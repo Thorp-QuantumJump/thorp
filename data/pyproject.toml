@@ -1,0 +1,16 @@
+[project]
+name = "quantum-jump-data"
+version = "0.1.1"
+description = "KRX 시세 수집·정제 파이프라인"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

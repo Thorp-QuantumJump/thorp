@@ -1,0 +1,17 @@
+[project]
+name = "quantum-jump-worker"
+version = "0.1.1"
+description = "Backtest worker: Kafka에서 Job을 받아 백테스트를 실행하고 결과를 저장한다"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

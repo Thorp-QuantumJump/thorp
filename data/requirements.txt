@@ -1,0 +1,8 @@
+pandas>=2.2
+numpy>=1.26
+pykrx>=1.0.45
+requests>=2.32
+pyarrow>=17.0
+SQLAlchemy>=2.0
+psycopg[binary]>=3.2
+python-dotenv>=1.0
