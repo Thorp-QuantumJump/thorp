@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 백테스트 Job API (스캐폴딩 초안).
  *
- * POST /backtests      → Job 생성 후 Kafka로 전달, 즉시 { backtestId, status: QUEUED } 반환
- * GET  /backtests/{id} → 상태/결과 조회 (QUEUED → RUNNING → COMPLETED | FAILED)
+ * <p>POST /backtests → Job 생성 후 Kafka로 전달, 즉시 { backtestId, status: QUEUED } 반환 GET /backtests/{id}
+ * → 상태/결과 조회 (QUEUED → RUNNING → COMPLETED | FAILED)
  */
 @RestController
 @RequestMapping("/backtests")

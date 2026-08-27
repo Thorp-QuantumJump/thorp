@@ -27,7 +27,7 @@
 | 폴더        | 파트  | 스택                          | 설명 |
 |-------------|-------|-------------------------------|------|
 | `frontend/` | FRONT | React + Vite + TypeScript     | 알고리즘/파라미터 선택 UI, 결과 시각화 |
-| `backend/`  | BACK  | Spring Boot 3 (Java 17, Gradle) | 백테스트 Job 생성·상태·결과 API |
+| `backend/`  | BACK  | Spring Boot 3 (Java 21, Gradle) | 백테스트 Job 생성·상태·결과 API |
 | `worker/`   | BACK/AI | Python 3.11 + pandas        | Kafka에서 Job을 받아 백테스트 실행 |
 | `data/`     | DATA  | Python 3.11 + pykrx/pandas    | KRX 시세 수집·정제 파이프라인 |
 | `ai/`       | AI    | Python                        | (예약) 유사 국면 탐색·GDELT 등 확장 |

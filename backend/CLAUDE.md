@@ -1,6 +1,6 @@
 # CLAUDE.md — backend (BACK 파트)
 
-Spring Boot 3.5 / Java 17 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 Kafka(`backtest.jobs`)에 넣으면 Worker가 처리.
+Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 Kafka(`backtest.jobs`)에 넣으면 Worker가 처리.
 
 ## 검증 명령 (작업 후 반드시 실행)
 

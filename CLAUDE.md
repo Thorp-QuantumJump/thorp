@@ -27,7 +27,7 @@ AI(Claude 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰�
 
 
 - `frontend/` React 19 + Vite + TypeScript — FRONT 파트
-- `backend/` Spring Boot 3.5, Java 17, Gradle — BACK 파트
+- `backend/` Spring Boot 3.5, Java 21, Gradle — BACK 파트
 - `worker/` Python 3.11, pandas 기반 백테스트 워커 — Kafka consumer
 - `data/` Python, pykrx 기반 KRX 데이터 수집 파이프라인 — DATA 파트
 - `ai/` (예약) 유사 국면 탐색 등 AI 파트 확장 영역
