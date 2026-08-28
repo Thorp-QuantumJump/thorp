@@ -1,7 +1,5 @@
 # Jira 컨벤션 (S15P21E205)
 
-> 원본: Notion `Jira Convention`, `Git Convention` (Team Quantum Jump). 이 문서는 레포용 요약본이며, 충돌 시 Notion 원본이 우선한다.
-
 - 보드: https://ssafy.atlassian.net/jira/software/projects/S15P21E205
 - 스프린트: 1주 단위, 매주 금요일 버전 릴리즈
 - 코드 리뷰: AI 리뷰로 진행, 문제 해결 후 Merge. 매일 16:00 팀 MR 리뷰
