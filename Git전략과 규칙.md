@@ -9,12 +9,12 @@
 
 | 브랜치 | 역할 | 직접 push |
 |---|---|---|
-| `master` | 배포 가능한 상태만 유지 | 금지 |
+| `main` | 배포 가능한 상태만 유지 | 금지 |
 | `develop` | 통합 브랜치. 모든 작업 브랜치의 분기점 | 금지 |
 | 작업 브랜치 | Jira 이슈 1개 = 브랜치 1개 | 허용 |
 
 - 작업 브랜치는 `develop`에서 분기하고 `develop`으로 PR한다.
-- 릴리즈 시점에만 `develop` → `master` PR.
+- 릴리즈 시점에만 `develop` → `main` PR.
 - 머지된 작업 브랜치는 즉시 삭제한다.
 
 ## 2. 브랜치 이름
@@ -106,7 +106,7 @@ S15P21E205-000
 
 ## 5. 금지 사항
 
-- `master` / `develop` 직접 push, force push
+- `main` / `develop` 직접 push, force push
 - 시크릿·`.env`·개인 API 키 커밋 (`.gitignore` 먼저 확인)
 - 대용량 데이터 파일 커밋 — Parquet, CSV 원본은 레포에 넣지 않는다
 - 의미 없는 커밋 메시지 (`수정`, `ㅇㅇ`, `test`, `asdf`)
