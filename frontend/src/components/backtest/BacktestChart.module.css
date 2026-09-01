@@ -1,0 +1,21 @@
+.chart {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 320px;
+  --chart-background: transparent;
+  --chart-grid: #e2e6e9;
+  --chart-foreground: #657180;
+  --chart-foreground-muted: #9aa3ad;
+  --chart-crosshair: #60707c;
+  --chart-label: #7c8793;
+  --chart-tooltip-background: rgb(18 27 39 / 94%);
+  --chart-tooltip-foreground: #fff;
+  --chart-tooltip-muted: #bac3ca;
+}
+
+@media (max-width: 720px) {
+  .chart {
+    min-height: 250px;
+  }
+}

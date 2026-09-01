@@ -1,0 +1,523 @@
+.page {
+  min-height: 100svh;
+  background: #f3f5f5;
+  color: #182331;
+  --surface: #fff;
+  --line: #e1e6e8;
+  --muted: #7f8a96;
+  --brand: #168f8a;
+  --brand-soft: #e8f6f4;
+}
+
+.header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(24px, calc((100vw - 1440px) / 2));
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 88%);
+  backdrop-filter: blur(18px);
+}
+
+.brand {
+  color: #182331;
+  font-size: 1.45rem;
+  font-weight: 720;
+  letter-spacing: -0.055em;
+  text-decoration: none;
+}
+
+.brand span {
+  color: var(--brand);
+}
+
+.headerMeta,
+.homeLink,
+.contextPills,
+.contextPills span,
+.titleLine,
+.legend,
+.legend span,
+.configTitle,
+.strategyHeading > div,
+.resetButton,
+.runButton {
+  display: flex;
+  align-items: center;
+}
+
+.headerMeta {
+  gap: 15px;
+}
+
+.prototype {
+  padding: 5px 9px;
+  border: 1px solid #d9dfe2;
+  border-radius: 999px;
+  color: #88929c;
+  font-size: 0.61rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.homeLink {
+  gap: 7px;
+  color: #51606e;
+  font-size: 0.76rem;
+  font-weight: 620;
+  text-decoration: none;
+}
+
+.homeLink:hover {
+  color: var(--brand);
+}
+
+.container {
+  width: min(100% - 40px, 1440px);
+  margin: 0 auto;
+  padding: 52px 0 72px;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--brand);
+  font-size: 0.65rem;
+  font-weight: 720;
+  letter-spacing: 0.15em;
+}
+
+.intro h1 {
+  margin: 0;
+  color: #13202f;
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 1.16;
+}
+
+.introCopy {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.contextPills {
+  gap: 8px;
+}
+
+.contextPills span {
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #dde3e5;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 65%);
+  color: #60707d;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 322px;
+  gap: 18px;
+  min-width: 0;
+  width: 100%;
+  align-items: start;
+}
+
+.mainColumn {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: 14px;
+}
+
+.panel,
+.metric {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--surface);
+  box-shadow: 0 8px 32px rgb(28 50 60 / 3%);
+}
+
+.chartPanel {
+  padding: 20px 20px 10px;
+}
+
+.panelHeader,
+.resultHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.titleLine {
+  gap: 8px;
+}
+
+.panelHeader h2,
+.resultHeader h2,
+.configTitle h2 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 690;
+  letter-spacing: -0.025em;
+}
+
+.panelHeader p,
+.resultHeader p,
+.configTitle p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.legend {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px 13px;
+  max-width: 58%;
+}
+
+.legend span {
+  gap: 6px;
+  color: #7b8691;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.benchmarkMarker {
+  background: #9aa3ad;
+}
+
+.chartStage {
+  position: relative;
+  margin-top: 4px;
+}
+
+.progressBadge {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid #d9e6e4;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 91%);
+  box-shadow: 0 10px 28px rgb(23 58 61 / 10%);
+  color: #66737f;
+  font-size: 0.64rem;
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+.progressBadge strong {
+  color: var(--brand);
+  font-size: 0.68rem;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric {
+  padding: 15px 16px;
+}
+
+.metric span {
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 5px;
+  color: #263140;
+  font-size: 1.13rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.metric strong[data-tone='positive'] {
+  color: #158b61;
+}
+
+.metric strong[data-tone='negative'] {
+  color: #d45d3f;
+}
+
+.resultPanel {
+  overflow: hidden;
+  padding: 18px 18px 8px;
+}
+
+.resultHeader {
+  align-items: center;
+  padding: 0 3px 10px;
+}
+
+.resetButton {
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 9px;
+  border: 1px solid #dfe4e7;
+  border-radius: 8px;
+  background: #fff;
+  color: #6f7c88;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 620;
+}
+
+.configPanel {
+  position: sticky;
+  top: 84px;
+  padding: 19px;
+}
+
+.configTitle {
+  gap: 10px;
+  margin-bottom: 19px;
+}
+
+.configTitle > svg {
+  color: var(--brand);
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.fieldGroup label {
+  color: #6f7b87;
+  font-size: 0.64rem;
+  font-weight: 650;
+}
+
+.fieldGroup select,
+.fieldGroup input {
+  width: 100%;
+  min-width: 0;
+  height: 39px;
+  padding: 0 10px;
+  border: 1px solid #dfe4e7;
+  border-radius: 10px;
+  background: #fafbfb;
+  color: #293644;
+  outline: none;
+  font-size: 0.72rem;
+}
+
+.fieldGroup select:focus,
+.fieldGroup input:focus {
+  border-color: #74bcb7;
+  box-shadow: 0 0 0 3px rgb(24 167 160 / 10%);
+}
+
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inputIconWrap {
+  position: relative;
+}
+
+.inputIconWrap > svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 10px;
+  color: #88939d;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.inputIconWrap select {
+  padding-left: 34px;
+}
+
+.divider {
+  height: 1px;
+  margin: 20px 0;
+  background: #edf0f1;
+}
+
+.strategyHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.strategyHeading > div {
+  gap: 7px;
+}
+
+.strategyHeading span {
+  color: #53606c;
+  font-size: 0.69rem;
+  font-weight: 680;
+}
+
+.strategyHeading small {
+  color: #a2aab1;
+  font-size: 0.59rem;
+}
+
+.strategyHeading strong {
+  color: var(--brand);
+  font-size: 0.68rem;
+}
+
+.runButton {
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 45px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 11px;
+  background: #182331;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 680;
+  transition: background 170ms ease, transform 170ms ease;
+}
+
+.runButton:hover:not(:disabled) {
+  background: #176f6c;
+  transform: translateY(-1px);
+}
+
+.runButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.runButton:focus-visible,
+.resetButton:focus-visible,
+.homeLink:focus-visible,
+.brand:focus-visible {
+  border-radius: 6px;
+  outline: 3px solid rgb(24 167 160 / 22%);
+  outline-offset: 3px;
+}
+
+.configNote {
+  margin: 10px 4px 0;
+  color: #9aa3ac;
+  font-size: 0.59rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+@media (max-width: 1050px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .configPanel {
+    position: static;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .header {
+    padding: 0 18px;
+  }
+
+  .prototype {
+    display: none;
+  }
+
+  .container {
+    width: min(100% - 28px, 1440px);
+    padding-top: 34px;
+  }
+
+  .intro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panelHeader {
+    flex-direction: column;
+  }
+
+  .legend {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartPanel {
+    padding: 16px 12px 8px;
+  }
+
+  .resultPanel {
+    padding: 16px 10px 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .homeLink {
+    font-size: 0;
+  }
+
+  .homeLink svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .contextPills {
+    flex-wrap: wrap;
+  }
+
+  .dateGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resultHeader {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runButton {
+    transition: none;
+  }
+}

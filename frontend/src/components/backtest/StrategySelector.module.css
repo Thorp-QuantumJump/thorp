@@ -1,0 +1,73 @@
+.list {
+  display: grid;
+  gap: 9px;
+}
+
+.strategy {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e6e9;
+  border-radius: 12px;
+  background: #fff;
+  color: #192331;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.strategy[data-selected='true'] {
+  border-color: #9bcfca;
+  background: #f5fbfa;
+}
+
+.strategy:focus-visible {
+  outline: 3px solid rgb(24 167 160 / 18%);
+  outline-offset: 2px;
+}
+
+.marker {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.copy strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy small {
+  overflow: hidden;
+  color: #8a949f;
+  font-size: 0.64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid #d9dee3;
+  border-radius: 7px;
+  color: #168d87;
+}
+
+.strategy[data-selected='true'] .check {
+  border-color: #94cec9;
+  background: #e3f5f2;
+}
