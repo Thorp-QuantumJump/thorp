@@ -1,0 +1,131 @@
+.page {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(rgb(20 31 44 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(20 31 44 / 4%) 1px, transparent 1px),
+    #f3f1ea;
+  background-size: 54px 54px;
+  color: #111a26;
+}
+
+.page::before {
+  position: absolute;
+  inset: 24px;
+  border: 1px solid rgb(17 26 38 / 10%);
+  content: '';
+  pointer-events: none;
+}
+
+.glow {
+  position: absolute;
+  width: min(70vw, 820px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(42 191 186 / 13%), transparent 66%);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  color: #688079;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.21em;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(5.25rem, 15vw, 11.5rem);
+  font-weight: 590;
+  letter-spacing: -0.085em;
+  line-height: 0.82;
+}
+
+.hero h1 span {
+  color: #22a7a1;
+}
+
+.description {
+  margin: 30px 0 34px;
+  color: #68727e;
+  font-size: clamp(0.92rem, 1.5vw, 1.08rem);
+  letter-spacing: -0.02em;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 0 21px;
+  border-radius: 999px;
+  background: #111a26;
+  box-shadow: 0 16px 36px rgb(17 26 38 / 16%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: gap 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.cta:hover {
+  gap: 17px;
+  background: #1e504f;
+  transform: translateY(-2px);
+}
+
+.cta:focus-visible {
+  outline: 3px solid rgb(34 167 161 / 30%);
+  outline-offset: 4px;
+}
+
+.version {
+  position: absolute;
+  right: 42px;
+  bottom: 34px;
+  margin: 0;
+  color: #8a928e;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+}
+
+@media (max-width: 640px) {
+  .page::before {
+    inset: 14px;
+  }
+
+  .hero h1 {
+    font-size: clamp(4.5rem, 29vw, 7rem);
+  }
+
+  .description {
+    max-width: 270px;
+  }
+
+  .version {
+    right: 27px;
+    bottom: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+}

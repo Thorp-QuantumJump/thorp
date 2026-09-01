@@ -1,0 +1,103 @@
+.wrapper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 690px;
+  border-collapse: collapse;
+  color: #273241;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #edf0f2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: #929ca7;
+  font-size: 0.63rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.clickableRow:hover,
+.clickableRow[data-active='true'] {
+  background: #f3faf9;
+}
+
+.strategyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: inherit;
+  font: inherit;
+  font-weight: 650;
+}
+
+.strategyButton:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid #18a7a0;
+  outline-offset: 3px;
+}
+
+.dot,
+.benchmarkDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.benchmarkDot {
+  background: #9aa3ad;
+}
+
+.positive {
+  color: #168d62;
+  font-weight: 650;
+}
+
+.negative {
+  color: #d05a3c;
+}
+
+.benchmarkRow {
+  background: #f7f8f9;
+  color: #6c7783;
+}
+
+.benchmarkRow th,
+.benchmarkRow td {
+  border-bottom: 0;
+}
+
+@media (max-width: 780px) {
+  .table {
+    min-width: 520px;
+  }
+
+  .optional {
+    display: none;
+  }
+}
