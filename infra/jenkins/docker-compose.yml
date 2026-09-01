@@ -1,0 +1,46 @@
+# Jenkins는 앱 스택과 별도의 compose 프로젝트로 띄운다.
+#
+#   cd infra/jenkins
+#   docker compose --env-file ../.env.prod up -d --build
+#
+# 왜 분리하나: 같은 파일에 넣으면 Jenkins가 배포하면서 `compose up -d`로
+# 자기 자신을 재시작해 파이프라인이 도중에 끊긴다.
+name: quantum-jump-ci
+
+services:
+  jenkins:
+    build: .
+    image: qj-jenkins:lts
+    container_name: qj-jenkins
+    restart: unless-stopped
+    # docker.sock 접근을 단순하게 하려고 root로 띄운다.
+    # 외부에 포트를 열지 않으므로 학습용으로는 이 정도가 현실적이다.
+    user: root
+    ports:
+      # 외부 비공개. SSH 터널로 접속한다.
+      #   ssh -L 9090:localhost:9090 -i key.pem ubuntu@j15e205.p.ssafy.io
+      #   → 브라우저에서 http://localhost:9090
+      - "127.0.0.1:9090:8080"
+    environment:
+      TZ: Asia/Seoul
+      JAVA_OPTS: "-Xmx1024m -Djava.awt.headless=true"
+      # nginx로 프록시해 GitLab Webhook을 받으려면 아래 주석을 풀고
+      # nginx 설정에 /jenkins location을 추가한다. (README 10단계)
+      # JENKINS_OPTS: "--prefix=/jenkins"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      # DooD: 호스트 도커를 그대로 부린다
+      - /var/run/docker.sock:/var/run/docker.sock
+      # ★ 호스트와 "동일한 경로"로 마운트해야 한다.
+      #   Jenkins가 docker.sock으로 띄우는 컨테이너의 bind mount는
+      #   호스트 기준으로 해석되기 때문에, 경로가 어긋나면 빈 디렉토리가 마운트된다.
+      - ${DEPLOY_DIR}:${DEPLOY_DIR}
+    deploy:
+      resources:
+        limits:
+          # Gradle/npm 빌드가 순간적으로 튀므로 여유를 준다
+          memory: 3G
+          cpus: "2.0"
+
+volumes:
+  jenkins-home:

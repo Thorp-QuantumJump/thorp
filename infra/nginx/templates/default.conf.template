@@ -1,0 +1,80 @@
+# nginx 공식 이미지가 기동 시 ${DOMAIN}을 치환해 /etc/nginx/conf.d/default.conf로 만든다.
+# $host, $uri 등 nginx 자체 변수는 NGINX_ENVSUBST_FILTER 덕분에 그대로 남는다.
+
+upstream backend_was {
+    server backend:8080;
+    keepalive 32;
+}
+
+# --- HTTP: 인증서 발급 경로만 열고 나머지는 HTTPS로 보낸다 ---
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS: 정적 프론트 + /api 리버스 프록시 ---
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 20m;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # 갱신 때도 HTTP 경로가 필요하다
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # --- 백엔드 API ---
+    location /api/ {
+        proxy_pass http://backend_was;
+        proxy_http_version 1.1;
+        proxy_set_header Connection        "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # 백테스트 결과 조회가 길어질 수 있어 기본 60s보다 넉넉히 준다
+        proxy_connect_timeout 10s;
+        proxy_read_timeout    300s;
+        proxy_send_timeout    300s;
+    }
+
+    # --- 정적 프론트 (Vite 빌드 산출물) ---
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # 해시가 붙은 자산은 오래 캐시해도 안전하다
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA 라우팅: 없는 경로는 index.html로 넘겨 React Router가 처리하게 한다
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

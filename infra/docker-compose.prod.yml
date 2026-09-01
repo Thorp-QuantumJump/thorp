@@ -1,0 +1,182 @@
+# 운영(EC2) 전용 스택. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.
+#
+#   cd infra
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# 로컬용과 다른 점
+#   - DB/Kafka/WAS 포트를 외부에 열지 않는다 (nginx의 80/443만 공개)
+#   - 컨테이너별 메모리·CPU 상한을 명시한다 (16GB / 4 vCPU 기준)
+#   - restart 정책과 TZ를 지정한다
+name: quantum-jump
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qj-postgres
+    restart: unless-stopped
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c work_mem=32MB
+      -c maintenance_work_mem=512MB
+      -c max_connections=100
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      # 외부 비공개. 로컬에서 볼 때는 SSH 터널을 쓴다.
+      #   ssh -L 5432:localhost:5432 -i key.pem ubuntu@j15e205.p.ssafy.io
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "1.5"
+    networks: [backend]
+
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: qj-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # 로컬용과 달리 EXTERNAL 리스너가 없다. 컨테이너 네트워크 안에서만 접근 가능.
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # 상한을 안 주면 힙이 계속 커져 Postgres가 OOM으로 죽는다.
+      KAFKA_HEAP_OPTS: "-Xmx1536m -Xms1536m"
+      TZ: Asia/Seoul
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: "1.0"
+    networks: [backend]
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../infra/docker/backend.Dockerfile
+    image: qj-backend:latest
+    container_name: qj-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      JAVA_TOOL_OPTIONS: "-Xmx1536m"
+      TZ: Asia/Seoul
+    # ports가 아니라 expose. 호스트에 열지 않고 nginx만 접근한다.
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    networks: [backend, edge]
+
+  worker:
+    build:
+      context: ../worker
+      dockerfile: ../infra/docker/worker.Dockerfile
+    image: qj-worker:latest
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PARQUET_DIR: /data/parquet
+      RAW_DIR: /data/raw
+      # Numba/OpenBLAS는 컨테이너 CPU 상한이 아니라 호스트 vCPU(4)를 보고 스레드를 띄운다.
+      # 아래를 안 걸면 Worker 2개 = 8스레드가 4코어에서 경쟁해 오히려 느려진다.
+      NUMBA_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      TZ: Asia/Seoul
+    volumes:
+      - ${DATA_DIR}/parquet:/data/parquet
+      - ${DATA_DIR}/raw:/data/raw:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    deploy:
+      # 4 vCPU에서는 2개가 상한선. 늘리기 전에 Kafka 파티션 수부터 확인할 것.
+      replicas: ${WORKER_REPLICAS}
+      resources:
+        limits:
+          memory: 2500M
+          cpus: "1.0"
+    networks: [backend]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: qj-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      # templates/*.template 안에서 ${DOMAIN}만 치환한다.
+      # 이 필터가 없으면 $host, $uri 같은 nginx 변수까지 건드릴 위험이 있다.
+      NGINX_ENVSUBST_FILTER: "^DOMAIN$$"
+      TZ: Asia/Seoul
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    networks: [edge]
+
+volumes:
+  postgres-data:
+  kafka-data:
+
+networks:
+  # DB/Kafka가 외부 노출 경로에 닿지 않도록 분리한다.
+  backend:
+  edge:

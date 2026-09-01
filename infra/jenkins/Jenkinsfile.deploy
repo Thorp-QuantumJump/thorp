@@ -1,0 +1,60 @@
+// 배포 전용 파이프라인. 레포 루트의 Jenkinsfile(빌드·테스트 CI)과 별개 Job으로 만든다.
+//
+// Jenkins Job 설정
+//   - Pipeline script from SCM → Script Path: infra/jenkins/Jenkinsfile.deploy
+//   - 트리거: 초반에는 Poll SCM(H/2 * * * *)을 권장한다.
+//     Jenkins를 127.0.0.1에만 묶어두면 GitLab Webhook이 들어올 수 없기 때문이다.
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    environment {
+        // 서버에 레포를 클론해 둔 고정 경로. infra/.env.prod 의 DEPLOY_DIR과 같아야 한다.
+        DEPLOY_DIR = '/home/ubuntu/S15P21E205'
+        DEPLOY_BRANCH = 'dev'
+    }
+
+    stages {
+        stage('Sync') {
+            // Jenkins 워크스페이스가 아니라 호스트 고정 경로를 최신화한다.
+            // (bind mount 경로가 호스트 기준으로 해석되기 때문)
+            steps {
+                sh '''
+                    cd "$DEPLOY_DIR"
+                    git fetch --prune origin
+                    git checkout "$DEPLOY_BRANCH"
+                    git reset --hard "origin/$DEPLOY_BRANCH"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'cd "$DEPLOY_DIR/infra" && ./scripts/deploy.sh'
+            }
+        }
+
+        stage('Smoke test') {
+            steps {
+                sh '''
+                    cd "$DEPLOY_DIR/infra"
+                    docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+                    # nginx를 거쳐 백엔드까지 살아있는지 확인
+                    docker exec qj-nginx wget -q -O- --no-check-certificate \
+                        https://localhost/api/health || echo "health 엔드포인트 미구현"
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            sh 'cd "$DEPLOY_DIR/infra" && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 100'
+        }
+    }
+}
