@@ -18,7 +18,7 @@ services:
     user: root
     ports:
       # 외부 비공개. SSH 터널로 접속한다.
-      #   ssh -L 9090:localhost:9090 -i key.pem ubuntu@j15e205.p.ssafy.io
+      #   ssh -L 9090:localhost:9090 -i ~/.ssh/J15E205T.pem ubuntu@j15e205.p.ssafy.io
       #   → 브라우저에서 http://localhost:9090
       - "127.0.0.1:9090:8080"
     environment:

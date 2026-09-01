@@ -27,7 +27,7 @@ services:
       TZ: Asia/Seoul
     ports:
       # 외부 비공개. 로컬에서 볼 때는 SSH 터널을 쓴다.
-      #   ssh -L 5432:localhost:5432 -i key.pem ubuntu@j15e205.p.ssafy.io
+      #   ssh -L 5432:localhost:5432 -i ~/.ssh/J15E205T.pem ubuntu@j15e205.p.ssafy.io
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
