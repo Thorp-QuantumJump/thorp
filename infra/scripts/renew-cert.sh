@@ -11,4 +11,4 @@ docker run --rm \
     certbot/certbot renew --webroot -w /var/www/certbot --quiet
 
 # 갱신 여부와 무관하게 reload — 새 인증서를 nginx가 다시 읽게 한다
-docker exec qj-nginx nginx -s reload
+docker exec thorp-nginx nginx -s reload

@@ -1,10 +1,10 @@
 # 운영(EC2) 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.
-name: quantum-jump
+name: thorp
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: qj-postgres
+    container_name: thorp-postgres
     restart: unless-stopped
     command: >
       postgres
@@ -39,7 +39,7 @@ services:
   kafka:
     profiles: ["kafka"]
     image: apache/kafka:3.9.1
-    container_name: qj-kafka
+    container_name: thorp-kafka
     restart: unless-stopped
     environment:
       KAFKA_NODE_ID: 1
@@ -72,7 +72,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: qj-rabbitmq
+    container_name: thorp-rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
@@ -99,8 +99,8 @@ services:
     build:
       context: ../backend
       dockerfile: ../infra/docker/backend.Dockerfile
-    image: qj-backend:latest
-    container_name: qj-backend
+    image: thorp-backend:latest
+    container_name: thorp-backend
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -134,7 +134,7 @@ services:
     build:
       context: ../worker
       dockerfile: ../infra/docker/worker.Dockerfile
-    image: qj-worker:latest
+    image: thorp-worker:latest
     restart: unless-stopped
     environment:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
@@ -170,7 +170,7 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: qj-nginx
+    container_name: thorp-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -205,6 +205,6 @@ networks:
   # 이름을 고정한다. 지정하지 않으면 <프로젝트명>_<키>로 생성되어,
   # 프로젝트명이 바뀌면 Jenkinsfile의 --network 참조가 조용히 깨진다.
   backend:
-    name: quantum-jump-backend
+    name: thorp-internal
   edge:
-    name: quantum-jump-edge
+    name: thorp-edge

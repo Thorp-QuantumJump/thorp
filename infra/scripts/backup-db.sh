@@ -22,7 +22,7 @@ mkdir -p "$BACKUP_DIR"
 trap 'rm -f "$TMP"' EXIT
 
 # 임시 파일에 먼저 쓴다. 실패한 덤프가 정상 백업처럼 남는 것을 막는다.
-docker exec qj-postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TMP"
+docker exec thorp-postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TMP"
 
 # pipefail이 pg_dump 실패를 잡지만 그것만으로는 부족하다.
 # 압축 무결성과 내용 유무를 확인한 뒤에만 최종 이름을 부여한다.

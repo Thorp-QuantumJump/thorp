@@ -1,12 +1,12 @@
 # 앱 스택과 별도의 compose 프로젝트로 띄운다.
 # 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.
-name: quantum-jump-ci
+name: thorp-ci
 
 services:
   jenkins:
     build: .
-    image: qj-jenkins:lts
-    container_name: qj-jenkins
+    image: thorp-jenkins:lts
+    container_name: thorp-jenkins
     restart: unless-stopped
     # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아
     # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.
