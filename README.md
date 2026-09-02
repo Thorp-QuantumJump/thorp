@@ -41,7 +41,7 @@
 cp .env.example .env
 
 # 1. 인프라(PostgreSQL + RabbitMQ) 실행
-docker compose up -d postgres rabbitmq
+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
 
 # 2. 백엔드
 cd backend && ./gradlew bootRun
@@ -64,7 +64,7 @@ python scripts/ingest_krx.py --start 2021-01-01 --end 2026-08-26
 전체를 컨테이너로 띄우려면:
 
 ```bash
-docker compose --profile app up -d --build
+docker compose -f docker-compose.dev.yml --profile app up -d --build
 ```
 
 ## 컨벤션
