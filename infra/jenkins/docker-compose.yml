@@ -8,8 +8,14 @@ services:
     image: qj-jenkins:lts
     container_name: qj-jenkins
     restart: unless-stopped
-    # docker.sock 접근을 단순하게 하려고 root로 띄운다. 외부에 포트를 열지 않는다.
-    user: root
+    # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아
+    # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.
+    #
+    # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.
+    # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면
+    # socket proxy나 별도 머신의 에이전트가 필요하다.
+    group_add:
+      - "${DOCKER_GID}"
     ports:
       # 외부 비공개. 접근은 SSH 터널로만.
       - "127.0.0.1:9090:8080"
