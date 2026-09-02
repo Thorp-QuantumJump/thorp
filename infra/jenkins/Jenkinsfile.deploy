@@ -43,10 +43,23 @@ pipeline {
             steps {
                 sh '''
                     cd "$DEPLOY_DIR/infra"
+                    set -a; . ./.env.prod; set +a
+
                     docker compose -f docker-compose.prod.yml --env-file .env.prod ps
-                    # nginx를 거쳐 백엔드까지 살아있는지 확인
-                    docker exec qj-nginx wget -q -O- --no-check-certificate \
-                        https://localhost/api/health || echo "health 엔드포인트 미구현"
+
+                    # 1) nginx 설정 유효성 (인증서 경로 포함)
+                    docker exec qj-nginx nginx -t
+
+                    # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인
+                    docker run --rm --network quantum-jump_backend curlimages/curl:8.10.1 \
+                        -sf --max-time 10 http://backend:8080/actuator/health
+
+                    # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.
+                    #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접
+                    #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
+                    docker run --rm --network quantum-jump_edge curlimages/curl:8.10.1 \
+                        -sf --max-time 10 --connect-to "${DOMAIN}:443:nginx:443" \
+                        -o /dev/null "https://${DOMAIN}/api/health"
                 '''
             }
         }
