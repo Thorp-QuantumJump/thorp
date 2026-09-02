@@ -86,14 +86,20 @@ pipeline {
                     docker exec thorp-nginx nginx -t
 
                     # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인
+                    #
+                    #    컨테이너가 떴다고 애플리케이션이 준비된 것은 아니다. Spring Boot 기동에
+                    #    10~20초가 걸리므로 연결 거부를 재시도로 흡수한다. --retry-connrefused 가
+                    #    없으면 curl 은 연결 거부를 재시도 대상으로 보지 않고 즉시 포기한다.
                     docker run --rm --network thorp-internal curlimages/curl:8.10.1 \
-                        -sf --max-time 10 http://backend:8080/actuator/health
+                        -sf --max-time 5 --retry 30 --retry-delay 2 --retry-connrefused \
+                        http://backend:8080/actuator/health
 
                     # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.
                     #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접
                     #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
                     docker run --rm --network thorp-edge curlimages/curl:8.10.1 \
-                        -sf --max-time 10 --connect-to "${DOMAIN}:443:nginx:443" \
+                        -sf --max-time 5 --retry 10 --retry-delay 2 --retry-connrefused \
+                        --connect-to "${DOMAIN}:443:nginx:443" \
                         -o /dev/null "https://${DOMAIN}/api/actuator/health"
                 '''
             }
