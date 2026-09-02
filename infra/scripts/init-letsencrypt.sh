@@ -35,15 +35,36 @@ if [[ "${STAGING:-0}" == "1" ]]; then
     echo "[i] STAGING 모드 — 브라우저에서 신뢰되지 않는 연습용 인증서를 받는다."
 fi
 
+make_dummy_cert() {
+    mkdir -p "$CONF_DIR/live/$DOMAIN"
+    docker run --rm -v "$CONF_DIR:/etc/letsencrypt" --entrypoint sh certbot/certbot -c "
+        openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -keyout '/etc/letsencrypt/live/$DOMAIN/privkey.pem' \
+            -out    '/etc/letsencrypt/live/$DOMAIN/fullchain.pem' \
+            -subj '/CN=localhost' 2>/dev/null"
+}
+
+# 4단계는 임시 인증서를 지운 뒤 실제 발급을 요청한다. 그 사이에 실패하면
+# 인증서 디렉토리가 빈 채로 남아 다음 재시작 때 nginx가 아예 뜨지 못한다.
+# 실패로 끝나면 임시 인증서를 되살려 웹서버만은 살아 있게 한다.
+on_exit() {
+    local code=$?
+    [[ $code -eq 0 ]] && exit 0
+    echo >&2
+    echo "오류로 중단되었다 (exit $code)." >&2
+    if [[ ! -s "$CONF_DIR/live/$DOMAIN/fullchain.pem" ]]; then
+        echo "인증서가 비어 있어 임시 인증서를 복구한다. nginx는 뜨지만 브라우저 경고가 난다." >&2
+        make_dummy_cert || echo "임시 인증서 복구 실패. 수동 확인이 필요하다." >&2
+    fi
+    exit $code
+}
+trap on_exit EXIT
+
 echo "[1/5] 디렉토리 준비 ($DOMAIN)"
 mkdir -p "$CONF_DIR/live/$DOMAIN" "$WWW_DIR"
 
 echo "[2/5] nginx 기동용 임시 인증서 생성"
-docker run --rm -v "$CONF_DIR:/etc/letsencrypt" --entrypoint sh certbot/certbot -c "
-    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-        -keyout '/etc/letsencrypt/live/$DOMAIN/privkey.pem' \
-        -out    '/etc/letsencrypt/live/$DOMAIN/fullchain.pem' \
-        -subj '/CN=localhost' 2>/dev/null"
+make_dummy_cert
 
 echo "[3/5] nginx 기동 (80번 포트로 인증 요청을 받는다)"
 $COMPOSE up -d nginx
