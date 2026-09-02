@@ -13,8 +13,10 @@ AI(Claude 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰�
 
 ## 아키텍처 원칙
 
-1. **Backend는 계산하지 않는다.** 백테스트는 Job으로 만들어 Kafka에 넣고, Worker가 처리한다.
-2. Worker는 같은 코드(`worker/`)를 여러 개 실행해 수평 확장한다. (Kafka Consumer Group)
+1. **Backend는 계산하지 않는다.** 백테스트는 Job으로 만들어 RabbitMQ에 넣고, Worker가 처리한다.
+2. Worker는 같은 코드(`worker/`)를 여러 개 실행해 수평 확장한다.
+   RabbitMQ의 competing consumers 구조라 Kafka 파티션 같은 개수 제약이 없고, 병목은 CPU다.
+   Kafka는 설치만 해둔 상태이며 현재 Job 전달에 쓰지 않는다. 전환·병행 시점은 실측 후 결정한다.
 3. 백테스트 API는 비동기. `POST /backtests` → `{ backtestId, status: QUEUED }` 즉시 반환,
    상태는 `GET /backtests/{id}`로 조회. 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED`.
 4. **빅데이터 기술(Spark/Hadoop)을 먼저 선택하지 않는다.** 계산량을 실측한 뒤 병목이 확인되면
@@ -28,7 +30,7 @@ AI(Claude 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰�
 
 - `frontend/` React 19 + Vite + TypeScript — FRONT 파트
 - `backend/` Spring Boot 3.5, Java 21, Gradle — BACK 파트
-- `worker/` Python 3.11, pandas 기반 백테스트 워커 — Kafka consumer
+- `worker/` Python 3.11, pandas 기반 백테스트 워커 — RabbitMQ consumer
 - `data/` Python, pykrx 기반 KRX 데이터 수집 파이프라인 — DATA 파트
 - `ai/` (예약) 유사 국면 탐색 등 AI 파트 확장 영역
 - `infra/` Dockerfile, 운영 스크립트 — INFRA 파트

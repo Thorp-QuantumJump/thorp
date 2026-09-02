@@ -1,5 +1,7 @@
 # --- build stage ---
 FROM eclipse-temurin:21-jdk AS build
+# 빌드 컨테이너에는 외부 메모리 상한이 걸리지 않아 힙을 직접 제한한다
+ENV GRADLE_OPTS="-Xmx1g"
 WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle

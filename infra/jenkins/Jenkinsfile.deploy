@@ -1,0 +1,121 @@
+// 배포 전용 파이프라인. 레포 루트의 Jenkinsfile(빌드·테스트 CI)과 별개 Job으로 만든다.
+//
+// Jenkins Job 설정
+//   - Pipeline script from SCM → Script Path: infra/jenkins/Jenkinsfile.deploy
+//   - 트리거: 초반에는 Poll SCM(H/2 * * * *)을 권장한다.
+//     Jenkins를 127.0.0.1에만 묶어두면 GitLab Webhook이 들어올 수 없기 때문이다.
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    parameters {
+        string(
+            name: 'DEPLOY_BRANCH',
+            defaultValue: 'dev',
+            description: '배포할 브랜치. 평소에는 dev, 머지 전 검증 시에만 다른 값을 넣는다'
+        )
+    }
+
+    environment {
+        // 서버에 레포를 클론해 둔 고정 경로. infra/.env.prod 의 DEPLOY_DIR과 같아야 한다.
+        DEPLOY_DIR = '/home/ubuntu/S15P21E205'
+    }
+
+    stages {
+        stage('Sync') {
+            // Jenkins 워크스페이스가 아니라 호스트 고정 경로를 최신화한다.
+            // (bind mount 경로가 호스트 기준으로 해석되기 때문)
+            steps {
+                // 이 디렉토리는 배포 전용이며 git 내용을 그대로 반영한다.
+                // reset --hard 는 추적 파일만 되돌린다. .env.prod, certbot/(인증서·개인키),
+                // nginx/html/(빌드 산출물)은 gitignore 대상이라 영향을 받지 않는다.
+                sh '''
+                    cd "$DEPLOY_DIR"
+                    git fetch --prune origin
+
+                    # 배포 대상 브랜치에 인프라 설정이 실제로 있는지 먼저 확인한다.
+                    # 이 검사가 없으면 인프라가 머지되지 않은 브랜치로 전환되어
+                    # 실행 중인 컨테이너가 compose 파일을 잃는다.
+                    if ! git cat-file -e "origin/$DEPLOY_BRANCH:infra/docker-compose.prod.yml" 2>/dev/null; then
+                        echo "오류: origin/$DEPLOY_BRANCH 에 infra/docker-compose.prod.yml 이 없다." >&2
+                        echo "      배포 가능한 브랜치가 아니다. 작업 디렉토리를 건드리지 않고 중단한다." >&2
+                        exit 1
+                    fi
+
+                    git checkout "$DEPLOY_BRANCH"
+
+                    # 폐기되는 내용을 빌드 로그에 남긴다. 조용히 사라지면 원인을 못 찾는다.
+                    if ! git diff --quiet || ! git diff --cached --quiet; then
+                        echo "경고: 서버에서 수정된 추적 파일을 폐기한다" >&2
+                        git status --short --untracked-files=no >&2
+                    fi
+
+                    git reset --hard "origin/$DEPLOY_BRANCH"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'cd "$DEPLOY_DIR/infra" && ./scripts/deploy.sh'
+            }
+        }
+
+        stage('Smoke test') {
+            steps {
+                sh '''
+                    cd "$DEPLOY_DIR/infra"
+
+                    # .env.prod 를 통째로 source 하지 않는다. Jenkins의 sh 스텝은 -x 로
+                    # 실행되므로 sourcing된 대입문이 그대로 빌드 로그에 찍혀 DB/RabbitMQ
+                    # 비밀번호가 콘솔에 남는다. 필요한 DOMAIN 한 줄만 뽑아 쓴다.
+                    DOMAIN=$(sed -n 's/^DOMAIN=//p' .env.prod | head -1)
+                    if [ -z "$DOMAIN" ]; then
+                        echo ".env.prod 에서 DOMAIN 을 읽지 못했다. 값이 비어 있는지 확인할 것." >&2
+                        exit 1
+                    fi
+
+                    docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+
+                    # 1) nginx 설정 유효성 (인증서 경로 포함)
+                    docker exec thorp-nginx nginx -t
+
+                    # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인
+                    #
+                    #    컨테이너가 떴다고 애플리케이션이 준비된 것은 아니다. Spring Boot 기동에
+                    #    10~20초가 걸리므로 연결 거부를 재시도로 흡수한다. --retry-connrefused 가
+                    #    없으면 curl 은 연결 거부를 재시도 대상으로 보지 않고 즉시 포기한다.
+                    docker run --rm --network thorp-internal curlimages/curl:8.10.1 \
+                        -sf --max-time 5 --retry 30 --retry-delay 2 --retry-connrefused \
+                        http://backend:8080/actuator/health
+
+                    # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.
+                    #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접
+                    #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
+                    docker run --rm --network thorp-edge curlimages/curl:8.10.1 \
+                        -sf --max-time 5 --retry 10 --retry-delay 2 --retry-connrefused \
+                        --connect-to "${DOMAIN}:443:nginx:443" \
+                        -o /dev/null "https://${DOMAIN}/api/actuator/health"
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            // 컨테이너 로그를 빌드 로그로 옮기지 않는다. 애플리케이션이 접속 URL이나
+            // 설정값을 예외 메시지에 담아 출력하면 비밀번호가 Jenkins 콘솔에 남는다.
+            // 상태만 남기고, 로그는 서버에서 직접 본다.
+            sh '''
+                cd "$DEPLOY_DIR/infra"
+                docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+                echo "로그 확인: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>"
+            '''
+        }
+    }
+}

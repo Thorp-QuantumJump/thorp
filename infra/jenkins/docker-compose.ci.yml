@@ -1,0 +1,41 @@
+# 앱 스택과 별도의 compose 프로젝트로 띄운다.
+# 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.
+name: thorp-ci
+
+services:
+  jenkins:
+    build: .
+    image: thorp-jenkins:lts
+    container_name: thorp-jenkins
+    restart: unless-stopped
+    # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아
+    # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.
+    #
+    # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.
+    # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면
+    # socket proxy나 별도 머신의 에이전트가 필요하다.
+    group_add:
+      - "${DOCKER_GID}"
+    ports:
+      # 외부 비공개. 접근은 SSH 터널로만.
+      - "127.0.0.1:9090:8080"
+    environment:
+      TZ: Asia/Seoul
+      JAVA_OPTS: "-Xmx1024m -Djava.awt.headless=true"
+      # GitLab Webhook을 받으려면 아래 주석을 풀고 nginx에 /jenkins location을 추가한다.
+      # JENKINS_OPTS: "--prefix=/jenkins"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는
+      # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.
+      - ${DEPLOY_DIR}:${DEPLOY_DIR}
+    deploy:
+      resources:
+        limits:
+          # Jenkins 자체는 JVM만 돈다. 빌드는 별도 컨테이너에서 일어나 여기 포함되지 않는다.
+          memory: 2G
+          cpus: "2.0"
+
+volumes:
+  jenkins-home:

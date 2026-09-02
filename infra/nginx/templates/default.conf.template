@@ -1,0 +1,78 @@
+# 기동 시 ${DOMAIN}만 치환된다. $host 등 nginx 변수는 NGINX_ENVSUBST_FILTER가 보호한다.
+
+upstream backend_was {
+    server backend:8080;
+    keepalive 32;
+}
+
+# HTTP: 인증서 발급 경로만 열고 나머지는 HTTPS로 보낸다
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS: 정적 프론트 + /api 리버스 프록시
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 20m;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location /api/ {
+        # 끝의 슬래시가 /api 접두사를 떼어낸다. 없으면 /api/backtests 가 그대로
+        # 전달되어 백엔드(/backtests)가 못 받는다. 지우지 말 것.
+        proxy_pass http://backend_was/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection        "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # 백테스트 조회가 길어질 수 있어 기본 60s보다 넉넉히 준다
+        proxy_connect_timeout 10s;
+        proxy_read_timeout    300s;
+        proxy_send_timeout    300s;
+    }
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # 파일명에 해시가 붙어 있어 장기 캐시가 안전하다
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA 라우팅
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -55,3 +55,9 @@ data/processed/
 
 # === Docker ===
 *.local.yml
+
+# === Infra (운영) ===
+infra/.env.prod
+infra/certbot/
+infra/nginx/html/*
+!infra/nginx/html/.gitkeep
