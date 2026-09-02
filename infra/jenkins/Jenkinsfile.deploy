@@ -59,13 +59,13 @@ pipeline {
                     docker exec qj-nginx nginx -t
 
                     # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인
-                    docker run --rm --network quantum-jump_backend curlimages/curl:8.10.1 \
+                    docker run --rm --network quantum-jump-backend curlimages/curl:8.10.1 \
                         -sf --max-time 10 http://backend:8080/actuator/health
 
                     # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.
                     #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접
                     #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
-                    docker run --rm --network quantum-jump_edge curlimages/curl:8.10.1 \
+                    docker run --rm --network quantum-jump-edge curlimages/curl:8.10.1 \
                         -sf --max-time 10 --connect-to "${DOMAIN}:443:nginx:443" \
                         -o /dev/null "https://${DOMAIN}/api/actuator/health"
                 '''
@@ -75,7 +75,14 @@ pipeline {
 
     post {
         failure {
-            sh 'cd "$DEPLOY_DIR/infra" && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 100'
+            // 컨테이너 로그를 빌드 로그로 옮기지 않는다. 애플리케이션이 접속 URL이나
+            // 설정값을 예외 메시지에 담아 출력하면 비밀번호가 Jenkins 콘솔에 남는다.
+            // 상태만 남기고, 로그는 서버에서 직접 본다.
+            sh '''
+                cd "$DEPLOY_DIR/infra"
+                docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+                echo "로그 확인: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>"
+            '''
         }
     }
 }

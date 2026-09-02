@@ -18,7 +18,11 @@ if [[ ! -f "$ENV_FILE" ]]; then
     exit 1
 fi
 
-set -a; source "$ENV_FILE"; set +a
+# 파일 전체를 source 하지 않는다. bash -x 로 실행하거나 CI에서 돌릴 때
+# 비밀번호까지 추적 출력에 실린다. 필요한 값만 뽑아 쓴다.
+read_env() { sed -n "s/^$1=//p" "$ENV_FILE" | head -1; }
+DOMAIN=$(read_env DOMAIN)
+CERTBOT_EMAIL=$(read_env CERTBOT_EMAIL)
 
 if [[ -z "${DOMAIN:-}" || -z "${CERTBOT_EMAIL:-}" ]]; then
     echo "오류: $ENV_FILE 의 DOMAIN 과 CERTBOT_EMAIL 을 채워야 한다." >&2

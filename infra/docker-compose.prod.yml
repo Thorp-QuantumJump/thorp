@@ -202,5 +202,9 @@ volumes:
 
 networks:
   # DB·브로커가 외부 노출 경로(edge)에 닿지 않도록 분리한다.
+  # 이름을 고정한다. 지정하지 않으면 <프로젝트명>_<키>로 생성되어,
+  # 프로젝트명이 바뀌면 Jenkinsfile의 --network 참조가 조용히 깨진다.
   backend:
+    name: quantum-jump-backend
   edge:
+    name: quantum-jump-edge
