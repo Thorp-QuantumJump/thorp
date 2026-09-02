@@ -13,7 +13,9 @@ ENV_FILE=".env.prod"
 COMPOSE="docker compose -f docker-compose.prod.yml --env-file $ENV_FILE"
 
 echo "[1/4] 프론트엔드 빌드"
-docker run --rm \
+# 빌드 컨테이너는 docker.sock으로 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이
+# 적용되지 않는다. 명시하지 않으면 무제한이라 여기서 직접 건다.
+docker run --rm --memory=2g --cpus=2 \
     -v "$PWD/../frontend:/app" \
     -w /app \
     node:20-alpine sh -c "npm ci && npm run build"

@@ -47,6 +47,9 @@ services:
   # 유휴 상태이므로 힙과 메모리 상한을 낮춰 RabbitMQ 몫을 확보했다.
   # 나중에 Kafka로 전환하거나 병행할 때 값을 되돌린다.
   kafka:
+    # 현재 Job 전달에 사용하지 않으므로 기본 기동에서 제외한다.
+    # 필요할 때만: docker compose -f docker-compose.prod.yml --env-file .env.prod --profile kafka up -d kafka
+    profiles: ["kafka"]
     image: apache/kafka:3.9.1
     container_name: qj-kafka
     restart: unless-stopped
@@ -139,8 +142,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -177,8 +178,6 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
-        condition: service_healthy
-      kafka:
         condition: service_healthy
     deploy:
       # 4 vCPU에서는 2개가 상한선. 늘리기 전에 Kafka 파티션 수부터 확인할 것.

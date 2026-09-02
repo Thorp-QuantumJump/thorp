@@ -38,8 +38,9 @@ services:
     deploy:
       resources:
         limits:
-          # Gradle/npm 빌드가 순간적으로 튀므로 여유를 준다
-          memory: 3G
+          # Jenkins 자체는 JVM(-Xmx1024m)만 돈다. 무거운 Gradle/npm 빌드는
+          # docker.sock으로 띄우는 별도 컨테이너에서 일어나므로 이 상한에 포함되지 않는다.
+          memory: 2G
           cpus: "2.0"
 
 volumes:
