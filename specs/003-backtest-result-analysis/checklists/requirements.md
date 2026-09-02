@@ -39,3 +39,6 @@
     2 and 5, edge cases, trade-metric assumptions).
   - Benchmark comparison → out of scope; strategy-only performance (FR-015, Assumptions).
 - All items pass. Ready for `/speckit-plan`.
+- 2026-09-02 amendment from F4 (004-strategy-comparison): metric definitions now carry a
+  "우수 방향" (better-direction) attribute (FR-003, Metric Definition entity) so per-metric rankings
+  in F4 have a defined basis. Re-validated; all items still pass.
