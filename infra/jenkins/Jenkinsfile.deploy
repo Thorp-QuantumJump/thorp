@@ -31,6 +31,13 @@ pipeline {
                     cd "$DEPLOY_DIR"
                     git fetch --prune origin
                     git checkout "$DEPLOY_BRANCH"
+
+                    # 폐기되는 내용을 빌드 로그에 남긴다. 조용히 사라지면 원인을 못 찾는다.
+                    if ! git diff --quiet || ! git diff --cached --quiet; then
+                        echo "경고: 서버에서 수정된 추적 파일을 폐기한다" >&2
+                        git status --short --untracked-files=no >&2
+                    fi
+
                     git reset --hard "origin/$DEPLOY_BRANCH"
                 '''
             }
