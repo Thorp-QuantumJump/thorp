@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # PostgreSQL 논리 백업. cron으로 매일 새벽에 돌린다.
-# 백업은 SSD가 아니라 대용량 HDD($DATA_DIR/backup)에 쌓는다.
+#
+# 덤프는 $DATA_DIR/backup(호스트 파일시스템)에 쌓인다. pg_dump만 컨테이너 안에서 돌고
+# gzip과 리다이렉션은 호스트에서 실행되므로, 컨테이너를 내리거나 지워도 파일은 남는다.
+#
+# ⚠️ 다만 현재는 DB 원본(named volume)과 이 백업이 **같은 EBS 볼륨**에 있다.
+#    볼륨이 통째로 사라지면(인스턴스 종료·초기화) 둘 다 함께 없어진다.
+#    반드시 주기적으로 서버 밖(로컬 PC / 서버2 / S3)으로 회수할 것.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
