@@ -42,6 +42,23 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: qj-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-quantum}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-quantum}
+    ports:
+      - "5672:5672"     # AMQP — 로컬에서는 호스트에서 직접 붙는다
+      - "15672:15672"   # 관리 UI (http://localhost:15672)
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
     profiles: ["app"]
     build:
@@ -54,11 +71,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-quantumjump}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-quantum}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-quantum}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-quantum}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-quantum}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
+      rabbitmq:
         condition: service_healthy
 
   worker:
@@ -67,12 +88,13 @@ services:
       context: ./worker
       dockerfile: ../infra/docker/worker.Dockerfile
     environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-quantum}:${RABBITMQ_PASSWORD:-quantum}@rabbitmq:5672/
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: postgresql://${POSTGRES_USER:-quantum}:${POSTGRES_PASSWORD:-quantum}@postgres:5432/${POSTGRES_DB:-quantumjump}
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
+      rabbitmq:
         condition: service_healthy
     deploy:
       replicas: 3   # Worker 수를 조절해 분산 처리 실험
@@ -80,3 +102,4 @@ services:
 volumes:
   postgres-data:
   kafka-data:
+  rabbitmq-data:
