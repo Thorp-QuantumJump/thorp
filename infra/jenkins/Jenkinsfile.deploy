@@ -13,10 +13,17 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
 
+    parameters {
+        string(
+            name: 'DEPLOY_BRANCH',
+            defaultValue: 'dev',
+            description: '배포할 브랜치. 평소에는 dev, 머지 전 검증 시에만 다른 값을 넣는다'
+        )
+    }
+
     environment {
         // 서버에 레포를 클론해 둔 고정 경로. infra/.env.prod 의 DEPLOY_DIR과 같아야 한다.
         DEPLOY_DIR = '/home/ubuntu/S15P21E205'
-        DEPLOY_BRANCH = 'dev'
     }
 
     stages {
@@ -30,6 +37,16 @@ pipeline {
                 sh '''
                     cd "$DEPLOY_DIR"
                     git fetch --prune origin
+
+                    # 배포 대상 브랜치에 인프라 설정이 실제로 있는지 먼저 확인한다.
+                    # 이 검사가 없으면 인프라가 머지되지 않은 브랜치로 전환되어
+                    # 실행 중인 컨테이너가 compose 파일을 잃는다.
+                    if ! git cat-file -e "origin/$DEPLOY_BRANCH:infra/docker-compose.prod.yml" 2>/dev/null; then
+                        echo "오류: origin/$DEPLOY_BRANCH 에 infra/docker-compose.prod.yml 이 없다." >&2
+                        echo "      배포 가능한 브랜치가 아니다. 작업 디렉토리를 건드리지 않고 중단한다." >&2
+                        exit 1
+                    fi
+
                     git checkout "$DEPLOY_BRANCH"
 
                     # 폐기되는 내용을 빌드 로그에 남긴다. 조용히 사라지면 원인을 못 찾는다.
