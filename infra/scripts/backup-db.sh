@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # PostgreSQL 논리 백업. cron으로 매일 돌린다.
-#
-# 주의: DB 원본과 이 백업이 같은 볼륨에 있다. 볼륨이 사라지면 둘 다 없어지므로
-# 주기적으로 서버 밖(로컬 PC / 서버2 / S3)으로 회수해야 한다.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
