@@ -39,5 +39,8 @@
   - Access scope → only the requesting user may view status and results (FR-016~FR-017, User
     entity, SC-010). User identification is recorded as a prerequisite dependency in Assumptions.
 - All items pass. Ready for `/speckit-plan`.
+- 2026-09-02 amendment from F2 (002-backtest-conditions) clarification: added FR-018 (record the
+  market data basis used by each run, viewable with the result) and the corresponding Backtest Run
+  attributes. Re-validated; all items still pass.
 - `docs/specs/` and `.specify/memory/constitution.md` referenced in the spec are document
   locations mandated by the constitution, not implementation details.
