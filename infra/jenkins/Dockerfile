@@ -1,6 +1,4 @@
-# 공식 Jenkins 이미지에는 docker CLI가 없다.
-# 호스트의 docker.sock을 쓰려면(DooD) CLI와 compose 플러그인을 넣어야 한다.
-# backend가 Java 21이라 jdk21 태그를 쓴다.
+# 공식 이미지에는 docker CLI가 없어 직접 넣는다. docker.sock을 쓰려면 필요하다.
 FROM jenkins/jenkins:lts-jdk21
 
 USER root
