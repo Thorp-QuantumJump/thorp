@@ -41,7 +41,7 @@ make_dummy_cert() {
         openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
             -keyout '/etc/letsencrypt/live/$DOMAIN/privkey.pem' \
             -out    '/etc/letsencrypt/live/$DOMAIN/fullchain.pem' \
-            -subj '/CN=localhost' 2>/dev/null"
+            -subj '/CN=$DOMAIN' 2>/dev/null"
 }
 
 # 4단계는 임시 인증서를 지운 뒤 실제 발급을 요청한다. 그 사이에 실패하면
