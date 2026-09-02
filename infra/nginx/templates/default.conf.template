@@ -47,7 +47,9 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://backend_was;
+        # 끝의 슬래시가 /api 접두사를 떼어낸다. 없으면 /api/backtests 가 그대로
+        # 전달되어 백엔드(/backtests)가 못 받는다. 지우지 말 것.
+        proxy_pass http://backend_was/;
         proxy_http_version 1.1;
         proxy_set_header Connection        "";
         proxy_set_header Host              $host;

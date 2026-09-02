@@ -59,7 +59,7 @@ pipeline {
                     #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
                     docker run --rm --network quantum-jump_edge curlimages/curl:8.10.1 \
                         -sf --max-time 10 --connect-to "${DOMAIN}:443:nginx:443" \
-                        -o /dev/null "https://${DOMAIN}/api/health"
+                        -o /dev/null "https://${DOMAIN}/api/actuator/health"
                 '''
             }
         }
