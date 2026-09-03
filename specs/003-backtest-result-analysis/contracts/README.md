@@ -29,7 +29,7 @@
 1. `GET /backtests/{id}` 응답에 `config`와 `summary`가 추가된다. `summary`는 COMPLETED일 때만 값이 있다
 2. 차트 데이터는 `GET /backtests/{id}/timeseries`에서 받는다. 전략 3개 비교 화면은 이 API를 전략 수만큼 호출한다
 3. 지표는 문자열(`'+124.8%'`)이 아니라 number(`1.248`)로 온다. 포맷팅은 프론트가 한다
-4. dev 시더의 `maxDrawdown`은 시계열에서 도출한 값이라 목데이터의 `mdd`와 다르다(trend −0.1261, dualMomentum −0.1171, rsiMeanReversion −0.0690)
+4. dev 시더의 `maxDrawdown`은 시계열에서 도출한 값이라 목데이터의 `mdd`와 다르다(trend −0.1261, dualMomentum −0.1171, rsiMeanReversion −0.0795)
 5. `winRate`·`profitFactor`는 시더 데이터에서 `null`(계산 불가)이다. "계산 불가"로 표시해야 한다
 6. `POST /backtests`에 `initialCash`(선택, 기본 10,000,000)를 보낼 수 있다
 7. `summary`에 최대 낙폭 구간 3필드(`maxDrawdownPeakDate`, `maxDrawdownTroughDate`, `maxDrawdownRecoveryDate`)가 있다. 회복일이 `null`이면 "미회복", 세 필드가 모두 `null`이면 "낙폭 없음"으로 표시한다
