@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thorp.ssafy.io/contracts/strategy-definition.schema.json",
+  "title": "StrategyDefinition",
+  "description": "하나의 퀀트 전략에 대한 메타데이터와 검증 계약. 진입/청산 조건은 사람이 읽는 서술만 담고 매매 판단 로직은 전략 구현이 소유한다. 이 스키마로 표현할 수 없는 규칙(D1~D13)은 data-model.md 참조.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "strategyId",
+    "definitionVersion",
+    "displayName",
+    "description",
+    "entryCondition",
+    "exitCondition",
+    "executionScopes",
+    "parameters",
+    "parameterConstraints",
+    "minimumHistoryRequirement",
+    "changeHistory"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "정의 형식의 버전. 개별 전략의 definitionVersion과 다른 축이다.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "strategyId": {
+      "description": "카탈로그 안에서 유일한 식별자. 유일성은 카탈로그 로딩 시 검사한다(D1).",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,49}$"
+    },
+    "definitionVersion": {
+      "description": "전략별 단조 증가 정수. 판정·실행 결과에 영향을 주는 변경에서만 올린다.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "entryCondition": {
+      "description": "진입 조건 서술. 기계가 해석·실행할 수 있는 형태를 담지 않는다.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "exitCondition": {
+      "description": "청산 조건 서술.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "executionScopes": {
+      "description": "이 전략이 유효한 실행 목적.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/executionScope" }
+    },
+    "parameters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameterDefinition" }
+    },
+    "parameterConstraints": {
+      "description": "둘 이상의 파라미터에 걸친 제약. 개별 파라미터 범위는 여기 담지 않는다.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameterConstraint" }
+    },
+    "minimumHistoryRequirement": { "$ref": "#/$defs/minimumHistoryRequirement" },
+    "changeHistory": {
+      "description": "최신 우선 정렬. [0]의 definitionVersion은 최상위 definitionVersion과 같아야 한다(D10).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/changeHistoryEntry" }
+    },
+    "deprecated": {
+      "description": "true면 신규 선택 대상에서 제외하되 기존 실행 기록 조회는 유지한다.",
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "$defs": {
+    "executionScope": {
+      "type": "string",
+      "enum": ["BACKTEST", "LIVE"]
+    },
+    "parameterType": {
+      "type": "string",
+      "enum": ["INTEGER", "DECIMAL", "BOOLEAN", "ENUM"]
+    },
+    "parameterDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "displayName", "description", "type", "required", "executionScopes"],
+      "properties": {
+        "name": {
+          "description": "프로그램이 쓰는 이름. 정의 안에서 유일해야 한다(D2).",
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]{0,39}$"
+        },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "type": { "$ref": "#/$defs/parameterType" },
+        "required": { "type": "boolean" },
+        "defaultValue": {
+          "description": "required:true인 파라미터에는 둘 수 없다(D4). 값은 자기 유효 범위를 만족해야 한다(D3).",
+          "type": ["integer", "number", "boolean", "string"]
+        },
+        "unit": {
+          "description": "표시용 단위. 판정에 사용하지 않는다.",
+          "type": ["string", "null"],
+          "maxLength": 20
+        },
+        "executionScopes": {
+          "description": "이 파라미터가 의미를 갖는 실행 목적.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/executionScope" }
+        },
+        "numericRange": { "$ref": "#/$defs/numericRange" },
+        "enumValues": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/enumOption" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "INTEGER" } }
+          },
+          "then": {
+            "required": ["numericRange"],
+            "properties": {
+              "enumValues": false,
+              "defaultValue": { "type": "integer" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "DECIMAL" } }
+          },
+          "then": {
+            "required": ["numericRange"],
+            "properties": {
+              "enumValues": false,
+              "defaultValue": { "type": "number" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "BOOLEAN" } }
+          },
+          "then": {
+            "properties": {
+              "numericRange": false,
+              "enumValues": false,
+              "defaultValue": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "ENUM" } }
+          },
+          "then": {
+            "required": ["enumValues"],
+            "properties": {
+              "numericRange": false,
+              "defaultValue": { "type": "string" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["required"],
+            "properties": { "required": { "const": true } }
+          },
+          "then": { "properties": { "defaultValue": false } }
+        }
+      ]
+    },
+    "numericRange": {
+      "description": "한쪽 경계만 지정한 열린 범위도 유효하다.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": "number" },
+        "minInclusive": { "type": "boolean", "default": true },
+        "max": { "type": "number" },
+        "maxInclusive": { "type": "boolean", "default": true },
+        "step": {
+          "description": "허용 간격. 판정식은 (value - min) % step == 0 이며 십진 연산으로 수행한다.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["step"] },
+          "then": {
+            "required": ["min"],
+            "properties": { "minInclusive": { "const": true } }
+          }
+        }
+      ]
+    },
+    "enumOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "displayName"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 60 }
+      }
+    },
+    "parameterConstraint": {
+      "description": "양변 모두 파라미터 이름이어야 하며 상수를 허용하지 않는다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["left", "operator", "right", "message"],
+      "properties": {
+        "left": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,39}$" },
+        "operator": {
+          "type": "string",
+          "enum": ["LT", "LTE", "GT", "GTE", "EQ", "NE"]
+        },
+        "right": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,39}$" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "minimumHistoryRequirement": {
+      "description": "확정 파라미터 값으로부터 bars 단위 이력 요구량을 산출하는 선언. 자유 수식은 허용하지 않는다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "unit"],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "enum": ["FIXED", "PARAMETER", "MAX_PARAMETERS", "SUM_PARAMETERS"]
+        },
+        "value": { "type": "integer", "minimum": 0 },
+        "parameters": {
+          "description": "대상 파라미터 이름. 모두 INTEGER 타입이어야 한다(D9).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,39}$" }
+        },
+        "offset": { "type": "integer", "minimum": 0, "default": 0 },
+        "unit": { "const": "bars" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["rule"],
+            "properties": { "rule": { "const": "FIXED" } }
+          },
+          "then": {
+            "required": ["value"],
+            "properties": { "parameters": false }
+          }
+        },
+        {
+          "if": {
+            "required": ["rule"],
+            "properties": { "rule": { "const": "PARAMETER" } }
+          },
+          "then": {
+            "required": ["parameters"],
+            "properties": {
+              "value": false,
+              "parameters": { "minItems": 1, "maxItems": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["rule"],
+            "properties": { "rule": { "enum": ["MAX_PARAMETERS", "SUM_PARAMETERS"] } }
+          },
+          "then": {
+            "required": ["parameters"],
+            "properties": {
+              "value": false,
+              "parameters": { "minItems": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "changeHistoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definitionVersion", "changeType", "changeSummary", "changedAt"],
+      "properties": {
+        "definitionVersion": { "type": "integer", "minimum": 1 },
+        "changeType": {
+          "description": "BACKWARD_COMPATIBLE은 직전 버전에서 유효했던 모든 값 집합이 이 버전에서도 유효함을 뜻한다.",
+          "type": "string",
+          "enum": ["INITIAL", "BACKWARD_COMPATIBLE", "INCOMPATIBLE"]
+        },
+        "changeSummary": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "changedAt": { "type": "string", "format": "date" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["definitionVersion"],
+            "properties": { "definitionVersion": { "const": 1 } }
+          },
+          "then": { "properties": { "changeType": { "const": "INITIAL" } } },
+          "else": { "properties": { "changeType": { "not": { "const": "INITIAL" } } } }
+        }
+      ]
+    }
+  }
+}

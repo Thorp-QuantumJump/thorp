@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thorp.ssafy.io/contracts/strategy-catalog-api.schema.json",
+  "title": "Strategy Catalog API",
+  "description": "전략 카탈로그 조회와 파라미터 값 판정 API의 요청·응답 계약. 모든 응답은 common/web/response/ApiResponse 봉투에 담긴다.",
+  "$defs": {
+    "apiEnvelope": {
+      "description": "com.ssafy.thorp.common.web.response.ApiResponse 의 JSON 표현.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["success", "data", "error"],
+      "properties": {
+        "success": { "type": "boolean" },
+        "data": {},
+        "error": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "getStrategiesResponseData": {
+      "description": "GET /strategies — 사용 가능한 전략 목록. 전략이 하나도 없으면 빈 배열이며 오류가 아니다.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/strategySummary" }
+    },
+
+    "strategySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategyId",
+        "definitionVersion",
+        "displayName",
+        "description",
+        "executionScopes",
+        "parameterCount",
+        "deprecated"
+      ],
+      "properties": {
+        "strategyId": { "type": "string" },
+        "definitionVersion": { "type": "integer", "minimum": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "executionScopes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["BACKTEST", "LIVE"] }
+        },
+        "parameterCount": { "type": "integer", "minimum": 0 },
+        "deprecated": { "type": "boolean" }
+      }
+    },
+
+    "getStrategyResponseData": {
+      "description": "GET /strategies/{strategyId} — 전략 정의 전체. strategy-definition.schema.json 과 동일한 구조를 그대로 노출한다. 존재하지 않으면 404 + error.code=RESOURCE_NOT_FOUND.",
+      "$ref": "strategy-definition.schema.json"
+    },
+
+    "parameterValueSet": {
+      "description": "사용자가 지정한 파라미터 값. 선택 파라미터는 생략할 수 있다.",
+      "type": "object",
+      "additionalProperties": {
+        "type": ["integer", "number", "boolean", "string"]
+      },
+      "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]{0,39}$" }
+    },
+
+    "parameterValidationRequest": {
+      "description": "POST /strategies/{strategyId}/parameter-validation 요청 본문.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameters"],
+      "properties": {
+        "parameters": { "$ref": "#/$defs/parameterValueSet" },
+        "executionScope": {
+          "description": "생략 시 BACKTEST. 해당 목적에 적용되지 않는 파라미터는 판정 대상에서 제외한다.",
+          "type": "string",
+          "enum": ["BACKTEST", "LIVE"],
+          "default": "BACKTEST"
+        }
+      }
+    },
+
+    "parameterValidationResponseData": {
+      "description": "판정 결과. 위반이 하나라도 있으면 resolvedParameters 와 requiredHistoryBars 는 null 이다. HTTP 상태는 판정 결과와 무관하게 200 — 요청 자체는 성공했고 판정 결과가 본문에 담긴다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategyId",
+        "definitionVersion",
+        "valid",
+        "violations",
+        "resolvedParameters",
+        "requiredHistoryBars"
+      ],
+      "properties": {
+        "strategyId": { "type": "string" },
+        "definitionVersion": { "type": "integer", "minimum": 1 },
+        "valid": { "type": "boolean" },
+        "violations": {
+          "description": "발견된 모든 위반. 첫 위반에서 중단하지 않는다. 순서는 판정 단계 순(S1→S6), 같은 단계 안에서는 정의의 parameters 선언 순서다.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameterViolation" }
+        },
+        "resolvedParameters": {
+          "description": "기본값이 채워진 확정 값 집합. 전략이 사용하는 모든 파라미터가 빠짐없이 들어간다.",
+          "oneOf": [{ "$ref": "#/$defs/parameterValueSet" }, { "type": "null" }]
+        },
+        "requiredHistoryBars": {
+          "description": "확정 값 기준 최소 이력 요구량(bars). 달력 일자 환산은 이 계약의 범위 밖이다.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["valid"],
+            "properties": { "valid": { "const": true } }
+          },
+          "then": {
+            "properties": {
+              "violations": { "maxItems": 0 },
+              "resolvedParameters": { "type": "object" },
+              "requiredHistoryBars": { "type": "integer" }
+            }
+          },
+          "else": {
+            "properties": {
+              "violations": { "minItems": 1 },
+              "resolvedParameters": { "type": "null" },
+              "requiredHistoryBars": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+
+    "parameterViolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "parameterName", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/violationCode" },
+        "parameterName": {
+          "description": "CONSTRAINT_VIOLATED 는 제약의 left 를 담는다. UNKNOWN_STRATEGY 는 null.",
+          "type": ["string", "null"]
+        },
+        "message": { "type": "string", "minLength": 1 },
+        "detail": {
+          "description": "판정 근거. 예: {\"min\":2,\"max\":120,\"actual\":300}",
+          "type": ["object", "null"]
+        }
+      }
+    },
+
+    "violationCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_STRATEGY",
+        "UNKNOWN_PARAMETER",
+        "REQUIRED_PARAMETER_MISSING",
+        "TYPE_MISMATCH",
+        "OUT_OF_RANGE",
+        "STEP_MISMATCH",
+        "NOT_IN_ENUM",
+        "CONSTRAINT_VIOLATED"
+      ]
+    }
+  }
+}

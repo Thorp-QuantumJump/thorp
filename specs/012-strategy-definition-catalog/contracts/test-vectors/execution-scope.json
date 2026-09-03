@@ -1,0 +1,134 @@
+{
+  "vectorVersion": 1,
+  "description": "executionScope 필터링 전용 벡터(FR-021). 실행 목적에 포함되지 않은 파라미터는 그 요청에서 존재하지 않는 것으로 취급한다 — 필수여도 요구하지 않고, 확정 값 집합에 넣지 않으며, 입력에 들어오면 UNKNOWN_PARAMETER 로 거부한다. parameter-validation.json 과 같은 형식이므로 같은 테스트 하네스로 읽는다.",
+  "definitionSources": {
+    "SCOPED_DEMO": {
+      "inline": {
+        "schemaVersion": "1.0.0",
+        "strategyId": "SCOPED_DEMO",
+        "definitionVersion": 1,
+        "displayName": "실행 목적별 파라미터 데모",
+        "description": "executionScope 에 따라 판정 대상 파라미터가 달라지는 경우를 검증하기 위한 합성 정의.",
+        "entryCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "exitCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "executionScopes": [
+          "BACKTEST",
+          "LIVE"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "displayName": "관측 기간",
+            "description": "양쪽 실행 목적에서 모두 쓰인다.",
+            "type": "INTEGER",
+            "required": true,
+            "unit": "bars",
+            "executionScopes": [
+              "BACKTEST",
+              "LIVE"
+            ],
+            "numericRange": {
+              "min": 1,
+              "minInclusive": true,
+              "max": 100,
+              "maxInclusive": true,
+              "step": 1
+            }
+          },
+          {
+            "name": "slippageRate",
+            "displayName": "슬리피지",
+            "description": "과거 데이터 검증에서만 의미가 있다. 실시장 운용에서는 실제 체결가가 대신한다.",
+            "type": "DECIMAL",
+            "required": true,
+            "unit": "ratio",
+            "executionScopes": [
+              "BACKTEST"
+            ],
+            "numericRange": {
+              "min": 0,
+              "minInclusive": true,
+              "max": 0.05,
+              "maxInclusive": true,
+              "step": 0.0001
+            }
+          }
+        ],
+        "parameterConstraints": [],
+        "minimumHistoryRequirement": {
+          "rule": "PARAMETER",
+          "parameters": [
+            "period"
+          ],
+          "offset": 0,
+          "unit": "bars"
+        },
+        "changeHistory": [
+          {
+            "definitionVersion": 1,
+            "changeType": "INITIAL",
+            "changeSummary": "최초 정의",
+            "changedAt": "2026-09-03"
+          }
+        ],
+        "deprecated": false
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "실행 목적에 포함된 파라미터는 모두 판정 대상이다",
+      "strategyId": "SCOPED_DEMO",
+      "executionScope": "BACKTEST",
+      "input": {
+        "period": 10,
+        "slippageRate": 0.001
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "period": 10,
+          "slippageRate": 0.001
+        },
+        "requiredHistoryBars": 10
+      }
+    },
+    {
+      "name": "실행 목적에 해당하지 않는 파라미터는 필수여도 요구하지 않고 확정 값에서도 빠진다",
+      "strategyId": "SCOPED_DEMO",
+      "executionScope": "LIVE",
+      "input": {
+        "period": 10
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "period": 10
+        },
+        "requiredHistoryBars": 10
+      }
+    },
+    {
+      "name": "실행 목적에 해당하지 않는 파라미터를 보내면 정의에 없는 파라미터로 거부된다",
+      "strategyId": "SCOPED_DEMO",
+      "executionScope": "LIVE",
+      "input": {
+        "period": 10,
+        "slippageRate": 0.001
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "UNKNOWN_PARAMETER",
+            "parameterName": "slippageRate"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    }
+  ]
+}

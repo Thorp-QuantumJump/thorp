@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0.0",
+  "strategyId": "MOMENTUM",
+  "definitionVersion": 1,
+  "displayName": "모멘텀",
+  "description": "최근 일정 기간의 수익률이 기준치를 넘으면 추세가 이어질 것으로 보고 보유한다. 기존 worker/src/worker/strategies/momentum.py 의 lookback 개념을 정의로 옮긴 것이다.",
+  "entryCondition": "직전 lookbackDays 동안의 수익률이 진입 임계값을 넘은 다음 거래일 시가에 전량 진입한다.",
+  "exitCondition": "직전 lookbackDays 동안의 수익률이 진입 임계값 아래로 내려간 다음 거래일 시가에 전량 청산한다.",
+  "executionScopes": ["BACKTEST", "LIVE"],
+  "parameters": [
+    {
+      "name": "lookbackDays",
+      "displayName": "모멘텀 관측 기간",
+      "description": "수익률을 계산할 과거 거래일 수.",
+      "type": "INTEGER",
+      "required": true,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": 5, "minInclusive": true, "max": 250, "maxInclusive": true, "step": 1 }
+    },
+    {
+      "name": "entryThreshold",
+      "displayName": "진입 임계 수익률",
+      "description": "이 수익률을 넘어야 진입한다. 0.05는 5%를 뜻한다.",
+      "type": "DECIMAL",
+      "required": false,
+      "defaultValue": 0,
+      "unit": "ratio",
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": -0.5, "minInclusive": true, "max": 1, "maxInclusive": true, "step": 0.01 }
+    }
+  ],
+  "parameterConstraints": [],
+  "minimumHistoryRequirement": {
+    "rule": "PARAMETER",
+    "parameters": ["lookbackDays"],
+    "offset": 1,
+    "unit": "bars"
+  },
+  "changeHistory": [
+    {
+      "definitionVersion": 1,
+      "changeType": "INITIAL",
+      "changeSummary": "최초 정의",
+      "changedAt": "2026-09-03"
+    }
+  ],
+  "deprecated": false
+}

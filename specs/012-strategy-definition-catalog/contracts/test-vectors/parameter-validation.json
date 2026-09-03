@@ -1,0 +1,530 @@
+{
+  "vectorVersion": 1,
+  "description": "파라미터 값 판정과 최소 이력 산출의 공유 테스트 벡터. Spring BE(JUnit), FE(vitest), 그리고 판정을 구현하게 될 다른 소비자가 모두 이 파일을 읽어 같은 결과를 내야 한다. SC-002와 SC-010은 이 파일이 통과하는지로 측정한다. violations 비교는 code + parameterName + 배열 순서까지 일치해야 하며, message 문구는 비교 대상이 아니다. 모든 케이스의 executionScope 는 BACKTEST 이며, 실행 목적 필터링은 execution-scope.json 이 다룬다.",
+  "definitionSources": {
+    "SMA_CROSSOVER": {
+      "ref": "examples/SMA_CROSSOVER.json"
+    },
+    "RSI_REVERSION": {
+      "ref": "examples/RSI_REVERSION.json"
+    },
+    "MACD_SIGNAL": {
+      "ref": "examples/MACD_SIGNAL.json"
+    },
+    "FIXED_WARMUP": {
+      "inline": {
+        "schemaVersion": "1.0.0",
+        "strategyId": "FIXED_WARMUP",
+        "definitionVersion": 1,
+        "displayName": "고정 이력 요구 데모",
+        "description": "FIXED 규칙과 파라미터 없는 전략을 검증하기 위한 합성 정의.",
+        "entryCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "exitCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "executionScopes": [
+          "BACKTEST"
+        ],
+        "parameters": [],
+        "parameterConstraints": [],
+        "minimumHistoryRequirement": {
+          "rule": "FIXED",
+          "value": 250,
+          "offset": 0,
+          "unit": "bars"
+        },
+        "changeHistory": [
+          {
+            "definitionVersion": 1,
+            "changeType": "INITIAL",
+            "changeSummary": "최초 정의",
+            "changedAt": "2026-09-03"
+          }
+        ],
+        "deprecated": false
+      }
+    },
+    "DEFAULT_CONSTRAINT_DEMO": {
+      "inline": {
+        "schemaVersion": "1.0.0",
+        "strategyId": "DEFAULT_CONSTRAINT_DEMO",
+        "definitionVersion": 1,
+        "displayName": "기본값이 제약에 참여하는 데모",
+        "description": "생략된 선택 파라미터의 기본값이 상호 제약 판정에 그대로 쓰이는지 검증하기 위한 합성 정의.",
+        "entryCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "exitCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+        "executionScopes": [
+          "BACKTEST"
+        ],
+        "parameters": [
+          {
+            "name": "floorValue",
+            "displayName": "하단 값",
+            "description": "상단 값보다 작아야 한다.",
+            "type": "INTEGER",
+            "required": true,
+            "unit": null,
+            "executionScopes": [
+              "BACKTEST"
+            ],
+            "numericRange": {
+              "min": 1,
+              "minInclusive": true,
+              "max": 100,
+              "maxInclusive": true,
+              "step": 1
+            }
+          },
+          {
+            "name": "ceilValue",
+            "displayName": "상단 값",
+            "description": "생략하면 기본값 50이 쓰인다.",
+            "type": "INTEGER",
+            "required": false,
+            "defaultValue": 50,
+            "unit": null,
+            "executionScopes": [
+              "BACKTEST"
+            ],
+            "numericRange": {
+              "min": 1,
+              "minInclusive": true,
+              "max": 100,
+              "maxInclusive": true,
+              "step": 1
+            }
+          }
+        ],
+        "parameterConstraints": [
+          {
+            "left": "floorValue",
+            "operator": "LT",
+            "right": "ceilValue",
+            "message": "하단 값은 상단 값보다 작아야 합니다."
+          }
+        ],
+        "minimumHistoryRequirement": {
+          "rule": "MAX_PARAMETERS",
+          "parameters": [
+            "floorValue",
+            "ceilValue"
+          ],
+          "offset": 0,
+          "unit": "bars"
+        },
+        "changeHistory": [
+          {
+            "definitionVersion": 1,
+            "changeType": "INITIAL",
+            "changeSummary": "최초 정의",
+            "changedAt": "2026-09-03"
+          }
+        ],
+        "deprecated": false
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "필수만 채우면 기본값이 주입되고 이력 요구량이 산출된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20,
+        "longPeriod": 200
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "shortPeriod": 20,
+          "longPeriod": 200,
+          "allowShort": false,
+          "rebalancePeriod": "DAILY"
+        },
+        "requiredHistoryBars": 201
+      }
+    },
+    {
+      "name": "모든 값을 명시해도 결과는 같다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20,
+        "longPeriod": 200,
+        "allowShort": true,
+        "rebalancePeriod": "WEEKLY"
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "shortPeriod": 20,
+          "longPeriod": 200,
+          "allowShort": true,
+          "rebalancePeriod": "WEEKLY"
+        },
+        "requiredHistoryBars": 201
+      }
+    },
+    {
+      "name": "존재하지 않는 전략은 다른 판정을 수행하지 않고 종료한다",
+      "strategyId": "NO_SUCH_STRATEGY",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "UNKNOWN_STRATEGY",
+            "parameterName": null
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "정의에 없는 파라미터는 거부된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20,
+        "longPeriod": 200,
+        "unknownKnob": 1
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "UNKNOWN_PARAMETER",
+            "parameterName": "unknownKnob"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "필수 파라미터 누락은 이름을 특정해 거부한다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "REQUIRED_PARAMETER_MISSING",
+            "parameterName": "longPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "타입이 다르면 범위 판정으로 넘어가지 않는다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": "20",
+        "longPeriod": 200
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "TYPE_MISMATCH",
+            "parameterName": "shortPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "INTEGER 파라미터에 소수를 넣으면 타입 불일치다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20.5,
+        "longPeriod": 200
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "TYPE_MISMATCH",
+            "parameterName": "shortPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "상한을 넘으면 거부된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20,
+        "longPeriod": 500
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "OUT_OF_RANGE",
+            "parameterName": "longPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "배타 하한은 경계값 자체를 거부한다",
+      "strategyId": "RSI_REVERSION",
+      "executionScope": "BACKTEST",
+      "input": {
+        "rsiPeriod": 14,
+        "overboughtThreshold": 50
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "OUT_OF_RANGE",
+            "parameterName": "overboughtThreshold"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "DECIMAL step 위반은 십진 연산으로 판정한다",
+      "strategyId": "RSI_REVERSION",
+      "executionScope": "BACKTEST",
+      "input": {
+        "rsiPeriod": 14,
+        "oversoldThreshold": 30.2
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "STEP_MISMATCH",
+            "parameterName": "oversoldThreshold"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "step 배수에 정확히 맞으면 통과한다",
+      "strategyId": "RSI_REVERSION",
+      "executionScope": "BACKTEST",
+      "input": {
+        "rsiPeriod": 14,
+        "oversoldThreshold": 30.5
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "rsiPeriod": 14,
+          "oversoldThreshold": 30.5,
+          "overboughtThreshold": 70,
+          "maxHoldingBars": 20
+        },
+        "requiredHistoryBars": 15
+      }
+    },
+    {
+      "name": "상한이 없는 파라미터는 큰 값도 허용한다",
+      "strategyId": "RSI_REVERSION",
+      "executionScope": "BACKTEST",
+      "input": {
+        "rsiPeriod": 14,
+        "maxHoldingBars": 99999
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "rsiPeriod": 14,
+          "oversoldThreshold": 30,
+          "overboughtThreshold": 70,
+          "maxHoldingBars": 99999
+        },
+        "requiredHistoryBars": 15
+      }
+    },
+    {
+      "name": "허용 목록에 없는 열거값은 거부된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 20,
+        "longPeriod": 200,
+        "rebalancePeriod": "HOURLY"
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "NOT_IN_ENUM",
+            "parameterName": "rebalancePeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "개별 범위는 통과해도 상호 제약을 위반하면 거부된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": 100,
+        "longPeriod": 100
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "CONSTRAINT_VIOLATED",
+            "parameterName": "shortPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "상호 제약은 생략된 파라미터의 기본값까지 채운 확정 값으로 판정한다",
+      "strategyId": "DEFAULT_CONSTRAINT_DEMO",
+      "executionScope": "BACKTEST",
+      "input": {
+        "floorValue": 60
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "CONSTRAINT_VIOLATED",
+            "parameterName": "floorValue"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "기본값이 제약을 만족하면 통과한다",
+      "strategyId": "DEFAULT_CONSTRAINT_DEMO",
+      "executionScope": "BACKTEST",
+      "input": {
+        "floorValue": 40
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "floorValue": 40,
+          "ceilValue": 50
+        },
+        "requiredHistoryBars": 50
+      }
+    },
+    {
+      "name": "값이 확정되지 않은 파라미터를 참조하는 제약은 건너뛴다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": "not-a-number",
+        "longPeriod": 200
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "TYPE_MISMATCH",
+            "parameterName": "shortPeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "여러 위반은 판정 단계 순서대로 한 번에 보고된다",
+      "strategyId": "SMA_CROSSOVER",
+      "executionScope": "BACKTEST",
+      "input": {
+        "shortPeriod": "x",
+        "longPeriod": 500,
+        "rebalancePeriod": "HOURLY",
+        "unknownKnob": 1
+      },
+      "expected": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "UNKNOWN_PARAMETER",
+            "parameterName": "unknownKnob"
+          },
+          {
+            "code": "TYPE_MISMATCH",
+            "parameterName": "shortPeriod"
+          },
+          {
+            "code": "OUT_OF_RANGE",
+            "parameterName": "longPeriod"
+          },
+          {
+            "code": "NOT_IN_ENUM",
+            "parameterName": "rebalancePeriod"
+          }
+        ],
+        "resolvedParameters": null,
+        "requiredHistoryBars": null
+      }
+    },
+    {
+      "name": "SUM_PARAMETERS 는 대상 값의 합에 offset 을 더한다",
+      "strategyId": "MACD_SIGNAL",
+      "executionScope": "BACKTEST",
+      "input": {
+        "fastPeriod": 12,
+        "slowPeriod": 26
+      },
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {
+          "fastPeriod": 12,
+          "slowPeriod": 26,
+          "signalPeriod": 9
+        },
+        "requiredHistoryBars": 36
+      }
+    },
+    {
+      "name": "FIXED 규칙과 파라미터 없는 전략이 성립한다",
+      "strategyId": "FIXED_WARMUP",
+      "executionScope": "BACKTEST",
+      "input": {},
+      "expected": {
+        "valid": true,
+        "violations": [],
+        "resolvedParameters": {},
+        "requiredHistoryBars": 250
+      }
+    }
+  ]
+}

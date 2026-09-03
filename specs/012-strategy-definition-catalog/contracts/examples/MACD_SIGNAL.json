@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "strategyId": "MACD_SIGNAL",
+  "definitionVersion": 2,
+  "displayName": "MACD 시그널 교차",
+  "description": "빠른 지수이동평균과 느린 지수이동평균의 차(MACD)가 시그널선을 교차할 때 매매한다. 시그널선이 안정되기까지 느린 기간과 시그널 기간을 합한 만큼의 이력이 필요하다.",
+  "entryCondition": "MACD가 시그널선을 아래에서 위로 교차한 다음 거래일 시가에 전량 진입한다.",
+  "exitCondition": "MACD가 시그널선을 위에서 아래로 교차한 다음 거래일 시가에 전량 청산한다.",
+  "executionScopes": ["BACKTEST"],
+  "parameters": [
+    {
+      "name": "fastPeriod",
+      "displayName": "빠른 EMA 기간",
+      "description": "빠른 지수이동평균의 기간.",
+      "type": "INTEGER",
+      "required": true,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST"],
+      "numericRange": { "min": 2, "minInclusive": true, "max": 60, "maxInclusive": true, "step": 1 }
+    },
+    {
+      "name": "slowPeriod",
+      "displayName": "느린 EMA 기간",
+      "description": "느린 지수이동평균의 기간.",
+      "type": "INTEGER",
+      "required": true,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST"],
+      "numericRange": { "min": 5, "minInclusive": true, "max": 200, "maxInclusive": true, "step": 1 }
+    },
+    {
+      "name": "signalPeriod",
+      "displayName": "시그널 기간",
+      "description": "MACD를 다시 평활할 기간.",
+      "type": "INTEGER",
+      "required": false,
+      "defaultValue": 9,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST"],
+      "numericRange": { "min": 2, "minInclusive": true, "max": 50, "maxInclusive": true, "step": 1 }
+    }
+  ],
+  "parameterConstraints": [
+    {
+      "left": "fastPeriod",
+      "operator": "LT",
+      "right": "slowPeriod",
+      "message": "빠른 EMA 기간은 느린 EMA 기간보다 짧아야 합니다."
+    }
+  ],
+  "minimumHistoryRequirement": {
+    "rule": "SUM_PARAMETERS",
+    "parameters": ["slowPeriod", "signalPeriod"],
+    "offset": 1,
+    "unit": "bars"
+  },
+  "changeHistory": [
+    {
+      "definitionVersion": 2,
+      "changeType": "INCOMPATIBLE",
+      "changeSummary": "fastPeriod 하한을 1에서 2로 올림 — 기존에 1을 쓰던 값 집합이 무효해진다",
+      "changedAt": "2026-09-03"
+    },
+    {
+      "definitionVersion": 1,
+      "changeType": "INITIAL",
+      "changeSummary": "최초 정의",
+      "changedAt": "2026-09-02"
+    }
+  ],
+  "deprecated": false
+}

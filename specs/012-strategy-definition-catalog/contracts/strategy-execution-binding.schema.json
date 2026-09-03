@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thorp.ssafy.io/contracts/strategy-execution-binding.schema.json",
+  "title": "StrategyExecutionBinding",
+  "description": "실행 요청 메시지에 실리는 전략 바인딩. Backend가 판정을 마친 뒤 채우고 Worker가 소비한다. Worker는 전략 정의 파일을 읽지 않으며 이 객체만으로 실행에 필요한 전부를 얻는다. 이 객체 하나로 '어떤 전략의 어떤 버전을 어떤 값으로 실행했는가'가 사후에 특정된다(FR-019d, SC-009).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "strategyId",
+    "definitionVersion",
+    "resolvedParameters",
+    "requiredHistoryBars",
+    "executionScope"
+  ],
+  "properties": {
+    "strategyId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,49}$"
+    },
+    "definitionVersion": {
+      "description": "실행 시점에 사용한 정의의 버전. 실행 기록에 그대로 보존한다.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "resolvedParameters": {
+      "description": "기본값이 모두 채워진 확정 값 집합. 전략이 사용하는 모든 파라미터를 빠짐없이 담는다.",
+      "type": "object",
+      "additionalProperties": {
+        "type": ["integer", "number", "boolean", "string"]
+      },
+      "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]{0,39}$" }
+    },
+    "requiredHistoryBars": {
+      "description": "Backend가 minimumHistoryRequirement 로부터 산출한 값. Worker는 재계산하지 않고 이 값을 그대로 쓴다.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "executionScope": {
+      "type": "string",
+      "enum": ["BACKTEST", "LIVE"]
+    }
+  },
+
+  "$comment": "F1(백테스트 실행 및 결과 추적) 계약 델타 — 원칙 IV에 따라 생산자와 소비자를 함께 바꿔야 한다. 현재 worker/src/worker/models.py 의 BacktestJob.strategy 는 str 한 필드이며, 이 기능이 그것을 이 객체로 교체한다. backend 의 발행 메시지와 worker 의 BacktestJob 을 같은 MR에서 함께 변경하지 않으면 배포가 깨진다.",
+
+  "examples": [
+    {
+      "strategyId": "SMA_CROSSOVER",
+      "definitionVersion": 1,
+      "resolvedParameters": {
+        "shortPeriod": 20,
+        "longPeriod": 200,
+        "allowShort": false,
+        "rebalancePeriod": "DAILY"
+      },
+      "requiredHistoryBars": 201,
+      "executionScope": "BACKTEST"
+    }
+  ]
+}

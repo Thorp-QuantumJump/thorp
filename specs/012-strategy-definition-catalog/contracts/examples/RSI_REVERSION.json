@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0.0",
+  "strategyId": "RSI_REVERSION",
+  "definitionVersion": 1,
+  "displayName": "RSI 평균 회귀",
+  "description": "상대강도지수(RSI)가 과매도 구간에 들어가면 반등을 기대해 진입하고 과매수 구간에서 청산한다. 추세가 강한 구간에서는 이른 진입으로 손실이 커질 수 있다.",
+  "entryCondition": "RSI가 과매도 임계값 아래로 내려간 다음 거래일 시가에 전량 진입한다.",
+  "exitCondition": "RSI가 과매수 임계값 위로 올라간 다음 거래일 시가에 전량 청산한다.",
+  "executionScopes": ["BACKTEST", "LIVE"],
+  "parameters": [
+    {
+      "name": "rsiPeriod",
+      "displayName": "RSI 계산 기간",
+      "description": "RSI를 계산할 거래일 수.",
+      "type": "INTEGER",
+      "required": true,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": 2, "minInclusive": true, "max": 60, "maxInclusive": true, "step": 1 }
+    },
+    {
+      "name": "oversoldThreshold",
+      "displayName": "과매도 임계값",
+      "description": "이 값 아래로 내려가면 과매도로 본다. 낮출수록 진입이 드물어진다.",
+      "type": "DECIMAL",
+      "required": false,
+      "defaultValue": 30,
+      "unit": null,
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": 5, "minInclusive": true, "max": 50, "maxInclusive": true, "step": 0.5 }
+    },
+    {
+      "name": "overboughtThreshold",
+      "displayName": "과매수 임계값",
+      "description": "이 값 위로 올라가면 과매수로 본다. 높일수록 보유 기간이 길어진다. 50은 포함하지 않는다.",
+      "type": "DECIMAL",
+      "required": false,
+      "defaultValue": 70,
+      "unit": null,
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": 50, "minInclusive": false, "max": 95, "maxInclusive": true }
+    },
+    {
+      "name": "maxHoldingBars",
+      "displayName": "최대 보유 기간",
+      "description": "과매수 신호가 오지 않아도 이 기간이 지나면 청산한다. 상한이 없다.",
+      "type": "INTEGER",
+      "required": false,
+      "defaultValue": 20,
+      "unit": "bars",
+      "executionScopes": ["BACKTEST", "LIVE"],
+      "numericRange": { "min": 1, "minInclusive": true, "step": 1 }
+    }
+  ],
+  "parameterConstraints": [
+    {
+      "left": "oversoldThreshold",
+      "operator": "LT",
+      "right": "overboughtThreshold",
+      "message": "과매도 임계값은 과매수 임계값보다 낮아야 합니다."
+    }
+  ],
+  "minimumHistoryRequirement": {
+    "rule": "PARAMETER",
+    "parameters": ["rsiPeriod"],
+    "offset": 1,
+    "unit": "bars"
+  },
+  "changeHistory": [
+    {
+      "definitionVersion": 1,
+      "changeType": "INITIAL",
+      "changeSummary": "최초 정의",
+      "changedAt": "2026-09-03"
+    }
+  ],
+  "deprecated": false
+}
