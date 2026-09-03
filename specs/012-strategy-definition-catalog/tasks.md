@@ -55,10 +55,10 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 어떤 사용자 스토리도 시작할 수 없다
 
-- [ ] T011 `.../strategy/` 아래 `presentation/{controller,request,response}`, `application/{service,command,result,repository}`, `domain/{model,vo,policy,exception}`, `infrastructure/catalog` 디렉터리 생성
-- [ ] T012 [P] `.../strategy/domain/vo/`에 enum 6종 작성 — `ParameterType`(INTEGER/DECIMAL/BOOLEAN/ENUM), `ExecutionScope`(BACKTEST/LIVE), `ConstraintOperator`(LT/LTE/GT/GTE/EQ/NE), `HistoryRule`(FIXED/PARAMETER/MAX_PARAMETERS/SUM_PARAMETERS), `ChangeType`(INITIAL/BACKWARD_COMPATIBLE/INCOMPATIBLE), `ViolationCode`(8종)
-- [ ] T013 [P] `.../strategy/domain/vo/`에 값 타입 작성 — `NumericRange`(BigDecimal min/max + 경계 포함 여부 + step), `EnumOption`, `sealed interface ParameterValue` + `IntegerValue`/`DecimalValue`/`BooleanValue`/`EnumValue`, `ResolvedParameters`
-- [ ] T014 `.../strategy/domain/model/`에 정의 record 작성 — `ParameterDefinition`, `ParameterConstraint`, `MinimumHistoryRequirement`, `ChangeHistoryEntry`, `StrategyDefinition`, `StrategyCatalog` (T012·T013 필요). 필드는 data-model.md §2~§6을 따른다
+- [X] T011 `.../strategy/` 아래 `presentation/{controller,request,response}`, `application/{service,command,result,repository}`, `domain/{model,vo,policy,exception}`, `infrastructure/catalog` 디렉터리 생성
+- [X] T012 [P] `.../strategy/domain/vo/`에 enum 6종 작성 — `ParameterType`(INTEGER/DECIMAL/BOOLEAN/ENUM), `ExecutionScope`(BACKTEST/LIVE), `ConstraintOperator`(LT/LTE/GT/GTE/EQ/NE), `HistoryRule`(FIXED/PARAMETER/MAX_PARAMETERS/SUM_PARAMETERS), `ChangeType`(INITIAL/BACKWARD_COMPATIBLE/INCOMPATIBLE), `ViolationCode`(8종)
+- [X] T013 [P] `.../strategy/domain/vo/`에 값 타입 작성 — `NumericRange`(BigDecimal min/max + 경계 포함 여부 + step), `EnumOption`, `sealed interface ParameterValue` + `IntegerValue`/`DecimalValue`/`BooleanValue`/`EnumValue`, `ResolvedParameters`
+- [X] T014 `.../strategy/domain/model/`에 정의 record 작성 — `ParameterDefinition`, `ParameterConstraint`, `MinimumHistoryRequirement`, `ChangeHistoryEntry`, `StrategyDefinition`, `StrategyCatalog` (T012·T013 필요). 필드는 data-model.md §2~§6을 따른다
 - [ ] T015 [P] `.../strategy/domain/exception/`에 `StrategyNotFoundException`, `InvalidStrategyDefinitionException` 작성
 - [ ] T016 [P] `.../strategy/application/repository/StrategyDefinitionRepository.java` 인터페이스 작성 — `findAll()`, `findById(String strategyId)`
 - [ ] T017 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonDto.java` 작성 — Jackson 바인딩 전용 DTO. 도메인은 Jackson을 참조할 수 없으므로 역직렬화는 여기서만 한다
@@ -66,7 +66,7 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 - [ ] T019 `.../strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepository.java` 작성 — 기동 시 `classpath:strategies/*.json` 스캔 후 불변 맵 보관. 역직렬화 실패분은 `WARN` 로그 후 제외하고 나머지는 제공한다. 정의가 0건이어도 기동에 성공한다. 핫 리로드는 두지 않는다
 - [ ] T020 [P] `contracts/examples/`의 정의 4종(`SMA_CROSSOVER`, `RSI_REVERSION`, `MACD_SIGNAL`, `MOMENTUM`)을 `backend/src/main/resources/strategies/`에 배치
 - [ ] T021 [P] `.../test/strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepositoryTest.java` 작성 — 4종 로드, 정의 0건일 때 빈 카탈로그, 깨진 JSON 하나가 나머지를 막지 않음
-- [ ] T022 `cd backend && ./gradlew test`로 `ArchitectureTest` 통과 확인 — `domain`이 Spring·JPA·Jackson을 참조하지 않고 계층 의존 방향이 지켜지는지
+- [X] T022 `cd backend && ./gradlew test`로 `ArchitectureTest` 통과 확인 — `domain`이 Spring·JPA·Jackson을 참조하지 않고 계층 의존 방향이 지켜지는지
 
 **Checkpoint**: 정의가 도메인 객체로 로드된다. 사용자 스토리 구현을 병렬로 시작할 수 있다
 
