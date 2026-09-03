@@ -1,6 +1,7 @@
 package com.thorp.api.common.web.advice;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -18,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,12 +61,51 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("도메인 불변식 위반(IllegalArgumentException)은 400으로 응답한다")
+    void illegalArgumentException() throws Exception {
+        mockMvc.perform(get("/test/illegal-argument"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
+                .andExpect(
+                        jsonPath("$.error.message").value("startDate must not be after endDate"));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 경로는 500이 아니라 404로 응답한다")
     void unknownPath() throws Exception {
         mockMvc.perform(get("/test/no-such-path"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("깨진 JSON 본문은 500이 아니라 400으로 응답한다")
+    void malformedJsonBody() throws Exception {
+        mockMvc.perform(
+                        post("/test/validation")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{oops"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    @DisplayName("경로 변수 타입 불일치는 500이 아니라 400으로 응답한다")
+    void pathVariableTypeMismatch() throws Exception {
+        mockMvc.perform(get("/test/number/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    @DisplayName("허용되지 않는 메서드는 500이 아니라 405로 응답한다")
+    void methodNotAllowed() throws Exception {
+        mockMvc.perform(delete("/test/business"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test
@@ -89,6 +130,14 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/validation")
         void validation(@Valid @RequestBody SampleRequest request) {}
+
+        @GetMapping("/number/{value}")
+        void number(@PathVariable Long value) {}
+
+        @GetMapping("/illegal-argument")
+        void illegalArgument() {
+            throw new IllegalArgumentException("startDate must not be after endDate");
+        }
 
         @GetMapping("/unexpected")
         void unexpected() {

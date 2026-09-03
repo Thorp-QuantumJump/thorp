@@ -68,6 +68,24 @@ class BacktestControllerTest {
     }
 
     @Test
+    @DisplayName("POST /backtests startDate > endDate → 400")
+    void createRejectsInvertedPeriod() throws Exception {
+        when(backtestService.create(any()))
+                .thenThrow(new IllegalArgumentException("startDate must not be after endDate"));
+
+        mockMvc.perform(
+                        post("/backtests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"strategy":"sma-cross","startDate":"2023-12-31","endDate":"2019-01-01"}
+                                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
     @DisplayName("GET /backtests/{id} → 200 + 현재 상태")
     void getReturnsStatus() throws Exception {
         when(backtestService.get(1L))
