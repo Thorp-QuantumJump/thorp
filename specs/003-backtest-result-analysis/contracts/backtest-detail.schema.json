@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thorp.ssafy/contracts/backtest-detail.schema.json",
+  "title": "BacktestDetail",
+  "description": "GET /backtests/{backtestId} 및 POST /backtests 응답의 data. ApiResponse 래퍼({success, data, error}) 안에 들어간다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["backtestId", "status", "config", "summary"],
+  "properties": {
+    "backtestId": { "type": "integer", "description": "Job id" },
+    "status": {
+      "type": "string",
+      "enum": ["QUEUED", "RUNNING", "COMPLETED", "FAILED"]
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "startDate", "endDate", "initialCash"],
+      "properties": {
+        "strategy": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "initialCash": { "type": "integer", "minimum": 1, "description": "초기 자산(KRW)" }
+      }
+    },
+    "summary": {
+      "description": "status가 COMPLETED이고 결과가 저장되어 있을 때만 객체. 그 외 null. 지표 필드의 null은 '계산 불가'.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "initialEquity", "finalEquity", "totalReturn", "cagr", "maxDrawdown", "volatility",
+            "sharpeRatio", "tradeCount", "winRate", "profitFactor", "metricDefinitionVersion"
+          ],
+          "properties": {
+            "initialEquity": { "type": "integer", "minimum": 1, "description": "시작 자산(KRW)" },
+            "finalEquity": { "type": "integer", "minimum": 0, "description": "종료 시점 총 자산(KRW)" },
+            "totalReturn": { "type": ["number", "null"], "description": "finalEquity / initialEquity - 1" },
+            "cagr": { "type": ["number", "null"], "description": "연환산 수익률 (365 / 달력 경과일 기준)" },
+            "maxDrawdown": { "type": ["number", "null"], "maximum": 0, "description": "최대 낙폭, 0 또는 음수" },
+            "volatility": { "type": ["number", "null"], "minimum": 0, "description": "연환산 변동성 (ddof=1, √252)" },
+            "sharpeRatio": { "type": ["number", "null"], "description": "(일별수익률 평균×252 − 0) / volatility" },
+            "tradeCount": { "type": "integer", "minimum": 0, "description": "청산 거래 수" },
+            "winRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "profitFactor": { "type": ["number", "null"], "minimum": 0 },
+            "metricDefinitionVersion": { "type": "string", "minLength": 1, "description": "지표 계산 규약 버전, 예: \"1.0\"" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_request": "GET /backtests/999  또는  GET /backtests/999/timeseries",
+  "_status": 404,
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "백테스트를 찾을 수 없습니다: id=999"
+  }
+}

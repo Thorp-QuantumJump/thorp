@@ -1,0 +1,10 @@
+{
+  "_request": "GET /backtests/4/timeseries  (status = QUEUED | RUNNING | FAILED, 또는 COMPLETED이지만 결과 행 없음)",
+  "_status": 409,
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "RESULT_NOT_READY",
+    "message": "백테스트 결과가 아직 준비되지 않았습니다: id=4, status=QUEUED"
+  }
+}

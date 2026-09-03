@@ -1,0 +1,15 @@
+{
+  "_note": "dev 시더(trend) 기준 앞 4개 포인트와 마지막 포인트만 발췌. 실제 응답은 20개(Worker 결과는 기간 내 모든 거래일).",
+  "success": true,
+  "data": {
+    "backtestId": 1,
+    "points": [
+      { "date": "2019-01-01", "equity": 10000000, "cumulativeReturn": 0.0, "drawdown": 0.0 },
+      { "date": "2019-04-01", "equity": 10600000, "cumulativeReturn": 0.06, "drawdown": 0.0 },
+      { "date": "2019-07-01", "equity": 11200000, "cumulativeReturn": 0.12, "drawdown": 0.0 },
+      { "date": "2019-10-01", "equity": 10800000, "cumulativeReturn": 0.08, "drawdown": -0.0357 },
+      { "date": "2023-10-01", "equity": 22480000, "cumulativeReturn": 1.248, "drawdown": 0.0 }
+    ]
+  },
+  "error": null
+}

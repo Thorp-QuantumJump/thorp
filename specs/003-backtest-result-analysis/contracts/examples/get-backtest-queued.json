@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": 4,
+    "status": "QUEUED",
+    "config": {
+      "strategy": "trend",
+      "startDate": "2019-01-01",
+      "endDate": "2023-12-31",
+      "initialCash": 10000000
+    },
+    "summary": null
+  },
+  "error": null
+}

@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": 1,
+    "status": "COMPLETED",
+    "config": {
+      "strategy": "trend",
+      "startDate": "2019-01-01",
+      "endDate": "2023-12-31",
+      "initialCash": 10000000
+    },
+    "summary": {
+      "initialEquity": 10000000,
+      "finalEquity": 22480000,
+      "totalReturn": 1.248,
+      "cagr": 0.184,
+      "maxDrawdown": -0.1261,
+      "volatility": 0.124,
+      "sharpeRatio": 1.42,
+      "tradeCount": 156,
+      "winRate": null,
+      "profitFactor": null,
+      "metricDefinitionVersion": "1.0"
+    }
+  },
+  "error": null
+}

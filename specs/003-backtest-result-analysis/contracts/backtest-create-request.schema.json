@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thorp.ssafy/contracts/backtest-create-request.schema.json",
+  "title": "BacktestCreateRequest",
+  "description": "POST /backtests 요청 본문. initialCash는 선택이며 생략 시 서버가 10000000(KRW)을 적용한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["strategy", "startDate", "endDate"],
+  "properties": {
+    "strategy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "전략 id (예: trend, dualMomentum, rsiMeanReversion)"
+    },
+    "startDate": {
+      "type": "string",
+      "format": "date",
+      "description": "백테스트 시작일 (YYYY-MM-DD). endDate 이하"
+    },
+    "endDate": {
+      "type": "string",
+      "format": "date",
+      "description": "백테스트 종료일 (YYYY-MM-DD)"
+    },
+    "initialCash": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 10000000,
+      "description": "초기 자산(KRW 정수). 생략 시 10000000"
+    }
+  },
+  "examples": [
+    { "strategy": "trend", "startDate": "2019-01-01", "endDate": "2023-12-31" },
+    { "strategy": "trend", "startDate": "2019-01-01", "endDate": "2023-12-31", "initialCash": 50000000 }
+  ]
+}
