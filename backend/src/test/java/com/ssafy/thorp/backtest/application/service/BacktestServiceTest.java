@@ -7,9 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ssafy.thorp.backtest.BacktestResultFixtures;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
@@ -33,19 +35,14 @@ class BacktestServiceTest {
     private static final long INITIAL_CASH = 10_000_000L;
 
     @Mock private BacktestJobRepository repository;
+    @Mock private BacktestResultRepository resultRepository;
     @Mock private BacktestJobPublisher publisher;
     @InjectMocks private BacktestService service;
 
     @Test
-    @DisplayName("create는 QUEUED Job을 저장한 뒤 저장된 Job을 발행하고 결과를 돌려준다")
+    @DisplayName("create는 QUEUED Job을 저장한 뒤 저장된 Job을 발행하고 config가 담긴 결과를 돌려준다")
     void createSavesThenPublishes() {
-        BacktestJob saved =
-                BacktestJob.restore(
-                        1L,
-                        "sma-cross",
-                        new BacktestPeriod(START, END),
-                        INITIAL_CASH,
-                        BacktestStatus.QUEUED);
+        BacktestJob saved = job(1L, BacktestStatus.QUEUED);
         when(repository.save(any(BacktestJob.class))).thenReturn(saved);
 
         BacktestJobResult result =
@@ -59,10 +56,12 @@ class BacktestServiceTest {
 
         verify(publisher).publish(saved);
         assertThat(result.id()).isEqualTo(1L);
-        assertThat(result.strategy()).isEqualTo("sma-cross");
-        assertThat(result.startDate()).isEqualTo(START);
-        assertThat(result.endDate()).isEqualTo(END);
         assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(result.config().strategy()).isEqualTo("sma-cross");
+        assertThat(result.config().startDate()).isEqualTo(START);
+        assertThat(result.config().endDate()).isEqualTo(END);
+        assertThat(result.config().initialCash()).isEqualTo(INITIAL_CASH);
+        assertThat(result.summary()).isNull();
     }
 
     @Test
@@ -93,22 +92,49 @@ class BacktestServiceTest {
     }
 
     @Test
-    @DisplayName("get은 저장된 Job을 결과로 돌려준다")
-    void getReturnsResult() {
-        when(repository.findById(1L))
-                .thenReturn(
-                        Optional.of(
-                                BacktestJob.restore(
-                                        1L,
-                                        "sma-cross",
-                                        new BacktestPeriod(START, END),
-                                        INITIAL_CASH,
-                                        BacktestStatus.RUNNING)));
+    @DisplayName("get은 COMPLETED가 아니면 결과 저장소를 조회하지 않고 summary null로 돌려준다")
+    void getReturnsWithoutSummaryWhenNotCompleted() {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, BacktestStatus.RUNNING)));
 
         BacktestJobResult result = service.get(1L);
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.status()).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(result.config().initialCash()).isEqualTo(INITIAL_CASH);
+        assertThat(result.summary()).isNull();
+        verify(resultRepository, never()).findByBacktestJobId(any());
+    }
+
+    @Test
+    @DisplayName("get은 COMPLETED Job이면 저장된 결과의 summary를 함께 돌려준다")
+    void getReturnsSummaryWhenCompleted() {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, BacktestStatus.COMPLETED)));
+        when(resultRepository.findByBacktestJobId(1L))
+                .thenReturn(Optional.of(BacktestResultFixtures.sampleResult(1L)));
+
+        BacktestJobResult result = service.get(1L);
+
+        assertThat(result.status()).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(result.summary()).isNotNull();
+        assertThat(result.summary().initialEquity())
+                .isEqualTo(BacktestResultFixtures.INITIAL_EQUITY);
+        assertThat(result.summary().finalEquity()).isEqualTo(BacktestResultFixtures.FINAL_EQUITY);
+        assertThat(result.summary().totalReturn()).isEqualTo(1.248);
+        assertThat(result.summary().maxDrawdownPeakDate()).isEqualTo(LocalDate.of(2020, 1, 1));
+        assertThat(result.summary().winRate()).isNull();
+        assertThat(result.summary().metricDefinitionVersion()).isEqualTo("1.0");
+    }
+
+    @Test
+    @DisplayName("get은 COMPLETED이지만 결과 행이 없으면 summary null로 돌려준다")
+    void getReturnsWithoutSummaryWhenResultMissing() {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, BacktestStatus.COMPLETED)));
+        when(resultRepository.findByBacktestJobId(1L)).thenReturn(Optional.empty());
+
+        BacktestJobResult result = service.get(1L);
+
+        assertThat(result.status()).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(result.summary()).isNull();
     }
 
     @Test
@@ -117,5 +143,11 @@ class BacktestServiceTest {
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(999L)).isInstanceOf(BacktestNotFoundException.class);
+        verify(resultRepository, never()).findByBacktestJobId(any());
+    }
+
+    private static BacktestJob job(Long id, BacktestStatus status) {
+        return BacktestJob.restore(
+                id, "sma-cross", new BacktestPeriod(START, END), INITIAL_CASH, status);
     }
 }

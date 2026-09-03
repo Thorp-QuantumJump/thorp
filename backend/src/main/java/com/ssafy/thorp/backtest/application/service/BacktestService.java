@@ -3,21 +3,41 @@ package com.ssafy.thorp.backtest.application.service;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/** 백테스트 Job 생성·조회 유스케이스. 계산은 하지 않고 Job을 저장한 뒤 Worker에 발행한다. */
+/**
+ * 백테스트 Job 생성·조회 유스케이스. 계산은 하지 않고 Job을 저장한 뒤 Worker에 발행하며, 결과는 Worker가 저장한 행을 읽어 조합만 한다.
+ *
+ * <p>상태별 조회 동작:
+ *
+ * <ul>
+ *   <li>{@code get}: 어떤 상태든 200. COMPLETED이고 결과 행이 있으면 summary를 채우고, 그 외에는 summary null
+ * </ul>
+ */
 @Service
 public class BacktestService {
 
+    private static final Logger log = LoggerFactory.getLogger(BacktestService.class);
+
     private final BacktestJobRepository repository;
+    private final BacktestResultRepository resultRepository;
     private final BacktestJobPublisher publisher;
 
-    public BacktestService(BacktestJobRepository repository, BacktestJobPublisher publisher) {
+    public BacktestService(
+            BacktestJobRepository repository,
+            BacktestResultRepository resultRepository,
+            BacktestJobPublisher publisher) {
         this.repository = repository;
+        this.resultRepository = resultRepository;
         this.publisher = publisher;
     }
 
@@ -33,10 +53,25 @@ public class BacktestService {
         return BacktestJobResult.from(saved);
     }
 
+    @Transactional(readOnly = true)
     public BacktestJobResult get(Long backtestId) {
+        BacktestJob job = findJob(backtestId);
+        if (job.getStatus() != BacktestStatus.COMPLETED) {
+            return BacktestJobResult.from(job);
+        }
+        return resultRepository
+                .findByBacktestJobId(backtestId)
+                .map(result -> BacktestJobResult.from(job, result))
+                .orElseGet(
+                        () -> {
+                            log.warn("COMPLETED backtest has no result row yet: id={}", backtestId);
+                            return BacktestJobResult.from(job);
+                        });
+    }
+
+    private BacktestJob findJob(Long backtestId) {
         return repository
                 .findById(backtestId)
-                .map(BacktestJobResult::from)
                 .orElseThrow(() -> new BacktestNotFoundException(backtestId));
     }
 }
