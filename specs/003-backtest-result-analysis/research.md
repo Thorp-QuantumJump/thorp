@@ -25,7 +25,10 @@ Technical Context에 남은 미확정 사항과 설계 결정의 근거를 기�
 **Verification**: Foundational Phase의 `BacktestResultRepositoryImplTest`(H2)에서 저장 → `flush/clear` → 조회
 라운드트립으로 확정한다. 실패하면 아래 후퇴안으로 전환하고 이 절을 갱신한다.
 
-**Fallback (실패 시)**: `@Column(columnDefinition = "TEXT") String equityCurveJson` + `BacktestResultMapper` 안에서
+**결과 (2026-09-03 확정)**: H2 라운드트립 **통과**. `BacktestResultRepositoryImplTest` 4건이 `@JdbcTypeCode(SqlTypes.JSON)` +
+`List<EquityPointJson>` 매핑으로 저장·조회·unique 위반을 검증한다. 아래 후퇴안은 채택하지 않았고, 이후 필요 시 참고용으로만 남긴다.
+
+**Fallback (미채택, 참고)**: `@Column(columnDefinition = "TEXT") String equityCurveJson` + `BacktestResultMapper` 안에서
 Jackson `ObjectMapper`로 수동 직렬화. Jackson 사용은 infrastructure 계층에 한정되므로 ArchUnit 규칙에 영향이 없다.
 
 **Alternatives considered**:

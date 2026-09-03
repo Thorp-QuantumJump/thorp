@@ -132,10 +132,10 @@
 
 **Purpose**: 계약 일치 확인, 문서 마무리. 코드 변경은 최소.
 
-- [ ] T041 [P] `specs/003-backtest-result-analysis/quickstart.md` §1·§3 절차 실행(빌드 필수, curl은 PostgreSQL 기동 가능 시). 응답 JSON을 `specs/003-backtest-result-analysis/contracts/examples/*.json`과 필드명·타입 대조. 어긋나면 코드가 아니라 어느 쪽이 맞는지 판단해 contracts 또는 코드를 수정
-- [ ] T042 [P] `backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java`·`BacktestService.java` 클래스 Javadoc이 최종 엔드포인트·상태별 동작(research.md §5 표)과 일치하는지 확인·정리
-- [ ] T043 `specs/003-backtest-result-analysis/research.md` §1에 JSON 컬럼 H2 라운드트립 결과(성공/후퇴)를 확정 문구로 기록. `specs/003-backtest-result-analysis/plan.md`「Worker 동기화 항목」이 최종 코드(필드명·기본값)와 맞는지 확인
-- [ ] T044 최종 `cd backend && ./gradlew spotlessApply build` 통과 확인 후 tasks.md의 모든 항목을 `[X]`로 표시
+- [X] T041 [P] `specs/003-backtest-result-analysis/quickstart.md` §1·§3 절차 실행(빌드 필수, curl은 PostgreSQL 기동 가능 시). 응답 JSON을 `specs/003-backtest-result-analysis/contracts/examples/*.json`과 필드명·타입 대조. 어긋나면 코드가 아니라 어느 쪽이 맞는지 판단해 contracts 또는 코드를 수정
+- [X] T042 [P] `backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java`·`BacktestService.java` 클래스 Javadoc이 최종 엔드포인트·상태별 동작(research.md §5 표)과 일치하는지 확인·정리
+- [X] T043 `specs/003-backtest-result-analysis/research.md` §1에 JSON 컬럼 H2 라운드트립 결과(성공/후퇴)를 확정 문구로 기록. `specs/003-backtest-result-analysis/plan.md`「Worker 동기화 항목」이 최종 코드(필드명·기본값)와 맞는지 확인
+- [X] T044 최종 `cd backend && ./gradlew spotlessApply build` 통과 확인 후 tasks.md의 모든 항목을 `[X]`로 표시
 
 ---
 
