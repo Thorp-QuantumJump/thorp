@@ -55,12 +55,20 @@ research.md §2 → 후속 `docs/specs/`), 거래(Trade)는 US3에서 다룬다.
 | `totalReturn` | `Double` | O | — |
 | `cagr` | `Double` | O | — |
 | `maxDrawdown` | `Double` | O | `<= 0` |
+| `maxDrawdownPeakDate` | `LocalDate` | O | 최대 낙폭 구간 고점일 |
+| `maxDrawdownTroughDate` | `LocalDate` | O | 최대 낙폭 구간 저점일. `>= peakDate` |
+| `maxDrawdownRecoveryDate` | `LocalDate` | O | 회복일. null = 미회복. `> troughDate` |
 | `volatility` | `Double` | O | `>= 0` |
 | `sharpeRatio` | `Double` | O | — |
 | `tradeCount` | `int` | X | `>= 0` |
 | `winRate` | `Double` | O | `0 <= x <= 1` |
 | `profitFactor` | `Double` | O | `>= 0` |
 | `metricDefinitionVersion` | `String` | X | not blank |
+
+낙폭 구간 불변식(FR-008):
+- `maxDrawdown < 0`이면 `maxDrawdownPeakDate`·`maxDrawdownTroughDate`는 null이 아니어야 하고 `peakDate <= troughDate`
+- `maxDrawdownRecoveryDate`가 있으면 `troughDate`도 있어야 하고 `recoveryDate > troughDate`
+- `maxDrawdown`이 null 또는 0이면 세 날짜는 모두 null("구간 없음")
 
 ### 1.4 `vo.EquityPoint` (신규, record)
 
@@ -91,7 +99,7 @@ research.md §2 → 후속 `docs/specs/`), 거래(Trade)는 US3에서 다룬다.
 |---|---|---|
 | `command.CreateBacktestCommand` | record (수정) | `strategy, startDate, endDate, initialCash(long)` |
 | `result.BacktestConfigResult` | record (신규) | `strategy, startDate, endDate, initialCash` |
-| `result.BacktestSummaryResult` | record (신규) | `PerformanceSummary`와 같은 11필드. `from(PerformanceSummary)` |
+| `result.BacktestSummaryResult` | record (신규) | `PerformanceSummary`와 같은 14필드. `from(PerformanceSummary)` |
 | `result.BacktestJobResult` | record (수정) | `id, status, BacktestConfigResult config, BacktestSummaryResult summary(nullable)`. `from(BacktestJob)`(summary null), `from(BacktestJob, BacktestResult)` |
 | `result.EquityPointResult` | record (신규) | `date, equity, cumulativeReturn, drawdown` |
 | `result.EquityCurveResult` | record (신규) | `backtestId, List<EquityPointResult> points`. `from(BacktestResult)` |
@@ -131,6 +139,9 @@ research.md §2 → 후속 `docs/specs/`), 거래(Trade)는 US3에서 다룬다.
 | `total_return` | `DOUBLE PRECISION` | `DOUBLE` | O | `summary.totalReturn` |
 | `cagr` | `DOUBLE PRECISION` | `DOUBLE` | O | `summary.cagr` |
 | `max_drawdown` | `DOUBLE PRECISION` | `DOUBLE` | O | `summary.maxDrawdown` |
+| `max_drawdown_peak_date` | `DATE` | 동일 | O | `summary.maxDrawdownPeakDate` |
+| `max_drawdown_trough_date` | `DATE` | 동일 | O | `summary.maxDrawdownTroughDate` |
+| `max_drawdown_recovery_date` | `DATE` | 동일 | O | `summary.maxDrawdownRecoveryDate` |
 | `volatility` | `DOUBLE PRECISION` | `DOUBLE` | O | `summary.volatility` |
 | `sharpe_ratio` | `DOUBLE PRECISION` | `DOUBLE` | O | `summary.sharpeRatio` |
 | `trade_count` | `INTEGER` | 동일 | X | `summary.tradeCount` |
@@ -179,6 +190,7 @@ research.md §2 → 후속 `docs/specs/`), 거래(Trade)는 US3에서 다룬다.
 | 날짜 오름차순·중복 없음 | `EquityCurve` | FR-007 (시간 순서) |
 | 지표 null = 계산 불가, 0·무한대 금지 | `PerformanceSummary` nullable + 규약 §2.4 | FR-011, SC-001 |
 | `maxDrawdown ≤ 0`, `winRate ∈ [0,1]` | `PerformanceSummary` | FR-013 (단위 명확) |
+| 낙폭 구간(고점·저점·회복/미회복) 저장·응답, 날짜 순서 불변식 | `PerformanceSummary`, 컬럼 3개 | FR-008 |
 | `metricDefinitionVersion` 필수 저장·응답 | `PerformanceSummary`, 컬럼 NOT NULL | FR-005 |
 | COMPLETED가 아니면 결과 없음 | `BacktestService` | FR-001 |
 | `initialCash > 0` | `BacktestJob` | (F2 조건) |

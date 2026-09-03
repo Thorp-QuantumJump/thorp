@@ -32,3 +32,4 @@
 4. dev 시더의 `maxDrawdown`은 시계열에서 도출한 값이라 목데이터의 `mdd`와 다르다(trend −0.1261, dualMomentum −0.1171, rsiMeanReversion −0.0690)
 5. `winRate`·`profitFactor`는 시더 데이터에서 `null`(계산 불가)이다. "계산 불가"로 표시해야 한다
 6. `POST /backtests`에 `initialCash`(선택, 기본 10,000,000)를 보낼 수 있다
+7. `summary`에 최대 낙폭 구간 3필드(`maxDrawdownPeakDate`, `maxDrawdownTroughDate`, `maxDrawdownRecoveryDate`)가 있다. 회복일이 `null`이면 "미회복", 세 필드가 모두 `null`이면 "낙폭 없음"으로 표시한다

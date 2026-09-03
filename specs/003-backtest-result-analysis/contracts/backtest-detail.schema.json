@@ -31,7 +31,8 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "initialEquity", "finalEquity", "totalReturn", "cagr", "maxDrawdown", "volatility",
+            "initialEquity", "finalEquity", "totalReturn", "cagr", "maxDrawdown",
+            "maxDrawdownPeakDate", "maxDrawdownTroughDate", "maxDrawdownRecoveryDate", "volatility",
             "sharpeRatio", "tradeCount", "winRate", "profitFactor", "metricDefinitionVersion"
           ],
           "properties": {
@@ -40,6 +41,9 @@
             "totalReturn": { "type": ["number", "null"], "description": "finalEquity / initialEquity - 1" },
             "cagr": { "type": ["number", "null"], "description": "연환산 수익률 (365 / 달력 경과일 기준)" },
             "maxDrawdown": { "type": ["number", "null"], "maximum": 0, "description": "최대 낙폭, 0 또는 음수" },
+            "maxDrawdownPeakDate": { "type": ["string", "null"], "format": "date", "description": "최대 낙폭 구간 고점일. maxDrawdown이 0 또는 null이면 null" },
+            "maxDrawdownTroughDate": { "type": ["string", "null"], "format": "date", "description": "최대 낙폭 구간 저점일. peakDate 이후. maxDrawdown이 0 또는 null이면 null" },
+            "maxDrawdownRecoveryDate": { "type": ["string", "null"], "format": "date", "description": "고점 값 이상으로 처음 회복한 날(troughDate 이후). 미회복이면 null" },
             "volatility": { "type": ["number", "null"], "minimum": 0, "description": "연환산 변동성 (ddof=1, √252)" },
             "sharpeRatio": { "type": ["number", "null"], "description": "(일별수익률 평균×252 − 0) / volatility" },
             "tradeCount": { "type": "integer", "minimum": 0, "description": "청산 거래 수" },

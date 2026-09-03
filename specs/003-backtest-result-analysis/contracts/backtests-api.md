@@ -67,6 +67,9 @@ Job 상태와, COMPLETED이면 핵심 지표(US1)를 돌려준다. 폴링용이�
 | `summary.totalReturn` | number | O | `finalEquity / initialEquity - 1` |
 | `summary.cagr` | number | O | 연환산 수익률 |
 | `summary.maxDrawdown` | number | O | 최대 낙폭, 0 또는 음수 |
+| `summary.maxDrawdownPeakDate` | date | O | 최대 낙폭 구간의 고점일(직전 최고 자산 시점). `maxDrawdown`이 0 또는 null이면 null |
+| `summary.maxDrawdownTroughDate` | date | O | 최대 낙폭 구간의 저점일. `maxDrawdown`이 0 또는 null이면 null |
+| `summary.maxDrawdownRecoveryDate` | date | O | 저점 이후 자산이 고점 값 이상으로 처음 회복한 날. 기간 종료까지 미회복이면 null |
 | `summary.volatility` | number | O | 연환산 변동성 |
 | `summary.sharpeRatio` | number | O | 배수 |
 | `summary.tradeCount` | integer | X | 청산 거래 수. 0은 정당한 값 |
@@ -75,6 +78,8 @@ Job 상태와, COMPLETED이면 핵심 지표(US1)를 돌려준다. 폴링용이�
 | `summary.metricDefinitionVersion` | string | X | 지표 계산 규약 버전(`"1.0"`). 정의는 plan research.md §2 |
 
 지표의 `null`은 계산 불가(예: 거래 0건 → `winRate`, 손실 거래 없음 → `profitFactor`, 변동성 0 → `sharpeRatio`).
+낙폭 구간 3필드(FR-008)는 규칙이 다르다. `maxDrawdown < 0`이면 고점일·저점일은 항상 값이 있고(`peakDate <= troughDate`), 회복일만 미회복 시 null이다.
+`maxDrawdown`이 0(하락 없음)이면 세 필드 모두 null이며 이는 "구간 없음"을 뜻한다.
 
 예시: [examples/get-backtest-completed.json](./examples/get-backtest-completed.json),
 [examples/get-backtest-queued.json](./examples/get-backtest-queued.json)

@@ -17,6 +17,9 @@
 | `total_return` | `DOUBLE PRECISION` | O | `final_equity / initial_equity - 1` |
 | `cagr` | `DOUBLE PRECISION` | O | `(final/initial)^(365/달력경과일) - 1` |
 | `max_drawdown` | `DOUBLE PRECISION` | O | `min(drawdown)`. 0 또는 음수 |
+| `max_drawdown_peak_date` | `DATE` | O | 최대 낙폭 구간의 고점일(저점 직전 최고 자산 거래일). `max_drawdown`이 0 또는 NULL이면 NULL |
+| `max_drawdown_trough_date` | `DATE` | O | 최대 낙폭 구간의 저점일(`drawdown`이 최솟값인 거래일, 여러 개면 첫 번째). `>= peak_date`. `max_drawdown`이 0 또는 NULL이면 NULL |
+| `max_drawdown_recovery_date` | `DATE` | O | 저점 이후 `equity >= 고점 equity`가 처음 성립한 거래일. 기간 종료까지 미회복이면 NULL. `> trough_date` |
 | `volatility` | `DOUBLE PRECISION` | O | 일별수익률 표본표준편차(ddof=1) × √252. 관측치 2개 미만이면 NULL |
 | `sharpe_ratio` | `DOUBLE PRECISION` | O | `(mean(daily) × 252 − 0.0) / volatility`. volatility NULL 또는 0이면 NULL |
 | `trade_count` | `INTEGER` | X | 청산 거래 수. 0 허용 |
@@ -55,11 +58,13 @@ PostgreSQL이 받아들이지만 백엔드 도메인 검증에서 거부되거�
 BEGIN;
 UPDATE backtest_job SET status = 'COMPLETED', updated_at = now() WHERE id = :job_id;
 INSERT INTO backtest_result (
-  backtest_job_id, initial_equity, final_equity, total_return, cagr, max_drawdown, volatility,
+  backtest_job_id, initial_equity, final_equity, total_return, cagr, max_drawdown,
+  max_drawdown_peak_date, max_drawdown_trough_date, max_drawdown_recovery_date, volatility,
   sharpe_ratio, trade_count, win_rate, profit_factor, metric_definition_version, equity_curve,
   created_at, updated_at
 ) VALUES (
-  :job_id, :initial_equity, :final_equity, :total_return, :cagr, :max_drawdown, :volatility,
+  :job_id, :initial_equity, :final_equity, :total_return, :cagr, :max_drawdown,
+  :max_drawdown_peak_date, :max_drawdown_trough_date, :max_drawdown_recovery_date, :volatility,
   :sharpe_ratio, :trade_count, :win_rate, :profit_factor, '1.0', :equity_curve_json::jsonb,
   now(), now()
 );
@@ -78,3 +83,5 @@ COMMIT;
 - `equity_curve`가 비어 있지 않고 날짜 오름차순
 - `equity_curve[0].equity == initial_equity`, `equity_curve[last].equity == final_equity`
 - `max_drawdown <= 0`, `0 <= win_rate <= 1`, `profit_factor >= 0`, `trade_count >= 0`, `metric_definition_version` 비어 있지 않음
+- `max_drawdown < 0`이면 `max_drawdown_peak_date`·`max_drawdown_trough_date`가 NULL이 아니고 `peak <= trough`, `recovery`는 NULL 또는 `> trough`.
+  `max_drawdown`이 0 또는 NULL이면 세 날짜 모두 NULL

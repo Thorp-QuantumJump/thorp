@@ -56,6 +56,9 @@ Jackson `ObjectMapper`로 수동 직렬화. Jackson 사용은 infrastructure 계
 | `totalReturn` | `finalEquity / initialEquity - 1` | 비율 | 높을수록 | `initialEquity <= 0` |
 | `cagr` | `(finalEquity / initialEquity) ^ (365 / 달력 경과일수) - 1`. 경과일수 = `endDate - startDate`(달력 일). 1년 미만도 그대로 연환산 | 비율 | 높을수록 | `initialEquity <= 0`, 경과일수 0 |
 | `maxDrawdown` | `min(drawdown[t])`, `drawdown[t] = equity[t] / max(equity[0..t]) - 1`. **0 또는 음수** | 비율 | 0에 가까울수록 | 없음(하락이 없으면 정당한 값 0) |
+| `maxDrawdownTroughDate` | `drawdown`이 최솟값인 거래일(여러 개면 첫 번째) | 날짜 | — | `maxDrawdown`이 0 또는 null → null("구간 없음") |
+| `maxDrawdownPeakDate` | 저점 이전 구간에서 `equity == max(equity[0..trough])`인 마지막 거래일 | 날짜 | — | 같음 |
+| `maxDrawdownRecoveryDate` | 저점 이후 `equity[t] >= equity[peak]`가 처음 성립하는 거래일 | 날짜 | — | 같음. 기간 종료까지 미회복이면 null(정당한 상태 "미회복", 스펙 Edge Case) |
 | `volatility` | 일별 수익률의 표본표준편차(ddof = 1) × √252 | 비율 | 낮을수록 | 관측치(거래일) 2개 미만 |
 | `sharpeRatio` | `(mean(dailyReturn) × 252 - riskFreeRate) / volatility`, `riskFreeRate = 0.0` | 배수 | 높을수록 | `volatility`가 null 또는 0 |
 | `tradeCount` | 청산(CLOSED) 거래 수. 미청산 포지션 제외 | 횟수 | 우수 방향 없음 | 없음(0은 정당한 값) |
@@ -180,6 +183,7 @@ Worker 쪽 필드 추가는 plan.md「Worker 동기화 항목」으로 넘긴다
 | `totalReturn` | 목데이터 문자열 환산: 1.248 / 0.846 / 0.624 (= 마지막 포인트에서 계산한 값과 일치) |
 | `cagr`, `volatility`, `sharpeRatio`, `tradeCount` | 목데이터 값 환산: 0.184·0.124·1.42·156 / 0.132·0.142·1.05·89 / 0.108·0.181·0.78·234 |
 | `maxDrawdown` | **시계열에서 도출**: −0.1261 (119→104) / −0.1171 (111→98) / −0.0690 (116→108) |
+| 낙폭 구간 3필드 | **시계열에서 도출**: trend 고점 2020-01-01 · 저점 2020-04-01 · 회복 2020-07-01 / dualMomentum 2020-01-01 · 2020-04-01 · 2020-07-01 / rsiMeanReversion 고점 2019-10-01 · 저점 2020-04-01 · 회복 2020-07-01 |
 | `winRate`, `profitFactor` | `null`(목데이터에 없음 = 계산 불가) |
 | `metricDefinitionVersion` | `"1.0"` |
 
@@ -203,8 +207,13 @@ Worker 쪽 필드 추가는 plan.md「Worker 동기화 항목」으로 넘긴다
 **Decision**:
 - 도메인 불변식은 **저장값 사이의 일관성**만 검사한다: `equityCurve` 비어 있지 않음, 날짜 strictly ascending, 첫 포인트 `equity`
   = `summary.initialEquity`, 마지막 포인트 `equity` = `summary.finalEquity`, `maxDrawdown ≤ 0`, `winRate ∈ [0, 1]`,
-  `tradeCount ≥ 0`, `profitFactor ≥ 0`, `metricDefinitionVersion` 비어 있지 않음. 지표를 다시 계산해 비교하지는 않는다
+  `tradeCount ≥ 0`, `profitFactor ≥ 0`, `metricDefinitionVersion` 비어 있지 않음, 낙폭 구간 날짜 순서(`peak ≤ trough < recovery`)와
+  `maxDrawdown`과의 동반 규칙(음수면 고점·저점 필수, 0·null이면 전부 null). 지표를 다시 계산해 비교하지는 않는다
   (부동소수 오차·헌장 I).
+
+**낙폭 구간 필드를 이번에 넣는 이유(2026-09-03 결정)**: 스펙 FR-008·US2 시나리오 4가 요구하는 항목인데 원 설계 문서의 summary
+목록에서 빠져 있었다(`/speckit-analyze` C1). 프론트가 `points[].drawdown`에서 도출하게 하는 대안도 있었지만, Worker가 drawdown 배열을
+만들 때 세 날짜를 함께 얻을 수 있고 나중에 붙이면 테이블·Worker 계약을 두 번 바꿔야 하므로 지금 계약에 포함한다.
 - `BacktestService.get`은 Job을 읽고 COMPLETED면 `BacktestResultRepository.findByBacktestJobId`로 summary를 조합한다.
   `getTimeseries`는 Job 404 → 상태 검사 409 → 결과 조회 409 → `EquityCurveResult` 순서로 처리한다.
 - 서비스 조회 메서드에 `@Transactional(readOnly = true)`를 붙인다(`open-in-view: false`이므로 JSON 컬럼 역직렬화가 트랜잭션

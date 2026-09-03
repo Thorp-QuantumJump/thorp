@@ -61,7 +61,7 @@ dev 프로파일 시더가 예시 전략 3개의 결과를 채워 프론트 연�
 | II. 실행은 요청 생명주기와 독립, 추적 가능 | PASS | 기존 `backtestId`·상태 흐름(`QUEUED → RUNNING → COMPLETED \| FAILED`) 그대로. 결과는 같은 id로 조회하며 COMPLETED 이전에는 `summary: null` / 409로 "아직 없음"을 명시한다 |
 | III. 빅데이터 기술은 실측 후 도입 | PASS | 신규 인프라·의존성 없음. 시계열은 JSON 컬럼 1개(5년 일봉 ≈ 1,250포인트)로 충분하며, 정규화·별도 저장소는 필요가 확인될 때 도입 |
 | IV. 파트 경계 계약 명시·함께 변경 | PASS | 응답·요청·테이블 계약을 `contracts/`에 문서화(camelCase). `initialCash`는 optional+기본값으로 기존 Worker 계약과 호환되는 단계적 변경. `backtest_result` 스키마는 Worker 저장 티켓의 계약이 된다. 계산 규약은 `docs/specs/` 승격을 후속 티켓으로 기록 |
-| V. 결과 신뢰성(비교 가능성·재현성) | PASS | 모든 결과에 `metricDefinitionVersion`을 저장·응답(FR-005). 계산 불가는 `null`로 표현(FR-011, 0·무한대 금지). 도메인 불변식이 시계열 첫 값 = `initialEquity`, 마지막 값 = `finalEquity`를 강제(FR-007·FR-010). 조회는 저장값을 그대로 돌려주므로 반복 조회 시 동일(FR-014) |
+| V. 결과 신뢰성(비교 가능성·재현성) | PASS | 모든 결과에 `metricDefinitionVersion`을 저장·응답(FR-005). 계산 불가는 `null`로 표현(FR-011, 0·무한대 금지). 도메인 불변식이 시계열 첫 값 = `initialEquity`, 마지막 값 = `finalEquity`를 강제(FR-007·FR-010). 최대 낙폭 구간(고점·저점·회복/미회복)을 저장·응답(FR-008). 조회는 저장값을 그대로 돌려주므로 반복 조회 시 동일(FR-014) |
 | 보안·데이터 제약 | PASS | 비밀값·시장 데이터 파일 추가 없음 |
 | 품질 게이트 | PASS | `./gradlew spotlessApply build`(Spotless + 전체 테스트 + ArchUnit) 통과를 Phase별 완료 조건으로 둔다 |
 
@@ -128,7 +128,7 @@ backend/src/main/java/com/ssafy/thorp/
 │   │   │   └── BacktestResult.java                     # [신규] jobId 1:1, summary, equityCurve, 정합 불변식
 │   │   ├── vo/
 │   │   │   ├── BacktestPeriod.java                     # (유지)
-│   │   │   ├── PerformanceSummary.java                 # [신규] 지표 11필드, nullable = 계산 불가
+│   │   │   ├── PerformanceSummary.java                 # [신규] 지표 11필드 + 낙폭 구간 3필드, nullable = 계산 불가
 │   │   │   ├── EquityPoint.java                        # [신규] date, equity, cumulativeReturn, drawdown
 │   │   │   └── EquityCurve.java                        # [신규] 비어 있지 않고 날짜 오름차순
 │   │   └── exception/
@@ -175,6 +175,7 @@ backend/src/test/java/com/ssafy/thorp/
 | `GET /backtests/{id}` | `{ backtestId, status, config, summary }`. `summary`는 COMPLETED이고 결과 행이 있을 때만, 그 외 `null` |
 | `GET /backtests/{id}/timeseries` | `{ backtestId, points[] }`. 없는 id 404 `RESOURCE_NOT_FOUND`, COMPLETED 아님·결과 행 없음 409 `RESULT_NOT_READY` |
 | 값 타입 | 비율 number(0.125=12.5%), `maxDrawdown` ≤ 0, 금액 KRW 정수(Long), 지표 nullable(`null`=계산 불가) |
+| 낙폭 구간(FR-008) | `summary`에 `maxDrawdownPeakDate`·`maxDrawdownTroughDate`·`maxDrawdownRecoveryDate`(date, nullable). 미회복이면 회복일 null, 낙폭 0이면 셋 다 null |
 | 지표 계산 규약 | v1.0 (research.md §2). `metricDefinitionVersion = "1.0"` 저장·응답 |
 | 저장 | `backtest_result` 1테이블, `backtest_job_id` unique. summary 컬럼 + `equity_curve` JSON(`@JdbcTypeCode(SqlTypes.JSON)`, PostgreSQL jsonb / H2 json) |
 | 계층 | 도메인 `BacktestResult`+VO 3개, JPA 엔티티 분리, 정적 Mapper. 리포지토리 인터페이스는 application, 구현은 infrastructure |

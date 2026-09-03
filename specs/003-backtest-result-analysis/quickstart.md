@@ -54,6 +54,7 @@ docker exec thorp-postgres psql -U thorp -d thorp -c "select backtest_job_id, to
 curl -s localhost:8080/backtests/1 | jq
 # 기대: data.status == "COMPLETED", data.config.initialCash == 10000000,
 #       data.summary.initialEquity == 10000000, data.summary.totalReturn == 1.248,
+#       data.summary.maxDrawdownPeakDate == "2020-01-01", maxDrawdownTroughDate == "2020-04-01", maxDrawdownRecoveryDate == "2020-07-01",
 #       data.summary.winRate == null, data.summary.metricDefinitionVersion == "1.0"
 
 # US2: 시계열
