@@ -1,12 +1,12 @@
 # ADR-0001: 백엔드 패키지 구조 — 도메인별 계층형 아키텍처
 
 - 상태: 승인 (2026-09-03)
-- 대상: `backend/` (`com.thorp.api`)
+- 대상: `backend/` (`com.ssafy.thorp`)
 - 관련 이슈: #87
 
 ## 배경
 
-백엔드는 `com.thorp.api` 아래 `backtest/`(컨트롤러 1개, 요청 DTO 1개)와 빈 `common/`만 있는
+백엔드는 `com.ssafy.thorp` 아래 `backtest/`(컨트롤러 1개, 요청 DTO 1개)와 빈 `common/`만 있는
 스캐폴딩 상태다. 기존 `backend/CLAUDE.md`는 "도메인 패키지 안에 controller·service·repository·dto를
 함께 둔다"고만 정해 두었고, 계층 간 의존 방향은 규정하지 않았다.
 
@@ -32,7 +32,7 @@
 | 외부 발행(메시징) | `application/port` 인터페이스(`BacktestJobPublisher`) → `infrastructure/messaging` 구현 | 브로커 결정 유보 원칙과 맞물림. 브로커를 바꿔도 application 이상은 수정 없음 |
 | DTO 경계 | `presentation/request·response`는 HTTP 전용. `application/command·result`는 유스케이스 입출력. 컨트롤러가 request→command, result→response 변환 | 컨트롤러 DTO가 서비스 시그니처에 새는 것을 차단 |
 | 공통 요소 | `common/web`(응답 포맷·전역 예외 처리), `common/exception`, `common/persistence`(`BaseEntity`), `common/config` | 최상위 `config/`는 두지 않고 `common` 아래로 흡수 |
-| 루트 패키지 | `com.thorp.api` 유지 | 변경 시 Application 클래스·테스트·Docker 설정까지 흔들리는데 얻는 것이 없다 |
+| 루트 패키지 | `com.ssafy.thorp` | 조직·서비스 순서의 일반 관례. `api` 세그먼트는 의미가 없어 제거 |
 | 의존 강제 | ArchUnit (`archunit-junit5`), `layeredArchitecture()` 기반 | 규칙이 문서에만 있으면 무너진다. 도메인이 늘어도 규칙에 자동 포함되게 한다 |
 
 ### 의존 방향 (허용되는 화살표만)
@@ -58,7 +58,7 @@ domain: Spring·JPA·Jackson 등 프레임워크 import 금지 (java.*, 자신�
 ### 목표 패키지 트리 (backtest 기준)
 
 ```
-com.thorp.api
+com.ssafy.thorp
 ├── ThorpApplication.java
 ├── backtest
 │   ├── presentation
@@ -101,7 +101,7 @@ com.thorp.api
    `jakarta.persistence..`, `com.fasterxml..`에 의존하지 않는다.
 2. `..application..`은 `..infrastructure..`, `..presentation..`에 의존하지 않는다.
 3. `..presentation..`은 `..infrastructure..`에 의존하지 않는다.
-4. `..common..`은 어떤 도메인 패키지(`com.thorp.api.(?!common).*`)에도 의존하지 않는다.
+4. `..common..`은 어떤 도메인 패키지(`com.ssafy.thorp.(?!common).*`)에도 의존하지 않는다.
 5. `@Entity` 클래스는 `..infrastructure.persistence..`에만 위치한다.
 6. `@RestController` 클래스는 `..presentation.controller..`에만 위치한다.
 

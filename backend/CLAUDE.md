@@ -8,7 +8,7 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 ./gradlew spotlessApply build
 ```
 
-## 패키지 규칙 (`com.thorp.api`)
+## 패키지 규칙 (`com.ssafy.thorp`)
 
 근거: [ADR-0001](../docs/adr/0001-be-layered-package-architecture.md). 규칙은 `ArchitectureTest`(ArchUnit)가 검증하며, 위반 시 빌드가 실패한다.
 
@@ -45,7 +45,7 @@ common: 모든 계층에서 참조 가능
 
 ### 새 도메인 추가 체크리스트
 
-1. `com.thorp.api.{domain}/` 아래 `presentation` `application` `domain` `infrastructure` 폴더 생성
+1. `com.ssafy.thorp.{domain}/` 아래 `presentation` `application` `domain` `infrastructure` 폴더 생성
 2. 리포지토리·외부 발행은 `application/repository`·`application/port`에 인터페이스, `infrastructure`에 구현
 3. `./gradlew test`로 `ArchitectureTest` 통과 확인 — 규칙은 `layeredArchitecture()` 기반이라 새 도메인에 자동 적용된다. 별도 등록 불필요
 4. 구조를 벗어나야 하면 코드가 아니라 ADR을 먼저 갱신한다
