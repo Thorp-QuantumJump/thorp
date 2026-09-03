@@ -10,7 +10,7 @@
   min-width: 690px;
   border-collapse: collapse;
   color: #273241;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -24,7 +24,7 @@
 
 .table thead th {
   color: #929ca7;
-  font-size: 0.63rem;
+  font-size: 0.7rem;
   font-weight: 650;
   letter-spacing: 0.03em;
 }

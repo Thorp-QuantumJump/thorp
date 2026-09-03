@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   CalendarDays,
   ChartNoAxesCombined,
   CircleDollarSign,
@@ -10,10 +9,10 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { BacktestChart } from '@/components/backtest/BacktestChart'
 import { ResultTable } from '@/components/backtest/ResultTable'
 import { StrategySelector } from '@/components/backtest/StrategySelector'
+import { AppHeader } from '@/components/navigation/AppHeader'
 import {
   strategyResults,
   type StrategyId,
@@ -98,18 +97,7 @@ export function BacktestPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
-          Thorp<span>.</span>
-        </Link>
-        <div className={styles.headerMeta}>
-          <span className={styles.prototype}>PROTOTYPE 01</span>
-          <Link className={styles.homeLink} to="/">
-            <ArrowLeft size={15} aria-hidden="true" />
-            처음으로
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className={styles.container}>
         <section className={styles.intro}>

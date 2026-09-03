@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useLayoutEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { HomePage } from '@/pages/HomePage'
 
@@ -10,9 +10,21 @@ const BacktestPage = lazy(() =>
   })),
 )
 
+// 시장 대시보드 역시 실제 접근 시점에 불러와 초기 랜딩 번들을 유지한다.
+const DashboardPage = lazy(() =>
+  import('@/pages/DashboardPage').then((module) => ({
+    default: module.DashboardPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
+
+  // 페이지 경로가 바뀌면 이전 화면의 스크롤 위치를 이어받지 않도록 최상단으로 이동한다.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -26,6 +38,7 @@ function AnimatedRoutes() {
         <Suspense fallback={<div role="status" aria-label="페이지를 불러오는 중" />}>
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

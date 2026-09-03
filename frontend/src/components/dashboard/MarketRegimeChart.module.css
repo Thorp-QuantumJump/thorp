@@ -1,0 +1,87 @@
+.container {
+  width: 100%;
+  aspect-ratio: 600 / 310;
+  padding: 3px 21px 0;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gridLine,
+.referenceLine,
+.xTickLine {
+  shape-rendering: crispEdges;
+}
+
+.gridLine {
+  stroke: #edf0f1;
+  stroke-width: 1;
+}
+
+.referenceLine {
+  stroke: #aeb9bd;
+  stroke-dasharray: 4 5;
+  stroke-width: 1.1;
+}
+
+.xTickLine {
+  stroke: #cbd3d5;
+  stroke-width: 1;
+}
+
+.yTick,
+.xTick,
+.indexLabel {
+  fill: #818c92;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
+.indexLabel {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.cycleLine {
+  stroke: #527f7c;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+  filter: drop-shadow(0 4px 6px rgb(38 82 79 / 10%));
+}
+
+.latestHalo {
+  fill: #e7f1f0;
+}
+
+.latestPoint {
+  fill: #527f7c;
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+
+.latestValue {
+  fill: #365f5d;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+@media (max-width: 430px) {
+  .yTick,
+  .xTick {
+    font-size: 16px;
+  }
+
+  .indexLabel {
+    font-size: 13px;
+  }
+
+  .latestValue {
+    font-size: 17px;
+  }
+}

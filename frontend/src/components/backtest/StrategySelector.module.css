@@ -43,7 +43,7 @@
 
 .copy strong {
   overflow: hidden;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -52,7 +52,7 @@
 .copy small {
   overflow: hidden;
   color: #8a949f;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
