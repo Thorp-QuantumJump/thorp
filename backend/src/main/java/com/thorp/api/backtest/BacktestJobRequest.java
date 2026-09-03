@@ -1,4 +1,4 @@
-package com.quantumjump.api.backtest;
+package com.thorp.api.backtest;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
