@@ -1,4 +1,6 @@
-# Quantum Jump — 퀀트 백테스트 플랫폼
+# Thorp — 퀀트 백테스트 플랫폼
+
+> Team Quantum Jump · SSAFY S15P21E205
 
 과거 시장 데이터로 퀀트 전략을 백테스트하고 비교할 수 있는 학습·시뮬레이션 플랫폼.
 

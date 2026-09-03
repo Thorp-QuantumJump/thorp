@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}
-    username: ${SPRING_DATASOURCE_USERNAME:quantum}
-    password: ${SPRING_DATASOURCE_PASSWORD:quantum}
+    username: ${SPRING_DATASOURCE_USERNAME:thorp}
+    password: ${SPRING_DATASOURCE_PASSWORD:thorp}
 
   jpa:
     hibernate:

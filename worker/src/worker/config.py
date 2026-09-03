@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "localhost:9092"
     backtest_job_topic: str = "backtest.jobs"
     consumer_group_id: str = "backtest-workers"
-    database_url: str = "postgresql://quantum:quantum@localhost:5432/quantumjump"
+    database_url: str = "postgresql://thorp:thorp@localhost:5432/thorp"
 
 
 settings = Settings()

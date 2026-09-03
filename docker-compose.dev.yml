@@ -1,26 +1,26 @@
-name: quantum-jump
+name: thorp
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: qj-postgres
+    container_name: thorp-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-thorp}
-      POSTGRES_USER: ${POSTGRES_USER:-quantum}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantum}
+      POSTGRES_USER: ${POSTGRES_USER:-thorp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thorp}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantum} -d ${POSTGRES_DB:-thorp}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thorp} -d ${POSTGRES_DB:-thorp}"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   kafka:
     image: apache/kafka:3.9.1
-    container_name: qj-kafka
+    container_name: thorp-kafka
     ports:
       - "9092:9092"
     environment:
@@ -44,10 +44,10 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: qj-rabbitmq
+    container_name: thorp-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-quantum}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-quantum}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-thorp}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-thorp}
     ports:
       - "5672:5672"     # AMQP — 로컬에서는 호스트에서 직접 붙는다
       - "15672:15672"   # 관리 UI (http://localhost:15672)
@@ -64,17 +64,17 @@ services:
     build:
       context: ./backend
       dockerfile: ../infra/docker/backend.Dockerfile
-    container_name: qj-backend
+    container_name: thorp-backend
     ports:
       - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-thorp}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-quantum}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-quantum}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-thorp}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-thorp}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-quantum}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-quantum}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-thorp}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-thorp}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       postgres:
@@ -88,9 +88,9 @@ services:
       context: ./worker
       dockerfile: ../infra/docker/worker.Dockerfile
     environment:
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-quantum}:${RABBITMQ_PASSWORD:-quantum}@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-thorp}:${RABBITMQ_PASSWORD:-thorp}@rabbitmq:5672/
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      DATABASE_URL: postgresql://${POSTGRES_USER:-quantum}:${POSTGRES_PASSWORD:-quantum}@postgres:5432/${POSTGRES_DB:-thorp}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}
     depends_on:
       postgres:
         condition: service_healthy

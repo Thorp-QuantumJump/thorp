@@ -1,4 +1,4 @@
-// Quantum Jump CI 파이프라인 (초안)
+// Thorp CI 파이프라인 (초안)
 // 변경된 파트만 빌드하도록 추후 개선 예정. Jenkins 서버 구성은 infra/jenkins/ 참고.
 pipeline {
     agent any

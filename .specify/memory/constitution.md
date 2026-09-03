@@ -1,5 +1,7 @@
 <!--
 Sync Impact Report
+- Version change: 1.0.0 → 1.0.1 (2026-09-03 — 서비스명 표기를 Quantum Jump에서 Thorp로 정정.
+  원칙 내용 변경 없음. 팀명 "Quantum Jump"는 유지한다)
 - Version change: (template, unversioned) → 1.0.0 (initial ratification; pre-merge draft
   revised 2026-09-02 — version kept at 1.0.0 because the document had not yet been adopted)
 - Modified principles (draft revisions, latest first):
@@ -37,9 +39,9 @@ Sync Impact Report
 - Follow-up TODOs: none
 -->
 
-# Quantum Jump Constitution
+# Thorp Constitution
 
-퀀트 전략 백테스트 플랫폼(Quantum Jump)의 모든 파트에 장기적으로 적용되는 원칙만 담는다.
+퀀트 전략 백테스트 플랫폼(Thorp)의 모든 파트에 장기적으로 적용되는 원칙만 담는다.
 이 문서는 "반드시 지켜야 하는 특성"을 정하고, 그 특성을 만족시키는 아키텍처·기술·배포 형태는
 정하지 않는다. 그런 결정은 `docs/adr/`, `docs/specs/`, 각 파트의 `CLAUDE.md`에 두며 측정과
 요구사항에 따라 바꿀 수 있다. 브랜치·커밋 컨벤션, 리뷰 절차, 릴리즈 주기 같은 작업 방식은
@@ -135,4 +137,4 @@ Sync Impact Report
   넣는다. 그 특성을 구현하는 아키텍처·기술·배포 결정은 ADR과 파트 문서에 둔다. 현재 구현되어
   있다는 사실만으로 원칙으로 승격하지 않으며, 확실하지 않은 규칙은 만들지 않는다.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-02
+**Version**: 1.0.1 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-03
