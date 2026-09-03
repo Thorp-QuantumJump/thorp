@@ -50,7 +50,7 @@ PostgreSQL이 받아들이지만 백엔드 도메인 검증에서 거부되거�
 | `cumulativeReturn` | number | `equity / equity[0] - 1` |
 | `drawdown` | number | `equity / max(equity[0..t]) - 1`. 0 또는 음수 |
 
-키 이름은 camelCase 그대로 써야 한다(백엔드가 이 키로 역직렬화한다). 추가 키가 있으면 역직렬화 실패 가능성이 있으므로 넣지 않는다.
+키 이름은 camelCase 그대로 써야 한다(백엔드가 이 키로 역직렬화한다). 위 4개 외의 키는 백엔드가 무시한다(`@JsonIgnoreProperties(ignoreUnknown)`). 필드를 추가할 때는 이 문서와 `EquityPointJson`을 함께 갱신한다.
 
 ## Worker INSERT 예시 (psycopg / SQLAlchemy 등)
 

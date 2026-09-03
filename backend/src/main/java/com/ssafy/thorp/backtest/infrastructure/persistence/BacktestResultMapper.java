@@ -44,7 +44,25 @@ final class BacktestResultMapper {
                 curve);
     }
 
+    /**
+     * 저장된 행이 도메인 불변식을 위반하면(Worker가 잘못 쓴 행) {@link IllegalStateException}으로 바꿔 던진다. 도메인의 {@code
+     * IllegalArgumentException}은 전역 핸들러가 400(클라이언트 입력 오류)으로 응답하는데, 이 경우는 서버 데이터 오류이므로 500으로 가야
+     * 한다(contracts/backtest-result-table.md「백엔드 검증」).
+     */
     static BacktestResult toDomain(BacktestResultJpaEntity entity) {
+        try {
+            return toDomainUnchecked(entity);
+        } catch (IllegalArgumentException | java.time.DateTimeException e) {
+            throw new IllegalStateException(
+                    "corrupt backtest_result row: id="
+                            + entity.getId()
+                            + ", backtestJobId="
+                            + entity.getBacktestJobId(),
+                    e);
+        }
+    }
+
+    private static BacktestResult toDomainUnchecked(BacktestResultJpaEntity entity) {
         PerformanceSummary summary =
                 new PerformanceSummary(
                         entity.getInitialEquity(),

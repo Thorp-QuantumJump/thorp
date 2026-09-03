@@ -74,6 +74,39 @@ class BacktestResultRepositoryImplTest {
     }
 
     @Test
+    @DisplayName("불변식을 위반한 행(마지막 equity ≠ finalEquity)을 읽으면 IllegalStateException(500)으로 실패한다")
+    void corruptRowFailsAsIllegalState() {
+        BacktestResultJpaEntity corrupt =
+                BacktestResultMapper.toEntity(BacktestResultFixtures.sampleResult(4L));
+        BacktestResultJpaEntity persisted =
+                new BacktestResultJpaEntity(
+                        null,
+                        4L,
+                        corrupt.getInitialEquity(),
+                        corrupt.getFinalEquity() + 1,
+                        corrupt.getTotalReturn(),
+                        corrupt.getCagr(),
+                        corrupt.getMaxDrawdown(),
+                        corrupt.getMaxDrawdownPeakDate(),
+                        corrupt.getMaxDrawdownTroughDate(),
+                        corrupt.getMaxDrawdownRecoveryDate(),
+                        corrupt.getVolatility(),
+                        corrupt.getSharpeRatio(),
+                        corrupt.getTradeCount(),
+                        corrupt.getWinRate(),
+                        corrupt.getProfitFactor(),
+                        corrupt.getMetricDefinitionVersion(),
+                        corrupt.getEquityCurve());
+        entityManager.persistAndFlush(persisted);
+        entityManager.clear();
+
+        assertThatThrownBy(() -> repository.findByBacktestJobId(4L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("backtestJobId=4")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("없는 jobId는 빈 Optional을 돌려준다")
     void findByBacktestJobIdReturnsEmptyWhenMissing() {
         assertThat(repository.findByBacktestJobId(999L)).isEmpty();
