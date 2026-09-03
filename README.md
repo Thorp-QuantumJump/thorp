@@ -36,6 +36,29 @@
 
 ## 빠른 시작
 
+### 공통 Python 실행 도구
+
+팀의 공통 Python 실행 도구로 [uv](https://docs.astral.sh/uv/)를 사용한다. 개발 환경과 Spec Kit
+자동화를 실행하는 CI에는 `uv`가 설치되어 있어야 한다. 최초 한 번 Python 3.11을 준비한다.
+
+```bash
+uv python install 3.11
+```
+
+프로젝트의 Spec Kit 스킬은 사용자의 Python 설치 경로를 저장하지 않고 다음과 같이 실행한다.
+
+```bash
+uv run --python 3.11 python .specify/scripts/python/check_prerequisites.py --json --paths-only
+```
+
+`specify integration install` 또는 `specify integration upgrade` 후에는 생성된 스킬에 개발자별 절대
+경로가 다시 포함되지 않았는지 다음 명령으로 확인한다.
+
+```bash
+rg -n --hidden -S '([A-Za-z]:\\Users\\|/Users/|/home/)' .agents/skills .claude/skills
+specify integration status
+```
+
 ```bash
 # 0. 환경변수 준비
 cp .env.example .env
