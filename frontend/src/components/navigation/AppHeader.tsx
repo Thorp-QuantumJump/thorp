@@ -6,7 +6,13 @@ import {
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import styles from './AppHeader.module.css'
 
@@ -34,6 +40,12 @@ export function AppHeader() {
   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)
   const drawerRef = useRef<HTMLElement>(null)
 
+  // 닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다.
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false)
+    menuButtonRef.current?.focus()
+  }, [])
+
   // 페이지 상단을 벗어나면 투명 탐색을 플로팅 바 형태로 전환한다.
   useEffect(() => {
     let frameId = 0
@@ -58,28 +70,25 @@ export function AppHeader() {
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const focusFrame = window.requestAnimationFrame(() => firstMenuLinkRef.current?.focus())
+    firstMenuLinkRef.current?.focus()
 
-    return () => {
-      window.cancelAnimationFrame(focusFrame)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [isMenuOpen])
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
 
-  // 닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다.
-  const closeMenu = () => {
-    setIsMenuOpen(false)
-    window.requestAnimationFrame(() => menuButtonRef.current?.focus())
-  }
-
-  // Escape와 Tab 순환을 처리해 열린 메뉴 안에서 키보드 탐색이 이어지게 한다.
-  const handleDrawerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') {
       event.preventDefault()
       closeMenu()
-      return
     }
 
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [closeMenu, isMenuOpen])
+
+  // Tab 순환을 처리해 열린 메뉴 안에서 키보드 탐색이 이어지게 한다.
+  const handleDrawerKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Tab' || !drawerRef.current) return
 
     const focusableElements = Array.from(
