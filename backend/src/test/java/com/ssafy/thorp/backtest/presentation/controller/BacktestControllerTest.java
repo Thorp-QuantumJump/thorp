@@ -15,10 +15,14 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.result.BacktestConfigResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestSummaryResult;
+import com.ssafy.thorp.backtest.application.result.EquityCurveResult;
+import com.ssafy.thorp.backtest.application.result.EquityPointResult;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
+import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -183,6 +187,59 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.data.summary.winRate").value(nullValue()))
                 .andExpect(jsonPath("$.data.summary.profitFactor").value(nullValue()))
                 .andExpect(jsonPath("$.data.summary.metricDefinitionVersion").value("1.0"));
+    }
+
+    @Test
+    @DisplayName("GET /backtests/{id}/timeseries COMPLETED → 200 + backtestId + points[]")
+    void getTimeseriesReturnsPoints() throws Exception {
+        List<EquityPointResult> points =
+                List.of(
+                        new EquityPointResult(LocalDate.of(2019, 1, 1), 10_000_000L, 0.0, 0.0),
+                        new EquityPointResult(LocalDate.of(2019, 4, 1), 10_600_000L, 0.06, 0.0),
+                        new EquityPointResult(
+                                LocalDate.of(2019, 10, 1), 10_800_000L, 0.08, -0.0357));
+        when(backtestService.getTimeseries(1L)).thenReturn(new EquityCurveResult(1L, points));
+
+        mockMvc.perform(get("/backtests/1/timeseries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.backtestId").value(1))
+                .andExpect(jsonPath("$.data.points.length()").value(3))
+                .andExpect(jsonPath("$.data.points[0].date").value("2019-01-01"))
+                .andExpect(jsonPath("$.data.points[0].equity").value(10000000))
+                .andExpect(jsonPath("$.data.points[0].cumulativeReturn").value(0.0))
+                .andExpect(jsonPath("$.data.points[0].drawdown").value(0.0))
+                .andExpect(jsonPath("$.data.points[2].date").value("2019-10-01"))
+                .andExpect(jsonPath("$.data.points[2].drawdown").value(-0.0357))
+                .andExpect(jsonPath("$.error").isEmpty());
+    }
+
+    @Test
+    @DisplayName("GET /backtests/{id}/timeseries 없는 id → 404 + RESOURCE_NOT_FOUND")
+    void getTimeseriesReturnsNotFound() throws Exception {
+        when(backtestService.getTimeseries(999L)).thenThrow(new BacktestNotFoundException(999L));
+
+        mockMvc.perform(get("/backtests/999/timeseries"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data").isEmpty())
+                .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("GET /backtests/{id}/timeseries QUEUED → 409 + RESULT_NOT_READY")
+    void getTimeseriesReturnsConflictWhenNotReady() throws Exception {
+        when(backtestService.getTimeseries(4L))
+                .thenThrow(new BacktestResultNotReadyException(4L, BacktestStatus.QUEUED));
+
+        mockMvc.perform(get("/backtests/4/timeseries"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data").isEmpty())
+                .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"))
+                .andExpect(
+                        jsonPath("$.error.message")
+                                .value("백테스트 결과가 아직 준비되지 않았습니다: id=4, status=QUEUED"));
     }
 
     @Test

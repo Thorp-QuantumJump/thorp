@@ -5,7 +5,9 @@ import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.EquityCurveResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
+import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <ul>
  *   <li>{@code get}: 어떤 상태든 200. COMPLETED이고 결과 행이 있으면 summary를 채우고, 그 외에는 summary null
+ *   <li>{@code getTimeseries}: COMPLETED이고 결과 행이 있을 때만 시계열. 그 외에는 {@link
+ *       BacktestResultNotReadyException}(409)
  * </ul>
  */
 @Service
@@ -66,6 +70,22 @@ public class BacktestService {
                         () -> {
                             log.warn("COMPLETED backtest has no result row yet: id={}", backtestId);
                             return BacktestJobResult.from(job);
+                        });
+    }
+
+    @Transactional(readOnly = true)
+    public EquityCurveResult getTimeseries(Long backtestId) {
+        BacktestJob job = findJob(backtestId);
+        if (job.getStatus() != BacktestStatus.COMPLETED) {
+            throw new BacktestResultNotReadyException(backtestId, job.getStatus());
+        }
+        return resultRepository
+                .findByBacktestJobId(backtestId)
+                .map(EquityCurveResult::from)
+                .orElseThrow(
+                        () -> {
+                            log.warn("COMPLETED backtest has no result row yet: id={}", backtestId);
+                            return new BacktestResultNotReadyException(backtestId, job.getStatus());
                         });
     }
 

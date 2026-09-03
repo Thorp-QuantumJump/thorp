@@ -13,7 +13,9 @@ import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.EquityCurveResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
+import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -22,6 +24,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -135,6 +139,61 @@ class BacktestServiceTest {
 
         assertThat(result.status()).isEqualTo(BacktestStatus.COMPLETED);
         assertThat(result.summary()).isNull();
+    }
+
+    @Test
+    @DisplayName("getTimeseries는 COMPLETED Job의 포인트를 날짜 순서대로 돌려준다")
+    void getTimeseriesReturnsPointsWhenCompleted() {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, BacktestStatus.COMPLETED)));
+        when(resultRepository.findByBacktestJobId(1L))
+                .thenReturn(Optional.of(BacktestResultFixtures.sampleResult(1L)));
+
+        EquityCurveResult result = service.getTimeseries(1L);
+
+        assertThat(result.backtestId()).isEqualTo(1L);
+        assertThat(result.points()).hasSize(20);
+        assertThat(result.points().get(0).date()).isEqualTo(LocalDate.of(2019, 1, 1));
+        assertThat(result.points().get(0).equity())
+                .isEqualTo(BacktestResultFixtures.INITIAL_EQUITY);
+        assertThat(result.points().get(0).cumulativeReturn()).isZero();
+        assertThat(result.points().get(0).drawdown()).isZero();
+        assertThat(result.points().get(19).equity()).isEqualTo(BacktestResultFixtures.FINAL_EQUITY);
+        assertThat(result.points()).isSortedAccordingTo((a, b) -> a.date().compareTo(b.date()));
+    }
+
+    @Test
+    @DisplayName("getTimeseries는 없는 id면 BacktestNotFoundException을 던진다")
+    void getTimeseriesThrowsWhenMissing() {
+        when(repository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getTimeseries(999L))
+                .isInstanceOf(BacktestNotFoundException.class);
+        verify(resultRepository, never()).findByBacktestJobId(any());
+    }
+
+    @ParameterizedTest(name = "status={0}")
+    @EnumSource(
+            value = BacktestStatus.class,
+            names = {"QUEUED", "RUNNING", "FAILED"})
+    @DisplayName(
+            "getTimeseries는 COMPLETED가 아니면 결과 저장소를 조회하지 않고 BacktestResultNotReadyException을 던진다")
+    void getTimeseriesThrowsWhenNotCompleted(BacktestStatus status) {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, status)));
+
+        assertThatThrownBy(() -> service.getTimeseries(1L))
+                .isInstanceOf(BacktestResultNotReadyException.class)
+                .hasMessageContaining("status=" + status);
+        verify(resultRepository, never()).findByBacktestJobId(any());
+    }
+
+    @Test
+    @DisplayName("getTimeseries는 COMPLETED이지만 결과 행이 없으면 BacktestResultNotReadyException을 던진다")
+    void getTimeseriesThrowsWhenResultMissing() {
+        when(repository.findById(1L)).thenReturn(Optional.of(job(1L, BacktestStatus.COMPLETED)));
+        when(resultRepository.findByBacktestJobId(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getTimeseries(1L))
+                .isInstanceOf(BacktestResultNotReadyException.class);
     }
 
     @Test
