@@ -1,9 +1,9 @@
 spring:
   application:
-    name: quantum-jump-backend
+    name: thorp-backend
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/quantumjump}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}
     username: ${SPRING_DATASOURCE_USERNAME:quantum}
     password: ${SPRING_DATASOURCE_PASSWORD:quantum}
 

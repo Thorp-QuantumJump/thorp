@@ -1,8 +1,8 @@
-package com.quantumjump.api;
+package com.thorp.api;
 
 import org.junit.jupiter.api.Test;
 
-class QuantumJumpApplicationTests {
+class ThorpApplicationTests {
 
     @Test
     void placeholder() {

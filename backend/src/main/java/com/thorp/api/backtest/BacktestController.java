@@ -1,4 +1,4 @@
-package com.quantumjump.api.backtest;
+package com.thorp.api.backtest;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

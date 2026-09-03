@@ -8,7 +8,7 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 ./gradlew spotlessApply build
 ```
 
-## 패키지 규칙 (`com.quantumjump.api`)
+## 패키지 규칙 (`com.thorp.api`)
 
 - 도메인별 패키지(`backtest/`, ...) 안에 controller·service·repository·dto를 함께 둔다 (계층별 상위 폴더 X)
 - `config/` 공통 설정, `common/` 공통 예외·응답 포맷
