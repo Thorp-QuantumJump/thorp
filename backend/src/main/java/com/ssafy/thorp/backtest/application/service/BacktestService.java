@@ -9,8 +9,10 @@ import com.ssafy.thorp.backtest.application.result.EquityCurveResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestResult;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -60,38 +62,38 @@ public class BacktestService {
     @Transactional(readOnly = true)
     public BacktestJobResult get(Long backtestId) {
         BacktestJob job = findJob(backtestId);
-        if (job.getStatus() != BacktestStatus.COMPLETED) {
-            return BacktestJobResult.from(job);
-        }
-        return resultRepository
-                .findByBacktestJobId(backtestId)
+        return findResult(job)
                 .map(result -> BacktestJobResult.from(job, result))
-                .orElseGet(
-                        () -> {
-                            log.warn("COMPLETED backtest has no result row yet: id={}", backtestId);
-                            return BacktestJobResult.from(job);
-                        });
+                .orElseGet(() -> BacktestJobResult.from(job));
     }
 
     @Transactional(readOnly = true)
     public EquityCurveResult getTimeseries(Long backtestId) {
         BacktestJob job = findJob(backtestId);
-        if (job.getStatus() != BacktestStatus.COMPLETED) {
-            throw new BacktestResultNotReadyException(backtestId, job.getStatus());
-        }
-        return resultRepository
-                .findByBacktestJobId(backtestId)
+        return findResult(job)
                 .map(EquityCurveResult::from)
                 .orElseThrow(
-                        () -> {
-                            log.warn("COMPLETED backtest has no result row yet: id={}", backtestId);
-                            return new BacktestResultNotReadyException(backtestId, job.getStatus());
-                        });
+                        () -> new BacktestResultNotReadyException(backtestId, job.getStatus()));
     }
 
     private BacktestJob findJob(Long backtestId) {
         return repository
                 .findById(backtestId)
                 .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+    }
+
+    /**
+     * COMPLETED이고 결과 행이 있을 때만 값이 있다. COMPLETED인데 행이 없으면 Worker 저장 실패 등 비정상이므로 warn을 남기고, 호출자는 "아직
+     * 없음"과 같게 처리한다(research.md §5).
+     */
+    private Optional<BacktestResult> findResult(BacktestJob job) {
+        if (job.getStatus() != BacktestStatus.COMPLETED) {
+            return Optional.empty();
+        }
+        Optional<BacktestResult> result = resultRepository.findByBacktestJobId(job.getId());
+        if (result.isEmpty()) {
+            log.warn("COMPLETED backtest has no result row yet: id={}", job.getId());
+        }
+        return result;
     }
 }
