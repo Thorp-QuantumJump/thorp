@@ -44,8 +44,8 @@ export function HomePage() {
             visible: { opacity: 1, y: 0 },
           }}
         >
-          <Link className={styles.cta} to="/backtest">
-            백테스트 시작하기
+          <Link className={styles.cta} to="/dashboard">
+            시작하기
             <ArrowUpRight aria-hidden="true" size={18} strokeWidth={1.8} />
           </Link>
         </motion.div>
