@@ -1,4 +1,4 @@
-package com.thorp.api.backtest;
+package com.thorp.api.backtest.presentation.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
