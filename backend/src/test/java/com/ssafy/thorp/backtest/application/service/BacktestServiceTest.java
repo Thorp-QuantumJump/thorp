@@ -30,6 +30,7 @@ class BacktestServiceTest {
 
     private static final LocalDate START = LocalDate.of(2019, 1, 1);
     private static final LocalDate END = LocalDate.of(2023, 12, 31);
+    private static final long INITIAL_CASH = 10_000_000L;
 
     @Mock private BacktestJobRepository repository;
     @Mock private BacktestJobPublisher publisher;
@@ -40,15 +41,20 @@ class BacktestServiceTest {
     void createSavesThenPublishes() {
         BacktestJob saved =
                 BacktestJob.restore(
-                        1L, "sma-cross", new BacktestPeriod(START, END), BacktestStatus.QUEUED);
+                        1L,
+                        "sma-cross",
+                        new BacktestPeriod(START, END),
+                        INITIAL_CASH,
+                        BacktestStatus.QUEUED);
         when(repository.save(any(BacktestJob.class))).thenReturn(saved);
 
         BacktestJobResult result =
-                service.create(new CreateBacktestCommand("sma-cross", START, END));
+                service.create(new CreateBacktestCommand("sma-cross", START, END, INITIAL_CASH));
 
         ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getId()).isNull();
+        assertThat(captor.getValue().getInitialCash()).isEqualTo(INITIAL_CASH);
         assertThat(captor.getValue().getStatus()).isEqualTo(BacktestStatus.QUEUED);
 
         verify(publisher).publish(saved);
@@ -62,7 +68,24 @@ class BacktestServiceTest {
     @Test
     @DisplayName("기간이 잘못되면 저장·발행 없이 실패한다")
     void createRejectsInvalidPeriodBeforeSaving() {
-        assertThatThrownBy(() -> service.create(new CreateBacktestCommand("sma-cross", END, START)))
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        new CreateBacktestCommand(
+                                                "sma-cross", END, START, INITIAL_CASH)))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    @DisplayName("initialCash가 0 이하이면 저장·발행 없이 실패한다")
+    void createRejectsNonPositiveInitialCashBeforeSaving() {
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        new CreateBacktestCommand("sma-cross", START, END, 0L)))
                 .isInstanceOf(IllegalArgumentException.class);
 
         verify(repository, never()).save(any());
@@ -79,6 +102,7 @@ class BacktestServiceTest {
                                         1L,
                                         "sma-cross",
                                         new BacktestPeriod(START, END),
+                                        INITIAL_CASH,
                                         BacktestStatus.RUNNING)));
 
         BacktestJobResult result = service.get(1L);

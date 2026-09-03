@@ -38,7 +38,10 @@ public class BacktestController {
         BacktestJobResult result =
                 backtestService.create(
                         new CreateBacktestCommand(
-                                request.strategy(), request.startDate(), request.endDate()));
+                                request.strategy(),
+                                request.startDate(),
+                                request.endDate(),
+                                request.initialCashOrDefault()));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));
     }

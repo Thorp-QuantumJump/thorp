@@ -26,7 +26,8 @@ public class BacktestService {
         BacktestJob job =
                 BacktestJob.create(
                         command.strategy(),
-                        new BacktestPeriod(command.startDate(), command.endDate()));
+                        new BacktestPeriod(command.startDate(), command.endDate()),
+                        command.initialCash());
         BacktestJob saved = repository.save(job);
         publisher.publish(saved);
         return BacktestJobResult.from(saved);

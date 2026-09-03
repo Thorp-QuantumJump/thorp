@@ -23,16 +23,18 @@ import org.springframework.context.annotation.Import;
 @Import({JpaAuditingConfig.class, BacktestJobRepositoryImpl.class})
 class BacktestJobRepositoryImplTest {
 
+    private static final long INITIAL_CASH = 10_000_000L;
+
     @Autowired private BacktestJobRepositoryImpl repository;
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("save 후 findById로 같은 Job을 읽어온다")
+    @DisplayName("save 후 findById로 같은 Job을 읽어온다 (initialCash 포함)")
     void saveThenFindById() {
         BacktestPeriod period =
                 new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));
 
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", period));
+        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", period, 50_000_000L));
         entityManager.flush();
         entityManager.clear();
 
@@ -41,6 +43,7 @@ class BacktestJobRepositoryImplTest {
         assertThat(found).isPresent();
         assertThat(found.get().getStrategy()).isEqualTo("sma-cross");
         assertThat(found.get().getPeriod()).isEqualTo(period);
+        assertThat(found.get().getInitialCash()).isEqualTo(50_000_000L);
         assertThat(found.get().getStatus()).isEqualTo(BacktestStatus.QUEUED);
     }
 
@@ -52,7 +55,8 @@ class BacktestJobRepositoryImplTest {
                         BacktestJob.create(
                                 "sma-cross",
                                 new BacktestPeriod(
-                                        LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31))));
+                                        LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31)),
+                                INITIAL_CASH));
         entityManager.flush();
 
         BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());

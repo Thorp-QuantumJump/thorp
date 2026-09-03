@@ -14,6 +14,7 @@ final class BacktestJobMapper {
                 job.getStrategy(),
                 job.getPeriod().startDate(),
                 job.getPeriod().endDate(),
+                job.getInitialCash(),
                 job.getStatus());
     }
 
@@ -22,6 +23,7 @@ final class BacktestJobMapper {
                 entity.getId(),
                 entity.getStrategy(),
                 new BacktestPeriod(entity.getStartDate(), entity.getEndDate()),
+                entity.getInitialCash(),
                 entity.getStatus());
     }
 }

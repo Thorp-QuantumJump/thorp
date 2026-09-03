@@ -48,6 +48,18 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("RESULT_NOT_READY BusinessException은 409와 코드로 응답한다")
+    void resultNotReady() throws Exception {
+        mockMvc.perform(get("/test/not-ready"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data").value(nullValue()))
+                .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"))
+                .andExpect(
+                        jsonPath("$.error.message").value(ErrorCode.RESULT_NOT_READY.getMessage()));
+    }
+
+    @Test
     @DisplayName("요청 검증 실패는 400과 첫 필드 오류 메시지로 응답한다")
     void validationException() throws Exception {
         mockMvc.perform(
@@ -126,6 +138,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/business")
         void business() {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "백테스트 없음");
+        }
+
+        @GetMapping("/not-ready")
+        void notReady() {
+            throw new BusinessException(ErrorCode.RESULT_NOT_READY);
         }
 
         @PostMapping("/validation")
