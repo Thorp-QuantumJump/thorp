@@ -1,4 +1,5 @@
 import type { DashboardData, Indicator } from '@/types/dashboard'
+import { withIndicatorHistoryMock } from './indicatorHistoryMock'
 
 const retrievedAt = '2026-08-31T09:00:00+09:00'
 
@@ -542,8 +543,8 @@ export const dashboardMock: DashboardData = {
     asOf: '2026-08-31',
     isMock: true,
   },
-  marketIndicators,
-  macroIndicators,
+  marketIndicators: marketIndicators.map(withIndicatorHistoryMock),
+  macroIndicators: macroIndicators.map(withIndicatorHistoryMock),
   stabilityIndicators,
   similarPeriod: {
     periodStart: '2018-09',

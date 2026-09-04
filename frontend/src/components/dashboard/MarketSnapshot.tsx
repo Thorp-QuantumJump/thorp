@@ -1,6 +1,6 @@
 import { Clock } from 'lucide-react'
-import { motion } from 'motion/react'
 import type { Indicator } from '@/types/dashboard'
+import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
   formatFrequency,
@@ -8,19 +8,21 @@ import {
   formatIndicatorValue,
 } from '@/utils/dashboardFormat'
 import { TrendSparkline } from './TrendSparkline'
+import { IndicatorHistoryCard } from './IndicatorHistoryCard'
 import styles from './MarketSnapshot.module.css'
 
 interface MarketSnapshotProps {
   indicators: Indicator[]
+  activeIndicatorId: string | null
+  onActiveChange: (id: string | null) => void
 }
 
 /** 거래일 기준 시장지표와 각 데이터의 지연 정보를 카드로 요약한다. */
-export function MarketSnapshot({ indicators }: MarketSnapshotProps) {
+export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange }: MarketSnapshotProps) {
   return (
     <section className={styles.section} aria-labelledby="market-snapshot-title">
       <div className={styles.sectionHeader}>
         <div>
-          <p>오늘의 시장 지표</p>
           <h2 id="market-snapshot-title">주식시장 핵심 지표</h2>
         </div>
         <span>
@@ -31,17 +33,14 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {
 
       <div className={styles.grid}>
         {indicators.map((indicator, index) => (
-          <motion.article
+          <IndicatorHistoryCard
             className={styles.card}
             key={indicator.id}
-            initial={{ opacity: 0, y: 28, scale: 0.985 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: false, amount: 0.25 }}
-            transition={{
-              delay: index * 0.07,
-              duration: 0.55,
-              ease: [0.22, 1, 0.36, 1],
-            }}
+            indicator={indicator}
+            index={index}
+            variant="market"
+            expanded={activeIndicatorId === indicator.id}
+            onActiveChange={onActiveChange}
           >
             <div className={styles.cardTop}>
               <span>{indicator.name}</span>
@@ -52,7 +51,7 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {
               {formatIndicatorChange(indicator)}
             </p>
             <TrendSparkline
-              series={indicator.series}
+              series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}
               tone={indicator.tone}
               delay={index * 0.06}
             />
@@ -61,7 +60,7 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {
               <span>{indicator.source.provider}</span>
               <span>{indicator.source.delayDescription ?? formatFrequency(indicator.source.frequency)}</span>
             </div>
-          </motion.article>
+          </IndicatorHistoryCard>
         ))}
       </div>
     </section>
