@@ -194,6 +194,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 | 코드 | 발생 조건 | 근거 |
 |---|---|---|
 | `UNKNOWN_STRATEGY` | `strategyId`가 카탈로그에 없음 | FR-001 |
+| `EXECUTION_SCOPE_NOT_SUPPORTED` | 전략은 있으나 요청한 실행 목적을 지원하지 않음 | FR-020, FR-021 |
 | `UNKNOWN_PARAMETER` | 정의에 없는 파라미터 이름이 입력에 포함 | FR-013 |
 | `REQUIRED_PARAMETER_MISSING` | `required: true`인 파라미터가 입력에 없음 | FR-011 |
 | `TYPE_MISMATCH` | 값의 타입이 `type`과 다름 | FR-005 |
@@ -207,7 +208,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 | 필드 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `code` | 위 코드 중 하나 | O | |
-| `parameterName` | string \| null | O | `CONSTRAINT_VIOLATED`는 `left`를, `UNKNOWN_STRATEGY`는 `null` |
+| `parameterName` | string \| null | O | `CONSTRAINT_VIOLATED`는 `left`를, 전략 단위 위반(`UNKNOWN_STRATEGY`·`EXECUTION_SCOPE_NOT_SUPPORTED`)은 `null` |
 | `message` | string | O | 사용자에게 보일 한국어 설명 |
 | `detail` | object \| null | – | 판정 근거. 예: `{"min":2,"max":120,"actual":300}` |
 
@@ -215,6 +216,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 
 ```
 S0. 전략 조회        실패 → UNKNOWN_STRATEGY 하나만 반환하고 종료
+S0b. 실행 목적 지원   실패 → EXECUTION_SCOPE_NOT_SUPPORTED 하나만 반환하고 종료
 S1. 미정의 파라미터   입력 키 - 정의 키 → UNKNOWN_PARAMETER (해당 키는 이후 단계에서 무시)
 S2. 필수 누락         REQUIRED_PARAMETER_MISSING
 S3. 타입 판정         TYPE_MISMATCH (실패한 파라미터는 S4·S6에서 제외)
@@ -242,8 +244,10 @@ S7. 이력 요구량 산출   위반이 하나도 없을 때만 requiredHistoryB
 - 최소 이력 규칙이 범위 밖 파라미터를 참조하면 그 정의는 형식 위반이다(D18).
 - 제약의 한쪽 변만 범위 안에 있으면 그 정의는 형식 위반이다(D16). 그렇지 않으면 판정이 조용히 건너뛰어진다.
 
-전략 자체의 `executionScopes`에 요청한 목적이 없으면 그 전략은 해당 목적의 카탈로그 목록에서 빠진다.
-목록에 없는 전략을 지정하면 `UNKNOWN_STRATEGY`다.
+전략 자체의 `executionScopes`에 요청한 목적이 없으면 그 전략은 해당 목적의 카탈로그 목록에서 빠지고,
+그래도 지정해서 보내면 `EXECUTION_SCOPE_NOT_SUPPORTED`로 거부한다(S0b). 카탈로그에 아예 없는 식별자를 보낸
+것과는 다른 상황이므로 `UNKNOWN_STRATEGY`와 코드를 나눈다 — 목록에서 본 전략을 골랐는데 "없는 전략"이라는
+답을 받으면 사용자가 무엇을 고쳐야 할지 알 수 없다. 실행 목적을 바꾸면 되는 상황임을 코드가 말해 준다.
 - 위반이 하나라도 있으면 `resolvedParameters`와 `requiredHistoryBars`는 `null`이다.
 - 위반 목록의 순서는 `S1 → S6` 단계 순, 같은 단계 안에서는 정의의 `parameters` 선언 순서다.
   **세 파트가 동일한 순서로 보고해야 한다** — 테스트 벡터가 순서까지 비교한다.

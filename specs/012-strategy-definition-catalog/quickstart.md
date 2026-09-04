@@ -56,24 +56,38 @@ curl -s localhost:8080/strategies/SMA_CROSSOVER | jq '.data.parameters[].name'
 # → "shortPeriod" "longPeriod" "allowShort" "rebalancePeriod"
 
 # 유효한 값 — 기본값이 채워지고 이력 요구량이 산출된다
-curl -s -X POST localhost:8080/strategies/SMA_CROSSOVER/parameter-validation \
+curl -s -X POST localhost:8080/strategies/config/validate \
   -H 'Content-Type: application/json' \
-  -d '{"parameters":{"shortPeriod":20,"longPeriod":200}}' | jq '.data'
+  -d '{"strategyId":"SMA_CROSSOVER","executionScope":"BACKTEST",
+       "parameters":{"shortPeriod":20,"longPeriod":200}}' | jq '.data'
 # → valid: true, resolvedParameters 4개 전부, requiredHistoryBars: 201
 
 # 여러 위반 — 한 번에 전부 보고되는지 (FR-012, SC-004)
-curl -s -X POST localhost:8080/strategies/SMA_CROSSOVER/parameter-validation \
+curl -s -X POST localhost:8080/strategies/config/validate \
   -H 'Content-Type: application/json' \
-  -d '{"parameters":{"shortPeriod":"x","longPeriod":500,"rebalancePeriod":"HOURLY","unknownKnob":1}}' \
+  -d '{"strategyId":"SMA_CROSSOVER",
+       "parameters":{"shortPeriod":"x","longPeriod":500,"rebalancePeriod":"HOURLY","unknownKnob":1}}' \
   | jq '.data.violations[] | {code, parameterName}'
 # → UNKNOWN_PARAMETER/unknownKnob, TYPE_MISMATCH/shortPeriod,
 #    OUT_OF_RANGE/longPeriod, NOT_IN_ENUM/rebalancePeriod  (이 순서 그대로)
 
 # 상호 제약 (FR-009)
-curl -s -X POST localhost:8080/strategies/SMA_CROSSOVER/parameter-validation \
+curl -s -X POST localhost:8080/strategies/config/validate \
   -H 'Content-Type: application/json' \
-  -d '{"parameters":{"shortPeriod":100,"longPeriod":100}}' | jq '.data.violations'
+  -d '{"strategyId":"SMA_CROSSOVER","parameters":{"shortPeriod":100,"longPeriod":100}}' \
+  | jq '.data.violations'
 # → CONSTRAINT_VIOLATED / shortPeriod
+
+# 지원하지 않는 실행 목적 (FR-021)
+curl -s -X POST localhost:8080/strategies/config/validate \
+  -H 'Content-Type: application/json' \
+  -d '{"strategyId":"MACD_SIGNAL","executionScope":"LIVE",
+       "parameters":{"fastPeriod":12,"slowPeriod":26}}' | jq '.data.violations[].code'
+# → "EXECUTION_SCOPE_NOT_SUPPORTED" (MACD_SIGNAL 은 BACKTEST 전용)
+
+# 실행 목적별 목록 — LIVE 에서는 MACD_SIGNAL 이 빠진다
+curl -s 'localhost:8080/strategies?executionScope=LIVE' | jq '.data[].strategyId'
+# → "MOMENTUM" "RSI_REVERSION" "SMA_CROSSOVER"
 
 # 없는 전략
 curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/strategies/NOPE

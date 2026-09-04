@@ -20,8 +20,8 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 |---|---|---|
 | `presentation` | `controller` `request` `response` | HTTP 입출력. `@RestController`는 여기에만. request→command, result→response 변환은 컨트롤러가 한다 |
 | `application` | `service` `command` `result` `repository` `port` | 유스케이스 조합·트랜잭션 경계. `repository`·`port`는 인터페이스만 둔다 |
-| `domain` | `model` `vo` `exception` | 순수 Java 도메인 모델과 불변식. Spring·JPA·Jackson import 금지 |
-| `infrastructure` | `persistence` `messaging` | `application` 인터페이스의 구현. `@Entity`·Spring Data·브로커 클라이언트는 여기에만 |
+| `domain` | `model` `vo` `exception` `policy` | 순수 Java 도메인 모델과 불변식. Spring·JPA·Jackson import 금지. `policy`는 상태를 갖지 않는 판정·계산(예: `ParameterSetValidator`) |
+| `infrastructure` | `persistence` `messaging` `catalog` | `application` 인터페이스의 구현. `@Entity`·Spring Data·브로커 클라이언트는 여기에만. `catalog`는 배포 리소스(전략 정의 JSON) 로딩과 Jackson 바인딩 DTO |
 
 ### 공통 (`common/`)
 
@@ -42,6 +42,7 @@ common: 모든 계층에서 참조 가능
 
 - 도메인 모델(`domain/model`)과 JPA Entity(`infrastructure/persistence/*JpaEntity`)는 분리하고 `*Mapper`(정적 `toEntity`/`toDomain`)로 변환한다.
 - 컨트롤러 DTO(`request`/`response`)를 서비스 시그니처에 쓰지 않는다. 서비스는 `command`/`result`만 받고 돌려준다.
+- 판정 규칙처럼 FE와 나눠 갖는 로직은 `domain/policy`에 두고 서비스에 흩지 않는다. 두 구현을 대조할 지점이 한 곳이어야 같은 답을 낸다는 것을 테스트로 보일 수 있다.
 
 ### 새 도메인 추가 체크리스트
 

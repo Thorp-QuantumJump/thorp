@@ -10,6 +10,9 @@ public enum ViolationCode {
     /** 카탈로그에 없는 전략을 지정했다. */
     UNKNOWN_STRATEGY,
 
+    /** 전략은 있으나 요청한 실행 목적을 지원하지 않는다. */
+    EXECUTION_SCOPE_NOT_SUPPORTED,
+
     /** 정의에 존재하지 않는 파라미터 이름이 입력에 포함됐다. */
     UNKNOWN_PARAMETER,
 

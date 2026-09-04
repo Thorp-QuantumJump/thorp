@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "strategyId": "INVALID_DEFINITION",
+  "definitionVersion": 1,
+  "displayName": "테스트 전략",
+  "description": "카탈로그 로딩을 확인하기 위한 정의.",
+  "entryCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+  "exitCondition": "테스트 전용 정의이며 실제 매매 규칙을 담지 않는다.",
+  "executionScopes": [
+    "BACKTEST"
+  ],
+  "parameters": [
+    {
+      "name": "period",
+      "displayName": "관측 기간",
+      "description": "관측할 거래일 수.",
+      "type": "INTEGER",
+      "required": false,
+      "unit": "bars",
+      "executionScopes": [
+        "BACKTEST"
+      ],
+      "numericRange": {
+        "min": 1,
+        "minInclusive": true,
+        "max": 100,
+        "maxInclusive": true,
+        "step": 1
+      }
+    }
+  ],
+  "parameterConstraints": [],
+  "minimumHistoryRequirement": {
+    "rule": "PARAMETER",
+    "parameters": [
+      "period"
+    ],
+    "offset": 0,
+    "unit": "bars"
+  },
+  "changeHistory": [
+    {
+      "definitionVersion": 1,
+      "changeType": "INITIAL",
+      "changeSummary": "최초 정의",
+      "changedAt": "2026-09-04"
+    }
+  ],
+  "deprecated": false
+}

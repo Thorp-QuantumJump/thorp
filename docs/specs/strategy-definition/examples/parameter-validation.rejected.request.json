@@ -1,8 +1,9 @@
 {
+  "strategyId": "SMA_CROSSOVER",
+  "executionScope": "BACKTEST",
   "parameters": {
     "shortPeriod": 300,
     "longPeriod": 60,
     "momentumWindow": 5
-  },
-  "executionScope": "BACKTEST"
+  }
 }

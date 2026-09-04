@@ -22,6 +22,7 @@ export type ChangeType = 'INITIAL' | 'BACKWARD_COMPATIBLE' | 'INCOMPATIBLE'
 
 export type ViolationCode =
   | 'UNKNOWN_STRATEGY'
+  | 'EXECUTION_SCOPE_NOT_SUPPORTED'
   | 'UNKNOWN_PARAMETER'
   | 'REQUIRED_PARAMETER_MISSING'
   | 'TYPE_MISMATCH'
@@ -127,15 +128,17 @@ export interface StrategySummary {
   deprecated: boolean
 }
 
-export interface ParameterValidationRequest {
-  parameters: ParameterValueSet
+/** POST /api/strategies/config/validate 요청 본문. */
+export interface StrategyConfigRequest {
+  strategyId: string
   /** 생략 시 BACKTEST */
   executionScope?: ExecutionScope
+  parameters: ParameterValueSet
 }
 
 export interface ParameterViolation {
   code: ViolationCode
-  /** CONSTRAINT_VIOLATED 는 제약의 left, UNKNOWN_STRATEGY 는 null */
+  /** CONSTRAINT_VIOLATED 는 제약의 left, 전략 단위 위반은 null */
   parameterName: string | null
   message: string
   /** 판정 근거. 예: { min: 2, max: 120, actual: 300 } */
@@ -146,9 +149,11 @@ export interface ParameterViolation {
  * 판정 결과. 위반이 하나라도 있으면 `resolvedParameters` 와 `requiredHistoryBars` 는 null 이다.
  * 판정 실패도 HTTP 200 이며 결과는 본문에 담긴다.
  */
-export interface ParameterValidationResult {
+export interface StrategyConfigValidationResult {
   strategyId: string
-  definitionVersion: number
+  /** 카탈로그에 없는 전략이면 null */
+  definitionVersion: number | null
+  executionScope: ExecutionScope
   valid: boolean
   /** 발견된 모든 위반. 순서는 판정 단계 순, 같은 단계 안에서는 정의의 parameters 선언 순서. */
   violations: ParameterViolation[]

@@ -42,7 +42,7 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 - [ ] T006 [P] `frontend/package.json`에 `vitest` devDependency와 `"test": "vitest run"` 스크립트를 추가하고 `frontend/vitest.config.ts`를 생성한다
 - [ ] T007 `Jenkinsfile` 수정 — Worker 스테이지를 `uv venv --python 3.14` 기반으로 교체(시스템 `python3` 의존 제거), Frontend 스테이지에 `npm run test` 추가, T002 스크립트를 실행하는 계약 검증 스테이지 추가
 - [ ] T008 [P] `docs/adr/0002-nautilus-trader-as-strategy-engine.md` 작성 — NautilusTrader 확정 결정, 자체 `BaseStrategy`를 두지 않는 이유, 계약을 엔진 비종속으로 유지하는 경계(`worker/src/worker/strategies/binding.py`) 기록
-- [ ] T009 [P] `backend/CLAUDE.md` 계층 표에 `domain/policy`(순수 판정·계산)와 `infrastructure/catalog`(정의 로딩·Jackson DTO) 행 추가
+- [X] T009 [P] `backend/CLAUDE.md` 계층 표에 `domain/policy`(순수 판정·계산)와 `infrastructure/catalog`(정의 로딩·Jackson DTO) 행 추가
 - [ ] T010 [P] `worker/CLAUDE.md`의 "전략은 `base.Strategy` 상속, `generate_signals`만 구현 / 체결·지표는 `engine.py` 담당" 규칙을 Nautilus `Strategy`/`StrategyConfig` 기준으로 교체
 
 **Checkpoint**: 계약이 `docs/specs/`에 있고 세 파트의 검증 명령이 새 런타임에서 돈다
@@ -60,13 +60,13 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 - [X] T013 [P] `.../strategy/domain/vo/`에 값 타입 작성 — `NumericRange`(BigDecimal min/max + 경계 포함 여부 + step), `EnumOption`, `sealed interface ParameterValue` + `IntegerValue`/`DecimalValue`/`BooleanValue`/`EnumValue`, `ResolvedParameters`
 - [X] T014a 메타데이터 스키마 관계 점검 — `ParameterDefinition`의 타입·기본값·유효범위, `ExecutionScope`, 파라미터 제약 사이의 관계를 대조해 D15~D18과 "선택 파라미터는 기본값 필수" 규칙을 확정했다. record 불변식(D2·D12·D15·D17), JSON Schema, data-model.md §2 표를 함께 갱신했다
 - [X] T014 `.../strategy/domain/model/`에 정의 record 작성 — `ParameterDefinition`, `ParameterConstraint`, `MinimumHistoryRequirement`, `ChangeHistoryEntry`, `StrategyDefinition`, `StrategyCatalog` (T012·T013 필요). 필드는 data-model.md §2~§6을 따른다
-- [ ] T015 [P] `.../strategy/domain/exception/`에 `StrategyNotFoundException`, `InvalidStrategyDefinitionException` 작성
-- [ ] T016 [P] `.../strategy/application/repository/StrategyDefinitionRepository.java` 인터페이스 작성 — `findAll()`, `findById(String strategyId)`
-- [ ] T017 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonDto.java` 작성 — Jackson 바인딩 전용 DTO. 도메인은 Jackson을 참조할 수 없으므로 역직렬화는 여기서만 한다
-- [ ] T018 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonMapper.java` 작성 — DTO를 도메인 record로 변환. `numericRange`/`enumValues`의 타입별 배타성과 기본값 리터럴을 `ParameterValue`로 옮긴다
-- [ ] T019 `.../strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepository.java` 작성 — 기동 시 `classpath:strategies/*.json` 스캔 후 불변 맵 보관. 역직렬화 실패분은 `WARN` 로그 후 제외하고 나머지는 제공한다. 정의가 0건이어도 기동에 성공한다. 핫 리로드는 두지 않는다
+- [X] T015 [P] `.../strategy/domain/exception/`에 `StrategyNotFoundException`, `InvalidStrategyDefinitionException` 작성
+- [X] T016 [P] `.../strategy/application/port/StrategyRegistry.java` 인터페이스 작성 — `catalog()`. 전략 목록을 관리하는 지점이며 DB가 아니라 배포 리소스를 읽으므로 `repository`가 아닌 `port`에 둔다
+- [X] T017 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonDto.java` 작성 — Jackson 바인딩 전용 DTO. 도메인은 Jackson을 참조할 수 없으므로 역직렬화는 여기서만 한다
+- [X] T018 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonMapper.java` 작성 — DTO를 도메인 record로 변환. `numericRange`/`enumValues`의 타입별 배타성과 기본값 리터럴을 `ParameterValue`로 옮긴다
+- [X] T019 `.../strategy/infrastructure/catalog/ClasspathStrategyRegistry.java` 작성 — 기동 시 `classpath:strategies/*.json` 스캔 후 불변 맵 보관. 역직렬화 실패분은 `WARN` 로그 후 제외하고 나머지는 제공한다. 정의가 0건이어도 기동에 성공한다. 핫 리로드는 두지 않는다
 - [X] T020 [P] `contracts/examples/`의 정의 4종(`SMA_CROSSOVER`, `RSI_REVERSION`, `MACD_SIGNAL`, `MOMENTUM`)을 `backend/src/main/resources/strategies/`에 배치
-- [ ] T021 [P] `.../test/strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepositoryTest.java` 작성 — 4종 로드, 정의 0건일 때 빈 카탈로그, 깨진 JSON 하나가 나머지를 막지 않음
+- [X] T021 [P] `.../test/strategy/infrastructure/catalog/ClasspathStrategyRegistryTest.java` 작성 — 4종 로드, 정의 0건일 때 빈 카탈로그, 깨진 JSON 하나가 나머지를 막지 않음
 - [X] T022 `cd backend && ./gradlew test`로 `ArchitectureTest` 통과 확인 — `domain`이 Spring·JPA·Jackson을 참조하지 않고 계층 의존 방향이 지켜지는지
 
 **Checkpoint**: 정의가 도메인 객체로 로드된다. 사용자 스토리 구현을 병렬로 시작할 수 있다
@@ -84,16 +84,16 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 ### Tests for User Story 1
 
-- [ ] T023 [P] [US1] `.../test/strategy/presentation/controller/StrategyControllerTest.java` 작성 — `GET /strategies` 목록, `GET /strategies/{id}` 상세, 없는 전략 404 + `RESOURCE_NOT_FOUND`, 카탈로그가 비었을 때 `data: []`
-- [ ] T024 [P] [US1] `.../test/strategy/application/service/StrategyCatalogServiceTest.java` 작성 — 목록 요약 변환과 단건 조회, 미존재 시 `StrategyNotFoundException`
+- [X] T023 [P] [US1] `.../test/strategy/presentation/controller/StrategyControllerTest.java` 작성 — `GET /strategies` 목록, `GET /strategies/{id}` 상세, 없는 전략 404 + `RESOURCE_NOT_FOUND`, 카탈로그가 비었을 때 `data: []`
+- [X] T024 [P] [US1] `.../test/strategy/application/service/StrategyCatalogServiceTest.java` 작성 — 목록 요약 변환과 단건 조회, 미존재 시 `StrategyNotFoundException`
 
 ### Implementation for User Story 1
 
-- [ ] T025 [P] [US1] `.../strategy/application/result/`에 `StrategySummaryResult`, `StrategyDefinitionResult` 작성
-- [ ] T026 [US1] `.../strategy/application/service/StrategyCatalogService.java` 작성 — `findAll()`, `findById()`. 미존재 시 `StrategyNotFoundException`
-- [ ] T027 [P] [US1] `.../strategy/presentation/response/`에 `StrategySummaryResponse`, `StrategyDefinitionResponse`와 중첩 응답 record(파라미터·제약·최소이력·변경이력) 작성. 필드는 `strategy-catalog-api.schema.json`의 `strategySummary`/`getStrategyResponseData`와 일치해야 한다
-- [ ] T028 [US1] `.../strategy/presentation/controller/StrategyController.java` 작성 — `@RequestMapping("/strategies")`, `GET /` 와 `GET /{strategyId}`. 응답은 `ApiResponse.ok(...)`로 감싼다
-- [ ] T029 [US1] `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java`에 `StrategyNotFoundException` → 404 `RESOURCE_NOT_FOUND` 매핑 추가
+- [X] T025 [P] [US1] `.../strategy/application/result/`에 `StrategySummaryResult`, `StrategyDefinitionResult` 작성
+- [X] T026 [US1] `.../strategy/application/service/StrategyCatalogService.java` 작성 — `findAll()`, `findById()`. 미존재 시 `StrategyNotFoundException`
+- [X] T027 [P] [US1] `.../strategy/presentation/response/`에 `StrategySummaryResponse`, `StrategyDefinitionResponse`와 중첩 응답 record(파라미터·제약·최소이력·변경이력) 작성. 필드는 `strategy-catalog-api.schema.json`의 `strategySummary`/`getStrategyResponseData`와 일치해야 한다
+- [X] T028 [US1] `.../strategy/presentation/controller/StrategyController.java` 작성 — `@RequestMapping("/strategies")`, `GET /` 와 `GET /{strategyId}`. 응답은 `ApiResponse.ok(...)`로 감싼다
+- [X] T029 [US1] `StrategyNotFoundException` → 404 `RESOURCE_NOT_FOUND` 매핑 확인 — `BusinessException` 상속으로 기존 `GlobalExceptionHandler` 경로를 그대로 타므로 핸들러 변경은 필요 없었다. `StrategyControllerTest`가 404와 코드를 확인한다
 - [X] T030 [P] [US1] `frontend/src/types/strategy.ts` 작성 — `strategy-definition.schema.json`과 `strategy-catalog-api.schema.json`의 미러 타입
 - [ ] T031 [P] [US1] `frontend/src/api/strategies.ts` 작성 — `apiClient` 경유 `fetchStrategies()`, `fetchStrategy(strategyId)`
 - [ ] T032 [US1] `frontend/src/components/backtest/ParameterForm.tsx` 작성 — `parameters[]`의 `type`으로 입력 컴포넌트를 고른다. `INTEGER`/`DECIMAL`은 `min`·`max`·`step`이 붙은 숫자 입력, `BOOLEAN`은 스위치, `ENUM`은 `displayName`을 보여주는 셀렉트. 이 단계에서는 표시만 하고 검증은 US2에서 붙인다
@@ -115,20 +115,20 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 ### Tests for User Story 2
 
-- [ ] T035 [P] [US2] `.../test/strategy/support/TestVectorLoader.java` 작성 — `docs/specs/strategy-definition/test-vectors/*.json`을 읽어 케이스와 `definitionSources`(`ref`/`inline` 둘 다)를 로드하는 하네스
-- [ ] T036 [P] [US2] `.../test/strategy/domain/policy/ParameterSetValidatorVectorTest.java` 작성 — `parameter-validation.json` 20 케이스 전부. `violations`는 `code` + `parameterName` + **배열 순서**까지 비교하고 `message`는 비교하지 않는다
-- [ ] T037 [P] [US2] `.../test/strategy/domain/policy/HistoryRequirementCalculatorTest.java` 작성 — `FIXED`/`PARAMETER`/`MAX_PARAMETERS`/`SUM_PARAMETERS` 각각과 `offset` 가산
+- [X] T035 [P] [US2] `.../test/strategy/support/TestVectorLoader.java` 작성 — `docs/specs/strategy-definition/test-vectors/*.json`을 읽어 케이스와 `definitionSources`(`ref`/`inline` 둘 다)를 로드하는 하네스
+- [X] T036 [P] [US2] `.../test/strategy/domain/policy/ParameterSetValidatorVectorTest.java` 작성 — `parameter-validation.json` 20 케이스 전부. `violations`는 `code` + `parameterName` + **배열 순서**까지 비교하고 `message`는 비교하지 않는다
+- [X] T037 [P] [US2] `.../test/strategy/domain/policy/HistoryRequirementCalculatorTest.java` 작성 — `FIXED`/`PARAMETER`/`MAX_PARAMETERS`/`SUM_PARAMETERS` 각각과 `offset` 가산
 - [ ] T038 [P] [US2] `frontend/src/lib/strategyValidation.test.ts` 작성 — BE와 **같은** `parameter-validation.json`을 읽어 같은 비교를 수행
 
 ### Implementation for User Story 2
 
-- [ ] T039 [P] [US2] `.../strategy/domain/model/`에 `ValidationOutcome`, `ParameterViolation` 작성. 위반이 있으면 `resolvedParameters`와 `requiredHistoryBars`는 null이다
-- [ ] T040 [US2] `.../strategy/domain/policy/HistoryRequirementCalculator.java` 작성 — 확정 값 집합과 정의로부터 `bars` 산출. 대상 파라미터는 INTEGER만 받는다
-- [ ] T041 [US2] `.../strategy/domain/policy/ParameterSetValidator.java` 작성 — data-model.md §7의 S0~S7 순서. 중단 없이 모든 위반을 누적하고, 타입이 깨진 값은 이후 단계에서 제외하되 **범위를 위반한 값은 제약 판정에 그대로 사용한다**. 위반 순서는 단계 순 → 정의의 `parameters` 선언 순서. 십진 연산(`BigDecimal`)으로 step을 판정한다
-- [ ] T042 [P] [US2] `.../strategy/application/`에 `ValidateParametersCommand`(command), `ParameterValidationResult`(result) 작성
-- [ ] T043 [US2] `.../strategy/application/service/ParameterValidationService.java` 작성 — 전략 조회 → 판정 → 이력 산출 조합
-- [ ] T044 [P] [US2] `.../strategy/presentation/`에 `ParameterValidationRequest`(request), `ParameterValidationResponse`·`ParameterViolationResponse`(response) 작성
-- [ ] T045 [US2] `StrategyController`에 `POST /strategies/{strategyId}/parameter-validation` 추가 — 판정 실패도 HTTP 200이며 결과는 본문에 담긴다
+- [X] T039 [P] [US2] `.../strategy/domain/model/`에 `ValidationOutcome`, `ParameterViolation` 작성. 위반이 있으면 `resolvedParameters`와 `requiredHistoryBars`는 null이다
+- [X] T040 [US2] `.../strategy/domain/policy/HistoryRequirementCalculator.java` 작성 — 확정 값 집합과 정의로부터 `bars` 산출. 대상 파라미터는 INTEGER만 받는다
+- [X] T041 [US2] `.../strategy/domain/policy/ParameterSetValidator.java` 작성 — data-model.md §7의 S0~S7 순서. 중단 없이 모든 위반을 누적하고, 타입이 깨진 값은 이후 단계에서 제외하되 **범위를 위반한 값은 제약 판정에 그대로 사용한다**. 위반 순서는 단계 순 → 정의의 `parameters` 선언 순서. 십진 연산(`BigDecimal`)으로 step을 판정한다
+- [X] T042 [P] [US2] `.../strategy/application/`에 `ValidateStrategyConfigCommand`(command), `StrategyConfigValidationResult`(result) 작성
+- [X] T043 [US2] `.../strategy/application/service/StrategyConfigValidationService.java` 작성 — 전략 조회 → 판정 → 이력 산출 조합
+- [X] T044 [P] [US2] `.../strategy/presentation/`에 `StrategyConfigRequest`(request), `StrategyConfigValidationResponse`·중첩 `ParameterViolationResponse`(response) 작성
+- [X] T045 [US2] `StrategyController`에 `POST /strategies/config/validate` 추가 — 전략과 값을 한 본문에 담아 받는다(FE가 고른 전략을 그대로 실어 보낸다). 판정 실패도 HTTP 200이며 결과는 본문에 담긴다
 - [ ] T046 [US2] `frontend/src/lib/strategyValidation.ts` 작성 — BE와 동일한 S0~S7 판정 미러. 즉시 피드백용이며 권위는 서버에 있다
 - [ ] T047 [US2] `ParameterForm.tsx`에 즉시 검증 피드백을 연결하고, 제출 시 `validateParameters()`로 서버 판정을 받아 결과를 표시
 - [ ] T048 [US2] `quickstart.md` §2의 다중 위반·상호 제약 curl과 §3의 즉시 피드백 확인 수행
@@ -182,14 +182,14 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 ### Tests for User Story 4
 
-- [ ] T064 [P] [US4] `.../test/strategy/domain/policy/ExecutionScopeVectorTest.java` 작성 — `execution-scope.json` 3 케이스. T035의 하네스를 재사용한다
+- [X] T064 [P] [US4] `execution-scope.json` 3 케이스를 `ParameterSetValidatorVectorTest`에 함께 담았다 — 같은 하네스·같은 비교라 클래스를 나눌 이유가 없다
 - [ ] T065 [P] [US4] `frontend/src/lib/strategyValidation.scope.test.ts` 작성 — 같은 `execution-scope.json`으로 FE 미러 검증
 
 ### Implementation for User Story 4
 
-- [ ] T066 [US4] `ParameterSetValidator`에 `executionScope` 필터링 추가 — 범위 밖 파라미터는 필수여도 요구하지 않고, 확정 값 집합에 넣지 않으며, 입력에 들어오면 `UNKNOWN_PARAMETER`로 거부한다 (data-model.md §7)
+- [X] T066 [US4] `ParameterSetValidator`에 `executionScope` 필터링 추가 — 범위 밖 파라미터는 필수여도 요구하지 않고, 확정 값 집합에 넣지 않으며, 입력에 들어오면 `UNKNOWN_PARAMETER`로 거부한다 (data-model.md §7)
 - [ ] T067 [US4] `StrategyDefinitionFormatValidator`에 D9 연장 규칙 추가 — 최소 이력 규칙이 실행 목적 범위 밖 파라미터를 참조하면 형식 위반
-- [ ] T068 [US4] `GET /strategies`에 `executionScope` 쿼리 파라미터 필터 추가 (기본 `BACKTEST`) — 해당 목적을 지원하지 않는 전략은 목록에서 제외한다
+- [X] T068 [US4] `GET /strategies`에 `executionScope` 쿼리 파라미터 필터 추가 (기본 `BACKTEST`) — 해당 목적을 지원하지 않는 전략은 목록에서 제외한다
 - [ ] T069 [US4] `worker/src/worker/models.py` 수정 — `StrategyBinding` pydantic 모델 추가하고 `BacktestJob.strategy`를 `str`에서 이 객체로 교체. `strategy-execution-binding.schema.json`과 필드를 맞춘다
 - [ ] T070 [US4] `backend/src/main/java/com/ssafy/thorp/backtest/`의 실행 메시지 발행 경로(`application/port/BacktestJobPublisher`, `infrastructure/messaging/LoggingBacktestJobPublisher`)에 `strategyId`·`definitionVersion`·`resolvedParameters`·`requiredHistoryBars`·`executionScope`를 싣는다. **T069와 같은 MR에서 함께 변경해야 한다** — 헌장 IV가 비호환 상태의 Merge를 금지한다
 - [ ] T071 [US4] `worker/src/worker/main.py`의 Job 수신 로깅을 새 바인딩 구조에 맞게 갱신 (`job.strategy.strategy_id`, `definition_version`)

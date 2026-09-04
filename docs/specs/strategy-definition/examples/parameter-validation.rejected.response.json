@@ -3,6 +3,7 @@
   "data": {
     "strategyId": "SMA_CROSSOVER",
     "definitionVersion": 1,
+    "executionScope": "BACKTEST",
     "valid": false,
     "violations": [
       {
