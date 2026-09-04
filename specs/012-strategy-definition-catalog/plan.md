@@ -13,7 +13,7 @@
 기술적 접근은 세 갈래다.
 
 1. **정의는 데이터, 판정은 코드.** 전략 정의는 `backend/src/main/resources/strategies/<strategyId>.json`
-   파일이고, 형식은 `contracts/strategy-definition.schema.json`이 규정한다. Backend가 유일한 런타임
+   파일이고, 형식은 `docs/specs/strategy-definition/strategy-definition.schema.json`이 규정한다. Backend가 유일한 런타임
    제공자이며 FE는 API로, Worker는 실행 메시지로 필요한 것만 받는다.
 2. **표현 수단을 역할별로 쪼갠다.** 개별 파라미터의 타입·범위·step·enum은 JSON Schema가 잡고, 파라미터 간
    제약과 최소 이력 규칙은 각각 닫힌 어휘의 **별도 선언 목록**으로 둔다. 스키마 하나에 전부 밀어 넣으면
@@ -223,7 +223,7 @@ S6 상호 제약 → S7 이력 산출`. 중단 없이 전부 수행하고 위반
 
 ### 7. 등록·조회 구조 → [data-model.md §9](./data-model.md)
 
-기동 시 `classpath:strategies/*.json` 스캔 → Jackson 역직렬화 → 도메인 매핑 → D1~D13 형식 검사 →
+기동 시 `classpath:strategies/*.json` 스캔 → Jackson 역직렬화 → 도메인 매핑 → D1~D18 형식 검사 →
 통과분만 불변 카탈로그에 등재. 실패분은 WARN 로그 후 제외하며 나머지 전략 제공에 영향을 주지 않는다.
 정의가 0건이어도 앱은 기동하고 빈 목록을 반환한다. 핫 리로드는 두지 않는다.
 
@@ -274,7 +274,7 @@ Frontend: `types/strategy.ts` / `api/strategies.ts` / `lib/strategyValidation.ts
 | FR-010~010c 최소 이력 | `minimumHistoryRequirement` 4규칙 + `offset`, 대상은 INTEGER 한정 |
 | FR-011~014 판정과 확정 값 | 판정 순서 S0~S7, 위반 전량 보고, 기본값 주입 |
 | FR-015/016 계약·확장 | `contracts/` + 새 전략 3파일 규칙 |
-| FR-017/018 형식 위반·유일성 | D1~D13, 위반분만 제외 |
+| FR-017/018 형식 위반·유일성 | D1~D18, 위반분만 제외 |
 | FR-019~019d 버전·호환성 | `definitionVersion` + `changeHistory` + 실행 바인딩 |
 | FR-020/021 실행 목적 | `executionScopes`(전략·파라미터 양쪽) + scope 필터링 규칙 |
 | FR-022 사용자는 값만 변경 | 정의는 리소스 파일이며 API에 쓰기 경로가 없다 |

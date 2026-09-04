@@ -1,9 +1,11 @@
 package com.ssafy.thorp.strategy.domain.model;
 
 import com.ssafy.thorp.strategy.domain.vo.HistoryRule;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 전략이 요구하는 최소 이력의 양을 산출하는 선언(FR-010).
@@ -63,9 +65,15 @@ public record MinimumHistoryRequirement(
                         "%s 규칙의 대상 파라미터는 %d개까지다: %s"
                                 .formatted(rule, rule.maxTargetCount(), parameters));
             }
+            Set<String> seen = new LinkedHashSet<>();
             for (String parameter : parameters) {
                 if (!ParameterDefinition.NAME_PATTERN.matcher(parameter).matches()) {
                     throw new IllegalArgumentException("최소 이력 규칙의 대상이 파라미터 이름이 아니다: " + parameter);
+                }
+                // SUM_PARAMETERS에서 같은 이름이 두 번 들어가면 그 값이 두 번 더해진다. 의도한 계산이
+                // 아니라 오타일 가능성이 크고, 의도한 것이라면 offset으로 표현해야 한다.
+                if (!seen.add(parameter)) {
+                    throw new IllegalArgumentException("최소 이력 규칙의 대상이 중복됐다: " + parameter);
                 }
             }
         }

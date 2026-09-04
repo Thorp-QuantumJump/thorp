@@ -30,6 +30,10 @@ public record ParameterConstraint(
 
         requireParameterName(left, "좌변");
         requireParameterName(right, "우변");
+        // 같은 파라미터를 양변에 두면 값과 무관하게 결과가 고정된다. 판정이 아니라 오타다.
+        if (left.equals(right)) {
+            throw new IllegalArgumentException("제약의 양변이 같은 파라미터다: " + left);
+        }
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException(
                     "제약의 설명은 비어 있을 수 없다: %s %s %s".formatted(left, operator, right));

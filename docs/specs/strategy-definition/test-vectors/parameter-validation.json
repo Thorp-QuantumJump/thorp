@@ -3,13 +3,13 @@
   "description": "파라미터 값 판정과 최소 이력 산출의 공유 테스트 벡터. Spring BE(JUnit), FE(vitest), 그리고 판정을 구현하게 될 다른 소비자가 모두 이 파일을 읽어 같은 결과를 내야 한다. SC-002와 SC-010은 이 파일이 통과하는지로 측정한다. violations 비교는 code + parameterName + 배열 순서까지 일치해야 하며, message 문구는 비교 대상이 아니다. 모든 케이스의 executionScope 는 BACKTEST 이며, 실행 목적 필터링은 execution-scope.json 이 다룬다.",
   "definitionSources": {
     "SMA_CROSSOVER": {
-      "ref": "examples/SMA_CROSSOVER.json"
+      "ref": "strategies/SMA_CROSSOVER.json"
     },
     "RSI_REVERSION": {
-      "ref": "examples/RSI_REVERSION.json"
+      "ref": "strategies/RSI_REVERSION.json"
     },
     "MACD_SIGNAL": {
-      "ref": "examples/MACD_SIGNAL.json"
+      "ref": "strategies/MACD_SIGNAL.json"
     },
     "FIXED_WARMUP": {
       "inline": {

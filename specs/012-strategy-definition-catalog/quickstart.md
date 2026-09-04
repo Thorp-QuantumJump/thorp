@@ -15,12 +15,14 @@
 ## 1. 계약 문서 검증 (가장 먼저)
 
 ```bash
-cd docs/specs/strategy-definition
-uv run --python 3.11 --with jsonschema python scripts/validate_definitions.py
+uv run --python 3.14 --with jsonschema python     docs/specs/strategy-definition/scripts/validate_definitions.py
 ```
 
-**기대 결과**: `backend/src/main/resources/strategies/*.json` 전부가 `OK`. 하나라도 `FAIL`이면 그 정의는
-기동 시 카탈로그에서 제외되므로 여기서 먼저 잡는다.
+**기대 결과**: 네 절 전부 `OK`이고 마지막 줄이 `모두 통과`. 검사 대상은
+`backend/src/main/resources/strategies/*.json`(스키마 만족·파일명과 `strategyId` 일치),
+테스트 벡터의 `ref` 해소, `docs/specs/strategy-definition/examples/`의 API 예시,
+그리고 그 예시가 배포 정의와 어긋나지 않는지다. 정의가 `FAIL`이면 기동 시 카탈로그에서 제외되므로
+여기서 먼저 잡는다.
 
 ---
 
@@ -36,7 +38,7 @@ cd backend
 - `ArchitectureTest` 통과 — `domain/policy`가 Spring·Jackson을 참조하지 않음이 확인된다.
 - `ParameterSetValidatorVectorTest`가 `docs/specs/strategy-definition/test-vectors/parameter-validation.json`
   의 전 케이스를 통과. 이 테스트가 SC-002·SC-010의 BE 쪽 증거다.
-- `StrategyDefinitionFormatValidatorTest`가 D1~D13 각각에 대해 위반 정의를 거부함을 확인.
+- `StrategyDefinitionFormatValidatorTest`가 D1~D18 각각에 대해 위반 정의를 거부함을 확인.
 
 앱을 띄워 실제 응답을 본다:
 

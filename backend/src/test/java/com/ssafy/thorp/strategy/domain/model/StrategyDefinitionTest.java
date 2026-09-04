@@ -7,6 +7,7 @@ import com.ssafy.thorp.strategy.domain.StrategyFixtures;
 import com.ssafy.thorp.strategy.domain.vo.ExecutionScope;
 import com.ssafy.thorp.strategy.domain.vo.HistoryRule;
 import com.ssafy.thorp.strategy.domain.vo.ParameterType;
+import com.ssafy.thorp.strategy.domain.vo.ParameterValue;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -165,6 +166,43 @@ class StrategyDefinitionTest {
                                         false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("중복");
+    }
+
+    @Test
+    @DisplayName("전략이 지원하지 않는 실행 목적을 파라미터가 주장하면 정의를 만들 수 없다")
+    void rejectsParameterScopeOutsideStrategyScope() {
+        StrategyDefinition source = StrategyFixtures.macdSignal(); // BACKTEST 전용 전략
+        ParameterDefinition liveOnly =
+                new ParameterDefinition(
+                        "liveOnlyFlag",
+                        "실시장 전용",
+                        "전략이 지원하지 않는 실행 목적을 주장한다.",
+                        ParameterType.BOOLEAN,
+                        false,
+                        ParameterValue.of(false),
+                        null,
+                        Set.of(ExecutionScope.LIVE),
+                        null,
+                        null);
+
+        assertThatThrownBy(
+                        () ->
+                                new StrategyDefinition(
+                                        source.schemaVersion(),
+                                        source.strategyId(),
+                                        source.definitionVersion(),
+                                        source.displayName(),
+                                        source.description(),
+                                        source.entryCondition(),
+                                        source.exitCondition(),
+                                        source.executionScopes(),
+                                        List.of(liveOnly),
+                                        List.of(),
+                                        MinimumHistoryRequirement.fixed(10, 0),
+                                        source.changeHistory(),
+                                        false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("실행 목적을 벗어난다");
     }
 
     @Test

@@ -296,7 +296,7 @@ Worker 스테이지만 `uv`로 바꾸면 Data 파트는 영향을 받지 않는�
 ## R9. FE 판정 미러의 검증 수단
 
 **Decision**: FE에 `vitest`를 devDependency로 추가하고, BE·FE가 **같은 테스트 벡터 파일**
-(`contracts/test-vectors/parameter-validation.json`)을 읽어 동일한 판정 결과를 내는지 각자 검증한다.
+(`docs/specs/strategy-definition/test-vectors/parameter-validation.json`)을 읽어 동일한 판정 결과를 내는지 각자 검증한다.
 Jenkinsfile의 Frontend 스테이지에 `npm run test`를 추가한다.
 
 **Rationale**: SC-002와 SC-010은 "서로 다른 소비 지점이 다른 판정을 낸 사례 0건"을 요구하는데, FE에 테스트

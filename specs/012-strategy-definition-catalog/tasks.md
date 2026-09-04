@@ -34,8 +34,8 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 **Purpose**: 계약 정본 이관, 런타임 버전 상향, 검증 도구·문서 정비
 
-- [ ] T001 계약 정본을 `specs/012-strategy-definition-catalog/contracts/`에서 `docs/specs/strategy-definition/`으로 이동한다 — 스키마 3종(`strategy-definition.schema.json`, `strategy-catalog-api.schema.json`, `strategy-execution-binding.schema.json`)과 `test-vectors/parameter-validation.json`, `test-vectors/execution-scope.json`. 헌장 IV가 파트 경계 계약을 `docs/specs/`에 두도록 규정한다
-- [ ] T002 [P] `docs/specs/strategy-definition/scripts/validate_definitions.py` 작성 — `jsonschema`로 `backend/src/main/resources/strategies/*.json`을 `strategy-definition.schema.json`에 검증하고 실패 시 exit 1
+- [X] T001 계약 정본을 `specs/012-strategy-definition-catalog/contracts/`에서 `docs/specs/strategy-definition/`으로 이동한다 — 스키마 3종(`strategy-definition.schema.json`, `strategy-catalog-api.schema.json`, `strategy-execution-binding.schema.json`)과 `test-vectors/parameter-validation.json`, `test-vectors/execution-scope.json`. 헌장 IV가 파트 경계 계약을 `docs/specs/`에 두도록 규정한다
+- [X] T002 [P] `docs/specs/strategy-definition/scripts/validate_definitions.py` 작성 — `jsonschema`로 `backend/src/main/resources/strategies/*.json`을 `strategy-definition.schema.json`에 검증하고 실패 시 exit 1
 - [ ] T003 [P] `worker/pyproject.toml`에서 `requires-python = ">=3.14"`, `[tool.ruff] target-version = "py314"`로 상향
 - [ ] T004 [P] `worker/requirements.txt`에 `nautilus_trader>=1.231` 추가
 - [ ] T005 [P] `infra/docker/worker.Dockerfile`의 베이스를 `python:3.11-slim`에서 `python:3.14-slim`으로 변경
@@ -58,13 +58,14 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 - [X] T011 `.../strategy/` 아래 `presentation/{controller,request,response}`, `application/{service,command,result,repository}`, `domain/{model,vo,policy,exception}`, `infrastructure/catalog` 디렉터리 생성
 - [X] T012 [P] `.../strategy/domain/vo/`에 enum 6종 작성 — `ParameterType`(INTEGER/DECIMAL/BOOLEAN/ENUM), `ExecutionScope`(BACKTEST/LIVE), `ConstraintOperator`(LT/LTE/GT/GTE/EQ/NE), `HistoryRule`(FIXED/PARAMETER/MAX_PARAMETERS/SUM_PARAMETERS), `ChangeType`(INITIAL/BACKWARD_COMPATIBLE/INCOMPATIBLE), `ViolationCode`(8종)
 - [X] T013 [P] `.../strategy/domain/vo/`에 값 타입 작성 — `NumericRange`(BigDecimal min/max + 경계 포함 여부 + step), `EnumOption`, `sealed interface ParameterValue` + `IntegerValue`/`DecimalValue`/`BooleanValue`/`EnumValue`, `ResolvedParameters`
+- [X] T014a 메타데이터 스키마 관계 점검 — `ParameterDefinition`의 타입·기본값·유효범위, `ExecutionScope`, 파라미터 제약 사이의 관계를 대조해 D15~D18과 "선택 파라미터는 기본값 필수" 규칙을 확정했다. record 불변식(D2·D12·D15·D17), JSON Schema, data-model.md §2 표를 함께 갱신했다
 - [X] T014 `.../strategy/domain/model/`에 정의 record 작성 — `ParameterDefinition`, `ParameterConstraint`, `MinimumHistoryRequirement`, `ChangeHistoryEntry`, `StrategyDefinition`, `StrategyCatalog` (T012·T013 필요). 필드는 data-model.md §2~§6을 따른다
 - [ ] T015 [P] `.../strategy/domain/exception/`에 `StrategyNotFoundException`, `InvalidStrategyDefinitionException` 작성
 - [ ] T016 [P] `.../strategy/application/repository/StrategyDefinitionRepository.java` 인터페이스 작성 — `findAll()`, `findById(String strategyId)`
 - [ ] T017 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonDto.java` 작성 — Jackson 바인딩 전용 DTO. 도메인은 Jackson을 참조할 수 없으므로 역직렬화는 여기서만 한다
 - [ ] T018 `.../strategy/infrastructure/catalog/StrategyDefinitionJsonMapper.java` 작성 — DTO를 도메인 record로 변환. `numericRange`/`enumValues`의 타입별 배타성과 기본값 리터럴을 `ParameterValue`로 옮긴다
 - [ ] T019 `.../strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepository.java` 작성 — 기동 시 `classpath:strategies/*.json` 스캔 후 불변 맵 보관. 역직렬화 실패분은 `WARN` 로그 후 제외하고 나머지는 제공한다. 정의가 0건이어도 기동에 성공한다. 핫 리로드는 두지 않는다
-- [ ] T020 [P] `contracts/examples/`의 정의 4종(`SMA_CROSSOVER`, `RSI_REVERSION`, `MACD_SIGNAL`, `MOMENTUM`)을 `backend/src/main/resources/strategies/`에 배치
+- [X] T020 [P] `contracts/examples/`의 정의 4종(`SMA_CROSSOVER`, `RSI_REVERSION`, `MACD_SIGNAL`, `MOMENTUM`)을 `backend/src/main/resources/strategies/`에 배치
 - [ ] T021 [P] `.../test/strategy/infrastructure/catalog/ClasspathStrategyDefinitionRepositoryTest.java` 작성 — 4종 로드, 정의 0건일 때 빈 카탈로그, 깨진 JSON 하나가 나머지를 막지 않음
 - [X] T022 `cd backend && ./gradlew test`로 `ArchitectureTest` 통과 확인 — `domain`이 Spring·JPA·Jackson을 참조하지 않고 계층 의존 방향이 지켜지는지
 
@@ -93,7 +94,7 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 - [ ] T027 [P] [US1] `.../strategy/presentation/response/`에 `StrategySummaryResponse`, `StrategyDefinitionResponse`와 중첩 응답 record(파라미터·제약·최소이력·변경이력) 작성. 필드는 `strategy-catalog-api.schema.json`의 `strategySummary`/`getStrategyResponseData`와 일치해야 한다
 - [ ] T028 [US1] `.../strategy/presentation/controller/StrategyController.java` 작성 — `@RequestMapping("/strategies")`, `GET /` 와 `GET /{strategyId}`. 응답은 `ApiResponse.ok(...)`로 감싼다
 - [ ] T029 [US1] `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java`에 `StrategyNotFoundException` → 404 `RESOURCE_NOT_FOUND` 매핑 추가
-- [ ] T030 [P] [US1] `frontend/src/types/strategy.ts` 작성 — `strategy-definition.schema.json`과 `strategy-catalog-api.schema.json`의 미러 타입
+- [X] T030 [P] [US1] `frontend/src/types/strategy.ts` 작성 — `strategy-definition.schema.json`과 `strategy-catalog-api.schema.json`의 미러 타입
 - [ ] T031 [P] [US1] `frontend/src/api/strategies.ts` 작성 — `apiClient` 경유 `fetchStrategies()`, `fetchStrategy(strategyId)`
 - [ ] T032 [US1] `frontend/src/components/backtest/ParameterForm.tsx` 작성 — `parameters[]`의 `type`으로 입력 컴포넌트를 고른다. `INTEGER`/`DECIMAL`은 `min`·`max`·`step`이 붙은 숫자 입력, `BOOLEAN`은 스위치, `ENUM`은 `displayName`을 보여주는 셀렉트. 이 단계에서는 표시만 하고 검증은 US2에서 붙인다
 - [ ] T033 [US1] `frontend/src/components/backtest/StrategySelector.tsx`를 `src/data/backtestMock` 대신 `fetchStrategies()` 기반으로 전환하고, 전략을 바꾸면 `ParameterForm`이 새 정의로 교체되게 연결
@@ -148,14 +149,14 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 
 ### Tests for User Story 3
 
-- [ ] T049 [P] [US3] `.../test/strategy/domain/policy/StrategyDefinitionFormatValidatorTest.java` 작성 — data-model.md §2의 D1~D14 각각에 대해 위반 정의를 거부하고 위반 규칙을 특정하는지
+- [ ] T049 [P] [US3] `.../test/strategy/domain/policy/StrategyDefinitionFormatValidatorTest.java` 작성 — data-model.md §2의 D1~D18 각각에 대해 위반 정의를 거부하고 위반 규칙을 특정하는지
 - [ ] T050 [P] [US3] `worker/tests/test_strategy_definition_contract.py` 작성 — `../backend/src/main/resources/strategies/*.json`을 읽어 (a) 모든 정의가 `registry.STRATEGY_PATHS`에 등록됨 (b) 등록된 항목에 정의가 있음 (c) 정의 파라미터의 snake_case 집합이 `config_path` 설정 클래스의 자체 선언 필드 집합(예약 16개 제외)과 일치 (d) `type`이 필드 애노테이션과 대응. 경로가 없으면 skip
 - [ ] T051 [P] [US3] `worker/tests/test_binding.py` 작성 — camelCase→snake_case 변환, `DECIMAL`을 문자열로 실어 `Decimal`로 정확히 복원(`0.1 + 0.2` → `Decimal('0.3')`, float으로 실으면 `Decimal('0.30000000000000004')`가 되므로 이 케이스가 회귀 방지선), `StrategyFactory.create()`가 실제 `Strategy` 인스턴스를 만드는지
 
 ### Implementation for User Story 3
 
 - [ ] T052 [US3] `.../strategy/domain/vo/ReservedConfigFields.java` 작성 — `StrategyConfig` 예약 필드 16개 상수 목록 (D14 판정용). 목록은 research.md R11에 있다
-- [ ] T053 [US3] `.../strategy/domain/policy/StrategyDefinitionFormatValidator.java` 작성 — D1~D14 검사. 위반 시 어떤 규칙을 어긴 어떤 항목인지 특정한다
+- [ ] T053 [US3] `.../strategy/domain/policy/StrategyDefinitionFormatValidator.java` 작성 — D1~D18 검사. 위반 시 어떤 규칙을 어긴 어떤 항목인지 특정한다
 - [ ] T054 [US3] `ClasspathStrategyDefinitionRepository`에 형식 검증을 연결 — 위반 정의는 `WARN` 로그 후 제외하고 나머지는 등재한다. `strategyId` 중복(D1) 시 충돌한 정의를 **모두** 제외한다
 - [ ] T055 [P] [US3] `worker/src/worker/strategies/naming.py` 작성 — `to_snake()`/`to_camel()` 기계 변환과 `RESERVED_CONFIG_FIELDS` 상수
 - [ ] T056 [P] [US3] `worker/src/worker/strategies/registry.py` 작성 — `STRATEGY_PATHS: dict[str, tuple[str, str]]` (strategyId → `"module:Class"`, `"module:ConfigClass"`)와 `resolve()`
@@ -201,8 +202,8 @@ Backend 패키지 루트는 `backend/src/main/java/com/ssafy/thorp/strategy/`이
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [ ] T073 [P] `cd backend && ./gradlew spotlessApply`와 `cd worker && uv run --python 3.14 ruff format src tests` 실행
-- [ ] T074 [P] `specs/012-strategy-definition-catalog/contracts/README.md`를 `docs/specs/strategy-definition/`로의 포인터만 남기고 정리 — 정본이 두 곳에 있으면 어긋난다
-- [ ] T075 [P] `docs/specs/strategy-definition/README.md` 정리 — 스키마 목록, 검증 명령, 스키마가 담지 않는 규칙(D1~D14)의 위치
+- [X] T074 [P] `specs/012-strategy-definition-catalog/contracts/README.md`를 `docs/specs/strategy-definition/`로의 포인터만 남기고 정리 — 정본이 두 곳에 있으면 어긋난다
+- [X] T075 [P] `docs/specs/strategy-definition/README.md` 정리 — 스키마 목록, 검증 명령, 스키마가 담지 않는 규칙(D1~D18)의 위치
 - [ ] T076 `specs/012-strategy-definition-catalog/quickstart.md` 6개 절 전체 수행 — 계약 검증 → BE → FE → Worker → 확장성 → CI
 - [ ] T077 CI 전체 통과 확인 — Frontend(lint·test·build), Backend(`clean test build`), Worker(ruff·pytest), 계약 검증 스테이지
 

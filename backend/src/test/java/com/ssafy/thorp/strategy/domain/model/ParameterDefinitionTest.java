@@ -28,8 +28,18 @@ class ParameterDefinitionTest {
             ParameterValue defaultValue,
             NumericRange range,
             List<EnumOption> options) {
+        // 기본값이 없으면 필수로 둔다. 선택 파라미터는 기본값을 반드시 가져야 하기 때문이다.
         return new ParameterDefinition(
-                name, "표시 이름", "설명", type, false, defaultValue, null, BOTH, range, options);
+                name,
+                "표시 이름",
+                "설명",
+                type,
+                defaultValue == null,
+                defaultValue,
+                null,
+                BOTH,
+                range,
+                options);
     }
 
     @Test
@@ -209,15 +219,33 @@ class ParameterDefinitionTest {
     }
 
     @Test
-    @DisplayName("필수이거나 기본값이 있으면 값이 항상 확정된다")
-    void alwaysResolvableWhenRequiredOrDefaulted() {
-        ParameterDefinition optionalWithDefault =
-                of("enabled", ParameterType.BOOLEAN, ParameterValue.of(false), null, null);
-        ParameterDefinition optionalWithoutDefault =
+    @DisplayName("선택 파라미터에 기본값이 없으면 거부한다")
+    void optionalParameterRequiresDefaultValue() {
+        assertThatThrownBy(
+                        () ->
+                                new ParameterDefinition(
+                                        "mode",
+                                        "표시 이름",
+                                        "설명",
+                                        ParameterType.ENUM,
+                                        false,
+                                        null,
+                                        null,
+                                        BOTH,
+                                        null,
+                                        List.of(new EnumOption("A", "가"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("선택 파라미터는 기본값");
+    }
+
+    @Test
+    @DisplayName("필수 파라미터는 기본값 없이도 값이 확정된다")
+    void requiredParameterNeedsNoDefault() {
+        ParameterDefinition required =
                 of("mode", ParameterType.ENUM, null, null, List.of(new EnumOption("A", "가")));
 
-        assertThat(optionalWithDefault.alwaysResolvable()).isTrue();
-        assertThat(optionalWithoutDefault.alwaysResolvable()).isFalse();
+        assertThat(required.required()).isTrue();
+        assertThat(required.hasDefault()).isFalse();
     }
 
     @Test

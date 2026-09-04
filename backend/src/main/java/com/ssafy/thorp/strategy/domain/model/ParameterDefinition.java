@@ -23,15 +23,18 @@ import java.util.regex.Pattern;
  * 대응을 불변식으로 지킨다. 수치형이면 {@code numericRange}가 있고 {@code enumValues}는 없다. 열거형이면 그 반대다. 논리형이면 둘 다 없다.
  * 이 배타성이 지켜지므로 소비 지점은 {@code type} 하나만 보고 나머지를 안전하게 꺼낼 수 있다.
  *
- * <p>이 record가 지키는 것은 <b>형태</b>다. 기본값이 자기 유효 범위 안에 있는지(D3), 필수 파라미터에 기본값이 함께 있는지(D4) 같은 정의 형식 규칙은
- * 카탈로그 등재 시점의 형식 검증이 다룬다. 여기서 함께 처리하면 "형태가 잘못된 것"과 "형식 규칙을 어긴 것"의 보고 방식이 섞인다.
+ * <p>선택 파라미터는 기본값을 반드시 갖는다. 확정 값 집합이 전략이 쓰는 모든 파라미터를 빠짐없이 담아야 하므로(FR-014), 기본값 없는 선택 파라미터가 있으면 사용자가
+ * 생략했을 때 채울 값을 정의가 내놓지 못한다. 그 순간 값을 정하는 주체가 전략 구현으로 넘어가고 정의가 단일 출처라는 전제가 깨진다.
+ *
+ * <p>이 record가 지키는 것은 <b>형태</b>다. 기본값이 자기 유효 범위 안에 있는지(D3) 같이 값의 내용을 봐야 하는 정의 형식 규칙은 카탈로그 등재 시점의 형식
+ * 검증이 다룬다. 여기서 함께 처리하면 "형태가 잘못된 것"과 "형식 규칙을 어긴 것"의 보고 방식이 섞인다.
  *
  * @param name 프로그램이 쓰는 이름. 정의 안에서 유일해야 한다
  * @param displayName 화면에 보이는 이름
  * @param description 이 값이 무엇을 바꾸는지에 대한 설명
  * @param type 값의 종류
  * @param required 값을 반드시 지정해야 하는지
- * @param defaultValue 생략 시 채워질 값. 없으면 {@code null}
+ * @param defaultValue 생략 시 채워질 값. {@code required}가 {@code false}면 반드시 있어야 한다
  * @param unit 표시용 단위. 판정에 쓰지 않는다. 없으면 {@code null}
  * @param executionScopes 이 파라미터가 의미를 갖는 실행 목적
  * @param numericRange 수치형의 유효 범위. 수치형이 아니면 {@code null}
@@ -98,6 +101,13 @@ public record ParameterDefinition(
                             .formatted(name, type, defaultValue.type()));
         }
 
+        // 선택 파라미터는 기본값이 있어야 한다. 확정 값 집합은 전략이 쓰는 모든 파라미터를 빠짐없이 담아야
+        // 하는데(FR-014), 기본값 없는 선택 파라미터는 사용자가 생략하면 채울 값이 없다. 그러면 값을 정하는
+        // 주체가 전략 구현으로 넘어가고 정의가 단일 출처라는 전제가 깨진다.
+        if (!required && defaultValue == null) {
+            throw new IllegalArgumentException("선택 파라미터는 기본값이 있어야 한다(필수로 두거나 기본값을 지정한다): " + name);
+        }
+
         executionScopes = Set.copyOf(executionScopes);
         enumValues = enumValues == null ? null : List.copyOf(enumValues);
     }
@@ -133,10 +143,5 @@ public record ParameterDefinition(
     /** 주어진 실행 목적에서 이 파라미터가 의미를 갖는지(FR-021). */
     public boolean appliesTo(ExecutionScope scope) {
         return executionScopes.contains(scope);
-    }
-
-    /** 이 파라미터가 값을 확정해 둘 수 있는지. 필수이거나 기본값이 있으면 확정된다. */
-    public boolean alwaysResolvable() {
-        return required || hasDefault();
     }
 }

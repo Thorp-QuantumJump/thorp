@@ -96,6 +96,17 @@ public record StrategyDefinition(
                         "파라미터 이름이 중복됐다: strategyId=%s, name=%s"
                                 .formatted(strategyId, parameter.name()));
             }
+            // 전략이 지원하지 않는 실행 목적을 파라미터가 주장하면 그 파라미터는 어느 요청에서도
+            // 판정되지 않는다. 사라진 이유를 정의만 보고는 알 수 없으므로 정의 단계에서 막는다.
+            if (!executionScopes.containsAll(parameter.executionScopes())) {
+                throw new IllegalArgumentException(
+                        "파라미터의 실행 목적이 전략의 실행 목적을 벗어난다: strategyId=%s, name=%s, 파라미터=%s, 전략=%s"
+                                .formatted(
+                                        strategyId,
+                                        parameter.name(),
+                                        parameter.executionScopes(),
+                                        executionScopes));
+            }
         }
 
         executionScopes = Set.copyOf(executionScopes);

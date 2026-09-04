@@ -2,8 +2,8 @@
 
 **Feature**: `specs/012-strategy-definition-catalog` | **Date**: 2026-09-03
 
-JSON 표현의 정본은 `contracts/`의 JSON Schema다. 이 문서는 그 구조의 의미, 스키마로 표현할 수 없는 규칙,
-그리고 세 파트의 타입 대응을 정리한다. 모든 JSON 필드는 camelCase다(원칙 IV).
+JSON 표현의 정본은 `docs/specs/strategy-definition/`의 JSON Schema다. 이 문서는 그 구조의 의미, 스키마로
+표현할 수 없는 규칙, 그리고 세 파트의 타입 대응을 정리한다. 모든 JSON 필드는 camelCase다(원칙 IV).
 
 ---
 
@@ -48,24 +48,41 @@ ParameterValueSet   사용자 입력 (부분 집합 가능)
 
 `ExecutionScope` = `BACKTEST` | `LIVE` (닫힌 집합)
 
-### 형식 위반 규칙 (JSON Schema로 표현 불가 — `StrategyDefinitionFormatValidator` 담당)
+### 형식 위반 규칙 (JSON Schema로 표현 불가)
 
-| # | 규칙 | 근거 |
-|---|---|---|
-| D1 | `strategyId`가 카탈로그 안에서 유일 | FR-018 |
-| D2 | `parameters[].name`이 정의 안에서 유일 | FR-005 |
-| D3 | `defaultValue`가 있으면 그 파라미터의 `numericRange`/`enumValues`를 만족 | FR-006 |
-| D4 | `required: true`인 파라미터는 `defaultValue`를 가질 수 없음 | spec Edge Cases |
-| D5 | `parameterConstraints[].left`/`.right`가 `parameters`에 존재 | FR-009 |
-| D6 | 제약이 참조하는 파라미터는 `required: true`이거나 `defaultValue` 보유 | R3 |
-| D7 | `LT`/`LTE`/`GT`/`GTE` 제약의 양변은 INTEGER 또는 DECIMAL | R3 |
-| D8 | `EQ`/`NE` 제약의 양변은 같은 `type` | R3 |
-| D9 | `minimumHistoryRequirement.parameters[]`가 `parameters`에 존재하고 `type: INTEGER` | FR-010c, R4 |
-| D10 | `changeHistory[0].definitionVersion == definitionVersion` | R6 |
-| D11 | `changeHistory`의 `definitionVersion`이 내림차순이며 중복 없음 | R6 |
-| D12 | `step`이 있으면 `min`이 있고 `minInclusive: true` | R5 |
-| D13 | `numericRange`에 `min`과 `max`가 모두 있으면 `min <= max`, 경계 배타 조합으로 공집합이 되지 않음 | FR-008 |
-| D14 | 파라미터 이름의 snake_case 형태가 `StrategyConfig` 예약 필드 16개와 겹치지 않음 | R11 |
+여러 항목을 대조해야 알 수 있는 규칙들이다. "검사 지점"은 이 규칙을 실제로 막는 곳이다 — record는
+객체를 만드는 순간(생성자 불변식), validator는 `StrategyDefinitionFormatValidator`, catalog는 카탈로그
+등재 시점. record가 던지는 예외도 로더가 잡아 그 정의만 제외하므로 결과는 같다(FR-017).
+
+| # | 규칙 | 검사 지점 | 근거 |
+|---|---|---|---|
+| D1 | `strategyId`가 카탈로그 안에서 유일 | catalog | FR-018 |
+| D2 | `parameters[].name`이 정의 안에서 유일 | record | FR-005 |
+| D3 | `defaultValue`가 있으면 그 파라미터의 `numericRange`/`enumValues`를 만족 | validator | FR-006 |
+| D4 | `required: true`인 파라미터는 `defaultValue`를 가질 수 없음 | validator | spec Edge Cases |
+| D5 | `parameterConstraints[].left`/`.right`가 `parameters`에 존재 | validator | FR-009 |
+| D6 | 제약이 참조하는 파라미터는 `required: true`이거나 `defaultValue` 보유 | validator | R3 |
+| D7 | `LT`/`LTE`/`GT`/`GTE` 제약의 양변은 INTEGER 또는 DECIMAL | validator | R3 |
+| D8 | `EQ`/`NE` 제약의 양변은 같은 `type` | validator | R3 |
+| D9 | `minimumHistoryRequirement.parameters[]`가 `parameters`에 존재하고 `type: INTEGER` | validator | FR-010c, R4 |
+| D10 | `changeHistory[0].definitionVersion == definitionVersion` | validator | R6 |
+| D11 | `changeHistory`의 `definitionVersion`이 내림차순이며 중복 없음 | validator | R6 |
+| D12 | `step`이 있으면 `min`이 있고 `minInclusive: true` | record | R5 |
+| D13 | `numericRange`에 `min`과 `max`가 모두 있으면 `min <= max`, 경계 배타 조합으로 공집합이 되지 않음 | validator | FR-008 |
+| D14 | 파라미터 이름의 snake_case 형태가 `StrategyConfig` 예약 필드 16개와 겹치지 않음 | validator | R11 |
+| D15 | `parameters[].executionScopes`가 전략의 `executionScopes`의 부분집합 | record | FR-021 |
+| D16 | 제약의 양변이 전략의 각 실행 목적에서 함께 유효 — 한쪽만 유효한 제약은 금지 | validator | FR-021 |
+| D17 | `parameterConstraints[].left != .right` | record | FR-009 |
+| D18 | `minimumHistoryRequirement.parameters[]`가 전략의 **모든** 실행 목적에서 유효 | validator | FR-010a, FR-021 |
+
+D15~D18은 실행 목적(`ExecutionScope`)과 다른 항목 사이의 관계를 닫는 규칙이다. 없으면 이런 일이 생긴다.
+
+- D15 없으면: 전략이 `BACKTEST`만 지원하는데 파라미터가 `LIVE`만 주장한다. 그 파라미터는 어느 요청에서도
+  판정되지 않고 확정 값에도 들어가지 않는다. 사라진 이유를 정의만 보고는 알 수 없다.
+- D16 없으면: `left`는 `BACKTEST` 전용, `right`는 `LIVE` 전용인 제약이 양쪽 목적 어디서도 판정되지 않는다.
+  §7의 "양변 값이 모두 확정된 제약만 판정" 규칙에 걸려 **조용히** 건너뛰어지므로 아무도 눈치채지 못한다.
+- D18 없으면: `LIVE` 요청에서 `BACKTEST` 전용 파라미터를 참조하는 이력 규칙이 산출할 값을 잃는다.
+  최소 이력 요구량은 정의와 확정 값만으로 항상 산출돼야 한다(FR-010a).
 
 D14의 예약 필드 목록: `strategy_id`, `order_id_tag`, `use_uuid_client_order_ids`,
 `use_hyphens_in_client_order_ids`, `oms_type`, `external_order_claims`, `manage_contingent_orders`,
@@ -95,6 +112,12 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 | `numericRange` | `NumericRange` | 조건부 | `INTEGER`/`DECIMAL`일 때 필수, 그 외 금지 |
 | `enumValues` | `EnumOption[]` | 조건부 | `ENUM`일 때 필수(1개 이상), 그 외 금지 |
 
+**선택 파라미터는 기본값을 반드시 갖는다.** `required: false`이면서 `defaultValue`가 없으면 사용자가
+생략했을 때 채울 값을 정의가 내놓지 못한다. 그러면 확정 값 집합이 전략의 모든 파라미터를 담는다는 약속
+(FR-014)이 깨지고, 값을 정하는 주체가 전략 구현으로 넘어가 정의가 단일 출처라는 전제도 함께 무너진다.
+`required`와 `defaultValue`는 서로 배타적이며 **둘 중 하나는 반드시 있다**. 이 규칙은 파일 하나로 판정
+가능하므로 JSON Schema가 막고 `ParameterDefinition` record도 같은 불변식을 갖는다.
+
 ### NumericRange
 
 | 필드 | 타입 | 필수 | 설명 |
@@ -106,7 +129,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 | `step` | number > 0 | – | 허용 간격. 지정 시 `min` 필수 + `minInclusive: true`(D12) |
 
 한쪽 경계만 지정한 열린 범위는 유효하다(FR-008, spec Edge Cases). `INTEGER`의 `min`/`max`/`step`은 정수여야
-한다. `step` 판정식은 `(value - min) % step == 0`이며 십진 연산으로 수행한다(R5).
+하며 JSON Schema가 이를 막는다 — `2.5` 같은 하한은 어떤 정수도 만족시키지 못하거나 경계를 모호하게 만든다. `step` 판정식은 `(value - min) % step == 0`이며 십진 연산으로 수행한다(R5).
 
 ### EnumOption
 
@@ -123,7 +146,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 |---|---|---|---|
 | `left` | string | O | 파라미터 이름 |
 | `operator` | `ConstraintOperator` | O | `LT` \| `LTE` \| `GT` \| `GTE` \| `EQ` \| `NE` |
-| `right` | string | O | 파라미터 이름. 상수 불가(R3) |
+| `right` | string | O | 파라미터 이름. 상수 불가(R3). `left`와 달라야 한다(D17) |
 | `message` | string | O | 위반 시 사용자에게 보일 설명 (FR-009) |
 
 판정은 **확정 값 집합(기본값 주입 후)** 기준이다. 예:
@@ -141,7 +164,7 @@ D1 위반 시에는 충돌한 `strategyId`를 가진 정의를 **모두** 제외
 |---|---|---|---|
 | `rule` | `HistoryRule` | O | `FIXED` \| `PARAMETER` \| `MAX_PARAMETERS` \| `SUM_PARAMETERS` |
 | `value` | integer ≥ 0 | 조건부 | `FIXED`일 때 필수, 그 외 금지 |
-| `parameters` | string[] | 조건부 | `PARAMETER`는 정확히 1개, `MAX_`/`SUM_`은 1개 이상. `FIXED`일 때 금지 |
+| `parameters` | string[] | 조건부 | `PARAMETER`는 정확히 1개, `MAX_`/`SUM_`은 1개 이상, 중복 불가. `FIXED`일 때 금지 |
 | `offset` | integer ≥ 0 | – | 기본 `0` |
 | `unit` | `"bars"` | O | 상수. 다른 값 불가 |
 
@@ -216,7 +239,8 @@ S7. 이력 요구량 산출   위반이 하나도 없을 때만 requiredHistoryB
 - 판정 대상에서 제외한다 — `required: true`여도 누락으로 보지 않는다.
 - 확정 값 집합에 넣지 않는다 — 기본값이 있어도 주입하지 않는다.
 - 입력에 그 이름이 들어오면 `UNKNOWN_PARAMETER`로 거부한다. 해당 목적에서는 정의에 없는 이름과 같다.
-- 최소 이력 규칙이 범위 밖 파라미터를 참조하면 그 정의는 형식 위반이다(D9의 연장).
+- 최소 이력 규칙이 범위 밖 파라미터를 참조하면 그 정의는 형식 위반이다(D18).
+- 제약의 한쪽 변만 범위 안에 있으면 그 정의는 형식 위반이다(D16). 그렇지 않으면 판정이 조용히 건너뛰어진다.
 
 전략 자체의 `executionScopes`에 요청한 목적이 없으면 그 전략은 해당 목적의 카탈로그 목록에서 빠진다.
 목록에 없는 전략을 지정하면 `UNKNOWN_STRATEGY`다.
@@ -468,7 +492,7 @@ export interface ParameterValueSet { [name: string]: ParameterValue }
 검사한다. `binding.py`·`naming.py`·Backend·FE는 건드리지 않는다.
 
 **로딩(기동 시)**: `ClasspathStrategyDefinitionRepository`가 `classpath:strategies/*.json`을 스캔 →
-Jackson으로 DTO 역직렬화 → 도메인 record로 매핑 → `StrategyDefinitionFormatValidator`로 D1~D13 검사 →
+Jackson으로 DTO 역직렬화 → 도메인 record로 매핑 → `StrategyDefinitionFormatValidator`로 D1~D18 검사 →
 통과분만 `StrategyCatalog`에 등재. 실패분은 `WARN` 로그에 `strategyId`와 위반 규칙 번호를 남기고 제외한다
 (FR-017). **정의가 하나도 없거나 전부 실패해도 애플리케이션은 기동한다** — `GET /strategies`가 빈 목록을
 반환할 뿐이다(spec Edge Cases).
