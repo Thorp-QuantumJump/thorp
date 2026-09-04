@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { DataFreshnessPanel } from '@/components/dashboard/DataFreshnessPanel'
 import { MacroIndicatorGrid } from '@/components/dashboard/MacroIndicatorGrid'
 import { MarketRegimeHero } from '@/components/dashboard/MarketRegimeHero'
@@ -10,6 +11,7 @@ import styles from './DashboardPage.module.css'
 
 /** 한국 시장 국면, 유사 과거 구간과 전략 추천 컴포넌트를 하나의 화면으로 조합한다. */
 export function DashboardPage() {
+  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)
   const allComparisonIndicators = [
     ...dashboardMock.marketIndicators,
     ...dashboardMock.macroIndicators,
@@ -28,8 +30,16 @@ export function DashboardPage() {
 
         <div className={styles.contentBoundary}>
           <div className={styles.contentFlow}>
-            <MarketSnapshot indicators={dashboardMock.marketIndicators} />
-            <MacroIndicatorGrid indicators={dashboardMock.macroIndicators} />
+            <MarketSnapshot
+              indicators={dashboardMock.marketIndicators}
+              activeIndicatorId={activeIndicatorId}
+              onActiveChange={setActiveIndicatorId}
+            />
+            <MacroIndicatorGrid
+              indicators={dashboardMock.macroIndicators}
+              activeIndicatorId={activeIndicatorId}
+              onActiveChange={setActiveIndicatorId}
+            />
             <SimilarMarketPanel
               period={dashboardMock.similarPeriod}
               indicators={allComparisonIndicators}

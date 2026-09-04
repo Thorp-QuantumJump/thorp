@@ -1,4 +1,4 @@
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import type { IndicatorSeriesPoint, IndicatorTone } from '@/types/dashboard'
 import styles from './TrendSparkline.module.css'
 
@@ -33,6 +33,7 @@ function buildSparklinePath(series: IndicatorSeriesPoint[]) {
 
 /** 색상에 의존하지 않는 텍스트 정보 옆에 보조 추세선을 표시한다. */
 export function TrendSparkline({ series, tone, delay = 0 }: TrendSparklineProps) {
+  const reducedMotion = useReducedMotion()
   const path = buildSparklinePath(series)
 
   return (
@@ -48,12 +49,12 @@ export function TrendSparkline({ series, tone, delay = 0 }: TrendSparklineProps)
         className={styles.line}
         d={path}
         fill="none"
-        initial={{ pathLength: 0, opacity: 0 }}
+        initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}
         whileInView={{ pathLength: 1, opacity: 1 }}
         viewport={{ once: false, amount: 0.65 }}
         transition={{
-          delay: 0.16 + delay,
-          duration: 1.05,
+          delay: reducedMotion ? 0 : 0.16 + delay,
+          duration: reducedMotion ? 0 : 1.05,
           ease: [0.22, 1, 0.36, 1],
         }}
       />

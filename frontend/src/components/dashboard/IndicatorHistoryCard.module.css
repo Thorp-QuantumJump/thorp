@@ -1,0 +1,231 @@
+.slot {
+  position: relative;
+  min-width: 0;
+  --panel-left: 0;
+  --panel-right: auto;
+}
+
+.slot:has(.panel) {
+  z-index: 9;
+}
+
+.slot[data-expanded='true'] {
+  z-index: 10;
+}
+
+.preview {
+  height: 100%;
+}
+
+.expandButton,
+.panelHeader,
+.panelValue,
+.panelFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.expandButton {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--dashboard-copy);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.expandButton span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--dashboard-brand);
+}
+
+.expandButton:focus-visible,
+.closeButton:focus-visible {
+  outline: 2px solid var(--dashboard-brand);
+  outline-offset: 4px;
+}
+
+.slot:focus-within .panel {
+  border-color: var(--dashboard-brand);
+}
+
+.panel {
+  position: absolute;
+  top: -10px;
+  right: var(--panel-right);
+  left: var(--panel-left);
+  width: max(100%, min(440px, calc(100vw - 48px)));
+  padding: 20px;
+  border: 1px solid var(--dashboard-line);
+  border-radius: 17px;
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow);
+  overflow: hidden;
+}
+
+.panel[data-present='false'] {
+  pointer-events: none;
+}
+
+.panelHeader,
+.panelValue > span,
+.panelFooter {
+  color: var(--dashboard-copy);
+  font-size: 0.68rem;
+}
+
+.panelHeader > span {
+  color: var(--dashboard-brand);
+  font-weight: 650;
+}
+
+.closeButton {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--dashboard-line-soft);
+  border-radius: 8px;
+  background: var(--dashboard-surface);
+  color: var(--dashboard-copy);
+  cursor: pointer;
+}
+
+.panel h3 {
+  margin: 4px 0 12px;
+  color: var(--dashboard-ink);
+  font-size: 0.95rem;
+}
+
+.panelValue {
+  flex-wrap: wrap;
+}
+
+.panelValue strong {
+  color: var(--dashboard-ink);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.historyChart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 12px;
+  overflow: visible;
+}
+
+.historyChart text {
+  fill: var(--dashboard-copy);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gridLine {
+  stroke: var(--dashboard-line-soft);
+  stroke-width: 1;
+}
+
+.historyLine {
+  stroke: var(--dashboard-brand);
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.latestPoint {
+  fill: var(--dashboard-brand);
+  stroke: var(--dashboard-surface);
+  stroke-width: 2;
+}
+
+.interpretation,
+.empty {
+  margin: 12px 0;
+  color: var(--dashboard-copy);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.panelFooter {
+  padding-top: 12px;
+  border-top: 1px solid var(--dashboard-line-soft);
+  flex-wrap: wrap;
+}
+
+/* 각 반응형 그리드의 마지막 열은 안쪽으로 확장해 화면 밖으로 넘치지 않는다. */
+.slot[data-variant='market']:nth-child(5n),
+.slot[data-variant='macro']:nth-child(3n) {
+  --panel-left: auto;
+  --panel-right: 0;
+}
+
+@media (max-width: 1180px) {
+  .slot[data-variant='market']:nth-child(n) {
+    --panel-left: 0;
+    --panel-right: auto;
+  }
+
+  .slot[data-variant='market']:nth-child(3n) {
+    --panel-left: auto;
+    --panel-right: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .slot[data-variant='macro']:nth-child(n) {
+    --panel-left: 0;
+    --panel-right: auto;
+  }
+
+  .slot[data-variant='macro']:nth-child(2n) {
+    --panel-left: auto;
+    --panel-right: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .slot[data-variant='market']:nth-child(n) {
+    --panel-left: 0;
+    --panel-right: auto;
+  }
+
+  .slot[data-variant='market']:nth-child(2n) {
+    --panel-left: auto;
+    --panel-right: 0;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .closeButton {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 560px) {
+  .slot[data-variant='macro'] .panel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 500px) {
+  .slot[data-variant='market'] .panel {
+    width: 100%;
+  }
+
+  .historyChart text {
+    font-size: 17px;
+  }
+}

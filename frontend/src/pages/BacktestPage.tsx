@@ -36,6 +36,7 @@ export function BacktestPage() {
   const [status, setStatus] = useState<BacktestViewStatus>('ready')
   const [progress, setProgress] = useState(100)
   const [runIndex, setRunIndex] = useState(1)
+  const [initialCapital, setInitialCapital] = useState(10_000_000)
 
   // 프로토타입 실행 시간을 재현하고 완료 시 차트를 ready 상태로 전환한다.
   useEffect(() => {
@@ -148,6 +149,7 @@ export function BacktestPage() {
                   focusedStrategy={focusedStrategy}
                   status={status}
                   revealSignature={`run-${runIndex}`}
+                  initialCapital={initialCapital}
                 />
                 <AnimatePresence>
                   {status === 'loading' && (
@@ -248,7 +250,11 @@ export function BacktestPage() {
               <label htmlFor="capital">초기 투자금</label>
               <div className={styles.inputIconWrap}>
                 <CircleDollarSign size={16} aria-hidden="true" />
-                <select id="capital" defaultValue="10000000">
+                <select
+                  id="capital"
+                  value={initialCapital}
+                  onChange={(event) => setInitialCapital(Number(event.target.value))}
+                >
                   <option value="1000000">1,000,000원</option>
                   <option value="10000000">10,000,000원</option>
                   <option value="100000000">100,000,000원</option>
@@ -261,9 +267,9 @@ export function BacktestPage() {
             <div className={styles.strategyHeading}>
               <div>
                 <span>비교 전략</span>
-                <small>최대 3개</small>
+                <small>최대 {strategyResults.length}개</small>
               </div>
-              <strong>{activeStrategies.length}/3</strong>
+              <strong>{activeStrategies.length}/{strategyResults.length}</strong>
             </div>
             <StrategySelector selected={activeStrategies} onToggle={toggleStrategy} />
 
