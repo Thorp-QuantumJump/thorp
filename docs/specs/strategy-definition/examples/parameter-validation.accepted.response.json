@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "data": {
+    "strategyId": "SMA_CROSSOVER",
+    "definitionVersion": 1,
+    "valid": true,
+    "violations": [],
+    "resolvedParameters": {
+      "shortPeriod": 20,
+      "longPeriod": 60,
+      "allowShort": false,
+      "rebalancePeriod": "DAILY"
+    },
+    "requiredHistoryBars": 61
+  },
+  "error": null
+}

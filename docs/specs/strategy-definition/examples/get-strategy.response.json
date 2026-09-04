@@ -1,0 +1,123 @@
+{
+  "success": true,
+  "data": {
+    "schemaVersion": "1.0.0",
+    "strategyId": "SMA_CROSSOVER",
+    "definitionVersion": 1,
+    "displayName": "이동평균 교차",
+    "description": "단기 이동평균과 장기 이동평균의 교차로 추세 전환을 포착한다. 추세가 이어지는 구간에서 수익을 내고 횡보 구간에서는 잦은 교차로 손실이 누적되는 성격을 가진다.",
+    "entryCondition": "단기 이동평균이 장기 이동평균을 아래에서 위로 교차한 다음 거래일 시가에 전량 진입한다.",
+    "exitCondition": "단기 이동평균이 장기 이동평균을 위에서 아래로 교차한 다음 거래일 시가에 전량 청산한다.",
+    "executionScopes": [
+      "BACKTEST",
+      "LIVE"
+    ],
+    "parameters": [
+      {
+        "name": "shortPeriod",
+        "displayName": "단기 이동평균 기간",
+        "description": "단기 이동평균을 계산할 거래일 수. 짧을수록 신호가 자주 발생한다.",
+        "type": "INTEGER",
+        "required": true,
+        "unit": "bars",
+        "executionScopes": [
+          "BACKTEST",
+          "LIVE"
+        ],
+        "numericRange": {
+          "min": 2,
+          "minInclusive": true,
+          "max": 120,
+          "maxInclusive": true,
+          "step": 1
+        }
+      },
+      {
+        "name": "longPeriod",
+        "displayName": "장기 이동평균 기간",
+        "description": "장기 이동평균을 계산할 거래일 수. 추세의 기준선 역할을 한다.",
+        "type": "INTEGER",
+        "required": true,
+        "unit": "bars",
+        "executionScopes": [
+          "BACKTEST",
+          "LIVE"
+        ],
+        "numericRange": {
+          "min": 5,
+          "minInclusive": true,
+          "max": 400,
+          "maxInclusive": true,
+          "step": 1
+        }
+      },
+      {
+        "name": "allowShort",
+        "displayName": "공매도 허용",
+        "description": "하향 교차 시 청산에서 그치지 않고 매도 포지션까지 잡을지 여부.",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": false,
+        "unit": null,
+        "executionScopes": [
+          "BACKTEST",
+          "LIVE"
+        ]
+      },
+      {
+        "name": "rebalancePeriod",
+        "displayName": "신호 확인 주기",
+        "description": "교차 여부를 확인하는 주기. 주기가 길수록 잡음 신호가 줄어든다.",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "DAILY",
+        "unit": null,
+        "executionScopes": [
+          "BACKTEST",
+          "LIVE"
+        ],
+        "enumValues": [
+          {
+            "value": "DAILY",
+            "displayName": "매 거래일"
+          },
+          {
+            "value": "WEEKLY",
+            "displayName": "매주"
+          },
+          {
+            "value": "MONTHLY",
+            "displayName": "매월"
+          }
+        ]
+      }
+    ],
+    "parameterConstraints": [
+      {
+        "left": "shortPeriod",
+        "operator": "LT",
+        "right": "longPeriod",
+        "message": "단기 이동평균 기간은 장기 이동평균 기간보다 짧아야 합니다."
+      }
+    ],
+    "minimumHistoryRequirement": {
+      "rule": "MAX_PARAMETERS",
+      "parameters": [
+        "shortPeriod",
+        "longPeriod"
+      ],
+      "offset": 1,
+      "unit": "bars"
+    },
+    "changeHistory": [
+      {
+        "definitionVersion": 1,
+        "changeType": "INITIAL",
+        "changeSummary": "최초 정의",
+        "changedAt": "2026-09-03"
+      }
+    ],
+    "deprecated": false
+  },
+  "error": null
+}

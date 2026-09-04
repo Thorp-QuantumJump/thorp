@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "data": {
+    "strategyId": "SMA_CROSSOVER",
+    "definitionVersion": 1,
+    "valid": false,
+    "violations": [
+      {
+        "code": "UNKNOWN_PARAMETER",
+        "parameterName": "momentumWindow",
+        "message": "이 전략에 없는 파라미터입니다: momentumWindow",
+        "detail": null
+      },
+      {
+        "code": "OUT_OF_RANGE",
+        "parameterName": "shortPeriod",
+        "message": "단기 이동평균 기간은 2 이상 120 이하여야 합니다.",
+        "detail": {
+          "min": 2,
+          "max": 120,
+          "actual": 300
+        }
+      },
+      {
+        "code": "CONSTRAINT_VIOLATED",
+        "parameterName": "shortPeriod",
+        "message": "단기 이동평균 기간은 장기 이동평균 기간보다 짧아야 합니다.",
+        "detail": {
+          "left": "shortPeriod",
+          "operator": "LT",
+          "right": "longPeriod"
+        }
+      }
+    ],
+    "resolvedParameters": null,
+    "requiredHistoryBars": null
+  },
+  "error": null
+}

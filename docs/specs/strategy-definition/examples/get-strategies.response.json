@@ -1,0 +1,53 @@
+{
+  "success": true,
+  "data": [
+    {
+      "strategyId": "SMA_CROSSOVER",
+      "definitionVersion": 1,
+      "displayName": "이동평균 교차",
+      "description": "단기 이동평균과 장기 이동평균의 교차로 추세 전환을 포착한다. 추세가 이어지는 구간에서 수익을 내고 횡보 구간에서는 잦은 교차로 손실이 누적되는 성격을 가진다.",
+      "executionScopes": [
+        "BACKTEST",
+        "LIVE"
+      ],
+      "parameterCount": 4,
+      "deprecated": false
+    },
+    {
+      "strategyId": "RSI_REVERSION",
+      "definitionVersion": 1,
+      "displayName": "RSI 평균 회귀",
+      "description": "상대강도지수(RSI)가 과매도 구간에 들어가면 반등을 기대해 진입하고 과매수 구간에서 청산한다. 추세가 강한 구간에서는 이른 진입으로 손실이 커질 수 있다.",
+      "executionScopes": [
+        "BACKTEST",
+        "LIVE"
+      ],
+      "parameterCount": 4,
+      "deprecated": false
+    },
+    {
+      "strategyId": "MACD_SIGNAL",
+      "definitionVersion": 2,
+      "displayName": "MACD 시그널 교차",
+      "description": "빠른 지수이동평균과 느린 지수이동평균의 차(MACD)가 시그널선을 교차할 때 매매한다. 시그널선이 안정되기까지 느린 기간과 시그널 기간을 합한 만큼의 이력이 필요하다.",
+      "executionScopes": [
+        "BACKTEST"
+      ],
+      "parameterCount": 3,
+      "deprecated": false
+    },
+    {
+      "strategyId": "MOMENTUM",
+      "definitionVersion": 1,
+      "displayName": "모멘텀",
+      "description": "최근 일정 기간의 수익률이 기준치를 넘으면 추세가 이어질 것으로 보고 보유한다. 기존 worker/src/worker/strategies/momentum.py 의 lookback 개념을 정의로 옮긴 것이다.",
+      "executionScopes": [
+        "BACKTEST",
+        "LIVE"
+      ],
+      "parameterCount": 2,
+      "deprecated": false
+    }
+  ],
+  "error": null
+}

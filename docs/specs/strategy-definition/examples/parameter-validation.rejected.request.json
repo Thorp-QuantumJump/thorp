@@ -1,0 +1,8 @@
+{
+  "parameters": {
+    "shortPeriod": 300,
+    "longPeriod": 60,
+    "momentumWindow": 5
+  },
+  "executionScope": "BACKTEST"
+}

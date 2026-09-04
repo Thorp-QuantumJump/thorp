@@ -1,0 +1,8 @@
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "존재하지 않는 전략입니다: NO_SUCH_STRATEGY"
+  }
+}

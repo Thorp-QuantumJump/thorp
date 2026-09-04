@@ -1,0 +1,7 @@
+{
+  "parameters": {
+    "shortPeriod": 20,
+    "longPeriod": 60
+  },
+  "executionScope": "BACKTEST"
+}
