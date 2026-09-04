@@ -1,6 +1,7 @@
 import { ArrowUpRight, X } from 'lucide-react'
 import { AnimatePresence, motion, useIsPresent, useReducedMotion, type Transition } from 'motion/react'
-import { useRef, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
+import { useIndicatorEscape } from '@/hooks/useIndicatorEscape'
 import type { Indicator } from '@/types/dashboard'
 import { formatDataDate, formatIndicatorValue } from '@/utils/dashboardFormat'
 import { IndicatorHistoryChart } from './IndicatorHistoryChart'
@@ -100,10 +101,12 @@ export function IndicatorHistoryCard({
   const layoutId = `indicator-card-${indicator.id}`
 
   /** 명시적으로 닫으면 원래 버튼으로 초점을 돌려 키보드 탐색을 이어간다. */
-  function closePanel() {
+  const closePanel = useCallback(() => {
     onActiveChange(null)
     triggerRef.current?.focus({ preventScroll: true })
-  }
+  }, [onActiveChange])
+
+  useIndicatorEscape(expanded, closePanel)
 
   return (
     <motion.article
@@ -122,13 +125,6 @@ export function IndicatorHistoryCard({
       }}
       onBlur={(event) => {
         if (expanded && !event.currentTarget.contains(event.relatedTarget)) onActiveChange(null)
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && expanded) {
-          event.preventDefault()
-          event.stopPropagation()
-          closePanel()
-        }
       }}
     >
       <motion.div
