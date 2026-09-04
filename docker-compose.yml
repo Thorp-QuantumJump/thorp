@@ -69,6 +69,18 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: postgresql://${POSTGRES_USER:-quantum}:${POSTGRES_PASSWORD:-quantum}@postgres:5432/${POSTGRES_DB:-quantumjump}
+      # 시세 스냅샷 경로 (baseline 러너 / 워커 공용)
+      MARKET_DATA_PATH: /app/data
+      # "단일 프로세스" 전제를 지키기 위해 BLAS 스레드 수를 1로 고정한다.
+      # 이 값이 없으면 numpy가 몰래 멀티코어를 써서 baseline이 실제보다 빨라진다.
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    volumes:
+      # 시세 Parquet 스냅샷 (읽기 전용). 측정 재현성을 위해 스냅샷을 고정해서 쓴다.
+      - ./data/processed:/app/data:ro
+      # 측정 결과 JSON을 호스트로 회수하는 경로
+      - ./benchmarks:/app/out
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "mode": "baseline",
+  "measured_at": "2026-09-04T17:06:50+09:00",
+  "environment": {
+    "hostname": "DESKTOP-MR7IIH9",
+    "in_container": false,
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "cpu_count": 22,
+    "memory_gb": null,
+    "python": "3.12.12",
+    "pandas": "3.0.5",
+    "numpy": "2.5.2",
+    "thread_env": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null
+    },
+    "git_commit": "21f2cda"
+  },
+  "workload": {
+    "strategy": "MOMENTUM",
+    "start": "2021-01-01",
+    "end": "2025-12-31",
+    "tickers": [
+      "005930",
+      "000660",
+      "373220",
+      "207940",
+      "005380",
+      "000270",
+      "068270",
+      "035420",
+      "051910",
+      "006400"
+    ],
+    "input_rows": 13040,
+    "jobs_per_run": 20,
+    "cost_bps": 10.0,
+    "data_source": "synthetic"
+  },
+  "timings": {
+    "data_load_sec": 0.014791,
+    "warmup": 1,
+    "repeat": 5,
+    "cooldown_sec": 0.0,
+    "runs_sec": [
+      0.232409,
+      0.232749,
+      0.23665,
+      0.239744,
+      0.23996
+    ],
+    "per_run_sec": {
+      "median": 0.23665,
+      "mean": 0.236302,
+      "p95": 0.239917,
+      "min": 0.232409,
+      "max": 0.23996,
+      "stdev": 0.003645
+    },
+    "per_job_sec": {
+      "median": 0.011832,
+      "mean": 0.011815,
+      "p95": 0.011996,
+      "min": 0.01162,
+      "max": 0.011998,
+      "stdev": 0.000182
+    },
+    "throughput_jobs_per_sec": 84.517,
+    "load_average_before": null,
+    "load_average_after": null
+  },
+  "projection": {
+    "jobs": 2400,
+    "estimated_sec": 28.397
+  },
+  "result_sample": {
+    "job_id": 1,
+    "total_return": 0.2279282713718227,
+    "mdd": -0.0895131835643902,
+    "sharpe": 0.735347630961127,
+    "trade_count": 1323
+  },
+  "phases": {
+    "signal_sec": 0.005091,
+    "simulate_sec": 0.00669,
+    "metrics_sec": 0.001204
+  },
+  "warnings": [
+    "합성 데이터로 측정했다. 공식 수치로 쓰지 말 것(실제 KRX 스냅샷 필요).",
+    "컨테이너 밖에서 측정했다. 공식 수치는 서버 컨테이너에서 측정할 것.",
+    "cooldown 없이 연속 반복했다. Lightsail은 버스터블 인스턴스라 CPU 크레딧 소진 시 스로틀링될 수 있다(--cooldown 권장)."
+  ]
+}
