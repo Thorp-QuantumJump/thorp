@@ -162,7 +162,9 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | 검증 | 백엔드 (결과 Consumer) | 워커 (실행 Consumer) |
 |---|---|---|
 | 필수 정수 누락·null (`sequence`, `schemaVersion`, `tradeCount` …) | ObjectMapper `FAIL_ON_NULL_FOR_PRIMITIVES` → 역직렬화 실패 | pydantic 기본(int 필수) |
+| 정수 자리에 소수 (`completedTradingDays: 1.9`) | `ACCEPT_FLOAT_AS_INT=false` → 실패 (1로 자르지 않음) | pydantic 기본 실패 |
 | 미지 enum 값 | Jackson 기본 실패 | pydantic 기본 실패 |
+| enum 자리에 숫자 (`type: 0`) | `FAIL_ON_NUMBERS_FOR_ENUMS` → 실패 (ordinal로 바꾸지 않음) | pydantic 기본 실패 |
 | 필수 객체·문자열 누락 | 역직렬화 직후 명시 검증 | pydantic 기본(`T \| None = None`이 아니면 필수) |
 | 지원하지 않는 `schemaVersion` | 명시 검증 | 명시 검증 |
 | `type`과 `payload` 형태 불일치 | `type`을 먼저 읽고 payload 타입을 선택해 변환, 실패 시 거부 | 동일 |
