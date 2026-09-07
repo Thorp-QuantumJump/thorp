@@ -17,7 +17,7 @@ ruff check src tests && ruff format --check src tests && pytest
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
   진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행·벤치마크 계산은 실행 Consumer 책임
-- `models.py` 구 Kafka Job 계약 — 런타임 교체(Task 4a) 시 `contracts/`로 대체·삭제 예정. 새 코드는 참조하지 않는다
+- `models.py` 구 Kafka Job 계약 — 런타임을 pika로 교체할 때 `contracts/`로 대체·삭제 예정. 새 코드는 참조하지 않는다
 - `config.py` 설정은 환경변수로만 주입, 코드에 접속 정보 하드코딩 금지
 
 ## 규칙

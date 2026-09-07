@@ -103,7 +103,7 @@ public class BacktestRabbitConfig {
     }
 
     /**
-     * 발행용 컨버터. 수신(Task 5)은 raw {@code Message}를 받아 본문 {@code type}을 확인한 뒤 {@link
+     * 발행용 컨버터. 수신(결과 Consumer)은 raw {@code Message}를 받아 본문 {@code type}을 확인한 뒤 {@link
      * #messageObjectMapper()}로 직접 변환하므로 이 컨버터와 {@code __TypeId__} 헤더에 의존하지 않는다.
      */
     @Bean

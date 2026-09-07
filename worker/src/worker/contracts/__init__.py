@@ -9,5 +9,5 @@
 - ``events``        이벤트 envelope (BacktestEvent) + payload 3종
 - ``engine``        엔진 경계 (BacktestEngine Protocol, ProgressCallback)
 
-기존 ``worker.models`` (Kafka 시절 4필드 Job)는 Task 4a 런타임 교체 때 제거한다.
+기존 ``worker.models`` (Kafka 시절 4필드 Job)는 워커 런타임을 pika로 교체할 때 제거한다.
 """

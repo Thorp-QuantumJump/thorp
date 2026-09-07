@@ -2,12 +2,12 @@
 
 - 엔진은 DB·브로커를 모른다. ``EngineInput`` → ``EngineOutput`` 만 책임진다.
 - 진행 콜백은 **거래일 1개 단위**. 20거래일 묶음 PROGRESS 발행, 벤치마크 계산,
-  STARTED/FINISHED 발행, ACK는 실행 Consumer(Task 4a)가 한다.
+  STARTED/FINISHED 발행, ACK는 실행 Consumer가 한다.
   실행 Consumer는 EngineOutput 내용을 해석하지 않는다.
 - 실패는 예외가 아니라 ``EngineOutput(run.status=FAILED, run.error=...)`` 로 반환한다 (README §4.3).
 
 기존 ``worker/engine.py`` 모듈과 이름이 겹치므로 ``worker/engine/`` 패키지는 만들지 않는다.
-그 모듈의 정리는 Task 4a.
+그 모듈은 워커 런타임을 교체할 때 정리한다.
 """
 
 from typing import Protocol, runtime_checkable

@@ -16,7 +16,7 @@ spring:
         format_sql: true
 
   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.
-  # confirm·returns·listener 설정은 발행(Task 3)·결과 Consumer(Task 5) 구현 시 추가.
+  # confirm·returns·listener 설정은 발행·결과 Consumer 구현 시 추가.
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}

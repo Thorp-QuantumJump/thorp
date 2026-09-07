@@ -30,7 +30,7 @@ class ProgressPayload(ContractModel):
     """20거래일 단위. 이번 구간에서 새로 계산한 포인트만 담는다 (마지막 잔여 구간도 발행).
 
     엔진은 거래일마다 ProgressPoint 1개를 콜백으로 넘기고, 이 payload로 묶어 발행하는 것은
-    실행 Consumer(Task 4a) 책임이다.
+    실행 Consumer 책임이다.
     """
 
     completed_trading_days: int

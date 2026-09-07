@@ -9,7 +9,7 @@
 
 설계 문서 `NautilusTrader 설계(input, output)`의 "RabbitMQ 연동 및 실시간 그래프 설계" 절이 브로커를 RabbitMQ로,
 작업 메시지를 `EngineInput` 전체로, 이벤트를 STARTED / PROGRESS / FINISHED로 정했다. 큐 이름, 저장·ACK 책임, SSE 규격까지
-정해져 있어 계약 정의(Task 1)는 완료로 본다.
+정해져 있어 계약 정의는 완료로 본다.
 
 그러나 설계 문서와 다른 문서·코드 사이에 네 가지가 갈라져 있어 DTO를 작성하기 전에 정해야 한다. 또한 코드에는
 Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPublisher`)만 있다.
@@ -21,12 +21,12 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
 - 현재: 코드 `BacktestStatus.QUEUED`, 설계 `PENDING`, 루트 CLAUDE.md `QUEUED`.
 - 결정: 설계 문서를 따라 `PENDING`. Job 상태는 `PENDING → RUNNING → COMPLETED | FAILED`. `EngineOutput.run.status`는 `COMPLETED | FAILED`만.
 - 이유: 설계 §1 "코드에서 QUEUED를 사용 중이면 구현 전에 이름을 통일하고 두 값을 혼용하지 않는다". 이벤트·SSE·프론트가
-  같은 문자열을 보게 된다. 리네임은 요청 API 변경(Task 3)에서 수행하고 루트·backend CLAUDE.md도 그때 갱신한다.
+  같은 문자열을 보게 된다. 리네임은 요청 API 변경 작업에서 수행하고 루트·backend CLAUDE.md도 그때 갱신한다.
 
 ### D2. `backtestId`는 문자열 `BT-{yyyyMMdd}-{6자리 순번}`
 
 - 현재: 코드 Long IDENTITY PK를 그대로 노출, 설계 `"BT-20260831-000123"`.
-- 결정: 외부 식별자(`backtestId`)는 문자열. DB PK는 Long을 유지하고 `backtest_id` UNIQUE 컬럼을 추가한다(Task 3).
+- 결정: 외부 식별자(`backtestId`)는 문자열. DB PK는 Long을 유지하고 `backtest_id` UNIQUE 컬럼을 추가한다(발행 구현 시).
 - 이유: 메시지 `correlation_id`, SSE 경로, 프론트 노출값이 모두 이 값이다. PK를 노출하지 않고 형식을 바꿔도 저장 구조에 영향이 없다.
 
 ### D3. `initialCash`는 사용자 입력 (기본값 10,000,000 KRW)
@@ -56,19 +56,19 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
 | 픽스처 위치 | `docs/specs/backtest-messaging/examples/` 한 벌. 백엔드·워커 테스트가 상대 경로로 같은 파일을 읽음 | 테스트 리소스로 복사하면 어긋난다 |
 | null 표현 | **키 자체를 생략**한다(`null` 값도 쓰지 않음). 수신 측은 "키 없음 == null"로 읽고 명시 `null`도 같은 뜻으로 수용 | 원본 설계의 "명시 null" 표기를 확장한 결정. Jackson record는 명시 null과 키 없음을 구분하지 못해 한 규칙이어야 픽스처와 정확 동치 round-trip이 가능. 백엔드 `NON_NULL`, 워커 `exclude_none`, 픽스처 생성기 세 곳이 같은 규칙 |
 | `strategy.parameters` 숫자 | 정수·소수를 JSON 숫자로 그대로 통과. 문자열 변환 금지 | 자유 형식 객체는 전략 팀 소유. 금액·비율 문자열 규칙은 선언된 decimal 필드에만 적용 |
-| 필수 필드 검증 | DTO 생성자가 아니라 수신 Consumer가 역직렬화 직후 명시 검증(Task 4a·5) | NPE에 맡기면 쓰지 않는 필드의 누락이 묻히고 프로그램 버그를 계약 오류로 오인한다 |
+| 필수 필드 검증 | DTO 생성자가 아니라 수신 Consumer가 역직렬화 직후 명시 검증(실행 Consumer·결과 Consumer) | NPE에 맡기면 쓰지 않는 필드의 누락이 묻히고 프로그램 버그를 계약 오류로 오인한다 |
 | 엔진 진행 콜백 단위 | 거래일 1개. 20거래일 묶음 PROGRESS 발행은 실행 Consumer 책임 | 묶음 정책이 Mock·Nautilus 엔진 양쪽에 중복되지 않게 한 곳에 둔다 |
 
 ## 결과
 
-- Task 2(#102)는 이 결정을 **제안값으로** 구현한다. 제안값 구현과 팀의 계약 승인은 별개이며, 승인 시 이 문서 상태를 갱신한다.
-  D1~D4가 바뀌면 메시지 DTO 구조는 유지되지만 enum·픽스처 외에 요청 API(Task 3)·DB 컬럼·엔진 정책(수수료·데이터셋)까지 영향받는다. 변경 시 별도 이슈로 영향 범위를 정리한다.
-- Task 3에서 `QUEUED → PENDING` 리네임, `backtest_id` 컬럼, `LoggingBacktestJobPublisher` 삭제를 수행한다.
+- #102는 이 결정을 **제안값으로** 구현한다. 제안값 구현과 팀의 계약 승인은 별개이며, 승인 시 이 문서 상태를 갱신한다.
+  D1~D4가 바뀌면 메시지 DTO 구조는 유지되지만 enum·픽스처 외에 요청 API·DB 컬럼·엔진 정책(수수료·데이터셋)까지 영향받는다. 변경 시 별도 이슈로 영향 범위를 정리한다.
+- 발행 구현 시 `QUEUED → PENDING` 리네임, `backtest_id` 컬럼, `LoggingBacktestJobPublisher` 삭제를 수행한다.
 - 워커 실행 Consumer와 엔진의 경계는 `worker/src/worker/contracts/engine.py`의 `BacktestEngine` Protocol이다. 엔진 담당은 이 인터페이스만 구현한다.
-  (기존 `worker/engine.py` 모듈과 이름이 충돌하므로 `engine/` 패키지는 만들지 않는다. 기존 모듈 정리는 Task 4a.)
+  (기존 `worker/engine.py` 모듈과 이름이 충돌하므로 `engine/` 패키지는 만들지 않는다. 기존 모듈은 워커 런타임 교체 때 정리한다.)
 
 ## 이 결정에서 다루지 않는 것
 
-- outbox 테이블 구조와 재발행 스케줄(Task 3), 결과 테이블 구조(Task 5), SSE 다중 인스턴스 전파(설계 §6, 후순위).
+- outbox 테이블 구조와 재발행 스케줄(발행 구현), 결과 테이블 구조(결과 Consumer 구현), SSE 다중 인스턴스 전파(설계 §6, 후순위).
 - 파라미터 탐색(Optimization) 메시지. 설계 문서도 별도 범위로 두었다.
 - Kafka 제거 시점. 실측 후 별도 chore.
