@@ -53,7 +53,39 @@ public class UserEntity {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
-    protected UserEntity() {
+    protected UserEntity() { //jpa용 기본 생성자
+    }
+
+    UserEntity(
+        Long id,
+        String email,
+        String passwordHash,
+        String nickname,
+        String phoneNumber,
+        String profileImageUrl,
+        UserStatus status,
+        boolean paperRankingEnabled,
+        boolean liveRankingEnabled,
+        boolean rankingDisplayNickname,
+        Instant lastLoginAt,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant withdrawnAt
+    ) {
+        this.id = id;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.nickname = nickname;
+        this.phoneNumber = phoneNumber;
+        this.profileImageUrl = profileImageUrl;
+        this.status = status;
+        this.paperRankingEnabled = paperRankingEnabled;
+        this.liveRankingEnabled = liveRankingEnabled;
+        this.rankingDisplayNickname = rankingDisplayNickname;
+        this.lastLoginAt = lastLoginAt;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.withdrawnAt = withdrawnAt;
     }
 
     @PrePersist
@@ -67,4 +99,64 @@ public class UserEntity {
     private void onUpdate() {
         updatedAt = Instant.now();
     }
+
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public boolean isPaperRankingEnabled() {
+        return paperRankingEnabled;
+    }
+
+    public boolean isLiveRankingEnabled() {
+        return liveRankingEnabled;
+    }
+
+    public boolean isRankingDisplayNickname() {
+        return rankingDisplayNickname;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Instant getWithdrawnAt() {
+        return withdrawnAt;
+    }
+
+
 }

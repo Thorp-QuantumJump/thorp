@@ -78,5 +78,60 @@ public class User {
             null
         );
     }
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public boolean isPaperRankingEnabled() {
+        return paperRankingEnabled;
+    }
+
+    public boolean isLiveRankingEnabled() {
+        return liveRankingEnabled;
+    }
+
+    public boolean isRankingDisplayNickname() {
+        return rankingDisplayNickname;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Instant getWithdrawnAt() {
+        return withdrawnAt;
+    }
 }
 
