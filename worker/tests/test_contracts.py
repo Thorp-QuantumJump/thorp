@@ -99,6 +99,29 @@ def test_event_contract_errors_are_rejected(override: dict) -> None:
         BacktestEvent[StartedPayload].model_validate({**BASE_EVENT, **override})
 
 
+def test_naive_datetime_is_rejected() -> None:
+    """시간대 없는 시각은 백엔드 Instant가 읽지 못하므로 워커에서 먼저 거부한다 (README §5)."""
+    with pytest.raises(ValidationError):
+        BacktestEvent[StartedPayload].model_validate(
+            {**BASE_EVENT, "occurredAt": "2026-09-08T00:00:00"}
+        )
+    with pytest.raises(ValidationError):
+        StartedPayload.model_validate({"startedAt": "2026-09-08T09:00:00"})
+
+
+def test_offset_datetime_is_normalized_to_utc_z() -> None:
+    event = BacktestEvent[StartedPayload].model_validate(
+        {
+            **BASE_EVENT,
+            "occurredAt": "2026-09-08T09:00:00+09:00",
+            "payload": {"startedAt": "2026-09-08T09:00:00+09:00"},
+        }
+    )
+    dumped = json.loads(event.to_json())
+    assert dumped["occurredAt"] == "2026-09-08T00:00:00Z"
+    assert dumped["payload"]["startedAt"] == "2026-09-08T00:00:00Z"
+
+
 def test_event_missing_required_int_is_rejected() -> None:
     body = {k: v for k, v in BASE_EVENT.items() if k != "sequence"}
     with pytest.raises(ValidationError):

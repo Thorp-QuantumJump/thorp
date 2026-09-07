@@ -1,7 +1,20 @@
 """계약 모델 공통 설정."""
 
-from pydantic import BaseModel, ConfigDict
+from datetime import UTC, datetime
+from typing import Annotated
+
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+
+# 실행 시각(README §5): 시간대 정보가 없는 값은 거부하고, 있으면 UTC로 정규화해 "…Z"로 직렬화한다.
+# 백엔드 Instant는 오프셋 없는 문자열을 역직렬화하지 못하므로 워커에서 먼저 막는다.
+# 거래일(date)은 대상이 아니다.
+UtcDatetime = Annotated[AwareDatetime, AfterValidator(lambda d: d.astimezone(UTC))]
+
+
+def utc_now() -> datetime:
+    """이벤트 시각 생성용. naive ``datetime.now()`` 대신 쓴다."""
+    return datetime.now(UTC)
 
 
 class ContractModel(BaseModel):

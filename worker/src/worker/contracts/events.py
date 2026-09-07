@@ -1,11 +1,11 @@
 """워커 → 백엔드 이벤트 envelope와 payload 3종. 기준: README §4.2, 픽스처 event-*.json."""
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from typing import Generic, TypeVar
 
-from worker.contracts.base import ContractModel
+from worker.contracts.base import ContractModel, UtcDatetime
 from worker.contracts.engine_output import BenchmarkResult, EngineOutput
 
 
@@ -16,7 +16,7 @@ class BacktestEventType(StrEnum):
 
 
 class StartedPayload(ContractModel):
-    started_at: datetime
+    started_at: UtcDatetime
 
 
 class ProgressPoint(ContractModel):
@@ -61,5 +61,5 @@ class BacktestEvent(ContractModel, Generic[P]):
     execution_id: str  # 엔진 실행 시도 식별자. 재실행마다 새 값
     type: BacktestEventType
     sequence: int  # STARTED=0, 이후 1씩 증가
-    occurred_at: datetime  # UTC
+    occurred_at: UtcDatetime
     payload: P

@@ -3,11 +3,11 @@
 기준: README §4.3, 픽스처 event-finished-*.json.
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
-from worker.contracts.base import ContractModel
+from worker.contracts.base import ContractModel, UtcDatetime
 
 
 class RunStatus(StrEnum):
@@ -37,8 +37,8 @@ class EngineError(ContractModel):
 class RunResult(ContractModel):
     backtest_id: str
     status: RunStatus
-    started_at: datetime
-    finished_at: datetime
+    started_at: UtcDatetime
+    finished_at: UtcDatetime
     error: EngineError | None = None  # None = 성공
 
 
@@ -91,8 +91,8 @@ class TradeResult(ContractModel):
     instrument_id: str
     side: TradeSide
     status: TradeStatus
-    entry_time: datetime
-    exit_time: datetime | None = None
+    entry_time: UtcDatetime
+    exit_time: UtcDatetime | None = None
     entry_price: Decimal  # 계약상 실제 평균 체결가. 현재 픽스처는 기준가 (README §4.3 체결가 의미)
     exit_price: Decimal | None = None
     quantity: Decimal
