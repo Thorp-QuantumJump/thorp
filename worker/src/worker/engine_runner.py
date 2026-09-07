@@ -1,0 +1,104 @@
+"""Data loading, native execution and complete EngineOutput conversion."""
+
+import hashlib
+from datetime import UTC, datetime
+from decimal import Decimal
+
+import nautilus_trader
+
+from worker.engine_contracts import (
+    Diagnostics,
+    EngineInput,
+    EngineOutput,
+    ErrorResult,
+    ExecutionResult,
+    RunResult,
+)
+from worker.market_data import DataProvider, MarketDataError, YFinanceDataProvider, validate_prices
+from worker.nautilus_engine import CallbackError, SnapshotCallback, execute_nautilus
+from worker.performance import calculate_performance
+
+
+def run_engine(
+    engine_input: EngineInput | dict,
+    *,
+    data_provider: DataProvider | None = None,
+    on_snapshot: SnapshotCallback | None = None,
+) -> EngineOutput:
+    request = EngineInput.model_validate(engine_input)
+    started = datetime.now(UTC)
+    metadata = {
+        "engineVersion": nautilus_trader.__version__,
+        "inputHash": "sha256:"
+        + hashlib.sha256(request.model_dump_json(by_alias=True).encode()).hexdigest(),
+        "input": request.model_dump(mode="json", by_alias=True),
+        "commissionRate": "0",
+        "taxRate": "0",
+        "slippageBps": 5,
+        "metricsVersion": "DAILY_252_DDOF1_RF0_V1",
+        "simulationCurrency": "KRW_SIM (1:1 KRW, precision 8)",
+    }
+    try:
+        dataset = (data_provider or YFinanceDataProvider()).load(request)
+        if dataset.instrument_id != request.universe.instrument_ids[0]:
+            raise MarketDataError("Provider instrument does not match requested instrument")
+        if dataset.adjustment != request.market_data.adjustment:
+            raise MarketDataError("Provider adjustment does not match requested adjustment")
+        prices = validate_prices(dataset.prices)
+        prices = prices.loc[prices.index.date <= request.run.end]
+        evaluation = prices.loc[prices.index.date >= request.run.start]
+        if evaluation.empty:
+            raise MarketDataError("No evaluation trading days in requested period")
+        metadata.update(dataset.metadata)
+        metadata.update(
+            {
+                "ticker": dataset.ticker,
+                "instrumentId": dataset.instrument_id,
+                "dataSource": dataset.source,
+                "adjustment": dataset.adjustment,
+                "evaluationStart": evaluation.index[0].date().isoformat(),
+                "evaluationEnd": evaluation.index[-1].date().isoformat(),
+                "warmupTradingDays": len(prices) - len(evaluation),
+                "totalTradingDays": len(evaluation),
+                "dataHash": "sha256:" + hashlib.sha256(prices.to_csv().encode()).hexdigest(),
+            }
+        )
+        execution = execute_nautilus(request, prices, on_snapshot)
+        slip = sum((trade.slippage_cost for trade in execution.trades), Decimal("0"))
+        return EngineOutput(
+            run=RunResult(
+                backtest_id=request.run.backtest_id,
+                status="COMPLETED",
+                started_at=started,
+                finished_at=datetime.now(UTC),
+            ),
+            performance=calculate_performance(
+                request.portfolio.initial_cash, execution.series, execution.trades
+            ),
+            portfolio_series=execution.series,
+            trades=execution.trades,
+            execution=ExecutionResult(
+                order_count=len(execution.orders),
+                fill_count=sum(order.status == "FILLED" for order in execution.orders),
+                rejected_order_count=sum(order.status == "REJECTED" for order in execution.orders),
+                total_slippage_cost=slip,
+                orders=execution.orders,
+            ),
+            diagnostics=Diagnostics(warnings=execution.warnings, metadata=metadata),
+        )
+    except CallbackError:
+        raise
+    except Exception as exc:
+        return EngineOutput(
+            run=RunResult(
+                backtest_id=request.run.backtest_id,
+                status="FAILED",
+                started_at=started,
+                finished_at=datetime.now(UTC),
+            ),
+            error=ErrorResult(
+                code="NO_MARKET_DATA" if isinstance(exc, MarketDataError) else "ENGINE_ERROR",
+                message=f"{type(exc).__name__}: {exc}",
+            ),
+            diagnostics=Diagnostics(metadata=metadata),
+        )
