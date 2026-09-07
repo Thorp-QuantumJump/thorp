@@ -1,0 +1,68 @@
+# ADR-0002: 백테스트 브로커 RabbitMQ 확정과 메시지 계약의 미결 항목 결정
+
+- 상태: 제안 (2026-09-07) — D1~D4는 팀 확인 후 "승인"으로 갱신
+- 대상: `backend/`, `worker/`, `docs/specs/backtest-messaging/`
+- 관련 이슈: #102
+- 선행: [ADR-0001](0001-be-layered-package-architecture.md) "브로커 결정 티켓에서 의존성·설정을 함께 정리한다"
+
+## 배경
+
+설계 문서 `NautilusTrader 설계(input, output)`의 "RabbitMQ 연동 및 실시간 그래프 설계" 절이 브로커를 RabbitMQ로,
+작업 메시지를 `EngineInput` 전체로, 이벤트를 STARTED / PROGRESS / FINISHED로 정했다. 큐 이름, 저장·ACK 책임, SSE 규격까지
+정해져 있어 계약 정의(Task 1)는 완료로 본다.
+
+그러나 설계 문서와 다른 문서·코드 사이에 네 가지가 갈라져 있어 DTO를 작성하기 전에 정해야 한다. 또한 코드에는
+Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPublisher`)만 있다.
+
+## 결정
+
+### D1. Job 대기 상태 이름은 `PENDING`
+
+- 현재: 코드 `BacktestStatus.QUEUED`, 설계 `PENDING`, 루트 CLAUDE.md `QUEUED`.
+- 결정: 설계 문서를 따라 `PENDING`. Job 상태는 `PENDING → RUNNING → COMPLETED | FAILED`. `EngineOutput.run.status`는 `COMPLETED | FAILED`만.
+- 이유: 설계 §1 "코드에서 QUEUED를 사용 중이면 구현 전에 이름을 통일하고 두 값을 혼용하지 않는다". 이벤트·SSE·프론트가
+  같은 문자열을 보게 된다. 리네임은 요청 API 변경(Task 3)에서 수행하고 루트·backend CLAUDE.md도 그때 갱신한다.
+
+### D2. `backtestId`는 문자열 `BT-{yyyyMMdd}-{6자리 순번}`
+
+- 현재: 코드 Long IDENTITY PK를 그대로 노출, 설계 `"BT-20260831-000123"`.
+- 결정: 외부 식별자(`backtestId`)는 문자열. DB PK는 Long을 유지하고 `backtest_id` UNIQUE 컬럼을 추가한다(Task 3).
+- 이유: 메시지 `correlation_id`, SSE 경로, 프론트 노출값이 모두 이 값이다. PK를 노출하지 않고 형식을 바꿔도 저장 구조에 영향이 없다.
+
+### D3. `initialCash`는 사용자 입력 (기본값 10,000,000 KRW)
+
+- 현재: 기획서·BT_001 "초기 자본은 공통 엔진 규칙으로 동일 적용"(고정), 설계 `BacktestRequest.portfolio.initialCash` 필수(입력).
+- 결정: 설계 INPUT 스펙을 따라 사용자 입력. 프론트가 기본값을 채워 보낸다.
+- 이유: 설계 문서가 더 최신·상세하며 `EngineInput`이 이미 이 필드를 요구한다. 전략 비교(BT_006) 공정성은 비교 화면이 같은
+  값을 강제해 보장한다. 고정으로 되돌려야 하면 백엔드가 요청값을 무시하고 상수를 채우면 되므로 계약은 바뀌지 않는다.
+
+### D4. 대상 시장은 KRX, 식별자는 `{종목코드}.XKRX`, 통화 `KRW`
+
+- 현재: 요구사항 "국내 주식·ETF·지수", 설계 예시 `AAPL.XNAS`, `SPY.ARCA`, `USD`.
+- 결정: `instrumentId = "005930.XKRX"` 형식, `currency = "KRW"`, `marketData.datasetId = "KRX_DAILY_V1"`, 벤치마크 예시 `069500.XKRX`(KODEX 200).
+- 이유: Nautilus `InstrumentId`의 `symbol.venue` 규약과 호환되고 데이터 파트(pykrx)가 KRX 일봉을 수집한다. 해외 시장 추가는 venue 값만 달라진다.
+
+### 부수 결정
+
+| 항목 | 결정 | 이유 |
+|---|---|---|
+| 큐·exchange 선언 주체 | 백엔드 애플리케이션(Spring `Declarables`) | 인프라 선행 작업 없이 로컬·CI에서 동작. 인프라가 미리 만들어도 동일 속성이면 무해 |
+| Kafka 의존성·설정 | 유지, `application.yml`에 미사용 주석만 추가 | 루트 CLAUDE.md "설치만, 전환·병행은 실측 후 결정". 브로커 없이도 지연 연결이라 기동에 영향 없음 |
+| 메시지 DTO 위치 | `backtest/application/port/message` (순수 record, 프레임워크 import 없음) | 발행(application)과 소비(infrastructure)가 모두 참조. 직렬화 규칙은 infrastructure의 메시지 전용 ObjectMapper가 담당 |
+| 금액·비율 JSON 표현 | 문자열 decimal | 설계 규약. 부동소수 오차 회피. 수신 측은 숫자도 수용 |
+| 수수료 정책 상수 | `commission.broker=KIWOOM`, `version=2026-09` | 모의투자(SIM_001)가 키움 API 연동 예정. 실제 요율표는 엔진 쪽 정책 파일로 관리 |
+| `EngineOutput.run.error` | 설계에 없던 필드를 보충. 실패 시 `{code, message}`, 성공 시 null | 설계의 ErrorResponse 코드 집합을 엔진 결과에서도 그대로 쓰기 위함 |
+| internal API 명세서 `/engine/backtests/*` | 폐기. 이 메시지 계약으로 대체 | HTTP 동기 호출 안은 RabbitMQ 설계 이전 산출물 |
+| 픽스처 위치 | `docs/specs/backtest-messaging/examples/` 한 벌. 백엔드·워커 테스트가 상대 경로로 같은 파일을 읽음 | 테스트 리소스로 복사하면 어긋난다 |
+
+## 결과
+
+- Task 2(#102)는 이 결정을 전제로 토폴로지·DTO·픽스처를 구현한다. D1~D4가 바뀌면 enum 값과 픽스처 값만 바뀌고 구조는 유지된다.
+- Task 3에서 `QUEUED → PENDING` 리네임, `backtest_id` 컬럼, `LoggingBacktestJobPublisher` 삭제를 수행한다.
+- 워커 실행 Consumer와 엔진의 경계는 `worker/src/worker/engine/base.py`의 `BacktestEngine` Protocol이다. 엔진 담당은 이 인터페이스만 구현한다.
+
+## 이 결정에서 다루지 않는 것
+
+- outbox 테이블 구조와 재발행 스케줄(Task 3), 결과 테이블 구조(Task 5), SSE 다중 인스턴스 전파(설계 §6, 후순위).
+- 파라미터 탐색(Optimization) 메시지. 설계 문서도 별도 범위로 두었다.
+- Kafka 제거 시점. 실측 후 별도 chore.

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "eventId": "EVT-000002",
+  "backtestId": "BT-20260907-000001",
+  "executionId": "EXEC-000001",
+  "type": "FINISHED",
+  "sequence": 1,
+  "occurredAt": "2026-09-07T01:00:01Z",
+  "payload": {
+    "engineOutput": {
+      "run": {
+        "backtestId": "BT-20260907-000001",
+        "status": "FAILED",
+        "startedAt": "2026-09-07T01:00:00Z",
+        "finishedAt": "2026-09-07T01:00:01Z",
+        "error": {
+          "code": "NO_MARKET_DATA",
+          "message": "Market data is unavailable for 000660.XKRX in the requested period."
+        }
+      },
+      "performance": null,
+      "portfolioSeries": [],
+      "trades": [],
+      "execution": null,
+      "diagnostics": {
+        "warnings": []
+      }
+    },
+    "benchmark": null
+  }
+}

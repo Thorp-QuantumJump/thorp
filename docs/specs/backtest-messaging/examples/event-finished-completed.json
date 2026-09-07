@@ -1,0 +1,1967 @@
+{
+  "schemaVersion": 1,
+  "eventId": "EVT-000009",
+  "backtestId": "BT-20260907-000001",
+  "executionId": "EXEC-000001",
+  "type": "FINISHED",
+  "sequence": 8,
+  "occurredAt": "2026-09-07T01:00:04Z",
+  "payload": {
+    "engineOutput": {
+      "run": {
+        "backtestId": "BT-20260907-000001",
+        "status": "COMPLETED",
+        "startedAt": "2026-09-07T01:00:00Z",
+        "finishedAt": "2026-09-07T01:00:04Z",
+        "error": null
+      },
+      "performance": {
+        "initialEquity": "10000000.00",
+        "finalEquity": "11666521.51",
+        "currency": "KRW",
+        "totalReturn": "0.166652",
+        "cagr": "0.366917",
+        "maxDrawdown": "-0.041757",
+        "sharpeRatio": "2.342630",
+        "volatility": "0.132307",
+        "tradeCount": 2,
+        "winRate": "0.500000"
+      },
+      "portfolioSeries": [
+        {
+          "date": "2025-01-01",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000",
+          "positions": []
+        },
+        {
+          "date": "2025-01-02",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-03",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-06",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-07",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-08",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-09",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-10",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-13",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-14",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-15",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-16",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-17",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-20",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-21",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-22",
+          "equity": "9996858.55",
+          "cash": "5163858.55",
+          "positionValue": "4833000.00",
+          "dailyReturn": "-0.000314",
+          "cumulativeReturn": "-0.000314",
+          "drawdown": "-0.000314",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "4833000.00",
+              "weight": "0.483452",
+              "unrealizedPnl": "0.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-01-23",
+          "equity": "10014858.55",
+          "cash": "5163858.55",
+          "positionValue": "4851000.00",
+          "dailyReturn": "0.001801",
+          "cumulativeReturn": "0.001486",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-24",
+          "equity": "10122858.55",
+          "cash": "5163858.55",
+          "positionValue": "4959000.00",
+          "dailyReturn": "0.010784",
+          "cumulativeReturn": "0.012286",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-27",
+          "equity": "10131858.55",
+          "cash": "5163858.55",
+          "positionValue": "4968000.00",
+          "dailyReturn": "0.000889",
+          "cumulativeReturn": "0.013186",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-28",
+          "equity": "10122858.55",
+          "cash": "5163858.55",
+          "positionValue": "4959000.00",
+          "dailyReturn": "-0.000888",
+          "cumulativeReturn": "0.012286",
+          "drawdown": "-0.000888"
+        },
+        {
+          "date": "2025-01-29",
+          "equity": "10167858.55",
+          "cash": "5163858.55",
+          "positionValue": "5004000.00",
+          "dailyReturn": "0.004445",
+          "cumulativeReturn": "0.016786",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-30",
+          "equity": "10059858.55",
+          "cash": "5163858.55",
+          "positionValue": "4896000.00",
+          "dailyReturn": "-0.010622",
+          "cumulativeReturn": "0.005986",
+          "drawdown": "-0.010622"
+        },
+        {
+          "date": "2025-01-31",
+          "equity": "10032858.55",
+          "cash": "5163858.55",
+          "positionValue": "4869000.00",
+          "dailyReturn": "-0.002684",
+          "cumulativeReturn": "0.003286",
+          "drawdown": "-0.013277"
+        },
+        {
+          "date": "2025-02-03",
+          "equity": "10077858.55",
+          "cash": "5163858.55",
+          "positionValue": "4914000.00",
+          "dailyReturn": "0.004485",
+          "cumulativeReturn": "0.007786",
+          "drawdown": "-0.008851"
+        },
+        {
+          "date": "2025-02-04",
+          "equity": "10149858.55",
+          "cash": "5163858.55",
+          "positionValue": "4986000.00",
+          "dailyReturn": "0.007144",
+          "cumulativeReturn": "0.014986",
+          "drawdown": "-0.001770"
+        },
+        {
+          "date": "2025-02-05",
+          "equity": "10131858.55",
+          "cash": "5163858.55",
+          "positionValue": "4968000.00",
+          "dailyReturn": "-0.001773",
+          "cumulativeReturn": "0.013186",
+          "drawdown": "-0.003541"
+        },
+        {
+          "date": "2025-02-06",
+          "equity": "10164520.15",
+          "cash": "24520.15",
+          "positionValue": "10140000.00",
+          "dailyReturn": "0.003224",
+          "cumulativeReturn": "0.016452",
+          "drawdown": "-0.000328",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "5004000.00",
+              "weight": "0.492301",
+              "unrealizedPnl": "171000.00"
+            },
+            {
+              "instrumentId": "000660.XKRX",
+              "quantity": "24",
+              "marketValue": "5136000.00",
+              "weight": "0.505287",
+              "unrealizedPnl": "0.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-02-07",
+          "equity": "10093720.15",
+          "cash": "24520.15",
+          "positionValue": "10069200.00",
+          "dailyReturn": "-0.006965",
+          "cumulativeReturn": "0.009372",
+          "drawdown": "-0.007291"
+        },
+        {
+          "date": "2025-02-10",
+          "equity": "10302520.15",
+          "cash": "24520.15",
+          "positionValue": "10278000.00",
+          "dailyReturn": "0.020686",
+          "cumulativeReturn": "0.030252",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-11",
+          "equity": "10222120.15",
+          "cash": "24520.15",
+          "positionValue": "10197600.00",
+          "dailyReturn": "-0.007804",
+          "cumulativeReturn": "0.022212",
+          "drawdown": "-0.007804"
+        },
+        {
+          "date": "2025-02-12",
+          "equity": "10353520.15",
+          "cash": "24520.15",
+          "positionValue": "10329000.00",
+          "dailyReturn": "0.012854",
+          "cumulativeReturn": "0.035352",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-13",
+          "equity": "10397320.15",
+          "cash": "24520.15",
+          "positionValue": "10372800.00",
+          "dailyReturn": "0.004230",
+          "cumulativeReturn": "0.039732",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-14",
+          "equity": "10278520.15",
+          "cash": "24520.15",
+          "positionValue": "10254000.00",
+          "dailyReturn": "-0.011426",
+          "cumulativeReturn": "0.027852",
+          "drawdown": "-0.011426"
+        },
+        {
+          "date": "2025-02-17",
+          "equity": "10267120.15",
+          "cash": "24520.15",
+          "positionValue": "10242600.00",
+          "dailyReturn": "-0.001109",
+          "cumulativeReturn": "0.026712",
+          "drawdown": "-0.012522"
+        },
+        {
+          "date": "2025-02-18",
+          "equity": "10496920.15",
+          "cash": "24520.15",
+          "positionValue": "10472400.00",
+          "dailyReturn": "0.022382",
+          "cumulativeReturn": "0.049692",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-19",
+          "equity": "10602520.15",
+          "cash": "24520.15",
+          "positionValue": "10578000.00",
+          "dailyReturn": "0.010060",
+          "cumulativeReturn": "0.060252",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-20",
+          "equity": "10610920.15",
+          "cash": "24520.15",
+          "positionValue": "10586400.00",
+          "dailyReturn": "0.000792",
+          "cumulativeReturn": "0.061092",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-21",
+          "equity": "10535320.15",
+          "cash": "24520.15",
+          "positionValue": "10510800.00",
+          "dailyReturn": "-0.007125",
+          "cumulativeReturn": "0.053532",
+          "drawdown": "-0.007125"
+        },
+        {
+          "date": "2025-02-24",
+          "equity": "10807120.15",
+          "cash": "24520.15",
+          "positionValue": "10782600.00",
+          "dailyReturn": "0.025799",
+          "cumulativeReturn": "0.080712",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-25",
+          "equity": "10749520.15",
+          "cash": "24520.15",
+          "positionValue": "10725000.00",
+          "dailyReturn": "-0.005330",
+          "cumulativeReturn": "0.074952",
+          "drawdown": "-0.005330"
+        },
+        {
+          "date": "2025-02-26",
+          "equity": "10823920.15",
+          "cash": "24520.15",
+          "positionValue": "10799400.00",
+          "dailyReturn": "0.006921",
+          "cumulativeReturn": "0.082392",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-27",
+          "equity": "10972120.15",
+          "cash": "24520.15",
+          "positionValue": "10947600.00",
+          "dailyReturn": "0.013692",
+          "cumulativeReturn": "0.097212",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-28",
+          "equity": "10910920.15",
+          "cash": "24520.15",
+          "positionValue": "10886400.00",
+          "dailyReturn": "-0.005578",
+          "cumulativeReturn": "0.091092",
+          "drawdown": "-0.005578"
+        },
+        {
+          "date": "2025-03-03",
+          "equity": "10719520.15",
+          "cash": "24520.15",
+          "positionValue": "10695000.00",
+          "dailyReturn": "-0.017542",
+          "cumulativeReturn": "0.071952",
+          "drawdown": "-0.023022"
+        },
+        {
+          "date": "2025-03-04",
+          "equity": "10814320.15",
+          "cash": "24520.15",
+          "positionValue": "10789800.00",
+          "dailyReturn": "0.008844",
+          "cumulativeReturn": "0.081432",
+          "drawdown": "-0.014382"
+        },
+        {
+          "date": "2025-03-05",
+          "equity": "10870120.15",
+          "cash": "24520.15",
+          "positionValue": "10845600.00",
+          "dailyReturn": "0.005160",
+          "cumulativeReturn": "0.087012",
+          "drawdown": "-0.009296"
+        },
+        {
+          "date": "2025-03-06",
+          "equity": "10835320.15",
+          "cash": "24520.15",
+          "positionValue": "10810800.00",
+          "dailyReturn": "-0.003201",
+          "cumulativeReturn": "0.083532",
+          "drawdown": "-0.012468"
+        },
+        {
+          "date": "2025-03-07",
+          "equity": "10993720.15",
+          "cash": "24520.15",
+          "positionValue": "10969200.00",
+          "dailyReturn": "0.014619",
+          "cumulativeReturn": "0.099372",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-03-10",
+          "equity": "11037520.15",
+          "cash": "24520.15",
+          "positionValue": "11013000.00",
+          "dailyReturn": "0.003984",
+          "cumulativeReturn": "0.103752",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-03-11",
+          "equity": "10834720.15",
+          "cash": "24520.15",
+          "positionValue": "10810200.00",
+          "dailyReturn": "-0.018374",
+          "cumulativeReturn": "0.083472",
+          "drawdown": "-0.018374"
+        },
+        {
+          "date": "2025-03-12",
+          "equity": "10876631.35",
+          "cash": "4773431.35",
+          "positionValue": "6103200.00",
+          "dailyReturn": "0.003868",
+          "cumulativeReturn": "0.087663",
+          "drawdown": "-0.014577",
+          "positions": [
+            {
+              "instrumentId": "000660.XKRX",
+              "quantity": "24",
+              "marketValue": "6103200.00",
+              "weight": "0.561130",
+              "unrealizedPnl": "967200.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-03-13",
+          "equity": "10845431.35",
+          "cash": "4773431.35",
+          "positionValue": "6072000.00",
+          "dailyReturn": "-0.002869",
+          "cumulativeReturn": "0.084543",
+          "drawdown": "-0.017403"
+        },
+        {
+          "date": "2025-03-14",
+          "equity": "10631831.35",
+          "cash": "4773431.35",
+          "positionValue": "5858400.00",
+          "dailyReturn": "-0.019695",
+          "cumulativeReturn": "0.063183",
+          "drawdown": "-0.036755"
+        },
+        {
+          "date": "2025-03-17",
+          "equity": "10694231.35",
+          "cash": "4773431.35",
+          "positionValue": "5920800.00",
+          "dailyReturn": "0.005869",
+          "cumulativeReturn": "0.069423",
+          "drawdown": "-0.031102"
+        },
+        {
+          "date": "2025-03-18",
+          "equity": "10684631.35",
+          "cash": "4773431.35",
+          "positionValue": "5911200.00",
+          "dailyReturn": "-0.000898",
+          "cumulativeReturn": "0.068463",
+          "drawdown": "-0.031972"
+        },
+        {
+          "date": "2025-03-19",
+          "equity": "10576631.35",
+          "cash": "4773431.35",
+          "positionValue": "5803200.00",
+          "dailyReturn": "-0.010108",
+          "cumulativeReturn": "0.057663",
+          "drawdown": "-0.041757"
+        },
+        {
+          "date": "2025-03-20",
+          "equity": "10648631.35",
+          "cash": "4773431.35",
+          "positionValue": "5875200.00",
+          "dailyReturn": "0.006807",
+          "cumulativeReturn": "0.064863",
+          "drawdown": "-0.035233"
+        },
+        {
+          "date": "2025-03-21",
+          "equity": "10715831.35",
+          "cash": "4773431.35",
+          "positionValue": "5942400.00",
+          "dailyReturn": "0.006311",
+          "cumulativeReturn": "0.071583",
+          "drawdown": "-0.029145"
+        },
+        {
+          "date": "2025-03-24",
+          "equity": "10631831.35",
+          "cash": "4773431.35",
+          "positionValue": "5858400.00",
+          "dailyReturn": "-0.007839",
+          "cumulativeReturn": "0.063183",
+          "drawdown": "-0.036755"
+        },
+        {
+          "date": "2025-03-25",
+          "equity": "10684631.35",
+          "cash": "4773431.35",
+          "positionValue": "5911200.00",
+          "dailyReturn": "0.004966",
+          "cumulativeReturn": "0.068463",
+          "drawdown": "-0.031972"
+        },
+        {
+          "date": "2025-03-26",
+          "equity": "10828631.35",
+          "cash": "4773431.35",
+          "positionValue": "6055200.00",
+          "dailyReturn": "0.013477",
+          "cumulativeReturn": "0.082863",
+          "drawdown": "-0.018925"
+        },
+        {
+          "date": "2025-03-27",
+          "equity": "10723031.35",
+          "cash": "4773431.35",
+          "positionValue": "5949600.00",
+          "dailyReturn": "-0.009752",
+          "cumulativeReturn": "0.072303",
+          "drawdown": "-0.028493"
+        },
+        {
+          "date": "2025-03-28",
+          "equity": "10775831.35",
+          "cash": "4773431.35",
+          "positionValue": "6002400.00",
+          "dailyReturn": "0.004924",
+          "cumulativeReturn": "0.077583",
+          "drawdown": "-0.023709"
+        },
+        {
+          "date": "2025-03-31",
+          "equity": "10773431.35",
+          "cash": "4773431.35",
+          "positionValue": "6000000.00",
+          "dailyReturn": "-0.000223",
+          "cumulativeReturn": "0.077343",
+          "drawdown": "-0.023926"
+        },
+        {
+          "date": "2025-04-01",
+          "equity": "11107031.35",
+          "cash": "4773431.35",
+          "positionValue": "6333600.00",
+          "dailyReturn": "0.030965",
+          "cumulativeReturn": "0.110703",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-04-02",
+          "equity": "10828631.35",
+          "cash": "4773431.35",
+          "positionValue": "6055200.00",
+          "dailyReturn": "-0.025065",
+          "cumulativeReturn": "0.082863",
+          "drawdown": "-0.025065"
+        },
+        {
+          "date": "2025-04-03",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.008718",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566",
+          "positions": []
+        },
+        {
+          "date": "2025-04-04",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-07",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-08",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-09",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-10",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-11",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-14",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-15",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-16",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-17",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-18",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-21",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-22",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-23",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-24",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-25",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-28",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-29",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-04-30",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-01",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-02",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-05",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-06",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-07",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-08",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-09",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-12",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-13",
+          "equity": "10923031.51",
+          "cash": "10923031.51",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.092303",
+          "drawdown": "-0.016566"
+        },
+        {
+          "date": "2025-05-14",
+          "equity": "10919521.51",
+          "cash": "5519521.51",
+          "positionValue": "5400000.00",
+          "dailyReturn": "-0.000321",
+          "cumulativeReturn": "0.091952",
+          "drawdown": "-0.016882",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "5400000.00",
+              "weight": "0.494527",
+              "unrealizedPnl": "0.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-05-15",
+          "equity": "11036521.51",
+          "cash": "5519521.51",
+          "positionValue": "5517000.00",
+          "dailyReturn": "0.010715",
+          "cumulativeReturn": "0.103652",
+          "drawdown": "-0.006348"
+        },
+        {
+          "date": "2025-05-16",
+          "equity": "11036521.51",
+          "cash": "5519521.51",
+          "positionValue": "5517000.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.103652",
+          "drawdown": "-0.006348"
+        },
+        {
+          "date": "2025-05-19",
+          "equity": "11216521.51",
+          "cash": "5519521.51",
+          "positionValue": "5697000.00",
+          "dailyReturn": "0.016309",
+          "cumulativeReturn": "0.121652",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-05-20",
+          "equity": "11180521.51",
+          "cash": "5519521.51",
+          "positionValue": "5661000.00",
+          "dailyReturn": "-0.003210",
+          "cumulativeReturn": "0.118052",
+          "drawdown": "-0.003210"
+        },
+        {
+          "date": "2025-05-21",
+          "equity": "11333521.51",
+          "cash": "5519521.51",
+          "positionValue": "5814000.00",
+          "dailyReturn": "0.013685",
+          "cumulativeReturn": "0.133352",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-05-22",
+          "equity": "11351521.51",
+          "cash": "5519521.51",
+          "positionValue": "5832000.00",
+          "dailyReturn": "0.001588",
+          "cumulativeReturn": "0.135152",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-05-23",
+          "equity": "11306521.51",
+          "cash": "5519521.51",
+          "positionValue": "5787000.00",
+          "dailyReturn": "-0.003964",
+          "cumulativeReturn": "0.130652",
+          "drawdown": "-0.003964"
+        },
+        {
+          "date": "2025-05-26",
+          "equity": "11207521.51",
+          "cash": "5519521.51",
+          "positionValue": "5688000.00",
+          "dailyReturn": "-0.008756",
+          "cumulativeReturn": "0.120752",
+          "drawdown": "-0.012686"
+        },
+        {
+          "date": "2025-05-27",
+          "equity": "11189521.51",
+          "cash": "5519521.51",
+          "positionValue": "5670000.00",
+          "dailyReturn": "-0.001606",
+          "cumulativeReturn": "0.118952",
+          "drawdown": "-0.014271"
+        },
+        {
+          "date": "2025-05-28",
+          "equity": "11324521.51",
+          "cash": "5519521.51",
+          "positionValue": "5805000.00",
+          "dailyReturn": "0.012065",
+          "cumulativeReturn": "0.132452",
+          "drawdown": "-0.002379"
+        },
+        {
+          "date": "2025-05-29",
+          "equity": "11405521.51",
+          "cash": "5519521.51",
+          "positionValue": "5886000.00",
+          "dailyReturn": "0.007153",
+          "cumulativeReturn": "0.140552",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-05-30",
+          "equity": "11477521.51",
+          "cash": "5519521.51",
+          "positionValue": "5958000.00",
+          "dailyReturn": "0.006313",
+          "cumulativeReturn": "0.147752",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-06-02",
+          "equity": "11261521.51",
+          "cash": "5519521.51",
+          "positionValue": "5742000.00",
+          "dailyReturn": "-0.018819",
+          "cumulativeReturn": "0.126152",
+          "drawdown": "-0.018819"
+        },
+        {
+          "date": "2025-06-03",
+          "equity": "11324521.51",
+          "cash": "5519521.51",
+          "positionValue": "5805000.00",
+          "dailyReturn": "0.005594",
+          "cumulativeReturn": "0.132452",
+          "drawdown": "-0.013330"
+        },
+        {
+          "date": "2025-06-04",
+          "equity": "11378521.51",
+          "cash": "5519521.51",
+          "positionValue": "5859000.00",
+          "dailyReturn": "0.004768",
+          "cumulativeReturn": "0.137852",
+          "drawdown": "-0.008626"
+        },
+        {
+          "date": "2025-06-05",
+          "equity": "11333521.51",
+          "cash": "5519521.51",
+          "positionValue": "5814000.00",
+          "dailyReturn": "-0.003955",
+          "cumulativeReturn": "0.133352",
+          "drawdown": "-0.012546"
+        },
+        {
+          "date": "2025-06-06",
+          "equity": "11279521.51",
+          "cash": "5519521.51",
+          "positionValue": "5760000.00",
+          "dailyReturn": "-0.004765",
+          "cumulativeReturn": "0.127952",
+          "drawdown": "-0.017251"
+        },
+        {
+          "date": "2025-06-09",
+          "equity": "11279521.51",
+          "cash": "5519521.51",
+          "positionValue": "5760000.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.127952",
+          "drawdown": "-0.017251"
+        },
+        {
+          "date": "2025-06-10",
+          "equity": "11450521.51",
+          "cash": "5519521.51",
+          "positionValue": "5931000.00",
+          "dailyReturn": "0.015160",
+          "cumulativeReturn": "0.145052",
+          "drawdown": "-0.002352"
+        },
+        {
+          "date": "2025-06-11",
+          "equity": "11351521.51",
+          "cash": "5519521.51",
+          "positionValue": "5832000.00",
+          "dailyReturn": "-0.008646",
+          "cumulativeReturn": "0.135152",
+          "drawdown": "-0.010978"
+        },
+        {
+          "date": "2025-06-12",
+          "equity": "11315521.51",
+          "cash": "5519521.51",
+          "positionValue": "5796000.00",
+          "dailyReturn": "-0.003171",
+          "cumulativeReturn": "0.131552",
+          "drawdown": "-0.014115"
+        },
+        {
+          "date": "2025-06-13",
+          "equity": "11450521.51",
+          "cash": "5519521.51",
+          "positionValue": "5931000.00",
+          "dailyReturn": "0.011931",
+          "cumulativeReturn": "0.145052",
+          "drawdown": "-0.002352"
+        },
+        {
+          "date": "2025-06-16",
+          "equity": "11405521.51",
+          "cash": "5519521.51",
+          "positionValue": "5886000.00",
+          "dailyReturn": "-0.003930",
+          "cumulativeReturn": "0.140552",
+          "drawdown": "-0.006273"
+        },
+        {
+          "date": "2025-06-17",
+          "equity": "11378521.51",
+          "cash": "5519521.51",
+          "positionValue": "5859000.00",
+          "dailyReturn": "-0.002367",
+          "cumulativeReturn": "0.137852",
+          "drawdown": "-0.008626"
+        },
+        {
+          "date": "2025-06-18",
+          "equity": "11387521.51",
+          "cash": "5519521.51",
+          "positionValue": "5868000.00",
+          "dailyReturn": "0.000791",
+          "cumulativeReturn": "0.138752",
+          "drawdown": "-0.007841"
+        },
+        {
+          "date": "2025-06-19",
+          "equity": "11279521.51",
+          "cash": "5519521.51",
+          "positionValue": "5760000.00",
+          "dailyReturn": "-0.009484",
+          "cumulativeReturn": "0.127952",
+          "drawdown": "-0.017251"
+        },
+        {
+          "date": "2025-06-20",
+          "equity": "11297521.51",
+          "cash": "5519521.51",
+          "positionValue": "5778000.00",
+          "dailyReturn": "0.001596",
+          "cumulativeReturn": "0.129752",
+          "drawdown": "-0.015683"
+        },
+        {
+          "date": "2025-06-23",
+          "equity": "11198521.51",
+          "cash": "5519521.51",
+          "positionValue": "5679000.00",
+          "dailyReturn": "-0.008763",
+          "cumulativeReturn": "0.119852",
+          "drawdown": "-0.024308"
+        },
+        {
+          "date": "2025-06-24",
+          "equity": "11279521.51",
+          "cash": "5519521.51",
+          "positionValue": "5760000.00",
+          "dailyReturn": "0.007233",
+          "cumulativeReturn": "0.127952",
+          "drawdown": "-0.017251"
+        },
+        {
+          "date": "2025-06-25",
+          "equity": "11279521.51",
+          "cash": "5519521.51",
+          "positionValue": "5760000.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.127952",
+          "drawdown": "-0.017251"
+        },
+        {
+          "date": "2025-06-26",
+          "equity": "11504521.51",
+          "cash": "5519521.51",
+          "positionValue": "5985000.00",
+          "dailyReturn": "0.019948",
+          "cumulativeReturn": "0.150452",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-06-27",
+          "equity": "11531521.51",
+          "cash": "5519521.51",
+          "positionValue": "6012000.00",
+          "dailyReturn": "0.002347",
+          "cumulativeReturn": "0.153152",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-06-30",
+          "equity": "11666521.51",
+          "cash": "5519521.51",
+          "positionValue": "6147000.00",
+          "dailyReturn": "0.011707",
+          "cumulativeReturn": "0.166652",
+          "drawdown": "0.000000",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "6147000.00",
+              "weight": "0.526892",
+              "unrealizedPnl": "747000.00"
+            }
+          ]
+        }
+      ],
+      "trades": [
+        {
+          "tradeId": "TRD-000001",
+          "instrumentId": "005930.XKRX",
+          "side": "LONG",
+          "status": "CLOSED",
+          "entryTime": "2025-01-22T00:00:00Z",
+          "exitTime": "2025-03-12T00:00:00Z",
+          "entryPrice": "53700.00",
+          "exitPrice": "52800.00",
+          "quantity": "90",
+          "grossPnl": "-81000.00",
+          "commission": "1437.75",
+          "slippageCost": "4792.50",
+          "realizedPnl": "-87230.25",
+          "returnRate": "-0.018049"
+        },
+        {
+          "tradeId": "TRD-000002",
+          "instrumentId": "000660.XKRX",
+          "side": "LONG",
+          "status": "CLOSED",
+          "entryTime": "2025-02-06T00:00:00Z",
+          "exitTime": "2025-04-03T00:00:00Z",
+          "entryPrice": "214000.00",
+          "exitPrice": "256400.00",
+          "quantity": "24",
+          "grossPnl": "1017600.00",
+          "commission": "1693.44",
+          "slippageCost": "5644.80",
+          "realizedPnl": "1010261.76",
+          "returnRate": "0.196702"
+        },
+        {
+          "tradeId": "TRD-000003",
+          "instrumentId": "005930.XKRX",
+          "side": "LONG",
+          "status": "OPEN",
+          "entryTime": "2025-05-14T00:00:00Z",
+          "exitTime": null,
+          "entryPrice": "60000.00",
+          "exitPrice": null,
+          "quantity": "90",
+          "grossPnl": null,
+          "commission": "810.00",
+          "slippageCost": "2700.00",
+          "realizedPnl": null,
+          "returnRate": null
+        }
+      ],
+      "execution": {
+        "orderCount": 5,
+        "fillCount": 5,
+        "rejectedOrderCount": 0,
+        "totalCommission": "3941.19",
+        "totalSlippageCost": "13137.30"
+      },
+      "diagnostics": {
+        "warnings": [
+          {
+            "date": "2025-02-26",
+            "instrumentId": "000660.XKRX",
+            "code": "TRADING_HALTED",
+            "message": "Order execution was delayed until trading resumed."
+          }
+        ]
+      }
+    },
+    "benchmark": {
+      "instrumentId": "069500.XKRX",
+      "totalReturn": "0.053292",
+      "timeseries": [
+        {
+          "date": "2025-01-01",
+          "equity": "10000000.00",
+          "cumulativeReturn": "0.000000"
+        },
+        {
+          "date": "2025-01-02",
+          "equity": "10282131.66",
+          "cumulativeReturn": "0.028213"
+        },
+        {
+          "date": "2025-01-03",
+          "equity": "10438871.47",
+          "cumulativeReturn": "0.043887"
+        },
+        {
+          "date": "2025-01-06",
+          "equity": "10282131.66",
+          "cumulativeReturn": "0.028213"
+        },
+        {
+          "date": "2025-01-07",
+          "equity": "10250783.70",
+          "cumulativeReturn": "0.025078"
+        },
+        {
+          "date": "2025-01-08",
+          "equity": "10313479.62",
+          "cumulativeReturn": "0.031348"
+        },
+        {
+          "date": "2025-01-09",
+          "equity": "10407523.51",
+          "cumulativeReturn": "0.040752"
+        },
+        {
+          "date": "2025-01-10",
+          "equity": "10250783.70",
+          "cumulativeReturn": "0.025078"
+        },
+        {
+          "date": "2025-01-13",
+          "equity": "10000000.00",
+          "cumulativeReturn": "0.000000"
+        },
+        {
+          "date": "2025-01-14",
+          "equity": "9811912.23",
+          "cumulativeReturn": "-0.018809"
+        },
+        {
+          "date": "2025-01-15",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-01-16",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-01-17",
+          "equity": "9843260.19",
+          "cumulativeReturn": "-0.015674"
+        },
+        {
+          "date": "2025-01-20",
+          "equity": "9749216.30",
+          "cumulativeReturn": "-0.025078"
+        },
+        {
+          "date": "2025-01-21",
+          "equity": "9623824.45",
+          "cumulativeReturn": "-0.037618"
+        },
+        {
+          "date": "2025-01-22",
+          "equity": "9404388.71",
+          "cumulativeReturn": "-0.059561"
+        },
+        {
+          "date": "2025-01-23",
+          "equity": "9467084.64",
+          "cumulativeReturn": "-0.053292"
+        },
+        {
+          "date": "2025-01-24",
+          "equity": "9498432.60",
+          "cumulativeReturn": "-0.050157"
+        },
+        {
+          "date": "2025-01-27",
+          "equity": "9592476.49",
+          "cumulativeReturn": "-0.040752"
+        },
+        {
+          "date": "2025-01-28",
+          "equity": "9686520.38",
+          "cumulativeReturn": "-0.031348"
+        },
+        {
+          "date": "2025-01-29",
+          "equity": "9686520.38",
+          "cumulativeReturn": "-0.031348"
+        },
+        {
+          "date": "2025-01-30",
+          "equity": "9811912.23",
+          "cumulativeReturn": "-0.018809"
+        },
+        {
+          "date": "2025-01-31",
+          "equity": "9811912.23",
+          "cumulativeReturn": "-0.018809"
+        },
+        {
+          "date": "2025-02-03",
+          "equity": "9749216.30",
+          "cumulativeReturn": "-0.025078"
+        },
+        {
+          "date": "2025-02-04",
+          "equity": "9686520.38",
+          "cumulativeReturn": "-0.031348"
+        },
+        {
+          "date": "2025-02-05",
+          "equity": "9623824.45",
+          "cumulativeReturn": "-0.037618"
+        },
+        {
+          "date": "2025-02-06",
+          "equity": "9404388.71",
+          "cumulativeReturn": "-0.059561"
+        },
+        {
+          "date": "2025-02-07",
+          "equity": "9435736.68",
+          "cumulativeReturn": "-0.056426"
+        },
+        {
+          "date": "2025-02-10",
+          "equity": "9467084.64",
+          "cumulativeReturn": "-0.053292"
+        },
+        {
+          "date": "2025-02-11",
+          "equity": "9435736.68",
+          "cumulativeReturn": "-0.056426"
+        },
+        {
+          "date": "2025-02-12",
+          "equity": "9373040.75",
+          "cumulativeReturn": "-0.062696"
+        },
+        {
+          "date": "2025-02-13",
+          "equity": "9404388.71",
+          "cumulativeReturn": "-0.059561"
+        },
+        {
+          "date": "2025-02-14",
+          "equity": "9592476.49",
+          "cumulativeReturn": "-0.040752"
+        },
+        {
+          "date": "2025-02-17",
+          "equity": "9592476.49",
+          "cumulativeReturn": "-0.040752"
+        },
+        {
+          "date": "2025-02-18",
+          "equity": "9529780.56",
+          "cumulativeReturn": "-0.047022"
+        },
+        {
+          "date": "2025-02-19",
+          "equity": "9498432.60",
+          "cumulativeReturn": "-0.050157"
+        },
+        {
+          "date": "2025-02-20",
+          "equity": "9467084.64",
+          "cumulativeReturn": "-0.053292"
+        },
+        {
+          "date": "2025-02-21",
+          "equity": "9341692.79",
+          "cumulativeReturn": "-0.065831"
+        },
+        {
+          "date": "2025-02-24",
+          "equity": "9341692.79",
+          "cumulativeReturn": "-0.065831"
+        },
+        {
+          "date": "2025-02-25",
+          "equity": "9341692.79",
+          "cumulativeReturn": "-0.065831"
+        },
+        {
+          "date": "2025-02-26",
+          "equity": "9561128.53",
+          "cumulativeReturn": "-0.043887"
+        },
+        {
+          "date": "2025-02-27",
+          "equity": "9655172.41",
+          "cumulativeReturn": "-0.034483"
+        },
+        {
+          "date": "2025-02-28",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-03-03",
+          "equity": "9686520.38",
+          "cumulativeReturn": "-0.031348"
+        },
+        {
+          "date": "2025-03-04",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-03-05",
+          "equity": "9655172.41",
+          "cumulativeReturn": "-0.034483"
+        },
+        {
+          "date": "2025-03-06",
+          "equity": "9686520.38",
+          "cumulativeReturn": "-0.031348"
+        },
+        {
+          "date": "2025-03-07",
+          "equity": "9749216.30",
+          "cumulativeReturn": "-0.025078"
+        },
+        {
+          "date": "2025-03-10",
+          "equity": "9655172.41",
+          "cumulativeReturn": "-0.034483"
+        },
+        {
+          "date": "2025-03-11",
+          "equity": "9874608.15",
+          "cumulativeReturn": "-0.012539"
+        },
+        {
+          "date": "2025-03-12",
+          "equity": "9937304.08",
+          "cumulativeReturn": "-0.006270"
+        },
+        {
+          "date": "2025-03-13",
+          "equity": "9749216.30",
+          "cumulativeReturn": "-0.025078"
+        },
+        {
+          "date": "2025-03-14",
+          "equity": "9811912.23",
+          "cumulativeReturn": "-0.018809"
+        },
+        {
+          "date": "2025-03-17",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-03-18",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-03-19",
+          "equity": "9811912.23",
+          "cumulativeReturn": "-0.018809"
+        },
+        {
+          "date": "2025-03-20",
+          "equity": "9874608.15",
+          "cumulativeReturn": "-0.012539"
+        },
+        {
+          "date": "2025-03-21",
+          "equity": "9655172.41",
+          "cumulativeReturn": "-0.034483"
+        },
+        {
+          "date": "2025-03-24",
+          "equity": "9529780.56",
+          "cumulativeReturn": "-0.047022"
+        },
+        {
+          "date": "2025-03-25",
+          "equity": "9623824.45",
+          "cumulativeReturn": "-0.037618"
+        },
+        {
+          "date": "2025-03-26",
+          "equity": "9780564.26",
+          "cumulativeReturn": "-0.021944"
+        },
+        {
+          "date": "2025-03-27",
+          "equity": "9968652.04",
+          "cumulativeReturn": "-0.003135"
+        },
+        {
+          "date": "2025-03-28",
+          "equity": "10188087.77",
+          "cumulativeReturn": "0.018809"
+        },
+        {
+          "date": "2025-03-31",
+          "equity": "9968652.04",
+          "cumulativeReturn": "-0.003135"
+        },
+        {
+          "date": "2025-04-01",
+          "equity": "10031347.96",
+          "cumulativeReturn": "0.003135"
+        },
+        {
+          "date": "2025-04-02",
+          "equity": "9843260.19",
+          "cumulativeReturn": "-0.015674"
+        },
+        {
+          "date": "2025-04-03",
+          "equity": "10031347.96",
+          "cumulativeReturn": "0.003135"
+        },
+        {
+          "date": "2025-04-04",
+          "equity": "10062695.92",
+          "cumulativeReturn": "0.006270"
+        },
+        {
+          "date": "2025-04-07",
+          "equity": "9937304.08",
+          "cumulativeReturn": "-0.006270"
+        },
+        {
+          "date": "2025-04-08",
+          "equity": "10156739.81",
+          "cumulativeReturn": "0.015674"
+        },
+        {
+          "date": "2025-04-09",
+          "equity": "10219435.74",
+          "cumulativeReturn": "0.021944"
+        },
+        {
+          "date": "2025-04-10",
+          "equity": "10031347.96",
+          "cumulativeReturn": "0.003135"
+        },
+        {
+          "date": "2025-04-11",
+          "equity": "10062695.92",
+          "cumulativeReturn": "0.006270"
+        },
+        {
+          "date": "2025-04-14",
+          "equity": "10000000.00",
+          "cumulativeReturn": "0.000000"
+        },
+        {
+          "date": "2025-04-15",
+          "equity": "10000000.00",
+          "cumulativeReturn": "0.000000"
+        },
+        {
+          "date": "2025-04-16",
+          "equity": "9968652.04",
+          "cumulativeReturn": "-0.003135"
+        },
+        {
+          "date": "2025-04-17",
+          "equity": "10125391.85",
+          "cumulativeReturn": "0.012539"
+        },
+        {
+          "date": "2025-04-18",
+          "equity": "9968652.04",
+          "cumulativeReturn": "-0.003135"
+        },
+        {
+          "date": "2025-04-21",
+          "equity": "10000000.00",
+          "cumulativeReturn": "0.000000"
+        },
+        {
+          "date": "2025-04-22",
+          "equity": "10188087.77",
+          "cumulativeReturn": "0.018809"
+        },
+        {
+          "date": "2025-04-23",
+          "equity": "10125391.85",
+          "cumulativeReturn": "0.012539"
+        },
+        {
+          "date": "2025-04-24",
+          "equity": "10125391.85",
+          "cumulativeReturn": "0.012539"
+        },
+        {
+          "date": "2025-04-25",
+          "equity": "10156739.81",
+          "cumulativeReturn": "0.015674"
+        },
+        {
+          "date": "2025-04-28",
+          "equity": "10094043.89",
+          "cumulativeReturn": "0.009404"
+        },
+        {
+          "date": "2025-04-29",
+          "equity": "10156739.81",
+          "cumulativeReturn": "0.015674"
+        },
+        {
+          "date": "2025-04-30",
+          "equity": "10188087.77",
+          "cumulativeReturn": "0.018809"
+        },
+        {
+          "date": "2025-05-01",
+          "equity": "10094043.89",
+          "cumulativeReturn": "0.009404"
+        },
+        {
+          "date": "2025-05-02",
+          "equity": "10282131.66",
+          "cumulativeReturn": "0.028213"
+        },
+        {
+          "date": "2025-05-05",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-05-06",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-05-07",
+          "equity": "10282131.66",
+          "cumulativeReturn": "0.028213"
+        },
+        {
+          "date": "2025-05-08",
+          "equity": "10219435.74",
+          "cumulativeReturn": "0.021944"
+        },
+        {
+          "date": "2025-05-09",
+          "equity": "10344827.59",
+          "cumulativeReturn": "0.034483"
+        },
+        {
+          "date": "2025-05-12",
+          "equity": "10344827.59",
+          "cumulativeReturn": "0.034483"
+        },
+        {
+          "date": "2025-05-13",
+          "equity": "10407523.51",
+          "cumulativeReturn": "0.040752"
+        },
+        {
+          "date": "2025-05-14",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-05-15",
+          "equity": "10470219.44",
+          "cumulativeReturn": "0.047022"
+        },
+        {
+          "date": "2025-05-16",
+          "equity": "10438871.47",
+          "cumulativeReturn": "0.043887"
+        },
+        {
+          "date": "2025-05-19",
+          "equity": "10532915.36",
+          "cumulativeReturn": "0.053292"
+        },
+        {
+          "date": "2025-05-20",
+          "equity": "10532915.36",
+          "cumulativeReturn": "0.053292"
+        },
+        {
+          "date": "2025-05-21",
+          "equity": "10626959.25",
+          "cumulativeReturn": "0.062696"
+        },
+        {
+          "date": "2025-05-22",
+          "equity": "10721003.13",
+          "cumulativeReturn": "0.072100"
+        },
+        {
+          "date": "2025-05-23",
+          "equity": "10689655.17",
+          "cumulativeReturn": "0.068966"
+        },
+        {
+          "date": "2025-05-26",
+          "equity": "10595611.29",
+          "cumulativeReturn": "0.059561"
+        },
+        {
+          "date": "2025-05-27",
+          "equity": "10501567.40",
+          "cumulativeReturn": "0.050157"
+        },
+        {
+          "date": "2025-05-28",
+          "equity": "10407523.51",
+          "cumulativeReturn": "0.040752"
+        },
+        {
+          "date": "2025-05-29",
+          "equity": "10313479.62",
+          "cumulativeReturn": "0.031348"
+        },
+        {
+          "date": "2025-05-30",
+          "equity": "10407523.51",
+          "cumulativeReturn": "0.040752"
+        },
+        {
+          "date": "2025-06-02",
+          "equity": "10407523.51",
+          "cumulativeReturn": "0.040752"
+        },
+        {
+          "date": "2025-06-03",
+          "equity": "10595611.29",
+          "cumulativeReturn": "0.059561"
+        },
+        {
+          "date": "2025-06-04",
+          "equity": "10877742.95",
+          "cumulativeReturn": "0.087774"
+        },
+        {
+          "date": "2025-06-05",
+          "equity": "10877742.95",
+          "cumulativeReturn": "0.087774"
+        },
+        {
+          "date": "2025-06-06",
+          "equity": "10689655.17",
+          "cumulativeReturn": "0.068966"
+        },
+        {
+          "date": "2025-06-09",
+          "equity": "10658307.21",
+          "cumulativeReturn": "0.065831"
+        },
+        {
+          "date": "2025-06-10",
+          "equity": "10658307.21",
+          "cumulativeReturn": "0.065831"
+        },
+        {
+          "date": "2025-06-11",
+          "equity": "10470219.44",
+          "cumulativeReturn": "0.047022"
+        },
+        {
+          "date": "2025-06-12",
+          "equity": "10470219.44",
+          "cumulativeReturn": "0.047022"
+        },
+        {
+          "date": "2025-06-13",
+          "equity": "10501567.40",
+          "cumulativeReturn": "0.050157"
+        },
+        {
+          "date": "2025-06-16",
+          "equity": "10438871.47",
+          "cumulativeReturn": "0.043887"
+        },
+        {
+          "date": "2025-06-17",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-06-18",
+          "equity": "10282131.66",
+          "cumulativeReturn": "0.028213"
+        },
+        {
+          "date": "2025-06-19",
+          "equity": "10501567.40",
+          "cumulativeReturn": "0.050157"
+        },
+        {
+          "date": "2025-06-20",
+          "equity": "10470219.44",
+          "cumulativeReturn": "0.047022"
+        },
+        {
+          "date": "2025-06-23",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-06-24",
+          "equity": "10344827.59",
+          "cumulativeReturn": "0.034483"
+        },
+        {
+          "date": "2025-06-25",
+          "equity": "10470219.44",
+          "cumulativeReturn": "0.047022"
+        },
+        {
+          "date": "2025-06-26",
+          "equity": "10376175.55",
+          "cumulativeReturn": "0.037618"
+        },
+        {
+          "date": "2025-06-27",
+          "equity": "10438871.47",
+          "cumulativeReturn": "0.043887"
+        },
+        {
+          "date": "2025-06-30",
+          "equity": "10532915.36",
+          "cumulativeReturn": "0.053292"
+        }
+      ]
+    }
+  }
+}
