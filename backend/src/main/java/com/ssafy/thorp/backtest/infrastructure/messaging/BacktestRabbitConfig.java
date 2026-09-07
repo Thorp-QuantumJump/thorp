@@ -12,13 +12,18 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.io.IOException;
 import java.math.BigDecimal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -30,6 +35,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class BacktestRabbitConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(BacktestRabbitConfig.class);
 
     public static final String EXCHANGE = "backtest";
     public static final String DEAD_LETTER_EXCHANGE = "backtest.dlx";
@@ -74,6 +81,25 @@ public class BacktestRabbitConfig {
                 BindingBuilder.bind(events).to(exchange).with(EVENTS_ROUTING_KEY),
                 BindingBuilder.bind(jobsDlq).to(dlx).with(JOBS_DEAD_LETTER_ROUTING_KEY),
                 BindingBuilder.bind(eventsDlq).to(dlx).with(EVENTS_DEAD_LETTER_ROUTING_KEY));
+    }
+
+    /**
+     * 기동 시 브로커 연결을 한 번 연다. {@code RabbitAdmin}은 첫 연결이 열릴 때 토폴로지를 선언하는데, 발행·리스너가 없는 동안은 연결을 열 계기가 없어
+     * 관리 UI에 큐가 보이지 않는다. 브로커에 닿지 못하면 경고만 남기고 기동은 계속한다(첫 연결 성공 시 자동 선언).
+     */
+    @Bean
+    public ApplicationRunner declareBacktestTopology(ConnectionFactory connectionFactory) {
+        return args -> {
+            try {
+                connectionFactory.createConnection(); // CachingConnectionFactory: 공유 연결로 유지된다
+                log.info("RabbitMQ connected; backtest topology declared (exchange={})", EXCHANGE);
+            } catch (AmqpException e) {
+                log.warn(
+                        "RabbitMQ unreachable at startup; topology will be declared on first"
+                                + " connection. cause={}",
+                        e.getMessage());
+            }
+        };
     }
 
     /**
