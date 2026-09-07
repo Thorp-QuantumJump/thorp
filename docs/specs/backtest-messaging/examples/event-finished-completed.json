@@ -12,8 +12,7 @@
         "backtestId": "BT-20260907-000001",
         "status": "COMPLETED",
         "startedAt": "2026-09-07T01:00:00Z",
-        "finishedAt": "2026-09-07T01:00:04Z",
-        "error": null
+        "finishedAt": "2026-09-07T01:00:04Z"
       },
       "performance": {
         "initialEquity": "10000000.00",
@@ -1283,15 +1282,10 @@
           "side": "LONG",
           "status": "OPEN",
           "entryTime": "2025-05-14T00:00:00Z",
-          "exitTime": null,
           "entryPrice": "60000.00",
-          "exitPrice": null,
           "quantity": "90",
-          "grossPnl": null,
           "commission": "810.00",
-          "slippageCost": "2700.00",
-          "realizedPnl": null,
-          "returnRate": null
+          "slippageCost": "2700.00"
         }
       ],
       "execution": {

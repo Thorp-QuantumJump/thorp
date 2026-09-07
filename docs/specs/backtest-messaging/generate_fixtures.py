@@ -254,7 +254,8 @@ engine_input = {
     "strategy": {
         "strategyId": "MA_CROSSOVER",
         "version": "1.0.0",
-        "parameters": {"shortWindow": 20, "longWindow": 60},
+        # threshold(소수)는 자유 형식 파라미터의 숫자가 문자열로 변질되지 않는지 round-trip으로 확인하는 용도
+        "parameters": {"shortWindow": 20, "longWindow": 60, "threshold": 0.05},
     },
     "portfolio": {
         "initialCash": str(INITIAL_CASH),
@@ -384,8 +385,20 @@ files = {
     "event-finished-completed.json": finished_completed,
     "event-finished-failed.json": finished_failed,
 }
+
+
+def strip_none(obj):  # noqa: ANN001, ANN201 - 재귀 JSON 트리
+    """계약 규칙: null 값 필드는 키 자체를 쓰지 않는다 (수신 측은 '키 없음 == null')."""
+    if isinstance(obj, dict):
+        return {k: strip_none(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [strip_none(v) for v in obj]
+    return obj
+
+
 for name, obj in files.items():
-    (OUT / name).write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    text = json.dumps(strip_none(obj), indent=2, ensure_ascii=False) + "\n"
+    (OUT / name).write_text(text, encoding="utf-8", newline="\n")
 
 # 요약 출력 (README 작성용)
 print(f"tradingDays={N} progressEvents={progress_events} finishedSequence={progress_events + 1}")

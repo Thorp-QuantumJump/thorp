@@ -18,14 +18,11 @@
           "message": "Market data is unavailable for 000660.XKRX in the requested period."
         }
       },
-      "performance": null,
       "portfolioSeries": [],
       "trades": [],
-      "execution": null,
       "diagnostics": {
         "warnings": []
       }
-    },
-    "benchmark": null
+    }
   }
 }

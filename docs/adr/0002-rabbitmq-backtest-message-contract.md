@@ -54,12 +54,18 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
 | `EngineOutput.run.error` | 설계에 없던 필드를 보충. 실패 시 `{code, message}`, 성공 시 null | 설계의 ErrorResponse 코드 집합을 엔진 결과에서도 그대로 쓰기 위함 |
 | internal API 명세서 `/engine/backtests/*` | 폐기. 이 메시지 계약으로 대체 | HTTP 동기 호출 안은 RabbitMQ 설계 이전 산출물 |
 | 픽스처 위치 | `docs/specs/backtest-messaging/examples/` 한 벌. 백엔드·워커 테스트가 상대 경로로 같은 파일을 읽음 | 테스트 리소스로 복사하면 어긋난다 |
+| null 표현 | **키 자체를 생략**한다(`null` 값도 쓰지 않음). 수신 측은 "키 없음 == null"로 읽고 명시 `null`도 같은 뜻으로 수용 | 원본 설계의 "명시 null" 표기를 확장한 결정. Jackson record는 명시 null과 키 없음을 구분하지 못해 한 규칙이어야 픽스처와 정확 동치 round-trip이 가능. 백엔드 `NON_NULL`, 워커 `exclude_none`, 픽스처 생성기 세 곳이 같은 규칙 |
+| `strategy.parameters` 숫자 | 정수·소수를 JSON 숫자로 그대로 통과. 문자열 변환 금지 | 자유 형식 객체는 전략 팀 소유. 금액·비율 문자열 규칙은 선언된 decimal 필드에만 적용 |
+| 필수 필드 검증 | DTO 생성자가 아니라 수신 Consumer가 역직렬화 직후 명시 검증(Task 4a·5) | NPE에 맡기면 쓰지 않는 필드의 누락이 묻히고 프로그램 버그를 계약 오류로 오인한다 |
+| 엔진 진행 콜백 단위 | 거래일 1개. 20거래일 묶음 PROGRESS 발행은 실행 Consumer 책임 | 묶음 정책이 Mock·Nautilus 엔진 양쪽에 중복되지 않게 한 곳에 둔다 |
 
 ## 결과
 
-- Task 2(#102)는 이 결정을 전제로 토폴로지·DTO·픽스처를 구현한다. D1~D4가 바뀌면 enum 값과 픽스처 값만 바뀌고 구조는 유지된다.
+- Task 2(#102)는 이 결정을 **제안값으로** 구현한다. 제안값 구현과 팀의 계약 승인은 별개이며, 승인 시 이 문서 상태를 갱신한다.
+  D1~D4가 바뀌면 메시지 DTO 구조는 유지되지만 enum·픽스처 외에 요청 API(Task 3)·DB 컬럼·엔진 정책(수수료·데이터셋)까지 영향받는다. 변경 시 별도 이슈로 영향 범위를 정리한다.
 - Task 3에서 `QUEUED → PENDING` 리네임, `backtest_id` 컬럼, `LoggingBacktestJobPublisher` 삭제를 수행한다.
-- 워커 실행 Consumer와 엔진의 경계는 `worker/src/worker/engine/base.py`의 `BacktestEngine` Protocol이다. 엔진 담당은 이 인터페이스만 구현한다.
+- 워커 실행 Consumer와 엔진의 경계는 `worker/src/worker/contracts/engine.py`의 `BacktestEngine` Protocol이다. 엔진 담당은 이 인터페이스만 구현한다.
+  (기존 `worker/engine.py` 모듈과 이름이 충돌하므로 `engine/` 패키지는 만들지 않는다. 기존 모듈 정리는 Task 4a.)
 
 ## 이 결정에서 다루지 않는 것
 

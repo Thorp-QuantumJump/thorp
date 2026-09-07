@@ -22,7 +22,8 @@
     "version": "1.0.0",
     "parameters": {
       "shortWindow": 20,
-      "longWindow": 60
+      "longWindow": 60,
+      "threshold": 0.05
     }
   },
   "portfolio": {
