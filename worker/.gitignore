@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
+engine-output.json
+examples/live-*.json
+examples/fixture-output.json

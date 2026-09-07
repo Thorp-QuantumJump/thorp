@@ -1,0 +1,39 @@
+{
+  "run": {
+    "backtestId": "BT-MOMENTUM-DEMO",
+    "start": "2020-09-18",
+    "end": "2022-12-30",
+    "randomSeed": 42
+  },
+  "universe": {"instrumentIds": ["000660.XKRX"]},
+  "marketData": {
+    "datasetId": "YFINANCE_DAILY",
+    "interval": "1D",
+    "adjustment": "TOTAL_RETURN_ADJUSTED",
+    "priceType": "LAST"
+  },
+  "strategy": {
+    "strategyId": "MOMENTUM",
+    "version": "1.0.0",
+    "parameters": {"lookbackDays": 120}
+  },
+  "portfolio": {
+    "initialCash": "10000000",
+    "currency": "KRW",
+    "positionSizing": {"type": "STRATEGY_DEFINED", "maxPositionPct": "1"},
+    "shortSelling": false,
+    "leverage": "1"
+  },
+  "execution": {
+    "signalTiming": "BAR_CLOSE",
+    "executionTiming": "NEXT_BAR_OPEN",
+    "orderTypes": ["MARKET"],
+    "commission": {"model": "ZERO", "version": "DEMO_ZERO_V1", "taxRate": "0"},
+    "slippage": {"model": "FIXED_BPS", "bps": 5},
+    "partialFill": false,
+    "liquidity": {"model": "UNLIMITED"},
+    "tradingHalt": "WAIT_UNTIL_RESUME",
+    "delisting": "UNSUPPORTED"
+  },
+  "benchmark": null
+}
