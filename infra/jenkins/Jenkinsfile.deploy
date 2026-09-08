@@ -107,46 +107,38 @@ pipeline {
     }
 
     post {
-        failure {
-            // 컨테이너 로그를 빌드 로그로 옮기지 않는다. 애플리케이션이 접속 URL이나
-            // 설정값을 예외 메시지에 담아 출력하면 비밀번호가 Jenkins 콘솔에 남는다.
-            // 상태만 남기고, 로그는 서버에서 직접 본다.
-            sh '''
+    failure {
+        sh(
+            returnStatus: true,
+            script: '''
                 cd "$DEPLOY_DIR/infra"
-                docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+                docker compose \
+                    -f docker-compose.prod.yml \
+                    --env-file .env.prod \
+                    ps
+
                 echo "로그 확인: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>"
             '''
-        }
+        )
+
+        mattermostSend(
+            color: 'danger',
+            message: "❌ 배포 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+        )
     }
-    post {
-        failure {
-            echo 'Mattermost 실패 알림 전송 시작'
 
-            mattermostSend(
-                color: 'danger',
-                failOnError: true,
-                message: "❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
-
-        unstable {
-            echo 'Mattermost 빌드 불안정 알림 전송 시작'
-
-            mattermostSend(
-                color: 'warning',
-                failOnError: true,
-                message: "⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
-
-        success {
-            echo 'Mattermost 성공 알림 전송 시작'
-
-            mattermostSend(
-                color: 'good',
-                failOnError: true,
-                message: "✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
+    unstable {
+        mattermostSend(
+            color: 'warning',
+            message: "⚠️ 배포 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+        )
     }
+
+    success {
+        mattermostSend(
+            color: 'good',
+            message: "✅ 배포 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+        )
+    }
+}
 }
