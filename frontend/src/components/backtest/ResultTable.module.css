@@ -16,7 +16,7 @@
 
 .table th,
 .table td {
-  padding: 13px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid #edf0f2;
   text-align: right;
   white-space: nowrap;
@@ -83,7 +83,7 @@
 }
 
 .benchmarkRow {
-  background: #f7f8f9;
+  background: #fafbfb;
   color: #6c7783;
 }
 

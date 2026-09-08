@@ -1,6 +1,6 @@
 .page {
   min-height: 100svh;
-  background: #f3f5f5;
+  background: #fff;
   color: #182331;
   --surface: #fff;
   --line: #e1e6e8;
@@ -9,8 +9,6 @@
   --brand-soft: #e8f6f4;
 }
 
-.contextPills,
-.contextPills span,
 .titleLine,
 .legend,
 .legend span,
@@ -23,62 +21,15 @@
 }
 
 .container {
-  width: min(100% - 40px, 1440px);
+  width: min(100% - 40px, 1520px);
   margin: 0 auto;
-  padding: 52px 0 72px;
-}
-
-.intro {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 26px;
-}
-
-.eyebrow {
-  margin: 0 0 9px;
-  color: var(--brand);
-  font-size: 0.72rem;
-  font-weight: 720;
-  letter-spacing: 0.15em;
-}
-
-.intro h1 {
-  margin: 0;
-  color: #13202f;
-  font-size: clamp(1.75rem, 3vw, 2.75rem);
-  font-weight: 650;
-  letter-spacing: -0.055em;
-  line-height: 1.16;
-}
-
-.introCopy {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.contextPills {
-  gap: 8px;
-}
-
-.contextPills span {
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 11px;
-  border: 1px solid #dde3e5;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 65%);
-  color: #60707d;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 16px 0 26px;
 }
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 322px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 306px;
+  gap: 16px;
   min-width: 0;
   width: 100%;
   align-items: start;
@@ -88,20 +39,16 @@
   display: grid;
   min-width: 0;
   max-width: 100%;
-  gap: 14px;
+  gap: 10px;
 }
 
-.panel,
-.metric {
+.panel {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 17px;
-  background: var(--surface);
-  box-shadow: 0 8px 32px rgb(28 50 60 / 3%);
 }
 
 .chartPanel {
-  padding: 20px 20px 10px;
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--line);
 }
 
 .panelHeader,
@@ -126,7 +73,6 @@
 }
 
 .panelHeader p,
-.resultHeader p,
 .configTitle p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -159,7 +105,7 @@
 
 .chartStage {
   position: relative;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .progressBadge {
@@ -188,11 +134,18 @@
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .metric {
-  padding: 15px 16px;
+  min-width: 0;
+  padding: 9px 14px;
+  background: #fff;
+}
+
+.metric + .metric {
+  border-left: 1px solid var(--line);
 }
 
 .metric span {
@@ -202,7 +155,7 @@
 
 .metric strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 2px;
   color: #263140;
   font-size: 1.13rem;
   font-variant-numeric: tabular-nums;
@@ -219,12 +172,16 @@
 
 .resultPanel {
   overflow: hidden;
-  padding: 18px 18px 8px;
+  padding: 7px 8px 0;
 }
 
 .resultHeader {
   align-items: center;
-  padding: 0 3px 10px;
+  padding: 0 3px 5px;
+}
+
+.resultHeader p {
+  display: none;
 }
 
 .resetButton {
@@ -242,13 +199,14 @@
 
 .configPanel {
   position: sticky;
-  top: 84px;
-  padding: 19px;
+  top: 82px;
+  padding: 8px 0 8px 18px;
+  border-left: 1px solid var(--line);
 }
 
 .configTitle {
   gap: 10px;
-  margin-bottom: 19px;
+  margin-bottom: 8px;
 }
 
 .configTitle > svg {
@@ -257,8 +215,8 @@
 
 .fieldGroup {
   display: grid;
-  gap: 6px;
-  margin-top: 12px;
+  gap: 4px;
+  margin-top: 8px;
 }
 
 .fieldGroup label {
@@ -271,11 +229,11 @@
 .fieldGroup input {
   width: 100%;
   min-width: 0;
-  height: 39px;
+  height: 34px;
   padding: 0 10px;
   border: 1px solid #dfe4e7;
-  border-radius: 10px;
-  background: #fafbfb;
+  border-radius: 7px;
+  background: #fff;
   color: #293644;
   outline: none;
   font-size: 0.72rem;
@@ -313,7 +271,7 @@
 
 .divider {
   height: 1px;
-  margin: 20px 0;
+  margin: 12px 0 8px;
   background: #edf0f1;
 }
 
@@ -321,7 +279,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 9px;
+  margin-bottom: 2px;
 }
 
 .strategyHeading > div {
@@ -348,10 +306,10 @@
   justify-content: center;
   gap: 9px;
   width: 100%;
-  min-height: 45px;
-  margin-top: 16px;
+  min-height: 38px;
+  margin-top: 10px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 7px;
   background: #182331;
   color: #fff;
   cursor: pointer;
@@ -378,7 +336,7 @@
 }
 
 .configNote {
-  margin: 10px 4px 0;
+  margin: 6px 4px 0;
   color: #9aa3ac;
   font-size: 0.66rem;
   line-height: 1.55;
@@ -393,18 +351,17 @@
   .configPanel {
     position: static;
     grid-row: 1;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-left: 0;
   }
 }
 
 @media (max-width: 760px) {
   .container {
-    width: min(100% - 28px, 1440px);
-    padding-top: 34px;
-  }
-
-  .intro {
-    align-items: flex-start;
-    flex-direction: column;
+    width: min(100% - 28px, 1520px);
+    padding-top: 14px;
   }
 
   .panelHeader {
@@ -421,19 +378,15 @@
   }
 
   .chartPanel {
-    padding: 16px 12px 8px;
+    padding: 10px 0 6px;
   }
 
   .resultPanel {
-    padding: 16px 10px 6px;
+    padding: 10px 0 0;
   }
 }
 
 @media (max-width: 420px) {
-  .contextPills {
-    flex-wrap: wrap;
-  }
-
   .dateGrid {
     grid-template-columns: 1fr;
   }

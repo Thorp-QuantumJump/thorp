@@ -1,4 +1,4 @@
-import type { Indicator, IndicatorSeriesPoint } from '@/types/dashboard'
+import type { Indicator, IndicatorSeriesPoint } from '@/types/market'
 
 // 실제 과거 시세가 아닌 UI 검증용 연간 기준값이다. 마지막 6개월은 기존 mock을 유지한다.
 const historyAnchors: Record<string, number[]> = {

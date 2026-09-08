@@ -1,7 +1,11 @@
-"""백테스트 엔진 (스캐폴딩).
+"""옛 Kafka Job 계약용 미구현 스캐폴딩.
 
-전략은 '시장 데이터 -> 매매 신호'만 출력하고,
-엔진이 체결/자산 계산과 성과지표(수익률, MDD, Sharpe) 산출을 담당한다.
+공개 실행 경로는 이 모듈이 아니라 `worker.engine_runner.NautilusMomentumEngine`이다
+(`run(engine_input, on_progress) -> EngineOutput`, 원장·metadata까지 필요하면
+`run_with_artifacts`). 시장 데이터 공급자는 엔진 인스턴스에 주입해 여러 실행에서 재사용한다.
+
+여기 남은 `run_backtest`는 아직 구현되지 않은 옛 Job 계약(`worker.models`) 스캐폴딩이며
+`worker.main`의 TODO만 이를 가리킨다. 워커 런타임을 pika로 교체할 때 함께 정리한다.
 """
 
 import pandas as pd

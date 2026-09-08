@@ -1,4 +1,4 @@
-import type { IndicatorSeriesPoint } from '@/types/dashboard'
+import type { IndicatorSeriesPoint } from '@/types/market'
 
 /** ISO 월·일 형식과 윤년을 검사하고, 존재하는 날짜만 월 인덱스로 변환한다. */
 function parseIndicatorDate(value: string) {

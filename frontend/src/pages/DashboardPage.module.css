@@ -1,106 +1,19 @@
 .page {
-  position: relative;
-  min-width: 0;
-  min-height: 100svh;
-  overflow-x: clip;
-  background: #fbfcfb;
-  color: #182331;
-  --dashboard-surface: #fff;
-  --dashboard-ink: #172331;
-  --dashboard-copy: #60707c;
-  --dashboard-muted: #87939d;
-  --dashboard-line: #dfe5e6;
-  --dashboard-line-soft: #edf0f1;
-  --dashboard-brand: #168f8a;
-  --dashboard-positive: #21865f;
-  --dashboard-negative: #c75d48;
-  --dashboard-warning: #c2782b;
-  --dashboard-neutral: #687783;
-  --dashboard-shadow: 0 20px 48px rgb(28 50 60 / 5%);
-  --dashboard-shadow-soft: 0 8px 28px rgb(28 50 60 / 3%);
+  background: #fff;
 }
 
 .container {
-  width: 100%;
-  padding: 0;
-}
-
-.heroStage {
-  position: relative;
-  width: min(100% - 80px, 1320px);
-  margin: 0 auto;
-}
-
-.orbitPrimary,
-.orbitSecondary {
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.orbitPrimary {
-  top: -410px;
-  right: -250px;
-  width: 1050px;
-  height: 670px;
-  border: 1px solid #e4e8e8;
-  border-radius: 50%;
-  transform: rotate(-9deg);
-}
-
-.orbitSecondary {
-  bottom: -230px;
-  left: -480px;
-  width: 930px;
-  height: 410px;
-  border: 1px solid #e9ecec;
-  border-radius: 50%;
-  transform: rotate(12deg);
-}
-
-.heroStage > section {
-  z-index: 1;
-}
-
-.contentBoundary {
-  position: relative;
-  margin-top: 12px;
-  padding: clamp(62px, 7vw, 92px) max(40px, calc((100vw - 1320px) / 2)) 84px;
-  border-top: 1px solid #dde3e3;
-  border-radius: clamp(48px, 7vw, 96px) clamp(48px, 7vw, 96px) 0 0;
-  background: #f3f6f5;
-}
-
-.contentFlow {
   display: grid;
-  width: 100%;
-  max-width: 1320px;
+  width: min(100% - 56px, 1400px);
   margin: 0 auto;
-  min-width: 0;
-  gap: clamp(48px, 6vh, 72px);
-}
-
-.footer {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #dfe5e6;
-  color: #939da5;
-  font-size: 0.65rem;
-  text-align: center;
+  padding: 14px 0 22px;
+  gap: 18px;
 }
 
 @media (max-width: 760px) {
-  .heroStage {
-    width: min(100% - 28px, 1440px);
-  }
-
-  .orbitPrimary {
-    right: -580px;
-  }
-
-  .contentBoundary {
-    margin-top: 0;
-    padding: 48px 14px 64px;
-    border-radius: 38px 38px 0 0;
+  .container {
+    width: calc(100% - 28px);
+    padding-top: 10px;
+    gap: 18px;
   }
 }
