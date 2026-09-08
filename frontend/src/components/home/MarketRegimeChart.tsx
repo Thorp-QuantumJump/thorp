@@ -1,7 +1,7 @@
 import { scaleLinear } from '@visx/scale'
 import { curveMonotoneX, line } from 'd3-shape'
 import { motion, useReducedMotion } from 'motion/react'
-import type { MarketCyclePoint, MarketOverviewChart } from '@/types/dashboard'
+import type { MarketCyclePoint, MarketOverviewChart } from '@/types/market'
 import styles from './MarketRegimeChart.module.css'
 
 interface MarketRegimeChartProps {

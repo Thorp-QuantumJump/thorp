@@ -1,27 +1,29 @@
 import { Clock } from 'lucide-react'
-import type { Indicator } from '@/types/dashboard'
+import type { Indicator } from '@/types/market'
 import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
   formatFrequency,
   formatIndicatorChange,
   formatIndicatorValue,
-} from '@/utils/dashboardFormat'
+} from '@/utils/marketFormat'
 import { TrendSparkline } from './TrendSparkline'
 import { IndicatorHistoryCard } from './IndicatorHistoryCard'
+import layout from '@/styles/MarketLayout.module.css'
 import styles from './MarketSnapshot.module.css'
 
 interface MarketSnapshotProps {
+  compact?: boolean
   indicators: Indicator[]
   activeIndicatorId: string | null
   onActiveChange: (id: string | null) => void
 }
 
 /** 거래일 기준 시장지표와 각 데이터의 지연 정보를 카드로 요약한다. */
-export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange }: MarketSnapshotProps) {
+export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange, compact = false }: MarketSnapshotProps) {
   return (
-    <section className={styles.section} aria-labelledby="market-snapshot-title">
-      <div className={styles.sectionHeader}>
+    <section className={`${styles.section} ${compact ? layout.compactSection : ''}`} data-density={compact ? 'compact' : undefined} aria-labelledby="market-snapshot-title">
+      <div className={`${styles.sectionHeader} ${compact ? layout.compactHeader : ''}`}>
         <div>
           <h2 id="market-snapshot-title">주식시장 핵심 지표</h2>
         </div>

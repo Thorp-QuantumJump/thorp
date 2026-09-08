@@ -1,40 +1,66 @@
 import { motion, useReducedMotion } from 'motion/react'
-import type { IndicatorSeriesPoint, IndicatorTone } from '@/types/dashboard'
+import type { IndicatorSeriesPoint, IndicatorTone } from '@/types/market'
 import styles from './TrendSparkline.module.css'
 
 interface TrendSparklineProps {
   series: IndicatorSeriesPoint[]
   tone: IndicatorTone
   delay?: number
+  addDetail?: boolean
 }
 
 const width = 160
 const height = 48
 const padding = 3
 
+/** 짧은 월간 시계열에만 미세한 중간 굴곡을 더해 추세 방향을 읽기 쉽게 만든다. */
+function addDisplayDetail(values: number[]) {
+  if (values.length < 2 || values.length > 4) return values
+
+  const range = Math.max(...values) - Math.min(...values)
+  const fallbackRange = Math.max(Math.abs(values[0]) * 0.015, 0.1)
+  const detailRange = Math.max(range, fallbackRange)
+
+  return values.flatMap((value, index) => {
+    const nextValue = values[index + 1]
+    if (nextValue === undefined) return [value]
+
+    const direction = index % 2 === 0 ? 1 : -1
+    const midpoint = value + (nextValue - value) * 0.48
+
+    return [value, midpoint + direction * detailRange * 0.12]
+  })
+}
+
 /** 작은 시계열을 카드 폭에 맞는 SVG 경로로 정규화한다. */
-function buildSparklinePath(series: IndicatorSeriesPoint[]) {
+function buildSparklinePath(series: IndicatorSeriesPoint[], addDetail: boolean) {
   if (series.length === 0) return ''
 
-  const values = series.map((point) => point.value)
+  const rawValues = series.map((point) => point.value)
+  const values = addDetail ? addDisplayDetail(rawValues) : rawValues
   const min = Math.min(...values)
   const max = Math.max(...values)
   const range = max - min || 1
-  const xStep = (width - padding * 2) / Math.max(series.length - 1, 1)
+  const xStep = (width - padding * 2) / Math.max(values.length - 1, 1)
 
-  return series
-    .map((point, index) => {
+  return values
+    .map((value, index) => {
       const x = padding + index * xStep
-      const y = height - padding - ((point.value - min) / range) * (height - padding * 2)
+      const y = height - padding - ((value - min) / range) * (height - padding * 2)
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
     })
     .join(' ')
 }
 
 /** 색상에 의존하지 않는 텍스트 정보 옆에 보조 추세선을 표시한다. */
-export function TrendSparkline({ series, tone, delay = 0 }: TrendSparklineProps) {
+export function TrendSparkline({
+  series,
+  tone,
+  delay = 0,
+  addDetail = false,
+}: TrendSparklineProps) {
   const reducedMotion = useReducedMotion()
-  const path = buildSparklinePath(series)
+  const path = buildSparklinePath(series, addDetail)
 
   return (
     <svg

@@ -1,8 +1,6 @@
 import {
-  CalendarDays,
   ChartNoAxesCombined,
   CircleDollarSign,
-  Database,
   Play,
   RotateCcw,
   SlidersHorizontal,
@@ -101,20 +99,6 @@ export function BacktestPage() {
       <AppHeader />
 
       <div className={styles.container}>
-        <section className={styles.intro}>
-          <div>
-            <p className={styles.eyebrow}>BACKTEST STUDIO</p>
-            <h1>전략을 같은 시장에서 비교하세요.</h1>
-            <p className={styles.introCopy}>
-              선택한 알고리즘을 동일한 기간과 투자금으로 검증합니다.
-            </p>
-          </div>
-          <div className={styles.contextPills} aria-label="백테스트 기준">
-            <span><Database size={14} aria-hidden="true" />NASDAQ-100</span>
-            <span><CalendarDays size={14} aria-hidden="true" />5년</span>
-          </div>
-        </section>
-
         <div className={styles.workspace}>
           <div className={styles.mainColumn}>
             {/* 선택한 전략과 벤치마크의 누적 성과를 같은 축에서 비교한다. */}
@@ -138,7 +122,7 @@ export function BacktestPage() {
                     ))}
                   <span>
                     <i className={styles.benchmarkMarker} aria-hidden="true" />
-                    NASDAQ-100
+                    KOSPI 200
                   </span>
                 </div>
               </div>
@@ -229,9 +213,8 @@ export function BacktestPage() {
 
             <div className={styles.fieldGroup}>
               <label htmlFor="market">투자 대상</label>
-              <select id="market" defaultValue="nasdaq100">
-                <option value="nasdaq100">NASDAQ-100</option>
-                <option value="nasdaq">NASDAQ Composite</option>
+              <select id="market" defaultValue="kospi200">
+                <option value="kospi200">KOSPI 200</option>
               </select>
             </div>
 

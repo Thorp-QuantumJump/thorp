@@ -18,8 +18,14 @@ import styles from './AppHeader.module.css'
 
 const navigationItems = [
   {
-    label: '시장 대시보드',
-    description: '현재 한국 시장을 쉽게 확인합니다.',
+    label: '홈',
+    description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',
+    path: '/home',
+    icon: Home,
+  },
+  {
+    label: '대시보드',
+    description: '핵심 지표와 추천 전략을 빠르게 확인합니다.',
     path: '/dashboard',
     icon: ChartNoAxesCombined,
   },
@@ -122,7 +128,7 @@ export function AppHeader() {
             >
               <Menu size={20} aria-hidden="true" />
             </button>
-            <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
+            <Link className={styles.brand} to="/home" aria-label="Thorp 홈">
               Thorp<span>.</span>
             </Link>
           </div>

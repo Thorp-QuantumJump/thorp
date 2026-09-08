@@ -1,4 +1,4 @@
-import type { DataFrequency, Indicator } from '@/types/dashboard'
+import type { DataFrequency, Indicator, MarketRegime } from '@/types/market'
 
 const frequencyLabels: Record<DataFrequency, string> = {
   daily: '거래일',
@@ -43,4 +43,23 @@ export function formatComparisonValue(value: number, unit: string) {
   })
 
   return `${formatted}${unit === '원' ? '' : ' '}${unit}`
+}
+
+export const cycleLabels: Record<MarketRegime['cycle'], string> = {
+  recovery: '회복 중',
+  expansion: '확장',
+  slowdown: '경기 둔화',
+  contraction: '경기 위축',
+}
+
+export const inflationLabels: Record<MarketRegime['inflation'], string> = {
+  easing: '물가 부담 완화',
+  neutral: '물가 안정',
+  pressure: '물가 부담 증가',
+}
+
+export const riskLabels: Record<MarketRegime['risk'], string> = {
+  riskOn: '긍정적',
+  neutral: '중립',
+  riskOff: '주의 필요',
 }

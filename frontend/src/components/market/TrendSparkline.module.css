@@ -2,19 +2,19 @@
   width: 100%;
   height: 48px;
   overflow: visible;
-  color: var(--dashboard-neutral);
+  color: var(--market-neutral);
 }
 
 .sparkline[data-tone='positive'] {
-  color: var(--dashboard-positive);
+  color: var(--market-positive);
 }
 
 .sparkline[data-tone='negative'] {
-  color: var(--dashboard-negative);
+  color: var(--market-negative);
 }
 
 .sparkline[data-tone='warning'] {
-  color: var(--dashboard-warning);
+  color: var(--market-warning);
 }
 
 .line {
@@ -25,6 +25,6 @@
 }
 
 .baseline {
-  stroke: var(--dashboard-line-soft);
+  stroke: var(--market-line-soft);
   stroke-width: 1;
 }

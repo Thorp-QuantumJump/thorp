@@ -85,7 +85,7 @@ export function ResultTable({
             <th scope="row">
               <span className={styles.strategyButton}>
                 <span className={styles.benchmarkDot} aria-hidden="true" />
-                NASDAQ-100
+                KOSPI 200
               </span>
             </th>
             <td className={styles.positive}>+80.2%</td>

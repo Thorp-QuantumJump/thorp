@@ -1,7 +1,7 @@
 import { scaleLinear } from '@visx/scale'
 import { curveMonotoneX, line } from 'd3-shape'
 import { motion, useReducedMotion } from 'motion/react'
-import type { Indicator, IndicatorSeriesPoint } from '@/types/dashboard'
+import type { Indicator, IndicatorSeriesPoint } from '@/types/market'
 import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import styles from './IndicatorHistoryCard.module.css'
 

@@ -1,0 +1,48 @@
+.page {
+  position: relative;
+  min-width: 0;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: #fbfcfb;
+  color: #182331;
+  --market-surface: #fff;
+  --market-ink: #172331;
+  --market-copy: #60707c;
+  --market-muted: #87939d;
+  --market-line: #dfe5e6;
+  --market-line-soft: #edf0f1;
+  --market-brand: #168f8a;
+  --market-positive: #21865f;
+  --market-negative: #c75d48;
+  --market-warning: #c2782b;
+  --market-neutral: #687783;
+  --market-shadow: 0 20px 48px rgb(28 50 60 / 5%);
+  --market-shadow-soft: 0 8px 28px rgb(28 50 60 / 3%);
+}
+
+.footer {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #dfe5e6;
+  color: #939da5;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+/* 같은 지표·전략 섹션을 대시보드에서는 간결한 간격으로 표시한다. */
+.compactSection[data-density='compact'] {
+  min-height: 0;
+}
+
+.compactSection > .compactHeader {
+  margin-bottom: 16px;
+}
+
+.compactSection > .compactHeader h2 {
+  font-size: 1.2rem;
+  line-height: 1.4;
+}
+
+.compactSection > .compactHeader p {
+  display: none;
+}

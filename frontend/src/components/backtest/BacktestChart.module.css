@@ -2,7 +2,7 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  min-height: 320px;
+  min-height: 260px;
   --chart-background: transparent;
   --chart-grid: #e2e6e9;
   --chart-foreground: #657180;
@@ -66,6 +66,6 @@
 
 @media (max-width: 720px) {
   .chart {
-    min-height: 250px;
+    min-height: 260px;
   }
 }

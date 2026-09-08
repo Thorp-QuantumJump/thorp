@@ -1,4 +1,4 @@
-import type { DashboardData, Indicator } from '@/types/dashboard'
+import type { MarketData, Indicator } from '@/types/market'
 import { withIndicatorHistoryMock } from './indicatorHistoryMock'
 
 const retrievedAt = '2026-08-31T09:00:00+09:00'
@@ -423,8 +423,8 @@ const stabilityIndicators: Indicator[] = [
   },
 ]
 
-// 미래 `/api/dashboard` 응답 경계와 동일한 형태로 화면 전체의 예시 데이터를 묶는다.
-export const dashboardMock: DashboardData = {
+// 홈과 대시보드가 공유하는 화면 모델이다. 실제 API DTO는 연동 시 별도로 매핑한다.
+export const marketMock: MarketData = {
   regime: {
     cycle: 'slowdown',
     inflation: 'easing',

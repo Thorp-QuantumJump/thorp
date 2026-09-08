@@ -24,7 +24,7 @@
 
 .sectionHeader p {
   margin: 0 0 4px;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.78rem;
   font-weight: 720;
   letter-spacing: 0.12em;
@@ -32,7 +32,7 @@
 
 .sectionHeader h2 {
   margin: 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: clamp(1.75rem, 3vw, 2.8rem);
   font-weight: 620;
   letter-spacing: -0.035em;
@@ -41,7 +41,7 @@
 
 .sectionHeader > span {
   gap: 6px;
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.7rem;
 }
 
@@ -54,10 +54,10 @@
 .card {
   min-width: 0;
   padding: 19px;
-  border: 1px solid var(--dashboard-line);
+  border: 1px solid var(--market-line);
   border-radius: 17px;
-  background: var(--dashboard-surface);
-  box-shadow: var(--dashboard-shadow-soft);
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
 }
 
 .cardHeader,
@@ -72,7 +72,7 @@
 }
 
 .cardHeader span {
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.62rem;
   font-weight: 740;
   letter-spacing: 0.08em;
@@ -95,28 +95,28 @@
 }
 
 .valueRow strong {
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 1.5rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
 }
 
 .valueRow span {
-  color: var(--dashboard-neutral);
+  color: var(--market-neutral);
   font-size: 0.68rem;
   font-weight: 680;
 }
 
 .valueRow span[data-tone='positive'] {
-  color: var(--dashboard-positive);
+  color: var(--market-positive);
 }
 
 .valueRow span[data-tone='negative'] {
-  color: var(--dashboard-negative);
+  color: var(--market-negative);
 }
 
 .valueRow span[data-tone='warning'] {
-  color: var(--dashboard-warning);
+  color: var(--market-warning);
 }
 
 .chartWrap {
@@ -133,7 +133,7 @@
 
 .meta {
   padding-top: 12px;
-  border-top: 1px solid var(--dashboard-line-soft);
+  border-top: 1px solid var(--market-line-soft);
   color: #98a2aa;
   font-size: 0.62rem;
 }

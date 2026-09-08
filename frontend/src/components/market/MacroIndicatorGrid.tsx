@@ -1,26 +1,28 @@
 import { Database } from 'lucide-react'
-import type { Indicator } from '@/types/dashboard'
+import type { Indicator } from '@/types/market'
 import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
   formatIndicatorChange,
   formatIndicatorValue,
-} from '@/utils/dashboardFormat'
+} from '@/utils/marketFormat'
 import { TrendSparkline } from './TrendSparkline'
 import { IndicatorHistoryCard } from './IndicatorHistoryCard'
+import layout from '@/styles/MarketLayout.module.css'
 import styles from './MacroIndicatorGrid.module.css'
 
 interface MacroIndicatorGridProps {
+  compact?: boolean
   indicators: Indicator[]
   activeIndicatorId: string | null
   onActiveChange: (id: string | null) => void
 }
 
 /** 시장 국면을 설명하는 월간 거시지표를 역할 중심으로 표시한다. */
-export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChange }: MacroIndicatorGridProps) {
+export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChange, compact = false }: MacroIndicatorGridProps) {
   return (
-    <section className={styles.section} aria-labelledby="macro-indicator-title">
-      <div className={styles.sectionHeader}>
+    <section className={`${styles.section} ${compact ? layout.compactSection : ''}`} data-density={compact ? 'compact' : undefined} aria-labelledby="macro-indicator-title">
+      <div className={`${styles.sectionHeader} ${compact ? layout.compactHeader : ''}`}>
         <div>
           <h2 id="macro-indicator-title">경기·물가·심리 핵심 지표</h2>
         </div>

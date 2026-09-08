@@ -1,3 +1,4 @@
+import { curveLinear } from '@visx/curve'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
 import { ChartTooltip } from '@/components/charts/tooltip'
@@ -36,7 +37,7 @@ function BacktestTooltip({ point, activeStrategies, initialCapital }: {
 }) {
   const series = [
     ...strategyResults.filter((strategy) => activeStrategies.includes(strategy.id)),
-    { id: 'benchmark', name: 'NASDAQ-100', color: 'var(--chart-foreground-muted)' },
+    { id: 'benchmark', name: 'KOSPI 200', color: 'var(--chart-foreground-muted)' },
   ]
 
   return (
@@ -67,7 +68,7 @@ function BacktestTooltip({ point, activeStrategies, initialCapital }: {
   )
 }
 
-/** 활성 전략과 NASDAQ-100 벤치마크의 누적 성과를 선 차트로 비교한다. */
+/** 활성 전략과 KOSPI 200 벤치마크의 누적 성과를 선 차트로 비교한다. */
 export function BacktestChart({
   activeStrategies,
   focusedStrategy,
@@ -84,14 +85,15 @@ export function BacktestChart({
         loadingLabel="전략을 계산하고 있습니다"
         animationDuration={1400}
         revealSignature={revealSignature}
-        aspectRatio="2 / 1"
-        margin={{ top: 24, right: 24, bottom: 42, left: 24 }}
+        aspectRatio="3.35 / 1"
+        margin={{ top: 16, right: 18, bottom: 34, left: 18 }}
       >
         <Grid horizontal numTicksRows={5} strokeDasharray="2,5" />
 
         {/* 벤치마크는 전략 성과를 판단하는 공통 기준선으로 유지한다. */}
         <Line
           dataKey="benchmark"
+          curve={curveLinear}
           stroke="#9aa3ad"
           strokeWidth={1.6}
           animate
@@ -105,6 +107,7 @@ export function BacktestChart({
             <Line
               key={strategy.id}
               dataKey={strategy.id}
+              curve={curveLinear}
               stroke={
                 focusedStrategy && focusedStrategy !== strategy.id
                   ? strategy.mutedColor
