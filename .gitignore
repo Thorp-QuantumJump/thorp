@@ -61,3 +61,13 @@ infra/.env.prod
 infra/certbot/
 infra/nginx/html/*
 !infra/nginx/html/.gitkeep
+
+# Claude: 기본적으로 개인 설정 제외
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+
+# Codex: 기본적으로 개인 설정 제외
+.agents/*
+!.agents/skills/
+!.agents/skills/**

@@ -1,0 +1,64 @@
+{
+  "run": {
+    "backtestId": "BT-20260907-000001",
+    "start": "2025-01-01",
+    "end": "2025-06-30",
+    "randomSeed": 42
+  },
+  "universe": {
+    "instrumentIds": [
+      "005930.XKRX",
+      "000660.XKRX"
+    ]
+  },
+  "marketData": {
+    "datasetId": "KRX_DAILY_V1",
+    "interval": "1D",
+    "adjustment": "SPLIT_ADJUSTED",
+    "priceType": "LAST"
+  },
+  "strategy": {
+    "strategyId": "MA_CROSSOVER",
+    "version": "1.0.0",
+    "parameters": {
+      "shortWindow": 20,
+      "longWindow": 60,
+      "threshold": 0.05
+    }
+  },
+  "portfolio": {
+    "initialCash": "10000000",
+    "currency": "KRW",
+    "positionSizing": {
+      "type": "STRATEGY_DEFINED",
+      "maxPositionPct": "0.50"
+    },
+    "shortSelling": false,
+    "leverage": "1.0"
+  },
+  "execution": {
+    "signalTiming": "BAR_CLOSE",
+    "executionTiming": "NEXT_BAR_OPEN",
+    "orderTypes": [
+      "MARKET"
+    ],
+    "commission": {
+      "model": "BROKER",
+      "broker": "KIWOOM",
+      "version": "2026-09"
+    },
+    "slippage": {
+      "model": "FIXED_BPS",
+      "bps": 5
+    },
+    "partialFill": false,
+    "liquidity": {
+      "model": "UNLIMITED"
+    },
+    "tradingHalt": "WAIT_UNTIL_RESUME",
+    "delisting": "CAUSE_BASED"
+  },
+  "benchmark": {
+    "instrumentId": "069500.XKRX"
+  }
+}
