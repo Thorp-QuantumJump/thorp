@@ -19,7 +19,7 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 | 계층 | 하위 패키지 | 역할 |
 |---|---|---|
 | `presentation` | `controller` `request` `response` | HTTP 입출력. `@RestController`는 여기에만. request→command, result→response 변환은 컨트롤러가 한다 |
-| `application` | `service` `command` `result` `repository` `port` | 유스케이스 조합·트랜잭션 경계. `repository`·`port`는 인터페이스만 둔다 |
+| `application` | `service` `command` `result` `repository` `port` | 유스케이스 조합·트랜잭션 경계. `repository`·`port`는 인터페이스만 둔다. `port/message`는 브로커 메시지 DTO(순수 record, Jackson·Spring import 금지 — ArchUnit 규칙 7) |
 | `domain` | `model` `vo` `exception` | 순수 Java 도메인 모델과 불변식. Spring·JPA·Jackson import 금지 |
 | `infrastructure` | `persistence` `messaging` | `application` 인터페이스의 구현. `@Entity`·Spring Data·브로커 클라이언트는 여기에만 |
 
@@ -56,7 +56,9 @@ common: 모든 계층에서 참조 가능
 - 포맷은 Spotless(google-java-format AOSP)가 강제 — CI에서 spotlessCheck 실패 시 빌드 실패
 - API JSON은 camelCase, 비동기 계약 준수: `POST /backtests` → 즉시 `{backtestId, status: QUEUED}` 반환
 - 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED` (Worker가 갱신, backend는 조회 제공)
-- Job 메시지 스키마 변경 시 `worker/src/worker/models.py`와 반드시 동기화
+- 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다
+- 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다
+- 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `strategy.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
 
 ## 도메인 용어
 

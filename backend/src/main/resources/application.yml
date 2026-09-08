@@ -15,6 +15,17 @@ spring:
       hibernate:
         format_sql: true
 
+  # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.
+  # confirm·returns·listener 설정은 발행·결과 Consumer 구현 시 추가.
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:thorp}
+    password: ${SPRING_RABBITMQ_PASSWORD:thorp}
+    virtual-host: ${SPRING_RABBITMQ_VHOST:/}
+
+  # Job 전달에는 사용하지 않는다. 브로커는 RabbitMQ(spring.rabbitmq). Kafka는 설치만 해둔 상태이며
+  # 전환·병행은 실측 후 결정한다 (루트 CLAUDE.md). 브로커 없이도 지연 연결이라 기동에 영향 없음.
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -22,7 +33,7 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 app:
-  kafka:
+  kafka:  # 미사용 (위 주석 참조). 큐 이름은 BacktestRabbitConfig 상수.
     backtest-job-topic: ${BACKTEST_JOB_TOPIC:backtest.jobs}
 
 server:
