@@ -2,6 +2,13 @@ spring:
   application:
     name: thorp-backend
 
+  config:
+    import: optional:file:./.env[.properties]
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}
+    username: ${SPRING_DATASOURCE_USERNAME:thorp}
+    password: ${SPRING_DATASOURCE_PASSWORD:thorp}
   profiles:
     default: local
 
@@ -33,6 +40,18 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 app:
   kafka:  # 미사용 (위 주석 참조). 큐 이름은 BacktestRabbitConfig 상수.
