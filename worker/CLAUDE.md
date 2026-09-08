@@ -25,7 +25,7 @@ ruff check src tests && ruff format --check src tests && pytest
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
   진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행·벤치마크 계산은 실행 Consumer 책임
-- `engine_contracts.py` 는 **입력 모델만 남은 과도기 파일**이다. 결과·진행 모델은 `contracts/`로 옮겼고, 입력은 계약 `contracts/engine_input.py`와 고정 실행 정책 세 곳(`marketData.adjustment`, `execution.delisting`, `execution.commission`)이 달라 남아 있다.
+- `engine_contracts.py` 는 **입력 모델만 남은 과도기 파일**이다. 결과·진행 모델은 `contracts/`로 옮겼고, 입력은 계약 `contracts/engine_input.py`와 고정 실행 정책 두 곳(`execution.delisting`, `execution.commission`)이 달라 남아 있다. 결정은 ADR-0003·0004에 있고 반영은 다음 작업이다.
   수수료 정책이 결정되면 `contracts/engine_input.py`로 통합하고 이 파일은 제거한다. 새 입력 필드는 여기가 아니라 계약 쪽에 맞춘다. 근거는 `docs/adr/0003-nautilus-momentum-engine-boundary.md` "메시지 계약과의 정합 상태"
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
