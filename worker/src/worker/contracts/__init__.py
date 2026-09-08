@@ -8,6 +8,7 @@
 - ``engine_output`` 엔진 결과 (EngineOutput) + 벤치마크 (BenchmarkResult)
 - ``events``        이벤트 envelope (BacktestEvent) + payload 3종
 - ``engine``        엔진 경계 (BacktestEngine Protocol, ProgressCallback)
+- ``strategy_params`` 전략별 ``strategy.parameters`` 스키마 + ``strategyId`` 레지스트리
 
 기존 ``worker.models`` (Kafka 시절 4필드 Job)는 워커 런타임을 pika로 교체할 때 제거한다.
 """
