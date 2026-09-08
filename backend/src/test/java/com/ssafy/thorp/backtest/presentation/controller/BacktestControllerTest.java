@@ -18,6 +18,10 @@ import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -32,22 +36,19 @@ class BacktestControllerTest {
 
     private static final String BACKTEST_ID = "BT-20260907-000001";
 
-    private static final String VALID_BODY =
-            """
-            {
-              "run": { "start": "2025-01-01", "end": "2025-06-30" },
-              "universe": { "instrumentIds": ["005930.XKRX", "000660.XKRX"] },
-              "strategy": {
-                "strategyId": "MA_CROSSOVER",
-                "parameters": { "shortWindow": 20, "longWindow": 60, "threshold": 0.05 }
-              },
-              "portfolio": {
-                "initialCash": "10000000",
-                "positionSizing": { "type": "STRATEGY_DEFINED", "maxPositionPct": "0.50" }
-              },
-              "benchmark": { "instrumentId": "069500.XKRX" }
-            }
-            """;
+    /** 계약 예시가 요청 본문의 기준이다. gradle test의 작업 디렉터리는 backend/다. */
+    private static final Path REQUEST_FIXTURE =
+            Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
+
+    private static final String VALID_BODY = readFixture();
+
+    private static String readFixture() {
+        try {
+            return Files.readString(REQUEST_FIXTURE);
+        } catch (IOException e) {
+            throw new UncheckedIOException("계약 예시를 읽을 수 없습니다: " + REQUEST_FIXTURE, e);
+        }
+    }
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private BacktestService backtestService;

@@ -33,6 +33,8 @@ class EngineInputFixtureTest {
 
     private static final Path FIXTURE =
             Path.of("..", "docs", "specs", "backtest-messaging", "examples", "engine-input.json");
+    private static final Path REQUEST_FIXTURE =
+            Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
     private final EngineInputAssembler assembler = new EngineInputAssembler();
@@ -64,6 +66,26 @@ class EngineInputFixtureTest {
         JsonNode expected = mapper.readTree(Files.readString(FIXTURE));
 
         assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("HTTP 요청 예시와 작업 메시지 예시의 공통 필드가 서로 어긋나지 않는다")
+    void requestFixtureAgreesWithMessageFixture() throws IOException {
+        JsonNode request = mapper.readTree(Files.readString(REQUEST_FIXTURE));
+        JsonNode message = mapper.readTree(Files.readString(FIXTURE));
+
+        assertThat(request.at("/run/start")).isEqualTo(message.at("/run/start"));
+        assertThat(request.at("/run/end")).isEqualTo(message.at("/run/end"));
+        assertThat(request.get("universe")).isEqualTo(message.get("universe"));
+        assertThat(request.at("/strategy/strategyId"))
+                .isEqualTo(message.at("/strategy/strategyId"));
+        assertThat(request.at("/strategy/parameters"))
+                .isEqualTo(message.at("/strategy/parameters"));
+        assertThat(request.at("/portfolio/initialCash"))
+                .isEqualTo(message.at("/portfolio/initialCash"));
+        assertThat(request.at("/portfolio/positionSizing"))
+                .isEqualTo(message.at("/portfolio/positionSizing"));
+        assertThat(request.get("benchmark")).isEqualTo(message.get("benchmark"));
     }
 
     @Test

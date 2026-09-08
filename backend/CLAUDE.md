@@ -54,7 +54,8 @@ common: 모든 계층에서 참조 가능
 
 - DTO는 record 우선, 요청 DTO에 `@Valid` 검증 필수
 - 포맷은 Spotless(google-java-format AOSP)가 강제 — CI에서 spotlessCheck 실패 시 빌드 실패
-- API JSON은 camelCase, 비동기 계약 준수: `POST /backtests` → 즉시 `{backtestId, status: QUEUED}` 반환
+- API JSON은 camelCase, 비동기 계약 준수: `POST /backtests` → 즉시 202 `{backtestId: "BT-20260908-000001", status: "QUEUED"}` 반환.
+  `backtestId`는 문자열이며 DB PK(Long)는 노출하지 않는다(ADR-0002 D2). HTTP 계약과 예시는 `docs/specs/backtest-api/`
 - 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED` (Worker가 갱신, backend는 조회 제공)
 - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다
 - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다

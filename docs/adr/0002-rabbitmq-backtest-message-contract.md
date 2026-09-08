@@ -23,12 +23,17 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
   설계 문서의 `PENDING`과 계약 README의 `Job(PENDING)` 표기를 `QUEUED`로 정정한다.
 - 이유: 설계 §1 "코드에서 QUEUED를 사용 중이면 구현 전에 이름을 통일하고 두 값을 혼용하지 않는다". 두 값 중 하나를 고르는 문제이며,
   이미 코드·루트/backend CLAUDE.md·프론트 타입이 모두 `QUEUED`다. 문서 두 곳만 고치면 끝나므로 리네임 비용과 FE 파급이 없는 쪽을 택한다.
+- 적용: 계약 README와 이 문서를 `QUEUED`로 정정했고 코드·프론트는 그대로다. HTTP 계약 문서에도 같은 상태 흐름을 적었다.
 
-### D2. `backtestId`는 문자열 `BT-{yyyyMMdd}-{6자리 순번}`
+### D2. `backtestId`는 문자열 `BT-{yyyyMMdd}-{6자리 이상 순번}`
 
 - 현재: 코드 Long IDENTITY PK를 그대로 노출, 설계 `"BT-20260831-000123"`.
 - 결정: 외부 식별자(`backtestId`)는 문자열. DB PK는 Long을 유지하고 `backtest_id` UNIQUE 컬럼을 추가한다(발행 구현 시).
 - 이유: 메시지 `correlation_id`, SSE 경로, 프론트 노출값이 모두 이 값이다. PK를 노출하지 않고 형식을 바꿔도 저장 구조에 영향이 없다.
+- 적용(요청 API·발행 구현): `domain/vo/BacktestId`가 `BT-{yyyyMMdd(KST)}-{PK %06d}`를 만들고 `^BT-\d{8}-\d{6,}$`를 검증한다.
+  순번은 PK라 유일성이 공짜이며 999,999를 넘으면 자릿수가 늘어난다. 그래서 "6자리"가 아니라 **6자리 이상**이다. 수신 측은 길이를 가정하지 않는다.
+  PK 전략을 IDENTITY에서 SEQUENCE로 바꿔 INSERT 전에 `backtest_id`(UNIQUE, NOT NULL)를 채운다. HTTP 계약은
+  `docs/specs/backtest-api/`에 정리했다.
 
 ### D3. `initialCash`는 사용자 입력 (기본값 10,000,000 KRW)
 
