@@ -24,6 +24,12 @@ repositories {
     mavenCentral()
 }
 
+// Boot 3.5.4 BOM이 고정하는 Testcontainers 1.21.3은 Docker Engine 29에 붙지 못한다.
+// Docker API 요청이 400으로 거부되어 Docker가 없는 것으로 판정되고, 컨테이너를 쓰는
+// 테스트가 조용히 전부 건너뛰어진다. 1.21.4에서 고쳐졌으므로 BOM 값을 덮어쓴다.
+// Boot BOM이 1.21.4 이상을 관리하게 되면 이 줄을 지운다.
+ext['testcontainers.version'] = '1.21.4'
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
