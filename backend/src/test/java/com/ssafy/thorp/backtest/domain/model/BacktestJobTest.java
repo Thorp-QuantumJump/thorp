@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class BacktestJobTest {
 
@@ -171,6 +173,80 @@ class BacktestJobTest {
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> job.getParameters().put("x", 1))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    private static BacktestJob restoreWith(BacktestStatus status) {
+        return BacktestJob.restore(
+                7L,
+                BacktestId.from("BT-20260907-000007"),
+                "MA_CROSSOVER",
+                "1.0.0",
+                Map.of("shortWindow", 20),
+                List.of(SAMSUNG),
+                PERIOD,
+                CASH,
+                PositionSizingMode.STRATEGY_DEFINED,
+                new BigDecimal("0.50"),
+                SK,
+                42,
+                status);
+    }
+
+    @Test
+    @DisplayName("markRunning은 QUEUED에서 RUNNING으로 바꾸고 나머지 필드는 그대로 둔다")
+    void markRunningFromQueued() {
+        BacktestJob queued = restoreWith(BacktestStatus.QUEUED);
+
+        BacktestJob running = queued.markRunning();
+
+        assertThat(running.getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(queued.getStatus()).as("원본은 불변").isEqualTo(BacktestStatus.QUEUED);
+        assertThat(running.getId()).isEqualTo(7L);
+        assertThat(running.getBacktestId()).isEqualTo(BacktestId.from("BT-20260907-000007"));
+        assertThat(running.getStrategyId()).isEqualTo("MA_CROSSOVER");
+        assertThat(running.getStrategyVersion()).isEqualTo("1.0.0");
+        assertThat(running.getParameters()).containsEntry("shortWindow", 20);
+        assertThat(running.getInstrumentIds()).containsExactly(SAMSUNG);
+        assertThat(running.getPeriod()).isEqualTo(PERIOD);
+        assertThat(running.getInitialCash()).isEqualTo(CASH);
+        assertThat(running.getPositionSizingType()).isEqualTo(PositionSizingMode.STRATEGY_DEFINED);
+        assertThat(running.getMaxPositionPct()).isEqualTo(new BigDecimal("0.50"));
+        assertThat(running.getBenchmarkInstrumentId()).isEqualTo(SK);
+        assertThat(running.getRandomSeed()).isEqualTo(42);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = BacktestStatus.class,
+            names = {"RUNNING", "COMPLETED", "FAILED"})
+    @DisplayName("markRunning은 QUEUED가 아닌 상태에서 거부한다")
+    void markRunningRejectsNonQueued(BacktestStatus status) {
+        assertThatThrownBy(() -> restoreWith(status).markRunning())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = BacktestStatus.class,
+            names = {"QUEUED", "RUNNING"})
+    @DisplayName("markCompleted·markFailed는 비최종 상태(QUEUED 포함)에서 허용한다")
+    void finalTransitionsAllowedFromNonFinal(BacktestStatus status) {
+        assertThat(restoreWith(status).markCompleted().getStatus())
+                .isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(restoreWith(status).markFailed().getStatus()).isEqualTo(BacktestStatus.FAILED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = BacktestStatus.class,
+            names = {"COMPLETED", "FAILED"})
+    @DisplayName("최종 상태에서는 어떤 전이도 거부한다")
+    void finalStateRejectsAllTransitions(BacktestStatus status) {
+        BacktestJob job = restoreWith(status);
+
+        assertThatThrownBy(job::markRunning).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(job::markCompleted).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(job::markFailed).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

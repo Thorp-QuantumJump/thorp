@@ -125,6 +125,56 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("update는 상태 전이를 저장하고 나머지 컬럼은 그대로 둔다")
+    void updatePersistsStatusTransition() {
+        BacktestJob saved = repository.save(newJob());
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestJob updated = repository.update(saved.markRunning());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(updated.getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        Optional<BacktestJob> found = repository.findById(saved.getId());
+        assertThat(found).isPresent();
+        BacktestJob job = found.get();
+        assertThat(job.getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());
+        assertThat(job.getParameters()).isEqualTo(PARAMETERS);
+        assertThat(job.getInstrumentIds()).isEqualTo(INSTRUMENTS);
+        assertThat(job.getInitialCash()).isEqualByComparingTo(CASH);
+
+        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());
+        assertThat(entity.getCreatedAt()).as("createdAt은 갱신되지 않는다").isNotNull();
+    }
+
+    @Test
+    @DisplayName("update는 저장된 Job 전용이라 id가 없거나 없는 id면 거부한다")
+    void updateRejectsUnknownJob() {
+        assertThatThrownBy(() -> repository.update(newJob()))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        BacktestJob missing =
+                BacktestJob.restore(
+                        999_999L,
+                        BacktestId.from("BT-20260907-999999"),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        PARAMETERS,
+                        INSTRUMENTS,
+                        PERIOD,
+                        CASH,
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        BacktestStatus.RUNNING);
+        assertThatThrownBy(() -> repository.update(missing))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("없는 식별자는 빈 Optional을 돌려준다")
     void findReturnsEmptyWhenMissing() {
         assertThat(repository.findById(999L)).isEmpty();

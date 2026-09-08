@@ -162,6 +162,47 @@ public class BacktestJob {
                 status);
     }
 
+    /** 워커가 실행을 시작했다(STARTED). QUEUED에서만 허용한다. */
+    public BacktestJob markRunning() {
+        return transitionTo(BacktestStatus.RUNNING, status == BacktestStatus.QUEUED);
+    }
+
+    /**
+     * 실행이 성공으로 끝났다(FINISHED, COMPLETED). 최종 상태가 아니면 허용한다.
+     *
+     * <p>RUNNING으로 제한하지 않는다. STARTED가 유실되거나 계약 오류로 DLQ에 가면 FINISHED가 QUEUED 상태로 도착하는데, 그때 거부하면 결과가
+     * 있는데도 Job이 영원히 QUEUED다. FINISHED는 실행의 최종 결과이므로 STARTED 수신 여부와 무관하게 받는다.
+     */
+    public BacktestJob markCompleted() {
+        return transitionTo(BacktestStatus.COMPLETED, !status.isFinal());
+    }
+
+    /** 실행이 실패로 끝났다(FINISHED, FAILED). 허용 범위는 {@link #markCompleted()}와 같다. 실패 원인은 결과 저장소가 가진다. */
+    public BacktestJob markFailed() {
+        return transitionTo(BacktestStatus.FAILED, !status.isFinal());
+    }
+
+    /** 불변 객체이므로 상태만 바뀐 새 인스턴스를 돌려준다. 호출자가 상태를 먼저 걸러내므로 여기의 예외는 최후 방어선이다. */
+    private BacktestJob transitionTo(BacktestStatus next, boolean allowed) {
+        if (!allowed) {
+            throw new IllegalStateException("illegal status transition: " + status + " -> " + next);
+        }
+        return new BacktestJob(
+                id,
+                backtestId,
+                strategyId,
+                strategyVersion,
+                parameters,
+                instrumentIds,
+                period,
+                initialCash,
+                positionSizingType,
+                maxPositionPct,
+                benchmarkInstrumentId,
+                randomSeed,
+                next);
+    }
+
     public Long getId() {
         return id;
     }
