@@ -50,26 +50,5 @@ pipeline {
         }
     }
 
-    post {
-        failure {
-            mattermostSend(
-                color: 'danger',
-                message: "❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
-
-        unstable {
-            mattermostSend(
-                color: 'warning',
-                message: "⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
-
-        success {
-            mattermostSend(
-                color: 'good',
-                message: "✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
-            )
-        }
-    }
+    
 }
