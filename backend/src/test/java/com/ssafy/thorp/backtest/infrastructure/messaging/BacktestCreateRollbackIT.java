@@ -33,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
             "spring.rabbitmq.host=localhost",
             "spring.rabbitmq.port=1",
             "spring.rabbitmq.connection-timeout=1s",
+            // 결과 이벤트 리스너가 죽은 브로커에 계속 재연결을 시도하지 않도록 끈다. 이 테스트는 발행 실패만 본다.
+            "spring.rabbitmq.listener.simple.auto-startup=false",
             // 메일 자격 증명은 운영에서만 주입된다. 전체 컨텍스트를 띄우는 테스트라
             // 값이 없으면 메일 발송 빈 생성 단계에서 플레이스홀더 해석이 실패한다.
             "spring.mail.username=test@example.com",
