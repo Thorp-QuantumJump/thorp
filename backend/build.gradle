@@ -32,6 +32,11 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka' // 설치만. Job 전달은 RabbitMQ(starter-amqp)
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
 
+    // 운영 스키마는 Flyway가 관리한다 (prod 프로필). 버전은 Spring Boot BOM이 결정한다.
+    // Flyway 10부터 DB별 지원이 모듈로 분리되어 PostgreSQL 모듈을 명시해야 한다.
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
