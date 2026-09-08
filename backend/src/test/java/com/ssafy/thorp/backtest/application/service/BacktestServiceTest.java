@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -40,7 +41,11 @@ class BacktestServiceTest {
     void createSavesThenPublishes() {
         BacktestJob saved =
                 BacktestJob.restore(
-                        1L, "sma-cross", new BacktestPeriod(START, END), BacktestStatus.QUEUED);
+                        1L,
+                        BacktestId.from("BT-20260907-000001"),
+                        "sma-cross",
+                        new BacktestPeriod(START, END),
+                        BacktestStatus.QUEUED);
         when(repository.save(any(BacktestJob.class))).thenReturn(saved);
 
         BacktestJobResult result =
@@ -77,6 +82,7 @@ class BacktestServiceTest {
                         Optional.of(
                                 BacktestJob.restore(
                                         1L,
+                                        BacktestId.from("BT-20260907-000001"),
                                         "sma-cross",
                                         new BacktestPeriod(START, END),
                                         BacktestStatus.RUNNING)));
