@@ -6,9 +6,7 @@ import jakarta.validation.constraints.Pattern;
 
 public class EmailVerificationConfirmRequest {
 
-    @NotBlank
-    @Email
-    private String email;
+    @NotBlank @Email private String email;
 
     @NotBlank
     @Pattern(regexp = "\\d{6}")

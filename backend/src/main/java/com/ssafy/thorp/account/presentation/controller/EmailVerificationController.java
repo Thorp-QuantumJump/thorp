@@ -1,6 +1,7 @@
 package com.ssafy.thorp.account.presentation.controller;
 
 import com.ssafy.thorp.account.application.service.EmailVerificationService;
+import com.ssafy.thorp.account.presentation.request.EmailVerificationConfirmRequest;
 import com.ssafy.thorp.account.presentation.request.EmailVerificationRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +9,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.ssafy.thorp.account.presentation.request.EmailVerificationConfirmRequest;
 
 @RestController
 @RequestMapping("/api/accounts/email-verifications")
@@ -28,11 +28,9 @@ public class EmailVerificationController {
 
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirmVerificationCode(
-        @Valid @RequestBody EmailVerificationConfirmRequest request) {
+            @Valid @RequestBody EmailVerificationConfirmRequest request) {
 
-        emailVerificationService.verifyCode(
-            request.getEmail(),
-            request.getVerificationCode());
+        emailVerificationService.verifyCode(request.getEmail(), request.getVerificationCode());
 
         return ResponseEntity.noContent().build();
     }

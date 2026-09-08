@@ -55,6 +55,7 @@ public class User {
         this.withdrawnAt = withdrawnAt;
     }
 
+    /** 가입 시점에 이미 이메일 인증을 마쳤으므로 바로 활성 상태로 만든다. */
     public static User register(
             String email, String passwordHash, String nickname, String phoneNumber) {
         return new User(
@@ -64,7 +65,7 @@ public class User {
                 nickname,
                 phoneNumber,
                 null,
-                UserStatus.PENDING_VERIFICATION,
+                UserStatus.ACTIVE,
                 false,
                 false,
                 false,

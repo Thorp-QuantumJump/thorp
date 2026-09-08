@@ -1,5 +1,7 @@
 package com.ssafy.thorp.account.presentation.controller;
 
+import com.ssafy.thorp.account.application.command.SignupCommand;
+import com.ssafy.thorp.account.application.result.SignupResult;
 import com.ssafy.thorp.account.application.service.SignupService;
 import com.ssafy.thorp.account.presentation.request.SignupRequest;
 import com.ssafy.thorp.account.presentation.response.SignupResponse;
@@ -24,11 +26,21 @@ public class SignupController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
-        @Valid @RequestBody SignupRequest request) {
+            @Valid @RequestBody SignupRequest request) {
 
-        SignupResponse response = signupService.signup(request);
+        SignupCommand command =
+                new SignupCommand(
+                        request.getEmail(),
+                        request.getPassword(),
+                        request.getNickname(),
+                        request.getPhoneNumber());
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(response));
+        SignupResult result = signupService.signup(command);
+
+        SignupResponse response =
+                new SignupResponse(
+                        result.userId(), result.email(), result.nickname(), result.status());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
     }
 }

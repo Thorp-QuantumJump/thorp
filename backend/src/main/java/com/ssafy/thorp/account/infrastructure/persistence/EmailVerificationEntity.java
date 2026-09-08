@@ -28,17 +28,35 @@ public class EmailVerificationEntity {
 
     protected EmailVerificationEntity() {}
 
-    public EmailVerificationEntity(String email, String verificationCodeHash, Instant expiresAt) {
+    EmailVerificationEntity(
+            Long id,
+            String email,
+            String verificationCodeHash,
+            Instant expiresAt,
+            Instant verifiedAt,
+            Instant createdAt) {
+        this.id = id;
         this.email = email;
         this.verificationCodeHash = verificationCodeHash;
         this.expiresAt = expiresAt;
+        this.verifiedAt = verifiedAt;
+        this.createdAt = createdAt;
     }
 
     @PrePersist
     private void onCreate() {
-        this.createdAt = Instant.now();
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
 
     public String getVerificationCodeHash() {
         return verificationCodeHash;
@@ -52,9 +70,7 @@ public class EmailVerificationEntity {
         return verifiedAt;
     }
 
-    public void verify(Instant verifiedAt) {
-        this.verifiedAt = verifiedAt;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 }
-
-
