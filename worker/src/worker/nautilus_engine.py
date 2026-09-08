@@ -1,8 +1,6 @@
 """Nautilus execution gateway: close-time intent, next-open native market execution."""
 
 from collections import deque
-from collections.abc import Callable
-from copy import deepcopy
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -20,6 +18,7 @@ from nautilus_trader.model.objects import Currency, Money, Price, Quantity
 from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 
 from worker.artifacts import OrderRecord
+from worker.contracts.engine import ProgressCallback
 from worker.contracts.engine_output import (
     PortfolioSnapshot,
     PositionSnapshot,
@@ -28,10 +27,10 @@ from worker.contracts.engine_output import (
     TradeStatus,
 )
 from worker.contracts.engine_output import Warning as ContractWarning
-from worker.engine_contracts import EngineInput, ProgressSnapshot
+from worker.contracts.events import ProgressPoint
+from worker.engine_contracts import EngineInput
 from worker.strategies.momentum import MomentumStrategy
 
-SnapshotCallback = Callable[[ProgressSnapshot], None]
 ZERO = Decimal("0")
 SLIPPAGE = Decimal("0.0005")
 PRICE_QUANTUM = Decimal("0.000001")
@@ -59,7 +58,7 @@ class MomentumExecution(NautilusStrategy):
         bar_type: BarType,
         evaluation_dates: list[date],
         reference_opens: dict[int, Decimal],
-        on_snapshot: SnapshotCallback | None,
+        on_progress: ProgressCallback | None,
     ) -> None:
         super().__init__(StrategyConfig(strategy_id="MOMENTUM-001"))
         self.request = request
@@ -67,7 +66,7 @@ class MomentumExecution(NautilusStrategy):
         self.bar_type = bar_type
         self.evaluation_dates = evaluation_dates
         self.reference_opens = reference_opens
-        self.on_snapshot_callback = on_snapshot
+        self.on_progress_callback = on_progress
         self.signal_strategy = MomentumStrategy(request.strategy.parameters.lookback_days)
         self.closes: deque[Decimal] = deque(maxlen=self.signal_strategy.lookback_days + 1)
         self.cash = request.portfolio.initial_cash
@@ -224,18 +223,24 @@ class MomentumExecution(NautilusStrategy):
         )
         self.series.append(snapshot)
         self.changed = False
-        if self.on_snapshot_callback is not None:
+        if self.on_progress_callback is not None:
+            # 계약(contracts.engine.ProgressCallback)은 거래일 1개마다 ProgressPoint 4필드만
+            # 넘긴다. 진행 이벤트는 저장하지 않고 SSE로만 흘리며, 보유 종목까지 담은 전체
+            # 스냅샷은 최종 결과의 portfolioSeries에 이미 있다.
             try:
-                self.on_snapshot_callback(
-                    ProgressSnapshot(
-                        completed_trading_days=len(self.series),
-                        total_trading_days=len(self.evaluation_dates),
-                        portfolio_series=[deepcopy(snapshot)],
-                    )
+                self.on_progress_callback(
+                    ProgressPoint(
+                        date=snapshot.date,
+                        equity=snapshot.equity,
+                        cumulative_return=snapshot.cumulative_return,
+                        drawdown=snapshot.drawdown,
+                    ),
+                    len(self.series),
+                    len(self.evaluation_dates),
                 )
             except Exception as exc:
                 self.callback_error = exc
-                raise CallbackError("Snapshot callback failed") from exc
+                raise CallbackError("Progress callback failed") from exc
 
     def _create_order(self, side: OrderSide, quantity: int, ns: int) -> None:
         self.pending = self.order_factory.market(
@@ -255,7 +260,7 @@ class MomentumExecution(NautilusStrategy):
 def execute_nautilus(
     request: EngineInput,
     prices: pd.DataFrame,
-    on_snapshot: SnapshotCallback | None,
+    on_progress: ProgressCallback | None,
 ) -> MomentumExecution:
     """Every signal and fill is driven by a real BacktestEngine event loop."""
     instrument_id = InstrumentId.from_str(request.universe.instrument_ids[0])
@@ -312,7 +317,7 @@ def execute_nautilus(
         if request.run.start <= day.date() <= request.run.end:
             dates.append(day.date())
     execution = MomentumExecution(
-        request, instrument, bar_type, dates, reference_opens, on_snapshot
+        request, instrument, bar_type, dates, reference_opens, on_progress
     )
     engine = BacktestEngine(
         config=BacktestEngineConfig(
@@ -335,7 +340,7 @@ def execute_nautilus(
         engine.add_strategy(execution)
         engine.run()
         if execution.callback_error is not None:
-            raise CallbackError("Snapshot callback failed") from execution.callback_error
+            raise CallbackError("Progress callback failed") from execution.callback_error
         if len(execution.series) != len(dates):
             raise RuntimeError("Engine did not complete every evaluation day")
         native_fills = sum(order.filled_qty.as_decimal() > 0 for order in engine.cache.orders())

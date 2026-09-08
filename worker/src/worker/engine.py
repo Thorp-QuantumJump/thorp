@@ -6,13 +6,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from worker.contracts.engine import ProgressCallback
 from worker.contracts.engine_output import EngineOutput
-from worker.engine_contracts import EngineInput, ProgressSnapshot
+from worker.engine_contracts import EngineInput
 from worker.models import BacktestJob, BacktestResult
 from worker.strategies.base import Strategy
 
@@ -36,7 +36,7 @@ def run_engine(
     engine_input: EngineInput | dict[str, Any],
     *,
     data_provider: DataProvider | None = None,
-    on_snapshot: Callable[[ProgressSnapshot], None] | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> EngineOutput:
     """Nautilus 엔진을 실행한다. 메시지 발행·결과 저장·ACK는 호출자가 담당한다.
 
@@ -45,4 +45,4 @@ def run_engine(
     """
     from worker.engine_runner import NautilusMomentumEngine
 
-    return NautilusMomentumEngine(data_provider).run(engine_input, on_snapshot)
+    return NautilusMomentumEngine(data_provider).run(engine_input, on_progress)

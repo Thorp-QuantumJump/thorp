@@ -8,7 +8,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from worker.contracts.engine_output import RunStatus
-from worker.engine_contracts import EngineInput, ProgressSnapshot
+from worker.contracts.events import ProgressPoint
+from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
 
@@ -65,10 +66,11 @@ def main() -> int:
             }
         )
 
-    def progress(snapshot: ProgressSnapshot) -> None:
-        done, total = snapshot.completed_trading_days, snapshot.total_trading_days
+    def progress(point: ProgressPoint, done: int, total: int) -> None:
+        # 계약의 진행 콜백 모양(거래일 1개 = ProgressPoint 1개). 20거래일 묶음은 사람이 읽는
+        # 출력을 줄이려는 것이며, 실제 PROGRESS 발행 묶음은 실행 Consumer가 만든다.
         if done % 20 == 0 or done == total:
-            print(f"Completed trading days: {done}/{total}", file=sys.stderr)
+            print(f"Completed trading days: {done}/{total} ({point.date})", file=sys.stderr)
 
     engine = NautilusMomentumEngine(CsvDataProvider(args.fixture) if args.fixture else None)
     output, artifacts = engine.run_with_artifacts(request, progress)

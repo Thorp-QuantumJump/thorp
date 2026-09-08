@@ -55,34 +55,36 @@ uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`�
 ### Consumer 연결
 
 ```python
-import json
-
+from worker.contracts.events import ProgressPayload, ProgressPoint
 from worker.engine import run_engine
-from worker.models import EngineInput, EngineOutput, ProgressSnapshot
+from worker.models import EngineInput, EngineOutput
 
-buffer = []
+buffer: list[ProgressPoint] = []
 
-def on_snapshot(progress: ProgressSnapshot) -> None:
-    buffer.extend(progress.portfolio_series)
-    done, total = progress.completed_trading_days, progress.total_trading_days
+def on_progress(point: ProgressPoint, done: int, total: int) -> None:
+    buffer.append(point)
     if len(buffer) == 20 or done == total:
-        payload = {
-            "completedTradingDays": done,
-            "totalTradingDays": total,
-            "portfolioSeries": [json.loads(p.to_json()) for p in buffer],
-        }
+        payload = ProgressPayload(
+            completed_trading_days=done,
+            total_trading_days=total,
+            portfolio_series=list(buffer),
+        )
         # Consumer가 payload를 발행한다. 발행 성공 후 buffer.clear().
         buffer.clear()
 
 engine_input = EngineInput.model_validate_json(open("examples/engine-input.json").read())
-result: EngineOutput = run_engine(engine_input, on_snapshot=on_snapshot)
+result: EngineOutput = run_engine(engine_input, on_progress=on_progress)
 result_json = result.to_json()
 ```
 
-- `run_engine(engine_input, *, data_provider=None, on_snapshot=None) -> EngineOutput`.
+- `run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput`.
   dict 입력도 가능하고, 커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
-- 콜백은 평가 거래일당 1번, 새 스냅샷 1개와 완료/전체 거래일 수를 전달한다. 준비 데이터는 제외한다.
-  콜백 객체는 복사본이므로 Consumer의 변경이 최종 결과를 오염시키지 않는다.
+- 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
+  `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
+  `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
+  `portfolioSeries` 항목과 값이 일치한다. 20거래일 묶음 발행·벤치마크 계산은 Consumer 책임이다.
+  진행 이벤트는 저장하지 않고 SSE로만 흐르므로 보유 종목까지 담은 전체 스냅샷은 넘기지 않는다.
+  콜백에 넘어가는 객체는 결과와 분리되어 있어 Consumer의 변경이 최종 결과를 오염시키지 않는다.
 - 금액·비율·수량은 JSON decimal 문자열, 주문/체결/거래 건수는 정수다.
   계산 불가능한 지표와 OPEN 거래의 미실현 필드는 값이 없는 상태이며, 계약 직렬화
   `ContractModel.to_json()`(= camelCase + `exclude_none`)은 이런 키를 아예 내보내지 않는다.

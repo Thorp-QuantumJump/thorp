@@ -7,8 +7,10 @@ from typing import Any
 import pandas as pd
 import pytest
 
+from worker.contracts.engine import BacktestEngine
 from worker.contracts.engine_output import PortfolioSnapshot, RunStatus, TradeStatus
-from worker.engine_contracts import EngineInput, ProgressSnapshot
+from worker.contracts.events import ProgressPoint
+from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider, MarketDataError, MarketDataset, validate_prices
 from worker.nautilus_engine import CallbackError
@@ -26,15 +28,28 @@ def request(**overrides: Any) -> EngineInput:
     return EngineInput.model_validate(values)
 
 
+class ProgressRecorder:
+    """계약 ``ProgressCallback`` 모양(인자 3개)으로만 호출을 받는 기록기."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[ProgressPoint, int, int]] = []
+
+    def __call__(
+        self, point: ProgressPoint, completed_trading_days: int, total_trading_days: int
+    ) -> None:
+        self.calls.append((point, completed_trading_days, total_trading_days))
+
+
 def test_native_next_open_round_trips_and_callback() -> None:
-    callbacks = []
+    recorder = ProgressRecorder()
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(
-        request(), callbacks.append
+        request(), recorder
     )
     assert output.run.status is RunStatus.COMPLETED, output.run.error
-    assert len(callbacks) == len(output.portfolio_series) == 7
-    assert [s.completed_trading_days for s in callbacks] == list(range(1, 8))
-    assert all(s.total_trading_days == 7 and len(s.portfolio_series) == 1 for s in callbacks)
+    assert len(recorder.calls) == len(output.portfolio_series) == 7
+    assert [done for _, done, _ in recorder.calls] == list(range(1, 8))
+    assert all(total == 7 for _, _, total in recorder.calls)
+    assert all(isinstance(point, ProgressPoint) for point, _, _ in recorder.calls)
     assert artifacts.metadata["warmupTradingDays"] == 2
     orders = artifacts.orders
     assert len(orders) == 3
@@ -93,10 +108,10 @@ def test_native_next_open_round_trips_and_callback() -> None:
 def test_injected_provider_is_reusable_across_runs() -> None:
     """공급자를 생성자로 한 번 주입한 인스턴스로 여러 번 실행해도 상태가 새지 않는다."""
     engine = NautilusMomentumEngine(CsvDataProvider(FIXTURE))
-    first_callbacks: list[ProgressSnapshot] = []
-    second_callbacks: list[ProgressSnapshot] = []
-    first, first_artifacts = engine.run_with_artifacts(request(), first_callbacks.append)
-    second, second_artifacts = engine.run_with_artifacts(request(), second_callbacks.append)
+    first_recorder = ProgressRecorder()
+    second_recorder = ProgressRecorder()
+    first, first_artifacts = engine.run_with_artifacts(request(), first_recorder)
+    second, second_artifacts = engine.run_with_artifacts(request(), second_recorder)
     assert first.run.status == second.run.status == "COMPLETED", first.run.error or second.run.error
     assert first.performance == second.performance
     assert first.portfolio_series == second.portfolio_series
@@ -104,7 +119,8 @@ def test_injected_provider_is_reusable_across_runs() -> None:
     assert first.trades == second.trades
     assert first.diagnostics == second.diagnostics
     assert first_artifacts == second_artifacts
-    assert len(first_callbacks) == len(second_callbacks) == 7
+    assert len(first_recorder.calls) == len(second_recorder.calls) == 7
+    assert first_recorder.calls == second_recorder.calls
     # 다른 입력을 이어서 실행해도 앞선 실행 결과와 섞이지 않는다.
     single_day = {"backtestId": "REUSE", "start": "2025-01-06", "end": "2025-01-06"}
     other, other_artifacts = engine.run_with_artifacts(request(run=single_day))
@@ -165,7 +181,7 @@ def test_insufficient_history_stays_cash_and_warns() -> None:
 
 
 def test_callback_failure_propagates() -> None:
-    def broken(snapshot: ProgressSnapshot) -> None:
+    def broken(point: ProgressPoint, done: int, total: int) -> None:
         raise RuntimeError("consumer unavailable")
 
     with pytest.raises(CallbackError):
@@ -252,12 +268,47 @@ def test_full_input_example_and_output_json_roundtrip() -> None:
 
 
 def test_callbacks_are_isolated_from_result_ledger() -> None:
-    def mutate(snapshot: ProgressSnapshot) -> None:
-        snapshot.portfolio_series[0].equity = Decimal("999999999")
+    def mutate(point: ProgressPoint, done: int, total: int) -> None:
+        point.equity = Decimal("999999999")
 
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request(), mutate)
     assert output.run.status == "COMPLETED"
     assert output.performance.final_equity == Decimal("1068.7")
+    assert output.portfolio_series[-1].equity == Decimal("1068.7")
+
+
+def test_engine_satisfies_backtest_engine_protocol_when_called_by_contract() -> None:
+    """계약 모양대로 호출해도 실제로 동작하는지 본다.
+
+    ``runtime_checkable`` Protocol의 ``isinstance``는 메서드 이름 존재만 보고 시그니처를
+    검사하지 않으므로, 계약 ``ProgressCallback``(인자 3개)로 호출해 실행까지 확인한다.
+    """
+    engine = NautilusMomentumEngine(CsvDataProvider(FIXTURE))
+    assert isinstance(engine, BacktestEngine)
+    recorder = ProgressRecorder()
+    contract_engine: BacktestEngine = engine
+    output = contract_engine.run(request(), recorder)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    # 진행 콜백은 평가 거래일 1개 단위. 묶음 발행은 실행 Consumer 책임이므로 엔진은 묶지 않는다.
+    assert len(recorder.calls) == len(output.portfolio_series)
+    assert [done for _, done, _ in recorder.calls] == list(
+        range(1, len(output.portfolio_series) + 1)
+    )
+    assert {total for _, _, total in recorder.calls} == {len(output.portfolio_series)}
+    # 진행 중에 보낸 값이 최종 결과와 어긋나면 화면 그래프가 최종 결과와 달라진다.
+    final = {point.date: point for point in output.portfolio_series}
+    for point, _, _ in recorder.calls:
+        assert isinstance(point, ProgressPoint)
+        assert set(json.loads(point.to_json())) == {
+            "date",
+            "equity",
+            "cumulativeReturn",
+            "drawdown",
+        }
+        snapshot = final[point.date]
+        assert point.equity == snapshot.equity
+        assert point.cumulative_return == snapshot.cumulative_return
+        assert point.drawdown == snapshot.drawdown
 
 
 def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) -> None:

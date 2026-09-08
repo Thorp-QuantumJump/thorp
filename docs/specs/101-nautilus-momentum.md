@@ -1,11 +1,15 @@
 # Jira 101: executable momentum engine contract
 
-`worker.engine.run_engine(engine_input, *, data_provider=None, on_snapshot=None) -> EngineOutput`
-accepts `EngineInput` or a camelCase dictionary. `on_snapshot(ProgressSnapshot)` runs
-synchronously once per completed evaluation trading day; its `portfolioSeries` contains
-one new snapshot and counts are `completedTradingDays` / `totalTradingDays`. Consumer
-owns batching (20 days plus the final remainder), messaging and persistence. Callback
-exceptions propagate to the caller: publication failures must not be hidden as success.
+`worker.engine.run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput`
+accepts `EngineInput` or a camelCase dictionary. The callback follows the message contract
+`contracts.engine.ProgressCallback`: `on_progress(point, completed_trading_days,
+total_trading_days)` runs synchronously once per completed evaluation trading day, where
+`point` is a `ProgressPoint(date, equity, cumulativeReturn, drawdown)` whose values match the
+same-date entry of the final `portfolioSeries`. Consumer owns batching (20 days plus the final
+remainder), messaging and persistence. Progress events are streamed over SSE and never stored,
+so the callback deliberately omits the per-day position list; the full snapshots stay in the
+final `portfolioSeries`. Callback exceptions propagate to the caller: publication failures must
+not be hidden as success.
 
 Input parsing errors raise Pydantic validation errors. Data/engine failures return FAILED
 EngineOutput with null performance/execution and `run.error`. Existing legacy models and

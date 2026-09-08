@@ -22,7 +22,7 @@ MVP는 단일 KRX 종목의 일봉 모멘텀 전략을 실행하고, Backend/Con
 새 공개 진입점은 다음 하나다.
 
 ```python
-run_engine(engine_input, *, data_provider=None, on_snapshot=None) -> EngineOutput
+run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput
 ```
 
 이 함수는 엔진 실행과 결과 계산까지만 책임진다. 브로커 소비/ACK, 상태 저장, 결과 DB 저장,

@@ -1,6 +1,7 @@
 """Typed, decimal-string integration contract for the executable engine.
 
-결과(출력) 모델은 공용 메시지 계약 ``worker.contracts.engine_output`` 으로 옮겼다. 같은 모양을
+결과(출력) 모델은 공용 메시지 계약 ``worker.contracts.engine_output`` 으로 옮겼다. 진행 콜백이
+넘기는 값도 같은 이유로 ``worker.contracts.events.ProgressPoint`` 를 그대로 쓴다. 같은 모양을
 두 곳에 선언해 두면 한쪽만 고쳤을 때 조용히 어긋나기 때문이다.
 
 입력 모델은 아직 여기 남아 있다. 계약 ``worker.contracts.engine_input`` 의 고정값
@@ -14,8 +15,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
-
-from worker.contracts.engine_output import PortfolioSnapshot
 
 
 class Contract(BaseModel):
@@ -115,11 +114,3 @@ class EngineInput(Contract):
     portfolio: PortfolioSpec = Field(default_factory=PortfolioSpec)
     execution: ExecutionSpec = Field(default_factory=ExecutionSpec)
     benchmark: None = None
-
-
-class ProgressSnapshot(Contract):
-    """진행 콜백 payload. 스냅샷 자체는 공용 계약 모델을 그대로 쓴다."""
-
-    completed_trading_days: int
-    total_trading_days: int
-    portfolio_series: list[PortfolioSnapshot]

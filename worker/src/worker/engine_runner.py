@@ -7,6 +7,7 @@ from decimal import Decimal
 import nautilus_trader
 
 from worker.artifacts import OrderRecord, RunArtifacts
+from worker.contracts.engine import ProgressCallback
 from worker.contracts.engine_output import (
     Diagnostics,
     EngineError,
@@ -17,7 +18,7 @@ from worker.contracts.engine_output import (
 )
 from worker.engine_contracts import EngineInput
 from worker.market_data import DataProvider, MarketDataError, YFinanceDataProvider, validate_prices
-from worker.nautilus_engine import CallbackError, SnapshotCallback, execute_nautilus
+from worker.nautilus_engine import CallbackError, execute_nautilus
 from worker.performance import calculate_performance
 
 
@@ -36,7 +37,7 @@ class NautilusMomentumEngine:
     def run(
         self,
         engine_input: EngineInput | dict,
-        on_progress: SnapshotCallback | None = None,
+        on_progress: ProgressCallback | None = None,
     ) -> EngineOutput:
         """계약 메시지만 돌려준다 (``contracts.engine.BacktestEngine`` Protocol 모양).
 
@@ -48,7 +49,7 @@ class NautilusMomentumEngine:
     def run_with_artifacts(
         self,
         engine_input: EngineInput | dict,
-        on_progress: SnapshotCallback | None = None,
+        on_progress: ProgressCallback | None = None,
     ) -> tuple[EngineOutput, RunArtifacts]:
         """계약 메시지와 로컬 진단 산출물을 함께 돌려준다.
 
