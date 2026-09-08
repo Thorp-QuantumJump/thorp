@@ -6,4 +6,4 @@ __pycache__/
 *.egg-info/
 engine-output.json
 examples/live-*.json
-examples/fixture-output.json
+examples/fixture-output*.json
