@@ -22,9 +22,9 @@ public class LoggingBacktestJobPublisher implements BacktestJobPublisher {
     @Override
     public void publish(BacktestJob job) {
         log.warn(
-                "[TEMP] Broker not configured. Job not delivered to worker: id={}, strategy={}, period={}~{}",
-                job.getId(),
-                job.getStrategy(),
+                "[TEMP] Broker not configured. Job not delivered to worker: backtestId={}, strategy={}, period={}~{}",
+                job.getBacktestId(),
+                job.getStrategyId(),
                 job.getPeriod().startDate(),
                 job.getPeriod().endDate());
     }

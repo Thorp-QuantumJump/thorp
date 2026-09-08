@@ -10,7 +10,10 @@ import java.util.regex.Pattern;
  */
 public record InstrumentId(String value) {
 
-    private static final Pattern PATTERN = Pattern.compile("^\\d{6}\\.XKRX$");
+    /** 요청 DTO의 검증 패턴과 규칙을 공유하려고 노출한다. */
+    public static final String REGEX = "^\\d{6}\\.XKRX$";
+
+    private static final Pattern PATTERN = Pattern.compile(REGEX);
 
     public InstrumentId {
         Objects.requireNonNull(value, "instrumentId must not be null");

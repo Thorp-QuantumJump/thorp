@@ -5,13 +5,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.common.config.JpaAuditingConfig;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +41,25 @@ class BacktestJobRepositoryImplTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 7);
     private static final BacktestPeriod PERIOD =
             new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));
+    private static final Map<String, Object> PARAMETERS =
+            Map.of("shortWindow", 20, "threshold", 0.05, "mode", "cross");
+    private static final List<InstrumentId> INSTRUMENTS =
+            List.of(new InstrumentId("005930.XKRX"), new InstrumentId("000660.XKRX"));
+    private static final BigDecimal CASH = new BigDecimal("10000000.00");
+
+    private static BacktestJob newJob() {
+        return BacktestJob.create(
+                "MA_CROSSOVER",
+                "1.0.0",
+                PARAMETERS,
+                INSTRUMENTS,
+                PERIOD,
+                CASH,
+                PositionSizingMode.STRATEGY_DEFINED,
+                new BigDecimal("0.5000"),
+                new InstrumentId("069500.XKRX"),
+                42);
+    }
 
     @TestConfiguration
     static class FixedClockConfig {
@@ -49,25 +73,34 @@ class BacktestJobRepositoryImplTest {
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("save 후 findById로 같은 Job을 읽어온다")
+    @DisplayName("save 후 findById로 JSON 컬럼까지 같은 값으로 읽어온다")
     void saveThenFindById() {
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", PERIOD));
+        BacktestJob saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
         assertThat(saved.getId()).isNotNull();
         Optional<BacktestJob> found = repository.findById(saved.getId());
         assertThat(found).isPresent();
-        assertThat(found.get().getBacktestId()).isEqualTo(saved.getBacktestId());
-        assertThat(found.get().getStrategy()).isEqualTo("sma-cross");
-        assertThat(found.get().getPeriod()).isEqualTo(PERIOD);
-        assertThat(found.get().getStatus()).isEqualTo(BacktestStatus.QUEUED);
+        BacktestJob job = found.get();
+        assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());
+        assertThat(job.getStrategyId()).isEqualTo("MA_CROSSOVER");
+        assertThat(job.getStrategyVersion()).isEqualTo("1.0.0");
+        assertThat(job.getParameters()).isEqualTo(PARAMETERS);
+        assertThat(job.getInstrumentIds()).isEqualTo(INSTRUMENTS);
+        assertThat(job.getPeriod()).isEqualTo(PERIOD);
+        assertThat(job.getInitialCash()).isEqualByComparingTo(CASH);
+        assertThat(job.getPositionSizingType()).isEqualTo(PositionSizingMode.STRATEGY_DEFINED);
+        assertThat(job.getMaxPositionPct()).isEqualByComparingTo("0.5000");
+        assertThat(job.getBenchmarkInstrumentId()).isEqualTo(new InstrumentId("069500.XKRX"));
+        assertThat(job.getRandomSeed()).isEqualTo(42);
+        assertThat(job.getStatus()).isEqualTo(BacktestStatus.QUEUED);
     }
 
     @Test
     @DisplayName("save는 고정 Clock의 날짜와 PK로 backtestId를 부여하고 NOT NULL인 채로 INSERT된다")
     void saveAssignsBacktestIdBeforeInsert() {
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", PERIOD));
+        BacktestJob saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
@@ -81,7 +114,7 @@ class BacktestJobRepositoryImplTest {
     @Test
     @DisplayName("findByBacktestId로 문자열 식별자 조회가 된다")
     void findByBacktestId() {
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", PERIOD));
+        BacktestJob saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
@@ -100,16 +133,24 @@ class BacktestJobRepositoryImplTest {
     @Test
     @DisplayName("backtest_id가 겹치면 UNIQUE 제약에 걸린다")
     void rejectsDuplicateBacktestId() {
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", PERIOD));
+        BacktestJob saved = repository.save(newJob());
         entityManager.flush();
 
         entityManager.persist(
                 new BacktestJobJpaEntity(
                         null,
                         saved.getBacktestId().value(),
-                        "sma-cross",
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        PARAMETERS,
+                        List.of("005930.XKRX"),
                         PERIOD.startDate(),
                         PERIOD.endDate(),
+                        CASH,
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
                         BacktestStatus.QUEUED));
 
         assertThatThrownBy(() -> entityManager.flush()).isInstanceOf(Exception.class);
@@ -122,8 +163,16 @@ class BacktestJobRepositoryImplTest {
                 BacktestJob.restore(
                         1L,
                         BacktestId.from("BT-20260907-000001"),
-                        "sma-cross",
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        PARAMETERS,
+                        INSTRUMENTS,
                         PERIOD,
+                        CASH,
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
                         BacktestStatus.QUEUED);
 
         assertThatThrownBy(() -> repository.save(existing))
@@ -137,9 +186,17 @@ class BacktestJobRepositoryImplTest {
                 new BacktestJobJpaEntity(
                         null,
                         "BT-20260907-000001",
-                        "sma-cross",
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        PARAMETERS,
+                        List.of("005930.XKRX"),
                         PERIOD.startDate(),
                         PERIOD.endDate(),
+                        CASH,
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
                         BacktestStatus.QUEUED);
 
         assertThatThrownBy(() -> entity.assignBacktestIdOn(TODAY))
@@ -149,7 +206,7 @@ class BacktestJobRepositoryImplTest {
     @Test
     @DisplayName("BaseEntity의 생성·수정 시각이 Auditing으로 채워진다")
     void auditingFieldsArePopulated() {
-        BacktestJob saved = repository.save(BacktestJob.create("sma-cross", PERIOD));
+        BacktestJob saved = repository.save(newJob());
         entityManager.flush();
 
         BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());

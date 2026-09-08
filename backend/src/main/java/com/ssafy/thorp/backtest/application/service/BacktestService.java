@@ -7,6 +7,8 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 /** 백테스트 Job 생성·조회 유스케이스. 계산은 하지 않고 Job을 저장한 뒤 Worker에 발행한다. */
@@ -21,21 +23,37 @@ public class BacktestService {
         this.publisher = publisher;
     }
 
-    // TODO: 트랜잭션 경계와 publish 실패 처리(저장 롤백 vs FAILED 마킹 vs outbox)는 브로커 결정 후 확정한다.
+    // TODO: 트랜잭션 경계와 publish 실패 처리는 RabbitMQ 발행기 구현에서 확정한다.
     public BacktestJobResult create(CreateBacktestCommand command) {
         BacktestJob job =
                 BacktestJob.create(
-                        command.strategy(),
-                        new BacktestPeriod(command.startDate(), command.endDate()));
+                        command.strategyId(),
+                        ExecutionPolicy.STRATEGY_VERSION,
+                        command.parameters(),
+                        toInstrumentIds(command.instrumentIds()),
+                        new BacktestPeriod(command.start(), command.end()),
+                        command.initialCash(),
+                        command.positionSizingType(),
+                        command.maxPositionPct(),
+                        toInstrumentId(command.benchmarkInstrumentId()),
+                        ExecutionPolicy.DEFAULT_RANDOM_SEED);
         BacktestJob saved = repository.save(job);
         publisher.publish(saved);
         return BacktestJobResult.from(saved);
     }
 
-    public BacktestJobResult get(Long backtestId) {
+    public BacktestJobResult get(String backtestId) {
         return repository
-                .findById(backtestId)
+                .findByBacktestId(backtestId)
                 .map(BacktestJobResult::from)
                 .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+    }
+
+    private static List<InstrumentId> toInstrumentIds(List<String> values) {
+        return values == null ? List.of() : values.stream().map(InstrumentId::new).toList();
+    }
+
+    private static InstrumentId toInstrumentId(String value) {
+        return value == null ? null : new InstrumentId(value);
     }
 }
