@@ -2,21 +2,20 @@ package com.ssafy.thorp.account.infrastructure.persistence;
 
 import com.ssafy.thorp.account.domain.model.UserStatus;
 import jakarta.persistence.*;
-
 import java.time.Instant;
 
 @Entity
-@Table(name="users")
+@Table(name = "users")
 public class UserEntity {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name= "password_hash", nullable = false, unique = false, length = 255)
+    @Column(name = "password_hash", nullable = false, unique = false, length = 255)
     private String passwordHash;
 
     @Column(name = "nickname", nullable = false, length = 100)
@@ -53,25 +52,24 @@ public class UserEntity {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
-    protected UserEntity() { //jpa용 기본 생성자
+    protected UserEntity() { // jpa용 기본 생성자
     }
 
     UserEntity(
-        Long id,
-        String email,
-        String passwordHash,
-        String nickname,
-        String phoneNumber,
-        String profileImageUrl,
-        UserStatus status,
-        boolean paperRankingEnabled,
-        boolean liveRankingEnabled,
-        boolean rankingDisplayNickname,
-        Instant lastLoginAt,
-        Instant createdAt,
-        Instant updatedAt,
-        Instant withdrawnAt
-    ) {
+            Long id,
+            String email,
+            String passwordHash,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl,
+            UserStatus status,
+            boolean paperRankingEnabled,
+            boolean liveRankingEnabled,
+            boolean rankingDisplayNickname,
+            Instant lastLoginAt,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant withdrawnAt) {
         this.id = id;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -99,8 +97,6 @@ public class UserEntity {
     private void onUpdate() {
         updatedAt = Instant.now();
     }
-
-
 
     public Long getId() {
         return id;
@@ -157,6 +153,4 @@ public class UserEntity {
     public Instant getWithdrawnAt() {
         return withdrawnAt;
     }
-
-
 }

@@ -5,13 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-import java.security.PrivateKey;
-
 public class SignupRequest {
 
-    @NotBlank
-    @Email
-    private String email;
+    @NotBlank @Email private String email;
 
     @NotBlank
     @Size(min = 8, max = 25)
@@ -40,5 +36,4 @@ public class SignupRequest {
     public String getPhoneNumber() {
         return phoneNumber;
     }
-
 }

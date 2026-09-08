@@ -2,9 +2,8 @@ package com.ssafy.thorp.account.infrastructure.persistence;
 
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.User;
-import org.springframework.stereotype.Repository;
-
 import java.util.Optional;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public class UserRepositoryImpl implements UserRepository {
@@ -26,8 +25,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return userJpaRepository.findByEmail(email)
-            .map(UserMapper::toDomain);
+        return userJpaRepository.findByEmail(email).map(UserMapper::toDomain);
     }
 
     @Override

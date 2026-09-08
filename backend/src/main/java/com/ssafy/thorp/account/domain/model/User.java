@@ -1,6 +1,7 @@
 package com.ssafy.thorp.account.domain.model;
 
 import java.time.Instant;
+
 public class User {
 
     private final Long id;
@@ -24,21 +25,20 @@ public class User {
     private Instant withdrawnAt;
 
     public User(
-        Long id,
-        String email,
-        String passwordHash,
-        String nickname,
-        String phoneNumber,
-        String profileImageUrl,
-        UserStatus status,
-        boolean paperRankingEnabled,
-        boolean liveRankingEnabled,
-        boolean rankingDisplayNickname,
-        Instant lastLoginAt,
-        Instant createdAt,
-        Instant updatedAt,
-        Instant withdrawnAt
-    ) {
+            Long id,
+            String email,
+            String passwordHash,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl,
+            UserStatus status,
+            boolean paperRankingEnabled,
+            boolean liveRankingEnabled,
+            boolean rankingDisplayNickname,
+            Instant lastLoginAt,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant withdrawnAt) {
         this.id = id;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -56,28 +56,24 @@ public class User {
     }
 
     public static User register(
-        String email,
-        String passwordHash,
-        String nickname,
-        String phoneNumber
-    ) {
+            String email, String passwordHash, String nickname, String phoneNumber) {
         return new User(
-            null,
-            email,
-            passwordHash,
-            nickname,
-            phoneNumber,
-            null,
-            UserStatus.PENDING_VERIFICATION,
-            false,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null
-        );
+                null,
+                email,
+                passwordHash,
+                nickname,
+                phoneNumber,
+                null,
+                UserStatus.PENDING_VERIFICATION,
+                false,
+                false,
+                false,
+                null,
+                null,
+                null,
+                null);
     }
+
     public Long getId() {
         return id;
     }
@@ -134,4 +130,3 @@ public class User {
         return withdrawnAt;
     }
 }
-

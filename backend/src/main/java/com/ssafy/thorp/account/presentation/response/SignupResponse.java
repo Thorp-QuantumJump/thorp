@@ -7,12 +7,7 @@ public class SignupResponse {
     private final String nickname;
     private final String status;
 
-    public SignupResponse(
-        Long userId,
-        String email,
-        String nickname,
-        String status
-    ) {
+    public SignupResponse(Long userId, String email, String nickname, String status) {
         this.userId = userId;
         this.email = email;
         this.nickname = nickname;

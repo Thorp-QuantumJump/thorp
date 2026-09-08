@@ -1,7 +1,6 @@
 package com.ssafy.thorp.account.infrastructure.persistence;
 
 import jakarta.persistence.*;
-
 import java.time.Instant;
 
 @Entity
@@ -27,14 +26,9 @@ public class EmailVerificationEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    protected EmailVerificationEntity() {
-    }
+    protected EmailVerificationEntity() {}
 
-    public EmailVerificationEntity(
-        String email,
-        String verificationCodeHash,
-        Instant expiresAt
-    ) {
+    public EmailVerificationEntity(String email, String verificationCodeHash, Instant expiresAt) {
         this.email = email;
         this.verificationCodeHash = verificationCodeHash;
         this.expiresAt = expiresAt;
@@ -44,4 +38,23 @@ public class EmailVerificationEntity {
     private void onCreate() {
         this.createdAt = Instant.now();
     }
+
+
+    public String getVerificationCodeHash() {
+        return verificationCodeHash;
+    }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public Instant getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void verify(Instant verifiedAt) {
+        this.verifiedAt = verifiedAt;
+    }
 }
+
+
