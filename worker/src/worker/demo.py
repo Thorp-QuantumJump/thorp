@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from worker.engine import run_engine
 from worker.engine_contracts import EngineInput, ProgressSnapshot
+from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
 
 
@@ -51,11 +51,8 @@ def main() -> int:
         if done % 20 == 0 or done == total:
             print(f"Completed trading days: {done}/{total}", file=sys.stderr)
 
-    output = run_engine(
-        request,
-        data_provider=CsvDataProvider(args.fixture) if args.fixture else None,
-        on_snapshot=progress,
-    )
+    engine = NautilusMomentumEngine(CsvDataProvider(args.fixture) if args.fixture else None)
+    output = engine.run(request, progress)
     # Preserve required null metrics/OPEN fields; omit only unchanged positions snapshots.
     payload = output.model_dump(mode="json", by_alias=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

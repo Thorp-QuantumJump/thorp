@@ -36,7 +36,7 @@
 |---|---|---|
 | `engine.py` | Facade | 외부 공개 진입점 `run_engine` |
 | `engine_contracts.py` | request/response record + Bean Validation + Jackson 설정 | 입출력 계약과 검증 |
-| `engine_runner.py` | Application Service | 데이터 로드 → 실행 → 지표 → 결과 조립 |
+| `engine_runner.py` | Application Service | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
 | `market_data.py` | Port와 Adapter | `DataProvider` 계약, yfinance/CSV 구현, OHLCV 검증 |
 | `strategies/momentum.py` | 순수 Domain Service | 종가 배열을 0/1 목표 포지션 신호로 변환 |
 | `nautilus_engine.py` | 이벤트 핸들러 + Infrastructure Gateway | Nautilus 설정, 이벤트 수신, 주문·체결·일별 원장 |
@@ -57,7 +57,7 @@ EngineInput(JSON/dict/Pydantic 객체)
 engine.run_engine                         공개 Facade
         │
         ▼
-engine_runner.run_engine                  실행 유스케이스
+engine_runner.NautilusMomentumEngine.run  실행 유스케이스
         │
         ├─ 1. EngineInput.model_validate  계약/날짜/고정 정책 검증
         ├─ 2. DataProvider.load           yfinance 또는 CSV 로드

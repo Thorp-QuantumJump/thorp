@@ -6,8 +6,8 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from worker.engine import run_engine
 from worker.engine_contracts import EngineInput, PortfolioSnapshot, ProgressSnapshot
+from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider, MarketDataError, MarketDataset, validate_prices
 from worker.nautilus_engine import CallbackError
 
@@ -26,9 +26,7 @@ def request(**overrides: Any) -> EngineInput:
 
 def test_native_next_open_round_trips_and_callback() -> None:
     callbacks = []
-    output = run_engine(
-        request(), data_provider=CsvDataProvider(FIXTURE), on_snapshot=callbacks.append
-    )
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request(), callbacks.append)
     assert output.run.status == "COMPLETED", output.error
     assert len(callbacks) == len(output.portfolio_series) == 7
     assert [s.completed_trading_days for s in callbacks] == list(range(1, 8))
@@ -67,6 +65,28 @@ def test_native_next_open_round_trips_and_callback() -> None:
     assert payload["trades"][-1]["realizedPnl"] is None
 
 
+def test_injected_provider_is_reusable_across_runs() -> None:
+    """공급자를 생성자로 한 번 주입한 인스턴스로 여러 번 실행해도 상태가 새지 않는다."""
+    engine = NautilusMomentumEngine(CsvDataProvider(FIXTURE))
+    first_callbacks: list[ProgressSnapshot] = []
+    second_callbacks: list[ProgressSnapshot] = []
+    first = engine.run(request(), first_callbacks.append)
+    second = engine.run(request(), second_callbacks.append)
+    assert first.run.status == second.run.status == "COMPLETED", first.error or second.error
+    assert first.performance == second.performance
+    assert first.portfolio_series == second.portfolio_series
+    assert first.execution == second.execution
+    assert first.trades == second.trades
+    assert first.diagnostics == second.diagnostics
+    assert len(first_callbacks) == len(second_callbacks) == 7
+    # 다른 입력을 이어서 실행해도 앞선 실행 결과와 섞이지 않는다.
+    single_day = {"backtestId": "REUSE", "start": "2025-01-06", "end": "2025-01-06"}
+    other = engine.run(request(run=single_day))
+    assert other.run.backtest_id == "REUSE"
+    assert other.execution.order_count == 1
+    assert first.execution.order_count == 3
+
+
 class FrameProvider:
     def __init__(self, frame: pd.DataFrame) -> None:
         self.frame = frame
@@ -78,7 +98,7 @@ class FrameProvider:
 def test_gap_rejects_whole_order_and_retries_without_future_sizing() -> None:
     frame = CsvDataProvider(FIXTURE).load(request()).prices
     frame.loc["2025-01-07", ["open", "high"]] = [200, 200]
-    output = run_engine(request(), data_provider=FrameProvider(frame))
+    output = NautilusMomentumEngine(FrameProvider(frame)).run(request())
     assert output.run.status == "COMPLETED", output.error
     first, second = output.execution.orders[:2]
     assert first.quantity == 9  # Same close-sized quantity despite the unknown future gap.
@@ -93,7 +113,7 @@ def test_gap_rejects_whole_order_and_retries_without_future_sizing() -> None:
 
 def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
     req = request(run={"backtestId": "LAST", "start": "2025-01-06", "end": "2025-01-06"})
-    output = run_engine(req, data_provider=CsvDataProvider(FIXTURE))
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
     assert output.run.status == "COMPLETED", output.error
     assert output.execution.order_count == 1
     assert output.execution.fill_count == 0
@@ -107,7 +127,7 @@ def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
 
 def test_insufficient_history_stays_cash_and_warns() -> None:
     req = request(strategy={"parameters": {"lookbackDays": 120}})
-    output = run_engine(req, data_provider=CsvDataProvider(FIXTURE))
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
     assert output.run.status == "COMPLETED", output.error
     assert output.execution.order_count == 0
     assert output.performance.final_equity == 1000
@@ -120,7 +140,7 @@ def test_callback_failure_propagates() -> None:
         raise RuntimeError("consumer unavailable")
 
     with pytest.raises(CallbackError):
-        run_engine(request(), data_provider=CsvDataProvider(FIXTURE), on_snapshot=broken)
+        NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request(), broken)
 
 
 @pytest.mark.parametrize("damage", ["duplicate", "unordered", "nan", "negative", "range"])
@@ -174,8 +194,8 @@ def test_future_data_changes_do_not_change_previous_output() -> None:
     original = CsvDataProvider(FIXTURE).load(request()).prices
     changed = original.copy()
     changed.loc["2025-01-14", ["open", "high", "low", "close"]] = [900, 910, 890, 905]
-    baseline = run_engine(request(), data_provider=FrameProvider(original))
-    alternate = run_engine(request(), data_provider=FrameProvider(changed))
+    baseline = NautilusMomentumEngine(FrameProvider(original)).run(request())
+    alternate = NautilusMomentumEngine(FrameProvider(changed)).run(request())
     assert baseline.run.status == alternate.run.status == "COMPLETED"
     assert baseline.portfolio_series[:-1] == alternate.portfolio_series[:-1]
     assert baseline.execution.orders[2].quantity == alternate.execution.orders[2].quantity
@@ -188,7 +208,7 @@ def test_full_input_example_and_output_json_roundtrip() -> None:
     example = FIXTURE.with_name("engine-input.json").read_text(encoding="utf-8")
     parsed = EngineInput.model_validate_json(example)
     assert parsed == EngineInput.model_validate_json(parsed.model_dump_json(by_alias=True))
-    output = run_engine(request(), data_provider=CsvDataProvider(FIXTURE))
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request())
     assert output == EngineOutput.model_validate_json(output.model_dump_json(by_alias=True))
     assert "positions" not in output.portfolio_series[2].model_dump(mode="json", by_alias=True)
 
@@ -197,7 +217,7 @@ def test_callbacks_are_isolated_from_result_ledger() -> None:
     def mutate(snapshot: ProgressSnapshot) -> None:
         snapshot.portfolio_series[0].equity = Decimal("999999999")
 
-    output = run_engine(request(), data_provider=CsvDataProvider(FIXTURE), on_snapshot=mutate)
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request(), mutate)
     assert output.run.status == "COMPLETED"
     assert output.performance.final_equity == Decimal("1068.7")
 
@@ -240,7 +260,7 @@ def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_empty_evaluation_is_failed_without_fake_metrics() -> None:
     req = request(run={"backtestId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
-    output = run_engine(req, data_provider=CsvDataProvider(FIXTURE))
+    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
     assert output.run.status == "FAILED"
     assert output.error.code == "NO_MARKET_DATA"
     assert output.performance is None and output.execution is None
@@ -256,7 +276,7 @@ def test_120_previous_closes_are_required() -> None:
         run={"backtestId": "120", "start": dates[119].date(), "end": dates[-1].date()},
         strategy={"parameters": {"lookbackDays": 120}},
     )
-    output = run_engine(req, data_provider=FrameProvider(frame))
+    output = NautilusMomentumEngine(FrameProvider(frame)).run(req)
     assert output.run.status == "COMPLETED", output.error
     assert output.execution.orders[0].signal_time.date() == dates[120].date()
     assert output.execution.orders[0].fill_time.date() == dates[121].date()

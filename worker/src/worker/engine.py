@@ -37,7 +37,11 @@ def run_engine(
     data_provider: DataProvider | None = None,
     on_snapshot: Callable[[ProgressSnapshot], None] | None = None,
 ) -> EngineOutput:
-    """Nautilus 엔진을 실행한다. 메시지 발행·결과 저장·ACK는 호출자가 담당한다."""
-    from worker.engine_runner import run_engine as execute
+    """Nautilus 엔진을 실행한다. 메시지 발행·결과 저장·ACK는 호출자가 담당한다.
 
-    return execute(engine_input, data_provider=data_provider, on_snapshot=on_snapshot)
+    `NautilusMomentumEngine` 인스턴스를 실행마다 새로 만드는 얇은 래퍼다. 공급자를 여러
+    실행에서 재사용하거나 전략별 엔진 구현체를 고르려면 클래스를 직접 쓴다.
+    """
+    from worker.engine_runner import NautilusMomentumEngine
+
+    return NautilusMomentumEngine(data_provider).run(engine_input, on_snapshot)
