@@ -118,4 +118,35 @@ pipeline {
             '''
         }
     }
+    post {
+        failure {
+            echo 'Mattermost 실패 알림 전송 시작'
+
+            mattermostSend(
+                color: 'danger',
+                failOnError: true,
+                message: "❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        unstable {
+            echo 'Mattermost 빌드 불안정 알림 전송 시작'
+
+            mattermostSend(
+                color: 'warning',
+                failOnError: true,
+                message: "⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        success {
+            echo 'Mattermost 성공 알림 전송 시작'
+
+            mattermostSend(
+                color: 'good',
+                failOnError: true,
+                message: "✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+    }
 }
