@@ -3,8 +3,13 @@
 ## NautilusTrader 모멘텀 엔진 (Jira 101)
 
 Python 3.11, NautilusTrader **1.219.0**, yfinance **0.2.65**. 엔진 실행과 결과 계산만
-담당하며 RabbitMQ·SSE·DB는 호출하는 Consumer가 담당한다. 기존 `worker.main`과
-축약 `run_backtest`는 이 경로에 연결되지 않은 레거시 스캐폴딩이다.
+담당하며 브로커·SSE·DB는 앞으로 연결할 Consumer가 담당한다. 기존 `worker.main`과
+축약 `run_backtest`는 이 경로에 연결되지 않은 Kafka 레거시 스캐폴딩이다. 브로커는 아직
+RabbitMQ/Kafka 중 최종 결정되지 않았다.
+
+Python/Nautilus가 낯설다면 [Java 개발자용 엔진 가이드](../docs/guides/nautilus-momentum-engine.md)를
+먼저 읽는다. 설계 이유는 [ADR-0002](../docs/adr/0002-nautilus-momentum-engine-boundary.md),
+필드별 계약은 [Jira 101 spec](../docs/specs/101-nautilus-momentum.md)이 기준이다.
 
 ### 설치와 실행
 

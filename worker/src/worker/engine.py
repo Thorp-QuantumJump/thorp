@@ -1,7 +1,7 @@
-"""백테스트 엔진 (스캐폴딩).
+"""백테스트 엔진의 공개 진입점.
 
-전략은 '시장 데이터 -> 매매 신호'만 출력하고,
-엔진이 체결/자산 계산과 성과지표(수익률, MDD, Sharpe) 산출을 담당한다.
+`run_engine`은 Jira 101에서 구현한 Nautilus 경로다. `run_backtest`는 이전 Job 계약을 위한
+미구현 스캐폴딩이며 운영 Consumer도 아직 어느 경로에도 연결되지 않았다.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def run_engine(
     data_provider: DataProvider | None = None,
     on_snapshot: Callable[[ProgressSnapshot], None] | None = None,
 ) -> EngineOutput:
-    """New integration entry point; legacy run_backtest remains unchanged."""
+    """Nautilus 엔진을 실행한다. 메시지 발행·결과 저장·ACK는 호출자가 담당한다."""
     from worker.engine_runner import run_engine as execute
 
     return execute(engine_input, data_provider=data_provider, on_snapshot=on_snapshot)

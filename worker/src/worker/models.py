@@ -1,4 +1,8 @@
-"""Backend와 공유하는 Job 계약. 백엔드 BacktestJobRequest와 필드를 맞춘다."""
+"""공개 엔진 계약의 재노출과 기존 Kafka 스캐폴딩 계약.
+
+EngineInput/EngineOutput은 Jira 101 경로이고, BacktestJob/BacktestResult는 아직 연결되지 않은
+기존 Consumer용 모델이다.
+"""
 
 from datetime import date
 
