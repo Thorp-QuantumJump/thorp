@@ -20,14 +20,15 @@ from nautilus_trader.model.objects import Currency, Money, Price, Quantity
 from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 
 from worker.artifacts import OrderRecord
-from worker.engine_contracts import (
-    EngineInput,
+from worker.contracts.engine_output import (
     PortfolioSnapshot,
     PositionSnapshot,
-    ProgressSnapshot,
     TradeResult,
-    WarningRecord,
+    TradeSide,
+    TradeStatus,
 )
+from worker.contracts.engine_output import Warning as ContractWarning
+from worker.engine_contracts import EngineInput, ProgressSnapshot
 from worker.strategies.momentum import MomentumStrategy
 
 SnapshotCallback = Callable[[ProgressSnapshot], None]
@@ -79,7 +80,7 @@ class MomentumExecution(NautilusStrategy):
         # and slippageCost, from which the reference price is derivable.
         self.entry_reference_prices: dict[str, Decimal] = {}
         self.series: list[PortfolioSnapshot] = []
-        self.warnings: list[WarningRecord] = []
+        self.warnings: list[ContractWarning] = []
         self.peak = self.cash
         self.changed = False
         self.callback_error: Exception | None = None
@@ -108,7 +109,7 @@ class MomentumExecution(NautilusStrategy):
         record.status = "REJECTED"
         record.reason = reason
         self.warnings.append(
-            WarningRecord(
+            ContractWarning(
                 date=record.submitted_time.astimezone(ZoneInfo("Asia/Seoul")).date(),
                 instrument_id=str(self.instrument.id),
                 code=code,
@@ -143,9 +144,12 @@ class MomentumExecution(NautilusStrategy):
             trade = TradeResult(
                 trade_id=f"TR-{len(self.trades) + 1:06d}",
                 instrument_id=str(self.instrument.id),
+                side=TradeSide.LONG,
+                status=TradeStatus.OPEN,
                 entry_time=record.fill_time,
                 entry_price=price,
                 quantity=quantity,
+                commission=ZERO,
                 slippage_cost=slip,
             )
             self.entry_reference_prices[trade.trade_id] = record.reference_price
@@ -155,7 +159,7 @@ class MomentumExecution(NautilusStrategy):
             self.quantity = 0
             trade = self.trades[-1]
             entry_reference = self.entry_reference_prices[trade.trade_id]
-            trade.status = "CLOSED"
+            trade.status = TradeStatus.CLOSED
             trade.exit_time = record.fill_time
             trade.exit_price = price
             trade.slippage_cost += slip
@@ -175,7 +179,7 @@ class MomentumExecution(NautilusStrategy):
         if len(self.closes) <= self.signal_strategy.lookback_days:
             if not any(w.code == "INSUFFICIENT_HISTORY" for w in self.warnings):
                 self.warnings.append(
-                    WarningRecord(
+                    ContractWarning(
                         date=day,
                         instrument_id=str(self.instrument.id),
                         code="INSUFFICIENT_HISTORY",
@@ -344,7 +348,7 @@ def execute_nautilus(
             )
         if execution.pending is not None:
             execution.warnings.append(
-                WarningRecord(
+                ContractWarning(
                     date=dates[-1],
                     instrument_id=str(instrument_id),
                     code="NO_NEXT_TRADING_DAY",

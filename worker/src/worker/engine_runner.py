@@ -7,14 +7,15 @@ from decimal import Decimal
 import nautilus_trader
 
 from worker.artifacts import OrderRecord, RunArtifacts
-from worker.engine_contracts import (
+from worker.contracts.engine_output import (
     Diagnostics,
     EngineError,
-    EngineInput,
     EngineOutput,
     ExecutionResult,
     RunResult,
+    RunStatus,
 )
+from worker.engine_contracts import EngineInput
 from worker.market_data import DataProvider, MarketDataError, YFinanceDataProvider, validate_prices
 from worker.nautilus_engine import CallbackError, SnapshotCallback, execute_nautilus
 from worker.performance import calculate_performance
@@ -99,12 +100,15 @@ class NautilusMomentumEngine:
             output = EngineOutput(
                 run=RunResult(
                     backtest_id=request.run.backtest_id,
-                    status="COMPLETED",
+                    status=RunStatus.COMPLETED,
                     started_at=started,
                     finished_at=datetime.now(UTC),
                 ),
                 performance=calculate_performance(
-                    request.portfolio.initial_cash, execution.series, execution.trades
+                    request.portfolio.initial_cash,
+                    execution.series,
+                    execution.trades,
+                    request.portfolio.currency,
                 ),
                 portfolio_series=execution.series,
                 trades=execution.trades,
@@ -112,6 +116,7 @@ class NautilusMomentumEngine:
                     order_count=len(orders),
                     fill_count=sum(order.status == "FILLED" for order in orders),
                     rejected_order_count=sum(order.status == "REJECTED" for order in orders),
+                    total_commission=Decimal("0"),
                     total_slippage_cost=slip,
                 ),
                 diagnostics=Diagnostics(warnings=execution.warnings),
@@ -119,10 +124,11 @@ class NautilusMomentumEngine:
         except CallbackError:
             raise
         except Exception as exc:
+            # 실패해도 존재하지 않는 성과를 0으로 채우지 않는다 (계약 §4.3).
             output = EngineOutput(
                 run=RunResult(
                     backtest_id=request.run.backtest_id,
-                    status="FAILED",
+                    status=RunStatus.FAILED,
                     started_at=started,
                     finished_at=datetime.now(UTC),
                     error=EngineError(
@@ -132,5 +138,8 @@ class NautilusMomentumEngine:
                         message=f"{type(exc).__name__}: {exc}",
                     ),
                 ),
+                portfolio_series=[],
+                trades=[],
+                diagnostics=Diagnostics(warnings=[]),
             )
         return output, RunArtifacts(orders=orders, metadata=metadata)

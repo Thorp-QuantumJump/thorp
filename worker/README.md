@@ -55,6 +55,8 @@ uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`�
 ### Consumer 연결
 
 ```python
+import json
+
 from worker.engine import run_engine
 from worker.models import EngineInput, EngineOutput, ProgressSnapshot
 
@@ -67,14 +69,14 @@ def on_snapshot(progress: ProgressSnapshot) -> None:
         payload = {
             "completedTradingDays": done,
             "totalTradingDays": total,
-            "portfolioSeries": [p.model_dump(mode="json", by_alias=True) for p in buffer],
+            "portfolioSeries": [json.loads(p.to_json()) for p in buffer],
         }
         # Consumer가 payload를 발행한다. 발행 성공 후 buffer.clear().
         buffer.clear()
 
 engine_input = EngineInput.model_validate_json(open("examples/engine-input.json").read())
 result: EngineOutput = run_engine(engine_input, on_snapshot=on_snapshot)
-result_json = result.model_dump_json(by_alias=True)
+result_json = result.to_json()
 ```
 
 - `run_engine(engine_input, *, data_provider=None, on_snapshot=None) -> EngineOutput`.
@@ -82,10 +84,12 @@ result_json = result.model_dump_json(by_alias=True)
 - 콜백은 평가 거래일당 1번, 새 스냅샷 1개와 완료/전체 거래일 수를 전달한다. 준비 데이터는 제외한다.
   콜백 객체는 복사본이므로 Consumer의 변경이 최종 결과를 오염시키지 않는다.
 - 금액·비율·수량은 JSON decimal 문자열, 주문/체결/거래 건수는 정수다.
-  계산 불가능한 지표와 OPEN 거래의 미실현 필드는 null을 유지한다.
+  계산 불가능한 지표와 OPEN 거래의 미실현 필드는 값이 없는 상태이며, 계약 직렬화
+  `ContractModel.to_json()`(= camelCase + `exclude_none`)은 이런 키를 아예 내보내지 않는다.
 - `portfolioSeries`는 매일 존재한다. `positions`는 첫날·마지막 날·수량 변경일에만 존재하며,
   생략은 구성 스냅샷 없음, 빈 배열은 현금 상태를 뜻한다.
-- 데이터/엔진 오류는 `run.status=FAILED`, `run.error={code, message}`, null 성과를 반환한다.
+- 데이터/엔진 오류는 `run.status=FAILED`, `run.error={code, message}`로 반환하고
+  `performance`·`execution`은 채우지 않는다(메시지에서는 키가 빠진다).
   잘못된 EngineInput은 ValidationError, 콜백 실패는 CallbackError를 발생시킨다.
   Consumer는 결과가 COMPLETED인지 확인해야 하며, 콜백 100%가 저장 성공을 뜻하지 않는다.
 - 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run_engine` 대신

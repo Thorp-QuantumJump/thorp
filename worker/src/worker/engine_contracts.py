@@ -1,12 +1,21 @@
-"""Typed, decimal-string integration contract for the executable engine."""
+"""Typed, decimal-string integration contract for the executable engine.
+
+결과(출력) 모델은 공용 메시지 계약 ``worker.contracts.engine_output`` 으로 옮겼다. 같은 모양을
+두 곳에 선언해 두면 한쪽만 고쳤을 때 조용히 어긋나기 때문이다.
+
+입력 모델은 아직 여기 남아 있다. 계약 ``worker.contracts.engine_input`` 의 고정값
+(``adjustment=SPLIT_ADJUSTED``, ``commission.model=BROKER``, ``delisting=CAUSE_BASED``)과 이 엔진이
+실제로 지원하는 값이 달라서, 지원 값을 팀에서 맞춘 뒤 함께 옮긴다.
+"""
 
 from datetime import date as Date
-from datetime import datetime
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
+
+from worker.contracts.engine_output import PortfolioSnapshot
 
 
 class Contract(BaseModel):
@@ -108,106 +117,9 @@ class EngineInput(Contract):
     benchmark: None = None
 
 
-class PositionSnapshot(Contract):
-    instrument_id: str
-    quantity: Decimal
-    market_value: Decimal
-    weight: Decimal
-    unrealized_pnl: Decimal
-
-
-class PortfolioSnapshot(Contract):
-    date: Date
-    equity: Decimal
-    cash: Decimal
-    position_value: Decimal
-    daily_return: Decimal
-    cumulative_return: Decimal
-    drawdown: Decimal
-    positions: list[PositionSnapshot] | None = None
-
-    @model_serializer(mode="wrap")
-    def serialize_snapshot(self, handler: Any) -> dict:
-        result = handler(self)
-        if self.positions is None:
-            result.pop("positions", None)
-        return result
-
-
 class ProgressSnapshot(Contract):
+    """진행 콜백 payload. 스냅샷 자체는 공용 계약 모델을 그대로 쓴다."""
+
     completed_trading_days: int
     total_trading_days: int
     portfolio_series: list[PortfolioSnapshot]
-
-
-class TradeResult(Contract):
-    trade_id: str
-    instrument_id: str
-    side: Literal["LONG"] = "LONG"
-    status: Literal["OPEN", "CLOSED"] = "OPEN"
-    entry_time: datetime
-    exit_time: datetime | None = None
-    entry_price: Decimal
-    exit_price: Decimal | None = None
-    quantity: Decimal
-    gross_pnl: Decimal | None = None
-    commission: Decimal = Decimal("0")
-    slippage_cost: Decimal
-    realized_pnl: Decimal | None = None
-    return_rate: Decimal | None = None
-
-
-class PerformanceResult(Contract):
-    initial_equity: Decimal
-    final_equity: Decimal
-    currency: str = "KRW"
-    total_return: Decimal
-    cagr: Decimal | None
-    max_drawdown: Decimal
-    sharpe_ratio: Decimal | None
-    volatility: Decimal | None
-    trade_count: int
-    win_rate: Decimal | None
-
-
-class ExecutionResult(Contract):
-    """Aggregate counts only; the per-order audit log is a local artifact, not a message."""
-
-    order_count: int
-    fill_count: int
-    rejected_order_count: int
-    total_commission: Decimal = Decimal("0")
-    total_slippage_cost: Decimal
-
-
-class WarningRecord(Contract):
-    date: Date
-    instrument_id: str
-    code: str
-    message: str
-
-
-class Diagnostics(Contract):
-    warnings: list[WarningRecord] = Field(default_factory=list)
-
-
-class EngineError(Contract):
-    code: str
-    message: str
-
-
-class RunResult(Contract):
-    backtest_id: str
-    status: Literal["COMPLETED", "FAILED"]
-    started_at: datetime
-    finished_at: datetime
-    error: EngineError | None = None
-
-
-class EngineOutput(Contract):
-    run: RunResult
-    performance: PerformanceResult | None = None
-    portfolio_series: list[PortfolioSnapshot] = Field(default_factory=list)
-    trades: list[TradeResult] = Field(default_factory=list)
-    execution: ExecutionResult | None = None
-    diagnostics: Diagnostics = Field(default_factory=Diagnostics)

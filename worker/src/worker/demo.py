@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from worker.contracts.engine_output import RunStatus
 from worker.engine_contracts import EngineInput, ProgressSnapshot
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
@@ -73,8 +74,9 @@ def main() -> int:
     output, artifacts = engine.run_with_artifacts(request, progress)
     # Two files on purpose: --output is the broker message contract, --artifacts is local
     # diagnostics that the contract deliberately excludes.
-    # Preserve required null metrics/OPEN fields; omit only unchanged positions snapshots.
-    write_json(args.output, output.model_dump(mode="json", by_alias=True))
+    # 메시지는 계약 규약(README §5)대로 ContractModel.to_json()으로 직렬화한다: camelCase에
+    # 계산 불가·미지정 값은 명시 null이 아니라 키 자체를 생략한다.
+    write_json(args.output, json.loads(output.to_json()))
     write_json(artifacts_path, artifacts.model_dump(mode="json", by_alias=True))
     print(
         f"{output.run.status}: message {args.output}, artifacts {artifacts_path}",
@@ -82,7 +84,7 @@ def main() -> int:
     )
     if output.run.error:
         print(output.run.error.message, file=sys.stderr)
-    return 0 if output.run.status == "COMPLETED" else 1
+    return 0 if output.run.status is RunStatus.COMPLETED else 1
 
 
 if __name__ == "__main__":

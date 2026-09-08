@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from worker.engine_contracts import EngineInput, EngineOutput, ProgressSnapshot
+from worker.contracts.engine_output import EngineOutput
+from worker.engine_contracts import EngineInput, ProgressSnapshot
 from worker.models import BacktestJob, BacktestResult
 from worker.strategies.base import Strategy
 

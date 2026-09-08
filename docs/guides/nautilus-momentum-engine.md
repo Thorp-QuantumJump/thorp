@@ -35,7 +35,8 @@
 | Python 파일 | Java에서 비슷한 역할 | 책임 |
 |---|---|---|
 | `engine.py` | Facade | 외부 공개 진입점 `run_engine` |
-| `engine_contracts.py` | request/response record + Bean Validation + Jackson 설정 | 입출력 계약과 검증 |
+| `engine_contracts.py` | request record + Bean Validation + Jackson 설정 | 입력 계약과 검증 |
+| `contracts/engine_output.py` | response record | 결과 계약(브로커 메시지와 공용) |
 | `engine_runner.py` | Application Service | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
 | `market_data.py` | Port와 Adapter | `DataProvider` 계약, yfinance/CSV 구현, OHLCV 검증 |
 | `strategies/momentum.py` | 순수 Domain Service | 종가 배열을 0/1 목표 포지션 신호로 변환 |
@@ -46,7 +47,8 @@
 
 추천 읽기 순서는 `engine.py` → `engine_runner.py` → `market_data.py` →
 `strategies/momentum.py` → `nautilus_engine.py` → `performance.py` → 테스트다.
-`engine_contracts.py`는 처음부터 전부 읽기보다, 흐름에서 만나는 모델을 찾아보는 편이 쉽다.
+`engine_contracts.py`(입력)와 `contracts/engine_output.py`(결과)는 처음부터 전부 읽기보다,
+흐름에서 만나는 모델을 찾아보는 편이 쉽다.
 
 ## 3. 전체 호출 흐름
 
@@ -167,14 +169,16 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 - 출력 체결 수와 Nautilus native 체결 수가 같다.
 - 출력 현금과 Nautilus 계정 잔액이 같다.
 - 콜백이 받은 객체를 변경해도 최종 결과 원장은 바뀌지 않는다.
-- 계산할 수 없는 값과 OPEN 거래의 미실현 필드는 `null`이지 임의의 0이 아니다.
+- 계산할 수 없는 값과 OPEN 거래의 미실현 필드는 임의의 0이 아니라 없는 값이며, 메시지 JSON에는
+  `null`이 아니라 키 자체가 빠진다(`ContractModel.to_json()`).
 - 실패한 실행에는 가짜 성과나 체결 결과를 넣지 않는다.
 
 ## 8. 변경 목적별 시작점
 
 | 하고 싶은 변경 | 먼저 볼 곳 | 함께 확인할 테스트 |
 |---|---|---|
-| 입력/출력 필드 변경 | `engine_contracts.py` | JSON round-trip 테스트 |
+| 입력 필드 변경 | `engine_contracts.py` | JSON round-trip 테스트 |
+| 출력 필드 변경 | `contracts/engine_output.py` | 계약 픽스처 테스트, JSON round-trip 테스트 |
 | 전략 계산 변경 | `strategies/momentum.py` | 미래 데이터 불변 테스트, lookback 경계 테스트 |
 | 체결 시점/슬리피지 변경 | `nautilus_engine.py` | next-open, gap reject, 양방향 가격 테스트 |
 | 데이터 공급자 교체 | `market_data.py`의 `DataProvider` | 잘못된 OHLCV 거절 테스트 |

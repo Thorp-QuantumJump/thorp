@@ -9,8 +9,8 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 # Public integration models; legacy Job/Result are retained below for existing consumers.
+from worker.contracts.engine_output import EngineOutput as EngineOutput
 from worker.engine_contracts import EngineInput as EngineInput
-from worker.engine_contracts import EngineOutput as EngineOutput
 from worker.engine_contracts import ProgressSnapshot as ProgressSnapshot
 
 

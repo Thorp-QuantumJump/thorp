@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -6,7 +7,8 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from worker.engine_contracts import EngineInput, PortfolioSnapshot, ProgressSnapshot
+from worker.contracts.engine_output import PortfolioSnapshot, RunStatus, TradeStatus
+from worker.engine_contracts import EngineInput, ProgressSnapshot
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider, MarketDataError, MarketDataset, validate_prices
 from worker.nautilus_engine import CallbackError
@@ -29,7 +31,7 @@ def test_native_next_open_round_trips_and_callback() -> None:
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(
         request(), callbacks.append
     )
-    assert output.run.status == "COMPLETED", output.run.error
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
     assert len(callbacks) == len(output.portfolio_series) == 7
     assert [s.completed_trading_days for s in callbacks] == list(range(1, 8))
     assert all(s.total_trading_days == 7 and len(s.portfolio_series) == 1 for s in callbacks)
@@ -51,7 +53,7 @@ def test_native_next_open_round_trips_and_callback() -> None:
     assert orders[1].reference_price == Decimal("95")
     assert output.portfolio_series[1].cash == Decimal("54.5275")
     assert output.performance.trade_count == 1
-    assert [t.status for t in output.trades] == ["CLOSED", "OPEN"]
+    assert [t.status for t in output.trades] == [TradeStatus.CLOSED, TradeStatus.OPEN]
     closed, opened = output.trades
     assert closed.gross_pnl == -90
     assert (
@@ -70,9 +72,18 @@ def test_native_next_open_round_trips_and_callback() -> None:
         assert point.cash >= 0
         if point.positions is not None:
             assert sum(p.market_value for p in point.positions) == point.position_value
-    payload = output.model_dump(mode="json", by_alias=True)
+    payload = json.loads(output.to_json())
     assert isinstance(payload["performance"]["totalReturn"], str)
-    assert payload["trades"][-1]["realizedPnl"] is None
+    assert payload["performance"]["currency"] == "KRW"
+    # 계약 §5: 계산 불가·미지정 값은 명시 null이 아니라 키 자체를 쓰지 않는다.
+    assert "error" not in payload["run"]
+    assert payload["trades"][-1]["status"] == "OPEN"
+    assert not {"exitTime", "exitPrice", "grossPnl", "realizedPnl", "returnRate"} & set(
+        payload["trades"][-1]
+    )
+    assert {"exitTime", "exitPrice", "grossPnl", "realizedPnl", "returnRate"} <= set(
+        payload["trades"][0]
+    )
     # Diagnostic-only keys must not travel in the message.
     assert "orders" not in payload["execution"]
     assert "metadata" not in payload["diagnostics"]
@@ -200,7 +211,8 @@ def test_metrics_follow_sample_standard_deviation_and_calendar_days() -> None:
             ]
         )
     ]
-    result = calculate_performance(Decimal(1000), points, [])
+    result = calculate_performance(Decimal(1000), points, [], "KRW")
+    assert result.currency == "KRW"
     assert float(result.volatility) == pytest.approx(0.1 * 252**0.5)
     assert result.sharpe_ratio == 0
     assert result.max_drawdown == Decimal("-0.1")
@@ -225,14 +237,18 @@ def test_future_data_changes_do_not_change_previous_output() -> None:
 
 
 def test_full_input_example_and_output_json_roundtrip() -> None:
-    from worker.engine_contracts import EngineOutput
+    from worker.contracts.engine_output import EngineOutput
 
     example = FIXTURE.with_name("engine-input.json").read_text(encoding="utf-8")
     parsed = EngineInput.model_validate_json(example)
     assert parsed == EngineInput.model_validate_json(parsed.model_dump_json(by_alias=True))
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request())
-    assert output == EngineOutput.model_validate_json(output.model_dump_json(by_alias=True))
-    assert "positions" not in output.portfolio_series[2].model_dump(mode="json", by_alias=True)
+    assert output == EngineOutput.model_validate_json(output.to_json())
+    # 계약 §4.3: positions는 보유 구성이 바뀐 날 + 시작일 + 종료일에만 존재한다.
+    assert output.portfolio_series[2].positions is None
+    assert "positions" not in json.loads(output.portfolio_series[2].to_json())
+    assert "positions" not in json.loads(output.to_json())["portfolioSeries"][2]
+    assert "positions" in json.loads(output.to_json())["portfolioSeries"][0]
 
 
 def test_callbacks_are_isolated_from_result_ledger() -> None:
@@ -283,12 +299,16 @@ def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) ->
 def test_empty_evaluation_is_failed_without_fake_metrics() -> None:
     req = request(run={"backtestId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)
-    assert output.run.status == "FAILED"
+    assert output.run.status is RunStatus.FAILED
     # 실패 사유는 계약 위치(run.error)에 실린다. 여기가 아니면 백엔드가 조용히 버린다.
     assert output.run.error.code == "NO_MARKET_DATA"
     assert "No evaluation trading days" in output.run.error.message
     assert output.performance is None and output.execution is None
-    assert output.model_dump(mode="json", by_alias=True)["run"]["error"]["code"] == "NO_MARKET_DATA"
+    payload = json.loads(output.to_json())
+    assert payload["run"]["error"]["code"] == "NO_MARKET_DATA"
+    # 존재하지 않는 성과를 0으로 채우지도, 명시 null로 내보내지도 않는다.
+    assert "performance" not in payload and "execution" not in payload
+    assert payload["portfolioSeries"] == [] and payload["trades"] == []
     # 실패해도 재현성 메타데이터는 남는다(주문은 만들어지기 전이므로 비어 있다).
     assert artifacts.metadata["metricsVersion"] == "DAILY_252_DDOF1_RF0_V1"
     assert artifacts.orders == []
