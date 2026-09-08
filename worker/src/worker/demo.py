@@ -3,19 +3,72 @@
 import argparse
 import json
 import sys
+from datetime import date as Date
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import RunStatus
 from worker.contracts.events import ProgressPoint
-from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
 
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def build_engine_input(
+    instrument_id: str, start: Date, end: Date, lookback_days: int
+) -> EngineInput:
+    """CLI 인자로 계약 ``EngineInput`` 을 조립한다.
+
+    계약은 ``run``·``universe``·``marketData``·``strategy``·``portfolio``·``execution`` 이
+    모두 필수이므로 부분 dict를 넘길 수 없다. 실행 정책은 계약 §4.1 고정값이며, 운영에서는
+    백엔드가 채운다. ``datasetId`` 는 실제 공급자(yfinance)를 그대로 적는다 — 계약 고정값은
+    ``KRX_DAILY_V1`` 이지만 자유 문자열 필드이고 KRX 연결은 별도 작업이다.
+    """
+    return EngineInput.model_validate(
+        {
+            "run": {
+                "backtestId": "BT-MOMENTUM-DEMO",
+                "start": start,
+                "end": end,
+                "randomSeed": 42,
+            },
+            "universe": {"instrumentIds": [instrument_id]},
+            "marketData": {
+                "datasetId": "YFINANCE_DAILY",
+                "interval": "1D",
+                "adjustment": "SPLIT_ADJUSTED",
+                "priceType": "LAST",
+            },
+            "strategy": {
+                "strategyId": "MOMENTUM",
+                "version": "1.0.0",
+                "parameters": {"lookbackDays": lookback_days},
+            },
+            "portfolio": {
+                "initialCash": "10000000",
+                "currency": "KRW",
+                "positionSizing": {"type": "STRATEGY_DEFINED", "maxPositionPct": "1"},
+                "shortSelling": False,
+                "leverage": "1",
+            },
+            "execution": {
+                "signalTiming": "BAR_CLOSE",
+                "executionTiming": "NEXT_BAR_OPEN",
+                "orderTypes": ["MARKET"],
+                "commission": {"model": "ZERO"},
+                "slippage": {"model": "FIXED_BPS", "bps": 5},
+                "partialFill": False,
+                "liquidity": {"model": "UNLIMITED"},
+                "tradingHalt": "WAIT_UNTIL_RESUME",
+                "delisting": "CAUSE_BASED",
+            },
+        }
+    )
 
 
 def main() -> int:
@@ -58,13 +111,7 @@ def main() -> int:
             start = datetime.strptime(args.start, "%Y-%m-%d").date()
         if not args.ticker.endswith(".KS"):
             parser.error("--ticker must be an explicit KOSPI ticker such as 000660.KS")
-        request = EngineInput.model_validate(
-            {
-                "run": {"backtestId": "BT-MOMENTUM-DEMO", "start": start, "end": end},
-                "universe": {"instrumentIds": [args.ticker[:-3] + ".XKRX"]},
-                "strategy": {"parameters": {"lookbackDays": args.lookback_days}},
-            }
-        )
+        request = build_engine_input(args.ticker[:-3] + ".XKRX", start, end, args.lookback_days)
 
     def progress(point: ProgressPoint, done: int, total: int) -> None:
         # 계약의 진행 콜백 모양(거래일 1개 = ProgressPoint 1개). 20거래일 묶음은 사람이 읽는

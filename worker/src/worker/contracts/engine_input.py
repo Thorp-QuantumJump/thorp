@@ -58,7 +58,16 @@ class OrderType(StrEnum):
 
 
 class CommissionModel(StrEnum):
+    """거래비용 모델 (ADR-0004).
+
+    ``ZERO`` 는 수수료·세금·제비용을 모두 0으로 계산하며 ``broker`` 를 쓰지 않는다. 임시
+    우회값이 아니라 "거래비용을 제외한 순수 전략 성능"을 뜻하는 정식 모델이다.
+    ``BROKER`` 는 증권사 요율표대로 계산하고 ``broker`` 가 필수다(요율표 구현은 전략 비교
+    단계의 별도 티켓 — ADR-0004 D3).
+    """
+
     BROKER = "BROKER"
+    ZERO = "ZERO"
 
 
 class SlippageModel(StrEnum):

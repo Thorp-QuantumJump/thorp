@@ -19,6 +19,7 @@ from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 
 from worker.artifacts import OrderRecord
 from worker.contracts.engine import ProgressCallback
+from worker.contracts.engine_input import EngineInput, RunSpec
 from worker.contracts.engine_output import (
     PortfolioSnapshot,
     PositionSnapshot,
@@ -28,12 +29,21 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.engine_output import Warning as ContractWarning
 from worker.contracts.events import ProgressPoint
-from worker.engine_contracts import EngineInput
-from worker.strategies.momentum import MomentumStrategy
+from worker.strategies import prepare_strategy
 
 ZERO = Decimal("0")
-SLIPPAGE = Decimal("0.0005")
+#: 엔진이 하드코딩하는 고정 슬리피지. ``execution.slippage.bps`` 는 읽지 않고, 다른 값이 오면
+#: ``worker.engine_support`` 가 실행 전에 거절한다.
+SLIPPAGE_BPS = 5
+SLIPPAGE = Decimal(SLIPPAGE_BPS) / Decimal(10000)
 PRICE_QUANTUM = Decimal("0.000001")
+#: ``run.randomSeed`` 미지정(None) 시 쓰는 값. 재현성을 위해 시드 없이 실행하지 않는다.
+DEFAULT_RANDOM_SEED = 42
+
+
+def effective_random_seed(run: RunSpec) -> int:
+    """실제로 ``FillModel`` 에 넣는 시드. 계약은 ``None``(미지정)을 허용한다."""
+    return DEFAULT_RANDOM_SEED if run.random_seed is None else run.random_seed
 
 
 class CallbackError(RuntimeError):
@@ -67,8 +77,15 @@ class MomentumExecution(NautilusStrategy):
         self.evaluation_dates = evaluation_dates
         self.reference_opens = reference_opens
         self.on_progress_callback = on_progress
-        self.signal_strategy = MomentumStrategy(request.strategy.parameters.lookback_days)
-        self.closes: deque[Decimal] = deque(maxlen=self.signal_strategy.lookback_days + 1)
+        # 전략과 준비 기간은 레지스트리(worker.strategies)가 만든다. 계약 parameters는
+        # dict[str, Any] 봉투이므로 전략별 모델로 검증된 typed_parameters를 넘긴다.
+        prepared = prepare_strategy(request.strategy)
+        self.signal_strategy = prepared.signal
+        self.required_history = prepared.required_history
+        self.closes: deque[Decimal] = deque(maxlen=self.required_history + 1)
+        # 계약의 maxPositionPct는 생략 가능하고 생략 = 제한 없음이다.
+        pct = request.portfolio.position_sizing.max_position_pct
+        self.max_position_pct = Decimal("1") if pct is None else pct
         self.cash = request.portfolio.initial_cash
         self.quantity = 0
         self.pending = None
@@ -175,7 +192,7 @@ class MomentumExecution(NautilusStrategy):
         day = pd.Timestamp(bar.ts_event, tz="UTC").tz_convert("Asia/Seoul").date()
         if not self.request.run.start <= day <= self.request.run.end:
             return
-        if len(self.closes) <= self.signal_strategy.lookback_days:
+        if len(self.closes) <= self.required_history:
             if not any(w.code == "INSUFFICIENT_HISTORY" for w in self.warnings):
                 self.warnings.append(
                     ContractWarning(
@@ -189,7 +206,7 @@ class MomentumExecution(NautilusStrategy):
             prices = pd.DataFrame({"close": list(self.closes)})
             target = int(self.signal_strategy.generate_signals(prices).iloc[-1])
             if target and self.quantity == 0:
-                budget = self.cash * self.request.portfolio.position_sizing.max_position_pct
+                budget = self.cash * self.max_position_pct
                 quantity = int(budget // (close * (1 + SLIPPAGE)))
                 if quantity:
                     self._create_order(OrderSide.BUY, quantity, bar.ts_event)
@@ -333,7 +350,7 @@ def execute_nautilus(
             starting_balances=[Money(request.portfolio.initial_cash, currency)],
             bar_execution=False,
             trade_execution=False,
-            fill_model=FillModel(prob_slippage=0, random_seed=request.run.random_seed),
+            fill_model=FillModel(prob_slippage=0, random_seed=effective_random_seed(request.run)),
         )
         engine.add_instrument(instrument)
         engine.add_data(events)

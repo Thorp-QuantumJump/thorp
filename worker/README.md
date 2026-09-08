@@ -57,9 +57,9 @@ uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`�
 ```python
 from pathlib import Path
 
+from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import EngineOutput
 from worker.contracts.events import ProgressPayload, ProgressPoint
-from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 
 buffer: list[ProgressPoint] = []
@@ -87,13 +87,30 @@ result_json = result.to_json()
   dict 입력도 가능하다. 시장 데이터 공급자는 실행 인자가 아니라 생성자 인자
   `NautilusMomentumEngine(data_provider)`이므로 엔진 인스턴스를 여러 실행에서 재사용한다.
   커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
-- 결과·진행 모델은 공용 메시지 계약(`contracts/engine_output.py`, `contracts/events.py`)이지만
-  **입력 모델은 아직 `engine_contracts.py`의 과도기 모델**이다. 계약
-  `contracts/engine_input.py`와 고정 실행 정책 두 곳(`execution.delisting`,
-  `execution.commission`)이 달라 통합 전이며, 이유와 남은 결정은
-  [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md)에 있다.
-  `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 계약 고정값
-  `SPLIT_ADJUSTED`와 맞췄다.
+- 입력·결과·진행 모델 모두 공용 메시지 계약이다(`contracts/engine_input.py`,
+  `contracts/engine_output.py`, `contracts/events.py`). 과도기 입력 모델
+  `engine_contracts.py`는 제거했다 — 계약에 거래비용 모델 `ZERO`를 추가하고
+  ([ADR-0004](../docs/adr/0004-backtest-commission-model.md)) 데모 고정값을 `model=ZERO`로
+  바꾼 결정, `delisting=CAUSE_BASED`를 받고 경고로 남기는 결정
+  ([ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md) "D-상장폐지")으로
+  마지막 두 차이가 해소됐다. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔
+  계약 고정값 `SPLIT_ADJUSTED`와 맞췄다.
+- **계약은 통과하지만 이 엔진이 계산할 수 없는 요청은 실행 전에 거절한다**
+  (`worker/engine_support.py`, `run.error.code=INVALID_REQUEST`). 계약(`contracts/`)은 백엔드와
+  공유하며 "메시지만 보고 판단할 수 있는" 불변식만 보므로, 지원 범위 판단은 엔진 몫이다.
+  거절 대상: 종목 2개 이상, `portfolio.leverage != 1`, `shortSelling=true`,
+  `currency != KRW`, `execution.commission.model != ZERO`, `execution.slippage.bps != 5`,
+  `partialFill=true`, `benchmark` 지정, 그리고 엔진 레지스트리(`strategies/__init__.py`
+  `STRATEGIES`)에 없는 `strategy.strategyId`·`strategy.version`. 여러 항목이 동시에 미지원이면
+  한 메시지에 전부 담는다. 지원하지 않는 값을 조용히 무시하고 `COMPLETED`를 반환하지 않는다 —
+  요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로 저장되기 때문이다.
+- `execution.delisting=CAUSE_BASED`는 거절하지 않고 받되, 사유 분류 미지원을
+  `diagnostics.warnings`에 `DELISTING_CLASSIFICATION_UNSUPPORTED`로 **실행당 1건** 남긴다.
+  이 경고는 특정 거래일이 아니라 실행 전체에 걸리므로 계약 필수 필드인 `date`에 평가 구간의
+  첫 거래일을 넣는다.
+- `run.randomSeed`는 계약상 생략 가능하다. 생략하면 재현성을 위해 고정 기본값 `42`를 쓰고
+  실제 사용값을 진단 산출물 `metadata.randomSeed`에 남긴다.
+  `portfolio.positionSizing.maxPositionPct` 생략은 "제한 없음"(= 1)으로 해석한다.
 - 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
   `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
   `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
@@ -107,7 +124,9 @@ result_json = result.to_json()
   생략은 구성 스냅샷 없음, 빈 배열은 현금 상태를 뜻한다.
 - 데이터/엔진 오류는 `run.status=FAILED`, `run.error={code, message}`로 반환하고
   `performance`·`execution`은 채우지 않는다(메시지에서는 키가 빠진다).
-  잘못된 EngineInput은 ValidationError, 콜백 실패는 CallbackError를 발생시킨다.
+  계약 자체를 위반한 EngineInput은 예외(pydantic `ValidationError`)지만, 계약은 지켰으나 엔진이
+  지원하지 않는 값은 예외가 아니라 `FAILED` + `INVALID_REQUEST` 결과로 돌아온다.
+  콜백 실패는 CallbackError를 발생시킨다.
   Consumer는 결과가 COMPLETED인지 확인해야 하며, 콜백 100%가 저장 성공을 뜻하지 않는다.
 - 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run(...)` 대신
   `NautilusMomentumEngine.run_with_artifacts(...) -> (EngineOutput, RunArtifacts)`를 쓴다.

@@ -11,7 +11,7 @@
 
 | 영역 | 현재 상태 |
 |---|---|
-| EngineInput 검증 | 구현됨 (`engine_contracts.py`. 메시지 계약 입력 모델과는 통합 전) |
+| EngineInput 검증 | 구현됨 (메시지 계약 `contracts/engine_input.py` + 엔진 지원 범위 `engine_support.py`) |
 | Yahoo Finance/CSV 데이터 로딩과 검증 | 구현됨 |
 | Nautilus 이벤트 루프에서 모멘텀 주문·체결 | 구현됨 |
 | 일별 평가, 거래 원장, 성과지표, 진행 콜백 | 구현됨 |
@@ -35,7 +35,9 @@
 | Python 파일 | Java에서 비슷한 역할 | 책임 |
 |---|---|---|
 | `engine_runner.py` | Application Service (외부 공개 진입점) | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
-| `engine_contracts.py` | request record + Bean Validation + Jackson 설정 | 입력 계약과 검증. 계약 `contracts/engine_input.py`와 통합 전인 과도기 파일 |
+| `contracts/engine_input.py` | request record + Bean Validation + Jackson 설정 | 입력 계약(브로커 메시지와 공용)과 값 불변식 검증 |
+| `engine_support.py` | 유스케이스 사전 검증(계약 밖) | 계약은 통과하지만 이 엔진이 계산할 수 없는 요청을 `INVALID_REQUEST`로 거절 |
+| `strategies/__init__.py` | 구현체 레지스트리(`Map<String, Factory>`) | `strategyId` → 지원 `version`·builder. 전략 추가 = 파일 1개 + 한 줄 |
 | `contracts/engine_output.py` | response record | 결과 계약(브로커 메시지와 공용) |
 | `contracts/events.py` | 이벤트 DTO | 진행 콜백이 넘기는 `ProgressPoint`와 이벤트 envelope |
 | `artifacts.py` | 감사 로그 DTO(메시지 아님) | `RunArtifacts`: 주문 원장과 재현성 metadata |
@@ -48,13 +50,14 @@
 
 추천 읽기 순서는 `engine_runner.py` → `market_data.py` →
 `strategies/momentum.py` → `nautilus_engine.py` → `performance.py` → 테스트다.
-`engine_contracts.py`(입력)와 `contracts/engine_output.py`(결과)는 처음부터 전부 읽기보다,
+`contracts/engine_input.py`(입력)와 `contracts/engine_output.py`(결과)는 처음부터 전부 읽기보다,
 흐름에서 만나는 모델을 찾아보는 편이 쉽다.
 
 `contracts/`는 Backend와 공유하는 메시지 계약이고 `artifacts.py`는 브로커로 나가지 않는 로컬
-진단 산출물이다. 결과·진행 모델은 이미 계약으로 통합했지만 입력 모델은 아직
-`engine_contracts.py`에 있다. 어긋난 지점과 남은 결정은 ADR-0003 "메시지 계약과의 정합 상태"에
-있다.
+진단 산출물이다. 입력·결과·진행 모델 모두 계약으로 통합했다(과도기 입력 모델
+`engine_contracts.py`는 삭제). 계약은 이 엔진이 계산할 수 없는 값도 허용하므로 — 계약은
+수신자가 누구든 답이 같은 불변식만 본다 — 엔진 지원 범위 판단은 `engine_support.py`가 맡는다.
+경위는 ADR-0003 "메시지 계약과의 정합 상태"에 있다.
 
 ## 3. 전체 호출 흐름
 
@@ -110,8 +113,8 @@ engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이
 | `with pytest.raises(...)` | `assertThrows(...)` |
 | `prices.loc[...]` | pandas 테이블에서 조건에 맞는 행 선택 |
 
-Python 내부 필드는 `snake_case`, 외부 JSON은 `camelCase`다. 입력 쪽 `engine_contracts.Contract`와
-메시지 쪽 `contracts.base.ContractModel`의 Pydantic 설정이 Jackson의 naming strategy처럼 양쪽을
+Python 내부 필드는 `snake_case`, 외부 JSON은 `camelCase`다. 계약 모델의 공통 베이스
+`contracts.base.ContractModel`의 Pydantic 설정이 Jackson의 naming strategy처럼 양쪽을
 변환한다. 숫자를 JSON decimal 문자열로 내보내는 것과, 값 없는 키를 아예 생략하는
 `ContractModel.to_json()`도 계약 모델이 담당한다.
 
@@ -189,7 +192,9 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 
 | 하고 싶은 변경 | 먼저 볼 곳 | 함께 확인할 테스트 |
 |---|---|---|
-| 입력 필드 변경 | `engine_contracts.py`(현재 입력) + 계약 `contracts/engine_input.py` | JSON round-trip 테스트, 계약 픽스처 테스트 |
+| 입력 필드 변경 | 계약 `contracts/engine_input.py` (픽스처 → 백엔드 `port/message` → 계약 순서) | 계약 픽스처 테스트, JSON round-trip 테스트, 백엔드 `BacktestMessageRoundTripTest` |
+| 엔진 지원 범위 변경 | `engine_support.py` (계약이 아니라 여기) | `test_engine_support.py` |
+| 전략 추가 | `strategies/{전략}.py` + `strategies/__init__.py` 레지스트리 + `contracts/strategy_params/` | 레지스트리 테스트, 미지원 전략·버전 거절 테스트 |
 | 출력 필드 변경 | `contracts/engine_output.py` | 계약 픽스처 테스트, JSON round-trip 테스트 |
 | 전략 계산 변경 | `strategies/momentum.py` | 미래 데이터 불변 테스트, lookback 경계 테스트 |
 | 체결 시점/슬리피지 변경 | `nautilus_engine.py` | next-open, gap reject, 양방향 가격 테스트 |
@@ -207,7 +212,8 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 | 높음 | 브로커가 문서상 RabbitMQ, 레거시 코드상 Kafka로 불일치 | 하나를 결정하고 설정·의존성·Consumer·문서를 한 티켓에서 정리 |
 | 높음 | 새 엔진이 운영 Job 흐름과 단절 | 메시지→EngineInput 변환, 상태 전이, 결과 저장, ACK 순서를 구현하고 통합 테스트 |
 | 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 재전달 시 중복을 허용하는 멱등 키/업서트 정책 결정 |
-| 높음 | 입력 모델이 메시지 계약과 별도(`engine_contracts.py`) | 수수료 정책을 결정하고 `delisting`까지 맞춘 뒤 `contracts/engine_input.py`로 통합. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 이미 맞췄다 (ADR-0003) |
+| ~~높음~~ 해소 | ~~입력 모델이 메시지 계약과 별도(`engine_contracts.py`)~~ | **완료 (2026-09-08).** 계약에 `ZERO` 수수료 모델을 추가(ADR-0004)하고 `delisting=CAUSE_BASED`를 경고로 받아(ADR-0003) `contracts/engine_input.py`로 통합, 과도기 파일 삭제. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 먼저 맞췄다 |
+| 중간 | 키움 요율표(`commission.model=BROKER`) 미구현 | 알고리즘 20개+ 비교에 착수할 때 엔진에 구현하고 `engine_support.py`의 거절을 제거 (ADR-0004 D3). 그 전에 순위를 근거로 의사결정하지 않는다 |
 | 중간 | yfinance 데이터가 수정되거나 결측될 수 있음 | 원시 데이터 스냅샷과 dataset version을 보존하는 공급자 도입 |
 | 중간 | native 원장과 출력 원장을 함께 유지 | 새 주문 유형마다 reconciliation 테스트 추가 또는 단일 원장 변환 구조 재검토 |
 | 낮음 | 실제 KRX 틱·유동성·정지·상폐를 모델링하지 않음 | DEMO 범위를 벗어날 때 별도 시장 모델로 구현 |

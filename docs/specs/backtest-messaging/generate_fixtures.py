@@ -268,7 +268,8 @@ engine_input = {
         "signalTiming": "BAR_CLOSE",
         "executionTiming": "NEXT_BAR_OPEN",
         "orderTypes": ["MARKET"],
-        "commission": {"model": "BROKER", "broker": "KIWOOM", "version": "2026-09"},
+        # 데모 단계 고정값은 ZERO (ADR-0004 D2). model=BROKER는 계약에 남아 있고 broker 필수다.
+        "commission": {"model": "ZERO"},
         "slippage": {"model": "FIXED_BPS", "bps": 5},
         "partialFill": False,
         "liquidity": {"model": "UNLIMITED"},

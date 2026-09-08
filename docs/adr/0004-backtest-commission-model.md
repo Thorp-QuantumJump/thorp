@@ -90,28 +90,33 @@ MVP v0.1.1은 알고리즘 1개를 고정 파라미터로 돌리는 단계이므
 나머지 둘은 계약 변경 없이 코드로 처리할 수 있다 — `adjustment`는 공급자를
 yfinance `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED` 의미에 맞추고(배당 재투자가 빠져 데모
 수익률 숫자가 낮아진다), `delisting`은 `CAUSE_BASED` 요청을 받되 미지원 사실을
-`diagnostics.warnings`에 남긴다. `adjustment`는 적용을 마쳤고(ADR-0003 "A-보정방식"),
-`delisting`은 아직 적용하지 않았다.
+`diagnostics.warnings`에 남긴다. **둘 다 적용을 마쳤다** — `adjustment`는 ADR-0003 "A-보정방식",
+`delisting`은 ADR-0003 "D-상장폐지"(2026-09-08). 입력 계약 통합도 함께 끝났다.
 
-### 다음 MR에서 함께 고칠 것
+### 반영 완료 (2026-09-08)
 
-거래비용 고정값은 현재 backend와 worker 양쪽에 각각 박혀 있다. 다음 작업에서 하나로 합친다.
-계약 스키마를 바꾸므로 **픽스처 → 백엔드 → 워커 순서로 같은 MR에서** 고친다(§규약).
+거래비용 고정값이 backend와 worker 양쪽에 각각 박혀 있던 것을 하나로 합쳤다. 계약 스키마를
+바꾸므로 **픽스처 → 백엔드 → 워커 순서로 같은 MR에서** 고쳤다(§규약).
 
-| 위치 | 현재 | 변경 |
-|---|---|---|
-| `docs/specs/backtest-messaging/README.md` §4.1 | 고정값 표에 `BROKER/KIWOOM/2026-09` | `ZERO` |
-| `docs/specs/backtest-messaging/examples/engine-input.json` | `{model: BROKER, broker: KIWOOM, version: "2026-09"}` | `{model: ZERO}` |
-| `generate_fixtures.py` | 위 값 생성 | 같이 수정 |
-| `.../port/message/CommissionModel.java` | `enum { BROKER }` | `enum { BROKER, ZERO }` |
-| `worker/src/worker/contracts/engine_input.py` | `CommissionModel` StrEnum 1개 값 | `ZERO` 추가. `model=BROKER`일 때 `broker` 필수 검증은 유지 |
-| `worker/src/worker/engine_contracts.py` | 입력 모델 한 벌 전체 | **삭제.** 엔진이 계약 입력 모델을 직접 받는다 |
+| 위치 | 이전 | 변경 | 상태 |
+|---|---|---|---|
+| `docs/specs/backtest-messaging/README.md` §4.1 | 고정값 표에 `BROKER/KIWOOM/2026-09` | `ZERO` | ✅ 완료 |
+| `docs/specs/backtest-messaging/examples/engine-input.json` | `{model: BROKER, broker: KIWOOM, version: "2026-09"}` | `{model: ZERO}` | ✅ 완료 (생성기로 재생성) |
+| `generate_fixtures.py` | 위 값 생성 | 같이 수정 | ✅ 완료 |
+| `.../port/message/CommissionModel.java` | `enum { BROKER }` | `enum { BROKER, ZERO }` | ✅ 완료 |
+| `worker/src/worker/contracts/engine_input.py` | `CommissionModel` StrEnum 1개 값 | `ZERO` 추가. `model=BROKER`일 때 `broker` 필수 검증은 유지 | ✅ 완료 (검증 유지) |
+| `worker/src/worker/engine_contracts.py` | 입력 모델 한 벌 전체 | **삭제.** 엔진이 계약 입력 모델을 직접 받는다 | ✅ 완료 |
 
 백엔드에는 `EngineInput`을 조립하는 코드가 아직 없다(발행자 미구현). 고정값은 단일 멤버 enum과
-README 표에만 있으므로, 백엔드 쪽 작업은 enum 값 추가와 문서·픽스처 수정뿐이다. 조립 로직은
+README 표에만 있었으므로, 백엔드 쪽 작업은 enum 값 추가와 문서·픽스처 수정뿐이었다. 조립 로직은
 발행 구현 티켓에서 이 결정을 반영해 작성한다.
 
-입력 모델을 옮길 때 함께 처리할 부수 차이는 ADR-0003 "함께 정리해야 하는 부수 차이"에 있다.
+`ZERO`를 추가하면서 `model=BROKER`가 계약 검증을 새로 통과하게 되었으므로, 요율표가 없는 동안
+엔진이 `BROKER` 요청을 `INVALID_REQUEST`로 거절한다(`worker/src/worker/engine_support.py`).
+수수료 0으로 계산한 숫자를 요율표 결과로 저장하지 않기 위한 것으로, 이 배경 §영향 규모 실측의
+직접적인 대응이다. 요율표를 구현하면(D3) 이 거절만 제거한다.
+
+입력 모델을 옮기면서 함께 처리한 부수 차이는 ADR-0003 "함께 정리한 부수 차이"에 있다.
 
 ## 이 결정에서 다루지 않는 것
 
@@ -119,5 +124,6 @@ README 표에만 있으므로, 백엔드 쪽 작업은 enum 값 추가와 문서
   수수료 포함/제외를 비교하는 기능은 의미가 있지만 MVP 범위를 넘는다. `ZERO`를 정식 모델로
   둔 덕에 나중에 열 수 있다.
 - **슬리피지·유동성 모델 변경.** `FIXED_BPS` 5bps와 `UNLIMITED`는 그대로다.
-- **`delisting` 전환 시점.** 위 "결과"에 방법만 적었고 적용 시점은 정하지 않았다.
-  (`adjustment`는 전환을 마쳤다 — ADR-0003 "A-보정방식".)
+- **`delisting` 전환 시점.** 위 "결과"에 방법만 적었고 적용 시점은 정하지 않았다 —
+  결과적으로 입력 계약 통합과 같은 MR에서 적용했다(ADR-0003 "D-상장폐지").
+  (`adjustment`는 그보다 먼저 전환을 마쳤다 — ADR-0003 "A-보정방식".)

@@ -28,12 +28,11 @@
     "signalTiming": "BAR_CLOSE",
     "executionTiming": "NEXT_BAR_OPEN",
     "orderTypes": ["MARKET"],
-    "commission": {"model": "ZERO", "version": "DEMO_ZERO_V1", "taxRate": "0"},
+    "commission": {"model": "ZERO"},
     "slippage": {"model": "FIXED_BPS", "bps": 5},
     "partialFill": false,
     "liquidity": {"model": "UNLIMITED"},
     "tradingHalt": "WAIT_UNTIL_RESUME",
-    "delisting": "UNSUPPORTED"
-  },
-  "benchmark": null
+    "delisting": "CAUSE_BASED"
+  }
 }

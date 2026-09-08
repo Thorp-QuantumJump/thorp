@@ -1,6 +1,6 @@
 # ADR-0003: Nautilus 모멘텀 엔진의 경계와 체결 모델
 
-- 상태: 구현됨 (2026-09-08, 운영 Consumer 연동·입력 계약 통합 제외)
+- 상태: 구현됨 (2026-09-08, 입력 계약 통합 완료. 운영 Consumer 연동 제외)
 - 대상: `worker/`
 - 관련 이슈: Jira 101
 
@@ -123,22 +123,41 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 (`on_progress(ProgressPoint, completed_trading_days, total_trading_days)`, 거래일 1개 단위)이고,
 20거래일 묶음 발행은 실행 Consumer 책임이다.
 
-### 아직 통합하지 않은 것: 입력 모델
+### 해소됨: 입력 모델도 계약을 직접 쓴다 (2026-09-08)
 
-입력 모델만 `worker/src/worker/engine_contracts.py`에 남아 있다. 계약이 정한 고정 실행 정책
-(`docs/specs/backtest-messaging/README.md` §4.1)과 이 엔진이 실제로 지원하는 값이 아직 두 곳
-다르기 때문이다. 세 곳이었고 `marketData.adjustment`는 해소했다.
+**입력 모델 통합을 마쳤다.** 엔진은 이제 `worker.contracts.engine_input.EngineInput`을 직접
+받고, 과도기 입력 모델 `worker/src/worker/engine_contracts.py`는 **삭제했다.**
 
-| 경로 | 계약 고정값 | 엔진 지원값 | 현재 판단 |
+| 경로 | 계약 고정값 | 엔진 지원값 | 결과 |
 |---|---|---|---|
-| `marketData.adjustment` | `SPLIT_ADJUSTED` | `SPLIT_ADJUSTED` | **해소됨 (아래 A-보정방식)**: 공급자를 `auto_adjust=False`로 바꿔 적용 완료 |
-| `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | **결정됨 (아래 D-상장폐지)**: 요청을 받고 미지원 경고를 남긴다 |
-| `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | **결정됨 ([ADR-0004](0004-backtest-commission-model.md))**: 계약에 `ZERO` 추가. 반영은 다음 작업 |
+| `marketData.adjustment` | `SPLIT_ADJUSTED` | `SPLIT_ADJUSTED` | **해소 (아래 A-보정방식)**: 공급자를 `auto_adjust=False`로 바꿔 적용 완료 |
+| `execution.delisting` | `CAUSE_BASED` | 분류 미지원 | **해소 (아래 D-상장폐지)**: 요청을 받고 `DELISTING_CLASSIFICATION_UNSUPPORTED` 경고를 실행당 1건 남긴다 (`engine_runner._run_level_warnings`) |
+| `execution.commission` | `model=ZERO` | 수수료·세금 0 | **해소 ([ADR-0004](0004-backtest-commission-model.md))**: 계약에 `ZERO`를 추가하고 §4.1 고정값을 `ZERO`로 바꿨다. `BROKER` 요청은 엔진이 `INVALID_REQUEST`로 거절한다 |
 
-계약 쪽 세 값은 `worker/src/worker/contracts/engine_input.py`의 `Adjustment`, `DelistingPolicy`,
-`CommissionModel` enum이 각각 하나씩만 허용한다. `Adjustment`는 이제 엔진과 같은 값이지만,
-나머지 두 곳 때문에 입력 모델을 지금 그대로 갈아끼우면 현재 데모 입력
-(`worker/examples/momentum-demo-input.json`)이 여전히 역직렬화 단계에서 거절된다.
+`Adjustment`·`DelistingPolicy` enum은 그대로 하나씩만 허용하고, `CommissionModel`은
+`BROKER`·`ZERO` 둘이 된다.
+
+**대신 생긴 것: 엔진 지원 범위 검증(`worker/src/worker/engine_support.py`).** 삭제한 과도기
+모델은 `Literal` 타입으로 미지원 값을 자동 거절해 왔다. 계약 모델은 그 값들을 전부 통과시키므로
+(계약 `engine_input.py` docstring: "엔진이 실제로 지원하는 값의 범위는 여기서 다루지 않는다 —
+엔진 쪽 책임이다") 같은 거절을 엔진 쪽에 새로 만들었다. 종목 2개 이상, `leverage != 1`,
+`shortSelling`, `currency != KRW`, `commission.model != ZERO`, `slippage.bps != 5`,
+`partialFill`, `benchmark` 지정이 대상이고, 예외가 아니라
+`EngineOutput(run.status=FAILED, run.error.code=INVALID_REQUEST)`로 반환한다(§6 "오류와 콜백
+의미"의 입력 계약 오류와 구분된다 — 계약 자체를 위반한 메시지는 여전히 pydantic 예외다).
+
+**이 검증을 `contracts/`에 두지 않는다.** `contracts/`는 백엔드와 공유하는 계약이고, 계약
+픽스처 `docs/specs/backtest-messaging/examples/engine-input.json`(MA_CROSSOVER·2종목·benchmark
+있음)은 구조 검증용이라 계약 검증을 계속 통과해야 한다(백엔드 `BacktestMessageRoundTripTest`와
+워커 `tests/test_contracts.py`가 같은 파일을 읽는다). 엔진 실행 입력은
+`worker/examples/momentum-demo-input.json`이다.
+
+**전략 지원 범위는 하드코딩하지 않고 레지스트리로 둔다.** `worker/strategies/__init__.py`의
+`STRATEGIES`가 `strategyId` → (지원 `version` 집합, `typed_parameters`로 전략을 만드는 builder)를
+선언한다. 계약 쪽 `contracts/strategy_params/STRATEGY_PARAMETERS`와 대칭이며, 미지원 전략·버전
+거절은 "레지스트리에 없음"으로 자동 처리된다. v0.1.2에서 알고리즘이 20개 이상 늘어날 때
+거절 코드를 전략마다 고치지 않으려는 조치다. 준비 기간(`required_history`)도 레지스트리가
+선언한다 — `Strategy` ABC는 `generate_signals`만 요구한다(위 3번).
 
 ### A-보정방식. 공급자를 `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED`에 맞췄다
 
@@ -182,7 +201,7 @@ OHLCV만 골라 쓰므로 검증에 영향이 없다.)
   않는다. 미지원을 이유로 실행을 거부하면 아무 영향도 없는 상황에서 데모가 막힌다.
   반대로 경고 없이 조용히 통과시키면 나중에 다종목으로 넓혔을 때 생존 편향을 눈치채지 못한다.
 
-**구현 시 정할 것 두 가지를 미리 적어 둔다.**
+**구현했다 (2026-09-08).** 정한 대로 두 가지가 이렇게 되었다.
 
 1. **경고 코드**: `DELISTING_CLASSIFICATION_UNSUPPORTED`. `warnings[].code`는 개방 집합이다
    (계약 §4.3, 기존 예 `TRADING_HALTED`·`INSUFFICIENT_CASH`).
@@ -191,29 +210,40 @@ OHLCV만 골라 쓰므로 검증에 영향이 없다.)
    (`INSUFFICIENT_CASH`·`ORDER_REJECTED`·`INSUFFICIENT_HISTORY`·`NO_NEXT_TRADING_DAY`)는 모두
    실제 거래일을 갖기 때문에 실행 단위 경고는 이번이 처음이다. 실행마다 1건만 남긴다.
 
+구현 위치는 `worker/src/worker/engine_runner.py`의 `_run_level_warnings`이며, 실행 단위 경고를
+거래일 단위 경고(`MomentumExecution.warnings`) 앞에 붙인다. `DelistingPolicy` enum은 계약
+변경 없이 `CAUSE_BASED` 하나로 그대로 두었다. 실패 결과에는 붙이지 않는다 — 평가 구간이 없으면
+경고에 넣을 거래일도 없다.
+
 **이 결정이 유효하지 않게 되는 시점**: 유니버스를 다종목으로 넓히거나, 상장폐지된 종목이 포함될
 수 있는 기간을 다루게 되면 경고로는 부족하다. 그때는 공급자가 폐지 사유를 제공해야 하고
 (KRX 데이터 파이프라인의 책임), 엔진이 사유별 청산을 구현해야 한다.
 
 **`execution.commission`** — 이것만은 경고로 덮을 수 없다. 수수료·세금은 모든 수익률을 바꾸고,
 특히 회전율이 높은 전략을 과대평가하게 만든다. **[ADR-0004](0004-backtest-commission-model.md)에서
-결정되었다** — 계약의 `CommissionModel`에 `ZERO`를 정식 모델로 추가하고 데모 단계 고정값을
-`model=ZERO`로 바꾼다. 키움 요율표는 전략 비교 단계에서 별도 티켓으로 구현한다.
-이 결정으로 입력 모델 통합이 가능해졌고, 실제 반영은 다음 작업에서 픽스처 → 백엔드 → 워커
-순서로 함께 한다.
+결정되었고 2026-09-08에 반영했다** — 계약의 `CommissionModel`에 `ZERO`를 정식 모델로 추가하고
+데모 단계 고정값을 `model=ZERO`로 바꿨다(픽스처 → 백엔드 enum → 워커 계약 순서, 같은 MR).
+키움 요율표는 전략 비교 단계에서 별도 티켓으로 구현한다. 그때까지 `model=BROKER` 요청은
+엔진이 `INVALID_REQUEST`로 거절한다 — 수수료 0으로 계산한 숫자를 요율표 결과로 저장하지 않는다.
 
-### 함께 정리해야 하는 부수 차이
+### 함께 정리한 부수 차이 (2026-09-08 완료)
 
-위 세 가지를 결정하고 입력 모델을 옮길 때 같이 처리한다. 셋과 달리 판단이 필요한 항목은 아니다.
+판단이 필요한 항목은 아니었고 입력 모델을 옮기면서 같이 처리했다.
 
-- `marketData.datasetId`: 계약 고정값은 `KRX_DAILY_V1`, 엔진 기본값은 `YFINANCE_DAILY`이다.
-  계약에서 이 필드는 enum이 아니라 문자열이라 역직렬화를 막지는 않는다.
-- 계약 `StrategySpec.parameters`는 `dict[str, Any]` 봉투이고 전략별 검증 결과는
-  `typed_parameters`로 꺼낸다. 지금 엔진은 `request.strategy.parameters.lookback_days`를 직접
-  읽으므로 호출부를 `typed_parameters`로 바꿔야 한다.
-- 엔진 입력 모델은 거의 모든 필드에 기본값이 있어 테스트·데모가 부분 dict를 넘긴다. 계약
-  `EngineInput`은 `run`·`universe`·`marketData`·`strategy`·`portfolio`·`execution`이 모두
-  필수이므로 그 호출부가 전체 필드를 채워야 한다.
+- `marketData.datasetId`: 계약 고정값은 `KRX_DAILY_V1`, 실제 공급자는 yfinance라 데모 입력은
+  `YFINANCE_DAILY`를 쓴다. 계약에서 이 필드는 enum이 아니라 자유 문자열이라 역직렬화를 막지
+  않으므로 **엔진은 이 값을 검증하지 않는다.** 실제 출처는 산출물 `metadata.dataSource`에
+  기록된다. KRX 데이터 연결은 별도 티켓이다.
+- 계약 `StrategySpec.parameters`는 `dict[str, Any]` 봉투이므로 엔진 호출부를
+  `request.strategy.typed_parameters`로 바꿨다(`nautilus_engine.py`, `market_data.py`).
+  전략과 준비 기간 조립은 `strategies/__init__.py` 레지스트리가 맡는다.
+- 계약 `EngineInput`은 6개 섹션이 모두 필수이므로 부분 dict를 넘길 수 없다. `demo.py`는
+  `build_engine_input`으로, 테스트는 `tests/conftest.py`의 `ENGINE_INPUT_BODY`·
+  `engine_input_body()`로 전체 필드를 채운다.
+- 계약이 `T | None`으로 둔 두 필드의 의미를 엔진 쪽에서 정했다.
+  `positionSizing.maxPositionPct` 생략 = 제한 없음(= 1),
+  `run.randomSeed` 생략 = 고정 기본값 `42`를 쓰고 실제 사용값을 `metadata.randomSeed`에 남긴다
+  (`FillModel`에 `None`을 넘기면 실행마다 시드가 달라질 수 있어 재현성이 깨진다).
 
 ## 다루지 않는 것
 

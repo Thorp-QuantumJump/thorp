@@ -1,13 +1,14 @@
 """Data loading, native execution and complete EngineOutput conversion."""
 
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import nautilus_trader
 
 from worker.artifacts import OrderRecord, RunArtifacts
 from worker.contracts.engine import ProgressCallback
+from worker.contracts.engine_input import DelistingPolicy, EngineInput
 from worker.contracts.engine_output import (
     Diagnostics,
     EngineError,
@@ -16,10 +17,42 @@ from worker.contracts.engine_output import (
     RunResult,
     RunStatus,
 )
-from worker.engine_contracts import EngineInput
+from worker.contracts.engine_output import Warning as ContractWarning
+from worker.engine_support import unsupported_reasons
 from worker.market_data import DataProvider, MarketDataError, YFinanceDataProvider, validate_prices
-from worker.nautilus_engine import CallbackError, execute_nautilus
+from worker.nautilus_engine import (
+    SLIPPAGE_BPS,
+    CallbackError,
+    effective_random_seed,
+    execute_nautilus,
+)
 from worker.performance import calculate_performance
+
+
+def _run_level_warnings(request: EngineInput, first_evaluation_day: date) -> list[ContractWarning]:
+    """특정 거래일이 아니라 실행 전체에 걸리는 경고.
+
+    계약 ``Warning.date`` 는 필수이므로 **평가 구간의 첫 거래일**을 쓴다(ADR-0003 D-상장폐지).
+    실행마다 1건씩만 남긴다.
+    """
+    warnings: list[ContractWarning] = []
+    if request.execution.delisting is DelistingPolicy.CAUSE_BASED:
+        # 요청을 거부하지 않고 받되 미지원 사실을 남긴다. 현재 공급자가 폐지 사유를 주지
+        # 않으므로 사유별 청산을 구현할 수 없고, 조용히 통과시키면 다종목으로 넓혔을 때
+        # 생존 편향을 눈치채지 못한다 (ADR-0003 D-상장폐지).
+        warnings.append(
+            ContractWarning(
+                date=first_evaluation_day,
+                instrument_id=request.universe.instrument_ids[0],
+                code="DELISTING_CLASSIFICATION_UNSUPPORTED",
+                message=(
+                    "execution.delisting=CAUSE_BASED was accepted, but this engine does not "
+                    "classify delisting causes; the data provider supplies no cause and sessions "
+                    "without data are skipped. Results may carry survivorship bias."
+                ),
+            )
+        )
+    return warnings
 
 
 class NautilusMomentumEngine:
@@ -65,11 +98,22 @@ class NautilusMomentumEngine:
             "input": request.model_dump(mode="json", by_alias=True),
             "commissionRate": "0",
             "taxRate": "0",
-            "slippageBps": 5,
+            "slippageBps": SLIPPAGE_BPS,
+            # 계약은 run.randomSeed 미지정을 허용하므로 실제로 쓴 값을 남긴다.
+            "randomSeed": effective_random_seed(request.run),
             "metricsVersion": "DAILY_252_DDOF1_RF0_V1",
             "simulationCurrency": "KRW_SIM (1:1 KRW, precision 8)",
         }
         orders: list[OrderRecord] = []
+        # 계약은 통과했지만 이 엔진이 계산할 수 없는 값은 실행 전에 거절한다. 조용히 무시하고
+        # COMPLETED를 반환하면 요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로
+        # 저장된다. 예외가 아니라 계약 위치(run.error)에 담아 반환한다 (README §4.3).
+        reasons = unsupported_reasons(request)
+        if reasons:
+            return (
+                self._rejected(request, started, "INVALID_REQUEST", "; ".join(reasons)),
+                RunArtifacts(orders=orders, metadata=metadata),
+            )
         try:
             dataset = self.data_provider.load(request)
             if dataset.instrument_id != request.universe.instrument_ids[0]:
@@ -120,27 +164,39 @@ class NautilusMomentumEngine:
                     total_commission=Decimal("0"),
                     total_slippage_cost=slip,
                 ),
-                diagnostics=Diagnostics(warnings=execution.warnings),
+                diagnostics=Diagnostics(
+                    warnings=_run_level_warnings(request, evaluation.index[0].date())
+                    + execution.warnings
+                ),
             )
         except CallbackError:
             raise
         except Exception as exc:
             # 실패해도 존재하지 않는 성과를 0으로 채우지 않는다 (계약 §4.3).
-            output = EngineOutput(
-                run=RunResult(
-                    backtest_id=request.run.backtest_id,
-                    status=RunStatus.FAILED,
-                    started_at=started,
-                    finished_at=datetime.now(UTC),
-                    error=EngineError(
-                        code="NO_MARKET_DATA"
-                        if isinstance(exc, MarketDataError)
-                        else "ENGINE_ERROR",
-                        message=f"{type(exc).__name__}: {exc}",
-                    ),
-                ),
-                portfolio_series=[],
-                trades=[],
-                diagnostics=Diagnostics(warnings=[]),
+            output = self._rejected(
+                request,
+                started,
+                "NO_MARKET_DATA" if isinstance(exc, MarketDataError) else "ENGINE_ERROR",
+                f"{type(exc).__name__}: {exc}",
             )
         return output, RunArtifacts(orders=orders, metadata=metadata)
+
+    @staticmethod
+    def _rejected(request: EngineInput, started: datetime, code: str, message: str) -> EngineOutput:
+        """실패는 예외가 아니라 ``run.error`` 로 반환한다 (계약 §4.3).
+
+        존재하지 않는 성과를 0으로 채우지 않으므로 ``performance``·``execution`` 은 채우지
+        않는다 (직렬화에서 키가 빠진다).
+        """
+        return EngineOutput(
+            run=RunResult(
+                backtest_id=request.run.backtest_id,
+                status=RunStatus.FAILED,
+                started_at=started,
+                finished_at=datetime.now(UTC),
+                error=EngineError(code=code, message=message),
+            ),
+            portfolio_series=[],
+            trades=[],
+            diagnostics=Diagnostics(warnings=[]),
+        )

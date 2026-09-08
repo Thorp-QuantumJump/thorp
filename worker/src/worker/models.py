@@ -1,7 +1,7 @@
 """옛 Kafka 스캐폴딩의 Job/Result 계약.
 
 `worker.main`만 참조하는 4필드 모델이다. 새 코드는 이 모듈이 아니라
-`worker.contracts/`(메시지 계약)와 `worker.engine_contracts`(EngineInput)를 직접 쓴다.
+`worker.contracts/`(메시지 계약, `EngineInput` 포함)를 직접 쓴다.
 워커 런타임을 pika로 교체할 때 `contracts/`로 대체·삭제한다.
 """
 

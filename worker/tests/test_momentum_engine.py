@@ -6,11 +6,12 @@ from typing import Any
 
 import pandas as pd
 import pytest
+from conftest import engine_input_body
 
 from worker.contracts.engine import BacktestEngine
+from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import PortfolioSnapshot, RunStatus, TradeStatus
 from worker.contracts.events import ProgressPoint
-from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider, MarketDataError, MarketDataset, validate_prices
 from worker.nautilus_engine import CallbackError
@@ -19,13 +20,8 @@ FIXTURE = Path(__file__).parents[1] / "examples" / "momentum_fixture.csv"
 
 
 def request(**overrides: Any) -> EngineInput:
-    values = {
-        "run": {"backtestId": "TEST", "start": "2025-01-06", "end": "2025-01-14"},
-        "strategy": {"parameters": {"lookbackDays": 2}},
-        "portfolio": {"initialCash": "1000"},
-    }
-    values.update(overrides)
-    return EngineInput.model_validate(values)
+    """회귀 기준 실행 조건. 전체 본문은 ``conftest.ENGINE_INPUT_BODY``에 있다."""
+    return EngineInput.model_validate(engine_input_body(**overrides))
 
 
 class ProgressRecorder:
@@ -51,6 +47,8 @@ def test_native_next_open_round_trips_and_callback() -> None:
     assert all(total == 7 for _, _, total in recorder.calls)
     assert all(isinstance(point, ProgressPoint) for point, _, _ in recorder.calls)
     assert artifacts.metadata["warmupTradingDays"] == 2
+    # 계약이 randomSeed 미지정을 허용하므로 실제로 쓴 시드를 산출물에 남긴다.
+    assert artifacts.metadata["randomSeed"] == 42
     orders = artifacts.orders
     assert len(orders) == 3
     assert output.execution.order_count == 3
