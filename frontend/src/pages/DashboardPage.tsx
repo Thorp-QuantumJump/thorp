@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DashboardIndicatorStrip } from '@/components/dashboard/DashboardIndicatorStrip'
 import { MarketStatusSummary } from '@/components/dashboard/MarketStatusSummary'
+import { MarketDataStatus } from '@/components/market/MarketDataStatus'
 import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { marketMock } from '@/data/marketMock'
@@ -11,7 +12,13 @@ import styles from './DashboardPage.module.css'
 /** 시장 요약 → 지표 확인 → 추천 전략 순서로 빠르게 살펴보는 대시보드다. */
 export function DashboardPage() {
   const [indicatorGroup, setIndicatorGroup] = useState<'market' | 'macro'>('market')
-  const { marketIndicators, macroIndicators } = useMarketIndicators(
+  const {
+    marketIndicators,
+    macroIndicators,
+    failedCodes,
+    isRefreshing,
+    refetch,
+  } = useMarketIndicators(
     marketMock.marketIndicators,
     marketMock.macroIndicators,
   )
@@ -20,6 +27,11 @@ export function DashboardPage() {
     <div className={`${layout.page} ${styles.page}`}>
       <AppHeader />
       <main className={styles.container}>
+        <MarketDataStatus
+          failedCount={failedCodes.length}
+          isRefreshing={isRefreshing}
+          onRetry={() => void refetch()}
+        />
         <MarketStatusSummary regime={marketMock.regime} />
 
         <DashboardIndicatorStrip

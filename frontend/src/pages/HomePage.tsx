@@ -1,27 +1,39 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DataFreshnessPanel } from '@/components/home/DataFreshnessPanel'
 import { MacroIndicatorGrid } from '@/components/market/MacroIndicatorGrid'
 import { MarketRegimeHero } from '@/components/home/MarketRegimeHero'
 import { MarketSnapshot } from '@/components/market/MarketSnapshot'
+import { MarketDataStatus } from '@/components/market/MarketDataStatus'
 import { SimilarMarketPanel } from '@/components/home/SimilarMarketPanel'
 import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { marketMock } from '@/data/marketMock'
 import { useMarketIndicators } from '@/hooks/useMarketIndicators'
+import { withCurrentIndicatorValues } from '@/utils/marketComparison'
 import layout from '@/styles/MarketLayout.module.css'
 import styles from './HomePage.module.css'
 
 /** 기존 시장 분석 화면을 홈으로 제공하고 상세 지표·차트·유사 시장 탐색을 유지한다. */
 export function HomePage() {
   const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)
-  const { marketIndicators, macroIndicators } = useMarketIndicators(
+  const {
+    marketIndicators,
+    macroIndicators,
+    failedCodes,
+    isRefreshing,
+    refetch,
+  } = useMarketIndicators(
     marketMock.marketIndicators,
     marketMock.macroIndicators,
   )
-  const allComparisonIndicators = [
-    ...marketMock.marketIndicators,
-    ...marketMock.macroIndicators,
-  ]
+  const allComparisonIndicators = useMemo(
+    () => [...marketIndicators, ...macroIndicators],
+    [macroIndicators, marketIndicators],
+  )
+  const comparisonPeriod = useMemo(
+    () => withCurrentIndicatorValues(marketMock.similarPeriod, allComparisonIndicators),
+    [allComparisonIndicators],
+  )
 
   return (
     <div className={layout.page}>
@@ -36,6 +48,11 @@ export function HomePage() {
 
         <div className={styles.contentBoundary}>
           <div className={styles.contentFlow}>
+            <MarketDataStatus
+              failedCount={failedCodes.length}
+              isRefreshing={isRefreshing}
+              onRetry={() => void refetch()}
+            />
             <MarketSnapshot
               indicators={marketIndicators}
               activeIndicatorId={activeIndicatorId}
@@ -47,7 +64,7 @@ export function HomePage() {
               onActiveChange={setActiveIndicatorId}
             />
             <SimilarMarketPanel
-              period={marketMock.similarPeriod}
+              period={comparisonPeriod}
               indicators={allComparisonIndicators}
             />
             <StrategyRecommendationSection strategies={marketMock.strategyRecommendations} />

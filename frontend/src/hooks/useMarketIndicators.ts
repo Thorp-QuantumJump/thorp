@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchLatestMarketIndicators } from '@/api/market'
 import type { Indicator } from '@/types/market'
 import type {
@@ -20,9 +20,9 @@ const requestCodeByUiCode: Record<string, MarketIndicatorCode> = {
   COINCIDENT_CYCLE: 'COINCIDENT_CYCLE',
   LEADING_CYCLE: 'LEADING_CYCLE',
   ESI_CYCLE: 'ESI_CYCLE',
-  CORE_CPI: 'CORE_CPI_YOY',
-  EXPORTS_YOY: 'EXPORTS_USD',
-  M2_YOY: 'M2',
+  CORE_CPI_YOY: 'CORE_CPI_YOY',
+  EXPORTS_USD: 'EXPORTS_USD',
+  M2: 'M2',
 }
 
 const displayNameOverrides: Partial<Record<MarketIndicatorCode, string>> = {
@@ -31,8 +31,8 @@ const displayNameOverrides: Partial<Record<MarketIndicatorCode, string>> = {
 }
 
 /** 라우트 전환 시 같은 요청을 반복하지 않도록 짧은 브라우저 메모리 캐시를 공유한다. */
-function loadLatestIndicators() {
-  if (cachedBatch && Date.now() - cachedBatch.storedAt < frontendCacheTtl) {
+function loadLatestIndicators(force = false) {
+  if (!force && cachedBatch && Date.now() - cachedBatch.storedAt < frontendCacheTtl) {
     return Promise.resolve(cachedBatch.value)
   }
 
@@ -56,7 +56,6 @@ function applyLatestValue(
 ): Indicator {
   return {
     ...indicator,
-    code: response.code,
     name: displayNameOverrides[response.code] ?? indicator.name,
     value: response.value,
     unit: response.unit,
@@ -108,6 +107,7 @@ export function useMarketIndicators(
     ? cachedBatch.value
     : null
   const [batch, setBatch] = useState<MarketIndicatorBatch | null>(validCache)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -121,10 +121,22 @@ export function useMarketIndicators(
     }
   }, [])
 
+  const refetch = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      const value = await loadLatestIndicators(true)
+      setBatch(value)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [])
+
   return useMemo(() => ({
     marketIndicators: mergeIndicators(marketIndicators, batch),
     macroIndicators: mergeIndicators(macroIndicators, batch),
     isLoading: batch === null,
+    isRefreshing,
     failedCodes: batch ? Object.keys(batch.errors) as MarketIndicatorCode[] : [],
-  }), [batch, macroIndicators, marketIndicators])
+    refetch,
+  }), [batch, isRefreshing, macroIndicators, marketIndicators, refetch])
 }
