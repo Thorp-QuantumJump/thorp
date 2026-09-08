@@ -1,0 +1,188 @@
+.details {
+  overflow: hidden;
+  border: 1px solid var(--market-line);
+  border-radius: 17px;
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
+}
+
+.details summary,
+.details summary > span,
+.sourceCard > div,
+.stabilityCard > div,
+.fciNote {
+  display: flex;
+  align-items: center;
+}
+
+.details summary {
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 64px;
+  padding: 0 20px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.details summary:focus-visible {
+  outline: 3px solid rgb(22 143 138 / 20%);
+  outline-offset: -3px;
+}
+
+.details summary > span {
+  gap: 8px;
+  color: #43515d;
+  font-size: 0.8rem;
+  font-weight: 680;
+}
+
+.details summary > span svg {
+  color: var(--market-brand);
+}
+
+.details summary > small {
+  color: #929ca5;
+  font-size: 0.68rem;
+}
+
+.content {
+  padding: 20px;
+  border-top: 1px solid var(--market-line-soft);
+}
+
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.sourceCard,
+.stabilityCard,
+.fciNote {
+  min-width: 0;
+  padding: 15px;
+  border-radius: 13px;
+  background: #f7f9f9;
+}
+
+.sourceCard > div,
+.stabilityCard > div {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sourceCard strong,
+.stabilityCard > div > span {
+  color: #465460;
+  font-size: 0.73rem;
+  font-weight: 680;
+}
+
+.sourceCard > div > span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e6f3f2;
+  color: var(--market-brand);
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+.sourceCard > div > span[data-status='review-needed'] {
+  background: #fff2e7;
+  color: #b16b26;
+}
+
+.sourceCard p {
+  margin: 13px 0 6px;
+  color: #66747f;
+  font-size: 0.69rem;
+}
+
+.sourceCard > small,
+.stabilityCard > small {
+  color: #929ca4;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.stabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 0.65fr)) minmax(280px, 1fr);
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.stabilityCard > div small {
+  color: #9aa3aa;
+  font-size: 0.6rem;
+}
+
+.stabilityCard > strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--market-ink);
+  font-size: 1.08rem;
+}
+
+.stabilityCard > p {
+  margin: 2px 0 8px;
+  color: var(--market-neutral);
+  font-size: 0.66rem;
+  font-weight: 680;
+}
+
+.stabilityCard > p[data-tone='warning'] {
+  color: var(--market-warning);
+}
+
+.fciNote {
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #d8e5e3;
+  background: #eff6f5;
+  color: var(--market-ink);
+}
+
+.fciNote svg {
+  flex: 0 0 auto;
+  color: var(--market-brand);
+}
+
+.fciNote p {
+  margin: 0;
+  color: var(--market-copy);
+  font-size: 0.68rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .sourceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stabilityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fciNote {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .details summary {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding: 14px 18px;
+  }
+
+  .sourceGrid,
+  .stabilityGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fciNote {
+    grid-column: auto;
+  }
+}

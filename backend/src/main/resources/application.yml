@@ -9,10 +9,14 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}
     username: ${SPRING_DATASOURCE_USERNAME:thorp}
     password: ${SPRING_DATASOURCE_PASSWORD:thorp}
+  profiles:
+    default: local
 
+  # 스키마 관리 정책은 프로필별로 갈린다.
+  #  - local: Hibernate ddl-auto=update (Flyway 비활성)
+  #  - prod : Flyway가 마이그레이션, Hibernate는 ddl-auto=validate로 검증만
+  # 공통에는 ddl-auto를 두지 않는다. 여기에 값이 있으면 운영에서도 Hibernate가 스키마를 건드린다.
   jpa:
-    hibernate:
-      ddl-auto: update   # TODO: 스키마 안정화 후 validate + 마이그레이션 도구(Flyway)로 전환
     open-in-view: false
     properties:
       hibernate:
@@ -26,11 +30,13 @@ spring:
     username: ${SPRING_RABBITMQ_USERNAME:thorp}
     password: ${SPRING_RABBITMQ_PASSWORD:thorp}
     virtual-host: ${SPRING_RABBITMQ_VHOST:/}
+    # 발행은 Job 생성 트랜잭션 안에서 일어난다. 브로커가 응답하지 않을 때 클라이언트 기본값(60초)만큼 기다리면
+    # 그동안 DB 커넥션을 잡고 있게 되므로 짧게 끊는다. 발행이 트랜잭션 밖(outbox relay)으로 나가면 재검토한다.
+    connection-timeout: 5s
 
   # Job 전달에는 사용하지 않는다. 브로커는 RabbitMQ(spring.rabbitmq). Kafka는 설치만 해둔 상태이며
   # 전환·병행은 실측 후 결정한다 (루트 CLAUDE.md). 브로커 없이도 지연 연결이라 기동에 영향 없음.
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

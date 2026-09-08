@@ -1,56 +1,63 @@
-import { ArrowUpRight } from 'lucide-react'
-import { motion } from 'motion/react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { DataFreshnessPanel } from '@/components/home/DataFreshnessPanel'
+import { MacroIndicatorGrid } from '@/components/market/MacroIndicatorGrid'
+import { MarketRegimeHero } from '@/components/home/MarketRegimeHero'
+import { MarketSnapshot } from '@/components/market/MarketSnapshot'
+import { SimilarMarketPanel } from '@/components/home/SimilarMarketPanel'
+import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'
+import { AppHeader } from '@/components/navigation/AppHeader'
+import { marketMock } from '@/data/marketMock'
+import layout from '@/styles/MarketLayout.module.css'
 import styles from './HomePage.module.css'
 
-/** 서비스 소개와 백테스트 화면 진입 동선을 제공한다. */
+/** 기존 시장 분석 화면을 홈으로 제공하고 상세 지표·차트·유사 시장 탐색을 유지한다. */
 export function HomePage() {
+  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)
+  const allComparisonIndicators = [
+    ...marketMock.marketIndicators,
+    ...marketMock.macroIndicators,
+  ]
+
   return (
-    <main className={styles.page}>
-      <div className={styles.glow} aria-hidden="true" />
-      <motion.section
-        className={styles.hero}
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.09 } },
-        }}
-      >
-        <motion.p
-          className={styles.eyebrow}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          QUANT RESEARCH PLATFORM
-        </motion.p>
-        <motion.h1
-          variants={{
-            hidden: { opacity: 0, y: 18 },
-            visible: { opacity: 1, y: 0 },
-          }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        >
-          Thorp<span>.</span>
-        </motion.h1>
-        <motion.p
-          className={styles.description}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          숫자로 전략을 검증하고, 더 나은 투자 판단을 만듭니다.
-        </motion.p>
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 10 },
-            visible: { opacity: 1, y: 0 },
-          }}
-        >
-          <Link className={styles.cta} to="/dashboard">
-            시작하기
-            <ArrowUpRight aria-hidden="true" size={18} strokeWidth={1.8} />
-          </Link>
-        </motion.div>
-      </motion.section>
-      <p className={styles.version}>PROTOTYPE · 01</p>
-    </main>
+    <div className={layout.page}>
+      <AppHeader />
+
+      <main className={styles.container}>
+        <div className={styles.heroStage}>
+          <span className={styles.orbitPrimary} aria-hidden="true" />
+          <span className={styles.orbitSecondary} aria-hidden="true" />
+          <MarketRegimeHero regime={marketMock.regime} />
+        </div>
+
+        <div className={styles.contentBoundary}>
+          <div className={styles.contentFlow}>
+            <MarketSnapshot
+              indicators={marketMock.marketIndicators}
+              activeIndicatorId={activeIndicatorId}
+              onActiveChange={setActiveIndicatorId}
+            />
+            <MacroIndicatorGrid
+              indicators={marketMock.macroIndicators}
+              activeIndicatorId={activeIndicatorId}
+              onActiveChange={setActiveIndicatorId}
+            />
+            <SimilarMarketPanel
+              period={marketMock.similarPeriod}
+              indicators={allComparisonIndicators}
+            />
+            <StrategyRecommendationSection strategies={marketMock.strategyRecommendations} />
+            <DataFreshnessPanel
+              sources={marketMock.dataFreshness}
+              stabilityIndicators={marketMock.stabilityIndicators}
+            />
+          </div>
+
+          <footer className={layout.footer}>
+            본 화면은 UI 검증을 위한 예시 데이터이며 투자 권유나 수익을 보장하는 정보가
+            아닙니다.
+          </footer>
+        </div>
+      </main>
+    </div>
   )
 }

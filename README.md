@@ -6,7 +6,7 @@
 
 > **MVP v0.1.1**: KRX API로 데이터를 받아 알고리즘 1개(파라미터 고정, 기간 5년)를 백테스트하는 DEMO
 
-## 아키텍처
+## 목표 아키텍처
 
 ```
 사용자 → Frontend → Backend (Job 생성/조회 API)
@@ -23,6 +23,17 @@
 - 백테스트 요청은 비동기: `QUEUED → RUNNING → COMPLETED` 상태를 폴링으로 조회.
 - Spark/Hadoop은 **계산량 실측 후** 도입을 결정한다. 그때를 대비해 연산은 Worker 뒤에,
   데이터는 Parquet 친화적으로 격리해 두었다.
+
+### 현재 구현 상태 (2026-09-08)
+
+- Backend는 Job API와 임시 로깅 Publisher까지 있고 실제 브로커 발행은 연결되지 않았다.
+- Worker의 Jira 101 Nautilus 모멘텀 엔진은 CLI/테스트로 독립 실행할 수 있다.
+- Backend → 브로커 → Worker → PostgreSQL/SSE의 end-to-end 흐름은 아직 구현되지 않았다.
+- 목표 브로커는 RabbitMQ지만 레거시 Worker 스캐폴딩과 일부 설정에는 Kafka가 남아 있다.
+  최종 선택 전까지 어느 쪽도 현재 운영 연동으로 간주하지 않는다.
+
+처음 코드를 읽는다면 [Nautilus 모멘텀 엔진 이해하기](docs/guides/nautilus-momentum-engine.md)에서
+현재 범위, 실행 흐름, Java 관점의 파일 지도와 남은 부채를 먼저 확인한다.
 
 ## 폴더 구조
 

@@ -1,7 +1,7 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { lazy, Suspense, useLayoutEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { HomePage } from '@/pages/HomePage'
+import { LandingPage } from '@/pages/LandingPage'
 
 // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.
 const BacktestPage = lazy(() =>
@@ -10,7 +10,13 @@ const BacktestPage = lazy(() =>
   })),
 )
 
-// 시장 대시보드 역시 실제 접근 시점에 불러와 초기 랜딩 번들을 유지한다.
+// 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.
+const HomePage = lazy(() =>
+  import('@/pages/HomePage').then((module) => ({
+    default: module.HomePage,
+  })),
+)
+
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
     default: module.DashboardPage,
@@ -37,7 +43,8 @@ function AnimatedRoutes() {
       >
         <Suspense fallback={<div role="status" aria-label="페이지를 불러오는 중" />}>
           <Routes location={location}>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

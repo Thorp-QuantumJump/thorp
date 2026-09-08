@@ -12,5 +12,6 @@ class MomentumStrategy(Strategy):
         self.lookback_days = lookback_days
 
     def generate_signals(self, prices: pd.DataFrame) -> pd.Series:
-        # TODO: 최근 lookback 수익률 기반 신호 구현
-        raise NotImplementedError
+        if self.lookback_days < 1:
+            raise ValueError("lookback_days must be positive")
+        return (prices["close"] / prices["close"].shift(self.lookback_days) - 1 > 0).astype(int)

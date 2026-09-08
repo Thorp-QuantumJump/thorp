@@ -114,6 +114,21 @@ services:
       BACKTEST_JOB_QUEUE: ${BACKTEST_JOB_QUEUE}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      KRX_API_KEY: ${KRX_API_KEY}
+      ECOS_API_KEY: ${ECOS_API_KEY}
+      KOSIS_API_KEY: ${KOSIS_API_KEY}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
+      # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.
+      # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라
+      # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.
+      MARKET_CACHE_TTL: ${MARKET_CACHE_TTL:-6h}
+      MARKET_CACHE_MAX_AGE: ${MARKET_CACHE_MAX_AGE:-24h}
+      MARKET_FAILURE_COOLDOWN: ${MARKET_FAILURE_COOLDOWN:-30s}
+      MARKET_REQUEST_BUDGET: ${MARKET_REQUEST_BUDGET:-8s}
+      KRX_VOLATILITY_INDEX_NAME: ${KRX_VOLATILITY_INDEX_NAME:-코스피 200 변동성지수}
+      # ECOS 통계표·항목은 기관이 코드를 바꿀 때만 .env.prod에서 재정의한다.
+      ECOS_M2_TABLE: ${ECOS_M2_TABLE:-161Y006}
+      ECOS_M2_ITEM: ${ECOS_M2_ITEM:-BBHA00}
       JAVA_TOOL_OPTIONS: "-Xmx1536m"
       TZ: Asia/Seoul
     expose:

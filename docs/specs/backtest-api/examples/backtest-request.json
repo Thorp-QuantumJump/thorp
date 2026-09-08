@@ -1,0 +1,30 @@
+{
+  "run": {
+    "start": "2025-01-01",
+    "end": "2025-06-30"
+  },
+  "universe": {
+    "instrumentIds": [
+      "005930.XKRX",
+      "000660.XKRX"
+    ]
+  },
+  "strategy": {
+    "strategyId": "MA_CROSSOVER",
+    "parameters": {
+      "shortWindow": 20,
+      "longWindow": 60,
+      "threshold": 0.05
+    }
+  },
+  "portfolio": {
+    "initialCash": "10000000",
+    "positionSizing": {
+      "type": "STRATEGY_DEFINED",
+      "maxPositionPct": "0.50"
+    }
+  },
+  "benchmark": {
+    "instrumentId": "069500.XKRX"
+  }
+}
