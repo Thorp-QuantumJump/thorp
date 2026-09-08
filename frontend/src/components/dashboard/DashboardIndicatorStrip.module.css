@@ -137,6 +137,13 @@
   color: var(--market-warning);
 }
 
+.change[data-status='loading'],
+.change[data-status='live'],
+.change[data-status='stale'],
+.change[data-status='error'] {
+  color: var(--market-muted);
+}
+
 .card svg {
   min-width: 48px;
   height: 38px;

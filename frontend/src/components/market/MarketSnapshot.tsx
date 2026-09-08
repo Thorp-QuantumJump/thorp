@@ -4,7 +4,7 @@ import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
   formatFrequency,
-  formatIndicatorChange,
+  formatIndicatorContext,
   formatIndicatorValue,
 } from '@/utils/marketFormat'
 import { TrendSparkline } from './TrendSparkline'
@@ -49,8 +49,13 @@ export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange, 
               <small>{formatDataDate(indicator.observationDate)}</small>
             </div>
             <strong>{formatIndicatorValue(indicator)}</strong>
-            <p className={styles.change} data-tone={indicator.tone}>
-              {formatIndicatorChange(indicator)}
+            <p
+              className={styles.change}
+              data-tone={indicator.tone}
+              data-status={indicator.dataStatus}
+              title={indicator.statusMessage ?? undefined}
+            >
+              {formatIndicatorContext(indicator)}
             </p>
             <TrendSparkline
               series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}

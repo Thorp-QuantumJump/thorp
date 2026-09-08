@@ -119,6 +119,13 @@
   color: var(--market-warning);
 }
 
+.valueRow span[data-status='loading'],
+.valueRow span[data-status='live'],
+.valueRow span[data-status='stale'],
+.valueRow span[data-status='error'] {
+  color: var(--market-muted);
+}
+
 .chartWrap {
   margin-top: 6px;
 }

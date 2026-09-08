@@ -9,6 +9,22 @@ const frequencyLabels: Record<DataFrequency, string> = {
 
 /** 지표의 원시 숫자를 소수점과 단위 규칙에 맞춰 표시한다. */
 export function formatIndicatorValue(indicator: Indicator) {
+  if (indicator.unit === 'USD' && Math.abs(indicator.value) >= 1_000_000_000) {
+    const value = (indicator.value / 1_000_000_000).toLocaleString('ko-KR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })
+    return `${value}B USD`
+  }
+
+  if (indicator.unit === '십억원' && Math.abs(indicator.value) >= 1_000) {
+    const value = (indicator.value / 1_000).toLocaleString('ko-KR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })
+    return `${value} 조원`
+  }
+
   const value = indicator.value.toLocaleString('ko-KR', {
     minimumFractionDigits: indicator.decimals,
     maximumFractionDigits: indicator.decimals,
@@ -23,6 +39,22 @@ export function formatIndicatorChange(indicator: Indicator) {
 
   const prefix = indicator.change > 0 ? '+' : ''
   return `${prefix}${indicator.change.toLocaleString('ko-KR')}${indicator.changeUnit ? ` ${indicator.changeUnit}` : ''}`
+}
+
+/** 최신값 API와 예시 변화량·차트를 혼동하지 않도록 데이터 상태를 우선 표시한다. */
+export function formatIndicatorContext(indicator: Indicator) {
+  switch (indicator.dataStatus) {
+    case 'loading':
+      return '최신값 불러오는 중'
+    case 'live':
+      return '최신 관측값 · 차트 예시'
+    case 'stale':
+      return '이전 수집값 · 차트 예시'
+    case 'error':
+      return '연결 실패 · 예시값'
+    default:
+      return formatIndicatorChange(indicator)
+  }
 }
 
 /** ISO 형태의 기준일을 짧은 한국어 화면 표기로 변환한다. */

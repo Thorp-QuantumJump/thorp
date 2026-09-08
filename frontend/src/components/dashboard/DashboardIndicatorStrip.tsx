@@ -3,7 +3,7 @@ import type { Indicator } from '@/types/market'
 import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
-  formatIndicatorChange,
+  formatIndicatorContext,
   formatIndicatorValue,
 } from '@/utils/marketFormat'
 import { TrendSparkline } from '@/components/market/TrendSparkline'
@@ -65,8 +65,13 @@ export function DashboardIndicatorStrip({
                   <small>{formatDataDate(indicator.observationDate)}</small>
                 </div>
                 <strong>{formatIndicatorValue(indicator)}</strong>
-                <span className={styles.change} data-tone={indicator.tone}>
-                  {formatIndicatorChange(indicator)}
+                <span
+                  className={styles.change}
+                  data-tone={indicator.tone}
+                  data-status={indicator.dataStatus}
+                  title={indicator.statusMessage ?? undefined}
+                >
+                  {formatIndicatorContext(indicator)}
                 </span>
               </div>
               <TrendSparkline

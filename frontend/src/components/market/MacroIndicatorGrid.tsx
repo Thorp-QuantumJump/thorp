@@ -3,7 +3,8 @@ import type { Indicator } from '@/types/market'
 import { selectIndicatorPeriod } from '@/utils/indicatorHistory'
 import {
   formatDataDate,
-  formatIndicatorChange,
+  formatFrequency,
+  formatIndicatorContext,
   formatIndicatorValue,
 } from '@/utils/marketFormat'
 import { TrendSparkline } from './TrendSparkline'
@@ -28,7 +29,7 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan
         </div>
         <span>
           <Database size={13} aria-hidden="true" />
-          발표일과 수정 여부를 함께 표시해요
+          최신 관측값과 출처를 함께 표시해요
         </span>
       </div>
 
@@ -52,7 +53,13 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan
             </div>
             <div className={styles.valueRow}>
               <strong>{formatIndicatorValue(indicator)}</strong>
-              <span data-tone={indicator.tone}>{formatIndicatorChange(indicator)}</span>
+              <span
+                data-tone={indicator.tone}
+                data-status={indicator.dataStatus}
+                title={indicator.statusMessage ?? undefined}
+              >
+                {formatIndicatorContext(indicator)}
+              </span>
             </div>
             <div className={styles.chartWrap}>
               <TrendSparkline
@@ -64,7 +71,7 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan
             <p className={styles.interpretation}>{indicator.interpretation}</p>
             <div className={styles.meta}>
               <span>{indicator.source.provider}</span>
-              <span>{indicator.revisionStatus === 'revised' ? '수정 가능' : '초기 발표'}</span>
+              <span>{formatFrequency(indicator.source.frequency)}</span>
             </div>
           </IndicatorHistoryCard>
         ))}

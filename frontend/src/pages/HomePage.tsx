@@ -7,12 +7,17 @@ import { SimilarMarketPanel } from '@/components/home/SimilarMarketPanel'
 import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { marketMock } from '@/data/marketMock'
+import { useMarketIndicators } from '@/hooks/useMarketIndicators'
 import layout from '@/styles/MarketLayout.module.css'
 import styles from './HomePage.module.css'
 
 /** 기존 시장 분석 화면을 홈으로 제공하고 상세 지표·차트·유사 시장 탐색을 유지한다. */
 export function HomePage() {
   const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)
+  const { marketIndicators, macroIndicators } = useMarketIndicators(
+    marketMock.marketIndicators,
+    marketMock.macroIndicators,
+  )
   const allComparisonIndicators = [
     ...marketMock.marketIndicators,
     ...marketMock.macroIndicators,
@@ -32,12 +37,12 @@ export function HomePage() {
         <div className={styles.contentBoundary}>
           <div className={styles.contentFlow}>
             <MarketSnapshot
-              indicators={marketMock.marketIndicators}
+              indicators={marketIndicators}
               activeIndicatorId={activeIndicatorId}
               onActiveChange={setActiveIndicatorId}
             />
             <MacroIndicatorGrid
-              indicators={marketMock.macroIndicators}
+              indicators={macroIndicators}
               activeIndicatorId={activeIndicatorId}
               onActiveChange={setActiveIndicatorId}
             />
@@ -53,8 +58,8 @@ export function HomePage() {
           </div>
 
           <footer className={layout.footer}>
-            본 화면은 UI 검증을 위한 예시 데이터이며 투자 권유나 수익을 보장하는 정보가
-            아닙니다.
+            지표 최신값은 연동 API를 우선 사용하며, 과거 차트·시장 해석·추천 결과는 UI
+            검증용 예시 데이터입니다. 투자 권유나 수익을 보장하는 정보가 아닙니다.
           </footer>
         </div>
       </main>
