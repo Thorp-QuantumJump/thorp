@@ -8,6 +8,16 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:thorp}
     password: ${SPRING_DATASOURCE_PASSWORD:thorp}
 
+  # 개발 편의를 위해 Hibernate가 스키마를 갱신한다.
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  # Hibernate와 Flyway가 동시에 스키마를 바꾸지 않도록 로컬에서는 Flyway를 끈다.
+  # 마이그레이션을 직접 확인하려면 SPRING_FLYWAY_ENABLED=true + ddl-auto=validate로 임시 전환한다.
+  flyway:
+    enabled: false
+
   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
