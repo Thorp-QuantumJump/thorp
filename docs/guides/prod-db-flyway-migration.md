@@ -48,13 +48,28 @@ docker exec -it thorp-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\d
 
 | 컬럼 | 타입 | NULL | 비고 |
 |---|---|---|---|
-| `id` | `bigint` | NOT NULL | PK, identity(또는 기존 sequence 기본값) |
-| `strategy` | `varchar(255)` | NOT NULL | |
+| `id` | `bigint` | NOT NULL | PK. 기본값이 아니라 `backtest_job_seq` 시퀀스에서 채운다 |
+| `backtest_id` | `varchar(32)` | NOT NULL | UNIQUE. 외부 식별자 `BT-yyyyMMdd-순번` |
+| `strategy_id` | `varchar(64)` | NOT NULL | |
+| `strategy_version` | `varchar(32)` | NOT NULL | |
+| `parameters` | `jsonb` | NOT NULL | |
+| `instrument_ids` | `jsonb` | NOT NULL | |
 | `start_date` | `date` | NOT NULL | |
 | `end_date` | `date` | NOT NULL | |
+| `initial_cash` | `numeric(19,2)` | NOT NULL | |
+| `position_sizing_type` | `varchar(32)` | NOT NULL | enum을 문자열로 저장 |
+| `max_position_pct` | `numeric(5,4)` | NULL 허용 | |
+| `benchmark_instrument_id` | `varchar(32)` | NULL 허용 | |
+| `random_seed` | `integer` | NOT NULL | |
 | `status` | `varchar(20)` | NOT NULL | enum을 문자열로 저장 |
 | `created_at` | `timestamp` | NOT NULL | |
 | `updated_at` | `timestamp` | NOT NULL | |
+
+시퀀스도 함께 확인한다. `\ds`에 `backtest_job_seq`가 있어야 한다.
+
+회원 도메인 테이블 `users`와 `email_verifications`도 같은 방식으로 대조한다. 두 테이블의
+시각 컬럼은 `Instant` 매핑이라 `timestamp with time zone`이고, `backtest_job`의
+`created_at`·`updated_at`은 `LocalDateTime` 매핑이라 `timestamp`다. 이 둘을 섞지 않는다.
 
 컬럼 개수, 이름, 타입, 길이, NULL 허용 여부, PK 정의가 **모두** 같아야 한다.
 `ddl-auto: update`는 컬럼을 추가만 하고 삭제하지 않으므로, V1에 없는 잔여 컬럼이
@@ -88,6 +103,43 @@ docker run --rm --network thorp-internal \
 
 빈 DB에는 baseline이 필요 없다. 애플리케이션이 뜨면서 Flyway가 V1을 적용하고
 `flyway_schema_history`를 만든다. 별도 조치가 없다.
+
+### 5-1) 이미 이전 V1이 적용된 DB를 다시 초기화할 때
+
+V1 파일 자체를 고쳤다면, 이미 V1을 적용한 DB에서는 체크섬이 달라져 `validate-on-migrate`가
+기동을 막는다. 운영 데이터를 버려도 되는 단계에서만, 스키마와 적용 이력을 함께 지우고
+V1을 처음부터 다시 적용한다. **1)의 백업을 먼저 마친 뒤에 진행한다.**
+
+애플리케이션을 먼저 내려서 기동 재시도가 중간에 끼어들지 않게 한다.
+
+```bash
+docker compose -f infra/docker-compose.prod.yml stop backend
+```
+
+지울 대상을 눈으로 확인한다. 행이 남아 있다면 여기서 멈추고 보존 여부를 먼저 정한다.
+
+```bash
+docker exec -it thorp-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'SELECT count(*) FROM backtest_job;'
+```
+
+```bash
+docker exec -it thorp-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\dt'
+```
+
+이전 V1이 만든 것만 지운다. 다른 테이블이 있다면 그 이름을 함께 확인한 뒤 목록에 넣는다.
+
+```bash
+docker exec -it thorp-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'DROP TABLE IF EXISTS backtest_job; DROP TABLE IF EXISTS "flyway_schema_history";'
+```
+
+그 뒤 애플리케이션을 올리면 5)와 같은 경로로 새 V1이 적용된다.
+
+```bash
+docker compose -f infra/docker-compose.prod.yml up -d backend
+```
+
+`\dt`로 `backtest_job`·`users`·`email_verifications`가, `\ds`로 `backtest_job_seq`가
+생겼는지 확인한다.
 
 ### 6) 마이그레이션 실패 시
 

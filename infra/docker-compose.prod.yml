@@ -129,6 +129,10 @@ services:
       # ECOS 통계표·항목은 기관이 코드를 바꿀 때만 .env.prod에서 재정의한다.
       ECOS_M2_TABLE: ${ECOS_M2_TABLE:-161Y006}
       ECOS_M2_ITEM: ${ECOS_M2_ITEM:-BBHA00}
+      # 회원가입 인증 메일 발송 계정. application.yml이 기본값 없이 요구하므로
+      # 값이 없으면 메일 발송 빈을 만드는 단계에서 기동이 실패한다.
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
       JAVA_TOOL_OPTIONS: "-Xmx1536m"
       TZ: Asia/Seoul
     expose:
