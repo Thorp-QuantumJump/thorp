@@ -16,7 +16,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Element;
@@ -78,14 +80,7 @@ public class CustomsMarketClient implements MarketProvider {
 
     static MarketObservation parse(String body, String startMonth, String endMonth) {
         try {
-            var factory = DocumentBuilderFactory.newInstance();
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-            var builder = factory.newDocumentBuilder();
-            builder.setErrorHandler(new DefaultHandler());
+            var builder = secureDocumentBuilder();
             Element root =
                     builder.parse(new InputSource(new StringReader(body))).getDocumentElement();
             String status = field(root, "resultCode");
@@ -118,6 +113,23 @@ public class CustomsMarketClient implements MarketProvider {
         } catch (MarketDataException e) {
             throw e;
         } catch (Exception e) {
+            throw new MarketDataException(Reason.INVALID_RESPONSE);
+        }
+    }
+
+    private static DocumentBuilder secureDocumentBuilder() {
+        try {
+            var factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            var builder = factory.newDocumentBuilder();
+            builder.setErrorHandler(new DefaultHandler());
+            return builder;
+        } catch (ParserConfigurationException | IllegalArgumentException e) {
+            // 필수 보안 설정을 지원하지 않는 환경에서는 보호되지 않은 XML 파싱을 중단한다.
             throw new MarketDataException(Reason.INVALID_RESPONSE);
         }
     }
