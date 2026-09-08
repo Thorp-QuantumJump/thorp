@@ -24,9 +24,7 @@ public class SignupRequest {
      * 저장 전 정규화를 함께 도입한다.
      */
     @NotBlank
-    @Pattern(
-            regexp = "^01[016789]\\d{7,8}$",
-            message = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678")
+    @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678")
     private String phoneNumber;
 
     public String getEmail() {
