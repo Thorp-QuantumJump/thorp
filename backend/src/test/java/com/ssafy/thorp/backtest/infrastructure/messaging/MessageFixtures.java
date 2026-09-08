@@ -1,7 +1,9 @@
 package com.ssafy.thorp.backtest.infrastructure.messaging;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -51,8 +53,30 @@ public final class MessageFixtures {
     }
 
     public static <T> T read(String file, TypeReference<T> type) {
+        return parse(raw(file), type);
+    }
+
+    public static <T> T parse(String json, TypeReference<T> type) {
         try {
-            return MAPPER.readValue(raw(file), type);
+            return MAPPER.readValue(json, type);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * 픽스처의 {@code backtestId}(envelope와 {@code engineOutput.run})를 바꾼 JSON. 통합 테스트가 실제로 만든 Job에
+     * 이벤트를 붙일 때 쓴다. 픽스처의 나머지는 그대로다.
+     */
+    public static String withBacktestId(String file, String backtestId) {
+        try {
+            ObjectNode node = (ObjectNode) MAPPER.readTree(raw(file));
+            node.put("backtestId", backtestId);
+            JsonNode run = node.at("/payload/engineOutput/run");
+            if (run.isObject()) {
+                ((ObjectNode) run).put("backtestId", backtestId);
+            }
+            return MAPPER.writeValueAsString(node);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
