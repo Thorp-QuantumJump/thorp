@@ -3,7 +3,7 @@
 이 문서는 Python과 NautilusTrader에 익숙하지 않은 Java 개발자가 Jira 101 구현을 빠르게
 이해하고 안전하게 변경하기 위한 입문서다. 세부 JSON 규약은
 [`docs/specs/101-nautilus-momentum.md`](../specs/101-nautilus-momentum.md), 설계 이유는
-[`ADR-0002`](../adr/0002-nautilus-momentum-engine-boundary.md)를 기준으로 한다.
+[`ADR-0003`](../adr/0003-nautilus-momentum-engine-boundary.md)를 기준으로 한다.
 
 ## 먼저 알아야 할 현재 상태
 

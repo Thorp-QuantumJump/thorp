@@ -8,7 +8,7 @@ Python 3.11, NautilusTrader **1.219.0**, yfinance **0.2.65**. 엔진 실행과 �
 RabbitMQ/Kafka 중 최종 결정되지 않았다.
 
 Python/Nautilus가 낯설다면 [Java 개발자용 엔진 가이드](../docs/guides/nautilus-momentum-engine.md)를
-먼저 읽는다. 설계 이유는 [ADR-0002](../docs/adr/0002-nautilus-momentum-engine-boundary.md),
+먼저 읽는다. 설계 이유는 [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md),
 필드별 계약은 [Jira 101 spec](../docs/specs/101-nautilus-momentum.md)이 기준이다.
 
 ### 설치와 실행

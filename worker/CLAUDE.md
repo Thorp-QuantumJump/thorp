@@ -5,7 +5,7 @@ Python 3.11 + pandas + NautilusTrader. Jira 101의 공개 실행 경로는
 브로커·PostgreSQL·SSE에는 아직 연결되지 않았다. `worker.main`, `BacktestJob`, `run_backtest`는
 Kafka 기반 레거시 스캐폴딩이고, 목표 아키텍처의 RabbitMQ와 최종 선택이 정리되기 전에는 새
 엔진 연동 기준으로 사용하지 않는다. 자세한 현재 상태는
-`docs/guides/nautilus-momentum-engine.md`와 `docs/adr/0002-nautilus-momentum-engine-boundary.md`를
+`docs/guides/nautilus-momentum-engine.md`와 `docs/adr/0003-nautilus-momentum-engine-boundary.md`를
 먼저 확인한다.
 
 ## 검증 명령 (작업 후 반드시 실행)
