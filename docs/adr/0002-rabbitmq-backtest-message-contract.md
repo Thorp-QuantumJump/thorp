@@ -1,6 +1,6 @@
 # ADR-0002: 백테스트 브로커 RabbitMQ 확정과 메시지 계약의 미결 항목 결정
 
-- 상태: 제안 (2026-09-07) — D1~D4는 팀 확인 후 "승인"으로 갱신
+- 상태: 승인 (2026-09-08) — D1~D4 팀 확인 완료
 - 대상: `backend/`, `worker/`, `docs/specs/backtest-messaging/`
 - 관련 이슈: #102
 - 선행: [ADR-0001](0001-be-layered-package-architecture.md) "브로커 결정 티켓에서 의존성·설정을 함께 정리한다"
@@ -16,12 +16,13 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
 
 ## 결정
 
-### D1. Job 대기 상태 이름은 `PENDING`
+### D1. Job 대기 상태 이름은 `QUEUED`
 
 - 현재: 코드 `BacktestStatus.QUEUED`, 설계 `PENDING`, 루트 CLAUDE.md `QUEUED`.
-- 결정: 설계 문서를 따라 `PENDING`. Job 상태는 `PENDING → RUNNING → COMPLETED | FAILED`. `EngineOutput.run.status`는 `COMPLETED | FAILED`만.
-- 이유: 설계 §1 "코드에서 QUEUED를 사용 중이면 구현 전에 이름을 통일하고 두 값을 혼용하지 않는다". 이벤트·SSE·프론트가
-  같은 문자열을 보게 된다. 리네임은 요청 API 변경 작업에서 수행하고 루트·backend CLAUDE.md도 그때 갱신한다.
+- 결정(2026-09-08 정정): 코드에 이미 쓰이는 `QUEUED`로 통일한다. Job 상태는 `QUEUED → RUNNING → COMPLETED | FAILED`. `EngineOutput.run.status`는 `COMPLETED | FAILED`만.
+  설계 문서의 `PENDING`과 계약 README의 `Job(PENDING)` 표기를 `QUEUED`로 정정한다.
+- 이유: 설계 §1 "코드에서 QUEUED를 사용 중이면 구현 전에 이름을 통일하고 두 값을 혼용하지 않는다". 두 값 중 하나를 고르는 문제이며,
+  이미 코드·루트/backend CLAUDE.md·프론트 타입이 모두 `QUEUED`다. 문서 두 곳만 고치면 끝나므로 리네임 비용과 FE 파급이 없는 쪽을 택한다.
 
 ### D2. `backtestId`는 문자열 `BT-{yyyyMMdd}-{6자리 순번}`
 
@@ -61,9 +62,9 @@ Kafka 의존성·설정이 남아 있고 임시 발행기(`LoggingBacktestJobPub
 
 ## 결과
 
-- #102는 이 결정을 **제안값으로** 구현한다. 제안값 구현과 팀의 계약 승인은 별개이며, 승인 시 이 문서 상태를 갱신한다.
+- D1~D4는 팀 확인을 거쳐 승인되었다. 이후 변경은 별도 ADR 또는 이 문서의 개정으로 다룬다.
   D1~D4가 바뀌면 메시지 DTO 구조는 유지되지만 enum·픽스처 외에 요청 API·DB 컬럼·엔진 정책(수수료·데이터셋)까지 영향받는다. 변경 시 별도 이슈로 영향 범위를 정리한다.
-- 발행 구현 시 `QUEUED → PENDING` 리네임, `backtest_id` 컬럼, `LoggingBacktestJobPublisher` 삭제를 수행한다.
+- 발행 구현 시 `backtest_id` 컬럼 추가와 `LoggingBacktestJobPublisher` 삭제를 수행한다(D1 정정으로 상태 리네임은 없다).
 - 워커 실행 Consumer와 엔진의 경계는 `worker/src/worker/contracts/engine.py`의 `BacktestEngine` Protocol이다. 엔진 담당은 이 인터페이스만 구현한다.
   (기존 `worker/engine.py` 모듈과 이름이 충돌하므로 `engine/` 패키지는 만들지 않는다. 기존 모듈은 워커 런타임 교체 때 정리한다.)
 
