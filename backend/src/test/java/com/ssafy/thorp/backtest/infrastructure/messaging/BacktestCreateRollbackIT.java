@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,21 +25,21 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>큐에 들어가지 못한 Job이 QUEUED로 남으면 사용자는 영원히 끝나지 않는 백테스트를 보게 된다. 그것을 막는 것이 생성 트랜잭션의 존재 이유이므로, 서비스 단위
  * 테스트(모킹)와 별개로 실제 트랜잭션 경계에서 한 번 확인한다.
  *
- * <p>Docker가 필요 없다. 아무도 듣지 않는 포트를 브로커로 지정해 연결 실패를 만들고, DB는 H2를 쓴다.
+ * <p>브로커 컨테이너는 띄우지 않는다. 아무도 듣지 않는 포트를 브로커로 지정해 연결 실패를 만든다. DB는 {@link PostgresTestSupport}가 주는
+ * PostgreSQL 컨테이너를 쓰므로 Docker가 없으면 건너뛴다.
  */
 @SpringBootTest(
         properties = {
-            "spring.datasource.url=jdbc:h2:mem:rollback-it;DB_CLOSE_DELAY=-1",
-            "spring.datasource.driver-class-name=org.h2.Driver",
-            "spring.datasource.username=sa",
-            "spring.datasource.password=",
-            "spring.jpa.hibernate.ddl-auto=create-drop",
             "spring.rabbitmq.host=localhost",
             "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s"
+            "spring.rabbitmq.connection-timeout=1s",
+            // 메일 자격 증명은 운영에서만 주입된다. 전체 컨텍스트를 띄우는 테스트라
+            // 값이 없으면 메일 발송 빈 생성 단계에서 플레이스홀더 해석이 실패한다.
+            "spring.mail.username=test@example.com",
+            "spring.mail.password=test"
         })
 @AutoConfigureMockMvc
-class BacktestCreateRollbackIT {
+class BacktestCreateRollbackIT extends PostgresTestSupport {
 
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");

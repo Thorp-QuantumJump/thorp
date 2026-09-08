@@ -32,8 +32,8 @@ import org.hibernate.type.SqlTypes;
  * <p>결합은 {@code @PrePersist}에서 한다. Hibernate는 {@code persist()} 호출 시점의 필드 상태로 INSERT 문을 만들기 때문에
  * persist 이후에 필드를 바꾸면 그 값이 INSERT에 실리지 않는다. {@code @PrePersist}는 PK 채번 뒤·상태 스냅샷 전에 불린다.
  *
- * <p>{@code parameters}와 {@code instrument_ids}는 JSON 컬럼이다(PostgreSQL jsonb, H2 JSON). 종목 조인 테이블은
- * MVP에 과하고, Hibernate 6 네이티브 매핑이라 라이브러리를 더하지 않는다.
+ * <p>{@code parameters}와 {@code instrument_ids}는 PostgreSQL jsonb 컬럼이다. 종목 조인 테이블은 MVP에 과하고,
+ * Hibernate 6 네이티브 매핑이라 라이브러리를 더하지 않는다.
  */
 @Entity
 @Table(name = "backtest_job")

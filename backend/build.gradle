@@ -42,16 +42,19 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
+    // 테스트도 운영과 같은 PostgreSQL(Testcontainers)에서 돌기 때문에 테스트 런타임에도 이 드라이버를 쓴다.
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-    // 발행 통합 테스트용 RabbitMQ 컨테이너. 버전은 Boot BOM이 관리한다.
+    // 통합 테스트용 컨테이너. 버전은 Boot BOM이 관리한다.
+    // DB는 운영과 같은 PostgreSQL만 쓴다. 인메모리 DB를 두면 jsonb·시퀀스처럼
+    // 방언이 갈리는 부분을 검증하지 못해 운영에서만 터지는 스키마 불일치가 남는다.
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:rabbitmq'
-    testRuntimeOnly 'com.h2database:h2'
+    testImplementation 'org.testcontainers:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
