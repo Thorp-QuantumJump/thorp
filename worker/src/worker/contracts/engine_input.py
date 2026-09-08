@@ -11,9 +11,10 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from pydantic import field_validator, model_validator
+from pydantic import PrivateAttr, field_validator, model_validator
 
 from worker.contracts.base import ContractModel
+from worker.contracts.strategy_params import STRATEGY_PARAMETERS
 
 # 종목 코드 표기: 6자리 숫자 + KRX 거래소 코드 (예 005930.XKRX)
 _INSTRUMENT_ID_PATTERN = re.compile(r"\d{6}\.XKRX")
@@ -124,8 +125,14 @@ class MarketDataSpec(ContractModel):
 class StrategySpec(ContractModel):
     strategy_id: str
     version: str
-    # 전략별 자유 형식. 정수는 int, 소수는 float로 그대로 통과 (문자열 변환 금지)
+    # 전략별 자유 형식. 정수는 int, 소수는 float로 그대로 통과 (문자열 변환 금지).
+    # 봉투는 dict로 남기고, 어떤 키가 오는지는 worker.contracts.strategy_params 가 선언한다.
+    # 여기를 전략별 union으로 바꾸면 전략을 추가할 때마다 이 파일·백엔드 record·픽스처를
+    # 함께 고쳐야 한다.
     parameters: dict[str, Any]
+
+    # 레지스트리에 등록된 전략의 검증 결과. PrivateAttr이므로 model_dump에 나오지 않는다.
+    _typed_parameters: ContractModel | None = PrivateAttr(default=None)
 
     @field_validator("strategy_id")
     @classmethod
@@ -136,6 +143,32 @@ class StrategySpec(ContractModel):
     @classmethod
     def _version_present(cls, value: str) -> str:
         return _require_text(value, "strategy.version")
+
+    @model_validator(mode="after")
+    def _validate_registered_parameters(self) -> "StrategySpec":
+        """등록된 전략이면 parameters를 전략별 모델로 검증한다.
+
+        미등록 strategyId는 통과시킨다 — 엔진이 지원하는 전략의 범위는 메시지만 보고
+        판단할 수 없어서 계약 검증의 몫이 아니다.
+        """
+        model = STRATEGY_PARAMETERS.get(self.strategy_id)
+        if model is not None:
+            self._typed_parameters = model.model_validate(self.parameters)
+        return self
+
+    @property
+    def typed_parameters(self) -> ContractModel:
+        """전략별 모델로 검증된 parameters.
+
+        미등록 ``strategyId`` 라 검증된 값이 없으면 오류를 낸다.
+        """
+        if self._typed_parameters is None:
+            known = ", ".join(sorted(STRATEGY_PARAMETERS)) or "(none)"
+            raise LookupError(
+                f"strategy.strategyId {self.strategy_id!r} has no registered parameter schema; "
+                f"known strategies: {known}"
+            )
+        return self._typed_parameters
 
 
 class PositionSizing(ContractModel):
