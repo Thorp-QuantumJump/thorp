@@ -1,9 +1,9 @@
 .details {
   overflow: hidden;
-  border: 1px solid var(--dashboard-line);
+  border: 1px solid var(--market-line);
   border-radius: 17px;
-  background: var(--dashboard-surface);
-  box-shadow: var(--dashboard-shadow-soft);
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
 }
 
 .details summary,
@@ -37,7 +37,7 @@
 }
 
 .details summary > span svg {
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
 }
 
 .details summary > small {
@@ -47,7 +47,7 @@
 
 .content {
   padding: 20px;
-  border-top: 1px solid var(--dashboard-line-soft);
+  border-top: 1px solid var(--market-line-soft);
 }
 
 .sourceGrid {
@@ -82,7 +82,7 @@
   padding: 3px 6px;
   border-radius: 999px;
   background: #e6f3f2;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.6rem;
   white-space: nowrap;
 }
@@ -120,19 +120,19 @@
 .stabilityCard > strong {
   display: block;
   margin-top: 12px;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 1.08rem;
 }
 
 .stabilityCard > p {
   margin: 2px 0 8px;
-  color: var(--dashboard-neutral);
+  color: var(--market-neutral);
   font-size: 0.66rem;
   font-weight: 680;
 }
 
 .stabilityCard > p[data-tone='warning'] {
-  color: var(--dashboard-warning);
+  color: var(--market-warning);
 }
 
 .fciNote {
@@ -140,17 +140,17 @@
   gap: 10px;
   border: 1px solid #d8e5e3;
   background: #eff6f5;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
 }
 
 .fciNote svg {
   flex: 0 0 auto;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
 }
 
 .fciNote p {
   margin: 0;
-  color: var(--dashboard-copy);
+  color: var(--market-copy);
   font-size: 0.68rem;
   line-height: 1.6;
 }

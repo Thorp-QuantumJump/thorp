@@ -23,7 +23,7 @@
 
 .sectionHeader p {
   margin: 0 0 4px;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.78rem;
   font-weight: 720;
   letter-spacing: 0.12em;
@@ -31,7 +31,7 @@
 
 .sectionHeader h2 {
   margin: 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: clamp(1.75rem, 3vw, 2.8rem);
   font-weight: 620;
   letter-spacing: -0.035em;
@@ -40,7 +40,7 @@
 
 .sectionHeader > span {
   gap: 6px;
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.7rem;
 }
 
@@ -53,10 +53,10 @@
 .card {
   min-width: 0;
   padding: 17px;
-  border: 1px solid var(--dashboard-line);
+  border: 1px solid var(--market-line);
   border-radius: 17px;
-  background: var(--dashboard-surface);
-  box-shadow: var(--dashboard-shadow-soft);
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
 }
 
 .cardTop,
@@ -80,7 +80,7 @@
 .card strong {
   display: block;
   margin-top: 13px;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 1.3rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.035em;
@@ -88,21 +88,21 @@
 
 .change {
   margin: 3px 0 7px;
-  color: var(--dashboard-neutral);
+  color: var(--market-neutral);
   font-size: 0.7rem;
   font-weight: 680;
 }
 
 .change[data-tone='positive'] {
-  color: var(--dashboard-positive);
+  color: var(--market-positive);
 }
 
 .change[data-tone='negative'] {
-  color: var(--dashboard-negative);
+  color: var(--market-negative);
 }
 
 .change[data-tone='warning'] {
-  color: var(--dashboard-warning);
+  color: var(--market-warning);
 }
 
 .interpretation {
@@ -115,7 +115,7 @@
 
 .source {
   padding-top: 11px;
-  border-top: 1px solid var(--dashboard-line-soft);
+  border-top: 1px solid var(--market-line-soft);
   color: #99a2aa;
   font-size: 0.62rem;
 }

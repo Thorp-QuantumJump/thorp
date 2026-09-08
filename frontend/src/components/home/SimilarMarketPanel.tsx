@@ -1,7 +1,7 @@
 import { CalendarDays } from 'lucide-react'
 import { motion } from 'motion/react'
-import type { Indicator, SimilarMarketPeriod } from '@/types/dashboard'
-import { formatComparisonValue, formatDataDate } from '@/utils/dashboardFormat'
+import type { Indicator, SimilarMarketPeriod } from '@/types/market'
+import { formatComparisonValue, formatDataDate } from '@/utils/marketFormat'
 import styles from './SimilarMarketPanel.module.css'
 
 interface SimilarMarketPanelProps {

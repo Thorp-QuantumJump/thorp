@@ -1,8 +1,8 @@
 import { Pause, Play, ShieldAlert } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import type { MarketOverviewChart } from '@/types/dashboard'
-import { formatDataDate } from '@/utils/dashboardFormat'
+import type { MarketOverviewChart } from '@/types/market'
+import { formatDataDate } from '@/utils/marketFormat'
 import { MarketRegimeChart } from './MarketRegimeChart'
 import styles from './MarketOverviewCarousel.module.css'
 

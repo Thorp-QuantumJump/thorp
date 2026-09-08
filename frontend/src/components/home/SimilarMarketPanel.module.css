@@ -23,7 +23,7 @@
 
 .sectionHeader p {
   margin: 0 0 4px;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.78rem;
   font-weight: 720;
   letter-spacing: 0.12em;
@@ -31,7 +31,7 @@
 
 .sectionHeader h2 {
   margin: 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: clamp(1.75rem, 3vw, 2.8rem);
   font-weight: 620;
   letter-spacing: -0.035em;
@@ -40,7 +40,7 @@
 
 .sectionHeader > span {
   gap: 6px;
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.7rem;
 }
 
@@ -48,10 +48,10 @@
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
   overflow: hidden;
-  border: 1px solid var(--dashboard-line);
+  border: 1px solid var(--market-line);
   border-radius: 20px;
-  background: var(--dashboard-surface);
-  box-shadow: var(--dashboard-shadow-soft);
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
 }
 
 .overview,
@@ -61,18 +61,18 @@
 }
 
 .overview {
-  border-right: 1px solid var(--dashboard-line-soft);
+  border-right: 1px solid var(--market-line-soft);
 }
 
 .label {
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.7rem;
   font-weight: 650;
 }
 
 .overview h3 {
   margin: 6px 0 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 1.45rem;
   letter-spacing: -0.045em;
 }
@@ -88,13 +88,13 @@
 }
 
 .scoreRow strong {
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 1.02rem;
   font-variant-numeric: tabular-nums;
 }
 
 .scoreRow strong[data-positive] {
-  color: var(--dashboard-positive);
+  color: var(--market-positive);
 }
 
 .scoreRow span {
@@ -122,7 +122,7 @@
   gap: 18px;
   margin-top: 22px;
   padding-top: 19px;
-  border-top: 1px solid var(--dashboard-line-soft);
+  border-top: 1px solid var(--market-line-soft);
 }
 
 .observationGrid h4 {
@@ -151,7 +151,7 @@
   gap: 12px;
   align-items: center;
   min-height: 47px;
-  border-bottom: 1px solid var(--dashboard-line-soft);
+  border-bottom: 1px solid var(--market-line-soft);
 }
 
 .comparisonHeader {
@@ -173,7 +173,7 @@
 }
 
 .comparisonRow span:nth-child(2) {
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-weight: 680;
 }
 
@@ -191,7 +191,7 @@
 
   .overview {
     border-right: 0;
-    border-bottom: 1px solid var(--dashboard-line-soft);
+    border-bottom: 1px solid var(--market-line-soft);
   }
 }
 

@@ -117,7 +117,7 @@ export interface DataFreshnessItem {
   note: string
 }
 
-export interface DashboardData {
+export interface MarketData {
   regime: MarketRegime
   marketIndicators: Indicator[]
   macroIndicators: Indicator[]

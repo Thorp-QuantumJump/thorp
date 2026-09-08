@@ -22,7 +22,7 @@
 
 .sectionHeader p {
   margin: 0 0 4px;
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.78rem;
   font-weight: 720;
   letter-spacing: 0.12em;
@@ -30,7 +30,7 @@
 
 .sectionHeader h2 {
   margin: 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: clamp(1.75rem, 3vw, 2.8rem);
   font-weight: 620;
   letter-spacing: -0.035em;
@@ -38,7 +38,7 @@
 }
 
 .sectionHeader > span {
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.68rem;
 }
 
@@ -52,10 +52,10 @@
   position: relative;
   min-width: 0;
   padding: 22px;
-  border: 1px solid var(--dashboard-line);
+  border: 1px solid var(--market-line);
   border-radius: 18px;
-  background: var(--dashboard-surface);
-  box-shadow: var(--dashboard-shadow-soft);
+  background: var(--market-surface);
+  box-shadow: var(--market-shadow-soft);
 }
 
 .rank {
@@ -73,13 +73,13 @@
 
 .cardHeader h3 {
   margin: 0;
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 0.98rem;
   letter-spacing: -0.025em;
 }
 
 .cardHeader strong {
-  color: var(--dashboard-brand);
+  color: var(--market-brand);
   font-size: 0.8rem;
 }
 
@@ -95,7 +95,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--dashboard-brand);
+  background: var(--market-brand);
 }
 
 .reason {
@@ -121,11 +121,52 @@
 
 .risk svg {
   flex: 0 0 auto;
-  color: var(--dashboard-warning);
+  color: var(--market-warning);
 }
 
 .action > * {
   width: 100%;
+}
+
+.section[data-density='compact'] .card {
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.section[data-density='compact'] .grid {
+  gap: 0;
+  border-top: 1px solid var(--market-line);
+  border-bottom: 1px solid var(--market-line);
+}
+
+.section[data-density='compact'] .card + .card {
+  border-left: 1px solid var(--market-line-soft);
+}
+
+.section[data-density='compact'] .reason {
+  display: -webkit-box;
+  min-height: 36px;
+  margin-top: 10px;
+  overflow: hidden;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.section[data-density='compact'] .meter {
+  margin-top: 8px;
+}
+
+.section[data-density='compact'] .action {
+  margin-top: 12px;
+}
+
+.section[data-density='compact'] .action a {
+  min-height: 38px;
+  font-size: 0.72rem;
 }
 
 @media (max-width: 860px) {
@@ -136,6 +177,11 @@
   .reason,
   .risk {
     min-height: 0;
+  }
+
+  .section[data-density='compact'] .card + .card {
+    border-top: 1px solid var(--market-line-soft);
+    border-left: 0;
   }
 }
 

@@ -5,7 +5,7 @@
   border: 1px solid #d8dedf;
   border-radius: 13px;
   background: rgb(255 255 255 / 91%);
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   box-shadow: 0 28px 72px rgb(35 49 54 / 10%);
   backdrop-filter: blur(10px);
 }
@@ -25,7 +25,7 @@
   justify-content: space-between;
   min-height: 46px;
   padding: 0 16px 0 20px;
-  border-bottom: 1px solid var(--dashboard-line);
+  border-bottom: 1px solid var(--market-line);
   background: #f7f8f8;
   color: #89949a;
   font-size: 0.58rem;
@@ -42,7 +42,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--dashboard-brand);
+  background: var(--market-brand);
 }
 
 .controls {
@@ -85,7 +85,7 @@
 }
 
 .chartTabs button[aria-selected='true']::after {
-  background: var(--dashboard-brand);
+  background: var(--market-brand);
 }
 
 .chartTabs button:focus-visible,
@@ -133,14 +133,14 @@
 }
 
 .chartHeader span {
-  color: var(--dashboard-muted);
+  color: var(--market-muted);
   font-size: 0.61rem;
   font-weight: 680;
   letter-spacing: 0.12em;
 }
 
 .chartHeader > div:first-child strong {
-  color: var(--dashboard-ink);
+  color: var(--market-ink);
   font-size: 1rem;
   word-break: keep-all;
 }
@@ -150,7 +150,7 @@
   flex: 0 0 auto;
   gap: 3px;
   padding-left: 16px;
-  border-left: 1px solid var(--dashboard-line);
+  border-left: 1px solid var(--market-line);
   text-align: right;
 }
 
@@ -164,8 +164,8 @@
   gap: 10px;
   margin: 0 27px;
   padding: 15px 0 19px;
-  border-top: 1px solid var(--dashboard-line-soft);
-  color: var(--dashboard-muted);
+  border-top: 1px solid var(--market-line-soft);
+  color: var(--market-muted);
   font-size: 0.64rem;
 }
 

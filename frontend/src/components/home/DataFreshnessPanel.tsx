@@ -1,11 +1,11 @@
 import { Database, Info } from 'lucide-react'
-import type { DataFreshnessItem, Indicator } from '@/types/dashboard'
+import type { DataFreshnessItem, Indicator } from '@/types/market'
 import {
   formatDataDate,
   formatFrequency,
   formatIndicatorChange,
   formatIndicatorValue,
-} from '@/utils/dashboardFormat'
+} from '@/utils/marketFormat'
 import styles from './DataFreshnessPanel.module.css'
 
 interface DataFreshnessPanelProps {
