@@ -103,7 +103,7 @@ services:
     container_name: thorp-backend
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -114,6 +114,10 @@ services:
       BACKTEST_JOB_QUEUE: ${BACKTEST_JOB_QUEUE}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      KRX_API_KEY: ${KRX_API_KEY}
+      ECOS_API_KEY: ${ECOS_API_KEY}
+      KOSIS_API_KEY: ${KOSIS_API_KEY}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
       JAVA_TOOL_OPTIONS: "-Xmx1536m"
       TZ: Asia/Seoul
     expose:
