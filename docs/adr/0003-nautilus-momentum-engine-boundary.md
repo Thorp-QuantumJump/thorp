@@ -1,6 +1,6 @@
 # ADR-0003: Nautilus 모멘텀 엔진의 경계와 체결 모델
 
-- 상태: 구현됨 (2026-09-08, 운영 Consumer 연동 제외)
+- 상태: 구현됨 (2026-09-08, 운영 Consumer 연동·입력 계약 통합 제외)
 - 대상: `worker/`
 - 관련 이슈: Jira 101
 
@@ -104,6 +104,69 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 - 일봉 하나를 Quote와 Bar 두 이벤트로 변환하는 어댑터가 필요하다.
 - 엄격한 시세 검증 때문에 yfinance 일부 기간은 실행이 실패할 수 있다.
 - 현재 엔진이 독립되어 있어 운영 서비스가 end-to-end로 동작하는 것은 아니다.
+
+## 메시지 계약과의 정합 상태 (2026-09-08 기준)
+
+이 엔진과 공용 메시지 계약(`worker/src/worker/contracts/`, `docs/specs/backtest-messaging/`)의
+현재 차이를 기록한다.
+
+### 통합이 끝난 범위
+
+결과 모델, 직렬화, 진행 콜백, 엔진 경계는 계약과 일치한다. 결과는
+`worker.contracts.engine_output.EngineOutput` 하나만 쓰고, 실패 사유는 최상위가 아니라
+`run.error {code, message}`에 담는다. 메시지 직렬화는 `ContractModel.to_json()`
+(camelCase + 값 없는 키 생략)이며, 계약에 없는 주문 원장(`orders`)과 재현성 `metadata`는
+`worker/src/worker/artifacts.py`의 `RunArtifacts`(로컬 진단 산출물)로 옮겨 메시지에서 뺐다.
+`trades[]`의 `entryReferencePrice`/`exitReferencePrice`도 뺐다 — 기준가는 `grossPnl` 계산에만
+쓰는 엔진 내부 값이고, 계산 방식과 `realizedPnl == grossPnl - commission - slippageCost`
+항등식은 그대로다. 진행 콜백은 `contracts.engine.ProgressCallback` 모양
+(`on_progress(ProgressPoint, completed_trading_days, total_trading_days)`, 거래일 1개 단위)이고,
+20거래일 묶음 발행은 실행 Consumer 책임이다.
+
+### 아직 통합하지 않은 것: 입력 모델
+
+입력 모델만 `worker/src/worker/engine_contracts.py`에 남아 있다. 계약이 정한 고정 실행 정책
+(`docs/specs/backtest-messaging/README.md` §4.1)과 이 엔진이 실제로 지원하는 값이 세 곳 다르기
+때문이다.
+
+| 경로 | 계약 고정값 | 엔진 지원값 | 현재 판단 |
+|---|---|---|---|
+| `marketData.adjustment` | `SPLIT_ADJUSTED` | `TOTAL_RETURN_ADJUSTED` | 계약 변경 없이 해소 가능. 아직 적용하지 않았다 |
+| `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | 경고로 해소 가능 |
+| `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | 경고로 덮을 수 없다. 팀 결정 필요 |
+
+계약 쪽 세 값은 `worker/src/worker/contracts/engine_input.py`의 `Adjustment`, `DelistingPolicy`,
+`CommissionModel` enum이 각각 하나씩만 허용한다. 그래서 입력 모델을 지금 그대로 갈아끼우면
+현재 데모 입력(`worker/examples/momentum-demo-input.json`)이 역직렬화 단계에서 거절된다.
+
+**`marketData.adjustment`** — 계약 변경 없이 해소할 수 있다. 지금 공급자는 yfinance
+`auto_adjust=True`라서 분할뿐 아니라 배당까지 반영한다(설치된 0.2.65의
+`yfinance.utils.auto_adjust`가 `Adj Close / Close` 비율을 Open/High/Low/Close에 곱한다 —
+소스에서 확인). `auto_adjust=False`로 두면 Yahoo 원본 시계열, 즉 액면분할만 반영된 값이 되어
+`SPLIT_ADJUSTED`의 의미와 맞고, 나중에 KRX 수정주가로 갈아탈 때도 같은 의미다.
+**단 배당 재투자가 빠지므로 데모 수익률 숫자가 달라진다.** 전환 여부는 아직 결정하지 않았다.
+
+**`execution.delisting`** — 상장폐지 이벤트를 원인별로 분류할 수 없는 임시 공급자의 한계다.
+요청 기간에 상장폐지가 없으면 결과 숫자가 달라지지 않으므로, `CAUSE_BASED` 요청을 받되
+미지원 사실을 `diagnostics.warnings`에 남기는 방식으로 해소할 수 있다.
+
+**`execution.commission`** — 이것만은 경고로 덮을 수 없다. 수수료·세금은 모든 수익률을 바꾸고,
+특히 회전율이 높은 전략을 과대평가하게 만든다. 키움 요율표(`version=2026-09`)를 구현하거나,
+계약에 한시적인 무수수료 값을 추가하거나 중 하나를 팀이 결정해야 하며, 그 결정 전에는 입력
+모델을 통합할 수 없다.
+
+### 함께 정리해야 하는 부수 차이
+
+위 세 가지를 결정하고 입력 모델을 옮길 때 같이 처리한다. 셋과 달리 판단이 필요한 항목은 아니다.
+
+- `marketData.datasetId`: 계약 고정값은 `KRX_DAILY_V1`, 엔진 기본값은 `YFINANCE_DAILY`이다.
+  계약에서 이 필드는 enum이 아니라 문자열이라 역직렬화를 막지는 않는다.
+- 계약 `StrategySpec.parameters`는 `dict[str, Any]` 봉투이고 전략별 검증 결과는
+  `typed_parameters`로 꺼낸다. 지금 엔진은 `request.strategy.parameters.lookback_days`를 직접
+  읽으므로 호출부를 `typed_parameters`로 바꿔야 한다.
+- 엔진 입력 모델은 거의 모든 필드에 기본값이 있어 테스트·데모가 부분 dict를 넘긴다. 계약
+  `EngineInput`은 `run`·`universe`·`marketData`·`strategy`·`portfolio`·`execution`이 모두
+  필수이므로 그 호출부가 전체 필드를 채워야 한다.
 
 ## 다루지 않는 것
 

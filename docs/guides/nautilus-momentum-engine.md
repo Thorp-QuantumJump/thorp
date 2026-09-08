@@ -11,7 +11,7 @@
 
 | 영역 | 현재 상태 |
 |---|---|
-| EngineInput 검증 | 구현됨 |
+| EngineInput 검증 | 구현됨 (`engine_contracts.py`. 메시지 계약 입력 모델과는 통합 전) |
 | Yahoo Finance/CSV 데이터 로딩과 검증 | 구현됨 |
 | Nautilus 이벤트 루프에서 모멘텀 주문·체결 | 구현됨 |
 | 일별 평가, 거래 원장, 성과지표, 진행 콜백 | 구현됨 |
@@ -35,8 +35,10 @@
 | Python 파일 | Java에서 비슷한 역할 | 책임 |
 |---|---|---|
 | `engine_runner.py` | Application Service (외부 공개 진입점) | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
-| `engine_contracts.py` | request record + Bean Validation + Jackson 설정 | 입력 계약과 검증 |
+| `engine_contracts.py` | request record + Bean Validation + Jackson 설정 | 입력 계약과 검증. 계약 `contracts/engine_input.py`와 통합 전인 과도기 파일 |
 | `contracts/engine_output.py` | response record | 결과 계약(브로커 메시지와 공용) |
+| `contracts/events.py` | 이벤트 DTO | 진행 콜백이 넘기는 `ProgressPoint`와 이벤트 envelope |
+| `artifacts.py` | 감사 로그 DTO(메시지 아님) | `RunArtifacts`: 주문 원장과 재현성 metadata |
 | `market_data.py` | Port와 Adapter | `DataProvider` 계약, yfinance/CSV 구현, OHLCV 검증 |
 | `strategies/momentum.py` | 순수 Domain Service | 종가 배열을 0/1 목표 포지션 신호로 변환 |
 | `nautilus_engine.py` | 이벤트 핸들러 + Infrastructure Gateway | Nautilus 설정, 이벤트 수신, 주문·체결·일별 원장 |
@@ -48,6 +50,11 @@
 `strategies/momentum.py` → `nautilus_engine.py` → `performance.py` → 테스트다.
 `engine_contracts.py`(입력)와 `contracts/engine_output.py`(결과)는 처음부터 전부 읽기보다,
 흐름에서 만나는 모델을 찾아보는 편이 쉽다.
+
+`contracts/`는 Backend와 공유하는 메시지 계약이고 `artifacts.py`는 브로커로 나가지 않는 로컬
+진단 산출물이다. 결과·진행 모델은 이미 계약으로 통합했지만 입력 모델은 아직
+`engine_contracts.py`에 있다. 어긋난 지점과 남은 결정은 ADR-0003 "메시지 계약과의 정합 상태"에
+있다.
 
 ## 3. 전체 호출 흐름
 
@@ -67,6 +74,10 @@ engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이
         └─ 6. EngineOutput                COMPLETED 또는 FAILED
 ```
 
+`run`은 메시지 계약 `EngineOutput`만 반환한다. 주문 원장과 재현성 metadata가 필요하면
+`run_with_artifacts`가 `(EngineOutput, RunArtifacts)`를 함께 반환한다. 실패는 예외가 아니라
+`run.status=FAILED` + `run.error {code, message}`이고, 이때 `performance`·`execution`은 값이 없다.
+
 ### 하루의 시간 순서
 
 예를 들어 월요일 종가에서 매수 신호가 생겼다면 다음 순서다.
@@ -74,7 +85,10 @@ engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이
 1. 월요일 15:30 `on_bar`: 월요일 종가까지의 정보만 보고 주문 객체와 수량을 만든다.
 2. 화요일 09:00 `on_quote_tick`: 화요일 시가에 매수 5bps를 더한 ask 가격으로 주문을 제출한다.
 3. Nautilus `on_order_filled`: 실제 체결 이벤트를 받아 현금·수량·거래 원장을 갱신한다.
-4. 화요일 15:30 `on_bar`: 화요일 종가로 자산을 평가하고 진행 스냅샷을 보낸다.
+4. 화요일 15:30 `on_bar`: 화요일 종가로 자산을 평가하고, 그 거래일 1개에 대한 진행 콜백을
+   `on_progress(ProgressPoint, completed_trading_days, total_trading_days)`로 한 번 호출한다.
+   `ProgressPoint`는 `date`, `equity`, `cumulativeReturn`, `drawdown` 4필드이고 보유 종목
+   목록은 담지 않는다. 20거래일 묶음 발행은 실행 Consumer 책임이다.
 
 이 순서를 지키는 이유는 월요일 판단에 아직 알 수 없는 화요일 시가를 사용하지 않기 위해서다.
 백테스트에서 미래 정보를 사용하는 오류를 **look-ahead bias**라고 한다.
@@ -96,9 +110,10 @@ engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이
 | `with pytest.raises(...)` | `assertThrows(...)` |
 | `prices.loc[...]` | pandas 테이블에서 조건에 맞는 행 선택 |
 
-Python 내부 필드는 `snake_case`, 외부 JSON은 `camelCase`다. `Contract`의 Pydantic 설정이
-Jackson의 naming strategy처럼 양쪽을 변환한다. 숫자를 JSON decimal 문자열로 내보내는 것도
-계약 모델이 담당한다.
+Python 내부 필드는 `snake_case`, 외부 JSON은 `camelCase`다. 입력 쪽 `engine_contracts.Contract`와
+메시지 쪽 `contracts.base.ContractModel`의 Pydantic 설정이 Jackson의 naming strategy처럼 양쪽을
+변환한다. 숫자를 JSON decimal 문자열로 내보내는 것과, 값 없는 키를 아예 생략하는
+`ContractModel.to_json()`도 계약 모델이 담당한다.
 
 ## 5. Nautilus 개념 지도
 
@@ -132,8 +147,9 @@ Bar만으로 다음 날 시가 체결을 켜면 이벤트 설정에 따라 같�
 
 ### Nautilus 계정 외에 현금·거래 원장을 다시 들고 있는 이유
 
-서비스 계약은 기준 시가, 슬리피지 비용, OPEN/CLOSED 거래, 선택적 포지션 스냅샷처럼 Nautilus의
-기본 리포트와 다른 형태를 요구한다. 그래서 애플리케이션 원장을 별도로 만들되, 실행 종료 때
+서비스 계약은 슬리피지 비용, OPEN/CLOSED 거래, 선택적 포지션 스냅샷처럼 Nautilus의
+기본 리포트와 다른 형태를 요구한다(슬리피지 전 기준 시가는 메시지에 없고 `grossPnl` 계산과
+진단 산출물의 주문 원장에만 쓴다). 그래서 애플리케이션 원장을 별도로 만들되, 실행 종료 때
 Nautilus의 체결 건수와 현금 잔액이 같은지 검사해 이중 원장의 불일치를 탐지한다.
 
 ### `KRW_SIM`을 쓰는 이유
@@ -173,7 +189,7 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 
 | 하고 싶은 변경 | 먼저 볼 곳 | 함께 확인할 테스트 |
 |---|---|---|
-| 입력 필드 변경 | `engine_contracts.py` | JSON round-trip 테스트 |
+| 입력 필드 변경 | `engine_contracts.py`(현재 입력) + 계약 `contracts/engine_input.py` | JSON round-trip 테스트, 계약 픽스처 테스트 |
 | 출력 필드 변경 | `contracts/engine_output.py` | 계약 픽스처 테스트, JSON round-trip 테스트 |
 | 전략 계산 변경 | `strategies/momentum.py` | 미래 데이터 불변 테스트, lookback 경계 테스트 |
 | 체결 시점/슬리피지 변경 | `nautilus_engine.py` | next-open, gap reject, 양방향 가격 테스트 |
@@ -191,6 +207,7 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 | 높음 | 브로커가 문서상 RabbitMQ, 레거시 코드상 Kafka로 불일치 | 하나를 결정하고 설정·의존성·Consumer·문서를 한 티켓에서 정리 |
 | 높음 | 새 엔진이 운영 Job 흐름과 단절 | 메시지→EngineInput 변환, 상태 전이, 결과 저장, ACK 순서를 구현하고 통합 테스트 |
 | 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 재전달 시 중복을 허용하는 멱등 키/업서트 정책 결정 |
+| 높음 | 입력 모델이 메시지 계약과 별도(`engine_contracts.py`) | 수수료 정책을 결정하고 `adjustment`·`delisting`까지 맞춘 뒤 `contracts/engine_input.py`로 통합 (ADR-0003) |
 | 중간 | yfinance 데이터가 수정되거나 결측될 수 있음 | 원시 데이터 스냅샷과 dataset version을 보존하는 공급자 도입 |
 | 중간 | native 원장과 출력 원장을 함께 유지 | 새 주문 유형마다 reconciliation 테스트 추가 또는 단일 원장 변환 구조 재검토 |
 | 낮음 | 실제 KRX 틱·유동성·정지·상폐를 모델링하지 않음 | DEMO 범위를 벗어날 때 별도 시장 모델로 구현 |

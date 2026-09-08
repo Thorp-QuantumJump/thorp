@@ -21,16 +21,27 @@ The order-level audit log and the reproducibility metadata are NOT part of the m
 contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the message as
 `RunArtifacts` (`worker/artifacts.py`); `run` returns the message only.
 
+The result side of this engine is the shared message contract: `EngineOutput` comes from
+`worker/contracts/engine_output.py` and the callback point from `worker/contracts/events.py`.
+The input side is not yet: `engine_input` is still `worker/engine_contracts.py`, not the
+contract's `worker/contracts/engine_input.py`. The two disagree on three fixed execution
+policy values; ADR-0003 records which ones and what has to be decided before they merge.
+
 ## Decisions overriding or clarifying the supplied design
 
 - Single XKRX equity, MOMENTUM, default 120 trading days, initial KRW 10,000,000,
-  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage.
+  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage. The contract
+  fixes `execution.commission` to the KIWOOM broker schedule instead; ADR-0003 records why
+  that gap blocks the input model from moving to the contract.
 - `universe.instrumentIds` follows the detailed input table, not the `instruments` tree.
 - Native market order is created at close (including quantity); gateway submits it only
   on the next available open quote. Bars do not execute orders. This avoids execution
   against the stale open or the current closing bar. The final order stays unsubmitted.
 - Adjusted OHLC use yfinance `auto_adjust=True` (splits AND dividends); this is explicitly
   `TOTAL_RETURN_ADJUSTED`, not the design's example SPLIT_ADJUSTED. No ticker fallback.
+  The messaging contract fixes `marketData.adjustment=SPLIT_ADJUSTED`, so this value is
+  currently out of line with it; ADR-0003 "메시지 계약과의 정합 상태" records that state and
+  the open question of switching to `auto_adjust=False`.
 - Entry/exit prices are actual fills; the pre-slippage opens stay internal to the engine and
   are recoverable from the fill price and slippageCost (per-order values are in the artifacts).
   grossPnl uses reference prices; realizedPnl = grossPnl - commission - slippageCost.
@@ -49,10 +60,13 @@ contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the
   in the artifacts order ledger, counted in execution.rejectedOrderCount, warned about in
   diagnostics, and cleared for next-close reevaluation. Accepted orders
   have native fill events; native fill count and account balance are reconciled to the output.
-- No benchmark fields in EngineOutput (as required by the detailed EngineOutput section).
-  Artifact metadata records source, ticker, identity, adjustment, dates and versions.
+- No benchmark fields in EngineOutput (as required by the detailed EngineOutput section);
+  the contract's `BenchmarkResult` is computed by the consumer and joined into the FINISHED
+  payload, not produced here. Reproducibility metadata (source, ticker, identity, adjustment,
+  observed dates, versions) lives in `RunArtifacts.metadata`, outside the message.
 - Market halt/delisting event classification is unavailable in this temporary provider;
-  missing sessions are skipped, with no claim to cause-based delisting support.
+  missing sessions are skipped, with no claim to cause-based delisting support. The contract
+  fixes `execution.delisting=CAUSE_BASED`; see ADR-0003 for that gap.
 
 ## Dependencies and references
 

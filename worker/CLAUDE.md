@@ -1,8 +1,8 @@
 # CLAUDE.md — worker (백테스트 워커)
 
 Python 3.11 + pandas + NautilusTrader. Jira 101의 공개 실행 경로는
-`worker.engine_runner.NautilusMomentumEngine.run(EngineInput) -> EngineOutput`이며 현재
-CLI/테스트로 독립 실행된다.
+`worker.engine_runner.NautilusMomentumEngine.run(engine_input, on_progress) -> EngineOutput`이며
+현재 CLI/테스트로 독립 실행된다.
 브로커·PostgreSQL·SSE에는 아직 연결되지 않았다. `worker.main`, `BacktestJob`, `run_backtest`는
 Kafka 기반 레거시 스캐폴딩이고, 목표 아키텍처의 RabbitMQ와 최종 선택이 정리되기 전에는 새
 엔진 연동 기준으로 사용하지 않는다. 자세한 현재 상태는
@@ -25,6 +25,10 @@ ruff check src tests && ruff format --check src tests && pytest
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
   진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행·벤치마크 계산은 실행 Consumer 책임
+- `engine_contracts.py` 는 **입력 모델만 남은 과도기 파일**이다. 결과·진행 모델은 `contracts/`로 옮겼고, 입력은 계약 `contracts/engine_input.py`와 고정 실행 정책 세 곳(`marketData.adjustment`, `execution.delisting`, `execution.commission`)이 달라 남아 있다.
+  수수료 정책이 결정되면 `contracts/engine_input.py`로 통합하고 이 파일은 제거한다. 새 입력 필드는 여기가 아니라 계약 쪽에 맞춘다. 근거는 `docs/adr/0003-nautilus-momentum-engine-boundary.md` "메시지 계약과의 정합 상태"
+- `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
+  메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - `models.py`(구 Kafka Job 계약)와 `engine.py`(미구현 `run_backtest`) — 런타임을 pika로 교체할 때 `contracts/`·`engine_runner.py`로 대체·삭제 예정. 새 코드는 참조하지 않는다
 - `config.py` 설정은 환경변수로만 주입, 코드에 접속 정보 하드코딩 금지
 
