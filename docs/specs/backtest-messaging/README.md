@@ -10,14 +10,14 @@
 
 | 구성 요소 | 책임 |
 |---|---|
-| Backend API | 요청 검증, `backtestId` 생성, Job(PENDING)·outbox 저장, 작업 발행, 상태·결과 조회, SSE |
+| Backend API | 요청 검증, `backtestId` 생성, Job(QUEUED)·outbox 저장, 작업 발행, 상태·결과 조회, SSE |
 | RabbitMQ | 작업·이벤트 메시지 보관·전달 |
 | Worker (실행 Consumer) | 작업 수신, `BacktestEngine.run()` 호출, 벤치마크 계산, STARTED / PROGRESS / FINISHED 발행, ACK |
 | 엔진 (`BacktestEngine` 구현) | `EngineInput` → `EngineOutput`. 진행 콜백 제공. **DB·브로커를 모른다** |
 | Backend 결과 Consumer | 이벤트 검증, Job 상태 갱신, 최종 결과 저장, SSE 전달 |
 
 ```
-Frontend → POST /backtests → Job 저장(PENDING) → [backtest.jobs] ← 202 + backtestId
+Frontend → POST /backtests → Job 저장(QUEUED) → [backtest.jobs] ← 202 + backtestId
 [backtest.jobs] → Worker → engine.run() → STARTED / PROGRESS… / FINISHED → [backtest.events]
 [backtest.events] → Backend 결과 Consumer → RUNNING / SSE progress / 결과 저장 + COMPLETED|FAILED
 ```
