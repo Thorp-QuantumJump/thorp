@@ -18,7 +18,7 @@ Python/Nautilus가 낯설다면 [Java 개발자용 엔진 가이드](../docs/gui
 ```bash
 cd worker
 uv sync --python 3.11 --group dev
-uv run python -m worker.demo --input examples/engine-input.json --output engine-output.json
+uv run python -m worker.demo --input examples/momentum-demo-input.json --output engine-output.json
 ```
 
 마지막 명령 하나가 **실제 데이터 조회 → Nautilus 실행 → 결과 JSON 2개 저장**을 수행한다.
@@ -55,9 +55,12 @@ uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`�
 ### Consumer 연결
 
 ```python
+from pathlib import Path
+
+from worker.contracts.engine_output import EngineOutput
 from worker.contracts.events import ProgressPayload, ProgressPoint
-from worker.engine import run_engine
-from worker.models import EngineInput, EngineOutput
+from worker.engine_contracts import EngineInput
+from worker.engine_runner import NautilusMomentumEngine
 
 buffer: list[ProgressPoint] = []
 
@@ -72,13 +75,18 @@ def on_progress(point: ProgressPoint, done: int, total: int) -> None:
         # Consumer가 payload를 발행한다. 발행 성공 후 buffer.clear().
         buffer.clear()
 
-engine_input = EngineInput.model_validate_json(open("examples/engine-input.json").read())
-result: EngineOutput = run_engine(engine_input, on_progress=on_progress)
+engine = NautilusMomentumEngine()  # 공급자를 생략하면 yfinance
+engine_input = EngineInput.model_validate_json(
+    Path("examples/momentum-demo-input.json").read_text(encoding="utf-8")
+)
+result: EngineOutput = engine.run(engine_input, on_progress)
 result_json = result.to_json()
 ```
 
-- `run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput`.
-  dict 입력도 가능하고, 커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
+- 공개 실행 경로는 `NautilusMomentumEngine.run(engine_input, on_progress) -> EngineOutput`.
+  dict 입력도 가능하다. 시장 데이터 공급자는 실행 인자가 아니라 생성자 인자
+  `NautilusMomentumEngine(data_provider)`이므로 엔진 인스턴스를 여러 실행에서 재사용한다.
+  커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
 - 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
   `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
   `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
@@ -94,7 +102,7 @@ result_json = result.to_json()
   `performance`·`execution`은 채우지 않는다(메시지에서는 키가 빠진다).
   잘못된 EngineInput은 ValidationError, 콜백 실패는 CallbackError를 발생시킨다.
   Consumer는 결과가 COMPLETED인지 확인해야 하며, 콜백 100%가 저장 성공을 뜻하지 않는다.
-- 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run_engine` 대신
+- 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run(...)` 대신
   `NautilusMomentumEngine.run_with_artifacts(...) -> (EngineOutput, RunArtifacts)`를 쓴다.
   `run(...)`은 계약 메시지만 반환한다. 산출물은 반환값으로만 전달하고 엔진 인스턴스에
   남기지 않으므로 같은 인스턴스로 여러 번 실행해도 결과가 섞이지 않는다.

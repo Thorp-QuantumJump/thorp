@@ -255,7 +255,7 @@ def test_future_data_changes_do_not_change_previous_output() -> None:
 def test_full_input_example_and_output_json_roundtrip() -> None:
     from worker.contracts.engine_output import EngineOutput
 
-    example = FIXTURE.with_name("engine-input.json").read_text(encoding="utf-8")
+    example = FIXTURE.with_name("momentum-demo-input.json").read_text(encoding="utf-8")
     parsed = EngineInput.model_validate_json(example)
     assert parsed == EngineInput.model_validate_json(parsed.model_dump_json(by_alias=True))
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request())

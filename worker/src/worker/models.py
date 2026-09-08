@@ -1,17 +1,13 @@
-"""공개 엔진 계약의 재노출과 기존 Kafka 스캐폴딩 계약.
+"""옛 Kafka 스캐폴딩의 Job/Result 계약.
 
-EngineInput/EngineOutput은 Jira 101 경로이고, BacktestJob/BacktestResult는 아직 연결되지 않은
-기존 Consumer용 모델이다.
+`worker.main`만 참조하는 4필드 모델이다. 새 코드는 이 모듈이 아니라
+`worker.contracts/`(메시지 계약)와 `worker.engine_contracts`(EngineInput)를 직접 쓴다.
+워커 런타임을 pika로 교체할 때 `contracts/`로 대체·삭제한다.
 """
 
 from datetime import date
 
 from pydantic import BaseModel, Field
-
-# Public integration models; legacy Job/Result are retained below for existing consumers.
-from worker.contracts.engine_output import EngineOutput as EngineOutput
-from worker.contracts.events import ProgressPoint as ProgressPoint
-from worker.engine_contracts import EngineInput as EngineInput
 
 
 class BacktestJob(BaseModel):

@@ -1,7 +1,9 @@
 # Jira 101: executable momentum engine contract
 
-`worker.engine.run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput`
-accepts `EngineInput` or a camelCase dictionary. The callback follows the message contract
+`worker.engine_runner.NautilusMomentumEngine(data_provider=None).run(engine_input, on_progress)
+-> EngineOutput` accepts `EngineInput` or a camelCase dictionary. The market data provider is a
+constructor argument, so one engine instance can serve many runs. The callback follows the
+message contract
 `contracts.engine.ProgressCallback`: `on_progress(point, completed_trading_days,
 total_trading_days)` runs synchronously once per completed evaluation trading day, where
 `point` is a `ProgressPoint(date, equity, cumulativeReturn, drawdown)` whose values match the

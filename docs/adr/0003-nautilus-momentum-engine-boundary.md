@@ -22,10 +22,12 @@ MVP는 단일 KRX 종목의 일봉 모멘텀 전략을 실행하고, Backend/Con
 새 공개 진입점은 다음 하나다.
 
 ```python
-run_engine(engine_input, *, data_provider=None, on_progress=None) -> EngineOutput
+NautilusMomentumEngine(data_provider=None).run(engine_input, on_progress) -> EngineOutput
 ```
 
-이 함수는 엔진 실행과 결과 계산까지만 책임진다. 브로커 소비/ACK, 상태 저장, 결과 DB 저장,
+데이터 공급자는 실행 인자가 아니라 엔진 인스턴스의 성질이므로 생성자로 주입하고, 같은
+인스턴스를 여러 실행에서 재사용한다. 이 진입점은 엔진 실행과 결과 계산까지만 책임진다.
+브로커 소비/ACK, 상태 저장, 결과 DB 저장,
 SSE 발행은 호출하는 Consumer의 책임으로 둔다. 기존 `BacktestJob`, `BacktestResult`,
 `run_backtest`, `worker.main`은 호환을 위해 남긴 레거시 스캐폴딩이며 새 경로와 연결하지 않는다.
 

@@ -34,10 +34,9 @@
 
 | Python 파일 | Java에서 비슷한 역할 | 책임 |
 |---|---|---|
-| `engine.py` | Facade | 외부 공개 진입점 `run_engine` |
+| `engine_runner.py` | Application Service (외부 공개 진입점) | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
 | `engine_contracts.py` | request record + Bean Validation + Jackson 설정 | 입력 계약과 검증 |
 | `contracts/engine_output.py` | response record | 결과 계약(브로커 메시지와 공용) |
-| `engine_runner.py` | Application Service | `NautilusMomentumEngine`: 데이터 로드 → 실행 → 지표 → 결과 조립 |
 | `market_data.py` | Port와 Adapter | `DataProvider` 계약, yfinance/CSV 구현, OHLCV 검증 |
 | `strategies/momentum.py` | 순수 Domain Service | 종가 배열을 0/1 목표 포지션 신호로 변환 |
 | `nautilus_engine.py` | 이벤트 핸들러 + Infrastructure Gateway | Nautilus 설정, 이벤트 수신, 주문·체결·일별 원장 |
@@ -45,7 +44,7 @@
 | `demo.py` | CLI Adapter | JSON/CLI 입력으로 독립 실행 |
 | `test_momentum_engine.py` | 통합·회귀 테스트 | 실제 Nautilus 이벤트 루프와 불변식 검증 |
 
-추천 읽기 순서는 `engine.py` → `engine_runner.py` → `market_data.py` →
+추천 읽기 순서는 `engine_runner.py` → `market_data.py` →
 `strategies/momentum.py` → `nautilus_engine.py` → `performance.py` → 테스트다.
 `engine_contracts.py`(입력)와 `contracts/engine_output.py`(결과)는 처음부터 전부 읽기보다,
 흐름에서 만나는 모델을 찾아보는 편이 쉽다.
@@ -56,10 +55,7 @@
 EngineInput(JSON/dict/Pydantic 객체)
         │
         ▼
-engine.run_engine                         공개 Facade
-        │
-        ▼
-engine_runner.NautilusMomentumEngine.run  실행 유스케이스
+engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이스
         │
         ├─ 1. EngineInput.model_validate  계약/날짜/고정 정책 검증
         ├─ 2. DataProvider.load           yfinance 또는 CSV 로드
@@ -186,7 +182,7 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 | 메시지/DB/SSE 연동 | 새 Consumer adapter | 콜백 실패, 멱등성, ACK 순서 테스트 |
 
 운영 Consumer를 붙일 때 `run_backtest`에 억지로 맞추기보다, 브로커 메시지를 `EngineInput`으로
-변환해 `run_engine`을 호출하는 어댑터를 만드는 것이 현재 경계를 보존한다.
+변환해 `NautilusMomentumEngine.run`을 호출하는 어댑터를 만드는 것이 현재 경계를 보존한다.
 
 ## 9. 남아 있는 부채와 다음 결정
 
