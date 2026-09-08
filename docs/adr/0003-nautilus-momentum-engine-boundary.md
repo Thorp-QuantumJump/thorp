@@ -28,8 +28,9 @@ NautilusMomentumEngine(data_provider=None).run(engine_input, on_progress) -> Eng
 데이터 공급자는 실행 인자가 아니라 엔진 인스턴스의 성질이므로 생성자로 주입하고, 같은
 인스턴스를 여러 실행에서 재사용한다. 이 진입점은 엔진 실행과 결과 계산까지만 책임진다.
 브로커 소비/ACK, 상태 저장, 결과 DB 저장,
-SSE 발행은 호출하는 Consumer의 책임으로 둔다. 기존 `BacktestJob`, `BacktestResult`,
-`run_backtest`, `worker.main`은 호환을 위해 남긴 레거시 스캐폴딩이며 새 경로와 연결하지 않는다.
+SSE 발행은 호출하는 Consumer의 책임으로 둔다. 이 결정 당시 남겨 두었던 Kafka 레거시
+스캐폴딩(`BacktestJob`, `BacktestResult`, `run_backtest`)은 pika 실행 Consumer가 들어오면서
+삭제했고, `worker.main`은 그 Consumer의 엔트리포인트로 교체했다(2026-09-08).
 
 **이유:** 연산을 메시징·저장 기술에서 분리해야 고정 fixture로 결정론적 테스트가 가능하고,
 미결정인 RabbitMQ/Kafka 선택도 엔진 내부로 새지 않는다.

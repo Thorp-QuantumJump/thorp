@@ -10,5 +10,6 @@
 - ``engine``        엔진 경계 (BacktestEngine Protocol, ProgressCallback)
 - ``strategy_params`` 전략별 ``strategy.parameters`` 스키마 + ``strategyId`` 레지스트리
 
-기존 ``worker.models`` (Kafka 시절 4필드 Job)는 워커 런타임을 pika로 교체할 때 제거한다.
+Kafka 시절 스캐폴딩(``worker.models`` 의 4필드 Job, ``worker.engine`` 의 미구현
+``run_backtest``)은 pika 런타임 교체와 함께 제거했다. 작업 메시지 모델은 ``engine_input`` 뿐이다.
 """

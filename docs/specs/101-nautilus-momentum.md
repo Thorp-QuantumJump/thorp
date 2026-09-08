@@ -14,8 +14,9 @@ final `portfolioSeries`. Callback exceptions propagate to the caller: publicatio
 not be hidden as success.
 
 Input parsing errors raise Pydantic validation errors. Data/engine failures return FAILED
-EngineOutput with null performance/execution and `run.error`. Existing legacy models and
-`run_backtest` remain separate and are not the new integration entry point.
+EngineOutput with null performance/execution and `run.error`. The legacy Kafka models and
+`run_backtest` were deleted when the pika execution consumer landed (`worker/consumer.py`,
+`worker/rabbitmq.py`); `python -m worker.main` is now that consumer's entry point.
 
 The order-level audit log and the reproducibility metadata are NOT part of the message
 contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the message as

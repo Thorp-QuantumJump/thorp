@@ -16,13 +16,14 @@
 | Nautilus 이벤트 루프에서 모멘텀 주문·체결 | 구현됨 |
 | 일별 평가, 거래 원장, 성과지표, 진행 콜백 | 구현됨 |
 | 오프라인 회귀 테스트와 CLI 데모 | 구현됨 |
-| Backend Job → 브로커 → 새 엔진 호출 | 미구현 |
-| 결과 DB 저장·SSE 발행·메시지 ACK | 미구현 |
-| 브로커 RabbitMQ/Kafka 최종 선택 | 미결정 |
+| 브로커(RabbitMQ) 작업 수신 → 엔진 호출 → 이벤트 발행 | 구현됨 |
+| Backend Job 발행(outbox) | 미구현 |
+| 결과 DB 저장·SSE 발행 | 미구현 (백엔드 결과 Consumer 몫) |
 
-따라서 `python -m worker.demo`는 실행되지만 `python -m worker.main`은 이 엔진을 호출하지 않는다.
-`worker.main`과 `run_backtest`는 예전 Kafka 스캐폴딩이며, 후자는 아직
-`NotImplementedError`를 발생시킨다.
+브로커는 RabbitMQ로 확정됐다(ADR-0002). `python -m worker.demo`는 엔진만 단독 실행하고,
+`python -m worker.main`은 RabbitMQ `backtest.jobs`를 소비해 이 엔진을 호출하고
+`backtest.events`로 STARTED / PROGRESS / FINISHED를 발행한다. Kafka 스캐폴딩
+(`worker/models.py`, `worker/engine.py`의 `run_backtest`)은 삭제했다.
 
 ## 1. 한 문장으로 보는 동작
 
@@ -46,6 +47,10 @@
 | `nautilus_engine.py` | 이벤트 핸들러 + Infrastructure Gateway | Nautilus 설정, 이벤트 수신, 주문·체결·일별 원장 |
 | `performance.py` | 순수 계산기 | 서비스 규약에 맞는 CAGR/MDD/Sharpe 계산 |
 | `demo.py` | CLI Adapter | JSON/CLI 입력으로 독립 실행 |
+| `messaging.py` | 계약 상수 + Port 인터페이스 | 큐·routing key 상수, `schemaVersion`, 발행/ACK Protocol (pika 없음) |
+| `consumer.py` | Message Listener | 작업 수신·검증 → 엔진 호출 → 이벤트 발행 → ACK. 브로커 기술 비의존 |
+| `rabbitmq.py` | Messaging Adapter | pika 구현(발행 confirm, ACK/reject, 소비 루프) |
+| `main.py` | 엔트리포인트 | `python -m worker.main` |
 | `test_momentum_engine.py` | 통합·회귀 테스트 | 실제 Nautilus 이벤트 루프와 불변식 검증 |
 
 추천 읽기 순서는 `engine_runner.py` → `market_data.py` →
@@ -200,18 +205,21 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 | 체결 시점/슬리피지 변경 | `nautilus_engine.py` | next-open, gap reject, 양방향 가격 테스트 |
 | 데이터 공급자 교체 | `market_data.py`의 `DataProvider` | 잘못된 OHLCV 거절 테스트 |
 | 지표 공식 변경 | `performance.py` | 표준편차·달력 일수 테스트 |
-| 메시지/DB/SSE 연동 | 새 Consumer adapter | 콜백 실패, 멱등성, ACK 순서 테스트 |
+| 브로커 연동(발행·ACK 순서) | `consumer.py`(로직) / `rabbitmq.py`(pika) | `test_consumer.py`, `test_rabbitmq.py` |
+| 큐·routing key 이름 | `messaging.py` 상수 (백엔드 `BacktestRabbitConfig`와 함께) | `test_rabbitmq.py`의 상수 대조 테스트 |
+| DB 저장·SSE 발행 | 백엔드 결과 Consumer (워커 아님) | 백엔드 테스트 |
 
-운영 Consumer를 붙일 때 `run_backtest`에 억지로 맞추기보다, 브로커 메시지를 `EngineInput`으로
-변환해 `NautilusMomentumEngine.run`을 호출하는 어댑터를 만드는 것이 현재 경계를 보존한다.
+실행 Consumer는 브로커 메시지를 `EngineInput`으로 검증해 `NautilusMomentumEngine.run`을
+호출하는 어댑터이며, 엔진은 브로커를 모르는 상태를 유지한다. 발행·ACK는 주입 가능한
+Protocol 뒤에 있어 브로커 없이 테스트된다.
 
 ## 9. 남아 있는 부채와 다음 결정
 
 | 우선순위 | 부채 | 해결 조건 |
 |---|---|---|
-| 높음 | 브로커가 문서상 RabbitMQ, 레거시 코드상 Kafka로 불일치 | 하나를 결정하고 설정·의존성·Consumer·문서를 한 티켓에서 정리 |
-| 높음 | 새 엔진이 운영 Job 흐름과 단절 | 메시지→EngineInput 변환, 상태 전이, 결과 저장, ACK 순서를 구현하고 통합 테스트 |
-| 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 재전달 시 중복을 허용하는 멱등 키/업서트 정책 결정 |
+| ~~높음~~ 해소 | ~~브로커가 문서상 RabbitMQ, 레거시 코드상 Kafka로 불일치~~ | **완료.** RabbitMQ 확정(ADR-0002)에 맞춰 워커 런타임을 pika로 교체하고 Kafka 의존성·설정·스캐폴딩을 제거했다 |
+| 높음 | 백엔드 Job 발행(outbox)과 결과 Consumer 미구현 | 발행·상태 전이·결과 저장까지 붙이고 브로커를 띄운 통합 테스트 |
+| 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 워커는 재전달 시 재실행 + 새 `executionId`로 두고, 중복 방어는 백엔드 결과 Consumer가 `eventId`로 처리한다(계약 §7). 그 업서트 정책을 결과 Consumer 티켓에서 확정 |
 | ~~높음~~ 해소 | ~~입력 모델이 메시지 계약과 별도(`engine_contracts.py`)~~ | **완료 (2026-09-08).** 계약에 `ZERO` 수수료 모델을 추가(ADR-0004)하고 `delisting=CAUSE_BASED`를 경고로 받아(ADR-0003) `contracts/engine_input.py`로 통합, 과도기 파일 삭제. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 먼저 맞췄다 |
 | 중간 | 키움 요율표(`commission.model=BROKER`) 미구현 | 알고리즘 20개+ 비교에 착수할 때 엔진에 구현하고 `engine_support.py`의 거절을 제거 (ADR-0004 D3). 그 전에 순위를 근거로 의사결정하지 않는다 |
 | 중간 | yfinance 데이터가 수정되거나 결측될 수 있음 | 원시 데이터 스냅샷과 dataset version을 보존하는 공급자 도입 |
