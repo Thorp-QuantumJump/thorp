@@ -82,6 +82,6 @@ GET /backtests/{backtestId}
 
 - `backtestId`는 숫자가 아니라 문자열이다. 경로 변수도 문자열로 넣는다.
 - 같은 조건으로 다시 요청하면 **항상 새 Job**이 만들어진다(새 `backtestId`). 입력이 같아도 결과를 재사용하지 않는다.
-- 요청 구조는 설계 `BacktestRequest`와 같은 5블록(run / universe / strategy / portfolio / benchmark)이다.
+- 요청은 5블록(run / universe / strategy / portfolio / benchmark)이다. 블록별 필드는 위 1절 표와 요청 예시를 본다.
 - 종목은 계약상 50개까지 보낼 수 있지만, 현재 엔진은 1종목만 처리한다. 2개 이상 보내면 Job은 접수되고 실행 단계에서
   `FAILED`가 된다. MVP 화면은 1종목만 보낸다.

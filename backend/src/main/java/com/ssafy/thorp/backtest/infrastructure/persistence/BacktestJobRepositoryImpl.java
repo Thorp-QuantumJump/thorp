@@ -12,8 +12,7 @@ import org.springframework.stereotype.Repository;
  * 저장 시 외부 식별자를 부여한다.
  *
  * <p>{@code persist()}가 SEQUENCE에서 PK를 받아온 뒤 INSERT 전에 {@code backtestId}를 채우므로 INSERT는 한 번이고
- * {@code backtest_id}를 NOT NULL로 둘 수 있다(구현 설계 R1). 날짜만 여기서 정하고 PK와의 결합은 엔티티의 {@code @PrePersist}가
- * 한다.
+ * {@code backtest_id}를 NOT NULL로 둘 수 있다. 날짜만 여기서 정하고 PK와의 결합은 엔티티의 {@code @PrePersist}가 한다.
  */
 @Repository
 public class BacktestJobRepositoryImpl implements BacktestJobRepository {

@@ -27,7 +27,7 @@ import org.hibernate.type.SqlTypes;
  * {@code backtest_job} 테이블 매핑. 도메인 모델과는 {@link BacktestJobMapper}로 변환한다.
  *
  * <p>PK가 SEQUENCE라 {@code persist()} 시점에 값이 나오고, 그 PK로 {@code backtest_id}를 INSERT 전에 채우므로 컬럼을 NOT
- * NULL로 둘 수 있고 사후 UPDATE가 없다(구현 설계 R1).
+ * NULL로 둘 수 있고 사후 UPDATE가 없다.
  *
  * <p>결합은 {@code @PrePersist}에서 한다. Hibernate는 {@code persist()} 호출 시점의 필드 상태로 INSERT 문을 만들기 때문에
  * persist 이후에 필드를 바꾸면 그 값이 INSERT에 실리지 않는다. {@code @PrePersist}는 PK 채번 뒤·상태 스냅샷 전에 불린다.

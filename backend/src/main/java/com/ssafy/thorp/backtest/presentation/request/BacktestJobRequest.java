@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 백테스트 실행 요청. 설계 BacktestRequest 구조를 그대로 따른다.
+ * 백테스트 실행 요청. 계약 기준은 {@code docs/specs/backtest-api/}(README와 요청 예시)다.
  *
  * <p>소수 자릿수는 저장 컬럼에 맞춘다. initialCash는 NUMERIC(19,2), maxPositionPct는 NUMERIC(5,4)이라 더 세밀한 값을 받으면 저장
  * 시 반올림되어 도메인 값과 저장값이 달라진다.
