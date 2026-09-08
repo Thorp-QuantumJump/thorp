@@ -5,9 +5,11 @@ spring:
   profiles:
     default: local
 
+  # 스키마 관리 정책은 프로필별로 갈린다.
+  #  - local: Hibernate ddl-auto=update (Flyway 비활성)
+  #  - prod : Flyway가 마이그레이션, Hibernate는 ddl-auto=validate로 검증만
+  # 공통에는 ddl-auto를 두지 않는다. 여기에 값이 있으면 운영에서도 Hibernate가 스키마를 건드린다.
   jpa:
-    hibernate:
-      ddl-auto: update   # TODO: 스키마 안정화 후 validate + 마이그레이션 도구(Flyway)로 전환
     open-in-view: false
     properties:
       hibernate:
