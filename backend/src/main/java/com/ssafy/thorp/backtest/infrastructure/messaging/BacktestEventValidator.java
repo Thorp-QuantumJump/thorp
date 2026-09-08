@@ -7,7 +7,9 @@ import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 역직렬화 직후의 명시 검증. 계약 기준: {@code docs/specs/backtest-messaging/README.md} §4.2·§4.3·§5·§8.
@@ -33,6 +35,9 @@ final class BacktestEventValidator {
     static final int MAX_ID_LENGTH = 255;
 
     static final int SCHEMA_VERSION = 1;
+
+    /** 종목 식별자 형식은 도메인 VO와 같은 계약(ADR-0002 D4)이다. 저장 컬럼 `VARCHAR(32)`보다 훨씬 짧아 길이 문제도 여기서 걸러진다. */
+    private static final Pattern INSTRUMENT_ID = Pattern.compile(InstrumentId.REGEX);
 
     private BacktestEventValidator() {}
 
@@ -188,7 +193,7 @@ final class BacktestEventValidator {
                 String positionPath = path + ".positions[" + j + "]";
                 EngineOutput.PositionSnapshot position =
                         require(snapshot.positions().get(j), positionPath);
-                require(position.instrumentId(), positionPath + ".instrumentId");
+                requireInstrumentId(position.instrumentId(), positionPath + ".instrumentId");
                 require(position.quantity(), positionPath + ".quantity");
                 require(position.marketValue(), positionPath + ".marketValue");
             }
@@ -200,7 +205,7 @@ final class BacktestEventValidator {
             String path = base + "[" + i + "]";
             EngineOutput.TradeResult trade = require(trades.get(i), path);
             requireId(trade.tradeId(), path + ".tradeId");
-            require(trade.instrumentId(), path + ".instrumentId");
+            requireInstrumentId(trade.instrumentId(), path + ".instrumentId");
             require(trade.side(), path + ".side");
             require(trade.status(), path + ".status");
             require(trade.entryTime(), path + ".entryTime");
@@ -227,7 +232,7 @@ final class BacktestEventValidator {
     }
 
     private static void benchmark(BenchmarkResult benchmark, String base) {
-        require(benchmark.instrumentId(), base + ".instrumentId");
+        requireInstrumentId(benchmark.instrumentId(), base + ".instrumentId");
         require(benchmark.totalReturn(), base + ".totalReturn");
         List<BenchmarkResult.BenchmarkPoint> series =
                 require(benchmark.timeseries(), base + ".timeseries");
@@ -257,6 +262,13 @@ final class BacktestEventValidator {
         requireNotBlank(value, path);
         if (value.length() > MAX_ID_LENGTH) {
             fail(path, "length " + value.length() + " exceeds " + MAX_ID_LENGTH);
+        }
+    }
+
+    private static void requireInstrumentId(String value, String path) {
+        requireNotBlank(value, path);
+        if (!INSTRUMENT_ID.matcher(value).matches()) {
+            fail(path, "must match " + InstrumentId.REGEX + " but was " + value);
         }
     }
 

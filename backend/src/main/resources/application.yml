@@ -21,6 +21,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # 백테스트 결과의 거래 행은 한 번에 수백 건씩 INSERT된다. 배칭이 없으면 건마다 왕복한다.
+        # SEQUENCE PK 엔티티(backtest_trade·backtest_job)에만 효과가 있고, IDENTITY PK(회원 테이블)는 원래 배칭되지 않는다.
+        jdbc:
+          batch_size: 50
+        order_inserts: true
 
   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.
   # confirm·returns 설정은 발행 신뢰성(outbox) 작업에서 추가.

@@ -40,6 +40,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p>{@code jsonb}는 JSON 숫자를 {@code numeric}으로 정규화한다(지수 표기가 사라지는 등). 메시지 ObjectMapper가 decimal을
  * 문자열로 쓰기 때문에 그 경로를 타지 않는다 — 저장된 값이 JSON 문자열인지도 함께 확인한다.
+ *
+ * <p>유일한 예외는 음수 scale({@code 1E+2})이다. 계약 표기가 plain 문자열이라 {@code "100"}으로 저장되고 다시 읽으면 scale이 0이 된다.
+ * 값은 같다. 계약 JSON은 plain 표기만 쓰므로 실제 메시지에서 음수 scale이 생기는 일은 없다. 이 동작을 테스트로 고정해 둔다.
  */
 @DataJpaTest
 @Import({
@@ -56,8 +59,11 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
     /** 후행 0. scale 2가 유지돼야 한다. */
     private static final BigDecimal TRAILING_ZERO = new BigDecimal("1.50");
 
-    /** {@code toString()}이 지수 표기("1E-7")가 되는 값. */
+    /** {@code toString()}이 지수 표기("1E-7")가 되는 값. plain 문자열로 저장돼야 한다. */
     private static final BigDecimal TINY = new BigDecimal("0.0000001");
+
+    /** 음수 scale(-2). 계약의 plain 표기로는 표현할 수 없어 {@code 100}(scale 0)으로 정규화된다. */
+    private static final BigDecimal NEGATIVE_SCALE = new BigDecimal("1E+2");
 
     private static final Instant T0 = Instant.parse("2025-01-02T00:00:00Z");
     private static final LocalDate D0 = LocalDate.of(2025, 1, 2);
@@ -76,7 +82,29 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
     @Autowired private TestEntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
 
+    private Long newJobId() {
+        return jobRepository
+                .save(
+                        BacktestJob.create(
+                                "MA_CROSSOVER",
+                                "1.0.0",
+                                Map.of(),
+                                List.of(new InstrumentId("005930.XKRX")),
+                                new BacktestPeriod(D0, D0.plusMonths(1)),
+                                LONG_SCALE,
+                                PositionSizingMode.STRATEGY_DEFINED,
+                                null,
+                                null,
+                                0))
+                .getId();
+    }
+
     private static EngineOutput output() {
+        return output(LONG_SCALE);
+    }
+
+    /** 모든 decimal 자리에 극단값을 넣는다. {@code totalCommission}만 인자로 받아 개별 케이스를 만든다. */
+    private static EngineOutput output(BigDecimal totalCommission) {
         var performance =
                 new EngineOutput.PerformanceResult(
                         LONG_SCALE,
@@ -118,7 +146,7 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
                         TINY,
                         LONG_SCALE.negate(),
                         TINY.negate());
-        var execution = new EngineOutput.ExecutionResult(1, 1, 0, LONG_SCALE, TINY);
+        var execution = new EngineOutput.ExecutionResult(1, 1, 0, totalCommission, TINY);
         return new EngineOutput(
                 new EngineOutput.RunResult(
                         "BT-1", RunStatus.COMPLETED, T0, T0.plusSeconds(1), null),
@@ -136,38 +164,27 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
                 List.of(new BenchmarkResult.BenchmarkPoint(D0, LONG_SCALE, TRAILING_ZERO)));
     }
 
+    private BacktestResultJpaEntity saveAndReload(Long jobId, EngineOutput output) {
+        resultRepository.save(
+                new SaveBacktestResultCommand(jobId, "EXEC-1", "EVT-1", output, benchmark()));
+        entityManager.flush();
+        entityManager.clear();
+        return entityManager.find(BacktestResultJpaEntity.class, jobId);
+    }
+
     @Test
     @DisplayName("소수 20자리·후행 0·지수 표기 값이 모든 JSON 컬럼에서 scale까지 그대로 왕복한다")
     void decimalsRoundTripExactly() {
-        Long jobId =
-                jobRepository
-                        .save(
-                                BacktestJob.create(
-                                        "MA_CROSSOVER",
-                                        "1.0.0",
-                                        Map.of(),
-                                        List.of(new InstrumentId("005930.XKRX")),
-                                        new BacktestPeriod(D0, D0.plusMonths(1)),
-                                        LONG_SCALE,
-                                        PositionSizingMode.STRATEGY_DEFINED,
-                                        null,
-                                        null,
-                                        0))
-                        .getId();
+        Long jobId = newJobId();
         EngineOutput output = output();
-        BenchmarkResult benchmark = benchmark();
 
-        resultRepository.save(
-                new SaveBacktestResultCommand(jobId, "EXEC-1", "EVT-1", output, benchmark));
-        entityManager.flush();
-        entityManager.clear();
+        BacktestResultJpaEntity result = saveAndReload(jobId, output);
 
-        BacktestResultJpaEntity result = entityManager.find(BacktestResultJpaEntity.class, jobId);
         // record equals → BigDecimal.equals → scale까지 같아야 통과
         assertThat(result.getPerformance()).isEqualTo(output.performance());
         assertThat(result.getExecution()).isEqualTo(output.execution());
         assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());
-        assertThat(result.getBenchmark()).isEqualTo(benchmark);
+        assertThat(result.getBenchmark()).isEqualTo(benchmark());
         assertThat(tradeRepository.findByJobIdOrderByEntryTimeAscIdAsc(jobId))
                 .extracting(BacktestTradeJpaEntity::getDetail)
                 .containsExactly(output.trades().get(0));
@@ -176,24 +193,8 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
     @Test
     @DisplayName("decimal은 jsonb 안에 문자열로 저장되어 숫자 정규화를 타지 않는다")
     void decimalsAreStoredAsJsonStrings() {
-        Long jobId =
-                jobRepository
-                        .save(
-                                BacktestJob.create(
-                                        "MA_CROSSOVER",
-                                        "1.0.0",
-                                        Map.of(),
-                                        List.of(new InstrumentId("005930.XKRX")),
-                                        new BacktestPeriod(D0, D0.plusMonths(1)),
-                                        LONG_SCALE,
-                                        PositionSizingMode.STRATEGY_DEFINED,
-                                        null,
-                                        null,
-                                        0))
-                        .getId();
-        resultRepository.save(
-                new SaveBacktestResultCommand(jobId, "EXEC-1", "EVT-1", output(), benchmark()));
-        entityManager.flush();
+        Long jobId = newJobId();
+        saveAndReload(jobId, output());
 
         String type =
                 jdbcTemplate.queryForObject(
@@ -216,5 +217,25 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
         assertThat(type).isEqualTo("string");
         assertThat(stored).isEqualTo("53726.85123456789012345678");
         assertThat(tiny).as("지수 표기가 아니라 plain 문자열").isEqualTo("0.0000001");
+    }
+
+    @Test
+    @DisplayName("음수 scale(1E+2)은 계약의 plain 표기로 정규화된다 — 값은 같고 scale은 0")
+    void negativeScaleIsNormalizedToPlainNotation() {
+        Long jobId = newJobId();
+
+        BacktestResultJpaEntity result = saveAndReload(jobId, output(NEGATIVE_SCALE));
+
+        BigDecimal reloaded = result.getExecution().totalCommission();
+        assertThat(reloaded).isEqualByComparingTo(NEGATIVE_SCALE);
+        assertThat(reloaded.scale()).isZero();
+        assertThat(reloaded).as("BigDecimal.equals는 scale이 달라 false").isNotEqualTo(NEGATIVE_SCALE);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT execution ->> 'totalCommission' FROM backtest_result"
+                                        + " WHERE backtest_job_id = ?",
+                                String.class,
+                                jobId))
+                .isEqualTo("100");
     }
 }

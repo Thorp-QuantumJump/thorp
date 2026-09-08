@@ -112,7 +112,7 @@ DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영�
 
 | 설계 표기 | JSON | Java | Python |
 |---|---|---|---|
-| 금액·비율 (`decimal/string`) | **문자열** `"10000000.00"`, `"0.166652"` | `BigDecimal` (문자열로 직렬화, 숫자도 수용) | `Decimal` |
+| 금액·비율 (`decimal/string`) | **문자열** `"10000000.00"`, `"0.166652"`. **plain 표기만** — 지수 표기(`"1E+2"`)는 쓰지 않는다. 수신 측은 plain으로 정규화해 저장하므로 값은 같고 음수 scale만 0이 된다 | `BigDecimal` (`toPlainString`으로 직렬화, 숫자도 수용) | `Decimal` |
 | 거래일 (`date`) | `"2025-01-03"` 타임존 없음, 거래소 현지 거래일 | `LocalDate` | `date` |
 | 실행 시각 (`datetime`) | `"2026-09-07T01:00:00Z"` UTC | `Instant` | aware `datetime` |
 | 정수 | JSON number | `int` / `Integer` | `int` |
@@ -120,6 +120,7 @@ DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영�
 | 계산 불가 · 미지정 | **키 자체를 쓰지 않는다** (`null`도 쓰지 않음, 0·NaN 금지). 수신 측은 "키 없음 == null"로 읽고, 명시 `null`이 와도 같은 뜻으로 수용한다 | 래퍼 타입, 직렬화는 `NON_NULL` | `T \| None = None`, 덤프는 `exclude_none=True` |
 | 수익률 | 비율 (`0.125` = 12.5%). MDD·drawdown은 0 또는 음수 | | |
 | 식별자 문자열 (`eventId`·`executionId`·`tradeId`·`run.error.code`) | **255자 이하**. 초과는 계약 오류 → DLQ. 형식은 정하지 않는다(UUID·`EVT-000001` 모두 가능) | `String`, 저장 컬럼 `VARCHAR(255)` | `str` |
+| 종목 식별자 (`instrumentId` — trade·position·benchmark) | `{6자리 종목코드}.XKRX` (ADR-0002 D4). 형식 위반은 계약 오류 → DLQ | `InstrumentId` VO의 패턴으로 검증, 저장 컬럼 `VARCHAR(32)` | `str` |
 
 지표 계산 규약(연환산 252, ddof=1, riskFreeRate 0.0, CAGR 달력일 기준, `tradeCount`는 CLOSED만)은 설계 문서를 따른다.
 이 규약을 바꾸면 `schemaVersion`이 아니라 결과 저장소의 지표 버전을 올린다.
@@ -171,6 +172,7 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | `type`과 `payload` 형태 불일치 | `type`을 먼저 읽고 payload 타입을 선택해 변환, 실패 시 거부 | 동일 |
 | `FINISHED`의 `engineOutput.run.status`가 COMPLETED/FAILED 외 | 명시 검증 | — (엔진 반환 시점에 확인) |
 | 식별자 길이 255자 초과 (§5) | 명시 검증 | — |
+| `instrumentId` 형식 (§5, trade·position·benchmark) | 명시 검증 (`InstrumentId.REGEX`) | — (엔진 입력의 종목이 그대로 나감) |
 | `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |
 | 상태별 nullable 규칙 (COMPLETED: `performance`·`execution` 필수, `error` 없음. FAILED: `error` 필수, `performance`·`execution`·`benchmark` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
 | 계약이 nullable로 정한 생략 (성과 지표 개별 null, `benchmark`, snapshot의 `positions`, OPEN 거래의 청산 필드) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |

@@ -157,6 +157,21 @@ class BacktestEventValidatorTest {
                                         .put("instrumentId", "005930.XKRX")
                                         .put("marketValue", "1.00")),
                 violation(
+                        "payload.engineOutput.trades[0].instrumentId",
+                        n -> at(n, EO + "/trades/0").put("instrumentId", "SAMSUNG")),
+                violation(
+                        "payload.engineOutput.portfolioSeries[0].positions[0].instrumentId",
+                        n ->
+                                at(n, EO + "/portfolioSeries/0")
+                                        .putArray("positions")
+                                        .addObject()
+                                        .put("instrumentId", "005930")
+                                        .put("quantity", "1")
+                                        .put("marketValue", "1.00")),
+                violation(
+                        "payload.benchmark.instrumentId",
+                        n -> at(n, "/payload/benchmark").put("instrumentId", "X".repeat(40))),
+                violation(
                         "payload.engineOutput.trades[0].entryPrice",
                         n -> at(n, EO + "/trades/0").remove("entryPrice")),
                 violation(

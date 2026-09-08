@@ -123,6 +123,9 @@ class BacktestEventFlowIT extends PostgresTestSupport {
         assertThat(count("backtest_trade", job.getId())).isEqualTo(3);
         assertThat(resultColumn("finished_event_id", job.getId())).isEqualTo("EVT-000009");
         assertThat(resultColumn("error_code", job.getId())).isNull();
+        // 슬라이스 테스트가 아닌 전체 컨텍스트에서도 JSON 직렬화 설정이 살아 있어 decimal이 문자열로 저장된다
+        assertThat(resultColumn("jsonb_typeof(performance -> 'initialEquity')", job.getId()))
+                .isEqualTo("string");
     }
 
     @Test

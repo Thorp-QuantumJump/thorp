@@ -107,8 +107,9 @@ public class BacktestEventService {
      *
      * <p>Job을 조회하는 이유: 모르는 {@code backtestId}와 끝난 Job의 늦은 PROGRESS가 그대로 구독자에게 흘러가면 클라이언트 차트가 뒤로 간다.
      * QUEUED의 PROGRESS도 무시한다 — STARTED가 아직 안 온 상태에서 진행률만 먼저 보내면 상태가 어긋난다.
+     *
+     * <p>트랜잭션을 열지 않는다. 조회 한 번뿐이고, notifier가 SSE로 바뀌면 클라이언트 네트워크 I/O를 하는 동안 DB 커넥션을 쥐고 있지 않기 위해서다.
      */
-    @Transactional(readOnly = true)
     public void handleProgress(BacktestEvent<ProgressPayload> event) {
         BacktestJob job = findJob(event);
         if (job == null) {

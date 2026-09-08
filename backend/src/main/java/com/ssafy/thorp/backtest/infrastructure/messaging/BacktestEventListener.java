@@ -74,6 +74,8 @@ public class BacktestEventListener {
                         parse(body, FINISHED_TYPE, BacktestEventValidator::validateFinished);
                 service.handleFinished(event);
             }
+            // enum에 값이 추가되고 여기에 case가 빠지면 메시지가 조용히 ACK되어 사라진다. 그 경로를 막는다.
+            default -> throw reject("type", "no handler for " + type);
         }
     }
 
