@@ -32,11 +32,11 @@ public class SignupService {
     @Transactional
     public SignupResult signup(SignupCommand command) {
         if (userRepository.existsByEmail(command.email())) {
-            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 가입된 이메일입니다.");
         }
 
         if (userRepository.existsByPhoneNumber(command.phoneNumber())) {
-            throw new IllegalArgumentException("이미 가입된 전화번호입니다.");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 가입된 전화번호입니다.");
         }
 
         EmailVerification verification =
