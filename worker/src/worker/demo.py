@@ -1,4 +1,4 @@
-"""One command: obtain OHLCV, run Nautilus, write EngineOutput JSON."""
+"""One command: obtain OHLCV, run Nautilus, write the EngineOutput message and artifacts."""
 
 import argparse
 import json
@@ -10,6 +10,10 @@ from zoneinfo import ZoneInfo
 from worker.engine_contracts import EngineInput, ProgressSnapshot
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main() -> int:
@@ -24,8 +28,22 @@ def main() -> int:
         "--fixture", type=Path, help="Explicit CSV test data (not real market data)"
     )
     parser.add_argument("--lookback-days", type=int, default=120)
-    parser.add_argument("--output", type=Path, default=Path("engine-output.json"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("engine-output.json"),
+        help="EngineOutput message JSON: exactly what would be published to the broker",
+    )
+    parser.add_argument(
+        "--artifacts",
+        type=Path,
+        help="Local diagnostics JSON (order ledger + metadata); not part of the message. "
+        "Default: <output>-artifacts.json next to --output",
+    )
     args = parser.parse_args()
+    artifacts_path = args.artifacts or args.output.with_name(
+        f"{args.output.stem}-artifacts{args.output.suffix}"
+    )
     if args.input:
         request = EngineInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     else:
@@ -52,13 +70,18 @@ def main() -> int:
             print(f"Completed trading days: {done}/{total}", file=sys.stderr)
 
     engine = NautilusMomentumEngine(CsvDataProvider(args.fixture) if args.fixture else None)
-    output = engine.run(request, progress)
+    output, artifacts = engine.run_with_artifacts(request, progress)
+    # Two files on purpose: --output is the broker message contract, --artifacts is local
+    # diagnostics that the contract deliberately excludes.
     # Preserve required null metrics/OPEN fields; omit only unchanged positions snapshots.
-    payload = output.model_dump(mode="json", by_alias=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"{output.run.status}: {args.output}", file=sys.stderr)
-    if output.error:
-        print(output.error.message, file=sys.stderr)
+    write_json(args.output, output.model_dump(mode="json", by_alias=True))
+    write_json(artifacts_path, artifacts.model_dump(mode="json", by_alias=True))
+    print(
+        f"{output.run.status}: message {args.output}, artifacts {artifacts_path}",
+        file=sys.stderr,
+    )
+    if output.run.error:
+        print(output.run.error.message, file=sys.stderr)
     return 0 if output.run.status == "COMPLETED" else 1
 
 

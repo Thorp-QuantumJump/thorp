@@ -6,11 +6,12 @@ from decimal import Decimal
 
 import nautilus_trader
 
+from worker.artifacts import OrderRecord, RunArtifacts
 from worker.engine_contracts import (
     Diagnostics,
+    EngineError,
     EngineInput,
     EngineOutput,
-    ErrorResult,
     ExecutionResult,
     RunResult,
 )
@@ -36,6 +37,23 @@ class NautilusMomentumEngine:
         engine_input: EngineInput | dict,
         on_progress: SnapshotCallback | None = None,
     ) -> EngineOutput:
+        """계약 메시지만 돌려준다 (``contracts.engine.BacktestEngine`` Protocol 모양).
+
+        주문 원장·재현성 메타데이터가 필요하면 ``run_with_artifacts``를 쓴다.
+        """
+        output, _ = self.run_with_artifacts(engine_input, on_progress)
+        return output
+
+    def run_with_artifacts(
+        self,
+        engine_input: EngineInput | dict,
+        on_progress: SnapshotCallback | None = None,
+    ) -> tuple[EngineOutput, RunArtifacts]:
+        """계약 메시지와 로컬 진단 산출물을 함께 돌려준다.
+
+        산출물을 인스턴스 속성으로 남기지 않고 반환값으로만 넘기므로, 같은 엔진 인스턴스를
+        여러 번(또는 나중에 병렬로) 실행해도 실행 사이에 결과가 섞이지 않는다.
+        """
         request = EngineInput.model_validate(engine_input)
         started = datetime.now(UTC)
         metadata = {
@@ -49,6 +67,7 @@ class NautilusMomentumEngine:
             "metricsVersion": "DAILY_252_DDOF1_RF0_V1",
             "simulationCurrency": "KRW_SIM (1:1 KRW, precision 8)",
         }
+        orders: list[OrderRecord] = []
         try:
             dataset = self.data_provider.load(request)
             if dataset.instrument_id != request.universe.instrument_ids[0]:
@@ -75,8 +94,9 @@ class NautilusMomentumEngine:
                 }
             )
             execution = execute_nautilus(request, prices, on_progress)
+            orders = execution.orders
             slip = sum((trade.slippage_cost for trade in execution.trades), Decimal("0"))
-            return EngineOutput(
+            output = EngineOutput(
                 run=RunResult(
                     backtest_id=request.run.backtest_id,
                     status="COMPLETED",
@@ -89,29 +109,28 @@ class NautilusMomentumEngine:
                 portfolio_series=execution.series,
                 trades=execution.trades,
                 execution=ExecutionResult(
-                    order_count=len(execution.orders),
-                    fill_count=sum(order.status == "FILLED" for order in execution.orders),
-                    rejected_order_count=sum(
-                        order.status == "REJECTED" for order in execution.orders
-                    ),
+                    order_count=len(orders),
+                    fill_count=sum(order.status == "FILLED" for order in orders),
+                    rejected_order_count=sum(order.status == "REJECTED" for order in orders),
                     total_slippage_cost=slip,
-                    orders=execution.orders,
                 ),
-                diagnostics=Diagnostics(warnings=execution.warnings, metadata=metadata),
+                diagnostics=Diagnostics(warnings=execution.warnings),
             )
         except CallbackError:
             raise
         except Exception as exc:
-            return EngineOutput(
+            output = EngineOutput(
                 run=RunResult(
                     backtest_id=request.run.backtest_id,
                     status="FAILED",
                     started_at=started,
                     finished_at=datetime.now(UTC),
+                    error=EngineError(
+                        code="NO_MARKET_DATA"
+                        if isinstance(exc, MarketDataError)
+                        else "ENGINE_ERROR",
+                        message=f"{type(exc).__name__}: {exc}",
+                    ),
                 ),
-                error=ErrorResult(
-                    code="NO_MARKET_DATA" if isinstance(exc, MarketDataError) else "ENGINE_ERROR",
-                    message=f"{type(exc).__name__}: {exc}",
-                ),
-                diagnostics=Diagnostics(metadata=metadata),
             )
+        return output, RunArtifacts(orders=orders, metadata=metadata)

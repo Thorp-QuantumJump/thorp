@@ -26,14 +26,17 @@ def request(**overrides: Any) -> EngineInput:
 
 def test_native_next_open_round_trips_and_callback() -> None:
     callbacks = []
-    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(request(), callbacks.append)
-    assert output.run.status == "COMPLETED", output.error
+    output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(
+        request(), callbacks.append
+    )
+    assert output.run.status == "COMPLETED", output.run.error
     assert len(callbacks) == len(output.portfolio_series) == 7
     assert [s.completed_trading_days for s in callbacks] == list(range(1, 8))
     assert all(s.total_trading_days == 7 and len(s.portfolio_series) == 1 for s in callbacks)
-    assert output.diagnostics.metadata["warmupTradingDays"] == 2
-    orders = output.execution.orders
+    assert artifacts.metadata["warmupTradingDays"] == 2
+    orders = artifacts.orders
     assert len(orders) == 3
+    assert output.execution.order_count == 3
     assert [o.side for o in orders] == ["BUY", "SELL", "BUY"]
     assert orders[0].quantity == 9
     assert orders[0].signal_time.date() == date(2025, 1, 6)
@@ -43,11 +46,18 @@ def test_native_next_open_round_trips_and_callback() -> None:
     assert orders[0].submitted_time == orders[0].fill_time
     assert orders[0].fill_price == Decimal("105.0525")
     assert orders[1].fill_price == Decimal("94.9525")
+    # Pre-slippage opens live only in the artifacts, and still drive grossPnl.
+    assert orders[0].reference_price == Decimal("105")
+    assert orders[1].reference_price == Decimal("95")
     assert output.portfolio_series[1].cash == Decimal("54.5275")
     assert output.performance.trade_count == 1
     assert [t.status for t in output.trades] == ["CLOSED", "OPEN"]
     closed, opened = output.trades
     assert closed.gross_pnl == -90
+    assert (
+        closed.gross_pnl
+        == (orders[1].reference_price - orders[0].reference_price) * closed.quantity
+    )
     assert closed.slippage_cost == Decimal("0.9")
     assert closed.realized_pnl == Decimal("-90.9")
     assert closed.realized_pnl == closed.gross_pnl - closed.commission - closed.slippage_cost
@@ -63,6 +73,10 @@ def test_native_next_open_round_trips_and_callback() -> None:
     payload = output.model_dump(mode="json", by_alias=True)
     assert isinstance(payload["performance"]["totalReturn"], str)
     assert payload["trades"][-1]["realizedPnl"] is None
+    # Diagnostic-only keys must not travel in the message.
+    assert "orders" not in payload["execution"]
+    assert "metadata" not in payload["diagnostics"]
+    assert not [key for key in payload["trades"][0] if "eferencePrice" in key]
 
 
 def test_injected_provider_is_reusable_across_runs() -> None:
@@ -70,21 +84,25 @@ def test_injected_provider_is_reusable_across_runs() -> None:
     engine = NautilusMomentumEngine(CsvDataProvider(FIXTURE))
     first_callbacks: list[ProgressSnapshot] = []
     second_callbacks: list[ProgressSnapshot] = []
-    first = engine.run(request(), first_callbacks.append)
-    second = engine.run(request(), second_callbacks.append)
-    assert first.run.status == second.run.status == "COMPLETED", first.error or second.error
+    first, first_artifacts = engine.run_with_artifacts(request(), first_callbacks.append)
+    second, second_artifacts = engine.run_with_artifacts(request(), second_callbacks.append)
+    assert first.run.status == second.run.status == "COMPLETED", first.run.error or second.run.error
     assert first.performance == second.performance
     assert first.portfolio_series == second.portfolio_series
     assert first.execution == second.execution
     assert first.trades == second.trades
     assert first.diagnostics == second.diagnostics
+    assert first_artifacts == second_artifacts
     assert len(first_callbacks) == len(second_callbacks) == 7
     # 다른 입력을 이어서 실행해도 앞선 실행 결과와 섞이지 않는다.
     single_day = {"backtestId": "REUSE", "start": "2025-01-06", "end": "2025-01-06"}
-    other = engine.run(request(run=single_day))
+    other, other_artifacts = engine.run_with_artifacts(request(run=single_day))
     assert other.run.backtest_id == "REUSE"
     assert other.execution.order_count == 1
     assert first.execution.order_count == 3
+    # 산출물은 반환값으로만 나가므로 앞선 실행의 주문 원장이 뒤 실행에 남지 않는다.
+    assert len(other_artifacts.orders) == 1
+    assert len(first_artifacts.orders) == 3
 
 
 class FrameProvider:
@@ -98,9 +116,9 @@ class FrameProvider:
 def test_gap_rejects_whole_order_and_retries_without_future_sizing() -> None:
     frame = CsvDataProvider(FIXTURE).load(request()).prices
     frame.loc["2025-01-07", ["open", "high"]] = [200, 200]
-    output = NautilusMomentumEngine(FrameProvider(frame)).run(request())
-    assert output.run.status == "COMPLETED", output.error
-    first, second = output.execution.orders[:2]
+    output, artifacts = NautilusMomentumEngine(FrameProvider(frame)).run_with_artifacts(request())
+    assert output.run.status == "COMPLETED", output.run.error
+    first, second = artifacts.orders[:2]
     assert first.quantity == 9  # Same close-sized quantity despite the unknown future gap.
     assert first.status == "REJECTED" and first.fill_price is None
     assert second.signal_time.date() == date(2025, 1, 7)
@@ -113,11 +131,11 @@ def test_gap_rejects_whole_order_and_retries_without_future_sizing() -> None:
 
 def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
     req = request(run={"backtestId": "LAST", "start": "2025-01-06", "end": "2025-01-06"})
-    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
-    assert output.run.status == "COMPLETED", output.error
+    output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)
+    assert output.run.status == "COMPLETED", output.run.error
     assert output.execution.order_count == 1
     assert output.execution.fill_count == 0
-    assert output.execution.orders[0].status == "PENDING"
+    assert artifacts.orders[0].status == "PENDING"
     assert output.performance.final_equity == 1000
     assert output.performance.sharpe_ratio is None
     assert output.performance.volatility is None
@@ -128,7 +146,7 @@ def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
 def test_insufficient_history_stays_cash_and_warns() -> None:
     req = request(strategy={"parameters": {"lookbackDays": 120}})
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
-    assert output.run.status == "COMPLETED", output.error
+    assert output.run.status == "COMPLETED", output.run.error
     assert output.execution.order_count == 0
     assert output.performance.final_equity == 1000
     assert output.performance.sharpe_ratio is None
@@ -194,12 +212,16 @@ def test_future_data_changes_do_not_change_previous_output() -> None:
     original = CsvDataProvider(FIXTURE).load(request()).prices
     changed = original.copy()
     changed.loc["2025-01-14", ["open", "high", "low", "close"]] = [900, 910, 890, 905]
-    baseline = NautilusMomentumEngine(FrameProvider(original)).run(request())
-    alternate = NautilusMomentumEngine(FrameProvider(changed)).run(request())
+    baseline, base_artifacts = NautilusMomentumEngine(FrameProvider(original)).run_with_artifacts(
+        request()
+    )
+    alternate, alt_artifacts = NautilusMomentumEngine(FrameProvider(changed)).run_with_artifacts(
+        request()
+    )
     assert baseline.run.status == alternate.run.status == "COMPLETED"
     assert baseline.portfolio_series[:-1] == alternate.portfolio_series[:-1]
-    assert baseline.execution.orders[2].quantity == alternate.execution.orders[2].quantity
-    assert alternate.execution.orders[2].status == "REJECTED"
+    assert base_artifacts.orders[2].quantity == alt_artifacts.orders[2].quantity
+    assert alt_artifacts.orders[2].status == "REJECTED"
 
 
 def test_full_input_example_and_output_json_roundtrip() -> None:
@@ -260,10 +282,16 @@ def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_empty_evaluation_is_failed_without_fake_metrics() -> None:
     req = request(run={"backtestId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
-    output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
+    output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)
     assert output.run.status == "FAILED"
-    assert output.error.code == "NO_MARKET_DATA"
+    # 실패 사유는 계약 위치(run.error)에 실린다. 여기가 아니면 백엔드가 조용히 버린다.
+    assert output.run.error.code == "NO_MARKET_DATA"
+    assert "No evaluation trading days" in output.run.error.message
     assert output.performance is None and output.execution is None
+    assert output.model_dump(mode="json", by_alias=True)["run"]["error"]["code"] == "NO_MARKET_DATA"
+    # 실패해도 재현성 메타데이터는 남는다(주문은 만들어지기 전이므로 비어 있다).
+    assert artifacts.metadata["metricsVersion"] == "DAILY_252_DDOF1_RF0_V1"
+    assert artifacts.orders == []
 
 
 def test_120_previous_closes_are_required() -> None:
@@ -276,8 +304,8 @@ def test_120_previous_closes_are_required() -> None:
         run={"backtestId": "120", "start": dates[119].date(), "end": dates[-1].date()},
         strategy={"parameters": {"lookbackDays": 120}},
     )
-    output = NautilusMomentumEngine(FrameProvider(frame)).run(req)
-    assert output.run.status == "COMPLETED", output.error
-    assert output.execution.orders[0].signal_time.date() == dates[120].date()
-    assert output.execution.orders[0].fill_time.date() == dates[121].date()
+    output, artifacts = NautilusMomentumEngine(FrameProvider(frame)).run_with_artifacts(req)
+    assert output.run.status == "COMPLETED", output.run.error
+    assert artifacts.orders[0].signal_time.date() == dates[120].date()
+    assert artifacts.orders[0].fill_time.date() == dates[121].date()
     assert output.execution.order_count == 1

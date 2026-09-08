@@ -21,7 +21,14 @@ uv sync --python 3.11 --group dev
 uv run python -m worker.demo --input examples/engine-input.json --output engine-output.json
 ```
 
-마지막 명령 하나가 **실제 데이터 조회 → Nautilus 실행 → EngineOutput JSON 저장**을 수행한다.
+마지막 명령 하나가 **실제 데이터 조회 → Nautilus 실행 → 결과 JSON 2개 저장**을 수행한다.
+파일은 성격에 따라 나뉜다.
+
+- `engine-output.json` — 메시지 계약 `EngineOutput`. 브로커로 나갈 payload 그 자체다.
+- `engine-output-artifacts.json` — 로컬 진단 산출물 `RunArtifacts`(주문 원장 `orders`,
+  재현성 `metadata`). 메시지 계약에 없으므로 브로커로 나가지 않는다. 경로는 `--output`
+  옆에 `-artifacts`를 붙여 자동으로 정하며 `--artifacts`로 직접 지정할 수 있다.
+
 예제 입력은 실제 검증에 성공한 2020-09-18~2022-12-30 구간이다. 인자 없이 실행하면
 최근 완료 거래일을 끝으로 약 5년을 요청한다(서울 16시 이전에는 전날까지).
 
@@ -32,7 +39,8 @@ uv run python -m worker.demo --ticker 000660.KS --start 2020-09-18 --end 2022-12
 
 다른 코스피 종목을 사용하려면 `--ticker 005930.KS`처럼 명시한다. 자동 종목 대체는 없다.
 `--input`을 쓰면 입력 JSON의 실행 조건이 CLI 조건보다 우선한다. `run.end`는 포함이고
-yfinance의 배타적 end에는 하루를 더한다. 실제 평가 시작·종료일과 종목명은 metadata에 기록한다.
+yfinance의 배타적 end에는 하루를 더한다. 실제 평가 시작·종료일과 종목명은 산출물 파일의
+metadata에 기록한다.
 
 네트워크 없는 작은 테스트 데이터(실제 시세가 아님):
 
@@ -40,7 +48,8 @@ yfinance의 배타적 end에는 하루를 더한다. 실제 평가 시작·종�
 uv run python -m worker.demo --fixture examples/momentum_fixture.csv --start 2025-01-06 --end 2025-01-14 --lookback-days 2 --output examples/fixture-output.json
 ```
 
-작은 파일의 신호/청산 검증용 lookback은 2이다. 실제 전략의 기본값과 별도 경계 테스트는 120이다.
+`examples/fixture-output.json`(메시지)과 `examples/fixture-output-artifacts.json`(진단
+산출물)이 함께 생성된다. 작은 파일의 신호/청산 검증용 lookback은 2이다. 실제 전략의 기본값과 별도 경계 테스트는 120이다.
 uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`를 사용할 수 있다.
 
 ### Consumer 연결
@@ -76,9 +85,13 @@ result_json = result.model_dump_json(by_alias=True)
   계산 불가능한 지표와 OPEN 거래의 미실현 필드는 null을 유지한다.
 - `portfolioSeries`는 매일 존재한다. `positions`는 첫날·마지막 날·수량 변경일에만 존재하며,
   생략은 구성 스냅샷 없음, 빈 배열은 현금 상태를 뜻한다.
-- 데이터/엔진 오류는 `run.status=FAILED`, `error`, null 성과를 반환한다.
+- 데이터/엔진 오류는 `run.status=FAILED`, `run.error={code, message}`, null 성과를 반환한다.
   잘못된 EngineInput은 ValidationError, 콜백 실패는 CallbackError를 발생시킨다.
   Consumer는 결과가 COMPLETED인지 확인해야 하며, 콜백 100%가 저장 성공을 뜻하지 않는다.
+- 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run_engine` 대신
+  `NautilusMomentumEngine.run_with_artifacts(...) -> (EngineOutput, RunArtifacts)`를 쓴다.
+  `run(...)`은 계약 메시지만 반환한다. 산출물은 반환값으로만 전달하고 엔진 인스턴스에
+  남기지 않으므로 같은 인스턴스로 여러 번 실행해도 결과가 섞이지 않는다.
 
 ### 체결·계산 규칙
 
@@ -86,7 +99,8 @@ result_json = result.model_dump_json(by_alias=True)
 이며 시가 QuoteTick의 bid/ask에 각각 -/+5bps를 적용한다. 실제 체결은 Nautilus가 수행하며
 native 체결 건수와 native 잔액이 출력 원장과 일치하는지도 검사한다. 실제 시가 비용이 현금을
 초과하면 **제출 게이트웨이에서 주문 전체를 거절**하고 INSUFFICIENT_CASH 경고를 남긴다.
-거절은 출력 주문 원장에 기록되며, 거래소에 제출되지 않았으므로 native 주문 캐시에는 없다.
+거절은 진단 산출물의 주문 원장과 메시지의 `execution.rejectedOrderCount`에 기록되며,
+거래소에 제출되지 않았으므로 native 주문 캐시에는 없다.
 
 수수료·세금 0, 슬리피지 5bps, 정수 수량, 추가 매수·일별 리밸런싱·공매도·강제 청산 없음.
 마지막 종가 주문은 PENDING이며 다음 평가 거래일이 없어 제출하지 않는다. 호가 수량은
@@ -94,8 +108,11 @@ Nautilus의 최대 표현 수량을 사용하여 모든 지원 가능한 주문�
 
 일별 `cash + positionValue`로 평가한다. Sharpe는 252일, RF=0, ddof=1, 첫날 수익률 0이며
 CAGR은 실제 첫/마지막 평가 거래일 사이 달력 일수를 사용한다. MDD는 음수다. CLOSED만
-tradeCount/승률에 포함한다. entryPrice/exitPrice는 실제 체결가이고 별도 ReferencePrice가
-슬리피지 전 시가다. grossPnl은 기준가 손익, realizedPnl은 실제 체결가 손익이므로 비용을 중복 차감하지 않는다.
+tradeCount/승률에 포함한다. entryPrice/exitPrice는 실제 체결가다. grossPnl은 슬리피지 전
+시가(기준가) 손익, realizedPnl은 실제 체결가 손익이므로 비용을 중복 차감하지 않는다
+(`realizedPnl == grossPnl - commission - slippageCost`). 기준가 자체는 엔진 내부 값이며
+메시지에는 없다. 실제 체결가와 slippageCost로 역산되고, 주문별 기준가는 진단 산출물의
+주문 원장(`referencePrice`)에 남는다.
 
 자세한 계약 해석은 [설계 결정](../docs/specs/101-nautilus-momentum.md)을 참고한다.
 

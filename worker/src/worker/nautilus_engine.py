@@ -19,9 +19,9 @@ from nautilus_trader.model.instruments import Equity
 from nautilus_trader.model.objects import Currency, Money, Price, Quantity
 from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 
+from worker.artifacts import OrderRecord
 from worker.engine_contracts import (
     EngineInput,
-    OrderRecord,
     PortfolioSnapshot,
     PositionSnapshot,
     ProgressSnapshot,
@@ -75,6 +75,9 @@ class MomentumExecution(NautilusStrategy):
         self.pending_record: OrderRecord | None = None
         self.orders: list[OrderRecord] = []
         self.trades: list[TradeResult] = []
+        # Pre-slippage entry opens stay internal: the message carries the actual fill price
+        # and slippageCost, from which the reference price is derivable.
+        self.entry_reference_prices: dict[str, Decimal] = {}
         self.series: list[PortfolioSnapshot] = []
         self.warnings: list[WarningRecord] = []
         self.peak = self.cash
@@ -137,27 +140,26 @@ class MomentumExecution(NautilusStrategy):
             if self.cash < 0:
                 raise RuntimeError("Negative cash invariant violated")
             self.quantity = int(quantity)
-            self.trades.append(
-                TradeResult(
-                    trade_id=f"TR-{len(self.trades) + 1:06d}",
-                    instrument_id=str(self.instrument.id),
-                    entry_time=record.fill_time,
-                    entry_price=price,
-                    entry_reference_price=record.reference_price,
-                    quantity=quantity,
-                    slippage_cost=slip,
-                )
+            trade = TradeResult(
+                trade_id=f"TR-{len(self.trades) + 1:06d}",
+                instrument_id=str(self.instrument.id),
+                entry_time=record.fill_time,
+                entry_price=price,
+                quantity=quantity,
+                slippage_cost=slip,
             )
+            self.entry_reference_prices[trade.trade_id] = record.reference_price
+            self.trades.append(trade)
         else:
             self.cash += price * quantity
             self.quantity = 0
             trade = self.trades[-1]
+            entry_reference = self.entry_reference_prices[trade.trade_id]
             trade.status = "CLOSED"
             trade.exit_time = record.fill_time
             trade.exit_price = price
-            trade.exit_reference_price = record.reference_price
             trade.slippage_cost += slip
-            trade.gross_pnl = (record.reference_price - trade.entry_reference_price) * quantity
+            trade.gross_pnl = (record.reference_price - entry_reference) * quantity
             trade.realized_pnl = (price - trade.entry_price) * quantity
             trade.return_rate = trade.realized_pnl / (trade.entry_price * quantity)
         self.pending = None

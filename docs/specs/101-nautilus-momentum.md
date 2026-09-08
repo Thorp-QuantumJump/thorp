@@ -8,8 +8,12 @@ owns batching (20 days plus the final remainder), messaging and persistence. Cal
 exceptions propagate to the caller: publication failures must not be hidden as success.
 
 Input parsing errors raise Pydantic validation errors. Data/engine failures return FAILED
-EngineOutput with null performance/execution and an error. Existing legacy models and
+EngineOutput with null performance/execution and `run.error`. Existing legacy models and
 `run_backtest` remain separate and are not the new integration entry point.
+
+The order-level audit log and the reproducibility metadata are NOT part of the message
+contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the message as
+`RunArtifacts` (`worker/artifacts.py`); `run` returns the message only.
 
 ## Decisions overriding or clarifying the supplied design
 
@@ -21,7 +25,8 @@ EngineOutput with null performance/execution and an error. Existing legacy model
   against the stale open or the current closing bar. The final order stays unsubmitted.
 - Adjusted OHLC use yfinance `auto_adjust=True` (splits AND dividends); this is explicitly
   `TOTAL_RETURN_ADJUSTED`, not the design's example SPLIT_ADJUSTED. No ticker fallback.
-- Entry/exit prices are actual fills; entry/exitReferencePrice are pre-slippage opens.
+- Entry/exit prices are actual fills; the pre-slippage opens stay internal to the engine and
+  are recoverable from the fill price and slippageCost (per-order values are in the artifacts).
   grossPnl uses reference prices; realizedPnl = grossPnl - commission - slippageCost.
   returnRate divides by actual entryPrice * quantity. OPEN PnL fields are null.
 - positions are present on first/last evaluation days and quantity-change days; absent
@@ -35,10 +40,11 @@ EngineOutput with null performance/execution and an error. Existing legacy model
   Quote size is the maximum native quantity, covering every supported order size without
   imposing historical volume limits. This is explicitly a daily demo model.
 - A cash-short order is rejected by the submission gateway before native submission, recorded
-  in execution.orders and diagnostics, and cleared for next-close reevaluation. Accepted orders
+  in the artifacts order ledger, counted in execution.rejectedOrderCount, warned about in
+  diagnostics, and cleared for next-close reevaluation. Accepted orders
   have native fill events; native fill count and account balance are reconciled to the output.
 - No benchmark fields in EngineOutput (as required by the detailed EngineOutput section).
-  Diagnostics metadata records source, ticker, identity, adjustment, dates and versions.
+  Artifact metadata records source, ticker, identity, adjustment, dates and versions.
 - Market halt/delisting event classification is unavailable in this temporary provider;
   missing sessions are skipped, with no claim to cause-based delisting support.
 

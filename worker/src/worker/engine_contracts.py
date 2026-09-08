@@ -149,8 +149,6 @@ class TradeResult(Contract):
     exit_time: datetime | None = None
     entry_price: Decimal
     exit_price: Decimal | None = None
-    entry_reference_price: Decimal
-    exit_reference_price: Decimal | None = None
     quantity: Decimal
     gross_pnl: Decimal | None = None
     commission: Decimal = Decimal("0")
@@ -172,30 +170,18 @@ class PerformanceResult(Contract):
     win_rate: Decimal | None
 
 
-class OrderRecord(Contract):
-    order_id: str
-    signal_time: datetime
-    quantity: Decimal
-    side: Literal["BUY", "SELL"]
-    status: Literal["PENDING", "FILLED", "REJECTED"] = "PENDING"
-    submitted_time: datetime | None = None
-    fill_time: datetime | None = None
-    reference_price: Decimal | None = None
-    fill_price: Decimal | None = None
-    reason: str | None = None
-
-
 class ExecutionResult(Contract):
+    """Aggregate counts only; the per-order audit log is a local artifact, not a message."""
+
     order_count: int
     fill_count: int
     rejected_order_count: int
     total_commission: Decimal = Decimal("0")
     total_slippage_cost: Decimal
-    orders: list[OrderRecord]
 
 
 class WarningRecord(Contract):
-    date: Date | None = None
+    date: Date
     instrument_id: str
     code: str
     message: str
@@ -203,7 +189,11 @@ class WarningRecord(Contract):
 
 class Diagnostics(Contract):
     warnings: list[WarningRecord] = Field(default_factory=list)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class EngineError(Contract):
+    code: str
+    message: str
 
 
 class RunResult(Contract):
@@ -211,11 +201,7 @@ class RunResult(Contract):
     status: Literal["COMPLETED", "FAILED"]
     started_at: datetime
     finished_at: datetime
-
-
-class ErrorResult(Contract):
-    code: str
-    message: str
+    error: EngineError | None = None
 
 
 class EngineOutput(Contract):
@@ -225,4 +211,3 @@ class EngineOutput(Contract):
     trades: list[TradeResult] = Field(default_factory=list)
     execution: ExecutionResult | None = None
     diagnostics: Diagnostics = Field(default_factory=Diagnostics)
-    error: ErrorResult | None = None
