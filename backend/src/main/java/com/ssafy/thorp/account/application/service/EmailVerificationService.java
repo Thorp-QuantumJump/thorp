@@ -2,6 +2,7 @@ package com.ssafy.thorp.account.application.service;
 
 import com.ssafy.thorp.account.application.port.VerificationMailSender;
 import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;
+import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.EmailVerification;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -24,6 +25,7 @@ public class EmailVerificationService {
     private static final Duration CODE_TTL = Duration.ofMinutes(3);
 
     private final EmailVerificationRepository emailVerificationRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final VerificationMailSender verificationMailSender;
 
@@ -31,16 +33,26 @@ public class EmailVerificationService {
 
     public EmailVerificationService(
             EmailVerificationRepository emailVerificationRepository,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             VerificationMailSender verificationMailSender) {
         this.emailVerificationRepository = emailVerificationRepository;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.verificationMailSender = verificationMailSender;
     }
 
-    /** 인증번호를 새로 발급해 메일로 보낸다. 재발송이면 기존 인증 기록을 지운다. */
+    /**
+     * 인증번호를 새로 발급해 메일로 보낸다. 재발송이면 기존 인증 기록을 지운다.
+     *
+     * <p>이미 가입된 이메일이면 기존 인증 기록에 손대지 않고 바로 거절한다.
+     */
     @Transactional
     public void createVerificationCode(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 가입된 이메일입니다.");
+        }
+
         emailVerificationRepository.deleteByEmail(email);
 
         String verificationCode = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));
