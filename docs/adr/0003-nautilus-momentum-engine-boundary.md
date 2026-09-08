@@ -133,7 +133,7 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 |---|---|---|---|
 | `marketData.adjustment` | `SPLIT_ADJUSTED` | `TOTAL_RETURN_ADJUSTED` | 계약 변경 없이 해소 가능. 아직 적용하지 않았다 |
 | `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | 경고로 해소 가능 |
-| `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | 경고로 덮을 수 없다. 팀 결정 필요 |
+| `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | **결정됨 ([ADR-0004](0004-backtest-commission-model.md))**: 계약에 `ZERO` 추가. 반영은 다음 작업 |
 
 계약 쪽 세 값은 `worker/src/worker/contracts/engine_input.py`의 `Adjustment`, `DelistingPolicy`,
 `CommissionModel` enum이 각각 하나씩만 허용한다. 그래서 입력 모델을 지금 그대로 갈아끼우면
@@ -151,9 +151,11 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 미지원 사실을 `diagnostics.warnings`에 남기는 방식으로 해소할 수 있다.
 
 **`execution.commission`** — 이것만은 경고로 덮을 수 없다. 수수료·세금은 모든 수익률을 바꾸고,
-특히 회전율이 높은 전략을 과대평가하게 만든다. 키움 요율표(`version=2026-09`)를 구현하거나,
-계약에 한시적인 무수수료 값을 추가하거나 중 하나를 팀이 결정해야 하며, 그 결정 전에는 입력
-모델을 통합할 수 없다.
+특히 회전율이 높은 전략을 과대평가하게 만든다. **[ADR-0004](0004-backtest-commission-model.md)에서
+결정되었다** — 계약의 `CommissionModel`에 `ZERO`를 정식 모델로 추가하고 데모 단계 고정값을
+`model=ZERO`로 바꾼다. 키움 요율표는 전략 비교 단계에서 별도 티켓으로 구현한다.
+이 결정으로 입력 모델 통합이 가능해졌고, 실제 반영은 다음 작업에서 픽스처 → 백엔드 → 워커
+순서로 함께 한다.
 
 ### 함께 정리해야 하는 부수 차이
 
