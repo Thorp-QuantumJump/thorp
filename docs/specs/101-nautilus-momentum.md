@@ -24,8 +24,9 @@ contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the
 The result side of this engine is the shared message contract: `EngineOutput` comes from
 `worker/contracts/engine_output.py` and the callback point from `worker/contracts/events.py`.
 The input side is not yet: `engine_input` is still `worker/engine_contracts.py`, not the
-contract's `worker/contracts/engine_input.py`. The two disagree on three fixed execution
-policy values; ADR-0003 records which ones and what has to be decided before they merge.
+contract's `worker/contracts/engine_input.py`. The two still disagree on two fixed execution
+policy values (`execution.commission`, `execution.delisting`); `marketData.adjustment` is now
+aligned. ADR-0003 records which ones and what has to be decided before they merge.
 
 ## Decisions overriding or clarifying the supplied design
 
@@ -37,11 +38,14 @@ policy values; ADR-0003 records which ones and what has to be decided before the
 - Native market order is created at close (including quantity); gateway submits it only
   on the next available open quote. Bars do not execute orders. This avoids execution
   against the stale open or the current closing bar. The final order stays unsubmitted.
-- Adjusted OHLC use yfinance `auto_adjust=True` (splits AND dividends); this is explicitly
-  `TOTAL_RETURN_ADJUSTED`, not the design's example SPLIT_ADJUSTED. No ticker fallback.
-  The messaging contract fixes `marketData.adjustment=SPLIT_ADJUSTED`, so this value is
-  currently out of line with it; ADR-0003 "메시지 계약과의 정합 상태" records that state and
-  the open question of switching to `auto_adjust=False`.
+- OHLC use yfinance `auto_adjust=False`, i.e. Yahoo's raw series, which reflects splits only.
+  That is exactly the `SPLIT_ADJUSTED` the messaging contract fixes for
+  `marketData.adjustment`, so the engine and the contract agree on this field; pykrx's
+  adjusted prices carry the same meaning, so a later switch to KRX data needs no contract
+  change. Dividend reinvestment is therefore excluded and live demo returns are lower than
+  the earlier `auto_adjust=True` (`TOTAL_RETURN_ADJUSTED`) runs — an approved trade-off that
+  also makes runs more stable, because dividend adjustment retroactively rewrites past prices
+  on every new dividend. No ticker fallback. See ADR-0003 "메시지 계약과의 정합 상태".
 - Entry/exit prices are actual fills; the pre-slippage opens stay internal to the engine and
   are recoverable from the fill price and slippageCost (per-order values are in the artifacts).
   grossPnl uses reference prices; realizedPnl = grossPnl - commission - slippageCost.

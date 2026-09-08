@@ -4,9 +4,12 @@
 넘기는 값도 같은 이유로 ``worker.contracts.events.ProgressPoint`` 를 그대로 쓴다. 같은 모양을
 두 곳에 선언해 두면 한쪽만 고쳤을 때 조용히 어긋나기 때문이다.
 
-입력 모델은 아직 여기 남아 있다. 계약 ``worker.contracts.engine_input`` 의 고정값
-(``adjustment=SPLIT_ADJUSTED``, ``commission.model=BROKER``, ``delisting=CAUSE_BASED``)과 이 엔진이
-실제로 지원하는 값이 달라서, 지원 값을 팀에서 맞춘 뒤 함께 옮긴다.
+입력 모델은 아직 여기 남아 있다. 계약 ``worker.contracts.engine_input`` 의 고정값과 이 엔진이
+실제로 지원하는 값이 달라서, 지원 값을 팀에서 맞춘 뒤 함께 옮긴다. ``marketData.adjustment``
+는 공급자를 yfinance ``auto_adjust=False`` 로 바꿔 계약 고정값 ``SPLIT_ADJUSTED`` 와 일치시켰다.
+남은 차이는 수수료 모델(계약 ``commission.model=BROKER`` vs 엔진 ``ZERO``)이다. 계약에 ``ZERO``
+를 추가하기로 결정했고(ADR-0004) 그 반영이 남아 있다. ``delisting=CAUSE_BASED`` 는 요청을 받고
+미지원 경고를 남기기로 결정했으며(ADR-0003) 아직 구현하지 않아 여기서는 ``UNSUPPORTED`` 다.
 """
 
 from datetime import date as Date
@@ -48,7 +51,7 @@ class UniverseSpec(Contract):
 class MarketDataSpec(Contract):
     dataset_id: str = "YFINANCE_DAILY"
     interval: Literal["1D"] = "1D"
-    adjustment: Literal["TOTAL_RETURN_ADJUSTED"] = "TOTAL_RETURN_ADJUSTED"
+    adjustment: Literal["SPLIT_ADJUSTED"] = "SPLIT_ADJUSTED"
     price_type: Literal["LAST"] = "LAST"
 
 

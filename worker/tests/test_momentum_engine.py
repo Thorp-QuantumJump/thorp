@@ -339,8 +339,12 @@ def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) ->
     dataset = YFinanceDataProvider().load(request())
     assert calls[0] == "000660.KS"
     assert calls[1]["end"] == "2025-01-15"
-    assert calls[1]["auto_adjust"] is True
+    # 계약 고정값 marketData.adjustment=SPLIT_ADJUSTED = 액면분할만 반영한 원본 시계열.
+    # auto_adjust=True 로 두면 배당까지 반영되어 계약과 어긋난다.
+    assert calls[1]["auto_adjust"] is False
     assert calls[1]["keepna"] is True
+    assert dataset.adjustment == "SPLIT_ADJUSTED"
+    assert dataset.metadata["autoAdjust"] is False
     assert dataset.metadata["instrumentName"] == "SK hynix Inc."
     monkeypatch.setattr(FakeTicker, "get_history_metadata", lambda _: {"symbol": "WRONG"})
     with pytest.raises(MarketDataError, match="Unexpected identity"):

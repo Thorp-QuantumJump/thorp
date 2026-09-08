@@ -126,25 +126,42 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 ### 아직 통합하지 않은 것: 입력 모델
 
 입력 모델만 `worker/src/worker/engine_contracts.py`에 남아 있다. 계약이 정한 고정 실행 정책
-(`docs/specs/backtest-messaging/README.md` §4.1)과 이 엔진이 실제로 지원하는 값이 세 곳 다르기
-때문이다.
+(`docs/specs/backtest-messaging/README.md` §4.1)과 이 엔진이 실제로 지원하는 값이 아직 두 곳
+다르기 때문이다. 세 곳이었고 `marketData.adjustment`는 해소했다.
 
 | 경로 | 계약 고정값 | 엔진 지원값 | 현재 판단 |
 |---|---|---|---|
-| `marketData.adjustment` | `SPLIT_ADJUSTED` | `TOTAL_RETURN_ADJUSTED` | 계약 변경 없이 해소 가능. 아직 적용하지 않았다 |
+| `marketData.adjustment` | `SPLIT_ADJUSTED` | `SPLIT_ADJUSTED` | **해소됨 (아래 A-보정방식)**: 공급자를 `auto_adjust=False`로 바꿔 적용 완료 |
 | `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | **결정됨 (아래 D-상장폐지)**: 요청을 받고 미지원 경고를 남긴다 |
 | `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | **결정됨 ([ADR-0004](0004-backtest-commission-model.md))**: 계약에 `ZERO` 추가. 반영은 다음 작업 |
 
 계약 쪽 세 값은 `worker/src/worker/contracts/engine_input.py`의 `Adjustment`, `DelistingPolicy`,
-`CommissionModel` enum이 각각 하나씩만 허용한다. 그래서 입력 모델을 지금 그대로 갈아끼우면
-현재 데모 입력(`worker/examples/momentum-demo-input.json`)이 역직렬화 단계에서 거절된다.
+`CommissionModel` enum이 각각 하나씩만 허용한다. `Adjustment`는 이제 엔진과 같은 값이지만,
+나머지 두 곳 때문에 입력 모델을 지금 그대로 갈아끼우면 현재 데모 입력
+(`worker/examples/momentum-demo-input.json`)이 여전히 역직렬화 단계에서 거절된다.
 
-**`marketData.adjustment`** — 계약 변경 없이 해소할 수 있다. 지금 공급자는 yfinance
-`auto_adjust=True`라서 분할뿐 아니라 배당까지 반영한다(설치된 0.2.65의
+### A-보정방식. 공급자를 `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED`에 맞췄다
+
+**결정·적용 (2026-09-08).** 계약을 바꾸지 않고 공급자를 계약에 맞췄다.
+
+이전 공급자는 yfinance `auto_adjust=True`라서 분할뿐 아니라 배당까지 반영했다(설치된 0.2.65의
 `yfinance.utils.auto_adjust`가 `Adj Close / Close` 비율을 Open/High/Low/Close에 곱한다 —
-소스에서 확인). `auto_adjust=False`로 두면 Yahoo 원본 시계열, 즉 액면분할만 반영된 값이 되어
-`SPLIT_ADJUSTED`의 의미와 맞고, 나중에 KRX 수정주가로 갈아탈 때도 같은 의미다.
-**단 배당 재투자가 빠지므로 데모 수익률 숫자가 달라진다.** 전환 여부는 아직 결정하지 않았다.
+소스에서 확인). 즉 `TOTAL_RETURN_ADJUSTED`였고 계약 고정값과 어긋났다. `auto_adjust=False`로
+두면 Yahoo 원본 시계열, 즉 액면분할만 반영된 값이 되어 `SPLIT_ADJUSTED`의 의미와 맞는다.
+(`auto_adjust=False` 응답에는 `Adj Close` 컬럼이 추가로 들어오지만 `validate_prices`가
+OHLCV만 골라 쓰므로 검증에 영향이 없다.)
+
+- **이점 1 — 데이터 원본 교체와 무관하다.** pykrx가 제공하는 수정주가도 분할 계열 조정이므로
+  나중에 KRX 데이터로 갈아탈 때 계약을 다시 건드릴 필요가 없다.
+- **이점 2 — 재현성이 개선된다.** 배당 보정은 현재 시점 기준으로 과거를 역산하므로 새 배당이
+  발생할 때마다 과거 가격이 다시 계산된다. 초기자본이 고정돼 있어 가격이 미세하게 달라지면
+  매수 가능 주식 수(정수)가 바뀌고 최종 자산이 달라진다. 실제로 같은 날 몇 분 사이에 라이브
+  실행 결과가 달라지는 것이 관측됐다(아래 `worker/README.md` 기록). 분할은 배당보다 훨씬
+  드물어 값이 안정적이다.
+- **대가 — 배당 재투자 수익이 빠진다.** 라이브 데모의 수익률·최종 자산 숫자가 낮아지고, 매수
+  가능 수량이 달라져 체결·거절 건수도 바뀐다. **팀이 승인한 변경이다.** 그 대신 이전에 기록해
+  둔 라이브 검증 숫자는 더 이상 유효하지 않다. 고정 데이터(`worker/examples/momentum_fixture.csv`)
+  기반 회귀 기준값은 정적 파일이라 보정 방식과 무관하며 변하지 않는다.
 
 ### D-상장폐지. `CAUSE_BASED` 요청을 받고, 분류 미지원을 경고로 남긴다
 

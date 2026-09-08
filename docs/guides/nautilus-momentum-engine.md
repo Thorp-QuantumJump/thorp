@@ -154,7 +154,7 @@ Nautilus의 체결 건수와 현금 잔액이 같은지 검사해 이중 원장�
 
 ### `KRW_SIM`을 쓰는 이유
 
-Nautilus의 실제 KRW 정의는 소수점이 없다. 그러나 배당·분할 보정 가격과 5bps 체결가는 소수점을
+Nautilus의 실제 KRW 정의는 소수점이 없다. 그러나 분할 보정 가격과 5bps 체결가는 소수점을
 가질 수 있다. 프로세스 전체의 실제 KRW 정의를 덮어쓰지 않고 계산 정밀도를 보존하려고 1:1 모의
 통화 `KRW_SIM`을 내부 계정에만 사용하며, 외부 결과 통화는 KRW로 유지한다.
 
@@ -207,7 +207,7 @@ ACK해 작업을 잃을 수 있다. 따라서 `CallbackError`는 호출자까지
 | 높음 | 브로커가 문서상 RabbitMQ, 레거시 코드상 Kafka로 불일치 | 하나를 결정하고 설정·의존성·Consumer·문서를 한 티켓에서 정리 |
 | 높음 | 새 엔진이 운영 Job 흐름과 단절 | 메시지→EngineInput 변환, 상태 전이, 결과 저장, ACK 순서를 구현하고 통합 테스트 |
 | 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 재전달 시 중복을 허용하는 멱등 키/업서트 정책 결정 |
-| 높음 | 입력 모델이 메시지 계약과 별도(`engine_contracts.py`) | 수수료 정책을 결정하고 `adjustment`·`delisting`까지 맞춘 뒤 `contracts/engine_input.py`로 통합 (ADR-0003) |
+| 높음 | 입력 모델이 메시지 계약과 별도(`engine_contracts.py`) | 수수료 정책을 결정하고 `delisting`까지 맞춘 뒤 `contracts/engine_input.py`로 통합. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 이미 맞췄다 (ADR-0003) |
 | 중간 | yfinance 데이터가 수정되거나 결측될 수 있음 | 원시 데이터 스냅샷과 dataset version을 보존하는 공급자 도입 |
 | 중간 | native 원장과 출력 원장을 함께 유지 | 새 주문 유형마다 reconciliation 테스트 추가 또는 단일 원장 변환 구조 재검토 |
 | 낮음 | 실제 KRX 틱·유동성·정지·상폐를 모델링하지 않음 | DEMO 범위를 벗어날 때 별도 시장 모델로 구현 |

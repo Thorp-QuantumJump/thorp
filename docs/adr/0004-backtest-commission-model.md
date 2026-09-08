@@ -89,8 +89,9 @@ MVP v0.1.1은 알고리즘 1개를 고정 파라미터로 돌리는 단계이므
 입력 계약을 통합할 수 있게 된다. ADR-0003이 기록한 세 불일치 중 거래비용이 해소되면,
 나머지 둘은 계약 변경 없이 코드로 처리할 수 있다 — `adjustment`는 공급자를
 yfinance `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED` 의미에 맞추고(배당 재투자가 빠져 데모
-수익률 숫자가 달라진다), `delisting`은 `CAUSE_BASED` 요청을 받되 미지원 사실을
-`diagnostics.warnings`에 남긴다. 이 둘은 아직 적용하지 않았다.
+수익률 숫자가 낮아진다), `delisting`은 `CAUSE_BASED` 요청을 받되 미지원 사실을
+`diagnostics.warnings`에 남긴다. `adjustment`는 적용을 마쳤고(ADR-0003 "A-보정방식"),
+`delisting`은 아직 적용하지 않았다.
 
 ### 다음 MR에서 함께 고칠 것
 
@@ -118,4 +119,5 @@ README 표에만 있으므로, 백엔드 쪽 작업은 enum 값 추가와 문서
   수수료 포함/제외를 비교하는 기능은 의미가 있지만 MVP 범위를 넘는다. `ZERO`를 정식 모델로
   둔 덕에 나중에 열 수 있다.
 - **슬리피지·유동성 모델 변경.** `FIXED_BPS` 5bps와 `UNLIMITED`는 그대로다.
-- **`adjustment`·`delisting` 전환 시점.** 위 "결과"에 방법만 적었고 적용 시점은 정하지 않았다.
+- **`delisting` 전환 시점.** 위 "결과"에 방법만 적었고 적용 시점은 정하지 않았다.
+  (`adjustment`는 전환을 마쳤다 — ADR-0003 "A-보정방식".)

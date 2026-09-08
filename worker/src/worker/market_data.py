@@ -21,7 +21,7 @@ class MarketDataset:
     instrument_id: str
     ticker: str
     source: str
-    adjustment: str = "TOTAL_RETURN_ADJUSTED"
+    adjustment: str = "SPLIT_ADJUSTED"
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -88,7 +88,7 @@ class YFinanceDataProvider:
                 start=fetch_start.isoformat(),
                 end=(request.run.end + timedelta(days=1)).isoformat(),
                 interval="1d",
-                auto_adjust=True,
+                auto_adjust=False,
                 actions=False,
                 repair=False,
                 keepna=True,
@@ -120,7 +120,7 @@ class YFinanceDataProvider:
                 "exchange": identity["exchangeName"],
                 "currency": identity["currency"],
                 "fetchStart": fetch_start.isoformat(),
-                "autoAdjust": True,
+                "autoAdjust": False,
                 "endExclusive": (request.run.end + timedelta(days=1)).isoformat(),
             },
         )

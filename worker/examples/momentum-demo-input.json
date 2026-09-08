@@ -9,7 +9,7 @@
   "marketData": {
     "datasetId": "YFINANCE_DAILY",
     "interval": "1D",
-    "adjustment": "TOTAL_RETURN_ADJUSTED",
+    "adjustment": "SPLIT_ADJUSTED",
     "priceType": "LAST"
   },
   "strategy": {

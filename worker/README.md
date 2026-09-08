@@ -89,9 +89,11 @@ result_json = result.to_json()
   커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
 - 결과·진행 모델은 공용 메시지 계약(`contracts/engine_output.py`, `contracts/events.py`)이지만
   **입력 모델은 아직 `engine_contracts.py`의 과도기 모델**이다. 계약
-  `contracts/engine_input.py`와 고정 실행 정책 세 곳(`marketData.adjustment`,
-  `execution.delisting`, `execution.commission`)이 달라 통합 전이며, 이유와 남은 결정은
+  `contracts/engine_input.py`와 고정 실행 정책 두 곳(`execution.delisting`,
+  `execution.commission`)이 달라 통합 전이며, 이유와 남은 결정은
   [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md)에 있다.
+  `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 계약 고정값
+  `SPLIT_ADJUSTED`와 맞췄다.
 - 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
   `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
   `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
@@ -146,29 +148,33 @@ tradeCount/승률에 포함한다. entryPrice/exitPrice는 실제 체결가다. 
 중복 주문 방지, 잔여 현금, 전량 거절 후 재평가, 양방향 슬리피지, OPEN/CLOSED, 지표, 콜백도
 같은 파일에서 pytest로 검증한다.
 
-**라이브(yfinance) 실행값은 참고용이며 재현되지 않는다.** 아래 숫자는 관측 시점의 기록일 뿐
-기준값이 아니다.
+**라이브(yfinance) 실행값은 참고용이며 재현되지 않는다.** 아래 관측은 실행 성공 여부와
+공급자 특성에 대한 기록이고, 성과 숫자는 기준값이 아니다.
 
 - 실제 SK하이닉스 **000660.KS / SK hynix Inc. / KRW / KSC** 확인 후 2020-09-18~2022-12-30
-  요청 성공. 실제 평가 종료는 2022-12-29, 평가 **561거래일**, 준비 **249거래일**,
-  체결 **14건**, 현금 부족 거절 **12건**, CLOSED **7건**.
-- 최종 자산은 2026-09-08 관측에서 **11,464,060.366064 KRW**였다. 같은 명령을 몇 분 뒤 다시
-  실행하면 **11,464,067.583818 KRW**가 나왔고 산출물 `metadata.dataHash`도 달랐다.
-  2026-09-07 기록값은 11,464,055.150381이었다. 체결·거절 건수와 평가 거래일 수는 세 번 모두
-  같으므로 엔진 계산이 바뀐 것이 아니라 **공급자가 과거 시세를 계속 정정하는 것**이다.
-  **이 값들 역시 재현 보장이 없다.** 라이브 실행에는 네트워크가 필요하다.
+  요청 성공. 실제 평가 종료는 2022-12-29, 평가 **561거래일**, 준비 **249거래일**.
+- **이전에 이 문서에 적어 두었던 라이브 성과·체결 건수 기록은 보정 방식을
+  `auto_adjust=False`(`SPLIT_ADJUSTED`)로 바꾼 뒤로 무효다.** 배당 재투자가 빠져 수익률이
+  낮아지고, 초기자본이 고정된 상태에서 가격이 달라지면 매수 가능 주식 수(정수)가 바뀌므로
+  체결·거절 건수까지 달라진다. 라이브 값은 애초에 재현되지 않으므로 새 숫자를 기록하지
+  않는다. 필요하면 직접 실행해 확인한다.
+- 이전 `auto_adjust=True` 기록에서는 **같은 명령을 몇 분 뒤 다시 실행하면 최종 자산과
+  산출물 `metadata.dataHash`가 달라졌다**(2026-09-07·09-08 관측). 체결·거절 건수와 평가
+  거래일 수는 같았으므로 엔진 계산이 바뀐 것이 아니라 **공급자가 과거 시세를 계속 정정하는
+  것**이었다. 배당 보정은 현재 시점 기준으로 과거를 역산하므로 새 배당마다 과거 가격이 다시
+  계산된다. 분할만 반영하면 그만큼 값이 안정적이다. 라이브 실행에는 네트워크가 필요하다.
 - 최근 약 5년 요청(2021-09-06~2026-09-06)은 **실패**했다. Yahoo가 2025-09-19에 모든 OHLC를
   NaN으로 반환했다. 다른 5년 구간에서는 2023-02-02, 2023-02-09, 2024-10-14의 OHLC 범위
   오류도 확인했다. 이를 임의 수정·삭제하지 않고 날짜를 포함한 오류를 반환한다.
   기본 5년 실행 성공을 보장하지 않으며, 공급자 데이터 정정 또는 다른 명시적 기간이 필요하다.
-- 조정 방식은 yfinance `auto_adjust=True`로 배당과 분할을 모두 반영한다
-  (= `TOTAL_RETURN_ADJUSTED`). 메시지 계약의 고정값은 `SPLIT_ADJUSTED`이므로 지금은 어긋난
-  상태이며, 정합 상태와 남은 결정은
-  [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md)에 기록했다. 실제 KRX 틱 규칙,
+- 조정 방식은 yfinance `auto_adjust=False`로 액면분할만 반영한 원본 시계열을 쓴다
+  (= 메시지 계약 고정값 `SPLIT_ADJUSTED`). 응답에 `Adj Close` 컬럼이 함께 오지만 검증 단계에서
+  OHLCV만 사용한다. 배당 재투자는 반영하지 않는다(팀 승인). 근거는
+  [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md) "A-보정방식"에 있다. 실제 KRX 틱 규칙,
   기업행동/거래정지/상장폐지 원인 분류는 구현하지 않는다. 실제 원화의 정수 단위 반올림을 피하기
   위해 native 계정에는 `KRW_SIM`(KRW와 1:1, 8자리)을 사용하고 출력은 KRW로 표시한다.
   가격은 6자리로 정규화한다. 실거래용 브로커 모델이 아니다.
-- yfinance는 과거 시세가 실제로 정정되는 임시 공급자다(위 최종 자산 차이가 그 관측 결과다).
+- yfinance는 과거 시세가 실제로 정정되는 임시 공급자다(위 dataHash 변화가 그 관측 결과다).
   dataHash/버전/실제 기간을 기록하지만 장기 재현을 위해서는 향후 원시 데이터 스냅샷 보관
   공급자로 교체해야 한다. 그때까지 라이브 실행값을 회귀 기준으로 쓰지 않는다.
 
