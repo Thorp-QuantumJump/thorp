@@ -19,7 +19,7 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 | 계층 | 하위 패키지 | 역할 |
 |---|---|---|
 | `presentation` | `controller` `request` `response` | HTTP 입출력. `@RestController`는 여기에만. request→command, result→response 변환은 컨트롤러가 한다 |
-| `application` | `service` `command` `result` `repository` `port` | 유스케이스 조합·트랜잭션 경계. `repository`·`port`는 인터페이스만 둔다. `port/message`는 브로커 메시지 DTO(순수 record, Jackson·Spring import 금지 — ArchUnit 규칙 7) |
+| `application` | `service` `command` `result` `repository` `port` `exception` | 유스케이스 조합·트랜잭션 경계. `exception`은 도메인 규칙 위반이 아닌 유스케이스 실패(외부 시스템 장애 등). `repository`·`port`는 인터페이스만 둔다. `port/message`는 브로커 메시지 DTO(순수 record, Jackson·Spring import 금지 — ArchUnit 규칙 7) |
 | `domain` | `model` `vo` `exception` | 순수 Java 도메인 모델과 불변식. Spring·JPA·Jackson import 금지 |
 | `infrastructure` | `persistence` `messaging` | `application` 인터페이스의 구현. `@Entity`·Spring Data·브로커 클라이언트는 여기에만 |
 

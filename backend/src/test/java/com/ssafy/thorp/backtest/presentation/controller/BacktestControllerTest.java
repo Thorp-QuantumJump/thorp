@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
@@ -206,6 +207,23 @@ class BacktestControllerTest {
                 .thenThrow(new IllegalArgumentException("startDate must not be after endDate"));
 
         expectBadRequest(VALID_BODY.replace("2025-01-01", "2025-12-31"));
+    }
+
+    @Test
+    @DisplayName("발행 실패는 503 BROKER_UNAVAILABLE로 응답한다")
+    void createReturnsServiceUnavailableWhenBrokerDown() throws Exception {
+        when(backtestService.create(any()))
+                .thenThrow(
+                        new BacktestPublishFailedException(
+                                BACKTEST_ID, new RuntimeException("broker down")));
+
+        mockMvc.perform(
+                        post("/backtests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(VALID_BODY))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("BROKER_UNAVAILABLE"));
     }
 
     @Test

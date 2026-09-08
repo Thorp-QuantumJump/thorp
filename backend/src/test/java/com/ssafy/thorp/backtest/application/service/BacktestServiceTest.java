@@ -3,12 +3,15 @@ package com.ssafy.thorp.backtest.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
+import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +45,7 @@ class BacktestServiceTest {
 
     @Mock private BacktestJobRepository repository;
     @Mock private BacktestJobPublisher publisher;
+    @Spy private EngineInputAssembler assembler;
     @InjectMocks private BacktestService service;
 
     private static CreateBacktestCommand command(LocalDate start, LocalDate end) {
@@ -90,7 +95,10 @@ class BacktestServiceTest {
         assertThat(requested.getInstrumentIds()).containsExactly(new InstrumentId("005930.XKRX"));
         assertThat(requested.getBenchmarkInstrumentId()).isEqualTo(new InstrumentId("069500.XKRX"));
 
-        verify(publisher).publish(saved);
+        ArgumentCaptor<EngineInput> published = ArgumentCaptor.forClass(EngineInput.class);
+        verify(publisher).publish(published.capture());
+        assertThat(published.getValue().run().backtestId()).isEqualTo(BACKTEST_ID);
+
         assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
         assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);
     }
@@ -118,6 +126,18 @@ class BacktestServiceTest {
 
         verify(repository, never()).save(any());
         verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    @DisplayName("발행이 실패하면 예외를 그대로 올려 트랜잭션을 롤백시킨다")
+    void createPropagatesPublishFailure() {
+        when(repository.save(any(BacktestJob.class))).thenReturn(savedJob());
+        doThrow(new BacktestPublishFailedException(BACKTEST_ID, new RuntimeException("down")))
+                .when(publisher)
+                .publish(any());
+
+        assertThatThrownBy(() -> service.create(command(START, END)))
+                .isInstanceOf(BacktestPublishFailedException.class);
     }
 
     @Test

@@ -19,6 +19,12 @@ public class BusinessException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    /** 외부 시스템 장애처럼 원인 예외를 남겨야 하는 경우. */
+    public BusinessException(ErrorCode errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.errorCode = errorCode;
+    }
+
     public ErrorCode getErrorCode() {
         return errorCode;
     }
