@@ -1,5 +1,5 @@
-// Thorp CI 파이프라인 (초안)
-// 변경된 파트만 빌드하도록 추후 개선 예정. Jenkins 서버 구성은 infra/jenkins/ 참고.
+// Thorp CI 파이프라인
+// Jenkins 서버 구성은 infra/jenkins/ 참고.
 pipeline {
     agent any
 
@@ -47,6 +47,29 @@ pipeline {
                     sh '. .venv/bin/activate && ruff check src scripts && pytest'
                 }
             }
+        }
+    }
+
+    post {
+        failure {
+            mattermostSend(
+                color: 'danger',
+                message: "❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        unstable {
+            mattermostSend(
+                color: 'warning',
+                message: "⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        success {
+            mattermostSend(
+                color: 'good',
+                message: "✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
         }
     }
 }
