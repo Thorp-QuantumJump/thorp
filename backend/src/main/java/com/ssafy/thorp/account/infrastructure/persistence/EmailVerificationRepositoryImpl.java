@@ -4,6 +4,7 @@ import com.ssafy.thorp.account.application.repository.EmailVerificationRepositor
 import com.ssafy.thorp.account.domain.model.EmailVerification;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class EmailVerificationRepositoryImpl implements EmailVerificationRepository {
@@ -31,7 +32,9 @@ public class EmailVerificationRepositoryImpl implements EmailVerificationReposit
                 .map(EmailVerificationMapper::toDomain);
     }
 
+    /** 서비스 트랜잭션 밖에서 직접 호출돼도 동작하도록 이 메서드에도 트랜잭션 경계를 둔다. */
     @Override
+    @Transactional
     public void deleteByEmail(String email) {
         emailVerificationJpaRepository.deleteByEmail(email);
     }
