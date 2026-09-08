@@ -64,6 +64,25 @@ class ArchitectureTest {
                             "jakarta.persistence..",
                             "com.fasterxml..");
 
+    /**
+     * 규칙 7: 브로커 메시지 DTO(application.port.message)는 순수 record다. 직렬화 규칙은 infrastructure의 메시지
+     * ObjectMapper가 담당하므로 Jackson 애노테이션·Spring·JPA에 의존하지 않는다. 근거:
+     * docs/adr/0002-rabbitmq-backtest-message-contract.md.
+     */
+    @ArchTest
+    static final ArchRule 메시지_DTO는_프레임워크에_의존하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..application.port.message..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "..infrastructure..",
+                            "..presentation..",
+                            "org.springframework..",
+                            "jakarta..",
+                            "com.fasterxml..");
+
     /** 규칙 4: common은 어떤 도메인 패키지도 참조하지 않는다. */
     @ArchTest
     static final ArchRule common은_도메인을_참조하지_않는다 =
