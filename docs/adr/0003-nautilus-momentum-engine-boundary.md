@@ -132,7 +132,7 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 | 경로 | 계약 고정값 | 엔진 지원값 | 현재 판단 |
 |---|---|---|---|
 | `marketData.adjustment` | `SPLIT_ADJUSTED` | `TOTAL_RETURN_ADJUSTED` | 계약 변경 없이 해소 가능. 아직 적용하지 않았다 |
-| `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | 경고로 해소 가능 |
+| `execution.delisting` | `CAUSE_BASED` | `UNSUPPORTED` | **결정됨 (아래 D-상장폐지)**: 요청을 받고 미지원 경고를 남긴다 |
 | `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` | `model=ZERO`, `version=DEMO_ZERO_V1`, `taxRate=0` (수수료·세금 0) | **결정됨 ([ADR-0004](0004-backtest-commission-model.md))**: 계약에 `ZERO` 추가. 반영은 다음 작업 |
 
 계약 쪽 세 값은 `worker/src/worker/contracts/engine_input.py`의 `Adjustment`, `DelistingPolicy`,
@@ -146,9 +146,37 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 `SPLIT_ADJUSTED`의 의미와 맞고, 나중에 KRX 수정주가로 갈아탈 때도 같은 의미다.
 **단 배당 재투자가 빠지므로 데모 수익률 숫자가 달라진다.** 전환 여부는 아직 결정하지 않았다.
 
-**`execution.delisting`** — 상장폐지 이벤트를 원인별로 분류할 수 없는 임시 공급자의 한계다.
-요청 기간에 상장폐지가 없으면 결과 숫자가 달라지지 않으므로, `CAUSE_BASED` 요청을 받되
-미지원 사실을 `diagnostics.warnings`에 남기는 방식으로 해소할 수 있다.
+### D-상장폐지. `CAUSE_BASED` 요청을 받고, 분류 미지원을 경고로 남긴다
+
+**결정 (2026-09-08).** 계약 변경 없이 엔진 동작만 정한다.
+
+`CAUSE_BASED`는 상장폐지를 사유별로 다르게 처리하라는 정책이다 — 합병·자발적 폐지는 인수가나
+정리매매가로 청산하고, 부도·감사의견 거절 등은 손실로 처리하는 식이다. 이 구분이 필요한 이유는
+**생존 편향**이다. 폐지된 종목을 데이터에서 빼면 살아남은 종목만 남아 전략 성과가 실제보다
+좋아 보인다.
+
+현재 임시 공급자(yfinance)는 폐지 사유를 제공하지 않는다. 데이터가 없는 세션은 그냥 건너뛴다.
+그래서 엔진은 사유 기반 처리를 구현할 수 없다.
+
+- **결정**: `delisting=CAUSE_BASED` 요청을 거부하지 않고 받는다. 대신 사유 분류를 지원하지
+  않는다는 사실을 `diagnostics.warnings`에 남겨 결과를 읽는 쪽이 알 수 있게 한다.
+- **이유**: 요청 기간에 해당 종목의 상장폐지가 없으면 이 정책은 결과 숫자에 영향을 주지 않는다.
+  현재 데모는 상장폐지되지 않은 단일 종목(`000660.XKRX`)이므로 지금 범위에서 숫자가 달라지지
+  않는다. 미지원을 이유로 실행을 거부하면 아무 영향도 없는 상황에서 데모가 막힌다.
+  반대로 경고 없이 조용히 통과시키면 나중에 다종목으로 넓혔을 때 생존 편향을 눈치채지 못한다.
+
+**구현 시 정할 것 두 가지를 미리 적어 둔다.**
+
+1. **경고 코드**: `DELISTING_CLASSIFICATION_UNSUPPORTED`. `warnings[].code`는 개방 집합이다
+   (계약 §4.3, 기존 예 `TRADING_HALTED`·`INSUFFICIENT_CASH`).
+2. **경고의 거래일**: 계약 `Warning.date`는 필수인데 이 경고는 특정 거래일이 아니라 실행 전체에
+   해당한다. **평가 구간의 첫 거래일**을 쓴다. 엔진이 현재 만드는 경고 네 종류
+   (`INSUFFICIENT_CASH`·`ORDER_REJECTED`·`INSUFFICIENT_HISTORY`·`NO_NEXT_TRADING_DAY`)는 모두
+   실제 거래일을 갖기 때문에 실행 단위 경고는 이번이 처음이다. 실행마다 1건만 남긴다.
+
+**이 결정이 유효하지 않게 되는 시점**: 유니버스를 다종목으로 넓히거나, 상장폐지된 종목이 포함될
+수 있는 기간을 다루게 되면 경고로는 부족하다. 그때는 공급자가 폐지 사유를 제공해야 하고
+(KRX 데이터 파이프라인의 책임), 엔진이 사유별 청산을 구현해야 한다.
 
 **`execution.commission`** — 이것만은 경고로 덮을 수 없다. 수수료·세금은 모든 수익률을 바꾸고,
 특히 회전율이 높은 전략을 과대평가하게 만든다. **[ADR-0004](0004-backtest-commission-model.md)에서
