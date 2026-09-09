@@ -1,16 +1,13 @@
 package com.ssafy.thorp.backtest.infrastructure.messaging;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import java.io.IOException;
+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +109,15 @@ public class BacktestRabbitConfig {
     }
 
     /**
-     * 메시지 전용 ObjectMapper(README §5). 웹 MVC ObjectMapper와 분리한다. 같은 패키지의 테스트와 결과 Consumer가 공유한다.
+     * 메시지 전용 ObjectMapper(README §5). 웹 MVC ObjectMapper와 분리한다.
+     *
+     * <p>브로커 경로와 결과 저장·조회가 같은 매퍼를 써야 한다 — {@code MessageJsonPersistenceConfig}가 이 매퍼를 Hibernate
+     * JSON 포맷 매퍼로 연결해 decimal을 jsonb 문자열로 저장하므로, 그 컬럼을 직접 읽어 파싱하는 쪽도 이것으로 읽어야 값과 scale이 복원된다.
+     *
+     * <p>{@code public}이지만 **다른 계층에서 쓰지 않는다.** 그 경계는 Java 가시성이 아니라 {@code ArchitectureTest}의 {@code
+     * whereLayer("Infrastructure").mayNotBeAccessedByAnyLayer()}가 지킨다 — application·presentation은
+     * 가시성과 무관하게 이 클래스를 참조할 수 없다. package-private는 그 위에 덧댄 이중 잠금이었고 정작 같은 계층의 {@code
+     * infrastructure.persistence}가 쓰는 것을 막았다.
      *
      * <ul>
      *   <li>BigDecimal → plain 문자열, 읽기는 숫자·문자열 모두 수용
@@ -125,7 +130,7 @@ public class BacktestRabbitConfig {
      *       것을 막기 위함
      * </ul>
      */
-    static ObjectMapper messageObjectMapper() {
+    public static ObjectMapper messageObjectMapper() {
         SimpleModule decimals =
                 new SimpleModule().addSerializer(BigDecimal.class, new PlainBigDecimalSerializer());
         return JsonMapper.builder()
@@ -140,19 +145,5 @@ public class BacktestRabbitConfig {
                 .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .build();
-    }
-
-    /** {@code toPlainString}: 소수 7자리 이상에서 지수 표기("1E-7")가 나오는 것을 막는다. */
-    private static final class PlainBigDecimalSerializer extends StdSerializer<BigDecimal> {
-
-        PlainBigDecimalSerializer() {
-            super(BigDecimal.class);
-        }
-
-        @Override
-        public void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider provider)
-                throws IOException {
-            gen.writeString(value.toPlainString());
-        }
     }
 }
