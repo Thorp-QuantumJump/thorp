@@ -134,6 +134,11 @@ public class BacktestJobJpaEntity extends BaseEntity {
         this.backtestIdDate = date;
     }
 
+    /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */
+    void changeStatus(BacktestStatus status) {
+        this.status = status;
+    }
+
     @PrePersist
     void fillBacktestId() {
         if (backtestId == null) {

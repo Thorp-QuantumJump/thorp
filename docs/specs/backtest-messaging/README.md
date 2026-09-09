@@ -14,12 +14,12 @@
 | RabbitMQ | 작업·이벤트 메시지 보관·전달 |
 | Worker (실행 Consumer) | 작업 수신, `BacktestEngine.run()` 호출, 벤치마크 계산, STARTED / PROGRESS / FINISHED 발행, ACK |
 | 엔진 (`BacktestEngine` 구현) | `EngineInput` → `EngineOutput`. 진행 콜백 제공. **DB·브로커를 모른다** |
-| Backend 결과 Consumer | 이벤트 검증, Job 상태 갱신, 최종 결과 저장, SSE 전달 |
+| Backend 결과 Consumer | 이벤트 검증, Job 상태 갱신, 최종 결과 저장, SSE 전달. **구현됨**: `BacktestEventListener` → `BacktestEventValidator` → `BacktestEventService` (SSE 전달은 로깅 임시 구현) |
 
 ```
 Frontend → POST /backtests → Job 저장(QUEUED) → [backtest.jobs] ← 202 + backtestId
 [backtest.jobs] → Worker → engine.run() → STARTED / PROGRESS… / FINISHED → [backtest.events]
-[backtest.events] → Backend 결과 Consumer → RUNNING / SSE progress / 결과 저장 + COMPLETED|FAILED
+[backtest.events] → Backend 결과 Consumer → RUNNING / SSE progress / 결과 저장 + COMPLETED|FAILED   (구현됨)
 ```
 
 워커와 엔진은 결과 DB에 직접 쓰지 않는다. 성과 지표는 엔진이 계산하고 백엔드는 저장·조회만 한다.
@@ -112,13 +112,15 @@ DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영�
 
 | 설계 표기 | JSON | Java | Python |
 |---|---|---|---|
-| 금액·비율 (`decimal/string`) | **문자열** `"10000000.00"`, `"0.166652"` | `BigDecimal` (문자열로 직렬화, 숫자도 수용) | `Decimal` |
+| 금액·비율 (`decimal/string`) | **문자열** `"10000000.00"`, `"0.166652"`. **plain 표기만** — 지수 표기(`"1E+2"`)는 쓰지 않는다. 수신 측은 plain으로 정규화해 저장하므로 값은 같고 음수 scale만 0이 된다 | `BigDecimal` (`toPlainString`으로 직렬화, 숫자도 수용) | `Decimal` |
 | 거래일 (`date`) | `"2025-01-03"` 타임존 없음, 거래소 현지 거래일 | `LocalDate` | `date` |
 | 실행 시각 (`datetime`) | `"2026-09-07T01:00:00Z"` UTC | `Instant` | aware `datetime` |
 | 정수 | JSON number | `int` / `Integer` | `int` |
 | enum | 대문자 스네이크 문자열. 미지의 값은 역직렬화 실패 → 계약 오류 → DLQ | enum | `Literal` / `StrEnum` |
 | 계산 불가 · 미지정 | **키 자체를 쓰지 않는다** (`null`도 쓰지 않음, 0·NaN 금지). 수신 측은 "키 없음 == null"로 읽고, 명시 `null`이 와도 같은 뜻으로 수용한다 | 래퍼 타입, 직렬화는 `NON_NULL` | `T \| None = None`, 덤프는 `exclude_none=True` |
 | 수익률 | 비율 (`0.125` = 12.5%). MDD·drawdown은 0 또는 음수 | | |
+| 식별자 문자열 (`eventId`·`executionId`·`tradeId`·`run.error.code`) | **255자 이하**. 초과는 계약 오류 → DLQ. 형식은 정하지 않는다(UUID·`EVT-000001` 모두 가능) | `String`, 저장 컬럼 `VARCHAR(255)` | `str` |
+| 종목 식별자 (`instrumentId` — trade·position·benchmark) | `{6자리 종목코드}.XKRX` (ADR-0002 D4). 형식 위반은 계약 오류 → DLQ | `InstrumentId` VO의 패턴으로 검증, 저장 컬럼 `VARCHAR(32)` | `str` |
 
 지표 계산 규약(연환산 252, ddof=1, riskFreeRate 0.0, CAGR 달력일 기준, `tradeCount`는 CLOSED만)은 설계 문서를 따른다.
 이 규약을 바꾸면 `schemaVersion`이 아니라 결과 저장소의 지표 버전을 올린다.
@@ -151,7 +153,7 @@ python3 docs/specs/backtest-messaging/generate_fixtures.py docs/specs/backtest-m
 
 - 작업 발행: Job + outbox 같은 트랜잭션. publisher confirm·라우팅 실패 확인 후 발행 완료 기록. 202는 "접수".
 - 실행 Consumer: manual ACK, prefetch 1. FINISHED 발행이 브로커에서 확인된 뒤 작업 메시지 ACK.
-- 결과 Consumer: 결과 저장 + Job 최종 상태 + 처리된 `eventId` 기록을 한 트랜잭션으로 커밋 후 ACK. 이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK.
+- 결과 Consumer: 결과 저장 + Job 최종 상태를 한 트랜잭션으로 커밋 후 ACK. 처리한 `eventId`·`executionId`는 결과 행에 컬럼으로 남긴다(별도 처리 이력 테이블 없음 — 멱등성은 상태 전이가 보장한다: STARTED는 QUEUED에서만, FINISHED는 비최종 상태에서만 적용). 이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK. 모르는 `backtestId`는 경고 로그 후 ACK(DLQ로 보내지 않음). STARTED가 유실돼 QUEUED인 Job에 온 FINISHED도 적용한다.
 - PROGRESS는 DB에 저장하지 않고 SSE 경로에 넘긴 뒤 ACK(접속자 없어도 ACK).
 - JSON 파싱·계약 오류는 requeue 없이 reject → DLQ. 일시 장애는 제한적 재시도.
 
@@ -169,6 +171,11 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | 지원하지 않는 `schemaVersion` | 명시 검증 | 명시 검증 |
 | `type`과 `payload` 형태 불일치 | `type`을 먼저 읽고 payload 타입을 선택해 변환, 실패 시 거부 | 동일 |
 | `FINISHED`의 `engineOutput.run.status`가 COMPLETED/FAILED 외 | 명시 검증 | — (엔진 반환 시점에 확인) |
+| 식별자 길이 255자 초과 (§5) | 명시 검증 | — |
+| `instrumentId` 형식 (§5, trade·position·benchmark) | 명시 검증 (`InstrumentId.REGEX`) | — (엔진 입력의 종목이 그대로 나감) |
+| `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |
+| 상태별 nullable 규칙 (COMPLETED: `performance`·`execution` 필수, `error` 없음. FAILED: `error` 필수, `performance`·`execution`·`benchmark` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
+| 계약이 nullable로 정한 생략 (성과 지표 개별 null, `benchmark`, snapshot의 `positions`, OPEN 거래의 청산 필드) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
 | 알 수 없는 필드 | 무시(`FAIL_ON_UNKNOWN_PROPERTIES=false`) — 상대가 필드를 먼저 추가해도 깨지지 않게 | 무시(`extra="ignore"`) |
 
 검증 실패는 계약 오류로 보고 requeue 없이 reject → DLQ(§7). 픽스처 round-trip 테스트는 DTO 구조가 계약과 맞는지 확인하는 것이며 실제 수신 메시지 검증을 대신하지 않는다.

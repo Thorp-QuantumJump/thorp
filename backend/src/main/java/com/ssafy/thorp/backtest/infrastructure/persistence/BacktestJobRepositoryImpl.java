@@ -35,6 +35,26 @@ public class BacktestJobRepositoryImpl implements BacktestJobRepository {
         return BacktestJobMapper.toDomain(jpaRepository.save(entity));
     }
 
+    /**
+     * 관리 엔티티를 읽어 상태만 바꾼다. 도메인 객체를 새 엔티티로 merge하면 {@code createdAt}(updatable=false)이 null인 사본이 관리
+     * 상태를 덮어 쓰므로 그 방식은 피한다. {@code save()}는 트랜잭션 밖에서 불려도 UPDATE가 나가도록 한 번 명시한다.
+     */
+    @Override
+    public BacktestJob update(BacktestJob job) {
+        if (job.getId() == null) {
+            throw new IllegalArgumentException("update is for persisted jobs only: id is null");
+        }
+        BacktestJobJpaEntity entity =
+                jpaRepository
+                        .findById(job.getId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "job not found: id=" + job.getId()));
+        entity.changeStatus(job.getStatus());
+        return BacktestJobMapper.toDomain(jpaRepository.save(entity));
+    }
+
     @Override
     public Optional<BacktestJob> findById(Long id) {
         return jpaRepository.findById(id).map(BacktestJobMapper::toDomain);
