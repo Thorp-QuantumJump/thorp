@@ -1,56 +1,31 @@
-import { ArrowUpRight } from 'lucide-react'
-import { motion } from 'motion/react'
-import { Link } from 'react-router-dom'
+import { AlgorithmOrbit } from '@/components/landing/AlgorithmOrbit'
+import { LandingHeader } from '@/components/landing/LandingHeader'
+import {
+  BacktestIntroSection,
+  HeroSection,
+  MarketAnalysisSection,
+} from '@/components/landing/LandingSections'
+import { marketMock } from '@/data/marketMock'
+import { useMarketIndicators } from '@/hooks/useMarketIndicators'
 import styles from './LandingPage.module.css'
 
-/** 서비스 소개와 홈 화면 진입 동선을 제공한다. */
+/** 시장 분석부터 전략 검증까지 Thorp의 핵심 흐름을 순차적으로 소개한다. */
 export function LandingPage() {
+  const { marketIndicators, macroIndicators } = useMarketIndicators(
+    marketMock.marketIndicators,
+    marketMock.macroIndicators,
+  )
+  const indicators = [...marketIndicators, ...macroIndicators]
+
   return (
     <main className={styles.page}>
-      <div className={styles.glow} aria-hidden="true" />
-      <motion.section
-        className={styles.hero}
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.09 } },
-        }}
-      >
-        <motion.p
-          className={styles.eyebrow}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          QUANT RESEARCH PLATFORM
-        </motion.p>
-        <motion.h1
-          variants={{
-            hidden: { opacity: 0, y: 18 },
-            visible: { opacity: 1, y: 0 },
-          }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        >
-          Thorp<span>.</span>
-        </motion.h1>
-        <motion.p
-          className={styles.description}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          숫자로 전략을 검증하고, 더 나은 투자 판단을 만듭니다.
-        </motion.p>
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 10 },
-            visible: { opacity: 1, y: 0 },
-          }}
-        >
-          <Link className={styles.cta} to="/home">
-            시작하기
-            <ArrowUpRight aria-hidden="true" size={18} strokeWidth={1.8} />
-          </Link>
-        </motion.div>
-      </motion.section>
-      <p className={styles.version}>PROTOTYPE · 01</p>
+      <LandingHeader />
+      <HeroSection />
+      <div className={styles.storyFlow}>
+        <MarketAnalysisSection indicators={indicators} />
+        <BacktestIntroSection />
+        <AlgorithmOrbit />
+      </div>
     </main>
   )
 }
