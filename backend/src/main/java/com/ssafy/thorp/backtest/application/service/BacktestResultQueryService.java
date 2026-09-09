@@ -66,7 +66,32 @@ public class BacktestResultQueryService {
             return BacktestDetailResult.withoutResult(job, ExecutionPolicy.CURRENCY);
         }
         BacktestResultSummary summary = requireSummary(job);
+        if (isBenchmarkMismatch(job, summary)) {
+            log.warn(
+                    "요청과 결과의 벤치마크가 다르다 (워커가 다른 종목으로 계산했다): backtestId={} 요청={} 결과={}",
+                    backtestId,
+                    job.getBenchmarkInstrumentId().value(),
+                    summary.benchmarkInstrumentId());
+        }
         return BacktestDetailResult.of(job, ExecutionPolicy.CURRENCY, summary);
+    }
+
+    /**
+     * 요청한 벤치마크와 결과의 벤치마크가 다른가.
+     *
+     * <p>결과에 벤치마크가 없는 것은 <b>불일치가 아니다</b> — 워커에 계산기가 없어 현재는 그게 정상이고, 매 요청마다 경고를 남기면 로그만 시끄러워진다. 결과에
+     * 값이 있는데 요청과 다를 때만 참이다. 그 응답은 {@code config.benchmarkId}와 {@code
+     * summary.benchmark.instrumentId}가 서로 다른 모순된 상태이므로 조용히 내보내지 않는다.
+     */
+    static boolean isBenchmarkMismatch(BacktestJob job, BacktestResultSummary summary) {
+        if (summary.benchmarkInstrumentId() == null) {
+            return false;
+        }
+        String requested =
+                job.getBenchmarkInstrumentId() == null
+                        ? null
+                        : job.getBenchmarkInstrumentId().value();
+        return !summary.benchmarkInstrumentId().equals(requested);
     }
 
     /**
@@ -94,11 +119,17 @@ public class BacktestResultQueryService {
     }
 
     /**
-     * 거래 내역 한 페이지. 거래가 0건이면 빈 {@code content}와 함께 정상 응답이다 — 결과가 있는데 거래가 없었던 실행은 실제로 가능하다. "결과 자체가
-     * 없음"은 관문이 이미 409로 걸렀다.
+     * 거래 내역 한 페이지. 거래가 0건이면 빈 {@code content}와 함께 정상 응답이다 — 결과가 있는데 거래가 없었던 실행은 실제로 가능하다. "아직 결과가
+     * 없음"은 관문이 409로 걸렀다.
+     *
+     * <p><b>결과 행 존재를 따로 확인한다.</b> 이 조회는 {@code backtest_trade}만 읽어서 결과 행 유실을 스스로 알아채지 못한다 — 거래가
+     * 0건이면 빈 페이지를, 거래 행만 남아 있으면 목록을 정상 응답으로 돌려주게 된다. 다른 세 엔드포인트는 결과 컬럼을 읽다가 자연히 걸리므로 여기만 명시적으로 본다.
      */
     public BacktestTradePageResult getTrades(String backtestId, FindBacktestTradesQuery query) {
         BacktestJob job = requireResultReady(backtestId);
+        if (!resultRepository.exists(job.getId())) {
+            throw missingResultRow(job);
+        }
         Page<EngineOutput.TradeResult> page = resultRepository.findTrades(job.getId(), query);
         return new BacktestTradePageResult(
                 backtestId,
@@ -115,14 +146,15 @@ public class BacktestResultQueryService {
      * <p>체결이 없던 날의 보유 종목·수량은 직전 스냅샷과 같으므로 구성 정보는 정확하다. 다만 평가액은 스냅샷 날짜의 Close 기준이라 응답에 {@code
      * snapshotDate}를 담아 화면이 표시하게 한다.
      *
-     * <p>계약상 시작일에는 항상 스냅샷이 있으므로, 요청일이 시작일 이상이면 반드시 하나는 찾는다. 못 찾으면 요청일이 백테스트 시작 전이거나 데이터가 계약을 어긴 것이고
-     * 둘 다 400으로 드러낸다.
+     * <p>계약상 시작일·종료일에는 항상 스냅샷이 있다. 못 찾는 경우는 두 가지이고 <b>원인이 다르므로 코드도 다르다</b> — 요청일이 첫 보유 스냅샷보다 앞이면
+     * 400(요청 잘못), 보유 스냅샷이 시계열 전체에 하나도 없으면 500(저장 데이터가 계약 위반). 후자를 400으로 주면 서버 데이터 손상을 클라이언트 탓으로 보이게
+     * 한다.
      */
     public BacktestPositionsResult getPositions(String backtestId, LocalDate date) {
         BacktestJob job = requireResultReady(backtestId);
         List<EngineOutput.PortfolioSnapshot> series =
                 require(resultRepository.findPortfolioSeries(job.getId()), job);
-        EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date);
+        EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);
         return new BacktestPositionsResult(
                 backtestId,
                 date,
@@ -144,16 +176,33 @@ public class BacktestResultQueryService {
      * jsonb_array_elements} + 서브쿼리를 쓰면 읽기만 어려워진다.
      *
      * <p>{@code positions == null}은 "그날 구성 변경 없음"이라 건너뛴다. 빈 배열은 "보유 없음이 확정"이라 답이 된다.
+     *
+     * <p>한 번만 훑으면서 가장 이른 보유 스냅샷도 기억한다 — 못 찾았을 때 400과 500을 가르고, 400 메시지에 "언제부터 조회할 수 있는지"를 담기 위해서다.
      */
-    private static EngineOutput.PortfolioSnapshot latestSnapshotOnOrBefore(
-            List<EngineOutput.PortfolioSnapshot> series, LocalDate date) {
+    private EngineOutput.PortfolioSnapshot latestSnapshotOnOrBefore(
+            List<EngineOutput.PortfolioSnapshot> series, LocalDate date, BacktestJob job) {
+        EngineOutput.PortfolioSnapshot earliest = null;
         for (int i = series.size() - 1; i >= 0; i--) {
             EngineOutput.PortfolioSnapshot snapshot = series.get(i);
-            if (!snapshot.date().isAfter(date) && snapshot.positions() != null) {
+            if (snapshot.positions() == null) {
+                continue;
+            }
+            earliest = snapshot; // 역순이므로 루프가 끝나면 가장 이른 보유 스냅샷이 남는다
+            if (!snapshot.date().isAfter(date)) {
                 return snapshot;
             }
         }
-        throw new BusinessException(ErrorCode.INVALID_INPUT, "요청일 이전 보유 스냅샷이 없습니다: date=" + date);
+        if (earliest == null) {
+            log.error(
+                    "보유 스냅샷이 하나도 없는 결과 (계약 위반 — 시작일·종료일에는 항상 있어야 한다):" + " backtestId={} 시계열={}점",
+                    job.getBacktestId().value(),
+                    series.size());
+            throw new IllegalStateException(
+                    "보유 스냅샷이 없습니다: backtestId=" + job.getBacktestId().value());
+        }
+        throw new BusinessException(
+                ErrorCode.INVALID_INPUT,
+                "요청일이 첫 보유 스냅샷보다 앞입니다: date=" + date + ", 첫 스냅샷=" + earliest.date());
     }
 
     private static Map<LocalDate, BigDecimal> benchmarkByDate(BenchmarkResult benchmark) {

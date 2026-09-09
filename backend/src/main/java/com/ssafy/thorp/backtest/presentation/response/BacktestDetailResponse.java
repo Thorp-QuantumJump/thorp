@@ -47,7 +47,8 @@ public record BacktestDetailResponse(
             String benchmarkId) {}
 
     /**
-     * @param benchmark null = 결과에 벤치마크가 없음. 계산기 티켓 전까지는 항상 null이다
+     * @param benchmark null = 결과에 벤치마크가 없음. 워커에 계산기가 없는 <b>현재 운영에서는</b> 항상 null이다(HTTP 계약 README
+     *     §4). 계약 픽스처에는 벤치마크가 있어 테스트에서는 값이 채워진다
      */
     public record Summary(
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal initialEquity,

@@ -29,6 +29,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -41,6 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>브로커 컨테이너는 띄우지 않는다({@code BacktestEventFlowIT}와 같은 방식). DB는 PostgreSQL 컨테이너다.
  */
 @SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "spring.rabbitmq.host=localhost",
             "spring.rabbitmq.port=1",
@@ -60,6 +67,8 @@ class BacktestResultApiIT extends PostgresTestSupport {
     @Autowired private BacktestResultRepository resultRepository;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private TestRestTemplate restTemplate;
 
     /** 계약 픽스처와 같은 조건의 Job. config 단언이 여기 값과 맞아야 한다. */
     private BacktestJob newJob() {
@@ -202,6 +211,47 @@ class BacktestResultApiIT extends PostgresTestSupport {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
         }
+    }
+
+    @Test
+    @DisplayName("COMPLETED인데 결과 행이 없으면 네 엔드포인트 모두 500이다 — 거래 목록도 내보내지 않는다")
+    void missingResultRowIsServerErrorEverywhere() throws Exception {
+        BacktestJob job = completedJob();
+        String id = job.getBacktestId().value();
+        // 결과 행만 지운다. 거래 행은 남겨 둔다 — /trades가 그것만 보고 200을 주면 안 된다
+        jdbcTemplate.update("DELETE FROM backtest_result WHERE backtest_job_id = ?", job.getId());
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM backtest_trade WHERE backtest_job_id = ?",
+                                Long.class,
+                                job.getId()))
+                .isEqualTo(3);
+
+        for (String path : List.of("", "/timeseries", "/trades", "/positions?date=2025-01-22")) {
+            mockMvc.perform(get("/backtests/" + id + path))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"));
+        }
+    }
+
+    @Test
+    @DisplayName("시계열 응답은 gzip으로 압축된다 — 이 앱에서 가장 큰 응답이다")
+    void timeseriesIsGzipped() {
+        String id = completedJob().getBacktestId().value();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.ACCEPT_ENCODING, "gzip");
+
+        // MockMvc는 Tomcat을 거치지 않아 압축을 확인할 수 없다. 실제 포트로 호출한다.
+        ResponseEntity<byte[]> response =
+                restTemplate.exchange(
+                        "/backtests/" + id + "/timeseries",
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        byte[].class);
+
+        assertThat(response.getHeaders().get(HttpHeaders.CONTENT_ENCODING)).containsExactly("gzip");
+        // 압축 전 본문이 min-response-size(2KB)를 넘어야 압축된다 — 129점 시계열이면 충분하다
+        assertThat(response.getBody()).isNotEmpty();
     }
 
     @Test

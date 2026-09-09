@@ -2,6 +2,9 @@ package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
@@ -288,6 +291,7 @@ class BacktestResultQueryServiceTest {
     @DisplayName("거래 페이지는 Page의 메타데이터를 그대로 옮긴다")
     void tradesCopiesPageMetadata() {
         given(BacktestStatus.COMPLETED);
+        when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);
         when(resultRepository.findTrades(JOB_ID, query))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));
@@ -304,6 +308,7 @@ class BacktestResultQueryServiceTest {
     @DisplayName("거래 0건도 정상 응답이다 — 결과 자체가 없는 것과 다르다")
     void tradesEmptyIsOk() {
         given(BacktestStatus.COMPLETED);
+        when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
         when(resultRepository.findTrades(JOB_ID, query))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
@@ -421,12 +426,93 @@ class BacktestResultQueryServiceTest {
     }
 
     @Test
+    @DisplayName("보유 스냅샷이 시계열 전체에 하나도 없으면 500이다 — 요청 잘못이 아니라 데이터 손상")
+    void positionsWithoutAnySnapshotIsServerError() {
+        given(BacktestStatus.COMPLETED);
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith("2025-01-02", null),
+                                        snapshotWith("2025-01-03", null))));
+
+        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3)))
+                .isInstanceOf(IllegalStateException.class)
+                .isNotInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("400 메시지는 언제부터 조회할 수 있는지 알려준다")
+    void positionsBeforeFirstSnapshotSaysEarliest() {
+        givenPositionSeries();
+
+        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+                .hasMessageContaining("2025-01-02");
+    }
+
+    @Test
     @DisplayName("보유도 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
     void positionsUsesGate() {
         given(BacktestStatus.FAILED);
 
         assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2)))
                 .isInstanceOf(BacktestFailedException.class);
+    }
+
+    @Test
+    @DisplayName("COMPLETED인데 결과 행이 없으면 거래도 500이다 — 빈 페이지를 주지 않는다")
+    void tradesMissingResultRowIsServerError() {
+        given(BacktestStatus.COMPLETED);
+        when(resultRepository.exists(JOB_ID)).thenReturn(false);
+
+        assertThatThrownBy(
+                        () ->
+                                service.getTrades(
+                                        BACKTEST_ID,
+                                        new FindBacktestTradesQuery(0, 100, null, null)))
+                .isInstanceOf(IllegalStateException.class);
+        // 거래 조회까지 가지 않는다
+        verify(resultRepository, never()).findTrades(any(), any());
+    }
+
+    // ---------- 벤치마크 불일치 감지 ----------
+
+    @Test
+    @DisplayName("결과에 벤치마크가 없으면 불일치가 아니다 — 계산기가 없는 현재 상태가 정상이다")
+    void benchmarkAbsentIsNotMismatch() {
+        assertThat(
+                        BacktestResultQueryService.isBenchmarkMismatch(
+                                jobIn(BacktestStatus.COMPLETED), summary(null, false)))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("요청과 결과의 벤치마크가 같으면 불일치가 아니다")
+    void benchmarkSameIsNotMismatch() {
+        assertThat(
+                        BacktestResultQueryService.isBenchmarkMismatch(
+                                jobIn(BacktestStatus.COMPLETED), summary(null, true)))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("결과에 값이 있는데 요청과 다르면 불일치다 — config와 summary가 모순된 응답이 된다")
+    void benchmarkDifferentIsMismatch() {
+        BacktestResultSummary other =
+                new BacktestResultSummary(
+                        null,
+                        null,
+                        Instant.parse("2026-09-07T01:00:00Z"),
+                        Instant.parse("2026-09-07T01:00:12Z"),
+                        performance(),
+                        execution(),
+                        "229200.XKRX",
+                        new BigDecimal("0.011000"));
+
+        assertThat(
+                        BacktestResultQueryService.isBenchmarkMismatch(
+                                jobIn(BacktestStatus.COMPLETED), other))
+                .isTrue();
     }
 
     // ---------- 하위 리소스 관문 ----------

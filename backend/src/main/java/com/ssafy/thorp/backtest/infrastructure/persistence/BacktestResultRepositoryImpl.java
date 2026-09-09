@@ -63,6 +63,11 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
+    public boolean exists(Long backtestJobId) {
+        return resultRepository.existsById(backtestJobId);
+    }
+
+    @Override
     public Optional<BacktestResultSummary> findSummary(Long backtestJobId) {
         return resultRepository
                 .findSummaryRow(backtestJobId)

@@ -31,6 +31,15 @@ public interface BacktestResultRepository {
      * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면
      * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.
      */
+    /**
+     * 결과 행이 있는지만 본다. JSON 컬럼을 읽지도 파싱하지도 않는다.
+     *
+     * <p>{@code /trades}는 {@code backtest_trade} 행만 읽어서 결과 행 유실을 스스로 알아채지 못한다 — 거래가 0건이면 빈 페이지를, 거래
+     * 행만 남아 있으면 목록을 정상 응답으로 돌려준다. 그 경로를 막기 위한 존재 확인이다. {@link #findSummary}로 대신하면 쓰지도 않을 {@code
+     * performance}·{@code execution} JSON을 역직렬화한다.
+     */
+    boolean exists(Long backtestJobId);
+
     Optional<BacktestResultSummary> findSummary(Long backtestJobId);
 
     /**
