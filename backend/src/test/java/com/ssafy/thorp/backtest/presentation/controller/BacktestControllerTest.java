@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,7 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
+import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
@@ -20,8 +23,13 @@ import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +60,7 @@ class BacktestControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private BacktestService backtestService;
+    @MockitoBean private BacktestResultQueryService queryService;
 
     private void expectAccepted(String body) throws Exception {
         when(backtestService.create(any()))
@@ -227,29 +236,125 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.error.code").value("BROKER_UNAVAILABLE"));
     }
 
+    // ---------- GET /backtests/{backtestId} ----------
+
+    private static final BacktestDetailResult.Config CONFIG =
+            new BacktestDetailResult.Config(
+                    "MA_CROSSOVER",
+                    "1.0.0",
+                    Map.of("shortWindow", 20),
+                    List.of("005930.XKRX"),
+                    LocalDate.of(2025, 1, 1),
+                    LocalDate.of(2025, 6, 30),
+                    new BigDecimal("10000000.00"),
+                    "KRW",
+                    "069500.XKRX");
+
+    private static BacktestDetailResult detail(
+            BacktestStatus status,
+            BacktestDetailResult.Summary summary,
+            BacktestDetailResult.Error error) {
+        return new BacktestDetailResult(
+                BACKTEST_ID,
+                status,
+                CONFIG,
+                summary,
+                error,
+                status.isFinal() ? Instant.parse("2026-09-07T01:00:00Z") : null,
+                status.isFinal() ? Instant.parse("2026-09-07T01:00:12Z") : null);
+    }
+
     @Test
-    @DisplayName("GET은 문자열 backtestId로 현재 상태를 돌려준다")
-    void getReturnsStatus() throws Exception {
-        when(backtestService.get(BACKTEST_ID))
-                .thenReturn(new BacktestJobResult(BACKTEST_ID, BacktestStatus.RUNNING));
+    @DisplayName("QUEUED·RUNNING은 config만 있고 summary·error는 null이다")
+    void getReturnsConfigOnlyBeforeResult() throws Exception {
+        when(queryService.getDetail(BACKTEST_ID))
+                .thenReturn(detail(BacktestStatus.RUNNING, null, null));
 
         mockMvc.perform(get("/backtests/" + BACKTEST_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
-                .andExpect(jsonPath("$.data.status").value("RUNNING"));
+                .andExpect(jsonPath("$.data.status").value("RUNNING"))
+                .andExpect(jsonPath("$.data.config.strategyVersion").value("1.0.0"))
+                .andExpect(jsonPath("$.data.summary").value(nullValue()))
+                .andExpect(jsonPath("$.data.error").value(nullValue()))
+                .andExpect(jsonPath("$.data.startedAt").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("COMPLETED는 summary를 담고 decimal은 전부 문자열이다")
+    void getReturnsSummaryWithStringDecimals() throws Exception {
+        BacktestDetailResult.Summary summary =
+                new BacktestDetailResult.Summary(
+                        new BigDecimal("10000000.00"),
+                        new BigDecimal("11666521.51"),
+                        "KRW",
+                        new BigDecimal("0.166652"),
+                        new BigDecimal("0.366917"),
+                        new BigDecimal("-0.041757"),
+                        new BigDecimal("2.342630"),
+                        new BigDecimal("0.132307"),
+                        2,
+                        new BigDecimal("0.500000"),
+                        new BigDecimal("3941.19"),
+                        new BigDecimal("13137.30"),
+                        new BacktestDetailResult.Benchmark(
+                                "069500.XKRX", new BigDecimal("0.053292")));
+        when(queryService.getDetail(BACKTEST_ID))
+                .thenReturn(detail(BacktestStatus.COMPLETED, summary, null));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                // 숫자로 나오면 계약 위반이다. value(String)은 타입까지 본다
+                .andExpect(jsonPath("$.data.summary.totalReturn").value("0.166652"))
+                .andExpect(jsonPath("$.data.summary.initialEquity").value("10000000.00"))
+                .andExpect(jsonPath("$.data.config.initialCash").value("10000000.00"))
+                .andExpect(jsonPath("$.data.summary.benchmark.totalReturn").value("0.053292"))
+                // tradeCount는 계약상 정수다
+                .andExpect(jsonPath("$.data.summary.tradeCount").value(2))
+                .andExpect(jsonPath("$.data.error").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("FAILED도 200이고 error를 담는다. summary는 null")
+    void getReturnsOkWhenBacktestFailed() throws Exception {
+        when(queryService.getDetail(BACKTEST_ID))
+                .thenReturn(
+                        detail(
+                                BacktestStatus.FAILED,
+                                null,
+                                new BacktestDetailResult.Error("NO_MARKET_DATA", "no data")));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("FAILED"))
+                .andExpect(jsonPath("$.data.error.code").value("NO_MARKET_DATA"))
+                .andExpect(jsonPath("$.data.summary").value(nullValue()));
     }
 
     @Test
     @DisplayName("없는 backtestId는 404와 RESOURCE_NOT_FOUND")
     void getReturnsNotFound() throws Exception {
         String missing = "BT-20260907-999999";
-        when(backtestService.get(missing)).thenThrow(new BacktestNotFoundException(missing));
+        when(queryService.getDetail(missing)).thenThrow(new BacktestNotFoundException(missing));
 
         mockMvc.perform(get("/backtests/" + missing))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.data").isEmpty())
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("최종 상태인데 결과 행이 없으면 500이다 — RESULT_NOT_READY로 감추지 않는다")
+    void getReturnsServerErrorOnMissingResultRow() throws Exception {
+        when(queryService.getDetail(BACKTEST_ID))
+                .thenThrow(new IllegalStateException("결과 행이 없습니다"));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"));
     }
 }

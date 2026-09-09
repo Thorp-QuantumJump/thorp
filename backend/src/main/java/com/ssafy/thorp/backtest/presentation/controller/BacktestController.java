@@ -1,10 +1,13 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
+import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -21,17 +24,22 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 백테스트 Job API.
  *
- * <p>POST /backtests → Job 저장(QUEUED) 후 Worker에 발행, 202와 { backtestId, status: QUEUED } 즉시 반환. GET
- * /backtests/{backtestId} → 상태 조회 (QUEUED → RUNNING → COMPLETED | FAILED).
+ * <p>POST /backtests → Job 저장(QUEUED) 후 Worker에 발행, 202와 { backtestId, status: QUEUED } 즉시 반환.
+ *
+ * <p>결과 조회는 응답 크기 때문에 네 리소스로 나뉜다 — 계약과 예시는 {@code docs/specs/backtest-api/README.md} §2다. POST 응답은
+ * 그대로 { backtestId, status }이며 커지지 않는다.
  */
 @RestController
 @RequestMapping("/backtests")
 public class BacktestController {
 
     private final BacktestService backtestService;
+    private final BacktestResultQueryService queryService;
 
-    public BacktestController(BacktestService backtestService) {
+    public BacktestController(
+            BacktestService backtestService, BacktestResultQueryService queryService) {
         this.backtestService = backtestService;
+        this.queryService = queryService;
     }
 
     @PostMapping
@@ -42,10 +50,15 @@ public class BacktestController {
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));
     }
 
+    /**
+     * 상태 + 설정 + 요약 + 오류. <b>백테스트가 실패해도 200이다</b> — Job 조회 자체는 성공했고 실패는 {@code status}·{@code
+     * error}로 전달한다(설계 "HTTP 상태 코드"). 프론트 폴링은 이 리소스로 한다.
+     */
     @GetMapping("/{backtestId}")
-    public ResponseEntity<ApiResponse<BacktestJobResponse>> get(@PathVariable String backtestId) {
-        BacktestJobResult result = backtestService.get(backtestId);
-        return ResponseEntity.ok(ApiResponse.ok(BacktestJobResponse.from(result)));
+    public ResponseEntity<ApiResponse<BacktestDetailResponse>> get(
+            @PathVariable String backtestId) {
+        BacktestDetailResult result = queryService.getDetail(backtestId);
+        return ResponseEntity.ok(ApiResponse.ok(BacktestDetailResponse.from(result)));
     }
 
     /** positionSizing이 생략되면 여기서만 기본값을 채운다. 서비스와 도메인은 기본값을 모른다. */
