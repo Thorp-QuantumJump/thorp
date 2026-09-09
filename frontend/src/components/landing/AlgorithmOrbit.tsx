@@ -36,12 +36,12 @@ export function AlgorithmOrbit() {
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        setSelectedIndex((current) => (current + 1) % strategyResults.length)
+        setSelectedIndex((selectedIndex + 1) % strategyResults.length)
       }
     }, 3600)
 
     return () => window.clearInterval(intervalId)
-  }, [reducedMotion])
+  }, [reducedMotion, selectedIndex])
 
   const move = (direction: number) => {
     setSelectedIndex((current) => (current + direction + strategyResults.length) % strategyResults.length)
