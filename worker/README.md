@@ -107,6 +107,8 @@ result_json = result.to_json()
   `STRATEGIES`)에 없는 `strategy.strategyId`·`strategy.version`. 여러 항목이 동시에 미지원이면
   한 메시지에 전부 담는다. 지원하지 않는 값을 조용히 무시하고 `COMPLETED`를 반환하지 않는다 —
   요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로 저장되기 때문이다.
+  단 `benchmark` 지정은 실행 Consumer가 엔진 호출 전에 벗기므로(`consumer.strip_benchmark`)
+  브로커 경로로 들어온 요청은 이 거절에 걸리지 않는다. 엔진을 직접 호출하면 그대로 거절된다.
 - `execution.delisting=CAUSE_BASED`는 거절하지 않고 받되, 사유 분류 미지원을
   `diagnostics.warnings`에 `DELISTING_CLASSIFICATION_UNSUPPORTED`로 **실행당 1건** 남긴다.
   이 경고는 특정 거래일이 아니라 실행 전체에 걸리므로 계약 필수 필드인 `date`에 평가 구간의
@@ -259,10 +261,14 @@ uv run python -m worker.main
   워커는 결과 DB에 쓰지 않는 게 계약(§1)이라 처리 이력을 남길 곳이 없고, 고정 입력에 대해
   결정론적이라 재실행이 안전하다. 중복 방어는 계약 §7이 백엔드 결과 Consumer 쪽에 요구하며
   ("이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK") `eventId`가 그 키다.
-- **벤치마크는 계산하지 않는다.** 계약 §1은 벤치마크 계산을 실행 Consumer 책임으로 두지만,
-  엔진이 `benchmark` 지정을 `INVALID_REQUEST`로 거절하고 백엔드 요청에도 벤치마크를 지정할
-  필드가 없어 계산 대상이 없다. `FINISHED` payload의 `benchmark`는 항상 없음(직렬화에서 키
-  생략)이며 계산기 도입은 별도 티켓이다.
+- **벤치마크는 계산하지 않고, 엔진에 넘기지도 않는다.** 계약 §1이 벤치마크 계산을 실행 Consumer
+  책임으로 두지만 계산기가 아직 없다(별도 티켓). 백엔드는 사용자가 벤치마크를 지정하면
+  `BenchmarkSpec`을 실어 보내고 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로, 그대로 넘기면
+  **벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가 FAILED가 된다.** 그래서 실행 Consumer가
+  엔진 호출 입력에서만 `benchmark`를 벗긴다(`consumer.strip_benchmark`). 엔진의 거절 규칙은 그대로
+  두므로 엔진을 직접 호출하는 쪽은 계속 거절당한다. `FINISHED` payload의 `benchmark`는 항상
+  없음(직렬화에서 키 생략)이고, 계약이 그 생략을 "미지정 또는 실패"로 정의하므로 수신 측은 산출되지
+  않았음을 그대로 읽는다.
 - **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드
   (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,
   없으면 큐를 만들지 않고 "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다

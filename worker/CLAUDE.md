@@ -37,9 +37,13 @@ ruff check src tests && ruff format --check src tests && pytest
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
   진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행은 실행 Consumer(`consumer.py`) 책임.
-  벤치마크도 계약상 실행 Consumer 책임이지만 **계산하지 않는다** — 엔진이 `benchmark` 지정을
-  `INVALID_REQUEST`로 거절하고 백엔드 요청에도 지정할 필드가 없어 계산 대상이 없다.
-  `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며, 계산기 도입은 별도 티켓이다
+  벤치마크도 계약상 실행 Consumer 책임이지만 **계산하지 않는다**(별도 티켓). 백엔드는 사용자가
+  지정하면 `BenchmarkSpec`을 실어 보내는데 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로,
+  실행 Consumer가 **엔진 호출 입력에서만** `benchmark`를 벗긴다(`consumer.strip_benchmark`).
+  엔진의 거절 규칙(`engine_support.py`)은 유지한다 — 벗기는 책임은 계약이 벤치마크 담당으로
+  지정한 실행 Consumer에 있고, 엔진을 직접 호출하는 쪽은 계속 거절당해야 한다.
+  `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며 계약이 그 생략을 "미지정 또는 실패"로
+  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다

@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 from conftest import FIXTURE_DIR, engine_input_body
 
-from worker.consumer import BacktestJobConsumer
+from worker.consumer import BacktestJobConsumer, strip_benchmark
 from worker.contracts.base import utc_now
 from worker.contracts.engine import BacktestEngine
 from worker.contracts.engine_input import EngineInput
@@ -109,14 +109,16 @@ class FakeEngine:
 
 
 class CountingEngine:
-    """실제 엔진을 그대로 실행하면서 실행 횟수만 센다 (재전달 확인용)."""
+    """실제 엔진을 그대로 실행하면서 실행 횟수와 엔진이 실제로 받은 입력을 기록한다."""
 
     def __init__(self, engine: BacktestEngine) -> None:
         self._engine = engine
         self.runs = 0
+        self.inputs: list[EngineInput] = []
 
     def run(self, engine_input: EngineInput, on_progress: Any = None) -> EngineOutput:
         self.runs += 1
+        self.inputs.append(engine_input)
         return self._engine.run(engine_input, on_progress)
 
 
@@ -408,3 +410,55 @@ def test_regression_baseline_is_untouched() -> None:
     assert output.performance is not None
     assert output.performance.final_equity == Decimal("1068.7")
     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS
+
+
+# --- 벤치마크: 엔진 호출에서만 벗긴다 --------------------------------------------------
+
+#: 기본 본문(SK하이닉스 000660.XKRX 단일 종목)에 벤치마크 지정만 얹은 요청.
+BENCHMARK_BODY = engine_input_body(benchmark={"instrumentId": "069500.XKRX"})
+
+
+def test_benchmark_request_still_produces_a_result() -> None:
+    """벤치마크를 지정해도 결과가 나온다.
+
+    벗기기 전에는 엔진이 지정을 ``INVALID_REQUEST`` 로 거절해(``engine_support``) 벤치마크를
+    골랐다는 이유만으로 백테스트 결과 전체가 FAILED로 저장됐다.
+    """
+    engine = CountingEngine(real_engine())
+    call_log, publisher = handle(json.dumps(BENCHMARK_BODY), engine=engine)
+
+    assert engine.inputs[0].benchmark is None  # 엔진은 지정을 받지 않는다
+    assert call_log[-2:] == ["publish:FINISHED", "ack"]
+    output = publisher.of_type(BacktestEventType.FINISHED)[0].payload.engine_output
+    assert output.run.status is RunStatus.COMPLETED
+    assert output.performance is not None
+    assert output.performance.final_equity == Decimal("1068.7")
+
+
+def test_benchmark_request_omits_the_benchmark_from_finished() -> None:
+    """벗긴 사실을 감추지 않는다. 계산하지 않았으므로 payload에서 키가 빠진다.
+
+    계약이 그 생략을 "미지정 또는 실패"로 정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다.
+    """
+    _, publisher = handle(json.dumps(BENCHMARK_BODY))
+    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
+
+    assert finished.payload.benchmark is None
+    assert "benchmark" not in json.loads(finished.to_json())["payload"]
+
+
+def test_strip_benchmark_returns_the_request_untouched_when_none_is_specified() -> None:
+    engine_input = EngineInput.model_validate(engine_input_body())
+    assert strip_benchmark(engine_input) is engine_input
+
+
+def test_strip_benchmark_changes_only_the_benchmark() -> None:
+    """원본은 그대로 둔다 — 벤치마크는 계약상 실행 Consumer가 나중에 계산할 대상이다."""
+    engine_input = EngineInput.model_validate(BENCHMARK_BODY)
+    stripped = strip_benchmark(engine_input)
+
+    assert stripped.benchmark is None
+    assert engine_input.benchmark is not None
+    assert stripped.model_dump(exclude={"benchmark"}) == engine_input.model_dump(
+        exclude={"benchmark"}
+    )
