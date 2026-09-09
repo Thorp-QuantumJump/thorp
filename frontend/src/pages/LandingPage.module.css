@@ -583,6 +583,18 @@
   white-space: nowrap;
 }
 
+.indicatorItem[data-status='live'] .indicatorMeta small {
+  color: var(--landing-accent-soft);
+}
+
+.indicatorItem[data-status='stale'] .indicatorMeta small {
+  color: var(--landing-warning);
+}
+
+.indicatorItem[data-status='error'] .indicatorMeta small {
+  color: var(--landing-negative);
+}
+
 .indicatorReading {
   grid-column: 1;
   gap: 5px;

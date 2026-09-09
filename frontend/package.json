@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build --configLoader runner",
     "lint": "eslint .",
+    "test": "node --test src/api/market.test.ts src/utils/indicatorHistory.test.ts src/utils/marketComparison.test.ts src/utils/marketFormat.test.ts",
+    "check:shader": "vgpu check src/components/landing/market-atmosphere.wgsl --require-validation",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import { ArrowUpRight, Menu, X } from 'lucide-react'
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import styles from '@/pages/LandingPage.module.css'
 
@@ -12,6 +12,21 @@ const navigationItems = [
 /** 랜딩 안에서만 사용하는 섹션 탐색 헤더다. */
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+
+    const handleEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setIsMenuOpen(false)
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus())
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isMenuOpen])
 
   const moveToSection = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     const target = document.querySelector(href)
@@ -43,11 +58,13 @@ export function LandingHeader() {
       </Link>
 
       <button
+        ref={menuButtonRef}
         type="button"
         className={styles.menuButton}
         aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
         aria-expanded={isMenuOpen}
         aria-controls="landing-mobile-navigation"
+        aria-haspopup="true"
         onClick={() => setIsMenuOpen((current) => !current)}
       >
         {isMenuOpen ? <X aria-hidden="true" size={20} /> : <Menu aria-hidden="true" size={20} />}

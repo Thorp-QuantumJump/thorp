@@ -1,6 +1,13 @@
 import { ArrowUpRight } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react'
 import { Link } from 'react-router-dom'
 import { strategyResults } from '@/data/backtestMock'
 import styles from '@/pages/LandingPage.module.css'
@@ -16,9 +23,12 @@ function relativeIndex(index: number, selectedIndex: number, length: number) {
 export function AlgorithmOrbit() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [stageWidth, setStageWidth] = useState(960)
+  const [announcement, setAnnouncement] = useState('')
   const stageRef = useRef<HTMLDivElement>(null)
   const pointerStartRef = useRef<number | null>(null)
+  const didDragRef = useRef(false)
   const reducedMotion = useReducedMotion()
+  const isInView = useInView(stageRef, { amount: 0.2 })
 
   useEffect(() => {
     const stage = stageRef.current
@@ -32,7 +42,7 @@ export function AlgorithmOrbit() {
   }, [])
 
   useEffect(() => {
-    if (reducedMotion) return
+    if (reducedMotion || !isInView) return
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -41,10 +51,17 @@ export function AlgorithmOrbit() {
     }, 3600)
 
     return () => window.clearInterval(intervalId)
-  }, [reducedMotion, selectedIndex])
+  }, [isInView, reducedMotion, selectedIndex])
 
   const move = (direction: number) => {
-    setSelectedIndex((current) => (current + direction + strategyResults.length) % strategyResults.length)
+    const nextIndex = (selectedIndex + direction + strategyResults.length) % strategyResults.length
+    setSelectedIndex(nextIndex)
+    setAnnouncement(`${strategyResults[nextIndex]?.name ?? ''} 전략 선택됨`)
+  }
+
+  const selectStrategy = (index: number) => {
+    setSelectedIndex(index)
+    setAnnouncement(`${strategyResults[index]?.name ?? ''} 전략 선택됨`)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -60,14 +77,43 @@ export function AlgorithmOrbit() {
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     pointerStartRef.current = event.clientX
+    didDragRef.current = false
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerStartRef.current === null) return
+    if (Math.abs(event.clientX - pointerStartRef.current) > 8) {
+      didDragRef.current = true
+    }
   }
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
     if (pointerStartRef.current === null) return
     const distance = event.clientX - pointerStartRef.current
     pointerStartRef.current = null
+    didDragRef.current = Math.abs(distance) > 8
     if (Math.abs(distance) < 44) return
     move(distance > 0 ? -1 : 1)
+  }
+
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    pointerStartRef.current = null
+    didDragRef.current = false
+  }
+
+  const preventClickAfterDrag = (event: MouseEvent<HTMLElement>) => {
+    if (!didDragRef.current) return false
+    event.preventDefault()
+    event.stopPropagation()
+    didDragRef.current = false
+    return true
   }
 
   const xRadius = Math.min(280, Math.max(112, stageWidth * 0.27))
@@ -101,10 +147,9 @@ export function AlgorithmOrbit() {
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={() => {
-          pointerStartRef.current = null
-        }}
+        onPointerCancel={handlePointerCancel}
       >
         <div className={styles.orbitFloor} aria-hidden="true" />
         {strategyResults.map((strategy, index) => {
@@ -155,7 +200,7 @@ export function AlgorithmOrbit() {
                 <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>
               </dl>
               {isSelected ? (
-                <Link to="/backtest">
+                <Link to="/backtest" onClick={preventClickAfterDrag}>
                   이 전략 백테스트하기
                   <ArrowUpRight aria-hidden="true" size={18} />
                 </Link>
@@ -164,7 +209,9 @@ export function AlgorithmOrbit() {
                   type="button"
                   className={styles.cardSelectButton}
                   aria-label={`${strategy.name} 전략 선택`}
-                  onClick={() => setSelectedIndex(index)}
+                  onClick={(event) => {
+                    if (!preventClickAfterDrag(event)) selectStrategy(index)
+                  }}
                   tabIndex={0}
                 />
               )}
@@ -174,7 +221,7 @@ export function AlgorithmOrbit() {
       </div>
 
       <p className={styles.srOnly} aria-live="polite">
-        {strategyResults[selectedIndex]?.name}
+        {announcement}
       </p>
     </motion.section>
   )

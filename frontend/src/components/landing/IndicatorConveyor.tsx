@@ -31,15 +31,35 @@ function createSparkline(indicator: Indicator) {
     .join(' ')
 }
 
+function getStatusLabel(indicator: Indicator) {
+  switch (indicator.dataStatus) {
+    case 'live':
+      return `LIVE · ${indicator.source.provider}`
+    case 'stale':
+      return '갱신 지연'
+    case 'loading':
+      return '불러오는 중'
+    case 'error':
+      return '연결 실패 · 예시값'
+    default:
+      return '예시 데이터'
+  }
+}
+
 function IndicatorItem({ indicator }: { indicator: Indicator }) {
   const changePrefix = indicator.change !== null && indicator.change > 0 ? '+' : ''
   const toneStyle = { '--indicator-tone': `var(--landing-${indicator.tone})` } as CSSProperties
 
   return (
-    <article className={styles.indicatorItem} style={toneStyle}>
+    <article
+      className={styles.indicatorItem}
+      data-status={indicator.dataStatus ?? 'example'}
+      style={toneStyle}
+      title={indicator.statusMessage ?? undefined}
+    >
       <div className={styles.indicatorMeta}>
         <span>{indicator.code.replaceAll('_', ' ')}</span>
-        <small>{indicator.dataStatus === 'live' ? 'LIVE' : indicator.source.provider}</small>
+        <small>{getStatusLabel(indicator)}</small>
       </div>
       <div className={styles.indicatorReading}>
         <strong>{formatValue(indicator)}</strong>
