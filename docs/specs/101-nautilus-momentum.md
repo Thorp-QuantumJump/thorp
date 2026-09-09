@@ -14,19 +14,27 @@ final `portfolioSeries`. Callback exceptions propagate to the caller: publicatio
 not be hidden as success.
 
 Input parsing errors raise Pydantic validation errors. Data/engine failures return FAILED
-EngineOutput with null performance/execution and `run.error`. Existing legacy models and
-`run_backtest` remain separate and are not the new integration entry point.
+EngineOutput with null performance/execution and `run.error`. The legacy Kafka models and
+`run_backtest` were deleted when the pika execution consumer landed (`worker/consumer.py`,
+`worker/rabbitmq.py`); `python -m worker.main` is now that consumer's entry point.
 
 The order-level audit log and the reproducibility metadata are NOT part of the message
 contract. `NautilusMomentumEngine.run_with_artifacts` returns them alongside the message as
 `RunArtifacts` (`worker/artifacts.py`); `run` returns the message only.
 
-The result side of this engine is the shared message contract: `EngineOutput` comes from
-`worker/contracts/engine_output.py` and the callback point from `worker/contracts/events.py`.
-The input side is not yet: `engine_input` is still `worker/engine_contracts.py`, not the
-contract's `worker/contracts/engine_input.py`. The two still disagree on two fixed execution
-policy values (`execution.commission`, `execution.delisting`); `marketData.adjustment` is now
-aligned. ADR-0003 records which ones and what has to be decided before they merge.
+Input, result and progress models are all the shared message contract: `EngineInput` comes from
+`worker/contracts/engine_input.py`, `EngineOutput` from `worker/contracts/engine_output.py` and
+the callback point from `worker/contracts/events.py`. The transitional input model
+`worker/engine_contracts.py` has been deleted; the last two disagreements were resolved by
+adding the `ZERO` commission model to the contract (ADR-0004) and by accepting
+`delisting=CAUSE_BASED` with a warning (ADR-0003 "D-상장폐지").
+
+The contract deliberately admits values this engine cannot compute, so requests outside the
+engine's supported range are rejected before execution as
+`EngineOutput(run.status=FAILED, run.error.code=INVALID_REQUEST)` by
+`worker/engine_support.py`. That check lives in the engine, not in `contracts/`: the contract is
+shared with the backend and the structural fixture
+`docs/specs/backtest-messaging/examples/engine-input.json` must keep passing it.
 
 ## Decisions overriding or clarifying the supplied design
 

@@ -27,10 +27,14 @@
 ### 현재 구현 상태 (2026-09-08)
 
 - Backend는 Job API와 임시 로깅 Publisher까지 있고 실제 브로커 발행은 연결되지 않았다.
-- Worker의 Jira 101 Nautilus 모멘텀 엔진은 CLI/테스트로 독립 실행할 수 있다.
+  RabbitMQ 토폴로지 선언은 Backend가 하므로, Worker를 띄우기 전에 Backend를 한 번 실행해야 한다.
+- Worker의 Jira 101 Nautilus 모멘텀 엔진은 CLI/테스트로 독립 실행할 수 있고,
+  `python -m worker.main`은 RabbitMQ `backtest.jobs`를 소비해 엔진을 돌리고 `backtest.events`로
+  STARTED / PROGRESS / FINISHED를 발행한다.
 - Backend → 브로커 → Worker → PostgreSQL/SSE의 end-to-end 흐름은 아직 구현되지 않았다.
-- 목표 브로커는 RabbitMQ지만 레거시 Worker 스캐폴딩과 일부 설정에는 Kafka가 남아 있다.
-  최종 선택 전까지 어느 쪽도 현재 운영 연동으로 간주하지 않는다.
+  남은 구간은 Backend의 Job 발행과 결과 Consumer다.
+- 브로커는 RabbitMQ로 확정됐다(ADR-0002). Worker에서 Kafka 의존성·설정은 제거했다.
+  Kafka는 설치만 해둔 상태이며 Job 전달에 쓰지 않는다.
 
 처음 코드를 읽는다면 [Nautilus 모멘텀 엔진 이해하기](docs/guides/nautilus-momentum-engine.md)에서
 현재 범위, 실행 흐름, Java 관점의 파일 지도와 남은 부채를 먼저 확인한다.

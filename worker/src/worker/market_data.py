@@ -8,7 +8,8 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
-from worker.engine_contracts import EngineInput
+from worker.contracts.engine_input import EngineInput
+from worker.strategies import prepare_strategy
 
 
 class MarketDataError(ValueError):
@@ -80,7 +81,8 @@ class YFinanceDataProvider:
 
         instrument_id = request.universe.instrument_ids[0]
         ticker = instrument_id.split(".")[0] + ".KS"
-        lookback = request.strategy.parameters.lookback_days
+        # 준비 기간은 전략별로 다르므로 레지스트리가 선언한 값을 쓴다.
+        lookback = prepare_strategy(request.strategy).required_history
         fetch_start = request.run.start - timedelta(days=max(365, lookback * 3))
         try:
             security = yf.Ticker(ticker)

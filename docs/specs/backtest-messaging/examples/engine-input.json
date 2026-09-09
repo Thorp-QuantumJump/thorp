@@ -43,9 +43,7 @@
       "MARKET"
     ],
     "commission": {
-      "model": "BROKER",
-      "broker": "KIWOOM",
-      "version": "2026-09"
+      "model": "ZERO"
     },
     "slippage": {
       "model": "FIXED_BPS",

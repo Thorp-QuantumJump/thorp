@@ -12,7 +12,7 @@ import pytest
 from conftest import FIXTURE_DIR
 from pydantic import ValidationError
 
-from worker.contracts.engine_input import EngineInput
+from worker.contracts.engine_input import CommissionModel, EngineInput
 
 
 def fixture_body() -> dict[str, Any]:
@@ -21,11 +21,12 @@ def fixture_body() -> dict[str, Any]:
 
 
 def test_fixture_passes_validation() -> None:
-    """픽스처(종목 2개, maxPositionPct 0.50, BROKER/KIWOOM, leverage 1.0)는 통과한다."""
+    """픽스처(종목 2개, maxPositionPct 0.50, commission ZERO, leverage 1.0)는 통과한다."""
     engine_input = EngineInput.model_validate(fixture_body())
     assert len(engine_input.universe.instrument_ids) == 2
     assert str(engine_input.portfolio.position_sizing.max_position_pct) == "0.50"
-    assert engine_input.execution.commission.broker == "KIWOOM"
+    # model=ZERO는 broker를 쓰지 않는다 (ADR-0004 D1).
+    assert engine_input.execution.commission.broker is None
 
 
 def _mutate(body: dict[str, Any], path: str, value: Any) -> dict[str, Any]:
@@ -83,9 +84,16 @@ VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [
     ("portfolio-leverage-below-one", lambda b: _mutate(b, "portfolio.leverage", "0.5")),
     ("portfolio-currency-lowercase", lambda b: _mutate(b, "portfolio.currency", "krw")),
     ("portfolio-currency-too-long", lambda b: _mutate(b, "portfolio.currency", "KRWW")),
-    # CommissionSpec: model=BROKER 이면 broker 필수
-    ("commission-broker-missing", lambda b: _drop(b, "execution.commission.broker")),
-    ("commission-broker-blank", lambda b: _mutate(b, "execution.commission.broker", " ")),
+    # CommissionSpec: model=BROKER 이면 broker 필수. 픽스처 고정값은 ZERO(broker 없음)이므로
+    # 변형 body로 확인한다. 검증하는 대상은 규칙이지 특정 증권사 코드가 아니다.
+    (
+        "commission-broker-missing",
+        lambda b: _mutate(b, "execution.commission", {"model": "BROKER"}),
+    ),
+    (
+        "commission-broker-blank",
+        lambda b: _mutate(b, "execution.commission", {"model": "BROKER", "broker": " "}),
+    ),
     # SlippageSpec: model=FIXED_BPS 이면 bps 필수이고 bps >= 0
     ("slippage-bps-missing", lambda b: _drop(b, "execution.slippage.bps")),
     ("slippage-bps-negative", lambda b: _mutate(b, "execution.slippage.bps", -1)),
@@ -106,6 +114,26 @@ def test_same_start_and_end_is_allowed() -> None:
     """end >= start 이므로 하루 기간(start == end)은 계약 위반이 아니다."""
     body = _mutate(fixture_body(), "run.end", fixture_body()["run"]["start"])
     assert EngineInput.model_validate(body).run.start == EngineInput.model_validate(body).run.end
+
+
+def test_broker_commission_model_accepts_any_broker_identifier() -> None:
+    """``BROKER`` 는 계약에 남아 있다 (요율표 구현은 ADR-0004 D3의 별도 티켓).
+
+    계약이 검증하는 것은 "``model=BROKER`` 면 ``broker`` 가 있어야 한다"는 규칙뿐이고, 어떤
+    증권사 코드가 유효한지는 요율표 구현체가 판단할 몫이다.
+    """
+    body = _mutate(
+        fixture_body(), "execution.commission", {"model": "BROKER", "broker": "SOME-BROKER"}
+    )
+    commission = EngineInput.model_validate(body).execution.commission
+    assert commission.model is CommissionModel.BROKER
+    assert commission.broker == "SOME-BROKER"
+
+
+def test_zero_commission_model_needs_no_broker() -> None:
+    """``ZERO`` 는 수수료·세금·제비용 0이며 ``broker`` 를 쓰지 않는다 (ADR-0004 D1)."""
+    body = _mutate(fixture_body(), "execution.commission", {"model": "ZERO"})
+    assert EngineInput.model_validate(body).execution.commission.model is CommissionModel.ZERO
 
 
 def test_absent_max_position_pct_is_allowed() -> None:

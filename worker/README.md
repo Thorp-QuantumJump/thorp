@@ -2,10 +2,10 @@
 
 ## NautilusTrader 모멘텀 엔진 (Jira 101)
 
-Python 3.11, NautilusTrader **1.219.0**, yfinance **0.2.65**. 엔진 실행과 결과 계산만
-담당하며 브로커·SSE·DB는 앞으로 연결할 Consumer가 담당한다. 기존 `worker.main`과
-축약 `run_backtest`는 이 경로에 연결되지 않은 Kafka 레거시 스캐폴딩이다. 브로커는 아직
-RabbitMQ/Kafka 중 최종 결정되지 않았다.
+Python 3.11, NautilusTrader **1.219.0**, yfinance **0.2.65**. 엔진은 실행과 결과 계산만
+담당하고 브로커를 모른다. 브로커 연동은 이 문서 아래
+[실행 Consumer (RabbitMQ)](#실행-consumer-rabbitmq)가 담당하며, 결과 DB 저장과 SSE는
+워커가 아니라 백엔드 결과 Consumer 몫이다(계약 §1). Kafka 스캐폴딩은 제거했다.
 
 Python/Nautilus가 낯설다면 [Java 개발자용 엔진 가이드](../docs/guides/nautilus-momentum-engine.md)를
 먼저 읽는다. 설계 이유는 [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md),
@@ -52,14 +52,17 @@ uv run python -m worker.demo --fixture examples/momentum_fixture.csv --start 202
 산출물)이 함께 생성된다. 작은 파일의 신호/청산 검증용 lookback은 2이다. 실제 전략의 기본값과 별도 경계 테스트는 120이다.
 uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`를 사용할 수 있다.
 
-### Consumer 연결
+### 엔진을 직접 호출하기
+
+실행 Consumer가 하는 일을 코드로 축약하면 아래와 같다. 실제 구현은 `worker/consumer.py`이며
+묶음 발행과 ACK 순서가 거기 들어 있다.
 
 ```python
 from pathlib import Path
 
+from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import EngineOutput
 from worker.contracts.events import ProgressPayload, ProgressPoint
-from worker.engine_contracts import EngineInput
 from worker.engine_runner import NautilusMomentumEngine
 
 buffer: list[ProgressPoint] = []
@@ -87,17 +90,34 @@ result_json = result.to_json()
   dict 입력도 가능하다. 시장 데이터 공급자는 실행 인자가 아니라 생성자 인자
   `NautilusMomentumEngine(data_provider)`이므로 엔진 인스턴스를 여러 실행에서 재사용한다.
   커스텀 공급자는 `load(EngineInput) -> MarketDataset`를 구현한다.
-- 결과·진행 모델은 공용 메시지 계약(`contracts/engine_output.py`, `contracts/events.py`)이지만
-  **입력 모델은 아직 `engine_contracts.py`의 과도기 모델**이다. 계약
-  `contracts/engine_input.py`와 고정 실행 정책 두 곳(`execution.delisting`,
-  `execution.commission`)이 달라 통합 전이며, 이유와 남은 결정은
-  [ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md)에 있다.
-  `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 계약 고정값
-  `SPLIT_ADJUSTED`와 맞췄다.
+- 입력·결과·진행 모델 모두 공용 메시지 계약이다(`contracts/engine_input.py`,
+  `contracts/engine_output.py`, `contracts/events.py`). 과도기 입력 모델
+  `engine_contracts.py`는 제거했다 — 계약에 거래비용 모델 `ZERO`를 추가하고
+  ([ADR-0004](../docs/adr/0004-backtest-commission-model.md)) 데모 고정값을 `model=ZERO`로
+  바꾼 결정, `delisting=CAUSE_BASED`를 받고 경고로 남기는 결정
+  ([ADR-0003](../docs/adr/0003-nautilus-momentum-engine-boundary.md) "D-상장폐지")으로
+  마지막 두 차이가 해소됐다. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔
+  계약 고정값 `SPLIT_ADJUSTED`와 맞췄다.
+- **계약은 통과하지만 이 엔진이 계산할 수 없는 요청은 실행 전에 거절한다**
+  (`worker/engine_support.py`, `run.error.code=INVALID_REQUEST`). 계약(`contracts/`)은 백엔드와
+  공유하며 "메시지만 보고 판단할 수 있는" 불변식만 보므로, 지원 범위 판단은 엔진 몫이다.
+  거절 대상: 종목 2개 이상, `portfolio.leverage != 1`, `shortSelling=true`,
+  `currency != KRW`, `execution.commission.model != ZERO`, `execution.slippage.bps != 5`,
+  `partialFill=true`, `benchmark` 지정, 그리고 엔진 레지스트리(`strategies/__init__.py`
+  `STRATEGIES`)에 없는 `strategy.strategyId`·`strategy.version`. 여러 항목이 동시에 미지원이면
+  한 메시지에 전부 담는다. 지원하지 않는 값을 조용히 무시하고 `COMPLETED`를 반환하지 않는다 —
+  요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로 저장되기 때문이다.
+- `execution.delisting=CAUSE_BASED`는 거절하지 않고 받되, 사유 분류 미지원을
+  `diagnostics.warnings`에 `DELISTING_CLASSIFICATION_UNSUPPORTED`로 **실행당 1건** 남긴다.
+  이 경고는 특정 거래일이 아니라 실행 전체에 걸리므로 계약 필수 필드인 `date`에 평가 구간의
+  첫 거래일을 넣는다.
+- `run.randomSeed`는 계약상 생략 가능하다. 생략하면 재현성을 위해 고정 기본값 `42`를 쓰고
+  실제 사용값을 진단 산출물 `metadata.randomSeed`에 남긴다.
+  `portfolio.positionSizing.maxPositionPct` 생략은 "제한 없음"(= 1)으로 해석한다.
 - 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
   `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
   `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
-  `portfolioSeries` 항목과 값이 일치한다. 20거래일 묶음 발행·벤치마크 계산은 Consumer 책임이다.
+  `portfolioSeries` 항목과 값이 일치한다. 20거래일 묶음 발행은 Consumer 책임이다.
   진행 이벤트는 저장하지 않고 SSE로만 흐르므로 보유 종목까지 담은 전체 스냅샷은 넘기지 않는다.
   콜백에 넘어가는 객체는 결과와 분리되어 있어 Consumer의 변경이 최종 결과를 오염시키지 않는다.
 - 금액·비율·수량은 JSON decimal 문자열, 주문/체결/거래 건수는 정수다.
@@ -107,7 +127,9 @@ result_json = result.to_json()
   생략은 구성 스냅샷 없음, 빈 배열은 현금 상태를 뜻한다.
 - 데이터/엔진 오류는 `run.status=FAILED`, `run.error={code, message}`로 반환하고
   `performance`·`execution`은 채우지 않는다(메시지에서는 키가 빠진다).
-  잘못된 EngineInput은 ValidationError, 콜백 실패는 CallbackError를 발생시킨다.
+  계약 자체를 위반한 EngineInput은 예외(pydantic `ValidationError`)지만, 계약은 지켰으나 엔진이
+  지원하지 않는 값은 예외가 아니라 `FAILED` + `INVALID_REQUEST` 결과로 돌아온다.
+  콜백 실패는 CallbackError를 발생시킨다.
   Consumer는 결과가 COMPLETED인지 확인해야 하며, 콜백 100%가 저장 성공을 뜻하지 않는다.
 - 주문 원장과 재현성 metadata는 메시지 계약에 없다. 필요하면 `run(...)` 대신
   `NautilusMomentumEngine.run_with_artifacts(...) -> (EngineOutput, RunArtifacts)`를 쓴다.
@@ -186,16 +208,153 @@ uv run ruff format --check src tests
 uv run pytest
 ```
 
-## 기존 Consumer 스캐폴딩
+## 실행 Consumer (RabbitMQ)
 
-Kafka `backtest.jobs` 토픽에서 Job을 받아 백테스트를 실행하고 결과를 PostgreSQL에 저장한다.
-같은 코드를 여러 개 실행해(Consumer Group) 분산 처리한다.
+RabbitMQ `backtest.jobs` 큐에서 작업 메시지(`EngineInput` 전체)를 받아 엔진을 실행하고
+`backtest.events` 큐로 `STARTED` / `PROGRESS` / `FINISHED`를 발행한다. 같은 코드를 여러 개
+실행해(competing consumers) 수평 확장한다. 계약은
+[`docs/specs/backtest-messaging/README.md`](../docs/specs/backtest-messaging/README.md)
+(§2 토폴로지, §3 메시지 속성, §4.2 envelope, §7 전달 규칙, §8 검증 책임)와
+[ADR-0002](../docs/adr/0002-rabbitmq-backtest-message-contract.md)다.
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt -r requirements-dev.txt
-python -m worker.main
+# 접속 정보는 환경변수 하나로만 주입한다 (기본값 amqp://thorp:thorp@localhost:5672/)
+export RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/
+uv run python -m worker.main
 ```
 
-- lint/format: `ruff check src tests` / `ruff format src tests`
-- test: `pytest`
+| 파일 | 역할 |
+|---|---|
+| `messaging.py` | 계약 상수(exchange·queue·routing key, `SCHEMA_VERSION=1`, prefetch 1, 묶음 20)와 경계 Protocol(`EventPublisher`, `JobAcknowledger`), 오류 분류. **pika 없음** |
+| `consumer.py` | `BacktestJobConsumer` — 검증 → 엔진 호출 → 발행 순서 → ACK 판단. 브로커 기술을 모른다 |
+| `rabbitmq.py` | pika 구현: publisher confirm + `mandatory` 발행, ACK/reject 매핑, 소비 루프 |
+| `main.py` | 엔트리포인트(`python -m worker.main`) |
+
+동작 규칙:
+
+- **manual ACK, prefetch 1.** `FINISHED` 발행이 브로커에서 확인된 뒤에만 작업 메시지를 ACK한다
+  (계약 §7). publisher confirm과 `mandatory`를 켜서 라우팅 실패도 확인한다 — 발행이 확인되지
+  않으면 ACK하지 않는다.
+- `sequence`는 `STARTED`=0에서 1씩 증가한다. `PROGRESS`는 **20거래일 묶음**이고 이번 구간에서
+  새로 계산한 포인트만 담으며 **마지막 잔여 구간도 발행**한다. 엔진 콜백은 거래일 1개 단위로
+  오므로 묶는 것은 Consumer 책임이다.
+- 메시지 속성(계약 §3): `content_type=application/json`, `delivery_mode=2`,
+  `message_id`=본문 `eventId`, `correlation_id`=`backtestId`, 헤더 `schemaVersion`.
+  워커는 Spring의 `__TypeId__` 헤더를 보내지 않는다.
+- `executionId`는 엔진 실행 시도마다 새 값, `eventId`는 이벤트마다 고유하고 재발행 시 유지한다
+  (중복 방지 키 — 계약 §4.2).
+- **`schemaVersion` 검증.** 상수는 `messaging.SCHEMA_VERSION = 1`. 헤더나 본문이 다른 값을
+  표시하면 계약 오류로 보고 거절한다. 작업 메시지 본문은 `EngineInput` 전체이고 계약 픽스처에
+  `schemaVersion` 키가 없으므로, 양쪽 모두 표시하지 않은 경우는 통과시킨다.
+- **오류 3분류** (계약 §7·§8):
+
+  | 상황 | 처리 |
+  |---|---|
+  | JSON 파싱 실패, pydantic `ValidationError`, 미지원 `schemaVersion` | 계약 오류. requeue 없이 reject → DLQ |
+  | 엔진이 `FAILED` `EngineOutput` 반환(`NO_MARKET_DATA`·`ENGINE_ERROR`·`INVALID_REQUEST`) | 정상 결과. 그대로 `FINISHED`에 담아 발행하고 ACK. DLQ 아님 |
+  | 발행 실패·브로커 일시 장애(`CallbackError` 포함) | 일시 장애. 제한적 재시도 후 ACK하지 않고 requeue |
+
+- **실행 Consumer는 `EngineOutput` 내용을 해석하지 않는다.** 성공·실패 모두 같은 `FINISHED`다.
+- **멱등성: 같은 `backtestId`가 재전달되면 그냥 다시 실행하고 `executionId`만 새로 발급한다.**
+  워커는 결과 DB에 쓰지 않는 게 계약(§1)이라 처리 이력을 남길 곳이 없고, 고정 입력에 대해
+  결정론적이라 재실행이 안전하다. 중복 방어는 계약 §7이 백엔드 결과 Consumer 쪽에 요구하며
+  ("이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK") `eventId`가 그 키다.
+- **벤치마크는 계산하지 않는다.** 계약 §1은 벤치마크 계산을 실행 Consumer 책임으로 두지만,
+  엔진이 `benchmark` 지정을 `INVALID_REQUEST`로 거절하고 백엔드 요청에도 벤치마크를 지정할
+  필드가 없어 계산 대상이 없다. `FINISHED` payload의 `benchmark`는 항상 없음(직렬화에서 키
+  생략)이며 계산기 도입은 별도 티켓이다.
+- **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드
+  (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,
+  없으면 큐를 만들지 않고 "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다
+  (exit code 1). 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌해 훨씬 찾기 어려워진다.
+
+### 로컬 실행 절차
+
+**순서가 중요하다. 토폴로지 선언은 백엔드 몫이므로 백엔드를 한 번 띄워 큐가 만들어진 뒤에
+워커를 실행한다.** 브로커를 새로 만들었다면 `backtest.jobs`가 아직 없다.
+
+```bash
+# 1. 브로커 (저장소 루트)
+docker compose -f docker-compose.dev.yml up -d rabbitmq
+
+# 2. 백엔드를 한 번 띄워 토폴로지를 선언한다 (exchange 2, queue 4, binding 4)
+cd backend && ./gradlew bootRun
+
+# 3. 큐가 생겼는지 확인 (관리 UI http://localhost:15672, thorp/thorp)
+docker exec thorp-rabbitmq rabbitmqctl list_queues name messages
+
+# 4. 워커
+cd worker && RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/ uv run python -m worker.main
+```
+
+### 실제 브로커 연동 확인
+
+pytest는 브로커 없이 fake로 검증한다(아래 "테스트"). 실제 연동은 사람이 한 번 확인한다.
+
+위 "로컬 실행 절차" 1~4를 먼저 수행한다. 워커가
+`worker consuming queue=backtest.jobs prefetch=1` 을 남기면 준비된 상태다. 백엔드 발행이 아직
+없으므로 작업 메시지는 손으로 한 건 넣는다(백엔드가 넣을 것과 같은 속성으로 — 계약 §3).
+`pika`가 워커 의존성이라 별도 도구를 설치하지 않는다.
+
+```bash
+cd worker
+uv run python - <<'PY'
+import pathlib
+import pika
+
+body = pathlib.Path("examples/momentum-demo-input.json").read_text(encoding="utf-8")
+connection = pika.BlockingConnection(
+    pika.URLParameters("amqp://thorp:thorp@localhost:5672/")
+)
+channel = connection.channel()
+channel.confirm_delivery()
+channel.basic_publish(
+    exchange="backtest",
+    routing_key="backtest.job.requested",
+    body=body.encode("utf-8"),
+    properties=pika.BasicProperties(
+        content_type="application/json",
+        delivery_mode=2,
+        message_id="JOB-LOCAL-000001",
+        correlation_id="BT-20260907-000001",
+        headers={"schemaVersion": 1},
+    ),
+    mandatory=True,
+)
+connection.close()
+print("published")
+PY
+```
+
+이 입력은 실제 시세를 조회하므로 네트워크가 필요하다(고정 데이터 회귀 기준 입력이 아니다).
+발행 후 확인:
+
+```bash
+# backtest.jobs 는 0이어야 한다(ACK됨), backtest.events 에 STARTED 1 + PROGRESS n + FINISHED 1
+docker exec thorp-rabbitmq rabbitmqctl list_queues name messages
+```
+
+이벤트 본문·속성은 관리 UI(<http://localhost:15672>, thorp/thorp)의
+Queues → `backtest.events` → Get messages(Requeue: Yes)로 본다. 확인할 것:
+
+- `backtest.jobs`가 0으로 비었는가 (= FINISHED 발행 후 ACK됐다)
+- 첫 메시지가 `type=STARTED`·`sequence=0`이고 마지막이 `type=FINISHED`인가
+- 각 메시지의 `correlation_id`가 본문 `backtestId`와 같고 `message_id`가 본문 `eventId`와 같은가
+- 헤더에 `schemaVersion=1`이 있고 `__TypeId__`가 **없는가**
+- `FINISHED` payload에 `benchmark` 키가 없는가
+
+계약 오류 처리는 위 스크립트의 `body`를 깨진 JSON(`b"{"`)으로 바꿔 발행한 뒤
+`backtest.jobs.dlq`에 1건이 쌓이는지로 확인한다(`backtest.jobs`는 다시 0).
+
+### 테스트
+
+```bash
+uv run ruff check src tests && uv run ruff format --check src tests && uv run pytest
+```
+
+- `tests/test_consumer.py` 발행 순서·`sequence`, 20거래일 묶음과 잔여 구간, **FINISHED 발행
+  확인 전 ACK 금지**, 계약 오류 reject, 엔진 FAILED의 ACK, 재전달 시 새 `executionId`,
+  `eventId` 고유성, 계약 픽스처와의 payload 모양 대조. 엔진은 실제 `NautilusMomentumEngine` +
+  `CsvDataProvider`(네트워크 없음)를 쓴다.
+- `tests/test_rabbitmq.py` 메시지 속성, 발행 확인·재시도, ACK/reject 매핑, 큐 부재 처리,
+  그리고 큐·routing key 상수가 백엔드 `BacktestRabbitConfig.java`와 같은지 대조.

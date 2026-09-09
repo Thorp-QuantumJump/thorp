@@ -65,7 +65,7 @@ DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영�
 | `portfolio.currency` / `shortSelling` / `leverage` | `KRW` / `false` / `"1.0"` |
 | `execution.signalTiming` / `executionTiming` | `BAR_CLOSE` / `NEXT_BAR_OPEN` (t 종가 신호 → t+1 시가 체결) |
 | `execution.orderTypes` | `["MARKET"]` |
-| `execution.commission` | `model=BROKER`, `broker=KIWOOM`, `version=2026-09` |
+| `execution.commission` | `model=ZERO` (수수료·세금·제비용 0. 요율표 `model=BROKER`는 [ADR-0004](../../adr/0004-backtest-commission-model.md) D3에 따라 전략 비교 단계에서 구현) |
 | `execution.slippage` | `model=FIXED_BPS`, `bps=5` (0.05%) |
 | `execution.partialFill` / `liquidity.model` | `false` / `UNLIMITED` |
 | `execution.tradingHalt` / `delisting` | `WAIT_UNTIL_RESUME` / `CAUSE_BASED` |
