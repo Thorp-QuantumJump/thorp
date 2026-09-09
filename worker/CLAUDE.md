@@ -43,7 +43,9 @@ ruff check src tests && ruff format --check src tests && pytest
   엔진의 거절 규칙(`engine_support.py`)은 유지한다 — 벗기는 책임은 계약이 벤치마크 담당으로
   지정한 실행 Consumer에 있고, 엔진을 직접 호출하는 쪽은 계속 거절당해야 한다.
   `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며 계약이 그 생략을 "미지정 또는 실패"로
-  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다
+  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다. 다만 결과 메시지에 "벗겼다"는 표시는
+  남지 않으므로(`diagnostics.warnings` 미사용) `DELISTING_CLASSIFICATION_UNSUPPORTED` 선례처럼
+  경고로 드러내는 방안은 별도 티켓이다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다

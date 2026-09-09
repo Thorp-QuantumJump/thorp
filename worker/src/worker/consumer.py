@@ -102,10 +102,15 @@ def strip_benchmark(engine_input: EngineInput) -> EngineInput:
     백테스트 결과 전체가 FAILED가 된다.** 전략 성과는 벤치마크와 무관하게 계산되므로 결과를
     버릴 이유가 없다.
 
-    조용히 무시하는 것이 아니다(ADR-0004). 아직 벤치마크 계산기가 없으므로(별도 티켓)
+    벗긴 사실을 감추지 않는다. 아직 벤치마크 계산기가 없으므로(별도 티켓)
     ``FINISHED`` payload의 ``benchmark`` 는 계속 생략되고, 계약이 그 생략을 "미지정 또는 실패"로
     정의하므로 수신 측은 "벤치마크는 산출되지 않았다"를 그대로 읽는다. 엔진의 거절 규칙은 그대로
     둔다 — 엔진을 직접 호출하는 쪽은 계속 거절당해야 지원 범위가 흐려지지 않는다.
+
+    다만 **결과 메시지에 "벗겼다"는 표시가 남지는 않는다.** 벤치마크를 요청하지 않은 실행과
+    payload가 같다. ``execution.delisting=CAUSE_BASED`` 가 ``diagnostics.warnings`` 에
+    ``DELISTING_CLASSIFICATION_UNSUPPORTED`` 를 남기는 선례(ADR-0003 "D-상장폐지")처럼 경고로
+    드러내는 편이 낫고, 그 방안은 별도 티켓으로 둔다.
     """
     if engine_input.benchmark is None:
         return engine_input

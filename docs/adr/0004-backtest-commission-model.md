@@ -107,9 +107,17 @@ yfinance `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED` 의미에 맞추고(배�
 | `worker/src/worker/contracts/engine_input.py` | `CommissionModel` StrEnum 1개 값 | `ZERO` 추가. `model=BROKER`일 때 `broker` 필수 검증은 유지 | ✅ 완료 (검증 유지) |
 | `worker/src/worker/engine_contracts.py` | 입력 모델 한 벌 전체 | **삭제.** 엔진이 계약 입력 모델을 직접 받는다 | ✅ 완료 |
 
-백엔드에는 `EngineInput`을 조립하는 코드가 아직 없다(발행자 미구현). 고정값은 단일 멤버 enum과
-README 표에만 있었으므로, 백엔드 쪽 작업은 enum 값 추가와 문서·픽스처 수정뿐이었다. 조립 로직은
-발행 구현 티켓에서 이 결정을 반영해 작성한다.
+백엔드 조립 로직(`EngineInputAssembler`·`ExecutionPolicy`)은 발행 구현 티켓(#108)에서 작성됐고,
+그때 `ExecutionPolicy`가 이 결정을 반영하지 않아 `BROKER/KIWOOM/2026-09`를 계속 발행했다.
+그래서 `EngineInputFixtureTest`가 실패 상태였고, 워커 엔진이 `ZERO`만 실행하므로 **모든 Job이
+`INVALID_REQUEST`로 거절됐다.** #111에서 아래와 같이 맞췄다.
+
+| 위치 | 이전 | 변경 | 상태 |
+|---|---|---|---|
+| `.../application/service/ExecutionPolicy.java` | `CommissionSpec(BROKER, "KIWOOM", "2026-09")` | `CommissionSpec(ZERO, null, null)` | ✅ 완료 (#111) |
+
+고정값은 단일 멤버 enum과 README 표에만 있었으므로 당시 백엔드 작업은 enum 값 추가와 문서·픽스처
+수정뿐이었다.
 
 `ZERO`를 추가하면서 `model=BROKER`가 계약 검증을 새로 통과하게 되었으므로, 요율표가 없는 동안
 엔진이 `BROKER` 요청을 `INVALID_REQUEST`로 거절한다(`worker/src/worker/engine_support.py`).

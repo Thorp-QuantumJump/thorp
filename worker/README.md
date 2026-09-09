@@ -269,6 +269,9 @@ uv run python -m worker.main
   두므로 엔진을 직접 호출하는 쪽은 계속 거절당한다. `FINISHED` payload의 `benchmark`는 항상
   없음(직렬화에서 키 생략)이고, 계약이 그 생략을 "미지정 또는 실패"로 정의하므로 수신 측은 산출되지
   않았음을 그대로 읽는다.
+  다만 결과 메시지에 "벗겼다"는 표시는 남지 않아 벤치마크를 요청하지 않은 실행과 payload가
+  같다. `execution.delisting=CAUSE_BASED` 처럼 `diagnostics.warnings` 로 드러내는 방안은
+  별도 티켓이다.
 - **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드
   (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,
   없으면 큐를 만들지 않고 "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다
