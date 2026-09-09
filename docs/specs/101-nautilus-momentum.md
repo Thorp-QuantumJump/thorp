@@ -39,9 +39,10 @@ shared with the backend and the structural fixture
 ## Decisions overriding or clarifying the supplied design
 
 - Single XKRX equity, MOMENTUM, default 120 trading days, initial KRW 10,000,000,
-  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage. The contract
-  fixes `execution.commission` to the KIWOOM broker schedule instead; ADR-0003 records why
-  that gap blocks the input model from moving to the contract.
+  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage. The contract now
+  fixes `execution.commission` to `model=ZERO` as well (ADR-0004 D2), so this gap is closed;
+  the KIWOOM broker schedule (`model=BROKER`) stays in the contract for the strategy-comparison
+  stage (ADR-0004 D3).
 - `universe.instrumentIds` follows the detailed input table, not the `instruments` tree.
 - Native market order is created at close (including quantity); gateway submits it only
   on the next available open quote. Bars do not execute orders. This avoids execution
