@@ -10,6 +10,8 @@ export type IndicatorCategory =
 
 export type IndicatorTone = 'positive' | 'negative' | 'warning' | 'neutral'
 
+export type IndicatorDataStatus = 'example' | 'loading' | 'live' | 'stale' | 'error'
+
 export interface DataSource {
   provider: string
   datasetName: string
@@ -43,6 +45,8 @@ export interface Indicator {
   revisionStatus?: 'initial' | 'revised' | 'backfilled'
   source: DataSource
   series: IndicatorSeriesPoint[]
+  dataStatus?: IndicatorDataStatus
+  statusMessage?: string | null
 }
 
 export interface MarketCyclePoint {

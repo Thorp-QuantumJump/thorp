@@ -142,7 +142,7 @@ export function IndicatorHistoryCard({
           aria-controls={panelId}
           onClick={() => onActiveChange(expanded ? null : indicator.id)}
         >
-          최근 3개월 <span>5년 보기 <ArrowUpRight size={13} aria-hidden="true" /></span>
+          최근 3개월 · 예시 <span>5년 보기 <ArrowUpRight size={13} aria-hidden="true" /></span>
         </button>
       </motion.div>
       <AnimatePresence initial={false}>
