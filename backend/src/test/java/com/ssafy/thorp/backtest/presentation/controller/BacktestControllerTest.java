@@ -12,10 +12,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.port.message.TradeSide;
+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
@@ -348,6 +353,124 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.data").isEmpty())
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    // ---------- GET /backtests/{backtestId}/trades ----------
+
+    private static BacktestTradePageResult tradePage(int page, int size) {
+        EngineOutput.TradeResult open =
+                new EngineOutput.TradeResult(
+                        "TRD-000003",
+                        "005930.XKRX",
+                        TradeSide.LONG,
+                        TradeStatus.OPEN,
+                        Instant.parse("2025-05-14T00:00:00Z"),
+                        null,
+                        new BigDecimal("60000.00"),
+                        null,
+                        new BigDecimal("90"),
+                        null,
+                        new BigDecimal("810.00"),
+                        new BigDecimal("2700.00"),
+                        null,
+                        null);
+        return new BacktestTradePageResult(BACKTEST_ID, page, size, 1, 1, List.of(open));
+    }
+
+    private FindBacktestTradesQuery capturedTradeQuery() {
+        ArgumentCaptor<FindBacktestTradesQuery> captor =
+                ArgumentCaptor.forClass(FindBacktestTradesQuery.class);
+        verify(queryService)
+                .getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    @DisplayName("OPEN 거래의 청산 필드는 명시적 null이다 — 키를 생략하지 않는다")
+    void getTradesKeepsExplicitNullsForOpenTrade() throws Exception {
+        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
+                .thenReturn(tradePage(0, 100));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].entryDate").value("2025-05-14"))
+                .andExpect(jsonPath("$.data.content[0].entryPrice").value("60000.00"))
+                // 키가 있고 값이 null이다. doesNotExist()가 아니다
+                .andExpect(jsonPath("$.data.content[0].exitDate").value(nullValue()))
+                .andExpect(jsonPath("$.data.content[0].realizedPnl").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("page·size를 생략하면 0·100을 채운다")
+    void getTradesAppliesDefaults() throws Exception {
+        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
+                .thenReturn(tradePage(0, 100));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades")).andExpect(status().isOk());
+
+        FindBacktestTradesQuery query = capturedTradeQuery();
+        assertThat(query.page()).isZero();
+        assertThat(query.size()).isEqualTo(100);
+        assertThat(query.instrumentId()).isNull();
+        assertThat(query.status()).isNull();
+    }
+
+    @Test
+    @DisplayName("생략과 명시적 size=0은 다르다 — 0은 400이다")
+    void getTradesRejectsExplicitZeroSize() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        verify(queryService, never()).getTrades(org.mockito.ArgumentMatchers.anyString(), any());
+    }
+
+    @Test
+    @DisplayName("size가 1000을 넘거나 page가 음수면 400")
+    void getTradesRejectsOutOfRange() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("size", "1001"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("page", "-1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("instrumentId 형식 위반은 빈 페이지가 아니라 400이다")
+    void getTradesRejectsMalformedInstrumentId() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("instrumentId", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        verify(queryService, never()).getTrades(org.mockito.ArgumentMatchers.anyString(), any());
+    }
+
+    @Test
+    @DisplayName("모르는 status 값은 400")
+    void getTradesRejectsUnknownStatus() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("status", "UNKNOWN"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("필터는 커맨드로 그대로 넘어간다")
+    void getTradesPassesFilters() throws Exception {
+        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
+                .thenReturn(tradePage(1, 20));
+
+        mockMvc.perform(
+                        get("/backtests/" + BACKTEST_ID + "/trades")
+                                .param("page", "1")
+                                .param("size", "20")
+                                .param("instrumentId", "005930.XKRX")
+                                .param("status", "OPEN"))
+                .andExpect(status().isOk());
+
+        FindBacktestTradesQuery query = capturedTradeQuery();
+        assertThat(query.page()).isEqualTo(1);
+        assertThat(query.size()).isEqualTo(20);
+        assertThat(query.instrumentId()).isEqualTo("005930.XKRX");
+        assertThat(query.status()).isEqualTo(TradeStatus.OPEN);
     }
 
     // ---------- GET /backtests/{backtestId}/timeseries ----------

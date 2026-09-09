@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
@@ -13,6 +14,8 @@ import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -96,6 +99,19 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
         return resultRepository
                 .findPortfolioSeriesJson(backtestJobId)
                 .map(json -> read(json, SERIES));
+    }
+
+    @Override
+    public Page<EngineOutput.TradeResult> findTrades(
+            Long backtestJobId, FindBacktestTradesQuery query) {
+        return tradeRepository
+                .findPage(
+                        backtestJobId,
+                        query.instrumentId(),
+                        query.status(),
+                        PageRequest.of(query.page(), query.size()))
+                // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다
+                .map(BacktestTradeJpaEntity::getDetail);
     }
 
     /** {@code jsonb}에 문자열로 저장된 decimal을 값과 scale 그대로 되돌린다. */

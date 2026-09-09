@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
@@ -12,6 +13,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
@@ -35,6 +37,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 /** 상태별 응답 규칙(HTTP 계약 §2.1·§2.5)을 고정한다. */
 @ExtendWith(MockitoExtension.class)
@@ -273,6 +277,48 @@ class BacktestResultQueryServiceTest {
 
         assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
                 .isInstanceOf(BacktestFailedException.class);
+    }
+
+    // ---------- getTrades ----------
+
+    @Test
+    @DisplayName("거래 페이지는 Page의 메타데이터를 그대로 옮긴다")
+    void tradesCopiesPageMetadata() {
+        given(BacktestStatus.COMPLETED);
+        FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);
+        when(resultRepository.findTrades(JOB_ID, query))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));
+
+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, query);
+
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result.totalElements()).isEqualTo(5);
+        assertThat(result.totalPages()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("거래 0건도 정상 응답이다 — 결과 자체가 없는 것과 다르다")
+    void tradesEmptyIsOk() {
+        given(BacktestStatus.COMPLETED);
+        FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
+        when(resultRepository.findTrades(JOB_ID, query))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        assertThat(service.getTrades(BACKTEST_ID, query).content()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("거래도 관문을 그대로 쓴다 — RUNNING이면 RESULT_NOT_READY")
+    void tradesUsesGate() {
+        given(BacktestStatus.RUNNING);
+
+        assertThatThrownBy(
+                        () ->
+                                service.getTrades(
+                                        BACKTEST_ID,
+                                        new FindBacktestTradesQuery(0, 100, null, null)))
+                .isInstanceOf(BacktestResultNotReadyException.class);
     }
 
     // ---------- 하위 리소스 관문 ----------

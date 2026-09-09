@@ -2,9 +2,12 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -30,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -135,5 +139,109 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
     @DisplayName("결과 행이 없으면 빈 Optional이다 — 호출자가 Job 상태와 맞춰 해석한다")
     void summaryEmptyWhenNoResultRow() {
         assertThat(resultRepository.findSummary(999_999L)).isEmpty();
+    }
+
+    // ---------- 시계열 조회 ----------
+
+    @Test
+    @DisplayName("시계열 조회는 두 컬럼을 파싱해 돌려준다")
+    void findsTimeseriesWithBenchmark() {
+        Long jobId = saveFixtureResult();
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        var series = resultRepository.findTimeseries(jobId).orElseThrow();
+
+        assertThat(series.portfolioSeries())
+                .isEqualTo(event.payload().engineOutput().portfolioSeries());
+        assertThat(series.benchmark()).isEqualTo(event.payload().benchmark());
+    }
+
+    @Test
+    @DisplayName("보유 조회는 시계열 한 컬럼만 읽는다")
+    void findsPortfolioSeriesOnly() {
+        Long jobId = saveFixtureResult();
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        assertThat(resultRepository.findPortfolioSeries(jobId))
+                .contains(event.payload().engineOutput().portfolioSeries());
+    }
+
+    // ---------- 거래 페이징·필터 ----------
+
+    /**
+     * PostgreSQL에서 {@code (:param IS NULL OR ...)} 바인딩이 타입 추론되는지 실측하는 자리이기도 하다. 추론이 안 되면 여기서 깨지고
+     * {@code CAST(:instrumentId AS text)}가 필요하다.
+     */
+    @Test
+    @DisplayName("거래는 (entry_time, id) 순서로 페이징된다")
+    void pagesTradesInContractOrder() {
+        Long jobId = saveFixtureResult();
+
+        Page<EngineOutput.TradeResult> first =
+                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 2, null, null));
+        Page<EngineOutput.TradeResult> second =
+                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(1, 2, null, null));
+
+        assertThat(first.getTotalElements()).isEqualTo(3);
+        assertThat(first.getTotalPages()).isEqualTo(2);
+        assertThat(first.getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000001", "TRD-000002");
+        assertThat(second.getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000003");
+        // 페이지 경계에서 행이 중복·누락되지 않는다
+        assertThat(first.getContent()).doesNotContainAnyElementsOf(second.getContent());
+    }
+
+    @Test
+    @DisplayName("instrumentId·status 필터가 각각·조합으로 걸리고 totalElements도 필터 적용값이다")
+    void filtersTrades() {
+        Long jobId = saveFixtureResult();
+
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(0, 100, "000660.XKRX", null))
+                                .getTotalElements())
+                .isEqualTo(1);
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN))
+                                .getTotalElements())
+                .isEqualTo(1);
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(
+                                                0, 100, "005930.XKRX", TradeStatus.CLOSED))
+                                .getTotalElements())
+                .isEqualTo(1);
+        // 있는 종목이지만 그 상태의 거래가 없는 조합
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(
+                                                0, 100, "000660.XKRX", TradeStatus.OPEN))
+                                .getContent())
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("거래의 detail을 꺼내면 계약 형태의 거래가 그대로 나온다")
+    void tradeContentIsContractShape() {
+        Long jobId = saveFixtureResult();
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        Page<EngineOutput.TradeResult> page =
+                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 100, null, null));
+
+        // record equals는 BigDecimal의 scale까지 본다
+        assertThat(page.getContent()).isEqualTo(event.payload().engineOutput().trades());
     }
 }

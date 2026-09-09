@@ -1,11 +1,13 @@
 package com.ssafy.thorp.backtest.application.repository;
 
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
 
 /**
  * 백테스트 결과 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다.
@@ -46,4 +48,14 @@ public interface BacktestResultRepository {
      * 컬럼은 select에 넣지 않는다.
      */
     Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long backtestJobId);
+
+    /**
+     * 거래 내역 한 페이지. 정렬은 {@code (entry_time, id)} 고정이므로 {@code Pageable}의 {@code Sort}를 받지 않는다 — 계약이
+     * 정렬을 고정했고 같은 시각의 거래 순서가 흔들리면 페이지 경계에서 행이 중복·누락된다.
+     *
+     * <p>Spring {@code Page}가 content 쿼리와 count 쿼리를 함께 처리한다. 포트에 프레임워크 타입이 보이지만 application은 이미
+     * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code
+     * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.
+     */
+    Page<EngineOutput.TradeResult> findTrades(Long backtestJobId, FindBacktestTradesQuery query);
 }

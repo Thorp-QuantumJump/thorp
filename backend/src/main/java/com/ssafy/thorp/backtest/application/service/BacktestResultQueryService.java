@@ -1,12 +1,15 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
@@ -19,6 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -84,6 +88,22 @@ public class BacktestResultQueryService {
                                                 benchmark.get(s.date())))
                         .toList();
         return new BacktestTimeseriesResult(backtestId, points);
+    }
+
+    /**
+     * 거래 내역 한 페이지. 거래가 0건이면 빈 {@code content}와 함께 정상 응답이다 — 결과가 있는데 거래가 없었던 실행은 실제로 가능하다. "결과 자체가
+     * 없음"은 관문이 이미 409로 걸렀다.
+     */
+    public BacktestTradePageResult getTrades(String backtestId, FindBacktestTradesQuery query) {
+        BacktestJob job = requireResultReady(backtestId);
+        Page<EngineOutput.TradeResult> page = resultRepository.findTrades(job.getId(), query);
+        return new BacktestTradePageResult(
+                backtestId,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getContent());
     }
 
     private static Map<LocalDate, BigDecimal> benchmarkByDate(BenchmarkResult benchmark) {
