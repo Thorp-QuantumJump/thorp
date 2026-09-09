@@ -1,6 +1,6 @@
 # CLAUDE.md — backend (BACK 파트)
 
-Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 브로커(현재 RabbitMQ 예정, Kafka는 설치만)에 넣으면 Worker가 처리. 브로커 결정은 루트 `CLAUDE.md`를 따른다.
+Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 브로커 RabbitMQ(ADR-0002로 확정, Kafka는 설치만)에 넣으면 Worker가 처리. 브로커 결정은 루트 `CLAUDE.md`와 ADR-0002를 따른다.
 
 ## 검증 명령 (작업 후 반드시 실행)
 
