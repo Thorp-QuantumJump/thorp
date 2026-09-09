@@ -19,6 +19,7 @@ import com.ssafy.thorp.backtest.application.port.message.TradeSide;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
@@ -471,6 +472,49 @@ class BacktestControllerTest {
         assertThat(query.size()).isEqualTo(20);
         assertThat(query.instrumentId()).isEqualTo("005930.XKRX");
         assertThat(query.status()).isEqualTo(TradeStatus.OPEN);
+    }
+
+    // ---------- GET /backtests/{backtestId}/positions ----------
+
+    @Test
+    @DisplayName("보유는 snapshotDate를 함께 담는다 — 요청일과 다를 수 있다")
+    void getPositionsIncludesSnapshotDate() throws Exception {
+        when(queryService.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 23)))
+                .thenReturn(
+                        new BacktestPositionsResult(
+                                BACKTEST_ID,
+                                LocalDate.of(2025, 1, 23),
+                                LocalDate.of(2025, 1, 22),
+                                List.of(
+                                        new BacktestPositionsResult.Position(
+                                                "005930.XKRX",
+                                                new BigDecimal("90"),
+                                                new BigDecimal("4743000.00"),
+                                                new BigDecimal("0.406000"),
+                                                new BigDecimal("-87300.00")))));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions").param("date", "2025-01-23"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.requestedDate").value("2025-01-23"))
+                .andExpect(jsonPath("$.data.snapshotDate").value("2025-01-22"))
+                .andExpect(jsonPath("$.data.positions[0].marketValue").value("4743000.00"))
+                .andExpect(jsonPath("$.data.positions[0].weight").value("0.406000"));
+    }
+
+    @Test
+    @DisplayName("date를 빠뜨리면 400 INVALID_INPUT이고 본문도 ApiResponse다")
+    void getPositionsRequiresDate() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    @DisplayName("date 형식이 틀리면 400")
+    void getPositionsRejectsMalformedDate() throws Exception {
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions").param("date", "2025-13-99"))
+                .andExpect(status().isBadRequest());
     }
 
     // ---------- GET /backtests/{backtestId}/timeseries ----------

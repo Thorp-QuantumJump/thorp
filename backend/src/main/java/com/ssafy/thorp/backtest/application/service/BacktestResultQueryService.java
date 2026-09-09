@@ -6,6 +6,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
@@ -14,6 +15,8 @@ import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -104,6 +107,53 @@ public class BacktestResultQueryService {
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.getContent());
+    }
+
+    /**
+     * 특정 시점 보유 구성. 스냅샷이 없는 날은 <b>요청일 이하에서 스냅샷이 있는 가장 최근 날짜</b>를 돌려준다(설계 §조회 규칙).
+     *
+     * <p>체결이 없던 날의 보유 종목·수량은 직전 스냅샷과 같으므로 구성 정보는 정확하다. 다만 평가액은 스냅샷 날짜의 Close 기준이라 응답에 {@code
+     * snapshotDate}를 담아 화면이 표시하게 한다.
+     *
+     * <p>계약상 시작일에는 항상 스냅샷이 있으므로, 요청일이 시작일 이상이면 반드시 하나는 찾는다. 못 찾으면 요청일이 백테스트 시작 전이거나 데이터가 계약을 어긴 것이고
+     * 둘 다 400으로 드러낸다.
+     */
+    public BacktestPositionsResult getPositions(String backtestId, LocalDate date) {
+        BacktestJob job = requireResultReady(backtestId);
+        List<EngineOutput.PortfolioSnapshot> series =
+                require(resultRepository.findPortfolioSeries(job.getId()), job);
+        EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date);
+        return new BacktestPositionsResult(
+                backtestId,
+                date,
+                snapshot.date(),
+                snapshot.positions().stream()
+                        .map(
+                                p ->
+                                        new BacktestPositionsResult.Position(
+                                                p.instrumentId(),
+                                                p.quantity(),
+                                                p.marketValue(),
+                                                p.weight(),
+                                                p.unrealizedPnl()))
+                        .toList());
+    }
+
+    /**
+     * 뒤에서부터 훑는다. 계약상 시계열은 날짜 오름차순이고 5년치라도 1,250점이라 스캔 비용이 무시할 수준이다 — SQL로 {@code
+     * jsonb_array_elements} + 서브쿼리를 쓰면 읽기만 어려워진다.
+     *
+     * <p>{@code positions == null}은 "그날 구성 변경 없음"이라 건너뛴다. 빈 배열은 "보유 없음이 확정"이라 답이 된다.
+     */
+    private static EngineOutput.PortfolioSnapshot latestSnapshotOnOrBefore(
+            List<EngineOutput.PortfolioSnapshot> series, LocalDate date) {
+        for (int i = series.size() - 1; i >= 0; i--) {
+            EngineOutput.PortfolioSnapshot snapshot = series.get(i);
+            if (!snapshot.date().isAfter(date) && snapshot.positions() != null) {
+                return snapshot;
+            }
+        }
+        throw new BusinessException(ErrorCode.INVALID_INPUT, "요청일 이전 보유 스냅샷이 없습니다: date=" + date);
     }
 
     private static Map<LocalDate, BigDecimal> benchmarkByDate(BenchmarkResult benchmark) {

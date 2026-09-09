@@ -4,6 +4,7 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
@@ -14,11 +15,14 @@ import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;
 import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -87,6 +92,19 @@ public class BacktestController {
             @PathVariable String backtestId, @Valid @ModelAttribute TradePageQuery query) {
         BacktestTradePageResult result = queryService.getTrades(backtestId, toQuery(query));
         return ResponseEntity.ok(ApiResponse.ok(BacktestTradePageResponse.from(result)));
+    }
+
+    /**
+     * 특정 시점 보유 구성. {@code date}는 필수이고 스냅샷이 없는 날이면 직전 스냅샷을 돌려준다.
+     *
+     * <p>{@code date} 누락·형식 오류는 Spring MVC 표준 예외라 전역 처리기가 400 {@code INVALID_INPUT}으로 감싼다.
+     */
+    @GetMapping("/{backtestId}/positions")
+    public ResponseEntity<ApiResponse<BacktestPositionsResponse>> getPositions(
+            @PathVariable String backtestId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        BacktestPositionsResult result = queryService.getPositions(backtestId, date);
+        return ResponseEntity.ok(ApiResponse.ok(BacktestPositionsResponse.from(result)));
     }
 
     /**

@@ -10,6 +10,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
@@ -23,6 +24,8 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -319,6 +322,111 @@ class BacktestResultQueryServiceTest {
                                         BACKTEST_ID,
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(BacktestResultNotReadyException.class);
+    }
+
+    // ---------- getPositions ----------
+
+    private static EngineOutput.PositionSnapshot position(String instrumentId) {
+        return new EngineOutput.PositionSnapshot(
+                instrumentId,
+                new BigDecimal("90"),
+                new BigDecimal("4743000.00"),
+                new BigDecimal("0.406000"),
+                new BigDecimal("-87300.00"));
+    }
+
+    private static EngineOutput.PortfolioSnapshot snapshotWith(
+            String date, List<EngineOutput.PositionSnapshot> positions) {
+        EngineOutput.PortfolioSnapshot base = snapshot(date, "10000000.00");
+        return new EngineOutput.PortfolioSnapshot(
+                base.date(),
+                base.equity(),
+                base.cash(),
+                base.positionValue(),
+                base.dailyReturn(),
+                base.cumulativeReturn(),
+                base.drawdown(),
+                positions);
+    }
+
+    /** 01-02(보유 1) → 01-03(변경 없음) → 01-06(보유 없음 확정) → 01-07(변경 없음) */
+    private void givenPositionSeries() {
+        given(BacktestStatus.COMPLETED);
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith(
+                                                "2025-01-02", List.of(position("005930.XKRX"))),
+                                        snapshotWith("2025-01-03", null),
+                                        snapshotWith("2025-01-06", List.of()),
+                                        snapshotWith("2025-01-07", null))));
+    }
+
+    @Test
+    @DisplayName("요청일에 스냅샷이 있으면 그대로 돌려준다")
+    void positionsOnSnapshotDate() {
+        givenPositionSeries();
+
+        BacktestPositionsResult result =
+                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2));
+
+        assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 2));
+        assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
+        assertThat(result.positions()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("스냅샷이 없는 날은 직전 스냅샷을 돌려주고 snapshotDate가 앞선다")
+    void positionsFallsBackToPreviousSnapshot() {
+        givenPositionSeries();
+
+        BacktestPositionsResult result =
+                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3));
+
+        assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 3));
+        assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
+    }
+
+    @Test
+    @DisplayName("빈 positions는 '보유 없음 확정'이라 답이 된다 — 더 거슬러 올라가지 않는다")
+    void positionsEmptyArrayIsAnAnswer() {
+        givenPositionSeries();
+
+        BacktestPositionsResult result =
+                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 7));
+
+        assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 6));
+        assertThat(result.positions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("마지막 스냅샷 이후를 요청하면 마지막 것을 돌려준다")
+    void positionsAfterLastSnapshot() {
+        givenPositionSeries();
+
+        assertThat(service.getPositions(BACKTEST_ID, LocalDate.of(2025, 12, 31)).snapshotDate())
+                .isEqualTo(LocalDate.of(2025, 1, 6));
+    }
+
+    @Test
+    @DisplayName("첫 스냅샷보다 앞선 날짜는 400이다")
+    void positionsBeforeFirstSnapshot() {
+        givenPositionSeries();
+
+        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("보유도 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
+    void positionsUsesGate() {
+        given(BacktestStatus.FAILED);
+
+        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2)))
+                .isInstanceOf(BacktestFailedException.class);
     }
 
     // ---------- 하위 리소스 관문 ----------
