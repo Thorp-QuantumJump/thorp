@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260907-000001",
+    "status": "COMPLETED",
+    "config": {
+      "strategyId": "MA_CROSSOVER",
+      "strategyVersion": "1.0.0",
+      "parameters": {
+        "shortWindow": 20,
+        "longWindow": 60,
+        "threshold": 0.05
+      },
+      "instrumentIds": [
+        "005930.XKRX",
+        "000660.XKRX"
+      ],
+      "start": "2025-01-01",
+      "end": "2025-06-30",
+      "initialCash": "10000000.00",
+      "currency": "KRW",
+      "benchmarkId": "069500.XKRX"
+    },
+    "summary": {
+      "initialEquity": "10000000.00",
+      "finalEquity": "11666521.51",
+      "currency": "KRW",
+      "totalReturn": "0.166652",
+      "cagr": "0.366917",
+      "maxDrawdown": "-0.041757",
+      "sharpeRatio": "2.342630",
+      "volatility": "0.132307",
+      "tradeCount": 2,
+      "winRate": "0.500000",
+      "totalCommission": "3941.19",
+      "totalSlippageCost": "13137.30",
+      "benchmark": {
+        "instrumentId": "069500.XKRX",
+        "totalReturn": "0.053292"
+      }
+    },
+    "startedAt": "2026-09-07T01:00:00Z",
+    "finishedAt": "2026-09-07T01:00:04Z",
+    "error": null
+  },
+  "error": null
+}
