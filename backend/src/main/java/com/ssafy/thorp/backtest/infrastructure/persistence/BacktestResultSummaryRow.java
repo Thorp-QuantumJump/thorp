@@ -5,9 +5,9 @@ import java.time.Instant;
 /**
  * 요약 조회의 native 프로젝션. JSON 컬럼은 **문자열로 받아** 구현체가 메시지 ObjectMapper로 파싱한다.
  *
- * <p>{@code BigDecimal}로 받지 않는 이유: T5가 정규화를 피하려고 decimal을 {@code jsonb} 문자열로 저장했다. SQL에서 {@code
- * ::numeric}으로 캐스팅하면 그 문제를 되불러오므로 {@code ->>}로 문자열을 꺼내 {@code new BigDecimal(...)}로 복원한다 — scale이
- * 정확히 보존된다.
+ * <p>{@code BigDecimal}로 받지 않는 이유: 결과 저장이 {@code jsonb}의 숫자 정규화를 피하려고 decimal을 문자열로 넣는다. SQL에서
+ * {@code ::numeric}으로 캐스팅하면 그 문제를 되불러오므로 {@code ->>}로 문자열을 꺼내 {@code new BigDecimal(...)}로 복원한다 —
+ * scale이 정확히 보존된다.
  *
  * <p>getter 이름과 SQL alias가 맞아야 한다. **alias는 따옴표로 감싼다** — PostgreSQL은 인용하지 않은 식별자를 소문자로 접어 {@code
  * errorcode}가 되고 여기 매핑이 깨진다.

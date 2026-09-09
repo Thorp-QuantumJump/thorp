@@ -87,8 +87,8 @@ class BacktestResultApiIT extends PostgresTestSupport {
     }
 
     /**
-     * 결과 저장은 <b>한 트랜잭션 안에서</b> 해야 한다 — T5 포트 계약이고, Job을 {@code getReferenceById} 프록시로 참조하기 때문이다.
-     * 운영에서는 {@code @Transactional} 서비스가 그 경계를 만든다.
+     * 결과 저장은 <b>한 트랜잭션 안에서</b> 해야 한다 — 결과 저장 포트의 계약이고, Job을 {@code getReferenceById} 프록시로 참조하기
+     * 때문이다. 운영에서는 {@code @Transactional} 서비스가 그 경계를 만든다.
      */
     private BacktestJob saveResult(BacktestEvent<FinishedPayload> event, boolean completed) {
         return transactionTemplate.execute(
