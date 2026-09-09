@@ -99,6 +99,11 @@ VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [
     ("slippage-bps-negative", lambda b: _mutate(b, "execution.slippage.bps", -1)),
     # ExecutionSpec: orderTypes 가 비어 있지 않다
     ("execution-order-types-empty", lambda b: _mutate(b, "execution.orderTypes", [])),
+    # BenchmarkSpec: instrumentId 도 {6자리}.XKRX 형식이다 (계약 README §5).
+    # 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로 이 검증이 마지막 방어선이다.
+    ("benchmark-not-krx", lambda b: _mutate(b, "benchmark.instrumentId", "KOSPI200")),
+    ("benchmark-blank", lambda b: _mutate(b, "benchmark.instrumentId", "")),
+    ("benchmark-wrong-venue", lambda b: _mutate(b, "benchmark.instrumentId", "069500.XNAS")),
 ]
 
 

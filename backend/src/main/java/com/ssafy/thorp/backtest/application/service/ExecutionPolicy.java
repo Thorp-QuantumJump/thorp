@@ -43,7 +43,11 @@ public final class ExecutionPolicy {
                     SignalTiming.BAR_CLOSE,
                     ExecutionTiming.NEXT_BAR_OPEN,
                     List.of(OrderType.MARKET),
-                    new EngineInput.CommissionSpec(CommissionModel.BROKER, "KIWOOM", "2026-09"),
+                    // DEMO 고정값은 ZERO다 — 수수료·세금·제비용을 모두 0으로 계산한다
+                    // (계약 README §4.1, ADR-0004 D2). 임시 우회값이 아니라 "거래비용을 제외한
+                    // 순수 전략 성능"을 뜻하는 정식 모델이며, 요율표 model=BROKER는 전략 비교
+                    // 단계의 별도 티켓이다(ADR-0004 D3). 워커 엔진도 ZERO만 실행한다.
+                    new EngineInput.CommissionSpec(CommissionModel.ZERO, null, null),
                     new EngineInput.SlippageSpec(SlippageModel.FIXED_BPS, 5),
                     false,
                     new EngineInput.LiquiditySpec(LiquidityModel.UNLIMITED),

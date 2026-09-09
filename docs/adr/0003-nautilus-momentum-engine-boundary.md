@@ -147,6 +147,14 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험�
 `EngineOutput(run.status=FAILED, run.error.code=INVALID_REQUEST)`로 반환한다(§6 "오류와 콜백
 의미"의 입력 계약 오류와 구분된다 — 계약 자체를 위반한 메시지는 여전히 pydantic 예외다).
 
+**갱신(#111).** 위 목록 중 `benchmark` 지정은 **브로커 경로에서 더 이상 거절 사유가 아니다.**
+백엔드가 사용자 지정 벤치마크를 `EngineInput.benchmark`로 실어 보내므로 그대로 두면 벤치마크를
+골랐다는 이유만으로 백테스트 결과 전체가 FAILED가 된다. 실행 Consumer가 엔진 호출 입력에서만
+벗기고(`consumer.strip_benchmark`) 엔진의 거절 규칙은 유지한다 — 엔진을 직접 호출하는 쪽은
+계속 거절당한다. 계산기가 없어 `FINISHED` payload의 `benchmark`는 생략되며, 계약이 그 생략을
+"미지정 또는 실패"로 정의한다. `diagnostics.warnings`로 드러내는 방안(`D-상장폐지` 선례)은
+별도 티켓이다.
+
 **이 검증을 `contracts/`에 두지 않는다.** `contracts/`는 백엔드와 공유하는 계약이고, 계약
 픽스처 `docs/specs/backtest-messaging/examples/engine-input.json`(MA_CROSSOVER·2종목·benchmark
 있음)은 구조 검증용이라 계약 검증을 계속 통과해야 한다(백엔드 `BacktestMessageRoundTripTest`와

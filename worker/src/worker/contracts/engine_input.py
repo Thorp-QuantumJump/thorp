@@ -278,7 +278,19 @@ class ExecutionSpec(ContractModel):
 
 
 class BenchmarkSpec(ContractModel):
-    instrument_id: str
+    instrument_id: str  # "{6자리코드}.XKRX"
+
+    @field_validator("instrument_id")
+    @classmethod
+    def _krx_instrument_id(cls, value: str) -> str:
+        # 계약 README §5는 benchmark의 instrumentId도 같은 형식으로 규정하고 형식 위반을
+        # 계약 오류(→ DLQ)로 둔다. 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로
+        # (consumer.strip_benchmark) 이 검증이 없으면 형식이 깨진 값이 조용히 통과한다.
+        if not _INSTRUMENT_ID_PATTERN.fullmatch(value):
+            raise ValueError(
+                f"benchmark.instrumentId must look like '{{6-digit code}}.XKRX'; got {value!r}"
+            )
+        return value
 
 
 class EngineInput(ContractModel):

@@ -9,6 +9,10 @@ pika를 직접 부르지 않는다. 발행과 ACK는 ``worker.messaging`` 의 Pr
 
 **EngineOutput 내용을 해석하지 않는다.** ``run.status`` 가 COMPLETED든 FAILED든 같은
 FINISHED 이벤트에 그대로 담는다. 엔진이 계약대로 답한 것이므로 DLQ가 아니다.
+
+**벤치마크는 엔진에 넘기지 않는다.** 계약이 벤치마크를 실행 Consumer 책임으로 두므로
+(:func:`strip_benchmark`) 엔진 호출 입력에서만 ``benchmark`` 를 벗긴다. 계산기는 아직 없어
+``FINISHED`` payload의 ``benchmark`` 는 생략된다 (계약상 "미지정 또는 실패").
 """
 
 import json
@@ -89,6 +93,36 @@ def parse_job(body: bytes | str, headers: Mapping[str, Any] | None) -> EngineInp
         raise ContractViolation(f"job body violates the EngineInput contract: {exc}") from exc
 
 
+def strip_benchmark(engine_input: EngineInput) -> EngineInput:
+    """엔진에 넘길 입력에서만 ``benchmark`` 지정을 벗긴다.
+
+    벤치마크 산출은 계약상 실행 Consumer 책임이고(계약 §1·§4.2) 엔진은 지정을
+    ``INVALID_REQUEST`` 로 거절한다(``engine_support``). 그런데 백엔드는 사용자가 벤치마크를
+    지정하면 ``BenchmarkSpec`` 을 실어 보내므로, 벗기지 않으면 **벤치마크를 지정했다는 이유만으로
+    백테스트 결과 전체가 FAILED가 된다.** 전략 성과는 벤치마크와 무관하게 계산되므로 결과를
+    버릴 이유가 없다.
+
+    벗긴 사실을 감추지 않는다. 아직 벤치마크 계산기가 없으므로(별도 티켓)
+    ``FINISHED`` payload의 ``benchmark`` 는 계속 생략되고, 계약이 그 생략을 "미지정 또는 실패"로
+    정의하므로 수신 측은 "벤치마크는 산출되지 않았다"를 그대로 읽는다. 엔진의 거절 규칙은 그대로
+    둔다 — 엔진을 직접 호출하는 쪽은 계속 거절당해야 지원 범위가 흐려지지 않는다.
+
+    다만 **결과 메시지에 "벗겼다"는 표시가 남지는 않는다.** 벤치마크를 요청하지 않은 실행과
+    payload가 같다. ``execution.delisting=CAUSE_BASED`` 가 ``diagnostics.warnings`` 에
+    ``DELISTING_CLASSIFICATION_UNSUPPORTED`` 를 남기는 선례(ADR-0003 "D-상장폐지")처럼 경고로
+    드러내는 편이 낫고, 그 방안은 별도 티켓으로 둔다.
+    """
+    if engine_input.benchmark is None:
+        return engine_input
+    logger.info(
+        "benchmark %s is not handed to the engine and is not computed; the FINISHED payload "
+        "omits it (backtestId=%s)",
+        engine_input.benchmark.instrument_id,
+        engine_input.run.backtest_id,
+    )
+    return engine_input.model_copy(update={"benchmark": None})
+
+
 class _EventStream:
     """한 번의 엔진 실행이 발행하는 이벤트 순서와 ``sequence`` 를 관리한다.
 
@@ -124,9 +158,9 @@ class _EventStream:
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
     def finished(self, output: EngineOutput) -> None:
-        # benchmark는 항상 없다. 엔진이 benchmark 지정을 INVALID_REQUEST로 거절하고 백엔드
-        # 요청에도 지정할 필드가 없으므로 계산할 대상이 없다(별도 티켓). exclude_none이
-        # 키를 생략한다.
+        # benchmark는 항상 없다. 백엔드가 지정을 실어 보내도 계산기가 없어(별도 티켓) 산출할
+        # 값이 없기 때문이며, 계약이 이 생략을 "미지정 또는 실패"로 정의하므로 수신 측은
+        # 산출되지 않았음을 그대로 읽는다(strip_benchmark 참고). exclude_none이 키를 생략한다.
         self._emit(
             BacktestEventType.FINISHED,
             FinishedPayload(engine_output=output, benchmark=None),
@@ -282,7 +316,7 @@ class BacktestJobConsumer:
         stream = _EventStream(self._publisher, backtest_id, execution_id, self._new_id, self._clock)
         stream.started()
         batcher = _ProgressBatcher(stream, self._progress_batch_size)
-        output = self._engine.run(engine_input, batcher.on_progress)
+        output = self._engine.run(strip_benchmark(engine_input), batcher.on_progress)
         batcher.flush()
         stream.finished(output)
         return output
