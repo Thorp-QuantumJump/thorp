@@ -30,4 +30,27 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     """,
             nativeQuery = true)
     Optional<BacktestResultSummaryRow> findSummaryRow(@Param("jobId") Long jobId);
+
+    /** 시계열 + 벤치마크. 성과·집계·오류 컬럼은 읽지 않는다. */
+    @Query(
+            value =
+                    """
+                    SELECT portfolio_series::text AS "portfolioSeries",
+                           benchmark::text        AS "benchmark"
+                      FROM backtest_result
+                     WHERE backtest_job_id = :jobId
+                    """,
+            nativeQuery = true)
+    Optional<BacktestSeriesRow> findSeriesRow(@Param("jobId") Long jobId);
+
+    /** 시계열만. 보유 구성 조회는 벤치마크가 필요 없다. */
+    @Query(
+            value =
+                    """
+                    SELECT portfolio_series::text
+                      FROM backtest_result
+                     WHERE backtest_job_id = :jobId
+                    """,
+            nativeQuery = true)
+    Optional<String> findPortfolioSeriesJson(@Param("jobId") Long jobId);
 }

@@ -1,14 +1,22 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
+import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -54,6 +62,42 @@ public class BacktestResultQueryService {
         return BacktestDetailResult.of(job, ExecutionPolicy.CURRENCY, summary);
     }
 
+    /**
+     * 차트용 시계열. 벤치마크 누적 수익률을 <b>날짜로</b> 조인한다.
+     *
+     * <p>계약상 워커가 벤치마크를 같은 거래일 축으로 forward fill하지만 그것을 전제로 NPE를 내지 않는다 — 없는 날은 {@code
+     * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.
+     */
+    public BacktestTimeseriesResult getTimeseries(String backtestId) {
+        BacktestJob job = requireResultReady(backtestId);
+        BacktestSeries series = require(resultRepository.findTimeseries(job.getId()), job);
+        Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());
+        List<BacktestTimeseriesResult.Point> points =
+                series.portfolioSeries().stream()
+                        .map(
+                                s ->
+                                        new BacktestTimeseriesResult.Point(
+                                                s.date(),
+                                                s.equity(),
+                                                s.cumulativeReturn(),
+                                                s.drawdown(),
+                                                benchmark.get(s.date())))
+                        .toList();
+        return new BacktestTimeseriesResult(backtestId, points);
+    }
+
+    private static Map<LocalDate, BigDecimal> benchmarkByDate(BenchmarkResult benchmark) {
+        if (benchmark == null || benchmark.timeseries() == null) {
+            return Map.of();
+        }
+        return benchmark.timeseries().stream()
+                .collect(
+                        Collectors.toMap(
+                                BenchmarkResult.BenchmarkPoint::date,
+                                BenchmarkResult.BenchmarkPoint::cumulativeReturn,
+                                (first, second) -> first));
+    }
+
     private BacktestJob requireJob(String backtestId) {
         return jobRepository
                 .findByBacktestId(backtestId)
@@ -83,17 +127,21 @@ public class BacktestResultQueryService {
      * <p>{@code RESULT_NOT_READY}(409)로 돌려주면 안 된다 — 그 코드는 "기다리면 온다"는 뜻이고 최종 상태에서는 영원히 오지 않아 프론트가 무한
      * 폴링한다.
      */
+    /** 관문을 통과한(=COMPLETED) Job인데 결과 컬럼이 없으면 데이터 손상이다. {@link #requireSummary}와 같은 이유. */
+    private <T> T require(Optional<T> value, BacktestJob job) {
+        return value.orElseThrow(() -> missingResultRow(job));
+    }
+
+    private IllegalStateException missingResultRow(BacktestJob job) {
+        log.error(
+                "결과 행이 없는 최종 상태 Job (저장 트랜잭션 불변식 위반): backtestId={} status={} id={}",
+                job.getBacktestId().value(),
+                job.getStatus(),
+                job.getId());
+        return new IllegalStateException("결과 행이 없습니다: backtestId=" + job.getBacktestId().value());
+    }
+
     private BacktestResultSummary requireSummary(BacktestJob job) {
-        Optional<BacktestResultSummary> summary = resultRepository.findSummary(job.getId());
-        if (summary.isEmpty()) {
-            log.error(
-                    "결과 행이 없는 최종 상태 Job (저장 트랜잭션 불변식 위반): backtestId={} status={} id={}",
-                    job.getBacktestId().value(),
-                    job.getStatus(),
-                    job.getId());
-            throw new IllegalStateException(
-                    "결과 행이 없습니다: backtestId=" + job.getBacktestId().value());
-        }
-        return summary.get();
+        return require(resultRepository.findSummary(job.getId()), job);
     }
 }

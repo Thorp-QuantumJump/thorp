@@ -15,9 +15,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
+import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
+import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -345,6 +348,62 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.data").isEmpty())
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    // ---------- GET /backtests/{backtestId}/timeseries ----------
+
+    @Test
+    @DisplayName("시계열은 points를 담고 benchmarkReturn이 없으면 키를 생략한다")
+    void getTimeseriesOmitsBenchmarkReturnKey() throws Exception {
+        when(queryService.getTimeseries(BACKTEST_ID))
+                .thenReturn(
+                        new BacktestTimeseriesResult(
+                                BACKTEST_ID,
+                                List.of(
+                                        new BacktestTimeseriesResult.Point(
+                                                LocalDate.of(2025, 1, 2),
+                                                new BigDecimal("10000000.00"),
+                                                new BigDecimal("0.000000"),
+                                                new BigDecimal("0.000000"),
+                                                new BigDecimal("0.000000")),
+                                        new BacktestTimeseriesResult.Point(
+                                                LocalDate.of(2025, 1, 3),
+                                                new BigDecimal("10100000.00"),
+                                                new BigDecimal("0.010000"),
+                                                new BigDecimal("0.000000"),
+                                                null))));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.points.length()").value(2))
+                .andExpect(jsonPath("$.data.points[0].equity").value("10000000.00"))
+                .andExpect(jsonPath("$.data.points[0].benchmarkReturn").value("0.000000"))
+                // 벤치마크가 없는 포인트는 키 자체가 없다 (null이 아니다)
+                .andExpect(jsonPath("$.data.points[1].benchmarkReturn").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("결과 전이면 409 RESULT_NOT_READY (폴링 계속)")
+    void getTimeseriesReturnsConflictWhenNotReady() throws Exception {
+        when(queryService.getTimeseries(BACKTEST_ID))
+                .thenThrow(
+                        new BacktestResultNotReadyException(BACKTEST_ID, BacktestStatus.RUNNING));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
+    }
+
+    @Test
+    @DisplayName("FAILED면 409 BACKTEST_FAILED (폴링 중단)")
+    void getTimeseriesReturnsConflictWhenFailed() throws Exception {
+        when(queryService.getTimeseries(BACKTEST_ID))
+                .thenThrow(new BacktestFailedException(BACKTEST_ID));
+
+        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
     }
 
     @Test

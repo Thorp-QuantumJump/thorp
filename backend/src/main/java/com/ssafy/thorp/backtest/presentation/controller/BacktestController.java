@@ -3,12 +3,14 @@ package com.ssafy.thorp.backtest.presentation.controller;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -59,6 +61,14 @@ public class BacktestController {
             @PathVariable String backtestId) {
         BacktestDetailResult result = queryService.getDetail(backtestId);
         return ResponseEntity.ok(ApiResponse.ok(BacktestDetailResponse.from(result)));
+    }
+
+    /** 차트용 거래일별 시계열. 결과가 없으면 409다(§2.5) — 빈 배열을 만들어 내지 않는다. */
+    @GetMapping("/{backtestId}/timeseries")
+    public ResponseEntity<ApiResponse<BacktestTimeseriesResponse>> getTimeseries(
+            @PathVariable String backtestId) {
+        BacktestTimeseriesResult result = queryService.getTimeseries(backtestId);
+        return ResponseEntity.ok(ApiResponse.ok(BacktestTimeseriesResponse.from(result)));
     }
 
     /** positionSizing이 생략되면 여기서만 기본값을 채운다. 서비스와 도메인은 기본값을 모른다. */

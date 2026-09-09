@@ -1,7 +1,10 @@
 package com.ssafy.thorp.backtest.application.repository;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
+import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,4 +30,20 @@ public interface BacktestResultRepository {
      * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.
      */
     Optional<BacktestResultSummary> findSummary(Long backtestJobId);
+
+    /**
+     * 시계열 + 벤치마크. {@code /timeseries}가 날짜로 조인해 쓴다.
+     *
+     * <p>이 엔드포인트는 원래 시계열을 내려주는 곳이라 크게 읽는 것이 정상이다. 그래도 {@code performance}·{@code execution}·오류 컬럼은
+     * 읽지 않는다.
+     */
+    Optional<BacktestSeries> findTimeseries(Long backtestJobId);
+
+    /**
+     * 시계열만. {@code /positions}가 역순 스캔에 쓴다.
+     *
+     * <p>{@link #findTimeseries}를 재사용하지 않는 이유: 벤치마크 시계열도 거래일 수만큼 크고 보유 구성 조회에는 전혀 쓰이지 않는다. 읽지 않을
+     * 컬럼은 select에 넣지 않는다.
+     */
+    Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long backtestJobId);
 }

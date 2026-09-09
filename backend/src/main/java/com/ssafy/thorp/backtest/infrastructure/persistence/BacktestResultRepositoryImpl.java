@@ -1,13 +1,17 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
+import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -26,6 +30,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class BacktestResultRepositoryImpl implements BacktestResultRepository {
+
+    private static final TypeReference<List<EngineOutput.PortfolioSnapshot>> SERIES =
+            new TypeReference<>() {};
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
 
@@ -73,9 +80,38 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                                         decimal(row.getBenchmarkTotalReturn())));
     }
 
+    @Override
+    public Optional<BacktestSeries> findTimeseries(Long backtestJobId) {
+        return resultRepository
+                .findSeriesRow(backtestJobId)
+                .map(
+                        row ->
+                                new BacktestSeries(
+                                        read(row.getPortfolioSeries(), SERIES),
+                                        read(row.getBenchmark(), BenchmarkResult.class)));
+    }
+
+    @Override
+    public Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long backtestJobId) {
+        return resultRepository
+                .findPortfolioSeriesJson(backtestJobId)
+                .map(json -> read(json, SERIES));
+    }
+
     /** {@code jsonb}에 문자열로 저장된 decimal을 값과 scale 그대로 되돌린다. */
     private static BigDecimal decimal(String value) {
         return value == null ? null : new BigDecimal(value);
+    }
+
+    private <T> T read(String json, TypeReference<T> type) {
+        if (json == null) {
+            return null;
+        }
+        try {
+            return mapper.readValue(json, type);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("결과 JSON을 읽을 수 없습니다: " + type.getType(), e);
+        }
     }
 
     private <T> T read(String json, Class<T> type) {

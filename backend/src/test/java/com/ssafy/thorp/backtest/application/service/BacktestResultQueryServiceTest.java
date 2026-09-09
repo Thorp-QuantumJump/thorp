@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
+import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
@@ -180,6 +183,96 @@ class BacktestResultQueryServiceTest {
         assertThatThrownBy(() -> service.getDetail(BACKTEST_ID))
                 .isInstanceOf(IllegalStateException.class)
                 .isNotInstanceOf(BacktestResultNotReadyException.class);
+    }
+
+    // ---------- getTimeseries ----------
+
+    private static EngineOutput.PortfolioSnapshot snapshot(String date, String equity) {
+        return new EngineOutput.PortfolioSnapshot(
+                LocalDate.parse(date),
+                new BigDecimal(equity),
+                new BigDecimal("1000000.00"),
+                new BigDecimal("9000000.00"),
+                null,
+                new BigDecimal("0.010000"),
+                new BigDecimal("-0.005000"),
+                null);
+    }
+
+    private static BenchmarkResult benchmark(String... datesAndReturns) {
+        List<BenchmarkResult.BenchmarkPoint> points = new java.util.ArrayList<>();
+        for (int i = 0; i < datesAndReturns.length; i += 2) {
+            points.add(
+                    new BenchmarkResult.BenchmarkPoint(
+                            LocalDate.parse(datesAndReturns[i]),
+                            new BigDecimal("10000000.00"),
+                            new BigDecimal(datesAndReturns[i + 1])));
+        }
+        return new BenchmarkResult("069500.XKRX", new BigDecimal("0.053292"), points);
+    }
+
+    private void givenSeries(BenchmarkResult benchmark) {
+        given(BacktestStatus.COMPLETED);
+        when(resultRepository.findTimeseries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                new BacktestSeries(
+                                        List.of(
+                                                snapshot("2025-01-02", "10000000.00"),
+                                                snapshot("2025-01-03", "10100000.00")),
+                                        benchmark)));
+    }
+
+    @Test
+    @DisplayName("시계열은 벤치마크 누적 수익률을 날짜로 조인한다")
+    void timeseriesJoinsBenchmarkByDate() {
+        givenSeries(benchmark("2025-01-02", "0.000000", "2025-01-03", "0.008000"));
+
+        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+
+        assertThat(points).hasSize(2);
+        assertThat(points.get(0).benchmarkReturn()).isEqualByComparingTo("0.000000");
+        assertThat(points.get(1).benchmarkReturn()).isEqualByComparingTo("0.008000");
+        assertThat(points.get(1).equity()).isEqualByComparingTo("10100000.00");
+    }
+
+    @Test
+    @DisplayName("벤치마크에 없는 거래일은 benchmarkReturn이 null이다 — 축이 어긋나도 터지지 않는다")
+    void timeseriesToleratesMissingBenchmarkDate() {
+        givenSeries(benchmark("2025-01-02", "0.000000"));
+
+        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+
+        assertThat(points.get(0).benchmarkReturn()).isNotNull();
+        assertThat(points.get(1).benchmarkReturn()).isNull();
+    }
+
+    @Test
+    @DisplayName("벤치마크가 없으면 모든 포인트의 benchmarkReturn이 null이다")
+    void timeseriesWithoutBenchmark() {
+        givenSeries(null);
+
+        assertThat(service.getTimeseries(BACKTEST_ID).points())
+                .allSatisfy(p -> assertThat(p.benchmarkReturn()).isNull());
+    }
+
+    @Test
+    @DisplayName("시계열도 결과 행이 없으면 500이다")
+    void timeseriesMissingResultRow() {
+        given(BacktestStatus.COMPLETED);
+        when(resultRepository.findTimeseries(JOB_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("시계열은 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
+    void timeseriesUsesGate() {
+        given(BacktestStatus.FAILED);
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+                .isInstanceOf(BacktestFailedException.class);
     }
 
     // ---------- 하위 리소스 관문 ----------

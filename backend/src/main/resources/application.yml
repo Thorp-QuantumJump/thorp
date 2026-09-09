@@ -81,6 +81,12 @@ app:
 
 server:
   port: 8080
+  # 결과 시계열이 이 앱에서 가장 큰 응답이다 — 5년 일봉이면 거래일 약 1,250개 × 5필드로 수백 KB고
+  # 날짜·숫자 문자열이 반복돼 압축률이 높다. 나머지 응답은 min-response-size 아래라 영향이 없다.
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 2KB
 
 management:
   endpoints:
