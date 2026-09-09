@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -47,22 +47,30 @@ class BacktestCreateRollbackIT extends PostgresTestSupport {
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
 
     @Autowired private MockMvc mockMvc;
-    @Autowired private BacktestJobRepository repository;
     @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
+
+    private long storedJobs() {
+        return transactionTemplate.execute(
+                status ->
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM backtest_job", Long.class));
+    }
 
     @Test
     @DisplayName("브로커에 닿지 못하면 503을 주고 Job을 저장하지 않는다")
     void rollsBackWhenBrokerUnreachable() throws IOException, Exception {
         String body = Files.readString(REQUEST_FIXTURE);
+        long before = storedJobs();
 
         mockMvc.perform(post("/backtests").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("BROKER_UNAVAILABLE"));
 
-        // 요청 트랜잭션이 끝난 뒤 별도 트랜잭션에서 확인한다. 롤백됐다면 어떤 backtestId로도 찾을 수 없다.
-        Boolean anyJobStored =
-                transactionTemplate.execute(status -> repository.findById(1L).isPresent());
-        assertThat(anyJobStored).isFalse();
+        // 요청 트랜잭션이 끝난 뒤 별도 트랜잭션에서 확인한다. 롤백됐다면 행 수가 그대로다.
+        // 절대 개수(또는 id 1의 존재)로 단언하지 않는다 — PostgreSQL 컨테이너가 싱글턴이라 다른 테스트 클래스가
+        // 커밋한 Job이 같은 DB에 남아 있고, 시퀀스는 롤백돼도 앞으로 나간다.
+        assertThat(storedJobs()).isEqualTo(before);
     }
 }
