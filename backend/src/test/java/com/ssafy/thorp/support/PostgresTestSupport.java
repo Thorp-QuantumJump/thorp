@@ -1,10 +1,10 @@
 package com.ssafy.thorp.support;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
@@ -17,6 +17,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * 상속한 테스트의 컨텍스트 로딩부터 실패한다.
  *
  * <p>Docker가 없는 환경에서는 상속한 테스트를 건너뛴다. 이미지 태그는 운영 Compose({@code postgres:16-alpine})와 맞춘다.
+ *
+ * <p><b>컨테이너를 {@code @Container}로 관리하지 않고 싱글턴으로 둔다.</b> {@code @Container} static은 테스트 <b>클래스마다</b>
+ * 컨테이너를 stop하는데 Spring은 애플리케이션 컨텍스트를 캐시해 다음 클래스에서 재사용한다. 설정이 같은 {@code @SpringBootTest} 클래스가 둘 이상이면
+ * 뒤에 오는 쪽이 <b>죽은 컨테이너를 가리키는 커넥션 풀</b>을 물려받아 {@code Connection is not available ... (total=0)}으로
+ * 30초씩 타임아웃한다. 한 번 띄우고 stop하지 않으면 순서와 무관하게 안전하고, 클래스마다 컨테이너를 다시 띄우지 않아 전체 테스트도 빨라진다. 정리는
+ * Testcontainers의 Ryuk가 JVM 종료 시 한다.
+ *
+ * <p>시작을 {@code @BeforeAll}에서 하는 이유: static 초기화 블록에서 하면 Docker가 없는 환경에서 클래스 로딩 시점에 터져 {@code
+ * disabledWithoutDocker}의 skip보다 먼저 실패한다. {@code @BeforeAll}은 실행 조건 평가 뒤에 돌고 Spring 컨텍스트 생성보다는 앞이다.
  */
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -29,6 +38,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         })
 public abstract class PostgresTestSupport {
 
-    @Container @ServiceConnection
+    @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @BeforeAll
+    static void startContainerOnce() {
+        if (!POSTGRES.isRunning()) {
+            POSTGRES.start();
+        }
+    }
 }
