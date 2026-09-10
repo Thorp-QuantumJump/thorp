@@ -79,6 +79,19 @@ app:
   kafka:  # 미사용 (위 주석 참조). 큐 이름은 BacktestRabbitConfig 상수.
     backtest-job-topic: ${BACKTEST_JOB_TOPIC:backtest.jobs}
 
+# 자동 탐색(spec 007) 실행 한도. ParamSearchProperties가 읽고 네 값 모두 필수다(@NotNull).
+# 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
+thorp:
+  param-search:
+    # 유효 후보 수 상한. clarify 확정값이며 PD-06 실측 후 고정한다.
+    max-candidates: 1000
+    # 아래 셋은 PD-05 잔여로 팀 확정 대기다. 키만 두고 값을 비운다 — 추측해 채우지 않는다.
+    # 확정되면 여기에 값을 넣고 ParamSearchProperties.PROVISIONAL_NAMES에서 이름을 지운다.
+    # 로컬 개발값은 application-local.yml에 있다(개발 편의값이며 팀 확정값이 아니다).
+    dispatch-window:
+    time-limit-seconds:
+    consecutive-failure-limit:
+
 server:
   port: 8080
   # 결과 시계열이 이 앱에서 가장 큰 응답이다 — 5년 일봉이면 거래일 약 1,250개 × 5필드로 수백 KB고
