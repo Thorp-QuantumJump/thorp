@@ -4,14 +4,14 @@
   max-width: 100%;
   min-height: 260px;
   --chart-background: transparent;
-  --chart-grid: #e2e6e9;
-  --chart-foreground: #657180;
-  --chart-foreground-muted: #9aa3ad;
-  --chart-crosshair: #60707c;
-  --chart-label: #7c8793;
-  --chart-tooltip-background: rgb(18 27 39 / 94%);
-  --chart-tooltip-foreground: #fff;
-  --chart-tooltip-muted: #bac3ca;
+  --chart-grid: var(--thorp-line);
+  --chart-foreground: var(--thorp-copy);
+  --chart-foreground-muted: var(--thorp-muted);
+  --chart-crosshair: var(--thorp-accent-soft);
+  --chart-label: var(--thorp-copy);
+  --chart-tooltip-background: rgb(7 17 11 / 96%);
+  --chart-tooltip-foreground: var(--thorp-foreground);
+  --chart-tooltip-muted: var(--thorp-copy);
 }
 
 .tooltip {

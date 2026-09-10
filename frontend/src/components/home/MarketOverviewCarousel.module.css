@@ -2,11 +2,11 @@
   position: relative;
   align-self: stretch;
   overflow: hidden;
-  border: 1px solid #d8dedf;
-  border-radius: 13px;
-  background: rgb(255 255 255 / 91%);
+  border: 1px solid var(--market-line-strong, var(--market-line));
+  border-radius: 10px;
+  background: rgb(7 17 11 / 88%);
   color: var(--market-ink);
-  box-shadow: 0 28px 72px rgb(35 49 54 / 10%);
+  box-shadow: var(--market-shadow);
   backdrop-filter: blur(10px);
 }
 
@@ -26,8 +26,8 @@
   min-height: 46px;
   padding: 0 16px 0 20px;
   border-bottom: 1px solid var(--market-line);
-  background: #f7f8f8;
-  color: #89949a;
+  background: var(--thorp-surface-muted);
+  color: var(--market-muted);
   font-size: 0.58rem;
   font-weight: 680;
   letter-spacing: 0.1em;
@@ -35,7 +35,7 @@
 
 .windowIdentity {
   gap: 9px;
-  color: #607079;
+  color: var(--market-copy);
 }
 
 .windowIdentity > span {
@@ -57,7 +57,7 @@
 .pauseButton {
   border: 0;
   background: transparent;
-  color: #8a959b;
+  color: var(--market-muted);
   cursor: pointer;
   font: inherit;
 }
@@ -81,7 +81,7 @@
 }
 
 .chartTabs button[aria-selected='true'] {
-  color: #30444c;
+  color: var(--market-ink);
 }
 
 .chartTabs button[aria-selected='true']::after {
@@ -90,7 +90,7 @@
 
 .chartTabs button:focus-visible,
 .pauseButton:focus-visible {
-  outline: 2px solid rgb(22 143 138 / 35%);
+  outline: 2px solid rgb(3 199 90 / 38%);
   outline-offset: 2px;
 }
 
@@ -99,20 +99,20 @@
   width: 27px;
   height: 27px;
   place-items: center;
-  border: 1px solid #dce2e3;
+  border: 1px solid var(--market-line);
   border-radius: 6px;
 }
 
 .progressTrack {
   height: 2px;
-  background: #edf0f1;
+  background: var(--market-line-soft);
 }
 
 .progressTrack span {
   display: block;
   width: 100%;
   height: 100%;
-  background: #688d8a;
+  background: var(--market-brand);
   transform-origin: left center;
 }
 
@@ -155,7 +155,7 @@
 }
 
 .currentState strong {
-  color: #365f5d;
+  color: var(--thorp-accent-soft);
   font-size: 0.75rem;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .chartFooter strong {
-  color: #64727a;
+  color: var(--market-copy);
   font-size: 0.7rem;
 }
 
@@ -182,7 +182,7 @@
   position: absolute;
   right: 16px;
   bottom: 6px;
-  color: #a1aaaf;
+  color: var(--market-muted);
   font-size: 0.5rem;
 }
 

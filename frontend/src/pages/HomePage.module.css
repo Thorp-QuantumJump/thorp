@@ -21,7 +21,7 @@
   right: -250px;
   width: 1050px;
   height: 670px;
-  border: 1px solid #e4e8e8;
+  border: 1px solid var(--market-line-soft);
   border-radius: 50%;
   transform: rotate(-9deg);
 }
@@ -31,7 +31,7 @@
   left: -480px;
   width: 930px;
   height: 410px;
-  border: 1px solid #e9ecec;
+  border: 1px solid var(--market-line-soft);
   border-radius: 50%;
   transform: rotate(12deg);
 }
@@ -44,9 +44,11 @@
   position: relative;
   margin-top: 12px;
   padding: clamp(62px, 7vw, 92px) max(40px, calc((100vw - 1320px) / 2)) 84px;
-  border-top: 1px solid #dde3e3;
+  border-top: 1px solid var(--market-line);
   border-radius: clamp(48px, 7vw, 96px) clamp(48px, 7vw, 96px) 0 0;
-  background: #f3f6f5;
+  background:
+    linear-gradient(180deg, rgb(3 199 90 / 3%), transparent 280px),
+    var(--thorp-background);
 }
 
 .contentFlow {

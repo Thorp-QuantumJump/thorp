@@ -41,10 +41,10 @@
 }
 
 .inner[data-scrolled='true'] {
-  border-color: #d7dfe1;
-  border-radius: 18px;
-  background: rgb(255 255 255 / 96%);
-  box-shadow: 0 14px 34px rgb(43 62 72 / 10%);
+  border-color: var(--thorp-line-strong);
+  border-radius: 10px;
+  background: rgb(7 17 11 / 94%);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 28%);
   transform: translateY(10px);
   backdrop-filter: blur(18px);
 }
@@ -57,9 +57,9 @@
 .menuButton,
 .drawerHeader button {
   justify-content: center;
-  border: 1px solid #dbe2e4;
-  background: #fff;
-  color: #263440;
+  border: 1px solid var(--thorp-line-strong);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
   cursor: pointer;
 }
 
@@ -73,13 +73,13 @@
 }
 
 .menuButton:hover {
-  border-color: #8fc7c3;
-  background: #f0f8f7;
-  color: #168f8a;
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
 }
 
 .brand {
-  color: #182331;
+  color: var(--thorp-foreground);
   font-size: 1.5rem;
   font-weight: 720;
   letter-spacing: -0.055em;
@@ -87,7 +87,7 @@
 }
 
 .brand span {
-  color: #168f8a;
+  color: var(--thorp-accent);
 }
 
 .desktopNav {
@@ -103,7 +103,7 @@
   min-height: 34px;
   padding: 0 13px;
   border-radius: 4px;
-  color: #6f7d88;
+  color: var(--thorp-copy);
   font-size: 0.76rem;
   font-weight: 650;
   text-decoration: none;
@@ -112,22 +112,22 @@
 .desktopNav a[aria-current='page'] {
   border-radius: 0;
   background: transparent;
-  box-shadow: inset 0 -2px 0 #168f8a;
-  color: #168f8a;
+  box-shadow: inset 0 -2px 0 var(--thorp-accent);
+  color: var(--thorp-accent-soft);
 }
 
 .homeLink {
   gap: 7px;
   justify-self: end;
   padding-right: 16px;
-  color: #596874;
+  color: var(--thorp-copy);
   font-size: 0.78rem;
   font-weight: 630;
   text-decoration: none;
 }
 
 .homeLink:hover {
-  color: #168f8a;
+  color: var(--thorp-accent-soft);
 }
 
 .menuButton:focus-visible,
@@ -137,7 +137,7 @@
 .drawer button:focus-visible,
 .drawer a:focus-visible {
   border-radius: 8px;
-  outline: 3px solid rgb(22 143 138 / 25%);
+  outline: 3px solid rgb(3 199 90 / 30%);
   outline-offset: 3px;
 }
 
@@ -152,7 +152,7 @@
   inset: 0;
   width: 100%;
   border: 0;
-  background: rgb(15 25 35 / 43%);
+  background: rgb(0 4 2 / 68%);
   cursor: pointer;
   backdrop-filter: blur(2px);
 }
@@ -165,9 +165,9 @@
   display: flex;
   width: min(340px, 88vw);
   padding: 22px;
-  border-right: 1px solid #dfe5e6;
-  background: #fff;
-  box-shadow: 24px 0 60px rgb(17 31 42 / 16%);
+  border-right: 1px solid var(--thorp-line-strong);
+  background: var(--thorp-surface);
+  box-shadow: 24px 0 60px rgb(0 0 0 / 44%);
   flex-direction: column;
 }
 
@@ -175,7 +175,7 @@
   justify-content: space-between;
   gap: 20px;
   padding-bottom: 21px;
-  border-bottom: 1px solid #edf0f1;
+  border-bottom: 1px solid var(--thorp-line);
 }
 
 .drawerHeader > div {
@@ -184,14 +184,14 @@
 }
 
 .drawerHeader span {
-  color: #168f8a;
+  color: var(--thorp-accent);
   font-size: 0.64rem;
   font-weight: 750;
   letter-spacing: 0.16em;
 }
 
 .drawerHeader strong {
-  color: #172331;
+  color: var(--thorp-foreground);
   font-size: 1.45rem;
 }
 
@@ -213,14 +213,14 @@
   padding: 14px;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: #263440;
+  color: var(--thorp-foreground);
   text-decoration: none;
 }
 
 .drawerLink:hover,
 .drawerLink[aria-current='page'] {
-  border-color: #cde4e2;
-  background: #eff8f7;
+  border-color: var(--thorp-line-strong);
+  background: var(--thorp-accent-muted);
 }
 
 .drawerIcon {
@@ -228,13 +228,13 @@
   width: 42px;
   height: 42px;
   border-radius: 3px;
-  background: #f1f4f4;
-  color: #53636f;
+  background: var(--thorp-surface-muted);
+  color: var(--thorp-copy);
 }
 
 .drawerLink[aria-current='page'] .drawerIcon {
-  background: #dff2f0;
-  color: #168f8a;
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
 }
 
 .drawerLink > span:last-child {
@@ -247,7 +247,7 @@
 }
 
 .drawerLink small {
-  color: #7d8993;
+  color: var(--thorp-muted);
   font-size: 0.72rem;
   line-height: 1.45;
 }
@@ -257,8 +257,8 @@
   min-height: 46px;
   margin-top: auto;
   padding: 0 13px;
-  border-top: 1px solid #edf0f1;
-  color: #667580;
+  border-top: 1px solid var(--thorp-line);
+  color: var(--thorp-copy);
   font-size: 0.82rem;
   font-weight: 630;
   text-decoration: none;

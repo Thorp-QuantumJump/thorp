@@ -1,7 +1,7 @@
 .details {
   overflow: hidden;
   border: 1px solid var(--market-line);
-  border-radius: 17px;
+  border-radius: 10px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -25,13 +25,13 @@
 }
 
 .details summary:focus-visible {
-  outline: 3px solid rgb(22 143 138 / 20%);
+  outline: 3px solid rgb(3 199 90 / 28%);
   outline-offset: -3px;
 }
 
 .details summary > span {
   gap: 8px;
-  color: #43515d;
+  color: var(--market-ink);
   font-size: 0.8rem;
   font-weight: 680;
 }
@@ -41,7 +41,7 @@
 }
 
 .details summary > small {
-  color: #929ca5;
+  color: var(--market-muted);
   font-size: 0.68rem;
 }
 
@@ -61,8 +61,8 @@
 .fciNote {
   min-width: 0;
   padding: 15px;
-  border-radius: 13px;
-  background: #f7f9f9;
+  border-radius: 6px;
+  background: var(--thorp-surface-muted);
 }
 
 .sourceCard > div,
@@ -73,7 +73,7 @@
 
 .sourceCard strong,
 .stabilityCard > div > span {
-  color: #465460;
+  color: var(--market-ink);
   font-size: 0.73rem;
   font-weight: 680;
 }
@@ -81,26 +81,26 @@
 .sourceCard > div > span {
   padding: 3px 6px;
   border-radius: 999px;
-  background: #e6f3f2;
+  background: var(--thorp-accent-muted);
   color: var(--market-brand);
   font-size: 0.6rem;
   white-space: nowrap;
 }
 
 .sourceCard > div > span[data-status='review-needed'] {
-  background: #fff2e7;
-  color: #b16b26;
+  background: rgb(232 189 114 / 12%);
+  color: var(--market-warning);
 }
 
 .sourceCard p {
   margin: 13px 0 6px;
-  color: #66747f;
+  color: var(--market-copy);
   font-size: 0.69rem;
 }
 
 .sourceCard > small,
 .stabilityCard > small {
-  color: #929ca4;
+  color: var(--market-muted);
   font-size: 0.62rem;
   line-height: 1.45;
 }
@@ -113,7 +113,7 @@
 }
 
 .stabilityCard > div small {
-  color: #9aa3aa;
+  color: var(--market-muted);
   font-size: 0.6rem;
 }
 
@@ -138,8 +138,8 @@
 .fciNote {
   align-items: flex-start;
   gap: 10px;
-  border: 1px solid #d8e5e3;
-  background: #eff6f5;
+  border: 1px solid var(--market-line-strong, var(--market-line));
+  background: var(--thorp-accent-muted);
   color: var(--market-ink);
 }
 

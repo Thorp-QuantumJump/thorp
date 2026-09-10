@@ -55,7 +55,7 @@
   min-width: 0;
   padding: 19px;
   border: 1px solid var(--market-line);
-  border-radius: 17px;
+  border-radius: 8px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -80,12 +80,12 @@
 
 .cardHeader h3 {
   margin: 3px 0 0;
-  color: #3c4a57;
+  color: var(--market-copy);
   font-size: 0.82rem;
 }
 
 .cardHeader small {
-  color: #9aa4ad;
+  color: var(--market-muted);
   font-size: 0.62rem;
   white-space: nowrap;
 }
@@ -133,7 +133,7 @@
 .interpretation {
   min-height: 39px;
   margin: 9px 0 15px;
-  color: #687581;
+  color: var(--market-copy);
   font-size: 0.72rem;
   line-height: 1.55;
 }
@@ -141,7 +141,7 @@
 .meta {
   padding-top: 12px;
   border-top: 1px solid var(--market-line-soft);
-  color: #98a2aa;
+  color: var(--market-muted);
   font-size: 0.62rem;
 }
 
