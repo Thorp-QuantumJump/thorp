@@ -1,0 +1,454 @@
+openapi: 3.1.0
+info:
+  title: Thorp Account and Authentication API
+  version: 0.1.0
+  description: >-
+    014-user-auth의 외부 /api 계약이다. x-implementation-status가 existing인
+    operation은 현재 account 구현을 재사용하되 proxy 경로 정규화가 필요하다.
+servers:
+  - url: /api
+paths:
+  /accounts/email-verifications:
+    post:
+      operationId: requestEmailVerification
+      summary: 이메일 인증번호 발송
+      x-implementation-status: existing-path-fix-required
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+      responses:
+        '204':
+          description: 발송 요청 완료
+        '400':
+          $ref: '#/components/responses/EmailVerificationRequestRejected'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts/email-verifications/confirm:
+    post:
+      operationId: confirmEmailVerification
+      summary: 이메일 인증번호 확인
+      x-implementation-status: existing-path-fix-required
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationConfirmRequest'
+      responses:
+        '204':
+          description: 인증 완료. 이미 인증된 최신 요청도 성공으로 처리한다.
+        '400':
+          $ref: '#/components/responses/EmailVerificationConfirmRejected'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts:
+    post:
+      operationId: signup
+      summary: 회원가입
+      x-implementation-status: existing-path-fix-required
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: 계정 생성 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/SignupRejected'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/csrf:
+    get:
+      operationId: prepareCsrfToken
+      summary: SPA 상태 변경 요청용 CSRF token 준비
+      x-implementation-status: required
+      responses:
+        '204':
+          description: XSRF-TOKEN cookie가 준비됨
+          headers:
+            Set-Cookie:
+              description: XSRF-TOKEN cookie
+              schema:
+                type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/sessions:
+    post:
+      operationId: login
+      summary: 이메일·비밀번호 로그인
+      x-implementation-status: required
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인 완료 및 server session 생성
+          headers:
+            Set-Cookie:
+              description: HttpOnly THORP_SESSION cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: 현재 로그인한 사용자 조회
+      x-implementation-status: required
+      responses:
+        '200':
+          description: 유효한 로그인 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'
+        '401':
+          $ref: '#/components/responses/AuthenticationRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/sessions/current:
+    delete:
+      operationId: logout
+      summary: 현재 server session 종료
+      x-implementation-status: required
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        '204':
+          description: 세션 종료. 이미 비로그인인 경우에도 같은 결과를 반환한다.
+          headers:
+            Set-Cookie:
+              description: 만료된 THORP_SESSION cookie
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: THORP_SESSION
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-XSRF-TOKEN
+  schemas:
+    EmailVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형
+    EmailVerificationConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [email, verificationCode]
+      properties:
+        email:
+          type: string
+          format: email
+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형
+        verificationCode:
+          type: string
+          pattern: '^\d{6}$'
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, nickname, phoneNumber]
+      properties:
+        email:
+          type: string
+          format: email
+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형
+        password:
+          type: string
+          minLength: 8
+          maxLength: 25
+          writeOnly: true
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 20
+        phoneNumber:
+          type: string
+          pattern: '^01[016789]\d{7,8}$'
+          description: 하이픈·공백 없는 국내 휴대폰 번호
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형
+        password:
+          type: string
+          writeOnly: true
+    SignupResponse:
+      type: object
+      additionalProperties: false
+      required: [userId, email, nickname, status]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        nickname:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE]
+    AuthenticatedUser:
+      type: object
+      additionalProperties: false
+      required: [userId, email, nickname, status]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        nickname:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE]
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_INPUT
+            - DUPLICATE_EMAIL
+            - DUPLICATE_PHONE
+            - EMAIL_VERIFICATION_REQUIRED
+            - EMAIL_VERIFICATION_NOT_FOUND
+            - EMAIL_VERIFICATION_INVALID
+            - EMAIL_VERIFICATION_EXPIRED
+            - INVALID_CREDENTIALS
+            - AUTHENTICATION_REQUIRED
+            - CSRF_TOKEN_INVALID
+            - INTERNAL_ERROR
+        message:
+          type: string
+    SignupSuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/SignupResponse'
+        error:
+          type: 'null'
+    AuthenticatedUserSuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/AuthenticatedUser'
+        error:
+          type: 'null'
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          const: false
+        data:
+          type: 'null'
+        error:
+          $ref: '#/components/schemas/ApiError'
+  responses:
+    EmailVerificationRequestRejected:
+      description: 입력 형식 오류 또는 이미 가입된 이메일
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            invalidInput:
+              value:
+                success: false
+                data: null
+                error:
+                  code: INVALID_INPUT
+                  message: 이메일 형식을 확인해 주세요.
+            duplicateEmail:
+              value:
+                success: false
+                data: null
+                error:
+                  code: DUPLICATE_EMAIL
+                  message: 이미 가입된 이메일입니다.
+    EmailVerificationConfirmRejected:
+      description: 입력 형식, 인증 요청, 인증번호 또는 만료 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            notFound:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_NOT_FOUND
+                  message: 인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요.
+            invalidCode:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_INVALID
+                  message: 인증번호를 다시 확인해 주세요.
+            expired:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_EXPIRED
+                  message: 인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요.
+    SignupRejected:
+      description: 입력 형식, 중복 계정 또는 이메일 인증 조건 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            duplicateEmail:
+              value:
+                success: false
+                data: null
+                error:
+                  code: DUPLICATE_EMAIL
+                  message: 이미 가입된 이메일입니다.
+            duplicatePhone:
+              value:
+                success: false
+                data: null
+                error:
+                  code: DUPLICATE_PHONE
+                  message: 이미 가입된 전화번호입니다.
+            verificationRequired:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_REQUIRED
+                  message: 이메일 인증을 완료해 주세요.
+    InvalidInput:
+      description: 입력 형식, 중복 계정, 인증번호 상태 또는 이메일 인증 조건 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: INVALID_INPUT
+              message: 입력값이 올바르지 않습니다.
+    InvalidCredentials:
+      description: 이메일·비밀번호 또는 계정 상태로 인증할 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: INVALID_CREDENTIALS
+              message: 이메일 또는 비밀번호를 확인해 주세요.
+    AuthenticationRequired:
+      description: 유효한 로그인 상태 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: AUTHENTICATION_REQUIRED
+              message: 로그인이 필요합니다.
+    InvalidCsrf:
+      description: CSRF token 누락 또는 불일치
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: CSRF_TOKEN_INVALID
+              message: 요청 확인 정보가 만료되었습니다. 다시 시도해 주세요.
+    InternalError:
+      description: 예상하지 못한 서버 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: INTERNAL_ERROR
+              message: 서버 내부 오류가 발생했습니다.
