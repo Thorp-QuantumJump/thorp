@@ -136,6 +136,6 @@ constitution "하지 않는 것"과 기획서 §8.2에 따라 아래 항목은 �
 
 ## 다음 단계
 
-- `.specify/feature.json`의 `feature_directory`는 한 번에 spec 하나를 가리킨다. `/speckit-clarify`·`/speckit-plan`·`/speckit-tasks`를 실행하기 전에 대상 spec 디렉터리로 바꾼다. 현재 값은 `specs/001-etf-market-data`다.
+- `.specify/feature.json`의 `feature_directory`는 한 번에 spec 하나를 가리킨다. `/speckit-clarify`·`/speckit-plan`·`/speckit-tasks`를 실행하기 전에 대상 spec 디렉터리로 바꾼다.
 - plan은 spec 우선순위 순서(001 → 005 → 006·007 → 008~011 → 012·013)를 기본으로 하되, 팀 배치에 따라 병렬로 진행할 수 있다. plan의 Constitution Check는 constitution을 기준으로 판정한다.
 - PD 항목이 확정되면 소유 spec의 표를 갱신하고 이 문서의 상태 열도 같은 값으로 고친다.
