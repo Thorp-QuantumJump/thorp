@@ -28,8 +28,9 @@
 Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 파트 태스크도 없다.
 
 **`T###`는 브랜치 단위가 아니다.** constitution v3.0.0 "Jira 연계"가 `작업 묶음 = 1 Branch = 1 MR`로
-정하고 있어, 브랜치·MR·Jira Task 단위는 [plan.md](plan.md) "작업 묶음 구성"의 묶음(B01~B24) 24개다.
-아래 126개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.
+정하고 있어, 브랜치·MR·Jira Task 단위는 [plan.md](plan.md) "작업 묶음 구성"의 묶음(M1~M10) 10개다.
+아래 134개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.
+묶음은 초판의 24개(B01~B24)에서 10개로 합쳤다 — 사유는 plan.md "묶음 구성 개정 이력"에 있다.
 
 ## Path Conventions
 
@@ -46,13 +47,13 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Backend
 
-- [ ] T001 (BE) `paramsearch` 최상위 패키지와 4계층 하위 패키지 골격을 만들고 계층 규약을 `backend/src/main/java/com/ssafy/thorp/paramsearch/package-info.java`에 명시 (ADR-0001 계층 구조를 따르고 `backtest` 모듈과 같은 배치)
-- [ ] T002 [P] (BE) `ParamSearchProperties` 설정 클래스를 `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchProperties.java`에 작성 — `maxCandidates`·`dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`와 임시값 이름 목록을 노출. **네 값 모두 `@NotNull`로 필수화하고 코드에 기본값을 박지 않는다** — PD-05가 미확정인 값을 코드가 임의로 정하면 constitution "AI 작업 방식"을 어기므로, 미설정이면 기동을 실패시켜 설정으로 드러낸다
+- [X] T001 (BE) `paramsearch` 최상위 패키지와 4계층 하위 패키지 골격을 만들고 계층 규약을 `backend/src/main/java/com/ssafy/thorp/paramsearch/package-info.java`에 명시 (ADR-0001 계층 구조를 따르고 `backtest` 모듈과 같은 배치)
+- [X] T002 [P] (BE) `ParamSearchProperties` 설정 클래스를 `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchProperties.java`에 작성 — `maxCandidates`·`dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`와 임시값 이름 목록을 노출. **네 값 모두 `@NotNull`로 필수화하고 코드에 기본값을 박지 않는다** — PD-05가 미확정인 값을 코드가 임의로 정하면 constitution "AI 작업 방식"을 어기므로, 미설정이면 기동을 실패시켜 설정으로 드러낸다
 
 ### Infra
 
-- [ ] T003 [P] (INFRA) `backend/src/main/resources/application.yml`에 `thorp.param-search` 블록 추가 — `maxCandidates: 1000`만 채운다(clarify 확정, PD-06 실측 후 고정). `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`는 **키만 두고 값을 비운 채 PD-05 확정 대기임을 주석으로 남긴다**. 값을 추측해 채우지 않는다
-- [ ] T004 [P] (INFRA) `backend/src/main/resources/application-local.yml`에 개발용 값 4개를 모두 채운다 — 낮은 `maxCandidates`(상한 초과 거부를 로컬에서 재현, quickstart 시나리오 3)와 `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`. **개발 편의값이며 팀 확정값이 아님을 주석에 명시**하고, API 응답의 `limits.provisional`에 실린다
+- [X] T003 [P] (INFRA) `backend/src/main/resources/application.yml`에 `thorp.param-search` 블록 추가 — `maxCandidates: 1000`만 채운다(clarify 확정, PD-06 실측 후 고정). `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`는 **키만 두고 값을 비운 채 PD-05 확정 대기임을 주석으로 남긴다**. 값을 추측해 채우지 않는다
+- [X] T004 [P] (INFRA) `backend/src/main/resources/application-local.yml`에 개발용 값 4개를 모두 채운다 — 낮은 `maxCandidates`(상한 초과 거부를 로컬에서 재현, quickstart 시나리오 3)와 `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`. **개발 편의값이며 팀 확정값이 아님을 주석에 명시**하고, API 응답의 `limits.provisional`에 실린다
 
 ### Frontend
 
@@ -61,7 +62,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Test 기반
 
-- [ ] T007 [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/` 테스트 패키지 골격 생성과 `backtest` 통합 테스트의 Testcontainers PostgreSQL 설정 재사용 확인
+- [X] T007 [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/` 테스트 패키지 골격 생성과 `backtest` 통합 테스트의 Testcontainers PostgreSQL 설정 재사용 확인
 
 ---
 
@@ -73,35 +74,35 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### DB 스키마 (같은 파일이라 순차)
 
-- [ ] T008 (DB) `backend/src/main/resources/db/migration/V3__param_search.sql`에 `param_search_seq` 시퀀스와 `param_search` 테이블 작성 ([data-model.md](data-model.md) §2). 전략 파라미터 축(`search_space`)과 평가 시나리오 축(`evaluation_split`)을 별도 컬럼으로 둔다 — 경제환경 검색 설정 축은 010 소유라 만들지 않는다 (FR-021). `V2__backtest_result.sql`의 저장 규칙 주석 규약을 따른다 — 질의에 쓰는 값만 컬럼, 표시용은 JSONB, decimal은 예외 없이 JSONB
-- [ ] T009 (DB) 같은 파일에 `backtest_trade_seq`와 같은 방식의 `search_candidate_seq`(INCREMENT 50)와 `search_candidate` 테이블 작성 ([data-model.md](data-model.md) §4)
-- [ ] T010 (DB) 같은 파일에 인덱스·제약 추가 — `param_search.search_id` UNIQUE, `(owner_user_id, created_at DESC)`, `(param_search_id, candidate_no)` UNIQUE, `(param_search_id, status)`, `(param_search_id, selected)`, `search_candidate.backtest_job_id` UNIQUE(NULL 허용)
+- [X] T008 (DB) `backend/src/main/resources/db/migration/V3__param_search.sql`에 `param_search_seq` 시퀀스와 `param_search` 테이블 작성 ([data-model.md](data-model.md) §2). 전략 파라미터 축(`search_space`)과 평가 시나리오 축(`evaluation_split`)을 별도 컬럼으로 둔다 — 경제환경 검색 설정 축은 010 소유라 만들지 않는다 (FR-021). `V2__backtest_result.sql`의 저장 규칙 주석 규약을 따른다 — 질의에 쓰는 값만 컬럼, 표시용은 JSONB, decimal은 예외 없이 JSONB
+- [X] T009 (DB) 같은 파일에 `backtest_trade_seq`와 같은 방식의 `search_candidate_seq`(INCREMENT 50)와 `search_candidate` 테이블 작성 ([data-model.md](data-model.md) §4)
+- [X] T010 (DB) 같은 파일에 인덱스·제약 추가 — `param_search.search_id` UNIQUE, `(owner_user_id, created_at DESC)`, `(param_search_id, candidate_no)` UNIQUE, `(param_search_id, status)`, `(param_search_id, selected)`, `search_candidate.backtest_job_id` UNIQUE(NULL 허용)
 
 ### 도메인 enum·VO (서로 독립)
 
-- [ ] T011 [P] (BE) `domain/model/ParamSearchStatus.java` — `QUEUED` `RUNNING` `COMPLETED` `PARTIAL` `FAILED` `REJECTED`와 전이 허용 규칙 ([data-model.md](data-model.md) §3)
-- [ ] T012 [P] (BE) `domain/model/CandidateStatus.java` — `PENDING` `DISPATCHED` `COMPLETED` `FAILED` `EXCLUDED` `SKIPPED`와 전이 허용 규칙 (FR-008, §4.1). `SKIPPED`는 되돌아오지 않는 확정 상태다
-- [ ] T013 [P] (BE) `domain/model/ValidationLabel.java` — `SEARCH_RESULT` `HELD_OUT_RESULT` `UNVALIDATED`
-- [ ] T014 [P] (BE) `domain/vo/ParamSearchId.java` — `PS-{yyyyMMdd}-{6자리 이상 순번}` 형식 생성·검증 (`BacktestId`와 같은 규약, DB PK 비노출)
-- [ ] T015 [P] (BE) `domain/vo/ParameterCombination.java` — 파라미터 조합 하나. 값에 `null` 금지
-- [ ] T016 [P] (BE) `domain/vo/GridCoordinates.java` — 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (research R7)
-- [ ] T017 [P] (BE) `domain/vo/SearchSpace.java` — 축 이름 → 선택한 후보 값 목록
+- [X] T011 [P] (BE) `domain/model/ParamSearchStatus.java` — `QUEUED` `RUNNING` `COMPLETED` `PARTIAL` `FAILED` `REJECTED`와 전이 허용 규칙 ([data-model.md](data-model.md) §3)
+- [X] T012 [P] (BE) `domain/model/CandidateStatus.java` — `PENDING` `DISPATCHED` `COMPLETED` `FAILED` `EXCLUDED` `SKIPPED`와 전이 허용 규칙 (FR-008, §4.1). `SKIPPED`는 되돌아오지 않는 확정 상태다
+- [X] T013 [P] (BE) `domain/model/ValidationLabel.java` — `SEARCH_RESULT` `HELD_OUT_RESULT` `UNVALIDATED`
+- [X] T014 [P] (BE) `domain/vo/ParamSearchId.java` — `PS-{yyyyMMdd}-{6자리 이상 순번}` 형식 생성·검증 (`BacktestId`와 같은 규약, DB PK 비노출)
+- [X] T015 [P] (BE) `domain/vo/ParameterCombination.java` — 파라미터 조합 하나. 값에 `null` 금지
+- [X] T016 [P] (BE) `domain/vo/GridCoordinates.java` — 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (research R7)
+- [X] T017 [P] (BE) `domain/vo/SearchSpace.java` — 축 이름 → 선택한 후보 값 목록
 
 ### 도메인 모델
 
-- [ ] T018 (BE) `domain/model/SelectionRule.java` — 선정 규칙 스냅샷과 JSON 직렬화 ([data-model.md](data-model.md) §5). 절대 문턱 숫자를 담지 않는다
-- [ ] T019 (BE) `domain/model/ParamSearch.java` — 묶음 애그리게이트와 상태 전이 (T011, T014, T017, T018 의존)
-- [ ] T020 (BE) `domain/model/SearchCandidate.java` — 후보 모델과 상태 전이 (T012, T013, T015, T016 의존)
-- [ ] T020a [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/StatusTransitionTest.java` — 허용된 전이만 통과하고 나머지는 거부하는지 검증. `SKIPPED`가 되돌아오지 않는지, `FAILED`→`DISPATCHED`(재시도, FR-024)만 허용되는지 포함. 이 묶음이 스스로 검증 가능해야 한다(묶음 조건 2)
+- [X] T018 (BE) `domain/model/SelectionRule.java` — 선정 규칙 스냅샷과 JSON 직렬화 ([data-model.md](data-model.md) §5). 절대 문턱 숫자를 담지 않는다
+- [X] T019 (BE) `domain/model/ParamSearch.java` — 묶음 애그리게이트와 상태 전이 (T011, T014, T017, T018 의존)
+- [X] T020 (BE) `domain/model/SearchCandidate.java` — 후보 모델과 상태 전이 (T012, T013, T015, T016 의존)
+- [X] T020a [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/StatusTransitionTest.java` — 허용된 전이만 통과하고 나머지는 거부하는지 검증. `SKIPPED`가 되돌아오지 않는지, `FAILED`→`DISPATCHED`(재시도, FR-024)만 허용되는지 포함. 이 묶음이 스스로 검증 가능해야 한다(묶음 조건 2)
 
 ### 영속화
 
-- [ ] T021 [P] (BE) `infrastructure/persistence/ParamSearchJpaEntity.java` — T008 스키마와 1:1 (`ddl-auto=validate`)
-- [ ] T022 [P] (BE) `infrastructure/persistence/SearchCandidateJpaEntity.java` — T009 스키마와 1:1, `allocationSize = 50`
-- [ ] T023 [P] (BE) `infrastructure/persistence/ParamSearchJpaRepository.java`와 `SearchCandidateJpaRepository.java`
-- [ ] T024 (BE) `infrastructure/persistence/ParamSearchMapper.java`와 `SearchCandidateMapper.java` — 도메인 ↔ 엔티티 (T019~T022 의존)
-- [ ] T025 (BE) `application/repository/ParamSearchRepository.java`·`SearchCandidateRepository.java` 포트와 `infrastructure/persistence/*RepositoryImpl.java` 구현
-- [ ] T026 (BE 테스트) 엔티티와 V3 스키마 일치 검증 테스트 — `ddl-auto=validate`로 기동되는지 Testcontainers로 확인
+- [X] T021 [P] (BE) `infrastructure/persistence/ParamSearchJpaEntity.java` — T008 스키마와 1:1 (`ddl-auto=validate`)
+- [X] T022 [P] (BE) `infrastructure/persistence/SearchCandidateJpaEntity.java` — T009 스키마와 1:1, `allocationSize = 50`
+- [X] T023 [P] (BE) `infrastructure/persistence/ParamSearchJpaRepository.java`와 `SearchCandidateJpaRepository.java`
+- [X] T024 (BE) `infrastructure/persistence/ParamSearchMapper.java`와 `SearchCandidateMapper.java` — 도메인 ↔ 엔티티 (T019~T022 의존)
+- [X] T025 (BE) `application/repository/ParamSearchRepository.java`·`SearchCandidateRepository.java` 포트와 `infrastructure/persistence/*RepositoryImpl.java` 구현
+- [X] T026 (BE 테스트) 엔티티와 V3 스키마 일치 검증 테스트 — `ddl-auto=validate`로 기동되는지 Testcontainers로 확인
 
 ### 등록표 포트 (003 경계)
 
@@ -353,26 +354,28 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### 묶음(브랜치·MR) 진행 순서
 
-브랜치·MR 단위는 [plan.md](plan.md) "작업 묶음 구성"의 B01~B24다. 아래는 그 묶음들의 선후 관계다.
+브랜치·MR 단위는 [plan.md](plan.md) "작업 묶음 구성"의 M1~M10이다. 아래는 그 묶음들의 선후 관계다.
 
 ```text
-B01 B02                    (Setup, 서로 병렬)
- └─▶ B03 ─▶ B04            도메인 → 스키마·영속화
-     B05 B07 B08           (B03과 병렬 가능, 서로도 병렬)
-     B05 ─▶ B06            등록표 포트 → 그리드·유효성
-         └─▶ B09 ─▶ B10    유스케이스 → 엔드포인트
-                  └─▶ B11 ─▶ B12        (FE, 계약 문서로 B09·B10과 병행 가능)
-             B13 ─▶ B14 ─▶ B15 ─▶ B16   선정 계산 → 조회 API → 결과 화면 → 비교 연결
-             B17 B18 ─▶ B19             거부·취소·한도 → FE 표시
-             B20 ─▶ B21                 검증 라벨 → 배지
-             B22 B23 B24                (Polish, 서로 병렬)
+M1 ─▶ M2 ─▶ M3 ─┬─▶ M5 ─▶ M6           선정 계산 → 조회 API → 결과 화면·비교 연결
+                 ├─▶ M7 ─▶ M8           거부·취소·한도 → FE 표시·배지
+                 └─▶ M9                 검증 라벨·실행 측정 (M5 뒤)
+M4                                       (FE, 계약 문서로 M1~M3과 병행 가능)
+M10                                      (DOCS, 어느 시점에서든 병렬)
 ```
 
-- **B04는 B03 뒤다** — Mapper가 도메인 모델을 참조한다.
-- **B06은 B05 뒤다** — 그리드 전개가 등록표 포트를 쓴다.
-- **B13은 B09·B10과 병렬로 열 수 있다** — 선정 계산은 고정 입력으로 단위 검증되므로 접수 경로를 기다리지 않는다. 다만 종단 확인은 B09 이후다.
-- **B17은 B09 뒤다** — 거부·취소가 접수 경로에 덧붙는다.
-- 한 묶음이 곧 한 MR이므로 **묶음 안의 task를 절반만 올리지 않는다**(묶음 조건 3).
+- **M1이 나머지 전부를 막는다.** 도메인·스키마·영속화가 없으면 어느 묶음도 컴파일되지 않는다.
+- **M2는 M1 뒤다** — 그리드 전개가 도메인 VO(`SearchSpace`·`GridCoordinates`)를 쓴다.
+- **M3은 M2 뒤다** — 접수 유스케이스가 등록표 포트·그리드 전개·유효성 판정을 모두 호출한다.
+- **M4는 선행이 없다** — 계약(`contracts/param-search-api.md`)이 응답 모양을 고정했으므로 FE는 M1~M3을
+  기다리지 않는다. 화면 연동 확인만 M3 이후다.
+- **M5는 M3 뒤다** — 선정 계산 자체(T073~T076)는 고정 입력으로 단위 검증되지만, 조회 API(T079~T081)가
+  접수된 묶음을 전제한다. 계산만 먼저 열려면 M5를 다시 쪼개야 하므로 이 판에서는 M3 뒤로 둔다.
+- **M7은 M3 뒤다** — 거부·취소가 접수 경로에 덧붙는다.
+- **M8은 M7·M9 뒤다** — 거부 표시는 M7, 검증 배지는 M9의 라벨을 쓴다.
+- **M9는 M5 뒤다** — 검증 라벨이 선정 결과에 붙는다.
+- 한 묶음이 곧 한 MR이므로 **묶음 안의 task를 절반만 올리지 않는다**(묶음 조건 3). 묶음 안의 진행은
+  커밋으로 쪼갠다.
 
 ### 파트 사이 순서
 
@@ -394,7 +397,7 @@ B01 B02                    (Setup, 서로 병렬)
 - 각 스토리의 테스트 태스크는 전부 병렬
 - **BE와 FE는 스토리 안에서 병렬** — 계약이 고정되어 있다
 - Foundational 완료 후 US1·US3의 검증 부분을 다른 담당이 동시에 진행 가능
-- **묶음 수준 병렬**: B03·B05·B07·B08은 서로 다른 브랜치로 동시에 열 수 있다. B11·B12(FE)는 계약 문서만 보고 B09·B10(BE)과 동시 진행한다
+- **묶음 수준 병렬**: 묶음을 10개로 합친 뒤 동시에 열 수 있는 조합은 **M1~M3(BE 직렬)과 M4(FE), M10(DOCS)** 세 갈래다. M3이 끝나면 M5·M7이 갈라져 병렬이 된다. 초판의 B03·B05·B07·B08 병렬은 M1·M2 안으로 들어가 커밋 병렬이 되었다
 
 ---
 
@@ -426,23 +429,23 @@ Task: "T058~T064 api 모듈·확인 화면·상세 변경·폴링"          # FE
 
 ### MVP First (User Story 1만)
 
-1. Phase 1 Setup (T001~T007) = 묶음 **B01·B02**
-2. Phase 2 Foundational (T008~T038) = 묶음 **B03~B08** — **여기가 가장 크다. 스토리 전부를 막는다**
-3. Phase 3 User Story 1 (T039~T064) = 묶음 **B09~B12**
+1. Phase 1 Setup + Phase 2 도메인·영속화 (T001~T004, T007~T026) = 묶음 **M1** — **여기가 가장 크다. 나머지 전부를 막는다**
+2. Phase 2 경계·전개 (T027~T039, T089, T090) = 묶음 **M2**
+3. Phase 3 User Story 1 Backend (T040~T057) = 묶음 **M3**, Frontend (T005·T006, T058~T064) = 묶음 **M4**
 4. **멈추고 검증**: quickstart 시나리오 1로 US1 단독 확인
 5. 데모 가능 — 탐색을 접수해 진행 상태까지 보인다
 
-**MVP = 묶음 12개(B01~B12) = 브랜치·MR 12개.** T### 기준으로는 T001~T064에 T089·T090을 더한 것이다
-(B06이 US3 단계의 유효성 테스트를 함께 가져간다).
+**MVP = 묶음 4개(M1~M4) = 브랜치·MR 4개.** T### 기준으로는 T001~T064에 T089·T090을 더한 것이다
+(M2가 US3 단계의 유효성 테스트를 함께 가져간다).
 
 ### Incremental Delivery
 
-1. Setup + Foundational (B01~B08) → 기반 완료
-2. US1 (B09~B12) → 시나리오 1 → **MVP 데모**
-3. US2 (B13~B16) → 시나리오 5 → 결과 비교 데모
-4. US3 (B17~B19) → 시나리오 2·3·4 → 낭비 차단과 중단 처리
-5. US4 (B20·B21) → 검증 상태 표시
-6. Polish (B22~B24) → 측정·문서·회귀
+1. Setup + Foundational (M1·M2) → 기반 완료
+2. US1 (M3·M4) → 시나리오 1 → **MVP 데모**
+3. US2 (M5·M6) → 시나리오 5 → 결과 비교 데모
+4. US3 (M7·M8 앞부분) → 시나리오 2·3·4 → 낭비 차단과 중단 처리
+5. US4 (M9·M8 배지) → 검증 상태 표시
+6. Polish (M10) → 문서·회귀 (실행 측정은 M9가 가져갔다)
 
 각 단계가 MR 몇 개인지는 위 묶음 개수와 같다. 릴리즈는 매주 금요일이므로(constitution Git 규칙)
 한 주에 닫을 묶음을 골라 쌓는다.

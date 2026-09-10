@@ -83,7 +83,7 @@ curl -s "localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED" | 
 
 ## 시나리오 3 — 상한 초과 거부 (FR-005b)
 
-임시 상한(1000)을 넘는 조합을 만든다. 축 값을 늘리거나 테스트 프로파일에서 상한을 낮춰 확인한다.
+임시 상한(120)을 넘는 조합을 만든다. 축 값을 늘리거나 테스트 프로파일에서 상한을 낮춰 확인한다.
 
 **기대**: `422 CANDIDATE_LIMIT_EXCEEDED`. `message`에 유효 후보 수·상한·좁히는 방법이 있고,
 `param_search` 행이 `status=REJECTED`로 남는다. 후보 행은 생기지 않고, **표본을 뽑아 실행하지 않는다.**
