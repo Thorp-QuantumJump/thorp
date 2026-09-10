@@ -53,7 +53,7 @@
       ]
     },
     "limits": {
-      "maxCandidates": 1000,
+      "maxCandidates": 120,
       "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow"],
       "exceeded": false
     },
@@ -118,7 +118,7 @@
         "displayCount": 5,
         "tieHandling": "SHOW_ALL_TIED"
       },
-      "limits": { "maxCandidates": 1000, "provisional": ["maxCandidates"] },
+      "limits": { "maxCandidates": 120, "provisional": ["maxCandidates"] },
       "referenceVersions": { "marketData": "2026-08-31", "cost": "v1", "engine": "nautilus-0.1" },
       "dataVersionChanged": false
     },

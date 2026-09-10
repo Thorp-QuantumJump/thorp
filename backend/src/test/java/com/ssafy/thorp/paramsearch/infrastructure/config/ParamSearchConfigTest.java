@@ -58,12 +58,19 @@ class ParamSearchConfigTest {
                                             context.getEnvironment()
                                                     .getProperty("thorp.param-search.enabled"))
                                     .isEqualTo("false");
-                            // 공통 설정은 확정된 임시값 셋을 갖고, 미측정인 실행시간 상한만 비어 있다.
+                            // 한도 네 값이 모두 임시값으로 채워져 있다. 플래그만 꺼져 있다.
+                            // 후보 수 상한과 실행시간 상한은 함께 정한 값이라 같이 단언한다 —
+                            // 한쪽만 바뀌면 예산(상한 x 건당시간 <= 실행시간)이 깨진다.
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.max-candidates"))
-                                    .isEqualTo("1000");
+                                    .isEqualTo("120");
+                            assertThat(
+                                            context.getEnvironment()
+                                                    .getProperty(
+                                                            "thorp.param-search.time-limit-seconds"))
+                                    .isEqualTo("120");
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
@@ -74,11 +81,6 @@ class ParamSearchConfigTest {
                                                     .getProperty(
                                                             "thorp.param-search.consecutive-failure-limit"))
                                     .isEqualTo("5");
-                            assertThat(
-                                            context.getEnvironment()
-                                                    .getProperty(
-                                                            "thorp.param-search.time-limit-seconds"))
-                                    .isNullOrEmpty();
                         });
     }
 
@@ -93,6 +95,7 @@ class ParamSearchConfigTest {
                             assertThat(context).hasSingleBean(ParamSearchProperties.class);
                             ParamSearchProperties properties =
                                     context.getBean(ParamSearchProperties.class);
+                            // 로컬은 상한 초과 거부(FR-005b)를 재현하려고 공통값보다 낮춘 24다.
                             assertThat(properties.getMaxCandidates()).isEqualTo(24);
                             assertThat(properties.getDispatchWindow()).isEqualTo(4);
                             assertThat(properties.getTimeLimitSeconds()).isEqualTo(300L);
@@ -105,7 +108,10 @@ class ParamSearchConfigTest {
     void enabledWithoutLimitsFailsFast() {
         contextRunner
                 .withPropertyValues(
-                        "spring.profiles.active=none", "thorp.param-search.enabled=true")
+                        "spring.profiles.active=none",
+                        "thorp.param-search.enabled=true",
+                        // 공통 설정에는 이제 빈 값이 없다. 값을 지운 채 플래그를 켜는 실수를 재현한다.
+                        "thorp.param-search.time-limit-seconds=")
                 .run(
                         context -> {
                             assertThat(context).hasFailed();
