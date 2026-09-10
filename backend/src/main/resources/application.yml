@@ -92,12 +92,17 @@ thorp:
     enabled: false
     # 유효 후보 수 상한. clarify 확정값이며 PD-06 실측 후 고정한다.
     max-candidates: 1000
-    # 아래 셋은 PD-05 잔여로 팀 확정 대기다. 키만 두고 값을 비운다 — 추측해 채우지 않는다.
+    # 발행 창 = 워커 수 x 2. prod 워커가 2개(infra/.env.prod.example WORKER_REPLICAS)이므로
+    # 각 워커가 1건을 처리하는 동안 1건이 앞에 대기해 큐가 비지 않는다. 더 키우면 한 묶음이
+    # backtest.jobs를 오래 점유해 다른 사용자의 단일 실행이 뒤로 밀린다. 워커 수를 바꾸면 이 값도 바꾼다.
+    dispatch-window: 4
+    # 연속 실패 한도. **발행 창보다 커야 한다** — 창에 든 4건이 한꺼번에 실패하는 일(자료 결측 등)만으로
+    # 묶음이 멈추면 산발적 실패에 과민 반응한다. 4를 넘는 5로 두어 한 창이 전멸해도 한 번 더 시도하고,
+    # 그래도 실패하면 수백 건을 헛돌리기 전에 멈춘다.
+    consecutive-failure-limit: 5
+    # PD-05 잔여. 후보 1건의 계산 시간이 미측정이라 아직 비어 있다 — 추측해 채우지 않는다.
     # 확정되면 여기에 값을 넣고 ParamSearchProperties.PROVISIONAL_NAMES에서 이름을 지운다.
-    # 로컬 개발값은 application-local.yml에 있다(개발 편의값이며 팀 확정값이 아니다).
-    dispatch-window:
     time-limit-seconds:
-    consecutive-failure-limit:
 
 server:
   port: 8080

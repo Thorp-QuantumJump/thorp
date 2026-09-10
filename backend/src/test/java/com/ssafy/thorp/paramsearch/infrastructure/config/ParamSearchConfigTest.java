@@ -58,7 +58,7 @@ class ParamSearchConfigTest {
                                             context.getEnvironment()
                                                     .getProperty("thorp.param-search.enabled"))
                                     .isEqualTo("false");
-                            // 공통 설정은 확정값인 후보 수 상한만 갖고 나머지는 비어 있다.
+                            // 공통 설정은 확정된 임시값 셋을 갖고, 미측정인 실행시간 상한만 비어 있다.
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
@@ -68,6 +68,16 @@ class ParamSearchConfigTest {
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.dispatch-window"))
+                                    .isEqualTo("4");
+                            assertThat(
+                                            context.getEnvironment()
+                                                    .getProperty(
+                                                            "thorp.param-search.consecutive-failure-limit"))
+                                    .isEqualTo("5");
+                            assertThat(
+                                            context.getEnvironment()
+                                                    .getProperty(
+                                                            "thorp.param-search.time-limit-seconds"))
                                     .isNullOrEmpty();
                         });
     }
@@ -91,7 +101,7 @@ class ParamSearchConfigTest {
     }
 
     @Test
-    @DisplayName("켠 채로 한도가 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다")
+    @DisplayName("켠 채로 실행시간 상한이 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다")
     void enabledWithoutLimitsFailsFast() {
         contextRunner
                 .withPropertyValues(
@@ -104,10 +114,9 @@ class ParamSearchConfigTest {
                                     .isInstanceOf(ConfigurationPropertiesBindException.class);
                             // 어느 값이 빠졌는지가 오류에 드러나야 설정으로 고칠 수 있다.
                             // 필드 이름은 최상위 메시지가 아니라 원인(BindValidationException)에 담긴다.
+                            // 공통 설정에서 아직 비어 있는 값은 실행시간 상한 하나다(PD-05 잔여).
                             assertThat(context.getStartupFailure())
-                                    .hasStackTraceContaining("dispatchWindow")
-                                    .hasStackTraceContaining("timeLimitSeconds")
-                                    .hasStackTraceContaining("consecutiveFailureLimit");
+                                    .hasStackTraceContaining("timeLimitSeconds");
                         });
     }
 
