@@ -1,8 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 (미비준 초안, 2026-09-09 기획서 기준) → 1.0.0 (미비준 초안, 2026-09-10 개정 기획서·
-  Git/Jira Convention 반영). HEAD에는 미기입 템플릿만 있고 이전 초안은 커밋되지 않았으므로 버전을
-  올리지 않는다. 비준(전체 회의 승인 후 merge) 시점의 판이 1.0.0이 된다.
+- Version change: 1.1.0 → 1.2.0. plan 대상 Jira Ticket이 없을 때 Task를 먼저 만드는 절차를
+  추가하는 실질적 작업 흐름 확장이므로 MINOR를 올린다. 비준은 전체 회의 승인 후 merge로 확정한다.
 - Modified principles (이전 초안 → 이번 판):
   I. 중심 약속은 전략 진단이다 → 유지, 시장 흐름의 전략 독립 탐색과 진단 연결을 추가
   II. 첫 화면은 단순하게 → 유지, "경제를 하나의 점수로 줄이지 않는다"와 분야별 기본·종합 선택형 추가
@@ -16,6 +15,9 @@ Sync Impact Report
   (신설) X. 자료는 이용 조건 안에서만 쓴다
 - Added sections: Git·Jira 규칙(동결된 Git Convention·Jira Convention 반영), 검증과 완료 기준의
   "미확인 항목 처리", 완료의 정의에 Jira Task 완료 조건 반영, 용어 정의에 경제환경 검색 용어 추가
+- Clarified rules: Git·Jira 규칙에 1 Plan = 1 Jira Ticket = 1 Branch = 1 MR 범위를 명시하고,
+  Ticket이 없으면 먼저 Task를 생성하도록 정했으며, 문서 역할과 AI 작업 방식에서 plan의 분할 기준을
+  같은 뜻으로 정렬했다.
 - Removed sections: "유사 시장 검색"(전략별 가격 특징 다변량 검색) 관련 규칙·용어. 기획서가 해당 검색을
   전략 독립 경제환경 검색으로 교체했다(§4.3, §9). 단순 가격 추세·변동성 검색은 내부 비교 기준으로만 남는다.
 - Templates: .specify/templates/plan-template.md "Constitution Check"는 이 파일을 런타임에 읽으므로
@@ -577,11 +579,17 @@ AI(Claude 등) 모두에게 적용된다.
 
 - **1 Task = 1 Branch = 1 MR**이다. Task 작업을 시작할 때 Jira 이슈 번호가 포함된 브랜치를 위 Git 규칙
   형식으로 만든다.
+- **1 Plan = 1 Jira Ticket = 1 Branch = 1 MR**이다. plan은 Jira Ticket 하나와 그 브랜치에서
+  구현·검증·리뷰할 범위만 다룬다. spec 하나가 여러 Jira Ticket을 포함하면 Ticket마다 plan을 분리하며,
+  다른 Ticket·브랜치·MR의 작업을 함께 계획하지 않는다.
+- plan 범위에 연결할 Jira Ticket이 없으면 **plan·브랜치·MR을 만들기 전에** Jira Convention의
+  제목·연결 규칙을 따른 Task를 먼저 생성한다. 생성한 Ticket을 plan에 연결한 뒤 그 Ticket 번호로
+  브랜치를 만든다.
 - Task를 진행 중으로 바꾸기 전에 담당자·스프린트·Epic 연결·Story 연결·스토리 포인트·GitLab 이슈·브랜치를
   확인한다. Task의 완료 조건은 위 "완료의 정의"의 다섯 조건이다.
 
-왜: spec의 사용자 스토리와 tasks의 작업 단위가 Jira의 Story·Task와 같은 형식이어야 문서와 이슈가 1:1로
-대응한다.
+왜: spec의 사용자 스토리와 Jira Story, plan의 작업 범위와 Jira Ticket이 같은 단위여야 문서·이슈·브랜치·MR의
+추적이 1:1로 대응한다.
 
 ## 문서 역할과 AI 작업 방식
 
@@ -594,8 +602,10 @@ AI(Claude 등) 모두에게 적용된다.
 - **constitution(이 문서)**: 프로젝트 내내 유지되는 원칙. `.specify/memory/constitution.md`에 둔다.
 - **spec**: 이번 범위·우선순위와 "실행 전 결정 항목"의 확정값. 사용자 스토리는 Jira Story 문장 형식으로
   쓰고, 기획 근거를 인용할 때 D번호·U번호를 쓴다.
-- **plan / tasks**: spec을 구현하는 계획과 작업. tasks의 작업 단위는 Jira Task 제목 형식과 1 Task =
-  1 Branch = 1 MR 규칙에 맞춘다. plan의 Constitution Check는 이 문서를 기준으로 판정한다.
+- **plan / tasks**: spec은 여러 Jira Ticket으로 나뉠 수 있다. plan은 spec을 구현하는 **Jira Ticket
+  하나의 단일 브랜치·단일 MR** 계획이고, tasks는 그 plan 안에서 실행할 작업이다. 다른 Ticket·브랜치·MR이
+  필요해지면 plan도 분리한다. Jira Task로 관리하는 작업은 Jira Task 제목 형식과 1 Task = 1 Branch =
+  1 MR 규칙에 맞춘다. plan의 Constitution Check는 이 문서를 기준으로 판정한다.
 
 ### AI 작업 방식 (§6.3, §6.4.2, §7.4, §9, §10.1에서 도출)
 
@@ -606,7 +616,9 @@ AI(Claude 등) 모두에게 적용된다.
 - 확인할 수 없는 사실(데이터 포괄성, 경쟁 우위, 성과 향상률, 미확인 API 응답)을 확인된 것처럼
   문서·화면에 쓰지 않는다. 확인한 범위와 확인하지 못한 범위를 함께 적는다.
 - 구현 완료를 효과 입증으로, 명세 완료를 구현 완료로 보고하지 않는다.
-- 브랜치·커밋·MR·Task를 만들 때 위 Git·Jira 규칙의 형식을 따른다.
+- 브랜치·커밋·MR·Task·plan을 만들 때 위 Git·Jira 규칙의 형식을 따른다. plan은 시작 전에 대상 Jira
+  Ticket·브랜치·MR 범위를 정한다. 대상 Ticket이 없으면 Task를 먼저 만들고, 다른 Ticket 또는 브랜치가
+  필요해지는 변경은 별도 plan으로 분리한다.
 
 ### 합의되지 않아 이 판에 넣지 않은 영역 (가이드 2·4)
 
@@ -644,4 +656,4 @@ AI(Claude 등) 모두에게 적용된다.
 - **근거 자료 변경**: 기획서의 "확정한 방향"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로
   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10
+**Version**: 1.2.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10
