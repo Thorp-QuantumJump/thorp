@@ -17,6 +17,8 @@ from worker.contracts.events import BacktestEvent
 
 EXCHANGE = "backtest"
 DEAD_LETTER_EXCHANGE = "backtest.dlx"
+#: 백엔드 → 워커 제어(CANCEL) fanout. 소비 루프는 취소 티켓(T011)에서 붙인다.
+CONTROL_EXCHANGE = "backtest.control"
 
 JOBS_QUEUE = "backtest.jobs"
 JOBS_ROUTING_KEY = "backtest.job.requested"
@@ -30,15 +32,13 @@ EVENTS_DEAD_LETTER_ROUTING_KEY = "backtest.event.dead"
 
 #: 메시지 스키마 버전(계약 §3 header ``schemaVersion``, §4.2 envelope). 수신 검증과 발행에
 #: 같은 값을 쓴다. enum 멤버 추가는 하위호환이 아니므로(ADR-0004 부수 결정) 계약이 바뀌면
-#: 이 값을 올리고 backend·worker를 함께 배포한다.
-SCHEMA_VERSION = 1
+#: 이 값을 올리고 backend·worker를 함께 배포한다. v2: spec 004(runId·allocation·costProfile·
+#: CANCELLED·제어 메시지).
+SCHEMA_VERSION = 2
 
 #: manual ACK + prefetch 1 (계약 §7). 한 번에 Job 하나만 받아 CPU 병목을 워커 수로 조절한다.
+#: 작업 큐는 quorum + x-delivery-limit=1 이라 requeue된 메시지는 한 번만 다시 배달된다.
 PREFETCH_COUNT = 1
-
-#: PROGRESS 발행 묶음 크기(계약 §4.2). 엔진 콜백은 거래일 1개 단위로 오므로 묶는 것은
-#: 실행 Consumer 책임이다.
-PROGRESS_BATCH_TRADING_DAYS = 20
 
 
 # --- 오류 분류 (계약 §7·§8) ----------------------------------------------------------

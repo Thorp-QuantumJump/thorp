@@ -101,14 +101,16 @@ result_json = result.to_json()
 - **계약은 통과하지만 이 엔진이 계산할 수 없는 요청은 실행 전에 거절한다**
   (`worker/engine_support.py`, `run.error.code=INVALID_REQUEST`). 계약(`contracts/`)은 백엔드와
   공유하며 "메시지만 보고 판단할 수 있는" 불변식만 보므로, 지원 범위 판단은 엔진 몫이다.
-  거절 대상: 종목 2개 이상, `portfolio.leverage != 1`, `shortSelling=true`,
-  `currency != KRW`, `execution.commission.model != ZERO`, `execution.slippage.bps != 5`,
-  `partialFill=true`, `benchmark` 지정, 그리고 엔진 레지스트리(`strategies/__init__.py`
-  `STRATEGIES`)에 없는 `strategy.strategyId`·`strategy.version`. 여러 항목이 동시에 미지원이면
+  거절 대상: 종목 2개 이상, `run.scenario != FULL_PERIOD`, `run.effectiveStart` 지정,
+  `portfolio.leverage != 1`, `shortSelling=true`, `currency != KRW`, `integerLots=false`,
+  `execution.costProfile`의 수수료·스프레드·세금 bps ≠ 0 또는 `slippageBps != 5`,
+  `partialFill=true`, `evaluation.warmupTradingDays` 지정, `evaluation.liquidationAtEnd=true`,
+  그리고 엔진 레지스트리(`strategies/__init__.py` `STRATEGIES`)에 없는
+  `allocation.strategyId`·`allocation.rulesVersion`. 여러 항목이 동시에 미지원이면
   한 메시지에 전부 담는다. 지원하지 않는 값을 조용히 무시하고 `COMPLETED`를 반환하지 않는다 —
   요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로 저장되기 때문이다.
-  단 `benchmark` 지정은 실행 Consumer가 엔진 호출 전에 벗기므로(`consumer.strip_benchmark`)
-  브로커 경로로 들어온 요청은 이 거절에 걸리지 않는다. 엔진을 직접 호출하면 그대로 거절된다.
+  `marketData.fillPrice != signalPrice`는 거절하지 않고 받되 단일 시계열로 계산한다는 사실을
+  `diagnostics.warnings`에 `PRICE_SERIES_NOT_DISTINGUISHED`로 남긴다(다종목 엔진 T007에서 분리).
 - `execution.delisting=CAUSE_BASED`는 거절하지 않고 받되, 사유 분류 미지원을
   `diagnostics.warnings`에 `DELISTING_CLASSIFICATION_UNSUPPORTED`로 **실행당 1건** 남긴다.
   이 경고는 특정 거래일이 아니라 실행 전체에 걸리므로 계약 필수 필드인 `date`에 평가 구간의
@@ -119,7 +121,7 @@ result_json = result.to_json()
 - 콜백 규약은 계약 `contracts.engine.ProgressCallback`이다: 평가 거래일당 1번
   `(point, completed_trading_days, total_trading_days)`를 전달하며 준비 데이터는 제외한다.
   `point`는 `ProgressPoint(date, equity, cumulativeReturn, drawdown)`이고 최종 결과의 같은 날짜
-  `portfolioSeries` 항목과 값이 일치한다. 20거래일 묶음 발행은 Consumer 책임이다.
+  `portfolioSeries` 항목과 값이 일치한다. `progress.batchTradingDays` 묶음 발행은 Consumer 책임이다.
   진행 이벤트는 저장하지 않고 SSE로만 흐르므로 보유 종목까지 담은 전체 스냅샷은 넘기지 않는다.
   콜백에 넘어가는 객체는 결과와 분리되어 있어 Consumer의 변경이 최종 결과를 오염시키지 않는다.
 - 금액·비율·수량은 JSON decimal 문자열, 주문/체결/거래 건수는 정수다.
@@ -237,15 +239,17 @@ uv run python -m worker.main
 - **manual ACK, prefetch 1.** `FINISHED` 발행이 브로커에서 확인된 뒤에만 작업 메시지를 ACK한다
   (계약 §7). publisher confirm과 `mandatory`를 켜서 라우팅 실패도 확인한다 — 발행이 확인되지
   않으면 ACK하지 않는다.
-- `sequence`는 `STARTED`=0에서 1씩 증가한다. `PROGRESS`는 **20거래일 묶음**이고 이번 구간에서
-  새로 계산한 포인트만 담으며 **마지막 잔여 구간도 발행**한다. 엔진 콜백은 거래일 1개 단위로
-  오므로 묶는 것은 Consumer 책임이다.
+- `sequence`는 `STARTED`=0에서 1씩 증가한다. `PROGRESS`는 작업 메시지의
+  **`progress.batchTradingDays` 묶음**이고 이번 구간에서 새로 계산한 포인트만 담으며
+  **마지막 잔여 구간도 발행**한다. 엔진 콜백은 거래일 1개 단위로 오므로 묶는 것은 Consumer 책임이다.
+  STARTED·PROGRESS의 `stage`, PROGRESS의 `lastTradingDate`, FINISHED의 `status`·`partial`·
+  `lastTradingDate`·`resource`(cpu·wall 초)는 Consumer가 채운다.
 - 메시지 속성(계약 §3): `content_type=application/json`, `delivery_mode=2`,
-  `message_id`=본문 `eventId`, `correlation_id`=`backtestId`, 헤더 `schemaVersion`.
+  `message_id`=본문 `eventId`, `correlation_id`=`runId`, 헤더 `schemaVersion`.
   워커는 Spring의 `__TypeId__` 헤더를 보내지 않는다.
 - `executionId`는 엔진 실행 시도마다 새 값, `eventId`는 이벤트마다 고유하고 재발행 시 유지한다
   (중복 방지 키 — 계약 §4.2).
-- **`schemaVersion` 검증.** 상수는 `messaging.SCHEMA_VERSION = 1`. 헤더나 본문이 다른 값을
+- **`schemaVersion` 검증.** 상수는 `messaging.SCHEMA_VERSION = 2`(v1 메시지는 계약 오류). 헤더나 본문이 다른 값을
   표시하면 계약 오류로 보고 거절한다. 작업 메시지 본문은 `EngineInput` 전체이고 계약 픽스처에
   `schemaVersion` 키가 없으므로, 양쪽 모두 표시하지 않은 경우는 통과시킨다.
 - **오류 3분류** (계약 §7·§8):
@@ -253,25 +257,17 @@ uv run python -m worker.main
   | 상황 | 처리 |
   |---|---|
   | JSON 파싱 실패, pydantic `ValidationError`, 미지원 `schemaVersion` | 계약 오류. requeue 없이 reject → DLQ |
-  | 엔진이 `FAILED` `EngineOutput` 반환(`NO_MARKET_DATA`·`ENGINE_ERROR`·`INVALID_REQUEST`) | 정상 결과. 그대로 `FINISHED`에 담아 발행하고 ACK. DLQ 아님 |
+  | 엔진이 `FAILED` `EngineOutput` 반환(`DATA_INSUFFICIENT`·`ENGINE_ERROR`·`INVALID_REQUEST`) | 정상 결과. 그대로 `FINISHED`에 담아 발행하고 ACK. DLQ 아님 |
   | 발행 실패·브로커 일시 장애(`CallbackError` 포함) | 일시 장애. 제한적 재시도 후 ACK하지 않고 requeue |
 
 - **실행 Consumer는 `EngineOutput` 내용을 해석하지 않는다.** 성공·실패 모두 같은 `FINISHED`다.
-- **멱등성: 같은 `backtestId`가 재전달되면 그냥 다시 실행하고 `executionId`만 새로 발급한다.**
+- **멱등성: 같은 `runId`가 재전달되면 그냥 다시 실행하고 `executionId`만 새로 발급한다.**
   워커는 결과 DB에 쓰지 않는 게 계약(§1)이라 처리 이력을 남길 곳이 없고, 고정 입력에 대해
   결정론적이라 재실행이 안전하다. 중복 방어는 계약 §7이 백엔드 결과 Consumer 쪽에 요구하며
-  ("이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK") `eventId`가 그 키다.
-- **벤치마크는 계산하지 않고, 엔진에 넘기지도 않는다.** 계약 §1이 벤치마크 계산을 실행 Consumer
-  책임으로 두지만 계산기가 아직 없다(별도 티켓). 백엔드는 사용자가 벤치마크를 지정하면
-  `BenchmarkSpec`을 실어 보내고 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로, 그대로 넘기면
-  **벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가 FAILED가 된다.** 그래서 실행 Consumer가
-  엔진 호출 입력에서만 `benchmark`를 벗긴다(`consumer.strip_benchmark`). 엔진의 거절 규칙은 그대로
-  두므로 엔진을 직접 호출하는 쪽은 계속 거절당한다. `FINISHED` payload의 `benchmark`는 항상
-  없음(직렬화에서 키 생략)이고, 계약이 그 생략을 "미지정 또는 실패"로 정의하므로 수신 측은 산출되지
-  않았음을 그대로 읽는다.
-  다만 결과 메시지에 "벗겼다"는 표시는 남지 않아 벤치마크를 요청하지 않은 실행과 payload가
-  같다. `execution.delisting=CAUSE_BASED` 처럼 `diagnostics.warnings` 로 드러내는 방안은
-  별도 티켓이다.
+  ("이미 최종 상태인 실행의 늦은 이벤트는 덮어쓰지 않고 ACK") `eventId`가 그 키다. 작업 큐는
+  quorum + `x-delivery-limit=1`이라 워커가 죽어 requeue된 작업은 한 번만 다시 배달된다.
+- **벤치마크는 계약 v2에 없다.** `EngineInput.benchmark`도 `FINISHED.benchmark`도 사라졌고
+  v1의 `consumer.strip_benchmark`도 제거했다. 벤치마크 비교는 별도 spec에서 다룬다.
 - **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드
   (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,
   없으면 큐를 만들지 않고 "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다
@@ -326,7 +322,7 @@ channel.basic_publish(
         delivery_mode=2,
         message_id="JOB-LOCAL-000001",
         correlation_id="BT-20260907-000001",
-        headers={"schemaVersion": 1},
+        headers={"schemaVersion": 2},
     ),
     mandatory=True,
 )
@@ -348,9 +344,9 @@ Queues → `backtest.events` → Get messages(Requeue: Yes)로 본다. 확인할
 
 - `backtest.jobs`가 0으로 비었는가 (= FINISHED 발행 후 ACK됐다)
 - 첫 메시지가 `type=STARTED`·`sequence=0`이고 마지막이 `type=FINISHED`인가
-- 각 메시지의 `correlation_id`가 본문 `backtestId`와 같고 `message_id`가 본문 `eventId`와 같은가
-- 헤더에 `schemaVersion=1`이 있고 `__TypeId__`가 **없는가**
-- `FINISHED` payload에 `benchmark` 키가 없는가
+- 각 메시지의 `correlation_id`가 본문 `runId`와 같고 `message_id`가 본문 `eventId`와 같은가
+- 헤더에 `schemaVersion=2`가 있고 `__TypeId__`가 **없는가**
+- `FINISHED` payload의 `status`가 `engineOutput.run.status`와 같고 `partial=false`인가
 
 계약 오류 처리는 위 스크립트의 `body`를 깨진 JSON(`b"{"`)으로 바꿔 발행한 뒤
 `backtest.jobs.dlq`에 1건이 쌓이는지로 확인한다(`backtest.jobs`는 다시 0).
@@ -361,7 +357,7 @@ Queues → `backtest.events` → Get messages(Requeue: Yes)로 본다. 확인할
 uv run ruff check src tests && uv run ruff format --check src tests && uv run pytest
 ```
 
-- `tests/test_consumer.py` 발행 순서·`sequence`, 20거래일 묶음과 잔여 구간, **FINISHED 발행
+- `tests/test_consumer.py` 발행 순서·`sequence`, 묶음 크기와 잔여 구간, **FINISHED 발행
   확인 전 ACK 금지**, 계약 오류 reject, 엔진 FAILED의 ACK, 재전달 시 새 `executionId`,
   `eventId` 고유성, 계약 픽스처와의 payload 모양 대조. 엔진은 실제 `NautilusMomentumEngine` +
   `CsvDataProvider`(네트워크 없음)를 쓴다.

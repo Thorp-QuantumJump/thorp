@@ -8,18 +8,19 @@ pika를 직접 부르지 않는다. 발행과 ACK는 ``worker.messaging`` 의 Pr
 주입받는 것과 같은 패턴이며, 덕분에 브로커 없이 전체 흐름을 pytest로 검증한다.
 
 **EngineOutput 내용을 해석하지 않는다.** ``run.status`` 가 COMPLETED든 FAILED든 같은
-FINISHED 이벤트에 그대로 담는다. 엔진이 계약대로 답한 것이므로 DLQ가 아니다.
-
-**벤치마크는 엔진에 넘기지 않는다.** 계약이 벤치마크를 실행 Consumer 책임으로 두므로
-(:func:`strip_benchmark`) 엔진 호출 입력에서만 ``benchmark`` 를 벗긴다. 계산기는 아직 없어
-``FINISHED`` payload의 ``benchmark`` 는 생략된다 (계약상 "미지정 또는 실패").
+FINISHED 이벤트에 그대로 담는다. 엔진이 계약대로 답한 것이므로 DLQ가 아니다. FINISHED payload의
+``status``·``partial``·``lastTradingDate`` 는 ``run`` 블록의 값을 그대로 옮긴 것이다.
 """
 
 import json
 import logging
+import os
+import socket
+import time
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from pydantic import ValidationError
@@ -32,12 +33,14 @@ from worker.contracts.events import (
     BacktestEvent,
     BacktestEventType,
     FinishedPayload,
+    ProcessInfo,
+    ProcessingStage,
     ProgressPayload,
     ProgressPoint,
+    ResourceUsage,
     StartedPayload,
 )
 from worker.messaging import (
-    PROGRESS_BATCH_TRADING_DAYS,
     SCHEMA_VERSION,
     ContractViolation,
     EventPublisher,
@@ -93,34 +96,8 @@ def parse_job(body: bytes | str, headers: Mapping[str, Any] | None) -> EngineInp
         raise ContractViolation(f"job body violates the EngineInput contract: {exc}") from exc
 
 
-def strip_benchmark(engine_input: EngineInput) -> EngineInput:
-    """엔진에 넘길 입력에서만 ``benchmark`` 지정을 벗긴다.
-
-    벤치마크 산출은 계약상 실행 Consumer 책임이고(계약 §1·§4.2) 엔진은 지정을
-    ``INVALID_REQUEST`` 로 거절한다(``engine_support``). 그런데 백엔드는 사용자가 벤치마크를
-    지정하면 ``BenchmarkSpec`` 을 실어 보내므로, 벗기지 않으면 **벤치마크를 지정했다는 이유만으로
-    백테스트 결과 전체가 FAILED가 된다.** 전략 성과는 벤치마크와 무관하게 계산되므로 결과를
-    버릴 이유가 없다.
-
-    벗긴 사실을 감추지 않는다. 아직 벤치마크 계산기가 없으므로(별도 티켓)
-    ``FINISHED`` payload의 ``benchmark`` 는 계속 생략되고, 계약이 그 생략을 "미지정 또는 실패"로
-    정의하므로 수신 측은 "벤치마크는 산출되지 않았다"를 그대로 읽는다. 엔진의 거절 규칙은 그대로
-    둔다 — 엔진을 직접 호출하는 쪽은 계속 거절당해야 지원 범위가 흐려지지 않는다.
-
-    다만 **결과 메시지에 "벗겼다"는 표시가 남지는 않는다.** 벤치마크를 요청하지 않은 실행과
-    payload가 같다. ``execution.delisting=CAUSE_BASED`` 가 ``diagnostics.warnings`` 에
-    ``DELISTING_CLASSIFICATION_UNSUPPORTED`` 를 남기는 선례(ADR-0003 "D-상장폐지")처럼 경고로
-    드러내는 편이 낫고, 그 방안은 별도 티켓으로 둔다.
-    """
-    if engine_input.benchmark is None:
-        return engine_input
-    logger.info(
-        "benchmark %s is not handed to the engine and is not computed; the FINISHED payload "
-        "omits it (backtestId=%s)",
-        engine_input.benchmark.instrument_id,
-        engine_input.run.backtest_id,
-    )
-    return engine_input.model_copy(update={"benchmark": None})
+def _seconds(value: float) -> Decimal:
+    return Decimal(f"{value:.3f}")
 
 
 class _EventStream:
@@ -134,17 +111,19 @@ class _EventStream:
     def __init__(
         self,
         publisher: EventPublisher,
-        backtest_id: str,
+        run_id: str,
         execution_id: str,
         new_id: IdFactory,
         clock: Clock,
     ) -> None:
         self._publisher = publisher
-        self._backtest_id = backtest_id
+        self._run_id = run_id
         self._execution_id = execution_id
         self._new_id = new_id
         self._clock = clock
         self._sequence = 0
+        self._wall_started = time.monotonic()
+        self._cpu_started = time.process_time()
 
     @property
     def sequence(self) -> int:
@@ -152,20 +131,30 @@ class _EventStream:
 
     def started(self) -> None:
         now = self._clock()
-        self._emit(BacktestEventType.STARTED, StartedPayload(started_at=now), now)
+        payload = StartedPayload(
+            started_at=now,
+            stage=ProcessingStage.PREPARING_DATA,
+            resource=ProcessInfo(pid=os.getpid(), hostname=socket.gethostname()),
+        )
+        self._emit(BacktestEventType.STARTED, payload, now)
 
     def progress(self, payload: ProgressPayload) -> None:
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
     def finished(self, output: EngineOutput) -> None:
-        # benchmark는 항상 없다. 백엔드가 지정을 실어 보내도 계산기가 없어(별도 티켓) 산출할
-        # 값이 없기 때문이며, 계약이 이 생략을 "미지정 또는 실패"로 정의하므로 수신 측은
-        # 산출되지 않았음을 그대로 읽는다(strip_benchmark 참고). exclude_none이 키를 생략한다.
-        self._emit(
-            BacktestEventType.FINISHED,
-            FinishedPayload(engine_output=output, benchmark=None),
-            self._clock(),
+        # ponytail: peakRssMb는 재지 않는다(resource 모듈이 Windows에 없다). 필요하면 psutil.
+        usage = ResourceUsage(
+            cpu_seconds=_seconds(time.process_time() - self._cpu_started),
+            wall_seconds=_seconds(time.monotonic() - self._wall_started),
         )
+        payload = FinishedPayload(
+            status=output.run.status,
+            partial=bool(output.run.partial),
+            last_trading_date=output.run.last_trading_date,
+            engine_output=output,
+            resource=usage,
+        )
+        self._emit(BacktestEventType.FINISHED, payload, self._clock())
 
     def _emit(
         self,
@@ -176,7 +165,7 @@ class _EventStream:
         event: BacktestEvent = BacktestEvent(
             schema_version=SCHEMA_VERSION,
             event_id=self._new_id(),
-            backtest_id=self._backtest_id,
+            run_id=self._run_id,
             execution_id=self._execution_id,
             type=event_type,
             sequence=self._sequence,
@@ -188,7 +177,7 @@ class _EventStream:
 
 
 class _ProgressBatcher:
-    """거래일 1개 단위 콜백을 20거래일 묶음 PROGRESS로 바꾼다(계약 §4.2).
+    """거래일 1개 단위 콜백을 ``progress.batchTradingDays`` 묶음 PROGRESS로 바꾼다(계약 §4.2).
 
     이번 구간에서 **새로 계산한 포인트만** 담고, 발행이 확인된 뒤에 버퍼를 비운다. 발행이
     실패하면 버퍼를 유지한 채 예외가 콜백 밖으로 나가므로 같은 포인트를 잃지 않는다.
@@ -218,8 +207,10 @@ class _ProgressBatcher:
     def _publish(self) -> None:
         self._stream.progress(
             ProgressPayload(
+                stage=ProcessingStage.COMPUTING,
                 completed_trading_days=self._completed,
                 total_trading_days=self._total,
+                last_trading_date=self._buffer[-1].date,
                 portfolio_series=list(self._buffer),
             )
         )
@@ -236,13 +227,11 @@ class BacktestJobConsumer:
         *,
         new_id: IdFactory = _new_id,
         clock: Clock = utc_now,
-        progress_batch_size: int = PROGRESS_BATCH_TRADING_DAYS,
     ) -> None:
         self._engine = engine
         self._publisher = publisher
         self._new_id = new_id
         self._clock = clock
-        self._progress_batch_size = progress_batch_size
 
     def handle(
         self,
@@ -252,7 +241,7 @@ class BacktestJobConsumer:
     ) -> None:
         """수신 → 역직렬화 → 실행 → 발행 → ACK. 오류 3분류가 여기서 갈린다(계약 §7).
 
-        같은 ``backtestId`` 가 재전달되면 그냥 다시 실행하고 ``executionId`` 만 새로 발급한다.
+        같은 ``runId`` 가 재전달되면 그냥 다시 실행하고 ``executionId`` 만 새로 발급한다.
         워커는 DB에 쓰지 않아(계약 §1) 처리 이력을 남길 곳이 없다. 중복 방어는 계약 §7이
         백엔드 결과 Consumer에 요구하며 ``eventId`` 가 그 키다.
         """
@@ -260,19 +249,19 @@ class BacktestJobConsumer:
             engine_input = parse_job(body, headers)
         except ContractViolation as exc:
             # 재전달해도 결과가 같으므로 되돌리지 않는다. 이벤트도 발행하지 않는다 —
-            # backtestId를 신뢰할 수 없다.
+            # runId를 신뢰할 수 없다.
             logger.error("contract violation; rejecting to DLQ without requeue: %s", exc)
             acknowledger.reject()
             return
 
-        backtest_id = engine_input.run.backtest_id
+        run_id = engine_input.run.run_id
         execution_id = self._new_id()
         try:
-            output = self._execute(engine_input, backtest_id, execution_id)
+            output = self._execute(engine_input, run_id, execution_id)
         except PublishError as exc:
             logger.error(
-                "event publication failed for backtestId=%s executionId=%s; not acking: %s",
-                backtest_id,
+                "event publication failed for runId=%s executionId=%s; not acking: %s",
+                run_id,
                 execution_id,
                 exc,
             )
@@ -281,8 +270,8 @@ class BacktestJobConsumer:
         except CallbackError as exc:
             # 진행 콜백(= PROGRESS 발행) 실패를 엔진이 감싸 올린 것이다.
             logger.error(
-                "progress publication failed for backtestId=%s executionId=%s; not acking: %s",
-                backtest_id,
+                "progress publication failed for runId=%s executionId=%s; not acking: %s",
+                run_id,
                 execution_id,
                 exc,
             )
@@ -293,8 +282,8 @@ class BacktestJobConsumer:
             # 예외는 워커 버그나 브로커 장애다. 어느 쪽이든 결과를 잃은 상태를 완료로
             # 숨기지 않는다(ADR-0003 §6). 반복 재전달되면 로그로 드러난다.
             logger.exception(
-                "unexpected failure for backtestId=%s executionId=%s; not acking",
-                backtest_id,
+                "unexpected failure for runId=%s executionId=%s; not acking",
+                run_id,
                 execution_id,
             )
             acknowledger.requeue()
@@ -304,19 +293,17 @@ class BacktestJobConsumer:
         # 그 뒤에만 ACK한다 (계약 §7).
         acknowledger.ack()
         logger.info(
-            "job done: backtestId=%s executionId=%s status=%s",
-            backtest_id,
+            "job done: runId=%s executionId=%s status=%s",
+            run_id,
             execution_id,
             output.run.status,
         )
 
-    def _execute(
-        self, engine_input: EngineInput, backtest_id: str, execution_id: str
-    ) -> EngineOutput:
-        stream = _EventStream(self._publisher, backtest_id, execution_id, self._new_id, self._clock)
+    def _execute(self, engine_input: EngineInput, run_id: str, execution_id: str) -> EngineOutput:
+        stream = _EventStream(self._publisher, run_id, execution_id, self._new_id, self._clock)
         stream.started()
-        batcher = _ProgressBatcher(stream, self._progress_batch_size)
-        output = self._engine.run(strip_benchmark(engine_input), batcher.on_progress)
+        batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
+        output = self._engine.run(engine_input, batcher.on_progress)
         batcher.flush()
         stream.finished(output)
         return output

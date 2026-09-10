@@ -36,20 +36,14 @@ ruff check src tests && ruff format --check src tests && pytest
   `tests/test_contracts.py`가 그 픽스처를 직접 읽어 round-trip을 검증한다. 스키마 변경은 픽스처 → 백엔드 `port/message` → `contracts/` 순서로 같은 MR에서 함께 고친다.
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
-  진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행은 실행 Consumer(`consumer.py`) 책임.
-  벤치마크도 계약상 실행 Consumer 책임이지만 **계산하지 않는다**(별도 티켓). 백엔드는 사용자가
-  지정하면 `BenchmarkSpec`을 실어 보내는데 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로,
-  실행 Consumer가 **엔진 호출 입력에서만** `benchmark`를 벗긴다(`consumer.strip_benchmark`).
-  엔진의 거절 규칙(`engine_support.py`)은 유지한다 — 벗기는 책임은 계약이 벤치마크 담당으로
-  지정한 실행 Consumer에 있고, 엔진을 직접 호출하는 쪽은 계속 거절당해야 한다.
-  `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며 계약이 그 생략을 "미지정 또는 실패"로
-  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다. 다만 결과 메시지에 "벗겼다"는 표시는
-  남지 않으므로(`diagnostics.warnings` 미사용) `DELISTING_CLASSIFICATION_UNSUPPORTED` 선례처럼
-  경고로 드러내는 방안은 별도 티켓이다
+  진행 콜백은 거래일 1개 단위, `progress.batchTradingDays` 묶음 발행은 실행 Consumer(`consumer.py`) 책임.
+  `FINISHED` payload의 `status`·`partial`·`lastTradingDate`는 `run` 블록의 값을 그대로 옮긴다(백엔드가 일치를 검증).
+  계약 v2(spec 004 T001)에 벤치마크는 없다 — `EngineInput.benchmark`도 `FINISHED.benchmark`도 없고 `strip_benchmark`는 제거했다.
+  제어 메시지(`contracts/control.py`, CANCEL) 수신 루프는 취소 티켓(T011)에서 붙인다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다
-  - `messaging.py` 계약 상수(exchange·queue·routing key, `SCHEMA_VERSION`, prefetch, 묶음 크기)와
+  - `messaging.py` 계약 상수(exchange·queue·routing key·control exchange, `SCHEMA_VERSION`, prefetch)와
     경계 Protocol(`EventPublisher`, `JobAcknowledger`) + 오류 분류(`ContractViolation`, `PublishError`).
     **pika를 import하지 않는다**
   - `consumer.py` `BacktestJobConsumer` — 수신·검증·엔진 호출·발행 순서·ACK 판단. 브로커 기술을 모른다
@@ -76,7 +70,7 @@ ruff check src tests && ruff format --check src tests && pytest
    (`Strategy` ABC 는 `generate_signals` 만 요구하므로 준비 기간은 전략 클래스가 아니라
    레지스트리가 선언한다)
 
-`StrategySpec`·백엔드 record·픽스처·`engine_support.py` 는 건드리지 않는다. 지원하지 않는
+`AllocationSpec`·백엔드 record·픽스처·`engine_support.py` 는 건드리지 않는다. 지원하지 않는
 `version` 을 다른 버전 로직으로 계산해 놓고 그 버전의 결과라고 반환하면 안 되므로 `versions` 를
 반드시 채운다.
 
@@ -87,7 +81,7 @@ ruff check src tests && ruff format --check src tests && pytest
 - 브로커 ACK는 처리와 필수 발행이 완료된 뒤 수행한다(at-least-once). 구체적으로 **FINISHED
   발행이 브로커에서 확인된 뒤에만 작업 메시지를 ACK한다**(계약 §7). 이 순서를 뒤집으면 결과를
   잃고 ACK한 상태가 생긴다. 발행 실패는 완료로 숨기지 않는다(ADR-0003 §6)
-- **멱등성: 같은 `backtestId`가 재전달되면 그냥 다시 실행하고 `executionId`만 새로 발급한다.**
+- **멱등성: 같은 `runId`가 재전달되면 그냥 다시 실행하고 `executionId`만 새로 발급한다.**
   워커는 결과 DB에 쓰지 않는 게 계약(§1)이라 처리 이력을 남길 곳이 없고, 백테스트는 고정 입력에
   대해 결정론적이라 재실행이 안전하다. 중복 방어는 계약 §7이 백엔드 결과 Consumer 쪽에 요구하며
   ("이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK") `eventId`가 그 키다. 그래서

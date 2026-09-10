@@ -75,7 +75,7 @@ class PikaEventPublisher:
             content_type="application/json",
             delivery_mode=2,  # persistent (계약 §3)
             message_id=event.event_id,  # 본문 eventId와 같은 값
-            correlation_id=event.backtest_id,
+            correlation_id=event.run_id,
             headers={"schemaVersion": SCHEMA_VERSION},
             # Spring의 __TypeId__ 헤더는 보내지 않는다 (계약 §3).
         )

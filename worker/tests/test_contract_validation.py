@@ -12,7 +12,7 @@ import pytest
 from conftest import FIXTURE_DIR
 from pydantic import ValidationError
 
-from worker.contracts.engine_input import CommissionModel, EngineInput
+from worker.contracts.engine_input import EngineInput
 
 
 def fixture_body() -> dict[str, Any]:
@@ -21,12 +21,12 @@ def fixture_body() -> dict[str, Any]:
 
 
 def test_fixture_passes_validation() -> None:
-    """픽스처(종목 2개, maxPositionPct 0.50, commission ZERO, leverage 1.0)는 통과한다."""
+    """픽스처(종목 2개, maxPositionPct 0.50, PROVISIONAL-DEMO-1 비용, leverage 1.0)는 통과한다."""
     engine_input = EngineInput.model_validate(fixture_body())
-    assert len(engine_input.universe.instrument_ids) == 2
+    assert len(engine_input.universe.items) == 2
     assert str(engine_input.portfolio.position_sizing.max_position_pct) == "0.50"
-    # model=ZERO는 broker를 쓰지 않는다 (ADR-0004 D1).
-    assert engine_input.execution.commission.broker is None
+    assert engine_input.execution.cost_profile.version == "PROVISIONAL-DEMO-1"
+    assert engine_input.universe.mapping_version is None  # 대응표 없이 종목 직접 지정
 
 
 def _mutate(body: dict[str, Any], path: str, value: Any) -> dict[str, Any]:
@@ -47,24 +47,39 @@ def _drop(body: dict[str, Any], path: str) -> dict[str, Any]:
     return body
 
 
+def _items(*instrument_ids: str) -> list[dict[str, str]]:
+    return [{"instrumentId": item} for item in instrument_ids]
+
+
 VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [
-    # RunSpec: end >= start
+    # RunSpec: runId 비어 있지 않음, end >= start, effectiveStart는 [start, end] 안
+    ("run-blank-id", lambda b: _mutate(b, "run.runId", " ")),
     ("run-end-before-start", lambda b: _mutate(b, "run.end", "2024-12-31")),
+    ("run-effective-start-before-start", lambda b: _mutate(b, "run.effectiveStart", "2024-12-31")),
+    ("run-effective-start-after-end", lambda b: _mutate(b, "run.effectiveStart", "2025-07-01")),
+    ("run-unknown-scenario", lambda b: _mutate(b, "run.scenario", "STRESS")),
     # UniverseSpec: 비어 있지 않고, {6자리}.XKRX 형식이며, 중복이 없다
-    ("universe-empty", lambda b: _mutate(b, "universe.instrumentIds", [])),
-    ("universe-not-krx", lambda b: _mutate(b, "universe.instrumentIds", ["AAPL"])),
-    ("universe-wrong-venue", lambda b: _mutate(b, "universe.instrumentIds", ["005930.XNAS"])),
-    ("universe-short-code", lambda b: _mutate(b, "universe.instrumentIds", ["5930.XKRX"])),
-    ("universe-nondigit-code", lambda b: _mutate(b, "universe.instrumentIds", ["00593A.XKRX"])),
+    ("universe-empty", lambda b: _mutate(b, "universe.items", [])),
+    ("universe-not-krx", lambda b: _mutate(b, "universe.items", _items("AAPL"))),
+    ("universe-wrong-venue", lambda b: _mutate(b, "universe.items", _items("005930.XNAS"))),
+    ("universe-short-code", lambda b: _mutate(b, "universe.items", _items("5930.XKRX"))),
+    ("universe-nondigit-code", lambda b: _mutate(b, "universe.items", _items("00593A.XKRX"))),
     (
         "universe-duplicated",
-        lambda b: _mutate(b, "universe.instrumentIds", ["005930.XKRX", "005930.XKRX"]),
+        lambda b: _mutate(b, "universe.items", _items("005930.XKRX", "005930.XKRX")),
     ),
-    # MarketDataSpec: datasetId 가 빈 문자열이 아니다
+    (
+        "universe-target-weight-above-one",
+        lambda b: _mutate(
+            b, "universe.items", [{"instrumentId": "005930.XKRX", "targetWeight": "1.5"}]
+        ),
+    ),
+    # MarketDataSpec: datasetId 가 빈 문자열이 아니다, 가격 계열 enum
     ("market-data-blank-dataset-id", lambda b: _mutate(b, "marketData.datasetId", "  ")),
-    # StrategySpec: strategyId, version 이 빈 문자열이 아니다
-    ("strategy-empty-id", lambda b: _mutate(b, "strategy.strategyId", "")),
-    ("strategy-empty-version", lambda b: _mutate(b, "strategy.version", "")),
+    ("market-data-unknown-fill-price", lambda b: _mutate(b, "marketData.fillPrice", "VWAP")),
+    # AllocationSpec: strategyId, rulesVersion 이 빈 문자열이 아니다
+    ("allocation-empty-id", lambda b: _mutate(b, "allocation.strategyId", "")),
+    ("allocation-empty-rules-version", lambda b: _mutate(b, "allocation.rulesVersion", "")),
     # PositionSizing: maxPositionPct 가 있으면 0 < 값 <= 1
     (
         "position-sizing-pct-zero",
@@ -78,32 +93,29 @@ VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [
         "position-sizing-pct-above-one",
         lambda b: _mutate(b, "portfolio.positionSizing.maxPositionPct", "1.5"),
     ),
-    # PortfolioSpec: initialCash > 0, leverage >= 1, currency 3글자 대문자
+    # PortfolioSpec: initialCash > 0, leverage >= 1, currency 3글자 대문자, integerLots 필수
     ("portfolio-zero-cash", lambda b: _mutate(b, "portfolio.initialCash", "0")),
     ("portfolio-negative-cash", lambda b: _mutate(b, "portfolio.initialCash", "-1")),
     ("portfolio-leverage-below-one", lambda b: _mutate(b, "portfolio.leverage", "0.5")),
     ("portfolio-currency-lowercase", lambda b: _mutate(b, "portfolio.currency", "krw")),
     ("portfolio-currency-too-long", lambda b: _mutate(b, "portfolio.currency", "KRWW")),
-    # CommissionSpec: model=BROKER 이면 broker 필수. 픽스처 고정값은 ZERO(broker 없음)이므로
-    # 변형 body로 확인한다. 검증하는 대상은 규칙이지 특정 증권사 코드가 아니다.
-    (
-        "commission-broker-missing",
-        lambda b: _mutate(b, "execution.commission", {"model": "BROKER"}),
-    ),
-    (
-        "commission-broker-blank",
-        lambda b: _mutate(b, "execution.commission", {"model": "BROKER", "broker": " "}),
-    ),
-    # SlippageSpec: model=FIXED_BPS 이면 bps 필수이고 bps >= 0
-    ("slippage-bps-missing", lambda b: _drop(b, "execution.slippage.bps")),
-    ("slippage-bps-negative", lambda b: _mutate(b, "execution.slippage.bps", -1)),
-    # ExecutionSpec: orderTypes 가 비어 있지 않다
+    ("portfolio-integer-lots-missing", lambda b: _drop(b, "portfolio.integerLots")),
+    # CostProfile: version 비어 있지 않음, bps >= 0, provisional 필수
+    ("cost-profile-blank-version", lambda b: _mutate(b, "execution.costProfile.version", " ")),
+    ("cost-profile-negative-bps", lambda b: _mutate(b, "execution.costProfile.slippageBps", "-1")),
+    ("cost-profile-provisional-missing", lambda b: _drop(b, "execution.costProfile.provisional")),
+    ("cost-profile-missing", lambda b: _drop(b, "execution.costProfile")),
+    # ExecutionSpec: orderTypes 가 비어 있지 않다, v1 정책값은 더 이상 유효하지 않다
     ("execution-order-types-empty", lambda b: _mutate(b, "execution.orderTypes", [])),
-    # BenchmarkSpec: instrumentId 도 {6자리}.XKRX 형식이다 (계약 README §5).
-    # 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로 이 검증이 마지막 방어선이다.
-    ("benchmark-not-krx", lambda b: _mutate(b, "benchmark.instrumentId", "KOSPI200")),
-    ("benchmark-blank", lambda b: _mutate(b, "benchmark.instrumentId", "")),
-    ("benchmark-wrong-venue", lambda b: _mutate(b, "benchmark.instrumentId", "069500.XNAS")),
+    (
+        "execution-v1-trading-halt",
+        lambda b: _mutate(b, "execution.tradingHalt", "WAIT_UNTIL_RESUME"),
+    ),
+    # EvaluationSpec / ProgressSpec
+    ("evaluation-negative-warmup", lambda b: _mutate(b, "evaluation.warmupTradingDays", -1)),
+    ("evaluation-missing", lambda b: _drop(b, "evaluation")),
+    ("progress-zero-batch", lambda b: _mutate(b, "progress.batchTradingDays", 0)),
+    ("progress-missing", lambda b: _drop(b, "progress")),
 ]
 
 
@@ -121,30 +133,19 @@ def test_same_start_and_end_is_allowed() -> None:
     assert EngineInput.model_validate(body).run.start == EngineInput.model_validate(body).run.end
 
 
-def test_broker_commission_model_accepts_any_broker_identifier() -> None:
-    """``BROKER`` 는 계약에 남아 있다 (요율표 구현은 ADR-0004 D3의 별도 티켓).
-
-    계약이 검증하는 것은 "``model=BROKER`` 면 ``broker`` 가 있어야 한다"는 규칙뿐이고, 어떤
-    증권사 코드가 유효한지는 요율표 구현체가 판단할 몫이다.
-    """
-    body = _mutate(
-        fixture_body(), "execution.commission", {"model": "BROKER", "broker": "SOME-BROKER"}
-    )
-    commission = EngineInput.model_validate(body).execution.commission
-    assert commission.model is CommissionModel.BROKER
-    assert commission.broker == "SOME-BROKER"
-
-
-def test_zero_commission_model_needs_no_broker() -> None:
-    """``ZERO`` 는 수수료·세금·제비용 0이며 ``broker`` 를 쓰지 않는다 (ADR-0004 D1)."""
-    body = _mutate(fixture_body(), "execution.commission", {"model": "ZERO"})
-    assert EngineInput.model_validate(body).execution.commission.model is CommissionModel.ZERO
-
-
 def test_absent_max_position_pct_is_allowed() -> None:
     """maxPositionPct 는 생략 가능(제한 없음)하므로 키가 없어도 통과한다."""
     body = _drop(fixture_body(), "portfolio.positionSizing.maxPositionPct")
     assert EngineInput.model_validate(body).portfolio.position_sizing.max_position_pct is None
+
+
+def test_optional_v2_blocks_may_be_absent() -> None:
+    """dataVersion·mappingVersion·rules·scenarioParams·effectiveStart는 계약상 생략 가능하다."""
+    engine_input = EngineInput.model_validate(fixture_body())
+    assert engine_input.market_data.data_version is None
+    assert engine_input.allocation.rules is None
+    assert engine_input.run.scenario_params is None and engine_input.run.effective_start is None
+    assert engine_input.evaluation.warmup_trading_days is None
 
 
 def test_validation_message_names_the_field() -> None:

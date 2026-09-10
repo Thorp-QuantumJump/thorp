@@ -120,9 +120,9 @@ def test_injected_provider_is_reusable_across_runs() -> None:
     assert len(first_recorder.calls) == len(second_recorder.calls) == 7
     assert first_recorder.calls == second_recorder.calls
     # 다른 입력을 이어서 실행해도 앞선 실행 결과와 섞이지 않는다.
-    single_day = {"backtestId": "REUSE", "start": "2025-01-06", "end": "2025-01-06"}
+    single_day = {"runId": "REUSE", "start": "2025-01-06", "end": "2025-01-06"}
     other, other_artifacts = engine.run_with_artifacts(request(run=single_day))
-    assert other.run.backtest_id == "REUSE"
+    assert other.run.run_id == "REUSE"
     assert other.execution.order_count == 1
     assert first.execution.order_count == 3
     # 산출물은 반환값으로만 나가므로 앞선 실행의 주문 원장이 뒤 실행에 남지 않는다.
@@ -155,7 +155,7 @@ def test_gap_rejects_whole_order_and_retries_without_future_sizing() -> None:
 
 
 def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
-    req = request(run={"backtestId": "LAST", "start": "2025-01-06", "end": "2025-01-06"})
+    req = request(run={"runId": "LAST", "start": "2025-01-06", "end": "2025-01-06"})
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)
     assert output.run.status == "COMPLETED", output.run.error
     assert output.execution.order_count == 1
@@ -169,7 +169,7 @@ def test_final_signal_unfilled_and_single_day_metrics_null() -> None:
 
 
 def test_insufficient_history_stays_cash_and_warns() -> None:
-    req = request(strategy={"parameters": {"lookbackDays": 120}})
+    req = request(allocation={"parameters": {"lookbackDays": 120}})
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(req)
     assert output.run.status == "COMPLETED", output.run.error
     assert output.execution.order_count == 0
@@ -350,15 +350,15 @@ def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_empty_evaluation_is_failed_without_fake_metrics() -> None:
-    req = request(run={"backtestId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
+    req = request(run={"runId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)
     assert output.run.status is RunStatus.FAILED
     # 실패 사유는 계약 위치(run.error)에 실린다. 여기가 아니면 백엔드가 조용히 버린다.
-    assert output.run.error.code == "NO_MARKET_DATA"
+    assert output.run.error.code == "DATA_INSUFFICIENT"
     assert "No evaluation trading days" in output.run.error.message
     assert output.performance is None and output.execution is None
     payload = json.loads(output.to_json())
-    assert payload["run"]["error"]["code"] == "NO_MARKET_DATA"
+    assert payload["run"]["error"]["code"] == "DATA_INSUFFICIENT"
     # 존재하지 않는 성과를 0으로 채우지도, 명시 null로 내보내지도 않는다.
     assert "performance" not in payload and "execution" not in payload
     assert payload["portfolioSeries"] == [] and payload["trades"] == []
@@ -374,8 +374,8 @@ def test_120_previous_closes_are_required() -> None:
     frame["volume"] = 0  # Volume does not limit fills in this demo.
     frame.loc[dates[121], ["open", "low"]] = 110
     req = request(
-        run={"backtestId": "120", "start": dates[119].date(), "end": dates[-1].date()},
-        strategy={"parameters": {"lookbackDays": 120}},
+        run={"runId": "120", "start": dates[119].date(), "end": dates[-1].date()},
+        allocation={"parameters": {"lookbackDays": 120}},
     )
     output, artifacts = NautilusMomentumEngine(FrameProvider(frame)).run_with_artifacts(req)
     assert output.run.status == "COMPLETED", output.run.error

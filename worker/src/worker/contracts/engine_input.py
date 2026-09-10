@@ -1,4 +1,4 @@
-"""작업 메시지 본문 EngineInput. 기준: README §4.1, 픽스처 engine-input.json.
+"""작업 메시지 본문 EngineInput(schemaVersion 2). 기준: README §4.1, 픽스처 engine-input*.json.
 
 구조(필드 이름·타입)뿐 아니라 값의 불변식도 역직렬화와 함께 검증한다(README §8).
 검증은 "메시지만 보고 판단할 수 있고 수신자가 누구든 답이 같은 것"으로 한정한다.
@@ -11,7 +11,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from pydantic import PrivateAttr, field_validator, model_validator
+from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from worker.contracts.base import ContractModel
 from worker.contracts.strategy_params import STRATEGY_PARAMETERS
@@ -29,6 +29,12 @@ def _require_text(value: str, field: str) -> str:
     return value
 
 
+def _require_instrument_id(value: str, field: str) -> str:
+    if not _INSTRUMENT_ID_PATTERN.fullmatch(value):
+        raise ValueError(f"{field} must look like '{{6-digit code}}.XKRX'; got {value!r}")
+    return value
+
+
 class Interval(StrEnum):
     DAY_1 = "1D"
 
@@ -39,6 +45,26 @@ class Adjustment(StrEnum):
 
 class PriceType(StrEnum):
     LAST = "LAST"
+
+
+class PriceSource(StrEnum):
+    """체결(fillPrice)·신호(signalPrice)에 쓰는 가격 계열. 계약 고정: RAW / ADJUSTED."""
+
+    RAW = "RAW"
+    ADJUSTED = "ADJUSTED"
+
+
+class DistributionPolicy(StrEnum):
+    CASH_ON_PAY_DATE = "CASH_ON_PAY_DATE"
+
+
+class Scenario(StrEnum):
+    """주 분석 또는 별도 시나리오(spec 004 FR-016)."""
+
+    FULL_PERIOD = "FULL_PERIOD"
+    FRESH_CASH_FROM = "FRESH_CASH_FROM"
+    COST_ESCALATION = "COST_ESCALATION"
+    TARGET_RISK = "TARGET_RISK"
 
 
 class PositionSizingType(StrEnum):
@@ -57,29 +83,12 @@ class OrderType(StrEnum):
     MARKET = "MARKET"
 
 
-class CommissionModel(StrEnum):
-    """거래비용 모델 (ADR-0004).
-
-    ``ZERO`` 는 수수료·세금·제비용을 모두 0으로 계산하며 ``broker`` 를 쓰지 않는다. 임시
-    우회값이 아니라 "거래비용을 제외한 순수 전략 성능"을 뜻하는 정식 모델이다.
-    ``BROKER`` 는 증권사 요율표대로 계산하고 ``broker`` 가 필수다(요율표 구현은 전략 비교
-    단계의 별도 티켓 — ADR-0004 D3).
-    """
-
-    BROKER = "BROKER"
-    ZERO = "ZERO"
-
-
-class SlippageModel(StrEnum):
-    FIXED_BPS = "FIXED_BPS"
-
-
 class LiquidityModel(StrEnum):
     UNLIMITED = "UNLIMITED"
 
 
 class TradingHaltPolicy(StrEnum):
-    WAIT_UNTIL_RESUME = "WAIT_UNTIL_RESUME"
+    DEFER_TO_NEXT_TRADABLE = "DEFER_TO_NEXT_TRADABLE"
 
 
 class DelistingPolicy(StrEnum):
@@ -87,43 +96,82 @@ class DelistingPolicy(StrEnum):
 
 
 class RunSpec(ContractModel):
-    backtest_id: str
+    run_id: str  # 이벤트 envelope의 runId와 같다
     start: date
     end: date
+    effective_start: date | None = None  # None = 미산출(엔진이 자료로 정한다)
     random_seed: int | None = None  # None = 미지정
+    scenario: Scenario
+    scenario_params: dict[str, Any] | None = None  # TARGET_RISK: targetVolatility 등
+    scenario_rules: dict[str, Any] | None = None  # 시나리오 규칙 사본(등록표)
+
+    @field_validator("run_id")
+    @classmethod
+    def _run_id_present(cls, value: str) -> str:
+        return _require_text(value, "run.runId")
 
     @model_validator(mode="after")
     def _dates_ordered(self) -> "RunSpec":
         if self.end < self.start:
             raise ValueError(f"run.end ({self.end}) must be on or after run.start ({self.start})")
+        if self.effective_start is not None and not self.start <= self.effective_start <= self.end:
+            raise ValueError(
+                f"run.effectiveStart ({self.effective_start}) must lie within "
+                f"[run.start, run.end] = [{self.start}, {self.end}]"
+            )
         return self
 
 
-class UniverseSpec(ContractModel):
-    instrument_ids: list[str]  # "{6자리코드}.XKRX"
+class UniverseItem(ContractModel):
+    sector_id: str | None = None  # None = 대응표 없이 종목 직접 지정
+    instrument_id: str  # "{6자리코드}.XKRX"
+    target_weight: Decimal | None = None  # FIXED_WEIGHT에서만 존재
 
-    @field_validator("instrument_ids")
+    @field_validator("instrument_id")
     @classmethod
-    def _krx_instrument_ids(cls, value: list[str]) -> list[str]:
-        if not value:
-            raise ValueError("universe.instrumentIds must contain at least one instrument")
-        malformed = [item for item in value if not _INSTRUMENT_ID_PATTERN.fullmatch(item)]
-        if malformed:
+    def _krx_instrument_id(cls, value: str) -> str:
+        return _require_instrument_id(value, "universe.items[].instrumentId")
+
+    @field_validator("target_weight")
+    @classmethod
+    def _target_weight_is_a_ratio(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and not 0 <= value <= 1:
             raise ValueError(
-                "universe.instrumentIds entries must look like '{6-digit code}.XKRX'; "
-                f"got {malformed}"
+                f"universe.items[].targetWeight must be a ratio in [0, 1]; got {value}"
             )
-        duplicated = sorted({item for item in value if value.count(item) > 1})
-        if duplicated:
-            raise ValueError(f"universe.instrumentIds must not repeat an instrument: {duplicated}")
         return value
+
+
+class UniverseSpec(ContractModel):
+    mapping_version: str | None = None  # None = 대응표 없이 종목 직접 지정(003 연동 전)
+    items: list[UniverseItem]
+
+    @field_validator("items")
+    @classmethod
+    def _items_present_and_unique(cls, value: list[UniverseItem]) -> list[UniverseItem]:
+        if not value:
+            raise ValueError("universe.items must contain at least one instrument")
+        ids = [item.instrument_id for item in value]
+        duplicated = sorted({item for item in ids if ids.count(item) > 1})
+        if duplicated:
+            raise ValueError(f"universe.items must not repeat an instrument: {duplicated}")
+        return value
+
+    @property
+    def instrument_ids(self) -> list[str]:
+        """종목 코드만 순서대로. 대응표(sectorId)는 엔진이 알 필요가 없다."""
+        return [item.instrument_id for item in self.items]
 
 
 class MarketDataSpec(ContractModel):
     dataset_id: str
+    data_version: str | None = None  # None = 미지정(공급자가 정한다)
     interval: Interval
     adjustment: Adjustment
     price_type: PriceType
+    fill_price: PriceSource
+    signal_price: PriceSource
+    distributions: DistributionPolicy
 
     @field_validator("dataset_id")
     @classmethod
@@ -131,13 +179,15 @@ class MarketDataSpec(ContractModel):
         return _require_text(value, "marketData.datasetId")
 
 
-class StrategySpec(ContractModel):
+class AllocationSpec(ContractModel):
+    """배분 전략 지정. v1의 ``strategy`` 블록에 규칙 사본·버전이 붙은 것이다."""
+
     strategy_id: str
-    version: str
+    rules_version: str
+    # 규칙 명세 사본(등록표). None = 등록표 연동 전. 엔진은 자체 기본값을 두지 않는다.
+    rules: dict[str, Any] | None = None
     # 전략별 자유 형식. 정수는 int, 소수는 float로 그대로 통과 (문자열 변환 금지).
     # 봉투는 dict로 남기고, 어떤 키가 오는지는 worker.contracts.strategy_params 가 선언한다.
-    # 여기를 전략별 union으로 바꾸면 전략을 추가할 때마다 이 파일·백엔드 record·픽스처를
-    # 함께 고쳐야 한다.
     parameters: dict[str, Any]
 
     # 레지스트리에 등록된 전략의 검증 결과. PrivateAttr이므로 model_dump에 나오지 않는다.
@@ -146,15 +196,15 @@ class StrategySpec(ContractModel):
     @field_validator("strategy_id")
     @classmethod
     def _strategy_id_present(cls, value: str) -> str:
-        return _require_text(value, "strategy.strategyId")
+        return _require_text(value, "allocation.strategyId")
 
-    @field_validator("version")
+    @field_validator("rules_version")
     @classmethod
-    def _version_present(cls, value: str) -> str:
-        return _require_text(value, "strategy.version")
+    def _rules_version_present(cls, value: str) -> str:
+        return _require_text(value, "allocation.rulesVersion")
 
     @model_validator(mode="after")
-    def _validate_registered_parameters(self) -> "StrategySpec":
+    def _validate_registered_parameters(self) -> "AllocationSpec":
         """등록된 전략이면 parameters를 전략별 모델로 검증한다.
 
         미등록 strategyId는 통과시킨다 — 엔진이 지원하는 전략의 범위는 메시지만 보고
@@ -167,15 +217,12 @@ class StrategySpec(ContractModel):
 
     @property
     def typed_parameters(self) -> ContractModel:
-        """전략별 모델로 검증된 parameters.
-
-        미등록 ``strategyId`` 라 검증된 값이 없으면 오류를 낸다.
-        """
+        """전략별 모델로 검증된 parameters. 미등록 ``strategyId`` 면 오류를 낸다."""
         if self._typed_parameters is None:
             known = ", ".join(sorted(STRATEGY_PARAMETERS)) or "(none)"
             raise LookupError(
-                f"strategy.strategyId {self.strategy_id!r} has no registered parameter schema; "
-                f"known strategies: {known}"
+                f"allocation.strategyId {self.strategy_id!r} has no registered parameter "
+                f"schema; known strategies: {known}"
             )
         return self._typed_parameters
 
@@ -200,6 +247,7 @@ class PortfolioSpec(ContractModel):
     position_sizing: PositionSizing
     short_selling: bool
     leverage: Decimal
+    integer_lots: bool
 
     @field_validator("initial_cash")
     @classmethod
@@ -225,33 +273,24 @@ class PortfolioSpec(ContractModel):
         return value
 
 
-class CommissionSpec(ContractModel):
-    model: CommissionModel
-    broker: str | None = None  # model=BROKER일 때 필수 (예 KIWOOM)
-    version: str | None = None  # 요율표 버전 (예 2026-09)
+class CostProfile(ContractModel):
+    """비용 조건 버전(``cost_profile``). bps 값은 plain 문자열 decimal.
 
-    @model_validator(mode="after")
-    def _broker_required_for_broker_model(self) -> "CommissionSpec":
-        if self.model is CommissionModel.BROKER and not (self.broker or "").strip():
-            raise ValueError(
-                "execution.commission.broker is required when commission.model is BROKER"
-            )
-        return self
+    ``provisional=True`` 는 팀 결정(PD-07) 전 임시값이라는 표시이며 결과 ``versions`` 에 그대로
+    남는다.
+    """
 
+    version: str
+    commission_bps: Decimal = Field(ge=0)
+    spread_bps: Decimal = Field(ge=0)
+    slippage_bps: Decimal = Field(ge=0)
+    tax_bps: Decimal = Field(ge=0)
+    provisional: bool
 
-class SlippageSpec(ContractModel):
-    model: SlippageModel
-    bps: int | None = None  # model=FIXED_BPS일 때 필수
-
-    @model_validator(mode="after")
-    def _bps_required_for_fixed_bps_model(self) -> "SlippageSpec":
-        if self.model is not SlippageModel.FIXED_BPS:
-            return self
-        if self.bps is None:
-            raise ValueError("execution.slippage.bps is required when slippage.model is FIXED_BPS")
-        if self.bps < 0:
-            raise ValueError(f"execution.slippage.bps must not be negative; got {self.bps}")
-        return self
+    @field_validator("version")
+    @classmethod
+    def _version_present(cls, value: str) -> str:
+        return _require_text(value, "execution.costProfile.version")
 
 
 class LiquiditySpec(ContractModel):
@@ -262,8 +301,7 @@ class ExecutionSpec(ContractModel):
     signal_timing: SignalTiming
     execution_timing: ExecutionTiming
     order_types: list[OrderType]
-    commission: CommissionSpec
-    slippage: SlippageSpec
+    cost_profile: CostProfile
     partial_fill: bool
     liquidity: LiquiditySpec
     trading_halt: TradingHaltPolicy
@@ -277,20 +315,15 @@ class ExecutionSpec(ContractModel):
         return value
 
 
-class BenchmarkSpec(ContractModel):
-    instrument_id: str  # "{6자리코드}.XKRX"
+class EvaluationSpec(ContractModel):
+    split_version: str | None = None  # None = 미지정
+    # None = 엔진이 전략 관측 기간으로 정한다
+    warmup_trading_days: int | None = Field(default=None, ge=0)
+    liquidation_at_end: bool
 
-    @field_validator("instrument_id")
-    @classmethod
-    def _krx_instrument_id(cls, value: str) -> str:
-        # 계약 README §5는 benchmark의 instrumentId도 같은 형식으로 규정하고 형식 위반을
-        # 계약 오류(→ DLQ)로 둔다. 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로
-        # (consumer.strip_benchmark) 이 검증이 없으면 형식이 깨진 값이 조용히 통과한다.
-        if not _INSTRUMENT_ID_PATTERN.fullmatch(value):
-            raise ValueError(
-                f"benchmark.instrumentId must look like '{{6-digit code}}.XKRX'; got {value!r}"
-            )
-        return value
+
+class ProgressSpec(ContractModel):
+    batch_trading_days: int = Field(gt=0)  # PROGRESS 발행 묶음 크기(거래일)
 
 
 class EngineInput(ContractModel):
@@ -299,7 +332,8 @@ class EngineInput(ContractModel):
     run: RunSpec
     universe: UniverseSpec
     market_data: MarketDataSpec
-    strategy: StrategySpec
+    allocation: AllocationSpec
     portfolio: PortfolioSpec
     execution: ExecutionSpec
-    benchmark: BenchmarkSpec | None = None  # None = 벤치마크 미지정
+    evaluation: EvaluationSpec
+    progress: ProgressSpec
