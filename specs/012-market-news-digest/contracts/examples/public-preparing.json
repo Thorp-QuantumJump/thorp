@@ -1,0 +1,17 @@
+{
+  "httpStatus": "OK",
+  "isSuccess": true,
+  "message": "요청이 성공적으로 처리되었습니다.",
+  "code": 200,
+  "result": {
+    "context": "CURRENT",
+    "state": "PREPARING",
+    "sectorId": null,
+    "from": null,
+    "to": null,
+    "lastUpdatedAt": null,
+    "stale": false,
+    "statusMessage": "뉴스 제공을 준비하고 있습니다.",
+    "digests": []
+  }
+}
