@@ -26,6 +26,10 @@ $COMPOSE build backend worker
 $COMPOSE up -d
 
 echo "[4/4] nginx 재적용 및 정리"
+# bind mount된 템플릿 변경은 컨테이너 재시작 없이 자동 반영되지 않는다.
+# 공식 nginx entrypoint 스크립트로 설정을 다시 생성한 뒤 유효한 경우에만 reload한다.
+$COMPOSE exec -T nginx /docker-entrypoint.d/20-envsubst-on-templates.sh
+$COMPOSE exec -T nginx nginx -t
 $COMPOSE exec -T nginx nginx -s reload
 docker image prune -f
 

@@ -2,8 +2,9 @@
 //
 // Jenkins Job 설정
 //   - Pipeline script from SCM → Script Path: infra/jenkins/Jenkinsfile.deploy
-//   - 트리거: 초반에는 Poll SCM(H/2 * * * *)을 권장한다.
-//     Jenkins를 127.0.0.1에만 묶어두면 GitLab Webhook이 들어올 수 없기 때문이다.
+//   - GitLab Webhook URL: https://<DOMAIN>/jenkins/project/<JOB_NAME>
+//   - Build Trigger: GitLab Push Event, branch name filter: dev
+//   - Advanced에서 Secret Token을 생성해 GitLab Webhook에도 같은 값을 등록한다.
 pipeline {
     agent any
 

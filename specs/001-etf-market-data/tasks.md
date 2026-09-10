@@ -114,7 +114,7 @@ cd backend  && ./gradlew spotlessApply build
 - [ ] T036 [US2] `data/src/data_pipeline/corporate_actions.py`에 분배금·분할 수집과 소급 조정 계수 산출을 구현한다. `adjusted_close`와 `adjustment_factor`를 함께 저장한다 (research.md 결정 2)
 - [ ] T037 [US2] `data/src/data_pipeline/corporate_actions.py`에 상장일·상장폐지일 확보를 넣는다. 상장 전 합성 이력이나 미래 자료로 빈 값을 채우지 않는다 (FR-005)
 - [ ] T038 [P] [US2] `data/src/data_pipeline/index.py`에 KOSPI 시리즈 일별 자료 수집을 구현한다. 확보 기간이 비교 대상 대표 ETF의 상장 이후 전체를 포함하는지 검사한다 (FR-009)
-- [ ] T039 [US2] `data/src/data_pipeline/gaps.py`에 자료 부족 구간 산출을 구현한다. `reason`은 `AMBIGUOUS_PRICE`·`MISSING_CORPORATE_ACTION`·`RECONCILIATION_UNKNOWN`·`INDEX_HISTORY_SHORT`이며, **`SUSPENDED_TOO_LONG`은 PD-18 확정 전까지 쓰지 않는다** (FR-006, contracts/market-dataset.md)
+- [ ] T039 [US2] `data/src/data_pipeline/gaps.py`에 자료 부족 구간 산출을 구현한다. `reason`은 `AMBIGUOUS_PRICE`·`MISSING_CORPORATE_ACTION`·`RECONCILIATION_UNKNOWN`·`INDEX_HISTORY_SHORT`이며, **`SUSPENDED_TOO_LONG`은 PD-19·PD-20 확정 전까지 쓰지 않는다** (FR-006, contracts/market-dataset.md)
 - [ ] T040 [US2] `data/src/data_pipeline/gaps.py`에 거래정지 처리를 구현한다. 길이와 무관하게 직전 종가를 평가에만 쓰고 `price_carried_forward`를 표시하며, 정지 구간을 `suspension_period`에 시작일·종료일·거래일 수로 기록한다 (FR-006 임시 동작)
 - [ ] T041 [US2] `data/scripts/ingest_krx.py` 스캐폴딩을 완성한다. `--map-version`·`--until`·`--sample`·`--simulate-quota-exhausted` 인자를 받고, Parquet 사본과 서비스 저장소에 함께 적재한다 (research.md 결정 8)
 - [ ] T042 [P] [US2] `data/scripts/ingest_index.py`를 만들어 지수 자료 수집 진입점을 제공한다
@@ -171,13 +171,13 @@ cd backend  && ./gradlew spotlessApply build
 
 ---
 
-## Phase 7: PD-18 확정 (Phase 4 이후, 본선과 독립)
+## Phase 7: PD-19·PD-20 확정 (Phase 4 이후, 본선과 독립)
 
 **목적**: 긴 거래정지의 처리 방식과 기준 일수를 정한다. Phase 4가 쌓아 둔 `suspension_period` 기록이 입력이므로 그 뒤에 시작한다.
 
 - [ ] T066 `data/scripts/suspension_stats.py`를 만들어 `suspension_period`에서 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포
-- [ ] T067 그 분포로 처리 방식 B(정지 이후만)·C(정지 이전만)·D(후보 제외) 각각을 적용했을 때 공통 평가 기간이 얼마나 줄어드는지 계산한다. 손실 규모를 수치로 비교한다 (research.md 「PD-18을 나중에 정하기 위한 준비」)
-- [ ] T068 처리 방식과 기준 일수를 확정하고 `specs/README.md`의 PD-18a·PD-18b를 갱신한다. 정지 구간을 빼고 앞뒤를 이어 붙이는 방식은 후보에서 제외된 상태다
+- [ ] T067 그 분포로 처리 방식 B(정지 이후만)·C(정지 이전만)·D(후보 제외) 각각을 적용했을 때 공통 평가 기간이 얼마나 줄어드는지 계산한다. 손실 규모를 수치로 비교한다 (research.md 「PD-19·PD-20을 나중에 정하기 위한 준비」)
+- [ ] T068 처리 방식과 기준 일수를 확정하고 `specs/README.md`의 PD-19·PD-20를 갱신한다. 정지 구간을 빼고 앞뒤를 이어 붙이는 방식은 후보에서 제외된 상태다
 - [ ] T069 확정한 규칙을 `spec.md` FR-006과 `contracts/market-dataset.md` 「거래정지 처리」에 반영하고 `data/src/data_pipeline/gaps.py`에 `SUSPENDED_TOO_LONG` 기록을 켠다
 - [ ] T070 `worker/src/worker/market_data.py`의 `metadata.provisionalSuspensionHandling`을 제거하고 `contracts/market-dataset.md`의 임시 처리 안내 문단을 걷는다
 
@@ -212,7 +212,7 @@ Phase 2 (Foundational) ← 저장소와 자료 버전. 모든 스토리를 막�
 Phase 8 (Polish)
 
 Phase 6 (PD-01)  Phase 1 이후 언제든. 본선과 의존 없음
-Phase 7 (PD-18)  Phase 4 이후. suspension_period 기록이 필요하다
+Phase 7 (PD-19·PD-20)  Phase 4 이후. suspension_period 기록이 필요하다
 ```
 
 ### User Story Dependencies
@@ -300,5 +300,5 @@ Phase 2의 스키마(T006~T009)가 두 파트의 접점이므로 먼저 합의�
 - **T004는 DATA 파트 합의가 선행되어야 한다.** `data/CLAUDE.md`의 원천과 컬럼 표준을 바꾸는 일이라 AI나 한 사람이 정할 수 없다
 - **T051은 세 곳을 함께 고치는 작업이 아니다.** `datasetId`의 값 규칙만 바꾸므로 스키마는 그대로이고 픽스처 값 하나가 바뀐다. 만약 필드를 추가해야 하는 상황이 되면 `backend/CLAUDE.md`가 정한 순서(픽스처 → `port/message` → `worker/contracts/`)를 지킨다
 - **T029는 Worker와 Backend가 공유하는 픽스처다.** 산식을 고칠 때는 `contracts/README.md` 「계약 변경 순서」를 따른다
-- **PD-18 확정 전 임시 동작을 함부로 바꾸지 않는다.** `suspension_period` 기록이 Phase 7의 입력이므로, 정지를 제외하도록 미리 바꾸면 결정 근거가 사라진다
+- **PD-19·PD-20 확정 전 임시 동작을 함부로 바꾸지 않는다.** `suspension_period` 기록이 Phase 7의 입력이므로, 정지를 제외하도록 미리 바꾸면 결정 근거가 사라진다
 - 커밋은 작업 단위로 하고, MR 전에 AI 코드리뷰를 수행한다 (루트 `CLAUDE.md`)
