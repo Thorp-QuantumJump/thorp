@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -117,8 +118,20 @@ class BacktestEventServiceTest {
         assertThat(command.executionId()).isEqualTo(event.executionId());
         assertThat(command.eventId()).isEqualTo(event.eventId());
         assertThat(command.engineOutput()).isSameAs(event.payload().engineOutput());
-        assertThat(command.benchmark()).isSameAs(event.payload().benchmark());
+        assertThat(command.benchmark()).isNull(); // v2 FINISHED에는 벤치마크가 없다
         assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 실행 모델(T003)이 생기기 전에는 저장하지 않고 예외를 낸다")
+    void finishedCancelledIsNotSupportedYet() {
+        givenJob(BacktestStatus.RUNNING);
+
+        assertThatThrownBy(() -> service.handleFinished(MessageFixtures.finishedCancelled()))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining(BACKTEST_ID);
+        verifyNoInteractions(resultRepository);
+        verify(jobRepository, never()).update(any());
     }
 
     @Test
@@ -133,7 +146,7 @@ class BacktestEventServiceTest {
                 ArgumentCaptor.forClass(SaveBacktestResultCommand.class);
         verify(resultRepository).save(captor.capture());
         assertThat(captor.getValue().engineOutput().run().error().code())
-                .isEqualTo("NO_MARKET_DATA");
+                .isEqualTo("DATA_INSUFFICIENT");
         assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.FAILED);
     }
 

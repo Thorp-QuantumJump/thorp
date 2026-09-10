@@ -1,28 +1,49 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "eventId": "EVT-000002",
-  "backtestId": "BT-20260907-000001",
+  "runId": "BT-20260907-000001",
   "executionId": "EXEC-000001",
   "type": "FINISHED",
   "sequence": 1,
   "occurredAt": "2026-09-07T01:00:01Z",
   "payload": {
+    "status": "FAILED",
+    "partial": false,
     "engineOutput": {
       "run": {
-        "backtestId": "BT-20260907-000001",
+        "runId": "BT-20260907-000001",
         "status": "FAILED",
         "startedAt": "2026-09-07T01:00:00Z",
         "finishedAt": "2026-09-07T01:00:01Z",
+        "partial": false,
         "error": {
-          "code": "NO_MARKET_DATA",
+          "code": "DATA_INSUFFICIENT",
           "message": "Market data is unavailable for 000660.XKRX in the requested period."
         }
       },
       "portfolioSeries": [],
       "trades": [],
+      "versions": {
+        "rules": {
+          "version": "1.0.0",
+          "provisional": false
+        },
+        "costProfile": {
+          "version": "PROVISIONAL-DEMO-1",
+          "provisional": true
+        },
+        "data": "FIXTURE-2026-09-07",
+        "engine": "nautilus_trader 1.219.0",
+        "worker": "2.0.0"
+      },
       "diagnostics": {
         "warnings": []
       }
+    },
+    "resource": {
+      "peakRssMb": "128.0",
+      "cpuSeconds": "0.210",
+      "wallSeconds": "0.900"
     }
   }
 }

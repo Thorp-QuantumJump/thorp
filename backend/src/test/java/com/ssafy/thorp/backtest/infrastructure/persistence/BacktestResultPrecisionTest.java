@@ -111,11 +111,13 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
                         TRAILING_ZERO,
                         "KRW",
                         TINY,
+                        null,
                         LONG_SCALE.negate(),
                         TINY.negate(),
                         null,
                         new BigDecimal("0.000000"),
                         1,
+                        null,
                         null);
         var position =
                 new EngineOutput.PositionSnapshot(
@@ -129,7 +131,8 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
                         null,
                         TRAILING_ZERO,
                         LONG_SCALE.negate(),
-                        List.of(position));
+                        List.of(position),
+                        null);
         var trade =
                 new EngineOutput.TradeResult(
                         "TRD-1",
@@ -145,15 +148,32 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
                         TRAILING_ZERO,
                         TINY,
                         LONG_SCALE.negate(),
-                        TINY.negate());
+                        TINY.negate(),
+                        null,
+                        null);
         var execution = new EngineOutput.ExecutionResult(1, 1, 0, totalCommission, TINY);
         return new EngineOutput(
                 new EngineOutput.RunResult(
-                        "BT-1", RunStatus.COMPLETED, T0, T0.plusSeconds(1), null),
+                        "BT-1",
+                        RunStatus.COMPLETED,
+                        T0,
+                        T0.plusSeconds(1),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null),
                 performance,
                 List.of(snapshot),
+                null,
+                null,
                 List.of(trade),
                 execution,
+                null,
+                null,
+                null,
+                null,
+                null,
                 new EngineOutput.Diagnostics(List.of()));
     }
 

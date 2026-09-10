@@ -130,7 +130,7 @@ class BacktestEventListenerTest {
                                 listener.onEvent(
                                         mutated(
                                                 MessageFixtures.FINISHED_COMPLETED,
-                                                n -> n.put("schemaVersion", 2))))
+                                                n -> n.put("schemaVersion", 99))))
                 .isInstanceOf(AmqpRejectAndDontRequeueException.class)
                 .hasMessageContaining("schemaVersion");
         verifyNoInteractions(service);
@@ -146,7 +146,7 @@ class BacktestEventListenerTest {
                                                 MessageFixtures.STARTED,
                                                 n -> n.put("type", "FINISHED").put("sequence", 1))))
                 .isInstanceOf(AmqpRejectAndDontRequeueException.class)
-                .hasMessageContaining("payload.engineOutput");
+                .hasMessageContaining("partial"); // 필수 boolean이 없어 역직렬화 단계에서 걸린다
         verifyNoInteractions(service);
     }
 

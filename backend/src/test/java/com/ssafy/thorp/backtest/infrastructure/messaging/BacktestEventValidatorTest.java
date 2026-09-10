@@ -51,17 +51,18 @@ class BacktestEventValidatorTest {
 
     static Stream<Arguments> startedViolations() {
         return Stream.of(
-                violation("schemaVersion", n -> n.put("schemaVersion", 2)),
+                violation("schemaVersion", n -> n.put("schemaVersion", 1)),
                 violation("eventId", n -> n.put("eventId", " ")),
                 violation("eventId", n -> n.put("eventId", LONG_ID)),
-                violation("backtestId", n -> n.remove("backtestId")),
+                violation("runId", n -> n.remove("runId")),
                 violation("executionId", n -> n.remove("executionId")),
                 violation("executionId", n -> n.put("executionId", LONG_ID)),
                 violation("sequence", n -> n.put("sequence", -1)),
                 violation("sequence", n -> n.put("sequence", 1)),
                 violation("occurredAt", n -> n.remove("occurredAt")),
                 violation("payload", n -> n.remove("payload")),
-                violation("payload.startedAt", n -> at(n, "/payload").remove("startedAt")));
+                violation("payload.startedAt", n -> at(n, "/payload").remove("startedAt")),
+                violation("payload.stage", n -> at(n, "/payload").remove("stage")));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -84,6 +85,7 @@ class BacktestEventValidatorTest {
     static Stream<Arguments> progressViolations() {
         return Stream.of(
                 violation("sequence", n -> n.put("sequence", 0)),
+                violation("payload.stage", n -> at(n, "/payload").remove("stage")),
                 violation(
                         "payload.completedTradingDays",
                         n -> at(n, "/payload").put("completedTradingDays", -1)),
@@ -93,6 +95,9 @@ class BacktestEventValidatorTest {
                 violation(
                         "payload.completedTradingDays",
                         n -> at(n, "/payload").put("completedTradingDays", 1_000)),
+                violation(
+                        "payload.lastTradingDate",
+                        n -> at(n, "/payload").remove("lastTradingDate")),
                 violation(
                         "payload.portfolioSeries",
                         n -> at(n, "/payload").remove("portfolioSeries")),
@@ -126,14 +131,22 @@ class BacktestEventValidatorTest {
     static Stream<Arguments> completedViolations() {
         return Stream.of(
                 violation("sequence", n -> n.put("sequence", 0)),
+                violation("payload.status", n -> at(n, "/payload").remove("status")),
+                violation("payload.partial", n -> at(n, "/payload").put("partial", true)),
                 violation("payload.engineOutput", n -> at(n, "/payload").remove("engineOutput")),
                 violation("payload.engineOutput.run", n -> at(n, EO).remove("run")),
                 violation(
                         "payload.engineOutput.run.status",
                         n -> at(n, EO + "/run").remove("status")),
                 violation(
-                        "payload.engineOutput.run.backtestId",
-                        n -> at(n, EO + "/run").put("backtestId", "BT-20260907-000999")),
+                        "payload.engineOutput.run.status",
+                        n -> at(n, EO + "/run").put("status", "FAILED")),
+                violation(
+                        "payload.engineOutput.run.runId",
+                        n -> at(n, EO + "/run").put("runId", "BT-20260907-000999")),
+                violation(
+                        "payload.engineOutput.run.partial",
+                        n -> at(n, EO + "/run").put("partial", true)),
                 violation(
                         "payload.engineOutput.run.finishedAt",
                         n -> at(n, EO + "/run").put("finishedAt", "2020-01-01T00:00:00Z")),
@@ -169,9 +182,6 @@ class BacktestEventValidatorTest {
                                         .put("quantity", "1")
                                         .put("marketValue", "1.00")),
                 violation(
-                        "payload.benchmark.instrumentId",
-                        n -> at(n, "/payload/benchmark").put("instrumentId", "X".repeat(40))),
-                violation(
                         "payload.engineOutput.trades[0].entryPrice",
                         n -> at(n, EO + "/trades/0").remove("entryPrice")),
                 violation(
@@ -194,13 +204,7 @@ class BacktestEventValidatorTest {
                 violation(
                         "payload.engineOutput.performance.initialEquity",
                         n -> at(n, EO + "/performance").remove("initialEquity")),
-                violation("payload.engineOutput.execution", n -> at(n, EO).remove("execution")),
-                violation(
-                        "payload.benchmark.instrumentId",
-                        n -> at(n, "/payload/benchmark").remove("instrumentId")),
-                violation(
-                        "payload.benchmark.timeseries[0].equity",
-                        n -> at(n, "/payload/benchmark/timeseries/0").remove("equity")));
+                violation("payload.engineOutput.execution", n -> at(n, EO).remove("execution")));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -223,6 +227,7 @@ class BacktestEventValidatorTest {
     static Stream<Arguments> failedViolations() {
         ObjectNode completed = fixture(MessageFixtures.FINISHED_COMPLETED);
         return Stream.of(
+                violation("payload.partial", n -> at(n, "/payload").put("partial", true)),
                 violation(
                         "payload.engineOutput.run.error", n -> at(n, EO + "/run").remove("error")),
                 violation(
@@ -249,12 +254,7 @@ class BacktestEventValidatorTest {
                                 at(n, EO)
                                         .set(
                                                 "portfolioSeries",
-                                                completed.at(EO + "/portfolioSeries"))),
-                violation(
-                        "payload.benchmark",
-                        n ->
-                                at(n, "/payload")
-                                        .set("benchmark", completed.at("/payload/benchmark"))));
+                                                completed.at(EO + "/portfolioSeries"))));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -272,10 +272,39 @@ class BacktestEventValidatorTest {
                 .hasMessageContaining(path);
     }
 
+    // ---------- FINISHED (CANCELLED) ----------
+
+    static Stream<Arguments> cancelledViolations() {
+        return Stream.of(
+                violation("payload.partial", n -> at(n, "/payload").put("partial", false)),
+                violation(
+                        "payload.lastTradingDate",
+                        n -> at(n, "/payload").remove("lastTradingDate")),
+                violation("payload.engineOutput.performance", n -> at(n, EO).remove("performance")),
+                violation(
+                        "payload.engineOutput.run.status",
+                        n -> at(n, EO + "/run").put("status", "COMPLETED")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("cancelledViolations")
+    @DisplayName("FINISHED(CANCELLED) 위반은 경로를 담은 계약 오류다")
+    void rejectsCancelledViolation(String path, Consumer<ObjectNode> mutation) {
+        ObjectNode node = fixture(MessageFixtures.FINISHED_CANCELLED);
+        mutation.accept(node);
+
+        assertThatThrownBy(
+                        () ->
+                                BacktestEventValidator.validateFinished(
+                                        convert(node, MessageFixtures.FINISHED_EVENT)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(path);
+    }
+
     // ---------- 통과해야 하는 것 ----------
 
     @Test
-    @DisplayName("계약 픽스처 4종은 그대로 통과한다")
+    @DisplayName("계약 픽스처 5종은 그대로 통과한다")
     void acceptsFixtures() {
         assertThatCode(() -> BacktestEventValidator.validateStarted(MessageFixtures.started()))
                 .doesNotThrowAnyException();
@@ -291,6 +320,11 @@ class BacktestEventValidatorTest {
                                 BacktestEventValidator.validateFinished(
                                         MessageFixtures.finishedFailed()))
                 .doesNotThrowAnyException();
+        assertThatCode(
+                        () ->
+                                BacktestEventValidator.validateFinished(
+                                        MessageFixtures.finishedCancelled()))
+                .doesNotThrowAnyException();
     }
 
     static Stream<Arguments> allowedOmissions() {
@@ -302,9 +336,6 @@ class BacktestEventValidatorTest {
                                     at(n, EO + "/performance").remove("sharpeRatio");
                                     at(n, EO + "/performance").remove("winRate");
                                 }),
-                Arguments.of(
-                        "benchmark 없음",
-                        (Consumer<ObjectNode>) n -> at(n, "/payload").remove("benchmark")),
                 Arguments.of(
                         "snapshot의 positions 없음",
                         (Consumer<ObjectNode>)
@@ -332,7 +363,33 @@ class BacktestEventValidatorTest {
                 Arguments.of(
                         "snapshot의 dailyReturn 없음(nullable)",
                         (Consumer<ObjectNode>)
-                                n -> at(n, EO + "/portfolioSeries/0").remove("dailyReturn")));
+                                n -> at(n, EO + "/portfolioSeries/0").remove("dailyReturn")),
+                Arguments.of(
+                        "v2 추가 항목 전부 없음(단일 종목 데모 엔진 출력)",
+                        (Consumer<ObjectNode>)
+                                n -> {
+                                    ObjectNode output = at(n, EO);
+                                    for (String key :
+                                            new String[] {
+                                                "weightsSeries",
+                                                "weightsSource",
+                                                "costs",
+                                                "liquidation",
+                                                "analytics",
+                                                "exceptions",
+                                                "versions"
+                                            }) {
+                                        output.remove(key);
+                                    }
+                                    at(n, EO + "/run").remove("partial");
+                                    at(n, EO + "/run").remove("lastTradingDate");
+                                    at(n, EO + "/run").remove("effectiveStart");
+                                    at(n, EO + "/run").remove("effectiveEnd");
+                                    at(n, EO + "/performance").remove("netTotalReturn");
+                                    at(n, EO + "/performance").remove("totalTradingCost");
+                                    at(n, EO + "/trades/0").remove("reason");
+                                    at(n, "/payload").remove("resource");
+                                }));
     }
 
     @ParameterizedTest(name = "{0}")

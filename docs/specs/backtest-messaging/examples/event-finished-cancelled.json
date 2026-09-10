@@ -1,0 +1,800 @@
+{
+  "schemaVersion": 2,
+  "eventId": "EVT-000005",
+  "runId": "BT-20260907-000001",
+  "executionId": "EXEC-000001",
+  "type": "FINISHED",
+  "sequence": 4,
+  "occurredAt": "2026-09-07T01:00:03Z",
+  "payload": {
+    "status": "CANCELLED",
+    "partial": true,
+    "lastTradingDate": "2025-03-25",
+    "engineOutput": {
+      "run": {
+        "runId": "BT-20260907-000001",
+        "status": "CANCELLED",
+        "startedAt": "2026-09-07T01:00:00Z",
+        "finishedAt": "2026-09-07T01:00:03Z",
+        "partial": true,
+        "lastTradingDate": "2025-03-25",
+        "effectiveStart": "2025-01-01",
+        "effectiveEnd": "2025-06-30"
+      },
+      "performance": {
+        "initialEquity": "10000000.00",
+        "finalEquity": "10774631.35",
+        "currency": "KRW",
+        "totalReturn": "0.077463",
+        "netTotalReturn": "0.077463",
+        "cagr": "0.388330",
+        "maxDrawdown": "-0.041419",
+        "sharpeRatio": "2.289363",
+        "volatility": "0.141231",
+        "tradeCount": 1,
+        "winRate": "0.000000",
+        "totalTradingCost": "9568.65"
+      },
+      "portfolioSeries": [
+        {
+          "date": "2025-01-01",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000",
+          "positions": []
+        },
+        {
+          "date": "2025-01-02",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-03",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-06",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-07",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-08",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-09",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-10",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-13",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-14",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-15",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-16",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-17",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-20",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-21",
+          "equity": "10000000.00",
+          "cash": "10000000.00",
+          "positionValue": "0.00",
+          "dailyReturn": "0.000000",
+          "cumulativeReturn": "0.000000",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-22",
+          "equity": "9996858.55",
+          "cash": "5163858.55",
+          "positionValue": "4833000.00",
+          "dailyReturn": "-0.000314",
+          "cumulativeReturn": "-0.000314",
+          "drawdown": "-0.000314",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "4833000.00",
+              "weight": "0.483452",
+              "unrealizedPnl": "0.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-01-23",
+          "equity": "10014858.55",
+          "cash": "5163858.55",
+          "positionValue": "4851000.00",
+          "dailyReturn": "0.001801",
+          "cumulativeReturn": "0.001486",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-24",
+          "equity": "10122858.55",
+          "cash": "5163858.55",
+          "positionValue": "4959000.00",
+          "dailyReturn": "0.010784",
+          "cumulativeReturn": "0.012286",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-27",
+          "equity": "10131858.55",
+          "cash": "5163858.55",
+          "positionValue": "4968000.00",
+          "dailyReturn": "0.000889",
+          "cumulativeReturn": "0.013186",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-28",
+          "equity": "10122858.55",
+          "cash": "5163858.55",
+          "positionValue": "4959000.00",
+          "dailyReturn": "-0.000888",
+          "cumulativeReturn": "0.012286",
+          "drawdown": "-0.000888"
+        },
+        {
+          "date": "2025-01-29",
+          "equity": "10167858.55",
+          "cash": "5163858.55",
+          "positionValue": "5004000.00",
+          "dailyReturn": "0.004445",
+          "cumulativeReturn": "0.016786",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-01-30",
+          "equity": "10059858.55",
+          "cash": "5163858.55",
+          "positionValue": "4896000.00",
+          "dailyReturn": "-0.010622",
+          "cumulativeReturn": "0.005986",
+          "drawdown": "-0.010622"
+        },
+        {
+          "date": "2025-01-31",
+          "equity": "10032858.55",
+          "cash": "5163858.55",
+          "positionValue": "4869000.00",
+          "dailyReturn": "-0.002684",
+          "cumulativeReturn": "0.003286",
+          "drawdown": "-0.013277"
+        },
+        {
+          "date": "2025-02-03",
+          "equity": "10077858.55",
+          "cash": "5163858.55",
+          "positionValue": "4914000.00",
+          "dailyReturn": "0.004485",
+          "cumulativeReturn": "0.007786",
+          "drawdown": "-0.008851"
+        },
+        {
+          "date": "2025-02-04",
+          "equity": "10149858.55",
+          "cash": "5163858.55",
+          "positionValue": "4986000.00",
+          "dailyReturn": "0.007144",
+          "cumulativeReturn": "0.014986",
+          "drawdown": "-0.001770"
+        },
+        {
+          "date": "2025-02-05",
+          "equity": "10131858.55",
+          "cash": "5163858.55",
+          "positionValue": "4968000.00",
+          "dailyReturn": "-0.001773",
+          "cumulativeReturn": "0.013186",
+          "drawdown": "-0.003541"
+        },
+        {
+          "date": "2025-02-06",
+          "equity": "10164520.15",
+          "cash": "24520.15",
+          "positionValue": "10140000.00",
+          "dailyReturn": "0.003224",
+          "cumulativeReturn": "0.016452",
+          "drawdown": "-0.000328",
+          "positions": [
+            {
+              "instrumentId": "005930.XKRX",
+              "quantity": "90",
+              "marketValue": "5004000.00",
+              "weight": "0.492301",
+              "unrealizedPnl": "171000.00"
+            },
+            {
+              "instrumentId": "000660.XKRX",
+              "quantity": "24",
+              "marketValue": "5136000.00",
+              "weight": "0.505287",
+              "unrealizedPnl": "0.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-02-07",
+          "equity": "10093720.15",
+          "cash": "24520.15",
+          "positionValue": "10069200.00",
+          "dailyReturn": "-0.006965",
+          "cumulativeReturn": "0.009372",
+          "drawdown": "-0.007291"
+        },
+        {
+          "date": "2025-02-10",
+          "equity": "10302520.15",
+          "cash": "24520.15",
+          "positionValue": "10278000.00",
+          "dailyReturn": "0.020686",
+          "cumulativeReturn": "0.030252",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-11",
+          "equity": "10222120.15",
+          "cash": "24520.15",
+          "positionValue": "10197600.00",
+          "dailyReturn": "-0.007804",
+          "cumulativeReturn": "0.022212",
+          "drawdown": "-0.007804"
+        },
+        {
+          "date": "2025-02-12",
+          "equity": "10443520.15",
+          "cash": "114520.15",
+          "positionValue": "10329000.00",
+          "dailyReturn": "0.021659",
+          "cumulativeReturn": "0.044352",
+          "drawdown": "0.000000",
+          "cashFlows": [
+            {
+              "type": "DISTRIBUTION",
+              "instrumentId": "005930.XKRX",
+              "amount": "90000.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-02-13",
+          "equity": "10487320.15",
+          "cash": "114520.15",
+          "positionValue": "10372800.00",
+          "dailyReturn": "0.004194",
+          "cumulativeReturn": "0.048732",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-14",
+          "equity": "10368520.15",
+          "cash": "114520.15",
+          "positionValue": "10254000.00",
+          "dailyReturn": "-0.011328",
+          "cumulativeReturn": "0.036852",
+          "drawdown": "-0.011328"
+        },
+        {
+          "date": "2025-02-17",
+          "equity": "10357120.15",
+          "cash": "114520.15",
+          "positionValue": "10242600.00",
+          "dailyReturn": "-0.001099",
+          "cumulativeReturn": "0.035712",
+          "drawdown": "-0.012415"
+        },
+        {
+          "date": "2025-02-18",
+          "equity": "10586920.15",
+          "cash": "114520.15",
+          "positionValue": "10472400.00",
+          "dailyReturn": "0.022188",
+          "cumulativeReturn": "0.058692",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-19",
+          "equity": "10692520.15",
+          "cash": "114520.15",
+          "positionValue": "10578000.00",
+          "dailyReturn": "0.009975",
+          "cumulativeReturn": "0.069252",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-20",
+          "equity": "10700920.15",
+          "cash": "114520.15",
+          "positionValue": "10586400.00",
+          "dailyReturn": "0.000786",
+          "cumulativeReturn": "0.070092",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-21",
+          "equity": "10625320.15",
+          "cash": "114520.15",
+          "positionValue": "10510800.00",
+          "dailyReturn": "-0.007065",
+          "cumulativeReturn": "0.062532",
+          "drawdown": "-0.007065"
+        },
+        {
+          "date": "2025-02-24",
+          "equity": "10897120.15",
+          "cash": "114520.15",
+          "positionValue": "10782600.00",
+          "dailyReturn": "0.025580",
+          "cumulativeReturn": "0.089712",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-25",
+          "equity": "10839520.15",
+          "cash": "114520.15",
+          "positionValue": "10725000.00",
+          "dailyReturn": "-0.005286",
+          "cumulativeReturn": "0.083952",
+          "drawdown": "-0.005286"
+        },
+        {
+          "date": "2025-02-26",
+          "equity": "10913920.15",
+          "cash": "114520.15",
+          "positionValue": "10799400.00",
+          "dailyReturn": "0.006864",
+          "cumulativeReturn": "0.091392",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-27",
+          "equity": "11062120.15",
+          "cash": "114520.15",
+          "positionValue": "10947600.00",
+          "dailyReturn": "0.013579",
+          "cumulativeReturn": "0.106212",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-02-28",
+          "equity": "11000920.15",
+          "cash": "114520.15",
+          "positionValue": "10886400.00",
+          "dailyReturn": "-0.005532",
+          "cumulativeReturn": "0.100092",
+          "drawdown": "-0.005532"
+        },
+        {
+          "date": "2025-03-03",
+          "equity": "10809520.15",
+          "cash": "114520.15",
+          "positionValue": "10695000.00",
+          "dailyReturn": "-0.017399",
+          "cumulativeReturn": "0.080952",
+          "drawdown": "-0.022835"
+        },
+        {
+          "date": "2025-03-04",
+          "equity": "10904320.15",
+          "cash": "114520.15",
+          "positionValue": "10789800.00",
+          "dailyReturn": "0.008770",
+          "cumulativeReturn": "0.090432",
+          "drawdown": "-0.014265"
+        },
+        {
+          "date": "2025-03-05",
+          "equity": "10960120.15",
+          "cash": "114520.15",
+          "positionValue": "10845600.00",
+          "dailyReturn": "0.005117",
+          "cumulativeReturn": "0.096012",
+          "drawdown": "-0.009221"
+        },
+        {
+          "date": "2025-03-06",
+          "equity": "10925320.15",
+          "cash": "114520.15",
+          "positionValue": "10810800.00",
+          "dailyReturn": "-0.003175",
+          "cumulativeReturn": "0.092532",
+          "drawdown": "-0.012367"
+        },
+        {
+          "date": "2025-03-07",
+          "equity": "11083720.15",
+          "cash": "114520.15",
+          "positionValue": "10969200.00",
+          "dailyReturn": "0.014498",
+          "cumulativeReturn": "0.108372",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-03-10",
+          "equity": "11127520.15",
+          "cash": "114520.15",
+          "positionValue": "11013000.00",
+          "dailyReturn": "0.003952",
+          "cumulativeReturn": "0.112752",
+          "drawdown": "0.000000"
+        },
+        {
+          "date": "2025-03-11",
+          "equity": "10924720.15",
+          "cash": "114520.15",
+          "positionValue": "10810200.00",
+          "dailyReturn": "-0.018225",
+          "cumulativeReturn": "0.092472",
+          "drawdown": "-0.018225"
+        },
+        {
+          "date": "2025-03-12",
+          "equity": "10966631.35",
+          "cash": "4863431.35",
+          "positionValue": "6103200.00",
+          "dailyReturn": "0.003836",
+          "cumulativeReturn": "0.096663",
+          "drawdown": "-0.014459",
+          "positions": [
+            {
+              "instrumentId": "000660.XKRX",
+              "quantity": "24",
+              "marketValue": "6103200.00",
+              "weight": "0.556525",
+              "unrealizedPnl": "967200.00"
+            }
+          ]
+        },
+        {
+          "date": "2025-03-13",
+          "equity": "10935431.35",
+          "cash": "4863431.35",
+          "positionValue": "6072000.00",
+          "dailyReturn": "-0.002845",
+          "cumulativeReturn": "0.093543",
+          "drawdown": "-0.017262"
+        },
+        {
+          "date": "2025-03-14",
+          "equity": "10721831.35",
+          "cash": "4863431.35",
+          "positionValue": "5858400.00",
+          "dailyReturn": "-0.019533",
+          "cumulativeReturn": "0.072183",
+          "drawdown": "-0.036458"
+        },
+        {
+          "date": "2025-03-17",
+          "equity": "10784231.35",
+          "cash": "4863431.35",
+          "positionValue": "5920800.00",
+          "dailyReturn": "0.005820",
+          "cumulativeReturn": "0.078423",
+          "drawdown": "-0.030850"
+        },
+        {
+          "date": "2025-03-18",
+          "equity": "10774631.35",
+          "cash": "4863431.35",
+          "positionValue": "5911200.00",
+          "dailyReturn": "-0.000890",
+          "cumulativeReturn": "0.077463",
+          "drawdown": "-0.031713"
+        },
+        {
+          "date": "2025-03-19",
+          "equity": "10666631.35",
+          "cash": "4863431.35",
+          "positionValue": "5803200.00",
+          "dailyReturn": "-0.010024",
+          "cumulativeReturn": "0.066663",
+          "drawdown": "-0.041419"
+        },
+        {
+          "date": "2025-03-20",
+          "equity": "10738631.35",
+          "cash": "4863431.35",
+          "positionValue": "5875200.00",
+          "dailyReturn": "0.006750",
+          "cumulativeReturn": "0.073863",
+          "drawdown": "-0.034948"
+        },
+        {
+          "date": "2025-03-21",
+          "equity": "10805831.35",
+          "cash": "4863431.35",
+          "positionValue": "5942400.00",
+          "dailyReturn": "0.006258",
+          "cumulativeReturn": "0.080583",
+          "drawdown": "-0.028909"
+        },
+        {
+          "date": "2025-03-24",
+          "equity": "10721831.35",
+          "cash": "4863431.35",
+          "positionValue": "5858400.00",
+          "dailyReturn": "-0.007774",
+          "cumulativeReturn": "0.072183",
+          "drawdown": "-0.036458"
+        },
+        {
+          "date": "2025-03-25",
+          "equity": "10774631.35",
+          "cash": "4863431.35",
+          "positionValue": "5911200.00",
+          "dailyReturn": "0.004925",
+          "cumulativeReturn": "0.077463",
+          "drawdown": "-0.031713",
+          "positions": [
+            {
+              "instrumentId": "000660.XKRX",
+              "quantity": "24",
+              "marketValue": "5911200.00",
+              "weight": "0.548622",
+              "unrealizedPnl": "775200.00"
+            }
+          ]
+        }
+      ],
+      "weightsSeries": [
+        {
+          "date": "2025-01-01",
+          "target": {},
+          "actual": {},
+          "weightError": "0.000000"
+        },
+        {
+          "date": "2025-01-22",
+          "target": {
+            "005930.XKRX": "0.483452"
+          },
+          "actual": {
+            "005930.XKRX": "0.483452"
+          },
+          "weightError": "0.000000"
+        },
+        {
+          "date": "2025-02-06",
+          "target": {
+            "005930.XKRX": "0.492301",
+            "000660.XKRX": "0.505287"
+          },
+          "actual": {
+            "005930.XKRX": "0.492301",
+            "000660.XKRX": "0.505287"
+          },
+          "weightError": "0.000000"
+        },
+        {
+          "date": "2025-03-12",
+          "target": {
+            "000660.XKRX": "0.556525"
+          },
+          "actual": {
+            "000660.XKRX": "0.556525"
+          },
+          "weightError": "0.000000"
+        },
+        {
+          "date": "2025-03-25",
+          "target": {
+            "000660.XKRX": "0.548622"
+          },
+          "actual": {
+            "000660.XKRX": "0.548622"
+          },
+          "weightError": "0.000000"
+        }
+      ],
+      "weightsSource": "COMPUTED",
+      "trades": [
+        {
+          "tradeId": "TRD-000001",
+          "instrumentId": "005930.XKRX",
+          "side": "LONG",
+          "status": "CLOSED",
+          "entryTime": "2025-01-22T00:00:00Z",
+          "exitTime": "2025-03-12T00:00:00Z",
+          "entryPrice": "53700.00",
+          "exitPrice": "52800.00",
+          "quantity": "90",
+          "grossPnl": "-81000.00",
+          "commission": "1437.75",
+          "slippageCost": "4792.50",
+          "realizedPnl": "-87230.25",
+          "returnRate": "-0.018049",
+          "reason": "SIGNAL"
+        },
+        {
+          "tradeId": "TRD-000002",
+          "instrumentId": "000660.XKRX",
+          "side": "LONG",
+          "status": "OPEN",
+          "entryTime": "2025-02-06T00:00:00Z",
+          "entryPrice": "214000.00",
+          "quantity": "24",
+          "commission": "770.40",
+          "slippageCost": "2568.00",
+          "reason": "SIGNAL"
+        }
+      ],
+      "execution": {
+        "orderCount": 3,
+        "fillCount": 3,
+        "rejectedOrderCount": 0,
+        "totalCommission": "2208.15",
+        "totalSlippageCost": "7360.50"
+      },
+      "costs": {
+        "commission": "2208.15",
+        "spread": "0.00",
+        "slippage": "7360.50",
+        "tax": "0.00",
+        "total": "9568.65"
+      },
+      "liquidation": {
+        "markToMarket": {
+          "finalEquity": "10774631.35",
+          "totalReturn": "0.077463"
+        },
+        "liquidated": {
+          "finalEquity": "10770789.07",
+          "totalReturn": "0.077079",
+          "liquidationCost": "3842.28"
+        }
+      },
+      "analytics": {
+        "turnover": "0.706163",
+        "correlationMatrix": {
+          "005930.XKRX": {
+            "005930.XKRX": "1.000000",
+            "000660.XKRX": "-0.186170"
+          },
+          "000660.XKRX": {
+            "005930.XKRX": "-0.186170",
+            "000660.XKRX": "1.000000"
+          }
+        },
+        "riskContribution": {
+          "005930.XKRX": "1.000000",
+          "000660.XKRX": "0.000000"
+        },
+        "lossContribution": {
+          "005930.XKRX": "1.000000",
+          "000660.XKRX": "0.000000"
+        },
+        "weightError": "0.000000",
+        "method": "sample-covariance-daily"
+      },
+      "exceptions": [
+        {
+          "date": "2025-02-26",
+          "instrumentId": "000660.XKRX",
+          "kind": "HALT_DEFERRED",
+          "rule": "DEFER_TO_NEXT_TRADABLE",
+          "action": "Order deferred to the next tradable session."
+        }
+      ],
+      "versions": {
+        "rules": {
+          "version": "1.0.0",
+          "provisional": false
+        },
+        "costProfile": {
+          "version": "PROVISIONAL-DEMO-1",
+          "provisional": true
+        },
+        "data": "FIXTURE-2026-09-07",
+        "engine": "nautilus_trader 1.219.0",
+        "worker": "2.0.0"
+      },
+      "diagnostics": {
+        "warnings": [
+          {
+            "date": "2025-02-26",
+            "instrumentId": "000660.XKRX",
+            "code": "TRADING_HALTED",
+            "message": "Order execution was delayed until trading resumed."
+          }
+        ]
+      }
+    },
+    "resource": {
+      "peakRssMb": "400.0",
+      "cpuSeconds": "1.500",
+      "wallSeconds": "2.100"
+    }
+  }
+}

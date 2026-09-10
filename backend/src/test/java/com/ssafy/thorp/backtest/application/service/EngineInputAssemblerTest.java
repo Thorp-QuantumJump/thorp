@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.domain.model.BacktestJob;
 import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -44,7 +45,7 @@ class EngineInputAssemblerTest {
     }
 
     @Test
-    @DisplayName("Job의 사용자 입력을 그대로 옮긴다")
+    @DisplayName("Job의 사용자 입력을 그대로 옮긴다 (runId = backtestId, 요청/실행 분리 전)")
     void mapsJobFields() {
         EngineInput input =
                 assembler.assemble(
@@ -52,20 +53,27 @@ class EngineInputAssemblerTest {
                                 BacktestId.from("BT-20260907-000001"),
                                 new InstrumentId("069500.XKRX")));
 
-        assertThat(input.run().backtestId()).isEqualTo("BT-20260907-000001");
+        assertThat(input.run().runId()).isEqualTo("BT-20260907-000001");
         assertThat(input.run().start()).isEqualTo(LocalDate.of(2025, 1, 1));
         assertThat(input.run().end()).isEqualTo(LocalDate.of(2025, 6, 30));
         assertThat(input.run().randomSeed()).isEqualTo(42);
-        assertThat(input.universe().instrumentIds()).containsExactly("005930.XKRX", "000660.XKRX");
-        assertThat(input.strategy().strategyId()).isEqualTo("MA_CROSSOVER");
-        assertThat(input.strategy().version()).isEqualTo("1.0.0");
-        assertThat(input.strategy().parameters()).containsEntry("shortWindow", 20);
+        assertThat(input.run().scenario()).isEqualTo(Scenario.FULL_PERIOD);
+        assertThat(input.run().effectiveStart()).isNull();
+        assertThat(input.universe().mappingVersion()).isNull();
+        assertThat(input.universe().items())
+                .extracting(EngineInput.UniverseItem::instrumentId)
+                .containsExactly("005930.XKRX", "000660.XKRX");
+        assertThat(input.universe().items())
+                .allSatisfy(item -> assertThat(item.sectorId()).isNull());
+        assertThat(input.allocation().strategyId()).isEqualTo("MA_CROSSOVER");
+        assertThat(input.allocation().rulesVersion()).isEqualTo("1.0.0");
+        assertThat(input.allocation().rules()).isNull();
+        assertThat(input.allocation().parameters()).containsEntry("shortWindow", 20);
         assertThat(input.portfolio().initialCash()).isEqualByComparingTo("10000000");
         assertThat(input.portfolio().positionSizing().type())
                 .isEqualTo(PositionSizingType.STRATEGY_DEFINED);
         assertThat(input.portfolio().positionSizing().maxPositionPct())
                 .isEqualByComparingTo("0.50");
-        assertThat(input.benchmark().instrumentId()).isEqualTo("069500.XKRX");
     }
 
     @Test
@@ -75,17 +83,14 @@ class EngineInputAssemblerTest {
 
         assertThat(input.marketData()).isEqualTo(ExecutionPolicy.MARKET_DATA);
         assertThat(input.execution()).isEqualTo(ExecutionPolicy.EXECUTION);
+        assertThat(input.execution().costProfile().version()).isEqualTo("PROVISIONAL-DEMO-1");
+        assertThat(input.execution().costProfile().provisional()).isTrue();
+        assertThat(input.evaluation()).isEqualTo(ExecutionPolicy.EVALUATION);
+        assertThat(input.progress()).isEqualTo(ExecutionPolicy.PROGRESS);
         assertThat(input.portfolio().currency()).isEqualTo(ExecutionPolicy.CURRENCY);
         assertThat(input.portfolio().shortSelling()).isEqualTo(ExecutionPolicy.SHORT_SELLING);
         assertThat(input.portfolio().leverage()).isEqualByComparingTo(ExecutionPolicy.LEVERAGE);
-    }
-
-    @Test
-    @DisplayName("벤치마크가 없으면 null로 넘긴다")
-    void passesNullBenchmark() {
-        EngineInput input = assembler.assemble(job(BacktestId.from("BT-20260907-000001"), null));
-
-        assertThat(input.benchmark()).isNull();
+        assertThat(input.portfolio().integerLots()).isTrue();
     }
 
     @Test

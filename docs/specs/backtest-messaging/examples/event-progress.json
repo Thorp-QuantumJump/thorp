@@ -1,14 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "eventId": "EVT-000002",
-  "backtestId": "BT-20260907-000001",
+  "runId": "BT-20260907-000001",
   "executionId": "EXEC-000001",
   "type": "PROGRESS",
   "sequence": 1,
   "occurredAt": "2026-09-07T01:00:01Z",
   "payload": {
+    "stage": "COMPUTING",
     "completedTradingDays": 20,
     "totalTradingDays": 129,
+    "lastTradingDate": "2025-01-28",
     "portfolioSeries": [
       {
         "date": "2025-01-01",

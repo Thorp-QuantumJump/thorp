@@ -7,22 +7,19 @@
         "date": "2025-01-01",
         "equity": "10000000.00",
         "cumulativeReturn": "0.000000",
-        "drawdown": "0.000000",
-        "benchmarkReturn": "0.000000"
+        "drawdown": "0.000000"
       },
       {
         "date": "2025-01-02",
         "equity": "10000000.00",
         "cumulativeReturn": "0.000000",
-        "drawdown": "0.000000",
-        "benchmarkReturn": "0.028213"
+        "drawdown": "0.000000"
       },
       {
         "date": "2025-01-03",
         "equity": "10000000.00",
         "cumulativeReturn": "0.000000",
-        "drawdown": "0.000000",
-        "benchmarkReturn": "0.043887"
+        "drawdown": "0.000000"
       }
     ]
   },

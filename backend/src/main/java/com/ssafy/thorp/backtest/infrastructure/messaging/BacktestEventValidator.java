@@ -1,10 +1,10 @@
 package com.ssafy.thorp.backtest.infrastructure.messaging;
 
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
-import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
+import com.ssafy.thorp.backtest.application.port.message.RunStatus;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * 중 NPE가 나고, 계약 오류가 일시 오류로 오인돼 재시도된다.
  *
  * <p>구조와 상태별 nullable 규칙만 본다. 회계 항등식({@code equity = cash + positionValue} 등)은 재계산하지 않는다 — 그것은 엔진의
- * 책임이다. 계약이 nullable로 정한 필드(성과 지표 개별 null, benchmark null, snapshot의 positions 없음, OPEN 거래의 청산 필드)는
+ * 책임이다. 계약이 nullable로 정한 필드(성과 지표 개별 null, snapshot의 positions 없음, OPEN 거래의 청산 필드, v2 추가 항목 전부)는
  * 그대로 받는다. 반대로 필수 필드는 기본값으로 보정하지 않는다 — {@code trades}가 누락된 COMPLETED를 {@code []}로 저장하면 "거래가 없었다"는
  * 거짓 결과를 확정한다.
  *
@@ -34,7 +34,7 @@ final class BacktestEventValidator {
      */
     static final int MAX_ID_LENGTH = 255;
 
-    static final int SCHEMA_VERSION = 1;
+    static final int SCHEMA_VERSION = BacktestRabbitConfig.SCHEMA_VERSION;
 
     /** 종목 식별자 형식은 도메인 VO와 같은 계약(ADR-0002 D4)이다. 저장 컬럼 `VARCHAR(32)`보다 훨씬 짧아 길이 문제도 여기서 걸러진다. */
     private static final Pattern INSTRUMENT_ID = Pattern.compile(InstrumentId.REGEX);
@@ -47,12 +47,14 @@ final class BacktestEventValidator {
             fail("sequence", "STARTED must have sequence 0 but was " + event.sequence());
         }
         require(event.payload().startedAt(), "payload.startedAt");
+        require(event.payload().stage(), "payload.stage");
     }
 
     static void validateProgress(BacktestEvent<ProgressPayload> event) {
         envelope(event);
         subsequent(event);
         ProgressPayload payload = event.payload();
+        require(payload.stage(), "payload.stage");
         if (payload.completedTradingDays() < 0) {
             fail("payload.completedTradingDays", "must be >= 0");
         }
@@ -66,6 +68,7 @@ final class BacktestEventValidator {
                             + " exceeds totalTradingDays "
                             + payload.totalTradingDays());
         }
+        require(payload.lastTradingDate(), "payload.lastTradingDate");
         List<ProgressPayload.ProgressPoint> series =
                 require(payload.portfolioSeries(), "payload.portfolioSeries");
         for (int i = 0; i < series.size(); i++) {
@@ -81,9 +84,19 @@ final class BacktestEventValidator {
     static void validateFinished(BacktestEvent<FinishedPayload> event) {
         envelope(event);
         subsequent(event);
+        FinishedPayload payload = event.payload();
+        RunStatus status = require(payload.status(), "payload.status");
         String base = "payload.engineOutput";
-        EngineOutput output = require(event.payload().engineOutput(), base);
-        run(output.run(), event.backtestId(), base + ".run");
+        EngineOutput output = require(payload.engineOutput(), base);
+        run(output.run(), event.runId(), base + ".run");
+        if (output.run().status() != status) {
+            fail(
+                    base + ".run.status",
+                    output.run().status() + " differs from payload.status " + status);
+        }
+        if (output.run().partial() != null && output.run().partial() != payload.partial()) {
+            fail(base + ".run.partial", "differs from payload.partial " + payload.partial());
+        }
 
         List<EngineOutput.PortfolioSnapshot> series =
                 require(output.portfolioSeries(), base + ".portfolioSeries");
@@ -95,13 +108,22 @@ final class BacktestEventValidator {
         trades(trades, base + ".trades");
         warnings(warnings, base + ".diagnostics.warnings");
 
-        BenchmarkResult benchmark = event.payload().benchmark();
-        switch (output.run().status()) {
-            case COMPLETED -> completed(output, base);
-            case FAILED -> failed(output, benchmark, base);
-        }
-        if (benchmark != null) {
-            benchmark(benchmark, "payload.benchmark");
+        switch (status) {
+            case COMPLETED -> {
+                notPartial(payload);
+                computed(output, base);
+            }
+            case CANCELLED -> {
+                if (!payload.partial()) {
+                    fail("payload.partial", "must be true when status is CANCELLED");
+                }
+                require(payload.lastTradingDate(), "payload.lastTradingDate");
+                computed(output, base);
+            }
+            case FAILED -> {
+                notPartial(payload);
+                failed(output, base);
+            }
         }
     }
 
@@ -110,7 +132,7 @@ final class BacktestEventValidator {
             fail("schemaVersion", "unsupported version " + event.schemaVersion());
         }
         requireId(event.eventId(), "eventId");
-        requireNotBlank(event.backtestId(), "backtestId");
+        requireNotBlank(event.runId(), "runId");
         requireId(event.executionId(), "executionId");
         require(event.type(), "type");
         if (event.sequence() < 0) {
@@ -127,22 +149,29 @@ final class BacktestEventValidator {
         }
     }
 
-    private static void run(EngineOutput.RunResult run, String backtestId, String path) {
+    private static void run(EngineOutput.RunResult run, String runId, String path) {
         require(run, path);
         require(run.status(), path + ".status");
         require(run.startedAt(), path + ".startedAt");
         require(run.finishedAt(), path + ".finishedAt");
-        if (!backtestId.equals(run.backtestId())) {
-            fail(path + ".backtestId", run.backtestId() + " differs from envelope " + backtestId);
+        if (!runId.equals(run.runId())) {
+            fail(path + ".runId", run.runId() + " differs from envelope " + runId);
         }
         if (run.finishedAt().isBefore(run.startedAt())) {
             fail(path + ".finishedAt", "before startedAt");
         }
     }
 
-    private static void completed(EngineOutput output, String base) {
+    private static void notPartial(FinishedPayload payload) {
+        if (payload.partial()) {
+            fail("payload.partial", "must be false when status is " + payload.status());
+        }
+    }
+
+    /** COMPLETED와 CANCELLED(부분 결과) 공통: 계산된 구간의 성과·실행 집계가 있어야 한다. */
+    private static void computed(EngineOutput output, String base) {
         if (output.run().error() != null) {
-            fail(base + ".run.error", "must be absent when status is COMPLETED");
+            fail(base + ".run.error", "must be absent when status is " + output.run().status());
         }
         EngineOutput.PerformanceResult performance =
                 require(output.performance(), base + ".performance");
@@ -155,7 +184,7 @@ final class BacktestEventValidator {
         require(execution.totalSlippageCost(), base + ".execution.totalSlippageCost");
     }
 
-    private static void failed(EngineOutput output, BenchmarkResult benchmark, String base) {
+    private static void failed(EngineOutput output, String base) {
         EngineOutput.EngineError error = require(output.run().error(), base + ".run.error");
         requireId(error.code(), base + ".run.error.code");
         requireNotBlank(error.message(), base + ".run.error.message");
@@ -164,9 +193,6 @@ final class BacktestEventValidator {
         }
         if (output.execution() != null) {
             fail(base + ".execution", "must be absent when status is FAILED");
-        }
-        if (benchmark != null) {
-            fail("payload.benchmark", "must be absent when status is FAILED");
         }
         if (!output.portfolioSeries().isEmpty()) {
             fail(base + ".portfolioSeries", "must be empty when status is FAILED");
@@ -186,16 +212,23 @@ final class BacktestEventValidator {
             require(snapshot.positionValue(), path + ".positionValue");
             require(snapshot.cumulativeReturn(), path + ".cumulativeReturn");
             require(snapshot.drawdown(), path + ".drawdown");
-            if (snapshot.positions() == null) {
-                continue; // 보유 구성 변경이 없는 날. 정상
+            if (snapshot.positions() != null) {
+                for (int j = 0; j < snapshot.positions().size(); j++) {
+                    String positionPath = path + ".positions[" + j + "]";
+                    EngineOutput.PositionSnapshot position =
+                            require(snapshot.positions().get(j), positionPath);
+                    requireInstrumentId(position.instrumentId(), positionPath + ".instrumentId");
+                    require(position.quantity(), positionPath + ".quantity");
+                    require(position.marketValue(), positionPath + ".marketValue");
+                }
             }
-            for (int j = 0; j < snapshot.positions().size(); j++) {
-                String positionPath = path + ".positions[" + j + "]";
-                EngineOutput.PositionSnapshot position =
-                        require(snapshot.positions().get(j), positionPath);
-                requireInstrumentId(position.instrumentId(), positionPath + ".instrumentId");
-                require(position.quantity(), positionPath + ".quantity");
-                require(position.marketValue(), positionPath + ".marketValue");
+            if (snapshot.cashFlows() != null) {
+                for (int j = 0; j < snapshot.cashFlows().size(); j++) {
+                    String flowPath = path + ".cashFlows[" + j + "]";
+                    EngineOutput.CashFlow flow = require(snapshot.cashFlows().get(j), flowPath);
+                    requireNotBlank(flow.type(), flowPath + ".type");
+                    require(flow.amount(), flowPath + ".amount");
+                }
             }
         }
     }
@@ -228,20 +261,6 @@ final class BacktestEventValidator {
             String path = base + "[" + i + "]";
             EngineOutput.Warning warning = require(warnings.get(i), path);
             requireNotBlank(warning.code(), path + ".code");
-        }
-    }
-
-    private static void benchmark(BenchmarkResult benchmark, String base) {
-        requireInstrumentId(benchmark.instrumentId(), base + ".instrumentId");
-        require(benchmark.totalReturn(), base + ".totalReturn");
-        List<BenchmarkResult.BenchmarkPoint> series =
-                require(benchmark.timeseries(), base + ".timeseries");
-        for (int i = 0; i < series.size(); i++) {
-            String path = base + ".timeseries[" + i + "]";
-            BenchmarkResult.BenchmarkPoint point = require(series.get(i), path);
-            require(point.date(), path + ".date");
-            require(point.equity(), path + ".equity");
-            require(point.cumulativeReturn(), path + ".cumulativeReturn");
         }
     }
 

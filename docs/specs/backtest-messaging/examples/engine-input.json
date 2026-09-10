@@ -1,25 +1,33 @@
 {
   "run": {
-    "backtestId": "BT-20260907-000001",
+    "runId": "BT-20260907-000001",
     "start": "2025-01-01",
     "end": "2025-06-30",
-    "randomSeed": 42
+    "randomSeed": 42,
+    "scenario": "FULL_PERIOD"
   },
   "universe": {
-    "instrumentIds": [
-      "005930.XKRX",
-      "000660.XKRX"
+    "items": [
+      {
+        "instrumentId": "005930.XKRX"
+      },
+      {
+        "instrumentId": "000660.XKRX"
+      }
     ]
   },
   "marketData": {
     "datasetId": "KRX_DAILY_V1",
     "interval": "1D",
     "adjustment": "SPLIT_ADJUSTED",
-    "priceType": "LAST"
+    "priceType": "LAST",
+    "fillPrice": "RAW",
+    "signalPrice": "ADJUSTED",
+    "distributions": "CASH_ON_PAY_DATE"
   },
-  "strategy": {
+  "allocation": {
     "strategyId": "MA_CROSSOVER",
-    "version": "1.0.0",
+    "rulesVersion": "1.0.0",
     "parameters": {
       "shortWindow": 20,
       "longWindow": 60,
@@ -34,7 +42,8 @@
       "maxPositionPct": "0.50"
     },
     "shortSelling": false,
-    "leverage": "1.0"
+    "leverage": "1.0",
+    "integerLots": true
   },
   "execution": {
     "signalTiming": "BAR_CLOSE",
@@ -42,21 +51,25 @@
     "orderTypes": [
       "MARKET"
     ],
-    "commission": {
-      "model": "ZERO"
-    },
-    "slippage": {
-      "model": "FIXED_BPS",
-      "bps": 5
+    "costProfile": {
+      "version": "PROVISIONAL-DEMO-1",
+      "commissionBps": "0",
+      "spreadBps": "0",
+      "slippageBps": "5",
+      "taxBps": "0",
+      "provisional": true
     },
     "partialFill": false,
     "liquidity": {
       "model": "UNLIMITED"
     },
-    "tradingHalt": "WAIT_UNTIL_RESUME",
+    "tradingHalt": "DEFER_TO_NEXT_TRADABLE",
     "delisting": "CAUSE_BASED"
   },
-  "benchmark": {
-    "instrumentId": "069500.XKRX"
+  "evaluation": {
+    "liquidationAtEnd": false
+  },
+  "progress": {
+    "batchTradingDays": 20
   }
 }

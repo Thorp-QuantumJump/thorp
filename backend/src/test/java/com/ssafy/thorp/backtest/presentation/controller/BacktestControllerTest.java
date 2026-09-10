@@ -374,6 +374,8 @@ class BacktestControllerTest {
                         new BigDecimal("810.00"),
                         new BigDecimal("2700.00"),
                         null,
+                        null,
+                        null,
                         null);
         return new BacktestTradePageResult(BACKTEST_ID, page, size, 1, 1, List.of(open));
     }

@@ -12,6 +12,7 @@ import org.springframework.amqp.AmqpConnectException;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.Exchange;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
@@ -21,28 +22,46 @@ class BacktestRabbitConfigTest {
     private final Declarables topology = new BacktestRabbitConfig().backtestTopology();
 
     @Test
-    void exchange_2_queue_4_binding_4() {
-        assertThat(topology.getDeclarablesByType(Exchange.class)).hasSize(2);
+    void exchange_3_queue_4_binding_4() {
+        assertThat(topology.getDeclarablesByType(Exchange.class)).hasSize(3);
         assertThat(topology.getDeclarablesByType(Queue.class)).hasSize(4);
         assertThat(topology.getDeclarablesByType(Binding.class)).hasSize(4);
     }
 
     @Test
-    void 작업_이벤트_큐는_DLX_인자를_가진다() {
+    void 제어_exchange는_durable_fanout이다() {
+        Exchange control =
+                topology.getDeclarablesByType(Exchange.class).stream()
+                        .filter(e -> e.getName().equals(BacktestRabbitConfig.CONTROL_EXCHANGE))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(control).isInstanceOf(FanoutExchange.class);
+        assertThat(control.isDurable()).isTrue();
+        // 워커마다 exclusive·auto-delete 큐를 바인딩하므로 백엔드는 큐·binding을 선언하지 않는다
+    }
+
+    @Test
+    void 작업_큐는_quorum이고_재전달_1회_뒤_DLQ로_간다() {
         Queue jobs = queue(BacktestRabbitConfig.JOBS_QUEUE);
         assertThat(jobs.isDurable()).isTrue();
         assertThat(jobs.getArguments())
+                .containsEntry("x-queue-type", "quorum")
+                .containsEntry("x-delivery-limit", BacktestRabbitConfig.JOBS_DELIVERY_LIMIT)
                 .containsEntry("x-dead-letter-exchange", BacktestRabbitConfig.DEAD_LETTER_EXCHANGE)
                 .containsEntry(
                         "x-dead-letter-routing-key",
                         BacktestRabbitConfig.JOBS_DEAD_LETTER_ROUTING_KEY);
+    }
 
+    @Test
+    void 이벤트_큐는_DLX_인자를_가진다() {
         Queue events = queue(BacktestRabbitConfig.EVENTS_QUEUE);
         assertThat(events.getArguments())
                 .containsEntry("x-dead-letter-exchange", BacktestRabbitConfig.DEAD_LETTER_EXCHANGE)
                 .containsEntry(
                         "x-dead-letter-routing-key",
-                        BacktestRabbitConfig.EVENTS_DEAD_LETTER_ROUTING_KEY);
+                        BacktestRabbitConfig.EVENTS_DEAD_LETTER_ROUTING_KEY)
+                .doesNotContainKey("x-queue-type");
     }
 
     @Test
