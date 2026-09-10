@@ -197,7 +197,7 @@ infrastructure`)을 그대로 쓰고, 007을 **별도 최상위 도메인 패키
 
 constitution v3.0.0 "Jira 연계"가 **`작업 묶음 = 1 Branch = 1 MR`** 이고 **"묶음 구성은 plan을 시작할
 때 정한다"** 고 요구한다. [tasks.md](tasks.md)의 `T###`는 실행 지시의 최소 단위이며 브랜치 단위가
-아니다. 브랜치·MR·Jira Task 단위는 아래 묶음(B##)이다.
+아니다. 브랜치·MR·Jira Task 단위는 아래 묶음(M##) 10개다.
 
 묶음마다 constitution이 정한 세 조건을 확인했다 — (1) 하나의 목적(같은 계층·기능 흐름·배포 단위)
 공유, (2) 독립 구현·검증·리뷰와 다른 묶음을 건드리지 않는 롤백, (3) 리뷰어가 한 번에 읽을 수 있는
@@ -205,55 +205,80 @@ constitution v3.0.0 "Jira 연계"가 **`작업 묶음 = 1 Branch = 1 MR`** 이�
 
 | 묶음 | Jira Task 요약 | 브랜치 | 포함 T### | 수 |
 |---|---|---|---|---|
-| B01 | `[BE] 자동 탐색 모듈 골격과 한도 설정` | `chore(be)/{N}-paramsearch-skeleton` | T001~T004, T007 | 5 |
-| B02 | `[FE] 자동 탐색 API 타입과 모듈 골격` | `chore(fe)/{N}-paramsearch-api-skeleton` | T005, T006 | 2 |
-| B03 | `[BE] 탐색 묶음 도메인 모델과 상태 전이` | `feat(be)/{N}-paramsearch-domain` | T011~T020, T020a | 11 |
-| B04 | `[BE] 탐색 묶음 스키마와 영속화 계층` | `feat(be)/{N}-paramsearch-persistence` | T008~T010, T021~T026 | 9 |
-| B05 | `[BE] 파라미터 등록표 포트와 임시 구현` | `feat(be)/{N}-parameter-registry-port` | T027~T029 | 3 |
-| B06 | `[BE] 그리드 전개와 유효성 사전 판정` | `feat(be)/{N}-grid-expand-validate` | T030, T031, T039, T089, T090 | 5 |
-| B07 | `[BE] 후보 실행 포트와 백테스트 완료 이벤트 연결` | `feat(be)/{N}-candidate-launcher-event` | T032~T036 | 5 |
-| B08 | `[BE] 자동 탐색 오류 코드와 예외 매핑` | `feat(be)/{N}-paramsearch-error-codes` | T037, T038 | 2 |
-| B09 | `[BE] 탐색 확인·접수 유스케이스와 발행 창` | `feat(be)/{N}-paramsearch-usecase` | T040~T052, T049a | 14 |
-| B10 | `[BE] 자동 탐색 HTTP 엔드포인트` | `feat(be)/{N}-paramsearch-api` | T053~T057 | 5 |
-| B11 | `[FE] 탐색 실행 전 확인 화면` | `feat(fe)/{N}-paramsearch-preflight` | T058~T060, T064 | 4 |
-| B12 | `[FE] 탐색 상세 변경과 진행 상태` | `feat(fe)/{N}-paramsearch-space-progress` | T061~T063 | 3 |
-| B13 | `[BE] 인접 안정성과 후보 선정 계산` | `feat(be)/{N}-candidate-selection` | T065~T078 | 14 |
-| B14 | `[BE] 후보 목록·선정 결과 조회 API` | `feat(be)/{N}-candidate-query-api` | T079~T081 | 3 |
-| B15 | `[FE] 탐색 결과 화면과 후보 상세` | `feat(fe)/{N}-paramsearch-result` | T082~T086, T088 | 6 |
-| B16 | `[FE] 후보를 결과 비교로 넘기는 연결` | `feat(fe)/{N}-candidate-compare-handoff` | T087 | 1 |
-| B17 | `[BE] 접수 거부와 취소·재시도·부분 결과` | `feat(be)/{N}-paramsearch-reject-cancel-retry` | T091~T098, T098a, T098b, T098c, T102, T103 | 13 |
-| B18 | `[BE] 실행시간·연속 실패 한도` | `feat(be)/{N}-paramsearch-runtime-limits` | T099~T101, T101a | 4 |
-| B19 | `[FE] 거부·부분 결과 표시와 취소·재시도 조작` | `feat(fe)/{N}-paramsearch-notices` | T104~T107, T107a | 5 |
-| B20 | `[BE] 검증 상태 라벨과 선정 규칙 불변성` | `feat(be)/{N}-validation-label` | T108~T113 | 6 |
-| B21 | `[FE] 검증 상태 배지와 미검증 안내` | `feat(fe)/{N}-validation-badge` | T114~T116 | 3 |
-| B22 | `[BE] 자동 탐색 실행 측정과 재현 기록 검증` | `feat(be)/{N}-paramsearch-metrics` | T117, T117a | 2 |
-| B23 | `[DOCS] 자동 탐색 계약 문서·ADR·결정 항목 동기화` | `docs(infra)/{N}-paramsearch-contract-adr` | T120~T123 | 4 |
-| B24 | `[DOCS] quickstart 종단 확인과 한도 측정 인계` | `docs(infra)/{N}-paramsearch-quickstart-run` | T125, T126 | 2 |
+| M1 | `[BE] 자동 탐색 기반 — 골격·도메인·스키마·영속화` | `feat(be)/157-paramsearch-foundation` | T001~T004, T007~T026, T020a | 25 |
+| M2 | `[BE] 경계 포트·오류 매핑과 그리드 전개·유효성` | `feat(be)/{N}-paramsearch-boundary-grid` | T027~T039, T089, T090 | 15 |
+| M3 | `[BE] 탐색 접수 유스케이스와 HTTP API` | `feat(be)/{N}-paramsearch-intake` | T040~T057, T049a | 19 |
+| M4 | `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` | `feat(fe)/{N}-paramsearch-preflight` | T005, T006, T058~T064 | 9 |
+| M5 | `[BE] 후보 선정 계산과 조회 API` | `feat(be)/{N}-candidate-selection` | T065~T081 | 17 |
+| M6 | `[FE] 탐색 결과 화면과 비교 연결` | `feat(fe)/{N}-paramsearch-result` | T082~T088 | 7 |
+| M7 | `[BE] 거부·취소·재시도·부분 결과와 실행 한도` | `feat(be)/{N}-paramsearch-reject-cancel-limits` | T091~T103, T098a, T098b, T098c, T101a | 17 |
+| M8 | `[FE] 거부·부분 결과 표시와 검증 배지` | `feat(fe)/{N}-paramsearch-notices-badge` | T104~T107, T107a, T114~T116 | 8 |
+| M9 | `[BE] 검증 라벨·선정 규칙 불변성과 실행 측정` | `feat(be)/{N}-validation-label-metrics` | T108~T113, T117, T117a | 8 |
+| M10 | `[DOCS] 계약·ADR 동기화와 quickstart 종단 확인` | `docs(infra)/{N}-paramsearch-docs` | T120~T123, T125, T126 | 6 |
 
-**묶음 24개 = 브랜치 24개 = MR 24개.** 131개 T###를 덮고, 아래 3개는 의도적으로 뺐다.
+**묶음 10개 = 브랜치 10개 = MR 10개.** tasks.md의 134개 중 131개를 덮고, 아래 3개는 의도적으로 뺐다.
 
 각 묶음의 Jira Task가 없으면 **브랜치·MR을 만들기 전에** Task를 먼저 만들고 그 Ticket 번호로
 브랜치를 만든다. `{N}`이 그 자리다. 개별 `T###` 번호는 MR 본문의 "주요 변경 사항"에 나열한다.
+
+### 묶음 구성 개정 이력 (24개 → 10개)
+
+초판은 묶음을 24개(B01~B24)로 뒀다. 구현 착수 시점에 **10개(M1~M10)로 합쳤다.** constitution
+"묶음 구성은 plan을 시작할 때 정하고, 구현 도중 범위가 달라지면 그 사유와 새 묶음 구성을 plan 또는
+MR 본문에 남긴다"에 따라 사유를 남긴다. **T### 범위는 하나도 바뀌지 않았다** — 131개를 덮는 것과
+제외한 3개가 초판과 같고, 묶음 경계만 굵어졌다.
+
+| 새 묶음 | 합친 초판 묶음 |
+|---|---|
+| M1 | B01 + B03 + B04 |
+| M2 | B05 + B06 + B07 + B08 |
+| M3 | B09 + B10 |
+| M4 | B02 + B11 + B12 |
+| M5 | B13 + B14 |
+| M6 | B15 + B16 |
+| M7 | B17 + B18 |
+| M8 | B19 + B21 |
+| M9 | B20 + B22 |
+| M10 | B23 + B24 |
+
+합친 사유:
+
+1. **초판이 커밋 단위를 브랜치 단위로 쪼갰다.** B16(T087 하나)·B02(2개)·B08(2개)처럼 task 1~3개인
+   묶음은 브랜치·MR·Jira Task를 각각 하나씩 소모하면서 리뷰에 얻는 것이 없다. constitution의 묶음
+   규칙이 막으려던 것("task 하나를 반드시 브랜치 하나로 나눌 필요는 없다")에 초판이 오히려 가까웠다.
+   묶음 안의 진행은 커밋으로 쪼갠다.
+2. **B03/B04 분리는 조건 2를 어겼다.** 초판은 "도메인 모델과 스키마·영속화는 롤백 단위가 다르다"고
+   적었지만, 이 프로젝트는 `ddl-auto=validate`다 — V3 마이그레이션 없는 엔티티는 기동을 실패시킨다.
+   엔티티(B04)와 도메인 모델(B03)은 같이 움직여야 하는 배포 단위이므로 M1로 합치는 것이 조건 2에
+   더 맞다. 초판의 분리 근거는 철회한다.
+3. **B05~B08은 같은 목적을 공유한다** — 기반(M1)과 유스케이스(M3) 사이의 경계·전개 계층이다.
+   003 등록표 포트, 004 실행 포트, 오류 매핑, 그리드 전개·유효성이 모두 "접수 전에 필요한 재료"다.
+4. **B09/B10 분리는 유지할 이유가 사라졌다.** 초판은 18개가 조건 3을 넘는다고 봤지만, 같은 기능
+   흐름(preview·create)의 application과 presentation을 갈라 두 MR로 만들면 앞 MR이 호출자 없는
+   유스케이스만 담는다. 조건 3의 "미완성 상태로 남는 task가 없다"에 어긋난다.
+
+유지한 경계:
+
+- **파트를 섞지 않았다.** 브랜치 이름의 `position`이 하나여야 하므로(Git Convention) BE와 FE를 한
+  묶음에 넣을 수 없다. M3(BE)와 M4(FE)가 같은 US1을 다루면서도 갈라져 있는 이유다.
+- **테스트를 구현과 같은 묶음에 넣었다.** Task 완료 조건이 "테스트 또는 동작 확인 완료"라 검증이
+  다른 브랜치에 있으면 그 묶음 스스로 완료 조건을 만족하지 못한다. M2가 Foundational 구현
+  (T030·T031)과 US3 단계에 있는 그 테스트(T089·T090)를 함께 가져가는 것이 그 예다.
+- **M9는 검증 라벨(B20)과 실행 측정(B22)을 합쳤다.** 실행 측정은 네 스토리 전부에 걸쳐 어느 스토리
+  묶음에도 붙지 않는데, 단독 2개 묶음으로 두는 것보다 마지막 BE 묶음에 얹는 편이 낫다. 둘 다
+  "구현이 끝난 뒤 결과에 라벨·기록을 붙이는 일"이라는 목적을 공유한다.
+
+### 남은 크기 위험
+
+M1(25)·M3(19)·M5(17)·M7(17)은 조건 3(리뷰어가 한 번에 읽을 수 있는 범위)의 경계에 있다. M1은
+T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합쳤다. **리뷰에서 분량이 문제가 되면
+첫 번째 후퇴선은 M1에서 B04(T008~T010, T021~T026)를 다시 떼는 것이고**, 그때는 이 절에 다시 기록한다.
 
 ### 묶음에 넣지 않은 task
 
 `T118`(`./gradlew spotlessApply` + `test`), `T119`(`npm run lint` + `test`), `T124`(`pytest` 회귀)는
 묶음이 아니라 **모든 묶음의 완료 조건**이다("완료의 정의" 조건 2). 각 MR의 테스트 체크박스에서
 확인하고, tasks.md에 남긴 것은 마지막에 전체를 한 번 더 돌리라는 뜻이다.
-
-### 묶음 경계를 정한 근거
-
-- **테스트를 구현과 같은 묶음에 넣었다.** Task 완료 조건이 "테스트 또는 동작 확인 완료"라 검증이
-  다른 브랜치에 있으면 그 묶음 스스로 완료 조건을 만족하지 못한다. 그래서 tasks.md에서 단계가 다르게
-  적힌 테스트도 묶음에서는 구현과 합쳤다 — B06이 Foundational 구현(T030·T031)과 US1·US3 단계에 있는
-  그 테스트(T039·T089·T090)를 함께 가져가는 것이 그 예다.
-- **B09와 B10을 계층으로 갈랐다.** 둘을 합치면 18개 task라 조건 3(한 번에 읽을 수 있는 범위)을
-  넘는다. 유스케이스(application)와 엔드포인트(presentation)는 "같은 계층" 기준으로 나뉜다.
-- **B03과 B04를 갈랐다.** 도메인 모델과 스키마·영속화는 롤백 단위가 다르다. 마이그레이션을 되돌리는
-  일과 모델을 되돌리는 일이 같은 MR에 묶이면 조건 2를 어긴다.
-- **B22를 단독으로 뒀다.** 실행 측정은 네 스토리 전부에 걸쳐 있어 어느 스토리 묶음에도 붙지 않는다.
-- 무관한 task를 편의로 합치지 않았다 — B16(비교 연결)과 B15(결과 화면)는 화면이 인접하지만 005
-  의존과 롤백 범위가 달라 나눴다.
 
 ## Complexity Tracking
 
