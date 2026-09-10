@@ -298,3 +298,14 @@ T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합�
 - 내 기록 목록·보관 정책(PD-13) — [006](../006-my-records/spec.md) 소유
 - 인증·인가 도입 — 소유 spec 없음. 007은 nullable 소유자 컬럼만 준비한다(R4)
 - 실행 한도의 확정값(PD-06)과 검증 설계(PD-12) — 실측·팀 확정 대기
+
+**PD-05 잔여 세 값이 확정될 때까지 자동 탐색 모듈은 기능 플래그로 꺼져 있다.**
+`thorp.param-search.enabled`가 `false`면 `ParamSearchConfig`가 로드되지 않는다. 공통 설정의 기본값이
+`false`이고 로컬만 `true`다. `ParamSearchProperties`의 네 한도가 `@NotNull`이라 플래그 없이 무조건
+로드하면 값을 채우지 않은 환경에서 **애플리케이션 전체가 기동에 실패**한다 — 007이 아직 엔드포인트를
+노출하지 않는 단계에서 기존 기능까지 내려가는 것은 받아들일 수 없다. 값을 추측해 코드 기본값으로 박는
+것(constitution "AI 작업 방식" 위반)과 배포를 깨는 것 사이의 세 번째 선택이다.
+
+`dispatch-window`·`time-limit-seconds`·`consecutive-failure-limit`가 정해지면 그 값을 설정에 넣고
+플래그를 켠다. 스키마(V3)는 플래그와 무관하게 Flyway가 적용하므로 나중에 켜도 마이그레이션을 다시
+할 일이 없다. `ParamSearchProperties`를 주입하는 빈은 같은 플래그 조건을 가져야 한다(M3 이후).
