@@ -16,3 +16,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 USER jenkins
+
+# Jenkins Job의 GitLab Push Webhook 트리거를 이미지 재생성 후에도 보장한다.
+RUN jenkins-plugin-cli --plugins gitlab-plugin
