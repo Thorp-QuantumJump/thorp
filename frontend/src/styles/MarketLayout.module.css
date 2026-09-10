@@ -3,28 +3,30 @@
   min-width: 0;
   min-height: 100svh;
   overflow-x: clip;
-  background: #fbfcfb;
-  color: #182331;
-  --market-surface: #fff;
-  --market-ink: #172331;
-  --market-copy: #60707c;
-  --market-muted: #87939d;
-  --market-line: #dfe5e6;
-  --market-line-soft: #edf0f1;
-  --market-brand: #168f8a;
-  --market-positive: #21865f;
-  --market-negative: #c75d48;
-  --market-warning: #c2782b;
-  --market-neutral: #687783;
-  --market-shadow: 0 20px 48px rgb(28 50 60 / 5%);
-  --market-shadow-soft: 0 8px 28px rgb(28 50 60 / 3%);
+  background: var(--thorp-background);
+  color: var(--thorp-foreground);
+  color-scheme: dark;
+  --market-surface: var(--thorp-surface-raised);
+  --market-ink: var(--thorp-foreground);
+  --market-copy: var(--thorp-copy);
+  --market-muted: var(--thorp-muted);
+  --market-line: var(--thorp-line-strong);
+  --market-line-soft: var(--thorp-line);
+  --market-line-strong: var(--thorp-line-strong);
+  --market-brand: var(--thorp-accent);
+  --market-positive: var(--thorp-positive);
+  --market-negative: var(--thorp-negative);
+  --market-warning: var(--thorp-warning);
+  --market-neutral: var(--thorp-neutral);
+  --market-shadow: 0 16px 42px rgb(0 0 0 / 24%);
+  --market-shadow-soft: none;
 }
 
 .footer {
   margin-top: 25px;
   padding-top: 20px;
-  border-top: 1px solid #dfe5e6;
-  color: #939da5;
+  border-top: 1px solid var(--market-line);
+  color: var(--market-muted);
   font-size: 0.65rem;
   text-align: center;
 }

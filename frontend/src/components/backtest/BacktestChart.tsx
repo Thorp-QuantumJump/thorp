@@ -94,7 +94,7 @@ export function BacktestChart({
         <Line
           dataKey="benchmark"
           curve={curveLinear}
-          stroke="#9aa3ad"
+          stroke="var(--thorp-neutral)"
           strokeWidth={1.6}
           animate
           fadeEdges={false}

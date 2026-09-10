@@ -49,7 +49,7 @@
   grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
   overflow: hidden;
   border: 1px solid var(--market-line);
-  border-radius: 20px;
+  border-radius: 10px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -98,7 +98,7 @@
 }
 
 .scoreRow span {
-  color: #929ca4;
+  color: var(--market-muted);
   font-size: 0.62rem;
 }
 
@@ -110,9 +110,9 @@
 
 .events span {
   padding: 5px 8px;
-  border-radius: 7px;
-  background: #f1f4f4;
-  color: #65727e;
+  border-radius: 4px;
+  background: var(--thorp-surface-muted);
+  color: var(--market-copy);
   font-size: 0.65rem;
 }
 
@@ -127,7 +127,7 @@
 
 .observationGrid h4 {
   margin: 0;
-  color: #43515d;
+  color: var(--market-ink);
   font-size: 0.72rem;
 }
 
@@ -136,7 +136,7 @@
   gap: 7px;
   margin: 9px 0 0;
   padding-left: 15px;
-  color: #71808b;
+  color: var(--market-copy);
   font-size: 0.67rem;
   line-height: 1.5;
 }
@@ -156,18 +156,18 @@
 
 .comparisonHeader {
   min-height: 34px;
-  color: #a0a9b0;
+  color: var(--market-muted);
   font-size: 0.64rem;
   font-weight: 680;
 }
 
 .comparisonRow strong {
-  color: #46535f;
+  color: var(--market-ink);
   font-size: 0.72rem;
 }
 
 .comparisonRow span {
-  color: #697681;
+  color: var(--market-copy);
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
@@ -179,7 +179,7 @@
 
 .note {
   margin: 14px 0 0;
-  color: #9ba4ab;
+  color: var(--market-muted);
   font-size: 0.62rem;
   line-height: 1.5;
 }

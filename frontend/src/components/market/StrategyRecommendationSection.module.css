@@ -53,14 +53,14 @@
   min-width: 0;
   padding: 22px;
   border: 1px solid var(--market-line);
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
 
 .rank {
   margin-bottom: 19px;
-  color: #bdc4c8;
+  color: var(--market-muted);
   font-size: 0.66rem;
   font-weight: 720;
   letter-spacing: 0.1em;
@@ -88,7 +88,7 @@
   height: 4px;
   margin-top: 12px;
   border-radius: 99px;
-  background: #e9eeee;
+  background: var(--market-line);
 }
 
 .meter span {
@@ -101,7 +101,7 @@
 .reason {
   min-height: 59px;
   margin: 17px 0 0;
-  color: #66747f;
+  color: var(--market-copy);
   font-size: 0.74rem;
   line-height: 1.65;
 }
@@ -112,9 +112,9 @@
   min-height: 46px;
   margin: 14px 0 18px;
   padding: 11px;
-  border-radius: 10px;
-  background: #f7f8f8;
-  color: #7c878f;
+  border-radius: 6px;
+  background: var(--thorp-surface-muted);
+  color: var(--market-copy);
   font-size: 0.68rem;
   line-height: 1.45;
 }

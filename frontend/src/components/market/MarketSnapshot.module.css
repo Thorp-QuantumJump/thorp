@@ -54,7 +54,7 @@
   min-width: 0;
   padding: 17px;
   border: 1px solid var(--market-line);
-  border-radius: 17px;
+  border-radius: 8px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -66,13 +66,13 @@
 }
 
 .cardTop > span {
-  color: #465461;
+  color: var(--market-copy);
   font-size: 0.78rem;
   font-weight: 680;
 }
 
 .cardTop small {
-  color: #a0a9b0;
+  color: var(--market-muted);
   font-size: 0.64rem;
   white-space: nowrap;
 }
@@ -115,7 +115,7 @@
 .interpretation {
   min-height: 42px;
   margin: 9px 0 13px;
-  color: #697681;
+  color: var(--market-copy);
   font-size: 0.72rem;
   line-height: 1.55;
 }
@@ -123,7 +123,7 @@
 .source {
   padding-top: 11px;
   border-top: 1px solid var(--market-line-soft);
-  color: #99a2aa;
+  color: var(--market-muted);
   font-size: 0.62rem;
 }
 

@@ -18,25 +18,25 @@
 }
 
 .gridLine {
-  stroke: #edf0f1;
+  stroke: var(--market-line-soft);
   stroke-width: 1;
 }
 
 .referenceLine {
-  stroke: #aeb9bd;
+  stroke: var(--market-muted);
   stroke-dasharray: 4 5;
   stroke-width: 1.1;
 }
 
 .xTickLine {
-  stroke: #cbd3d5;
+  stroke: var(--market-line-strong, var(--market-line));
   stroke-width: 1;
 }
 
 .yTick,
 .xTick,
 .indexLabel {
-  fill: #818c92;
+  fill: var(--market-muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
 }
@@ -48,25 +48,25 @@
 }
 
 .cycleLine {
-  stroke: #527f7c;
+  stroke: var(--market-brand);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
-  filter: drop-shadow(0 4px 6px rgb(38 82 79 / 10%));
+  filter: drop-shadow(0 4px 8px rgb(3 199 90 / 18%));
 }
 
 .latestHalo {
-  fill: #e7f1f0;
+  fill: var(--thorp-accent-muted);
 }
 
 .latestPoint {
-  fill: #527f7c;
-  stroke: #fff;
+  fill: var(--market-brand);
+  stroke: var(--market-surface);
   stroke-width: 2.5;
 }
 
 .latestValue {
-  fill: #365f5d;
+  fill: var(--thorp-accent-soft);
   font-size: 11px;
   font-weight: 750;
 }

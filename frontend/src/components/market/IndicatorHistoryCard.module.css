@@ -64,7 +64,7 @@
   width: max(100%, min(440px, calc(100vw - 48px)));
   padding: 20px;
   border: 1px solid var(--market-line);
-  border-radius: 17px;
+  border-radius: 10px;
   background: var(--market-surface);
   box-shadow: var(--market-shadow);
   overflow: hidden;

@@ -9,7 +9,7 @@
   width: 100%;
   min-width: 690px;
   border-collapse: collapse;
-  color: #273241;
+  color: var(--thorp-foreground);
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
@@ -17,13 +17,13 @@
 .table th,
 .table td {
   padding: 8px 12px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--thorp-line);
   text-align: right;
   white-space: nowrap;
 }
 
 .table thead th {
-  color: #929ca7;
+  color: var(--thorp-muted);
   font-size: 0.7rem;
   font-weight: 650;
   letter-spacing: 0.03em;
@@ -41,7 +41,7 @@
 
 .clickableRow:hover,
 .clickableRow[data-active='true'] {
-  background: #f3faf9;
+  background: var(--thorp-accent-muted);
 }
 
 .strategyButton {
@@ -58,7 +58,7 @@
 
 .strategyButton:focus-visible {
   border-radius: 4px;
-  outline: 2px solid #18a7a0;
+  outline: 2px solid var(--thorp-accent);
   outline-offset: 3px;
 }
 
@@ -70,21 +70,21 @@
 }
 
 .benchmarkDot {
-  background: #9aa3ad;
+  background: var(--thorp-neutral);
 }
 
 .positive {
-  color: #168d62;
+  color: var(--thorp-positive);
   font-weight: 650;
 }
 
 .negative {
-  color: #d05a3c;
+  color: var(--thorp-negative);
 }
 
 .benchmarkRow {
-  background: #fafbfb;
-  color: #6c7783;
+  background: var(--thorp-surface);
+  color: var(--thorp-copy);
 }
 
 .benchmarkRow th,
