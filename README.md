@@ -1,10 +1,14 @@
-# Thorp — 퀀트 백테스트 플랫폼
+# Thorp — 퀀트 전략 분석 플랫폼
 
 > Team Quantum Jump · SSAFY S15P21E205
 
-과거 시장 데이터로 퀀트 전략을 백테스트하고 비교할 수 있는 학습·시뮬레이션 플랫폼.
+국내 섹터 ETF의 배분 전략과 설정 조합이 과거 수익·손실·비용에 어떤 차이를 만드는지 같은 조건에서
+비교하는 학습·시뮬레이션 플랫폼. 제품 방향과 범위의 원본은 Notion 기획서, 프로젝트 원칙은
+[`.specify/memory/constitution.md`](.specify/memory/constitution.md)다.
 
-> **MVP v0.1.1**: KRX API로 데이터를 받아 알고리즘 1개(파라미터 고정, 기간 5년)를 백테스트하는 DEMO
+> **현재 개발 범위**: 다섯 배분 전략(고정 비중·동일 비중·역변동성·섹터 모멘텀·최소분산), 자동 파라미터
+> 대량 탐색, 전략과 독립된 분야별 경제환경 검색. **현재 코드 상태**는 아래 "현재 구현 상태"대로 단일
+> KRX 종목 모멘텀 백테스트 DEMO다.
 
 ## 목표 아키텍처
 
@@ -86,7 +90,9 @@ docker compose -f docker-compose.dev.yml --profile app up -d --build
 
 ## 컨벤션
 
-브랜치/커밋/MR 컨벤션과 AI 협업 규칙은 [CLAUDE.md](./CLAUDE.md)와 팀 Notion을 따른다.
+프로젝트 원칙은 [constitution](.specify/memory/constitution.md)이 최상위이고, 브랜치/커밋/MR 컨벤션과
+AI 협업 규칙은 [CLAUDE.md](./CLAUDE.md)와 팀 Notion(Git Convention·Jira Convention)을 따른다.
+MR 본문 양식은 `.gitlab/merge_request_templates/Default.md`가 자동 적용된다.
 
 - 브랜치: `{type}({position})/{JIRA_NUMBER}-{description}` (예: `feat(be)/12-kakao-oauth`)
 - 커밋: `feat(be): 작업 내역 요약`

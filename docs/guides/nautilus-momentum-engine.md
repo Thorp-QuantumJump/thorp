@@ -221,7 +221,7 @@ Protocol 뒤에 있어 브로커 없이 테스트된다.
 | 높음 | 백엔드 Job 발행(outbox)과 결과 Consumer 미구현 | 발행·상태 전이·결과 저장까지 붙이고 브로커를 띄운 통합 테스트 |
 | 높음 | 콜백 100%와 결과 저장 성공의 원자성 없음 | 워커는 재전달 시 재실행 + 새 `executionId`로 두고, 중복 방어는 백엔드 결과 Consumer가 `eventId`로 처리한다(계약 §7). 그 업서트 정책을 결과 Consumer 티켓에서 확정 |
 | ~~높음~~ 해소 | ~~입력 모델이 메시지 계약과 별도(`engine_contracts.py`)~~ | **완료 (2026-09-08).** 계약에 `ZERO` 수수료 모델을 추가(ADR-0004)하고 `delisting=CAUSE_BASED`를 경고로 받아(ADR-0003) `contracts/engine_input.py`로 통합, 과도기 파일 삭제. `marketData.adjustment`는 공급자를 `auto_adjust=False`로 바꿔 먼저 맞췄다 |
-| 중간 | 키움 요율표(`commission.model=BROKER`) 미구현 | 알고리즘 20개+ 비교에 착수할 때 엔진에 구현하고 `engine_support.py`의 거절을 제거 (ADR-0004 D3). 그 전에 순위를 근거로 의사결정하지 않는다 |
+| 중간 | 키움 요율표(`commission.model=BROKER`) 미구현 | 전략 비교 단계(다섯 배분 전략·자동 탐색)에 착수할 때 엔진에 구현하고 `engine_support.py`의 거절을 제거 (ADR-0004 D3). 그 전에 순위를 근거로 의사결정하지 않는다 |
 | 중간 | yfinance 데이터가 수정되거나 결측될 수 있음 | 원시 데이터 스냅샷과 dataset version을 보존하는 공급자 도입 |
 | 중간 | native 원장과 출력 원장을 함께 유지 | 새 주문 유형마다 reconciliation 테스트 추가 또는 단일 원장 변환 구조 재검토 |
 | 낮음 | 실제 KRX 틱·유동성·정지·상폐를 모델링하지 않음 | DEMO 범위를 벗어날 때 별도 시장 모델로 구현 |
