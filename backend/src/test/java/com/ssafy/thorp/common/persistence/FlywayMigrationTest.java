@@ -205,6 +205,185 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("V3가 적용되어 flyway_schema_history에 성공으로 기록된다")
+    void v3IsApplied() {
+        Integer applied =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM flyway_schema_history"
+                                + " WHERE version = '3' AND success = TRUE",
+                        Integer.class);
+
+        assertThat(applied).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V3가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다")
+    void v3CreatesNewsArticleWithoutBodyColumns() {
+        assertThat(columnsOf("news_article"))
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "article_id",
+                        "source_type",
+                        "publisher_id",
+                        "source_item_id",
+                        "original_url",
+                        "canonical_url",
+                        "title",
+                        "language",
+                        "published_at",
+                        "published_at_status",
+                        "collected_at",
+                        "gdelt_recorded_at",
+                        "duplicate_key",
+                        "source_payload_hash",
+                        "ingest_run_id",
+                        "display_eligible",
+                        "created_at",
+                        "updated_at");
+    }
+
+    @Test
+    @DisplayName("V3의 어떤 뉴스 테이블에도 본문·Tone 컬럼이 없다 (spec FR-002·SC-001)")
+    void v3HasNoBodyOrToneColumnAnywhere() {
+        List<String> forbidden =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(table_name) || '.' || LOWER(column_name)"
+                                + " FROM information_schema.columns"
+                                + " WHERE LOWER(table_schema) = 'public'"
+                                + " AND LOWER(table_name) LIKE 'news_%'"
+                                + " AND (LOWER(column_name) LIKE '%body%'"
+                                + " OR LOWER(column_name) LIKE '%content%'"
+                                + " OR LOWER(column_name) LIKE '%full_text%'"
+                                + " OR LOWER(column_name) LIKE '%html%'"
+                                + " OR LOWER(column_name) LIKE '%tone%')",
+                        String.class);
+
+        assertThat(forbidden).isEmpty();
+    }
+
+    @Test
+    @DisplayName("V3가 매체의 등록 도메인과 현재 허가 상태를 둔다 (spec FR-009·FR-015)")
+    void v3CreatesPublisherColumns() {
+        assertThat(columnsOf("news_publisher"))
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "publisher_key",
+                        "display_name",
+                        "language",
+                        "registered_domain",
+                        "rss_url",
+                        "permission_status",
+                        "permission_updated_at",
+                        "enabled",
+                        "etag",
+                        "last_modified",
+                        "created_at",
+                        "updated_at");
+    }
+
+    @Test
+    @DisplayName("V3가 허가 이력을 별도 테이블로 둔다 (spec FR-015)")
+    void v3CreatesPermissionHistory() {
+        assertThat(columnsOf("news_publisher_permission_history"))
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "publisher_id",
+                        "event_type",
+                        "permission_status",
+                        "allowed_fields",
+                        "occurred_at",
+                        "reference",
+                        "created_at",
+                        "updated_at");
+    }
+
+    @Test
+    @DisplayName("V3가 수집 상태에 INCOMPLETE와 점유 컬럼을 둔다 (spec FR-013·FR-022)")
+    void v3CreatesCollectionState() {
+        assertThat(columnsOf("news_collection_state"))
+                .containsExactlyInAnyOrder(
+                        "source_key",
+                        "status",
+                        "cursor_value",
+                        "last_attempt_at",
+                        "last_success_at",
+                        "next_attempt_at",
+                        "retry_count",
+                        "error_category",
+                        "lease_owner",
+                        "lease_until",
+                        "created_at",
+                        "updated_at");
+
+        Integer incompleteAllowed =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.check_constraints"
+                                + " WHERE LOWER(constraint_name) = 'ck_news_collection_state_status'"
+                                + " AND check_clause LIKE '%INCOMPLETE%'",
+                        Integer.class);
+        assertThat(incompleteAllowed).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V3가 정리 작업을 수집 뉴스원과 같은 점유 테이블에 seed한다 (spec FR-022)")
+    void v3SeedsRetentionCleanupLease() {
+        Integer seeded =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM news_collection_state"
+                                + " WHERE source_key = 'retention-cleanup'",
+                        Integer.class);
+
+        assertThat(seeded).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V3가 규칙 버전 네 개를 seed한다 (원칙 VIII)")
+    void v3SeedsRuleVersions() {
+        List<String> versions =
+                jdbcTemplate.queryForList(
+                        "SELECT rule_version FROM news_rule_version ORDER BY rule_version",
+                        String.class);
+
+        assertThat(versions)
+                .containsExactly(
+                        "news-grouping-v1",
+                        "news-importance-v1",
+                        "news-link-v1",
+                        "news-url-normalization-v1");
+    }
+
+    @Test
+    @DisplayName("V3가 canonical URL과 외부 식별자에 UNIQUE를 건다 (spec FR-011·FR-025)")
+    void v3CreatesUniqueKeys() {
+        List<String> uniques =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(constraint_name) FROM information_schema.table_constraints"
+                                + " WHERE constraint_type = 'UNIQUE'"
+                                + " AND LOWER(table_name) LIKE 'news_%'",
+                        String.class);
+
+        assertThat(uniques)
+                .contains(
+                        "uk_news_article_canonical_url",
+                        "uk_news_article_article_id",
+                        "uk_news_digest_digest_id",
+                        "uk_news_publisher_key");
+    }
+
+    @Test
+    @DisplayName("V3는 섹터 마스터 테이블을 만들지 않는다 (spec FR-005)")
+    void v3DoesNotOwnSectorIdentifiers() {
+        List<String> sectorTables =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(table_name) FROM information_schema.tables"
+                                + " WHERE LOWER(table_schema) = 'public'"
+                                + " AND LOWER(table_name) IN ('news_sector', 'sector', 'sectors')",
+                        String.class);
+
+        assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").isEmpty();
+    }
+
+    @Test
     @DisplayName("V1 스키마에 Entity를 저장하고 다시 읽을 수 있다")
     void entityRoundTripsOnMigratedSchema() {
         Map<String, Object> parameters = Map.of("shortWindow", 20, "threshold", 0.05);

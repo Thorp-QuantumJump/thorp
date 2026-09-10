@@ -1,0 +1,23 @@
+{
+  "version": "news-link-v1",
+  "_comment": "섹터 식별자는 spec 001이 소유한다. 이 파일은 섹터를 선언하지 않고 주제 키와 외부 섹터 식별자의 연결, 그리고 뉴스원 분류 값의 주제 키 매핑만 담는다. sectorIds는 001의 대응표가 확정된 뒤 채운다.",
+  "topics": [
+    { "topicKey": "monetary-policy", "displayName": "통화정책", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "prices", "displayName": "물가", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "employment", "displayName": "고용", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "trade", "displayName": "교역", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "exchange-rate", "displayName": "환율", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "energy", "displayName": "에너지", "domesticLink": true, "sectorIds": [] },
+    { "topicKey": "semiconductor", "displayName": "반도체", "domesticLink": true, "sectorIds": [] }
+  ],
+  "categoryMappings": [
+    { "sourceCategory": "경제", "topicKey": "monetary-policy" },
+    { "sourceCategory": "금융", "topicKey": "monetary-policy" },
+    { "sourceCategory": "물가", "topicKey": "prices" },
+    { "sourceCategory": "고용", "topicKey": "employment" },
+    { "sourceCategory": "무역", "topicKey": "trade" },
+    { "sourceCategory": "환율", "topicKey": "exchange-rate" },
+    { "sourceCategory": "에너지", "topicKey": "energy" },
+    { "sourceCategory": "반도체", "topicKey": "semiconductor" }
+  ]
+}
