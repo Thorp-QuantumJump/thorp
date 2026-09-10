@@ -97,3 +97,9 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 
 - **Decision**: Task 완료 조건 2의 "테스트"는 backend `./gradlew spotlessApply build`, worker `ruff check src tests && ruff format --check src tests && pytest`로 한다. 계약 변경은 양쪽 픽스처 테스트가 같은 `examples/*.json`을 읽어 통과해야 한다. 수기 대조(SC-003)는 3개 ETF·24개월 CSV 픽스처에 대해 스프레드시트 계산 결과를 `worker/tests/fixtures/manual_reconciliation.json`으로 고정하고 pytest가 허용 오차(PD-12 확정 전 임시 0, 즉 정확 일치) 안에서 비교한다.
 - **Rationale**: 현행 검증 명령을 그대로 쓴다. 허용 오차 0은 정수 수량·원 단위 회계에서 가능하고 PD-12가 정해지면 바꾼다.
+
+## R-17 목표 위험 맞춤 시나리오 (PD-18, 2026-09-10 팀 확정)
+
+- **Decision**: `scenario=TARGET_RISK`는 전략 위에 얹는 공통 오버레이로 구현한다. 요청 `conditions.scenarioParams.targetVolatility`(연환산, plain string, 기본 `"0.1000"`, 허용 0.05~0.20, 0.01 간격)를 받고, 규칙은 `strategy_rules`의 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true}`(REGISTERED, provisional=false)로 버전 관리한다. 워커는 리밸런싱 판단일마다 최근 63거래일 포트폴리오 일별 수익률(전략 목표 비중 기준)의 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로 두며, 추정치 ≤ 목표이면 조절하지 않는다. 조절 비율·추정 변동성을 `weightsSeries[].riskScale`·`estimatedVolatility`에 기록한다. 이 값들은 동일 버전 키(R-03)에 포함된다(scenario·scenarioParams·규칙 버전).
+- **Rationale**: 005 FR-017이 "별도 시나리오 보조 보기"로 요구한다. 레버리지 금지(FR-012)라 상향 조절은 불가능하므로 하향만 한다. 관측 63거래일·월말 조절은 역변동성(FR-023)·기본 리밸런싱(FR-011)과 같은 값을 써서 새 결정을 만들지 않는다. 목표 수준은 결과 의미를 바꾸는 사용자 선택이므로 003 등록표 항목(기본값 표기는 "예시·출발점")으로 둔다.
+- **Alternatives**: 전략별로 다른 규칙(공통 오버레이면 충분, 비교 조건이 같아짐) / 004 범위 제외(005 보조 보기가 빈 화면이 됨) / 상향 조절 허용(레버리지 금지 위반).

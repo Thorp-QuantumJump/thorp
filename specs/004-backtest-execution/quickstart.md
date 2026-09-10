@@ -58,6 +58,10 @@ pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 
 
 S1~S6을 마친 뒤 `GET /internal/execution-metrics?type=SINGLE`(운영자 토큰). 기대: `count ≥ 6`, `failRate`·`cancelRate`·`autoRetryRate`가 0보다 크고, `waitP50Ms ≤ waitP95Ms`, `reuseCount ≥ 1`. `psql -c 'select * from v_run_metric_summary'`와 값이 같다.
 
+## S11. 목표 위험 맞춤 시나리오 (FR-016, PD-18)
+
+S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVolatility": "0.0500"}`만 바꿔 요청한다. 기대: 별도 실행(새 `resultSource=NEW`, 동일 버전 키가 S1과 다름), `/weights`의 각 리밸런싱 항목에 `estimatedVolatility`·`riskScale`이 있고, 추정 변동성이 5%를 넘는 달은 `riskScale < 1`·현금 비중 증가, 넘지 않는 달은 `riskScale = 1`. `targetVolatility: "0.2500"`(범위 밖)은 `400 INVALID_INPUT`, `scenario=FULL_PERIOD`에 `scenarioParams`를 넣으면 `400`. 픽스처 3종목·24개월에서 세 전략 모두 실행되고 결과 `versions.rules`에 `TARGET_RISK_OVERLAY/1`이 기록된다.
+
 ## 완료 판정
 
-S1~S10이 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).
+S1~S11이 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).

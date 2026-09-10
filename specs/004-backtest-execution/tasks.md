@@ -22,7 +22,7 @@
 **Purpose**: 양쪽(Java·Python)이 같은 계약 v2 위에서 시작하고, 실행 환경이 준비된다.
 
 - [ ] T001 [P] [BE] 메시지·API 계약 v2: 문서·픽스처·Java 레코드·quorum 토폴로지·pydantic 모델 (`docs/specs/backtest-api/{README.md,examples/*.json}`, `docs/specs/backtest-messaging/{README.md,examples/*.json}`, `backtest/application/port/message/*.java`, `backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher,RabbitBacktestControlPublisher}.java`, `backend/src/test/.../BacktestMessageRoundTripTest.java`, `worker/src/worker/contracts/{engine_input,engine_output,events,control}.py`, `worker/src/worker/messaging.py`, `worker/tests/{test_contracts,test_rabbitmq}.py`) — Jira `S15P21E205-128`
-  - 문서: `specs/004-backtest-execution/contracts/rest-api.md`·`messaging.md`를 두 README에 반영, "같은 조건이면 항상 새 Job" 문장 제거. API 예시 8종(request v2, accepted-joined/reused, detail-running/cancelled, weights, exceptions, execution-metrics)·메시징 예시 v2 7종(engine-input, started, progress, finished-{completed,failed,cancelled}, control-cancel) 추가, v1 삭제. 픽스처 불변 조건 갱신(run 식별자 `RUN-…`, schemaVersion 2)
+  - 문서: `specs/004-backtest-execution/contracts/rest-api.md`·`messaging.md`를 두 README에 반영, "같은 조건이면 항상 새 Job" 문장 제거. API 예시 8종(request v2, accepted-joined/reused, detail-running/cancelled, weights, exceptions, execution-metrics)·메시징 예시 v2 7종(engine-input, started, progress, finished-{completed,failed,cancelled}, control-cancel) 추가, v1 삭제. 픽스처 불변 조건 갱신(run 식별자 `RUN-…`, schemaVersion 2). `conditions.scenarioParams`(REST)와 `run.scenarioParams`·`run.scenarioRules`(메시징) 필드 포함, `engine-input-target-risk.json` 예시 추가(PD-18)
   - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id="JOB-"+runId`
   - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate·diagnostics.resource). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가
   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증
@@ -41,6 +41,7 @@
   - V3(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB), `backtest_request` 생성, `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)
   - 도메인: `RunStatus.CANCELLED`·`isFinal()`, `BacktestRun.markRunning(executionId)`(attempt+1)/`markCompleted`/`markFailed`/`markCancelled`/`recordProgress`, `BacktestRequest.cancel()`
   - V4: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)
+  - `strategy_rules`에 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(PD-18 확정) 행 추가
   - `StrategyRulesService.requireRegistered()` → PENDING이면 422 `RULES_NOT_REGISTERED`. `ErrorCode` 추가: RULES_NOT_REGISTERED, INSUFFICIENT_HISTORY, EXECUTION_LIMIT, NOT_CANCELLABLE, NOT_RETRYABLE
   - 기존 `BacktestJob*Test`를 Run/Request 테스트로 교체, `FlywayMigrationTest`·`ArchitectureTest` 통과
 - [ ] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`
@@ -62,7 +63,8 @@
   - 접수: 요청 본문 contracts/rest-api.md 구조(executionType·sectorAllocation·strategy·conditions). 검증: targetWeight는 FIXED_WEIGHT만·합=1, 상한 합계 ≥ 투자 비중, 식별자 패턴, 규칙 REGISTERED, 워밍업 가용 기간(422 INSUFFICIENT_HISTORY). 대응표·자료 버전·상장일 읽기 포트가 없으면 이 Task에서 픽스처 기반으로 만든다(analyze M1)
   - `DedupKeyCalculator`: canonical JSON(키 정렬·BigDecimal plain string·null 제거) → SHA-256. 요청자·executionType 제외를 테스트로 고정
   - `BacktestService.create()`: NEW 경로(키 조회 → 없으면 run+request 생성+발행, 한 트랜잭션). JOINED/REUSED는 T010
-  - `EngineInputAssembler` v2: 대응표·규칙 사본·비용 프로필·dataVersion·effectiveStart·seed 42. 202 응답에 resultSource·effectiveStart/End·versions
+  - 시나리오 검증: `TARGET_RISK`면 `scenarioParams.targetVolatility` 필수·0.0500~0.2000·0.0100 간격, `FRESH_CASH_FROM`이면 `startDate` 필수, 그 외 `scenarioParams` 금지(400). scenario·scenarioParams·오버레이 규칙 버전을 동일 버전 키에 포함
+  - `EngineInputAssembler` v2: 대응표·규칙 사본·비용 프로필·dataVersion·effectiveStart·seed 42. `TARGET_RISK`면 `run.scenarioRules`에 `TARGET_RISK_OVERLAY/1` 사본을 채움. 202 응답에 resultSource·effectiveStart/End·versions
   - 조회 `GET /backtests/{id}`: 파생 상태(cancelled_at→CANCELLED), progress{stage,lastTradingDate,completed/totalTradingDays}, queueWaitSeconds, partial, resultSource, versions, failure{code,message}, summary. 타인 요청 404
   - 이벤트: `handleStarted` QUEUED→RUNNING·attempt+1·stage=PREPARING_DATA(RUNNING 중 다른 executionId면 attempt만 +1); `handleProgress` 트랜잭션 저장(`LoggingBacktestProgressNotifier` 삭제); `handleFinished(COMPLETED|FAILED)` 결과·versions·failure_code 저장. CANCELLED는 T011. 종결 후 이벤트 무시 유지
 - [ ] T006 [P] [US1] [BE] 워커 소비자 v2와 다종목 리밸런싱 Nautilus 전략 (`worker/src/worker/{consumer,rabbitmq,engine_runner,nautilus_engine,portfolio_execution,engine_support}.py`, `worker/tests/{test_consumer,test_portfolio_execution}.py`) — Jira `S15P21E205-137`
@@ -70,7 +72,8 @@
   - `PortfolioRebalanceExecution(NautilusStrategy)`: 월말 판단일 `on_bar`(마지막 종목 bar 뒤)에서 배분 모듈(T007)에 조정 종가 이력 전달 → 목표 비중 → 현금·현재가 기준 정수 수량 주문 → 다음 거래일 시가 QuoteTick 시장가 체결. 공매도·레버리지 불가, 매도→매수 순서 고정
   - 거래 정지·거래 불가(halted 또는 volume 0) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`
   - 워밍업: `evaluation.warmupTradingDays` 소비 후 `effectiveStart`부터 성과 집계. 종료일: 시가평가·청산(전량 매도, 비용 포함) 두 결과(`liquidation`)
-  - 비중 오차·잔여 현금을 `weightsSeries[].weightError`·`portfolioSeries[].cash`로 기록(재정규화 금지). `scenario=FRESH_CASH_FROM`(시작일·시작 현금 재지정) 지원(analyze H2)
+  - 비중 오차·잔여 현금을 `weightsSeries[].weightError`·`portfolioSeries[].cash`로 기록(재정규화 금지). `scenario=FRESH_CASH_FROM`(시작일·시작 현금 재지정) 지원
+  - `scenario=TARGET_RISK` 오버레이(PD-18): 리밸런싱 판단일마다 최근 `scenarioRules.lookbackDays`(63) 포트폴리오 일별 수익률 표준편차 × √252로 변동성 추정, 추정치 > `scenarioParams.targetVolatility`이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로, 아니면 그대로(하향만, 레버리지 금지). `weightsSeries[].riskScale`·`estimatedVolatility` 기록. 규칙 없이 오면 INVALID_REQUEST
 
 **Checkpoint**: 접수·상태 흐름과 워커 실행 경로가 연결된다. 전략 계산 검증은 US2 뒤에 S1로 재확인한다.
 
@@ -88,7 +91,7 @@
   - `compute_weights(history, params, rules) -> AllocationResult{weights, source: USER|COMPUTED, exceptions[]}` 순수 함수. FIXED_WEIGHT(source=USER), EQUAL_WEIGHT(1/N), INVERSE_VOLATILITY(`rules.lookbackDays` 63 표준편차 역수, 0 변동성은 `rules.zeroVolatility`대로 + `exceptions[{kind: ZERO_VOLATILITY}]`, `weightCap` 초과 재분배 불가 시 CONSTRAINT_VIOLATION). 규칙 값은 EngineInput `allocation.rules`에서만 읽고 자체 기본값 없음(provisional, PD-02)
   - `rules_registry.py`: SECTOR_MOMENTUM·MINIMUM_VARIANCE 또는 rules 없음 → INVALID_REQUEST("RULES_NOT_REGISTERED"). 두 전략 모듈 파일은 만들지 않음(PD-03·04 확정 후 별도 Task)
 - [ ] T008 [US2] [BE] 성과 지표 확장과 결정성·수기 대조 테스트(SC-002·SC-003) (`worker/src/worker/{performance,engine_runner}.py`, `worker/tests/{test_performance,test_determinism,test_manual_reconciliation}.py`, `worker/tests/fixtures/{manual_reconciliation.json,engine-input-three-etf-{fixed,equal,inverse_vol}.json}`, `docs/specs/backtest-messaging/examples/reconciliation/*.csv`) — Jira `S15P21E205-142`
-  - `performance{…, netTotalReturn, maxDrawdown, totalTradingCost}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method:"sample-covariance-daily"}`, `exceptions[]` 집계, `versions{mapping, rules(provisional), costProfile(provisional), data, engine:"nautilus_trader 1.219.0", worker}`. 부분 결과(취소·한도)는 `lastTradingDate`까지의 시계열로 같은 함수가 계산
+  - `performance{…, netTotalReturn, maxDrawdown, totalTradingCost}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method:"sample-covariance-daily"}`, `exceptions[]` 집계, `versions{mapping, rules(provisional), scenarioRules(TARGET_RISK_OVERLAY/1, 해당 시), costProfile(provisional), data, engine:"nautilus_trader 1.219.0", worker}`. 결정성·수기 대조 테스트에 `TARGET_RISK` 픽스처 1건 추가(quickstart S11). 부분 결과(취소·한도)는 `lastTradingDate`까지의 시계열로 같은 함수가 계산
   - 결정성: 같은 EngineInput 두 번 실행 → `EngineOutput.to_json()` 바이트 동일(세 전략)
   - 수기 대조: 스프레드시트로 계산한 대표 거래일 3개(첫 리밸런싱·분배금 지급일·거래 정지 이월일)의 체결일·수량·현금·비용·분배금을 JSON으로 고정, `PROVISIONAL_TOLERANCE = 0`(PD-12 확정 시 상수만 변경). 스프레드시트 원본 CSV 보관
   - 검증: 모든 체결일 = 판단일 다음 거래일(SC-004), 정수 수량, 결과 시작일 = effectiveStart
@@ -189,4 +192,4 @@
 - PD-03·04·06·07 값은 어느 Task에서도 정하지 않는다. 등록표 행·상수 자리만 만든다.
 - 각 Task 병합 전 AI 코드리뷰(CLAUDE.md 규칙)와 R-16 검증 명령 통과가 필요하다.
 - 기존 DEMO 데이터는 V3에서 폐기 전제다. 보존이 필요하면 T003 리뷰에서 마이그레이션 방식을 바꾼다.
-- analyze H1(임시 실행 한도 적용)·H2(`TARGET_RISK` 시나리오 범위)는 팀 결정 뒤 Task를 추가하거나 spec을 고친다.
+- analyze H1(임시 실행 한도 적용)은 팀이 PD-06 임시값을 주면 Task를 추가한다. H2(`TARGET_RISK`)는 2026-09-10 PD-18로 확정해 T001·T003·T005·T006·T008에 나눠 넣었다. 목표 변동성 항목(기본 10%, 5~20%, 1%)을 003 파라미터 등록표에 올리는 일은 003 spec 쪽 작업이다.

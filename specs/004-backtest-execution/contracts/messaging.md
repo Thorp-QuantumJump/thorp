@@ -18,7 +18,7 @@
 
 ```json
 {
-  "run": {"runId": "RUN-000123", "effectiveStart": "2018-04-02", "start": "2018-01-02", "end": "2025-12-30", "randomSeed": 42, "scenario": "FULL_PERIOD"},
+  "run": {"runId": "RUN-000123", "effectiveStart": "2018-04-02", "start": "2018-01-02", "end": "2025-12-30", "randomSeed": 42, "scenario": "FULL_PERIOD", "scenarioParams": null, "scenarioRules": null},
   "universe": {"mappingVersion": "SECTOR-ETF-2026-09", "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "targetWeight": "0.4000"}]},
   "marketData": {"datasetId": "KRX_DAILY_V1", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
   "allocation": {"strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "rules": {"lookbackDays": 63, "zeroVolatility": "EXCLUDE_THEN_ALLOCATE", "weightCap": "1.0000", "investedFraction": "1.0000"}, "parameters": {"rebalance": "MONTH_END"}},
@@ -30,6 +30,7 @@
 ```
 
 - `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.
+- `run.scenario=TARGET_RISK`면 `run.scenarioParams={"targetVolatility": "0.1000"}`와 `run.scenarioRules={"version": "TARGET_RISK_OVERLAY/1", "lookbackDays": 63, "adjustAt": "REBALANCE", "scaleDownOnly": true}`가 함께 온다(둘 다 백엔드가 채움). 워커는 리밸런싱 판단일마다 최근 `lookbackDays` 포트폴리오 일별 수익률 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱한다. `weightsSeries[]`에 `riskScale`·`estimatedVolatility`를 기록한다. `FRESH_CASH_FROM`이면 `run.scenarioParams={"startDate": "…"}`. 규칙이 빠진 `TARGET_RISK`는 `INVALID_REQUEST`.
 - `marketData.fillPrice=RAW`, `signalPrice=ADJUSTED`는 FR-013을 고정한 값이며 다른 값은 거부.
 - `benchmark` 블록은 v2에서 제거(005 보조 보기는 별도 spec).
 

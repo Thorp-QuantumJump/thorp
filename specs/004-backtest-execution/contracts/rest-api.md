@@ -22,13 +22,14 @@
     ]
   },
   "strategy": {"strategyId": "FIXED_WEIGHT", "rulesVersion": "1", "registryVersion": "PARAM-2026-09", "parameters": {"rebalance": "MONTH_END"}},
-  "conditions": {"start": "2018-01-02", "end": "2025-12-30", "initialCash": "10000000.00", "costProfileVersion": null, "evaluationSplitVersion": "SPLIT-1", "scenario": "FULL_PERIOD"}
+  "conditions": {"start": "2018-01-02", "end": "2025-12-30", "initialCash": "10000000.00", "costProfileVersion": null, "evaluationSplitVersion": "SPLIT-1", "scenario": "FULL_PERIOD", "scenarioParams": null}
 }
 ```
 
 - `targetWeight`는 `FIXED_WEIGHT`에서만 필수, 다른 전략에서는 금지(400).
 - `costProfileVersion` null → 서버 기본(현재 `PROVISIONAL-DEMO-1`).
 - `scenario`: `FULL_PERIOD`(주 분석) · `FRESH_CASH_FROM` · `COST_ESCALATION` · `TARGET_RISK` (FR-016, 별도 실행으로 기록).
+- `scenarioParams`: `TARGET_RISK`면 `{"targetVolatility": "0.1000"}` 필수(연환산, 0.0500~0.2000, 0.0100 간격, 기본값은 003 등록표가 제공). `FRESH_CASH_FROM`이면 `{"startDate": "2020-03-02"}`. `FULL_PERIOD`·`COST_ESCALATION`에서는 null. 규칙(63거래일 추정·월말 조절·하향만)은 서버가 `strategy_rules` `TARGET_RISK_OVERLAY/1`에서 채우며 사용자 입력이 아니다(PD-18).
 
 응답 `202 Accepted`:
 
