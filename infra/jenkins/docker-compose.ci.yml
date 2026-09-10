@@ -22,14 +22,15 @@ services:
     environment:
       TZ: Asia/Seoul
       JAVA_OPTS: "-Xmx1024m -Djava.awt.headless=true"
-      # GitLab Webhook을 받으려면 아래 주석을 풀고 nginx에 /jenkins location을 추가한다.
-      # JENKINS_OPTS: "--prefix=/jenkins"
     volumes:
       - jenkins-home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는
       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.
       - ${DEPLOY_DIR}:${DEPLOY_DIR}
+    # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에
+    # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.
+    networks: [webhook]
     deploy:
       resources:
         limits:
@@ -39,3 +40,8 @@ services:
 
 volumes:
   jenkins-home:
+
+networks:
+  webhook:
+    external: true
+    name: thorp-edge
