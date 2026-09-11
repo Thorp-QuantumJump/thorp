@@ -89,7 +89,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
     }
 
     private void publish(String fixture, BacktestJob job) {
-        publish(MessageFixtures.withBacktestId(fixture, job.getBacktestId().value()));
+        publish(MessageFixtures.withRunId(fixture, job.getBacktestId().value()));
     }
 
     private BacktestStatus statusOf(BacktestJob job) {
@@ -135,10 +135,10 @@ class BacktestEventListenerIT extends PostgresTestSupport {
                 (ObjectNode)
                         MessageFixtures.mapper()
                                 .readTree(
-                                        MessageFixtures.withBacktestId(
+                                        MessageFixtures.withRunId(
                                                 MessageFixtures.FINISHED_COMPLETED,
                                                 job.getBacktestId().value()));
-        broken.put("schemaVersion", 2);
+        broken.put("schemaVersion", 99);
 
         publish(MessageFixtures.mapper().writeValueAsString(broken));
 
@@ -147,7 +147,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
         Message dead = rabbitTemplate.receive(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE, 5000);
         assertThat(dead).isNotNull();
         assertThat(dead.getMessageProperties().getXDeathHeader()).isNotEmpty();
-        assertThat(new String(dead.getBody(), UTF_8)).contains("\"schemaVersion\":2");
+        assertThat(new String(dead.getBody(), UTF_8)).contains("\"schemaVersion\":99");
         assertThat(messageCount(BacktestRabbitConfig.EVENTS_QUEUE)).isZero();
         assertThat(statusOf(job)).isEqualTo(BacktestStatus.QUEUED);
         assertThat(count("backtest_result", job.getId())).isZero();
@@ -156,7 +156,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
     @Test
     @DisplayName("모르는 backtestId의 정상 메시지는 ACK되어 버려지고 DLQ로 가지 않는다")
     void unknownBacktestIdIsAckedNotDeadLettered() {
-        publish(MessageFixtures.withBacktestId(MessageFixtures.STARTED, "BT-20991231-999999"));
+        publish(MessageFixtures.withRunId(MessageFixtures.STARTED, "BT-20991231-999999"));
 
         await().atMost(TIMEOUT).until(() -> messageCount(BacktestRabbitConfig.EVENTS_QUEUE) == 0);
         // 계약 오류였다면 재시도(약 3초) 뒤 DLQ에 나타난다. 그 시간 동안 DLQ가 비어 있어야 한다.

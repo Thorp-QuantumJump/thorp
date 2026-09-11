@@ -12,7 +12,7 @@
 2. ``worker/strategies/{전략}.py`` 에 ``Strategy`` 구현(``generate_signals`` 만)을 만들고
    아래 ``STRATEGIES`` 에 한 줄 등록한다.
 
-``version`` 도 레지스트리가 선언한다. 지원하지 않는 버전을 1.0.0 로직으로 계산해 놓고 그
+``rulesVersion`` 도 레지스트리가 선언한다. 지원하지 않는 버전을 1.0.0 로직으로 계산해 놓고 그
 버전의 결과라고 반환하면 안 되므로, 미지원 버전은 미등록 전략과 같이 거절한다.
 """
 
@@ -20,7 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from worker.contracts.base import ContractModel
-from worker.contracts.engine_input import StrategySpec
+from worker.contracts.engine_input import AllocationSpec
 from worker.strategies.base import Strategy
 from worker.strategies.momentum import MomentumStrategy
 
@@ -43,13 +43,13 @@ class PreparedStrategy:
 class StrategyEntry:
     """``strategyId`` 하나의 지원 범위와 조립 방법."""
 
-    #: 이 엔진이 결과를 그 버전의 결과라고 말할 수 있는 ``strategy.version`` 집합
+    #: 이 엔진이 결과를 그 버전의 결과라고 말할 수 있는 ``allocation.rulesVersion`` 집합
     versions: frozenset[str]
     #: 계약이 전략별 모델로 검증한 ``typed_parameters`` 를 받아 실행 준비를 끝낸다
     build: Callable[[ContractModel], PreparedStrategy]
 
 
-#: ``strategy.strategyId`` → 지원 범위. 여기 없는 전략은 엔진이 거절한다.
+#: ``allocation.strategyId`` → 지원 범위. 여기 없는 전략은 엔진이 거절한다.
 STRATEGIES: dict[str, StrategyEntry] = {
     "MOMENTUM": StrategyEntry(
         versions=frozenset({"1.0.0"}),
@@ -58,29 +58,29 @@ STRATEGIES: dict[str, StrategyEntry] = {
 }
 
 
-def unsupported_strategy_reason(spec: StrategySpec) -> str | None:
+def unsupported_strategy_reason(spec: AllocationSpec) -> str | None:
     """엔진이 이 전략 요청을 실행할 수 없는 이유. 실행할 수 있으면 ``None``.
 
-    ``StrategySpec.typed_parameters`` 는 미등록 ``strategyId`` 에서 ``LookupError`` 를 내므로
+    ``AllocationSpec.typed_parameters`` 는 미등록 ``strategyId`` 에서 ``LookupError`` 를 내므로
     파라미터를 꺼내기 전에 이 함수로 먼저 확인한다.
     """
     entry = STRATEGIES.get(spec.strategy_id)
     if entry is None:
         known = ", ".join(sorted(STRATEGIES)) or "(none)"
         return (
-            f"strategy.strategyId {spec.strategy_id!r} is not implemented by this engine; "
+            f"allocation.strategyId {spec.strategy_id!r} is not implemented by this engine; "
             f"supported: {known}"
         )
-    if spec.version not in entry.versions:
+    if spec.rules_version not in entry.versions:
         supported = ", ".join(sorted(entry.versions))
         return (
-            f"strategy.version {spec.version!r} is not implemented for "
+            f"allocation.rulesVersion {spec.rules_version!r} is not implemented for "
             f"{spec.strategy_id}; supported: {supported}"
         )
     return None
 
 
-def prepare_strategy(spec: StrategySpec) -> PreparedStrategy:
+def prepare_strategy(spec: AllocationSpec) -> PreparedStrategy:
     """레지스트리의 builder로 전략을 조립한다.
 
     지원 범위 확인(``unsupported_strategy_reason``)을 통과한 요청에만 쓴다. 그러지 않은 요청은

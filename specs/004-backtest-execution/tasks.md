@@ -21,14 +21,14 @@
 
 **Purpose**: 양쪽(Java·Python)이 같은 계약 v2 위에서 시작하고, 실행 환경이 준비된다.
 
-- [ ] T001 [P] [BE] 메시지·API 계약 v2: 문서·픽스처·Java 레코드·quorum 토폴로지·pydantic 모델 (`docs/specs/backtest-api/{README.md,examples/*.json}`, `docs/specs/backtest-messaging/{README.md,examples/*.json}`, `backtest/application/port/message/*.java`, `backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher,RabbitBacktestControlPublisher}.java`, `backend/src/test/.../BacktestMessageRoundTripTest.java`, `worker/src/worker/contracts/{engine_input,engine_output,events,control}.py`, `worker/src/worker/messaging.py`, `worker/tests/{test_contracts,test_rabbitmq}.py`) — Jira `S15P21E205-128`
+- [x] T001 [P] [BE] 메시지·API 계약 v2: 문서·픽스처·Java 레코드·quorum 토폴로지·pydantic 모델 (`docs/specs/backtest-api/{README.md,examples/*.json}`, `docs/specs/backtest-messaging/{README.md,examples/*.json}`, `backtest/application/port/message/*.java`, `backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher,RabbitBacktestControlPublisher}.java`, `backend/src/test/.../BacktestMessageRoundTripTest.java`, `worker/src/worker/contracts/{engine_input,engine_output,events,control}.py`, `worker/src/worker/messaging.py`, `worker/tests/{test_contracts,test_rabbitmq}.py`) — Jira `S15P21E205-128`
   - 문서: `specs/004-backtest-execution/contracts/rest-api.md`·`messaging.md`를 두 README에 반영, "같은 조건이면 항상 새 Job" 문장 제거. API 예시 8종(request v2, accepted-joined/reused, detail-running/cancelled, weights, exceptions, execution-metrics)·메시징 예시 v2 7종(engine-input, started, progress, finished-{completed,failed,cancelled}, control-cancel) 추가, v1 삭제. 픽스처 불변 조건 갱신(run 식별자 `RUN-…`, schemaVersion 2). `conditions.scenarioParams`(REST)와 `run.scenarioParams`·`run.scenarioRules`(메시징) 필드 포함, `engine-input-target-risk.json` 예시 추가(PD-18)
   - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id="JOB-"+runId`
-  - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate·diagnostics.resource). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가
+  - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate; 자원 사용량은 FINISHED payload `resource`). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가
   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증
 - [ ] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
   - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)
-  - `migrate-jobs-queue.sh`: 미ACK 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언. `deploy.sh`에 1회 실행 안내
+  - `migrate-jobs-queue.sh`: 접수 중단 → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언 → 실패 시 되돌리기(선언 revert). `deploy.sh`에 1회 실행 안내. **T001 배포와 같은 단계에서 실행한다**
   - (T010 병합 뒤) 전환 실행, `rabbitmqctl list_queues name type arguments`로 quorum·delivery-limit 확인. quickstart S6: 워커 2 replica에서 RUNNING 중 `kill -9` 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE). 가이드에 기록, 운영 배포 절차에 1회 실행 단계 추가
 
 ---
@@ -153,7 +153,7 @@
 
 ### Phase Dependencies
 
-- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 전환 실행·장애 시나리오는 T010 뒤.
+- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 큐 전환 실행은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패). 장애 시나리오 확인만 T010 뒤.
 - **Phase 2**: T003은 T001 뒤. T004는 독립.
 - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.
 - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.
@@ -182,7 +182,7 @@
 
 ### Incremental Delivery
 
-1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 큐 전환 실행·장애 시나리오도 이때 마무리.
+1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 장애 시나리오 확인도 이때 마무리(큐 전환 실행은 T001 배포 시점에 끝나 있어야 한다).
 2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.
 3. T013 마무리.
 4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).

@@ -5,7 +5,7 @@ fake로 갈아끼우고, **발행과 ACK를 같은 로그 리스트에 기록해
 (계약 §7 "FINISHED 발행이 브로커에서 확인된 뒤 작업 메시지 ACK").
 
 엔진은 실제 ``NautilusMomentumEngine`` + ``CsvDataProvider`` 를 쓴다(네트워크 없음).
-20거래일 묶음 경계만은 고정 데이터가 7거래일뿐이라 콜백만 흉내내는 fake 엔진을 쓴다.
+묶음 경계만은 고정 데이터가 7거래일뿐이라 콜백만 흉내내는 fake 엔진을 쓴다.
 """
 
 import json
@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 from conftest import FIXTURE_DIR, engine_input_body
 
-from worker.consumer import BacktestJobConsumer, strip_benchmark
+from worker.consumer import BacktestJobConsumer
 from worker.contracts.base import utc_now
 from worker.contracts.engine import BacktestEngine
 from worker.contracts.engine_input import EngineInput
@@ -27,18 +27,23 @@ from worker.contracts.events import (
     BacktestEvent,
     BacktestEventType,
     FinishedPayload,
+    ProcessingStage,
     ProgressPayload,
     ProgressPoint,
     StartedPayload,
 )
 from worker.engine_runner import NautilusMomentumEngine
 from worker.market_data import CsvDataProvider
-from worker.messaging import PROGRESS_BATCH_TRADING_DAYS, SCHEMA_VERSION, PublishError
+from worker.messaging import SCHEMA_VERSION, PublishError
 
 CSV_FIXTURE = Path(__file__).parents[1] / "examples" / "momentum_fixture.csv"
 
 #: 고정 데이터 회귀 기준 구간의 평가 거래일 수 (README "검증 결과와 제약").
 EVALUATION_TRADING_DAYS = 7
+
+
+def progress(batch_trading_days: int) -> dict[str, Any]:
+    return {"progress": {"batchTradingDays": batch_trading_days}}
 
 
 class FakePublisher:
@@ -97,7 +102,7 @@ class FakeEngine:
         now = utc_now()
         return EngineOutput(
             run=RunResult(
-                backtest_id=engine_input.run.backtest_id,
+                run_id=engine_input.run.run_id,
                 status=RunStatus.COMPLETED,
                 started_at=now,
                 finished_at=now,
@@ -139,22 +144,20 @@ def handle(
     engine: Any = None,
     fail_on: tuple[BacktestEventType, ...] = (),
     headers: Mapping[str, Any] | None = None,
-    progress_batch_size: int = PROGRESS_BATCH_TRADING_DAYS,
     deterministic_ids: bool = True,
+    **overrides: Any,
 ) -> tuple[list[str], FakePublisher]:
-    """작업 메시지 한 건을 처리하고 (호출 로그, 발행자)를 돌려준다."""
+    """작업 메시지 한 건을 처리하고 (호출 로그, 발행자)를 돌려준다.
+
+    ``overrides`` 는 기본 본문의 섹션 덮어쓰기다(``body`` 를 직접 주면 무시).
+    """
     call_log: list[str] = []
     publisher = FakePublisher(call_log, fail_on)
     ids = sequential_ids()
-    overrides: dict[str, Any] = {"new_id": lambda: next(ids)} if deterministic_ids else {}
-    consumer = BacktestJobConsumer(
-        engine or real_engine(),
-        publisher,
-        progress_batch_size=progress_batch_size,
-        **overrides,
-    )
+    factory: dict[str, Any] = {"new_id": lambda: next(ids)} if deterministic_ids else {}
+    consumer = BacktestJobConsumer(engine or real_engine(), publisher, **factory)
     if body is None:
-        body = json.dumps(engine_input_body())
+        body = json.dumps(engine_input_body(**overrides))
     consumer.handle(body, headers, FakeAcknowledger(call_log))
     return call_log, publisher
 
@@ -163,8 +166,8 @@ def handle(
 
 
 def test_started_progress_finished_order_and_sequence() -> None:
-    """STARTED(0) → PROGRESS(20거래일 묶음, 마지막 잔여 구간 포함) → FINISHED → ACK."""
-    call_log, publisher = handle(progress_batch_size=3)  # 7거래일 → 3 + 3 + 1
+    """STARTED(0) → PROGRESS(묶음, 마지막 잔여 구간 포함) → FINISHED → ACK."""
+    call_log, publisher = handle(**progress(3))  # 7거래일 → 3 + 3 + 1
 
     assert call_log == [
         "publish:STARTED",
@@ -175,15 +178,25 @@ def test_started_progress_finished_order_and_sequence() -> None:
         "ack",
     ]
     assert [event.sequence for event in publisher.events] == [0, 1, 2, 3, 4]
-    progress = publisher.of_type(BacktestEventType.PROGRESS)
-    assert [len(event.payload.portfolio_series) for event in progress] == [3, 3, 1]
-    assert [event.payload.completed_trading_days for event in progress] == [3, 6, 7]
-    assert {event.payload.total_trading_days for event in progress} == {EVALUATION_TRADING_DAYS}
+    progress_events = publisher.of_type(BacktestEventType.PROGRESS)
+    assert [len(e.payload.portfolio_series) for e in progress_events] == [3, 3, 1]
+    assert [e.payload.completed_trading_days for e in progress_events] == [3, 6, 7]
+    assert {e.payload.total_trading_days for e in progress_events} == {EVALUATION_TRADING_DAYS}
+
+
+def test_progress_carries_stage_and_last_trading_date() -> None:
+    _, publisher = handle(**progress(3))
+    for event in publisher.of_type(BacktestEventType.PROGRESS):
+        assert event.payload.stage is ProcessingStage.COMPUTING
+        assert event.payload.last_trading_date == event.payload.portfolio_series[-1].date
+    started = publisher.of_type(BacktestEventType.STARTED)[0]
+    assert started.payload.stage is ProcessingStage.PREPARING_DATA
+    assert started.payload.resource is not None and started.payload.resource.pid is not None
 
 
 def test_progress_points_are_not_republished() -> None:
     """이번 구간에서 새로 계산한 포인트만 담는다 (계약 §4.2)."""
-    _, publisher = handle(progress_batch_size=3)
+    _, publisher = handle(**progress(3))
     dates = [
         point.date
         for event in publisher.of_type(BacktestEventType.PROGRESS)
@@ -193,19 +206,18 @@ def test_progress_points_are_not_republished() -> None:
     assert dates == sorted(dates)
 
 
-def test_default_batch_is_twenty_trading_days_with_remainder() -> None:
-    """기본 묶음은 20거래일이고 마지막 잔여 5거래일도 발행한다."""
-    assert PROGRESS_BATCH_TRADING_DAYS == 20
-    _, publisher = handle(engine=FakeEngine(trading_days=45))
-    progress = publisher.of_type(BacktestEventType.PROGRESS)
-    assert [len(event.payload.portfolio_series) for event in progress] == [20, 20, 5]
-    assert [event.payload.completed_trading_days for event in progress] == [20, 40, 45]
+def test_batch_size_comes_from_the_job_message() -> None:
+    """묶음 크기는 상수가 아니라 ``progress.batchTradingDays`` 다. 잔여 5거래일도 발행한다."""
+    _, publisher = handle(engine=FakeEngine(trading_days=45), **progress(20))
+    progress_events = publisher.of_type(BacktestEventType.PROGRESS)
+    assert [len(e.payload.portfolio_series) for e in progress_events] == [20, 20, 5]
+    assert [e.payload.completed_trading_days for e in progress_events] == [20, 40, 45]
 
 
 def test_exact_batch_boundary_does_not_publish_empty_progress() -> None:
-    _, publisher = handle(engine=FakeEngine(trading_days=40))
-    progress = publisher.of_type(BacktestEventType.PROGRESS)
-    assert [len(event.payload.portfolio_series) for event in progress] == [20, 20]
+    _, publisher = handle(engine=FakeEngine(trading_days=40), **progress(20))
+    progress_events = publisher.of_type(BacktestEventType.PROGRESS)
+    assert [len(e.payload.portfolio_series) for e in progress_events] == [20, 20]
 
 
 # --- FINISHED 발행 확인 → ACK 순서 -----------------------------------------------------
@@ -234,7 +246,7 @@ def test_started_publish_failure_skips_execution_and_does_not_ack() -> None:
 
 def test_progress_publish_failure_does_not_ack() -> None:
     """엔진이 콜백 실패를 CallbackError로 올린다. 그래도 ACK하지 않는다."""
-    call_log, publisher = handle(fail_on=(BacktestEventType.PROGRESS,), progress_batch_size=3)
+    call_log, publisher = handle(fail_on=(BacktestEventType.PROGRESS,), **progress(3))
     assert "ack" not in call_log
     assert call_log == ["publish:STARTED", "publish-failed:PROGRESS", "requeue"]
     assert publisher.of_type(BacktestEventType.FINISHED) == []
@@ -249,23 +261,32 @@ def _body_without_initial_cash() -> str:
     return json.dumps(body)
 
 
+def _v1_body() -> str:
+    """v1 모양(backtestId·strategy·commission)의 작업 메시지는 v2 워커에서 계약 오류다."""
+    body = engine_input_body()
+    body["run"] = {"backtestId": "OLD", "start": "2025-01-06", "end": "2025-01-14"}
+    body["strategy"] = body.pop("allocation")
+    return json.dumps(body)
+
+
 @pytest.mark.parametrize(
     ("body", "headers"),
     [
         pytest.param("{not json", None, id="broken-json"),
         pytest.param("[]", None, id="json-array-not-object"),
         pytest.param(_body_without_initial_cash(), None, id="missing-required-field"),
+        pytest.param(_v1_body(), None, id="v1-shape"),
         pytest.param(
             json.dumps(engine_input_body(marketData={"interval": "1H"})),
             None,
             id="unknown-enum-value",
         ),
-        pytest.param(json.dumps(engine_input_body()), {"schemaVersion": 2}, id="header-version"),
+        pytest.param(json.dumps(engine_input_body()), {"schemaVersion": 1}, id="header-version"),
         pytest.param(
-            json.dumps({**engine_input_body(), "schemaVersion": 2}), None, id="body-version"
+            json.dumps({**engine_input_body(), "schemaVersion": 99}), None, id="body-version"
         ),
         pytest.param(
-            json.dumps(engine_input_body()), {"schemaVersion": "1"}, id="header-version-not-int"
+            json.dumps(engine_input_body()), {"schemaVersion": "2"}, id="header-version-not-int"
         ),
     ],
 )
@@ -297,7 +318,7 @@ def test_absent_schema_version_is_accepted() -> None:
 @pytest.mark.parametrize(
     ("overrides", "code"),
     [
-        pytest.param({"run": {"start": "2030-01-02", "end": "2030-01-10"}}, "NO_MARKET_DATA"),
+        pytest.param({"run": {"start": "2030-01-02", "end": "2030-01-10"}}, "DATA_INSUFFICIENT"),
         pytest.param({"portfolio": {"leverage": "2"}}, "INVALID_REQUEST"),
     ],
 )
@@ -309,6 +330,8 @@ def test_engine_failure_is_published_as_finished_and_acked(
     assert call_log[-2:] == ["publish:FINISHED", "ack"]
     assert "reject" not in call_log and "requeue" not in call_log
     finished = publisher.of_type(BacktestEventType.FINISHED)[0]
+    assert finished.payload.status is RunStatus.FAILED
+    assert finished.payload.partial is False and finished.payload.last_trading_date is None
     output = finished.payload.engine_output
     assert output.run.status is RunStatus.FAILED
     assert output.run.error is not None and output.run.error.code == code
@@ -321,6 +344,18 @@ def test_consumer_does_not_branch_on_engine_status() -> None:
     failed, _ = handle(json.dumps(engine_input_body(portfolio={"leverage": "2"})))
     assert [entry for entry in ok if entry.startswith("publish:F")] == ["publish:FINISHED"]
     assert [entry for entry in failed if entry.startswith("publish:F")] == ["publish:FINISHED"]
+
+
+def test_finished_payload_mirrors_run_block() -> None:
+    """payload.status·partial·lastTradingDate는 run 블록의 값 그대로다(백엔드가 일치를 검증)."""
+    _, publisher = handle()
+    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
+    run = finished.payload.engine_output.run
+    assert finished.payload.status is run.status is RunStatus.COMPLETED
+    assert finished.payload.partial is False and run.partial is False
+    assert finished.payload.last_trading_date == run.last_trading_date is not None
+    assert finished.payload.resource is not None
+    assert finished.payload.resource.wall_seconds is not None
 
 
 # --- 멱등성: 재전달은 재실행 + 새 executionId -----------------------------------------
@@ -339,7 +374,7 @@ def test_redelivery_reruns_with_a_new_execution_id() -> None:
     second_execution = {event.execution_id for event in second.events}
     assert len(first_execution) == len(second_execution) == 1  # 실행 안에서는 하나
     assert first_execution != second_execution  # 실행 시도마다 새 값
-    assert {event.backtest_id for event in first.events + second.events} == {"TEST"}
+    assert {event.run_id for event in first.events + second.events} == {"TEST"}
     assert [event.sequence for event in second.events] == [0, 1, 2]  # 새 실행은 0부터
 
 
@@ -359,31 +394,32 @@ def fixture_json(name: str) -> dict[str, Any]:
 
 
 def test_published_events_match_contract_fixture_shape() -> None:
-    _, publisher = handle(progress_batch_size=3)
+    _, publisher = handle(**progress(3))
     published = {event.type: json.loads(event.to_json()) for event in publisher.events}
 
     envelope_keys = set(fixture_json("event-started.json"))
     for event_type, body in published.items():
         assert set(body) == envelope_keys, event_type
         assert body["schemaVersion"] == SCHEMA_VERSION
-        assert body["backtestId"] == "TEST"
+        assert body["runId"] == "TEST"
         assert body["occurredAt"].endswith("Z")
 
     started = fixture_json("event-started.json")
     assert set(published[BacktestEventType.STARTED]["payload"]) == set(started["payload"])
 
     progress_fixture = fixture_json("event-progress.json")["payload"]
-    progress = published[BacktestEventType.PROGRESS]["payload"]
-    assert set(progress) == set(progress_fixture)
-    assert set(progress["portfolioSeries"][0]) == set(progress_fixture["portfolioSeries"][0])
+    progress_payload = published[BacktestEventType.PROGRESS]["payload"]
+    assert set(progress_payload) == set(progress_fixture)
+    assert set(progress_payload["portfolioSeries"][0]) == set(
+        progress_fixture["portfolioSeries"][0]
+    )
 
-    # benchmark 를 계산하지 않으므로(별도 티켓) 모양 기준은 benchmark 없는 실패 픽스처다.
-    finished_fixture = fixture_json("event-finished-failed.json")["payload"]
+    finished_fixture = fixture_json("event-finished-completed.json")["payload"]
     assert set(published[BacktestEventType.FINISHED]["payload"]) == set(finished_fixture)
 
 
 def test_published_events_revalidate_through_the_contract() -> None:
-    _, publisher = handle(progress_batch_size=3)
+    _, publisher = handle(**progress(3))
     models = {
         BacktestEventType.STARTED: BacktestEvent[StartedPayload],
         BacktestEventType.PROGRESS: BacktestEvent[ProgressPayload],
@@ -394,14 +430,6 @@ def test_published_events_revalidate_through_the_contract() -> None:
         assert model.model_validate_json(event.to_json()).sequence == event.sequence
 
 
-def test_finished_never_carries_a_benchmark() -> None:
-    """벤치마크 계산은 이 티켓 범위가 아니다. 항상 None → 직렬화에서 키 생략."""
-    _, publisher = handle()
-    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
-    assert finished.payload.benchmark is None
-    assert "benchmark" not in json.loads(finished.to_json())["payload"]
-
-
 def test_regression_baseline_is_untouched() -> None:
     """엔진을 건드리지 않았는지 확인 (최종 자산 1068.7, 평가 7거래일)."""
     _, publisher = handle()
@@ -410,55 +438,3 @@ def test_regression_baseline_is_untouched() -> None:
     assert output.performance is not None
     assert output.performance.final_equity == Decimal("1068.7")
     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS
-
-
-# --- 벤치마크: 엔진 호출에서만 벗긴다 --------------------------------------------------
-
-#: 기본 본문(SK하이닉스 000660.XKRX 단일 종목)에 벤치마크 지정만 얹은 요청.
-BENCHMARK_BODY = engine_input_body(benchmark={"instrumentId": "069500.XKRX"})
-
-
-def test_benchmark_request_still_produces_a_result() -> None:
-    """벤치마크를 지정해도 결과가 나온다.
-
-    벗기기 전에는 엔진이 지정을 ``INVALID_REQUEST`` 로 거절해(``engine_support``) 벤치마크를
-    골랐다는 이유만으로 백테스트 결과 전체가 FAILED로 저장됐다.
-    """
-    engine = CountingEngine(real_engine())
-    call_log, publisher = handle(json.dumps(BENCHMARK_BODY), engine=engine)
-
-    assert engine.inputs[0].benchmark is None  # 엔진은 지정을 받지 않는다
-    assert call_log[-2:] == ["publish:FINISHED", "ack"]
-    output = publisher.of_type(BacktestEventType.FINISHED)[0].payload.engine_output
-    assert output.run.status is RunStatus.COMPLETED
-    assert output.performance is not None
-    assert output.performance.final_equity == Decimal("1068.7")
-
-
-def test_benchmark_request_omits_the_benchmark_from_finished() -> None:
-    """벗긴 사실을 감추지 않는다. 계산하지 않았으므로 payload에서 키가 빠진다.
-
-    계약이 그 생략을 "미지정 또는 실패"로 정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다.
-    """
-    _, publisher = handle(json.dumps(BENCHMARK_BODY))
-    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
-
-    assert finished.payload.benchmark is None
-    assert "benchmark" not in json.loads(finished.to_json())["payload"]
-
-
-def test_strip_benchmark_returns_the_request_untouched_when_none_is_specified() -> None:
-    engine_input = EngineInput.model_validate(engine_input_body())
-    assert strip_benchmark(engine_input) is engine_input
-
-
-def test_strip_benchmark_changes_only_the_benchmark() -> None:
-    """원본은 그대로 둔다 — 벤치마크는 계약상 실행 Consumer가 나중에 계산할 대상이다."""
-    engine_input = EngineInput.model_validate(BENCHMARK_BODY)
-    stripped = strip_benchmark(engine_input)
-
-    assert stripped.benchmark is None
-    assert engine_input.benchmark is not None
-    assert stripped.model_dump(exclude={"benchmark"}) == engine_input.model_dump(
-        exclude={"benchmark"}
-    )

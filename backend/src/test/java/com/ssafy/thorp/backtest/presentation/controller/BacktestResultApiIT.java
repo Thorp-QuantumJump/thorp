@@ -100,7 +100,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
                                     event.executionId(),
                                     event.eventId(),
                                     event.payload().engineOutput(),
-                                    event.payload().benchmark()));
+                                    null));
                     return jobRepository.update(completed ? job.markCompleted() : job.markFailed());
                 });
     }

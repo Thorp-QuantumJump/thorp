@@ -39,7 +39,7 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 - **Decision**: `backtest.jobs`를 quorum queue(`x-queue-type=quorum`, `x-delivery-limit=1`, 기존 DLX 유지)로 선언한다. 워커 프로세스가 죽어 unacked 메시지가 재전달되면 한 번만 재실행되고, 두 번째도 끊기면 브로커가 DLQ로 보낸다. 백엔드에 `backtest.jobs.dlq` 리스너를 추가해 run을 `FAILED(failureCode=SYSTEM_FAILURE)`로 종결한다. STARTED 이벤트의 새 executionId를 받으면 `attempt`를 1 올리고, 측정 기록의 `autoRetried = attempt > 1`로 남긴다. 워커가 스스로 판정한 결정적 오류(INVALID_REQUEST·자료 부족·제약 위반)는 FINISHED(FAILED)로 응답하고 ACK하므로 재시도되지 않는다.
 - **Rationale**: Clarify Q5. 브로커가 재시도 횟수를 세므로 워커·백엔드에 카운터 경합이 없다. 기존 DLX·DLQ 토폴로지를 그대로 쓴다.
 - **Alternatives**: `redelivered` 플래그로 워커 판단(2회째와 3회째 구분 불가) / 백엔드가 STARTED 횟수로 CANCEL 발행(경합, 계산 낭비).
-- **주의**: classic → quorum 전환은 인자 변경이라 기존 큐를 삭제해야 한다. 개발 환경은 `rabbitmqctl delete_queue backtest.jobs`(quickstart), 운영은 배포 절차에 넣는다. 미ACK 메시지가 없을 때만 삭제한다.
+- **주의**: classic → quorum 전환은 인자 변경이라 기존 큐를 삭제해야 한다. 개발 환경은 `rabbitmqctl delete_queue backtest.jobs`(quickstart), 운영은 배포 절차에 넣는다. **선언 변경(T001)과 큐 전환은 같은 배포 단계다** — 전환 없이 v2 백엔드를 띄우면 재선언이 `PRECONDITION_FAILED`로 실패하고 큐는 classic으로 남는다. 삭제는 접수를 멈춘 상태에서 `messages_ready`·`messages_unacknowledged`가 모두 0일 때만 한다(미ACK만 확인하면 대기 작업을 잃는다).
 
 ## R-07 비용 조건 버전
 
@@ -62,7 +62,7 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 
 ## R-10 실행 측정 기록과 원가
 
-- **Decision**: 백엔드가 종결 이벤트마다 `backtest_run_metric`(run_id, execution_type, status, queued_at, started_at, finished_at, wait_ms, run_ms, peak_rss_mb, cpu_seconds, auto_retried, result_bytes)을 기록한다. 자원 사용량은 워커가 FINISHED `diagnostics.resource`에 실어 보낸다(`resource.getrusage`). 재조회는 `backtest_reuse_event(run_id, request_id, kind JOINED|REUSED, at)`로 따로 기록한다. 집계는 SQL 뷰 `v_run_metric_summary`(유형별 `percentile_cont(0.5/0.95)` 대기·소요, 실패율, 자동 재시도율)와 `GET /internal/execution-metrics`로 제공한다. 원가는 cpu_seconds·peak_rss_mb·result_bytes 원단위로만 기록하고 금액 환산 단가는 정하지 않는다.
+- **Decision**: 백엔드가 종결 이벤트마다 `backtest_run_metric`(run_id, execution_type, status, queued_at, started_at, finished_at, wait_ms, run_ms, peak_rss_mb, cpu_seconds, auto_retried, result_bytes)을 기록한다. 자원 사용량은 워커가 FINISHED payload의 `resource{peakRssMb, cpuSeconds, wallSeconds}`에 실어 보낸다(EngineOutput 밖 — 결정성 비교 대상에서 제외. T001은 cpu·wall 초만 채우고 peak RSS는 T012에서). 재조회는 `backtest_reuse_event(run_id, request_id, kind JOINED|REUSED, at)`로 따로 기록한다. 집계는 SQL 뷰 `v_run_metric_summary`(유형별 `percentile_cont(0.5/0.95)` 대기·소요, 실패율, 자동 재시도율)와 `GET /internal/execution-metrics`로 제공한다. 원가는 cpu_seconds·peak_rss_mb·result_bytes 원단위로만 기록하고 금액 환산 단가는 정하지 않는다.
 - **Rationale**: 원칙 IX와 US4. 뷰 하나면 운영자가 볼 수 있고 대시보드는 필요가 확인되면 만든다.
 - **Alternatives**: Micrometer 히스토그램(프로세스 재시작 시 소실, 실행 유형별 원가 기록 불가) / 별도 시계열 DB(미측정 병목에 인프라 추가).
 

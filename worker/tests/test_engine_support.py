@@ -21,6 +21,15 @@ from worker.strategies import STRATEGIES, prepare_strategy, unsupported_strategy
 
 FIXTURE = Path(__file__).parents[1] / "examples" / "momentum_fixture.csv"
 
+COST_PROFILE = {
+    "version": "PROVISIONAL-DEMO-1",
+    "commissionBps": "0",
+    "spreadBps": "0",
+    "slippageBps": "5",
+    "taxBps": "0",
+    "provisional": True,
+}
+
 
 def run(**overrides: Any) -> Any:
     """고정 데이터로 실행한다. 거절되면 데이터에 닿기 전에 반환된다."""
@@ -30,51 +39,56 @@ def run(**overrides: Any) -> Any:
 
 # (테스트 id, EngineInput 섹션 덮어쓰기, 오류 메시지에 반드시 들어가야 하는 필드 경로)
 UNSUPPORTED: list[tuple[str, dict[str, Any], str]] = [
-    # 엔진은 instrumentIds[0]만 쓴다. 나머지를 조용히 버리면 요청하지 않은 단일 종목 결과가
+    # 엔진은 items[0]만 쓴다. 나머지를 조용히 버리면 요청하지 않은 단일 종목 결과가
     # 다종목 백테스트 결과로 저장된다.
     (
         "universe-multiple-instruments",
-        {"universe": {"instrumentIds": ["000660.XKRX", "005930.XKRX"]}},
-        "universe.instrumentIds",
+        {"universe": {"items": [{"instrumentId": "000660.XKRX"}, {"instrumentId": "005930.XKRX"}]}},
+        "universe.items",
     ),
+    ("run-scenario", {"run": {"scenario": "TARGET_RISK"}}, "run.scenario"),
+    ("run-effective-start", {"run": {"effectiveStart": "2025-01-08"}}, "run.effectiveStart"),
     ("portfolio-leverage", {"portfolio": {"leverage": "2"}}, "portfolio.leverage"),
     ("portfolio-short-selling", {"portfolio": {"shortSelling": True}}, "portfolio.shortSelling"),
     # 엔진은 KRW_SIM을 하드코딩하고 currency는 성과 라벨링에만 쓴다 → USD를 받으면 KRW로
     # 계산해 놓고 결과에 USD라고 적는다.
     ("portfolio-currency", {"portfolio": {"currency": "USD"}}, "portfolio.currency"),
-    # 계약에 ZERO를 추가하면서 BROKER가 새로 통과한다. 엔진은 수수료·세금 0만 구현했다.
+    ("portfolio-fractional-lots", {"portfolio": {"integerLots": False}}, "portfolio.integerLots"),
+    # 엔진은 수수료·스프레드·세금 0, 슬리피지 5bps만 구현했다.
     (
-        "commission-broker",
-        {"execution": {"commission": {"model": "BROKER", "broker": "SOME-BROKER"}}},
-        "execution.commission.model",
+        "cost-profile-commission",
+        {"execution": {"costProfile": {**COST_PROFILE, "commissionBps": "1.5"}}},
+        "execution.costProfile.commissionBps",
     ),
-    # 엔진은 SLIPPAGE_BPS=5를 하드코딩하고 execution.slippage.bps를 읽지 않는다.
     (
-        "slippage-bps",
-        {"execution": {"slippage": {"model": "FIXED_BPS", "bps": 10}}},
-        "execution.slippage.bps",
+        "cost-profile-tax",
+        {"execution": {"costProfile": {**COST_PROFILE, "taxBps": "23"}}},
+        "execution.costProfile.taxBps",
+    ),
+    (
+        "cost-profile-slippage",
+        {"execution": {"costProfile": {**COST_PROFILE, "slippageBps": "10"}}},
+        "execution.costProfile.slippageBps",
     ),
     ("partial-fill", {"execution": {"partialFill": True}}, "execution.partialFill"),
-    ("benchmark", {"benchmark": {"instrumentId": "069500.XKRX"}}, "benchmark"),
-    # 미지원 전략·버전은 엔진 레지스트리에 없다는 사실로 자동 거절된다.
-    # MA_CROSSOVER는 계약(STRATEGY_PARAMETERS)에는 있고 엔진 구현체는 없는 경우다.
     (
-        "strategy-known-to-contract-only",
-        {
-            "strategy": {
-                "strategyId": "MA_CROSSOVER",
-                "parameters": {"shortWindow": 20, "longWindow": 60, "threshold": 0.05},
-            }
-        },
-        "strategy.strategyId",
+        "evaluation-warmup",
+        {"evaluation": {"warmupTradingDays": 10, "liquidationAtEnd": False}},
+        "evaluation.warmupTradingDays",
     ),
+    (
+        "evaluation-liquidation",
+        {"evaluation": {"liquidationAtEnd": True}},
+        "evaluation.liquidationAtEnd",
+    ),
+    # 미지원 전략·버전은 엔진 레지스트리에 없다는 사실로 자동 거절된다.
     # 계약이 아예 모르는 strategyId는 parameters 봉투를 그대로 통과시킨다.
     (
         "strategy-unknown-everywhere",
-        {"strategy": {"strategyId": "NOT_A_STRATEGY", "parameters": {"anything": 1}}},
-        "strategy.strategyId",
+        {"allocation": {"strategyId": "NOT_A_STRATEGY", "parameters": {"anything": 1}}},
+        "allocation.strategyId",
     ),
-    ("strategy-version", {"strategy": {"version": "2.0.0"}}, "strategy.version"),
+    ("strategy-version", {"allocation": {"rulesVersion": "2.0.0"}}, "allocation.rulesVersion"),
 ]
 
 
@@ -96,26 +110,25 @@ def test_unsupported_request_is_rejected(_id: str, overrides: dict[str, Any], fi
 def test_every_unsupported_field_is_reported_at_once() -> None:
     """여러 항목이 동시에 미지원이면 한 번의 실패로 전부 알 수 있어야 한다."""
     output = run(
-        universe={"instrumentIds": ["000660.XKRX", "005930.XKRX"]},
+        universe={"items": [{"instrumentId": "000660.XKRX"}, {"instrumentId": "005930.XKRX"}]},
         portfolio={"currency": "USD", "leverage": "3", "shortSelling": True},
         execution={
-            "commission": {"model": "BROKER", "broker": "SOME-BROKER"},
-            "slippage": {"model": "FIXED_BPS", "bps": 10},
+            "costProfile": {**COST_PROFILE, "commissionBps": "1.5", "slippageBps": "10"},
             "partialFill": True,
         },
-        benchmark={"instrumentId": "069500.XKRX"},
+        evaluation={"liquidationAtEnd": True},
     )
     assert output.run.error.code == "INVALID_REQUEST"
     message = output.run.error.message
     for field in (
-        "universe.instrumentIds",
+        "universe.items",
         "portfolio.currency",
         "portfolio.leverage",
         "portfolio.shortSelling",
-        "execution.commission.model",
-        "execution.slippage.bps",
+        "execution.costProfile.commissionBps",
+        "execution.costProfile.slippageBps",
         "execution.partialFill",
-        "benchmark",
+        "evaluation.liquidationAtEnd",
     ):
         assert field in message
 
@@ -128,7 +141,7 @@ def test_contract_fixture_stays_valid_but_is_out_of_engine_scope() -> None:
     """
     body = json.loads((FIXTURE_DIR / "engine-input.json").read_text(encoding="utf-8"))
     contract_input = EngineInput.model_validate(body)
-    assert contract_input.strategy.strategy_id == "MA_CROSSOVER"
+    assert contract_input.allocation.strategy_id == "MA_CROSSOVER"
     output = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run(contract_input)
     assert output.run.status is RunStatus.FAILED
     assert output.run.error.code == "INVALID_REQUEST"
@@ -171,9 +184,30 @@ def test_delisting_cause_based_is_accepted_with_exactly_one_warning() -> None:
     assert delisting[0].instrument_id == "000660.XKRX"
 
 
+def test_split_price_series_is_accepted_with_a_warning() -> None:
+    """fillPrice=RAW·signalPrice=ADJUSTED는 받되 단일 시계열로 계산한다는 사실을 남긴다."""
+    output = run()
+    codes = [w.code for w in output.diagnostics.warnings]
+    assert codes.count("PRICE_SERIES_NOT_DISTINGUISHED") == 1
+    same = run(marketData={"fillPrice": "ADJUSTED", "signalPrice": "ADJUSTED"})
+    assert "PRICE_SERIES_NOT_DISTINGUISHED" not in [w.code for w in same.diagnostics.warnings]
+
+
+def test_completed_run_reports_v2_run_and_cost_blocks() -> None:
+    output = run()
+    assert output.run.partial is False
+    assert output.run.last_trading_date == output.portfolio_series[-1].date
+    assert output.run.effective_start == output.portfolio_series[0].date
+    assert output.costs is not None and output.costs.total == output.costs.slippage
+    assert output.performance.total_trading_cost == output.costs.total
+    assert output.performance.net_total_return == output.performance.total_return
+    assert output.versions.cost_profile.version == "PROVISIONAL-DEMO-1"
+    assert output.versions.rules.version == "1.0.0"
+
+
 def test_failed_run_carries_no_warnings() -> None:
     """실패 결과에는 경고를 붙이지 않는다 (평가 구간이 없으면 경고의 거래일도 없다)."""
-    output = run(run={"backtestId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
+    output = run(run={"runId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
     assert output.run.status is RunStatus.FAILED
     assert output.diagnostics.warnings == []
 
@@ -181,7 +215,7 @@ def test_failed_run_carries_no_warnings() -> None:
 def test_registry_declares_versions_and_builds_from_typed_parameters() -> None:
     entry = STRATEGIES["MOMENTUM"]
     assert entry.versions == frozenset({"1.0.0"})
-    spec = EngineInput.model_validate(engine_input_body()).strategy
+    spec = EngineInput.model_validate(engine_input_body()).allocation
     assert unsupported_strategy_reason(spec) is None
     prepared = prepare_strategy(spec)
     assert prepared.required_history == 2
@@ -191,8 +225,8 @@ def test_registry_declares_versions_and_builds_from_typed_parameters() -> None:
 def test_prepare_strategy_never_substitutes_another_strategy() -> None:
     """미등록 전략을 조용히 다른 전략으로 대체하지 않는다."""
     spec = EngineInput.model_validate(
-        engine_input_body(strategy={"strategyId": "NOPE", "parameters": {}})
-    ).strategy
+        engine_input_body(allocation={"strategyId": "NOPE", "parameters": {}})
+    ).allocation
     assert "NOPE" in (unsupported_strategy_reason(spec) or "")
     with pytest.raises(LookupError, match="NOPE"):
         prepare_strategy(spec)

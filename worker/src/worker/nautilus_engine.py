@@ -23,6 +23,7 @@ from worker.contracts.engine_input import EngineInput, RunSpec
 from worker.contracts.engine_output import (
     PortfolioSnapshot,
     PositionSnapshot,
+    TradeReason,
     TradeResult,
     TradeSide,
     TradeStatus,
@@ -79,7 +80,7 @@ class MomentumExecution(NautilusStrategy):
         self.on_progress_callback = on_progress
         # 전략과 준비 기간은 레지스트리(worker.strategies)가 만든다. 계약 parameters는
         # dict[str, Any] 봉투이므로 전략별 모델로 검증된 typed_parameters를 넘긴다.
-        prepared = prepare_strategy(request.strategy)
+        prepared = prepare_strategy(request.allocation)
         self.signal_strategy = prepared.signal
         self.required_history = prepared.required_history
         self.closes: deque[Decimal] = deque(maxlen=self.required_history + 1)
@@ -167,6 +168,7 @@ class MomentumExecution(NautilusStrategy):
                 quantity=quantity,
                 commission=ZERO,
                 slippage_cost=slip,
+                reason=TradeReason.SIGNAL,
             )
             self.entry_reference_prices[trade.trade_id] = record.reference_price
             self.trades.append(trade)

@@ -34,10 +34,7 @@
       "winRate": "0.500000",
       "totalCommission": "3941.19",
       "totalSlippageCost": "13137.30",
-      "benchmark": {
-        "instrumentId": "069500.XKRX",
-        "totalReturn": "0.053292"
-      }
+      "benchmark": null
     },
     "startedAt": "2026-09-07T01:00:00Z",
     "finishedAt": "2026-09-07T01:00:04Z",

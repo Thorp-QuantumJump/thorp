@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -31,15 +32,14 @@ import org.junit.jupiter.api.Test;
  */
 class EngineInputFixtureTest {
 
-    private static final Path FIXTURE =
-            Path.of("..", "docs", "specs", "backtest-messaging", "examples", "engine-input.json");
+    private static final Path FIXTURE = MessageFixtures.DIR.resolve(MessageFixtures.ENGINE_INPUT);
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
     private final EngineInputAssembler assembler = new EngineInputAssembler();
 
-    /** 픽스처의 run/universe/strategy/portfolio/benchmark 값을 그대로 담은 Job. */
+    /** 픽스처의 run/universe/allocation/portfolio 값을 그대로 담은 Job. 벤치마크 종목은 v2 메시지에 실리지 않는다. */
     private static BacktestJob fixtureJob(InstrumentId benchmark) {
         return BacktestJob.restore(
                 1L,
@@ -69,32 +69,42 @@ class EngineInputFixtureTest {
     }
 
     @Test
-    @DisplayName("HTTP 요청 예시와 작업 메시지 예시의 공통 필드가 서로 어긋나지 않는다")
+    @DisplayName("HTTP 요청 예시(v1)와 작업 메시지 예시(v2)의 공통 필드가 서로 어긋나지 않는다")
     void requestFixtureAgreesWithMessageFixture() throws IOException {
         JsonNode request = mapper.readTree(Files.readString(REQUEST_FIXTURE));
         JsonNode message = mapper.readTree(Files.readString(FIXTURE));
 
         assertThat(request.at("/run/start")).isEqualTo(message.at("/run/start"));
         assertThat(request.at("/run/end")).isEqualTo(message.at("/run/end"));
-        assertThat(request.get("universe")).isEqualTo(message.get("universe"));
+        List<String> messageInstruments =
+                StreamSupport.stream(message.at("/universe/items").spliterator(), false)
+                        .map(item -> item.get("instrumentId").asText())
+                        .toList();
+        List<String> requestInstruments =
+                StreamSupport.stream(request.at("/universe/instrumentIds").spliterator(), false)
+                        .map(JsonNode::asText)
+                        .toList();
+        assertThat(messageInstruments).isEqualTo(requestInstruments);
         assertThat(request.at("/strategy/strategyId"))
-                .isEqualTo(message.at("/strategy/strategyId"));
+                .isEqualTo(message.at("/allocation/strategyId"));
         assertThat(request.at("/strategy/parameters"))
-                .isEqualTo(message.at("/strategy/parameters"));
+                .isEqualTo(message.at("/allocation/parameters"));
         assertThat(request.at("/portfolio/initialCash"))
                 .isEqualTo(message.at("/portfolio/initialCash"));
         assertThat(request.at("/portfolio/positionSizing"))
                 .isEqualTo(message.at("/portfolio/positionSizing"));
-        assertThat(request.get("benchmark")).isEqualTo(message.get("benchmark"));
     }
 
     @Test
-    @DisplayName("벤치마크가 없는 Job은 benchmark 키를 생략한다")
-    void omitsBenchmarkKeyWhenAbsent() {
-        EngineInput assembled = assembler.assemble(fixtureJob(null));
-
-        JsonNode actual = mapper.valueToTree(assembled);
-
-        assertThat(actual.has("benchmark")).isFalse();
+    @DisplayName("벤치마크 지정 여부와 무관하게 v2 메시지에는 benchmark 키가 없다")
+    void neverEmitsBenchmark() {
+        assertThat(mapper.valueToTree(assembler.assemble(fixtureJob(null))).has("benchmark"))
+                .isFalse();
+        assertThat(
+                        mapper.valueToTree(
+                                        assembler.assemble(
+                                                fixtureJob(new InstrumentId("069500.XKRX"))))
+                                .has("benchmark"))
+                .isFalse();
     }
 }

@@ -14,7 +14,12 @@ from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker, Unroutab
 
 from worker import messaging
 from worker.contracts.base import utc_now
-from worker.contracts.events import BacktestEvent, BacktestEventType, StartedPayload
+from worker.contracts.events import (
+    BacktestEvent,
+    BacktestEventType,
+    ProcessingStage,
+    StartedPayload,
+)
 from worker.messaging import (
     EVENTS_ROUTING_KEY,
     EXCHANGE,
@@ -47,17 +52,17 @@ BACKEND_CONFIG = (
 )
 
 
-def started_event(event_id: str = "EVT-1", backtest_id: str = "BT-1") -> BacktestEvent:
+def started_event(event_id: str = "EVT-1", run_id: str = "BT-1") -> BacktestEvent:
     now = utc_now()
     return BacktestEvent(
         schema_version=SCHEMA_VERSION,
         event_id=event_id,
-        backtest_id=backtest_id,
+        run_id=run_id,
         execution_id="EXEC-1",
         type=BacktestEventType.STARTED,
         sequence=0,
         occurred_at=now,
-        payload=StartedPayload(started_at=now),
+        payload=StartedPayload(started_at=now, stage=ProcessingStage.PREPARING_DATA),
     )
 
 
@@ -104,6 +109,14 @@ def test_prefetch_is_one() -> None:
     assert messaging.PREFETCH_COUNT == 1
 
 
+def test_schema_version_matches_the_backend() -> None:
+    """``SCHEMA_VERSION`` 은 String 상수가 아니라 위 대조에 안 걸리므로 따로 본다."""
+    source = BACKEND_CONFIG.read_text(encoding="utf-8")
+    match = re.search(r"public static final int SCHEMA_VERSION = (\d+);", source)
+    assert match is not None, "backend SCHEMA_VERSION constant not found"
+    assert messaging.SCHEMA_VERSION == int(match.group(1)) == 2
+
+
 # --- 메시지 속성 (계약 §3) ------------------------------------------------------------
 
 
@@ -118,7 +131,7 @@ def test_publish_sets_contract_message_properties() -> None:
     assert properties.content_type == "application/json"
     assert properties.delivery_mode == 2
     assert properties.message_id == "EVT-9"  # 본문 eventId
-    assert properties.correlation_id == "BT-42"  # backtestId
+    assert properties.correlation_id == "BT-42"  # runId
     assert properties.headers == {"schemaVersion": SCHEMA_VERSION}
     assert "__TypeId__" not in properties.headers  # 워커는 Spring 헤더를 보내지 않는다
 
@@ -129,7 +142,7 @@ def test_publish_body_is_contract_json() -> None:
     body = json.loads(channel.published[0]["body"].decode("utf-8"))
     assert body["eventId"] == "EVT-1" and body["type"] == "STARTED"
     assert body["schemaVersion"] == SCHEMA_VERSION
-    assert set(body["payload"]) == {"startedAt"}  # camelCase, 값 없는 키 생략
+    assert set(body["payload"]) == {"startedAt", "stage"}  # camelCase, 값 없는 키 생략
 
 
 # --- 발행 확인과 제한적 재시도 --------------------------------------------------------

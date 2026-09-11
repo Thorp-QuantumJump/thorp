@@ -15,6 +15,7 @@ import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -48,14 +49,29 @@ public class BacktestRabbitConfig {
     public static final String EVENTS_DEAD_LETTER_QUEUE = "backtest.events.dlq";
     public static final String EVENTS_DEAD_LETTER_ROUTING_KEY = "backtest.event.dead";
 
-    /** exchange 2, queue 4, binding 4. DLQ로 간 메시지는 자동 재투입하지 않는다. */
+    /** 백엔드 → 워커 제어(취소) fanout. 워커마다 exclusive·auto-delete 큐를 바인딩한다(계약 §2·§4.4). */
+    public static final String CONTROL_EXCHANGE = "backtest.control";
+
+    /** 메시지 스키마 버전(계약 §3 header, §4.2 envelope). 워커 {@code messaging.SCHEMA_VERSION}과 같아야 한다. */
+    public static final int SCHEMA_VERSION = 2;
+
+    /**
+     * 작업 큐의 quorum 재전달 상한. 워커 프로세스가 죽어 unacked 메시지가 재전달되면 한 번만 재실행되고, 두 번째도 끊기면 브로커가 DLQ로 보낸다(spec
+     * 004 Clarify Q5, research R-06). classic → quorum 전환은 인자 변경이라 기존 큐를 삭제해야 한다.
+     */
+    public static final int JOBS_DELIVERY_LIMIT = 1;
+
+    /** exchange 3(direct 2 + fanout 1), queue 4, binding 4. DLQ로 간 메시지는 자동 재투입하지 않는다. */
     @Bean
     public Declarables backtestTopology() {
         DirectExchange exchange = new DirectExchange(EXCHANGE, true, false);
         DirectExchange dlx = new DirectExchange(DEAD_LETTER_EXCHANGE, true, false);
+        FanoutExchange control = new FanoutExchange(CONTROL_EXCHANGE, true, false);
 
         Queue jobs =
                 QueueBuilder.durable(JOBS_QUEUE)
+                        .quorum()
+                        .deliveryLimit(JOBS_DELIVERY_LIMIT)
                         .deadLetterExchange(DEAD_LETTER_EXCHANGE)
                         .deadLetterRoutingKey(JOBS_DEAD_LETTER_ROUTING_KEY)
                         .build();
@@ -70,6 +86,7 @@ public class BacktestRabbitConfig {
         return new Declarables(
                 exchange,
                 dlx,
+                control,
                 jobs,
                 events,
                 jobsDlq,

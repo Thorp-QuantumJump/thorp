@@ -81,11 +81,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
     private static SaveBacktestResultCommand command(
             Long jobId, BacktestEvent<FinishedPayload> event) {
         return new SaveBacktestResultCommand(
-                jobId,
-                event.executionId(),
-                event.eventId(),
-                event.payload().engineOutput(),
-                event.payload().benchmark());
+                jobId, event.executionId(), event.eventId(), event.payload().engineOutput(), null);
     }
 
     private void saveAndClear(SaveBacktestResultCommand command) {
@@ -114,7 +110,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         assertThat(result.getPerformance()).isEqualTo(output.performance());
         assertThat(result.getExecution()).isEqualTo(output.execution());
         assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());
-        assertThat(result.getBenchmark()).isEqualTo(event.payload().benchmark());
+        assertThat(result.getBenchmark()).isNull();
         assertThat(result.getDiagnostics()).isEqualTo(output.diagnostics());
         assertThat(result.getCreatedAt()).isNotNull();
     }
@@ -158,7 +154,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         saveAndClear(command(jobId, event));
 
         BacktestResultJpaEntity result = entityManager.find(BacktestResultJpaEntity.class, jobId);
-        assertThat(result.getErrorCode()).isEqualTo("NO_MARKET_DATA");
+        assertThat(result.getErrorCode()).isEqualTo("DATA_INSUFFICIENT");
         assertThat(result.getErrorMessage()).contains("000660.XKRX");
         assertThat(result.getPerformance()).isNull();
         assertThat(result.getExecution()).isNull();
@@ -179,8 +175,15 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
                         output.run(),
                         output.performance(),
                         output.portfolioSeries(),
+                        output.weightsSeries(),
+                        output.weightsSource(),
                         List.of(first, first),
                         output.execution(),
+                        output.costs(),
+                        output.liquidation(),
+                        output.analytics(),
+                        output.exceptions(),
+                        output.versions(),
                         output.diagnostics());
         Long jobId = newJobId();
 

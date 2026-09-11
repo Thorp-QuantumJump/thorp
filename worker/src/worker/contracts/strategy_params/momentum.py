@@ -6,7 +6,7 @@ from worker.contracts.base import ContractModel
 
 
 class MomentumParameters(ContractModel):
-    """``strategy.parameters`` 중 ``strategyId=MOMENTUM`` 인 경우의 스키마.
+    """``allocation.parameters`` 중 ``strategyId=MOMENTUM`` 인 경우의 스키마.
 
     기본값을 두지 않는다. 기본값이 있으면 ``lookbackDays`` 를 ``lookbackDay`` 로 잘못 보내도
     조용히 기본값으로 백테스트가 돌아 잘못된 수익률이 나온다. 필수 필드 + ``extra="forbid"``

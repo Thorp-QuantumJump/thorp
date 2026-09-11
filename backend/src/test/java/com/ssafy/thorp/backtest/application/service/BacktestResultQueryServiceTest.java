@@ -80,12 +80,14 @@ class BacktestResultQueryServiceTest {
                 new BigDecimal("11666521.51"),
                 "KRW",
                 new BigDecimal("0.166652"),
+                null,
                 new BigDecimal("0.366917"),
                 new BigDecimal("-0.041757"),
                 new BigDecimal("2.342630"),
                 new BigDecimal("0.132307"),
                 2,
-                new BigDecimal("0.500000"));
+                new BigDecimal("0.500000"),
+                null);
     }
 
     private static EngineOutput.ExecutionResult execution() {
@@ -206,6 +208,7 @@ class BacktestResultQueryServiceTest {
                 null,
                 new BigDecimal("0.010000"),
                 new BigDecimal("-0.005000"),
+                null,
                 null);
     }
 
@@ -351,7 +354,8 @@ class BacktestResultQueryServiceTest {
                 base.dailyReturn(),
                 base.cumulativeReturn(),
                 base.drawdown(),
-                positions);
+                positions,
+                null);
     }
 
     /** 01-02(보유 1) → 01-03(변경 없음) → 01-06(보유 없음 확정) → 01-07(변경 없음) */

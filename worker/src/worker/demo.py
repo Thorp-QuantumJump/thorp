@@ -24,29 +24,33 @@ def build_engine_input(
 ) -> EngineInput:
     """CLI 인자로 계약 ``EngineInput`` 을 조립한다.
 
-    계약은 ``run``·``universe``·``marketData``·``strategy``·``portfolio``·``execution`` 이
-    모두 필수이므로 부분 dict를 넘길 수 없다. 실행 정책은 계약 §4.1 고정값이며, 운영에서는
-    백엔드가 채운다. ``datasetId`` 는 실제 공급자(yfinance)를 그대로 적는다 — 계약 고정값은
-    ``KRX_DAILY_V1`` 이지만 자유 문자열 필드이고 KRX 연결은 별도 작업이다.
+    계약은 여덟 블록(``run``·``universe``·``marketData``·``allocation``·``portfolio``·``execution``·
+    ``evaluation``·``progress``)이 모두 필수이므로 부분 dict를 넘길 수 없다. 실행 정책은 계약 §4.1
+    고정값이며, 운영에서는 백엔드가 채운다. ``datasetId`` 는 실제 공급자(yfinance)를 그대로 적는다 —
+    계약 고정값은 ``KRX_DAILY_V1`` 이지만 자유 문자열 필드이고 KRX 연결은 별도 작업이다.
     """
     return EngineInput.model_validate(
         {
             "run": {
-                "backtestId": "BT-MOMENTUM-DEMO",
+                "runId": "BT-MOMENTUM-DEMO",
                 "start": start,
                 "end": end,
                 "randomSeed": 42,
+                "scenario": "FULL_PERIOD",
             },
-            "universe": {"instrumentIds": [instrument_id]},
+            "universe": {"items": [{"instrumentId": instrument_id}]},
             "marketData": {
                 "datasetId": "YFINANCE_DAILY",
                 "interval": "1D",
                 "adjustment": "SPLIT_ADJUSTED",
                 "priceType": "LAST",
+                "fillPrice": "RAW",
+                "signalPrice": "ADJUSTED",
+                "distributions": "CASH_ON_PAY_DATE",
             },
-            "strategy": {
+            "allocation": {
                 "strategyId": "MOMENTUM",
-                "version": "1.0.0",
+                "rulesVersion": "1.0.0",
                 "parameters": {"lookbackDays": lookback_days},
             },
             "portfolio": {
@@ -55,18 +59,27 @@ def build_engine_input(
                 "positionSizing": {"type": "STRATEGY_DEFINED", "maxPositionPct": "1"},
                 "shortSelling": False,
                 "leverage": "1",
+                "integerLots": True,
             },
             "execution": {
                 "signalTiming": "BAR_CLOSE",
                 "executionTiming": "NEXT_BAR_OPEN",
                 "orderTypes": ["MARKET"],
-                "commission": {"model": "ZERO"},
-                "slippage": {"model": "FIXED_BPS", "bps": 5},
+                "costProfile": {
+                    "version": "PROVISIONAL-DEMO-1",
+                    "commissionBps": "0",
+                    "spreadBps": "0",
+                    "slippageBps": "5",
+                    "taxBps": "0",
+                    "provisional": True,
+                },
                 "partialFill": False,
                 "liquidity": {"model": "UNLIMITED"},
-                "tradingHalt": "WAIT_UNTIL_RESUME",
+                "tradingHalt": "DEFER_TO_NEXT_TRADABLE",
                 "delisting": "CAUSE_BASED",
             },
+            "evaluation": {"liquidationAtEnd": False},
+            "progress": {"batchTradingDays": 20},
         }
     )
 

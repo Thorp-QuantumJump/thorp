@@ -94,7 +94,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                         event.executionId(),
                         event.eventId(),
                         event.payload().engineOutput(),
-                        event.payload().benchmark()));
+                        null));
         entityManager.flush();
         entityManager.clear();
         return jobId;
@@ -127,12 +127,10 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         // record equals는 BigDecimal의 scale까지 본다
         assertThat(summary.performance()).isEqualTo(event.payload().engineOutput().performance());
         assertThat(summary.execution()).isEqualTo(event.payload().engineOutput().execution());
-        // 벤치마크는 jsonb에서 스칼라 두 개만 뽑는다. ::numeric 캐스팅을 하지 않으므로 scale이 보존된다
-        assertThat(summary.benchmarkInstrumentId())
-                .isEqualTo(event.payload().benchmark().instrumentId());
-        assertThat(summary.benchmarkTotalReturn())
-                .isEqualTo(event.payload().benchmark().totalReturn());
-        assertThat(summary.hasBenchmark()).isTrue();
+        // v2 FINISHED에는 벤치마크가 없다. 저장 컬럼은 남아 있고 null이다
+        assertThat(summary.benchmarkInstrumentId()).isNull();
+        assertThat(summary.benchmarkTotalReturn()).isNull();
+        assertThat(summary.hasBenchmark()).isFalse();
     }
 
     @Test
@@ -153,7 +151,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
 
         assertThat(series.portfolioSeries())
                 .isEqualTo(event.payload().engineOutput().portfolioSeries());
-        assertThat(series.benchmark()).isEqualTo(event.payload().benchmark());
+        assertThat(series.benchmark()).isNull();
     }
 
     @Test

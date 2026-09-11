@@ -86,7 +86,7 @@ Content-Type: application/json
 
 **`config.initialCash`의 자릿수는 요청과 다를 수 있다.** 저장 컬럼이 `NUMERIC(19,2)`이라 `"10000000"`으로 보낸 값이 `"10000000.00"`으로 돌아온다. 값은 같고 표기 자릿수만 컬럼 scale로 정규화된다.
 
-예시 파일의 `summary.benchmark`에는 값이 있다 — 계약 픽스처가 벤치마크를 포함하기 때문이다. **실제 시스템에서는 계산기가 없어 아직 `null`이다**(§4).
+예시 파일의 `summary.benchmark`는 `null`이다. 메시지 계약 v2(spec 004 T001)에서 벤치마크가 빠졌으므로 워커는 벤치마크를 계산하지 않는다(§4).
 
 `summary.benchmark`는 결과에 벤치마크가 있을 때만 있다. `config.benchmarkId`(요청값)와 다를 수 있으며,
 **현재는 벤치마크 계산기가 없어 항상 `null`이다**(§4 참고).
@@ -163,7 +163,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 ## 4. 프론트가 알아야 할 것
 
 - `backtestId`는 숫자가 아니라 문자열이다. 경로 변수도 문자열로 넣는다.
-- 같은 조건으로 다시 요청하면 **항상 새 Job**이 만들어진다(새 `backtestId`). 입력이 같아도 결과를 재사용하지 않는다.
+- 같은 조건으로 다시 요청하면 현재는 **항상 새 Job**이 만들어진다(새 `backtestId`). spec 004(T003 요청/실행 분리)부터는
+  같은 입력의 요청이 진행 중인 실행에 합류하고 결과를 공유한다 — 그때 이 문서의 2절을 다시 고친다.
 - 요청은 5블록(run / universe / strategy / portfolio / benchmark)이다. 블록별 필드는 위 1절 표와 요청 예시를 본다.
 - 종목은 계약상 50개까지 보낼 수 있지만, 현재 엔진은 1종목만 처리한다. 2개 이상 보내면 Job은 접수되고 실행 단계에서
   `FAILED`가 된다. MVP 화면은 1종목만 보낸다.
@@ -171,8 +172,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
   필요한 계산은 문자열로 다룬다.
 - **`GET /backtests/{id}`는 백테스트가 실패해도 200이다.** `status`와 `error`로 판단한다. 폴링은 이 리소스로 하고,
   하위 리소스의 409 `RESULT_NOT_READY`(계속) / `BACKTEST_FAILED`(중단)로 재시도 여부를 가른다(§2.5).
-- **벤치마크는 당분간 항상 비어 있다.** 요청에 `benchmark.instrumentId`를 넣으면 `config.benchmarkId`에는 보이지만,
-  워커가 엔진 호출에서 벤치마크를 벗기고 **계산기가 아직 없어서** `summary.benchmark`는 `null`이고
-  `timeseries[].benchmarkReturn`은 키가 없다. 벤치마크 비교 UI는 계산기 티켓 이후에 붙인다.
+- **벤치마크는 항상 비어 있다.** 요청에 `benchmark.instrumentId`를 넣으면 `config.benchmarkId`에는 보이지만, 메시지 계약
+  v2에는 벤치마크가 없어 워커에 전달되지 않는다. `summary.benchmark`는 `null`이고 `timeseries[].benchmarkReturn`은 키가 없다.
+  벤치마크 비교는 별도 spec에서 다룬다.
 - 현재 엔진이 실행할 수 있는 전략은 `MOMENTUM`(파라미터 `lookbackDays`)뿐이다. 다른 `strategyId`는 Job이 접수되고
   실행 단계에서 `FAILED`(`INVALID_REQUEST`)가 된다.

@@ -69,21 +69,19 @@ class BacktestEventFlowIT extends PostgresTestSupport {
 
     private static BacktestEvent<StartedPayload> started(BacktestJob job) {
         return MessageFixtures.parse(
-                MessageFixtures.withBacktestId(
-                        MessageFixtures.STARTED, job.getBacktestId().value()),
+                MessageFixtures.withRunId(MessageFixtures.STARTED, job.getBacktestId().value()),
                 MessageFixtures.STARTED_EVENT);
     }
 
     private static BacktestEvent<ProgressPayload> progress(BacktestJob job) {
         return MessageFixtures.parse(
-                MessageFixtures.withBacktestId(
-                        MessageFixtures.PROGRESS, job.getBacktestId().value()),
+                MessageFixtures.withRunId(MessageFixtures.PROGRESS, job.getBacktestId().value()),
                 MessageFixtures.PROGRESS_EVENT);
     }
 
     private static BacktestEvent<FinishedPayload> finished(BacktestJob job, String file) {
         return MessageFixtures.parse(
-                MessageFixtures.withBacktestId(file, job.getBacktestId().value()),
+                MessageFixtures.withRunId(file, job.getBacktestId().value()),
                 MessageFixtures.FINISHED_EVENT);
     }
 
@@ -155,7 +153,7 @@ class BacktestEventFlowIT extends PostgresTestSupport {
         assertThat(statusOf(job)).isEqualTo(BacktestStatus.FAILED);
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(count("backtest_trade", job.getId())).isZero();
-        assertThat(resultColumn("error_code", job.getId())).isEqualTo("NO_MARKET_DATA");
+        assertThat(resultColumn("error_code", job.getId())).isEqualTo("DATA_INSUFFICIENT");
     }
 
     @Test
@@ -184,12 +182,12 @@ class BacktestEventFlowIT extends PostgresTestSupport {
                         () -> {
                             service.handleStarted(
                                     MessageFixtures.parse(
-                                            MessageFixtures.withBacktestId(
+                                            MessageFixtures.withRunId(
                                                     MessageFixtures.STARTED, unknown),
                                             MessageFixtures.STARTED_EVENT));
                             service.handleFinished(
                                     MessageFixtures.parse(
-                                            MessageFixtures.withBacktestId(
+                                            MessageFixtures.withRunId(
                                                     MessageFixtures.FINISHED_COMPLETED, unknown),
                                             MessageFixtures.FINISHED_EVENT));
                         })

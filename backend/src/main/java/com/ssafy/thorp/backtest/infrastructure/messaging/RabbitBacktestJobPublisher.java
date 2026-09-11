@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
  * 작업 메시지를 {@code backtest.jobs}로 발행한다. 메시지 속성은 계약 {@code docs/specs/backtest-messaging/README.md}
  * §3을 따른다.
  *
- * <p>{@code message_id}는 {@code JOB-{backtestId}}다. 재시도할 때 유지되는 발행 측 고유 ID여야 하므로 저장 구조가 아니라
- * backtestId에서 결정적으로 만든다(v1은 Job당 작업 메시지가 하나).
+ * <p>{@code message_id}는 {@code JOB-{runId}}다. 재시도할 때 유지되는 발행 측 고유 ID여야 하므로 저장 구조가 아니라 runId에서
+ * 결정적으로 만든다(실행 하나에 작업 메시지 하나).
  *
  * <p>본문 직렬화는 {@code backtestMessageConverter}가 담당하고 Boot 자동설정이 {@link RabbitTemplate}에 넣어준다.
  */
@@ -26,7 +26,7 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
 
     static final String MESSAGE_ID_PREFIX = "JOB-";
     static final String SCHEMA_VERSION_HEADER = "schemaVersion";
-    static final int SCHEMA_VERSION = 1;
+    static final int SCHEMA_VERSION = BacktestRabbitConfig.SCHEMA_VERSION;
 
     private final RabbitTemplate rabbitTemplate;
 
@@ -36,15 +36,15 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
 
     @Override
     public void publish(EngineInput engineInput) {
-        String backtestId = engineInput.run().backtestId();
+        String runId = engineInput.run().runId();
         try {
             rabbitTemplate.convertAndSend(
                     BacktestRabbitConfig.EXCHANGE,
                     BacktestRabbitConfig.JOBS_ROUTING_KEY,
                     engineInput,
                     message -> {
-                        message.getMessageProperties().setMessageId(MESSAGE_ID_PREFIX + backtestId);
-                        message.getMessageProperties().setCorrelationId(backtestId);
+                        message.getMessageProperties().setMessageId(MESSAGE_ID_PREFIX + runId);
+                        message.getMessageProperties().setCorrelationId(runId);
                         message.getMessageProperties()
                                 .setHeader(SCHEMA_VERSION_HEADER, SCHEMA_VERSION);
                         message.getMessageProperties()
@@ -52,8 +52,8 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
                         return message;
                     });
         } catch (AmqpException e) {
-            log.warn("Failed to publish backtest job: backtestId={}", backtestId, e);
-            throw new BacktestPublishFailedException(backtestId, e);
+            log.warn("Failed to publish backtest job: runId={}", runId, e);
+            throw new BacktestPublishFailedException(runId, e);
         }
     }
 }

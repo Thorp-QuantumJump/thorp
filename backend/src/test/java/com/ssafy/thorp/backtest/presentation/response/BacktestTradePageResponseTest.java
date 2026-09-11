@@ -39,7 +39,9 @@ class BacktestTradePageResponseTest {
                 new BigDecimal("1437.75"),
                 new BigDecimal("4792.50"),
                 exitTime == null ? null : new BigDecimal("-87230.25"),
-                exitTime == null ? null : new BigDecimal("-0.018049"));
+                exitTime == null ? null : new BigDecimal("-0.018049"),
+                null,
+                null);
     }
 
     private static BacktestTradePageResponse.Trade mapped(EngineOutput.TradeResult t) {

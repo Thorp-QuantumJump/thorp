@@ -97,7 +97,7 @@ class BacktestServiceTest {
 
         ArgumentCaptor<EngineInput> published = ArgumentCaptor.forClass(EngineInput.class);
         verify(publisher).publish(published.capture());
-        assertThat(published.getValue().run().backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(published.getValue().run().runId()).isEqualTo(BACKTEST_ID);
 
         assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
         assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);

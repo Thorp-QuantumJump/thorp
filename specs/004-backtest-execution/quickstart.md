@@ -6,7 +6,9 @@ spec의 User Story·SC를 끝에서 끝까지 확인하는 절차다. 구현 코
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
-# quorum 큐 전환(최초 1회, 미ACK 메시지가 없을 때만)
+# quorum 큐 전환(기존 classic 큐가 있는 환경에서 최초 1회). 백엔드·워커를 멈춘 뒤
+# messages_ready·messages_unacknowledged 가 모두 0인지 확인하고 삭제한다(미ACK만 보면 대기 작업을 잃는다)
+docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl list_queues name messages_ready messages_unacknowledged
 docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl delete_queue backtest.jobs
 cd backend && ./gradlew spotlessApply build && ./gradlew bootRun --args='--spring.profiles.active=local'
 cd worker && ruff check src tests && ruff format --check src tests && pytest && python -m worker.main

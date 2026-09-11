@@ -23,8 +23,8 @@ class LoggingBacktestProgressNotifier implements BacktestProgressNotifier {
     @Override
     public void notifyProgress(BacktestEvent<ProgressPayload> event) {
         log.debug(
-                "backtest progress: backtestId={} executionId={} sequence={} {}/{} trading days",
-                event.backtestId(),
+                "backtest progress: runId={} executionId={} sequence={} {}/{} trading days",
+                event.runId(),
                 event.executionId(),
                 event.sequence(),
                 event.payload().completedTradingDays(),
