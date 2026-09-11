@@ -1,0 +1,19 @@
+{
+  "httpStatus": "OK",
+  "isSuccess": true,
+  "message": "허가된 뉴스 메타데이터를 조회했습니다.",
+  "code": 200,
+  "result": {
+    "items": [
+      {
+        "articleId": "jhx337tiywd4p2svejdapwk7kaeyqr36",
+        "title": "반도체 수출 지표가 발표됐다",
+        "publisher": "허가 매체",
+        "publishedAt": "2026-09-10T01:00:00Z",
+        "publicationTimeStatus": "VERIFIED",
+        "originalUrl": "https://example.com/economy/semiconductor-export"
+      }
+    ],
+    "nextCursor": null
+  }
+}

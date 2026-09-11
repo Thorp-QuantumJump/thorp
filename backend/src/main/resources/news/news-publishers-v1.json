@@ -1,0 +1,5 @@
+{
+  "version": "news-publishers-v1",
+  "_comment": "실제 매체 항목은 BACK 파트가 공개 전에 채운다(PD-15a). 항목이 비어 있는 동안 공개 조회는 PREPARING을 반환하고, 구현과 내부 검증은 테스트 fixture로 진행한다. 등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외.",
+  "publishers": []
+}
