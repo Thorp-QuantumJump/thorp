@@ -205,20 +205,20 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v3IsApplied() {
+    @DisplayName("V4가 적용되어 flyway_schema_history에 성공으로 기록된다")
+    void v4IsApplied() {
         Integer applied =
                 jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '3' AND success = TRUE",
+                                + " WHERE version = '4' AND success = TRUE",
                         Integer.class);
 
         assertThat(applied).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("V3가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다")
-    void v3CreatesNewsArticleWithoutBodyColumns() {
+    @DisplayName("V4가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다")
+    void v4CreatesNewsArticleWithoutBodyColumns() {
         assertThat(columnsOf("news_article"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -243,8 +243,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3의 어떤 뉴스 테이블에도 본문·Tone 컬럼이 없다 (spec FR-002·SC-001)")
-    void v3HasNoBodyOrToneColumnAnywhere() {
+    @DisplayName("V4의 어떤 뉴스 테이블에도 본문·Tone 컬럼이 없다 (spec FR-002·SC-001)")
+    void v4HasNoBodyOrToneColumnAnywhere() {
         List<String> forbidden =
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) || '.' || LOWER(column_name)"
@@ -262,8 +262,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 매체의 등록 도메인과 현재 허가 상태를 둔다 (spec FR-009·FR-015)")
-    void v3CreatesPublisherColumns() {
+    @DisplayName("V4가 매체의 등록 도메인과 현재 허가 상태를 둔다 (spec FR-009·FR-015)")
+    void v4CreatesPublisherColumns() {
         assertThat(columnsOf("news_publisher"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -282,8 +282,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 허가 이력을 별도 테이블로 둔다 (spec FR-015)")
-    void v3CreatesPermissionHistory() {
+    @DisplayName("V4가 허가 이력을 별도 테이블로 둔다 (spec FR-015)")
+    void v4CreatesPermissionHistory() {
         assertThat(columnsOf("news_publisher_permission_history"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -298,8 +298,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 수집 상태에 INCOMPLETE와 점유 컬럼을 둔다 (spec FR-013·FR-022)")
-    void v3CreatesCollectionState() {
+    @DisplayName("V4가 수집 상태에 INCOMPLETE와 점유 컬럼을 둔다 (spec FR-013·FR-022)")
+    void v4CreatesCollectionState() {
         assertThat(columnsOf("news_collection_state"))
                 .containsExactlyInAnyOrder(
                         "source_key",
@@ -325,8 +325,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 정리 작업을 수집 뉴스원과 같은 점유 테이블에 seed한다 (spec FR-022)")
-    void v3SeedsRetentionCleanupLease() {
+    @DisplayName("V4가 정리 작업을 수집 뉴스원과 같은 점유 테이블에 seed한다 (spec FR-022)")
+    void v4SeedsRetentionCleanupLease() {
         Integer seeded =
                 jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM news_collection_state"
@@ -337,8 +337,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 규칙 버전 네 개를 seed한다 (원칙 VIII)")
-    void v3SeedsRuleVersions() {
+    @DisplayName("V4가 규칙 버전 네 개를 seed한다 (원칙 VIII)")
+    void v4SeedsRuleVersions() {
         List<String> versions =
                 jdbcTemplate.queryForList(
                         "SELECT rule_version FROM news_rule_version ORDER BY rule_version",
@@ -353,8 +353,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 canonical URL과 외부 식별자에 UNIQUE를 건다 (spec FR-011·FR-025)")
-    void v3CreatesUniqueKeys() {
+    @DisplayName("V4가 canonical URL과 외부 식별자에 UNIQUE를 건다 (spec FR-011·FR-025)")
+    void v4CreatesUniqueKeys() {
         List<String> uniques =
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(constraint_name) FROM information_schema.table_constraints"
@@ -371,8 +371,8 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3는 섹터 마스터 테이블을 만들지 않는다 (spec FR-005)")
-    void v3DoesNotOwnSectorIdentifiers() {
+    @DisplayName("V4는 섹터 마스터 테이블을 만들지 않는다 (spec FR-005)")
+    void v4DoesNotOwnSectorIdentifiers() {
         List<String> sectorTables =
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) FROM information_schema.tables"

@@ -16,7 +16,7 @@
 
 **Primary Dependencies**: Spring Boot 3.5.4, Spring Web, Validation, Data JPA, Actuator, Java HTTP client/XML parser, Jackson
 
-**Storage**: PostgreSQL 16, Flyway migration `V3__market_news_digest.sql`; 기사 본문·HTML·이미지는 저장하지 않음
+**Storage**: PostgreSQL 16, Flyway migration `V4__market_news_digest.sql`; 기사 본문·HTML·이미지는 저장하지 않음
 
 **Testing**: JUnit 5, Spring Boot Test, MockMvc, ArchUnit, Testcontainers PostgreSQL 16, 고정 `Clock`, RSS/GDELT 로컬 fixture
 
@@ -93,7 +93,7 @@ backend/
 │       ├── persistence/
 │       └── scheduling/
 ├── src/main/resources/
-│   └── db/migration/V3__market_news_digest.sql
+│   └── db/migration/V4__market_news_digest.sql
 └── src/test/java/com/ssafy/thorp/news/
     ├── presentation/
     ├── application/
