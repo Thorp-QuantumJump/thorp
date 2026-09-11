@@ -94,7 +94,9 @@ final class BacktestEventValidator {
                     base + ".run.status",
                     output.run().status() + " differs from payload.status " + status);
         }
-        if (output.run().partial() != null && output.run().partial() != payload.partial()) {
+        // 계약 §4.3: run.partial 생략은 false다. 값이 있을 때만 비교하면 키를 뺀 채 payload만
+        // true인 취소 이벤트가 통과한다. null을 false로 접어 항상 대조한다.
+        if (Boolean.TRUE.equals(output.run().partial()) != payload.partial()) {
             fail(base + ".run.partial", "differs from payload.partial " + payload.partial());
         }
 

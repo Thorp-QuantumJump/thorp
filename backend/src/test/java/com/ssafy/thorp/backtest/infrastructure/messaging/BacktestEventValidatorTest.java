@@ -283,7 +283,11 @@ class BacktestEventValidatorTest {
                 violation("payload.engineOutput.performance", n -> at(n, EO).remove("performance")),
                 violation(
                         "payload.engineOutput.run.status",
-                        n -> at(n, EO + "/run").put("status", "COMPLETED")));
+                        n -> at(n, EO + "/run").put("status", "COMPLETED")),
+                // 계약 §4.3에서 run.partial 생략은 false다. payload가 true인데 키가 없으면 모순이다
+                violation(
+                        "payload.engineOutput.run.partial",
+                        n -> at(n, EO + "/run").remove("partial")));
     }
 
     @ParameterizedTest(name = "{0}")
