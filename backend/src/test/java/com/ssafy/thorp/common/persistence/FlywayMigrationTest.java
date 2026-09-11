@@ -2,13 +2,14 @@ package com.ssafy.thorp.common.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestJobRepositoryImpl;
+import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;
 import com.ssafy.thorp.common.config.JpaAuditingConfig;
+import com.ssafy.thorp.support.MigrationFiles;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,9 +33,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 제공하므로, 마이그레이션과 Entity 매핑이 어긋나면 컨텍스트 로딩 자체가 실패한다.
  *
  * <p>여기서 확인하는 것은 컬럼과 시퀀스의 존재다. 타입 불일치는 Hibernate가 경고로만 남기고 통과시키기 때문에, 컬럼 목록을 눈으로 맞춰 두는 이 단언이 필요하다.
+ *
+ * <p><b>적용 여부 단언에는 버전 번호를 적지 않는다.</b> {@link MigrationFiles}가 읽어온 클래스패스의 파일 목록과 대조한다. 예전에는 {@code WHERE
+ * version = '4'}처럼 번호를 박고 있어서 버전을 하나 바꿀 때마다(V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명한 일이 그랬다) 테스트까지 함께 고쳐야 했다. 신규
+ * 마이그레이션이 타임스탬프 버전을 쓰게 된 뒤로는 14자리 숫자를 손으로 옮겨 적는 비용이 더 크다. 아래 단언은 파일이 몇 개든 그대로 둔다.
+ *
+ * <p>파일명 규칙과 버전 중복은 {@code MigrationFileConventionTest}가 Docker 없이 따로 검사한다. 이 테스트는 Docker가 없으면 통째로
+ * 스킵되기 때문이다.
  */
 @DataJpaTest
-@Import({JpaAuditingConfig.class, BacktestJobRepositoryImpl.class})
+@Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
 class FlywayMigrationTest extends PostgresTestSupport {
 
     private static final BacktestPeriod PERIOD =
@@ -49,26 +57,43 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private BacktestJobRepositoryImpl repository;
+    @Autowired private BacktestRunRepositoryImpl repository;
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("V1이 빈 DB에 적용되고 flyway_schema_history에 성공으로 기록된다")
-    void v1IsAppliedToEmptyDatabase() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '1' AND success = TRUE",
-                        Integer.class);
+    @DisplayName("클래스패스의 모든 마이그레이션이 빈 DB에 적용되고 성공으로 기록된다")
+    void allMigrationsAreAppliedToEmptyDatabase() {
+        // BASELINE 행은 실제로 실행한 마이그레이션이 아니라 기존 스키마를 인정한 기록이고,
+        // version이 비어 있는 행은 반복 실행(R__) 마이그레이션이다. 둘 다 파일 목록과 대조할 대상이 아니다.
+        List<String> appliedVersions =
+                jdbcTemplate.queryForList(
+                        "SELECT version FROM flyway_schema_history"
+                                + " WHERE success = TRUE AND version IS NOT NULL"
+                                + " AND type <> 'BASELINE'",
+                        String.class);
 
-        assertThat(applied).isEqualTo(1);
+        assertThat(appliedVersions)
+                .as("적용된 버전이 classpath:db/migration 의 파일 목록과 다르다")
+                .containsExactlyInAnyOrderElementsOf(MigrationFiles.versions());
     }
 
     @Test
-    @DisplayName("V1이 backtest_job을 Entity 매핑과 같은 컬럼으로 만든다")
-    void v1CreatesBacktestJobColumns() {
-        assertThat(columnsOf("backtest_job"))
+    @DisplayName("실패로 기록된 마이그레이션이 없다")
+    void noMigrationIsRecordedAsFailed() {
+        List<String> failed =
+                jdbcTemplate.queryForList(
+                        "SELECT script FROM flyway_schema_history WHERE success = FALSE",
+                        String.class);
+
+        assertThat(failed).as("실패한 마이그레이션이 남아 있으면 다음 배포가 repair 없이는 진행되지 않는다").isEmpty();
+    }
+
+    @Test
+    @DisplayName("backtest_run이 요청 원문과 실행 기록 컬럼을 모두 갖는다 (V1 + T003 개명·확장)")
+    void backtestRunHasAllColumns() {
+        assertThat(columnsOf("backtest_run"))
                 .containsExactlyInAnyOrder(
+                        // V1에서 온 요청 원문. T005가 request_spec 하나로 접는다
                         "id",
                         "backtest_id",
                         "strategy_id",
@@ -84,16 +109,136 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "random_seed",
                         "status",
                         "created_at",
+                        "updated_at",
+                        // 실행 식별·재사용 (R-02·R-03). 접수 경로(T005)가 채울 때까지 nullable
+                        "dedup_key",
+                        "execution_type",
+                        "rules_version",
+                        "cost_profile_version",
+                        "data_version",
+                        "request_spec",
+                        "versions",
+                        "effective_start",
+                        "effective_end",
+                        // 진행 정도 (R-05)
+                        "progress_stage",
+                        "progress_last_trading_date",
+                        "progress_completed_days",
+                        "progress_total_days",
+                        // 실행 시도·종결 (R-06·R-18)
+                        "attempt",
+                        "current_execution_id",
+                        "partial",
+                        "failure_code",
+                        "failure_message",
+                        "cancel_requested_at",
+                        // 발행 보장 (R-18)
+                        "published_at",
+                        "publish_count",
+                        "dlq_count",
+                        // 측정 원천 (R-10)
+                        "queued_at",
+                        "started_at",
+                        "finished_at");
+    }
+
+    /**
+     * 아직 엔티티가 매핑하지 않는 컬럼도 스키마에는 있어야 한다.
+     *
+     * <p>{@code ddl-auto=validate}는 <b>매핑된</b> 컬럼만 본다. T005·T010·T011·T012가 쓸 컬럼을 지금 지워도 컨텍스트는 그대로
+     * 뜨므로, 그 누락을 잡아 줄 단언이 여기 말고는 없다.
+     */
+    @Test
+    @DisplayName("아직 매핑하지 않은 실행 컬럼도 스키마에는 있다 (T005 이후가 쓴다)")
+    void unmappedRunColumnsExistForLaterTasks() {
+        assertThat(columnsOf("backtest_run"))
+                .contains(
+                        "dedup_key",
+                        "request_spec",
+                        "versions",
+                        "queued_at",
+                        "published_at",
+                        "publish_count",
+                        "dlq_count",
+                        "cancel_requested_at");
+    }
+
+    @Test
+    @DisplayName("backtest_request가 요청/실행 분리에 필요한 컬럼을 갖는다 (R-02·R-04)")
+    void backtestRequestHasAllColumns() {
+        assertThat(columnsOf("backtest_request"))
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "backtest_id",
+                        "run_id",
+                        "requester_id",
+                        "execution_type",
+                        "result_source",
+                        "retry_of_request_id",
+                        "cancelled_at",
+                        "cancelled_last_trading_date",
+                        "stopped_run",
+                        "created_at",
                         "updated_at");
     }
 
     @Test
-    @DisplayName("V1이 backtest_job PK용 시퀀스를 만든다")
-    void v1CreatesBacktestJobSequence() {
+    @DisplayName("등록표 두 개가 시드 행과 함께 만들어진다 (R-07·R-08)")
+    void registriesAreSeeded() {
+        assertThat(columnsOf("cost_profile"))
+                .containsExactlyInAnyOrder(
+                        "version",
+                        "commission_bps",
+                        "spread_bps",
+                        "slippage_bps",
+                        "tax_bps",
+                        "escalation",
+                        "provisional",
+                        "note",
+                        "created_at");
+        assertThat(columnsOf("strategy_rules"))
+                .containsExactlyInAnyOrder(
+                        "strategy_id",
+                        "rules_version",
+                        "status",
+                        "provisional",
+                        "spec",
+                        "decision_ref",
+                        "created_at");
+
+        // 데모 비용은 임시값으로 표시돼 있어야 한다. false로 들어가면 결과가 확정 비용인 척한다.
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT provisional FROM cost_profile"
+                                        + " WHERE version = 'PROVISIONAL-DEMO-1'",
+                                Boolean.class))
+                .isTrue();
+
+        // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
+        // (constitution "실행 전 결정 임의 확정 금지").
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT strategy_id FROM strategy_rules"
+                                        + " WHERE status = 'PENDING_DECISION' AND spec IS NULL",
+                                String.class))
+                .containsExactlyInAnyOrder("SECTOR_MOMENTUM", "MINIMUM_VARIANCE");
+
+        // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT provisional FROM strategy_rules"
+                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
+                                Boolean.class))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("실행 PK용 시퀀스가 개명된 이름으로 있다")
+    void backtestRunSequenceExists() {
         Integer sequences =
                 jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM information_schema.sequences"
-                                + " WHERE LOWER(sequence_name) = 'backtest_job_seq'",
+                                + " WHERE LOWER(sequence_name) = 'backtest_run_seq'",
                         Integer.class);
 
         assertThat(sequences).isEqualTo(1);
@@ -130,23 +275,11 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V2가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v2IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '2' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
-    }
-
-    @Test
     @DisplayName("V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다")
     void v2CreatesBacktestResultColumns() {
         assertThat(columnsOf("backtest_result"))
                 .containsExactlyInAnyOrder(
-                        "backtest_job_id",
+                        "run_id",
                         "execution_id",
                         "finished_event_id",
                         "started_at",
@@ -158,6 +291,14 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "portfolio_series",
                         "benchmark",
                         "diagnostics",
+                        // T003이 더한 v2 산출 항목(R-11). 저장·조회는 T009가 붙인다
+                        "weights_series",
+                        "weights_source",
+                        "costs",
+                        "liquidation",
+                        "analytics",
+                        "exceptions",
+                        "versions",
                         "created_at",
                         "updated_at");
     }
@@ -168,7 +309,7 @@ class FlywayMigrationTest extends PostgresTestSupport {
         assertThat(columnsOf("backtest_trade"))
                 .containsExactlyInAnyOrder(
                         "id",
-                        "backtest_job_id",
+                        "run_id",
                         "trade_id",
                         "instrument_id",
                         "side",
@@ -186,7 +327,7 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V2가 결과·거래 테이블에 backtest_job FK와 거래 UNIQUE 제약을 만든다")
+    @DisplayName("결과·거래 테이블이 실행을 FK로 가리키고 거래 UNIQUE 제약이 있다")
     void v2CreatesConstraints() {
         List<String> foreignKeyTables =
                 jdbcTemplate.queryForList(
@@ -199,21 +340,9 @@ class FlywayMigrationTest extends PostgresTestSupport {
         Integer unique =
                 jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM information_schema.table_constraints"
-                                + " WHERE LOWER(constraint_name) = 'uk_backtest_trade_job_trade'",
+                                + " WHERE LOWER(constraint_name) = 'uk_backtest_trade_run_trade'",
                         Integer.class);
         assertThat(unique).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("V4가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v4IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '4' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
     }
 
     @Test
@@ -377,10 +506,17 @@ class FlywayMigrationTest extends PostgresTestSupport {
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) FROM information_schema.tables"
                                 + " WHERE LOWER(table_schema) = 'public'"
-                                + " AND LOWER(table_name) IN ('news_sector', 'sector', 'sectors')",
+                                + " AND LOWER(table_name) IN"
+                                + " ('news_sector', 'sector', 'sectors')",
                         String.class);
 
-        assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").isEmpty();
+        // 이 단언의 취지는 "뉴스(V4)가 섹터 마스터를 따로 만들지 않는다"이다. spec 001이
+        // sector를 소유하게 되었으므로 sector가 있는 것은 정상이고, 뉴스가 만들었을
+        // news_sector·sectors가 없어야 한다.
+        assertThat(sectorTables)
+                .as("뉴스는 섹터 마스터를 따로 만들지 않는다")
+                .doesNotContain("news_sector", "sectors");
+        assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").contains("sector");
     }
 
     @Test
@@ -389,9 +525,9 @@ class FlywayMigrationTest extends PostgresTestSupport {
         Map<String, Object> parameters = Map.of("shortWindow", 20, "threshold", 0.05);
         List<InstrumentId> instruments = List.of(new InstrumentId("005930.XKRX"));
 
-        BacktestJob saved =
+        BacktestRun saved =
                 repository.save(
-                        BacktestJob.create(
+                        BacktestRun.create(
                                 "MA_CROSSOVER",
                                 "1.0.0",
                                 parameters,
@@ -425,7 +561,7 @@ class FlywayMigrationTest extends PostgresTestSupport {
                             assertThat(job.getBenchmarkInstrumentId())
                                     .isEqualTo(new InstrumentId("069500.XKRX"));
                             assertThat(job.getRandomSeed()).isEqualTo(42);
-                            assertThat(job.getStatus()).isEqualTo(BacktestStatus.QUEUED);
+                            assertThat(job.getStatus()).isEqualTo(RunStatus.QUEUED);
                         });
     }
 

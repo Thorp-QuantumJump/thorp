@@ -8,7 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.RunStatus;
 import com.ssafy.thorp.backtest.application.port.message.TradeSide;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -48,7 +48,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Import({
     JpaAuditingConfig.class,
     MessageJsonPersistenceConfig.class,
-    BacktestJobRepositoryImpl.class,
+    BacktestRunRepositoryImpl.class,
     BacktestResultRepositoryImpl.class
 })
 class BacktestResultPrecisionTest extends PostgresTestSupport {
@@ -76,7 +76,7 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl jobRepository;
+    @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;
     @Autowired private BacktestTradeJpaRepository tradeRepository;
     @Autowired private TestEntityManager entityManager;
@@ -85,7 +85,7 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
     private Long newJobId() {
         return jobRepository
                 .save(
-                        BacktestJob.create(
+                        BacktestRun.create(
                                 "MA_CROSSOVER",
                                 "1.0.0",
                                 Map.of(),
@@ -219,18 +219,18 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
         String type =
                 jdbcTemplate.queryForObject(
                         "SELECT jsonb_typeof(performance -> 'initialEquity') FROM backtest_result"
-                                + " WHERE backtest_job_id = ?",
+                                + " WHERE run_id = ?",
                         String.class,
                         jobId);
         String stored =
                 jdbcTemplate.queryForObject(
                         "SELECT performance ->> 'initialEquity' FROM backtest_result"
-                                + " WHERE backtest_job_id = ?",
+                                + " WHERE run_id = ?",
                         String.class,
                         jobId);
         String tiny =
                 jdbcTemplate.queryForObject(
-                        "SELECT detail ->> 'quantity' FROM backtest_trade WHERE backtest_job_id = ?",
+                        "SELECT detail ->> 'quantity' FROM backtest_trade WHERE run_id = ?",
                         String.class,
                         jobId);
 
@@ -253,7 +253,7 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT execution ->> 'totalCommission' FROM backtest_result"
-                                        + " WHERE backtest_job_id = ?",
+                                        + " WHERE run_id = ?",
                                 String.class,
                                 jobId))
                 .isEqualTo("100");

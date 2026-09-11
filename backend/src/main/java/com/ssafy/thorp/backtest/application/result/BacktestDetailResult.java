@@ -1,8 +1,8 @@
 package com.ssafy.thorp.backtest.application.result;
 
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public record BacktestDetailResult(
         String backtestId,
-        BacktestStatus status,
+        RunStatus status,
         Config config,
         Summary summary,
         Error error,
@@ -77,7 +77,7 @@ public record BacktestDetailResult(
     public record Error(String code, String message) {}
 
     /** 결과 행이 아직 없는 Job({@code QUEUED}·{@code RUNNING}). */
-    public static BacktestDetailResult withoutResult(BacktestJob job, String currency) {
+    public static BacktestDetailResult withoutResult(BacktestRun job, String currency) {
         return new BacktestDetailResult(
                 job.getBacktestId().value(),
                 job.getStatus(),
@@ -90,8 +90,8 @@ public record BacktestDetailResult(
 
     /** 결과 행이 있는 Job({@code COMPLETED}·{@code FAILED}). 상태에 따라 summary와 error가 갈린다. */
     public static BacktestDetailResult of(
-            BacktestJob job, String currency, BacktestResultSummary result) {
-        boolean completed = job.getStatus() == BacktestStatus.COMPLETED;
+            BacktestRun job, String currency, BacktestResultSummary result) {
+        boolean completed = job.getStatus() == RunStatus.COMPLETED;
         return new BacktestDetailResult(
                 job.getBacktestId().value(),
                 job.getStatus(),
@@ -104,7 +104,7 @@ public record BacktestDetailResult(
                 result.finishedAt());
     }
 
-    private static Config config(BacktestJob job, String currency) {
+    private static Config config(BacktestRun job, String currency) {
         return new Config(
                 job.getStrategyId(),
                 job.getStrategyVersion(),

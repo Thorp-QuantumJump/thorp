@@ -2,7 +2,7 @@ package com.ssafy.thorp.backtest.presentation.response;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,7 +25,7 @@ import java.util.Map;
  */
 public record BacktestDetailResponse(
         String backtestId,
-        BacktestStatus status,
+        RunStatus status,
         Config config,
         Summary summary,
         Error error,

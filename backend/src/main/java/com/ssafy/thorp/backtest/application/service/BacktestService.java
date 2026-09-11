@@ -2,10 +2,10 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import java.util.List;
@@ -21,12 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BacktestService {
 
-    private final BacktestJobRepository repository;
+    private final BacktestRunRepository repository;
     private final BacktestJobPublisher publisher;
     private final EngineInputAssembler assembler;
 
     public BacktestService(
-            BacktestJobRepository repository,
+            BacktestRunRepository repository,
             BacktestJobPublisher publisher,
             EngineInputAssembler assembler) {
         this.repository = repository;
@@ -36,8 +36,8 @@ public class BacktestService {
 
     @Transactional
     public BacktestJobResult create(CreateBacktestCommand command) {
-        BacktestJob job =
-                BacktestJob.create(
+        BacktestRun job =
+                BacktestRun.create(
                         command.strategyId(),
                         ExecutionPolicy.STRATEGY_VERSION,
                         command.parameters(),
@@ -48,7 +48,7 @@ public class BacktestService {
                         command.maxPositionPct(),
                         toInstrumentId(command.benchmarkInstrumentId()),
                         ExecutionPolicy.DEFAULT_RANDOM_SEED);
-        BacktestJob saved = repository.save(job);
+        BacktestRun saved = repository.save(job);
         publisher.publish(assembler.assemble(saved));
         return BacktestJobResult.from(saved);
     }

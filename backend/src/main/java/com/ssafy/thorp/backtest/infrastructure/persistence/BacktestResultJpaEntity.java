@@ -32,12 +32,12 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "backtest_result")
 public class BacktestResultJpaEntity extends BaseEntity {
 
-    @Id private Long backtestJobId;
+    @Id private Long runId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
-    @JoinColumn(name = "backtest_job_id")
-    private BacktestJobJpaEntity job;
+    @JoinColumn(name = "run_id")
+    private BacktestRunJpaEntity job;
 
     @Column(nullable = false, length = 255)
     private String executionId;
@@ -76,7 +76,7 @@ public class BacktestResultJpaEntity extends BaseEntity {
 
     protected BacktestResultJpaEntity() {}
 
-    private BacktestResultJpaEntity(BacktestJobJpaEntity job, SaveBacktestResultCommand command) {
+    private BacktestResultJpaEntity(BacktestRunJpaEntity job, SaveBacktestResultCommand command) {
         EngineOutput output = command.engineOutput();
         EngineOutput.RunResult run = output.run();
         this.job = job;
@@ -95,12 +95,12 @@ public class BacktestResultJpaEntity extends BaseEntity {
 
     /** 계약 DTO → 엔티티. 결과 도메인 모델이 없으므로 별도 Mapper 없이 여기서 매핑한다. */
     static BacktestResultJpaEntity from(
-            BacktestJobJpaEntity job, SaveBacktestResultCommand command) {
+            BacktestRunJpaEntity job, SaveBacktestResultCommand command) {
         return new BacktestResultJpaEntity(job, command);
     }
 
-    public Long getBacktestJobId() {
-        return backtestJobId;
+    public Long getRunId() {
+        return runId;
     }
 
     public String getExecutionId() {

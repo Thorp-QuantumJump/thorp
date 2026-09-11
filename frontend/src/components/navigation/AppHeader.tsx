@@ -1,6 +1,7 @@
 import {
   ChartNoAxesCombined,
   Home,
+  LogIn,
   Menu,
   Play,
   X,
@@ -37,7 +38,7 @@ const navigationItems = [
   },
 ]
 
-/** 모든 서비스 화면에서 홈·대시보드·백테스트로 이동할 수 있는 공통 탐색을 제공한다. */
+/** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
 export function AppHeader() {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -128,7 +129,7 @@ export function AppHeader() {
             >
               <Menu size={20} aria-hidden="true" />
             </button>
-            <Link className={styles.brand} to="/home" aria-label="Thorp 홈">
+            <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
               Thorp<span>.</span>
             </Link>
           </div>
@@ -151,9 +152,9 @@ export function AppHeader() {
             })}
           </nav>
 
-          <Link className={styles.homeLink} to="/">
-            <Home size={16} aria-hidden="true" />
-            처음으로
+          <Link className={styles.authLink} to="/login">
+            <LogIn size={16} aria-hidden="true" />
+            로그인
           </Link>
         </div>
       </header>
@@ -219,9 +220,9 @@ export function AppHeader() {
                 })}
               </div>
 
-              <Link className={styles.drawerHome} to="/" onClick={() => setIsMenuOpen(false)}>
-                <Home size={18} aria-hidden="true" />
-                처음 화면으로
+              <Link className={styles.drawerAuth} to="/login" onClick={() => setIsMenuOpen(false)}>
+                <LogIn size={18} aria-hidden="true" />
+                로그인
               </Link>
             </motion.nav>
           </div>

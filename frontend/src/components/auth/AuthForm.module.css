@@ -1,0 +1,145 @@
+.field {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.field label {
+  color: var(--thorp-foreground);
+  font-size: 0.78rem;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+
+.field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  background: rgb(3 8 5 / 72%);
+  color: var(--thorp-foreground);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.field input::placeholder {
+  color: var(--thorp-muted);
+}
+
+.field input:hover:not(:disabled) {
+  border-color: rgb(134 242 168 / 38%);
+}
+
+.field input:focus-visible {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-surface);
+  box-shadow: 0 0 0 3px rgb(3 199 90 / 16%);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--thorp-negative);
+}
+
+.field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.hint,
+.fieldError {
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.hint {
+  color: var(--thorp-muted);
+}
+
+.fieldError {
+  color: var(--thorp-negative);
+}
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 20px;
+  padding: 11px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 4px;
+  background: var(--thorp-surface-muted);
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.status svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.status[data-tone='success'] {
+  border-color: rgb(99 220 138 / 30%);
+  background: rgb(99 220 138 / 7%);
+  color: var(--thorp-positive);
+}
+
+.status[data-tone='error'] {
+  border-color: rgb(239 138 104 / 34%);
+  background: rgb(239 138 104 / 8%);
+  color: #f2a184;
+}
+
+.submitButton,
+.secondaryButton {
+  min-height: 48px;
+  border-radius: 4px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.submitButton {
+  border: 1px solid var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: #021108;
+}
+
+.secondaryButton {
+  border: 1px solid var(--thorp-line-strong);
+  background: transparent;
+  color: var(--thorp-foreground);
+}
+
+.submitButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+.submitButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid rgb(3 199 90 / 30%);
+  outline-offset: 3px;
+}
+
+.submitButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .submitButton,
+  .secondaryButton {
+    transition: none;
+  }
+}

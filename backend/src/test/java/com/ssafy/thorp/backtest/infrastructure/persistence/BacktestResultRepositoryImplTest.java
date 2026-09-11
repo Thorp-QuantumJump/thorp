@@ -8,7 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -42,7 +42,7 @@ import org.springframework.context.annotation.Import;
 @Import({
     JpaAuditingConfig.class,
     MessageJsonPersistenceConfig.class,
-    BacktestJobRepositoryImpl.class,
+    BacktestRunRepositoryImpl.class,
     BacktestResultRepositoryImpl.class
 })
 class BacktestResultRepositoryImplTest extends PostgresTestSupport {
@@ -55,7 +55,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl jobRepository;
+    @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;
     @Autowired private BacktestTradeJpaRepository tradeRepository;
     @Autowired private TestEntityManager entityManager;
@@ -63,7 +63,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
     private Long newJobId() {
         return jobRepository
                 .save(
-                        BacktestJob.create(
+                        BacktestRun.create(
                                 "MA_CROSSOVER",
                                 "1.0.0",
                                 Map.of("shortWindow", 20),

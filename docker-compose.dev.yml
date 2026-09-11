@@ -92,13 +92,24 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-thorp}:${RABBITMQ_PASSWORD:-thorp}@rabbitmq:5672/
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}
+      # 시장 자료 읽기 전용 접속(spec 004 R-09). 시장 자료 공급자(T004)가 읽는다. 읽기 전용 role은
+      # T003 마이그레이션이 만들며 그 전까지 dev는 일반 계정을 가리킨다. 워커는 결과 DB에 쓰지 않는다.
+      MARKET_DATA_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}
+      # 결정성(spec 004 R-14): 수치 라이브러리가 호스트 vCPU 수만큼 스레드를 띄우면 합산 순서가 달라져
+      # 같은 입력에 다른 결과가 나올 수 있다. 운영 compose와 같은 값.
+      NUMBA_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     deploy:
-      replicas: 3   # Worker 수를 조절해 분산 처리 실험
+      # replica 수 × prefetch(1) = 동시 실행 상한(spec 004 R-19). 백엔드는 동시 실행 상한을 따로 검사하지 않는다.
+      # quickstart S6(장애 재시도)도 2 replica를 전제로 한다. 운영도 2.
+      replicas: 2
 
 volumes:
   postgres-data:

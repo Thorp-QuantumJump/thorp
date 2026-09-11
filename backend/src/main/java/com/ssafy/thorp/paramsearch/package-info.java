@@ -15,6 +15,6 @@
  * search}로 하지 않은 것은 010 경제환경 검색이 같은 낱말을 쓰기 때문이다.
  *
  * <p><b>{@code backtest} 모듈을 향한 참조는 단방향이다.</b> {@code search_candidate.backtest_job_id}가 {@code
- * backtest_job}을 가리키고, {@code backtest}는 {@code paramsearch}를 알지 못한다.
+ * backtest_run}을 가리키고, {@code backtest}는 {@code paramsearch}를 알지 못한다.
  */
 package com.ssafy.thorp.paramsearch;

@@ -12,7 +12,7 @@ Consumer 몫이다(계약 §1). 자세한 현재 상태는
 ## 검증 명령 (작업 후 반드시 실행)
 
 ```bash
-ruff check src tests && ruff format --check src tests && pytest
+ruff check src tests scripts && ruff format --check src tests scripts && pytest
 ```
 
 ## 구조 규칙
@@ -42,6 +42,20 @@ ruff check src tests && ruff format --check src tests && pytest
   제어 메시지(`contracts/control.py`, CANCEL) 수신 루프는 취소 티켓(T011)에서 붙인다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
+- **시장 자료는 `market_data.py` 한 곳에서만 읽고, 공급자는 주입한다.** 두 층이 공존한다:
+  DEMO 단일 종목 경로(`DataProvider`·`MarketDataset`·`CsvDataProvider`)와 다종목 경로
+  (`MarketDataProvider`·`MarketData`·`PostgresMarketDataProvider`·`CsvMarketDataProvider`).
+  뒤쪽이 spec 004 계약(`specs/004-backtest-execution/contracts/market-data-input.md`)의 표를 읽고,
+  앞쪽은 T006이 다종목 엔진으로 갈아끼울 때 사라진다. 둘 다 `validate_prices()`로 같은 fail-closed
+  검증을 받는다
+- **엔진 생성자에 공급자 기본값을 두지 말 것.** 예전 기본값(yfinance)은 주입을 잊은 경로가 조용히
+  이용 조건 밖 원천(원칙 X)으로 넘어가게 했다. yfinance 공급자는 `worker/scripts/`에 있고 배포되는
+  `worker` 패키지에서 import할 수 없다 — 개발 데모(`worker.demo`)와 그 테스트만 `sys.path`에 넣어 쓴다
+- **결측과 거래정지는 다른 사건이다.** 거래정지일에도 행이 있고(`trading_suspended=true`, volume 0,
+  OHLC 전부 직전 종가) 실행은 계속된다. 거래일 행이 빠지면 보간하지 않고 `DataInsufficientError`로
+  실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다
+- 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고
+  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)
 - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다
   - `messaging.py` 계약 상수(exchange·queue·routing key·control exchange, `SCHEMA_VERSION`, prefetch)와
     경계 Protocol(`EventPublisher`, `JobAcknowledger`) + 오류 분류(`ContractViolation`, `PublishError`).
@@ -56,8 +70,10 @@ ruff check src tests && ruff format --check src tests && pytest
   속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌해 훨씬 찾기 어려운 문제가 된다
 - **실행 Consumer는 `EngineOutput` 내용을 해석하지 않는다.** `run.status`가 COMPLETED든 FAILED든
   같은 `FINISHED` 이벤트에 그대로 담아 발행하고 ACK한다. 엔진 실패는 계약대로 답한 정상 결과이지 DLQ가 아니다
-- `config.py` 설정은 환경변수로만 주입, 코드에 접속 정보 하드코딩 금지. 접속 정보는 단일 AMQP URL
-  `RABBITMQ_URL` 하나이며 이름·형태는 `docker-compose.dev.yml`이 주입하는 것과 같다
+- `config.py` 설정은 환경변수로만 주입, 코드에 접속 정보 하드코딩 금지. 접속 정보는 브로커
+  `RABBITMQ_URL`과 시장 자료 DB `MARKET_DATA_URL` 둘이며 이름·형태는 `docker-compose.dev.yml`이
+  주입하는 것과 같다. `MARKET_DATA_URL`에는 기본값을 두지 않는다 — 값이 없으면 조용히 로컬 DB를
+  읽는 대신 실패해야 한다
 
 ## 전략 추가 절차 (파일 2개 + 레지스트리 2줄)
 
