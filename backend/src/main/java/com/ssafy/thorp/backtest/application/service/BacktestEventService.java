@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
@@ -15,6 +16,7 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,14 +48,17 @@ public class BacktestEventService {
 
     private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestEventService(
             BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
+            ApplicationEventPublisher events,
             Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -125,6 +130,15 @@ public class BacktestEventService {
                         job.getId(), event.executionId(), event.eventId(), output, null));
         jobRepository.update(
                 finished.withLifecycle(finished.getLifecycle().finished(clock.instant())));
+
+        // 트랜잭션 안에서 발행하고, 수신자가 AFTER_COMMIT으로 받는다. 커밋 전에 전달되면 수신자가
+        // 아직 없는 결과를 읽는다(spec 007 research R6). 이 모듈은 수신자를 알지 못한다.
+        events.publishEvent(
+                new BacktestFinished(
+                        job.getId(),
+                        event.runId(),
+                        finished.getStatus(),
+                        finished.getStatus() == RunStatus.FAILED ? failureCode(output) : null));
     }
 
     /**

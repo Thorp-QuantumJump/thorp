@@ -348,6 +348,36 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("제외된 후보에는 실행 행이 만들어지지 않는다 — 계산 전 제외다")
+    void excludedCandidateHasNoBacktestRun() {
+        // 컨테이너를 공유하므로 다른 테스트가 남긴 행이 있다. 전체 개수가 아니라 변화량을 본다.
+        int runsBefore = countBacktestRuns();
+        ParamSearch saved = paramSearchRepository.save(newSearch());
+        candidateRepository.saveAll(
+                saved.getId(),
+                List.of(
+                        SearchCandidate.excluded(
+                                1,
+                                "SECTOR_MOMENTUM",
+                                ParameterCombination.of(Map.of("topN", 12)),
+                                GridCoordinates.of(Map.of("topN", 2)),
+                                "TOP_N_EXCEEDS_UNIVERSE",
+                                "상위 12개를 고르도록 설정했지만 후보 섹터가 2개입니다")));
+        entityManager.flush();
+        entityManager.clear();
+
+        // 제외는 실행 자원을 쓰지 않는다. 행이 생기면 "제약 위반"이 "실행 실패"로 남는다(FR-006, 원칙 VI).
+        assertThat(countBacktestRuns()).isEqualTo(runsBefore);
+        assertThat(candidateRepository.findByParamSearchId(saved.getId()))
+                .singleElement()
+                .satisfies(
+                        candidate -> {
+                            assertThat(candidate.getStatus()).isEqualTo(CandidateStatus.EXCLUDED);
+                            assertThat(candidate.getBacktestJobId()).isNull();
+                        });
+    }
+
+    @Test
     @DisplayName("탐색 공간은 축을 배열로 저장해 JSONB 왕복에서 축 순서가 보존된다")
     void searchSpaceKeepsAxisOrderAcrossJsonbRoundTrip() {
         ParamSearch saved = paramSearchRepository.save(newSearch());
@@ -383,6 +413,10 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                             // 전체 조합 수 = 전략별 (축별 값 개수의 곱)의 합 (FR-027).
                             assertThat(space.combinationCount()).isEqualTo(6L);
                         });
+    }
+
+    private int countBacktestRuns() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM backtest_run", Integer.class);
     }
 
     private String jsonbTypeOf(String searchId, String jsonPathExpression) {
