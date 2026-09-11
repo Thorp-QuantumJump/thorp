@@ -12,7 +12,21 @@ from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import RunStatus
 from worker.contracts.events import ProgressPoint
 from worker.engine_runner import NautilusMomentumEngine
-from worker.market_data import CsvDataProvider
+from worker.market_data import CsvDataProvider, DataProvider
+
+
+def load_yfinance_provider() -> DataProvider:
+    """개발용 yfinance 공급자를 ``worker/scripts`` 에서 늦게 불러온다.
+
+    배포되는 ``worker`` 패키지 안에 두지 않는 이유는 그쪽 모듈 주석에 적어 두었다(R-09).
+    데모에서 ``--fixture`` 없이 실제 시세를 받아 볼 때만 이 경로를 쓴다.
+    """
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    from yfinance_provider import YFinanceDataProvider
+
+    return YFinanceDataProvider()
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -132,7 +146,9 @@ def main() -> int:
         if done % 20 == 0 or done == total:
             print(f"Completed trading days: {done}/{total} ({point.date})", file=sys.stderr)
 
-    engine = NautilusMomentumEngine(CsvDataProvider(args.fixture) if args.fixture else None)
+    engine = NautilusMomentumEngine(
+        CsvDataProvider(args.fixture) if args.fixture else load_yfinance_provider()
+    )
     output, artifacts = engine.run_with_artifacts(request, progress)
     # Two files on purpose: --output is the broker message contract, --artifacts is local
     # diagnostics that the contract deliberately excludes.

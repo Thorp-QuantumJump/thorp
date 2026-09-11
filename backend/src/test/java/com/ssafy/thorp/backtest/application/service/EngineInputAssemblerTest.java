@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -27,8 +27,8 @@ class EngineInputAssemblerTest {
 
     private final EngineInputAssembler assembler = new EngineInputAssembler();
 
-    private static BacktestJob job(BacktestId backtestId, InstrumentId benchmark) {
-        return BacktestJob.restore(
+    private static BacktestRun job(BacktestId backtestId, InstrumentId benchmark) {
+        return BacktestRun.restore(
                 1L,
                 backtestId,
                 "MA_CROSSOVER",
@@ -41,7 +41,7 @@ class EngineInputAssemblerTest {
                 new BigDecimal("0.50"),
                 benchmark,
                 42,
-                BacktestStatus.QUEUED);
+                RunStatus.QUEUED);
     }
 
     @Test

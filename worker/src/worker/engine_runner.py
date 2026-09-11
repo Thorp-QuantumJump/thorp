@@ -22,7 +22,7 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.engine_output import Warning as ContractWarning
 from worker.engine_support import unsupported_reasons
-from worker.market_data import DataProvider, MarketDataError, YFinanceDataProvider, validate_prices
+from worker.market_data import DataProvider, MarketDataError, validate_prices
 from worker.nautilus_engine import (
     SLIPPAGE_BPS,
     CallbackError,
@@ -85,8 +85,10 @@ class NautilusMomentumEngine:
     같은 인스턴스로 여러 번 실행해도 서로 영향을 주지 않는다.
     """
 
-    def __init__(self, data_provider: DataProvider | None = None) -> None:
-        self.data_provider = data_provider or YFinanceDataProvider()
+    def __init__(self, data_provider: DataProvider) -> None:
+        # 기본값을 두지 않는다. 예전 기본값(yfinance)은 공급자를 잊은 실행이 조용히 외부
+        # 시세 API 를 때리게 했다 — 운영 자료 원천은 명시적으로 주입한다(R-09, 원칙 X).
+        self.data_provider = data_provider
 
     def run(
         self,

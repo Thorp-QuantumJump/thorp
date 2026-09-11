@@ -3,8 +3,8 @@ package com.ssafy.thorp.backtest.application.service;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
@@ -14,7 +14,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
@@ -50,18 +50,18 @@ public class BacktestResultQueryService {
 
     private static final Logger log = LoggerFactory.getLogger(BacktestResultQueryService.class);
 
-    private final BacktestJobRepository jobRepository;
+    private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
 
     public BacktestResultQueryService(
-            BacktestJobRepository jobRepository, BacktestResultRepository resultRepository) {
+            BacktestRunRepository jobRepository, BacktestResultRepository resultRepository) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
     }
 
     /** 상태 + 설정 + 요약 + 오류. 없는 id만 예외(404)이고 나머지는 상태에 따라 채워진다. */
     public BacktestDetailResult getDetail(String backtestId) {
-        BacktestJob job = requireJob(backtestId);
+        BacktestRun job = requireJob(backtestId);
         if (!job.getStatus().isFinal()) {
             return BacktestDetailResult.withoutResult(job, ExecutionPolicy.CURRENCY);
         }
@@ -83,7 +83,7 @@ public class BacktestResultQueryService {
      * 값이 있는데 요청과 다를 때만 참이다. 그 응답은 {@code config.benchmarkId}와 {@code
      * summary.benchmark.instrumentId}가 서로 다른 모순된 상태이므로 조용히 내보내지 않는다.
      */
-    static boolean isBenchmarkMismatch(BacktestJob job, BacktestResultSummary summary) {
+    static boolean isBenchmarkMismatch(BacktestRun job, BacktestResultSummary summary) {
         if (summary.benchmarkInstrumentId() == null) {
             return false;
         }
@@ -101,7 +101,7 @@ public class BacktestResultQueryService {
      * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.
      */
     public BacktestTimeseriesResult getTimeseries(String backtestId) {
-        BacktestJob job = requireResultReady(backtestId);
+        BacktestRun job = requireResultReady(backtestId);
         BacktestSeries series = require(resultRepository.findTimeseries(job.getId()), job);
         Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());
         List<BacktestTimeseriesResult.Point> points =
@@ -126,7 +126,7 @@ public class BacktestResultQueryService {
      * 0건이면 빈 페이지를, 거래 행만 남아 있으면 목록을 정상 응답으로 돌려주게 된다. 다른 세 엔드포인트는 결과 컬럼을 읽다가 자연히 걸리므로 여기만 명시적으로 본다.
      */
     public BacktestTradePageResult getTrades(String backtestId, FindBacktestTradesQuery query) {
-        BacktestJob job = requireResultReady(backtestId);
+        BacktestRun job = requireResultReady(backtestId);
         if (!resultRepository.exists(job.getId())) {
             throw missingResultRow(job);
         }
@@ -151,7 +151,7 @@ public class BacktestResultQueryService {
      * 한다.
      */
     public BacktestPositionsResult getPositions(String backtestId, LocalDate date) {
-        BacktestJob job = requireResultReady(backtestId);
+        BacktestRun job = requireResultReady(backtestId);
         List<EngineOutput.PortfolioSnapshot> series =
                 require(resultRepository.findPortfolioSeries(job.getId()), job);
         EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);
@@ -180,7 +180,7 @@ public class BacktestResultQueryService {
      * <p>한 번만 훑으면서 가장 이른 보유 스냅샷도 기억한다 — 못 찾았을 때 400과 500을 가르고, 400 메시지에 "언제부터 조회할 수 있는지"를 담기 위해서다.
      */
     private EngineOutput.PortfolioSnapshot latestSnapshotOnOrBefore(
-            List<EngineOutput.PortfolioSnapshot> series, LocalDate date, BacktestJob job) {
+            List<EngineOutput.PortfolioSnapshot> series, LocalDate date, BacktestRun job) {
         EngineOutput.PortfolioSnapshot earliest = null;
         for (int i = series.size() - 1; i >= 0; i--) {
             EngineOutput.PortfolioSnapshot snapshot = series.get(i);
@@ -217,7 +217,7 @@ public class BacktestResultQueryService {
                                 (first, second) -> first));
     }
 
-    private BacktestJob requireJob(String backtestId) {
+    private BacktestRun requireJob(String backtestId) {
         return jobRepository
                 .findByBacktestId(backtestId)
                 .orElseThrow(() -> new BacktestNotFoundException(backtestId));
@@ -229,8 +229,8 @@ public class BacktestResultQueryService {
      *
      * <p>{@code switch}에 {@code default}를 두지 않는다. 상태가 추가되면 컴파일이 깨져서 여기를 고치게 된다.
      */
-    BacktestJob requireResultReady(String backtestId) {
-        BacktestJob job = requireJob(backtestId);
+    BacktestRun requireResultReady(String backtestId) {
+        BacktestRun job = requireJob(backtestId);
         switch (job.getStatus()) {
             case QUEUED, RUNNING ->
                     throw new BacktestResultNotReadyException(backtestId, job.getStatus());
@@ -247,11 +247,11 @@ public class BacktestResultQueryService {
      * 폴링한다.
      */
     /** 관문을 통과한(=COMPLETED) Job인데 결과 컬럼이 없으면 데이터 손상이다. {@link #requireSummary}와 같은 이유. */
-    private <T> T require(Optional<T> value, BacktestJob job) {
+    private <T> T require(Optional<T> value, BacktestRun job) {
         return value.orElseThrow(() -> missingResultRow(job));
     }
 
-    private IllegalStateException missingResultRow(BacktestJob job) {
+    private IllegalStateException missingResultRow(BacktestRun job) {
         log.error(
                 "결과 행이 없는 최종 상태 Job (저장 트랜잭션 불변식 위반): backtestId={} status={} id={}",
                 job.getBacktestId().value(),
@@ -260,7 +260,7 @@ public class BacktestResultQueryService {
         return new IllegalStateException("결과 행이 없습니다: backtestId=" + job.getBacktestId().value());
     }
 
-    private BacktestResultSummary requireSummary(BacktestJob job) {
+    private BacktestResultSummary requireSummary(BacktestRun job) {
         return require(resultRepository.findSummary(job.getId()), job);
     }
 }

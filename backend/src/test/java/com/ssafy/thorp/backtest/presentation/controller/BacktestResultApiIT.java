@@ -10,9 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -63,7 +63,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
     private static final Path EXAMPLES = Path.of("..", "docs", "specs", "backtest-api", "examples");
 
     @Autowired private MockMvc mockMvc;
-    @Autowired private BacktestJobRepository jobRepository;
+    @Autowired private BacktestRunRepository jobRepository;
     @Autowired private BacktestResultRepository resultRepository;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private TransactionTemplate transactionTemplate;
@@ -71,9 +71,9 @@ class BacktestResultApiIT extends PostgresTestSupport {
     @Autowired private TestRestTemplate restTemplate;
 
     /** 계약 픽스처와 같은 조건의 Job. config 단언이 여기 값과 맞아야 한다. */
-    private BacktestJob newJob() {
+    private BacktestRun newJob() {
         return jobRepository.save(
-                BacktestJob.create(
+                BacktestRun.create(
                         "MA_CROSSOVER",
                         "1.0.0",
                         Map.of("shortWindow", 20, "longWindow", 60, "threshold", 0.05),
@@ -90,10 +90,10 @@ class BacktestResultApiIT extends PostgresTestSupport {
      * 결과 저장은 <b>한 트랜잭션 안에서</b> 해야 한다 — 결과 저장 포트의 계약이고, Job을 {@code getReferenceById} 프록시로 참조하기
      * 때문이다. 운영에서는 {@code @Transactional} 서비스가 그 경계를 만든다.
      */
-    private BacktestJob saveResult(BacktestEvent<FinishedPayload> event, boolean completed) {
+    private BacktestRun saveResult(BacktestEvent<FinishedPayload> event, boolean completed) {
         return transactionTemplate.execute(
                 status -> {
-                    BacktestJob job = newJob();
+                    BacktestRun job = newJob();
                     resultRepository.save(
                             new SaveBacktestResultCommand(
                                     job.getId(),
@@ -101,15 +101,18 @@ class BacktestResultApiIT extends PostgresTestSupport {
                                     event.eventId(),
                                     event.payload().engineOutput(),
                                     null));
-                    return jobRepository.update(completed ? job.markCompleted() : job.markFailed());
+                    return jobRepository.update(
+                            completed
+                                    ? job.markCompleted()
+                                    : job.markFailed("DATA_INSUFFICIENT", "no data"));
                 });
     }
 
-    private BacktestJob completedJob() {
+    private BacktestRun completedJob() {
         return saveResult(MessageFixtures.finishedCompleted(), true);
     }
 
-    private BacktestJob failedJob() {
+    private BacktestRun failedJob() {
         return saveResult(MessageFixtures.finishedFailed(), false);
     }
 
@@ -203,7 +206,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
         mockMvc.perform(get("/backtests/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("FAILED"))
-                .andExpect(jsonPath("$.data.error.code").value("NO_MARKET_DATA"))
+                .andExpect(jsonPath("$.data.error.code").value("DATA_INSUFFICIENT"))
                 .andExpect(jsonPath("$.data.summary").doesNotExist());
 
         for (String path : List.of("/timeseries", "/trades", "/positions?date=2025-01-02")) {
@@ -216,13 +219,13 @@ class BacktestResultApiIT extends PostgresTestSupport {
     @Test
     @DisplayName("COMPLETED인데 결과 행이 없으면 네 엔드포인트 모두 500이다 — 거래 목록도 내보내지 않는다")
     void missingResultRowIsServerErrorEverywhere() throws Exception {
-        BacktestJob job = completedJob();
+        BacktestRun job = completedJob();
         String id = job.getBacktestId().value();
         // 결과 행만 지운다. 거래 행은 남겨 둔다 — /trades가 그것만 보고 200을 주면 안 된다
-        jdbcTemplate.update("DELETE FROM backtest_result WHERE backtest_job_id = ?", job.getId());
+        jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id = ?", job.getId());
         assertThat(
                         jdbcTemplate.queryForObject(
-                                "SELECT count(*) FROM backtest_trade WHERE backtest_job_id = ?",
+                                "SELECT count(*) FROM backtest_trade WHERE run_id = ?",
                                 Long.class,
                                 job.getId()))
                 .isEqualTo(3);

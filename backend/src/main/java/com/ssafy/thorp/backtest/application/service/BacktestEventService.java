@@ -7,10 +7,10 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,12 +39,12 @@ public class BacktestEventService {
 
     private static final Logger log = LoggerFactory.getLogger(BacktestEventService.class);
 
-    private final BacktestJobRepository jobRepository;
+    private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
     private final BacktestProgressNotifier progressNotifier;
 
     public BacktestEventService(
-            BacktestJobRepository jobRepository,
+            BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
             BacktestProgressNotifier progressNotifier) {
         this.jobRepository = jobRepository;
@@ -55,11 +55,11 @@ public class BacktestEventService {
     /** QUEUED → RUNNING. 이미 RUNNING이거나 끝난 Job이면 무시한다. */
     @Transactional
     public void handleStarted(BacktestEvent<StartedPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
-        if (job.getStatus() != BacktestStatus.QUEUED) {
+        if (job.getStatus() != RunStatus.QUEUED) {
             log.info(
                     "late STARTED ignored: runId={} status={} eventId={}",
                     event.runId(),
@@ -67,7 +67,7 @@ public class BacktestEventService {
                     event.eventId());
             return;
         }
-        jobRepository.update(job.markRunning());
+        jobRepository.update(job.markRunning(event.executionId()));
     }
 
     /**
@@ -77,7 +77,7 @@ public class BacktestEventService {
      */
     @Transactional
     public void handleFinished(BacktestEvent<FinishedPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
@@ -92,13 +92,13 @@ public class BacktestEventService {
         }
 
         EngineOutput output = event.payload().engineOutput();
-        BacktestJob finished =
+        BacktestRun finished =
                 switch (event.payload().status()) {
                     case COMPLETED -> job.markCompleted();
-                    case FAILED -> job.markFailed();
+                    case FAILED -> job.markFailed(failureCode(output), failureMessage(output));
                     case CANCELLED ->
                             throw new UnsupportedOperationException(
-                                    "CANCELLED results need the run model (spec 004 T003);"
+                                    "CANCELLED results need the cancel flow (spec 004 T011);"
                                             + " runId="
                                             + event.runId());
                 };
@@ -117,11 +117,11 @@ public class BacktestEventService {
      * <p>트랜잭션을 열지 않는다. 조회 한 번뿐이고, notifier가 SSE로 바뀌면 클라이언트 네트워크 I/O를 하는 동안 DB 커넥션을 쥐고 있지 않기 위해서다.
      */
     public void handleProgress(BacktestEvent<ProgressPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
-        if (job.getStatus() != BacktestStatus.RUNNING) {
+        if (job.getStatus() != RunStatus.RUNNING) {
             log.info(
                     "PROGRESS for non-running job ignored: runId={} status={} eventId={}",
                     event.runId(),
@@ -132,7 +132,7 @@ public class BacktestEventService {
         progressNotifier.notifyProgress(event);
     }
 
-    private BacktestJob findJob(BacktestEvent<?> event) {
+    private BacktestRun findJob(BacktestEvent<?> event) {
         return jobRepository
                 .findByBacktestId(event.runId())
                 .orElseGet(
@@ -144,5 +144,14 @@ public class BacktestEventService {
                                     event.eventId());
                             return null;
                         });
+    }
+
+    /** 계약의 {@code run.error.code}. 검증기가 FAILED에 error를 요구하므로 여기서 비는 일은 없다. */
+    private static String failureCode(EngineOutput output) {
+        return output.run().error() == null ? "ENGINE_ERROR" : output.run().error().code();
+    }
+
+    private static String failureMessage(EngineOutput output) {
+        return output.run().error() == null ? null : output.run().error().message();
     }
 }

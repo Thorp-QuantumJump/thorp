@@ -1,6 +1,6 @@
 package com.ssafy.thorp.backtest.domain.exception;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 
@@ -14,7 +14,7 @@ import com.ssafy.thorp.common.exception.ErrorCode;
  */
 public class BacktestResultNotReadyException extends BusinessException {
 
-    public BacktestResultNotReadyException(String backtestId, BacktestStatus status) {
+    public BacktestResultNotReadyException(String backtestId, RunStatus status) {
         super(
                 ErrorCode.RESULT_NOT_READY,
                 "백테스트 결과가 아직 없습니다: backtestId=" + backtestId + ", status=" + status);

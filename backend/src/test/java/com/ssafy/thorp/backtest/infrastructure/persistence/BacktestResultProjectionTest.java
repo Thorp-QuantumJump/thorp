@@ -9,7 +9,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -51,7 +51,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Import({
     JpaAuditingConfig.class,
     MessageJsonPersistenceConfig.class,
-    BacktestJobRepositoryImpl.class,
+    BacktestRunRepositoryImpl.class,
     BacktestResultRepositoryImpl.class
 })
 class BacktestResultProjectionTest extends PostgresTestSupport {
@@ -64,7 +64,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl jobRepository;
+    @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;
     @Autowired private TestEntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -73,7 +73,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         Long jobId =
                 jobRepository
                         .save(
-                                BacktestJob.create(
+                                BacktestRun.create(
                                         "MA_CROSSOVER",
                                         "1.0.0",
                                         Map.of("shortWindow", 20),
@@ -107,7 +107,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         // jsonb로는 유효하지만 List<PortfolioSnapshot>으로는 읽을 수 없는 값
         jdbcTemplate.update(
                 "UPDATE backtest_result SET portfolio_series = '{\"broken\":true}'::jsonb"
-                        + " WHERE backtest_job_id = ?",
+                        + " WHERE run_id = ?",
                 jobId);
 
         Optional<BacktestResultSummary> summary = resultRepository.findSummary(jobId);

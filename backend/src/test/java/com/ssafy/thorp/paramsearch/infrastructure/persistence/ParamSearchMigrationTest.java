@@ -346,15 +346,15 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     /**
-     * 후보에 붙일 실제 {@code backtest_job} 행을 만든다.
+     * 후보에 붙일 실제 {@code backtest_run} 행을 만든다(004 T003 에서 {@code backtest_job} 이 개명됐다).
      *
-     * <p>{@code search_candidate.backtest_job_id}가 {@code backtest_job(id)}를 참조하므로 없는 Job id를 쓰면 FK
+     * <p>{@code search_candidate.backtest_job_id}가 {@code backtest_run(id)}를 참조하므로 없는 Job id를 쓰면 FK
      * 위반이다. 004의 접수 경로를 부르지 않고 행만 넣는 이유: 이 테스트가 검증하는 것은 007 스키마이고, Job 생성 규약은 {@code
      * FlywayMigrationTest}가 이미 본다.
      */
     private void insertBacktestJob(long id) {
         jdbcTemplate.update(
-                "INSERT INTO backtest_job (id, backtest_id, strategy_id, strategy_version,"
+                "INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,"
                         + " parameters, instrument_ids, start_date, end_date, initial_cash,"
                         + " position_sizing_type, random_seed, status, created_at, updated_at)"
                         + " VALUES (?, ?, 'SECTOR_MOMENTUM', '1.0.0', '{}'::jsonb,"

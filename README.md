@@ -63,6 +63,8 @@ cp .env.example .env
 
 # 1. 인프라(PostgreSQL + RabbitMQ) 실행
 docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
+#    기존 rabbitmq-data 볼륨이 있으면(메시지 계약 v2 이전에 백엔드를 띄운 적 있음) 작업 큐를 1회 전환한다:
+#    ./infra/scripts/migrate-jobs-queue.sh --dev     (docs/guides/backtest-queue-migration.md)
 
 # 2. 백엔드
 cd backend && ./gradlew bootRun

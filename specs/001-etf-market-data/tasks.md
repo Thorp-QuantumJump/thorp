@@ -2,7 +2,7 @@
 
 **Input**: `specs/001-etf-market-data/` — plan.md, spec.md(Clarifications 5건), research.md(결정 1~8), data-model.md, contracts/{sector-api,evaluation-window,market-dataset}.md, quickstart.md(시나리오 1~7)
 
-**작업 단위 규칙** (constitution v3.0.0 "Jira 연계"): 아래 T항목 하나 = 작업 묶음 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **`data/` 수집 파이프라인은 DATA 파트라 `[DE]`, `backend/`와 `worker/`는 백엔드 파트라 `[BE]`로 표기한다**(워커의 파트 소속은 004 tasks가 2026-09-10에 확정). 2026-09-11에 개별 task 76개를 아래 16개 묶음으로 재편했다. 묶음 기준은 constitution의 세 조건(하나의 목적 공유 / 독립 구현·검증·롤백 / 리뷰어가 한 번에 읽을 범위)이며, 같은 파트가 연속으로 하는 작업과 한쪽만 병합하면 반쪽이 되는 작업을 묶었다. **Jira 이슈는 아직 발급되지 않았다.** 각 묶음의 Branch·MR을 만들기 전에 Jira Task를 먼저 생성하고 그 번호로 브랜치(`{type}({position})/{JIRA_NUMBER}-{desc}`)를 만든다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 완료 조건은 constitution "완료의 정의" 다섯 가지다.
+**작업 단위 규칙** (constitution v3.0.0 "Jira 연계"): 아래 T항목 하나는 실행 지시의 최소 단위이며, 여러 T항목을 묶은 작업 묶음 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나다. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **`data/` 수집 파이프라인은 DATA 파트라 `[DE]`, `backend/`와 `worker/`는 백엔드 파트라 `[BE]`로 표기한다**(워커의 파트 소속은 004 tasks가 2026-09-10에 확정). 2026-09-11에 개별 task 76개를 아래 16개 묶음으로 재편했다. 묶음 기준은 constitution의 세 조건(하나의 목적 공유 / 독립 구현·검증·롤백 / 리뷰어가 한 번에 읽을 범위)이며, 같은 파트가 연속으로 하는 작업과 한쪽만 병합하면 반쪽이 되는 작업을 묶었다. **2026-09-11에 T001~T013을 Jira Task 6개로 다시 묶고 이슈를 발급했다.** 묶음을 16개에서 6개로 줄인 까닭은 Jira Task 하나의 단위를 speckit task 여러 개로 두기로 정했고, 같은 파트가 연속으로 수행하며 함께 병합해야 뜻이 통하는 작업을 한 묶음에 담는 편이 리뷰에 유리하기 때문이다(constitution 「Jira 연계」가 요구하는 묶음 구성 변경 기록이다). 발급 결과는 Epic `S15P21E205-30 백테스트` 아래 Story 3개(US1 `-173`, US2 `-174`, US3 `-175`)와 Task 6개다: T001·T002 → `-176`(SP 3), T003·T004 → `-177`(SP 5), T005·T006 → `-178`(SP 5), T007·T008·T009 → `-179`(SP 8), T010·T011 → `-180`(SP 5), T012·T013 → `-181`(SP 3). Story에는 담당자와 스토리 포인트를 지정하지 않고 Task에만 지정한다. 브랜치는 `feat(be)/{JIRA_NUMBER}-{desc}` 형식이며, 서브에이전트가 쓰는 작업 브랜치에는 Jira 번호를 붙이지 않는다. T014~T016은 실제 자료 확보가 선행 조건이라 아직 발급하지 않았다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 완료 조건은 constitution "완료의 정의" 다섯 가지다.
 
 **Tests**: 각 묶음은 자기 변경의 테스트를 포함한다. 파트별 검증 명령은 `data/` `ruff check src scripts && pytest`, `worker/` `ruff check src tests && pytest`, `backend/` `./gradlew spotlessApply build`다. 재현성(SC-004)은 T011, 공시 대조(SC-002)는 T009, 수기 대조는 T016에 명시했다.
 
@@ -27,17 +27,17 @@
 
 **Purpose**: 수집 환경을 갖추고, 004가 요구한 계약과 001의 데이터 모형이 어긋나지 않게 맞춘다.
 
-- [ ] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — Jira 미발급
+- [ ] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — S15P21E205-176
   - 의존성: KRX OPEN API HTTP 클라이언트·pyarrow·PostgreSQL 드라이버 추가, pykrx 제거 (research.md 결정 1)
   - `.env.example`에 `KRX_API_KEY`·`DATABASE_URL`을 문서화한다. 실제 키는 `.env`에만 두고 코드에 하드코딩하지 않는다
   - `data/CLAUDE.md`: 원천을 pykrx에서 KRX OPEN API로, 컬럼 표준에 `value`(거래대금, 원)를 추가한다 (research.md 결정 1·6). **DATA 파트 합의가 선행되어야 한다**
   - `raw/`·`tests/` 디렉터리를 만들고 `.gitignore`에 `raw/`가 있는지 확인한다
-- [ ] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — Jira 미발급
-  - 열 이름 정합: 004는 `trade_date`·`data_version`·`adj_close`·`halted`를 쓰고 001은 `date`·`dataset_id`·`adjusted_close`·`price_carried_forward`를 쓴다. 계약이 "이름은 제안이며 의미가 우선"이라 했으므로 어느 쪽으로 통일할지 정해 양쪽 문서에 반영한다
-  - **의미 충돌 해소**: 004는 "결측은 행 부재로 표현하고 보간값을 넣지 않는다. 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 004가 요구한 `halted BOOL` 열로 "행은 있되 거래 불가 표시"를 쓰면 양쪽을 만족하는지 확인하고 결론을 FR-006과 계약 문서에 적는다
+- [ ] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
+  - **열 이름 정합 (2026-09-11 확정)**: 001 기준(`date`·`dataset_id`·`adjusted_close`·`price_carried_forward`)으로 통일하고 004의 `market-data-input.md`를 그에 맞춘다. 004 계약이 "이름은 제안이며 의미가 우선한다. 001이 다른 이름을 쓰면 provider 매핑만 바꾼다"고 허용했고 004는 아직 구현 전이라 문서 수정만으로 끝난다. 메시지 계약 픽스처와 ADR-0002·0003은 고치지 않는다
+  - **의미 충돌 해소 (2026-09-11 확정)**: 004는 "결측은 행 부재로 표현하고 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 정지일에도 행을 만들고 `trading_suspended` 열로 표시해 해소한다. OHLC 네 값을 모두 직전 종가로 채우고 `volume`·`value`는 0이다. `trading_suspended`(원인)와 `price_carried_forward`(처리)를 둘 다 둔다. 진짜 결측에는 행을 만들지 않으므로 004의 규칙이 유지된다
   - 분배금 이벤트에 004가 요구한 `ex_date`(배당락일)와 `pay_date`(지급일)를 모두 담도록 `corporate_action`을 고친다. 현재 data-model.md에는 날짜가 하나뿐이다
   - 자료 버전에 004가 요구한 `source` 열을 추가한다
-  - 마이그레이션 번호를 V7로 확정하고, 007·014가 함께 쓰는 V3 중복의 재배정 결론을 `specs/README.md`에 남긴다
+  - **Flyway 버전을 타임스탬프 방식으로 전환한다 (2026-09-11 확정)**. 형식은 `V{YYYYMMDDHHMMSS}__설명.sql`이며 적용된 `V1`~`V3`은 그대로 둔다. `backend/CLAUDE.md`에 규칙을 반영하고, 004·007·014 문서의 V 번호 표기가 갱신 대상임을 `specs/README.md`에 남긴다. 001은 다른 spec의 문서를 직접 고치지 않는다
 
 **Checkpoint**: 004와 열·의미가 맞고 마이그레이션 번호가 겹치지 않는다.
 
@@ -45,13 +45,13 @@
 
 ## Phase 2: Foundational (모든 스토리가 의존)
 
-- [ ] T003 [BE] 자료 저장 스키마 V7과 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V7__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — Jira 미발급
+- [ ] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
   - 관계형 6개: `sector`, `representative_etf`, `sector_etf_map_version`, `sector_etf_map_entry`, `dataset_version`, `reconciliation_record`
-  - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 `(instrument_id, data_version, trade_date)` 인덱스를 둔다
+  - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 조회 인덱스 `(instrument_id, dataset_id, date)`를 둔다. `daily_price`에 `trading_suspended`를, `corporate_action`에 `ex_date`·`pay_date`를, `dataset_version`에 `source`를 담는다 (T002 확정)
   - 불변식: `(map_version_id, sector_id)` UNIQUE, `leveraged`·`inverse` true 거부, `effective_to IS NULL` 행 최대 하나, `cause`↔`resolution` 조합 제한 (data-model.md)
   - 발행된 `dataset_version` 행과 딸린 시계열 행의 UPDATE·DELETE를 거부한다 (FR-017). quickstart 시나리오 3이 이 거부를 확인한다
   - 테스트는 `PostgresTestSupport`를 상속한다. Docker가 꺼져 있으면 skip되므로 `skipped` 수를 확인한다
-- [ ] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — Jira 미발급
+- [ ] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — S15P21E205-177
   - `dataset_id`는 `KRX_DAILY_{YYYYMMDD}` 형식이다. `data_deadline`·`collected_at`·`last_success_at`·`complete`·`failure_reason`·`is_sample`·`source`를 기록한다 (research.md 결정 4)
   - 적재 순서를 강제한다. 자료 버전 행을 먼저 만든 뒤 시계열을 넣고, `raw → processed → PostgreSQL` 한 방향만 허용한다 (research.md 결정 8)
   - 발행된 버전에 다시 적재하려는 시도를 거부하는 테스트를 포함한다
@@ -66,13 +66,13 @@
 
 **Independent Test**: 섹터 목록을 조회해 모든 섹터에 대표 ETF 하나가 연결되어 있고 상장일·기준 지수가 등록되어 있는지 확인한다. 화면 없이 대응표만으로 검증할 수 있다.
 
-- [ ] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — Jira 미발급
+- [ ] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — S15P21E205-178
   - 항목은 섹터 이름·대표 ETF 이름·종목 식별자·상장일·기준 지수·운용사다. 국내 상장 비레버리지·비인버스 ETF만 허용한다 (FR-001)
   - 버전 발행: 내용이 바뀌면 새 버전을 만들고 기존 버전을 고치지 않는다 (FR-003)
   - 진입점은 `--sample`·`--map-version` 인자를 받고 재실행이 멱등하다 (`data/CLAUDE.md`)
   - 예시 대응표는 PD-01 확정 전까지 쓰며 `isSample` 표시가 붙는다 (FR-002)
   - 테스트: 섹터마다 대표 ETF 정확히 하나, 레버리지·인버스 거부, 상장일·기준 지수 필수
-- [ ] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — Jira 미발급
+- [ ] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — S15P21E205-178
   - 도메인 모델에 Spring·JPA·Jackson import를 두지 않는다. `*Mapper`는 정적 `toEntity`/`toDomain`이다 (ADR-0001)
   - 저장소 인터페이스에 **수정·생성 메서드를 두지 않는다.** 대응표는 파이프라인이 소유한다 (research.md 결정 7)
   - `GET /sectors`가 `mapVersion`·`isSample`을 함께 반환한다 (contracts/sector-api.md)
@@ -90,30 +90,30 @@
 
 **Independent Test**: 대표 ETF 하나를 골라 상장 전 날짜·분배금 지급일·분할일 전후의 원시 가격과 조정 자료를 조회해 운용사 공시와 대조한다.
 
-- [ ] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — Jira 미발급
+- [ ] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — S15P21E205-179
   - KRX OPEN API 연동으로 `fetch_ohlcv` 스캐폴딩을 완성한다. 컬럼을 `date, open, high, low, close, volume, value`로 표준화한다
   - 상장 전 합성 이력이나 미래 자료로 빈 값을 채우지 않는다. 상장일·상장폐지일을 함께 확보한다 (FR-005)
   - 이용 한도에 걸려 그날 수집을 끝내지 못하면 중단하고 `complete = false`와 `failure_reason`을 남긴다 (FR-014). `--simulate-quota-exhausted`로 재현한다
   - KOSPI 시리즈 일별 자료의 확보 기간이 비교 대상 대표 ETF의 상장 이후 전체를 포함하는지 검사한다 (FR-009)
   - `verify_listing_boundary.py`는 상장 전 가격 행을 센다. quickstart 시나리오 2가 쓴다
   - 테스트: 컬럼 표준 변환, 상장 전 행 부재(SC-003), 재실행 멱등성
-- [ ] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — Jira 미발급
+- [ ] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — S15P21E205-179
   - 분배금·분할 수집과 소급 조정 계수 산출. `adjusted_close`와 `adjustment_factor`를 함께 저장한다 (research.md 결정 2)
   - 운용보수를 다시 차감하지 않는다. 이미 가격에 반영되어 있다 (FR-004)
   - 자료 부족 구간의 `reason`은 `AMBIGUOUS_PRICE`·`MISSING_CORPORATE_ACTION`·`RECONCILIATION_UNKNOWN`·`INDEX_HISTORY_SHORT`다. **`SUSPENDED_TOO_LONG`은 PD-19·PD-20 확정 전까지 쓰지 않는다** (FR-006)
   - 거래정지는 길이와 무관하게 직전 종가를 평가에만 쓰고 표시를 남기며, 정지 구간을 `suspension_period`에 시작일·종료일·거래일 수로 기록한다. 이 기록이 T015의 입력이 된다
   - 테스트: 계수 계산, 과거 두 시점의 비율이 이후 계수에 영향받지 않음, 보수 중복 차감 없음
-- [ ] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — Jira 미발급
+- [ ] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — S15P21E205-179
   - 표본은 상장 첫날·모든 분배금 지급일·모든 분할일이다. 평범한 거래일은 넣지 않는다 (FR-016)
   - 불일치가 나도 개별 값을 수정하지 않는다. 수집·가공 오류는 새 버전 재발행, 정의 차이는 기록만, 원인 불명은 구간 제외 (FR-017)
   - 테스트: 표본 구성 검증, `cause`↔`resolution` 조합 제한, SC-002 판정
-- [ ] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — Jira 미발급
+- [ ] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — S15P21E205-180
   - 픽스처를 먼저 만든다. `contracts/evaluation-window.md` 「경계 동작」 7가지를 모두 담는다
   - 워커와 백엔드가 **같은 픽스처**를 읽는다. 한쪽만 고치면 실패해야 한다 (contracts/README.md 「계약 변경 순서」)
   - 검증용 잠금 구간을 빼지 않는다. 평가 분할은 007이 맡는다 (FR-008)
   - `GET /sectors/evaluation-window`는 `evaluable: false`를 오류가 아닌 정상 응답으로 반환한다
   - 양쪽을 한 묶음에 둔 이유: 계약이 두 구현을 묶고 있어 한쪽만 병합하면 픽스처가 반쪽이 된다
-- [ ] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — Jira 미발급
+- [ ] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — S15P21E205-180
   - **선행**: 004 T004(`S15P21E205-134`)가 `market_data.py`에 공급자 골격과 CSV 픽스처를 먼저 넣는다
   - 저장소를 읽는 공급자를 추가하고 `engine_runner.py:68`의 기본값을 그것으로 바꾼다. `YFinanceDataProvider` 클래스는 남기되 실제 Job 처리 경로에서 쓰지 않는 임시 수단임을 주석에 적는다 (research.md 결정 1)
   - `metadata`에 `datasetId`·`dataDeadline`·`carriedForwardDates`·`dataGaps`·`mapVersion`·`provisionalSuspensionHandling`을 담는다 (contracts/market-dataset.md)
@@ -131,12 +131,12 @@
 
 **Independent Test**: 대표 ETF 하나의 대표 상품 정보를 열어 필수 항목이 모두 보이고, 과거 구성 이력이 없는 상품에 현재 구성 기준 표시가 붙는지 확인한다.
 
-- [ ] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — Jira 미발급
+- [ ] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — S15P21E205-181
   - 기준 지수·지수 방법론 요약·상장일·구성종목 중복·최근 3개월 일평균 거래대금·자료 출처·생존 상품 한계를 담는다 (FR-015)
   - 유동성은 `daily_price.value` 기준이다. 거래량과 종가를 곱한 추정을 쓰지 않는다
   - 과거 구성 이력이 없으면 `holdings_as_of_current`를 true로 표시하고, 당시 중복·집중도를 재현했다고 표현하지 않는다
   - **추적 차이는 만들지 않는다.** 계산 정의가 PD-21로 남아 있다 (Out of Scope)
-- [ ] T013 [US3] [BE] 대표 상품 정보 조회 API (`sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — Jira 미발급
+- [ ] T013 [US3] [BE] 대표 상품 정보 조회 API (`sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — S15P21E205-181
   - `GET /sectors/{code}/instrument-profile` (contracts/sector-api.md)
   - `avgDailyValue3m`에 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 **필드마다** 붙인다. 웹 ObjectMapper에 전역 등록하면 기존 `MarketResponse.value` 계약이 깨진다 (`backend/CLAUDE.md`)
   - `INSTRUMENT_PROFILE_NOT_READY`(409)를 추가한다

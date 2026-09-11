@@ -3,9 +3,9 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -36,8 +36,8 @@ import org.springframework.context.annotation.Import;
  * 같은지를 본다.
  */
 @DataJpaTest
-@Import({JpaAuditingConfig.class, BacktestJobRepositoryImpl.class})
-class BacktestJobRepositoryImplTest extends PostgresTestSupport {
+@Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
+class BacktestRunRepositoryImplTest extends PostgresTestSupport {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 7);
     private static final BacktestPeriod PERIOD =
@@ -48,8 +48,8 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
             List.of(new InstrumentId("005930.XKRX"), new InstrumentId("000660.XKRX"));
     private static final BigDecimal CASH = new BigDecimal("10000000.00");
 
-    private static BacktestJob newJob() {
-        return BacktestJob.create(
+    private static BacktestRun newJob() {
+        return BacktestRun.create(
                 "MA_CROSSOVER",
                 "1.0.0",
                 PARAMETERS,
@@ -70,20 +70,20 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl repository;
+    @Autowired private BacktestRunRepositoryImpl repository;
     @Autowired private TestEntityManager entityManager;
 
     @Test
     @DisplayName("save 후 findById로 JSON 컬럼까지 같은 값으로 읽어온다")
     void saveThenFindById() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
         assertThat(saved.getId()).isNotNull();
-        Optional<BacktestJob> found = repository.findById(saved.getId());
+        Optional<BacktestRun> found = repository.findById(saved.getId());
         assertThat(found).isPresent();
-        BacktestJob job = found.get();
+        BacktestRun job = found.get();
         assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());
         assertThat(job.getStrategyId()).isEqualTo("MA_CROSSOVER");
         assertThat(job.getStrategyVersion()).isEqualTo("1.0.0");
@@ -95,31 +95,31 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
         assertThat(job.getMaxPositionPct()).isEqualByComparingTo("0.5000");
         assertThat(job.getBenchmarkInstrumentId()).isEqualTo(new InstrumentId("069500.XKRX"));
         assertThat(job.getRandomSeed()).isEqualTo(42);
-        assertThat(job.getStatus()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(job.getStatus()).isEqualTo(RunStatus.QUEUED);
     }
 
     @Test
     @DisplayName("save는 고정 Clock의 날짜와 PK로 backtestId를 부여하고 NOT NULL인 채로 INSERT된다")
     void saveAssignsBacktestIdBeforeInsert() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
         assertThat(saved.getBacktestId()).isEqualTo(BacktestId.of(TODAY, saved.getId()));
         assertThat(saved.getBacktestId().value()).startsWith("BT-20260907-");
 
-        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
         assertThat(entity.getBacktestId()).isEqualTo(saved.getBacktestId().value());
     }
 
     @Test
     @DisplayName("findByBacktestId로 문자열 식별자 조회가 된다")
     void findByBacktestId() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
-        Optional<BacktestJob> found = repository.findByBacktestId(saved.getBacktestId().value());
+        Optional<BacktestRun> found = repository.findByBacktestId(saved.getBacktestId().value());
         assertThat(found).isPresent();
         assertThat(found.get().getId()).isEqualTo(saved.getId());
     }
@@ -127,25 +127,25 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     @Test
     @DisplayName("update는 상태 전이를 저장하고 나머지 컬럼은 그대로 둔다")
     void updatePersistsStatusTransition() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
         entityManager.clear();
 
-        BacktestJob updated = repository.update(saved.markRunning());
+        BacktestRun updated = repository.update(saved.markRunning("EXEC-000001"));
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(updated.getStatus()).isEqualTo(BacktestStatus.RUNNING);
-        Optional<BacktestJob> found = repository.findById(saved.getId());
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.RUNNING);
+        Optional<BacktestRun> found = repository.findById(saved.getId());
         assertThat(found).isPresent();
-        BacktestJob job = found.get();
-        assertThat(job.getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        BacktestRun job = found.get();
+        assertThat(job.getStatus()).isEqualTo(RunStatus.RUNNING);
         assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());
         assertThat(job.getParameters()).isEqualTo(PARAMETERS);
         assertThat(job.getInstrumentIds()).isEqualTo(INSTRUMENTS);
         assertThat(job.getInitialCash()).isEqualByComparingTo(CASH);
 
-        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
         assertThat(entity.getCreatedAt()).as("createdAt은 갱신되지 않는다").isNotNull();
     }
 
@@ -155,8 +155,8 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
         assertThatThrownBy(() -> repository.update(newJob()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        BacktestJob missing =
-                BacktestJob.restore(
+        BacktestRun missing =
+                BacktestRun.restore(
                         999_999L,
                         BacktestId.from("BT-20260907-999999"),
                         "MA_CROSSOVER",
@@ -169,7 +169,7 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
                         null,
                         null,
                         42,
-                        BacktestStatus.RUNNING);
+                        RunStatus.RUNNING);
         assertThatThrownBy(() -> repository.update(missing))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -184,11 +184,11 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     @Test
     @DisplayName("backtest_id가 겹치면 UNIQUE 제약에 걸린다")
     void rejectsDuplicateBacktestId() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
 
         entityManager.persist(
-                new BacktestJobJpaEntity(
+                new BacktestRunJpaEntity(
                         null,
                         saved.getBacktestId().value(),
                         "MA_CROSSOVER",
@@ -202,7 +202,16 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
                         null,
                         null,
                         42,
-                        BacktestStatus.QUEUED));
+                        RunStatus.QUEUED,
+                        0,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null));
 
         assertThatThrownBy(() -> entityManager.flush()).isInstanceOf(Exception.class);
     }
@@ -210,8 +219,8 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     @Test
     @DisplayName("save는 신규 Job 전용이라 id가 있으면 거부한다")
     void saveRejectsExistingJob() {
-        BacktestJob existing =
-                BacktestJob.restore(
+        BacktestRun existing =
+                BacktestRun.restore(
                         1L,
                         BacktestId.from("BT-20260907-000001"),
                         "MA_CROSSOVER",
@@ -224,7 +233,7 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
                         null,
                         null,
                         42,
-                        BacktestStatus.QUEUED);
+                        RunStatus.QUEUED);
 
         assertThatThrownBy(() -> repository.save(existing))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -233,8 +242,8 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     @Test
     @DisplayName("이미 backtestId가 있는 엔티티에는 다시 부여할 수 없다")
     void assignBacktestIdOnlyOnce() {
-        BacktestJobJpaEntity entity =
-                new BacktestJobJpaEntity(
+        BacktestRunJpaEntity entity =
+                new BacktestRunJpaEntity(
                         null,
                         "BT-20260907-000001",
                         "MA_CROSSOVER",
@@ -248,7 +257,16 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
                         null,
                         null,
                         42,
-                        BacktestStatus.QUEUED);
+                        RunStatus.QUEUED,
+                        0,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
 
         assertThatThrownBy(() -> entity.assignBacktestIdOn(TODAY))
                 .isInstanceOf(IllegalStateException.class);
@@ -257,10 +275,10 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {
     @Test
     @DisplayName("BaseEntity의 생성·수정 시각이 Auditing으로 채워진다")
     void auditingFieldsArePopulated() {
-        BacktestJob saved = repository.save(newJob());
+        BacktestRun saved = repository.save(newJob());
         entityManager.flush();
 
-        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
         assertThat(entity.getCreatedAt()).isNotNull();
         assertThat(entity.getUpdatedAt()).isNotNull();
     }

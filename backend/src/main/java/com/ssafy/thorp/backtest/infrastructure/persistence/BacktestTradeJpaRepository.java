@@ -10,14 +10,14 @@ import org.springframework.data.repository.query.Param;
 
 interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntity, Long> {
 
-    /** 조회 API의 기본 정렬과 같다. 인덱스 {@code (backtest_job_id, entry_time, id)}를 그대로 탄다. */
+    /** 조회 API의 기본 정렬과 같다. 인덱스 {@code (run_id, entry_time, id)}를 그대로 탄다. */
     List<BacktestTradeJpaEntity> findByJobIdOrderByEntryTimeAscIdAsc(Long jobId);
 
     /**
      * 필터 조합이 네 가지라 파생 쿼리 네 개도, {@code Specification}도 만들지 않는다. nullable 파라미터 두 개가 가장 짧다.
      *
-     * <p>정렬을 쿼리에 박아 {@code Pageable}의 {@code Sort}를 무시한다 — 계약이 고정했고 인덱스 {@code (backtest_job_id,
-     * entry_time, id)}를 그대로 탄다.
+     * <p>정렬을 쿼리에 박아 {@code Pageable}의 {@code Sort}를 무시한다 — 계약이 고정했고 인덱스 {@code (run_id, entry_time,
+     * id)}를 그대로 탄다.
      */
     @Query(
             """

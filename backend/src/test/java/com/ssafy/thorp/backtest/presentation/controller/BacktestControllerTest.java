@@ -27,9 +27,9 @@ import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -73,7 +73,7 @@ class BacktestControllerTest {
 
     private void expectAccepted(String body) throws Exception {
         when(backtestService.create(any()))
-                .thenReturn(new BacktestJobResult(BACKTEST_ID, BacktestStatus.QUEUED));
+                .thenReturn(new BacktestJobResult(BACKTEST_ID, RunStatus.QUEUED));
         mockMvc.perform(post("/backtests").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isAccepted());
     }
@@ -96,7 +96,7 @@ class BacktestControllerTest {
     @DisplayName("POST /backtests는 202와 backtestId·QUEUED를 돌려준다")
     void createReturnsAccepted() throws Exception {
         when(backtestService.create(any()))
-                .thenReturn(new BacktestJobResult(BACKTEST_ID, BacktestStatus.QUEUED));
+                .thenReturn(new BacktestJobResult(BACKTEST_ID, RunStatus.QUEUED));
 
         mockMvc.perform(
                         post("/backtests")
@@ -195,11 +195,11 @@ class BacktestControllerTest {
     void createChecksStrategyIdLength() throws Exception {
         expectBadRequest(
                 VALID_BODY.replace(
-                        "MA_CROSSOVER", "A".repeat(BacktestJob.MAX_STRATEGY_ID_LENGTH + 1)));
+                        "MA_CROSSOVER", "A".repeat(BacktestRun.MAX_STRATEGY_ID_LENGTH + 1)));
         verify(backtestService, never()).create(any());
 
         expectAccepted(
-                VALID_BODY.replace("MA_CROSSOVER", "A".repeat(BacktestJob.MAX_STRATEGY_ID_LENGTH)));
+                VALID_BODY.replace("MA_CROSSOVER", "A".repeat(BacktestRun.MAX_STRATEGY_ID_LENGTH)));
     }
 
     @Test
@@ -260,7 +260,7 @@ class BacktestControllerTest {
                     "069500.XKRX");
 
     private static BacktestDetailResult detail(
-            BacktestStatus status,
+            RunStatus status,
             BacktestDetailResult.Summary summary,
             BacktestDetailResult.Error error) {
         return new BacktestDetailResult(
@@ -276,8 +276,7 @@ class BacktestControllerTest {
     @Test
     @DisplayName("QUEUED·RUNNING은 config만 있고 summary·error는 null이다")
     void getReturnsConfigOnlyBeforeResult() throws Exception {
-        when(queryService.getDetail(BACKTEST_ID))
-                .thenReturn(detail(BacktestStatus.RUNNING, null, null));
+        when(queryService.getDetail(BACKTEST_ID)).thenReturn(detail(RunStatus.RUNNING, null, null));
 
         mockMvc.perform(get("/backtests/" + BACKTEST_ID))
                 .andExpect(status().isOk())
@@ -310,7 +309,7 @@ class BacktestControllerTest {
                         new BacktestDetailResult.Benchmark(
                                 "069500.XKRX", new BigDecimal("0.053292")));
         when(queryService.getDetail(BACKTEST_ID))
-                .thenReturn(detail(BacktestStatus.COMPLETED, summary, null));
+                .thenReturn(detail(RunStatus.COMPLETED, summary, null));
 
         mockMvc.perform(get("/backtests/" + BACKTEST_ID))
                 .andExpect(status().isOk())
@@ -331,7 +330,7 @@ class BacktestControllerTest {
         when(queryService.getDetail(BACKTEST_ID))
                 .thenReturn(
                         detail(
-                                BacktestStatus.FAILED,
+                                RunStatus.FAILED,
                                 null,
                                 new BacktestDetailResult.Error("NO_MARKET_DATA", "no data")));
 
@@ -555,8 +554,7 @@ class BacktestControllerTest {
     @DisplayName("결과 전이면 409 RESULT_NOT_READY (폴링 계속)")
     void getTimeseriesReturnsConflictWhenNotReady() throws Exception {
         when(queryService.getTimeseries(BACKTEST_ID))
-                .thenThrow(
-                        new BacktestResultNotReadyException(BACKTEST_ID, BacktestStatus.RUNNING));
+                .thenThrow(new BacktestResultNotReadyException(BACKTEST_ID, RunStatus.RUNNING));
 
         mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
                 .andExpect(status().isConflict())

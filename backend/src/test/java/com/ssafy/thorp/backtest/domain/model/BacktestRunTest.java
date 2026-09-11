@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-class BacktestJobTest {
+class BacktestRunTest {
 
     private static final BacktestPeriod PERIOD =
             new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));
@@ -24,9 +24,9 @@ class BacktestJobTest {
     private static final InstrumentId SK = new InstrumentId("000660.XKRX");
     private static final BigDecimal CASH = new BigDecimal("10000000");
 
-    private static BacktestJob create(
+    private static BacktestRun create(
             List<InstrumentId> instrumentIds, BigDecimal initialCash, BigDecimal maxPositionPct) {
-        return BacktestJob.create(
+        return BacktestRun.create(
                 "MA_CROSSOVER",
                 "1.0.0",
                 Map.of("shortWindow", 20),
@@ -42,7 +42,7 @@ class BacktestJobTest {
     @Test
     @DisplayName("create는 id·backtestId 없이 QUEUED 상태로 만든다")
     void createStartsQueuedWithoutId() {
-        BacktestJob job = create(List.of(SAMSUNG), CASH, new BigDecimal("0.50"));
+        BacktestRun job = create(List.of(SAMSUNG), CASH, new BigDecimal("0.50"));
 
         assertThat(job.getId()).isNull();
         assertThat(job.getBacktestId()).isNull();
@@ -56,7 +56,7 @@ class BacktestJobTest {
         assertThat(job.getMaxPositionPct()).isEqualTo(new BigDecimal("0.50"));
         assertThat(job.getBenchmarkInstrumentId()).isNull();
         assertThat(job.getRandomSeed()).isEqualTo(42);
-        assertThat(job.getStatus()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(job.getStatus()).isEqualTo(RunStatus.QUEUED);
     }
 
     @Test
@@ -64,7 +64,7 @@ class BacktestJobTest {
     void createRejectsBlankStrategyId() {
         assertThatThrownBy(
                         () ->
-                                BacktestJob.create(
+                                BacktestRun.create(
                                         " ",
                                         "1.0.0",
                                         Map.of(),
@@ -81,9 +81,9 @@ class BacktestJobTest {
     @Test
     @DisplayName("strategyId는 저장 컬럼 폭까지만 허용한다")
     void createRejectsTooLongStrategyId() {
-        String maxLength = "A".repeat(BacktestJob.MAX_STRATEGY_ID_LENGTH);
+        String maxLength = "A".repeat(BacktestRun.MAX_STRATEGY_ID_LENGTH);
         assertThat(
-                        BacktestJob.create(
+                        BacktestRun.create(
                                         maxLength,
                                         "1.0.0",
                                         Map.of(),
@@ -99,7 +99,7 @@ class BacktestJobTest {
 
         assertThatThrownBy(
                         () ->
-                                BacktestJob.create(
+                                BacktestRun.create(
                                         maxLength + "A",
                                         "1.0.0",
                                         Map.of(),
@@ -121,7 +121,7 @@ class BacktestJobTest {
 
         assertThatThrownBy(
                         () ->
-                                BacktestJob.create(
+                                BacktestRun.create(
                                         "MA_CROSSOVER",
                                         "1.0.0",
                                         withNull,
@@ -167,7 +167,7 @@ class BacktestJobTest {
     @Test
     @DisplayName("parameters와 instrumentIds는 방어적으로 복사해 불변으로 담는다")
     void createCopiesCollections() {
-        BacktestJob job = create(List.of(SAMSUNG), CASH, null);
+        BacktestRun job = create(List.of(SAMSUNG), CASH, null);
 
         assertThatThrownBy(() -> job.getInstrumentIds().add(SK))
                 .isInstanceOf(UnsupportedOperationException.class);
@@ -175,8 +175,8 @@ class BacktestJobTest {
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
-    private static BacktestJob restoreWith(BacktestStatus status) {
-        return BacktestJob.restore(
+    private static BacktestRun restoreWith(RunStatus status) {
+        return BacktestRun.restore(
                 7L,
                 BacktestId.from("BT-20260907-000007"),
                 "MA_CROSSOVER",
@@ -195,12 +195,12 @@ class BacktestJobTest {
     @Test
     @DisplayName("markRunning은 QUEUED에서 RUNNING으로 바꾸고 나머지 필드는 그대로 둔다")
     void markRunningFromQueued() {
-        BacktestJob queued = restoreWith(BacktestStatus.QUEUED);
+        BacktestRun queued = restoreWith(RunStatus.QUEUED);
 
-        BacktestJob running = queued.markRunning();
+        BacktestRun running = queued.markRunning("EXEC-000001");
 
-        assertThat(running.getStatus()).isEqualTo(BacktestStatus.RUNNING);
-        assertThat(queued.getStatus()).as("원본은 불변").isEqualTo(BacktestStatus.QUEUED);
+        assertThat(running.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(queued.getStatus()).as("원본은 불변").isEqualTo(RunStatus.QUEUED);
         assertThat(running.getId()).isEqualTo(7L);
         assertThat(running.getBacktestId()).isEqualTo(BacktestId.from("BT-20260907-000007"));
         assertThat(running.getStrategyId()).isEqualTo("MA_CROSSOVER");
@@ -217,44 +217,112 @@ class BacktestJobTest {
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
-            names = {"RUNNING", "COMPLETED", "FAILED"})
-    @DisplayName("markRunning은 QUEUED가 아닌 상태에서 거부한다")
-    void markRunningRejectsNonQueued(BacktestStatus status) {
-        assertThatThrownBy(() -> restoreWith(status).markRunning())
+            value = RunStatus.class,
+            names = {"COMPLETED", "FAILED", "CANCELLED"})
+    @DisplayName("markRunning은 최종 상태에서 거부한다")
+    void markRunningRejectsFinal(RunStatus status) {
+        assertThatThrownBy(() -> restoreWith(status).markRunning("EXEC-000001"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("markRunning은 시도 횟수를 올리고 실행 시도 식별자를 남긴다")
+    void markRunningRecordsAttempt() {
+        BacktestRun running = restoreWith(RunStatus.QUEUED).markRunning("EXEC-000001");
+
+        assertThat(running.getAttempt()).isEqualTo(1);
+        assertThat(running.getCurrentExecutionId()).isEqualTo("EXEC-000001");
+        assertThat(running.getProgress().stage()).isEqualTo(ProgressStage.PREPARING_DATA);
+    }
+
+    @Test
+    @DisplayName("RUNNING 중 다른 executionId의 STARTED는 시도만 올린다 — 브로커 재전달(자동 재시도)이다")
+    void secondStartedKeepsRunningAndBumpsAttempt() {
+        BacktestRun first = restoreWith(RunStatus.QUEUED).markRunning("EXEC-000001");
+
+        BacktestRun retried = first.markRunning("EXEC-000002");
+
+        assertThat(retried.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(retried.getAttempt()).isEqualTo(2);
+        assertThat(retried.getCurrentExecutionId()).isEqualTo("EXEC-000002");
+    }
+
+    @Test
+    @DisplayName("같은 executionId의 중복 STARTED는 아무것도 바꾸지 않는다")
+    void duplicateStartedIsIgnored() {
+        BacktestRun first = restoreWith(RunStatus.QUEUED).markRunning("EXEC-000001");
+
+        assertThat(first.markRunning("EXEC-000001")).isSameAs(first);
+    }
+
+    @Test
+    @DisplayName("markCancelled는 부분 결과 표시와 정지한 거래일을 남긴다")
+    void markCancelledKeepsStoppedDate() {
+        BacktestRun running = restoreWith(RunStatus.QUEUED).markRunning("EXEC-000001");
+
+        BacktestRun cancelled = running.markCancelled(LocalDate.of(2025, 3, 25));
+
+        assertThat(cancelled.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(cancelled.isPartial()).isTrue();
+        assertThat(cancelled.getProgress().lastTradingDate()).isEqualTo(LocalDate.of(2025, 3, 25));
+    }
+
+    @Test
+    @DisplayName("markFailed는 사유 코드를 남기고, 코드가 비면 거부한다")
+    void markFailedKeepsFailureCode() {
+        BacktestRun failed = restoreWith(RunStatus.QUEUED).markFailed("DATA_INSUFFICIENT", "자료 없음");
+
+        assertThat(failed.getFailureCode()).isEqualTo("DATA_INSUFFICIENT");
+        assertThat(failed.getFailureMessage()).isEqualTo("자료 없음");
+        assertThatThrownBy(() -> restoreWith(RunStatus.QUEUED).markFailed(" ", null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("recordProgress는 RUNNING에서만 허용한다")
+    void recordProgressOnlyWhileRunning() {
+        BacktestRun running = restoreWith(RunStatus.QUEUED).markRunning("EXEC-000001");
+        RunProgress progress =
+                new RunProgress(ProgressStage.COMPUTING, LocalDate.of(2025, 1, 28), 20, 129);
+
+        assertThat(running.recordProgress(progress).getProgress()).isEqualTo(progress);
+        assertThatThrownBy(() -> restoreWith(RunStatus.QUEUED).recordProgress(progress))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "RUNNING"})
     @DisplayName("markCompleted·markFailed는 비최종 상태(QUEUED 포함)에서 허용한다")
-    void finalTransitionsAllowedFromNonFinal(BacktestStatus status) {
-        assertThat(restoreWith(status).markCompleted().getStatus())
-                .isEqualTo(BacktestStatus.COMPLETED);
-        assertThat(restoreWith(status).markFailed().getStatus()).isEqualTo(BacktestStatus.FAILED);
+    void finalTransitionsAllowedFromNonFinal(RunStatus status) {
+        assertThat(restoreWith(status).markCompleted().getStatus()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(restoreWith(status).markFailed("ENGINE_ERROR", "boom").getStatus())
+                .isEqualTo(RunStatus.FAILED);
     }
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
-            names = {"COMPLETED", "FAILED"})
+            value = RunStatus.class,
+            names = {"COMPLETED", "FAILED", "CANCELLED"})
     @DisplayName("최종 상태에서는 어떤 전이도 거부한다")
-    void finalStateRejectsAllTransitions(BacktestStatus status) {
-        BacktestJob job = restoreWith(status);
+    void finalStateRejectsAllTransitions(RunStatus status) {
+        BacktestRun run = restoreWith(status);
 
-        assertThatThrownBy(job::markRunning).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(job::markCompleted).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(job::markFailed).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> run.markRunning("EXEC-000001"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(run::markCompleted).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> run.markFailed("ENGINE_ERROR", "boom"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> run.markCancelled(null)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     @DisplayName("restore는 저장된 id·backtestId와 상태를 그대로 복원한다")
     void restoreKeepsIdAndStatus() {
         BacktestId backtestId = BacktestId.from("BT-20260907-000007");
-        BacktestJob job =
-                BacktestJob.restore(
+        BacktestRun job =
+                BacktestRun.restore(
                         7L,
                         backtestId,
                         "MA_CROSSOVER",
@@ -267,11 +335,11 @@ class BacktestJobTest {
                         null,
                         SK,
                         42,
-                        BacktestStatus.RUNNING);
+                        RunStatus.RUNNING);
 
         assertThat(job.getId()).isEqualTo(7L);
         assertThat(job.getBacktestId()).isEqualTo(backtestId);
         assertThat(job.getBenchmarkInstrumentId()).isEqualTo(SK);
-        assertThat(job.getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(job.getStatus()).isEqualTo(RunStatus.RUNNING);
     }
 }

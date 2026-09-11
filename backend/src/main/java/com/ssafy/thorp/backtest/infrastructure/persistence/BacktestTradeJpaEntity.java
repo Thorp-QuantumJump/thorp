@@ -28,8 +28,8 @@ import org.hibernate.type.SqlTypes;
  * 계약 DTO({@link EngineOutput.TradeResult}) 그대로 {@code detail} JSON에 담는다. 결과 엔티티와 같은 이유(decimal
  * scale 보존)다. 컬럼과 JSON에 같은 값이 일부 중복되지만, 조회 측이 {@code detail} 하나만 역직렬화하면 계약 형태의 거래를 그대로 얻는다.
  *
- * <p>정렬은 {@code (backtest_job_id, entry_time, id)}로 고정한다. {@code entry_time}만으로는 같은 시각의 거래 순서가 불안정해
- * 페이징에서 행이 중복·누락된다. 거래 행은 한 번 쓰고 바뀌지 않아 생성·수정 시각을 두지 않는다.
+ * <p>정렬은 {@code (run_id, entry_time, id)}로 고정한다. {@code entry_time}만으로는 같은 시각의 거래 순서가 불안정해 페이징에서 행이
+ * 중복·누락된다. 거래 행은 한 번 쓰고 바뀌지 않아 생성·수정 시각을 두지 않는다.
  */
 @Entity
 @Table(
@@ -37,11 +37,11 @@ import org.hibernate.type.SqlTypes;
         uniqueConstraints =
                 @UniqueConstraint(
                         name = "uk_backtest_trade_job_trade",
-                        columnNames = {"backtest_job_id", "trade_id"}),
+                        columnNames = {"run_id", "trade_id"}),
         indexes =
                 @Index(
                         name = "idx_backtest_trade_job_entry",
-                        columnList = "backtest_job_id, entry_time, id"))
+                        columnList = "run_id, entry_time, id"))
 public class BacktestTradeJpaEntity {
 
     /** 시퀀스 증분과 같은 값. 거래는 한 결과에 수백 건씩 들어오므로 1로 두면 건마다 시퀀스를 조회한다. */
@@ -56,8 +56,8 @@ public class BacktestTradeJpaEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "backtest_job_id", nullable = false)
-    private BacktestJobJpaEntity job;
+    @JoinColumn(name = "run_id", nullable = false)
+    private BacktestRunJpaEntity job;
 
     @Column(nullable = false, length = 255)
     private String tradeId;
@@ -85,7 +85,7 @@ public class BacktestTradeJpaEntity {
 
     protected BacktestTradeJpaEntity() {}
 
-    private BacktestTradeJpaEntity(BacktestJobJpaEntity job, EngineOutput.TradeResult trade) {
+    private BacktestTradeJpaEntity(BacktestRunJpaEntity job, EngineOutput.TradeResult trade) {
         this.job = job;
         this.tradeId = trade.tradeId();
         this.instrumentId = trade.instrumentId();
@@ -96,7 +96,7 @@ public class BacktestTradeJpaEntity {
         this.detail = trade;
     }
 
-    static BacktestTradeJpaEntity from(BacktestJobJpaEntity job, EngineOutput.TradeResult trade) {
+    static BacktestTradeJpaEntity from(BacktestRunJpaEntity job, EngineOutput.TradeResult trade) {
         return new BacktestTradeJpaEntity(job, trade);
     }
 
@@ -104,7 +104,7 @@ public class BacktestTradeJpaEntity {
         return id;
     }
 
-    public BacktestJobJpaEntity getJob() {
+    public BacktestRunJpaEntity getJob() {
         return job;
     }
 

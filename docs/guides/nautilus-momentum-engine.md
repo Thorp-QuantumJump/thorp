@@ -42,7 +42,7 @@
 | `contracts/engine_output.py` | response record | 결과 계약(브로커 메시지와 공용) |
 | `contracts/events.py` | 이벤트 DTO | 진행 콜백이 넘기는 `ProgressPoint`와 이벤트 envelope |
 | `artifacts.py` | 감사 로그 DTO(메시지 아님) | `RunArtifacts`: 주문 원장과 재현성 metadata |
-| `market_data.py` | Port와 Adapter | `DataProvider` 계약, yfinance/CSV 구현, OHLCV 검증 |
+| `market_data.py` | Port와 Adapter | DEMO `DataProvider`(CSV) + 다종목 `MarketDataProvider`(PostgreSQL·픽스처), OHLCV 검증. yfinance는 `worker/scripts/`로 나갔다(spec 004 R-09) |
 | `strategies/momentum.py` | 순수 Domain Service | 종가 배열을 0/1 목표 포지션 신호로 변환 |
 | `nautilus_engine.py` | 이벤트 핸들러 + Infrastructure Gateway | Nautilus 설정, 이벤트 수신, 주문·체결·일별 원장 |
 | `performance.py` | 순수 계산기 | 서비스 규약에 맞는 CAGR/MDD/Sharpe 계산 |
@@ -73,7 +73,7 @@ EngineInput(JSON/dict/Pydantic 객체)
 engine_runner.NautilusMomentumEngine.run  공개 진입점 = 실행 유스케이스
         │
         ├─ 1. EngineInput.model_validate  계약/날짜/고정 정책 검증
-        ├─ 2. DataProvider.load           yfinance 또는 CSV 로드
+        ├─ 2. DataProvider.load           주입된 공급자에서 로드(기본값 없음)
         ├─ 3. validate_prices             OHLCV 무결성 검증
         ├─ 4. execute_nautilus             이벤트 루프 실행
         │       ├─ 09:00 QuoteTick        전날 주문 제출·체결

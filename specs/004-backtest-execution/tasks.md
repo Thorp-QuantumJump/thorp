@@ -26,10 +26,10 @@
   - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id="JOB-"+runId`
   - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate; 자원 사용량은 FINISHED payload `resource`). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가
   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증
-- [ ] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
+- [x] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
   - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)
-  - `migrate-jobs-queue.sh`: 접수 중단 → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언 → 실패 시 되돌리기(선언 revert). `deploy.sh`에 1회 실행 안내. **T001 배포와 같은 단계에서 실행한다**
-  - (T010 병합 뒤) 전환 실행, `rabbitmqctl list_queues name type arguments`로 quorum·delivery-limit 확인. quickstart S6: 워커 2 replica에서 RUNNING 중 `kill -9` 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE). 가이드에 기록, 운영 배포 절차에 1회 실행 단계 추가
+  - `migrate-jobs-queue.sh`: v2 이미지 빌드(내리기 전) → nginx만 정지해 신규 접수 차단(백엔드·워커는 유지) → `backtest.jobs`·**`backtest.events`** 모두 ready·unacked 0까지 드레인(v2 백엔드는 v1 이벤트를 거절하므로 결과 이벤트도 v1이 처리해야 한다) → `delete_queue` → v2 백엔드 기동·quorum 확인 → 워커·nginx 기동. 실패 시 되돌리기 안내. `deploy.sh`가 배포 시작 시 큐 타입을 검사해 classic이면 중단. **T001 배포와 같은 단계에서 실행한다**
+  - `deploy.sh`가 매 배포 시작 시 `backtest.jobs` 타입을 검사해 classic이면 중단·전환 안내(운영 배포 절차의 1회 실행 단계). 스크립트가 전환 뒤 `list_queues name type arguments`로 quorum·delivery-limit을 확인한다. quickstart S6(워커 2 replica, RUNNING 중 kill 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE)) 절차는 가이드에 적었고, 실측 기록은 T010 병합 뒤 T013 검증 기록에 남긴다. dev compose 워커 replica를 2로 맞춤(동시 실행 상한 = replica × prefetch, R-19)
 
 ---
 
@@ -37,17 +37,19 @@
 
 **Purpose**: 요청/실행 분리 스키마·등록표, 자료 입력 경로.
 
-- [ ] T003 [BE] 스키마 V3·V4: 요청/실행 분리와 비용·규칙 등록표 (`backend/src/main/resources/db/migration/{V3__backtest_run_request,V4__cost_profile_strategy_rules}.sql`, `backtest/domain/model/{BacktestRequest,BacktestRun,RunStatus,ResultSource,ExecutionType,CostProfile,StrategyRules,RulesStatus}.java`, `backtest/application/service/{CostProfileService,StrategyRulesService}.java`, `backtest/infrastructure/persistence/*`, `common/exception/ErrorCode.java`) — Jira `S15P21E205-130`
-  - V3(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB, published_at·publish_count·dlq_count — R-18), `backtest_request` 생성(`cancelled_last_trading_date`·`stopped_run` 포함 — R-04), `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)
+- [x] T003 [BE] 스키마: 요청/실행 분리와 비용·규칙 등록표 (`backend/src/main/resources/db/migration/{V20260911110000__cost_profile_strategy_rules,V20260911111000__backtest_run_request}.sql`, `backtest/domain/model/{BacktestRequest,BacktestRun,RunStatus,ResultSource,ExecutionType,CostProfile,StrategyRules,RulesStatus}.java`, `backtest/application/service/{CostProfileService,StrategyRulesService}.java`, `backtest/infrastructure/persistence/*`, `common/exception/ErrorCode.java`) — Jira `S15P21E205-130`
+  - 파일 이름은 순번이 아니라 타임스탬프다(2026-09-11 팀 결정). 등록표가 먼저다 — `backtest_run`이 두 등록표를 FK로 참조한다
+  - 개명·확장(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB, published_at·publish_count·dlq_count — R-18), `backtest_request` 생성(`cancelled_last_trading_date`·`stopped_run` 포함 — R-04), `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)
   - 도메인: `RunStatus.CANCELLED`·`isFinal()`, `BacktestRun.markRunning(executionId)`(attempt+1)/`markCompleted`/`markFailed`/`markCancelled`/`recordProgress`, `BacktestRequest.cancel()`
-  - V4: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)
+  - 등록표: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)
   - `strategy_rules`에 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(PD-18 확정) 행 추가
   - `StrategyRulesService.requireRegistered()` → PENDING이면 422 `RULES_NOT_REGISTERED`. `ErrorCode` 추가: RULES_NOT_REGISTERED, INSUFFICIENT_HISTORY, EXECUTION_LIMIT, NOT_CANCELLABLE, NOT_RETRYABLE, NO_PARTIAL_RESULT
   - 기존 `BacktestJob*Test`를 Run/Request 테스트로 교체, `FlywayMigrationTest`·`ArchitectureTest` 통과
-- [ ] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`
+- [x] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`
   - `PostgresMarketDataProvider(url)`: contracts/market-data-input.md의 열을 읽어 원시 OHLC·조정 종가·분배금·분할·상장/폐지일·data_version 반환. 읽기 전용, 종목 ≤50·기간 한 번에 조회
   - `CsvMarketDataProvider`가 같은 스키마의 픽스처 디렉터리를 읽음(`versions.data="FIXTURE-three_etf_24m"`). 픽스처에 분배금 2건·거래 정지 1일·상장일 다른 종목 1개 포함(quickstart S8)
   - 결측 거래일 → `DataInsufficientError`(보간 금지), 기존 `validate_prices()` 재사용. `YFinanceDataProvider`는 `worker/scripts/`로 이동해 실행 경로에서 제외(원칙 X)
+  - 구현 시 결정: 엔진 생성자의 공급자 **기본값을 없앴다**(필수 인자). 기본값이 남아 있으면 주입을 잊은 경로가 계속 생긴다. 거래일 달력은 읽어 온 자료의 합집합으로 만든다(워커에 KRX 달력 없음) — 모든 종목에서 같은 날이 함께 빠지면 이 검사로는 안 보이고 001 `dataset_version`이 막는다. `PostgresMarketDataProvider`의 SQL은 001이 표를 만들기 전이라 가짜 커서 테스트로만 고정했다
 
 **Checkpoint**: 계약 v2·스키마·등록표·자료 경로가 준비되어 스토리 구현을 시작할 수 있다.
 
@@ -162,8 +164,8 @@
 
 ### Phase Dependencies
 
-- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 큐 전환 실행은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패). 장애 시나리오 확인만 T010 뒤.
-- **Phase 2**: T003은 T001 뒤. T004는 독립.
+- **Phase 1**: T001 ∥ T002. T002의 큐 전환은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패, `deploy.sh`가 검사). 장애 시나리오(S6) 실측은 T010 뒤 T013 검증 기록에서.
+- **Phase 2**: T003은 T001 뒤. T004는 독립. T003에서 접수 경로가 채우는 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·data_version·request_spec·versions·effective_start/end)은 nullable로 두고 T005가 채우며 NOT NULL로 조인다.
 - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.
 - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.
 - **Phase 5**: T010은 T005 뒤. T011은 T005·T006·T008 뒤. T010 ∥ T011. T014는 T005·T011 뒤(제어 채널 재사용).
@@ -191,7 +193,7 @@
 
 ### Incremental Delivery
 
-1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 장애 시나리오 확인도 이때 마무리(큐 전환 실행은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.
+1. T010·T011(재사용·재시도·취소) → S2~S6. S6(장애 재시도) 실측은 T013 검증 기록에서(큐 전환은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.
 2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.
 3. T013 마무리.
 4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).
