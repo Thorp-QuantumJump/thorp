@@ -216,7 +216,9 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                             assertThat(search.getRegistryVersion())
                                     .isEqualTo("PROVISIONAL-20260910");
                             // JSONB 왕복에서 탐색 공간의 축·값 순서가 보존되어야 저장된 그리드 좌표가 뜻을 유지한다.
-                            assertThat(search.getSearchSpace().valuesOf("lookbackDays"))
+                            assertThat(
+                                            search.getSearchSpace()
+                                                    .valuesOf("SECTOR_MOMENTUM", "lookbackDays"))
                                     .containsExactly(20, 60, 120);
                             assertThat(search.getSelectionRule().displayCount()).isEqualTo(5);
                             assertThat(search.getSelectionRule().isProvisional("displayCount"))
@@ -276,7 +278,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                             assertThat(search.getFinishedAt()).isNotNull();
                             // 접수 시점 스냅샷은 그대로다(FR-013c).
                             assertThat(search.getSelectionRule()).isEqualTo(newSelectionRule());
-                            assertThat(search.getSearchSpace().valuesOf("topN"))
+                            assertThat(search.getSearchSpace().valuesOf("SECTOR_MOMENTUM", "topN"))
                                     .containsExactly(2, 3);
                             assertThat(search.getRegistryVersion())
                                     .isEqualTo("PROVISIONAL-20260910");
@@ -345,6 +347,54 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                 .isEqualTo(4);
     }
 
+    @Test
+    @DisplayName("탐색 공간은 축을 배열로 저장해 JSONB 왕복에서 축 순서가 보존된다")
+    void searchSpaceKeepsAxisOrderAcrossJsonbRoundTrip() {
+        ParamSearch saved = paramSearchRepository.save(newSearch());
+        entityManager.flush();
+        entityManager.clear();
+
+        // 저장 형태부터 확인한다 — 축이 객체 키로 저장되면 jsonb가 키를 정렬하므로 아래 순서 단언이
+        // 우연히 통과할 수 있다(사전순으로 lookbackDays < topN). 배열이어야 순서가 뜻을 가진다.
+        assertThat(
+                        jsonbTypeOf(
+                                saved.getSearchId().value(),
+                                "search_space -> 'SECTOR_MOMENTUM' -> 'axes'"))
+                .isEqualTo("array");
+
+        assertThat(paramSearchRepository.findBySearchId(saved.getSearchId().value()))
+                .get()
+                .satisfies(
+                        search -> {
+                            SearchSpace space = search.getSearchSpace();
+                            assertThat(space.strategyIds()).containsExactly("SECTOR_MOMENTUM");
+                            // 넣은 순서 그대로다. 사전순(lookbackDays, topN)이 아니다.
+                            assertThat(space.axisNames("SECTOR_MOMENTUM"))
+                                    .containsExactly("topN", "lookbackDays");
+                            assertThat(space.valuesOf("SECTOR_MOMENTUM", "lookbackDays"))
+                                    .containsExactly(20, 60, 120);
+                            // 표시 정보도 함께 남는다 — 등록표 버전이 올라간 뒤에도 읽을 수 있어야 한다(FR-020).
+                            SearchSpace.StrategySpace strategy =
+                                    space.strategySpace("SECTOR_MOMENTUM");
+                            assertThat(strategy.strategyName()).isEqualTo("섹터 모멘텀");
+                            assertThat(strategy.axis("lookbackDays").label()).isEqualTo("관측 기간");
+                            assertThat(strategy.axis("lookbackDays").unit()).isEqualTo("거래일");
+                            assertThat(strategy.axis("topN").unit()).isNull();
+                            // 전체 조합 수 = 전략별 (축별 값 개수의 곱)의 합 (FR-027).
+                            assertThat(space.combinationCount()).isEqualTo(6L);
+                        });
+    }
+
+    private String jsonbTypeOf(String searchId, String jsonPathExpression) {
+        return jdbcTemplate.queryForObject(
+                "SELECT jsonb_typeof("
+                        + jsonPathExpression
+                        + ") FROM param_search"
+                        + " WHERE search_id = ?",
+                String.class,
+                searchId);
+    }
+
     /**
      * 후보에 붙일 실제 {@code backtest_run} 행을 만든다(004 T003 에서 {@code backtest_job} 이 개명됐다).
      *
@@ -378,15 +428,31 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                 List.of("SECTOR_MOMENTUM"),
                 List.of("091160.XKRX", "091170.XKRX"),
                 "PROVISIONAL-20260910",
-                SearchSpace.of(
-                        Map.of(
-                                "lookbackDays", List.of(20, 60, 120),
-                                "topN", List.of(2, 3))),
+                newSearchSpace(),
                 newSelectionRule(),
                 null,
                 Map.of("maxCandidates", 1000, "provisional", List.of("maxCandidates")),
                 Map.of("engineVersion", "0.1.0"),
                 SearchCounts.initial(6, 5, 1));
+    }
+
+    /**
+     * 축 이름을 사전 역순(topN → lookbackDays)으로 두는 이유: {@code jsonb}가 객체 키를 정렬해 저장하므로, 축이 객체 키라면 이 순서가 뒤집혀
+     * 돌아온다. 배열 저장이 지켜지는지 왕복 테스트가 그 차이로 확인한다.
+     */
+    private static SearchSpace newSearchSpace() {
+        return SearchSpace.of(
+                Map.of(
+                        "SECTOR_MOMENTUM",
+                        SearchSpace.StrategySpace.of(
+                                "섹터 모멘텀",
+                                List.of(
+                                        SearchSpace.Axis.of("topN", "선정 섹터 수", null, List.of(2, 3)),
+                                        SearchSpace.Axis.of(
+                                                "lookbackDays",
+                                                "관측 기간",
+                                                "거래일",
+                                                List.of(20, 60, 120))))));
     }
 
     private static SelectionRule newSelectionRule() {
