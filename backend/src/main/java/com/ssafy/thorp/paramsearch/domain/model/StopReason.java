@@ -17,5 +17,9 @@ public enum StopReason {
     /** 연속 실패 한도에 도달해 발행을 멈췄다. */
     FAILURE_LIMIT,
     /** 유효한 조합이 하나도 없어 실행하지 않았다(Edge Case). */
-    NO_VALID_CANDIDATE
+    NO_VALID_CANDIDATE,
+    /** 003 등록표의 활성 전략이 아니어서 조합 생성 전에 거부했다(FR-026). */
+    STRATEGY_NOT_REGISTERED,
+    /** 004가 실행을 지원하지 않는 전략이어서 조합 생성 전에 거부했다(FR-026). */
+    STRATEGY_NOT_EXECUTABLE
 }

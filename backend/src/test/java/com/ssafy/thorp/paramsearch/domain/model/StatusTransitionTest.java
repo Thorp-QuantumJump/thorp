@@ -364,8 +364,13 @@ class StatusTransitionTest {
                 "PROVISIONAL-20260910",
                 SearchSpace.of(
                         Map.of(
-                                "lookbackDays", List.of(20, 60, 120),
-                                "topN", List.of(2, 3))),
+                                "SECTOR_MOMENTUM",
+                                SearchSpace.StrategySpace.of(
+                                        "섹터 모멘텀",
+                                        List.of(
+                                                SearchSpace.Axis.of(
+                                                        "lookbackDays", List.of(20, 60, 120)),
+                                                SearchSpace.Axis.of("topN", List.of(2, 3)))))),
                 newSelectionRule(),
                 null,
                 Map.of("maxCandidates", 1000),

@@ -22,7 +22,19 @@ public enum ErrorCode {
     EXECUTION_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "지금은 실행이 밀려 있습니다. 잠시 후 다시 시도해 주세요."),
     NOT_CANCELLABLE(HttpStatus.CONFLICT, "이미 끝난 분석은 취소할 수 없습니다."),
     NOT_RETRYABLE(HttpStatus.CONFLICT, "실패하거나 취소한 분석만 다시 시도할 수 있습니다."),
-    NO_PARTIAL_RESULT(HttpStatus.CONFLICT, "취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다.");
+    NO_PARTIAL_RESULT(HttpStatus.CONFLICT, "취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다."),
+
+    // spec 007 자동 파라미터 탐색. 계약은 specs/007-auto-parameter-search/contracts/param-search-api.md §6.
+    CANDIDATE_LIMIT_EXCEEDED(
+            HttpStatus.UNPROCESSABLE_ENTITY, "탐색할 후보가 한 번에 실행할 수 있는 수를 넘습니다. 범위를 좁혀 주세요."),
+    NO_VALID_COMBINATION(HttpStatus.UNPROCESSABLE_ENTITY, "선택한 범위에 유효한 조합이 없습니다. 섹터나 범위를 바꿔 주세요."),
+    UNREGISTERED_PARAMETER_VALUE(HttpStatus.BAD_REQUEST, "등록되지 않은 파라미터 값입니다."),
+    STRATEGY_NOT_REGISTERED(HttpStatus.UNPROCESSABLE_ENTITY, "등록되지 않은 전략입니다."),
+    STRATEGY_NOT_EXECUTABLE(HttpStatus.UNPROCESSABLE_ENTITY, "아직 실행을 지원하지 않는 전략입니다."),
+    REGISTRY_VERSION_CHANGED(HttpStatus.CONFLICT, "확인하신 사이에 전략 등록표가 바뀌었습니다. 바뀐 내용을 다시 확인해 주세요."),
+    REGISTRY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "전략 등록 정보를 읽을 수 없습니다. 잠시 후 다시 시도해 주세요."),
+    ALREADY_FINISHED(HttpStatus.CONFLICT, "이미 끝난 탐색입니다."),
+    NOTHING_TO_RETRY(HttpStatus.CONFLICT, "다시 시도할 실패 후보가 없습니다.");
 
     private final HttpStatus status;
     private final String message;
