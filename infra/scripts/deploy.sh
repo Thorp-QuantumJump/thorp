@@ -19,6 +19,8 @@ if [[ -n "$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)" ]]; then
     if [[ "$QUEUE_TYPE" == "classic" ]]; then
         echo "backtest.jobs 가 classic 큐다. 배포를 멈춘다. 먼저 1회 전환:"
         echo "    ./scripts/migrate-jobs-queue.sh     (docs/guides/backtest-queue-migration.md)"
+        echo "  이 스크립트가 v2 이미지 빌드 → 접수 차단 → 작업·이벤트 큐 드레인 → 큐 교체 →"
+        echo "  백엔드·워커·nginx 기동까지 한다. 끝나면 이 배포를 다시 실행한다."
         exit 1
     fi
 fi

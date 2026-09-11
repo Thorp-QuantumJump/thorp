@@ -28,7 +28,7 @@
   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증
 - [x] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
   - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)
-  - `migrate-jobs-queue.sh`: 접수 중단 → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언 → 실패 시 되돌리기(선언 revert). `deploy.sh`에 1회 실행 안내. **T001 배포와 같은 단계에서 실행한다**
+  - `migrate-jobs-queue.sh`: v2 이미지 빌드(내리기 전) → nginx만 정지해 신규 접수 차단(백엔드·워커는 유지) → `backtest.jobs`·**`backtest.events`** 모두 ready·unacked 0까지 드레인(v2 백엔드는 v1 이벤트를 거절하므로 결과 이벤트도 v1이 처리해야 한다) → `delete_queue` → v2 백엔드 기동·quorum 확인 → 워커·nginx 기동. 실패 시 되돌리기 안내. `deploy.sh`가 배포 시작 시 큐 타입을 검사해 classic이면 중단. **T001 배포와 같은 단계에서 실행한다**
   - `deploy.sh`가 매 배포 시작 시 `backtest.jobs` 타입을 검사해 classic이면 중단·전환 안내(운영 배포 절차의 1회 실행 단계). 스크립트가 전환 뒤 `list_queues name type arguments`로 quorum·delivery-limit을 확인한다. quickstart S6(워커 2 replica, RUNNING 중 kill 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE)) 절차는 가이드에 적었고, 실측 기록은 T010 병합 뒤 T013 검증 기록에 남긴다. dev compose 워커 replica를 2로 맞춤(동시 실행 상한 = replica × prefetch, R-19)
 
 ---

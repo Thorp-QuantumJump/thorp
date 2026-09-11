@@ -13,52 +13,69 @@ delivery-limit이 적용되지 않는다. 새 볼륨에서 시작하는 환경�
 
 | 조건 | 이유 |
 |---|---|
-| 접수가 멈춰 있다(백엔드 정지) | 지우는 사이 새 작업이 들어오면 잃는다 |
-| `messages_ready = 0` | 대기 중인 작업이 있으면 잃는다. **미ACK만 보는 것으로는 부족하다**(plan 리뷰) |
-| `messages_unacknowledged = 0` | 워커가 처리 중인 작업이 있으면 그 결과가 붙을 메시지가 사라진다 |
+| 신규 접수가 막혀 있다(nginx 정지) | 지우는 사이 새 작업이 들어오면 잃는다. **백엔드는 내리지 않는다** — 아래 이벤트 큐를 비워야 한다 |
+| `backtest.jobs`의 `messages_ready = 0` | 대기 중인 작업이 있으면 잃는다. **미ACK만 보는 것으로는 부족하다** |
+| `backtest.jobs`의 `messages_unacknowledged = 0` | 워커가 처리 중인 작업이 있으면 그 결과가 붙을 메시지가 사라진다 |
+| **`backtest.events`도 둘 다 0** | v2 백엔드는 v1 이벤트(`schemaVersion 1`)를 계약 오류로 거절해 DLQ로 보낸다(계약 README §3). 남겨 두면 그 실행들의 결과가 DB에 저장되지 않는다 |
+| **v2 이미지가 빌드돼 있다** | 전환 뒤 `up -d`가 예전 v1 이미지를 띄우면 classic 큐가 그대로 되살아난다 |
 
 ```bash
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod exec rabbitmq \
   rabbitmqctl list_queues name type messages_ready messages_unacknowledged
 ```
 
-두 숫자가 0이 아니면 **워커만 올려 비운다.** 백엔드가 내려가 있어도 워커의 결과 이벤트는 `backtest.events`
-큐에 쌓이고 백엔드가 올라오면 처리하므로 결과를 잃지 않는다.
+**결과 이벤트까지 v1 백엔드가 처리해야 한다.** 작업 큐만 비우는 것으로는 부족하다. 워커가 마지막 작업을
+끝내면 `backtest.events`에 v1 이벤트를 넣는데, 이것을 소비할 수 있는 것은 v1 백엔드뿐이다. 그래서 드레인
+동안 백엔드와 워커를 모두 살려 두고 nginx만 멈춰 신규 접수를 막는다. 두 큐가 모두 0이 되면 그때까지 접수된
+실행의 결과가 DB에 반영된 것이다.
+
+숫자가 0이 아닌데 줄지도 않으면 워커가 살아 있는지, 백엔드가 이벤트를 처리 중인지 본다(`logs --tail 50 backend`).
+**기존 실행 기록을 버려도 되는 환경이라면** 드레인 없이 큐와 볼륨을 지워도 되지만, 그때는 "결과가 보존된다"고
+안내하지 않는다 — 남아 있던 작업과 결과는 사라진다.
 
 ## 운영 전환 절차
 
 `infra/scripts/migrate-jobs-queue.sh`가 아래를 순서대로 하고, 실패하면 되돌리는 방법을 출력한다.
+**레포가 배포할 버전(v2)으로 동기화된 상태에서 실행한다** — 2단계 빌드가 그 소스를 쓴다. Jenkins는 Sync
+단계 뒤에 Deploy를 호출하므로 `deploy.sh`가 멈춘 시점의 `$DEPLOY_DIR`는 이미 v2다.
 
 1. 큐 상태 확인. 큐가 없거나 이미 quorum이면 아무것도 하지 않고 끝난다.
-2. 접수 중단: `backend`·`worker` 컨테이너 정지.
-3. `ready`·`unacked` 모두 0 확인. 아니면 `backend`·`worker`를 다시 올리고 중단한다(전환 포기).
-4. `rabbitmqctl delete_queue backtest.jobs`.
-5. `backend` 기동 → 최대 60초 안에 `type=quorum` 확인 → `worker` 기동.
+2. **v2 `backend`·`worker` 이미지 빌드**(기존 서비스는 계속 실행). 내리기 전에 빌드해야 5단계에서 v2가 뜬다.
+3. 신규 접수 차단: `nginx`만 정지. 백엔드·워커는 남은 일을 끝내야 하므로 살려 둔다.
+4. 드레인: `backtest.jobs`와 `backtest.events`가 **모두 0**이 될 때까지 10초 간격으로 확인(기본 상한 30분,
+   `DRAIN_TIMEOUT_SECONDS`로 조절). 시간을 넘기면 `nginx`를 다시 올리고 중단한다(전환 포기).
+5. `backend`·`worker` 정지 → `rabbitmqctl delete_queue backtest.jobs` → `backend`(v2) 기동 →
+   최대 60초 안에 `type=quorum` 확인.
+6. `worker`(v2)·`nginx` 기동.
 
 ```bash
 cd "$DEPLOY_DIR/infra"
 ./scripts/migrate-jobs-queue.sh
 ```
 
+드레인 동안 사용자에게는 서비스가 닫혀 있다. 진행 중인 백테스트가 끝나야 하므로 점검 시간은 가장 긴 실행
+하나만큼이다.
+
 **배포 순서와의 관계.** 이 전환은 계약 v2 백엔드(T001 이후 dev)를 **처음 배포하는 그 단계**에서 한 번 실행한다.
 `deploy.sh`는 시작 시 `backtest.jobs`가 classic이면 배포를 멈추고 이 스크립트를 먼저 실행하라고 알린다.
 백엔드와 워커는 같은 배포에서 함께 올린다 — v1 워커는 v2 작업 메시지를 계약 오류로 거절하고(DLQ),
 v2 백엔드는 v1 이벤트를 거절한다(계약 README §3).
 
-**되돌리기.** 5단계에서 quorum 재선언이 확인되지 않으면 백엔드 로그를 보고, 이전 버전 백엔드 이미지로
-`up -d backend` 하면 classic 큐가 다시 선언된다. 그 사이 워커는 올리지 않는다. 지운 큐의 메시지는 3단계에서
-0을 확인했으므로 잃은 것이 없다.
+**되돌리기.** 5단계에서 quorum 재선언이 확인되지 않으면 백엔드 로그를 본다. 이전 버전으로 체크아웃해
+`backend` 이미지를 다시 빌드·기동하면 classic 큐가 다시 선언된다(v1 이미지가 남아 있지 않을 수 있으므로
+`up -d`만으로는 부족하다). 그 사이 워커는 올리지 않는다. 두 큐는 4단계에서 비운 상태이므로 잃은 메시지가 없다.
 
 ## 개발 환경
 
 `docker-compose.dev.yml`은 `rabbitmq-data` 볼륨을 유지하므로 T001 이전에 한 번이라도 백엔드를 띄운 PC는
-전부 해당된다. 백엔드(`bootRun` 또는 compose)와 워커를 내린 뒤:
+전부 해당된다. **백엔드와 워커를 켜 둔 채로**(두 큐를 비워야 한다) 새 요청만 보내지 않고 실행한다:
 
 ```bash
 ./infra/scripts/migrate-jobs-queue.sh --dev
 ```
 
-개발 모드는 컨테이너를 대신 내리지 않고 확인·삭제만 한다. 이후 백엔드를 띄우면 quorum으로 선언된다.
+개발 모드는 이미지 빌드와 nginx 정지를 건너뛰고, 두 큐가 빌 때까지 기다린 뒤 삭제한다. 컨테이너로 띄운
+경우가 아니면(`bootRun`·`python -m worker.main`) 정지는 사람이 한다. 이후 백엔드를 띄우면 quorum으로 선언된다.
 확인:
 
 ```bash
