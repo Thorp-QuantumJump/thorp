@@ -18,7 +18,7 @@
 ## 다른 spec과의 경계
 
 - **004가 001에 요구하는 계약**은 `specs/004-backtest-execution/contracts/market-data-input.md`다. 004 워커의 `PostgresMarketDataProvider`(R-09)가 그 열을 읽고, 워커용 읽기 전용 접속 `MARKET_DATA_URL`은 004 T002가 마련한다. 001의 저장 설계가 그 계약을 만족해야 한다
-- **마이그레이션 번호**: 저장소에 V2까지 있고 004가 V3~V6을 쓴다. 001은 **V7**을 쓴다. 007(`V3__param_search`)과 014(`V3__spring_session`)도 V3을 적어 두었으므로 재배정이 필요하다(T002에서 결론)
+- **마이그레이션 번호**: T002에서 **타임스탬프 방식(`V{YYYYMMDDHHMMSS}__설명.sql`)으로 전환**했다(2026-09-11 확정, `backend/CLAUDE.md`). 여러 spec이 같은 번호를 적어 두던 충돌이 이로써 사라진다. 저장소에 적용된 `V1`~`V4`는 그대로 두며, Flyway가 버전을 숫자로 정렬하므로 타임스탬프가 뒤에 온다. 001이 쓰는 파일은 `V20260911114500__etf_market_data.sql`이다
 - **`worker/src/worker/market_data.py`**: 004 T004(`S15P21E205-134`)가 CSV 픽스처 기반 공급자를 먼저 만들고, 001 T011이 실제 저장소 연결을 얹는다. 004가 먼저 병합되어야 한다
 
 ---
@@ -27,12 +27,12 @@
 
 **Purpose**: 수집 환경을 갖추고, 004가 요구한 계약과 001의 데이터 모형이 어긋나지 않게 맞춘다.
 
-- [ ] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — S15P21E205-176
+- [x] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — S15P21E205-176
   - 의존성: KRX OPEN API HTTP 클라이언트·pyarrow·PostgreSQL 드라이버 추가, pykrx 제거 (research.md 결정 1)
   - `.env.example`에 `KRX_API_KEY`·`DATABASE_URL`을 문서화한다. 실제 키는 `.env`에만 두고 코드에 하드코딩하지 않는다
   - `data/CLAUDE.md`: 원천을 pykrx에서 KRX OPEN API로, 컬럼 표준에 `value`(거래대금, 원)를 추가한다 (research.md 결정 1·6). **DATA 파트 합의가 선행되어야 한다**
   - `raw/`·`tests/` 디렉터리를 만들고 `.gitignore`에 `raw/`가 있는지 확인한다
-- [ ] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
+- [x] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
   - **열 이름 정합 (2026-09-11 확정)**: 001 기준(`date`·`dataset_id`·`adjusted_close`·`price_carried_forward`)으로 통일하고 004의 `market-data-input.md`를 그에 맞춘다. 004 계약이 "이름은 제안이며 의미가 우선한다. 001이 다른 이름을 쓰면 provider 매핑만 바꾼다"고 허용했고 004는 아직 구현 전이라 문서 수정만으로 끝난다. 메시지 계약 픽스처와 ADR-0002·0003은 고치지 않는다
   - **의미 충돌 해소 (2026-09-11 확정)**: 004는 "결측은 행 부재로 표현하고 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 정지일에도 행을 만들고 `trading_suspended` 열로 표시해 해소한다. OHLC 네 값을 모두 직전 종가로 채우고 `volume`·`value`는 0이다. `trading_suspended`(원인)와 `price_carried_forward`(처리)를 둘 다 둔다. 진짜 결측에는 행을 만들지 않으므로 004의 규칙이 유지된다
   - 분배금 이벤트에 004가 요구한 `ex_date`(배당락일)와 `pay_date`(지급일)를 모두 담도록 `corporate_action`을 고친다. 현재 data-model.md에는 날짜가 하나뿐이다
@@ -45,13 +45,13 @@
 
 ## Phase 2: Foundational (모든 스토리가 의존)
 
-- [ ] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
+- [x] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
   - 관계형 6개: `sector`, `representative_etf`, `sector_etf_map_version`, `sector_etf_map_entry`, `dataset_version`, `reconciliation_record`
   - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 조회 인덱스 `(instrument_id, dataset_id, date)`를 둔다. `daily_price`에 `trading_suspended`를, `corporate_action`에 `ex_date`·`pay_date`를, `dataset_version`에 `source`를 담는다 (T002 확정)
   - 불변식: `(map_version_id, sector_id)` UNIQUE, `leveraged`·`inverse` true 거부, `effective_to IS NULL` 행 최대 하나, `cause`↔`resolution` 조합 제한 (data-model.md)
   - 발행된 `dataset_version` 행과 딸린 시계열 행의 UPDATE·DELETE를 거부한다 (FR-017). quickstart 시나리오 3이 이 거부를 확인한다
   - 테스트는 `PostgresTestSupport`를 상속한다. Docker가 꺼져 있으면 skip되므로 `skipped` 수를 확인한다
-- [ ] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — S15P21E205-177
+- [x] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — S15P21E205-177
   - `dataset_id`는 `KRX_DAILY_{YYYYMMDD}` 형식이다. `data_deadline`·`collected_at`·`last_success_at`·`complete`·`failure_reason`·`is_sample`·`source`를 기록한다 (research.md 결정 4)
   - 적재 순서를 강제한다. 자료 버전 행을 먼저 만든 뒤 시계열을 넣고, `raw → processed → PostgreSQL` 한 방향만 허용한다 (research.md 결정 8)
   - 발행된 버전에 다시 적재하려는 시도를 거부하는 테스트를 포함한다
