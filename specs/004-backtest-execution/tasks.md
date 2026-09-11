@@ -26,10 +26,10 @@
   - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id="JOB-"+runId`
   - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate; 자원 사용량은 FINISHED payload `resource`). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가
   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증
-- [ ] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
+- [x] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`
   - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)
   - `migrate-jobs-queue.sh`: 접수 중단 → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언 → 실패 시 되돌리기(선언 revert). `deploy.sh`에 1회 실행 안내. **T001 배포와 같은 단계에서 실행한다**
-  - (T010 병합 뒤) 전환 실행, `rabbitmqctl list_queues name type arguments`로 quorum·delivery-limit 확인. quickstart S6: 워커 2 replica에서 RUNNING 중 `kill -9` 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE). 가이드에 기록, 운영 배포 절차에 1회 실행 단계 추가
+  - `deploy.sh`가 매 배포 시작 시 `backtest.jobs` 타입을 검사해 classic이면 중단·전환 안내(운영 배포 절차의 1회 실행 단계). 스크립트가 전환 뒤 `list_queues name type arguments`로 quorum·delivery-limit을 확인한다. quickstart S6(워커 2 replica, RUNNING 중 kill 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE)) 절차는 가이드에 적었고, 실측 기록은 T010 병합 뒤 T013 검증 기록에 남긴다. dev compose 워커 replica를 2로 맞춤(동시 실행 상한 = replica × prefetch, R-19)
 
 ---
 
@@ -162,7 +162,7 @@
 
 ### Phase Dependencies
 
-- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 큐 전환 실행은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패). 장애 시나리오 확인만 T010 뒤.
+- **Phase 1**: T001 ∥ T002. T002의 큐 전환은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패, `deploy.sh`가 검사). 장애 시나리오(S6) 실측은 T010 뒤 T013 검증 기록에서.
 - **Phase 2**: T003은 T001 뒤. T004는 독립.
 - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.
 - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.
@@ -191,7 +191,7 @@
 
 ### Incremental Delivery
 
-1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 장애 시나리오 확인도 이때 마무리(큐 전환 실행은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.
+1. T010·T011(재사용·재시도·취소) → S2~S6. S6(장애 재시도) 실측은 T013 검증 기록에서(큐 전환은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.
 2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.
 3. T013 마무리.
 4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).

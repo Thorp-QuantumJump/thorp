@@ -161,6 +161,9 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # 시장 자료 읽기 전용 접속(spec 004 R-09). T004 공급자가 읽는다. 읽기 전용 role(MARKET_DATA_USER)은
+      # T003 마이그레이션이 만들며, 값이 없으면 일반 계정으로 내려간다.
+      MARKET_DATA_URL: postgresql://${MARKET_DATA_USER:-${POSTGRES_USER}}:${MARKET_DATA_PASSWORD:-${POSTGRES_PASSWORD}}@postgres:5432/${POSTGRES_DB}
       PARQUET_DIR: /data/parquet
       RAW_DIR: /data/raw
       # Numba/OpenBLAS는 컨테이너 CPU 상한이 아니라 호스트 vCPU(4)를 보고 스레드를 띄운다.
@@ -179,7 +182,8 @@ services:
       rabbitmq:
         condition: service_healthy
     deploy:
-      # 4 vCPU에서는 2개가 상한선.
+      # 4 vCPU에서는 2개가 상한선. 이 값 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
+      # 백엔드는 동시 실행 상한을 따로 검사하지 않고 이 배치 값이 상한이다.
       replicas: ${WORKER_REPLICAS}
       resources:
         limits:

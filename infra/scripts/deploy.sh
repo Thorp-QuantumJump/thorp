@@ -10,6 +10,19 @@ cd "$(dirname "$0")/.."
 ENV_FILE=".env.prod"
 COMPOSE="docker compose -f docker-compose.prod.yml --env-file $ENV_FILE"
 
+echo "[0/4] 작업 큐 타입 확인 (spec 004 R-06)"
+# 계약 v2 백엔드는 backtest.jobs를 quorum으로 선언한다. classic 큐가 남아 있으면 재선언이
+# PRECONDITION_FAILED로 실패하고 delivery-limit이 적용되지 않으므로, 먼저 1회 전환해야 한다.
+if [[ -n "$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)" ]]; then
+    QUEUE_TYPE="$($COMPOSE exec -T rabbitmq rabbitmqctl list_queues name type 2>/dev/null \
+        | awk '$1=="backtest.jobs"{print $2}' || true)"
+    if [[ "$QUEUE_TYPE" == "classic" ]]; then
+        echo "backtest.jobs 가 classic 큐다. 배포를 멈춘다. 먼저 1회 전환:"
+        echo "    ./scripts/migrate-jobs-queue.sh     (docs/guides/backtest-queue-migration.md)"
+        exit 1
+    fi
+fi
+
 echo "[1/4] 프론트엔드 빌드"
 # 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이 적용되지 않는다. 여기서 직접 건다.
 docker run --rm --memory=2g --cpus=2 \
