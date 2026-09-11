@@ -45,13 +45,13 @@
 
 ## Phase 2: Foundational (모든 스토리가 의존)
 
-- [ ] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
+- [x] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
   - 관계형 6개: `sector`, `representative_etf`, `sector_etf_map_version`, `sector_etf_map_entry`, `dataset_version`, `reconciliation_record`
   - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 조회 인덱스 `(instrument_id, dataset_id, date)`를 둔다. `daily_price`에 `trading_suspended`를, `corporate_action`에 `ex_date`·`pay_date`를, `dataset_version`에 `source`를 담는다 (T002 확정)
   - 불변식: `(map_version_id, sector_id)` UNIQUE, `leveraged`·`inverse` true 거부, `effective_to IS NULL` 행 최대 하나, `cause`↔`resolution` 조합 제한 (data-model.md)
   - 발행된 `dataset_version` 행과 딸린 시계열 행의 UPDATE·DELETE를 거부한다 (FR-017). quickstart 시나리오 3이 이 거부를 확인한다
   - 테스트는 `PostgresTestSupport`를 상속한다. Docker가 꺼져 있으면 skip되므로 `skipped` 수를 확인한다
-- [ ] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — S15P21E205-177
+- [x] T004 [DE] 자료 버전 발행과 서비스 저장소 적재 계층 (`data/src/data_pipeline/{dataset_version,repository}.py`, `data/tests/{test_dataset_version,test_repository}.py`) — S15P21E205-177
   - `dataset_id`는 `KRX_DAILY_{YYYYMMDD}` 형식이다. `data_deadline`·`collected_at`·`last_success_at`·`complete`·`failure_reason`·`is_sample`·`source`를 기록한다 (research.md 결정 4)
   - 적재 순서를 강제한다. 자료 버전 행을 먼저 만든 뒤 시계열을 넣고, `raw → processed → PostgreSQL` 한 방향만 허용한다 (research.md 결정 8)
   - 발행된 버전에 다시 적재하려는 시도를 거부하는 테스트를 포함한다
