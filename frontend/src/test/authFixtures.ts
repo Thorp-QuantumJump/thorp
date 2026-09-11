@@ -1,4 +1,22 @@
-import type { ApiErrorEnvelope, ApiSuccessEnvelope, SignupResponse } from '@/types/auth'
+import type {
+  ApiErrorEnvelope,
+  ApiSuccessEnvelope,
+  AuthenticatedUser,
+  SignupResponse,
+} from '@/types/auth'
+
+export const authenticatedUser: AuthenticatedUser = {
+  userId: 7,
+  email: 'user@example.com',
+  nickname: '쏘프사용자',
+  status: 'ACTIVE',
+}
+
+export const authenticatedUserSuccess: ApiSuccessEnvelope<AuthenticatedUser> = {
+  success: true,
+  data: authenticatedUser,
+  error: null,
+}
 
 export const signupSuccess: ApiSuccessEnvelope<SignupResponse> = {
   success: true,
