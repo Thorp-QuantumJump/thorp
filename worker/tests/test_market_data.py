@@ -12,7 +12,6 @@ import shutil
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -21,7 +20,6 @@ from worker.market_data import (
     CsvMarketDataProvider,
     DataInsufficientError,
     MarketDataError,
-    PostgresMarketDataProvider,
 )
 
 FIXTURE = Path(__file__).resolve().parents[1] / "examples" / "three_etf_24m"
@@ -202,100 +200,5 @@ def test_missing_fixture_file_is_reported_on_construction(tmp_path: Path) -> Non
         CsvMarketDataProvider(tmp_path)
 
 
-# ---------------------------------------------------------------------------
-# PostgresMarketDataProvider — 001이 표를 만들기 전이라 가짜 커서로 매핑만 고정한다.
-# 실제 스키마 대조는 001 적재 후 통합 테스트로 해야 한다.
-# ---------------------------------------------------------------------------
-
-
-class FakeCursor:
-    def __init__(self, results: list[Any]) -> None:
-        self.results = results
-        self.executed: list[tuple[str, Any]] = []
-
-    def __enter__(self) -> FakeCursor:
-        return self
-
-    def __exit__(self, *_: Any) -> None:
-        return None
-
-    def execute(self, sql: str, params: Any = None) -> None:
-        self.executed.append((" ".join(sql.split()), params))
-
-    def fetchone(self) -> Any:
-        return self.results.pop(0)
-
-    def fetchall(self) -> Any:
-        return self.results.pop(0)
-
-
-class FakeConnection:
-    def __init__(self, cursor: FakeCursor) -> None:
-        self._cursor = cursor
-        self.read_only = False
-
-    def __enter__(self) -> FakeConnection:
-        return self
-
-    def __exit__(self, *_: Any) -> None:
-        return None
-
-    def cursor(self) -> FakeCursor:
-        return self._cursor
-
-
-def postgres_rows() -> list[Any]:
-    """(dataset 조회, 가격, 기업행위, 상품, 대응표) 순서의 응답."""
-    return [
-        ("KRX_DAILY_20260910",),
-        [
-            (SEMICONDUCTOR, date(2024, 1, 2), 100, 110, 95, 105, 1000, False, 105.0),
-            (SEMICONDUCTOR, date(2024, 1, 3), 105, 108, 105, 105, 0, True, 105.0),
-        ],
-        [
-            (SEMICONDUCTOR, "DISTRIBUTION", date(2024, 1, 3), date(2024, 1, 5), Decimal("7")),
-            (SEMICONDUCTOR, "SPLIT", date(2024, 1, 3), None, Decimal("2")),
-        ],
-        [(SEMICONDUCTOR, date(2015, 1, 2), None, "반도체", "IDX")],
-        [("SECTOR-ETF-2026-09", date(2023, 1, 1), None, "SEMICONDUCTOR", SEMICONDUCTOR)],
-    ]
-
-
-def test_postgres_provider_maps_rows_and_picks_latest_dataset() -> None:
-    cursor = FakeCursor(postgres_rows())
-    connect = lambda _: FakeConnection(cursor)  # noqa: E731
-    provider = PostgresMarketDataProvider("postgresql://x", connect=connect)
-
-    data = provider.load([SEMICONDUCTOR], date(2024, 1, 2), date(2024, 1, 3))
-
-    assert data.dataset_id == "KRX_DAILY_20260910"
-    assert len(data.prices[SEMICONDUCTOR]) == 2
-    assert bool(data.prices[SEMICONDUCTOR].iloc[1].trading_suspended) is True
-    assert data.distributions[0].pay_date == date(2024, 1, 5)
-    assert data.splits[0].ratio == Decimal("2")
-    assert data.mappings[0].sector_id == "SEMICONDUCTOR"
-    # 가장 늦은 성공 자료 버전을 고르고, 이후 조회는 모두 그 버전으로 묶인다.
-    assert "failure_reason IS NULL" in cursor.executed[0][0]
-    assert cursor.executed[1][1][0] == "KRX_DAILY_20260910"
-
-
-def test_postgres_provider_honours_explicit_dataset_id() -> None:
-    cursor = FakeCursor(postgres_rows()[1:])
-    connect = lambda _: FakeConnection(cursor)  # noqa: E731
-    provider = PostgresMarketDataProvider("postgresql://x", connect=connect)
-
-    data = provider.load([SEMICONDUCTOR], date(2024, 1, 2), date(2024, 1, 3), "KRX_DAILY_20250101")
-
-    assert data.dataset_id == "KRX_DAILY_20250101"
-    assert "dataset_version" not in cursor.executed[0][0]
-
-
-def test_postgres_distribution_without_pay_date_is_rejected() -> None:
-    rows = postgres_rows()
-    rows[2] = [(SEMICONDUCTOR, "DISTRIBUTION", date(2024, 1, 3), None, Decimal("7"))]
-    cursor = FakeCursor(rows)
-    connect = lambda _: FakeConnection(cursor)  # noqa: E731
-    provider = PostgresMarketDataProvider("postgresql://x", connect=connect)
-
-    with pytest.raises(MarketDataError, match="without pay date"):
-        provider.load([SEMICONDUCTOR], date(2024, 1, 2), date(2024, 1, 3))
+# PostgresMarketDataProvider 의 테스트는 tests/test_repository_provider.py 로 옮겼다(001 T011).
+# 실제 스키마와 대조하며 질의가 늘어나 픽스처 공급자의 테스트와 한 파일에 두기에는 커졌다.
