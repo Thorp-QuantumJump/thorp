@@ -533,7 +533,11 @@ def parse_migration_columns(table_name: str) -> list[str]:
     columns: list[str] = []
     for item in items:
         stripped = item.strip()
-        if not stripped or stripped.upper().startswith(_NOT_A_COLUMN):
+        if not stripped:
+            continue
+        # 첫 낱말을 **정확히** 비교한다. 앞머리 일치로 걸러면 CHECK으로 시작하는 열 이름
+        # (reconciliation_record.checked_at)이 제약으로 오인되어 대조에서 조용히 빠진다.
+        if stripped.split()[0].upper() in _NOT_A_COLUMN:
             continue
         columns.append(stripped.split()[0])
     return columns
