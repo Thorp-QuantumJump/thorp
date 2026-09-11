@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.service.EngineInputAssembler;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -40,8 +40,8 @@ class EngineInputFixtureTest {
     private final EngineInputAssembler assembler = new EngineInputAssembler();
 
     /** 픽스처의 run/universe/allocation/portfolio 값을 그대로 담은 Job. 벤치마크 종목은 v2 메시지에 실리지 않는다. */
-    private static BacktestJob fixtureJob(InstrumentId benchmark) {
-        return BacktestJob.restore(
+    private static BacktestRun fixtureJob(InstrumentId benchmark) {
+        return BacktestRun.restore(
                 1L,
                 BacktestId.from("BT-20260907-000001"),
                 "MA_CROSSOVER",
@@ -54,7 +54,7 @@ class EngineInputFixtureTest {
                 new BigDecimal("0.50"),
                 benchmark,
                 42,
-                BacktestStatus.QUEUED);
+                RunStatus.QUEUED);
     }
 
     @Test

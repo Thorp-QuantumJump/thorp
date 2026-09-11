@@ -37,10 +37,11 @@
 
 **Purpose**: 요청/실행 분리 스키마·등록표, 자료 입력 경로.
 
-- [ ] T003 [BE] 스키마 V3·V4: 요청/실행 분리와 비용·규칙 등록표 (`backend/src/main/resources/db/migration/{V3__backtest_run_request,V4__cost_profile_strategy_rules}.sql`, `backtest/domain/model/{BacktestRequest,BacktestRun,RunStatus,ResultSource,ExecutionType,CostProfile,StrategyRules,RulesStatus}.java`, `backtest/application/service/{CostProfileService,StrategyRulesService}.java`, `backtest/infrastructure/persistence/*`, `common/exception/ErrorCode.java`) — Jira `S15P21E205-130`
-  - V3(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB, published_at·publish_count·dlq_count — R-18), `backtest_request` 생성(`cancelled_last_trading_date`·`stopped_run` 포함 — R-04), `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)
+- [x] T003 [BE] 스키마: 요청/실행 분리와 비용·규칙 등록표 (`backend/src/main/resources/db/migration/{V202609111100__cost_profile_strategy_rules,V202609111110__backtest_run_request}.sql`, `backtest/domain/model/{BacktestRequest,BacktestRun,RunStatus,ResultSource,ExecutionType,CostProfile,StrategyRules,RulesStatus}.java`, `backtest/application/service/{CostProfileService,StrategyRulesService}.java`, `backtest/infrastructure/persistence/*`, `common/exception/ErrorCode.java`) — Jira `S15P21E205-130`
+  - 파일 이름은 순번이 아니라 타임스탬프다(2026-09-11 팀 결정). 등록표가 먼저다 — `backtest_run`이 두 등록표를 FK로 참조한다
+  - 개명·확장(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB, published_at·publish_count·dlq_count — R-18), `backtest_request` 생성(`cancelled_last_trading_date`·`stopped_run` 포함 — R-04), `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)
   - 도메인: `RunStatus.CANCELLED`·`isFinal()`, `BacktestRun.markRunning(executionId)`(attempt+1)/`markCompleted`/`markFailed`/`markCancelled`/`recordProgress`, `BacktestRequest.cancel()`
-  - V4: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)
+  - 등록표: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)
   - `strategy_rules`에 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(PD-18 확정) 행 추가
   - `StrategyRulesService.requireRegistered()` → PENDING이면 422 `RULES_NOT_REGISTERED`. `ErrorCode` 추가: RULES_NOT_REGISTERED, INSUFFICIENT_HISTORY, EXECUTION_LIMIT, NOT_CANCELLABLE, NOT_RETRYABLE, NO_PARTIAL_RESULT
   - 기존 `BacktestJob*Test`를 Run/Request 테스트로 교체, `FlywayMigrationTest`·`ArchitectureTest` 통과
@@ -163,7 +164,7 @@
 ### Phase Dependencies
 
 - **Phase 1**: T001 ∥ T002. T002의 큐 전환은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패, `deploy.sh`가 검사). 장애 시나리오(S6) 실측은 T010 뒤 T013 검증 기록에서.
-- **Phase 2**: T003은 T001 뒤. T004는 독립.
+- **Phase 2**: T003은 T001 뒤. T004는 독립. T003에서 접수 경로가 채우는 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·data_version·request_spec·versions·effective_start/end)은 nullable로 두고 T005가 채우며 NOT NULL로 조인다.
 - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.
 - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.
 - **Phase 5**: T010은 T005 뒤. T011은 T005·T006·T008 뒤. T010 ∥ T011. T014는 T005·T011 뒤(제어 채널 재사용).

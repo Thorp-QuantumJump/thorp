@@ -1,0 +1,76 @@
+package com.ssafy.thorp.backtest.infrastructure.persistence;
+
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.stereotype.Repository;
+
+/**
+ * 저장 시 외부 식별자를 부여한다. 방식은 {@link BacktestRunRepositoryImpl}과 같다 — SEQUENCE로 PK를 먼저 받고 그 값으로 {@code
+ * backtest_id}를 INSERT 전에 채운다.
+ */
+@Repository
+public class BacktestRequestRepositoryImpl implements BacktestRequestRepository {
+
+    private final BacktestRequestJpaRepository jpaRepository;
+    private final Clock clock;
+
+    public BacktestRequestRepositoryImpl(BacktestRequestJpaRepository jpaRepository, Clock clock) {
+        this.jpaRepository = jpaRepository;
+        this.clock = clock;
+    }
+
+    @Override
+    public BacktestRequest save(BacktestRequest request) {
+        if (request.getId() != null) {
+            throw new IllegalArgumentException(
+                    "save is for new requests only: id=" + request.getId());
+        }
+        BacktestRequestJpaEntity entity = BacktestRequestMapper.toEntity(request);
+        entity.assignBacktestIdOn(LocalDate.now(clock));
+        return BacktestRequestMapper.toDomain(jpaRepository.save(entity));
+    }
+
+    /**
+     * 관리 엔티티를 읽어 취소 기록만 바꾼다. 도메인 객체를 새 엔티티로 merge하면 {@code createdAt}(updatable=false)이 null인 사본이
+     * 관리 상태를 덮어 쓰므로 그 방식은 피한다.
+     */
+    @Override
+    public BacktestRequest update(BacktestRequest request) {
+        if (request.getId() == null) {
+            throw new IllegalArgumentException("update is for persisted requests only: id is null");
+        }
+        BacktestRequestJpaEntity entity =
+                jpaRepository
+                        .findById(request.getId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "request not found: id=" + request.getId()));
+        entity.applyCancellation(
+                request.getCancelledAt(),
+                request.getCancelledLastTradingDate(),
+                request.isStoppedRun());
+        return BacktestRequestMapper.toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    public Optional<BacktestRequest> findByBacktestId(String backtestId) {
+        return jpaRepository.findByBacktestId(backtestId).map(BacktestRequestMapper::toDomain);
+    }
+
+    @Override
+    public List<BacktestRequest> findByRunId(Long runId) {
+        return jpaRepository.findByRunId(runId).stream()
+                .map(BacktestRequestMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countActiveByRunId(Long runId) {
+        return jpaRepository.countByRunIdAndCancelledAtIsNull(runId);
+    }
+}

@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.service.EngineInputAssembler;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -52,7 +52,7 @@ class RabbitBacktestJobPublisherIT {
 
     private EngineInput sampleInput() {
         return assembler.assemble(
-                BacktestJob.restore(
+                BacktestRun.restore(
                         1L,
                         BacktestId.from("BT-20260907-000001"),
                         "MA_CROSSOVER",
@@ -65,7 +65,7 @@ class RabbitBacktestJobPublisherIT {
                         new BigDecimal("0.50"),
                         new InstrumentId("069500.XKRX"),
                         42,
-                        BacktestStatus.QUEUED));
+                        RunStatus.QUEUED));
     }
 
     @Test

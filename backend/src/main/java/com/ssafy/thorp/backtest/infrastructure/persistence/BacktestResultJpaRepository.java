@@ -26,7 +26,7 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                            benchmark ->> 'instrumentId' AS "benchmarkInstrumentId",
                            benchmark ->> 'totalReturn'  AS "benchmarkTotalReturn"
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<BacktestResultSummaryRow> findSummaryRow(@Param("jobId") Long jobId);
@@ -38,7 +38,7 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     SELECT portfolio_series::text AS "portfolioSeries",
                            benchmark::text        AS "benchmark"
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<BacktestSeriesRow> findSeriesRow(@Param("jobId") Long jobId);
@@ -49,7 +49,7 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     """
                     SELECT portfolio_series::text
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<String> findPortfolioSeriesJson(@Param("jobId") Long jobId);

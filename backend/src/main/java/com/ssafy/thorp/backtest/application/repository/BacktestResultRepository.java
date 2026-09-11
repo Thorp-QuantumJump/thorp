@@ -38,9 +38,9 @@ public interface BacktestResultRepository {
      * 행만 남아 있으면 목록을 정상 응답으로 돌려준다. 그 경로를 막기 위한 존재 확인이다. {@link #findSummary}로 대신하면 쓰지도 않을 {@code
      * performance}·{@code execution} JSON을 역직렬화한다.
      */
-    boolean exists(Long backtestJobId);
+    boolean exists(Long runId);
 
-    Optional<BacktestResultSummary> findSummary(Long backtestJobId);
+    Optional<BacktestResultSummary> findSummary(Long runId);
 
     /**
      * 시계열 + 벤치마크. {@code /timeseries}가 날짜로 조인해 쓴다.
@@ -48,7 +48,7 @@ public interface BacktestResultRepository {
      * <p>이 엔드포인트는 원래 시계열을 내려주는 곳이라 크게 읽는 것이 정상이다. 그래도 {@code performance}·{@code execution}·오류 컬럼은
      * 읽지 않는다.
      */
-    Optional<BacktestSeries> findTimeseries(Long backtestJobId);
+    Optional<BacktestSeries> findTimeseries(Long runId);
 
     /**
      * 시계열만. {@code /positions}가 역순 스캔에 쓴다.
@@ -56,7 +56,7 @@ public interface BacktestResultRepository {
      * <p>{@link #findTimeseries}를 재사용하지 않는 이유: 벤치마크 시계열도 거래일 수만큼 크고 보유 구성 조회에는 전혀 쓰이지 않는다. 읽지 않을
      * 컬럼은 select에 넣지 않는다.
      */
-    Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long backtestJobId);
+    Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long runId);
 
     /**
      * 거래 내역 한 페이지. 정렬은 {@code (entry_time, id)} 고정이므로 {@code Pageable}의 {@code Sort}를 받지 않는다 — 계약이
@@ -66,5 +66,5 @@ public interface BacktestResultRepository {
      * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code
      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.
      */
-    Page<EngineOutput.TradeResult> findTrades(Long backtestJobId, FindBacktestTradesQuery query);
+    Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query);
 }

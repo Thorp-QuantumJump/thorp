@@ -1,8 +1,9 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.common.persistence.BaseEntity;
 import jakarta.persistence.Column;
@@ -24,7 +25,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * {@code backtest_job} 테이블 매핑. 도메인 모델과는 {@link BacktestJobMapper}로 변환한다.
+ * {@code backtest_run} 테이블 매핑. 도메인 모델과는 {@link BacktestRunMapper}로 변환한다.
  *
  * <p>PK가 SEQUENCE라 {@code persist()} 시점에 값이 나오고, 그 PK로 {@code backtest_id}를 INSERT 전에 채우므로 컬럼을 NOT
  * NULL로 둘 수 있고 사후 UPDATE가 없다.
@@ -36,21 +37,21 @@ import org.hibernate.type.SqlTypes;
  * Hibernate 6 네이티브 매핑이라 라이브러리를 더하지 않는다.
  */
 @Entity
-@Table(name = "backtest_job")
-public class BacktestJobJpaEntity extends BaseEntity {
+@Table(name = "backtest_run")
+public class BacktestRunJpaEntity extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "backtest_job_seq_generator")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "backtest_run_seq_generator")
     @SequenceGenerator(
-            name = "backtest_job_seq_generator",
-            sequenceName = "backtest_job_seq",
+            name = "backtest_run_seq_generator",
+            sequenceName = "backtest_run_seq",
             allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, unique = true, length = 32)
     private String backtestId;
 
-    @Column(nullable = false, length = BacktestJob.MAX_STRATEGY_ID_LENGTH)
+    @Column(nullable = false, length = BacktestRun.MAX_STRATEGY_ID_LENGTH)
     private String strategyId;
 
     @Column(nullable = false, length = 32)
@@ -88,14 +89,48 @@ public class BacktestJobJpaEntity extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private BacktestStatus status;
+    private RunStatus status;
+
+    /**
+     * 아래는 워커 이벤트가 갱신하는 실행 기록이다(도메인 {@code RunState}).
+     *
+     * <p>마이그레이션이 만든 나머지 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·
+     * data_version·request_spec·versions·effective_start/end·queued_at·started_at·finished_at·
+     * published_at·publish_count·dlq_count·cancel_requested_at)은 아직 매핑하지 않는다. 그 값을 쓰는 접수·재사용· 취소·측정
+     * 경로가 T005·T010·T011·T012라서, 쓰는 코드와 같은 MR에서 매핑을 붙이는 편이 낫다. 컬럼이 실제로 있는지는 {@code
+     * FlywayMigrationTest}가 본다. NOT NULL 컬럼에는 모두 기본값이 있어 INSERT는 문제없다.
+     */
+    @Column(nullable = false)
+    private int attempt;
+
+    @Column(length = 255)
+    private String currentExecutionId;
+
+    @Column(nullable = false)
+    private boolean partial;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProgressStage progressStage;
+
+    private LocalDate progressLastTradingDate;
+
+    private Integer progressCompletedDays;
+
+    private Integer progressTotalDays;
+
+    @Column(length = 64)
+    private String failureCode;
+
+    @Column(columnDefinition = "text")
+    private String failureMessage;
 
     /** backtestId에 쓸 날짜 접두. 저장 전 한 번 예약하고 PK와의 결합은 PrePersist가 한다. */
     @Transient private LocalDate backtestIdDate;
 
-    protected BacktestJobJpaEntity() {}
+    protected BacktestRunJpaEntity() {}
 
-    BacktestJobJpaEntity(
+    BacktestRunJpaEntity(
             Long id,
             String backtestId,
             String strategyId,
@@ -109,7 +144,16 @@ public class BacktestJobJpaEntity extends BaseEntity {
             BigDecimal maxPositionPct,
             String benchmarkInstrumentId,
             int randomSeed,
-            BacktestStatus status) {
+            RunStatus status,
+            int attempt,
+            String currentExecutionId,
+            boolean partial,
+            ProgressStage progressStage,
+            LocalDate progressLastTradingDate,
+            Integer progressCompletedDays,
+            Integer progressTotalDays,
+            String failureCode,
+            String failureMessage) {
         this.id = id;
         this.backtestId = backtestId;
         this.strategyId = strategyId;
@@ -124,6 +168,15 @@ public class BacktestJobJpaEntity extends BaseEntity {
         this.benchmarkInstrumentId = benchmarkInstrumentId;
         this.randomSeed = randomSeed;
         this.status = status;
+        this.attempt = attempt;
+        this.currentExecutionId = currentExecutionId;
+        this.partial = partial;
+        this.progressStage = progressStage;
+        this.progressLastTradingDate = progressLastTradingDate;
+        this.progressCompletedDays = progressCompletedDays;
+        this.progressTotalDays = progressTotalDays;
+        this.failureCode = failureCode;
+        this.failureMessage = failureMessage;
     }
 
     /** 저장 직전 한 번만 외부 식별자를 예약한다. 이미 값이 있으면 거부한다. */
@@ -135,8 +188,27 @@ public class BacktestJobJpaEntity extends BaseEntity {
     }
 
     /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */
-    void changeStatus(BacktestStatus status) {
+    void applyState(
+            RunStatus status,
+            int attempt,
+            String currentExecutionId,
+            boolean partial,
+            ProgressStage progressStage,
+            LocalDate progressLastTradingDate,
+            Integer progressCompletedDays,
+            Integer progressTotalDays,
+            String failureCode,
+            String failureMessage) {
         this.status = status;
+        this.attempt = attempt;
+        this.currentExecutionId = currentExecutionId;
+        this.partial = partial;
+        this.progressStage = progressStage;
+        this.progressLastTradingDate = progressLastTradingDate;
+        this.progressCompletedDays = progressCompletedDays;
+        this.progressTotalDays = progressTotalDays;
+        this.failureCode = failureCode;
+        this.failureMessage = failureMessage;
     }
 
     @PrePersist
@@ -198,7 +270,43 @@ public class BacktestJobJpaEntity extends BaseEntity {
         return randomSeed;
     }
 
-    public BacktestStatus getStatus() {
+    public RunStatus getStatus() {
         return status;
+    }
+
+    public int getAttempt() {
+        return attempt;
+    }
+
+    public String getCurrentExecutionId() {
+        return currentExecutionId;
+    }
+
+    public boolean isPartial() {
+        return partial;
+    }
+
+    public ProgressStage getProgressStage() {
+        return progressStage;
+    }
+
+    public LocalDate getProgressLastTradingDate() {
+        return progressLastTradingDate;
+    }
+
+    public Integer getProgressCompletedDays() {
+        return progressCompletedDays;
+    }
+
+    public Integer getProgressTotalDays() {
+        return progressTotalDays;
+    }
+
+    public String getFailureCode() {
+        return failureCode;
+    }
+
+    public String getFailureMessage() {
+        return failureMessage;
     }
 }

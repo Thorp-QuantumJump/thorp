@@ -1,6 +1,6 @@
 package com.ssafy.thorp.backtest.presentation.request;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import jakarta.validation.Valid;
@@ -46,7 +46,7 @@ public record BacktestJobRequest(
      * @param parameters 전략별 자유 형식. 값에 null은 쓰지 않는다(계약상 null은 키 생략)
      */
     public record StrategyRequest(
-            @NotBlank @Size(max = BacktestJob.MAX_STRATEGY_ID_LENGTH) String strategyId,
+            @NotBlank @Size(max = BacktestRun.MAX_STRATEGY_ID_LENGTH) String strategyId,
             @NotNull Map<String, Object> parameters) {}
 
     /**

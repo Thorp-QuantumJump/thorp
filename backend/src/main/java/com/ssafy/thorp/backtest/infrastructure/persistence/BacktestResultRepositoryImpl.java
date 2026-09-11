@@ -39,12 +39,12 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
 
-    private final BacktestJobJpaRepository jobRepository;
+    private final BacktestRunJpaRepository jobRepository;
     private final BacktestResultJpaRepository resultRepository;
     private final BacktestTradeJpaRepository tradeRepository;
 
     public BacktestResultRepositoryImpl(
-            BacktestJobJpaRepository jobRepository,
+            BacktestRunJpaRepository jobRepository,
             BacktestResultJpaRepository resultRepository,
             BacktestTradeJpaRepository tradeRepository) {
         this.jobRepository = jobRepository;
@@ -54,7 +54,7 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
 
     @Override
     public void save(SaveBacktestResultCommand command) {
-        BacktestJobJpaEntity job = jobRepository.getReferenceById(command.backtestJobId());
+        BacktestRunJpaEntity job = jobRepository.getReferenceById(command.runId());
         resultRepository.save(BacktestResultJpaEntity.from(job, command));
         tradeRepository.saveAll(
                 command.engineOutput().trades().stream()
@@ -63,14 +63,14 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
-    public boolean exists(Long backtestJobId) {
-        return resultRepository.existsById(backtestJobId);
+    public boolean exists(Long runId) {
+        return resultRepository.existsById(runId);
     }
 
     @Override
-    public Optional<BacktestResultSummary> findSummary(Long backtestJobId) {
+    public Optional<BacktestResultSummary> findSummary(Long runId) {
         return resultRepository
-                .findSummaryRow(backtestJobId)
+                .findSummaryRow(runId)
                 .map(
                         row ->
                                 new BacktestResultSummary(
@@ -89,9 +89,9 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
-    public Optional<BacktestSeries> findTimeseries(Long backtestJobId) {
+    public Optional<BacktestSeries> findTimeseries(Long runId) {
         return resultRepository
-                .findSeriesRow(backtestJobId)
+                .findSeriesRow(runId)
                 .map(
                         row ->
                                 new BacktestSeries(
@@ -100,18 +100,15 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
-    public Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long backtestJobId) {
-        return resultRepository
-                .findPortfolioSeriesJson(backtestJobId)
-                .map(json -> read(json, SERIES));
+    public Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long runId) {
+        return resultRepository.findPortfolioSeriesJson(runId).map(json -> read(json, SERIES));
     }
 
     @Override
-    public Page<EngineOutput.TradeResult> findTrades(
-            Long backtestJobId, FindBacktestTradesQuery query) {
+    public Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query) {
         return tradeRepository
                 .findPage(
-                        backtestJobId,
+                        runId,
                         query.instrumentId(),
                         query.status(),
                         PageRequest.of(query.page(), query.size()))

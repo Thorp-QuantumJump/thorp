@@ -10,11 +10,11 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.service.BacktestEventService;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -48,13 +48,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class BacktestEventFlowIT extends PostgresTestSupport {
 
     @Autowired private BacktestEventService service;
-    @Autowired private BacktestJobRepository jobRepository;
+    @Autowired private BacktestRunRepository jobRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
     @MockitoBean private BacktestProgressNotifier progressNotifier;
 
-    private BacktestJob newJob() {
+    private BacktestRun newJob() {
         return jobRepository.save(
-                BacktestJob.create(
+                BacktestRun.create(
                         "MA_CROSSOVER",
                         "1.0.0",
                         Map.of("shortWindow", 20),
@@ -67,25 +67,25 @@ class BacktestEventFlowIT extends PostgresTestSupport {
                         42));
     }
 
-    private static BacktestEvent<StartedPayload> started(BacktestJob job) {
+    private static BacktestEvent<StartedPayload> started(BacktestRun job) {
         return MessageFixtures.parse(
                 MessageFixtures.withRunId(MessageFixtures.STARTED, job.getBacktestId().value()),
                 MessageFixtures.STARTED_EVENT);
     }
 
-    private static BacktestEvent<ProgressPayload> progress(BacktestJob job) {
+    private static BacktestEvent<ProgressPayload> progress(BacktestRun job) {
         return MessageFixtures.parse(
                 MessageFixtures.withRunId(MessageFixtures.PROGRESS, job.getBacktestId().value()),
                 MessageFixtures.PROGRESS_EVENT);
     }
 
-    private static BacktestEvent<FinishedPayload> finished(BacktestJob job, String file) {
+    private static BacktestEvent<FinishedPayload> finished(BacktestRun job, String file) {
         return MessageFixtures.parse(
                 MessageFixtures.withRunId(file, job.getBacktestId().value()),
                 MessageFixtures.FINISHED_EVENT);
     }
 
-    private BacktestStatus statusOf(BacktestJob job) {
+    private RunStatus statusOf(BacktestRun job) {
         return jobRepository
                 .findByBacktestId(job.getBacktestId().value())
                 .orElseThrow()
@@ -94,29 +94,25 @@ class BacktestEventFlowIT extends PostgresTestSupport {
 
     private Integer count(String table, Long jobId) {
         return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM " + table + " WHERE backtest_job_id = ?",
-                Integer.class,
-                jobId);
+                "SELECT COUNT(*) FROM " + table + " WHERE run_id = ?", Integer.class, jobId);
     }
 
     private String resultColumn(String column, Long jobId) {
         return jdbcTemplate.queryForObject(
-                "SELECT " + column + " FROM backtest_result WHERE backtest_job_id = ?",
-                String.class,
-                jobId);
+                "SELECT " + column + " FROM backtest_result WHERE run_id = ?", String.class, jobId);
     }
 
     @Test
     @DisplayName("Job 생성 → STARTED → FINISHED(COMPLETED): 상태가 움직이고 결과·거래가 저장된다")
     void fullFlow() {
-        BacktestJob job = newJob();
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.QUEUED);
+        BacktestRun job = newJob();
+        assertThat(statusOf(job)).isEqualTo(RunStatus.QUEUED);
 
         service.handleStarted(started(job));
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(statusOf(job)).isEqualTo(RunStatus.RUNNING);
 
         service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(statusOf(job)).isEqualTo(RunStatus.COMPLETED);
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(count("backtest_trade", job.getId())).isEqualTo(3);
         assertThat(resultColumn("finished_event_id", job.getId())).isEqualTo("EVT-000009");
@@ -129,14 +125,14 @@ class BacktestEventFlowIT extends PostgresTestSupport {
     @Test
     @DisplayName("FINISHED가 두 번 오면 두 번째는 무시된다(멱등·첫 결과 채택)")
     void secondFinishedIsIgnored() {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
         service.handleStarted(started(job));
         service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));
 
         // 다른 eventId·다른 결과(FAILED)로 다시 와도 첫 결과가 남는다
         service.handleFinished(finished(job, MessageFixtures.FINISHED_FAILED));
 
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(statusOf(job)).isEqualTo(RunStatus.COMPLETED);
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(count("backtest_trade", job.getId())).isEqualTo(3);
         assertThat(resultColumn("finished_event_id", job.getId())).isEqualTo("EVT-000009");
@@ -146,11 +142,11 @@ class BacktestEventFlowIT extends PostgresTestSupport {
     @Test
     @DisplayName("STARTED 없이 FINISHED(FAILED)가 와도 결과가 저장되고 FAILED가 된다")
     void finishedWithoutStarted() {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
 
         service.handleFinished(finished(job, MessageFixtures.FINISHED_FAILED));
 
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.FAILED);
+        assertThat(statusOf(job)).isEqualTo(RunStatus.FAILED);
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(count("backtest_trade", job.getId())).isZero();
         assertThat(resultColumn("error_code", job.getId())).isEqualTo("DATA_INSUFFICIENT");
@@ -159,7 +155,7 @@ class BacktestEventFlowIT extends PostgresTestSupport {
     @Test
     @DisplayName("PROGRESS는 RUNNING일 때만 notifier로 가고 최종 상태 이후에는 가지 않는다")
     void progressOnlyWhileRunning() {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
         service.handleProgress(progress(job)); // QUEUED: 무시
         verifyNoInteractions(progressNotifier);
 
