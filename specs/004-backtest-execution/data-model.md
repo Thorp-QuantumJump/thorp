@@ -30,9 +30,10 @@
 | result_source | VARCHAR(10) NOT NULL | `NEW` · `JOINED` · `REUSED` |
 | retry_of_request_id | BIGINT FK → backtest_request NULL | 재시도 원본 |
 | cancelled_at | TIMESTAMPTZ NULL | 이 요청의 취소 시각 |
+| cancelled_last_trading_date | DATE NULL | 취소 시점의 `run.progress_last_trading_date` 스냅샷(QUEUED면 NULL). 합류 요청 하나만 취소돼 run이 계속 돌 때 이 요청의 완료 범위(R-04) |
 | created_at | TIMESTAMPTZ NOT NULL | |
 
-**파생 상태**: `cancelled_at IS NOT NULL` → `CANCELLED`, 그 외 `run.status`. 진행 정도·부분 완료 범위는 run에서 읽는다.
+**파생 상태**: `cancelled_at IS NOT NULL` → `CANCELLED`(`partial=true`), 그 외 `run.status`·`run.partial`. 진행 정도는 run에서 읽되, **취소된 요청의 완료 범위는 `cancelled_last_trading_date`**다(run이 계속 돌아 `progress_last_trading_date`가 늘어나도 바뀌지 않는다). 취소된 요청의 시계열·거래·보유 조회는 그 날짜까지 읽기 필터로 자르고 요약 지표는 주지 않는다. run 자체가 `CANCELLED`(마지막 활성 요청 취소·실행 시간 한도)면 두 날짜가 같고 부분 결과 요약이 있다.
 
 **인덱스**: `(requester_id, created_at DESC)`, `(run_id)`.
 
@@ -60,10 +61,11 @@
 | failure_code / failure_message | VARCHAR(64) / TEXT NULL | `SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `EXECUTION_LIMIT` … |
 | cancel_requested_at | TIMESTAMPTZ NULL | 마지막 활성 요청 취소로 run 취소를 요청한 시각 |
 | queued_at / started_at / finished_at | TIMESTAMPTZ | 측정 기록 원천 |
+| published_at | TIMESTAMPTZ NULL | 작업 메시지 발행이 브로커에서 확인된 시각. `QUEUED`인데 NULL이면 재발행 대상(R-18) |
 | random_seed | INTEGER NOT NULL | 42 고정(현행) |
 | created_at / updated_at | TIMESTAMPTZ NOT NULL | |
 
-**인덱스**: `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')` (부분 유니크, R-02). `(status, queued_at)` 대기열 조회용.
+**인덱스**: `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')` (부분 유니크, R-02). `(status, queued_at)` 대기열 조회용. `(status, published_at)` 재발행 조회용(R-18).
 
 **상태 전이**
 
@@ -79,7 +81,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 - 종결 상태(`COMPLETED` `FAILED` `CANCELLED`)에서 오는 이벤트는 기록만 하고 무시한다(현행 규칙 유지).
 - 대기 중(`QUEUED`) run이 `CANCELLED`가 된 뒤 STARTED가 도착하면 백엔드가 CANCEL 제어 메시지를 보낸다(R-04).
 
-**취소 규칙(Edge Cases)**: 요청 취소는 해당 `backtest_request.cancelled_at`만 기록한다. 같은 run에 `cancelled_at IS NULL`인 요청이 하나도 남지 않을 때만 run에 `cancel_requested_at`을 기록하고 QUEUED면 즉시 `CANCELLED`, RUNNING이면 제어 메시지를 보낸다. run이 `FAILED`면 합류한 모든 요청이 FAILED로 보이고 각각 재시도할 수 있다.
+**취소 규칙(Edge Cases)**: 요청 취소는 해당 `backtest_request.cancelled_at`만 기록한다. 같은 run에 `cancelled_at IS NULL`인 요청이 하나도 남지 않을 때만 run에 `cancel_requested_at`을 기록하고 QUEUED면 즉시 `CANCELLED`, RUNNING이면 제어 메시지를 보낸다. run이 `FAILED`면 합류한 모든 요청이 FAILED로 보이고 각각 재시도할 수 있다. 요청 취소 시 `cancelled_last_trading_date`에 그 순간의 `run.progress_last_trading_date`를 복사한다(R-04).
 
 ## backtest_result (결과)
 
@@ -163,7 +165,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 ## 마이그레이션 V3 요약
 
-1. `backtest_job` → `backtest_run` 개명, 새 컬럼 추가(`dedup_key`는 기존 행에 대해 request_spec 기반으로 계산하거나 `LEGACY-{id}`를 채움), `status` CHECK에 `CANCELLED` 추가.
-2. `backtest_request` 생성, 기존 run마다 `result_source=NEW`, `requester_id`는 기존 행에 없으므로 마이그레이션용 시스템 사용자 또는 데모 데이터 삭제 중 택일(데모 데이터라 삭제를 권장하며 tasks에서 확정).
+1. `backtest_job` → `backtest_run` 개명, 새 컬럼 추가(`dedup_key`는 기존 행에 대해 request_spec 기반으로 계산하거나 `LEGACY-{id}`를 채움), `status` CHECK에 `CANCELLED` 추가. `published_at`(R-18)은 기존 행에 `created_at`을 채운다(이미 발행된 Job).
+2. `backtest_request` 생성(`cancelled_last_trading_date` 포함), 기존 run마다 `result_source=NEW`, `requester_id`는 기존 행에 없으므로 마이그레이션용 시스템 사용자 또는 데모 데이터 삭제 중 택일(데모 데이터라 삭제를 권장하며 tasks에서 확정).
 3. `backtest_result.backtest_job_id` → `run_id`, `backtest_trade.backtest_job_id` → `run_id` 개명, 새 JSONB 열 추가.
 4. `cost_profile`, `strategy_rules`, `backtest_run_metric`, `backtest_reuse_event`, 뷰 생성과 초기 행 삽입.

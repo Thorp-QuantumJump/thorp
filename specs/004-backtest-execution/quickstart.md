@@ -36,6 +36,8 @@ S1 완료 뒤 같은 본문을 사용자 B 토큰으로 다시 보낸다. 기대
 
 S3 상태에서 사용자 A가 `POST /backtests/{A}/cancel`. 기대: A는 `CANCELLED`, B는 계속 `RUNNING`(마지막 요청이 아니므로 계산 유지). 이어 B도 취소하면 다음 진행 배치 안에 워커가 `FINISHED(CANCELLED)`를 보내고 B는 `CANCELLED, partial=true, progress.lastTradingDate`가 채워지며 `/timeseries`가 그 날짜까지의 데이터를 `200`으로 돌려준다. 이후 같은 본문 재요청은 `resultSource=NEW`(취소 결과는 재사용 안 함).
 
+합류 취소(Clarify Q3·R-04): A·B가 같은 실행에 합류한 상태에서 A만 취소한다. 기대: A는 즉시 `CANCELLED`·`partial=true`, `progress.lastTradingDate`가 취소 시점 값으로 고정, B는 계속 `RUNNING`. B 완료 뒤 A를 다시 조회해도 완료 범위가 그대로고 `summary`는 null(`summaryUnavailable: CANCELLED_WHILE_RUN_CONTINUED`), `/timeseries`는 그 날짜까지만 온다. B는 `COMPLETED` 전체 결과.
+
 ## S5. 실패와 재시도 (US3-5, FR-010)
 
 존재하지 않는 거래일 구간이 생기도록 픽스처에서 한 종목의 일부 행을 지운 자료 버전으로 요청한다. 기대: `FAILED`, `failure.code=DATA_INSUFFICIENT`, `summary=null`(0으로 채우지 않음). `POST /backtests/{id}/retry` → `202` 새 id, `retryOf` 원 id. 자료를 복구한 새 `data_version`으로 요청하면 다른 키의 새 실행.
@@ -64,6 +66,10 @@ S1~S6을 마친 뒤 `GET /internal/execution-metrics?type=SINGLE`(운영자 토�
 
 S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVolatility": "0.0500"}`만 바꿔 요청한다. 기대: 별도 실행(새 `resultSource=NEW`, 동일 버전 키가 S1과 다름), `/weights`의 각 리밸런싱 항목에 `estimatedVolatility`·`riskScale`이 있고, 추정 변동성이 5%를 넘는 달은 `riskScale < 1`·현금 비중 증가, 넘지 않는 달은 `riskScale = 1`. `targetVolatility: "0.2500"`(범위 밖)은 `400 INVALID_INPUT`, `scenario=FULL_PERIOD`에 `scenarioParams`를 넣으면 `400`. 픽스처 3종목·24개월에서 세 전략 모두 실행되고 결과 `versions.rules`에 `TARGET_RISK_OVERLAY/1`이 기록된다.
 
+## S12. 실행 한도 장치 (FR-006, R-19, T014)
+
+local 임시값(`max-queued-per-user=2`)으로 같은 사용자가 서로 다른 조건 3건을 연속 요청한다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
+
 ## 완료 판정
 
-S1~S11이 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).
+S1~S12가 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).

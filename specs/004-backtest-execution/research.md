@@ -18,13 +18,13 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 
 ## R-03 동일 버전 키
 
-- **Decision**: FR-003 항목을 canonical JSON(키 사전순 정렬, 소수는 plain string, null 키 제거)으로 직렬화해 SHA-256 hex 64자를 `dedup_key`로 저장한다. 포함 항목: strategyId, rulesVersion, parameters, sector→ETF 대응(대응표 버전 + 정렬된 (sectorId, instrumentId, targetWeight) 목록), dataVersion, evaluationSplitVersion, costProfileVersion, engineVersion(`nautilus_trader` 버전 + 워커 엔진 버전 문자열), scenario, 분석 기간·시작 금액. 요청자·executionType은 제외한다.
+- **Decision**: FR-003 항목을 canonical JSON(키 사전순 정렬, 소수는 plain string, null 키 제거)으로 직렬화해 SHA-256 hex 64자를 `dedup_key`로 저장한다. 포함 항목: strategyId, rulesVersion, parameters, sector→ETF 대응(대응표 버전 + 정렬된 (sectorId, instrumentId, targetWeight) 목록), **warmupTradingDays(서버가 확정한 실효 워밍업 거래일 수, R-15)**, dataVersion, evaluationSplitVersion, costProfileVersion, engineVersion(`nautilus_trader` 버전 + 워커 엔진 버전 문자열), scenario·scenarioParams·시나리오 규칙 버전, 분석 기간·시작 금액. 요청자·executionType은 제외한다. 워밍업이 키에 없으면 같은 전략을 다른 공통 워밍업으로 돌린 두 실행이 같은 키로 묶여 잘못된 결과를 재사용한다(plan 리뷰 6번).
 - **Rationale**: constitution "실행·캐시" 캐시 키 항목과 일치. Jackson `ORDER_MAP_ENTRIES_BY_KEYS` + 기존 `messageObjectMapper`(BigDecimal plain string)로 구현 가능해 새 라이브러리가 필요 없다.
 - **Alternatives**: DB에서 컬럼 조합 유니크(JSONB 파라미터 비교 불안정) / UUIDv5(결국 canonical 문자열이 필요).
 
 ## R-04 취소 채널
 
-- **Decision**: fanout exchange `backtest.control`을 추가한다. 워커는 시작 시 exclusive·auto-delete 큐를 바인딩하고 별도 스레드에서 `{type: CANCEL, runId}`를 받아 `cancel_requested` 집합에 넣는다. 전략은 `on_bar`(거래일마다 호출)에서 집합을 확인해 자기 run이면 즉시 정지하고, 소비자는 `FINISHED(status=CANCELLED, partial=true, lastTradingDate)`와 부분 EngineOutput을 발행한 뒤 ACK한다. 대기 중 취소는 백엔드가 run을 CANCELLED로 바꾸는 것으로 끝내고, 그 run의 STARTED가 나중에 도착하면 백엔드가 CANCEL 제어 메시지를 보낸다.
+- **Decision**: fanout exchange `backtest.control`을 추가한다. 워커는 시작 시 exclusive·auto-delete 큐를 바인딩하고 별도 스레드에서 `{type: CANCEL, runId}`를 받아 `cancel_requested` 집합에 넣는다. 전략은 `on_bar`(거래일마다 호출)에서 집합을 확인해 자기 run이면 즉시 정지하고, 소비자는 `FINISHED(status=CANCELLED, partial=true, lastTradingDate)`와 부분 EngineOutput을 발행한 뒤 ACK한다. **합류 요청 하나만 취소한 경우**(남은 활성 요청이 있어 run은 계속 도는 경우) 백엔드는 그 요청에 `cancelled_last_trading_date = run.progress_last_trading_date`를 스냅샷으로 남긴다. 그 요청의 조회는 상태 `CANCELLED`, `partial=true`, 완료 범위 = 스냅샷 날짜이며, 시계열·거래·보유는 그 날짜까지 **읽기 필터**로 잘라 주고 요약 지표는 주지 않는다(`summary=null` — 백엔드가 지표를 다시 계산하지 않는다, 원칙 1). run이 나중에 COMPLETED가 되어도 이 요청의 표시는 바뀌지 않는다(plan 리뷰 2번). 대기 중 취소는 백엔드가 run을 CANCELLED로 바꾸는 것으로 끝내고, 그 run의 STARTED가 나중에 도착하면 백엔드가 CANCEL 제어 메시지를 보낸다.
 - **Rationale**: Clarify Q1·Q3. 취소 확인 지점을 거래일 단위로 두면 완료 범위가 "처리한 마지막 거래일"과 정확히 일치한다(Q4). 큐 재정렬이나 메시지 삭제는 RabbitMQ에서 불가능하므로 소비 시점 확인이 유일한 실용적 방법이다.
 - **Alternatives**: 상태만 바꾸고 워커는 끝까지 계산(자원 낭비, 부분 결과 시점 불명) / 워커가 DB 플래그 폴링(워커 DB 접근 금지 계약 위반).
 
@@ -90,7 +90,7 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 
 ## R-15 공통 워밍업과 실행 가능 기간
 
-- **Decision**: 백엔드가 요청 시 001의 공통 평가 기간(가장 늦은 상장일 이후)과 선택 전략의 최대 관측 길이(+최근 제외 구간)를 합해 `effectiveStart`를 계산해 run에 고정하고 202 응답에 돌려준다. 가용 기간이 관측 길이보다 짧으면 422 `INSUFFICIENT_HISTORY`. 상한 합계가 투자 비중을 채울 수 없는 설정은 400 `INVALID_INPUT`으로 실행 전에 거부한다.
+- **Decision**: 백엔드가 요청 시 001의 공통 평가 기간(가장 늦은 상장일 이후)과 **워밍업 거래일 수**를 합해 `effectiveStart`를 계산해 run에 고정하고 202 응답에 돌려준다. 워밍업 거래일 수 = max(선택 전략의 관측 길이 + 최근 제외 구간, 요청 `conditions.warmupTradingDays`). FR-018의 "비교 후보 중 가장 긴 관측 기간"은 요청 하나만 보는 004가 알 수 없으므로, **비교 묶음을 아는 쪽(003의 다섯 전략 비교 화면, 007 자동 탐색)이 후보 전체의 최대값을 `warmupTradingDays`로 넘긴다**. 004는 그 값이 자기 전략의 최소 관측 길이보다 작으면 422 `INSUFFICIENT_HISTORY`(본문에 필요 값)로 거부하고, 넘기지 않은 단독 요청은 자기 전략 값으로 계산한다. 같은 시작일·같은 `warmupTradingDays`로 고정 비중과 역변동성을 요청하면 두 실행의 `effectiveStart`가 같다(T005 테스트로 고정). 확정한 워밍업은 동일 버전 키에 들어가고(R-03) 메시지 계약 `evaluation.warmupTradingDays`에 실려 워커가 같은 값을 쓴다. 가용 기간이 워밍업보다 짧으면 422 `INSUFFICIENT_HISTORY`. 상한 합계가 투자 비중을 채울 수 없는 설정은 400 `INVALID_INPUT`으로 실행 전에 거부한다.
 - **Rationale**: FR-018, Edge Case, 원칙 IV "공통 평가 구간이 줄면 실행 전에 알린다". 날짜 산술은 계산이 아니라 검증이므로 백엔드에서 해도 원칙 1에 어긋나지 않는다.
 
 ## R-16 테스트·검증 기준 선택 (constitution "넣지 않은 영역")
@@ -103,3 +103,17 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 - **Decision**: `scenario=TARGET_RISK`는 전략 위에 얹는 공통 오버레이로 구현한다. 요청 `conditions.scenarioParams.targetVolatility`(연환산, plain string, 기본 `"0.1000"`, 허용 0.05~0.20, 0.01 간격)를 받고, 규칙은 `strategy_rules`의 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true}`(REGISTERED, provisional=false)로 버전 관리한다. 워커는 리밸런싱 판단일마다 최근 63거래일 포트폴리오 일별 수익률(전략 목표 비중 기준)의 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로 두며, 추정치 ≤ 목표이면 조절하지 않는다. 조절 비율·추정 변동성을 `weightsSeries[].riskScale`·`estimatedVolatility`에 기록한다. 이 값들은 동일 버전 키(R-03)에 포함된다(scenario·scenarioParams·규칙 버전).
 - **Rationale**: 005 FR-017이 "별도 시나리오 보조 보기"로 요구한다. 레버리지 금지(FR-012)라 상향 조절은 불가능하므로 하향만 한다. 관측 63거래일·월말 조절은 역변동성(FR-023)·기본 리밸런싱(FR-011)과 같은 값을 써서 새 결정을 만들지 않는다. 목표 수준은 결과 의미를 바꾸는 사용자 선택이므로 003 등록표 항목(기본값 표기는 "예시·출발점")으로 둔다.
 - **Alternatives**: 전략별로 다른 규칙(공통 오버레이면 충분, 비교 조건이 같아짐) / 004 범위 제외(005 보조 보기가 빈 화면이 됨) / 상향 조절 허용(레버리지 금지 위반).
+
+## R-18 작업 발행 전달 보장 (plan 리뷰 1번, 2026-09-11)
+
+- **Decision**: `BacktestService.create()`는 run+request를 커밋한 **뒤** 발행한다(`TransactionSynchronization.afterCommit` 또는 `@TransactionalEventListener(phase = AFTER_COMMIT)`). `backtest_run.published_at TIMESTAMPTZ NULL`을 두고 publisher confirm 뒤 채운다. 발행이 실패하면 run은 `QUEUED`·`published_at NULL`로 남고, 스케줄러 `JobRepublisher`(30초 주기)가 `status='QUEUED' AND published_at IS NULL AND created_at < now() - 1분`인 run을 재발행한다. 작업 메시지 `message_id = "JOB-" + runId`로 고정해 중복 발행이 식별 가능하고, 중복 실행이 생겨도 백엔드 상태 전이(FINISHED는 비최종 상태에서만 적용)가 두 번째 결과를 버린다. 202 응답은 커밋 시점에 돌려주며 발행 완료를 기다리지 않는다(현행 "202는 접수" 유지).
+- **Rationale**: 현행 `BacktestService`는 트랜잭션 안에서 발행해 (a) 워커 STARTED/FINISHED가 커밋보다 먼저 도착하면 결과 Consumer가 모르는 runId로 버리고 (b) 발행 뒤 커밋 실패는 고아 메시지를 만든다(주석에 "outbox 도입 전까지의 한계"로 남아 있다). 커밋 후 발행이 (a)를 닫고, `published_at` 재발행이 (b)의 반대 경우(커밋 뒤 발행 실패)를 닫는다. run 행이 발행 대상과 1:1이므로 별도 outbox 테이블 없이 같은 보장이다.
+- **Alternatives**: 트랜잭션 안 발행 유지(현행, 결과 유실) / 별도 outbox 테이블 + 릴레이(테이블·폴러 추가, 얻는 것이 같다) / 워커가 모르는 runId를 requeue(백엔드 지연을 워커가 감당, 계약 §7 위반).
+- **검증(T005)**: ① 커밋 실패 시 발행이 일어나지 않는다(afterCommit 미호출) ② 발행 시각 ≥ 커밋 시각(IT, 워커가 커밋 전에 응답할 수 없음) ③ 발행 실패 → `published_at NULL` → 재발행기가 1회 재발행 → 성공 시 채움 ④ 중복 발행 → 워커 2회 실행 → 두 번째 FINISHED 무시, 결과 1건.
+
+## R-19 실행 한도 장치와 값의 분리 (plan 리뷰 4번, analyze H1, 2026-09-11)
+
+- **Decision**: 한도 장치(T014, Jira S15P21E205-168)를 값(PD-06)과 분리해 먼저 만든다. 설정 `thorp.backtest.limits.{max-queued-per-user, max-queued-total, max-running-total, max-run-seconds}`. 접수 시 대기·동시 실행 상한 초과 → 429 `EXECUTION_LIMIT`(사유·현재 대기 수·`retryAfterSeconds`). JOINED·REUSED는 새 계산이 아니라 한도에 세지 않는다. 실행 시간 상한 초과는 백엔드 스케줄러가 CANCEL 제어 메시지(R-04 채널)로 정지시키고 run을 `CANCELLED(partial=true, failure_code=EXECUTION_LIMIT)`로 종결해 완료 범위를 표시한다(FR-005). 한도 도달은 `backtest_run_metric.limit_hit`(접수 거부·실행 정지 구분)로 기록해 PD-06 결정 자료로 쓴다. prod 프로필은 네 값이 필수(미설정 시 기동 실패), local은 임시값(사용자 5·전체 50·동시 2·1800초)을 두고 `provisional=true`로 응답·결과에 표시한다.
+- **Rationale**: FR-006 "상한을 정하기 전에 무제한 실행을 허용하지 않는다". plan 초판은 replica·prefetch만으로 PASS 처리했는데 그것은 동시 실행만 막고 대기 누적·실행 시간은 열려 있다. 값은 팀 결정이지만 장치가 없으면 값이 정해져도 적용할 곳이 없다. constitution "실행 전 결정 임의 확정 금지"는 값을 정하지 말라는 것이고 설정 자리를 만드는 것은 금지하지 않는다.
+- **Alternatives**: PD-06 확정까지 아무 장치도 두지 않음(FR-006 위반 상태로 공개) / 값을 임의로 정해 하드코딩(금지) / RabbitMQ `x-max-length`로 큐 길이만 제한(사용자별 구분·실행 시간 제한 불가, 초과 메시지가 조용히 DLX로 간다).
+- **사용자 공개 조건**: PD-06 값이 prod 설정에 들어가고 plan Constitution Check IX가 PASS로 바뀐 뒤. 그 전에는 local 임시값으로만 동작한다.
