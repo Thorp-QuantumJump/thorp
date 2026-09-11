@@ -68,6 +68,11 @@ public class ParamSearchRepositoryImpl implements ParamSearchRepository {
     }
 
     @Override
+    public Optional<ParamSearch> findByIdForUpdate(Long id) {
+        return jpaRepository.findByIdForUpdate(id).map(ParamSearchMapper::toDomain);
+    }
+
+    @Override
     public Optional<ParamSearch> findById(Long id) {
         return jpaRepository.findById(id).map(ParamSearchMapper::toDomain);
     }
