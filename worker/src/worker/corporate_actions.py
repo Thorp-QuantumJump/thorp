@@ -103,10 +103,19 @@ class SplitOutcome:
 
 
 def apply_split(split: Split, quantity: Decimal) -> SplitOutcome:
-    """분할 비율만큼 수량을 늘린다. 정수로 떨어지지 않으면 내림하고 예외를 남긴다."""
+    """분할 비율만큼 수량을 늘린다. 정수로 떨어지지 않으면 내림하고 예외를 남긴다.
+
+    내림은 <b>양수 보유에 대해서만</b> 뜻이 있다. 음수 보유는 이 제품에 존재할 수 없고, 있다면
+    ``ROUND_FLOOR`` 가 절댓값을 키우는 쪽으로 돌아 더 이상한 수량이 된다 — 그래서 내림하기 전에
+    거절한다.
+    """
     if split.ratio <= ZERO:
         raise ValueError(f"split ratio must be positive: {split.ratio}")
-    if quantity <= ZERO:
+    if quantity < ZERO:
+        # 공매도가 없으므로(FR-012) 음수 보유는 생길 수 없다. 생겼다면 호출부가 망가진 것이고,
+        # 조용히 0 으로 만들면 그 자리에서 포지션이 사라져 원인을 되짚을 수 없다.
+        raise ValueError(f"holding must not be negative: {quantity}")
+    if quantity == ZERO:
         return SplitOutcome(quantity=ZERO)
     exact = quantity * split.ratio
     whole = exact.to_integral_value(rounding="ROUND_FLOOR")

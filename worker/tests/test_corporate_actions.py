@@ -115,6 +115,12 @@ def test_no_holding_means_nothing_to_split():
     assert apply_split(split("2"), Decimal(0)).quantity == 0
 
 
+def test_negative_holding_is_rejected_not_zeroed():
+    """공매도가 없어 생길 수 없는 상태다. 조용히 0으로 만들면 포지션이 사라진 이유를 알 수 없다."""
+    with pytest.raises(ValueError, match="negative"):
+        apply_split(split("2"), Decimal(-5))
+
+
 def test_nonpositive_ratio_is_rejected():
     with pytest.raises(ValueError):
         apply_split(split("0"), Decimal(10))
