@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.presentation.support;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,23 @@ public class CurrentRequester {
         this.trustHeader = trustHeader;
     }
 
+    /**
+     * 요청자를 찾되 없으면 비어 있다. 소유자 필터가 아직 없는 경로(spec 007 자동 탐색, research R4)가 쓴다.
+     *
+     * <p>{@link #requireRequesterId}와 갈라 두는 이유: 남의 결과를 막아야 하는 조회는 요청자가 없으면 진행하면 안 되고, 소유자를 기록만 하는
+     * 접수는 없다고 막을 근거가 없다. 헤더 값이 숫자가 아니면 양쪽 모두 거절한다 — 그것은 "없음"이 아니라 잘못된 입력이다.
+     */
+    public Optional<Long> findRequesterId(HttpServletRequest request) {
+        if (!trustHeader) {
+            return Optional.empty();
+        }
+        String raw = request.getHeader(DEV_HEADER);
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(parse(raw));
+    }
+
     public long requireRequesterId(HttpServletRequest request) {
         if (!trustHeader) {
             throw new BusinessException(
@@ -42,6 +60,10 @@ public class CurrentRequester {
         if (raw == null || raw.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, DEV_HEADER + " 헤더가 필요합니다.");
         }
+        return parse(raw);
+    }
+
+    private static long parse(String raw) {
         try {
             return Long.parseLong(raw.trim());
         } catch (NumberFormatException exc) {

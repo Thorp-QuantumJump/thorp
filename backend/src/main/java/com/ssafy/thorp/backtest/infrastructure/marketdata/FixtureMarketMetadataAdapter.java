@@ -52,6 +52,19 @@ public class FixtureMarketMetadataAdapter implements MarketMetadataPort {
     }
 
     @Override
+    public String currentMappingVersion() {
+        return MAPPING_VERSION;
+    }
+
+    @Override
+    public Optional<String> sectorOf(String mappingVersion, String instrumentId) {
+        if (!MAPPING_VERSION.equals(mappingVersion)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(LISTINGS.get(instrumentId)).map(Listing::sectorId);
+    }
+
+    @Override
     public boolean isMappedTo(String mappingVersion, String sectorId, String instrumentId) {
         if (!MAPPING_VERSION.equals(mappingVersion)) {
             return false;

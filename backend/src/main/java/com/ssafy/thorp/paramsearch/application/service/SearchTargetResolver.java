@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -53,7 +52,7 @@ public class SearchTargetResolver {
             throw new IllegalArgumentException("strategyIds must not be empty");
         }
 
-        Set<String> supported = readSupported();
+        Map<String, String> supported = readSupported();
         List<StrategyRegistration> targets = new ArrayList<>();
         List<String> notRegistered = new ArrayList<>();
         List<String> notExecutable = new ArrayList<>();
@@ -62,7 +61,7 @@ public class SearchTargetResolver {
             Optional<StrategyRegistration> registration = readRegistration(strategyId);
             if (registration.isEmpty()) {
                 notRegistered.add(strategyId);
-            } else if (!supported.contains(strategyId)) {
+            } else if (!supported.containsKey(strategyId)) {
                 notExecutable.add(strategyId);
             } else {
                 targets.add(registration.get());
@@ -70,14 +69,16 @@ public class SearchTargetResolver {
         }
         return new SearchTargets(
                 registryVersion(),
+                baselineStrategyId(),
                 List.copyOf(targets),
+                Map.copyOf(supported),
                 List.copyOf(notRegistered),
                 List.copyOf(notExecutable));
     }
 
-    private Set<String> readSupported() {
+    private Map<String, String> readSupported() {
         try {
-            return executionSupport.supportedStrategyIds();
+            return executionSupport.supportedStrategies();
         } catch (BusinessException e) {
             throw e;
         } catch (RuntimeException e) {
@@ -95,6 +96,17 @@ public class SearchTargetResolver {
         }
     }
 
+    /** 등록표가 기준 전략 역할로 지정한 전략. 지정이 없으면 null이고 하락 폭 필터를 적용하지 않는다(FR-013d). */
+    private String baselineStrategyId() {
+        try {
+            return registry.baselineStrategyId().orElse(null);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new RegistryUnavailableException("003 기준 전략 지정", e);
+        }
+    }
+
     private String registryVersion() {
         try {
             return registry.version();
@@ -109,13 +121,17 @@ public class SearchTargetResolver {
      * 판정 결과.
      *
      * @param registryVersion 판정에 쓴 등록표 버전. 접수는 이 값을 묶음에 고정한다(FR-028)
+     * @param baselineStrategyId 등록표가 기준 전략으로 지정한 ID. 지정이 없으면 null(FR-013d)
      * @param targets 탐색 대상 전략의 등록 정보. 요청 순서를 보존한다
+     * @param rulesVersionByStrategy 004가 준 전략별 규칙 버전. 묶음이 접수 시점 값으로 고정한다
      * @param notRegistered 등록표에 없는 전략
      * @param notExecutable 등록됐으나 004가 실행을 지원하지 않는 전략
      */
     public record SearchTargets(
             String registryVersion,
+            String baselineStrategyId,
             List<StrategyRegistration> targets,
+            Map<String, String> rulesVersionByStrategy,
             List<String> notRegistered,
             List<String> notExecutable) {
 
