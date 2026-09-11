@@ -25,12 +25,33 @@ import org.springframework.stereotype.Service;
 public class GridExpander {
 
     /**
+     * 한 번에 펼칠 수 있는 조합 수의 기술적 한계.
+     *
+     * <p><b>후보 수 상한(FR-005b)이 아니다.</b> 그것은 등록표·한도 스냅샷이 정하는 값이고(현재 임시값 1,000) 이 숫자보다 훨씬 작다. 이 값은
+     * "펼치다가 메모리를 다 쓰는 대신 사유를 남기고 멈춘다"는 방어선이며, 여기에 걸리는 요청은 한도 판정에서 이미 거부됐어야 하는 요청이다.
+     *
+     * <p>100만이 아니라 10만인 이유: 조합 하나가 축 개수만큼의 항을 가진 맵을 둘(값과 좌표) 들고 있다. 축이 스무 개면 100만 건은 항이 4천만 개여서 기본
+     * 힙으로는 펼치는 중에 {@code OutOfMemoryError}가 난다 — 그러면 사유가 남지 않고 프로세스가 죽는다. 방어선은 죽기 전에 걸려야 한다.
+     */
+    static final long MAX_EXPANDABLE_POINTS = 100_000L;
+
+    /**
      * 전체 그리드. 반환 순서가 곧 후보 순번의 순서다.
      *
      * <p>축이 없는 전략은 빈 조합 1건이 된다 — 파라미터가 없는 전략도 계산 대상이다.
      */
     public List<GridPoint> expand(SearchSpace space) {
-        List<GridPoint> points = new ArrayList<>();
+        // 펼치기 전에 크기를 먼저 센다. 넘치는 공간을 그대로 펼치면 예외 없이 메모리를 다 쓸 때까지
+        // 돌고, 그때는 원인이 요청 범위라는 것이 드러나지 않는다. 셈은 넘침을 예외로 알린다.
+        long expected = space.combinationCount();
+        if (expected > MAX_EXPANDABLE_POINTS) {
+            throw new ArithmeticException(
+                    "search space is too large to expand: combinations="
+                            + expected
+                            + ", max="
+                            + MAX_EXPANDABLE_POINTS);
+        }
+        List<GridPoint> points = new ArrayList<>((int) expected);
         space.strategies()
                 .forEach((strategyId, strategy) -> expandStrategy(strategyId, strategy, points));
         return List.copyOf(points);

@@ -1,9 +1,11 @@
 package com.ssafy.thorp.paramsearch.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.paramsearch.application.service.GridExpander.GridPoint;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +107,70 @@ class GridExpanderTest {
                                         SearchSpace.Axis.of("y", List.of("a", "b")))));
 
         assertThat(expander.expand(space)).isEqualTo(expander.expand(space));
+    }
+
+    @Test
+    @DisplayName("조합 수가 long을 넘으면 펼치기 전에 예외로 끊는다")
+    void overflowingSpaceThrowsBeforeExpanding() {
+        // 축 40개 × 후보 4개 = 4^40. long을 한참 넘는다.
+        List<SearchSpace.Axis> axes = new ArrayList<>();
+        for (int i = 0; i < 40; i++) {
+            axes.add(SearchSpace.Axis.of("axis" + i, List.of(1, 2, 3, 4)));
+        }
+        SearchSpace space = space("STRATEGY_A", SearchSpace.StrategySpace.of("전략 A", axes));
+
+        assertThatThrownBy(() -> expander.expand(space))
+                .isInstanceOf(ArithmeticException.class)
+                .hasMessageContaining("overflow");
+    }
+
+    @Test
+    @DisplayName("전략별 조합 수의 합이 long을 넘어도 예외로 끊는다")
+    void overflowingSumThrows() {
+        // 전략 하나는 2^62(long 안에 들어간다). 둘을 더하면 넘친다 — 곱이 아니라 합에서 넘치는 경우다.
+        Map<String, SearchSpace.StrategySpace> strategies = new LinkedHashMap<>();
+        strategies.put("STRATEGY_A", binaryAxes(62));
+        strategies.put("STRATEGY_B", binaryAxes(62));
+        SearchSpace space = SearchSpace.of(strategies);
+
+        assertThatThrownBy(space::combinationCount)
+                .isInstanceOf(ArithmeticException.class)
+                .hasMessageContaining("overflow");
+        assertThatThrownBy(() -> expander.expand(space)).isInstanceOf(ArithmeticException.class);
+    }
+
+    @Test
+    @DisplayName("넘치지는 않지만 펼치기에 너무 큰 공간은 펼치기 전에 사유를 남기고 멈춘다")
+    void tooLargeSpaceIsRefusedWithReason() {
+        // 2^21 = 2,097,152. long에는 들어가지만 펼치면 힙을 다 쓴다. 셈은 축 개수만큼만 돌므로
+        // 이 단언은 실제로 펼치지 않고 끝난다 — 그것이 이 방어선의 목적이다.
+        SearchSpace space = SearchSpace.of(Map.of("STRATEGY_A", binaryAxes(21)));
+
+        assertThat(space.combinationCount()).isEqualTo(1L << 21);
+        assertThatThrownBy(() -> expander.expand(space))
+                .isInstanceOf(ArithmeticException.class)
+                .hasMessageContaining("too large to expand");
+    }
+
+    @Test
+    @DisplayName("한계 안의 큰 공간은 그대로 펼친다")
+    void largeButAllowedSpaceStillExpands() {
+        // 10 × 10 × 10 × 10 = 10,000. 한계(100,000) 안이므로 펼쳐야 한다.
+        List<SearchSpace.Axis> axes = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            axes.add(SearchSpace.Axis.of("axis" + i, List.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)));
+        }
+        SearchSpace space = space("STRATEGY_A", SearchSpace.StrategySpace.of("전략 A", axes));
+
+        assertThat(expander.expand(space)).hasSize(10_000);
+    }
+
+    private static SearchSpace.StrategySpace binaryAxes(int axisCount) {
+        List<SearchSpace.Axis> axes = new ArrayList<>();
+        for (int i = 0; i < axisCount; i++) {
+            axes.add(SearchSpace.Axis.of("axis" + i, List.of(0, 1)));
+        }
+        return SearchSpace.StrategySpace.of("전략", axes);
     }
 
     private static SearchSpace space(String strategyId, SearchSpace.StrategySpace strategy) {
