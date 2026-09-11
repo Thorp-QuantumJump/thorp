@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -33,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -253,12 +255,24 @@ class BacktestControllerTest {
     }
 
     @Test
+    @DisplayName("하위 리소스도 요청자 헤더가 없으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다")
+    void subResourcesRequireRequester() throws Exception {
+        for (String path : List.of("/timeseries", "/trades", "/positions?date=2024-06-28")) {
+            mockMvc.perform(get("/backtests/" + BACKTEST_ID + path))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
     @DisplayName("결과가 준비되지 않은 하위 리소스는 409다")
     void subResourceNotReady() throws Exception {
-        when(queryService.getTimeseries(BACKTEST_ID))
+        when(queryService.getTimeseries(eq(BACKTEST_ID), anyLong()))
                 .thenThrow(new BacktestResultNotReadyException(BACKTEST_ID, RunStatus.RUNNING));
 
-        mockMvc.perform(get("/backtests/{id}/timeseries", BACKTEST_ID))
+        mockMvc.perform(
+                        get("/backtests/{id}/timeseries", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
     }
@@ -266,10 +280,12 @@ class BacktestControllerTest {
     @Test
     @DisplayName("실패한 백테스트의 하위 리소스는 409 BACKTEST_FAILED다")
     void subResourceFailed() throws Exception {
-        when(queryService.getTrades(eq(BACKTEST_ID), any()))
+        when(queryService.getTrades(eq(BACKTEST_ID), anyLong(), any()))
                 .thenThrow(new BacktestFailedException(BACKTEST_ID));
 
-        mockMvc.perform(get("/backtests/{id}/trades", BACKTEST_ID))
+        mockMvc.perform(
+                        get("/backtests/{id}/trades", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
     }

@@ -60,9 +60,12 @@ common: 모든 계층에서 참조 가능
 - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다
 - 비용 조건(`cost_profile`)·전략 규칙(`strategy_rules`)은 **마이그레이션이 채우는 읽기 전용 등록표**다. 실행은 버전 문자열만 들고 다니고 값은 등록표에서 읽는다. 값이 바뀌면 행을 고치지 말고 새 버전을 넣는다 — 끝난 실행을 나중 값으로 재해석하면 재현이 깨진다. 팀 미확정 전략은 `PENDING_DECISION` 행만 두고 접수에서 422 `RULES_NOT_REGISTERED`
 - `BacktestRunJpaEntity`는 마이그레이션이 만든 컬럼 전부를 매핑하지 않는다. 접수·재사용·취소·측정이 쓰는 컬럼은 그 코드와 같은 MR에서 매핑을 붙인다. `ddl-auto=validate`는 매핑된 컬럼만 보므로 **미매핑 컬럼의 존재는 `FlywayMigrationTest`가 지킨다**
+- **`AFTER_COMMIT` 안에서 DB를 건드릴 때는 새 트랜잭션(`REQUIRES_NEW`)을 연다.** 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 **변경이 다시 커밋되지 않는다**. 조용히 사라지므로 테스트가 없으면 알아채지 못한다
+- **한 행을 여러 경로가 갱신하면 컬럼 소유를 가른다.** 실행 행은 이벤트 처리(상태·진행·시작/종료 시각)와 발행 경로(`published_at`·`publish_count`)가 서로 다른 스레드에서 동시에 쓴다. 도메인 객체를 읽어 통째로 저장하면 늦게 저장한 쪽이 상대의 갱신을 되돌린다 — 저장소에 경로별 메서드를 두고 자기 컬럼만 쓴다(`update` / `recordPublishAttempt` / `recordPublished`). 카운터는 읽어서 더하지 말고 DB에서 올린다
 - **작업 발행은 접수 트랜잭션이 커밋된 뒤에 한다**(spec 004 R-18, `BacktestJobDispatcher`). 트랜잭션 안에서 발행하면 워커의 STARTED가 커밋을 앞질러 도착해 결과 Consumer가 모르는 실행이라며 버린다. 브로커에 닿지 못해도 접수는 202이고 실행은 `QUEUED`·`published_at NULL`로 남아 `JobRepublisher`(30초)가 다시 보낸다. `publish_count`는 **confirm 수가 아니라 발행 시도 수**이며 시도 직전에 올린다 — 실제 메시지 수의 상한이어야 DLQ 종결 판정이 살아 있는 실행을 끊지 않는다
 - **동일 버전 키(`DedupKeyCalculator`)는 소수·날짜를 맵에 넣기 전에 문자열로 정규화한다.** 직렬화 설정에 표기를 맡기면 그 설정이 바뀐 날 모든 키가 조용히 바뀌고 진행 중이던 재사용 판정이 어긋난다. 메시지 ObjectMapper를 빌려 쓸 수 없다(infrastructure에 있다). 키에 **실효 워밍업 거래일 수**를 반드시 넣는다 — 빠지면 공통 워밍업이 다른 두 실행이 한 키로 묶인다
 - **요청 워밍업이 전략 요구값보다 작으면 `max()`로 올리지 말고 422로 거절한다**(R-15). 올려서 통과시키면 비교 묶음 안 실행들의 `effectiveStart`가 어긋난 채 지나가고, 나란히 놓고 본 숫자가 사실은 다른 구간의 값이 된다
+- **요청자 확인은 상세뿐 아니라 하위 리소스에도 적용한다.** 상세만 막고 시계열·거래·보유를 열어 두면 식별자만 알면 남의 결과를 읽을 수 있고, 개발용 헤더를 끈 운영에서도 그 경로만 열려 있게 된다
 - **요청자 식별은 `CurrentRequester` 한 곳이다.** 지금은 `thorp.auth.trust-user-id-header`를 켠 환경에서만 `X-User-Id` 헤더를 읽고 기본값은 꺼짐이다 — **헤더를 믿는 것은 인증이 아니다.** spec 014가 들어오면 이 클래스만 인증 주체를 읽도록 바꾼다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
 - **시장 자료 메타데이터(대응표·자료 버전·상장일·거래일 달력)는 `MarketMetadataPort`로만 읽는다.** 원본은 spec 001 소유이고 구현은 001 적재 전까지 픽스처다(`FixtureMarketMetadataAdapter`, 워커 픽스처와 같은 세 종목·평일 달력). 가격은 이 포트로 읽지 않는다 — 가격을 읽는 것은 워커다
 - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다

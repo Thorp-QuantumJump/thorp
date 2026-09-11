@@ -223,6 +223,28 @@ class BacktestResultQueryServiceTest {
                 .isInstanceOf(BacktestNotFoundException.class);
     }
 
+    @Test
+    @DisplayName("남의 요청은 하위 리소스도 404다 — 상세만 막고 하위를 열어 두면 식별자만 알면 읽힌다")
+    void subResourcesRejectOtherRequesters() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER + 1)));
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestNotFoundException.class);
+        assertThatThrownBy(
+                        () ->
+                                service.getTrades(
+                                        BACKTEST_ID,
+                                        REQUESTER,
+                                        new FindBacktestTradesQuery(0, 100, null, null)))
+                .isInstanceOf(BacktestNotFoundException.class);
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2)))
+                .isInstanceOf(BacktestNotFoundException.class);
+    }
+
     @ParameterizedTest(name = "{0}")
     @EnumSource(
             value = RunStatus.class,
@@ -281,7 +303,8 @@ class BacktestResultQueryServiceTest {
     void timeseriesJoinsBenchmarkByDate() {
         givenSeries(benchmark("2025-01-02", "0.000000", "2025-01-03", "0.008000"));
 
-        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+        List<BacktestTimeseriesResult.Point> points =
+                service.getTimeseries(BACKTEST_ID, REQUESTER).points();
 
         assertThat(points).hasSize(2);
         assertThat(points.get(0).benchmarkReturn()).isEqualByComparingTo("0.000000");
@@ -294,7 +317,8 @@ class BacktestResultQueryServiceTest {
     void timeseriesToleratesMissingBenchmarkDate() {
         givenSeries(benchmark("2025-01-02", "0.000000"));
 
-        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+        List<BacktestTimeseriesResult.Point> points =
+                service.getTimeseries(BACKTEST_ID, REQUESTER).points();
 
         assertThat(points.get(0).benchmarkReturn()).isNotNull();
         assertThat(points.get(1).benchmarkReturn()).isNull();
@@ -305,7 +329,7 @@ class BacktestResultQueryServiceTest {
     void timeseriesWithoutBenchmark() {
         givenSeries(null);
 
-        assertThat(service.getTimeseries(BACKTEST_ID).points())
+        assertThat(service.getTimeseries(BACKTEST_ID, REQUESTER).points())
                 .allSatisfy(p -> assertThat(p.benchmarkReturn()).isNull());
     }
 
@@ -315,7 +339,7 @@ class BacktestResultQueryServiceTest {
         given(RunStatus.COMPLETED);
         when(resultRepository.findTimeseries(JOB_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -324,7 +348,7 @@ class BacktestResultQueryServiceTest {
     void timeseriesUsesGate() {
         given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
@@ -339,7 +363,7 @@ class BacktestResultQueryServiceTest {
         when(resultRepository.findTrades(JOB_ID, query))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));
 
-        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, query);
+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);
 
         assertThat(result.page()).isEqualTo(1);
         assertThat(result.size()).isEqualTo(2);
@@ -356,7 +380,7 @@ class BacktestResultQueryServiceTest {
         when(resultRepository.findTrades(JOB_ID, query))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
 
-        assertThat(service.getTrades(BACKTEST_ID, query).content()).isEmpty();
+        assertThat(service.getTrades(BACKTEST_ID, REQUESTER, query).content()).isEmpty();
     }
 
     @Test
@@ -368,6 +392,7 @@ class BacktestResultQueryServiceTest {
                         () ->
                                 service.getTrades(
                                         BACKTEST_ID,
+                                        REQUESTER,
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(BacktestResultNotReadyException.class);
     }
@@ -418,7 +443,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2));
 
         assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 2));
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
@@ -431,7 +456,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 3));
 
         assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 3));
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
@@ -443,7 +468,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 7));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 7));
 
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 6));
         assertThat(result.positions()).isEmpty();
@@ -454,7 +479,9 @@ class BacktestResultQueryServiceTest {
     void positionsAfterLastSnapshot() {
         givenPositionSeries();
 
-        assertThat(service.getPositions(BACKTEST_ID, LocalDate.of(2025, 12, 31)).snapshotDate())
+        assertThat(
+                        service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 12, 31))
+                                .snapshotDate())
                 .isEqualTo(LocalDate.of(2025, 1, 6));
     }
 
@@ -463,7 +490,10 @@ class BacktestResultQueryServiceTest {
     void positionsBeforeFirstSnapshot() {
         givenPositionSeries();
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2024, 12, 31)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
@@ -480,7 +510,10 @@ class BacktestResultQueryServiceTest {
                                         snapshotWith("2025-01-02", null),
                                         snapshotWith("2025-01-03", null))));
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 3)))
                 .isInstanceOf(IllegalStateException.class)
                 .isNotInstanceOf(BusinessException.class);
     }
@@ -490,7 +523,10 @@ class BacktestResultQueryServiceTest {
     void positionsBeforeFirstSnapshotSaysEarliest() {
         givenPositionSeries();
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2024, 12, 31)))
                 .hasMessageContaining("2025-01-02");
     }
 
@@ -499,7 +535,10 @@ class BacktestResultQueryServiceTest {
     void positionsUsesGate() {
         given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2)))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
@@ -513,6 +552,7 @@ class BacktestResultQueryServiceTest {
                         () ->
                                 service.getTrades(
                                         BACKTEST_ID,
+                                        REQUESTER,
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(IllegalStateException.class);
         // 거래 조회까지 가지 않는다
@@ -529,7 +569,7 @@ class BacktestResultQueryServiceTest {
     void gateNotReady(RunStatus status) {
         given(status);
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestResultNotReadyException.class);
     }
 
@@ -538,7 +578,7 @@ class BacktestResultQueryServiceTest {
     void gateFailed() {
         given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
@@ -547,7 +587,7 @@ class BacktestResultQueryServiceTest {
     void gateCompleted() {
         given(RunStatus.COMPLETED);
 
-        assertThat(service.requireResultReady(BACKTEST_ID).getId()).isEqualTo(JOB_ID);
+        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).getId()).isEqualTo(JOB_ID);
     }
 
     @Test
@@ -555,7 +595,7 @@ class BacktestResultQueryServiceTest {
     void gateNotFound() {
         when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
     }
 }

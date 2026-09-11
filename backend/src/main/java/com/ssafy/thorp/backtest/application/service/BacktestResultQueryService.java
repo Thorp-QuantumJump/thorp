@@ -95,8 +95,8 @@ public class BacktestResultQueryService {
      * <p>계약상 워커가 벤치마크를 같은 거래일 축으로 forward fill하지만 그것을 전제로 NPE를 내지 않는다 — 없는 날은 {@code
      * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.
      */
-    public BacktestTimeseriesResult getTimeseries(String backtestId) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestTimeseriesResult getTimeseries(String backtestId, long requesterId) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         BacktestSeries series = require(resultRepository.findTimeseries(job.getId()), job);
         Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());
         List<BacktestTimeseriesResult.Point> points =
@@ -120,8 +120,9 @@ public class BacktestResultQueryService {
      * <p><b>결과 행 존재를 따로 확인한다.</b> 이 조회는 {@code backtest_trade}만 읽어서 결과 행 유실을 스스로 알아채지 못한다 — 거래가
      * 0건이면 빈 페이지를, 거래 행만 남아 있으면 목록을 정상 응답으로 돌려주게 된다. 다른 세 엔드포인트는 결과 컬럼을 읽다가 자연히 걸리므로 여기만 명시적으로 본다.
      */
-    public BacktestTradePageResult getTrades(String backtestId, FindBacktestTradesQuery query) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestTradePageResult getTrades(
+            String backtestId, long requesterId, FindBacktestTradesQuery query) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         if (!resultRepository.exists(job.getId())) {
             throw missingResultRow(job);
         }
@@ -145,8 +146,9 @@ public class BacktestResultQueryService {
      * 400(요청 잘못), 보유 스냅샷이 시계열 전체에 하나도 없으면 500(저장 데이터가 계약 위반). 후자를 400으로 주면 서버 데이터 손상을 클라이언트 탓으로 보이게
      * 한다.
      */
-    public BacktestPositionsResult getPositions(String backtestId, LocalDate date) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestPositionsResult getPositions(
+            String backtestId, long requesterId, LocalDate date) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         List<EngineOutput.PortfolioSnapshot> series =
                 require(resultRepository.findPortfolioSeries(job.getId()), job);
         EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);
@@ -212,7 +214,12 @@ public class BacktestResultQueryService {
                                 (first, second) -> first));
     }
 
-    /** 요청 식별자로 요청과 실행을 함께 찾는다. */
+    /**
+     * 요청 식별자로 요청과 실행을 함께 찾고, <b>요청자가 본인인지 확인한다</b>.
+     *
+     * <p>상세뿐 아니라 하위 리소스(시계열·거래·보유)도 이 관문을 지난다. 상세만 막고 하위를 열어 두면 식별자만 알면 남의 결과를 그대로 읽을 수 있고, 개발용 헤더를
+     * 끈 운영에서도 그 경로만 열려 있게 된다.
+     */
     private RequestAndRun requireOwned(String backtestId, long requesterId) {
         BacktestRequest request =
                 requestRepository
@@ -227,32 +234,13 @@ public class BacktestResultQueryService {
     }
 
     /**
-     * 요청 식별자로 실행만 찾는다(하위 리소스용).
-     *
-     * <p>여기에는 아직 요청자 확인이 없다 — 하위 리소스는 T009가 취소 스냅샷 자르기와 함께 다시 쓰면서 권한도 같이 붙인다. 지금 저장소에 인증 자체가 없어
-     * 노출되는 범위가 늘지는 않는다.
-     */
-    private BacktestRun requireRun(String backtestId) {
-        return requestRepository
-                .findByBacktestId(backtestId)
-                .flatMap(request -> jobRepository.findById(request.getRunId()))
-                .orElseThrow(() -> new BacktestNotFoundException(backtestId));
-    }
-
-    private BacktestRun requireJobUnused(String backtestId) {
-        return jobRepository
-                .findByBacktestId(backtestId)
-                .orElseThrow(() -> new BacktestNotFoundException(backtestId));
-    }
-
-    /**
      * 하위 리소스 세 개의 공통 관문. **판정은 결과 행 존재가 아니라 Job 상태로 한다** — 실패한 실행도 결과 행이 있으므로(오류만 채워짐) "행이 있으면
      * 200"으로 짜면 FAILED에 빈 시계열을 주게 된다.
      *
      * <p>{@code switch}에 {@code default}를 두지 않는다. 상태가 추가되면 컴파일이 깨져서 여기를 고치게 된다.
      */
-    BacktestRun requireResultReady(String backtestId) {
-        BacktestRun job = requireRun(backtestId);
+    BacktestRun requireResultReady(String backtestId, long requesterId) {
+        BacktestRun job = requireOwned(backtestId, requesterId).run();
         switch (job.getStatus()) {
             case QUEUED, RUNNING ->
                     throw new BacktestResultNotReadyException(backtestId, job.getStatus());

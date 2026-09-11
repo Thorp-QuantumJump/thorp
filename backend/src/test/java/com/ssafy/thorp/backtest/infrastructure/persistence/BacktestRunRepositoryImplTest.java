@@ -282,4 +282,52 @@ class BacktestRunRepositoryImplTest extends PostgresTestSupport {
         assertThat(entity.getCreatedAt()).isNotNull();
         assertThat(entity.getUpdatedAt()).isNotNull();
     }
+
+    /**
+     * 상태 저장과 발행 기록이 서로의 컬럼을 건드리지 않는지(spec 004 R-18).
+     *
+     * <p>동시성 없이 <b>결정적으로</b> 재현한다. 실제 사고는 스케줄러가 실행을 읽은 뒤 리스너가 상태를 바꾸고 스케줄러가 나중에 저장할 때 일어나는데, 시간 순서만
+     * 같으면 스레드가 하나든 둘이든 결과는 같다 — 오래된 스냅샷으로 저장하면 그 사이의 갱신이 사라진다.
+     */
+    @Test
+    @DisplayName("상태 저장이 발행 기록을 되돌리지 않는다 — 오래된 스냅샷으로 저장해도 시도 횟수가 남는다")
+    void updateDoesNotOverwriteDeliveryColumns() {
+        BacktestRun saved = repository.save(newJob());
+        entityManager.flush();
+
+        // 발행 경로가 먼저 시도 횟수와 확인 시각을 남긴다.
+        repository.recordPublishAttempt(saved.getId());
+        repository.recordPublished(saved.getId(), Instant.parse("2026-09-07T03:00:05Z"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // 이벤트 경로는 그 전에 읽어 둔 오래된 객체로 상태를 저장한다.
+        repository.update(saved.markRunning("exec-1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
+        assertThat(entity.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(entity.getPublishCount()).as("발행 시도 횟수가 되돌아가면 안 된다").isEqualTo(1);
+        assertThat(entity.getPublishedAt()).as("발행 확인이 지워지면 재발행기가 다시 보낸다").isNotNull();
+    }
+
+    @Test
+    @DisplayName("발행 기록이 실행 상태를 되돌리지 않는다")
+    void deliveryUpdateDoesNotOverwriteState() {
+        BacktestRun saved = repository.save(newJob());
+        entityManager.flush();
+        repository.update(saved.markRunning("exec-1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        repository.recordPublishAttempt(saved.getId());
+        repository.recordPublished(saved.getId(), Instant.parse("2026-09-07T03:00:05Z"));
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
+        assertThat(entity.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(entity.getCurrentExecutionId()).isEqualTo("exec-1");
+    }
 }

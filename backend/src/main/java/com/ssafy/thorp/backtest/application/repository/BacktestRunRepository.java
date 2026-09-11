@@ -35,4 +35,15 @@ public interface BacktestRunRepository {
 
     /** 커밋됐지만 발행 확인({@code published_at})이 없는 대기 실행. 재발행 대상이다(R-18). */
     List<BacktestRun> findUnpublishedQueued(Instant queuedBefore, int limit);
+
+    /**
+     * 발행 시도 횟수를 하나 올린다(R-18). 상태·진행 컬럼은 건드리지 않는다.
+     *
+     * <p>도메인 객체를 거치지 않는 이유: 읽어서 +1 해 쓰면 첫 발행과 재발행이 겹쳤을 때 증가 하나를 잃고, 그러면 시도 횟수가 실제 메시지 수보다 작아져 DLQ
+     * 종결 판정이 살아 있는 실행을 끊는다.
+     */
+    void recordPublishAttempt(Long runId);
+
+    /** 발행 confirm 시각을 남긴다. 이 컬럼만 바꾼다. */
+    void recordPublished(Long runId, Instant at);
 }

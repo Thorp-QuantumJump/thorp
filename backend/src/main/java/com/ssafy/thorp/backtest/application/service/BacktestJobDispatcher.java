@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -18,8 +20,13 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 발행 뒤 커밋이 실패하면 아무도 모르는 고아 메시지가 남았다. 커밋 후 발행이 앞의 문제를, {@code published_at} 재발행(JobRepublisher)이 뒤의
  * 문제를 닫는다. run 행이 발행 대상과 1:1이라 별도 outbox 테이블 없이 같은 보장을 얻는다.
  *
- * <p><b>{@code publishCount}는 접수 트랜잭션에서 이미 1로 올라와 있다</b>(발행 시도 예고). 여기서 다시 올리지 않는다 — 시도 횟수는 실제 메시지
- * 수의 상한이면 되고, 예고했다가 못 보낸 경우(1 ≥ 0)도 상한을 지킨다. 재발행할 때만 한 번 더 올린다.
+ * <p><b>여기의 DB 작업은 모두 새 트랜잭션이어야 한다.</b> {@code AFTER_COMMIT} 콜백은 원래 트랜잭션이 커밋된 뒤, 그러나 자원이 아직 묶여 있는
+ * 상태에서 실행된다. 기본 전파(REQUIRED)로 열면 이미 끝난 그 트랜잭션에 참여해 변경이 다시 커밋되지 않는다 — 발행에 성공해도 {@code published_at}이
+ * NULL로 남아 재발행기가 멀쩡한 작업을 계속 다시 보낸다.
+ *
+ * <p><b>상태 컬럼은 건드리지 않는다.</b> 발행 경로는 {@code publish_count}·{@code published_at}만 쓰고, 이벤트 처리는
+ * 상태·진행·시각만 쓴다. 둘은 서로 다른 스레드(스케줄러와 리스너)에서 동시에 도는데, 한쪽이 실행 전체를 읽어 통째로 저장하면 늦게 저장한 쪽이 상대의 갱신을 되돌린다.
+ * 예를 들어 재발행기가 QUEUED를 읽은 뒤 리스너가 RUNNING으로 바꿨는데 재발행기가 나중에 저장하면 실행이 QUEUED로 되돌아간다.
  */
 @Component
 public class BacktestJobDispatcher {
@@ -29,19 +36,20 @@ public class BacktestJobDispatcher {
     private final BacktestRunRepository repository;
     private final BacktestJobPublisher publisher;
     private final EngineInputAssembler assembler;
-    private final TransactionTemplate transactionTemplate;
+    private final TransactionTemplate newTransaction;
     private final Clock clock;
 
     public BacktestJobDispatcher(
             BacktestRunRepository repository,
             BacktestJobPublisher publisher,
             EngineInputAssembler assembler,
-            TransactionTemplate transactionTemplate,
+            PlatformTransactionManager transactionManager,
             Clock clock) {
         this.repository = repository;
         this.publisher = publisher;
         this.assembler = assembler;
-        this.transactionTemplate = transactionTemplate;
+        this.newTransaction = new TransactionTemplate(transactionManager);
+        this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.clock = clock;
     }
 
@@ -60,24 +68,12 @@ public class BacktestJobDispatcher {
      * NULL로 남아 {@link JobRepublisher}가 집어 간다.
      */
     void publishAlreadyCounted(long runId) {
-        Optional<BacktestRun> found =
-                transactionTemplate.execute(status -> repository.findById(runId));
-        if (found.isEmpty()) {
+        Optional<BacktestRun> found = newTransaction.execute(status -> repository.findById(runId));
+        if (found == null || found.isEmpty()) {
             log.warn("발행할 실행을 찾지 못했습니다: runId={}", runId);
             return;
         }
-        BacktestRun run = found.get();
-        try {
-            publisher.publish(assembler.assemble(run));
-        } catch (RuntimeException exc) {
-            log.warn(
-                    "작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}",
-                    runId,
-                    run.getBacktestId().value(),
-                    exc.toString());
-            return;
-        }
-        markPublished(run);
+        send(found.get());
     }
 
     /**
@@ -87,43 +83,31 @@ public class BacktestJobDispatcher {
      * >= publishCount})이 살아 있는 실행을 실패로 끊는다.
      */
     void republish(long runId) {
-        BacktestRun counted =
-                transactionTemplate.execute(
-                        status ->
-                                repository
-                                        .findById(runId)
-                                        .map(
-                                                run ->
-                                                        repository.update(
-                                                                run.withLifecycle(
-                                                                        run.getLifecycle()
-                                                                                .publishAttempted())))
-                                        .orElse(null));
-        if (counted == null) {
+        Optional<BacktestRun> found =
+                newTransaction.execute(
+                        status -> {
+                            repository.recordPublishAttempt(runId);
+                            return repository.findById(runId);
+                        });
+        if (found == null || found.isEmpty()) {
             log.warn("재발행할 실행을 찾지 못했습니다: runId={}", runId);
             return;
         }
-        try {
-            publisher.publish(assembler.assemble(counted));
-        } catch (RuntimeException exc) {
-            log.warn("재발행에 실패했습니다: runId={}, cause={}", runId, exc.toString());
-            return;
-        }
-        markPublished(counted);
+        send(found.get());
     }
 
-    private void markPublished(BacktestRun run) {
-        transactionTemplate.executeWithoutResult(
-                status ->
-                        repository
-                                .findById(run.getId())
-                                .ifPresent(
-                                        fresh ->
-                                                repository.update(
-                                                        fresh.withLifecycle(
-                                                                fresh.getLifecycle()
-                                                                        .published(
-                                                                                clock
-                                                                                        .instant())))));
+    private void send(BacktestRun run) {
+        try {
+            publisher.publish(assembler.assemble(run));
+        } catch (RuntimeException exc) {
+            log.warn(
+                    "작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}",
+                    run.getId(),
+                    run.getBacktestId().value(),
+                    exc.toString());
+            return;
+        }
+        newTransaction.executeWithoutResult(
+                status -> repository.recordPublished(run.getId(), clock.instant()));
     }
 }

@@ -56,6 +56,17 @@ class BacktestPublishAfterCommitIT extends PostgresTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     /** users FK를 만족시킬 최소 행. 회원 도메인을 끌어오지 않으려고 직접 넣는다. */
+    /**
+     * 계약 예시를 그대로 쓰되 시작 금액만 매번 다르게 한다.
+     *
+     * <p>같은 본문은 같은 동일 버전 키를 만들고, PostgreSQL 컨테이너는 테스트 클래스끼리 공유된다. 흔들지 않으면 뒤 테스트가 앞 테스트의 실행에
+     * 합류(JOINED)해 상태가 섞인다 — 그건 제품 동작이 맞지만 이 테스트들이 보려는 것이 아니다.
+     */
+    private String uniqueBody() throws java.io.IOException {
+        long unique = 10_000_000L + (System.nanoTime() % 1_000_000L);
+        return Files.readString(REQUEST_FIXTURE).replace("10000000.00", unique + ".00");
+    }
+
     private long newUser() {
         // phone_number 는 varchar(20) 이다. 긴 이메일을 그대로 넣으면 길이 제약에 걸린다.
         String suffix = Long.toString(System.nanoTime() % 1_000_000_000L);
@@ -79,7 +90,7 @@ class BacktestPublishAfterCommitIT extends PostgresTestSupport {
     @Test
     @DisplayName("브로커가 죽어 있어도 접수는 202이고 실행은 발행 대기로 남는다")
     void acceptsEvenWhenBrokerIsDown() throws IOException, Exception {
-        String body = Files.readString(REQUEST_FIXTURE);
+        String body = uniqueBody();
         long userId = newUser();
 
         String backtestId =

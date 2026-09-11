@@ -1,8 +1,8 @@
 package com.ssafy.thorp.backtest.application.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,11 +29,12 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.amqp.AmqpException;
-import org.springframework.transaction.support.SimpleTransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
 
 /**
  * 커밋됐는데 브로커에 닿지 못한 작업의 재발행(spec 004 research R-18).
@@ -50,17 +51,31 @@ class JobRepublisherTest {
     private final EngineInputAssembler assembler = mock(EngineInputAssembler.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    /** 트랜잭션 경계는 이 테스트의 관심사가 아니다 — 콜백을 그대로 실행한다. */
-    private final TransactionTemplate transactionTemplate =
-            new TransactionTemplate() {
+    /**
+     * 트랜잭션 경계는 이 테스트의 관심사가 아니다 — 콜백을 그대로 실행하는 가짜 매니저를 준다.
+     *
+     * <p>전파 설정이 실제로 맞는지(AFTER_COMMIT 에서 새 트랜잭션을 여는지)는 여기서 확인할 수 없다. 그것은 {@code
+     * BacktestPublishAfterCommitIT} 가 실제 DB 로 확인한다.
+     */
+    private final PlatformTransactionManager transactionManager =
+            new AbstractPlatformTransactionManager() {
                 @Override
-                public <T> T execute(TransactionCallback<T> action) {
-                    return action.doInTransaction(new SimpleTransactionStatus());
+                protected Object doGetTransaction() {
+                    return new Object();
                 }
+
+                @Override
+                protected void doBegin(Object transaction, TransactionDefinition definition) {}
+
+                @Override
+                protected void doCommit(DefaultTransactionStatus status) {}
+
+                @Override
+                protected void doRollback(DefaultTransactionStatus status) {}
             };
 
     private final BacktestJobDispatcher dispatcher =
-            new BacktestJobDispatcher(repository, publisher, assembler, transactionTemplate, clock);
+            new BacktestJobDispatcher(repository, publisher, assembler, transactionManager, clock);
 
     private final JobRepublisher republisher =
             new JobRepublisher(repository, dispatcher, clock, Duration.ofMinutes(1), 50);
@@ -84,59 +99,57 @@ class JobRepublisherTest {
                 new RunLifecycle(NOW.minusSeconds(600), null, null, publishedAt, publishCount, 0));
     }
 
-    @Test
-    @DisplayName("발행 확인이 없는 대기 작업을 다시 보내고 시도 횟수를 올린다")
-    void republishesUnpublished() {
+    private void givenStaleRun() {
         BacktestRun stale = queuedRun(1, null);
         when(repository.findUnpublishedQueued(any(), anyInt())).thenReturn(List.of(stale));
         when(repository.findById(11L)).thenReturn(Optional.of(stale));
-        when(repository.update(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
+    }
+
+    @Test
+    @DisplayName("보내기 전에 시도 횟수를 먼저 올린다")
+    void countsBeforeSending() {
+        givenStaleRun();
 
         republisher.republishUnpublished();
 
-        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
-        verify(repository, org.mockito.Mockito.atLeastOnce()).update(captor.capture());
-        assertThat(captor.getAllValues().get(0).getLifecycle().publishCount())
-                .as("보내기 전에 먼저 올린다")
-                .isEqualTo(2);
-        verify(publisher).publish(any());
+        InOrder order = inOrder(repository, publisher);
+        order.verify(repository).recordPublishAttempt(11L);
+        order.verify(publisher).publish(any());
     }
 
     @Test
     @DisplayName("재발행이 성공하면 발행 확인 시각을 남긴다 — 다음 주기에 다시 집어 가지 않는다")
     void marksPublishedOnSuccess() {
-        BacktestRun stale = queuedRun(1, null);
-        when(repository.findUnpublishedQueued(any(), anyInt())).thenReturn(List.of(stale));
-        when(repository.findById(11L)).thenReturn(Optional.of(stale));
-        when(repository.update(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
+        givenStaleRun();
 
         republisher.republishUnpublished();
 
-        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
-        verify(repository, org.mockito.Mockito.atLeast(2)).update(captor.capture());
-        assertThat(captor.getAllValues().getLast().getLifecycle().publishedAt()).isEqualTo(NOW);
+        verify(repository).recordPublished(11L, NOW);
     }
 
     @Test
     @DisplayName("재발행이 또 실패하면 발행 확인을 남기지 않는다 — 다음 주기가 다시 집어 간다")
     void keepsUnpublishedOnFailure() {
-        BacktestRun stale = queuedRun(1, null);
-        when(repository.findUnpublishedQueued(any(), anyInt())).thenReturn(List.of(stale));
-        when(repository.findById(11L)).thenReturn(Optional.of(stale));
-        when(repository.update(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
+        givenStaleRun();
         org.mockito.Mockito.doThrow(new AmqpException("broker down"))
                 .when(publisher)
                 .publish(any());
 
         republisher.republishUnpublished();
 
-        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
-        verify(repository).update(captor.capture());
-        assertThat(captor.getValue().getLifecycle().publishedAt()).isNull();
-        assertThat(captor.getValue().getLifecycle().publishCount()).isEqualTo(2);
+        verify(repository).recordPublishAttempt(11L);
+        verify(repository, never()).recordPublished(any(), any());
+    }
+
+    @Test
+    @DisplayName("발행 경로는 실행 상태를 저장하지 않는다 — 이벤트가 바꾼 상태를 되돌리면 안 된다")
+    void neverWritesRunState() {
+        givenStaleRun();
+
+        republisher.republishUnpublished();
+
+        verify(repository, never()).update(any());
     }
 
     @Test
@@ -147,6 +160,6 @@ class JobRepublisherTest {
         republisher.republishUnpublished();
 
         verify(publisher, never()).publish(any());
-        verify(repository, never()).update(any());
+        verify(repository, never()).recordPublishAttempt(any());
     }
 }

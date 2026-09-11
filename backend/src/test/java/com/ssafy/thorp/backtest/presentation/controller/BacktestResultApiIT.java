@@ -239,7 +239,9 @@ class BacktestResultApiIT extends PostgresTestSupport {
         String id = requestFor(transactionTemplate.execute(status -> newJob()));
 
         for (String path : List.of("/timeseries", "/trades", "/positions?date=2025-01-02")) {
-            mockMvc.perform(get("/backtests/" + id + path))
+            mockMvc.perform(
+                            get("/backtests/" + id + path)
+                                    .header(CurrentRequester.DEV_HEADER, requesterId))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
         }
@@ -263,7 +265,9 @@ class BacktestResultApiIT extends PostgresTestSupport {
                 .andExpect(jsonPath("$.data.summary").doesNotExist());
 
         for (String path : List.of("/timeseries", "/trades", "/positions?date=2025-01-02")) {
-            mockMvc.perform(get("/backtests/" + id + path))
+            mockMvc.perform(
+                            get("/backtests/" + id + path)
+                                    .header(CurrentRequester.DEV_HEADER, requesterId))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
         }

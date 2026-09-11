@@ -270,7 +270,13 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.dlqCount = dlqCount;
     }
 
-    /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */
+    /**
+     * 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다.
+     *
+     * <p><b>이 메서드가 쓰는 컬럼과 발행 기록이 쓰는 컬럼은 겹치지 않는다.</b> 이벤트 처리(상태·진행·시작/종료 시각)와 발행
+     * 경로(published_at·publish_count)는 서로 다른 스레드에서 동시에 돈다 — 한쪽이 상대의 컬럼까지 통째로 덮어쓰면 늦게 저장한 쪽이 상대의 갱신을
+     * 되돌린다. 그래서 발행 기록은 여기가 아니라 전용 UPDATE 로 처리한다.
+     */
     void applyState(
             RunStatus status,
             int attempt,
@@ -281,7 +287,9 @@ public class BacktestRunJpaEntity extends BaseEntity {
             Integer progressCompletedDays,
             Integer progressTotalDays,
             String failureCode,
-            String failureMessage) {
+            String failureMessage,
+            Instant startedAt,
+            Instant finishedAt) {
         this.status = status;
         this.attempt = attempt;
         this.currentExecutionId = currentExecutionId;
@@ -292,6 +300,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.progressTotalDays = progressTotalDays;
         this.failureCode = failureCode;
         this.failureMessage = failureMessage;
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
     }
 
     @PrePersist

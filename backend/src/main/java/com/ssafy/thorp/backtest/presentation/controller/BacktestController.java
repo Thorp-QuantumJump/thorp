@@ -84,8 +84,9 @@ public class BacktestController {
     /** 차트용 거래일별 시계열. 결과가 없으면 409다(§2.5) — 빈 배열을 만들어 내지 않는다. */
     @GetMapping("/{backtestId}/timeseries")
     public ResponseEntity<ApiResponse<BacktestTimeseriesResponse>> getTimeseries(
-            @PathVariable String backtestId) {
-        BacktestTimeseriesResult result = queryService.getTimeseries(backtestId);
+            @PathVariable String backtestId, HttpServletRequest http) {
+        BacktestTimeseriesResult result =
+                queryService.getTimeseries(backtestId, currentRequester.requireRequesterId(http));
         return ResponseEntity.ok(ApiResponse.ok(BacktestTimeseriesResponse.from(result)));
     }
 
@@ -96,8 +97,12 @@ public class BacktestController {
      */
     @GetMapping("/{backtestId}/trades")
     public ResponseEntity<ApiResponse<BacktestTradePageResponse>> getTrades(
-            @PathVariable String backtestId, @Valid @ModelAttribute TradePageQuery query) {
-        BacktestTradePageResult result = queryService.getTrades(backtestId, toQuery(query));
+            @PathVariable String backtestId,
+            @Valid @ModelAttribute TradePageQuery query,
+            HttpServletRequest http) {
+        BacktestTradePageResult result =
+                queryService.getTrades(
+                        backtestId, currentRequester.requireRequesterId(http), toQuery(query));
         return ResponseEntity.ok(ApiResponse.ok(BacktestTradePageResponse.from(result)));
     }
 
@@ -109,8 +114,11 @@ public class BacktestController {
     @GetMapping("/{backtestId}/positions")
     public ResponseEntity<ApiResponse<BacktestPositionsResponse>> getPositions(
             @PathVariable String backtestId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        BacktestPositionsResult result = queryService.getPositions(backtestId, date);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletRequest http) {
+        BacktestPositionsResult result =
+                queryService.getPositions(
+                        backtestId, currentRequester.requireRequesterId(http), date);
         return ResponseEntity.ok(ApiResponse.ok(BacktestPositionsResponse.from(result)));
     }
 
