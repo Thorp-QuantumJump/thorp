@@ -53,7 +53,7 @@ from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 from worker.allocation import AllocationError, compute_weights
 from worker.artifacts import OrderRecord
 from worker.contracts.engine import ProgressCallback
-from worker.contracts.engine_input import EngineInput, RunSpec
+from worker.contracts.engine_input import EngineInput, RunSpec, Scenario
 from worker.contracts.engine_output import (
     CashFlow,
     ExceptionRecord,
@@ -71,6 +71,7 @@ from worker.contracts.events import ProgressPoint
 from worker.corporate_actions import DistributionLedger, apply_split, splits_on
 from worker.costs import CostModel, FillCost, Side
 from worker.market_data import MarketData
+from worker.target_risk import TargetRiskRules, apply_target_risk, target_risk_rules
 
 ZERO = Decimal("0")
 PRICE_QUANTUM = Decimal("0.000001")
@@ -142,6 +143,16 @@ class Lot:
     trade: TradeResult
     quantity: Decimal
     entry_reference: Decimal
+
+
+@dataclass(frozen=True)
+class PlannedTarget:
+    """판단일에 정한 목표 비중. 주문이 전부 체결·거절된 날 ``weightsSeries`` 로 기록한다."""
+
+    fill_day: date
+    weights: dict[str, Decimal]
+    risk_scale: Decimal | None = None
+    estimated_volatility: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -286,7 +297,10 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         self.lots: dict[str, list[Lot]] = {iid: [] for iid in self.instrument_ids}
         self.last_close: dict[str, Decimal] = {}
         self.pending: dict[str, PendingOrder] = {}
-        self.pending_target: tuple[date, dict[str, Decimal]] | None = None
+        self.pending_target: PlannedTarget | None = None
+        self.target_risk: TargetRiskRules | None = (
+            target_risk_rules(request.run) if request.run.scenario is Scenario.TARGET_RISK else None
+        )
         self.orders: list[OrderRecord] = []
         self.trades: list[TradeResult] = []
         self.fills: list[FillCost] = []
@@ -645,21 +659,33 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         )
         self.series.append(snapshot)
         # 이월된 주문이 남아 있으면 아직 그 리밸런싱의 실제 비중이 아니다 — 다 체결된 날 기록한다.
-        if self.pending_target is not None and self.pending_target[0] <= day and not self.pending:
-            self._record_weights(day, equity, self.pending_target[1])
+        planned = self.pending_target
+        if planned is not None and planned.fill_day <= day and not self.pending:
+            self._record_weights(day, equity, planned)
             self.pending_target = None
         self.changed = False
         self._report_progress(snapshot)
         if day in self.plan.decision_days:
             self._decide(day, ns_close, equity)
 
-    def _record_weights(self, day: date, equity: Decimal, target: dict[str, Decimal]) -> None:
-        """체결일 종가 기준 실제 비중. 목표와의 차이(Σ|target − actual|)가 ``weightError`` 다."""
+    def _record_weights(self, day: date, equity: Decimal, planned: PlannedTarget) -> None:
+        """체결일 종가 기준 실제 비중. 목표와의 차이(Σ|target − actual|)가 ``weightError`` 다.
+
+        TARGET_RISK 면 ``target`` 은 조절 뒤 비중이고 ``riskScale``·``estimatedVolatility`` 가
+        함께 남는다.
+        """
         actual = {iid: self._market_value(iid) / equity for iid in self.instrument_ids}
-        full_target = {iid: target.get(iid, ZERO) for iid in self.instrument_ids}
-        error = sum((abs(full_target[iid] - actual[iid]) for iid in self.instrument_ids), ZERO)
+        target = {iid: planned.weights.get(iid, ZERO) for iid in self.instrument_ids}
+        error = sum((abs(target[iid] - actual[iid]) for iid in self.instrument_ids), ZERO)
         self.weights_series.append(
-            WeightsPoint(date=day, target=full_target, actual=actual, weight_error=error)
+            WeightsPoint(
+                date=day,
+                target=target,
+                actual=actual,
+                weight_error=error,
+                risk_scale=planned.risk_scale,
+                estimated_volatility=planned.estimated_volatility,
+            )
         )
 
     def _report_progress(self, snapshot: PortfolioSnapshot) -> None:
@@ -686,13 +712,24 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         result = compute_weights(self.request.allocation, self.request.universe.items, history, day)
         self.weights_source = result.source
         self.exceptions.extend(result.exceptions)
+        weights = dict(result.weights)
+        risk_scale: Decimal | None = None
+        estimated: Decimal | None = None
+        if self.target_risk is not None:
+            # 전략이 낸 비중 위에 목표 위험 맞춤을 얹는다. 내리기만 하고 나머지는 현금이다.
+            overlay = apply_target_risk(self.target_risk, weights, history, day)
+            weights, risk_scale, estimated = (
+                overlay.weights,
+                overlay.risk_scale,
+                overlay.estimated_volatility,
+            )
         fill_day = self.plan.next_trading_day(day)
         if fill_day is None:
             return
 
         targets: dict[str, int] = {}
         for iid in self.instrument_ids:
-            weight = result.weights.get(iid, ZERO)
+            weight = weights.get(iid, ZERO)
             close = self.last_close.get(iid)
             if weight <= ZERO or close is None:
                 targets[iid] = 0
@@ -723,7 +760,7 @@ class PortfolioRebalanceExecution(NautilusStrategy):
             )
             self.orders.append(record)
             self.pending[iid] = PendingOrder(iid, side, abs(delta), fill_day, record)
-        self.pending_target = (fill_day, dict(result.weights))
+        self.pending_target = PlannedTarget(fill_day, weights, risk_scale, estimated)
 
 
 def execute_portfolio(

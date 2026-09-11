@@ -114,6 +114,10 @@ class WeightsPoint(ContractModel):
     target: dict[str, Decimal]
     actual: dict[str, Decimal]
     weight_error: Decimal | None = None
+    risk_scale: Decimal | None = (
+        None  # TARGET_RISK: 목표 위험 맞춤 조절 비율(PD-18). 시나리오 아니면 None
+    )
+    estimated_volatility: Decimal | None = None  # TARGET_RISK: 조절에 쓴 추정 변동성
 
 
 class TradeResult(ContractModel):

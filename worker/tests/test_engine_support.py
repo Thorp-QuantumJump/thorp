@@ -27,8 +27,34 @@ def run(**overrides: Any) -> Any:
 
 # (테스트 id, EngineInput 섹션 덮어쓰기, 오류 메시지에 반드시 들어가야 하는 필드 경로)
 UNSUPPORTED: list[tuple[str, dict[str, Any], str]] = [
-    ("run-scenario-target-risk", {"run": {"scenario": "TARGET_RISK"}}, "run.scenario"),
     ("run-scenario-cost-escalation", {"run": {"scenario": "COST_ESCALATION"}}, "run.scenario"),
+    # 목표 위험 맞춤은 규칙 사본과 목표값이 둘 다 있어야 계산한다. 없으면 지어내지 않는다(R-17).
+    (
+        "target-risk-without-rules",
+        {"run": {"scenario": "TARGET_RISK", "scenarioParams": {"targetVolatility": "0.1000"}}},
+        "run.scenarioRules",
+    ),
+    (
+        "target-risk-without-target",
+        {
+            "run": {
+                "scenario": "TARGET_RISK",
+                "scenarioRules": {"lookbackDays": 63, "scaleDownOnly": True},
+            }
+        },
+        "run.scenarioParams.targetVolatility",
+    ),
+    (
+        "target-risk-scale-up",
+        {
+            "run": {
+                "scenario": "TARGET_RISK",
+                "scenarioParams": {"targetVolatility": "0.1000"},
+                "scenarioRules": {"lookbackDays": 63, "scaleDownOnly": False},
+            }
+        },
+        "run.scenarioRules.scaleDownOnly",
+    ),
     (
         "fresh-cash-without-start-date",
         {"run": {"scenario": "FRESH_CASH_FROM"}},
@@ -80,7 +106,7 @@ def test_unsupported_request_is_rejected(_id: str, overrides: dict[str, Any], fi
 def test_every_unsupported_field_is_reported_at_once() -> None:
     """여러 항목이 동시에 미지원이면 한 번의 실패로 전부 알 수 있어야 한다."""
     output = run(
-        run={"scenario": "TARGET_RISK"},
+        run={"scenario": "COST_ESCALATION"},
         marketData={"fillPrice": "ADJUSTED"},
         portfolio={"currency": "USD", "leverage": "3", "shortSelling": True},
         execution={"partialFill": True},

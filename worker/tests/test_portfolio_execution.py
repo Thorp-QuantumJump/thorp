@@ -504,3 +504,85 @@ def test_engine_invariant_failure_is_returned_as_engine_error(
     output = run()
     assert output.run.status is RunStatus.FAILED
     assert output.run.error is not None and output.run.error.code == "ENGINE_ERROR"
+
+
+# --- TARGET_RISK 오버레이(PD-18) -----------------------------------------------------------------
+
+TARGET_RISK_RULES: dict[str, Any] = {
+    "version": "TARGET_RISK_OVERLAY/1",
+    "lookbackDays": 63,
+    "adjustAt": "REBALANCE",
+    "scaleDownOnly": True,
+}
+
+
+def target_risk(target: str, evaluation: dict[str, Any] | None = None) -> dict[str, Any]:
+    return three_etf(
+        "2023-08-01",
+        "2024-06-28",
+        run={
+            "scenario": "TARGET_RISK",
+            "scenarioParams": {"targetVolatility": target},
+            "scenarioRules": TARGET_RISK_RULES,
+        },
+        evaluation=evaluation or {"warmupTradingDays": None, "liquidationAtEnd": False},
+    )
+
+
+def test_target_risk_scales_down_only_when_the_estimate_exceeds_the_target() -> None:
+    output = completed(**target_risk("0.0500"))
+    assert output.versions is not None
+    assert output.versions.scenario_rules == "TARGET_RISK_OVERLAY/1"
+    points = output.weights_series
+    assert points
+    for point in points:
+        assert point.estimated_volatility is not None and point.estimated_volatility > 0
+        assert point.risk_scale is not None and 0 < point.risk_scale <= 1
+        # 고정 비중 합 1 × 조절 비율 = 조절 뒤 목표 합. 나머지는 현금이다.
+        assert abs(sum(point.target.values()) - point.risk_scale) < Decimal("1e-12")
+        if point.risk_scale < 1:
+            assert point.risk_scale == Decimal("0.0500") / point.estimated_volatility
+    assert any(point.risk_scale < 1 for point in points), "합성 자료의 변동성은 연 5%를 넘는다"
+    # 조절된 달에는 그만큼 현금이 남는다.
+    scaled = next(
+        point for point in points if point.risk_scale is not None and point.risk_scale < 1
+    )
+    snapshot = next(s for s in output.portfolio_series if s.date == scaled.date)
+    assert snapshot.cash / snapshot.equity > (1 - scaled.risk_scale) * Decimal("0.9")
+
+
+def test_loose_target_never_scales_up_and_equals_the_main_analysis() -> None:
+    """추정치가 목표 아래면 그대로다 — 올리지 않는다(레버리지 금지).
+
+    그러면 같은 워밍업의 주 분석과 결과가 같아야 한다.
+    """
+    loose = completed(**target_risk("0.9000"))
+    assert all(point.risk_scale == 1 for point in loose.weights_series)
+    main = completed(
+        **three_etf(
+            "2023-08-01",
+            "2024-06-28",
+            evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
+        )
+    )
+    assert loose.run.effective_start == main.run.effective_start
+    assert loose.portfolio_series == main.portfolio_series
+    assert loose.trades == main.trades
+
+
+def test_target_risk_default_warmup_is_the_overlay_lookback() -> None:
+    output = completed(**target_risk("0.9000"))
+    calendar = (
+        CsvMarketDataProvider(THREE_ETF_DIR)
+        .load([SEMICONDUCTOR, BATTERY, BIO], date(2023, 8, 1), date(2024, 6, 28))
+        .trading_days
+    )
+    assert output.run.effective_start == calendar[63]
+
+
+def test_target_risk_without_enough_history_fails_estimation() -> None:
+    """추정할 수익률이 모자라면 대충 추정하지 않고 ESTIMATION_FAILED 로 멈춘다."""
+    output = run(**target_risk("0.1000", {"warmupTradingDays": 0, "liquidationAtEnd": False}))
+    assert output.run.status is RunStatus.FAILED
+    assert output.run.error is not None and output.run.error.code == "ESTIMATION_FAILED"
+    assert "warmup" in output.run.error.message

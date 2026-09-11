@@ -48,7 +48,27 @@ public class EffectivePeriodCalculator {
             LocalDate requestedStart,
             LocalDate requestedEnd,
             Integer requestedWarmupTradingDays) {
-        int required = requiredWarmupTradingDays(rules);
+        return resolve(
+                rules,
+                null,
+                instrumentIds,
+                requestedStart,
+                requestedEnd,
+                requestedWarmupTradingDays);
+    }
+
+    /**
+     * @param scenarioOverlay 시나리오 오버레이 규칙({@code TARGET_RISK_OVERLAY}). null = 주 분석. 오버레이의 관측 길이도
+     *     워밍업에 들어간다 — 첫 판단일에 변동성을 추정할 수익률이 있어야 워커가 {@code ESTIMATION_FAILED} 없이 시작한다
+     */
+    public EffectivePeriod resolve(
+            StrategyRules rules,
+            StrategyRules scenarioOverlay,
+            List<String> instrumentIds,
+            LocalDate requestedStart,
+            LocalDate requestedEnd,
+            Integer requestedWarmupTradingDays) {
+        int required = requiredWarmupTradingDays(rules, scenarioOverlay);
         int warmup = required;
         if (requestedWarmupTradingDays != null) {
             if (requestedWarmupTradingDays < required) {
@@ -87,11 +107,23 @@ public class EffectivePeriodCalculator {
      * <p>등록표 명세에서 읽는다 — 코드에 전략별 숫자를 박으면 규칙 버전을 올려도 값이 따라오지 않는다. 명세에 관측 길이가 없는 전략(고정 비중·동일 비중)은 0이다.
      */
     public static int requiredWarmupTradingDays(StrategyRules rules) {
-        Map<String, Object> spec = rules.spec();
-        if (spec == null) {
-            return 0;
-        }
-        return intValue(spec, "lookbackDays") + intValue(spec, "skipRecentDays");
+        return requiredWarmupTradingDays(rules, null);
+    }
+
+    /** 전략 관측 길이와 시나리오 오버레이 관측 길이 중 긴 쪽. 둘은 같은 자료를 보므로 더하지 않는다. */
+    public static int requiredWarmupTradingDays(
+            StrategyRules rules, StrategyRules scenarioOverlay) {
+        int strategy = lookback(rules) + skipRecent(rules);
+        int overlay = scenarioOverlay == null ? 0 : lookback(scenarioOverlay);
+        return Math.max(strategy, overlay);
+    }
+
+    private static int lookback(StrategyRules rules) {
+        return rules.spec() == null ? 0 : intValue(rules.spec(), "lookbackDays");
+    }
+
+    private static int skipRecent(StrategyRules rules) {
+        return rules.spec() == null ? 0 : intValue(rules.spec(), "skipRecentDays");
     }
 
     private static int intValue(Map<String, Object> spec, String key) {

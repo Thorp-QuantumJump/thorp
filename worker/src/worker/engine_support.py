@@ -12,18 +12,21 @@
 from datetime import date
 
 from worker.allocation import ALLOCATION_RULES
+from worker.allocation.base import AllocationError
 from worker.contracts.engine_input import EngineInput, PriceSource, Scenario
 from worker.portfolio_execution import REBALANCE_MONTH_END
 from worker.rules_registry import rules_not_registered_message
+from worker.target_risk import target_risk_rules
 
 #: 엔진이 계산하는 통화. ``KRW_SIM``(KRW 와 1:1)으로 계산하므로 다른 통화를 받으면 KRW 로 계산해
 #: 놓고 결과에 그 통화라고 적게 된다.
 SUPPORTED_CURRENCY = "KRW"
 
-#: 시나리오별 지원 상태. 없는 시나리오는 아직 계산하지 않는다 — TARGET_RISK 는 결과 계약에
-#: ``riskScale``·``estimatedVolatility`` 칸이 없고(PD-18), COST_ESCALATION 은 ``escalation`` 규칙이
-#: 미정의다. 둘 다 계약과 함께 별도 Task 에서 연다.
-SUPPORTED_SCENARIOS = frozenset({Scenario.FULL_PERIOD, Scenario.FRESH_CASH_FROM})
+#: 계산하는 시나리오. COST_ESCALATION 은 비용 프로필에 ``escalation`` 규칙이 정의되지 않아 거절한다
+#: (spec 004 T007: 미정의면 INVALID_REQUEST). 규칙이 등록표에 생기면 계약과 함께 연다.
+SUPPORTED_SCENARIOS = frozenset(
+    {Scenario.FULL_PERIOD, Scenario.FRESH_CASH_FROM, Scenario.TARGET_RISK}
+)
 
 
 def unsupported_reasons(request: EngineInput) -> list[str]:
@@ -57,6 +60,11 @@ def unsupported_reasons(request: EngineInput) -> list[str]:
             f"run.scenario {run.scenario} is not computed by this engine yet;"
             f" supported: {supported}"
         )
+    if run.scenario is Scenario.TARGET_RISK:
+        try:
+            target_risk_rules(run)
+        except AllocationError as exc:
+            reasons.append(str(exc))
     if run.scenario is Scenario.FRESH_CASH_FROM:
         raw = (run.scenario_params or {}).get("startDate")
         try:

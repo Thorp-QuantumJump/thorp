@@ -37,6 +37,7 @@ from worker.portfolio_execution import (
     execute_portfolio,
     plan_days,
 )
+from worker.target_risk import target_risk_rules
 
 ZERO = Decimal("0")
 
@@ -72,6 +73,9 @@ def evaluation_start(request: EngineInput, calendar: list[date]) -> date:
     warmup = request.evaluation.warmup_trading_days
     if warmup is None:
         warmup = int((request.allocation.rules or {}).get("lookbackDays", 0))
+        if run.scenario is Scenario.TARGET_RISK:
+            # 첫 판단일에 추정할 수익률이 있어야 한다. 백엔드도 같은 규칙으로 워밍업을 확정한다.
+            warmup = max(warmup, target_risk_rules(run).lookback_days)
     if warmup >= len(in_range):
         raise MarketDataError(
             f"warmup of {warmup} trading days leaves no evaluation day in {len(in_range)} available"
@@ -266,9 +270,17 @@ class PortfolioBacktestEngine:
     @staticmethod
     def _versions(request: EngineInput, market: MarketData | None) -> Versions:
         cost = request.execution.cost_profile
+        # 거절 결과에도 versions 가 붙으므로 여기서는 검증하지 않고 있는 값만 읽는다.
+        overlay_version = (request.run.scenario_rules or {}).get("version")
+        scenario_rules = (
+            str(overlay_version)
+            if request.run.scenario is Scenario.TARGET_RISK and overlay_version is not None
+            else None
+        )
         return Versions(
             mapping=request.universe.mapping_version,
             rules=RuleVersion(version=request.allocation.rules_version),
+            scenario_rules=scenario_rules,
             cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),
             data=market.dataset_id if market is not None else None,
             engine=f"nautilus_trader {nautilus_trader.__version__}",
