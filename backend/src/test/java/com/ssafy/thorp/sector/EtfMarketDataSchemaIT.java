@@ -2,7 +2,6 @@ package com.ssafy.thorp.sector;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -19,6 +18,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 001 자료 저장 스키마의 불변식을 운영과 같은 PostgreSQL에서 검증한다 (spec 001 T003).
@@ -26,8 +26,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * <p>여기서 확인하는 것은 표가 있다는 사실이 아니라 <b>거부되어야 하는 입력이 실제로 거부되는지</b>다. 불변식을 애플리케이션이 아니라 DB에 둔 이유가 쓰는 쪽이
  * 여럿(파이썬 파이프라인·백엔드·psql 직접 접속)이기 때문이므로, 검증도 DB 경계에서 해야 뜻이 있다.
  *
- * <p>skip 조건({@code @Testcontainers(disabledWithoutDocker = true)})은 {@link PostgresTestSupport}에서
- * 물려받되, <b>Spring 컨텍스트를 새로 띄우지 않고 공용 컨테이너도 쓰지 않는다.</b> Spring은 설정이 다른
+ * <p>skip 조건({@code @Testcontainers(disabledWithoutDocker = true)})을 이 클래스에 직접 붙이고 {@code
+ * PostgresTestSupport}를 상속하지 않는다. 상속하면 그 클래스의 {@code @BeforeAll startContainerOnce()}까지 물려받아, 쓰지도
+ * 않을 공용 컨테이너가 함께 떠서 JVM이 끝날 때까지 남는다. <b>Spring 컨텍스트를 새로 띄우지 않고 공용 컨테이너도 쓰지 않는다.</b> Spring은 설정이 다른
  * {@code @DataJpaTest}·{@code @SpringBootTest}마다 컨텍스트를 따로 캐시하고 각 컨텍스트가 기본 10짜리 Hikari 풀을 테스트가 끝날
  * 때까지 붙들고 있는데, 이 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의 {@code max_connections}(기본 100)를 거의 다 쓰고 있다. 컨텍스트를 하나
  * 더 만들면 이 클래스가 아니라 <b>나중에 뜨는 다른 DB 테스트</b>가 {@code FATAL: sorry, too many clients already}로 죽는다(풀을
@@ -43,9 +44,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * <p>거부를 확인하는 단언은 세이브포인트로 감싼다({@link #rejectionOf}). PostgreSQL은 트랜잭션 안에서 문 하나가 실패하면 그 트랜잭션을 통째로
  * 중단시켜 뒤따르는 문을 모두 거절한다.
  *
- * <p>Docker가 없으면 {@link PostgresTestSupport}가 통째로 skip한다. 결과의 {@code skipped}를 반드시 확인한다.
+ * <p>Docker가 없으면 이 클래스를 통째로 skip한다. 결과의 {@code skipped}를 반드시 확인한다.
  */
-class EtfMarketDataSchemaIT extends PostgresTestSupport {
+@Testcontainers(disabledWithoutDocker = true)
+class EtfMarketDataSchemaIT {
 
     private static final String DATASET = "KRX_DAILY_20260907";
     private static final String ETF = "091160.XKRX";
@@ -93,7 +95,7 @@ class EtfMarketDataSchemaIT extends PostgresTestSupport {
                     + " complete, failure_reason, is_sample, source, map_version_id)"
                     + " VALUES (?, NOW(), NOW(), NOW(), ?, ?, TRUE, 'KRX_OPEN_API', ?)";
 
-    /** 스키마 전용 컨테이너. 이미지 태그는 운영 Compose·{@link PostgresTestSupport}와 같다. */
+    /** 스키마 전용 컨테이너. 이미지 태그는 운영 Compose·{@code PostgresTestSupport}와 같다. */
     private static final PostgreSQLContainer<?> SCHEMA_POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine");
 

@@ -140,6 +140,16 @@ class DatasetVersion:
     def __post_init__(self) -> None:
         validate_dataset_id(self.dataset_id)
         _require_aware(self.data_deadline, "data_deadline")
+        # research.md 결정 4가 값 규칙을 `KRX_DAILY_{자료마감일}`로 정했으므로 둘은 같은 날을
+        # 가리켜야 한다. 어긋나면 식별자가 말하는 날과 data_deadline 열이 말하는 날이 달라지고,
+        # 발행된 행은 고칠 수 없어 아무도 바로잡지 못한다.
+        derived = build_dataset_id(self.data_deadline)
+        if derived != self.dataset_id:
+            raise DatasetVersionError(
+                f"dataset_id와 data_deadline이 어긋난다: {self.dataset_id} ≠ {derived}"
+                f" (data_deadline={self.data_deadline.isoformat()}). 값 규칙은"
+                " KRX_DAILY_{자료마감일}이다 (research.md 결정 4)"
+            )
         _require_aware(self.collected_at, "collected_at")
         _require_aware(self.last_success_at, "last_success_at")
         if not isinstance(self.complete, bool):

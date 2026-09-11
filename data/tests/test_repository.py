@@ -14,6 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 from sqlalchemy import Table, create_engine, func, select
 
@@ -23,7 +24,9 @@ from data_pipeline.dataset_version import (
     DatasetAlreadyPublishedError,
     DatasetNotPublishedError,
     DatasetVersion,
+    DatasetVersionError,
     InvalidDatasetIdError,
+    dataset_deadline_date,
 )
 from data_pipeline.repository import (
     METADATA,
@@ -51,10 +54,16 @@ _MIGRATIONS = sorted(
 MIGRATION = _MIGRATIONS[-1] if _MIGRATIONS else None
 
 
+def deadline_for(dataset_id: str) -> datetime:
+    """``dataset_id``가 가리키는 날의 마감 시각. 둘은 같은 날이어야 한다 (research.md 결정 4)."""
+    day = dataset_deadline_date(dataset_id)
+    return datetime(day.year, day.month, day.day, 18, 0, tzinfo=UTC)
+
+
 def make_version(dataset_id: str = DATASET_ID, **overrides: Any) -> DatasetVersion:
     values: dict[str, Any] = {
         "dataset_id": dataset_id,
-        "data_deadline": MOMENT,
+        "data_deadline": deadline_for(dataset_id),
         "collected_at": MOMENT,
         "last_success_at": MOMENT,
         "complete": True,
@@ -539,3 +548,50 @@ def test_columns_match_the_migration(table: Table) -> None:
     assert sorted(column.name for column in table.columns) == sorted(
         parse_migration_columns(table.name)
     )
+
+
+class TestCodeReviewFixes:
+    """코드리뷰(2026-09-11)에서 나온 지적을 막는 회귀 테스트."""
+
+    def test_numpy_integers_are_accepted(self, published: MarketDataRepository) -> None:
+        # 이 파트는 pandas 기반이고 이 모듈이 DataFrame에서 PostgreSQL로 가는 유일한 다리다.
+        # numpy.int64는 int의 하위형이 아니라 형만 보면 거부된다.
+        row = price_row(volume=np.int64(1_200_000), value=np.int64(42_000_000_000))
+        assert published.load_daily_price(DATASET_ID, [row]) == 1
+
+    def test_numpy_bools_are_accepted(self, published: MarketDataRepository) -> None:
+        row = suspended_row(trading_suspended=np.bool_(True), price_carried_forward=np.bool_(True))
+        assert published.load_daily_price(DATASET_ID, [row]) == 1
+
+    def test_float_volume_is_still_rejected(self, published: MarketDataRepository) -> None:
+        # iterrows()는 수치 행을 float64로 올린다. 거래대금처럼 큰 정수에서 값이 달라질 수
+        # 있으므로 조용히 받지 않는다.
+        with pytest.raises(RowValidationError):
+            published.load_daily_price(DATASET_ID, [price_row(volume=1_200_000.0)])
+
+    def test_dataset_id_must_match_the_deadline(self) -> None:
+        # research.md 결정 4. 어긋난 채 발행되면 발행본이 불변이라 바로잡을 수 없다.
+        with pytest.raises(DatasetVersionError):
+            DatasetVersion(
+                dataset_id="KRX_DAILY_20260912",
+                data_deadline=deadline_for(DATASET_ID),
+                collected_at=MOMENT,
+                last_success_at=MOMENT,
+                complete=True,
+                is_sample=False,
+                source=SOURCE_KRX_OPEN_API,
+                map_version_id=1,
+            )
+
+    def test_missing_env_file_is_reported(self, tmp_path: Path) -> None:
+        # 없는 경로를 조용히 무시하면 셸에 걸린 다른 DATABASE_URL로 적재된다.
+        with pytest.raises(RepositoryError):
+            database_url_from_env(tmp_path / "없는파일.env")
+
+    def test_explicit_env_file_beats_the_environment(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("DATABASE_URL", "postgresql://공용:x@shared:5432/thorp")
+        env_file = tmp_path / ".env"
+        env_file.write_text("DATABASE_URL=postgresql://local:x@localhost:5432/thorp\n", "utf-8")
+        assert "localhost" in database_url_from_env(env_file)

@@ -15,6 +15,13 @@ DB에서 시계열을 읽어 ``processed/``나 ``raw/``로 되돌리는 경로�
 이미 발행된 ``dataset_id``에 다시 발행하거나, 이미 적재한 시계열을 다시 넣는 시도는 거부한다
 (FR-017). 자료를 고쳐야 하면 새 ``dataset_id``를 발행한다.
 
+동시 실행. 존재 확인과 INSERT는 한 트랜잭션 안에 있지만 잠금을 걸지 않으므로, READ
+COMMITTED에서 두 실행이 같은 ``dataset_id``를 동시에 다루면 확인이 둘 다 "없음"을 읽을 수
+있다. 그때는 ``dataset_version``의 UNIQUE와 시계열 PK가 막고, 이 모듈이 그 위반을 같은
+도메인 예외(:class:`DatasetAlreadyPublishedError`·:class:`DatasetAlreadyLoadedError`)로
+바꿔 돌려준다. 즉 **잘못된 자료가 들어가지는 않지만 어느 쪽이 이길지는 정해져 있지 않다.**
+수집을 병렬로 돌릴 계획이 생기면 ``dataset_id``에 advisory lock을 걸어야 한다.
+
 역할 분담. 저장 스키마
 (``backend/src/main/resources/db/migration/V20260911114500__etf_market_data.sql``)가 최종
 방어선이고 UPDATE·DELETE 거부 트리거·FK·CHECK를 모두 갖고 있다. 여기서는 DB 제약 이름만
@@ -25,6 +32,7 @@ DB CHECK 이름만으로 뜻이 통하는 값 범위 검사는 DB에 맡긴다.
 
 from __future__ import annotations
 
+import numbers
 import os
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -35,6 +43,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Any, Final
 
+import numpy as np
 from dotenv import load_dotenv
 from sqlalchemy import (
     BigInteger,
@@ -53,6 +62,7 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.dataset_version import (
     DatasetAlreadyLoadedError,
@@ -77,6 +87,9 @@ DATA_GAP_REASONS: Final[frozenset[str]] = frozenset(
 )
 
 DEFAULT_CHUNK_SIZE: Final[int] = 1000
+
+# PostgreSQL의 unique_violation. 유일성 위반만 재적재로 해석하고 FK·CHECK 위반과 구분한다.
+_PG_UNIQUE_VIOLATION: Final[str] = "23505"
 
 
 class RepositoryError(RuntimeError):
@@ -231,9 +244,17 @@ def _require_instrument_id(value: object, field: str = "instrument_id") -> str:
 
 
 def _require_bool(value: object, field: str) -> bool:
-    if not isinstance(value, bool):
-        raise RowValidationError(f"{field}은(는) bool이어야 한다: {value!r}")
-    return value
+    """bool을 요구하되 ``numpy.bool_``도 받는다.
+
+    이 파트는 pandas 기반이고 이 모듈이 DataFrame과 PostgreSQL 사이의 유일한 다리다.
+    ``numpy.bool_``은 ``bool``의 하위형이 아니라서 형만 보면 거부되는데, 값은 같고
+    상자만 다르므로 받아서 파이썬 ``bool``로 바꾼다.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, np.bool_):
+        return bool(value)
+    raise RowValidationError(f"{field}은(는) bool이어야 한다: {value!r}")
 
 
 def _check_daily_price(row: dict[str, Any]) -> None:
@@ -310,13 +331,26 @@ def _check_suspension_period(row: dict[str, Any]) -> None:
 
 
 def _require_integer(value: object, field: str) -> None:
-    if not isinstance(value, int) or isinstance(value, bool):
+    """정수를 요구하되 ``numpy.int64`` 같은 numpy 정수도 받는다.
+
+    ``numbers.Integral``은 numpy 정수를 포함하고 ``float``는 포함하지 않는다. 실수는
+    그대로 거부한다. ``DataFrame.iterrows()``는 수치 열이 섞인 행을 ``float64``로 올려
+    ``volume``을 실수로 만드는데, 그것을 조용히 받으면 거래대금처럼 큰 정수에서 값이
+    달라질 수 있다. 부르는 쪽은 ``to_dict("records")``나 ``itertuples()``를 쓴다.
+    """
+    if isinstance(value, bool | np.bool_) or not isinstance(value, numbers.Integral):
         raise RowValidationError(f"{field}은(는) 정수여야 한다: {value!r}")
 
 
 def _require_number(value: object, field: str) -> None:
-    """숫자 열의 형만 본다. 값의 범위(양수·상하한)는 저장 스키마의 CHECK가 본다."""
-    if isinstance(value, bool) or not isinstance(value, int | float | Decimal):
+    """숫자 열의 형만 본다. 값의 범위(양수·상하한)는 저장 스키마의 CHECK가 본다.
+
+    ``numpy.float64``는 ``float``의 하위형이라 그대로 통과하지만 ``numpy.int64``는
+    ``int``의 하위형이 아니므로 ``numbers.Integral``로 함께 받는다.
+    """
+    if isinstance(value, bool | np.bool_) or not isinstance(
+        value, numbers.Integral | float | Decimal
+    ):
         raise RowValidationError(f"{field}은(는) 숫자여야 한다: {value!r}")
     if not isfinite(float(value)):
         raise RowValidationError(
@@ -489,11 +523,20 @@ def normalize_database_url(url: str) -> str:
 
 
 def database_url_from_env(env_path: Path | None = None) -> str:
-    """``.env``의 ``DATABASE_URL``을 읽는다. 접속 정보를 코드에 두지 않는다."""
+    """``.env``의 ``DATABASE_URL``을 읽는다. 접속 정보를 코드에 두지 않는다.
+
+    ``env_path``를 명시하면 그 파일의 값이 이미 내보내진 환경 변수를 이긴다. 기본값
+    ``override=False``로 두면 셸에 공용 DB의 ``DATABASE_URL``이 걸려 있을 때 파일을
+    지정해도 무시되어, 의도한 곳이 아닌 DB에 적재된다. 발행된 자료는 트리거가
+    UPDATE·DELETE를 막아 되돌릴 수 없으므로 조용히 다른 곳에 넣는 실패는 치명적이다.
+    없는 경로를 넘기면 조용히 넘어가지 않고 알린다.
+    """
     if env_path is None:
         load_dotenv()
     else:
-        load_dotenv(env_path)
+        if not env_path.exists():
+            raise RepositoryError(f"지정한 환경 파일이 없다: {env_path}")
+        load_dotenv(env_path, override=True)
     url = (os.environ.get("DATABASE_URL") or "").strip()
     if not url:
         raise RepositoryError(
@@ -533,13 +576,22 @@ class MarketDataRepository:
         if not isinstance(version, DatasetVersion):
             raise DatasetVersionError(f"DatasetVersion이어야 한다: {type(version).__name__}")
         row = version.to_row()
-        with self._engine.begin() as conn:
-            if self._published(conn, version.dataset_id):
-                raise DatasetAlreadyPublishedError(
-                    f"이미 발행된 자료 버전이다: {version.dataset_id}. "
-                    "발행된 버전은 고치지 않고 새 dataset_id로 발행한다 (FR-017)"
-                )
-            conn.execute(dataset_version_table.insert().values(**row))
+        already = DatasetAlreadyPublishedError(
+            f"이미 발행된 자료 버전이다: {version.dataset_id}. "
+            "발행된 버전은 고치지 않고 새 dataset_id로 발행한다 (FR-017)"
+        )
+        try:
+            with self._engine.begin() as conn:
+                if self._published(conn, version.dataset_id):
+                    raise already
+                conn.execute(dataset_version_table.insert().values(**row))
+        except IntegrityError as error:
+            # 확인과 INSERT 사이에 다른 실행이 같은 dataset_id를 넣으면 여기로 온다.
+            # uk_dataset_version_dataset_id가 최종 방어선이고, 부르는 쪽이 잡는 것은
+            # 도메인 예외이므로 원래 오류를 붙여 같은 예외로 바꾼다.
+            if self._is_unique_violation(error):
+                raise already from error
+            raise
 
     def is_published(self, dataset_id: str) -> bool:
         """자료 버전 행이 있는지 확인한다. 적재해도 되는지 판단하는 용도다."""
@@ -617,22 +669,40 @@ class MarketDataRepository:
         # 되돌릴 수 없다(발행된 자료는 DELETE도 거부된다).
         prepared = _normalize_rows(spec, dataset_id, rows)
 
-        with self._engine.begin() as conn:
-            if not self._published(conn, dataset_id):
-                raise DatasetNotPublishedError(
-                    f"자료 버전 행이 없다: {dataset_id}. "
-                    "publish_dataset_version으로 자료 버전을 먼저 발행한 뒤 시계열을 적재한다"
-                )
-            if self._has_rows(conn, spec.table, dataset_id):
-                raise DatasetAlreadyLoadedError(
-                    f"{table_name}에 이미 {dataset_id} 자료가 적재되어 있다. "
-                    "발행된 자료는 덧붙이거나 고치지 않고 새 dataset_id로 다시 만든다 (FR-017)"
-                )
-            for start in range(0, len(prepared), chunk_size):
-                chunk: Sequence[dict[str, Any]] = prepared[start : start + chunk_size]
-                if chunk:
-                    conn.execute(spec.table.insert(), list(chunk))
+        already = DatasetAlreadyLoadedError(
+            f"{table_name}에 이미 {dataset_id} 자료가 적재되어 있다. "
+            "발행된 자료는 덧붙이거나 고치지 않고 새 dataset_id로 다시 만든다 (FR-017)"
+        )
+        try:
+            with self._engine.begin() as conn:
+                if not self._published(conn, dataset_id):
+                    raise DatasetNotPublishedError(
+                        f"자료 버전 행이 없다: {dataset_id}. "
+                        "publish_dataset_version으로 자료 버전을 먼저 발행한 뒤 시계열을 적재한다"
+                    )
+                if self._has_rows(conn, spec.table, dataset_id):
+                    raise already
+                for start in range(0, len(prepared), chunk_size):
+                    chunk: Sequence[dict[str, Any]] = prepared[start : start + chunk_size]
+                    if chunk:
+                        conn.execute(spec.table.insert(), list(chunk))
+        except IntegrityError as error:
+            # 두 실행이 같은 dataset_id를 동시에 적재하면 확인이 둘 다 "없음"을 읽는다.
+            # 시계열 PK가 최종 방어선이며, 그때도 도메인 예외로 알린다.
+            if self._is_unique_violation(error):
+                raise already from error
+            raise
         return len(prepared)
+
+    @staticmethod
+    def _is_unique_violation(error: IntegrityError) -> bool:
+        """유일성 위반인지 가린다. FK·CHECK 위반을 재적재로 오인하지 않기 위함이다."""
+        origin = getattr(error, "orig", None)
+        sqlstate = getattr(origin, "sqlstate", None)
+        if sqlstate is not None:
+            return sqlstate == _PG_UNIQUE_VIOLATION
+        # SQLite에는 sqlstate가 없다. 테스트 대역에서만 이 갈래를 탄다.
+        return "UNIQUE constraint failed" in str(origin)
 
     @staticmethod
     def _published(conn: Connection, dataset_id: str) -> bool:
