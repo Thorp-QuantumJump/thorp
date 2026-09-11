@@ -18,7 +18,7 @@
 ## 다른 spec과의 경계
 
 - **004가 001에 요구하는 계약**은 `specs/004-backtest-execution/contracts/market-data-input.md`다. 004 워커의 `PostgresMarketDataProvider`(R-09)가 그 열을 읽고, 워커용 읽기 전용 접속 `MARKET_DATA_URL`은 004 T002가 마련한다. 001의 저장 설계가 그 계약을 만족해야 한다
-- **마이그레이션 번호**: 저장소에 V2까지 있고 004가 V3~V6을 쓴다. 001은 **V7**을 쓴다. 007(`V3__param_search`)과 014(`V3__spring_session`)도 V3을 적어 두었으므로 재배정이 필요하다(T002에서 결론)
+- **마이그레이션 번호**: T002에서 **타임스탬프 방식(`V{YYYYMMDDHHMMSS}__설명.sql`)으로 전환**했다(2026-09-11 확정, `backend/CLAUDE.md`). 여러 spec이 같은 번호를 적어 두던 충돌이 이로써 사라진다. 저장소에 적용된 `V1`~`V4`는 그대로 두며, Flyway가 버전을 숫자로 정렬하므로 타임스탬프가 뒤에 온다. 001이 쓰는 파일은 `V20260911114500__etf_market_data.sql`이다
 - **`worker/src/worker/market_data.py`**: 004 T004(`S15P21E205-134`)가 CSV 픽스처 기반 공급자를 먼저 만들고, 001 T011이 실제 저장소 연결을 얹는다. 004가 먼저 병합되어야 한다
 
 ---
