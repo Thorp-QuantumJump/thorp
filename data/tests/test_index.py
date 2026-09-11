@@ -278,8 +278,31 @@ class TestQuotaLimit:
         assert collection.complete is False
         assert collection.failure_reason
         assert "지수" in collection.failure_reason
-        assert collection.collected_dates == list(CANDIDATE_DAYS[:3])
-        assert collection.last_collected == CANDIDATE_DAYS[2]
+        assert collection.called_dates == list(CANDIDATE_DAYS[:3])
+        assert collection.uncalled_count == len(CANDIDATE_DAYS) - 3
+
+
+class TestDeadlineIsATradingDay:
+    """자료 마감일은 **값을 얻은 마지막 거래일**이며 호출을 마친 마지막 날짜가 아니다.
+
+    지수 수집의 후보는 달력 날짜라 호출 목록의 끝이 휴장일일 수 있다. 그 값을 마감일로 쓰면
+    ``dataset_id``와 ``data_deadline``이 휴장일로 발행되고, 발행본은 트리거가 UPDATE·DELETE를
+    막아 되돌릴 수 없다 (FR-017).
+    """
+
+    def test_called_dates_can_end_on_a_closed_day(self) -> None:
+        # 2026-09-06은 일요일이다. 호출은 마쳤고 빈 배열이 왔다.
+        collection = collect(days=tuple(CANDIDATE_DAYS[:6]))
+        assert collection.called_dates[-1] == date(2026, 9, 6)
+
+    def test_last_trading_day_skips_the_closed_day(self) -> None:
+        collection = collect(days=tuple(CANDIDATE_DAYS[:6]))
+        assert collection.last_trading_day() == date(2026, 9, 4)
+
+    def test_last_trading_day_is_none_without_data(self) -> None:
+        # 휴장일만 물었으면 마감일로 쓸 날짜가 없다. 없는 날짜를 지어내지 않는다.
+        collection = collect(days=(date(2026, 9, 6),))
+        assert collection.last_trading_day() is None
 
     def test_calendar_is_short_when_the_quota_runs_out(self) -> None:
         """한도로 끊긴 달력을 그대로 쓰면 그 뒤 거래일이 휴장일로 보인다.

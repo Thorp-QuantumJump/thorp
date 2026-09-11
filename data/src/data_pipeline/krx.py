@@ -73,20 +73,22 @@ _HTTP_UNAUTHORIZED: Final[int] = 401
 _HTTP_TOO_MANY_REQUESTS: Final[int] = 429
 
 #: 이용 한도로 읽을 응답 표시. **개발 중 한도에 걸리지 않아 실제 응답을 보지 못했다.**
-#: 그래서 HTTP 429와 아래 낱말을 근거로 삼고, 처리 경로 자체는
+#: 그래서 확인된 HTTP 429를 주된 근거로 삼고, 아래 낱말은 **200이 아닌 응답에만** 보조로 쓴다
+#: (:func:`_rows_from_response` 의 판정 순서 참고). 처리 경로 자체는
 #: ``--simulate-quota-exhausted``(:class:`QuotaLimitedSource`)로 재현해 검증한다.
-#: 실제 한도 응답을 확인하면 이 목록을 그 값으로 좁힌다.
+#:
+#: 낱말은 **한도로만 읽히는 것**으로 한정한다. ``초과``·``quota``·``traffic`` 같은 넓은 낱말을
+#: 넣었더니 ``조회 기간을 초과하였습니다`` 같은 인자 오류까지 한도로 분류되었고, 한도 오류는
+#: 수집이 일부러 삼켜 중단으로 처리하므로 거짓 사유를 달고 되돌릴 수 없는 부분 갱신본이
+#: 발행된다. 실제 한도 응답을 확인하면 이 목록을 그 값 하나로 좁힌다.
 _QUOTA_MARKERS: Final[tuple[str, ...]] = (
     "too many requests",
-    "limit exceeded",
-    "exceeded the limit",
     "rate limit",
-    "quota",
-    "traffic",
     "요청 한도",
     "이용 한도",
     "호출 한도",
-    "초과",
+    "일일 허용량",
+    "트래픽 초과",
 )
 
 _DEFAULT_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -195,8 +197,22 @@ def _rows_from_response(
 ) -> list[Mapping[str, str]]:
     """응답을 행 목록으로 바꾸고 인증·한도 오류를 가려낸다.
 
-    HTTP 상태와 본문의 ``respCode``를 함께 본다. 이 원천은 활용 승인이 없을 때 401을 내고
-    (2026-09-11 확인), 한도 응답은 확인하지 못했으므로 429와 낱말 표시로 판정한다.
+    **판정 순서가 중요하다.** 확인된 것부터 보고 추측은 마지막에 둔다.
+
+    1. 401(활용 승인 없음). 2026-09-11에 실제로 받아 본 응답이다
+    2. 429(요청 과다). HTTP 상태나 ``respCode``가 그 값이면 한도로 본다
+    3. 200이 아닌 응답의 ``respMsg``에 한도를 뜻하는 낱말이 있으면 한도로 본다
+    4. 그 밖의 200이 아닌 응답은 :class:`KrxResponseError` 다
+
+    한도로 **잘못** 분류하면 피해가 크다. :func:`collect_daily_quotes` 가 한도 오류를 일부러
+    삼켜 중단으로 처리하므로(FR-014), ``--commit``이 붙은 실행은 "이용 한도로 중단했다"는
+    사유를 달고 되돌릴 수 없는 부분 갱신본을 발행한다. 실제 원인이 잘못된 요청이면 다시
+    실행해도 같은 자리에서 멈추는데 사유는 거짓으로 남는다.
+
+    그래서 3번을 **200이 아닌 응답에만** 적용하고 낱말도 한도로만 읽히는 것으로 좁혔다.
+    이전에는 ``초과``만으로도 한도로 보았는데, ``조회 기간을 초과하였습니다`` 같은 인자
+    오류가 200으로 오면 그것까지 한도가 된다. 잘못 분류해 조용히 발행하는 편보다 분류하지
+    못해 시끄럽게 멈추는 편이 낫다 — 멈추면 발행이 일어나지 않는다.
     """
     where = f"{group}/{endpoint} basDd={bas_dd:%Y%m%d}"
     status = response.status_code
@@ -212,16 +228,16 @@ def _rows_from_response(
         message = str(body.get("respMsg") or "")
         resp_code = str(body.get("respCode") or "")
 
-    if status == _HTTP_TOO_MANY_REQUESTS or resp_code == str(_HTTP_TOO_MANY_REQUESTS):
-        raise KrxQuotaExhaustedError(f"이용 한도에 걸렸다: {where} (HTTP {status} {message})")
-    if _looks_like_quota(message):
-        raise KrxQuotaExhaustedError(f"이용 한도에 걸렸다: {where} ({message})")
     if status == _HTTP_UNAUTHORIZED or resp_code == str(_HTTP_UNAUTHORIZED):
         raise KrxAuthError(
             f"인증키가 없거나 이 서비스의 활용 승인이 없다: {where} ({message}). "
             "KRX OPEN API는 서비스별로 승인을 받는다"
         )
+    if status == _HTTP_TOO_MANY_REQUESTS or resp_code == str(_HTTP_TOO_MANY_REQUESTS):
+        raise KrxQuotaExhaustedError(f"이용 한도에 걸렸다: {where} (HTTP {status} {message})")
     if status != 200:
+        if _looks_like_quota(message):
+            raise KrxQuotaExhaustedError(f"이용 한도에 걸렸다: {where} (HTTP {status} {message})")
         raise KrxResponseError(f"예상하지 못한 응답이다: {where} (HTTP {status} {message})")
     if not isinstance(body, Mapping):
         raise KrxResponseError(f"응답 본문이 매핑이 아니다: {where} ({type(body).__name__})")
@@ -584,17 +600,21 @@ def collect_daily_quotes(
             code = str(row.get("ISU_CD") or "").strip()
             if not code:
                 raise KrxResponseError(f"{group}/{endpoint} {day:%Y%m%d} 행에 ISU_CD가 없다")
-            # 식별자로 바꾸기 **전에** 원천 코드로 걸러낸다. 하루를 부르면 그날 상장된 ETF
-            # 전부가 오는데 그 안에 저장 스키마가 담을 수 없는 코드가 섞여 있어서(아래),
-            # 먼저 바꾸면 찾지도 않는 종목 때문에 수집 전체가 멈춘다.
-            if wanted_codes is not None and code not in wanted_codes:
-                continue
             if ISSUE_CODE_PATTERN.match(code) is None:
                 # 6자리 숫자가 아닌 종목코드다(예: ``0184E0``). 저장 스키마의
                 # ``ck_daily_price_instrument_id_format``과 ``engine_input.py``가 모두
-                # ``{6자리}.XKRX``만 허용하므로 담을 수 없다. 수집을 멈추지도, 조용히
-                # 버리지도 않고 모아 두어 부르는 쪽이 보고할 수 있게 한다.
+                # ``{6자리}.XKRX``만 허용하므로 담을 수 없다.
+                #
+                # **찾는 종목만 걸러내기보다 이 검사를 먼저 둔다.** 진입점은 ``--instruments``를
+                # 필수로 받고 그 값은 이미 6자리로 검사되므로, 걸러내기를 먼저 하면 이 갈래에
+                # 아무도 도달하지 못해 모아 둔 목록이 늘 비고 보고도 나오지 않는다. 담을 수
+                # 없는 종목이 원천의 26%(2026-09-10 기준 304종목)라는 사실은 후보를 고르는
+                # 쪽에 필요한 정보라, 찾는 종목이 무엇이든 관측한 대로 알린다.
                 collection.unsupported_codes.add(code)
+                continue
+            # 식별자로 바꾸기 전에 원천 코드로 걸러낸다. 하루를 부르면 그날 상장된 ETF
+            # 전부가 오므로 찾는 종목만 남긴다.
+            if wanted_codes is not None and code not in wanted_codes:
                 continue
             instrument_id = instrument_id_for(code)
             quote = normalize_etf_row(row, expected_date=day)

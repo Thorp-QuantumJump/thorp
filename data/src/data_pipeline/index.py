@@ -127,17 +127,34 @@ def normalize_index_row(
 
 @dataclass
 class IndexCollection:
-    """지수 수집 결과. 중단 사유까지 함께 담는다 (FR-014)."""
+    """지수 수집 결과. 중단 사유까지 함께 담는다 (FR-014).
+
+    ``called_dates``는 **호출을 마친 달력 날짜**이고 값이 왔는지와 무관하다. 지수 수집은
+    거래일 달력을 만드는 단계라 후보가 달력 날짜여서(휴장일이 섞여 있다) 이 목록의 마지막
+    날짜는 휴장일일 수 있다. 그래서 **자료 마감일로 쓸 수 있는 것은 이 목록이 아니라
+    :meth:`last_trading_day` 다.**
+
+    ``KrxCollection``에는 ``last_collected``가 있고 그 값은 거래일이다. ETF 수집은 이미 만들어진
+    달력을 입력으로 받기 때문이다. 여기에 같은 이름을 두면 뜻이 다른 두 값이 같은 이름으로
+    불려 마감일이 휴장일로 발행된다. 발행본은 트리거가 UPDATE·DELETE를 막아 되돌릴 수
+    없으므로(FR-017) 이름을 갈라 둔다.
+    """
 
     quotes: list[IndexQuote] = field(default_factory=list)
-    collected_dates: list[date] = field(default_factory=list)
+    called_dates: list[date] = field(default_factory=list)
     requested_dates: list[date] = field(default_factory=list)
     complete: bool = True
     failure_reason: str | None = None
 
     @property
-    def last_collected(self) -> date | None:
-        return max(self.collected_dates) if self.collected_dates else None
+    def uncalled_count(self) -> int:
+        """호출하지 못한 날짜 수. 이용 한도로 중단된 뒤에 몇 날이 남았는지 센다."""
+        return len(self.requested_dates) - len(self.called_dates)
+
+    def last_trading_day(self, index_code: str = CALENDAR_INDEX_CODE) -> date | None:
+        """값을 실제로 얻은 마지막 거래일. **자료 마감일은 이 값으로 정한다.**"""
+        calendar = self.trading_calendar(index_code)
+        return calendar[-1] if calendar else None
 
     def for_index(self, index_code: str) -> list[IndexQuote]:
         picked = [quote for quote in self.quotes if quote.index_code == index_code]
@@ -198,7 +215,7 @@ def collect_index_quotes(
             quote = normalize_index_row(row, expected_date=day, index_code=code)
             if quote is not None:
                 collection.quotes.append(quote)
-        collection.collected_dates.append(day)
+        collection.called_dates.append(day)
     return collection
 
 

@@ -109,7 +109,12 @@ RECONCILIATION_RECORD_VALUE_COLUMNS: Final[tuple[str, ...]] = (
 
 #: 표본 하나를 가리키는 키. 사유까지 넣는 이유는 같은 종목·같은 날짜에 사유가 둘일 수 있고
 #: (분배금 지급일과 분할일이 겹칠 수 있다) 사유마다 대조할 항목이 다르기 때문이다.
-SampleKey = tuple[str, date, str]
+#: 표본 하나를 가리키는 키. 마지막 칸은 **그 표본을 만든 기업행위의 배당락일**이며 상장
+#: 첫날 표본에는 없다(``None``). 이 칸이 없으면 배당락일이 다르고 지급일이 같은 분배금 둘이
+#: 한 표본으로 합쳐진다. 금액까지 같으면 조용히 합쳐져 기업행위 하나가 대조되지 않은 채
+#: "표본을 모두 대조했다"는 판정이 나오고, 금액이 다르면 대조 자체가 멈춘다. 둘 다 FR-016의
+#: "모든 분배금 지급일"을 어긴다.
+SampleKey = tuple[str, date, str, date | None]
 
 
 class ReconciliationError(ValueError):
@@ -242,6 +247,9 @@ class ReconciliationTarget:
     instrument_id: str
     target_date: date
     sample_reason: str
+    #: 이 표본을 만든 기업행위의 배당락일. 상장 첫날 표본에는 없다. 저장 열이 아니라
+    #: 표본을 구분하는 값이며, ``reconciliation_record``에는 들어가지 않는다.
+    event_ex_date: date | None = None
 
     def __post_init__(self) -> None:
         _require_instrument_id(self.instrument_id)
@@ -250,10 +258,26 @@ class ReconciliationTarget:
             raise ReconciliationError(
                 f"sample_reason은 {list(SAMPLE_REASONS)} 중 하나여야 한다: {self.sample_reason!r}"
             )
+        if self.event_ex_date is not None:
+            _require_sample_date(self.event_ex_date, "event_ex_date")
+            if self.sample_reason == SAMPLE_LISTING:
+                raise ReconciliationError(
+                    f"상장 첫날 표본에는 배당락일이 없다: {self.instrument_id} {self.target_date}"
+                )
+            if self.event_ex_date > self.target_date:
+                raise ReconciliationError(
+                    f"배당락일이 표본 날짜보다 뒤다: {self.instrument_id} "
+                    f"{self.event_ex_date} > {self.target_date}"
+                )
 
     @property
     def key(self) -> SampleKey:
-        return (self.instrument_id, self.target_date, self.sample_reason)
+        return (
+            self.instrument_id,
+            self.target_date,
+            self.sample_reason,
+            self.event_ex_date,
+        )
 
 
 def build_samples(
@@ -307,7 +331,9 @@ def build_samples(
                 f"상장 전 기업행위다: {action.instrument_id} {sample_date} "
                 f"< listed_on {window.listed_on}"
             )
-        target = ReconciliationTarget(action.instrument_id, sample_date, sample_reason)
+        target = ReconciliationTarget(
+            action.instrument_id, sample_date, sample_reason, action.ex_date
+        )
         targets[target.key] = target
 
     return tuple(sorted(targets.values(), key=lambda item: item.key))
@@ -330,7 +356,7 @@ def build_queried_values(
             raise ReconciliationError(
                 f"상장 구간은 ListingWindow여야 한다: {type(window).__name__}"
             )
-        key = (window.instrument_id, window.listed_on, SAMPLE_LISTING)
+        key = (window.instrument_id, window.listed_on, SAMPLE_LISTING, None)
         values[key] = {FIELD_LISTED_ON: value_text(window.listed_on)}
 
     for action in actions:
@@ -339,13 +365,19 @@ def build_queried_values(
                 f"기업행위는 CorporateAction이어야 한다: {type(action).__name__}"
             )
         if action.is_distribution:
-            key = (action.instrument_id, action.pay_date, SAMPLE_DISTRIBUTION)
+            key = (
+                action.instrument_id,
+                action.pay_date,
+                SAMPLE_DISTRIBUTION,
+                action.ex_date,
+            )
             entry = {
                 FIELD_AMOUNT: value_text(action.amount),
                 FIELD_PAY_DATE: value_text(action.pay_date),
+                FIELD_EX_DATE: value_text(action.ex_date),
             }
         else:
-            key = (action.instrument_id, action.ex_date, SAMPLE_SPLIT)
+            key = (action.instrument_id, action.ex_date, SAMPLE_SPLIT, action.ex_date)
             entry = {
                 FIELD_AMOUNT: value_text(action.amount),
                 FIELD_EX_DATE: value_text(action.ex_date),
@@ -404,10 +436,14 @@ def disclosed_values_from_records(
         missing = sorted({"instrument_id", "target_date", "sample_reason", "values"} - set(record))
         if missing:
             raise ReconciliationError(f"{position}번째 공시값에 없는 열: {missing}")
+        # ``event_ex_date``는 선택이다. 지급일이 같은 분배금이 둘인 종목에서만 필요하고,
+        # 없으면 조회값의 구분자와 짝이 맞지 않아 그 표본이 "대조하지 않음"으로 남는다.
+        # 빠뜨린 것을 조용히 넘기지 않고 그렇게 드러나게 두는 편이 맞다.
         target = ReconciliationTarget(
             instrument_id=str(record["instrument_id"]),
             target_date=record["target_date"],
             sample_reason=str(record["sample_reason"]),
+            event_ex_date=record.get("event_ex_date"),
         )
         raw_values = record["values"]
         if not isinstance(raw_values, Mapping) or not raw_values:

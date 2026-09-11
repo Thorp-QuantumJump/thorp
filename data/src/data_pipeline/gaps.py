@@ -397,14 +397,25 @@ def build_instrument_series(
     calendar: Sequence[date],
     window: ListingWindow,
     actions: Iterable[CorporateAction] = (),
+    *,
+    actions_known_from: date | None = None,
 ) -> InstrumentSeries:
     """원시 종가 계열 → 조정 계열 → 일별 가격 행 순서를 한 번에 묶는다.
 
     이 순서를 함수로 묶는 이유는 뒤바꾸면 조용히 틀린 값이 나오기 때문이다. 조정 계열을
     먼저 만들고 정지일을 나중에 채우면, 정지일의 조정가가 원천 기준가 기준이 되어 같은
     행의 ``close``와 다른 계열을 가리킨다.
+
+    ``actions_known_from``은 기업행위 목록이 빠짐없다고 말할 수 있는 가장 이른 날이며
+    :func:`data_pipeline.corporate_actions.build_adjustment_series` 로 그대로 넘긴다.
+    **이 인자를 여기서 받지 않으면 FR-006의 ``MISSING_CORPORATE_ACTION`` 기록이 파이프라인
+    경로에서 영원히 만들어지지 않는다.** 2020년부터만 담은 기업행위 파일로 2010년 상장
+    종목을 처리하면 2010~2019년의 누적 계수가 틀린 채로, 그 사실을 알리는 자료 부족 구간도
+    없이 발행된다.
     """
     closes = raw_close_series(quotes, calendar, window)
-    adjustment = build_adjustment_series(window.instrument_id, closes, actions)
+    adjustment = build_adjustment_series(
+        window.instrument_id, closes, actions, actions_known_from=actions_known_from
+    )
     build = build_daily_prices(quotes, calendar, window, adjustment)
     return InstrumentSeries(instrument_id=window.instrument_id, adjustment=adjustment, build=build)

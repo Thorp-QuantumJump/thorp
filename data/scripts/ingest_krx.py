@@ -32,7 +32,6 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import create_engine
 
 # `scripts/`를 직접 실행하면 `src/`가 sys.path에 없다. `data_pipeline`은 설치형 패키지가 아니고
 # pytest의 `pythonpath` 설정으로만 잡히므로(`pyproject.toml`), 진입점이 직접 경로를 붙인다.
@@ -145,6 +144,18 @@ def build_parser() -> argparse.ArgumentParser:
             '[{"instrumentId": ..., "exDate": ..., "eventType": "DISTRIBUTION", '
             '"amount": "120", "payDate": ...}] 모양이다. '
             "주지 않으면 기업행위가 없는 것으로 보고 누적 계수가 전부 1이 된다"
+        ),
+    )
+    parser.add_argument(
+        "--actions-known-from",
+        type=_parse_day,
+        default=None,
+        help=(
+            "기업행위 목록이 빠짐없다고 말할 수 있는 가장 이른 날 YYYY-MM-DD (선택). "
+            "그날보다 앞 구간은 빠진 기업행위가 있을 수 있으므로 MISSING_CORPORATE_ACTION "
+            "자료 부족 구간으로 기록한다 (FR-006). 기업행위는 원천 API로 받을 수 없어 공시를 "
+            "옮긴 파일로 들어오고, 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이지 "
+            "코드가 알아낼 수 있는 값이 아니다. 주지 않으면 목록이 전 구간을 담았다고 본다"
         ),
     )
     parser.add_argument(
@@ -294,11 +305,13 @@ def build_source(*, env_file: Path | None, allowed_calls: int | None) -> krx.Dai
 def data_deadline(etf: krx.KrxCollection, indices: index.IndexCollection) -> date:
     """데이터 마감일. **요청한 날짜가 아니라 실제로 수집한 마지막 거래일이다.**
 
-    두 수집의 ``last_collected`` 가운데 이른 쪽을 쓴다. 한쪽이 먼저 끊기면 그 뒤 구간은
+    ETF 쪽 ``last_collected``와 지수 쪽 ``last_trading_day()`` 가운데 이른 쪽을 쓴다.
+    한쪽이 먼저 끊기면 그 뒤 구간은
     한쪽 자료만 있는 상태라, 늦은 쪽을 마감일로 쓰면 없는 자료를 있다고 말하는 셈이다
     (quickstart 시나리오 7).
     """
-    collected = [day for day in (etf.last_collected, indices.last_collected) if day is not None]
+    # 지수 쪽은 호출 목록의 끝이 휴장일일 수 있으므로 last_trading_day를 쓴다.
+    collected = [day for day in (etf.last_collected, indices.last_trading_day()) if day is not None]
     if len(collected) < 2:
         raise IngestError(
             "지수와 ETF 가운데 한쪽도 수집하지 못해 데이터 마감일을 정할 수 없다. "
@@ -369,14 +382,12 @@ def rehearse(version: DatasetVersion, tables: dict[str, list[dict[str, Any]]]) -
     CHECK·트리거는 마이그레이션이 원본이고 여기 대역에는 없다. 이 예행은 파이썬 계층의 행
     검사와 적재 순서까지만 확인한다.
     """
-    engine = create_engine("sqlite://")
-    repository.METADATA.create_all(engine)
+    rehearsal = repository.MarketDataRepository.rehearsal()
     try:
-        rehearsal = repository.MarketDataRepository(engine)
         rehearsal.publish_dataset_version(version)
         _load_all(rehearsal, version.dataset_id, tables)
     finally:
-        engine.dispose()
+        rehearsal.engine.dispose()
 
 
 # ---------------------------------------------------------------------------
@@ -419,6 +430,7 @@ def _build_tables(
     instrument_ids: Sequence[str],
     actions: Sequence[CorporateAction],
     deadline: date,
+    actions_known_from: date | None,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, gaps.InstrumentSeries]]:
     """종목별 시계열을 만들고 FR-009 검사 결과를 자료 부족 구간에 더한다."""
     series: dict[str, gaps.InstrumentSeries] = {}
@@ -427,7 +439,11 @@ def _build_tables(
     suspension_rows: list[dict[str, Any]] = []
     for instrument_id in instrument_ids:
         built = gaps.build_instrument_series(
-            etf.for_instrument(instrument_id), calendar, windows[instrument_id], actions
+            etf.for_instrument(instrument_id),
+            calendar,
+            windows[instrument_id],
+            actions,
+            actions_known_from=actions_known_from,
         )
         series[instrument_id] = built
         price_rows.extend(dict(row) for row in built.price_rows)
@@ -474,7 +490,7 @@ def _report(
     print(f"수집 완료 여부: {'완료' if reason is None else '부분 갱신'}")
     if reason is not None:
         print(f"중단 사유: {reason}")
-        print(f"지수 미수집 날짜: {len(indices.requested_dates) - len(indices.collected_dates)}일")
+        print(f"지수 미수집 날짜: {indices.uncalled_count}일")
         print(f"ETF 미수집 거래일: {len(etf.missed_dates)}일")
     for name in _TIMESERIES:
         print(f"  {name}: {len(tables[name])}행")
@@ -509,7 +525,14 @@ def run(args: argparse.Namespace) -> int:
     dataset_id = build_dataset_id(deadline)
     reason = failure_reason(etf, indices)
     tables, series = _build_tables(
-        etf, indices, calendar, windows, instrument_ids, actions, deadline
+        etf,
+        indices,
+        calendar,
+        windows,
+        instrument_ids,
+        actions,
+        deadline,
+        args.actions_known_from,
     )
 
     written: list[Path] = []

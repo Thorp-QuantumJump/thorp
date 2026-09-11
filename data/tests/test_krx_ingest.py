@@ -497,14 +497,82 @@ class TestUnsupportedIssueCodes:
         collection = krx.collect_daily_quotes(self.MixedSource(), [date(2026, 9, 10)])
         assert collection.unsupported_codes == {"0184E0"}
 
-    def test_asking_for_one_instrument_filters_before_the_format_check(self) -> None:
-        # 찾지도 않는 종목의 코드 때문에 멈추지 않아야 한다. 걸러내기가 식별자 변환보다
-        # 먼저 와야 성립한다.
+    def test_the_code_is_reported_even_when_another_instrument_is_requested(self) -> None:
+        """찾는 종목을 지정해도 담을 수 없는 코드는 보고된다.
+
+        진입점은 ``--instruments``를 필수로 받고 그 값은 이미 6자리로 검사되므로, 형식 검사가
+        걸러내기 **뒤에** 오면 이 목록이 늘 비어 보고도 나오지 않는다. 담을 수 없는 종목이
+        원천의 26%라는 사실은 후보를 고르는 쪽에 필요한 정보다.
+        """
         collection = krx.collect_daily_quotes(
             self.MixedSource(), [date(2026, 9, 10)], instrument_ids=(KODEX_200,)
         )
-        assert collection.unsupported_codes == set()
+        assert collection.unsupported_codes == {"0184E0"}
+        # 그러면서도 수집은 멈추지 않고 찾는 종목만 담는다.
         assert collection.instrument_ids == [KODEX_200]
 
     def test_a_six_digit_code_is_never_reported_as_unsupported(self) -> None:
         assert collect().unsupported_codes == set()
+
+
+class TestErrorClassification:
+    """응답 오류를 어느 종류로 읽는지가 되돌릴 수 없는 결과를 만든다.
+
+    :class:`krx.KrxQuotaExhaustedError` 는 수집이 **일부러 삼켜** 중단으로 처리하므로
+    (FR-014), 한도가 아닌 오류를 한도로 분류하면 ``--commit``이 붙은 실행이 "이용 한도로
+    중단했다"는 거짓 사유를 달고 되돌릴 수 없는 부분 갱신본을 발행한다. 그래서 분류를
+    좁게 두고 여기서 고정한다.
+    """
+
+    class Fake:
+        """``requests.Response`` 대역. 상태와 본문만 흉내 낸다."""
+
+        def __init__(self, status: int, body: object) -> None:
+            self.status_code = status
+            self._body = body
+
+        def json(self) -> object:
+            if self._body is None:
+                raise ValueError("본문이 JSON이 아니다")
+            return self._body
+
+    def classify(self, status: int, message: str, resp_code: str | None = None) -> type | None:
+        response = self.Fake(status, {"respCode": resp_code or str(status), "respMsg": message})
+        try:
+            krx._rows_from_response("etp", "etf_bydd_trd", date(2026, 9, 10), response)  # type: ignore[arg-type]
+        except Exception as error:  # noqa: BLE001 - 어느 종류인지가 검사 대상이다
+            return type(error)
+        return None
+
+    def test_a_parameter_error_is_not_a_quota_error(self) -> None:
+        # 이 문구에는 "초과"가 들어 있다. 넓은 낱말로 판정하면 한도로 잘못 읽힌다.
+        for status in (200, 400):
+            assert self.classify(status, "조회 기간을 초과하였습니다") is krx.KrxResponseError
+
+    def test_unapproved_service_is_an_auth_error(self) -> None:
+        # 2026-09-11에 실제로 받아 본 응답이다. 인증 판정이 가장 먼저 와야 한다.
+        assert self.classify(401, "Unauthorized API Call") is krx.KrxAuthError
+
+    def test_a_bad_key_is_an_auth_error(self) -> None:
+        assert self.classify(401, "Unauthorized Key") is krx.KrxAuthError
+
+    def test_too_many_requests_is_a_quota_error(self) -> None:
+        assert self.classify(429, "Too Many Requests") is krx.KrxQuotaExhaustedError
+
+    def test_a_quota_word_on_an_error_response_is_a_quota_error(self) -> None:
+        assert self.classify(403, "일일 허용량을 모두 사용했습니다") is krx.KrxQuotaExhaustedError
+
+    def test_a_quota_word_on_a_normal_response_is_not_trusted(self) -> None:
+        # 200으로 오는 본문의 낱말만으로는 한도로 보지 않는다. 한도 응답은 200일 수 없다.
+        assert self.classify(200, "이용 한도") is krx.KrxResponseError
+
+    def test_a_server_error_is_a_response_error(self) -> None:
+        assert self.classify(500, "server error") is krx.KrxResponseError
+
+    def test_a_normal_response_needs_the_rows_key(self) -> None:
+        assert self.classify(200, "") is krx.KrxResponseError
+
+    def test_auth_is_checked_before_the_quota_words(self) -> None:
+        # 401 본문에 한도 낱말이 섞여 있어도 인증 오류다. 순서가 뒤바뀌면 활용 승인이 없는
+        # 상태가 한도로 읽혀 조용히 부분 갱신본이 발행된다.
+        assert self.classify(401, "이용 한도") is krx.KrxAuthError

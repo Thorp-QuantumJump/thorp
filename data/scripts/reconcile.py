@@ -25,7 +25,18 @@
 ``--disclosure`` (운용사 공시를 사람이 옮긴 파일. 공시는 API로 받을 수 없다)::
 
     [{"instrument_id": "069500.XKRX", "target_date": "2026-05-08",
-      "sample_reason": "DISTRIBUTION", "values": {"amount": "118"}}]
+      "sample_reason": "DISTRIBUTION", "event_ex_date": "2026-04-29",
+      "values": {"amount": "118", "pay_date": "2026-05-08", "ex_date": "2026-04-29"}}]
+
+``event_ex_date``는 **표본 구분자**이며 상장 첫날 표본에는 없다. 지급일이 같고 배당락일이
+다른 분배금이 둘인 종목에서 어느 쪽의 공시값인지 가린다. 이 칸이 없으면 배당락일이 다른
+분배금 둘이 한 표본으로 합쳐져, 금액까지 같으면 기업행위 하나가 대조되지 않은 채 "표본을
+모두 대조했다"는 판정이 나온다(FR-016은 "모든 분배금 지급일"을 요구한다).
+
+``values``의 항목 이름은 조회값의 이름과 같아야 한다. 분배금은 ``amount``·``pay_date``·
+``ex_date`` 셋을 대조한다. 배당락일까지 대조하는 이유는 그 날짜가 틀리면 조정 계수가 엉뚱한
+구간에 곱해지는데(research.md 결정 2), 금액만 맞춰 보면 그 오류가 드러나지 않기 때문이다.
+이름이 빠지면 그 항목은 "대조하지 않음"으로 남고 SC-002 판정이 미충족이 된다.
 
 조회값은 ``--listing``·``--corporate-actions``에서 뽑는다. 이 파트의 적재 방향은
 ``raw → processed → PostgreSQL`` 한 방향뿐이라 DB에서 읽어 되돌리지 않는다.
@@ -66,7 +77,16 @@ from data_pipeline.reconciliation import (  # noqa: E402
 from data_pipeline.repository import MarketDataRepository  # noqa: E402
 
 #: 파일에서 문자열로 오는 날짜 열. ``date``로 바꿔 ``*_from_records``에 넘긴다.
-_DATE_FIELDS: tuple[str, ...] = ("listed_on", "delisted_on", "ex_date", "pay_date", "target_date")
+#: JSON 입력에서 날짜로 바꿀 열. ``event_ex_date``는 표본 구분자이며(지급일이 같은 분배금이
+#: 둘인 종목에서 어느 쪽의 공시값인지 가린다) 여기 없으면 문자열로 남아 거부된다.
+_DATE_FIELDS: tuple[str, ...] = (
+    "listed_on",
+    "delisted_on",
+    "ex_date",
+    "pay_date",
+    "target_date",
+    "event_ex_date",
+)
 
 
 def _read_records(path: Path, label: str) -> list[Mapping[str, Any]]:
@@ -198,8 +218,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if unused:
         print("")
         print(f"표본에 없어 쓰지 않은 공시값 {len(unused)}건")
-        for instrument_id, target_date, sample_reason in unused:
-            print(f"  {instrument_id} {target_date} {sample_reason}")
+        for instrument_id, target_date, sample_reason, event_ex_date in unused:
+            # 배당락일까지 낸다. 지급일이 같은 분배금이 둘인 종목에서는 그 값이 어긋나
+            # 짝이 맞지 않은 경우가 있어, 날짜만 보면 왜 안 쓰였는지 알 수 없다.
+            suffix = "" if event_ex_date is None else f" (배당락일 {event_ex_date})"
+            print(f"  {instrument_id} {target_date} {sample_reason}{suffix}")
 
     if args.commit:
         env_path = Path(args.env_file) if args.env_file else None

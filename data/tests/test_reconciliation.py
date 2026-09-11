@@ -38,6 +38,7 @@ from data_pipeline.reconciliation import (
     CAUSE_PIPELINE_ERROR,
     CAUSE_UNKNOWN,
     FIELD_AMOUNT,
+    FIELD_EX_DATE,
     FIELD_LISTED_ON,
     FIELD_PAY_DATE,
     RESOLUTION_NONE,
@@ -90,6 +91,15 @@ SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts/reconcile.py"
 # ---------------------------------------------------------------------------
 # 표본과 값 만들기
 # ---------------------------------------------------------------------------
+
+
+def _sort_key(key: tuple[str, date, str, date | None]) -> tuple[str, date, str, date]:
+    """``None``이 섞인 표본 키를 견줄 수 있게 만든다.
+
+    표본 키의 마지막 칸은 상장 첫날에 ``None``이고 기업행위 표본에는 날짜다. 튜플을 그대로
+    견주면 앞 세 칸이 같은 두 키에서 ``None``과 날짜를 비교하다 TypeError가 난다.
+    """
+    return (key[0], key[1], key[2], key[3] or date.min)
 
 
 def window(instrument_id: str = INSTRUMENT_ID, listed_on: date = LISTED_ON) -> ListingWindow:
@@ -232,13 +242,52 @@ class TestSamples:
         assert [t.target_date for t in targets if t.sample_reason == SAMPLE_SPLIT] == [SPLIT_DATE]
 
     def test_samples_are_sorted_and_deduplicated(self) -> None:
-        """같은 (종목, 날짜, 사유)는 한 번만 들어간다."""
-        actions = [distribution(), distribution(ex_date=date(2026, 4, 30))]
+        """같은 기업행위를 두 번 넘겨도 표본은 한 번만 들어간다."""
+        actions = [distribution(), distribution()]
         targets = build_samples([window(OTHER_INSTRUMENT_ID), window()], actions)
         keys = [target.key for target in targets]
-        assert keys == sorted(keys)
+        assert keys == sorted(keys, key=_sort_key)
         assert len(keys) == len(set(keys))
         assert len([key for key in keys if key[2] == SAMPLE_DISTRIBUTION]) == 1
+
+    def test_two_distributions_sharing_a_pay_date_stay_separate(self) -> None:
+        """배당락일이 다르고 지급일이 같은 분배금 둘은 **표본 둘**이다.
+
+        하나로 합치면 기업행위 하나가 대조되지 않은 채 "표본을 모두 대조했다"는 판정이
+        나온다. FR-016이 "모든 분배금 지급일"을 요구하므로 각 분배금의 금액이 공시와 맞는지
+        따로 확인되어야 하고, 금액까지 같으면 합쳐진 사실 자체가 드러나지 않는다.
+        """
+        actions = [distribution(), distribution(ex_date=date(2026, 4, 30))]
+        targets = build_samples([window()], actions)
+        distributions = [t for t in targets if t.sample_reason == SAMPLE_DISTRIBUTION]
+        assert len(distributions) == 2
+        assert {t.target_date for t in distributions} == {PAY_DATE}
+        assert {t.event_ex_date for t in distributions} == {EX_DATE, date(2026, 4, 30)}
+
+    def test_two_distributions_with_the_same_amount_stay_separate(self) -> None:
+        # 금액까지 같으면 예전 키로는 조용히 합쳐졌다. 그 조용함이 이 지적의 핵심이었다.
+        actions = [
+            distribution(amount="120"),
+            distribution(ex_date=date(2026, 4, 30), amount="120"),
+        ]
+        assert len(build_queried_values([window()], actions)) == 3
+
+    def test_two_distributions_with_different_amounts_no_longer_abort(self) -> None:
+        # 예전 키로는 "같은 표본에 조회값이 두 벌 있다"로 대조 전체가 멈췄다.
+        actions = [
+            distribution(amount="120"),
+            distribution(ex_date=date(2026, 4, 30), amount="130"),
+        ]
+        queried = build_queried_values([window()], actions)
+        amounts = {
+            entry[FIELD_AMOUNT] for key, entry in queried.items() if key[2] == SAMPLE_DISTRIBUTION
+        }
+        assert amounts == {"120", "130"}
+
+    def test_a_listing_sample_carries_no_ex_date(self) -> None:
+        targets = build_samples([window()], [])
+        assert targets[0].sample_reason == SAMPLE_LISTING
+        assert targets[0].event_ex_date is None
 
     def test_action_without_a_listing_window_is_rejected(self) -> None:
         """상장 구간이 없는 종목의 기업행위는 버리지 않고 알린다. 버리면 표본이 준다."""
@@ -256,14 +305,15 @@ class TestSamples:
     def test_queried_values_come_from_the_pipeline_inputs(self) -> None:
         """조회값은 대응표와 기업행위 입력에서 뽑는다. DB에서 읽어 되돌리지 않는다."""
         queried = build_queried_values([window()], [distribution(), split()])
-        assert queried[(INSTRUMENT_ID, LISTED_ON, SAMPLE_LISTING)] == {
+        assert queried[(INSTRUMENT_ID, LISTED_ON, SAMPLE_LISTING, None)] == {
             FIELD_LISTED_ON: "2002-10-14"
         }
-        assert queried[(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)] == {
+        assert queried[(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)] == {
             FIELD_AMOUNT: "120",
             FIELD_PAY_DATE: "2026-05-08",
+            FIELD_EX_DATE: "2026-04-29",
         }
-        assert queried[(INSTRUMENT_ID, SPLIT_DATE, SAMPLE_SPLIT)][FIELD_AMOUNT] == "2"
+        assert queried[(INSTRUMENT_ID, SPLIT_DATE, SAMPLE_SPLIT, SPLIT_DATE)][FIELD_AMOUNT] == "2"
 
 
 # ---------------------------------------------------------------------------
@@ -358,10 +408,12 @@ def run_reconcile(
     targets = build_samples(windows, actions)
     queried = build_queried_values(windows, actions)
     disclosed = {
-        (INSTRUMENT_ID, LISTED_ON, SAMPLE_LISTING): {FIELD_LISTED_ON: "2002-10-14"},
-        (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION): {
+        (INSTRUMENT_ID, LISTED_ON, SAMPLE_LISTING, None): {FIELD_LISTED_ON: "2002-10-14"},
+        (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE): {
             FIELD_AMOUNT: disclosed_amount,
             FIELD_PAY_DATE: "2026-05-08",
+            # 배당락일도 대조한다. 이 날짜가 틀리면 조정 계수가 틀린 구간에 곱해진다.
+            FIELD_EX_DATE: "2026-04-29",
         },
     }
     return reconcile(
@@ -377,7 +429,7 @@ def run_reconcile(
 class TestReconcile:
     def test_equal_values_are_a_match(self) -> None:
         outcome = run_reconcile("120")
-        assert [record.cause for record in outcome.records] == [CAUSE_MATCH] * 3
+        assert [record.cause for record in outcome.records] == [CAUSE_MATCH] * 4
         assert outcome.republish_required == ()
         assert outcome.excluded_ranges == ()
 
@@ -426,7 +478,7 @@ class TestReconcile:
             )
 
     def test_duplicate_target_is_rejected(self) -> None:
-        target = ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)
+        target = ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)
         with pytest.raises(ReconciliationError, match="두 번"):
             reconcile([target, target], {}, {}, checked_at=CHECKED_AT)
 
@@ -441,8 +493,8 @@ class TestReconcile:
 
     def test_unpaired_field_is_reported(self) -> None:
         """항목 이름이 짝지어지지 않으면 그 항목은 대조하지 않은 것이다."""
-        targets = [ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)]
-        key = (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)
+        targets = [ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)]
+        key = (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)
         outcome = reconcile(
             targets,
             {key: {FIELD_AMOUNT: "120"}},
@@ -456,8 +508,8 @@ class TestReconcile:
 class TestExcludedRanges:
     def multi_field_outcome(self) -> Any:
         """같은 종목·같은 날짜에서 두 항목이 어긋난 대조."""
-        targets = [ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)]
-        key = (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION)
+        targets = [ReconciliationTarget(INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)]
+        key = (INSTRUMENT_ID, PAY_DATE, SAMPLE_DISTRIBUTION, EX_DATE)
         return reconcile(
             targets,
             {key: {FIELD_AMOUNT: "120", FIELD_PAY_DATE: "2026-05-08"}},
@@ -504,7 +556,8 @@ class TestSc002:
     def test_all_matched_is_satisfied(self) -> None:
         verdict = sc002_verdict(run_reconcile("120"))
         assert verdict.satisfied is True
-        assert (verdict.matched, verdict.mismatched) == (3, 0)
+        # 항목 넷: 상장일 1개 + 분배금의 금액·지급일·배당락일 3개
+        assert (verdict.matched, verdict.mismatched) == (4, 0)
         assert verdict.sample_count == 2
 
     def test_mismatch_with_recorded_cause_is_satisfied(self) -> None:
@@ -537,8 +590,8 @@ class TestLoad:
         self, published: MarketDataRepository
     ) -> None:
         outcome = run_reconcile("118")
-        assert published.load_reconciliation_records(DATASET_ID, outcome.records) == 3
-        assert count_records(published) == 3
+        assert published.load_reconciliation_records(DATASET_ID, outcome.records) == 4
+        assert count_records(published) == 4
         with published.engine.connect() as conn:
             row = conn.execute(
                 select(
@@ -668,7 +721,14 @@ def write_inputs(tmp_path: Path, disclosed_amount: str) -> list[str]:
                     "instrument_id": INSTRUMENT_ID,
                     "target_date": "2026-05-08",
                     "sample_reason": "DISTRIBUTION",
-                    "values": {"amount": disclosed_amount, "pay_date": "2026-05-08"},
+                    # 배당락일이 표본 구분자다. 지급일이 같은 분배금이 둘인 종목에서는
+                    # 이 값이 없으면 두 표본 가운데 어느 쪽의 공시값인지 정해지지 않는다.
+                    "event_ex_date": "2026-04-29",
+                    "values": {
+                        "amount": disclosed_amount,
+                        "pay_date": "2026-05-08",
+                        "ex_date": "2026-04-29",
+                    },
                 },
             ]
         ),
@@ -737,6 +797,7 @@ class TestEntryPoint:
                 "instrument_id": INSTRUMENT_ID,
                 "target_date": ORDINARY_DAY.isoformat(),
                 "sample_reason": "DISTRIBUTION",
+                "event_ex_date": ORDINARY_DAY.isoformat(),
                 "values": {"amount": "120"},
             }
         )

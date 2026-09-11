@@ -135,7 +135,10 @@ def run(args: argparse.Namespace) -> int:
         source = krx.QuotaLimitedSource(inner=source, allowed_calls=max(len(candidates) - 1, 1))
 
     collection = index.collect_index_quotes(source, candidates, index_codes=codes)
-    deadline = collection.last_collected
+    # 마감일은 호출을 마친 마지막 날짜가 아니라 **값을 얻은 마지막 거래일**이다.
+    # 후보가 달력 날짜라 호출 목록의 끝은 휴장일일 수 있고, 그대로 쓰면 마감일과
+    # dataset_id가 휴장일로 발행된다. 발행본은 되돌릴 수 없다 (FR-017).
+    deadline = collection.last_trading_day()
     if deadline is None:
         raise IndexIngestError(
             f"{args.start} ~ {args.until} 구간에서 하루도 수집하지 못해 데이터 마감일을 "
@@ -159,6 +162,17 @@ def run(args: argparse.Namespace) -> int:
             map_version_id=args.map_version_id,
             failure_reason=collection.failure_reason,
         )
+        # PostgreSQL을 건드리기 전에 같은 열 정의의 인메모리 대역에 한 번 넣어 본다.
+        # load_daily_index가 행 검사에서 걸리면 자료 버전 행은 이미 커밋되어 있고, 발행본은
+        # DELETE도 거부되어 그 dataset_id가 빈 채로 영구히 남는다 (FR-017).
+        # ingest_krx.py가 같은 이유로 같은 예행을 거친다.
+        rehearsal = repository.MarketDataRepository.rehearsal()
+        try:
+            rehearsal.publish_dataset_version(version)
+            rehearsal.load_daily_index(dataset_id, rows)
+        finally:
+            rehearsal.engine.dispose()
+
         store = repository.MarketDataRepository.from_env(args.env_file)
         # 자료 버전 → 시계열. 이 순서를 뒤집을 수 없다.
         store.publish_dataset_version(version)

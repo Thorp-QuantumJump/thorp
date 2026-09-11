@@ -634,6 +634,24 @@ class MarketDataRepository:
         """``.env``의 ``DATABASE_URL``로 저장소를 연다."""
         return cls(create_engine(database_url_from_env(env_path)))
 
+    @classmethod
+    def rehearsal(cls) -> MarketDataRepository:
+        """같은 열 정의의 인메모리 SQLite 저장소. **적재 예행용이다.**
+
+        행 검사는 표 하나 단위로 일어나므로, 네 번째 표에서 걸리면 앞의 세 표는 이미 들어가
+        있다. 그 상태는 발행본이라 DELETE도 거부되어 되돌릴 수 없다. 그래서 진입점은 전체
+        묶음을 여기에 먼저 통째로 넣어 보고, 통과한 뒤에만 실제 저장소를 건드린다.
+
+        **CHECK와 트리거는 이 대역에 없다.** 마이그레이션이 원본이고 이 예행은 파이썬 계층의
+        행 검사와 적재 순서까지만 확인한다. 그 위는 실제 적재에서 DB가 본다.
+
+        쓰고 나면 :attr:`engine` 을 ``dispose()`` 한다. 인메모리 대역이라 접속이 닫히면
+        내용도 함께 사라진다.
+        """
+        engine = create_engine("sqlite://")
+        METADATA.create_all(engine)
+        return cls(engine)
+
     @property
     def engine(self) -> Engine:
         return self._engine

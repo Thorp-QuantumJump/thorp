@@ -30,6 +30,7 @@ from data_pipeline.dataset_version import SOURCE_KRX_OPEN_API, DatasetVersion
 from data_pipeline.gaps import (
     ALLOWED_GAP_REASONS,
     REASON_AMBIGUOUS_PRICE,
+    REASON_MISSING_CORPORATE_ACTION,
     REASON_SUSPENDED_TOO_LONG,
     SUSPENSION_RULE_CONFIRMED,
     GapError,
@@ -603,3 +604,56 @@ class TestLoadable:
         for group in (built.price_rows, built.gap_rows, built.suspension_rows):
             for row in group:
                 assert "dataset_id" not in row
+
+
+class TestActionsKnownFromReachesTheAdjustment:
+    """``build_instrument_series``가 ``actions_known_from``을 넘겨야 FR-006이 동작한다.
+
+    이 인자를 받지 않으면 ``MISSING_CORPORATE_ACTION`` 기록이 파이프라인 경로에서 영원히
+    만들어지지 않는다. 2020년부터만 담은 기업행위 파일로 2010년 상장 종목을 처리하면
+    2010~2019년의 누적 계수가 틀린 채로, 그 사실을 알리는 자료 부족 구간도 없이 발행된다.
+    단위 검사만 있고 배선이 빠지면 그 상태가 초록색으로 남는다.
+    """
+
+    QUOTES = (
+        quote(D1, "10000"),
+        quote(D2, "10200"),
+        quote(D3, "10100"),
+        quote(D4, "10400"),
+    )
+
+    def test_without_the_argument_there_is_no_gap(self) -> None:
+        built = build_instrument_series(list(self.QUOTES), calendar(D1, D2, D3, D4), WINDOW)
+        assert built.gap_rows == ()
+
+    def test_the_argument_produces_the_gap(self) -> None:
+        built = build_instrument_series(
+            list(self.QUOTES), calendar(D1, D2, D3, D4), WINDOW, (), actions_known_from=D3
+        )
+        reasons = [row["reason"] for row in built.gap_rows]
+        assert reasons == [REASON_MISSING_CORPORATE_ACTION]
+        gap = built.gap_rows[0]
+        assert (gap["start_date"], gap["end_date"]) == (D1, D2)
+
+    def test_the_gap_survives_validation_and_loads(self) -> None:
+        # 만들어진 행이 검사와 적재를 통과해야 기록으로 남는다.
+        built = build_instrument_series(
+            list(self.QUOTES), calendar(D1, D2, D3, D4), WINDOW, (), actions_known_from=D3
+        )
+        engine = create_engine("sqlite://")
+        METADATA.create_all(engine)
+        store = MarketDataRepository(engine)
+        store.publish_dataset_version(
+            DatasetVersion(
+                dataset_id=DATASET_ID,
+                data_deadline=DEADLINE,
+                collected_at=DEADLINE,
+                last_success_at=DEADLINE,
+                complete=True,
+                is_sample=False,
+                source=SOURCE_KRX_OPEN_API,
+                map_version_id=1,
+            )
+        )
+        assert store.load_data_gap(DATASET_ID, list(built.gap_rows)) == 1
+        engine.dispose()
