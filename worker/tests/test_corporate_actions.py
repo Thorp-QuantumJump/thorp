@@ -96,15 +96,22 @@ def test_split_multiplies_quantity():
     assert apply_split(split("2"), Decimal(10)).quantity == Decimal(20)
 
 
-def test_fractional_split_floors_and_records_why():
+@pytest.mark.parametrize(
+    ("ratio", "held", "expected", "exact"),
+    [
+        ("1.5", 5, 7, "7.5"),  # 반올림이면 8 이 된다
+        ("1.33", 5, 6, "6.65"),  # 반올림이면 7 이 된다
+    ],
+)
+def test_fractional_split_floors_and_records_why(ratio, held, expected, exact):
     """정수 주만 다루므로 단주는 버린다. 조용히 버리면 자산이 준 이유를 알 수 없다."""
-    outcome = apply_split(split("1.5"), Decimal(5))
+    outcome = apply_split(split(ratio), Decimal(held))
 
-    assert outcome.quantity == Decimal(7)  # 7.5 -> 7
+    assert outcome.quantity == Decimal(expected)
     assert outcome.exception is not None
     assert outcome.exception.kind == SPLIT_FRACTION
     assert outcome.exception.instrument_id == ETF
-    assert "7.5" in outcome.exception.action
+    assert exact in outcome.exception.action
 
 
 def test_exact_split_has_no_exception():

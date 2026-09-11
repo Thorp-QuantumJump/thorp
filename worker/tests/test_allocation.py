@@ -182,6 +182,42 @@ def test_short_history_is_excluded_with_a_reason():
     assert [record.kind for record in result.exceptions] == ["INSUFFICIENT_HISTORY"]
 
 
+def test_exactly_enough_history_is_included():
+    """경계: 수익률 lookback 개를 만들려면 종가가 lookback+1 개 필요하다."""
+    lookback = INVERSE_RULES["lookbackDays"]
+    just_enough = [100.0 + index for index in range(lookback + 1)]
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI)],
+        history(**{SEMI: just_enough}),
+        AS_OF,
+    )
+
+    assert set(result.weights) == {SEMI}
+    assert result.exceptions == []
+
+
+def test_one_day_short_is_excluded_and_the_rest_renormalises():
+    """경계 반대쪽: 딱 하루 모자란 종목만 빠지고 남은 종목이 투자 비중을 채운다."""
+    lookback = INVERSE_RULES["lookbackDays"]
+    enough = [100.0, 101.0, 100.5, 102.0]
+    one_short = [100.0 + index for index in range(lookback)]
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: enough, BATTERY: one_short}),
+        AS_OF,
+    )
+
+    assert set(result.weights) == {SEMI}
+    assert result.weights[SEMI] == Decimal(1), "남은 종목이 투자 비중을 전부 가져간다"
+    assert [(record.kind, record.instrument_id) for record in result.exceptions] == [
+        ("INSUFFICIENT_HISTORY", BATTERY)
+    ]
+
+
 def test_weight_cap_is_enforced():
     calm = [100.0, 100.1, 100.2, 100.3]
     wild = [100.0, 110.0, 95.0, 115.0]
