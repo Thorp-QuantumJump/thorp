@@ -148,12 +148,14 @@
 
 ## Phase 6: 결정 항목 확정 (본선과 독립)
 
-- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — Jira 미발급
+**2026-09-11: KRX OPEN API 키를 확보해 T014~T016의 착수 조건이 해소되었다.** 세 작업은 실자료 조회가 선행 조건이라 그때까지 Jira를 발급하지 않았는데, 키가 생겨 각각 Task로 발급했다(T014 `-186`, T015 `-187`, T016 `-188`). 착수 차례는 JT4(`-179`)가 수집 코드를 완성한 뒤 T014부터다. JT4가 만드는 조회 도구로 후보 비교를 하는 편이 자연스럽기 때문이다(2026-09-11 결정).
+
+- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
   - **선행 조건은 T001뿐이다.** 본선(T003~T013)과 의존 관계가 없어 병행할 수 있다
   - 자료 이용 승인을 신청하고 진행 상태를 기록한다
   - 섹터마다 후보 3~5개를 골라 확보 가능 기간·기업행위 이력 완전성·최근 3개월 일평균 거래대금을 실제 조회로 채운 비교표를 만든다. **후보끼리 비교하는 것이며 예시 자료 결과와 비교하는 것이 아니다**
   - 확정한 대응표를 새 버전으로 발행하고 `is_sample`·`isSample`을 false로 바꾼다. `specs/README.md`의 PD-01과 spec의 결정 항목 표를 갱신한다
-- [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — Jira 미발급
+- [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187
   - **선행 조건은 T008이다.** 본선이 쌓아 둔 `suspension_period` 기록이 입력이다
   - 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포
   - 처리 방식 B(정지 이후만)·C(정지 이전만)·D(후보 제외) 각각이 공통 평가 기간을 얼마나 줄이는지 계산한다. 손실 규모를 수치로 비교한다 (research.md 「PD-19·PD-20을 나중에 정하기 위한 준비」)
@@ -164,7 +166,7 @@
 
 ## Phase 7: Polish
 
-- [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — Jira 미발급
+- [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — S15P21E205-188
   - quickstart 시나리오 1~7을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
   - constitution 「기능·계산 확인」이 요구하는 수기 대조를 한 건 수행한다. 분배금 지급일 하나를 골라 운용사 공시의 주당 분배금과 `corporate_action.amount`를 눈으로 확인하고 `reconciliation_record`에 남긴다
   - `README.md`의 "현재 구현 상태"에서 자료 원천이 바뀐 사실을 반영한다
