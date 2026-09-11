@@ -103,6 +103,11 @@ public class ParamSearchJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private Map<String, Object> referenceVersions;
 
+    /** 접수 시점에 고정한 실행 조건(구간·금액·비용·대응표·워밍업·기준 전략). 후보와 기준이 이 값으로 조립된다. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false)
+    private Map<String, Object> executionPlan;
+
     @Column private Long baselineJobId;
 
     @Enumerated(EnumType.STRING)
@@ -147,6 +152,7 @@ public class ParamSearchJpaEntity extends BaseEntity {
             Map<String, Object> selectionRule,
             Map<String, Object> limits,
             Map<String, Object> referenceVersions,
+            Map<String, Object> executionPlan,
             Long baselineJobId,
             ParamSearchStatus status,
             StopReason stopReason,
@@ -168,6 +174,7 @@ public class ParamSearchJpaEntity extends BaseEntity {
         this.selectionRule = selectionRule;
         this.limits = limits;
         this.referenceVersions = referenceVersions;
+        this.executionPlan = executionPlan;
         this.baselineJobId = baselineJobId;
         this.status = status;
         this.stopReason = stopReason;
@@ -268,6 +275,10 @@ public class ParamSearchJpaEntity extends BaseEntity {
 
     public Map<String, Object> getReferenceVersions() {
         return referenceVersions;
+    }
+
+    public Map<String, Object> getExecutionPlan() {
+        return executionPlan;
     }
 
     public Long getBaselineJobId() {

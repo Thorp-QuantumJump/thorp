@@ -26,6 +26,21 @@ public interface MarketMetadataPort {
      */
     boolean isMappedTo(String mappingVersion, String sectorId, String instrumentId);
 
+    /**
+     * 현재 대응표 버전. 요청이 버전을 들고 오지 않는 경로(spec 007 자동 탐색)가 쓴다.
+     *
+     * <p>호출자가 기본값을 정하지 않게 하려고 포트가 돌려준다 — 007이 대응표 버전 상수를 갖는 순간 001이 표를 갱신해도 그 값이 따라가지 않는다.
+     */
+    String currentMappingVersion();
+
+    /**
+     * 대응표 버전에서 이 종목이 속한 섹터. 모르는 종목이면 비어 있다.
+     *
+     * <p>{@link #isMappedTo}의 역방향이다. 섹터를 입력으로 받지 않는 화면(007은 종목만 고른다)이 004 접수에 필요한 섹터를 채우려면 이 조회가
+     * 있어야 한다. 007이 종목-섹터 대응을 자체적으로 갖지 않게 하는 것이 목적이다.
+     */
+    Optional<String> sectorOf(String mappingVersion, String instrumentId);
+
     /** 종목 상장일. 모르는 종목이면 비어 있다(400 INVALID_INPUT의 근거). */
     Optional<LocalDate> listedOn(String instrumentId);
 

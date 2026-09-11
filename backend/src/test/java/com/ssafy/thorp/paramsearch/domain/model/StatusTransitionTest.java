@@ -375,6 +375,7 @@ class StatusTransitionTest {
                 null,
                 Map.of("maxCandidates", 1000),
                 Map.of("engineVersion", "0.1.0"),
+                Map.of("initialCash", "10000000.00"),
                 SearchCounts.initial(6, 6, 0));
     }
 

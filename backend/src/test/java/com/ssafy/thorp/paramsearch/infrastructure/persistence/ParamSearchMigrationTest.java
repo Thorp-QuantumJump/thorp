@@ -89,6 +89,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                         "selection_rule",
                         "limits",
                         "reference_versions",
+                        "execution_plan",
                         "baseline_job_id",
                         "status",
                         "stop_reason",
@@ -467,6 +468,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                 null,
                 Map.of("maxCandidates", 1000, "provisional", List.of("maxCandidates")),
                 Map.of("engineVersion", "0.1.0"),
+                Map.of("initialCash", "10000000.00"),
                 SearchCounts.initial(6, 5, 1));
     }
 

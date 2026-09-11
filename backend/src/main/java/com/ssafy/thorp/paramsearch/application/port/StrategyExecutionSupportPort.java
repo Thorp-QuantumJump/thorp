@@ -1,5 +1,6 @@
 package com.ssafy.thorp.paramsearch.application.port;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -15,5 +16,16 @@ import java.util.Set;
  */
 public interface StrategyExecutionSupportPort {
 
-    Set<String> supportedStrategyIds();
+    /**
+     * 실행을 지원하는 전략과 그 전략의 규칙 버전.
+     *
+     * <p>버전까지 받는 이유: 004에 후보를 접수하려면 어느 규칙 버전으로 계산할지 함께 넘겨야 하는데, 그 값을 007이 고르면 004의 등록표와 갈린다. 묶음은 접수
+     * 시점 버전을 스냅샷에 고정해 끝까지 쓴다(FR-012).
+     */
+    Map<String, String> supportedStrategies();
+
+    /** 탐색 대상 판정에 쓰는 집합. 버전이 필요 없는 호출자를 위한 것이다(FR-026). */
+    default Set<String> supportedStrategyIds() {
+        return supportedStrategies().keySet();
+    }
 }
