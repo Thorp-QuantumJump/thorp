@@ -36,7 +36,7 @@ S1 완료 뒤 같은 본문을 사용자 B 토큰으로 다시 보낸다. 기대
 
 S3 상태에서 사용자 A가 `POST /backtests/{A}/cancel`. 기대: A는 `CANCELLED`, B는 계속 `RUNNING`(마지막 요청이 아니므로 계산 유지). 이어 B도 취소하면 다음 진행 배치 안에 워커가 `FINISHED(CANCELLED)`를 보내고 B는 `CANCELLED, partial=true, progress.lastTradingDate`가 채워지며 `/timeseries`가 그 날짜까지의 데이터를 `200`으로 돌려준다. 이후 같은 본문 재요청은 `resultSource=NEW`(취소 결과는 재사용 안 함).
 
-합류 취소(Clarify Q3·R-04): A·B가 같은 실행에 합류한 상태에서 A만 취소한다. 기대: A는 즉시 `CANCELLED`·`partial=true`, `progress.lastTradingDate`가 취소 시점 값으로 고정, B는 계속 `RUNNING`. B 완료 뒤 A를 다시 조회해도 완료 범위가 그대로고 `summary`는 null(`summaryUnavailable: CANCELLED_WHILE_RUN_CONTINUED`), `/timeseries`는 그 날짜까지만 온다. B는 `COMPLETED` 전체 결과.
+합류 취소(Clarify Q3·R-04): A·B가 같은 실행에 합류한 상태에서 A만 취소한다. 기대: A는 즉시 `CANCELLED`·`partial=true`, `progress.lastTradingDate`가 취소 시점 값으로 고정, B는 계속 `RUNNING`. B 실행 중 A `/timeseries`는 `409 RESULT_NOT_READY`. B 완료 뒤 A를 다시 조회해도 완료 범위가 그대로고 `summary`는 null(`summaryUnavailable: CANCELLED_WHILE_RUN_CONTINUED`), `/timeseries`는 그 날짜까지만 온다. B는 `COMPLETED` 전체 결과. 변형: A 취소 뒤 B도 취소하면 run은 B의 정지 날짜(A 스냅샷보다 뒤)에서 멈추고 B만 부분 요약을 보며 A는 그대로다.
 
 ## S5. 실패와 재시도 (US3-5, FR-010)
 
@@ -68,7 +68,7 @@ S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVol
 
 ## S12. 실행 한도 장치 (FR-006, R-19, T014)
 
-local 임시값(`max-queued-per-user=2`)으로 같은 사용자가 서로 다른 조건 3건을 연속 요청한다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
+local 임시값(`max-queued-per-user=2`)으로 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
 
 ## 완료 판정
 
