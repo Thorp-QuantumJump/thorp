@@ -36,4 +36,5 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# scripts 는 배포 패키지가 아니다. 개발용 yfinance 공급자 테스트만 여기서 import 한다.
+pythonpath = ["src", "scripts"]

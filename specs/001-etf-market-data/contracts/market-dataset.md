@@ -131,3 +131,11 @@ trading_suspended = true 인 거래일 (정지 길이와 무관하게 모두)
 | `YFinanceDataProvider` | 클래스는 남기되 기본값 자리에서 빼고, 실제 Job 처리 경로에서 쓰지 않는 임시 수단임을 주석에 남긴다 (research.md 결정 1) |
 
 기본값을 바꾸는 것이 이 정리의 핵심이다. 현재 `engine_runner.py:68`이 `data_provider or YFinanceDataProvider()`이므로, provider를 주입하지 않는 경로는 이용 조건 밖 원천으로 조용히 넘어간다.
+
+> **2026-09-11, spec 004 T004가 이 표의 세 줄을 이미 처리했다**(001 담당자 확인 필요).
+> `YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고(배포 패키지에서 import 불가),
+> `engine_runner`의 기본값은 다른 공급자로 바꾼 것이 아니라 **없앴다** — 공급자는 이제 필수 인자다.
+> 기본값이 있는 한 "주입을 잊은 경로"가 계속 생기기 때문이다. 또한 004가
+> [004 contracts/market-data-input.md](../../004-backtest-execution/contracts/market-data-input.md)의
+> 표를 읽는 `PostgresMarketDataProvider`를 이미 추가했으므로, 001은 `RepositoryDataProvider`를
+> 새로 만들지 말고 그 구현의 SQL이 실제 스키마와 맞는지 확인하는 쪽으로 진행하면 된다.
