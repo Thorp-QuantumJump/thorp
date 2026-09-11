@@ -34,7 +34,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             "spring.flyway.enabled=true",
             "spring.flyway.locations=classpath:db/migration",
             "spring.flyway.baseline-on-migrate=false",
-            "spring.jpa.hibernate.ddl-auto=validate"
+            "spring.jpa.hibernate.ddl-auto=validate",
+            // Spring은 설정이 다른 테스트 클래스마다 컨텍스트를 따로 만들어 캐시하고, 캐시된 컨텍스트는
+            // 커넥션 풀을 잡은 채 JVM이 끝날 때까지 살아 있다. Hikari 기본값(10)이면 DB에 붙는 테스트
+            // 클래스가 열 개를 넘는 순간 PostgreSQL 기본 상한(max_connections=100)에 걸려 뒤쪽
+            // 테스트가 "FATAL: sorry, too many clients already"로 무더기 실패한다. 단독으로 돌리면
+            // 통과하고 전체로 돌리면 실패해서 원인을 찾기 어렵다.
+            // 테스트는 단일 스레드로 돌아 커넥션이 많이 필요하지 않으므로 풀을 작게 잡는다.
+            "spring.datasource.hikari.maximum-pool-size=4"
         })
 public abstract class PostgresTestSupport {
 
