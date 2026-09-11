@@ -56,9 +56,20 @@ public class BacktestJobDispatcher {
     /** 접수가 커밋됐다는 신호. 이 이벤트가 없으면(롤백) 발행도 없다. */
     public record RunAccepted(long runId) {}
 
+    /**
+     * <b>여기서 나가는 예외는 접수를 실패로 만든다.</b> {@code AFTER_COMMIT} 콜백의 예외는 삼켜지지 않고 커밋을 호출한 쪽으로 전파된다 — 접수는
+     * 이미 커밋됐고 작업은 브로커에 들어갔는데 사용자만 500을 받는다. 그러면 사용자가 다시 눌러 같은 요청이 하나 더 생긴다.
+     *
+     * <p>그래서 발행 실패뿐 아니라 <b>발행 뒤 기록 실패까지</b> 전부 여기서 막는다. 기록에 실패한 실행은 {@code published_at}이 NULL로 남아
+     * 재발행기가 집어 가므로 잃는 것이 없다.
+     */
     @TransactionalEventListener
     public void onRunAccepted(RunAccepted event) {
-        publishAlreadyCounted(event.runId());
+        try {
+            publishAlreadyCounted(event.runId());
+        } catch (RuntimeException exc) {
+            log.error("커밋 후 발행 처리에서 예외가 났습니다. 접수는 그대로 두고 재발행기에 맡깁니다: runId={}", event.runId(), exc);
+        }
     }
 
     /**

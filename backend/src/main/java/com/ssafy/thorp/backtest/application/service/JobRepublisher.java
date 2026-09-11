@@ -58,7 +58,12 @@ public class JobRepublisher {
         }
         log.info("발행되지 않은 대기 작업 {}건을 재발행합니다.", stale.size());
         for (BacktestRun run : stale) {
-            dispatcher.republish(run.getId());
+            try {
+                dispatcher.republish(run.getId());
+            } catch (RuntimeException exc) {
+                // 한 건이 터져도 나머지는 보낸다. 묶음 전체가 멈추면 그 주기에 대기 중인 작업이 전부 밀린다.
+                log.error("재발행 중 예외가 났습니다. 다음 실행으로 넘어갑니다: runId={}", run.getId(), exc);
+            }
         }
     }
 }
