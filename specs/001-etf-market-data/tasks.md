@@ -27,12 +27,12 @@
 
 **Purpose**: 수집 환경을 갖추고, 004가 요구한 계약과 001의 데이터 모형이 어긋나지 않게 맞춘다.
 
-- [ ] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — S15P21E205-176
+- [x] T001 [P] [DE] 수집 환경과 DATA 파트 규칙 정비 (`data/pyproject.toml`, `data/requirements.txt`, `data/.env.example`, `data/.gitignore`, `data/CLAUDE.md`) — S15P21E205-176
   - 의존성: KRX OPEN API HTTP 클라이언트·pyarrow·PostgreSQL 드라이버 추가, pykrx 제거 (research.md 결정 1)
   - `.env.example`에 `KRX_API_KEY`·`DATABASE_URL`을 문서화한다. 실제 키는 `.env`에만 두고 코드에 하드코딩하지 않는다
   - `data/CLAUDE.md`: 원천을 pykrx에서 KRX OPEN API로, 컬럼 표준에 `value`(거래대금, 원)를 추가한다 (research.md 결정 1·6). **DATA 파트 합의가 선행되어야 한다**
   - `raw/`·`tests/` 디렉터리를 만들고 `.gitignore`에 `raw/`가 있는지 확인한다
-- [ ] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
+- [x] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
   - **열 이름 정합 (2026-09-11 확정)**: 001 기준(`date`·`dataset_id`·`adjusted_close`·`price_carried_forward`)으로 통일하고 004의 `market-data-input.md`를 그에 맞춘다. 004 계약이 "이름은 제안이며 의미가 우선한다. 001이 다른 이름을 쓰면 provider 매핑만 바꾼다"고 허용했고 004는 아직 구현 전이라 문서 수정만으로 끝난다. 메시지 계약 픽스처와 ADR-0002·0003은 고치지 않는다
   - **의미 충돌 해소 (2026-09-11 확정)**: 004는 "결측은 행 부재로 표현하고 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 정지일에도 행을 만들고 `trading_suspended` 열로 표시해 해소한다. OHLC 네 값을 모두 직전 종가로 채우고 `volume`·`value`는 0이다. `trading_suspended`(원인)와 `price_carried_forward`(처리)를 둘 다 둔다. 진짜 결측에는 행을 만들지 않으므로 004의 규칙이 유지된다
   - 분배금 이벤트에 004가 요구한 `ex_date`(배당락일)와 `pay_date`(지급일)를 모두 담도록 `corporate_action`을 고친다. 현재 data-model.md에는 날짜가 하나뿐이다
