@@ -40,6 +40,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `evaluation_split` | JSONB NULL | 미등록이면 NULL → 전 후보 '미검증' (R5) |
 | `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시 |
 | `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |
+| `execution_plan` | JSONB NOT NULL | 접수 시점에 고정한 실행 조건. 아래 §2.2 (2026-09-11 추가, FR-007·FR-012) |
 | `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |
 | `status` | VARCHAR(20) NOT NULL | §3 상태 |
 | `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` `NO_VALID_CANDIDATE` `STRATEGY_NOT_REGISTERED` `STRATEGY_NOT_EXECUTABLE` (뒤 둘은 2026-09-11 추가, FR-026) |
@@ -79,6 +80,36 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
   바뀐 뒤에도 그 묶음이 무엇을 탐색했는지 읽을 수 있어야 한다(FR-020, 원칙 VIII).
 - **전체 조합 수는 전략별 (축별 값 개수의 곱)의 합**이다. 전략 하나뿐일 때 초판 계산과 같다.
 - 등록표에 축이 없는 전략(파라미터 없음)은 `axes: []`이고 조합 1건이다.
+
+### 2.2 `execution_plan` 구조 (2026-09-11 추가, FR-007·FR-012)
+
+후보와 기준을 조립하는 데 필요한 값 전부다. **V3에는 이 자리가 없었다** — 전략·탐색 공간·선정 규칙·참조
+버전만 있고 공통 구간·금액·비용 조건·대응표 버전·공통 워밍업을 담을 곳이 없었다.
+
+```json
+{
+  "universe": [{ "sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX" }],
+  "mappingVersion": "SECTOR-ETF-2026-09",
+  "start": "2019-08-30", "end": "2026-08-31",
+  "initialCash": "10000000.00",
+  "costProfileVersion": "v1",
+  "warmupTradingDays": 252,
+  "registryVersion": "PROVISIONAL-20260911",
+  "rulesVersionByStrategy": { "EQUAL_WEIGHT": "1" },
+  "baselineStrategyId": "EQUAL_WEIGHT",
+  "baselineParameters": {}
+}
+```
+
+- **왜 컬럼인가**: 후보는 발행 창 단위로 며칠에 걸쳐 나갈 수 있고, 재발행·재시도는 기동 뒤에도 같은
+  조건을 다시 조립해야 한다. 발행할 때마다 현재 설정을 읽으면 한 묶음 안의 후보들이 서로 다른 조건으로
+  계산되어 나란히 놓은 숫자가 비교 가능한 값이 아니게 된다(원칙 IV).
+- **금액은 문자열**이다. JSON 숫자로 두면 읽을 때 배정밀도로 돌아와 자릿수를 잃는다(V2 규약과 같다).
+- **값이 없는 항목은 키를 넣지 않는다.** 저장 ObjectMapper가 null 키를 생략하므로 넣어 두면 저장 전후의
+  값이 달라진다. 읽는 쪽은 "키 없음 == null"로 본다(메시지 JSON 규약과 같다).
+- `rulesVersionByStrategy`는 004가 준 값이다. 007이 버전을 고르면 004 등록표와 갈린다.
+- `baselineStrategyId`는 등록표가 기준 전략 역할로 지정한 값이며 없으면 키가 없다 — 그때는 기준 실행을
+  만들지 않고 `drawdownFilterApplied = false`다(FR-013d·FR-025).
 
 ## 3. `param_search.status` 상태 전이
 
@@ -190,7 +221,10 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr
 
 ## 7. 기존 테이블 변경
 
-없음. `backtest_job`·`backtest_result`·`backtest_trade`는 그대로 쓴다.
+`param_search`에 `execution_plan` 컬럼을 더한다(2026-09-11, §2.2). V3은 이미 병합돼 있으므로 고치지
+않고 타임스탬프 마이그레이션으로 덧붙인다 — 기존 행이 있을 수 있어 `NOT NULL DEFAULT '{}'::jsonb`다.
+
+`backtest`는 그대로다. `backtest_job`·`backtest_result`·`backtest_trade`는 그대로 쓴다.
 
 `search_candidate.backtest_job_id`가 `backtest_job(id)`를 참조하는 단방향이며, `backtest` 모듈은
 `paramsearch`를 알지 못한다. 묶음에 속한 Job과 단일 실행 Job은 `backtest_job`에서 구분되지 않는데,

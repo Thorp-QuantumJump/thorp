@@ -35,6 +35,7 @@ final class ParamSearchMapper {
                 paramSearch.getSelectionRule().toMap(),
                 paramSearch.getLimits(),
                 paramSearch.getReferenceVersions(),
+                paramSearch.getExecutionPlan(),
                 paramSearch.getBaselineJobId(),
                 paramSearch.getStatus(),
                 paramSearch.getStopReason(),
@@ -60,6 +61,7 @@ final class ParamSearchMapper {
                 .selectionRule(SelectionRule.fromMap(entity.getSelectionRule()))
                 .limits(entity.getLimits())
                 .referenceVersions(entity.getReferenceVersions())
+                .executionPlan(entity.getExecutionPlan())
                 .baselineJobId(entity.getBaselineJobId())
                 .status(entity.getStatus())
                 .stopReason(entity.getStopReason())

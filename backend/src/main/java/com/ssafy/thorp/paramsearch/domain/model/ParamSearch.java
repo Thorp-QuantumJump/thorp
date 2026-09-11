@@ -3,6 +3,8 @@ package com.ssafy.thorp.paramsearch.domain.model;
 import com.ssafy.thorp.paramsearch.domain.vo.ParamSearchId;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ public class ParamSearch {
     private final Map<String, Object> evaluationSplit;
     private final Map<String, Object> limits;
     private final Map<String, Object> referenceVersions;
+    private final Map<String, Object> executionPlan;
     private final Long baselineJobId;
     private final ParamSearchStatus status;
     private final StopReason stopReason;
@@ -65,6 +68,10 @@ public class ParamSearch {
                 builder.evaluationSplit == null ? null : Map.copyOf(builder.evaluationSplit);
         this.limits = Map.copyOf(builder.limits);
         this.referenceVersions = Map.copyOf(builder.referenceVersions);
+        // Map.copyOf를 쓰지 않는다 — 실행 조건에는 값이 null인 항목(평가 분할 버전, 기준 전략 미지정)이
+        // 있고 Map.copyOf는 null 값에서 NPE를 던진다. 순서도 함께 지킨다(사람이 읽는 기록이다).
+        this.executionPlan =
+                Collections.unmodifiableMap(new LinkedHashMap<>(builder.executionPlan));
         this.baselineJobId = builder.baselineJobId;
         this.status = builder.status;
         this.stopReason = builder.stopReason;
@@ -91,6 +98,7 @@ public class ParamSearch {
             Map<String, Object> evaluationSplit,
             Map<String, Object> limits,
             Map<String, Object> referenceVersions,
+            Map<String, Object> executionPlan,
             SearchCounts counts) {
         requireNonBlankValues(strategyIds, "strategyIds");
         requireNonBlankValues(instrumentIds, "instrumentIds");
@@ -111,6 +119,8 @@ public class ParamSearch {
                 .referenceVersions(
                         Objects.requireNonNull(
                                 referenceVersions, "referenceVersions must not be null"))
+                .executionPlan(
+                        Objects.requireNonNull(executionPlan, "executionPlan must not be null"))
                 .counts(Objects.requireNonNull(counts, "counts must not be null"))
                 .status(ParamSearchStatus.QUEUED)
                 .build();
@@ -217,6 +227,7 @@ public class ParamSearch {
                 .evaluationSplit(evaluationSplit)
                 .limits(limits)
                 .referenceVersions(referenceVersions)
+                .executionPlan(executionPlan)
                 .baselineJobId(baselineJobId)
                 .status(status)
                 .stopReason(stopReason)
@@ -307,6 +318,16 @@ public class ParamSearch {
         return referenceVersions;
     }
 
+    /**
+     * 접수 시점에 고정한 실행 조건 — 공통 구간·금액·비용 조건·대응표 버전·공통 워밍업·기준 전략이다.
+     *
+     * <p>후보와 기준을 조립할 때마다 현재 설정을 다시 읽으면 같은 묶음 안의 후보가 서로 다른 조건으로 계산된다(FR-007·FR-012). 형식은 {@code
+     * ParamSearchSnapshot}이 정한다 — 도메인은 프레임워크도 application 계층도 모르므로 여기서는 {@code Map}으로 둔다.
+     */
+    public Map<String, Object> getExecutionPlan() {
+        return executionPlan;
+    }
+
     public Long getBaselineJobId() {
         return baselineJobId;
     }
@@ -355,6 +376,7 @@ public class ParamSearch {
         private Map<String, Object> evaluationSplit;
         private Map<String, Object> limits = Map.of();
         private Map<String, Object> referenceVersions = Map.of();
+        private Map<String, Object> executionPlan = Map.of();
         private Long baselineJobId;
         private ParamSearchStatus status = ParamSearchStatus.QUEUED;
         private StopReason stopReason;
@@ -426,6 +448,11 @@ public class ParamSearch {
 
         public Builder referenceVersions(Map<String, Object> referenceVersions) {
             this.referenceVersions = referenceVersions;
+            return this;
+        }
+
+        public Builder executionPlan(Map<String, Object> executionPlan) {
+            this.executionPlan = executionPlan == null ? Map.of() : executionPlan;
             return this;
         }
 
