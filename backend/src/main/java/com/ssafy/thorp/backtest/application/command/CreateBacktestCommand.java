@@ -1,27 +1,43 @@
 package com.ssafy.thorp.backtest.application.command;
 
-import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 백테스트 생성 유스케이스 입력. HTTP 요청 DTO와 분리한다.
+ * 접수 유스케이스 입력(spec 004 T005). 컨트롤러가 요청 DTO를 이 모양으로 바꿔 넘긴다.
  *
- * <p>요청의 중첩 구조는 컨트롤러가 여기로 펼친다. {@code positionSizingType}은 not null이며 요청에서 생략됐을 때의 기본값도 컨트롤러가 채운다.
- * 서비스와 도메인은 기본값을 모른다.
- *
- * @param maxPositionPct null = 제한 없음
- * @param benchmarkInstrumentId null = 벤치마크 미지정
+ * @param requesterId 요청자. 계산 기록이 아니라 요청에만 붙는다(R-12). 취소·조회 권한의 근거다
+ * @param warmupTradingDays null = 선택 전략의 관측 길이를 쓴다
+ * @param scenarioParams 시나리오 입력값. 없으면 null
  */
 public record CreateBacktestCommand(
+        Long requesterId,
+        ExecutionType executionType,
+        String mappingVersion,
+        List<AllocationItem> items,
         String strategyId,
+        String rulesVersion,
+        String registryVersion,
         Map<String, Object> parameters,
-        List<String> instrumentIds,
         LocalDate start,
         LocalDate end,
         BigDecimal initialCash,
-        PositionSizingMode positionSizingType,
-        BigDecimal maxPositionPct,
-        String benchmarkInstrumentId) {}
+        String costProfileVersion,
+        String evaluationSplitVersion,
+        Integer warmupTradingDays,
+        Scenario scenario,
+        Map<String, Object> scenarioParams) {
+
+    /**
+     * @param targetWeight FIXED_WEIGHT 에서만 존재
+     */
+    public record AllocationItem(String sectorId, String instrumentId, BigDecimal targetWeight) {}
+
+    public List<String> instrumentIds() {
+        return items.stream().map(AllocationItem::instrumentId).toList();
+    }
+}

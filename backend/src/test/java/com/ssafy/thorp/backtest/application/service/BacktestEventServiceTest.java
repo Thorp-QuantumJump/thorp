@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
-import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -17,23 +16,28 @@ import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,8 +49,14 @@ class BacktestEventServiceTest {
 
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
-    @Mock private BacktestProgressNotifier progressNotifier;
-    @InjectMocks private BacktestEventService service;
+
+    private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
+    private BacktestEventService service;
+
+    @BeforeEach
+    void createService() {
+        service = new BacktestEventService(jobRepository, resultRepository, clock);
+    }
 
     private static BacktestRun jobIn(RunStatus status) {
         return BacktestRun.restore(
@@ -67,6 +77,26 @@ class BacktestEventServiceTest {
 
     private void givenJob(RunStatus status) {
         when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
+    }
+
+    /** 마지막 STARTED 의 executionId 를 지정한 실행. 픽스처 이벤트의 executionId 와 일부러 다르게 둔다. */
+    private void givenJob(RunStatus status, String currentExecutionId) {
+        BacktestRun job =
+                BacktestRun.restore(
+                        1L,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of(),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        new RunState(status, 1, currentExecutionId, false, null, null, null));
+        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(job));
     }
 
     private void givenUnknownJob() {
@@ -92,14 +122,26 @@ class BacktestEventServiceTest {
     @ParameterizedTest
     @EnumSource(
             value = RunStatus.class,
-            names = {"RUNNING", "COMPLETED", "FAILED"})
-    @DisplayName("STARTED: QUEUED가 아닌 Job이면 갱신하지 않는다(늦은 이벤트·중복)")
+            names = {"COMPLETED", "FAILED", "CANCELLED"})
+    @DisplayName("STARTED: 이미 끝난 실행이면 갱신하지 않는다(늦은 이벤트)")
     void lateStartedIsIgnored(RunStatus status) {
         givenJob(status);
 
         service.handleStarted(MessageFixtures.started());
 
         verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("STARTED: RUNNING 중 다른 실행이 시작하면 상태는 그대로 두고 시도만 올린다 (R-06 자동 재시도)")
+    void startedFromAnotherExecutionBumpsAttempt() {
+        givenJob(RunStatus.RUNNING, "exec-previous");
+
+        service.handleStarted(MessageFixtures.started());
+
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(updated.getAttempt()).isEqualTo(2);
     }
 
     @Test
@@ -185,31 +227,62 @@ class BacktestEventServiceTest {
         service.handleProgress(MessageFixtures.progress());
 
         verify(jobRepository, never()).update(any());
-        verifyNoInteractions(resultRepository, progressNotifier);
+        verifyNoInteractions(resultRepository);
     }
 
     @Test
-    @DisplayName("PROGRESS: RUNNING Job의 진행은 notifier로 전달한다")
-    void progressOnRunningJobIsNotified() {
+    @DisplayName("PROGRESS: RUNNING 실행의 진행은 실행 행에 저장한다 (R-05)")
+    void progressOnRunningJobIsPersisted() {
         givenJob(RunStatus.RUNNING);
         BacktestEvent<ProgressPayload> event = MessageFixtures.progress();
 
         service.handleProgress(event);
 
-        verify(progressNotifier).notifyProgress(event);
-        verify(jobRepository, never()).update(any());
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getProgress().stage()).isEqualTo(ProgressStage.COMPUTING);
+        assertThat(captor.getValue().getProgress().lastTradingDate())
+                .isEqualTo(event.payload().lastTradingDate());
+        assertThat(captor.getValue().getProgress().completedTradingDays())
+                .isEqualTo(event.payload().completedTradingDays());
     }
 
     @ParameterizedTest
     @EnumSource(
             value = RunStatus.class,
             names = {"QUEUED", "COMPLETED", "FAILED"})
-    @DisplayName("PROGRESS: RUNNING이 아닌 Job의 진행은 전달하지 않는다")
+    @DisplayName("PROGRESS: RUNNING이 아닌 실행의 진행은 저장하지 않는다")
     void progressOnNonRunningJobIsIgnored(RunStatus status) {
         givenJob(status);
 
         service.handleProgress(MessageFixtures.progress());
 
-        verifyNoInteractions(progressNotifier);
+        verify(jobRepository, never()).update(any());
+    }
+
+    // --- R-18 중복 실행 종결 규칙 -------------------------------------------
+
+    @Test
+    @DisplayName("다른 실행의 FAILED는 무시하고 RUNNING을 유지한다 — 뒤에 올 정상 결과를 덮지 않는다")
+    void failedFromSupersededExecutionIsIgnored() {
+        givenJob(RunStatus.RUNNING, "exec-current");
+
+        service.handleFinished(MessageFixtures.finishedFailed());
+
+        verify(jobRepository, never()).update(any());
+        verifyNoInteractions(resultRepository);
+    }
+
+    @Test
+    @DisplayName("COMPLETED는 어느 실행에서 와도 적용한다 — 입력이 같으므로 결과가 같다")
+    void completedFromAnyExecutionApplies() {
+        givenJob(RunStatus.RUNNING, "exec-current");
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(captor.getValue().getLifecycle().finishedAt()).isEqualTo(clock.instant());
     }
 }

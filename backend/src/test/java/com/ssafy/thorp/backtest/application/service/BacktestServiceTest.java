@@ -3,160 +3,401 @@ package com.ssafy.thorp.backtest.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
-import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
-import com.ssafy.thorp.backtest.application.port.message.EngineInput;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
-import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
-import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.CostProfile;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RulesStatus;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
-import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
-import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * 접수 유스케이스(spec 004 T005).
+ *
+ * <p>계산기 두 개는 진짜를 쓴다 — 동일 버전 키와 실효 기간은 접수의 결론 그 자체라서, 목으로 대체하면 "접수가 무엇을 확정했는가"를 확인할 수 없다. 저장소와 이벤트
+ * 발행만 목이다.
+ */
 class BacktestServiceTest {
 
-    private static final LocalDate START = LocalDate.of(2019, 1, 1);
-    private static final LocalDate END = LocalDate.of(2023, 12, 31);
-    private static final String BACKTEST_ID = "BT-20260907-000001";
-    private static final BigDecimal CASH = new BigDecimal("10000000");
+    private static final long REQUESTER = 7L;
+    private static final Instant NOW = Instant.parse("2026-09-11T04:00:00Z");
 
-    @Mock private BacktestRunRepository repository;
-    @Mock private BacktestJobPublisher publisher;
-    @Spy private EngineInputAssembler assembler;
-    @InjectMocks private BacktestService service;
+    private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
+    private final BacktestRequestRepository requestRepository =
+            mock(BacktestRequestRepository.class);
+    private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
+    private final CostProfileService costProfileService = mock(CostProfileService.class);
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final FixtureMarketMetadataAdapter marketMetadata =
+            new FixtureMarketMetadataAdapter(LocalDate.of(2026, 12, 31));
 
-    private static CreateBacktestCommand command(LocalDate start, LocalDate end) {
-        return new CreateBacktestCommand(
-                "MA_CROSSOVER",
-                Map.of("shortWindow", 20),
-                List.of("005930.XKRX"),
-                start,
-                end,
-                CASH,
-                PositionSizingMode.STRATEGY_DEFINED,
-                new BigDecimal("0.50"),
-                "069500.XKRX");
+    private final BacktestService service =
+            new BacktestService(
+                    runRepository,
+                    requestRepository,
+                    strategyRulesService,
+                    costProfileService,
+                    new EffectivePeriodCalculator(marketMetadata),
+                    new DedupKeyCalculator(),
+                    marketMetadata,
+                    events,
+                    Clock.fixed(NOW, ZoneOffset.UTC),
+                    "nautilus_trader 1.219.0 / worker 2.0.0");
+
+    @BeforeEach
+    void stubRegistries() {
+        when(strategyRulesService.requireRegistered("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        when(strategyRulesService.requireRegistered("INVERSE_VOLATILITY", "1"))
+                .thenReturn(rules("INVERSE_VOLATILITY", Map.of("lookbackDays", 63)));
+        when(strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1"))
+                .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
+        when(costProfileService.resolve(any()))
+                .thenReturn(
+                        new CostProfile(
+                                "PROVISIONAL-DEMO-1",
+                                new BigDecimal("0"),
+                                new BigDecimal("0"),
+                                new BigDecimal("5"),
+                                new BigDecimal("0"),
+                                null,
+                                true,
+                                "ADR-0004"));
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.empty());
+        when(runRepository.save(any()))
+                .thenAnswer(invocation -> saved(invocation.getArgument(0), 11L));
+        when(requestRepository.save(any()))
+                .thenAnswer(invocation -> savedRequest(invocation.getArgument(0)));
     }
 
-    private static BacktestRun savedJob() {
+    private static StrategyRules rules(String strategyId, Map<String, Object> spec) {
+        return new StrategyRules(strategyId, "1", RulesStatus.REGISTERED, false, spec, null);
+    }
+
+    /** 저장소가 하는 일(식별자 부여)만 흉내 낸다. */
+    private static BacktestRun saved(BacktestRun run, long id) {
         return BacktestRun.restore(
-                1L,
-                BacktestId.from(BACKTEST_ID),
-                "MA_CROSSOVER",
-                "1.0.0",
-                Map.of("shortWindow", 20),
-                List.of(new InstrumentId("005930.XKRX")),
-                new BacktestPeriod(START, END),
-                CASH,
-                PositionSizingMode.STRATEGY_DEFINED,
-                new BigDecimal("0.50"),
-                new InstrumentId("069500.XKRX"),
-                42,
-                RunStatus.QUEUED);
+                        id,
+                        BacktestId.from("BT-20260911-000011"),
+                        run.getStrategyId(),
+                        run.getStrategyVersion(),
+                        run.getParameters(),
+                        run.getInstrumentIds(),
+                        run.getPeriod(),
+                        run.getInitialCash(),
+                        run.getPositionSizingType(),
+                        run.getMaxPositionPct(),
+                        run.getBenchmarkInstrumentId(),
+                        run.getRandomSeed(),
+                        run.getState(),
+                        run.getPlan(),
+                        run.getLifecycle())
+                .withPlan(run.getPlan());
+    }
+
+    private static BacktestRequest savedRequest(BacktestRequest request) {
+        return BacktestRequest.restore(
+                21L,
+                BacktestId.from("BT-20260911-000021"),
+                request.getRunId(),
+                request.getRequesterId(),
+                request.getExecutionType(),
+                request.getResultSource(),
+                request.getRetryOfRequestId(),
+                null,
+                null,
+                false);
+    }
+
+    private static CreateBacktestCommand command(
+            String strategyId,
+            BigDecimal weight,
+            Integer warmup,
+            Scenario scenario,
+            Map<String, Object> params) {
+        return new CreateBacktestCommand(
+                REQUESTER,
+                ExecutionType.SINGLE,
+                "SECTOR-ETF-2026-09",
+                List.of(
+                        new CreateBacktestCommand.AllocationItem(
+                                "SEMICONDUCTOR", "091160.XKRX", weight),
+                        new CreateBacktestCommand.AllocationItem(
+                                "BATTERY",
+                                "305720.XKRX",
+                                weight == null ? null : BigDecimal.ONE.subtract(weight))),
+                strategyId,
+                "1",
+                "PARAM-2026-09",
+                Map.of("rebalance", "MONTH_END"),
+                LocalDate.of(2024, 1, 2),
+                LocalDate.of(2024, 12, 31),
+                new BigDecimal("10000000.00"),
+                null,
+                "SPLIT-1",
+                warmup,
+                scenario,
+                params);
+    }
+
+    private static CreateBacktestCommand fixedWeight() {
+        return command("FIXED_WEIGHT", new BigDecimal("0.4000"), null, Scenario.FULL_PERIOD, null);
     }
 
     @Test
-    @DisplayName("create는 QUEUED Job을 저장한 뒤 저장된 Job을 발행하고 결과를 돌려준다")
-    void createSavesThenPublishes() {
-        BacktestRun saved = savedJob();
-        when(repository.save(any(BacktestRun.class))).thenReturn(saved);
+    @DisplayName("접수하면 실행과 요청이 생기고 202 본문에 실효 기간·버전이 담긴다")
+    void createsRunAndRequest() {
+        BacktestJobResult result = service.create(fixedWeight());
 
-        BacktestJobResult result = service.create(command(START, END));
+        assertThat(result.backtestId()).isEqualTo("BT-20260911-000021");
+        assertThat(result.status()).isEqualTo(RunStatus.QUEUED);
+        assertThat(result.resultSource()).isEqualTo(ResultSource.NEW);
+        assertThat(result.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
+        assertThat(result.effectiveEnd()).isEqualTo(LocalDate.of(2024, 12, 31));
+        assertThat(result.versions())
+                .containsEntry("rules", "1")
+                .containsEntry("data", "FIXTURE-three_etf_24m")
+                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.0.0");
+        assertThat(result.versions().get("costProfile"))
+                .isEqualTo(Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
+    }
+
+    @Test
+    @DisplayName("저장하는 실행에 동일 버전 키·발행 시도 1·접수 시각이 붙는다 (R-18)")
+    void savedRunCarriesPlanAndFirstPublishAttempt() {
+        service.create(fixedWeight());
 
         ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
-        verify(repository).save(captor.capture());
-        BacktestRun requested = captor.getValue();
-        assertThat(requested.getId()).isNull();
-        assertThat(requested.getBacktestId()).isNull();
-        assertThat(requested.getStatus()).isEqualTo(RunStatus.QUEUED);
-        assertThat(requested.getInstrumentIds()).containsExactly(new InstrumentId("005930.XKRX"));
-        assertThat(requested.getBenchmarkInstrumentId()).isEqualTo(new InstrumentId("069500.XKRX"));
+        verify(runRepository).save(captor.capture());
+        BacktestRun run = captor.getValue();
 
-        ArgumentCaptor<EngineInput> published = ArgumentCaptor.forClass(EngineInput.class);
-        verify(publisher).publish(published.capture());
-        assertThat(published.getValue().run().runId()).isEqualTo(BACKTEST_ID);
-
-        assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
-        assertThat(result.status()).isEqualTo(RunStatus.QUEUED);
+        assertThat(run.getDedupKey()).hasSize(64);
+        assertThat(run.getPlan().costProfileVersion()).isEqualTo("PROVISIONAL-DEMO-1");
+        assertThat(run.getPlan().requestSpec())
+                .containsEntry("mappingVersion", "SECTOR-ETF-2026-09")
+                .containsEntry("warmupTradingDays", 0);
+        assertThat(run.getLifecycle().publishCount())
+                .as("발행 시도는 커밋 전에 예고한다 — 못 보내도 상한은 지켜진다")
+                .isEqualTo(1);
+        assertThat(run.getLifecycle().publishedAt()).isNull();
+        assertThat(run.getLifecycle().queuedAt()).isEqualTo(NOW);
     }
 
     @Test
-    @DisplayName("전략 버전과 시드는 요청이 아니라 고정 정책에서 온다")
-    void createUsesExecutionPolicyDefaults() {
-        when(repository.save(any(BacktestRun.class))).thenReturn(savedJob());
+    @DisplayName("발행은 커밋 뒤에 일어나도록 이벤트로만 알린다 — 여기서 직접 발행하지 않는다")
+    void publishesAfterCommitViaEvent() {
+        service.create(fixedWeight());
 
-        service.create(command(START, END));
-
-        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
-        verify(repository).save(captor.capture());
-        assertThat(captor.getValue().getStrategyVersion())
-                .isEqualTo(ExecutionPolicy.STRATEGY_VERSION);
-        assertThat(captor.getValue().getRandomSeed())
-                .isEqualTo(ExecutionPolicy.DEFAULT_RANDOM_SEED);
+        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L));
     }
 
     @Test
-    @DisplayName("기간이 잘못되면 저장·발행 없이 실패한다")
-    void createRejectsInvalidPeriodBeforeSaving() {
-        assertThatThrownBy(() -> service.create(command(END, START)))
-                .isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("같은 조건의 살아 있는 실행이 있으면 새로 계산하지 않고 합류한다")
+    void joinsActiveRun() {
+        BacktestRun running = saved(runningRun(), 11L);
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(running));
 
-        verify(repository, never()).save(any());
-        verify(publisher, never()).publish(any());
+        BacktestJobResult result = service.create(fixedWeight());
+
+        assertThat(result.resultSource()).isEqualTo(ResultSource.JOINED);
+        verify(runRepository, never()).save(any());
+        verify(events, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("발행이 실패하면 예외를 그대로 올려 트랜잭션을 롤백시킨다")
-    void createPropagatesPublishFailure() {
-        when(repository.save(any(BacktestRun.class))).thenReturn(savedJob());
-        doThrow(new BacktestPublishFailedException(BACKTEST_ID, new RuntimeException("down")))
-                .when(publisher)
-                .publish(any());
+    @DisplayName("완료된 실행이 있으면 결과를 재사용한다 — 상태가 이미 COMPLETED다")
+    void reusesCompletedRun() {
+        when(runRepository.findActiveByDedupKey(any()))
+                .thenReturn(Optional.of(saved(completedRun(), 11L)));
 
-        assertThatThrownBy(() -> service.create(command(START, END)))
-                .isInstanceOf(BacktestPublishFailedException.class);
+        BacktestJobResult result = service.create(fixedWeight());
+
+        assertThat(result.resultSource()).isEqualTo(ResultSource.REUSED);
+        assertThat(result.status()).isEqualTo(RunStatus.COMPLETED);
     }
 
     @Test
-    @DisplayName("get은 저장된 Job을 결과로 돌려준다")
-    void getReturnsResult() {
-        when(repository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(savedJob()));
-
-        BacktestJobResult result = service.get(BACKTEST_ID);
-
-        assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
-        assertThat(result.status()).isEqualTo(RunStatus.QUEUED);
+    @DisplayName("고정 비중이 아닌 전략에 목표 비중을 보내면 400이다")
+    void weightsOnlyForFixedWeight() {
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        command(
+                                                "INVERSE_VOLATILITY",
+                                                new BigDecimal("0.4000"),
+                                                null,
+                                                Scenario.FULL_PERIOD,
+                                                null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("FIXED_WEIGHT");
     }
 
     @Test
-    @DisplayName("get은 없는 backtestId면 예외를 던진다")
-    void getThrowsWhenMissing() {
-        when(repository.findByBacktestId("BT-20260907-999999")).thenReturn(Optional.empty());
+    @DisplayName("목표 비중 합이 1이 아니면 400이다")
+    void weightsMustSumToOne() {
+        CreateBacktestCommand command =
+                new CreateBacktestCommand(
+                        REQUESTER,
+                        ExecutionType.SINGLE,
+                        "SECTOR-ETF-2026-09",
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "SEMICONDUCTOR", "091160.XKRX", new BigDecimal("0.4000")),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BATTERY", "305720.XKRX", new BigDecimal("0.4000"))),
+                        "FIXED_WEIGHT",
+                        "1",
+                        null,
+                        Map.of(),
+                        LocalDate.of(2024, 1, 2),
+                        LocalDate.of(2024, 12, 31),
+                        new BigDecimal("10000000.00"),
+                        null,
+                        null,
+                        null,
+                        Scenario.FULL_PERIOD,
+                        null);
 
-        assertThatThrownBy(() -> service.get("BT-20260907-999999"))
-                .isInstanceOf(BacktestNotFoundException.class);
+        assertThatThrownBy(() -> service.create(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("합이 1이 아닙니다");
+    }
+
+    @Test
+    @DisplayName("대응표가 연결하지 않는 섹터·종목 쌍은 400이다 — 옛 화면이 보낸 요청을 조용히 실행하지 않는다")
+    void mappingMismatchIsRejected() {
+        CreateBacktestCommand command =
+                new CreateBacktestCommand(
+                        REQUESTER,
+                        ExecutionType.SINGLE,
+                        "SECTOR-ETF-2026-09",
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BIO", "091160.XKRX", BigDecimal.ONE)),
+                        "FIXED_WEIGHT",
+                        "1",
+                        null,
+                        Map.of(),
+                        LocalDate.of(2024, 1, 2),
+                        LocalDate.of(2024, 12, 31),
+                        new BigDecimal("10000000.00"),
+                        null,
+                        null,
+                        null,
+                        Scenario.FULL_PERIOD,
+                        null);
+
+        assertThatThrownBy(() -> service.create(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("연결되지 않습니다");
+    }
+
+    @Test
+    @DisplayName("목표 위험 시나리오는 허용 범위와 간격을 지켜야 한다")
+    void targetVolatilityIsValidated() {
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        command(
+                                                "FIXED_WEIGHT",
+                                                new BigDecimal("0.4000"),
+                                                null,
+                                                Scenario.TARGET_RISK,
+                                                Map.of("targetVolatility", "0.3000"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("0.0500~0.2000");
+
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        command(
+                                                "FIXED_WEIGHT",
+                                                new BigDecimal("0.4000"),
+                                                null,
+                                                Scenario.TARGET_RISK,
+                                                Map.of("targetVolatility", "0.1050"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("간격");
+    }
+
+    @Test
+    @DisplayName("주 분석에 시나리오 입력값을 보내면 400이다")
+    void scenarioParamsForbiddenOnFullPeriod() {
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        command(
+                                                "FIXED_WEIGHT",
+                                                new BigDecimal("0.4000"),
+                                                null,
+                                                Scenario.FULL_PERIOD,
+                                                Map.of("targetVolatility", "0.1000"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("보낼 수 없습니다");
+    }
+
+    @Test
+    @DisplayName("요청 워밍업이 전략 요구값보다 작으면 422다 (R-15)")
+    void warmupBelowRequirementIsRejected() {
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        command(
+                                                "INVERSE_VOLATILITY",
+                                                null,
+                                                20,
+                                                Scenario.FULL_PERIOD,
+                                                null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.INSUFFICIENT_HISTORY);
+    }
+
+    private static BacktestRun runningRun() {
+        return BacktestRun.create(
+                        "FIXED_WEIGHT",
+                        "1",
+                        Map.of(),
+                        List.of(new com.ssafy.thorp.backtest.domain.vo.InstrumentId("091160.XKRX")),
+                        new com.ssafy.thorp.backtest.domain.vo.BacktestPeriod(
+                                LocalDate.of(2024, 1, 2), LocalDate.of(2024, 12, 31)),
+                        new BigDecimal("10000000.00"),
+                        com.ssafy.thorp.backtest.domain.model.PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42)
+                .markRunning("exec-1");
+    }
+
+    private static BacktestRun completedRun() {
+        return runningRun().markCompleted();
     }
 }
