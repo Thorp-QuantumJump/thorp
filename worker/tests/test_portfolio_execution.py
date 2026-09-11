@@ -506,6 +506,23 @@ def test_engine_invariant_failure_is_returned_as_engine_error(
     assert output.run.error is not None and output.run.error.code == "ENGINE_ERROR"
 
 
+def test_defect_after_data_is_loaded_is_an_engine_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """자료가 메모리에 오른 뒤의 예외는 전부 결정적 결함이다.
+
+    전파해 재전달시키면 같은 자리에서 또 죽어 DLQ 로 간다 — 장애가 아니라 결함이다.
+    """
+    import worker.engine_runner as runner_module
+
+    def broken(*args: Any, **kwargs: Any) -> Any:
+        raise ZeroDivisionError("division by zero in metrics")
+
+    monkeypatch.setattr(runner_module, "calculate_performance", broken)
+    output = run()
+    assert output.run.status is RunStatus.FAILED
+    assert output.run.error is not None and output.run.error.code == "ENGINE_ERROR"
+    assert "ZeroDivisionError" in output.run.error.message
+
+
 # --- TARGET_RISK 오버레이(PD-18) -----------------------------------------------------------------
 
 TARGET_RISK_RULES: dict[str, Any] = {

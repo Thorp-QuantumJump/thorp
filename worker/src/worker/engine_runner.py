@@ -172,7 +172,10 @@ class PortfolioBacktestEngine:
                 self._rejected(request, None, started, "INVALID_REQUEST", "; ".join(reasons)),
                 RunArtifacts(orders=orders, metadata=metadata),
             )
-        market: MarketData | None = None
+        # 일시 장애(DB 접속 실패 등)는 자료 적재에서만 난다. 그래서 이 호출만 try 밖에 두고
+        # 그대로 전파한다 — 소비자는 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로
+        # 바꾸면 FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다. 자료 부족은 확정
+        # 오류이므로 아래에서 결과로 바꾼다.
         try:
             market = self.market_data.load(
                 request.universe.instrument_ids,
@@ -180,6 +183,12 @@ class PortfolioBacktestEngine:
                 request.run.end,
                 request.market_data.data_version,
             )
+        except MarketDataError as exc:
+            return (
+                self._rejected(request, None, started, "DATA_INSUFFICIENT", str(exc)),
+                RunArtifacts(orders=orders, metadata=metadata),
+            )
+        try:
             calendar = market.trading_days
             first_day = evaluation_start(request, calendar)
             plan = plan_days(
@@ -260,11 +269,14 @@ class PortfolioBacktestEngine:
         except MarketDataError as exc:
             output = self._rejected(request, market, started, "DATA_INSUFFICIENT", str(exc))
         except EngineFailure as exc:
-            # 같은 입력이면 다시 나는 엔진 결함. 결과로 돌려준다 — 재전달해도 달라지지 않는다.
             output = self._rejected(request, market, started, "ENGINE_ERROR", str(exc))
-        # 그 밖의 예외(공급자 접속 실패 등 일시 장애)는 결과로 바꾸지 않고 소비자에게 전파한다.
-        # 소비자는 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 여기서 FAILED 로 바꾸면
-        # FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다.
+        except Exception as exc:  # noqa: BLE001 - 아래 이유로 의도한 광역 처리
+            # 자료가 메모리에 오른 뒤의 예외는 전부 결정적이다 — 같은 입력이면 다시 난다. 전파하면
+            # 소비자가 재전달하고 한 번 더 같은 자리에서 죽어 DLQ(SYSTEM_FAILURE)로 가는데, 그건
+            # 장애가 아니라 엔진 결함이다. 결과로 돌려준다(계약 §4.3 ENGINE_ERROR).
+            output = self._rejected(
+                request, market, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
+            )
         return output, RunArtifacts(orders=orders, metadata=metadata)
 
     @staticmethod

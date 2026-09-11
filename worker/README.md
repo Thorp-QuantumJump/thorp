@@ -64,9 +64,10 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   `DATA_INSUFFICIENT`, 규칙 값 누락 `INVALID_REQUEST`, 조건을 만족하는 배분이 없음
   `CONSTRAINT_VIOLATION`, 목표 위험 추정에 수익률 부족 `ESTIMATION_FAILED`, 엔진 자체 불변식 위반
   `ENGINE_ERROR`. `performance`·`execution` 은 채우지 않는다(키가 빠진다).
-- **일시 장애는 결과가 아니다.** 공급자 접속 실패 같은 그 밖의 예외는 `FAILED` 로 바꾸지 않고 전파한다 —
-  소비자가 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로 바꾸면 FINISHED 가 발행·ACK 되어
-  일시 장애가 최종 실패로 굳는다.
+- **일시 장애는 결과가 아니다.** 자료 적재(`MarketDataProvider.load`)에서 나는 접속 실패 같은 예외는
+  `FAILED` 로 바꾸지 않고 전파한다 — 소비자가 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로
+  바꾸면 FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다. 자료가 메모리에 오른 뒤의 예외는
+  전부 결정적 결함이라 `ENGINE_ERROR` 결과다.
 - `execution.delisting=CAUSE_BASED` 는 받되 사유 분류 미지원을 `diagnostics.warnings` 에
   `DELISTING_CLASSIFICATION_UNSUPPORTED` 로 실행당 1건 남긴다. `run.randomSeed` 생략은 42.
 
