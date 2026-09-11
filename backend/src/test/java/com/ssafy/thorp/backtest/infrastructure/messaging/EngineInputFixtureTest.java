@@ -12,6 +12,7 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -19,7 +20,6 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +37,13 @@ class EngineInputFixtureTest {
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
-    private final EngineInputAssembler assembler = new EngineInputAssembler();
+    private final EngineInputAssembler assembler =
+            new EngineInputAssembler(
+                    org.mockito.Mockito.mock(
+                            com.ssafy.thorp.backtest.application.service.StrategyRulesService
+                                    .class),
+                    org.mockito.Mockito.mock(
+                            com.ssafy.thorp.backtest.application.service.CostProfileService.class));
 
     /** 픽스처의 run/universe/allocation/portfolio 값을 그대로 담은 Job. 벤치마크 종목은 v2 메시지에 실리지 않는다. */
     private static BacktestRun fixtureJob(InstrumentId benchmark) {
@@ -69,30 +75,15 @@ class EngineInputFixtureTest {
     }
 
     @Test
-    @DisplayName("HTTP 요청 예시(v1)와 작업 메시지 예시(v2)의 공통 필드가 서로 어긋나지 않는다")
-    void requestFixtureAgreesWithMessageFixture() throws IOException {
-        JsonNode request = mapper.readTree(Files.readString(REQUEST_FIXTURE));
-        JsonNode message = mapper.readTree(Files.readString(FIXTURE));
+    @DisplayName("HTTP 요청 예시가 v2 접수 DTO 로 그대로 읽힌다")
+    void requestFixtureParsesIntoV2Dto() throws IOException {
+        BacktestJobRequest request =
+                mapper.readValue(Files.readString(REQUEST_FIXTURE), BacktestJobRequest.class);
 
-        assertThat(request.at("/run/start")).isEqualTo(message.at("/run/start"));
-        assertThat(request.at("/run/end")).isEqualTo(message.at("/run/end"));
-        List<String> messageInstruments =
-                StreamSupport.stream(message.at("/universe/items").spliterator(), false)
-                        .map(item -> item.get("instrumentId").asText())
-                        .toList();
-        List<String> requestInstruments =
-                StreamSupport.stream(request.at("/universe/instrumentIds").spliterator(), false)
-                        .map(JsonNode::asText)
-                        .toList();
-        assertThat(messageInstruments).isEqualTo(requestInstruments);
-        assertThat(request.at("/strategy/strategyId"))
-                .isEqualTo(message.at("/allocation/strategyId"));
-        assertThat(request.at("/strategy/parameters"))
-                .isEqualTo(message.at("/allocation/parameters"));
-        assertThat(request.at("/portfolio/initialCash"))
-                .isEqualTo(message.at("/portfolio/initialCash"));
-        assertThat(request.at("/portfolio/positionSizing"))
-                .isEqualTo(message.at("/portfolio/positionSizing"));
+        assertThat(request.executionType()).isNotNull();
+        assertThat(request.sectorAllocation().items()).isNotEmpty();
+        assertThat(request.strategy().rulesVersion()).isNotBlank();
+        assertThat(request.conditions().start()).isBefore(request.conditions().end());
     }
 
     @Test

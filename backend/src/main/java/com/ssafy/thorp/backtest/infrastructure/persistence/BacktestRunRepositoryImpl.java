@@ -4,9 +4,13 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,6 +22,10 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class BacktestRunRepositoryImpl implements BacktestRunRepository {
+
+    /** 부분 유니크 인덱스 {@code uk_backtest_run_dedup_active} 와 같은 상태 집합이어야 한다. */
+    private static final List<RunStatus> ACTIVE_FOR_REUSE =
+            List.of(RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.COMPLETED);
 
     private final BacktestRunJpaRepository jpaRepository;
     private final Clock clock;
@@ -34,12 +42,27 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         }
         BacktestRunJpaEntity entity = BacktestRunMapper.toEntity(run);
         entity.assignBacktestIdOn(LocalDate.now(clock));
+        // queued_at 은 NOT NULL 이다. 접수가 시각을 주지 않은 실행(테스트 픽스처 등)은 저장 시각으로 둔다 —
+        // 대기 시간의 기준은 "큐에 들어간 때"이고 그게 곧 이 INSERT 시점이다.
+        if (run.getLifecycle().queuedAt() == null) {
+            entity.applyLifecycle(
+                    clock.instant(),
+                    run.getLifecycle().startedAt(),
+                    run.getLifecycle().finishedAt(),
+                    run.getLifecycle().publishedAt(),
+                    run.getLifecycle().publishCount(),
+                    run.getLifecycle().dlqCount());
+        }
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
 
     /**
-     * 관리 엔티티를 읽어 상태만 바꾼다. 도메인 객체를 새 엔티티로 merge하면 {@code createdAt}(updatable=false)이 null인 사본이 관리
-     * 상태를 덮어 쓰므로 그 방식은 피한다. {@code save()}는 트랜잭션 밖에서 불려도 UPDATE가 나가도록 한 번 명시한다.
+     * 관리 엔티티를 읽어 <b>상태 컬럼만</b> 바꾼다. 도메인 객체를 새 엔티티로 merge하면 {@code createdAt}(updatable=false)이
+     * null인 사본이 관리 상태를 덮어 쓰므로 그 방식은 피한다.
+     *
+     * <p>계획(접수 확정값)과 발행 기록은 여기서 쓰지 않는다. 계획은 저장 시점에 한 번 정해지고 바뀌지 않으며, 발행 기록은 {@link
+     * #recordPublishAttempt}·{@link #recordPublished}가 전용 UPDATE로 쓴다 — 이벤트 처리와 발행 경로가 동시에 돌기 때문에
+     * 서로의 컬럼을 건드리면 늦게 저장한 쪽이 상대의 갱신을 되돌린다.
      */
     @Override
     public BacktestRun update(BacktestRun run) {
@@ -65,8 +88,20 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                 progress == null ? null : progress.completedTradingDays(),
                 progress == null ? null : progress.totalTradingDays(),
                 state.failureCode(),
-                state.failureMessage());
+                state.failureMessage(),
+                run.getLifecycle().startedAt(),
+                run.getLifecycle().finishedAt());
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    public void recordPublishAttempt(Long runId) {
+        jpaRepository.incrementPublishCount(runId);
+    }
+
+    @Override
+    public void recordPublished(Long runId, Instant at) {
+        jpaRepository.markPublished(runId, at);
     }
 
     @Override
@@ -77,5 +112,25 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     @Override
     public Optional<BacktestRun> findByBacktestId(String backtestId) {
         return jpaRepository.findByBacktestId(backtestId).map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public Optional<BacktestRun> findActiveByDedupKey(String dedupKey) {
+        if (dedupKey == null) {
+            return Optional.empty();
+        }
+        return jpaRepository
+                .findByDedupKeyAndStatusIn(dedupKey, ACTIVE_FOR_REUSE)
+                .map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public List<BacktestRun> findUnpublishedQueued(Instant queuedBefore, int limit) {
+        return jpaRepository
+                .findByStatusAndPublishedAtIsNullAndQueuedAtLessThanOrderByQueuedAtAsc(
+                        RunStatus.QUEUED, queuedBefore, Limit.of(limit))
+                .stream()
+                .map(BacktestRunMapper::toDomain)
+                .toList();
     }
 }

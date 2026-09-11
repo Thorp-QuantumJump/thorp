@@ -1,8 +1,20 @@
 {
   "success": true,
   "data": {
-    "backtestId": "BT-20260908-000001",
-    "status": "QUEUED"
+    "backtestId": "BT-20260911-000001",
+    "status": "QUEUED",
+    "resultSource": "NEW",
+    "effectiveStart": "2023-07-03",
+    "effectiveEnd": "2024-12-31",
+    "versions": {
+      "costProfile": {
+        "version": "PROVISIONAL-DEMO-1",
+        "provisional": true
+      },
+      "rules": "1",
+      "data": "FIXTURE-three_etf_24m",
+      "engine": "nautilus_trader 1.219.0 / worker 2.0.0"
+    }
   },
   "error": null
 }

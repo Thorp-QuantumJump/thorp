@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.application.service;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
@@ -14,10 +15,12 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -51,47 +54,39 @@ public class BacktestResultQueryService {
     private static final Logger log = LoggerFactory.getLogger(BacktestResultQueryService.class);
 
     private final BacktestRunRepository jobRepository;
+    private final BacktestRequestRepository requestRepository;
     private final BacktestResultRepository resultRepository;
+    private final Clock clock;
 
     public BacktestResultQueryService(
-            BacktestRunRepository jobRepository, BacktestResultRepository resultRepository) {
+            BacktestRunRepository jobRepository,
+            BacktestRequestRepository requestRepository,
+            BacktestResultRepository resultRepository,
+            Clock clock) {
         this.jobRepository = jobRepository;
+        this.requestRepository = requestRepository;
         this.resultRepository = resultRepository;
+        this.clock = clock;
     }
 
-    /** 상태 + 설정 + 요약 + 오류. 없는 id만 예외(404)이고 나머지는 상태에 따라 채워진다. */
-    public BacktestDetailResult getDetail(String backtestId) {
-        BacktestRun job = requireJob(backtestId);
-        if (!job.getStatus().isFinal()) {
-            return BacktestDetailResult.withoutResult(job, ExecutionPolicy.CURRENCY);
-        }
-        BacktestResultSummary summary = requireSummary(job);
-        if (isBenchmarkMismatch(job, summary)) {
-            log.warn(
-                    "요청과 결과의 벤치마크가 다르다 (워커가 다른 종목으로 계산했다): backtestId={} 요청={} 결과={}",
-                    backtestId,
-                    job.getBenchmarkInstrumentId().value(),
-                    summary.benchmarkInstrumentId());
-        }
-        return BacktestDetailResult.of(job, ExecutionPolicy.CURRENCY, summary);
-    }
+    /** 사용자가 준 식별자는 <b>요청</b>의 것이고 결과는 <b>실행</b>에 붙어 있다(R-02). 거의 모든 조회가 둘 다 필요하다. */
+    record RequestAndRun(BacktestRequest request, BacktestRun run) {}
 
     /**
-     * 요청한 벤치마크와 결과의 벤치마크가 다른가.
+     * 상태 + 설정 + 요약 + 실패. 없는 id와 <b>남의 요청</b>만 404이고 나머지는 상태에 따라 채워진다.
      *
-     * <p>결과에 벤치마크가 없는 것은 <b>불일치가 아니다</b> — 워커에 계산기가 없어 현재는 그게 정상이고, 매 요청마다 경고를 남기면 로그만 시끄러워진다. 결과에
-     * 값이 있는데 요청과 다를 때만 참이다. 그 응답은 {@code config.benchmarkId}와 {@code
-     * summary.benchmark.instrumentId}가 서로 다른 모순된 상태이므로 조용히 내보내지 않는다.
+     * <p>남의 요청을 403이 아니라 404로 숨기는 이유: 403은 "그 식별자는 존재한다"를 알려 준다(R-12).
      */
-    static boolean isBenchmarkMismatch(BacktestRun job, BacktestResultSummary summary) {
-        if (summary.benchmarkInstrumentId() == null) {
-            return false;
+    public BacktestDetailResult getDetail(String backtestId, long requesterId) {
+        RequestAndRun found = requireOwned(backtestId, requesterId);
+        BacktestRun job = found.run();
+        if (!job.getStatus().isFinal()) {
+            return BacktestDetailResult.withoutResult(
+                    found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
         }
-        String requested =
-                job.getBenchmarkInstrumentId() == null
-                        ? null
-                        : job.getBenchmarkInstrumentId().value();
-        return !summary.benchmarkInstrumentId().equals(requested);
+        BacktestResultSummary summary = requireSummary(job);
+        return BacktestDetailResult.of(
+                found.request(), job, ExecutionPolicy.CURRENCY, clock.instant(), summary);
     }
 
     /**
@@ -100,8 +95,8 @@ public class BacktestResultQueryService {
      * <p>계약상 워커가 벤치마크를 같은 거래일 축으로 forward fill하지만 그것을 전제로 NPE를 내지 않는다 — 없는 날은 {@code
      * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.
      */
-    public BacktestTimeseriesResult getTimeseries(String backtestId) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestTimeseriesResult getTimeseries(String backtestId, long requesterId) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         BacktestSeries series = require(resultRepository.findTimeseries(job.getId()), job);
         Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());
         List<BacktestTimeseriesResult.Point> points =
@@ -125,8 +120,9 @@ public class BacktestResultQueryService {
      * <p><b>결과 행 존재를 따로 확인한다.</b> 이 조회는 {@code backtest_trade}만 읽어서 결과 행 유실을 스스로 알아채지 못한다 — 거래가
      * 0건이면 빈 페이지를, 거래 행만 남아 있으면 목록을 정상 응답으로 돌려주게 된다. 다른 세 엔드포인트는 결과 컬럼을 읽다가 자연히 걸리므로 여기만 명시적으로 본다.
      */
-    public BacktestTradePageResult getTrades(String backtestId, FindBacktestTradesQuery query) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestTradePageResult getTrades(
+            String backtestId, long requesterId, FindBacktestTradesQuery query) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         if (!resultRepository.exists(job.getId())) {
             throw missingResultRow(job);
         }
@@ -150,8 +146,9 @@ public class BacktestResultQueryService {
      * 400(요청 잘못), 보유 스냅샷이 시계열 전체에 하나도 없으면 500(저장 데이터가 계약 위반). 후자를 400으로 주면 서버 데이터 손상을 클라이언트 탓으로 보이게
      * 한다.
      */
-    public BacktestPositionsResult getPositions(String backtestId, LocalDate date) {
-        BacktestRun job = requireResultReady(backtestId);
+    public BacktestPositionsResult getPositions(
+            String backtestId, long requesterId, LocalDate date) {
+        BacktestRun job = requireResultReady(backtestId, requesterId);
         List<EngineOutput.PortfolioSnapshot> series =
                 require(resultRepository.findPortfolioSeries(job.getId()), job);
         EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);
@@ -217,10 +214,23 @@ public class BacktestResultQueryService {
                                 (first, second) -> first));
     }
 
-    private BacktestRun requireJob(String backtestId) {
-        return jobRepository
-                .findByBacktestId(backtestId)
-                .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+    /**
+     * 요청 식별자로 요청과 실행을 함께 찾고, <b>요청자가 본인인지 확인한다</b>.
+     *
+     * <p>상세뿐 아니라 하위 리소스(시계열·거래·보유)도 이 관문을 지난다. 상세만 막고 하위를 열어 두면 식별자만 알면 남의 결과를 그대로 읽을 수 있고, 개발용 헤더를
+     * 끈 운영에서도 그 경로만 열려 있게 된다.
+     */
+    private RequestAndRun requireOwned(String backtestId, long requesterId) {
+        BacktestRequest request =
+                requestRepository
+                        .findByBacktestId(backtestId)
+                        .filter(found -> found.getRequesterId() == requesterId)
+                        .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+        BacktestRun run =
+                jobRepository
+                        .findById(request.getRunId())
+                        .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+        return new RequestAndRun(request, run);
     }
 
     /**
@@ -229,13 +239,15 @@ public class BacktestResultQueryService {
      *
      * <p>{@code switch}에 {@code default}를 두지 않는다. 상태가 추가되면 컴파일이 깨져서 여기를 고치게 된다.
      */
-    BacktestRun requireResultReady(String backtestId) {
-        BacktestRun job = requireJob(backtestId);
+    BacktestRun requireResultReady(String backtestId, long requesterId) {
+        BacktestRun job = requireOwned(backtestId, requesterId).run();
         switch (job.getStatus()) {
             case QUEUED, RUNNING ->
                     throw new BacktestResultNotReadyException(backtestId, job.getStatus());
             case FAILED -> throw new BacktestFailedException(backtestId);
-            case COMPLETED -> {}
+            // 취소는 부분 결과가 붙는다. 스냅샷 날짜로 자르는 읽기 필터와 요청 단위 권한은
+            // 결과 API v2(T009)·취소(T011)가 붙인다. 여기서는 통과시킨다.
+            case CANCELLED, COMPLETED -> {}
         }
         return job;
     }

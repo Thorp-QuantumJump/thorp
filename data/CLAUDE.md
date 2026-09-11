@@ -10,6 +10,10 @@ Python 3.11 + requests/pandas. **KRX OPEN API**(ETF 일별매매정보·KOSPI �
 ruff check src scripts tests && pytest
 ```
 
+가상환경은 `data/.venv`이며 이 파트 전용이다(`worker/.venv`를 빌려 쓰지 않는다). 처음 준비할 때는
+`uv venv --python 3.11 .venv` 뒤에 `uv pip install -r requirements.txt -r requirements-dev.txt`를
+실행한다. PATH의 `python`은 Microsoft Store 스텁이라 잡히지 않으므로 `.venv/Scripts`를 앞에 붙인다.
+
 ## 구조 규칙
 
 - `src/data_pipeline/` 재사용 로직, `scripts/` 실행 진입점(argparse), `notebooks/` 탐색용(로직 두지 말 것)

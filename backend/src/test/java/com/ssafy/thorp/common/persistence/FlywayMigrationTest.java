@@ -506,10 +506,17 @@ class FlywayMigrationTest extends PostgresTestSupport {
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) FROM information_schema.tables"
                                 + " WHERE LOWER(table_schema) = 'public'"
-                                + " AND LOWER(table_name) IN ('news_sector', 'sector', 'sectors')",
+                                + " AND LOWER(table_name) IN"
+                                + " ('news_sector', 'sector', 'sectors')",
                         String.class);
 
-        assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").isEmpty();
+        // 이 단언의 취지는 "뉴스(V4)가 섹터 마스터를 따로 만들지 않는다"이다. spec 001이
+        // sector를 소유하게 되었으므로 sector가 있는 것은 정상이고, 뉴스가 만들었을
+        // news_sector·sectors가 없어야 한다.
+        assertThat(sectorTables)
+                .as("뉴스는 섹터 마스터를 따로 만들지 않는다")
+                .doesNotContain("news_sector", "sectors");
+        assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").contains("sector");
     }
 
     @Test

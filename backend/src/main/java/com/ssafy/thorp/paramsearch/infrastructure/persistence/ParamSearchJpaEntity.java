@@ -65,16 +65,19 @@ public class ParamSearchJpaEntity extends BaseEntity {
     private String registryVersion;
 
     /**
-     * 축 이름 -> 선택한 후보 값 목록.
+     * 전략 ID -> 그 전략의 축과 실제 탐색한 후보값(data-model.md §2.1).
      *
      * <p><b>{@code Map<String, Object>}로 두지 않는다.</b> 값 자리를 {@code Object}로 선언하면 Jackson이 untyped
      * 역직렬화 경로를 타는데, 클래스패스에 {@code jackson-module-scala}가 있으면(테스트에서 {@code spring-kafka-test}가 끌어온다)
      * JSON 배열이 {@code java.util.List}가 아닌 Scala {@code List}로 돌아온다. 실제 타입을 선언하면 Jackson이 타입 있는 컬렉션
      * 역직렬화를 써서 환경에 상관없이 {@code java.util.List}가 된다.
+     *
+     * <p>전략은 객체 키이고 축은 배열이다. 전략 사이에는 순서의 뜻이 없지만 축 순서는 그리드 좌표의 뜻이고, {@code jsonb}는 객체 키 순서를 보존하지
+     * 않는다(FR-029).
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
-    private Map<String, List<Object>> searchSpace;
+    private Map<String, SearchSpaceDocument> searchSpace;
 
     /** 평가 분할이 미등록이면 NULL이고 그 결과 전 후보가 미검증이다(research R5). */
     @JdbcTypeCode(SqlTypes.JSON)
@@ -99,6 +102,11 @@ public class ParamSearchJpaEntity extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private Map<String, Object> referenceVersions;
+
+    /** 접수 시점에 고정한 실행 조건(구간·금액·비용·대응표·워밍업·기준 전략). 후보와 기준이 이 값으로 조립된다. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false)
+    private Map<String, Object> executionPlan;
 
     @Column private Long baselineJobId;
 
@@ -137,13 +145,14 @@ public class ParamSearchJpaEntity extends BaseEntity {
             List<String> strategyIds,
             List<String> instrumentIds,
             String registryVersion,
-            Map<String, List<Object>> searchSpace,
+            Map<String, SearchSpaceDocument> searchSpace,
             Map<String, Object> evaluationSplit,
             SearchMethod searchMethod,
             Integer randomSeed,
             Map<String, Object> selectionRule,
             Map<String, Object> limits,
             Map<String, Object> referenceVersions,
+            Map<String, Object> executionPlan,
             Long baselineJobId,
             ParamSearchStatus status,
             StopReason stopReason,
@@ -165,6 +174,7 @@ public class ParamSearchJpaEntity extends BaseEntity {
         this.selectionRule = selectionRule;
         this.limits = limits;
         this.referenceVersions = referenceVersions;
+        this.executionPlan = executionPlan;
         this.baselineJobId = baselineJobId;
         this.status = status;
         this.stopReason = stopReason;
@@ -239,7 +249,7 @@ public class ParamSearchJpaEntity extends BaseEntity {
         return registryVersion;
     }
 
-    public Map<String, List<Object>> getSearchSpace() {
+    public Map<String, SearchSpaceDocument> getSearchSpace() {
         return searchSpace;
     }
 
@@ -265,6 +275,10 @@ public class ParamSearchJpaEntity extends BaseEntity {
 
     public Map<String, Object> getReferenceVersions() {
         return referenceVersions;
+    }
+
+    public Map<String, Object> getExecutionPlan() {
+        return executionPlan;
     }
 
     public Long getBaselineJobId() {

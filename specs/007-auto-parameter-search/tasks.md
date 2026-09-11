@@ -29,13 +29,19 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 **`T###`는 브랜치 단위가 아니다.** constitution v3.0.0 "Jira 연계"가 `작업 묶음 = 1 Branch = 1 MR`로
 정하고 있어, 브랜치·MR·Jira Task 단위는 [plan.md](plan.md) "작업 묶음 구성"의 묶음(M1~M10) 10개다.
-아래 134개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.
+아래 157개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.
 묶음은 초판의 24개(B01~B24)에서 10개로 합쳤다 — 사유는 plan.md "묶음 구성 개정 이력"에 있다.
+
+**2026-09-11 개정**: 전략 비의존성 결정(spec FR-025~FR-029, US5)에 따라 23개를 더했고 기존 태스크
+10여 개의 내용을 고쳤다. `/speckit-analyze`가 찾은 F1(기준 전략)·F4(등록표 경계 화면)도 함께 반영했다. 새 묶음은 만들지 않았다 — 늘어난 범위는 M2·M3·M4·M7이 나눠 가진다
+(plan.md "2026-09-11 개정이 묶음에 주는 영향"). **T001~T026은 이미 머지된 M1이므로 손대지 않고,
+그 중 개정이 필요한 세 건만 `T026a`~`T026c`로 새로 끼워 M2 브랜치에서 처리한다.**
 
 ## Path Conventions
 
 - 백엔드: `backend/src/main/java/com/ssafy/thorp/paramsearch/...`, 테스트는 `backend/src/test/java/com/ssafy/thorp/paramsearch/...`
 - 마이그레이션: `backend/src/main/resources/db/migration/V3__param_search.sql`
+- 임시 등록표 데이터: `backend/src/main/resources/registry/parameter-registry-provisional.yml` (003 대역)
 - 프론트엔드: `frontend/src/...`
 - 커밋 전 `cd backend && ./gradlew spotlessApply` 필수 (CLAUDE.md 코드 컨벤션)
 
@@ -104,29 +110,40 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T025 (BE) `application/repository/ParamSearchRepository.java`·`SearchCandidateRepository.java` 포트와 `infrastructure/persistence/*RepositoryImpl.java` 구현
 - [X] T026 (BE 테스트) 엔티티와 V3 스키마 일치 검증 테스트 — `ddl-auto=validate`로 기동되는지 Testcontainers로 확인
 
+### M1 재작업 (2026-09-11 개정. M2 브랜치에서 처리하고 MR 본문에 사유를 남긴다)
+
+- [X] T026a (BE) `domain/vo/SearchSpace.java`를 `전략 → 축 → 값` 중첩 구조로 바꾼다 — 한 묶음이 전략 여러 개를 담으면 축 이름이 충돌한다. `combinationCount()`는 **전략별 (축별 값 개수의 곱)의 합**이 되고 넘침 검사는 유지한다. 축 순서와 축별 값 순서 보존은 그대로다 ([data-model.md](data-model.md) §2.1, FR-027)
+- [X] T026b [P] (BE) `domain/model/StopReason.java`에 `STRATEGY_NOT_REGISTERED`·`STRATEGY_NOT_EXECUTABLE` 추가 — 미등록과 실행 미지원을 구분해 남긴다 (FR-026)
+- [X] T026c (BE 테스트) `SearchSpace` JSONB 왕복 테스트 — **축을 배열로 저장해 순서가 보존되는지** 검증한다. `jsonb`는 객체 키 순서를 보존하지 않아 축을 객체 키로 두면 `grid_coordinates` 인덱스가 다른 값을 가리킨다 ([data-model.md](data-model.md) §2.1, FR-029). V3 마이그레이션은 다시 만들지 않는다 (JSONB 컬럼)
+
 ### 등록표 포트 (003 경계)
 
-- [ ] T027 [P] (BE) `application/port/ParameterRegistryPort.java`와 `ParameterAxis`·`ValidationVerdict`·`SearchContext` record 정의 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1)
-- [ ] T028 (BE) `infrastructure/registry/FixedParameterRegistry.java` 임시 구현 — `version()`은 `PROVISIONAL-{날짜}`, 축·값은 코드 상수. **PD-02 팀 확정값이 아님을 클래스 주석과 버전 문자열로 명시** (research R1)
-- [ ] T029 (BE 테스트) 같은 `version()` 안에서 축 순서와 값 인덱스가 안정적인지 검증 — 흔들리면 그리드 좌표가 뜻을 잃는다
+- [X] T027 [P] (BE) `application/port/ParameterRegistryPort.java`와 `StrategyRegistration`·`ParameterAxis`·`AllowedRange`·`ValidationVerdict`·`SearchContext` record 정의 — 포트가 **활성 전략 목록(`activeStrategies()`)·전략 하나 조회(`find()`)·전략명·표시 정보·축별 자동 탐색 후보값·기본 시작값·입력 허용 범위·단위·유효성 규칙 호출·손실 제약의 '기준 전략' 역할 조회(`baselineStrategyId()`)**를 모두 돌려준다. 007은 이 포트가 주는 값 외에 전략에 대해 아무것도 알지 못한다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1, FR-025·FR-027)
+- [X] T028 (BE) `infrastructure/registry/ProvisionalFileParameterRegistry.java` 임시 구현 — `version()`은 `PROVISIONAL-{날짜}`, 전략·축·값은 **자원 파일에서 읽고 Java 상수로 두지 않는다**. 로더는 파일 구조만 읽고 전략별 해석을 하지 않는다. **PD-02 팀 확정값이 아님을 클래스 주석과 버전 문자열로 명시** (research R1 개정, FR-025)
+- [X] T028a [P] (INFRA) `backend/src/main/resources/registry/parameter-registry-provisional.yml` 작성 — 003 등록표의 대역. 전략별 ID·이름·축·자동 탐색 후보값·기본 시작값·허용 범위·단위·유효성 규칙 코드를 담는다. **이 파일이 유일한 전략 데이터 위치이고 007 코드에는 전략 이름이 나타나지 않는다.** 003 완성 시 이 파일과 로더를 003 구현체로 교체한다 (research R1 개정)
+- [X] T029 (BE 테스트) 같은 `version()` 안에서 축 순서와 후보값 인덱스가 안정적인지, `defaultValue`·`allowedRange`가 자원 파일 값과 일치하는지 검증 — 인덱스가 흔들리면 그리드 좌표가 뜻을 잃는다 (FR-029)
 
 ### 공통 서비스
 
-- [ ] T030 (BE) `application/service/GridExpander.java` — 전체 그리드 전개와 그리드 좌표 부여 (T027 의존, FR-005)
-- [ ] T031 (BE) `application/service/CandidateValidator.java` — 계산 전 유효성 판정. 최소 두 위반 코드 `TOP_N_EXCEEDS_UNIVERSE`·`WEIGHT_CAP_SUM_TOO_SMALL`과 사유 문장 (FR-006)
+- [X] T030 (BE) `application/service/GridExpander.java` — **전략별로** 전체 그리드를 전개하고 그리드 좌표를 부여한다. 축 개수·축별 후보 개수가 전략마다 달라도 같은 절차로 처리하고, 전체 조합 수는 전략별 곱의 합이다. `strategyId` 분기를 두지 않는다 (T026a·T027 의존, FR-005·FR-027)
+- [X] T031 (BE) `application/service/CandidateValidator.java` — 조합마다 `ParameterRegistryPort.validate()`를 호출하고 돌려받은 `reasonCode`·`reasonDetail`을 그대로 저장한다. **위반 규칙을 007이 갖지 않는다** — 위반 코드 목록을 상수로 두거나 전략별로 분기하지 않는다 (FR-006·FR-025)
 
 ### 004 경계
 
-- [ ] T032 [P] (BE) `application/port/CandidateJobLauncher.java` 포트 정의 — `launchCandidate()`와 **`launchBaseline()` 두 메서드**([contracts/param-search-internal.md](contracts/param-search-internal.md) §2). `launchBaseline`이 없으면 FR-013d의 하락 폭 필터 기준값이 만들어지지 않는다
-- [ ] T033 (BE) `infrastructure/launcher/CandidateJobLauncherImpl.java` — `backtest` 모듈 접수 유스케이스 호출로 두 메서드 구현. `launchBaseline()`은 동일 비중 기준 1건을 후보와 같은 섹터 집합·공통 구간·금액·비용·참조 버전으로 접수한다(FR-013d). **묶음 스냅샷만 보고 조립하고 현재 시각의 자료·비용 버전을 다시 읽지 않는다** (FR-007, FR-012)
-- [ ] T034 [P] (BE) `backtest/application/event/BacktestFinished.java` 이벤트 record 정의 — `backtest` 모듈은 `paramsearch`를 참조하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §3)
-- [ ] T035 (BE) `backtest/application/service/BacktestEventService.java`에 결과 저장 커밋 후 `BacktestFinished` 발행 추가 (`@TransactionalEventListener(phase = AFTER_COMMIT)`)
-- [ ] T036 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceEventTest.java` — 커밋 전에는 이벤트가 발행되지 않는지 검증 — 커밋 전 발행이면 007이 없는 결과를 읽는다
+- [X] T032 [P] (BE) `application/port/CandidateJobLauncher.java` 포트 정의 — `launchCandidate()`와 **`launchBaseline()` 두 메서드**([contracts/param-search-internal.md](contracts/param-search-internal.md) §2). `launchBaseline()`은 스냅샷의 `baselineStrategyId`로 조립하고 기준 전략을 코드에 지정하지 않는다(FR-025). 이 메서드가 없으면 FR-013d의 하락 폭 필터 기준값이 만들어지지 않는다
+- [X] T033 (BE) `infrastructure/launcher/CandidateJobLauncherImpl.java` — `backtest` 모듈 접수 유스케이스 호출로 두 메서드 구현. `launchBaseline()`은 스냅샷의 기준 전략 1건을 그 전략의 등록된 기본 시작값과 후보와 같은 섹터 집합·공통 구간·금액·비용·참조 버전으로 접수한다(FR-013d). **묶음 스냅샷만 보고 조립하고 현재 시각의 자료·비용 버전을 다시 읽지 않는다** (FR-007, FR-012)
+- [X] T034 [P] (BE) `backtest/application/event/BacktestFinished.java` 이벤트 record 정의 — `backtest` 모듈은 `paramsearch`를 참조하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §3)
+- [X] T035 (BE) `backtest/application/service/BacktestEventService.java`에 결과 저장 커밋 후 `BacktestFinished` 발행 추가 (`@TransactionalEventListener(phase = AFTER_COMMIT)`)
+- [X] T036 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceEventTest.java` — 커밋 전에는 이벤트가 발행되지 않는지 검증 — 커밋 전 발행이면 007이 없는 결과를 읽는다
+- [X] T036a [P] (BE) `application/port/StrategyExecutionSupportPort.java` 정의 — `supportedStrategyIds()` 하나. "이 전략을 실행할 수 있는가"는 004의 사실이므로 004에 묻는다. 003이 대신 선언하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1.1, FR-026)
+- [X] T036b (BE) `infrastructure/support/StrategyExecutionSupportAdapter.java` — `backtest` 모듈이 노출하는 지원 전략 목록을 읽어 포트를 구현한다. 004가 워커에 전략을 추가하고 목록에 넣으면 007은 코드 변경 없이 그 전략을 얻는다 (research R8)
+- [X] T036c [P] (BE 테스트) 지원 목록에 없는 전략이 탐색 대상에서 빠지는지, 목록에 전략을 더하면 **007 코드 변경 없이** 대상이 되는지 검증 (SC-010, FR-026)
+- [X] T036d (BE) `application/service/SearchTargetResolver.java` — 요청 전략을 `activeStrategies()` ∩ `supportedStrategyIds()`와 맞춰 탐색 대상을 정한다. 앞에 없으면 `STRATEGY_NOT_REGISTERED`, 뒤에 없으면 `STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부 사유를 만든다. 007 내부 전략 목록과 비교하지 않는다 (T027·T036a 의존, FR-026, research R8)
 
 ### 오류 처리
 
-- [ ] T037 [P] (BE) `common/exception/ErrorCode.java`에 `CANDIDATE_LIMIT_EXCEEDED`·`NO_VALID_COMBINATION`·`UNREGISTERED_PARAMETER_VALUE`·`ALREADY_FINISHED` 추가
-- [ ] T038 (BE) `application/exception/` 예외 클래스 4개와 `common/web/advice/GlobalExceptionHandler.java` 매핑 추가 — HTTP 상태는 [contracts/param-search-api.md](contracts/param-search-api.md) §6과 일치
+- [X] T037 [P] (BE) `common/exception/ErrorCode.java`에 `CANDIDATE_LIMIT_EXCEEDED`·`NO_VALID_COMBINATION`·`UNREGISTERED_PARAMETER_VALUE`·`ALREADY_FINISHED`·`NOTHING_TO_RETRY`·`STRATEGY_NOT_REGISTERED`·`STRATEGY_NOT_EXECUTABLE`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE` 추가
+- [X] T038 (BE) `application/exception/` 예외 클래스와 `common/web/advice/GlobalExceptionHandler.java` 매핑 추가 — 미등록·실행 미지원은 422, 버전 드리프트는 409, 등록표 조회 실패는 503. HTTP 상태는 [contracts/param-search-api.md](contracts/param-search-api.md) §6과 일치 (FR-026·FR-028)
 
 **Checkpoint**: 스키마·모델·포트 준비 완료. 사용자 스토리를 병렬로 시작할 수 있다
 
@@ -140,41 +157,45 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Tests for User Story 1
 
-- [ ] T039 [P] [US1] (BE 테스트) `GridExpander` 단위 테스트 — 조합 수 = 축 값 개수의 곱, 좌표가 등록표 인덱스와 일치
-- [ ] T040 [P] [US1] (BE 테스트) preview 작업량 집계 단위 테스트 — `totalCombinations` = `valid` + `excluded`, 사유별 건수 합이 `excluded`와 일치
-- [ ] T041 [P] [US1] (BE 테스트) `CandidateDispatcher` 단위 테스트 — `DISPATCHED` 후보 수가 발행 창을 넘지 않는다 (내부 계약 §4 불변식 1)
-- [ ] T042 [P] [US1] (BE 테스트) preview 계약 테스트 — 네 덩어리 존재, `limits.provisional`에 `maxCandidates` 포함, `validationLabel = UNVALIDATED`
-- [ ] T043 [P] [US1] (BE 테스트) 접수 → 발행 → `BacktestFinished` 수신 → `counts` 집계 통합 테스트 (Testcontainers)
-- [ ] T044 [P] [US1] (BE 테스트) 동시 `BacktestFinished` 수신에서 `counts`가 서로를 덮어쓰지 않는지 검증 (내부 계약 §4 동시 수신 경쟁)
+- [X] T039 [P] [US1] (BE 테스트) `GridExpander` 단위 테스트 — 조합 수 = 축 값 개수의 곱, 좌표가 등록표 인덱스와 일치
+- [X] T040 [P] [US1] (BE 테스트) preview 작업량 집계 단위 테스트 — `totalCombinations` = `valid` + `excluded`, 사유별 건수 합이 `excluded`와 일치
+- [X] T041 [P] [US1] (BE 테스트) `CandidateDispatcher` 단위 테스트 — `DISPATCHED` 후보 수가 발행 창을 넘지 않는다 (내부 계약 §4 불변식 1)
+- [X] T042 [P] [US1] (BE 테스트) preview 계약 테스트 — 네 덩어리 존재, `limits.provisional`에 `maxCandidates` 포함, `validationLabel = UNVALIDATED`
+- [X] T043 [P] [US1] (BE 테스트) 접수 → 발행 → `BacktestFinished` 수신 → `counts` 집계 통합 테스트 (Testcontainers)
+- [X] T044 [P] [US1] (BE 테스트) 동시 `BacktestFinished` 수신에서 `counts`가 서로를 덮어쓰지 않는지 검증 (내부 계약 §4 동시 수신 경쟁)
 
 ### Implementation for User Story 1 — Backend 유스케이스
 
-- [ ] T045 [P] [US1] (BE) `application/command/PreviewParamSearchCommand.java`와 `CreateParamSearchCommand.java` (record 우선)
-- [ ] T046 [P] [US1] (BE) `application/result/ParamSearchPreviewResult.java`와 `ParamSearchResult.java`
-- [ ] T047 [US1] (BE) `application/service/CommonPeriodResolver.java` — 후보 공통 평가 구간 산출과 `shortenedBy` 계산. 모든 후보를 같은 구간으로 평가한다 (Edge Case)
-- [ ] T048 [US1] (BE) `application/service/ParamSearchService.preview()` — 등록표 조회·그리드 전개·유효성 집계·한도·공통 구간·검증 라벨 반환. **저장하지 않는다** (FR-001, FR-003)
-- [ ] T049 [US1] (BE) `ParamSearchService.create()` — 묶음·후보 저장 후 기준 1건과 발행 창만큼 발행. 저장과 발행을 한 트랜잭션으로 묶는다 (`BacktestService`와 같은 규약)
-- [ ] T050 [US1] (BE) `application/service/CandidateDispatcher.java` — 발행 창 관리와 묶음 행 비관적 락. 후보 실행끼리 병렬화한다 (FR-008, research R2, 내부 계약 §4)
-- [ ] T051 [US1] (BE) `application/service/ParamSearchProgressService.java` — 후보 상태 갱신과 예상·유효·완료·실패·제외·미실행 `counts` 집계 (FR-008)
-- [ ] T049a [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReproducibilityTest.java` — 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 두 번 접수하면 후보 집합과 그리드 좌표가 완전히 같은지, `random_seed`가 두 묶음 모두 NULL인지 검증 (SC-004, 원칙 VIII)
-- [ ] T052 [US1] (BE) `infrastructure/listener/BacktestFinishedListener.java` — `backtestJobId`로 후보 조회, 못 찾으면 단일 실행 Job이므로 경고 없이 무시, 찾으면 다음 후보 발행 요청
+- [X] T045 [P] [US1] (BE) `application/command/PreviewParamSearchCommand.java`와 `CreateParamSearchCommand.java` (record 우선)
+- [X] T046 [P] [US1] (BE) `application/result/ParamSearchPreviewResult.java`와 `ParamSearchResult.java` — `spaceSummary`는 **전략별 배열**이고 축마다 `values`·`defaultValue`·`allowedRange`·`unit`을, 전략마다 `name`·`executable`을 담는다. 모두 등록표·지원 목록 조회 결과를 옮긴 값이다 ([contracts/param-search-api.md](contracts/param-search-api.md) §1, FR-027)
+- [X] T047 [US1] (BE) `application/service/CommonPeriodResolver.java` — 후보 공통 평가 구간 산출과 `shortenedBy` 계산. 모든 후보를 같은 구간으로 평가한다 (Edge Case)
+- [X] T048 [US1] (BE) `application/service/ParamSearchService.preview()` — 등록 정보·실행 지원 조회 → `SearchTargetResolver` 판정 → 그리드 전개·유효성 집계·한도·공통 구간·검증 라벨 반환. 등록표 버전과 전략별 축·기본값·허용 범위를 응답에 담는다. **저장하지 않는다** (T036d 의존, FR-001·FR-003·FR-027)
+- [X] T049 [US1] (BE) `ParamSearchService.create()` — 요청의 `registryVersion`이 접수 시점 버전과 다르면 `409 REGISTRY_VERSION_CHANGED`로 멈추고, 같으면 그 버전과 **실제 사용한 탐색 후보값**을 묶음에 고정해 저장한 뒤 기준 1건과 발행 창만큼 발행한다. 저장과 발행을 한 트랜잭션으로 묶는다 (`BacktestService`와 같은 규약, FR-028)
+- [X] T049b [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/RegistrySnapshotTest.java` — (1) 미리보기와 다른 `registryVersion`으로 접수하면 409이고 묶음이 저장되지 않는지, (2) 등록표 조회가 실패하면 503이고 캐시·기본값으로 대체 실행하지 않는지, (3) 저장된 `search_space`로 후보 집합을 재구성할 수 있는지 검증 (FR-028, research R9)
+- [X] T049c [US1] (BE) 접수 시 `baselineStrategyId()`를 조회해 `selection_rule` 스냅샷에 기준 전략 ID·표시명을 고정한다. 역할 지정이 없으면 기준 실행을 만들지 않고 `drawdownFilterApplied = false`로 두며 사유를 남긴다. **기준 전략 ID를 007 코드에 두지 않는다** (FR-013d·FR-025)
+- [X] T050 [US1] (BE) `application/service/CandidateDispatcher.java` — 발행 창 관리와 묶음 행 비관적 락. 후보 실행끼리 병렬화한다 (FR-008, research R2, 내부 계약 §4)
+- [X] T051 [US1] (BE) `application/service/ParamSearchProgressService.java` — 후보 상태 갱신과 예상·유효·완료·실패·제외·미실행 `counts` 집계 (FR-008)
+- [X] T049a [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReproducibilityTest.java` — 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 두 번 접수하면 후보 집합과 그리드 좌표가 완전히 같은지, `random_seed`가 두 묶음 모두 NULL인지 검증 (SC-004, 원칙 VIII)
+- [X] T052 [US1] (BE) `infrastructure/listener/BacktestFinishedListener.java` — `backtestJobId`로 후보 조회, 못 찾으면 단일 실행 Job이므로 경고 없이 무시, 찾으면 다음 후보 발행 요청
 
 ### Implementation for User Story 1 — Backend API
 
-- [ ] T053 [P] [US1] (BE) `presentation/request/ParamSearchPreviewRequest.java`·`ParamSearchCreateRequest.java`와 Bean Validation — 종목 1~50개·`{6자리}.XKRX`·중복 금지, `space` 생략 허용
-- [ ] T054 [P] [US1] (BE) `presentation/response/ParamSearchPreviewResponse.java`·`ParamSearchResponse.java`
-- [ ] T055 [US1] (BE) `presentation/controller/ParamSearchController.java`에 `POST /param-searches/preview`(200)와 `POST /param-searches`(202) 추가
-- [ ] T056 [US1] (BE) 같은 컨트롤러에 `GET /param-searches/{searchId}` 추가 — `status`·`counts`·`config` 반환, `selection`은 아직 `null`. 실패해도 200이다
-- [ ] T057 [US1] (BE) `space`에 등록표 밖 값이 오면 `400 UNREGISTERED_PARAMETER_VALUE` 처리 (FR-002)
+- [X] T053 [P] [US1] (BE) `presentation/request/ParamSearchPreviewRequest.java`·`ParamSearchCreateRequest.java`와 Bean Validation — 종목 1~50개·`{6자리}.XKRX`·중복 금지, `space`는 **전략 ID → (축 → 값 배열)** 중첩이며 생략 허용. 실행 요청은 `registryVersion` 필수(미리보기 응답 값을 되돌려 보낸다), 미리보기에서는 무시 (FR-028)
+- [X] T054 [P] [US1] (BE) `presentation/response/ParamSearchPreviewResponse.java`·`ParamSearchResponse.java`
+- [X] T055 [US1] (BE) `presentation/controller/ParamSearchController.java`에 `POST /param-searches/preview`(200)와 `POST /param-searches`(202) 추가
+- [X] T056 [US1] (BE) 같은 컨트롤러에 `GET /param-searches/{searchId}` 추가 — `status`·`counts`·`config` 반환, `selection`은 아직 `null`. 실패해도 200이다
+- [X] T057 [US1] (BE) `space`에 등록표 밖 값이 오면 `400 UNREGISTERED_PARAMETER_VALUE` 처리 (FR-002)
 
 ### Implementation for User Story 1 — Frontend
 
 - [ ] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현
 - [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)
-- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음 (원칙 II, SC-001)
-- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 등록표 범위 안에서만 좁히거나 넓히고 범위 밖 값은 입력할 수 없다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004)
+- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)
+- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)
 - [ ] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)
 - [ ] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결
+- [ ] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)
+- [ ] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)
 - [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)
 
 **Checkpoint**: 탐색을 접수해 진행 상태까지 볼 수 있다. 선정 결과는 아직 없다
@@ -191,8 +212,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Tests for User Story 2
 
-- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`
-- [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 동일 비중 기준보다 큰 후보만 탈락
+- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, **전략이 다른 후보는 이웃이 아님**, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`. 숫자가 아닌 축에서도 인덱스만으로 판정되는지 포함 (FR-013a·FR-029)
+- [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 스냅샷의 기준 전략 결과보다 큰 후보만 탈락
 - [ ] T067 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/StabilityFilterTest.java` — 계산 불가 후보는 통과 처리 (FR-013b)
 - [ ] T068 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorSortTest.java` — 동률은 5개를 넘겨 전부 표시, 임의 순서 없음 (research R3)
 - [ ] T069 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorShortfallTest.java` — 문턱을 낮춰 채우지 않는다 (원칙 VII)
@@ -202,8 +223,9 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 2 — Backend 계산
 
-- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상 (FR-013a)
-- [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 동일 비중 기준보다 크지 않은 후보만 통과 (FR-013)
+- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상이고 **이웃은 같은 `strategy_id` 안에서만** 찾는다. 인덱스 비교만 하므로 축의 종류를 구분하지 않는다 (FR-013a·FR-029)
+- [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 **스냅샷의 기준 전략 결과**보다 크지 않은 후보만 통과. 기준 전략이 무엇인지 알지 못한 채 값만 쓴다 (FR-013·FR-013d)
+- [ ] T074a [P] [US2] (BE 테스트) 기준 전략 역할이 지정되지 않은 묶음에서 하락 폭 필터가 빠지고 `drawdownFilterApplied = false`가 응답에 나오는지, 선정 코드에 기준 전략 ID 리터럴이 없는지 검증 (FR-013d, SC-010)
 - [ ] T075 [US2] (BE) `application/service/selection/StabilityFilter.java` — 묶음 내 유효 후보의 상위 50%만 통과, 계산 불가는 통과
 - [ ] T076 [US2] (BE) `application/service/CandidateSelector.java` — 두 필터 적용 → 비용 차감 후 수익 정렬 → 상위 5 → 동률 전부. 후보별 선정·탈락 사유 기록 (T073~T075 의존)
 - [ ] T077 [US2] (BE) `ParamSearchProgressService`에 묶음 종료 감지 추가 — `PENDING` 0 && `DISPATCHED` 0이면 안정성 → 선정 순서로 1회 실행
@@ -233,14 +255,14 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 **Goal**: 제약 위반 조합이 계산 전에 사유와 함께 제외되고, 취소·한도 도달 시 부분 결과임과 완료 범위가 보인다
 
-**Independent Test**: 선정 수가 섹터 수보다 큰 조합을 포함해 실행해 그 조합이 `EXCLUDED` + 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다 (quickstart 시나리오 2·3·4)
+**Independent Test**: 등록표 유효성 규칙이 거부하는 조합을 포함해 실행해 그 조합이 `EXCLUDED` + 규칙이 돌려준 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다 (quickstart 시나리오 2·3·4)
 
 **Depends on**: Foundational의 `CandidateValidator`(T031). US1의 접수 경로에 거부·취소를 덧붙인다
 
 ### Tests for User Story 3
 
-- [ ] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — 알려진 두 위반이 100% 제외되고 사유 코드가 남는다 (SC-002)
-- [ ] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다
+- [X] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — fixture 등록표가 거부하는 조합이 100% 제외되고 **규칙이 돌려준 사유 코드가 그대로** 남는지, 위반 규칙이 007 코드에 없는지 검증 (SC-002, FR-025)
+- [X] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다
 - [ ] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**
 - [ ] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장
 - [ ] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)
@@ -267,7 +289,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 3 — Frontend
 
-- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내. 상한 초과·유효 조합 0건을 오류 화면 없이 한 문장으로 (공통 성공 기준)
+- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)
 - [ ] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수
 - [ ] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)
 - [ ] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영
@@ -307,7 +329,37 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 7: User Story 5 - 전략이 추가돼도 007을 고치지 않고 탐색 대상이 된다 (Priority: P1)
+
+**Goal**: 003 등록표에 활성 전략을 추가하고 004가 실행을 지원하면 007 코드 변경 없이 그 전략이 미리보기와 후보 조합 생성에 나타난다
+
+**파일 순서는 스토리 번호 순이고 착수는 Foundational 직후다.** 테스트 T127~T133은 M2, 화면 정리 T135·T136은 M4, 거부 마무리 T134는 M7이 가져간다 (Incremental Delivery 2단계).
+
+**Independent Test**: 테스트 등록표에 여섯 번째 전략을 넣고 007 운영 코드를 한 줄도 바꾸지 않은 채 미리보기와 후보 조합 생성이 동작하는지 확인한다 (quickstart 시나리오 7)
+
+**Depends on**: Foundational의 T027·T028·T036d·T036a (포트와 판정). 거부 저장은 US3의 `REJECTED` 경로(T095·T096)에 덧붙는다
+
+### Tests for User Story 5
+
+- [X] T127 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/registry/RegistryFixtures.java` — 테스트용 등록표 fixture 구현. 전략 수·축 수·후보 개수를 자유롭게 구성하고, 운영 코드가 아니므로 전략 값을 직접 담는다(FR-025의 예외)
+- [X] T128 [P] [US5] (BE 테스트) 활성 전략 전부가 **같은 등록표 계약 경로**로 처리되는지 검증 — 어느 전략도 예외 경로·전용 분기를 타지 않는다 (spec US5 시나리오 1)
+- [X] T129 [P] [US5] (BE 테스트) fixture에 여섯 번째 전략을 더하면 미리보기와 후보 조합 생성이 **운영 코드 변경 없이** 동작하는지 검증 (SC-010, spec US5 시나리오 2)
+- [X] T130 [P] [US5] (BE 테스트) 축 개수와 축별 후보 개수가 서로 다른 전략을 섞어 실행했을 때 전체 조합 수·유효 후보 수·제외 후보 수가 등록값으로 계산한 기대치와 일치하는지 검증 (SC-011, spec US5 시나리오 3)
+- [X] T131 [P] [US5] (BE 테스트) 미등록 전략은 `422 STRATEGY_NOT_REGISTERED`, 실행 미지원 전략은 `422 STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부되고 두 사유가 구분돼 저장되는지 검증 (SC-012, spec US5 시나리오 4)
+- [X] T132 [P] [US5] (BE 테스트) 같은 등록표 버전·같은 선택 범위가 같은 후보 집합을 만드는지 **전략 여러 개를 섞어** 검증 — T049a의 단일 전략 재현 테스트를 다중 전략으로 넓힌다 (spec US5 시나리오 5, SC-004)
+- [X] T133 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/StrategyIndependenceTest.java` — `paramsearch` 운영 소스에 전략 ID 문자열 리터럴·전략 목록 상수·`strategyId` 분기가 없는지 정적으로 검사한다(ArchUnit 또는 소스 스캔). 테스트 fixture와 자원 파일은 대상에서 뺀다 (SC-010, FR-025)
+
+### Implementation for User Story 5
+
+- [ ] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)
+- [ ] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)
+- [ ] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)
+
+**Checkpoint**: 다섯 사용자 스토리가 모두 독립적으로 동작하고, 전략 추가가 007을 건드리지 않는다
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: 여러 스토리에 걸친 기록·문서·검증
 
@@ -325,13 +377,13 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 - [ ] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)
 - [ ] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)
-- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 "순위 배지·추천 표현 0건"과 "결제·포인트·상품 선택 단계 0건" 항목 추가 (plan 설계 제약 4, FR-010)
+- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 "순위 배지·추천 표현 0건", "결제·포인트·상품 선택 단계 0건", **"전략 ID 상수·전략별 분기 0건"** 항목 추가 (plan 설계 제약, FR-010·FR-025)
 - [ ] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화
 
 ### 검증
 
 - [ ] T124 (BE 테스트) `cd worker && pytest` 회귀 확인 — 워커를 바꾸지 않았음을 증명한다
-- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 6개를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록
+- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록
 - [ ] T126 (DOCS) T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달
 
 ---
@@ -342,8 +394,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 - **Phase 1 Setup**: 선행 없음. 즉시 시작
 - **Phase 2 Foundational**: Setup 완료 후. **모든 사용자 스토리를 막는다**
-- **Phase 3~6 User Stories**: Foundational 완료 후
-- **Phase 7 Polish**: 원하는 스토리들이 끝난 뒤
+- **Phase 3~7 User Stories**: Foundational 완료 후
+- **Phase 8 Polish**: 원하는 스토리들이 끝난 뒤
 
 ### User Story Dependencies
 
@@ -351,6 +403,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - **US2 (P1)**: US1 필요. 선정할 완료 후보가 있어야 한다. 다만 `NeighborStabilityCalculator`·필터·`CandidateSelector`(T073~T076)는 US1과 **병렬로 개발**하고 고정 입력으로 단위 테스트할 수 있다
 - **US3 (P2)**: Foundational의 T031 필요. 거부·취소는 US1의 접수 경로에 덧붙는다. `CandidateValidator` 테스트(T089·T090)는 US1 없이도 가능
 - **US4 (P2)**: US1·US2 필요. 작업량이 가장 작다(라벨·표시 중심)
+- **US5 (P1)**: Foundational의 포트(T027·T028·T036d·T036a) 필요. 테스트 대부분은 fixture만으로 US1 없이 돌아가고, 거부 마무리(T134)만 US1·US3의 접수·`REJECTED` 경로 뒤다. **다른 스토리를 막지는 않지만 전략이 늘어난 뒤에 붙이면 이미 하드코딩이 퍼져 있어 회수 비용이 커진다** — Foundational 직후에 함께 닫는다
 
 ### 묶음(브랜치·MR) 진행 순서
 
@@ -374,6 +427,7 @@ M10                                      (DOCS, 어느 시점에서든 병렬)
 - **M7은 M3 뒤다** — 거부·취소가 접수 경로에 덧붙는다.
 - **M8은 M7·M9 뒤다** — 거부 표시는 M7, 검증 배지는 M9의 라벨을 쓴다.
 - **M9는 M5 뒤다** — 검증 라벨이 선정 결과에 붙는다.
+- **US5(전략 비의존성)는 새 묶음을 만들지 않는다** — 포트·전개·정적 검사(T026a~T026c, T028a, T036d, T036a~T036c, T127~T133)는 M2, 접수 경로 연결(T134)과 거부 저장 테스트는 M7, 화면 정리(T135·T136)는 M4가 가져간다 (plan.md "2026-09-11 개정이 묶음에 주는 영향").
 - 한 묶음이 곧 한 MR이므로 **묶음 안의 task를 절반만 올리지 않는다**(묶음 조건 3). 묶음 안의 진행은
   커밋으로 쪼갠다.
 
@@ -393,7 +447,8 @@ M10                                      (DOCS, 어느 시점에서든 병렬)
 
 - Phase 1의 T002~T007 전부 병렬
 - Phase 2의 enum·VO T011~T017 전부 병렬 (서로 다른 파일)
-- Phase 2의 T021·T022·T023, T027, T032, T034, T037 병렬
+- Phase 2의 T021·T022·T023, T027, T028a, T032, T036a, T036c, T034, T037 병렬
+- Phase 7(US5)의 테스트 T127~T133 전부 병렬 — fixture만 쓰므로 다른 스토리 구현을 기다리지 않는다
 - 각 스토리의 테스트 태스크는 전부 병렬
 - **BE와 FE는 스토리 안에서 병렬** — 계약이 고정되어 있다
 - Foundational 완료 후 US1·US3의 검증 부분을 다른 담당이 동시에 진행 가능
@@ -430,22 +485,24 @@ Task: "T058~T064 api 모듈·확인 화면·상세 변경·폴링"          # FE
 ### MVP First (User Story 1만)
 
 1. Phase 1 Setup + Phase 2 도메인·영속화 (T001~T004, T007~T026) = 묶음 **M1** — **여기가 가장 크다. 나머지 전부를 막는다**
-2. Phase 2 경계·전개 (T027~T039, T089, T090) = 묶음 **M2**
+2. Phase 2 경계·전개 (T026a~T026c, T027~T039, T089, T090, T127~T133) = 묶음 **M2**
 3. Phase 3 User Story 1 Backend (T040~T057) = 묶음 **M3**, Frontend (T005·T006, T058~T064) = 묶음 **M4**
 4. **멈추고 검증**: quickstart 시나리오 1로 US1 단독 확인
 5. 데모 가능 — 탐색을 접수해 진행 상태까지 보인다
 
-**MVP = 묶음 4개(M1~M4) = 브랜치·MR 4개.** T### 기준으로는 T001~T064에 T089·T090을 더한 것이다
-(M2가 US3 단계의 유효성 테스트를 함께 가져간다).
+**MVP = 묶음 4개(M1~M4) = 브랜치·MR 4개.** T### 기준으로는 T001~T064에 T026a~T026c·T089·T090·
+T127~T133·T135·T136을 더한 것이다 (M2가 US3 단계의 유효성 테스트와 US5의 비의존성 검증을 함께
+가져가고, M4가 화면 정리를 가져간다).
 
 ### Incremental Delivery
 
 1. Setup + Foundational (M1·M2) → 기반 완료
-2. US1 (M3·M4) → 시나리오 1 → **MVP 데모**
-3. US2 (M5·M6) → 시나리오 5 → 결과 비교 데모
-4. US3 (M7·M8 앞부분) → 시나리오 2·3·4 → 낭비 차단과 중단 처리
-5. US4 (M9·M8 배지) → 검증 상태 표시
-6. Polish (M10) → 문서·회귀 (실행 측정은 M9가 가져갔다)
+2. **US5 검증 (M2에 포함) → 시나리오 7 → 전략 비의존성을 기반 단계에서 먼저 고정**
+3. US1 (M3·M4, US5 화면 정리 포함) → 시나리오 1 → **MVP 데모**
+4. US2 (M5·M6) → 시나리오 5 → 결과 비교 데모
+5. US3 (M7 + US5 거부 마무리 T134, M8 앞부분) → 시나리오 2·3·4 → 낭비 차단과 중단 처리
+6. US4 (M9·M8 배지) → 검증 상태 표시
+7. Polish (M10) → 문서·회귀 (실행 측정은 M9가 가져갔다)
 
 각 단계가 MR 몇 개인지는 위 묶음 개수와 같다. 릴리즈는 매주 금요일이므로(constitution Git 규칙)
 한 주에 닫을 묶음을 골라 쌓는다.
@@ -454,6 +511,8 @@ Task: "T058~T064 api 모듈·확인 화면·상세 변경·폴링"          # FE
 
 - **004 없이는 종단 확인이 momentum 단일 종목으로만 된다.** 섹터 2개 이상은 후보 Job이 `FAILED`가 된다. quickstart가 이 전제로 쓰여 있다
 - `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는 PD-02 확정 등록표의 결과가 아니다
+- **전략 데이터는 `parameter-registry-provisional.yml` 한 곳에만 있다.** 007 운영 코드(백엔드·프론트)에 전략 ID·전략명·파라미터값·허용 범위를 쓰는 순간 T133·T136이 실패한다 (FR-025)
+- 등록표 조회 실패(503)와 버전 드리프트(409)는 묶음을 저장하지 않는다. 미등록·실행 미지원 거부는 `REJECTED`로 저장한다 (research R9)
 - 전 후보 `UNVALIDATED`라 SC-005는 자동 만족이며 이를 검증 통과로 보고하지 않는다
 - **동일 결과 재사용(캐시)은 004 소유 미구현 항목이다.** 007에 별도 캐시를 만들지 않는다 (plan Phase 1 이후 재확인). 진행·취소·재시도는 007이 갖췄다(FR-024)
 - **SC-008(사용성 관찰)에는 구현 태스크가 없다.** PD-14의 관찰 항목이며 코드로 만들 수 있는 일이 아니다. specs/README "공통 검증·완료 규칙"의 관찰에 포함된다

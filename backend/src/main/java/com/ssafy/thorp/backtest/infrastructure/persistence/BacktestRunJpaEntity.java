@@ -18,9 +18,11 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -38,6 +40,11 @@ import org.hibernate.type.SqlTypes;
  */
 @Entity
 @Table(name = "backtest_run")
+// 바꾼 컬럼만 UPDATE 한다. 이 행은 두 경로가 동시에 갱신한다 — 이벤트 처리(상태·진행·시각)와
+// 발행 경로(published_at·publish_count). 기본 UPDATE 는 바꾸지 않은 컬럼까지 함께 쓰므로,
+// 이벤트 트랜잭션이 실행을 읽어 둔 사이에 발행 경로가 올린 시도 횟수가 옛 값으로 되돌아간다.
+// Java 쪽에서 건드리는 필드를 갈라 놓는 것만으로는 막을 수 없다 — 스냅샷 시점의 값이 그대로 나간다.
+@DynamicUpdate
 public class BacktestRunJpaEntity extends BaseEntity {
 
     @Id
@@ -125,6 +132,47 @@ public class BacktestRunJpaEntity extends BaseEntity {
     @Column(columnDefinition = "text")
     private String failureMessage;
 
+    // --- 접수가 확정한 계획(spec 004 T005). 값이 없는 행은 T003까지 만들어진 실행이다. ---
+
+    @Column(length = 64)
+    private String dedupKey;
+
+    @Column(length = 32)
+    private String rulesVersion;
+
+    @Column(length = 32)
+    private String costProfileVersion;
+
+    @Column(length = 64)
+    private String dataVersion;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> requestSpec;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> versions;
+
+    private LocalDate effectiveStart;
+
+    private LocalDate effectiveEnd;
+
+    // --- 전달 보장과 시각(R-18). publishCount 는 confirm 이 아니라 발행 시도 횟수다. ---
+
+    private Instant publishedAt;
+
+    @Column(nullable = false)
+    private int publishCount;
+
+    @Column(nullable = false)
+    private int dlqCount;
+
+    @Column(nullable = false)
+    private Instant queuedAt;
+
+    private Instant startedAt;
+
+    private Instant finishedAt;
+
     /** backtestId에 쓸 날짜 접두. 저장 전 한 번 예약하고 PK와의 결합은 PrePersist가 한다. */
     @Transient private LocalDate backtestIdDate;
 
@@ -187,7 +235,54 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.backtestIdDate = date;
     }
 
-    /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */
+    /**
+     * 접수가 확정한 계획을 반영한다. 생성자 인자를 늘리는 대신 별도 메서드로 둔다 — 이 값들은 저장 직전 한 번만 채워지고, 접수 경로를 거치지 않는 실행(T003까지의
+     * 행, 테스트 픽스처)은 채우지 않는다.
+     */
+    void applyPlan(
+            String dedupKey,
+            String rulesVersion,
+            String costProfileVersion,
+            String dataVersion,
+            LocalDate effectiveStart,
+            LocalDate effectiveEnd,
+            Map<String, Object> requestSpec,
+            Map<String, Object> versions) {
+        this.dedupKey = dedupKey;
+        this.rulesVersion = rulesVersion;
+        this.costProfileVersion = costProfileVersion;
+        this.dataVersion = dataVersion;
+        this.effectiveStart = effectiveStart;
+        this.effectiveEnd = effectiveEnd;
+        this.requestSpec = requestSpec;
+        this.versions = versions;
+    }
+
+    /** 발행 시도·confirm·DLQ·시각. 상태 전이와 따로 갱신된다(R-18). */
+    void applyLifecycle(
+            Instant queuedAt,
+            Instant startedAt,
+            Instant finishedAt,
+            Instant publishedAt,
+            int publishCount,
+            int dlqCount) {
+        if (queuedAt != null) {
+            this.queuedAt = queuedAt;
+        }
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
+        this.publishedAt = publishedAt;
+        this.publishCount = publishCount;
+        this.dlqCount = dlqCount;
+    }
+
+    /**
+     * 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다.
+     *
+     * <p><b>이 메서드가 쓰는 컬럼과 발행 기록이 쓰는 컬럼은 겹치지 않는다.</b> 이벤트 처리(상태·진행·시작/종료 시각)와 발행
+     * 경로(published_at·publish_count)는 서로 다른 스레드에서 동시에 돈다 — 한쪽이 상대의 컬럼까지 통째로 덮어쓰면 늦게 저장한 쪽이 상대의 갱신을
+     * 되돌린다. 그래서 발행 기록은 여기가 아니라 전용 UPDATE 로 처리한다.
+     */
     void applyState(
             RunStatus status,
             int attempt,
@@ -198,7 +293,9 @@ public class BacktestRunJpaEntity extends BaseEntity {
             Integer progressCompletedDays,
             Integer progressTotalDays,
             String failureCode,
-            String failureMessage) {
+            String failureMessage,
+            Instant startedAt,
+            Instant finishedAt) {
         this.status = status;
         this.attempt = attempt;
         this.currentExecutionId = currentExecutionId;
@@ -209,6 +306,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.progressTotalDays = progressTotalDays;
         this.failureCode = failureCode;
         this.failureMessage = failureMessage;
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
     }
 
     @PrePersist
@@ -216,6 +315,62 @@ public class BacktestRunJpaEntity extends BaseEntity {
         if (backtestId == null) {
             backtestId = BacktestId.of(backtestIdDate, id).value();
         }
+    }
+
+    public String getDedupKey() {
+        return dedupKey;
+    }
+
+    public String getRulesVersion() {
+        return rulesVersion;
+    }
+
+    public String getCostProfileVersion() {
+        return costProfileVersion;
+    }
+
+    public String getDataVersion() {
+        return dataVersion;
+    }
+
+    public Map<String, Object> getRequestSpec() {
+        return requestSpec;
+    }
+
+    public Map<String, Object> getVersions() {
+        return versions;
+    }
+
+    public LocalDate getEffectiveStart() {
+        return effectiveStart;
+    }
+
+    public LocalDate getEffectiveEnd() {
+        return effectiveEnd;
+    }
+
+    public Instant getPublishedAt() {
+        return publishedAt;
+    }
+
+    public int getPublishCount() {
+        return publishCount;
+    }
+
+    public int getDlqCount() {
+        return dlqCount;
+    }
+
+    public Instant getQueuedAt() {
+        return queuedAt;
+    }
+
+    public Instant getStartedAt() {
+        return startedAt;
+    }
+
+    public Instant getFinishedAt() {
+        return finishedAt;
     }
 
     public Long getId() {

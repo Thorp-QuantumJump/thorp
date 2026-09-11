@@ -1,0 +1,18 @@
+.checking {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background:
+    linear-gradient(var(--thorp-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
+    var(--thorp-background);
+  background-size: 72px 72px;
+  color: var(--thorp-muted);
+}
+
+.checking span {
+  padding: 12px 16px;
+  border: 1px solid var(--thorp-line);
+  background: var(--thorp-surface);
+  font-size: 0.76rem;
+}

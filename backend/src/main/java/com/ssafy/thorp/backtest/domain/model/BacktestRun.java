@@ -38,6 +38,8 @@ public class BacktestRun {
     private final InstrumentId benchmarkInstrumentId;
     private final int randomSeed;
     private final RunState state;
+    private final RunPlan plan;
+    private final RunLifecycle lifecycle;
 
     private BacktestRun(
             Long id,
@@ -52,7 +54,9 @@ public class BacktestRun {
             BigDecimal maxPositionPct,
             InstrumentId benchmarkInstrumentId,
             int randomSeed,
-            RunState state) {
+            RunState state,
+            RunPlan plan,
+            RunLifecycle lifecycle) {
         this.id = id;
         this.backtestId = backtestId;
         this.strategyId = Objects.requireNonNull(strategyId, "strategyId must not be null");
@@ -71,6 +75,10 @@ public class BacktestRun {
         this.benchmarkInstrumentId = benchmarkInstrumentId;
         this.randomSeed = randomSeed;
         this.state = Objects.requireNonNull(state, "state must not be null");
+        this.plan = Objects.requireNonNullElseGet(plan, RunPlan::empty);
+        this.lifecycle =
+                Objects.requireNonNullElseGet(
+                        lifecycle, () -> new RunLifecycle(null, null, null, null, 0, 0));
     }
 
     /** 새 실행 생성. 항상 QUEUED로 시작하며 id·backtestId는 저장 전이라 null이다. */
@@ -133,7 +141,9 @@ public class BacktestRun {
                 maxPositionPct,
                 benchmarkInstrumentId,
                 randomSeed,
-                RunState.of(RunStatus.QUEUED));
+                RunState.of(RunStatus.QUEUED),
+                RunPlan.empty(),
+                new RunLifecycle(null, null, null, null, 0, 0));
     }
 
     /** 상태만 아는 복원. 실행 기록(시도·진행·실패)이 필요 없는 호출자용이다. */
@@ -167,6 +177,41 @@ public class BacktestRun {
                 RunState.of(status));
     }
 
+    /** 접수 경로가 채운 계획·전달 기록까지 복원한다. 저장소 구현이 쓰는 완전한 형태다. */
+    public static BacktestRun restore(
+            Long id,
+            BacktestId backtestId,
+            String strategyId,
+            String strategyVersion,
+            Map<String, Object> parameters,
+            List<InstrumentId> instrumentIds,
+            BacktestPeriod period,
+            BigDecimal initialCash,
+            PositionSizingMode positionSizingType,
+            BigDecimal maxPositionPct,
+            InstrumentId benchmarkInstrumentId,
+            int randomSeed,
+            RunState state,
+            RunPlan plan,
+            RunLifecycle lifecycle) {
+        return new BacktestRun(
+                id,
+                backtestId,
+                strategyId,
+                strategyVersion,
+                parameters,
+                instrumentIds,
+                period,
+                initialCash,
+                positionSizingType,
+                maxPositionPct,
+                benchmarkInstrumentId,
+                randomSeed,
+                state,
+                plan,
+                lifecycle);
+    }
+
     /** 저장소에서 읽어온 상태를 복원한다. 불변식 검증 없이 값을 그대로 담는다. 저장된 실행은 항상 backtestId가 있다. */
     public static BacktestRun restore(
             Long id,
@@ -182,7 +227,7 @@ public class BacktestRun {
             InstrumentId benchmarkInstrumentId,
             int randomSeed,
             RunState state) {
-        return new BacktestRun(
+        return restore(
                 id,
                 backtestId,
                 strategyId,
@@ -195,7 +240,9 @@ public class BacktestRun {
                 maxPositionPct,
                 benchmarkInstrumentId,
                 randomSeed,
-                state);
+                state,
+                RunPlan.empty(),
+                new RunLifecycle(null, null, null, null, 0, 0));
     }
 
     /**
@@ -332,7 +379,49 @@ public class BacktestRun {
                 maxPositionPct,
                 benchmarkInstrumentId,
                 randomSeed,
-                next);
+                next,
+                plan,
+                lifecycle);
+    }
+
+    /** 접수가 확정한 계획을 붙인다. 저장 직전 한 번만 호출한다 — 그 뒤로 바뀌면 재현이 깨진다. */
+    public BacktestRun withPlan(RunPlan next) {
+        return new BacktestRun(
+                id,
+                backtestId,
+                strategyId,
+                strategyVersion,
+                parameters,
+                instrumentIds,
+                period,
+                initialCash,
+                positionSizingType,
+                maxPositionPct,
+                benchmarkInstrumentId,
+                randomSeed,
+                state,
+                Objects.requireNonNull(next, "plan must not be null"),
+                lifecycle);
+    }
+
+    /** 발행 시도·confirm·DLQ·시각 기록을 갱신한다(R-18). 상태 전이와는 독립이다. */
+    public BacktestRun withLifecycle(RunLifecycle next) {
+        return new BacktestRun(
+                id,
+                backtestId,
+                strategyId,
+                strategyVersion,
+                parameters,
+                instrumentIds,
+                period,
+                initialCash,
+                positionSizingType,
+                maxPositionPct,
+                benchmarkInstrumentId,
+                randomSeed,
+                state,
+                plan,
+                Objects.requireNonNull(next, "lifecycle must not be null"));
     }
 
     public Long getId() {
@@ -419,5 +508,19 @@ public class BacktestRun {
 
     public String getFailureMessage() {
         return state.failureMessage();
+    }
+
+    /** 접수가 확정한 값(동일 버전 키·실효 기간·버전 묶음). 접수 경로를 거치지 않은 실행은 비어 있다. */
+    public RunPlan getPlan() {
+        return plan;
+    }
+
+    public RunLifecycle getLifecycle() {
+        return lifecycle;
+    }
+
+    /** null = 접수 경로를 거치지 않았다. 재사용 판정에 걸리지 않는다. */
+    public String getDedupKey() {
+        return plan.dedupKey();
     }
 }

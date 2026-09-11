@@ -2,10 +2,7 @@ package com.ssafy.thorp.backtest.infrastructure.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -27,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * 서비스 계층을 직접 호출해 실제 트랜잭션 경계에서 Job 생성 → STARTED → FINISHED 전이와 저장, 멱등성을 확인한다.
@@ -50,7 +46,6 @@ class BacktestEventFlowIT extends PostgresTestSupport {
     @Autowired private BacktestEventService service;
     @Autowired private BacktestRunRepository jobRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @MockitoBean private BacktestProgressNotifier progressNotifier;
 
     private BacktestRun newJob() {
         return jobRepository.save(
@@ -153,20 +148,26 @@ class BacktestEventFlowIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("PROGRESS는 RUNNING일 때만 notifier로 가고 최종 상태 이후에는 가지 않는다")
+    @DisplayName("PROGRESS는 RUNNING일 때만 저장되고 최종 상태 이후에는 진행이 바뀌지 않는다")
     void progressOnlyWhileRunning() {
         BacktestRun job = newJob();
+
         service.handleProgress(progress(job)); // QUEUED: 무시
-        verifyNoInteractions(progressNotifier);
+        assertThat(reload(job).getProgress()).isNull();
 
         service.handleStarted(started(job));
         BacktestEvent<ProgressPayload> running = progress(job);
         service.handleProgress(running);
-        verify(progressNotifier).notifyProgress(running);
+        LocalDate recorded = reload(job).getProgress().lastTradingDate();
+        assertThat(recorded).isEqualTo(running.payload().lastTradingDate());
 
         service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));
         service.handleProgress(progress(job)); // COMPLETED: 무시
-        verify(progressNotifier).notifyProgress(running); // 여전히 1회
+        assertThat(reload(job).getProgress().lastTradingDate()).isEqualTo(recorded);
+    }
+
+    private BacktestRun reload(BacktestRun job) {
+        return jobRepository.findById(job.getId()).orElseThrow();
     }
 
     @Test

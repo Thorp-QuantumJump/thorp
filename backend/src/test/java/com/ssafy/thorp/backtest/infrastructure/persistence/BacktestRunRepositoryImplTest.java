@@ -282,4 +282,55 @@ class BacktestRunRepositoryImplTest extends PostgresTestSupport {
         assertThat(entity.getCreatedAt()).isNotNull();
         assertThat(entity.getUpdatedAt()).isNotNull();
     }
+
+    /**
+     * 상태 저장과 발행 기록이 서로의 컬럼을 건드리지 않는지(spec 004 R-18).
+     *
+     * <p><b>이 테스트만으로는 모자란다.</b> 중간에 영속성 컨텍스트를 비우므로 저장 시점에 최신 엔티티를 다시 읽는다. 실제 사고는 이벤트 트랜잭션이 실행을
+     * <b>읽어 둔 채로</b> 진행되는 동안 발행 경로가 끼어들 때 일어나고, 그때는 Hibernate 가 바꾸지 않은 컬럼까지 옛 값으로 함께 쓴다(그래서 엔티티에
+     * {@code @DynamicUpdate} 를 걸었다). 그쪽은 {@code
+     * BacktestPublishRecordIT.staleContextDoesNotResetPublishCount} 가 실제 커밋으로 확인한다. 여기서 보는 것은 "저장소
+     * 메서드가 남의 컬럼을 인자로 받지 않는다"는 더 좁은 성질이다.
+     */
+    @Test
+    @DisplayName("상태 저장이 발행 기록을 되돌리지 않는다 — 오래된 스냅샷으로 저장해도 시도 횟수가 남는다")
+    void updateDoesNotOverwriteDeliveryColumns() {
+        BacktestRun saved = repository.save(newJob());
+        entityManager.flush();
+
+        // 발행 경로가 먼저 시도 횟수와 확인 시각을 남긴다.
+        repository.recordPublishAttempt(saved.getId());
+        repository.recordPublished(saved.getId(), Instant.parse("2026-09-07T03:00:05Z"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // 이벤트 경로는 그 전에 읽어 둔 오래된 객체로 상태를 저장한다.
+        repository.update(saved.markRunning("exec-1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
+        assertThat(entity.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(entity.getPublishCount()).as("발행 시도 횟수가 되돌아가면 안 된다").isEqualTo(1);
+        assertThat(entity.getPublishedAt()).as("발행 확인이 지워지면 재발행기가 다시 보낸다").isNotNull();
+    }
+
+    @Test
+    @DisplayName("발행 기록이 실행 상태를 되돌리지 않는다")
+    void deliveryUpdateDoesNotOverwriteState() {
+        BacktestRun saved = repository.save(newJob());
+        entityManager.flush();
+        repository.update(saved.markRunning("exec-1"));
+        entityManager.flush();
+        entityManager.clear();
+
+        repository.recordPublishAttempt(saved.getId());
+        repository.recordPublished(saved.getId(), Instant.parse("2026-09-07T03:00:05Z"));
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestRunJpaEntity entity = entityManager.find(BacktestRunJpaEntity.class, saved.getId());
+        assertThat(entity.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(entity.getCurrentExecutionId()).isEqualTo("exec-1");
+    }
 }
