@@ -18,7 +18,7 @@ class RepositoryDataProvider:
 | `prices` | 요청 구간의 일봉. `validate_prices`를 통과한 것 |
 | `instrument_id` | `request.universe.instrument_ids[0]` |
 | `ticker` | 6자리 코드. `.KS` 접미사를 붙이지 않는다 — yfinance 표기였다 |
-| `source` | `KRX_OPEN_API`, 예시 자료이면 `FIXED_TEST_DATA` |
+| `source` | `dataset_version.source`를 그대로 쓴다. `KRX_OPEN_API`, 예시 자료이면 `FIXED_TEST_DATA` |
 | `adjustment` | `SPLIT_ADJUSTED` |
 | `metadata` | 아래 표 |
 
@@ -60,20 +60,65 @@ FR-004가 정한 배분이다. 이 구분을 어기면 원칙 V 위반이다.
 
 PD-19·PD-20이 확정되기 전의 임시 동작이다.
 
+### 저장소에 무엇이 들어 있는가
+
+거래정지일에도 `daily_price` 행이 **있다**. 004 계약이 "결측은 행 부재로 표현하고 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 정했으므로, 정지일에 행을 만들지 않으면 워커가 001의 자료를 읽자마자 실패한다. **정지는 결측이 아니라 별도 상태**이며 다음과 같이 담는다(2026-09-11 결정, data-model.md `daily_price` 「거래정지일 표현」).
+
+| 컬럼 | 정지일의 값 |
+|---|---|
+| `trading_suspended` | `true` |
+| `open` `high` `low` `close` | 네 값 모두 직전 거래일의 `close` |
+| `volume` `value` | 0 |
+| `price_carried_forward` | `true` |
+| `adjusted_close` | 직전 거래일의 `adjusted_close`(같은 조정 계수 적용) |
+
+OHLC 네 값을 모두 채우는 것은 `validate_prices`(`worker/src/worker/market_data.py:33`)가 OHLC 양수와 `high >= max(open, low, close)`·`low <= min(open, high, close)`를 요구하기 때문이다. `close`만 채우면 검증을 통과하지 못한다. `volume = 0`은 "음수가 아닌 정수" 조건을 통과한다.
+
+`trading_suspended`와 `price_carried_forward`는 **둘 다 둔다.** 전자는 원인(거래정지), 후자는 처리(직전 종가를 썼음)로 뜻이 다르다. 지금 범위에서는 항상 함께 true지만, 거래정지가 아닌 사유로 직전 종가를 쓰는 경우가 생기면 구분할 수 있어야 한다.
+
+**진짜 결측(자료를 얻지 못한 거래일)에는 행을 만들지 않는다.** 이 경우 워커는 004 계약대로 `DATA_INSUFFICIENT`로 실패한다. 채울 값이 없는 상장 첫날의 정지도 행을 만들지 않고 `data_gap`(`AMBIGUOUS_PRICE`)으로 기록한다.
+
+### 워커가 정지 행을 어떻게 다루는가
+
 ```
-체결 가격이 없는 거래일 (길이와 무관하게 모두)
-  → 평가에는 직전 종가를 쓴다
-  → 그날 매매 주문을 만들지 않는다
+trading_suspended = true 인 거래일 (정지 길이와 무관하게 모두)
+  → 행이 있으므로 DATA_INSUFFICIENT 로 실패하지 않는다
+  → 평가(보유 자산 가치 계산)에만 쓴다. 값은 직전 종가다
+  → 그날 매매 주문을 만들지 않는다. 리밸런싱일이 정지일과 겹치면 주문을 다음 거래 가능일로 미룬다
+  → 신호 계산에는 들어간다. 직전 종가가 반복되므로 그날의 수익률은 0이다
   → metadata.carriedForwardDates 에 날짜를 남긴다
   → 정지 구간을 suspension_periods 에 기록한다 (시작일·종료일·거래일 수)
   → metadata.provisionalSuspensionHandling = true 로 임시 처리 중임을 알린다
 ```
+
+`volume = 0`도 거래 불가 판정의 근거가 되지만(004 계약), **판정의 기준은 `trading_suspended`다.** 정지가 아니면서 거래량이 0인 날이 있을 수 있고, 그날은 호가가 있어 체결이 가능하다. 두 조건을 같은 것으로 다루면 정지가 아닌 날의 주문을 잘못 막는다.
 
 **확정 전에는 `SUSPENDED_TOO_LONG`을 `data_gaps`에 쓰지 않는다.** 자료를 버리지 않아야 다른 기능의 개발이 막히지 않고, 기록한 정지 구간이 곧 PD-19·PD-20 결정의 입력이 된다.
 
 어떤 방식이 확정되더라도 **정지 구간을 빼고 앞뒤를 이어 붙이는 처리는 하지 않는다.** 정지 직전과 직후가 하루 차이처럼 계산되어 없던 수익률이 생긴다(원칙 VI).
 
 `provisionalSuspensionHandling`이 true인 결과에는 정지 일수를 표시한다. 원칙 VI가 "자료 부족을 낮은 수익과 구분해 기록하고 표시한다"를 요구하므로, 긴 정지 동안 평가액이 굳은 채 계산된 결과를 그냥 내보내지 않는다.
+
+## 004 불변 조건 대조표
+
+[004 market-data-input.md](../../004-backtest-execution/contracts/market-data-input.md)의 「불변 조건」 여섯 항목을 001 데이터 모형이 만족하는지 항목별로 대조한다. 이 정합 작업에는 자동 검증이 없으므로 **이 표가 검증을 대신한다.** 어느 쪽 문서를 고치면 이 표를 다시 맞춘다.
+
+| # | 004의 불변 조건 | 001의 근거 | 판정 |
+|---|---|---|---|
+| 1 | 같은 `(instrument_id, date, dataset_id)`에 행이 하나다. 날짜는 KRX 거래일만 있고 오름차순 조회가 가능하다 | `daily_price` PK `(dataset_id, instrument_id, date)`. 검증 규칙 "날짜는 유일하고 오름차순". 조회 인덱스 `(instrument_id, dataset_id, date)` | **만족.** 다만 "KRX 거래일만"은 아래 ※1 참고 |
+| 2 | 상장일 이전 행이 없다. 합성·백필 값이 없다(원칙 V) | 검증 규칙 `date < listed_on`인 행 불가(SC-003), `delisted_on` 이후 행 불가. 상장 전 합성 ETF 이력은 spec Out of Scope이자 specs/README 「범위 밖」 | **만족** |
+| 3 | `dataset_id`가 바뀌어도 이전 버전 행은 유지된다 | `dataset_id`가 PK 선두. FR-017 "발행된 버전은 수정하지 않는다". T003이 발행된 `dataset_version`과 딸린 시계열의 UPDATE·DELETE를 거부한다 | **만족** |
+| 4 | 조정 종가는 해당 `dataset_id` 기준으로 전체 기간에 일관되게 계산되어 있다. 원시 가격은 조정하지 않는다 | `daily_price`가 원시 `open/high/low/close`와 `adjusted_close`·`adjustment_factor`를 같은 행에 나눠 담는다(research.md 결정 2). 이 문서 「체결과 신호의 계열 구분」이 용도를 고정한다 | **만족** |
+| 5 | 결측은 행 부재로 표현하고 0이나 보간값을 넣지 않는다(원칙 VI). 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다 | 검증 규칙 "결측·비유한 값을 거부한다. 채우지 않는다"(FR-005). 처리 불명확 구간은 값을 만들지 않고 `data_gap`에 기록한다(FR-006) | **만족.** 정지일은 결측이 아니므로 이 항목의 대상이 아니다(6번) |
+| 6 | 거래정지일은 결측이 아니다. 행이 있고 `trading_suspended = true`, OHLC 네 값이 직전 종가, `volume = 0`이다. 워커는 평가에만 쓰고 주문을 만들지 않는다 | data-model.md `daily_price` 「거래정지일 표현」과 이 문서 「거래정지 처리」. FR-006과 clarify 2의 임시 동작을 그대로 담는다 | **만족** (2026-09-11에 이 항목을 추가하며 양쪽을 맞췄다) |
+
+※1 **거래일 달력은 `daily_index`의 날짜 집합이 맡는다.** "행이 있는 날짜가 모두 KRX 거래일"은 적재 쪽이 지키면 되지만, 워커가 "거래일인데 행이 없다"(=결측)와 "휴일이라 행이 없다"(=정상)를 구분하려면 거래일 달력이 있어야 한다. 구분하지 못하면 결측을 휴일로 착각해 건너뛰고, 자료가 빠진 채 계산된 결과가 정상처럼 나온다.
+
+이 달력의 출처는 [evaluation-window.md](./evaluation-window.md)가 이미 정해 두었다. 공통 평가 기간 산식의 입력 `tradingCalendar`가 "확보한 지수 자료의 날짜 집합"이며, 같은 집합을 결측 판정에도 쓴다. **개별 ETF는 거래정지될 수 있지만 KOSPI 지수는 장이 열리면 언제나 산출되므로**, 지수 자료에 그 날짜의 행이 있다는 사실이 곧 그날 장이 열렸다는 증거가 된다. 별도 달력 표를 두지 않는 이유가 이것이다. 지수도 `dataset_id`에 묶여 있어 같은 자료 버전으로 다시 조회하면 같은 달력이 나온다(SC-004).
+
+`daily_price`에 행이 있는 날짜의 합집합으로 달력을 대신하지 않는다. 모든 종목이 같은 날 정지·결측이면 그 날을 휴일로 오인하기 때문이다.
+
+남는 한계는 지수 자료가 대표 ETF의 상장 이후 기간을 다 채우지 못하는 구간이다. 그 구간에는 달력도 없다. FR-009가 지수 확보 기간에 그 전체를 포함하도록 요구하므로 원칙적으로는 생기지 않지만, spec Edge Case가 이미 UI-02로 등록해 둔 항목이다.
 
 ## 기존 provider 정리
 
