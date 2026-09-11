@@ -36,7 +36,7 @@ S1 완료 뒤 같은 본문을 사용자 B 토큰으로 다시 보낸다. 기대
 
 S3 상태에서 사용자 A가 `POST /backtests/{A}/cancel`. 기대: A는 `CANCELLED`, B는 계속 `RUNNING`(마지막 요청이 아니므로 계산 유지). 이어 B도 취소하면 다음 진행 배치 안에 워커가 `FINISHED(CANCELLED)`를 보내고 B는 `CANCELLED, partial=true, progress.lastTradingDate`가 채워지며 `/timeseries`가 그 날짜까지의 데이터를 `200`으로 돌려준다. 이후 같은 본문 재요청은 `resultSource=NEW`(취소 결과는 재사용 안 함).
 
-합류 취소(Clarify Q3·R-04): A·B가 같은 실행에 합류한 상태에서 A만 취소한다. 기대: A는 즉시 `CANCELLED`·`partial=true`, `progress.lastTradingDate`가 취소 시점 값으로 고정, B는 계속 `RUNNING`. B 실행 중 A `/timeseries`는 `409 RESULT_NOT_READY`. B 완료 뒤 A를 다시 조회해도 완료 범위가 그대로고 `summary`는 null(`summaryUnavailable: CANCELLED_WHILE_RUN_CONTINUED`), `/timeseries`는 그 날짜까지만 온다. B는 `COMPLETED` 전체 결과. 변형: A 취소 뒤 B도 취소하면 run은 B의 정지 날짜(A 스냅샷보다 뒤)에서 멈추고 B만 부분 요약을 보며 A는 그대로다.
+합류 취소(Clarify Q3·R-04): A·B가 같은 실행에 합류한 상태에서 A만 취소한다. 기대: A는 즉시 `CANCELLED`·`partial=true`, `progress.lastTradingDate`가 취소 시점 값으로 고정, B는 계속 `RUNNING`. B 실행 중 A `/timeseries`는 `409 RESULT_NOT_READY`. B 완료 뒤 A를 다시 조회해도 완료 범위가 그대로고 `summary`는 null(`summaryUnavailable: CANCELLED_WHILE_RUN_CONTINUED`), `/timeseries`는 그 날짜까지만 온다. B는 `COMPLETED` 전체 결과. 변형 1: A 취소 뒤 B도 취소하면 run은 B의 정지 날짜(A 스냅샷보다 뒤)에서 멈추고 B만 부분 요약을 보며 A는 그대로다. 변형 2: A·B가 아직 대기 중일 때 A를 취소하면 A의 완료 범위는 null이고, B가 완료된 뒤에도 A `/timeseries`는 `409 NO_PARTIAL_RESULT`다. 변형 3: 워커를 모두 내린 뒤 마지막 요청을 취소하면 `cancel-grace-seconds` 뒤 run이 `FAILED(SYSTEM_FAILURE)`가 되고 결과 행이 없으며 요청은 `CANCELLED`·`partial=false`·`summaryUnavailable: CANCEL_UNANSWERED`다.
 
 ## S5. 실패와 재시도 (US3-5, FR-010)
 
