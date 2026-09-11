@@ -49,19 +49,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Add RSS fixture and HTTP security tests for allowlisted hosts, redirect/time/size/content-type bounds, optional fields, opaque GUID, RFC-822 dates, conditional 304, ignored description, and XML entity rejection in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicyTest.java`, `RssNewsClientTest.java`, and `backend/src/test/resources/news/rss/`
-- [ ] T013 [P] [US1] Add GDELT DOC/file fixture and HTTP boundary tests for bounded windows, result caps, title/URL metadata, recorded-time separation, and non-displayable records in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/GdeltNewsClientTest.java` and `backend/src/test/resources/news/gdelt/`
-- [ ] T014 [P] [US1] Add deterministic URL normalization, topic linking, duplicate fallback, grouping-boundary, transitive-similarity, summary exclusion, and importance-order tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsProcessingRulesTest.java`
+- [X] T012 [P] [US1] Add RSS fixture and HTTP security tests for allowlisted hosts, redirect/time/size/content-type bounds, optional fields, opaque GUID, RFC-822 dates, conditional 304, ignored description, and XML entity rejection in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicyTest.java`, `RssNewsClientTest.java`, and `backend/src/test/resources/news/rss/`
+- [X] T013 [P] [US1] Add GDELT DOC/file fixture and HTTP boundary tests for bounded windows, result caps, title/URL metadata, recorded-time separation, and non-displayable records in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/GdeltNewsClientTest.java` and `backend/src/test/resources/news/gdelt/`
+- [X] T014 [P] [US1] Add deterministic URL normalization, topic linking, duplicate fallback, grouping-boundary, transitive-similarity, summary exclusion, and importance-order tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsProcessingRulesTest.java`
 - [ ] T015 [P] [US1] Add MockMvc response-contract tests for READY and fewer-than-three results using `specs/012-market-news-digest/contracts/examples/current-ready.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsDigestContractTest.java`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement the shared HTTP security boundary—publisher host allowlist, bounded redirects, response size/content-type and time budgets, URL sanitization, disabled XML external entities—and RSS 2.0 metadata parsing with conditional requests and no description/body persistence in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicy.java`, `NewsHttpClient.java`, and `RssNewsClient.java`
-- [ ] T017 [US1] After T016, implement bounded GDELT DOC ArticleList retrieval and oldest-first required-file retrieval through the shared HTTP security boundary while keeping record time separate from publication time in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/GdeltDocNewsClient.java` and `GdeltFileNewsClient.java`
-- [ ] T018 [P] [US1] Implement versioned canonical URL, fallback duplicate key, sector/topic relevance, and conservative event grouping rules in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsUrlNormalizer.java`, `NewsRelevanceClassifier.java`, and `NewsGroupingPolicy.java`
-- [ ] T019 [P] [US1] Implement deterministic representative selection, safe one-sentence metadata summary, exclusion fallback, and importance tuple ordering in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSummaryPolicy.java` and `NewsImportancePolicy.java`
-- [ ] T020 [US1] Orchestrate period → relevance → deduplication → persistence → grouping with per-source commits, cursor-after-commit semantics, and idempotent reruns in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsIngestionService.java`
-- [ ] T021 [US1] Add the 15-minute due-source scheduler and database lease boundary without holding transactions during network calls in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsCollectionScheduler.java` and `DatabaseNewsCollectionLease.java`
+- [X] T016 [P] [US1] Implement the shared HTTP security boundary—publisher host allowlist, bounded redirects, response size/content-type and time budgets, URL sanitization, disabled XML external entities—and RSS 2.0 metadata parsing with conditional requests and no description/body persistence in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicy.java`, `NewsHttpClient.java` (interface; the real call lives in `JdkNewsHttpClient.java` and the response in `NewsHttpResponse.java` so clients can be verified from fixtures without a network), and `RssNewsClient.java`
+- [X] T017 [US1] After T016, implement bounded GDELT DOC ArticleList retrieval and oldest-first required-file retrieval through the shared HTTP security boundary while keeping record time separate from publication time in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/GdeltDocNewsClient.java`, `GdeltFileNewsClient.java`, `GdeltTimestamps.java` (shared time formats), and `CompositeNewsSourceClient.java` (implements the `NewsSourceClient` port, which covers both RSS and GDELT)
+- [X] T018 [P] [US1] Implement versioned canonical URL, fallback duplicate key, sector/topic relevance, and conservative event grouping rules in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsUrlNormalizer.java`, `NewsRelevanceClassifier.java`, and `NewsGroupingPolicy.java`, reading topics through the new `application/port/NewsTopicCatalog.java` boundary (implemented by `infrastructure/config/RegistryNewsTopicCatalog.java`) so the application layer does not depend on the infrastructure registry
+- [X] T019 [P] [US1] Implement deterministic representative selection, safe one-sentence metadata summary, exclusion fallback, and importance tuple ordering in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSummaryPolicy.java` and `NewsImportancePolicy.java`
+- [X] T020 [US1] Orchestrate period → relevance → deduplication → persistence → grouping with per-source commits, cursor-after-commit semantics, and idempotent reruns in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsIngestionService.java`, persisting sector/topic links through the new `application/repository/NewsArticleLinkRepository.java` boundary (implemented by `infrastructure/persistence/NewsArticleLinkRepositoryImpl.java` with `NewsTopicJpaEntity`/`NewsTopicJpaRepository`)
+- [X] T021 [US1] Add the 15-minute due-source scheduler and database lease boundary without holding transactions during network calls in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsCollectionScheduler.java` and `DatabaseNewsCollectionLease.java`
 - [ ] T022 [US1] Implement current digest query and result projection with maximum three items in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java` and `backend/src/main/java/com/ssafy/thorp/news/application/result/NewsDigestListResult.java`
 - [ ] T023 [US1] Implement the body-free `GET /market-news/digests` response using `HttpApiResponse` in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
 
@@ -163,7 +163,7 @@
 
 - [ ] T048 [P] Add structured source-run metrics and sanitized logs for duration, processed/excluded/duplicate/grouped counts, retry, and freshness in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsObservability.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsObservabilityTest.java`
 - [ ] T049 Add daily news-domain cleanup activated on/after 2026-11-07 with cascade deletion and repeat zero-row no-op semantics, without a long-term audit table, in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetentionService.java`, `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsRetentionScheduler.java`, and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsRetentionIT.java`
-- [ ] T050 [P] Add version-controlled grouping-quality fixtures that prove duplicate and wrong-event merges are 0 and same-event split rate is at most 10%, plus language-policy cases excluding forecast, judgment, investment implication, and return-causation language, in `backend/src/test/resources/news/grouping-quality.json`, `summary-policy.json`, `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsGroupingQualityTest.java`, and `NewsSummaryLanguagePolicyTest.java`
+- [X] T050 [P] Add version-controlled grouping-quality fixtures that prove duplicate and wrong-event merges are 0 and same-event split rate is at most 10%, plus language-policy cases excluding forecast, judgment, investment implication, and return-causation language, in `backend/src/test/resources/news/grouping-quality.json`, `summary-policy.json`, `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsGroupingQualityTest.java`, and `NewsSummaryLanguagePolicyTest.java`
 - [ ] T051 Synchronize API documentation and all response examples with implementation in `docs/specs/market-news-api.md`, `specs/012-market-news-digest/contracts/openapi.yaml`, and `specs/012-market-news-digest/contracts/examples/current-ready.json`, `current-stale.json`, `public-preparing.json`, `historical-empty.json`, `export-allowed.json`
 - [ ] T052 Add repeatable PostgreSQL Testcontainers performance tests with 100,000 article fixtures, 30 warm-up/100 measured digest queries at p95 ≤500ms, and a local 20-RSS-plus-one-GDELT collection cycle ≤15 minutes in `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`
 - [ ] T053 Run and record `backend/.\gradlew.bat spotlessApply build`, confirm PostgreSQL Testcontainers/Flyway tests were not skipped, execute every scenario in `specs/012-market-news-digest/quickstart.md`, and document verified scope and remaining PD-15 limitation in `docs/specs/market-news-api.md`
@@ -277,3 +277,62 @@ Developer E: T015 → T022/T023 (조회 service와 HTTP 계약)
 - 외부 실호출은 opt-in이며 일반 테스트는 fixture를 사용한다.
 - `worker/`, `data/`, `frontend/`, `infra/` 변경을 요구하는 발견이 생기면 자동 확장하지 말고 plan 변경 승인을 먼저 받는다.
 - 기사 본문, RSS description, 이미지, GDELT Tone은 저장·요약·응답 어디에도 추가하지 않는다.
+
+---
+
+## Phase 9: Convergence
+
+구현 결과를 spec·plan·tasks와 대조해 남은 일을 덧붙인 목록이다. 기존 Task는 손대지 않는다.
+이미 T015·T022~T049·T051~T053이 맡고 있는 일은 중복으로 만들지 않았다.
+
+- [X] T054 CRITICAL: GDELT 기사에 실제 매체를 귀속시킨다. 지금은 `NewsCollectionScheduler`가 활성 매체 중 첫 번째를 넘겨 해외 기사가 임의의 국내 매체 식별자로 저장되고, 그 매체의 허가 상태를 그대로 물려받아 회신하지 않은 해외 매체의 기사가 공개될 수 있다. GDELT 응답의 domain으로 매체를 찾고 없으면 `PENDING` 상태로 등록한 뒤 그 식별자를 쓴다 per SC-005, FR-016 (contradicts)
+- [X] T055 조건부 요청이 실제로 동작하도록 응답의 ETag·Last-Modified를 매체에 되돌려 저장한다. `NewsPublisher.withConditionalRequestState`가 호출되지 않아 저장된 ETag가 계속 비어 있고 304 경로에 도달하지 못한다. 저장은 수집 회차 트랜잭션 안에서 한다 per FR-013 (partial)
+- [X] T056 RSS 채널의 `ttl`·`skipHours`·`skipDays` 힌트를 읽어 다음 시도 시각에 반영한다. 현재 파서가 이 요소들을 건너뛰어 매체가 요청한 호출 간격을 지키지 못한다 per plan "수집과 재시도" (missing)
+- [X] T057 가림 정책을 시험으로 고정한다. 로그·저장된 `errorCategory`·운영 지표·API 응답 어디에도 URL query, 인증 정보, `rssUrl`, 외부 응답 원문이 실리지 않는지 단언하는 테스트를 둔다. 지금은 관례로만 지키고 있어 회귀를 잡지 못한다 per SC-009, FR-021 (missing)
+- [X] T058 배포 파일에서 온 기사를 `GDELT_FILE`로 저장한다. `CompositeNewsSourceClient`가 DOC 결과와 합치면서 출처 구분이 사라져 `NewsIngestionService`가 전부 `GDELT_DOC`으로 기록한다 per data-model `NewsArticle.sourceType` (partial)
+
+---
+
+## Phase 10: Convergence
+
+두 번째 수렴 검토다. Phase 9의 T054~T058은 아직 구현되지 않았고 그대로 유효하므로 중복으로 만들지 않았다.
+이번에는 묶음 재생성 경로를 살펴 새로 찾은 것만 담는다. 기존 Task는 손대지 않는다.
+
+- [X] T059 치명: 묶음 후보에 48시간 창 안의 기존 기사를 포함시킨다. 지금 `NewsIngestionService.regroup`은 이번 회차에 들어온 기사만 묶어서, 같은 사건 보도가 다른 회차에 들어오면 영영 묶이지 않는다. 15분 주기 수집에서는 같은 사건이 한 회차에 모두 들어오는 일이 드물어 묶음 기능이 사실상 동작하지 않는다. 선언만 되고 호출되지 않는 `NewsDigestRepository.findByArticleIds`와 `findRecent`가 그 용도다 per FR-011, US1/AC1, SC-002 (contradicts)
+- [X] T060 대표 기사가 바뀔 때 옛 묶음이 남지 않게 한다. `digestId`가 대표 기사에서 유도되므로 더 이른 발행 시각의 기사가 나중 회차에 들어오면 새 식별자가 생기고 이전 묶음이 그대로 남아 같은 사건이 두 번 보인다. 재생성 범위 안의 옛 묶음을 정리하거나 새 묶음이 승계하게 한다 per FR-011, SC-002 (partial)
+- [X] T061 사실 요약의 매체명을 대표 기사의 매체로 바꾼다. `NewsIngestionService` 285·366행이 회차를 돌린 매체의 이름을 쓰고 있어, 여러 매체가 섞인 묶음에서 대표 기사와 다른 매체가 문장에 실린다 per FR-003 (partial)
+- [X] T062 호출되지 않는 공개 메서드를 정리한다. `NewsSummaryPolicy.displayNames`, `GdeltFileNewsClient.slotName`, `NewsIngestionService.GdeltCursor.parse`가 쓰이는 곳이 없다. 쓸 자리를 만들거나 지운다. `JdkNewsHttpClient.retryAfter`는 T037이 쓸 예정이라 제외한다 per plan 범위 (unrequested)
+
+---
+
+## Phase 11: Convergence
+
+세 번째 수렴 검토다. Phase 9·10의 T054~T062는 코드가 그대로라 여전히 유효하므로 중복으로 만들지 않았다.
+이번에는 GDELT 경로 끝단과 재현 근거 저장을 살폈다. 기존 Task는 손대지 않는다.
+
+- [X] T063 치명: GDELT로 들어온 기사가 관련성 필터에서 전량 폐기되는 것을 고친다. `GdeltDocNewsClient`와 `GdeltFileNewsClient`가 분류 값을 빈 목록으로 채우는데 `NewsRelevanceClassifier`는 주제가 비면 무조건 거부하므로, 보완원으로 받은 기사가 한 건도 저장되지 않는다. 응답에서 주제를 끌어내거나 조회에 쓴 주제를 그 기사에 물려준다 per FR-009, FR-010, US1 (contradicts)
+- [X] T064 원시 응답 해시를 재현 가능한 값으로 바꾼다. `NewsIngestionService` 304행이 `Integer.toHexString(item.hashCode())`를 쓰는데 32비트라 충돌이 잦고 원시 응답이 아니라 파싱 결과에서 나온 값이라 나중에 같은 응답인지 대조할 수 없다. 응답 바이트에서 SHA-256을 계산해 저장한다 per 원칙 VIII, data-model `NewsArticle.sourcePayloadHash` (partial)
+- [X] T065 묶음 판정 근거를 저장한다. `NewsDigestRepositoryImpl` 79·80행이 제목 유사도와 공통 주제 키를 null로 넣어, 왜 그 기사들이 한 묶음이 됐는지 나중에 확인할 수 없다. 판정에 쓴 값을 그대로 남긴다 per 원칙 VIII, data-model `NewsDigestArticle` (partial)
+- [X] T066 주제 연결 근거 키를 저장한다. `NewsArticleLinkRepositoryImpl` 60행이 `matchEvidenceKey`를 null로 넣어, 어떤 규칙 항목이 걸려 그 주제에 연결됐는지 남지 않는다. 매핑에 걸린 분류 값을 근거로 남기되 기사 본문 조각은 저장하지 않는다 per data-model `NewsArticleTopic` (partial)
+
+---
+
+## Phase 12: Convergence
+
+네 번째 수렴 검토다. Phase 9~11의 T054~T066은 모두 구현됐고 전체 빌드가 통과한다.
+이번에는 그 수정이 남긴 자리를 살폈다. 치명 격차는 없다. 기존 Task는 손대지 않는다.
+
+- [X] T067 등록된 매체가 없어도 GDELT 회차를 돌린다. `NewsCollectionScheduler.runGdelt`가 활성 매체가 비면 회차를 통째로 건너뛰는데, 매체 registry는 공개 전까지 비어 있는 것이 정상이라 그동안 해외 보완 수집이 영영 돌지 않는다. T054로 GDELT가 기사마다 매체를 스스로 찾아 등록하게 됐으므로 국내 매체를 미리 요구할 이유가 사라졌다 per FR-009, plan "수집과 재시도" (contradicts)
+- [X] T068 묶음의 공통 주제 근거를 저장한다. `NewsDigestRepositoryImpl.sharedTopicKey`가 항상 null을 돌려줘 제목 유사도만 남고 공통 주제는 비어 있다. 묶음을 만든 쪽이 판정에 쓴 공통 주제를 넘겨 그대로 저장한다. 저장소에서 주제를 다시 조회하면 판정 당시 값과 달라질 수 있어 근거가 되지 못한다 per 원칙 VIII, data-model `NewsDigestArticle` (partial)
+- [X] T069 배포 파일 기사의 언어를 단정하지 않는다. `GdeltFileNewsClient`가 확인 없이 `en`으로 채우는데, 배포 파일에 언어 열이 없으면 그것은 모르는 값이다. 모르는 값을 채우면 나중에 언어로 거르는 판단이 틀어진다 per 원칙 VI, data-model `NewsArticle.language` (partial)
+
+---
+
+## Phase 13: Convergence
+
+수집 경로의 바깥쪽 끝을 봤다. 앞선 회차가 우리 코드끼리의 이음매를 맞췄다면, 이번에 걸린 것은 외부 서비스의 실제 형식과 "표시해도 되는 기사"의 경계다. 기존 Task는 손대지 않는다.
+
+- [X] T070 GDELT 배포 파일을 실제 배포 형식으로 받는다. `GdeltFileNewsClient`가 `{시각}.export.CSV`를 요청하고 `NewsHttpSecurityPolicy.EXPORT_FILE_CONTENT_TYPES`가 `text/csv` 계열만 허용하는데, GDELT 2.0이 실제로 배포하는 것은 `{시각}.export.CSV.zip`이다. 지금 상태로는 운영에서 배포 파일 보완이 매 회차 전량 실패하고, 로컬 fixture로만 돌아 테스트는 통과한다. 주소·압축 해제·허용 content-type을 실제 형식에 맞추고 fixture도 같은 형식으로 바꾼다 per FR-013, plan "수집과 재시도" (contradicts)
+- [X] T071 검증된 발행 시각이 없는 배포 레코드를 표시 후보로 만들지 않는다. `NewsIngestionService.save`의 `displayEligible`이 요약을 만들 수 있는지만 보는데, plan은 배포 레코드로 검증된 발행 시각과 제목을 확보하지 못하면 그 레코드를 연결·중복 판정 보조로만 쓰라고 한다. 배포 파일에는 발행 시각이 없으므로 이 경로의 기사는 항상 표시 후보에서 빠져야 한다 per plan "수집과 재시도", FR-006·FR-012 (partial)
+- [X] T072 표시할 수 없는 기사를 묶음 후보에서 뺀다. `NewsIngestionService.regroup`이 후보의 `displayEligible`을 보지 않아, 표시 불가 기사가 대표 기사로 뽑히거나 서로 다른 매체 수를 부풀린다. 대표가 표시되지 못하면 묶음 전체가 사라지고, 매체 수가 부풀면 주요도 순서가 틀어진다 per FR-001·FR-003·FR-004 (partial)
+- [X] T073 매핑되지 않은 분류 값의 건수를 남긴다. `NewsRelevanceClassifier.Relevance.unmappedCategories`를 계산만 하고 아무도 읽지 않아, 등록표에 빠진 분류 값이 얼마나 버려지는지 알 방법이 없다. 원문 값은 저장하지 않고 건수만 회차 로그에 남긴다 per FR-010 (partial)

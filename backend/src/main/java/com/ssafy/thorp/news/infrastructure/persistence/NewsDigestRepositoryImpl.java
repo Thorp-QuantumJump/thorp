@@ -76,8 +76,8 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
                     new NewsDigestArticleJpaEntity(
                             new NewsDigestArticleJpaEntity.Key(saved.getId(), member.getId()),
                             timeGapSeconds(digest, member),
-                            null,
-                            null));
+                            titleSimilarity(digest, member),
+                            sharedTopicKey(digest, member)));
         }
         membershipRepository.saveAll(memberships);
 
@@ -117,6 +117,18 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
             return List.of();
         }
         return loadAll(digestRepository.findByArticleIds(articleIds));
+    }
+
+    @Override
+    @Transactional
+    public void deleteByArticleIds(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return;
+        }
+        for (NewsDigestJpaEntity digest : digestRepository.findByArticleIds(articleIds)) {
+            membershipRepository.deleteByKeyDigestId(digest.getId());
+            digestRepository.delete(digest);
+        }
     }
 
     /** 여러 묶음의 멤버 기사를 한 번에 읽는다. 묶음마다 조회하면 N+1이 된다. */
@@ -185,6 +197,30 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
                 entity.getFactualSummary(),
                 entity.getGroupingRuleVersion(),
                 entity.getImportanceRuleVersion());
+    }
+
+    /**
+     * 대표 기사와의 제목 유사도. 왜 이 기사가 이 묶음에 들어왔는지 남긴다(원칙 VIII).
+     *
+     * <p>대표 기사 자신은 비교 대상이 아니므로 값을 두지 않는다.
+     */
+    private Double titleSimilarity(NewsDigest digest, NewsArticle member) {
+        NewsArticle representative = digest.getRepresentative();
+        if (representative.getCanonicalUrl().equals(member.getCanonicalUrl())) {
+            return null;
+        }
+        return com.ssafy.thorp.news.application.service.NewsGroupingPolicy.titleSimilarity(
+                representative.getTitle(), member.getTitle());
+    }
+
+    /**
+     * 묶음 판정에 쓴 공통 주제.
+     *
+     * <p>묶음을 만든 쪽이 실어 준 값을 그대로 쓴다. 주제를 여기서 다시 조회하면 판정에 쓴 값과 달라질 수 있어 근거로서 값어치가 없다. 근거를 싣지 않고 저장한
+     * 묶음은 비워 둔다.
+     */
+    private String sharedTopicKey(NewsDigest digest, NewsArticle member) {
+        return digest.sharedTopicKeyWith(member);
     }
 
     /** 대표 기사와의 시간 차. 묶음 근거로 남긴다. 확인된 시각이 없으면 값을 만들지 않는다. */

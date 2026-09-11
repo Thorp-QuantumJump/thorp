@@ -28,6 +28,9 @@ public class NewsDigest {
     private final String groupingRuleVersion;
     private final String importanceRuleVersion;
 
+    /** 기사별로 연결된 주제 키. 묶음 근거를 남길 때만 쓰고, 저장된 행을 복원할 때는 비어 있다. */
+    private final java.util.Map<Long, Set<String>> topicKeysByArticleId;
+
     private NewsDigest(
             Long id,
             NewsDigestId digestId,
@@ -36,7 +39,8 @@ public class NewsDigest {
             String representativeTitle,
             String factualSummary,
             String groupingRuleVersion,
-            String importanceRuleVersion) {
+            String importanceRuleVersion,
+            java.util.Map<Long, Set<String>> topicKeysByArticleId) {
         this.id = id;
         this.digestId = Objects.requireNonNull(digestId, "digestId must not be null");
         this.articles = List.copyOf(Objects.requireNonNull(articles, "articles must not be null"));
@@ -49,6 +53,10 @@ public class NewsDigest {
         this.factualSummary = requireText(factualSummary, "factualSummary");
         this.groupingRuleVersion = requireText(groupingRuleVersion, "groupingRuleVersion");
         this.importanceRuleVersion = requireText(importanceRuleVersion, "importanceRuleVersion");
+        this.topicKeysByArticleId =
+                topicKeysByArticleId == null
+                        ? java.util.Map.of()
+                        : java.util.Map.copyOf(topicKeysByArticleId);
     }
 
     /**
@@ -61,6 +69,25 @@ public class NewsDigest {
             String factualSummary,
             String groupingRuleVersion,
             String importanceRuleVersion) {
+        return of(
+                articles,
+                factualSummary,
+                groupingRuleVersion,
+                importanceRuleVersion,
+                java.util.Map.of());
+    }
+
+    /**
+     * 주제 근거와 함께 새 묶음을 만든다.
+     *
+     * @param topicKeysByArticleId 기사 식별자별 연결 주제 키. 대표 기사와 무엇을 공유해 묶였는지 남기는 데 쓴다(원칙 VIII).
+     */
+    public static NewsDigest of(
+            List<NewsArticle> articles,
+            String factualSummary,
+            String groupingRuleVersion,
+            String importanceRuleVersion,
+            java.util.Map<Long, Set<String>> topicKeysByArticleId) {
         NewsArticle representative =
                 selectRepresentative(articles)
                         .orElseThrow(() -> new IllegalArgumentException("대표 기사를 정할 수 없다"));
@@ -72,7 +99,8 @@ public class NewsDigest {
                 representative.getTitle(),
                 factualSummary,
                 groupingRuleVersion,
-                importanceRuleVersion);
+                importanceRuleVersion,
+                topicKeysByArticleId);
     }
 
     /** 저장된 행을 복원한다. */
@@ -93,7 +121,30 @@ public class NewsDigest {
                 representativeTitle,
                 factualSummary,
                 groupingRuleVersion,
-                importanceRuleVersion);
+                importanceRuleVersion,
+                java.util.Map.of());
+    }
+
+    /**
+     * 이 기사가 대표 기사와 공유하는 주제 키.
+     *
+     * <p>묶음 판정의 세 조건 중 "공통 주제 1개 이상"이 왜 성립했는지를 남기는 값이다. 여럿이면 사전순 첫 번째를 골라 같은 입력에서 늘 같은 값이 나오게 한다.
+     * 대표 기사 자신과 근거를 모르는 경우에는 값을 두지 않는다.
+     */
+    public String sharedTopicKeyWith(NewsArticle member) {
+        if (member.getId() == null || member.getId().equals(representative.getId())) {
+            return null;
+        }
+        Set<String> representativeTopics = topicKeysByArticleId.get(representative.getId());
+        Set<String> memberTopics = topicKeysByArticleId.get(member.getId());
+        if (representativeTopics == null || memberTopics == null) {
+            return null;
+        }
+        return representativeTopics.stream()
+                .filter(memberTopics::contains)
+                .sorted()
+                .findFirst()
+                .orElse(null);
     }
 
     /**

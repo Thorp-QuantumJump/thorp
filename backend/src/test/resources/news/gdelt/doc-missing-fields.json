@@ -1,0 +1,7 @@
+{
+  "articles": [
+    { "url": "https://press.overseas.example.com/m/1", "seendate": "20260910T040000Z", "domain": "press.overseas.example.com", "language": "English" },
+    { "title": "URL이 없는 레코드", "seendate": "20260910T040000Z", "domain": "press.overseas.example.com", "language": "English" },
+    { "url": "https://press.overseas.example.com/m/3", "title": "정상 레코드", "seendate": "20260910T040000Z", "domain": "press.overseas.example.com", "language": "English" }
+  ]
+}

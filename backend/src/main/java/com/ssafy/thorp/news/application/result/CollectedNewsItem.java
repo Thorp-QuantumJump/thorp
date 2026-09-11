@@ -20,6 +20,8 @@ import java.util.Objects;
  * @param parsedPublishedAt 파싱에 성공한 발행 시각. 실패했거나 timezone이 없으면 null.
  * @param recordedAt GDELT 기록 시각. 발행 시각으로 쓰지 않는다.
  * @param sourceCategories 뉴스원이 준 분류 값. 등록표 매핑을 통과한 것만 연결 근거가 된다(spec FR-010).
+ * @param sourceType 이 항목을 가져온 경로. 여러 경로의 결과를 합친 뒤에도 어디서 왔는지 남긴다(data-model {@code
+ *     NewsArticle.sourceType}).
  */
 public record CollectedNewsItem(
         String sourceItemId,
@@ -28,7 +30,8 @@ public record CollectedNewsItem(
         String language,
         Instant parsedPublishedAt,
         Instant recordedAt,
-        List<String> sourceCategories) {
+        List<String> sourceCategories,
+        com.ssafy.thorp.news.domain.vo.NewsSourceType sourceType) {
 
     public CollectedNewsItem {
         Objects.requireNonNull(title, "title must not be null");
@@ -36,6 +39,7 @@ public record CollectedNewsItem(
             throw new IllegalArgumentException("title은 비어 있을 수 없다");
         }
         sourceCategories = sourceCategories == null ? List.of() : List.copyOf(sourceCategories);
+        Objects.requireNonNull(sourceType, "sourceType must not be null");
     }
 
     /** 중복 판정에 쓸 식별 근거가 하나라도 있는지. 없으면 수집에서 제외한다(spec FR-011). */

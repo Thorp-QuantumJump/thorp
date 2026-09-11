@@ -29,4 +29,11 @@ public interface NewsDigestRepository {
 
     /** 그 회차가 건드린 기사가 속한 묶음. 묶음 재생성 범위를 그 회차로 한정한다(spec FR-022). */
     List<NewsDigest> findByArticleIds(List<Long> articleIds);
+
+    /**
+     * 이 기사들이 속한 묶음을 지운다. 묶음을 다시 만들기 전에 부른다.
+     *
+     * <p>묶음 식별자는 대표 기사에서 유도되므로 대표가 바뀌면 새 식별자가 생긴다. 옛 묶음을 지우지 않으면 같은 사건이 두 묶음으로 남는다(spec SC-002).
+     */
+    void deleteByArticleIds(java.util.List<Long> articleIds);
 }

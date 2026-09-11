@@ -63,6 +63,30 @@ class NewsDomainModelTest {
                 true);
     }
 
+    /** 저장된 뒤의 기사. 식별자가 있어야 묶음 근거를 기사별로 실을 수 있다. */
+    private static NewsArticle stored(
+            long id, long publisherId, String url, String title, Instant publishedAt) {
+        NewsArticle a = article(publisherId, url, title, publishedAt);
+        return NewsArticle.restore(
+                id,
+                a.getArticleId(),
+                a.getSourceType(),
+                a.getPublisherId(),
+                a.getSourceItemId(),
+                a.getOriginalUrl(),
+                a.getCanonicalUrl(),
+                a.getTitle(),
+                a.getLanguage(),
+                a.getPublishedAt(),
+                a.getPublishedAtStatus(),
+                a.getCollectedAt(),
+                a.getGdeltRecordedAt(),
+                a.getDuplicateKey(),
+                a.getSourcePayloadHash(),
+                a.getIngestRunId(),
+                a.isDisplayEligible());
+    }
+
     @Nested
     @DisplayName("본문 없음 (spec FR-002·SC-001)")
     class NoBody {
@@ -385,6 +409,68 @@ class NewsDomainModelTest {
                             "나 매체 제목",
                             Instant.parse("2026-09-10T04:20:00Z"));
             return NewsDigest.of(List.of(first, second), "요약", GROUPING_RULE, IMPORTANCE_RULE);
+        }
+
+        @Test
+        @DisplayName("멤버의 공통 주제 근거는 대표와 공유하는 주제 중 사전순 첫 번째다")
+        void 공통_주제_근거() {
+            NewsArticle first =
+                    stored(
+                            11L,
+                            1L,
+                            "https://a.example.com/1",
+                            "가 매체 제목",
+                            Instant.parse("2026-09-10T04:00:00Z"));
+            NewsArticle second =
+                    stored(
+                            12L,
+                            2L,
+                            "https://b.example.com/2",
+                            "나 매체 제목",
+                            Instant.parse("2026-09-10T04:20:00Z"));
+            NewsDigest digest =
+                    NewsDigest.of(
+                            List.of(first, second),
+                            "요약",
+                            GROUPING_RULE,
+                            IMPORTANCE_RULE,
+                            java.util.Map.of(
+                                    first.getId(),
+                                    java.util.Set.of("semiconductor", "export"),
+                                    second.getId(),
+                                    java.util.Set.of("export", "semiconductor", "won")));
+
+            NewsArticle representative = digest.getRepresentative();
+            NewsArticle member =
+                    digest.getArticles().stream()
+                            .filter(a -> !a.getId().equals(representative.getId()))
+                            .findFirst()
+                            .orElseThrow();
+
+            assertThat(digest.sharedTopicKeyWith(member))
+                    .as("근거가 없으면 왜 같은 사건으로 묶였는지 나중에 따질 수 없다")
+                    .isEqualTo("export");
+            assertThat(digest.sharedTopicKeyWith(representative))
+                    .as("대표 기사는 자신과 비교할 대상이 아니다")
+                    .isNull();
+        }
+
+        @Test
+        @DisplayName("주제 근거 없이 만든 묶음은 공통 주제를 비워 둔다")
+        void 공통_주제_근거_없음() {
+            NewsDigest digest = mixedDigest();
+            NewsArticle member =
+                    digest.getArticles().stream()
+                            .filter(
+                                    a ->
+                                            !a.getCanonicalUrl()
+                                                    .equals(
+                                                            digest.getRepresentative()
+                                                                    .getCanonicalUrl()))
+                            .findFirst()
+                            .orElseThrow();
+
+            assertThat(digest.sharedTopicKeyWith(member)).isNull();
         }
 
         @Test
