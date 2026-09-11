@@ -454,3 +454,21 @@ def test_artifacts_hold_orders_and_reproducibility_metadata() -> None:
     assert all(o.submitted_time and o.fill_time and o.reference_price for o in artifacts.orders)
     assert output.versions is not None and output.versions.data == "FIXTURE-three_etf_24m"
     assert output.versions.mapping == "SECTOR-ETF-2026-09"
+
+
+# --- 리뷰 반영 (1차) ----------------------------------------------------------------------------
+
+
+def test_pending_order_is_scaled_on_the_split_day() -> None:
+    """3/1 판단(분할 전 가격) → 3/4 체결(분할 후 가격). 수량을 같은 비율로 늘려야 목표 비중이 찬다.
+
+    늘리지 않으면 분할 전 수량(약 763주)이 그대로 체결돼 1천만 원 중 절반이 현금으로 남는다.
+    """
+    items = [{"sectorId": "BIO", "instrumentId": BIO, "targetWeight": "1"}]
+    output = completed(run={"start": "2024-03-01", "end": "2024-03-08"}, universe={"items": items})
+
+    fill_day = next(s for s in output.portfolio_series if s.date == SPLIT_DAY)
+    assert fill_day.cash < Decimal("6554") * 2, "분할 후 두 주 값도 안 되는 현금만 남아야 한다"
+    assert output.trades[0].quantity > 1400
+    assert output.weights_series[0].weight_error is not None
+    assert output.weights_series[0].weight_error < Decimal("0.01")

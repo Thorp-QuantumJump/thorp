@@ -334,7 +334,16 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         self.cash_flows_today = []
         for split in splits_on(list(self.market.splits), day):
             iid = split.instrument_id
-            if iid not in self.quantity or self.quantity[iid] == ZERO:
+            if iid not in self.quantity:
+                continue
+            order = self.pending.get(iid)
+            if order is not None:
+                # 전날 분할 전 가격으로 정한 수량. 오늘 시가는 분할 후 가격이라 수량도 같은 비율로
+                # 늘린다 — 그대로 두면 목표 비중의 절반만 사고 나머지가 현금으로 남는다.
+                scaled = apply_split(split, Decimal(order.quantity)).quantity
+                order.quantity = int(scaled)
+                order.record.quantity = scaled
+            if self.quantity[iid] == ZERO:
                 continue
             outcome = apply_split(split, self.quantity[iid])
             self.quantity[iid] = outcome.quantity
