@@ -50,6 +50,10 @@ import org.springframework.test.web.servlet.MockMvc;
 class SectorApiIT extends PostgresTestSupport {
 
     private static final String MAP_VERSION = "SEM-2026-09-10-001";
+    private static final String SEMICONDUCTOR = "SEMICONDUCTOR";
+    private static final String BATTERY = "SECONDARY_BATTERY";
+    private static final String SEMICONDUCTOR_ETF = "091160.XKRX";
+    private static final String BATTERY_ETF = "305720.XKRX";
 
     /** contracts/sector-api.md의 {@code GET /sectors} 예시에 실린 섹터 항목 그대로다. */
     private static final String CONTRACT_EXAMPLE_SECTOR =
@@ -88,10 +92,16 @@ class SectorApiIT extends PostgresTestSupport {
      * 비운다 — 특히 {@code effective_to IS NULL}인 행을 남기면 부분 UNIQUE 인덱스 때문에 다음 테스트의 INSERT가 실패한다.
      */
     private void deleteSectorTables() {
-        jdbcTemplate.update("DELETE FROM sector_etf_map_entry");
-        jdbcTemplate.update("DELETE FROM sector_etf_map_version");
-        jdbcTemplate.update("DELETE FROM sector");
-        jdbcTemplate.update("DELETE FROM representative_etf");
+        jdbcTemplate.update(
+                "DELETE FROM sector_etf_map_entry WHERE map_version_id IN"
+                        + " (SELECT id FROM sector_etf_map_version WHERE version = ?)",
+                MAP_VERSION);
+        jdbcTemplate.update("DELETE FROM sector_etf_map_version WHERE version = ?", MAP_VERSION);
+        jdbcTemplate.update("DELETE FROM sector WHERE code IN (?, ?)", SEMICONDUCTOR, BATTERY);
+        jdbcTemplate.update(
+                "DELETE FROM representative_etf WHERE instrument_id IN (?, ?)",
+                SEMICONDUCTOR_ETF,
+                BATTERY_ETF);
     }
 
     /**
@@ -101,17 +111,13 @@ class SectorApiIT extends PostgresTestSupport {
      * @return 넣은 대응표 버전 이름
      */
     private String publishSampleMap(boolean openVersion) {
-        long semiconductor = insertSector("SEMICONDUCTOR", "반도체", "INDUSTRY");
-        long battery = insertSector("SECONDARY_BATTERY", "2차전지", "THEME");
+        long semiconductor = insertSector(SEMICONDUCTOR, "반도체", "INDUSTRY");
+        long battery = insertSector(BATTERY, "2차전지", "THEME");
         long kodexSemiconductor =
-                insertEtf("091160.XKRX", "KODEX 반도체", "2006-06-27", "KRX 반도체", "삼성자산운용");
+                insertEtf(SEMICONDUCTOR_ETF, "KODEX 반도체", "2006-06-27", "KRX 반도체", "삼성자산운용");
         long kodexBattery =
                 insertEtf(
-                        "305720.XKRX",
-                        "KODEX 2차전지산업",
-                        "2018-09-12",
-                        "FnGuide 2차전지 산업 지수",
-                        "삼성자산운용");
+                        BATTERY_ETF, "KODEX 2차전지산업", "2018-09-12", "FnGuide 2차전지 산업 지수", "삼성자산운용");
 
         Long mapVersionId =
                 jdbcTemplate.queryForObject(
@@ -129,8 +135,11 @@ class SectorApiIT extends PostgresTestSupport {
                         // 자리의 타입을 추론하지 못해 그대로 두면 준비 단계에서 거절하기 때문이다.
                         openVersion ? null : "2026-09-11 00:00:00+09");
 
-        insertEntry(mapVersionId, battery, kodexBattery);
+        // 넣는 차례를 기대하는 차례와 일부러 반대로 둔다. 코드 오름차순은 SECONDARY_BATTERY가
+        // 앞이므로('C' < 'M') 넣기는 SEMICONDUCTOR부터 한다. 같은 차례로 넣으면
+        // sectorsAreOrderedByCode가 정렬을 지워도 통과해 아무것도 지키지 못한다.
         insertEntry(mapVersionId, semiconductor, kodexSemiconductor);
+        insertEntry(mapVersionId, battery, kodexBattery);
         return MAP_VERSION;
     }
 
@@ -244,7 +253,8 @@ class SectorApiIT extends PostgresTestSupport {
 
         JsonNode sectors = getJson("/sectors", 200).get("data").get("sectors");
 
-        // 넣은 순서는 BATTERY → SEMICONDUCTOR가 아니라 그 반대였는데도 코드 오름차순으로 나온다.
+        // 넣은 차례는 SEMICONDUCTOR → SECONDARY_BATTERY인데도 코드 오름차순으로 나온다.
+        // 정렬을 지우면 힙 스캔이 넣은 차례를 돌려주므로 이 단언이 깨진다.
         assertThat(sectors.get(0).get("code").asText()).isEqualTo("SECONDARY_BATTERY");
         assertThat(sectors.get(1).get("code").asText()).isEqualTo("SEMICONDUCTOR");
     }

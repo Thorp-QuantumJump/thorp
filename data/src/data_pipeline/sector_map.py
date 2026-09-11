@@ -63,10 +63,16 @@ from data_pipeline.repository import INSTRUMENT_ID_PATTERN, database_url_from_en
 SECTOR_CLASSIFICATIONS: Final[frozenset[str]] = frozenset({"INDUSTRY", "THEME"})
 
 #: 섹터 코드는 외부 식별자라 URL과 JSON에 그대로 실린다 (contracts/sector-api.md).
-SECTOR_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Z][A-Z0-9_]{1,63}$")
+#:
+#: 끝을 ``$``가 아니라 ``\Z``로 닫는다. 파이썬의 ``$``는 문자열 끝뿐 아니라 **끝에 붙은 줄바꿈
+#: 앞**에서도 맞으므로 ``"SEMICONDUCTOR\n"``이 통과한다. 자바 쪽 ``SectorCode``는
+#: ``String.matches()``라 그것을 거부하고, 그러면 파이프라인이 넣을 수 있는데 API가 거부하는
+#: 코드가 생긴다. ``sector.code``에는 형식 CHECK가 없어 DB도 막아 주지 않는다.
+SECTOR_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[A-Z][A-Z0-9_]{1,63}\Z")
 
 #: 대응표 버전 이름. 기본 생성 형식은 ``SEM-{YYYY-MM-DD}-{NNN}``이다 (contracts/sector-api.md).
-MAP_VERSION_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+#: 끝을 ``\Z``로 닫는 이유는 위와 같다.
+MAP_VERSION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 MAP_VERSION_PREFIX: Final[str] = "SEM"
 _MAX_VERSION_SEQUENCE: Final[int] = 999
 
@@ -113,6 +119,15 @@ class LeveragedEtfRejectedError(SectorMapError):
 
 class DuplicateSectorError(SectorMapError):
     """한 대응표 안에 같은 섹터가 두 번 들어 있다 (SC-001)."""
+
+
+class ConflictingEtfAttributesError(SectorMapError):
+    """같은 종목이 한 대응표 안에서 서로 다른 내용으로 두 번 나왔다.
+
+    ``representative_etf``는 종목 하나에 행 하나라 두 값을 담을 자리가 없다. 막지 않으면 먼저
+    온 쪽만 저장되고 뒤엣것은 조용히 사라지며, 내용 지문은 두 값을 다르게 세므로 저장본과 영영
+    달라져 재실행이 멱등하지 않게 된다.
+    """
 
 
 class SectorMapVersionConflictError(SectorMapError):
@@ -395,6 +410,7 @@ class SectorEtfMap:
             raise SectorMapError("대응표에 항목이 하나도 없다")
         _require_bool(self.is_sample, "is_sample")
         seen: dict[str, int] = {}
+        etf_positions: dict[str, int] = {}
         for position, entry in enumerate(self.entries):
             if not isinstance(entry, SectorMapEntry):
                 raise SectorMapError(
@@ -410,6 +426,21 @@ class SectorEtfMap:
                     "한다 (SC-001)"
                 )
             seen[entry.code] = position
+
+            # 같은 종목이 여러 섹터에 붙는 것은 허용하지만(data-model.md), 그때 속성까지
+            # 같아야 한다. representative_etf는 종목 하나에 행 하나라 서로 다른 값을 담을
+            # 자리가 없고, 저장하면 먼저 온 쪽만 남는다. 그대로 두면 뒤엣것이 조용히
+            # 사라지고, 내용 지문은 두 값을 다르게 세므로 저장본과 영영 달라져 재실행이
+            # 멱등하지 않게 된다(같은 파일로 돌릴 때마다 새 버전이 열린다).
+            first = etf_positions.get(entry.etf.instrument_id)
+            if first is not None and self.entries[first].etf != entry.etf:
+                raise ConflictingEtfAttributesError(
+                    f"같은 종목 {entry.etf.instrument_id}이(가) 서로 다른 내용으로 두 번 "
+                    f"나온다 ({first}번째 {self.entries[first].code}, {position}번째 "
+                    f"{entry.code}). 같은 종목이 여러 섹터에 붙는 것은 되지만 이름·상장일·"
+                    "기준 지수·운용사는 같아야 한다. 상품이 실제로 다르다면 다른 종목코드다"
+                )
+            etf_positions.setdefault(entry.etf.instrument_id, position)
 
     @classmethod
     def of(cls, entries: Iterable[SectorMapEntry], *, is_sample: bool) -> SectorEtfMap:

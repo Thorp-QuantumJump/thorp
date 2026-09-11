@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import json
 import re
@@ -21,8 +22,11 @@ import pytest
 from sqlalchemy import Table, create_engine, func, select
 
 from data_pipeline.sector_map import (
+    MAP_VERSION_PATTERN,
     SAMPLE_SECTOR_MAP_PATH,
+    SECTOR_CODE_PATTERN,
     SECTOR_METADATA,
+    ConflictingEtfAttributesError,
     DuplicateSectorError,
     LeveragedEtfRejectedError,
     RepresentativeEtf,
@@ -635,3 +639,49 @@ def test_columns_match_the_migration(table: Table) -> None:
 def test_no_credentials_are_hardcoded() -> None:
     source = (DATA_ROOT / "src/data_pipeline/sector_map.py").read_text(encoding="utf-8")
     assert 'create_engine("postgresql' not in source
+
+
+class TestCodeReviewFixes:
+    """코드리뷰(2026-09-11)에서 나온 지적을 막는 회귀 테스트."""
+
+    def test_same_etf_with_different_attributes_is_rejected(self) -> None:
+        """대응표를 만드는 자리에서 막는다.
+
+        representative_etf는 종목 하나에 행 하나라 두 값을 담을 자리가 없다. 막지 않으면 먼저 온
+        쪽만 저장되고 뒤엣것이 조용히 사라진다.
+        """
+        first = make_entry()
+        twin = make_entry(code="MEMORY", name="메모리")
+        conflicting = dataclasses.replace(
+            twin, etf=dataclasses.replace(twin.etf, name="KODEX 반도체(오타)")
+        )
+        with pytest.raises(ConflictingEtfAttributesError):
+            make_map(first, conflicting)
+
+    def test_same_etf_with_identical_attributes_is_allowed(self) -> None:
+        """같은 종목이 여러 섹터에 붙는 것 자체는 data-model.md가 허용한다."""
+        published = make_map(make_entry(), make_entry(code="MEMORY", name="메모리"))
+        assert len(published.entries) == 2
+
+    def test_republishing_stays_idempotent_when_an_etf_serves_two_sectors(
+        self, repository: SectorMapRepository
+    ) -> None:
+        """지적 1의 본체. 고치기 전에는 돌릴 때마다 새 버전이 열렸다."""
+        published = make_map(make_entry(), make_entry(code="MEMORY", name="메모리"))
+        first = repository.publish(published, published_at=FIRST)
+        again = repository.publish(published, published_at=SECOND)
+        assert again.version == first.version
+        assert count_rows(repository, sector_etf_map_version_table) == 1
+
+    def test_trailing_newline_in_sector_code_is_rejected(self) -> None:
+        """파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞는다.
+
+        자바 쪽 SectorCode는 String.matches()라 거부하므로, 그대로 두면 파이프라인이 넣을 수
+        있는데 API가 읽지 못하는 코드가 생긴다. sector.code에는 형식 CHECK도 없다.
+        """
+        assert SECTOR_CODE_PATTERN.match("SEMICONDUCTOR\n") is None
+        with pytest.raises(SectorMapError):
+            make_entry(code="SEMICONDUCTOR\n")
+
+    def test_trailing_newline_in_map_version_is_rejected(self) -> None:
+        assert MAP_VERSION_PATTERN.match("SEM-2026-09-11-001\n") is None
