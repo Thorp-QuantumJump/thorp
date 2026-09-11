@@ -119,6 +119,9 @@
   - `metadata`에 `datasetId`·`dataDeadline`·`carriedForwardDates`·`dataGaps`·`mapVersion`·`provisionalSuspensionHandling`을 담는다 (contracts/market-dataset.md)
   - 워밍업 자료를 거래일 기준으로 앞에서 읽는다. 달력 일수 방식은 연휴가 긴 해에 모자란다
   - `datasetId` 값 규칙을 `KRX_DAILY_V1`에서 `KRX_DAILY_{YYYYMMDD}`로 바꾼다. **스키마는 그대로이므로 픽스처 값만 바뀌고 round-trip 테스트는 통과해야 한다** (research.md 결정 4)
+    - **2026-09-11 보류.** 픽스처의 값은 백엔드 상수 `ExecutionPolicy.MARKET_DATA`에서 나오고 `EngineInputFixtureTest`가 둘의 동치를 단언한다. 픽스처만 고치면 그 테스트가 깨진다. 그렇다고 상수에 `KRX_DAILY_20260911`을 박으면 내일부터 거짓말이 된다 — 지금의 `KRX_DAILY_V1`은 누가 봐도 자리 표시인데 날짜가 박힌 값은 진짜 마감일처럼 보이면서 영원히 그 날에 멈춘다.
+    - 값 규칙 자체는 이미 구현·검증되어 있다. 식별자를 **만드는** 쪽인 `data/src/data_pipeline/dataset_version.py`의 `build_dataset_id`가 규칙을 세우고, `DatasetVersion`이 식별자와 `data_deadline`의 불일치를 거부한다.
+    - 올바른 해결은 백엔드가 값을 지어내지 않고 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. `ExecutionPolicy`의 `MARKET_DATA` 블록은 `dataVersion: null // 001 자료 계층 연동 전` 주석이 말하듯 통째로 자리 표시다. **004 연동 작업에서 푼다.**
   - 테스트: 같은 `datasetId`로 두 번 조회 시 값 동일(SC-004), 불일치 시 `MarketDataError`, 상장 전 구간 요청 시 오류, 정지일 기록
 
 **Checkpoint**: 백테스트가 001의 자료로 실행된다. quickstart 시나리오 2~6을 실행할 수 있다.
