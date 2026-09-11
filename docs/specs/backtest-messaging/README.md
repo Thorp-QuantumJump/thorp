@@ -29,7 +29,7 @@
 
 | 구성 요소 | 책임 |
 |---|---|
-| Backend API | 요청 검증, 실행(`runId`) 결정, Job·outbox 저장, 작업 발행, 취소 요청 발행, 상태·결과 조회, SSE |
+| Backend API | 요청 검증, 실행(`runId`) 결정, run·request 저장, **커밋 후** 작업 발행(`published_at` 재발행, spec 004 R-18), 취소 요청 발행, 상태·결과 조회, SSE |
 | RabbitMQ | 작업·이벤트·제어 메시지 보관·전달 |
 | Worker (실행 Consumer) | 작업 수신, `BacktestEngine.run()` 호출, STARTED / PROGRESS / FINISHED 발행, ACK, 제어 메시지(CANCEL) 수신 |
 | 엔진 (`BacktestEngine` 구현) | `EngineInput` → `EngineOutput`. 진행 콜백 제공. **DB·브로커를 모른다** |
@@ -204,7 +204,7 @@ Consumer 테스트는 시나리오마다 저장 상태를 초기화한다. 완�
 
 ## 7. 전달·저장 규칙 요약 (설계 §5)
 
-- 작업 발행: Job + outbox 같은 트랜잭션. publisher confirm·라우팅 실패 확인 후 발행 완료 기록. 202는 "접수".
+- 작업 발행: run·request 커밋 **뒤** 발행(spec 004 R-18). publisher confirm·라우팅 확인 후 `published_at` 기록, 기록이 없는 QUEUED run은 재발행. 202는 "접수". 현행 코드(트랜잭션 안 발행)는 T005에서 바꾼다.
 - 실행 Consumer: manual ACK, prefetch 1. FINISHED 발행이 브로커에서 확인된 뒤 작업 메시지 ACK. 워커가 죽으면 quorum 큐가 한 번 재배달하고(`x-delivery-limit=1`) 두 번째는 DLQ.
 - 결과 Consumer: 결과 저장 + 최종 상태를 한 트랜잭션으로 커밋 후 ACK. 처리한 `eventId`·`executionId`는 결과 행에 컬럼으로 남긴다(별도 처리 이력 테이블 없음 — 멱등성은 상태 전이가 보장한다: STARTED는 QUEUED에서만, FINISHED는 비최종 상태에서만 적용). 이미 최종 상태인 실행의 늦은 이벤트는 덮어쓰지 않고 ACK. 모르는 `runId`는 경고 로그 후 ACK(DLQ로 보내지 않음). STARTED가 유실돼 QUEUED인 실행에 온 FINISHED도 적용한다.
 - PROGRESS는 DB에 시계열을 저장하지 않고 SSE 경로에 넘긴 뒤 ACK(접속자 없어도 ACK). `stage`·`lastTradingDate`·거래일 수는 실행 행에 갱신한다(T003부터, research R-05).

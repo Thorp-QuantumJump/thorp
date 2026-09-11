@@ -22,12 +22,13 @@
     ]
   },
   "strategy": {"strategyId": "FIXED_WEIGHT", "rulesVersion": "1", "registryVersion": "PARAM-2026-09", "parameters": {"rebalance": "MONTH_END"}},
-  "conditions": {"start": "2018-01-02", "end": "2025-12-30", "initialCash": "10000000.00", "costProfileVersion": null, "evaluationSplitVersion": "SPLIT-1", "scenario": "FULL_PERIOD", "scenarioParams": null}
+  "conditions": {"start": "2018-01-02", "end": "2025-12-30", "initialCash": "10000000.00", "costProfileVersion": null, "evaluationSplitVersion": "SPLIT-1", "warmupTradingDays": null, "scenario": "FULL_PERIOD", "scenarioParams": null}
 }
 ```
 
 - `targetWeight`는 `FIXED_WEIGHT`에서만 필수, 다른 전략에서는 금지(400).
 - `costProfileVersion` null → 서버 기본(현재 `PROVISIONAL-DEMO-1`).
+- `warmupTradingDays`(선택, 정수 ≥ 0): 비교 묶음의 공통 워밍업. 003(다섯 전략 비교)·007(자동 탐색)이 후보 전체의 최대 관측 길이를 넘긴다. 서버는 이 값을 그대로 워밍업으로 써서 `effectiveStart`를 정하고 동일 버전 키에 넣는다(R-15·R-03). null이면 선택 전략의 관측 길이를 쓴다. 값이 선택 전략의 요구값보다 **작으면 올리지 않고** 422 `INSUFFICIENT_HISTORY`(본문에 필요 값)로 거부한다 — 묶음 최대값 계산이 틀렸다는 신호다. 같으면 통과, 크면 요청값 사용.
 - `scenario`: `FULL_PERIOD`(주 분석) · `FRESH_CASH_FROM` · `COST_ESCALATION` · `TARGET_RISK` (FR-016, 별도 실행으로 기록).
 - `scenarioParams`: `TARGET_RISK`면 `{"targetVolatility": "0.1000"}` 필수(연환산, 0.0500~0.2000, 0.0100 간격, 기본값은 003 등록표가 제공). `FRESH_CASH_FROM`이면 `{"startDate": "2020-03-02"}`. `FULL_PERIOD`·`COST_ESCALATION`에서는 null. 규칙(63거래일 추정·월말 조절·하향만)은 서버가 `strategy_rules` `TARGET_RISK_OVERLAY/1`에서 채우며 사용자 입력이 아니다(PD-18).
 
@@ -38,7 +39,7 @@
 ```
 
 - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).
-- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(대기열·동시 실행 상한, 본문에 사유), 503 `BROKER_UNAVAILABLE`(현행).
+- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).
 
 ## GET /backtests/{backtestId} — 상태·요약
 
@@ -57,13 +58,13 @@
 ```
 
 - `progress.stage`: `PREPARING_DATA` `COMPUTING` `SAVING`. QUEUED에서는 `progress` null, `queueWaitSeconds`만 채움.
-- `CANCELLED`: `partial=true`, `progress.lastTradingDate`가 완료 범위. `summary`는 부분 구간 기준 값.
-- `FAILED`: `failure: {code, message}`. code는 `SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `EXECUTION_LIMIT`. 낮은 수익으로 표현하지 않는다.
+- `CANCELLED`: `partial=true`. 두 경우가 있다. ① **실행을 실제로 멈춘 요청**(마지막 활성 요청의 취소·실행 시간 한도): `progress.lastTradingDate` = FINISHED(CANCELLED)의 `lastTradingDate`(취소를 누른 시점의 진행 날짜보다 며칠 뒤일 수 있다 — 워커는 다음 거래일 처리 시점에 멈춘다), `summary`는 그 구간 기준 값. ② **먼저 취소해 실행은 계속 돈 요청**: `progress.lastTradingDate` = 취소 시점 스냅샷(`cancelled_last_trading_date`, 이후 바뀌지 않음), `summary=null`, `summaryUnavailable: "CANCELLED_WHILE_RUN_CONTINUED"`. 실행이 나중에 완료되거나 다른 요청이 더 늦게 취소해 더 긴 부분 결과가 생겨도 이 요청은 자기 스냅샷을 넘는 결과를 보이지 않는다(R-04). 완료한 거래일이 없으면(첫 PROGRESS 전 취소) `progress.lastTradingDate=null`이고 하위 리소스는 run이 끝난 뒤에도 `409 NO_PARTIAL_RESULT`다. ③ **취소 무응답**(CANCEL 뒤 유예 시간 안 FINISHED 없음, R-19): run은 `FAILED(SYSTEM_FAILURE)`로 강제 종결되고 결과가 없다. 취소한 요청은 `CANCELLED`·`partial=false`·`summary=null`·`summaryUnavailable: "CANCEL_UNANSWERED"`, `failure`에 run 실패 사유, 하위 리소스 `409 BACKTEST_FAILED`. 상세 조회는 모든 경우 200이다. 같은 조건을 다시 보려면 새 요청을 낸다(REUSED).
+- `FAILED`: `failure: {code, message}`. code는 `SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `EXECUTION_LIMIT`. `SYSTEM_FAILURE`에는 워커 소멸(DLQ)뿐 아니라 정체·취소 무응답 강제 종결(R-19)이 포함되며 `message`로 구분한다. 낮은 수익으로 표현하지 않는다.
 - `summary`(COMPLETED·CANCELLED): 핵심 숫자 3개(`netTotalReturn`, `maxDrawdown`, `totalTradingCost`) + `liquidation{markToMarket, liquidated}` + `costs{…}` + `analytics{recoveryDays, turnover}` + `exceptionCount`.
 
 ## POST /backtests/{backtestId}/cancel
 
-`202` `{backtestId, status}`. 이 요청만 취소한다(다른 합류 요청은 영향 없음, 마지막이면 실행 정지). 종결 상태면 `409 NOT_CANCELLABLE`. 취소 반영은 다음 진행 배치 이내이며 그동안 `status`는 `RUNNING`, `cancelRequested: true`로 보인다.
+`202` `{backtestId, status}`. 이 요청만 취소한다(다른 합류 요청은 영향 없음, 마지막이면 실행 정지). 취소 시점의 완료 범위를 요청에 스냅샷으로 남기므로(`cancelled_last_trading_date`), 다른 합류 요청 때문에 실행이 계속돼도 이 요청의 표시 범위는 늘어나지 않는다. 종결 상태면 `409 NOT_CANCELLABLE`. 취소 반영은 다음 진행 배치 이내이며 그동안 `status`는 `RUNNING`, `cancelRequested: true`로 보인다.
 
 ## POST /backtests/{backtestId}/retry
 
@@ -71,7 +72,7 @@
 
 ## GET /backtests/{backtestId}/timeseries · /trades · /positions · /weights
 
-- 현행 세 개 유지. `409 RESULT_NOT_READY`(QUEUED·RUNNING), `409 BACKTEST_FAILED`(FAILED). `CANCELLED`는 `200`에 부분 구간 데이터 + `partial=true`.
+- 현행 세 개 유지. `409 RESULT_NOT_READY`(QUEUED·RUNNING), `409 BACKTEST_FAILED`(FAILED). `CANCELLED`는 `200`에 부분 구간 데이터 + `partial=true`. 먼저 취소한 요청(스냅샷 있음)은 공용 실행이 끝난 뒤 `cancelled_last_trading_date`까지만 날짜로 잘라 준다(읽기 필터, 재계산 없음). **공용 실행이 아직 종결 전이면 `409 RESULT_NOT_READY`**(상세 결과가 저장되기 전), **공용 실행이 `FAILED`로 끝나면 `409 BACKTEST_FAILED`**(부분 결과를 확보하지 못함). 완료한 거래일이 없는 취소 요청(스냅샷 NULL)은 `409 NO_PARTIAL_RESULT`. `/weights`·`/trades`·`/positions`·`/exceptions`도 같다.
 - 신규 `GET /backtests/{backtestId}/weights`: `[{date, target:{instrumentId: weight}, actual:{…}, weightError}]`, `weightsSource: USER|COMPUTED`.
 - `/trades` 항목에 `reason`(`REBALANCE` `HALT_DEFERRED` `LIQUIDATION`)·`plannedDate` 추가. `/timeseries` 항목에 `cashFlows[{type: DISTRIBUTION, instrumentId, amount}]` 추가.
 - `GET /backtests/{backtestId}/exceptions`: `[{date, instrumentId, kind, rule, action}]` — 005가 "결과 옆 한 문장"에 쓰는 원천.
@@ -86,11 +87,12 @@
 |---|---|---|
 | RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(PD-03·04) |
 | INSUFFICIENT_HISTORY | 422 | 가용 기간이 워밍업보다 짧음 |
-| EXECUTION_LIMIT | 429 | 대기열·동시 실행 상한 |
+| EXECUTION_LIMIT | 429 / `failure.code` | 접수: 대기열 상한 초과(사용자별·전체, 본문 `retryAfterSeconds`). 실행: 실행 시간 상한 초과로 정지(run `CANCELLED partial=true`, `failure.code=EXECUTION_LIMIT`). 값은 PD-06(R-19) |
 | NOT_CANCELLABLE / NOT_RETRYABLE | 409 | 상태 전이 불가 |
+| NO_PARTIAL_RESULT | 409 | 취소 요청에 완료한 거래일이 없음(첫 PROGRESS 전 취소). 재시도 무의미 |
 
 기존 `INVALID_INPUT` `RESOURCE_NOT_FOUND` `RESULT_NOT_READY` `BACKTEST_FAILED` `BROKER_UNAVAILABLE` `INTERNAL_ERROR` 유지.
 
 ## 예시 파일
 
-`docs/specs/backtest-api/examples/`에 `backtest-request.json`(v2), `backtest-accepted-joined.json`, `backtest-accepted-reused.json`, `backtest-detail-running.json`, `backtest-detail-cancelled.json`, `backtest-weights.json`, `backtest-exceptions.json`, `execution-metrics.json`을 추가·교체한다.
+`docs/specs/backtest-api/examples/`에 `backtest-request.json`(v2), `backtest-accepted-joined.json`, `backtest-accepted-reused.json`, `backtest-detail-running.json`, `backtest-detail-cancelled.json`, `backtest-detail-cancelled-joined.json`, `backtest-limit-exceeded.json`, `backtest-weights.json`, `backtest-exceptions.json`, `execution-metrics.json`을 추가·교체한다.

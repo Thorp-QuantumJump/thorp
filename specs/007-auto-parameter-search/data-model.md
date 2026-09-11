@@ -140,7 +140,7 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr
 | 유효 후보 수 > 후보 수 상한이면 접수 거부, 표본 추출·간격 확대 금지 | FR-005b | `ParamSearchService.create` 전 `GridExpander` 결과 검사 |
 | 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator` |
 | 유효 조합 0건이면 실행하지 않고 어느 제약 때문인지 한 문장 | Edge Case | 같은 지점, `status=REJECTED` |
-| 모든 후보와 기준이 같은 섹터 집합·공통 구간·금액·비용·참조 버전 | FR-007, FR-013d | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립 |
+| 모든 후보와 기준이 같은 섹터 집합·공통 구간·공통 워밍업(`warmupTradingDays`)·금액·비용·참조 버전 | FR-007, FR-013d, 004 R-15 | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립 |
 | 묶음은 시작 시점 참조 버전으로 끝까지 계산 | FR-012 | `reference_versions` 스냅샷 + 갱신 시 `data_version_changed` |
 | 이웃 없는 후보는 안정성 `calculable=false`, 0으로 채우지 않고 필터 통과 | FR-013b | `NeighborStabilityCalculator` |
 | 문턱 통과 후보 < 5면 그 수만, 0이면 '기준 충족 후보 없음' | Edge Case | `CandidateSelector` |
