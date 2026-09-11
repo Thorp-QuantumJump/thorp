@@ -1,30 +1,41 @@
 {
-  "run": {
-    "start": "2025-01-01",
-    "end": "2025-06-30"
-  },
-  "universe": {
-    "instrumentIds": [
-      "005930.XKRX",
-      "000660.XKRX"
+  "executionType": "SINGLE",
+  "sectorAllocation": {
+    "mappingVersion": "SECTOR-ETF-2026-09",
+    "items": [
+      {
+        "sectorId": "SEMICONDUCTOR",
+        "instrumentId": "091160.XKRX",
+        "targetWeight": "0.4000"
+      },
+      {
+        "sectorId": "BATTERY",
+        "instrumentId": "305720.XKRX",
+        "targetWeight": "0.3000"
+      },
+      {
+        "sectorId": "BIO",
+        "instrumentId": "244580.XKRX",
+        "targetWeight": "0.3000"
+      }
     ]
   },
   "strategy": {
-    "strategyId": "MA_CROSSOVER",
+    "strategyId": "FIXED_WEIGHT",
+    "rulesVersion": "1",
+    "registryVersion": "PARAM-2026-09",
     "parameters": {
-      "shortWindow": 20,
-      "longWindow": 60,
-      "threshold": 0.05
+      "rebalance": "MONTH_END"
     }
   },
-  "portfolio": {
-    "initialCash": "10000000",
-    "positionSizing": {
-      "type": "STRATEGY_DEFINED",
-      "maxPositionPct": "0.50"
-    }
-  },
-  "benchmark": {
-    "instrumentId": "069500.XKRX"
+  "conditions": {
+    "start": "2023-07-03",
+    "end": "2024-12-31",
+    "initialCash": "10000000.00",
+    "costProfileVersion": null,
+    "evaluationSplitVersion": "SPLIT-1",
+    "warmupTradingDays": null,
+    "scenario": "FULL_PERIOD",
+    "scenarioParams": null
   }
 }

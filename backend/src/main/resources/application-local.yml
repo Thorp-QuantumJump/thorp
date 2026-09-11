@@ -33,6 +33,10 @@ spring:
 # API 응답의 limits.provisional에 네 항목이 모두 실려 화면에 임시값 표시가 붙는다(FR-005a).
 # 확정값은 PD-06(후보 수 상한 실측)과 PD-05 잔여(나머지 셋) 결정을 기다린다.
 thorp:
+  auth:
+    # 로그인(spec 014)이 붙기 전까지 개발 환경에서만 X-User-Id 헤더로 요청자를 대신한다.
+    # **인증이 아니다.** 운영 설정에는 절대 넣지 않는다 — 누구나 남의 요청을 조회·취소할 수 있게 된다.
+    trust-user-id-header: true
   param-search:
     # 로컬은 네 값이 모두 채워져 있어 켠다. 개발 중 자동 탐색을 쓰는 곳이 여기다.
     enabled: true

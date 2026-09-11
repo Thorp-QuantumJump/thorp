@@ -18,6 +18,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +126,47 @@ public class BacktestRunJpaEntity extends BaseEntity {
     @Column(columnDefinition = "text")
     private String failureMessage;
 
+    // --- 접수가 확정한 계획(spec 004 T005). 값이 없는 행은 T003까지 만들어진 실행이다. ---
+
+    @Column(length = 64)
+    private String dedupKey;
+
+    @Column(length = 32)
+    private String rulesVersion;
+
+    @Column(length = 32)
+    private String costProfileVersion;
+
+    @Column(length = 64)
+    private String dataVersion;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> requestSpec;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> versions;
+
+    private LocalDate effectiveStart;
+
+    private LocalDate effectiveEnd;
+
+    // --- 전달 보장과 시각(R-18). publishCount 는 confirm 이 아니라 발행 시도 횟수다. ---
+
+    private Instant publishedAt;
+
+    @Column(nullable = false)
+    private int publishCount;
+
+    @Column(nullable = false)
+    private int dlqCount;
+
+    @Column(nullable = false)
+    private Instant queuedAt;
+
+    private Instant startedAt;
+
+    private Instant finishedAt;
+
     /** backtestId에 쓸 날짜 접두. 저장 전 한 번 예약하고 PK와의 결합은 PrePersist가 한다. */
     @Transient private LocalDate backtestIdDate;
 
@@ -187,6 +229,47 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.backtestIdDate = date;
     }
 
+    /**
+     * 접수가 확정한 계획을 반영한다. 생성자 인자를 늘리는 대신 별도 메서드로 둔다 — 이 값들은 저장 직전 한 번만 채워지고, 접수 경로를 거치지 않는 실행(T003까지의
+     * 행, 테스트 픽스처)은 채우지 않는다.
+     */
+    void applyPlan(
+            String dedupKey,
+            String rulesVersion,
+            String costProfileVersion,
+            String dataVersion,
+            LocalDate effectiveStart,
+            LocalDate effectiveEnd,
+            Map<String, Object> requestSpec,
+            Map<String, Object> versions) {
+        this.dedupKey = dedupKey;
+        this.rulesVersion = rulesVersion;
+        this.costProfileVersion = costProfileVersion;
+        this.dataVersion = dataVersion;
+        this.effectiveStart = effectiveStart;
+        this.effectiveEnd = effectiveEnd;
+        this.requestSpec = requestSpec;
+        this.versions = versions;
+    }
+
+    /** 발행 시도·confirm·DLQ·시각. 상태 전이와 따로 갱신된다(R-18). */
+    void applyLifecycle(
+            Instant queuedAt,
+            Instant startedAt,
+            Instant finishedAt,
+            Instant publishedAt,
+            int publishCount,
+            int dlqCount) {
+        if (queuedAt != null) {
+            this.queuedAt = queuedAt;
+        }
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
+        this.publishedAt = publishedAt;
+        this.publishCount = publishCount;
+        this.dlqCount = dlqCount;
+    }
+
     /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */
     void applyState(
             RunStatus status,
@@ -216,6 +299,62 @@ public class BacktestRunJpaEntity extends BaseEntity {
         if (backtestId == null) {
             backtestId = BacktestId.of(backtestIdDate, id).value();
         }
+    }
+
+    public String getDedupKey() {
+        return dedupKey;
+    }
+
+    public String getRulesVersion() {
+        return rulesVersion;
+    }
+
+    public String getCostProfileVersion() {
+        return costProfileVersion;
+    }
+
+    public String getDataVersion() {
+        return dataVersion;
+    }
+
+    public Map<String, Object> getRequestSpec() {
+        return requestSpec;
+    }
+
+    public Map<String, Object> getVersions() {
+        return versions;
+    }
+
+    public LocalDate getEffectiveStart() {
+        return effectiveStart;
+    }
+
+    public LocalDate getEffectiveEnd() {
+        return effectiveEnd;
+    }
+
+    public Instant getPublishedAt() {
+        return publishedAt;
+    }
+
+    public int getPublishCount() {
+        return publishCount;
+    }
+
+    public int getDlqCount() {
+        return dlqCount;
+    }
+
+    public Instant getQueuedAt() {
+        return queuedAt;
+    }
+
+    public Instant getStartedAt() {
+        return startedAt;
+    }
+
+    public Instant getFinishedAt() {
+        return finishedAt;
     }
 
     public Long getId() {

@@ -45,7 +45,13 @@ class RabbitBacktestJobPublisherIT {
     static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
-    private final EngineInputAssembler assembler = new EngineInputAssembler();
+    private final EngineInputAssembler assembler =
+            new EngineInputAssembler(
+                    org.mockito.Mockito.mock(
+                            com.ssafy.thorp.backtest.application.service.StrategyRulesService
+                                    .class),
+                    org.mockito.Mockito.mock(
+                            com.ssafy.thorp.backtest.application.service.CostProfileService.class));
 
     @Autowired private BacktestJobPublisher publisher;
     @Autowired private RabbitTemplate rabbitTemplate;

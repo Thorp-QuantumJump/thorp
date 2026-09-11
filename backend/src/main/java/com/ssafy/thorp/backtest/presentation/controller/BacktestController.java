@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.presentation.controller;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
@@ -9,7 +10,6 @@ import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
-import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;
@@ -18,9 +18,10 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
+import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -48,17 +49,22 @@ public class BacktestController {
 
     private final BacktestService backtestService;
     private final BacktestResultQueryService queryService;
+    private final CurrentRequester currentRequester;
 
     public BacktestController(
-            BacktestService backtestService, BacktestResultQueryService queryService) {
+            BacktestService backtestService,
+            BacktestResultQueryService queryService,
+            CurrentRequester currentRequester) {
         this.backtestService = backtestService;
         this.queryService = queryService;
+        this.currentRequester = currentRequester;
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(
-            @Valid @RequestBody BacktestJobRequest request) {
-        BacktestJobResult result = backtestService.create(toCommand(request));
+            @Valid @RequestBody BacktestJobRequest request, HttpServletRequest http) {
+        long requesterId = currentRequester.requireRequesterId(http);
+        BacktestJobResult result = backtestService.create(toCommand(request, requesterId));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));
     }
@@ -69,8 +75,9 @@ public class BacktestController {
      */
     @GetMapping("/{backtestId}")
     public ResponseEntity<ApiResponse<BacktestDetailResponse>> get(
-            @PathVariable String backtestId) {
-        BacktestDetailResult result = queryService.getDetail(backtestId);
+            @PathVariable String backtestId, HttpServletRequest http) {
+        long requesterId = currentRequester.requireRequesterId(http);
+        BacktestDetailResult result = queryService.getDetail(backtestId, requesterId);
         return ResponseEntity.ok(ApiResponse.ok(BacktestDetailResponse.from(result)));
     }
 
@@ -122,21 +129,48 @@ public class BacktestController {
                 query.pageOrDefault(), query.sizeOrDefault(), query.instrumentId(), query.status());
     }
 
-    /** positionSizing이 생략되면 여기서만 기본값을 채운다. 서비스와 도메인은 기본값을 모른다. */
-    private static CreateBacktestCommand toCommand(BacktestJobRequest request) {
-        BacktestJobRequest.PositionSizingRequest sizing = request.portfolio().positionSizing();
-        PositionSizingMode sizingType =
-                sizing == null ? PositionSizingMode.STRATEGY_DEFINED : sizing.type();
-        BigDecimal maxPositionPct = sizing == null ? null : sizing.maxPositionPct();
+    /**
+     * 요청 DTO를 유스케이스 입력으로 옮긴다. 기본값은 여기서만 채운다 — 서비스와 도메인은 "생략됐다"는 사실을 모른다.
+     *
+     * <p>{@code scenario} 생략은 주 분석({@code FULL_PERIOD})이다.
+     */
+    private static CreateBacktestCommand toCommand(BacktestJobRequest request, long requesterId) {
+        BacktestJobRequest.ConditionsRequest conditions = request.conditions();
         return new CreateBacktestCommand(
+                requesterId,
+                request.executionType(),
+                request.sectorAllocation().mappingVersion(),
+                request.sectorAllocation().items().stream()
+                        .map(
+                                item ->
+                                        new CreateBacktestCommand.AllocationItem(
+                                                item.sectorId(),
+                                                item.instrumentId(),
+                                                item.targetWeight()))
+                        .toList(),
                 request.strategy().strategyId(),
+                request.strategy().rulesVersion(),
+                request.strategy().registryVersion(),
                 request.strategy().parameters(),
-                request.universe().instrumentIds(),
-                request.run().start(),
-                request.run().end(),
-                request.portfolio().initialCash(),
-                sizingType,
-                maxPositionPct,
-                request.benchmark() == null ? null : request.benchmark().instrumentId());
+                conditions.start(),
+                conditions.end(),
+                conditions.initialCash(),
+                conditions.costProfileVersion(),
+                conditions.evaluationSplitVersion(),
+                conditions.warmupTradingDays(),
+                toScenario(conditions.scenario()),
+                conditions.scenarioParams());
+    }
+
+    /** 모르는 시나리오 이름은 400이다. enum 변환 실패를 500으로 흘리지 않는다. */
+    private static Scenario toScenario(String value) {
+        if (value == null || value.isBlank()) {
+            return Scenario.FULL_PERIOD;
+        }
+        try {
+            return Scenario.valueOf(value);
+        } catch (IllegalArgumentException exc) {
+            throw new IllegalArgumentException("모르는 scenario 입니다: " + value);
+        }
     }
 }

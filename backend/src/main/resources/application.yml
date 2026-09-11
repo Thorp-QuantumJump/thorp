@@ -82,6 +82,18 @@ app:
 # 자동 탐색(spec 007) 실행 한도. ParamSearchProperties가 읽고 네 값 모두 필수다(@NotNull).
 # 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
 thorp:
+  backtest:
+    # 결과 versions.engine 에 그대로 나가고 동일 버전 키에도 들어간다(R-03).
+    # 워커를 올릴 때 이 값을 같이 올린다 — 값이 바뀌면 같은 조건이라도 새 실행이 된다.
+    engine-version: "nautilus_trader 1.219.0 / worker 2.0.0"
+    # 비용 조건 기본 버전. 요청이 costProfileVersion 을 비우면 이 값을 쓴다.
+    default-cost-profile: PROVISIONAL-DEMO-1
+    republish:
+      # 커밋됐는데 발행 확인이 없는 대기 작업을 다시 보내는 주기(R-18).
+      interval: PT30S
+      # 접수 직후 정상 발행과 경쟁하지 않도록 두는 유예. 이보다 오래 QUEUED·미발행이면 재발행한다.
+      grace: PT1M
+      batch-size: 50
   param-search:
     # 자동 탐색(spec 007) 기능 플래그. 꺼져 있으면 ParamSearchConfig가 로드되지 않는다.
     # 네 한도가 모두 채워졌으므로 이제 켜도 기동은 실패하지 않는다. 그래도 공통 기본값을

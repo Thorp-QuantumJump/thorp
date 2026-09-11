@@ -4,9 +4,13 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,6 +22,10 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class BacktestRunRepositoryImpl implements BacktestRunRepository {
+
+    /** 부분 유니크 인덱스 {@code uk_backtest_run_dedup_active} 와 같은 상태 집합이어야 한다. */
+    private static final List<RunStatus> ACTIVE_FOR_REUSE =
+            List.of(RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.COMPLETED);
 
     private final BacktestRunJpaRepository jpaRepository;
     private final Clock clock;
@@ -34,6 +42,17 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         }
         BacktestRunJpaEntity entity = BacktestRunMapper.toEntity(run);
         entity.assignBacktestIdOn(LocalDate.now(clock));
+        // queued_at 은 NOT NULL 이다. 접수가 시각을 주지 않은 실행(테스트 픽스처 등)은 저장 시각으로 둔다 —
+        // 대기 시간의 기준은 "큐에 들어간 때"이고 그게 곧 이 INSERT 시점이다.
+        if (run.getLifecycle().queuedAt() == null) {
+            entity.applyLifecycle(
+                    clock.instant(),
+                    run.getLifecycle().startedAt(),
+                    run.getLifecycle().finishedAt(),
+                    run.getLifecycle().publishedAt(),
+                    run.getLifecycle().publishCount(),
+                    run.getLifecycle().dlqCount());
+        }
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
 
@@ -66,6 +85,7 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                 progress == null ? null : progress.totalTradingDays(),
                 state.failureCode(),
                 state.failureMessage());
+        BacktestRunMapper.applyPlanAndLifecycle(entity, run);
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
 
@@ -77,5 +97,25 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     @Override
     public Optional<BacktestRun> findByBacktestId(String backtestId) {
         return jpaRepository.findByBacktestId(backtestId).map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public Optional<BacktestRun> findActiveByDedupKey(String dedupKey) {
+        if (dedupKey == null) {
+            return Optional.empty();
+        }
+        return jpaRepository
+                .findByDedupKeyAndStatusIn(dedupKey, ACTIVE_FOR_REUSE)
+                .map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public List<BacktestRun> findUnpublishedQueued(Instant queuedBefore, int limit) {
+        return jpaRepository
+                .findByStatusAndPublishedAtIsNullAndQueuedAtLessThanOrderByQueuedAtAsc(
+                        RunStatus.QUEUED, queuedBefore, Limit.of(limit))
+                .stream()
+                .map(BacktestRunMapper::toDomain)
+                .toList();
     }
 }

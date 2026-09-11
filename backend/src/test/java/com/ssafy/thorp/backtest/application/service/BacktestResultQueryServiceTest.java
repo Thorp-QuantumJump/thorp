@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
@@ -21,8 +22,12 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -30,17 +35,19 @@ import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -53,25 +60,53 @@ class BacktestResultQueryServiceTest {
     private static final String BACKTEST_ID = "BT-20260907-000001";
     private static final Long JOB_ID = 1L;
 
+    private static final long REQUESTER = 7L;
+
     @Mock private BacktestRunRepository jobRepository;
+    @Mock private BacktestRequestRepository requestRepository;
     @Mock private BacktestResultRepository resultRepository;
-    @InjectMocks private BacktestResultQueryService service;
+
+    private final Clock clock = Clock.fixed(Instant.parse("2026-09-07T01:00:20Z"), ZoneOffset.UTC);
+    private BacktestResultQueryService service;
+
+    @BeforeEach
+    void createService() {
+        service =
+                new BacktestResultQueryService(
+                        jobRepository, requestRepository, resultRepository, clock);
+    }
+
+    /** 사용자가 보는 식별자는 요청의 것이다. 실행은 그 뒤에 있다(R-02). */
+    private static BacktestRequest requestFor(long requesterId) {
+        return BacktestRequest.restore(
+                21L,
+                BacktestId.from(BACKTEST_ID),
+                JOB_ID,
+                requesterId,
+                ExecutionType.SINGLE,
+                ResultSource.NEW,
+                null,
+                null,
+                null,
+                false);
+    }
 
     private static BacktestRun jobIn(RunStatus status) {
         return BacktestRun.restore(
-                JOB_ID,
-                BacktestId.from(BACKTEST_ID),
-                "MA_CROSSOVER",
-                "1.0.0",
-                Map.of("shortWindow", 20),
-                List.of(new InstrumentId("005930.XKRX")),
-                new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
-                new BigDecimal("10000000.00"),
-                PositionSizingMode.STRATEGY_DEFINED,
-                null,
-                new InstrumentId("069500.XKRX"),
-                42,
-                status);
+                        JOB_ID,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of("shortWindow", 20),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        new InstrumentId("069500.XKRX"),
+                        42,
+                        status)
+                .withLifecycle(RunLifecycle.queuedAt(Instant.parse("2026-09-07T01:00:00Z")));
     }
 
     private static EngineOutput.PerformanceResult performance() {
@@ -108,7 +143,9 @@ class BacktestResultQueryServiceTest {
     }
 
     private void given(RunStatus status) {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER)));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(status)));
     }
 
     // ---------- getDetail ----------
@@ -121,65 +158,68 @@ class BacktestResultQueryServiceTest {
     void detailBeforeResult(RunStatus status) {
         given(status);
 
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
         assertThat(result.status()).isEqualTo(status);
-        assertThat(result.config().strategyVersion()).isEqualTo("1.0.0");
-        assertThat(result.config().currency()).isEqualTo(ExecutionPolicy.CURRENCY);
+        assertThat(result.resultSource()).isEqualTo(ResultSource.NEW);
+        assertThat(result.config()).containsEntry("currency", ExecutionPolicy.CURRENCY);
         assertThat(result.summary()).isNull();
-        assertThat(result.error()).isNull();
+        assertThat(result.failure()).isNull();
         assertThat(result.startedAt()).isNull();
     }
 
     @Test
-    @DisplayName("COMPLETED는 performance·execution·benchmark를 summary로 합친다")
+    @DisplayName("대기 시간은 아직 시작하지 않았어도 지금까지 기다린 시간으로 채운다")
+    void queueWaitCountsWhileWaiting() {
+        given(RunStatus.QUEUED);
+
+        assertThat(service.getDetail(BACKTEST_ID, REQUESTER).queueWaitSeconds()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("COMPLETED는 performance·execution을 summary로 합친다")
     void detailCompleted() {
         given(RunStatus.COMPLETED);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, true)));
 
-        BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID).summary();
+        BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID, REQUESTER).summary();
 
         assertThat(summary.totalReturn()).isEqualByComparingTo("0.166652");
         assertThat(summary.tradeCount()).isEqualTo(2);
         // execution에서 비용 2개만 가져온다. orderCount 등은 노출하지 않는다
         assertThat(summary.totalCommission()).isEqualByComparingTo("3941.19");
         assertThat(summary.totalSlippageCost()).isEqualByComparingTo("13137.30");
-        assertThat(summary.benchmark().instrumentId()).isEqualTo("069500.XKRX");
     }
 
     @Test
-    @DisplayName("FAILED는 error만 채우고 summary는 null이다")
+    @DisplayName("FAILED는 failure만 채우고 summary는 null이다")
     void detailFailed() {
         given(RunStatus.FAILED);
         when(resultRepository.findSummary(JOB_ID))
-                .thenReturn(Optional.of(summary("NO_MARKET_DATA", false)));
+                .thenReturn(Optional.of(summary("DATA_INSUFFICIENT", false)));
 
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
         assertThat(result.summary()).isNull();
-        assertThat(result.error().code()).isEqualTo("NO_MARKET_DATA");
-        assertThat(result.finishedAt()).isEqualTo(Instant.parse("2026-09-07T01:00:12Z"));
-    }
-
-    @Test
-    @DisplayName("요청에 벤치마크가 있어도 결과에 없으면 summary.benchmark는 null이다")
-    void detailWithoutBenchmarkInResult() {
-        given(RunStatus.COMPLETED);
-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
-
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
-
-        // Job에는 벤치마크 종목이 있다 — config에는 보이고 summary에는 안 보인다
-        assertThat(result.config().benchmarkId()).isEqualTo("069500.XKRX");
-        assertThat(result.summary().benchmark()).isNull();
+        assertThat(result.failure().code()).isEqualTo("DATA_INSUFFICIENT");
     }
 
     @Test
     @DisplayName("없는 backtestId는 404 예외")
     void detailNotFound() {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
+        when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("남의 요청은 403이 아니라 404다 — 존재 여부를 알려 주지 않는다")
+    void othersRequestIsNotFound() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER + 1)));
+
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
     }
 
@@ -192,7 +232,7 @@ class BacktestResultQueryServiceTest {
         given(status);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(IllegalStateException.class)
                 .isNotInstanceOf(BacktestResultNotReadyException.class);
     }
@@ -479,46 +519,6 @@ class BacktestResultQueryServiceTest {
         verify(resultRepository, never()).findTrades(any(), any());
     }
 
-    // ---------- 벤치마크 불일치 감지 ----------
-
-    @Test
-    @DisplayName("결과에 벤치마크가 없으면 불일치가 아니다 — 계산기가 없는 현재 상태가 정상이다")
-    void benchmarkAbsentIsNotMismatch() {
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(RunStatus.COMPLETED), summary(null, false)))
-                .isFalse();
-    }
-
-    @Test
-    @DisplayName("요청과 결과의 벤치마크가 같으면 불일치가 아니다")
-    void benchmarkSameIsNotMismatch() {
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(RunStatus.COMPLETED), summary(null, true)))
-                .isFalse();
-    }
-
-    @Test
-    @DisplayName("결과에 값이 있는데 요청과 다르면 불일치다 — config와 summary가 모순된 응답이 된다")
-    void benchmarkDifferentIsMismatch() {
-        BacktestResultSummary other =
-                new BacktestResultSummary(
-                        null,
-                        null,
-                        Instant.parse("2026-09-07T01:00:00Z"),
-                        Instant.parse("2026-09-07T01:00:12Z"),
-                        performance(),
-                        execution(),
-                        "229200.XKRX",
-                        new BigDecimal("0.011000"));
-
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(RunStatus.COMPLETED), other))
-                .isTrue();
-    }
-
     // ---------- 하위 리소스 관문 ----------
 
     @ParameterizedTest(name = "{0}")
@@ -553,7 +553,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("하위 리소스: 없는 backtestId는 404")
     void gateNotFound() {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
+        when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
                 .isInstanceOf(BacktestNotFoundException.class);

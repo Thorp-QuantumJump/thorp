@@ -1,6 +1,8 @@
 package com.ssafy.thorp.backtest.application.repository;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /** 백테스트 Job 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. */
@@ -23,4 +25,14 @@ public interface BacktestRunRepository {
     Optional<BacktestRun> findById(Long id);
 
     Optional<BacktestRun> findByBacktestId(String backtestId);
+
+    /**
+     * 같은 동일 버전 키로 아직 살아 있는 실행(QUEUED·RUNNING·COMPLETED). 부분 유니크 인덱스와 같은 상태 집합이다.
+     *
+     * <p>실패·취소한 실행은 걸리지 않는다 — 같은 조건을 다시 요청하면 새로 계산해야 하기 때문이다(R-02).
+     */
+    Optional<BacktestRun> findActiveByDedupKey(String dedupKey);
+
+    /** 커밋됐지만 발행 확인({@code published_at})이 없는 대기 실행. 재발행 대상이다(R-18). */
+    List<BacktestRun> findUnpublishedQueued(Instant queuedBefore, int limit);
 }
