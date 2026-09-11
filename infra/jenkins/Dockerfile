@@ -3,6 +3,19 @@ FROM jenkins/jenkins:lts-jdk21
 
 USER root
 
+# 프론트엔드 CI(npm ci / lint / test / build)를 이 컨테이너 안에서 실행하므로 Node가 필요하다.
+# 베이스 이미지에는 Node도 npm도 들어 있지 않아, 없으면 Frontend 스테이지가 첫 명령에서
+# "npm: not found" 로 끝난다.
+#
+# 메이저 버전을 24로 고정한 이유는 두 가지다.
+#   1) frontend 테스트는 Node 22.18 이상을 요구한다. node --test 의 글롭 패턴 인자,
+#      node:module 의 registerHooks(22.15 이상), 플래그 없는 TypeScript 타입
+#      스트리핑(22.18 이상)을 모두 쓰기 때문이다. 실제로 컨테이너에서 확인한 결과
+#      24.19.0 과 22.23.2 는 13개 테스트를 통과했고, 20.20.2 는 글롭 패턴을 해석하지
+#      못해 "Could not find src/**/*.test.ts" 로 끝났다.
+#   2) 팀의 로컬 개발 환경이 24.x 이므로 같은 메이저를 맞춰야 CI에서만 나타나는 차이를 줄일 수 있다.
+ARG NODE_MAJOR=24
+
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -m 0755 -d /etc/apt/keyrings \
@@ -10,8 +23,13 @@ RUN apt-get update \
  && chmod a+r /etc/apt/keyrings/docker.asc \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
     > /etc/apt/sources.list.d/docker.list \
+ && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+ && chmod a+r /etc/apt/keyrings/nodesource.gpg \
+ && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin git \
+ && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin git nodejs \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

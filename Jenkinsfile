@@ -37,6 +37,28 @@ pipeline {
                     }
                 }
 
+                stage('FE Test') {
+                    steps {
+                        dir('frontend') {
+                            // npm run test 는 spec 리포터로 콘솔에 결과를 출력하면서
+                            // junit 리포터로 XML 도 함께 남긴다. 두 경로를 동시에 쓰기
+                            // 때문에 실패 로그를 스테이지에서 바로 읽을 수 있고,
+                            // 아래 post 블록에서 실패한 테스트만 따로 모을 수 있다.
+                            sh 'npm run test'
+                        }
+                    }
+                    post {
+                        always {
+                            // post 블록은 dir('frontend') 바깥이므로 워크스페이스 루트
+                            // 기준 경로를 쓴다.
+                            junit(
+                                allowEmptyResults: true,
+                                testResults: 'frontend/build/test-results/node-test.xml'
+                            )
+                        }
+                    }
+                }
+
                 stage('FE Build') {
                     steps {
                         dir('frontend') {
