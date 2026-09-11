@@ -194,8 +194,15 @@ def _resolve_calendar(trading_calendar: list[date]) -> list[date]:
     return sorted(set(trading_calendar))
 
 
-def _require_instrument_id(instrument_id: str) -> None:
-    if not _INSTRUMENT_ID_PATTERN.fullmatch(instrument_id):
+def _require_instrument_id(instrument_id: object) -> None:
+    """자바 쪽 ``requireInstrumentId``와 같은 입력에 같은 오류를 낸다.
+
+    문자열이 아닌 값을 먼저 거른다. ``fullmatch``에 ``None``을 넘기면 ``TypeError``가 나는데,
+    그것은 부르는 쪽이 잡는 ``EvaluationWindowError``를 빠져나간다. 자바는 ``null``을 명시적으로
+    검사해 ``INVALID_INSTRUMENT_ID``를 내므로, 고치지 않으면 **두 구현이 갈라지는 유일한
+    입력**이 된다. 같은 픽스처로 묶어 둔 뜻이 없어진다.
+    """
+    if not isinstance(instrument_id, str) or not _INSTRUMENT_ID_PATTERN.fullmatch(instrument_id):
         raise EvaluationWindowError(
             "INVALID_INSTRUMENT_ID", f"종목 식별자 형식이 아니다: {instrument_id}"
         )

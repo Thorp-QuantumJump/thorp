@@ -574,3 +574,16 @@ def test_negative_warmup_is_rejected() -> None:
 # 4. 실행 계획. 종목 50개 × 16년 조회가 인덱스를 타는지는 EXPLAIN 으로만 확인된다.
 # 5. 세션 시간대. ``_as_date`` 가 KST 로 옮기는 것은 aware datetime 일 때뿐이라, 드라이버가
 #    naive 로 돌려주는 설정이면 날짜가 밀릴 수 있다.
+
+
+def test_window_beyond_the_data_deadline_is_rejected() -> None:
+    """마감일을 넘겨 요청하면 짧은 계열을 조용히 돌려주지 않는다.
+
+    거래일 달력이 마감일까지만 있어 기대 거래일 집합도 그만큼만 만들어지고, 결측 검사가 그
+    집합으로 도는 탓에 아무 신호 없이 통과했다. 6년치를 요청하고 닷새치를 받고도 6년을
+    받았다고 믿게 된다.
+    """
+    provider, _ = make_provider(build_database())
+    with pytest.raises(MarketDataError) as caught:
+        provider.load([SEMICONDUCTOR], START, date(2030, 1, 1), DATASET)
+    assert "data deadline" in str(caught.value) or "complete through" in str(caught.value)
