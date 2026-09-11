@@ -1,4 +1,4 @@
-import { ArrowUpRight, Menu, X } from 'lucide-react'
+import { LogIn, Menu, X } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import styles from '@/pages/LandingPage.module.css'
@@ -52,9 +52,9 @@ export function LandingHeader() {
         ))}
       </nav>
 
-      <Link className={styles.headerCta} to="/dashboard">
-        서비스 시작
-        <ArrowUpRight aria-hidden="true" size={16} strokeWidth={1.8} />
+      <Link className={styles.headerCta} to="/login">
+        로그인
+        <LogIn aria-hidden="true" size={16} strokeWidth={1.8} />
       </Link>
 
       <button
@@ -81,8 +81,8 @@ export function LandingHeader() {
               {item.label}
             </a>
           ))}
-          <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
-            서비스 시작
+          <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+            로그인
           </Link>
         </nav>
       ) : null}

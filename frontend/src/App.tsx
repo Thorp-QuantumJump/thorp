@@ -23,6 +23,18 @@ const DashboardPage = lazy(() =>
   })),
 )
 
+const SignupPage = lazy(() =>
+  import('@/pages/SignupPage').then((module) => ({
+    default: module.SignupPage,
+  })),
+)
+
+const LoginPage = lazy(() =>
+  import('@/pages/LoginPage').then((module) => ({
+    default: module.LoginPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -47,6 +59,8 @@ function AnimatedRoutes() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
