@@ -18,7 +18,6 @@ spec 004의 T006~T009가 넓힌다.
 from decimal import Decimal
 
 from worker.contracts.engine_input import EngineInput, Scenario
-from worker.nautilus_engine import SLIPPAGE_BPS
 from worker.strategies import unsupported_strategy_reason
 
 #: 엔진이 계산하는 통화. ``execute_nautilus`` 가 ``KRW_SIM``(KRW와 1:1)을 하드코딩하고
@@ -96,11 +95,6 @@ def unsupported_reasons(request: EngineInput) -> list[str]:
                 f"execution.costProfile.{name} must be 0; this engine charges slippage only and "
                 f"would report {name}={value} costs as zero"
             )
-    if cost.slippage_bps != SLIPPAGE_BPS:
-        reasons.append(
-            f"execution.costProfile.slippageBps must be {SLIPPAGE_BPS}; this engine applies a "
-            f"fixed {SLIPPAGE_BPS} bps and would ignore {cost.slippage_bps}"
-        )
 
     if request.execution.partial_fill:
         reasons.append(
