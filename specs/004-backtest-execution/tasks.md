@@ -45,10 +45,11 @@
   - `strategy_rules`에 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(PD-18 확정) 행 추가
   - `StrategyRulesService.requireRegistered()` → PENDING이면 422 `RULES_NOT_REGISTERED`. `ErrorCode` 추가: RULES_NOT_REGISTERED, INSUFFICIENT_HISTORY, EXECUTION_LIMIT, NOT_CANCELLABLE, NOT_RETRYABLE, NO_PARTIAL_RESULT
   - 기존 `BacktestJob*Test`를 Run/Request 테스트로 교체, `FlywayMigrationTest`·`ArchitectureTest` 통과
-- [ ] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`
+- [x] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`
   - `PostgresMarketDataProvider(url)`: contracts/market-data-input.md의 열을 읽어 원시 OHLC·조정 종가·분배금·분할·상장/폐지일·data_version 반환. 읽기 전용, 종목 ≤50·기간 한 번에 조회
   - `CsvMarketDataProvider`가 같은 스키마의 픽스처 디렉터리를 읽음(`versions.data="FIXTURE-three_etf_24m"`). 픽스처에 분배금 2건·거래 정지 1일·상장일 다른 종목 1개 포함(quickstart S8)
   - 결측 거래일 → `DataInsufficientError`(보간 금지), 기존 `validate_prices()` 재사용. `YFinanceDataProvider`는 `worker/scripts/`로 이동해 실행 경로에서 제외(원칙 X)
+  - 구현 시 결정: 엔진 생성자의 공급자 **기본값을 없앴다**(필수 인자). 기본값이 남아 있으면 주입을 잊은 경로가 계속 생긴다. 거래일 달력은 읽어 온 자료의 합집합으로 만든다(워커에 KRX 달력 없음) — 모든 종목에서 같은 날이 함께 빠지면 이 검사로는 안 보이고 001 `dataset_version`이 막는다. `PostgresMarketDataProvider`의 SQL은 001이 표를 만들기 전이라 가짜 커서 테스트로만 고정했다
 
 **Checkpoint**: 계약 v2·스키마·등록표·자료 경로가 준비되어 스토리 구현을 시작할 수 있다.
 

@@ -309,46 +309,6 @@ def test_engine_satisfies_backtest_engine_protocol_when_called_by_contract() -> 
         assert point.drawdown == snapshot.drawdown
 
 
-def test_yfinance_identity_and_exclusive_end(monkeypatch: pytest.MonkeyPatch) -> None:
-    import yfinance
-
-    from worker.market_data import YFinanceDataProvider
-
-    calls = []
-
-    class FakeTicker:
-        def __init__(self, ticker: str) -> None:
-            calls.append(ticker)
-
-        def history(self, **kwargs: Any) -> pd.DataFrame:
-            calls.append(kwargs)
-            return CsvDataProvider(FIXTURE).load(request()).prices
-
-        def get_history_metadata(self) -> dict:
-            return {
-                "symbol": "000660.KS",
-                "currency": "KRW",
-                "instrumentType": "EQUITY",
-                "exchangeName": "KSC",
-                "longName": "SK hynix Inc.",
-            }
-
-    monkeypatch.setattr(yfinance, "Ticker", FakeTicker)
-    dataset = YFinanceDataProvider().load(request())
-    assert calls[0] == "000660.KS"
-    assert calls[1]["end"] == "2025-01-15"
-    # 계약 고정값 marketData.adjustment=SPLIT_ADJUSTED = 액면분할만 반영한 원본 시계열.
-    # auto_adjust=True 로 두면 배당까지 반영되어 계약과 어긋난다.
-    assert calls[1]["auto_adjust"] is False
-    assert calls[1]["keepna"] is True
-    assert dataset.adjustment == "SPLIT_ADJUSTED"
-    assert dataset.metadata["autoAdjust"] is False
-    assert dataset.metadata["instrumentName"] == "SK hynix Inc."
-    monkeypatch.setattr(FakeTicker, "get_history_metadata", lambda _: {"symbol": "WRONG"})
-    with pytest.raises(MarketDataError, match="Unexpected identity"):
-        YFinanceDataProvider().load(request())
-
-
 def test_empty_evaluation_is_failed_without_fake_metrics() -> None:
     req = request(run={"runId": "EMPTY", "start": "2026-01-01", "end": "2026-01-02"})
     output, artifacts = NautilusMomentumEngine(CsvDataProvider(FIXTURE)).run_with_artifacts(req)

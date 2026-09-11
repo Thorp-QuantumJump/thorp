@@ -14,5 +14,9 @@ class Settings(BaseSettings):
     # host/port/user/password를 따로 받지 않는다.
     rabbitmq_url: str = "amqp://thorp:thorp@localhost:5672/"
 
+    # 001이 적재한 시장 자료 DB(읽기 전용). compose 가 MARKET_DATA_URL 로 주입한다.
+    # 기본값을 두지 않는다 — 값이 없으면 조용히 로컬 DB 를 읽는 대신 실패해야 한다.
+    market_data_url: str | None = None
+
 
 settings = Settings()
