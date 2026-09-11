@@ -22,6 +22,10 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
     validate-on-migrate: true
+    # 스키마를 통째로 지우는 clean을 막는다. Flyway 9부터 기본값이 true지만 명시해 둔다 —
+    # 기본값에 기대면 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다.
+    # constitution "스키마 변경 규칙": 운영 데이터베이스를 초기화하는 명령은 쓰지 않는다.
+    clean-disabled: true
 
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST}
