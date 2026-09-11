@@ -31,7 +31,16 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   계약이고 "메시지만 보고 판단할 수 있는" 불변식만 본다. 엔진 지원 범위는 수신자마다 다르므로
   구현체 책임이며, 계약 픽스처(`examples/engine-input.json`)는 `contracts/` 검증을 계속 통과해야 한다.
   현재 거절: `fillPrice≠RAW`, `signalPrice≠ADJUSTED`, 규칙 사본 없음, 레버리지·공매도·부분 체결·
-  KRW 외 통화, 시나리오 `TARGET_RISK`·`COST_ESCALATION`(결과 계약 칸·규칙 미정, 별도 Task)
+  KRW 외 통화, 시나리오 `COST_ESCALATION`(비용 프로필에 `escalation` 규칙 없음), `TARGET_RISK` 에
+  `scenarioRules`·`scenarioParams.targetVolatility` 누락
+- **목표 위험 맞춤은 `target_risk.py` 오버레이다**(PD-18). 배분 모듈이 낸 비중 위에 얹고 내리기만 한다.
+  추정 대상은 실제 보유가 아니라 목표 비중 포트폴리오의 과거 수익률이고(첫 판단일에도 값이 있고
+  결정적), 규칙은 `run.scenarioRules`·목표는 `run.scenarioParams` 에서만 읽는다. 수익률이 모자라면
+  `ESTIMATION_FAILED` — 백엔드가 오버레이 관측 길이를 워밍업에 넣어 보낸다
+- **일시 장애와 확정 오류를 섞지 말 것.** 엔진은 배분·자료·입력 오류와 자체 불변식 위반
+  (`EngineFailure` → `ENGINE_ERROR`)만 `run.error` 결과로 바꾼다. 공급자 접속 실패 같은 그 밖의 예외는
+  그대로 전파한다 — 소비자가 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로 바꾸면 FINISHED 가
+  발행·ACK 되어 일시 장애가 최종 실패로 굳는다
 - 엔진 입력 모델은 계약 `contracts/engine_input.py`의 `EngineInput` 하나다. 과도기 모델
   `engine_contracts.py`는 제거했다(ADR-0004 반영). 새 입력 필드는 계약 쪽에 맞춘다
 

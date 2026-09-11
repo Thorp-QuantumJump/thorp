@@ -57,11 +57,16 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   (`engine_support.py`, `run.error.code=INVALID_REQUEST`). 거절 대상: `marketData.fillPrice≠RAW`,
   `signalPrice≠ADJUSTED`, `allocation.rules` 없음, 미등록 전략(팀 미확정 `SECTOR_MOMENTUM`·
   `MINIMUM_VARIANCE` 는 "정하지 않았다"로 구분해 말한다), `rebalance≠MONTH_END`, 레버리지·공매도·
-  부분 체결·KRW 외 통화·분수 수량, 시나리오 `TARGET_RISK`·`COST_ESCALATION`(결과 계약 칸과 규칙이
-  아직 없다). 여러 항목이 동시에 미지원이면 한 메시지에 전부 담는다.
+  부분 체결·KRW 외 통화·분수 수량, 시나리오 `COST_ESCALATION`(비용 프로필에 `escalation` 규칙이 없다),
+  `TARGET_RISK` 에 `scenarioRules`·`scenarioParams.targetVolatility` 누락. 여러 항목이 동시에 미지원이면 한
+  메시지에 전부 담는다.
 - 자료·배분 오류는 `run.status=FAILED` 와 `run.error` 로 돌아온다: 거래일 행 부재·워밍업 부족
   `DATA_INSUFFICIENT`, 규칙 값 누락 `INVALID_REQUEST`, 조건을 만족하는 배분이 없음
-  `CONSTRAINT_VIOLATION`. `performance`·`execution` 은 채우지 않는다(키가 빠진다).
+  `CONSTRAINT_VIOLATION`, 목표 위험 추정에 수익률 부족 `ESTIMATION_FAILED`, 엔진 자체 불변식 위반
+  `ENGINE_ERROR`. `performance`·`execution` 은 채우지 않는다(키가 빠진다).
+- **일시 장애는 결과가 아니다.** 공급자 접속 실패 같은 그 밖의 예외는 `FAILED` 로 바꾸지 않고 전파한다 —
+  소비자가 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로 바꾸면 FINISHED 가 발행·ACK 되어
+  일시 장애가 최종 실패로 굳는다.
 - `execution.delisting=CAUSE_BASED` 는 받되 사유 분류 미지원을 `diagnostics.warnings` 에
   `DELISTING_CLASSIFICATION_UNSUPPORTED` 로 실행당 1건 남긴다. `run.randomSeed` 생략은 42.
 
@@ -84,7 +89,13 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   `costs{commission, spread, slippage, tax, total}`. `trades[].commission` 은 양쪽 수수료 합이고
   세금은 `realizedPnl` 과 `costs.tax` 에만 반영된다(거래 계약에 세금 칸이 없다).
 - **분배금**은 권리락일 시작 시점 보유로 자격이 생기고 지급일에 한 번 현금이 된다
-  (`portfolioSeries[].cashFlows`). **분할**은 수량과 묶음 진입가만 바꾼다(거래 아님).
+  (`portfolioSeries[].cashFlows`). **분할**은 보유 수량·묶음 진입가·**그날 체결할 미체결 주문 수량**을
+  같은 비율로 바꾼다(거래 아님).
+- **목표 위험 맞춤**(`scenario=TARGET_RISK`, PD-18): 판단일마다 목표 비중 포트폴리오의 최근
+  `scenarioRules.lookbackDays`(63) 일별 수익률 표준편차 × √252 를 추정치로 삼고, 목표
+  (`scenarioParams.targetVolatility`)를 넘으면 비중에 `target/estimate` 를 곱해 나머지를 현금으로 둔다
+  (내리기만). `weightsSeries[].riskScale`·`estimatedVolatility` 에 남고 `versions.scenarioRules` 가 규칙
+  버전이다. 수익률이 모자라면 `ESTIMATION_FAILED`.
 - **청산**(`evaluation.liquidationAtEnd`)은 종료일 종가에 전량 매도했다면 얼마가 남는가의 가정치다
   (`liquidation{markToMarket, liquidated}`). `trades`·`costs` 합계에 넣지 않는다.
 - **워밍업·평가 시작**: `FRESH_CASH_FROM` 의 `scenarioParams.startDate` → `run.effectiveStart` →
