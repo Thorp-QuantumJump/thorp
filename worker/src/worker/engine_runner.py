@@ -31,6 +31,7 @@ from worker.performance import calculate_performance
 from worker.portfolio_execution import (
     REBALANCE_MONTH_END,
     CallbackError,
+    EngineFailure,
     PortfolioRebalanceExecution,
     effective_random_seed,
     execute_portfolio,
@@ -254,13 +255,12 @@ class PortfolioBacktestEngine:
             output = self._rejected(request, market, started, exc.code, str(exc))
         except MarketDataError as exc:
             output = self._rejected(request, market, started, "DATA_INSUFFICIENT", str(exc))
-        except ValueError as exc:
-            output = self._rejected(request, market, started, "INVALID_REQUEST", str(exc))
-        except Exception as exc:
-            # 실패해도 존재하지 않는 성과를 0으로 채우지 않는다(계약 §4.3).
-            output = self._rejected(
-                request, market, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
-            )
+        except EngineFailure as exc:
+            # 같은 입력이면 다시 나는 엔진 결함. 결과로 돌려준다 — 재전달해도 달라지지 않는다.
+            output = self._rejected(request, market, started, "ENGINE_ERROR", str(exc))
+        # 그 밖의 예외(공급자 접속 실패 등 일시 장애)는 결과로 바꾸지 않고 소비자에게 전파한다.
+        # 소비자는 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 여기서 FAILED 로 바꾸면
+        # FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다.
         return output, RunArtifacts(orders=orders, metadata=metadata)
 
     @staticmethod

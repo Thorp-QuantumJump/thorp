@@ -28,6 +28,7 @@ from worker.portfolio_execution import (
     HALT_DEFERRED,
     WEIGHT_ROUNDING,
     CallbackError,
+    EngineFailure,
     plan_days,
 )
 
@@ -472,3 +473,34 @@ def test_pending_order_is_scaled_on_the_split_day() -> None:
     assert output.trades[0].quantity > 1400
     assert output.weights_series[0].weight_error is not None
     assert output.weights_series[0].weight_error < Decimal("0.01")
+
+
+def test_transient_provider_failure_propagates_instead_of_failing_the_run() -> None:
+    """일시 장애를 FAILED 결과로 바꾸면 소비자가 FINISHED 를 발행·ACK 해 최종 실패로 굳는다.
+
+    계약 §7 ③: 일시 장애는 ACK 하지 않고 재전달 경로로 넘긴다.
+    """
+
+    class FlakyProvider:
+        def load(self, *args: Any, **kwargs: Any) -> Any:
+            raise ConnectionError("market data DB unreachable")
+
+    with pytest.raises(ConnectionError):
+        PortfolioBacktestEngine(FlakyProvider()).run(
+            EngineInput.model_validate(engine_input_body())
+        )
+
+
+def test_engine_invariant_failure_is_returned_as_engine_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """엔진 자체 결함은 같은 입력이면 다시 나므로 결과로 돌려준다 — 재전달해도 달라지지 않는다."""
+    import worker.engine_runner as runner_module
+
+    def broken(*args: Any, **kwargs: Any) -> Any:
+        raise EngineFailure("Cash invariant violated")
+
+    monkeypatch.setattr(runner_module, "execute_portfolio", broken)
+    output = run()
+    assert output.run.status is RunStatus.FAILED
+    assert output.run.error is not None and output.run.error.code == "ENGINE_ERROR"

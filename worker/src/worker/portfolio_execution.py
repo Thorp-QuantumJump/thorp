@@ -50,7 +50,7 @@ from nautilus_trader.model.instruments import Equity
 from nautilus_trader.model.objects import Money, Price, Quantity
 from nautilus_trader.trading.strategy import Strategy as NautilusStrategy
 
-from worker.allocation import compute_weights
+from worker.allocation import AllocationError, compute_weights
 from worker.artifacts import OrderRecord
 from worker.contracts.engine import ProgressCallback
 from worker.contracts.engine_input import EngineInput, RunSpec
@@ -93,6 +93,14 @@ def effective_random_seed(run: RunSpec) -> int:
 
 class CallbackError(RuntimeError):
     """진행 콜백 실패를 보존해 소비자가 발행을 명시적으로 재시도할 수 있게 한다."""
+
+
+class EngineFailure(RuntimeError):
+    """엔진 자체 불변식 위반. 같은 입력이면 다시 나므로 결과(``ENGINE_ERROR``)로 돌려준다.
+
+    공급자 접속 실패 같은 일시 장애와 갈라야 한다 — 그쪽은 결과로 바꾸지 않고 소비자에게 전파해
+    재전달 경로로 보낸다(계약 §7).
+    """
 
 
 def timestamp(ns: int) -> datetime:
@@ -748,9 +756,13 @@ def execute_portfolio(
         if execution.callback_error is not None:
             raise CallbackError("Progress callback failed") from execution.callback_error
         if execution.failure is not None:
-            raise execution.failure
+            if isinstance(execution.failure, AllocationError):
+                raise execution.failure  # 배분·추정 오류는 자기 코드로 결과가 된다
+            raise EngineFailure(
+                f"{type(execution.failure).__name__}: {execution.failure}"
+            ) from execution.failure
         if len(execution.series) != len(plan.evaluation_days):
-            raise RuntimeError(
+            raise EngineFailure(
                 f"{len(execution.series)} snapshots for {len(plan.evaluation_days)} evaluation days"
             )
         for order in execution.pending.values():
