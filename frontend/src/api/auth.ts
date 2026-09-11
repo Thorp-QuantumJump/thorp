@@ -34,6 +34,15 @@ function readSignupResponse(value: unknown): SignupResponse | null {
   }
 }
 
+/** 값은 남기지 않고 필드별 타입만 모아 예상과 다른 응답 구조를 추적한다. */
+function describeShape(value: unknown): string {
+  if (!isRecord(value)) return typeof value
+  const fields = Object.keys(value)
+    .map((key) => `${key}: ${Array.isArray(value[key]) ? 'array' : typeof value[key]}`)
+    .join(', ')
+  return `{ ${fields} }`
+}
+
 async function runMutation<T>(request: () => Promise<T>): Promise<T> {
   try {
     await prepareCsrfToken()
@@ -93,6 +102,7 @@ export async function signup(
     throw new ApiClientError(
       'unexpected',
       '회원가입 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      { cause: new Error(`unexpected signup response shape: ${describeShape(body.data)}`) },
     )
   }
 

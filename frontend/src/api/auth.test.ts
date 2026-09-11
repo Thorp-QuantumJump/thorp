@@ -1,7 +1,7 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { authError, signupSuccess } from '@/test/authFixtures'
-import { apiClient, resetCsrfToken } from './client'
+import { type ApiClientError, apiClient, resetCsrfToken } from './client'
 import {
   confirmEmailVerification,
   normalizeEmail,
@@ -86,6 +86,34 @@ describe('auth API', () => {
       code: 'DUPLICATE_EMAIL',
       message: '이미 가입된 이메일입니다.',
     })
+  })
+
+  it('가입 응답 구조가 다르면 값 없이 필드 타입만 담은 원인을 남긴다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    vi.spyOn(apiClient, 'post').mockResolvedValue(
+      axiosResponse(
+        {
+          success: true,
+          data: { userId: '42', email: 'new.user@example.com', status: 'ACTIVE' },
+          error: null,
+        },
+        201,
+      ),
+    )
+
+    const error = await signup({
+      email: 'new.user@example.com',
+      password: 'password1234',
+      nickname: '새사용자',
+      phoneNumber: '01012345678',
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({ kind: 'unexpected', code: null })
+    const cause = (error as ApiClientError).cause
+    expect((cause as Error).message).toBe(
+      'unexpected signup response shape: { userId: string, email: string, status: string }',
+    )
+    expect((cause as Error).message).not.toContain('new.user@example.com')
   })
 
   it('응답이 없는 오류를 사용자가 재시도할 수 있는 연결 오류로 구분한다', async () => {
