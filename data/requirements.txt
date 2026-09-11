@@ -1,8 +1,10 @@
 pandas>=2.2
 numpy>=1.26
-pykrx>=1.0.45
+# KRX OPEN API 호출용 HTTP 클라이언트 (pykrx 제거: research.md 결정 1, 원칙 X)
 requests>=2.32
+# processed/ Parquet 입출력
 pyarrow>=17.0
+# 서비스 저장소(PostgreSQL) 적재 — worker/pyproject.toml과 같은 드라이버
 SQLAlchemy>=2.0
 psycopg[binary]>=3.2
 python-dotenv>=1.0
