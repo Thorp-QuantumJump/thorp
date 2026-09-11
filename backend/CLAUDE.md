@@ -66,7 +66,15 @@ common: 모든 계층에서 참조 가능
 - 응답 decimal은 필드마다 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열이 된다. **웹 ObjectMapper에 전역 등록하지 않는다** — 다른 도메인(`MarketResponse.value`)이 숫자→문자열로 바뀌어 그 계약이 깨진다. 전역 `NON_NULL`도 금지: 거래의 `exitDate`는 명시적 null이고 시계열의 `benchmarkReturn`만 키를 생략한다
 - 결과 조회는 엔드포인트마다 읽을 컬럼이 달라 저장소 조회가 4개다(`findSummary`·`findTimeseries`·`findPortfolioSeries`·`findTrades`). `portfolio_series`는 5년치면 수백 KB이고 `@JdbcTypeCode(JSON)` 기본 타입은 지연 로딩이 없어 엔티티를 읽으면 무조건 딸려온다 — 읽지 않을 컬럼은 select에 넣지 않는다. native alias는 따옴표로 감싼다(PostgreSQL이 소문자로 접는다)
 - 거래 응답의 `entryDate`는 저장된 `entryTime`(Instant)을 **거래소 현지(Asia/Seoul)** 기준으로 바꾼 값이다. UTC로 자르면 거래소를 늘릴 때 하루 밀린다
-- 스키마 변경은 `db/migration/V{N}__*.sql`(PostgreSQL 문법)로 한다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`. DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다
+- 스키마 변경은 `db/migration/V{버전}__{설명}.sql`(PostgreSQL 문법)로 한다. 버전은 숫자만, 설명은 소문자·숫자·밑줄이다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`
+- **운영에 이미 적용된 마이그레이션은 고치지 않는다.** 아직 어느 운영 환경에도 적용되지 않은 파일은 병합 뒤라도 버전을 올리거나 정리할 수 있다(2026-09-11 V3 중복을 V4로 푼 것이 그 경우다). 근거는 constitution "스키마 변경 규칙"
+- 스키마 변경·Entity 매핑·검증 테스트는 **같은 MR**에 담는다. prod가 `ddl-auto: validate`라 셋 중 하나만 병합되면 그 시점부터 배포가 실패하고, 원인이 방금 병합한 MR이 아니라 이전 MR에 있어 찾기 어렵다
+- 데이터를 지우거나 기존 값을 무효로 만드는 변경(테이블·컬럼 삭제, TRUNCATE, 타입 변경, 기존 행이 위반하는 제약 추가)은 MR 본문에 영향 범위를 적고 백업·승인 뒤 배포한다. 빈 DB 테스트는 이런 변경을 전부 통과시키므로 자동 검증으로 걸러지지 않는다. `flyway clean`은 쓰지 않는다(prod `clean-disabled: true`, `ApplicationProfileConfigTest`가 단언)
+- 마이그레이션 검증은 셋이다. **테스트에 버전 번호를 적지 않는다** — 적용 여부는 `support/MigrationFiles`가 읽은 파일 목록과 대조한다
+  - `common/persistence/MigrationFileConventionTest` 파일명 규칙과 버전 중복. **Docker 없이 돈다**
+  - `common/persistence/FlywayMigrationTest`·`paramsearch/.../ParamSearchMigrationTest` 빈 DB 적용과 스키마 구조
+  - `infra/scripts/check-migration-version.sh` 기준 브랜치 대비 버전 역전(out-of-order). 빈 DB 테스트로는 잡히지 않아 CI가 따로 돌린다
+- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다
 
 ## 도메인 용어
 
