@@ -1,8 +1,16 @@
-import { ApiClientError, apiClient, normalizeApiError, prepareCsrfToken } from './client'
+import {
+  ApiClientError,
+  apiClient,
+  normalizeApiError,
+  prepareCsrfToken,
+  resetCsrfToken,
+} from './client'
 import type {
   ApiEnvelope,
+  AuthenticatedUser,
   EmailVerificationConfirmRequest,
   EmailVerificationRequest,
+  LoginRequest,
   SignupRequest,
   SignupResponse,
 } from '@/types/auth'
@@ -32,6 +40,10 @@ function readSignupResponse(value: unknown): SignupResponse | null {
     nickname: value.nickname,
     status: value.status,
   }
+}
+
+function readAuthenticatedUser(value: unknown): AuthenticatedUser | null {
+  return readSignupResponse(value)
 }
 
 /** 값은 남기지 않고 필드별 타입만 모아 예상과 다른 응답 구조를 추적한다. */
@@ -107,4 +119,64 @@ export async function signup(
   }
 
   return result
+}
+
+export async function login(
+  input: LoginRequest,
+  signal?: AbortSignal,
+): Promise<AuthenticatedUser> {
+  const response = await runMutation(() =>
+    apiClient.post<ApiEnvelope<AuthenticatedUser>>(
+      '/auth/sessions',
+      { email: normalizeEmail(input.email), password: input.password },
+      { signal },
+    ),
+  )
+
+  const body = response.data
+  if (!body.success) {
+    throw new ApiClientError('api', body.error.message, {
+      code: body.error.code,
+      fieldErrors: body.error.fieldErrors,
+    })
+  }
+
+  const user = readAuthenticatedUser(body.data)
+  if (!user) {
+    throw new ApiClientError(
+      'unexpected',
+      '로그인 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      { cause: new Error(`unexpected login response shape: ${describeShape(body.data)}`) },
+    )
+  }
+
+  resetCsrfToken()
+  return user
+}
+
+export async function getCurrentUser(signal?: AbortSignal): Promise<AuthenticatedUser> {
+  try {
+    const response = await apiClient.get<ApiEnvelope<AuthenticatedUser>>('/auth/me', { signal })
+    const body = response.data
+
+    if (!body.success) {
+      throw new ApiClientError('api', body.error.message, {
+        code: body.error.code,
+        fieldErrors: body.error.fieldErrors,
+      })
+    }
+
+    const user = readAuthenticatedUser(body.data)
+    if (!user) {
+      throw new ApiClientError(
+        'unexpected',
+        '로그인 상태 응답을 확인하지 못했습니다.',
+        { cause: new Error(`unexpected current user response shape: ${describeShape(body.data)}`) },
+      )
+    }
+
+    return user
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
 }

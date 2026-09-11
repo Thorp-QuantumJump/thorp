@@ -1,9 +1,16 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { authError, signupSuccess } from '@/test/authFixtures'
+import {
+  authenticatedUser,
+  authenticatedUserSuccess,
+  authError,
+  signupSuccess,
+} from '@/test/authFixtures'
 import { type ApiClientError, apiClient, resetCsrfToken } from './client'
 import {
   confirmEmailVerification,
+  getCurrentUser,
+  login,
   normalizeEmail,
   requestEmailVerification,
   signup,
@@ -123,5 +130,46 @@ describe('auth API', () => {
       kind: 'network',
       code: null,
     })
+  })
+
+  it('이메일을 정규화해 로그인하고 현재 사용자만 반환한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    const postSpy = vi
+      .spyOn(apiClient, 'post')
+      .mockResolvedValue(axiosResponse(authenticatedUserSuccess))
+
+    await expect(
+      login({ email: ' User@Example.COM ', password: 'password1234' }),
+    ).resolves.toEqual(authenticatedUser)
+    expect(postSpy).toHaveBeenCalledWith(
+      '/auth/sessions',
+      { email: 'user@example.com', password: 'password1234' },
+      { signal: undefined },
+    )
+  })
+
+  it('현재 사용자 조회는 CSRF 준비 없이 세션 기준 사용자를 반환한다', async () => {
+    const getSpy = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue(axiosResponse(authenticatedUserSuccess))
+
+    await expect(getCurrentUser()).resolves.toEqual(authenticatedUser)
+    expect(getSpy).toHaveBeenCalledOnce()
+    expect(getSpy).toHaveBeenCalledWith('/auth/me', { signal: undefined })
+  })
+
+  it('로그인 실패 envelope를 안정된 인증 오류로 변환한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    const response = axiosResponse(
+      authError('INVALID_CREDENTIALS', '이메일 또는 비밀번호를 확인해 주세요.'),
+      401,
+    )
+    vi.spyOn(apiClient, 'post').mockRejectedValue(
+      new AxiosError('Request failed', 'ERR_BAD_REQUEST', undefined, undefined, response),
+    )
+
+    await expect(
+      login({ email: 'user@example.com', password: 'wrong-password' }),
+    ).rejects.toMatchObject({ kind: 'api', code: 'INVALID_CREDENTIALS' })
   })
 })
