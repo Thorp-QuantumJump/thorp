@@ -9,6 +9,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;
 import com.ssafy.thorp.common.config.JpaAuditingConfig;
+import com.ssafy.thorp.support.MigrationFiles;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,6 +33,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 제공하므로, 마이그레이션과 Entity 매핑이 어긋나면 컨텍스트 로딩 자체가 실패한다.
  *
  * <p>여기서 확인하는 것은 컬럼과 시퀀스의 존재다. 타입 불일치는 Hibernate가 경고로만 남기고 통과시키기 때문에, 컬럼 목록을 눈으로 맞춰 두는 이 단언이 필요하다.
+ *
+ * <p><b>적용 여부 단언에는 버전 번호를 적지 않는다.</b> {@link MigrationFiles}가 읽어온 클래스패스의 파일 목록과 대조한다. 예전에는 {@code WHERE
+ * version = '4'}처럼 번호를 박고 있어서 버전을 하나 바꿀 때마다(V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명한 일이 그랬다) 테스트까지 함께 고쳐야 했다. 신규
+ * 마이그레이션이 타임스탬프 버전을 쓰게 된 뒤로는 14자리 숫자를 손으로 옮겨 적는 비용이 더 크다. 아래 단언은 파일이 몇 개든 그대로 둔다.
+ *
+ * <p>파일명 규칙과 버전 중복은 {@code MigrationFileConventionTest}가 Docker 없이 따로 검사한다. 이 테스트는 Docker가 없으면 통째로
+ * 스킵되기 때문이다.
  */
 @DataJpaTest
 @Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
@@ -53,15 +61,31 @@ class FlywayMigrationTest extends PostgresTestSupport {
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("V1이 빈 DB에 적용되고 flyway_schema_history에 성공으로 기록된다")
-    void v1IsAppliedToEmptyDatabase() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '1' AND success = TRUE",
-                        Integer.class);
+    @DisplayName("클래스패스의 모든 마이그레이션이 빈 DB에 적용되고 성공으로 기록된다")
+    void allMigrationsAreAppliedToEmptyDatabase() {
+        // BASELINE 행은 실제로 실행한 마이그레이션이 아니라 기존 스키마를 인정한 기록이고,
+        // version이 비어 있는 행은 반복 실행(R__) 마이그레이션이다. 둘 다 파일 목록과 대조할 대상이 아니다.
+        List<String> appliedVersions =
+                jdbcTemplate.queryForList(
+                        "SELECT version FROM flyway_schema_history"
+                                + " WHERE success = TRUE AND version IS NOT NULL"
+                                + " AND type <> 'BASELINE'",
+                        String.class);
 
-        assertThat(applied).isEqualTo(1);
+        assertThat(appliedVersions)
+                .as("적용된 버전이 classpath:db/migration 의 파일 목록과 다르다")
+                .containsExactlyInAnyOrderElementsOf(MigrationFiles.versions());
+    }
+
+    @Test
+    @DisplayName("실패로 기록된 마이그레이션이 없다")
+    void noMigrationIsRecordedAsFailed() {
+        List<String> failed =
+                jdbcTemplate.queryForList(
+                        "SELECT script FROM flyway_schema_history WHERE success = FALSE",
+                        String.class);
+
+        assertThat(failed).as("실패한 마이그레이션이 남아 있으면 다음 배포가 repair 없이는 진행되지 않는다").isEmpty();
     }
 
     @Test
@@ -251,18 +275,6 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V2가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v2IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '2' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
-    }
-
-    @Test
     @DisplayName("V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다")
     void v2CreatesBacktestResultColumns() {
         assertThat(columnsOf("backtest_result"))
@@ -331,18 +343,6 @@ class FlywayMigrationTest extends PostgresTestSupport {
                                 + " WHERE LOWER(constraint_name) = 'uk_backtest_trade_run_trade'",
                         Integer.class);
         assertThat(unique).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("V4가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v4IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '4' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
     }
 
     @Test

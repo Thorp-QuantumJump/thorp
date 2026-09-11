@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * V3 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.
+ * 자동 탐색 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.
  *
  * <p>Flyway·{@code ddl-auto=validate} 설정과 PostgreSQL 컨테이너는 {@link PostgresTestSupport}가 제공하므로, 스키마와
  * 매핑이 어긋나면 <b>컨텍스트 로딩 자체가 실패</b>한다. 로컬 프로필은 {@code ddl-auto=update} + Flyway 비활성이라 이 불일치를 잡지 못한다 —
@@ -41,6 +41,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p>컬럼 목록을 눈으로 맞춰 두는 단언이 함께 있는 이유는 {@code FlywayMigrationTest}와 같다. Hibernate는 타입 불일치를 경고로만 남기고
  * 통과시킨다.
+ *
+ * <p>마이그레이션이 실제로 적용됐는지는 {@code FlywayMigrationTest}가 클래스패스의 파일 목록과 대조해 한곳에서 확인한다. 여기서는 버전 번호를 적지 않고
+ * 이 도메인의 스키마 구조만 본다.
  */
 @DataJpaTest
 @Import({
@@ -69,20 +72,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("V3가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v3IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '3' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("V3가 param_search를 Entity 매핑과 같은 컬럼으로 만든다")
-    void v3CreatesParamSearchColumns() {
+    @DisplayName("param_search가 Entity 매핑과 같은 컬럼을 가진다")
+    void paramSearchHasColumnsMatchingEntity() {
         assertThat(columnsOf("param_search"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -111,8 +102,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 search_candidate를 Entity 매핑과 같은 컬럼으로 만든다")
-    void v3CreatesSearchCandidateColumns() {
+    @DisplayName("search_candidate가 Entity 매핑과 같은 컬럼을 가진다")
+    void searchCandidateHasColumnsMatchingEntity() {
         assertThat(columnsOf("search_candidate"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -136,8 +127,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 PK용 시퀀스 둘을 만들고 후보 시퀀스 증분이 allocationSize(50)와 같다")
-    void v3CreatesSequencesWithMatchingIncrement() {
+    @DisplayName("PK용 시퀀스 둘이 있고 후보 시퀀스 증분이 allocationSize(50)와 같다")
+    void sequencesExistWithMatchingIncrement() {
         assertThat(sequenceExists("param_search_seq")).isEqualTo(1);
         assertThat(sequenceExists("search_candidate_seq")).isEqualTo(1);
 
@@ -154,8 +145,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK를 만든다")
-    void v3CreatesConstraints() {
+    @DisplayName("묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK가 있다")
+    void constraintsExist() {
         List<String> foreignKeyTables =
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) FROM information_schema.table_constraints"
@@ -182,7 +173,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다")
+    @DisplayName("마이그레이션이 만든 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다")
     void entitiesRoundTripOnMigratedSchema() {
         ParamSearch saved = paramSearchRepository.save(newSearch());
         entityManager.flush();
