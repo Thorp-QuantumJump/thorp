@@ -33,11 +33,11 @@
   - `data/CLAUDE.md`: 원천을 pykrx에서 KRX OPEN API로, 컬럼 표준에 `value`(거래대금, 원)를 추가한다 (research.md 결정 1·6). **DATA 파트 합의가 선행되어야 한다**
   - `raw/`·`tests/` 디렉터리를 만들고 `.gitignore`에 `raw/`가 있는지 확인한다
 - [ ] T002 [DOCS] 004 시장 자료 입력 계약과 001 데이터 모형 정합 (`specs/001-etf-market-data/{data-model.md,contracts/market-dataset.md,spec.md}`, `specs/README.md`) — S15P21E205-176
-  - 열 이름 정합: 004는 `trade_date`·`data_version`·`adj_close`·`halted`를 쓰고 001은 `date`·`dataset_id`·`adjusted_close`·`price_carried_forward`를 쓴다. 계약이 "이름은 제안이며 의미가 우선"이라 했으므로 어느 쪽으로 통일할지 정해 양쪽 문서에 반영한다
-  - **의미 충돌 해소**: 004는 "결측은 행 부재로 표현하고 보간값을 넣지 않는다. 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 004가 요구한 `halted BOOL` 열로 "행은 있되 거래 불가 표시"를 쓰면 양쪽을 만족하는지 확인하고 결론을 FR-006과 계약 문서에 적는다
+  - **열 이름 정합 (2026-09-11 확정)**: 001 기준(`date`·`dataset_id`·`adjusted_close`·`price_carried_forward`)으로 통일하고 004의 `market-data-input.md`를 그에 맞춘다. 004 계약이 "이름은 제안이며 의미가 우선한다. 001이 다른 이름을 쓰면 provider 매핑만 바꾼다"고 허용했고 004는 아직 구현 전이라 문서 수정만으로 끝난다. 메시지 계약 픽스처와 ADR-0002·0003은 고치지 않는다
+  - **의미 충돌 해소 (2026-09-11 확정)**: 004는 "결측은 행 부재로 표현하고 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 하고, 001의 임시 동작은 거래정지일에 직전 종가를 채운다. 정지일에도 행을 만들고 `trading_suspended` 열로 표시해 해소한다. OHLC 네 값을 모두 직전 종가로 채우고 `volume`·`value`는 0이다. `trading_suspended`(원인)와 `price_carried_forward`(처리)를 둘 다 둔다. 진짜 결측에는 행을 만들지 않으므로 004의 규칙이 유지된다
   - 분배금 이벤트에 004가 요구한 `ex_date`(배당락일)와 `pay_date`(지급일)를 모두 담도록 `corporate_action`을 고친다. 현재 data-model.md에는 날짜가 하나뿐이다
   - 자료 버전에 004가 요구한 `source` 열을 추가한다
-  - 마이그레이션 번호를 V7로 확정하고, 007·014가 함께 쓰는 V3 중복의 재배정 결론을 `specs/README.md`에 남긴다
+  - **Flyway 버전을 타임스탬프 방식으로 전환한다 (2026-09-11 확정)**. 형식은 `V{YYYYMMDDHHMMSS}__설명.sql`이며 적용된 `V1`~`V3`은 그대로 둔다. `backend/CLAUDE.md`에 규칙을 반영하고, 004·007·014 문서의 V 번호 표기가 갱신 대상임을 `specs/README.md`에 남긴다. 001은 다른 spec의 문서를 직접 고치지 않는다
 
 **Checkpoint**: 004와 열·의미가 맞고 마이그레이션 번호가 겹치지 않는다.
 
@@ -45,9 +45,9 @@
 
 ## Phase 2: Foundational (모든 스토리가 의존)
 
-- [ ] T003 [BE] 자료 저장 스키마 V7과 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V7__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
+- [ ] T003 [BE] 자료 저장 스키마와 자료 버전 불변 규칙 (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__etf_market_data.sql`, `backend/src/test/java/.../sector/EtfMarketDataSchemaIT.java`) — S15P21E205-177
   - 관계형 6개: `sector`, `representative_etf`, `sector_etf_map_version`, `sector_etf_map_entry`, `dataset_version`, `reconciliation_record`
-  - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 `(instrument_id, data_version, trade_date)` 인덱스를 둔다
+  - 시계열 5개: `daily_price`, `corporate_action`, `daily_index`, `data_gap`, `suspension_period`. `daily_price` PK는 `(dataset_id, instrument_id, date)`이고 004가 요구한 조회 인덱스 `(instrument_id, dataset_id, date)`를 둔다. `daily_price`에 `trading_suspended`를, `corporate_action`에 `ex_date`·`pay_date`를, `dataset_version`에 `source`를 담는다 (T002 확정)
   - 불변식: `(map_version_id, sector_id)` UNIQUE, `leveraged`·`inverse` true 거부, `effective_to IS NULL` 행 최대 하나, `cause`↔`resolution` 조합 제한 (data-model.md)
   - 발행된 `dataset_version` 행과 딸린 시계열 행의 UPDATE·DELETE를 거부한다 (FR-017). quickstart 시나리오 3이 이 거부를 확인한다
   - 테스트는 `PostgresTestSupport`를 상속한다. Docker가 꺼져 있으면 skip되므로 `skipped` 수를 확인한다
