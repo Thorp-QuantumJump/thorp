@@ -4,19 +4,18 @@
 fake로 갈아끼우고, **발행과 ACK를 같은 로그 리스트에 기록해 순서를 직접 단언한다**
 (계약 §7 "FINISHED 발행이 브로커에서 확인된 뒤 작업 메시지 ACK").
 
-엔진은 실제 ``NautilusMomentumEngine`` + ``CsvDataProvider`` 를 쓴다(네트워크 없음).
-묶음 경계만은 고정 데이터가 7거래일뿐이라 콜백만 흉내내는 fake 엔진을 쓴다.
+엔진은 실제 ``PortfolioBacktestEngine`` + 3종목 픽스처 ``CsvMarketDataProvider`` 를 쓴다(네트워크
+없음). 묶음 경계만은 기준 본문이 7거래일뿐이라 콜백만 흉내내는 fake 엔진을 쓴다.
 """
 
 import json
 from collections.abc import Iterator, Mapping
 from datetime import date, timedelta
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import FIXTURE_DIR, engine_input_body
+from conftest import FIXTURE_DIR, THREE_ETF_DIR, engine_input_body
 
 from worker.consumer import BacktestJobConsumer
 from worker.contracts.base import utc_now
@@ -32,13 +31,11 @@ from worker.contracts.events import (
     ProgressPoint,
     StartedPayload,
 )
-from worker.engine_runner import NautilusMomentumEngine
-from worker.market_data import CsvDataProvider
+from worker.engine_runner import PortfolioBacktestEngine
+from worker.market_data import CsvMarketDataProvider
 from worker.messaging import SCHEMA_VERSION, PublishError
 
-CSV_FIXTURE = Path(__file__).parents[1] / "examples" / "momentum_fixture.csv"
-
-#: 고정 데이터 회귀 기준 구간의 평가 거래일 수 (README "검증 결과와 제약").
+#: 기준 본문(2023-01-02 ~ 01-10)의 평가 거래일 수.
 EVALUATION_TRADING_DAYS = 7
 
 
@@ -127,8 +124,8 @@ class CountingEngine:
         return self._engine.run(engine_input, on_progress)
 
 
-def real_engine() -> NautilusMomentumEngine:
-    return NautilusMomentumEngine(CsvDataProvider(CSV_FIXTURE))
+def real_engine() -> PortfolioBacktestEngine:
+    return PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))
 
 
 def sequential_ids() -> Iterator[str]:
@@ -264,7 +261,7 @@ def _body_without_initial_cash() -> str:
 def _v1_body() -> str:
     """v1 모양(backtestId·strategy·commission)의 작업 메시지는 v2 워커에서 계약 오류다."""
     body = engine_input_body()
-    body["run"] = {"backtestId": "OLD", "start": "2025-01-06", "end": "2025-01-14"}
+    body["run"] = {"backtestId": "OLD", "start": "2023-01-02", "end": "2023-01-10"}
     body["strategy"] = body.pop("allocation")
     return json.dumps(body)
 
@@ -356,6 +353,7 @@ def test_finished_payload_mirrors_run_block() -> None:
     assert finished.payload.last_trading_date == run.last_trading_date is not None
     assert finished.payload.resource is not None
     assert finished.payload.resource.wall_seconds is not None
+    assert finished.payload.resource.cpu_seconds is not None
 
 
 # --- 멱등성: 재전달은 재실행 + 새 executionId -----------------------------------------
@@ -430,11 +428,13 @@ def test_published_events_revalidate_through_the_contract() -> None:
         assert model.model_validate_json(event.to_json()).sequence == event.sequence
 
 
-def test_regression_baseline_is_untouched() -> None:
-    """엔진을 건드리지 않았는지 확인 (최종 자산 1068.7, 평가 7거래일)."""
+def test_real_engine_output_rides_the_finished_event() -> None:
+    """기준 본문(두 종목 고정 비중, 7거래일)이 실제 엔진으로 끝까지 돈다."""
     _, publisher = handle()
     output = publisher.of_type(BacktestEventType.FINISHED)[0].payload.engine_output
     assert output.run.status is RunStatus.COMPLETED
     assert output.performance is not None
-    assert output.performance.final_equity == Decimal("1068.7")
+    assert output.performance.final_equity == output.portfolio_series[-1].equity
+    assert output.portfolio_series[0].cash == Decimal("10000000")
     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS
+    assert output.trades and output.weights_series
