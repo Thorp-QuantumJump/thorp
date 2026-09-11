@@ -342,6 +342,28 @@ def _check_window(
             )
 
 
+def _check_deadline(dataset_id: str, data_deadline: Any, end: date) -> None:
+    """요청 끝이 자료 마감일을 넘으면 거절한다.
+
+    넘어도 조회는 성공한다. 거래일 달력이 마감일까지만 있어서 기대 거래일 집합이 그만큼만
+    만들어지고, 결측 검사도 그 집합으로 하기 때문에 아무 신호 없이 통과한다. **6년치를
+    요청했는데 닷새치를 받고도 6년을 받았다고 믿게 된다.**
+
+    계약 「읽기 규칙」이 "다른 버전으로 조용히 대체하지 않는다", "빈 값으로 채우지 않고 오류를
+    낸다"로 세운 원칙이 같은 것을 말한다. 요청한 것과 다른 것을 말없이 돌려주지 않는다.
+
+    부르는 쪽이 쓸 수 있는 구간은 공통 평가 기간 산식이 알려 준다(``evaluation-window.md``의
+    ``commonEnd = min(dataDeadline, ...)``). 여기서는 그 산식을 거치지 않은 요청을 막는다.
+    """
+    deadline_day = _as_date(data_deadline)
+    if end > deadline_day:
+        raise MarketDataError(
+            f"Requested window ends {end.isoformat()} but {dataset_id} is only complete "
+            f"through {deadline_day.isoformat()}; ask within the data deadline "
+            "(see evaluation-window.md commonEnd) instead of receiving a shorter series"
+        )
+
+
 def _check_complete(
     prices: dict[str, pd.DataFrame],
     instruments: dict[str, Instrument],
@@ -854,6 +876,7 @@ class PostgresMarketDataProvider:
         wanted = _check_instruments(instrument_ids)
         with self._open() as connection, connection.cursor() as cursor:
             version = self._dataset_version(cursor, dataset_id)
+            _check_deadline(version.dataset_id, version.data_deadline, end)
             fetch_start = self._warmup_start(cursor, version.dataset_id, start, warmup_trading_days)
             calendar = self._calendar(cursor, version.dataset_id, fetch_start, end)
             price_rows, carried = self._prices(

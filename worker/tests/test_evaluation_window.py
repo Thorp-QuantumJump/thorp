@@ -20,6 +20,7 @@ from worker.evaluation_window import (
     EvaluationWindowError,
     ExcludedRange,
     Strategy,
+    _require_instrument_id,
     compute_evaluation_window,
 )
 
@@ -143,3 +144,14 @@ def test_data_gap_does_not_push_common_start() -> None:
     assert window.excluded_ranges == (
         ExcludedRange(date(2024, 1, 4), date(2024, 1, 11), "AMBIGUOUS_PRICE"),
     )
+
+
+def test_none_instrument_id_matches_the_java_error() -> None:
+    """두 구현이 갈라지던 유일한 입력. 파이썬은 TypeError를 내고 있었다.
+
+    자바 쪽 requireInstrumentId는 null을 명시적으로 검사해 INVALID_INSTRUMENT_ID를 낸다.
+    TypeError는 부르는 쪽이 잡는 EvaluationWindowError를 빠져나간다.
+    """
+    with pytest.raises(EvaluationWindowError) as caught:
+        _require_instrument_id(None)
+    assert caught.value.code == "INVALID_INSTRUMENT_ID"
