@@ -66,13 +66,13 @@
 
 **Independent Test**: 섹터 목록을 조회해 모든 섹터에 대표 ETF 하나가 연결되어 있고 상장일·기준 지수가 등록되어 있는지 확인한다. 화면 없이 대응표만으로 검증할 수 있다.
 
-- [ ] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — S15P21E205-178
+- [x] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — S15P21E205-178
   - 항목은 섹터 이름·대표 ETF 이름·종목 식별자·상장일·기준 지수·운용사다. 국내 상장 비레버리지·비인버스 ETF만 허용한다 (FR-001)
   - 버전 발행: 내용이 바뀌면 새 버전을 만들고 기존 버전을 고치지 않는다 (FR-003)
   - 진입점은 `--sample`·`--map-version` 인자를 받고 재실행이 멱등하다 (`data/CLAUDE.md`)
   - 예시 대응표는 PD-01 확정 전까지 쓰며 `isSample` 표시가 붙는다 (FR-002)
   - 테스트: 섹터마다 대표 ETF 정확히 하나, 레버리지·인버스 거부, 상장일·기준 지수 필수
-- [ ] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — S15P21E205-178
+- [x] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — S15P21E205-178
   - 도메인 모델에 Spring·JPA·Jackson import를 두지 않는다. `*Mapper`는 정적 `toEntity`/`toDomain`이다 (ADR-0001)
   - 저장소 인터페이스에 **수정·생성 메서드를 두지 않는다.** 대응표는 파이프라인이 소유한다 (research.md 결정 7)
   - `GET /sectors`가 `mapVersion`·`isSample`을 함께 반환한다 (contracts/sector-api.md)
@@ -107,13 +107,16 @@
   - 표본은 상장 첫날·모든 분배금 지급일·모든 분할일이다. 평범한 거래일은 넣지 않는다 (FR-016)
   - 불일치가 나도 개별 값을 수정하지 않는다. 수집·가공 오류는 새 버전 재발행, 정의 차이는 기록만, 원인 불명은 구간 제외 (FR-017)
   - 테스트: 표본 구성 검증, `cause`↔`resolution` 조합 제한, SC-002 판정
-- [ ] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — S15P21E205-180
+- [x] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — S15P21E205-180
   - 픽스처를 먼저 만든다. `contracts/evaluation-window.md` 「경계 동작」 7가지를 모두 담는다
   - 워커와 백엔드가 **같은 픽스처**를 읽는다. 한쪽만 고치면 실패해야 한다 (contracts/README.md 「계약 변경 순서」)
   - 검증용 잠금 구간을 빼지 않는다. 평가 분할은 007이 맡는다 (FR-008)
   - `GET /sectors/evaluation-window`는 `evaluable: false`를 오류가 아닌 정상 응답으로 반환한다
+    - **2026-09-11 엔드포인트 보류.** 산식 입력 다섯 가지 중 네 가지를 백엔드가 읽을 경로가 없다. 특히 `warmupTradingDays`는 `evaluation-window.md` 입력표가 "전략 등록표(003 소유)에서 온다. **001은 이 값을 정하지 않고 받는다**"고 못 박아 001이 만들 수 없다. `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. 값을 지어내는 표면을 만드느니 붙이지 않는 편이 원칙 VI에 맞다.
+    - 산식과 공유 픽스처는 만들었다. `EvaluationWindowService`는 입력을 전부 인자로 받는 의존성 없는 산식이라, 재료가 생기면 **이 클래스를 고치지 않고 호출부만 붙이면 된다.**
+    - 붙일 때 필요한 것: 003의 전략 등록표(워밍업 값), `RepresentativeEtf`에 `delistedOn` 필드, `data_gap`·`daily_index`·`dataset_version` 조회 경로, 그리고 `SectorExceptionHandler`의 `IllegalArgumentException` → 500 매핑 정리(빈 후보 목록은 계약이 400을 요구한다).
   - 양쪽을 한 묶음에 둔 이유: 계약이 두 구현을 묶고 있어 한쪽만 병합하면 픽스처가 반쪽이 된다
-- [ ] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — S15P21E205-180
+- [x] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — S15P21E205-180
   - **선행**: 004 T004(`S15P21E205-134`)가 `market_data.py`에 공급자 골격과 CSV 픽스처를 먼저 넣는다
   - 저장소를 읽는 공급자를 추가하고 `engine_runner.py:68`의 기본값을 그것으로 바꾼다. `YFinanceDataProvider` 클래스는 남기되 실제 Job 처리 경로에서 쓰지 않는 임시 수단임을 주석에 적는다 (research.md 결정 1)
   - `metadata`에 `datasetId`·`dataDeadline`·`carriedForwardDates`·`dataGaps`·`mapVersion`·`provisionalSuspensionHandling`을 담는다 (contracts/market-dataset.md)
