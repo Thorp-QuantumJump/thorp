@@ -30,13 +30,10 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.engine_output import Warning as ContractWarning
 from worker.contracts.events import ProgressPoint
+from worker.costs import CostModel, Side
 from worker.strategies import prepare_strategy
 
 ZERO = Decimal("0")
-#: 엔진이 하드코딩하는 고정 슬리피지. ``execution.slippage.bps`` 는 읽지 않고, 다른 값이 오면
-#: ``worker.engine_support`` 가 실행 전에 거절한다.
-SLIPPAGE_BPS = 5
-SLIPPAGE = Decimal(SLIPPAGE_BPS) / Decimal(10000)
 PRICE_QUANTUM = Decimal("0.000001")
 #: ``run.randomSeed`` 미지정(None) 시 쓰는 값. 재현성을 위해 시드 없이 실행하지 않는다.
 DEFAULT_RANDOM_SEED = 42
@@ -80,6 +77,10 @@ class MomentumExecution(NautilusStrategy):
         self.on_progress_callback = on_progress
         # 전략과 준비 기간은 레지스트리(worker.strategies)가 만든다. 계약 parameters는
         # dict[str, Any] 봉투이므로 전략별 모델로 검증된 typed_parameters를 넘긴다.
+        # 비용은 요청에 실려 온 프로필에서만 읽는다. 예전에는 슬리피지를 이 모듈 상수로
+        # 들고 있었고 다른 값이 오면 실행 전에 거절했다 — 등록표에 새 비용 버전이 생겨도
+        # 엔진이 못 받는 구조였다.
+        self.costs = CostModel(request.execution.cost_profile)
         prepared = prepare_strategy(request.allocation)
         self.signal_strategy = prepared.signal
         self.required_history = prepared.required_history
@@ -209,7 +210,7 @@ class MomentumExecution(NautilusStrategy):
             target = int(self.signal_strategy.generate_signals(prices).iloc[-1])
             if target and self.quantity == 0:
                 budget = self.cash * self.max_position_pct
-                quantity = int(budget // (close * (1 + SLIPPAGE)))
+                quantity = self.costs.affordable_quantity(budget, close)
                 if quantity:
                     self._create_order(OrderSide.BUY, quantity, bar.ts_event)
             elif not target and self.quantity:
@@ -282,6 +283,7 @@ def execute_nautilus(
     on_progress: ProgressCallback | None,
 ) -> MomentumExecution:
     """Every signal and fill is driven by a real BacktestEngine event loop."""
+    costs = CostModel(request.execution.cost_profile)
     instrument_id = InstrumentId.from_str(request.universe.instrument_ids[0])
     # Native KRW has zero decimals; a distinct simulation code preserves fractional
     # adjusted-price costs without overwriting the process-wide real KRW definition.
@@ -313,8 +315,8 @@ def execute_nautilus(
         events.append(
             QuoteTick(
                 instrument_id,
-                as_price(reference * (1 - SLIPPAGE)),
-                as_price(reference * (1 + SLIPPAGE)),
+                as_price(costs.effective_price(Side.SELL, reference)),
+                as_price(costs.effective_price(Side.BUY, reference)),
                 Quantity.from_str("18446744073"),
                 Quantity.from_str("18446744073"),
                 ns_open,

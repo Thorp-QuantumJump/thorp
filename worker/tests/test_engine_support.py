@@ -65,11 +65,6 @@ UNSUPPORTED: list[tuple[str, dict[str, Any], str]] = [
         {"execution": {"costProfile": {**COST_PROFILE, "taxBps": "23"}}},
         "execution.costProfile.taxBps",
     ),
-    (
-        "cost-profile-slippage",
-        {"execution": {"costProfile": {**COST_PROFILE, "slippageBps": "10"}}},
-        "execution.costProfile.slippageBps",
-    ),
     ("partial-fill", {"execution": {"partialFill": True}}, "execution.partialFill"),
     (
         "evaluation-warmup",
@@ -113,7 +108,7 @@ def test_every_unsupported_field_is_reported_at_once() -> None:
         universe={"items": [{"instrumentId": "000660.XKRX"}, {"instrumentId": "005930.XKRX"}]},
         portfolio={"currency": "USD", "leverage": "3", "shortSelling": True},
         execution={
-            "costProfile": {**COST_PROFILE, "commissionBps": "1.5", "slippageBps": "10"},
+            "costProfile": {**COST_PROFILE, "commissionBps": "1.5"},
             "partialFill": True,
         },
         evaluation={"liquidationAtEnd": True},
@@ -126,7 +121,6 @@ def test_every_unsupported_field_is_reported_at_once() -> None:
         "portfolio.leverage",
         "portfolio.shortSelling",
         "execution.costProfile.commissionBps",
-        "execution.costProfile.slippageBps",
         "execution.partialFill",
         "evaluation.liquidationAtEnd",
     ):

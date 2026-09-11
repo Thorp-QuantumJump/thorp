@@ -24,7 +24,6 @@ from worker.contracts.engine_output import Warning as ContractWarning
 from worker.engine_support import unsupported_reasons
 from worker.market_data import DataProvider, MarketDataError, validate_prices
 from worker.nautilus_engine import (
-    SLIPPAGE_BPS,
     CallbackError,
     effective_random_seed,
     execute_nautilus,
@@ -121,7 +120,7 @@ class NautilusMomentumEngine:
             "input": request.model_dump(mode="json", by_alias=True),
             "commissionRate": "0",
             "taxRate": "0",
-            "slippageBps": SLIPPAGE_BPS,
+            "slippageBps": request.execution.cost_profile.slippage_bps,
             # 계약은 run.randomSeed 미지정을 허용하므로 실제로 쓴 값을 남긴다.
             "randomSeed": effective_random_seed(request.run),
             "metricsVersion": "DAILY_252_DDOF1_RF0_V1",
