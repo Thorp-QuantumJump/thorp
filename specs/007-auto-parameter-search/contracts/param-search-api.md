@@ -27,10 +27,18 @@
 | `strategy.strategyIds` | `string[]` | 필수 | 1개 이상. 각 64자 이하 |
 | `run.start` / `run.end` | `date` | 선택 | 생략 시 공통 평가 구간을 서버가 제시한다 |
 | `portfolio.initialCash` | `string` (decimal) | 선택 | 생략 시 서버 기본값 |
-| `space` | `object` | 선택 | 축 이름 → 후보 값 배열. **생략하면 등록표 전체 범위**를 쓴다 |
+| `space` | `object` | 선택 | 전략 ID → (축 이름 → 후보 값 배열). **생략하면 등록표 전체 범위**를 쓴다 |
+| `registryVersion` | `string` | 실행만 필수 | 미리보기 응답에서 받은 값을 그대로 되돌려 보낸다. 미리보기에서는 무시한다 |
+
+`space`는 **전략별로 중첩**한다 — 전략마다 축 구성이 다르고 축 이름이 겹칠 수 있다(FR-027).
+
+```json
+{ "space": { "sector-momentum": { "lookbackDays": [20, 60], "topN": [2, 3] } } }
+```
 
 `space`에 등록표에 없는 값을 넣으면 `400 INVALID_INPUT`이다(FR-002, US1 시나리오 3). 범위를 좁히거나
-넓히는 것은 등록표 안에서만 가능하다.
+넓히는 것은 등록표 안에서만 가능하다. 허용 범위·기본 시작값·후보값은 모두 등록표가 정하며 서버는
+그 값을 그대로 검증에 쓴다(FR-027).
 
 ### 200 응답
 
@@ -39,10 +47,27 @@
   "success": true,
   "data": {
     "registryVersion": "PROVISIONAL-2026-09-10",
-    "strategies": [{ "strategyId": "sector-momentum", "name": "섹터 모멘텀" }],
+    "strategies": [
+      { "strategyId": "sector-momentum", "name": "섹터 모멘텀", "executable": true }
+    ],
     "spaceSummary": [
-      { "axis": "lookbackDays", "label": "관측 기간", "values": [20, 60, 120], "unit": "거래일" },
-      { "axis": "topN", "label": "선정 섹터 수", "values": [2, 3, 4] }
+      {
+        "strategyId": "sector-momentum",
+        "strategyName": "섹터 모멘텀",
+        "axes": [
+          {
+            "axis": "lookbackDays", "label": "관측 기간", "unit": "거래일",
+            "values": [20, 60, 120], "defaultValue": 60,
+            "allowedRange": { "min": 5, "max": 250, "step": 1, "values": null }
+          },
+          {
+            "axis": "topN", "label": "선정 섹터 수", "unit": null,
+            "values": [2, 3, 4], "defaultValue": 3,
+            "allowedRange": { "min": 1, "max": 50, "step": 1, "values": null }
+          }
+        ],
+        "combinations": 9
+      }
     ],
     "workload": {
       "totalCombinations": 9,
@@ -54,7 +79,7 @@
     },
     "limits": {
       "maxCandidates": 120,
-      "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow"],
+      "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
     "commonPeriod": { "start": "2015-01-02", "end": "2026-08-31", "shortenedBy": null },
@@ -65,7 +90,15 @@
 }
 ```
 
+- **`strategies`·`spaceSummary`의 모든 값은 등록표 조회 결과다.** 서버도 화면도 전략 이름·라벨·
+  단위·기본값·후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행
+  지원 여부다(FR-026).
+- `spaceSummary`는 **전략별 배열**이고 `axes` 안의 순서가 그리드 좌표 축 순서다. `values` 배열의
+  순서가 인접 판정의 근거다(FR-029). `totalCombinations`는 전략별 `combinations`의 합이다.
+- `defaultValue`는 등록된 기본 시작값을 그대로 옮긴 것이며 **추천값이나 최적값이 아니다**(원칙 III).
+  화면에 '추천'·'최적' 문구를 붙이지 않는다.
 - `limits.provisional`은 임시값인 항목 이름이다. 화면은 이 항목에 임시값 표시를 붙인다(FR-005a).
+  **네 한도 전부가 임시값이므로 네 이름이 모두 들어간다** — 실측 후 PD-06에서 고정하면 그때 줄어든다.
 - `limits.exceeded`가 `true`면 실행은 거부된다(§2). 화면은 범위를 좁히라고 안내한다(FR-005b).
 - `commonPeriod.shortenedBy`는 긴 관측 기간을 요구하는 후보 때문에 공통 구간이 줄었을 때 그 축
   이름을 담는다(Edge Case). 모든 후보는 같은 공통 구간으로 평가한다.
@@ -86,9 +119,19 @@
 |---|---|---|
 | 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수 > 후보 수 상한. `message`에 유효 수·상한·좁히는 방법 (FR-005b) |
 | 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반. `message`에 어느 제약인지 한 문장 (Edge Case) |
+| 422 | `STRATEGY_NOT_REGISTERED` | 요청 전략이 등록표의 활성 전략에 없음. `message`에 어느 전략인지 (FR-026) |
+| 422 | `STRATEGY_NOT_EXECUTABLE` | 등록돼 있으나 004가 실행을 지원하지 않음 (FR-026) |
+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 `registryVersion`이 접수 시점 등록표 버전과 다름 (FR-028) |
+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보 또는 실행 지원 목록 조회 실패 (FR-028) |
 
-둘 다 표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않는다. **묶음은 `REJECTED` 상태로 저장되어
-사유가 남는다**(FR-020) — 재현 기록이므로 조용히 버리지 않는다.
+앞의 네 가지는 표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않고, **묶음을 `REJECTED` 상태로 저장해
+사유를 남긴다**(FR-020) — 재현 기록이므로 조용히 버리지 않는다. 전략 거부는 두 사유를 구분해
+저장한다(`stop_reason`).
+
+뒤의 두 가지는 **묶음을 저장하지 않는다.** 버전 드리프트는 사용자가 다시 확인하면 해소되고, 조회
+실패는 일시적 장애다 — `BROKER_UNAVAILABLE`을 묶음으로 남기지 않는 것과 같은 기준이다(R9).
+`REGISTRY_VERSION_CHANGED`를 받은 화면은 미리보기를 다시 호출해 바뀐 요약(후보값·조합 수)을 보이고
+확인을 받은 뒤 다시 실행한다. 등록 정보를 캐시나 기본값으로 대체해 실행하지 않는다(FR-028).
 
 ## 3. 묶음 상태·결과 — `GET /param-searches/{searchId}`
 
@@ -110,7 +153,15 @@
       "registryVersion": "PROVISIONAL-2026-09-10",
       "searchMethod": "FULL_GRID",
       "randomSeed": null,
-      "space": { "lookbackDays": [20, 60, 120], "topN": [2, 3, 4] },
+      "space": {
+        "sector-momentum": {
+          "strategyName": "섹터 모멘텀",
+          "axes": [
+            { "name": "lookbackDays", "label": "관측 기간", "unit": "거래일", "values": [20, 60, 120] },
+            { "name": "topN", "label": "선정 섹터 수", "unit": null, "values": [2, 3, 4] }
+          ]
+        }
+      },
       "selectionRule": {
         "drawdownFilter": "NOT_WORSE_THAN_BASELINE",
         "stabilityFilter": "BATCH_PERCENTILE_TOP_50",
@@ -118,12 +169,16 @@
         "displayCount": 5,
         "tieHandling": "SHOW_ALL_TIED"
       },
-      "limits": { "maxCandidates": 120, "provisional": ["maxCandidates"] },
+      "limits": {
+        "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5,
+        "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"]
+      },
       "referenceVersions": { "marketData": "2026-08-31", "cost": "v1", "engine": "nautilus-0.1" },
       "dataVersionChanged": false
     },
     "baseline": {
-      "kind": "EQUAL_WEIGHT",
+      "strategyId": "<등록표가 기준 전략으로 지정한 ID>",
+      "strategyName": "동일 비중",
       "backtestId": "BT-20260910-000042",
       "status": "COMPLETED",
       "netReturn": "0.1421",
@@ -245,6 +300,10 @@
 | 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수가 상한 초과 | 범위를 좁힌 뒤 |
 | 422 | `NO_VALID_COMBINATION` | 유효 조합 0건 | 섹터·범위를 바꾼 뒤 |
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |
+| 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없는 전략 | 등록 후 |
+| 422 | `STRATEGY_NOT_EXECUTABLE` | 004가 실행을 지원하지 않는 전략 | 004 지원 후 |
+| 409 | `REGISTRY_VERSION_CHANGED` | 미리보기와 접수 시점의 등록표 버전이 다름 | 미리보기를 다시 본 뒤 |
+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·지원 목록 조회 실패 | 잠시 후 |
 | 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |
 | 409 | `NOTHING_TO_RETRY` | 실패 후보가 없는 묶음에 재시도 요청 | 무의미 |
 | 404 | `RESOURCE_NOT_FOUND` | 없는 `searchId` | 무의미 |
@@ -258,6 +317,12 @@
 - **표시 후보에 순위 번호를 붙이지 않는다.** 정렬 지표 이름을 함께 보이고, 후보마다
   `validationLabel`을 항상 함께 보인다(현재 값은 전부 `UNVALIDATED`).
 - `limits.provisional`에 든 항목은 임시값 표시를 붙인다.
+- **프론트에 전략 목록·파라미터 기본값·허용 범위·단위를 두지 않는다**(FR-025). 전략 이름·축 라벨·
+  단위·기본값·후보값은 `spaceSummary`·`strategies`에서만 읽는다. 전략이 늘어도 화면 코드를 고치지
+  않는 것이 이 계약의 목적이고, `strategyId`로 분기하는 화면 코드는 리뷰에서 막는다.
+- 등록된 기본 시작값에 '추천'·'최적' 문구를 붙이지 않는다(원칙 III).
+- `POST /param-searches`에는 미리보기에서 받은 `registryVersion`을 반드시 함께 보낸다. `409
+  REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 바뀐 요약을 보이고 확인을 받는다.
 - **현재 워커는 1종목만 계산한다.** `universe.instrumentIds`를 2개 이상 보내면 후보 Job은 접수되고
   실행 단계에서 `FAILED`가 된다(`backtest-api` §4와 같은 한계). 004의 배분 전략이 붙기 전까지 007의
   종단 확인은 1종목·momentum으로만 가능하다.

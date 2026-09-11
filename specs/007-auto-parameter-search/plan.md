@@ -12,7 +12,10 @@
 기술 접근은 **새 계산 경로를 만들지 않는 오케스트레이션**이다. 후보 1건 = 기존 `backtest_job` 1행 +
 `backtest.jobs` 메시지 1건이고, Worker는 변경하지 않는다. 007이 새로 만드는 것은 그리드 전개와
 유효성 사전 제외, 발행 창(window) 기반 실행 관리, 결과 집계, 완료 후 1회 선정 계산, 재현 기록이다.
-004가 다섯 배분 전략을 워커에 추가하면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.
+
+**전략은 007이 갖지 않는다.** 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·
+단위·유효성 규칙은 003 등록표에서, 실행 지원 여부는 004에서 조회한다(FR-025~FR-029). 003에 활성
+전략이 추가되고 004가 그 실행을 지원하면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.
 
 ## Technical Context
 
@@ -40,7 +43,9 @@ Phase 0에서 5건을 해소했다. 상세 근거는 [research.md](research.md).
 
 | 항목 | 결론 |
 |---|---|
-| 파라미터 등록표 원천 (PD-02·003 미구현) | `ParameterRegistryPort` + 임시 구현체. 003 완성 시 구현체 교체 (R1) |
+| 파라미터 등록표 원천 (PD-02·003 미구현) | `ParameterRegistryPort` + 자원 파일 기반 임시 구현체. 003 완성 시 구현체 교체 (R1, 2026-09-11 개정) |
+| 실행 지원 전략의 원천 (FR-026) | `StrategyExecutionSupportPort`로 004에 조회. 등록 전략 ∩ 실행 지원 전략만 탐색 대상 (R8) |
+| 등록표 버전 드리프트·조회 실패 (FR-028) | 접수 시점 버전 고정. 미리보기와 다르면 409, 조회 실패는 503으로 거부하고 대체값을 쓰지 않는다 (R9) |
 | 실행시간·동시성 상한·중단 규칙 (PD-05 잔여) | 값 미확정. 발행 창 구조로 값과 무관하게 동작 (R2) |
 | 동률 처리 (PD-05 잔여) | spec의 대체 규칙 사용 — 전부 표시, 임의 순서 금지 (R3) |
 | 묶음 소유자 (인증 미구현) | `owner_user_id` nullable, 현재 NULL (R4) |
@@ -86,6 +91,28 @@ plan / tasks 항목, "AI 작업 방식"의 브랜치·Task 생성 항목이다. 
 3. 정렬 지표 이름("비용 차감 후 수익")을 화면에 명시한다. 한 항목 기준 정렬은 FR-017이 허용한다.
 4. MR 리뷰 체크리스트에 "순위 배지·추천 표현 0건"을 넣는다(공통 성공 기준).
 
+### 설계 제약 (전략 비의존성 — FR-025~FR-029, 2026-09-11 결정)
+
+007은 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙을 갖지
+않고, 003 등록표와 004 실행 지원 목록을 조회해 쓰기만 한다. 코드·리뷰에서 다음을 고정한다.
+
+1. `paramsearch` 패키지의 운영 코드에 전략 ID 상수·전략 목록 enum·`strategyId` 분기(`switch`/`if`)·
+   전략별 파라미터 기본값을 두지 않는다. 전략은 `ParameterRegistryPort`가 돌려주는 값으로만 다룬다.
+2. 임시 등록표(003 완성 전)의 축·후보값·기본값·허용 범위·유효성 규칙은 **자원 파일**
+   (`backend/src/main/resources/registry/parameter-registry-provisional.yml`)에 두고, 로더는 그
+   파일을 전략별 해석 없이 읽는다. Java 상수로 박으면 그것이 곧 007의 하드코딩이다(FR-025).
+3. 프론트도 같다. 전략 이름·파라미터 라벨·단위·기본값·후보값은 응답에서만 읽고 `frontend/src/`
+   어디에도 전략 목록이나 파라미터 기본값을 두지 않는다.
+4. 테스트는 등록표 fixture로 한다. 여섯 번째 가짜 전략을 넣은 fixture로 미리보기·후보 조합 생성이
+   운영 코드 변경 없이 동작함을 검증한다(SC-010, spec US5 시나리오 2). fixture는 FR-025의 예외다.
+5. MR 리뷰 체크리스트에 "전략 ID 상수·전략별 분기 0건"을 넣는다(위 순위 배지 규칙과 같은 자리).
+
+**다중 전략의 축 분리**: 한 묶음이 전략 여러 개를 담을 수 있으므로(spec Assumptions) 탐색 공간은
+전략별로 축을 따로 갖는다. 전체 조합 수는 전략별 (축별 후보 개수의 곱)의 **합**이고, 인접 이웃
+판정은 **같은 전략 안에서만** 한다 — 전략이 다른 후보는 파라미터 축 자체가 다르므로 이웃이 아니다.
+M1에서 이미 구현한 `SearchSpace` VO가 평면 `축 → 값`이라 이 개정으로 `전략 → 축 → 값`으로 바꾼다
+(JSONB 컬럼이라 마이그레이션은 없다. [data-model.md](data-model.md) §2.1 참조).
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -111,13 +138,16 @@ specs/007-auto-parameter-search/
 backend/src/main/java/com/ssafy/thorp/paramsearch/     # 신규 모듈
 ├── application/
 │   ├── command/      CreateParamSearchCommand, PreviewParamSearchCommand
-│   ├── port/         ParameterRegistryPort, CandidateJobLauncher
+│   ├── port/         ParameterRegistryPort      # 003 등록표 조회 (FR-025)
+│   │                 StrategyExecutionSupportPort # 004 실행 지원 조회 (FR-026)
+│   │                 CandidateJobLauncher
 │   ├── repository/   ParamSearchRepository, SearchCandidateRepository
 │   ├── result/       ParamSearchPreviewResult, ParamSearchResult,
 │   │                 ParamSearchDetailResult, CandidatePageResult
 │   ├── service/      ParamSearchService          # 접수·취소·재시도 유스케이스 (FR-024)
 │   │                 GridExpander                # 조합 전개 + 그리드 좌표
-│   │                 CandidateValidator          # 유효성 사전 제외 (FR-006)
+│   │                 SearchTargetResolver        # 등록 ∩ 실행 지원 판정·거부 (FR-026)
+│   │                 CandidateValidator          # 등록 규칙 호출로 사전 제외 (FR-006)
 │   │                 CandidateDispatcher         # 발행 창 관리 (R2)
 │   │                 ParamSearchProgressService  # 결과 이벤트 집계
 │   │                 NeighborStabilityCalculator # 인접 안정성 (FR-013a)
@@ -134,7 +164,8 @@ backend/src/main/java/com/ssafy/thorp/paramsearch/     # 신규 모듈
 ├── infrastructure/
 │   ├── persistence/  ParamSearchJpaEntity, SearchCandidateJpaEntity, *JpaRepository,
 │   │                 *Mapper, *RepositoryImpl
-│   ├── registry/     FixedParameterRegistry      # 003 완성 전 임시 구현 (R1)
+│   ├── registry/     ProvisionalFileParameterRegistry # 003 완성 전 임시 구현. 자원 파일 로더 (R1)
+│   ├── support/      StrategyExecutionSupportAdapter  # 004 지원 전략 조회 (R8)
 │   ├── launcher/     CandidateJobLauncherImpl    # 004 접수 유스케이스 호출
 │   ├── config/       ParamSearchProperties       # 한도·발행 창 설정
 │   └── listener/     BacktestFinishedListener    # 인메모리 이벤트 수신 (R6)
@@ -149,6 +180,11 @@ backend/src/main/java/com/ssafy/thorp/backtest/         # 기존 모듈 최소 �
 
 backend/src/main/resources/db/migration/
 └── V3__param_search.sql                                # 신규
+
+backend/src/main/resources/registry/
+└── parameter-registry-provisional.yml                  # 신규. 003 완성 전 임시 등록표 데이터
+                                                        # (전략·축·후보값·기본값·허용 범위·유효성 규칙)
+                                                        # 007 운영 코드에는 이 값이 들어가지 않는다
 
 backend/src/test/java/com/ssafy/thorp/paramsearch/       # 단위 + 통합 테스트
 
@@ -181,6 +217,7 @@ infrastructure`)을 그대로 쓰고, 007을 **별도 최상위 도메인 패키
 | VI | PASS 강화 | 미완료·제외·실패 후보의 성과 필드를 `null`로 고정했다. 0으로 채울 경로가 없다 |
 | VIII | PASS | `REJECTED` 묶음도 저장해 실행하지 않은 이유가 남는다. `random_seed`는 현재 NULL이고 그 사실을 기록한다 |
 | IX | PASS 강화 | 발행 창 불변식(한 묶음의 `DISPATCHED` ≤ 창 크기)이 큐 독점을 구조로 막는다 |
+| IV·VIII (2026-09-11 개정) | PASS 강화 | 전략 목록·파라미터·유효성 규칙의 원천이 003 등록표 하나로 좁혀졌다. 007이 같은 규칙을 두 번째로 정의할 경로가 설계에서 사라지고, 묶음이 등록표 버전과 실제 사용한 후보값을 함께 저장해 등록표가 바뀐 뒤에도 후보 집합을 재구성할 수 있다(FR-028) |
 
 **`/speckit-analyze` 이후 해소한 사항** — constitution "실행·캐시"가 "진행·취소·**재시도**와 동일 결과
 재사용을 제공한다"를 요구하는데 초판에는 재시도가 없었다. spec에 FR-024(실패 후보 재시도)와 SC-009를
@@ -206,20 +243,35 @@ constitution v3.0.0 "Jira 연계"가 **`작업 묶음 = 1 Branch = 1 MR`** 이�
 | 묶음 | Jira Task 요약 | 브랜치 | 포함 T### | 수 |
 |---|---|---|---|---|
 | M1 | `[BE] 자동 탐색 기반 — 골격·도메인·스키마·영속화` | `feat(be)/157-paramsearch-foundation` | T001~T004, T007~T026, T020a | 25 |
-| M2 | `[BE] 경계 포트·오류 매핑과 그리드 전개·유효성` | `feat(be)/{N}-paramsearch-boundary-grid` | T027~T039, T089, T090 | 15 |
-| M3 | `[BE] 탐색 접수 유스케이스와 HTTP API` | `feat(be)/{N}-paramsearch-intake` | T040~T057, T049a | 19 |
-| M4 | `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` | `feat(fe)/{N}-paramsearch-preflight` | T005, T006, T058~T064 | 9 |
-| M5 | `[BE] 후보 선정 계산과 조회 API` | `feat(be)/{N}-candidate-selection` | T065~T081 | 17 |
+| M2 | `[BE] 경계 포트·오류 매핑과 그리드 전개·유효성·전략 비의존성` | `feat(be)/{N}-paramsearch-boundary-grid` | T026a~T026c, T027~T039, T028a, T036a~T036d, T089, T090, T127~T133 | 30 |
+| M3 | `[BE] 탐색 접수 유스케이스와 HTTP API` | `feat(be)/{N}-paramsearch-intake` | T040~T057, T049a~T049c | 21 |
+| M4 | `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` | `feat(fe)/{N}-paramsearch-preflight` | T005, T006, T058~T064, T063a, T063b, T135, T136 | 13 |
+| M5 | `[BE] 후보 선정 계산과 조회 API` | `feat(be)/{N}-candidate-selection` | T065~T081, T074a | 18 |
 | M6 | `[FE] 탐색 결과 화면과 비교 연결` | `feat(fe)/{N}-paramsearch-result` | T082~T088 | 7 |
-| M7 | `[BE] 거부·취소·재시도·부분 결과와 실행 한도` | `feat(be)/{N}-paramsearch-reject-cancel-limits` | T091~T103, T098a, T098b, T098c, T101a | 17 |
+| M7 | `[BE] 거부·취소·재시도·부분 결과와 실행 한도` | `feat(be)/{N}-paramsearch-reject-cancel-limits` | T091~T103, T098a, T098b, T098c, T101a, T134 | 18 |
 | M8 | `[FE] 거부·부분 결과 표시와 검증 배지` | `feat(fe)/{N}-paramsearch-notices-badge` | T104~T107, T107a, T114~T116 | 8 |
 | M9 | `[BE] 검증 라벨·선정 규칙 불변성과 실행 측정` | `feat(be)/{N}-validation-label-metrics` | T108~T113, T117, T117a | 8 |
 | M10 | `[DOCS] 계약·ADR 동기화와 quickstart 종단 확인` | `docs(infra)/{N}-paramsearch-docs` | T120~T123, T125, T126 | 6 |
 
-**묶음 10개 = 브랜치 10개 = MR 10개.** tasks.md의 134개 중 131개를 덮고, 아래 3개는 의도적으로 뺐다.
+**묶음 10개 = 브랜치 10개 = MR 10개.** tasks.md의 157개 중 154개를 덮고, 아래 3개는 의도적으로 뺐다.
+2026-09-11 개정으로 23개가 늘었고 그 전부를 M2·M3·M4·M7이 나눠 가졌다 — **새 묶음은 만들지 않았다.**
 
 각 묶음의 Jira Task가 없으면 **브랜치·MR을 만들기 전에** Task를 먼저 만들고 그 Ticket 번호로
 브랜치를 만든다. `{N}`이 그 자리다. 개별 `T###` 번호는 MR 본문의 "주요 변경 사항"에 나열한다.
+
+### 2026-09-11 개정이 묶음에 주는 영향
+
+전략 비의존성 결정(FR-025~FR-029)은 **묶음 경계를 바꾸지 않는다.** 범위가 늘어난 곳은 두 곳이다.
+
+- **M1**(기반): `SearchSpace` VO를 `전략 → 축 → 값`으로 바꾸고 `StopReason`에 미등록·실행 미지원
+  값을 추가한다. 이미 머지된 묶음이므로 이 변경은 M2 브랜치에서 함께 처리하고 MR 본문에 사유를
+  남긴다. JSONB 컬럼이라 V3 마이그레이션은 다시 만들지 않는다.
+- **M2**(경계 포트·전개·유효성): `ParameterRegistryPort` 확장(활성 전략 목록·표시 정보·기본 시작값·
+  허용 범위), `StrategyExecutionSupportPort` 신설, `SearchTargetResolver`(미등록·미지원 거부),
+  자원 파일 기반 임시 등록표, 6번째 전략 fixture 테스트가 여기로 들어간다.
+
+`tasks.md`는 이 개정 전에 생성된 것이라 위 항목의 `T###`가 없다. **`/speckit-tasks`를 다시 돌려
+태스크를 갱신한 뒤 M2에 착수한다.**
 
 ### 묶음 구성 개정 이력 (24개 → 10개)
 
@@ -270,7 +322,9 @@ MR 본문에 남긴다"에 따라 사유를 남긴다. **T### 범위는 하나�
 
 ### 남은 크기 위험
 
-M1(25)·M3(19)·M5(17)·M7(17)은 조건 3(리뷰어가 한 번에 읽을 수 있는 범위)의 경계에 있다. M1은
+M2(30)·M1(25)·M3(21)·M5(18)·M7(18)은 조건 3(리뷰어가 한 번에 읽을 수 있는 범위)의 경계에 있다.
+2026-09-11 개정으로 M2가 가장 커졌다 — **분량이 문제가 되면 M2에서 US5 검증(T127~T133)을 떼어
+별 묶음으로 두는 것이 첫 번째 후퇴선이고**, 그 태스크들은 fixture만 쓰므로 독립 검증·롤백이 된다. M1은
 T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합쳤다. **리뷰에서 분량이 문제가 되면
 첫 번째 후퇴선은 M1에서 B04(T008~T010, T021~T026)를 다시 떼는 것이고**, 그때는 이 절에 다시 기록한다.
 
@@ -290,22 +344,26 @@ T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합�
 
 ## 이 plan이 다루지 않는 것
 
-- 후보 하나의 계산 규칙과 다섯 배분 전략 구현 — [004](../004-backtest-execution/spec.md) 소유.
+- 후보 하나의 계산 규칙과 배분 전략 구현, 그리고 어느 전략의 실행을 지원하는지 —
+  [004](../004-backtest-execution/spec.md) 소유. 007은 지원 목록을 조회만 한다(FR-026).
   **007의 종단 검증은 004 없이는 momentum 단일 전략으로만 가능하다.**
-- 파라미터 등록표의 실제 값(PD-02) — [003](../003-strategy-settings/spec.md) 소유
+- 전략 목록·표시 정보·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙과 그
+  실제 값(PD-02) — [003](../003-strategy-settings/spec.md) 소유. 007은 조회해 쓰기만 한다(FR-025)
 - 비교 화면 구성 — [005](../005-result-comparison/spec.md) 소유. 007은 후보를 비교 대상으로 넘기는
   연결만 만든다(FR-019)
 - 내 기록 목록·보관 정책(PD-13) — [006](../006-my-records/spec.md) 소유
 - 인증·인가 도입 — 소유 spec 없음. 007은 nullable 소유자 컬럼만 준비한다(R4)
 - 실행 한도의 확정값(PD-06)과 검증 설계(PD-12) — 실측·팀 확정 대기
 
-**PD-05 잔여 세 값이 확정될 때까지 자동 탐색 모듈은 기능 플래그로 꺼져 있다.**
-`thorp.param-search.enabled`가 `false`면 `ParamSearchConfig`가 로드되지 않는다. 공통 설정의 기본값이
-`false`이고 로컬만 `true`다. `ParamSearchProperties`의 네 한도가 `@NotNull`이라 플래그 없이 무조건
-로드하면 값을 채우지 않은 환경에서 **애플리케이션 전체가 기동에 실패**한다 — 007이 아직 엔드포인트를
-노출하지 않는 단계에서 기존 기능까지 내려가는 것은 받아들일 수 없다. 값을 추측해 코드 기본값으로 박는
-것(constitution "AI 작업 방식" 위반)과 배포를 깨는 것 사이의 세 번째 선택이다.
+**자동 탐색 모듈은 기능 플래그로 꺼져 있다.** `thorp.param-search.enabled`가 `false`면
+`ParamSearchConfig`가 로드되지 않는다. 공통 설정의 기본값이 `false`이고 로컬만 `true`다. 실행 한도
+네 값(후보 수·실행시간·발행 창·연속 실패)은 2026-09-10 임시값으로 확정해 설정에 넣었으므로 플래그를
+켜도 기동이 실패하지는 않는다. 그래도 공통 기본값을 `false`로 두는 이유는 007이 아직 엔드포인트를
+노출하지 않기 때문이다(M1 단계) — 미완성 모듈을 운영에서 켜 둘 이유가 없다. HTTP API가 붙는 M3에서
+`true`로 바꾼다.
 
-`dispatch-window`·`time-limit-seconds`·`consecutive-failure-limit`가 정해지면 그 값을 설정에 넣고
-플래그를 켠다. 스키마(V3)는 플래그와 무관하게 Flyway가 적용하므로 나중에 켜도 마이그레이션을 다시
-할 일이 없다. `ParamSearchProperties`를 주입하는 빈은 같은 플래그 조건을 가져야 한다(M3 이후).
+`ParamSearchProperties`의 네 한도는 `@NotNull`이라 **플래그를 켠 채 값을 비우면 애플리케이션 전체가
+기동에 실패**한다. 값을 지울 때는 플래그도 함께 끈다. 스키마(V3)는 플래그와 무관하게 Flyway가
+적용하므로 나중에 켜도 마이그레이션을 다시 할 일이 없다. `ParamSearchProperties`를 주입하는 빈은 같은
+플래그 조건을 가져야 한다(M3 이후). 남은 팀 결정은 동률 처리 하나이며(PD-05), 그 값은 spec Edge
+Cases의 대체 규칙(전부 표시·임의 순서 금지, R3)으로 대신하고 있어 착수를 막지 않는다.

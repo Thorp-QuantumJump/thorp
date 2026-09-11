@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -40,6 +41,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 /** 상태에 따른 적용·무시 판단을 고정한다. 픽스처의 backtestId는 {@code BT-20260907-000001}이다. */
 @ExtendWith(MockitoExtension.class)
@@ -49,13 +51,14 @@ class BacktestEventServiceTest {
 
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
+    @Mock private ApplicationEventPublisher events;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service = new BacktestEventService(jobRepository, resultRepository, clock);
+        service = new BacktestEventService(jobRepository, resultRepository, events, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -162,6 +165,46 @@ class BacktestEventServiceTest {
         assertThat(command.engineOutput()).isSameAs(event.payload().engineOutput());
         assertThat(command.benchmark()).isNull(); // v2 FINISHED에는 벤치마크가 없다
         assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("FINISHED: 끝난 실행을 BacktestFinished로 알린다 — 007이 큐를 다시 소비하지 않는 이유다")
+    void finishedPublishesDomainEvent() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        service.handleFinished(event);
+
+        ArgumentCaptor<BacktestFinished> captor = ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(captor.capture());
+        BacktestFinished published = captor.getValue();
+        assertThat(published.backtestJobId()).isEqualTo(1L);
+        assertThat(published.backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(published.status()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(published.errorCode()).isNull();
+    }
+
+    @Test
+    @DisplayName("FINISHED(FAILED): 실패 사유 코드를 이벤트에 담는다")
+    void finishedFailedPublishesErrorCode() {
+        givenJob(RunStatus.RUNNING);
+
+        service.handleFinished(MessageFixtures.finishedFailed());
+
+        ArgumentCaptor<BacktestFinished> captor = ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(RunStatus.FAILED);
+        assertThat(captor.getValue().errorCode()).isEqualTo("DATA_INSUFFICIENT");
+    }
+
+    @Test
+    @DisplayName("늦게 온 FINISHED는 아무것도 알리지 않는다 — 끝난 실행을 두 번 알리면 후보가 두 번 갱신된다")
+    void lateFinishedPublishesNothing() {
+        givenJob(RunStatus.COMPLETED);
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        verifyNoInteractions(events);
     }
 
     @Test

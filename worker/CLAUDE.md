@@ -56,6 +56,12 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다
 - 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고
   `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)
+- **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다
+- **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다
+- **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 PD-03·PD-04 대기이며, 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). "팀이 안 정했다"와 "엔진이 구현 안 했다"는 메시지를 구분한다 — 사용자가 할 일이 다르다
+- **`INVALID_REQUEST`와 `CONSTRAINT_VIOLATION`을 섞지 말 것.** 앞은 요청이 잘못됐다는 뜻이고 뒤는 요청은 말이 되지만 그 조건을 만족하는 배분이 없다는 뜻이다(상한 × 종목 수 < 투자 비중 등)
+- **비용은 네 갈래를 따로 보고한다**(`costs.py`). 호가차·슬리피지는 체결가를 불리하게 움직이고 수수료·세금은 현금으로 빠진다 — 합쳐서 한 숫자로 만들면 결과 계약의 `costs{commission, spread, slippage, tax}`를 채울 수 없다. 적용 방향(양방향/매도만)과 기준 금액은 `costs.py` 모듈 주석에 모아 두었다
+- **분배금은 권리락일에 자격이 생기고 지급일에 현금이 된다**(`corporate_actions.py`). 둘을 같은 날로 다루면 권리락일에 들고 있다가 판 사람의 몫이 사라지고 지급일에 산 사람이 남의 몫을 받는다. ETF 내부 보수는 차감하지 않는다(FR-013) — 이미 가격에 반영돼 있다
 - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다
   - `messaging.py` 계약 상수(exchange·queue·routing key·control exchange, `SCHEMA_VERSION`, prefetch)와
     경계 Protocol(`EventPublisher`, `JobAcknowledger`) + 오류 분류(`ContractViolation`, `PublishError`).

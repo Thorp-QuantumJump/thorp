@@ -89,7 +89,10 @@ from data_pipeline.dataset_version import (
 # 이 모듈을 부르지 않으므로(적재 배선은 scripts/reconcile.py가 한다) 순환 import가 생기지 않는다.
 from data_pipeline.reconciliation import ReconciliationRecord
 
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[0-9]{6}\.XKRX$")
+# 끝을 ``$``가 아니라 ``\Z``로 닫는다. 파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞아
+# "091160.XKRX\n"이 통과한다. 저장 스키마의 CHECK는 그것을 거부하므로, 그대로 두면 뜻이 분명한
+# 오류 대신 제약 이름만 돌아온다.
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
 
 CORPORATE_ACTION_EVENT_TYPES: Final[frozenset[str]] = frozenset({"DISTRIBUTION", "SPLIT"})
 DATA_GAP_REASONS: Final[frozenset[str]] = frozenset(

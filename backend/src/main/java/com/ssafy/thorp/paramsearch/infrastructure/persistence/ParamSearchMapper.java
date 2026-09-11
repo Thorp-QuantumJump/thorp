@@ -7,7 +7,6 @@ import com.ssafy.thorp.paramsearch.domain.vo.ParamSearchId;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,19 +71,52 @@ final class ParamSearchMapper {
                 .build();
     }
 
-    private static Map<String, List<Object>> toSearchSpaceMap(SearchSpace searchSpace) {
-        return new LinkedHashMap<>(searchSpace.axes());
+    private static Map<String, SearchSpaceDocument> toSearchSpaceMap(SearchSpace searchSpace) {
+        Map<String, SearchSpaceDocument> stored = new LinkedHashMap<>();
+        searchSpace
+                .strategies()
+                .forEach(
+                        (strategyId, space) ->
+                                stored.put(
+                                        strategyId,
+                                        new SearchSpaceDocument(
+                                                space.strategyName(),
+                                                space.axes().stream()
+                                                        .map(ParamSearchMapper::toAxisDocument)
+                                                        .toList())));
+        return stored;
+    }
+
+    private static SearchSpaceDocument.AxisDocument toAxisDocument(SearchSpace.Axis axis) {
+        return new SearchSpaceDocument.AxisDocument(
+                axis.name(), axis.label(), axis.unit(), new ArrayList<>(axis.values()));
     }
 
     /**
-     * JSONB에서 읽은 축 목록을 {@link SearchSpace}로 되돌린다.
+     * JSONB에서 읽은 전략별 축 목록을 {@link SearchSpace}로 되돌린다.
      *
      * <p>축마다 리스트를 새로 담는 이유: Jackson이 준 리스트를 그대로 {@code SearchSpace}에 넘기면 저장소가 준 가변 리스트가 도메인 VO 안으로
      * 들어간다. {@code SearchSpace}가 다시 불변 복사를 하지만, 복사 전 참조를 공유하지 않도록 여기서 끊는다.
      */
-    private static SearchSpace toSearchSpace(Map<String, List<Object>> stored) {
-        Map<String, List<Object>> axes = new LinkedHashMap<>();
-        stored.forEach((axis, values) -> axes.put(axis, new ArrayList<>(values)));
-        return SearchSpace.of(axes);
+    private static SearchSpace toSearchSpace(Map<String, SearchSpaceDocument> stored) {
+        Map<String, SearchSpace.StrategySpace> strategies = new LinkedHashMap<>();
+        stored.forEach(
+                (strategyId, document) ->
+                        strategies.put(
+                                strategyId,
+                                new SearchSpace.StrategySpace(
+                                        document.strategyName(),
+                                        document.axes().stream()
+                                                .map(ParamSearchMapper::toAxis)
+                                                .toList())));
+        return SearchSpace.of(strategies);
+    }
+
+    private static SearchSpace.Axis toAxis(SearchSpaceDocument.AxisDocument document) {
+        return new SearchSpace.Axis(
+                document.name(),
+                document.label(),
+                document.unit(),
+                new ArrayList<>(document.values()));
     }
 }
