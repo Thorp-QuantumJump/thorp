@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -39,6 +40,11 @@ import org.hibernate.type.SqlTypes;
  */
 @Entity
 @Table(name = "backtest_run")
+// 바꾼 컬럼만 UPDATE 한다. 이 행은 두 경로가 동시에 갱신한다 — 이벤트 처리(상태·진행·시각)와
+// 발행 경로(published_at·publish_count). 기본 UPDATE 는 바꾸지 않은 컬럼까지 함께 쓰므로,
+// 이벤트 트랜잭션이 실행을 읽어 둔 사이에 발행 경로가 올린 시도 횟수가 옛 값으로 되돌아간다.
+// Java 쪽에서 건드리는 필드를 갈라 놓는 것만으로는 막을 수 없다 — 스냅샷 시점의 값이 그대로 나간다.
+@DynamicUpdate
 public class BacktestRunJpaEntity extends BaseEntity {
 
     @Id

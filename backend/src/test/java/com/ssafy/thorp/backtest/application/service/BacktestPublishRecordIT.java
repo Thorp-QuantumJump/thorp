@@ -21,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -52,6 +54,7 @@ class BacktestPublishRecordIT extends PostgresTestSupport {
     @Autowired private BacktestRunRepository runRepository;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     /** 브로커 없이 발행을 성공시킨다. 이 테스트의 관심사는 발행 자체가 아니라 그 뒤의 DB 기록이다. */
     @MockitoBean private BacktestJobPublisher publisher;
@@ -122,6 +125,37 @@ class BacktestPublishRecordIT extends PostgresTestSupport {
                 .isNotNull();
         assertThat(column("publish_count", runId, Integer.class)).isEqualTo(1);
         assertThat(column("status", runId, String.class)).isEqualTo("QUEUED");
+    }
+
+    /**
+     * 이벤트 트랜잭션이 <b>오래된 영속성 컨텍스트</b>를 들고 저장할 때 발행 횟수가 살아남는지.
+     *
+     * <p>Java 쪽에서 건드리는 필드를 갈라 놓는 것만으로는 모자란다. Hibernate 의 기본 UPDATE 는 바꾸지 않은 컬럼까지 함께 쓰기 때문에, 컨텍스트에
+     * 올라온 시점의 옛 값이 그대로 나간다. 앞선 저장소 테스트는 중간에 컨텍스트를 비워 최신 엔티티를 다시 읽으므로 이 경우를 놓친다 — 실제 사고는 이벤트 트랜잭션이
+     * 실행을 읽어 둔 채로 진행되는 동안 발행 경로가 끼어들 때 일어난다.
+     */
+    @Test
+    @DisplayName("오래된 영속성 컨텍스트로 상태를 저장해도 발행 횟수가 되돌아가지 않는다")
+    void staleContextDoesNotResetPublishCount() throws Exception {
+        long runId = acceptRun();
+        TransactionTemplate requiresNew = new TransactionTemplate(transactionManager);
+        requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    // 1) 이벤트 트랜잭션이 실행을 읽는다(컨텍스트에 publish_count=1 로 올라온다).
+                    BacktestRun stale = runRepository.findById(runId).orElseThrow();
+                    // 2) 그 사이 발행 경로가 다른 트랜잭션에서 시도 횟수를 올리고 커밋한다.
+                    requiresNew.executeWithoutResult(
+                            inner -> runRepository.recordPublishAttempt(runId));
+                    // 3) 이벤트 트랜잭션이 이제 상태를 저장한다.
+                    runRepository.update(stale.markRunning("exec-1"));
+                });
+
+        assertThat(column("publish_count", runId, Integer.class))
+                .as("바꾸지 않은 컬럼까지 쓰면 여기가 1로 내려간다")
+                .isEqualTo(2);
+        assertThat(column("status", runId, String.class)).isEqualTo(RunStatus.RUNNING.name());
     }
 
     @Test
