@@ -62,6 +62,11 @@ Backend ── CANCEL ──▶ [backtest.control] (fanout) ──▶ 모든 Wor
 `x-delivery-limit=1`은 워커가 죽어 requeue된 작업을 **한 번만** 다시 배달하고 그 다음은 DLQ로 보낸다(spec 004 FR-023 자동 재시도 1회, research R-06).
 DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영자가 재처리한다.
 
+**v1 classic 큐가 이미 있는 환경(개발 PC의 기존 볼륨, 운영 브로커)은 v2 백엔드를 띄우기 전에 `backtest.jobs`를 한 번 삭제해야 한다.**
+classic → quorum은 큐 인자 변경이라 같은 이름으로 재선언하면 `PRECONDITION_FAILED`로 선언이 실패하고, 큐는 classic 그대로 남아 `x-delivery-limit`이 적용되지 않는다.
+삭제 전제조건은 **접수(백엔드 `POST /backtests`)를 멈춘 상태에서 `messages_ready`와 `messages_unacknowledged`가 모두 0**이다. 미ACK만 확인하면 대기 중인 작업을 잃는다.
+개발 환경 명령은 `specs/004-backtest-execution/quickstart.md`, 운영 절차(중단·확인·삭제·재선언·되돌리기)는 T002 `docs/guides/backtest-queue-migration.md`가 정한다.
+
 ## 3. 메시지 속성 (작업·이벤트·제어 공통)
 
 | 속성 | 값 |

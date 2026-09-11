@@ -138,7 +138,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | queued_at / started_at / finished_at | TIMESTAMPTZ |
 | wait_ms / run_ms | BIGINT (started-queued, finished-started) |
 | concurrent_running | INTEGER (종결 시점의 RUNNING run 수) |
-| peak_rss_mb / cpu_seconds | NUMERIC (워커 diagnostics.resource) |
+| peak_rss_mb / cpu_seconds | NUMERIC (FINISHED payload `resource`) |
 | auto_retried | BOOLEAN (attempt > 1) |
 | result_bytes | BIGINT (JSONB 합계 길이) |
 | recorded_at | TIMESTAMPTZ |
