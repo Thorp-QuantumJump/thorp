@@ -32,8 +32,8 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `owner_user_id` | BIGINT NULL | 인증 도입 전 NULL (R4) |
 | `strategy_ids` | JSONB NOT NULL | 고정한 전략군 |
 | `instrument_ids` | JSONB NOT NULL | 고정한 섹터 후보 집합 |
-| `registry_version` | VARCHAR(64) NOT NULL | 등록표 버전. 임시 구현은 `PROVISIONAL-*` (R1) |
-| `search_space` | JSONB NOT NULL | 축 이름 → 선택한 후보 값 목록. 탐색 공간 기록(FR-020) |
+| `registry_version` | VARCHAR(64) NOT NULL | 조회한 등록표 버전. **접수 시점에 고정한다**(FR-028). 임시 구현은 `PROVISIONAL-*` (R1) |
+| `search_space` | JSONB NOT NULL | 전략별 축과 **실제 사용한 탐색 후보값**. 아래 §2.1 (FR-020, FR-028) |
 | `search_method` | VARCHAR(32) NOT NULL | 현재 `FULL_GRID` 고정 (FR-005) |
 | `random_seed` | INTEGER NULL | 현재 항상 NULL. 무작위 표본 도입 시 채운다(FR-020) |
 | `selection_rule` | JSONB NOT NULL | 접수 시점 스냅샷. 아래 §5 |
@@ -42,7 +42,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |
 | `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |
 | `status` | VARCHAR(20) NOT NULL | §3 상태 |
-| `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` |
+| `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` `NO_VALID_CANDIDATE` `STRATEGY_NOT_REGISTERED` `STRATEGY_NOT_EXECUTABLE` (뒤 둘은 2026-09-11 추가, FR-026) |
 | `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |
 | `selection` | JSONB NULL | 선정 결과 스냅샷. 완료 후 1회 계산해 저장 |
 | `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |
@@ -54,17 +54,44 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 **`counts`를 컬럼이 아니라 JSONB로 두는 이유**: 6개 값이 함께 갱신되고 개별 필터·정렬 대상이 아니다.
 표시용 묶음이므로 V2 규약의 "표시용 값은 JSONB"에 해당한다.
 
+### 2.1 `search_space` 구조 (2026-09-11 개정, FR-027·FR-028)
+
+한 묶음이 전략 여러 개를 담을 수 있고 전략마다 축 구성이 다르므로 **전략별로 축을 따로 저장한다.**
+초판의 평면 구조(`축 → 값`)는 전략이 둘 이상이면 축 이름이 충돌한다.
+
+```json
+{
+  "sector-momentum": {
+    "strategyName": "섹터 모멘텀",
+    "axes": [
+      { "name": "lookbackDays", "label": "관측 기간", "unit": "거래일", "values": [20, 60, 120] },
+      { "name": "topN", "label": "선정 섹터 수", "unit": null, "values": [2, 3, 4] }
+    ]
+  }
+}
+```
+
+- **축을 배열로 저장하는 이유**: `jsonb`는 객체 키 순서를 보존하지 않는다(정렬해 저장한다). 축을
+  객체 키로 두면 순서가 흔들린다. 배열은 순서를 지키고, **각 축 `values` 배열의 순서가
+  `grid_coordinates` 인덱스의 뜻**이다(R7, FR-029).
+- 값은 등록표가 돌려준 후보값을 **그대로** 담는다. 007이 정렬·보간·단위 변환을 하지 않는다(FR-025).
+- `label`·`unit`·`strategyName`을 함께 남기는 이유: 등록표 버전이 올라가 축 이름이나 표시 문구가
+  바뀐 뒤에도 그 묶음이 무엇을 탐색했는지 읽을 수 있어야 한다(FR-020, 원칙 VIII).
+- **전체 조합 수는 전략별 (축별 값 개수의 곱)의 합**이다. 전략 하나뿐일 때 초판 계산과 같다.
+- 등록표에 축이 없는 전략(파라미터 없음)은 `axes: []`이고 조합 1건이다.
+
 ## 3. `param_search.status` 상태 전이
 
 ```text
 QUEUED ──▶ RUNNING ──▶ COMPLETED          모든 유효 후보가 완료 또는 실패로 끝남
                    ├─▶ PARTIAL            취소·한도 도달로 미실행 후보가 남음
                    └─▶ FAILED             접수 후 실행 자체가 불가 (기준 발행 실패 등)
-QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초과·유효 조합 0건)
+QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략)
 ```
 
-- `REJECTED`는 저장하되 후보를 만들지 않는다. 상한 초과(FR-005b)와 유효 조합 전무(Edge Case)가 여기
-  들어가며 `stop_reason`에 사유가 남는다.
+- `REJECTED`는 저장하되 후보를 만들지 않는다. 상한 초과(FR-005b), 유효 조합 전무(Edge Case),
+  미등록 전략과 실행 미지원 전략(FR-026)이 여기 들어가며 `stop_reason`에 사유가 남는다. 등록표
+  조회 실패는 여기 들어가지 않는다 — 일시적 장애라 묶음을 만들지 않고 503만 돌려준다(research R9).
 - `PARTIAL`은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009).
 - `COMPLETED`와 `PARTIAL` 둘 다 선정 계산을 수행한다. 취소된 묶음도 완료된 후보로 비교할 수 있다.
 
@@ -77,7 +104,7 @@ QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초
 | `candidate_no` | INTEGER NOT NULL | 묶음 내 순번. `(param_search_id, candidate_no)` UNIQUE |
 | `strategy_id` | VARCHAR(64) NOT NULL | |
 | `parameters` | JSONB NOT NULL | 파라미터 조합 하나 |
-| `grid_coordinates` | JSONB NOT NULL | 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (R7) |
+| `grid_coordinates` | JSONB NOT NULL | 축 이름 → `search_space`의 값 인덱스. 이웃 판정의 근거 (R7). 좌표의 뜻은 `strategy_id` 안에서만 유효하다 — 이웃은 같은 전략 안에서만 찾는다 |
 | `backtest_job_id` | BIGINT NULL FK → `backtest_job(id)` | 발행 전·제외 후보는 NULL |
 | `status` | VARCHAR(20) NOT NULL | §4.1 |
 | `reason_code` | VARCHAR(64) NULL | 제외·실패 사유 코드 |
@@ -118,7 +145,11 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr
 
 ```json
 {
-  "drawdownFilter": { "type": "NOT_WORSE_THAN_BASELINE", "baseline": "EQUAL_WEIGHT" },
+  "drawdownFilter": {
+    "type": "NOT_WORSE_THAN_BASELINE",
+    "baselineStrategyId": "<등록표가 기준 전략 역할로 지정한 ID>",
+    "baselineStrategyName": "<표시용. 등록표 값>"
+  },
   "stabilityFilter": { "type": "BATCH_PERCENTILE", "keepTopPercent": 50 },
   "sortMetric": "NET_RETURN",
   "displayCount": 5,
@@ -138,7 +169,13 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr
 | 규칙 | 근거 | 적용 지점 |
 |---|---|---|
 | 유효 후보 수 > 후보 수 상한이면 접수 거부, 표본 추출·간격 확대 금지 | FR-005b | `ParamSearchService.create` 전 `GridExpander` 결과 검사 |
-| 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator` |
+| 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator`가 `ParameterRegistryPort.validate()` 결과를 그대로 쓴다. 판정 규칙을 007에 두지 않는다(FR-025) |
+| 등록표에 없는 전략은 조합 생성 전 거부, `status=REJECTED` + `stop_reason=STRATEGY_NOT_REGISTERED` | FR-026 | `SearchTargetResolver` |
+| 004가 실행을 지원하지 않는 전략은 조합 생성 전 거부, `stop_reason=STRATEGY_NOT_EXECUTABLE` | FR-026 | 같은 지점. 두 사유를 구분해 남긴다 |
+| 등록 정보·지원 목록 조회 실패는 묶음을 저장하지 않고 `503 REGISTRY_UNAVAILABLE`. 캐시·기본값으로 대체 실행 금지 | FR-028, R9 | 접수 진입점 |
+| 미리보기 때 본 등록표 버전과 접수 시점 버전이 다르면 `409 REGISTRY_VERSION_CHANGED` | FR-028, R9 | 접수 진입점 |
+| 기본 시작값·입력 허용 범위는 등록표 값을 그대로 쓴다 | FR-027 | 007에 기본값 상수를 두지 않는다 |
+| 이웃 인덱스의 뜻은 등록표가 준 후보값 순서에서만 온다 | FR-029 | `search_space.axes[].values` 순서 |
 | 유효 조합 0건이면 실행하지 않고 어느 제약 때문인지 한 문장 | Edge Case | 같은 지점, `status=REJECTED` |
 | 모든 후보와 기준이 같은 섹터 집합·공통 구간·공통 워밍업(`warmupTradingDays`)·금액·비용·참조 버전 | FR-007, FR-013d, 004 R-15 | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립 |
 | 묶음은 시작 시점 참조 버전으로 끝까지 계산 | FR-012 | `reference_versions` 스냅샷 + 갱신 시 `data_version_changed` |
@@ -146,6 +183,7 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr
 | 문턱 통과 후보 < 5면 그 수만, 0이면 '기준 충족 후보 없음' | Edge Case | `CandidateSelector` |
 | 동률은 전부 표시, 임의 순서 금지 | Edge Case, R3 | `CandidateSelector` |
 | 기준 백테스트 실패 시 하락 폭 필터 미적용 + 사실 표시 | Edge Case | `CandidateSelector` |
+| 기준 전략 역할이 등록표에 지정돼 있지 않으면 하락 폭 필터 미적용 + 사실 표시. 기준 전략을 007이 추정하지 않는다 | FR-013d, FR-025 | 접수 시 스냅샷 고정, `CandidateSelector` |
 | 평가 분할 미등록이면 전 후보 `UNVALIDATED` | FR-014, R5 | 후보 생성 시 기본값 |
 | 재시도는 시작 시점 스냅샷을 재사용하고 새 묶음을 만들지 않는다 | FR-024 | `ParamSearchService.retryFailed` |
 | 재시도 완료 후 선정을 다시 계산하되 선정 규칙은 바꾸지 않는다 | FR-024, FR-013c | `CandidateSelector` 재실행 |

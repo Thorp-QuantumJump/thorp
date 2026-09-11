@@ -9,7 +9,11 @@
 ## 사전 조건
 
 **004가 아직 없다는 것을 전제로 한 절차다.** 현재 워커는 단일 종목 momentum만 계산하므로 이 가이드는
-섹터 1종목으로 확인한다. 다섯 배분 전략이 붙으면 `instrumentIds`를 늘려 같은 절차를 반복한다.
+섹터 1종목으로 확인한다. 004가 배분 전략을 추가하고 실행 지원 목록에 넣으면 `instrumentIds`를 늘려
+같은 절차를 반복한다 — **007 코드를 고치지 않는다**(FR-026).
+
+등록표 데이터는 `backend/src/main/resources/registry/parameter-registry-provisional.yml`에 있다.
+축·후보값·기본값을 바꿔 보려면 그 파일만 고친다. 007 코드에는 전략·파라미터값이 없다(FR-025).
 
 ```bash
 # 1. 인프라
@@ -151,6 +155,50 @@ FROM search_candidate WHERE param_search_id IN (:a, :b) GROUP BY param_search_id
 
 `searchId`는 다르다. 같은 조건 재실행은 항상 새 묶음이다(FR-013c).
 
+## 시나리오 7 — 전략 비의존성 (US5, SC-010·SC-011·SC-012)
+
+**등록표만 바꿔서 새 전략이 탐색 대상이 되는지** 확인한다. 007 소스는 한 줄도 고치지 않는다.
+
+```bash
+# 1. 미리보기의 전략 목록·축·기본값이 모두 등록표에서 오는지 (FR-025, FR-027)
+curl -s -X POST localhost:8080/param-searches/preview \
+  -H 'Content-Type: application/json' \
+  -d '{"universe":{"instrumentIds":["069500.XKRX"]},"strategy":{"strategyIds":["momentum"]}}' \
+  | jq '{registryVersion, strategies, spaceSummary}'
+
+# 2. 자원 파일에 여섯 번째 전략을 추가한다 (코드 수정 없음)
+#    backend/src/main/resources/registry/parameter-registry-provisional.yml 에
+#    축 개수와 후보 개수가 기존 전략과 다른 전략 하나를 넣고 백엔드를 재기동한다.
+
+# 3. 그 전략으로 미리보기가 동작하고 조합 수가 맞는지 (SC-010, SC-011)
+#    전체 조합 수 = 전략별 (축별 후보 개수의 곱)의 합
+curl -s -X POST localhost:8080/param-searches/preview \
+  -H 'Content-Type: application/json' \
+  -d '{"universe":{"instrumentIds":["069500.XKRX"]},"strategy":{"strategyIds":["<새-전략-id>"]}}' \
+  | jq '.data.workload'
+
+# 4. 등록표에 없는 전략 → 422 STRATEGY_NOT_REGISTERED (SC-012)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8080/param-searches \
+  -H 'Content-Type: application/json' \
+  -d '{"universe":{"instrumentIds":["069500.XKRX"]},"strategy":{"strategyIds":["no-such-strategy"]},"registryVersion":"PROVISIONAL-2026-09-10"}'
+
+# 5. 등록됐지만 004가 실행을 지원하지 않는 전략 → 422 STRATEGY_NOT_EXECUTABLE (SC-012)
+#    위 2단계에서 추가한 전략이 워커에 없으므로 그대로 실행을 시도하면 이 코드가 나온다.
+
+# 6. 미리보기와 다른 registryVersion으로 실행 → 409 REGISTRY_VERSION_CHANGED (FR-028)
+curl -s -X POST localhost:8080/param-searches \
+  -H 'Content-Type: application/json' \
+  -d '{"universe":{"instrumentIds":["069500.XKRX"]},"strategy":{"strategyIds":["momentum"]},"registryVersion":"PROVISIONAL-1999-01-01"}' | jq '.error'
+```
+
+확인:
+
+- 1단계 응답의 전략 이름·축 라벨·단위·기본값이 자원 파일 값과 일치한다. 007 소스에서
+  `grep -rn "momentum" backend/src/main/java/com/ssafy/thorp/paramsearch` 결과가 **0건**이다(SC-010).
+- 3단계에서 축 개수·후보 개수가 다른 전략의 조합 수가 기대치와 같다(SC-011).
+- 4·5단계가 서로 다른 오류 코드로 거부되고, 묶음이 `REJECTED`로 저장되며 `stop_reason`이 구분된다.
+- 6단계는 묶음을 만들지 않는다(`param_search` 행이 늘지 않는다).
+
 ## 자동 테스트
 
 ```bash
@@ -176,7 +224,7 @@ Backend 테스트가 덮어야 하는 것(구현 Task에서 작성):
 
 ## 아직 확인할 수 없는 것
 
-- **다섯 배분 전략의 탐색** — 004 미구현. 2종목 이상은 후보 Job이 `FAILED`가 된다.
+- **배분 전략의 탐색** — 004 미구현이라 실행 지원 목록이 momentum뿐이다. 2종목 이상은 후보 Job이 `FAILED`가 된다.
 - **파라미터 등록표의 실제 값** — PD-02 미확정. `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는
   팀 확정 등록표의 결과가 아니다.
 - **미사용 검증 결과 표시** — PD-12 미확정. 전 후보가 `UNVALIDATED`이므로 SC-005는 자동 만족이며

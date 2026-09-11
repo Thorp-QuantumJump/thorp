@@ -8,9 +8,10 @@
 
 ---
 
-## 1. `ParameterRegistryPort` — 003과의 경계 (research R1)
+## 1. `ParameterRegistryPort` — 003과의 경계 (research R1, 2026-09-11 개정)
 
-003이 소유한 파라미터 등록표를 007이 읽는 유일한 통로다. 003 완성 시 구현체만 교체한다.
+003이 소유한 전략·파라미터 등록표를 007이 읽는 **유일한** 통로다. 003 완성 시 구현체만 교체한다.
+007은 이 포트가 돌려주는 값 외에 전략에 대해 아무것도 알지 못한다(FR-025).
 
 ```java
 public interface ParameterRegistryPort {
@@ -18,19 +19,37 @@ public interface ParameterRegistryPort {
     /** 등록표 버전. 임시 구현은 "PROVISIONAL-" 로 시작한다. */
     String version();
 
-    /** 전략의 탐색 축 목록. 순서는 안정적이어야 한다 — 그리드 좌표의 축 순서가 된다. */
-    List<ParameterAxis> axes(String strategyId);
+    /** 활성 전략 전체. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026). */
+    List<StrategyRegistration> activeStrategies();
 
-    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다. */
+    /** 전략 하나의 등록 정보. 등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026). */
+    Optional<StrategyRegistration> find(String strategyId);
+
+    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다(FR-006). */
     ValidationVerdict validate(String strategyId, ParameterCombination combination, SearchContext context);
+
+    /** 손실 제약 기준으로 쓸 전략. 등록표가 '기준 전략' 역할로 지정한다(FR-013d). 지정이 없으면 empty. */
+    Optional<String> baselineStrategyId();
 }
 
-public record ParameterAxis(
-        String name,        // "lookbackDays"
-        String label,       // "관측 기간"
-        String unit,        // "거래일", null 허용
-        List<Object> values // 등록된 후보 값. 인덱스가 그리드 좌표다
+public record StrategyRegistration(
+        String strategyId,          // "sector-momentum"
+        String name,                // "섹터 모멘텀" — 표시용. 007이 만들지 않는다
+        String description,         // 표시용, null 허용
+        List<ParameterAxis> axes    // 순서 보존. 축이 없으면 빈 목록(조합 1건)
 ) {}
+
+public record ParameterAxis(
+        String name,            // "lookbackDays"
+        String label,           // "관측 기간"
+        String unit,            // "거래일", null 허용
+        List<Object> searchValues,   // 자동 탐색 후보값. 인덱스가 그리드 좌표다
+        Object defaultValue,         // 기본 시작값. 007이 정하지 않는다(FR-027)
+        AllowedRange allowedRange    // 입력 허용 범위. 상세 변경의 경계(FR-027)
+) {}
+
+/** 입력 허용 범위. 열거형 축은 values만, 수치형 축은 min·max·step을 쓴다. 등록표가 준 형태를 그대로 옮긴다. */
+public record AllowedRange(Object min, Object max, Object step, List<Object> values) {}
 
 public record ValidationVerdict(boolean valid, String reasonCode, String reasonDetail) {}
 
@@ -40,15 +59,50 @@ public record SearchContext(int universeSize) {}
 
 **규약**
 
-- `axes()`의 반환 순서와 `values`의 인덱스는 같은 `version()` 안에서 안정적이어야 한다. 인덱스가
-  흔들리면 `grid_coordinates`가 뜻을 잃고 재현이 깨진다(FR-020).
-- `validate()`는 계산 없이 판정할 수 있는 것만 본다. 알려진 위반은 최소 두 가지다 — 모멘텀 선정 수가
-  가용 섹터 수 초과, 비중 상한들의 합계로 투자 비중을 채울 수 없음(FR-006).
+- `axes()`의 반환 순서와 `searchValues`의 인덱스는 같은 `version()` 안에서 안정적이어야 한다.
+  인덱스가 흔들리면 `grid_coordinates`가 뜻을 잃고 재현이 깨진다(FR-020·FR-029).
+- **인접 판정은 `searchValues`의 인덱스만 쓴다.** 007은 값을 해석해 순서를 만들지 않으므로 숫자가
+  아닌 축(범주형)도 전략별 분기 없이 같은 규칙으로 다뤄진다(FR-029).
+- `validate()`는 계산 없이 판정할 수 있는 것만 본다. **어떤 제약이 있는지는 등록표가 정한다** —
+  007은 제약의 종류를 알지 못하고 `reasonCode`를 그대로 저장·표시한다(FR-006·FR-025). 제약 목록과
+  그 값은 [003](../../003-strategy-settings/spec.md)의 PD-02다.
+- `defaultValue`·`allowedRange`는 상세 변경 화면과 범위 검증이 그대로 쓴다. 007에 기본값 상수나
+  범위 상수를 두지 않는다(FR-027). 기본값을 "추천"이나 "최적값"으로 표시하지 않는다(원칙 III).
 - 007은 등록표에 없는 값을 절대 만들지 않는다(FR-002). `space`에 등록표 밖 값이 오면 400이다.
+- 조회가 실패하면(구현체 예외) 접수를 거부한다 — `503 REGISTRY_UNAVAILABLE`. 캐시된 등록 정보나
+  내부 기본값으로 대체하지 않는다(FR-028, R9).
+- `baselineStrategyId()`가 empty이면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다
+  (`drawdownFilterApplied = false`). **007이 어느 전략이 기준인지 추정하지 않는다** — 기준 전략 ID를
+  코드에 두면 그것이 FR-025 위반이고, 사용자 등록 전략이 늘어나면 곧바로 깨진다 (FR-013d·FR-025).
 
-**임시 구현 `FixedParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고, 축과 값은
-코드 상수로 둔다. PD-02가 확정되지 않았으므로 **이 값은 팀 확정값이 아니다** — API 응답의
-`registryVersion`과 화면 표시로 임시임을 밝힌다.
+**임시 구현 `ProvisionalFileParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고,
+전략·축·후보값·기본값·허용 범위·유효성 규칙은 자원 파일
+`backend/src/main/resources/registry/parameter-registry-provisional.yml`에서 읽는다. **Java 코드
+상수로 두지 않는다** — 그것이 곧 007의 하드코딩이다(FR-025). PD-02가 확정되지 않았으므로 **이 값은
+팀 확정값이 아니다**: API 응답의 `registryVersion`과 화면 표시로 임시임을 밝힌다.
+
+테스트는 같은 포트의 fixture 구현으로 한다. 여섯 번째 가짜 전략을 넣은 fixture로 미리보기·후보 조합
+생성이 운영 코드 변경 없이 동작함을 검증한다(SC-010).
+
+## 1.1 `StrategyExecutionSupportPort` — 004와의 경계 (research R8)
+
+"이 전략을 실행할 수 있는가"는 004의 사실이므로 004에 묻는다. 007도 003도 대신 선언하지 않는다.
+
+```java
+public interface StrategyExecutionSupportPort {
+
+    /** 004가 현재 실행을 지원하는 전략 ID 전체. */
+    Set<String> supportedStrategyIds();
+}
+```
+
+**규약**
+
+- 탐색 대상 = `activeStrategies()` ∩ `supportedStrategyIds()`. 요청 전략이 앞에 없으면
+  `STRATEGY_NOT_REGISTERED`, 뒤에 없으면 `STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부하고
+  두 사유를 구분해 표시·저장한다(FR-026).
+- 004가 워커에 전략을 추가하고 이 목록에 넣으면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.
+- 조회 실패는 등록표 조회 실패와 같이 다룬다(`503 REGISTRY_UNAVAILABLE`).
 
 ## 2. `CandidateJobLauncher` — 004와의 경계
 
@@ -70,6 +124,8 @@ public interface CandidateJobLauncher {
 
 - 두 메서드는 묶음 스냅샷(`ParamSearchSnapshot`)만 보고 조립한다. 현재 시각의 자료 버전·비용 설정을
   다시 읽지 않는다 — 묶음은 시작 시점 버전으로 끝까지 계산한다(FR-012).
+- `launchBaseline()`은 스냅샷의 `baselineStrategyId`와 그 전략의 **등록된 기본 시작값**으로 조립한다.
+  어느 전략이 기준인지, 그 전략의 파라미터가 무엇인지 007은 알지 못한다(FR-013d·FR-025).
 - 후보와 기준은 같은 섹터 집합·공통 평가 구간·금액·비용·참조 버전을 쓴다(FR-007, 원칙 IV). 묶음 시작 시 후보 전략 전체의 최대 관측 기간(+최근 제외 구간)을 스냅샷에 `warmupTradingDays`로 고정하고 모든 후보와 기준 실행에 동일하게 넘긴다(004 R-15). 004는 이 값이 해당 전략의 요구값보다 작으면 422로 거부하므로 스냅샷 계산이 틀리면 묶음이 시작 단계에서 드러난다.
 - 발행 실패(브로커 장애)는 후보를 `PENDING`으로 남기고 다음 시도에 다시 발행한다. `FAILED`로 바꾸지
   않는다 — 계산 실패와 발행 실패는 다르다(FR-011).
