@@ -10,8 +10,8 @@ import static org.mockito.Mockito.when;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
@@ -21,9 +21,9 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -53,12 +53,12 @@ class BacktestResultQueryServiceTest {
     private static final String BACKTEST_ID = "BT-20260907-000001";
     private static final Long JOB_ID = 1L;
 
-    @Mock private BacktestJobRepository jobRepository;
+    @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @InjectMocks private BacktestResultQueryService service;
 
-    private static BacktestJob jobIn(BacktestStatus status) {
-        return BacktestJob.restore(
+    private static BacktestRun jobIn(RunStatus status) {
+        return BacktestRun.restore(
                 JOB_ID,
                 BacktestId.from(BACKTEST_ID),
                 "MA_CROSSOVER",
@@ -107,7 +107,7 @@ class BacktestResultQueryServiceTest {
                 benchmark ? new BigDecimal("0.053292") : null);
     }
 
-    private void given(BacktestStatus status) {
+    private void given(RunStatus status) {
         when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
     }
 
@@ -115,10 +115,10 @@ class BacktestResultQueryServiceTest {
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "RUNNING"})
     @DisplayName("결과 전에는 config만 채우고 결과 행을 읽지 않는다")
-    void detailBeforeResult(BacktestStatus status) {
+    void detailBeforeResult(RunStatus status) {
         given(status);
 
         BacktestDetailResult result = service.getDetail(BACKTEST_ID);
@@ -134,7 +134,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("COMPLETED는 performance·execution·benchmark를 summary로 합친다")
     void detailCompleted() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, true)));
 
         BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID).summary();
@@ -150,7 +150,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("FAILED는 error만 채우고 summary는 null이다")
     void detailFailed() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
         when(resultRepository.findSummary(JOB_ID))
                 .thenReturn(Optional.of(summary("NO_MARKET_DATA", false)));
 
@@ -164,7 +164,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("요청에 벤치마크가 있어도 결과에 없으면 summary.benchmark는 null이다")
     void detailWithoutBenchmarkInResult() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
 
         BacktestDetailResult result = service.getDetail(BACKTEST_ID);
@@ -185,10 +185,10 @@ class BacktestResultQueryServiceTest {
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"COMPLETED", "FAILED"})
     @DisplayName("최종 상태인데 결과 행이 없으면 500이다 — RESULT_NOT_READY로 감추지 않는다")
-    void detailMissingResultRowIsServerError(BacktestStatus status) {
+    void detailMissingResultRowIsServerError(RunStatus status) {
         given(status);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
 
@@ -225,7 +225,7 @@ class BacktestResultQueryServiceTest {
     }
 
     private void givenSeries(BenchmarkResult benchmark) {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findTimeseries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -272,7 +272,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("시계열도 결과 행이 없으면 500이다")
     void timeseriesMissingResultRow() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findTimeseries(JOB_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
@@ -282,7 +282,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("시계열은 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
     void timeseriesUsesGate() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
         assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
                 .isInstanceOf(BacktestFailedException.class);
@@ -293,7 +293,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("거래 페이지는 Page의 메타데이터를 그대로 옮긴다")
     void tradesCopiesPageMetadata() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);
         when(resultRepository.findTrades(JOB_ID, query))
@@ -310,7 +310,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("거래 0건도 정상 응답이다 — 결과 자체가 없는 것과 다르다")
     void tradesEmptyIsOk() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
         when(resultRepository.findTrades(JOB_ID, query))
@@ -322,7 +322,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("거래도 관문을 그대로 쓴다 — RUNNING이면 RESULT_NOT_READY")
     void tradesUsesGate() {
-        given(BacktestStatus.RUNNING);
+        given(RunStatus.RUNNING);
 
         assertThatThrownBy(
                         () ->
@@ -360,7 +360,7 @@ class BacktestResultQueryServiceTest {
 
     /** 01-02(보유 1) → 01-03(변경 없음) → 01-06(보유 없음 확정) → 01-07(변경 없음) */
     private void givenPositionSeries() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findPortfolioSeries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -432,7 +432,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("보유 스냅샷이 시계열 전체에 하나도 없으면 500이다 — 요청 잘못이 아니라 데이터 손상")
     void positionsWithoutAnySnapshotIsServerError() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findPortfolioSeries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -457,7 +457,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("보유도 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
     void positionsUsesGate() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
         assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2)))
                 .isInstanceOf(BacktestFailedException.class);
@@ -466,7 +466,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("COMPLETED인데 결과 행이 없으면 거래도 500이다 — 빈 페이지를 주지 않는다")
     void tradesMissingResultRowIsServerError() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(false);
 
         assertThatThrownBy(
@@ -486,7 +486,7 @@ class BacktestResultQueryServiceTest {
     void benchmarkAbsentIsNotMismatch() {
         assertThat(
                         BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), summary(null, false)))
+                                jobIn(RunStatus.COMPLETED), summary(null, false)))
                 .isFalse();
     }
 
@@ -495,7 +495,7 @@ class BacktestResultQueryServiceTest {
     void benchmarkSameIsNotMismatch() {
         assertThat(
                         BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), summary(null, true)))
+                                jobIn(RunStatus.COMPLETED), summary(null, true)))
                 .isFalse();
     }
 
@@ -515,7 +515,7 @@ class BacktestResultQueryServiceTest {
 
         assertThat(
                         BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), other))
+                                jobIn(RunStatus.COMPLETED), other))
                 .isTrue();
     }
 
@@ -523,10 +523,10 @@ class BacktestResultQueryServiceTest {
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "RUNNING"})
     @DisplayName("하위 리소스: 결과 전이면 RESULT_NOT_READY (폴링 계속)")
-    void gateNotReady(BacktestStatus status) {
+    void gateNotReady(RunStatus status) {
         given(status);
 
         assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
@@ -536,7 +536,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("하위 리소스: FAILED면 BACKTEST_FAILED (폴링 중단)")
     void gateFailed() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
         assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
                 .isInstanceOf(BacktestFailedException.class);
@@ -545,7 +545,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("하위 리소스: COMPLETED만 통과한다")
     void gateCompleted() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
 
         assertThat(service.requireResultReady(BACKTEST_ID).getId()).isEqualTo(JOB_ID);
     }

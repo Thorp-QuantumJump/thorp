@@ -54,7 +54,7 @@ class BacktestCreateRollbackIT extends PostgresTestSupport {
         return transactionTemplate.execute(
                 status ->
                         jdbcTemplate.queryForObject(
-                                "SELECT count(*) FROM backtest_job", Long.class));
+                                "SELECT count(*) FROM backtest_run", Long.class));
     }
 
     @Test

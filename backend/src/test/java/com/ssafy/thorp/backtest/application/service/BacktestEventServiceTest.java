@@ -13,11 +13,11 @@ import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -43,13 +43,13 @@ class BacktestEventServiceTest {
 
     private static final String BACKTEST_ID = "BT-20260907-000001";
 
-    @Mock private BacktestJobRepository jobRepository;
+    @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @Mock private BacktestProgressNotifier progressNotifier;
     @InjectMocks private BacktestEventService service;
 
-    private static BacktestJob jobIn(BacktestStatus status) {
-        return BacktestJob.restore(
+    private static BacktestRun jobIn(RunStatus status) {
+        return BacktestRun.restore(
                 1L,
                 BacktestId.from(BACKTEST_ID),
                 "MA_CROSSOVER",
@@ -65,7 +65,7 @@ class BacktestEventServiceTest {
                 status);
     }
 
-    private void givenJob(BacktestStatus status) {
+    private void givenJob(RunStatus status) {
         when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
     }
 
@@ -73,8 +73,8 @@ class BacktestEventServiceTest {
         when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
     }
 
-    private BacktestJob updatedJob() {
-        ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);
+    private BacktestRun updatedJob() {
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
         verify(jobRepository).update(captor.capture());
         return captor.getValue();
     }
@@ -82,19 +82,19 @@ class BacktestEventServiceTest {
     @Test
     @DisplayName("STARTED: QUEUED Job을 RUNNING으로 갱신한다")
     void startedMovesQueuedToRunning() {
-        givenJob(BacktestStatus.QUEUED);
+        givenJob(RunStatus.QUEUED);
 
         service.handleStarted(MessageFixtures.started());
 
-        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.RUNNING);
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.RUNNING);
     }
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"RUNNING", "COMPLETED", "FAILED"})
     @DisplayName("STARTED: QUEUED가 아닌 Job이면 갱신하지 않는다(늦은 이벤트·중복)")
-    void lateStartedIsIgnored(BacktestStatus status) {
+    void lateStartedIsIgnored(RunStatus status) {
         givenJob(status);
 
         service.handleStarted(MessageFixtures.started());
@@ -105,7 +105,7 @@ class BacktestEventServiceTest {
     @Test
     @DisplayName("FINISHED(COMPLETED): 결과를 저장하고 Job을 COMPLETED로 갱신한다")
     void finishedCompletedSavesResultAndCompletes() {
-        givenJob(BacktestStatus.RUNNING);
+        givenJob(RunStatus.RUNNING);
         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
 
         service.handleFinished(event);
@@ -114,18 +114,18 @@ class BacktestEventServiceTest {
                 ArgumentCaptor.forClass(SaveBacktestResultCommand.class);
         verify(resultRepository).save(captor.capture());
         SaveBacktestResultCommand command = captor.getValue();
-        assertThat(command.backtestJobId()).isEqualTo(1L);
+        assertThat(command.runId()).isEqualTo(1L);
         assertThat(command.executionId()).isEqualTo(event.executionId());
         assertThat(command.eventId()).isEqualTo(event.eventId());
         assertThat(command.engineOutput()).isSameAs(event.payload().engineOutput());
         assertThat(command.benchmark()).isNull(); // v2 FINISHED에는 벤치마크가 없다
-        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.COMPLETED);
     }
 
     @Test
     @DisplayName("FINISHED(CANCELLED): 실행 모델(T003)이 생기기 전에는 저장하지 않고 예외를 낸다")
     void finishedCancelledIsNotSupportedYet() {
-        givenJob(BacktestStatus.RUNNING);
+        givenJob(RunStatus.RUNNING);
 
         assertThatThrownBy(() -> service.handleFinished(MessageFixtures.finishedCancelled()))
                 .isInstanceOf(UnsupportedOperationException.class)
@@ -137,7 +137,7 @@ class BacktestEventServiceTest {
     @Test
     @DisplayName("FINISHED(FAILED): 결과(오류 포함)를 저장하고 Job을 FAILED로 갱신한다")
     void finishedFailedSavesResultAndFails() {
-        givenJob(BacktestStatus.RUNNING);
+        givenJob(RunStatus.RUNNING);
         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedFailed();
 
         service.handleFinished(event);
@@ -147,26 +147,26 @@ class BacktestEventServiceTest {
         verify(resultRepository).save(captor.capture());
         assertThat(captor.getValue().engineOutput().run().error().code())
                 .isEqualTo("DATA_INSUFFICIENT");
-        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.FAILED);
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.FAILED);
     }
 
     @Test
     @DisplayName("FINISHED: STARTED가 유실돼 QUEUED인 Job도 저장하고 최종화한다")
     void finishedOnQueuedJobIsApplied() {
-        givenJob(BacktestStatus.QUEUED);
+        givenJob(RunStatus.QUEUED);
 
         service.handleFinished(MessageFixtures.finishedCompleted());
 
         verify(resultRepository).save(any());
-        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.COMPLETED);
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.COMPLETED);
     }
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"COMPLETED", "FAILED"})
     @DisplayName("FINISHED: 이미 최종 상태면 저장도 갱신도 하지 않는다(멱등·첫 결과 채택)")
-    void finishedOnFinalJobIsIgnored(BacktestStatus status) {
+    void finishedOnFinalJobIsIgnored(RunStatus status) {
         givenJob(status);
 
         service.handleFinished(MessageFixtures.finishedCompleted());
@@ -191,7 +191,7 @@ class BacktestEventServiceTest {
     @Test
     @DisplayName("PROGRESS: RUNNING Job의 진행은 notifier로 전달한다")
     void progressOnRunningJobIsNotified() {
-        givenJob(BacktestStatus.RUNNING);
+        givenJob(RunStatus.RUNNING);
         BacktestEvent<ProgressPayload> event = MessageFixtures.progress();
 
         service.handleProgress(event);
@@ -202,10 +202,10 @@ class BacktestEventServiceTest {
 
     @ParameterizedTest
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "COMPLETED", "FAILED"})
     @DisplayName("PROGRESS: RUNNING이 아닌 Job의 진행은 전달하지 않는다")
-    void progressOnNonRunningJobIsIgnored(BacktestStatus status) {
+    void progressOnNonRunningJobIsIgnored(RunStatus status) {
         givenJob(status);
 
         service.handleProgress(MessageFixtures.progress());

@@ -2,7 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class EngineInputAssembler {
 
-    public EngineInput assemble(BacktestJob job) {
+    public EngineInput assemble(BacktestRun job) {
         if (job.getBacktestId() == null) {
             throw new IllegalStateException("backtestId must be assigned before publishing");
         }
@@ -52,7 +52,7 @@ public class EngineInputAssembler {
     }
 
     /** 도메인 enum을 메시지 계약 enum으로 옮긴다. 도메인은 계층 규칙상 메시지 enum을 참조할 수 없다. */
-    private static PositionSizingType toMessageType(BacktestJob job) {
+    private static PositionSizingType toMessageType(BacktestRun job) {
         return switch (job.getPositionSizingType()) {
             case STRATEGY_DEFINED -> PositionSizingType.STRATEGY_DEFINED;
         };

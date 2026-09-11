@@ -34,7 +34,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             "spring.flyway.enabled=true",
             "spring.flyway.locations=classpath:db/migration",
             "spring.flyway.baseline-on-migrate=false",
-            "spring.jpa.hibernate.ddl-auto=validate"
+            "spring.jpa.hibernate.ddl-auto=validate",
+            // 컨텍스트마다 Hikari 기본 10개를 잡으면 DB 테스트 클래스가 늘수록
+            // PostgreSQL 기본 max_connections(100)를 넘겨 "too many clients already"가 난다.
+            // 테스트는 단일 스레드라 컨텍스트당 2개로 충분하다.
+            "spring.datasource.hikari.maximum-pool-size=2",
+            "spring.datasource.hikari.minimum-idle=0"
         })
 public abstract class PostgresTestSupport {
 

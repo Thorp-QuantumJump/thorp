@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -53,7 +53,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
 
     @Autowired private RabbitTemplate rabbitTemplate;
     @Autowired private AmqpAdmin amqpAdmin;
-    @Autowired private BacktestJobRepository jobRepository;
+    @Autowired private BacktestRunRepository jobRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -63,9 +63,9 @@ class BacktestEventListenerIT extends PostgresTestSupport {
         amqpAdmin.purgeQueue(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE, false);
     }
 
-    private BacktestJob newJob() {
+    private BacktestRun newJob() {
         return jobRepository.save(
-                BacktestJob.create(
+                BacktestRun.create(
                         "MA_CROSSOVER",
                         "1.0.0",
                         Map.of("shortWindow", 20),
@@ -88,11 +88,11 @@ class BacktestEventListenerIT extends PostgresTestSupport {
                         .build());
     }
 
-    private void publish(String fixture, BacktestJob job) {
+    private void publish(String fixture, BacktestRun job) {
         publish(MessageFixtures.withRunId(fixture, job.getBacktestId().value()));
     }
 
-    private BacktestStatus statusOf(BacktestJob job) {
+    private RunStatus statusOf(BacktestRun job) {
         return jobRepository
                 .findByBacktestId(job.getBacktestId().value())
                 .orElseThrow()
@@ -105,21 +105,19 @@ class BacktestEventListenerIT extends PostgresTestSupport {
 
     private Integer count(String table, Long jobId) {
         return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM " + table + " WHERE backtest_job_id = ?",
-                Integer.class,
-                jobId);
+                "SELECT COUNT(*) FROM " + table + " WHERE run_id = ?", Integer.class, jobId);
     }
 
     @Test
     @DisplayName("STARTED → FINISHED를 발행하면 리스너가 소비해 Job이 COMPLETED가 되고 결과가 저장된다")
     void consumesStartedAndFinished() {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
 
         publish(MessageFixtures.STARTED, job);
-        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.RUNNING);
+        await().atMost(TIMEOUT).until(() -> statusOf(job) == RunStatus.RUNNING);
 
         publish(MessageFixtures.FINISHED_COMPLETED, job);
-        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.COMPLETED);
+        await().atMost(TIMEOUT).until(() -> statusOf(job) == RunStatus.COMPLETED);
 
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(count("backtest_trade", job.getId())).isEqualTo(3);
@@ -130,7 +128,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
     @Test
     @DisplayName("계약을 어긴 메시지는 재시도 뒤 backtest.events.dlq로 가고 Job은 그대로다")
     void contractViolationGoesToDeadLetterQueue() throws Exception {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
         ObjectNode broken =
                 (ObjectNode)
                         MessageFixtures.mapper()
@@ -149,7 +147,7 @@ class BacktestEventListenerIT extends PostgresTestSupport {
         assertThat(dead.getMessageProperties().getXDeathHeader()).isNotEmpty();
         assertThat(new String(dead.getBody(), UTF_8)).contains("\"schemaVersion\":99");
         assertThat(messageCount(BacktestRabbitConfig.EVENTS_QUEUE)).isZero();
-        assertThat(statusOf(job)).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(statusOf(job)).isEqualTo(RunStatus.QUEUED);
         assertThat(count("backtest_result", job.getId())).isZero();
     }
 
@@ -168,20 +166,20 @@ class BacktestEventListenerIT extends PostgresTestSupport {
     @Test
     @DisplayName("이미 끝난 Job의 늦은 FINISHED는 무시된다(결과를 덮어쓰지 않음)")
     void lateFinishedIsIgnored() {
-        BacktestJob job = newJob();
+        BacktestRun job = newJob();
         publish(MessageFixtures.FINISHED_COMPLETED, job);
-        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.COMPLETED);
+        await().atMost(TIMEOUT).until(() -> statusOf(job) == RunStatus.COMPLETED);
 
         publish(MessageFixtures.FINISHED_FAILED, job);
 
         await().atMost(TIMEOUT).until(() -> messageCount(BacktestRabbitConfig.EVENTS_QUEUE) == 0);
         await().during(Duration.ofSeconds(2))
                 .atMost(TIMEOUT)
-                .until(() -> statusOf(job) == BacktestStatus.COMPLETED);
+                .until(() -> statusOf(job) == RunStatus.COMPLETED);
         assertThat(count("backtest_result", job.getId())).isEqualTo(1);
         assertThat(
                         jdbcTemplate.queryForObject(
-                                "SELECT error_code FROM backtest_result WHERE backtest_job_id = ?",
+                                "SELECT error_code FROM backtest_result WHERE run_id = ?",
                                 String.class,
                                 job.getId()))
                 .isNull();

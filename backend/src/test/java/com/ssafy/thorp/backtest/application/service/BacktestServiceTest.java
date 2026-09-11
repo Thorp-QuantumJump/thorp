@@ -12,12 +12,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -43,7 +43,7 @@ class BacktestServiceTest {
     private static final String BACKTEST_ID = "BT-20260907-000001";
     private static final BigDecimal CASH = new BigDecimal("10000000");
 
-    @Mock private BacktestJobRepository repository;
+    @Mock private BacktestRunRepository repository;
     @Mock private BacktestJobPublisher publisher;
     @Spy private EngineInputAssembler assembler;
     @InjectMocks private BacktestService service;
@@ -61,8 +61,8 @@ class BacktestServiceTest {
                 "069500.XKRX");
     }
 
-    private static BacktestJob savedJob() {
-        return BacktestJob.restore(
+    private static BacktestRun savedJob() {
+        return BacktestRun.restore(
                 1L,
                 BacktestId.from(BACKTEST_ID),
                 "MA_CROSSOVER",
@@ -75,23 +75,23 @@ class BacktestServiceTest {
                 new BigDecimal("0.50"),
                 new InstrumentId("069500.XKRX"),
                 42,
-                BacktestStatus.QUEUED);
+                RunStatus.QUEUED);
     }
 
     @Test
     @DisplayName("create는 QUEUED Job을 저장한 뒤 저장된 Job을 발행하고 결과를 돌려준다")
     void createSavesThenPublishes() {
-        BacktestJob saved = savedJob();
-        when(repository.save(any(BacktestJob.class))).thenReturn(saved);
+        BacktestRun saved = savedJob();
+        when(repository.save(any(BacktestRun.class))).thenReturn(saved);
 
         BacktestJobResult result = service.create(command(START, END));
 
-        ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
         verify(repository).save(captor.capture());
-        BacktestJob requested = captor.getValue();
+        BacktestRun requested = captor.getValue();
         assertThat(requested.getId()).isNull();
         assertThat(requested.getBacktestId()).isNull();
-        assertThat(requested.getStatus()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(requested.getStatus()).isEqualTo(RunStatus.QUEUED);
         assertThat(requested.getInstrumentIds()).containsExactly(new InstrumentId("005930.XKRX"));
         assertThat(requested.getBenchmarkInstrumentId()).isEqualTo(new InstrumentId("069500.XKRX"));
 
@@ -100,17 +100,17 @@ class BacktestServiceTest {
         assertThat(published.getValue().run().runId()).isEqualTo(BACKTEST_ID);
 
         assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
-        assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(result.status()).isEqualTo(RunStatus.QUEUED);
     }
 
     @Test
     @DisplayName("전략 버전과 시드는 요청이 아니라 고정 정책에서 온다")
     void createUsesExecutionPolicyDefaults() {
-        when(repository.save(any(BacktestJob.class))).thenReturn(savedJob());
+        when(repository.save(any(BacktestRun.class))).thenReturn(savedJob());
 
         service.create(command(START, END));
 
-        ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getStrategyVersion())
                 .isEqualTo(ExecutionPolicy.STRATEGY_VERSION);
@@ -131,7 +131,7 @@ class BacktestServiceTest {
     @Test
     @DisplayName("발행이 실패하면 예외를 그대로 올려 트랜잭션을 롤백시킨다")
     void createPropagatesPublishFailure() {
-        when(repository.save(any(BacktestJob.class))).thenReturn(savedJob());
+        when(repository.save(any(BacktestRun.class))).thenReturn(savedJob());
         doThrow(new BacktestPublishFailedException(BACKTEST_ID, new RuntimeException("down")))
                 .when(publisher)
                 .publish(any());
@@ -148,7 +148,7 @@ class BacktestServiceTest {
         BacktestJobResult result = service.get(BACKTEST_ID);
 
         assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
-        assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);
+        assertThat(result.status()).isEqualTo(RunStatus.QUEUED);
     }
 
     @Test
