@@ -190,8 +190,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 
 **먼저 취소해 실행이 계속 돈 요청**(spec 004 R-04)은 공용 실행이 끝난 뒤 자기 스냅샷 날짜(`progress.lastTradingDate`)까지만 잘라 준다 —
 백엔드가 지표를 다시 계산하지 않는 읽기 필터다. 날짜가 있는 항목(시계열·보유·비중·예외)은 날짜로 자른다. 거래는 스냅샷 다음 날 0시(거래소 현지) 전에
-**진입하고 청산까지 끝난 거래와 실행 종료까지 열려 있던 거래만** 준다 — 스냅샷을 가로질러 뒤에 청산된 거래는 청산가·실현손익이 스냅샷 밖이라 보이지 않는다
-(`/positions`에는 그 보유가 있으나 `/trades`에는 없을 수 있다). 공용 실행이 종결 전이면 `RESULT_NOT_READY`, `FAILED`로 끝나면 `BACKTEST_FAILED`다.
+**청산된 거래만** 준다 — 저장된 거래 행은 실행 종료 시점 값이라, 스냅샷을 가로질러 뒤에 청산된 거래는 청산가·실현손익이, 끝까지 OPEN인 거래는 분할·부분 매도로
+바뀐 수량·수수료가 스냅샷 밖이다. **따라서 취소 요청의 `/trades`는 전체 진입 내역이 아니다**(`status=OPEN` 필터는 빈 페이지). 스냅샷 시점 보유는 `/positions`가 준다. 공용 실행이 종결 전이면 `RESULT_NOT_READY`, `FAILED`로 끝나면 `BACKTEST_FAILED`다.
 
 ### 2.6 비중 기록 — `GET /backtests/{backtestId}/weights`
 
