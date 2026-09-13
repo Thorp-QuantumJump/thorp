@@ -56,6 +56,20 @@ def test_rules_and_target_come_only_from_the_message() -> None:
     assert rules == TargetRiskRules(Decimal("0.1000"), 63, "TARGET_RISK_OVERLAY/1")
 
 
+@pytest.mark.parametrize("raw", ["NaN", "Infinity", "-Infinity", "0", "-0.1"])
+def test_non_finite_or_non_positive_target_is_an_invalid_request(raw: str) -> None:
+    """NaN 은 비교에서 InvalidOperation 을 던져 일시 장애처럼 재전달되고, Infinity 는 통과해
+    조절이 영원히 일어나지 않는다. 둘 다 결정적 입력 오류이므로 INVALID_REQUEST 여야 한다."""
+    with pytest.raises(AllocationError) as error:
+        target_risk_rules(
+            run_spec(
+                scenarioParams={"targetVolatility": raw},
+                scenarioRules={"lookbackDays": 63, "scaleDownOnly": True},
+            )
+        )
+    assert error.value.code == "INVALID_REQUEST"
+
+
 def test_estimate_is_the_annualised_std_of_the_target_portfolio_returns() -> None:
     frame = history(64)
     weights = {A: Decimal("0.6"), B: Decimal("0.4")}
