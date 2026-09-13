@@ -1,7 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
+import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -52,13 +52,16 @@ class BacktestEventServiceTest {
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @Mock private ApplicationEventPublisher events;
+    @Mock private BacktestControlPublisher controlPublisher;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service = new BacktestEventService(jobRepository, resultRepository, events, clock);
+        service =
+                new BacktestEventService(
+                        jobRepository, resultRepository, controlPublisher, events, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -208,14 +211,34 @@ class BacktestEventServiceTest {
     }
 
     @Test
-    @DisplayName("FINISHED(CANCELLED): 실행 모델(T003)이 생기기 전에는 저장하지 않고 예외를 낸다")
-    void finishedCancelledIsNotSupportedYet() {
+    @DisplayName("FINISHED(CANCELLED): 부분 결과를 저장하고 실행을 CANCELLED·partial 로 끝내며 워커가 멈춘 거래일을 진행에 남긴다")
+    void finishedCancelledStoresPartialResult() {
         givenJob(RunStatus.RUNNING);
 
-        assertThatThrownBy(() -> service.handleFinished(MessageFixtures.finishedCancelled()))
-                .isInstanceOf(UnsupportedOperationException.class)
-                .hasMessageContaining(BACKTEST_ID);
-        verifyNoInteractions(resultRepository);
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        verify(resultRepository).save(any());
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(updated.isPartial()).isTrue();
+        assertThat(updated.getProgress().lastTradingDate())
+                .isEqualTo(LocalDate.parse("2025-03-25"));
+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+        verifyNoInteractions(controlPublisher);
+    }
+
+    @Test
+    @DisplayName("STARTED: 대기 중 취소돼 이미 CANCELLED 인 실행이 시작하면 CANCEL 을 다시 보낸다 — 워커는 첫 거래일 뒤 멈춘다")
+    void startedOnCancelledRunRepublishesCancel() {
+        givenJob(RunStatus.CANCELLED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(controlPublisher).cancel(BACKTEST_ID);
         verify(jobRepository, never()).update(any());
     }
 

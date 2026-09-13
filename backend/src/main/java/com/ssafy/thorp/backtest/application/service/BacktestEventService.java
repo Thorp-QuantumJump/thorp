@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
+import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
@@ -32,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  * DLQ로 보내지 않는다.
  *
  * <p>envelope의 {@code runId}는 <b>실행</b>의 외부 식별자다. 사용자가 보는 요청 식별자와 다르다(R-02). 취소 결과({@code
- * CANCELLED})는 워커가 취소를 구현하는 T011에서 받는다.
+ * CANCELLED})는 부분 결과와 함께 저장하고 실행을 {@code CANCELLED·partial}로 끝낸다(R-04, T011).
  *
  * <p><b>중복 실행 종결 규칙(R-18)</b>: 재발행이나 confirm 유실로 같은 실행의 메시지가 둘 생길 수 있고, 그러면 워커 둘이 같은 입력을 동시에 돈다. ①
  * {@code COMPLETED}는 어느 {@code executionId}든 적용한다 — 입력이 같으므로 결과가 같다. ② {@code FAILED}는 마지막 STARTED의
@@ -48,16 +49,19 @@ public class BacktestEventService {
 
     private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
+    private final BacktestControlPublisher controlPublisher;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestEventService(
             BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
+            BacktestControlPublisher controlPublisher,
             ApplicationEventPublisher events,
             Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
+        this.controlPublisher = controlPublisher;
         this.events = events;
         this.clock = clock;
     }
@@ -72,6 +76,16 @@ public class BacktestEventService {
     public void handleStarted(BacktestEvent<StartedPayload> event) {
         BacktestRun job = findJob(event);
         if (job == null) {
+            return;
+        }
+        if (job.getStatus() == RunStatus.CANCELLED) {
+            // 대기 중 취소된 실행이 뒤늦게 시작했다(R-04). 워커는 이 CANCEL 을 받아 첫 거래일 뒤 멈추고
+            // FINISHED 를 보내지만 그것은 종결 상태 규칙으로 무시된다.
+            log.info(
+                    "STARTED for a cancelled run; re-sending CANCEL: runId={} eventId={}",
+                    event.runId(),
+                    event.eventId());
+            controlPublisher.cancel(event.runId());
             return;
         }
         if (job.getStatus().isFinal()) {
@@ -116,11 +130,8 @@ public class BacktestEventService {
                             isCurrentExecution(job, event)
                                     ? job.markFailed(failureCode(output), failureMessage(output))
                                     : null;
-                    case CANCELLED ->
-                            throw new UnsupportedOperationException(
-                                    "CANCELLED results need the cancel flow (spec 004 T011);"
-                                            + " runId="
-                                            + event.runId());
+                    // 부분 결과(R-04). 워커가 실제로 멈춘 거래일이 완료 범위다. 먼저 도착한 것을 적용한다(R-18 ④)
+                    case CANCELLED -> job.markCancelled(event.payload().lastTradingDate());
                 };
         if (finished == null) {
             return;

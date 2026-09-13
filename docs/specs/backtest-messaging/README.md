@@ -159,7 +159,9 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 `backtest.control`(fanout)로 모든 워커에 전달된다. `{ schemaVersion=2, type=CANCEL, runId, requestedAt }`.
 워커는 자기 프로세스가 실행 중인 `runId`면 **다음 거래일 처리 시점**에 멈추고 `FINISHED(status=CANCELLED, partial=true)`를 발행한다. 모르는 `runId`는
-무시한다(다른 워커의 실행이거나 이미 끝났다). 발행 측(백엔드 T011)과 수신 루프(워커 T011)는 아직 없고 이 계약 모양만 확정한 상태다.
+무시한다(다른 워커의 실행이거나 이미 끝났다). 발행 측은 백엔드 `RabbitBacktestControlPublisher`(비영속, routing key 없음, `correlationId=runId`,
+헤더 `schemaVersion`), 수신 루프는 워커 `rabbitmq.run_control_listener`(별도 연결·스레드, exclusive·auto-delete 큐, auto-ack)다. 워커는 받은 runId를
+`CancelRegistry`에 표시하고 엔진이 거래일마다 확인한다. 끝난 runId의 표시는 지운다 — 재전달된 같은 runId가 옛 취소로 멈추면 안 된다(T011).
 
 ## 5. 표기 규약
 

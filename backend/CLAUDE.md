@@ -69,6 +69,11 @@ common: 모든 계층에서 참조 가능
 - **요청자 식별은 `CurrentRequester` 한 곳이다.** 지금은 `thorp.auth.trust-user-id-header`를 켠 환경에서만 `X-User-Id` 헤더를 읽고 기본값은 꺼짐이다 — **헤더를 믿는 것은 인증이 아니다.** spec 014가 들어오면 이 클래스만 인증 주체를 읽도록 바꾼다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
 - **시장 자료 메타데이터(대응표·자료 버전·상장일·거래일 달력)는 `MarketMetadataPort`로만 읽는다.** 원본은 spec 001 소유이고 구현은 001 적재 전까지 픽스처다(`FixtureMarketMetadataAdapter`, 워커 픽스처와 같은 세 종목·평일 달력). 가격은 이 포트로 읽지 않는다 — 가격을 읽는 것은 워커다
 - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다
+- **취소는 요청 단위다**(`BacktestCancelService`, R-04). 이 요청에 `cancelled_at`을 남기고, 같은 실행의 마지막 활성 요청일 때만 실행을 멈춘다 —
+  `QUEUED`면 바로 `CANCELLED`, `RUNNING`이면 `BacktestControlPublisher.cancel(runId)`. 합류 요청 하나만 취소하면 스냅샷(`cancelled_last_trading_date`)만
+  남기고 실행은 계속 돈다. CANCEL 발행은 취소 트랜잭션 안에서 하고 실패하면 503으로 되돌린다 — 작업 발행(커밋 후)과 다르다: 워커가 커밋보다 먼저 CANCEL을
+  받아도 해롭지 않고(멈추고 FINISHED를 보내면 그때 처리), 요청만 취소로 남고 워커가 계속 도는 상태가 더 나쁘다. 대기 중 취소된 실행의 STARTED가 뒤늦게
+  오면 `BacktestEventService.handleStarted`가 CANCEL을 다시 보낸다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
 - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
 - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다
 - 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `runId`(요청/실행 분리 전까지 `backtestId` 값과 같다)·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다

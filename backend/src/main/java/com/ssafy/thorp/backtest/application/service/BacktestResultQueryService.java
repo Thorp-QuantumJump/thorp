@@ -20,6 +20,7 @@ import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
@@ -89,9 +90,18 @@ public class BacktestResultQueryService {
             return BacktestDetailResult.withoutResult(
                     found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
         }
-        BacktestResultSummary summary = requireSummary(job);
+        Optional<BacktestResultSummary> summary = resultRepository.findSummary(job.getId());
+        if (summary.isEmpty() && job.getStatus() == RunStatus.CANCELLED) {
+            // 대기 중 취소된 실행은 워커가 돌지 않았으니 결과 행이 없는 것이 정상이다(T011).
+            return BacktestDetailResult.cancelledBeforeStart(
+                    found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
+        }
         return BacktestDetailResult.of(
-                found.request(), job, ExecutionPolicy.CURRENCY, clock.instant(), summary);
+                found.request(),
+                job,
+                ExecutionPolicy.CURRENCY,
+                clock.instant(),
+                summary.orElseThrow(() -> missingResultRow(job)));
     }
 
     /**
@@ -322,6 +332,13 @@ public class BacktestResultQueryService {
             case CANCELLED, COMPLETED -> {}
         }
         BacktestRequest request = found.request();
+        if (job.getStatus() == RunStatus.CANCELLED
+                && (job.getProgress() == null || job.getProgress().lastTradingDate() == null)) {
+            // 대기 중 취소 — 계산한 거래일이 없어 결과 행도 없다. 500(결과 유실)이 아니라 결과 없음이다.
+            throw new BusinessException(
+                    ErrorCode.NO_PARTIAL_RESULT,
+                    "실행이 시작되기 전에 취소돼 보여드릴 결과가 없습니다: backtestId=" + backtestId);
+        }
         LocalDate cutoff = null;
         if (request.isCancelled() && !request.isStoppedRun()) {
             cutoff = request.getCancelledLastTradingDate();
@@ -352,9 +369,5 @@ public class BacktestResultQueryService {
                 job.getStatus(),
                 job.getId());
         return new IllegalStateException("결과 행이 없습니다: backtestId=" + job.getBacktestId().value());
-    }
-
-    private BacktestResultSummary requireSummary(BacktestRun job) {
-        return require(resultRepository.findSummary(job.getId()), job);
     }
 }

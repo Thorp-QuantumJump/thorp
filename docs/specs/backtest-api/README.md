@@ -65,6 +65,21 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
 예전처럼 503으로 거절하고 롤백하지 않는다 — 워커의 이벤트가 커밋을 앞질러 도착하면 결과를 잃기 때문이다.
 
+## 1.5 취소 — `POST /backtests/{backtestId}/cancel`
+
+`202` `{backtestId, status: "CANCELLED", cancelRequested}`. **이 요청만** 취소한다(spec 004 R-04). 같은 실행에 합류한 다른 요청은 영향이 없고,
+마지막 활성 요청의 취소일 때만 실행을 멈춘다.
+
+| 상황 | 백엔드가 하는 일 | `cancelRequested` |
+|---|---|---|
+| 합류 요청 중 하나 | 요청에 취소 시각과 스냅샷(`progress.lastTradingDate`, 없으면 완료 거래일 없음)을 남긴다. 실행은 계속 | `false` |
+| 마지막 활성 요청, 실행 `QUEUED` | 실행을 바로 `CANCELLED`로 끝낸다(워커가 없다). 뒤늦게 워커가 시작하면 CANCEL을 보내 멈춘다 | `false` |
+| 마지막 활성 요청, 실행 `RUNNING` | `backtest.control`에 CANCEL을 보낸다. 워커는 다음 거래일 처리 시점에 멈추고 FINISHED(CANCELLED, 부분 결과)를 보낸다 | `true` |
+
+- 요청자 본인만(남의 요청은 404). 종결 상태(완료·실패·이미 취소)면 `409 NOT_CANCELLABLE`.
+- CANCEL 발행이 실패하면 `503 BROKER_UNAVAILABLE`이고 취소는 기록되지 않는다 — 그대로 다시 누르면 된다.
+- 취소한 요청의 `status`는 곧바로 `CANCELLED`다. 실행이 아직 도는 동안 상세의 `cancelRequested=true`, 하위 리소스는 `409 RESULT_NOT_READY`.
+
 ## 2. 결과 조회
 
 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec "API 응답 분리"). 필드 의미·타입·nullable 규칙은
@@ -114,8 +129,13 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
   처리하지 않았는데 0%를 보여 주면 "시작했다"로 읽힌다.
 - `queueWaitSeconds`는 접수부터 실행 시작까지다. 아직 시작 전이면 지금까지 기다린 시간이다.
 - `partial`은 취소·한도로 끊긴 부분 결과라는 뜻이다.
+- `cancelRequested`는 취소했지만 실행이 아직 끝나지 않았다는 뜻이다(워커에 CANCEL을 보내고 FINISHED를 기다리는 중). 취소한 요청의 `status`는
+  곧바로 `CANCELLED`이고(파생 상태), 완료 범위·요약은 다음 진행 배치 안에 FINISHED(CANCELLED)가 오면 채워진다. 대기 중 취소·합류 취소는 `false`다.
 - `summaryUnavailable`은 요약을 줄 수 없는 이유다. 먼저 취소해 실행이 계속 돈 요청은 `CANCELLED_WHILE_RUN_CONTINUED`이며
-  요약이 `null`이다 — 백엔드가 지표를 다시 계산하지 않기 때문이다(spec 004 R-04).
+  요약이 `null`이다 — 백엔드가 지표를 다시 계산하지 않기 때문이다(spec 004 R-04). 대기 중 취소돼 계산이 없었던 실행은
+  `CANCELLED_BEFORE_START`(결과 행 없음, 하위 리소스 `409 NO_PARTIAL_RESULT`). 취소 무응답 강제 종결 `CANCEL_UNANSWERED`는 T014.
+- 실행을 실제로 멈춘 취소(마지막 활성 요청의 취소)는 `CANCELLED`·`partial=true`이고 `summary`는 **부분 구간 기준** 값이다. `progress.lastTradingDate`는
+  워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.
 - `versions`는 202 응답과 같은 값이다.
 - `failure.code`는 엔진이 준 값(`SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION`
   `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다.
@@ -221,7 +241,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 | 404 | `RESOURCE_NOT_FOUND` | 없는 `backtestId` 조회 |
 | 409 | `RESULT_NOT_READY` | 하위 리소스(`/timeseries`·`/trades`·`/positions`)를 조회했는데 Job이 `QUEUED`·`RUNNING`이다. **재시도하면 된다** |
 | 409 | `BACKTEST_FAILED` | 하위 리소스를 조회했는데 Job이 `FAILED`다. **재시도해도 같다** — `GET /backtests/{id}`의 `error`를 본다 |
-| 409 | `NO_PARTIAL_RESULT` | 먼저 취소한 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |
+| 409 | `NO_PARTIAL_RESULT` | 취소 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소, 대기 중 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |
+| 409 | `NOT_CANCELLABLE` | 완료·실패·이미 취소한 분석의 취소 |
 | 503 | `BROKER_UNAVAILABLE` | 작업 큐에 연결 실패. Job은 저장되지 않으므로 **그대로 재시도해도 안전하다** |
 | 500 | `INTERNAL_ERROR` | 그 외. **`COMPLETED`인데 결과가 없는 데이터 손상**도 여기다 — 재시도하지 말고 백엔드 로그를 본다 |
 

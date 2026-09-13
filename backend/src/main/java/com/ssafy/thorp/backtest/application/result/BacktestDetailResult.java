@@ -22,13 +22,17 @@ import java.util.Map;
  *
  * @param status 실행 상태에 요청의 취소를 얹은 값. 요청이 취소됐으면 실행이 계속 돌아도 CANCELLED다
  * @param queueWaitSeconds 접수부터 실행 시작까지. 아직 시작 전이면 지금까지 기다린 시간이다
- * @param summaryUnavailable 요약을 줄 수 없는 이유. null = 정상(요약이 있거나 아직 끝나지 않았다)
+ * @param cancelRequested 취소했지만 실행이 아직 끝나지 않았다(워커의 FINISHED 대기). 다음 진행 배치 안에 반영된다
+ * @param summaryUnavailable 요약을 줄 수 없는 이유. null = 정상(요약이 있거나 아직 끝나지 않았다). {@code
+ *     CANCELLED_WHILE_RUN_CONTINUED} 먼저 취소해 실행이 계속 돈 요청 / {@code CANCELLED_BEFORE_START} 대기 중 취소돼
+ *     계산이 없었다 / {@code CANCEL_UNANSWERED} 취소 무응답 강제 종결(T014)
  */
 public record BacktestDetailResult(
         String backtestId,
         RunStatus status,
         ResultSource resultSource,
         boolean partial,
+        boolean cancelRequested,
         Progress progress,
         Instant queuedAt,
         Instant startedAt,
@@ -91,22 +95,32 @@ public record BacktestDetailResult(
     /** 결과 행이 아직 없는 실행(QUEUED·RUNNING). */
     public static BacktestDetailResult withoutResult(
             BacktestRequest request, BacktestRun run, String currency, Instant now) {
-        return build(request, run, currency, now, null, null);
+        return build(request, run, currency, now, null, null, null);
     }
 
-    /** 결과 행이 있는 실행(COMPLETED·FAILED·CANCELLED). 상태에 따라 요약과 실패가 갈린다. */
+    /** 대기 중 취소돼 계산이 없었던 실행. 결과 행이 없는 것이 정상이다. */
+    public static BacktestDetailResult cancelledBeforeStart(
+            BacktestRequest request, BacktestRun run, String currency, Instant now) {
+        return build(request, run, currency, now, null, "CANCELLED_BEFORE_START", null);
+    }
+
+    /**
+     * 결과 행이 있는 실행(COMPLETED·FAILED·CANCELLED). 상태에 따라 요약과 실패가 갈린다.
+     *
+     * <p>취소 실행의 요약은 부분 구간 기준이다(partial). 성과가 없는 결과(실패)는 요약도 없다.
+     */
     public static BacktestDetailResult of(
             BacktestRequest request,
             BacktestRun run,
             String currency,
             Instant now,
             BacktestResultSummary result) {
-        Summary summary = run.getStatus() == RunStatus.COMPLETED ? summary(result) : null;
+        Summary summary = result.performance() == null ? null : summary(result);
         Failure failure =
                 result.errorCode() == null
                         ? null
                         : new Failure(result.errorCode(), result.errorMessage());
-        return build(request, run, currency, now, summary, failure);
+        return build(request, run, currency, now, summary, null, failure);
     }
 
     private static BacktestDetailResult build(
@@ -115,6 +129,7 @@ public record BacktestDetailResult(
             String currency,
             Instant now,
             Summary summary,
+            String unavailableReason,
             Failure failure) {
         boolean cancelledRequest = request.isCancelled();
         RunStatus status = cancelledRequest ? RunStatus.CANCELLED : run.getStatus();
@@ -123,7 +138,7 @@ public record BacktestDetailResult(
                         run.getProgress() == null ? null : run.getProgress().lastTradingDate());
         // 먼저 취소해 실행이 계속 돈 요청은 자기 스냅샷 구간의 요약을 갖지 못한다 — 백엔드가 지표를
         // 다시 계산하지 않기 때문이다(원칙 1). 요약이 없는 이유를 숨기지 않고 이름을 붙여 돌려준다.
-        String summaryUnavailable = null;
+        String summaryUnavailable = unavailableReason;
         Summary visibleSummary = summary;
         if (cancelledRequest && !request.isStoppedRun()) {
             visibleSummary = null;
@@ -134,6 +149,7 @@ public record BacktestDetailResult(
                 status,
                 request.getResultSource(),
                 cancelledRequest || run.isPartial(),
+                cancelledRequest && !run.getStatus().isFinal(),
                 progress(run, completedRange),
                 run.getLifecycle().queuedAt(),
                 run.getLifecycle().startedAt(),
