@@ -262,7 +262,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("취소 요청의 거래 경계: 진입·청산이 모두 경계 전인 거래만 보인다 — 취소일을 가로지르는 거래는 빠진다")
+    @DisplayName("취소 요청의 거래 경계: 경계 전에 청산된 거래만 보인다 — 가로지르는 거래와 OPEN 거래는 빠진다")
     void tradesCrossingTheVisibleBoundaryAreExcluded() {
         Long jobId = saveFixtureResult();
         // 픽스처: TRD-000001 01-22 → 03-12 CLOSED, TRD-000002 02-06 → 04-03 CLOSED, TRD-000003 05-14
@@ -285,6 +285,13 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                                 .getTotalElements())
                 .isEqualTo(1);
         assertThat(resultRepository.findTrades(jobId, all, null).getTotalElements()).isEqualTo(3);
+        // 끝까지 OPEN 인 거래(05-14 진입)는 경계가 그 뒤(06-01)여도 보이지 않는다 — 저장된 OPEN 행은 실행
+        // 종료 시점 값(분할·부분 매도로 수량·수수료가 바뀐다)이라 경계 시점 상태가 아니다
+        Instant june =
+                LocalDate.parse("2025-06-01").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        assertThat(resultRepository.findTrades(jobId, all, june).getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000001", "TRD-000002");
     }
 
     @Test

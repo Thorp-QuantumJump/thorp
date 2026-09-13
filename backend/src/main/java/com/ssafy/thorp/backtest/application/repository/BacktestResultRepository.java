@@ -76,8 +76,8 @@ public interface BacktestResultRepository {
      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.
      */
     /**
-     * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>진입하고 청산까지 끝난</b>(또는
-     *     끝까지 열려 있던) 거래만 본다 — 경계를 가로지르는 거래는 청산 정보가 스냅샷 밖이라 보이지 않는다(R-04)
+     * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>청산된</b> 거래만 본다 — 가로지르는
+     *     거래와 OPEN 거래는 저장된 값이 실행 종료 시점이라 경계 시점 상태가 아니다(R-04)
      */
     Page<EngineOutput.TradeResult> findTrades(
             Long runId, FindBacktestTradesQuery query, Instant visibleBefore);
