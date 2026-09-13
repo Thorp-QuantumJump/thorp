@@ -119,7 +119,8 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
 - **취소(R-04)**: `main.py` 가 `CancelRegistry` 하나를 만들어 엔진과 `run_consumer` 에 넘긴다. `rabbitmq.run_control_listener`
   (별도 연결·데몬 스레드)가 `backtest.control` 의 CANCEL 을 받아 표시하고, 엔진은 거래일마다 자기 runId 를 확인해 멈춘다.
   결과는 `lastTradingDate` 까지의 부분 결과이고 소비자는 `FINISHED{status: CANCELLED, partial: true}` 로 발행한 뒤 ACK 한다.
-  끝난 runId 의 표시는 지운다 — 재전달된 같은 runId 가 옛 취소로 바로 멈추면 안 된다.
+  레지스트리는 **활성 실행만** 받는다(소비자가 STARTED 앞에서 `begin`, 끝나면 `end`) — 남의 실행·끝난 실행의 CANCEL 은 버리고,
+  재전달된 같은 runId 는 새 실행이라 옛 취소를 물려받지 않는다. `run_consumer` 는 제어 큐가 바인딩된 뒤에야 작업을 받는다.
 - 버전은 `worker.__version__` 한 곳이 원본이다(pyproject `dynamic`). 운영 이미지는 패키지를 설치하지
   않으므로 `importlib.metadata` 를 쓰지 않는다.
 - **수기 대조**(SC-003): `tests/fixtures/manual_reconciliation.json` 의 기대값은

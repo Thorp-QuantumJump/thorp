@@ -67,6 +67,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private BacktestEventService events;
+    @Autowired private BacktestCancelService cancelService;
     @Autowired private BacktestRunRepository runRepository;
     @Autowired private BacktestRequestRepository requestRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -257,6 +258,51 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         JsonNode bSeries = timeseries(b, userB);
         assertThat(bSeries.get("partial").asBoolean()).isFalse();
         assertThat(bSeries.get("points").size()).isEqualTo(129);
+    }
+
+    @Test
+    @DisplayName("두 요청이 동시에 취소해도 마지막 판정은 직렬화된다 — CANCEL 은 정확히 한 번, stoppedRun 도 하나만")
+    void concurrentCancelsStillStopTheRunExactlyOnce() throws Exception {
+        long userA = newUser();
+        long userB = newUser();
+        BacktestRun run = runningWithProgress();
+        String a = requestFor(run, userA, ResultSource.NEW);
+        String b = requestFor(run, userB, ResultSource.JOINED);
+
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<?> first =
+                    pool.submit(
+                            () -> {
+                                go.await();
+                                return cancelService.cancel(a, userA);
+                            });
+            java.util.concurrent.Future<?> second =
+                    pool.submit(
+                            () -> {
+                                go.await();
+                                return cancelService.cancel(b, userB);
+                            });
+            go.countDown();
+            first.get(30, java.util.concurrent.TimeUnit.SECONDS);
+            second.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        verify(controlPublisher, org.mockito.Mockito.times(1)).cancel(run.getBacktestId().value());
+        List<BacktestRequest> requests = requestRepository.findByRunId(run.getId());
+        assertThat(requests).allMatch(BacktestRequest::isCancelled);
+        assertThat(requests.stream().filter(BacktestRequest::isStoppedRun).count()).isEqualTo(1);
+        assertThat(
+                        runRepository
+                                .findById(run.getId())
+                                .orElseThrow()
+                                .getLifecycle()
+                                .cancelRequestedAt())
+                .isNotNull();
     }
 
     @Test

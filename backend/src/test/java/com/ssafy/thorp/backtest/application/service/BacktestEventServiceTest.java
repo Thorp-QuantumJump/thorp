@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
-import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -52,16 +51,13 @@ class BacktestEventServiceTest {
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @Mock private ApplicationEventPublisher events;
-    @Mock private BacktestControlPublisher controlPublisher;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service =
-                new BacktestEventService(
-                        jobRepository, resultRepository, controlPublisher, events, clock);
+        service = new BacktestEventService(jobRepository, resultRepository, events, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -228,7 +224,6 @@ class BacktestEventServiceTest {
                 ArgumentCaptor.forClass(BacktestFinished.class);
         verify(events).publishEvent(published.capture());
         assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
-        verifyNoInteractions(controlPublisher);
     }
 
     @Test
@@ -238,7 +233,7 @@ class BacktestEventServiceTest {
 
         service.handleStarted(MessageFixtures.started());
 
-        verify(controlPublisher).cancel(BACKTEST_ID);
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
         verify(jobRepository, never()).update(any());
     }
 

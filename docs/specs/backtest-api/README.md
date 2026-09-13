@@ -77,7 +77,11 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | 마지막 활성 요청, 실행 `RUNNING` | `backtest.control`에 CANCEL을 보낸다. 워커는 다음 거래일 처리 시점에 멈추고 FINISHED(CANCELLED, 부분 결과)를 보낸다 | `true` |
 
 - 요청자 본인만(남의 요청은 404). 종결 상태(완료·실패·이미 취소)면 `409 NOT_CANCELLABLE`.
-- CANCEL 발행이 실패하면 `503 BROKER_UNAVAILABLE`이고 취소는 기록되지 않는다 — 그대로 다시 누르면 된다.
+- 취소 의도는 먼저 커밋되고 CANCEL은 커밋 뒤에 나간다(작업 발행과 같은 방식). 발행이 실패해도 202이며, 실행에 남은 취소 의도
+  (`cancel_requested_at`)를 보고 유예 감시(T014)가 다시 보낸다. 같은 실행의 동시 취소는 실행 행 잠금으로 직렬화돼 마지막 요청 판정이 어긋나지 않는다.
+- **취소 대기 중인 실행에는 새 요청이 합류하지 않는다.** CANCEL을 보냈고 FINISHED가 아직 오지 않은 실행과 같은 조건으로 `POST /backtests`를
+  보내면 `409 CANCEL_PENDING`이다 — 합류시키면 취소하지 않은 요청까지 부분 결과로 끝나고, 새 실행은 동일 버전 인덱스 때문에 그 실행이 종결될 때까지
+  만들 수 없다. 워커가 다음 거래일에 멈추면(수 초) 다시 요청하면 된다.
 - 취소한 요청의 `status`는 곧바로 `CANCELLED`다. 실행이 아직 도는 동안 상세의 `cancelRequested=true`, 하위 리소스는 `409 RESULT_NOT_READY`.
 
 ## 2. 결과 조회
@@ -243,6 +247,7 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 | 409 | `BACKTEST_FAILED` | 하위 리소스를 조회했는데 Job이 `FAILED`다. **재시도해도 같다** — `GET /backtests/{id}`의 `error`를 본다 |
 | 409 | `NO_PARTIAL_RESULT` | 취소 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소, 대기 중 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |
 | 409 | `NOT_CANCELLABLE` | 완료·실패·이미 취소한 분석의 취소 |
+| 409 | `CANCEL_PENDING` | 같은 조건의 실행이 취소 처리 중(CANCEL 발행 뒤 FINISHED 전)이라 합류할 수 없다. **잠시 뒤 재시도** |
 | 503 | `BROKER_UNAVAILABLE` | 작업 큐에 연결 실패. Job은 저장되지 않으므로 **그대로 재시도해도 안전하다** |
 | 500 | `INTERNAL_ERROR` | 그 외. **`COMPLETED`인데 결과가 없는 데이터 손상**도 여기다 — 재시도하지 말고 백엔드 로그를 본다 |
 

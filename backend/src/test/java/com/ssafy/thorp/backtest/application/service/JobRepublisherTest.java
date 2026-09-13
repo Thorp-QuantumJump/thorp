@@ -96,7 +96,8 @@ class JobRepublisherTest {
                 42,
                 com.ssafy.thorp.backtest.domain.model.RunState.of(RunStatus.QUEUED),
                 com.ssafy.thorp.backtest.domain.model.RunPlan.empty(),
-                new RunLifecycle(NOW.minusSeconds(600), null, null, publishedAt, publishCount, 0));
+                new RunLifecycle(
+                        NOW.minusSeconds(600), null, null, publishedAt, publishCount, 0, null));
     }
 
     private void givenStaleRun() {

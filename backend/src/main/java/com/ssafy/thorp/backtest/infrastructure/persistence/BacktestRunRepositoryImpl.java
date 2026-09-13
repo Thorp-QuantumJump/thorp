@@ -51,7 +51,8 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                     run.getLifecycle().finishedAt(),
                     run.getLifecycle().publishedAt(),
                     run.getLifecycle().publishCount(),
-                    run.getLifecycle().dlqCount());
+                    run.getLifecycle().dlqCount(),
+                    run.getLifecycle().cancelRequestedAt());
         }
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
@@ -92,6 +93,16 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                 run.getLifecycle().startedAt(),
                 run.getLifecycle().finishedAt());
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    public Optional<BacktestRun> findByIdForUpdate(Long id) {
+        return jpaRepository.lockById(id).map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public void recordCancelRequested(Long runId, Instant at) {
+        jpaRepository.markCancelRequested(runId, at);
     }
 
     @Override

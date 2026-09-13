@@ -194,6 +194,14 @@ public class BacktestService {
      * 아니다.
      */
     private BacktestJobResult joinExisting(CreateBacktestCommand command, BacktestRun run) {
+        if (run.getLifecycle().cancelRequestedAt() != null) {
+            // 마지막 활성 요청이 취소해 CANCEL 을 보낸 실행이다. 워커가 다음 거래일에 멈추고 FINISHED(CANCELLED)를 보내면
+            // 종결된다 — 여기에 합류시키면 취소하지 않은 이 요청까지 부분 결과로 끝난다(R-04). 새 실행은 동일 버전
+            // 부분 유니크 인덱스(status IN QUEUED·RUNNING·COMPLETED) 때문에 그때까지 만들 수 없으니 잠시 뒤 다시 오게 한다.
+            throw new BusinessException(
+                    ErrorCode.CANCEL_PENDING,
+                    "같은 조건의 실행이 취소 처리 중입니다: runId=" + run.getBacktestId().value());
+        }
         ResultSource source =
                 run.getStatus() == RunStatus.COMPLETED ? ResultSource.REUSED : ResultSource.JOINED;
         BacktestRequest request =

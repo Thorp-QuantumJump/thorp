@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
@@ -42,6 +41,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 /** 취소 유스케이스(spec 004 R-04, T011): 마지막 활성 요청 규칙과 스냅샷. */
 @ExtendWith(MockitoExtension.class)
@@ -56,7 +56,7 @@ class BacktestCancelServiceTest {
 
     @Mock private BacktestRunRepository runRepository;
     @Mock private BacktestRequestRepository requestRepository;
-    @Mock private BacktestControlPublisher controlPublisher;
+    @Mock private ApplicationEventPublisher events;
 
     private BacktestCancelService service;
 
@@ -64,10 +64,7 @@ class BacktestCancelServiceTest {
     void createService() {
         service =
                 new BacktestCancelService(
-                        runRepository,
-                        requestRepository,
-                        controlPublisher,
-                        Clock.fixed(NOW, ZoneOffset.UTC));
+                        runRepository, requestRepository, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static BacktestRequest request(long requesterId, Instant cancelledAt) {
@@ -115,7 +112,7 @@ class BacktestCancelServiceTest {
     private void given(BacktestRun run, long activeRequests) {
         when(requestRepository.findByBacktestId(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, null)));
-        when(runRepository.findById(RUN_PK)).thenReturn(Optional.of(run));
+        when(runRepository.findByIdForUpdate(RUN_PK)).thenReturn(Optional.of(run));
         when(requestRepository.countActiveByRunId(RUN_PK)).thenReturn(activeRequests);
     }
 
@@ -126,7 +123,7 @@ class BacktestCancelServiceTest {
     }
 
     @Test
-    @DisplayName("마지막 활성 요청이 RUNNING 실행을 취소하면 CANCEL 을 보내고 stoppedRun=true·스냅샷 없음이다")
+    @DisplayName("마지막 활성 요청이 RUNNING 실행을 취소하면 실행 행을 잠근 채 취소 의도를 기록하고 커밋 뒤 CANCEL 을 보내게 한다")
     void lastActiveRequestOnRunningRunSendsCancel() {
         given(run(RunStatus.RUNNING, PROGRESS_DATE), 1);
 
@@ -141,7 +138,9 @@ class BacktestCancelServiceTest {
         assertThat(cancelled.isStoppedRun()).isTrue();
         // 범위는 FINISHED(CANCELLED)가 run 에 남긴다 — 워커는 마지막 PROGRESS 뒤 며칠을 더 계산한다(R-04)
         assertThat(cancelled.getCancelledLastTradingDate()).isNull();
-        verify(controlPublisher).cancel(RUN_ID);
+        // 취소 의도는 커밋되는 컬럼에 남기고, CANCEL 발행은 커밋 뒤 디스패처가 한다(작업 발행과 같은 이유)
+        verify(runRepository).recordCancelRequested(RUN_PK, NOW);
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(RUN_ID));
         verify(runRepository, never()).update(any());
     }
 
@@ -159,7 +158,8 @@ class BacktestCancelServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(RunStatus.CANCELLED);
         assertThat(captor.getValue().getLifecycle().finishedAt()).isEqualTo(NOW);
         assertThat(updatedRequest().isStoppedRun()).isTrue();
-        verifyNoInteractions(controlPublisher);
+        verify(runRepository, never()).recordCancelRequested(any(), any());
+        verifyNoInteractions(events);
     }
 
     @Test
@@ -175,7 +175,7 @@ class BacktestCancelServiceTest {
         assertThat(cancelled.isStoppedRun()).isFalse();
         assertThat(cancelled.getCancelledLastTradingDate()).isEqualTo(PROGRESS_DATE);
         verify(runRepository, never()).update(any());
-        verifyNoInteractions(controlPublisher);
+        verifyNoInteractions(events);
     }
 
     @Test
@@ -193,7 +193,7 @@ class BacktestCancelServiceTest {
     void finalOrAlreadyCancelledIsNotCancellable() {
         when(requestRepository.findByBacktestId(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, null)));
-        when(runRepository.findById(RUN_PK))
+        when(runRepository.findByIdForUpdate(RUN_PK))
                 .thenReturn(Optional.of(run(RunStatus.COMPLETED, PROGRESS_DATE)));
         assertThatThrownBy(() -> service.cancel(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BusinessException.class)
@@ -202,7 +202,7 @@ class BacktestCancelServiceTest {
 
         when(requestRepository.findByBacktestId(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, NOW.minusSeconds(60))));
-        when(runRepository.findById(RUN_PK))
+        when(runRepository.findByIdForUpdate(RUN_PK))
                 .thenReturn(Optional.of(run(RunStatus.RUNNING, PROGRESS_DATE)));
         assertThatThrownBy(() -> service.cancel(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BusinessException.class)
@@ -219,6 +219,6 @@ class BacktestCancelServiceTest {
 
         assertThatThrownBy(() -> service.cancel(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
-        verifyNoInteractions(controlPublisher);
+        verifyNoInteractions(events);
     }
 }

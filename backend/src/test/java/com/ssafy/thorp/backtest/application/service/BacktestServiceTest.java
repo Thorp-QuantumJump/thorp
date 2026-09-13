@@ -233,6 +233,22 @@ class BacktestServiceTest {
     }
 
     @Test
+    @DisplayName("취소 대기 중인 실행(CANCEL 을 보냈고 FINISHED 전)에는 합류하지 않는다 — 409 CANCEL_PENDING")
+    void doesNotJoinACancelPendingRun() {
+        BacktestRun running = saved(runningRun(), 11L);
+        BacktestRun cancelPending =
+                running.withLifecycle(running.getLifecycle().cancelRequested(NOW.minusSeconds(5)));
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(cancelPending));
+
+        assertThatThrownBy(() -> service.create(fixedWeight()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.CANCEL_PENDING);
+        verify(requestRepository, never()).save(any());
+        verify(runRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("완료된 실행이 있으면 결과를 재사용한다 — 상태가 이미 COMPLETED다")
     void reusesCompletedRun() {
         when(runRepository.findActiveByDedupKey(any()))

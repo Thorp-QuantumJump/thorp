@@ -2,7 +2,6 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
-import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
@@ -49,19 +48,16 @@ public class BacktestEventService {
 
     private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
-    private final BacktestControlPublisher controlPublisher;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestEventService(
             BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
-            BacktestControlPublisher controlPublisher,
             ApplicationEventPublisher events,
             Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
-        this.controlPublisher = controlPublisher;
         this.events = events;
         this.clock = clock;
     }
@@ -85,7 +81,7 @@ public class BacktestEventService {
                     "STARTED for a cancelled run; re-sending CANCEL: runId={} eventId={}",
                     event.runId(),
                     event.eventId());
-            controlPublisher.cancel(event.runId());
+            events.publishEvent(new BacktestCancelDispatcher.CancelRequested(event.runId()));
             return;
         }
         if (job.getStatus().isFinal()) {

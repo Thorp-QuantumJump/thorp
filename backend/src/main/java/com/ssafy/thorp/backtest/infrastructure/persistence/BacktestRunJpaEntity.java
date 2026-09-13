@@ -103,9 +103,9 @@ public class BacktestRunJpaEntity extends BaseEntity {
      *
      * <p>마이그레이션이 만든 나머지 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·
      * data_version·request_spec·versions·effective_start/end·queued_at·started_at·finished_at·
-     * published_at·publish_count·dlq_count·cancel_requested_at)은 아직 매핑하지 않는다. 그 값을 쓰는 접수·재사용· 취소·측정
-     * 경로가 T005·T010·T011·T012라서, 쓰는 코드와 같은 MR에서 매핑을 붙이는 편이 낫다. 컬럼이 실제로 있는지는 {@code
-     * FlywayMigrationTest}가 본다. NOT NULL 컬럼에는 모두 기본값이 있어 INSERT는 문제없다.
+     * published_at·publish_count·dlq_count)은 아직 매핑하지 않는다. 그 값을 쓰는 접수·재사용·측정 경로가 T005·T010·T012라서,
+     * 쓰는 코드와 같은 MR에서 매핑을 붙이는 편이 낫다. 컬럼이 실제로 있는지는 {@code FlywayMigrationTest}가 본다. NOT NULL 컬럼에는 모두
+     * 기본값이 있어 INSERT는 문제없다.
      */
     @Column(nullable = false)
     private int attempt;
@@ -165,6 +165,9 @@ public class BacktestRunJpaEntity extends BaseEntity {
 
     @Column(nullable = false)
     private int dlqCount;
+
+    /** 마지막 활성 요청의 취소로 CANCEL 을 보낸 시각(R-04). 취소 경로 전용 UPDATE 로만 쓴다. null = 취소 대기 아님 */
+    private Instant cancelRequestedAt;
 
     @Column(nullable = false)
     private Instant queuedAt;
@@ -265,7 +268,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
             Instant finishedAt,
             Instant publishedAt,
             int publishCount,
-            int dlqCount) {
+            int dlqCount,
+            Instant cancelRequestedAt) {
         if (queuedAt != null) {
             this.queuedAt = queuedAt;
         }
@@ -274,6 +278,7 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.publishedAt = publishedAt;
         this.publishCount = publishCount;
         this.dlqCount = dlqCount;
+        this.cancelRequestedAt = cancelRequestedAt;
     }
 
     /**
@@ -355,6 +360,10 @@ public class BacktestRunJpaEntity extends BaseEntity {
 
     public int getPublishCount() {
         return publishCount;
+    }
+
+    public Instant getCancelRequestedAt() {
+        return cancelRequestedAt;
     }
 
     public int getDlqCount() {

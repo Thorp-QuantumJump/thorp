@@ -23,6 +23,7 @@ public enum ErrorCode {
     NOT_CANCELLABLE(HttpStatus.CONFLICT, "이미 끝난 분석은 취소할 수 없습니다."),
     NOT_RETRYABLE(HttpStatus.CONFLICT, "실패하거나 취소한 분석만 다시 시도할 수 있습니다."),
     NO_PARTIAL_RESULT(HttpStatus.CONFLICT, "취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다."),
+    CANCEL_PENDING(HttpStatus.CONFLICT, "같은 조건의 실행이 취소 처리 중입니다. 잠시 후 다시 요청해 주세요."),
 
     // spec 007 자동 파라미터 탐색. 계약은 specs/007-auto-parameter-search/contracts/param-search-api.md §6.
     CANDIDATE_LIMIT_EXCEEDED(

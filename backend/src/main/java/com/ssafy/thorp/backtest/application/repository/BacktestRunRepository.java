@@ -24,6 +24,15 @@ public interface BacktestRunRepository {
 
     Optional<BacktestRun> findById(Long id);
 
+    /**
+     * 행 잠금을 잡고 읽는다(SELECT … FOR UPDATE). 같은 실행의 마지막 활성 요청 판정을 직렬화한다(R-04) — 두 요청이 동시에 취소하면 둘 다 "다른
+     * 활성 요청이 남았다"고 읽어 아무도 실행을 멈추지 않는다.
+     */
+    Optional<BacktestRun> findByIdForUpdate(Long id);
+
+    /** 마지막 활성 요청의 취소로 CANCEL 을 보내기로 했다. 이 컬럼만 쓴다(상태 전이·발행 경로와 부딪히지 않는다). */
+    void recordCancelRequested(Long runId, Instant at);
+
     Optional<BacktestRun> findByBacktestId(String backtestId);
 
     /**

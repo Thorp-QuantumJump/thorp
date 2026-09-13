@@ -1,6 +1,5 @@
 package com.ssafy.thorp.backtest.application.service;
 
-import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
@@ -15,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,17 +40,17 @@ public class BacktestCancelService {
 
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
-    private final BacktestControlPublisher controlPublisher;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestCancelService(
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
-            BacktestControlPublisher controlPublisher,
+            ApplicationEventPublisher events,
             Clock clock) {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
-        this.controlPublisher = controlPublisher;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -61,9 +61,10 @@ public class BacktestCancelService {
                         .findByBacktestId(backtestId)
                         .filter(found -> found.getRequesterId() == requesterId)
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+        // 실행 행을 잠근다 — 같은 실행의 취소가 동시에 들어오면 마지막 활성 요청 판정이 어긋난다.
         BacktestRun run =
                 runRepository
-                        .findById(request.getRunId())
+                        .findByIdForUpdate(request.getRunId())
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
         if (request.isCancelled() || run.getStatus().isFinal()) {
             throw new BusinessException(
@@ -89,8 +90,14 @@ public class BacktestCancelService {
             runRepository.update(cancelled.withLifecycle(cancelled.getLifecycle().finished(now)));
             return new BacktestCancelResult(backtestId, RunStatus.CANCELLED, false);
         }
-        controlPublisher.cancel(run.getBacktestId().value());
-        log.info("CANCEL sent: backtestId={} runId={}", backtestId, run.getBacktestId().value());
+        // 취소 의도는 커밋되는 컬럼에 남기고(접수가 합류를 막고, 유예 감시가 기다리는 근거), CANCEL 은 커밋 뒤 보낸다.
+        runRepository.recordCancelRequested(run.getId(), now);
+        events.publishEvent(
+                new BacktestCancelDispatcher.CancelRequested(run.getBacktestId().value()));
+        log.info(
+                "cancel requested for the run: backtestId={} runId={}",
+                backtestId,
+                run.getBacktestId().value());
         return new BacktestCancelResult(backtestId, RunStatus.CANCELLED, true);
     }
 }
