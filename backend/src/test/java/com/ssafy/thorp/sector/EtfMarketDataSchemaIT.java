@@ -189,8 +189,12 @@ class EtfMarketDataSchemaIT {
     class Shape {
 
         @Test
-        @DisplayName("관계형 6개와 시계열 5개, 모두 11개 표를 만든다")
-        void createsElevenTables() {
+        @DisplayName("관계형 7개와 시계열 5개, 모두 12개 표를 만든다")
+        void createsTwelveTables() {
+            // data-model.md가 정의한 표는 12개다. T003이 11개를 만들면서 instrument_profile을
+            // 빠뜨렸고 T013이 V20260913103000__instrument_profile.sql로 뒤늦게 채웠는데, 이 검사가
+            // 함께 넓어지지 않아 "빠진 표"를 다시 놓쳐도 여기서 잡히지 않았다. 열두 번째를 넣어
+            // 목록이 data-model.md와 같은 수를 세게 한다.
             assertThat(
                             jdbcTemplate.queryForList(
                                     "SELECT LOWER(table_name) FROM information_schema.tables"
@@ -198,9 +202,9 @@ class EtfMarketDataSchemaIT {
                                             + " AND LOWER(table_name) IN ('sector',"
                                             + " 'representative_etf', 'sector_etf_map_version',"
                                             + " 'sector_etf_map_entry', 'dataset_version',"
-                                            + " 'reconciliation_record', 'daily_price',"
-                                            + " 'corporate_action', 'daily_index', 'data_gap',"
-                                            + " 'suspension_period')",
+                                            + " 'reconciliation_record', 'instrument_profile',"
+                                            + " 'daily_price', 'corporate_action', 'daily_index',"
+                                            + " 'data_gap', 'suspension_period')",
                                     String.class))
                     .containsExactlyInAnyOrder(
                             "sector",
@@ -209,6 +213,7 @@ class EtfMarketDataSchemaIT {
                             "sector_etf_map_entry",
                             "dataset_version",
                             "reconciliation_record",
+                            "instrument_profile",
                             "daily_price",
                             "corporate_action",
                             "daily_index",
