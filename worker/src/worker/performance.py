@@ -84,8 +84,8 @@ def calculate_analytics(
       쌍(변동성 0)은 키를 뺀다.
     - ``riskContribution``: wᵢ(Σw)ᵢ / wᵀΣw. w 는 리밸런싱 기록의 실제 비중 평균, Σ 는 표본 공분산.
       기록이 없거나 포트폴리오 분산이 0 이면 None.
-    - ``lossContribution``: 종목별 손익(실현 + 종료일 미실현 + 분배금)이 전체 손익에서 차지하는
-      비율. 합은 1 이다. 전체 손익이 0 이면 None.
+    - ``lossContribution``: 종목별 손익(실현 + 종료일 미실현 − 미청산 매수 수수료 + 분배금)이 전체
+      손익에서 차지하는 비율. 합은 1 이고 손익 합은 자산 증감과 같다. 전체 손익이 0 이면 None.
     - ``weightError``: 리밸런싱마다 기록한 Σ|target − actual| 의 평균.
     """
     return Analytics(
@@ -163,6 +163,10 @@ def _loss_contribution(
     for trade in trades:
         if trade.realized_pnl is not None:
             pnl[trade.instrument_id] = pnl.get(trade.instrument_id, ZERO) + trade.realized_pnl
+        else:
+            # OPEN 거래의 미실현 손익 (종가 − 매수가) × 수량에는 매수 수수료가 없다. 빼야 손익 합이
+            # 자산 증감과 같다(호가차·슬리피지는 매수가에 이미 들어 있다).
+            pnl[trade.instrument_id] = pnl.get(trade.instrument_id, ZERO) - trade.commission
     for position in series[-1].positions or []:
         pnl[position.instrument_id] = (
             pnl.get(position.instrument_id, ZERO) + position.unrealized_pnl

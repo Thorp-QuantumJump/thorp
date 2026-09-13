@@ -184,6 +184,26 @@ def test_loss_contribution_is_each_instruments_share_of_total_pnl() -> None:
     assert result.loss_contribution == {A: Decimal("0.8"), B: Decimal("0.2")}
 
 
+def test_loss_contribution_subtracts_the_entry_commission_of_open_trades() -> None:
+    """미실현 손익 (종가 − 매수가) × 수량에는 매수 수수료가 없다. 빼지 않으면 손익 합이 실제 자산
+    증감과 어긋난다(2차 리뷰 2)."""
+    open_b = trade(B, 1, 100)
+    open_b.commission = Decimal(5)
+    last_positions = [
+        PositionSnapshot(
+            instrument_id=B,
+            quantity=Decimal(1),
+            market_value=Decimal(1),
+            weight=Decimal(1),
+            unrealized_pnl=Decimal(20),
+        )
+    ]
+    series = snapshots([100, 100, 145], last_positions)
+    # A: 실현 +30. B: 미실현 +20 − 수수료 5 = 15. 합 45 = 자산 증감(145 − 100)
+    result = analytics(series=series, trades=[trade(A, 1, 100, 130, 30), open_b])
+    assert result.loss_contribution == {A: Decimal("0.66666667"), B: Decimal("0.33333333")}
+
+
 def test_loss_contribution_is_none_when_total_pnl_is_zero() -> None:
     trades = [trade(A, 1, 100, 110, 10), trade(B, 1, 100, 90, -10)]
     assert analytics(trades=trades).loss_contribution is None
