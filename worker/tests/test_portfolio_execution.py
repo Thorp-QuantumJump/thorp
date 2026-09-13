@@ -33,6 +33,7 @@ from worker.portfolio_execution import (
     WEIGHT_ROUNDING,
     CallbackError,
     EngineFailure,
+    execute_portfolio,
     plan_days,
 )
 
@@ -496,6 +497,77 @@ def test_artifacts_hold_orders_and_reproducibility_metadata() -> None:
     assert all(o.submitted_time and o.fill_time and o.reference_price for o in artifacts.orders)
     assert output.versions is not None and output.versions.data == "FIXTURE-three_etf_24m"
     assert output.versions.mapping == "SECTOR-ETF-2026-09"
+
+
+# --- 지표·참조 버전(T008) --------------------------------------------------------------------
+
+
+def test_completed_output_carries_analytics_and_reference_versions() -> None:
+    output = completed(
+        **three_etf(
+            "2024-01-02",
+            "2024-06-28",
+            execution={"costProfile": FULL_COSTS},
+            allocation={
+                "strategyId": "FIXED_WEIGHT",
+                "rulesVersion": "1",
+                "rules": {"investedFraction": "1.0000", "provisional": True},
+                "parameters": {"rebalance": "MONTH_END"},
+            },
+        )
+    )
+    analytics = output.analytics
+    assert analytics is not None and analytics.method == "sample-covariance-daily"
+    instruments = {SEMICONDUCTOR, BATTERY, BIO}
+    assert analytics.correlation_matrix is not None
+    assert set(analytics.correlation_matrix) == instruments
+    assert analytics.risk_contribution is not None
+    assert set(analytics.risk_contribution) == instruments
+    assert abs(sum(analytics.risk_contribution.values()) - 1) < Decimal("1e-6")
+    assert analytics.loss_contribution is not None
+    assert abs(sum(analytics.loss_contribution.values()) - 1) < Decimal("1e-6")
+    assert analytics.turnover is not None and analytics.turnover > 0
+    assert analytics.weight_error is not None and analytics.weight_error >= 0
+    assert analytics.recovery_days is None or analytics.recovery_days >= 0
+
+    versions = output.versions
+    assert versions is not None
+    assert versions.worker == "thorp-worker 0.1.1"
+    assert versions.rules is not None and versions.rules.provisional is True
+    assert versions.engine == "nautilus_trader 1.219.0"
+
+
+def test_rules_provisional_is_omitted_when_the_rules_copy_does_not_say() -> None:
+    output = completed(**three_etf("2024-01-02", "2024-03-29"))
+    assert output.versions is not None and output.versions.rules is not None
+    assert output.versions.rules.provisional is None
+
+
+def test_partial_output_is_assembled_from_the_series_up_to_last_trading_date() -> None:
+    """취소·한도(T011·T014)는 lastTradingDate 까지의 시계열로 같은 함수가 결과를 만든다."""
+    from datetime import UTC, datetime
+
+    from worker.engine_runner import assemble_output
+
+    request = EngineInput.model_validate(engine_input_body(**three_etf("2024-01-02", "2024-03-29")))
+    market = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        request.universe.instrument_ids, request.run.start, request.run.end
+    )
+    calendar = market.trading_days
+    first = evaluation_start(request, calendar)
+    plan = plan_days(calendar, first, request.run.end, "MONTH_END")
+    execution = execute_portfolio(request, market, plan, None)
+    execution.series = execution.series[:20]  # T011 은 여기서 엔진을 멈춘다
+
+    output = assemble_output(
+        request, market, execution, datetime.now(UTC), status=RunStatus.CANCELLED, partial=True
+    )
+    assert output.run.status is RunStatus.CANCELLED and output.run.partial is True
+    assert output.run.last_trading_date == execution.series[-1].date
+    assert output.run.effective_end == execution.series[-1].date
+    assert output.performance is not None
+    assert output.performance.final_equity == execution.series[-1].equity
+    assert output.analytics is not None and output.execution is not None
 
 
 # --- 리뷰 반영 (1차) ----------------------------------------------------------------------------
