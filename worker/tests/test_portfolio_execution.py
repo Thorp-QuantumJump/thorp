@@ -521,7 +521,9 @@ def test_completed_output_carries_analytics_and_reference_versions() -> None:
 
     versions = output.versions
     assert versions is not None
-    assert versions.worker == "thorp-worker 0.1.1"
+    import worker
+
+    assert versions.worker == f"thorp-worker {worker.__version__}" == "thorp-worker 0.1.1"
     assert versions.rules is not None and versions.rules.provisional is True
     assert versions.engine == "nautilus_trader 1.219.0"
 
@@ -532,31 +534,56 @@ def test_rules_provisional_is_omitted_when_the_rules_copy_does_not_say() -> None
     assert output.versions.rules.provisional is None
 
 
-def test_partial_output_is_assembled_from_the_series_up_to_last_trading_date() -> None:
-    """취소·한도(T011·T014)는 lastTradingDate 까지의 시계열로 같은 함수가 결과를 만든다."""
+def test_partial_output_after_an_early_stop_keeps_the_holdings_of_the_stop_day() -> None:
+    """취소·한도(T011·T014)는 판단 전에 엔진을 멈추고 lastTradingDate 까지의 시계열로 결과를 만든다.
+
+    멈춘 날은 그 실행의 종료일이므로 보유 스냅샷이 있어야 한다 — 없으면 미실현 손익이 손익 기여에서
+    빠진다(2차 리뷰 3). 손익 합은 자산 증감과 정확히 같다.
+    """
     from datetime import UTC, datetime
 
     from worker.engine_runner import assemble_output
 
-    request = EngineInput.model_validate(engine_input_body(**three_etf("2024-01-02", "2024-03-29")))
+    request = EngineInput.model_validate(
+        engine_input_body(
+            **three_etf("2024-01-02", "2024-03-29", execution={"costProfile": FULL_COSTS})
+        )
+    )
     market = CsvMarketDataProvider(THREE_ETF_DIR).load(
         request.universe.instrument_ids, request.run.start, request.run.end
     )
     calendar = market.trading_days
-    first = evaluation_start(request, calendar)
-    plan = plan_days(calendar, first, request.run.end, "MONTH_END")
-    execution = execute_portfolio(request, market, plan, None)
-    execution.series = execution.series[:20]  # T011 은 여기서 엔진을 멈춘다
+    plan = plan_days(calendar, evaluation_start(request, calendar), request.run.end, "MONTH_END")
+    stop_day = date(2024, 1, 5)
+    execution = execute_portfolio(
+        request, market, plan, None, stop_after=lambda day: day >= stop_day
+    )
+    assert execution.series[-1].date == stop_day
+    assert execution.series[-1].positions, "멈춘 날은 종료일이라 보유 스냅샷이 있어야 한다"
 
     output = assemble_output(
         request, market, execution, datetime.now(UTC), status=RunStatus.CANCELLED, partial=True
     )
     assert output.run.status is RunStatus.CANCELLED and output.run.partial is True
-    assert output.run.last_trading_date == execution.series[-1].date
-    assert output.run.effective_end == execution.series[-1].date
+    assert output.run.last_trading_date == output.run.effective_end == stop_day
     assert output.performance is not None
     assert output.performance.final_equity == execution.series[-1].equity
-    assert output.analytics is not None and output.execution is not None
+    assert output.analytics is not None and output.analytics.loss_contribution is not None
+    assert abs(sum(output.analytics.loss_contribution.values()) - 1) < Decimal("1e-6")
+
+    # 손익 항등식: Σ실현 + Σ(미실현 − 매수 수수료) + 분배금 == 자산 증감
+    realized = sum(
+        (t.realized_pnl for t in output.trades if t.realized_pnl is not None), Decimal(0)
+    )
+    open_commission = sum(
+        (t.commission for t in output.trades if t.status is TradeStatus.OPEN), Decimal(0)
+    )
+    unrealized = sum(
+        (p.unrealized_pnl for p in output.portfolio_series[-1].positions or []), Decimal(0)
+    )
+    paid = sum((f.amount for s in output.portfolio_series for f in s.cash_flows or []), Decimal(0))
+    equity_change = output.performance.final_equity - output.performance.initial_equity
+    assert realized + unrealized - open_commission + paid == equity_change
 
 
 # --- 리뷰 반영 (1차) ----------------------------------------------------------------------------

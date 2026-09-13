@@ -114,7 +114,10 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   wᵢ(Σw)ᵢ/wᵀΣw(실제 비중 평균), 손실 기여(종목별 실현+미실현+분배금 / 전체 손익), 비중 오차 평균.
   `method="sample-covariance-daily"`. 계산 불가는 키 생략.
 - **결과 조립은 `engine_runner.assemble_output` 하나**다. 완료도, 취소·한도의 부분 결과(T011·T014)도
-  `series` 가 `lastTradingDate` 까지만 담긴 채 같은 함수로 만든다.
+  같은 함수로 만든다 — `execute_portfolio(..., stop_after=lambda day: ...)` 가 그날 평가를 마친 뒤
+  멈추고(멈춘 날은 종료일이라 보유 스냅샷을 남긴다) `status=CANCELLED, partial=True` 로 조립한다.
+- 버전은 `worker.__version__` 한 곳이 원본이다(pyproject `dynamic`). 운영 이미지는 패키지를 설치하지
+  않으므로 `importlib.metadata` 를 쓰지 않는다.
 - **수기 대조**(SC-003): `tests/fixtures/manual_reconciliation.json` 의 기대값은
   `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`(워커 import 없음, 표준 라이브러리)가
   픽스처 CSV 에서 계산한 것이다. 픽스처를 다시 만들면 이 스크립트도 다시 돌린다. 허용 오차 0(PD-12 전).

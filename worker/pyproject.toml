@@ -1,6 +1,6 @@
 [project]
 name = "thorp-worker"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Backtest worker: RabbitMQ backtest.jobs를 소비해 백테스트 엔진을 실행하고 이벤트를 발행한다"
 requires-python = ">=3.11"
 dependencies = [
@@ -36,3 +36,6 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "worker.__version__"}

@@ -3,11 +3,11 @@
 import hashlib
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from importlib.metadata import version as package_version
 
 import nautilus_trader
 import pandas as pd
 
+from worker import __version__ as worker_version
 from worker.allocation import AllocationError
 from worker.artifacts import OrderRecord, RunArtifacts
 from worker.contracts.engine import ProgressCallback
@@ -221,7 +221,7 @@ def reference_versions(request: EngineInput, market: MarketData | None) -> Versi
         cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),
         data=market.dataset_id if market is not None else None,
         engine=f"nautilus_trader {nautilus_trader.__version__}",
-        worker=f"thorp-worker {package_version('thorp-worker')}",
+        worker=f"thorp-worker {worker_version}",
     )
 
 
