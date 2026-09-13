@@ -7,22 +7,35 @@ FIXTURE_DIR = (
     Path(__file__).resolve().parents[2] / "docs" / "specs" / "backtest-messaging" / "examples"
 )
 
-# 계약 EngineInput은 여덟 블록이 모두 필수이므로 부분 dict를 넘길 수 없다. 회귀 기준 실행 조건
-# (고정 데이터, lookbackDays=2, 초기자금 1000)에 계약 §4.1 고정 실행 정책을 채운 전체 본문을
-# 기준으로 두고, 테스트는 섹션 단위로 덮어쓴다.
-# 계약 구조 검증용 픽스처(examples/engine-input.json: MA_CROSSOVER·2종목)와 달리
-# 이 본문은 엔진이 실제로 실행할 수 있는 요청이다.
+#: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.
+THREE_ETF_DIR = Path(__file__).resolve().parents[1] / "examples" / "three_etf_24m"
+THREE_ETF_DATASET = "FIXTURE-three_etf_24m"
+
+SEMICONDUCTOR = "091160.XKRX"  # 2015-01-02 상장
+BATTERY = "305720.XKRX"  # 2018-09-12 상장
+BIO = "244580.XKRX"  # 2023-07-03 상장, 2024-03-04 2:1 분할
+
+# 계약 EngineInput은 여덟 블록이 모두 필수이므로 부분 dict를 넘길 수 없다. 엔진이 실제로 실행할 수
+# 있는 요청(두 종목 고정 비중, 7거래일)을 기준으로 두고 테스트는 섹션 단위로 덮어쓴다.
+# 계약 구조 검증용 픽스처(examples/engine-input.json: MA_CROSSOVER·2종목)와는 다른 본문이다.
 ENGINE_INPUT_BODY: dict[str, Any] = {
     "run": {
         "runId": "TEST",
-        "start": "2025-01-06",
-        "end": "2025-01-14",
+        "start": "2023-01-02",
+        "end": "2023-01-10",
         "randomSeed": 42,
         "scenario": "FULL_PERIOD",
     },
-    "universe": {"items": [{"instrumentId": "000660.XKRX"}]},
+    "universe": {
+        "mappingVersion": "SECTOR-ETF-2026-09",
+        "items": [
+            {"sectorId": "SEMICONDUCTOR", "instrumentId": SEMICONDUCTOR, "targetWeight": "0.5"},
+            {"sectorId": "BATTERY", "instrumentId": BATTERY, "targetWeight": "0.5"},
+        ],
+    },
     "marketData": {
-        "datasetId": "YFINANCE_DAILY",
+        "datasetId": "KRX_DAILY_V1",
+        "dataVersion": THREE_ETF_DATASET,
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",
         "priceType": "LAST",
@@ -31,14 +44,15 @@ ENGINE_INPUT_BODY: dict[str, Any] = {
         "distributions": "CASH_ON_PAY_DATE",
     },
     "allocation": {
-        "strategyId": "MOMENTUM",
-        "rulesVersion": "1.0.0",
-        "parameters": {"lookbackDays": 2},
+        "strategyId": "FIXED_WEIGHT",
+        "rulesVersion": "1",
+        "rules": {"investedFraction": "1.0000"},
+        "parameters": {"rebalance": "MONTH_END"},
     },
     "portfolio": {
-        "initialCash": "1000",
+        "initialCash": "10000000",
         "currency": "KRW",
-        "positionSizing": {"type": "STRATEGY_DEFINED", "maxPositionPct": "1"},
+        "positionSizing": {"type": "STRATEGY_DEFINED"},
         "shortSelling": False,
         "leverage": "1",
         "integerLots": True,
@@ -60,7 +74,7 @@ ENGINE_INPUT_BODY: dict[str, Any] = {
         "tradingHalt": "DEFER_TO_NEXT_TRADABLE",
         "delisting": "CAUSE_BASED",
     },
-    "evaluation": {"liquidationAtEnd": False},
+    "evaluation": {"warmupTradingDays": 0, "liquidationAtEnd": False},
     "progress": {"batchTradingDays": 20},
 }
 

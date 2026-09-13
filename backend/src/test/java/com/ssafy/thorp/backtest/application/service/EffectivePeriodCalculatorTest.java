@@ -54,6 +54,29 @@ class EffectivePeriodCalculatorTest {
     }
 
     @Test
+    @DisplayName("목표 위험 오버레이의 관측 기간도 워밍업에 들어간다 — 첫 판단일에 추정할 수익률이 있어야 한다")
+    void targetRiskOverlayLookbackCountsAsWarmup() {
+        StrategyRules overlay = rules("TARGET_RISK_OVERLAY", 63);
+
+        EffectivePeriodCalculator.EffectivePeriod period =
+                calculator.resolve(
+                        FIXED_WEIGHT,
+                        overlay,
+                        List.of(SEMICONDUCTOR),
+                        LocalDate.of(2024, 1, 2),
+                        LocalDate.of(2024, 12, 31),
+                        null);
+
+        assertThat(period.warmupTradingDays()).isEqualTo(63);
+        assertThat(period.effectiveStart()).isAfter(LocalDate.of(2024, 1, 2));
+        // 전략과 오버레이는 같은 자료를 보므로 더하지 않고 긴 쪽을 쓴다.
+        assertThat(
+                        EffectivePeriodCalculator.requiredWarmupTradingDays(
+                                INVERSE_VOLATILITY, rules("TARGET_RISK_OVERLAY", 20)))
+                .isEqualTo(63);
+    }
+
+    @Test
     @DisplayName("전략이 관측 기간을 요구하면 그만큼 거래일을 소진한 뒤 시작한다")
     void warmupPushesStartForward() {
         EffectivePeriodCalculator.EffectivePeriod period =

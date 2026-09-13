@@ -41,7 +41,12 @@ def item(instrument: str, weight: str | None = None) -> UniverseItem:
 
 def allocation(strategy_id: str, rules: dict | None) -> AllocationSpec:
     return AllocationSpec.model_validate(
-        {"strategyId": strategy_id, "rulesVersion": "1", "rules": rules, "parameters": {}}
+        {
+            "strategyId": strategy_id,
+            "rulesVersion": "1",
+            "rules": rules,
+            "parameters": {"rebalance": "MONTH_END"},
+        }
     )
 
 

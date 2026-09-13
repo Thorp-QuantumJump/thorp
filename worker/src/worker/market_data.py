@@ -1,8 +1,8 @@
-"""Replaceable daily data sources. Fixtures are always identified as test data."""
+"""시장 자료 공급자(주입). 픽스처는 항상 테스트 자료로 식별된다."""
 
 import csv
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -11,25 +11,9 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
-from worker.contracts.engine_input import EngineInput
-
 
 class MarketDataError(ValueError):
     """Unavailable or invalid source data; never silently substitute another symbol."""
-
-
-@dataclass
-class MarketDataset:
-    prices: pd.DataFrame
-    instrument_id: str
-    ticker: str
-    source: str
-    adjustment: str = "SPLIT_ADJUSTED"
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-class DataProvider(Protocol):
-    def load(self, request: EngineInput) -> MarketDataset: ...
 
 
 def validate_prices(prices: pd.DataFrame) -> pd.DataFrame:
@@ -77,31 +61,11 @@ def validate_prices(prices: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-class CsvDataProvider:
-    """Explicit offline fixture source; never advertised as historical market prices."""
-
-    def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
-
-    def load(self, request: EngineInput) -> MarketDataset:
-        prices = pd.read_csv(self.path, index_col="date", parse_dates=["date"])
-        instrument_id = request.universe.instrument_ids[0]
-        return MarketDataset(
-            prices=validate_prices(prices),
-            instrument_id=instrument_id,
-            ticker=instrument_id.split(".")[0] + ".KS",
-            source="FIXED_TEST_DATA",
-            metadata={"fixture": self.path.name, "notRealMarketData": True},
-        )
-
-
 # ---------------------------------------------------------------------------
 # 다종목 시장 자료 (spec 004 R-09, contracts/market-data-input.md)
 #
-# 위쪽 ``DataProvider``/``MarketDataset`` 은 DEMO 단일 종목 모멘텀 경로다. 아래는 001이
-# 적재하는 표를 읽는 경로이며 종목 여러 개·조정 종가·기업행위를 함께 돌려준다. 둘을 한
-# 타입으로 합치지 않은 이유: DEMO 경로는 T006 이 다종목 엔진으로 갈아끼울 때 통째로
-# 사라진다. 그때까지 두 경로가 같은 ``validate_prices()`` 로 같은 fail-closed 검증을 받는다.
+# 001이 적재하는 표를 읽어 종목 여러 개·조정 종가·기업행위를 함께 돌려준다. 원시 OHLCV 는
+# 위 ``validate_prices()`` 로 fail-closed 검증을 받는다.
 # ---------------------------------------------------------------------------
 
 

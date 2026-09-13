@@ -139,7 +139,8 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
   처리 시점에 반영되므로 `portfolioSeries`의 마지막 날짜가 `lastTradingDate`다.
 - `portfolioSeries[].positions`는 보유 구성이 바뀐 거래일 + 시작일 + 종료일에만 존재한다. `portfolioSeries[].cashFlows[] { type, instrumentId?, amount }`는
   분배금 등 현금 흐름이 있는 날에만 존재한다(FR-013).
-- `weightsSeries[] { date, target{}, actual{}, weightError? }` + `weightsSource` (`USER` / `COMPUTED`): 목표 비중과 실제 비중(FR-019).
+- `weightsSeries[] { date, target{}, actual{}, weightError?, riskScale?, estimatedVolatility? }` + `weightsSource` (`USER` / `COMPUTED`): 목표 비중과 실제 비중(FR-019).
+  `riskScale`·`estimatedVolatility` 는 `scenario=TARGET_RISK` 에서만 존재하고 그때 `target` 은 조절 뒤 비중이다(PD-18).
 - `trades[]`: OPEN 거래는 `exitTime`, `exitPrice`, `grossPnl`, `realizedPnl`, `returnRate`가 없음이고 `commission`·`slippageCost`는 진입 측만 합산한다.
   `reason` (`SIGNAL` / `REBALANCE` / `HALT_DEFERRED` / `LIQUIDATION`)과 이월 주문의 `plannedDate`는 선택.
 - `costs { commission, spread, slippage, tax, total }` 비용 합계(FR-027). `performance.netTotalReturn`·`totalTradingCost`와 짝.
