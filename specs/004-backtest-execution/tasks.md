@@ -73,7 +73,7 @@
 - [x] T006 [P] [US1] [BE] 워커 소비자 v2와 다종목 리밸런싱 Nautilus 전략 (`worker/src/worker/{consumer,rabbitmq,engine_runner,nautilus_engine,portfolio_execution,engine_support}.py`, `worker/tests/{test_consumer,test_portfolio_execution}.py`) — Jira `S15P21E205-137`
   - 소비자 v2: STARTED{stage: PREPARING_DATA, resource{pid,hostname}}, PROGRESS{stage: COMPUTING, lastTradingDate,…} 20거래일 배치, FINISHED{status, partial, lastTradingDate, engineOutput, resource{peakRssMb,cpuSeconds,wallSeconds}}(`resource.getrusage`). INVALID_REQUEST·DATA_INSUFFICIENT·CONSTRAINT_VIOLATION·ESTIMATION_FAILED는 FINISHED(FAILED) 후 ACK(재시도 없음); 프로세스 예외는 전파해 unacked로 죽게 둔다. `engine_support.py` 제한을 v2 기준(fillPrice=RAW, signalPrice=ADJUSTED, 규칙 사본 필수)으로 교체
   - `PortfolioRebalanceExecution(NautilusStrategy)`: 월말 판단일 `on_bar`(마지막 종목 bar 뒤)에서 배분 모듈(T007)에 조정 종가 이력 전달 → 목표 비중 → 현금·현재가 기준 정수 수량 주문 → 다음 거래일 시가 QuoteTick 시장가 체결. 공매도·레버리지 불가, 매도→매수 순서 고정
-  - 거래 정지·거래 불가(halted 또는 volume 0) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`
+  - 거래 정지(`trading_suspended=true` 만 거래 불가로 판정, 거래량 0 은 정지가 아니다 — 결정 ⑬) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`
   - 워밍업: `evaluation.warmupTradingDays` 소비 후 `effectiveStart`부터 성과 집계. 종료일: 시가평가·청산(전량 매도, 비용 포함) 두 결과(`liquidation`)
   - 비중 오차·잔여 현금을 `weightsSeries[].weightError`·`portfolioSeries[].cash`로 기록(재정규화 금지). `scenario=FRESH_CASH_FROM`(시작일·시작 현금 재지정) 지원
   - `scenario=TARGET_RISK` 오버레이(PD-18): 리밸런싱 판단일마다 최근 `scenarioRules.lookbackDays`(63) 포트폴리오 일별 수익률 표준편차 × √252로 변동성 추정, 추정치 > `scenarioParams.targetVolatility`이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로, 아니면 그대로(하향만, 레버리지 금지). `weightsSeries[].riskScale`·`estimatedVolatility` 기록. 규칙 없이 오면 INVALID_REQUEST
