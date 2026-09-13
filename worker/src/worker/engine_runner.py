@@ -232,7 +232,9 @@ class PortfolioBacktestEngine:
 
     ``cancel_registry`` 를 주면 거래일마다 자기 runId 의 취소 표시를 보고 그날 평가를 마친 뒤
     멈춘다(R-04). 결과는 ``status=CANCELLED, partial=true`` 에 ``lastTradingDate`` 까지의
-    시계열이다. 레지스트리가 없으면 끝까지 돈다(테스트·데모).
+    시계열이다. 엔진은 표시를 **읽기만** 한다 — 활성 실행 등록·해제는 소비자가 STARTED
+    앞뒤에서 한다.
+    레지스트리가 없으면 끝까지 돈다(테스트·데모).
     """
 
     def __init__(
@@ -340,10 +342,6 @@ class PortfolioBacktestEngine:
             output = self._rejected(
                 request, market, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
             )
-        finally:
-            if self.cancel_registry is not None:
-                # 끝난 runId 의 표시는 지운다. 재전달된 같은 runId 가 옛 취소로 바로 멈추면 안 된다.
-                self.cancel_registry.discard(request.run.run_id)
         return output, RunArtifacts(orders=orders, metadata=metadata)
 
     def _stop_after(self, run_id: str) -> Callable[[date], bool] | None:

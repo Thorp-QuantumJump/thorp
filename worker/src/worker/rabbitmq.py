@@ -165,18 +165,31 @@ def bind_control_queue(channel: BlockingChannel) -> str:
     return queue
 
 
-def run_control_listener(url: str, registry: CancelRegistry, stop: threading.Event) -> None:
+def _connect(url: str) -> BlockingConnection:
+    return pika.BlockingConnection(pika.URLParameters(url))
+
+
+def run_control_listener(
+    url: str,
+    registry: CancelRegistry,
+    stop: threading.Event,
+    ready: threading.Event,
+    connect: Callable[[str], BlockingConnection] = _connect,
+) -> None:
     """제어 채널 소비 루프. 별도 연결·별도 스레드다(BlockingConnection 은 스레드 간 공유 불가).
 
-    auto-ack 다: 취소는 살아 있는 워커에게만 뜻이 있고 재전달할 이유가 없다. 브로커 장애로 끊기면
-    잠시 뒤 다시 붙는다.
+    큐를 바인딩한 **뒤에** ``ready`` 를 켠다. 소비자는 그것을 기다린 뒤에야 작업을 받는다 —
+    작업이 먼저 시작되고 큐가 아직 없는 사이에 온 CANCEL 은 이 워커에 닿지 않는다. auto-ack 다:
+    취소는 살아 있는 워커에게만 뜻이 있고 재전달할 이유가 없다. 브로커 장애로 끊기면 잠시 뒤 다시
+    붙는다.
     """
     while not stop.is_set():
         try:
-            connection = pika.BlockingConnection(pika.URLParameters(url))
+            connection = connect(url)
             try:
                 channel = connection.channel()
                 queue = bind_control_queue(channel)
+                ready.set()
                 logger.info("control listener bound queue=%s exchange=%s", queue, CONTROL_EXCHANGE)
                 for method, _properties, body in channel.consume(
                     queue, auto_ack=True, inactivity_timeout=1.0
@@ -196,27 +209,57 @@ def run_control_listener(url: str, registry: CancelRegistry, stop: threading.Eve
             time.sleep(PUBLISH_RETRY_SECONDS)
 
 
-def run_consumer(url: str, engine: BacktestEngine, registry: CancelRegistry | None = None) -> None:
+#: 제어 큐가 이 시간 안에 준비되지 않으면 작업 소비를 시작하지 않는다.
+#: 취소가 닿지 않는 워커를 만들지 않는다.
+CONTROL_READY_TIMEOUT_SECONDS = 30.0
+
+ControlListener = Callable[
+    [str, CancelRegistry, threading.Event, threading.Event, Callable[[str], BlockingConnection]],
+    None,
+]
+
+
+def run_consumer(
+    url: str,
+    engine: BacktestEngine,
+    registry: CancelRegistry | None = None,
+    *,
+    connect: Callable[[str], BlockingConnection] = _connect,
+    control_listener: ControlListener = run_control_listener,
+    ready_timeout: float = CONTROL_READY_TIMEOUT_SECONDS,
+) -> None:
     """``backtest.jobs`` 를 manual ACK · prefetch 1로 소비한다 (계약 §7).
 
     한 연결·한 채널에서 소비와 발행을 함께 한다. BlockingConnection은 단일 스레드이므로
     엔진 실행 중에는 다른 Job을 받지 않는다(prefetch 1과 같은 방향이다). ``registry`` 를 주면
-    제어 채널 스레드를 함께 띄운다(엔진도 같은 레지스트리를 봐야 취소가 닿는다).
+    제어 채널 스레드를 먼저 띄우고 **그 큐가 바인딩된 뒤에야** 작업을 받기 시작한다(R-04) — 그 전에
+    작업을 시작하면 그 사이 온 CANCEL 을 잃는다. 소비자와 엔진이 같은 레지스트리를 봐야 취소가
+    닿는다.
     """
     stop = threading.Event()
+    ready = threading.Event()
     listener: threading.Thread | None = None
     if registry is not None:
         listener = threading.Thread(
-            target=run_control_listener, args=(url, registry, stop), name="control", daemon=True
+            target=control_listener,
+            args=(url, registry, stop, ready, connect),
+            name="control",
+            daemon=True,
         )
         listener.start()
-    connection = pika.BlockingConnection(pika.URLParameters(url))
+        if not ready.wait(ready_timeout):
+            stop.set()
+            raise RuntimeError(
+                f"control queue was not bound within {ready_timeout:.0f}s; refusing to consume jobs"
+                " without a cancel channel (check the broker and the backend topology)"
+            )
+    connection = connect(url)
     try:
         require_jobs_queue(connection)
         channel = connection.channel()
         channel.confirm_delivery()  # publisher confirm: 발행 확인 후에만 반환한다
         channel.basic_qos(prefetch_count=PREFETCH_COUNT)
-        consumer = BacktestJobConsumer(engine, PikaEventPublisher(channel))
+        consumer = BacktestJobConsumer(engine, PikaEventPublisher(channel), registry=registry)
         logger.info("worker consuming queue=%s prefetch=%d", JOBS_QUEUE, PREFETCH_COUNT)
         for method, properties, body in channel.consume(JOBS_QUEUE, auto_ack=False):
             logger.info("received job delivery_tag=%s", method.delivery_tag)
