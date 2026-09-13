@@ -33,6 +33,15 @@ public class NewsArticle {
     private final String originalUrl;
     private final CanonicalNewsUrl canonicalUrl;
     private final String title;
+
+    /**
+     * 언어를 알 수 없을 때 쓰는 값(ISO 639-2 {@code und}).
+     *
+     * <p>뉴스원이 언어를 밝히지 않았는데 특정 언어로 적어 두면, 나중에 언어로 거르거나 요약 규칙을 언어별로 나눌 때 그 단정이 사실로 굳어 버린다. 모른다는 사실을
+     * 그대로 남긴다.
+     */
+    public static final String UNDETERMINED_LANGUAGE = "und";
+
     private final String language;
     private final Instant publishedAt;
     private final PublicationTimeStatus publishedAtStatus;

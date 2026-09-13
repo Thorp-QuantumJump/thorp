@@ -1,7 +1,9 @@
 package com.ssafy.thorp.paramsearch.infrastructure.config;
 
+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -25,4 +27,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConditionalOnProperty(prefix = "thorp.param-search", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(ParamSearchProperties.class)
-public class ParamSearchConfig {}
+public class ParamSearchConfig {
+
+    /**
+     * 설정값을 application 계층이 쓰는 모양으로 옮긴다.
+     *
+     * <p>유스케이스가 {@link ParamSearchProperties}를 직접 주입받으면 application → infrastructure 참조가 되어 계층 규칙을
+     * 어긴다({@code ArchitectureTest}). 변환을 여기서 한 번 하면 설정 형식이 바뀌어도 유스케이스가 흔들리지 않는다.
+     */
+    @Bean
+    SearchLimits searchLimits(ParamSearchProperties properties) {
+        return new SearchLimits(
+                properties.getMaxCandidates(),
+                properties.getDispatchWindow(),
+                properties.getTimeLimitSeconds(),
+                properties.getConsecutiveFailureLimit(),
+                properties.provisionalNames());
+    }
+}

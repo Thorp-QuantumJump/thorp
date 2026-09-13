@@ -365,6 +365,27 @@ class BacktestServiceTest {
     }
 
     @Test
+    @DisplayName("목표 위험 시나리오는 오버레이 관측 기간(63거래일)을 워밍업으로 확정한다")
+    void targetRiskOverlayLookbackBecomesWarmup() {
+        // 워커는 첫 판단일에 변동성을 추정할 수익률이 있어야 한다. 전략(고정 비중)만 보면 워밍업 0으로
+        // 접수되고 워커가 ESTIMATION_FAILED 를 낸다 — 접수 정책과 엔진이 같은 규칙을 봐야 한다.
+        BacktestJobResult result =
+                service.create(
+                        command(
+                                "FIXED_WEIGHT",
+                                new BigDecimal("0.4000"),
+                                null,
+                                Scenario.TARGET_RISK,
+                                Map.of("targetVolatility", "0.1000")));
+
+        assertThat(result.effectiveStart()).isAfter(LocalDate.of(2024, 1, 2));
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(runRepository).save(captor.capture());
+        assertThat(captor.getValue().getPlan().requestSpec())
+                .containsEntry("warmupTradingDays", 63);
+    }
+
+    @Test
     @DisplayName("요청 워밍업이 전략 요구값보다 작으면 422다 (R-15)")
     void warmupBelowRequirementIsRejected() {
         assertThatThrownBy(

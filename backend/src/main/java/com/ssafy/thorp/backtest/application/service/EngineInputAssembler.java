@@ -9,6 +9,7 @@ import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -128,10 +129,17 @@ public class EngineInputAssembler {
                 fixed.delisting());
     }
 
-    /** 목표 위험 오버레이 규칙 사본(PD-18). 사용자 입력이 아니라 등록표 값이다. */
+    /**
+     * 목표 위험 오버레이 규칙 사본(PD-18). 사용자 입력이 아니라 등록표 값이다.
+     *
+     * <p>{@code version} 을 함께 싣는다 — 워커가 결과 {@code versions.scenarioRules} 에 그대로 적어 어느 오버레이 규칙으로
+     * 계산했는지 남긴다(FR-028).
+     */
     private Map<String, Object> targetRiskRules() {
         StrategyRules overlay = strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1");
-        return overlay.spec();
+        Map<String, Object> rules = new LinkedHashMap<>(overlay.spec());
+        rules.put("version", overlay.strategyId() + "/" + overlay.rulesVersion());
+        return rules;
     }
 
     /**

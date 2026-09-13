@@ -16,15 +16,18 @@ import java.util.Objects;
  * @param resultCapReached 결과 상한 도달 여부.
  * @param etag 응답의 ETag. 다음 조건부 요청에 쓴다.
  * @param lastModified 응답의 Last-Modified.
+ * @param channelHints RSS 채널이 알려 준 호출 간격 힌트. 없으면 {@link RssChannelHints#NONE}.
  */
 public record NewsFetchResult(
         List<CollectedNewsItem> items,
         boolean notModified,
         boolean resultCapReached,
         String etag,
-        String lastModified) {
+        String lastModified,
+        RssChannelHints channelHints) {
 
     public NewsFetchResult {
+        channelHints = channelHints == null ? RssChannelHints.NONE : channelHints;
         items = items == null ? List.of() : List.copyOf(items);
         if (notModified && !items.isEmpty()) {
             throw new IllegalArgumentException("변경 없음 응답에는 기사가 없어야 한다");
@@ -33,17 +36,34 @@ public record NewsFetchResult(
 
     /** 변경 없음 응답. 수집 위치와 기사 데이터를 그대로 두게 한다. */
     public static NewsFetchResult notModified(String etag, String lastModified) {
-        return new NewsFetchResult(List.of(), true, false, etag, lastModified);
+        return new NewsFetchResult(
+                List.of(), true, false, etag, lastModified, RssChannelHints.NONE);
+    }
+
+    /** 변경 없음 응답이지만 채널 힌트는 살아 있는 경우. 힌트는 본문과 무관하게 유지된다. */
+    public static NewsFetchResult notModified(
+            String etag, String lastModified, RssChannelHints hints) {
+        return new NewsFetchResult(List.of(), true, false, etag, lastModified, hints);
     }
 
     /** 구간을 모두 받은 정상 응답. */
     public static NewsFetchResult complete(
             List<CollectedNewsItem> items, String etag, String lastModified) {
-        return new NewsFetchResult(items, false, false, etag, lastModified);
+        return complete(items, etag, lastModified, RssChannelHints.NONE);
+    }
+
+    /** 채널 힌트까지 담은 정상 응답. */
+    public static NewsFetchResult complete(
+            List<CollectedNewsItem> items,
+            String etag,
+            String lastModified,
+            RssChannelHints hints) {
+        return new NewsFetchResult(items, false, false, etag, lastModified, hints);
     }
 
     /** 결과 상한에 걸려 구간을 다 받지 못한 응답. */
     public static NewsFetchResult capped(List<CollectedNewsItem> items) {
-        return new NewsFetchResult(Objects.requireNonNull(items), false, true, null, null);
+        return new NewsFetchResult(
+                Objects.requireNonNull(items), false, true, null, null, RssChannelHints.NONE);
     }
 }

@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.BiPredicate;
 
 /**
@@ -53,10 +52,14 @@ public final class RegistryFixtures {
         return axis(name, values);
     }
 
-    /** 004가 실행을 지원한다고 답하는 fixture. */
+    /** 004가 실행을 지원한다고 답하는 fixture. 규칙 버전은 모두 {@code FIXTURE-RULES-1}이다. */
     public static StrategyExecutionSupportPort supporting(String... strategyIds) {
-        Set<String> supported = Set.of(strategyIds);
-        return () -> supported;
+        Map<String, String> supported = new LinkedHashMap<>();
+        for (String strategyId : strategyIds) {
+            supported.put(strategyId, "FIXTURE-RULES-1");
+        }
+        Map<String, String> unmodifiable = Map.copyOf(supported);
+        return () -> unmodifiable;
     }
 
     /** 조회가 실패하는 등록표. 503 경로(FR-028, research R9) 검증용이다. */

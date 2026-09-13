@@ -1,3 +1,9 @@
+> **역사 문서(2026-09-11).** 이 가이드가 설명하는 단일 종목 모멘텀 DEMO 엔진(`nautilus_engine.py`·
+> `strategies/`·yfinance 공급자)은 spec 004 T006에서 삭제했다. 현재 엔진은
+> `worker/src/worker/portfolio_execution.py`(다종목 리밸런싱 실행 전략 하나)와 `engine_runner.py`
+> (`PortfolioBacktestEngine`)이고, 자료는 `market_data.py`의 `MarketDataProvider`(PostgreSQL·픽스처)로만
+> 읽는다. 아키텍처 경계(엔진은 DB·브로커를 모른다, 실패는 `run.error`)와 검증 원칙은 그대로 유효하다.
+
 # Nautilus 모멘텀 엔진 이해하기
 
 이 문서는 Python과 NautilusTrader에 익숙하지 않은 Java 개발자가 Jira 101 구현을 빠르게

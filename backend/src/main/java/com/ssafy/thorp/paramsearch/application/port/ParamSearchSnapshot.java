@@ -2,6 +2,8 @@ package com.ssafy.thorp.paramsearch.application.port;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,6 +71,98 @@ public record ParamSearchSnapshot(
     /** 전략의 규칙 버전. 없으면 null이고 004가 접수에서 422로 거부한다 — 007이 기본 버전을 만들어 넣지 않는다. */
     public String rulesVersionOf(String strategyId) {
         return rulesVersionByStrategy.get(strategyId);
+    }
+
+    /**
+     * 저장용 {@code Map} 변환. {@code param_search.execution_plan}이 이 형식이다.
+     *
+     * <p>Jackson을 쓰지 않는 이유는 {@code SelectionRule}과 같다 — 저장 형식이 바뀌어도 이 record만 보면 되고, 직렬화는
+     * infrastructure의 JSONB 매핑이 맡는다.
+     *
+     * <p><b>금액은 문자열로 담는다.</b> JSON 숫자로 두면 읽을 때 배정밀도로 돌아와 원래 자릿수를 잃는다.
+     *
+     * <p><b>값이 없는 항목은 키를 넣지 않는다.</b> 저장 ObjectMapper가 null 키를 생략하므로(메시지 JSON 규약) 넣어 두면 저장 전후의 맵이
+     * 달라진다 — 같은 스냅샷이 왕복 한 번에 다른 값이 되면 재현 기록을 비교할 수 없다. 읽는 쪽은 "키 없음 == null"로 본다.
+     */
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put(
+                "universe",
+                universe.stream()
+                        .map(
+                                entry -> {
+                                    Map<String, Object> item = new LinkedHashMap<>();
+                                    item.put("sectorId", entry.sectorId());
+                                    item.put("instrumentId", entry.instrumentId());
+                                    if (entry.targetWeight() != null) {
+                                        item.put(
+                                                "targetWeight",
+                                                entry.targetWeight().toPlainString());
+                                    }
+                                    return item;
+                                })
+                        .toList());
+        putIfPresent(map, "mappingVersion", mappingVersion);
+        map.put("start", start.toString());
+        map.put("end", end.toString());
+        map.put("initialCash", initialCash.toPlainString());
+        putIfPresent(map, "costProfileVersion", costProfileVersion);
+        putIfPresent(map, "evaluationSplitVersion", evaluationSplitVersion);
+        putIfPresent(map, "warmupTradingDays", warmupTradingDays);
+        putIfPresent(map, "registryVersion", registryVersion);
+        map.put("rulesVersionByStrategy", new LinkedHashMap<>(rulesVersionByStrategy));
+        putIfPresent(map, "baselineStrategyId", baselineStrategyId);
+        map.put("baselineParameters", new LinkedHashMap<>(baselineParameters));
+        return Collections.unmodifiableMap(map);
+    }
+
+    /** 저장된 실행 조건을 되살린다. 묶음 식별자는 묶음 행에서 온다. */
+    @SuppressWarnings("unchecked")
+    public static ParamSearchSnapshot fromMap(
+            Long paramSearchId, String searchId, Long ownerUserId, Map<String, Object> map) {
+        Objects.requireNonNull(map, "execution plan must not be null");
+        List<UniverseEntry> universe =
+                ((List<Map<String, Object>>) map.get("universe"))
+                        .stream()
+                                .map(
+                                        item ->
+                                                new UniverseEntry(
+                                                        text(item.get("sectorId")),
+                                                        text(item.get("instrumentId")),
+                                                        decimal(item.get("targetWeight"))))
+                                .toList();
+        return new ParamSearchSnapshot(
+                paramSearchId,
+                searchId,
+                ownerUserId,
+                universe,
+                text(map.get("mappingVersion")),
+                LocalDate.parse(text(map.get("start"))),
+                LocalDate.parse(text(map.get("end"))),
+                decimal(map.get("initialCash")),
+                text(map.get("costProfileVersion")),
+                text(map.get("evaluationSplitVersion")),
+                map.get("warmupTradingDays") == null
+                        ? null
+                        : ((Number) map.get("warmupTradingDays")).intValue(),
+                text(map.get("registryVersion")),
+                (Map<String, String>) map.getOrDefault("rulesVersionByStrategy", Map.of()),
+                text(map.get("baselineStrategyId")),
+                (Map<String, Object>) map.getOrDefault("baselineParameters", Map.of()));
+    }
+
+    private static void putIfPresent(Map<String, Object> map, String key, Object value) {
+        if (value != null) {
+            map.put(key, value);
+        }
+    }
+
+    private static String text(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static BigDecimal decimal(Object value) {
+        return value == null ? null : new BigDecimal(String.valueOf(value));
     }
 
     /** 섹터 하나와 그 대표 종목. {@code targetWeight}는 비중을 사용자가 정하는 전략에서만 채워진다. */

@@ -1,115 +1,38 @@
-"""One command: obtain OHLCV, run Nautilus, write the EngineOutput message and artifacts."""
+"""한 명령으로 EngineInput JSON 을 픽스처 자료로 실행해 EngineOutput 메시지와 산출물을 쓴다.
+
+    python -m worker.demo --input engine-input.json --fixture worker/examples/three_etf_24m
+
+실제 시세는 받지 않는다 — 운영 자료는 001 이 적재한 DB(``MARKET_DATA_URL``)에서만 읽고, 그 경로는
+``worker.main`` 이다. 여기는 계약 메시지 모양과 픽스처 결과를 눈으로 확인하는 개발용이다.
+"""
 
 import argparse
 import json
 import sys
-from datetime import date as Date
-from datetime import datetime, timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from worker.contracts.engine_input import EngineInput
 from worker.contracts.engine_output import RunStatus
 from worker.contracts.events import ProgressPoint
-from worker.engine_runner import NautilusMomentumEngine
-from worker.market_data import CsvDataProvider, DataProvider
+from worker.engine_runner import PortfolioBacktestEngine
+from worker.market_data import CsvMarketDataProvider
 
-
-def load_yfinance_provider() -> DataProvider:
-    """개발용 yfinance 공급자를 ``worker/scripts`` 에서 늦게 불러온다.
-
-    배포되는 ``worker`` 패키지 안에 두지 않는 이유는 그쪽 모듈 주석에 적어 두었다(R-09).
-    데모에서 ``--fixture`` 없이 실제 시세를 받아 볼 때만 이 경로를 쓴다.
-    """
-    scripts = Path(__file__).resolve().parents[2] / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    from yfinance_provider import YFinanceDataProvider
-
-    return YFinanceDataProvider()
+DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "three_etf_24m"
 
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def build_engine_input(
-    instrument_id: str, start: Date, end: Date, lookback_days: int
-) -> EngineInput:
-    """CLI 인자로 계약 ``EngineInput`` 을 조립한다.
-
-    계약은 여덟 블록(``run``·``universe``·``marketData``·``allocation``·``portfolio``·``execution``·
-    ``evaluation``·``progress``)이 모두 필수이므로 부분 dict를 넘길 수 없다. 실행 정책은 계약 §4.1
-    고정값이며, 운영에서는 백엔드가 채운다. ``datasetId`` 는 실제 공급자(yfinance)를 그대로 적는다 —
-    계약 고정값은 ``KRX_DAILY_V1`` 이지만 자유 문자열 필드이고 KRX 연결은 별도 작업이다.
-    """
-    return EngineInput.model_validate(
-        {
-            "run": {
-                "runId": "BT-MOMENTUM-DEMO",
-                "start": start,
-                "end": end,
-                "randomSeed": 42,
-                "scenario": "FULL_PERIOD",
-            },
-            "universe": {"items": [{"instrumentId": instrument_id}]},
-            "marketData": {
-                "datasetId": "YFINANCE_DAILY",
-                "interval": "1D",
-                "adjustment": "SPLIT_ADJUSTED",
-                "priceType": "LAST",
-                "fillPrice": "RAW",
-                "signalPrice": "ADJUSTED",
-                "distributions": "CASH_ON_PAY_DATE",
-            },
-            "allocation": {
-                "strategyId": "MOMENTUM",
-                "rulesVersion": "1.0.0",
-                "parameters": {"lookbackDays": lookback_days},
-            },
-            "portfolio": {
-                "initialCash": "10000000",
-                "currency": "KRW",
-                "positionSizing": {"type": "STRATEGY_DEFINED", "maxPositionPct": "1"},
-                "shortSelling": False,
-                "leverage": "1",
-                "integerLots": True,
-            },
-            "execution": {
-                "signalTiming": "BAR_CLOSE",
-                "executionTiming": "NEXT_BAR_OPEN",
-                "orderTypes": ["MARKET"],
-                "costProfile": {
-                    "version": "PROVISIONAL-DEMO-1",
-                    "commissionBps": "0",
-                    "spreadBps": "0",
-                    "slippageBps": "5",
-                    "taxBps": "0",
-                    "provisional": True,
-                },
-                "partialFill": False,
-                "liquidity": {"model": "UNLIMITED"},
-                "tradingHalt": "DEFER_TO_NEXT_TRADABLE",
-                "delisting": "CAUSE_BASED",
-            },
-            "evaluation": {"liquidationAtEnd": False},
-            "progress": {"batchTradingDays": 20},
-        }
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, required=True, help="Full EngineInput JSON")
     parser.add_argument(
-        "--input", type=Path, help="Full EngineInput JSON; overrides CLI run defaults"
+        "--fixture",
+        type=Path,
+        default=DEFAULT_FIXTURE,
+        help="Fixture directory in the market-data table layout (synthetic, not real prices)",
     )
-    parser.add_argument("--start")
-    parser.add_argument("--end")
-    parser.add_argument("--ticker", default="000660.KS")
-    parser.add_argument(
-        "--fixture", type=Path, help="Explicit CSV test data (not real market data)"
-    )
-    parser.add_argument("--lookback-days", type=int, default=120)
     parser.add_argument(
         "--output",
         type=Path,
@@ -126,19 +49,7 @@ def main() -> int:
     artifacts_path = args.artifacts or args.output.with_name(
         f"{args.output.stem}-artifacts{args.output.suffix}"
     )
-    if args.input:
-        request = EngineInput.model_validate_json(args.input.read_text(encoding="utf-8"))
-    else:
-        now = datetime.now(ZoneInfo("Asia/Seoul"))
-        end = now.date() if now.hour >= 16 else now.date() - timedelta(days=1)
-        if args.end:
-            end = datetime.strptime(args.end, "%Y-%m-%d").date()
-        start = end - timedelta(days=365 * 5)
-        if args.start:
-            start = datetime.strptime(args.start, "%Y-%m-%d").date()
-        if not args.ticker.endswith(".KS"):
-            parser.error("--ticker must be an explicit KOSPI ticker such as 000660.KS")
-        request = build_engine_input(args.ticker[:-3] + ".XKRX", start, end, args.lookback_days)
+    request = EngineInput.model_validate_json(args.input.read_text(encoding="utf-8"))
 
     def progress(point: ProgressPoint, done: int, total: int) -> None:
         # 계약의 진행 콜백 모양(거래일 1개 = ProgressPoint 1개). 20거래일 묶음은 사람이 읽는
@@ -146,14 +57,10 @@ def main() -> int:
         if done % 20 == 0 or done == total:
             print(f"Completed trading days: {done}/{total} ({point.date})", file=sys.stderr)
 
-    engine = NautilusMomentumEngine(
-        CsvDataProvider(args.fixture) if args.fixture else load_yfinance_provider()
-    )
+    engine = PortfolioBacktestEngine(CsvMarketDataProvider(args.fixture))
     output, artifacts = engine.run_with_artifacts(request, progress)
-    # Two files on purpose: --output is the broker message contract, --artifacts is local
-    # diagnostics that the contract deliberately excludes.
     # 메시지는 계약 규약(README §5)대로 ContractModel.to_json()으로 직렬화한다: camelCase에
-    # 계산 불가·미지정 값은 명시 null이 아니라 키 자체를 생략한다.
+    # 계산 불가·미지정 값은 명시 null이 아니라 키 자체를 생략한다. 산출물은 계약 밖 로컬 진단이다.
     write_json(args.output, json.loads(output.to_json()))
     write_json(artifacts_path, artifacts.model_dump(mode="json", by_alias=True))
     print(

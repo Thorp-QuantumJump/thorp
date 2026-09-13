@@ -1,13 +1,14 @@
 # CLAUDE.md — worker (백테스트 워커)
 
 Python 3.11 + pandas + NautilusTrader + pika. 엔진의 공개 실행 경로는
-`worker.engine_runner.NautilusMomentumEngine.run(engine_input, on_progress) -> EngineOutput`이고,
-운영 엔트리포인트는 `python -m worker.main`(= RabbitMQ 실행 Consumer)이다. Kafka 스캐폴딩
+`worker.engine_runner.PortfolioBacktestEngine.run(engine_input, on_progress) -> EngineOutput`이고,
+운영 엔트리포인트는 `python -m worker.main`(= RabbitMQ 실행 Consumer, `MARKET_DATA_URL` 필수)이다.
+단일 종목 모멘텀 DEMO 엔진(`nautilus_engine.py`·`strategies/`·yfinance 공급자)은 spec 004 T006에서
+삭제했다. Kafka 스캐폴딩
 (`worker.main`의 Kafka 루프, `BacktestJob`, `run_backtest`)은 pika 교체와 함께 삭제했다.
 워커는 **PostgreSQL에 쓰지 않고 SSE도 발행하지 않는다** — 결과 저장·SSE는 백엔드 결과
-Consumer 몫이다(계약 §1). 자세한 현재 상태는
-`docs/guides/nautilus-momentum-engine.md`와 `docs/adr/0003-nautilus-momentum-engine-boundary.md`를
-먼저 확인한다.
+Consumer 몫이다(계약 §1). 현재 상태는 `worker/README.md`와 `portfolio_execution.py` 모듈 주석을,
+경계 설계는 `docs/adr/0003-nautilus-momentum-engine-boundary.md`를 먼저 확인한다.
 
 ## 검증 명령 (작업 후 반드시 실행)
 
@@ -17,18 +18,33 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
 
 ## 구조 규칙
 
-- `strategies/` 전략은 `base.Strategy` 상속, `generate_signals(prices) -> Series`만 구현
-  (전략은 신호만 출력, 체결·자산 계산은 `nautilus_engine.py`, 지표 산출은 `performance.py`
-  담당 — 이 분리를 깨지 말 것)
-- `strategies/__init__.py` `STRATEGIES` 는 **엔진이 실행할 수 있는 전략의 레지스트리**다.
-  `contracts/strategy_params/STRATEGY_PARAMETERS`("parameters 가 어떤 모양인가")와 대칭으로
-  "이 엔진이 그 전략·버전을 실제로 실행할 수 있는가"를 선언한다. 미등록 `strategyId`·미지원
-  `version` 거절은 여기 등록 여부로 자동 처리되므로 `engine_support.py`에 전략을 하드코딩하지 말 것
+- **실행은 `portfolio_execution.PortfolioRebalanceExecution` 하나다**(R-01). 배분 전략이 몇 개든
+  Nautilus 전략은 이것 하나이고, 전략 차이는 `allocation/compute_weights`가 돌려주는 비중에만 있다.
+  체결·현금·분배금·분할 회계는 여기, 지표 산출은 `performance.py`, 결과 조립은
+  `engine_runner.assemble_output` — 이 분리를 깨지 말 것. 파생 지표(`analytics`)의 정의 원본은
+  `calculate_analytics` docstring 이다(spec 은 이름만 정했다).
+  하루 순서(09:00 틱: 기업행위 → 매도·매수 제출 / 15:30 봉: 평가 → 판단)와 Nautilus 제약(체결
+  콜백은 핸들러 뒤에 온다, 계좌는 MARGIN, 장부가 원장이다)은 그 모듈 주석에 있다
+- **엔진이 실행할 수 있는 전략은 `allocation/ALLOCATION_RULES`가 정한다.**
+  `contracts/strategy_params/STRATEGY_PARAMETERS`("parameters 가 어떤 모양인가")와 대칭이다.
+  미등록 `strategyId` 거절은 등록 여부로 자동 처리되므로 `engine_support.py`에 전략을 하드코딩하지 말 것
 - `engine_support.py` 계약은 통과하지만 이 엔진이 계산할 수 없는 요청을 실행 전에 거절한다
   (`INVALID_REQUEST`). **이 검증을 `contracts/`에 넣지 말 것** — `contracts/`는 백엔드와 공유하는
   계약이고 "메시지만 보고 판단할 수 있는" 불변식만 본다. 엔진 지원 범위는 수신자마다 다르므로
   구현체 책임이며, 계약 픽스처(`examples/engine-input.json`)는 `contracts/` 검증을 계속 통과해야 한다.
-  지원 범위의 근거는 ADR-0003 "7. DEMO 시장 모델"
+  현재 거절: `fillPrice≠RAW`, `signalPrice≠ADJUSTED`, 규칙 사본 없음, 레버리지·공매도·부분 체결·
+  KRW 외 통화, 시나리오 `COST_ESCALATION`(비용 프로필에 `escalation` 규칙 없음), `TARGET_RISK` 에
+  `scenarioRules`·`scenarioParams.targetVolatility` 누락
+- **목표 위험 맞춤은 `target_risk.py` 오버레이다**(PD-18). 배분 모듈이 낸 비중 위에 얹고 내리기만 한다.
+  추정 대상은 실제 보유가 아니라 목표 비중 포트폴리오의 과거 수익률이고(첫 판단일에도 값이 있고
+  결정적), 규칙은 `run.scenarioRules`·목표는 `run.scenarioParams` 에서만 읽는다. 수익률이 모자라면
+  `ESTIMATION_FAILED` — 백엔드가 오버레이 관측 길이를 워밍업에 넣어 보낸다
+- **일시 장애와 확정 오류를 섞지 말 것.** 일시 장애(DB 접속 실패 등)는 자료 적재
+  (`MarketDataProvider.load`)에서만 나므로 러너는 그 호출만 try 밖에 두어 전파한다 — 소비자가 ACK 하지
+  않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로 바꾸면 FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로
+  굳는다. **자료가 메모리에 오른 뒤의 예외는 전부 결정적**(같은 입력이면 다시 난다)이라 배분·자료·입력
+  오류는 자기 코드로, 그 밖은 `ENGINE_ERROR` 결과로 돌려준다. 전파해 재전달시키면 같은 자리에서 또 죽어
+  DLQ(SYSTEM_FAILURE)로 가는데 그건 장애가 아니라 결함이다
 - 엔진 입력 모델은 계약 `contracts/engine_input.py`의 `EngineInput` 하나다. 과도기 모델
   `engine_contracts.py`는 제거했다(ADR-0004 반영). 새 입력 필드는 계약 쪽에 맞춘다
 
@@ -42,20 +58,22 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   제어 메시지(`contracts/control.py`, CANCEL) 수신 루프는 취소 티켓(T011)에서 붙인다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
-- **시장 자료는 `market_data.py` 한 곳에서만 읽고, 공급자는 주입한다.** 두 층이 공존한다:
-  DEMO 단일 종목 경로(`DataProvider`·`MarketDataset`·`CsvDataProvider`)와 다종목 경로
-  (`MarketDataProvider`·`MarketData`·`PostgresMarketDataProvider`·`CsvMarketDataProvider`).
-  뒤쪽이 spec 004 계약(`specs/004-backtest-execution/contracts/market-data-input.md`)의 표를 읽고,
-  앞쪽은 T006이 다종목 엔진으로 갈아끼울 때 사라진다. 둘 다 `validate_prices()`로 같은 fail-closed
-  검증을 받는다
+- **시장 자료는 `market_data.py` 한 곳에서만 읽고, 공급자는 주입한다.**
+  `MarketDataProvider` 구현은 둘 — 운영 `PostgresMarketDataProvider`(001 적재 표, 읽기 전용)와 픽스처
+  `CsvMarketDataProvider`(같은 표 배치의 CSV 디렉터리). spec 004 계약
+  (`specs/004-backtest-execution/contracts/market-data-input.md`)의 표를 읽고 원시 OHLCV는
+  `validate_prices()`로 fail-closed 검증을 받는다
 - **엔진 생성자에 공급자 기본값을 두지 말 것.** 예전 기본값(yfinance)은 주입을 잊은 경로가 조용히
-  이용 조건 밖 원천(원칙 X)으로 넘어가게 했다. yfinance 공급자는 `worker/scripts/`에 있고 배포되는
-  `worker` 패키지에서 import할 수 없다 — 개발 데모(`worker.demo`)와 그 테스트만 `sys.path`에 넣어 쓴다
+  이용 조건 밖 원천(원칙 X)으로 넘어가게 했다. 외부 시세 공급자는 이제 없다 — `worker.main`은
+  `MARKET_DATA_URL`이 없으면 시작하지 않고, `worker.demo`는 픽스처 디렉터리만 받는다
 - **결측과 거래정지는 다른 사건이다.** 거래정지일에도 행이 있고(`trading_suspended=true`, volume 0,
   OHLC 전부 직전 종가) 실행은 계속된다. 거래일 행이 빠지면 보간하지 않고 `DataInsufficientError`로
   실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다
 - 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고
-  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)
+  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다).
+  다시 만들면 `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py` 도 다시 돌려
+  `tests/fixtures/manual_reconciliation.json` 을 갱신한다 — 이 스크립트는 워커를 import 하지 않는
+  독립 계산이라 기대값을 엔진 출력으로 채우면 대조가 아니다
 - **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다
 - **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다
 - **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 PD-03·PD-04 대기이며, 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). "팀이 안 정했다"와 "엔진이 구현 안 했다"는 메시지를 구분한다 — 사용자가 할 일이 다르다
@@ -81,20 +99,17 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   주입하는 것과 같다. `MARKET_DATA_URL`에는 기본값을 두지 않는다 — 값이 없으면 조용히 로컬 DB를
   읽는 대신 실패해야 한다
 
-## 전략 추가 절차 (파일 2개 + 레지스트리 2줄)
+## 배분 전략 추가 절차 (파일 1~2개 + 레지스트리 1~2줄)
 
-1. `contracts/strategy_params/{전략}.py` 에 파라미터 모델(`ContractModel`, `extra="forbid"`,
-   기본값 금지)을 만들고 `contracts/strategy_params/__init__.py` 의 `STRATEGY_PARAMETERS` 에 한 줄 등록
-2. `strategies/{전략}.py` 에 `Strategy` 구현(`generate_signals` 만)을 만들고
-   `strategies/__init__.py` 의 `STRATEGIES` 에 `StrategyEntry(versions=..., build=...)` 한 줄 등록.
-   `build` 는 계약이 검증한 `typed_parameters` 를 받아 `PreparedStrategy(signal, required_history)` 를
-   돌려준다 — `required_history` 는 첫 신호에 필요한 이전 거래일 종가 수다
-   (`Strategy` ABC 는 `generate_signals` 만 요구하므로 준비 기간은 전략 클래스가 아니라
-   레지스트리가 선언한다)
+1. `allocation/{전략}.py` 에 `compute(universe, history, parameters, rules, as_of) -> AllocationResult`
+   순수 함수를 만들고 `allocation/__init__.py` 의 `ALLOCATION_RULES` 에 한 줄 등록. 규칙 값은
+   `rules`에서만 읽고 없으면 `INVALID_REQUEST`로 멈춘다
+2. `parameters` 모양이 공통(`{"rebalance": "MONTH_END"}`)과 다르면
+   `contracts/strategy_params/{전략}.py` 에 모델(`ContractModel`, `extra="forbid"`, 기본값 금지)을 만들고
+   `STRATEGY_PARAMETERS` 에 등록. 같으면 `RebalanceParameters`를 그대로 등록한다
 
-`AllocationSpec`·백엔드 record·픽스처·`engine_support.py` 는 건드리지 않는다. 지원하지 않는
-`version` 을 다른 버전 로직으로 계산해 놓고 그 버전의 결과라고 반환하면 안 되므로 `versions` 를
-반드시 채운다.
+`portfolio_execution.py`·`AllocationSpec`·백엔드 record·픽스처·`engine_support.py` 는 건드리지 않는다.
+팀 미확정 전략(`rules_registry.PENDING_DECISION`)은 규칙이 확정되면 그 표에서 빼고 여기 절차를 따른다.
 
 ## 규칙
 

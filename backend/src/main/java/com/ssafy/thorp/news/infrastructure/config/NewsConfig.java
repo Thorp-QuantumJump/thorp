@@ -19,6 +19,8 @@ import org.springframework.core.io.Resource;
  */
 @Configuration
 @EnableConfigurationProperties(NewsProperties.class)
+// 수집 스케줄러가 돌려면 필요하다. 저장소에 @EnableScheduling이 없어 여기서 켠다.
+@org.springframework.scheduling.annotation.EnableScheduling
 public class NewsConfig {
 
     static final String PUBLISHER_REGISTRY_PATH = "news/news-publishers-v1.json";

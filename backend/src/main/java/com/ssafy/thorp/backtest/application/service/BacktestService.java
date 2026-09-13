@@ -104,6 +104,7 @@ public class BacktestService {
         EffectivePeriodCalculator.EffectivePeriod period =
                 effectivePeriodCalculator.resolve(
                         rules,
+                        overlay,
                         command.instrumentIds(),
                         command.start(),
                         command.end(),
