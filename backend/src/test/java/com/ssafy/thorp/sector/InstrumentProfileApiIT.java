@@ -60,6 +60,8 @@ class InstrumentProfileApiIT extends PostgresTestSupport {
     private static final String DATASET_ID = "KRX_DAILY_20260907";
     private static final String OLD_DATASET_ID = "KRX_DAILY_20260801";
     private static final String PARTIAL_DATASET_ID = "KRX_DAILY_20260908";
+    private static final String RETIRED_MAP_VERSION = "SEM-2026-08-01-001";
+    private static final String RETIRED_DATASET_ID = "KRX_DAILY_20260930";
 
     private static final String METHODOLOGY = "KRX 반도체 지수를 추종하며 유동시가총액 가중으로 구성종목을 담는다.";
     private static final String SOURCE_ATTRIBUTION = "한국거래소 통계정보";
@@ -217,6 +219,27 @@ class InstrumentProfileApiIT extends PostgresTestSupport {
                 done,
                 done ? null : "이용 한도 도달",
                 mapVersionId);
+    }
+
+    /**
+     * 이미 물러난 대응표 버전 하나. {@code effective_to}가 차 있어 열린 버전이 아니다.
+     *
+     * <p>열린 버전은 최대 하나라는 불변식이 있으므로 이 행은 그 제약에 걸리지 않는다. 섹터 연결을 만들지 않는 이유는 대표 상품 정보 조회가 대응표 항목이 아니라 자료
+     * 버전이 가리키는 대응표 버전만 보기 때문이다.
+     */
+    private long publishRetiredMap() {
+        return jdbcTemplate.queryForObject(
+                """
+                INSERT INTO sector_etf_map_version
+                    (version, effective_from, effective_to, is_sample, published_at)
+                VALUES (?, TIMESTAMPTZ '2026-08-01 00:00:00+09', TIMESTAMPTZ '2026-09-13 00:00:00+09',
+                        TRUE, TIMESTAMPTZ '2026-08-01 00:00:00+09')
+                ON CONFLICT (version) DO UPDATE
+                    SET effective_to = TIMESTAMPTZ '2026-09-13 00:00:00+09'
+                RETURNING id
+                """,
+                Long.class,
+                RETIRED_MAP_VERSION);
     }
 
     private void insertProfile(long etfId, long datasetVersionId, String value, boolean current) {
@@ -393,6 +416,26 @@ class InstrumentProfileApiIT extends PostgresTestSupport {
         insertProfile(etfId, partialId, "999999999", true);
 
         assertThat(profileOf(SEMICONDUCTOR).get("datasetId").asText()).isEqualTo(DATASET_ID);
+    }
+
+    @Test
+    @DisplayName("물러난 대응표로 만든 자료 버전은 고르지 않는다")
+    void ignoresProfilesFromARetiredMapVersion() throws Exception {
+        long openMapId = publishMap();
+        long openVersionId = publishDataset(openMapId, DATASET_ID, "2026-09-07T18:00:00+09", true);
+        long retiredMapId = publishRetiredMap();
+        // 마감 시각을 일부러 더 늦게 둔다. 대응표 조건을 지우면 정렬이 이쪽을 고르므로 이 테스트가
+        // 깨진다. 조건이 있는지를 값으로 확인하려는 것이다.
+        long retiredVersionId =
+                publishDataset(retiredMapId, RETIRED_DATASET_ID, "2026-09-30T18:00:00+09", true);
+        long etfId = etfId(SEMICONDUCTOR_ETF);
+        insertProfile(etfId, openVersionId, "1240000000", true);
+        insertProfile(etfId, retiredVersionId, "999999999", true);
+
+        JsonNode data = profileOf(SEMICONDUCTOR);
+
+        assertThat(data.get("datasetId").asText()).isEqualTo(DATASET_ID);
+        assertThat(data.get("avgDailyValue3m").asText()).isEqualTo("1240000000");
     }
 
     @Test

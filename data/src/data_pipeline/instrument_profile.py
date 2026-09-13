@@ -77,8 +77,11 @@ _WEIGHT_EXPONENT: Final[Decimal] = Decimal("0.0001")
 INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
 
 #: 파일 입력이 받는 키. 여기 없는 키는 거부한다 — 특히 추적 차이(PD-21)가 조용히 섞이지 않게 한다.
+#: ``sourceAttribution``을 받지 않는 이유는 그 값이 종목마다 다른 자료가 아니라 원천이 정해 주는
+#: 한 문장이기 때문이다. 파일이 덮어쓸 수 있으면 FR-011이 요구한 출처 표시가 파일을 쓰는 사람의
+#: 손에 달리고, SC-005의 "100%"를 코드가 보장하지 못한다.
 _PROFILE_KEYS: Final[frozenset[str]] = frozenset(
-    {"instrumentId", "indexMethodologySummary", "holdingsOverlap", "sourceAttribution"}
+    {"instrumentId", "indexMethodologySummary", "holdingsOverlap"}
 )
 _OVERLAP_KEYS: Final[frozenset[str]] = frozenset({"asOfCurrentComposition", "topHoldings"})
 _HOLDING_KEYS: Final[frozenset[str]] = frozenset({"name", "weight"})
@@ -365,9 +368,16 @@ def holdings_overlap_from_payload(payload: object, where: str) -> HoldingsOverla
             # 문자열로 규정한다(contracts/sector-api.md 예시).
             raise InstrumentProfileError(f"{spot}의 weight는 문자열이어야 한다: {weight!r}")
         holdings.append(Holding(name=item["name"], weight=_parse_weight(weight, spot)))
-    return HoldingsOverlap(
-        holdings=tuple(holdings), as_of_current=_require_bool(payload["asOfCurrentComposition"])
-    )
+    as_of_current = _require_bool(payload["asOfCurrentComposition"])
+    if not as_of_current:
+        # 과거 구성 이력을 주는 원천이 없다(2026-09-13 확인). 거짓으로 두면 "당시 구성을
+        # 재현했다"는 뜻이 되어 FR-015가 금지한 표현이 화면에 실린다. 나중에 과거 구성을
+        # 확보하면 이 검사를 푸는 자리가 여기다.
+        raise InstrumentProfileError(
+            f"{where}의 asOfCurrentComposition은 참이어야 한다. 과거 구성 이력을 주는 "
+            "원천이 없어 당시 구성을 재현했다고 표현할 수 없다 (FR-015)"
+        )
+    return HoldingsOverlap(holdings=tuple(holdings), as_of_current=as_of_current)
 
 
 def _parse_weight(value: str, where: str) -> Decimal:
@@ -423,7 +433,7 @@ def profiles_from_records(
                 avg_daily_value_3m=average_daily_trading_value(
                     price_rows, instrument_id, data_deadline=data_deadline, months=months
                 ),
-                source_attribution=record.get("sourceAttribution", SOURCE_ATTRIBUTION_KRX),
+                source_attribution=SOURCE_ATTRIBUTION_KRX,
             )
         )
     return profiles
