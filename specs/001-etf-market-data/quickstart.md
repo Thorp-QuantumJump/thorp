@@ -146,6 +146,40 @@ uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-e
 - `failure_reason`과 `last_success_at`이 채워져 있다
 - 조회 응답의 `dataDeadline`이 실제로 수집한 마지막 날짜다. 요청한 날짜가 아니다
 
+## 시나리오 8 — 대표 상품 정보에서 근거와 한계를 확인한다
+
+**검증 대상**: FR-011, FR-015, SC-005, User Story 3
+
+지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 같이 파일로 받는다. 일평균 거래대금만 방금 적재한 `daily_price`의 거래대금에서 계산한다.
+
+```bash
+cd data
+uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07 \
+    --instrument-profiles raw/instrument-profiles.json
+```
+
+```bash
+curl -s localhost:8080/sectors/SEMICONDUCTOR/instrument-profile | jq
+```
+
+**기대 결과**
+
+- 필수 항목이 모두 있다: `benchmarkIndex`·`indexMethodologySummary`·`listedOn`·`holdingsOverlap`·`avgDailyValue3m`·`sourceAttribution`·`survivorshipNote` (FR-015)
+- `sourceAttribution`이 `한국거래소 통계정보`다 (FR-011, SC-005)
+- 과거 구성 이력이 없으므로 `holdingsOverlap.asOfCurrentComposition`이 `true`다. 화면은 당시 구성을 재현했다고 표현하지 않는다
+- `survivorshipNote`에 현재 생존 상품만 고른 한계가 한 문장으로 있다
+- **추적 차이 필드가 없다.** 계산 정의가 PD-21로 남아 이번 범위에서 뺐다
+- `avgDailyValue3m`이 지수 표기 없는 문자열이다. 거래량과 종가를 곱한 추정이 아니라 `daily_price.value` 기준이다
+- `datasetId`·`dataDeadline`이 어느 자료 버전 기준인지 알려 준다. `isSample`은 **그 자료 버전**의 값이며 `GET /sectors`의 `isSample`(대응표 기준)과 근거가 다르다
+
+이어서 없는 상태와 빈 값을 구분하는지 확인한다.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/sectors/NO_SUCH_SECTOR/instrument-profile
+```
+
+**기대 결과**: 없는 섹터 코드는 `404 SECTOR_NOT_FOUND`, 대표 상품 정보가 아직 적재되지 않았으면 빈 값이 아니라 `409 INSTRUMENT_PROFILE_NOT_READY`다. 원칙 VI가 "없는 결과를 만들어내지 않는다"를 요구하므로 준비 안 됨과 없음을 구분한다.
+
 ## 전체 검증 명령
 
 파트별 검증 명령은 각 CLAUDE.md가 정한 것을 그대로 쓴다.
