@@ -22,7 +22,8 @@ COMMITTED에서 두 실행이 같은 ``dataset_id``를 동시에 다루면 확�
 바꿔 돌려준다. 즉 **잘못된 자료가 들어가지는 않지만 어느 쪽이 이길지는 정해져 있지 않다.**
 수집을 병렬로 돌릴 계획이 생기면 ``dataset_id``에 advisory lock을 걸어야 한다.
 
-대조 기록(``reconciliation_record``)은 시계열 5개와 적재 경로가 다르다. 시계열 표는
+대조 기록(``reconciliation_record``)과 대표 상품 정보(``instrument_profile``)는 시계열 5개와
+적재 경로가 다르다. 시계열 표는
 ``dataset_id`` **문자열**을 갖고 그 값으로 ``dataset_version``을 참조하지만, 이 표는
 ``dataset_version_id``·``etf_id`` **bigint 외래 키**를 갖는다(data-model.md). 파이프라인이 다루는
 값은 문자열 ``dataset_id``와 ``{6자리}.XKRX`` 종목 식별자뿐이므로, 적재 전에 두 식별자를 찾아
@@ -57,6 +58,7 @@ from typing import Any, Final
 import numpy as np
 from dotenv import load_dotenv
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
@@ -72,6 +74,7 @@ from sqlalchemy import (
     create_engine,
     select,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -84,9 +87,11 @@ from data_pipeline.dataset_version import (
     validate_dataset_id,
 )
 
-# 대조 기록은 cause↔resolution 조합 검사를 거친 값만 적재한다. 그 지식은 FR-017의 규칙이므로
-# reconciliation 한 곳에만 두고 여기서는 형을 요구해 검사를 거쳤음을 보장한다. reconciliation은
-# 이 모듈을 부르지 않으므로(적재 배선은 scripts/reconcile.py가 한다) 순환 import가 생기지 않는다.
+# 아래 두 개체는 값 규칙 검사를 거친 형으로만 받는다. 대조 기록의 cause↔resolution 조합(FR-017)과
+# 대표 상품 정보의 비중 합·상위 종목 개수·추적 차이 금지(FR-015)는 각 모듈 한 곳에만 두고, 여기서는
+# 형을 요구해 검사를 거쳤음을 보장한다. 두 모듈 모두 이 모듈을 부르지 않으므로(적재 배선은
+# scripts/ 진입점이 한다) 순환 import가 생기지 않는다.
+from data_pipeline.instrument_profile import InstrumentProfile
 from data_pipeline.reconciliation import ReconciliationRecord
 
 # 끝을 ``$``가 아니라 ``\Z``로 닫는다. 파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞아
@@ -205,6 +210,35 @@ reconciliation_record_table: Final[Table] = Table(
     Column("cause", String(20), nullable=False),
     Column("resolution", String(20), nullable=False),
     Column("checked_at", DateTime(timezone=True), nullable=False),
+)
+
+instrument_profile_table: Final[Table] = Table(
+    "instrument_profile",
+    METADATA,
+    # 대조 기록과 같은 모양이다 — 문자열 dataset_id가 아니라 bigint 외래 키 두 개를 갖는다
+    # (data-model.md). 시계열이 아니라 대표 ETF 하나에 딸린 표시용 묶음이기 때문이다.
+    Column(
+        "id",
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    ),
+    Column("etf_id", BigInteger, ForeignKey("representative_etf.id"), nullable=False),
+    Column(
+        "dataset_version_id",
+        BigInteger,
+        ForeignKey("dataset_version.id"),
+        nullable=False,
+    ),
+    Column("index_methodology_summary", Text, nullable=False),
+    # PostgreSQL은 jsonb다. 예행용 SQLite에는 그 형이 없어 표를 만들 수 없으므로 변형을 둔다.
+    Column("holdings_overlap", JSONB().with_variant(JSON, "sqlite"), nullable=False),
+    Column("holdings_as_of_current", Boolean, nullable=False),
+    # 금액이지만 TEXT다. NUMERIC은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다
+    # (data-model.md instrument_profile 불변식, backend/CLAUDE.md).
+    Column("avg_daily_value_3m", Text, nullable=False),
+    Column("source_attribution", String(200), nullable=False),
+    Column("survivorship_note", Text, nullable=False),
 )
 
 daily_price_table: Final[Table] = Table(
@@ -818,6 +852,74 @@ class MarketDataRepository:
             raise
         return len(prepared)
 
+    # -- 대표 상품 정보 -----------------------------------------------------
+
+    def load_instrument_profiles(
+        self,
+        dataset_id: str,
+        profiles: Iterable[InstrumentProfile],
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> int:
+        """대표 상품 정보를 적재한다 (FR-015, T012·T013).
+
+        **여기에 두는 이유**: 이 표는 시계열과 달리 ``dataset_version_id``·``etf_id`` 두 bigint
+        외래 키를 갖고(data-model.md), 그 변환은 이미 :meth:`load_reconciliation_records` 가
+        하고 있다. 같은 변환을 별도 모듈에 다시 쓰면 적재 순서 강제와 재적재 거부라는 이 모듈의
+        규칙이 두 곳으로 갈라진다. 일평균 거래대금을 **다시 계산하지 않고** 받는 것도 같은
+        까닭이다 — 산출은 :mod:`data_pipeline.instrument_profile` 한 곳의 일이다.
+
+        시계열과 같은 순서로 검사한다. DB를 건드리기 전에 값을 모두 갖추고, 자료 버전이
+        발행되지 않았으면 :class:`DatasetNotPublishedError`, 이미 그 자료 버전의 대표 상품
+        정보가 있으면 :class:`DatasetAlreadyLoadedError` 다. 자료 버전마다 한 벌이며 고쳐
+        쓰지 않는다(FR-017).
+        """
+        if chunk_size < 1:
+            raise RepositoryError(f"chunk_size는 1 이상이어야 한다: {chunk_size}")
+        validate_dataset_id(dataset_id)
+        prepared = list(profiles)
+        seen: dict[str, int] = {}
+        for position, profile in enumerate(prepared):
+            if not isinstance(profile, InstrumentProfile):
+                raise RowValidationError(
+                    f"instrument_profile {position}번째가 InstrumentProfile이 아니다: "
+                    f"{type(profile).__name__}. FR-015의 값 규칙을 거친 값만 적재한다"
+                )
+            if profile.instrument_id in seen:
+                # 저장 스키마의 UNIQUE (etf_id, dataset_version_id)가 최종 방어선이지만,
+                # 여기서 막아야 어느 항목이 겹쳤는지 알려 줄 수 있다.
+                raise RowValidationError(
+                    f"{profile.instrument_id}의 대표 상품 정보가 두 번 들어 있다 "
+                    f"({seen[profile.instrument_id]}번째와 {position}번째)"
+                )
+            seen[profile.instrument_id] = position
+
+        already = DatasetAlreadyLoadedError(
+            f"instrument_profile에 이미 {dataset_id} 자료의 대표 상품 정보가 있다. "
+            "발행된 자료는 덧붙이거나 고치지 않고 새 dataset_id로 다시 만든다 (FR-017)"
+        )
+        try:
+            with self._engine.begin() as conn:
+                version_id = self._dataset_version_id(conn, dataset_id)
+                if self._has_instrument_profiles(conn, version_id):
+                    raise already
+                rows: list[dict[str, Any]] = []
+                for profile in prepared:
+                    row = profile.to_row()
+                    instrument_id = row.pop("instrument_id")
+                    row["dataset_version_id"] = version_id
+                    row["etf_id"] = self._representative_etf_id(conn, instrument_id)
+                    rows.append(row)
+                for start in range(0, len(rows), chunk_size):
+                    chunk: Sequence[dict[str, Any]] = rows[start : start + chunk_size]
+                    if chunk:
+                        conn.execute(instrument_profile_table.insert(), list(chunk))
+        except IntegrityError as error:
+            if self._is_unique_violation(error):
+                raise already from error
+            raise
+        return len(prepared)
+
     # -- 내부 --------------------------------------------------------------
 
     def _load(
@@ -916,6 +1018,15 @@ class MarketDataRepository:
                 "representative_etf를 참조하므로 대응표를 먼저 적재해야 한다"
             )
         return int(found)
+
+    @staticmethod
+    def _has_instrument_profiles(conn: Connection, dataset_version_id: int) -> bool:
+        statement = (
+            select(instrument_profile_table.c.id)
+            .where(instrument_profile_table.c.dataset_version_id == dataset_version_id)
+            .limit(1)
+        )
+        return conn.execute(statement).first() is not None
 
     @staticmethod
     def _has_reconciliation_records(conn: Connection, dataset_version_id: int) -> bool:
