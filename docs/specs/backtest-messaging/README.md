@@ -146,6 +146,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `costs { commission, spread, slippage, tax, total }` 비용 합계(FR-027). `performance.netTotalReturn`·`totalTradingCost`와 짝.
 - `liquidation { markToMarket { finalEquity, totalReturn }, liquidated { finalEquity, totalReturn, liquidationCost } }` — `evaluation.liquidationAtEnd=true`일 때(FR-017).
 - `analytics { recoveryDays?, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method }` 파생 지표(FR-027).
+  정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method="sample-covariance-daily"`. 계산 불가 항목은 키 생략.
 - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,
   `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING` 등 개방 집합.
 - `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, worker }` 참조 버전(FR-028).

@@ -108,7 +108,16 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
 - **결정성.** 이벤트는 날짜 → 종목 이름순으로 넣고 주문도 같은 순서라, 같은 입력은
   `run.startedAt/finishedAt` 을 뺀 `EngineOutput` 이 바이트 단위로 같다.
 - 지표(`performance.py`): Sharpe 252일·RF 0·ddof 1, CAGR 은 달력 일수, MDD 음수, CLOSED 만
-  거래 수·승률. 확장(순수익률·분석 블록·수기 대조)은 T008.
+  거래 수·승률. `netTotalReturn` 은 `totalReturn` 과 같다(자산 곡선이 비용 차감 후).
+- **분석 블록**(`analytics`, `calculate_analytics` docstring 이 정의 원본): 회복 기간(저점 → 전 고점
+  회복까지 거래일), 회전율((매수+매도 대금)/2/평균 자산, 연환산), 종목 수익률 표본 상관, 위험 기여
+  wᵢ(Σw)ᵢ/wᵀΣw(실제 비중 평균), 손실 기여(종목별 실현+미실현+분배금 / 전체 손익), 비중 오차 평균.
+  `method="sample-covariance-daily"`. 계산 불가는 키 생략.
+- **결과 조립은 `engine_runner.assemble_output` 하나**다. 완료도, 취소·한도의 부분 결과(T011·T014)도
+  `series` 가 `lastTradingDate` 까지만 담긴 채 같은 함수로 만든다.
+- **수기 대조**(SC-003): `tests/fixtures/manual_reconciliation.json` 의 기대값은
+  `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`(워커 import 없음, 표준 라이브러리)가
+  픽스처 CSV 에서 계산한 것이다. 픽스처를 다시 만들면 이 스크립트도 다시 돌린다. 허용 오차 0(PD-12 전).
 
 필수 검증:
 
