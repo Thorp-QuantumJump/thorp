@@ -7,4 +7,3 @@ pydantic>=2.8
 pydantic-settings>=2.4
 python-dotenv>=1.0
 nautilus_trader==1.219.0
-yfinance==0.2.65
