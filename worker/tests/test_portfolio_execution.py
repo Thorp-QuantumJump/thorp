@@ -6,6 +6,8 @@ T008 이 맡는다.
 """
 
 import json
+from collections.abc import Callable
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
@@ -23,7 +25,7 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.events import ProgressPoint
 from worker.engine_runner import PortfolioBacktestEngine, evaluation_start
-from worker.market_data import CsvMarketDataProvider
+from worker.market_data import CsvMarketDataProvider, MarketData
 from worker.portfolio_execution import (
     HALT_DEFERRED,
     WEIGHT_ROUNDING,
@@ -55,6 +57,21 @@ FULL_COSTS = {
 
 def engine() -> PortfolioBacktestEngine:
     return PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))
+
+
+class PatchedProvider:
+    """픽스처를 읽은 뒤 한 군데만 바꾼다 — 픽스처에 없는 사건(병합·장기 정지)을 만들 때."""
+
+    def __init__(self, patch: Callable[[MarketData], MarketData]) -> None:
+        self.patch = patch
+
+    def load(self, *args: Any, **kwargs: Any) -> MarketData:
+        return self.patch(CsvMarketDataProvider(THREE_ETF_DIR).load(*args, **kwargs))
+
+
+def run_patched(patch: Callable[[MarketData], MarketData], **overrides: Any) -> EngineOutput:
+    body = EngineInput.model_validate(engine_input_body(**overrides))
+    return PortfolioBacktestEngine(PatchedProvider(patch)).run(body, None)
 
 
 def run(on_progress: Any = None, **overrides: Any) -> EngineOutput:
@@ -473,6 +490,30 @@ def test_pending_order_is_scaled_on_the_split_day() -> None:
     assert output.trades[0].quantity > 1400
     assert output.weights_series[0].weight_error is not None
     assert output.weights_series[0].weight_error < Decimal("0.01")
+
+
+def test_reverse_split_that_rounds_a_pending_order_to_zero_drops_it_with_a_record() -> None:
+    """병합(비율 0.5). 3/1 에 1주 매수를 정했는데 3/4 분할 뒤 0.5주 → 0주다.
+
+    0주 주문을 Nautilus 에 내면 SELL 은 터지고 BUY 는 INSUFFICIENT_CASH 라는 틀린 사유로 남는다.
+    """
+
+    def merge(market: MarketData) -> MarketData:
+        splits = tuple(replace(s, ratio=Decimal("0.5")) for s in market.splits)
+        return replace(market, splits=splits)
+
+    items = [{"sectorId": "BIO", "instrumentId": BIO, "targetWeight": "1"}]
+    output = run_patched(
+        merge,
+        run={"start": "2024-03-01", "end": "2024-03-08"},
+        universe={"items": items},
+        portfolio={"initialCash": "20000"},  # 13,097원짜리 한 주만 산다
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.trades == []
+    assert [e.kind for e in output.exceptions or [] if e.date == SPLIT_DAY] == ["SPLIT_FRACTION"]
+    warned = [w.code for w in output.diagnostics.warnings if w.date == SPLIT_DAY]
+    assert warned == ["SPLIT_ROUNDING"]
 
 
 def test_transient_provider_failure_propagates_instead_of_failing_the_run() -> None:

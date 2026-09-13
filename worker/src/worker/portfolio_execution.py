@@ -82,6 +82,7 @@ REBALANCE_MONTH_END = "MONTH_END"
 #: 결과 계약 ``exceptions[].kind``.
 HALT_DEFERRED = "HALT_DEFERRED"
 WEIGHT_ROUNDING = "WEIGHT_ROUNDING"
+SPLIT_ROUNDING = "SPLIT_ROUNDING"  # 병합으로 미체결 주문이 0주가 되어 버렸다
 #: Nautilus 가 무제한 유동성(``liquidity.model=UNLIMITED``)으로 다루도록 두는 호가 잔량.
 UNLIMITED_SIZE = Quantity.from_str("18446744073")
 VENUE = Venue("XKRX")
@@ -362,9 +363,19 @@ class PortfolioRebalanceExecution(NautilusStrategy):
             if order is not None:
                 # 전날 분할 전 가격으로 정한 수량. 오늘 시가는 분할 후 가격이라 수량도 같은 비율로
                 # 늘린다 — 그대로 두면 목표 비중의 절반만 사고 나머지가 현금으로 남는다.
-                scaled = apply_split(split, Decimal(order.quantity)).quantity
-                order.quantity = int(scaled)
-                order.record.quantity = scaled
+                scaled = apply_split(split, Decimal(order.quantity))
+                if scaled.exception is not None:
+                    self.exceptions.append(scaled.exception)
+                if scaled.quantity == ZERO:
+                    # 병합(비율 < 1)으로 한 주도 남지 않았다. 0주 주문은 낼 수 없다.
+                    self._reject(
+                        iid,
+                        SPLIT_ROUNDING,
+                        f"{order.side.value} {order.quantity} x {split.ratio} -> 0 whole shares",
+                    )
+                else:
+                    order.quantity = int(scaled.quantity)
+                    order.record.quantity = scaled.quantity
             if self.quantity[iid] == ZERO:
                 continue
             outcome = apply_split(split, self.quantity[iid])
