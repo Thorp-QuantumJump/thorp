@@ -139,7 +139,11 @@ class BacktestResultQueryServiceTest {
                 errorCode == null ? performance() : null,
                 errorCode == null ? execution() : null,
                 benchmark ? "069500.XKRX" : null,
-                benchmark ? new BigDecimal("0.053292") : null);
+                benchmark ? new BigDecimal("0.053292") : null,
+                null,
+                null,
+                null,
+                0);
     }
 
     private void given(RunStatus status) {

@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.application.repository;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import java.util.List;
@@ -57,6 +58,13 @@ public interface BacktestResultRepository {
      * 컬럼은 select에 넣지 않는다.
      */
     Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long runId);
+
+    /**
+     * 비중 기록·비중 출처·예외 기록. {@code /weights}·{@code /exceptions}가 쓴다. 시계열은 읽지 않는다.
+     *
+     * <p>블록이 저장되지 않은 결과(null 컬럼)는 빈 리스트로 돌려준다 — 결과 행이 없는 것(빈 Optional)과 다르다.
+     */
+    Optional<BacktestResultBlocks> findBlocks(Long runId);
 
     /**
      * 거래 내역 한 페이지. 정렬은 {@code (entry_time, id)} 고정이므로 {@code Pageable}의 {@code Sort}를 받지 않는다 — 계약이

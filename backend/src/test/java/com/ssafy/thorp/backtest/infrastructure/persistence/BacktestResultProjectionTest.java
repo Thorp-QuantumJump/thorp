@@ -8,6 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -131,6 +132,30 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         assertThat(summary.benchmarkInstrumentId()).isNull();
         assertThat(summary.benchmarkTotalReturn()).isNull();
         assertThat(summary.hasBenchmark()).isFalse();
+        // v2 요약 항목(T009): 비용·청산·분석 블록과 예외 건수. 예외 본문은 읽지 않는다
+        EngineOutput output = event.payload().engineOutput();
+        assertThat(summary.costs()).isEqualTo(output.costs());
+        assertThat(summary.liquidation()).isEqualTo(output.liquidation());
+        assertThat(summary.analytics()).isEqualTo(output.analytics());
+        assertThat(summary.exceptionCount()).isEqualTo(output.exceptions().size());
+    }
+
+    @Test
+    @DisplayName("비중·예외 블록 조회는 시계열을 읽지 않고 두 리스트와 비중 출처를 돌려준다")
+    void findsWeightsAndExceptionsWithoutSeries() {
+        Long jobId = saveFixtureResult();
+        EngineOutput output = MessageFixtures.finishedCompleted().payload().engineOutput();
+        jdbcTemplate.update(
+                "UPDATE backtest_result SET portfolio_series = '{\"broken\":true}'::jsonb"
+                        + " WHERE run_id = ?",
+                jobId);
+
+        BacktestResultBlocks blocks = resultRepository.findBlocks(jobId).orElseThrow();
+
+        assertThat(blocks.weightsSeries()).isEqualTo(output.weightsSeries());
+        assertThat(blocks.weightsSource()).isEqualTo(output.weightsSource());
+        assertThat(blocks.exceptions()).isEqualTo(output.exceptions());
+        assertThat(resultRepository.findBlocks(999_999L)).isEmpty();
     }
 
     @Test

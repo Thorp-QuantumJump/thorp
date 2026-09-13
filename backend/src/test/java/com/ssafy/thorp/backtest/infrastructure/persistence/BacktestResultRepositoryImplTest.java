@@ -112,6 +112,14 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());
         assertThat(result.getBenchmark()).isNull();
         assertThat(result.getDiagnostics()).isEqualTo(output.diagnostics());
+        // v2 블록(T009). 표시용이라 전부 JSONB 이고 weights_source 만 필터용 스칼라다
+        assertThat(result.getWeightsSeries()).isEqualTo(output.weightsSeries());
+        assertThat(result.getWeightsSource()).isEqualTo(output.weightsSource());
+        assertThat(result.getCosts()).isEqualTo(output.costs());
+        assertThat(result.getLiquidation()).isEqualTo(output.liquidation());
+        assertThat(result.getAnalytics()).isEqualTo(output.analytics());
+        assertThat(result.getExceptions()).isEqualTo(output.exceptions());
+        assertThat(result.getVersions()).isEqualTo(output.versions());
         assertThat(result.getCreatedAt()).isNotNull();
     }
 
