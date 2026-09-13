@@ -8,7 +8,7 @@
 
 | 자료 | 001의 표 | 열 | 용도 |
 |---|---|---|---|
-| 일별 원시 가격 | `daily_price` | `instrument_id, date, open, high, low, close, volume, trading_suspended BOOL, dataset_id` | 체결(다음 거래일 원시 시가), 거래 불가 판정(`trading_suspended` 또는 volume 0) |
+| 일별 원시 가격 | `daily_price` | `instrument_id, date, open, high, low, close, volume, trading_suspended BOOL, dataset_id` | 체결(다음 거래일 원시 시가), 거래 불가 판정(`trading_suspended` 하나. 정지가 아닌 volume 0 은 호가가 있어 체결 가능 — 001 contracts/market-dataset.md 「거래정지 처리」) |
 | 일별 조정 종가 | `daily_price` (같은 행) | `instrument_id, date, adjusted_close, dataset_id` | 신호·성과(분할·분배 일관 반영) |
 | 분배금 이벤트 | `corporate_action` (`event_type = 'DISTRIBUTION'`) | `instrument_id, ex_date, pay_date, amount, dataset_id` | 지급일 현금 반영(한 번만) |
 | 분할 이벤트 | `corporate_action` (`event_type = 'SPLIT'`) | `instrument_id, ex_date, amount, dataset_id` | 원시 수량 조정. `amount`가 비율이고 `pay_date`는 NULL이다 |

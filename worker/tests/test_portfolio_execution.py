@@ -12,6 +12,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
+import pandas as pd
 import pytest
 from conftest import BATTERY, BIO, SEMICONDUCTOR, THREE_ETF_DIR, engine_input_body
 
@@ -240,6 +241,28 @@ def test_halted_instrument_is_deferred_to_the_next_tradable_day() -> None:
     assert {p.instrument_id for p in halted_day.positions or []} == {BATTERY, BIO}
     # 이월 체결 뒤 비중 기록은 정지일이 아니라 실제 체결일에 남는다.
     assert output.weights_series[0].date == date(2024, 6, 12)
+
+
+def test_zero_volume_without_a_suspension_flag_is_still_tradable() -> None:
+    """정지가 아니면서 거래량이 0인 날은 호가가 있어 체결할 수 있다(001 contracts/market-dataset.md
+    「거래정지 처리」). 판정 기준은 ``trading_suspended`` 하나다 — volume 0 을 정지로 읽으면 정상
+    주문을 잘못 이월한다.
+    """
+
+    def zero_volume(market: MarketData) -> MarketData:
+        market.prices[BATTERY].loc[pd.Timestamp(HALT_DAY), "volume"] = 0
+        return market
+
+    output = run_patched(
+        zero_volume, **three_etf("2024-06-03", "2024-06-28", run={"effectiveStart": "2024-06-10"})
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    battery = [t for t in output.trades if t.instrument_id == BATTERY]
+    assert battery and all(t.reason is TradeReason.REBALANCE for t in battery)
+    assert kst_date(battery[0].entry_time) == HALT_DAY
+    assert {e.instrument_id for e in output.exceptions or [] if e.kind == HALT_DEFERRED} == {
+        SEMICONDUCTOR
+    }
 
 
 # --- 기업행위(FR-013) ------------------------------------------------------------------

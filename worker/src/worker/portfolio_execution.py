@@ -9,7 +9,7 @@
 1. 09:00 D 의 QuoteTick 이 종목별로 도착한다. 첫 틱에서 그날의 기업행위(분할 → 수량, 권리락일 →
    분배금 자격, 지급일 → 현금)를 먼저 반영한다.
 2. 마지막 종목의 틱이 오면 전날 판단한 주문을 **매도 먼저, 매수 나중**에 제출한다. 그날 거래
-   정지(정지 표시 또는 거래량 0)인 종목의 주문은 제출하지 않고 다음 거래 가능일로 미룬다
+   정지(``trading_suspended``)인 종목의 주문은 제출하지 않고 다음 거래 가능일로 미룬다
    (``HALT_DEFERRED``). 체결가는 틱의 호가 — 시가에 호가차·슬리피지를 얹은 값이다.
 3. 15:30 D 의 Bar 가 도착한다. 마지막 봉에서 종가로 평가해 스냅샷을 남기고, D 가 판단일(평가
    시작일과 매월 마지막 거래일)이면 목표 비중을 구해 다음 거래일 주문을 만든다.
@@ -400,8 +400,10 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         frame = self.market.prices[iid]
         if pd.Timestamp(day) not in frame.index:
             return False
-        row = frame.loc[pd.Timestamp(day)]
-        return not bool(row.trading_suspended) and int(row.volume) > 0
+        # 판정 기준은 trading_suspended 하나다. 정지가 아닌 거래량 0 인 날은 호가가 있어 체결할 수
+        # 있다(001 contracts/market-dataset.md 「거래정지 처리」). volume 0 을 정지로 읽으면 정상
+        # 주문을 잘못 이월한다.
+        return not bool(frame.loc[pd.Timestamp(day)].trading_suspended)
 
     def _submit_pending(self, day: date) -> None:
         """매도 먼저, 매수 나중. 둘 다 종목 이름순이라 실행마다 같은 순서다."""
