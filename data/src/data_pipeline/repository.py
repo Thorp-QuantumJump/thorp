@@ -22,6 +22,17 @@ COMMITTED에서 두 실행이 같은 ``dataset_id``를 동시에 다루면 확�
 바꿔 돌려준다. 즉 **잘못된 자료가 들어가지는 않지만 어느 쪽이 이길지는 정해져 있지 않다.**
 수집을 병렬로 돌릴 계획이 생기면 ``dataset_id``에 advisory lock을 걸어야 한다.
 
+대조 기록(``reconciliation_record``)은 시계열 5개와 적재 경로가 다르다. 시계열 표는
+``dataset_id`` **문자열**을 갖고 그 값으로 ``dataset_version``을 참조하지만, 이 표는
+``dataset_version_id``·``etf_id`` **bigint 외래 키**를 갖는다(data-model.md). 파이프라인이 다루는
+값은 문자열 ``dataset_id``와 ``{6자리}.XKRX`` 종목 식별자뿐이므로, 적재 전에 두 식별자를 찾아
+바꿔 넣어야 한다(:meth:`MarketDataRepository.load_reconciliation_records`). 없는 자료 버전이나
+대응표에 없는 종목이면 FK 위반 메시지 대신 무엇이 없는지 말하는 오류를 낸다 — 여기서는 열 이름만
+같은 표가 아니라 두 표를 잇는 조회가 끼기 때문에 원인 설명이 더 필요하다. ``etf_id`` 조회를
+위해 ``representative_etf``의 열 사본도 함께 둔다(그 표는 대응표 쪽이 적재하고 이 모듈은 읽기만
+한다). 재적재 거부 기준도 자료 버전 하나당 대조 기록 한 묶음이다 — 발행된 자료는 바뀌지 않으므로
+같은 자료 버전을 다시 대조하면 결과가 같아야 한다 (FR-017).
+
 역할 분담. 저장 스키마
 (``backend/src/main/resources/db/migration/V20260911114500__etf_market_data.sql``)가 최종
 방어선이고 UPDATE·DELETE 거부 트리거·FK·CHECK를 모두 갖고 있다. 여기서는 DB 제약 이름만
@@ -73,6 +84,11 @@ from data_pipeline.dataset_version import (
     validate_dataset_id,
 )
 
+# 대조 기록은 cause↔resolution 조합 검사를 거친 값만 적재한다. 그 지식은 FR-017의 규칙이므로
+# reconciliation 한 곳에만 두고 여기서는 형을 요구해 검사를 거쳤음을 보장한다. reconciliation은
+# 이 모듈을 부르지 않으므로(적재 배선은 scripts/reconcile.py가 한다) 순환 import가 생기지 않는다.
+from data_pipeline.reconciliation import ReconciliationRecord
+
 # 끝을 ``$``가 아니라 ``\Z``로 닫는다. 파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞아
 # "091160.XKRX\n"이 통과한다. 저장 스키마의 CHECK는 그것을 거부하므로, 그대로 두면 뜻이 분명한
 # 오류 대신 제약 이름만 돌아온다.
@@ -101,6 +117,14 @@ class RepositoryError(RuntimeError):
 
 class RowValidationError(DatasetVersionError):
     """적재하려는 행이 저장 스키마의 모양과 맞지 않는다."""
+
+
+class RepresentativeEtfNotFoundError(RowValidationError):
+    """대조 기록이 가리키는 종목이 ``representative_etf``에 없다.
+
+    ``reconciliation_record.etf_id``가 그 표를 참조하므로 FK 위반이 되는데, DB가 돌려주는
+    제약 이름만으로는 어느 종목이 없는지 알 수 없다.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +156,55 @@ dataset_version_table: Final[Table] = Table(
     Column("is_sample", Boolean, nullable=False),
     Column("source", String(64), nullable=False),
     Column("map_version_id", BigInteger, nullable=False),
+)
+
+representative_etf_table: Final[Table] = Table(
+    "representative_etf",
+    METADATA,
+    # 이 모듈은 이 표를 읽기만 한다(``etf_id`` 조회). 적재는 대응표 쪽이 맡는다.
+    Column(
+        "id",
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    ),
+    Column("instrument_id", String(32), nullable=False, unique=True),
+    Column("name", String(200), nullable=False),
+    Column("listed_on", Date, nullable=False),
+    Column("delisted_on", Date, nullable=True),
+    Column("benchmark_index", String(200), nullable=False),
+    Column("manager", String(200), nullable=False),
+    Column("leveraged", Boolean, nullable=False, default=False),
+    Column("inverse", Boolean, nullable=False, default=False),
+)
+
+reconciliation_record_table: Final[Table] = Table(
+    "reconciliation_record",
+    METADATA,
+    # 시계열 표와 달리 문자열 ``dataset_id``가 아니라 bigint 외래 키 두 개를 갖는다
+    # (data-model.md). 적재 전에 두 식별자를 찾아 넣는다.
+    Column(
+        "id",
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    ),
+    Column(
+        "dataset_version_id",
+        BigInteger,
+        ForeignKey("dataset_version.id"),
+        nullable=False,
+    ),
+    Column("etf_id", BigInteger, ForeignKey("representative_etf.id"), nullable=False),
+    Column("target_date", Date, nullable=False),
+    Column("sample_reason", String(16), nullable=False),
+    Column("field_name", String(64), nullable=False),
+    Column("queried_value", Text, nullable=False),
+    Column("disclosed_value", Text, nullable=False),
+    Column("difference", Text, nullable=True),
+    Column("cause", String(20), nullable=False),
+    Column("resolution", String(20), nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
 )
 
 daily_price_table: Final[Table] = Table(
@@ -564,6 +637,24 @@ class MarketDataRepository:
         """``.env``의 ``DATABASE_URL``로 저장소를 연다."""
         return cls(create_engine(database_url_from_env(env_path)))
 
+    @classmethod
+    def rehearsal(cls) -> MarketDataRepository:
+        """같은 열 정의의 인메모리 SQLite 저장소. **적재 예행용이다.**
+
+        행 검사는 표 하나 단위로 일어나므로, 네 번째 표에서 걸리면 앞의 세 표는 이미 들어가
+        있다. 그 상태는 발행본이라 DELETE도 거부되어 되돌릴 수 없다. 그래서 진입점은 전체
+        묶음을 여기에 먼저 통째로 넣어 보고, 통과한 뒤에만 실제 저장소를 건드린다.
+
+        **CHECK와 트리거는 이 대역에 없다.** 마이그레이션이 원본이고 이 예행은 파이썬 계층의
+        행 검사와 적재 순서까지만 확인한다. 그 위는 실제 적재에서 DB가 본다.
+
+        쓰고 나면 :attr:`engine` 을 ``dispose()`` 한다. 인메모리 대역이라 접속이 닫히면
+        내용도 함께 사라진다.
+        """
+        engine = create_engine("sqlite://")
+        METADATA.create_all(engine)
+        return cls(engine)
+
     @property
     def engine(self) -> Engine:
         return self._engine
@@ -654,6 +745,79 @@ class MarketDataRepository:
         """거래정지 구간을 적재한다. ``daily_price``의 정지 표시에서 파생된 표다."""
         return self._load("suspension_period", dataset_id, rows, chunk_size=chunk_size)
 
+    # -- 대조 기록 ---------------------------------------------------------
+
+    def load_reconciliation_records(
+        self,
+        dataset_id: str,
+        records: Iterable[ReconciliationRecord],
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> int:
+        """공시 대조 기록을 적재한다 (FR-016·FR-017).
+
+        시계열과 달리 ``dataset_version_id``·``etf_id``를 찾아 넣으므로 ``_load``를 쓰지
+        않는다. 검사 순서는 같다 — DB를 건드리기 전에 행을 모두 검사하고, 자료 버전이
+        발행되지 않았으면 :class:`DatasetNotPublishedError`, 이미 그 자료 버전의 대조 기록이
+        있으면 :class:`DatasetAlreadyLoadedError` 다. 같은 자료 버전을 다시 대조하면 결과가
+        같아야 하므로(발행된 자료는 바뀌지 않는다) 재적재를 거부하는 것이 맞다.
+        """
+        if chunk_size < 1:
+            raise RepositoryError(f"chunk_size는 1 이상이어야 한다: {chunk_size}")
+        validate_dataset_id(dataset_id)
+        prepared = list(records)
+        seen: dict[tuple[str, date, str, str], int] = {}
+        for position, record in enumerate(prepared):
+            if not isinstance(record, ReconciliationRecord):
+                raise RowValidationError(
+                    f"reconciliation_record {position}번째가 ReconciliationRecord가 아니다: "
+                    f"{type(record).__name__}. cause↔resolution 조합 검사를 거친 값만 적재한다"
+                )
+            identity = (
+                record.instrument_id,
+                record.target_date,
+                record.sample_reason,
+                record.field_name,
+            )
+            if identity in seen:
+                # 같은 표본의 같은 항목이 두 번 기록되면 SC-002의 일치·불일치 건수가 부풀고,
+                # 어느 쪽이 맞는지 알 수 없다. 표에는 PK가 없으므로 여기서 막는다.
+                raise RowValidationError(
+                    f"같은 표본의 같은 항목이 두 번 들어 있다 "
+                    f"({seen[identity]}번째와 {position}번째): {identity}"
+                )
+            seen[identity] = position
+
+        already = DatasetAlreadyLoadedError(
+            f"reconciliation_record에 이미 {dataset_id} 자료의 대조 기록이 있다. "
+            "발행된 자료는 바뀌지 않으므로 같은 자료 버전을 다시 대조해도 결과가 같다 (FR-017)"
+        )
+        try:
+            with self._engine.begin() as conn:
+                version_id = self._dataset_version_id(conn, dataset_id)
+                if self._has_reconciliation_records(conn, version_id):
+                    raise already
+                etf_ids = {
+                    instrument_id: self._representative_etf_id(conn, instrument_id)
+                    for instrument_id in sorted({record.instrument_id for record in prepared})
+                }
+                rows: list[dict[str, Any]] = []
+                for record in prepared:
+                    row = record.to_row()
+                    instrument_id = row.pop("instrument_id")
+                    row["dataset_version_id"] = version_id
+                    row["etf_id"] = etf_ids[instrument_id]
+                    rows.append(row)
+                for start in range(0, len(rows), chunk_size):
+                    chunk: Sequence[dict[str, Any]] = rows[start : start + chunk_size]
+                    if chunk:
+                        conn.execute(reconciliation_record_table.insert(), list(chunk))
+        except IntegrityError as error:
+            if self._is_unique_violation(error):
+                raise already from error
+            raise
+        return len(prepared)
+
     # -- 내부 --------------------------------------------------------------
 
     def _load(
@@ -719,4 +883,45 @@ class MarketDataRepository:
     @staticmethod
     def _has_rows(conn: Connection, table: Table, dataset_id: str) -> bool:
         statement = select(table.c.dataset_id).where(table.c.dataset_id == dataset_id).limit(1)
+        return conn.execute(statement).first() is not None
+
+    @staticmethod
+    def _dataset_version_id(conn: Connection, dataset_id: str) -> int:
+        """문자열 ``dataset_id``로 ``dataset_version.id``를 찾는다 (대조 기록의 FK 대상)."""
+        statement = (
+            select(dataset_version_table.c.id)
+            .where(dataset_version_table.c.dataset_id == dataset_id)
+            .limit(1)
+        )
+        found = conn.execute(statement).scalar_one_or_none()
+        if found is None:
+            raise DatasetNotPublishedError(
+                f"자료 버전 행이 없다: {dataset_id}. "
+                "publish_dataset_version으로 자료 버전을 먼저 발행한 뒤 대조 기록을 적재한다"
+            )
+        return int(found)
+
+    @staticmethod
+    def _representative_etf_id(conn: Connection, instrument_id: str) -> int:
+        """종목 식별자로 ``representative_etf.id``를 찾는다."""
+        statement = (
+            select(representative_etf_table.c.id)
+            .where(representative_etf_table.c.instrument_id == instrument_id)
+            .limit(1)
+        )
+        found = conn.execute(statement).scalar_one_or_none()
+        if found is None:
+            raise RepresentativeEtfNotFoundError(
+                f"대표 ETF 행이 없다: {instrument_id}. reconciliation_record.etf_id가 "
+                "representative_etf를 참조하므로 대응표를 먼저 적재해야 한다"
+            )
+        return int(found)
+
+    @staticmethod
+    def _has_reconciliation_records(conn: Connection, dataset_version_id: int) -> bool:
+        statement = (
+            select(reconciliation_record_table.c.id)
+            .where(reconciliation_record_table.c.dataset_version_id == dataset_version_id)
+            .limit(1)
+        )
         return conn.execute(statement).first() is not None
