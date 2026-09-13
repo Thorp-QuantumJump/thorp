@@ -83,6 +83,7 @@ REBALANCE_MONTH_END = "MONTH_END"
 HALT_DEFERRED = "HALT_DEFERRED"
 WEIGHT_ROUNDING = "WEIGHT_ROUNDING"
 SPLIT_ROUNDING = "SPLIT_ROUNDING"  # 병합으로 미체결 주문이 0주가 되어 버렸다
+HALT_SUPERSEDED = "HALT_SUPERSEDED"  # 이월 주문이 다음 판단일까지 남아 새 목표로 바뀌었다
 #: Nautilus 가 무제한 유동성(``liquidity.model=UNLIMITED``)으로 다루도록 두는 호가 잔량.
 UNLIMITED_SIZE = Quantity.from_str("18446744073")
 VENUE = Venue("XKRX")
@@ -739,6 +740,8 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         fill_day = self.plan.next_trading_day(day)
         if fill_day is None:
             return
+        if self.pending:
+            self._supersede_pending(day, equity)
 
         targets: dict[str, int] = {}
         for iid in self.instrument_ids:
@@ -762,7 +765,7 @@ class PortfolioRebalanceExecution(NautilusStrategy):
 
         for iid in self.instrument_ids:
             delta = targets[iid] - int(self.quantity[iid])
-            if delta == 0 or iid in self.pending:
+            if delta == 0:
                 continue
             side = Side.BUY if delta > 0 else Side.SELL
             record = OrderRecord(
@@ -774,6 +777,33 @@ class PortfolioRebalanceExecution(NautilusStrategy):
             self.orders.append(record)
             self.pending[iid] = PendingOrder(iid, side, abs(delta), fill_day, record)
         self.pending_target = PlannedTarget(fill_day, weights, risk_scale, estimated)
+
+    def _supersede_pending(self, day: date, equity: Decimal) -> None:
+        """이월 주문이 다음 판단일까지 남았다. 옛 목표 수량으로 체결하면 기록(새 목표)과 어긋난다.
+
+        이월 주문은 아직 Nautilus 에 낸 적이 없으므로 장부에서 닫기만 하면 된다. 미완료였던 이전
+        리밸런싱은 버리지 않고 오늘 실제 비중으로 ``weightsSeries`` 에 남긴다 — 그래야 정지 때문에
+        목표에 닿지 못했다는 사실이 ``weightError`` 로 보인다.
+        """
+        if self.pending_target is not None:
+            self._record_weights(day, equity, self.pending_target)
+            self.pending_target = None
+        for iid in sorted(self.pending):
+            order = self.pending.pop(iid)
+            order.record.status = "REJECTED"
+            order.record.reason = HALT_SUPERSEDED
+            self.exceptions.append(
+                ExceptionRecord(
+                    date=day,
+                    instrument_id=iid,
+                    kind=HALT_SUPERSEDED,
+                    rule=str(self.request.execution.trading_halt),
+                    action=(
+                        f"{order.side.value} {order.quantity} planned "
+                        f"{order.planned_date.isoformat()} replaced by this rebalance"
+                    ),
+                )
+            )
 
 
 def execute_portfolio(

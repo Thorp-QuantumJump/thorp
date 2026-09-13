@@ -29,6 +29,7 @@ from worker.engine_runner import PortfolioBacktestEngine, evaluation_start
 from worker.market_data import CsvMarketDataProvider, MarketData
 from worker.portfolio_execution import (
     HALT_DEFERRED,
+    HALT_SUPERSEDED,
     WEIGHT_ROUNDING,
     CallbackError,
     EngineFailure,
@@ -537,6 +538,46 @@ def test_reverse_split_that_rounds_a_pending_order_to_zero_drops_it_with_a_recor
     assert [e.kind for e in output.exceptions or [] if e.date == SPLIT_DAY] == ["SPLIT_FRACTION"]
     warned = [w.code for w in output.diagnostics.warnings if w.date == SPLIT_DAY]
     assert warned == ["SPLIT_ROUNDING"]
+
+
+def test_halt_spanning_a_rebalance_supersedes_the_deferred_order() -> None:
+    """반도체 ETF 가 5/20~6/4 정지. 5/17 판단의 이월 주문이 5/31 월말 판단을 넘긴다.
+
+    옛 수량으로 체결하면 기록(새 목표)과 주문(옛 목표)이 어긋나고 5/17 리밸런싱의 비중 기록은
+    사라진다. 5/31 에 이월 주문을 새 목표로 바꾸고, 미완료였던 5/17 목표는 그날 실제 비중으로
+    남긴다.
+    """
+    halted = pd.date_range("2024-05-20", "2024-06-04")
+
+    def long_halt(market: MarketData) -> MarketData:
+        frame = market.prices[SEMICONDUCTOR]
+        rows = frame.index.isin(halted)
+        frame.loc[rows, "trading_suspended"] = True
+        frame.loc[rows, "volume"] = 0
+        return market
+
+    output = run_patched(
+        long_halt, **three_etf("2024-05-13", "2024-06-28", run={"effectiveStart": "2024-05-17"})
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+
+    superseded = [e for e in output.exceptions or [] if e.kind == HALT_SUPERSEDED]
+    assert [(e.date, e.instrument_id) for e in superseded] == [(date(2024, 5, 31), SEMICONDUCTOR)]
+
+    # 5/17 리밸런싱은 미완료 상태로 5/31 에 기록되고, 5/31 리밸런싱은 정지 해제 뒤 6/5 에 기록된다.
+    assert [w.date for w in output.weights_series] == [date(2024, 5, 31), date(2024, 6, 5)]
+    unfinished = output.weights_series[0]
+    assert unfinished.target[SEMICONDUCTOR] == Decimal("0.4")
+    assert unfinished.actual[SEMICONDUCTOR] == 0
+    assert unfinished.weight_error is not None and unfinished.weight_error > Decimal("0.3")
+    # 5/31 종가로 정한 수량을 6/5 종가로 평가한 차이만 남는다(옛 5/17 수량이면 훨씬 크다).
+    assert output.weights_series[1].weight_error < Decimal("0.05")
+
+    # 실제 체결은 5/31 판단의 주문이다 — 예정일이 5/20 이 아니라 6/3 이다.
+    semis = [t for t in output.trades if t.instrument_id == SEMICONDUCTOR]
+    assert len(semis) == 1 and semis[0].reason is TradeReason.HALT_DEFERRED
+    assert semis[0].planned_date == date(2024, 6, 3)
+    assert kst_date(semis[0].entry_time) == date(2024, 6, 5)
 
 
 def test_transient_provider_failure_propagates_instead_of_failing_the_run() -> None:
