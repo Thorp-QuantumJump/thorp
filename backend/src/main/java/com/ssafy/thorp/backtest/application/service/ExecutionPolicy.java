@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.port.message.SignalTiming;
 import com.ssafy.thorp.backtest.application.port.message.TradingHaltPolicy;
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -47,6 +48,9 @@ public final class ExecutionPolicy {
                     PriceSource.RAW,
                     PriceSource.ADJUSTED,
                     DistributionPolicy.CASH_ON_PAY_DATE);
+
+    /** 체결 시각을 거래일로 바꾸는 거래소 현지 시간대. 모든 종목이 XKRX 다(ADR-0002 D4). */
+    public static final ZoneId EXCHANGE_ZONE = ZoneId.of("Asia/Seoul");
 
     public static final String CURRENCY = "KRW";
     public static final boolean SHORT_SELLING = false;

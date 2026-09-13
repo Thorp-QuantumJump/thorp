@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,11 +26,13 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit
              WHERE t.job.id = :jobId
                AND (:instrumentId IS NULL OR t.instrumentId = :instrumentId)
                AND (:status IS NULL OR t.status = :status)
+               AND (CAST(:entryTimeBefore AS java.time.Instant) IS NULL OR t.entryTime < :entryTimeBefore)
              ORDER BY t.entryTime ASC, t.id ASC
             """)
     Page<BacktestTradeJpaEntity> findPage(
             @Param("jobId") Long jobId,
             @Param("instrumentId") String instrumentId,
             @Param("status") TradeStatus status,
+            @Param("entryTimeBefore") Instant entryTimeBefore,
             Pageable pageable);
 }

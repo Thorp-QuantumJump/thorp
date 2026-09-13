@@ -52,7 +52,38 @@ public record BacktestDetailResponse(
             int tradeCount,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal winRate,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalCommission,
-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalSlippageCost) {}
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalSlippageCost,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal netTotalReturn,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalTradingCost,
+            Costs costs,
+            Liquidation liquidation,
+            Analytics analytics,
+            int exceptionCount) {}
+
+    /** 비용 네 갈래와 합(FR-027). */
+    public record Costs(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commission,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal spread,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippage,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal tax,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal total) {}
+
+    /** 종료 시 시가평가와 청산 가정치(FR-017). */
+    public record Liquidation(MarkToMarket markToMarket, Liquidated liquidated) {}
+
+    public record MarkToMarket(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn) {}
+
+    public record Liquidated(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal liquidationCost) {}
+
+    /** 요약에 실리는 파생 지표 둘. {@code recoveryDays} null = 미회복. */
+    public record Analytics(
+            Integer recoveryDays,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal turnover) {}
 
     public record Failure(String code, String message) {}
 
@@ -95,6 +126,31 @@ public record BacktestDetailResponse(
                 source.tradeCount(),
                 source.winRate(),
                 source.totalCommission(),
-                source.totalSlippageCost());
+                source.totalSlippageCost(),
+                source.netTotalReturn(),
+                source.totalTradingCost(),
+                source.costs() == null
+                        ? null
+                        : new Costs(
+                                source.costs().commission(),
+                                source.costs().spread(),
+                                source.costs().slippage(),
+                                source.costs().tax(),
+                                source.costs().total()),
+                source.liquidation() == null
+                        ? null
+                        : new Liquidation(
+                                new MarkToMarket(
+                                        source.liquidation().markToMarket().finalEquity(),
+                                        source.liquidation().markToMarket().totalReturn()),
+                                new Liquidated(
+                                        source.liquidation().liquidated().finalEquity(),
+                                        source.liquidation().liquidated().totalReturn(),
+                                        source.liquidation().liquidated().liquidationCost())),
+                source.analytics() == null
+                        ? null
+                        : new Analytics(
+                                source.analytics().recoveryDays(), source.analytics().turnover()),
+                source.exceptionCount());
     }
 }

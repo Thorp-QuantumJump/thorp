@@ -52,10 +52,15 @@ public record BacktestDetailResult(
             Integer totalTradingDays) {}
 
     /**
-     * 전체 기간 성과.
+     * 전체 기간 성과(rest-api.md {@code summary}). 핵심 숫자 3개는 {@code netTotalReturn}·{@code
+     * maxDrawdown}·{@code totalTradingCost}다. 앞 열두 항목은 v1부터 있던 값이고 뒤 여섯이 v2 추가분이다.
      *
-     * <p>v2 계약이 정한 항목(netTotalReturn·liquidation·costs·analytics·exceptionCount)은 결과 JSONB를 채우는
-     * T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대로다.
+     * @param netTotalReturn 비용 차감 후 전체 수익률(FR-027). null = 미산출
+     * @param totalTradingCost 거래비용 합계. null = 미산출
+     * @param costs 비용 네 갈래와 합. null = 미저장
+     * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끔
+     * @param analytics 파생 지표 중 요약에 넣는 둘. 나머지는 결과 JSONB 에 있다. null = 미저장
+     * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}
      */
     public record Summary(
             BigDecimal initialEquity,
@@ -69,7 +74,16 @@ public record BacktestDetailResult(
             int tradeCount,
             BigDecimal winRate,
             BigDecimal totalCommission,
-            BigDecimal totalSlippageCost) {}
+            BigDecimal totalSlippageCost,
+            BigDecimal netTotalReturn,
+            BigDecimal totalTradingCost,
+            EngineOutput.Costs costs,
+            EngineOutput.Liquidation liquidation,
+            AnalyticsSummary analytics,
+            int exceptionCount) {}
+
+    /** {@code analytics} 중 요약에 실리는 둘(rest-api.md). */
+    public record AnalyticsSummary(Integer recoveryDays, BigDecimal turnover) {}
 
     /** 실패 사유. 코드 집합은 엔진 소유이고 HTTP {@code ErrorCode}와 다르다. */
     public record Failure(String code, String message) {}
@@ -201,6 +215,15 @@ public record BacktestDetailResult(
                 p.tradeCount(),
                 p.winRate(),
                 e.totalCommission(),
-                e.totalSlippageCost());
+                e.totalSlippageCost(),
+                p.netTotalReturn(),
+                p.totalTradingCost(),
+                result.costs(),
+                result.liquidation(),
+                result.analytics() == null
+                        ? null
+                        : new AnalyticsSummary(
+                                result.analytics().recoveryDays(), result.analytics().turnover()),
+                result.exceptionCount());
     }
 }

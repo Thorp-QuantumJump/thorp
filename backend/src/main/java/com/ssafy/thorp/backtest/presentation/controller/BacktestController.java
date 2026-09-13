@@ -4,20 +4,24 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;
 import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>POST /backtests → Job 저장(QUEUED) 후 Worker에 발행, 202와 { backtestId, status: QUEUED } 즉시 반환.
  *
- * <p>결과 조회는 응답 크기 때문에 네 리소스로 나뉜다 — 계약과 예시는 {@code docs/specs/backtest-api/README.md} §2다. POST 응답은
+ * <p>결과 조회는 응답 크기 때문에 여섯 리소스로 나뉜다 — 계약과 예시는 {@code docs/specs/backtest-api/README.md} §2다. POST 응답은
  * 그대로 { backtestId, status }이며 커지지 않는다.
  */
 @RestController
@@ -120,6 +124,24 @@ public class BacktestController {
                 queryService.getPositions(
                         backtestId, currentRequester.requireRequesterId(http), date);
         return ResponseEntity.ok(ApiResponse.ok(BacktestPositionsResponse.from(result)));
+    }
+
+    /** 리밸런싱마다 목표·실제 비중(FR-026). {@code weightsSource}로 사용자 입력 비중과 계산 비중을 구분한다. */
+    @GetMapping("/{backtestId}/weights")
+    public ResponseEntity<ApiResponse<BacktestWeightsResponse>> getWeights(
+            @PathVariable String backtestId, HttpServletRequest http) {
+        BacktestWeightsResult result =
+                queryService.getWeights(backtestId, currentRequester.requireRequesterId(http));
+        return ResponseEntity.ok(ApiResponse.ok(BacktestWeightsResponse.from(result)));
+    }
+
+    /** 예외 처리 기록(FR-020·FR-030). 005가 "결과 옆 한 문장"에 쓰는 원천이다. */
+    @GetMapping("/{backtestId}/exceptions")
+    public ResponseEntity<ApiResponse<BacktestExceptionsResponse>> getExceptions(
+            @PathVariable String backtestId, HttpServletRequest http) {
+        BacktestExceptionsResult result =
+                queryService.getExceptions(backtestId, currentRequester.requireRequesterId(http));
+        return ResponseEntity.ok(ApiResponse.ok(BacktestExceptionsResponse.from(result)));
     }
 
     /**

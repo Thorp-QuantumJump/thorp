@@ -10,15 +10,18 @@ import static org.mockito.Mockito.when;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
@@ -38,6 +41,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -115,14 +119,14 @@ class BacktestResultQueryServiceTest {
                 new BigDecimal("11666521.51"),
                 "KRW",
                 new BigDecimal("0.166652"),
-                null,
+                new BigDecimal("0.166652"),
                 new BigDecimal("0.366917"),
                 new BigDecimal("-0.041757"),
                 new BigDecimal("2.342630"),
                 new BigDecimal("0.132307"),
                 2,
                 new BigDecimal("0.500000"),
-                null);
+                new BigDecimal("17078.49"));
     }
 
     private static EngineOutput.ExecutionResult execution() {
@@ -140,10 +144,55 @@ class BacktestResultQueryServiceTest {
                 errorCode == null ? execution() : null,
                 benchmark ? "069500.XKRX" : null,
                 benchmark ? new BigDecimal("0.053292") : null,
+                errorCode == null ? costs() : null,
+                errorCode == null ? liquidation() : null,
+                errorCode == null ? analytics() : null,
+                errorCode == null ? 1 : 0);
+    }
+
+    private static EngineOutput.Costs costs() {
+        return new EngineOutput.Costs(
+                new BigDecimal("3941.19"),
+                new BigDecimal("0.00"),
+                new BigDecimal("13137.30"),
+                new BigDecimal("0.00"),
+                new BigDecimal("17078.49"));
+    }
+
+    private static EngineOutput.Liquidation liquidation() {
+        return new EngineOutput.Liquidation(
+                new EngineOutput.MarkToMarket(
+                        new BigDecimal("11666521.51"), new BigDecimal("0.166652")),
+                new EngineOutput.Liquidated(
+                        new BigDecimal("11662525.96"),
+                        new BigDecimal("0.166253"),
+                        new BigDecimal("3995.55")));
+    }
+
+    private static EngineOutput.Analytics analytics() {
+        return new EngineOutput.Analytics(
+                9, new BigDecimal("1.219991"), null, null, null, null, "sample-covariance-daily");
+    }
+
+    /** 먼저 취소해 실행은 계속 돈 요청(R-04). 스냅샷 날짜까지만 볼 수 있다. */
+    private static BacktestRequest cancelledJoinedRequest(LocalDate snapshot) {
+        return BacktestRequest.restore(
+                21L,
+                BacktestId.from(BACKTEST_ID),
+                JOB_ID,
+                REQUESTER,
+                ExecutionType.SINGLE,
+                ResultSource.JOINED,
                 null,
-                null,
-                null,
-                0);
+                Instant.parse("2026-09-07T01:00:10Z"),
+                snapshot,
+                false);
+    }
+
+    private void givenCancelledJoined(LocalDate snapshot) {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelledJoinedRequest(snapshot)));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(RunStatus.COMPLETED)));
     }
 
     private void given(RunStatus status) {
@@ -193,6 +242,141 @@ class BacktestResultQueryServiceTest {
         // execution에서 비용 2개만 가져온다. orderCount 등은 노출하지 않는다
         assertThat(summary.totalCommission()).isEqualByComparingTo("3941.19");
         assertThat(summary.totalSlippageCost()).isEqualByComparingTo("13137.30");
+        // v2 항목(rest-api.md summary): 핵심 숫자 3개 + 청산 + 비용 + analytics 2개 + 예외 건수
+        assertThat(summary.netTotalReturn()).isEqualByComparingTo("0.166652");
+        assertThat(summary.totalTradingCost()).isEqualByComparingTo("17078.49");
+        assertThat(summary.costs()).isEqualTo(costs());
+        assertThat(summary.liquidation()).isEqualTo(liquidation());
+        assertThat(summary.analytics().recoveryDays()).isEqualTo(9);
+        assertThat(summary.analytics().turnover()).isEqualByComparingTo("1.219991");
+        assertThat(summary.exceptionCount()).isEqualTo(1);
+    }
+
+    // ---------- getWeights · getExceptions ----------
+
+    private static EngineOutput.WeightsPoint weightsPoint(String date) {
+        return new EngineOutput.WeightsPoint(
+                LocalDate.parse(date),
+                Map.of("005930.XKRX", new BigDecimal("0.5")),
+                Map.of("005930.XKRX", new BigDecimal("0.49")),
+                new BigDecimal("0.01"),
+                null,
+                null);
+    }
+
+    private static EngineOutput.ExceptionRecord exception(String date) {
+        return new EngineOutput.ExceptionRecord(
+                LocalDate.parse(date), "005930.XKRX", "HALT_DEFERRED", "DEFER", "deferred");
+    }
+
+    private void givenBlocks() {
+        when(resultRepository.findBlocks(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                new BacktestResultBlocks(
+                                        List.of(
+                                                weightsPoint("2025-01-02"),
+                                                weightsPoint("2025-02-03")),
+                                        WeightsSource.COMPUTED,
+                                        List.of(
+                                                exception("2025-01-10"),
+                                                exception("2025-02-10")))));
+    }
+
+    @Test
+    @DisplayName("비중 기록은 리밸런싱 포인트와 비중 출처를 그대로 돌려준다")
+    void weightsReturnPointsAndSource() {
+        given(RunStatus.COMPLETED);
+        givenBlocks();
+
+        BacktestWeightsResult result = service.getWeights(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(result.partial()).isFalse();
+        assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);
+        assertThat(result.points()).hasSize(2);
+        assertThat(result.points().get(0).weightError()).isEqualByComparingTo("0.01");
+    }
+
+    @Test
+    @DisplayName("예외 기록은 그대로 돌려주고 관문을 쓴다 — RUNNING 이면 RESULT_NOT_READY")
+    void exceptionsReturnRecordsAndUseGate() {
+        given(RunStatus.COMPLETED);
+        givenBlocks();
+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items()).hasSize(2);
+
+        given(RunStatus.RUNNING);
+        assertThatThrownBy(() -> service.getExceptions(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestResultNotReadyException.class);
+    }
+
+    @Test
+    @DisplayName("비중도 결과 행이 없으면 500이다")
+    void weightsMissingResultRow() {
+        given(RunStatus.COMPLETED);
+        when(resultRepository.findBlocks(JOB_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getWeights(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    // ---------- 먼저 취소한 요청의 읽기 필터(R-04, T005 결정 ⑥) ----------
+
+    @Test
+    @DisplayName("먼저 취소해 실행이 계속 돈 요청은 스냅샷 날짜까지만 보고 partial=true 다")
+    void cancelledJoinedRequestIsCutAtItsSnapshot() {
+        givenCancelledJoined(LocalDate.parse("2025-01-10"));
+        when(resultRepository.findTimeseries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                new BacktestSeries(
+                                        List.of(
+                                                snapshot("2025-01-02", "10000000.00"),
+                                                snapshot("2025-01-10", "10100000.00"),
+                                                snapshot("2025-01-13", "10200000.00")),
+                                        null)));
+        givenBlocks();
+
+        BacktestTimeseriesResult series = service.getTimeseries(BACKTEST_ID, REQUESTER);
+        assertThat(series.partial()).isTrue();
+        assertThat(series.points())
+                .extracting(BacktestTimeseriesResult.Point::date)
+                .containsExactly(LocalDate.parse("2025-01-02"), LocalDate.parse("2025-01-10"));
+
+        assertThat(service.getWeights(BACKTEST_ID, REQUESTER).points())
+                .extracting(EngineOutput.WeightsPoint::date)
+                .containsExactly(LocalDate.parse("2025-01-02"));
+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items())
+                .extracting(EngineOutput.ExceptionRecord::date)
+                .containsExactly(LocalDate.parse("2025-01-10"));
+    }
+
+    @Test
+    @DisplayName("완료한 거래일이 없는 취소 요청은 409 NO_PARTIAL_RESULT 다 — 실행 결과로 대신하지 않는다")
+    void cancelledBeforeAnyProgressHasNoPartialResult() {
+        givenCancelledJoined(null);
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NO_PARTIAL_RESULT);
+    }
+
+    @Test
+    @DisplayName("취소 요청의 거래는 스냅샷 다음 날 0시(거래소 현지) 전에 진입한 것만 저장소에 요청한다")
+    void cancelledJoinedRequestBoundsTradesByEntryTime() {
+        givenCancelledJoined(LocalDate.parse("2025-01-10"));
+        when(resultRepository.exists(JOB_ID)).thenReturn(true);
+        FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
+        Instant bound =
+                LocalDate.parse("2025-01-11").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        when(resultRepository.findTrades(JOB_ID, query, bound))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);
+
+        assertThat(result.partial()).isTrue();
+        assertThat(result.content()).isEmpty();
     }
 
     @Test
@@ -364,7 +548,7 @@ class BacktestResultQueryServiceTest {
         given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);
-        when(resultRepository.findTrades(JOB_ID, query))
+        when(resultRepository.findTrades(JOB_ID, query, null))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));
 
         BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);
@@ -381,7 +565,7 @@ class BacktestResultQueryServiceTest {
         given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
-        when(resultRepository.findTrades(JOB_ID, query))
+        when(resultRepository.findTrades(JOB_ID, query, null))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
 
         assertThat(service.getTrades(BACKTEST_ID, REQUESTER, query).content()).isEmpty();
@@ -560,7 +744,7 @@ class BacktestResultQueryServiceTest {
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(IllegalStateException.class);
         // 거래 조회까지 가지 않는다
-        verify(resultRepository, never()).findTrades(any(), any());
+        verify(resultRepository, never()).findTrades(any(), any(), any());
     }
 
     // ---------- 하위 리소스 관문 ----------
@@ -591,7 +775,8 @@ class BacktestResultQueryServiceTest {
     void gateCompleted() {
         given(RunStatus.COMPLETED);
 
-        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).getId()).isEqualTo(JOB_ID);
+        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).run().getId())
+                .isEqualTo(JOB_ID);
     }
 
     @Test

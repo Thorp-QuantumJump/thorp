@@ -21,7 +21,8 @@
         "commission": "1437.75",
         "slippageCost": "4792.50",
         "realizedPnl": "-87230.25",
-        "returnRate": "-0.018049"
+        "returnRate": "-0.018049",
+        "reason": "SIGNAL"
       },
       {
         "tradeId": "TRD-000002",
@@ -37,7 +38,8 @@
         "commission": "1693.44",
         "slippageCost": "5644.80",
         "realizedPnl": "1010261.76",
-        "returnRate": "0.196702"
+        "returnRate": "0.196702",
+        "reason": "SIGNAL"
       },
       {
         "tradeId": "TRD-000003",
@@ -53,9 +55,11 @@
         "commission": "810.00",
         "slippageCost": "2700.00",
         "realizedPnl": null,
-        "returnRate": null
+        "returnRate": null,
+        "reason": "SIGNAL"
       }
-    ]
+    ],
+    "partial": false
   },
   "error": null
 }

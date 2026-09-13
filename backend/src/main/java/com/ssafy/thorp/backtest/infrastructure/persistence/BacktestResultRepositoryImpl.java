@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -133,12 +134,14 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
-    public Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query) {
+    public Page<EngineOutput.TradeResult> findTrades(
+            Long runId, FindBacktestTradesQuery query, Instant entryTimeBefore) {
         return tradeRepository
                 .findPage(
                         runId,
                         query.instrumentId(),
                         query.status(),
+                        entryTimeBefore,
                         PageRequest.of(query.page(), query.size()))
                 // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다
                 .map(BacktestTradeJpaEntity::getDetail);

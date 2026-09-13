@@ -205,6 +205,24 @@ class BacktestResultApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("비중 응답이 계약 예시와 같다 — weightsSource 와 리밸런싱 포인트")
+    void weightsMatchExample() throws Exception {
+        String id = requestFor(completedJob());
+
+        assertThat(actualData("/backtests/" + id + "/weights"))
+                .isEqualTo(expectedData("backtest-weights.json", id));
+    }
+
+    @Test
+    @DisplayName("예외 응답이 계약 예시와 같다")
+    void exceptionsMatchExample() throws Exception {
+        String id = requestFor(completedJob());
+
+        assertThat(actualData("/backtests/" + id + "/exceptions"))
+                .isEqualTo(expectedData("backtest-exceptions.json", id));
+    }
+
+    @Test
     @DisplayName("보유 응답이 계약 예시와 같다 — 직전 스냅샷 규칙")
     void positionsMatchExample() throws Exception {
         String id = requestFor(completedJob());
@@ -238,7 +256,13 @@ class BacktestResultApiIT extends PostgresTestSupport {
     void subResourcesReturnConflictBeforeResult() throws Exception {
         String id = requestFor(transactionTemplate.execute(status -> newJob()));
 
-        for (String path : List.of("/timeseries", "/trades", "/positions?date=2025-01-02")) {
+        for (String path :
+                List.of(
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2025-01-02",
+                        "/weights",
+                        "/exceptions")) {
             mockMvc.perform(
                             get("/backtests/" + id + path)
                                     .header(CurrentRequester.DEV_HEADER, requesterId))
@@ -264,7 +288,13 @@ class BacktestResultApiIT extends PostgresTestSupport {
                 .andExpect(jsonPath("$.data.failure.code").value("DATA_INSUFFICIENT"))
                 .andExpect(jsonPath("$.data.summary").doesNotExist());
 
-        for (String path : List.of("/timeseries", "/trades", "/positions?date=2025-01-02")) {
+        for (String path :
+                List.of(
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2025-01-02",
+                        "/weights",
+                        "/exceptions")) {
             mockMvc.perform(
                             get("/backtests/" + id + path)
                                     .header(CurrentRequester.DEV_HEADER, requesterId))
@@ -287,7 +317,14 @@ class BacktestResultApiIT extends PostgresTestSupport {
                                 job.getId()))
                 .isEqualTo(3);
 
-        for (String path : List.of("", "/timeseries", "/trades", "/positions?date=2025-01-22")) {
+        for (String path :
+                List.of(
+                        "",
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2025-01-22",
+                        "/weights",
+                        "/exceptions")) {
             mockMvc.perform(
                             get("/backtests/" + id + path)
                                     .header(CurrentRequester.DEV_HEADER, requesterId))
@@ -321,7 +358,14 @@ class BacktestResultApiIT extends PostgresTestSupport {
     void unknownBacktestIdIsNotFound() throws Exception {
         String missing = "BT-29991231-999999";
 
-        for (String path : List.of("", "/timeseries", "/trades", "/positions?date=2025-01-02")) {
+        for (String path :
+                List.of(
+                        "",
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2025-01-02",
+                        "/weights",
+                        "/exceptions")) {
             mockMvc.perform(
                             get("/backtests/" + missing + path)
                                     .header(CurrentRequester.DEV_HEADER, requesterId))

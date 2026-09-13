@@ -40,7 +40,32 @@
       "tradeCount": 2,
       "winRate": "0.500000",
       "totalCommission": "3941.19",
-      "totalSlippageCost": "13137.30"
+      "totalSlippageCost": "13137.30",
+      "netTotalReturn": "0.166652",
+      "totalTradingCost": "17078.49",
+      "costs": {
+        "commission": "3941.19",
+        "spread": "0.00",
+        "slippage": "13137.30",
+        "tax": "0.00",
+        "total": "17078.49"
+      },
+      "liquidation": {
+        "markToMarket": {
+          "finalEquity": "11666521.51",
+          "totalReturn": "0.166652"
+        },
+        "liquidated": {
+          "finalEquity": "11662525.96",
+          "totalReturn": "0.166253",
+          "liquidationCost": "3995.55"
+        }
+      },
+      "analytics": {
+        "recoveryDays": 9,
+        "turnover": "1.219991"
+      },
+      "exceptionCount": 1
     },
     "summaryUnavailable": null,
     "failure": null

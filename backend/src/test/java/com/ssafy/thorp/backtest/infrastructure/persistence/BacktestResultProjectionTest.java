@@ -201,9 +201,11 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         Long jobId = saveFixtureResult();
 
         Page<EngineOutput.TradeResult> first =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 2, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(0, 2, null, null), null);
         Page<EngineOutput.TradeResult> second =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(1, 2, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(1, 2, null, null), null);
 
         assertThat(first.getTotalElements()).isEqualTo(3);
         assertThat(first.getTotalPages()).isEqualTo(2);
@@ -226,14 +228,16 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                         resultRepository
                                 .findTrades(
                                         jobId,
-                                        new FindBacktestTradesQuery(0, 100, "000660.XKRX", null))
+                                        new FindBacktestTradesQuery(0, 100, "000660.XKRX", null),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         assertThat(
                         resultRepository
                                 .findTrades(
                                         jobId,
-                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN))
+                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         assertThat(
@@ -241,7 +245,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                                 .findTrades(
                                         jobId,
                                         new FindBacktestTradesQuery(
-                                                0, 100, "005930.XKRX", TradeStatus.CLOSED))
+                                                0, 100, "005930.XKRX", TradeStatus.CLOSED),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         // 있는 종목이지만 그 상태의 거래가 없는 조합
@@ -250,7 +255,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                                 .findTrades(
                                         jobId,
                                         new FindBacktestTradesQuery(
-                                                0, 100, "000660.XKRX", TradeStatus.OPEN))
+                                                0, 100, "000660.XKRX", TradeStatus.OPEN),
+                                        null)
                                 .getContent())
                 .isEmpty();
     }
@@ -262,7 +268,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
 
         Page<EngineOutput.TradeResult> page =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 100, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(0, 100, null, null), null);
 
         // record equals는 BigDecimal의 scale까지 본다
         assertThat(page.getContent()).isEqualTo(event.payload().engineOutput().trades());
