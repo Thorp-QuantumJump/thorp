@@ -46,7 +46,7 @@ class BacktestTradePageResponseTest {
 
     private static BacktestTradePageResponse.Trade mapped(EngineOutput.TradeResult t) {
         return BacktestTradePageResponse.from(
-                        new BacktestTradePageResult("BT-1", 0, 100, 1, 1, List.of(t)))
+                        new BacktestTradePageResult("BT-1", false, 0, 100, 1, 1, List.of(t)))
                 .content()
                 .get(0);
     }

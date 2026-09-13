@@ -7,11 +7,14 @@ import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -35,6 +38,10 @@ import org.springframework.stereotype.Repository;
 public class BacktestResultRepositoryImpl implements BacktestResultRepository {
 
     private static final TypeReference<List<EngineOutput.PortfolioSnapshot>> SERIES =
+            new TypeReference<>() {};
+    private static final TypeReference<List<EngineOutput.WeightsPoint>> WEIGHTS =
+            new TypeReference<>() {};
+    private static final TypeReference<List<EngineOutput.ExceptionRecord>> EXCEPTIONS =
             new TypeReference<>() {};
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
@@ -85,7 +92,29 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                                                 row.getExecution(),
                                                 EngineOutput.ExecutionResult.class),
                                         row.getBenchmarkInstrumentId(),
-                                        decimal(row.getBenchmarkTotalReturn())));
+                                        decimal(row.getBenchmarkTotalReturn()),
+                                        read(row.getCosts(), EngineOutput.Costs.class),
+                                        read(row.getLiquidation(), EngineOutput.Liquidation.class),
+                                        read(row.getAnalytics(), EngineOutput.Analytics.class),
+                                        row.getExceptionCount()));
+    }
+
+    @Override
+    public Optional<BacktestResultBlocks> findBlocks(Long runId) {
+        return resultRepository
+                .findBlocksRow(runId)
+                .map(
+                        row ->
+                                new BacktestResultBlocks(
+                                        orEmpty(read(row.getWeightsSeries(), WEIGHTS)),
+                                        row.getWeightsSource() == null
+                                                ? null
+                                                : WeightsSource.valueOf(row.getWeightsSource()),
+                                        orEmpty(read(row.getExceptions(), EXCEPTIONS))));
+    }
+
+    private static <T> List<T> orEmpty(List<T> value) {
+        return value == null ? List.of() : value;
     }
 
     @Override
@@ -105,12 +134,14 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     }
 
     @Override
-    public Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query) {
+    public Page<EngineOutput.TradeResult> findTrades(
+            Long runId, FindBacktestTradesQuery query, Instant visibleBefore) {
         return tradeRepository
                 .findPage(
                         runId,
                         query.instrumentId(),
                         query.status(),
+                        visibleBefore,
                         PageRequest.of(query.page(), query.size()))
                 // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다
                 .map(BacktestTradeJpaEntity::getDetail);

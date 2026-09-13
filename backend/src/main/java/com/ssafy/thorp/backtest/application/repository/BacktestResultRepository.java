@@ -3,8 +3,10 @@ package com.ssafy.thorp.backtest.application.repository;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -59,6 +61,13 @@ public interface BacktestResultRepository {
     Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long runId);
 
     /**
+     * 비중 기록·비중 출처·예외 기록. {@code /weights}·{@code /exceptions}가 쓴다. 시계열은 읽지 않는다.
+     *
+     * <p>블록이 저장되지 않은 결과(null 컬럼)는 빈 리스트로 돌려준다 — 결과 행이 없는 것(빈 Optional)과 다르다.
+     */
+    Optional<BacktestResultBlocks> findBlocks(Long runId);
+
+    /**
      * 거래 내역 한 페이지. 정렬은 {@code (entry_time, id)} 고정이므로 {@code Pageable}의 {@code Sort}를 받지 않는다 — 계약이
      * 정렬을 고정했고 같은 시각의 거래 순서가 흔들리면 페이지 경계에서 행이 중복·누락된다.
      *
@@ -66,5 +75,10 @@ public interface BacktestResultRepository {
      * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code
      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.
      */
-    Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query);
+    /**
+     * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>청산된</b> 거래만 본다 —
+     *     가로지르는 거래와 OPEN 거래는 저장된 값이 실행 종료 시점이라 경계 시점 상태가 아니다(R-04)
+     */
+    Page<EngineOutput.TradeResult> findTrades(
+            Long runId, FindBacktestTradesQuery query, Instant visibleBefore);
 }

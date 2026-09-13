@@ -14,9 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
@@ -257,11 +261,71 @@ class BacktestControllerTest {
     @Test
     @DisplayName("하위 리소스도 요청자 헤더가 없으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다")
     void subResourcesRequireRequester() throws Exception {
-        for (String path : List.of("/timeseries", "/trades", "/positions?date=2024-06-28")) {
+        for (String path :
+                List.of(
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2024-06-28",
+                        "/weights",
+                        "/exceptions")) {
             mockMvc.perform(get("/backtests/" + BACKTEST_ID + path))
                     .andExpect(status().isBadRequest());
         }
         verifyNoInteractions(queryService);
+    }
+
+    @Test
+    @DisplayName("비중 기록은 리밸런싱 포인트·비중 출처·partial 을 내려준다 — 없는 선택 항목은 키를 생략한다")
+    void weightsEndpoint() throws Exception {
+        when(queryService.getWeights(eq(BACKTEST_ID), anyLong()))
+                .thenReturn(
+                        new BacktestWeightsResult(
+                                BACKTEST_ID,
+                                false,
+                                WeightsSource.USER,
+                                List.of(
+                                        new EngineOutput.WeightsPoint(
+                                                LocalDate.of(2024, 1, 3),
+                                                Map.of("091160.XKRX", new BigDecimal("0.4000")),
+                                                Map.of("091160.XKRX", new BigDecimal("0.3998")),
+                                                new BigDecimal("0.0002"),
+                                                null,
+                                                null))));
+
+        mockMvc.perform(
+                        get("/backtests/{id}/weights", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.weightsSource").value("USER"))
+                .andExpect(jsonPath("$.data.partial").value(false))
+                .andExpect(jsonPath("$.data.points[0].target['091160.XKRX']").value("0.4000"))
+                .andExpect(jsonPath("$.data.points[0].weightError").value("0.0002"))
+                .andExpect(jsonPath("$.data.points[0].riskScale").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("예외 기록은 항목 그대로 내려준다")
+    void exceptionsEndpoint() throws Exception {
+        when(queryService.getExceptions(eq(BACKTEST_ID), anyLong()))
+                .thenReturn(
+                        new BacktestExceptionsResult(
+                                BACKTEST_ID,
+                                true,
+                                List.of(
+                                        new EngineOutput.ExceptionRecord(
+                                                LocalDate.of(2024, 6, 11),
+                                                "091160.XKRX",
+                                                "HALT_DEFERRED",
+                                                "DEFER_TO_NEXT_TRADABLE",
+                                                "planned 2024-06-11 -> next tradable day"))));
+
+        mockMvc.perform(
+                        get("/backtests/{id}/exceptions", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.partial").value(true))
+                .andExpect(jsonPath("$.data.items[0].kind").value("HALT_DEFERRED"))
+                .andExpect(jsonPath("$.data.items[0].instrumentId").value("091160.XKRX"));
     }
 
     @Test

@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260911-000001",
+    "partial": false,
+    "items": [
+      {
+        "date": "2025-02-26",
+        "instrumentId": "000660.XKRX",
+        "kind": "HALT_DEFERRED",
+        "rule": "DEFER_TO_NEXT_TRADABLE",
+        "action": "Order deferred to the next tradable session."
+      }
+    ]
+  },
+  "error": null
+}
