@@ -1,6 +1,7 @@
 """자료 적재 → Nautilus 실행 → 완전한 EngineOutput 변환(spec 004 T006)."""
 
 import hashlib
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -26,6 +27,7 @@ from worker.contracts.engine_output import (
     Versions,
 )
 from worker.contracts.engine_output import Warning as ContractWarning
+from worker.control import CancelRegistry
 from worker.costs import CostModel, Side, total_costs
 from worker.engine_support import unsupported_reasons
 from worker.market_data import MarketData, MarketDataError, MarketDataProvider
@@ -226,10 +228,18 @@ def reference_versions(request: EngineInput, market: MarketData | None) -> Versi
 
 
 class PortfolioBacktestEngine:
-    """다종목 리밸런싱 엔진. 공급자는 인스턴스의 성질이므로 생성자로 주입한다(기본값 없음, R-09)."""
+    """다종목 리밸런싱 엔진. 공급자는 인스턴스의 성질이므로 생성자로 주입한다(기본값 없음, R-09).
 
-    def __init__(self, market_data: MarketDataProvider) -> None:
+    ``cancel_registry`` 를 주면 거래일마다 자기 runId 의 취소 표시를 보고 그날 평가를 마친 뒤
+    멈춘다(R-04). 결과는 ``status=CANCELLED, partial=true`` 에 ``lastTradingDate`` 까지의
+    시계열이다. 레지스트리가 없으면 끝까지 돈다(테스트·데모).
+    """
+
+    def __init__(
+        self, market_data: MarketDataProvider, cancel_registry: CancelRegistry | None = None
+    ) -> None:
         self.market_data = market_data
+        self.cancel_registry = cancel_registry
 
     def run(
         self,
@@ -304,9 +314,17 @@ class PortfolioBacktestEngine:
                     ).hexdigest(),
                 }
             )
-            execution = execute_portfolio(request, market, plan, on_progress)
+            execution = execute_portfolio(
+                request, market, plan, on_progress, stop_after=self._stop_after(request.run.run_id)
+            )
             orders = execution.orders
-            output = assemble_output(request, market, execution, started)
+            if execution.stopped_early:
+                # 취소(R-04): 멈춘 날까지의 부분 결과다. 실패가 아니므로 run.error 는 없다.
+                output = assemble_output(
+                    request, market, execution, started, status=RunStatus.CANCELLED, partial=True
+                )
+            else:
+                output = assemble_output(request, market, execution, started)
         except CallbackError:
             raise
         except AllocationError as exc:
@@ -322,7 +340,17 @@ class PortfolioBacktestEngine:
             output = self._rejected(
                 request, market, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
             )
+        finally:
+            if self.cancel_registry is not None:
+                # 끝난 runId 의 표시는 지운다. 재전달된 같은 runId 가 옛 취소로 바로 멈추면 안 된다.
+                self.cancel_registry.discard(request.run.run_id)
         return output, RunArtifacts(orders=orders, metadata=metadata)
+
+    def _stop_after(self, run_id: str) -> Callable[[date], bool] | None:
+        registry = self.cancel_registry
+        if registry is None:
+            return None
+        return lambda _day: registry.is_cancelled(run_id)
 
     @classmethod
     def _rejected(

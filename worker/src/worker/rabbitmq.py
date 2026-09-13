@@ -10,6 +10,7 @@ pika는 이 모듈에만 있다. 실행 Consumer 로직(``worker.consumer``)은 
 """
 
 import logging
+import threading
 import time
 from collections.abc import Callable
 
@@ -20,7 +21,9 @@ from pika.exceptions import AMQPError, ChannelClosedByBroker, NackError, Unrouta
 from worker.consumer import BacktestJobConsumer
 from worker.contracts.engine import BacktestEngine
 from worker.contracts.events import BacktestEvent
+from worker.control import CancelRegistry, handle_control_body
 from worker.messaging import (
+    CONTROL_EXCHANGE,
     EVENTS_ROUTING_KEY,
     EXCHANGE,
     JOBS_QUEUE,
@@ -148,12 +151,65 @@ def require_jobs_queue(connection: BlockingConnection) -> None:
     probe.close()
 
 
-def run_consumer(url: str, engine: BacktestEngine) -> None:
+def bind_control_queue(channel: BlockingChannel) -> str:
+    """``backtest.control`` 에 이 워커만의 exclusive·auto-delete 큐를 묶는다(계약 §2·§4.4).
+
+    exchange 는 백엔드가 선언하므로 passive 로 존재만 확인한다(없으면 404 로 채널이 닫힌다 —
+    ``run_consumer`` 의 큐 확인과 같은 안내다). 큐는 서버 이름이고 연결이 끊기면 함께 사라진다.
+    취소는 살아 있는 워커에게만 뜻이 있다.
+    """
+    channel.exchange_declare(exchange=CONTROL_EXCHANGE, passive=True)
+    declared = channel.queue_declare(queue="", exclusive=True, auto_delete=True)
+    queue = declared.method.queue
+    channel.queue_bind(queue=queue, exchange=CONTROL_EXCHANGE)
+    return queue
+
+
+def run_control_listener(url: str, registry: CancelRegistry, stop: threading.Event) -> None:
+    """제어 채널 소비 루프. 별도 연결·별도 스레드다(BlockingConnection 은 스레드 간 공유 불가).
+
+    auto-ack 다: 취소는 살아 있는 워커에게만 뜻이 있고 재전달할 이유가 없다. 브로커 장애로 끊기면
+    잠시 뒤 다시 붙는다.
+    """
+    while not stop.is_set():
+        try:
+            connection = pika.BlockingConnection(pika.URLParameters(url))
+            try:
+                channel = connection.channel()
+                queue = bind_control_queue(channel)
+                logger.info("control listener bound queue=%s exchange=%s", queue, CONTROL_EXCHANGE)
+                for method, _properties, body in channel.consume(
+                    queue, auto_ack=True, inactivity_timeout=1.0
+                ):
+                    if stop.is_set():
+                        break
+                    if method is None:
+                        continue
+                    handle_control_body(body, registry)
+            finally:
+                if connection.is_open:
+                    connection.close()
+        except AMQPError as exc:
+            if stop.is_set():
+                return
+            logger.warning("control listener disconnected; retrying: %s", exc)
+            time.sleep(PUBLISH_RETRY_SECONDS)
+
+
+def run_consumer(url: str, engine: BacktestEngine, registry: CancelRegistry | None = None) -> None:
     """``backtest.jobs`` 를 manual ACK · prefetch 1로 소비한다 (계약 §7).
 
     한 연결·한 채널에서 소비와 발행을 함께 한다. BlockingConnection은 단일 스레드이므로
-    엔진 실행 중에는 다른 Job을 받지 않는다(prefetch 1과 같은 방향이다).
+    엔진 실행 중에는 다른 Job을 받지 않는다(prefetch 1과 같은 방향이다). ``registry`` 를 주면
+    제어 채널 스레드를 함께 띄운다(엔진도 같은 레지스트리를 봐야 취소가 닿는다).
     """
+    stop = threading.Event()
+    listener: threading.Thread | None = None
+    if registry is not None:
+        listener = threading.Thread(
+            target=run_control_listener, args=(url, registry, stop), name="control", daemon=True
+        )
+        listener.start()
     connection = pika.BlockingConnection(pika.URLParameters(url))
     try:
         require_jobs_queue(connection)
@@ -170,5 +226,8 @@ def run_consumer(url: str, engine: BacktestEngine) -> None:
                 PikaJobAcknowledger(channel, method.delivery_tag),
             )
     finally:
+        stop.set()
         if connection.is_open:
             connection.close()
+        if listener is not None:
+            listener.join(timeout=5.0)

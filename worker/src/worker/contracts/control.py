@@ -3,7 +3,8 @@
 fanout exchange ``backtest.control`` 로 모든 워커에 전달된다. 워커는 자기 프로세스가 실행 중인
 ``run_id`` 면 다음 거래일 처리 시점에 멈추고 FINISHED(CANCELLED)를 발행한다. 모르는 runId는
 무시한다.
-수신 루프(제어 채널 소비)는 취소 구현 티켓(T011)에서 붙인다 — 여기는 계약 모양만 둔다.
+수신 루프는 ``worker.rabbitmq.run_control_listener``, 표시는
+``worker.control.CancelRegistry`` 다(T011).
 """
 
 from enum import StrEnum
