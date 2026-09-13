@@ -409,10 +409,23 @@ class TestPublishing:
         assert len(version_rows(repository)) == 1
 
     def test_version_sequence_increases_within_a_day(self, repository: SectorMapRepository) -> None:
+        """이름의 날짜는 한국 기준이다. FIRST(09-11 09:00 UTC)는 한국 09-11 18:00이고
+        later(09-11 14:00 UTC)는 한국 09-11 23:00이라 같은 날이다."""
         repository.publish(make_map(), published_at=FIRST)
-        later = FIRST.replace(hour=18)
+        later = FIRST.replace(hour=14)
         result = repository.publish(make_map(is_sample=False), published_at=later)
         assert result.version == "SEM-2026-09-11-002"
+
+    def test_version_label_uses_the_korean_date(self, repository: SectorMapRepository) -> None:
+        """UTC로 자르면 한국 오전 0~9시 발행이 전날 이름을 받는다.
+
+        같은 행의 effective_from을 읽는 쪽(worker의 _as_date)은 한국 기준으로 자르므로,
+        고치지 않으면 이름과 유효일이 하루 어긋나고 전날 순번과도 부딪힌다.
+        """
+        # 한국 2026-09-12 오전 8시
+        moment = datetime(2026, 9, 11, 23, 0, tzinfo=UTC)
+        result = repository.publish(make_map(), published_at=moment)
+        assert result.version == "SEM-2026-09-12-001"
 
     def test_publishing_before_the_open_version_started_is_rejected(
         self, repository: SectorMapRepository

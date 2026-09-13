@@ -34,7 +34,7 @@ import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Final
 
@@ -58,6 +58,11 @@ from sqlalchemy import (
 from sqlalchemy.engine import Connection, Engine
 
 from data_pipeline.repository import INSTRUMENT_ID_PATTERN, database_url_from_env
+
+#: 대응표 버전 이름의 날짜는 한국 기준이다. ``zoneinfo`` 대신 고정 오프셋을 쓰는 까닭은
+#: 한국이 1988년 이후 서머타임을 쓰지 않고, tzdata가 없는 환경에서도 같은 값을 주기
+#: 때문이다. 읽는 쪽인 ``worker/src/worker/market_data.py`` 의 ``KST`` 와 같은 정의다.
+_KST: Final[timezone] = timezone(timedelta(hours=9), "KST")
 
 #: ``sector.classification``. data-model.md가 업종과 테마 둘로 고정했다.
 SECTOR_CLASSIFICATIONS: Final[frozenset[str]] = frozenset({"INDUSTRY", "THEME"})
@@ -672,8 +677,16 @@ class SectorMapRepository:
         with self._engine.begin() as conn:
             open_row = self._open_version(conn)
             if open_row is not None:
-                current = self._read_map(conn, int(open_row.id), bool(open_row.is_sample))
-                if current.fingerprint() == sector_map.fingerprint():
+                # 저장된 행을 값 객체로 되살리면 지금의 입력 규칙이 다시 걸린다. 규칙을 나중에
+                # 조인 뒤에는 옛 행이 그 규칙을 어길 수 있는데, 그때 예외를 그대로 올리면
+                # 닫기·열기에 닿기도 전에 멈춰 **새 버전을 영영 발행할 수 없게 된다.**
+                # 읽히지 않는 대응표는 "입력이 잘못됐다"가 아니라 "지금 것과 내용이 다르다"로
+                # 본다. 그래야 새 버전을 발행해 빠져나갈 길이 남는다.
+                try:
+                    current = self._read_map(conn, int(open_row.id), bool(open_row.is_sample))
+                except SectorMapError:
+                    current = None
+                if current is not None and current.fingerprint() == sector_map.fingerprint():
                     # 멱등. 이름만 다르게 다시 돌려도 버전이 늘지 않는다.
                     return PublishResult(
                         version=str(open_row.version),
@@ -689,7 +702,11 @@ class SectorMapRepository:
                         " effective_to > effective_from을 요구한다"
                     )
 
-            label = version or self._next_version(conn, moment.date())
+            # 이름의 날짜는 한국 기준이다. moment는 시간대가 붙은 값이고 대개 UTC인데, 그대로
+            # .date()를 쓰면 한국 오전 0~9시에 발행한 것이 전날 이름을 받는다. 같은 행의
+            # effective_from을 읽는 쪽(worker의 _as_date)은 한국 기준으로 자르므로 이름과
+            # 유효일이 하루 어긋나고, 전날 쓰던 순번과도 부딪힌다.
+            label = version or self._next_version(conn, moment.astimezone(_KST).date())
             if self._version_exists(conn, label):
                 raise SectorMapVersionConflictError(
                     f"이미 쓰인 대응표 버전 이름이다: {label}. 발행된 버전은 고치지 않고 "

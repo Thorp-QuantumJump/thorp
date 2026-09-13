@@ -66,13 +66,13 @@
 
 **Independent Test**: 섹터 목록을 조회해 모든 섹터에 대표 ETF 하나가 연결되어 있고 상장일·기준 지수가 등록되어 있는지 확인한다. 화면 없이 대응표만으로 검증할 수 있다.
 
-- [ ] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — S15P21E205-178
+- [x] T005 [US1] [DE] 섹터-ETF 대응표 파이프라인과 예시 대응표 (`data/src/data_pipeline/sector_map.py`, `data/scripts/ingest_sector_map.py`, `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`, `data/tests/test_sector_map.py`) — S15P21E205-178
   - 항목은 섹터 이름·대표 ETF 이름·종목 식별자·상장일·기준 지수·운용사다. 국내 상장 비레버리지·비인버스 ETF만 허용한다 (FR-001)
   - 버전 발행: 내용이 바뀌면 새 버전을 만들고 기존 버전을 고치지 않는다 (FR-003)
   - 진입점은 `--sample`·`--map-version` 인자를 받고 재실행이 멱등하다 (`data/CLAUDE.md`)
   - 예시 대응표는 PD-01 확정 전까지 쓰며 `isSample` 표시가 붙는다 (FR-002)
   - 테스트: 섹터마다 대표 ETF 정확히 하나, 레버리지·인버스 거부, 상장일·기준 지수 필수
-- [ ] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — S15P21E205-178
+- [x] T006 [US1] [BE] 섹터 목록 조회 API (`sector/domain/model/{Sector,RepresentativeEtf}.java`, `sector/domain/vo/SectorCode.java`, `sector/infrastructure/persistence/{SectorJpaEntity,RepresentativeEtfJpaEntity,SectorEtfMapJpaEntity,SectorMapper,SectorRepositoryImpl}.java`, `sector/application/{repository/SectorRepository,service/SectorService,result/SectorListResult}.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/SectorListResponse}.java`, `backend/src/test/java/.../sector/SectorApiIT.java`) — S15P21E205-178
   - 도메인 모델에 Spring·JPA·Jackson import를 두지 않는다. `*Mapper`는 정적 `toEntity`/`toDomain`이다 (ADR-0001)
   - 저장소 인터페이스에 **수정·생성 메서드를 두지 않는다.** 대응표는 파이프라인이 소유한다 (research.md 결정 7)
   - `GET /sectors`가 `mapVersion`·`isSample`을 함께 반환한다 (contracts/sector-api.md)
@@ -107,18 +107,24 @@
   - 표본은 상장 첫날·모든 분배금 지급일·모든 분할일이다. 평범한 거래일은 넣지 않는다 (FR-016)
   - 불일치가 나도 개별 값을 수정하지 않는다. 수집·가공 오류는 새 버전 재발행, 정의 차이는 기록만, 원인 불명은 구간 제외 (FR-017)
   - 테스트: 표본 구성 검증, `cause`↔`resolution` 조합 제한, SC-002 판정
-- [ ] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — S15P21E205-180
+- [x] T010 [US2] [BE] 공통 평가 기간 산식과 조회 API (`specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json`, `worker/src/worker/evaluation_window.py`, `worker/tests/test_evaluation_window.py`, `sector/application/service/EvaluationWindowService.java`, `sector/presentation/controller/SectorController.java`, `backend/src/test/java/.../sector/EvaluationWindowTest.java`) — S15P21E205-180
   - 픽스처를 먼저 만든다. `contracts/evaluation-window.md` 「경계 동작」 7가지를 모두 담는다
   - 워커와 백엔드가 **같은 픽스처**를 읽는다. 한쪽만 고치면 실패해야 한다 (contracts/README.md 「계약 변경 순서」)
   - 검증용 잠금 구간을 빼지 않는다. 평가 분할은 007이 맡는다 (FR-008)
   - `GET /sectors/evaluation-window`는 `evaluable: false`를 오류가 아닌 정상 응답으로 반환한다
+    - **2026-09-11 엔드포인트 보류.** 산식 입력 다섯 가지 중 네 가지를 백엔드가 읽을 경로가 없다. 특히 `warmupTradingDays`는 `evaluation-window.md` 입력표가 "전략 등록표(003 소유)에서 온다. **001은 이 값을 정하지 않고 받는다**"고 못 박아 001이 만들 수 없다. `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. 값을 지어내는 표면을 만드느니 붙이지 않는 편이 원칙 VI에 맞다.
+    - 산식과 공유 픽스처는 만들었다. `EvaluationWindowService`는 입력을 전부 인자로 받는 의존성 없는 산식이라, 재료가 생기면 **이 클래스를 고치지 않고 호출부만 붙이면 된다.**
+    - 붙일 때 필요한 것: 003의 전략 등록표(워밍업 값), `RepresentativeEtf`에 `delistedOn` 필드, `data_gap`·`daily_index`·`dataset_version` 조회 경로, 그리고 `SectorExceptionHandler`의 `IllegalArgumentException` → 500 매핑 정리(빈 후보 목록은 계약이 400을 요구한다).
   - 양쪽을 한 묶음에 둔 이유: 계약이 두 구현을 묶고 있어 한쪽만 병합하면 픽스처가 반쪽이 된다
-- [ ] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — S15P21E205-180
+- [x] T011 [US2] [BE] 워커 자료 공급자 연결과 자료 버전 값 규칙 (`worker/src/worker/{market_data,engine_runner}.py`, `worker/tests/test_repository_provider.py`, `docs/specs/backtest-messaging/{README.md,examples/*.json,generate_fixtures.py}`) — S15P21E205-180
   - **선행**: 004 T004(`S15P21E205-134`)가 `market_data.py`에 공급자 골격과 CSV 픽스처를 먼저 넣는다
   - 저장소를 읽는 공급자를 추가하고 `engine_runner.py:68`의 기본값을 그것으로 바꾼다. `YFinanceDataProvider` 클래스는 남기되 실제 Job 처리 경로에서 쓰지 않는 임시 수단임을 주석에 적는다 (research.md 결정 1)
   - `metadata`에 `datasetId`·`dataDeadline`·`carriedForwardDates`·`dataGaps`·`mapVersion`·`provisionalSuspensionHandling`을 담는다 (contracts/market-dataset.md)
   - 워밍업 자료를 거래일 기준으로 앞에서 읽는다. 달력 일수 방식은 연휴가 긴 해에 모자란다
   - `datasetId` 값 규칙을 `KRX_DAILY_V1`에서 `KRX_DAILY_{YYYYMMDD}`로 바꾼다. **스키마는 그대로이므로 픽스처 값만 바뀌고 round-trip 테스트는 통과해야 한다** (research.md 결정 4)
+    - **2026-09-11 보류.** 픽스처의 값은 백엔드 상수 `ExecutionPolicy.MARKET_DATA`에서 나오고 `EngineInputFixtureTest`가 둘의 동치를 단언한다. 픽스처만 고치면 그 테스트가 깨진다. 그렇다고 상수에 `KRX_DAILY_20260911`을 박으면 내일부터 거짓말이 된다 — 지금의 `KRX_DAILY_V1`은 누가 봐도 자리 표시인데 날짜가 박힌 값은 진짜 마감일처럼 보이면서 영원히 그 날에 멈춘다.
+    - 값 규칙 자체는 이미 구현·검증되어 있다. 식별자를 **만드는** 쪽인 `data/src/data_pipeline/dataset_version.py`의 `build_dataset_id`가 규칙을 세우고, `DatasetVersion`이 식별자와 `data_deadline`의 불일치를 거부한다.
+    - 올바른 해결은 백엔드가 값을 지어내지 않고 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. `ExecutionPolicy`의 `MARKET_DATA` 블록은 `dataVersion: null // 001 자료 계층 연동 전` 주석이 말하듯 통째로 자리 표시다. **004 연동 작업에서 푼다.**
   - 테스트: 같은 `datasetId`로 두 번 조회 시 값 동일(SC-004), 불일치 시 `MarketDataError`, 상장 전 구간 요청 시 오류, 정지일 기록
 
 **Checkpoint**: 백테스트가 001의 자료로 실행된다. quickstart 시나리오 2~6을 실행할 수 있다.
@@ -148,12 +154,14 @@
 
 ## Phase 6: 결정 항목 확정 (본선과 독립)
 
-- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — Jira 미발급
+**2026-09-11: KRX OPEN API 키를 확보해 T014~T016의 착수 조건이 해소되었다.** 세 작업은 실자료 조회가 선행 조건이라 그때까지 Jira를 발급하지 않았는데, 키가 생겨 각각 Task로 발급했다(T014 `-186`, T015 `-187`, T016 `-188`). 착수 차례는 JT4(`-179`)가 수집 코드를 완성한 뒤 T014부터다. JT4가 만드는 조회 도구로 후보 비교를 하는 편이 자연스럽기 때문이다(2026-09-11 결정).
+
+- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
   - **선행 조건은 T001뿐이다.** 본선(T003~T013)과 의존 관계가 없어 병행할 수 있다
   - 자료 이용 승인을 신청하고 진행 상태를 기록한다
   - 섹터마다 후보 3~5개를 골라 확보 가능 기간·기업행위 이력 완전성·최근 3개월 일평균 거래대금을 실제 조회로 채운 비교표를 만든다. **후보끼리 비교하는 것이며 예시 자료 결과와 비교하는 것이 아니다**
   - 확정한 대응표를 새 버전으로 발행하고 `is_sample`·`isSample`을 false로 바꾼다. `specs/README.md`의 PD-01과 spec의 결정 항목 표를 갱신한다
-- [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — Jira 미발급
+- [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187
   - **선행 조건은 T008이다.** 본선이 쌓아 둔 `suspension_period` 기록이 입력이다
   - 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포
   - 처리 방식 B(정지 이후만)·C(정지 이전만)·D(후보 제외) 각각이 공통 평가 기간을 얼마나 줄이는지 계산한다. 손실 규모를 수치로 비교한다 (research.md 「PD-19·PD-20을 나중에 정하기 위한 준비」)
@@ -164,7 +172,7 @@
 
 ## Phase 7: Polish
 
-- [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — Jira 미발급
+- [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — S15P21E205-188
   - quickstart 시나리오 1~7을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
   - constitution 「기능·계산 확인」이 요구하는 수기 대조를 한 건 수행한다. 분배금 지급일 하나를 골라 운용사 공시의 주당 분배금과 `corporate_action.amount`를 눈으로 확인하고 `reconciliation_record`에 남긴다
   - `README.md`의 "현재 구현 상태"에서 자료 원천이 바뀐 사실을 반영한다

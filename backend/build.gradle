@@ -80,4 +80,23 @@ spotless {
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    // 저장소 밖(backend/ 바깥)에 있는 공유 픽스처를 이 태스크의 입력으로 선언한다.
+    //
+    // 계약 픽스처는 워커(Python)와 백엔드(Java)가 같은 파일 하나를 읽어 두 구현을 묶는
+    // 장치다. 그런데 Gradle은 선언된 입력만 보고 최신 여부를 판단하므로, 선언하지 않으면
+    // 픽스처만 바뀌었을 때 :test가 UP-TO-DATE로 건너뛴다. 실제로 픽스처를 일부러 틀리게
+    // 고쳐도 BUILD SUCCESSFUL이 나왔다(2026-09-11 확인).
+    //
+    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 새로 클론해 받아 늘
+    // 돌지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.
+    inputs.dir(file('../specs/001-etf-market-data/contracts/fixtures'))
+            .withPropertyName('evaluationWindowFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/backtest-messaging/examples'))
+            .withPropertyName('backtestMessagingFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/backtest-api/examples'))
+            .withPropertyName('backtestApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
 }
