@@ -349,6 +349,20 @@ class BacktestResultQueryServiceTest {
         assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items())
                 .extracting(EngineOutput.ExceptionRecord::date)
                 .containsExactly(LocalDate.parse("2025-01-10"));
+
+        // 보유도 스냅샷 뒤 날짜를 요청하면 스냅샷 이하의 마지막 보유로 답하고 partial 을 싣는다
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith(
+                                                "2025-01-02", List.of(position("005930.XKRX"))),
+                                        snapshotWith("2025-01-13", List.of()))));
+        BacktestPositionsResult positions =
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse("2025-01-13"));
+        assertThat(positions.partial()).isTrue();
+        assertThat(positions.snapshotDate()).isEqualTo(LocalDate.parse("2025-01-02"));
+        assertThat(positions.positions()).hasSize(1);
     }
 
     @Test
@@ -363,7 +377,7 @@ class BacktestResultQueryServiceTest {
     }
 
     @Test
-    @DisplayName("취소 요청의 거래는 스냅샷 다음 날 0시(거래소 현지) 전에 진입한 것만 저장소에 요청한다")
+    @DisplayName("취소 요청의 거래는 스냅샷 다음 날 0시(거래소 현지) 를 경계로 저장소에 요청한다")
     void cancelledJoinedRequestBoundsTradesByEntryTime() {
         givenCancelledJoined(LocalDate.parse("2025-01-10"));
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
@@ -377,6 +391,23 @@ class BacktestResultQueryServiceTest {
 
         assertThat(result.partial()).isTrue();
         assertThat(result.content()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("취소하지 않은 요청의 보유 조회는 partial=false 다")
+    void positionsOfOrdinaryRequestAreNotPartial() {
+        given(RunStatus.COMPLETED);
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith(
+                                                "2025-01-02", List.of(position("005930.XKRX"))))));
+
+        assertThat(
+                        service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse("2025-01-02"))
+                                .partial())
+                .isFalse();
     }
 
     @Test

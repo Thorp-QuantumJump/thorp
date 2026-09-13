@@ -2,6 +2,7 @@
   "success": true,
   "data": {
     "backtestId": "BT-20260907-000001",
+    "partial": false,
     "requestedDate": "2025-01-23",
     "snapshotDate": "2025-01-22",
     "positions": [

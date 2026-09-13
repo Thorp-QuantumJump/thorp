@@ -162,7 +162,7 @@ public class BacktestResultQueryService {
             throw missingResultRow(job);
         }
         Page<EngineOutput.TradeResult> page =
-                resultRepository.findTrades(job.getId(), query, view.tradesEntryBefore());
+                resultRepository.findTrades(job.getId(), query, view.tradesVisibleBefore());
         return new BacktestTradePageResult(
                 backtestId,
                 view.partial(),
@@ -194,6 +194,7 @@ public class BacktestResultQueryService {
         EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);
         return new BacktestPositionsResult(
                 backtestId,
+                view.partial(),
                 date,
                 snapshot.date(),
                 snapshot.positions().stream()
@@ -277,7 +278,7 @@ public class BacktestResultQueryService {
      * 하위 리소스가 볼 수 있는 결과의 범위.
      *
      * <p>먼저 취소해 실행이 계속 돈 요청은 자기 스냅샷 날짜({@code cutoff})까지만 본다 — 실행이 뒤에 더 계산했어도 이 요청의 표시 범위는 늘어나지
-     * 않는다(R-04). 백엔드가 지표를 다시 계산하지 않으므로 **읽기 필터**다: 날짜가 있는 항목은 날짜로, 거래는 진입 시각으로 자른다.
+     * 않는다(R-04). 백엔드가 지표를 다시 계산하지 않으므로 **읽기 필터**다: 날짜가 있는 항목은 날짜로, 거래는 진입·청산 시각으로 자른다.
      *
      * @param cutoff null = 자르지 않는다(취소하지 않았거나, 이 취소가 실행을 멈춰 FINISHED 가 범위를 확정했다)
      */
@@ -290,8 +291,11 @@ public class BacktestResultQueryService {
             return items.stream().filter(item -> !dateOf.apply(item).isAfter(cutoff)).toList();
         }
 
-        /** 거래는 DB 에서 페이징하므로 필터를 저장소에 넘긴다. 스냅샷 다음 날 0시(거래소 현지) 전 진입만. */
-        Instant tradesEntryBefore() {
+        /**
+         * 거래는 DB 에서 페이징하므로 경계를 저장소에 넘긴다. 스냅샷 다음 날 0시(거래소 현지) 전에 진입하고 청산까지 끝난(또는 끝까지 열려 있던) 거래만 보인다
+         * — 경계를 가로지르는 거래는 청산 정보가 스냅샷 밖이다.
+         */
+        Instant tradesVisibleBefore() {
             return cutoff == null
                     ? null
                     : cutoff.plusDays(1).atStartOfDay(ExecutionPolicy.EXCHANGE_ZONE).toInstant();

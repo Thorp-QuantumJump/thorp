@@ -262,6 +262,32 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("취소 요청의 거래 경계: 진입·청산이 모두 경계 전인 거래만 보인다 — 취소일을 가로지르는 거래는 빠진다")
+    void tradesCrossingTheVisibleBoundaryAreExcluded() {
+        Long jobId = saveFixtureResult();
+        // 픽스처: TRD-000001 01-22 → 03-12 CLOSED, TRD-000002 02-06 → 04-03 CLOSED, TRD-000003 05-14
+        // OPEN
+        Instant before =
+                LocalDate.parse("2025-03-13").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        FindBacktestTradesQuery all = new FindBacktestTradesQuery(0, 100, null, null);
+
+        assertThat(resultRepository.findTrades(jobId, all, before).getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000001");
+        // 02-06 진입은 경계 전이지만 04-03 청산이 경계 뒤라 status 필터로도 나오지 않는다
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(
+                                                0, 100, null, TradeStatus.CLOSED),
+                                        before)
+                                .getTotalElements())
+                .isEqualTo(1);
+        assertThat(resultRepository.findTrades(jobId, all, null).getTotalElements()).isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("거래의 detail을 꺼내면 계약 형태의 거래가 그대로 나온다")
     void tradeContentIsContractShape() {
         Long jobId = saveFixtureResult();

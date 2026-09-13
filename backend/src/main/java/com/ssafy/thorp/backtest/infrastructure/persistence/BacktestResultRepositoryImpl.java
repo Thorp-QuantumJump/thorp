@@ -135,13 +135,13 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
 
     @Override
     public Page<EngineOutput.TradeResult> findTrades(
-            Long runId, FindBacktestTradesQuery query, Instant entryTimeBefore) {
+            Long runId, FindBacktestTradesQuery query, Instant visibleBefore) {
         return tradeRepository
                 .findPage(
                         runId,
                         query.instrumentId(),
                         query.status(),
-                        entryTimeBefore,
+                        visibleBefore,
                         PageRequest.of(query.page(), query.size()))
                 // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다
                 .map(BacktestTradeJpaEntity::getDetail);
