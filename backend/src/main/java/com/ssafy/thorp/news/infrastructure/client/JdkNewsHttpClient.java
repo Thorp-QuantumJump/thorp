@@ -141,7 +141,17 @@ public class JdkNewsHttpClient implements NewsHttpClient {
                 header(response, "last-modified"));
     }
 
-    /** 한도까지만 읽는다. 넘으면 그 자리에서 끊어 메모리를 지킨다. */
+    /**
+     * 한도까지만 읽는다. 넘으면 그 자리에서 끊어 메모리를 지킨다.
+     *
+     * <p>한도 초과는 {@link NewsSourceClient.NewsSourceException}이라 아래 {@code catch (IOException)}에 걸리지
+     * 않는다. try-with-resources는 본문에서 나간 예외를 primary로 두고 닫기에서 난 예외를 suppressed로 붙이므로(JLS 14.20.3.1),
+     * 닫다가 실패해도 {@code RESPONSE_TOO_LARGE}가 {@code CONNECTION_FAILED}로 바뀌지 않는다. 분류가 뒤집히면 재시도 불가인 응답을
+     * 일시 장애로 오인해 매 회차 다시 받으러 간다.
+     *
+     * <p>그래서 예외 유형을 바꾸지 않는다. {@code NewsSourceException}이 {@code IOException}을 상속하게 되거나 여기서 {@code
+     * Exception}을 잡으면 그 보장이 깨진다.
+     */
     private byte[] readBounded(InputStream in) {
         long limit = policy.maxResponseBytes();
         ByteArrayOutputStream out = new ByteArrayOutputStream();

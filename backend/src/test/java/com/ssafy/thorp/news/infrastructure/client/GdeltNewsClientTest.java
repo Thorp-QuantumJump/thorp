@@ -91,6 +91,33 @@ class GdeltNewsClientTest {
             return new StubHttpClient("text/csv", fixture(fixtureName));
         }
 
+        /**
+         * 작게 압축되지만 풀면 {@code decompressedBytes}가 되는 응답을 만든다.
+         *
+         * <p>같은 내용이 반복되면 거의 무한히 압축된다. 응답 본문 한도(10MiB)는 통과하면서 푼 뒤에만 커지는, 막으려는 바로 그 형태다.
+         *
+         * <p>{@code lineBreaks}가 참이면 줄바꿈이 있는 정상 모양이라 전체 크기 상한에 걸리고, 거짓이면 전체가 한 줄이라 줄 길이 상한에 걸린다. 둘은
+         * 다른 방어막이므로 따로 확인해야 한다.
+         */
+        static StubHttpClient zipBomb(long decompressedBytes, boolean lineBreaks) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            java.util.Arrays.fill(chunk, (byte) 'x');
+            if (lineBreaks) {
+                chunk[chunk.length - 1] = '\n';
+            }
+            try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+                zip.putNextEntry(new java.util.zip.ZipEntry("export.CSV"));
+                for (long written = 0; written < decompressedBytes; written += chunk.length) {
+                    zip.write(chunk);
+                }
+                zip.closeEntry();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+            return new StubHttpClient("application/zip", out.toByteArray());
+        }
+
         private static byte[] zip(String entryName, byte[] body) {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
@@ -291,6 +318,40 @@ class GdeltNewsClientTest {
                                                             List.of())))
                     .isInstanceOf(NewsSourceClient.NewsSourceException.class)
                     .hasMessage(GdeltFileNewsClient.MALFORMED_EXPORT);
+        }
+
+        @Test
+        @DisplayName("작게 압축됐어도 풀어서 한도를 넘으면 읽다가 끊는다")
+        void 압축_폭탄() {
+            // 푼 크기 한도(128MiB)를 갓 넘긴다. 압축된 응답은 수백 KB라 본문 한도에는 걸리지 않는다.
+            StubHttpClient bomb = StubHttpClient.zipBomb(129L * 1024 * 1024, true);
+
+            assertThatThrownBy(() -> fetchOneSlot(bomb))
+                    .as("푼 내용을 다 모은 뒤에 재면 이미 메모리를 쓴 다음이다")
+                    .isInstanceOf(NewsSourceClient.NewsSourceException.class)
+                    .hasMessage(GdeltFileNewsClient.MALFORMED_EXPORT);
+        }
+
+        @Test
+        @DisplayName("줄바꿈이 없어 한 줄이 계속 길어지면 전체 한도에 닿기 전에 끊는다")
+        void 줄바꿈_없는_폭탄() {
+            // 줄 길이 상한(1MiB)만 넘고 전체 상한(128MiB)에는 못 미치는 크기.
+            StubHttpClient bomb = StubHttpClient.zipBomb(8L * 1024 * 1024, false);
+
+            assertThatThrownBy(() -> fetchOneSlot(bomb))
+                    .as("줄로 만든 뒤에 재면 이미 그 줄이 통째로 메모리에 올라와 있다")
+                    .isInstanceOf(NewsSourceClient.NewsSourceException.class)
+                    .hasMessage(GdeltFileNewsClient.MALFORMED_EXPORT);
+        }
+
+        private NewsFetchResult fetchOneSlot(StubHttpClient http) {
+            return new GdeltFileNewsClient(http, policy())
+                    .fetch(
+                            new GdeltNewsSource(
+                                    "gdelt:file",
+                                    Instant.parse("2026-09-10T04:00:00Z"),
+                                    Instant.parse("2026-09-10T04:15:00Z"),
+                                    List.of()));
         }
 
         @Test
