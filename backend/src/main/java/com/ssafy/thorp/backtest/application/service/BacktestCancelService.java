@@ -30,8 +30,12 @@ import org.springframework.transaction.annotation.Transactional;
  *       이벤트 처리가 CANCEL 을 다시 보낸다
  * </ul>
  *
- * <p>CANCEL 발행은 트랜잭션 안에서 한다. 실패하면 503 으로 되돌린다 — 요청만 취소로 남고 워커가 계속 돌면 유예 시간 뒤 강제 종결(T014)까지 아무도 모르는
- * 상태가 된다. 워커가 커밋보다 먼저 CANCEL 을 받는 것은 해롭지 않다(멈추고 FINISHED 를 보내면 그때 처리된다).
+ * <p>취소 의도는 {@code run.cancel_requested_at} 에 커밋되고 CANCEL 은 커밋 뒤 {@link BacktestCancelDispatcher} 가
+ * 보낸다(작업 발행과 같은 방식). 트랜잭션 안에서 보내면 발행됐는데 커밋이 실패할 수 있고, 그러면 아무도 취소하지 않은 실행이 멈춘다. 발행이 실패해도 의도가 남아 있어
+ * 유예 감시(T014)가 다시 보낼 수 있다.
+ *
+ * <p>동시성: 요청 행과 실행 행을 <b>그 순서로</b> 잠근다. 요청 잠금은 같은 요청의 이중 취소를(뒤엣것이 앞엣것의 취소를 보아야 한다), 실행 잠금은 같은 실행의
+ * 마지막 활성 요청 판정을 직렬화한다. 접수(합류)도 실행 행을 잠그고 새 요청 행을 넣을 뿐이라 잠금 순서가 어긋나 교착하지 않는다.
  */
 @Service
 public class BacktestCancelService {
@@ -56,12 +60,15 @@ public class BacktestCancelService {
 
     @Transactional
     public BacktestCancelResult cancel(String backtestId, long requesterId) {
+        // 요청 행을 잠근 채 읽는다 — 같은 요청의 동시 취소에서 뒤엣것이 앞엣것의 취소를 보아야 한다.
+        // 잠금 전에 읽어 두면 옛 상태로 "아직 활성"이라 판단해 남은 요청이 있는데도 실행을 멈춘다.
         BacktestRequest request =
                 requestRepository
-                        .findByBacktestId(backtestId)
+                        .findByBacktestIdForUpdate(backtestId)
                         .filter(found -> found.getRequesterId() == requesterId)
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
-        // 실행 행을 잠근다 — 같은 실행의 취소가 동시에 들어오면 마지막 활성 요청 판정이 어긋난다.
+        // 이어서 실행 행을 잠근다(잠금 순서: 요청 → 실행) — 같은 실행의 서로 다른 요청이 동시에 취소하면
+        // 마지막 활성 요청 판정이 어긋난다.
         BacktestRun run =
                 runRepository
                         .findByIdForUpdate(request.getRunId())

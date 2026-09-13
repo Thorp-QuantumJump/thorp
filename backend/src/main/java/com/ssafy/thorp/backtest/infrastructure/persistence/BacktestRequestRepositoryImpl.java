@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -16,10 +17,13 @@ import org.springframework.stereotype.Repository;
 public class BacktestRequestRepositoryImpl implements BacktestRequestRepository {
 
     private final BacktestRequestJpaRepository jpaRepository;
+    private final EntityManager entityManager;
     private final Clock clock;
 
-    public BacktestRequestRepositoryImpl(BacktestRequestJpaRepository jpaRepository, Clock clock) {
+    public BacktestRequestRepositoryImpl(
+            BacktestRequestJpaRepository jpaRepository, EntityManager entityManager, Clock clock) {
         this.jpaRepository = jpaRepository;
+        this.entityManager = entityManager;
         this.clock = clock;
     }
 
@@ -60,6 +64,21 @@ public class BacktestRequestRepositoryImpl implements BacktestRequestRepository 
     @Override
     public Optional<BacktestRequest> findByBacktestId(String backtestId) {
         return jpaRepository.findByBacktestId(backtestId).map(BacktestRequestMapper::toDomain);
+    }
+
+    /**
+     * 잠그고 그 시점의 행을 다시 읽는다. 취소는 이 조회를 첫 읽기로 쓰지만 잠금 뒤 {@code refresh} 하는 이유는 {@link
+     * BacktestRunRepositoryImpl#findByIdForUpdate} 와 같다 — 잠금 자체는 1차 캐시의 옛 값을 밀어내지 않는다.
+     */
+    @Override
+    public Optional<BacktestRequest> findByBacktestIdForUpdate(String backtestId) {
+        return jpaRepository
+                .lockByBacktestId(backtestId)
+                .map(
+                        entity -> {
+                            entityManager.refresh(entity);
+                            return BacktestRequestMapper.toDomain(entity);
+                        });
     }
 
     @Override

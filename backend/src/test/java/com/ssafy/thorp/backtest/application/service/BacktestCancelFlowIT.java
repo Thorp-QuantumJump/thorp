@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
@@ -24,8 +25,11 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -68,6 +73,11 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private BacktestEventService events;
     @Autowired private BacktestCancelService cancelService;
+    @Autowired private BacktestService backtestService;
+
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @Autowired private BacktestRunRepository runRepository;
     @Autowired private BacktestRequestRepository requestRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -156,6 +166,37 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         started(run);
         progressed(run);
         return run;
+    }
+
+    /** 접수 경로를 실제로 태워야 동일 버전 키가 붙어 합류 판정이 돈다. */
+    private static CreateBacktestCommand intake(long requesterId) {
+        return new CreateBacktestCommand(
+                requesterId,
+                ExecutionType.SINGLE,
+                "SECTOR-ETF-2026-09",
+                List.of(
+                        new CreateBacktestCommand.AllocationItem(
+                                "SEMICONDUCTOR", "091160.XKRX", new BigDecimal("0.4000")),
+                        new CreateBacktestCommand.AllocationItem(
+                                "BATTERY", "305720.XKRX", new BigDecimal("0.6000"))),
+                "FIXED_WEIGHT",
+                "1",
+                "PARAM-2026-09",
+                Map.of("rebalance", "MONTH_END"),
+                LocalDate.of(2024, 1, 2),
+                LocalDate.of(2024, 12, 31),
+                new BigDecimal("10000000.00"),
+                null,
+                "SPLIT-1",
+                null,
+                com.ssafy.thorp.backtest.application.port.message.Scenario.FULL_PERIOD,
+                null);
+    }
+
+    /** 접수가 동일 버전 조회에 쓰는 키. 실행 행에 저장된 값을 그대로 읽는다. */
+    private String dedupKeyOf(Long runId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT dedup_key FROM backtest_run WHERE id = ?", String.class, runId);
     }
 
     // ---------------------------------------------------------------- http helpers
@@ -303,6 +344,108 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                                 .getLifecycle()
                                 .cancelRequestedAt())
                 .isNotNull();
+    }
+
+    @Test
+    @DisplayName("같은 요청을 동시에 두 번 취소해도 하나만 반영된다 — 남은 요청이 있는데 실행이 멈추면 안 된다")
+    void concurrentCancelsOfTheSameRequestOnlyApplyOnce() throws Exception {
+        long userA = newUser();
+        long userB = newUser();
+        BacktestRun run = runningWithProgress();
+        String a = requestFor(run, userA, ResultSource.NEW);
+        requestFor(run, userB, ResultSource.JOINED);
+
+        java.util.concurrent.CyclicBarrier barrier = new java.util.concurrent.CyclicBarrier(2);
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(2);
+        int failures = 0;
+        try {
+            List<java.util.concurrent.Future<Object>> futures =
+                    List.of(
+                            pool.submit(
+                                    () -> {
+                                        barrier.await();
+                                        return cancelService.cancel(a, userA);
+                                    }),
+                            pool.submit(
+                                    () -> {
+                                        barrier.await();
+                                        return cancelService.cancel(a, userA);
+                                    }));
+            for (java.util.concurrent.Future<Object> future : futures) {
+                try {
+                    future.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (java.util.concurrent.ExecutionException exc) {
+                    failures++;
+                    assertThat(exc.getCause()).isInstanceOf(BusinessException.class);
+                    assertThat(((BusinessException) exc.getCause()).getErrorCode())
+                            .isEqualTo(ErrorCode.NOT_CANCELLABLE);
+                }
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(failures).isEqualTo(1);
+        // B 가 아직 활성이므로 실행은 멈추지 않는다
+        List<BacktestRequest> requests = requestRepository.findByRunId(run.getId());
+        assertThat(requests.stream().filter(BacktestRequest::isCancelled).count()).isEqualTo(1);
+        assertThat(requests).noneMatch(BacktestRequest::isStoppedRun);
+        assertThat(
+                        runRepository
+                                .findById(run.getId())
+                                .orElseThrow()
+                                .getLifecycle()
+                                .cancelRequestedAt())
+                .isNull();
+        verify(controlPublisher, never()).cancel(anyString());
+    }
+
+    @Test
+    @DisplayName("동일 버전 조회로 이미 읽은 실행이라도 잠금 재조회는 그 사이 커밋된 취소 의도를 본다 — 취소 대기 실행에 합류하지 않는다")
+    void aJoinArrivingDuringACancelIsRejected() {
+        long owner = newUser();
+        long latecomer = newUser();
+        String accepted = backtestService.create(intake(owner)).backtestId();
+        Long runId = requestRepository.findByBacktestId(accepted).orElseThrow().getRunId();
+
+        TransactionTemplate cancelTx = new TransactionTemplate(transactionManager);
+        cancelTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        // 접수가 실행을 읽은 뒤, 잠그기 전에 취소가 커밋되는 순서를 그대로 재현한다. 스레드 타이밍에
+        // 기대지 않고 같은 트랜잭션 안에서 재현하므로 결과가 흔들리지 않는다.
+        Throwable raised =
+                new TransactionTemplate(transactionManager)
+                        .execute(
+                                status -> {
+                                    // ① 접수가 동일 버전 조회로 실행을 읽는다(영속성 컨텍스트에 올라온다)
+                                    assertThat(
+                                                    runRepository
+                                                            .findActiveByDedupKey(dedupKeyOf(runId))
+                                                            .orElseThrow()
+                                                            .getLifecycle()
+                                                            .cancelRequestedAt())
+                                            .isNull();
+                                    // ② 그 사이 마지막 활성 요청이 취소해 의도가 커밋된다
+                                    cancelTx.executeWithoutResult(
+                                            inner ->
+                                                    runRepository.recordCancelRequested(
+                                                            runId, Instant.now()));
+                                    // ③ 접수가 잠그고 다시 본다 — 여기서 최신 값을 보아야 한다
+                                    try {
+                                        backtestService.create(intake(latecomer));
+                                        return null;
+                                    } catch (RuntimeException exc) {
+                                        status.setRollbackOnly();
+                                        return (Throwable) exc;
+                                    }
+                                });
+
+        assertThat(raised)
+                .isInstanceOf(BusinessException.class)
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.CANCEL_PENDING);
+        assertThat(requestRepository.findByRunId(runId)).hasSize(1);
     }
 
     @Test

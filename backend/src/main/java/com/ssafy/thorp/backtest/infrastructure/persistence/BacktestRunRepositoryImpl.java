@@ -5,6 +5,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,10 +29,13 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
             List.of(RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.COMPLETED);
 
     private final BacktestRunJpaRepository jpaRepository;
+    private final EntityManager entityManager;
     private final Clock clock;
 
-    public BacktestRunRepositoryImpl(BacktestRunJpaRepository jpaRepository, Clock clock) {
+    public BacktestRunRepositoryImpl(
+            BacktestRunJpaRepository jpaRepository, EntityManager entityManager, Clock clock) {
         this.jpaRepository = jpaRepository;
+        this.entityManager = entityManager;
         this.clock = clock;
     }
 
@@ -95,9 +99,22 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
 
+    /**
+     * 잠그고 <b>그 시점의 행을 다시 읽는다</b>.
+     *
+     * <p>잠금만으로는 최신 값을 보지 못한다. 이 트랜잭션이 그 행을 이미 읽었다면(접수는 동일 버전 조회로 먼저 읽는다) 영속성 컨텍스트의 1차 캐시가 이겨서 잠금
+     * 쿼리가 가져온 행 상태는 버려진다 — 그러면 그 사이 커밋된 {@code cancel_requested_at} 을 놓치고 취소 대기 실행에 새 요청이 붙는다.
+     * {@code BacktestCancelFlowIT} 가 그 순서를 실제 DB 로 고정한다.
+     */
     @Override
     public Optional<BacktestRun> findByIdForUpdate(Long id) {
-        return jpaRepository.lockById(id).map(BacktestRunMapper::toDomain);
+        return jpaRepository
+                .lockById(id)
+                .map(
+                        entity -> {
+                            entityManager.refresh(entity);
+                            return BacktestRunMapper.toDomain(entity);
+                        });
     }
 
     @Override

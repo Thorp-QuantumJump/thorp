@@ -110,7 +110,7 @@ class BacktestCancelServiceTest {
     }
 
     private void given(BacktestRun run, long activeRequests) {
-        when(requestRepository.findByBacktestId(BACKTEST_ID))
+        when(requestRepository.findByBacktestIdForUpdate(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, null)));
         when(runRepository.findByIdForUpdate(RUN_PK)).thenReturn(Optional.of(run));
         when(requestRepository.countActiveByRunId(RUN_PK)).thenReturn(activeRequests);
@@ -191,7 +191,7 @@ class BacktestCancelServiceTest {
     @Test
     @DisplayName("이미 끝난 실행이나 이미 취소한 요청은 409 NOT_CANCELLABLE 이다")
     void finalOrAlreadyCancelledIsNotCancellable() {
-        when(requestRepository.findByBacktestId(BACKTEST_ID))
+        when(requestRepository.findByBacktestIdForUpdate(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, null)));
         when(runRepository.findByIdForUpdate(RUN_PK))
                 .thenReturn(Optional.of(run(RunStatus.COMPLETED, PROGRESS_DATE)));
@@ -200,7 +200,7 @@ class BacktestCancelServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_CANCELLABLE);
 
-        when(requestRepository.findByBacktestId(BACKTEST_ID))
+        when(requestRepository.findByBacktestIdForUpdate(BACKTEST_ID))
                 .thenReturn(Optional.of(request(REQUESTER, NOW.minusSeconds(60))));
         when(runRepository.findByIdForUpdate(RUN_PK))
                 .thenReturn(Optional.of(run(RunStatus.RUNNING, PROGRESS_DATE)));
@@ -212,9 +212,20 @@ class BacktestCancelServiceTest {
     }
 
     @Test
+    @DisplayName("요청은 실행 행을 잠그기 전이 아니라 자기 행을 잠근 채 읽는다 — 같은 요청의 동시 취소가 옛 상태를 보면 안 된다")
+    void readsTheRequestUnderItsOwnLock() {
+        given(run(RunStatus.RUNNING, PROGRESS_DATE), 2);
+
+        service.cancel(BACKTEST_ID, REQUESTER);
+
+        verify(requestRepository).findByBacktestIdForUpdate(BACKTEST_ID);
+        verify(requestRepository, never()).findByBacktestId(any());
+    }
+
+    @Test
     @DisplayName("남의 요청은 404 로 숨긴다(R-12)")
     void othersRequestIsNotFound() {
-        when(requestRepository.findByBacktestId(BACKTEST_ID))
+        when(requestRepository.findByBacktestIdForUpdate(BACKTEST_ID))
                 .thenReturn(Optional.of(request(99L, null)));
 
         assertThatThrownBy(() -> service.cancel(BACKTEST_ID, REQUESTER))

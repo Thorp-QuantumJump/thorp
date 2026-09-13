@@ -72,9 +72,12 @@ common: 모든 계층에서 참조 가능
 - **취소는 요청 단위다**(`BacktestCancelService`, R-04). 이 요청에 `cancelled_at`을 남기고, 같은 실행의 마지막 활성 요청일 때만 실행을 멈춘다 —
   `QUEUED`면 바로 `CANCELLED`, `RUNNING`이면 `run.cancel_requested_at`을 기록하고 커밋 뒤 `BacktestCancelDispatcher`가 CANCEL을 보낸다(작업
   발행과 같은 커밋 후 발행 — 트랜잭션 안에서 보내면 발행됐는데 커밋이 실패해 아무도 취소하지 않은 실행이 멈춘다). 발행 실패는 삼키고 유예 감시(T014)가
-  `cancel_requested_at`을 보고 다시 보낸다. **마지막 활성 요청 판정은 실행 행을 `findByIdForUpdate`로 잠근 채 한다** — 두 요청이 동시에 취소하면 둘 다
-  "남은 요청이 있다"고 읽어 아무도 실행을 멈추지 않는다. 합류 요청 하나만 취소하면 스냅샷(`cancelled_last_trading_date`)만 남기고 실행은 계속 돈다.
-  **접수는 `cancel_requested_at`이 있는 실행에 합류하지 않는다**(`409 CANCEL_PENDING`) — 합류시키면 취소하지 않은 요청까지 부분 결과로 끝난다. 대기 중
+  `cancel_requested_at`을 보고 다시 보낸다. **잠금 순서는 요청 → 실행이다**(`findByBacktestIdForUpdate` → `findByIdForUpdate`). 실행만 잠그면
+  같은 요청을 두 번 취소할 때 뒤엣것이 잠금 전에 읽어 둔 옛 요청을 보고 "아직 활성"이라 판단해, 남은 요청이 있는데도 실행을 멈춘다. 요청 잠금은 그
+  이중 취소를, 실행 잠금은 마지막 활성 요청 판정을 직렬화한다. 합류 요청 하나만 취소하면 스냅샷(`cancelled_last_trading_date`)만 남기고 실행은 계속 돈다.
+  **접수도 합류 직전에 같은 실행 행을 잠그고 최신 상태를 다시 본다** — `cancel_requested_at`이 있으면 `409 CANCEL_PENDING`(합류시키면 취소하지 않은
+  요청까지 부분 결과로 끝난다), 잠근 뒤 종결된 실행이면 재사용 대상이 아니라 새 실행을 만든다. **`*ForUpdate` 조회는 잠근 뒤 `refresh` 한다** —
+  잠금만으로는 영속성 컨텍스트의 1차 캐시가 이겨 그 사이 커밋된 값을 놓친다(`BacktestCancelFlowIT`가 그 순서를 고정한다). 대기 중
   취소된 실행의 STARTED가 뒤늦게 오면 `handleStarted`가 CANCEL을 다시 보낸다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
 - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
 - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다
