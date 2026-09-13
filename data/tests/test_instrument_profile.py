@@ -281,6 +281,35 @@ class TestFileInput:
         with pytest.raises(InstrumentProfileError, match="asOfCurrentComposition"):
             holdings_overlap_from_payload(payload, "항목")
 
+    def test_a_false_as_of_flag_is_rejected(self) -> None:
+        """과거 구성 이력을 주는 원천이 없으므로 당시 구성을 재현했다고 표현할 수 없다 (FR-015)."""
+        payload = {
+            "asOfCurrentComposition": False,
+            "topHoldings": [{"name": "가", "weight": "0.2"}],
+        }
+
+        with pytest.raises(InstrumentProfileError, match="참이어야 한다"):
+            holdings_overlap_from_payload(payload, "항목")
+
+    def test_source_attribution_cannot_be_supplied(self) -> None:
+        """출처 표시는 원천이 정하는 한 문장이라 파일이 덮어쓸 수 없다 (FR-011, SC-005).
+
+        받아 주면 SC-005의 "100%"를 코드가 아니라 파일을 쓰는 사람이 보장하게 된다.
+        """
+        with pytest.raises(InstrumentProfileError, match="모르는 키"):
+            profiles_from_records(
+                [record(sourceAttribution="아무 출처")],
+                [price_row(DEADLINE, value=1_000)],
+                data_deadline=DEADLINE,
+            )
+
+    def test_source_attribution_is_always_the_exchange(self) -> None:
+        built = profiles_from_records(
+            [record()], [price_row(DEADLINE, value=1_000)], data_deadline=DEADLINE
+        )
+
+        assert built[0].source_attribution == SOURCE_ATTRIBUTION_KRX
+
     def test_unknown_key_is_rejected(self) -> None:
         with pytest.raises(InstrumentProfileError, match="모르는 키"):
             profiles_from_records(
