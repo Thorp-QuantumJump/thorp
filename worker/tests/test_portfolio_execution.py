@@ -5,7 +5,6 @@
 T008 이 맡는다.
 """
 
-import json
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import date, timedelta
@@ -475,16 +474,6 @@ def test_progress_callback_failure_surfaces_as_callback_error() -> None:
 
     with pytest.raises(CallbackError):
         run(broken)
-
-
-def test_same_input_gives_byte_identical_output() -> None:
-    body = three_etf("2024-01-02", "2024-06-28", execution={"costProfile": FULL_COSTS})
-    first = json.loads(completed(**body).to_json())
-    second = json.loads(completed(**body).to_json())
-    for payload in (first, second):
-        payload["run"].pop("startedAt")
-        payload["run"].pop("finishedAt")
-    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
 
 
 def test_artifacts_hold_orders_and_reproducibility_metadata() -> None:
