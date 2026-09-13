@@ -76,6 +76,8 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `GET /backtests/{backtestId}/timeseries` | 차트용 거래일별 시계열 |
 | `GET /backtests/{backtestId}/trades` | 포지션 단위 거래 내역(페이지네이션·필터) |
 | `GET /backtests/{backtestId}/positions?date=` | 특정 시점 보유 구성(직전 스냅샷 규칙) |
+| `GET /backtests/{backtestId}/weights` | 리밸런싱마다 목표·실제 비중과 비중 출처(FR-026) |
+| `GET /backtests/{backtestId}/exceptions` | 예외 처리 기록(FR-020·FR-030) — 005가 "결과 옆 한 문장"에 쓰는 원천 |
 
 예시 파일이 계약의 기준이다. 백엔드 통합 테스트가 응답과 이 파일들의 동치를 단언한다.
 네 파일은 브로커 계약 픽스처 [`../backtest-messaging/examples/event-finished-completed.json`](../backtest-messaging/examples/event-finished-completed.json)와
@@ -85,6 +87,11 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 - [`examples/backtest-timeseries.json`](examples/backtest-timeseries.json)
 - [`examples/backtest-trades.json`](examples/backtest-trades.json)
 - [`examples/backtest-positions.json`](examples/backtest-positions.json)
+- [`examples/backtest-weights.json`](examples/backtest-weights.json)
+- [`examples/backtest-exceptions.json`](examples/backtest-exceptions.json)
+
+하위 리소스 다섯 개는 모두 `partial`을 싣는다 — 취소·실행 시간 한도로 끊긴 부분 결과라는 뜻이고, 먼저 취소해 실행이 계속 돈 요청은
+자기 스냅샷 날짜까지만 담긴다(§2.5).
 
 ### 2.1 상태·설정·요약 — `GET /backtests/{backtestId}`
 
@@ -116,14 +123,26 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 **`config.initialCash`의 자릿수는 요청과 다를 수 있다.** 저장 컬럼이 `NUMERIC(19,2)`이라 `"10000000"`으로 보낸 값이
 `"10000000.00"`으로 돌아온다. 값은 같고 표기 자릿수만 컬럼 scale로 정규화된다.
 
-`summary`의 v2 항목(`netTotalReturn`·`liquidation`·`costs`·`analytics`·`exceptionCount`)은 결과 JSONB를 채우는
-T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대로다.
+`summary`는 v1 항목 열두 개(`initialEquity`…`totalSlippageCost`)를 그대로 두고 v2 항목 여섯을 더한 것이다(spec 004 T009).
+핵심 숫자 3개는 `netTotalReturn`(비용 차감 후 전체 수익률)·`maxDrawdown`·`totalTradingCost`다.
+
+| 항목 | 뜻 |
+|---|---|
+| `netTotalReturn` | 비용 차감 후 전체 수익률. 자산 곡선이 이미 비용을 뺀 값이라 `totalReturn`과 같다 |
+| `totalTradingCost` | 거래비용 합계 = `costs.total` |
+| `costs{commission, spread, slippage, tax, total}` | 비용 네 갈래(FR-027) |
+| `liquidation{markToMarket{finalEquity,totalReturn}, liquidated{finalEquity,totalReturn,liquidationCost}}` | 종료일 종가 전량 매도 가정치(FR-017). 요청이 청산을 끄면 `null` |
+| `analytics{recoveryDays, turnover}` | 회복 거래일(미회복이면 `null`)·연환산 회전율. 나머지 파생 지표(상관·위험 기여·손실 기여)는 결과 저장소에 있고 이 API 로는 내려주지 않는다 |
+| `exceptionCount` | 예외 처리 기록 건수. 본문은 `/exceptions` |
+
+값의 정의는 워커 `performance.calculate_analytics` docstring 이 원본이다(spec 004 T008 결정 ①).
 
 ### 2.2 시계열 — `GET /backtests/{backtestId}/timeseries`
 
 거래일마다 1개, 해당 거래일 Close 기준이다. `cash`·`positionValue`·`dailyReturn`·`positions`는 내려주지 않는다.
 
 `benchmarkReturn`은 벤치마크가 없거나 그 날짜 값이 없으면 **키 자체를 생략한다**(`null`이 아니다).
+`cashFlows[{type, instrumentId?, amount}]`는 분배금 등 현금 흐름이 있는 날에만 있다(FR-013, `type`은 현재 `DISTRIBUTION`). 없는 날은 키를 생략한다.
 
 예시 파일의 `points`는 **발췌다** — 픽스처의 전체 시계열은 129개이고 파일에는 앞 3개만 담았다. 실제 응답은 거래일 수만큼 온다(5년이면 약 1,250개).
 
@@ -144,6 +163,9 @@ T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대�
 OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`가 **명시적 `null`**이다(키가 있다).
 0으로 대체해 표시하지 않는다.
 
+`reason`은 거래 사유(`REBALANCE` 리밸런싱, `HALT_DEFERRED` 거래 불가로 미룬 체결, `LIQUIDATION` 종료 청산, `SIGNAL` 단일 종목 신호)이고
+항상 있다. `plannedDate`는 `HALT_DEFERRED`에서만 있는 원래 체결 예정일이며 없으면 키를 생략한다.
+
 ### 2.4 보유 구성 — `GET /backtests/{backtestId}/positions?date=`
 
 `date`는 필수다(`YYYY-MM-DD`). 보유 구성이 바뀐 거래일 + 시작일 + 종료일에만 스냅샷이 있으므로,
@@ -156,14 +178,33 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 
 ### 2.5 하위 리소스의 준비 상태
 
-`/timeseries`·`/trades`·`/positions`는 결과가 없으면 데이터를 만들어 내지 않고 409를 준다.
+`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`는 결과가 없으면 데이터를 만들어 내지 않고 409를 준다.
 **빈 배열로 응답하지 않는다** — 실패한 실행에 `{"points":[]}`를 주면 "돌았고 자산 곡선이 비어 있었다"는 거짓이 된다.
 
-| Job 상태 | HTTP | `error.code` | 프론트 동작 |
+| 상태 | HTTP | `error.code` | 프론트 동작 |
 |---|---|---|---|
-| `QUEUED`·`RUNNING` | 409 | `RESULT_NOT_READY` | 폴링 계속 |
-| `FAILED` | 409 | `BACKTEST_FAILED` | **폴링 중단.** `GET /backtests/{id}`의 `error` 표시 |
-| `COMPLETED` | 200 | — | 그린다 |
+| 실행 `QUEUED`·`RUNNING` | 409 | `RESULT_NOT_READY` | 폴링 계속 |
+| 실행 `FAILED` | 409 | `BACKTEST_FAILED` | **폴링 중단.** `GET /backtests/{id}`의 `failure` 표시 |
+| 실행 `COMPLETED`·`CANCELLED` | 200 | — | 그린다. `partial=true`면 부분 구간임을 표시 |
+| 요청이 먼저 취소됐고 완료한 거래일이 없음 | 409 | `NO_PARTIAL_RESULT` | 재시도 무의미. 새 요청을 낸다 |
+
+**먼저 취소해 실행이 계속 돈 요청**(spec 004 R-04)은 공용 실행이 끝난 뒤 자기 스냅샷 날짜(`progress.lastTradingDate`)까지만 잘라 준다 —
+백엔드가 지표를 다시 계산하지 않는 읽기 필터다. 날짜가 있는 항목(시계열·보유·비중·예외)은 날짜로, 거래는 스냅샷 다음 날 0시(거래소 현지) 전에
+진입한 것만 준다. 공용 실행이 종결 전이면 `RESULT_NOT_READY`, `FAILED`로 끝나면 `BACKTEST_FAILED`다.
+
+### 2.6 비중 기록 — `GET /backtests/{backtestId}/weights`
+
+리밸런싱마다 1개. `points[{date, target:{instrumentId: weight}, actual:{…}, weightError, riskScale?, estimatedVolatility?}]`와
+`weightsSource`(`USER` 사용자가 준 비중 / `COMPUTED` 전략이 계산한 비중). `target`은 판단일에 정한 목표(현금 몫은 빠져 합이 1 미만일 수 있다),
+`actual`은 체결 뒤 실제 비중, `weightError`는 Σ|target − actual|(정수 수량 반올림 등). `riskScale`·`estimatedVolatility`는
+`scenario=TARGET_RISK`에서만 있고 그때 `target`은 조절 뒤 비중이다(PD-18). 그 밖에는 키를 생략한다. 예시: [`examples/backtest-weights.json`](examples/backtest-weights.json).
+
+### 2.7 예외 처리 기록 — `GET /backtests/{backtestId}/exceptions`
+
+`items[{date, instrumentId?, kind, rule?, action?}]`. `kind`는 개방 집합이다 — `HALT_DEFERRED`(거래 불가 이월), `HALT_SUPERSEDED`(이월 주문이
+다음 판단일을 넘겨 새 목표로 교체), `WEIGHT_ROUNDING`(정수 수량으로 한 주도 못 삼), `SPLIT_FRACTION`(분할 단주), `ZERO_VOLATILITY`, `NO_SELECTION`,
+`ESTIMATION_FAILED`, `CONSTRAINT_VIOLATION` 등. 포트폴리오 전체에 걸린 예외는 `instrumentId`가 없다. 정렬은 날짜 오름차순(엔진 기록 순).
+예시: [`examples/backtest-exceptions.json`](examples/backtest-exceptions.json).
 
 ## 3. 오류 응답
 
@@ -179,6 +220,7 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 | 404 | `RESOURCE_NOT_FOUND` | 없는 `backtestId` 조회 |
 | 409 | `RESULT_NOT_READY` | 하위 리소스(`/timeseries`·`/trades`·`/positions`)를 조회했는데 Job이 `QUEUED`·`RUNNING`이다. **재시도하면 된다** |
 | 409 | `BACKTEST_FAILED` | 하위 리소스를 조회했는데 Job이 `FAILED`다. **재시도해도 같다** — `GET /backtests/{id}`의 `error`를 본다 |
+| 409 | `NO_PARTIAL_RESULT` | 먼저 취소한 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |
 | 503 | `BROKER_UNAVAILABLE` | 작업 큐에 연결 실패. Job은 저장되지 않으므로 **그대로 재시도해도 안전하다** |
 | 500 | `INTERNAL_ERROR` | 그 외. **`COMPLETED`인데 결과가 없는 데이터 손상**도 여기다 — 재시도하지 말고 백엔드 로그를 본다 |
 
