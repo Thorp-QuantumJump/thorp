@@ -73,6 +73,8 @@ infra/nginx/html/*
 !.agents/skills/**
 # AI 에이전트 인계 문서: 로컬 작업 메모라 저장소에 올리지 않는다
 docs/handoffs/
+# Spec 요약 문서: 로컬 이해·인계용 메모라 저장소에 올리지 않는다
+summary/
 
 # 이해를 돕기 위한 개인 학습 메모: 저장소에 올리지 않는다
 notes/

@@ -35,6 +35,16 @@ public class NewsPublisherRepositoryImpl implements NewsPublisherRepository {
     }
 
     @Override
+    public Optional<NewsPublisher> findByRegisteredDomain(String registeredDomain) {
+        if (registeredDomain == null || registeredDomain.isBlank()) {
+            return Optional.empty();
+        }
+        return jpaRepository
+                .findByRegisteredDomain(registeredDomain.toLowerCase(java.util.Locale.ROOT))
+                .map(NewsPersistenceMapper::toDomain);
+    }
+
+    @Override
     public List<NewsPublisher> findEnabled() {
         return jpaRepository.findByEnabledTrue().stream()
                 .map(NewsPersistenceMapper::toDomain)

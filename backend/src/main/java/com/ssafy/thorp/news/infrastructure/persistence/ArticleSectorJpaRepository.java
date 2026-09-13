@@ -11,4 +11,7 @@ public interface ArticleSectorJpaRepository
     List<NewsArticleSectorJpaEntity> findByKeyArticleIdIn(Collection<Long> articleIds);
 
     boolean existsByKeySectorId(String sectorId);
+
+    /** 같은 규칙 버전으로 만든 연결만 지운다. 다른 버전의 연결은 과거 결과의 근거라 남긴다. */
+    void deleteByKeyArticleIdAndKeyRuleVersion(Long articleId, String ruleVersion);
 }
