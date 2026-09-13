@@ -301,7 +301,19 @@ def resolve_actions_known_from(path: Path | None, declared: date | None) -> date
 
     인자를 필수로 만들지 않는 이유는 시험 수집을 막지 않기 위함이다. 기록이 남으므로 없는 것을
     있는 것처럼 내보내지는 않는다.
+
+    **파일 없이 ``--actions-known-from``만 주면 거부한다.** 담을 목록이 없는데 그 목록이 어느
+    날부터 빠짐없다고 선언하는 것이라 뜻이 성립하지 않는다. 조용히 무시하면 사용자가 준 값이
+    아무 일도 하지 않은 채 결과만 달라지므로 원칙 VI("사용자 입력을 몰래 바꾸지 않는다")에
+    어긋난다. 무시하지 않고 무시할 수 없음을 알린다.
     """
+    if declared is not None and path is None:
+        raise SystemExit(
+            "--actions-known-from은 --corporate-actions와 함께 주어야 한다. "
+            "기업행위 목록 없이 그 목록이 담은 구간을 선언할 수 없다. "
+            "목록을 넣지 않을 생각이면 --actions-known-from도 빼라 "
+            "(그 종목의 전 구간이 MISSING_CORPORATE_ACTION 자료 부족 구간으로 남는다)."
+        )
     if path is None or declared is None:
         return ACTIONS_KNOWN_FROM_NEVER
     return declared

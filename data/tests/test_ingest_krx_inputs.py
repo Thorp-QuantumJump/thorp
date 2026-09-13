@@ -153,13 +153,14 @@ class TestMissingCorporateActionFile:
     def test_no_file_means_the_coverage_is_unknown(self) -> None:
         assert ingest_krx.resolve_actions_known_from(None, None) == ACTIONS_KNOWN_FROM_NEVER
 
-    def test_no_file_ignores_a_declared_coverage_start(self) -> None:
-        # 목록이 없는데 "이 날부터 빠짐없다"는 선언만 받으면, 담긴 것이 없는 파일을 담은 것처럼
-        # 다루게 된다. 파일이 없다는 사실이 선언보다 세다.
-        assert (
+    def test_no_file_with_a_declared_coverage_start_is_refused(self) -> None:
+        # 목록이 없는데 "이 날부터 빠짐없다"고 선언하는 것은 뜻이 성립하지 않는다. 조용히
+        # 무시하면 사용자가 준 값이 아무 일도 하지 않은 채 결과만 달라진다 (원칙 VI).
+        with pytest.raises(SystemExit) as caught:
             ingest_krx.resolve_actions_known_from(None, date(2020, 1, 1))
-            == ACTIONS_KNOWN_FROM_NEVER
-        )
+        message = str(caught.value)
+        assert "--corporate-actions" in message
+        assert "MISSING_CORPORATE_ACTION" in message
 
     def test_a_file_without_a_declared_start_is_also_unknown(self, tmp_path: Path) -> None:
         # 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이다. 없으면 담은 구간을 말할 수
