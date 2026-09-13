@@ -6,10 +6,13 @@ T008 이 맡는다.
 """
 
 import json
+from collections.abc import Callable
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
+import pandas as pd
 import pytest
 from conftest import BATTERY, BIO, SEMICONDUCTOR, THREE_ETF_DIR, engine_input_body
 
@@ -23,9 +26,10 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.events import ProgressPoint
 from worker.engine_runner import PortfolioBacktestEngine, evaluation_start
-from worker.market_data import CsvMarketDataProvider
+from worker.market_data import CsvMarketDataProvider, MarketData
 from worker.portfolio_execution import (
     HALT_DEFERRED,
+    HALT_SUPERSEDED,
     WEIGHT_ROUNDING,
     CallbackError,
     EngineFailure,
@@ -55,6 +59,21 @@ FULL_COSTS = {
 
 def engine() -> PortfolioBacktestEngine:
     return PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))
+
+
+class PatchedProvider:
+    """픽스처를 읽은 뒤 한 군데만 바꾼다 — 픽스처에 없는 사건(병합·장기 정지)을 만들 때."""
+
+    def __init__(self, patch: Callable[[MarketData], MarketData]) -> None:
+        self.patch = patch
+
+    def load(self, *args: Any, **kwargs: Any) -> MarketData:
+        return self.patch(CsvMarketDataProvider(THREE_ETF_DIR).load(*args, **kwargs))
+
+
+def run_patched(patch: Callable[[MarketData], MarketData], **overrides: Any) -> EngineOutput:
+    body = EngineInput.model_validate(engine_input_body(**overrides))
+    return PortfolioBacktestEngine(PatchedProvider(patch)).run(body, None)
 
 
 def run(on_progress: Any = None, **overrides: Any) -> EngineOutput:
@@ -223,6 +242,28 @@ def test_halted_instrument_is_deferred_to_the_next_tradable_day() -> None:
     assert {p.instrument_id for p in halted_day.positions or []} == {BATTERY, BIO}
     # 이월 체결 뒤 비중 기록은 정지일이 아니라 실제 체결일에 남는다.
     assert output.weights_series[0].date == date(2024, 6, 12)
+
+
+def test_zero_volume_without_a_suspension_flag_is_still_tradable() -> None:
+    """정지가 아니면서 거래량이 0인 날은 호가가 있어 체결할 수 있다(001 contracts/market-dataset.md
+    「거래정지 처리」). 판정 기준은 ``trading_suspended`` 하나다 — volume 0 을 정지로 읽으면 정상
+    주문을 잘못 이월한다.
+    """
+
+    def zero_volume(market: MarketData) -> MarketData:
+        market.prices[BATTERY].loc[pd.Timestamp(HALT_DAY), "volume"] = 0
+        return market
+
+    output = run_patched(
+        zero_volume, **three_etf("2024-06-03", "2024-06-28", run={"effectiveStart": "2024-06-10"})
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    battery = [t for t in output.trades if t.instrument_id == BATTERY]
+    assert battery and all(t.reason is TradeReason.REBALANCE for t in battery)
+    assert kst_date(battery[0].entry_time) == HALT_DAY
+    assert {e.instrument_id for e in output.exceptions or [] if e.kind == HALT_DEFERRED} == {
+        SEMICONDUCTOR
+    }
 
 
 # --- 기업행위(FR-013) ------------------------------------------------------------------
@@ -473,6 +514,70 @@ def test_pending_order_is_scaled_on_the_split_day() -> None:
     assert output.trades[0].quantity > 1400
     assert output.weights_series[0].weight_error is not None
     assert output.weights_series[0].weight_error < Decimal("0.01")
+
+
+def test_reverse_split_that_rounds_a_pending_order_to_zero_drops_it_with_a_record() -> None:
+    """병합(비율 0.5). 3/1 에 1주 매수를 정했는데 3/4 분할 뒤 0.5주 → 0주다.
+
+    0주 주문을 Nautilus 에 내면 SELL 은 터지고 BUY 는 INSUFFICIENT_CASH 라는 틀린 사유로 남는다.
+    """
+
+    def merge(market: MarketData) -> MarketData:
+        splits = tuple(replace(s, ratio=Decimal("0.5")) for s in market.splits)
+        return replace(market, splits=splits)
+
+    items = [{"sectorId": "BIO", "instrumentId": BIO, "targetWeight": "1"}]
+    output = run_patched(
+        merge,
+        run={"start": "2024-03-01", "end": "2024-03-08"},
+        universe={"items": items},
+        portfolio={"initialCash": "20000"},  # 13,097원짜리 한 주만 산다
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.trades == []
+    assert [e.kind for e in output.exceptions or [] if e.date == SPLIT_DAY] == ["SPLIT_FRACTION"]
+    warned = [w.code for w in output.diagnostics.warnings if w.date == SPLIT_DAY]
+    assert warned == ["SPLIT_ROUNDING"]
+
+
+def test_halt_spanning_a_rebalance_supersedes_the_deferred_order() -> None:
+    """반도체 ETF 가 5/20~6/4 정지. 5/17 판단의 이월 주문이 5/31 월말 판단을 넘긴다.
+
+    옛 수량으로 체결하면 기록(새 목표)과 주문(옛 목표)이 어긋나고 5/17 리밸런싱의 비중 기록은
+    사라진다. 5/31 에 이월 주문을 새 목표로 바꾸고, 미완료였던 5/17 목표는 그날 실제 비중으로
+    남긴다.
+    """
+    halted = pd.date_range("2024-05-20", "2024-06-04")
+
+    def long_halt(market: MarketData) -> MarketData:
+        frame = market.prices[SEMICONDUCTOR]
+        rows = frame.index.isin(halted)
+        frame.loc[rows, "trading_suspended"] = True
+        frame.loc[rows, "volume"] = 0
+        return market
+
+    output = run_patched(
+        long_halt, **three_etf("2024-05-13", "2024-06-28", run={"effectiveStart": "2024-05-17"})
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+
+    superseded = [e for e in output.exceptions or [] if e.kind == HALT_SUPERSEDED]
+    assert [(e.date, e.instrument_id) for e in superseded] == [(date(2024, 5, 31), SEMICONDUCTOR)]
+
+    # 5/17 리밸런싱은 미완료 상태로 5/31 에 기록되고, 5/31 리밸런싱은 정지 해제 뒤 6/5 에 기록된다.
+    assert [w.date for w in output.weights_series] == [date(2024, 5, 31), date(2024, 6, 5)]
+    unfinished = output.weights_series[0]
+    assert unfinished.target[SEMICONDUCTOR] == Decimal("0.4")
+    assert unfinished.actual[SEMICONDUCTOR] == 0
+    assert unfinished.weight_error is not None and unfinished.weight_error > Decimal("0.3")
+    # 5/31 종가로 정한 수량을 6/5 종가로 평가한 차이만 남는다(옛 5/17 수량이면 훨씬 크다).
+    assert output.weights_series[1].weight_error < Decimal("0.05")
+
+    # 실제 체결은 5/31 판단의 주문이다 — 예정일이 5/20 이 아니라 6/3 이다.
+    semis = [t for t in output.trades if t.instrument_id == SEMICONDUCTOR]
+    assert len(semis) == 1 and semis[0].reason is TradeReason.HALT_DEFERRED
+    assert semis[0].planned_date == date(2024, 6, 3)
+    assert kst_date(semis[0].entry_time) == date(2024, 6, 5)
 
 
 def test_transient_provider_failure_propagates_instead_of_failing_the_run() -> None:

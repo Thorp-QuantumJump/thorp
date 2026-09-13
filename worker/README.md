@@ -79,7 +79,7 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   `allocation.compute_weights`(조정 종가 이력, 판단일까지만)로 목표 비중 → 정수 수량 주문 생성.
 - **판단일**은 평가 시작일과 매월 마지막 거래일(`parameters.rebalance=MONTH_END`). 마지막 평가일은
   판단하지 않는다. 체결일은 항상 판단일 다음 거래일이다(SC-004).
-- **거래 정지**(`trading_suspended` 또는 거래량 0)인 종목의 주문은 다음 거래 가능일로 미루고
+- **거래 정지**(`trading_suspended`, 거래량 0 은 정지가 아니다)인 종목의 주문은 다음 거래 가능일로 미루고
   `trades[].reason=HALT_DEFERRED`, `plannedDate` 와 `exceptions[{kind: HALT_DEFERRED}]` 를 남긴다.
   다른 종목은 예정일에 그대로 체결된다.
 - **정수 수량·재정규화 금지.** 목표 비중을 정수 주로 못 채운 몫은 현금으로 남고 리밸런싱마다

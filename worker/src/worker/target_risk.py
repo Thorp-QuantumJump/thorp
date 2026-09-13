@@ -79,9 +79,11 @@ def target_risk_rules(run: RunSpec) -> TargetRiskRules:
             "INVALID_REQUEST",
             f"run.scenarioParams.targetVolatility must be a decimal for TARGET_RISK: {raw!r}",
         ) from exc
-    if target <= ZERO:
+    # NaN 은 아래 비교에서 InvalidOperation 을 던지고 Infinity 는 통과해 조절이 영원히 없다.
+    if not target.is_finite() or target <= ZERO:
         raise AllocationError(
-            "INVALID_REQUEST", f"run.scenarioParams.targetVolatility must be positive: {target}"
+            "INVALID_REQUEST",
+            f"run.scenarioParams.targetVolatility must be a finite positive decimal: {target}",
         )
     version = rules.get("version")
     return TargetRiskRules(target, lookback, str(version) if version is not None else None)
