@@ -5,7 +5,9 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import nautilus_trader
+import pandas as pd
 
+from worker import __version__ as worker_version
 from worker.allocation import AllocationError
 from worker.artifacts import OrderRecord, RunArtifacts
 from worker.contracts.engine import ProgressCallback
@@ -27,7 +29,7 @@ from worker.contracts.engine_output import Warning as ContractWarning
 from worker.costs import CostModel, Side, total_costs
 from worker.engine_support import unsupported_reasons
 from worker.market_data import MarketData, MarketDataError, MarketDataProvider
-from worker.performance import calculate_performance
+from worker.performance import calculate_analytics, calculate_performance
 from worker.portfolio_execution import (
     REBALANCE_MONTH_END,
     CallbackError,
@@ -132,6 +134,97 @@ def _liquidation(request: EngineInput, execution: PortfolioRebalanceExecution) -
     )
 
 
+def assemble_output(
+    request: EngineInput,
+    market: MarketData,
+    execution: PortfolioRebalanceExecution,
+    started: datetime,
+    *,
+    status: RunStatus = RunStatus.COMPLETED,
+    partial: bool = False,
+) -> EngineOutput:
+    """실행 상태 → 결과 계약. 완료도, 취소·한도의 부분 결과(T011·T014)도 같은 함수가 만든다.
+
+    부분 결과는 ``execution.series`` 가 ``lastTradingDate`` 까지만 담겨 있다는 것 외에 다르지 않다 —
+    지표·비용·비중·분석 블록을 그 시계열로 똑같이 계산한다.
+    """
+    series = execution.series
+    orders = execution.orders
+    costs = total_costs(execution.fills)
+    first, last = series[0].date, series[-1].date
+    # 평가 기간 종목 일별 수익률(조정 종가). 상관·위험 기여의 입력이다.
+    evaluated = execution.signal_history.loc[pd.Timestamp(first) : pd.Timestamp(last)]
+    instrument_returns = evaluated.pct_change().dropna()
+    return EngineOutput(
+        run=RunResult(
+            run_id=request.run.run_id,
+            status=status,
+            started_at=started,
+            finished_at=datetime.now(UTC),
+            partial=partial,
+            last_trading_date=last,
+            effective_start=first,
+            effective_end=last,
+        ),
+        performance=calculate_performance(
+            request.portfolio.initial_cash,
+            series,
+            execution.trades,
+            request.portfolio.currency,
+            total_trading_cost=costs.total,
+        ),
+        portfolio_series=series,
+        weights_series=execution.weights_series,
+        weights_source=execution.weights_source,
+        trades=execution.trades,
+        execution=ExecutionResult(
+            order_count=len(orders),
+            fill_count=sum(order.status == "FILLED" for order in orders),
+            rejected_order_count=sum(order.status == "REJECTED" for order in orders),
+            total_commission=costs.commission,
+            total_slippage_cost=costs.spread + costs.slippage,
+        ),
+        costs=costs,
+        liquidation=(
+            _liquidation(request, execution) if request.evaluation.liquidation_at_end else None
+        ),
+        analytics=calculate_analytics(
+            series, execution.weights_series, execution.trades, instrument_returns
+        ),
+        exceptions=execution.exceptions,
+        versions=reference_versions(request, market),
+        diagnostics=Diagnostics(warnings=_run_level_warnings(request, first) + execution.warnings),
+    )
+
+
+def reference_versions(request: EngineInput, market: MarketData | None) -> Versions:
+    """참조 버전(FR-028). 거절 결과에도 붙으므로 검증하지 않고 있는 값만 읽는다.
+
+    ``rules.provisional`` 은 규칙 사본에 ``provisional`` 키가 있을 때만 싣는다 — 등록표 열은
+    백엔드에 있고 조립기가 아직 사본에 넣지 않으므로, 없으면 모른다고(키 생략) 둔다.
+    """
+    cost = request.execution.cost_profile
+    overlay_version = (request.run.scenario_rules or {}).get("version")
+    scenario_rules = (
+        str(overlay_version)
+        if request.run.scenario is Scenario.TARGET_RISK and overlay_version is not None
+        else None
+    )
+    provisional = (request.allocation.rules or {}).get("provisional")
+    return Versions(
+        mapping=request.universe.mapping_version,
+        rules=RuleVersion(
+            version=request.allocation.rules_version,
+            provisional=provisional if isinstance(provisional, bool) else None,
+        ),
+        scenario_rules=scenario_rules,
+        cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),
+        data=market.dataset_id if market is not None else None,
+        engine=f"nautilus_trader {nautilus_trader.__version__}",
+        worker=f"thorp-worker {worker_version}",
+    )
+
+
 class PortfolioBacktestEngine:
     """다종목 리밸런싱 엔진. 공급자는 인스턴스의 성질이므로 생성자로 주입한다(기본값 없음, R-09)."""
 
@@ -213,55 +306,7 @@ class PortfolioBacktestEngine:
             )
             execution = execute_portfolio(request, market, plan, on_progress)
             orders = execution.orders
-            costs = total_costs(execution.fills)
-            performance = calculate_performance(
-                request.portfolio.initial_cash,
-                execution.series,
-                execution.trades,
-                request.portfolio.currency,
-            )
-            output = EngineOutput(
-                run=RunResult(
-                    run_id=request.run.run_id,
-                    status=RunStatus.COMPLETED,
-                    started_at=started,
-                    finished_at=datetime.now(UTC),
-                    partial=False,
-                    last_trading_date=execution.series[-1].date,
-                    effective_start=execution.series[0].date,
-                    effective_end=execution.series[-1].date,
-                ),
-                # 자산 곡선이 이미 비용을 뺀 값이라 총수익률이 곧 순수익률이다. 지표 확장은 T008.
-                performance=performance.model_copy(
-                    update={
-                        "net_total_return": performance.total_return,
-                        "total_trading_cost": costs.total,
-                    }
-                ),
-                portfolio_series=execution.series,
-                weights_series=execution.weights_series,
-                weights_source=execution.weights_source,
-                trades=execution.trades,
-                execution=ExecutionResult(
-                    order_count=len(orders),
-                    fill_count=sum(order.status == "FILLED" for order in orders),
-                    rejected_order_count=sum(order.status == "REJECTED" for order in orders),
-                    total_commission=costs.commission,
-                    total_slippage_cost=costs.spread + costs.slippage,
-                ),
-                costs=costs,
-                liquidation=(
-                    _liquidation(request, execution)
-                    if request.evaluation.liquidation_at_end
-                    else None
-                ),
-                exceptions=execution.exceptions,
-                versions=self._versions(request, market),
-                diagnostics=Diagnostics(
-                    warnings=_run_level_warnings(request, execution.series[0].date)
-                    + execution.warnings
-                ),
-            )
+            output = assemble_output(request, market, execution, started)
         except CallbackError:
             raise
         except AllocationError as exc:
@@ -278,25 +323,6 @@ class PortfolioBacktestEngine:
                 request, market, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
             )
         return output, RunArtifacts(orders=orders, metadata=metadata)
-
-    @staticmethod
-    def _versions(request: EngineInput, market: MarketData | None) -> Versions:
-        cost = request.execution.cost_profile
-        # 거절 결과에도 versions 가 붙으므로 여기서는 검증하지 않고 있는 값만 읽는다.
-        overlay_version = (request.run.scenario_rules or {}).get("version")
-        scenario_rules = (
-            str(overlay_version)
-            if request.run.scenario is Scenario.TARGET_RISK and overlay_version is not None
-            else None
-        )
-        return Versions(
-            mapping=request.universe.mapping_version,
-            rules=RuleVersion(version=request.allocation.rules_version),
-            scenario_rules=scenario_rules,
-            cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),
-            data=market.dataset_id if market is not None else None,
-            engine=f"nautilus_trader {nautilus_trader.__version__}",
-        )
 
     @classmethod
     def _rejected(
@@ -319,6 +345,6 @@ class PortfolioBacktestEngine:
             ),
             portfolio_series=[],
             trades=[],
-            versions=cls._versions(request, market),
+            versions=reference_versions(request, market),
             diagnostics=Diagnostics(warnings=[]),
         )

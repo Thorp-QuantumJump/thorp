@@ -279,6 +279,7 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         prepared: MarketEvents,
         plan: DayPlan,
         on_progress: ProgressCallback | None,
+        stop_after: Callable[[date], bool] | None = None,
     ) -> None:
         super().__init__(StrategyConfig(strategy_id="PORTFOLIO-001"))
         self.request = request
@@ -287,6 +288,8 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         self.instrument_ids = sorted(prepared.instruments)
         self.plan = plan
         self.on_progress_callback = on_progress
+        self.stop_after = stop_after
+        self.stopped_early = False
         self.costs = CostModel(request.execution.cost_profile)
         self.ledger = DistributionLedger(list(market.distributions))
         # 신호용 조정 종가(signalPrice=ADJUSTED). 판단일까지만 잘라 넘긴다 — 미래 참조 금지.
@@ -640,7 +643,9 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         equity = self.cash + position_value
         self.peak = max(self.peak, equity)
         is_first = not self.series
-        is_last = day == self.plan.evaluation_days[-1]
+        stopping = self.stop_after is not None and self.stop_after(day)
+        # 멈추는 날은 이 실행의 종료일이다 — 보유 스냅샷이 있어야 부분 결과의 미실현 손익이 남는다.
+        is_last = day == self.plan.evaluation_days[-1] or stopping
         positions = None
         if is_first or self.changed or is_last:
             positions = [
@@ -679,6 +684,11 @@ class PortfolioRebalanceExecution(NautilusStrategy):
             self.pending_target = None
         self.changed = False
         self._report_progress(snapshot)
+        if stopping:
+            # 취소·한도(T011·T014): 판단하지 않고 여기서 멈춘다. 결과는 이날까지의 시계열이다.
+            self.stopped_early = True
+            self.stop()
+            return
         if day in self.plan.decision_days:
             self._decide(day, ns_close, equity)
 
@@ -811,8 +821,12 @@ def execute_portfolio(
     market: MarketData,
     plan: DayPlan,
     on_progress: ProgressCallback | None,
+    stop_after: Callable[[date], bool] | None = None,
 ) -> PortfolioRebalanceExecution:
-    """모든 판단과 체결은 실제 BacktestEngine 이벤트 루프가 이끈다."""
+    """모든 판단과 체결은 실제 BacktestEngine 이벤트 루프가 이끈다.
+
+    ``stop_after(day)`` 가 참이면 그날 평가를 마친 뒤 멈춘다(취소·한도의 부분 결과, T011·T014).
+    """
     prepared = build_market_events(request, market)
     engine = BacktestEngine(
         BacktestEngineConfig(logging=LoggingConfig(bypass_logging=True), run_analysis=False)
@@ -829,7 +843,9 @@ def execute_portfolio(
     for instrument in prepared.instruments.values():
         engine.add_instrument(instrument)
     engine.add_data(prepared.events)
-    execution = PortfolioRebalanceExecution(request, market, prepared, plan, on_progress)
+    execution = PortfolioRebalanceExecution(
+        request, market, prepared, plan, on_progress, stop_after
+    )
     engine.add_strategy(execution)
     try:
         engine.run()
@@ -841,7 +857,7 @@ def execute_portfolio(
             raise EngineFailure(
                 f"{type(execution.failure).__name__}: {execution.failure}"
             ) from execution.failure
-        if len(execution.series) != len(plan.evaluation_days):
+        if not execution.stopped_early and len(execution.series) != len(plan.evaluation_days):
             raise EngineFailure(
                 f"{len(execution.series)} snapshots for {len(plan.evaluation_days)} evaluation days"
             )
@@ -849,7 +865,7 @@ def execute_portfolio(
             # 마지막 판단일 뒤 거래 가능일이 없어 끝내 체결하지 못한 주문. 버리지 않고 남긴다.
             execution.warnings.append(
                 ContractWarning(
-                    date=plan.evaluation_days[-1],
+                    date=execution.series[-1].date,
                     instrument_id=order.instrument_id,
                     code="ORDER_NOT_FILLED",
                     message=(

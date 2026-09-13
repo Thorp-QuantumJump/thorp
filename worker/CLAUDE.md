@@ -20,7 +20,9 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
 
 - **실행은 `portfolio_execution.PortfolioRebalanceExecution` 하나다**(R-01). 배분 전략이 몇 개든
   Nautilus 전략은 이것 하나이고, 전략 차이는 `allocation/compute_weights`가 돌려주는 비중에만 있다.
-  체결·현금·분배금·분할 회계는 여기, 지표 산출은 `performance.py` — 이 분리를 깨지 말 것.
+  체결·현금·분배금·분할 회계는 여기, 지표 산출은 `performance.py`, 결과 조립은
+  `engine_runner.assemble_output` — 이 분리를 깨지 말 것. 파생 지표(`analytics`)의 정의 원본은
+  `calculate_analytics` docstring 이다(spec 은 이름만 정했다).
   하루 순서(09:00 틱: 기업행위 → 매도·매수 제출 / 15:30 봉: 평가 → 판단)와 Nautilus 제약(체결
   콜백은 핸들러 뒤에 온다, 계좌는 MARGIN, 장부가 원장이다)은 그 모듈 주석에 있다
 - **엔진이 실행할 수 있는 전략은 `allocation/ALLOCATION_RULES`가 정한다.**
@@ -68,7 +70,10 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   OHLC 전부 직전 종가) 실행은 계속된다. 거래일 행이 빠지면 보간하지 않고 `DataInsufficientError`로
   실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다
 - 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고
-  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)
+  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다).
+  다시 만들면 `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py` 도 다시 돌려
+  `tests/fixtures/manual_reconciliation.json` 을 갱신한다 — 이 스크립트는 워커를 import 하지 않는
+  독립 계산이라 기대값을 엔진 출력으로 채우면 대조가 아니다
 - **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다
 - **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다
 - **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 PD-03·PD-04 대기이며, 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). "팀이 안 정했다"와 "엔진이 구현 안 했다"는 메시지를 구분한다 — 사용자가 할 일이 다르다
