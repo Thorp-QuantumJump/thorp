@@ -17,7 +17,9 @@ export type SearchCandidatesState = {
  * 정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착할 수 있고, 그러면 화면의 정렬 표시와
  * 실제 목록이 어긋난다.
  *
- * <p>질의 객체는 매 렌더마다 새로 만들어져도 된다. 내용이 같으면 다시 부르지 않는다.
+ * <p>질의 객체는 매 렌더마다 새로 만들어져도 된다 — <b>객체가 아니라 그 안의 값들을 의존성으로
+ * 본다.</b> 직렬화한 문자열을 쓰면 호출부가 키를 적은 순서까지 의존성이 되어, 같은 질의인데도
+ * 키 순서가 다르면 다시 부른다.
  */
 export function useSearchCandidates(
   searchId: string | null,
@@ -29,7 +31,8 @@ export function useSearchCandidates(
   const [reloadToken, setReloadToken] = useState(0)
   const requestSeq = useRef(0)
 
-  const queryKey = JSON.stringify(query)
+  // 질의를 원시값으로 풀어 둔다. 이것들이 곧 의존성이다.
+  const { page: queryPage, size, status, selected, sort, direction } = query
 
   const refetch = useCallback(() => {
     setReloadToken((current) => current + 1)
@@ -47,7 +50,14 @@ export function useSearchCandidates(
     let active = true
     setIsLoading(true)
 
-    getParamSearchCandidates(searchId, JSON.parse(queryKey) as CandidateQuery)
+    getParamSearchCandidates(searchId, {
+      page: queryPage,
+      size,
+      status,
+      selected,
+      sort,
+      direction,
+    })
       .then((next) => {
         if (!active || seq !== requestSeq.current) return
         setPage(next)
@@ -68,7 +78,7 @@ export function useSearchCandidates(
     return () => {
       active = false
     }
-  }, [searchId, queryKey, reloadToken])
+  }, [searchId, queryPage, size, status, selected, sort, direction, reloadToken])
 
   return { page, error, isLoading, refetch }
 }

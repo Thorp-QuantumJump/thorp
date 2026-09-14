@@ -53,6 +53,19 @@ function rankingClaimedAsFact(text: string): string[] {
 /**
  * 주석을 걷어낸 소스. 왜 순위를 만들지 않는지 적은 주석까지 위반으로 세면 설명을 지우게 된다 —
  * 지켜야 할 것은 <b>화면에 닿는 문자열</b>이다.
+ *
+ * <p><b>정규식이라 완전하지 않다.</b> 두 방향으로 틀릴 수 있고, 값은 서로 다르다.
+ *
+ * <ul>
+ *   <li>과탐: 줄 끝에 붙인 주석(`const x = 1 // 추천`)은 걷히지 않아 위반으로 잡힌다. 안전한
+ *       방향이다 — 주석 한 줄을 고쳐 쓰면 끝난다.
+ *   <li>미탐: 문자열 리터럴 안에 `/*`가 있으면 블록 주석으로 보고 다음 `*` `/`까지 먹는다. 그
+ *       구간의 위반을 놓친다. <b>이쪽이 위험하다.</b>
+ * </ul>
+ *
+ * <p>그래서 미탐을 canary로 막는다 — 걷어낸 뒤에도 `export`가 남아 있어야 한다. 정규식이 폭주해
+ * 코드를 통째로 먹었다면 그것이 사라진다. 완전한 해법은 AST 파싱이고, 검사 하나를 위해 파서를
+ * 들이는 것이 맞다고 판단되면 그때 바꾼다.
  */
 function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -151,6 +164,10 @@ describe('SelectionResult', () => {
 
     for (const source of resultSources) {
       const content = withoutComments(readFileSync(source, 'utf-8'))
+
+      // 주석 제거가 코드까지 먹었는지 본다. 먹었다면 아래 검사가 조용히 통과해 버린다.
+      expect(content, `${source} 의 주석 제거가 코드를 먹었다`).toContain('export')
+
       for (const word of rankingWords) {
         if (content.includes(word)) violations.push(`${source} → ${word}`)
       }
