@@ -1,12 +1,13 @@
 package com.ssafy.thorp.backtest.infrastructure.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.ssafy.thorp.backtest.application.service.BacktestEventService;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -37,6 +38,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class BacktestDeadLetterListenerIT {
 
     private static final String RUN_ID = "BT-20260914-000077";
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration POLL = Duration.ofMillis(100);
 
     @Container @ServiceConnection
     static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
@@ -65,23 +68,17 @@ class BacktestDeadLetterListenerIT {
      * 따라 통과했다 실패했다 한다(실제로 그랬다).
      */
     private void nackWhenDelivered() {
-        Instant deadline = Instant.now().plusSeconds(10);
-        while (Instant.now().isBefore(deadline)) {
-            if (nackNow()) {
-                return;
-            }
-            Thread.onSpinWait();
-        }
-        throw new AssertionError("작업 큐로 메시지가 오지 않았습니다");
+        await().atMost(TIMEOUT).pollInterval(POLL).until(this::nackNow);
     }
 
     @Test
-    @DisplayName("재전달 상한을 넘긴 작업 메시지는 DLQ 로 가고 리스너가 correlationId 의 runId 로 처리한다")
+    @DisplayName("재전달 상한을 넘긴 작업 메시지는 DLQ 로 가고 리스너가 runId·발행 시도 번호로 처리한다")
     void deadLetteredJobReachesTheListenerWithItsRunId() {
         byte[] body = ("{\"run\":{\"runId\":\"" + RUN_ID + "\"}}").getBytes(StandardCharsets.UTF_8);
         MessageProperties properties = new MessageProperties();
         properties.setCorrelationId(RUN_ID);
         properties.setMessageId("JOB-" + RUN_ID);
+        properties.setHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER, 2);
         rabbitTemplate.send(
                 BacktestRabbitConfig.EXCHANGE,
                 BacktestRabbitConfig.JOBS_ROUTING_KEY,
@@ -91,7 +88,7 @@ class BacktestDeadLetterListenerIT {
         nackWhenDelivered();
         nackWhenDelivered();
 
-        verify(eventService, timeout(10_000)).handleDeadLetter(RUN_ID);
+        verify(eventService, timeout(TIMEOUT.toMillis())).handleDeadLetter(RUN_ID, 2);
         // 자동 재투입은 없다 — 위 verify 가 돌아온 시점에 메시지는 이미 DLQ 로 갔다.
         assertThat(nackNow()).isFalse();
     }
