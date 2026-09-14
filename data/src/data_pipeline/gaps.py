@@ -411,7 +411,9 @@ def build_instrument_series(
     **이 인자를 여기서 받지 않으면 FR-006의 ``MISSING_CORPORATE_ACTION`` 기록이 파이프라인
     경로에서 영원히 만들어지지 않는다.** 2020년부터만 담은 기업행위 파일로 2010년 상장
     종목을 처리하면 2010~2019년의 누적 계수가 틀린 채로, 그 사실을 알리는 자료 부족 구간도
-    없이 발행된다.
+    없이 발행된다. 기업행위 목록 자체가 없으면
+    :data:`data_pipeline.corporate_actions.ACTIONS_KNOWN_FROM_NEVER` 를 넘겨 계열 전체를
+    자료 부족 구간으로 남긴다.
     """
     closes = raw_close_series(quotes, calendar, window)
     adjustment = build_adjustment_series(

@@ -14,4 +14,6 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# `scripts/`도 넣는 이유는 진입점이 입력 파일의 열 이름 규약과 기본값을 정하고 있어서다.
+# 그 규칙은 `src/`를 거치지 않으므로 진입점을 불러오지 않으면 테스트가 닿지 못한다.
+pythonpath = ["src", "scripts"]

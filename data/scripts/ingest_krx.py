@@ -8,6 +8,14 @@
 (:mod:`data_pipeline.krx` 문서 2번) 거래일 달력 없이 ETF를 수집하면 휴장일 행을 만든다.
 달력의 출처는 지수 자료뿐이다(:mod:`data_pipeline.index`).
 
+**입력 파일의 열 이름은 snake_case다.** ``data_pipeline``의 ``*_from_records`` 계약과 같은
+이름이라 변환을 한 겹 더 두지 않아도 되고, 같은 파일을 ``scripts/reconcile.py``에 그대로 넣을
+수 있다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을 대상으로 한 것이다.
+
+**기업행위 목록이 담은 구간을 말할 수 없으면 그만큼을 자료 부족 구간으로 남긴다**
+(:func:`resolve_actions_known_from`). 파일을 주지 않으면 전 구간이 그렇게 되고, 그래서
+"기업행위가 없었다"와 "목록을 넣지 않았다"가 결과에서 구분된다 (FR-006).
+
 **``--commit`` 없이는 DB를 건드리지 않는다.** 발행된 자료 버전은 트리거가 UPDATE·DELETE를
 막아 되돌릴 수 없어서(FR-017), 적재를 기본 동작으로 두면 잘못 부른 한 번을 수습할 방법이 없다.
 
@@ -41,6 +49,7 @@ if str(_DATA_ROOT / "src") not in sys.path:
 
 from data_pipeline import gaps, index, krx, repository  # noqa: E402
 from data_pipeline.corporate_actions import (  # noqa: E402
+    ACTIONS_KNOWN_FROM_NEVER,
     CorporateAction,
     CorporateActionError,
     corporate_actions_from_records,
@@ -130,9 +139,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help=(
             "상장 구간 JSON 파일. "
-            '[{"instrumentId": "069500.XKRX", "listedOn": "2002-10-14", "delistedOn": null}] '
-            "모양이다. 원천의 종목기본정보 서비스에 활용 승인이 없어 상장일을 받을 수 없으므로 "
-            "대응표가 소유한 값을 밖에서 받는다 (FR-005)"
+            '[{"instrument_id": "069500.XKRX", "listed_on": "2002-10-14", "delisted_on": null}] '
+            "모양이다. 열 이름은 snake_case이며 scripts/reconcile.py의 --listing과 같은 파일을 "
+            "그대로 쓸 수 있다. 원천의 종목기본정보 서비스에 활용 승인이 없어 상장일을 받을 수 "
+            "없으므로 대응표가 소유한 값을 밖에서 받는다 (FR-005)"
         ),
     )
     parser.add_argument(
@@ -141,9 +151,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "기업행위 JSON 파일(선택). "
-            '[{"instrumentId": ..., "exDate": ..., "eventType": "DISTRIBUTION", '
-            '"amount": "120", "payDate": ...}] 모양이다. '
-            "주지 않으면 기업행위가 없는 것으로 보고 누적 계수가 전부 1이 된다"
+            '[{"instrument_id": "069500.XKRX", "ex_date": "2026-04-29", '
+            '"event_type": "DISTRIBUTION", "amount": "120", "pay_date": "2026-05-08"}] '
+            "모양이며 열 이름은 snake_case다. scripts/reconcile.py의 --corporate-actions와 "
+            "같은 파일을 그대로 쓴다. 주지 않으면 기업행위를 반영할 수 없으므로 각 종목의 "
+            "전 구간을 MISSING_CORPORATE_ACTION 자료 부족 구간으로 기록한다 (FR-006)"
         ),
     )
     parser.add_argument(
@@ -155,7 +167,8 @@ def build_parser() -> argparse.ArgumentParser:
             "그날보다 앞 구간은 빠진 기업행위가 있을 수 있으므로 MISSING_CORPORATE_ACTION "
             "자료 부족 구간으로 기록한다 (FR-006). 기업행위는 원천 API로 받을 수 없어 공시를 "
             "옮긴 파일로 들어오고, 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이지 "
-            "코드가 알아낼 수 있는 값이 아니다. 주지 않으면 목록이 전 구간을 담았다고 본다"
+            "코드가 알아낼 수 있는 값이 아니다. 주지 않으면 담은 구간을 말할 수 없는 것이므로 "
+            "전 구간을 자료 부족 구간으로 기록한다. 전 구간을 담았다면 수집 시작일을 적는다"
         ),
     )
     parser.add_argument(
@@ -221,21 +234,25 @@ def _optional_day(record: dict[str, Any], field: str, where: str) -> date | None
 def listing_windows(path: Path) -> dict[str, krx.ListingWindow]:
     """상장 구간 JSON을 :class:`krx.ListingWindow` 로 바꾼다.
 
-    파일 형식은 API JSON 관례를 따라 camelCase다(``CLAUDE.md``). 상장일이 없으면 그 종목의
-    수집 자체를 할 수 없으므로 필수로 요구한다 — 없는 값을 0이나 수집 시작일로 채우면
-    상장 전 구간이 있는 것처럼 보여 SC-003의 판정이 무의미해진다.
+    **열 이름은 snake_case다.** ``data_pipeline``의 ``*_from_records`` 계약과 같은 이름이라
+    변환을 한 겹 더 두지 않아도 되고, 같은 파일을 ``scripts/reconcile.py``의 ``--listing``에
+    그대로 넣을 수 있다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을 대상으로 한 것이라
+    파이프라인 입력 파일에는 해당하지 않는다.
+
+    상장일이 없으면 그 종목의 수집 자체를 할 수 없으므로 필수로 요구한다 — 없는 값을 0이나
+    수집 시작일로 채우면 상장 전 구간이 있는 것처럼 보여 SC-003의 판정이 무의미해진다.
     """
     windows: list[krx.ListingWindow] = []
     for position, record in enumerate(_records_from_json(path, "상장 구간")):
         where = f"상장 구간 {position}번째 항목"
-        instrument_id = record.get("instrumentId")
+        instrument_id = record.get("instrument_id")
         if not isinstance(instrument_id, str):
-            raise IngestError(f"{where}의 instrumentId가 문자열이 아니다: {instrument_id!r}")
+            raise IngestError(f"{where}의 instrument_id가 문자열이 아니다: {instrument_id!r}")
         windows.append(
             krx.ListingWindow(
                 instrument_id=instrument_id.strip(),
-                listed_on=_required_day(record, "listedOn", where),
-                delisted_on=_optional_day(record, "delistedOn", where),
+                listed_on=_required_day(record, "listed_on", where),
+                delisted_on=_optional_day(record, "delisted_on", where),
             )
         )
     return krx.windows_by_instrument(windows)
@@ -244,9 +261,13 @@ def listing_windows(path: Path) -> dict[str, krx.ListingWindow]:
 def corporate_actions(path: Path | None) -> list[CorporateAction]:
     """기업행위 JSON을 :class:`CorporateAction` 으로 바꾼다.
 
-    파일이 없으면 빈 목록이다. 기업행위가 없는 것으로 보는 것이며, 그때 누적 계수는 전부 1이라
-    조정 종가가 원시 종가와 같아진다. 값 규칙 검사는 모두
-    :func:`corporate_actions_from_records` 가 맡고 여기서는 날짜 문자열만 풀어 준다.
+    **열 이름은 snake_case이며** ``scripts/reconcile.py``의 ``--corporate-actions``와 같은
+    파일이다. 값 규칙 검사는 모두 :func:`corporate_actions_from_records` 가 맡고 여기서는
+    날짜 문자열만 풀어 준다.
+
+    파일이 없으면 빈 목록이다. **이때 계수가 전부 1이 되는 것을 기업행위가 없는 것으로 보아서는
+    안 된다.** 목록이 담은 구간을 :func:`resolve_actions_known_from` 이 "말할 수 없음"으로 정해
+    전 구간이 자료 부족 구간으로 남는다.
     """
     if path is None:
         return []
@@ -255,14 +276,47 @@ def corporate_actions(path: Path | None) -> list[CorporateAction]:
         where = f"기업행위 {position}번째 항목"
         records.append(
             {
-                "instrument_id": str(record.get("instrumentId")),
-                "ex_date": _required_day(record, "exDate", where),
-                "event_type": str(record.get("eventType")),
+                "instrument_id": str(record.get("instrument_id")),
+                "ex_date": _required_day(record, "ex_date", where),
+                "event_type": str(record.get("event_type")),
                 "amount": record.get("amount"),
-                "pay_date": _optional_day(record, "payDate", where),
+                "pay_date": _optional_day(record, "pay_date", where),
             }
         )
     return corporate_actions_from_records(records)
+
+
+def resolve_actions_known_from(path: Path | None, declared: date | None) -> date:
+    """조정 계열에 넘길 "기업행위 목록이 빠짐없는 가장 이른 날"을 정한다 (FR-006).
+
+    두 경우에 :data:`ACTIONS_KNOWN_FROM_NEVER` 를 돌려주고, 그러면 그 종목의 전 구간이
+    ``MISSING_CORPORATE_ACTION`` 자료 부족 구간으로 남는다.
+
+    * **기업행위 파일을 주지 않았다.** 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데,
+      기록이 없으면 결과만 보아서는 기업행위가 없었던 것인지 목록을 넣지 않은 것인지 가릴 수
+      없다. 적재 지시를 붙이면 불변 트리거가 걸려 되돌릴 수도 없다.
+    * **파일은 주었으나 ``--actions-known-from``이 없다.** 그 파일이 어느 날부터를 담는지는
+      파일이 알려 주는 값이라, 없으면 담은 구간을 말할 수 없다. 전 구간을 담았다고 보는 것은
+      코드가 대신 하는 주장이다.
+
+    인자를 필수로 만들지 않는 이유는 시험 수집을 막지 않기 위함이다. 기록이 남으므로 없는 것을
+    있는 것처럼 내보내지는 않는다.
+
+    **파일 없이 ``--actions-known-from``만 주면 거부한다.** 담을 목록이 없는데 그 목록이 어느
+    날부터 빠짐없다고 선언하는 것이라 뜻이 성립하지 않는다. 조용히 무시하면 사용자가 준 값이
+    아무 일도 하지 않은 채 결과만 달라지므로 원칙 VI("사용자 입력을 몰래 바꾸지 않는다")에
+    어긋난다. 무시하지 않고 무시할 수 없음을 알린다.
+    """
+    if declared is not None and path is None:
+        raise SystemExit(
+            "--actions-known-from은 --corporate-actions와 함께 주어야 한다. "
+            "기업행위 목록 없이 그 목록이 담은 구간을 선언할 수 없다. "
+            "목록을 넣지 않을 생각이면 --actions-known-from도 빼라 "
+            "(그 종목의 전 구간이 MISSING_CORPORATE_ACTION 자료 부족 구간으로 남는다)."
+        )
+    if path is None or declared is None:
+        return ACTIONS_KNOWN_FROM_NEVER
+    return declared
 
 
 def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
@@ -469,6 +523,36 @@ def _build_tables(
     return tables, series
 
 
+def _report_corporate_actions(
+    args: argparse.Namespace, known_from: date | None, gap_rows: Sequence[dict[str, Any]]
+) -> None:
+    """기업행위 목록이 어느 구간을 담았는지와 그로 생긴 자료 부족 구간을 낸다 (FR-006).
+
+    조정 종가가 원시 종가와 같은 결과는 "기업행위가 없었다"와 "목록을 넣지 않았다"에서 똑같이
+    나온다. 요약에서 둘을 가르지 않으면 읽는 사람이 결과만 보고 구분할 수 없다.
+    """
+    affected = sorted(
+        {
+            str(row["instrument_id"])
+            for row in gap_rows
+            if row["reason"] == gaps.REASON_MISSING_CORPORATE_ACTION
+        }
+    )
+    if args.corporate_actions is None:
+        print("기업행위 목록: 없음 (--corporate-actions를 주지 않았다)")
+    elif known_from == ACTIONS_KNOWN_FROM_NEVER:
+        print(f"기업행위 목록: {args.corporate_actions} (담은 구간 미상)")
+        print("  --actions-known-from이 없어 목록이 어느 날부터를 담았는지 말할 수 없다")
+    else:
+        print(f"기업행위 목록: {args.corporate_actions} ({known_from}부터 빠짐없다)")
+    if affected:
+        scope = "전 구간" if known_from == ACTIONS_KNOWN_FROM_NEVER else f"{known_from} 이전 구간"
+        print(
+            f"  {gaps.REASON_MISSING_CORPORATE_ACTION} 자료 부족 구간: "
+            f"{len(affected)}종목의 {scope} ({', '.join(affected)})"
+        )
+
+
 def _report(
     *,
     dataset_id: str,
@@ -479,6 +563,7 @@ def _report(
     calendar: Sequence[date],
     tables: dict[str, list[dict[str, Any]]],
     reason: str | None,
+    known_from: date | None,
     written: list[Path],
     loaded: dict[str, int] | None,
 ) -> None:
@@ -487,6 +572,7 @@ def _report(
     # 줄글에 em dash(U+2014)를 쓰지 않는다. 윈도 콘솔의 기본 부호화(cp949)가 그 글자를
     # 담지 못해 출력 자체가 UnicodeEncodeError로 죽는다. 주석·docstring은 출력되지 않아 무관하다.
     print(f"거래일 달력: {len(calendar)}일 ({calendar[0]} ~ {calendar[-1]}), 출처는 지수 자료다")
+    _report_corporate_actions(args, known_from, tables["data_gap"])
     print(f"수집 완료 여부: {'완료' if reason is None else '부분 갱신'}")
     if reason is not None:
         print(f"중단 사유: {reason}")
@@ -519,6 +605,7 @@ def run(args: argparse.Namespace) -> int:
             "가려낼 수 없다 (FR-005, SC-003)"
         )
     actions = corporate_actions(args.corporate_actions)
+    known_from = resolve_actions_known_from(args.corporate_actions, args.actions_known_from)
 
     indices, etf, calendar = _collect(args, windows, instrument_ids)
     deadline = data_deadline(etf, indices)
@@ -532,7 +619,7 @@ def run(args: argparse.Namespace) -> int:
         instrument_ids,
         actions,
         deadline,
-        args.actions_known_from,
+        known_from,
     )
 
     written: list[Path] = []
@@ -575,6 +662,7 @@ def run(args: argparse.Namespace) -> int:
         calendar=calendar,
         tables=tables,
         reason=reason,
+        known_from=known_from,
         written=written,
         loaded=loaded,
     )

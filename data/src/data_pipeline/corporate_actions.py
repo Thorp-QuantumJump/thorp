@@ -51,6 +51,13 @@ EVENT_TYPES: Final[frozenset[str]] = frozenset({EVENT_DISTRIBUTION, EVENT_SPLIT}
 #: ``data_gap.reason``. 기업행위를 반영할 수 없어 그 이전 구간을 쓸 수 없을 때다 (FR-006).
 REASON_MISSING_CORPORATE_ACTION: Final[str] = "MISSING_CORPORATE_ACTION"
 
+#: ``actions_known_from``에 넣는 "목록이 담은 구간을 말할 수 없다"는 값. 기업행위 파일 자체가
+#: 없을 때가 그렇다. 모든 날이 이 값보다 앞이므로 :func:`build_adjustment_series` 는 계열
+#: 전체를 ``MISSING_CORPORATE_ACTION`` 자료 부족 구간으로 남긴다. 값을 지어내지 않으면서도
+#: "기업행위가 없다"와 "기업행위를 모른다"를 가르는 자리이며, 이 값은 구간의 날짜로 새어
+#: 나가지 않는다 — 구간의 끝은 언제나 계열의 마지막 날이다.
+ACTIONS_KNOWN_FROM_NEVER: Final[date] = date.max
+
 INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
 
 #: 누적 곱셈의 작업 정밀도. 저장 자리수(아래)보다 넉넉히 두어 중간 계산에서 깎이지 않게 한다.
@@ -302,6 +309,12 @@ def build_adjustment_series(
     누적 계수는 이전 구간 **전체**에 곱해지는 값이라, 하나를 빠뜨리면 그 앞의 조정가가
     모두 틀린다. 그래서 구간도 계열 시작부터 그날 직전까지 전체다.
 
+    **목록 자체가 없으면** :data:`ACTIONS_KNOWN_FROM_NEVER` 를 넣는다. 그러면 계열 전체가
+    자료 부족 구간이 된다. 목록이 없는 것과 기업행위가 없는 것은 다른 상태인데, 둘을 같게
+    다루면 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아진 채로, 그 사실을 알리는
+    기록도 없이 발행된다. ``None``은 "목록이 계열 전 구간을 담았다"는 **부르는 쪽의 주장**이며
+    기본값이 아닌 선언으로 쓴다.
+
     ``ex_date``가 계열의 첫 날보다 앞이거나 같은 분배금은 **곱할 대상이 없어** 건너뛴다.
     그날 이미 가격이 떨어진 뒤의 자료만 갖고 있으므로 조정할 것이 없고, 직전 종가가 없어
     계수를 만들 수도 없다. 이 건너뜀은 자료 부족이 아니다.
@@ -378,7 +391,11 @@ def _previous_close(
 def _unknown_action_gaps(
     instrument_id: str, days: Sequence[date], actions_known_from: date | None
 ) -> list[dict[str, Any]]:
-    """기업행위 목록이 담지 못한 앞 구간을 자료 부족으로 남긴다 (FR-006)."""
+    """기업행위 목록이 담지 못한 앞 구간을 자료 부족으로 남긴다 (FR-006).
+
+    ``actions_known_from``이 :data:`ACTIONS_KNOWN_FROM_NEVER` 면 모든 날이 그보다 앞이라
+    구간이 계열 전체가 된다. 목록이 없을 때 쓰는 길이 이 한 갈래로 모인다.
+    """
     if not days or actions_known_from is None:
         return []
     end = max((day for day in days if day < actions_known_from), default=None)

@@ -17,6 +17,7 @@ import pytest
 
 from data_pipeline import corporate_actions as module
 from data_pipeline.corporate_actions import (
+    ACTIONS_KNOWN_FROM_NEVER,
     ADJUSTED_CLOSE_EXPONENT,
     ADJUSTMENT_FACTOR_EXPONENT,
     EVENT_DISTRIBUTION,
@@ -315,10 +316,33 @@ class TestMissingCorporateAction:
         series = build_adjustment_series(INSTRUMENT_ID, CLOSES, [], actions_known_from=DAYS[0])
         assert series.gaps == ()
 
-    def test_no_gap_when_the_coverage_start_is_unknown(self) -> None:
-        # 값을 주지 않으면 구간을 만들지 않는다. 모른다는 사실을 자료 부족으로 옮겨 적으면
-        # 기업행위가 없는 종목까지 전 구간이 제외된다.
+    def test_none_is_the_callers_declaration_that_the_list_covers_everything(self) -> None:
+        # ``None``은 "이 목록이 계열 전 구간을 담았다"는 부르는 쪽의 주장이다. 모른다는 뜻이
+        # 아니다 — 모를 때 쓰는 값은 ACTIONS_KNOWN_FROM_NEVER이며 아래에서 확인한다.
         assert build_adjustment_series(INSTRUMENT_ID, CLOSES, []).gaps == ()
+
+    def test_never_marks_the_whole_series(self) -> None:
+        # 목록이 어느 구간을 담았는지 말할 수 없을 때다(기업행위 파일 자체가 없는 경우).
+        # 계열 전체가 자료 부족 구간이 되어, 계수가 전부 1인 결과가 "기업행위가 없었다"로
+        # 읽히지 않는다.
+        series = build_adjustment_series(
+            INSTRUMENT_ID, CLOSES, [], actions_known_from=ACTIONS_KNOWN_FROM_NEVER
+        )
+        assert len(series.gaps) == 1
+        gap = series.gaps[0]
+        assert gap["reason"] == REASON_MISSING_CORPORATE_ACTION
+        assert (gap["start_date"], gap["end_date"]) == (DAYS[0], DAYS[-1])
+
+    def test_never_does_not_leak_into_the_gap_dates(self) -> None:
+        # 구간의 끝은 계열의 마지막 날이지 date.max가 아니다. 그 값이 새어 나가면 적재에서
+        # 있지도 않은 날짜가 남는다.
+        series = build_adjustment_series(
+            INSTRUMENT_ID, CLOSES, [], actions_known_from=ACTIONS_KNOWN_FROM_NEVER
+        )
+        assert ACTIONS_KNOWN_FROM_NEVER not in {
+            series.gaps[0]["start_date"],
+            series.gaps[0]["end_date"],
+        }
 
     def test_the_range_before_the_coverage_start_is_marked(self) -> None:
         series = build_adjustment_series(
