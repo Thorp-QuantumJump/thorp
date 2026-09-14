@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 
 import com.ssafy.thorp.backtest.application.service.BacktestEventService;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -43,8 +44,8 @@ class BacktestDeadLetterListenerIT {
     @Autowired private RabbitTemplate rabbitTemplate;
     @MockitoBean private BacktestEventService eventService;
 
-    /** 워커가 집었다가 죽은 것과 같은 모양 — 받아서 requeue 로 거절한다. */
-    private boolean nackOnce() {
+    /** 지금 작업 큐에 있는 메시지 하나를 받아 requeue 로 거절한다. 없으면 false. */
+    private boolean nackNow() {
         return Boolean.TRUE.equals(
                 rabbitTemplate.execute(
                         channel -> {
@@ -55,6 +56,23 @@ class BacktestDeadLetterListenerIT {
                             channel.basicNack(response.getEnvelope().getDeliveryTag(), false, true);
                             return true;
                         }));
+    }
+
+    /**
+     * 워커가 집었다가 죽은 것과 같은 모양. <b>도착을 기다렸다가</b> 거절한다.
+     *
+     * <p>발행은 비동기라 {@code basicGet} 을 바로 부르면 아직 큐에 없을 수 있다. 되돌아오는 재전달도 마찬가지다 — 기다리지 않으면 전체 스위트에서 부하에
+     * 따라 통과했다 실패했다 한다(실제로 그랬다).
+     */
+    private void nackWhenDelivered() {
+        Instant deadline = Instant.now().plusSeconds(10);
+        while (Instant.now().isBefore(deadline)) {
+            if (nackNow()) {
+                return;
+            }
+            Thread.onSpinWait();
+        }
+        throw new AssertionError("작업 큐로 메시지가 오지 않았습니다");
     }
 
     @Test
@@ -70,11 +88,11 @@ class BacktestDeadLetterListenerIT {
                 new Message(body, properties));
 
         // 첫 전달은 상한 안이라 되돌아온다. 두 번째 거절에서 브로커가 DLX 로 옮긴다.
-        assertThat(nackOnce()).isTrue();
-        assertThat(nackOnce()).isTrue();
+        nackWhenDelivered();
+        nackWhenDelivered();
 
         verify(eventService, timeout(10_000)).handleDeadLetter(RUN_ID);
-        // 자동 재투입은 없다 — 작업 큐로 돌아오지 않는다.
-        assertThat(nackOnce()).isFalse();
+        // 자동 재투입은 없다 — 위 verify 가 돌아온 시점에 메시지는 이미 DLQ 로 갔다.
+        assertThat(nackNow()).isFalse();
     }
 }
