@@ -203,6 +203,22 @@ public class ParamSearch {
         return stopReason != null && !status.isFinal();
     }
 
+    /**
+     * 실패 후보 재시도로 묶음을 다시 연다(FR-024).
+     *
+     * <p><b>새 묶음을 만들지 않는다.</b> 참조 버전·탐색 공간·선정 규칙은 접수 시점 스냅샷 그대로다 — 재시도해 얻은 결과가 먼저 끝난 후보들과 같은 조건이어야
+     * 나란히 놓을 수 있다(FR-012·FR-013c).
+     *
+     * <p><b>선정은 비운다.</b> 후보가 더 붙으므로 이전 선정은 이미 사실이 아니다. 안정성 필터가 묶음 내 상대 분위라 후보 하나가 늘면 분위 자체가 달라진다 —
+     * 다시 끝날 때 한 번 더 계산한다(불변식 3).
+     *
+     * <p><b>중단 사유는 남긴다.</b> 취소로 '미실행'이 된 후보는 재시도 대상이 아니라 그대로 남으므로, 이 묶음은 다시 끝나도 여전히 부분 결과다. 사유를 지우면
+     * 취소한 적 없는 묶음처럼 보이고 완료 범위 표시가 뜻을 잃는다.
+     */
+    public ParamSearch reopenForRetry() {
+        return transitionTo(ParamSearchStatus.RUNNING).selection(null).finishedAt(null).build();
+    }
+
     /** 집계를 갱신한다. 상태는 그대로다 — 상태 전이 판정은 별도다. */
     public ParamSearch withCounts(SearchCounts counts) {
         return toBuilder()

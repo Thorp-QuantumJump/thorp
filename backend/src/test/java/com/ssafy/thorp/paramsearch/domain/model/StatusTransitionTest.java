@@ -51,11 +51,23 @@ class StatusTransitionTest {
         @ParameterizedTest
         @EnumSource(
                 value = ParamSearchStatus.class,
-                names = {"COMPLETED", "PARTIAL", "FAILED", "REJECTED"})
-        @DisplayName("최종 상태에서는 어디로도 가지 않는다")
-        void finalStatusesAreTerminal(ParamSearchStatus status) {
+                names = {"FAILED", "REJECTED"})
+        @DisplayName("실패·거부에서는 어디로도 가지 않는다")
+        void deadEndStatusesAreTerminal(ParamSearchStatus status) {
             assertThat(status.isFinal()).isTrue();
             assertThat(allowedFrom(status)).isEmpty();
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = ParamSearchStatus.class,
+                names = {"COMPLETED", "PARTIAL"})
+        @DisplayName("끝난 묶음은 재시도로만 다시 열린다")
+        void finishedBundlesReopenOnlyForRetry(ParamSearchStatus status) {
+            assertThat(status.isFinal()).as("다시 열릴 수 있어도 그때까지는 최종 상태다 — 발행 경로가 이 값을 본다").isTrue();
+            assertThat(allowedFrom(status))
+                    .as("실패 후보를 다시 돌리는 길 하나뿐이다. 새 묶음을 만들지 않는다(FR-024)")
+                    .containsExactly(ParamSearchStatus.RUNNING);
         }
 
         @Test
