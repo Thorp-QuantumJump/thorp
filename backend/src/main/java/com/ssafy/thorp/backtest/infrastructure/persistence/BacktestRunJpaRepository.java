@@ -118,14 +118,15 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
             @Param("startedBefore") Instant startedBefore,
             Limit limit);
 
-    /** 취소 무응답: CANCEL 을 보낸 지 오래됐는데 아직 종결되지 않은 실행. */
+    /**
+     * CANCEL 을 보냈는데 아직 종결되지 않은 실행. 유예가 지났는지는 <b>호출자가 건별로</b> 본다 — 유예 전이면 CANCEL 을 다시 보내고(발행이 실패했을 수
+     * 있다) 지났으면 강제 종결한다.
+     */
     @Query(
-            "select r from BacktestRunJpaEntity r where r.cancelRequestedAt < :requestedBefore"
+            "select r from BacktestRunJpaEntity r where r.cancelRequestedAt is not null"
                     + " and r.status in :alive order by r.cancelRequestedAt asc")
-    List<BacktestRunJpaEntity> findCancelUnanswered(
-            @Param("requestedBefore") Instant requestedBefore,
-            @Param("alive") Collection<RunStatus> alive,
-            Limit limit);
+    List<BacktestRunJpaEntity> findCancelPending(
+            @Param("alive") Collection<RunStatus> alive, Limit limit);
 
     /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다(R-19). */
     @Query("select count(r) from BacktestRunJpaEntity r where r.status = :status")

@@ -64,8 +64,11 @@ public interface BacktestRunRepository {
     /** RUNNING 이고 {@code startedBefore} 이전에 시작한 실행. 아직 CANCEL 을 보내지 않은 것만(실행 시간 상한). */
     List<BacktestRun> findOverrunning(Instant startedBefore, int limit);
 
-    /** CANCEL 을 보낸 지 {@code requestedBefore} 가 지나도록 종결되지 않은 실행(취소 유예). */
-    List<BacktestRun> findCancelUnanswered(Instant requestedBefore, int limit);
+    /**
+     * CANCEL 을 보냈는데 아직 종결되지 않은 실행. 유예 경과 여부는 호출자가 건별로 본다 — 유예 전이면 CANCEL 을 다시 보내야 하고(발행이 실패했을 수 있다)
+     * 지났으면 강제 종결한다.
+     */
+    List<BacktestRun> findCancelPending(int limit);
 
     /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다. */
     long countQueued();

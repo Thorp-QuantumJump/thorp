@@ -167,9 +167,8 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
-    public List<BacktestRun> findCancelUnanswered(Instant requestedBefore, int limit) {
-        return toDomain(
-                jpaRepository.findCancelUnanswered(requestedBefore, ALIVE, Limit.of(limit)));
+    public List<BacktestRun> findCancelPending(int limit) {
+        return toDomain(jpaRepository.findCancelPending(ALIVE, Limit.of(limit)));
     }
 
     @Override
