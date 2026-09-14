@@ -195,8 +195,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)
 - [X] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결
 - [X] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)
-- [ ] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)
-- [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)
+- [X] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)
+- [X] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)
 
 **Checkpoint**: 탐색을 접수해 진행 상태까지 볼 수 있다. 선정 결과는 아직 없다
 
@@ -352,8 +352,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 ### Implementation for User Story 5
 
 - [X] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)
-- [ ] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)
-- [ ] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)
+- [X] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)
+- [X] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)
 
 **Checkpoint**: 다섯 사용자 스토리가 모두 독립적으로 동작하고, 전략 추가가 007을 건드리지 않는다
 

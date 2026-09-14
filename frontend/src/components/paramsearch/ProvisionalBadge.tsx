@@ -16,8 +16,8 @@ interface ProvisionalBadgeProps {
 export function ProvisionalBadge({ label }: ProvisionalBadgeProps) {
   return (
     <span className={styles.badge}>
-      임시값
-      <span className={styles.srOnly}>{` — ${label}은(는) 실측 전 임시로 정한 값입니다`}</span>
+      <span aria-hidden="true">임시값</span>
+      <span className={styles.srOnly}>{`${label}은(는) 실측 전 임시로 정한 값입니다`}</span>
     </span>
   )
 }

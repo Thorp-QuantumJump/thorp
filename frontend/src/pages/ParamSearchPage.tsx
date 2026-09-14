@@ -226,8 +226,9 @@ export function ParamSearchPage() {
               조합 자동 비교'로 들어와 주세요.
             </p>
             <p className={styles.guideNote}>
-              주소로 바로 열 때는 <code>?instruments=091160.XKRX&amp;strategies=INVERSE_VOLATILITY</code>
-              처럼 대상을 함께 적습니다. 전략 목록을 이 화면에 두지 않기 때문입니다.
+              주소로 바로 열 때는 <code>?instruments=&#123;종목ID&#125;&amp;strategies=&#123;전략ID&#125;</code>
+              처럼 대상을 함께 적습니다. 고를 수 있는 값은 등록표가 정하므로 이 화면에 목록을 두지
+              않습니다.
             </p>
             <Link to="/backtest" className={styles.guideLink}>
               <ArrowLeft size={15} aria-hidden="true" />
