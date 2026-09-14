@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiClientError } from '@/api/client'
 import { authenticatedUser } from '@/test/authFixtures'
 import { useAuth } from './auth-context'
 import { AuthProvider } from './AuthProvider'
@@ -91,5 +92,29 @@ describe('authentication revalidation', () => {
 
     await act(async () => protectedEntry.resolve(authenticatedUser))
     expect(await screen.findByRole('heading', { name: '보호된 분석 기록' })).toBeTruthy()
+  })
+
+  it.each([
+    ['탭 재활성화', () => document.dispatchEvent(new Event('visibilitychange'))],
+    ['bfcache 복원', () => {
+      const pageShow = new Event('pageshow')
+      Object.defineProperty(pageShow, 'persisted', { value: true })
+      window.dispatchEvent(pageShow)
+    }],
+  ])('%s 재확인에서 401을 받으면 expired로 전환한다', async (_label, restorePage) => {
+    apiMocks.getCurrentUser
+      .mockResolvedValueOnce(authenticatedUser)
+      .mockRejectedValueOnce(
+        new ApiClientError('api', '로그인이 필요합니다.', {
+          code: 'AUTHENTICATION_REQUIRED',
+        }),
+      )
+
+    render(<AuthProvider><Probe /></AuthProvider>)
+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()
+
+    act(() => restorePage())
+
+    expect(await screen.findByText('expired:none')).toBeTruthy()
   })
 })
