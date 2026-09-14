@@ -5,6 +5,15 @@
 // 실패한 단계만 눌러 그 구간의 로그를 열어볼 수 있게 하기 위함이다. 한 스테이지에 여러
 // 명령을 묶으면 화면에는 "파트가 실패했다"까지만 나타나고, 어느 명령에서 실패했는지
 // 확인하려면 콘솔 로그 전체를 읽어야 한다.
+// 알림 메시지의 머리말. MR 로 트리거되면 어느 MR 인지가 함께 있어야 쓸모가 있다.
+// 그 밖의 경로(수동 실행 등)로 들어오면 값이 없으므로 Job 이름으로 물러선다.
+def ciSubject() {
+    if (env.gitlabMergeRequestIid) {
+        return "MR !${env.gitlabMergeRequestIid} (${env.gitlabSourceBranch} -> ${env.gitlabTargetBranch})"
+    }
+    return env.JOB_NAME
+}
+
 pipeline {
     agent any
 
@@ -286,6 +295,34 @@ pipeline {
             // 병합 상태를 되돌려 다음 빌드의 checkout 이 꼬이지 않게 한다.
             // 병합하지 않았으면 abort 할 것이 없어 실패하므로 결과를 무시한다.
             sh 'git merge --abort >/dev/null 2>&1 || true'
+        }
+
+        // 채널은 지정하지 않는다. Jenkins 전역 Mattermost 설정의 기본 채널로 가며,
+        // 배포 파이프라인(infra/jenkins/Jenkinsfile.deploy)의 알림과 같은 곳에 모인다.
+        //
+        // 이모지는 배포와 일부러 다른 것을 쓴다. 배포가 ✅⚠️❌ 를 쓰므로 CI 는 🟢🟡🔴 로
+        // 두어, 한 채널에 섞여도 어느 파이프라인의 알림인지 한눈에 갈린다.
+        //
+        // mattermostSend 는 mattermost 플러그인이 제공한다 (infra/jenkins/Dockerfile).
+        failure {
+            mattermostSend(
+                color: 'danger',
+                message: "🔴 CI 실패 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        unstable {
+            mattermostSend(
+                color: 'warning',
+                message: "🟡 CI 불안정 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
+        }
+
+        success {
+            mattermostSend(
+                color: 'good',
+                message: "🟢 CI 성공 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)"
+            )
         }
     }
 }
