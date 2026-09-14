@@ -63,8 +63,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Frontend
 
-- [ ] T005 [P] (FE) `frontend/src/types/paramSearch.ts`에 계약 응답 타입 정의 ([contracts/param-search-api.md](contracts/param-search-api.md)의 응답 모양과 1:1, 금액·비율은 `string`)
-- [ ] T006 [P] (FE) `frontend/src/api/paramSearch.ts` 빈 모듈과 `frontend/src/components/paramsearch/` 디렉터리 생성 (`frontend/src/api/client.ts`의 기존 호출 규약 재사용)
+- [X] T005 [P] (FE) `frontend/src/types/paramSearch.ts`에 계약 응답 타입 정의 ([contracts/param-search-api.md](contracts/param-search-api.md)의 응답 모양과 1:1, 금액·비율은 `string`)
+- [X] T006 [P] (FE) `frontend/src/api/paramSearch.ts` 빈 모듈과 `frontend/src/components/paramsearch/` 디렉터리 생성 (`frontend/src/api/client.ts`의 기존 호출 규약 재사용)
 
 ### Test 기반
 
@@ -188,7 +188,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 1 — Frontend
 
-- [ ] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현
+- [X] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현
 - [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)
 - [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)
 - [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)
