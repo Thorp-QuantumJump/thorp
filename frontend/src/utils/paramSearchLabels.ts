@@ -1,4 +1,11 @@
-import type { ValidationLabel } from '@/types/paramSearch'
+import type {
+  CandidateStability,
+  CandidateStatus,
+  SearchCandidateItem,
+  SelectionFilter,
+  SelectionOutcome,
+  ValidationLabel,
+} from '@/types/paramSearch'
 
 /**
  * 검증 라벨을 화면 문구로 바꾼다.
@@ -29,4 +36,143 @@ export function formatSeconds(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
   return rest === 0 ? `${formatCount(minutes)}분` : `${formatCount(minutes)}분 ${rest}초`
+}
+
+/**
+ * 비율을 퍼센트로. **`null`은 `null`로 돌려준다** — 계산하지 않은 값을 "0%"로 만들지 않는다
+ * (FR-011, 원칙 VI). 값이 없을 때 무엇을 보일지는 화면이 사유와 함께 정한다.
+ *
+ * 계약이 비율을 문자열로 주므로(부동소수 오차) 표시 직전에만 숫자로 바꾼다.
+ */
+export function formatPercent(value: string | null, options: { sign?: boolean } = {}) {
+  if (value === null) return null
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+
+  const percent = parsed * 100
+  const body = percent.toLocaleString('ko-KR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  return options.sign && percent > 0 ? `+${body}%` : `${body}%`
+}
+
+/** 거래비용. 원 단위로 읽고, 없으면 `null`이다. */
+export function formatWon(value: string | null) {
+  if (value === null) return null
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+
+  return `${Math.round(parsed).toLocaleString('ko-KR')}원`
+}
+
+/**
+ * 인접 설정 안정성. 이웃과의 수익 차 절댓값 평균이라 **작을수록 안정**이고 단위는 %p다.
+ *
+ * `calculable: false`는 "안정성이 나쁘다"가 아니라 **"이웃이 없어 말할 수 없다"**이다(FR-013b).
+ * 0으로 채우지 않는다.
+ */
+export function formatStability(stability: CandidateStability | null) {
+  if (stability === null) return { text: null, note: '선정 계산 전입니다' }
+  if (!stability.calculable || stability.value === null) {
+    return { text: null, note: '이웃한 설정이 없어 계산하지 않았습니다' }
+  }
+
+  const percent = formatPercent(stability.value)
+  return {
+    text: percent === null ? null : `${percent}p`,
+    note: `이웃 ${formatCount(stability.neighborCount)}개와 비교`,
+  }
+}
+
+/** 후보 상태 문구. */
+export function candidateStatusText(status: CandidateStatus): string {
+  switch (status) {
+    case 'PENDING':
+      return '대기'
+    case 'DISPATCHED':
+      return '계산 중'
+    case 'COMPLETED':
+      return '완료'
+    case 'FAILED':
+      return '실패'
+    case 'EXCLUDED':
+      return '계산 전 제외'
+    case 'SKIPPED':
+      return '미실행'
+  }
+}
+
+/**
+ * 성과가 없는 이유. **"0%"를 그리지 않으려면 대신 보일 문장이 있어야 한다**(FR-011).
+ *
+ * 서버가 사유를 줬으면 그것을 쓴다 — 유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다 정확하다.
+ */
+export function missingPerformanceReason(candidate: SearchCandidateItem): string {
+  const given = candidate.selectionReason?.message
+  if (given) return given
+
+  switch (candidate.status) {
+    case 'EXCLUDED':
+      return '유효성 제약에 걸려 계산 전에 제외되었습니다'
+    case 'FAILED':
+      return '계산이 실패했습니다'
+    case 'SKIPPED':
+      return '취소·한도로 실행되지 않았습니다'
+    case 'PENDING':
+      return '아직 발행되지 않았습니다'
+    case 'DISPATCHED':
+      return '계산 중입니다'
+    case 'COMPLETED':
+      return '결과에 값이 없습니다'
+  }
+}
+
+/**
+ * 선정 결과 문구.
+ *
+ * **`FILTERED_OUT`은 탈락이고 `NOT_IN_DISPLAY`는 "떨어진 것이 아니라 표시하지 않은 것"이다** —
+ * 두 문구를 같게 쓰면 통과한 후보가 탈락한 것처럼 읽힌다.
+ */
+export function selectionOutcomeText(outcome: SelectionOutcome): string {
+  switch (outcome) {
+    case 'SELECTED':
+      return '표시 후보'
+    case 'NOT_IN_DISPLAY':
+      return '기준은 통과했으나 표시 범위 밖'
+    case 'FILTERED_OUT':
+      return '기준에서 탈락'
+    case 'EXCLUDED_BEFORE_RUN':
+      return '계산 전 제외'
+    case 'NOT_EVALUATED':
+      return '비교 대상 아님'
+  }
+}
+
+/** 필터 이름. 사용자가 읽는 말로 옮긴다. */
+export function selectionFilterText(filter: SelectionFilter): string {
+  switch (filter) {
+    case 'DRAWDOWN':
+      return '손실 제약'
+    case 'STABILITY':
+      return '인접 설정 안정성'
+  }
+}
+
+/** 정렬 지표 이름. **화면에 무엇으로 정렬했는지 밝히는 것이 설계 제약이다**(plan 설계 제약 3). */
+export function sortMetricText(metric: string): string {
+  switch (metric) {
+    case 'NET_RETURN':
+      return '비용 차감 후 수익'
+    case 'MAX_DRAWDOWN':
+      return '가장 크게 줄었던 폭'
+    case 'TRADING_COST':
+      return '거래비용'
+    case 'STABILITY':
+      return '인접 설정 안정성'
+    default:
+      return metric
+  }
 }

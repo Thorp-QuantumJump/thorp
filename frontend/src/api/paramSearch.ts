@@ -1,6 +1,9 @@
 import axios from 'axios'
 import { apiClient } from './client'
 import type {
+  CandidatePage,
+  CandidateSort,
+  CandidateStatus,
   ParamSearchDetail,
   ParamSearchEnvelope,
   ParamSearchPreview,
@@ -168,6 +171,48 @@ export async function getParamSearch(searchId: string): Promise<ParamSearchDetai
   try {
     const response = await apiClient.get<ParamSearchEnvelope<ParamSearchDetail>>(
       `${basePath}/${encodeURIComponent(searchId)}`,
+    )
+    return unwrap(response.data)
+  } catch (error) {
+    throw normalizeParamSearchError(error)
+  }
+}
+
+/** 후보 목록 질의. 값을 정하지 않은 항목은 보내지 않는다 — 기본값은 서버가 정한다. */
+export type CandidateQuery = {
+  page?: number
+  size?: number
+  status?: CandidateStatus
+  selected?: boolean
+  sort?: CandidateSort
+  direction?: 'asc' | 'desc'
+}
+
+/**
+ * 후보 목록. 정렬 기준은 **서버가 허용하는 다섯 가지뿐**이고 그 밖의 값은 400이다.
+ *
+ * <p>방향을 생략하면 지표는 내림차순, 순번은 오름차순이다. <b>`asc`·`desc` 외의 방향도 400</b>이라
+ * 화면이 오타를 기본값으로 접지 않는다 — 접으면 목록이 조용히 뒤집힌다.
+ *
+ * <p>정렬은 FR-017이 허용하는 "한 항목 기준 정렬"이다. 정렬했다고 순위가 생기는 것은 아니다.
+ */
+export async function getParamSearchCandidates(
+  searchId: string,
+  query: CandidateQuery = {},
+): Promise<CandidatePage> {
+  const params = new URLSearchParams()
+  if (query.page !== undefined) params.set('page', String(query.page))
+  if (query.size !== undefined) params.set('size', String(query.size))
+  if (query.status) params.set('status', query.status)
+  if (query.selected !== undefined) params.set('selected', String(query.selected))
+  if (query.sort) {
+    params.set('sort', query.direction ? `${query.sort},${query.direction}` : query.sort)
+  }
+
+  const search = params.toString()
+  try {
+    const response = await apiClient.get<ParamSearchEnvelope<CandidatePage>>(
+      `${basePath}/${encodeURIComponent(searchId)}/candidates${search ? `?${search}` : ''}`,
     )
     return unwrap(response.data)
   } catch (error) {
