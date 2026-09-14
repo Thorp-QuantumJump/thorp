@@ -32,8 +32,8 @@
 }
 
 .notice button:focus-visible {
-  outline: 2px solid var(--market-brand);
-  outline-offset: 2px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
 }
 
 .notice button:disabled svg {

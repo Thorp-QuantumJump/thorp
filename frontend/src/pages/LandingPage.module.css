@@ -1,16 +1,16 @@
 .page {
-  --landing-background: #030806;
-  --landing-surface: #08110d;
-  --landing-surface-strong: #0b1510;
-  --landing-accent: #03c75a;
-  --landing-accent-soft: #86f2a8;
-  --landing-text: #f3f7f4;
-  --landing-muted: #91a097;
-  --landing-line: rgb(160 190 173 / 14%);
-  --landing-positive: #45dc7d;
-  --landing-negative: #ef8a68;
-  --landing-warning: #e8bd72;
-  --landing-neutral: #9caaa1;
+  --landing-background: var(--thorp-background);
+  --landing-surface: var(--thorp-surface);
+  --landing-surface-strong: var(--thorp-surface-raised);
+  --landing-accent: var(--thorp-accent);
+  --landing-accent-soft: var(--thorp-accent-soft);
+  --landing-text: var(--thorp-foreground);
+  --landing-muted: var(--thorp-copy);
+  --landing-line: var(--thorp-line);
+  --landing-positive: var(--thorp-positive);
+  --landing-negative: var(--thorp-negative);
+  --landing-warning: var(--thorp-warning);
+  --landing-neutral: var(--thorp-neutral);
   position: relative;
   height: 100svh;
   min-height: 100vh;
@@ -22,7 +22,7 @@
     radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),
     linear-gradient(180deg, #030806 0%, #050b08 45%, #030806 100%);
   color: var(--landing-text);
-  font-family: 'Geist Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--thorp-font-display);
 }
 
 .page::before {
@@ -116,7 +116,7 @@
   padding: 0 16px;
   border-radius: 8px;
   background: var(--landing-text);
-  color: #061009;
+  color: var(--thorp-action-foreground);
   font-size: 0.76rem;
   font-weight: 680;
   text-decoration: none;
@@ -358,7 +358,7 @@
 
 .primaryCta {
   background: var(--landing-accent);
-  color: #021108;
+  color: var(--thorp-action-foreground);
 }
 
 .secondaryCta {
@@ -950,7 +950,7 @@
   min-height: 36px;
   padding: 0 12px;
   background: var(--landing-accent);
-  color: #031008;
+  color: var(--thorp-action-foreground);
   font-size: 0.61rem;
   font-weight: 680;
   text-decoration: none;
@@ -991,8 +991,8 @@
 .algorithmCard > a:focus-visible,
 .cardSelectButton:focus-visible,
 .menuButton:focus-visible {
-  outline: 2px solid var(--landing-accent-soft);
-  outline-offset: 4px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-wide);
 }
 
 @keyframes glowBreath {

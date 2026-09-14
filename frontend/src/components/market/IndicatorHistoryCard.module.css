@@ -48,8 +48,8 @@
 
 .expandButton:focus-visible,
 .closeButton:focus-visible {
-  outline: 2px solid var(--market-brand);
-  outline-offset: 4px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-wide);
 }
 
 .slot:focus-within .panel {

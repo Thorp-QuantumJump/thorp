@@ -35,7 +35,7 @@
 .field input:focus-visible {
   border-color: var(--thorp-accent);
   background: var(--thorp-surface);
-  box-shadow: 0 0 0 3px rgb(3 199 90 / 16%);
+  box-shadow: var(--thorp-focus-shadow-subtle);
 }
 
 .field input[aria-invalid='true'] {
@@ -104,7 +104,7 @@
 .submitButton {
   border: 1px solid var(--thorp-accent);
   background: var(--thorp-accent);
-  color: #021108;
+  color: var(--thorp-action-foreground);
 }
 
 .secondaryButton {
@@ -125,8 +125,8 @@
 
 .submitButton:focus-visible,
 .secondaryButton:focus-visible {
-  outline: 3px solid rgb(3 199 90 / 30%);
-  outline-offset: 3px;
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
 }
 
 .submitButton:disabled,

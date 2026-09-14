@@ -69,7 +69,7 @@
 .actions a:first-child {
   border-color: var(--thorp-accent);
   background: var(--thorp-accent);
-  color: #021108;
+  color: var(--thorp-action-foreground);
 }
 
 .actions a:hover {
@@ -77,8 +77,8 @@
 }
 
 .actions a:focus-visible {
-  outline: 3px solid rgb(3 199 90 / 30%);
-  outline-offset: 3px;
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
 }
 
 .scopeNote {

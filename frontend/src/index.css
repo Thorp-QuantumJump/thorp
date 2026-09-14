@@ -7,9 +7,17 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  color-scheme: dark;
   font-size: 17px;
-  font-family: 'Pretendard', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--thorp-font-body);
   line-height: 1.5;
+  /* 브랜드 원색은 테마와 무관하며, 컴포넌트는 아래 의미 토큰을 사용한다. */
+  --thorp-brand-primary: rgb(3 199 90);
+  --thorp-brand-soft: #86f2a8;
+  --thorp-font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --thorp-font-display: 'Geist Variable', var(--thorp-font-body);
+  --thorp-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */
   --thorp-background: #030805;
   --thorp-surface: #07110b;
   --thorp-surface-raised: #0b1710;
@@ -19,14 +27,22 @@
   --thorp-muted: #718278;
   --thorp-line: rgb(134 242 168 / 14%);
   --thorp-line-strong: rgb(134 242 168 / 24%);
-  --thorp-accent: rgb(3 199 90);
-  --thorp-accent-soft: #86f2a8;
+  --thorp-accent: var(--thorp-brand-primary);
+  --thorp-accent-soft: var(--thorp-brand-soft);
   --thorp-accent-muted: rgb(3 199 90 / 12%);
+  --thorp-action-foreground: #021108;
   --thorp-positive: #63dc8a;
   --thorp-negative: #ef8a68;
   --thorp-warning: #e8bd72;
   --thorp-neutral: #8fa198;
   --thorp-shadow: 0 22px 58px rgb(0 0 0 / 34%);
+  --thorp-focus-outline: 3px solid rgb(3 199 90 / 30%);
+  --thorp-focus-outline-compact: 2px solid var(--thorp-accent-soft);
+  --thorp-focus-offset: 3px;
+  --thorp-focus-offset-compact: 2px;
+  --thorp-focus-offset-wide: 4px;
+  --thorp-focus-shadow: 0 0 0 3px rgb(3 199 90 / 28%);
+  --thorp-focus-shadow-subtle: 0 0 0 3px rgb(3 199 90 / 16%);
   --background: var(--thorp-background);
   --foreground: var(--thorp-foreground);
   --card: var(--thorp-surface-raised);
@@ -34,7 +50,7 @@
   --popover: var(--thorp-surface-raised);
   --popover-foreground: var(--thorp-foreground);
   --primary: var(--thorp-accent);
-  --primary-foreground: #021108;
+  --primary-foreground: var(--thorp-action-foreground);
   --secondary: var(--thorp-surface-muted);
   --secondary-foreground: var(--thorp-foreground);
   --muted: var(--thorp-surface-muted);
@@ -54,7 +70,7 @@
   --sidebar: var(--thorp-surface);
   --sidebar-foreground: var(--thorp-foreground);
   --sidebar-primary: var(--thorp-accent);
-  --sidebar-primary-foreground: #021108;
+  --sidebar-primary-foreground: var(--thorp-action-foreground);
   --sidebar-accent: var(--thorp-accent-muted);
   --sidebar-accent-foreground: var(--thorp-accent-soft);
   --sidebar-border: var(--thorp-line);
@@ -101,8 +117,8 @@ textarea {
 
 /* CSS 변수를 Tailwind 유틸리티에서 사용할 수 있는 테마 값으로 연결한다. */
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--thorp-font-display);
+  --font-sans: var(--thorp-font-body);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -143,55 +159,9 @@ textarea {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* 다크 테마에서 공통 UI와 차트가 사용할 디자인 토큰을 재정의한다. */
+/* shadcn의 dark variant 호환 클래스는 루트의 Thorp 의미 토큰을 그대로 상속한다. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --chart-background: oklch(0.145 0 0);
-  --chart-foreground: oklch(0.45 0 0);
-  --chart-foreground-muted: oklch(0.65 0.01 260);
-  --chart-crosshair: oklch(0.45 0 0);
-  --chart-grid: oklch(0.25 0 0);
-  --chart-brush-border: var(--chart-grid);
-  --chart-marker-background: oklch(0.25 0.01 260);
-  --chart-marker-border: oklch(0.4 0.01 260);
-  --chart-marker-foreground: oklch(0.9 0 0);
-  --chart-label: oklch(0.75 0.01 260);
-  --chart-scale-01: oklch(0.28 0.03 270);
-  --chart-scale-02: oklch(0.38 0.04 270);
-  --chart-scale-03: oklch(0.48 0.05 270);
-  --chart-scale-04: oklch(0.58 0.06 270);
-  --chart-scale-05: oklch(0.68 0.07 270);
-  --chart-scale-pattern-color: oklch(0.145 0 0);
+  color-scheme: dark;
 }
 
 /* Tailwind 기반 기본 요소에 공통 테두리와 색상 토큰을 적용한다. */
