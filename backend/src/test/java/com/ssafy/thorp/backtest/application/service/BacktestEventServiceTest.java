@@ -52,6 +52,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class BacktestEventServiceTest {
 
     private static final String BACKTEST_ID = "BT-20260907-000001";
+    private static final Instant NOW = Instant.parse("2026-09-11T05:00:00Z");
 
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
@@ -230,6 +231,58 @@ class BacktestEventServiceTest {
                 ArgumentCaptor.forClass(BacktestFinished.class);
         verify(events).publishEvent(published.capture());
         assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 실행 시간 상한으로 보낸 취소의 응답이면 실패 사유를 남긴다")
+    void cancelledByExecutionLimitCarriesTheFailureCode() {
+        // 사용자가 스스로 멈춘 것과 서버가 끊은 것은 다르다. 계약이 후자에 failure.code 를 정해 두었고,
+        // 자동 탐색은 이 값으로 "중간까지만 계산한 후보"를 정상 완료와 가른다(R-19).
+        BacktestRun cancelPending =
+                jobIn(RunStatus.RUNNING)
+                        .withLifecycle(
+                                RunLifecycle.queuedAt(NOW.minusSeconds(3600))
+                                        .cancelRequested(
+                                                NOW.minusSeconds(60),
+                                                CancelReason.EXECUTION_LIMIT));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(updated.isPartial()).isTrue();
+        assertThat(updated.getFailureCode()).isEqualTo("EXECUTION_LIMIT");
+
+        // 실행 행에만 남기면 부족하다. 알림에 사유가 실리지 않으면 자동 탐색이 이 후보를 정상 완료로
+        // 집계해 선정 대상에 넣는다 — 끝까지 계산되지 않은 성과가 "최적"으로 뽑힌다(R-19).
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(published.getValue().errorCode()).isEqualTo("EXECUTION_LIMIT");
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 사용자 취소의 응답에는 실패 사유를 남기지 않는다 — 스스로 멈춘 것은 실패가 아니다")
+    void cancelledByUserHasNoFailureCode() {
+        BacktestRun cancelPending =
+                jobIn(RunStatus.RUNNING)
+                        .withLifecycle(
+                                RunLifecycle.queuedAt(NOW.minusSeconds(3600))
+                                        .cancelRequested(NOW.minusSeconds(60), CancelReason.USER));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        assertThat(updatedJob().getFailureCode()).isNull();
+
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().errorCode()).isNull();
     }
 
     @Test

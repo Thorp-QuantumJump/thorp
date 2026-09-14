@@ -10,6 +10,7 @@ import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -140,8 +141,12 @@ public class BacktestEventService {
                             isCurrentExecution(job, event)
                                     ? job.markFailed(failureCode(output), failureMessage(output))
                                     : null;
-                    // 부분 결과(R-04). 워커가 실제로 멈춘 거래일이 완료 범위다. 먼저 도착한 것을 적용한다(R-18 ④)
-                    case CANCELLED -> job.markCancelled(event.payload().lastTradingDate());
+                    // 부분 결과(R-04). 워커가 실제로 멈춘 거래일이 완료 범위다. 먼저 도착한 것을 적용한다(R-18 ④).
+                    // 실행 시간 상한으로 보낸 취소의 응답이면 그 사유를 남긴다 — 사용자가 스스로 멈춘 것과
+                    // 서버가 끊은 것은 다르고, 계약이 후자에 failure.code=EXECUTION_LIMIT 를 정해 두었다(R-19).
+                    case CANCELLED ->
+                            job.markCancelled(
+                                    event.payload().lastTradingDate(), cancelFailureCode(job));
                 };
         if (finished == null) {
             return;
@@ -154,12 +159,15 @@ public class BacktestEventService {
 
         // 트랜잭션 안에서 발행하고, 수신자가 AFTER_COMMIT으로 받는다. 커밋 전에 전달되면 수신자가
         // 아직 없는 결과를 읽는다(spec 007 research R6). 이 모듈은 수신자를 알지 못한다.
+        //
+        // 사유는 실행 행에서 그대로 읽는다. FAILED 만 싣던 때는 실행 시간 상한으로 끊긴 CANCELLED 의
+        // EXECUTION_LIMIT 이 버려졌고, 받는 쪽이 그 후보를 정상 완료로 집계해 선정 대상에 넣었다(R-19).
         events.publishEvent(
                 new BacktestFinished(
                         job.getId(),
                         event.runId(),
                         finished.getStatus(),
-                        finished.getStatus() == RunStatus.FAILED ? failureCode(output) : null));
+                        finished.getFailureCode()));
     }
 
     /**
@@ -250,6 +258,13 @@ public class BacktestEventService {
                 counted.getLifecycle().publishCount());
         events.publishEvent(
                 new BacktestFinished(job.getId(), runId, RunStatus.FAILED, "SYSTEM_FAILURE"));
+    }
+
+    /** 협력 취소의 사유. 사용자 취소·정체는 실패가 아니므로 null 이다. */
+    private static String cancelFailureCode(BacktestRun job) {
+        return job.getLifecycle().cancelReason() == CancelReason.EXECUTION_LIMIT
+                ? "EXECUTION_LIMIT"
+                : null;
     }
 
     /**

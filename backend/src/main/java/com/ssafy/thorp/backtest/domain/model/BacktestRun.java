@@ -334,6 +334,14 @@ public class BacktestRun {
      * 값으로 갱신한다(R-04).
      */
     public BacktestRun markCancelled(LocalDate lastTradingDate) {
+        return markCancelled(lastTradingDate, null);
+    }
+
+    /**
+     * @param failureCode 협력 취소의 사유. 실행 시간 상한으로 멈춘 취소는 {@code EXECUTION_LIMIT} 이고(계약 rest-api.md),
+     *     사용자 취소는 null 이다 — 사용자가 스스로 멈춘 것은 실패가 아니다
+     */
+    public BacktestRun markCancelled(LocalDate lastTradingDate, String failureCode) {
         requireNotFinal(RunStatus.CANCELLED);
         RunProgress stopped =
                 lastTradingDate == null
@@ -354,7 +362,7 @@ public class BacktestRun {
                         state.currentExecutionId(),
                         true,
                         stopped,
-                        null,
+                        failureCode,
                         null));
     }
 
