@@ -42,6 +42,18 @@ public interface BacktestRunRepository {
     Optional<BacktestRun> findByBacktestId(String backtestId);
 
     /**
+     * 같은 동일 버전 키의 접수를 직렬화한다(R-02, T010). 트랜잭션이 끝나면 저절로 풀린다.
+     *
+     * <p>동일 버전 조회와 실행 INSERT 사이에 다른 접수가 같은 키로 먼저 INSERT 하면 부분 유니크 인덱스 {@code
+     * uk_backtest_run_dedup_active} 에 걸려 정상적인 사용자 행동이 500 이 된다. 잡아서 재조회하는 방법은 PostgreSQL 에서 쓸 수 없다
+     * — 제약 위반이 나면 그 트랜잭션이 abort 돼 같은 트랜잭션에서 더 질의할 수 없다. 세이브포인트로 감쌀 수도 있지만, 애초에 부딪히지 않게 하는 쪽이 예외 경로가
+     * 없어 단순하다.
+     *
+     * <p>키마다 다른 잠금이라 서로 다른 조건의 접수는 기다리지 않는다. 같은 키의 접수만 줄을 서고, 앞엣것이 커밋하면 뒤엣것의 조회가 그 실행을 보고 합류한다.
+     */
+    void lockDedupKey(String dedupKey);
+
+    /**
      * 같은 동일 버전 키로 아직 살아 있는 실행(QUEUED·RUNNING·COMPLETED). 부분 유니크 인덱스와 같은 상태 집합이다.
      *
      * <p>실패·취소한 실행은 걸리지 않는다 — 같은 조건을 다시 요청하면 새로 계산해야 하기 때문이다(R-02).

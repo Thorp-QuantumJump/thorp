@@ -154,6 +154,25 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         return jpaRepository.findByBacktestId(backtestId).map(BacktestRunMapper::toDomain);
     }
 
+    /**
+     * {@code pg_advisory_xact_lock(bigint)}. 잠금 식별자는 동일 버전 키(SHA-256 hex 64자)의 앞 16자를 그대로 읽은 값이다 —
+     * 키 자체가 고르게 퍼진 해시라 다시 해싱할 이유가 없고, 앞 64비트만 봐도 충돌은 실질적으로 없다. 설령 충돌해도 관계없는 두 조건의 접수가 잠깐 줄을 설 뿐이라
+     * 답이 달라지지 않는다.
+     *
+     * <p>{@code hashtext()} 를 쓰지 않는다 — 문서화되지 않은 내부 함수라 판 올림에 값이 바뀔 수 있다.
+     */
+    @Override
+    public void lockDedupKey(String dedupKey) {
+        entityManager
+                .createNativeQuery("SELECT pg_advisory_xact_lock(?1)")
+                .setParameter(1, lockIdOf(dedupKey))
+                .getSingleResult();
+    }
+
+    private static long lockIdOf(String dedupKey) {
+        return Long.parseUnsignedLong(dedupKey.substring(0, 16), 16);
+    }
+
     @Override
     public Optional<BacktestRun> findActiveByDedupKey(String dedupKey) {
         if (dedupKey == null) {

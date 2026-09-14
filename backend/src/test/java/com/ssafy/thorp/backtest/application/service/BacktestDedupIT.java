@@ -13,6 +13,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +70,16 @@ class BacktestDedupIT extends PostgresTestSupport {
      * BacktestCancelFlowIT} 와 겹쳐 깨졌다.
      */
     private static CreateBacktestCommand sameRequest(long requesterId) {
+        return requestOver(requesterId, LocalDate.of(2024, 3, 4), LocalDate.of(2024, 10, 31));
+    }
+
+    /** 동시 접수 테스트는 또 다른 기간을 쓴다 — 위 테스트의 실행에 합류하면 경합이 일어나지 않는다. */
+    private static CreateBacktestCommand concurrentRequest(long requesterId) {
+        return requestOver(requesterId, LocalDate.of(2024, 4, 1), LocalDate.of(2024, 9, 30));
+    }
+
+    private static CreateBacktestCommand requestOver(
+            long requesterId, LocalDate start, LocalDate end) {
         return new CreateBacktestCommand(
                 requesterId,
                 ExecutionType.SINGLE,
@@ -77,8 +93,8 @@ class BacktestDedupIT extends PostgresTestSupport {
                 "1",
                 "PARAM-2026-09",
                 Map.of("rebalance", "MONTH_END"),
-                LocalDate.of(2024, 3, 4),
-                LocalDate.of(2024, 10, 31),
+                start,
+                end,
                 new BigDecimal("10000000.00"),
                 null,
                 "SPLIT-1",
@@ -121,5 +137,46 @@ class BacktestDedupIT extends PostgresTestSupport {
         assertThat(event.get("kind")).isEqualTo("JOINED");
         assertThat(event.get("request_execution_type")).isEqualTo("SINGLE");
         assertThat(event.get("at")).isNotNull();
+    }
+
+    @Test
+    @DisplayName("같은 본문이 동시에 접수돼도 실행은 하나다 — 둘 다 INSERT 해서 부분 유니크 인덱스에 걸리지 않는다")
+    void concurrentIntakeOfTheSameRequestCreatesOneRun() throws Exception {
+        long first = newUser("c");
+        long second = newUser("d");
+
+        CountDownLatch go = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        BacktestJobResult one;
+        BacktestJobResult two;
+        try {
+            Callable<BacktestJobResult> intakeFirst =
+                    () -> {
+                        go.await();
+                        return backtestService.create(concurrentRequest(first));
+                    };
+            Callable<BacktestJobResult> intakeSecond =
+                    () -> {
+                        go.await();
+                        return backtestService.create(concurrentRequest(second));
+                    };
+            Future<BacktestJobResult> a = pool.submit(intakeFirst);
+            Future<BacktestJobResult> b = pool.submit(intakeSecond);
+            go.countDown();
+            // 잠그지 않으면 둘 중 하나가 DataIntegrityViolationException 으로 끝난다.
+            one = a.get(30, TimeUnit.SECONDS);
+            two = b.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        Long runId = requestRepository.findByBacktestId(one.backtestId()).orElseThrow().getRunId();
+        assertThat(requestRepository.findByBacktestId(two.backtestId()).orElseThrow().getRunId())
+                .isEqualTo(runId);
+        // 하나는 새로 만들고 하나는 합류한다 — 어느 쪽이 먼저인지는 정하지 않는다.
+        assertThat(List.of(one.resultSource(), two.resultSource()))
+                .containsExactlyInAnyOrder(ResultSource.NEW, ResultSource.JOINED);
+        assertThat(requestRepository.findByRunId(runId)).hasSize(2);
+        assertThat(reuseEventCount(runId)).isEqualTo(1);
     }
 }

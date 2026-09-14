@@ -143,6 +143,10 @@ public class BacktestService {
                                 command.scenarioParams(),
                                 overlay == null ? null : overlay.rulesVersion()));
 
+        // 조회 → 판단 → INSERT 를 같은 키끼리 직렬화한다. 잠그지 않으면 두 접수가 나란히 "없다"를 읽고
+        // 둘 다 INSERT 해 부분 유니크 인덱스에 걸린다 — 정상적인 사용자 행동이 500 이 된다.
+        runRepository.lockDedupKey(dedupKey);
+
         Optional<BacktestRun> active = runRepository.findActiveByDedupKey(dedupKey);
         if (active.isPresent()) {
             Optional<BacktestJobResult> joined = joinExisting(command, active.get().getId());
