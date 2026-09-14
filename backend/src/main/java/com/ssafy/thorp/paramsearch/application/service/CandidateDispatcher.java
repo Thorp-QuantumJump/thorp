@@ -74,7 +74,9 @@ public class CandidateDispatcher {
      */
     public void advance(Long paramSearchId, ParamSearchSnapshot snapshot) {
         ParamSearch locked = paramSearchRepository.findByIdForUpdate(paramSearchId).orElse(null);
-        if (locked == null || locked.getStatus().isFinal()) {
+        if (locked == null || locked.getStatus().isFinal() || locked.isStopRequested()) {
+            // 멈추기로 한 묶음에는 새 후보를 내보내지 않는다. 상태는 아직 RUNNING 이지만
+            // 사유가 박혀 있으면 그것이 발행을 막는 근거다(불변식 2).
             return;
         }
         fillWindow(paramSearchId, snapshot);

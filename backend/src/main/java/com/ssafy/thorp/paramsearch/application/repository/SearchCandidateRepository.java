@@ -26,6 +26,13 @@ public interface SearchCandidateRepository {
     /** 발행 창이 다음에 올릴 후보를 순번대로 {@code limit}건만 가져온다. */
     List<SearchCandidate> findNextByStatus(Long paramSearchId, CandidateStatus status, int limit);
 
+    /**
+     * 최근에 끝난 후보부터 {@code limit}건. 연속 실패 한도 판정에 쓴다(FR-005).
+     *
+     * <p>순번이 아니라 <b>끝난 순서</b>다 — 창 안에서 먼저 발행된 후보가 늦게 끝나는 일이 흔해서, 순번으로 세면 "줄줄이 실패했다"를 잘못 읽는다.
+     */
+    List<SearchCandidate> findRecentlyFinished(Long paramSearchId, int limit);
+
     long countByStatus(Long paramSearchId, CandidateStatus status);
 
     /** 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다. Job 하나는 후보 하나에만 붙는다. */

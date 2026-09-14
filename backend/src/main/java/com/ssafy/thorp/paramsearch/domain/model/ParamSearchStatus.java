@@ -11,6 +11,7 @@ import java.util.Set;
  *                    ├─▶ PARTIAL     취소·한도 도달로 미실행 후보가 남음
  *                    └─▶ FAILED      접수 후 실행 자체가 불가 (기준 발행 실패 등)
  * QUEUED ──▶ REJECTED                접수 시점 거부 (상한 초과·유효 조합 0건)
+ * COMPLETED·PARTIAL ──▶ RUNNING     실패 후보 재시도로 다시 열림 (FR-024)
  * </pre>
  *
  * <p>{@code REJECTED}는 저장하되 후보를 만들지 않는다. {@code PARTIAL}은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009). {@code
@@ -45,7 +46,10 @@ public enum ParamSearchStatus {
         return switch (this) {
             case QUEUED -> next == RUNNING || next == REJECTED;
             case RUNNING -> next == COMPLETED || next == PARTIAL || next == FAILED;
-            case COMPLETED, PARTIAL, FAILED, REJECTED -> false;
+            // 재시도로 다시 연다(FR-024). 실패 후보를 다시 돌리면 묶음은 다시 진행 중이 되고,
+            // 끝나면 선정을 다시 계산한다. 새 묶음을 만들지 않는 것이 이 전이의 목적이다.
+            case COMPLETED, PARTIAL -> next == RUNNING;
+            case FAILED, REJECTED -> false;
         };
     }
 }

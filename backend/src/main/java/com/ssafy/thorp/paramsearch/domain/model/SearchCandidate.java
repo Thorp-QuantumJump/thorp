@@ -2,6 +2,8 @@ package com.ssafy.thorp.paramsearch.domain.model;
 
 import com.ssafy.thorp.paramsearch.domain.vo.GridCoordinates;
 import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -53,14 +55,23 @@ public class SearchCandidate {
         this.status = builder.status;
         this.reasonCode = builder.reasonCode;
         this.reasonDetail = builder.reasonDetail;
-        this.stability = builder.stability == null ? null : Map.copyOf(builder.stability);
+        this.stability = unmodifiableOrNull(builder.stability);
         this.retryCount = builder.retryCount;
-        this.periodPerformance =
-                builder.periodPerformance == null ? null : Map.copyOf(builder.periodPerformance);
+        this.periodPerformance = unmodifiableOrNull(builder.periodPerformance);
         this.validationLabel = builder.validationLabel;
         this.selected = builder.selected;
-        this.selectionReason =
-                builder.selectionReason == null ? null : Map.copyOf(builder.selectionReason);
+        this.selectionReason = unmodifiableOrNull(builder.selectionReason);
+    }
+
+    /**
+     * 방어 복사. <b>{@code Map.copyOf}를 쓰지 않는다</b> — 그것은 null 값을 거부한다.
+     *
+     * <p>여기 담기는 맵은 <b>값이 없다는 사실 자체가 뜻</b>인 자리다. 안정성은 이웃이 없으면 {@code value}가 null이고(FR-013b), 선정 사유는
+     * 계산되지 않은 후보에서 {@code code}가 null이다. 키를 지우면 화면이 "없음"과 "필드가 아예 없음"을 구분할 수 없고, 0으로 채우면 계산 불가가 "가장
+     * 안정적"으로 뒤집힌다(FR-011, 원칙 VI). 그래서 null을 담을 수 있는 복사가 필요하다.
+     */
+    private static Map<String, Object> unmodifiableOrNull(Map<String, Object> source) {
+        return source == null ? null : Collections.unmodifiableMap(new LinkedHashMap<>(source));
     }
 
     /**

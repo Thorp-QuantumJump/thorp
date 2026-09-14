@@ -7,12 +7,16 @@ import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;
+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;
+import com.ssafy.thorp.paramsearch.application.service.ParamSearchRetryService;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchCreateRequest;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchPreviewRequest;
 import com.ssafy.thorp.paramsearch.presentation.response.CandidatePageResponse;
+import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchCancelResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchPreviewResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchResponse;
+import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchRetryResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -42,14 +46,20 @@ public class ParamSearchController {
 
     private final ParamSearchService paramSearchService;
     private final CandidateQueryService candidateQueryService;
+    private final ParamSearchCancelService cancelService;
+    private final ParamSearchRetryService retryService;
     private final CurrentRequester currentRequester;
 
     public ParamSearchController(
             ParamSearchService paramSearchService,
             CandidateQueryService candidateQueryService,
+            ParamSearchCancelService cancelService,
+            ParamSearchRetryService retryService,
             CurrentRequester currentRequester) {
         this.paramSearchService = paramSearchService;
         this.candidateQueryService = candidateQueryService;
+        this.cancelService = cancelService;
+        this.retryService = retryService;
         this.currentRequester = currentRequester;
     }
 
@@ -75,6 +85,36 @@ public class ParamSearchController {
     public ResponseEntity<ApiResponse<ParamSearchResponse>> get(@PathVariable String searchId) {
         return ResponseEntity.ok(
                 ApiResponse.ok(ParamSearchResponse.from(paramSearchService.get(searchId))));
+    }
+
+    /**
+     * 취소(계약 §5). {@code 202}로 접수하고, 발행하지 않은 후보를 '미실행'으로 확정한다.
+     *
+     * <p><b>이미 큐에 들어간 후보는 완주한다.</b> prefetch 1 + manual ACK 구조에서 발행된 메시지는 회수할 수 없다(research R2).
+     * 그래서 응답의 {@code status}는 아직 {@code RUNNING}일 수 있고, 실행 중 후보가 모두 끝나면 {@code PARTIAL}이 된다.
+     */
+    @PostMapping("/{searchId}/cancel")
+    public ResponseEntity<ApiResponse<ParamSearchCancelResponse>> cancel(
+            @PathVariable String searchId) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(
+                        ApiResponse.ok(
+                                ParamSearchCancelResponse.from(cancelService.cancel(searchId))));
+    }
+
+    /**
+     * 실패 후보 재시도(계약 §5.1). {@code 202}로 접수한다.
+     *
+     * <p><b>새 묶음을 만들지 않는다</b> — 묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙을 그대로 쓴다(FR-024). {@code
+     * SKIPPED}('미실행')는 대상이 아니다: 취소·한도로 빠진 것을 되살리면 완료 범위 표시가 뜻을 잃는다.
+     */
+    @PostMapping("/{searchId}/retry-failed")
+    public ResponseEntity<ApiResponse<ParamSearchRetryResponse>> retryFailed(
+            @PathVariable String searchId) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(
+                        ApiResponse.ok(
+                                ParamSearchRetryResponse.from(retryService.retryFailed(searchId))));
     }
 
     /**

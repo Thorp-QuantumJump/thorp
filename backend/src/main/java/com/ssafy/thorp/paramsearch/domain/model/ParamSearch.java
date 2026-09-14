@@ -176,6 +176,49 @@ public class ParamSearch {
                 .build();
     }
 
+    /**
+     * 멈추기로 했다 — 취소·실행시간 한도·연속 실패 한도(FR-009, 내부 계약 §4 불변식 2).
+     *
+     * <p><b>상태는 아직 바꾸지 않는다.</b> 이미 발행된 후보는 회수할 수 없어 완주하므로, 그때까지는 {@code RUNNING}이 사실이다. 계약도 취소 응답의
+     * 상태가 아직 {@code RUNNING}일 수 있다고 정한다(contracts §5). 사유만 먼저 박아 두면 <b>발행을 막는 근거</b>와 <b>마지막 후보가
+     * 끝났을 때 어느 사유로 {@code PARTIAL}이 되는지</b>가 한 값으로 해결된다.
+     *
+     * <p><b>먼저 적힌 사유가 이긴다.</b> 취소한 묶음이 뒤이어 실행시간 한도에도 걸리는 일은 흔한데, 그때 사유를 덮어쓰면 사용자가 누른 취소가 기록에서 사라진다.
+     *
+     * @throws IllegalStateException 이미 끝난 묶음일 때 — 끝난 것은 멈출 수 없다
+     */
+    public ParamSearch requestStop(StopReason stopReason) {
+        Objects.requireNonNull(stopReason, "stopReason must not be null");
+        if (status.isFinal()) {
+            throw new IllegalStateException("already finished: " + status);
+        }
+        if (this.stopReason != null) {
+            return this;
+        }
+        return toBuilder().stopReason(stopReason).build();
+    }
+
+    /** 멈추기로 한 묶음인가. 발행 경로가 이 값을 보고 새 후보를 내보내지 않는다(불변식 2). */
+    public boolean isStopRequested() {
+        return stopReason != null && !status.isFinal();
+    }
+
+    /**
+     * 실패 후보 재시도로 묶음을 다시 연다(FR-024).
+     *
+     * <p><b>새 묶음을 만들지 않는다.</b> 참조 버전·탐색 공간·선정 규칙은 접수 시점 스냅샷 그대로다 — 재시도해 얻은 결과가 먼저 끝난 후보들과 같은 조건이어야
+     * 나란히 놓을 수 있다(FR-012·FR-013c).
+     *
+     * <p><b>선정은 비운다.</b> 후보가 더 붙으므로 이전 선정은 이미 사실이 아니다. 안정성 필터가 묶음 내 상대 분위라 후보 하나가 늘면 분위 자체가 달라진다 —
+     * 다시 끝날 때 한 번 더 계산한다(불변식 3).
+     *
+     * <p><b>중단 사유는 남긴다.</b> 취소로 '미실행'이 된 후보는 재시도 대상이 아니라 그대로 남으므로, 이 묶음은 다시 끝나도 여전히 부분 결과다. 사유를 지우면
+     * 취소한 적 없는 묶음처럼 보이고 완료 범위 표시가 뜻을 잃는다.
+     */
+    public ParamSearch reopenForRetry() {
+        return transitionTo(ParamSearchStatus.RUNNING).selection(null).finishedAt(null).build();
+    }
+
     /** 집계를 갱신한다. 상태는 그대로다 — 상태 전이 판정은 별도다. */
     public ParamSearch withCounts(SearchCounts counts) {
         return toBuilder()
