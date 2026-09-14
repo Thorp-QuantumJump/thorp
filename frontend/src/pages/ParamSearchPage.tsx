@@ -4,13 +4,19 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'
+import { CandidateTable } from '@/components/paramsearch/CandidateTable'
+import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'
 import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
+import { SelectionResult } from '@/components/paramsearch/SelectionResult'
 import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'
 import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'
+import { useSearchCandidates } from '@/hooks/useSearchCandidates'
 import type {
   ParamSearchPreview,
   ParamSearchRequest,
+  SearchCandidateItem,
   SearchSpaceSelection,
   StrategySpaceSummary,
 } from '@/types/paramSearch'
@@ -236,6 +242,40 @@ export function ParamSearchPage() {
   const detail = status.detail
   const selection = detail?.selection ?? null
 
+  // 상세와 비교 담기는 후보 객체를 그대로 들고 있는다 — 목록이 다시 불릴 때마다 id 로 되찾지 않아도 된다.
+  const [detailCandidate, setDetailCandidate] = useState<SearchCandidateItem | null>(null)
+  const [comparePicks, setComparePicks] = useState<SearchCandidateItem[]>([])
+
+  const toggleComparePick = useCallback((candidate: SearchCandidateItem) => {
+    setComparePicks((current) =>
+      current.some((item) => item.candidateId === candidate.candidateId)
+        ? current.filter((item) => item.candidateId !== candidate.candidateId)
+        : [...current, candidate],
+    )
+  }, [])
+
+  const removeComparePick = useCallback((candidateId: string) => {
+    setComparePicks((current) => current.filter((item) => item.candidateId !== candidateId))
+  }, [])
+
+  // 표시 후보만 따로 받는다. selection.displayed 의 순서가 정렬 지표 순서라 그대로 맞춘다.
+  const displayedQuery = useSearchCandidates(selection ? searchId : null, {
+    selected: true,
+    size: 200,
+  })
+
+  const displayedCandidates = useMemo(() => {
+    if (!selection || !displayedQuery.page) return []
+    const byId = new Map(
+      displayedQuery.page.content.map((candidate) => [candidate.candidateId, candidate]),
+    )
+    return selection.displayed
+      .map((candidateId) => byId.get(candidateId))
+      .filter((candidate): candidate is SearchCandidateItem => candidate !== undefined)
+  }, [selection, displayedQuery.page])
+
+  const comparePickIds = comparePicks.map((candidate) => candidate.candidateId)
+
   return (
     <div className={styles.page}>
       <AppHeader />
@@ -344,27 +384,48 @@ export function ParamSearchPage() {
                       <p className={styles.note}>{detail.partialNote}</p>
                     )}
 
-                    {selection && (
-                      <div className={styles.selection}>
-                        <p>
-                          {`기준을 충족한 후보 ${formatCount(selection.displayed.length)}개`}
-                          {detail.config?.selectionRule
-                            ? ` · 정렬 지표 ${detail.config.selectionRule.sortMetric}`
-                            : null}
-                        </p>
-                        {selection.note && <p className={styles.note}>{selection.note}</p>}
-                        {!selection.drawdownFilterApplied && (
-                          <p className={styles.note}>
-                            손실 제약을 걸지 않았습니다. 기준 전략이 지정되지 않았거나 기준 실행이
-                            끝나지 않았습니다.
-                          </p>
-                        )}
-                      </div>
-                    )}
                   </>
                 )}
               </section>
-            ) : (
+            ) : null}
+
+            {searchId && detail && selection && (
+              <>
+                {displayedQuery.error && (
+                  <p className={styles.error} role="alert">
+                    {displayedQuery.error}
+                  </p>
+                )}
+                <SelectionResult
+                  selection={selection}
+                  selectionRule={detail.config?.selectionRule ?? null}
+                  baseline={detail.baseline}
+                  config={detail.config}
+                  candidates={displayedCandidates}
+                  onOpenDetail={setDetailCandidate}
+                  comparePicks={comparePickIds}
+                  onCompareToggle={toggleComparePick}
+                />
+
+                <CompareHandoff
+                  picks={comparePicks}
+                  config={detail.config}
+                  baseline={detail.baseline}
+                  onRemove={removeComparePick}
+                  onClear={() => setComparePicks([])}
+                />
+
+                <CandidateTable
+                  searchId={searchId}
+                  config={detail.config}
+                  onOpenDetail={setDetailCandidate}
+                  comparePicks={comparePickIds}
+                  onCompareToggle={toggleComparePick}
+                />
+              </>
+            )}
+
+            {searchId ? null : (
               <>
                 {previewLoading && !preview && (
                   <p className={styles.note} role="status">
@@ -418,6 +479,15 @@ export function ParamSearchPage() {
           </>
         )}
       </main>
+
+      {detailCandidate && detail && (
+        <CandidateDetail
+          candidate={detailCandidate}
+          config={detail.config}
+          selectionRule={detail.config?.selectionRule ?? null}
+          onClose={() => setDetailCandidate(null)}
+        />
+      )}
 
       {conflictBase && (
         <RegistryChangedDialog

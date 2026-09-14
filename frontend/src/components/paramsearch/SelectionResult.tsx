@@ -17,9 +17,9 @@ interface SelectionResultProps {
   config: ParamSearchConfig | null
   /** `selection.displayed`에 든 후보들. 서버가 준 순서를 그대로 쓴다. */
   candidates: SearchCandidateItem[]
-  onOpenDetail: (candidateId: string) => void
+  onOpenDetail: (candidate: SearchCandidateItem) => void
   comparePicks: string[]
-  onCompareToggle: (candidateId: string) => void
+  onCompareToggle: (candidate: SearchCandidateItem) => void
 }
 
 /**
@@ -93,9 +93,9 @@ export function SelectionResult({
               <CandidateSummaryCard
                 candidate={candidate}
                 config={config}
-                onOpenDetail={() => onOpenDetail(candidate.candidateId)}
+                onOpenDetail={() => onOpenDetail(candidate)}
                 compareChecked={comparePicks.includes(candidate.candidateId)}
-                onCompareToggle={() => onCompareToggle(candidate.candidateId)}
+                onCompareToggle={() => onCompareToggle(candidate)}
               />
             </li>
           ))}

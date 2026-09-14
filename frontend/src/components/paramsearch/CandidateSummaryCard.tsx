@@ -48,6 +48,8 @@ export function CandidateSummaryCard({
   const hasNumbers = netReturn !== null || maxDrawdown !== null || tradingCost !== null
   const showCompare = compareChecked !== undefined && onCompareToggle !== undefined
   const compareId = `compare-${candidate.candidateId}`
+  // 결과가 없는 후보를 비교에 담으면 비교 화면이 빈 자리를 그려야 한다. 담기지 않게 막는다.
+  const comparable = candidate.status === 'COMPLETED'
 
   return (
     <article className={styles.card}>
@@ -95,8 +97,11 @@ export function CandidateSummaryCard({
                 type="checkbox"
                 checked={compareChecked}
                 onChange={onCompareToggle}
+                disabled={!comparable}
               />
-              <label htmlFor={compareId}>비교에 담기</label>
+              <label htmlFor={compareId}>
+                {comparable ? '비교에 담기' : '결과가 없어 담을 수 없습니다'}
+              </label>
             </span>
           )}
           {onOpenDetail && (
