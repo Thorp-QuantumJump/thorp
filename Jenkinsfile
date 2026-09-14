@@ -22,6 +22,10 @@ pipeline {
         // 빌드는 초록색으로 끝난다. 마이그레이션과 Entity 매핑을 맞춰 보는 검증이 통째로 비어도
         // 알아챌 수 없다. CI에서는 그 상태를 실패로 본다 (backend RequiredDockerTest).
         THORP_REQUIRE_DOCKER = 'true'
+
+        // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을
+        // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.
+        GIT_CREDENTIALS_ID = 'gitlab-deploy-token'
     }
 
     stages {
@@ -30,29 +34,39 @@ pipeline {
         // 못한 것이 그 경우다. 이후 단계는 dev를 합친 결과 위에서 돈다.
         stage('Merge with dev') {
             steps {
-                sh '''
-                    set -e
-                    git fetch --no-tags origin dev
+                // checkout 스텝은 GIT_ASKPASS 로 자격을 주입하지만, sh 스텝은 별개 프로세스라
+                // 그것을 물려받지 못한다. 자격 없이 fetch 하면 사용자명을 묻다가
+                // "could not read Username for ..." 로 끝난다.
+                withCredentials([usernamePassword(
+                    credentialsId: env.GIT_CREDENTIALS_ID,
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_PASSWORD'
+                )]) {
+                    sh '''
+                        set -e
 
-                    if git merge-base --is-ancestor origin/dev HEAD; then
-                        echo "이미 origin/dev 를 포함한다. 병합을 건너뛴다."
-                        exit 0
-                    fi
+                        # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.
+                        # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.
+                        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev
 
-                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
-                    #              post 단계에서 git merge --abort 로 되돌린다.
-                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
-                    if ! git merge --no-commit --no-ff origin/dev; then
-                        echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
-                        exit 1
-                    fi
-                    echo "origin/dev 를 병합한 결과로 검증한다."
-                '''
+                        if git merge-base --is-ancestor origin/dev HEAD; then
+                            echo "이미 origin/dev 를 포함한다. 병합을 건너뛴다."
+                            exit 0
+                        fi
+
+                        # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
+                        #              post 단계에서 git merge --abort 로 되돌린다.
+                        # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
+                        if ! git merge --no-commit --no-ff origin/dev; then
+                            echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
+                            exit 1
+                        fi
+                        echo "origin/dev 를 병합한 결과로 검증한다."
+                    '''
+                }
             }
         }
 
-        // 병합 결과의 마이그레이션 버전을 본다. 빈 DB에 전체 적용해 보는 테스트로는
-        // 기준 브랜치보다 낮은 버전(out-of-order)을 잡지 못하므로 여기서 따로 검사한다.
         stage('Migration version') {
             steps {
                 sh 'bash infra/scripts/check-migration-version.sh origin/dev'
