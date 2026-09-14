@@ -1,7 +1,8 @@
 import { Play, ShieldQuestion, TriangleAlert } from 'lucide-react'
 import { ProvisionalBadge } from './ProvisionalBadge'
+import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchPreview } from '@/types/paramSearch'
-import { formatCount, formatSeconds, validationLabelText } from '@/utils/paramSearchLabels'
+import { formatCount, formatSeconds } from '@/utils/paramSearchLabels'
 import styles from './PreflightPanel.module.css'
 
 interface PreflightPanelProps {
@@ -71,8 +72,8 @@ export function PreflightPanel({
       <div className={styles.validation}>
         <ShieldQuestion size={15} aria-hidden="true" />
         <span>
-          <strong>{validationLabelText(preview.validationLabel)}</strong>
-          {preview.validationNote ? ` · ${preview.validationNote}` : null}
+          <ValidationBadge label={preview.validationLabel} describes="이번 탐색의 결과" />
+          {preview.validationNote ? ` ${preview.validationNote}` : null}
         </span>
       </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
+import { ValidationBadge } from './ValidationBadge'
 import type {
   CandidateSort,
   CandidateStatus,
@@ -148,6 +149,7 @@ export function CandidateTable({
                   <span className={styles.srOnly}>비교에 담기</span>
                 </th>
                 <th scope="col">설정</th>
+                <th scope="col">검증</th>
                 <th scope="col">상태</th>
                 {sortableColumns.map((column) => (
                   <th key={column.key} scope="col" aria-sort={ariaSortOf(column.key)}>
@@ -207,6 +209,12 @@ export function CandidateTable({
                     <td>
                       <span className={styles.strategy}>{strategyName}</span>
                       <span className={styles.parameters}>{parameterText}</span>
+                    </td>
+                    <td>
+                      <ValidationBadge
+                        label={candidate.validationLabel}
+                        describes={`${strategyName} ${parameterText}`}
+                      />
                     </td>
                     <td>{candidateStatusText(candidate.status)}</td>
                     <td className={styles.numeric}>{formatCount(candidate.candidateNo)}</td>

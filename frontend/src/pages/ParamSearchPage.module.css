@@ -197,15 +197,6 @@
   font-weight: 750;
 }
 
-.validation {
-  padding: 2px 7px;
-  border: 1px solid var(--thorp-warning);
-  border-radius: 3px;
-  color: var(--thorp-warning);
-  font-size: 0.64rem;
-  font-weight: 700;
-}
-
 .counts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));

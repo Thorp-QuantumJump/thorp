@@ -321,9 +321,9 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 4 — Frontend
 
-- [ ] T114 [P] [US4] (FE) `frontend/src/components/paramsearch/ValidationBadge.tsx` — 후보마다 검증 상태 상시 표시 (plan 설계 제약 2)
-- [ ] T115 [US4] (FE) `frontend/src/components/paramsearch/ValidationNote.tsx` — 미검증 안내 문구. '미검증·개선 근거 없음·판단 보류'를 결과에 표시하고 기능을 막지 않는다 (FR-016)
-- [ ] T116 [P] [US4] (FE 테스트) `frontend/src/components/paramsearch/ValidationBadge.test.tsx` — 검증 상태 배지 누락이 0건인지 검증
+- [X] T114 [P] [US4] (FE) `frontend/src/components/paramsearch/ValidationBadge.tsx` — 후보마다 검증 상태 상시 표시 (plan 설계 제약 2)
+- [X] T115 [US4] (FE) `frontend/src/components/paramsearch/ValidationNote.tsx` — 미검증 안내 문구. '미검증·개선 근거 없음·판단 보류'를 결과에 표시하고 기능을 막지 않는다 (FR-016)
+- [X] T116 [P] [US4] (FE 테스트) `frontend/src/components/paramsearch/ValidationBadge.test.tsx` — 검증 상태 배지 누락이 0건인지 검증
 
 **Checkpoint**: 네 사용자 스토리가 모두 독립적으로 동작한다
 

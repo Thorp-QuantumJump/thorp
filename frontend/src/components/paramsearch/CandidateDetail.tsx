@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { ValidationBadge } from './ValidationBadge'
 import type {
   ParamSearchConfig,
   SearchCandidateItem,
@@ -16,7 +17,6 @@ import {
   selectionFilterText,
   selectionOutcomeText,
   sortMetricText,
-  validationLabelText,
 } from '@/utils/paramSearchLabels'
 import styles from './CandidateDetail.module.css'
 
@@ -93,9 +93,7 @@ export function CandidateDetail({
 
         <div className={styles.badges}>
           <span className={styles.status}>{candidateStatusText(candidate.status)}</span>
-          <span className={styles.validation}>
-            {validationLabelText(candidate.validationLabel)}
-          </span>
+          <ValidationBadge label={candidate.validationLabel} describes={strategyName} />
           {candidate.retryCount > 0 && (
             <span className={styles.retry}>{`재시도 ${formatCount(candidate.retryCount)}회`}</span>
           )}

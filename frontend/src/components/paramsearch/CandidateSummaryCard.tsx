@@ -1,3 +1,4 @@
+import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'
 import {
   candidateStatusText,
@@ -5,7 +6,6 @@ import {
   formatPercent,
   formatWon,
   missingPerformanceReason,
-  validationLabelText,
 } from '@/utils/paramSearchLabels'
 import styles from './CandidateSummaryCard.module.css'
 
@@ -58,7 +58,10 @@ export function CandidateSummaryCard({
           <span className={styles.strategy}>{strategyName}</span>
           <span className={styles.parameters}>{parameterText}</span>
         </div>
-        <span className={styles.validation}>{validationLabelText(candidate.validationLabel)}</span>
+        <ValidationBadge
+          label={candidate.validationLabel}
+          describes={`${strategyName} ${parameterText}`}
+        />
       </header>
 
       {hasNumbers ? (

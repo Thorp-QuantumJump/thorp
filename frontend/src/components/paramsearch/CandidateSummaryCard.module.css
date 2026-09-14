@@ -32,17 +32,6 @@
   line-height: 1.5;
 }
 
-.validation {
-  flex: none;
-  padding: 2px 7px;
-  border: 1px solid var(--thorp-warning);
-  border-radius: 3px;
-  color: var(--thorp-warning);
-  font-size: 0.62rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

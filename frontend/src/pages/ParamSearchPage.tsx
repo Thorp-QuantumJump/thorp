@@ -10,6 +10,8 @@ import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'
 import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
 import { SelectionResult } from '@/components/paramsearch/SelectionResult'
+import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'
+import { ValidationNote } from '@/components/paramsearch/ValidationNote'
 import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'
 import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
@@ -20,7 +22,7 @@ import type {
   SearchSpaceSelection,
   StrategySpaceSummary,
 } from '@/types/paramSearch'
-import { formatCount, validationLabelText } from '@/utils/paramSearchLabels'
+import { formatCount } from '@/utils/paramSearchLabels'
 import styles from './ParamSearchPage.module.css'
 
 /** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */
@@ -353,14 +355,13 @@ export function ParamSearchPage() {
                     <p className={styles.statusLine} aria-live="polite">
                       <strong>{statusText[detail.status] ?? detail.status}</strong>
                       {detail.stopReason ? <span> · 멈추는 중</span> : null}
-                      <span className={styles.validation}>
-                        {validationLabelText(detail.validationLabel)}
-                      </span>
+                      <ValidationBadge label={detail.validationLabel} describes="이 탐색 묶음" />
                     </p>
 
-                    {detail.validationNote && (
-                      <p className={styles.note}>{detail.validationNote}</p>
-                    )}
+                    <ValidationNote
+                      label={detail.validationLabel}
+                      note={detail.validationNote}
+                    />
 
                     {detail.counts && (
                       <dl className={styles.counts}>
