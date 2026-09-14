@@ -33,6 +33,13 @@ def partChanged(String part) {
         return true
     }
 
+    // core.quotePath=false 로 한글 경로는 그대로 나오지만, 따옴표·역슬래시·제어문자가 든
+    // 경로는 git 이 여전히 따옴표로 감싼다. 그러면 그 줄이 part/ 로 시작하지 않아 바뀐 파트를
+    // 안 바뀐 것으로 읽는다. 그런 줄이 하나라도 있으면 비교를 믿지 않고 전체를 돌린다.
+    if (changed.startsWith('"') || changed.contains('\n"')) {
+        return true
+    }
+
     return changed.split('\n').any { it.startsWith(part + '/') }
 }
 
@@ -86,6 +93,10 @@ pipeline {
         // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가
         // data/ 로 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다.
         // 틀리는 방향이 건너뛰는 쪽이라 위험하므로 인용을 끈다.
+        //
+        // 이 값은 첫 스테이지 전에 한 번만 평가된다. 모든 스테이지가 최상위 agent 를 함께 쓰기
+        // 때문이다. 어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서
+        // 다시 평가되고, 체크아웃 전 워크스페이스에서 값이 정해질 수 있다.
         CHANGED_FILES = sh(returnStdout: true, script: 'git -c core.quotePath=false diff --name-only --no-renames origin/dev...HEAD || true').trim()
     }
 
