@@ -184,6 +184,9 @@ pipeline {
                     }
                     post {
                         always {
+                            // pytest 는 dir('worker') 안에서 돌아 worker/build/... 에 XML 을 남기고,
+                            // post 블록은 dir() 바깥이라 워크스페이스 루트 기준 경로를 쓴다. 두 경로가
+                            // 가리키는 파일은 같다.
                             junit(
                                 allowEmptyResults: true,
                                 testResults: 'worker/build/test-results/pytest.xml'
@@ -217,11 +220,13 @@ pipeline {
                 stage('Data Test') {
                     steps {
                         dir('data') {
-sh '. .venv/bin/activate && pytest --junitxml=build/test-results/pytest.xml'
+                            sh '. .venv/bin/activate && pytest --junitxml=build/test-results/pytest.xml'
                         }
                     }
                     post {
                         always {
+                            // Worker Test 와 같다. pytest 는 dir('data') 안에서, junit 은 워크스페이스
+                            // 루트 기준으로 같은 파일을 가리킨다.
                             junit(
                                 allowEmptyResults: true,
                                 testResults: 'data/build/test-results/pytest.xml'
