@@ -202,6 +202,9 @@ public class BacktestEventService {
      * 살아 있는 실행을 끊는다.
      *
      * <p>결과 행은 만들지 않는다. 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다 — 상세 조회는 실행 행의 실패 사유를 그대로 보여 준다.
+     *
+     * <p><b>같은 메시지를 두 번 세지 않는 것은 호출자({@code BacktestDeadLetterListener})의 몫이다.</b> 이 셈은 한쪽으로만 틀려야
+     * 한다 — 많이 세면 살아 있는 실행을 끊고, 적게 세면 실행이 종결되지 않고 남아 유예 감시(T014)가 거둔다.
      */
     @Transactional
     public void handleDeadLetter(String runId) {
