@@ -48,10 +48,17 @@ MOMENT = datetime(2026, 9, 11, 18, 0, tzinfo=UTC)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # 파일명을 고정하지 않고 찾는다. 마이그레이션 버전이 타임스탬프라 파일명이 바뀔 수 있는데,
 # 고정해 두면 이름이 달라진 순간 아래 대조가 조용히 건너뛰어져 표류를 놓친다.
-_MIGRATIONS = sorted(
-    (REPO_ROOT / "backend/src/main/resources/db/migration").glob("V*__etf_market_data.sql")
+#
+# 001의 표는 마이그레이션 두 개에 나뉘어 있다. 관계형·시계열 11개는 T003이 만들었고,
+# instrument_profile은 data-model.md에 있는데도 빠져 있어 T013이 따로 만들었다. 그래서 파일
+# 하나가 아니라 001이 만든 파일 전부에서 표 정의를 찾는다.
+_MIGRATION_DIR = REPO_ROOT / "backend/src/main/resources/db/migration"
+MIGRATIONS = sorted(
+    [
+        *_MIGRATION_DIR.glob("V*__etf_market_data.sql"),
+        *_MIGRATION_DIR.glob("V*__instrument_profile.sql"),
+    ]
 )
-MIGRATION = _MIGRATIONS[-1] if _MIGRATIONS else None
 
 
 def deadline_for(dataset_id: str) -> datetime:
@@ -505,12 +512,16 @@ _NOT_A_COLUMN = ("CONSTRAINT", "CHECK", "PRIMARY", "UNIQUE", "FOREIGN")
 
 def parse_migration_columns(table_name: str) -> list[str]:
     """마이그레이션에서 한 표의 열 이름을 읽는다. 코드와 스키마의 표류를 잡는다."""
-    assert MIGRATION is not None, (
-        "V*__etf_market_data.sql을 찾지 못했다. 마이그레이션이 사라졌거나 이름 규칙이 바뀌었다면"
+    assert MIGRATIONS, (
+        "001의 마이그레이션을 찾지 못했다. 마이그레이션이 사라졌거나 이름 규칙이 바뀌었다면"
         " 이 대조를 건너뛰지 말고 여기를 고쳐야 한다"
     )
-    sql = MIGRATION.read_text(encoding="utf-8")
-    match = re.search(rf"CREATE TABLE {table_name} \((.*?)\n\);", sql, flags=re.DOTALL)
+    match = None
+    for migration in MIGRATIONS:
+        sql = migration.read_text(encoding="utf-8")
+        match = re.search(rf"CREATE TABLE {table_name} \((.*?)\n\);", sql, flags=re.DOTALL)
+        if match is not None:
+            break
     assert match is not None, f"{table_name} 정의를 찾지 못했다"
     body = "\n".join(line.split("--")[0] for line in match.group(1).splitlines())
 

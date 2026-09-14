@@ -90,20 +90,20 @@
 
 **Independent Test**: 대표 ETF 하나를 골라 상장 전 날짜·분배금 지급일·분할일 전후의 원시 가격과 조정 자료를 조회해 운용사 공시와 대조한다.
 
-- [ ] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — S15P21E205-179
+- [x] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — S15P21E205-179
   - KRX OPEN API 연동으로 `fetch_ohlcv` 스캐폴딩을 완성한다. 컬럼을 `date, open, high, low, close, volume, value`로 표준화한다
   - 상장 전 합성 이력이나 미래 자료로 빈 값을 채우지 않는다. 상장일·상장폐지일을 함께 확보한다 (FR-005)
   - 이용 한도에 걸려 그날 수집을 끝내지 못하면 중단하고 `complete = false`와 `failure_reason`을 남긴다 (FR-014). `--simulate-quota-exhausted`로 재현한다
   - KOSPI 시리즈 일별 자료의 확보 기간이 비교 대상 대표 ETF의 상장 이후 전체를 포함하는지 검사한다 (FR-009)
   - `verify_listing_boundary.py`는 상장 전 가격 행을 센다. quickstart 시나리오 2가 쓴다
   - 테스트: 컬럼 표준 변환, 상장 전 행 부재(SC-003), 재실행 멱등성
-- [ ] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — S15P21E205-179
+- [x] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — S15P21E205-179
   - 분배금·분할 수집과 소급 조정 계수 산출. `adjusted_close`와 `adjustment_factor`를 함께 저장한다 (research.md 결정 2)
   - 운용보수를 다시 차감하지 않는다. 이미 가격에 반영되어 있다 (FR-004)
   - 자료 부족 구간의 `reason`은 `AMBIGUOUS_PRICE`·`MISSING_CORPORATE_ACTION`·`RECONCILIATION_UNKNOWN`·`INDEX_HISTORY_SHORT`다. **`SUSPENDED_TOO_LONG`은 PD-19·PD-20 확정 전까지 쓰지 않는다** (FR-006)
   - 거래정지는 길이와 무관하게 직전 종가를 평가에만 쓰고 표시를 남기며, 정지 구간을 `suspension_period`에 시작일·종료일·거래일 수로 기록한다. 이 기록이 T015의 입력이 된다
   - 테스트: 계수 계산, 과거 두 시점의 비율이 이후 계수에 영향받지 않음, 보수 중복 차감 없음
-- [ ] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — S15P21E205-179
+- [x] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — S15P21E205-179
   - 표본은 상장 첫날·모든 분배금 지급일·모든 분할일이다. 평범한 거래일은 넣지 않는다 (FR-016)
   - 불일치가 나도 개별 값을 수정하지 않는다. 수집·가공 오류는 새 버전 재발행, 정의 차이는 기록만, 원인 불명은 구간 제외 (FR-017)
   - 테스트: 표본 구성 검증, `cause`↔`resolution` 조합 제한, SC-002 판정
@@ -137,16 +137,22 @@
 
 **Independent Test**: 대표 ETF 하나의 대표 상품 정보를 열어 필수 항목이 모두 보이고, 과거 구성 이력이 없는 상품에 현재 구성 기준 표시가 붙는지 확인한다.
 
-- [ ] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — S15P21E205-181
+- [x] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — S15P21E205-181
   - 기준 지수·지수 방법론 요약·상장일·구성종목 중복·최근 3개월 일평균 거래대금·자료 출처·생존 상품 한계를 담는다 (FR-015)
   - 유동성은 `daily_price.value` 기준이다. 거래량과 종가를 곱한 추정을 쓰지 않는다
   - 과거 구성 이력이 없으면 `holdings_as_of_current`를 true로 표시하고, 당시 중복·집중도를 재현했다고 표현하지 않는다
   - **추적 차이는 만들지 않는다.** 계산 정의가 PD-21로 남아 있다 (Out of Scope)
-- [ ] T013 [US3] [BE] 대표 상품 정보 조회 API (`sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — S15P21E205-181
+  - **2026-09-13 확인**: 지수 방법론 요약과 구성종목을 주는 원천 서비스가 없다. 인증키로 직접 조회해 `etp/etf_pdf`·`etp/etf_comp_isu`·`idx/idx_comp_isu`·`idx/idx_base_info`가 모두 404임을 봤고, 되는 `etp/etf_bydd_trd`는 기초지수 이름과 순자산총액까지다. 그래서 상장일·기업행위와 같은 선례를 따라 파일 입력으로 받는다(`ingest_krx.py --instrument-profiles`). 원천이 나중에 제공하면 열 구성은 그대로 두고 입력만 수집으로 바꾼다
+  - **적재 경로 (2026-09-13 결정)**: 별도 진입점을 만들지 않고 `repository.py`에 `load_instrument_profiles`를 더했다. 이 표는 대조 기록과 같은 bigint 외래 키 두 개 구조라 식별자 변환·적재 순서 강제·재적재 거부가 이미 그 모듈에 있고, 무엇보다 일평균 거래대금의 근거가 `daily_price.value`인데 적재 계층은 DB에서 시계열을 읽어 되돌리는 경로를 두지 않는다. 별도 스크립트로는 그 값을 얻을 방법이 없다
+- [x] T013 [US3] [BE] 대표 상품 정보 조회 API (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__instrument_profile.sql`, `sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — S15P21E205-181
+  - **`instrument_profile` 표를 이 묶음에서 만든다 (2026-09-13 확정).** T003이 만든 표 11개에 이 표가 빠져 있었고 어느 묶음도 맡고 있지 않았다. 열 구성은 data-model.md 「instrument_profile」 그대로이며 새로 설계하지 않는다. 파일명은 타임스탬프 방식을 따른다
   - `GET /sectors/{code}/instrument-profile` (contracts/sector-api.md)
   - `avgDailyValue3m`에 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 **필드마다** 붙인다. 웹 ObjectMapper에 전역 등록하면 기존 `MarketResponse.value` 계약이 깨진다 (`backend/CLAUDE.md`)
   - `INSTRUMENT_PROFILE_NOT_READY`(409)를 추가한다
   - 테스트: 필수 항목 전부 존재, `asOfCurrentComposition` 표시, `sourceAttribution` 존재, **추적 차이 필드 부재**
+  - **어느 행을 보여줄지 (2026-09-13 결정)**: 문서가 정해 두지 않아 여기서 정했다. 열린 대응표 버전을 대상으로 수집된 자료 버전 중 `complete = true`이고 `data_deadline`이 가장 늦은 것이다. 물러난 대응표를 대상으로 만든 값이 현재 목록 옆에 나오지 않게 하고(원칙 IV), 부분 갱신 자료를 완전한 자료로 표시하지 않기 위함이다(FR-014). 응답의 `isSample`은 그 **자료 버전**의 값이며 대응표의 `isSample`과 근거가 다르다
+  - **없는 섹터 코드 판정**: 경로 변수로 `SectorCode`를 만들지 않는다. 만들면 형식 위반이 `IllegalArgumentException`이 되고 기존 처리기가 그것을 저장 자료 결함으로 보아 500으로 옮긴다. 열린 대응표 목록에서 같은 문자열을 찾기만 하므로 형식 위반도 `SECTOR_NOT_FOUND`(404)다
+  - `instrument_profile`에 UPDATE·DELETE 거부 트리거를 걸지 않았다. FR-017이 불변으로 못 박은 대상은 자료 버전과 시계열이고 `reconciliation_record`도 같은 이유로 트리거가 없다. 재현은 `(etf_id, dataset_version_id)` UNIQUE가 지킨다
 
 **Checkpoint**: 세 사용자 스토리가 모두 독립적으로 동작한다.
 
@@ -244,3 +250,47 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
 - **마이그레이션 번호 V3을 네 spec(001·004·007·014)이 함께 적어 두었다.** 001은 V7을 쓰되 나머지 재배정 결론은 T002에서 남긴다
 - **T015 확정 전 임시 동작을 함부로 바꾸지 않는다.** `suspension_period` 기록이 결정의 입력이므로, 정지를 제외하도록 미리 바꾸면 근거가 사라진다
 - 각 묶음의 MR 본문 "주요 변경 사항"에 그 묶음이 담은 구현 메모 항목을 나열해 추적한다 (constitution v3.0.0)
+
+---
+
+## Phase 8: Convergence
+
+**2026-09-13 `/speckit-converge` 산출.** 현재 코드를 spec.md·plan.md·contracts·data-model.md와 대조해 남은 일을 덧붙였다. 기존 항목은 하나도 고치지 않았다. T014~T016은 이미 열려 있으므로 다시 만들지 않는다. 판정: FR 17개·SC 7개·사용자 스토리 3개·plan 결정 10개·constitution 원칙 10개를 확인했고 MUST 위반은 없다. 유형은 missing 2·partial 9·contradicts 1이며 unrequested는 없다.
+
+- [ ] T017 [BE] `GET /sectors/evaluation-window`를 붙인다 per contracts/sector-api.md·FR-007 (missing)
+  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있다
+  - **001이 지금 만들 수 없다.** 산식 입력 다섯 중 `warmupTradingDays`를 `evaluation-window.md` 입력표가 "전략 등록표(003 소유)에서 온다. 001은 이 값을 정하지 않고 받는다"로 못 박았고, `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. T010의 2026-09-11 보류 판단이 그대로 유효하다
+  - 붙일 때 필요한 것은 T010이 적어 둔 다섯 가지다. `EvaluationWindowService`는 입력을 전부 인자로 받으므로 고치지 않고 호출부만 더하면 된다
+- [ ] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)
+  - 계약은 "워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다
+  - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다
+  - **001 혼자 못 고친다.** `evaluation_start`는 004가 `run.effectiveStart`·`evaluation.warmupTradingDays` 우선순위로 설계한 것이라, 호출을 바꾸면 모든 백테스트의 `evaluationStart`와 지표가 움직이고 004의 재현 픽스처가 함께 깨진다. 두 계약 중 어느 쪽을 기준으로 삼을지 팀이 정해야 한다
+- [ ] T019 [BE] `datasetId` 값 규칙을 저장된 자료 버전에서 읽는다 per research.md 결정 4 (contradicts)
+  - `ExecutionPolicy.java:43`과 `docs/specs/backtest-messaging/`의 픽스처가 아직 `KRX_DAILY_V1`이다. 규칙은 `KRX_DAILY_{YYYYMMDD}`다
+  - T011이 적어 둔 대로 **004 연동에서 푼다.** 상수에 날짜를 박으면 내일부터 거짓말이 되고, 올바른 해결은 백엔드가 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. 값 규칙 자체는 `dataset_version.build_dataset_id`가 이미 세우고 검증한다
+- [ ] T020 [DE] 대조 표본에 가격과 지수를 더한다 per FR-016·SC-002 (partial)
+  - FR-016은 "대표 ETF**와 지수**의 조회값"을, SC-002는 "**가격**·분배금·분할·상장일"을 공시와 대조하라고 한다. 지금 `build_queried_values`는 `listed_on`·`amount`·`pay_date`·`ex_date`만 채우고, 자기 docstring이 "여기서는 가격을 채우지 않고, 가격까지 대조하려면 부르는 쪽이 그 항목을 더한다"고 적어 두었는데 `reconcile.py`가 더하지 않는다
+  - 지수 표본은 아예 없다. `build_samples`는 `ListingWindow`와 `CorporateAction`만 받는다
+  - **실자료가 있어야 뜻이 생긴다.** 공시값은 사람이 옮긴 `--disclosure` 파일이고, 대조할 가격·지수 원본은 T014가 대표 ETF를 확정한 뒤에야 쌓인다. 배관(가격 입력 인자 추가)만 먼저 놓을지, T014·T016과 함께 닫을지 정해야 한다
+- [ ] T021 [BE] 공급자가 만든 자료 메타데이터를 결과까지 전달한다 per FR-006·FR-013·FR-014 (partial)
+  - `PostgresMarketDataProvider.load`가 `carriedForwardDates`·`dataGaps`·`dataDeadline`·`mapVersion`·`provisionalSuspensionHandling`·`notRealMarketData`를 빠짐없이 채운다. 그런데 `engine_runner`와 `artifacts`가 `market.metadata`를 읽지 않아 `datasetId` 말고는 `EngineOutput`에 닿지 않는다
+  - FR-006의 "결과에 정지 일수와 임시 처리 중임을 함께 표시한다"와 FR-014의 "내보내는 모든 자료에 데이터 마감 시각을 붙인다"가 공급자 경계에서 멈춘다
+  - **결과 표면은 004·005 소유다.** 001의 자체 검증(quickstart 시나리오 6)은 공급자 수준에서 확인하도록 쓰여 있어 통과한다. 어느 spec이 이 전달을 맡을지 정해야 한다
+- [X] T022 [DOCS] quickstart에 대표 상품 정보 시나리오를 더한다 per US3/AC1~AC4·FR-015 (missing)
+  - 시나리오 1~7 어디에도 `GET /sectors/{code}/instrument-profile`을 실행해 보는 절차가 없다. 사용자 스토리 3만 실행 가능한 검증 절차가 비어 있다
+  - 필수 항목 존재, `asOfCurrentComposition` 표시, `sourceAttribution`, 추적 차이 필드 부재, 409 구분을 확인한다
+  - **딸린 어긋남**: 이 문서 맨 위 Input 줄과 T016이 quickstart를 "시나리오 1~7"로 센다. converge는 기존 항목을 고치지 않으므로 그대로 두었다. T016을 착수할 때 「시나리오 1~8」로 고쳐 새 시나리오가 검증 기록에서 빠지지 않게 한다
+- [ ] T023 [DOCS] plan.md의 마이그레이션 파일명을 실제와 맞춘다 per plan.md Storage·Project Structure (partial)
+  - plan.md 19행·113행이 `V3__etf_market_data.sql`을 가리키는데 실제 파일은 `V20260911114500__etf_market_data.sql`이고, `V3__param_search.sql`은 **다른** 마이그레이션으로 이미 존재한다. 지금 문서대로 읽으면 남의 파일을 가리킨다
+  - T013이 만든 `V20260913103000__instrument_profile.sql`도 plan.md에 없다
+- [X] T024 [BE] 스키마 검사에 12번째 표를 넣는다 per data-model.md (partial)
+  - `EtfMarketDataSchemaIT`의 표 검사가 11개만 세고 `instrument_profile`을 빼놓았다. 표시 문구도 "관계형 6개와 시계열 5개, 모두 11개 표"로 남아 있는데 data-model.md가 정의한 표는 12개다
+  - T013이 그 표를 만들면서 검사를 함께 넓히지 않았다
+- [ ] T025 [DOCS] 일평균 거래대금의 저장 타입과 응답 타입 변환을 문서에 적는다 per data-model.md·contracts/sector-api.md (partial)
+  - data-model.md는 `avg_daily_value_3m`을 "금액이므로 문자열로 둔다"고 하고, 계약은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 요구한다. 구현은 TEXT 열 → `BigDecimal` 도메인 → 지수 표기 없는 문자열 응답으로 양립시켰는데 **어느 문서도 그 변환을 말하지 않는다**
+- [ ] T026 [DOCS] 대표 상품 정보의 `isSample`이 무엇의 값인지 계약에 적는다 per contracts/sector-api.md (partial)
+  - 계약의 응답 예시에 `isSample`이 있는데 대응표의 것인지 자료 버전의 것인지 말하지 않는다. 구현은 research.md 결정 5("자료 버전 레코드에도 같은 뜻의 표시를 둔다")를 따라 **자료 버전** 기준으로 정했고, `GET /sectors`의 `isSample`은 대응표 기준이라 두 값이 다를 수 있다
+- [ ] T027 [DOCS] 대표 상품 정보 표에 불변성 적용 여부를 적는다 per data-model.md·FR-017 (partial)
+  - data-model.md 「instrument_profile」 불변식이 `(etf_id, dataset_version_id)` UNIQUE만 말하고 UPDATE·DELETE 거부를 적용하는지 침묵한다. 구현은 트리거를 걸지 않기로 정하고 그 근거를 마이그레이션 주석에만 남겼다(FR-017이 못 박은 대상은 자료 버전과 시계열이며 `reconciliation_record`도 같다)
+- [ ] T028 [DOCS] plan.md의 워커 공급자 이름을 실제와 맞춘다 per plan.md (partial)
+  - plan.md가 `RepositoryDataProvider`를 더하고 `engine_runner.py:68`의 기본값을 바꾸라고 적었는데, 실제로는 004가 만든 `PostgresMarketDataProvider`가 그 자리를 맡고 `PortfolioBacktestEngine`은 공급자에 **기본값을 두지 않아** 주입을 잊은 경로 자체가 없다. `YFinanceDataProvider`는 코드에서 사라졌다(남은 것은 세 CLAUDE.md의 서술뿐)

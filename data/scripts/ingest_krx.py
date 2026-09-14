@@ -60,6 +60,11 @@ from data_pipeline.dataset_version import (  # noqa: E402
     DatasetVersionError,
     build_dataset_id,
 )
+from data_pipeline.instrument_profile import (  # noqa: E402
+    InstrumentProfile,
+    InstrumentProfileError,
+    profiles_from_records,
+)
 
 _RAW_ROOT = _DATA_ROOT / "raw"
 _PROCESSED_ROOT = _DATA_ROOT / "processed"
@@ -169,6 +174,21 @@ def build_parser() -> argparse.ArgumentParser:
             "옮긴 파일로 들어오고, 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이지 "
             "코드가 알아낼 수 있는 값이 아니다. 주지 않으면 담은 구간을 말할 수 없는 것이므로 "
             "전 구간을 자료 부족 구간으로 기록한다. 전 구간을 담았다면 수집 시작일을 적는다"
+        ),
+    )
+    parser.add_argument(
+        "--instrument-profiles",
+        type=Path,
+        default=None,
+        help=(
+            "대표 상품 정보 JSON 파일(선택). "
+            '[{"instrument_id": "069500.XKRX", "index_methodology_summary": "...", '
+            '"holdings_overlap": {"as_of_current_composition": true, '
+            '"top_holdings": [{"name": "삼성전자", "weight": "0.2431"}]}}] 모양이며 '
+            "열 이름은 snake_case다. "
+            "지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 "
+            "같이 파일로 받는다. 일평균 거래대금은 이 파일이 아니라 방금 만든 daily_price의 "
+            "거래대금에서 계산한다 (FR-015)"
         ),
     )
     parser.add_argument(
@@ -317,6 +337,46 @@ def resolve_actions_known_from(path: Path | None, declared: date | None) -> date
     if path is None or declared is None:
         return ACTIONS_KNOWN_FROM_NEVER
     return declared
+
+
+def instrument_profiles(
+    path: Path | None,
+    price_rows: Sequence[dict[str, Any]],
+    instrument_ids: Sequence[str],
+    deadline: date,
+) -> list[InstrumentProfile]:
+    """대표 상품 정보 JSON과 방금 만든 가격 행으로 대표 상품 정보를 만든다 (FR-015).
+
+    **열 이름은 snake_case다.** ``--listing``·``--corporate-actions``와 같은 규약이며, 중첩된
+    ``holdings_overlap`` 안의 이름도 마찬가지다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을
+    대상으로 한 것이라 파이프라인 입력 파일에는 해당하지 않는다.
+
+    파일이 없으면 빈 목록이고, 그러면 ``instrument_profile``에 아무것도 넣지 않는다. 조회 API는
+    그 상태를 빈 값이 아니라 ``INSTRUMENT_PROFILE_NOT_READY``(409)로 구분한다
+    (contracts/sector-api.md) — "아직 만들지 않았다"와 "만들었는데 비었다"는 다른 사실이다.
+
+    **여기서 만드는 이유**: 일평균 거래대금의 근거가 ``daily_price.value``인데, 적재 계층은
+    DB에서 시계열을 읽어 되돌리는 경로를 두지 않는다(:mod:`data_pipeline.repository` 문서).
+    그래서 별도 진입점을 만들면 그 값을 얻을 방법이 없고, 방금 가격 행을 만든 이 자리가
+    유일하게 근거를 들고 있는 지점이다.
+    """
+    if path is None:
+        return []
+    known = set(instrument_ids)
+    records = _records_from_json(path, "대표 상품 정보")
+    unknown = sorted(
+        {
+            str(record.get("instrument_id"))
+            for record in records
+            if str(record.get("instrument_id")) not in known
+        }
+    )
+    if unknown:
+        raise IngestError(
+            f"이번 수집에 없는 종목의 대표 상품 정보다: {unknown}. 그 종목의 거래대금이 없어 "
+            "일평균을 낼 수 없다"
+        )
+    return profiles_from_records(records, price_rows, data_deadline=deadline)
 
 
 def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
@@ -566,6 +626,7 @@ def _report(
     known_from: date | None,
     written: list[Path],
     loaded: dict[str, int] | None,
+    profiles: Sequence[InstrumentProfile],
 ) -> None:
     print(f"자료 버전: {dataset_id}")
     print(f"데이터 마감일: {deadline} (요청 종료일 {args.until})")
@@ -580,6 +641,12 @@ def _report(
         print(f"ETF 미수집 거래일: {len(etf.missed_dates)}일")
     for name in _TIMESERIES:
         print(f"  {name}: {len(tables[name])}행")
+    if profiles:
+        print(f"  instrument_profile: {len(profiles)}행 (최근 3개월 일평균 거래대금)")
+        for profile in profiles:
+            print(f"    {profile.instrument_id}: {profile.avg_daily_value_3m}원")
+    else:
+        print("  instrument_profile: 없음. --instrument-profiles로 지수 방법론·구성종목을 준다")
     if etf.unsupported_codes:
         # 저장 스키마가 담을 수 없는 종목코드다(6자리 숫자가 아닌 표기). 모아 두기만 하고
         # 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다
@@ -621,6 +688,9 @@ def run(args: argparse.Namespace) -> int:
         deadline,
         known_from,
     )
+    profiles = instrument_profiles(
+        args.instrument_profiles, tables["daily_price"], instrument_ids, deadline
+    )
 
     written: list[Path] = []
     for instrument_id, built in series.items():
@@ -652,6 +722,12 @@ def run(args: argparse.Namespace) -> int:
         # 자료 버전 → 시계열. 이 순서를 뒤집으면 저장소가 거부한다 (FR-017).
         store.publish_dataset_version(version)
         loaded = _load_all(store, dataset_id, tables)
+        if profiles:
+            # 시계열 다음이다. 이 표는 대표 ETF와 자료 버전을 bigint 외래 키로 가리키므로
+            # 예행(SQLite)에는 대응표 행이 없어 미리 넣어 볼 수 없다. 값 검사는
+            # instrument_profiles()가 이미 끝냈고 남은 것은 식별자 조회뿐이며, 조회가
+            # 실패하면 한 건도 넣지 않고 무엇이 없는지 말하는 오류가 난다.
+            loaded["instrument_profile"] = store.load_instrument_profiles(dataset_id, profiles)
 
     _report(
         dataset_id=dataset_id,
@@ -665,6 +741,7 @@ def run(args: argparse.Namespace) -> int:
         known_from=known_from,
         written=written,
         loaded=loaded,
+        profiles=profiles,
     )
     return 0
 
@@ -678,6 +755,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         krx.KrxError,
         gaps.GapError,
         CorporateActionError,
+        InstrumentProfileError,
         DatasetVersionError,
         repository.RepositoryError,
     ) as error:
