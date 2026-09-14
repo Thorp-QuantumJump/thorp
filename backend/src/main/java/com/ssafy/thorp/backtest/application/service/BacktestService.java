@@ -4,10 +4,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -47,6 +49,7 @@ public class BacktestService {
 
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
+    private final BacktestReuseEventRepository reuseEventRepository;
     private final StrategyRulesService strategyRulesService;
     private final CostProfileService costProfileService;
     private final EffectivePeriodCalculator effectivePeriodCalculator;
@@ -59,6 +62,7 @@ public class BacktestService {
     public BacktestService(
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
+            BacktestReuseEventRepository reuseEventRepository,
             StrategyRulesService strategyRulesService,
             CostProfileService costProfileService,
             EffectivePeriodCalculator effectivePeriodCalculator,
@@ -69,6 +73,7 @@ public class BacktestService {
             @Value("${thorp.backtest.engine-version}") String engineVersion) {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
+        this.reuseEventRepository = reuseEventRepository;
         this.strategyRulesService = strategyRulesService;
         this.costProfileService = costProfileService;
         this.effectivePeriodCalculator = effectivePeriodCalculator;
@@ -191,13 +196,6 @@ public class BacktestService {
     }
 
     /**
-     * 같은 조건의 실행이 이미 있다. 새로 계산하지 않고 요청만 붙인다.
-     *
-     * <p><b>여기까지가 T005의 몫이다.</b> 재사용 기록({@code backtest_reuse_event})과 동시 접수 경합의 재조회는 T010이 붙인다.
-     * 그때까지 이 분기가 없으면 같은 조건을 두 사람이 요청했을 때 부분 유니크 인덱스에 걸려 500이 난다 — 정상적인 사용자 행동이 500이 되는 것은 미룰 일이
-     * 아니다.
-     */
-    /**
      * 같은 조건의 살아 있는 실행에 합류(또는 완료 결과를 재사용)한다.
      *
      * <p><b>실행 행을 잠그고 최신 상태를 다시 본다.</b> 동일 버전 조회와 이 사이에 마지막 활성 요청이 취소해 CANCEL 이 나갔을 수 있는데, 그 실행에
@@ -229,6 +227,14 @@ public class BacktestService {
                                 command.executionType(),
                                 source,
                                 null));
+        // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.
+        reuseEventRepository.save(
+                BacktestReuseEvent.of(
+                        run.getId(),
+                        request.getId(),
+                        source,
+                        command.executionType(),
+                        clock.instant()));
         return Optional.of(BacktestJobResult.of(request, run));
     }
 
