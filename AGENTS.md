@@ -1,10 +1,10 @@
 # AGENTS.md — Team Quantum Jump
 
 > **최상위 규칙은 [`.specify/memory/constitution.md`](.specify/memory/constitution.md)이다.** 이 문서와
-> 파트 AGENTS.md는 constitution의 범위 안에서 운영 세부 규칙을 정한다. 충돌하면 constitution을 따르고
+> 파트 CLAUDE.md는 constitution의 범위 안에서 운영 세부 규칙을 정한다. 충돌하면 constitution을 따르고
 > 충돌한 문서를 고친다. 제품 방향·범위·결정(D01~D27)의 원본은 Notion 기획서다.
 
-AI(Codex 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰는 AI를 통해서만 진행하고,
+AI(Claude·Codex 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰는 AI를 통해서만 진행하고,
 발견된 문제는 해결한 후 Merge한다.
 
 ## 프로젝트 개요
@@ -34,7 +34,7 @@ AI(Codex 등)와 협업할 때 이 문서를 기준으로 한다. 코드리뷰�
 
 ## 모노레포 구조
 
-각 파트 폴더에 파트 전용 AGENTS.md가 있다. **해당 폴더 작업 시 그 파일의 규칙과 검증 명령을 따른다.**
+각 파트 폴더에 파트 전용 CLAUDE.md가 있다. **해당 폴더 작업 시 그 파일의 규칙과 검증 명령을 따른다.**
 
 
 - `frontend/` React 19 + Vite + TypeScript — FRONT 파트
