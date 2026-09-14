@@ -449,19 +449,26 @@ public class ParamSearchService {
     /**
      * 전략별 규칙 버전. <b>004가 준 값을 그대로 고정한다</b> — 007이 버전을 고르면 004 등록표와 갈리고, 발행할 때마다 다시 읽으면 묶음 안의 후보들이
      * 서로 다른 규칙으로 계산된다(FR-012).
+     *
+     * <p><b>기준 전략도 담는다.</b> 기준은 사용자가 고른 전략이 아니라 등록표가 지정한 역할이라 {@code targetIds}에 없다(FR-013d). 빠뜨리면
+     * 기준 발행이 규칙 버전 {@code null}로 004에 가서 접수 전체가 422로 죽는다 — 요청 전략에 기준이 우연히 섞이지 않는 한 <b>모든 접수</b>가
+     * 그렇다.
      */
     private static Map<String, String> rulesVersions(Preflight preflight) {
         Map<String, String> supported = preflight.targets().rulesVersionByStrategy();
+        List<String> needed = new ArrayList<>(preflight.targetIds());
+        String baselineStrategyId = preflight.baselineStrategyId();
+        if (baselineStrategyId != null && !needed.contains(baselineStrategyId)) {
+            needed.add(baselineStrategyId);
+        }
         Map<String, String> versions = new LinkedHashMap<>();
-        preflight
-                .targetIds()
-                .forEach(
-                        strategyId -> {
-                            String version = supported.get(strategyId);
-                            if (version != null) {
-                                versions.put(strategyId, version);
-                            }
-                        });
+        needed.forEach(
+                strategyId -> {
+                    String version = supported.get(strategyId);
+                    if (version != null) {
+                        versions.put(strategyId, version);
+                    }
+                });
         return versions;
     }
 

@@ -48,14 +48,16 @@ public class ParamSearchController {
     public ResponseEntity<ApiResponse<ParamSearchPreviewResponse>> preview(
             @Valid @RequestBody ParamSearchPreviewRequest request, HttpServletRequest http) {
         ParamSearchPreviewResult result =
-                paramSearchService.preview(request.toCommand(requesterId(http)));
+                paramSearchService.preview(request.toCommand(optionalRequesterId(http)));
         return ResponseEntity.ok(ApiResponse.ok(ParamSearchPreviewResponse.from(result)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ParamSearchResponse>> create(
             @Valid @RequestBody ParamSearchCreateRequest request, HttpServletRequest http) {
-        ParamSearchResult result = paramSearchService.create(request.toCommand(requesterId(http)));
+        ParamSearchResult result =
+                paramSearchService.create(
+                        request.toCommand(currentRequester.requireRequesterId(http)));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(ParamSearchResponse.accepted(result)));
     }
@@ -67,12 +69,16 @@ public class ParamSearchController {
     }
 
     /**
-     * 요청자 식별. 인증(spec 014) 전에는 개발용 헤더를 켠 환경에서만 값이 있고 기본은 null이다(research R4).
+     * 저장하지 않는 경로의 요청자. 인증(spec 014) 전에는 개발용 헤더를 켠 환경에서만 값이 있고 기본은 null이다(research R4).
      *
-     * <p>{@code requireRequesterId}를 쓰지 않는 이유: 자동 탐색은 아직 소유자 필터가 없어(006에서 붙는다) 헤더가 없다고 접수를 막을 근거가
-     * 없다. 소유자는 묶음에 그대로 기록되고, 필터가 붙는 시점에 이 메서드만 바꾼다.
+     * <p>미리보기만 이걸 쓴다. 아무것도 저장하지 않고 아무 실행도 만들지 않으므로 요청자를 몰라도 성립한다.
+     *
+     * <p><b>접수는 {@code requireRequesterId}를 쓴다.</b> 접수는 기준 1건과 후보를 004 접수 유스케이스로 넘기는데 {@code
+     * backtest_request.requester_id}가 NOT NULL이다(spec 004 R-12). 요청자 없이 진행하면 발행 직전에 처리되지 않은
+     * NullPointerException으로 죽어 사용자에게 500이 나간다 — "소유자 필터가 없다"는 것과 "요청자를 몰라도 실행을 만들 수 있다"는 것은 다른
+     * 말이다.
      */
-    private Long requesterId(HttpServletRequest http) {
+    private Long optionalRequesterId(HttpServletRequest http) {
         return currentRequester.findRequesterId(http).orElse(null);
     }
 }
