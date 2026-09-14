@@ -63,7 +63,10 @@ pipeline {
                         # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
                         #              post 단계에서 git merge --abort 로 되돌린다.
                         # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
-                        if ! git merge --no-commit --no-ff origin/dev; then
+                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
+                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
+                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
+                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then
                             echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
                             exit 1
                         fi
