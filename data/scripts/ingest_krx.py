@@ -182,9 +182,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "대표 상품 정보 JSON 파일(선택). "
-            '[{"instrumentId": ..., "indexMethodologySummary": "...", '
-            '"holdingsOverlap": {"asOfCurrentComposition": true, '
-            '"topHoldings": [{"name": "삼성전자", "weight": "0.2431"}]}}] 모양이다. '
+            '[{"instrument_id": "069500.XKRX", "index_methodology_summary": "...", '
+            '"holdings_overlap": {"as_of_current_composition": true, '
+            '"top_holdings": [{"name": "삼성전자", "weight": "0.2431"}]}}] 모양이며 '
+            "열 이름은 snake_case다. "
             "지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 "
             "같이 파일로 받는다. 일평균 거래대금은 이 파일이 아니라 방금 만든 daily_price의 "
             "거래대금에서 계산한다 (FR-015)"
@@ -336,6 +337,8 @@ def resolve_actions_known_from(path: Path | None, declared: date | None) -> date
     if path is None or declared is None:
         return ACTIONS_KNOWN_FROM_NEVER
     return declared
+
+
 def instrument_profiles(
     path: Path | None,
     price_rows: Sequence[dict[str, Any]],
@@ -343,6 +346,10 @@ def instrument_profiles(
     deadline: date,
 ) -> list[InstrumentProfile]:
     """대표 상품 정보 JSON과 방금 만든 가격 행으로 대표 상품 정보를 만든다 (FR-015).
+
+    **열 이름은 snake_case다.** ``--listing``·``--corporate-actions``와 같은 규약이며, 중첩된
+    ``holdings_overlap`` 안의 이름도 마찬가지다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을
+    대상으로 한 것이라 파이프라인 입력 파일에는 해당하지 않는다.
 
     파일이 없으면 빈 목록이고, 그러면 ``instrument_profile``에 아무것도 넣지 않는다. 조회 API는
     그 상태를 빈 값이 아니라 ``INSTRUMENT_PROFILE_NOT_READY``(409)로 구분한다
@@ -359,9 +366,9 @@ def instrument_profiles(
     records = _records_from_json(path, "대표 상품 정보")
     unknown = sorted(
         {
-            str(record.get("instrumentId"))
+            str(record.get("instrument_id"))
             for record in records
-            if str(record.get("instrumentId")) not in known
+            if str(record.get("instrument_id")) not in known
         }
     )
     if unknown:

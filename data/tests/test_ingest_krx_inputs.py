@@ -28,6 +28,7 @@ from data_pipeline.corporate_actions import (
     corporate_actions_from_records,
 )
 from data_pipeline.gaps import REASON_MISSING_CORPORATE_ACTION, build_instrument_series
+from data_pipeline.instrument_profile import InstrumentProfileError
 from data_pipeline.krx import DailyQuote, ListingWindow
 from data_pipeline.reconciliation import listing_windows_from_records
 
@@ -60,6 +61,56 @@ CAMEL_ACTION_RECORDS = [
         "amount": "120",
         "payDate": "2026-09-10",
     },
+]
+
+
+SUMMARY = "KRX 반도체 지수를 추종하며 유동시가총액 가중으로 구성종목을 담는다."
+PROFILE_RECORDS = [
+    {
+        "instrument_id": INSTRUMENT_ID,
+        "index_methodology_summary": SUMMARY,
+        "holdings_overlap": {
+            "as_of_current_composition": True,
+            "top_holdings": [{"name": "삼성전자", "weight": "0.2431"}],
+        },
+    },
+]
+CAMEL_PROFILE_RECORDS = [
+    {
+        "instrumentId": INSTRUMENT_ID,
+        "indexMethodologySummary": SUMMARY,
+        "holdingsOverlap": {
+            "asOfCurrentComposition": True,
+            "topHoldings": [{"name": "삼성전자", "weight": "0.2431"}],
+        },
+    },
+]
+#: 바깥은 맞게 적고 안쪽만 옛 표기로 적은 파일. 중첩된 객체를 가진 유일한 입력이라 따로 본다.
+CAMEL_OVERLAP_PROFILE_RECORDS = [
+    {
+        "instrument_id": INSTRUMENT_ID,
+        "index_methodology_summary": SUMMARY,
+        "holdings_overlap": {
+            "asOfCurrentComposition": True,
+            "topHoldings": [{"name": "삼성전자", "weight": "0.2431"}],
+        },
+    },
+]
+#: 일평균 거래대금의 근거. 대표 상품 정보는 파일이 아니라 이 행에서 그 값을 만든다 (FR-015).
+PROFILE_PRICE_ROWS: list[dict[str, object]] = [
+    {
+        "instrument_id": INSTRUMENT_ID,
+        "date": day,
+        "open": Decimal(close),
+        "high": Decimal(close),
+        "low": Decimal(close),
+        "close": Decimal(close),
+        "volume": 1000,
+        "value": 1000 * int(close),
+        "adjusted_close": Decimal(close),
+        "adjustment_factor": Decimal(1),
+    }
+    for day, close in zip(DAYS, CLOSES, strict=True)
 ]
 
 
@@ -133,14 +184,51 @@ class TestInputFileKeys:
         with pytest.raises(ingest_krx.IngestError, match="ex_date"):
             ingest_krx.corporate_actions(path)
 
+    def test_instrument_profile_file_uses_snake_case(self, tmp_path: Path) -> None:
+        path = write_json(tmp_path / "profiles.json", PROFILE_RECORDS)
+        (profile,) = ingest_krx.instrument_profiles(
+            path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1]
+        )
+        assert profile.instrument_id == INSTRUMENT_ID
+        assert profile.index_methodology_summary == SUMMARY
+        assert profile.holdings.as_of_current is True
+        assert [holding.name for holding in profile.holdings.holdings] == ["삼성전자"]
+
+    def test_a_camel_case_profile_file_is_refused(self, tmp_path: Path) -> None:
+        # 옛 표기의 파일은 종목을 가리킬 instrument_id가 비어 있는 것으로 읽힌다. 조용히 받아
+        # 주면 규약을 믿고 snake_case로 적은 사용자가 거부당하는 상태가 남는다.
+        path = write_json(tmp_path / "profiles.json", CAMEL_PROFILE_RECORDS)
+        with pytest.raises(ingest_krx.IngestError, match="대표 상품 정보"):
+            ingest_krx.instrument_profiles(path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1])
+
+    def test_camel_case_keys_inside_the_profile_payload_are_refused(self, tmp_path: Path) -> None:
+        # 중첩된 객체를 가진 유일한 입력 파일이라 안쪽 이름도 함께 굳힌다. 모르는 키는 버려지지
+        # 않고 거부되므로, 표기가 갈라지면 파일을 쓰는 사람이 바로 알게 된다.
+        path = write_json(tmp_path / "profiles.json", CAMEL_OVERLAP_PROFILE_RECORDS)
+        with pytest.raises(InstrumentProfileError, match="모르는 키"):
+            ingest_krx.instrument_profiles(path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1])
+
     def test_the_help_text_shows_the_same_keys(self) -> None:
         # 인자 설명이 사용자가 파일을 만들 때 보는 유일한 안내다. 여기에 옛 표기가 남으면
         # 코드가 받지 않는 파일을 만들게 된다.
         help_text = ingest_krx.build_parser().format_help()
-        for camel in ("instrumentId", "listedOn", "delistedOn", "exDate", "payDate", "eventType"):
+        for camel in (
+            "instrumentId",
+            "listedOn",
+            "delistedOn",
+            "exDate",
+            "payDate",
+            "eventType",
+            "indexMethodologySummary",
+            "holdingsOverlap",
+            "asOfCurrentComposition",
+            "topHoldings",
+        ):
             assert camel not in help_text, f"인자 설명에 옛 표기가 남아 있다: {camel}"
         assert '"instrument_id"' in help_text
         assert '"ex_date"' in help_text
+        assert '"holdings_overlap"' in help_text
+        assert '"top_holdings"' in help_text
 
 
 class TestMissingCorporateActionFile:

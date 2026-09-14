@@ -81,11 +81,11 @@ def overlap(as_of_current: bool = True) -> HoldingsOverlap:
 
 def record(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "instrumentId": INSTRUMENT_ID,
-        "indexMethodologySummary": SUMMARY,
-        "holdingsOverlap": {
-            "asOfCurrentComposition": True,
-            "topHoldings": [
+        "instrument_id": INSTRUMENT_ID,
+        "index_methodology_summary": SUMMARY,
+        "holdings_overlap": {
+            "as_of_current_composition": True,
+            "top_holdings": [
                 {"name": "삼성전자", "weight": "0.2431"},
                 {"name": "SK하이닉스", "weight": "0.2107"},
             ],
@@ -260,15 +260,15 @@ class TestHoldingsOverlap:
 
 class TestFileInput:
     def test_payload_is_parsed(self) -> None:
-        built = holdings_overlap_from_payload(record()["holdingsOverlap"], "항목")
+        built = holdings_overlap_from_payload(record()["holdings_overlap"], "항목")
 
         assert built.as_of_current is True
         assert built.holdings[0].name == "삼성전자"
 
     def test_numeric_weight_is_rejected(self) -> None:
         payload = {
-            "asOfCurrentComposition": True,
-            "topHoldings": [{"name": "가", "weight": 0.2431}],
+            "as_of_current_composition": True,
+            "top_holdings": [{"name": "가", "weight": 0.2431}],
         }
 
         with pytest.raises(InstrumentProfileError, match="문자열"):
@@ -276,16 +276,16 @@ class TestFileInput:
 
     def test_missing_as_of_flag_is_rejected(self) -> None:
         """현재 구성 기준인지 말하지 않은 채로는 만들 수 없다 (FR-015)."""
-        payload = {"topHoldings": [{"name": "가", "weight": "0.2"}]}
+        payload = {"top_holdings": [{"name": "가", "weight": "0.2"}]}
 
-        with pytest.raises(InstrumentProfileError, match="asOfCurrentComposition"):
+        with pytest.raises(InstrumentProfileError, match="as_of_current_composition"):
             holdings_overlap_from_payload(payload, "항목")
 
     def test_a_false_as_of_flag_is_rejected(self) -> None:
         """과거 구성 이력을 주는 원천이 없으므로 당시 구성을 재현했다고 표현할 수 없다 (FR-015)."""
         payload = {
-            "asOfCurrentComposition": False,
-            "topHoldings": [{"name": "가", "weight": "0.2"}],
+            "as_of_current_composition": False,
+            "top_holdings": [{"name": "가", "weight": "0.2"}],
         }
 
         with pytest.raises(InstrumentProfileError, match="참이어야 한다"):
@@ -322,7 +322,7 @@ class TestFileInput:
         """추적 차이는 계산 정의가 PD-21로 남아 이번 범위에서 뺐다. 조용히 버리지 않고 거부한다."""
         with pytest.raises(InstrumentProfileError, match="PD-21"):
             profiles_from_records(
-                [record(trackingDifference="0.0021")],
+                [record(tracking_difference="0.0021")],
                 [price_row(DEADLINE, value=1_000)],
                 data_deadline=DEADLINE,
             )
@@ -331,7 +331,7 @@ class TestFileInput:
         """일평균 거래대금은 파일이 들고 올 수 없다. 두 곳에서 만든 숫자는 갈라져도 모른다."""
         with pytest.raises(InstrumentProfileError, match="모르는 키"):
             profiles_from_records(
-                [record(avgDailyValue3m="1240000000")],
+                [record(avg_daily_value_3m="1240000000")],
                 [price_row(DEADLINE, value=1_000)],
                 data_deadline=DEADLINE,
             )
@@ -347,7 +347,7 @@ class TestFileInput:
     def test_bad_instrument_id_is_rejected(self) -> None:
         with pytest.raises(InstrumentProfileError, match="XKRX"):
             profiles_from_records(
-                [record(instrumentId="091160")],
+                [record(instrument_id="091160")],
                 [price_row(DEADLINE, value=1_000)],
                 data_deadline=DEADLINE,
             )
