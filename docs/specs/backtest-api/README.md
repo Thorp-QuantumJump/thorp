@@ -88,12 +88,12 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 
 ## 1.6 재시도 — `POST /backtests/{backtestId}/retry`
 
-`202` `{backtestId, status, resultSource, retryOf}`. 실패하거나 취소한 분석을 **같은 조건으로 다시 접수**한다(spec 004 T010, FR-009).
+`202` `{backtestId, status, resultSource, retryOf}`. 실패하거나 취소한 분석을 **같은 조건으로 다시 접수**한다(spec 004 T010, FR-002).
 `backtestId`는 새로 만들어진 요청의 것이고 `retryOf`가 원본이다.
 
 - **재시도도 접수를 다시 탄다.** 실행을 복제하지 않고 저장해 둔 요청 사본(`backtest_run.request_spec`)을 접수 명령으로 되돌려 `POST /backtests`와
   같은 경로를 태운다. 그래서 그 사이 전략 등록표가 내려갔으면 `422 RULES_NOT_REGISTERED`이고, 같은 조건을 이미 누가 돌리고 있으면 새로 계산하지
-  않고 `resultSource: "JOINED"`(완료돼 있으면 `REUSED`)다.
+  않고 `resultSource: "JOINED"`(완료돼 있으면 `REUSED`)다 — 동일 버전 판정은 재시도에도 그대로 적용된다(FR-003).
 - 비용 조건 버전은 원본 실행의 것을 그대로 쓴다. "같은 조건을 다시"이지 "지금 기본값으로 새로"가 아니다 — 기본 프로필이 바뀐 것을 조용히 따라가면
   비교하려던 두 결과의 비용 전제가 달라진다. 자료 버전은 반대로 지금 값을 쓴다(자료가 늘었으면 그것은 다른 계산이다).
 - 요청자 본인만(남의 요청은 404). 끝나지 않았거나(`QUEUED`·`RUNNING`) 성공한(`COMPLETED`) 분석은 `409 NOT_RETRYABLE`.
@@ -102,7 +102,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 ## 1.7 시스템 장애로 끊긴 실행
 
 작업 메시지가 브로커의 재전달 상한(`x-delivery-limit=1`)을 다 쓰면 DLQ로 가고, 백엔드는 그것을 세어 **발행한 메시지가 전부 죽었을 때만**
-실행을 `FAILED`(`error.code: "SYSTEM_FAILURE"`)로 끝낸다(R-18 ③). confirm 유실로 같은 실행의 메시지가 둘 생겼을 때 한쪽만 죽은 것으로
+실행을 `FAILED`(`error.code: "SYSTEM_FAILURE"`)로 끝낸다(FR-002, R-18 ③). confirm 유실로 같은 실행의 메시지가 둘 생겼을 때 한쪽만 죽은 것으로
 살아 있는 실행을 끊지 않기 위해서다.
 
 이렇게 끝난 실행에는 **결과 행이 없다** — 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다. 상세는 `200`이고 `error`에 실행 행의 실패 사유가
