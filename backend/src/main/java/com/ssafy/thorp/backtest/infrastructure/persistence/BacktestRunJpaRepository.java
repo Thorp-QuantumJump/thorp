@@ -1,12 +1,14 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -64,6 +66,21 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update BacktestRunJpaEntity r set r.publishCount = r.publishCount + 1 where r.id = :id")
     int incrementPublishCount(@Param("id") Long id);
+
+    /** 취소 경로: 실행 행을 잠근 채 활성 요청 수를 세고 갱신한다(R-04). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from BacktestRunJpaEntity r where r.id = :id")
+    Optional<BacktestRunJpaEntity> lockById(@Param("id") Long id);
+
+    /** 이벤트 처리: 상태 전이를 취소와 같은 행 잠금으로 직렬화한다(R-04). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from BacktestRunJpaEntity r where r.backtestId = :backtestId")
+    Optional<BacktestRunJpaEntity> lockByBacktestId(@Param("backtestId") String backtestId);
+
+    /** 마지막 활성 요청의 취소 시각. 이 컬럼만 건드린다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update BacktestRunJpaEntity r set r.cancelRequestedAt = :at where r.id = :id")
+    int markCancelRequested(@Param("id") Long id, @Param("at") Instant at);
 
     /** 발행 confirm 시각. 이 컬럼만 건드려 상태 전이와 부딪히지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

@@ -287,7 +287,20 @@ class BacktestEventValidatorTest {
                 // 계약 §4.3에서 run.partial 생략은 false다. payload가 true인데 키가 없으면 모순이다
                 violation(
                         "payload.engineOutput.run.partial",
-                        n -> at(n, EO + "/run").remove("partial")));
+                        n -> at(n, EO + "/run").remove("partial")),
+                // 완료 범위는 세 곳에 같은 값이어야 한다 — 어긋나면 화면의 완료 날짜와 실제 요약·시계열 범위가 다르다
+                violation(
+                        "payload.engineOutput.run.lastTradingDate",
+                        n -> at(n, EO + "/run").put("lastTradingDate", "2025-02-14")),
+                violation(
+                        "payload.engineOutput.portfolioSeries",
+                        n -> {
+                            at(n, "/payload").put("lastTradingDate", "2025-03-26");
+                            at(n, EO + "/run").put("lastTradingDate", "2025-03-26");
+                        }),
+                violation(
+                        "payload.engineOutput.portfolioSeries",
+                        n -> at(n, EO).putArray("portfolioSeries")));
     }
 
     @ParameterizedTest(name = "{0}")

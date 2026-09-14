@@ -140,7 +140,11 @@ public class BacktestService {
 
         Optional<BacktestRun> active = runRepository.findActiveByDedupKey(dedupKey);
         if (active.isPresent()) {
-            return joinExisting(command, active.get());
+            Optional<BacktestJobResult> joined = joinExisting(command, active.get().getId());
+            if (joined.isPresent()) {
+                return joined.get();
+            }
+            // 잠근 뒤 보니 종결된 실행이었다. 부분 유니크 인덱스가 같은 키의 새 실행을 허용하므로 아래에서 만든다.
         }
 
         Map<String, Object> versions = versions(costProfile, command.rulesVersion(), dataVersion);
@@ -193,7 +197,28 @@ public class BacktestService {
      * 그때까지 이 분기가 없으면 같은 조건을 두 사람이 요청했을 때 부분 유니크 인덱스에 걸려 500이 난다 — 정상적인 사용자 행동이 500이 되는 것은 미룰 일이
      * 아니다.
      */
-    private BacktestJobResult joinExisting(CreateBacktestCommand command, BacktestRun run) {
+    /**
+     * 같은 조건의 살아 있는 실행에 합류(또는 완료 결과를 재사용)한다.
+     *
+     * <p><b>실행 행을 잠그고 최신 상태를 다시 본다.</b> 동일 버전 조회와 이 사이에 마지막 활성 요청이 취소해 CANCEL 이 나갔을 수 있는데, 그 실행에
+     * 붙이면 취소하지 않은 이 요청까지 부분 결과로 끝난다(R-04). 취소 경로도 같은 행을 잠그므로 둘은 직렬화되고 어느 쪽이 이기든 답이 하나로 정해진다 — 취소가
+     * 먼저면 이 접수는 {@code CANCEL_PENDING}, 접수가 먼저면 그 취소는 마지막 요청이 아니게 되어 실행이 계속 돈다.
+     *
+     * @return 빈 값 = 잠근 뒤 보니 종결된 실행이라 재사용 대상이 아니다(호출자가 새 실행을 만든다)
+     */
+    private Optional<BacktestJobResult> joinExisting(CreateBacktestCommand command, Long runId) {
+        BacktestRun run = runRepository.findByIdForUpdate(runId).orElse(null);
+        if (run == null || !isReusable(run.getStatus())) {
+            return Optional.empty();
+        }
+        if (run.getLifecycle().cancelRequestedAt() != null) {
+            // 마지막 활성 요청이 취소해 CANCEL 을 보낸 실행이다. 워커가 다음 거래일에 멈추고 FINISHED(CANCELLED)를 보내면
+            // 종결된다 — 여기에 합류시키면 취소하지 않은 이 요청까지 부분 결과로 끝난다(R-04). 새 실행은 동일 버전
+            // 부분 유니크 인덱스(status IN QUEUED·RUNNING·COMPLETED) 때문에 그때까지 만들 수 없으니 잠시 뒤 다시 오게 한다.
+            throw new BusinessException(
+                    ErrorCode.CANCEL_PENDING,
+                    "같은 조건의 실행이 취소 처리 중입니다: runId=" + run.getBacktestId().value());
+        }
         ResultSource source =
                 run.getStatus() == RunStatus.COMPLETED ? ResultSource.REUSED : ResultSource.JOINED;
         BacktestRequest request =
@@ -204,7 +229,14 @@ public class BacktestService {
                                 command.executionType(),
                                 source,
                                 null));
-        return BacktestJobResult.of(request, run);
+        return Optional.of(BacktestJobResult.of(request, run));
+    }
+
+    /** 동일 버전 부분 유니크 인덱스 {@code uk_backtest_run_dedup_active} 와 같은 상태 집합이다. */
+    private static boolean isReusable(RunStatus status) {
+        return status == RunStatus.QUEUED
+                || status == RunStatus.RUNNING
+                || status == RunStatus.COMPLETED;
     }
 
     @Transactional(readOnly = true)

@@ -1,8 +1,9 @@
 """워커 엔트리포인트: ``python -m worker.main``.
 
 RabbitMQ ``backtest.jobs`` 를 소비해 백테스트 엔진을 실행하고 ``backtest.events`` 로
-STARTED / PROGRESS / FINISHED를 발행한다. 같은 코드를 여러 프로세스/컨테이너로 실행해
-수평 확장한다(competing consumers, prefetch 1).
+STARTED / PROGRESS / FINISHED를 발행한다. 별도 스레드가 ``backtest.control`` 의 CANCEL 을 받아
+실행 중인 백테스트를 다음 거래일 처리 시점에 멈춘다(R-04). 같은 코드를 여러 프로세스/컨테이너로
+실행해 수평 확장한다(competing consumers, prefetch 1).
 
 토폴로지 선언은 백엔드 책임이므로(계약 README §2) 큐가 없으면 만들지 않고 종료한다.
 접속 정보는 환경변수 ``RABBITMQ_URL``(브로커)·``MARKET_DATA_URL``(시장 자료 DB, 읽기 전용)로만
@@ -14,6 +15,7 @@ import logging
 from pika.exceptions import AMQPError
 
 from worker.config import settings
+from worker.control import CancelRegistry
 from worker.engine_runner import PortfolioBacktestEngine
 from worker.market_data import PostgresMarketDataProvider
 from worker.rabbitmq import QueueMissingError, run_consumer
@@ -30,9 +32,13 @@ def main() -> int:
         logger.error("MARKET_DATA_URL is not set; the worker reads market data only from 001's DB")
         return 1
     # 엔진 인스턴스는 여러 실행에서 재사용한다. 생성자는 접속하지 않는다(실행마다 읽기 전용 접속).
-    engine = PortfolioBacktestEngine(PostgresMarketDataProvider(settings.market_data_url))
+    # 취소 표시는 제어 스레드가 쓰고 엔진이 읽는다. 둘이 같은 레지스트리를 봐야 취소가 닿는다(R-04).
+    registry = CancelRegistry()
+    engine = PortfolioBacktestEngine(
+        PostgresMarketDataProvider(settings.market_data_url), cancel_registry=registry
+    )
     try:
-        run_consumer(settings.rabbitmq_url, engine)
+        run_consumer(settings.rabbitmq_url, engine, registry)
     except QueueMissingError as exc:
         logger.error("%s", exc)
         return 1

@@ -13,6 +13,8 @@
 .brand,
 .desktopNav,
 .desktopNav a,
+.accountLinks,
+.recordsLink,
 .authLink,
 .authState,
 .drawerHeader,
@@ -117,14 +119,26 @@
   color: var(--thorp-accent-soft);
 }
 
+.accountLinks {
+  gap: 14px;
+  justify-self: end;
+}
+
+.recordsLink,
 .authLink {
   gap: 7px;
-  justify-self: end;
-  padding-right: 16px;
   color: var(--thorp-copy);
   font-size: 0.78rem;
   font-weight: 630;
   text-decoration: none;
+}
+
+.authLink {
+  padding-right: 16px;
+}
+
+.recordsLink[aria-current='page'] {
+  color: var(--thorp-accent-soft);
 }
 
 .authState {
@@ -134,6 +148,7 @@
   font-size: 0.76rem;
 }
 
+.recordsLink:hover,
 .authLink:hover {
   color: var(--thorp-accent-soft);
 }
@@ -141,6 +156,7 @@
 .menuButton:focus-visible,
 .brand:focus-visible,
 .desktopNav a:focus-visible,
+.recordsLink:focus-visible,
 .authLink:focus-visible,
 .drawer button:focus-visible,
 .drawer a:focus-visible {
@@ -272,6 +288,11 @@
   text-decoration: none;
 }
 
+.drawerRecords {
+  margin-top: 18px;
+  border-top-color: var(--thorp-line);
+}
+
 @media (max-width: 720px) {
   .inner {
     grid-template-columns: 1fr auto;
@@ -284,10 +305,16 @@
 }
 
 @media (max-width: 420px) {
+  .accountLinks {
+    gap: 10px;
+  }
+
+  .recordsLink,
   .authLink {
     font-size: 0;
   }
 
+  .recordsLink svg,
   .authLink svg {
     width: 20px;
     height: 20px;

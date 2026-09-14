@@ -23,6 +23,7 @@ public record BacktestDetailResponse(
         RunStatus status,
         ResultSource resultSource,
         boolean partial,
+        boolean cancelRequested,
         Progress progress,
         Instant queuedAt,
         Instant startedAt,
@@ -93,6 +94,7 @@ public record BacktestDetailResponse(
                 result.status(),
                 result.resultSource(),
                 result.partial(),
+                result.cancelRequested(),
                 result.progress() == null
                         ? null
                         : new Progress(

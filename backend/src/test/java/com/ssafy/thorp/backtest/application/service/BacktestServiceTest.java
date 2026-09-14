@@ -224,6 +224,7 @@ class BacktestServiceTest {
     void joinsActiveRun() {
         BacktestRun running = saved(runningRun(), 11L);
         when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(running));
+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(running));
 
         BacktestJobResult result = service.create(fixedWeight());
 
@@ -233,9 +234,61 @@ class BacktestServiceTest {
     }
 
     @Test
+    @DisplayName("취소 대기 중인 실행(CANCEL 을 보냈고 FINISHED 전)에는 합류하지 않는다 — 409 CANCEL_PENDING")
+    void doesNotJoinACancelPendingRun() {
+        BacktestRun running = saved(runningRun(), 11L);
+        BacktestRun cancelPending =
+                running.withLifecycle(running.getLifecycle().cancelRequested(NOW.minusSeconds(5)));
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(cancelPending));
+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(cancelPending));
+
+        assertThatThrownBy(() -> service.create(fixedWeight()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.CANCEL_PENDING);
+        verify(requestRepository, never()).save(any());
+        verify(runRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("동일 버전 조회 뒤 잠그기 전에 취소되면 잠근 뒤 다시 본 상태로 판단한다 — 그 사이 붙는 합류를 막는다")
+    void reChecksTheRunUnderLockBeforeJoining() {
+        BacktestRun running = saved(runningRun(), 11L);
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(running));
+        // 잠금을 얻고 다시 읽으니 그 사이 마지막 요청이 취소했다
+        when(runRepository.findByIdForUpdate(11L))
+                .thenReturn(
+                        Optional.of(
+                                running.withLifecycle(
+                                        running.getLifecycle().cancelRequested(NOW))));
+
+        assertThatThrownBy(() -> service.create(fixedWeight()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.CANCEL_PENDING);
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("잠근 뒤 보니 종결된 실행이면 재사용 대상이 아니다 — 같은 키로 새 실행을 만든다(부분 유니크 인덱스가 허용한다)")
+    void createsANewRunWhenTheCandidateFinishedBeforeTheLock() {
+        BacktestRun running = saved(runningRun(), 11L);
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(running));
+        when(runRepository.findByIdForUpdate(11L))
+                .thenReturn(Optional.of(running.markFailed("SYSTEM_FAILURE", "worker gone")));
+
+        BacktestJobResult result = service.create(fixedWeight());
+
+        assertThat(result.resultSource()).isEqualTo(ResultSource.NEW);
+        verify(runRepository).save(any());
+    }
+
+    @Test
     @DisplayName("완료된 실행이 있으면 결과를 재사용한다 — 상태가 이미 COMPLETED다")
     void reusesCompletedRun() {
         when(runRepository.findActiveByDedupKey(any()))
+                .thenReturn(Optional.of(saved(completedRun(), 11L)));
+        when(runRepository.findByIdForUpdate(11L))
                 .thenReturn(Optional.of(saved(completedRun(), 11L)));
 
         BacktestJobResult result = service.create(fixedWeight());

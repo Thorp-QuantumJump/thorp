@@ -17,10 +17,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
+import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
+import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
@@ -31,6 +33,8 @@ import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -81,6 +85,7 @@ class BacktestControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockitoBean private BacktestService backtestService;
     @MockitoBean private BacktestResultQueryService queryService;
+    @MockitoBean private BacktestCancelService cancelService;
 
     private static BacktestJobResult accepted() {
         return new BacktestJobResult(
@@ -215,6 +220,7 @@ class BacktestControllerTest {
                 status,
                 ResultSource.NEW,
                 false,
+                false,
                 new BacktestDetailResult.Progress(
                         ProgressStage.COMPUTING, LocalDate.of(2024, 6, 28), 120, 360),
                 Instant.parse("2026-09-11T04:00:00Z"),
@@ -326,6 +332,36 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.data.partial").value(true))
                 .andExpect(jsonPath("$.data.items[0].kind").value("HALT_DEFERRED"))
                 .andExpect(jsonPath("$.data.items[0].instrumentId").value("091160.XKRX"));
+    }
+
+    @Test
+    @DisplayName("취소는 202 와 {backtestId, status, cancelRequested} 를 돌려준다")
+    void cancelAccepted() throws Exception {
+        when(cancelService.cancel(eq(BACKTEST_ID), anyLong()))
+                .thenReturn(new BacktestCancelResult(BACKTEST_ID, RunStatus.CANCELLED, true));
+
+        mockMvc.perform(
+                        post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.cancelRequested").value(true));
+    }
+
+    @Test
+    @DisplayName("끝난 분석의 취소는 409 NOT_CANCELLABLE 이고 요청자 헤더가 없으면 400 이다")
+    void cancelRejections() throws Exception {
+        when(cancelService.cancel(eq(BACKTEST_ID), anyLong()))
+                .thenThrow(new BusinessException(ErrorCode.NOT_CANCELLABLE));
+
+        mockMvc.perform(
+                        post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));
+        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
