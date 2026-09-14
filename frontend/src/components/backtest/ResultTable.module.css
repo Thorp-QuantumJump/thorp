@@ -58,8 +58,8 @@
 
 .strategyButton:focus-visible {
   border-radius: 4px;
-  outline: 2px solid var(--thorp-accent);
-  outline-offset: 3px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset);
 }
 
 .dot,

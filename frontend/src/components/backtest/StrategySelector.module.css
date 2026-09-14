@@ -24,8 +24,8 @@
 }
 
 .strategy:focus-visible {
-  outline: 3px solid rgb(3 199 90 / 26%);
-  outline-offset: 2px;
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
 }
 
 .marker {

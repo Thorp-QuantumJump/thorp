@@ -5,7 +5,6 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
-  color-scheme: dark;
   --market-surface: var(--thorp-surface-raised);
   --market-ink: var(--thorp-foreground);
   --market-copy: var(--thorp-copy);

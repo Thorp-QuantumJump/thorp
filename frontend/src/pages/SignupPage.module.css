@@ -108,7 +108,7 @@
 
 .intro h1:focus-visible {
   border-radius: 4px;
-  box-shadow: 0 0 0 3px rgb(3 199 90 / 28%);
+  box-shadow: var(--thorp-focus-shadow);
 }
 
 .intro p {
@@ -141,7 +141,7 @@
 
 .panelHeading h2:focus-visible {
   border-radius: 3px;
-  box-shadow: 0 0 0 3px rgb(3 199 90 / 28%);
+  box-shadow: var(--thorp-focus-shadow);
 }
 
 .stepProgress {
@@ -298,8 +298,8 @@
 .backLink:focus-visible,
 .loginPrompt a:focus-visible {
   border-radius: 4px;
-  outline: 3px solid rgb(3 199 90 / 30%);
-  outline-offset: 3px;
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
 }
 
 @media (max-width: 900px) {

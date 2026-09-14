@@ -161,8 +161,8 @@
 .drawer button:focus-visible,
 .drawer a:focus-visible {
   border-radius: 8px;
-  outline: 3px solid rgb(3 199 90 / 30%);
-  outline-offset: 3px;
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
 }
 
 .menuLayer {

@@ -90,8 +90,8 @@
 
 .chartTabs button:focus-visible,
 .pauseButton:focus-visible {
-  outline: 2px solid rgb(3 199 90 / 38%);
-  outline-offset: 2px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
 }
 
 .pauseButton {

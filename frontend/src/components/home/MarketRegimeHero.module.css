@@ -93,7 +93,7 @@
 
 .driver > span {
   color: var(--market-muted);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--thorp-font-mono);
   font-size: 0.63rem;
   font-weight: 650;
 }

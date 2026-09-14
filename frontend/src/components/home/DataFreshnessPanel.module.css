@@ -25,7 +25,7 @@
 }
 
 .details summary:focus-visible {
-  outline: 3px solid rgb(3 199 90 / 28%);
+  outline: var(--thorp-focus-outline);
   outline-offset: -3px;
 }
 
