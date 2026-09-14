@@ -24,6 +24,15 @@ pipeline {
         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에
         // 실패한다. 플러그인 목록은 infra/jenkins/Dockerfile 에 있다.
         ansiColor('xterm')
+
+        // updateGitlabCommitStatus 가 GitLab API 를 부를 때 쓰는 연결이다.
+        // Jenkins > Manage Jenkins > System 의 GitLab connections 에 있는 이름과 같아야 한다.
+        //
+        // Job 설정 화면에도 같은 항목이 있지만 거기에만 두면 안 된다. Declarative Pipeline 은
+        // options 블록을 만나면 Job 의 속성 집합을 이 내용으로 덮어쓰므로, 화면으로 지정한
+        // 연결이 빌드가 돌면서 지워진다. 그러면 커밋 상태 보고가 오류 없이 조용히 멈추고
+        // 로그에 "No GitLab connection configured" 만 남는다.
+        gitLabConnection('ssafy-gitlab')
     }
 
     environment {
