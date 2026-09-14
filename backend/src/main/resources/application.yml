@@ -102,6 +102,8 @@ thorp:
       max-queued-per-user: 5
       # 서버 전체. 이쪽은 종류를 가리지 않는다 — 사용자 사이의 공정성이 아니라 서버 보호다.
       # 탐색이 창 4개씩 쌓으므로 이 값은 dispatch-window 의 여러 배로 둔다.
+      # 이 값에 탐색이 닿으면 007 의 후보 완료 트랜잭션이 통째로 롤백돼 묶음이 멈춘다.
+      # 낮추기 전에 backtest-api/README.md §1.8 "알려진 한계" 를 먼저 본다.
       max-queued-total: 50
       # 실행 하나의 시간 상한(초). 넘으면 CANCEL 을 보내 완료 범위와 함께 멈춘다.
       max-run-seconds: 1800
