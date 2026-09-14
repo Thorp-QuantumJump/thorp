@@ -273,7 +273,7 @@ class TestSampleFixture:
 
 
 class TestInputFileKeys:
-    """대응표 파일의 키도 snake_case 한 가지다 (2026-09-13 결정).
+    """대응표 파일의 **자료 키**도 snake_case 한 가지다 (2026-09-13 결정).
 
     일봉·기업행위·대표 상품 정보 파일은 ``tests/test_ingest_krx_inputs.py``의
     ``TestInputFileKeys``가 같은 것을 고정한다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API
@@ -281,6 +281,10 @@ class TestInputFileKeys:
 
     조용히 둘 다 받아들이면 어느 표기가 규약인지 알 수 없게 되고, 한 파일에 두 표기가 섞여도
     드러나지 않는다.
+
+    **``$``로 시작하는 키는 대상이 아니다.** 파서가 읽기 전에 걷어내는 주석이고, 표본 파일과
+    ``contracts/fixtures/``의 다른 픽스처가 그 주석에 camelCase를 쓴다. 한 파일만 바꾸면
+    픽스처끼리 표기가 갈리므로 주석 표기를 통일할지는 따로 정한다.
     """
 
     def test_the_sample_map_file_uses_snake_case(self) -> None:
