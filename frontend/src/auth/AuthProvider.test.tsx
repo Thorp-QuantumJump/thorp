@@ -9,6 +9,7 @@ import { AuthProvider } from './AuthProvider'
 const apiMocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   login: vi.fn(),
+  logout: vi.fn(),
 }))
 
 vi.mock('@/api/auth', async () => {

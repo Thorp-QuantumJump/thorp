@@ -8,6 +8,7 @@ export type AuthSnapshot = {
 
 export type AuthContextValue = AuthSnapshot & {
   login: (input: LoginRequest, signal?: AbortSignal) => Promise<AuthenticatedUser>
+  logout: (signal?: AbortSignal) => Promise<void>
   recheck: () => Promise<AuthSnapshot>
 }
 
