@@ -1,9 +1,11 @@
 package com.ssafy.thorp.paramsearch.infrastructure.support;
 
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.ResultPerformance;
 import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;
 import com.ssafy.thorp.paramsearch.application.port.CandidatePerformancePort;
+import com.ssafy.thorp.paramsearch.application.port.CandidateRunView;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,9 +22,12 @@ import org.springframework.stereotype.Component;
 public class CandidatePerformanceAdapter implements CandidatePerformancePort {
 
     private final BacktestResultRepository resultRepository;
+    private final BacktestRunRepository runRepository;
 
-    public CandidatePerformanceAdapter(BacktestResultRepository resultRepository) {
+    public CandidatePerformanceAdapter(
+            BacktestResultRepository resultRepository, BacktestRunRepository runRepository) {
         this.resultRepository = resultRepository;
+        this.runRepository = runRepository;
     }
 
     @Override
@@ -34,6 +39,25 @@ public class CandidatePerformanceAdapter implements CandidatePerformancePort {
                         (runId, performance) ->
                                 performances.put(runId, toCandidatePerformance(performance)));
         return performances;
+    }
+
+    @Override
+    public Map<Long, CandidateRunView> findRunViews(Collection<Long> runIds) {
+        Map<Long, CandidateRunView> views = new LinkedHashMap<>();
+        runRepository
+                .findRunViews(runIds)
+                .forEach(
+                        (runId, view) ->
+                                views.put(
+                                        runId,
+                                        new CandidateRunView(
+                                                view.backtestId(),
+                                                view.status().name(),
+                                                view.performance() == null
+                                                        ? null
+                                                        : toCandidatePerformance(
+                                                                view.performance()))));
+        return views;
     }
 
     private static CandidatePerformance toCandidatePerformance(ResultPerformance performance) {

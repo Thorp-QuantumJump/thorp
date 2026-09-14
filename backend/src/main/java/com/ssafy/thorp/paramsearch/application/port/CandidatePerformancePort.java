@@ -19,4 +19,14 @@ public interface CandidatePerformancePort {
      * @return 결과가 있는 실행만 담는다. 실패·미완료 실행은 키 자체가 없다 — 0으로 채우지 않는다(FR-011)
      */
     Map<Long, CandidatePerformance> findByRunIds(Collection<Long> runIds);
+
+    /**
+     * 실행 id 여러 건의 목록용 뷰를 읽는다 — 상태와 요청 식별자가 성과와 함께 필요할 때 쓴다.
+     *
+     * <p>{@link #findByRunIds}와 갈라 두는 이유: 선정 계산은 숫자 셋만 쓰고 화면은 식별자·상태까지 쓴다. 선정이 쓰지 않는 값을 함께 읽으면 묶음마다
+     * 후보 수만큼 헛일이 된다.
+     *
+     * @return 존재하는 실행만 담는다
+     */
+    Map<Long, CandidateRunView> findRunViews(Collection<Long> runIds);
 }

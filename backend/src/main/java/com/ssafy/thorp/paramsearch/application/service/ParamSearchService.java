@@ -8,6 +8,9 @@ import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.command.PreviewParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.exception.ParamSearchRejectedException;
 import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;
+import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;
+import com.ssafy.thorp.paramsearch.application.port.CandidatePerformancePort;
+import com.ssafy.thorp.paramsearch.application.port.CandidateRunView;
 import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;
 import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
 import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
@@ -69,6 +72,7 @@ public class ParamSearchService {
     private final SearchCandidateRepository candidateRepository;
     private final MarketMetadataPort marketMetadata;
     private final CostProfileService costProfileService;
+    private final CandidatePerformancePort performancePort;
     private final SearchLimits limits;
     private final Clock clock;
     private final String engineVersion;
@@ -86,6 +90,7 @@ public class ParamSearchService {
             SearchCandidateRepository candidateRepository,
             MarketMetadataPort marketMetadata,
             CostProfileService costProfileService,
+            CandidatePerformancePort performancePort,
             SearchLimits limits,
             Clock clock,
             @Value("${thorp.backtest.engine-version}") String engineVersion,
@@ -101,6 +106,7 @@ public class ParamSearchService {
         this.candidateRepository = candidateRepository;
         this.marketMetadata = marketMetadata;
         this.costProfileService = costProfileService;
+        this.performancePort = performancePort;
         this.limits = limits;
         this.clock = clock;
         this.engineVersion = engineVersion;
@@ -195,14 +201,42 @@ public class ParamSearchService {
     /** 묶음 상태 조회. 실패해도 200이며 상태로 판단한다(contracts §3). */
     @Transactional(readOnly = true)
     public ParamSearchResult get(String searchId) {
-        return ParamSearchResult.from(
+        ParamSearch search =
                 paramSearchRepository
                         .findBySearchId(searchId)
                         .orElseThrow(
                                 () ->
                                         new BusinessException(
                                                 ErrorCode.RESOURCE_NOT_FOUND,
-                                                "탐색 묶음을 찾을 수 없습니다: " + searchId)));
+                                                "탐색 묶음을 찾을 수 없습니다: " + searchId));
+        return ParamSearchResult.from(search, baselineOf(search));
+    }
+
+    /**
+     * 손실 제약의 기준이 된 실행(FR-013d, 계약 §3).
+     *
+     * <p>전략 ID·표시명은 <b>접수 시점 스냅샷</b>에서 읽는다 — 지금 등록표를 다시 물으면 버전이 올라간 뒤 그 묶음이 무엇을 기준으로 삼았는지가
+     * 바뀐다(FR-020, 원칙 VIII). 숫자는 실행에서 읽는다.
+     *
+     * <p>기준 실행을 만들지 않았으면 null이다. 만들었지만 아직 안 끝났거나 실패했으면 숫자만 null이고, 그 경우 선정은 손실 제약을 걸지 않은 채 그 사실을
+     * {@code drawdownFilterApplied=false}로 알린다.
+     */
+    private ParamSearchResult.Baseline baselineOf(ParamSearch search) {
+        Long baselineJobId = search.getBaselineJobId();
+        if (baselineJobId == null) {
+            return null;
+        }
+        SelectionRule.DrawdownFilter filter = search.getSelectionRule().drawdownFilter();
+        CandidateRunView view =
+                performancePort.findRunViews(List.of(baselineJobId)).get(baselineJobId);
+        CandidatePerformance performance = view == null ? null : view.performance();
+        return new ParamSearchResult.Baseline(
+                filter.baseline(),
+                filter.baselineName(),
+                view == null ? null : view.backtestId(),
+                view == null ? null : view.status(),
+                performance == null ? null : performance.netReturn(),
+                performance == null ? null : performance.maxDrawdown());
     }
 
     /**
@@ -373,7 +407,9 @@ public class ParamSearchService {
                 baselineStrategyId == null
                         ? new SelectionRule.DrawdownFilter("NOT_APPLIED", "NO_BASELINE_REGISTERED")
                         : new SelectionRule.DrawdownFilter(
-                                "NOT_WORSE_THAN_BASELINE", baselineStrategyId);
+                                "NOT_WORSE_THAN_BASELINE",
+                                baselineStrategyId,
+                                baselineStrategyName(baselineStrategyId));
         return new SelectionRule(
                 drawdownFilter,
                 new SelectionRule.StabilityFilter("BATCH_PERCENTILE", 50),
@@ -383,6 +419,11 @@ public class ParamSearchService {
                 new SelectionRule.StabilityFormula(
                         "SINGLE_AXIS_ONE_STEP", "MEAN_ABS_NET_RETURN_DIFF"),
                 List.of("displayCount"));
+    }
+
+    /** 기준 전략의 표시명. 등록표 값을 그대로 옮긴다 — 007이 이름을 만들지 않는다(FR-025). */
+    private String baselineStrategyName(String baselineStrategyId) {
+        return registry.find(baselineStrategyId).map(StrategyRegistration::name).orElse(null);
     }
 
     private Map<String, Object> limitsSnapshot() {

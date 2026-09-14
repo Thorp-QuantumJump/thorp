@@ -1,14 +1,20 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.application.result.ResultPerformance;
+import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
@@ -107,6 +113,41 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     @Override
     public Optional<BacktestRun> findById(Long id) {
         return jpaRepository.findById(id).map(BacktestRunMapper::toDomain);
+    }
+
+    @Override
+    public Map<Long, RunView> findRunViews(Collection<Long> runIds) {
+        if (runIds == null || runIds.isEmpty()) {
+            // 빈 IN 절은 PostgreSQL 문법 오류다. 물어볼 것이 없으면 왕복도 하지 않는다.
+            return Map.of();
+        }
+        Map<Long, RunView> views = new LinkedHashMap<>();
+        for (BacktestRunViewRow row : jpaRepository.findRunViewRows(runIds)) {
+            views.put(
+                    row.getRunId(),
+                    new RunView(
+                            row.getBacktestId(),
+                            RunStatus.valueOf(row.getStatus()),
+                            performanceOf(row)));
+        }
+        return views;
+    }
+
+    /** 결과 행이 없으면 null이다 — 실행 중이거나 실패한 실행이며 0으로 채우지 않는다(FR-011). */
+    private static ResultPerformance performanceOf(BacktestRunViewRow row) {
+        if (row.getNetReturn() == null
+                && row.getMaxDrawdown() == null
+                && row.getTradingCost() == null) {
+            return null;
+        }
+        return new ResultPerformance(
+                decimalOrNull(row.getNetReturn()),
+                decimalOrNull(row.getMaxDrawdown()),
+                decimalOrNull(row.getTradingCost()));
+    }
+
+    private static BigDecimal decimalOrNull(String value) {
+        return value == null ? null : new BigDecimal(value);
     }
 
     @Override

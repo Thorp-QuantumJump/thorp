@@ -1,12 +1,24 @@
 package com.ssafy.thorp.backtest.application.repository;
 
+import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** 백테스트 Job 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. */
 public interface BacktestRunRepository {
+
+    /**
+     * 목록용 실행 뷰 여러 건. 상태 + 요청 식별자 + 성과 숫자 셋만 읽는다.
+     *
+     * <p>실행마다 {@link #findById}를 돌리지 않는 이유는 왕복 수와 읽는 양이다 — 자동 탐색은 묶음 하나가 후보 수백 건이다.
+     *
+     * @return 존재하는 실행만 담는다
+     */
+    Map<Long, RunView> findRunViews(Collection<Long> runIds);
 
     /**
      * 신규 Job 생성 전용. 저장하면서 외부 식별자 {@code backtestId}를 부여하고, id와 backtestId가 채워진 Job을 돌려준다.

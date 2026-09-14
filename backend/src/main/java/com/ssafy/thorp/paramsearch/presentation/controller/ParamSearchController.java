@@ -2,11 +2,15 @@ package com.ssafy.thorp.paramsearch.presentation.controller;
 
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
+import com.ssafy.thorp.paramsearch.application.command.FindCandidatesQuery;
+import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
+import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchCreateRequest;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchPreviewRequest;
+import com.ssafy.thorp.paramsearch.presentation.response.CandidatePageResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchPreviewResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -36,11 +41,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class ParamSearchController {
 
     private final ParamSearchService paramSearchService;
+    private final CandidateQueryService candidateQueryService;
     private final CurrentRequester currentRequester;
 
     public ParamSearchController(
-            ParamSearchService paramSearchService, CurrentRequester currentRequester) {
+            ParamSearchService paramSearchService,
+            CandidateQueryService candidateQueryService,
+            CurrentRequester currentRequester) {
         this.paramSearchService = paramSearchService;
+        this.candidateQueryService = candidateQueryService;
         this.currentRequester = currentRequester;
     }
 
@@ -66,6 +75,27 @@ public class ParamSearchController {
     public ResponseEntity<ApiResponse<ParamSearchResponse>> get(@PathVariable String searchId) {
         return ResponseEntity.ok(
                 ApiResponse.ok(ParamSearchResponse.from(paramSearchService.get(searchId))));
+    }
+
+    /**
+     * 후보 목록(계약 §4). 전체 후보를 본다 — 표시 후보만 보려면 {@code selected=true}다.
+     *
+     * <p>정렬은 허용 목록 안에서만 받는다. 임의의 필드명을 받으면 저장 구조가 그대로 API 계약이 되어 컬럼을 바꿀 수 없게 된다.
+     *
+     * <p><b>계산되지 않은 후보의 성과는 null이고 0이 아니다</b>(FR-011). 화면은 그 자리를 "0%"가 아니라 사유와 함께 표시한다.
+     */
+    @GetMapping("/{searchId}/candidates")
+    public ResponseEntity<ApiResponse<CandidatePageResponse>> candidates(
+            @PathVariable String searchId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean selected,
+            @RequestParam(required = false) String sort) {
+        CandidatePageResult result =
+                candidateQueryService.find(
+                        searchId, FindCandidatesQuery.of(page, size, status, selected, sort));
+        return ResponseEntity.ok(ApiResponse.ok(CandidatePageResponse.from(result)));
     }
 
     /**

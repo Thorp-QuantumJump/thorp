@@ -39,11 +39,20 @@ public record SelectionRule(
                 List.copyOf(Objects.requireNonNull(provisional, "provisional must not be null"));
     }
 
-    /** 하락 폭 필터. 기준 대비 상대 비교이므로 절대 문턱이 없다(FR-013d). */
-    public record DrawdownFilter(String type, String baseline) {
+    /**
+     * 하락 폭 필터. 기준 대비 상대 비교이므로 절대 문턱이 없다(FR-013d).
+     *
+     * <p>{@code baselineName}은 등록표가 준 표시명이다. 함께 남기는 이유는 {@code searchSpace}가 축 라벨을 남기는 이유와 같다 — 등록표
+     * 버전이 올라가 이름이 바뀐 뒤에도 그 묶음이 무엇을 기준으로 삼았는지 읽을 수 있어야 한다(FR-020). 지정이 없거나 옛 스냅샷이면 null이다.
+     */
+    public record DrawdownFilter(String type, String baseline, String baselineName) {
         public DrawdownFilter {
             requireText(type, "drawdownFilter.type");
             requireText(baseline, "drawdownFilter.baseline");
+        }
+
+        public DrawdownFilter(String type, String baseline) {
+            this(type, baseline, null);
         }
     }
 
@@ -71,6 +80,10 @@ public record SelectionRule(
         Map<String, Object> drawdown = new LinkedHashMap<>();
         drawdown.put("type", drawdownFilter.type());
         drawdown.put("baseline", drawdownFilter.baseline());
+        if (drawdownFilter.baselineName() != null) {
+            // 값이 없으면 키를 넣지 않는다 — 저장 전후의 맵이 달라지면 스냅샷 비교가 깨진다.
+            drawdown.put("baselineName", drawdownFilter.baselineName());
+        }
 
         Map<String, Object> stability = new LinkedHashMap<>();
         stability.put("type", stabilityFilter.type());
@@ -98,7 +111,13 @@ public record SelectionRule(
         Map<String, Object> stability = nested(map, "stabilityFilter");
         Map<String, Object> formula = nested(map, "stabilityFormula");
         return new SelectionRule(
-                new DrawdownFilter(text(drawdown, "type"), text(drawdown, "baseline")),
+                new DrawdownFilter(
+                        text(drawdown, "type"),
+                        text(drawdown, "baseline"),
+                        // 옛 스냅샷에는 없다. 없으면 없는 대로 둔다 — 지어내면 재현 기록이 거짓이 된다.
+                        drawdown.get("baselineName") == null
+                                ? null
+                                : drawdown.get("baselineName").toString()),
                 new StabilityFilter(text(stability, "type"), number(stability, "keepTopPercent")),
                 text(map, "sortMetric"),
                 number(map, "displayCount"),

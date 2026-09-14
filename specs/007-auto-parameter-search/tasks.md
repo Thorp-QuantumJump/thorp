@@ -218,7 +218,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T068 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorSortTest.java` — 동률은 5개를 넘겨 전부 표시, 임의 순서 없음 (research R3)
 - [X] T069 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorShortfallTest.java` — 문턱을 낮춰 채우지 않는다 (원칙 VII)
 - [X] T070 [P] [US2] (BE 테스트) 기준 백테스트 실패 시 하락 폭 필터 미적용 + `drawdownFilterApplied = false` 테스트
-- [ ] T071 [P] [US2] (BE 테스트) 후보 목록 계약 테스트 — `EXCLUDED`·`FAILED`·`SKIPPED`·`PENDING` 후보의 성과 필드가 **`null`이고 0이 아니다** (FR-011)
+- [X] T071 [P] [US2] (BE 테스트) 후보 목록 계약 테스트 — `EXCLUDED`·`FAILED`·`SKIPPED`·`PENDING` 후보의 성과 필드가 **`null`이고 0이 아니다** (FR-011)
 - [X] T072 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java` — 선정 계산이 묶음당 정확히 1회인지 검증 (내부 계약 §4 불변식 3)
 
 ### Implementation for User Story 2 — Backend 계산
@@ -233,9 +233,9 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 2 — Backend API
 
-- [ ] T079 [P] [US2] (BE) `application/result/CandidatePageResult.java`와 `presentation/response/CandidatePageResponse.java`
-- [ ] T080 [US2] (BE) `GET /param-searches/{searchId}/candidates` — 페이징(`size` 최대 200), `status`·`selected` 필터, 허용 정렬 목록(`candidateNo`·`netReturn`·`maxDrawdown`·`tradingCost`·`stability`)만 수용
-- [ ] T081 [US2] (BE) `GET /param-searches/{searchId}` 응답에 `selection`과 `baseline` 채우기 — `selection.displayed`는 **순위가 아니라 정렬 지표를 밝힌 집합**이다 (plan 설계 제약 1)
+- [X] T079 [P] [US2] (BE) `application/result/CandidatePageResult.java`와 `presentation/response/CandidatePageResponse.java`
+- [X] T080 [US2] (BE) `GET /param-searches/{searchId}/candidates` — 페이징(`size` 최대 200), `status`·`selected` 필터, 허용 정렬 목록(`candidateNo`·`netReturn`·`maxDrawdown`·`tradingCost`·`stability`)만 수용
+- [X] T081 [US2] (BE) `GET /param-searches/{searchId}` 응답에 `selection`과 `baseline` 채우기 — `selection.displayed`는 **순위가 아니라 정렬 지표를 밝힌 집합**이다 (plan 설계 제약 1)
 
 ### Implementation for User Story 2 — Frontend
 
