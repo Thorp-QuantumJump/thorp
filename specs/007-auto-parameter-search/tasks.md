@@ -265,8 +265,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다
 - [X] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**
 - [X] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장
-- [ ] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)
-- [ ] T094 [P] [US3] (BE 테스트) 끝난 묶음 취소 시 `409 ALREADY_FINISHED`
+- [X] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)
+- [X] T094 [P] [US3] (BE 테스트) 끝난 묶음 취소 시 `409 ALREADY_FINISHED`
 
 ### Implementation for User Story 3 — Backend 거부
 
@@ -275,8 +275,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 3 — Backend 중단·취소
 
-- [ ] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)
-- [ ] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409
+- [X] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)
+- [X] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409
 - [ ] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정
 - [ ] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정
 - [ ] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)

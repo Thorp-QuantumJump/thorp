@@ -7,10 +7,12 @@ import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;
+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchCreateRequest;
 import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchPreviewRequest;
 import com.ssafy.thorp.paramsearch.presentation.response.CandidatePageResponse;
+import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchCancelResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchPreviewResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,14 +44,17 @@ public class ParamSearchController {
 
     private final ParamSearchService paramSearchService;
     private final CandidateQueryService candidateQueryService;
+    private final ParamSearchCancelService cancelService;
     private final CurrentRequester currentRequester;
 
     public ParamSearchController(
             ParamSearchService paramSearchService,
             CandidateQueryService candidateQueryService,
+            ParamSearchCancelService cancelService,
             CurrentRequester currentRequester) {
         this.paramSearchService = paramSearchService;
         this.candidateQueryService = candidateQueryService;
+        this.cancelService = cancelService;
         this.currentRequester = currentRequester;
     }
 
@@ -75,6 +80,21 @@ public class ParamSearchController {
     public ResponseEntity<ApiResponse<ParamSearchResponse>> get(@PathVariable String searchId) {
         return ResponseEntity.ok(
                 ApiResponse.ok(ParamSearchResponse.from(paramSearchService.get(searchId))));
+    }
+
+    /**
+     * 취소(계약 §5). {@code 202}로 접수하고, 발행하지 않은 후보를 '미실행'으로 확정한다.
+     *
+     * <p><b>이미 큐에 들어간 후보는 완주한다.</b> prefetch 1 + manual ACK 구조에서 발행된 메시지는 회수할 수 없다(research R2).
+     * 그래서 응답의 {@code status}는 아직 {@code RUNNING}일 수 있고, 실행 중 후보가 모두 끝나면 {@code PARTIAL}이 된다.
+     */
+    @PostMapping("/{searchId}/cancel")
+    public ResponseEntity<ApiResponse<ParamSearchCancelResponse>> cancel(
+            @PathVariable String searchId) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(
+                        ApiResponse.ok(
+                                ParamSearchCancelResponse.from(cancelService.cancel(searchId))));
     }
 
     /**
