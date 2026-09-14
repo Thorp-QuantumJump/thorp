@@ -16,7 +16,7 @@
 
 **Primary Dependencies**: KRX OPEN API HTTP 클라이언트·pandas·pyarrow·PostgreSQL 드라이버 (`data/`), pandas·pydantic·PostgreSQL 드라이버 (`worker/`), Spring Boot 3.5·Spring Data JPA·Flyway (`backend/`). pykrx는 쓰지 않는다 (research.md 결정 1)
 
-**Storage**: 서비스 읽기 경로는 PostgreSQL 하나다(Flyway `V3__etf_market_data.sql` 이후). 가격·기업행위·지수·자료 부족·정지 구간과 대응표·자료 버전·대조 기록·대표 상품 정보가 모두 여기 있다. `data/raw/`는 원천 응답 원본, `data/processed/`는 Parquet 정제 사본이며 서비스가 읽지 않는다 (research.md 결정 8)
+**Storage**: 서비스 읽기 경로는 PostgreSQL 하나다(Flyway `V20260911114500__etf_market_data.sql`와 `V20260913103000__instrument_profile.sql` 이후). 가격·기업행위·지수·자료 부족·정지 구간과 대응표·자료 버전·대조 기록·대표 상품 정보가 모두 여기 있다. `data/raw/`는 원천 응답 원본, `data/processed/`는 Parquet 정제 사본이며 서비스가 읽지 않는다 (research.md 결정 8)
 
 **Testing**: pytest + ruff (`data/`, `worker/`), JUnit 5 + ArchUnit + `PostgresTestSupport` (`backend/`)
 
@@ -61,7 +61,9 @@
 
 10개 원칙과 3개 추가 게이트를 설계 산출물에 대해 다시 확인했다. 전부 통과이며, 설계 과정에서 다음 세 가지가 더 분명해졌다.
 
-- **원칙 X (이용 조건)**: Phase 0에서 저장소 안의 원천 불일치를 발견했다. `worker`가 실제로 쓰고 있는 yfinance와 `data/CLAUDE.md`가 지정한 pykrx는 모두 원칙 X가 열거한 원천이 아니다. `YFinanceDataProvider`는 최소 기능 구현용 임시 값이므로 클래스를 지우지 않고 `engine_runner.py:68`의 기본값 자리에서 빼는 방식으로 정리한다. 새 provider만 추가하고 기본값을 그대로 두면 주입을 잊은 경로가 이용 조건 밖 원천으로 조용히 넘어간다 (research.md 결정 1).
+- **원칙 X (이용 조건)**: Phase 0에서 저장소 안의 원천 불일치를 발견했다. 그때 `worker`가 실제로 쓰고 있던 yfinance와 `data/CLAUDE.md`가 지정한 pykrx는 모두 원칙 X가 열거한 원천이 아니다. Phase 0의 계획은 `YFinanceDataProvider` 클래스를 남겨 두고 공급자 기본값 자리에서만 빼는 것이었다. 새 공급자만 추가하고 기본값을 그대로 두면 주입을 잊은 경로가 이용 조건 밖 원천으로 조용히 넘어가기 때문이다 (research.md 결정 1).
+
+  **실제로는 004가 더 멀리 갔다** (2026-09-11, [contracts/market-dataset.md](./contracts/market-dataset.md) 「기존 provider 정리」의 덧붙임). `YFinanceDataProvider`는 기본값 자리에서 빠진 것이 아니라 코드에서 사라졌고, `PortfolioBacktestEngine`은 공급자에 **기본값 자체를 두지 않는다** — 생성자의 필수 인자다(`worker/src/worker/engine_runner.py`의 `PortfolioBacktestEngine.__init__`, `worker/CLAUDE.md` "엔진 생성자에 공급자 기본값을 두지 말 것"). 기본값이 없으므로 "주입을 잊은 경로"가 생길 자리가 없어, 원칙 X의 게이트는 계획보다 더 확실하게 지켜진다.
 - **원칙 V (당시 정보)**: 소급 조정 계열의 절대 수준이 미래 분배금에 의존한다는 점을 계약에 제약으로 명시했다. 현재 다섯 전략은 모두 비율 기반이라 안전하다 (contracts/market-dataset.md).
 - **원칙 VIII (재현)**: 발행된 자료 버전을 수정하지 않는다는 FR-017을 저장소 수준에서 막고, quickstart 시나리오 3이 `UPDATE`가 거부되는지 확인한다.
 
@@ -99,7 +101,7 @@ data/                                    # DATA 파트 — 수집·정제 파이
 └── processed/                           # Parquet 정제 사본, 자산/연도 파티션 (커밋 금지)
 
 worker/src/worker/
-├── market_data.py                       # 기존 DataProvider Protocol에 저장소 구현 추가
+├── market_data.py                       # 저장소를 읽는 PostgresMarketDataProvider (004가 만들었다)
 └── evaluation_window.py                 # 공통 평가 가능 기간 산출
 
 backend/src/main/java/com/ssafy/thorp/
@@ -110,13 +112,18 @@ backend/src/main/java/com/ssafy/thorp/
     └── infrastructure/persistence
 
 backend/src/main/resources/db/migration/
-└── V3__etf_market_data.sql              # 대응표·자료 버전·시계열·대조 기록 스키마
+├── V20260911114500__etf_market_data.sql    # 대응표·자료 버전·시계열·대조 기록 스키마 (표 11개)
+└── V20260913103000__instrument_profile.sql # 대표 상품 정보 (12번째 표)
 ```
+
+**마이그레이션 파일명은 연속 번호가 아니라 작성 시각이다.** `V{YYYYMMDDHHMMSS}__설명.sql` 형식을 쓴다(`backend/CLAUDE.md`). 여러 spec이 동시에 진행되면서 서로 다른 브랜치가 `V3`이라는 같은 번호를 함께 적어 두는 충돌이 실제로 났기 때문이다. 실제로 `V3__param_search.sql`은 007이 쓰고 있는 다른 마이그레이션이므로, 001의 스키마를 `V3`으로 부르면 남의 파일을 가리키게 된다. 이미 적용된 `V1`~`V4`는 그대로 두며, Flyway가 버전을 숫자로 정렬하므로 두 방식이 섞여도 순서가 뒤집히지 않는다.
+
+대표 상품 정보가 별도 파일인 까닭은 앞 마이그레이션이 data-model.md의 표 12개 중 그 하나를 빠뜨렸고, 뒤늦게 채웠기 때문이다(tasks.md T013). 이미 적용된 파일은 고치지 않는다.
 
 **Structure Decision**: 세 파트에 걸치는 기능이므로 파트별 경계를 따른다.
 
 - **`data/`**: 자료를 확보하고 정제해 적재하는 모든 로직. `data/CLAUDE.md`의 구조 규칙(`src/data_pipeline/` 재사용 로직, `scripts/` argparse 진입점, `processed/` Parquet 자산/연도 파티션, 소문자 컬럼 표준, 멱등한 재실행)을 그대로 지킨다. 컬럼 표준에는 `value`(거래대금)를 더한다(research.md 결정 6). 서비스 저장소 적재도 이 파이프라인의 출력이며, 대응표와 자료 버전 발행이 같은 경로에 있다.
-- **`worker/`**: 기존 `DataProvider` Protocol(`market_data.py`)에 서비스 저장소를 읽는 `RepositoryDataProvider`를 추가하고, `engine_runner.py:68`의 기본값을 그것으로 바꾼다. 지금 기본값이 `YFinanceDataProvider()`라 provider를 주입하지 않는 경로가 이용 조건 밖 원천으로 떨어진다. `validate_prices`의 검증 규칙(중복·비단조 날짜 거부, 결측·비유한 값 거부, OHLC 정합성)은 FR-004~FR-006과 이미 일치하므로 재사용한다.
+- **`worker/`**: 서비스 저장소를 읽는 공급자는 **새로 만들지 않는다.** Phase 1은 `RepositoryDataProvider`라는 이름으로 신설할 계획이었으나, 004가 같은 자리를 맡는 `PostgresMarketDataProvider`(`worker/src/worker/market_data.py`)를 먼저 만들었다. 001의 몫은 그 구현이 읽는 SQL이 여기 정의한 스키마와 맞는지 확인하는 것이다. 공급자 주입은 `worker/src/worker/main.py`가 하며 엔진에는 기본값이 없다(위 「Phase 1 설계 후 재판정」 원칙 X). `validate_prices`의 검증 규칙(중복·비단조 날짜 거부, 결측·비유한 값 거부, OHLC 정합성)은 FR-004~FR-006과 이미 일치하므로 재사용한다.
 - **`backend/`**: 섹터 목록과 대표 상품 정보는 화면이 조회해야 하므로 `sector/` 도메인을 신설한다. `backend/CLAUDE.md`의 4계층 규칙과 ArchUnit 검증을 따르며, 가격 시계열은 다루지 않는다.
 
 기존 `market/` 도메인은 거시 지표 카드(`/markets/{slug}`)용이며 008이 소유한다. 001의 섹터·ETF는 성격이 다르므로 별도 도메인으로 둔다.

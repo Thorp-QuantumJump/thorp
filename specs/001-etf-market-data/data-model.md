@@ -111,6 +111,8 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 
 **불변식**: `cause`와 `resolution`의 조합을 제한한다. `MATCH → NONE`, `PIPELINE_ERROR → REPUBLISHED`, `DEFINITION_DIFF → RECORDED_ONLY`, `UNKNOWN → RANGE_EXCLUDED`. 이 매핑이 FR-017의 처리 규칙이며, 다른 조합은 거부한다.
 
+이 표에는 UPDATE·DELETE 거부 트리거를 걸지 않는다. FR-017이 불변으로 못 박은 대상은 자료 버전과 딸린 시계열이고, 대조 기록은 그 자료를 검사한 결과이지 자료 자체가 아니다. 재적재 거부 기준은 자료 버전 하나당 대조 기록 한 묶음이다 — 발행된 자료는 바뀌지 않으므로 같은 자료 버전을 다시 대조하면 결과가 같아야 한다.
+
 ### instrument_profile — 대표 상품 정보
 
 | 필드 | 타입 | 제약 | 근거 |
@@ -125,7 +127,22 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | `source_attribution` | varchar | NOT NULL. 예: `한국거래소 통계정보` | FR-011 |
 | `survivorship_note` | text | NOT NULL. 현재 생존 상품만 고른 한계 한 문장 | FR-015 |
 
-**불변식**: `(etf_id, dataset_version_id)`가 UNIQUE다. `holdings_as_of_current`가 true면 화면은 "당시 구성을 재현했다"고 표현하지 않는다(FR-015). `avg_daily_value_3m`은 금액이므로 문자열로 둔다. `backend/CLAUDE.md`가 "decimal은 예외 없이 JSONB, `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다"고 정한 규칙을 따른다. **추적 차이 필드는 두지 않는다** — 이번 범위에서 제외했다(Out of Scope).
+**불변식**: `(etf_id, dataset_version_id)`가 UNIQUE다. 대표 ETF 하나에 자료 버전마다 한 행이라는 뜻이다. `holdings_as_of_current`가 true면 화면은 "당시 구성을 재현했다"고 표현하지 않는다(FR-015). **추적 차이 필드는 두지 않는다** — 이번 범위에서 제외했다(Out of Scope).
+
+**UPDATE·DELETE 거부 트리거를 걸지 않는다.** FR-017이 불변으로 못 박은 대상은 "이미 발행된 자료 버전의 내용"과 그 버전에 딸린 시계열이며, 실제로 거부 트리거가 붙은 표도 `dataset_version`과 시계열 다섯 개다. 대조 기록(`reconciliation_record`)도 같은 판단으로 트리거 없이 둔다. 재현(SC-004)은 위의 UNIQUE가 대신 지킨다 — 같은 `(etf_id, dataset_version_id)`에 두 번째 행이 들어오지 못하므로, 값을 바꾸려면 자료 버전을 새로 발행하는 길밖에 없다. 근거는 `backend/src/main/resources/db/migration/V20260913103000__instrument_profile.sql` 머리말 주석에 같은 내용으로 남아 있다.
+
+**`avg_daily_value_3m`의 저장 타입과 변환 경로**: 금액이므로 `numeric`이 아니라 `text`다. `NUMERIC` 컬럼은 scale을 미리 정해야 하고 그 자리를 넘는 값을 조용히 반올림하는데, 반올림된 사실이 어디에도 남지 않는다(`backend/CLAUDE.md`). 문자열로 두면 넣은 자리수가 그대로 보존된다. 대신 "금액이 문자열"이라는 결정 때문에 값이 네 단계를 지나며, 어느 단계에서도 표기가 바뀌지 않아야 한다.
+
+| 단계 | 하는 일 | 위치 |
+|---|---|---|
+| 1. 파이프라인 계산 | `daily_price.value`(거래대금) 합을 그 구간 거래일 수로 나눈 `Decimal`. 원 단위 정수로 반올림한다(`ROUND_HALF_UP`) — 원보다 작은 자리는 거래대금에 뜻이 없다 | `data/src/data_pipeline/instrument_profile.py`의 `average_daily_trading_value` |
+| 2. 파이프라인 적재 | `format(value, "f")`로 지수 표기 없는 문자열을 만들어 넣는다. `str(Decimal("1E+9"))`은 `"1E+9"`라 그대로 쓸 수 없다 | 같은 파일의 `plain` |
+| 3. 저장 | `text` 열. CHECK 제약이 `^[0-9]+(\.[0-9]+)?$`만 받아 지수 표기·부호·빈 문자열을 막는다 | `V20260913103000__instrument_profile.sql`의 `ck_instrument_profile_avg_daily_value_plain` |
+| 4. 조회·응답 | 읽은 문자열을 `BigDecimal`로 그대로 옮겨 도메인에 담고, 응답에서 다시 지수 표기 없는 문자열로 쓴다 | `InstrumentProfileMapper.toDomain` → `InstrumentProfileResponse` (contracts/sector-api.md 「공통 규칙」) |
+
+3단계의 CHECK가 이 경로를 성립시킨다. 저장된 모양이 plain 문자열임이 보장되므로 4단계가 값을 다듬지 않고 `BigDecimal`로 옮길 수 있고, 자리수가 보존되어 응답 문자열과 저장값이 같아진다. 도메인이 `BigDecimal`인 이유는 백엔드가 음수·null 같은 값 규칙을 문자열 비교가 아니라 수로 확인하기 때문이다.
+
+`holdings_overlap` 안의 비중도 같은 이유로 문자열이다. `jsonb`는 숫자를 정규화해 자리수와 표기를 바꾸므로, 숫자로 넣으면 넣은 모양이 보존되지 않는다.
 
 ## 시계열 개체
 
