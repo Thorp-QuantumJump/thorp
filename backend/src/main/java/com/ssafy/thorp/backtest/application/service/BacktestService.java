@@ -49,6 +49,7 @@ public class BacktestService {
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
     private final BacktestReuseEventRepository reuseEventRepository;
+    private final ExecutionLimitPolicy executionLimitPolicy;
     private final StrategyRulesService strategyRulesService;
     private final CostProfileService costProfileService;
     private final EffectivePeriodCalculator effectivePeriodCalculator;
@@ -62,6 +63,7 @@ public class BacktestService {
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
             BacktestReuseEventRepository reuseEventRepository,
+            ExecutionLimitPolicy executionLimitPolicy,
             StrategyRulesService strategyRulesService,
             CostProfileService costProfileService,
             EffectivePeriodCalculator effectivePeriodCalculator,
@@ -73,6 +75,7 @@ public class BacktestService {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
         this.reuseEventRepository = reuseEventRepository;
+        this.executionLimitPolicy = executionLimitPolicy;
         this.strategyRulesService = strategyRulesService;
         this.costProfileService = costProfileService;
         this.effectivePeriodCalculator = effectivePeriodCalculator;
@@ -164,6 +167,9 @@ public class BacktestService {
             }
             // 잠근 뒤 보니 종결된 실행이었다. 부분 유니크 인덱스가 같은 키의 새 실행을 허용하므로 아래에서 만든다.
         }
+
+        // 여기까지 왔으면 새 계산을 만든다. 합류·재사용은 위에서 끝났으므로 한도에 세지 않는다(R-19).
+        executionLimitPolicy.requireAdmission(command.requesterId(), command.executionType());
 
         Map<String, Object> versions = versions(costProfile, command.rulesVersion(), dataVersion);
         RunPlan plan =
