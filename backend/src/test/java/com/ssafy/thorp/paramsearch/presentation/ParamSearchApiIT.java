@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
@@ -38,6 +39,8 @@ import org.springframework.test.web.servlet.MockMvc;
             "spring.rabbitmq.listener.simple.auto-startup=false",
             "thorp.backtest.republish.enabled=false",
             "thorp.param-search.enabled=true",
+            // 접수는 요청자를 요구한다 — backtest_request.requester_id 가 NOT NULL 이다(spec 004 R-12).
+            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -55,11 +58,17 @@ class ParamSearchApiIT extends PostgresTestSupport {
 
     private final AtomicLong nextJobId = new AtomicLong(910_000L);
 
+    private long requesterId;
+
     @BeforeEach
     void prepare() {
         jdbcTemplate.update("DELETE FROM search_candidate");
         jdbcTemplate.update("DELETE FROM param_search");
+        // 결과 행이 실행 행을 FK로 참조한다. 자식을 먼저 지우지 않으면 다른 테스트가
+        // 남긴 결과 때문에 이 정리가 통째로 실패한다.
+        jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id >= 900000");
         jdbcTemplate.update("DELETE FROM backtest_run WHERE id >= 900000");
+        requesterId = newUser();
         Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))
                 .thenAnswer(invocation -> insertRun());
         Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))
@@ -98,6 +107,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         String created =
                 mockMvc.perform(
                                 post("/param-searches")
+                                        .header(CurrentRequester.DEV_HEADER, requesterId)
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(createBody(registryVersion)))
                         .andExpect(status().isAccepted())
@@ -125,6 +135,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     void staleVersionIsConflict() throws Exception {
         mockMvc.perform(
                         post("/param-searches")
+                                .header(CurrentRequester.DEV_HEADER, requesterId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody("PROVISIONAL-19990101")))
                 .andExpect(status().isConflict())
@@ -150,6 +161,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
 
         mockMvc.perform(
                         post("/param-searches")
+                                .header(CurrentRequester.DEV_HEADER, requesterId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andExpect(status().isBadRequest())
@@ -176,11 +188,53 @@ class ParamSearchApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("요청자 없이 실행하면 처리된 오류다 — 500이 아니다")
+    void createWithoutRequesterIsHandled() throws Exception {
+        String registryVersion = registryVersionFromPreview();
+
+        // 접수는 기준·후보를 004로 넘기는데 backtest_request.requester_id 가 NOT NULL 이다(spec 004 R-12).
+        // 요청자를 null 로 통과시키면 발행 직전에 NullPointerException 으로 죽어 사용자에게 500이 나간다.
+        mockMvc.perform(
+                        post("/param-searches")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(createBody(registryVersion)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    @DisplayName("미리보기는 요청자가 없어도 된다 — 저장도 실행도 하지 않는다")
+    void previewWorksWithoutRequester() throws Exception {
+        mockMvc.perform(
+                        post("/param-searches/preview")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(previewBody()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
     @DisplayName("없는 묶음 조회는 404다")
     void unknownSearchIsNotFound() throws Exception {
         mockMvc.perform(get("/param-searches/{searchId}", "PS-20000101-000001"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    /** 접수가 요구하는 요청자. backtest_request.requester_id 가 users 를 참조한다. */
+    private long newUser() {
+        String suffix = String.valueOf(System.nanoTime());
+        String email = "psapi-" + suffix + "@example.com";
+        jdbcTemplate.update(
+                "INSERT INTO users (email, password_hash, nickname, phone_number, status,"
+                        + " paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,"
+                        + " created_at, updated_at)"
+                        + " VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())",
+                email,
+                "u" + suffix,
+                suffix);
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = ?", Long.class, email);
     }
 
     private String previewBody() {

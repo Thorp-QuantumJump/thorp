@@ -1,7 +1,7 @@
 package com.ssafy.thorp.paramsearch.infrastructure.launcher;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
-import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
@@ -24,12 +24,12 @@ import org.springframework.stereotype.Component;
 public class CandidateJobLauncherImpl implements CandidateJobLauncher {
 
     private final BacktestService backtestService;
-    private final BacktestRunRepository runRepository;
+    private final BacktestRequestRepository requestRepository;
 
     public CandidateJobLauncherImpl(
-            BacktestService backtestService, BacktestRunRepository runRepository) {
+            BacktestService backtestService, BacktestRequestRepository requestRepository) {
         this.backtestService = backtestService;
-        this.runRepository = runRepository;
+        this.requestRepository = requestRepository;
     }
 
     @Override
@@ -51,14 +51,16 @@ public class CandidateJobLauncherImpl implements CandidateJobLauncher {
         BacktestJobResult result =
                 backtestService.create(command(snapshot, strategyId, parameters));
         // 후보는 실행 행의 PK로 자기 결과를 찾는다(search_candidate.backtest_job_id). 접수 결과가
-        // 돌려주는 것은 요청 식별자라 여기서 실행 행을 한 번 읽는다.
-        return runRepository
+        // 돌려주는 것은 **요청** 식별자이고 실행 행은 자기 backtest_id 를 따로 갖는다 — 두 값은 다르다.
+        // 그래서 요청을 읽어 run_id 를 얻는다. 실행 저장소를 요청 식별자로 조회하면 언제나 빈 결과다.
+        return requestRepository
                 .findByBacktestId(result.backtestId())
                 .orElseThrow(
                         () ->
                                 new IllegalStateException(
-                                        "accepted backtest has no run row: " + result.backtestId()))
-                .getId();
+                                        "accepted backtest has no request row: "
+                                                + result.backtestId()))
+                .getRunId();
     }
 
     private static CreateBacktestCommand command(

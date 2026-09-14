@@ -34,16 +34,19 @@ public class ParamSearchProgressService {
     private final ParamSearchRepository paramSearchRepository;
     private final SearchCandidateRepository candidateRepository;
     private final CandidateDispatcher dispatcher;
+    private final ParamSearchSelectionService selectionService;
     private final Clock clock;
 
     public ParamSearchProgressService(
             ParamSearchRepository paramSearchRepository,
             SearchCandidateRepository candidateRepository,
             CandidateDispatcher dispatcher,
+            ParamSearchSelectionService selectionService,
             Clock clock) {
         this.paramSearchRepository = paramSearchRepository;
         this.candidateRepository = candidateRepository;
         this.dispatcher = dispatcher;
+        this.selectionService = selectionService;
         this.clock = clock;
     }
 
@@ -112,11 +115,18 @@ public class ParamSearchProgressService {
             dispatcher.advance(search.getId(), snapshotOf(search));
             return;
         }
+        // 여기가 묶음의 끝이다 — PENDING 0 && DISPATCHED 0(내부 계약 §4 "묶음 종료").
         if (search.getCounts().skipped() > 0) {
-            // 멈춘 사유는 멈춘 쪽(취소·한도)이 이미 남겼다. 여기서는 상태만 확정한다.
+            // 멈춘 사유는 멈춘 쪽(취소·한도)이 남기고 PARTIAL 전이도 그쪽이 한다.
+            // 선정은 최종 상태가 된 뒤에만 붙일 수 있으므로(ParamSearch.withSelection)
+            // 그 경로가 전이 직후 selectOnce 를 부른다. 취소된 묶음도 완료된 후보끼리는
+            // 그대로 비교할 수 있다(data-model §3).
             return;
         }
-        paramSearchRepository.update(search.markCompleted(clock.instant()));
+        // 완료로 확정한 뒤 선정을 딱 한 번 계산한다. 안정성 필터가 묶음 내 상대 분위라
+        // 중간에 재면 나중에 끝난 후보가 분위를 흔들어 앞선 판정의 근거가 사라진다(불변식 3).
+        paramSearchRepository.update(
+                selectionService.selectOnce(search.markCompleted(clock.instant())));
     }
 
     private static ParamSearchSnapshot snapshotOf(ParamSearch search) {

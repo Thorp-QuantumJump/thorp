@@ -1,5 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,6 +36,25 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     """,
             nativeQuery = true)
     Optional<BacktestResultSummaryRow> findSummaryRow(@Param("jobId") Long jobId);
+
+    /**
+     * 실행 여러 건의 핵심 숫자 셋. {@code performance} JSONB에서 세 값만 꺼낸다.
+     *
+     * <p>자동 탐색의 후보 목록·선정 계산이 쓰는 경로다. 후보가 묶음당 수백 건이라 요약 쿼리를 건마다 돌리면 왕복과 역직렬화가 그만큼 늘어난다.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT run_id AS "runId",
+                           performance ->> 'netTotalReturn'   AS "netReturn",
+                           performance ->> 'maxDrawdown'      AS "maxDrawdown",
+                           performance ->> 'totalTradingCost' AS "tradingCost"
+                      FROM backtest_result
+                     WHERE run_id IN (:runIds)
+                    """,
+            nativeQuery = true)
+    List<BacktestResultPerformanceRow> findPerformanceRows(
+            @Param("runIds") Collection<Long> runIds);
 
     /** 비중 기록·출처·예외 기록. {@code /weights}·{@code /exceptions}용이며 시계열은 읽지 않는다. */
     @Query(

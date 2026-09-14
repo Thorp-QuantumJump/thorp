@@ -15,6 +15,34 @@ import org.springframework.data.repository.query.Param;
 
 interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, Long> {
 
+    /**
+     * 목록용 실행 뷰. 실행 상태 + 요청 식별자 + 성과 숫자 셋만 한 번에 읽는다.
+     *
+     * <p>자동 탐색 후보 목록이 쓰는 경로다. 후보가 묶음당 수백 건이라 실행마다 상세를 돌리면 왕복이 그만큼 늘고, 쓰지도 않을 시계열이 함께 온다.
+     *
+     * <p>요청 식별자를 하위 질의로 고르는 이유: 한 실행에 요청이 여럿일 수 있다(재사용·합류, spec 004 R-02). 가장 먼저 접수된 것을 고정해 같은 실행이
+     * 늘 같은 값을 내놓게 한다.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT r.id     AS "runId",
+                           r.status AS "status",
+                           (SELECT q.backtest_id
+                              FROM backtest_request q
+                             WHERE q.run_id = r.id
+                             ORDER BY q.id
+                             LIMIT 1) AS "backtestId",
+                           res.performance ->> 'netTotalReturn'   AS "netReturn",
+                           res.performance ->> 'maxDrawdown'      AS "maxDrawdown",
+                           res.performance ->> 'totalTradingCost' AS "tradingCost"
+                      FROM backtest_run r
+                      LEFT JOIN backtest_result res ON res.run_id = r.id
+                     WHERE r.id IN (:runIds)
+                    """,
+            nativeQuery = true)
+    List<BacktestRunViewRow> findRunViewRows(@Param("runIds") Collection<Long> runIds);
+
     Optional<BacktestRunJpaEntity> findByBacktestId(String backtestId);
 
     /**

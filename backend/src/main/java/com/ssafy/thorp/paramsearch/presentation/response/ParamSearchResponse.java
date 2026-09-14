@@ -1,7 +1,10 @@
 package com.ssafy.thorp.paramsearch.presentation.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
@@ -20,9 +23,23 @@ public record ParamSearchResponse(
         boolean partial,
         String partialNote,
         Config config,
+        Baseline baseline,
         Map<String, Object> selection,
         Instant startedAt,
         Instant finishedAt) {
+
+    /**
+     * 손실 제약의 기준이 된 실행(계약 §3).
+     *
+     * <p>{@code backtestId}로 기준의 상세를 열 수 있다 — 화면이 "무엇과 비교했는지"를 보여 주는 근거다(FR-013d).
+     */
+    public record Baseline(
+            String strategyId,
+            String strategyName,
+            String backtestId,
+            String status,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal netReturn,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal maxDrawdown) {}
 
     public record Counts(
             long expected,
@@ -57,6 +74,7 @@ public record ParamSearchResponse(
                 null,
                 null,
                 null,
+                null,
                 null);
     }
 
@@ -86,8 +104,23 @@ public record ParamSearchResponse(
                         result.config().limits(),
                         result.config().referenceVersions(),
                         result.config().dataVersionChanged()),
+                baselineOf(result),
                 result.selection(),
                 result.startedAt(),
                 result.finishedAt());
+    }
+
+    private static Baseline baselineOf(ParamSearchResult result) {
+        ParamSearchResult.Baseline baseline = result.baseline();
+        if (baseline == null) {
+            return null;
+        }
+        return new Baseline(
+                baseline.strategyId(),
+                baseline.strategyName(),
+                baseline.backtestId(),
+                baseline.status(),
+                baseline.netReturn(),
+                baseline.maxDrawdown());
     }
 }

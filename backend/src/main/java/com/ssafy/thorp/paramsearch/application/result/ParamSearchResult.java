@@ -5,6 +5,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,9 +26,24 @@ public record ParamSearchResult(
         boolean partial,
         String partialNote,
         Config config,
+        Baseline baseline,
         Map<String, Object> selection,
         Instant startedAt,
         Instant finishedAt) {
+
+    /**
+     * 손실 제약의 기준이 된 실행(FR-013d, 계약 §3).
+     *
+     * <p>등록표가 기준 전략 역할을 지정하지 않았으면 전체가 null이다. 실행이 아직 안 끝났거나 실패했으면 {@code netReturn}·{@code
+     * maxDrawdown}이 null이고, 그때 선정은 손실 제약을 걸지 않은 채 {@code drawdownFilterApplied=false}로 알린다.
+     */
+    public record Baseline(
+            String strategyId,
+            String strategyName,
+            String backtestId,
+            String status,
+            BigDecimal netReturn,
+            BigDecimal maxDrawdown) {}
 
     public record Counts(
             long expected,
@@ -64,6 +80,15 @@ public record ParamSearchResult(
             boolean dataVersionChanged) {}
 
     public static ParamSearchResult from(ParamSearch search) {
+        return from(search, null);
+    }
+
+    /**
+     * 기준 실행 정보를 함께 담는다.
+     *
+     * @param baseline 기준 실행. 지정이 없거나 아직 읽지 않았으면 null
+     */
+    public static ParamSearchResult from(ParamSearch search, Baseline baseline) {
         SearchCounts counts = search.getCounts();
         boolean partial = search.getStatus() == ParamSearchStatus.PARTIAL;
         return new ParamSearchResult(
@@ -84,6 +109,7 @@ public record ParamSearchResult(
                         search.getLimits(),
                         search.getReferenceVersions(),
                         search.isDataVersionChanged()),
+                baseline,
                 search.getSelection(),
                 search.getStartedAt(),
                 search.getFinishedAt());

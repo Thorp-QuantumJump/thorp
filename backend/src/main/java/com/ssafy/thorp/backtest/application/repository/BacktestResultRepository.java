@@ -6,8 +6,11 @@ import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import com.ssafy.thorp.backtest.application.result.ResultPerformance;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 
@@ -43,6 +46,17 @@ public interface BacktestResultRepository {
     boolean exists(Long runId);
 
     Optional<BacktestResultSummary> findSummary(Long runId);
+
+    /**
+     * 실행 여러 건의 핵심 숫자 셋만 한 번에 읽는다. {@code performance} JSONB에서 세 값만 꺼내고 시계열·비중·예외는 읽지 않는다.
+     *
+     * <p>{@link #findSummary}를 반복 호출하지 않는 이유가 둘이다 — 왕복이 실행 수만큼 늘고, 호출마다 쓰지도 않을 {@code
+     * execution}·{@code costs}·{@code analytics} JSON을 역직렬화한다. 자동 탐색은 묶음 하나가 후보 수백 건이라 그 차이가 그대로
+     * 드러난다.
+     *
+     * @return 결과 행이 있는 실행만 담는다. 없는 id는 키 자체가 없다
+     */
+    Map<Long, ResultPerformance> findPerformanceByRunIds(Collection<Long> runIds);
 
     /**
      * 시계열 + 벤치마크. {@code /timeseries}가 날짜로 조인해 쓴다.
