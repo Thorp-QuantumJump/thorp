@@ -127,6 +127,44 @@ class CandidateListApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("상태 값은 대소문자·공백을 흡수하고 모르는 값만 400이다")
+    void statusBindingAbsorbsCaseAndWhitespace() throws Exception {
+        // 화면이 보내는 문자열이 저장 enum 과 정확히 같은 표기여야 한다면, 표기 하나 틀릴 때마다
+        // 조회가 조용히 0건이 된다. 흡수는 하되 모르는 값은 400으로 드러낸다.
+        for (String raw : List.of("EXCLUDED", "excluded", "ExClUdEd", "  EXCLUDED  ")) {
+            mockMvc.perform(
+                            get("/param-searches/{searchId}/candidates", searchId)
+                                    .param("status", raw))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
+        }
+        for (String raw : List.of("BOGUS", "COMPLETE")) {
+            mockMvc.perform(
+                            get("/param-searches/{searchId}/candidates", searchId)
+                                    .param("status", raw))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+        }
+    }
+
+    @Test
+    @DisplayName("모르는 정렬 방향은 400이다 — 조용히 뒤집지 않는다")
+    void unknownSortDirectionIsRejected() throws Exception {
+        for (String raw : List.of("candidateNo,asc", "candidateNo,DESC", "candidateNo,desc")) {
+            mockMvc.perform(
+                            get("/param-searches/{searchId}/candidates", searchId)
+                                    .param("sort", raw))
+                    .andExpect(status().isOk());
+        }
+        // 오타를 기본값으로 접으면 "수익이 큰 순"이라 적힌 화면이 가장 낮은 후보를 맨 위에 보인다.
+        mockMvc.perform(
+                        get("/param-searches/{searchId}/candidates", searchId)
+                                .param("sort", "netReturn,dsec"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
     @DisplayName("허용 목록 밖 정렬과 과한 size는 400이다")
     void rejectsUnknownSortAndOversizedPage() throws Exception {
         mockMvc.perform(

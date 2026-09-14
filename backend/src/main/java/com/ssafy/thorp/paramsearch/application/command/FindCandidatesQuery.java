@@ -83,17 +83,33 @@ public record FindCandidatesQuery(
             Integer page, Integer size, String status, Boolean selected, String sort) {
         String[] parts = sort == null ? new String[0] : sort.split(",", 2);
         Sort parsed = Sort.from(parts.length > 0 ? parts[0] : null);
-        boolean descending =
-                parts.length > 1
-                        ? "desc".equalsIgnoreCase(parts[1].trim())
-                        : parsed != Sort.CANDIDATE_NO;
         return new FindCandidatesQuery(
                 page == null ? 0 : page,
                 size == null ? DEFAULT_SIZE : size,
                 parseStatus(status),
                 selected,
                 parsed,
-                descending);
+                parseDescending(parts.length > 1 ? parts[1] : null, parsed));
+    }
+
+    /**
+     * 정렬 방향. 생략하면 지표는 내림차순(큰 값이 위), 순번은 오름차순(접수 순서)이다.
+     *
+     * <p><b>모르는 방향은 400이다.</b> 조용히 기본값으로 접으면 {@code sort=netReturn,dsec} 같은 오타가 목록을 정반대로 뒤집은 채
+     * 200으로 나간다 — 화면은 "수익이 큰 순"이라 적어 두고 가장 낮은 후보를 맨 위에 보인다. 정렬 기준을 허용 목록으로 막는 것과 같은 이유다.
+     */
+    private static boolean parseDescending(String raw, Sort sort) {
+        if (raw == null || raw.isBlank()) {
+            return sort != Sort.CANDIDATE_NO;
+        }
+        String direction = raw.trim();
+        if ("desc".equalsIgnoreCase(direction)) {
+            return true;
+        }
+        if ("asc".equalsIgnoreCase(direction)) {
+            return false;
+        }
+        throw new BusinessException(ErrorCode.INVALID_INPUT, "정렬 방향은 asc 또는 desc 여야 합니다: " + raw);
     }
 
     private static CandidateStatus parseStatus(String raw) {
