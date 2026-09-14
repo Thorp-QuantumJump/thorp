@@ -97,6 +97,11 @@ public class BacktestResultQueryService {
             return BacktestDetailResult.cancelledBeforeStart(
                     found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
         }
+        if (summary.isEmpty() && failedWithoutResult(job)) {
+            // 워커가 계산을 마치지 못해 저장할 산출물이 없었다(DLQ 종결·취소 무응답). 실패 사유는 실행 행에 있다.
+            return BacktestDetailResult.failedWithoutResult(
+                    found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
+        }
         return BacktestDetailResult.of(
                 found.request(),
                 job,
@@ -349,6 +354,11 @@ public class BacktestResultQueryService {
             }
         }
         return new ResultView(job, cutoff, request.isCancelled() || job.isPartial());
+    }
+
+    /** 워커의 산출물 없이 백엔드가 끊은 실패인가. 실행 행에 사유가 있으면 그렇다 — 워커가 보낸 FAILED 는 결과 행을 함께 저장하므로 여기 걸리지 않는다. */
+    private static boolean failedWithoutResult(BacktestRun job) {
+        return job.getStatus() == RunStatus.FAILED && job.getFailureCode() != null;
     }
 
     /**

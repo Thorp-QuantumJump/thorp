@@ -71,6 +71,9 @@ public interface BacktestRunRepository {
      */
     void recordPublishAttempt(Long runId);
 
+    /** DLQ 로 끝난 메시지 수를 하나 올린다(R-18). 상태·진행 컬럼은 건드리지 않는다. */
+    void recordDeadLetter(Long runId);
+
     /** 발행 confirm 시각을 남긴다. 이 컬럼만 바꾼다. */
     void recordPublished(Long runId, Instant at);
 }

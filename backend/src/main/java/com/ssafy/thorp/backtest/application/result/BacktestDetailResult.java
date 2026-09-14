@@ -105,6 +105,22 @@ public record BacktestDetailResult(
     }
 
     /**
+     * 워커의 산출물 없이 백엔드가 끊은 실패(T010 DLQ 종결, T014 취소 무응답). 결과 행이 없는 것이 정상이므로 실패 사유는 <b>실행 행</b>에서 읽는다 —
+     * 이것을 결과 유실 500 으로 다루면 사용자는 무슨 일이 있었는지 영영 볼 수 없다.
+     */
+    public static BacktestDetailResult failedWithoutResult(
+            BacktestRequest request, BacktestRun run, String currency, Instant now) {
+        return build(
+                request,
+                run,
+                currency,
+                now,
+                null,
+                null,
+                new Failure(run.getFailureCode(), run.getFailureMessage()));
+    }
+
+    /**
      * 결과 행이 있는 실행(COMPLETED·FAILED·CANCELLED). 상태에 따라 요약과 실패가 갈린다.
      *
      * <p>취소 실행의 요약은 부분 구간 기준이다(partial). 성과가 없는 결과(실패)는 요약도 없다.

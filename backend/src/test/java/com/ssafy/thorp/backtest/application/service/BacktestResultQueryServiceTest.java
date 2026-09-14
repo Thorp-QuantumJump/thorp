@@ -331,6 +331,27 @@ class BacktestResultQueryServiceTest {
     }
 
     @Test
+    @DisplayName("워커 산출물 없이 끊긴 FAILED(DLQ 종결)는 500 이 아니라 실행 행의 실패 사유를 보여 준다")
+    void failedWithoutResultRowShowsTheRunFailure() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER)));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                jobIn(RunStatus.RUNNING)
+                                        .markFailed(
+                                                "SYSTEM_FAILURE", "작업 메시지가 모두 처리되지 못했습니다(DLQ).")));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.status()).isEqualTo(RunStatus.FAILED);
+        assertThat(result.failure().code()).isEqualTo("SYSTEM_FAILURE");
+        assertThat(result.summary()).isNull();
+        assertThat(result.partial()).isFalse();
+    }
+
+    @Test
     @DisplayName("진행 거래일이 있는 CANCELLED 인데 결과 행이 없으면 결과 유실(500)이다 — 실행 전 취소로 숨기지 않는다")
     void cancelledWithProgressButNoResultRowIsCorruption() {
         when(requestRepository.findByBacktestId(BACKTEST_ID))

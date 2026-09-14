@@ -140,6 +140,11 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
+    public void recordDeadLetter(Long runId) {
+        jpaRepository.incrementDlqCount(runId);
+    }
+
+    @Override
     public void recordPublished(Long runId, Instant at) {
         jpaRepository.markPublished(runId, at);
     }

@@ -279,6 +279,73 @@ class BacktestEventServiceTest {
         verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
     }
 
+    /** 발행 시도·DLQ 횟수를 지정한 실행. 종결 판정은 이 둘의 비교다(R-18 ③). */
+    private BacktestRun givenDeadLetterCounts(RunStatus status, int publishCount, int dlqCount) {
+        RunLifecycle lifecycle =
+                new RunLifecycle(
+                        Instant.parse("2026-09-11T04:00:00Z"),
+                        null,
+                        null,
+                        null,
+                        publishCount,
+                        dlqCount,
+                        null);
+        BacktestRun job = jobIn(status).withLifecycle(lifecycle);
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        return job;
+    }
+
+    @Test
+    @DisplayName("DLQ: 발행한 메시지가 모두 죽었으면 실행을 FAILED(SYSTEM_FAILURE)로 끝낸다")
+    void deadLetterFinishesTheRunWhenEveryMessageDied() {
+        givenDeadLetterCounts(RunStatus.RUNNING, 1, 1);
+
+        service.handleDeadLetter(BACKTEST_ID);
+
+        verify(jobRepository).recordDeadLetter(1L);
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.FAILED);
+        assertThat(updated.getFailureCode()).isEqualTo("SYSTEM_FAILURE");
+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());
+        // 결과 행은 만들지 않는다 — 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다.
+        verifyNoInteractions(resultRepository);
+    }
+
+    @Test
+    @DisplayName("DLQ: 아직 살아 있는 메시지가 있으면 세기만 하고 실행을 끊지 않는다 — 중복 실행의 한쪽만 죽은 경우다")
+    void deadLetterOnlyCountsWhileAnotherMessageMayRun() {
+        givenDeadLetterCounts(RunStatus.RUNNING, 2, 1);
+
+        service.handleDeadLetter(BACKTEST_ID);
+
+        verify(jobRepository).recordDeadLetter(1L);
+        verify(jobRepository, never()).update(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 이미 끝난 실행이면 세기만 하고 상태를 건드리지 않는다")
+    void deadLetterOnAFinishedRunChangesNothing() {
+        givenDeadLetterCounts(RunStatus.COMPLETED, 1, 1);
+
+        service.handleDeadLetter(BACKTEST_ID);
+
+        verify(jobRepository).recordDeadLetter(1L);
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 모르는 runId 는 로그만 남기고 버린다")
+    void deadLetterForAnUnknownRunIsDropped() {
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());
+
+        service.handleDeadLetter(BACKTEST_ID);
+
+        verify(jobRepository, never()).recordDeadLetter(any());
+        verify(jobRepository, never()).update(any());
+    }
+
     @Test
     @DisplayName("FINISHED(FAILED): 결과(오류 포함)를 저장하고 Job을 FAILED로 갱신한다")
     void finishedFailedSavesResultAndFails() {
