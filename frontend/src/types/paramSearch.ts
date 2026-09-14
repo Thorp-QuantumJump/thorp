@@ -82,9 +82,17 @@ export type ParamSearchRequest = {
   strategy: { strategyIds: string[] }
   run?: { start?: string; end?: string }
   portfolio?: { initialCash?: string }
-  space?: Record<string, Record<string, AxisValue[]>>
+  space?: SearchSpaceSelection
   registryVersion?: string
 }
+
+/**
+ * 사용자가 좁힌 탐색 공간. `전략 ID → 축 이름 → 고른 후보값`이다.
+ *
+ * **비어 있는 것과 전부 고른 것은 같은 뜻이다** — 둘 다 등록표 전체 범위를 쓴다. 그래서 화면은
+ * 아무것도 좁히지 않았으면 `space`를 아예 보내지 않는다.
+ */
+export type SearchSpaceSelection = Record<string, Record<string, AxisValue[]>>
 
 // ---------------------------------------------------------------------------
 // 미리보기 응답 (POST /param-searches/preview)

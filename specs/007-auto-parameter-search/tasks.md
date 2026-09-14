@@ -189,12 +189,12 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 ### Implementation for User Story 1 — Frontend
 
 - [X] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현
-- [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)
-- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)
-- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)
+- [X] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)
+- [X] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)
+- [X] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)
 - [ ] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)
 - [ ] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결
-- [ ] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)
+- [X] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)
 - [ ] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)
 - [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)
 
