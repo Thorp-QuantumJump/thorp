@@ -204,7 +204,9 @@ public class BacktestService {
                                 command.executionType(),
                                 ResultSource.NEW,
                                 retryOfRequestId));
-        events.publishEvent(new BacktestJobDispatcher.RunAccepted(saved.getId()));
+        events.publishEvent(
+                new BacktestJobDispatcher.RunAccepted(
+                        saved.getId(), saved.getLifecycle().publishCount()));
         return BacktestJobResult.of(request, saved);
     }
 

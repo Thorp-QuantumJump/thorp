@@ -53,8 +53,14 @@ public class BacktestJobDispatcher {
         this.clock = clock;
     }
 
-    /** 접수가 커밋됐다는 신호. 이 이벤트가 없으면(롤백) 발행도 없다. */
-    public record RunAccepted(long runId) {}
+    /**
+     * 접수가 커밋됐다는 신호. 이 이벤트가 없으면(롤백) 발행도 없다.
+     *
+     * @param publishAttempt 접수가 확보한 시도 번호. <b>여기에 실어 나른다</b> — 이 콜백이 늦어지는 사이 재발행기가 시도 번호를 올릴 수 있고,
+     *     그때 DB 를 다시 읽으면 최초 발행과 재발행이 같은 번호를 쓴다. 그러면 서로 다른 두 메시지가 DLQ 에서 한 건으로 집계돼 종결 판정이 영영 서지
+     *     않는다(R-18 ③)
+     */
+    public record RunAccepted(long runId, int publishAttempt) {}
 
     /**
      * <b>여기서 나가는 예외는 접수를 실패로 만든다.</b> {@code AFTER_COMMIT} 콜백의 예외는 삼켜지지 않고 커밋을 호출한 쪽으로 전파된다 — 접수는
@@ -66,7 +72,7 @@ public class BacktestJobDispatcher {
     @TransactionalEventListener
     public void onRunAccepted(RunAccepted event) {
         try {
-            publishAlreadyCounted(event.runId());
+            publishAlreadyCounted(event.runId(), event.publishAttempt());
         } catch (RuntimeException exc) {
             log.error("커밋 후 발행 처리에서 예외가 났습니다. 접수는 그대로 두고 재발행기에 맡깁니다: runId={}", event.runId(), exc);
         }
@@ -78,13 +84,15 @@ public class BacktestJobDispatcher {
      * <p>실패해도 예외를 밖으로 던지지 않는다 — 커밋은 이미 끝났고 사용자에게는 202를 돌려준 뒤다. 발행이 안 된 실행은 {@code published_at}이
      * NULL로 남아 {@link JobRepublisher}가 집어 간다.
      */
-    void publishAlreadyCounted(long runId) {
+    void publishAlreadyCounted(long runId, int publishAttempt) {
         Optional<BacktestRun> found = newTransaction.execute(status -> repository.findById(runId));
         if (found == null || found.isEmpty()) {
             log.warn("발행할 실행을 찾지 못했습니다: runId={}", runId);
             return;
         }
-        send(found.get());
+        // 시도 번호는 접수가 확보한 값을 쓰고 방금 읽은 실행에서 다시 읽지 않는다 — 이 콜백이 늦어지면
+        // 그 사이 재발행기가 올린 번호를 보게 되고, 두 발행이 같은 번호를 달면 DLQ 집계가 한 건으로 접힌다.
+        send(found.get(), publishAttempt);
     }
 
     /**
@@ -104,13 +112,17 @@ public class BacktestJobDispatcher {
             log.warn("재발행할 실행을 찾지 못했습니다: runId={}", runId);
             return;
         }
-        send(found.get());
+        // 올리기와 읽기가 한 트랜잭션이고 UPDATE 가 행을 잠그므로, 여기 값은 이 재발행이 확보한 번호다.
+        send(found.get(), found.get().getLifecycle().publishCount());
     }
 
-    private void send(BacktestRun run) {
+    /**
+     * @param publishAttempt <b>호출자가 확보한</b> 시도 번호. 실행에서 다시 읽지 않는다 — 두 발행 경로가 같은 번호를 달면 DLQ 집계가 서로
+     *     다른 두 메시지를 한 건으로 접어 종결 판정이 서지 않는다(R-18 ③)
+     */
+    private void send(BacktestRun run, int publishAttempt) {
         try {
-            // 시도 번호는 방금 올린 publish_count 다 — 두 경로 모두 올린 뒤 실행을 다시 읽고 여기로 온다.
-            publisher.publish(assembler.assemble(run), run.getLifecycle().publishCount());
+            publisher.publish(assembler.assemble(run), publishAttempt);
         } catch (RuntimeException exc) {
             log.warn(
                     "작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}",

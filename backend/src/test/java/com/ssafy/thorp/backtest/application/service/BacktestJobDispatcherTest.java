@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.application.service;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -14,6 +15,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -92,6 +94,41 @@ class BacktestJobDispatcherTest {
                 RunStatus.QUEUED);
     }
 
+    /** 발행 시도 횟수를 지정한 실행. 재발행기가 올려 둔 상태를 흉내 낸다. */
+    private static BacktestRun runWithPublishCount(int publishCount) {
+        RunLifecycle lifecycle = RunLifecycle.queuedAt(NOW);
+        for (int i = 0; i < publishCount; i++) {
+            lifecycle = lifecycle.publishAttempted();
+        }
+        return run().withLifecycle(lifecycle);
+    }
+
+    @Test
+    @DisplayName("최초 발행은 접수가 확보한 시도 번호를 쓴다 — 늦어진 사이 재발행기가 올려 둔 값을 따라가지 않는다")
+    void theFirstPublishKeepsItsOwnAttemptNumber() {
+        // 접수는 1을 확보했는데 콜백이 늦어졌고, 그 사이 재발행기가 2로 올려 시도 2를 이미 보냈다.
+        // 여기서 DB 의 최신값(2)을 읽으면 서로 다른 두 메시지가 같은 번호를 달고, DLQ 집계가 둘을
+        // 한 건으로 접어 dlq_count < publish_count 로 남는다 — 종결 판정이 영영 서지 않는다.
+        when(repository.findById(11L)).thenReturn(Optional.of(runWithPublishCount(2)));
+        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
+
+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));
+
+        verify(publisher).publish(any(), eq(1));
+    }
+
+    @Test
+    @DisplayName("재발행은 자기가 올린 번호를 쓴다")
+    void republishUsesTheNumberItClaimed() {
+        when(repository.findById(11L)).thenReturn(Optional.of(runWithPublishCount(2)));
+        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
+
+        dispatcher.republish(11L);
+
+        verify(repository).recordPublishAttempt(11L);
+        verify(publisher).publish(any(), eq(2));
+    }
+
     @Test
     @DisplayName("발행에 실패해도 접수 쪽으로 예외가 나가지 않는다")
     void publishFailureDoesNotEscape() {
@@ -99,7 +136,10 @@ class BacktestJobDispatcherTest {
         when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
         doThrow(new AmqpException("broker down")).when(publisher).publish(any(), anyInt());
 
-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
+        assertThatCode(
+                        () ->
+                                dispatcher.onRunAccepted(
+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
         verify(repository, never()).recordPublished(any(), any());
     }
@@ -113,7 +153,10 @@ class BacktestJobDispatcherTest {
                 .when(repository)
                 .recordPublished(any(), any());
 
-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
+        assertThatCode(
+                        () ->
+                                dispatcher.onRunAccepted(
+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
         verify(publisher).publish(any(), anyInt());
     }
@@ -123,7 +166,10 @@ class BacktestJobDispatcherTest {
     void lookupFailureDoesNotEscape() {
         when(repository.findById(11L)).thenThrow(new DataAccessResourceFailureException("db down"));
 
-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
+        assertThatCode(
+                        () ->
+                                dispatcher.onRunAccepted(
+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
         verify(publisher, never()).publish(any(), anyInt());
     }
@@ -133,7 +179,10 @@ class BacktestJobDispatcherTest {
     void unknownRunIsSkipped() {
         when(repository.findById(11L)).thenReturn(Optional.empty());
 
-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
+        assertThatCode(
+                        () ->
+                                dispatcher.onRunAccepted(
+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
         verify(publisher, never()).publish(any(), anyInt());
     }

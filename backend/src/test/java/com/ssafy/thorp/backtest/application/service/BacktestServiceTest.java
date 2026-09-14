@@ -221,7 +221,7 @@ class BacktestServiceTest {
     void publishesAfterCommitViaEvent() {
         service.create(fixedWeight());
 
-        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L));
+        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L, 1));
     }
 
     @Test
