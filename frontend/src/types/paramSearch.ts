@@ -57,6 +57,18 @@ export type SelectionOutcome =
 /** 선정에 쓰는 필터 이름. */
 export type SelectionFilter = 'DRAWDOWN' | 'STABILITY'
 
+/**
+ * 후보 목록을 정렬할 수 있는 항목. **서버가 허용하는 것이 전부이고 그 밖의 값은 400이다.**
+ *
+ * 한 항목 기준 정렬은 FR-017이 허용한다 — 정렬은 보기 편하라고 있는 것이고 순위를 뜻하지 않는다.
+ */
+export type CandidateSort =
+  | 'candidateNo'
+  | 'netReturn'
+  | 'maxDrawdown'
+  | 'tradingCost'
+  | 'stability'
+
 /** 축 후보값과 파라미터 값. 등록표가 정하는 값이라 숫자·문자열 어느 쪽도 올 수 있다. */
 export type AxisValue = number | string
 
