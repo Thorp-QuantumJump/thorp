@@ -277,15 +277,15 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 - [X] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)
 - [X] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409
-- [ ] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정
-- [ ] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정
-- [ ] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)
+- [X] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정
+- [X] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정
+- [X] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)
 - [X] T098a [US3] (BE) `ParamSearchService.retryFailed()` — `FAILED` 후보만 `DISPATCHED`로 되돌려 재발행하고 `retry_count`를 올린다. 묶음 시작 시점 스냅샷(참조 버전·탐색 공간·선정 규칙)을 그대로 쓰고 새 묶음을 만들지 않는다. `SKIPPED` 후보는 대상이 아니다 (FR-024)
 - [X] T098b [US3] (BE) `POST /param-searches/{searchId}/retry-failed` 엔드포인트와 응답 DTO — 재시도 대상 수·재발행 수 반환, 실패 후보가 없으면 `409 NOTHING_TO_RETRY` ([contracts/param-search-api.md](contracts/param-search-api.md) §5.1)
 - [X] T098c [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java` — 재시도가 새 묶음을 만들지 않고 스냅샷을 재사용하는지, `SKIPPED`가 제외되는지, 재시도 완료 후 선정이 다시 계산되는지 검증 (SC-009)
-- [ ] T101a [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java` — 실행시간·연속 실패 한도 도달 시 발행이 멈추고 `PARTIAL` + `stop_reason`이 남으며 부분 결과 문장이 나오는지 검증 (SC-003)
-- [ ] T102 [US3] (BE) `GET /param-searches/{searchId}` 응답에 `partial`·`partialNote`·`stopReason` 채우기 — 완료·미실행 후보 수를 문장으로 (FR-009)
-- [ ] T103 [US3] (BE) 후보 계산 실패·자료 부족을 `FAILED` + `reason_code`로 기록하고 성과 필드를 `null`로 유지 (FR-011)
+- [X] T101a [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java` — 실행시간·연속 실패 한도 도달 시 발행이 멈추고 `PARTIAL` + `stop_reason`이 남으며 부분 결과 문장이 나오는지 검증 (SC-003)
+- [X] T102 [US3] (BE) `GET /param-searches/{searchId}` 응답에 `partial`·`partialNote`·`stopReason` 채우기 — 완료·미실행 후보 수를 문장으로 (FR-009)
+- [X] T103 [US3] (BE) 후보 계산 실패·자료 부족을 `FAILED` + `reason_code`로 기록하고 성과 필드를 `null`로 유지 (FR-011)
 
 ### Implementation for User Story 3 — Frontend
 

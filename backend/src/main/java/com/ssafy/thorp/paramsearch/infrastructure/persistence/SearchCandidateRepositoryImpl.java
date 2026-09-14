@@ -101,6 +101,18 @@ public class SearchCandidateRepositoryImpl implements SearchCandidateRepository 
     }
 
     @Override
+    public List<SearchCandidate> findRecentlyFinished(Long paramSearchId, int limit) {
+        return jpaRepository
+                .findByParamSearchIdAndStatusInOrderByUpdatedAtDesc(
+                        paramSearchId,
+                        List.of(CandidateStatus.COMPLETED, CandidateStatus.FAILED),
+                        Limit.of(limit))
+                .stream()
+                .map(SearchCandidateMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public long countByStatus(Long paramSearchId, CandidateStatus status) {
         return jpaRepository.countByParamSearchIdAndStatus(paramSearchId, status);
     }

@@ -3,8 +3,12 @@ package com.ssafy.thorp.paramsearch.application.service;
 import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;
+import com.ssafy.thorp.paramsearch.application.service.limit.FailureLimitGuard;
+import com.ssafy.thorp.paramsearch.application.service.limit.TimeLimitGuard;
+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
+import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +36,22 @@ public class ParamSearchProgressService {
     private final SearchCandidateRepository candidateRepository;
     private final CandidateDispatcher dispatcher;
     private final ParamSearchCompletionService completionService;
+    private final TimeLimitGuard timeLimitGuard;
+    private final FailureLimitGuard failureLimitGuard;
 
     public ParamSearchProgressService(
             ParamSearchRepository paramSearchRepository,
             SearchCandidateRepository candidateRepository,
             CandidateDispatcher dispatcher,
-            ParamSearchCompletionService completionService) {
+            ParamSearchCompletionService completionService,
+            TimeLimitGuard timeLimitGuard,
+            FailureLimitGuard failureLimitGuard) {
         this.paramSearchRepository = paramSearchRepository;
         this.candidateRepository = candidateRepository;
         this.dispatcher = dispatcher;
         this.completionService = completionService;
+        this.timeLimitGuard = timeLimitGuard;
+        this.failureLimitGuard = failureLimitGuard;
     }
 
     /**
@@ -81,14 +91,66 @@ public class ParamSearchProgressService {
                                         new IllegalStateException(
                                                 "candidate without a search: "
                                                         + candidate.getId()));
+        // 한도는 다음 발행 직전에 본다. 여기서 멈추기로 하면 그 사유가 곧 PARTIAL 의 사유가 된다.
+        // 이미 발행된 후보는 끊지 않는다 — 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다.
+        ParamSearch guarded = applyLimits(locked);
         // 집계 갱신과 종료 판정·선정은 completionService 한곳이 한다. 취소로 끝나는 길과
         // 같은 코드를 쓰지 않으면 한쪽만 고쳐져 취소된 묶음에만 선정이 안 붙는다.
-        ParamSearch settled = completionService.settle(locked);
+        ParamSearch settled = completionService.settle(guarded);
         if (!settled.getStatus().isFinal()) {
             // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.
             dispatcher.advance(settled.getId(), snapshotOf(settled));
         }
         return true;
+    }
+
+    /**
+     * 실행시간·연속 실패 한도를 보고, 닿았으면 멈추기로 표시한다(FR-005, 내부 계약 §4 "한도 도달").
+     *
+     * <p><b>순서가 뜻을 갖는다.</b> 실행시간을 먼저 본다 — 오래 걸려 멈추는 것과 줄줄이 실패해 멈추는 것이 동시에 참일 때, 사용자가 먼저 알아야 할 것은
+     * "시간이 다 됐다"이기 때문이다. 이미 사유가 있으면 {@code requestStop}이 덮어쓰지 않는다.
+     *
+     * <p>남은 대기 후보가 없으면 보지 않는다 — 멈출 것이 없는데 사유를 남기면 정상 완료가 한도 도달로 기록된다.
+     */
+    private ParamSearch applyLimits(ParamSearch search) {
+        if (search.isStopRequested()
+                || candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING)
+                        == 0) {
+            return search;
+        }
+        StopReason reason = null;
+        if (timeLimitGuard.isReached(search)) {
+            reason = StopReason.TIME_LIMIT;
+        } else if (failureLimitGuard.isReached(search.getId())) {
+            reason = StopReason.FAILURE_LIMIT;
+        }
+        if (reason == null) {
+            return search;
+        }
+        log.info(
+                "param search stopped by a limit: searchId={} reason={}",
+                search.getSearchId().value(),
+                reason);
+        ParamSearch stopped = paramSearchRepository.update(search.requestStop(reason));
+        skipPending(stopped, reason);
+        return stopped;
+    }
+
+    /** 한도로 멈추면 남은 대기 후보는 '미실행'이다 — 취소와 같은 뜻이며 되돌아오지 않는다(FR-009). */
+    private void skipPending(ParamSearch search, StopReason reason) {
+        for (SearchCandidate candidate :
+                candidateRepository.findByParamSearchIdAndStatus(
+                        search.getId(), CandidateStatus.PENDING)) {
+            candidateRepository.update(candidate.markSkipped(reason.name(), detailOf(reason)));
+        }
+    }
+
+    private static String detailOf(StopReason reason) {
+        return switch (reason) {
+            case TIME_LIMIT -> "실행시간 상한에 닿아 실행되지 않았습니다";
+            case FAILURE_LIMIT -> "연속 실패가 이어져 실행되지 않았습니다";
+            default -> "실행되지 않았습니다";
+        };
     }
 
     private static ParamSearchSnapshot snapshotOf(ParamSearch search) {
