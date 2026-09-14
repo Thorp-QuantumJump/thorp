@@ -26,6 +26,12 @@ pipeline {
         // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을
         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.
         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'
+
+        // 파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면
+        // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.
+        // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
+        //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
+        CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF "[ci-all]" && echo true || echo false').trim()
     }
 
     stages {
@@ -57,7 +63,10 @@ pipeline {
                         # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
                         #              post 단계에서 git merge --abort 로 되돌린다.
                         # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
-                        if ! git merge --no-commit --no-ff origin/dev; then
+                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
+                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
+                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
+                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then
                             echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
                             exit 1
                         fi
@@ -74,7 +83,12 @@ pipeline {
         }
 
         stage('Frontend') {
-            when { changeset "frontend/**" }
+            when {
+                anyOf {
+                    changeset "frontend/**"
+                    environment name: 'CI_RUN_ALL', value: 'true'
+                }
+            }
             stages {
                 stage('FE Install') {
                     steps {
@@ -126,7 +140,12 @@ pipeline {
         }
 
         stage('Backend') {
-            when { changeset "backend/**" }
+            when {
+                anyOf {
+                    changeset "backend/**"
+                    environment name: 'CI_RUN_ALL', value: 'true'
+                }
+            }
             stages {
                 stage('BE Format') {
                     steps {
@@ -171,7 +190,12 @@ pipeline {
         }
 
         stage('Worker') {
-            when { changeset "worker/**" }
+            when {
+                anyOf {
+                    changeset "worker/**"
+                    environment name: 'CI_RUN_ALL', value: 'true'
+                }
+            }
             stages {
                 stage('Worker Setup') {
                     steps {
@@ -212,7 +236,12 @@ pipeline {
         }
 
         stage('Data') {
-            when { changeset "data/**" }
+            when {
+                anyOf {
+                    changeset "data/**"
+                    environment name: 'CI_RUN_ALL', value: 'true'
+                }
+            }
             stages {
                 stage('Data Setup') {
                     steps {
