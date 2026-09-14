@@ -29,8 +29,10 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -309,6 +311,36 @@ class BacktestResultQueryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NO_PARTIAL_RESULT);
+    }
+
+    @Test
+    @DisplayName("먼저 취소한 합류 요청의 완료 일수는 비운다 — 날짜는 취소 시점인데 일수만 실행의 최신 값이면 어긋난다")
+    void pinnedRequestHasNoCompletedTradingDays() {
+        RunProgress ahead =
+                new RunProgress(ProgressStage.COMPUTING, LocalDate.parse("2025-06-30"), 120, 120);
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelledJoinedRequest(LocalDate.parse("2025-01-28"))));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING).recordProgress(ahead)));
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.progress().lastTradingDate()).isEqualTo(LocalDate.parse("2025-01-28"));
+        assertThat(result.progress().completedTradingDays()).isNull();
+        assertThat(result.progress().totalTradingDays()).isEqualTo(120);
+    }
+
+    @Test
+    @DisplayName("진행 거래일이 있는 CANCELLED 인데 결과 행이 없으면 결과 유실(500)이다 — 실행 전 취소로 숨기지 않는다")
+    void cancelledWithProgressButNoResultRowIsCorruption() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(stoppedRequest()));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(cancelledRun(LocalDate.parse("2025-03-25"))));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

@@ -91,8 +91,9 @@ public class BacktestResultQueryService {
                     found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
         }
         Optional<BacktestResultSummary> summary = resultRepository.findSummary(job.getId());
-        if (summary.isEmpty() && job.getStatus() == RunStatus.CANCELLED) {
+        if (summary.isEmpty() && cancelledBeforeStart(job)) {
             // 대기 중 취소된 실행은 워커가 돌지 않았으니 결과 행이 없는 것이 정상이다(T011).
+            // 계산한 거래일이 있는 CANCELLED 는 부분 결과가 있어야 하므로 아래에서 500 이다.
             return BacktestDetailResult.cancelledBeforeStart(
                     found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());
         }
@@ -332,8 +333,7 @@ public class BacktestResultQueryService {
             case CANCELLED, COMPLETED -> {}
         }
         BacktestRequest request = found.request();
-        if (job.getStatus() == RunStatus.CANCELLED
-                && (job.getProgress() == null || job.getProgress().lastTradingDate() == null)) {
+        if (cancelledBeforeStart(job)) {
             // 대기 중 취소 — 계산한 거래일이 없어 결과 행도 없다. 500(결과 유실)이 아니라 결과 없음이다.
             throw new BusinessException(
                     ErrorCode.NO_PARTIAL_RESULT,
@@ -349,6 +349,16 @@ public class BacktestResultQueryService {
             }
         }
         return new ResultView(job, cutoff, request.isCancelled() || job.isPartial());
+    }
+
+    /**
+     * 워커가 한 거래일도 계산하기 전에 끝난 취소인가. 결과 행이 없는 것이 정상인 유일한 최종 상태다.
+     *
+     * <p>진행 거래일이 있는 CANCELLED 는 부분 결과를 저장했어야 한다 — 그 결과가 없으면 데이터 유실이므로 "실행 전 취소"로 덮어 200 으로 숨기지 않는다.
+     */
+    private static boolean cancelledBeforeStart(BacktestRun job) {
+        return job.getStatus() == RunStatus.CANCELLED
+                && (job.getProgress() == null || job.getProgress().lastTradingDate() == null);
     }
 
     /**
