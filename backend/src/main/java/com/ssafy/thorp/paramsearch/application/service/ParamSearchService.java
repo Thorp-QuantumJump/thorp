@@ -30,7 +30,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;
 import com.ssafy.thorp.paramsearch.domain.model.SelectionRule;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
-import com.ssafy.thorp.paramsearch.domain.model.ValidationLabel;
+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -600,6 +600,8 @@ public class ParamSearchService {
 
         ParamSearchPreviewResult toPreviewResult(SearchLimits limits) {
             long valid = validCount();
+            // 실행 전에도 미검증임을 알린다 — 결과를 본 뒤에야 알게 되면 그것은 이미 오해가 생긴 뒤다(FR-015).
+            ValidationStatus validation = ValidationStatus.unvalidated();
             return new ParamSearchPreviewResult(
                     registryVersion(),
                     strategySummaries(),
@@ -616,8 +618,8 @@ public class ParamSearchService {
                             ? null
                             : new ParamSearchPreviewResult.CommonPeriod(
                                     period.start(), period.end(), period.shortenedBy()),
-                    ValidationLabel.UNVALIDATED.name(),
-                    "평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다");
+                    validation.label().name(),
+                    validation.note());
         }
 
         private List<ParamSearchPreviewResult.StrategySummary> strategySummaries() {

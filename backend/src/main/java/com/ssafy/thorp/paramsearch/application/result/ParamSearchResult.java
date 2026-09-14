@@ -4,6 +4,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,6 +28,8 @@ public record ParamSearchResult(
         String partialNote,
         Config config,
         Baseline baseline,
+        String validationLabel,
+        String validationNote,
         Map<String, Object> selection,
         Instant startedAt,
         Instant finishedAt) {
@@ -90,6 +93,8 @@ public record ParamSearchResult(
      */
     public static ParamSearchResult from(ParamSearch search, Baseline baseline) {
         SearchCounts counts = search.getCounts();
+        // 실행 중에도, 끝난 뒤에도 같은 문장을 쓴다. 세 응답이 각자 문구를 들면 한 곳만 고쳐진다(FR-015).
+        ValidationStatus validation = ValidationStatus.of(search.getEvaluationSplit());
         boolean partial = search.getStatus() == ParamSearchStatus.PARTIAL;
         return new ParamSearchResult(
                 search.getSearchId() == null ? null : search.getSearchId().value(),
@@ -110,6 +115,8 @@ public record ParamSearchResult(
                         search.getReferenceVersions(),
                         search.isDataVersionChanged()),
                 baseline,
+                validation.label().name(),
+                validation.note(),
                 search.getSelection(),
                 search.getStartedAt(),
                 search.getFinishedAt());
