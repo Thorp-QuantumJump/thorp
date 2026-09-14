@@ -73,6 +73,7 @@
   color: var(--thorp-copy);
   font-size: 0.75rem;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .status svg {
@@ -141,5 +142,17 @@
   .submitButton,
   .secondaryButton {
     transition: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .status {
+    padding: 10px;
+    font-size: 0.71rem;
+  }
+
+  .submitButton,
+  .secondaryButton {
+    min-height: 46px;
   }
 }

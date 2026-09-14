@@ -10,6 +10,10 @@ export const apiClient = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
 })
 
+type AuthenticationRequiredListener = () => void
+
+const authenticationRequiredListeners = new Set<AuthenticationRequiredListener>()
+
 type ApiClientErrorKind = 'api' | 'network' | 'unexpected'
 
 export class ApiClientError extends Error {
@@ -80,6 +84,28 @@ function readApiError(value: unknown) {
   return { code: error.code, message: error.message, fieldErrors }
 }
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const apiError = readApiError(error.response.data)
+      if (apiError?.code === 'AUTHENTICATION_REQUIRED') {
+        authenticationRequiredListeners.forEach((listener) => listener())
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
+
+/** 인증된 요청에서 세션 만료가 확인되면 전역 인증 상태에 전달한다. */
+export function subscribeAuthenticationRequired(
+  listener: AuthenticationRequiredListener,
+): () => void {
+  authenticationRequiredListeners.add(listener)
+  return () => authenticationRequiredListeners.delete(listener)
+}
+
 /** Axios 오류를 화면에서 안전하게 분기할 수 있는 공통 오류로 변환한다. */
 export function normalizeApiError(error: unknown): ApiClientError {
   if (error instanceof ApiClientError) return error
@@ -143,4 +169,26 @@ export async function prepareCsrfToken(): Promise<void> {
 export function resetCsrfToken(): void {
   csrfReady = false
   pendingCsrfRequest = null
+}
+
+/** CSRF 오류에서는 토큰만 갱신하고 상태 변경 요청은 사용자가 재시도할 때까지 반복하지 않는다. */
+export async function runCsrfProtectedMutation<T>(request: () => Promise<T>): Promise<T> {
+  try {
+    await prepareCsrfToken()
+    return await request()
+  } catch (error) {
+    const normalizedError = normalizeApiError(error)
+
+    if (normalizedError.code === 'CSRF_TOKEN_INVALID') {
+      resetCsrfToken()
+      try {
+        await prepareCsrfToken()
+      } catch {
+        // 다음 명시적 재시도에서도 새 토큰을 준비하도록 실패 상태를 유지한다.
+        resetCsrfToken()
+      }
+    }
+
+    throw normalizedError
+  }
 }

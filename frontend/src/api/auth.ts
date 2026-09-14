@@ -2,8 +2,8 @@ import {
   ApiClientError,
   apiClient,
   normalizeApiError,
-  prepareCsrfToken,
   resetCsrfToken,
+  runCsrfProtectedMutation,
 } from './client'
 import type {
   ApiEnvelope,
@@ -55,21 +55,12 @@ function describeShape(value: unknown): string {
   return `{ ${fields} }`
 }
 
-async function runMutation<T>(request: () => Promise<T>): Promise<T> {
-  try {
-    await prepareCsrfToken()
-    return await request()
-  } catch (error) {
-    throw normalizeApiError(error)
-  }
-}
-
 export async function requestEmailVerification(
   input: EmailVerificationRequest,
   signal?: AbortSignal,
 ): Promise<void> {
   const email = normalizeEmail(input.email)
-  await runMutation(() =>
+  await runCsrfProtectedMutation(() =>
     apiClient.post('/accounts/email-verifications', { email }, { signal }),
   )
 }
@@ -79,7 +70,7 @@ export async function confirmEmailVerification(
   signal?: AbortSignal,
 ): Promise<void> {
   const email = normalizeEmail(input.email)
-  await runMutation(() =>
+  await runCsrfProtectedMutation(() =>
     apiClient.post(
       '/accounts/email-verifications/confirm',
       { email, verificationCode: input.verificationCode },
@@ -93,7 +84,7 @@ export async function signup(
   signal?: AbortSignal,
 ): Promise<SignupResponse> {
   const email = normalizeEmail(input.email)
-  const response = await runMutation(() =>
+  const response = await runCsrfProtectedMutation(() =>
     apiClient.post<ApiEnvelope<SignupResponse>>(
       '/accounts',
       { ...input, email },
@@ -125,7 +116,7 @@ export async function login(
   input: LoginRequest,
   signal?: AbortSignal,
 ): Promise<AuthenticatedUser> {
-  const response = await runMutation(() =>
+  const response = await runCsrfProtectedMutation(() =>
     apiClient.post<ApiEnvelope<AuthenticatedUser>>(
       '/auth/sessions',
       { email: normalizeEmail(input.email), password: input.password },
@@ -152,6 +143,13 @@ export async function login(
 
   resetCsrfToken()
   return user
+}
+
+export async function logout(signal?: AbortSignal): Promise<void> {
+  await runCsrfProtectedMutation(() =>
+    apiClient.delete('/auth/sessions/current', { signal }),
+  )
+  resetCsrfToken()
 }
 
 export async function getCurrentUser(signal?: AbortSignal): Promise<AuthenticatedUser> {

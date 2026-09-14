@@ -19,6 +19,7 @@ const anonymousAuth: AuthContextValue = {
   status: 'anonymous',
   user: null,
   login: vi.fn(),
+  logout: vi.fn(),
   recheck: vi.fn(),
 }
 
@@ -63,6 +64,7 @@ describe('App authentication routes', () => {
   })
 
   it('로그인 사용자는 내 기록 진입 화면을 바로 볼 수 있다', async () => {
+    authenticatedAuth.recheck = vi.fn().mockResolvedValue(authenticatedAuth)
     renderApp('/records', authenticatedAuth)
 
     expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()

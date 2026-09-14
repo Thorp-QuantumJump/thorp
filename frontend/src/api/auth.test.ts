@@ -11,6 +11,7 @@ import {
   confirmEmailVerification,
   getCurrentUser,
   login,
+  logout,
   normalizeEmail,
   requestEmailVerification,
   signup,
@@ -156,6 +157,14 @@ describe('auth API', () => {
     await expect(getCurrentUser()).resolves.toEqual(authenticatedUser)
     expect(getSpy).toHaveBeenCalledOnce()
     expect(getSpy).toHaveBeenCalledWith('/auth/me', { signal: undefined })
+  })
+
+  it('로그아웃은 CSRF를 준비한 뒤 현재 세션만 종료한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    const deleteSpy = vi.spyOn(apiClient, 'delete').mockResolvedValue(axiosResponse(null, 204))
+
+    await expect(logout()).resolves.toBeUndefined()
+    expect(deleteSpy).toHaveBeenCalledWith('/auth/sessions/current', { signal: undefined })
   })
 
   it('로그인 실패 envelope를 안정된 인증 오류로 변환한다', async () => {

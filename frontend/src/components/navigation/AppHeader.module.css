@@ -17,6 +17,9 @@
 .recordsLink,
 .authLink,
 .authState,
+.authActions,
+.authRecovery,
+.authButton,
 .drawerHeader,
 .drawerHeader button,
 .drawerLink,
@@ -24,6 +27,46 @@
 .drawerAuth {
   display: flex;
   align-items: center;
+}
+
+.authActions,
+.authRecovery {
+  gap: 8px;
+}
+
+.authButton {
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.authButton:hover:not(:disabled) {
+  border-color: var(--thorp-accent);
+  color: var(--thorp-accent-soft);
+}
+
+.authButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.authNotice {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .inner {
@@ -158,6 +201,7 @@
 .desktopNav a:focus-visible,
 .recordsLink:focus-visible,
 .authLink:focus-visible,
+.authButton:focus-visible,
 .drawer button:focus-visible,
 .drawer a:focus-visible {
   border-radius: 8px;
@@ -288,9 +332,40 @@
   text-decoration: none;
 }
 
+.drawerAuthActions {
+  display: grid;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.drawerAuthActions .drawerAuth {
+  width: 100%;
+  margin-top: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.drawerNotice {
+  color: var(--thorp-warning, var(--thorp-muted));
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
 .drawerRecords {
   margin-top: 18px;
   border-top-color: var(--thorp-line);
+}
+
+@media (max-width: 1100px) {
+  .authButton {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+  }
 }
 
 @media (max-width: 720px) {
@@ -314,10 +389,27 @@
     font-size: 0;
   }
 
+  .authActions,
+  .authRecovery {
+    gap: 4px;
+  }
+
+  .authButton {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+  }
+
   .recordsLink svg,
   .authLink svg {
     width: 20px;
     height: 20px;
+  }
+
+  .authButton svg {
+    width: 19px;
+    height: 19px;
   }
 }
 

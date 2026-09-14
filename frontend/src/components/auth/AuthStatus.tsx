@@ -18,6 +18,7 @@ export function AuthStatus({ message, tone = 'info' }: AuthStatusProps) {
       data-tone={tone}
       role={tone === 'error' ? 'alert' : 'status'}
       aria-live={tone === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
     >
       <Icon size={17} aria-hidden="true" />
       <span>{message}</span>

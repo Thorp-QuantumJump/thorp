@@ -3,8 +3,10 @@ import {
   FolderClock,
   Home,
   LogIn,
+  LogOut,
   Menu,
   Play,
+  RefreshCw,
   UserRound,
   X,
 } from 'lucide-react'
@@ -44,12 +46,27 @@ const navigationItems = [
 /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
 export function AppHeader() {
   const location = useLocation()
-  const { status: authStatus, user } = useAuth()
+  const { status: authStatus, user, logout, recheck } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)
   const drawerRef = useRef<HTMLElement>(null)
+  const recoveryButtonRef = useRef<HTMLButtonElement>(null)
+  const loginLinkRef = useRef<HTMLAnchorElement>(null)
+  const previousAuthStatusRef = useRef(authStatus)
+
+  useEffect(() => {
+    const previousStatus = previousAuthStatusRef.current
+    previousAuthStatusRef.current = authStatus
+
+    if (previousStatus === 'authenticated' && authStatus === 'logoutUnconfirmed') {
+      recoveryButtonRef.current?.focus()
+    } else if (previousStatus === 'logoutUnconfirmed' && authStatus === 'anonymous') {
+      loginLinkRef.current?.focus()
+    }
+  }, [authStatus])
 
   // 닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다.
   const closeMenu = useCallback(() => {
@@ -117,6 +134,109 @@ export function AppHeader() {
     }
   }
 
+  const handleLogout = async () => {
+    if (pendingAuthAction) return
+    setPendingAuthAction('logout')
+    try {
+      await logout()
+    } catch {
+      // AuthProvider가 보호 정보를 숨긴 채 복구 가능한 미확인 상태를 유지한다.
+    } finally {
+      setPendingAuthAction(null)
+    }
+  }
+
+  const handleRecheck = async () => {
+    if (pendingAuthAction) return
+    setPendingAuthAction('recheck')
+    await recheck()
+    setPendingAuthAction(null)
+  }
+
+  const desktopAuthControl = (() => {
+    if (authStatus === 'checking') {
+      return <span className={styles.authState} role="status">확인 중</span>
+    }
+    if (authStatus === 'authenticated' && user) {
+      return (
+        <div className={styles.authActions}>
+          <Link className={styles.authLink} to="/records" aria-label={`${user.nickname} 로그인됨`}>
+            <UserRound size={16} aria-hidden="true" />
+            {user.nickname}
+          </Link>
+          <button
+            type="button"
+            className={styles.authButton}
+            disabled={pendingAuthAction !== null}
+            onClick={() => void handleLogout()}
+          >
+            <LogOut size={16} aria-hidden="true" />
+            로그아웃
+          </button>
+        </div>
+      )
+    }
+    if (authStatus === 'logoutUnconfirmed') {
+      return (
+        <div className={styles.authRecovery}>
+          <span className={styles.authNotice} role="alert">로그아웃 상태를 확인하지 못했습니다.</span>
+          <button
+            ref={recoveryButtonRef}
+            type="button"
+            className={styles.authButton}
+            disabled={pendingAuthAction !== null}
+            onClick={() => void handleLogout()}
+          >
+            <LogOut size={16} aria-hidden="true" />
+            로그아웃 다시 시도
+          </button>
+          <button
+            type="button"
+            className={styles.authButton}
+            disabled={pendingAuthAction !== null}
+            onClick={() => void handleRecheck()}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            로그인 상태 다시 확인
+          </button>
+        </div>
+      )
+    }
+    if (authStatus === 'error') {
+      return (
+        <div className={styles.authRecovery}>
+          <span className={styles.authNotice} role="status">로그인 상태를 확인하지 못했습니다.</span>
+          <button
+            type="button"
+            className={styles.authButton}
+            disabled={pendingAuthAction !== null}
+            onClick={() => void handleRecheck()}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            로그인 상태 다시 확인
+          </button>
+        </div>
+      )
+    }
+    if (authStatus === 'expired') {
+      return (
+        <div className={styles.authRecovery}>
+          <span className={styles.authNotice} role="status">로그인이 만료되었습니다.</span>
+          <Link className={styles.authLink} to="/login">
+            <LogIn size={16} aria-hidden="true" />
+            다시 로그인
+          </Link>
+        </div>
+      )
+    }
+    return (
+      <Link ref={loginLinkRef} className={styles.authLink} to="/login">
+        <LogIn size={16} aria-hidden="true" />
+        로그인
+      </Link>
+    )
+  })()
+
   return (
     <>
       <header className={styles.header} data-scrolled={isScrolled}>
@@ -165,21 +285,7 @@ export function AppHeader() {
               <FolderClock size={16} aria-hidden="true" />
               내 기록
             </Link>
-            {authStatus === 'checking' ? (
-              <span className={styles.authState} role="status">
-                확인 중
-              </span>
-            ) : authStatus === 'authenticated' && user ? (
-              <Link className={styles.authLink} to="/records" aria-label={`${user.nickname} 로그인됨`}>
-                <UserRound size={16} aria-hidden="true" />
-                {user.nickname}
-              </Link>
-            ) : (
-              <Link className={styles.authLink} to="/login">
-                <LogIn size={16} aria-hidden="true" />
-                로그인
-              </Link>
-            )}
+            {desktopAuthControl}
           </div>
         </div>
       </header>
@@ -261,18 +367,39 @@ export function AppHeader() {
               </Link>
 
               {authStatus === 'authenticated' && user ? (
-                <Link className={styles.drawerAuth} to="/records" onClick={() => setIsMenuOpen(false)}>
-                  <UserRound size={18} aria-hidden="true" />
-                  {user.nickname}
-                </Link>
+                <div className={styles.drawerAuthActions}>
+                  <Link className={styles.drawerAuth} to="/records" onClick={() => setIsMenuOpen(false)}>
+                    <UserRound size={18} aria-hidden="true" />
+                    {user.nickname}
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.drawerAuth}
+                    disabled={pendingAuthAction !== null}
+                    onClick={() => void handleLogout()}
+                  >
+                    <LogOut size={18} aria-hidden="true" />
+                    로그아웃
+                  </button>
+                </div>
               ) : authStatus === 'checking' ? (
                 <span className={styles.drawerAuth} role="status">
                   확인 중
                 </span>
+              ) : authStatus === 'logoutUnconfirmed' ? (
+                <div className={styles.drawerAuthActions}>
+                  <span className={styles.drawerNotice} role="alert">로그아웃 상태를 확인하지 못했습니다.</span>
+                  <button type="button" className={styles.drawerAuth} onClick={() => void handleLogout()}>
+                    <LogOut size={18} aria-hidden="true" /> 로그아웃 다시 시도
+                  </button>
+                  <button type="button" className={styles.drawerAuth} onClick={() => void handleRecheck()}>
+                    <RefreshCw size={18} aria-hidden="true" /> 로그인 상태 다시 확인
+                  </button>
+                </div>
               ) : (
                 <Link className={styles.drawerAuth} to="/login" onClick={() => setIsMenuOpen(false)}>
                   <LogIn size={18} aria-hidden="true" />
-                  로그인
+                  {authStatus === 'expired' ? '다시 로그인' : '로그인'}
                 </Link>
               )}
             </motion.nav>
