@@ -9,6 +9,11 @@ interface PreflightPanelProps {
   /** 한 동작으로 탐색을 시작한다. 이 패널의 유일한 행동이다. */
   onRun: () => void
   running: boolean
+  /**
+   * 지금 실행할 수 없는 이유. 응답이 아니라 화면 사정(로그인 필요 등)으로 막을 때만 쓴다.
+   * 주면 실행을 막고 그 문장을 그대로 보인다 — 막힌 이유를 적지 않고 버튼만 끄지 않는다.
+   */
+  blockedReason?: string | null
 }
 
 /** 한도 항목의 이름과 값. 필드 이름은 계약의 것이고 전략 지식이 아니다. */
@@ -45,9 +50,14 @@ function limitRows(limits: ParamSearchPreview['limits']) {
  *
  * <p>검증 표시를 결과보다 먼저 보인다 — 결과를 본 뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다(FR-015).
  */
-export function PreflightPanel({ preview, onRun, running }: PreflightPanelProps) {
+export function PreflightPanel({
+  preview,
+  onRun,
+  running,
+  blockedReason = null,
+}: PreflightPanelProps) {
   const { strategies, spaceSummary, workload, limits } = preview
-  const blocked = limits.exceeded || workload.validCombinations === 0
+  const blocked = limits.exceeded || workload.validCombinations === 0 || blockedReason !== null
 
   return (
     <section className={styles.panel} aria-labelledby="preflight-title">
@@ -181,7 +191,9 @@ export function PreflightPanel({ preview, onRun, running }: PreflightPanelProps)
           <TriangleAlert size={15} aria-hidden="true" />
           {limits.exceeded
             ? '실행 예정 후보가 한도를 넘습니다. 상세 변경에서 후보값을 줄여 주세요.'
-            : '실행할 수 있는 조합이 없습니다. 대상 섹터나 후보값을 바꿔 주세요.'}
+            : workload.validCombinations === 0
+              ? '실행할 수 있는 조합이 없습니다. 대상 섹터나 후보값을 바꿔 주세요.'
+              : blockedReason}
         </p>
       )}
 
