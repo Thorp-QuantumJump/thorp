@@ -68,7 +68,7 @@ S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVol
 
 ## S12. 실행 한도 장치 (FR-006, R-19, T014)
 
-local 임시값(`max-queued-per-user=2`)으로 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
+local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
 
 ## 완료 판정
 
