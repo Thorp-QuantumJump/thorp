@@ -30,6 +30,12 @@ public interface BacktestRunRepository {
      */
     Optional<BacktestRun> findByIdForUpdate(Long id);
 
+    /**
+     * 외부 식별자로 잠그고 읽는다. 워커 이벤트의 상태 전이를 취소와 같은 행 잠금으로 직렬화한다(R-04) — 잠그지 않으면 STARTED 가 QUEUED 를 읽은 직후
+     * 커밋된 취소를 늦은 UPDATE 가 RUNNING 으로 덮는다.
+     */
+    Optional<BacktestRun> findByBacktestIdForUpdate(String backtestId);
+
     /** 마지막 활성 요청의 취소로 CANCEL 을 보내기로 했다. 이 컬럼만 쓴다(상태 전이·발행 경로와 부딪히지 않는다). */
     void recordCancelRequested(Long runId, Instant at);
 

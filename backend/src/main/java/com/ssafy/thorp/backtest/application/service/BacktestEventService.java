@@ -38,8 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code COMPLETED}는 어느 {@code executionId}든 적용한다 — 입력이 같으므로 결과가 같다. ② {@code FAILED}는 마지막 STARTED의
  * {@code executionId}일 때만 적용한다. 먼저 도착한 다른 실행의 실패가 뒤에 올 정상 결과를 덮으면, 성공한 계산이 있는데도 사용자에게 실패를 보여 주게 된다.
  *
- * <p>조회 → 판단 → 갱신 사이의 경쟁은 다루지 않는다. 같은 Job의 이벤트는 큐 순서대로 오고 리스너가 prefetch 1·단일 Consumer이므로 한 인스턴스
- * 안에서는 직렬이다. 백엔드를 다중 인스턴스로 띄우기 전에 낙관적 락 또는 상태 조건부 UPDATE를 넣어야 한다.
+ * <p>같은 Job의 이벤트끼리는 큐 순서대로 오고 리스너가 prefetch 1·단일 Consumer이므로 한 인스턴스 안에서는 직렬이다. 하지만 <b>취소는 다른
+ * 스레드(HTTP)</b>라 그 직렬성 밖에 있다 — 그래서 조회를 실행 행 잠금({@code findByBacktestIdForUpdate})으로 한다. 잠그지 않으면
+ * STARTED 가 QUEUED 를 읽은 직후 커밋된 취소를 늦은 UPDATE 가 RUNNING 으로 덮는다. 잠금 순서는 취소(요청 → 실행)와 어긋나지 않는다 — 여기서는
+ * 실행 행 하나만 잠근다.
  */
 @Service
 public class BacktestEventService {
@@ -95,6 +97,16 @@ public class BacktestEventService {
         BacktestRun started = job.markRunning(event.executionId());
         jobRepository.update(
                 started.withLifecycle(started.getLifecycle().started(clock.instant())));
+        if (job.getLifecycle().cancelRequestedAt() != null) {
+            // 취소를 보낸 실행이 다시 STARTED 를 보냈다 = 재전달이나 중복 실행이다(R-06). 워커는 실행이
+            // 끝날 때 레지스트리의 취소 표시를 지우므로 앞서 보낸 CANCEL 은 이 실행에 닿지 않는다 —
+            // 다시 보내지 않으면 취소한 실행이 끝까지 계산돼 COMPLETED 가 된다.
+            log.info(
+                    "STARTED for a cancel-pending run; re-sending CANCEL: runId={} eventId={}",
+                    event.runId(),
+                    event.eventId());
+            events.publishEvent(new BacktestCancelDispatcher.CancelRequested(event.runId()));
+        }
     }
 
     /**
@@ -204,7 +216,7 @@ public class BacktestEventService {
 
     private BacktestRun findJob(BacktestEvent<?> event) {
         return jobRepository
-                .findByBacktestId(event.runId())
+                .findByBacktestIdForUpdate(event.runId())
                 .orElseGet(
                         () -> {
                             log.warn(

@@ -449,6 +449,39 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("STARTED 가 실행을 읽은 뒤 취소가 커밋되면 CANCELLED 는 RUNNING 으로 되돌아가지 않는다")
+    void aStartedArrivingDuringACancelDoesNotReviveTheRun() {
+        long user = newUser();
+        BacktestRun run = newRun();
+        String id = requestFor(run, user, ResultSource.NEW);
+
+        TransactionTemplate cancelTx = new TransactionTemplate(transactionManager);
+        cancelTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        // 이벤트 처리가 실행을 읽은 뒤, 갱신하기 전에 취소가 커밋되는 순서를 그대로 재현한다.
+        // 합류 쪽(aJoinArrivingDuringACancelIsRejected)과 같은 이유로 스레드 타이밍에 기대지 않는다.
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            // ① STARTED 처리가 실행을 읽는다(영속성 컨텍스트에 QUEUED 로 올라온다)
+                            assertThat(
+                                            runRepository
+                                                    .findByBacktestId(run.getBacktestId().value())
+                                                    .orElseThrow()
+                                                    .getStatus())
+                                    .isEqualTo(RunStatus.QUEUED);
+                            // ② 그 사이 대기 중 취소가 커밋된다
+                            cancelTx.executeWithoutResult(inner -> cancelService.cancel(id, user));
+                            // ③ STARTED 가 상태를 옮긴다 — 잠금 재조회로 최신 상태를 보아야 한다
+                            started(run);
+                        });
+
+        assertThat(runRepository.findById(run.getId()).orElseThrow().getStatus())
+                .isEqualTo(RunStatus.CANCELLED);
+        verify(controlPublisher).cancel(run.getBacktestId().value());
+    }
+
+    @Test
     @DisplayName("ⓒ A 취소 뒤 실행이 FAILED 로 끝나면 A 는 CANCELLED 를 유지하고 하위는 409 BACKTEST_FAILED")
     void joinedCancelThenRunFails() throws Exception {
         long userA = newUser();
@@ -504,6 +537,24 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         assertThat(lastPointDate(bSeries)).isEqualTo(STOPPED_DATE);
         assertThat(runRepository.findById(run.getId()).orElseThrow().getStatus())
                 .isEqualTo(RunStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("취소를 보낸 실행이 재전달돼 다시 STARTED 를 보내면 CANCEL 을 다시 보낸다 — 워커의 취소 표시는 이미 지워졌다")
+    void aRedeliveredCancelPendingRunGetsCancelAgain() throws Exception {
+        long user = newUser();
+        BacktestRun run = runningWithProgress();
+        String id = requestFor(run, user, ResultSource.NEW);
+
+        cancel(id, user);
+        verify(controlPublisher, org.mockito.Mockito.times(1)).cancel(run.getBacktestId().value());
+
+        // 워커가 죽어 브로커가 작업을 재전달했다(R-06). 새 실행은 취소 표시 없이 시작한다.
+        started(run);
+
+        verify(controlPublisher, org.mockito.Mockito.times(2)).cancel(run.getBacktestId().value());
+        assertThat(runRepository.findById(run.getId()).orElseThrow().getStatus())
+                .isEqualTo(RunStatus.RUNNING);
     }
 
     @Test

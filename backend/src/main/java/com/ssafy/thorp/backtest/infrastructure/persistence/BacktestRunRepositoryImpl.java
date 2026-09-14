@@ -117,6 +117,18 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                         });
     }
 
+    /** {@link #findByIdForUpdate}와 같다 — 이벤트 처리는 실행을 외부 식별자로 찾는다. */
+    @Override
+    public Optional<BacktestRun> findByBacktestIdForUpdate(String backtestId) {
+        return jpaRepository
+                .lockByBacktestId(backtestId)
+                .map(
+                        entity -> {
+                            entityManager.refresh(entity);
+                            return BacktestRunMapper.toDomain(entity);
+                        });
+    }
+
     @Override
     public void recordCancelRequested(Long runId, Instant at) {
         jpaRepository.markCancelRequested(runId, at);

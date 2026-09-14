@@ -44,6 +44,11 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Query("select r from BacktestRunJpaEntity r where r.id = :id")
     Optional<BacktestRunJpaEntity> lockById(@Param("id") Long id);
 
+    /** 이벤트 처리: 상태 전이를 취소와 같은 행 잠금으로 직렬화한다(R-04). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from BacktestRunJpaEntity r where r.backtestId = :backtestId")
+    Optional<BacktestRunJpaEntity> lockByBacktestId(@Param("backtestId") String backtestId);
+
     /** 마지막 활성 요청의 취소 시각. 이 컬럼만 건드린다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update BacktestRunJpaEntity r set r.cancelRequestedAt = :at where r.id = :id")
