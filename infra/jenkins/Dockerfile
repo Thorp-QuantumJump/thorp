@@ -42,4 +42,9 @@ USER jenkins
 #                        (Blue Ocean은 유지보수가 중단되어 이 플러그인이 후속이다)
 #   ansicolor            Jenkinsfile의 ansiColor('xterm') 지시어가 동작하려면 필요하다.
 #                        이 플러그인 없이 지시어만 있으면 파이프라인이 기동에 실패한다.
-RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor
+#   warnings-ng          ESLint·Spotless·ruff 같은 정적 분석 결과를 빌드 화면에 목록으로
+#                        모아 준다. 지금은 설치만 해 둔다 — Jenkinsfile에서 recordIssues 로
+#                        각 lint 출력을 연결하는 일은 실제 Jenkins에서 파서와 출력 형식을
+#                        맞춰 봐야 하므로 후속 작업으로 남긴다. 설치가 먼저 있어야 그 작업을
+#                        시작할 수 있다.
+RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor warnings-ng
