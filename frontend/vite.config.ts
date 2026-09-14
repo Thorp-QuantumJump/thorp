@@ -14,7 +14,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts'],
+    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
   },
   server: {
