@@ -375,16 +375,16 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### 문서
 
-- [ ] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)
-- [ ] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)
-- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 "순위 배지·추천 표현 0건", "결제·포인트·상품 선택 단계 0건", **"전략 ID 상수·전략별 분기 0건"** 항목 추가 (plan 설계 제약, FR-010·FR-025)
-- [ ] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화
+- [X] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)
+- [X] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)
+- [X] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 "순위 배지·추천 표현 0건", "결제·포인트·상품 선택 단계 0건", **"전략 ID 상수·전략별 분기 0건"** 항목 추가 (plan 설계 제약, FR-010·FR-025)
+- [X] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화
 
 ### 검증
 
 - [ ] T124 (BE 테스트) `cd worker && pytest` 회귀 확인 — 워커를 바꾸지 않았음을 증명한다
-- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록
-- [ ] T126 (DOCS) T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달
+- [X] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록
+- [ ] T126 (DOCS) **완료 불가(2026-09-14)** — 선행 T117 이 완료 불가라 인계할 측정값이 없다. 004 에 실행 측정 저장소가 생겨 T117 이 기록을 남기기 시작하면 그때 착수한다. 원래 내용: T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달
 
 ---
 
