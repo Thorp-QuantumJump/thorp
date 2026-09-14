@@ -245,7 +245,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T085 [US2] (FE) `frontend/src/components/paramsearch/CandidateTable.tsx` — 전체 후보 목록과 한 항목 기준 정렬 (FR-017이 허용하는 범위)
 - [X] T086 [P] [US2] (FE) 계산 불가·미완료 후보 표시 — `null` 성과를 "0%"가 아니라 사유와 함께 보인다 (FR-011, 원칙 VI)
 - [X] T087 [US2] (FE) `frontend/src/components/paramsearch/CompareHandoff.tsx` — 후보를 005 비교 대상으로 넘기는 연결과 '자동 탐색 후보 비교' 표시 (FR-019). 005 미구현이면 진입 지점과 표시만 만든다
-- [ ] T088 [P] [US2] (FE 테스트) `frontend/src/components/paramsearch/SelectionResult.test.tsx` — 순위 번호·추천·우승 표현이 0건인지 검증 (SC-006)
+- [X] T088 [P] [US2] (FE 테스트) `frontend/src/components/paramsearch/SelectionResult.test.tsx` — 순위 번호·추천·우승 표현이 0건인지 검증 (SC-006)
 
 **Checkpoint**: US1과 US2가 각각 독립적으로 동작한다
 

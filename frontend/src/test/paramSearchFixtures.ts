@@ -1,4 +1,11 @@
-import type { ParamSearchDetail, ParamSearchPreview } from '@/types/paramSearch'
+import type {
+  ParamSearchBaseline,
+  ParamSearchConfig,
+  ParamSearchDetail,
+  ParamSearchPreview,
+  ParamSearchSelection,
+  SearchCandidateItem,
+} from '@/types/paramSearch'
 
 /**
  * 007 화면 테스트용 응답 픽스처.
@@ -98,4 +105,112 @@ export const acceptedFixture: ParamSearchDetail = {
   selection: null,
   startedAt: null,
   finishedAt: null,
+}
+
+/** 상태 응답의 config. 축 라벨·전략 이름을 여기서 읽는다 — 화면이 갖고 있지 않다. */
+export const configFixture: ParamSearchConfig = {
+  strategyIds: ['ALPHA_TILT'],
+  instrumentIds: ['TEST.XKRX'],
+  registryVersion: 'TEST-REGISTRY-1',
+  searchMethod: 'FULL_GRID',
+  randomSeed: null,
+  space: {
+    ALPHA_TILT: {
+      strategyName: '알파 기울기',
+      axes: [
+        { name: 'tiltWindow', label: '기울기 관측 창', unit: '거래일', values: [5, 10, 20] },
+      ],
+    },
+  },
+  selectionRule: {
+    drawdownFilter: { type: 'NOT_WORSE_THAN_BASELINE', baseline: 'CARRY_ROTATION' },
+    stabilityFilter: { type: 'BATCH_PERCENTILE', keepTopPercent: 50 },
+    sortMetric: 'NET_RETURN',
+    displayCount: 5,
+    tieHandling: 'SHOW_ALL_TIED',
+    provisional: ['displayCount'],
+  },
+  limits: null,
+  referenceVersions: null,
+  dataVersionChanged: false,
+}
+
+/** 결과가 있는 후보. 세 숫자가 모두 채워져 있다. */
+export const completedCandidate: SearchCandidateItem = {
+  candidateId: 'PS-20260914-000001-C001',
+  candidateNo: 1,
+  strategyId: 'ALPHA_TILT',
+  parameters: { tiltWindow: 5 },
+  status: 'COMPLETED',
+  backtestId: 'BT-20260914-000001',
+  netReturn: '0.300000',
+  maxDrawdown: '-0.100000',
+  tradingCost: '17078.49',
+  stability: { calculable: true, value: '0.05000000', neighborCount: 1 },
+  retryCount: 0,
+  validationLabel: 'UNVALIDATED',
+  selected: true,
+  selectionReason: { outcome: 'SELECTED', tied: false, passedFilters: ['DRAWDOWN', 'STABILITY'] },
+}
+
+/** 이웃이 없어 안정성을 말할 수 없는 후보. **나쁜 값이 아니라 없는 값이다.** */
+export const noNeighborCandidate: SearchCandidateItem = {
+  ...completedCandidate,
+  candidateId: 'PS-20260914-000001-C002',
+  candidateNo: 2,
+  parameters: { tiltWindow: 10 },
+  netReturn: '0.200000',
+  stability: { calculable: false, value: null, neighborCount: 0 },
+  selectionReason: { outcome: 'SELECTED', tied: false, passedFilters: ['STABILITY'] },
+}
+
+/** 계산 전에 제외된 후보. 성과가 전부 null 이고 **0이 아니다**(FR-011). */
+export const excludedCandidate: SearchCandidateItem = {
+  candidateId: 'PS-20260914-000001-C003',
+  candidateNo: 3,
+  strategyId: 'ALPHA_TILT',
+  parameters: { tiltWindow: 20 },
+  status: 'EXCLUDED',
+  backtestId: null,
+  netReturn: null,
+  maxDrawdown: null,
+  tradingCost: null,
+  stability: null,
+  retryCount: 0,
+  validationLabel: 'UNVALIDATED',
+  selected: false,
+  selectionReason: {
+    outcome: 'EXCLUDED_BEFORE_RUN',
+    code: 'WINDOW_TOO_SHORT',
+    message: '관측 창이 자료 구간보다 깁니다.',
+  },
+}
+
+/** 기준을 통과했으나 표시 범위 밖인 후보. **탈락이 아니다.** */
+export const notInDisplayCandidate: SearchCandidateItem = {
+  ...completedCandidate,
+  candidateId: 'PS-20260914-000001-C004',
+  candidateNo: 4,
+  netReturn: '0.010000',
+  selected: false,
+  selectionReason: {
+    outcome: 'NOT_IN_DISPLAY',
+    passedFilters: ['DRAWDOWN', 'STABILITY'],
+  },
+}
+
+export const selectionFixture: ParamSearchSelection = {
+  displayed: [completedCandidate.candidateId, noNeighborCandidate.candidateId],
+  shortOfDisplayCount: true,
+  note: '기준을 충족한 후보가 2개입니다',
+  drawdownFilterApplied: false,
+}
+
+export const baselineFixture: ParamSearchBaseline = {
+  strategyId: 'CARRY_ROTATION',
+  strategyName: '캐리 순환',
+  backtestId: 'BT-20260914-000009',
+  status: 'COMPLETED',
+  netReturn: '0.100000',
+  maxDrawdown: '-0.200000',
 }
