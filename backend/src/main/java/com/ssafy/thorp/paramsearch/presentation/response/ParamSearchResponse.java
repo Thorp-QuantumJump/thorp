@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
@@ -24,6 +25,8 @@ public record ParamSearchResponse(
         String partialNote,
         Config config,
         Baseline baseline,
+        String validationLabel,
+        String validationNote,
         Map<String, Object> selection,
         Instant startedAt,
         Instant finishedAt) {
@@ -73,6 +76,9 @@ public record ParamSearchResponse(
                 null,
                 null,
                 null,
+                // 접수 직후에도 미검증임을 알린다. 화면이 폴링을 시작하기 전부터 배지를 띄울 수 있어야 한다.
+                ValidationStatus.unvalidated().label().name(),
+                ValidationStatus.unvalidated().note(),
                 null,
                 null,
                 null);
@@ -105,6 +111,8 @@ public record ParamSearchResponse(
                         result.config().referenceVersions(),
                         result.config().dataVersionChanged()),
                 baselineOf(result),
+                result.validationLabel(),
+                result.validationNote(),
                 result.selection(),
                 result.startedAt(),
                 result.finishedAt());
