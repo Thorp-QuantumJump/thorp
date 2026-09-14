@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.repository;
 
 import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -48,8 +49,35 @@ public interface BacktestRunRepository {
      */
     Optional<BacktestRun> findByBacktestIdForUpdate(String backtestId);
 
-    /** 마지막 활성 요청의 취소로 CANCEL 을 보내기로 했다. 이 컬럼만 쓴다(상태 전이·발행 경로와 부딪히지 않는다). */
-    void recordCancelRequested(Long runId, Instant at);
+    /** CANCEL 을 보내기로 했다. 시각과 이유 두 컬럼만 쓴다(상태 전이·발행 경로와 부딪히지 않는다). */
+    void recordCancelRequested(Long runId, Instant at, CancelReason reason);
+
+    /**
+     * 워커가 살아 있다는 신호를 받았다(STARTED·PROGRESS). 이 컬럼만 쓴다 — 발행 기록이 함께 올라가면 멈춘 실행이 살아 있는 것처럼 보여 정체를
+     * 놓친다(R-19).
+     */
+    void recordEventReceived(Long runId, Instant at);
+
+    /** RUNNING 인데 마지막 신호가 {@code since} 보다 오래된 실행. 아직 CANCEL 을 보내지 않은 것만(R-19 정체 감지). */
+    List<BacktestRun> findStaleRunning(Instant since, int limit);
+
+    /** RUNNING 이고 {@code startedBefore} 이전에 시작한 실행. 아직 CANCEL 을 보내지 않은 것만(실행 시간 상한). */
+    List<BacktestRun> findOverrunning(Instant startedBefore, int limit);
+
+    /** CANCEL 을 보낸 지 {@code requestedBefore} 가 지나도록 종결되지 않은 실행(취소 유예). */
+    List<BacktestRun> findCancelUnanswered(Instant requestedBefore, int limit);
+
+    /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다. */
+    long countQueued();
+
+    /**
+     * 이 사용자가 대기시켜 둔 <b>단건</b> 실행 수. 탐색 묶음({@code SEARCH_BUNDLE})은 007 의 발행 창이 이미 통제하므로 세지 않는다 — 두
+     * 곳에서 막으면 창을 키운 날 탐색이 조용히 멈춘다(R-19, 2026-09-14 결정).
+     */
+    long countQueuedSingleByRequester(long requesterId);
+
+    /** 같은 키의 접수를 직렬화한다. 잠금 이름이 다르면 서로 기다리지 않는다. */
+    void lockAdmission(String key);
 
     Optional<BacktestRun> findByBacktestId(String backtestId);
 

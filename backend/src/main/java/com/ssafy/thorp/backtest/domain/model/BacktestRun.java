@@ -78,7 +78,8 @@ public class BacktestRun {
         this.plan = Objects.requireNonNullElseGet(plan, RunPlan::empty);
         this.lifecycle =
                 Objects.requireNonNullElseGet(
-                        lifecycle, () -> new RunLifecycle(null, null, null, null, 0, 0, null));
+                        lifecycle,
+                        () -> new RunLifecycle(null, null, null, null, 0, 0, null, null, null));
     }
 
     /** 새 실행 생성. 항상 QUEUED로 시작하며 id·backtestId는 저장 전이라 null이다. */
@@ -143,7 +144,7 @@ public class BacktestRun {
                 randomSeed,
                 RunState.of(RunStatus.QUEUED),
                 RunPlan.empty(),
-                new RunLifecycle(null, null, null, null, 0, 0, null));
+                new RunLifecycle(null, null, null, null, 0, 0, null, null, null));
     }
 
     /** 상태만 아는 복원. 실행 기록(시도·진행·실패)이 필요 없는 호출자용이다. */
@@ -242,7 +243,7 @@ public class BacktestRun {
                 randomSeed,
                 state,
                 RunPlan.empty(),
-                new RunLifecycle(null, null, null, null, 0, 0, null));
+                new RunLifecycle(null, null, null, null, 0, 0, null, null, null));
     }
 
     /**

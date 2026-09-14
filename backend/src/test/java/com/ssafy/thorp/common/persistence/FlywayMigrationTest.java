@@ -139,7 +139,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         // 측정 원천 (R-10)
                         "queued_at",
                         "started_at",
-                        "finished_at");
+                        "finished_at",
+                        // 정체 판정 기준과 취소 사유 (T014, R-19)
+                        "last_event_at",
+                        "cancel_reason");
     }
 
     /**
@@ -160,7 +163,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "published_at",
                         "publish_count",
                         "dlq_count",
-                        "cancel_requested_at");
+                        "cancel_requested_at",
+                        // T014: 정체 판정 기준과 취소 사유(R-19)
+                        "last_event_at",
+                        "cancel_reason");
     }
 
     @Test

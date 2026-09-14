@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
@@ -85,10 +86,50 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Query("select r from BacktestRunJpaEntity r where r.backtestId = :backtestId")
     Optional<BacktestRunJpaEntity> lockByBacktestId(@Param("backtestId") String backtestId);
 
-    /** 마지막 활성 요청의 취소 시각. 이 컬럼만 건드린다. */
+    /** 취소 시각과 그 이유. 이 두 컬럼만 건드린다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update BacktestRunJpaEntity r set r.cancelRequestedAt = :at where r.id = :id")
-    int markCancelRequested(@Param("id") Long id, @Param("at") Instant at);
+    @Query(
+            "update BacktestRunJpaEntity r set r.cancelRequestedAt = :at, r.cancelReason = :reason"
+                    + " where r.id = :id")
+    int markCancelRequested(
+            @Param("id") Long id, @Param("at") Instant at, @Param("reason") CancelReason reason);
+
+    /** 워커가 살아 있다는 마지막 신호 시각. <b>이 컬럼만 건드린다</b> — 발행 기록이 함께 올라가면 멈춘 실행이 살아 있는 것처럼 보여 정체를 놓친다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update BacktestRunJpaEntity r set r.lastEventAt = :at where r.id = :id")
+    int markEventReceived(@Param("id") Long id, @Param("at") Instant at);
+
+    /** 정체 감지: RUNNING 인데 마지막 신호가 오래된 실행. 아직 CANCEL 을 보내지 않은 것만. */
+    @Query(
+            "select r from BacktestRunJpaEntity r where r.status = :status"
+                    + " and r.cancelRequestedAt is null"
+                    + " and coalesce(r.lastEventAt, r.queuedAt) < :since"
+                    + " order by coalesce(r.lastEventAt, r.queuedAt) asc")
+    List<BacktestRunJpaEntity> findStale(
+            @Param("status") RunStatus status, @Param("since") Instant since, Limit limit);
+
+    /** 실행 시간 초과: RUNNING 이고 시작한 지 오래된 실행. 아직 CANCEL 을 보내지 않은 것만. */
+    @Query(
+            "select r from BacktestRunJpaEntity r where r.status = :status"
+                    + " and r.cancelRequestedAt is null and r.startedAt < :startedBefore"
+                    + " order by r.startedAt asc")
+    List<BacktestRunJpaEntity> findOverrunning(
+            @Param("status") RunStatus status,
+            @Param("startedBefore") Instant startedBefore,
+            Limit limit);
+
+    /** 취소 무응답: CANCEL 을 보낸 지 오래됐는데 아직 종결되지 않은 실행. */
+    @Query(
+            "select r from BacktestRunJpaEntity r where r.cancelRequestedAt < :requestedBefore"
+                    + " and r.status in :alive order by r.cancelRequestedAt asc")
+    List<BacktestRunJpaEntity> findCancelUnanswered(
+            @Param("requestedBefore") Instant requestedBefore,
+            @Param("alive") Collection<RunStatus> alive,
+            Limit limit);
+
+    /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다(R-19). */
+    @Query("select count(r) from BacktestRunJpaEntity r where r.status = :status")
+    long countByStatus(@Param("status") RunStatus status);
 
     /** 발행 confirm 시각. 이 컬럼만 건드려 상태 전이와 부딪히지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

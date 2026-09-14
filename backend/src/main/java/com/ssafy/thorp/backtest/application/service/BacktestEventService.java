@@ -97,6 +97,8 @@ public class BacktestEventService {
         BacktestRun started = job.markRunning(event.executionId());
         jobRepository.update(
                 started.withLifecycle(started.getLifecycle().started(clock.instant())));
+        // 워커가 살아 있다는 신호. 전용 UPDATE 라 상태 전이와 컬럼이 겹치지 않는다(R-19).
+        jobRepository.recordEventReceived(job.getId(), clock.instant());
         if (job.getLifecycle().cancelRequestedAt() != null) {
             // 취소를 보낸 실행이 다시 STARTED 를 보냈다 = 재전달이나 중복 실행이다(R-06). 워커는 실행이
             // 끝날 때 레지스트리의 취소 표시를 지우므로 앞서 보낸 CANCEL 은 이 실행에 닿지 않는다 —
@@ -184,6 +186,7 @@ public class BacktestEventService {
             return;
         }
         ProgressPayload payload = event.payload();
+        jobRepository.recordEventReceived(job.getId(), clock.instant());
         jobRepository.update(
                 job.recordProgress(
                         new RunProgress(
