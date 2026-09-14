@@ -17,6 +17,7 @@ import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
@@ -271,7 +272,8 @@ class BacktestEventServiceTest {
                                 null),
                         RunPlan.empty(),
                         RunLifecycle.queuedAt(Instant.parse("2026-09-11T04:00:00Z"))
-                                .cancelRequested(Instant.parse("2026-09-11T04:30:00Z")));
+                                .cancelRequested(
+                                        Instant.parse("2026-09-11T04:30:00Z"), CancelReason.USER));
         when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
                 .thenReturn(Optional.of(cancelPending));
 
@@ -291,6 +293,8 @@ class BacktestEventServiceTest {
                         null,
                         publishCount,
                         dlqCount,
+                        null,
+                        null,
                         null);
         BacktestRun job = jobIn(status).withLifecycle(lifecycle);
         when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
