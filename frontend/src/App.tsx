@@ -2,6 +2,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { lazy, Suspense, useLayoutEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
+import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { LandingPage } from '@/pages/LandingPage'
 
 // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.
@@ -36,6 +37,12 @@ const LoginPage = lazy(() =>
   })),
 )
 
+const MyRecordsEntryPage = lazy(() =>
+  import('@/pages/MyRecordsEntryPage').then((module) => ({
+    default: module.MyRecordsEntryPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -60,6 +67,14 @@ function AnimatedRoutes() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
+            <Route
+              path="/records/*"
+              element={
+                <ProtectedRoute>
+                  <MyRecordsEntryPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/signup"
               element={

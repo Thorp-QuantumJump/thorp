@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/api/client'
 import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { AuthProvider } from '@/auth/AuthProvider'
+import { saveReturnTarget } from '@/auth/returnTarget'
 import { authenticatedUser } from '@/test/authFixtures'
 import { render } from '@testing-library/react'
 import { LoginPage } from './LoginPage'
@@ -37,6 +38,7 @@ function renderLogin(options?: { signupEmail?: string }) {
             }
           />
           <Route path="/home" element={<h1>홈 화면</h1>} />
+          <Route path="/records/*" element={<h1>내 기록 화면</h1>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -54,6 +56,7 @@ function deferred<T>() {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    window.sessionStorage.clear()
     apiMocks.getCurrentUser.mockRejectedValue(
       new ApiClientError('api', '로그인이 필요합니다.', {
         code: 'AUTHENTICATION_REQUIRED',
@@ -121,5 +124,18 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('heading', { name: '홈 화면' })).toBeTruthy()
     expect(screen.queryByLabelText('비밀번호')).toBeNull()
+  })
+
+  it('내 기록에서 온 사용자는 로그인 성공 뒤 저장된 위치로 한 번만 복귀한다', async () => {
+    saveReturnTarget('/records/run-17?tab=trades#cost')
+    const user = userEvent.setup()
+    renderLogin()
+
+    await user.type(await screen.findByLabelText('이메일'), 'user@example.com')
+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()
+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBeNull()
   })
 })

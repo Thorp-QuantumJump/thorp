@@ -110,17 +110,17 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 ### Tests for User Story 3
 
-- [ ] T034 [P] [US3] Add failing unit tests for same-origin return-target validation, one-time consumption, reload persistence, and unsafe fallback in `frontend/src/auth/returnTarget.test.ts`
-- [ ] T035 [P] [US3] Add failing router tests for checking, anonymous, authenticated, expired, and invalid-return-target access in `frontend/src/auth/ProtectedRoute.test.tsx`
-- [ ] T036 [P] [US3] Add failing navigation tests proving public routes remain available and only the records entry is protected in `frontend/src/App.auth.test.tsx`
+- [x] T034 [P] [US3] Add failing unit tests for same-origin return-target validation, one-time consumption, reload persistence, and unsafe fallback in `frontend/src/auth/returnTarget.test.ts`
+- [x] T035 [P] [US3] Add failing router tests for checking, anonymous, authenticated, expired, and invalid-return-target access in `frontend/src/auth/ProtectedRoute.test.tsx`
+- [x] T036 [P] [US3] Add failing navigation tests proving public routes remain available and only the records entry is protected in `frontend/src/App.auth.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] Implement validated tab-scoped return-target storage and one-time consumption in `frontend/src/auth/returnTarget.ts` to satisfy T034
-- [ ] T038 [US3] Implement the records-only authentication boundary and loading/login-required states in `frontend/src/auth/ProtectedRoute.tsx` to satisfy T035
-- [ ] T039 [US3] Add an authentication-only `/records/*` entry boundary without implementing record content in `frontend/src/pages/MyRecordsEntryPage.tsx` and `frontend/src/pages/MyRecordsEntryPage.module.css`
-- [ ] T040 [US3] Wire the protected records route, post-login return, and public route exemptions in `frontend/src/App.tsx` after T037–T039
-- [ ] T041 [US3] Add the secondary “내 기록” navigation entry and authenticated/anonymous destination behavior in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`
+- [x] T037 [US3] Implement validated tab-scoped return-target storage and one-time consumption in `frontend/src/auth/returnTarget.ts` to satisfy T034
+- [x] T038 [US3] Implement the records-only authentication boundary and loading/login-required states in `frontend/src/auth/ProtectedRoute.tsx` to satisfy T035
+- [x] T039 [US3] Add an authentication-only `/records/*` entry boundary without implementing record content in `frontend/src/pages/MyRecordsEntryPage.tsx` and `frontend/src/pages/MyRecordsEntryPage.module.css`
+- [x] T040 [US3] Wire the protected records route, post-login return, and public route exemptions in `frontend/src/App.tsx` after T037–T039
+- [x] T041 [US3] Add the secondary “내 기록” navigation entry and authenticated/anonymous destination behavior in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`
 
 **Checkpoint**: US3 protects only the records boundary and remains independent from the record list implementation in spec 006.
 

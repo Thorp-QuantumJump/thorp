@@ -1,5 +1,6 @@
 import {
   ChartNoAxesCombined,
+  FolderClock,
   Home,
   LogIn,
   Menu,
@@ -155,21 +156,31 @@ export function AppHeader() {
             })}
           </nav>
 
-          {authStatus === 'checking' ? (
-            <span className={styles.authState} role="status">
-              확인 중
-            </span>
-          ) : authStatus === 'authenticated' && user ? (
-            <Link className={styles.authLink} to="/home" aria-label={`${user.nickname} 로그인됨`}>
-              <UserRound size={16} aria-hidden="true" />
-              {user.nickname}
+          <div className={styles.accountLinks}>
+            <Link
+              className={styles.recordsLink}
+              to="/records"
+              aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}
+            >
+              <FolderClock size={16} aria-hidden="true" />
+              내 기록
             </Link>
-          ) : (
-            <Link className={styles.authLink} to="/login">
-              <LogIn size={16} aria-hidden="true" />
-              로그인
-            </Link>
-          )}
+            {authStatus === 'checking' ? (
+              <span className={styles.authState} role="status">
+                확인 중
+              </span>
+            ) : authStatus === 'authenticated' && user ? (
+              <Link className={styles.authLink} to="/records" aria-label={`${user.nickname} 로그인됨`}>
+                <UserRound size={16} aria-hidden="true" />
+                {user.nickname}
+              </Link>
+            ) : (
+              <Link className={styles.authLink} to="/login">
+                <LogIn size={16} aria-hidden="true" />
+                로그인
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -234,8 +245,23 @@ export function AppHeader() {
                 })}
               </div>
 
+              <Link
+                className={`${styles.drawerLink} ${styles.drawerRecords}`}
+                to="/records"
+                aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className={styles.drawerIcon}>
+                  <FolderClock size={20} aria-hidden="true" />
+                </span>
+                <span>
+                  <strong>내 기록</strong>
+                  <small>저장한 분석과 전략 검증 기록을 확인합니다.</small>
+                </span>
+              </Link>
+
               {authStatus === 'authenticated' && user ? (
-                <Link className={styles.drawerAuth} to="/home" onClick={() => setIsMenuOpen(false)}>
+                <Link className={styles.drawerAuth} to="/records" onClick={() => setIsMenuOpen(false)}>
                   <UserRound size={18} aria-hidden="true" />
                   {user.nickname}
                 </Link>

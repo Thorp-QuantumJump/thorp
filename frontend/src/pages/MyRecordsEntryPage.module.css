@@ -1,0 +1,108 @@
+.page {
+  min-height: 100svh;
+  overflow-x: clip;
+  background:
+    linear-gradient(var(--thorp-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
+    radial-gradient(circle at 50% 28%, rgb(3 199 90 / 10%), transparent 34%),
+    var(--thorp-background);
+  background-size: 72px 72px, 72px 72px, auto, auto;
+  color: var(--thorp-foreground);
+}
+
+.main {
+  width: min(100% - 40px, 960px);
+  margin: 0 auto;
+  padding: clamp(90px, 15vh, 160px) 0 80px;
+}
+
+.eyebrow,
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.eyebrow {
+  gap: 9px;
+  color: var(--thorp-accent-soft);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.main h1 {
+  max-width: 780px;
+  margin: 22px 0 18px;
+  font-size: clamp(2.5rem, 7vw, 5.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+}
+
+.main > p:not(.scopeNote) {
+  max-width: 620px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: clamp(0.95rem, 1.8vw, 1.08rem);
+  line-height: 1.8;
+}
+
+.actions {
+  gap: 12px;
+  margin-top: 38px;
+  flex-wrap: wrap;
+}
+
+.actions a {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 20px;
+  padding: 0 18px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 4px;
+  color: var(--thorp-foreground);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.actions a:first-child {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: #021108;
+}
+
+.actions a:hover {
+  border-color: var(--thorp-accent-soft);
+}
+
+.actions a:focus-visible {
+  outline: 3px solid rgb(3 199 90 / 30%);
+  outline-offset: 3px;
+}
+
+.scopeNote {
+  max-width: 620px;
+  margin-top: 70px;
+  padding-top: 18px;
+  border-top: 1px solid var(--thorp-line);
+  color: var(--thorp-muted);
+  font-size: 0.72rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 600px) {
+  .main {
+    width: min(100% - 28px, 960px);
+    padding-top: 72px;
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions a {
+    justify-content: space-between;
+  }
+}
