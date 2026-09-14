@@ -12,10 +12,14 @@ import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
+import com.ssafy.thorp.backtest.application.result.ResultPerformance;
 import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -97,6 +101,24 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                                         read(row.getLiquidation(), EngineOutput.Liquidation.class),
                                         read(row.getAnalytics(), EngineOutput.Analytics.class),
                                         row.getExceptionCount()));
+    }
+
+    @Override
+    public Map<Long, ResultPerformance> findPerformanceByRunIds(Collection<Long> runIds) {
+        if (runIds == null || runIds.isEmpty()) {
+            // 빈 IN 절은 PostgreSQL 문법 오류다. 물어볼 것이 없으면 왕복도 하지 않는다.
+            return Map.of();
+        }
+        Map<Long, ResultPerformance> performances = new LinkedHashMap<>();
+        for (BacktestResultPerformanceRow row : resultRepository.findPerformanceRows(runIds)) {
+            performances.put(
+                    row.getRunId(),
+                    new ResultPerformance(
+                            decimal(row.getNetReturn()),
+                            decimal(row.getMaxDrawdown()),
+                            decimal(row.getTradingCost())));
+        }
+        return performances;
     }
 
     @Override

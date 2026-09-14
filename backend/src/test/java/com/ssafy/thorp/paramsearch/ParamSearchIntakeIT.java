@@ -84,6 +84,9 @@ class ParamSearchIntakeIT extends PostgresTestSupport {
     void stubLauncher() {
         jdbcTemplate.update("DELETE FROM search_candidate");
         jdbcTemplate.update("DELETE FROM param_search");
+        // 결과 행이 실행 행을 FK로 참조한다. 자식을 먼저 지우지 않으면 다른 테스트가
+        // 남긴 결과 때문에 이 정리가 통째로 실패한다.
+        jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id >= 900000");
         jdbcTemplate.update("DELETE FROM backtest_run WHERE id >= 900000");
         nextJobId.set(900_100L);
         // 실행 행을 실제로 만든다 — search_candidate.backtest_job_id 와 param_search.baseline_job_id 가
