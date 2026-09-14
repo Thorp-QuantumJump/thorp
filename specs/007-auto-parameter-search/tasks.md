@@ -310,14 +310,14 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 ### Tests for User Story 4
 
 - [X] T108 [P] [US4] (BE 테스트) 평가 분할 미등록이면 전 후보가 `UNVALIDATED`인지 검증하고, **이를 검증 통과로 보고하지 않는다는 주석**을 테스트에 남긴다 (research R5, 완료의 구분)
-- [ ] T109 [P] [US4] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java` — 잠금 구간 성과가 선정 계산에 입력되지 않는지 검증 (SC-005)
-- [ ] T110 [P] [US4] (BE 테스트) 선정 기준·범위를 바꿔 재실행하면 새 `searchId`가 생기고 이전 묶음의 `selection`·상태가 불변인지 통합 테스트 (FR-013c)
+- [X] T109 [P] [US4] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java` — 잠금 구간 성과가 선정 계산에 입력되지 않는지 검증 (SC-005)
+- [X] T110 [P] [US4] (BE 테스트) 선정 기준·범위를 바꿔 재실행하면 새 `searchId`가 생기고 이전 묶음의 `selection`·상태가 불변인지 통합 테스트 (FR-013c)
 
 ### Implementation for User Story 4 — Backend
 
 - [X] T111 [P] [US4] (BE) 후보 생성 시 `validation_label` 기본값 `UNVALIDATED` 적용과 `period_performance` JSONB 자리 예약 (FR-014, research R5)
 - [X] T112 [US4] (BE) preview·상태·후보 응답에 `validationLabel`과 `validationNote` 노출 — 실행 전에도 미검증임을 알린다. 탐색 성과와 미사용 구간 성과를 섞지 않는다 (FR-015)
-- [ ] T113 [US4] (BE) 선정 규칙 스냅샷 불변성 보장 — 기존 묶음의 `selection_rule`을 수정하는 경로를 만들지 않고, 변경은 새 묶음으로만 (FR-013c, 원칙 VII)
+- [X] T113 [US4] (BE) 선정 규칙 스냅샷 불변성 보장 — 기존 묶음의 `selection_rule`을 수정하는 경로를 만들지 않고, 변경은 새 묶음으로만 (FR-013c, 원칙 VII)
 
 ### Implementation for User Story 4 — Frontend
 
