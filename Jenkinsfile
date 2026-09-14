@@ -14,6 +14,28 @@ def ciSubject() {
     return env.JOB_NAME
 }
 
+// 이 파트가 이번 변경에 포함되는지 판단한다.
+//
+// 예전에는 when 의 changeset 지시어를 썼는데, 그것은 Jenkins 가 계산한 changelog 를 본다.
+// 이 Job 은 MR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가 있고,
+// 그러면 로그에 "Warning, empty changelog" 가 남으면서 네 파트가 모두 건너뛰어진 채
+// 빌드가 SUCCESS 로 끝난다. 실행되지 않은 검증이 통과로 세어진다.
+//
+// 비교 결과가 비면 참을 돌려준다. 무엇이 바뀌었는지 알아내지 못했을 때는 건너뛰는 쪽이
+// 아니라 전부 도는 쪽으로 기운다. 시간은 더 들지만 검증이 빈 채로 초록불이 뜨지는 않는다.
+def partChanged(String part) {
+    if (env.CI_RUN_ALL == 'true') {
+        return true
+    }
+
+    String changed = env.CHANGED_FILES
+    if (changed == null || changed.trim().isEmpty()) {
+        return true
+    }
+
+    return changed.split('\n').any { it.startsWith(part + '/') }
+}
+
 pipeline {
     agent any
 
@@ -28,10 +50,12 @@ pipeline {
         // updateGitlabCommitStatus 가 GitLab API 를 부를 때 쓰는 연결이다.
         // Jenkins > Manage Jenkins > System 의 GitLab connections 에 있는 이름과 같아야 한다.
         //
-        // Job 설정 화면에도 같은 항목이 있지만 거기에만 두면 안 된다. Declarative Pipeline 은
-        // options 블록을 만나면 Job 의 속성 집합을 이 내용으로 덮어쓰므로, 화면으로 지정한
-        // 연결이 빌드가 돌면서 지워진다. 그러면 커밋 상태 보고가 오류 없이 조용히 멈추고
-        // 로그에 "No GitLab connection configured" 만 남는다.
+        // 이름이 한 글자라도 다르거나 값이 비면 보고가 오류 없이 조용히 멈추고, 로그에
+        // "No GitLab connection configured" 한 줄만 남는다. 빌드는 초록색으로 끝난다.
+        //
+        // 이 선언은 Job 설정 화면의 GitLab Connection 보다 우선한다(선언을 넣은 첫 빌드만
+        // 예외다). 그러므로 이 줄을 지우면 다음 빌드에서 Job 의 연결 속성이 통째로 사라진다.
+        // Declarative 는 이전 Jenkinsfile 이 선언했던 속성을 지우기 때문이다 (JENKINS-44621).
         gitLabConnection('ssafy-gitlab')
     }
 
@@ -45,11 +69,19 @@ pipeline {
         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.
         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'
 
-        // 파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면
+        // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면
         // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.
         // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
         //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
         CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF "[ci-all]" && echo true || echo false').trim()
+
+        // 어느 파트가 바뀌었는지는 기준 브랜치와 직접 비교해서 정한다. partChanged 가 이 값을
+        // 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이 dev 에
+        // 들어온 남의 변경은 세지 않는다.
+        //
+        // origin/dev 는 Checkout SCM 이 refs/remotes/origin/* 를 통째로 가져오므로 이 시점에
+        // 이미 있다. 그래도 실패할 수 있으니 || true 로 받아, 실패하면 빈 값이 되어 전체가 돈다.
+        CHANGED_FILES = sh(returnStdout: true, script: 'git diff --name-only origin/dev...HEAD || true').trim()
     }
 
     stages {
@@ -120,10 +152,7 @@ pipeline {
 
         stage('Frontend') {
             when {
-                anyOf {
-                    changeset "frontend/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('frontend') }
             }
             stages {
                 stage('FE Install') {
@@ -183,10 +212,7 @@ pipeline {
 
         stage('Backend') {
             when {
-                anyOf {
-                    changeset "backend/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('backend') }
             }
             stages {
                 stage('BE Format') {
@@ -239,10 +265,7 @@ pipeline {
 
         stage('Worker') {
             when {
-                anyOf {
-                    changeset "worker/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('worker') }
             }
             stages {
                 stage('Worker Setup') {
@@ -291,10 +314,7 @@ pipeline {
 
         stage('Data') {
             when {
-                anyOf {
-                    changeset "data/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('data') }
             }
             stages {
                 stage('Data Setup') {
