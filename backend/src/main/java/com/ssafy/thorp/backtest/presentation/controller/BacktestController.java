@@ -13,6 +13,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
+import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
@@ -22,6 +23,7 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestRetryResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;
@@ -57,16 +59,19 @@ public class BacktestController {
     private final BacktestService backtestService;
     private final BacktestResultQueryService queryService;
     private final BacktestCancelService cancelService;
+    private final BacktestRetryService retryService;
     private final CurrentRequester currentRequester;
 
     public BacktestController(
             BacktestService backtestService,
             BacktestResultQueryService queryService,
             BacktestCancelService cancelService,
+            BacktestRetryService retryService,
             CurrentRequester currentRequester) {
         this.backtestService = backtestService;
         this.queryService = queryService;
         this.cancelService = cancelService;
+        this.retryService = retryService;
         this.currentRequester = currentRequester;
     }
 
@@ -81,6 +86,16 @@ public class BacktestController {
                 cancelService.cancel(backtestId, currentRequester.requireRequesterId(http));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestCancelResponse.from(result)));
+    }
+
+    /** 실패·취소한 분석을 같은 조건으로 다시 접수한다. 재시도도 동일 버전 판정을 받으므로 합류·재사용이 될 수 있다(T010). */
+    @PostMapping("/{backtestId}/retry")
+    public ResponseEntity<ApiResponse<BacktestRetryResponse>> retry(
+            @PathVariable String backtestId, HttpServletRequest http) {
+        BacktestJobResult result =
+                retryService.retry(backtestId, currentRequester.requireRequesterId(http));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok(BacktestRetryResponse.from(result)));
     }
 
     @PostMapping

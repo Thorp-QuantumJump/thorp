@@ -24,7 +24,6 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -95,6 +94,15 @@ public class BacktestService {
 
     @Transactional
     public BacktestJobResult create(CreateBacktestCommand command) {
+        return create(command, null);
+    }
+
+    /**
+     * @param retryOfRequestId 재시도라면 원본 요청의 id. 새 요청 행에 그대로 남는다(T010). 재시도도 접수를 <b>다시</b> 타므로 동일 버전
+     *     재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에 합류한다
+     */
+    @Transactional
+    public BacktestJobResult create(CreateBacktestCommand command, Long retryOfRequestId) {
         Scenario scenario = command.scenario() == null ? Scenario.FULL_PERIOD : command.scenario();
         validateScenario(scenario, command.scenarioParams());
         validateUniverse(command);
@@ -149,7 +157,8 @@ public class BacktestService {
 
         Optional<BacktestRun> active = runRepository.findActiveByDedupKey(dedupKey);
         if (active.isPresent()) {
-            Optional<BacktestJobResult> joined = joinExisting(command, active.get().getId());
+            Optional<BacktestJobResult> joined =
+                    joinExisting(command, active.get().getId(), retryOfRequestId);
             if (joined.isPresent()) {
                 return joined.get();
             }
@@ -166,7 +175,7 @@ public class BacktestService {
                         period.effectiveStart(),
                         period.effectiveEnd(),
                         period.warmupTradingDays(),
-                        requestSpec(command, scenario, period.warmupTradingDays()),
+                        RequestSpecCodec.write(command, scenario, period.warmupTradingDays()),
                         versions);
 
         BacktestRun run =
@@ -194,7 +203,7 @@ public class BacktestService {
                                 command.requesterId(),
                                 command.executionType(),
                                 ResultSource.NEW,
-                                null));
+                                retryOfRequestId));
         events.publishEvent(new BacktestJobDispatcher.RunAccepted(saved.getId()));
         return BacktestJobResult.of(request, saved);
     }
@@ -208,7 +217,8 @@ public class BacktestService {
      *
      * @return 빈 값 = 잠근 뒤 보니 종결된 실행이라 재사용 대상이 아니다(호출자가 새 실행을 만든다)
      */
-    private Optional<BacktestJobResult> joinExisting(CreateBacktestCommand command, Long runId) {
+    private Optional<BacktestJobResult> joinExisting(
+            CreateBacktestCommand command, Long runId, Long retryOfRequestId) {
         BacktestRun run = runRepository.findByIdForUpdate(runId).orElse(null);
         if (run == null || !isReusable(run.getStatus())) {
             return Optional.empty();
@@ -230,7 +240,7 @@ public class BacktestService {
                                 command.requesterId(),
                                 command.executionType(),
                                 source,
-                                null));
+                                retryOfRequestId));
         // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.
         reuseEventRepository.save(
                 BacktestReuseEvent.of(
@@ -410,41 +420,6 @@ public class BacktestService {
      * <p>{@code warmupTradingDays}는 요청값이 아니라 <b>서버가 확정한 값</b>을 넣는다. 요청이 null 이었다고 null 을 돌려주면 "그래서
      * 몇 거래일을 썼나"라는 질문에 답할 수 없다.
      */
-    private static Map<String, Object> requestSpec(
-            CreateBacktestCommand command, Scenario scenario, int warmupTradingDays) {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (CreateBacktestCommand.AllocationItem item : command.items()) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("sectorId", item.sectorId());
-            entry.put("instrumentId", item.instrumentId());
-            if (item.targetWeight() != null) {
-                entry.put("targetWeight", item.targetWeight());
-            }
-            items.add(entry);
-        }
-        Map<String, Object> spec = new LinkedHashMap<>();
-        spec.put("mappingVersion", command.mappingVersion());
-        spec.put("items", items);
-        spec.put("strategyId", command.strategyId());
-        spec.put("rulesVersion", command.rulesVersion());
-        if (command.registryVersion() != null) {
-            spec.put("registryVersion", command.registryVersion());
-        }
-        spec.put("parameters", command.parameters());
-        spec.put("start", command.start().toString());
-        spec.put("end", command.end().toString());
-        spec.put("initialCash", command.initialCash());
-        if (command.evaluationSplitVersion() != null) {
-            spec.put("evaluationSplitVersion", command.evaluationSplitVersion());
-        }
-        spec.put("warmupTradingDays", warmupTradingDays);
-        spec.put("scenario", scenario.name());
-        if (command.scenarioParams() != null && !command.scenarioParams().isEmpty()) {
-            spec.put("scenarioParams", command.scenarioParams());
-        }
-        return spec;
-    }
-
     private Map<String, Object> versions(
             CostProfile costProfile, String rulesVersion, String dataVersion) {
         Map<String, Object> costs = new LinkedHashMap<>();

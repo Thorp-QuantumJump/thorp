@@ -24,6 +24,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
+import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
@@ -86,6 +87,7 @@ class BacktestControllerTest {
     @MockitoBean private BacktestService backtestService;
     @MockitoBean private BacktestResultQueryService queryService;
     @MockitoBean private BacktestCancelService cancelService;
+    @MockitoBean private BacktestRetryService retryService;
 
     private static BacktestJobResult accepted() {
         return new BacktestJobResult(
@@ -94,7 +96,8 @@ class BacktestControllerTest {
                 ResultSource.NEW,
                 LocalDate.of(2023, 7, 3),
                 LocalDate.of(2024, 12, 31),
-                Map.of("rules", "1"));
+                Map.of("rules", "1"),
+                null);
     }
 
     private org.springframework.test.web.servlet.ResultActions postBody(String body)
@@ -388,5 +391,34 @@ class BacktestControllerTest {
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
+    }
+
+    @Test
+    @DisplayName("POST /backtests/{id}/retry 는 202 와 retryOf 를 돌려준다")
+    void retryReturnsAccepted() throws Exception {
+        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))
+                .thenReturn(accepted().withRetryOf(BACKTEST_ID));
+
+        mockMvc.perform(
+                        post("/backtests/{id}/retry", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
+                .andExpect(jsonPath("$.data.status").value("QUEUED"))
+                .andExpect(jsonPath("$.data.resultSource").value("NEW"))
+                .andExpect(jsonPath("$.data.retryOf").value(BACKTEST_ID));
+    }
+
+    @Test
+    @DisplayName("재시도할 수 없는 상태면 409 NOT_RETRYABLE 을 그대로 전한다")
+    void retryConflictIsPropagated() throws Exception {
+        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))
+                .thenThrow(new BusinessException(ErrorCode.NOT_RETRYABLE, "아직 돌고 있습니다"));
+
+        mockMvc.perform(
+                        post("/backtests/{id}/retry", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("NOT_RETRYABLE"));
     }
 }
