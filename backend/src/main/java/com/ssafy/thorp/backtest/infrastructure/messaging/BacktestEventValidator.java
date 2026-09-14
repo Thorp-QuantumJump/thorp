@@ -8,6 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.RunStatus;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -119,7 +120,7 @@ final class BacktestEventValidator {
                 if (!payload.partial()) {
                     fail("payload.partial", "must be true when status is CANCELLED");
                 }
-                require(payload.lastTradingDate(), "payload.lastTradingDate");
+                cancelledRange(payload, output, series, base);
                 computed(output, base);
             }
             case FAILED -> {
@@ -161,6 +162,37 @@ final class BacktestEventValidator {
         }
         if (run.finishedAt().isBefore(run.startedAt())) {
             fail(path + ".finishedAt", "before startedAt");
+        }
+    }
+
+    /**
+     * 취소의 완료 범위가 세 곳에서 같은가: {@code payload.lastTradingDate} = {@code
+     * engineOutput.run.lastTradingDate} = 시계열 마지막 날짜.
+     *
+     * <p>실행에는 payload 의 값을 진행 거래일로 기록하고 결과는 {@code engineOutput} 전체를 저장하므로, 둘이 어긋나면 화면의 완료 날짜와 실제
+     * 요약·시계열 범위가 다르게 보인다. 계약이 한 값을 세 군데 적어 두는 이상 여기서 대조해야 그 어긋남이 저장되지 않는다.
+     */
+    private static void cancelledRange(
+            FinishedPayload payload,
+            EngineOutput output,
+            List<EngineOutput.PortfolioSnapshot> series,
+            String base) {
+        LocalDate stopped = require(payload.lastTradingDate(), "payload.lastTradingDate");
+        if (!stopped.equals(output.run().lastTradingDate())) {
+            fail(
+                    base + ".run.lastTradingDate",
+                    output.run().lastTradingDate()
+                            + " differs from payload.lastTradingDate "
+                            + stopped);
+        }
+        if (series.isEmpty()) {
+            fail(base + ".portfolioSeries", "must not be empty when status is CANCELLED");
+        }
+        LocalDate last = series.get(series.size() - 1).date();
+        if (!stopped.equals(last)) {
+            fail(
+                    base + ".portfolioSeries",
+                    "last date " + last + " differs from payload.lastTradingDate " + stopped);
         }
     }
 

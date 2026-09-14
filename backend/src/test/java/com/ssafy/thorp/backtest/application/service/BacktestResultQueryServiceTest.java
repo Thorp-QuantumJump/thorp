@@ -29,8 +29,10 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -250,6 +252,109 @@ class BacktestResultQueryServiceTest {
         assertThat(summary.analytics().recoveryDays()).isEqualTo(9);
         assertThat(summary.analytics().turnover()).isEqualByComparingTo("1.219991");
         assertThat(summary.exceptionCount()).isEqualTo(1);
+    }
+
+    // ---------- 취소 실행의 상세(T011) ----------
+
+    private static BacktestRequest stoppedRequest() {
+        return BacktestRequest.restore(
+                21L,
+                BacktestId.from(BACKTEST_ID),
+                JOB_ID,
+                REQUESTER,
+                ExecutionType.SINGLE,
+                ResultSource.NEW,
+                null,
+                Instant.parse("2026-09-07T01:00:10Z"),
+                null,
+                true);
+    }
+
+    private static BacktestRun cancelledRun(LocalDate lastTradingDate) {
+        return jobIn(RunStatus.RUNNING).markCancelled(lastTradingDate);
+    }
+
+    @Test
+    @DisplayName("실행을 멈춘 취소 요청은 CANCELLED·partial 이고 부분 결과의 요약을 본다")
+    void stoppedCancelledRunHasPartialSummary() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(stoppedRequest()));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(cancelledRun(LocalDate.parse("2025-03-25"))));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.status()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(result.partial()).isTrue();
+        assertThat(result.cancelRequested()).isFalse();
+        assertThat(result.summary()).isNotNull();
+        assertThat(result.summaryUnavailable()).isNull();
+        assertThat(result.progress().lastTradingDate()).isEqualTo(LocalDate.parse("2025-03-25"));
+    }
+
+    @Test
+    @DisplayName(
+            "대기 중 취소된 실행은 결과 행이 없어도 200 이고 summaryUnavailable=CANCELLED_BEFORE_START, 하위는 NO_PARTIAL_RESULT")
+    void queuedCancelHasNoResultRow() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(stoppedRequest()));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(cancelledRun(null)));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+        assertThat(result.status()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(result.summary()).isNull();
+        assertThat(result.summaryUnavailable()).isEqualTo("CANCELLED_BEFORE_START");
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NO_PARTIAL_RESULT);
+    }
+
+    @Test
+    @DisplayName("먼저 취소한 합류 요청의 완료 일수는 비운다 — 날짜는 취소 시점인데 일수만 실행의 최신 값이면 어긋난다")
+    void pinnedRequestHasNoCompletedTradingDays() {
+        RunProgress ahead =
+                new RunProgress(ProgressStage.COMPUTING, LocalDate.parse("2025-06-30"), 120, 120);
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelledJoinedRequest(LocalDate.parse("2025-01-28"))));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING).recordProgress(ahead)));
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.progress().lastTradingDate()).isEqualTo(LocalDate.parse("2025-01-28"));
+        assertThat(result.progress().completedTradingDays()).isNull();
+        assertThat(result.progress().totalTradingDays()).isEqualTo(120);
+    }
+
+    @Test
+    @DisplayName("진행 거래일이 있는 CANCELLED 인데 결과 행이 없으면 결과 유실(500)이다 — 실행 전 취소로 숨기지 않는다")
+    void cancelledWithProgressButNoResultRowIsCorruption() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(stoppedRequest()));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(cancelledRun(LocalDate.parse("2025-03-25"))));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("CANCEL 을 보냈지만 아직 FINISHED 가 오지 않은 요청은 cancelRequested=true 다")
+    void cancelRequestedWhileRunStillRunning() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(stoppedRequest()));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(RunStatus.RUNNING)));
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.status()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(result.cancelRequested()).isTrue();
+        assertThat(result.summary()).isNull();
     }
 
     // ---------- getWeights · getExceptions ----------

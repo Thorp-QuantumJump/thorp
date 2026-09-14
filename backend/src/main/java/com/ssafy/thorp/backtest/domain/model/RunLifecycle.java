@@ -16,6 +16,8 @@ import java.util.Objects;
  * @param publishedAt 발행 confirm 시각. null이면서 QUEUED면 재발행 대상이다
  * @param publishCount 발행 시도 횟수(상한). DLQ 종결 판정의 분모
  * @param dlqCount DLQ로 끝난 메시지 수. {@code dlqCount >= publishCount}일 때만 실행을 실패로 종결한다
+ * @param cancelRequestedAt 마지막 활성 요청의 취소로 CANCEL 을 보낸 시각(R-04). null = 취소 대기 아님. 접수는 이 값이 있는 실행에
+ *     합류하지 않고, 유예 감시(T014)는 이 시각부터 FINISHED 를 기다린다
  */
 public record RunLifecycle(
         Instant queuedAt,
@@ -23,7 +25,8 @@ public record RunLifecycle(
         Instant finishedAt,
         Instant publishedAt,
         int publishCount,
-        int dlqCount) {
+        int dlqCount,
+        Instant cancelRequestedAt) {
 
     public RunLifecycle {
         if (publishCount < 0) {
@@ -37,34 +40,76 @@ public record RunLifecycle(
 
     public static RunLifecycle queuedAt(Instant at) {
         return new RunLifecycle(
-                Objects.requireNonNull(at, "queuedAt must not be null"), null, null, null, 0, 0);
+                Objects.requireNonNull(at, "queuedAt must not be null"),
+                null,
+                null,
+                null,
+                0,
+                0,
+                null);
     }
 
     /** 발행 시도 직전. confirm 여부와 무관하게 올린다. */
     public RunLifecycle publishAttempted() {
         return new RunLifecycle(
-                queuedAt, startedAt, finishedAt, publishedAt, publishCount + 1, dlqCount);
+                queuedAt,
+                startedAt,
+                finishedAt,
+                publishedAt,
+                publishCount + 1,
+                dlqCount,
+                cancelRequestedAt);
     }
 
     /** confirm 이 돌아온 뒤. 재발행기는 이 값이 채워진 실행을 건너뛴다. */
     public RunLifecycle published(Instant at) {
-        return new RunLifecycle(queuedAt, startedAt, finishedAt, at, publishCount, dlqCount);
+        return new RunLifecycle(
+                queuedAt, startedAt, finishedAt, at, publishCount, dlqCount, cancelRequestedAt);
     }
 
     public RunLifecycle deadLettered() {
         return new RunLifecycle(
-                queuedAt, startedAt, finishedAt, publishedAt, publishCount, dlqCount + 1);
+                queuedAt,
+                startedAt,
+                finishedAt,
+                publishedAt,
+                publishCount,
+                dlqCount + 1,
+                cancelRequestedAt);
     }
 
     /** 첫 STARTED 만 기록한다 — 재전달·중복 실행이 대기 시간을 뒤로 밀면 측정이 거짓말을 한다. */
     public RunLifecycle started(Instant at) {
         return startedAt != null
                 ? this
-                : new RunLifecycle(queuedAt, at, finishedAt, publishedAt, publishCount, dlqCount);
+                : new RunLifecycle(
+                        queuedAt,
+                        at,
+                        finishedAt,
+                        publishedAt,
+                        publishCount,
+                        dlqCount,
+                        cancelRequestedAt);
+    }
+
+    /**
+     * 마지막 활성 요청이 취소해 CANCEL 을 보냈다(R-04). 이 값이 있으면 접수는 이 실행에 합류하지 않고(취소 대기), 유예 감시(T014)는 이 시각부터
+     * FINISHED 를 기다린다.
+     */
+    public RunLifecycle cancelRequested(Instant at) {
+        return new RunLifecycle(
+                queuedAt,
+                startedAt,
+                finishedAt,
+                publishedAt,
+                publishCount,
+                dlqCount,
+                Objects.requireNonNull(at, "cancelRequestedAt must not be null"));
     }
 
     public RunLifecycle finished(Instant at) {
-        return new RunLifecycle(queuedAt, startedAt, at, publishedAt, publishCount, dlqCount);
+        return new RunLifecycle(
+                queuedAt, startedAt, at, publishedAt, publishCount, dlqCount, cancelRequestedAt);
     }
 
     /** 발행한 메시지가 모두 DLQ 로 끝났는가. 하나라도 남아 있으면 그 실행의 결과를 기다린다(R-18 ③). */

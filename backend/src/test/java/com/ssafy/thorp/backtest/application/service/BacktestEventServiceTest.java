@@ -1,7 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,6 +17,8 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
@@ -79,7 +80,8 @@ class BacktestEventServiceTest {
     }
 
     private void givenJob(RunStatus status) {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(jobIn(status)));
     }
 
     /** 마지막 STARTED 의 executionId 를 지정한 실행. 픽스처 이벤트의 executionId 와 일부러 다르게 둔다. */
@@ -99,11 +101,11 @@ class BacktestEventServiceTest {
                         null,
                         42,
                         new RunState(status, 1, currentExecutionId, false, null, null, null));
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(job));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
     }
 
     private void givenUnknownJob() {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());
     }
 
     private BacktestRun updatedJob() {
@@ -208,15 +210,73 @@ class BacktestEventServiceTest {
     }
 
     @Test
-    @DisplayName("FINISHED(CANCELLED): 실행 모델(T003)이 생기기 전에는 저장하지 않고 예외를 낸다")
-    void finishedCancelledIsNotSupportedYet() {
+    @DisplayName("FINISHED(CANCELLED): 부분 결과를 저장하고 실행을 CANCELLED·partial 로 끝내며 워커가 멈춘 거래일을 진행에 남긴다")
+    void finishedCancelledStoresPartialResult() {
         givenJob(RunStatus.RUNNING);
 
-        assertThatThrownBy(() -> service.handleFinished(MessageFixtures.finishedCancelled()))
-                .isInstanceOf(UnsupportedOperationException.class)
-                .hasMessageContaining(BACKTEST_ID);
-        verifyNoInteractions(resultRepository);
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        verify(resultRepository).save(any());
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(updated.isPartial()).isTrue();
+        assertThat(updated.getProgress().lastTradingDate())
+                .isEqualTo(LocalDate.parse("2025-03-25"));
+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("STARTED: 대기 중 취소돼 이미 CANCELLED 인 실행이 시작하면 CANCEL 을 다시 보낸다 — 워커는 첫 거래일 뒤 멈춘다")
+    void startedOnCancelledRunRepublishesCancel() {
+        givenJob(RunStatus.CANCELLED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
         verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("STARTED: 취소를 보낸 RUNNING 실행이 다시 시작하면(재전달) CANCEL 을 다시 보낸다")
+    void startedOnCancelPendingRunResendsCancel() {
+        // 워커는 실행이 끝날 때 레지스트리의 취소 표시를 지운다. 재전달된 실행에 다시 보내지 않으면
+        // 취소한 실행이 끝까지 계산돼 COMPLETED 가 된다.
+        BacktestRun cancelPending =
+                BacktestRun.restore(
+                        1L,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of(),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        new RunState(
+                                RunStatus.RUNNING,
+                                1,
+                                "previous-execution",
+                                false,
+                                null,
+                                null,
+                                null),
+                        RunPlan.empty(),
+                        RunLifecycle.queuedAt(Instant.parse("2026-09-11T04:00:00Z"))
+                                .cancelRequested(Instant.parse("2026-09-11T04:30:00Z")));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleStarted(MessageFixtures.started());
+
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.RUNNING);
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
     }
 
     @Test

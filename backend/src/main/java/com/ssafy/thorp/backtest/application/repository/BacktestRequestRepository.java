@@ -19,6 +19,12 @@ public interface BacktestRequestRepository {
 
     Optional<BacktestRequest> findByBacktestId(String backtestId);
 
+    /**
+     * 요청 행을 잠그고 <b>그 시점의 값을 읽는다</b>(SELECT … FOR UPDATE). 같은 요청을 동시에 취소하면 뒤엣것이 잠금을 얻은 뒤 앞엣것이 남긴 취소
+     * 상태를 보아야 한다 — 잠금 전에 읽어 두면 옛 상태로 "아직 취소되지 않았다"고 판단해 남은 요청이 있는데도 실행을 멈춘다(R-04).
+     */
+    Optional<BacktestRequest> findByBacktestIdForUpdate(String backtestId);
+
     /** 한 실행에 붙은 요청 전부. 마지막 활성 요청인지 판단할 때 쓴다(R-04). */
     List<BacktestRequest> findByRunId(Long runId);
 

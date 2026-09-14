@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.presentation.controller;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
@@ -10,11 +11,13 @@ import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
+import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;
+import com.ssafy.thorp.backtest.presentation.response.BacktestCancelResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
@@ -53,15 +56,31 @@ public class BacktestController {
 
     private final BacktestService backtestService;
     private final BacktestResultQueryService queryService;
+    private final BacktestCancelService cancelService;
     private final CurrentRequester currentRequester;
 
     public BacktestController(
             BacktestService backtestService,
             BacktestResultQueryService queryService,
+            BacktestCancelService cancelService,
             CurrentRequester currentRequester) {
         this.backtestService = backtestService;
         this.queryService = queryService;
+        this.cancelService = cancelService;
         this.currentRequester = currentRequester;
+    }
+
+    /**
+     * 이 요청만 취소한다(R-04). 같은 실행에 합류한 다른 요청은 영향이 없고, 마지막 활성 요청이면 실행을 멈춘다. 종결 상태면 409 {@code
+     * NOT_CANCELLABLE}.
+     */
+    @PostMapping("/{backtestId}/cancel")
+    public ResponseEntity<ApiResponse<BacktestCancelResponse>> cancel(
+            @PathVariable String backtestId, HttpServletRequest http) {
+        BacktestCancelResult result =
+                cancelService.cancel(backtestId, currentRequester.requireRequesterId(http));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok(BacktestCancelResponse.from(result)));
     }
 
     @PostMapping

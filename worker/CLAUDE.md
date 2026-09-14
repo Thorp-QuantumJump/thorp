@@ -55,7 +55,11 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   진행 콜백은 거래일 1개 단위, `progress.batchTradingDays` 묶음 발행은 실행 Consumer(`consumer.py`) 책임.
   `FINISHED` payload의 `status`·`partial`·`lastTradingDate`는 `run` 블록의 값을 그대로 옮긴다(백엔드가 일치를 검증).
   계약 v2(spec 004 T001)에 벤치마크는 없다 — `EngineInput.benchmark`도 `FINISHED.benchmark`도 없고 `strip_benchmark`는 제거했다.
-  제어 메시지(`contracts/control.py`, CANCEL) 수신 루프는 취소 티켓(T011)에서 붙인다
+  제어 메시지(`contracts/control.py`, CANCEL)는 `rabbitmq.run_control_listener`(별도 연결·데몬 스레드, exclusive·auto-delete 큐, auto-ack)가
+  받아 `control.CancelRegistry`에 표시하고, 엔진은 `stop_after` 훅으로 거래일마다 자기 runId를 확인해 멈춘다(R-04). **레지스트리는 활성 실행만
+  받는다** — 소비자가 STARTED 발행 앞에서 `begin(run_id)`, 끝나면 `end(run_id)`. fanout으로 오는 남의 실행·끝난 실행의 CANCEL은 버린다.
+  `run_consumer`는 제어 큐가 바인딩된 뒤에야 작업을 받는다(30초 안에 안 되면 시작하지 않는다) — 그 전에 온 CANCEL은 이 워커에 닿지 않는다.
+  엔진·소비자·리스너가 같은 레지스트리를 봐야 하므로 `main.py`가 하나를 만들어 셋에 넘긴다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - **시장 자료는 `market_data.py` 한 곳에서만 읽고, 공급자는 주입한다.**

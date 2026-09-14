@@ -41,6 +41,7 @@ from worker.contracts.events import (
     ResourceUsage,
     StartedPayload,
 )
+from worker.control import CancelRegistry
 from worker.messaging import (
     SCHEMA_VERSION,
     ContractViolation,
@@ -238,11 +239,13 @@ class BacktestJobConsumer:
         engine: BacktestEngine,
         publisher: EventPublisher,
         *,
+        registry: CancelRegistry | None = None,
         new_id: IdFactory = _new_id,
         clock: Clock = utc_now,
     ) -> None:
         self._engine = engine
         self._publisher = publisher
+        self._registry = registry
         self._new_id = new_id
         self._clock = clock
 
@@ -314,9 +317,17 @@ class BacktestJobConsumer:
 
     def _execute(self, engine_input: EngineInput, run_id: str, execution_id: str) -> EngineOutput:
         stream = _EventStream(self._publisher, run_id, execution_id, self._new_id, self._clock)
-        stream.started()
-        batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
-        output = self._engine.run(engine_input, batcher.on_progress)
-        batcher.flush()
-        stream.finished(output)
-        return output
+        # 활성 실행 등록은 STARTED 보다 앞선다 — STARTED 에 대한 답으로 오는 CANCEL 을 받아야
+        # 한다(R-04).
+        if self._registry is not None:
+            self._registry.begin(run_id)
+        try:
+            stream.started()
+            batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
+            output = self._engine.run(engine_input, batcher.on_progress)
+            batcher.flush()
+            stream.finished(output)
+            return output
+        finally:
+            if self._registry is not None:
+                self._registry.end(run_id)
