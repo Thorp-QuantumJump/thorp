@@ -81,23 +81,6 @@ pipeline {
         // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
         //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
         CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF "[ci-all]" && echo true || echo false').trim()
-
-        // 어느 파트가 바뀌었는지는 기준 브랜치와 직접 비교해서 정한다. partChanged 가 이 값을
-        // 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이 dev 에
-        // 들어온 남의 변경은 세지 않는다.
-        //
-        // origin/dev 는 Checkout SCM 이 refs/remotes/origin/* 를 통째로 가져오므로 이 시점에
-        // 이미 있다. 그래도 실패할 수 있으니 || true 로 받아, 실패하면 빈 값이 되어 전체가 돈다.
-
-        // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고
-        // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가
-        // data/ 로 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다.
-        // 틀리는 방향이 건너뛰는 쪽이라 위험하므로 인용을 끈다.
-        //
-        // 이 값은 첫 스테이지 전에 한 번만 평가된다. 모든 스테이지가 최상위 agent 를 함께 쓰기
-        // 때문이다. 어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서
-        // 다시 평가되고, 체크아웃 전 워크스페이스에서 값이 정해질 수 있다.
-        CHANGED_FILES = sh(returnStdout: true, script: 'git -c core.quotePath=false diff --name-only --no-renames origin/dev...HEAD || true').trim()
     }
 
     stages {
@@ -114,30 +97,76 @@ pipeline {
                     usernameVariable: 'GIT_USERNAME',
                     passwordVariable: 'GIT_PASSWORD'
                 )]) {
-                    sh '''
-                        set -e
+                    // 기준을 이름이 아니라 커밋으로 확정한다.
+                    //
+                    // git fetch 가 확정적으로 갱신하는 것은 FETCH_HEAD 뿐이다. refs/remotes/origin/dev
+                    // 갱신은 Job 에 설정된 refspec 이 refs/heads/dev 를 덮을 때만 일어나는 부수 효과다.
+                    // 이름 origin/dev 를 그대로 쓰면 그 설정에 따라 낡은 커밋을 기준으로 삼게 되고,
+                    // 그러면 아래 --is-ancestor 가 참이 되어 병합하지 않은 채 성공으로 끝난다.
+                    // 병합 결과를 검증하겠다는 스테이지가 검증 없이 초록불을 주는 셈이다.
+                    script {
+                        env.DEV_BASE = sh(returnStdout: true, script: '''
+                            set -e
 
-                        # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.
-                        # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.
-                        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev
+                            # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.
+                            # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.
+                            # fetch 의 출력은 stderr 로 보내 반환값을 더럽히지 않는다.
+                            git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev >&2
 
-                        if git merge-base --is-ancestor origin/dev HEAD; then
-                            echo "이미 origin/dev 를 포함한다. 병합을 건너뛴다."
-                            exit 0
-                        fi
+                            git rev-parse FETCH_HEAD
+                        ''').trim()
+                    }
+                }
 
-                        # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
-                        #              post 단계에서 git merge --abort 로 되돌린다.
-                        # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
-                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
-                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
-                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
-                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then
-                            echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
-                            exit 1
-                        fi
-                        echo "origin/dev 를 병합한 결과로 검증한다."
-                    '''
+                echo "기준 dev = ${env.DEV_BASE}"
+
+                sh '''
+                    set -e
+
+                    if git merge-base --is-ancestor "$DEV_BASE" HEAD; then
+                        echo "[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다."
+                        exit 0
+                    fi
+
+                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
+                    #              post 단계에서 git merge --abort 로 되돌린다.
+                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
+                    # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
+                    #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
+                    #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
+                    if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff "$DEV_BASE"; then
+                        echo "[병합] 기준 dev 와 충돌한다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
+                        exit 1
+                    fi
+                    echo "[병합] 기준 dev 를 합친 결과로 검증한다."
+                '''
+
+                // 어느 파트가 바뀌었는지는 위에서 확정한 기준과 직접 비교해서 정한다. partChanged 가
+                // 이 값을 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이
+                // dev 에 들어온 남의 변경은 세지 않는다.
+                //
+                // environment 블록이 아니라 여기서 계산하는 이유는 기준을 하나로 두기 위해서다.
+                // environment 는 fetch 보다 먼저 평가되어 Checkout SCM 시점의 값을 보게 된다.
+                // 스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지 않는다.
+                //
+                // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고
+                // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로
+                // 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이 건너뛰는
+                // 쪽이라 위험하므로 인용을 끈다.
+                //
+                // 병합은 --no-commit 이라 HEAD 를 움직이지 않는다. 커밋 사이의 비교이므로 이 값은
+                // 병합 전후 어디서 계산해도 같다.
+                script {
+                    env.CHANGED_FILES = sh(returnStdout: true, script: '''
+                        changed=$(git -c core.quotePath=false diff --name-only --no-renames "$DEV_BASE...HEAD" 2>/dev/null || true)
+
+                        # 값은 stdout 하나뿐이어야 하므로 사람이 읽을 줄은 stderr 로 보낸다.
+                        # 왜 어떤 파트를 건너뛰었는지가 빌드 로그에 남는다.
+                        echo "[파트 선별] 기준 대비 바뀐 파일:" >&2
+                        echo "$changed" >&2
+
+                        printf '%s' "$changed"
+                    ''').trim()
                 }
             }
 
@@ -156,7 +185,9 @@ pipeline {
 
         stage('Migration version') {
             steps {
-                sh 'bash infra/scripts/check-migration-version.sh origin/dev'
+                // Merge with dev 가 확정한 기준을 그대로 쓴다. 이름 origin/dev 를 다시 쓰면
+                // 검사 기준과 병합 기준이 서로 다른 커밋이 될 수 있다.
+                sh 'bash infra/scripts/check-migration-version.sh "$DEV_BASE"'
             }
 
             post {
