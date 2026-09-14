@@ -72,17 +72,22 @@ common: 모든 계층에서 참조 가능
 - **취소는 요청 단위다**(`BacktestCancelService`, R-04). 이 요청에 `cancelled_at`을 남기고, 같은 실행의 마지막 활성 요청일 때만 실행을 멈춘다 —
   `QUEUED`면 바로 `CANCELLED`, `RUNNING`이면 `run.cancel_requested_at`을 기록하고 커밋 뒤 `BacktestCancelDispatcher`가 CANCEL을 보낸다(작업
   발행과 같은 커밋 후 발행 — 트랜잭션 안에서 보내면 발행됐는데 커밋이 실패해 아무도 취소하지 않은 실행이 멈춘다). 발행 실패는 삼키고 유예 감시(T014)가
-  `cancel_requested_at`을 보고 다시 보낸다. **잠금 순서는 요청 → 실행이다**(`findByBacktestIdForUpdate` → `findByIdForUpdate`). 실행만 잠그면
+  `cancel_requested_at`을 보고 다시 보낸다. **잠금 순서는 요청 → 실행이다**(`BacktestRequestRepository.findByBacktestIdForUpdate` → `BacktestRunRepository.findByIdForUpdate`). 실행만 잠그면
   같은 요청을 두 번 취소할 때 뒤엣것이 잠금 전에 읽어 둔 옛 요청을 보고 "아직 활성"이라 판단해, 남은 요청이 있는데도 실행을 멈춘다. 요청 잠금은 그
   이중 취소를, 실행 잠금은 마지막 활성 요청 판정을 직렬화한다. 합류 요청 하나만 취소하면 스냅샷(`cancelled_last_trading_date`)만 남기고 실행은 계속 돈다.
   **접수도 합류 직전에 같은 실행 행을 잠그고 최신 상태를 다시 본다** — `cancel_requested_at`이 있으면 `409 CANCEL_PENDING`(합류시키면 취소하지 않은
   요청까지 부분 결과로 끝난다), 잠근 뒤 종결된 실행이면 재사용 대상이 아니라 새 실행을 만든다. **`*ForUpdate` 조회는 잠근 뒤 `refresh` 한다** —
-  잠금만으로는 영속성 컨텍스트의 1차 캐시가 이겨 그 사이 커밋된 값을 놓친다(`BacktestCancelFlowIT`가 그 순서를 고정한다). 대기 중
-  취소된 실행의 STARTED가 뒤늦게 오면 `handleStarted`가 CANCEL을 다시 보낸다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
+  잠금만으로는 영속성 컨텍스트의 1차 캐시가 이겨 그 사이 커밋된 값을 놓친다(`BacktestCancelFlowIT`가 그 순서를 고정한다). **워커 이벤트의 상태 전이도 같은 실행 행을 잠근다**
+  (`BacktestRunRepository.findByBacktestIdForUpdate`) — 이벤트끼리는 단일 Consumer라 직렬이지만 취소는 HTTP 스레드라 그 밖에 있어서,
+  잠그지 않으면 STARTED가 QUEUED를 읽은 직후 커밋된 취소를 늦은 UPDATE가 RUNNING으로 덮는다. 대기 중
+  취소된 실행의 STARTED가 뒤늦게 오면 `handleStarted`가 CANCEL을 다시 보낸다. **`cancel_requested_at`이 있는 RUNNING 실행의 STARTED도
+  마찬가지다** — 재전달(R-06)이면 워커가 실행을 끝낼 때 레지스트리의 취소 표시를 지웠으므로, 다시 보내지 않으면 취소한 실행이 끝까지 계산돼
+  COMPLETED가 된다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
 - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
 - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다
 - 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `runId`(요청/실행 분리 전까지 `backtestId` 값과 같다)·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다
-- 결과 조회 API(`GET /backtests/{id}` + `/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`): 계약과 예시는 `docs/specs/backtest-api/`이고 `BacktestResultApiIT`가 응답과 예시 파일의 동치를 단언한다. 하위 리소스는 `BacktestResultQueryService.requireResultReady`가 돌려주는 `ResultView` 하나를 관문으로 쓴다 — 먼저 취소한 요청의 스냅샷 자르기(R-04)와 `partial` 판정이 거기 있으니 엔드포인트마다 다시 쓰지 말 것. 상세는 실패해도 200(`status`·`error`로 전달), 하위 리소스는 결과가 없으면 409(`RESULT_NOT_READY` 재시도 가능 / `BACKTEST_FAILED` 무의미)이며 **빈 배열을 만들어 내지 않는다**. 최종 상태인데 결과 행이 없으면 500이다(저장 트랜잭션 불변식 위반)
+- 결과 조회 API(`GET /backtests/{id}` + `/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`): 계약과 예시는 `docs/specs/backtest-api/`이고 `BacktestResultApiIT`가 응답과 예시 파일의 동치를 단언한다. 하위 리소스는 `BacktestResultQueryService.requireResultReady`가 돌려주는 `ResultView` 하나를 관문으로 쓴다 — 먼저 취소한 요청의 스냅샷 자르기(R-04)와 `partial` 판정이 거기 있으니 엔드포인트마다 다시 쓰지 말 것. 상세는 실패해도 200(`status`·`error`로 전달), 하위 리소스는 결과가 없으면 409(`RESULT_NOT_READY` 재시도 가능 / `BACKTEST_FAILED` 무의미)이며 **빈 배열을 만들어 내지 않는다**. 최종 상태인데 결과 행이 없으면 500이다(저장 트랜잭션 불변식 위반). **예외는 `progress.lastTradingDate`가 없는 CANCELLED 하나뿐이다**
+  (`CANCELLED_BEFORE_START` — 워커가 한 거래일도 돌지 않았다). 계산한 거래일이 있는 CANCELLED를 여기 끼워 주면 실제 결과 유실이 200으로 숨는다
 - 응답 decimal은 필드마다 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열이 된다. **웹 ObjectMapper에 전역 등록하지 않는다** — 다른 도메인(`MarketResponse.value`)이 숫자→문자열로 바뀌어 그 계약이 깨진다. 전역 `NON_NULL`도 금지: 거래의 `exitDate`는 명시적 null이고 시계열의 `benchmarkReturn`만 키를 생략한다
 - 결과 조회는 엔드포인트마다 읽을 컬럼이 달라 저장소 조회가 5개다(`findSummary`·`findTimeseries`·`findPortfolioSeries`·`findTrades`·`findBlocks`). 비중·예외 블록은 KB 단위라 `findBlocks` 하나로 함께 읽고, 예외 건수는 `jsonb_array_length`로 요약 조회에 얹는다. `portfolio_series`는 5년치면 수백 KB이고 `@JdbcTypeCode(JSON)` 기본 타입은 지연 로딩이 없어 엔티티를 읽으면 무조건 딸려온다 — 읽지 않을 컬럼은 select에 넣지 않는다. native alias는 따옴표로 감싼다(PostgreSQL이 소문자로 접는다)
 - 거래 응답의 `entryDate`는 저장된 `entryTime`(Instant)을 **거래소 현지(Asia/Seoul)** 기준으로 바꾼 값이다. UTC로 자르면 거래소를 늘릴 때 하루 밀린다

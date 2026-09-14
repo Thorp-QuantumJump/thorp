@@ -132,14 +132,17 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 - `config`는 접수가 저장한 요청 사본에 `effectiveStart`·`effectiveEnd`를 얹은 것이다. `QUEUED`부터 값이 있다.
 - `progress`: `stage`(`PREPARING_DATA` → `COMPUTING` → `SAVING`), `lastTradingDate`(처리한 마지막 거래일),
   `completedTradingDays`/`totalTradingDays`. `QUEUED`에서는 `null`이고 `queueWaitSeconds`만 채운다 — 아무 거래일도
-  처리하지 않았는데 0%를 보여 주면 "시작했다"로 읽힌다.
+  처리하지 않았는데 0%를 보여 주면 "시작했다"로 읽힌다. 먼저 취소해 실행이 계속 도는 요청은 `lastTradingDate`가 취소 시점 스냅샷에 고정되므로
+  `completedTradingDays`도 `null`이다 — 실행의 최신 일수를 그대로 주면 "3월까지인데 100% 완료" 같은 응답이 된다(취소 시점의 일수는 저장하지 않는다).
 - `queueWaitSeconds`는 접수부터 실행 시작까지다. 아직 시작 전이면 지금까지 기다린 시간이다.
 - `partial`은 취소·한도로 끊긴 부분 결과라는 뜻이다.
 - `cancelRequested`는 취소했지만 실행이 아직 끝나지 않았다는 뜻이다(워커에 CANCEL을 보내고 FINISHED를 기다리는 중). 취소한 요청의 `status`는
   곧바로 `CANCELLED`이고(파생 상태), 완료 범위·요약은 다음 진행 배치 안에 FINISHED(CANCELLED)가 오면 채워진다. 대기 중 취소·합류 취소는 `false`다.
 - `summaryUnavailable`은 요약을 줄 수 없는 이유다. 먼저 취소해 실행이 계속 돈 요청은 `CANCELLED_WHILE_RUN_CONTINUED`이며
   요약이 `null`이다 — 백엔드가 지표를 다시 계산하지 않기 때문이다(spec 004 R-04). 대기 중 취소돼 계산이 없었던 실행은
-  `CANCELLED_BEFORE_START`(결과 행 없음, 하위 리소스 `409 NO_PARTIAL_RESULT`). 취소 무응답 강제 종결 `CANCEL_UNANSWERED`는 T014.
+  `CANCELLED_BEFORE_START`(결과 행 없음, 하위 리소스 `409 NO_PARTIAL_RESULT`). **`CANCELLED_BEFORE_START`는 `progress.lastTradingDate`가 없는
+  취소에만 쓴다** — 계산한 거래일이 있는데 결과 행이 없으면 그것은 정상적인 실행 전 취소가 아니라 결과 유실이므로 500이다. 취소 무응답 강제 종결
+  `CANCEL_UNANSWERED`는 T014.
 - 실행을 실제로 멈춘 취소(마지막 활성 요청의 취소)는 `CANCELLED`·`partial=true`이고 `summary`는 **부분 구간 기준** 값이다. `progress.lastTradingDate`는
   워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.
 - `versions`는 202 응답과 같은 값이다.

@@ -235,6 +235,7 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | `instrumentId` 형식 (§5, trade·position) | 명시 검증 (`InstrumentId.REGEX`) | universe 항목은 명시 검증, 결과는 엔진 입력의 종목이 그대로 나감 |
 | `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |
 | 상태별 nullable 규칙 (COMPLETED·CANCELLED: `performance`·`execution` 필수, `error` 없음. CANCELLED: `partial=true`·`lastTradingDate` 필수. FAILED: `error` 필수, `performance`·`execution` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
+| CANCELLED 완료 범위 일치 (`payload.lastTradingDate` == `engineOutput.run.lastTradingDate` == `portfolioSeries` 마지막 날짜) | 명시 검증 — 실행에는 payload 값을, 결과에는 `engineOutput` 전체를 저장하므로 어긋나면 화면의 완료 날짜와 요약·시계열 범위가 달라진다 | 엔진이 `assemble_output` 한 곳에서 세 값을 함께 채운다 |
 | 계약이 nullable로 정한 생략 (성과 지표 개별 null, snapshot의 `positions`·`cashFlows`, OPEN 거래의 청산 필드, v2 추가 블록 전부) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
 | 알 수 없는 필드 | 무시(`FAIL_ON_UNKNOWN_PROPERTIES=false`) — 상대가 필드를 먼저 추가해도 깨지지 않게 | 무시(`extra="ignore"`) |
 
