@@ -68,10 +68,10 @@ MIGRATION = _MIGRATIONS[-1] if _MIGRATIONS else None
 
 def etf_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "instrumentId": "091160.XKRX",
+        "instrument_id": "091160.XKRX",
         "name": "KODEX 반도체",
-        "listedOn": "2006-06-27",
-        "benchmarkIndex": "KRX 반도체",
+        "listed_on": "2006-06-27",
+        "benchmark_index": "KRX 반도체",
         "manager": "삼성자산운용",
     }
     payload.update(overrides)
@@ -83,7 +83,7 @@ def sector_payload(**overrides: Any) -> dict[str, Any]:
         "code": "SEMICONDUCTOR",
         "name": "반도체",
         "classification": "INDUSTRY",
-        "representativeEtf": etf_payload(),
+        "representative_etf": etf_payload(),
     }
     payload.update(overrides)
     return payload
@@ -91,11 +91,74 @@ def sector_payload(**overrides: Any) -> dict[str, Any]:
 
 def map_payload(sectors: list[dict[str, Any]] | None = None, **overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "isSample": True,
+        "is_sample": True,
         "sectors": sectors if sectors is not None else [sector_payload()],
     }
     payload.update(overrides)
     return payload
+
+
+def write_map(path: Path, payload: dict[str, Any]) -> Path:
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+# 고치기 전의 표기. 위의 대역과 달리 손으로 적어 둔다 — 이 값들은 "지금의 계약"이 아니라 "다시
+# 받아들이면 안 되는 옛 모양"이라, 계약이 또 바뀌어도 따라 움직이면 안 된다.
+CAMEL_MAP_PAYLOAD: dict[str, Any] = {
+    "isSample": True,
+    "sectors": [
+        {
+            "code": "SEMICONDUCTOR",
+            "name": "반도체",
+            "classification": "INDUSTRY",
+            "representativeEtf": {
+                "instrumentId": "091160.XKRX",
+                "name": "KODEX 반도체",
+                "listedOn": "2006-06-27",
+                "delistedOn": None,
+                "benchmarkIndex": "KRX 반도체",
+                "manager": "삼성자산운용",
+            },
+        }
+    ],
+}
+#: 바깥은 맞게 적고 섹터의 키만 옛 표기로 적은 파일.
+CAMEL_SECTOR_KEY_PAYLOAD: dict[str, Any] = {
+    "is_sample": True,
+    "sectors": [
+        {
+            "code": "SEMICONDUCTOR",
+            "name": "반도체",
+            "classification": "INDUSTRY",
+            "representativeEtf": {
+                "instrument_id": "091160.XKRX",
+                "name": "KODEX 반도체",
+                "listed_on": "2006-06-27",
+                "benchmark_index": "KRX 반도체",
+                "manager": "삼성자산운용",
+            },
+        }
+    ],
+}
+#: 대표 ETF 안쪽만 옛 표기로 적은 파일. 중첩이 두 겹이라 안쪽 이름도 따로 굳힌다.
+CAMEL_ETF_KEY_PAYLOAD: dict[str, Any] = {
+    "is_sample": True,
+    "sectors": [
+        {
+            "code": "SEMICONDUCTOR",
+            "name": "반도체",
+            "classification": "INDUSTRY",
+            "representative_etf": {
+                "instrumentId": "091160.XKRX",
+                "name": "KODEX 반도체",
+                "listedOn": "2006-06-27",
+                "benchmarkIndex": "KRX 반도체",
+                "manager": "삼성자산운용",
+            },
+        }
+    ],
+}
 
 
 def make_etf(**overrides: Any) -> RepresentativeEtf:
@@ -195,13 +258,58 @@ class TestSampleFixture:
     def test_sample_map_says_it_is_provisional(self) -> None:
         """FR-002. 예시임과 PD-01에서 확정된다는 사실이 파일 안에 드러나야 한다."""
         raw = json.loads(SAMPLE_SECTOR_MAP_PATH.read_text(encoding="utf-8"))
-        assert raw["isSample"] is True
+        assert raw["is_sample"] is True
         commentary = " ".join(value for key, value in raw.items() if key.startswith("$"))
         assert "PD-01" in commentary
 
     def test_classification_covers_both_values(self) -> None:
         sector_map = load_sector_map(SAMPLE_SECTOR_MAP_PATH)
         assert {entry.classification for entry in sector_map.entries} == {"INDUSTRY", "THEME"}
+
+
+# ---------------------------------------------------------------------------
+# 입력 파일의 키 표기
+# ---------------------------------------------------------------------------
+
+
+class TestInputFileKeys:
+    """대응표 파일의 키도 snake_case 한 가지다 (2026-09-13 결정).
+
+    일봉·기업행위·대표 상품 정보 파일은 ``tests/test_ingest_krx_inputs.py``의
+    ``TestInputFileKeys``가 같은 것을 고정한다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API
+    JSON을 대상으로 한 것이라(``contracts/sector-api.md``) 입력 파일에는 해당하지 않는다.
+
+    조용히 둘 다 받아들이면 어느 표기가 규약인지 알 수 없게 되고, 한 파일에 두 표기가 섞여도
+    드러나지 않는다.
+    """
+
+    def test_the_sample_map_file_uses_snake_case(self) -> None:
+        # 사람이 새 대응표를 만들 때 베끼는 파일이다. 여기에 옛 표기가 남으면 코드가 받지 않는
+        # 파일을 만들게 된다.
+        text = SAMPLE_SECTOR_MAP_PATH.read_text(encoding="utf-8")
+        for camel in (
+            "instrumentId",
+            "listedOn",
+            "delistedOn",
+            "benchmarkIndex",
+            "representativeEtf",
+            "isSample",
+        ):
+            assert f'"{camel}"' not in text, f"예시 대응표에 옛 표기가 남아 있다: {camel}"
+        assert load_sector_map(SAMPLE_SECTOR_MAP_PATH).is_sample is True
+
+    def test_a_camel_case_sector_map_file_is_refused(self, tmp_path: Path) -> None:
+        path = write_map(tmp_path / "map.json", CAMEL_MAP_PAYLOAD)
+        with pytest.raises(SectorMapFileError, match="is_sample"):
+            load_sector_map(path)
+
+    def test_a_camel_case_sector_key_is_refused(self) -> None:
+        with pytest.raises(SectorMapFileError, match="representativeEtf"):
+            sector_map_from_payload(CAMEL_SECTOR_KEY_PAYLOAD)
+
+    def test_camel_case_keys_inside_the_representative_etf_are_refused(self) -> None:
+        with pytest.raises(SectorMapFileError, match="instrument_id"):
+            sector_map_from_payload(CAMEL_ETF_KEY_PAYLOAD)
 
 
 # ---------------------------------------------------------------------------
@@ -212,23 +320,23 @@ class TestSampleFixture:
 class TestValidation:
     def test_duplicate_sector_is_rejected(self) -> None:
         """SC-001. 한 섹터에 대표 ETF가 둘 붙으면 거부한다."""
-        other = etf_payload(instrumentId="091170.XKRX", name="KODEX 은행")
+        other = etf_payload(instrument_id="091170.XKRX", name="KODEX 은행")
         with pytest.raises(DuplicateSectorError, match="SEMICONDUCTOR"):
             sector_map_from_payload(
-                map_payload([sector_payload(), sector_payload(representativeEtf=other)])
+                map_payload([sector_payload(), sector_payload(representative_etf=other)])
             )
 
     def test_sector_without_representative_etf_is_rejected(self) -> None:
         payload = sector_payload()
-        del payload["representativeEtf"]
-        with pytest.raises(SectorMapFileError, match="representativeEtf"):
+        del payload["representative_etf"]
+        with pytest.raises(SectorMapFileError, match="representative_etf"):
             sector_map_from_payload(map_payload([payload]))
 
     def test_leveraged_etf_is_rejected_with_reason(self) -> None:
         """FR-001. 거부 근거를 예외에 남긴다."""
         with pytest.raises(LeveragedEtfRejectedError) as caught:
             sector_map_from_payload(
-                map_payload([sector_payload(representativeEtf=etf_payload(leveraged=True))])
+                map_payload([sector_payload(representative_etf=etf_payload(leveraged=True))])
             )
         assert caught.value.reasons == ("leveraged=True",)
         assert caught.value.instrument_id == "091160.XKRX"
@@ -237,7 +345,7 @@ class TestValidation:
     def test_inverse_etf_is_rejected_with_reason(self) -> None:
         with pytest.raises(LeveragedEtfRejectedError) as caught:
             sector_map_from_payload(
-                map_payload([sector_payload(representativeEtf=etf_payload(inverse=True))])
+                map_payload([sector_payload(representative_etf=etf_payload(inverse=True))])
             )
         assert caught.value.reasons == ("inverse=True",)
 
@@ -248,33 +356,33 @@ class TestValidation:
 
     def test_missing_listing_date_is_rejected(self) -> None:
         payload = etf_payload()
-        del payload["listedOn"]
-        with pytest.raises(SectorMapFileError, match="listedOn"):
-            sector_map_from_payload(map_payload([sector_payload(representativeEtf=payload)]))
+        del payload["listed_on"]
+        with pytest.raises(SectorMapFileError, match="listed_on"):
+            sector_map_from_payload(map_payload([sector_payload(representative_etf=payload)]))
 
     def test_null_listing_date_is_rejected(self) -> None:
-        with pytest.raises(SectorMapFileError, match="listedOn"):
+        with pytest.raises(SectorMapFileError, match="listed_on"):
             sector_map_from_payload(
-                map_payload([sector_payload(representativeEtf=etf_payload(listedOn=None))])
+                map_payload([sector_payload(representative_etf=etf_payload(listed_on=None))])
             )
 
     def test_missing_benchmark_index_is_rejected(self) -> None:
         payload = etf_payload()
-        del payload["benchmarkIndex"]
-        with pytest.raises(SectorMapFileError, match="benchmarkIndex"):
-            sector_map_from_payload(map_payload([sector_payload(representativeEtf=payload)]))
+        del payload["benchmark_index"]
+        with pytest.raises(SectorMapFileError, match="benchmark_index"):
+            sector_map_from_payload(map_payload([sector_payload(representative_etf=payload)]))
 
     def test_blank_benchmark_index_is_rejected(self) -> None:
         with pytest.raises(SectorMapError, match="기준 지수"):
             sector_map_from_payload(
-                map_payload([sector_payload(representativeEtf=etf_payload(benchmarkIndex="  "))])
+                map_payload([sector_payload(representative_etf=etf_payload(benchmark_index="  "))])
             )
 
     def test_missing_manager_is_rejected(self) -> None:
         payload = etf_payload()
         del payload["manager"]
         with pytest.raises(SectorMapFileError, match="manager"):
-            sector_map_from_payload(map_payload([sector_payload(representativeEtf=payload)]))
+            sector_map_from_payload(map_payload([sector_payload(representative_etf=payload)]))
 
     def test_instrument_id_format_is_enforced(self) -> None:
         with pytest.raises(SectorMapError, match="XKRX"):
@@ -550,8 +658,8 @@ class TestEntryPoint:
                 map_payload(
                     [
                         sector_payload(
-                            representativeEtf=etf_payload(
-                                instrumentId="122630.XKRX",
+                            representative_etf=etf_payload(
+                                instrument_id="122630.XKRX",
                                 name="KODEX 레버리지",
                                 leveraged=True,
                             )
@@ -578,11 +686,11 @@ class TestEntryPoint:
     ) -> None:
         path = tmp_path / "final.json"
         path.write_text(
-            json.dumps(map_payload(isSample=False), ensure_ascii=False), encoding="utf-8"
+            json.dumps(map_payload(is_sample=False), ensure_ascii=False), encoding="utf-8"
         )
         monkeypatch.setattr(entry_point, "SAMPLE_SECTOR_MAP_PATH", path)
         assert entry_point.main(["--sample"], repository=repository) == 1
-        assert "isSample" in capsys.readouterr().err
+        assert "is_sample" in capsys.readouterr().err
 
     def test_a_source_argument_is_required(self, entry_point: ModuleType) -> None:
         with pytest.raises(SystemExit):

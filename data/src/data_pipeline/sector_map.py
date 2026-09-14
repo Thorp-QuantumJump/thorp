@@ -315,15 +315,15 @@ class RepresentativeEtf:
         _require_text(self.name, "대표 ETF 이름", max_length=_LEN_NAME)
         # 상장일과 기준 지수는 FR-001의 필수 항목이다. 저장 스키마도 NOT NULL이지만, 여기서
         # 막지 않으면 파이프라인을 돌린 사람이 받는 것은 열 이름뿐이다.
-        _require_date(self.listed_on, f"{self.instrument_id}의 상장일(listedOn)")
+        _require_date(self.listed_on, f"{self.instrument_id}의 상장일(listed_on)")
         _require_text(
             self.benchmark_index,
-            f"{self.instrument_id}의 기준 지수(benchmarkIndex)",
+            f"{self.instrument_id}의 기준 지수(benchmark_index)",
             max_length=_LEN_NAME,
         )
         _require_text(self.manager, f"{self.instrument_id}의 운용사(manager)", max_length=_LEN_NAME)
         if self.delisted_on is not None:
-            _require_date(self.delisted_on, f"{self.instrument_id}의 상장폐지일(delistedOn)")
+            _require_date(self.delisted_on, f"{self.instrument_id}의 상장폐지일(delisted_on)")
             if self.delisted_on <= self.listed_on:
                 raise SectorMapError(
                     f"상장폐지일은 상장일 이후여야 한다: {self.instrument_id} "
@@ -385,7 +385,7 @@ class SectorMapEntry:
             )
         if not isinstance(self.etf, RepresentativeEtf):
             raise SectorMapError(
-                f"{self.code}의 representativeEtf가 없다. 대표 ETF가 비어 있는 섹터는 "
+                f"{self.code}의 representative_etf가 없다. 대표 ETF가 비어 있는 섹터는 "
                 "만들 수 없다 (SC-001)"
             )
         if self.description is not None:
@@ -458,23 +458,23 @@ class SectorEtfMap:
     def canonical(self) -> dict[str, Any]:
         """내용 동일성 판정에 쓰는 정규형. 항목 차례는 뜻을 바꾸지 않으므로 코드로 정렬한다."""
         return {
-            "isSample": self.is_sample,
+            "is_sample": self.is_sample,
             "sectors": [
                 {
                     "code": entry.code,
                     "name": entry.name,
                     "classification": entry.classification,
                     "description": entry.description,
-                    "representativeEtf": {
-                        "instrumentId": entry.etf.instrument_id,
+                    "representative_etf": {
+                        "instrument_id": entry.etf.instrument_id,
                         "name": entry.etf.name,
-                        "listedOn": entry.etf.listed_on.isoformat(),
-                        "delistedOn": (
+                        "listed_on": entry.etf.listed_on.isoformat(),
+                        "delisted_on": (
                             None
                             if entry.etf.delisted_on is None
                             else entry.etf.delisted_on.isoformat()
                         ),
-                        "benchmarkIndex": entry.etf.benchmark_index,
+                        "benchmark_index": entry.etf.benchmark_index,
                         "manager": entry.etf.manager,
                     },
                 }
@@ -500,12 +500,12 @@ class SectorEtfMap:
 # 확정된다는 사실을 파일 안에서 밝혀야 하는데(FR-002), JSON에는 주석이 없어 자리를 마련한다.
 
 _ETF_REQUIRED: Final[frozenset[str]] = frozenset(
-    {"instrumentId", "name", "listedOn", "benchmarkIndex", "manager"}
+    {"instrument_id", "name", "listed_on", "benchmark_index", "manager"}
 )
-_ETF_OPTIONAL: Final[frozenset[str]] = frozenset({"delistedOn", "leveraged", "inverse"})
+_ETF_OPTIONAL: Final[frozenset[str]] = frozenset({"delisted_on", "leveraged", "inverse"})
 _SECTOR_REQUIRED: Final[frozenset[str]] = frozenset({"code", "name", "classification"})
-_SECTOR_OPTIONAL: Final[frozenset[str]] = frozenset({"description", "representativeEtf"})
-_ROOT_REQUIRED: Final[frozenset[str]] = frozenset({"isSample", "sectors"})
+_SECTOR_OPTIONAL: Final[frozenset[str]] = frozenset({"description", "representative_etf"})
+_ROOT_REQUIRED: Final[frozenset[str]] = frozenset({"is_sample", "sectors"})
 
 
 def _visible_keys(payload: object, where: str) -> set[str]:
@@ -538,18 +538,18 @@ def _parse_date(value: object, field: str) -> date:
 def _parse_etf(payload: object, code: str) -> RepresentativeEtf:
     if not isinstance(payload, Mapping):
         raise SectorMapFileError(
-            f"{code}에 representativeEtf가 없다. 대표 ETF가 비어 있는 섹터는 만들 수 없다 (SC-001)"
+            f"{code}에 representative_etf가 없다. 대표 ETF가 비어 있는 섹터는 만들 수 없다 (SC-001)"
         )
-    where = f"{code}의 representativeEtf"
+    where = f"{code}의 representative_etf"
     _check_keys(payload, where, _ETF_REQUIRED, _ETF_OPTIONAL)
-    delisted = payload.get("delistedOn")
+    delisted = payload.get("delisted_on")
     return RepresentativeEtf(
-        instrument_id=payload["instrumentId"],
+        instrument_id=payload["instrument_id"],
         name=payload["name"],
-        listed_on=_parse_date(payload["listedOn"], f"{where}의 listedOn"),
-        benchmark_index=payload["benchmarkIndex"],
+        listed_on=_parse_date(payload["listed_on"], f"{where}의 listed_on"),
+        benchmark_index=payload["benchmark_index"],
         manager=payload["manager"],
-        delisted_on=(None if delisted is None else _parse_date(delisted, f"{where}의 delistedOn")),
+        delisted_on=(None if delisted is None else _parse_date(delisted, f"{where}의 delisted_on")),
         leveraged=_require_bool(payload.get("leveraged", False), f"{where}의 leveraged"),
         inverse=_require_bool(payload.get("inverse", False), f"{where}의 inverse"),
     )
@@ -565,9 +565,9 @@ def sector_map_from_payload(payload: Mapping[str, Any]) -> SectorEtfMap:
     sectors = payload["sectors"]
     if not isinstance(sectors, list):
         raise SectorMapFileError(f"sectors는 배열이어야 한다: {type(sectors).__name__}")
-    is_sample = payload["isSample"]
+    is_sample = payload["is_sample"]
     if not isinstance(is_sample, bool):
-        raise SectorMapFileError(f"isSample은 true/false여야 한다: {is_sample!r}")
+        raise SectorMapFileError(f"is_sample은 true/false여야 한다: {is_sample!r}")
     entries: list[SectorMapEntry] = []
     for position, raw in enumerate(sectors):
         where = f"{position}번째 섹터"
@@ -579,7 +579,7 @@ def sector_map_from_payload(payload: Mapping[str, Any]) -> SectorEtfMap:
                 name=raw["name"],
                 classification=raw["classification"],
                 description=raw.get("description"),
-                etf=_parse_etf(raw.get("representativeEtf"), str(code)),
+                etf=_parse_etf(raw.get("representative_etf"), str(code)),
             )
         )
     return SectorEtfMap.of(entries, is_sample=is_sample)
