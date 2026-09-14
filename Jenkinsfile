@@ -83,11 +83,29 @@ pipeline {
                     '''
                 }
             }
+
+            // GitLab MR 화면에 이 파트의 결과를 되돌려준다. 여섯 파트가 각각 한 줄로 나열되어,
+            // Jenkins 에 들어가지 않고도 어느 파트가 깨졌는지 MR 에서 바로 보인다.
+            // 보고가 쌓이면 GitLab 의 Merge checks 가 빨간불일 때 머지 버튼을 막는다.
+            //
+            // when 조건에 걸려 건너뛴 파트는 post 가 돌지 않아 아예 표시되지 않는다.
+            // 돌지 않은 것을 성공으로 보고하는 것보다 낫다.
+            post {
+                success { updateGitlabCommitStatus(name: 'Merge with dev', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }
+            }
         }
 
         stage('Migration version') {
             steps {
                 sh 'bash infra/scripts/check-migration-version.sh origin/dev'
+            }
+
+            post {
+                success { updateGitlabCommitStatus(name: 'Migration version', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }
             }
         }
 
@@ -146,6 +164,12 @@ pipeline {
                     }
                 }
             }
+
+            post {
+                success { updateGitlabCommitStatus(name: 'Frontend', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }
+            }
         }
 
         stage('Backend') {
@@ -196,6 +220,12 @@ pipeline {
                     }
                 }
             }
+
+            post {
+                success { updateGitlabCommitStatus(name: 'Backend', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }
+            }
         }
 
         stage('Worker') {
@@ -242,6 +272,12 @@ pipeline {
                     }
                 }
             }
+
+            post {
+                success { updateGitlabCommitStatus(name: 'Worker', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }
+            }
         }
 
         stage('Data') {
@@ -286,6 +322,12 @@ pipeline {
                         }
                     }
                 }
+            }
+
+            post {
+                success { updateGitlabCommitStatus(name: 'Data', state: 'success') }
+                failure { updateGitlabCommitStatus(name: 'Data', state: 'failed') }
+                unstable { updateGitlabCommitStatus(name: 'Data', state: 'failed') }
             }
         }
     }
