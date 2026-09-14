@@ -152,15 +152,24 @@ export type PreviewWorkload = {
 }
 
 /**
- * 적용 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다(FR-005a, 원칙 IX).
- * `exceeded`가 `true`면 실행은 거부되고 화면은 범위를 좁히라고 안내한다.
+ * 묶음에 걸린 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다
+ * (FR-005a, 원칙 IX).
  */
-export type ParamSearchLimits = {
+export type AppliedLimits = {
   maxCandidates: number
   timeLimitSeconds: number
   dispatchWindow: number
   consecutiveFailureLimit: number
   provisional: string[]
+}
+
+/**
+ * 미리보기가 주는 한도. `exceeded`가 `true`면 실행은 거부되고 화면은 범위를 좁히라고 안내한다.
+ *
+ * **이 필드는 미리보기에만 있다** — 상태 응답의 `config.limits`는 이미 접수된 묶음에 걸린 값이라
+ * "넘었는가"라는 질문 자체가 없다. 두 타입을 하나로 합치면 없는 필드를 읽게 된다.
+ */
+export type ParamSearchLimits = AppliedLimits & {
   exceeded: boolean
 }
 
@@ -253,7 +262,7 @@ export type ParamSearchConfig = {
   randomSeed: number | null
   space: Record<string, ConfigStrategySpace>
   selectionRule: SelectionRule | null
-  limits: ParamSearchLimits | null
+  limits: AppliedLimits | null
   referenceVersions: ReferenceVersions | null
   dataVersionChanged: boolean
 }

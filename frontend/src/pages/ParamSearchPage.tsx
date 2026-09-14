@@ -12,6 +12,7 @@ import type {
   ParamSearchPreview,
   ParamSearchRequest,
   SearchSpaceSelection,
+  StrategySpaceSummary,
 } from '@/types/paramSearch'
 import { formatCount, validationLabelText } from '@/utils/paramSearchLabels'
 import styles from './ParamSearchPage.module.css'
@@ -52,6 +53,13 @@ export function ParamSearchPage() {
   const hasTarget = strategyIds.length > 0 && instrumentIds.length > 0
 
   const [space, setSpace] = useState<SearchSpaceSelection>({})
+  /**
+   * 좁히기 전의 등록 범위. **좁힌 뒤의 응답을 그대로 쓰면 안 된다** — 미리보기는 보낸 `space`만
+   * 되돌려 주므로, 끈 값이 다음 응답에서 사라져 다시 켤 수 없게 된다.
+   */
+  const [baseSpace, setBaseSpace] = useState<
+    { registryVersion: string; summary: StrategySpaceSummary[] } | null
+  >(null)
   const [preview, setPreview] = useState<ParamSearchPreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -69,6 +77,19 @@ export function ParamSearchPage() {
 
   const status = useParamSearchStatus(searchId)
   const requestSeq = useRef(0)
+  const targetKey = `${instrumentIds.join(',')}|${strategyIds.join(',')}`
+
+  // 대상이 바뀌면 좁힌 범위는 뜻을 잃는다 — 다른 전략의 축을 그대로 들고 갈 수 없다.
+  useEffect(() => {
+    setSpace({})
+    setBaseSpace(null)
+  }, [targetKey])
+
+  // 효과가 baseSpace 에 의존하면 갱신할 때마다 다시 조회한다. 버전만 ref 로 들고 본다.
+  const baseSpaceVersion = useRef<string | null>(null)
+  useEffect(() => {
+    baseSpaceVersion.current = baseSpace?.registryVersion ?? null
+  }, [baseSpace])
 
   const buildRequest = useCallback((): ParamSearchRequest => {
     const request: ParamSearchRequest = {
@@ -88,6 +109,7 @@ export function ParamSearchPage() {
     }
 
     const seq = ++requestSeq.current
+    const narrowed = Object.keys(space).length > 0
     let active = true
     setPreviewLoading(true)
 
@@ -97,6 +119,17 @@ export function ParamSearchPage() {
           if (!active || seq !== requestSeq.current) return
           setPreview(next)
           setPreviewError(null)
+
+          if (!narrowed) {
+            // 좁히지 않고 물었으니 이 응답이 등록 범위 자체다.
+            setBaseSpace({ registryVersion: next.registryVersion, summary: next.spaceSummary })
+            return
+          }
+          if (baseSpaceVersion.current !== null && baseSpaceVersion.current !== next.registryVersion) {
+            // 등록표가 바뀌면 좁혀 둔 값이 아직 등록된 값인지 알 수 없다. 범위를 놓고 다시 받는다.
+            setSpace({})
+            setBaseSpace(null)
+          }
         })
         .catch((caught: unknown) => {
           if (!active || seq !== requestSeq.current) return
@@ -113,7 +146,7 @@ export function ParamSearchPage() {
       active = false
       window.clearTimeout(timer)
     }
-  }, [hasTarget, buildRequest, previewToken])
+  }, [hasTarget, buildRequest, previewToken, space])
 
   const startSearch = useCallback(
     async (source: ParamSearchPreview) => {
@@ -372,7 +405,7 @@ export function ParamSearchPage() {
                       </button>
                       <div id="space-editor" hidden={!showSpaceEditor}>
                         <SpaceEditor
-                          spaceSummary={preview.spaceSummary}
+                          spaceSummary={baseSpace?.summary ?? preview.spaceSummary}
                           value={space}
                           onChange={setSpace}
                         />

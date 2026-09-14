@@ -103,7 +103,7 @@ export function SpaceEditor({ spaceSummary, value, onChange }: SpaceEditorProps)
         <section key={space.strategyId} className={styles.strategy}>
           <header className={styles.strategyHeader}>
             <h3>{space.strategyName}</h3>
-            <span>조합 {formatCount(space.combinations)}개</span>
+            <span>등록 조합 {formatCount(space.combinations)}개</span>
           </header>
 
           {space.axes.length === 0 ? (
