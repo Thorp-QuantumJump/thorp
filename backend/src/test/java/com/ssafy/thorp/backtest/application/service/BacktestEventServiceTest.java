@@ -2,6 +2,8 @@ package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -293,6 +295,7 @@ class BacktestEventServiceTest {
         BacktestRun job = jobIn(status).withLifecycle(lifecycle);
         when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
         when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(true);
         return job;
     }
 
@@ -301,9 +304,9 @@ class BacktestEventServiceTest {
     void deadLetterFinishesTheRunWhenEveryMessageDied() {
         givenDeadLetterCounts(RunStatus.RUNNING, 1, 1);
 
-        service.handleDeadLetter(BACKTEST_ID);
+        service.handleDeadLetter(BACKTEST_ID, 1);
 
-        verify(jobRepository).recordDeadLetter(1L);
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
         BacktestRun updated = updatedJob();
         assertThat(updated.getStatus()).isEqualTo(RunStatus.FAILED);
         assertThat(updated.getFailureCode()).isEqualTo("SYSTEM_FAILURE");
@@ -317,9 +320,9 @@ class BacktestEventServiceTest {
     void deadLetterOnlyCountsWhileAnotherMessageMayRun() {
         givenDeadLetterCounts(RunStatus.RUNNING, 2, 1);
 
-        service.handleDeadLetter(BACKTEST_ID);
+        service.handleDeadLetter(BACKTEST_ID, 1);
 
-        verify(jobRepository).recordDeadLetter(1L);
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
         verify(jobRepository, never()).update(any());
         verify(events, never()).publishEvent(any());
     }
@@ -329,10 +332,25 @@ class BacktestEventServiceTest {
     void deadLetterOnAFinishedRunChangesNothing() {
         givenDeadLetterCounts(RunStatus.COMPLETED, 1, 1);
 
-        service.handleDeadLetter(BACKTEST_ID);
+        service.handleDeadLetter(BACKTEST_ID, 1);
 
-        verify(jobRepository).recordDeadLetter(1L);
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
         verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 이미 센 시도의 재전달이면 아무것도 하지 않는다 — 두 번 세면 살아 있는 실행을 끊는다")
+    void deadLetterIgnoresAnAlreadyCountedAttempt() {
+        // 셈이 이미 끝난 시도라 저장소가 false 를 준다. 그 뒤로는 아무것도 읽지도 쓰지도 않는다.
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING)));
+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(false);
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository, never()).findById(any());
+        verify(jobRepository, never()).update(any());
+        verify(events, never()).publishEvent(any());
     }
 
     @Test
@@ -340,9 +358,9 @@ class BacktestEventServiceTest {
     void deadLetterForAnUnknownRunIsDropped() {
         when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());
 
-        service.handleDeadLetter(BACKTEST_ID);
+        service.handleDeadLetter(BACKTEST_ID, 1);
 
-        verify(jobRepository, never()).recordDeadLetter(any());
+        verify(jobRepository, never()).recordDeadLetter(any(), anyInt(), any());
         verify(jobRepository, never()).update(any());
     }
 

@@ -203,17 +203,24 @@ public class BacktestEventService {
      *
      * <p>결과 행은 만들지 않는다. 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다 — 상세 조회는 실행 행의 실패 사유를 그대로 보여 준다.
      *
-     * <p><b>같은 메시지를 두 번 세지 않는 것은 호출자({@code BacktestDeadLetterListener})의 몫이다.</b> 이 셈은 한쪽으로만 틀려야
-     * 한다 — 많이 세면 살아 있는 실행을 끊고, 적게 세면 실행이 종결되지 않고 남아 유예 감시(T014)가 거둔다.
+     * <p><b>같은 시도를 두 번 세지 않는다.</b> DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면 같은 메시지가 다시 온다. 저장소가
+     * {@code (runId, attempt)} 기록으로 걸러 주므로 재전달은 세지 않고, <b>커밋 전에 죽어 다시 온 첫 전달은 제대로 센다</b> — 그 경우 기록도
+     * 함께 롤백됐기 때문이다.
      */
     @Transactional
-    public void handleDeadLetter(String runId) {
+    public void handleDeadLetter(String runId, int attempt) {
         BacktestRun job = jobRepository.findByBacktestIdForUpdate(runId).orElse(null);
         if (job == null) {
             log.warn("dead-lettered job for unknown runId dropped: runId={}", runId);
             return;
         }
-        jobRepository.recordDeadLetter(job.getId());
+        if (!jobRepository.recordDeadLetter(job.getId(), attempt, clock.instant())) {
+            log.info(
+                    "dead-lettered job already counted; redelivery ignored: runId={} attempt={}",
+                    runId,
+                    attempt);
+            return;
+        }
         // 방금 올린 값을 포함해 다시 읽는다. 셈은 DB 가 하므로 여기서 더하지 않는다.
         BacktestRun counted = jobRepository.findById(job.getId()).orElseThrow();
         if (counted.getStatus().isFinal()) {

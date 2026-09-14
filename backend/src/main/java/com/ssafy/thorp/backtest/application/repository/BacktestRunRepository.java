@@ -71,8 +71,15 @@ public interface BacktestRunRepository {
      */
     void recordPublishAttempt(Long runId);
 
-    /** DLQ 로 끝난 메시지 수를 하나 올린다(R-18). 상태·진행 컬럼은 건드리지 않는다. */
-    void recordDeadLetter(Long runId);
+    /**
+     * DLQ 로 끝난 발행 시도를 기록하고 {@code dlq_count} 를 하나 올린다(R-18 ③). 상태·진행 컬럼은 건드리지 않는다.
+     *
+     * <p><b>같은 시도를 두 번 세지 않는다.</b> DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면 같은 메시지가 다시 온다. 시도 번호로
+     * 기록을 남겨 두 번째부터는 세지 않는다 — 두 번 세면 살아 있는 작업이 남았는데도 종결 판정이 서서 실행을 잘못 끊는다.
+     *
+     * @return 이번에 처음 세었으면 true. false = 이미 센 시도(재전달)
+     */
+    boolean recordDeadLetter(Long runId, int attempt, Instant at);
 
     /** 발행 confirm 시각을 남긴다. 이 컬럼만 바꾼다. */
     void recordPublished(Long runId, Instant at);

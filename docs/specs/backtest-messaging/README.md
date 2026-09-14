@@ -76,6 +76,11 @@ classic → quorum은 큐 인자 변경이라 같은 이름으로 재선언하�
 | `message_id` | 작업: 발행 측 고유 ID(재시도 시 유지). 이벤트: 본문 `eventId` |
 | `correlation_id` | `runId` |
 | header `schemaVersion` | `2` |
+| header `publishAttempt` | 작업만. 이 메시지를 보낼 때의 `backtest_run.publish_count`(1부터). 워커는 읽지 않는다 |
+
+`publishAttempt`는 **백엔드가 자기 자신에게 보내는 표시**다. 그 메시지가 DLQ로 끝났을 때 "어느 발행 시도가 죽었는지"를 구분해 같은 메시지를 두 번
+세지 않는다(R-18 ③) — DLQ 소비는 at-least-once라 커밋 뒤 ACK이 유실되면 같은 메시지가 다시 오고, 두 번 세면 살아 있는 작업이 남았는데도
+`dlq_count >= publish_count`가 서서 실행이 잘못 `FAILED`로 끝난다. 워커는 이 헤더를 읽지 않으므로 없어도 계산에는 영향이 없다.
 
 워커(pika)는 Spring의 `__TypeId__` 헤더를 보내지 않는다. 백엔드는 헤더가 아니라 리스너 파라미터 타입과 본문 `type` 필드로 역직렬화한다.
 v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 — 백엔드·워커를 함께 배포한다.

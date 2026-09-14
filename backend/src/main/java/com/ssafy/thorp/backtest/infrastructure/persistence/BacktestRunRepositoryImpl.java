@@ -139,9 +139,28 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         jpaRepository.incrementPublishCount(runId);
     }
 
+    /**
+     * 시도 기록을 먼저 넣고, <b>그 INSERT 가 실제로 들어갔을 때만</b> 카운터를 올린다. PK {@code (run_id, attempt)} 가 중복을 막으므로
+     * {@code ON CONFLICT DO NOTHING} 의 반환값이 곧 "처음 세는가"다.
+     *
+     * <p>엔티티를 두지 않고 native 로 쓴다 — 이 표는 객체로 읽는 곳이 없고 {@code ON CONFLICT} 는 JPQL 로 표현할 수 없다.
+     */
     @Override
-    public void recordDeadLetter(Long runId) {
+    public boolean recordDeadLetter(Long runId, int attempt, Instant at) {
+        int inserted =
+                entityManager
+                        .createNativeQuery(
+                                "INSERT INTO backtest_run_dlq_attempt (run_id, attempt, at)"
+                                        + " VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING")
+                        .setParameter(1, runId)
+                        .setParameter(2, attempt)
+                        .setParameter(3, at)
+                        .executeUpdate();
+        if (inserted == 0) {
+            return false;
+        }
         jpaRepository.incrementDlqCount(runId);
+        return true;
     }
 
     @Override

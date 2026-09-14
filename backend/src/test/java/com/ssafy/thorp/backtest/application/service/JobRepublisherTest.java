@@ -116,7 +116,7 @@ class JobRepublisherTest {
 
         InOrder order = inOrder(repository, publisher);
         order.verify(repository).recordPublishAttempt(11L);
-        order.verify(publisher).publish(any());
+        order.verify(publisher).publish(any(), anyInt());
     }
 
     @Test
@@ -135,7 +135,7 @@ class JobRepublisherTest {
         givenStaleRun();
         org.mockito.Mockito.doThrow(new AmqpException("broker down"))
                 .when(publisher)
-                .publish(any());
+                .publish(any(), anyInt());
 
         republisher.republishUnpublished();
 
@@ -160,7 +160,7 @@ class JobRepublisherTest {
 
         republisher.republishUnpublished();
 
-        verify(publisher, never()).publish(any());
+        verify(publisher, never()).publish(any(), anyInt());
         verify(repository, never()).recordPublishAttempt(any());
     }
 }

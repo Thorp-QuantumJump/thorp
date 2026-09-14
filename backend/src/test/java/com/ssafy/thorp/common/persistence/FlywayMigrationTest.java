@@ -192,6 +192,13 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("backtest_run_dlq_attempt 가 DLQ 멱등 판정에 필요한 컬럼만 갖는다 (R-18 ③)")
+    void backtestRunDlqAttemptHasAllColumns() {
+        assertThat(columnsOf("backtest_run_dlq_attempt"))
+                .containsExactlyInAnyOrder("run_id", "attempt", "at");
+    }
+
+    @Test
     @DisplayName("등록표 두 개가 시드 행과 함께 만들어진다 (R-07·R-08)")
     void registriesAreSeeded() {
         assertThat(columnsOf("cost_profile"))

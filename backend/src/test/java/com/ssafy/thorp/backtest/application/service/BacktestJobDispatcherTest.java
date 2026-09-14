@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -96,7 +97,7 @@ class BacktestJobDispatcherTest {
     void publishFailureDoesNotEscape() {
         when(repository.findById(11L)).thenReturn(Optional.of(run()));
         when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
-        doThrow(new AmqpException("broker down")).when(publisher).publish(any());
+        doThrow(new AmqpException("broker down")).when(publisher).publish(any(), anyInt());
 
         assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
                 .doesNotThrowAnyException();
@@ -114,7 +115,7 @@ class BacktestJobDispatcherTest {
 
         assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
                 .doesNotThrowAnyException();
-        verify(publisher).publish(any());
+        verify(publisher).publish(any(), anyInt());
     }
 
     @Test
@@ -124,7 +125,7 @@ class BacktestJobDispatcherTest {
 
         assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
                 .doesNotThrowAnyException();
-        verify(publisher, never()).publish(any());
+        verify(publisher, never()).publish(any(), anyInt());
     }
 
     @Test
@@ -134,6 +135,6 @@ class BacktestJobDispatcherTest {
 
         assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))
                 .doesNotThrowAnyException();
-        verify(publisher, never()).publish(any());
+        verify(publisher, never()).publish(any(), anyInt());
     }
 }

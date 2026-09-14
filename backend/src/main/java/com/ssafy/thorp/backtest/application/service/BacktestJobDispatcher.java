@@ -109,7 +109,8 @@ public class BacktestJobDispatcher {
 
     private void send(BacktestRun run) {
         try {
-            publisher.publish(assembler.assemble(run));
+            // 시도 번호는 방금 올린 publish_count 다 — 두 경로 모두 올린 뒤 실행을 다시 읽고 여기로 온다.
+            publisher.publish(assembler.assemble(run), run.getLifecycle().publishCount());
         } catch (RuntimeException exc) {
             log.warn(
                     "작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}",
