@@ -212,7 +212,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Tests for User Story 2
 
-- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, **전략이 다른 후보는 이웃이 아님**, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`. 숫자가 아닌 축에서도 인덱스만으로 판정되는지 포함 (FR-013a·FR-029)
+- [X] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, **전략이 다른 후보는 이웃이 아님**, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`. 숫자가 아닌 축에서도 인덱스만으로 판정되는지 포함 (FR-013a·FR-029)
 - [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 스냅샷의 기준 전략 결과보다 큰 후보만 탈락
 - [ ] T067 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/StabilityFilterTest.java` — 계산 불가 후보는 통과 처리 (FR-013b)
 - [ ] T068 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorSortTest.java` — 동률은 5개를 넘겨 전부 표시, 임의 순서 없음 (research R3)
@@ -223,7 +223,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 2 — Backend 계산
 
-- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상이고 **이웃은 같은 `strategy_id` 안에서만** 찾는다. 인덱스 비교만 하므로 축의 종류를 구분하지 않는다 (FR-013a·FR-029)
+- [X] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상이고 **이웃은 같은 `strategy_id` 안에서만** 찾는다. 인덱스 비교만 하므로 축의 종류를 구분하지 않는다 (FR-013a·FR-029)
 - [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 **스냅샷의 기준 전략 결과**보다 크지 않은 후보만 통과. 기준 전략이 무엇인지 알지 못한 채 값만 쓴다 (FR-013·FR-013d)
 - [ ] T074a [P] [US2] (BE 테스트) 기준 전략 역할이 지정되지 않은 묶음에서 하락 폭 필터가 빠지고 `drawdownFilterApplied = false`가 응답에 나오는지, 선정 코드에 기준 전략 ID 리터럴이 없는지 검증 (FR-013d, SC-010)
 - [ ] T075 [US2] (BE) `application/service/selection/StabilityFilter.java` — 묶음 내 유효 후보의 상위 50%만 통과, 계산 불가는 통과
