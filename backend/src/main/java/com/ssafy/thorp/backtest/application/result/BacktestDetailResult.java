@@ -1,60 +1,66 @@
 package com.ssafy.thorp.backtest.application.result;
 
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunProgress;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * {@code GET /backtests/{backtestId}}의 유스케이스 출력. 상태 + 설정 + 요약 + 오류 + 실행 시각.
+ * {@code GET /backtests/{backtestId}}의 유스케이스 출력(spec 004 contracts/rest-api.md).
  *
- * <p>{@code config}는 Job에서 오므로 {@code QUEUED}부터 값이 있다. {@code summary}·{@code error}·시각은 결과 행이 있을
- * 때만이고, 상태에 따라 어느 쪽이 채워지는지가 갈린다.
+ * <p>식별자·상태·완료 범위는 <b>요청</b> 기준이고 진행·결과는 <b>실행</b> 기준이다. 둘이 갈리는 지점이 취소다(R-04): 먼저 취소한 요청은 실행이 계속
+ * 돌아도 자기 스냅샷 날짜를 넘는 범위를 보지 않는다.
  *
- * @param summary {@code COMPLETED}가 아니면 null
- * @param error {@code FAILED}일 때만
+ * @param status 실행 상태에 요청의 취소를 얹은 값. 요청이 취소됐으면 실행이 계속 돌아도 CANCELLED다
+ * @param queueWaitSeconds 접수부터 실행 시작까지. 아직 시작 전이면 지금까지 기다린 시간이다
+ * @param summaryUnavailable 요약을 줄 수 없는 이유. null = 정상(요약이 있거나 아직 끝나지 않았다)
  */
 public record BacktestDetailResult(
         String backtestId,
-        BacktestStatus status,
-        Config config,
-        Summary summary,
-        Error error,
+        RunStatus status,
+        ResultSource resultSource,
+        boolean partial,
+        Progress progress,
+        Instant queuedAt,
         Instant startedAt,
-        Instant finishedAt) {
+        Instant finishedAt,
+        Long queueWaitSeconds,
+        Map<String, Object> config,
+        Map<String, Object> versions,
+        Summary summary,
+        String summaryUnavailable,
+        Failure failure) {
 
     /**
-     * 무엇을 어떻게 돌린 결과인지. 전부 Job에 저장된 값이거나 서버 고정 정책이다.
+     * 진행 정도(Clarify Q4). QUEUED에서는 null이다 — 아직 아무 거래일도 처리하지 않았는데 0%를 보여 주면 "시작했다"로 읽힌다.
      *
-     * <p>설계 ConfigResponse 표 그대로다. 재현·디버깅용 메타데이터({@code datasetId}·{@code commissionVersion}·{@code
-     * randomSeed}·{@code engineVersion}·{@code inputHash})는 설계가 "결과 저장소에만 보관하고 응답으로 내려주지 않는다"고
-     * 정했으므로 담지 않는다.
-     *
-     * @param initialCash 저장 컬럼이 {@code NUMERIC(19,2)}라 요청보다 자릿수가 늘 수 있다. 값은 같다
-     * @param benchmarkId null = 벤치마크 미지정
+     * @param lastTradingDate 처리한 마지막 거래일. 취소한 요청은 자기 스냅샷 날짜다
      */
-    public record Config(
-            String strategyId,
-            String strategyVersion,
-            Map<String, Object> parameters,
-            List<String> instrumentIds,
-            LocalDate start,
-            LocalDate end,
-            BigDecimal initialCash,
-            String currency,
-            String benchmarkId) {}
+    public record Progress(
+            ProgressStage stage,
+            LocalDate lastTradingDate,
+            Integer completedTradingDays,
+            Integer totalTradingDays) {}
 
     /**
-     * 전체 기간 성과. {@code performance} + {@code execution}의 비용 2개 + 벤치마크 요약.
+     * 전체 기간 성과(rest-api.md {@code summary}). 핵심 숫자 3개는 {@code netTotalReturn}·{@code
+     * maxDrawdown}·{@code totalTradingCost}다. 앞 열두 항목은 v1부터 있던 값이고 뒤 여섯이 v2 추가분이다.
      *
-     * <p>{@code execution}의 {@code orderCount}·{@code fillCount}·{@code rejectedOrderCount}는 설계가
-     * "검증·디버깅용"이라 노출하지 않는다.
-     *
-     * @param benchmark null = 결과에 벤치마크가 없음
+     * @param netTotalReturn 비용 차감 후 전체 수익률(FR-027). null = 미산출
+     * @param totalTradingCost 거래비용 합계. null = 미산출
+     * @param costs 비용 네 갈래와 합. null = 미저장
+     * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끔
+     * @param analytics 파생 지표 중 요약에 넣는 둘. 나머지는 결과 JSONB 에 있다. null = 미저장
+     * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}
      */
     public record Summary(
             BigDecimal initialEquity,
@@ -69,54 +75,129 @@ public record BacktestDetailResult(
             BigDecimal winRate,
             BigDecimal totalCommission,
             BigDecimal totalSlippageCost,
-            Benchmark benchmark) {}
+            BigDecimal netTotalReturn,
+            BigDecimal totalTradingCost,
+            EngineOutput.Costs costs,
+            EngineOutput.Liquidation liquidation,
+            AnalyticsSummary analytics,
+            int exceptionCount) {}
 
-    public record Benchmark(String instrumentId, BigDecimal totalReturn) {}
+    /** {@code analytics} 중 요약에 실리는 둘(rest-api.md). */
+    public record AnalyticsSummary(Integer recoveryDays, BigDecimal turnover) {}
 
-    /** 엔진이 준 실패 정보. 코드 집합은 엔진 소유이고 HTTP {@code ErrorCode}와 다르다. */
-    public record Error(String code, String message) {}
+    /** 실패 사유. 코드 집합은 엔진 소유이고 HTTP {@code ErrorCode}와 다르다. */
+    public record Failure(String code, String message) {}
 
-    /** 결과 행이 아직 없는 Job({@code QUEUED}·{@code RUNNING}). */
-    public static BacktestDetailResult withoutResult(BacktestJob job, String currency) {
-        return new BacktestDetailResult(
-                job.getBacktestId().value(),
-                job.getStatus(),
-                config(job, currency),
-                null,
-                null,
-                null,
-                null);
+    /** 결과 행이 아직 없는 실행(QUEUED·RUNNING). */
+    public static BacktestDetailResult withoutResult(
+            BacktestRequest request, BacktestRun run, String currency, Instant now) {
+        return build(request, run, currency, now, null, null);
     }
 
-    /** 결과 행이 있는 Job({@code COMPLETED}·{@code FAILED}). 상태에 따라 summary와 error가 갈린다. */
+    /** 결과 행이 있는 실행(COMPLETED·FAILED·CANCELLED). 상태에 따라 요약과 실패가 갈린다. */
     public static BacktestDetailResult of(
-            BacktestJob job, String currency, BacktestResultSummary result) {
-        boolean completed = job.getStatus() == BacktestStatus.COMPLETED;
-        return new BacktestDetailResult(
-                job.getBacktestId().value(),
-                job.getStatus(),
-                config(job, currency),
-                completed ? summary(result) : null,
+            BacktestRequest request,
+            BacktestRun run,
+            String currency,
+            Instant now,
+            BacktestResultSummary result) {
+        Summary summary = run.getStatus() == RunStatus.COMPLETED ? summary(result) : null;
+        Failure failure =
                 result.errorCode() == null
                         ? null
-                        : new Error(result.errorCode(), result.errorMessage()),
-                result.startedAt(),
-                result.finishedAt());
+                        : new Failure(result.errorCode(), result.errorMessage());
+        return build(request, run, currency, now, summary, failure);
     }
 
-    private static Config config(BacktestJob job, String currency) {
-        return new Config(
-                job.getStrategyId(),
-                job.getStrategyVersion(),
-                job.getParameters(),
-                job.getInstrumentIds().stream().map(id -> id.value()).toList(),
-                job.getPeriod().startDate(),
-                job.getPeriod().endDate(),
-                job.getInitialCash(),
-                currency,
-                job.getBenchmarkInstrumentId() == null
-                        ? null
-                        : job.getBenchmarkInstrumentId().value());
+    private static BacktestDetailResult build(
+            BacktestRequest request,
+            BacktestRun run,
+            String currency,
+            Instant now,
+            Summary summary,
+            Failure failure) {
+        boolean cancelledRequest = request.isCancelled();
+        RunStatus status = cancelledRequest ? RunStatus.CANCELLED : run.getStatus();
+        LocalDate completedRange =
+                request.completedRangeOf(
+                        run.getProgress() == null ? null : run.getProgress().lastTradingDate());
+        // 먼저 취소해 실행이 계속 돈 요청은 자기 스냅샷 구간의 요약을 갖지 못한다 — 백엔드가 지표를
+        // 다시 계산하지 않기 때문이다(원칙 1). 요약이 없는 이유를 숨기지 않고 이름을 붙여 돌려준다.
+        String summaryUnavailable = null;
+        Summary visibleSummary = summary;
+        if (cancelledRequest && !request.isStoppedRun()) {
+            visibleSummary = null;
+            summaryUnavailable = "CANCELLED_WHILE_RUN_CONTINUED";
+        }
+        return new BacktestDetailResult(
+                request.getBacktestId().value(),
+                status,
+                request.getResultSource(),
+                cancelledRequest || run.isPartial(),
+                progress(run, completedRange),
+                run.getLifecycle().queuedAt(),
+                run.getLifecycle().startedAt(),
+                run.getLifecycle().finishedAt(),
+                queueWaitSeconds(run, now),
+                config(run, currency),
+                run.getPlan().versions(),
+                visibleSummary,
+                summaryUnavailable,
+                failure);
+    }
+
+    /** 완료 범위는 요청 기준으로 덮어쓴다. 나머지 진행 수치는 실행의 것이다. */
+    private static Progress progress(BacktestRun run, LocalDate completedRange) {
+        RunProgress runProgress = run.getProgress();
+        if (runProgress == null) {
+            return completedRange == null
+                    ? null
+                    : new Progress(ProgressStage.COMPUTING, completedRange, null, null);
+        }
+        return new Progress(
+                runProgress.stage(),
+                completedRange,
+                runProgress.completedTradingDays(),
+                runProgress.totalTradingDays());
+    }
+
+    private static Long queueWaitSeconds(BacktestRun run, Instant now) {
+        Instant queuedAt = run.getLifecycle().queuedAt();
+        if (queuedAt == null) {
+            return null;
+        }
+        Instant until =
+                run.getLifecycle().startedAt() == null ? now : run.getLifecycle().startedAt();
+        return Math.max(0, Duration.between(queuedAt, until).toSeconds());
+    }
+
+    /**
+     * 무엇을 어떻게 돌렸는가. 접수가 저장한 요청 사본에 실효 기간을 얹는다.
+     *
+     * <p>요청 사본이 없는 실행(접수 경로를 거치지 않은 행)은 실행 스칼라 컬럼으로 최소한만 채운다.
+     */
+    private static Map<String, Object> config(BacktestRun run, String currency) {
+        Map<String, Object> config = new LinkedHashMap<>(run.getPlan().requestSpecOrEmpty());
+        if (config.isEmpty()) {
+            config.put("strategyId", run.getStrategyId());
+            config.put("rulesVersion", run.getStrategyVersion());
+            config.put("parameters", run.getParameters());
+            config.put(
+                    "instrumentIds",
+                    run.getInstrumentIds().stream().map(id -> id.value()).toList());
+            config.put("start", run.getPeriod().startDate().toString());
+            config.put("end", run.getPeriod().endDate().toString());
+            // 금액은 문자열이다. 요청 사본 경로(JSONB)와 표기를 맞춘다.
+            config.put("initialCash", run.getInitialCash().toPlainString());
+        }
+        config.put("currency", currency);
+        if (run.getPlan().effectiveStart() != null) {
+            config.put("effectiveStart", run.getPlan().effectiveStart().toString());
+        }
+        if (run.getPlan().effectiveEnd() != null) {
+            config.put("effectiveEnd", run.getPlan().effectiveEnd().toString());
+        }
+        return config;
     }
 
     private static Summary summary(BacktestResultSummary result) {
@@ -135,9 +216,14 @@ public record BacktestDetailResult(
                 p.winRate(),
                 e.totalCommission(),
                 e.totalSlippageCost(),
-                result.hasBenchmark()
-                        ? new Benchmark(
-                                result.benchmarkInstrumentId(), result.benchmarkTotalReturn())
-                        : null);
+                p.netTotalReturn(),
+                p.totalTradingCost(),
+                result.costs(),
+                result.liquidation(),
+                result.analytics() == null
+                        ? null
+                        : new AnalyticsSummary(
+                                result.analytics().recoveryDays(), result.analytics().turnover()),
+                result.exceptionCount());
     }
 }

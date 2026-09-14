@@ -13,12 +13,13 @@
 .brand,
 .desktopNav,
 .desktopNav a,
-.homeLink,
+.authLink,
+.authState,
 .drawerHeader,
 .drawerHeader button,
 .drawerLink,
 .drawerIcon,
-.drawerHome {
+.drawerAuth {
   display: flex;
   align-items: center;
 }
@@ -116,7 +117,7 @@
   color: var(--thorp-accent-soft);
 }
 
-.homeLink {
+.authLink {
   gap: 7px;
   justify-self: end;
   padding-right: 16px;
@@ -126,14 +127,21 @@
   text-decoration: none;
 }
 
-.homeLink:hover {
+.authState {
+  justify-self: end;
+  padding-right: 16px;
+  color: var(--thorp-muted);
+  font-size: 0.76rem;
+}
+
+.authLink:hover {
   color: var(--thorp-accent-soft);
 }
 
 .menuButton:focus-visible,
 .brand:focus-visible,
 .desktopNav a:focus-visible,
-.homeLink:focus-visible,
+.authLink:focus-visible,
 .drawer button:focus-visible,
 .drawer a:focus-visible {
   border-radius: 8px;
@@ -252,7 +260,7 @@
   line-height: 1.45;
 }
 
-.drawerHome {
+.drawerAuth {
   gap: 9px;
   min-height: 46px;
   margin-top: auto;
@@ -276,11 +284,11 @@
 }
 
 @media (max-width: 420px) {
-  .homeLink {
+  .authLink {
     font-size: 0;
   }
 
-  .homeLink svg {
+  .authLink svg {
     width: 20px;
     height: 20px;
   }

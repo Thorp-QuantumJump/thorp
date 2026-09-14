@@ -15,4 +15,6 @@ public interface PublisherJpaRepository extends JpaRepository<NewsPublisherJpaEn
     List<NewsPublisherJpaEntity> findByPermissionStatus(PermissionStatus permissionStatus);
 
     boolean existsByPermissionStatus(PermissionStatus permissionStatus);
+
+    Optional<NewsPublisherJpaEntity> findByRegisteredDomain(String registeredDomain);
 }

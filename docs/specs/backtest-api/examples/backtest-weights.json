@@ -1,0 +1,75 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260911-000001",
+    "partial": false,
+    "weightsSource": "COMPUTED",
+    "points": [
+      {
+        "date": "2025-01-01",
+        "target": {},
+        "actual": {},
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-01-22",
+        "target": {
+          "005930.XKRX": "0.483452"
+        },
+        "actual": {
+          "005930.XKRX": "0.483452"
+        },
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-02-06",
+        "target": {
+          "005930.XKRX": "0.492301",
+          "000660.XKRX": "0.505287"
+        },
+        "actual": {
+          "005930.XKRX": "0.492301",
+          "000660.XKRX": "0.505287"
+        },
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-03-12",
+        "target": {
+          "000660.XKRX": "0.561130"
+        },
+        "actual": {
+          "000660.XKRX": "0.561130"
+        },
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-04-03",
+        "target": {},
+        "actual": {},
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-05-14",
+        "target": {
+          "005930.XKRX": "0.494527"
+        },
+        "actual": {
+          "005930.XKRX": "0.494527"
+        },
+        "weightError": "0.000000"
+      },
+      {
+        "date": "2025-06-30",
+        "target": {
+          "005930.XKRX": "0.526892"
+        },
+        "actual": {
+          "005930.XKRX": "0.526892"
+        },
+        "weightError": "0.000000"
+      }
+    ]
+  },
+  "error": null
+}

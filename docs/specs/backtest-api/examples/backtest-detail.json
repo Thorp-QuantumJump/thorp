@@ -1,11 +1,18 @@
 {
   "success": true,
   "data": {
-    "backtestId": "BT-20260907-000001",
+    "backtestId": "BT-20260911-000001",
     "status": "COMPLETED",
+    "resultSource": "NEW",
+    "partial": false,
+    "progress": null,
+    "queuedAt": "2026-09-11T00:00:00Z",
+    "startedAt": null,
+    "finishedAt": null,
+    "queueWaitSeconds": 0,
     "config": {
       "strategyId": "MA_CROSSOVER",
-      "strategyVersion": "1.0.0",
+      "rulesVersion": "1.0.0",
       "parameters": {
         "shortWindow": 20,
         "longWindow": 60,
@@ -18,9 +25,9 @@
       "start": "2025-01-01",
       "end": "2025-06-30",
       "initialCash": "10000000.00",
-      "currency": "KRW",
-      "benchmarkId": "069500.XKRX"
+      "currency": "KRW"
     },
+    "versions": null,
     "summary": {
       "initialEquity": "10000000.00",
       "finalEquity": "11666521.51",
@@ -34,11 +41,34 @@
       "winRate": "0.500000",
       "totalCommission": "3941.19",
       "totalSlippageCost": "13137.30",
-      "benchmark": null
+      "netTotalReturn": "0.166652",
+      "totalTradingCost": "17078.49",
+      "costs": {
+        "commission": "3941.19",
+        "spread": "0.00",
+        "slippage": "13137.30",
+        "tax": "0.00",
+        "total": "17078.49"
+      },
+      "liquidation": {
+        "markToMarket": {
+          "finalEquity": "11666521.51",
+          "totalReturn": "0.166652"
+        },
+        "liquidated": {
+          "finalEquity": "11662525.96",
+          "totalReturn": "0.166253",
+          "liquidationCost": "3995.55"
+        }
+      },
+      "analytics": {
+        "recoveryDays": 9,
+        "turnover": "1.219991"
+      },
+      "exceptionCount": 1
     },
-    "startedAt": "2026-09-07T01:00:00Z",
-    "finishedAt": "2026-09-07T01:00:04Z",
-    "error": null
+    "summaryUnavailable": null,
+    "failure": null
   },
   "error": null
 }

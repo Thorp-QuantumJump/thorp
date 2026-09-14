@@ -1,18 +1,22 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
-import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.RunProgress;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +31,12 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>모르는 {@code runId}는 경고 로그 후 버린다. 발행 성공 뒤 Job 생성 트랜잭션이 실패해 생긴 고아 메시지가 여기로 온다. 계약을 지킨 정상 메시지이므로
  * DLQ로 보내지 않는다.
  *
- * <p>요청/실행 분리(spec 004 T003) 전이므로 envelope의 {@code runId} 값은 backtestId와 같고 Job을 그것으로 찾는다. 취소 결과
- * ({@code CANCELLED})는 실행 모델과 '취소' 상태가 생기기 전에는 저장할 곳이 없어 받지 않는다 — 워커가 취소를 구현하는 T011보다 T003·T005가 먼저
- * 병합되므로 실제로는 도달하지 않는다.
+ * <p>envelope의 {@code runId}는 <b>실행</b>의 외부 식별자다. 사용자가 보는 요청 식별자와 다르다(R-02). 취소 결과({@code
+ * CANCELLED})는 워커가 취소를 구현하는 T011에서 받는다.
+ *
+ * <p><b>중복 실행 종결 규칙(R-18)</b>: 재발행이나 confirm 유실로 같은 실행의 메시지가 둘 생길 수 있고, 그러면 워커 둘이 같은 입력을 동시에 돈다. ①
+ * {@code COMPLETED}는 어느 {@code executionId}든 적용한다 — 입력이 같으므로 결과가 같다. ② {@code FAILED}는 마지막 STARTED의
+ * {@code executionId}일 때만 적용한다. 먼저 도착한 다른 실행의 실패가 뒤에 올 정상 결과를 덮으면, 성공한 계산이 있는데도 사용자에게 실패를 보여 주게 된다.
  *
  * <p>조회 → 판단 → 갱신 사이의 경쟁은 다루지 않는다. 같은 Job의 이벤트는 큐 순서대로 오고 리스너가 prefetch 1·단일 Consumer이므로 한 인스턴스
  * 안에서는 직렬이다. 백엔드를 다중 인스턴스로 띄우기 전에 낙관적 락 또는 상태 조건부 UPDATE를 넣어야 한다.
@@ -39,27 +46,35 @@ public class BacktestEventService {
 
     private static final Logger log = LoggerFactory.getLogger(BacktestEventService.class);
 
-    private final BacktestJobRepository jobRepository;
+    private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
-    private final BacktestProgressNotifier progressNotifier;
+    private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     public BacktestEventService(
-            BacktestJobRepository jobRepository,
+            BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
-            BacktestProgressNotifier progressNotifier) {
+            ApplicationEventPublisher events,
+            Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
-        this.progressNotifier = progressNotifier;
+        this.events = events;
+        this.clock = clock;
     }
 
-    /** QUEUED → RUNNING. 이미 RUNNING이거나 끝난 Job이면 무시한다. */
+    /**
+     * 실행이 시작됐다. QUEUED면 RUNNING으로 가고 단계는 PREPARING_DATA다.
+     *
+     * <p>이미 RUNNING인데 <b>다른</b> executionId가 오면 상태는 그대로 두고 시도 횟수만 올린다 — 워커가 죽어 브로커가 재전달했거나(R-06)
+     * 재발행으로 중복 실행이 생긴 경우다. 같은 executionId의 중복 STARTED는 아무것도 바꾸지 않는다(도메인이 판단).
+     */
     @Transactional
     public void handleStarted(BacktestEvent<StartedPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
-        if (job.getStatus() != BacktestStatus.QUEUED) {
+        if (job.getStatus().isFinal()) {
             log.info(
                     "late STARTED ignored: runId={} status={} eventId={}",
                     event.runId(),
@@ -67,7 +82,9 @@ public class BacktestEventService {
                     event.eventId());
             return;
         }
-        jobRepository.update(job.markRunning());
+        BacktestRun started = job.markRunning(event.executionId());
+        jobRepository.update(
+                started.withLifecycle(started.getLifecycle().started(clock.instant())));
     }
 
     /**
@@ -77,7 +94,7 @@ public class BacktestEventService {
      */
     @Transactional
     public void handleFinished(BacktestEvent<FinishedPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
@@ -92,36 +109,54 @@ public class BacktestEventService {
         }
 
         EngineOutput output = event.payload().engineOutput();
-        BacktestJob finished =
+        BacktestRun finished =
                 switch (event.payload().status()) {
                     case COMPLETED -> job.markCompleted();
-                    case FAILED -> job.markFailed();
+                    case FAILED ->
+                            isCurrentExecution(job, event)
+                                    ? job.markFailed(failureCode(output), failureMessage(output))
+                                    : null;
                     case CANCELLED ->
                             throw new UnsupportedOperationException(
-                                    "CANCELLED results need the run model (spec 004 T003);"
+                                    "CANCELLED results need the cancel flow (spec 004 T011);"
                                             + " runId="
                                             + event.runId());
                 };
+        if (finished == null) {
+            return;
+        }
         resultRepository.save(
                 new SaveBacktestResultCommand(
                         job.getId(), event.executionId(), event.eventId(), output, null));
-        jobRepository.update(finished);
+        jobRepository.update(
+                finished.withLifecycle(finished.getLifecycle().finished(clock.instant())));
+
+        // 트랜잭션 안에서 발행하고, 수신자가 AFTER_COMMIT으로 받는다. 커밋 전에 전달되면 수신자가
+        // 아직 없는 결과를 읽는다(spec 007 research R6). 이 모듈은 수신자를 알지 못한다.
+        events.publishEvent(
+                new BacktestFinished(
+                        job.getId(),
+                        event.runId(),
+                        finished.getStatus(),
+                        finished.getStatus() == RunStatus.FAILED ? failureCode(output) : null));
     }
 
     /**
-     * RUNNING 상태인 Job의 진행만 전달한다. DB에는 아무것도 남기지 않는다.
+     * 진행을 실행 행에 저장한다(R-05). 조회는 이 값을 폴링으로 읽는다.
      *
-     * <p>Job을 조회하는 이유: 모르는 {@code runId}와 끝난 Job의 늦은 PROGRESS가 그대로 구독자에게 흘러가면 클라이언트 차트가 뒤로 간다.
-     * QUEUED의 PROGRESS도 무시한다 — STARTED가 아직 안 온 상태에서 진행률만 먼저 보내면 상태가 어긋난다.
+     * <p>20거래일 배치라 실행당 수백 번 UPDATE 이하이고, 저장해 두어야 사용자가 다른 화면에 갔다 와도 진행이 보인다. SSE는 이번 범위가 아니므로 {@code
+     * LoggingBacktestProgressNotifier}는 지웠다 — 아무도 구독하지 않는 알림을 남겨 둘 이유가 없다.
      *
-     * <p>트랜잭션을 열지 않는다. 조회 한 번뿐이고, notifier가 SSE로 바뀌면 클라이언트 네트워크 I/O를 하는 동안 DB 커넥션을 쥐고 있지 않기 위해서다.
+     * <p>RUNNING이 아닌 실행의 PROGRESS는 무시한다. QUEUED에 진행률만 먼저 들어오면 상태와 진행이 어긋나고, 끝난 실행에 들어오면 최종 범위가 뒤로
+     * 밀린다.
      */
+    @Transactional
     public void handleProgress(BacktestEvent<ProgressPayload> event) {
-        BacktestJob job = findJob(event);
+        BacktestRun job = findJob(event);
         if (job == null) {
             return;
         }
-        if (job.getStatus() != BacktestStatus.RUNNING) {
+        if (job.getStatus() != RunStatus.RUNNING) {
             log.info(
                     "PROGRESS for non-running job ignored: runId={} status={} eventId={}",
                     event.runId(),
@@ -129,10 +164,38 @@ public class BacktestEventService {
                     event.eventId());
             return;
         }
-        progressNotifier.notifyProgress(event);
+        ProgressPayload payload = event.payload();
+        jobRepository.update(
+                job.recordProgress(
+                        new RunProgress(
+                                ProgressStage.COMPUTING,
+                                payload.lastTradingDate(),
+                                payload.completedTradingDays(),
+                                payload.totalTradingDays())));
     }
 
-    private BacktestJob findJob(BacktestEvent<?> event) {
+    /**
+     * 이 이벤트가 마지막으로 시작한 실행의 것인가(R-18 2번).
+     *
+     * <p>아직 STARTED를 받지 못한 실행(QUEUED)의 FAILED는 받아들인다 — 비교할 current 가 없고, 그 실패를 버리면 실행이 영원히 QUEUED로
+     * 남는다.
+     */
+    private boolean isCurrentExecution(BacktestRun job, BacktestEvent<?> event) {
+        String current = job.getCurrentExecutionId();
+        if (current == null || current.equals(event.executionId())) {
+            return true;
+        }
+        log.info(
+                "FAILED from a superseded execution ignored: runId={} eventExecutionId={}"
+                        + " currentExecutionId={} eventId={}",
+                event.runId(),
+                event.executionId(),
+                current,
+                event.eventId());
+        return false;
+    }
+
+    private BacktestRun findJob(BacktestEvent<?> event) {
         return jobRepository
                 .findByBacktestId(event.runId())
                 .orElseGet(
@@ -144,5 +207,14 @@ public class BacktestEventService {
                                     event.eventId());
                             return null;
                         });
+    }
+
+    /** 계약의 {@code run.error.code}. 검증기가 FAILED에 error를 요구하므로 여기서 비는 일은 없다. */
+    private static String failureCode(EngineOutput output) {
+        return output.run().error() == null ? "ENGINE_ERROR" : output.run().error().code();
+    }
+
+    private static String failureMessage(EngineOutput output) {
+        return output.run().error() == null ? null : output.run().error().message();
     }
 }

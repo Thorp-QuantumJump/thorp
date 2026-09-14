@@ -33,4 +33,16 @@ interface BacktestResultSummaryRow {
 
     /** {@code benchmark ->> 'totalReturn'}. 문자열 그대로 */
     String getBenchmarkTotalReturn();
+
+    /** {@code costs} JSONB 전체. 5필드. null = 미저장 */
+    String getCosts();
+
+    /** {@code liquidation} JSONB 전체. null = 청산을 끈 요청 또는 미저장 */
+    String getLiquidation();
+
+    /** {@code analytics} JSONB 전체. 상관 행렬은 종목 수²이지만 50종목이라도 수 KB 다 */
+    String getAnalytics();
+
+    /** {@code jsonb_array_length(exceptions)}. 본문은 읽지 않는다. 컬럼이 null 이면 0 */
+    Integer getExceptionCount();
 }

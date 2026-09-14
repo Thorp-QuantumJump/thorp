@@ -8,7 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -42,7 +42,7 @@ import org.springframework.context.annotation.Import;
 @Import({
     JpaAuditingConfig.class,
     MessageJsonPersistenceConfig.class,
-    BacktestJobRepositoryImpl.class,
+    BacktestRunRepositoryImpl.class,
     BacktestResultRepositoryImpl.class
 })
 class BacktestResultRepositoryImplTest extends PostgresTestSupport {
@@ -55,7 +55,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl jobRepository;
+    @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;
     @Autowired private BacktestTradeJpaRepository tradeRepository;
     @Autowired private TestEntityManager entityManager;
@@ -63,7 +63,7 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
     private Long newJobId() {
         return jobRepository
                 .save(
-                        BacktestJob.create(
+                        BacktestRun.create(
                                 "MA_CROSSOVER",
                                 "1.0.0",
                                 Map.of("shortWindow", 20),
@@ -112,6 +112,14 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());
         assertThat(result.getBenchmark()).isNull();
         assertThat(result.getDiagnostics()).isEqualTo(output.diagnostics());
+        // v2 블록(T009). 표시용이라 전부 JSONB 이고 weights_source 만 필터용 스칼라다
+        assertThat(result.getWeightsSeries()).isEqualTo(output.weightsSeries());
+        assertThat(result.getWeightsSource()).isEqualTo(output.weightsSource());
+        assertThat(result.getCosts()).isEqualTo(output.costs());
+        assertThat(result.getLiquidation()).isEqualTo(output.liquidation());
+        assertThat(result.getAnalytics()).isEqualTo(output.analytics());
+        assertThat(result.getExceptions()).isEqualTo(output.exceptions());
+        assertThat(result.getVersions()).isEqualTo(output.versions());
         assertThat(result.getCreatedAt()).isNotNull();
     }
 

@@ -8,8 +8,9 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -51,7 +52,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Import({
     JpaAuditingConfig.class,
     MessageJsonPersistenceConfig.class,
-    BacktestJobRepositoryImpl.class,
+    BacktestRunRepositoryImpl.class,
     BacktestResultRepositoryImpl.class
 })
 class BacktestResultProjectionTest extends PostgresTestSupport {
@@ -64,7 +65,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         }
     }
 
-    @Autowired private BacktestJobRepositoryImpl jobRepository;
+    @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;
     @Autowired private TestEntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -73,7 +74,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         Long jobId =
                 jobRepository
                         .save(
-                                BacktestJob.create(
+                                BacktestRun.create(
                                         "MA_CROSSOVER",
                                         "1.0.0",
                                         Map.of("shortWindow", 20),
@@ -107,7 +108,7 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         // jsonb로는 유효하지만 List<PortfolioSnapshot>으로는 읽을 수 없는 값
         jdbcTemplate.update(
                 "UPDATE backtest_result SET portfolio_series = '{\"broken\":true}'::jsonb"
-                        + " WHERE backtest_job_id = ?",
+                        + " WHERE run_id = ?",
                 jobId);
 
         Optional<BacktestResultSummary> summary = resultRepository.findSummary(jobId);
@@ -131,6 +132,30 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         assertThat(summary.benchmarkInstrumentId()).isNull();
         assertThat(summary.benchmarkTotalReturn()).isNull();
         assertThat(summary.hasBenchmark()).isFalse();
+        // v2 요약 항목(T009): 비용·청산·분석 블록과 예외 건수. 예외 본문은 읽지 않는다
+        EngineOutput output = event.payload().engineOutput();
+        assertThat(summary.costs()).isEqualTo(output.costs());
+        assertThat(summary.liquidation()).isEqualTo(output.liquidation());
+        assertThat(summary.analytics()).isEqualTo(output.analytics());
+        assertThat(summary.exceptionCount()).isEqualTo(output.exceptions().size());
+    }
+
+    @Test
+    @DisplayName("비중·예외 블록 조회는 시계열을 읽지 않고 두 리스트와 비중 출처를 돌려준다")
+    void findsWeightsAndExceptionsWithoutSeries() {
+        Long jobId = saveFixtureResult();
+        EngineOutput output = MessageFixtures.finishedCompleted().payload().engineOutput();
+        jdbcTemplate.update(
+                "UPDATE backtest_result SET portfolio_series = '{\"broken\":true}'::jsonb"
+                        + " WHERE run_id = ?",
+                jobId);
+
+        BacktestResultBlocks blocks = resultRepository.findBlocks(jobId).orElseThrow();
+
+        assertThat(blocks.weightsSeries()).isEqualTo(output.weightsSeries());
+        assertThat(blocks.weightsSource()).isEqualTo(output.weightsSource());
+        assertThat(blocks.exceptions()).isEqualTo(output.exceptions());
+        assertThat(resultRepository.findBlocks(999_999L)).isEmpty();
     }
 
     @Test
@@ -176,9 +201,11 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         Long jobId = saveFixtureResult();
 
         Page<EngineOutput.TradeResult> first =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 2, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(0, 2, null, null), null);
         Page<EngineOutput.TradeResult> second =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(1, 2, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(1, 2, null, null), null);
 
         assertThat(first.getTotalElements()).isEqualTo(3);
         assertThat(first.getTotalPages()).isEqualTo(2);
@@ -201,14 +228,16 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                         resultRepository
                                 .findTrades(
                                         jobId,
-                                        new FindBacktestTradesQuery(0, 100, "000660.XKRX", null))
+                                        new FindBacktestTradesQuery(0, 100, "000660.XKRX", null),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         assertThat(
                         resultRepository
                                 .findTrades(
                                         jobId,
-                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN))
+                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         assertThat(
@@ -216,7 +245,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                                 .findTrades(
                                         jobId,
                                         new FindBacktestTradesQuery(
-                                                0, 100, "005930.XKRX", TradeStatus.CLOSED))
+                                                0, 100, "005930.XKRX", TradeStatus.CLOSED),
+                                        null)
                                 .getTotalElements())
                 .isEqualTo(1);
         // 있는 종목이지만 그 상태의 거래가 없는 조합
@@ -225,9 +255,43 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                                 .findTrades(
                                         jobId,
                                         new FindBacktestTradesQuery(
-                                                0, 100, "000660.XKRX", TradeStatus.OPEN))
+                                                0, 100, "000660.XKRX", TradeStatus.OPEN),
+                                        null)
                                 .getContent())
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("취소 요청의 거래 경계: 경계 전에 청산된 거래만 보인다 — 가로지르는 거래와 OPEN 거래는 빠진다")
+    void tradesCrossingTheVisibleBoundaryAreExcluded() {
+        Long jobId = saveFixtureResult();
+        // 픽스처: TRD-000001 01-22 → 03-12 CLOSED, TRD-000002 02-06 → 04-03 CLOSED, TRD-000003 05-14
+        // OPEN
+        Instant before =
+                LocalDate.parse("2025-03-13").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        FindBacktestTradesQuery all = new FindBacktestTradesQuery(0, 100, null, null);
+
+        assertThat(resultRepository.findTrades(jobId, all, before).getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000001");
+        // 02-06 진입은 경계 전이지만 04-03 청산이 경계 뒤라 status 필터로도 나오지 않는다
+        assertThat(
+                        resultRepository
+                                .findTrades(
+                                        jobId,
+                                        new FindBacktestTradesQuery(
+                                                0, 100, null, TradeStatus.CLOSED),
+                                        before)
+                                .getTotalElements())
+                .isEqualTo(1);
+        assertThat(resultRepository.findTrades(jobId, all, null).getTotalElements()).isEqualTo(3);
+        // 끝까지 OPEN 인 거래(05-14 진입)는 경계가 그 뒤(06-01)여도 보이지 않는다 — 저장된 OPEN 행은 실행
+        // 종료 시점 값(분할·부분 매도로 수량·수수료가 바뀐다)이라 경계 시점 상태가 아니다
+        Instant june =
+                LocalDate.parse("2025-06-01").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        assertThat(resultRepository.findTrades(jobId, all, june).getContent())
+                .extracting(EngineOutput.TradeResult::tradeId)
+                .containsExactly("TRD-000001", "TRD-000002");
     }
 
     @Test
@@ -237,7 +301,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
 
         Page<EngineOutput.TradeResult> page =
-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 100, null, null));
+                resultRepository.findTrades(
+                        jobId, new FindBacktestTradesQuery(0, 100, null, null), null);
 
         // record equals는 BigDecimal의 scale까지 본다
         assertThat(page.getContent()).isEqualTo(event.payload().engineOutput().trades());

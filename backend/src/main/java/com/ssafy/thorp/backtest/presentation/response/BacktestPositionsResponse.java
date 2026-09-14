@@ -16,6 +16,7 @@ import java.util.List;
  */
 public record BacktestPositionsResponse(
         String backtestId,
+        boolean partial,
         LocalDate requestedDate,
         LocalDate snapshotDate,
         List<Position> positions) {
@@ -30,6 +31,7 @@ public record BacktestPositionsResponse(
     public static BacktestPositionsResponse from(BacktestPositionsResult result) {
         return new BacktestPositionsResponse(
                 result.backtestId(),
+                result.partial(),
                 result.requestedDate(),
                 result.snapshotDate(),
                 result.positions().stream()

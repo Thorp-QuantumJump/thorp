@@ -21,7 +21,8 @@
         "cumulativeReturn": "0.000000",
         "drawdown": "0.000000"
       }
-    ]
+    ],
+    "partial": false
   },
   "error": null
 }

@@ -3,9 +3,12 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.common.persistence.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -32,12 +35,12 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "backtest_result")
 public class BacktestResultJpaEntity extends BaseEntity {
 
-    @Id private Long backtestJobId;
+    @Id private Long runId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
-    @JoinColumn(name = "backtest_job_id")
-    private BacktestJobJpaEntity job;
+    @JoinColumn(name = "run_id")
+    private BacktestRunJpaEntity job;
 
     @Column(nullable = false, length = 255)
     private String executionId;
@@ -74,9 +77,32 @@ public class BacktestResultJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private EngineOutput.Diagnostics diagnostics;
 
+    // v2 블록(spec 004 FR-026·FR-027·FR-030, T009). 표시용이라 JSONB 이고 weights_source 만 필터용 스칼라다.
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<EngineOutput.WeightsPoint> weightsSeries;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private WeightsSource weightsSource;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private EngineOutput.Costs costs;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private EngineOutput.Liquidation liquidation;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private EngineOutput.Analytics analytics;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<EngineOutput.ExceptionRecord> exceptions;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private EngineOutput.Versions versions;
+
     protected BacktestResultJpaEntity() {}
 
-    private BacktestResultJpaEntity(BacktestJobJpaEntity job, SaveBacktestResultCommand command) {
+    private BacktestResultJpaEntity(BacktestRunJpaEntity job, SaveBacktestResultCommand command) {
         EngineOutput output = command.engineOutput();
         EngineOutput.RunResult run = output.run();
         this.job = job;
@@ -91,16 +117,23 @@ public class BacktestResultJpaEntity extends BaseEntity {
         this.portfolioSeries = output.portfolioSeries();
         this.benchmark = command.benchmark();
         this.diagnostics = output.diagnostics();
+        this.weightsSeries = output.weightsSeries();
+        this.weightsSource = output.weightsSource();
+        this.costs = output.costs();
+        this.liquidation = output.liquidation();
+        this.analytics = output.analytics();
+        this.exceptions = output.exceptions();
+        this.versions = output.versions();
     }
 
     /** 계약 DTO → 엔티티. 결과 도메인 모델이 없으므로 별도 Mapper 없이 여기서 매핑한다. */
     static BacktestResultJpaEntity from(
-            BacktestJobJpaEntity job, SaveBacktestResultCommand command) {
+            BacktestRunJpaEntity job, SaveBacktestResultCommand command) {
         return new BacktestResultJpaEntity(job, command);
     }
 
-    public Long getBacktestJobId() {
-        return backtestJobId;
+    public Long getRunId() {
+        return runId;
     }
 
     public String getExecutionId() {
@@ -149,5 +182,34 @@ public class BacktestResultJpaEntity extends BaseEntity {
 
     public EngineOutput.Diagnostics getDiagnostics() {
         return diagnostics;
+    }
+
+    /** null = 엔진이 채우지 않았다(실패 또는 v2 이전 결과). 아래 여섯 getter 도 같다. */
+    public List<EngineOutput.WeightsPoint> getWeightsSeries() {
+        return weightsSeries;
+    }
+
+    public WeightsSource getWeightsSource() {
+        return weightsSource;
+    }
+
+    public EngineOutput.Costs getCosts() {
+        return costs;
+    }
+
+    public EngineOutput.Liquidation getLiquidation() {
+        return liquidation;
+    }
+
+    public EngineOutput.Analytics getAnalytics() {
+        return analytics;
+    }
+
+    public List<EngineOutput.ExceptionRecord> getExceptions() {
+        return exceptions;
+    }
+
+    public EngineOutput.Versions getVersions() {
+        return versions;
     }
 }

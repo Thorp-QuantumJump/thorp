@@ -23,5 +23,13 @@ public interface ParamSearchRepository {
 
     Optional<ParamSearch> findById(Long id);
 
+    /**
+     * 묶음 행을 잠그고 읽는다. 집계 갱신과 발행 창 계산이 이 락 안에서 일어난다(내부 계약 §4 동시 수신 경쟁).
+     *
+     * <p>락 없이 처리하면 동시에 도착한 두 결과가 같은 집계를 읽어 각자 갱신하고, 늦게 쓴 쪽이 상대의 갱신을 되돌린다. 발행 창도 마찬가지로 둘 다 "자리가 있다"고
+     * 판단해 창을 넘겨 발행한다.
+     */
+    Optional<ParamSearch> findByIdForUpdate(Long id);
+
     Optional<ParamSearch> findBySearchId(String searchId);
 }

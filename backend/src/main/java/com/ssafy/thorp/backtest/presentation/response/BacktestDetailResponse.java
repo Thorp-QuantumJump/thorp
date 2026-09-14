@@ -2,54 +2,44 @@ package com.ssafy.thorp.backtest.presentation.response;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 /**
- * {@code GET /backtests/{backtestId}} 응답. 계약: {@code docs/specs/backtest-api/README.md} §2.1과
- * {@code examples/backtest-detail.json}.
+ * {@code GET /backtests/{backtestId}} 응답(spec 004 contracts/rest-api.md).
  *
- * <p><b>decimal은 필드마다 {@link PlainBigDecimalSerializer}로 문자열이 된다.</b> 웹 ObjectMapper에 전역 등록하지 않는
- * 이유: 다른 도메인의 응답({@code MarketResponse.value})이 JSON 숫자에서 문자열로 바뀌어 그 API 계약이 깨진다.
+ * <p>백테스트가 실패해도 200이다 — 조회 자체는 성공했고 실패는 {@code status}·{@code failure}로 전달한다. 프론트 폴링은 이 리소스로 한다.
  *
- * <p><b>전역 {@code NON_NULL}도 켜지 않는다.</b> 계약이 필드마다 다르다 — 거래의 {@code exitDate}는 명시적 {@code null}이고
- * 시계열의 {@code benchmarkReturn}만 키를 생략한다.
- *
- * @param summary {@code COMPLETED}가 아니면 null
- * @param error {@code FAILED}일 때만
+ * <p>소수는 필드마다 문자열로 직렬화한다. <b>웹 ObjectMapper에 전역 등록하지 않는다</b> — 다른 도메인의 숫자 계약이 함께 바뀐다.
  */
 public record BacktestDetailResponse(
         String backtestId,
-        BacktestStatus status,
-        Config config,
-        Summary summary,
-        Error error,
+        RunStatus status,
+        ResultSource resultSource,
+        boolean partial,
+        Progress progress,
+        Instant queuedAt,
         Instant startedAt,
-        Instant finishedAt) {
+        Instant finishedAt,
+        Long queueWaitSeconds,
+        Map<String, Object> config,
+        Map<String, Object> versions,
+        Summary summary,
+        String summaryUnavailable,
+        Failure failure) {
 
-    /**
-     * @param initialCash 저장 컬럼이 {@code NUMERIC(19,2)}라 요청보다 자릿수가 늘 수 있다. 값은 같다
-     */
-    public record Config(
-            String strategyId,
-            String strategyVersion,
-            Map<String, Object> parameters,
-            List<String> instrumentIds,
-            LocalDate start,
-            LocalDate end,
-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal initialCash,
-            String currency,
-            String benchmarkId) {}
+    public record Progress(
+            ProgressStage stage,
+            LocalDate lastTradingDate,
+            Integer completedTradingDays,
+            Integer totalTradingDays) {}
 
-    /**
-     * @param benchmark null = 결과에 벤치마크가 없음. 워커에 계산기가 없는 <b>현재 운영에서는</b> 항상 null이다(HTTP 계약 README
-     *     §4). 계약 픽스처에는 벤치마크가 있어 테스트에서는 값이 채워진다
-     */
     public record Summary(
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal initialEquity,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,
@@ -63,60 +53,104 @@ public record BacktestDetailResponse(
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal winRate,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalCommission,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalSlippageCost,
-            Benchmark benchmark) {}
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal netTotalReturn,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalTradingCost,
+            Costs costs,
+            Liquidation liquidation,
+            Analytics analytics,
+            int exceptionCount) {}
 
-    public record Benchmark(
-            String instrumentId,
+    /** 비용 네 갈래와 합(FR-027). */
+    public record Costs(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commission,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal spread,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippage,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal tax,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal total) {}
+
+    /** 종료 시 시가평가와 청산 가정치(FR-017). */
+    public record Liquidation(MarkToMarket markToMarket, Liquidated liquidated) {}
+
+    public record MarkToMarket(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn) {}
 
-    /** 엔진이 준 실패 코드다. HTTP {@code error.code}와 다른 집합이다. */
-    public record Error(String code, String message) {}
+    public record Liquidated(
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal liquidationCost) {}
+
+    /** 요약에 실리는 파생 지표 둘. {@code recoveryDays} null = 미회복. */
+    public record Analytics(
+            Integer recoveryDays,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal turnover) {}
+
+    public record Failure(String code, String message) {}
 
     public static BacktestDetailResponse from(BacktestDetailResult result) {
         return new BacktestDetailResponse(
                 result.backtestId(),
                 result.status(),
-                config(result.config()),
-                summary(result.summary()),
-                result.error() == null
+                result.resultSource(),
+                result.partial(),
+                result.progress() == null
                         ? null
-                        : new Error(result.error().code(), result.error().message()),
+                        : new Progress(
+                                result.progress().stage(),
+                                result.progress().lastTradingDate(),
+                                result.progress().completedTradingDays(),
+                                result.progress().totalTradingDays()),
+                result.queuedAt(),
                 result.startedAt(),
-                result.finishedAt());
-    }
-
-    private static Config config(BacktestDetailResult.Config c) {
-        return new Config(
-                c.strategyId(),
-                c.strategyVersion(),
-                c.parameters(),
-                c.instrumentIds(),
-                c.start(),
-                c.end(),
-                c.initialCash(),
-                c.currency(),
-                c.benchmarkId());
-    }
-
-    private static Summary summary(BacktestDetailResult.Summary s) {
-        if (s == null) {
-            return null;
-        }
-        return new Summary(
-                s.initialEquity(),
-                s.finalEquity(),
-                s.currency(),
-                s.totalReturn(),
-                s.cagr(),
-                s.maxDrawdown(),
-                s.sharpeRatio(),
-                s.volatility(),
-                s.tradeCount(),
-                s.winRate(),
-                s.totalCommission(),
-                s.totalSlippageCost(),
-                s.benchmark() == null
+                result.finishedAt(),
+                result.queueWaitSeconds(),
+                result.config(),
+                result.versions(),
+                result.summary() == null ? null : summary(result.summary()),
+                result.summaryUnavailable(),
+                result.failure() == null
                         ? null
-                        : new Benchmark(s.benchmark().instrumentId(), s.benchmark().totalReturn()));
+                        : new Failure(result.failure().code(), result.failure().message()));
+    }
+
+    private static Summary summary(BacktestDetailResult.Summary source) {
+        return new Summary(
+                source.initialEquity(),
+                source.finalEquity(),
+                source.currency(),
+                source.totalReturn(),
+                source.cagr(),
+                source.maxDrawdown(),
+                source.sharpeRatio(),
+                source.volatility(),
+                source.tradeCount(),
+                source.winRate(),
+                source.totalCommission(),
+                source.totalSlippageCost(),
+                source.netTotalReturn(),
+                source.totalTradingCost(),
+                source.costs() == null
+                        ? null
+                        : new Costs(
+                                source.costs().commission(),
+                                source.costs().spread(),
+                                source.costs().slippage(),
+                                source.costs().tax(),
+                                source.costs().total()),
+                source.liquidation() == null
+                        ? null
+                        : new Liquidation(
+                                new MarkToMarket(
+                                        source.liquidation().markToMarket().finalEquity(),
+                                        source.liquidation().markToMarket().totalReturn()),
+                                new Liquidated(
+                                        source.liquidation().liquidated().finalEquity(),
+                                        source.liquidation().liquidated().totalReturn(),
+                                        source.liquidation().liquidated().liquidationCost())),
+                source.analytics() == null
+                        ? null
+                        : new Analytics(
+                                source.analytics().recoveryDays(), source.analytics().turnover()),
+                source.exceptionCount());
     }
 }

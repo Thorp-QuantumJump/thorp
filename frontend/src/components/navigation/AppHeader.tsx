@@ -1,8 +1,10 @@
 import {
   ChartNoAxesCombined,
   Home,
+  LogIn,
   Menu,
   Play,
+  UserRound,
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -14,6 +16,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '@/auth/auth-context'
 import styles from './AppHeader.module.css'
 
 const navigationItems = [
@@ -37,9 +40,10 @@ const navigationItems = [
   },
 ]
 
-/** 모든 서비스 화면에서 홈·대시보드·백테스트로 이동할 수 있는 공통 탐색을 제공한다. */
+/** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
 export function AppHeader() {
   const location = useLocation()
+  const { status: authStatus, user } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -128,7 +132,7 @@ export function AppHeader() {
             >
               <Menu size={20} aria-hidden="true" />
             </button>
-            <Link className={styles.brand} to="/home" aria-label="Thorp 홈">
+            <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
               Thorp<span>.</span>
             </Link>
           </div>
@@ -151,10 +155,21 @@ export function AppHeader() {
             })}
           </nav>
 
-          <Link className={styles.homeLink} to="/">
-            <Home size={16} aria-hidden="true" />
-            처음으로
-          </Link>
+          {authStatus === 'checking' ? (
+            <span className={styles.authState} role="status">
+              확인 중
+            </span>
+          ) : authStatus === 'authenticated' && user ? (
+            <Link className={styles.authLink} to="/home" aria-label={`${user.nickname} 로그인됨`}>
+              <UserRound size={16} aria-hidden="true" />
+              {user.nickname}
+            </Link>
+          ) : (
+            <Link className={styles.authLink} to="/login">
+              <LogIn size={16} aria-hidden="true" />
+              로그인
+            </Link>
+          )}
         </div>
       </header>
 
@@ -219,10 +234,21 @@ export function AppHeader() {
                 })}
               </div>
 
-              <Link className={styles.drawerHome} to="/" onClick={() => setIsMenuOpen(false)}>
-                <Home size={18} aria-hidden="true" />
-                처음 화면으로
-              </Link>
+              {authStatus === 'authenticated' && user ? (
+                <Link className={styles.drawerAuth} to="/home" onClick={() => setIsMenuOpen(false)}>
+                  <UserRound size={18} aria-hidden="true" />
+                  {user.nickname}
+                </Link>
+              ) : authStatus === 'checking' ? (
+                <span className={styles.drawerAuth} role="status">
+                  확인 중
+                </span>
+              ) : (
+                <Link className={styles.drawerAuth} to="/login" onClick={() => setIsMenuOpen(false)}>
+                  <LogIn size={18} aria-hidden="true" />
+                  로그인
+                </Link>
+              )}
             </motion.nav>
           </div>
         )}

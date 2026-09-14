@@ -1,10 +1,13 @@
 package com.ssafy.thorp.backtest.presentation.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
+import com.ssafy.thorp.backtest.application.port.message.TradeReason;
 import com.ssafy.thorp.backtest.application.port.message.TradeSide;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
+import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;
 import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,6 +23,7 @@ import java.util.List;
  */
 public record BacktestTradePageResponse(
         String backtestId,
+        boolean partial,
         int page,
         int size,
         long totalElements,
@@ -34,12 +38,15 @@ public record BacktestTradePageResponse(
      *
      * <p>현재 모든 종목이 XKRX다(ADR-0002 D4). 거래소가 늘면 {@code instrumentId} suffix → zone 매핑으로 뺀다.
      */
-    private static final ZoneId EXCHANGE = ZoneId.of("Asia/Seoul");
+    private static final ZoneId EXCHANGE = ExecutionPolicy.EXCHANGE_ZONE;
 
     /**
      * OPEN 거래는 {@code exitDate}·{@code exitPrice}·{@code grossPnl}·{@code realizedPnl}·{@code
      * returnRate}가 <b>명시적 {@code null}</b>이다(키가 있다). 설계 예시가 그렇게 적혀 있고, 0으로 대체해 표시하면 안 된다는 뜻이다. 그래서
      * 이 record에는 {@code @JsonInclude}를 붙이지 않는다.
+     *
+     * <p>v2 추가분 {@code reason}(REBALANCE·HALT_DEFERRED·LIQUIDATION·SIGNAL)은 항상 있고, {@code
+     * plannedDate}는 거래 불가로 미룬 거래에만 있어 없으면 키를 생략한다.
      */
     public record Trade(
             String tradeId,
@@ -55,7 +62,9 @@ public record BacktestTradePageResponse(
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commission,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippageCost,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal realizedPnl,
-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal returnRate) {}
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal returnRate,
+            TradeReason reason,
+            @JsonInclude(JsonInclude.Include.NON_NULL) LocalDate plannedDate) {}
 
     /** 체결 봉 timestamp → 거래소 현지 거래일. UTC로 자르지 않는다. */
     static LocalDate tradingDate(Instant instant) {
@@ -65,6 +74,7 @@ public record BacktestTradePageResponse(
     public static BacktestTradePageResponse from(BacktestTradePageResult result) {
         return new BacktestTradePageResponse(
                 result.backtestId(),
+                result.partial(),
                 result.page(),
                 result.size(),
                 result.totalElements(),
@@ -87,6 +97,8 @@ public record BacktestTradePageResponse(
                 t.commission(),
                 t.slippageCost(),
                 t.realizedPnl(),
-                t.returnRate());
+                t.returnRate(),
+                t.reason(),
+                t.plannedDate());
     }
 }

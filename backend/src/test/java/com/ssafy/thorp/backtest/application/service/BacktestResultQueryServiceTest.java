@@ -10,37 +10,48 @@ import static org.mockito.Mockito.when;
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -53,25 +64,53 @@ class BacktestResultQueryServiceTest {
     private static final String BACKTEST_ID = "BT-20260907-000001";
     private static final Long JOB_ID = 1L;
 
-    @Mock private BacktestJobRepository jobRepository;
-    @Mock private BacktestResultRepository resultRepository;
-    @InjectMocks private BacktestResultQueryService service;
+    private static final long REQUESTER = 7L;
 
-    private static BacktestJob jobIn(BacktestStatus status) {
-        return BacktestJob.restore(
-                JOB_ID,
+    @Mock private BacktestRunRepository jobRepository;
+    @Mock private BacktestRequestRepository requestRepository;
+    @Mock private BacktestResultRepository resultRepository;
+
+    private final Clock clock = Clock.fixed(Instant.parse("2026-09-07T01:00:20Z"), ZoneOffset.UTC);
+    private BacktestResultQueryService service;
+
+    @BeforeEach
+    void createService() {
+        service =
+                new BacktestResultQueryService(
+                        jobRepository, requestRepository, resultRepository, clock);
+    }
+
+    /** 사용자가 보는 식별자는 요청의 것이다. 실행은 그 뒤에 있다(R-02). */
+    private static BacktestRequest requestFor(long requesterId) {
+        return BacktestRequest.restore(
+                21L,
                 BacktestId.from(BACKTEST_ID),
-                "MA_CROSSOVER",
-                "1.0.0",
-                Map.of("shortWindow", 20),
-                List.of(new InstrumentId("005930.XKRX")),
-                new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
-                new BigDecimal("10000000.00"),
-                PositionSizingMode.STRATEGY_DEFINED,
+                JOB_ID,
+                requesterId,
+                ExecutionType.SINGLE,
+                ResultSource.NEW,
                 null,
-                new InstrumentId("069500.XKRX"),
-                42,
-                status);
+                null,
+                null,
+                false);
+    }
+
+    private static BacktestRun jobIn(RunStatus status) {
+        return BacktestRun.restore(
+                        JOB_ID,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of("shortWindow", 20),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        new InstrumentId("069500.XKRX"),
+                        42,
+                        status)
+                .withLifecycle(RunLifecycle.queuedAt(Instant.parse("2026-09-07T01:00:00Z")));
     }
 
     private static EngineOutput.PerformanceResult performance() {
@@ -80,14 +119,14 @@ class BacktestResultQueryServiceTest {
                 new BigDecimal("11666521.51"),
                 "KRW",
                 new BigDecimal("0.166652"),
-                null,
+                new BigDecimal("0.166652"),
                 new BigDecimal("0.366917"),
                 new BigDecimal("-0.041757"),
                 new BigDecimal("2.342630"),
                 new BigDecimal("0.132307"),
                 2,
                 new BigDecimal("0.500000"),
-                null);
+                new BigDecimal("17078.49"));
     }
 
     private static EngineOutput.ExecutionResult execution() {
@@ -104,95 +143,337 @@ class BacktestResultQueryServiceTest {
                 errorCode == null ? performance() : null,
                 errorCode == null ? execution() : null,
                 benchmark ? "069500.XKRX" : null,
-                benchmark ? new BigDecimal("0.053292") : null);
+                benchmark ? new BigDecimal("0.053292") : null,
+                errorCode == null ? costs() : null,
+                errorCode == null ? liquidation() : null,
+                errorCode == null ? analytics() : null,
+                errorCode == null ? 1 : 0);
     }
 
-    private void given(BacktestStatus status) {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));
+    private static EngineOutput.Costs costs() {
+        return new EngineOutput.Costs(
+                new BigDecimal("3941.19"),
+                new BigDecimal("0.00"),
+                new BigDecimal("13137.30"),
+                new BigDecimal("0.00"),
+                new BigDecimal("17078.49"));
+    }
+
+    private static EngineOutput.Liquidation liquidation() {
+        return new EngineOutput.Liquidation(
+                new EngineOutput.MarkToMarket(
+                        new BigDecimal("11666521.51"), new BigDecimal("0.166652")),
+                new EngineOutput.Liquidated(
+                        new BigDecimal("11662525.96"),
+                        new BigDecimal("0.166253"),
+                        new BigDecimal("3995.55")));
+    }
+
+    private static EngineOutput.Analytics analytics() {
+        return new EngineOutput.Analytics(
+                9, new BigDecimal("1.219991"), null, null, null, null, "sample-covariance-daily");
+    }
+
+    /** 먼저 취소해 실행은 계속 돈 요청(R-04). 스냅샷 날짜까지만 볼 수 있다. */
+    private static BacktestRequest cancelledJoinedRequest(LocalDate snapshot) {
+        return BacktestRequest.restore(
+                21L,
+                BacktestId.from(BACKTEST_ID),
+                JOB_ID,
+                REQUESTER,
+                ExecutionType.SINGLE,
+                ResultSource.JOINED,
+                null,
+                Instant.parse("2026-09-07T01:00:10Z"),
+                snapshot,
+                false);
+    }
+
+    private void givenCancelledJoined(LocalDate snapshot) {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelledJoinedRequest(snapshot)));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(RunStatus.COMPLETED)));
+    }
+
+    private void given(RunStatus status) {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER)));
+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(status)));
     }
 
     // ---------- getDetail ----------
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "RUNNING"})
     @DisplayName("결과 전에는 config만 채우고 결과 행을 읽지 않는다")
-    void detailBeforeResult(BacktestStatus status) {
+    void detailBeforeResult(RunStatus status) {
         given(status);
 
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
         assertThat(result.status()).isEqualTo(status);
-        assertThat(result.config().strategyVersion()).isEqualTo("1.0.0");
-        assertThat(result.config().currency()).isEqualTo(ExecutionPolicy.CURRENCY);
+        assertThat(result.resultSource()).isEqualTo(ResultSource.NEW);
+        assertThat(result.config()).containsEntry("currency", ExecutionPolicy.CURRENCY);
         assertThat(result.summary()).isNull();
-        assertThat(result.error()).isNull();
+        assertThat(result.failure()).isNull();
         assertThat(result.startedAt()).isNull();
     }
 
     @Test
-    @DisplayName("COMPLETED는 performance·execution·benchmark를 summary로 합친다")
+    @DisplayName("대기 시간은 아직 시작하지 않았어도 지금까지 기다린 시간으로 채운다")
+    void queueWaitCountsWhileWaiting() {
+        given(RunStatus.QUEUED);
+
+        assertThat(service.getDetail(BACKTEST_ID, REQUESTER).queueWaitSeconds()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("COMPLETED는 performance·execution을 summary로 합친다")
     void detailCompleted() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, true)));
 
-        BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID).summary();
+        BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID, REQUESTER).summary();
 
         assertThat(summary.totalReturn()).isEqualByComparingTo("0.166652");
         assertThat(summary.tradeCount()).isEqualTo(2);
         // execution에서 비용 2개만 가져온다. orderCount 등은 노출하지 않는다
         assertThat(summary.totalCommission()).isEqualByComparingTo("3941.19");
         assertThat(summary.totalSlippageCost()).isEqualByComparingTo("13137.30");
-        assertThat(summary.benchmark().instrumentId()).isEqualTo("069500.XKRX");
+        // v2 항목(rest-api.md summary): 핵심 숫자 3개 + 청산 + 비용 + analytics 2개 + 예외 건수
+        assertThat(summary.netTotalReturn()).isEqualByComparingTo("0.166652");
+        assertThat(summary.totalTradingCost()).isEqualByComparingTo("17078.49");
+        assertThat(summary.costs()).isEqualTo(costs());
+        assertThat(summary.liquidation()).isEqualTo(liquidation());
+        assertThat(summary.analytics().recoveryDays()).isEqualTo(9);
+        assertThat(summary.analytics().turnover()).isEqualByComparingTo("1.219991");
+        assertThat(summary.exceptionCount()).isEqualTo(1);
+    }
+
+    // ---------- getWeights · getExceptions ----------
+
+    private static EngineOutput.WeightsPoint weightsPoint(String date) {
+        return new EngineOutput.WeightsPoint(
+                LocalDate.parse(date),
+                Map.of("005930.XKRX", new BigDecimal("0.5")),
+                Map.of("005930.XKRX", new BigDecimal("0.49")),
+                new BigDecimal("0.01"),
+                null,
+                null);
+    }
+
+    private static EngineOutput.ExceptionRecord exception(String date) {
+        return new EngineOutput.ExceptionRecord(
+                LocalDate.parse(date), "005930.XKRX", "HALT_DEFERRED", "DEFER", "deferred");
+    }
+
+    private void givenBlocks() {
+        when(resultRepository.findBlocks(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                new BacktestResultBlocks(
+                                        List.of(
+                                                weightsPoint("2025-01-02"),
+                                                weightsPoint("2025-02-03")),
+                                        WeightsSource.COMPUTED,
+                                        List.of(
+                                                exception("2025-01-10"),
+                                                exception("2025-02-10")))));
     }
 
     @Test
-    @DisplayName("FAILED는 error만 채우고 summary는 null이다")
-    void detailFailed() {
-        given(BacktestStatus.FAILED);
-        when(resultRepository.findSummary(JOB_ID))
-                .thenReturn(Optional.of(summary("NO_MARKET_DATA", false)));
+    @DisplayName("비중 기록은 리밸런싱 포인트와 비중 출처를 그대로 돌려준다")
+    void weightsReturnPointsAndSource() {
+        given(RunStatus.COMPLETED);
+        givenBlocks();
 
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
+        BacktestWeightsResult result = service.getWeights(BACKTEST_ID, REQUESTER);
+
+        assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(result.partial()).isFalse();
+        assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);
+        assertThat(result.points()).hasSize(2);
+        assertThat(result.points().get(0).weightError()).isEqualByComparingTo("0.01");
+    }
+
+    @Test
+    @DisplayName("예외 기록은 그대로 돌려주고 관문을 쓴다 — RUNNING 이면 RESULT_NOT_READY")
+    void exceptionsReturnRecordsAndUseGate() {
+        given(RunStatus.COMPLETED);
+        givenBlocks();
+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items()).hasSize(2);
+
+        given(RunStatus.RUNNING);
+        assertThatThrownBy(() -> service.getExceptions(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestResultNotReadyException.class);
+    }
+
+    @Test
+    @DisplayName("비중도 결과 행이 없으면 500이다")
+    void weightsMissingResultRow() {
+        given(RunStatus.COMPLETED);
+        when(resultRepository.findBlocks(JOB_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getWeights(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    // ---------- 먼저 취소한 요청의 읽기 필터(R-04, T005 결정 ⑥) ----------
+
+    @Test
+    @DisplayName("먼저 취소해 실행이 계속 돈 요청은 스냅샷 날짜까지만 보고 partial=true 다")
+    void cancelledJoinedRequestIsCutAtItsSnapshot() {
+        givenCancelledJoined(LocalDate.parse("2025-01-10"));
+        when(resultRepository.findTimeseries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                new BacktestSeries(
+                                        List.of(
+                                                snapshot("2025-01-02", "10000000.00"),
+                                                snapshot("2025-01-10", "10100000.00"),
+                                                snapshot("2025-01-13", "10200000.00")),
+                                        null)));
+        givenBlocks();
+
+        BacktestTimeseriesResult series = service.getTimeseries(BACKTEST_ID, REQUESTER);
+        assertThat(series.partial()).isTrue();
+        assertThat(series.points())
+                .extracting(BacktestTimeseriesResult.Point::date)
+                .containsExactly(LocalDate.parse("2025-01-02"), LocalDate.parse("2025-01-10"));
+
+        assertThat(service.getWeights(BACKTEST_ID, REQUESTER).points())
+                .extracting(EngineOutput.WeightsPoint::date)
+                .containsExactly(LocalDate.parse("2025-01-02"));
+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items())
+                .extracting(EngineOutput.ExceptionRecord::date)
+                .containsExactly(LocalDate.parse("2025-01-10"));
+
+        // 보유도 스냅샷 뒤 날짜를 요청하면 스냅샷 이하의 마지막 보유로 답하고 partial 을 싣는다
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith(
+                                                "2025-01-02", List.of(position("005930.XKRX"))),
+                                        snapshotWith("2025-01-13", List.of()))));
+        BacktestPositionsResult positions =
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse("2025-01-13"));
+        assertThat(positions.partial()).isTrue();
+        assertThat(positions.snapshotDate()).isEqualTo(LocalDate.parse("2025-01-02"));
+        assertThat(positions.positions()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("완료한 거래일이 없는 취소 요청은 409 NO_PARTIAL_RESULT 다 — 실행 결과로 대신하지 않는다")
+    void cancelledBeforeAnyProgressHasNoPartialResult() {
+        givenCancelledJoined(null);
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NO_PARTIAL_RESULT);
+    }
+
+    @Test
+    @DisplayName("취소 요청의 거래는 스냅샷 다음 날 0시(거래소 현지) 를 경계로 저장소에 요청한다")
+    void cancelledJoinedRequestBoundsTradesByEntryTime() {
+        givenCancelledJoined(LocalDate.parse("2025-01-10"));
+        when(resultRepository.exists(JOB_ID)).thenReturn(true);
+        FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
+        Instant bound =
+                LocalDate.parse("2025-01-11").atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        when(resultRepository.findTrades(JOB_ID, query, bound))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);
+
+        assertThat(result.partial()).isTrue();
+        assertThat(result.content()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("취소하지 않은 요청의 보유 조회는 partial=false 다")
+    void positionsOfOrdinaryRequestAreNotPartial() {
+        given(RunStatus.COMPLETED);
+        when(resultRepository.findPortfolioSeries(JOB_ID))
+                .thenReturn(
+                        Optional.of(
+                                List.of(
+                                        snapshotWith(
+                                                "2025-01-02", List.of(position("005930.XKRX"))))));
+
+        assertThat(
+                        service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse("2025-01-02"))
+                                .partial())
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("FAILED는 failure만 채우고 summary는 null이다")
+    void detailFailed() {
+        given(RunStatus.FAILED);
+        when(resultRepository.findSummary(JOB_ID))
+                .thenReturn(Optional.of(summary("DATA_INSUFFICIENT", false)));
+
+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
         assertThat(result.summary()).isNull();
-        assertThat(result.error().code()).isEqualTo("NO_MARKET_DATA");
-        assertThat(result.finishedAt()).isEqualTo(Instant.parse("2026-09-07T01:00:12Z"));
-    }
-
-    @Test
-    @DisplayName("요청에 벤치마크가 있어도 결과에 없으면 summary.benchmark는 null이다")
-    void detailWithoutBenchmarkInResult() {
-        given(BacktestStatus.COMPLETED);
-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
-
-        BacktestDetailResult result = service.getDetail(BACKTEST_ID);
-
-        // Job에는 벤치마크 종목이 있다 — config에는 보이고 summary에는 안 보인다
-        assertThat(result.config().benchmarkId()).isEqualTo("069500.XKRX");
-        assertThat(result.summary().benchmark()).isNull();
+        assertThat(result.failure().code()).isEqualTo("DATA_INSUFFICIENT");
     }
 
     @Test
     @DisplayName("없는 backtestId는 404 예외")
     void detailNotFound() {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
+        when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("남의 요청은 403이 아니라 404다 — 존재 여부를 알려 주지 않는다")
+    void othersRequestIsNotFound() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER + 1)));
+
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("남의 요청은 하위 리소스도 404다 — 상세만 막고 하위를 열어 두면 식별자만 알면 읽힌다")
+    void subResourcesRejectOtherRequesters() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER + 1)));
+
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(BacktestNotFoundException.class);
+        assertThatThrownBy(
+                        () ->
+                                service.getTrades(
+                                        BACKTEST_ID,
+                                        REQUESTER,
+                                        new FindBacktestTradesQuery(0, 100, null, null)))
+                .isInstanceOf(BacktestNotFoundException.class);
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2)))
                 .isInstanceOf(BacktestNotFoundException.class);
     }
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"COMPLETED", "FAILED"})
     @DisplayName("최종 상태인데 결과 행이 없으면 500이다 — RESULT_NOT_READY로 감추지 않는다")
-    void detailMissingResultRowIsServerError(BacktestStatus status) {
+    void detailMissingResultRowIsServerError(RunStatus status) {
         given(status);
         when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getDetail(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(IllegalStateException.class)
                 .isNotInstanceOf(BacktestResultNotReadyException.class);
     }
@@ -225,7 +506,7 @@ class BacktestResultQueryServiceTest {
     }
 
     private void givenSeries(BenchmarkResult benchmark) {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findTimeseries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -241,7 +522,8 @@ class BacktestResultQueryServiceTest {
     void timeseriesJoinsBenchmarkByDate() {
         givenSeries(benchmark("2025-01-02", "0.000000", "2025-01-03", "0.008000"));
 
-        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+        List<BacktestTimeseriesResult.Point> points =
+                service.getTimeseries(BACKTEST_ID, REQUESTER).points();
 
         assertThat(points).hasSize(2);
         assertThat(points.get(0).benchmarkReturn()).isEqualByComparingTo("0.000000");
@@ -254,7 +536,8 @@ class BacktestResultQueryServiceTest {
     void timeseriesToleratesMissingBenchmarkDate() {
         givenSeries(benchmark("2025-01-02", "0.000000"));
 
-        List<BacktestTimeseriesResult.Point> points = service.getTimeseries(BACKTEST_ID).points();
+        List<BacktestTimeseriesResult.Point> points =
+                service.getTimeseries(BACKTEST_ID, REQUESTER).points();
 
         assertThat(points.get(0).benchmarkReturn()).isNotNull();
         assertThat(points.get(1).benchmarkReturn()).isNull();
@@ -265,26 +548,26 @@ class BacktestResultQueryServiceTest {
     void timeseriesWithoutBenchmark() {
         givenSeries(null);
 
-        assertThat(service.getTimeseries(BACKTEST_ID).points())
+        assertThat(service.getTimeseries(BACKTEST_ID, REQUESTER).points())
                 .allSatisfy(p -> assertThat(p.benchmarkReturn()).isNull());
     }
 
     @Test
     @DisplayName("시계열도 결과 행이 없으면 500이다")
     void timeseriesMissingResultRow() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findTimeseries(JOB_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     @DisplayName("시계열은 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
     void timeseriesUsesGate() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID))
+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
@@ -293,13 +576,13 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("거래 페이지는 Page의 메타데이터를 그대로 옮긴다")
     void tradesCopiesPageMetadata() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);
-        when(resultRepository.findTrades(JOB_ID, query))
+        when(resultRepository.findTrades(JOB_ID, query, null))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));
 
-        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, query);
+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);
 
         assertThat(result.page()).isEqualTo(1);
         assertThat(result.size()).isEqualTo(2);
@@ -310,24 +593,25 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("거래 0건도 정상 응답이다 — 결과 자체가 없는 것과 다르다")
     void tradesEmptyIsOk() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(true);
         FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);
-        when(resultRepository.findTrades(JOB_ID, query))
+        when(resultRepository.findTrades(JOB_ID, query, null))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
 
-        assertThat(service.getTrades(BACKTEST_ID, query).content()).isEmpty();
+        assertThat(service.getTrades(BACKTEST_ID, REQUESTER, query).content()).isEmpty();
     }
 
     @Test
     @DisplayName("거래도 관문을 그대로 쓴다 — RUNNING이면 RESULT_NOT_READY")
     void tradesUsesGate() {
-        given(BacktestStatus.RUNNING);
+        given(RunStatus.RUNNING);
 
         assertThatThrownBy(
                         () ->
                                 service.getTrades(
                                         BACKTEST_ID,
+                                        REQUESTER,
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(BacktestResultNotReadyException.class);
     }
@@ -360,7 +644,7 @@ class BacktestResultQueryServiceTest {
 
     /** 01-02(보유 1) → 01-03(변경 없음) → 01-06(보유 없음 확정) → 01-07(변경 없음) */
     private void givenPositionSeries() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findPortfolioSeries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -378,7 +662,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2));
 
         assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 2));
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
@@ -391,7 +675,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 3));
 
         assertThat(result.requestedDate()).isEqualTo(LocalDate.of(2025, 1, 3));
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 2));
@@ -403,7 +687,7 @@ class BacktestResultQueryServiceTest {
         givenPositionSeries();
 
         BacktestPositionsResult result =
-                service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 7));
+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 7));
 
         assertThat(result.snapshotDate()).isEqualTo(LocalDate.of(2025, 1, 6));
         assertThat(result.positions()).isEmpty();
@@ -414,7 +698,9 @@ class BacktestResultQueryServiceTest {
     void positionsAfterLastSnapshot() {
         givenPositionSeries();
 
-        assertThat(service.getPositions(BACKTEST_ID, LocalDate.of(2025, 12, 31)).snapshotDate())
+        assertThat(
+                        service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.of(2025, 12, 31))
+                                .snapshotDate())
                 .isEqualTo(LocalDate.of(2025, 1, 6));
     }
 
@@ -423,7 +709,10 @@ class BacktestResultQueryServiceTest {
     void positionsBeforeFirstSnapshot() {
         givenPositionSeries();
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2024, 12, 31)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
@@ -432,7 +721,7 @@ class BacktestResultQueryServiceTest {
     @Test
     @DisplayName("보유 스냅샷이 시계열 전체에 하나도 없으면 500이다 — 요청 잘못이 아니라 데이터 손상")
     void positionsWithoutAnySnapshotIsServerError() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.findPortfolioSeries(JOB_ID))
                 .thenReturn(
                         Optional.of(
@@ -440,7 +729,10 @@ class BacktestResultQueryServiceTest {
                                         snapshotWith("2025-01-02", null),
                                         snapshotWith("2025-01-03", null))));
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 3)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 3)))
                 .isInstanceOf(IllegalStateException.class)
                 .isNotInstanceOf(BusinessException.class);
     }
@@ -450,112 +742,80 @@ class BacktestResultQueryServiceTest {
     void positionsBeforeFirstSnapshotSaysEarliest() {
         givenPositionSeries();
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2024, 12, 31)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2024, 12, 31)))
                 .hasMessageContaining("2025-01-02");
     }
 
     @Test
     @DisplayName("보유도 관문을 그대로 쓴다 — FAILED면 BACKTEST_FAILED")
     void positionsUsesGate() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 2)))
+        assertThatThrownBy(
+                        () ->
+                                service.getPositions(
+                                        BACKTEST_ID, REQUESTER, LocalDate.of(2025, 1, 2)))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
     @Test
     @DisplayName("COMPLETED인데 결과 행이 없으면 거래도 500이다 — 빈 페이지를 주지 않는다")
     void tradesMissingResultRowIsServerError() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
         when(resultRepository.exists(JOB_ID)).thenReturn(false);
 
         assertThatThrownBy(
                         () ->
                                 service.getTrades(
                                         BACKTEST_ID,
+                                        REQUESTER,
                                         new FindBacktestTradesQuery(0, 100, null, null)))
                 .isInstanceOf(IllegalStateException.class);
         // 거래 조회까지 가지 않는다
-        verify(resultRepository, never()).findTrades(any(), any());
-    }
-
-    // ---------- 벤치마크 불일치 감지 ----------
-
-    @Test
-    @DisplayName("결과에 벤치마크가 없으면 불일치가 아니다 — 계산기가 없는 현재 상태가 정상이다")
-    void benchmarkAbsentIsNotMismatch() {
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), summary(null, false)))
-                .isFalse();
-    }
-
-    @Test
-    @DisplayName("요청과 결과의 벤치마크가 같으면 불일치가 아니다")
-    void benchmarkSameIsNotMismatch() {
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), summary(null, true)))
-                .isFalse();
-    }
-
-    @Test
-    @DisplayName("결과에 값이 있는데 요청과 다르면 불일치다 — config와 summary가 모순된 응답이 된다")
-    void benchmarkDifferentIsMismatch() {
-        BacktestResultSummary other =
-                new BacktestResultSummary(
-                        null,
-                        null,
-                        Instant.parse("2026-09-07T01:00:00Z"),
-                        Instant.parse("2026-09-07T01:00:12Z"),
-                        performance(),
-                        execution(),
-                        "229200.XKRX",
-                        new BigDecimal("0.011000"));
-
-        assertThat(
-                        BacktestResultQueryService.isBenchmarkMismatch(
-                                jobIn(BacktestStatus.COMPLETED), other))
-                .isTrue();
+        verify(resultRepository, never()).findTrades(any(), any(), any());
     }
 
     // ---------- 하위 리소스 관문 ----------
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(
-            value = BacktestStatus.class,
+            value = RunStatus.class,
             names = {"QUEUED", "RUNNING"})
     @DisplayName("하위 리소스: 결과 전이면 RESULT_NOT_READY (폴링 계속)")
-    void gateNotReady(BacktestStatus status) {
+    void gateNotReady(RunStatus status) {
         given(status);
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestResultNotReadyException.class);
     }
 
     @Test
     @DisplayName("하위 리소스: FAILED면 BACKTEST_FAILED (폴링 중단)")
     void gateFailed() {
-        given(BacktestStatus.FAILED);
+        given(RunStatus.FAILED);
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestFailedException.class);
     }
 
     @Test
     @DisplayName("하위 리소스: COMPLETED만 통과한다")
     void gateCompleted() {
-        given(BacktestStatus.COMPLETED);
+        given(RunStatus.COMPLETED);
 
-        assertThat(service.requireResultReady(BACKTEST_ID).getId()).isEqualTo(JOB_ID);
+        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).run().getId())
+                .isEqualTo(JOB_ID);
     }
 
     @Test
     @DisplayName("하위 리소스: 없는 backtestId는 404")
     void gateNotFound() {
-        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
+        when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID))
+        assertThatThrownBy(() -> service.requireResultReady(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
     }
 }

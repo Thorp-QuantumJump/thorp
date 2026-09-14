@@ -24,12 +24,29 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                            performance::text AS "performance",
                            execution::text   AS "execution",
                            benchmark ->> 'instrumentId' AS "benchmarkInstrumentId",
-                           benchmark ->> 'totalReturn'  AS "benchmarkTotalReturn"
+                           benchmark ->> 'totalReturn'  AS "benchmarkTotalReturn",
+                           costs::text       AS "costs",
+                           liquidation::text AS "liquidation",
+                           analytics::text   AS "analytics",
+                           COALESCE(jsonb_array_length(exceptions), 0) AS "exceptionCount"
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<BacktestResultSummaryRow> findSummaryRow(@Param("jobId") Long jobId);
+
+    /** 비중 기록·출처·예외 기록. {@code /weights}·{@code /exceptions}용이며 시계열은 읽지 않는다. */
+    @Query(
+            value =
+                    """
+                    SELECT weights_series::text AS "weightsSeries",
+                           weights_source       AS "weightsSource",
+                           exceptions::text     AS "exceptions"
+                      FROM backtest_result
+                     WHERE run_id = :jobId
+                    """,
+            nativeQuery = true)
+    Optional<BacktestResultBlocksRow> findBlocksRow(@Param("jobId") Long jobId);
 
     /** 시계열 + 벤치마크. 성과·집계·오류 컬럼은 읽지 않는다. */
     @Query(
@@ -38,7 +55,7 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     SELECT portfolio_series::text AS "portfolioSeries",
                            benchmark::text        AS "benchmark"
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<BacktestSeriesRow> findSeriesRow(@Param("jobId") Long jobId);
@@ -49,7 +66,7 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                     """
                     SELECT portfolio_series::text
                       FROM backtest_result
-                     WHERE backtest_job_id = :jobId
+                     WHERE run_id = :jobId
                     """,
             nativeQuery = true)
     Optional<String> findPortfolioSeriesJson(@Param("jobId") Long jobId);

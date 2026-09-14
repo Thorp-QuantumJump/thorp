@@ -1,10 +1,12 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,24 +14,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
-import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
-import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
-import com.ssafy.thorp.backtest.application.port.message.TradeSide;
-import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
-import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
-import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
-import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.BacktestStatus;
-import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -44,16 +45,26 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+/**
+ * HTTP 경계만 본다 — 본문 검증, 명령 변환, 상태 코드. 도메인 판단은 서비스 테스트가 맡는다.
+ *
+ * <p>요청 본문의 기준은 계약 예시 파일이다. 예시가 바뀌면 이 테스트가 먼저 깨져서 문서와 코드가 갈라지지 않는다.
+ */
 @WebMvcTest(BacktestController.class)
+@Import(CurrentRequester.class)
+@TestPropertySource(properties = "thorp.auth.trust-user-id-header=true")
 class BacktestControllerTest {
 
-    private static final String BACKTEST_ID = "BT-20260907-000001";
+    private static final String BACKTEST_ID = "BT-20260911-000001";
+    private static final String USER = "7";
 
-    /** 계약 예시가 요청 본문의 기준이다. gradle test의 작업 디렉터리는 backend/다. */
+    /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
 
@@ -71,518 +82,275 @@ class BacktestControllerTest {
     @MockitoBean private BacktestService backtestService;
     @MockitoBean private BacktestResultQueryService queryService;
 
-    private void expectAccepted(String body) throws Exception {
-        when(backtestService.create(any()))
-                .thenReturn(new BacktestJobResult(BACKTEST_ID, BacktestStatus.QUEUED));
-        mockMvc.perform(post("/backtests").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isAccepted());
+    private static BacktestJobResult accepted() {
+        return new BacktestJobResult(
+                BACKTEST_ID,
+                RunStatus.QUEUED,
+                ResultSource.NEW,
+                LocalDate.of(2023, 7, 3),
+                LocalDate.of(2024, 12, 31),
+                Map.of("rules", "1"));
     }
 
-    private void expectBadRequest(String body) throws Exception {
-        mockMvc.perform(post("/backtests").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
-    }
-
-    private CreateBacktestCommand capturedCommand() {
-        ArgumentCaptor<CreateBacktestCommand> captor =
-                ArgumentCaptor.forClass(CreateBacktestCommand.class);
-        verify(backtestService).create(captor.capture());
-        return captor.getValue();
+    private org.springframework.test.web.servlet.ResultActions postBody(String body)
+            throws Exception {
+        return mockMvc.perform(
+                post("/backtests")
+                        .header(CurrentRequester.DEV_HEADER, USER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body));
     }
 
     @Test
-    @DisplayName("POST /backtests는 202와 backtestId·QUEUED를 돌려준다")
-    void createReturnsAccepted() throws Exception {
-        when(backtestService.create(any()))
-                .thenReturn(new BacktestJobResult(BACKTEST_ID, BacktestStatus.QUEUED));
+    @DisplayName("계약 예시를 보내면 202와 식별자·결과 출처·실효 기간이 돌아온다")
+    void acceptsContractExample() throws Exception {
+        when(backtestService.create(any())).thenReturn(accepted());
 
-        mockMvc.perform(
-                        post("/backtests")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(VALID_BODY))
+        postBody(VALID_BODY)
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
-                .andExpect(jsonPath("$.error").isEmpty());
+                .andExpect(jsonPath("$.data.resultSource").value("NEW"))
+                .andExpect(jsonPath("$.data.effectiveStart").value("2023-07-03"))
+                .andExpect(jsonPath("$.data.versions.rules").value("1"));
     }
 
     @Test
-    @DisplayName("중첩 요청을 평평한 커맨드로 옮긴다")
-    void createFlattensRequestIntoCommand() throws Exception {
-        expectAccepted(VALID_BODY);
+    @DisplayName("중첩 본문을 유스케이스 입력으로 평평하게 옮긴다")
+    void mapsRequestToCommand() throws Exception {
+        when(backtestService.create(any())).thenReturn(accepted());
 
-        CreateBacktestCommand command = capturedCommand();
-        assertThat(command.strategyId()).isEqualTo("MA_CROSSOVER");
-        assertThat(command.instrumentIds()).containsExactly("005930.XKRX", "000660.XKRX");
-        assertThat(command.parameters()).containsEntry("shortWindow", 20);
-        assertThat(command.start()).isEqualTo("2025-01-01");
-        assertThat(command.end()).isEqualTo("2025-06-30");
-        assertThat(command.initialCash()).isEqualByComparingTo("10000000");
-        assertThat(command.maxPositionPct()).isEqualByComparingTo("0.50");
-        assertThat(command.benchmarkInstrumentId()).isEqualTo("069500.XKRX");
+        postBody(VALID_BODY).andExpect(status().isAccepted());
+
+        ArgumentCaptor<CreateBacktestCommand> captor =
+                ArgumentCaptor.forClass(CreateBacktestCommand.class);
+        verify(backtestService).create(captor.capture());
+        CreateBacktestCommand command = captor.getValue();
+
+        assertThat(command.requesterId()).isEqualTo(7L);
+        assertThat(command.executionType()).isEqualTo(ExecutionType.SINGLE);
+        assertThat(command.mappingVersion()).isEqualTo("SECTOR-ETF-2026-09");
+        assertThat(command.instrumentIds())
+                .containsExactly("091160.XKRX", "305720.XKRX", "244580.XKRX");
+        assertThat(command.items().get(0).targetWeight()).isEqualByComparingTo("0.4000");
+        assertThat(command.strategyId()).isEqualTo("FIXED_WEIGHT");
+        assertThat(command.rulesVersion()).isEqualTo("1");
+        assertThat(command.start()).isEqualTo(LocalDate.of(2023, 7, 3));
+        assertThat(command.initialCash()).isEqualByComparingTo(new BigDecimal("10000000.00"));
+        assertThat(command.costProfileVersion()).as("null = 서버 기본값").isNull();
+        assertThat(command.warmupTradingDays()).isNull();
+        assertThat(command.scenario()).isEqualTo(Scenario.FULL_PERIOD);
     }
 
     @Test
-    @DisplayName("positionSizing을 생략하면 STRATEGY_DEFINED와 제한 없음으로 채운다")
-    void createFillsPositionSizingDefault() throws Exception {
-        expectAccepted(
-                """
-                {
-                  "run": { "start": "2025-01-01", "end": "2025-06-30" },
-                  "universe": { "instrumentIds": ["005930.XKRX"] },
-                  "strategy": { "strategyId": "MA_CROSSOVER", "parameters": {} },
-                  "portfolio": { "initialCash": "10000000" }
-                }
-                """);
+    @DisplayName("scenario 를 생략하면 주 분석으로 본다")
+    void missingScenarioDefaultsToFullPeriod() throws Exception {
+        when(backtestService.create(any())).thenReturn(accepted());
 
-        CreateBacktestCommand command = capturedCommand();
-        assertThat(command.positionSizingType()).isEqualTo(PositionSizingMode.STRATEGY_DEFINED);
-        assertThat(command.maxPositionPct()).isNull();
-        assertThat(command.benchmarkInstrumentId()).isNull();
+        postBody(VALID_BODY.replace("\"scenario\": \"FULL_PERIOD\",", ""))
+                .andExpect(status().isAccepted());
+
+        ArgumentCaptor<CreateBacktestCommand> captor =
+                ArgumentCaptor.forClass(CreateBacktestCommand.class);
+        verify(backtestService).create(captor.capture());
+        assertThat(captor.getValue().scenario()).isEqualTo(Scenario.FULL_PERIOD);
     }
 
     @Test
-    @DisplayName("필수 블록이 빠지면 400이고 서비스를 부르지 않는다")
-    void createRejectsMissingBlocks() throws Exception {
-        expectBadRequest(
-                """
-                { "run": { "start": "2025-01-01", "end": "2025-06-30" } }
-                """);
+    @DisplayName("모르는 scenario 이름은 400이다 — 500으로 흘리지 않는다")
+    void unknownScenarioIsBadRequest() throws Exception {
+        postBody(VALID_BODY.replace("FULL_PERIOD", "SOMETHING_ELSE"))
+                .andExpect(status().isBadRequest());
 
         verify(backtestService, never()).create(any());
     }
 
     @Test
-    @DisplayName("종목 형식 위반과 빈 종목 목록은 400")
-    void createRejectsInvalidInstruments() throws Exception {
-        expectBadRequest(VALID_BODY.replace("005930.XKRX", "005930"));
-        expectBadRequest(
-                """
-                {
-                  "run": { "start": "2025-01-01", "end": "2025-06-30" },
-                  "universe": { "instrumentIds": [] },
-                  "strategy": { "strategyId": "MA_CROSSOVER", "parameters": {} },
-                  "portfolio": { "initialCash": "10000000" }
-                }
-                """);
-
-        verify(backtestService, never()).create(any());
-    }
-
-    @Test
-    @DisplayName("maxPositionPct가 0이거나 1을 넘으면 400")
-    void createRejectsMaxPositionPctOutOfRange() throws Exception {
-        expectBadRequest(VALID_BODY.replace("0.50", "0"));
-        expectBadRequest(VALID_BODY.replace("0.50", "1.01"));
-
-        verify(backtestService, never()).create(any());
-    }
-
-    @Test
-    @DisplayName("저장 컬럼보다 세밀한 소수는 400")
-    void createRejectsTooPreciseDecimals() throws Exception {
-        expectBadRequest(VALID_BODY.replace("10000000", "0.001"));
-        expectBadRequest(VALID_BODY.replace("0.50", "0.00001"));
-
-        verify(backtestService, never()).create(any());
-    }
-
-    @Test
-    @DisplayName("strategyId가 64자를 넘으면 400, 64자는 통과")
-    void createChecksStrategyIdLength() throws Exception {
-        expectBadRequest(
-                VALID_BODY.replace(
-                        "MA_CROSSOVER", "A".repeat(BacktestJob.MAX_STRATEGY_ID_LENGTH + 1)));
-        verify(backtestService, never()).create(any());
-
-        expectAccepted(
-                VALID_BODY.replace("MA_CROSSOVER", "A".repeat(BacktestJob.MAX_STRATEGY_ID_LENGTH)));
-    }
-
-    @Test
-    @DisplayName("parameters 값이 null이면 500이 아니라 400")
-    void createRejectsNullParameterValue() throws Exception {
-        when(backtestService.create(any()))
-                .thenThrow(new IllegalArgumentException("parameters must not contain null values"));
-
-        expectBadRequest(VALID_BODY.replace("20, ", "null, "));
-    }
-
-    @Test
-    @DisplayName("initialCash가 0 이하면 400")
-    void createRejectsNonPositiveCash() throws Exception {
-        expectBadRequest(VALID_BODY.replace("10000000", "0"));
-
-        verify(backtestService, never()).create(any());
-    }
-
-    @Test
-    @DisplayName("start가 end보다 늦으면 도메인이 거부해 400")
-    void createRejectsInvertedPeriod() throws Exception {
-        when(backtestService.create(any()))
-                .thenThrow(new IllegalArgumentException("startDate must not be after endDate"));
-
-        expectBadRequest(VALID_BODY.replace("2025-01-01", "2025-12-31"));
-    }
-
-    @Test
-    @DisplayName("발행 실패는 503 BROKER_UNAVAILABLE로 응답한다")
-    void createReturnsServiceUnavailableWhenBrokerDown() throws Exception {
-        when(backtestService.create(any()))
-                .thenThrow(
-                        new BacktestPublishFailedException(
-                                BACKTEST_ID, new RuntimeException("broker down")));
-
+    @DisplayName("요청자 헤더가 없으면 400이고 접수하지 않는다")
+    void missingRequesterHeaderIsRejected() throws Exception {
         mockMvc.perform(
                         post("/backtests")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(VALID_BODY))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("BROKER_UNAVAILABLE"));
+                .andExpect(status().isBadRequest());
+
+        verify(backtestService, never()).create(any());
     }
 
-    // ---------- GET /backtests/{backtestId} ----------
+    @Test
+    @DisplayName("필수 블록이 빠지면 400이다")
+    void missingBlocksAreRejected() throws Exception {
+        postBody("{}").andExpect(status().isBadRequest());
+        verify(backtestService, never()).create(any());
+    }
 
-    private static final BacktestDetailResult.Config CONFIG =
-            new BacktestDetailResult.Config(
-                    "MA_CROSSOVER",
-                    "1.0.0",
-                    Map.of("shortWindow", 20),
-                    List.of("005930.XKRX"),
-                    LocalDate.of(2025, 1, 1),
-                    LocalDate.of(2025, 6, 30),
-                    new BigDecimal("10000000.00"),
-                    "KRW",
-                    "069500.XKRX");
+    @Test
+    @DisplayName("종목 형식이 어긋나면 400이다")
+    void malformedInstrumentIsRejected() throws Exception {
+        postBody(VALID_BODY.replace("091160.XKRX", "091160.KS")).andExpect(status().isBadRequest());
+        verify(backtestService, never()).create(any());
+    }
 
-    private static BacktestDetailResult detail(
-            BacktestStatus status,
-            BacktestDetailResult.Summary summary,
-            BacktestDetailResult.Error error) {
+    @Test
+    @DisplayName("시작 금액이 0 이하면 400이다")
+    void nonPositiveCashIsRejected() throws Exception {
+        postBody(VALID_BODY.replace("\"10000000.00\"", "\"0\"")).andExpect(status().isBadRequest());
+        verify(backtestService, never()).create(any());
+    }
+
+    @Test
+    @DisplayName("워밍업 거래일 수가 음수면 400이다")
+    void negativeWarmupIsRejected() throws Exception {
+        postBody(VALID_BODY.replace("\"warmupTradingDays\": null", "\"warmupTradingDays\": -1"))
+                .andExpect(status().isBadRequest());
+        verify(backtestService, never()).create(any());
+    }
+
+    // --- 조회 ---------------------------------------------------------------
+
+    private static BacktestDetailResult detail(RunStatus status) {
         return new BacktestDetailResult(
                 BACKTEST_ID,
                 status,
-                CONFIG,
-                summary,
-                error,
-                status.isFinal() ? Instant.parse("2026-09-07T01:00:00Z") : null,
-                status.isFinal() ? Instant.parse("2026-09-07T01:00:12Z") : null);
+                ResultSource.NEW,
+                false,
+                new BacktestDetailResult.Progress(
+                        ProgressStage.COMPUTING, LocalDate.of(2024, 6, 28), 120, 360),
+                Instant.parse("2026-09-11T04:00:00Z"),
+                Instant.parse("2026-09-11T04:00:04Z"),
+                null,
+                4L,
+                Map.of("strategyId", "FIXED_WEIGHT"),
+                Map.of("rules", "1"),
+                null,
+                null,
+                null);
     }
 
     @Test
-    @DisplayName("QUEUED·RUNNING은 config만 있고 summary·error는 null이다")
-    void getReturnsConfigOnlyBeforeResult() throws Exception {
-        when(queryService.getDetail(BACKTEST_ID))
-                .thenReturn(detail(BacktestStatus.RUNNING, null, null));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
-                .andExpect(jsonPath("$.data.status").value("RUNNING"))
-                .andExpect(jsonPath("$.data.config.strategyVersion").value("1.0.0"))
-                .andExpect(jsonPath("$.data.summary").value(nullValue()))
-                .andExpect(jsonPath("$.data.error").value(nullValue()))
-                .andExpect(jsonPath("$.data.startedAt").value(nullValue()));
-    }
-
-    @Test
-    @DisplayName("COMPLETED는 summary를 담고 decimal은 전부 문자열이다")
-    void getReturnsSummaryWithStringDecimals() throws Exception {
-        BacktestDetailResult.Summary summary =
-                new BacktestDetailResult.Summary(
-                        new BigDecimal("10000000.00"),
-                        new BigDecimal("11666521.51"),
-                        "KRW",
-                        new BigDecimal("0.166652"),
-                        new BigDecimal("0.366917"),
-                        new BigDecimal("-0.041757"),
-                        new BigDecimal("2.342630"),
-                        new BigDecimal("0.132307"),
-                        2,
-                        new BigDecimal("0.500000"),
-                        new BigDecimal("3941.19"),
-                        new BigDecimal("13137.30"),
-                        new BacktestDetailResult.Benchmark(
-                                "069500.XKRX", new BigDecimal("0.053292")));
-        when(queryService.getDetail(BACKTEST_ID))
-                .thenReturn(detail(BacktestStatus.COMPLETED, summary, null));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
-                // 숫자로 나오면 계약 위반이다. value(String)은 타입까지 본다
-                .andExpect(jsonPath("$.data.summary.totalReturn").value("0.166652"))
-                .andExpect(jsonPath("$.data.summary.initialEquity").value("10000000.00"))
-                .andExpect(jsonPath("$.data.config.initialCash").value("10000000.00"))
-                .andExpect(jsonPath("$.data.summary.benchmark.totalReturn").value("0.053292"))
-                // tradeCount는 계약상 정수다
-                .andExpect(jsonPath("$.data.summary.tradeCount").value(2))
-                .andExpect(jsonPath("$.data.error").value(nullValue()));
-    }
-
-    @Test
-    @DisplayName("FAILED도 200이고 error를 담는다. summary는 null")
-    void getReturnsOkWhenBacktestFailed() throws Exception {
-        when(queryService.getDetail(BACKTEST_ID))
-                .thenReturn(
-                        detail(
-                                BacktestStatus.FAILED,
-                                null,
-                                new BacktestDetailResult.Error("NO_MARKET_DATA", "no data")));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("FAILED"))
-                .andExpect(jsonPath("$.data.error.code").value("NO_MARKET_DATA"))
-                .andExpect(jsonPath("$.data.summary").value(nullValue()));
-    }
-
-    @Test
-    @DisplayName("없는 backtestId는 404와 RESOURCE_NOT_FOUND")
-    void getReturnsNotFound() throws Exception {
-        String missing = "BT-20260907-999999";
-        when(queryService.getDetail(missing)).thenThrow(new BacktestNotFoundException(missing));
-
-        mockMvc.perform(get("/backtests/" + missing))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.data").isEmpty())
-                .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
-    }
-
-    // ---------- GET /backtests/{backtestId}/trades ----------
-
-    private static BacktestTradePageResult tradePage(int page, int size) {
-        EngineOutput.TradeResult open =
-                new EngineOutput.TradeResult(
-                        "TRD-000003",
-                        "005930.XKRX",
-                        TradeSide.LONG,
-                        TradeStatus.OPEN,
-                        Instant.parse("2025-05-14T00:00:00Z"),
-                        null,
-                        new BigDecimal("60000.00"),
-                        null,
-                        new BigDecimal("90"),
-                        null,
-                        new BigDecimal("810.00"),
-                        new BigDecimal("2700.00"),
-                        null,
-                        null,
-                        null,
-                        null);
-        return new BacktestTradePageResult(BACKTEST_ID, page, size, 1, 1, List.of(open));
-    }
-
-    private FindBacktestTradesQuery capturedTradeQuery() {
-        ArgumentCaptor<FindBacktestTradesQuery> captor =
-                ArgumentCaptor.forClass(FindBacktestTradesQuery.class);
-        verify(queryService)
-                .getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), captor.capture());
-        return captor.getValue();
-    }
-
-    @Test
-    @DisplayName("OPEN 거래의 청산 필드는 명시적 null이다 — 키를 생략하지 않는다")
-    void getTradesKeepsExplicitNullsForOpenTrade() throws Exception {
-        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
-                .thenReturn(tradePage(0, 100));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].entryDate").value("2025-05-14"))
-                .andExpect(jsonPath("$.data.content[0].entryPrice").value("60000.00"))
-                // 키가 있고 값이 null이다. doesNotExist()가 아니다
-                .andExpect(jsonPath("$.data.content[0].exitDate").value(nullValue()))
-                .andExpect(jsonPath("$.data.content[0].realizedPnl").value(nullValue()));
-    }
-
-    @Test
-    @DisplayName("page·size를 생략하면 0·100을 채운다")
-    void getTradesAppliesDefaults() throws Exception {
-        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
-                .thenReturn(tradePage(0, 100));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades")).andExpect(status().isOk());
-
-        FindBacktestTradesQuery query = capturedTradeQuery();
-        assertThat(query.page()).isZero();
-        assertThat(query.size()).isEqualTo(100);
-        assertThat(query.instrumentId()).isNull();
-        assertThat(query.status()).isNull();
-    }
-
-    @Test
-    @DisplayName("생략과 명시적 size=0은 다르다 — 0은 400이다")
-    void getTradesRejectsExplicitZeroSize() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("size", "0"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
-
-        verify(queryService, never()).getTrades(org.mockito.ArgumentMatchers.anyString(), any());
-    }
-
-    @Test
-    @DisplayName("size가 1000을 넘거나 page가 음수면 400")
-    void getTradesRejectsOutOfRange() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("size", "1001"))
-                .andExpect(status().isBadRequest());
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("page", "-1"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("instrumentId 형식 위반은 빈 페이지가 아니라 400이다")
-    void getTradesRejectsMalformedInstrumentId() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("instrumentId", "abc"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
-
-        verify(queryService, never()).getTrades(org.mockito.ArgumentMatchers.anyString(), any());
-    }
-
-    @Test
-    @DisplayName("모르는 status 값은 400")
-    void getTradesRejectsUnknownStatus() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/trades").param("status", "UNKNOWN"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("필터는 커맨드로 그대로 넘어간다")
-    void getTradesPassesFilters() throws Exception {
-        when(queryService.getTrades(org.mockito.ArgumentMatchers.eq(BACKTEST_ID), any()))
-                .thenReturn(tradePage(1, 20));
+    @DisplayName("상태 조회는 진행·대기 시간·버전을 담아 200을 돌려준다")
+    void getDetail() throws Exception {
+        when(queryService.getDetail(eq(BACKTEST_ID), anyLong()))
+                .thenReturn(detail(RunStatus.RUNNING));
 
         mockMvc.perform(
-                        get("/backtests/" + BACKTEST_ID + "/trades")
-                                .param("page", "1")
-                                .param("size", "20")
-                                .param("instrumentId", "005930.XKRX")
-                                .param("status", "OPEN"))
-                .andExpect(status().isOk());
-
-        FindBacktestTradesQuery query = capturedTradeQuery();
-        assertThat(query.page()).isEqualTo(1);
-        assertThat(query.size()).isEqualTo(20);
-        assertThat(query.instrumentId()).isEqualTo("005930.XKRX");
-        assertThat(query.status()).isEqualTo(TradeStatus.OPEN);
-    }
-
-    // ---------- GET /backtests/{backtestId}/positions ----------
-
-    @Test
-    @DisplayName("보유는 snapshotDate를 함께 담는다 — 요청일과 다를 수 있다")
-    void getPositionsIncludesSnapshotDate() throws Exception {
-        when(queryService.getPositions(BACKTEST_ID, LocalDate.of(2025, 1, 23)))
-                .thenReturn(
-                        new BacktestPositionsResult(
-                                BACKTEST_ID,
-                                LocalDate.of(2025, 1, 23),
-                                LocalDate.of(2025, 1, 22),
-                                List.of(
-                                        new BacktestPositionsResult.Position(
-                                                "005930.XKRX",
-                                                new BigDecimal("90"),
-                                                new BigDecimal("4743000.00"),
-                                                new BigDecimal("0.406000"),
-                                                new BigDecimal("-87300.00")))));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions").param("date", "2025-01-23"))
+                        get("/backtests/{id}", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.requestedDate").value("2025-01-23"))
-                .andExpect(jsonPath("$.data.snapshotDate").value("2025-01-22"))
-                .andExpect(jsonPath("$.data.positions[0].marketValue").value("4743000.00"))
-                .andExpect(jsonPath("$.data.positions[0].weight").value("0.406000"));
+                .andExpect(jsonPath("$.data.status").value("RUNNING"))
+                .andExpect(jsonPath("$.data.partial").value(false))
+                .andExpect(jsonPath("$.data.progress.stage").value("COMPUTING"))
+                .andExpect(jsonPath("$.data.progress.lastTradingDate").value("2024-06-28"))
+                .andExpect(jsonPath("$.data.queueWaitSeconds").value(4))
+                .andExpect(jsonPath("$.data.versions.rules").value("1"));
     }
 
     @Test
-    @DisplayName("date를 빠뜨리면 400 INVALID_INPUT이고 본문도 ApiResponse다")
-    void getPositionsRequiresDate() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    @DisplayName("남의 요청과 없는 식별자는 똑같이 404다")
+    void unknownOrForeignBacktestIsNotFound() throws Exception {
+        when(queryService.getDetail(eq(BACKTEST_ID), anyLong()))
+                .thenThrow(new BacktestNotFoundException(BACKTEST_ID));
+
+        mockMvc.perform(
+                        get("/backtests/{id}", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("date 형식이 틀리면 400")
-    void getPositionsRejectsMalformedDate() throws Exception {
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/positions").param("date", "2025-13-99"))
-                .andExpect(status().isBadRequest());
+    @DisplayName("하위 리소스도 요청자 헤더가 없으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다")
+    void subResourcesRequireRequester() throws Exception {
+        for (String path :
+                List.of(
+                        "/timeseries",
+                        "/trades",
+                        "/positions?date=2024-06-28",
+                        "/weights",
+                        "/exceptions")) {
+            mockMvc.perform(get("/backtests/" + BACKTEST_ID + path))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(queryService);
     }
 
-    // ---------- GET /backtests/{backtestId}/timeseries ----------
-
     @Test
-    @DisplayName("시계열은 points를 담고 benchmarkReturn이 없으면 키를 생략한다")
-    void getTimeseriesOmitsBenchmarkReturnKey() throws Exception {
-        when(queryService.getTimeseries(BACKTEST_ID))
+    @DisplayName("비중 기록은 리밸런싱 포인트·비중 출처·partial 을 내려준다 — 없는 선택 항목은 키를 생략한다")
+    void weightsEndpoint() throws Exception {
+        when(queryService.getWeights(eq(BACKTEST_ID), anyLong()))
                 .thenReturn(
-                        new BacktestTimeseriesResult(
+                        new BacktestWeightsResult(
                                 BACKTEST_ID,
+                                false,
+                                WeightsSource.USER,
                                 List.of(
-                                        new BacktestTimeseriesResult.Point(
-                                                LocalDate.of(2025, 1, 2),
-                                                new BigDecimal("10000000.00"),
-                                                new BigDecimal("0.000000"),
-                                                new BigDecimal("0.000000"),
-                                                new BigDecimal("0.000000")),
-                                        new BacktestTimeseriesResult.Point(
-                                                LocalDate.of(2025, 1, 3),
-                                                new BigDecimal("10100000.00"),
-                                                new BigDecimal("0.010000"),
-                                                new BigDecimal("0.000000"),
+                                        new EngineOutput.WeightsPoint(
+                                                LocalDate.of(2024, 1, 3),
+                                                Map.of("091160.XKRX", new BigDecimal("0.4000")),
+                                                Map.of("091160.XKRX", new BigDecimal("0.3998")),
+                                                new BigDecimal("0.0002"),
+                                                null,
                                                 null))));
 
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+        mockMvc.perform(
+                        get("/backtests/{id}/weights", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.points.length()").value(2))
-                .andExpect(jsonPath("$.data.points[0].equity").value("10000000.00"))
-                .andExpect(jsonPath("$.data.points[0].benchmarkReturn").value("0.000000"))
-                // 벤치마크가 없는 포인트는 키 자체가 없다 (null이 아니다)
-                .andExpect(jsonPath("$.data.points[1].benchmarkReturn").doesNotExist());
+                .andExpect(jsonPath("$.data.weightsSource").value("USER"))
+                .andExpect(jsonPath("$.data.partial").value(false))
+                .andExpect(jsonPath("$.data.points[0].target['091160.XKRX']").value("0.4000"))
+                .andExpect(jsonPath("$.data.points[0].weightError").value("0.0002"))
+                .andExpect(jsonPath("$.data.points[0].riskScale").doesNotExist());
     }
 
     @Test
-    @DisplayName("결과 전이면 409 RESULT_NOT_READY (폴링 계속)")
-    void getTimeseriesReturnsConflictWhenNotReady() throws Exception {
-        when(queryService.getTimeseries(BACKTEST_ID))
-                .thenThrow(
-                        new BacktestResultNotReadyException(BACKTEST_ID, BacktestStatus.RUNNING));
+    @DisplayName("예외 기록은 항목 그대로 내려준다")
+    void exceptionsEndpoint() throws Exception {
+        when(queryService.getExceptions(eq(BACKTEST_ID), anyLong()))
+                .thenReturn(
+                        new BacktestExceptionsResult(
+                                BACKTEST_ID,
+                                true,
+                                List.of(
+                                        new EngineOutput.ExceptionRecord(
+                                                LocalDate.of(2024, 6, 11),
+                                                "091160.XKRX",
+                                                "HALT_DEFERRED",
+                                                "DEFER_TO_NEXT_TRADABLE",
+                                                "planned 2024-06-11 -> next tradable day"))));
 
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+        mockMvc.perform(
+                        get("/backtests/{id}/exceptions", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.partial").value(true))
+                .andExpect(jsonPath("$.data.items[0].kind").value("HALT_DEFERRED"))
+                .andExpect(jsonPath("$.data.items[0].instrumentId").value("091160.XKRX"));
+    }
+
+    @Test
+    @DisplayName("결과가 준비되지 않은 하위 리소스는 409다")
+    void subResourceNotReady() throws Exception {
+        when(queryService.getTimeseries(eq(BACKTEST_ID), anyLong()))
+                .thenThrow(new BacktestResultNotReadyException(BACKTEST_ID, RunStatus.RUNNING));
+
+        mockMvc.perform(
+                        get("/backtests/{id}/timeseries", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
     }
 
     @Test
-    @DisplayName("FAILED면 409 BACKTEST_FAILED (폴링 중단)")
-    void getTimeseriesReturnsConflictWhenFailed() throws Exception {
-        when(queryService.getTimeseries(BACKTEST_ID))
+    @DisplayName("실패한 백테스트의 하위 리소스는 409 BACKTEST_FAILED다")
+    void subResourceFailed() throws Exception {
+        when(queryService.getTrades(eq(BACKTEST_ID), anyLong(), any()))
                 .thenThrow(new BacktestFailedException(BACKTEST_ID));
 
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID + "/timeseries"))
+        mockMvc.perform(
+                        get("/backtests/{id}/trades", BACKTEST_ID)
+                                .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
-    }
-
-    @Test
-    @DisplayName("최종 상태인데 결과 행이 없으면 500이다 — RESULT_NOT_READY로 감추지 않는다")
-    void getReturnsServerErrorOnMissingResultRow() throws Exception {
-        when(queryService.getDetail(BACKTEST_ID))
-                .thenThrow(new IllegalStateException("결과 행이 없습니다"));
-
-        mockMvc.perform(get("/backtests/" + BACKTEST_ID))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"));
     }
 }

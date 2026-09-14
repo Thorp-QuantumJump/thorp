@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build --configLoader runner",
     "lint": "eslint .",
     "pretest": "node -e \"require('node:fs').mkdirSync('build/test-results', { recursive: true })\"",
-    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=build/test-results/node-test.xml \"src/**/*.test.ts\"",
+    "test": "npm run test:dom && npm run test:legacy",
+    "test:dom": "vitest run --configLoader runner --reporter=default --reporter=junit --outputFile.junit=build/test-results/vitest.xml",
+    "test:legacy": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=build/test-results/node-test.xml src/api/market.test.ts src/utils/indicatorHistory.test.ts src/utils/marketComparison.test.ts src/utils/marketFormat.test.ts",
     "check:shader": "vgpu check src/components/landing/market-atmosphere.wgsl --require-validation",
     "preview": "vite preview"
   },
@@ -41,6 +43,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^26.4.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
@@ -50,8 +54,10 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "jsdom": "^30.0.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^5.0.0"
   }
 }

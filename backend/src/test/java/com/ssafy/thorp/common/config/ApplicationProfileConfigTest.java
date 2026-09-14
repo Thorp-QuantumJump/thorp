@@ -81,7 +81,12 @@ class ApplicationProfileConfigTest {
                         });
     }
 
-    /** 운영에서는 Flyway가 스키마를 만들고 Hibernate는 검증만 한다. baseline은 자동으로 켜지 않는다. */
+    /**
+     * 운영에서는 Flyway가 스키마를 만들고 Hibernate는 검증만 한다. baseline은 자동으로 켜지 않고, 스키마를 통째로 지우는 clean은 막아 둔다.
+     *
+     * <p>clean-disabled는 Flyway 기본값도 true지만 설정에 적고 여기서 단언한다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 드러나지
+     * 않는다.
+     */
     @Test
     void prodProfileDelegatesSchemaToFlywayAndValidatesWithHibernate() {
         prodContextRunner()
@@ -98,6 +103,8 @@ class ApplicationProfileConfigTest {
                             assertThat(environment.getProperty("spring.flyway.baseline-on-migrate"))
                                     .isEqualTo("false");
                             assertThat(environment.getProperty("spring.flyway.validate-on-migrate"))
+                                    .isEqualTo("true");
+                            assertThat(environment.getProperty("spring.flyway.clean-disabled"))
                                     .isEqualTo("true");
                         });
     }

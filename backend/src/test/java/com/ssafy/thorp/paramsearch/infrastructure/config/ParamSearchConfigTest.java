@@ -2,6 +2,7 @@ package com.ssafy.thorp.paramsearch.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindException;
@@ -36,10 +37,12 @@ class ParamSearchConfigTest {
     }
 
     @Test
-    @DisplayName("플래그 키가 아예 없어도 꺼진 것으로 보고 컨텍스트는 정상이다")
-    void missingFlagIsTreatedAsDisabled() {
+    @DisplayName("플래그 값이 비어 있으면 꺼진 것으로 보고 컨텍스트는 정상이다")
+    void blankFlagIsTreatedAsDisabled() {
+        // 공통 설정이 M3에서 true가 됐으므로 "키가 없는" 상태는 yml로 재현할 수 없다. 지켜야 하는
+        // 성질은 그대로다 — true가 아닌 값은 전부 꺼짐이고, 그때 한도가 없어도 기동은 멀쩡하다.
         contextRunner
-                .withPropertyValues("spring.profiles.active=none")
+                .withPropertyValues("spring.profiles.active=none", "thorp.param-search.enabled=")
                 .run(
                         context -> {
                             assertThat(context).hasNotFailed();
@@ -48,8 +51,8 @@ class ParamSearchConfigTest {
     }
 
     @Test
-    @DisplayName("공통 설정만 쓰는 환경(local 프로필 아님)은 플래그가 꺼져 있어 기동한다")
-    void sharedConfigDisablesParamSearch() {
+    @DisplayName("공통 설정은 M3에서 플래그를 켰고 네 한도가 모두 채워져 있다")
+    void sharedConfigEnablesParamSearch() {
         contextRunner
                 .withPropertyValues("spring.profiles.active=none")
                 .run(
@@ -57,8 +60,8 @@ class ParamSearchConfigTest {
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty("thorp.param-search.enabled"))
-                                    .isEqualTo("false");
-                            // 한도 네 값이 모두 임시값으로 채워져 있다. 플래그만 꺼져 있다.
+                                    .isEqualTo("true");
+                            // 켜 둔 이상 네 값이 반드시 있어야 한다. 하나라도 비면 기동이 실패한다.
                             // 후보 수 상한과 실행시간 상한은 함께 정한 값이라 같이 단언한다 —
                             // 한쪽만 바뀌면 예산(상한 x 건당시간 <= 실행시간)이 깨진다.
                             assertThat(
@@ -81,6 +84,16 @@ class ParamSearchConfigTest {
                                                     .getProperty(
                                                             "thorp.param-search.consecutive-failure-limit"))
                                     .isEqualTo("5");
+                            assertThat(context).hasNotFailed();
+                            assertThat(context).hasSingleBean(ParamSearchProperties.class);
+                            // 유스케이스가 쓰는 모양으로도 옮겨진다(application 계층은 설정 클래스를 모른다).
+                            assertThat(context).hasSingleBean(SearchLimits.class);
+                            assertThat(context.getBean(SearchLimits.class).provisional())
+                                    .containsExactlyInAnyOrder(
+                                            "maxCandidates",
+                                            "dispatchWindow",
+                                            "timeLimitSeconds",
+                                            "consecutiveFailureLimit");
                         });
     }
 
@@ -115,9 +128,13 @@ class ParamSearchConfigTest {
                 .run(
                         context -> {
                             assertThat(context).hasFailed();
-                            assertThat(context)
-                                    .getFailure()
-                                    .isInstanceOf(ConfigurationPropertiesBindException.class);
+                            // 예외 타입을 고정하지 않는다. 한도를 쓰는 빈(searchLimits)이 생긴 뒤로는
+                            // 바인딩 실패가 그 빈의 생성 실패로 한 겹 감싸여 올라온다 — 확인할 것은
+                            // 포장지가 아니라 "기동이 멈췄고 원인이 바인딩 실패"라는 사실이다.
+                            assertThat(context.getStartupFailure())
+                                    .hasStackTraceContaining(
+                                            ConfigurationPropertiesBindException.class
+                                                    .getSimpleName());
                             // 어느 값이 빠졌는지가 오류에 드러나야 설정으로 고칠 수 있다.
                             // 필드 이름은 최상위 메시지가 아니라 원인(BindValidationException)에 담긴다.
                             // 공통 설정에서 아직 비어 있는 값은 실행시간 상한 하나다(PD-05 잔여).

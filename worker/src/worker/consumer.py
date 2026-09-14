@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import socket
+import sys
 import time
 import uuid
 from collections.abc import Callable, Mapping
@@ -47,7 +48,7 @@ from worker.messaging import (
     JobAcknowledger,
     PublishError,
 )
-from worker.nautilus_engine import CallbackError
+from worker.portfolio_execution import CallbackError
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,18 @@ def _seconds(value: float) -> Decimal:
     return Decimal(f"{value:.3f}")
 
 
+def peak_rss_mb() -> Decimal | None:
+    """프로세스 최대 상주 메모리(MB). 못 재는 플랫폼(Windows)에서는 None → 키 생략."""
+    try:
+        import resource
+    except ImportError:
+        return None
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # Linux 는 KiB, macOS 는 bytes 로 준다.
+    divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
+    return Decimal(f"{peak / divisor:.1f}")
+
+
 class _EventStream:
     """한 번의 엔진 실행이 발행하는 이벤트 순서와 ``sequence`` 를 관리한다.
 
@@ -142,8 +155,8 @@ class _EventStream:
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
     def finished(self, output: EngineOutput) -> None:
-        # ponytail: peakRssMb는 재지 않는다(resource 모듈이 Windows에 없다). 필요하면 psutil.
         usage = ResourceUsage(
+            peak_rss_mb=peak_rss_mb(),
             cpu_seconds=_seconds(time.process_time() - self._cpu_started),
             wall_seconds=_seconds(time.monotonic() - self._wall_started),
         )

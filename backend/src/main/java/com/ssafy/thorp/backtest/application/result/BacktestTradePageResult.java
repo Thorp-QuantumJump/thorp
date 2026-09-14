@@ -12,6 +12,7 @@ import java.util.List;
  */
 public record BacktestTradePageResult(
         String backtestId,
+        boolean partial,
         int page,
         int size,
         long totalElements,

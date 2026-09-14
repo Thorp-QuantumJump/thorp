@@ -1,6 +1,7 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { lazy, Suspense, useLayoutEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { LandingPage } from '@/pages/LandingPage'
 
 // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.
@@ -20,6 +21,18 @@ const HomePage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
     default: module.DashboardPage,
+  })),
+)
+
+const SignupPage = lazy(() =>
+  import('@/pages/SignupPage').then((module) => ({
+    default: module.SignupPage,
+  })),
+)
+
+const LoginPage = lazy(() =>
+  import('@/pages/LoginPage').then((module) => ({
+    default: module.LoginPage,
   })),
 )
 
@@ -47,6 +60,22 @@ function AnimatedRoutes() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
+            <Route
+              path="/signup"
+              element={
+                <AuthEntryGuard>
+                  <SignupPage />
+                </AuthEntryGuard>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <AuthEntryGuard>
+                  <LoginPage />
+                </AuthEntryGuard>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

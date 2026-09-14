@@ -1,17 +1,16 @@
 package com.ssafy.thorp.backtest.presentation.request;
 
-import com.ssafy.thorp.backtest.domain.model.BacktestJob;
-import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,53 +18,59 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 백테스트 실행 요청. 계약 기준은 {@code docs/specs/backtest-api/}(README와 요청 예시)다.
+ * 분석 요청 접수 본문(spec 004 contracts/rest-api.md, schema v2).
  *
- * <p>소수 자릿수는 저장 컬럼에 맞춘다. initialCash는 NUMERIC(19,2), maxPositionPct는 NUMERIC(5,4)이라 더 세밀한 값을 받으면 저장
- * 시 반올림되어 도메인 값과 저장값이 달라진다.
+ * <p>v1과 모양이 다르다. 종목 목록 대신 <b>섹터 배분</b>({@code sectorAllocation})을 받고, 전략에 규칙 버전이 붙고, 기간·금액·시나리오가
+ * {@code conditions}로 모인다. 003 화면이 만드는 요청 그대로다.
  *
- * <p>기간 역전(start가 end보다 늦음)은 도메인 값 객체가 거부하고 전역 핸들러가 400으로 바꾼다. 전략 파라미터의 스키마 검증은 전략 카탈로그 작업의 몫이며
- * 여기서는 strategyId가 비어 있지 않은지만 본다.
- *
- * @param benchmark null = 벤치마크 미지정
+ * <p>여기서는 <b>모양</b>만 본다 — 비중 합, 규칙 등록 여부, 워밍업 가용성처럼 등록표·자료를 봐야 아는 것은 서비스가 판단한다. 이 구분을 지키지 않으면 검증이 두
+ * 군데로 갈라져 한쪽만 고치는 일이 생긴다.
  */
 public record BacktestJobRequest(
-        @NotNull @Valid RunRequest run,
-        @NotNull @Valid UniverseRequest universe,
+        @NotNull ExecutionType executionType,
+        @NotNull @Valid SectorAllocationRequest sectorAllocation,
         @NotNull @Valid StrategyRequest strategy,
-        @NotNull @Valid PortfolioRequest portfolio,
-        @Valid BenchmarkRequest benchmark) {
-
-    public record RunRequest(@NotNull LocalDate start, @NotNull LocalDate end) {}
-
-    public record UniverseRequest(
-            @NotEmpty @Size(max = 50)
-                    List<@NotBlank @Pattern(regexp = InstrumentId.REGEX) String> instrumentIds) {}
+        @NotNull @Valid ConditionsRequest conditions) {
 
     /**
-     * @param parameters 전략별 자유 형식. 값에 null은 쓰지 않는다(계약상 null은 키 생략)
+     * @param mappingVersion 섹터-ETF 대응표 버전. 서버가 이 버전으로 (섹터, 종목) 쌍을 검증한다
+     */
+    public record SectorAllocationRequest(
+            @NotBlank @Size(max = 64) String mappingVersion,
+            @NotEmpty @Size(max = 50) List<@NotNull @Valid AllocationItemRequest> items) {}
+
+    /**
+     * @param targetWeight FIXED_WEIGHT 에서만 필수이고 다른 전략에서는 금지다(서비스가 판단). 합은 1이어야 한다
+     */
+    public record AllocationItemRequest(
+            @NotBlank @Size(max = 64) String sectorId,
+            @NotBlank @Pattern(regexp = InstrumentId.REGEX) String instrumentId,
+            @Digits(integer = 1, fraction = 4) BigDecimal targetWeight) {}
+
+    /**
+     * @param registryVersion 003 파라미터 등록표 버전. 지금은 기록만 하고 검증하지 않는다(003 미구현)
      */
     public record StrategyRequest(
-            @NotBlank @Size(max = BacktestJob.MAX_STRATEGY_ID_LENGTH) String strategyId,
+            @NotBlank @Size(max = BacktestRun.MAX_STRATEGY_ID_LENGTH) String strategyId,
+            @NotBlank @Size(max = 32) String rulesVersion,
+            @Size(max = 64) String registryVersion,
             @NotNull Map<String, Object> parameters) {}
 
     /**
-     * @param positionSizing null = 전략이 정하는 대로(제한 없음)
+     * @param costProfileVersion null = 서버 기본 비용 조건
+     * @param warmupTradingDays null = 선택 전략의 관측 길이를 쓴다. 값이 있으면 비교 묶음이 계산한 공통 워밍업이며 전략 요구값보다 작으면
+     *     422다(R-15)
+     * @param scenario null = FULL_PERIOD(주 분석)
+     * @param scenarioParams TARGET_RISK 면 {@code targetVolatility}, FRESH_CASH_FROM 이면 {@code
+     *     startDate}. 그 외 시나리오에서는 금지다
      */
-    public record PortfolioRequest(
+    public record ConditionsRequest(
+            @NotNull LocalDate start,
+            @NotNull LocalDate end,
             @NotNull @Positive @Digits(integer = 17, fraction = 2) BigDecimal initialCash,
-            @Valid PositionSizingRequest positionSizing) {}
-
-    /**
-     * @param maxPositionPct null = 제한 없음. 값이 있으면 도메인과 같은 (0, 1] 범위
-     */
-    public record PositionSizingRequest(
-            @NotNull PositionSizingMode type,
-            @DecimalMin(value = "0", inclusive = false)
-                    @DecimalMax("1")
-                    @Digits(integer = 1, fraction = 4)
-                    BigDecimal maxPositionPct) {}
-
-    public record BenchmarkRequest(
-            @NotBlank @Pattern(regexp = InstrumentId.REGEX) String instrumentId) {}
+            @Size(max = 32) String costProfileVersion,
+            @Size(max = 32) String evaluationSplitVersion,
+            @PositiveOrZero Integer warmupTradingDays,
+            String scenario,
+            Map<String, Object> scenarioParams) {}
 }

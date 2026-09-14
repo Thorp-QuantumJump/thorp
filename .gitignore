@@ -48,7 +48,10 @@ venv/
 .ipynb_checkpoints/
 
 # === Data artifacts (raw data는 커밋하지 않는다) ===
-data/raw/
+# 디렉터리 자체를 제외하면 그 안의 파일을 되살릴 수 없으므로 내용만 제외하고
+# .gitkeep을 남긴다. data/tests/test_pipeline_smoke.py가 raw/ 존재를 확인한다.
+data/raw/*
+!data/raw/.gitkeep
 data/processed/
 *.parquet
 *.csv.gz
@@ -73,3 +76,11 @@ infra/nginx/html/*
 !.agents/skills/**
 # AI 에이전트 인계 문서: 로컬 작업 메모라 저장소에 올리지 않는다
 docs/handoffs/
+# Spec 요약 문서: 로컬 이해·인계용 메모라 저장소에 올리지 않는다
+summary/
+
+# 이해를 돕기 위한 개인 학습 메모: 저장소에 올리지 않는다
+notes/
+
+# 요약·정리용 개인 작업 공간: 저장소에 올리지 않는다
+summary/

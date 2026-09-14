@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * V3 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.
+ * 자동 탐색 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.
  *
  * <p>Flyway·{@code ddl-auto=validate} 설정과 PostgreSQL 컨테이너는 {@link PostgresTestSupport}가 제공하므로, 스키마와
  * 매핑이 어긋나면 <b>컨텍스트 로딩 자체가 실패</b>한다. 로컬 프로필은 {@code ddl-auto=update} + Flyway 비활성이라 이 불일치를 잡지 못한다 —
@@ -41,6 +41,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p>컬럼 목록을 눈으로 맞춰 두는 단언이 함께 있는 이유는 {@code FlywayMigrationTest}와 같다. Hibernate는 타입 불일치를 경고로만 남기고
  * 통과시킨다.
+ *
+ * <p>마이그레이션이 실제로 적용됐는지는 {@code FlywayMigrationTest}가 클래스패스의 파일 목록과 대조해 한곳에서 확인한다. 여기서는 버전 번호를 적지 않고
+ * 이 도메인의 스키마 구조만 본다.
  */
 @DataJpaTest
 @Import({
@@ -69,20 +72,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     @Autowired private TestEntityManager entityManager;
 
     @Test
-    @DisplayName("V3가 적용되어 flyway_schema_history에 성공으로 기록된다")
-    void v3IsApplied() {
-        Integer applied =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM flyway_schema_history"
-                                + " WHERE version = '3' AND success = TRUE",
-                        Integer.class);
-
-        assertThat(applied).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("V3가 param_search를 Entity 매핑과 같은 컬럼으로 만든다")
-    void v3CreatesParamSearchColumns() {
+    @DisplayName("param_search가 Entity 매핑과 같은 컬럼을 가진다")
+    void paramSearchHasColumnsMatchingEntity() {
         assertThat(columnsOf("param_search"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -98,6 +89,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                         "selection_rule",
                         "limits",
                         "reference_versions",
+                        "execution_plan",
                         "baseline_job_id",
                         "status",
                         "stop_reason",
@@ -111,8 +103,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 search_candidate를 Entity 매핑과 같은 컬럼으로 만든다")
-    void v3CreatesSearchCandidateColumns() {
+    @DisplayName("search_candidate가 Entity 매핑과 같은 컬럼을 가진다")
+    void searchCandidateHasColumnsMatchingEntity() {
         assertThat(columnsOf("search_candidate"))
                 .containsExactlyInAnyOrder(
                         "id",
@@ -136,8 +128,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 PK용 시퀀스 둘을 만들고 후보 시퀀스 증분이 allocationSize(50)와 같다")
-    void v3CreatesSequencesWithMatchingIncrement() {
+    @DisplayName("PK용 시퀀스 둘이 있고 후보 시퀀스 증분이 allocationSize(50)와 같다")
+    void sequencesExistWithMatchingIncrement() {
         assertThat(sequenceExists("param_search_seq")).isEqualTo(1);
         assertThat(sequenceExists("search_candidate_seq")).isEqualTo(1);
 
@@ -154,8 +146,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK를 만든다")
-    void v3CreatesConstraints() {
+    @DisplayName("묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK가 있다")
+    void constraintsExist() {
         List<String> foreignKeyTables =
                 jdbcTemplate.queryForList(
                         "SELECT LOWER(table_name) FROM information_schema.table_constraints"
@@ -182,7 +174,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다")
+    @DisplayName("마이그레이션이 만든 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다")
     void entitiesRoundTripOnMigratedSchema() {
         ParamSearch saved = paramSearchRepository.save(newSearch());
         entityManager.flush();
@@ -225,7 +217,9 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                             assertThat(search.getRegistryVersion())
                                     .isEqualTo("PROVISIONAL-20260910");
                             // JSONB 왕복에서 탐색 공간의 축·값 순서가 보존되어야 저장된 그리드 좌표가 뜻을 유지한다.
-                            assertThat(search.getSearchSpace().valuesOf("lookbackDays"))
+                            assertThat(
+                                            search.getSearchSpace()
+                                                    .valuesOf("SECTOR_MOMENTUM", "lookbackDays"))
                                     .containsExactly(20, 60, 120);
                             assertThat(search.getSelectionRule().displayCount()).isEqualTo(5);
                             assertThat(search.getSelectionRule().isProvisional("displayCount"))
@@ -285,7 +279,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                             assertThat(search.getFinishedAt()).isNotNull();
                             // 접수 시점 스냅샷은 그대로다(FR-013c).
                             assertThat(search.getSelectionRule()).isEqualTo(newSelectionRule());
-                            assertThat(search.getSearchSpace().valuesOf("topN"))
+                            assertThat(search.getSearchSpace().valuesOf("SECTOR_MOMENTUM", "topN"))
                                     .containsExactly(2, 3);
                             assertThat(search.getRegistryVersion())
                                     .isEqualTo("PROVISIONAL-20260910");
@@ -354,16 +348,98 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                 .isEqualTo(4);
     }
 
+    @Test
+    @DisplayName("제외된 후보에는 실행 행이 만들어지지 않는다 — 계산 전 제외다")
+    void excludedCandidateHasNoBacktestRun() {
+        // 컨테이너를 공유하므로 다른 테스트가 남긴 행이 있다. 전체 개수가 아니라 변화량을 본다.
+        int runsBefore = countBacktestRuns();
+        ParamSearch saved = paramSearchRepository.save(newSearch());
+        candidateRepository.saveAll(
+                saved.getId(),
+                List.of(
+                        SearchCandidate.excluded(
+                                1,
+                                "SECTOR_MOMENTUM",
+                                ParameterCombination.of(Map.of("topN", 12)),
+                                GridCoordinates.of(Map.of("topN", 2)),
+                                "TOP_N_EXCEEDS_UNIVERSE",
+                                "상위 12개를 고르도록 설정했지만 후보 섹터가 2개입니다")));
+        entityManager.flush();
+        entityManager.clear();
+
+        // 제외는 실행 자원을 쓰지 않는다. 행이 생기면 "제약 위반"이 "실행 실패"로 남는다(FR-006, 원칙 VI).
+        assertThat(countBacktestRuns()).isEqualTo(runsBefore);
+        assertThat(candidateRepository.findByParamSearchId(saved.getId()))
+                .singleElement()
+                .satisfies(
+                        candidate -> {
+                            assertThat(candidate.getStatus()).isEqualTo(CandidateStatus.EXCLUDED);
+                            assertThat(candidate.getBacktestJobId()).isNull();
+                        });
+    }
+
+    @Test
+    @DisplayName("탐색 공간은 축을 배열로 저장해 JSONB 왕복에서 축 순서가 보존된다")
+    void searchSpaceKeepsAxisOrderAcrossJsonbRoundTrip() {
+        ParamSearch saved = paramSearchRepository.save(newSearch());
+        entityManager.flush();
+        entityManager.clear();
+
+        // 저장 형태부터 확인한다 — 축이 객체 키로 저장되면 jsonb가 키를 정렬하므로 아래 순서 단언이
+        // 우연히 통과할 수 있다(사전순으로 lookbackDays < topN). 배열이어야 순서가 뜻을 가진다.
+        assertThat(
+                        jsonbTypeOf(
+                                saved.getSearchId().value(),
+                                "search_space -> 'SECTOR_MOMENTUM' -> 'axes'"))
+                .isEqualTo("array");
+
+        assertThat(paramSearchRepository.findBySearchId(saved.getSearchId().value()))
+                .get()
+                .satisfies(
+                        search -> {
+                            SearchSpace space = search.getSearchSpace();
+                            assertThat(space.strategyIds()).containsExactly("SECTOR_MOMENTUM");
+                            // 넣은 순서 그대로다. 사전순(lookbackDays, topN)이 아니다.
+                            assertThat(space.axisNames("SECTOR_MOMENTUM"))
+                                    .containsExactly("topN", "lookbackDays");
+                            assertThat(space.valuesOf("SECTOR_MOMENTUM", "lookbackDays"))
+                                    .containsExactly(20, 60, 120);
+                            // 표시 정보도 함께 남는다 — 등록표 버전이 올라간 뒤에도 읽을 수 있어야 한다(FR-020).
+                            SearchSpace.StrategySpace strategy =
+                                    space.strategySpace("SECTOR_MOMENTUM");
+                            assertThat(strategy.strategyName()).isEqualTo("섹터 모멘텀");
+                            assertThat(strategy.axis("lookbackDays").label()).isEqualTo("관측 기간");
+                            assertThat(strategy.axis("lookbackDays").unit()).isEqualTo("거래일");
+                            assertThat(strategy.axis("topN").unit()).isNull();
+                            // 전체 조합 수 = 전략별 (축별 값 개수의 곱)의 합 (FR-027).
+                            assertThat(space.combinationCount()).isEqualTo(6L);
+                        });
+    }
+
+    private int countBacktestRuns() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM backtest_run", Integer.class);
+    }
+
+    private String jsonbTypeOf(String searchId, String jsonPathExpression) {
+        return jdbcTemplate.queryForObject(
+                "SELECT jsonb_typeof("
+                        + jsonPathExpression
+                        + ") FROM param_search"
+                        + " WHERE search_id = ?",
+                String.class,
+                searchId);
+    }
+
     /**
-     * 후보에 붙일 실제 {@code backtest_job} 행을 만든다.
+     * 후보에 붙일 실제 {@code backtest_run} 행을 만든다(004 T003 에서 {@code backtest_job} 이 개명됐다).
      *
-     * <p>{@code search_candidate.backtest_job_id}가 {@code backtest_job(id)}를 참조하므로 없는 Job id를 쓰면 FK
+     * <p>{@code search_candidate.backtest_job_id}가 {@code backtest_run(id)}를 참조하므로 없는 Job id를 쓰면 FK
      * 위반이다. 004의 접수 경로를 부르지 않고 행만 넣는 이유: 이 테스트가 검증하는 것은 007 스키마이고, Job 생성 규약은 {@code
      * FlywayMigrationTest}가 이미 본다.
      */
     private void insertBacktestJob(long id) {
         jdbcTemplate.update(
-                "INSERT INTO backtest_job (id, backtest_id, strategy_id, strategy_version,"
+                "INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,"
                         + " parameters, instrument_ids, start_date, end_date, initial_cash,"
                         + " position_sizing_type, random_seed, status, created_at, updated_at)"
                         + " VALUES (?, ?, 'SECTOR_MOMENTUM', '1.0.0', '{}'::jsonb,"
@@ -387,15 +463,32 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                 List.of("SECTOR_MOMENTUM"),
                 List.of("091160.XKRX", "091170.XKRX"),
                 "PROVISIONAL-20260910",
-                SearchSpace.of(
-                        Map.of(
-                                "lookbackDays", List.of(20, 60, 120),
-                                "topN", List.of(2, 3))),
+                newSearchSpace(),
                 newSelectionRule(),
                 null,
                 Map.of("maxCandidates", 1000, "provisional", List.of("maxCandidates")),
                 Map.of("engineVersion", "0.1.0"),
+                Map.of("initialCash", "10000000.00"),
                 SearchCounts.initial(6, 5, 1));
+    }
+
+    /**
+     * 축 이름을 사전 역순(topN → lookbackDays)으로 두는 이유: {@code jsonb}가 객체 키를 정렬해 저장하므로, 축이 객체 키라면 이 순서가 뒤집혀
+     * 돌아온다. 배열 저장이 지켜지는지 왕복 테스트가 그 차이로 확인한다.
+     */
+    private static SearchSpace newSearchSpace() {
+        return SearchSpace.of(
+                Map.of(
+                        "SECTOR_MOMENTUM",
+                        SearchSpace.StrategySpace.of(
+                                "섹터 모멘텀",
+                                List.of(
+                                        SearchSpace.Axis.of("topN", "선정 섹터 수", null, List.of(2, 3)),
+                                        SearchSpace.Axis.of(
+                                                "lookbackDays",
+                                                "관측 기간",
+                                                "거래일",
+                                                List.of(20, 60, 120))))));
     }
 
     private static SelectionRule newSelectionRule() {

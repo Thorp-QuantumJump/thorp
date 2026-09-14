@@ -13,11 +13,13 @@ import java.util.List;
  * <p>{@code equity}·{@code cash}·{@code positionValue}는 담지 않는다(설계 예시에 없다). 총자산은 {@code
  * /timeseries}가 날짜별로 이미 준다.
  *
+ * @param partial 취소·한도로 끊긴 부분 결과인가. 먼저 취소한 요청은 스냅샷 날짜 이하의 보유만 본다(R-04)
  * @param snapshotDate {@code requestedDate}보다 앞일 수 있다
  * @param positions 빈 리스트 = 그날 보유 없음이 확정. "스냅샷 없음"과 다르다
  */
 public record BacktestPositionsResult(
         String backtestId,
+        boolean partial,
         LocalDate requestedDate,
         LocalDate snapshotDate,
         List<Position> positions) {

@@ -1,0 +1,502 @@
+{
+  "$contract": "../evaluation-window.md. 이 파일은 그 산식의 검증 픽스처이며 SC-007이 말하는 '수기 계산'이 여기 적힌 expected다.",
+  "$readers": [
+    "worker/tests/test_evaluation_window.py (pytest)",
+    "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowTest.java (JUnit)"
+  ],
+  "$binding": "두 테스트가 이 파일 하나를 읽는다. 테스트 리소스로 복사하지 않는다 — 복사하면 어긋난다. 산식을 고칠 때는 contracts/README.md 「계약 변경 순서」대로 이 파일 → worker → backend 순으로 같은 MR에서 함께 고친다. 한쪽만 고치면 다른 쪽 빌드가 실패한다.",
+  "$commentKeys": "`$`로 시작하는 키는 주석이며 읽는 쪽이 보지 않는다. sample-sector-map.json과 같은 규칙이다.",
+  "$caseShape": "케이스마다 `input`과, 정상 결과면 `expected`, 오류면 `error`가 있다. 둘 다 없거나 둘 다 있는 케이스는 읽는 쪽이 실패로 다룬다 — 검사 장치가 조용히 꺼지지 않게 한다.",
+  "$validationOrder": "오류 판정 순서는 EMPTY_CANDIDATES → EMPTY_STRATEGIES → NEGATIVE_WARMUP → EMPTY_CALENDAR → INVALID_INSTRUMENT_ID → CALENDAR_TOO_SHORT다. 아래 오류 케이스는 각각 정확히 하나만 걸리도록 짰다.",
+  "$notInScope": "검증용 잠금 구간(FR-008)은 이 산식에 들어오지 않는다. 반환값은 자료로 평가할 수 있는 전체 범위이고, 탐색 구간과 잠금 구간으로 나누는 일은 007이 맡는다. 그래서 입력에도 출력에도 잠금 구간 항목이 없다.",
+  "$tradingCalendar": "거래일 달력은 확보한 지수 자료(`daily_index`)의 날짜 집합이다(evaluation-window.md 입력표, data-model.md). 별도의 거래일 표는 없다. 픽스처에서는 그 집합을 날짜 배열로 그대로 적는다 — 2024-01-01은 신정 휴장이고 01-06·01-07은 주말이라 빠져 있다.",
+  "$firstEvaluable": "`listedOn 이후 warmup 번째 거래일`은 달력에서 `listedOn` 이상인 거래일만 오름차순으로 추린 뒤 0-기준 `warmup`번째를 고른 것이다. warmup = 0이면 그 값이 `listedOn`이 된다(경계 동작표).",
+  "$judgements": [
+    "bindingCandidate 동점: firstEvaluable이 같은 후보가 여럿이면 입력 순서가 앞선 후보를 쓴다. 계약이 정하지 않아 정했고, 두 구현이 갈라지지 않게 binding-candidate-tie 케이스로 묶었다.",
+    "excludedRanges 합집합: 구간을 [commonStart, commonEnd]로 자른 뒤, 사유가 같고 겹치는 구간끼리만 합친다. 사유가 다른 구간을 합치면 `data_gaps.reason`을 잃는다. 정렬은 (start, end, reason) 오름차순이다.",
+    "evaluable이 false면(구간이 뒤집혔으면) excludedRanges는 빈 배열이다. 자를 대상 구간이 없다.",
+    "달력이 warmup을 채우지 못하면 CALENDAR_TOO_SHORT 오류다. 없는 날짜를 지어내지 않는다(원칙 VI)."
+  ],
+  "cases": [
+    {
+      "name": "single-candidate",
+      "$boundary": "후보가 하나 — 그 후보의 값이 그대로 나온다",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 3 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-05",
+        "commonEnd": "2024-01-12",
+        "warmupTradingDays": 3,
+        "bindingCandidate": "091160.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "zero-warmup",
+      "$boundary": "warmupTradingDays가 0 — 허용하며 firstEvaluable = listedOn",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-04",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "FIXED_WEIGHT", "warmupTradingDays": 0 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-04",
+        "commonEnd": "2024-01-12",
+        "warmupTradingDays": 0,
+        "bindingCandidate": "091160.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "longest-warmup-wins",
+      "$boundary": "산식 `warmup = max(strategies[].warmupTradingDays)` — 요청된 전략 중 가장 긴 워밍업이 반영된다(FR-007)",
+      "$why": "전략마다 warmup이 다를 때 평균이나 첫 값이 아니라 최댓값을 쓴다. 짧은 쪽을 쓰면 가장 긴 전략이 신호를 낼 수 없는 구간을 평가 기간에 넣게 된다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [
+          { "strategyId": "FIXED_WEIGHT", "warmupTradingDays": 0 },
+          { "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 4 },
+          { "strategyId": "MIN_VARIANCE", "warmupTradingDays": 2 }
+        ],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-08",
+        "commonEnd": "2024-01-12",
+        "warmupTradingDays": 4,
+        "bindingCandidate": "091160.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "delisted-candidate-pulls-end",
+      "$boundary": "상장폐지된 후보가 섞임 — commonEnd가 그 폐지일로 당겨진다",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          },
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-03",
+            "delistedOn": "2024-01-10",
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 2 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-05",
+        "commonEnd": "2024-01-10",
+        "warmupTradingDays": 2,
+        "bindingCandidate": "091170.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "data-deadline-caps-end",
+      "$boundary": "산식 `commonEnd = min(dataDeadline, ...)` — 폐지일이 자료 마감일보다 뒤면 마감일이 이긴다",
+      "$why": "폐지 예정일이 앞으로 잡혀 있어도 자료는 마감일까지만 있다. 마감일 뒤를 평가 기간에 넣으면 자료 없는 구간을 평가하게 된다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          },
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": "2024-01-31",
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "EQUAL_WEIGHT", "warmupTradingDays": 0 }],
+        "dataDeadline": "2024-01-10",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-02",
+        "commonEnd": "2024-01-10",
+        "warmupTradingDays": 0,
+        "bindingCandidate": "091160.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "binding-candidate-tie",
+      "$boundary": "출력표 `bindingCandidate` — firstEvaluable이 동점이면 입력 순서가 앞선 후보다",
+      "$why": "계약이 정하지 않은 부분이다. 사전순으로 정하면 091160이 뽑혀 입력 순서와 어긋나므로, 두 구현이 갈라지지 않도록 입력 순서로 못박는다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-03",
+            "delistedOn": null,
+            "dataGaps": []
+          },
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-03",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-04",
+        "commonEnd": "2024-01-12",
+        "warmupTradingDays": 1,
+        "bindingCandidate": "091170.XKRX",
+        "excludedRanges": [],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "gap-covers-common-start",
+      "$boundary": "자료 부족 구간이 commonStart를 포함 — 구간을 잘라내지 않고 excludedRanges로 알린다",
+      "$why": "시작일을 조용히 다음 날로 미는 구현이 직관적이지만, 그러면 화면이 왜 기간이 짧아졌는지 설명할 수 없다(원칙 VI). commonStart는 2024-01-05 그대로이고, 같은 날을 덮는 부족 구간이 excludedRanges에 그대로 실린다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": [
+              { "start": "2024-01-03", "end": "2024-01-08", "reason": "AMBIGUOUS_PRICE" }
+            ]
+          },
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-03",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 2 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-05",
+        "commonEnd": "2024-01-12",
+        "warmupTradingDays": 2,
+        "bindingCandidate": "091170.XKRX",
+        "excludedRanges": [
+          { "start": "2024-01-05", "end": "2024-01-08", "reason": "AMBIGUOUS_PRICE" }
+        ],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "gaps-union-merge-and-clip",
+      "$boundary": "산식 `excludedRanges = 모든 후보의 dataGaps를 합집합한 뒤 [commonStart, commonEnd]로 자른 것`",
+      "$why": "겹치는 AMBIGUOUS_PRICE 둘은 하나로 합쳐지고(01-03~01-05), 사유가 다른 SUSPENDED_TOO_LONG·INDEX_HISTORY_SHORT는 합쳐지지 않는다. INDEX_HISTORY_SHORT는 01-12까지지만 commonEnd가 01-11이라 잘린다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": [
+              { "start": "2024-01-02", "end": "2024-01-04", "reason": "AMBIGUOUS_PRICE" },
+              { "start": "2024-01-09", "end": "2024-01-10", "reason": "SUSPENDED_TOO_LONG" }
+            ]
+          },
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": [
+              { "start": "2024-01-03", "end": "2024-01-05", "reason": "AMBIGUOUS_PRICE" },
+              { "start": "2024-01-11", "end": "2024-01-12", "reason": "INDEX_HISTORY_SHORT" }
+            ]
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-11",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-03",
+        "commonEnd": "2024-01-11",
+        "warmupTradingDays": 1,
+        "bindingCandidate": "091160.XKRX",
+        "excludedRanges": [
+          { "start": "2024-01-03", "end": "2024-01-05", "reason": "AMBIGUOUS_PRICE" },
+          { "start": "2024-01-09", "end": "2024-01-10", "reason": "SUSPENDED_TOO_LONG" },
+          { "start": "2024-01-11", "end": "2024-01-11", "reason": "INDEX_HISTORY_SHORT" }
+        ],
+        "evaluable": true
+      }
+    },
+    {
+      "name": "common-start-after-common-end",
+      "$boundary": "commonStart > commonEnd — evaluable: false. 오류가 아니라 정상 응답이다",
+      "$why": "091160은 01-05에 폐지되고 091170은 01-08에 상장해 겹치는 구간이 없다. 화면은 '이 조합은 분석할 수 없습니다' 한 문장을 보인다(원칙 VI). 뒤집힌 구간에는 자를 대상이 없으므로 091160의 부족 구간이 있어도 excludedRanges는 빈 배열이다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": "2024-01-05",
+            "dataGaps": [
+              { "start": "2024-01-03", "end": "2024-01-04", "reason": "AMBIGUOUS_PRICE" }
+            ]
+          },
+          {
+            "instrumentId": "091170.XKRX",
+            "listedOn": "2024-01-08",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": [
+          "2024-01-02",
+          "2024-01-03",
+          "2024-01-04",
+          "2024-01-05",
+          "2024-01-08",
+          "2024-01-09",
+          "2024-01-10",
+          "2024-01-11",
+          "2024-01-12"
+        ]
+      },
+      "expected": {
+        "commonStart": "2024-01-09",
+        "commonEnd": "2024-01-05",
+        "warmupTradingDays": 1,
+        "bindingCandidate": "091170.XKRX",
+        "excludedRanges": [],
+        "evaluable": false
+      }
+    },
+    {
+      "name": "empty-candidates",
+      "$boundary": "후보 목록이 빈 배열 — 오류. 후보 없이 기간을 산출하지 않는다",
+      "input": {
+        "candidates": [],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": ["2024-01-02", "2024-01-03", "2024-01-04"]
+      },
+      "error": "EMPTY_CANDIDATES"
+    },
+    {
+      "name": "empty-strategies",
+      "$boundary": "전략 목록이 빈 배열 — 오류. max(빈 집합)이 없어 warmup을 정할 수 없다",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": ["2024-01-02", "2024-01-03", "2024-01-04"]
+      },
+      "error": "EMPTY_STRATEGIES"
+    },
+    {
+      "name": "negative-warmup",
+      "$boundary": "warmupTradingDays가 음수 — 오류. 0은 허용하지만 음수는 뜻이 없다",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": -1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": ["2024-01-02", "2024-01-03", "2024-01-04"]
+      },
+      "error": "NEGATIVE_WARMUP"
+    },
+    {
+      "name": "empty-trading-calendar",
+      "$boundary": "거래일 달력이 빈 배열 — 오류. 확보한 지수 자료가 없으면 거래일을 셀 수 없다",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": []
+      },
+      "error": "EMPTY_CALENDAR"
+    },
+    {
+      "name": "invalid-instrument-id",
+      "$boundary": "종목 식별자 형식 위반 — 오류. `{6자리}.XKRX`만 받는다",
+      "$why": "파이썬의 `$`는 끝에 붙은 줄바꿈 앞에서도 맞으므로 `re.fullmatch`로, 자바는 이미 전체 일치인 `String.matches`로 검사한다. 한쪽이 받는 값을 다른 쪽이 거부하면 안 된다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "91160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 1 }],
+        "dataDeadline": "2024-01-12",
+        "tradingCalendar": ["2024-01-02", "2024-01-03", "2024-01-04"]
+      },
+      "error": "INVALID_INSTRUMENT_ID"
+    },
+    {
+      "name": "calendar-too-short-for-warmup",
+      "$boundary": "달력이 warmup을 채우지 못함 — 오류. 없는 거래일을 지어내지 않는다(원칙 VI)",
+      "$why": "상장일 이후 거래일이 3개뿐인데 warmup이 5다. firstEvaluable을 정할 근거가 없으므로 달력을 넘겨짚어 마지막 날로 떨어뜨리지 않고 실패한다.",
+      "input": {
+        "candidates": [
+          {
+            "instrumentId": "091160.XKRX",
+            "listedOn": "2024-01-02",
+            "delistedOn": null,
+            "dataGaps": []
+          }
+        ],
+        "strategies": [{ "strategyId": "SECTOR_MOMENTUM", "warmupTradingDays": 5 }],
+        "dataDeadline": "2024-01-04",
+        "tradingCalendar": ["2024-01-02", "2024-01-03", "2024-01-04"]
+      },
+      "error": "CALENDAR_TOO_SHORT"
+    }
+  ]
+}

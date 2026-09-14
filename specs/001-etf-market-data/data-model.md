@@ -85,7 +85,10 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | `complete` | boolean | NOT NULL. false면 부분 갱신 | FR-014, 이용 한도 도달 시 |
 | `failure_reason` | text | NULL 허용 | FR-014 |
 | `is_sample` | boolean | NOT NULL. true면 예시 자료 | FR-002, research.md 결정 5 |
+| `source` | varchar | NOT NULL. 자료 원천. 예: `KRX_OPEN_API`, 예시 자료이면 `FIXED_TEST_DATA` | FR-011, [004 market-data-input.md](../004-backtest-execution/contracts/market-data-input.md) |
 | `map_version_id` | bigint | FK → `sector_etf_map_version` NOT NULL | 이 자료가 어느 대응표를 대상으로 수집됐는지 |
+
+`source`는 004 계약이 자료 버전에 요구한 열이다(004는 `cutoff_at`·`note`도 요구하며, 각각 `data_deadline`·`failure_reason`이 같은 뜻을 담는다). 워커가 `MarketDataset.source`를 채울 때 이 값을 그대로 쓴다(contracts/market-dataset.md).
 
 **불변식**: 발행된 행은 수정하지 않는다(FR-017). 자료를 고쳐야 하면 새 `dataset_id`로 새 행을 만든다. `complete = false`인 버전을 완전한 자료로 표시하지 않는다.
 
@@ -139,10 +142,24 @@ PostgreSQL 테이블이며, 같은 컬럼 구성이 `data/processed/`의 Parquet
 | `value` | bigint | 거래대금(원) | research.md 결정 6 |
 | `adjusted_close` | numeric | 기업행위 반영. 신호·성과용 | FR-004, research.md 결정 2 |
 | `adjustment_factor` | numeric | 누적 조정 계수. 재현 검증용 | research.md 결정 2 |
-| `price_carried_forward` | boolean | 직전 종가를 쓴 날 | FR-006, clarify 2 |
+| `trading_suspended` | boolean | NOT NULL DEFAULT false. 그날 거래가 정지되어 체결 가격이 없었음 | FR-006, clarify 2, [004 market-data-input.md](../004-backtest-execution/contracts/market-data-input.md) |
+| `price_carried_forward` | boolean | NOT NULL DEFAULT false. 직전 종가를 쓴 날 | FR-006, clarify 2 |
 | `dataset_id` | varchar | 자료 버전 | FR-013 |
 
 **불변식**: `(dataset_id, instrument_id, date)`가 PK다. 자료 버전이 키에 들어가므로 새 버전을 발행해도 옛 버전 행이 그대로 남는다(FR-017, SC-004).
+
+**조회 인덱스**: PK와 별개로 `(instrument_id, dataset_id, date)` 인덱스를 둔다. 004 계약의 「조회 패턴」이 요구한 것으로, 워커가 한 종목의 한 자료 버전을 기간으로 훑는 조회를 PK 선두 컬럼(`dataset_id`)으로는 효율적으로 처리할 수 없기 때문이다. 다른 시계열 표도 같은 이유로 `(instrument_id, dataset_id, 날짜)` 순서의 인덱스를 둔다 — `corporate_action`은 `ex_date`, `daily_index`는 `index_code`와 `date`, `data_gap`과 `suspension_period`는 `start_date`다.
+
+**거래정지일 표현** (004 계약의 「결측은 행 부재」 규칙과의 정합, 2026-09-11 결정)
+
+004는 "결측은 행 부재로 표현하고, 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다"고 정했다. 001의 임시 동작(clarify 2)은 정지일에 직전 종가를 쓴다. 행을 만들지 않으면 워커가 001의 자료를 읽자마자 실패하므로 다음과 같이 해소한다.
+
+- 거래정지일에도 `daily_price` 행을 만들고 `trading_suspended = true`로 표시한다. **정지는 결측이 아니라 별도 상태다.** "진짜 결측은 행이 없다"는 004의 규칙은 그대로 유지된다
+- `open`·`high`·`low`·`close` 네 값을 모두 직전 거래일의 `close`로 채운다. `close`만 채우면 아래 검증 규칙의 `high >= max(open, low, close)`와 OHLC 양수 조건을 통과하지 못한다
+- `volume`은 0이다. 검증이 음수가 아닌 정수만 요구하므로 통과한다. `value`도 0이다
+- `price_carried_forward`도 함께 true다. **두 열을 모두 둔다** — `trading_suspended`는 원인(거래정지), `price_carried_forward`는 처리(직전 종가를 썼음)로 뜻이 다르다. 이번 범위에서는 항상 같이 움직이지만, 거래정지가 아닌 사유로 직전 종가를 쓰는 경우가 생기면 구분할 수 있어야 한다
+- 워커는 정지 행을 평가에만 쓰고 그날 주문을 만들지 않는다(contracts/market-dataset.md 「거래정지 처리」)
+- 상장 첫날은 직전 종가가 없다. 상장일에 정지가 걸린 사례는 행을 만들지 않고 `data_gap`(`AMBIGUOUS_PRICE`)으로 기록한다 — 채울 값이 없으므로 임의 값을 만들지 않는다(원칙 VI)
 
 가격 컬럼에 `numeric`을 쓰는 것은 `backend/CLAUDE.md`가 결과 저장에 적용한 판단("decimal은 예외 없이 JSONB")과 다르다. 그 규칙은 **표시용 값**을 대상으로 하며 임의 scale이 조용히 반올림하는 문제를 막기 위한 것이다. 여기 가격은 Worker가 계산에 쓰는 입력이고 국내 ETF 호가 단위가 정수 원 단위라 scale을 근거 있게 고정할 수 있다. 조정 가격은 계수 곱셈 결과이므로 소수 자리를 넉넉히 잡는다.
 
@@ -160,14 +177,19 @@ PostgreSQL 테이블이며, 같은 컬럼 구성이 `data/processed/`의 Parquet
 | 컬럼 | 타입 | 뜻 | 근거 |
 |---|---|---|---|
 | `instrument_id` | varchar | | |
-| `date` | date | | Key Entities |
+| `ex_date` | date | NOT NULL. 분배금은 배당락일, 분할은 효력 발생일 | Key Entities, [004 market-data-input.md](../004-backtest-execution/contracts/market-data-input.md) |
+| `pay_date` | date | 분배금 지급일. `event_type = 'SPLIT'`이면 NULL | 004 계약(지급일 현금 반영) |
 | `event_type` | varchar | `DISTRIBUTION` \| `SPLIT` | Key Entities |
 | `amount` | numeric | 분배금은 주당 금액, 분할은 비율 | Key Entities |
 | `dataset_id` | varchar | | FR-013 |
 
+**불변식**: `(dataset_id, instrument_id, ex_date, event_type)`이 PK다. `event_type = 'DISTRIBUTION'`이면 `pay_date`가 NOT NULL이고 `pay_date >= ex_date`, `event_type = 'SPLIT'`이면 `pay_date`가 NULL이어야 한다.
+
+날짜 열이 둘인 이유는 004가 배당락일과 지급일을 서로 다른 계산에 쓰기 때문이다. 배당락일은 조정 계수(`adjusted_close`) 산출에 들어가고, 지급일은 현금이 계좌에 들어오는 날이다. 한 열로 두면 워커가 분배금을 락일에 현금으로 넣거나 지급일에 조정하게 되어 양쪽 모두 틀린다. 지급일이 락일보다 뒤라 그 사이 기간의 현금 잔고가 달라진다.
+
 ### daily_index — 지수 자료
 
-가격 자료와 같은 컬럼을 쓰되 `adjusted_close`·`adjustment_factor`·`price_carried_forward`를 두지 않는다. 지수에는 기업행위가 없다. 키는 `instrument_id` 대신 `index_code`다. FR-009의 용도 제한(결과 보조 보기와 경제환경 참고 정보에만 사용, 검색 입력 금지)은 이 자료를 읽는 쪽이 지킨다.
+가격 자료와 같은 컬럼을 쓰되 `adjusted_close`·`adjustment_factor`·`price_carried_forward`·`trading_suspended`를 두지 않는다. 지수에는 기업행위가 없고 거래정지도 없다. 키는 `instrument_id` 대신 `index_code`다. FR-009의 용도 제한(결과 보조 보기와 경제환경 참고 정보에만 사용, 검색 입력 금지)은 이 자료를 읽는 쪽이 지킨다.
 
 ### data_gap — 자료 부족 구간
 
@@ -192,6 +214,8 @@ PD-19·PD-20을 나중에 정하기 위해 근거를 모으는 표다(research.m
 | `start_date` `end_date` | date | 정지 시작일과 마지막 날 |
 | `trading_days` | integer | 그 구간의 거래일 수 |
 | `dataset_id` | varchar | 자료 버전 |
+
+이 표는 `daily_price.trading_suspended = true`인 연속 구간을 묶은 것이다. 일별 표시가 원본이고 이 표는 파생이라, 둘이 어긋나면 일별 표시를 기준으로 다시 만든다. PD-19·PD-20 결정에 필요한 것은 구간 길이 분포이므로 매번 집계하지 않도록 표로 둔다.
 
 **이 표는 분석 범위를 줄이지 않는다.** 확정 전 임시 동작은 모든 정지를 직전 종가 유지로 처리하므로, 이 표는 기록과 표시에만 쓰인다. PD-19·PD-20 결정 작업이 이 표에서 길이 분포를 집계한다.
 
