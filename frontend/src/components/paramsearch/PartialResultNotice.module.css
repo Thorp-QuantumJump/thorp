@@ -1,0 +1,76 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 6px;
+  background: var(--thorp-surface);
+}
+
+.notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--thorp-warning);
+}
+
+.notice > div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--thorp-warning);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.reason {
+  padding: 2px 7px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 3px;
+  color: var(--thorp-copy);
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--thorp-line);
+}
+
+.counts div {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  background: var(--thorp-surface);
+}
+
+.counts dt {
+  color: var(--thorp-muted);
+  font-size: 0.66rem;
+}
+
+.counts dd {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.text {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.73rem;
+  line-height: 1.6;
+}

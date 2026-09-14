@@ -72,7 +72,6 @@
 }
 
 .status,
-.validation,
 .retry {
   padding: 2px 7px;
   border: 1px solid var(--thorp-line-strong);
@@ -80,11 +79,6 @@
   color: var(--thorp-copy);
   font-size: 0.63rem;
   font-weight: 700;
-}
-
-.validation {
-  border-color: var(--thorp-warning);
-  color: var(--thorp-warning);
 }
 
 .rows {
@@ -129,17 +123,6 @@
   color: var(--thorp-muted);
   font-size: 0.68rem;
   font-weight: 500;
-}
-
-.missing {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 5px;
-  background: var(--thorp-surface);
-  color: var(--thorp-copy);
-  font-size: 0.74rem;
-  line-height: 1.55;
 }
 
 .reason {

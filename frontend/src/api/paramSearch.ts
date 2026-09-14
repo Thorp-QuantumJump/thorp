@@ -4,10 +4,12 @@ import type {
   CandidatePage,
   CandidateSort,
   CandidateStatus,
+  ParamSearchCancelResult,
   ParamSearchDetail,
   ParamSearchEnvelope,
   ParamSearchPreview,
   ParamSearchRequest,
+  ParamSearchRetryResult,
 } from '@/types/paramSearch'
 
 /**
@@ -213,6 +215,56 @@ export async function getParamSearchCandidates(
   try {
     const response = await apiClient.get<ParamSearchEnvelope<CandidatePage>>(
       `${basePath}/${encodeURIComponent(searchId)}/candidates${search ? `?${search}` : ''}`,
+    )
+    return unwrap(response.data)
+  } catch (error) {
+    throw normalizeParamSearchError(error)
+  }
+}
+
+/**
+ * 탐색 취소. `202`이고 **응답의 `status`는 아직 `RUNNING`일 수 있다**.
+ *
+ * <p>발행하지 않은 후보를 '미실행'으로 확정하고 더 발행하지 않지만, <b>이미 큐에 들어간 후보는
+ * 완주한다</b> — 발행된 메시지는 회수할 수 없다. `inFlight`가 몇 개가 끝까지 도는지 알려 준다.
+ *
+ * <p>이미 끝난 묶음이면 `409 ALREADY_FINISHED`다.
+ */
+export async function cancelParamSearch(
+  searchId: string,
+  requesterId?: number | null,
+): Promise<ParamSearchCancelResult> {
+  try {
+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(
+      `${basePath}/${encodeURIComponent(searchId)}/cancel`,
+      null,
+      { headers: requesterHeaders(requesterId) },
+    )
+    return unwrap(response.data)
+  } catch (error) {
+    throw normalizeParamSearchError(error)
+  }
+}
+
+/**
+ * 실패 후보 재시도. `FAILED`만 다시 발행하고 **새 묶음을 만들지 않는다**(FR-024).
+ *
+ * <p>`SKIPPED`는 대상이 아니다 — 취소·한도로 빠진 것을 되살리면 완료 범위 표시가 뜻을 잃는다.
+ *
+ * <p><b>발행 창을 넘겨 보내지 않는다.</b> 실패가 창보다 많으면 이번에 창만큼만 보내고 나머지는
+ * `remainingFailed`로 알린다. 자동으로 이어 보내지 않으므로 화면이 그 수를 보고 다시 요청한다.
+ *
+ * <p>실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.
+ */
+export async function retryFailedCandidates(
+  searchId: string,
+  requesterId?: number | null,
+): Promise<ParamSearchRetryResult> {
+  try {
+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(
+      `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,
+      null,
+      { headers: requesterHeaders(requesterId) },
     )
     return unwrap(response.data)
   } catch (error) {

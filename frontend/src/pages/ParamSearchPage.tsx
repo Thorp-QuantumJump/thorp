@@ -4,12 +4,18 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { CancelButton } from '@/components/paramsearch/CancelButton'
 import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'
 import { CandidateTable } from '@/components/paramsearch/CandidateTable'
 import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'
+import { PartialResultNotice } from '@/components/paramsearch/PartialResultNotice'
 import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'
+import { RejectionNotice } from '@/components/paramsearch/RejectionNotice'
+import { RetryFailedButton } from '@/components/paramsearch/RetryFailedButton'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
 import { SelectionResult } from '@/components/paramsearch/SelectionResult'
+import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'
+import { ValidationNote } from '@/components/paramsearch/ValidationNote'
 import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'
 import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
@@ -20,7 +26,7 @@ import type {
   SearchSpaceSelection,
   StrategySpaceSummary,
 } from '@/types/paramSearch'
-import { formatCount, validationLabelText } from '@/utils/paramSearchLabels'
+import { formatCount } from '@/utils/paramSearchLabels'
 import styles from './ParamSearchPage.module.css'
 
 /** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */
@@ -73,7 +79,7 @@ export function ParamSearchPage() {
   const [showSpaceEditor, setShowSpaceEditor] = useState(false)
 
   const [creating, setCreating] = useState(false)
-  const [runError, setRunError] = useState<string | null>(null)
+  const [runError, setRunError] = useState<{ code: string | null; message: string } | null>(null)
 
   // 409를 받은 순간의 미리보기와, 그것을 대신할 새 미리보기. 확인 전에는 다시 보내지 않는다.
   const [conflictBase, setConflictBase] = useState<ParamSearchPreview | null>(null)
@@ -184,7 +190,7 @@ export function ParamSearchPage() {
           return
         }
 
-        setRunError(failure.message)
+        setRunError({ code: failure.code, message: failure.message })
       } finally {
         setCreating(false)
       }
@@ -353,14 +359,13 @@ export function ParamSearchPage() {
                     <p className={styles.statusLine} aria-live="polite">
                       <strong>{statusText[detail.status] ?? detail.status}</strong>
                       {detail.stopReason ? <span> · 멈추는 중</span> : null}
-                      <span className={styles.validation}>
-                        {validationLabelText(detail.validationLabel)}
-                      </span>
+                      <ValidationBadge label={detail.validationLabel} describes="이 탐색 묶음" />
                     </p>
 
-                    {detail.validationNote && (
-                      <p className={styles.note}>{detail.validationNote}</p>
-                    )}
+                    <ValidationNote
+                      label={detail.validationLabel}
+                      note={detail.validationNote}
+                    />
 
                     {detail.counts && (
                       <dl className={styles.counts}>
@@ -380,9 +385,34 @@ export function ParamSearchPage() {
                       </dl>
                     )}
 
-                    {detail.partialNote && (
-                      <p className={styles.note}>{detail.partialNote}</p>
+                    {detail.status === 'REJECTED' && detail.stopReason && (
+                      <RejectionNotice code={detail.stopReason} message={detail.partialNote} />
                     )}
+
+                    {(detail.partial || detail.stopReason !== null) &&
+                      detail.status !== 'REJECTED' && (
+                        <PartialResultNotice
+                          counts={detail.counts}
+                          stopReason={detail.stopReason}
+                          partialNote={detail.partialNote}
+                          stopping={status.isPolling && detail.stopReason !== null}
+                        />
+                      )}
+
+                    {status.isPolling && detail.stopReason === null && (
+                      <CancelButton
+                        searchId={searchId}
+                        requesterId={user?.userId}
+                        onCancelled={status.refetch}
+                      />
+                    )}
+
+                    <RetryFailedButton
+                      searchId={searchId}
+                      failedCount={detail.counts?.failed ?? 0}
+                      requesterId={user?.userId}
+                      onRetried={status.refetch}
+                    />
 
                   </>
                 )}
@@ -448,11 +478,14 @@ export function ParamSearchPage() {
                       blockedReason={user ? null : '실행하려면 로그인이 필요합니다.'}
                     />
 
-                    {runError && (
-                      <p className={styles.error} role="alert">
-                        {runError}
-                      </p>
-                    )}
+                    {runError &&
+                      (runError.code ? (
+                        <RejectionNotice code={runError.code} message={runError.message} />
+                      ) : (
+                        <p className={styles.error} role="alert">
+                          {runError.message}
+                        </p>
+                      ))}
 
                     <section className={styles.details}>
                       <button
