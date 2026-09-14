@@ -1,6 +1,7 @@
 import type {
   CandidateStability,
   CandidateStatus,
+  ParamSearchConfig,
   SearchCandidateItem,
   SelectionFilter,
   SelectionOutcome,
@@ -174,5 +175,39 @@ export function sortMetricText(metric: string): string {
       return '인접 설정 안정성'
     default:
       return metric
+  }
+}
+
+/**
+ * 후보가 어떤 설정인지 한 줄로. **전략 이름도 축 라벨도 응답에서만 읽는다**(FR-025).
+ *
+ * 상태 응답의 `config.space`가 전략별 축 라벨·단위를 갖고 있다. 그것이 없으면 축 이름을 그대로
+ * 쓴다 — 지어내지 않는다.
+ */
+export function describeCandidateSetting(
+  candidate: SearchCandidateItem,
+  config: ParamSearchConfig | null,
+): { strategyName: string; parameterText: string } {
+  const space = config?.space?.[candidate.strategyId] ?? null
+  const labelOf = (name: string) => {
+    const axis = space?.axes.find((item) => item.name === name)
+    if (!axis) return { label: name, unit: null as string | null }
+    return { label: axis.label, unit: axis.unit }
+  }
+
+  const entries = Object.entries(candidate.parameters)
+  const parameterText =
+    entries.length === 0
+      ? '설정 값 없음'
+      : entries
+          .map(([name, value]) => {
+            const { label, unit } = labelOf(name)
+            return `${label} ${value}${unit ? unit : ''}`
+          })
+          .join(' · ')
+
+  return {
+    strategyName: space?.strategyName ?? candidate.strategyId,
+    parameterText,
   }
 }
