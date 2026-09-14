@@ -289,11 +289,11 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 ### Implementation for User Story 3 — Frontend
 
-- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)
-- [ ] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수
-- [ ] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)
-- [ ] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영
-- [ ] T107a [P] [US3] (FE) `frontend/src/components/paramsearch/RetryFailedButton.tsx` — 실패 후보가 있을 때만 보이는 재시도 버튼과 재시도 후 상태 반영 (FR-024)
+- [X] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)
+- [X] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수
+- [X] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)
+- [X] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영
+- [X] T107a [P] [US3] (FE) `frontend/src/components/paramsearch/RetryFailedButton.tsx` — 실패 후보가 있을 때만 보이는 재시도 버튼과 재시도 후 상태 반영 (FR-024)
 
 **Checkpoint**: 계산 낭비와 중단 처리가 모두 동작한다
 

@@ -4,10 +4,14 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { CancelButton } from '@/components/paramsearch/CancelButton'
 import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'
 import { CandidateTable } from '@/components/paramsearch/CandidateTable'
 import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'
+import { PartialResultNotice } from '@/components/paramsearch/PartialResultNotice'
 import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'
+import { RejectionNotice } from '@/components/paramsearch/RejectionNotice'
+import { RetryFailedButton } from '@/components/paramsearch/RetryFailedButton'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
 import { SelectionResult } from '@/components/paramsearch/SelectionResult'
 import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'
@@ -75,7 +79,7 @@ export function ParamSearchPage() {
   const [showSpaceEditor, setShowSpaceEditor] = useState(false)
 
   const [creating, setCreating] = useState(false)
-  const [runError, setRunError] = useState<string | null>(null)
+  const [runError, setRunError] = useState<{ code: string | null; message: string } | null>(null)
 
   // 409를 받은 순간의 미리보기와, 그것을 대신할 새 미리보기. 확인 전에는 다시 보내지 않는다.
   const [conflictBase, setConflictBase] = useState<ParamSearchPreview | null>(null)
@@ -186,7 +190,7 @@ export function ParamSearchPage() {
           return
         }
 
-        setRunError(failure.message)
+        setRunError({ code: failure.code, message: failure.message })
       } finally {
         setCreating(false)
       }
@@ -381,9 +385,34 @@ export function ParamSearchPage() {
                       </dl>
                     )}
 
-                    {detail.partialNote && (
-                      <p className={styles.note}>{detail.partialNote}</p>
+                    {detail.status === 'REJECTED' && detail.stopReason && (
+                      <RejectionNotice code={detail.stopReason} message={detail.partialNote} />
                     )}
+
+                    {(detail.partial || detail.stopReason !== null) &&
+                      detail.status !== 'REJECTED' && (
+                        <PartialResultNotice
+                          counts={detail.counts}
+                          stopReason={detail.stopReason}
+                          partialNote={detail.partialNote}
+                          stopping={status.isPolling && detail.stopReason !== null}
+                        />
+                      )}
+
+                    {status.isPolling && detail.stopReason === null && (
+                      <CancelButton
+                        searchId={searchId}
+                        requesterId={user?.userId}
+                        onCancelled={status.refetch}
+                      />
+                    )}
+
+                    <RetryFailedButton
+                      searchId={searchId}
+                      failedCount={detail.counts?.failed ?? 0}
+                      requesterId={user?.userId}
+                      onRetried={status.refetch}
+                    />
 
                   </>
                 )}
@@ -449,11 +478,14 @@ export function ParamSearchPage() {
                       blockedReason={user ? null : '실행하려면 로그인이 필요합니다.'}
                     />
 
-                    {runError && (
-                      <p className={styles.error} role="alert">
-                        {runError}
-                      </p>
-                    )}
+                    {runError &&
+                      (runError.code ? (
+                        <RejectionNotice code={runError.code} message={runError.message} />
+                      ) : (
+                        <p className={styles.error} role="alert">
+                          {runError.message}
+                        </p>
+                      ))}
 
                     <section className={styles.details}>
                       <button

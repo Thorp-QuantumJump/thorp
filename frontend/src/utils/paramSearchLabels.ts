@@ -2,6 +2,7 @@ import type {
   CandidateStability,
   CandidateStatus,
   ParamSearchConfig,
+  ParamSearchStopReason,
   SearchCandidateItem,
   SelectionFilter,
   SelectionOutcome,
@@ -209,5 +210,28 @@ export function describeCandidateSetting(
   return {
     strategyName: space?.strategyName ?? candidate.strategyId,
     parameterText,
+  }
+}
+
+/**
+ * 묶음이 멈춘 사유. **"실패"와 섞지 않는다** — 취소·한도는 실행을 멈춘 것이지 계산이 틀린 것이
+ * 아니다.
+ */
+export function stopReasonText(reason: ParamSearchStopReason): string {
+  switch (reason) {
+    case 'CANCELLED':
+      return '사용자가 취소했습니다'
+    case 'CANDIDATE_LIMIT':
+      return '후보 수 상한에 닿았습니다'
+    case 'TIME_LIMIT':
+      return '실행 시간 한도에 닿았습니다'
+    case 'FAILURE_LIMIT':
+      return '실패가 이어져 멈췄습니다'
+    case 'NO_VALID_CANDIDATE':
+      return '돌릴 수 있는 후보가 없었습니다'
+    case 'STRATEGY_NOT_REGISTERED':
+      return '등록표에 없는 전략이 있었습니다'
+    case 'STRATEGY_NOT_EXECUTABLE':
+      return '실행을 지원하지 않는 전략이 있었습니다'
   }
 }

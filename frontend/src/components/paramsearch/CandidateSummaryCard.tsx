@@ -1,12 +1,7 @@
+import { CandidateReason } from './CandidateReason'
 import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'
-import {
-  candidateStatusText,
-  describeCandidateSetting,
-  formatPercent,
-  formatWon,
-  missingPerformanceReason,
-} from '@/utils/paramSearchLabels'
+import { describeCandidateSetting, formatPercent, formatWon } from '@/utils/paramSearchLabels'
 import styles from './CandidateSummaryCard.module.css'
 
 interface CandidateSummaryCardProps {
@@ -85,10 +80,7 @@ export function CandidateSummaryCard({
         </dl>
       ) : (
         // 세 숫자가 모두 없으면 표를 그리지 않는다. 빈 칸 세 개보다 사유 한 줄이 정확하다.
-        <p className={styles.missing}>
-          <strong>{candidateStatusText(candidate.status)}</strong>
-          {` · ${missingPerformanceReason(candidate)}`}
-        </p>
+        <CandidateReason candidate={candidate} />
       )}
 
       {(showCompare || onOpenDetail) && (

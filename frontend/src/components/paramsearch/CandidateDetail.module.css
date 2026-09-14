@@ -125,17 +125,6 @@
   font-weight: 500;
 }
 
-.missing {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 5px;
-  background: var(--thorp-surface);
-  color: var(--thorp-copy);
-  font-size: 0.74rem;
-  line-height: 1.55;
-}
-
 .reason {
   display: grid;
   gap: 6px;

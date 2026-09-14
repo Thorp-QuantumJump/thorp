@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { CandidateReason } from './CandidateReason'
 import { ValidationBadge } from './ValidationBadge'
 import type {
   ParamSearchConfig,
@@ -13,7 +14,6 @@ import {
   formatPercent,
   formatStability,
   formatWon,
-  missingPerformanceReason,
   selectionFilterText,
   selectionOutcomeText,
   sortMetricText,
@@ -126,7 +126,7 @@ export function CandidateDetail({
         </dl>
 
         {netReturn === null && maxDrawdown === null && tradingCost === null && (
-          <p className={styles.missing}>{missingPerformanceReason(candidate)}</p>
+          <CandidateReason candidate={candidate} />
         )}
 
         <section className={styles.reason} aria-labelledby="candidate-reason-title">
