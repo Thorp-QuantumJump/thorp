@@ -81,7 +81,12 @@ pipeline {
         //
         // origin/dev 는 Checkout SCM 이 refs/remotes/origin/* 를 통째로 가져오므로 이 시점에
         // 이미 있다. 그래도 실패할 수 있으니 || true 로 받아, 실패하면 빈 값이 되어 전체가 돈다.
-        CHANGED_FILES = sh(returnStdout: true, script: 'git diff --name-only origin/dev...HEAD || true').trim()
+
+        // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고
+        // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가
+        // data/ 로 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다.
+        // 틀리는 방향이 건너뛰는 쪽이라 위험하므로 인용을 끈다.
+        CHANGED_FILES = sh(returnStdout: true, script: 'git -c core.quotePath=false diff --name-only --no-renames origin/dev...HEAD || true').trim()
     }
 
     stages {
