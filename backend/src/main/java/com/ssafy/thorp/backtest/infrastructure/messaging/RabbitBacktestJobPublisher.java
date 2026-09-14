@@ -26,6 +26,10 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
 
     static final String MESSAGE_ID_PREFIX = "JOB-";
     static final String SCHEMA_VERSION_HEADER = "schemaVersion";
+
+    /** 이 메시지가 몇 번째 발행 시도인가. DLQ 소비가 같은 메시지를 두 번 세지 않는 근거다(R-18 ③). */
+    static final String PUBLISH_ATTEMPT_HEADER = "publishAttempt";
+
     static final int SCHEMA_VERSION = BacktestRabbitConfig.SCHEMA_VERSION;
 
     private final RabbitTemplate rabbitTemplate;
@@ -35,7 +39,7 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
     }
 
     @Override
-    public void publish(EngineInput engineInput) {
+    public void publish(EngineInput engineInput, int publishAttempt) {
         String runId = engineInput.run().runId();
         try {
             rabbitTemplate.convertAndSend(
@@ -47,6 +51,8 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
                         message.getMessageProperties().setCorrelationId(runId);
                         message.getMessageProperties()
                                 .setHeader(SCHEMA_VERSION_HEADER, SCHEMA_VERSION);
+                        message.getMessageProperties()
+                                .setHeader(PUBLISH_ATTEMPT_HEADER, publishAttempt);
                         message.getMessageProperties()
                                 .setDeliveryMode(MessageDeliveryMode.PERSISTENT);
                         return message;

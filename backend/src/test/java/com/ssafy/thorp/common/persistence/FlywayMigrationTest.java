@@ -183,6 +183,22 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("backtest_reuse_event 가 재사용·합류 기록에 필요한 컬럼만 갖는다 (FR-008)")
+    void backtestReuseEventHasAllColumns() {
+        // append-only 라 updated_at 이 없다. 발생 시각은 at 하나다.
+        assertThat(columnsOf("backtest_reuse_event"))
+                .containsExactlyInAnyOrder(
+                        "id", "run_id", "request_id", "kind", "request_execution_type", "at");
+    }
+
+    @Test
+    @DisplayName("backtest_run_dlq_attempt 가 DLQ 멱등 판정에 필요한 컬럼만 갖는다 (R-18 ③)")
+    void backtestRunDlqAttemptHasAllColumns() {
+        assertThat(columnsOf("backtest_run_dlq_attempt"))
+                .containsExactlyInAnyOrder("run_id", "attempt", "at");
+    }
+
+    @Test
     @DisplayName("등록표 두 개가 시드 행과 함께 만들어진다 (R-07·R-08)")
     void registriesAreSeeded() {
         assertThat(columnsOf("cost_profile"))

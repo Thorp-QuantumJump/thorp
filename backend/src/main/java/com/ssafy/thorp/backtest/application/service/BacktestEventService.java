@@ -194,6 +194,62 @@ public class BacktestEventService {
     }
 
     /**
+     * 작업 메시지 하나가 DLQ 로 끝났다(R-18 ③, T010). 브로커가 재전달 상한({@code x-delivery-limit=1})을 다 쓴 뒤 보낸 것이다.
+     *
+     * <p><b>메시지 하나가 죽었다고 실행을 끝내지 않는다.</b> confirm 이 유실돼 같은 실행의 메시지가 둘 생길 수 있고(R-18), 그 중 하나만 DLQ 로
+     * 가면 다른 하나는 아직 워커에서 돌고 있다. 발행한 메시지가 <b>전부</b> DLQ 로 끝났을 때만({@code dlqCount >= publishCount})
+     * 실행을 {@code FAILED(SYSTEM_FAILURE)}로 종결한다. 그래서 {@code publishCount}가 실제 메시지 수의 상한이어야 한다 — 모자라면
+     * 살아 있는 실행을 끊는다.
+     *
+     * <p>결과 행은 만들지 않는다. 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다 — 상세 조회는 실행 행의 실패 사유를 그대로 보여 준다.
+     *
+     * <p><b>같은 시도를 두 번 세지 않는다.</b> DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면 같은 메시지가 다시 온다. 저장소가
+     * {@code (runId, attempt)} 기록으로 걸러 주므로 재전달은 세지 않고, <b>커밋 전에 죽어 다시 온 첫 전달은 제대로 센다</b> — 그 경우 기록도
+     * 함께 롤백됐기 때문이다.
+     */
+    @Transactional
+    public void handleDeadLetter(String runId, int attempt) {
+        BacktestRun job = jobRepository.findByBacktestIdForUpdate(runId).orElse(null);
+        if (job == null) {
+            log.warn("dead-lettered job for unknown runId dropped: runId={}", runId);
+            return;
+        }
+        if (!jobRepository.recordDeadLetter(job.getId(), attempt, clock.instant())) {
+            log.info(
+                    "dead-lettered job already counted; redelivery ignored: runId={} attempt={}",
+                    runId,
+                    attempt);
+            return;
+        }
+        // 방금 올린 값을 포함해 다시 읽는다. 셈은 DB 가 하므로 여기서 더하지 않는다.
+        BacktestRun counted = jobRepository.findById(job.getId()).orElseThrow();
+        if (counted.getStatus().isFinal()) {
+            log.info(
+                    "dead-lettered job for a finished run: runId={} status={}",
+                    runId,
+                    counted.getStatus());
+            return;
+        }
+        if (!counted.getLifecycle().allMessagesDeadLettered()) {
+            log.info(
+                    "dead-lettered job counted, other messages may still run: runId={} dlq={}/{}",
+                    runId,
+                    counted.getLifecycle().dlqCount(),
+                    counted.getLifecycle().publishCount());
+            return;
+        }
+        BacktestRun failed = counted.markFailed("SYSTEM_FAILURE", "작업 메시지가 모두 처리되지 못했습니다(DLQ).");
+        jobRepository.update(failed.withLifecycle(failed.getLifecycle().finished(clock.instant())));
+        log.warn(
+                "run failed: every published job message was dead-lettered: runId={} dlq={}/{}",
+                runId,
+                counted.getLifecycle().dlqCount(),
+                counted.getLifecycle().publishCount());
+        events.publishEvent(
+                new BacktestFinished(job.getId(), runId, RunStatus.FAILED, "SYSTEM_FAILURE"));
+    }
+
+    /**
      * 이 이벤트가 마지막으로 시작한 실행의 것인가(R-18 2번).
      *
      * <p>아직 STARTED를 받지 못한 실행(QUEUED)의 FAILED는 받아들인다 — 비교할 current 가 없고, 그 실패를 버리면 실행이 영원히 QUEUED로

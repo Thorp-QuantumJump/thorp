@@ -145,6 +145,30 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         jpaRepository.incrementPublishCount(runId);
     }
 
+    /**
+     * 시도 기록을 먼저 넣고, <b>그 INSERT 가 실제로 들어갔을 때만</b> 카운터를 올린다. PK {@code (run_id, attempt)} 가 중복을 막으므로
+     * {@code ON CONFLICT DO NOTHING} 의 반환값이 곧 "처음 세는가"다.
+     *
+     * <p>엔티티를 두지 않고 native 로 쓴다 — 이 표는 객체로 읽는 곳이 없고 {@code ON CONFLICT} 는 JPQL 로 표현할 수 없다.
+     */
+    @Override
+    public boolean recordDeadLetter(Long runId, int attempt, Instant at) {
+        int inserted =
+                entityManager
+                        .createNativeQuery(
+                                "INSERT INTO backtest_run_dlq_attempt (run_id, attempt, at)"
+                                        + " VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING")
+                        .setParameter(1, runId)
+                        .setParameter(2, attempt)
+                        .setParameter(3, at)
+                        .executeUpdate();
+        if (inserted == 0) {
+            return false;
+        }
+        jpaRepository.incrementDlqCount(runId);
+        return true;
+    }
+
     @Override
     public void recordPublished(Long runId, Instant at) {
         jpaRepository.markPublished(runId, at);
@@ -193,6 +217,25 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     @Override
     public Optional<BacktestRun> findByBacktestId(String backtestId) {
         return jpaRepository.findByBacktestId(backtestId).map(BacktestRunMapper::toDomain);
+    }
+
+    /**
+     * {@code pg_advisory_xact_lock(bigint)}. 잠금 식별자는 동일 버전 키(SHA-256 hex 64자)의 앞 16자를 그대로 읽은 값이다 —
+     * 키 자체가 고르게 퍼진 해시라 다시 해싱할 이유가 없고, 앞 64비트만 봐도 충돌은 실질적으로 없다. 설령 충돌해도 관계없는 두 조건의 접수가 잠깐 줄을 설 뿐이라
+     * 답이 달라지지 않는다.
+     *
+     * <p>{@code hashtext()} 를 쓰지 않는다 — 문서화되지 않은 내부 함수라 판 올림에 값이 바뀔 수 있다.
+     */
+    @Override
+    public void lockDedupKey(String dedupKey) {
+        entityManager
+                .createNativeQuery("SELECT pg_advisory_xact_lock(?1)")
+                .setParameter(1, lockIdOf(dedupKey))
+                .getSingleResult();
+    }
+
+    private static long lockIdOf(String dedupKey) {
+        return Long.parseUnsignedLong(dedupKey.substring(0, 16), 16);
     }
 
     @Override

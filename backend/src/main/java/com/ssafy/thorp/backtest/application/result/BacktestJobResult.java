@@ -14,6 +14,7 @@ import java.util.Map;
  *
  * @param resultSource NEW 새 계산 / JOINED 진행 중 실행에 합류 / REUSED 완료 결과 재사용
  * @param effectiveStart 워밍업 이후 실제 평가 시작일. 요청 시작일보다 뒤다
+ * @param retryOf 재시도라면 원본 요청의 backtestId. 접수(T005) 경로에서는 null 이고 응답에도 싣지 않는다
  */
 public record BacktestJobResult(
         String backtestId,
@@ -21,7 +22,20 @@ public record BacktestJobResult(
         ResultSource resultSource,
         LocalDate effectiveStart,
         LocalDate effectiveEnd,
-        Map<String, Object> versions) {
+        Map<String, Object> versions,
+        String retryOf) {
+
+    /** 재시도 응답용. 접수 결과 자체는 원본을 알지 못하므로 재시도 유스케이스가 붙인다. */
+    public BacktestJobResult withRetryOf(String originalBacktestId) {
+        return new BacktestJobResult(
+                backtestId,
+                status,
+                resultSource,
+                effectiveStart,
+                effectiveEnd,
+                versions,
+                originalBacktestId);
+    }
 
     public static BacktestJobResult of(BacktestRequest request, BacktestRun run) {
         return new BacktestJobResult(
@@ -30,6 +44,7 @@ public record BacktestJobResult(
                 request.getResultSource(),
                 run.getPlan().effectiveStart(),
                 run.getPlan().effectiveEnd(),
-                run.getPlan().versions());
+                run.getPlan().versions(),
+                null);
     }
 }

@@ -11,9 +11,11 @@ import static org.mockito.Mockito.when;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
@@ -53,6 +55,8 @@ class BacktestServiceTest {
     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
     private final BacktestRequestRepository requestRepository =
             mock(BacktestRequestRepository.class);
+    private final BacktestReuseEventRepository reuseEventRepository =
+            mock(BacktestReuseEventRepository.class);
     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
     private final CostProfileService costProfileService = mock(CostProfileService.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -63,6 +67,7 @@ class BacktestServiceTest {
             new BacktestService(
                     runRepository,
                     requestRepository,
+                    reuseEventRepository,
                     strategyRulesService,
                     costProfileService,
                     new EffectivePeriodCalculator(marketMetadata),
@@ -216,7 +221,7 @@ class BacktestServiceTest {
     void publishesAfterCommitViaEvent() {
         service.create(fixedWeight());
 
-        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L));
+        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L, 1));
     }
 
     @Test
@@ -231,6 +236,38 @@ class BacktestServiceTest {
         assertThat(result.resultSource()).isEqualTo(ResultSource.JOINED);
         verify(runRepository, never()).save(any());
         verify(events, never()).publishEvent(any());
+        assertThat(recordedReuse())
+                .isEqualTo(
+                        new BacktestReuseEvent(
+                                null, 11L, 21L, ResultSource.JOINED, ExecutionType.SINGLE, NOW));
+    }
+
+    @Test
+    @DisplayName("완료된 실행의 결과를 재사용하면 REUSED 로 기록한다 — 아낀 계산을 원가 집계가 셀 수 있어야 한다")
+    void recordsReuseOfACompletedRun() {
+        BacktestRun completed = saved(runningRun(), 11L).markCompleted();
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(completed));
+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(completed));
+
+        BacktestJobResult result = service.create(fixedWeight());
+
+        assertThat(result.resultSource()).isEqualTo(ResultSource.REUSED);
+        assertThat(recordedReuse().kind()).isEqualTo(ResultSource.REUSED);
+    }
+
+    @Test
+    @DisplayName("새로 계산하는 요청은 재사용 기록을 남기지 않는다 — 실행 행 자체가 기록이다")
+    void doesNotRecordReuseForANewRun() {
+        service.create(fixedWeight());
+
+        verify(reuseEventRepository, never()).save(any());
+    }
+
+    private BacktestReuseEvent recordedReuse() {
+        ArgumentCaptor<BacktestReuseEvent> captor =
+                ArgumentCaptor.forClass(BacktestReuseEvent.class);
+        verify(reuseEventRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     @Test

@@ -72,6 +72,14 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Query("select r from BacktestRunJpaEntity r where r.id = :id")
     Optional<BacktestRunJpaEntity> lockById(@Param("id") Long id);
 
+    /**
+     * DLQ 로 끝난 메시지를 <b>DB 에서</b> 센다(R-18). {@link #incrementPublishCount}와 같은 이유로 읽어서 더하지 않는다 — 같은
+     * 실행의 메시지 둘이 동시에 DLQ 로 가면 증가 하나를 잃고, 그러면 종결 판정이 영영 서지 않아 실행이 RUNNING 으로 남는다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update BacktestRunJpaEntity r set r.dlqCount = r.dlqCount + 1 where r.id = :id")
+    int incrementDlqCount(@Param("id") Long id);
+
     /** 이벤트 처리: 상태 전이를 취소와 같은 행 잠금으로 직렬화한다(R-04). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from BacktestRunJpaEntity r where r.backtestId = :backtestId")

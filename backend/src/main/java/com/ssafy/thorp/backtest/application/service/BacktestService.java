@@ -4,10 +4,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -22,7 +24,6 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,6 +48,7 @@ public class BacktestService {
 
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
+    private final BacktestReuseEventRepository reuseEventRepository;
     private final StrategyRulesService strategyRulesService;
     private final CostProfileService costProfileService;
     private final EffectivePeriodCalculator effectivePeriodCalculator;
@@ -59,6 +61,7 @@ public class BacktestService {
     public BacktestService(
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
+            BacktestReuseEventRepository reuseEventRepository,
             StrategyRulesService strategyRulesService,
             CostProfileService costProfileService,
             EffectivePeriodCalculator effectivePeriodCalculator,
@@ -69,6 +72,7 @@ public class BacktestService {
             @Value("${thorp.backtest.engine-version}") String engineVersion) {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
+        this.reuseEventRepository = reuseEventRepository;
         this.strategyRulesService = strategyRulesService;
         this.costProfileService = costProfileService;
         this.effectivePeriodCalculator = effectivePeriodCalculator;
@@ -90,6 +94,15 @@ public class BacktestService {
 
     @Transactional
     public BacktestJobResult create(CreateBacktestCommand command) {
+        return create(command, null);
+    }
+
+    /**
+     * @param retryOfRequestId 재시도라면 원본 요청의 id. 새 요청 행에 그대로 남는다(T010). 재시도도 접수를 <b>다시</b> 타므로 동일 버전
+     *     재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에 합류한다
+     */
+    @Transactional
+    public BacktestJobResult create(CreateBacktestCommand command, Long retryOfRequestId) {
         Scenario scenario = command.scenario() == null ? Scenario.FULL_PERIOD : command.scenario();
         validateScenario(scenario, command.scenarioParams());
         validateUniverse(command);
@@ -138,9 +151,14 @@ public class BacktestService {
                                 command.scenarioParams(),
                                 overlay == null ? null : overlay.rulesVersion()));
 
+        // 조회 → 판단 → INSERT 를 같은 키끼리 직렬화한다. 잠그지 않으면 두 접수가 나란히 "없다"를 읽고
+        // 둘 다 INSERT 해 부분 유니크 인덱스에 걸린다 — 정상적인 사용자 행동이 500 이 된다.
+        runRepository.lockDedupKey(dedupKey);
+
         Optional<BacktestRun> active = runRepository.findActiveByDedupKey(dedupKey);
         if (active.isPresent()) {
-            Optional<BacktestJobResult> joined = joinExisting(command, active.get().getId());
+            Optional<BacktestJobResult> joined =
+                    joinExisting(command, active.get().getId(), retryOfRequestId);
             if (joined.isPresent()) {
                 return joined.get();
             }
@@ -157,7 +175,7 @@ public class BacktestService {
                         period.effectiveStart(),
                         period.effectiveEnd(),
                         period.warmupTradingDays(),
-                        requestSpec(command, scenario, period.warmupTradingDays()),
+                        RequestSpecCodec.write(command, scenario, period.warmupTradingDays()),
                         versions);
 
         BacktestRun run =
@@ -185,18 +203,13 @@ public class BacktestService {
                                 command.requesterId(),
                                 command.executionType(),
                                 ResultSource.NEW,
-                                null));
-        events.publishEvent(new BacktestJobDispatcher.RunAccepted(saved.getId()));
+                                retryOfRequestId));
+        events.publishEvent(
+                new BacktestJobDispatcher.RunAccepted(
+                        saved.getId(), saved.getLifecycle().publishCount()));
         return BacktestJobResult.of(request, saved);
     }
 
-    /**
-     * 같은 조건의 실행이 이미 있다. 새로 계산하지 않고 요청만 붙인다.
-     *
-     * <p><b>여기까지가 T005의 몫이다.</b> 재사용 기록({@code backtest_reuse_event})과 동시 접수 경합의 재조회는 T010이 붙인다.
-     * 그때까지 이 분기가 없으면 같은 조건을 두 사람이 요청했을 때 부분 유니크 인덱스에 걸려 500이 난다 — 정상적인 사용자 행동이 500이 되는 것은 미룰 일이
-     * 아니다.
-     */
     /**
      * 같은 조건의 살아 있는 실행에 합류(또는 완료 결과를 재사용)한다.
      *
@@ -206,7 +219,8 @@ public class BacktestService {
      *
      * @return 빈 값 = 잠근 뒤 보니 종결된 실행이라 재사용 대상이 아니다(호출자가 새 실행을 만든다)
      */
-    private Optional<BacktestJobResult> joinExisting(CreateBacktestCommand command, Long runId) {
+    private Optional<BacktestJobResult> joinExisting(
+            CreateBacktestCommand command, Long runId, Long retryOfRequestId) {
         BacktestRun run = runRepository.findByIdForUpdate(runId).orElse(null);
         if (run == null || !isReusable(run.getStatus())) {
             return Optional.empty();
@@ -228,7 +242,15 @@ public class BacktestService {
                                 command.requesterId(),
                                 command.executionType(),
                                 source,
-                                null));
+                                retryOfRequestId));
+        // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.
+        reuseEventRepository.save(
+                BacktestReuseEvent.of(
+                        run.getId(),
+                        request.getId(),
+                        source,
+                        command.executionType(),
+                        clock.instant()));
         return Optional.of(BacktestJobResult.of(request, run));
     }
 
@@ -400,41 +422,6 @@ public class BacktestService {
      * <p>{@code warmupTradingDays}는 요청값이 아니라 <b>서버가 확정한 값</b>을 넣는다. 요청이 null 이었다고 null 을 돌려주면 "그래서
      * 몇 거래일을 썼나"라는 질문에 답할 수 없다.
      */
-    private static Map<String, Object> requestSpec(
-            CreateBacktestCommand command, Scenario scenario, int warmupTradingDays) {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (CreateBacktestCommand.AllocationItem item : command.items()) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("sectorId", item.sectorId());
-            entry.put("instrumentId", item.instrumentId());
-            if (item.targetWeight() != null) {
-                entry.put("targetWeight", item.targetWeight());
-            }
-            items.add(entry);
-        }
-        Map<String, Object> spec = new LinkedHashMap<>();
-        spec.put("mappingVersion", command.mappingVersion());
-        spec.put("items", items);
-        spec.put("strategyId", command.strategyId());
-        spec.put("rulesVersion", command.rulesVersion());
-        if (command.registryVersion() != null) {
-            spec.put("registryVersion", command.registryVersion());
-        }
-        spec.put("parameters", command.parameters());
-        spec.put("start", command.start().toString());
-        spec.put("end", command.end().toString());
-        spec.put("initialCash", command.initialCash());
-        if (command.evaluationSplitVersion() != null) {
-            spec.put("evaluationSplitVersion", command.evaluationSplitVersion());
-        }
-        spec.put("warmupTradingDays", warmupTradingDays);
-        spec.put("scenario", scenario.name());
-        if (command.scenarioParams() != null && !command.scenarioParams().isEmpty()) {
-            spec.put("scenarioParams", command.scenarioParams());
-        }
-        return spec;
-    }
-
     private Map<String, Object> versions(
             CostProfile costProfile, String rulesVersion, String dataVersion) {
         Map<String, Object> costs = new LinkedHashMap<>();

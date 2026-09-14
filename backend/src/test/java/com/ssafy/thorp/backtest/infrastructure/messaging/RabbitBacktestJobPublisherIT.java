@@ -79,7 +79,7 @@ class RabbitBacktestJobPublisherIT {
     void publishesToJobsQueue() throws IOException {
         EngineInput input = sampleInput();
 
-        publisher.publish(input);
+        publisher.publish(input, 2);
 
         Message received = rabbitTemplate.receive(BacktestRabbitConfig.JOBS_QUEUE, 5000);
         assertThat(received).isNotNull();
@@ -90,6 +90,10 @@ class RabbitBacktestJobPublisherIT {
         Integer schemaVersion =
                 properties.getHeader(RabbitBacktestJobPublisher.SCHEMA_VERSION_HEADER);
         assertThat(schemaVersion).isEqualTo(RabbitBacktestJobPublisher.SCHEMA_VERSION);
+        // DLQ 소비가 같은 메시지를 두 번 세지 않으려면 이 번호가 메시지에 실려 있어야 한다(R-18 ③).
+        Integer publishAttempt =
+                properties.getHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER);
+        assertThat(publishAttempt).isEqualTo(2);
         assertThat(properties.getReceivedDeliveryMode()).isEqualTo(MessageDeliveryMode.PERSISTENT);
         assertThat(properties.getContentType()).isEqualTo("application/json");
 
