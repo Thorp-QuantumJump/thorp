@@ -44,8 +44,9 @@
 - **실행 한도 장치**(사용자별·단건 큐 전체 대기 상한 → 429, 실행 시간 상한·정체 → CANCEL, 취소 무응답 → 강제 종결)와 **측정 기록**
   (`backtest_run_metric`, 뷰 `v_run_metric_summary`, 운영자 API `GET /internal/execution-metrics`)이 있다. 한도 **값**은 임시값이며
   측정 자료로 팀이 정한다(PD-06).
-- **아직 없는 것**: 로그인(spec 014 — 개발 환경은 `X-User-Id` 헤더, 운영자 경로는 `X-Ops-Token`), 실시간 진행 푸시(폴링으로 조회),
-  진짜 KRX 자료 버전을 접수가 가리키는 것(백엔드 자료 메타데이터가 아직 픽스처 상수 — 001 T019와 함께 풀 후속).
+- **아직 없는 것**: 백테스트 요청자를 로그인 세션에서 읽는 것(spec 014의 세션·CSRF 경계와 `/auth/*`는 있지만 접수는 아직 개발용 `X-User-Id`
+  헤더, 운영자 경로는 `X-Ops-Token`), 실시간 진행 푸시(폴링으로 조회), 진짜 KRX 자료 버전을 접수가 가리키는 것(백엔드 자료 메타데이터가 아직 픽스처
+  상수 — 001 T019와 함께 풀 후속). 끝에서 끝까지 실제로 돈 기록은 [`docs/guides/backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md).
 - 브로커는 RabbitMQ(ADR-0002). Kafka는 설치만 돼 있고 Job 전달에 쓰지 않는다.
 
 처음 코드를 읽는다면 [`backend/CLAUDE.md`](backend/CLAUDE.md)·[`worker/CLAUDE.md`](worker/CLAUDE.md)의 규칙과

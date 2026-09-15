@@ -90,6 +90,10 @@ common: 모든 계층에서 참조 가능
   탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
   세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
   시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
+- **접수 트랜잭션 안에서 `BusinessException`을 던지는 `@Transactional` 메서드는 모두 `noRollbackFor = BusinessException.class`다**
+  (`BacktestService.create`·`StrategyRulesService.requireRegistered`·`CostProfileService.resolve`). 하나라도 기본 규칙이면 그 프록시가 바깥
+  트랜잭션을 rollback-only로 표시해 `create`의 커밋이 `UnexpectedRollbackException`(500)으로 끝난다 — quickstart S9에서 422 대신 500이 난 원인.
+  단위 테스트(목)로는 보이지 않으니 실제 프록시를 지나는 IT(`ExecutionLimitApiIT`)로 고정한다
 - **실행 측정은 종결 네 지점이 `ExecutionMetricRecorder.record(run, resource)`를 직접 부른다**(R-10, T012) — `handleFinished`·
   `handleDeadLetter`·`RunLivenessSweeper.settleOne`·`BacktestCancelService`(실행 전 취소). 종결 경로를 새로 만들면 그곳도 불러야 한다 — 빠진 종결은
   늦은 FINISHED 가 최종 상태라 무시되어 측정에서 영영 빠진다. 큐·워커 역할은 FINISHED `resource.queue`·`role`이 먼저고(중복 실행에서 마지막 STARTED 의

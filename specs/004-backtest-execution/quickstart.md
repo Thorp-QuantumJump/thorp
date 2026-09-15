@@ -84,11 +84,17 @@ S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVol
 
 ## S12. 실행 한도 장치 (FR-006, R-19, T014)
 
-local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_limit_hit`에 `ADMISSION_REJECTED`·`RUN_STOPPED` 한 건씩 남는다(T012). **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
+local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 픽스처 실행은 2~4초에 끝나므로 실행 시간 상한은
+`1`초, 스위퍼 주기도 `PT1S`로 내려야 걸린다 — 백엔드를 `THORP_BACKTEST_LIMITS_MAX_QUEUED_PER_USER=2 THORP_BACKTEST_LIMITS_MAX_RUN_SECONDS=1
+THORP_BACKTEST_LIVENESS_INTERVAL=PT1S`로 재기동한다. 대기 상한을 보려면 워커를 잠시 멈춰 요청이 `QUEUED`로 쌓이게 한다(워커가 있으면 100ms 안에
+`RUNNING`이 되어 세어지지 않는다). 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_limit_hit`에 `ADMISSION_REJECTED`·`RUN_STOPPED` 한 건씩 남는다(T012). **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
 
 ## S13. 단건·벌크 큐 분리 (R-20, T015)
 
-dev compose는 `worker`(single, `WORKER_ROLE=single`) 1개 + `worker-flex`(`WORKER_ROLE=flex`) 1개다. 007로 탐색 묶음을 하나 시작한 뒤 `rabbitmqctl list_queues name messages_ready messages_unacknowledged`를 본다. 기대: 후보는 `backtest.jobs.bulk`에 쌓이고(`dispatch-window`=4 → ready 3·unacked 1) `backtest.jobs`는 0. 그 상태에서 단건을 요청하면 **single 워커가 즉시** 집어 RUNNING이 된다 — 벌크가 끝나기를 기다리지 않는다. 묶음이 끝나 bulk가 비면 flex 워커 로그에 `role=flex queue=backtest.jobs`가 찍히며 단건을 집는다(최대 1초 뒤). `max-queued-total=1`로 낮추고 bulk에 후보가 쌓인 상태에서 단건 첫 건을 요청하면 **429가 아니다** — 전체 한도는 `backtest.jobs`의 단건만 센다. 두 번째 단건은 `429 TOTAL`. `backtest.jobs.dlq`는 하나뿐이고 어느 큐에서 죽은 메시지든 T010 리스너가 `runId`·`publishAttempt`로 집계한다.
+dev compose는 `worker`(single, `WORKER_ROLE=single`) 1개 + `worker-flex`(`WORKER_ROLE=flex`) 1개다. 007 묶음은 `POST /param-searches/preview`로
+`registryVersion`을 받은 뒤 `POST /param-searches`에 되돌려 보낸다. 픽스처(24개월)에서는 `INVERSE_VOLATILITY`의 `lookbackDays`를 `[21, 63]`으로 좁혀야
+`INSUFFICIENT_HISTORY`를 피하고, `FIXED_WEIGHT`는 목표 비중이 없어 탐색에 넣을 수 없다. **2026-09-15 기준 007 후보는 워커 계약 위반으로 DLQ에 간다**
+(검증 기록 발견 2) — 큐 분리·단건 즉시 처리는 그와 무관하게 확인된다. 007로 탐색 묶음을 하나 시작한 뒤 `rabbitmqctl list_queues name messages_ready messages_unacknowledged`를 본다. 기대: 후보는 `backtest.jobs.bulk`에 쌓이고(`dispatch-window`=4 → ready 3·unacked 1) `backtest.jobs`는 0. 그 상태에서 단건을 요청하면 **single 워커가 즉시** 집어 RUNNING이 된다 — 벌크가 끝나기를 기다리지 않는다. 묶음이 끝나 bulk가 비면 flex 워커 로그에 `role=flex queue=backtest.jobs`가 찍히며 단건을 집는다(최대 1초 뒤). `max-queued-total=1`로 낮추고 bulk에 후보가 쌓인 상태에서 단건 첫 건을 요청하면 **429가 아니다** — 전체 한도는 `backtest.jobs`의 단건만 센다. 두 번째 단건은 `429 TOTAL`. `backtest.jobs.dlq`는 하나뿐이고 어느 큐에서 죽은 메시지든 T010 리스너가 `runId`·`publishAttempt`로 집계한다.
 
 ## 완료 판정
 
