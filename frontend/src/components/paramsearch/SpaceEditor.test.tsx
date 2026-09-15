@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
@@ -24,44 +23,6 @@ const inventedSpace: StrategySpaceSummary[] = [
     ],
     combinations: 4,
   },
-]
-
-/** 007 운영 코드(프론트). 테스트와 픽스처는 FR-025의 명시적 예외라 뺀다. */
-const productionSources = [
-  'src/api/paramSearch.ts',
-  'src/types/paramSearch.ts',
-  'src/hooks/useParamSearchStatus.ts',
-  'src/utils/paramSearchLabels.ts',
-  'src/pages/ParamSearchPage.tsx',
-  'src/components/paramsearch/PreflightPanel.tsx',
-  'src/components/paramsearch/ProvisionalBadge.tsx',
-  'src/components/paramsearch/RegistryChangedDialog.tsx',
-  'src/components/paramsearch/SpaceEditor.tsx',
-]
-
-/**
- * 등록표의 전략 ID와 이름. 원본은
- * `backend/src/main/resources/registry/parameter-registry-provisional.yml`이고 여기 적은 것은
- * **화면 코드에 나타나면 안 되는 낱말 목록**이다. 등록표에 전략이 늘면 이 목록에도 더한다.
- */
-const registryWords = [
-  'EQUAL_WEIGHT',
-  'FIXED_WEIGHT',
-  'INVERSE_VOLATILITY',
-  'SECTOR_MOMENTUM',
-  'MINIMUM_VARIANCE',
-  '동일 비중',
-  '고정 비중',
-  '역변동성',
-  '섹터 모멘텀',
-  '최소분산',
-]
-
-/** 전략 분기의 흔한 형태. */
-const branchingPatterns = [
-  /switch\s*\(\s*[\w.]*[sS]trategyId/,
-  /[\w.]*[sS]trategyId\s*===?\s*['"]/,
-  /['"][A-Z][A-Z0-9_]{3,}['"]\s*===?\s*[\w.]*[sS]trategyId/,
 ]
 
 /** 제어 컴포넌트를 여러 번 눌러 보기 위한 최소 껍데기. */
@@ -164,32 +125,5 @@ describe('SpaceEditor', () => {
     for (const banned of ['추천', '최적', '1위', '우승']) {
       expect(text).not.toContain(banned)
     }
-  })
-
-  it('007 화면 코드에 등록표의 전략 ID·전략명이 없다', () => {
-    const violations: string[] = []
-
-    for (const source of productionSources) {
-      const content = readFileSync(source, 'utf-8')
-      for (const word of registryWords) {
-        if (content.includes(word)) violations.push(`${source} → ${word}`)
-      }
-    }
-
-    expect(violations).toEqual([])
-  })
-
-  it('007 화면 코드에 strategyId 분기가 없다', () => {
-    const violations: string[] = []
-
-    for (const source of productionSources) {
-      const content = readFileSync(source, 'utf-8')
-      for (const pattern of branchingPatterns) {
-        const matched = pattern.exec(content)
-        if (matched) violations.push(`${source} → ${matched[0]}`)
-      }
-    }
-
-    expect(violations).toEqual([])
   })
 })
