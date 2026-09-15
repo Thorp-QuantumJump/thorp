@@ -496,8 +496,9 @@ components/
 └─ LoginForm.test.tsx
 ```
 
-현재 프로젝트에는 테스트 스크립트가 없으므로 `npm test`를 완료 조건으로 강제하지 않는다.
-테스트 도구가 도입되면 `package.json`에 팀 공통 명령을 정의하고 이 문서를 갱신한다.
+`npm test`는 완료 조건이다. `test:dom`(Vitest)과 `test:legacy`(`node --test`)를 차례로 돌린다.
+
+Vitest가 수집하는 파일은 `vite.config.ts`의 `test.include`가 정하며, 이 값은 모든 테스트 파일을 자동으로 잡는 것이 아니라 **허용 목록**이다. 목록에 걸리지 않는 파일은 실패하지 않고 조용히 수집되지 않으므로, 새 테스트 파일을 만들 때는 그 경로가 `include`에 걸리는지 확인하고 걸리지 않으면 목록을 넓힌다.
 
 ## 16. 작업 절차
 
@@ -528,11 +529,10 @@ npm run build
 git diff --check
 ```
 
-`npm run lint`와 `npm run build`는 `frontend` 디렉터리에서 실행한다.
-테스트나 formatter가 도입되면 다음과 같은 공통 스크립트를 `package.json`에 정의한 뒤 완료 조건에 추가한다.
+`npm run lint`와 `npm run build`, `npm test`는 `frontend` 디렉터리에서 실행한다.
+formatter가 도입되면 다음과 같은 공통 스크립트를 `package.json`에 정의한 뒤 완료 조건에 추가한다.
 
 ```bash
-npm test
 npm run format:check
 ```
 
