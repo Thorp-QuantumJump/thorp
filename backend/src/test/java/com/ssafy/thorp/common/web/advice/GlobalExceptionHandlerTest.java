@@ -1,12 +1,14 @@
 package com.ssafy.thorp.common.web.advice;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import jakarta.validation.Valid;
@@ -31,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>{@code @WebMvcTest} 슬라이스로 띄우므로 {@code JpaAuditingConfig}가 컨텍스트에서 제외되는지도 함께 확인된다.
  */
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.ThrowingController.class)
-@Import(GlobalExceptionHandlerTest.ThrowingController.class)
+@Import({SecurityConfig.class, GlobalExceptionHandlerTest.ThrowingController.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -52,6 +54,7 @@ class GlobalExceptionHandlerTest {
     void validationException() throws Exception {
         mockMvc.perform(
                         post("/test/validation")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"name\": \"\"}"))
                 .andExpect(status().isBadRequest())
@@ -85,6 +88,7 @@ class GlobalExceptionHandlerTest {
     void malformedJsonBody() throws Exception {
         mockMvc.perform(
                         post("/test/validation")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{oops"))
                 .andExpect(status().isBadRequest())
@@ -103,7 +107,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("허용되지 않는 메서드는 500이 아니라 405로 응답한다")
     void methodNotAllowed() throws Exception {
-        mockMvc.perform(delete("/test/business"))
+        mockMvc.perform(delete("/test/business").with(csrf()))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.success").value(false));
     }

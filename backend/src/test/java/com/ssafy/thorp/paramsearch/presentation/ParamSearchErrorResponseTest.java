@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
 import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;
 import com.ssafy.thorp.paramsearch.application.exception.StrategyNotExecutableException;
@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 것을 한 번 더 확인한다.
  */
 @WebMvcTest(controllers = ParamSearchErrorResponseTest.ThrowingController.class)
-@Import(ParamSearchErrorResponseTest.ThrowingController.class)
+@Import({SecurityConfig.class, ParamSearchErrorResponseTest.ThrowingController.class})
 class ParamSearchErrorResponseTest {
 
     @Autowired private MockMvc mockMvc;

@@ -27,6 +27,11 @@ spring:
     # constitution "스키마 변경 규칙": 운영 데이터베이스를 초기화하는 명령은 쓰지 않는다.
     clean-disabled: true
 
+  # 운영 스키마는 위 Flyway 마이그레이션만 관리한다.
+  session:
+    jdbc:
+      initialize-schema: never
+
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST}
     port: ${SPRING_RABBITMQ_PORT}
@@ -36,6 +41,12 @@ spring:
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
 
 # 실행 한도(FR-006, R-19). **기본값을 두지 않는다** — 값이 없으면 기동이 실패한다.
 #

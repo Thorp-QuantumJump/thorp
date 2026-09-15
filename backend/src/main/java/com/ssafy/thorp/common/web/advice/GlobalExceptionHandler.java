@@ -10,6 +10,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -47,6 +49,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Domain constraint violated: {}", e.getMessage());
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())
                 .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INVALID_INPUT, e.getMessage())));
+    }
+
+    /** 컨트롤러 또는 서비스 경계에서 발견한 미인증 요청을 공통 JSON 포맷으로 변환한다. */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException e) {
+        log.warn("Authentication required: type={}", e.getClass().getSimpleName());
+        return ResponseEntity.status(ErrorCode.AUTHENTICATION_REQUIRED.getStatus())
+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.AUTHENTICATION_REQUIRED)));
+    }
+
+    /** MVC 계층까지 전달된 CSRF 검증 실패를 필터 계층과 같은 응답으로 변환한다. */
+    @ExceptionHandler(CsrfException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCsrf(CsrfException e) {
+        log.warn("CSRF validation failed: type={}", e.getClass().getSimpleName());
+        return ResponseEntity.status(ErrorCode.CSRF_TOKEN_INVALID.getStatus())
+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.CSRF_TOKEN_INVALID)));
     }
 
     /** 예상하지 못한 예외. 내부 정보가 새지 않도록 메시지는 고정 문구만 내려준다. */

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -206,6 +207,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         String body =
                 mockMvc.perform(
                                 post("/backtests/{id}/cancel", backtestId)
+                                        .with(csrf())
                                         .header(CurrentRequester.DEV_HEADER, user))
                         .andExpect(status().isAccepted())
                         .andReturn()
@@ -610,6 +612,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         // 두 번 취소는 409
         mockMvc.perform(
                         post("/backtests/{id}/cancel", id)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, user))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));

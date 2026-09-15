@@ -12,6 +12,10 @@ spring:
   profiles:
     default: local
 
+  # 인증 상태는 서버가 관리하고 PostgreSQL에 저장한다. 테이블 초기화 방식은 프로필별로 정한다.
+  session:
+    timeout: 30m
+
   # 스키마 관리 정책은 프로필별로 갈린다.
   #  - local: Hibernate ddl-auto=update (Flyway 비활성)
   #  - prod : Flyway가 마이그레이션, Hibernate는 ddl-auto=validate로 검증만
@@ -159,6 +163,13 @@ thorp:
 
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        name: THORP_SESSION
+        http-only: true
+        same-site: lax
+        path: /
   # 결과 시계열이 이 앱에서 가장 큰 응답이다 — 5년 일봉이면 거래일 약 1,250개 × 5필드로 수백 KB고
   # 날짜·숫자 문자열이 반복돼 압축률이 높다. 나머지 응답은 min-response-size 아래라 영향이 없다.
   compression:

@@ -15,6 +15,17 @@ public enum ErrorCode {
     BROKER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "작업 큐에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 
+    // spec 014 사용자 인증. 계약은 specs/014-user-auth/contracts/auth-api.yaml.
+    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일입니다."),
+    DUPLICATE_PHONE(HttpStatus.BAD_REQUEST, "이미 가입된 전화번호입니다."),
+    EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 인증을 완료해 주세요."),
+    EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요."),
+    EMAIL_VERIFICATION_INVALID(HttpStatus.BAD_REQUEST, "인증번호를 다시 확인해 주세요."),
+    EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요."),
+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
+    CSRF_TOKEN_INVALID(HttpStatus.FORBIDDEN, "요청 확인 정보가 만료되었습니다. 다시 시도해 주세요."),
+
     // spec 004 백테스트 실행. 계약은 specs/004-backtest-execution/contracts/rest-api.md "오류 코드 추가분".
     RULES_NOT_REGISTERED(
             HttpStatus.UNPROCESSABLE_ENTITY, "아직 계산 규칙이 정해지지 않은 전략입니다. 다른 전략을 선택해 주세요."),

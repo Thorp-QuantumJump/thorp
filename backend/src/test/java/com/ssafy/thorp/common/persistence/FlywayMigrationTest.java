@@ -297,6 +297,45 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("Spring Session 테이블이 공식 JDBC 스키마와 같은 컬럼을 갖는다")
+    void springSessionTablesHaveRequiredColumns() {
+        assertThat(columnsOf("spring_session"))
+                .containsExactlyInAnyOrder(
+                        "primary_id",
+                        "session_id",
+                        "creation_time",
+                        "last_access_time",
+                        "max_inactive_interval",
+                        "expiry_time",
+                        "principal_name");
+        assertThat(columnsOf("spring_session_attributes"))
+                .containsExactlyInAnyOrder(
+                        "session_primary_id", "attribute_name", "attribute_bytes");
+    }
+
+    @Test
+    @DisplayName("Spring Session 조회 인덱스와 속성 삭제용 외래 키가 생성된다")
+    void springSessionIndexesAndForeignKeyExist() {
+        List<String> indexes =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(indexname) FROM pg_indexes"
+                                + " WHERE schemaname = 'public'"
+                                + " AND LOWER(tablename) = 'spring_session'",
+                        String.class);
+        assertThat(indexes)
+                .contains("spring_session_ix1", "spring_session_ix2", "spring_session_ix3");
+
+        Integer foreignKeys =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.table_constraints"
+                                + " WHERE constraint_type = 'FOREIGN KEY'"
+                                + " AND LOWER(table_name) = 'spring_session_attributes'"
+                                + " AND LOWER(constraint_name) = 'spring_session_attributes_fk'",
+                        Integer.class);
+        assertThat(foreignKeys).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다")
     void v2CreatesBacktestResultColumns() {
         assertThat(columnsOf("backtest_result"))

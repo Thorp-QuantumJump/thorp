@@ -42,7 +42,44 @@ class ApplicationProfileConfigTest {
                             .isEqualTo("update");
                     assertThat(context.getEnvironment().getProperty("spring.flyway.enabled"))
                             .isEqualTo("false");
+                    assertThat(
+                                    context.getEnvironment()
+                                            .getProperty("spring.session.jdbc.initialize-schema"))
+                            .isEqualTo("always");
+                    assertThat(
+                                    context.getEnvironment()
+                                            .getProperty("server.servlet.session.cookie.secure"))
+                            .isEqualTo("false");
                 });
+    }
+
+    @Test
+    void sharedSessionConfigUsesServerManagedThirtyMinuteSession() {
+        contextRunner
+                .withPropertyValues("spring.profiles.active=none")
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            var environment = context.getEnvironment();
+                            assertThat(environment.getProperty("spring.session.timeout"))
+                                    .isEqualTo("30m");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "server.servlet.session.cookie.name"))
+                                    .isEqualTo("THORP_SESSION");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "server.servlet.session.cookie.http-only"))
+                                    .isEqualTo("true");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "server.servlet.session.cookie.same-site"))
+                                    .isEqualTo("lax");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "server.servlet.session.cookie.path"))
+                                    .isEqualTo("/");
+                        });
     }
 
     /** 공통 설정에 ddl-auto가 남아 있으면 프로필을 지정하지 않은 실행에서 Hibernate가 스키마를 건드린다. */
@@ -105,6 +142,14 @@ class ApplicationProfileConfigTest {
                             assertThat(environment.getProperty("spring.flyway.validate-on-migrate"))
                                     .isEqualTo("true");
                             assertThat(environment.getProperty("spring.flyway.clean-disabled"))
+                                    .isEqualTo("true");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "spring.session.jdbc.initialize-schema"))
+                                    .isEqualTo("never");
+                            assertThat(
+                                            environment.getProperty(
+                                                    "server.servlet.session.cookie.secure"))
                                     .isEqualTo("true");
                         });
     }

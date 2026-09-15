@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,6 +35,7 @@ import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.io.IOException;
@@ -62,7 +64,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>요청 본문의 기준은 계약 예시 파일이다. 예시가 바뀌면 이 테스트가 먼저 깨져서 문서와 코드가 갈라지지 않는다.
  */
 @WebMvcTest(BacktestController.class)
-@Import(CurrentRequester.class)
+@Import({SecurityConfig.class, CurrentRequester.class})
 @TestPropertySource(properties = "thorp.auth.trust-user-id-header=true")
 class BacktestControllerTest {
 
@@ -104,6 +106,7 @@ class BacktestControllerTest {
             throws Exception {
         return mockMvc.perform(
                 post("/backtests")
+                        .with(csrf())
                         .header(CurrentRequester.DEV_HEADER, USER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body));
@@ -179,6 +182,7 @@ class BacktestControllerTest {
     void missingRequesterHeaderIsRejected() throws Exception {
         mockMvc.perform(
                         post("/backtests")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(VALID_BODY))
                 .andExpect(status().isBadRequest());
@@ -345,6 +349,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
@@ -360,10 +365,11 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));
-        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID))
+        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID).with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -401,6 +407,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/retry", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
@@ -417,6 +424,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/retry", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_RETRYABLE"));

@@ -18,6 +18,11 @@ spring:
   flyway:
     enabled: false
 
+  # 로컬은 Flyway가 꺼져 있으므로 Spring Session의 공식 PostgreSQL 스크립트로 세션 테이블을 준비한다.
+  session:
+    jdbc:
+      initialize-schema: always
+
   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
@@ -28,6 +33,12 @@ spring:
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
 
 # 자동 탐색(spec 007) 로컬 개발값. 네 값 모두 **개발 편의값이며 팀 확정값이 아니다.**
 # API 응답의 limits.provisional에 네 항목이 모두 실려 화면에 임시값 표시가 붙는다(FR-005a).

@@ -23,9 +23,9 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 - [x] T001 [P] Add Vitest, jsdom, React Testing Library, and user-event dependencies and test scripts in `frontend/package.json` and `frontend/package-lock.json`
 - [x] T002 Configure Vitest DOM environment, aliases, and shared cleanup in `frontend/vite.config.ts` and `frontend/src/test/setup.ts` after T001
-- [ ] T003 [P] Replace crypto-only security dependency with Spring Security starter and add Spring Session JDBC in `backend/build.gradle`
-- [ ] T004 [P] Add PostgreSQL Spring Session tables and indexes without changing existing user data in `backend/src/main/resources/db/migration/V3__spring_session.sql`
-- [ ] T005 Configure 30-minute inactive session timeout and `THORP_SESSION` cookie defaults per environment in `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-local.yml`, and `backend/src/main/resources/application-prod.yml`
+- [x] T003 [P] Replace crypto-only security dependency with Spring Security starter and add Spring Session JDBC in `backend/build.gradle`
+- [x] T004 [P] Add PostgreSQL Spring Session tables and indexes without changing existing user data in `backend/src/main/resources/db/migration/V20260915092702__spring_session.sql`
+- [x] T005 Configure 30-minute inactive session timeout and `THORP_SESSION` cookie defaults per environment in `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-local.yml`, and `backend/src/main/resources/application-prod.yml`
 
 **Checkpoint**: FE component tests and BE session-backed security code can be implemented.
 
@@ -37,11 +37,11 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 사용자 스토리 구현을 병합하지 않는다.
 
-- [ ] T006 [P] Add failing contract tests for the common authentication error envelope, CSRF 403, and sanitized 500 responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java`
-- [ ] T007 [P] Add failing integration tests for public routes, protected authentication routes, CSRF bootstrap, cookie attributes, and session-id rotation in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java`
+- [x] T006 [P] Add failing contract tests for the common authentication error envelope, CSRF 403, and sanitized 500 responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java`
+- [x] T007 [P] Add failing integration tests for public routes, protected authentication routes, CSRF bootstrap, cookie attributes, and session-id rotation in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java`
 - [x] T008 [P] Define auth request, response, user, state, and stable error-code types from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts`
-- [ ] T009 Add stable account/auth error codes and security exception envelope handling in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java` to satisfy T006
-- [ ] T010 Add Spring Security session persistence, session-fixation protection, CSRF cookie repository, and JSON authentication handlers in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T007
+- [x] T009 Add stable account/auth error codes and security exception envelope handling in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java` to satisfy T006
+- [x] T010 Add Spring Security session persistence, session-fixation protection, CSRF cookie repository, and JSON authentication handlers in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T007
 - [x] T011 Extend Axios credentials, XSRF cookie/header names, CSRF bootstrap, and normalized API/network error handling in `frontend/src/api/client.ts`
 - [x] T012 [P] Add reusable auth API and provider test fixtures without storing credentials in `frontend/src/test/authFixtures.ts` and `frontend/src/test/renderWithRouter.tsx`
 
