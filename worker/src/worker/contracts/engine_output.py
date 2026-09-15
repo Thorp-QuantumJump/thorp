@@ -216,6 +216,7 @@ class Versions(ContractModel):
     cost_profile: RuleVersion | None = None
     data: str | None = None
     engine: str | None = None
+    evaluation_split: str | None = None  # 요청의 evaluation.splitVersion 사본. None = 미지정
     worker: str | None = None
 
 

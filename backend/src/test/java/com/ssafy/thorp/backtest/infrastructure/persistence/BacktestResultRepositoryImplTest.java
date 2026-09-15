@@ -121,6 +121,17 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {
         assertThat(result.getExceptions()).isEqualTo(output.exceptions());
         assertThat(result.getVersions()).isEqualTo(output.versions());
         assertThat(result.getCreatedAt()).isNotNull();
+        // 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).
+        // 엔티티 equals 는 필드가 빠져도 양쪽이 같이 빠지면 통과하므로 DB 의 JSONB 키를 직접 본다.
+        assertThat(
+                        entityManager
+                                .getEntityManager()
+                                .createNativeQuery(
+                                        "SELECT versions ->> 'evaluationSplit' FROM backtest_result"
+                                                + " WHERE run_id = :runId")
+                                .setParameter("runId", jobId)
+                                .getSingleResult())
+                .isEqualTo("SPLIT-1");
     }
 
     @Test

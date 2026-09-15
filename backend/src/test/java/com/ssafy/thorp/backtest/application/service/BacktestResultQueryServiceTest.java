@@ -32,6 +32,7 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
@@ -149,7 +150,8 @@ class BacktestResultQueryServiceTest {
                 errorCode == null ? costs() : null,
                 errorCode == null ? liquidation() : null,
                 errorCode == null ? analytics() : null,
-                errorCode == null ? 1 : 0);
+                errorCode == null ? 1 : 0,
+                errorCode == null ? "thorp-worker 0.2.0" : null);
     }
 
     private static EngineOutput.Costs costs() {
@@ -252,6 +254,49 @@ class BacktestResultQueryServiceTest {
         assertThat(summary.analytics().recoveryDays()).isEqualTo(9);
         assertThat(summary.analytics().turnover()).isEqualByComparingTo("1.219991");
         assertThat(summary.exceptionCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("완료 상세의 versions 는 접수가 확정한 값에 결과를 낸 워커의 자기 보고(worker)를 얹은 것이다")
+    void detailVersionsCarryTheReportingWorker() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER)));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.COMPLETED).withPlan(plannedVersions())));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
+
+        Map<String, Object> versions = service.getDetail(BACKTEST_ID, REQUESTER).versions();
+
+        assertThat(versions)
+                .containsEntry("rules", Map.of("version", "1", "provisional", true))
+                .containsEntry("worker", "thorp-worker 0.2.0");
+    }
+
+    @Test
+    @DisplayName("결과 전에는 worker 를 채우지 않는다 — 어느 워커가 계산할지 아직 모른다")
+    void detailBeforeResultHasNoWorkerVersion() {
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestFor(REQUESTER)));
+        when(jobRepository.findById(JOB_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING).withPlan(plannedVersions())));
+
+        assertThat(service.getDetail(BACKTEST_ID, REQUESTER).versions())
+                .containsKey("rules")
+                .doesNotContainKey("worker");
+    }
+
+    private static RunPlan plannedVersions() {
+        return new RunPlan(
+                "a".repeat(64),
+                "1",
+                "PROVISIONAL-DEMO-1",
+                "FIXTURE-three_etf_24m",
+                LocalDate.of(2025, 1, 2),
+                LocalDate.of(2025, 6, 30),
+                0,
+                Map.of("mappingVersion", "SECTOR-ETF-2026-09"),
+                Map.of("rules", Map.of("version", "1", "provisional", true)),
+                ExecutionType.SINGLE);
     }
 
     // ---------- 취소 실행의 상세(T011) ----------

@@ -59,7 +59,10 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 - `resultSource`: `NEW` 새 계산 / `JOINED` 진행 중인 같은 조건 실행에 합류 / `REUSED` 완료 결과 재사용. **`REUSED`면 `status`가
   이미 `COMPLETED`이고 결과를 바로 조회할 수 있다** — 상태만 보고 폴링을 시작하지 말 것.
 - `effectiveStart`는 워밍업과 상장일을 반영한 실제 평가 시작일이라 요청 시작일보다 뒤일 수 있다.
-- `versions`는 결과 재현의 기준(비용 조건·규칙·자료·엔진)이고 `costProfile.provisional=true`는 팀 확정 전 임시값이라는 뜻이다.
+- `versions`는 결과 재현의 기준이다: `{ mapping, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit }`.
+  `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
+  (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.
+  계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).
 - 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014), 503 `BROKER_UNAVAILABLE`.
 
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
@@ -242,7 +245,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   `CANCEL_UNANSWERED`는 T014.
 - 실행을 실제로 멈춘 취소(마지막 활성 요청의 취소)는 `CANCELLED`·`partial=true`이고 `summary`는 **부분 구간 기준** 값이다. `progress.lastTradingDate`는
   워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.
-- `versions`는 202 응답과 같은 값이다.
+- `versions`는 202 응답과 같은 값에 결과를 낸 워커의 자기 보고 `worker`(워커 패키지 버전)를 얹은 것이다. 결과가 없으면(대기·실행 중·결과 없는 실패) `worker` 키가 없다.
 - `failure.code`는 엔진이 준 값(`SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION`
   `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다.
 

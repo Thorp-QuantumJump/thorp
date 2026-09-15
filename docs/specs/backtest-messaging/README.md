@@ -119,7 +119,8 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 `allocation.parameters`는 전략별 자유 형식 객체 — **정수는 정수, 소수는 JSON 숫자로 그대로 통과**시키고 문자열로 바꾸지 않는다(금액·비율 문자열 규칙은
 선언된 decimal 필드에만 적용). 픽스처의 `threshold: 0.05`가 이 규칙의 round-trip 검사용이다. `allocation.rules`는 전략 규칙 등록표의 사본이며
-없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터).
+없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터). 사본에는 등록표의 `provisional`(팀 결정 전 임시 규칙, PD-02)이 함께 실리고 워커는 그 값을
+결과 `versions.rules.provisional`로 되돌려 준다(T018) — 배분 모듈은 자기가 아는 키만 읽으므로 이 키는 계산을 바꾸지 않는다.
 
 ### 4.2 이벤트 envelope — `event-*.json` 공통
 
@@ -164,7 +165,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
   정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method="sample-covariance-daily"`. 계산 불가 항목은 키 생략.
 - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,
   `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING` 등 개방 집합.
-- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, worker }` 참조 버전(FR-028).
+- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit?, worker }` 참조 버전(FR-028). `evaluationSplit`은 요청 `evaluation.splitVersion`의 사본이다 — 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
 - 계산 불가 성과 지표(설계 OUTPUT Spec 규칙): 변동성 0 → `sharpeRatio`만 null. 관측치 2개 미만 → `volatility`·`sharpeRatio` null.
   CLOSED 거래 0건 → `winRate` null. `initialEquity ≤ 0` → `totalReturn`·`cagr` null. 기간이 1년 미만이라는 이유로 `cagr`을 null로 만들지 않는다.
 - **체결가 의미**: 계약상 `trades[].entryPrice`/`exitPrice`는 슬리피지가 반영된 실제 평균 체결가다. **현재 픽스처는 기준가를 그대로 넣고 슬리피지를
