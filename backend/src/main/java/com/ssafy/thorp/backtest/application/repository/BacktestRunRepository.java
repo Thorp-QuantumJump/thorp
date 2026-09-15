@@ -70,8 +70,11 @@ public interface BacktestRunRepository {
      */
     List<BacktestRun> findCancelPending(int limit);
 
-    /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다. */
-    long countQueued();
+    /**
+     * 대기 중인 <b>단건</b> 실행 수(사용자 무관). 접수 한도 판정에 쓴다. 탐색·경제환경 파생 실행은 다른 큐로 가므로 세지 않는다(R-20) — 한 큐에서
+     * 배치까지 세면 배치가 큐를 채우는 동안 단건만 429 를 받았다.
+     */
+    long countQueuedSingle();
 
     /**
      * 이 사용자가 대기시켜 둔 <b>단건</b> 실행 수. 탐색 묶음({@code SEARCH_BUNDLE})은 007 의 발행 창이 이미 통제하므로 세지 않는다 — 두

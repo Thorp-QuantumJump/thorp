@@ -85,8 +85,9 @@ common: 모든 계층에서 참조 가능
   COMPLETED가 된다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
 - **실행 한도는 접수만 막고, 도는 것은 스위퍼가 끊는다**(`ExecutionLimitPolicy`·`RunLivenessSweeper`, R-19). `thorp.backtest.limits.*` 다섯 값은
   모두 `@NotNull`이라 하나라도 비면 기동에 실패하고, **prod는 `${ENV}` 참조에 기본값을 두지 않아** 공통 설정의 임시값을 물려받지 않는다(FR-006을
-  설정 누락으로 우회할 수 없게 한 것이다). **`max-queued-per-user`는 `SINGLE`만 센다** — 탐색 묶음의 적재량은 007 `dispatch-window`가
-  통제하므로 두 곳에서 막으면 창을 키운 날 탐색이 429를 받고 묶음이 영구 정지한다. `max-queued-total`은 종류를 가리지 않는다(서버 보호).
+  설정 누락으로 우회할 수 없게 한 것이다). **두 대기 한도는 `SINGLE`만 센다** — 탐색·경제환경 파생 실행은 다른 큐(`backtest.jobs.bulk`)로
+  가고 한도의 대상이 아니다(R-20). 한 큐였을 때는 탐색을 세면 007 묶음이 영구 정지하고(`advance()`는 `BacktestFinished`로만 불린다) 안 세면
+  탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
   세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
   시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
 - **정체 판정은 `last_event_at`으로 한다.** `updated_at`으로 대신하면 발행 기록이 갱신될 때도 올라가 멈춘 실행이 살아 있는 것처럼 보인다 —

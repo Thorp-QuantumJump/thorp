@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
@@ -128,9 +129,12 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     List<BacktestRunJpaEntity> findCancelPending(
             @Param("alive") Collection<RunStatus> alive, Limit limit);
 
-    /** 대기 중인 실행 수(전체). 접수 한도 판정에 쓴다(R-19). */
-    @Query("select count(r) from BacktestRunJpaEntity r where r.status = :status")
-    long countByStatus(@Param("status") RunStatus status);
+    /** 대기 중인 실행 수(유형별). 접수 한도 판정에 쓴다(R-19·R-20) — 단건 큐만 센다. */
+    @Query(
+            "select count(r) from BacktestRunJpaEntity r where r.status = :status"
+                    + " and r.executionType = :executionType")
+    long countByStatusAndExecutionType(
+            @Param("status") RunStatus status, @Param("executionType") ExecutionType executionType);
 
     /** 발행 confirm 시각. 이 컬럼만 건드려 상태 전이와 부딪히지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

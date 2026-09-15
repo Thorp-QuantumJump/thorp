@@ -20,13 +20,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 서버 전체 대기열이 찼을 때 무엇을 막고 무엇을 흘려보내는가(spec 004 T014, R-19).
+ * 단건 큐 전체가 찼을 때 무엇을 막고 무엇을 흘려보내는가(spec 004 T014·T015, R-19·R-20).
  *
  * <p><b>상한을 1로 둔다.</b> 스위트가 PostgreSQL 컨테이너를 공유해 다른 IT 가 남긴 대기 실행이 함께 세어지는데, 그 잔여물은 수를 <b>늘리기만</b>
- * 하므로 상한이 1이면 "이미 찼다"가 실행 순서와 무관하게 참이다. {@code ExecutionLimitApiIT} 는 반대로 전체 한도가 걸리지 않게 넉넉히 두고 사용자별
- * 한도만 본다.
+ * 하므로 상한이 1이면 단건 한 건을 넣은 뒤 "이미 찼다"가 실행 순서와 무관하게 참이다. {@code ExecutionLimitApiIT} 는 반대로 전체 한도가 걸리지
+ * 않게 넉넉히 두고 사용자별 한도만 본다.
  *
- * <p>여기서 고정하는 것은 값이 아니라 <b>가르는 기준</b>이다 — 사람이 기다리는 단건은 막고, 돌던 묶음의 다음 후보는 흘려보낸다.
+ * <p>여기서 고정하는 것은 값이 아니라 <b>가르는 기준</b>이다 — 한도는 단건 큐의 것이고, 다른 큐로 가는 탐색·경제환경 파생 실행은 단건 큐가 아무리 차 있어도
+ * 접수된다.
  */
 @SpringBootTest(
         properties = {
@@ -91,13 +92,13 @@ class ExecutionLimitFullQueueIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("전체 대기열이 차면 단건은 막고 탐색 후보는 흘려보낸다 — 끊으면 그 묶음이 다시 깨어나지 못한다")
-    void rejectsSingleButKeepsSearchBundlesFlowing() {
+    @DisplayName("단건 큐가 차면 단건은 막고, 다른 큐로 가는 탐색·경제환경 실행은 세지도 막지도 않는다")
+    void rejectsSingleButNeverTouchesBulkRuns() {
         long user = newUser("a");
-        // 상한 1을 확실히 넘긴다. 묶음은 한도 위에서도 접수된다.
-        backtestService.create(request(user, 3, ExecutionType.SEARCH_BUNDLE));
+        // 첫 단건은 잔여물이 있으면 막히고 없으면 통과한다 — 어느 쪽이든 이 뒤로 단건 큐는 상한 1에 닿아 있다.
+        catchThrowable(() -> backtestService.create(request(user, 3, ExecutionType.SINGLE)));
 
-        // 사람이 기다리는 단건은 여기서 막는다 — 서버 보호의 요점이다.
+        // 사람이 기다리는 단건은 여기서 막는다 — 단건 큐 보호의 요점이다.
         Throwable rejected =
                 catchThrowable(
                         () -> backtestService.create(request(user, 4, ExecutionType.SINGLE)));
@@ -105,11 +106,18 @@ class ExecutionLimitFullQueueIT extends PostgresTestSupport {
                 .isEqualTo(ErrorCode.EXECUTION_LIMIT);
         assertThat(((BusinessException) rejected).getDetails()).containsEntry("reason", "TOTAL");
 
-        // 돌던 묶음의 다음 후보는 통과해야 한다. 007 은 완료 이벤트로만 다음 후보를 내보내므로,
-        // 마지막 진행 후보가 끝난 순간 여기서 거절하면 남은 후보가 PENDING 인 채로 깨울 신호가 없다.
+        // 벌크 큐로 가는 실행은 단건 큐 상태와 무관하다(R-20). 한 큐였을 때는 여기서 거절하면 007 묶음이
+        // 영구 정지했고, 통과시키면 배치가 큐를 채우는 동안 단건만 429 를 받았다.
         assertThat(backtestService.create(request(user, 5, ExecutionType.SEARCH_BUNDLE)))
                 .isNotNull();
         assertThat(backtestService.create(request(user, 6, ExecutionType.REGIME_SECTOR)))
                 .isNotNull();
+        // 벌크가 쌓여도 단건 큐의 셈은 그대로다 — 단건이 또 막히는 이유는 단건끼리의 경쟁뿐이다.
+        Throwable stillTotal =
+                catchThrowable(
+                        () -> backtestService.create(request(user, 7, ExecutionType.SINGLE)));
+        assertThat(((BusinessException) stillTotal).getDetails())
+                .containsEntry("reason", "TOTAL")
+                .containsEntry("limit", 1);
     }
 }
