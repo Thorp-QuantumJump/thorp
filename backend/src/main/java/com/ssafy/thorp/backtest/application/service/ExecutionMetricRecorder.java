@@ -17,11 +17,11 @@ import org.springframework.stereotype.Component;
 /**
  * 실행 종결마다 측정 한 행을 남긴다(spec 004 R-10, FR-006·US4). PD-06 한도 값과 R-20 워커 비율은 이 기록으로 정한다.
  *
- * <p><b>종결 세 지점이 직접 부른다</b> — {@code BacktestEventService.handleFinished}(FINISHED 셋)·{@code
- * handleDeadLetter}(DLQ 종결)·{@code RunLivenessSweeper.settleOne}(취소 무응답 강제 종결). {@code
- * BacktestFinished} 이벤트를 구독하지 않는 이유: 그 이벤트는 007 을 위한 모듈 경계 신호라 FINISHED 의 {@code resource} 가 실려 있지
- * 않고, 측정을 위해 필드를 늘리면 받는 쪽마다 모르는 값이 생긴다. 세 지점 모두 실행 행을 잠근 트랜잭션 안이라 종결 UPDATE 와 이 INSERT 는 함께 커밋되거나
- * 함께 사라진다.
+ * <p><b>종결 네 지점이 직접 부른다</b> — {@code BacktestEventService.handleFinished}(FINISHED 셋)·{@code
+ * handleDeadLetter}(DLQ 종결)·{@code RunLivenessSweeper.settleOne}(취소 무응답 강제 종결)·{@code
+ * BacktestCancelService}(실행 전 취소). {@code BacktestFinished} 이벤트를 구독하지 않는 이유: 그 이벤트는 007 을 위한 모듈 경계
+ * 신호라 FINISHED 의 {@code resource} 가 실려 있지 않고, 측정을 위해 필드를 늘리면 받는 쪽마다 모르는 값이 생긴다. 네 지점 모두 실행 행을 잠근
+ * 트랜잭션 안이라 종결 UPDATE 와 이 INSERT 는 함께 커밋되거나 함께 사라진다.
  *
  * <p><b>호출자는 종결 시각까지 반영한 실행을 넘긴다</b>({@code lifecycle.finished(now)} 뒤). 여기서는 세기만 하고 실행을 바꾸지 않는다.
  *
@@ -47,7 +47,14 @@ public class ExecutionMetricRecorder {
      */
     public void record(BacktestRun run, FinishedPayload.ResourceUsage resource) {
         RunLifecycle lc = run.getLifecycle();
-        ExecutionMetricRepository.WorkerInfo worker = repository.findWorkerInfo(run.getId());
+        // 어느 큐·어느 워커가 집었나. FINISHED 가 실어 온 값이 먼저다 — 중복 실행(R-18)에서는 마지막 STARTED 의
+        // 워커와 결과를 낸 워커가 다를 수 있고, 측정은 결과를 낸 쪽의 것이어야 한다. FINISHED 가 없는 종결
+        // (DLQ·강제 종결·실행 전 취소)만 실행 행에 남은 STARTED 값으로 대신한다.
+        ExecutionMetricRepository.WorkerInfo worker =
+                resource != null && (resource.queue() != null || resource.role() != null)
+                        ? new ExecutionMetricRepository.WorkerInfo(
+                                resource.queue(), resource.role())
+                        : repository.findWorkerInfo(run.getId());
         ExecutionMetricRecord metric =
                 new ExecutionMetricRecord(
                         run.getId(),

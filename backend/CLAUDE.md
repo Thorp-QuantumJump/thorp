@@ -90,8 +90,10 @@ common: 모든 계층에서 참조 가능
   탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
   세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
   시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
-- **실행 측정은 종결 세 지점이 `ExecutionMetricRecorder.record(run, resource)`를 직접 부른다**(R-10, T012) — `handleFinished`·
-  `handleDeadLetter`·`RunLivenessSweeper.settleOne`. `BacktestFinished` 이벤트를 구독하지 않는다: 그 이벤트는 007 을 위한 경계 신호라 FINISHED 의
+- **실행 측정은 종결 네 지점이 `ExecutionMetricRecorder.record(run, resource)`를 직접 부른다**(R-10, T012) — `handleFinished`·
+  `handleDeadLetter`·`RunLivenessSweeper.settleOne`·`BacktestCancelService`(실행 전 취소). 종결 경로를 새로 만들면 그곳도 불러야 한다 — 빠진 종결은
+  늦은 FINISHED 가 최종 상태라 무시되어 측정에서 영영 빠진다. 큐·워커 역할은 FINISHED `resource.queue`·`role`이 먼저고(중복 실행에서 마지막 STARTED 의
+  워커와 결과를 낸 워커가 다를 수 있다) STARTED 값은 FINISHED 없는 종결의 대체다. `BacktestFinished` 이벤트를 구독하지 않는다: 그 이벤트는 007 을 위한 경계 신호라 FINISHED 의
   `resource`가 없다. 종결 UPDATE 와 같은 트랜잭션이고 `run_id` UNIQUE + `ON CONFLICT DO NOTHING`으로 한 번만 남는다. **호출자는 `finished(now)`까지
   반영한 실행을 넘긴다.** 한도 도달(429·실행 시간 상한 CANCEL)은 실행 행이 없거나 아직 끝나지 않아 `backtest_limit_hit` 별표다. 집계 SQL 은
   `ExecutionMetricRepositoryImpl.SUMMARY_BODY` 하나고 뷰 `v_run_metric_summary`는 그 범위 없는 판이다 — 뷰를 고치면 상수도 고친다
