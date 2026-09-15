@@ -139,6 +139,10 @@ class ExecutionMetricsApiIT extends PostgresTestSupport {
         assertThat(p99).isGreaterThanOrEqualTo(p95);
         assertThat(new BigDecimal(row.path("flexServedRate").asText()))
                 .isBetween(BigDecimal.ZERO, BigDecimal.ONE);
+        // 데이터 원가 중앙값(T019)도 뷰와 같다. 픽스처 FINISHED 가 dataRows 를 실어 오므로 null 이 아니다.
+        assertThat(new BigDecimal(row.path("dataRowsP50").asText()))
+                .isEqualByComparingTo(new BigDecimal(view.get("data_rows_p50").toString()));
+        assertThat(row.path("dataBytesP50").isTextual()).isTrue();
     }
 
     @Test

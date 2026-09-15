@@ -103,7 +103,9 @@ class ExecutionMetricRecorderTest {
                         new BigDecimal("3.210"),
                         new BigDecimal("4.0"),
                         null,
-                        null));
+                        null,
+                        1_439L,
+                        245_760L));
 
         ExecutionMetricRecord m = recorded();
         assertThat(m.runId()).isEqualTo(11L);
@@ -115,6 +117,9 @@ class ExecutionMetricRecorderTest {
         assertThat(m.peakRssMb()).isEqualByComparingTo("512.5");
         assertThat(m.cpuSeconds()).isEqualByComparingTo("3.210");
         assertThat(m.resultBytes()).isEqualTo(4096L);
+        // 데이터 원가(T019)는 FINISHED resource 에서 그대로 옮긴다.
+        assertThat(m.dataRows()).isEqualTo(1_439L);
+        assertThat(m.dataBytes()).isEqualTo(245_760L);
         assertThat(m.servedQueue()).isEqualTo("backtest.jobs");
         assertThat(m.workerRole()).isEqualTo("flex");
         assertThat(m.recordedAt()).isEqualTo(NOW);
@@ -132,7 +137,9 @@ class ExecutionMetricRecorderTest {
                         new BigDecimal("1.000"),
                         new BigDecimal("1.0"),
                         "backtest.jobs",
-                        "single"));
+                        "single",
+                        null,
+                        null));
 
         ExecutionMetricRecord m = recorded();
         assertThat(m.workerRole()).isEqualTo("single");

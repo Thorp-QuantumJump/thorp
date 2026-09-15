@@ -230,6 +230,9 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "cpu_seconds",
                         "auto_retried",
                         "result_bytes",
+                        // 데이터 원가 (FR-008, T019)
+                        "data_rows",
+                        "data_bytes",
                         // 어느 큐·어느 워커가 집었나 (R-20)
                         "served_queue",
                         "worker_role",
@@ -269,7 +272,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "peak_rss_p95_mb",
                         "flex_served_rate",
                         "reuse_count",
-                        "limit_hit_count");
+                        "limit_hit_count",
+                        // 데이터 원가 중앙값 (T019) — 뷰는 끝에만 열을 더할 수 있다
+                        "data_rows_p50",
+                        "data_bytes_p50");
     }
 
     @Test
