@@ -15,4 +15,8 @@ public interface PermissionHistoryJpaRepository
     Optional<NewsPublisherPermissionHistoryJpaEntity>
             findFirstByPublisherIdAndEventTypeOrderByOccurredAtDescIdDesc(
                     Long publisherId, PermissionEventType eventType);
+
+    /** 종류를 가리지 않은 가장 최근 사건. 현재 상태를 늦게 입력된 과거 사건이 덮지 않게 할 때 쓴다. */
+    Optional<NewsPublisherPermissionHistoryJpaEntity>
+            findFirstByPublisherIdOrderByOccurredAtDescIdDesc(Long publisherId);
 }

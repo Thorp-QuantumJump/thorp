@@ -1,8 +1,12 @@
 package com.ssafy.thorp.news.infrastructure.config;
 
+import com.ssafy.thorp.news.application.repository.NewsPublisherPermissionHistoryRepository;
 import com.ssafy.thorp.news.application.repository.NewsPublisherRepository;
 import com.ssafy.thorp.news.domain.model.NewsPublisher;
+import com.ssafy.thorp.news.domain.model.NewsPublisherPermissionHistory;
+import com.ssafy.thorp.news.domain.vo.PermissionStatus;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -44,43 +48,98 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {
 
     private final NewsPublisherRegistry registry;
     private final NewsPublisherRepository publishers;
+    private final NewsPublisherPermissionHistoryRepository permissions;
 
     public NewsPublisherRegistrySync(
-            NewsPublisherRegistry registry, NewsPublisherRepository publishers) {
+            NewsPublisherRegistry registry,
+            NewsPublisherRepository publishers,
+            NewsPublisherPermissionHistoryRepository permissions) {
         this.registry = registry;
         this.publishers = publishers;
+        this.permissions = permissions;
     }
 
     @Override
     public void afterSingletonsInstantiated() {
         int added = 0;
         int updated = 0;
+        int responses = 0;
         for (NewsPublisherRegistry.Publisher entry : registry.publishers()) {
             Optional<NewsPublisher> existing = publishers.findByPublisherKey(entry.publisherKey());
+            NewsPublisher publisher;
             if (existing.isPresent()) {
-                publishers.save(
-                        existing.get()
-                                .withChannel(
+                publisher =
+                        publishers.save(
+                                existing.get()
+                                        .withChannel(
+                                                entry.displayName(),
+                                                entry.language(),
+                                                entry.registeredDomain(),
+                                                entry.rssUrl(),
+                                                entry.enabled()));
+                updated++;
+            } else {
+                // 새 매체는 회신 전 상태로 들어온다. 등록했다는 것과 공개해도 된다는 것은 다르다(spec FR-015).
+                publisher =
+                        publishers.save(
+                                NewsPublisher.register(
+                                        entry.publisherKey(),
                                         entry.displayName(),
                                         entry.language(),
                                         entry.registeredDomain(),
                                         entry.rssUrl(),
                                         entry.enabled()));
-                updated++;
-                continue;
+                added++;
             }
-            // 새 매체는 회신 전 상태로 들어온다. 등록했다는 것과 공개해도 된다는 것은 다르다(spec FR-015).
-            publishers.save(
-                    NewsPublisher.register(
-                            entry.publisherKey(),
-                            entry.displayName(),
-                            entry.language(),
-                            entry.registeredDomain(),
-                            entry.rssUrl(),
-                            entry.enabled()));
-            added++;
+            if (applyPermission(publisher, entry.permission())) {
+                responses++;
+            }
         }
         // 주소는 남기지 않는다. 매체 키와 건수면 무엇이 반영됐는지 알 수 있다(spec FR-021).
-        log.info("매체 등록표를 반영했다 version={} added={} updated={}", registry.version(), added, updated);
+        log.info(
+                "매체 등록표를 반영했다 version={} added={} updated={} responses={}",
+                registry.version(),
+                added,
+                updated,
+                responses);
+    }
+
+    /**
+     * 등록표에 적힌 회신을 이력으로 반영한다.
+     *
+     * <p><b>매체 행에 직접 쓰지 않고 이력을 통한다.</b> 그래야 append-only와 원자적 전이가 그대로 지켜지고, 회신을 받았다는 사실 자체가 남는다. 현재
+     * 상태만 바꾸면 나중에 "왜 이 매체가 공개돼 있나"에 답할 근거가 없다(spec FR-015).
+     *
+     * <p><b>같은 회신을 두 번 넣지 않는다.</b> 기동할 때마다 도는 코드라 그냥 두면 재시작 횟수만큼 이력이 불어난다. 같은 시각·같은 결과의 회신이 이미 있으면
+     * 건너뛴다. 회신 시각을 바꾸면 새 회신으로 보고 다시 넣는다 — 매체가 답을 바꾼 경우다.
+     *
+     * @return 이번에 새로 반영했으면 참.
+     */
+    private boolean applyPermission(
+            NewsPublisher publisher, NewsPublisherRegistry.Permission permission) {
+        if (permission == null) {
+            return false;
+        }
+        boolean alreadyRecorded =
+                permissions.findByPublisherId(publisher.getId()).stream()
+                        .anyMatch(
+                                event ->
+                                        event.occurredAt().equals(permission.respondedAt())
+                                                && event.permissionStatus() == permission.status());
+        if (alreadyRecorded) {
+            return false;
+        }
+        permissions.appendAndApply(
+                permission.status() == PermissionStatus.ALLOWED
+                        ? NewsPublisherPermissionHistory.allowed(
+                                publisher.getId(),
+                                Set.copyOf(permission.allowedFields()),
+                                permission.respondedAt(),
+                                permission.reference())
+                        : NewsPublisherPermissionHistory.denied(
+                                publisher.getId(),
+                                permission.respondedAt(),
+                                permission.reference()));
+        return true;
     }
 }

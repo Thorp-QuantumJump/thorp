@@ -781,6 +781,53 @@ class NewsPersistenceIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("늦게 입력한 과거 회신이 현재 허가 상태를 덮지 않는다")
+    void 과거_회신은_현재_상태를_덮지_않는다() {
+        NewsPublisher publisher = savePublisher("late", PermissionStatus.PENDING);
+
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.allowed(
+                        publisher.getId(), Set.of(NewsAllowedField.TITLE), NOW, "9월 10일 허가 회신"));
+        // 메일함에 묻혀 있던 옛 불허 회신을 뒤늦게 입력한다.
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.denied(
+                        publisher.getId(), NOW.minus(Duration.ofDays(5)), "9월 5일 불허 회신"));
+        flushAndClear();
+
+        assertThat(permissionHistoryRepository.findByPublisherId(publisher.getId()))
+                .as("이력은 늘 남긴다. 늦게 넣었다고 근거가 사라지면 안 된다")
+                .hasSize(2);
+        assertThat(publisherRepository.findById(publisher.getId()))
+                .get()
+                .satisfies(
+                        p ->
+                                assertThat(p.getPermissionStatus())
+                                        .as("이미 받아 둔 최신 회신이 옛 회신에 조용히 뒤집히면 공개 여부가 바뀐다")
+                                        .isEqualTo(PermissionStatus.ALLOWED));
+    }
+
+    @Test
+    @DisplayName("같은 시각의 사건은 나중에 기록한 쪽이 현재 상태가 된다")
+    void 같은_시각이면_나중_기록() {
+        NewsPublisher publisher = savePublisher("tie", PermissionStatus.PENDING);
+
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.allowed(
+                        publisher.getId(), Set.of(NewsAllowedField.TITLE), NOW, "허가"));
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.denied(publisher.getId(), NOW, "불허"));
+        flushAndClear();
+
+        assertThat(publisherRepository.findById(publisher.getId()))
+                .get()
+                .satisfies(
+                        p ->
+                                assertThat(p.getPermissionStatus())
+                                        .as("사람이 마지막으로 판단한 것을 따른다")
+                                        .isEqualTo(PermissionStatus.DENIED));
+    }
+
+    @Test
     @DisplayName("발행 시각 미확인 묶음도 현재 조회 창 밖이면 빠진다")
     void 미확인_묶음도_창을_지킨다() {
         // 수집 시각은 고정 시계의 NOW다. 창(48시간)보다 훨씬 오래된 시각으로 옮겨 둔다.

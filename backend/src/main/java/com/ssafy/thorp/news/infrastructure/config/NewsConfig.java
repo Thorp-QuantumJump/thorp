@@ -65,8 +65,12 @@ public class NewsConfig {
 
     /** 등록표 파일을 읽는다. 모르는 필드는 허용해 파일에 주석용 키를 둘 수 있게 한다. */
     static <T> T read(Resource resource, Class<T> type) {
+        // 시간 모듈을 넣는다. 허가 회신 시각이 ISO-8601 문자열이라 이것 없이는 읽지 못하고,
+        // 그 실패가 기동 실패로 나타난다.
         ObjectMapper mapper =
-                new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                new ObjectMapper()
+                        .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         try (InputStream in = resource.getInputStream()) {
             T value = mapper.readValue(in, type);
             if (value == null) {
