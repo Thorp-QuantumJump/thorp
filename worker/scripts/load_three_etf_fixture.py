@@ -148,6 +148,66 @@ def build_corporate_action_rows(
     return rows
 
 
+def sector_attributes(sector_id: str) -> dict[str, Any]:
+    return {
+        "name": f"{sector_id}(픽스처)",
+        "classification": "INDUSTRY",
+        "description": "spec 004 픽스처 섹터",
+    }
+
+
+def etf_attributes(instrument: Mapping[str, str]) -> dict[str, Any]:
+    return {
+        "name": instrument["name"],
+        "listed_on": instrument["listed_on"],
+        "delisted_on": instrument["delisted_on"] or None,
+        "benchmark_index": instrument["benchmark_index"],
+        "manager": "픽스처",
+    }
+
+
+class MasterConflictError(RuntimeError):
+    """이미 있는 섹터·대표 ETF 행의 속성이 픽스처와 다르다.
+
+    ``sector``·``representative_etf`` 는 버전을 타지 않는 공용 표라 여기서 값을 바꾸면 이미
+    발행된 대응표가 가리키는 내용까지 바뀐다. 001 적재 계층도 같은 경우를
+    ``SectorMasterConflictError`` 로 막는다(FR-003). 같으면 기존 id 를 쓰고, 다르면 멈춘다.
+    """
+
+
+def _normalize(value: Any) -> str | None:
+    """DB 가 돌려주는 date·None 과 CSV 의 문자열·빈 값을 같은 모양으로 맞춘다."""
+    if value is None or value == "":
+        return None
+    return str(value)
+
+
+def _ensure_master_row(
+    cursor: Any, table: str, key_column: str, key: str, attributes: Mapping[str, Any]
+) -> int:
+    """공용 마스터 행을 확보한다 — 없으면 INSERT, 있으면 속성이 같을 때만 그 id 를 돌려준다."""
+    columns = list(attributes)
+    cursor.execute(f"SELECT id, {', '.join(columns)} FROM {table} WHERE {key_column} = %s", (key,))
+    found = cursor.fetchone()
+    if found is None:
+        placeholders = ", ".join(["%s"] * (len(columns) + 1))
+        cursor.execute(
+            f"INSERT INTO {table} ({key_column}, {', '.join(columns)})"
+            f" VALUES ({placeholders}) RETURNING id",
+            (key, *attributes.values()),
+        )
+        return int(cursor.fetchone()[0])
+    stored = tuple(_normalize(v) for v in found[1:])
+    incoming = tuple(_normalize(v) for v in attributes.values())
+    if stored != incoming:
+        raise MasterConflictError(
+            f"{table} {key} already exists with different attributes: {stored} != {incoming}."
+            " The table is unversioned, so changing it would rewrite what every published"
+            " map version points at. Load the fixture into an empty local database instead."
+        )
+    return int(found[0])
+
+
 def _insert_many(cursor: Any, table: str, rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
@@ -168,32 +228,25 @@ def load(connection: Any) -> bool:
         now = datetime.now(UTC)
 
         # 섹터·대표 ETF. 코드는 대응표의 sector_id 열, 이름은 픽스처임을 드러낸다.
+        # 공용 표라 이미 있는 행은 고치지 않는다 — 같으면 재사용, 다르면 MasterConflictError.
         sector_ids: dict[str, int] = {}
         for entry in mapping:
-            cursor.execute(
-                "INSERT INTO sector (code, name, classification, description)"
-                " VALUES (%s, %s, 'INDUSTRY', %s)"
-                " ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name RETURNING id",
-                (entry["sector_id"], f"{entry['sector_id']}(픽스처)", "spec 004 픽스처 섹터"),
+            sector_ids[entry["sector_id"]] = _ensure_master_row(
+                cursor,
+                "sector",
+                "code",
+                entry["sector_id"],
+                sector_attributes(entry["sector_id"]),
             )
-            sector_ids[entry["sector_id"]] = cursor.fetchone()[0]
         etf_ids: dict[str, int] = {}
         for instrument in instruments:
-            cursor.execute(
-                "INSERT INTO representative_etf"
-                " (instrument_id, name, listed_on, delisted_on, benchmark_index, manager)"
-                " VALUES (%s, %s, %s, %s, %s, %s)"
-                " ON CONFLICT (instrument_id) DO UPDATE SET name = EXCLUDED.name RETURNING id",
-                (
-                    instrument["instrument_id"],
-                    instrument["name"],
-                    instrument["listed_on"],
-                    instrument["delisted_on"] or None,
-                    instrument["benchmark_index"],
-                    "픽스처",
-                ),
+            etf_ids[instrument["instrument_id"]] = _ensure_master_row(
+                cursor,
+                "representative_etf",
+                "instrument_id",
+                instrument["instrument_id"],
+                etf_attributes(instrument),
             )
-            etf_ids[instrument["instrument_id"]] = cursor.fetchone()[0]
 
         # 대응표 버전. 열린 버전은 하나만 허용된다(uk_sector_etf_map_version_open) —
         # 001 예시 대응표가 이미 열려 있으면 여기서 UNIQUE 위반으로 멈춘다. 그 환경에서는
