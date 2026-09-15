@@ -260,20 +260,27 @@ def _price_frame(rows: list[dict[str, Any]], instrument_id: str) -> pd.DataFrame
 def _warmup_start_from_days(
     earlier_days: Sequence[date], start: date, warmup_trading_days: int
 ) -> date:
-    """워밍업 거래일 수만큼 앞선 거래일을 고른다.
+    """워밍업 거래일 수만큼 앞선 거래일을 고른다. 앞이 모자라면 **있는 만큼** 읽는다.
 
-    ``earlier_days`` 는 요청 시작일보다 앞선 거래일을 오름차순으로 담은 달력이다. 모자라면
-    조용히 짧게 읽지 않고 실패한다 — 워밍업이 모자란 신호는 계산은 되지만 뜻이 다르다.
+    ``earlier_days`` 는 요청 시작일보다 앞선 거래일을 오름차순으로 담은 달력이다.
+
+    **읽기는 관대하게, 평가 시작일 판정은 엄격하게.** 여기서 거절하면 백엔드가 계약대로
+    (001 contracts/evaluation-window.md 의 ``firstEvaluable``) 시작일을 뒤로 밀어 접수시킨
+    요청을 워커가 되돌려 두 계층이 모순된다. 자료 맨 앞 근처를 요청하면 워밍업을 채울 자료가
+    없는 것이 정상이고, 그것은 거절할 이유가 아니라 평가 시작일을 미룰 이유다. 워밍업이 모자란
+    채로 계산이 시작되는 것은 ``engine_runner.evaluation_start()`` 가 ``calendar[warmup]`` 으로
+    되밀어 막는다.
+
+    계약이 지키라는 것은 다른 것이다 — **없는 값을 지어내지 않는다**(FR-005·SC-003). 상장 전
+    구간을 빈 값으로 채우지 않고, 있어야 할 행이 빠지면 ``DataInsufficientError`` 를 내는
+    ``_check_window``·``_check_prices`` 가 그 몫을 그대로 맡는다.
     """
     if warmup_trading_days < 0:
         raise MarketDataError(f"warmup_trading_days must be nonnegative, got {warmup_trading_days}")
-    if warmup_trading_days == 0:
+    if warmup_trading_days == 0 or not earlier_days:
         return start
     if len(earlier_days) < warmup_trading_days:
-        raise DataInsufficientError(
-            f"Trading calendar holds only {len(earlier_days)} day(s) before {start.isoformat()}, "
-            f"need {warmup_trading_days} warmup trading day(s)"
-        )
+        return earlier_days[0]
     return earlier_days[-warmup_trading_days]
 
 

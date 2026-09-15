@@ -99,9 +99,37 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   버전이다. 수익률이 모자라면 `ESTIMATION_FAILED`.
 - **청산**(`evaluation.liquidationAtEnd`)은 종료일 종가에 전량 매도했다면 얼마가 남는가의 가정치다
   (`liquidation{markToMarket, liquidated}`). `trades`·`costs` 합계에 넣지 않는다.
-- **워밍업·평가 시작**: `FRESH_CASH_FROM` 의 `scenarioParams.startDate` → `run.effectiveStart` →
-  `evaluation.warmupTradingDays` → `rules.lookbackDays` → 0 순으로 정하고 `run.effectiveStart/End` 에
-  실제 값을 적는다. 성과·스냅샷·진행 콜백은 평가 시작일부터다.
+- **워밍업**(`engine_runner.required_warmup_trading_days`)은 `evaluation.warmupTradingDays` →
+  `rules.lookbackDays`(`TARGET_RISK` 면 오버레이 관측 길이와 큰 쪽, 더하지 않는다) 순으로 정하고,
+  그만큼 **평가가 시작될 날보다 앞에서** 자료를 더 읽는다 — 달력 일수가 아니라 거래일 수다(001
+  `contracts/market-dataset.md` 「읽기 규칙」). 앵커는 `engine_runner.warmup_anchor` 가 정한다:
+  `scenarioParams.startDate` → `run.effectiveStart` → `run.start`. **요청한 첫날이 아니다** —
+  평가가 6월부터인 실행이 1월 앞의 자료를 요구하면 자료 맨 앞 근처 요청이 읽기 단계에서 죽는다.
+- **읽기는 관대하게, 평가 시작일 판정은 엄격하게.** 앞에 채울 자료가 모자라면 공급자는 **있는 만큼**
+  읽고 거절하지 않는다. 자료 맨 앞이나 상장일 근처를 요청하면 워밍업이 모자란 것이 정상이고, 그것은
+  거절할 이유가 아니라 평가 시작일을 미룰 이유다. 워밍업이 모자란 채로 계산이 시작되는 것은 아래
+  「평가 시작」의 되밀기가 막는다. 읽어 온 달력 **전체**가 워밍업보다 짧을 때만 `DATA_INSUFFICIENT`
+  다. 없는 값을 지어내지 않는다는 계약(FR-005·SC-003)은 따로다 — 상장 전 구간을 빈 값으로 채우지
+  않고, 앞 자료가 상장 뒤라 관측 구간을 못 채운 종목은 그 판단일의 배분에서 빠지며
+  `exceptions[{kind: INSUFFICIENT_HISTORY}]` 로 남는다.
+- **평가 시작**(`engine_runner.evaluation_start`): **max(앵커, `calendar[warmup]`)** 이고
+  `run.effectiveStart/End` 에 실제 값을 적는다. 앵커는 위 `warmup_anchor` 가 정하고, 워밍업 바닥은
+  **세 갈래 모두에** 얹는다. **앵커 앞에 워밍업이 넉넉하면 `calendar[warmup] == 앵커` 라서 바닥이
+  아무 일도 하지 않는다** — 공급자가 앵커보다 정확히 워밍업만큼 앞에서 읽기 시작하기 때문이다. 워밍업을
+  두 번 소비하지 않는다. 앞이 모자랄 때만 모자란 만큼 밀린다. 성과·스냅샷·진행 콜백은 평가 시작일부터다.
+- **바닥을 `run.start` 갈래에만 얹으면 운영 경로에서 꺼진다.** 발행 경로는 `EngineInputAssembler`
+  하나이고 `BacktestService.create` 가 언제나 `plan.effectiveStart()` 를 싣는다. 그래서 실제 요청은
+  전부 `run.effectiveStart` 갈래를 탄다 — **`effectiveStart` 가 늘 채워져 온다는 것은 안심의 근거가
+  아니라 위험의 근거다.** 그 갈래에 바닥이 없으면 워밍업 없이 첫 판단일을 맞아 전략이
+  `CONSTRAINT_VIOLATION`·`ESTIMATION_FAILED` 로 죽는다.
+- **백엔드와 "자료가 시작된 뒤"의 뜻이 다르다.** 백엔드(`EffectivePeriodCalculator`·
+  `CommonPeriodResolver`)는 **가장 늦은 상장일**에서, 워커는 **읽어 온 가격 행의 합집합 첫날**에서
+  워밍업을 센다. **백엔드는 데이터셋이 언제 시작하는지 모른다** — `MarketMetadataPort` 에 자료 시작일을
+  묻는 길이 없다. 픽스처에서 둘은 8년 어긋나 있다(어댑터 상장일 2015·2018, 자료 2023-01-02). 그래서
+  백엔드가 낸 `effectiveStart` 앞에 워밍업이 없을 수 있고, 워커의 바닥이 그것을 막는다.
+  **남는 한계: 바닥이 일하면 화면에 보이는 기간과 실제 평가 기간이 갈린다.** 근본 해결은
+  `firstEvaluable` 의 기준점을 `max(상장일, 데이터셋 첫 거래일)` 로 바꾸는 것이고, 001의 자료 계층과
+  함께 옮긴다(001 `tasks.md` T029).
 - **Nautilus 는 주문 경로와 체결 이벤트만 준다.** 원장(현금·보유·묶음)은 워커 장부다. 계좌는
   MARGIN — 분할 뒤 늘어난 수량을 팔면 CASH 계좌는 공매도로 보고 거절하기 때문이다. 공매도·현금 음수
   금지는 장부가 지키고, 체결가는 매 건 그 방향 호가와 같아야 한다(FillModel 슬리피지 0).

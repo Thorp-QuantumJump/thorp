@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 class EffectivePeriodCalculatorTest {
 
     private static final String SEMICONDUCTOR = "091160.XKRX";
+    private static final String BATTERY = "305720.XKRX";
     private static final String BIO = "244580.XKRX";
 
     /** 픽스처 달력과 상장일을 그대로 쓴다 — 가짜 포트를 따로 만들면 실제 구현과 달력이 갈린다. */
@@ -68,7 +69,8 @@ class EffectivePeriodCalculatorTest {
                         null);
 
         assertThat(period.warmupTradingDays()).isEqualTo(63);
-        assertThat(period.effectiveStart()).isAfter(LocalDate.of(2024, 1, 2));
+        // 2015년 상장 종목이라 2024-01-02 앞에 워밍업 63거래일이 넉넉하다 — 시작일은 밀리지 않는다.
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
         // 전략과 오버레이는 같은 자료를 보므로 더하지 않고 긴 쪽을 쓴다.
         assertThat(
                         EffectivePeriodCalculator.requiredWarmupTradingDays(
@@ -76,9 +78,14 @@ class EffectivePeriodCalculatorTest {
                 .isEqualTo(63);
     }
 
+    // --- 한 규칙의 두 경계: effectiveStart = max(요청 시작일, 상장일 이후 warmup번째 거래일) ---
+
     @Test
-    @DisplayName("전략이 관측 기간을 요구하면 그만큼 거래일을 소진한 뒤 시작한다")
-    void warmupPushesStartForward() {
+    @DisplayName("요청 시작일이 상장일보다 한참 뒤면 워밍업이 요청 구간을 깎지 않는다 — 앞에서 읽는다")
+    void warmupBeforeTheRequestDoesNotPushTheStart() {
+        // 2015-01-02 상장 종목을 2024-01-02 부터 요청한다. 워밍업 63거래일은 2023년에 멀쩡히 있으므로
+        // 워커가 요청 구간 앞에서 읽는다(001 contracts/market-dataset.md 「읽기 규칙」). 예전 구현은
+        // 이 63일을 요청 구간에서 깎아 2024년 4월부터 평가했다 — 한 해를 요청한 사용자가 아홉 달을 받았다.
         EffectivePeriodCalculator.EffectivePeriod period =
                 calculator.resolve(
                         INVERSE_VOLATILITY,
@@ -88,7 +95,90 @@ class EffectivePeriodCalculatorTest {
                         null);
 
         assertThat(period.warmupTradingDays()).isEqualTo(63);
-        assertThat(period.effectiveStart()).isAfter(LocalDate.of(2024, 1, 2));
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
+        // commonStart 는 계약 산식 그대로 상장일 기준이라 요청과 무관하게 2015년이다.
+        assertThat(period.commonStart()).isBefore(LocalDate.of(2016, 1, 1));
+    }
+
+    @Test
+    @DisplayName("요청 시작일이 상장일보다 앞이면 상장일 이후 워밍업 번째 거래일부터다 (계약 commonStart)")
+    void warmupAfterALateListingPushesTheStart() {
+        // BIO 는 2023-07-03 상장이다. 그 앞에는 읽을 자료가 없으므로 밀 수밖에 없고, 밀리는 양은
+        // 계약 evaluation-window.md 의 commonStart 와 정확히 같다 — 요청 시작일은 이 계산에 들어가지 않는다.
+        EffectivePeriodCalculator.EffectivePeriod period =
+                calculator.resolve(
+                        INVERSE_VOLATILITY,
+                        List.of(SEMICONDUCTOR, BIO),
+                        LocalDate.of(2023, 1, 2),
+                        LocalDate.of(2024, 12, 31),
+                        null);
+
+        assertThat(period.commonStart()).isEqualTo(LocalDate.of(2023, 9, 28));
+        assertThat(period.effectiveStart()).isEqualTo(period.commonStart());
+    }
+
+    @Test
+    @DisplayName("상장일이 이른 종목이면 자료가 언제 시작하든 요청 시작일이 그대로 나간다 — 백엔드는 자료 시작일을 모른다")
+    void effectiveStartCannotSeeWhenTheDataActuallyBegins() {
+        // 워커가 읽는 픽스처 자료는 2023-01-02 에 시작한다(MarketFixtureAlignmentTest). 그런데 이
+        // 계산기의 기준점은 상장일뿐이라 2023-02-01 요청에 그 날을 그대로 돌려준다 — 그 앞에 워밍업
+        // 63거래일이 있는지는 보지 못한다(실제로는 22거래일밖에 없다).
+        //
+        // 그래서 워커가 읽어 온 달력으로 한 번 더 되민다. 이 검사와 워커의
+        // test_warmup_floor_applies_when_the_backend_start_has_no_warmup_behind_it 가 짝이다.
+        EffectivePeriodCalculator.EffectivePeriod period =
+                calculator.resolve(
+                        INVERSE_VOLATILITY,
+                        List.of(SEMICONDUCTOR, BATTERY),
+                        LocalDate.of(2023, 2, 1),
+                        LocalDate.of(2023, 12, 29),
+                        null);
+
+        assertThat(period.warmupTradingDays()).isEqualTo(63);
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2023, 2, 1));
+        // commonStart 는 늦은 상장일(BATTERY 2018-09-12) 기준이라 자료가 있기 4년 전이다.
+        assertThat(period.commonStart()).isBefore(LocalDate.of(2019, 1, 1));
+    }
+
+    @Test
+    @DisplayName("요청 시작일을 뒤로 옮겨도 commonStart 는 꿈쩍하지 않는다 — 기준점은 상장일 하나다")
+    void commonStartIgnoresTheRequestedStart() {
+        LocalDate expected = LocalDate.of(2023, 9, 28);
+
+        assertThat(
+                        calculator
+                                .resolve(
+                                        INVERSE_VOLATILITY,
+                                        List.of(BIO),
+                                        LocalDate.of(2023, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        null)
+                                .commonStart())
+                .isEqualTo(expected);
+        assertThat(
+                        calculator
+                                .resolve(
+                                        INVERSE_VOLATILITY,
+                                        List.of(BIO),
+                                        LocalDate.of(2024, 6, 3),
+                                        LocalDate.of(2024, 12, 31),
+                                        null)
+                                .commonStart())
+                .isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("요청 시작일이 휴장일이면 그 뒤 첫 거래일로 맞춘다 — 워커가 고르는 날과 같아야 한다")
+    void requestedStartIsSnappedToATradingDay() {
+        EffectivePeriodCalculator.EffectivePeriod period =
+                calculator.resolve(
+                        FIXED_WEIGHT,
+                        List.of(SEMICONDUCTOR),
+                        LocalDate.of(2024, 6, 1), // 토요일
+                        LocalDate.of(2024, 12, 31),
+                        null);
+
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2024, 6, 3));
     }
 
     @Test
@@ -171,15 +261,17 @@ class EffectivePeriodCalculatorTest {
     }
 
     @Test
-    @DisplayName("워밍업을 채우면 종료일을 넘는 기간은 422다")
+    @DisplayName("상장일 이후 워밍업을 채우면 종료일을 넘는 기간은 422다")
     void warmupBeyondEndIsRejected() {
+        // BIO(2023-07-03 상장) + 관측 63거래일이면 평가는 2023-09-28 부터인데 요청은 8월에 끝난다.
+        // 요청 시작일을 앞당겨도 해결되지 않으므로 메시지가 종료일을 가리켜야 한다.
         assertThatThrownBy(
                         () ->
                                 calculator.resolve(
                                         INVERSE_VOLATILITY,
-                                        List.of(SEMICONDUCTOR),
-                                        LocalDate.of(2024, 11, 1),
-                                        LocalDate.of(2024, 12, 31),
+                                        List.of(SEMICONDUCTOR, BIO),
+                                        LocalDate.of(2023, 1, 2),
+                                        LocalDate.of(2023, 8, 31),
                                         null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("요청 종료일");
