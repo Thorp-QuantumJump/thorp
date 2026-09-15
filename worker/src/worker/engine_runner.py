@@ -285,6 +285,7 @@ def reference_versions(request: EngineInput, market: MarketData | None) -> Versi
         cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),
         data=market.dataset_id if market is not None else None,
         engine=f"nautilus_trader {nautilus_trader.__version__}",
+        evaluation_split=request.evaluation.split_version,
         worker=f"thorp-worker {worker_version}",
     )
 
