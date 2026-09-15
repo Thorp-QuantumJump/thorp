@@ -305,11 +305,9 @@ class ParamSearchIntakeIT extends PostgresTestSupport {
 
         ParamSearch reloaded = paramSearchRepository.findById(saved.getId()).orElseThrow();
         assertThat(reloaded.getCounts().completed()).isEqualTo(1);
-        assertThat(
-                        candidateRepository
-                                .findByBacktestJobId(dispatched.getBacktestJobId())
-                                .orElseThrow()
-                                .getStatus())
+        assertThat(candidateRepository.findAllByBacktestJobId(dispatched.getBacktestJobId()))
+                .singleElement()
+                .extracting(SearchCandidate::getStatus)
                 .isEqualTo(CandidateStatus.COMPLETED);
         // 한 건이 끝나면 대기 후보 하나가 창에 들어간다(내부 계약 §4 "후보 종료").
         assertThat(candidateRepository.countByStatus(saved.getId(), CandidateStatus.DISPATCHED))

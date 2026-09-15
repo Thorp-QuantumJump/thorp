@@ -152,7 +152,10 @@ QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초
 - `(param_search_id, candidate_no)` UNIQUE
 - `(param_search_id, status)` — 집계와 다음 발행 대상 조회
 - `(param_search_id, selected)` — 표시 후보 조회
-- `backtest_job_id` UNIQUE (NULL 허용) — Job 하나가 두 후보에 붙지 않게
+- `backtest_job_id` (NULL 제외 부분 인덱스) — 결과 이벤트가 어느 후보의 것인지 찾는 경로.
+  **UNIQUE가 아니다**: 004가 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를 재사용하므로
+  (spec 004 R-02) 실행 하나에 후보가 여럿 걸린다 — 서로 다른 묶음의 것일 수도 있다. 한때 UNIQUE였고,
+  그래서 같은 조건을 두 번 접수하는 것만으로 접수가 500이었다(S15P21E205-221)
 
 ### 4.1 `search_candidate.status` 상태 전이
 

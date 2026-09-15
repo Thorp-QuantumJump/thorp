@@ -3,7 +3,9 @@ package com.ssafy.thorp.paramsearch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
@@ -11,6 +13,7 @@ import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -21,8 +24,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 접수가 <b>실제 발행기</b>로 004까지 닿는지(T043 보강).
@@ -63,6 +68,8 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Autowired private SearchCandidateRepository candidateRepository;
     @Autowired private ParameterRegistryPort registry;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private ApplicationEventPublisher events;
+    @Autowired private TransactionTemplate transactionTemplate;
 
     /** 브로커는 이 테스트의 관심사가 아니다. 발행 자체는 004의 테스트가 본다. */
     @MockitoBean private BacktestJobPublisher publisher;
@@ -114,6 +121,69 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("같은 조건을 두 번 접수해도 둘 다 받고, 두 묶음의 후보가 같은 실행을 나눠 쓴다")
+    void sameConditionTwiceSharesRuns() {
+        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        assumeThat(targets).isNotEmpty();
+
+        ParamSearchResult first = paramSearchService.create(createCommand(targets));
+        // 두 번째 접수가 500 이던 자리다(S15P21E205-221). 004는 같은 조건의 요청을 살아 있는 실행에
+        // 합류시키는데(spec 004 R-02), search_candidate.backtest_job_id 에 UNIQUE 가 걸려 있어
+        // 두 번째 후보가 같은 실행 행을 받는 순간 제약에 걸렸고 묶음 행까지 통째로 롤백됐다.
+        ParamSearchResult second = paramSearchService.create(createCommand(targets));
+
+        ParamSearch before = paramSearchRepository.findBySearchId(first.searchId()).orElseThrow();
+        ParamSearch after = paramSearchRepository.findBySearchId(second.searchId()).orElseThrow();
+        // 같은 조건이어도 묶음은 항상 새로 생긴다(FR-013c, 계약 §7).
+        assertThat(after.getSearchId()).isNotEqualTo(before.getSearchId());
+
+        List<Long> beforeJobs = dispatchedJobIds(before);
+        List<Long> afterJobs = dispatchedJobIds(after);
+        assertThat(afterJobs).as("발행 창만큼은 나가야 한다").isNotEmpty();
+        // 조합이 같으니 004가 돌려주는 실행도 같다 — 아낀 계산이 곧 재사용의 값이다.
+        assertThat(afterJobs).isEqualTo(beforeJobs);
+        assertThat(after.getBaselineJobId()).isEqualTo(before.getBaselineJobId());
+
+        // 실행은 공유해도 후보 행은 묶음마다 따로 남는다.
+        assertThat(candidateRepository.findAllByBacktestJobId(afterJobs.get(0)))
+                .hasSize(2)
+                .extracting(SearchCandidate::getParamSearchId)
+                .containsExactlyInAnyOrder(before.getId(), after.getId());
+    }
+
+    @Test
+    @DisplayName("공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다")
+    void sharedRunFinishesEveryCandidateOnIt() {
+        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        assumeThat(targets).isNotEmpty();
+
+        ParamSearchResult first = paramSearchService.create(createCommand(targets));
+        ParamSearchResult second = paramSearchService.create(createCommand(targets));
+        ParamSearch before = paramSearchRepository.findBySearchId(first.searchId()).orElseThrow();
+        long sharedJobId = dispatchedJobIds(before).get(0);
+
+        // 004가 발행하는 것과 같은 이벤트를 같은 경로(AFTER_COMMIT 리스너)로 흘린다.
+        transactionTemplate.executeWithoutResult(
+                status ->
+                        events.publishEvent(
+                                new BacktestFinished(
+                                        sharedJobId,
+                                        "BT-STUB-" + sharedJobId,
+                                        RunStatus.COMPLETED,
+                                        null)));
+
+        // 하나만 끝내면 나머지 묶음이 영영 RUNNING 으로 남는다 — 실행은 다시 오지 않는다.
+        assertThat(candidateRepository.findAllByBacktestJobId(sharedJobId))
+                .hasSize(2)
+                .allSatisfy(
+                        candidate ->
+                                assertThat(candidate.getStatus())
+                                        .isEqualTo(CandidateStatus.COMPLETED));
+        assertThat(paramSearchRepository.findBySearchId(second.searchId()).orElseThrow())
+                .satisfies(reloaded -> assertThat(reloaded.getCounts().completed()).isEqualTo(1));
+    }
+
+    @Test
     @DisplayName("기준 전략의 규칙 버전이 실행 조건 스냅샷에 들어 있다")
     void executionPlanCarriesBaselineRulesVersion() {
         List<String> targets = searchableStrategyIdsExcludingBaseline();
@@ -152,6 +222,14 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     private CreateParamSearchCommand createCommand(List<String> strategyIds) {
         return new CreateParamSearchCommand(
                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());
+    }
+
+    /** 이 묶음이 실제로 발행한 실행 행 id를 순번대로. 후보가 자기 결과를 찾는 그 값이다. */
+    private List<Long> dispatchedJobIds(ParamSearch search) {
+        return candidateRepository.findByParamSearchId(search.getId()).stream()
+                .filter(candidate -> candidate.getBacktestJobId() != null)
+                .map(SearchCandidate::getBacktestJobId)
+                .toList();
     }
 
     private boolean runExists(Long runId) {

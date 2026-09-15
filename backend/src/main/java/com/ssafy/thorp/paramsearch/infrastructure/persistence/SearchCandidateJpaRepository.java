@@ -2,7 +2,6 @@ package com.ssafy.thorp.paramsearch.infrastructure.persistence;
 
 import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -28,5 +27,6 @@ interface SearchCandidateJpaRepository extends JpaRepository<SearchCandidateJpaE
 
     long countByParamSearchIdAndStatus(Long paramSearchId, CandidateStatus status);
 
-    Optional<SearchCandidateJpaEntity> findByBacktestJobId(Long backtestJobId);
+    /** 실행 하나에 걸린 후보 전부. 순서를 고정해야 잠그는 순서도 고정된다(spec 004 R-02 합류·재사용). */
+    List<SearchCandidateJpaEntity> findByBacktestJobIdOrderByIdAsc(Long backtestJobId);
 }

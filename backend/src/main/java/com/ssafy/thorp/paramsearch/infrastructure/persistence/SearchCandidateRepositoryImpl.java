@@ -4,7 +4,6 @@ import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateReposit
 import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
@@ -118,9 +117,9 @@ public class SearchCandidateRepositoryImpl implements SearchCandidateRepository 
     }
 
     @Override
-    public Optional<SearchCandidate> findByBacktestJobId(Long backtestJobId) {
-        return jpaRepository
-                .findByBacktestJobId(backtestJobId)
-                .map(SearchCandidateMapper::toDomain);
+    public List<SearchCandidate> findAllByBacktestJobId(Long backtestJobId) {
+        return jpaRepository.findByBacktestJobIdOrderByIdAsc(backtestJobId).stream()
+                .map(SearchCandidateMapper::toDomain)
+                .toList();
     }
 }

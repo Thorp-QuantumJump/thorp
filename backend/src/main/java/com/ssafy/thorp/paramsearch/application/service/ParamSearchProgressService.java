@@ -9,7 +9,8 @@ import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
-import java.util.Optional;
+import java.util.Comparator;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><b>집계를 세어서 다시 쓴다.</b> 이전 값에 1을 더하지 않는 이유는 동시 수신 때문이다 — 두 이벤트가 같은 값을 읽어 각자 더하면 하나가 사라진다. 묶음 행을
  * 잠근 뒤 후보 상태별로 다시 세면 그 경쟁이 없다(내부 계약 §4).
+ *
+ * <p><b>실행 하나에 후보가 여럿 걸릴 수 있다.</b> 004가 같은 조건의 요청을 살아 있는 실행에 합류시키므로(spec 004 R-02), 같은 조건을 두 번 접수하면
+ * 두 묶음의 후보가 같은 실행 행을 가리킨다. 결과 이벤트 하나가 그 후보 전부를 끝내야 한다 — 하나만 끝내면 나머지 묶음이 영영 {@code RUNNING}으로 남는다.
  *
  * <p>{@code REQUIRES_NEW}로 여는 이유: 이 메서드는 {@code AFTER_COMMIT} 콜백에서 불린다. 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직
  * 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 <b>변경이 다시 커밋되지 않는다</b>(backend CLAUDE.md).
@@ -55,7 +59,7 @@ public class ParamSearchProgressService {
     }
 
     /**
-     * 후보 하나가 끝났다.
+     * 실행 하나가 끝났다. 그 실행에 걸린 후보를 전부 끝낸다.
      *
      * @param backtestJobId 끝난 실행 행의 id
      * @param failed 실패로 끝났는가
@@ -64,18 +68,31 @@ public class ParamSearchProgressService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean candidateFinished(long backtestJobId, boolean failed, String errorCode) {
-        Optional<SearchCandidate> found = candidateRepository.findByBacktestJobId(backtestJobId);
-        if (found.isEmpty()) {
+        List<SearchCandidate> bound = candidateRepository.findAllByBacktestJobId(backtestJobId);
+        if (bound.isEmpty()) {
             // 묶음에 속하지 않은 단일 실행이 대부분이다. 경고를 남기면 로그가 그것으로 덮인다(내부 계약 §3).
             return false;
         }
-        SearchCandidate candidate = found.get();
+        // 묶음 id 순으로 처리한다. 한 실행에 여러 묶음의 후보가 걸려 있으면 묶음 행을 여럿 잠그게 되는데,
+        // 잠그는 순서가 이벤트마다 다르면 서로의 락을 기다리다 엉킨다.
+        bound.stream()
+                .sorted(Comparator.comparing(SearchCandidate::getParamSearchId))
+                .forEach(candidate -> applyResult(candidate, failed, errorCode));
+        return true;
+    }
+
+    /**
+     * 후보 하나에 결과를 반영하고 그 묶음을 전진시킨다.
+     *
+     * <p>이미 끝난 후보는 건너뛴다 — 늦게 도착한 결과가 취소·한도로 닫힌 후보를 되살리면 안 된다.
+     */
+    private void applyResult(SearchCandidate candidate, boolean failed, String errorCode) {
         if (candidate.getStatus().isFinal()) {
             log.info(
                     "late candidate result ignored: candidateId={} status={}",
                     candidate.getId(),
                     candidate.getStatus());
-            return true;
+            return;
         }
         candidateRepository.update(
                 failed
@@ -101,7 +118,6 @@ public class ParamSearchProgressService {
             // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.
             dispatcher.advance(settled.getId(), snapshotOf(settled));
         }
-        return true;
     }
 
     /**

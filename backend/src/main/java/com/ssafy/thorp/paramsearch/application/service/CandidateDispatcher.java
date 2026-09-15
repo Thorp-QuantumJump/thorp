@@ -11,8 +11,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import java.time.Clock;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -28,8 +26,6 @@ import org.springframework.stereotype.Service;
 @Service
 @ConditionalOnProperty(prefix = "thorp.param-search", name = "enabled", havingValue = "true")
 public class CandidateDispatcher {
-
-    private static final Logger log = LoggerFactory.getLogger(CandidateDispatcher.class);
 
     private final CandidateJobLauncher launcher;
     private final ParamSearchRepository paramSearchRepository;
@@ -104,20 +100,20 @@ public class CandidateDispatcher {
     /**
      * 후보 하나를 발행한다.
      *
-     * <p>발행 실패(브로커 장애)는 후보를 {@code PENDING}으로 남긴다 — 계산 실패와 발행 실패는 다르다(FR-011). {@code FAILED}로 바꾸면
-     * "이 조합은 계산할 수 없다"는 뜻이 되어 결과 해석이 틀어지고, 재시도 대상 셈도 어긋난다.
+     * <p>후보를 {@code FAILED}로 바꾸지 않는다 — 계산 실패와 발행 실패는 다르다(FR-011). {@code FAILED}는 "이 조합은 계산할 수 없다"는
+     * 뜻이라 결과 해석이 틀어지고 재시도 대상 셈도 어긋난다. 여기서 터지면 후보는 {@code PENDING}인 채로 남는다.
+     *
+     * <p><b>예외를 잡지 않는다.</b> 한때 {@code catch (RuntimeException)}으로 "발행 실패면 다음 후보로 넘어간다"를 의도했지만 그
+     * 복원력은 없었다 — {@code launchCandidate} → 004 접수가 <b>같은 트랜잭션에 참여</b>하므로, 거기서 제약 위반이 나면 트랜잭션은 이미
+     * rollback-only다. 잡아도 되살아나지 않고 커밋 시점에 {@code UnexpectedRollbackException}이 되어, 후보 하나의 실패가 묶음
+     * 전체를 지운 채 500으로 나갔다.
+     *
+     * <p>이 catch가 노리던 브로커 장애는 애초에 여기로 오지 않는다. 004는 작업 메시지를 <b>커밋 뒤에</b> 보내고(spec 004 R-18), 보내지 못한
+     * 실행은 {@code published_at NULL}로 남아 재발행기가 집어 간다. 브로커가 죽어도 접수는 성공하고 후보는 발행된 채로 기다린다.
      */
     private void dispatch(ParamSearchSnapshot snapshot, SearchCandidate candidate) {
-        try {
-            long backtestJobId = launcher.launchCandidate(snapshot, candidate);
-            candidateRepository.update(candidate.markDispatched(backtestJobId));
-        } catch (RuntimeException e) {
-            log.warn(
-                    "candidate dispatch failed, staying PENDING: searchId={} candidateNo={}",
-                    snapshot.searchId(),
-                    candidate.getCandidateNo(),
-                    e);
-        }
+        long backtestJobId = launcher.launchCandidate(snapshot, candidate);
+        candidateRepository.update(candidate.markDispatched(backtestJobId));
     }
 
     /** 묶음이 끝났는가 — 대기도 실행 중도 없으면 끝이다(내부 계약 §4 "묶음 종료"). */

@@ -1,6 +1,7 @@
 package com.ssafy.thorp.paramsearch.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -90,18 +91,22 @@ class CandidateDispatcherTest {
     }
 
     @Test
-    @DisplayName("발행에 실패한 후보는 PENDING으로 남는다 — 계산 실패와 발행 실패는 다르다")
-    void publishFailureKeepsCandidatePending() {
+    @DisplayName("발행 중 예외는 삼키지 않고 내보낸다 — 같은 트랜잭션이라 잡아도 되살릴 수 없다")
+    void launchFailurePropagates() {
         when(candidateRepository.countByStatus(SEARCH_ID, CandidateStatus.DISPATCHED))
                 .thenReturn(0L);
         when(candidateRepository.findNextByStatus(SEARCH_ID, CandidateStatus.PENDING, WINDOW))
                 .thenReturn(pending(1));
         when(launcher.launchCandidate(any(), any()))
-                .thenThrow(new IllegalStateException("broker down"));
+                .thenThrow(new IllegalStateException("launch failed"));
 
-        dispatcher.fillWindow(SEARCH_ID, snapshot());
+        // 잡으면 트랜잭션은 이미 rollback-only 라 커밋 시점에 UnexpectedRollbackException 이 되고,
+        // 원인이 여기서 이미 로그로 지나간 뒤라 500 의 이유를 찾을 수 없다(S15P21E205-221).
+        assertThatThrownBy(() -> dispatcher.fillWindow(SEARCH_ID, snapshot()))
+                .isInstanceOf(IllegalStateException.class);
 
-        // FAILED로 바꾸면 "이 조합은 계산할 수 없다"는 뜻이 되어 결과 해석과 재시도 셈이 틀어진다(FR-011).
+        // 상태는 건드리지 않는다. FAILED로 바꾸면 "이 조합은 계산할 수 없다"는 뜻이 되어
+        // 결과 해석과 재시도 셈이 틀어진다(FR-011).
         verify(candidateRepository, never()).update(any());
     }
 
