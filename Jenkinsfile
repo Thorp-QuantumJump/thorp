@@ -56,7 +56,19 @@ def partChanged(String part) {
 //
 // 미결 목록을 env 에 문자열로 두는 이유는, 파이프라인 최상위에 선언한 변수가 CPS 변환을 거친
 // 스테이지 안에서는 보이지 않을 수 있기 때문이다. env 는 스테이지 경계를 넘어 살아남는다.
+//
+// 목록은 쉼표로 이어 붙인다. 그래서 이름에 쉼표가 있으면 한 이름이 둘로 쪼개져 finishCheck 가
+// 그것을 지우지 못하고, 끝난 검사가 미결로 남아 아래 post 에서 취소로 덮인다. 통과한 빌드가
+// MR 에서 취소로 보이는 셈이다. 이름은 코드에 박힌 상수이므로 그런 이름을 만나면 빌드를 세운다.
+// 조용히 어긋나는 것보다 그 이름을 넣은 사람이 개발 중에 걸리는 편이 낫다.
+//
+// 이 목록은 읽고 고쳐 쓰는 과정이 원자적이지 않다. 지금은 모든 스테이지가 순차로 돌아 문제가
+// 없다. 파트를 parallel 로 묶는다면 동시에 끝난 둘이 서로의 갱신을 지우므로, 그때는 이 방식을
+// 그대로 두면 안 된다.
 def openCheck(String name, String state) {
+    if (name.contains(',')) {
+        error("검사 이름에는 쉼표를 쓸 수 없다: ${name}")
+    }
     updateGitlabCommitStatus(name: name, state: state)
     env.PENDING_CHECKS = ((env.PENDING_CHECKS ?: '').tokenize(',') + name).unique().join(',')
 }
