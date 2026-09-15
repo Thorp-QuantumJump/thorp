@@ -5,8 +5,10 @@ React 19 + Vite + TypeScript SPA. 알고리즘/파라미터 선택 UI와 백테�
 ## 검증 명령 (작업 후 반드시 실행)
 
 ```bash
-npm run lint && npm run build
+npm run lint && npm run build && npm test
 ```
+
+`npm test`는 `test:dom`(Vitest)과 `test:legacy`(`node --test`)를 차례로 돌린다. **결과의 `skipped` 수를 확인한다.** Vitest가 수집하는 파일은 `vite.config.ts`의 `test.include`가 정하는데 이 값이 허용 목록이라, 목록에 걸리지 않는 테스트 파일은 실패하지 않고 조용히 수집되지 않는다. 새 테스트 파일을 만들 때는 `include`에 그 경로가 걸리는지 반드시 확인한다.
 
 ## 폴더 규칙
 
