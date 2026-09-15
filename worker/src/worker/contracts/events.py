@@ -8,6 +8,8 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Generic, TypeVar
 
+from pydantic import Field
+
 from worker.contracts.base import ContractModel, UtcDatetime
 from worker.contracts.engine_output import EngineOutput, RunStatus
 
@@ -77,6 +79,9 @@ class ResourceUsage(ContractModel):
     wall_seconds: Decimal | None = None
     queue: str | None = None
     role: str | None = None
+    # 읽은 자료의 양(데이터 원가, FR-008·T019). 가격·분배금·분할 행 수와 가격 프레임 바이트.
+    data_rows: int | None = Field(default=None, ge=0)
+    data_bytes: int | None = Field(default=None, ge=0)
 
 
 class FinishedPayload(ContractModel):

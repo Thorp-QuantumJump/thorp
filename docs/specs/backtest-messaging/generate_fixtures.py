@@ -50,7 +50,15 @@ COST_PROFILE = {
 }
 # queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.
 SERVED = {"queue": "backtest.jobs", "role": "single"}
-RESOURCE = {"peakRssMb": "512.5", "cpuSeconds": "3.210", "wallSeconds": "4.000", **SERVED}
+# dataRows·dataBytes 는 읽은 자료의 양(데이터 원가, T019). 자료를 읽지 못한 실패 예시에는 없다.
+DATA_USAGE = {"dataRows": 258, "dataBytes": 61920}
+RESOURCE = {
+    "peakRssMb": "512.5",
+    "cpuSeconds": "3.210",
+    "wallSeconds": "4.000",
+    **SERVED,
+    **DATA_USAGE,
+}
 
 
 def money(x: Decimal) -> str:
@@ -638,7 +646,13 @@ finished_cancelled = envelope(
         "partial": True,
         "lastTradingDate": partial["lastTradingDate"],
         "engineOutput": engine_output(partial, "CANCELLED", True, "2026-09-07T01:00:03Z"),
-        "resource": {"peakRssMb": "400.0", "cpuSeconds": "1.500", "wallSeconds": "2.100", **SERVED},
+        "resource": {
+            "peakRssMb": "400.0",
+            "cpuSeconds": "1.500",
+            "wallSeconds": "2.100",
+            **SERVED,
+            **DATA_USAGE,
+        },
     },
 )
 
