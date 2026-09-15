@@ -118,6 +118,15 @@ services:
       ECOS_API_KEY: ${ECOS_API_KEY}
       KOSIS_API_KEY: ${KOSIS_API_KEY}
       DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
+      # 백테스트 실행 한도(spec 004 T014·T015, FR-006). application-prod.yml 이 ${THORP_LIMIT_*} 를 기본값 없이
+      # 참조하므로 여기서 넘겨야 기동한다. :- 기본값을 두지 않는다 — 설정 누락으로 "무제한 실행 금지"를 우회하지
+      # 않게 하려는 것이라, 비어 있으면 기동 실패가 맞다. 두 대기 한도는 단건 큐(backtest.jobs)만 센다(R-20).
+      THORP_LIMIT_MAX_QUEUED_PER_USER: ${THORP_LIMIT_MAX_QUEUED_PER_USER}
+      THORP_LIMIT_MAX_QUEUED_TOTAL: ${THORP_LIMIT_MAX_QUEUED_TOTAL}
+      THORP_LIMIT_MAX_RUN_SECONDS: ${THORP_LIMIT_MAX_RUN_SECONDS}
+      THORP_LIMIT_STALE_RUN_SECONDS: ${THORP_LIMIT_STALE_RUN_SECONDS}
+      THORP_LIMIT_CANCEL_GRACE_SECONDS: ${THORP_LIMIT_CANCEL_GRACE_SECONDS}
+      THORP_LIMIT_PROVISIONAL: ${THORP_LIMIT_PROVISIONAL}
       # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.
       # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라
       # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.
