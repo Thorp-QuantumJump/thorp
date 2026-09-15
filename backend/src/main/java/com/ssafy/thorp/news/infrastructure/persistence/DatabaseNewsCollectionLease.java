@@ -33,7 +33,7 @@ public class DatabaseNewsCollectionLease implements NewsCollectionLease {
         Instant leaseUntil = now.plus(properties.leaseTtl());
         int updated =
                 jpaRepository.tryAcquireLease(
-                        sourceKey, owner, now, leaseUntil, NewsCollectionStatus.RUNNING);
+                        sourceKey, owner, now, leaseUntil, NewsCollectionStatus.RUNNING.name());
         return updated == 1 ? Optional.of(leaseUntil) : Optional.empty();
     }
 
