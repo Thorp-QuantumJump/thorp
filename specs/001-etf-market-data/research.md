@@ -28,6 +28,10 @@ self.data_provider = data_provider or RepositoryDataProvider()
 
 기본값을 그대로 두고 새 provider만 추가하면, 주입을 잊은 경로가 이용 조건 밖 원천으로 조용히 넘어간다. 클래스를 남기는 것과 기본값을 남기는 것은 다른 결정이며, 남길 것은 앞엣것뿐이다. 남기는 클래스에는 실제 Job 처리 경로에서 쓰지 않는 임시 수단임을 주석으로 명시한다.
 
+> **2026-09-15 확인 — 실제 구현은 위 결정과 다른 수단으로 끝났다.** 결정문은 당시 기록이므로 그대로 두고 결과만 덧붙인다.
+> `RepositoryDataProvider`는 끝내 만들지 않았다. 기본값을 다른 공급자로 바꾸는 대신 **기본값 자체를 없앴고**, 엔진은 공급자를 생성자의 필수 인자로 받는다(`PortfolioBacktestEngine.__init__`, `worker/src/worker/engine_runner.py:302`). 001이 적재한 표를 읽는 일은 spec 004가 만든 `PostgresMarketDataProvider`(`worker/src/worker/market_data.py:574`)가 맡는다.
+> `YFinanceDataProvider`도 주석을 달아 남기지 않고 **삭제했다**(spec 004 T006이 단일 종목 DEMO 엔진과 함께 지웠다). 결정이 지키려던 것("이용 조건 밖 원천이 선택되지 않게 한다")은 그대로 이뤄졌고 수단만 달라졌다.
+
 **Rationale**: constitution 원칙 X가 "KRX OPEN API와 DATA_GO_KR 증권상품시세는 개발·검증 단계의 원천으로만 쓴다"고 원천을 열거했다. yfinance와 pykrx는 그 목록에 없다. 두 도구는 공식 이용 허가를 받아 배포하는 경로가 아니라 각각 Yahoo Finance와 KRX 웹페이지에서 값을 긁어오는 방식이라, FR-010이 요구하는 이용 조건 준수를 문서로 입증할 수 없다. 원칙 X의 "왜"가 "허용 범위를 넘긴 자료로 만든 결과는 출시 시점에 통째로 무효가 된다"이므로, DEMO 단계에서 편의를 위해 남겨두면 뒤로 갈수록 걷어내기 어려워진다.
 
 **Alternatives considered**:
@@ -195,5 +199,5 @@ tasks 단계에서 다음을 독립 작업으로 둔다. 본선 구현과 의존
 
 1. **`data/CLAUDE.md`의 원천**: pykrx → KRX OPEN API (결정 1)
 2. **`data/CLAUDE.md`의 컬럼 표준**: `value` 추가 (결정 6)
-3. **`worker/src/worker/engine_runner.py:68`의 기본 provider**: `YFinanceDataProvider()` → `RepositoryDataProvider()` (결정 1). 클래스 자체는 남긴다
+3. **`worker/src/worker/engine_runner.py:68`의 기본 provider**: `YFinanceDataProvider()` → `RepositoryDataProvider()` (결정 1). 클래스 자체는 남긴다 — **2026-09-15 확인: 실제로는 기본값을 없애 공급자를 필수 인자로 만들었고(`worker/src/worker/engine_runner.py:302`), `RepositoryDataProvider`는 만들지 않았으며, `YFinanceDataProvider` 클래스도 남기지 않고 삭제했다. 자세한 경위는 결정 1의 덧붙임 참고**
 4. **`docs/adr/0004`의 수수료 모델과 `docs/specs/market-api.md`**: `specs/README.md:98`이 이미 "기존 API·메시지 스펙과 ADR은 이 spec들에 맞춰 갱신 대상"으로 기록했다. 001 범위에서 직접 고칠 대상은 아니다

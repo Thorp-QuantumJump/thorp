@@ -1,6 +1,6 @@
 # Tasks: 대표 ETF 자료 확보
 
-**Input**: `specs/001-etf-market-data/` — plan.md, spec.md(Clarifications 5건), research.md(결정 1~8), data-model.md, contracts/{sector-api,evaluation-window,market-dataset}.md, quickstart.md(시나리오 1~7)
+**Input**: `specs/001-etf-market-data/` — plan.md, spec.md(Clarifications 5건), research.md(결정 1~8), data-model.md, contracts/{sector-api,evaluation-window,market-dataset}.md, quickstart.md(시나리오 1~8)
 
 **작업 단위 규칙** (constitution v3.0.0 "Jira 연계"): 아래 T항목 하나는 실행 지시의 최소 단위이며, 여러 T항목을 묶은 작업 묶음 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나다. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **`data/` 수집 파이프라인은 DATA 파트라 `[DE]`, `backend/`와 `worker/`는 백엔드 파트라 `[BE]`로 표기한다**(워커의 파트 소속은 004 tasks가 2026-09-10에 확정). 2026-09-11에 개별 task 76개를 아래 16개 묶음으로 재편했다. 묶음 기준은 constitution의 세 조건(하나의 목적 공유 / 독립 구현·검증·롤백 / 리뷰어가 한 번에 읽을 범위)이며, 같은 파트가 연속으로 하는 작업과 한쪽만 병합하면 반쪽이 되는 작업을 묶었다. **2026-09-11에 T001~T013을 Jira Task 6개로 다시 묶고 이슈를 발급했다.** 묶음을 16개에서 6개로 줄인 까닭은 Jira Task 하나의 단위를 speckit task 여러 개로 두기로 정했고, 같은 파트가 연속으로 수행하며 함께 병합해야 뜻이 통하는 작업을 한 묶음에 담는 편이 리뷰에 유리하기 때문이다(constitution 「Jira 연계」가 요구하는 묶음 구성 변경 기록이다). 발급 결과는 Epic `S15P21E205-30 백테스트` 아래 Story 3개(US1 `-173`, US2 `-174`, US3 `-175`)와 Task 6개다: T001·T002 → `-176`(SP 3), T003·T004 → `-177`(SP 5), T005·T006 → `-178`(SP 5), T007·T008·T009 → `-179`(SP 8), T010·T011 → `-180`(SP 5), T012·T013 → `-181`(SP 3). Story에는 담당자와 스토리 포인트를 지정하지 않고 Task에만 지정한다. 브랜치는 `feat(be)/{JIRA_NUMBER}-{desc}` 형식이며, 서브에이전트가 쓰는 작업 브랜치에는 Jira 번호를 붙이지 않는다. T014~T016은 실제 자료 확보가 선행 조건이라 아직 발급하지 않았다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 완료 조건은 constitution "완료의 정의" 다섯 가지다.
 
@@ -179,7 +179,7 @@
 ## Phase 7: Polish
 
 - [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — S15P21E205-188
-  - quickstart 시나리오 1~7을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
+  - quickstart 시나리오 1~8을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
   - constitution 「기능·계산 확인」이 요구하는 수기 대조를 한 건 수행한다. 분배금 지급일 하나를 골라 운용사 공시의 주당 분배금과 `corporate_action.amount`를 눈으로 확인하고 `reconciliation_record`에 남긴다
   - `README.md`의 "현재 구현 상태"에서 자료 원천이 바뀐 사실을 반영한다
   - `docs/specs/market-api.md`와 `docs/adr/0004`가 001의 결정과 어긋나는 부분을 확인해 갱신 대상 목록을 남긴다. `specs/README.md`가 이미 갱신 대상으로 기록했으므로 001 범위에서 직접 고치지는 않는다
@@ -336,7 +336,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - `data-model.md`가 `instrument_id`를 `{6자리}.XKRX` 형식으로 정했고 마이그레이션의 CHECK와 `krx.py`의 형식 검사가 그것을 강제한다
   - **실제 원천에는 그 형식을 벗어나는 ETF가 많다.** 2026-09-11 하루치를 실제로 불러 세어 보니 1,168종 중 **304종(26%)**이 `0184E0`·`0182R0` 같은 영숫자 단축코드다. 이 종목들은 대표 ETF로도 비교 대상으로도 넣을 수 없다
   - PD-01(T014)이 후보를 고르는 일이라 **이 제약이 그 선택지를 먼저 좁힌다.** 형식을 넓힐지, 좁은 채로 두고 그 사실을 문서에 적을지 정한다
-- [ ] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
+- [X] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
   - 표가 아직 `RepositoryDataProvider`를 "`engine_runner.py:68`의 기본값이 된다"로 적는데 그 클래스는 만들어지지 않았고 004의 `PostgresMarketDataProvider`가 그 자리를 맡는다
   - 덧붙임이 "`YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고"라고 하는데 **그 파일은 없다.** 004 T006에서 삭제했다
   - 같은 덧붙임의 "001 담당자 확인 필요"가 아직 달려 있다. 이제 확인되었다
@@ -345,9 +345,9 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`가 아직 `KRX_DAILY_V1`을 박아 넣고, 그 산출물 `worker/tests/fixtures/manual_reconciliation.json`에 통째로 들어가 있다
   - 생성기만 고치면 산출물과 갈라진다. **둘을 함께 고치고 재생성해 검증할 수 있는 작업에서 닫는다**
   - 그 자리의 `dataVersion`이 `FIXTURE-three_etf_24m`이라 정직한 값이 KRX 날짜가 아니라 픽스처 식별자일 수 있다. T030과 함께 정하는 편이 낫다
-- [ ] T034 [DOCS] research.md의 워커 공급자 이름을 실제와 맞춘다 per research.md 결정 1 (partial)
+- [X] T034 [DOCS] research.md의 워커 공급자 이름을 실제와 맞춘다 per research.md 결정 1 (partial)
   - 26행과 198행이 아직 `RepositoryDataProvider`를 기본 공급자로 적는다. T028이 `plan.md`에서 고친 것과 같은 어긋남이다
-- [ ] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
+- [X] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
   - T022가 시나리오를 하나 더해 `quickstart.md`에 여덟 개가 있는데, 이 문서 3행의 Input 줄과 T016의 첫 항목이 아직 "시나리오 1~7"이다
   - **T016을 적힌 대로 수행하면 새 시나리오가 검증 기록에서 빠진다.** T016 착수 전에 고쳐야 한다
 - [ ] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)
