@@ -69,7 +69,9 @@ final class BacktestRunMapper {
                 lifecycle.publishedAt(),
                 lifecycle.publishCount(),
                 lifecycle.dlqCount(),
-                lifecycle.cancelRequestedAt());
+                lifecycle.cancelRequestedAt(),
+                lifecycle.cancelReason(),
+                lifecycle.lastEventAt());
     }
 
     static BacktestRun toDomain(BacktestRunJpaEntity entity) {
@@ -120,7 +122,9 @@ final class BacktestRunMapper {
                 entity.getPublishedAt(),
                 entity.getPublishCount(),
                 entity.getDlqCount(),
-                entity.getCancelRequestedAt());
+                entity.getCancelRequestedAt(),
+                entity.getCancelReason(),
+                entity.getLastEventAt());
     }
 
     /** 진행 기록은 단계가 있을 때만 만든다. 단계가 없으면 아직 STARTED를 받지 않은 실행이다. */

@@ -40,6 +40,14 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>접수가 하는 일은 "실행 전에 거절할 수 있는 것을 전부 거절하는 것"이다. 규칙이 팀 미확정이면 422, 워밍업이 모자라면 422, 비중 합이 1이 아니면 400이다.
  * 여기서 통과시킨 요청은 워커가 자료를 읽다가 실패하는 것 말고는 실패할 이유가 없어야 한다.
  *
+ * <p><b>접수 거절은 호출자의 트랜잭션을 되돌리지 않는다</b>({@code noRollbackFor = BusinessException.class}, T014).
+ * 기본값이면 여기서 던진 예외가 참여 중인 트랜잭션을 rollback-only 로 표시하고, 호출자가 그것을 잡아도 커밋할 수 없다. 007 자동 탐색은 후보 정산과 다음 후보
+ * 접수를 한 트랜잭션에서 하므로, 대기열이 찬 순간 <b>이미 끝난 후보의 완료 처리까지 함께 사라진다</b> — 접수를 거절하려다 남의 커밋을 지우는 셈이다.
+ *
+ * <p>이 설정이 안전한 근거는 <b>거절이 쓰기보다 먼저 일어난다</b>는 것 하나다. 이 메서드가 {@link BusinessException} 을 던지는 자리는 검증·동일
+ * 버전 판정·한도 검사뿐이고 그 앞에는 잠금과 조회만 있다. <b>쓰기 뒤에 던지는 분기를 새로 만들면 이 설정을 함께 거두어야 한다</b> — 그 순간 절반만 쓰인 접수가
+ * 커밋된다. {@code BacktestServiceTest} 가 그 순서를 단언한다.
+ *
  * <p><b>발행은 커밋 뒤에</b> 한다(R-18, {@link BacktestJobDispatcher}). 트랜잭션 안에서 발행하면 워커의 STARTED가 커밋을 앞질러
  * 모르는 실행으로 버려진다.
  */
@@ -49,6 +57,7 @@ public class BacktestService {
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
     private final BacktestReuseEventRepository reuseEventRepository;
+    private final ExecutionLimitPolicy executionLimitPolicy;
     private final StrategyRulesService strategyRulesService;
     private final CostProfileService costProfileService;
     private final EffectivePeriodCalculator effectivePeriodCalculator;
@@ -62,6 +71,7 @@ public class BacktestService {
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
             BacktestReuseEventRepository reuseEventRepository,
+            ExecutionLimitPolicy executionLimitPolicy,
             StrategyRulesService strategyRulesService,
             CostProfileService costProfileService,
             EffectivePeriodCalculator effectivePeriodCalculator,
@@ -73,6 +83,7 @@ public class BacktestService {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
         this.reuseEventRepository = reuseEventRepository;
+        this.executionLimitPolicy = executionLimitPolicy;
         this.strategyRulesService = strategyRulesService;
         this.costProfileService = costProfileService;
         this.effectivePeriodCalculator = effectivePeriodCalculator;
@@ -92,7 +103,7 @@ public class BacktestService {
     private static final BigDecimal MAX_TARGET_VOLATILITY = new BigDecimal("0.2000");
     private static final BigDecimal TARGET_VOLATILITY_STEP = new BigDecimal("0.0100");
 
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public BacktestJobResult create(CreateBacktestCommand command) {
         return create(command, null);
     }
@@ -101,7 +112,7 @@ public class BacktestService {
      * @param retryOfRequestId 재시도라면 원본 요청의 id. 새 요청 행에 그대로 남는다(T010). 재시도도 접수를 <b>다시</b> 타므로 동일 버전
      *     재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에 합류한다
      */
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public BacktestJobResult create(CreateBacktestCommand command, Long retryOfRequestId) {
         Scenario scenario = command.scenario() == null ? Scenario.FULL_PERIOD : command.scenario();
         validateScenario(scenario, command.scenarioParams());
@@ -164,6 +175,9 @@ public class BacktestService {
             }
             // 잠근 뒤 보니 종결된 실행이었다. 부분 유니크 인덱스가 같은 키의 새 실행을 허용하므로 아래에서 만든다.
         }
+
+        // 여기까지 왔으면 새 계산을 만든다. 합류·재사용은 위에서 끝났으므로 한도에 세지 않는다(R-19).
+        executionLimitPolicy.requireAdmission(command.requesterId(), command.executionType());
 
         Map<String, Object> versions = versions(costProfile, command.rulesVersion(), dataVersion);
         RunPlan plan =
