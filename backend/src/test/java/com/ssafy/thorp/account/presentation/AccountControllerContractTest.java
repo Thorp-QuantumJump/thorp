@@ -20,6 +20,8 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.common.web.advice.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -43,7 +45,7 @@ class AccountControllerContractTest {
                         post("/accounts/email-verifications")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"email\":\"member@example.com\"}"))
+                                .content("{\"email\":\" MEMBER@Example.COM \"}"))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(
@@ -51,7 +53,8 @@ class AccountControllerContractTest {
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                        "{\"email\":\"member@example.com\",\"verificationCode\":\"123456\"}"))
+                                        "{\"email\":\" MEMBER@Example.COM \""
+                                                + ",\"verificationCode\":\"123456\"}"))
                 .andExpect(status().isNoContent());
 
         verify(emailVerificationService).createVerificationCode("member@example.com");
@@ -67,7 +70,7 @@ class AccountControllerContractTest {
                         post("/accounts")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(signupJson("01012345678")))
+                                .content(signupJson(" MEMBER@Example.COM ", "01012345678")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.userId").value(1))
@@ -102,16 +105,20 @@ class AccountControllerContractTest {
                 .andExpect(jsonPath("$.error.code").value("CSRF_TOKEN_INVALID"));
     }
 
-    @Test
-    void validationAndBusinessErrorsUseStableContractCodes() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"010-1234-5678", "0212345678", "010 1234 5678", "010123456"})
+    void invalidPhoneNumbersUseStableInvalidInputCode(String phoneNumber) throws Exception {
         mockMvc.perform(
                         post("/accounts")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(signupJson("010-1234-5678")))
+                                .content(signupJson(phoneNumber)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
 
+    @Test
+    void businessErrorsUseStableContractCodes() throws Exception {
         when(signupService.signup(any()))
                 .thenThrow(new BusinessException(ErrorCode.DUPLICATE_EMAIL));
         mockMvc.perform(
@@ -126,14 +133,18 @@ class AccountControllerContractTest {
     }
 
     private static String signupJson(String phoneNumber) {
+        return signupJson("member@example.com", phoneNumber);
+    }
+
+    private static String signupJson(String email, String phoneNumber) {
         return """
                 {
-                  "email": "member@example.com",
+                  "email": "%s",
                   "password": "password123",
                   "nickname": "회원",
                   "phoneNumber": "%s"
                 }
                 """
-                .formatted(phoneNumber);
+                .formatted(email, phoneNumber);
     }
 }
