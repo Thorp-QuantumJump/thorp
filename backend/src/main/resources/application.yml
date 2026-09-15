@@ -82,6 +82,10 @@ app:
 # 자동 탐색(spec 007) 실행 한도. ParamSearchProperties가 읽고 네 값 모두 필수다(@NotNull).
 # 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
 thorp:
+  ops:
+    # 운영자 경로(/internal/**)의 임시 문(spec 004 T012). 요청 헤더 X-Ops-Token 이 이 값과 같아야 열린다.
+    # 비어 있으면 그 경로는 404 다 — 로그인(spec 014)이 붙기 전까지의 통로이고, 운영은 THORP_OPS_TOKEN 으로 넣는다.
+    token: ${THORP_OPS_TOKEN:}
   backtest:
     # 결과 versions.engine 에 그대로 나가고 동일 버전 키에도 들어간다(R-03).
     # 워커를 올릴 때 이 값을 같이 올린다 — 값이 바뀌면 같은 조건이라도 새 실행이 된다.

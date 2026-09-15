@@ -156,6 +156,33 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 
 PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 끊는 것은 실행 시간 상한의 몫이고, 그쪽은 완료 범위를 남긴다.
 
+## 1.10 운영자 측정 집계 — `GET /internal/execution-metrics`
+
+사용자 화면에는 노출하지 않는 운영자 경로다(spec 004 US4, R-10). 실행 유형별로 대기·소요 분포, 실패·취소·자동 재시도율, 공용 워커가
+집은 비율, 재사용·한도 도달 수를 돌려준다 — PD-06 한도 값과 R-20 워커 비율을 정하는 자료다.
+
+- 헤더 `X-Ops-Token`이 서버 설정 `thorp.ops.token`과 같아야 한다. **없거나 틀리거나 토큰이 설정되지 않은 환경이면 `404 RESOURCE_NOT_FOUND`** —
+  403이 아니다(경로의 존재를 알려 주지 않는다). 로그인(spec 014)이 붙기 전까지의 임시 문이다.
+- 쿼리 `type`(`SINGLE`·`SEARCH_BUNDLE`·`REGIME_SECTOR`·`REGIME_TOTAL`, 없으면 전부), `from`(포함)·`to`(미포함, ISO-8601 UTC). 둘 다 없으면
+  DB 뷰 `v_run_metric_summary`와 값이 같다. `from ≥ to`면 `400 INVALID_INPUT`.
+
+```json
+{ "success": true,
+  "data": { "from": null, "to": null,
+            "rows": [ { "executionType": "SINGLE", "count": 42,
+                        "failRate": "0.0476", "cancelRate": "0.0238", "autoRetryRate": "0.0238",
+                        "waitP50Ms": "812", "waitP95Ms": "4310", "waitP99Ms": "9020",
+                        "runP50Ms": "31200", "runP95Ms": "88000", "peakRssP95Mb": "512.5",
+                        "flexServedRate": "0.1904", "reuseCount": 7, "limitHitCount": 3 } ] },
+  "error": null }
+```
+
+- 비율·분위수는 다른 응답과 같이 **문자열 decimal**이다. 표본이 없는 분위수(예: STARTED를 못 받은 실행만 있는 유형)는 `null`이다 — 0으로
+  채우지 않는다.
+- `flexServedRate`는 공용(flex) 워커가 집은 비율이다. `SINGLE`에서 이 값이 곧 "공용 워커가 단건을 도운 비율"(R-20)이다.
+- `limitHitCount`는 접수 거절(429)과 실행 시간 상한 정지를 합친 수다. 종류별로 보려면 `backtest_limit_hit.kind`를 본다.
+- 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 여기 없다 — RabbitMQ 관리 UI.
+
 ## 2. 결과 조회
 
 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec "API 응답 분리"). 필드 의미·타입·nullable 규칙은
