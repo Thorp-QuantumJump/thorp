@@ -141,7 +141,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | 컬럼 | 타입 |
 |---|---|
 | id | BIGINT PK |
-| run_id | BIGINT FK NOT NULL UNIQUE |
+| run_id | BIGINT FK NOT NULL UNIQUE, ON DELETE CASCADE (실행이 없는 측정은 뜻이 없다) |
 | execution_type | VARCHAR(20) NOT NULL (`backtest_run.execution_type`, 없으면 SINGLE) |
 | status | VARCHAR(20) NOT NULL (종결 상태 COMPLETED · FAILED · CANCELLED) |
 | failure_code | VARCHAR(64) (FAILED 의 엔진 오류·SYSTEM_FAILURE, EXECUTION_LIMIT 으로 끊긴 CANCELLED) |

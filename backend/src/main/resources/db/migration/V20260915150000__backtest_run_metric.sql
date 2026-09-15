@@ -8,9 +8,11 @@
 
 CREATE SEQUENCE backtest_run_metric_seq START WITH 1 INCREMENT BY 1;
 
+-- run_id 는 ON DELETE CASCADE 다. 운영에서 실행 행은 지우지 않지만(append-only), 실행이 없는 측정은 뜻이 없고
+-- 테스트 픽스처는 실행 행을 지워 정리한다 — 여기서 막으면 실행을 지우는 모든 정리가 이 표 때문에 실패한다.
 CREATE TABLE backtest_run_metric (
     id                 BIGINT                   NOT NULL PRIMARY KEY,
-    run_id             BIGINT                   NOT NULL REFERENCES backtest_run (id),
+    run_id             BIGINT                   NOT NULL REFERENCES backtest_run (id) ON DELETE CASCADE,
     execution_type     VARCHAR(20)              NOT NULL,
     status             VARCHAR(20)              NOT NULL,
     failure_code       VARCHAR(64),
@@ -60,7 +62,8 @@ CREATE TABLE backtest_limit_hit (
     execution_type VARCHAR(20)              NOT NULL,
     reason         VARCHAR(32)              NOT NULL,
     requester_id   BIGINT,
-    run_id         BIGINT                   REFERENCES backtest_run (id),
+    -- 위와 같은 이유로 CASCADE. 접수 거절 행은 run_id 가 null 이라 영향이 없다.
+    run_id         BIGINT                   REFERENCES backtest_run (id) ON DELETE CASCADE,
     at             TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT ck_backtest_limit_hit_kind
         CHECK (kind IN ('ADMISSION_REJECTED', 'RUN_STOPPED'))
