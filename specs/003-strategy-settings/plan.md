@@ -116,6 +116,7 @@ specs/003-strategy-settings/
 backend/src/main/java/com/ssafy/thorp/strategy/        # 새로 만드는 003 소유 영역
 ├── application/
 │   ├── port/            # ParameterRegistryPort 와 값 타입 — 007이 옮겨 오는 그대로
+│   ├── exception/       # RegistryUnavailableException — 007에서 옮겨 온다
 │   ├── result/          # 조회 결과 DTO
 │   └── service/         # 등록표 조회·검증 서비스
 ├── infrastructure/
