@@ -3,6 +3,7 @@ package com.ssafy.thorp.news.application.service;
 import com.ssafy.thorp.news.application.port.NewsSourceClient;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Random;
 import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 
@@ -43,8 +44,18 @@ public class NewsRetryPolicy {
 
     private final RandomGenerator random;
 
+    /**
+     * 지터용 난수원으로 {@link Random}을 쓴다. {@code java.base}에 있어 어떤 런타임에도 존재한다.
+     *
+     * <p><b>{@code RandomGenerator.getDefault()}로 되돌리지 않는다.</b> 그것이 고르는 기본 알고리즘 {@code
+     * L32X64MixRandom}의 구현은 {@code jdk.random} 모듈에 있는데, 운영 런타임 이미지 {@code eclipse-temurin:21-jre}에는
+     * 그 모듈이 없어 이 빈을 만드는 단계에서 애플리케이션 전체가 기동에 실패한다(2026-09-15 운영 배포 중단). 빌드와 테스트는 {@code 21-jdk}에서 돌아
+     * {@code jdk.random}이 있으므로 CI로는 드러나지 않는다.
+     *
+     * <p>쓰임이 재시도 간격의 흔들림이라 암호학적 강도가 필요 없다. 난수원을 바꿀 때는 그 구현이 운영 런타임에 있는 모듈인지 먼저 확인한다.
+     */
     public NewsRetryPolicy() {
-        this(RandomGenerator.getDefault());
+        this(new Random());
     }
 
     /** 시험에서 흔들림을 고정하기 위한 생성자. */
