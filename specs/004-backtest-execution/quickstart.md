@@ -5,16 +5,32 @@ spec의 User Story·SC를 끝에서 끝까지 확인하는 절차다. 구현 코
 ## 준비
 
 ```bash
+# 0. 로컬 볼륨을 비운다. local 프로필은 Flyway 가 꺼져 있어 Hibernate 가 만든 스키마에는 001 자료 표(daily_price 등)가
+#    없다 — 운영과 같은 스키마로 검증하려면 Flyway 로 새로 만든다. 로컬 자료만 사라진다.
+docker compose -f docker-compose.dev.yml down -v
 docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
-# quorum 큐 전환(기존 classic 큐가 있는 환경에서 최초 1회). 백엔드·워커를 멈춘 뒤
-# messages_ready·messages_unacknowledged 가 모두 0인지 확인하고 삭제한다(미ACK만 보면 대기 작업을 잃는다)
-docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl list_queues name messages_ready messages_unacknowledged
-docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl delete_queue backtest.jobs
-cd backend && ./gradlew spotlessApply build && ./gradlew bootRun --args='--spring.profiles.active=local'
-cd worker && ruff check src tests && ruff format --check src tests && pytest && python -m worker.main
+
+# 1. 백엔드를 Flyway 켜서 한 번 띄운다 — 스키마(001 표 포함)와 RabbitMQ 토폴로지(exchange 3, queue 5, binding 5)를 만든다.
+cd backend && ./gradlew spotlessApply build
+SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate ./gradlew bootRun --args='--spring.profiles.active=local'
+
+# 2. 픽스처 자료를 001 표에 넣는다(로컬 전용, 멱등). 백엔드가 접수 때 붙이는 자료 버전이 상수 FIXTURE-three_etf_24m 이라
+#    이 자료로만 S1 이 돈다 — 진짜 KRX 자료는 001 T019(자료 버전 규칙)와 함께 붙인다. 운영 DB 에는 넣지 않는다.
+cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest
+MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp python scripts/load_three_etf_fixture.py
+
+# 3. 워커 둘 — 단건 전용과 벌크 우선 공용(R-20). 각각 별도 터미널.
+MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp WORKER_ROLE=single python -m worker.main
+MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp WORKER_ROLE=flex   python -m worker.main
 ```
 
-인증 토큰 `$TOKEN`(사용자 A), `$TOKEN_B`(사용자 B)를 준비한다. 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json`.
+전부 컨테이너로 띄우려면 `docker compose -f docker-compose.dev.yml --profile app up -d --build` — 이때도 백엔드에
+`SPRING_FLYWAY_ENABLED=true`를 넘겨야 001 표가 생긴다(dev compose 기본은 Hibernate `update`).
+
+**인증은 아직 없다**(spec 014 전). local 프로필은 `thorp.auth.trust-user-id-header=true`라 사용자는 헤더 `X-User-Id: {users.id}`로
+대신한다 — 아래의 `$TOKEN`은 `-H "X-User-Id: 1"`, `$TOKEN_B`는 `-H "X-User-Id: 2"`로 읽는다(`users` 행이 있어야 한다). 운영자 경로는
+`X-Ops-Token: dev-ops-token`. 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json` — 종목은 픽스처의 세 개
+(`091160`·`305720`·`244580.XKRX`), 대응표 버전 `SECTOR-ETF-2026-09`, 기간은 2023-01-02~2024-12-31 안이어야 한다.
 
 ## S1. 접수·상태·완료 (US1, SC-001)
 
