@@ -1,5 +1,66 @@
 {
   "version": "news-publishers-v1",
-  "_comment": "실제 매체 항목은 BACK 파트가 공개 전에 채운다(PD-15a). 항목이 비어 있는 동안 공개 조회는 PREPARING을 반환하고, 구현과 내부 검증은 테스트 fixture로 진행한다. 등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외.",
-  "publishers": []
+  "_comment": "등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외. enabled는 수집 여부이고 공개 여부가 아니다 — 공개는 매체 허가 회신(PD-15)이 기록된 뒤에만 열린다. 회신 전 매체는 PENDING이라 공개 조회에서 빠지고 내부 검증에서만 보인다.",
+  "_topicKeys": "기사가 분류 값을 주지 않는 채널에만 적는다. 기사 분류가 등록표를 하나라도 통과하면 이 값은 쓰이지 않는다 — 기사가 말한 것을 먼저 믿는다. 국내 경제 RSS 20곳을 받아 본 결과 기사별 분류 값을 주는 곳은 경향신문뿐이었고 나머지는 피드 이름을 되풀이하거나 분류가 아예 없었다.",
+  "publishers": [
+    {
+      "publisherKey": "khan-economy",
+      "displayName": "경향신문",
+      "language": "ko",
+      "registeredDomain": "khan.co.kr",
+      "rssUrl": "https://www.khan.co.kr/rss/rssdata/economy_news.xml",
+      "enabled": true
+    },
+    {
+      "publisherKey": "hankyung-economy",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/economy",
+      "enabled": true,
+      "topicKeys": ["economy-general"]
+    },
+    {
+      "publisherKey": "hankyung-finance",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/finance",
+      "enabled": true,
+      "topicKeys": ["markets"]
+    },
+    {
+      "publisherKey": "hankyung-it",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/it",
+      "enabled": true,
+      "topicKeys": ["tech"]
+    },
+    {
+      "publisherKey": "mk-economy",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/30100041/",
+      "enabled": true
+    },
+    {
+      "publisherKey": "mk-stock",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/50200011/",
+      "enabled": true
+    },
+    {
+      "publisherKey": "mk-company",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/50100032/",
+      "enabled": true
+    }
+  ]
 }

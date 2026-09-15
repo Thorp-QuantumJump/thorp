@@ -27,6 +27,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
      * @param registeredDomain 공식 채널 판정 기준이 되는 매체 등록 도메인.
      * @param rssUrl 공식 RSS 채널 주소. 서버 전용이며 응답·로그에 노출하지 않는다(spec FR-021).
      * @param enabled 수집 활성화 여부.
+     * @param topicKeys 이 채널이 다루는 주제. 기사가 분류 값을 주지 않는 매체에만 적는다.
      */
     public record Publisher(
             String publisherKey,
@@ -34,12 +35,32 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
             String language,
             String registeredDomain,
             String rssUrl,
-            boolean enabled) {
+            boolean enabled,
+            java.util.List<String> topicKeys) {
+
+        /** 기사 분류 값을 주는 매체. 채널 주제를 따로 적지 않는다. */
+        public Publisher(
+                String publisherKey,
+                String displayName,
+                String language,
+                String registeredDomain,
+                String rssUrl,
+                boolean enabled) {
+            this(
+                    publisherKey,
+                    displayName,
+                    language,
+                    registeredDomain,
+                    rssUrl,
+                    enabled,
+                    java.util.List.of());
+        }
 
         private static final java.util.regex.Pattern KEY =
                 java.util.regex.Pattern.compile("^[a-z0-9-]{1,64}$");
 
         public Publisher {
+            topicKeys = topicKeys == null ? java.util.List.of() : java.util.List.copyOf(topicKeys);
             requireText(publisherKey, "publisherKey");
             requireText(displayName, "displayName");
             requireText(language, "language");

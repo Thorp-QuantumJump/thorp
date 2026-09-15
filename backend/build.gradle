@@ -83,6 +83,14 @@ spotless {
 tasks.named('test') {
     useJUnitPlatform()
 
+    // 시험은 바깥 망에 나가지 않는다.
+    //
+    // 뉴스 수집 스케줄러는 @SpringBootTest 컨텍스트에서도 돌아, 그대로 두면 시험이 그날의 실제 기사를
+    // 받아 와 공용 Testcontainer DB에 넣는다. 그러면 뒤에 오는 DB 시험의 행 수가 달라지고, 실패가
+    // 그 시험의 잘못처럼 보인다(2026-09-15 매체를 등록하자마자 드러났다). 시험 결과가 바깥 세상의
+    // 그날 상태에 달리는 것이 가장 나쁘다.
+    systemProperty 'thorp.news.collection-enabled', 'false'
+
     // 저장소 밖(backend/ 바깥)에 있는 공유 픽스처를 이 태스크의 입력으로 선언한다.
     //
     // 계약 픽스처는 워커(Python)와 백엔드(Java)가 같은 파일 하나를 읽어 두 구현을 묶는
