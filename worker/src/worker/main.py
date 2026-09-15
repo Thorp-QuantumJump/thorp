@@ -1,11 +1,9 @@
 """워커 엔트리포인트: ``python -m worker.main``.
 
-작업 큐를 소비해 백테스트 엔진을 실행하고 ``backtest.events`` 로 STARTED / PROGRESS / FINISHED를
-발행한다. 역할은 ``WORKER_ROLE`` 로 정한다(R-20) — ``single``(기본)은 단건 큐 ``backtest.jobs`` 만
-push 로 소비하고, ``flex`` 는 벌크 큐 ``backtest.jobs.bulk`` 를 먼저 확인한 뒤 비어 있으면 단건 큐를
-pull 로 집는다. 별도 스레드가 ``backtest.control`` 의 CANCEL 을 받아 실행 중인 백테스트를 다음
-거래일 처리 시점에 멈춘다(R-04). 같은 코드를 여러 프로세스/컨테이너로 실행해 수평 확장한다
-(competing consumers, 한 번에 한 건).
+RabbitMQ ``backtest.jobs`` 를 소비해 백테스트 엔진을 실행하고 ``backtest.events`` 로
+STARTED / PROGRESS / FINISHED를 발행한다. 별도 스레드가 ``backtest.control`` 의 CANCEL 을 받아
+실행 중인 백테스트를 다음 거래일 처리 시점에 멈춘다(R-04). 같은 코드를 여러 프로세스/컨테이너로
+실행해 수평 확장한다(competing consumers, prefetch 1).
 
 토폴로지 선언은 백엔드 책임이므로(계약 README §2) 큐가 없으면 만들지 않고 종료한다.
 접속 정보는 환경변수 ``RABBITMQ_URL``(브로커)·``MARKET_DATA_URL``(시장 자료 DB, 읽기 전용)로만
@@ -40,7 +38,7 @@ def main() -> int:
         PostgresMarketDataProvider(settings.market_data_url), cancel_registry=registry
     )
     try:
-        run_consumer(settings.rabbitmq_url, engine, registry, role=settings.worker_role)
+        run_consumer(settings.rabbitmq_url, engine, registry)
     except QueueMissingError as exc:
         logger.error("%s", exc)
         return 1

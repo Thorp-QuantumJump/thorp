@@ -20,25 +20,12 @@ public class BacktestCancelDispatcher {
 
     private final BacktestControlPublisher publisher;
 
-    public BacktestCancelDispatcher(
-            BacktestControlPublisher publisher,
-            org.springframework.context.ApplicationEventPublisher events) {
+    public BacktestCancelDispatcher(BacktestControlPublisher publisher) {
         this.publisher = publisher;
-        this.events = events;
     }
 
     /** 취소 의도가 커밋됐다는 신호. 롤백되면 발행도 없다. */
     public record CancelRequested(String runId) {}
-
-    private final org.springframework.context.ApplicationEventPublisher events;
-
-    /**
-     * 커밋 뒤에 CANCEL 을 보내 달라고 예약한다. 사용자 취소(R-04)와 유예 감시(R-19)가 같은 경로를 쓰도록 한 곳에 둔다 — 트랜잭션 안에서 보내면 발행은
-     * 됐는데 커밋이 실패해 아무도 취소하지 않은 실행이 멈춘다.
-     */
-    public void publishAfterCommit(String runId) {
-        events.publishEvent(new CancelRequested(runId));
-    }
 
     @TransactionalEventListener
     public void onCancelRequested(CancelRequested event) {

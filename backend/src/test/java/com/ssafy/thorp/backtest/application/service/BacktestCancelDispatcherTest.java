@@ -14,9 +14,7 @@ import org.junit.jupiter.api.Test;
 class BacktestCancelDispatcherTest {
 
     private final BacktestControlPublisher publisher = mock(BacktestControlPublisher.class);
-    private final BacktestCancelDispatcher dispatcher =
-            new BacktestCancelDispatcher(
-                    publisher, mock(org.springframework.context.ApplicationEventPublisher.class));
+    private final BacktestCancelDispatcher dispatcher = new BacktestCancelDispatcher(publisher);
 
     @Test
     @DisplayName("취소 의도가 커밋되면 그 실행에 CANCEL 을 보낸다")

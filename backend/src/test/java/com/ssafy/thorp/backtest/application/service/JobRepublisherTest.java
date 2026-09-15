@@ -97,15 +97,7 @@ class JobRepublisherTest {
                 com.ssafy.thorp.backtest.domain.model.RunState.of(RunStatus.QUEUED),
                 com.ssafy.thorp.backtest.domain.model.RunPlan.empty(),
                 new RunLifecycle(
-                        NOW.minusSeconds(600),
-                        null,
-                        null,
-                        publishedAt,
-                        publishCount,
-                        0,
-                        null,
-                        null,
-                        null));
+                        NOW.minusSeconds(600), null, null, publishedAt, publishCount, 0, null));
     }
 
     private void givenStaleRun() {
@@ -124,7 +116,7 @@ class JobRepublisherTest {
 
         InOrder order = inOrder(repository, publisher);
         order.verify(repository).recordPublishAttempt(11L);
-        order.verify(publisher).publish(any(), anyInt(), any());
+        order.verify(publisher).publish(any(), anyInt());
     }
 
     @Test
@@ -143,7 +135,7 @@ class JobRepublisherTest {
         givenStaleRun();
         org.mockito.Mockito.doThrow(new AmqpException("broker down"))
                 .when(publisher)
-                .publish(any(), anyInt(), any());
+                .publish(any(), anyInt());
 
         republisher.republishUnpublished();
 
@@ -168,7 +160,7 @@ class JobRepublisherTest {
 
         republisher.republishUnpublished();
 
-        verify(publisher, never()).publish(any(), anyInt(), any());
+        verify(publisher, never()).publish(any(), anyInt());
         verify(repository, never()).recordPublishAttempt(any());
     }
 }

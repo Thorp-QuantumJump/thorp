@@ -46,45 +46,106 @@ from worker.target_risk import target_risk_rules
 ZERO = Decimal("0")
 
 
+def required_warmup_trading_days(request: EngineInput) -> int:
+    """요청 구간보다 **앞에서** 더 읽을 워밍업 거래일 수.
+
+    ``evaluation.warmupTradingDays`` 가 있으면 그 값, 없으면 규칙의 ``lookbackDays`` 다.
+    ``TARGET_RISK`` 면 첫 판단일에 추정할 수익률이 있어야 하므로 오버레이 관측 길이와 큰 쪽을
+    쓴다(백엔드도 같은 규칙으로 워밍업을 확정한다).
+
+    달력 일수가 아니라 거래일 수다 — 연휴가 긴 해에 달력 일수로 잡으면 워밍업이 모자란다
+    (001 contracts/market-dataset.md 「읽기 규칙」). 이 값을 공급자에 넘기면 공급자가
+    ``warmup_anchor()`` 보다 이만큼 앞선 거래일부터 읽는다. **앞에 자료가 모자라면 있는 만큼
+    읽는다** — 거절은 여기가 아니라 ``evaluation_start()`` 의 되밀기가 맡는다.
+    """
+    warmup = request.evaluation.warmup_trading_days
+    if warmup is None:
+        warmup = int((request.allocation.rules or {}).get("lookbackDays", 0))
+        if request.run.scenario is Scenario.TARGET_RISK:
+            warmup = max(warmup, target_risk_rules(request.run).lookback_days)
+    return warmup
+
+
+def warmup_anchor(request: EngineInput) -> date:
+    """워밍업을 그 **앞에서** 읽어야 하는 날. 달력을 읽기 전에 요청만으로 정한다.
+
+    자료를 읽어야 달력을 알고 달력을 알아야 평가 시작일이 나오므로, 적재 시점에는 요청이
+    말하는 평가 시작일로 대신한다. 갈래와 우선순위는 ``evaluation_start()`` 와 같다 —
+    ``FRESH_CASH_FROM`` 의 ``scenarioParams.startDate`` → ``run.effectiveStart`` →
+    ``run.start``. 셋 다 요청한 첫날보다 앞설 수 없으므로 ``run.start`` 와 늦은 쪽을 쓴다.
+
+    **``run.start`` 를 앵커로 쓰면 안 된다.** 평가가 6월부터인데 1월 앞의 자료를 요구하게 되고,
+    자료 맨 앞 근처를 요청한 실행이 읽기 단계에서 죽는다. 되민 시작일 앞에 자료가 멀쩡히 있어도
+    마찬가지다.
+    """
+    run = request.run
+    if run.scenario is Scenario.FRESH_CASH_FROM:
+        # engine_support 가 존재·형식을 이미 확인했다.
+        fresh_from = date.fromisoformat(str((run.scenario_params or {})["startDate"]))
+        return max(run.start, fresh_from)
+    if run.effective_start is not None:
+        return max(run.start, run.effective_start)
+    return run.start
+
+
 def evaluation_start(request: EngineInput, calendar: list[date]) -> date:
     """성과 집계를 시작하는 거래일(FR-014·R-15).
 
-    우선순위: ``FRESH_CASH_FROM`` 의 ``scenarioParams.startDate`` → 백엔드가 계산한
-    ``run.effectiveStart`` → ``evaluation.warmupTradingDays`` 만큼 소비한 뒤 → 규칙의
-    ``lookbackDays`` 만큼 소비한 뒤. 어느 것도 없으면 첫 거래일이다. 워밍업 일수를 채울 자료가
-    없으면 지어내지 않고 ``DATA_INSUFFICIENT`` 다.
+    **``max(앵커, calendar[warmup])``.** 앵커는 ``warmup_anchor()`` 가 정하고, 워밍업 바닥은
+    ``FRESH_CASH_FROM``·``run.effectiveStart``·``run.start`` **세 갈래 모두에** 얹는다.
+
+    ``calendar`` 는 워밍업 구간까지 포함해 읽어 온 전체 달력이므로 ``calendar[warmup]`` 이
+    "워밍업을 채우고 나서 평가할 수 있는 첫 거래일"이다. 공급자가 앞이 모자라도 있는 만큼만 읽고
+    거절하지 않으므로(``market_data._warmup_start_from_days``) **워밍업이 모자란 채로 계산이
+    시작되는 것을 막는 곳은 여기 하나다.**
+
+    - 앵커 앞에 워밍업 자료가 넉넉하면 → 공급자가 앵커보다 정확히 ``warmup`` 거래일 앞에서 읽기
+      시작하므로 ``calendar[warmup] == 앵커`` 가 되어 **바닥이 아무 일도 하지 않는다.** 워밍업을
+      두 번 소비하지 않는다
+    - 자료 맨 앞이나 상장일 근처라 앞이 모자라면 → **모자란 만큼만** 밀린다(001
+      contracts/evaluation-window.md 의 ``firstEvaluable``). ``DATA_INSUFFICIENT`` 가 아니다
+
+    **바닥을 ``run.start`` 갈래에만 얹으면 운영 경로에서 꺼진다.** 발행 경로는
+    ``EngineInputAssembler`` 하나이고 ``BacktestService.create`` 가 언제나
+    ``plan.effectiveStart()`` 를 싣는다. 그래서 실제로 오는 요청은 전부 ``run.effectiveStart``
+    갈래를 타고, 그 갈래에 바닥이 없으면 워밍업 없이 첫 판단일을 맞아 전략이
+    ``CONSTRAINT_VIOLATION``·``ESTIMATION_FAILED`` 로 죽는다. **`effectiveStart` 가 늘 채워져
+    온다는 것은 안심의 근거가 아니라 위험의 근거다.**
+
+    **남는 한계: 화면의 기간과 실제 평가 기간이 갈릴 수 있다.** 바닥이 일하면 워커는 백엔드가 준
+    ``run.effectiveStart`` 보다 뒤에서 시작한다. 실패하는 것보다 낫지만 완전한 해결은 아니다.
+    뿌리는 **백엔드가 데이터셋의 첫 거래일을 모른다**는 것이다 — ``firstEvaluable`` 의 기준점은
+    ``max(상장일, 데이터셋 첫 거래일)`` 이라야 하는데 ``MarketMetadataPort`` 에 자료 시작일을
+    묻는 길이 없다. 픽스처에서 그 둘은 8년 어긋나 있다(어댑터 상장일 2015·2018, 워커 픽스처 자료
+    2023-01-02). 001의 자료 계층이 들어올 때 함께 옮긴다(001 tasks.md T029).
     """
     run = request.run
     in_range = [day for day in calendar if run.start <= day <= run.end]
     if not in_range:
         raise MarketDataError("No trading days in the requested period")
+    floor = warmup_anchor(request)
     if run.scenario is Scenario.FRESH_CASH_FROM:
-        # engine_support 가 존재·형식을 이미 확인했다.
-        fresh_from = date.fromisoformat(str((run.scenario_params or {})["startDate"]))
-        candidates = [day for day in in_range if day >= fresh_from]
-        if not candidates:
-            raise MarketDataError(
-                f"No trading day on or after scenarioParams.startDate {fresh_from}"
-            )
-        return candidates[0]
-    if run.effective_start is not None:
-        candidates = [day for day in in_range if day >= run.effective_start]
-        if not candidates:
-            raise MarketDataError(
-                f"No trading day on or after run.effectiveStart {run.effective_start}"
-            )
-        return candidates[0]
-    warmup = request.evaluation.warmup_trading_days
-    if warmup is None:
-        warmup = int((request.allocation.rules or {}).get("lookbackDays", 0))
-        if run.scenario is Scenario.TARGET_RISK:
-            # 첫 판단일에 추정할 수익률이 있어야 한다. 백엔드도 같은 규칙으로 워밍업을 확정한다.
-            warmup = max(warmup, target_risk_rules(run).lookback_days)
-    if warmup >= len(in_range):
+        # 앵커는 max(run.start, scenarioParams.startDate) 라 둘 중 어느 쪽인지 밝혀 적는다.
+        source = f"{floor} (scenarioParams.startDate or run.start, whichever is later)"
+    elif run.effective_start is not None:
+        source = f"{floor} (run.effectiveStart or run.start, whichever is later)"
+    else:
+        source = f"run.start {floor}"
+    warmup = required_warmup_trading_days(request)
+    if warmup >= len(calendar):
+        # 워밍업 구간까지 읽어 온 달력 전체로도 워밍업을 못 채운다. 있는 만큼 읽어 온 뒤라
+        # 이것은 "앞이 짧다"가 아니라 "이 자료로는 이 전략을 계산할 수 없다"는 뜻이다.
         raise MarketDataError(
-            f"warmup of {warmup} trading days leaves no evaluation day in {len(in_range)} available"
+            f"Trading calendar holds {len(calendar)} day(s), "
+            f"need {warmup} warmup trading day(s) before the first evaluation day"
         )
-    return in_range[warmup]
+    if calendar[warmup] > floor:
+        floor = calendar[warmup]
+        source = f"{floor}, the first day with {warmup} warmup trading day(s) behind it"
+    candidates = [day for day in in_range if day >= floor]
+    if not candidates:
+        raise MarketDataError(f"No trading day on or after {source}")
+    return candidates[0]
 
 
 def _run_level_warnings(request: EngineInput, first_evaluation_day: date) -> list[ContractWarning]:
@@ -277,16 +338,38 @@ class PortfolioBacktestEngine:
                 self._rejected(request, None, started, "INVALID_REQUEST", "; ".join(reasons)),
                 RunArtifacts(orders=orders, metadata=metadata),
             )
+        # 워밍업은 요청 구간 **앞에서** 읽는다(001 contracts/market-dataset.md 「읽기 규칙」).
+        # 요청 구간 안에서 소비하면 사용자가 요청한 첫날부터의 결과를 받지 못한다.
+        try:
+            warmup = required_warmup_trading_days(request)
+            anchor = warmup_anchor(request)
+        except (ArithmeticError, LookupError, TypeError, ValueError) as exc:
+            # 규칙 사본의 ``lookbackDays`` 가 정수가 아니거나 시나리오 입력이 깨졌다. 결정적
+            # 결함이므로 전파해 재전달시키지 않고 결과로 돌려준다 — 아래 광역 처리와 같은
+            # 판단이다(계약 §4.3).
+            return (
+                self._rejected(
+                    request, None, started, "ENGINE_ERROR", f"{type(exc).__name__}: {exc}"
+                ),
+                RunArtifacts(orders=orders, metadata=metadata),
+            )
+        metadata["requestedWarmupTradingDays"] = warmup
+        metadata["warmupAnchor"] = anchor.isoformat()
         # 일시 장애(DB 접속 실패 등)는 자료 적재에서만 난다. 그래서 이 호출만 try 밖에 두고
         # 그대로 전파한다 — 소비자는 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로
-        # 바꾸면 FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다. 자료 부족은 확정
-        # 오류이므로 아래에서 결과로 바꾼다.
+        # 바꾸면 FINISHED 가 발행·ACK 되어 일시 장애가 최종 실패로 굳는다. 자료 부족(행 결측·
+        # 상장 전 구간만 요청)은 확정 오류이므로 아래에서 결과로 바꾼다.
+        #
+        # 앵커는 ``run.start`` 가 아니라 **평가가 실제로 시작될 날**이다. 요청한 첫날을 기준으로
+        # 삼으면 평가가 6월부터인 실행이 1월 앞의 자료를 요구하다 죽는다. 앞이 모자라면 공급자가
+        # 있는 만큼만 읽고, 워밍업이 모자란 채로 계산되는 것은 ``evaluation_start`` 가 막는다.
         try:
             market = self.market_data.load(
                 request.universe.instrument_ids,
-                request.run.start,
+                anchor,
                 request.run.end,
                 request.market_data.data_version,
+                warmup_trading_days=warmup,
             )
         except MarketDataError as exc:
             return (
@@ -307,6 +390,8 @@ class PortfolioBacktestEngine:
                     "datasetId": market.dataset_id,
                     "evaluationStart": first_day.isoformat(),
                     "evaluationEnd": plan.evaluation_days[-1].isoformat(),
+                    # 평가 시작일 앞에 실제로 쥐고 있는 거래일 수. 요청 구간 앞에서 읽은
+                    # 워밍업이 여기 들어간다(``requestedWarmupTradingDays`` 가 요청값이다).
                     "warmupTradingDays": len([d for d in calendar if d < first_day]),
                     "totalTradingDays": len(plan.evaluation_days),
                     "decisionDays": len(plan.decision_days),

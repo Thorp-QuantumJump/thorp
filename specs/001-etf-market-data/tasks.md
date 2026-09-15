@@ -261,7 +261,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있다
   - **001이 지금 만들 수 없다.** 산식 입력 다섯 중 `warmupTradingDays`를 `evaluation-window.md` 입력표가 "전략 등록표(003 소유)에서 온다. 001은 이 값을 정하지 않고 받는다"로 못 박았고, `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. T010의 2026-09-11 보류 판단이 그대로 유효하다
   - 붙일 때 필요한 것은 T010이 적어 둔 다섯 가지다. `EvaluationWindowService`는 입력을 전부 인자로 받으므로 고치지 않고 호출부만 더하면 된다
-- [ ] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)
+- [X] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)
   - 계약은 "워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다
   - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다
   - **001 혼자 못 고친다.** `evaluation_start`는 004가 `run.effectiveStart`·`evaluation.warmupTradingDays` 우선순위로 설계한 것이라, 호출을 바꾸면 모든 백테스트의 `evaluationStart`와 지표가 움직이고 004의 재현 픽스처가 함께 깨진다. 두 계약 중 어느 쪽을 기준으로 삼을지 팀이 정해야 한다
@@ -303,16 +303,27 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
 
 **다만 `-202`(T018)와 `-203`(T019)은 이 평가 뒤에 보류하기로 정했다.** 코드리뷰가 양쪽 모두에서 회귀를 찾아냈다 — 아래 T029와 T030을 본다. 따라서 `dev`에 들어가는 것은 `-204`와 `-207` 둘이고, **T018과 T019는 `[ ]`로 남는다.**
 
+**2026-09-15 둘 다 재개했다.** T029는 끝냈고(`S15P21E205-202`), T030은 곁가지만 닫고 본체를 자료 적재 뒤로 남겼다(`S15P21E205-203`). **따라서 T018은 `[X]`, T019는 `[ ]`로 남는다.** 각 항목 끝에 무엇이 달라졌는지 적었다.
+
 두 건이 같은 뿌리를 공유한다. **001의 자료 계층이 아직 실행 경로에 이어져 있지 않은 채로 백엔드만 정직하게 만들면, 지금 도는 DEMO 경로가 끊긴다.** 자료가 실제로 적재되는 것과 함께 옮겨야 한다.
 
 판정: FR 17개·SC 7개·사용자 스토리 3개·research 결정 8개·constitution 원칙 10개를 확인했다. MUST 위반은 없다. 유형은 partial 6·contradicts 2이며 missing과 unrequested는 없다. 이미 열려 있는 T014~T017·T020·T021이 덮는 범위는 다시 만들지 않았다.
 
-- [ ] T029 [BE] 워밍업을 어디서 읽을지 세 곳에서 함께 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)
+- [X] T029 [BE] 워밍업을 어디서 읽을지 세 곳에서 함께 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)
   - **같은 규칙을 구현한 곳이 셋인데 두 가지 규약이 섞여 있다.** `contracts/market-dataset.md` 「읽기 규칙」은 **요청 구간보다 앞에서** 읽으라 하고, `contracts/evaluation-window.md`는 `firstEvaluable`을 "상장일 이후 warmup번째 거래일"로 정의해 **뒤로 밀라** 한다. 후자는 자바와 파이썬이 함께 읽는 공유 픽스처 `contracts/fixtures/evaluation-window-cases.json`이 붙박고 있다
   - 세 곳은 `worker/src/worker/engine_runner.py`, `backend/.../EffectivePeriodCalculator.java`(→ `MarketMetadataPort.evaluationStart`), 그리고 위 공유 픽스처와 `paramsearch/CommonPeriodResolver`다
   - **워커만 먼저 옮기면 회귀가 난다.** T018 시도에서 실측으로 드러났다 — ⑴ 백엔드가 민 `effectiveStart`를 워커가 그대로 받아 워밍업이 두 번 들어가고(요청 63일에 실제 130일), ⑵ 요청 시작일이 자료의 처음이나 상장일 근처면 **전에는 성공하던 실행이 `DATA_INSUFFICIENT`로 실패한다.** 백엔드는 `commonStart` 뒤쪽만 보장할 뿐 `run.start` 앞쪽에 자료가 있는지 보지 않는다
   - 화면이 사용자에게 보여 주는 기간과 워커가 평가하는 기간이 반대 규칙으로 계산되는 것도 같은 뿌리다
   - `effectiveStart`는 동일 버전 키에 들어가 재현을 보장하는 값이다(R-03). 바꾸면 같은 요청이 다른 키를 갖는다. **워밍업 부족 판정·재현 키·포트 이름을 함께 정해야 하며 004 계약에 닿는다.** Jira `S15P21E205-205`, 워커 쪽 시도는 `S15P21E205-202`에 보류되어 있다
+  - **2026-09-15 해결. 위 진단 중 한 줄은 틀렸다** — 공유 픽스처 `contracts/fixtures/evaluation-window-cases.json`은 옳았고 고칠 것이 없었다. 두 계약은 서로 다른 것을 계산한다. `evaluation-window.md`의 `commonStart`는 **후보로 평가할 수 있는 가장 이른 날**이라 상장일에서 워밍업을 세는 것이 맞고, `market-dataset.md` 「읽기 규칙」은 **사용자가 고른 시작일**에 대한 규칙이다. 실제로 어긋난 것은 백엔드 구현 둘뿐이었다 — `EffectivePeriodCalculator`와 `CommonPeriodResolver`가 `max(요청 시작일, 상장일)`을 만든 뒤 거기서 워밍업을 세어, 계약이 기준점으로 삼지 않은 요청 시작일에서도 구간을 깎았다
+  - 세 곳이 이제 한 문장을 구현한다 — **평가 시작일 = max(요청 시작일, 자료가 시작된 뒤 warmup번째 거래일)**. 요청 앞에 워밍업 자료가 있으면 밀지 않고, 앞이 모자랄 때만 모자란 만큼 밀린다. 요청 시작일이 이길 때는 거래일에 맞춰 준다 — 주말을 평가 첫날로 삼으면 워커가 고르는 첫 거래일과 값이 갈리고 그 값은 동일 버전 키에 들어간다
+  - **"한 규칙"에는 단서가 있다.** 백엔드의 "자료가 시작된 뒤"는 가장 늦은 상장일이고 워커의 그것은 읽어 온 가격 행의 합집합 첫날이다. 세 곳의 주석·README에 그 차이를 적어 두었다
+  - **뿌리: 백엔드가 데이터셋의 첫 거래일을 모른다.** `contracts/evaluation-window.md`의 `firstEvaluable` 기준점은 사실 `max(상장일, 데이터셋 첫 거래일)`이라야 하는데, `MarketMetadataPort`에 자료 시작일을 묻는 길이 없어 앞쪽 항만 쓴다. 픽스처에서 둘은 **8년** 어긋나 있다 — 어댑터 상장일은 2015-01-02·2018-09-12이고 워커가 읽는 `worker/examples/three_etf_24m`의 자료는 2023-01-02부터다. 옛 규칙은 `max(요청 시작일, 상장일)`에서 워밍업을 세어 이 구멍을 **우연히** 덮고 있었고, 덮개를 걷어내자 드러났다. 그 어긋남 자체를 `MarketFixtureAlignmentTest`가 붙박는다 — 두 값이 같아지면 빨개진다
+  - **막는 곳은 워커 `evaluation_start`의 되밀기 하나이고, 세 갈래 모두에 얹어야 한다.** 발행 경로가 `EngineInputAssembler` 하나이고 `BacktestService.create`가 언제나 `plan.effectiveStart()`를 실으므로, 되밀기를 `run.start` 갈래에만 두면 **운영 경로에서 통째로 꺼진다.** 실측으로 확인했다 — 관측 63거래일이 필요한 요청을 자료 첫날 근처(2023-02-01, 앞 22거래일)에서 시작하면 워밍업 없이 첫 판단일을 맞아 `CONSTRAINT_VIOLATION`으로 죽었다. `dev`도 같은 입력에서 죽는다(회귀가 아니라 옛 구멍이 드러난 것이다). 세 갈래 모두에 얹으니 `COMPLETED`가 된다
+  - **남는 한계: 화면에 보이는 기간과 실제 평가 기간이 갈릴 수 있다.** 되밀기가 일하면 워커는 백엔드가 준 `effectiveStart`보다 뒤에서 시작한다(위 예에서 2023-02-01 대신 2023-03-30). 실패하는 것보다 낫지만 완전한 해결은 아니다. **근본 해결은 포트가 자료 시작일을 알려 주고 백엔드가 `max(상장일, 데이터셋 첫 거래일)`에서 세는 것이며, 001의 자료 계층과 함께 옮긴다.** 그때 되밀기는 이중 안전장치로 남는다
+  - **⑵의 `DATA_INSUFFICIENT` 회귀를 막는 것은 max 산식이 아니라 읽기 쪽 두 가지다.** 처음 고쳤을 때는 산식만 맞추고 `MarketDataProvider`에 요청 시작일을 앵커로 넘겨, 자료 맨 앞 근처를 요청한 실행이 **읽기 단계에서** 같은 회귀로 죽었다(`run.start=자료 첫날, warmup=5`도 죽었다). 둘을 함께 고쳤다 — ⑴ 앵커를 요청 첫날이 아니라 **평가가 실제로 시작될 날**(`scenarioParams.startDate` → `run.effectiveStart` → `run.start`)로 바꾸고, ⑵ 공급자가 앞이 모자라면 거절하지 않고 **있는 만큼** 읽게 했다. **읽기는 관대하게, 평가 시작일 판정은 엄격하게** — 되밀기는 `evaluation_start` 한 곳이 맡는다. 상장 전 구간을 지어내지 않는다는 계약(FR-005·SC-003)은 `_check_window`·`_check_prices`가 그대로 지킨다
+  - **`effectiveStart`가 키에 없어 옛 결과가 재사용된다.** 동일 버전 키 입력(`start`·`end`·`warmupTradingDays`)은 하나도 안 바뀌는데 결과 숫자가 움직인다. 그래서 키에 들어가는 `thorp.backtest.engine-version`을 `worker 2.0.0 → 2.1.0`으로, 결과 `versions.worker`가 싣는 워커 `__version__`을 `0.1.1 → 0.2.0`으로 올렸다. 계산 규칙이 바뀌면 이 둘을 올린다
+  - 004 재현 픽스처는 바뀌지 않았다. `EngineInputAssembler`가 저장된 계획값을 읽을 뿐 이 계산기를 부르지 않는다
 - [ ] T030 [BE] 자료 버전을 접수 시점에 정해 실행에 고정하고 고르는 키와 기록을 하나로 만든다 per research.md 결정 4·FR-013·SC-004 (contradicts)
   - **`marketData.datasetId`는 지금 아무도 읽지 않는다.** `engine_runner.py`가 공급자에 넘기는 것은 `request.market_data.data_version`이고, 그 값은 `FixtureMarketMetadataAdapter`의 고정값이다. 그래서 기록과 선택이 서로 다른 것을 가리킨다
   - T019 시도에서 실측으로 드러난 곁가지 셋이 함께 풀려야 한다

@@ -95,8 +95,7 @@ class EngineInputAssemblerTest {
                 LocalDate.of(2024, 12, 31),
                 63,
                 spec,
-                Map.of("rules", "1"),
-                null);
+                Map.of("rules", "1"));
     }
 
     private void registryAnswers() {

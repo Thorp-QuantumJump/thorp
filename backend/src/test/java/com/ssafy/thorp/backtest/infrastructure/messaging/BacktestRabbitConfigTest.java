@@ -22,19 +22,10 @@ class BacktestRabbitConfigTest {
     private final Declarables topology = new BacktestRabbitConfig().backtestTopology();
 
     @Test
-    void exchange_3_queue_5_binding_5() {
+    void exchange_3_queue_4_binding_4() {
         assertThat(topology.getDeclarablesByType(Exchange.class)).hasSize(3);
-        assertThat(topology.getDeclarablesByType(Queue.class)).hasSize(5);
-        assertThat(topology.getDeclarablesByType(Binding.class)).hasSize(5);
-    }
-
-    @Test
-    void 벌크_작업_큐는_단건_큐와_속성이_같고_같은_DLQ로_간다() {
-        // 어느 큐에서 죽어도 T010 의 DLQ 집계 하나를 타야 한다 — 재전달 상한과 DLX 가 다르면 큐마다 종결 규칙이 갈린다.
-        Queue bulk = queue(BacktestRabbitConfig.BULK_JOBS_QUEUE);
-        assertThat(bulk.isDurable()).isTrue();
-        assertThat(bulk.getArguments())
-                .isEqualTo(queue(BacktestRabbitConfig.JOBS_QUEUE).getArguments());
+        assertThat(topology.getDeclarablesByType(Queue.class)).hasSize(4);
+        assertThat(topology.getDeclarablesByType(Binding.class)).hasSize(4);
     }
 
     @Test
@@ -82,10 +73,6 @@ class BacktestRabbitConfigTest {
                                 BacktestRabbitConfig.EXCHANGE,
                                 BacktestRabbitConfig.JOBS_QUEUE,
                                 BacktestRabbitConfig.JOBS_ROUTING_KEY),
-                        org.assertj.core.groups.Tuple.tuple(
-                                BacktestRabbitConfig.EXCHANGE,
-                                BacktestRabbitConfig.BULK_JOBS_QUEUE,
-                                BacktestRabbitConfig.BULK_JOBS_ROUTING_KEY),
                         org.assertj.core.groups.Tuple.tuple(
                                 BacktestRabbitConfig.EXCHANGE,
                                 BacktestRabbitConfig.EVENTS_QUEUE,

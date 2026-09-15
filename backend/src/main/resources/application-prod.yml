@@ -36,21 +36,3 @@ spring:
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
-
-# 실행 한도(FR-006, R-19). **기본값을 두지 않는다** — 값이 없으면 기동이 실패한다.
-#
-# spec FR-006 은 "상한을 정하기 전에 무제한 실행을 허용하지 않는다"이다. 공통 설정에는 임시값이
-# 들어 있지만 운영에서는 그것을 물려받지 않는다 — 누가 PD-06 을 정하고 배포 환경에 넣어야
-# 비로소 뜬다. 다른 연결 정보와 같은 방식이다(infra/.env.prod).
-#
-# provisional 도 환경에서 받는다. PD-06 이 확정돼 아래 다섯 값이 실측 근거를 갖게 되면
-# false 로 넣는다 — 그때까지는 true 로 두어 429 응답에 임시값임이 실린다.
-thorp:
-  backtest:
-    limits:
-      max-queued-per-user: ${THORP_LIMIT_MAX_QUEUED_PER_USER}
-      max-queued-total: ${THORP_LIMIT_MAX_QUEUED_TOTAL}
-      max-run-seconds: ${THORP_LIMIT_MAX_RUN_SECONDS}
-      stale-run-seconds: ${THORP_LIMIT_STALE_RUN_SECONDS}
-      cancel-grace-seconds: ${THORP_LIMIT_CANCEL_GRACE_SECONDS}
-      provisional: ${THORP_LIMIT_PROVISIONAL}

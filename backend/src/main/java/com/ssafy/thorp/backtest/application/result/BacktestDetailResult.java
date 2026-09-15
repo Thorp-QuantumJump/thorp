@@ -132,14 +132,10 @@ public record BacktestDetailResult(
             Instant now,
             BacktestResultSummary result) {
         Summary summary = result.performance() == null ? null : summary(result);
-        // 결과 행의 사유가 먼저다. 없으면 실행 행을 본다 — 실행 시간 상한으로 멈춘 협력 취소는
-        // 결과(부분 산출물)는 있지만 오류가 아니라 사유가 실행 행에만 있다(R-19).
         Failure failure =
-                result.errorCode() != null
-                        ? new Failure(result.errorCode(), result.errorMessage())
-                        : run.getFailureCode() == null
-                                ? null
-                                : new Failure(run.getFailureCode(), run.getFailureMessage());
+                result.errorCode() == null
+                        ? null
+                        : new Failure(result.errorCode(), result.errorMessage());
         return build(request, run, currency, now, summary, null, failure);
     }
 

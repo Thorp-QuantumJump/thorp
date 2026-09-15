@@ -122,9 +122,7 @@ public class BacktestJobDispatcher {
      */
     private void send(BacktestRun run, int publishAttempt) {
         try {
-            // 최초 발행과 재발행이 모두 여기를 지나므로 큐 선택(R-20)은 이 한 줄이 전부다 — 재발행도 원래 큐로 간다.
-            publisher.publish(
-                    assembler.assemble(run), publishAttempt, run.getPlan().executionTypeOrSingle());
+            publisher.publish(assembler.assemble(run), publishAttempt);
         } catch (RuntimeException exc) {
             log.warn(
                     "작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}",

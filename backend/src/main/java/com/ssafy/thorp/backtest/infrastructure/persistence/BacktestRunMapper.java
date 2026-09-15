@@ -60,8 +60,7 @@ final class BacktestRunMapper {
                 plan.effectiveStart(),
                 plan.effectiveEnd(),
                 plan.requestSpec(),
-                plan.versions(),
-                plan.executionType());
+                plan.versions());
         RunLifecycle lifecycle = run.getLifecycle();
         entity.applyLifecycle(
                 lifecycle.queuedAt(),
@@ -70,9 +69,7 @@ final class BacktestRunMapper {
                 lifecycle.publishedAt(),
                 lifecycle.publishCount(),
                 lifecycle.dlqCount(),
-                lifecycle.cancelRequestedAt(),
-                lifecycle.cancelReason(),
-                lifecycle.lastEventAt());
+                lifecycle.cancelRequestedAt());
     }
 
     static BacktestRun toDomain(BacktestRunJpaEntity entity) {
@@ -112,8 +109,7 @@ final class BacktestRunMapper {
                 entity.getEffectiveEnd(),
                 warmup instanceof Number number ? number.intValue() : null,
                 requestSpec,
-                entity.getVersions(),
-                entity.getExecutionType());
+                entity.getVersions());
     }
 
     private static RunLifecycle toLifecycle(BacktestRunJpaEntity entity) {
@@ -124,9 +120,7 @@ final class BacktestRunMapper {
                 entity.getPublishedAt(),
                 entity.getPublishCount(),
                 entity.getDlqCount(),
-                entity.getCancelRequestedAt(),
-                entity.getCancelReason(),
-                entity.getLastEventAt());
+                entity.getCancelRequestedAt());
     }
 
     /** 진행 기록은 단계가 있을 때만 만든다. 단계가 없으면 아직 STARTED를 받지 않은 실행이다. */

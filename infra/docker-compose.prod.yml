@@ -118,15 +118,6 @@ services:
       ECOS_API_KEY: ${ECOS_API_KEY}
       KOSIS_API_KEY: ${KOSIS_API_KEY}
       DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
-      # 백테스트 실행 한도(spec 004 T014·T015, FR-006). application-prod.yml 이 ${THORP_LIMIT_*} 를 기본값 없이
-      # 참조하므로 여기서 넘겨야 기동한다. :- 기본값을 두지 않는다 — 설정 누락으로 "무제한 실행 금지"를 우회하지
-      # 않게 하려는 것이라, 비어 있으면 기동 실패가 맞다. 두 대기 한도는 단건 큐(backtest.jobs)만 센다(R-20).
-      THORP_LIMIT_MAX_QUEUED_PER_USER: ${THORP_LIMIT_MAX_QUEUED_PER_USER}
-      THORP_LIMIT_MAX_QUEUED_TOTAL: ${THORP_LIMIT_MAX_QUEUED_TOTAL}
-      THORP_LIMIT_MAX_RUN_SECONDS: ${THORP_LIMIT_MAX_RUN_SECONDS}
-      THORP_LIMIT_STALE_RUN_SECONDS: ${THORP_LIMIT_STALE_RUN_SECONDS}
-      THORP_LIMIT_CANCEL_GRACE_SECONDS: ${THORP_LIMIT_CANCEL_GRACE_SECONDS}
-      THORP_LIMIT_PROVISIONAL: ${THORP_LIMIT_PROVISIONAL}
       # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.
       # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라
       # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.
@@ -182,8 +173,6 @@ services:
       OPENBLAS_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
       TZ: Asia/Seoul
-      # 워커 역할(spec 004 R-20). 이 서비스는 단건 큐(backtest.jobs)만 push 로 받는 단건 전용이다.
-      WORKER_ROLE: single
     volumes:
       - ${DATA_DIR}/parquet:/data/parquet
       - ${DATA_DIR}/raw:/data/raw:ro
@@ -193,24 +182,9 @@ services:
       rabbitmq:
         condition: service_healthy
     deploy:
-      # 4 vCPU에서는 두 워커 서비스 합쳐 2개가 상한선. 합 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
+      # 4 vCPU에서는 2개가 상한선. 이 값 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
       # 백엔드는 동시 실행 상한을 따로 검사하지 않고 이 배치 값이 상한이다.
-      replicas: ${WORKER_SINGLE_REPLICAS}
-      resources:
-        limits:
-          memory: 2500M
-          cpus: "1.0"
-    networks: [backend]
-
-  # 공용 워커: 벌크 큐(backtest.jobs.bulk)를 먼저 보고 비어 있으면 단건 큐를 집는다(pull, 1초 폴링).
-  # 이미지·환경·자원 제한은 worker 와 같고 역할만 다르다(spec 004 R-20).
-  worker-flex:
-    extends:
-      service: worker
-    environment:
-      WORKER_ROLE: flex
-    deploy:
-      replicas: ${WORKER_FLEX_REPLICAS}
+      replicas: ${WORKER_REPLICAS}
       resources:
         limits:
           memory: 2500M

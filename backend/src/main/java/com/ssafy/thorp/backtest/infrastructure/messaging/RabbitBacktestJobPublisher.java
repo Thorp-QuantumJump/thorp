@@ -3,7 +3,6 @@ package com.ssafy.thorp.backtest.infrastructure.messaging;
 import com.ssafy.thorp.backtest.application.exception.BacktestPublishFailedException;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
-import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpException;
@@ -12,9 +11,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * 작업 메시지를 실행 유형에 맞는 작업 큐로 발행한다 — 단건은 {@code backtest.jobs}, 탐색·경제환경 파생은 {@code
- * backtest.jobs.bulk}(R-20). 메시지 속성은 계약 {@code docs/specs/backtest-messaging/README.md} §3을 따르며 큐가
- * 달라도 본문·헤더는 같다.
+ * 작업 메시지를 {@code backtest.jobs}로 발행한다. 메시지 속성은 계약 {@code docs/specs/backtest-messaging/README.md}
+ * §3을 따른다.
  *
  * <p>{@code message_id}는 {@code JOB-{runId}}다. 재시도할 때 유지되는 발행 측 고유 ID여야 하므로 저장 구조가 아니라 runId에서
  * 결정적으로 만든다(실행 하나에 작업 메시지 하나).
@@ -41,12 +39,12 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
     }
 
     @Override
-    public void publish(EngineInput engineInput, int publishAttempt, ExecutionType executionType) {
+    public void publish(EngineInput engineInput, int publishAttempt) {
         String runId = engineInput.run().runId();
         try {
             rabbitTemplate.convertAndSend(
                     BacktestRabbitConfig.EXCHANGE,
-                    routingKey(executionType),
+                    BacktestRabbitConfig.JOBS_ROUTING_KEY,
                     engineInput,
                     message -> {
                         message.getMessageProperties().setMessageId(MESSAGE_ID_PREFIX + runId);
@@ -63,12 +61,5 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {
             log.warn("Failed to publish backtest job: runId={}", runId, e);
             throw new BacktestPublishFailedException(runId, e);
         }
-    }
-
-    /** 단건만 단건 큐다. 새 실행 유형이 생기면 기본은 벌크 — 사람이 기다리는 큐에 배치가 섞이는 쪽이 더 나쁜 실수다. */
-    static String routingKey(ExecutionType executionType) {
-        return executionType == ExecutionType.SINGLE
-                ? BacktestRabbitConfig.JOBS_ROUTING_KEY
-                : BacktestRabbitConfig.BULK_JOBS_ROUTING_KEY;
     }
 }

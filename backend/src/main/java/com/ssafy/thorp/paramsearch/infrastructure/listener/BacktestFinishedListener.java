@@ -33,33 +33,18 @@ public class BacktestFinishedListener {
         this.progressService = progressService;
     }
 
-    /**
-     * <b>COMPLETED 가 아닌 종결은 모두 실패로 넘긴다.</b> FAILED 만 실패로 보던 때는, 실행 시간 상한으로 중간까지만 계산하고 끊긴
-     * 후보(CANCELLED + 부분 결과)가 정상 완료로 집계되어 <b>선정 대상</b>에 들어갔다. 끝까지 계산되지 않은 성과를 다른 후보와 나란히 비교하면 선정 자체가
-     * 거짓이 된다(R-19).
-     *
-     * <p>사유가 없는 CANCELLED 는 사용자가 스스로 멈춘 것이라 엔진 오류가 아니다 — {@code ENGINE_ERROR} 로 뭉개지 않도록 여기서 번역한다.
-     * 모듈 경계를 넘는 번역은 이 리스너의 몫이고, {@code paramsearch} 는 {@code RunStatus} 를 알 필요가 없다.
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onBacktestFinished(BacktestFinished event) {
         boolean belongsToSearch =
                 progressService.candidateFinished(
                         event.backtestJobId(),
-                        event.status() != RunStatus.COMPLETED,
-                        errorCodeOf(event));
+                        event.status() == RunStatus.FAILED,
+                        event.errorCode());
         if (belongsToSearch) {
             log.debug(
                     "param search candidate finished: backtestJobId={} status={}",
                     event.backtestJobId(),
                     event.status());
         }
-    }
-
-    private static String errorCodeOf(BacktestFinished event) {
-        if (event.errorCode() != null) {
-            return event.errorCode();
-        }
-        return event.status() == RunStatus.CANCELLED ? "CANCELLED" : null;
     }
 }

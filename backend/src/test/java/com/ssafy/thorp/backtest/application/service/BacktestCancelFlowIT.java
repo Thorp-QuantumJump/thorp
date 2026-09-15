@@ -17,7 +17,6 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
-import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
@@ -431,9 +430,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                                     cancelTx.executeWithoutResult(
                                             inner ->
                                                     runRepository.recordCancelRequested(
-                                                            runId,
-                                                            Instant.now(),
-                                                            CancelReason.USER));
+                                                            runId, Instant.now()));
                                     // ③ 접수가 잠그고 다시 본다 — 여기서 최신 값을 보아야 한다
                                     try {
                                         backtestService.create(intake(latecomer));

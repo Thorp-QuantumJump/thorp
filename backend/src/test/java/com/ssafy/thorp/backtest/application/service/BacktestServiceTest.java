@@ -17,7 +17,6 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
-import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
@@ -58,8 +57,6 @@ class BacktestServiceTest {
             mock(BacktestRequestRepository.class);
     private final BacktestReuseEventRepository reuseEventRepository =
             mock(BacktestReuseEventRepository.class);
-    // 한도는 ExecutionLimitPolicyTest 가 따로 본다. 여기서는 통과하는 것으로 둔다.
-    private final ExecutionLimitPolicy limitPolicy = mock(ExecutionLimitPolicy.class);
     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
     private final CostProfileService costProfileService = mock(CostProfileService.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -71,7 +68,6 @@ class BacktestServiceTest {
                     runRepository,
                     requestRepository,
                     reuseEventRepository,
-                    limitPolicy,
                     strategyRulesService,
                     costProfileService,
                     new EffectivePeriodCalculator(marketMetadata),
@@ -79,7 +75,7 @@ class BacktestServiceTest {
                     marketMetadata,
                     events,
                     Clock.fixed(NOW, ZoneOffset.UTC),
-                    "nautilus_trader 1.219.0 / worker 2.0.0");
+                    "nautilus_trader 1.219.0 / worker 2.1.0");
 
     @BeforeEach
     void stubRegistries() {
@@ -194,7 +190,7 @@ class BacktestServiceTest {
         assertThat(result.versions())
                 .containsEntry("rules", "1")
                 .containsEntry("data", "FIXTURE-three_etf_24m")
-                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.0.0");
+                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
         assertThat(result.versions().get("costProfile"))
                 .isEqualTo(Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
     }
@@ -279,9 +275,7 @@ class BacktestServiceTest {
     void doesNotJoinACancelPendingRun() {
         BacktestRun running = saved(runningRun(), 11L);
         BacktestRun cancelPending =
-                running.withLifecycle(
-                        running.getLifecycle()
-                                .cancelRequested(NOW.minusSeconds(5), CancelReason.USER));
+                running.withLifecycle(running.getLifecycle().cancelRequested(NOW.minusSeconds(5)));
         when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(cancelPending));
         when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(cancelPending));
 
@@ -303,8 +297,7 @@ class BacktestServiceTest {
                 .thenReturn(
                         Optional.of(
                                 running.withLifecycle(
-                                        running.getLifecycle()
-                                                .cancelRequested(NOW, CancelReason.USER))));
+                                        running.getLifecycle().cancelRequested(NOW))));
 
         assertThatThrownBy(() -> service.create(fixedWeight()))
                 .isInstanceOf(BusinessException.class)
@@ -475,7 +468,9 @@ class BacktestServiceTest {
                                 Scenario.TARGET_RISK,
                                 Map.of("targetVolatility", "0.1000")));
 
-        assertThat(result.effectiveStart()).isAfter(LocalDate.of(2024, 1, 2));
+        // 워밍업이 확정돼도 두 종목 모두 2018년 이전 상장이라 요청 시작일 앞에서 읽으면 된다 —
+        // 평가 시작일은 요청한 그날이다. 워밍업이 요청 구간을 깎지 않는다는 것이 여기서 드러난다.
+        assertThat(result.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
         ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
         verify(runRepository).save(captor.capture());
         assertThat(captor.getValue().getPlan().requestSpec())

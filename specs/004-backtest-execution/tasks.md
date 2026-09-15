@@ -137,24 +137,15 @@
   - 워커: 시작 시 `backtest.control` exclusive·auto-delete 큐 바인딩, 별도 스레드가 CANCEL{runId}를 `threading.Event` 맵에 표시. `PortfolioRebalanceExecution.on_bar`에서 취소 확인 시 `self.stop()`; 소비자는 `lastTradingDate`까지의 부분 EngineOutput(T008 함수)으로 FINISHED{status: CANCELLED, partial: true} 발행 후 ACK. 모르는·끝난 runId 무시
   - 구현 시 결정(T011): ① **워커의 취소 표시는 `control.CancelRegistry`(락 + 활성 집합 + 취소 집합) 하나**고 `main.py`가 만들어 엔진·소비자·리스너에 넘긴다. **활성 실행으로 등록된 runId의 CANCEL만 받는다**(리뷰 4) — fanout이라 모든 워커가 모든 CANCEL을 받으므로 남의 실행·끝난 실행의 표시를 쌓으면 집합이 끝없이 자라고 재전달된 같은 runId(R-06)가 옛 취소로 멈춘다. 등록은 소비자가 STARTED 발행 **앞**에서 `begin`, 종료 시 `end`(STARTED의 답으로 오는 CANCEL을 놓치지 않기 위해). 제어 리스너는 별도 연결·데몬 스레드(`rabbitmq.run_control_listener`, auto-ack, 계약 위반은 로그만, 끊기면 재접속)이고 **큐를 바인딩한 뒤 `ready`를 켠다; `run_consumer`는 그것을 기다린 뒤에야 작업을 받는다**(리뷰 3 — 그 전에 작업을 시작하면 그 사이 온 CANCEL을 잃는다. 30초 안에 준비되지 않으면 시작하지 않는다). 엔진은 T008의 `stop_after` 훅에 `registry.is_cancelled(run_id)`를 넣어 `_end_day`(거래일마다)에서 읽기만 하므로 완료 범위 = 처리한 마지막 거래일이다. `BacktestEngine` Protocol은 바꾸지 않았다(FINISHED는 run 블록을 그대로 옮긴다) ② **CANCEL은 취소 트랜잭션이 커밋된 뒤 `BacktestCancelDispatcher`가 보낸다**(작업 발행 R-18과 같은 방식, 리뷰 반영). 트랜잭션 안에서 보내면 발행됐는데 커밋이 실패해 취소 기록은 사라지고 워커는 멈춘다 — 아무도 취소하지 않은 실행이 CANCELLED로 끝난다. 취소 의도는 `run.cancel_requested_at`에 커밋되고, 발행 실패는 삼켜 유예 감시(T014)가 그 값을 보고 다시 보낸다. **잠금 순서는 요청 → 실행이다**(리뷰 1·2차 리뷰 1) — 실행 행만 잠그면 두 요청의 동시 취소는 막지만(둘 다 "남은 요청이 있다"고 읽는 문제), 같은 요청을 동시에 두 번 취소하면 뒤엣것이 잠금 전에 읽어 둔 옛 요청으로 "아직 활성"이라 판단해 남은 요청이 있는데도 실행을 멈춘다. 요청 행을 **첫 읽기로** 잠그고(`findByBacktestIdForUpdate`) 이어서 실행 행을 잠근다. `BacktestCancelFlowIT` 가 서로 다른 요청의 동시 취소(CANCEL 1회·`stoppedRun` 1건)와 같은 요청의 동시 취소(하나만 반영·뒤엣것 `NOT_CANCELLABLE`·실행 유지)를 두 스레드로 확인한다. 메시지는 비영속(살아 있는 워커에게만 뜻이 있다) ③ **취소한 요청의 `status`는 곧바로 `CANCELLED`**(T005가 정한 파생 상태를 유지)이고 실행이 아직 도는 동안은 `cancelRequested=true`로 구분한다. rest-api.md의 "그동안 status는 RUNNING"은 이 결정으로 갈음하고 README를 그에 맞췄다 ④ **대기 중 취소**는 실행을 바로 `CANCELLED`로 끝내고(`markCancelled(null)`, `finishedAt` 기록) 결과 행을 만들지 않는다. 상세는 200 + `summaryUnavailable: CANCELLED_BEFORE_START`, 하위 리소스는 `409 NO_PARTIAL_RESULT`(`requireResultReady`가 진행 거래일 없는 CANCELLED 실행을 결과 유실 500과 구분). 뒤늦게 STARTED가 오면 `handleStarted`가 CANCEL을 재발행한다 ⑤ **실행을 멈춘 취소의 상세 요약은 부분 구간 기준으로 채운다** — `BacktestDetailResult.of`가 COMPLETED 뿐 아니라 성과가 있는 CANCELLED 결과도 요약으로 만든다(T009 리뷰가 남긴 후속) ⑥ **`run.cancel_requested_at`을 `RunLifecycle.cancelRequestedAt`으로 매핑하고 취소 경로 전용 UPDATE(`recordCancelRequested`)로 쓴다.** 접수가 이 값을 보고 **취소 대기 실행에 합류하지 않는다**(`BacktestService.joinExisting` → `409 CANCEL_PENDING`, 리뷰 2). **접수도 합류 직전에 같은 실행 행을 잠그고 최신 상태를 다시 본다**(2차 리뷰 2) — 동일 버전 조회와 합류 사이에 취소가 커밋될 수 있고, 잠그지 않으면 취소 대기 실행에 새 요청이 붙는다. 잠근 뒤 종결된 실행이면 재사용 대상이 아니므로 새 실행을 만든다. **`*ForUpdate` 조회는 잠근 뒤 `refresh` 한다** — 잠금만으로는 영속성 컨텍스트의 1차 캐시가 이겨 그 사이 커밋된 값을 놓친다(refresh 를 빼면 테스트가 실제로 깨지는 것을 확인했다). `BacktestCancelFlowIT` 가 "읽기 → 다른 트랜잭션의 취소 커밋 → 잠금 재조회" 순서를 한 트랜잭션 안에서 재현해 고정한다 — 합류시키면 취소하지 않은 요청까지 부분 결과로 끝난다. 새 실행은 동일 버전 부분 유니크 인덱스(status IN QUEUED·RUNNING·COMPLETED) 때문에 그 실행이 FINISHED(CANCELLED)로 종결될 때까지 만들 수 없으므로 잠시 뒤 재시도로 안내한다. ⓕ(취소 무응답 → `FAILED(SYSTEM_FAILURE)`·`CANCEL_UNANSWERED`)와 CANCEL 재발행은 이 값을 읽는 T014 몫이다 ⑦ IT `BacktestCancelFlowIT`는 ⓐ~ⓔ 다섯 갈래와 대기 중 취소를 실제 DB로 확인하되 브로커는 띄우지 않고 `BacktestControlPublisher`를 목으로 받아 "CANCEL을 보냈는가"만 본다. 발행기 자체는 `RabbitBacktestControlPublisherIT`(Testcontainers RabbitMQ, 메시징 슬라이스)가 워커식 exclusive 큐로 받아 계약 모양을 확인한다
 
-- [x] T014 [US3] [BE] 실행 한도 장치: 설정 가능한 대기·실행 시간 상한과 429 EXECUTION_LIMIT (`backtest/application/service/{ExecutionLimitPolicy,BacktestService,BacktestCancelService}.java`, `backtest/infrastructure/config/BacktestLimitProperties.java`, `backend/src/main/resources/application*.yml`, `common/exception/ErrorCode.java`, 테스트 `{ExecutionLimitPolicyTest,ExecutionLimitApiIT}`, `docs/specs/backtest-api/README.md`) — Jira `S15P21E205-168`
+- [ ] T014 [US3] [BE] 실행 한도 장치: 설정 가능한 대기·실행 시간 상한과 429 EXECUTION_LIMIT (`backtest/application/service/{ExecutionLimitPolicy,BacktestService,BacktestCancelService}.java`, `backtest/infrastructure/config/BacktestLimitProperties.java`, `backend/src/main/resources/application*.yml`, `common/exception/ErrorCode.java`, 테스트 `{ExecutionLimitPolicyTest,ExecutionLimitApiIT}`, `docs/specs/backtest-api/README.md`) — Jira `S15P21E205-168`
   - 설정 `thorp.backtest.limits.{max-queued-per-user, max-queued-total, max-run-seconds, stale-run-seconds, cancel-grace-seconds}`. prod 프로필 필수(미설정 시 기동 실패), local은 임시값 + `provisional=true` 표시(R-19). **값은 PD-06, 이 Task는 장치만**
   - 접수: 대기 수 검사는 접수 트랜잭션에서 `pg_advisory_xact_lock`(사용자 키·전체 키)로 직렬화. 초과 → 429 `EXECUTION_LIMIT`{reason, queued, retryAfterSeconds}. JOINED·REUSED는 세지 않음. 테스트: 동시 접수 N건(스레드) → 통과 수 ≤ 상한
   - 동시 실행 상한은 접수에서 검사하지 않는다 — 워커 replica × prefetch(1)가 강제하며 T002 배치 문서에 "동시 실행 상한 = replica 수"로 명시(R-19)
   - 실행 시간: 스케줄러가 `RUNNING AND started_at < now()-max-run-seconds`인 run에 CANCEL 발행(T011 채널) → 워커 응답 시 run `CANCELLED(partial=true, failure_code=EXECUTION_LIMIT)`, 완료 범위 표시(FR-005)
   - 정체 감지·취소 유예(R-19): `RunLivenessSweeper`가 RUNNING인데 마지막 이벤트로부터 `stale-run-seconds` 지난 run에 CANCEL 발행, 어떤 CANCEL이든 뒤로 `cancel-grace-seconds` 안에 FINISHED 없으면 `FAILED(partial=false, 결과 행 없음, failure_code = SYSTEM_FAILURE 또는 EXECUTION_LIMIT)` 강제 종결. 테스트: 워커 없이 CANCEL → 유예 뒤 FAILED·결과 행 없음·늦은 FINISHED 무시; 워커 있는 협력 취소는 CANCELLED partial=true; PROGRESS가 계속 오는 긴 실행은 정체로 보지 않음
   - T012 측정에 `limit_hit`(접수 거부·실행 정지 구분) 기록. quickstart S12
-  - 구현 시 결정(T014): ① **사용자별 한도는 `SINGLE` 만 센다**(2026-09-14 팀 결정) — 탐색 적재량은 007 `dispatch-window` 가 통제하고, 두 곳에서 막으면 창을 키운 날 탐색이 429 를 받아 묶음이 영구 정지한다(007 `advance()` 는 `BacktestFinished` 로만 불린다). 전체 한도는 종류를 가리지 않는다 — 서버 보호다(**2026-09-15 T015 로 바뀜**: 전체 한도도 단건 큐만 센다. 한 큐로는 어느 정책도 성립하지 않아 큐를 나눴다, R-20) ② **정체 판정 기준으로 `last_event_at` 컬럼을 새로 둔다.** `updated_at` 으로 대신하면 발행 기록(`published_at`·`dlq_count`)이 갱신될 때도 올라가 멈춘 실행이 살아 있는 것처럼 보인다 — 이 셈이 틀리는 방향은 "안 잡는 쪽"이라 위험하다 ③ **`cancel_reason` 컬럼을 함께 둔다.** 강제 종결 시점에 조건을 다시 계산해 사유를 추론하면 그 사이 설정값이 바뀌었을 때 사유가 뒤바뀐다 ④ **스위퍼는 건마다 트랜잭션을 연다.** 하나가 터져도 나머지를 거두고, 무엇보다 CANCEL 발행이 `AFTER_COMMIT` 이라 트랜잭션이 없으면 이벤트가 조용히 버려진다 ⑤ **prod 는 `${ENV}` 참조에 기본값을 두지 않는다**(다른 연결 정보와 같은 방식) — 공통 설정의 임시값을 물려받지 않으므로 PD-06 을 넣기 전에는 기동하지 않는다 ⑥ 429 본문은 `error.details` 로 나간다. `ErrorResponse.details` 에만 `@JsonInclude(NON_NULL)` 를 걸어 다른 오류 응답의 모양을 바꾸지 않는다(전역 `NON_NULL` 은 금지돼 있다) ⑦ **전체 한도 분기는 IT 가 아니라 단위 테스트가 본다** — 스위트가 DB 를 공유해 다른 IT 의 대기 실행까지 세어지므로 몇 건에서 넘는지가 실행 순서에 따라 달라진다
 
-- [ ] T015 [US3] [BE] 단건·벌크 작업 큐 분리와 비대칭 워커 풀 (`backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher}.java`, `backtest/application/port/BacktestJobPublisher.java`, `backtest/application/service/{BacktestJobDispatcher,BacktestService,ExecutionLimitPolicy}.java`, `backtest/domain/model/RunPlan.java`, `backtest/infrastructure/persistence/{BacktestRunJpaEntity,BacktestRunMapper,BacktestRunRepositoryImpl}.java`, `worker/src/worker/{messaging,config,rabbitmq,main}.py`, `docker-compose.dev.yml`, `infra/{docker-compose.prod.yml,.env.prod.example}`, 테스트 `{BacktestRabbitConfigTest,RabbitBacktestJobPublisherIT,BacktestJobDispatcherTest,ExecutionLimitPolicyTest,ExecutionLimitFullQueueIT}`·`worker/tests/test_rabbitmq.py`, `docs/specs/backtest-messaging/README.md` §2, `docs/specs/backtest-api/README.md` §1.8, `backend/CLAUDE.md`, `worker/CLAUDE.md`) — Jira `S15P21E205-218`
-  - 큐 `backtest.jobs.bulk` 신설(quorum, `x-delivery-limit=1`, DLX `backtest.dlx` → 기존 `backtest.jobs.dlq`). `backtest.jobs`는 단건 큐로 **이름 그대로** 둔다(R-20 — 개명은 quorum 큐 교체 절차를 다시 요구한다). 백엔드 `Declarables`에 큐·binding 추가, 계약 상수를 워커 `messaging.py`에 같은 값으로(`test_topology_constants_match_the_backend`)
-  - 접수가 `backtest_run.execution_type`(T003 이 만들고 매핑하지 않은 컬럼)을 `RunPlan.executionType`으로 고정한다. `BacktestJobDispatcher.send` 한 곳에서 `SINGLE` → `backtest.job.requested`, 그 외 → `backtest.job.requested.bulk`. 재발행도 같은 자리를 지나므로 자동으로 원래 큐. 테스트: 유형별 발행 큐(IT), 재발행이 bulk 로 가는지
-  - 워커 `WORKER_ROLE=single|flex`(기본 `single`). single 은 지금 `run_consumer` 그대로. flex 는 `basic_get(bulk)` → 없으면 `basic_get(single)` → 둘 다 없으면 1초 대기, 한 건 처리·ACK 뒤에만 다음. 두 큐 모두 passive declare 로 존재만 확인. 취소 채널·`CancelRegistry`는 그대로. 테스트(fake 채널): bulk 우선, 단건 보조, 빈 큐 대기, unacked 1건
-  - T014 정리: `max-queued-total`은 `QUEUED AND execution_type='SINGLE'`만 세고 비단건은 검사하지 않는다. "묶음은 세되 거절하지 않는다" 분기·경고 로그·`doesNotRejectNonSingleOnTheTotalLimit`·`ExecutionLimitFullQueueIT`의 묶음 통과 갈래·API README §1.8 "전체 한도와 자동 탐색" 절·`application.yml`/`.env.prod.example` 주석을 걷어낸다. `noRollbackFor`는 남긴다
-  - compose: `worker`(single, `WORKER_SINGLE_REPLICAS`) + `worker-flex`(`WORKER_FLEX_REPLICAS`), 초기 1+1. `WORKER_REPLICAS`는 둘로 대체
-  - T014(-168)와 같은 릴리즈로 배포. quickstart S13
-
-**Checkpoint**: S2~S6·S12·S13 통과.
+**Checkpoint**: S2~S6·S12 통과.
 
 ---
 
@@ -169,7 +160,6 @@
   - 종결 이벤트(COMPLETED·FAILED·CANCELLED·DLQ)마다 `ExecutionMetricRecorder.record(run)`: wait_ms, run_ms, concurrent_running, peak_rss_mb·cpu_seconds, auto_retried = attempt > publish_count(R-18), result_bytes. 유형은 `run.execution_type`
   - `GET /internal/execution-metrics?type=&from=&to=` 운영자 권한, 뷰 행 반환. 사용자 화면 노출 없음
   - 원가는 원단위(cpu·메모리·바이트)만. 금액 단가·상한 값은 넣지 않는다(PD-06·D19)
-  - **큐 분리(T015, R-20) 뒤의 운영 지표를 남긴다**(2026-09-14 팀 결정을 2026-09-15 R-20 에 맞춰 고침): ① 단건 큐 대기시간 **p95·p99**(지금 뷰는 `execution_type` 별 p50·p95 라 p99 가 없다) ② 벌크 큐 대기시간과 후보 처리량 ③ single 워커 사용률과 **flex 워커가 단건을 지원한 비율** ④ 동시 탐색 묶음 수·큐별 대기 작업 수 ⑤ 단건 429 횟수(`limit_hit`). 이 값으로 N/M 워커 비율과 007 `dispatch-window`를 조정한다
 
 **Checkpoint**: 측정 기록이 쌓이고 PD-06 결정에 쓸 뷰가 있다.
 
@@ -192,8 +182,8 @@
 - **Phase 2**: T003은 T001 뒤. T004는 독립. T003에서 접수 경로가 채우는 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·data_version·request_spec·versions·effective_start/end)은 nullable로 두고 T005가 채우며 NOT NULL로 조인다.
 - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.
 - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.
-- **Phase 5**: T010은 T005 뒤. T011은 T005·T006·T008 뒤. T010 ∥ T011. T014는 T005·T011 뒤(제어 채널 재사용). T015는 T014 뒤(그 한도 정책을 큐별로 고친다)이며 T014와 같은 릴리즈로 배포한다.
-- **Phase 6**: T012는 T005·T010·T011·T014·T015 뒤(`limit_hit` 기록, 큐별 지표).
+- **Phase 5**: T010은 T005 뒤. T011은 T005·T006·T008 뒤. T010 ∥ T011. T014는 T005·T011 뒤(제어 채널 재사용).
+- **Phase 6**: T012는 T005·T010·T011·T014 뒤(`limit_hit` 기록).
 - **Phase 7**: T013은 모든 Task 뒤.
 
 ### User Story Dependencies
@@ -205,7 +195,7 @@
 
 ### Parallel Opportunities
 
-- T001 ∥ T002 → T003 ∥ T004 → T005 ∥ T006 ∥ T007 → T008 → T009 ∥ T010 ∥ T011 → T014 → T015 → T012 → T013
+- T001 ∥ T002 → T003 ∥ T004 → T005 ∥ T006 ∥ T007 → T008 → T009 ∥ T010 ∥ T011 → T014 → T012 → T013
 - 한 사람이 할 때는 위 순서를 그대로 직렬로 진행하면 된다. 병렬 표시는 리뷰 대기 중 다음 Task를 시작할 수 있는 지점이다.
 
 ## Implementation Strategy
@@ -217,7 +207,7 @@
 
 ### Incremental Delivery
 
-1. T010·T011(재사용·재시도·취소) → S2~S6. S6(장애 재시도) 실측은 T013 검증 기록에서(큐 전환은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12. T015(큐 분리, R-20) → S13.
+1. T010·T011(재사용·재시도·취소) → S2~S6. S6(장애 재시도) 실측은 T013 검증 기록에서(큐 전환은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.
 2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.
 3. T013 마무리.
 4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).

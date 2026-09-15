@@ -20,8 +20,6 @@ import java.util.Objects;
  * @param requestSpec 접수한 요청의 canonical 사본. 조회 {@code config}가 이것을 그대로 돌려준다 — 섹터·목표 비중처럼 실행 스칼라 컬럼에
  *     자리가 없는 값이 여기 있다
  * @param versions 결과에 표시할 버전 묶음(비용 조건·규칙·자료·엔진)
- * @param executionType 이 실행을 만든 요청의 사용 맥락(R-20). 어느 작업 큐로 가는지를 정하므로 실행에 고정한다 — 뒤에 합류하는 요청의 유형이 달라도
- *     이미 큐에 들어간 실행은 옮기지 않는다. null 은 접수 경로를 거치지 않은 실행이고 단건으로 다룬다
  */
 public record RunPlan(
         String dedupKey,
@@ -32,8 +30,7 @@ public record RunPlan(
         LocalDate effectiveEnd,
         Integer warmupTradingDays,
         Map<String, Object> requestSpec,
-        Map<String, Object> versions,
-        ExecutionType executionType) {
+        Map<String, Object> versions) {
 
     public RunPlan {
         if (dedupKey != null && dedupKey.length() > 64) {
@@ -62,16 +59,11 @@ public record RunPlan(
      * <p>이 값이 남아 있는 실행은 재사용 판정에 걸리지 않는다 — {@code dedupKey}가 없으면 같은 조건인지 말할 수 없기 때문이다.
      */
     public static RunPlan empty() {
-        return new RunPlan(null, null, null, null, null, null, null, null, null, null);
+        return new RunPlan(null, null, null, null, null, null, null, null, null);
     }
 
     public boolean isReusable() {
         return dedupKey != null;
-    }
-
-    /** 발행 큐를 정하는 유형. 접수 전 실행(T003 까지의 행, 픽스처)은 단건이다. */
-    public ExecutionType executionTypeOrSingle() {
-        return Objects.requireNonNullElse(executionType, ExecutionType.SINGLE);
     }
 
     public Map<String, Object> requestSpecOrEmpty() {

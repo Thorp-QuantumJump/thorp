@@ -471,11 +471,25 @@ def test_warmup_is_counted_in_trading_days_not_calendar_days() -> None:
     assert params_for(cursor, "daily_index") == (DATASET, START, 4)
 
 
-def test_warmup_shortfall_fails_instead_of_reading_a_shorter_window() -> None:
-    provider, _ = make_provider(build_database())
+def test_warmup_shortfall_reads_as_far_back_as_the_calendar_goes() -> None:
+    """앞이 모자라면 **있는 만큼** 읽는다 — 거절하지 않는다.
 
-    with pytest.raises(DataInsufficientError, match="need 99 warmup trading day"):
-        provider.load([SEMICONDUCTOR], START, END, DATASET, warmup_trading_days=99)
+    **읽기는 관대하게, 평가 시작일 판정은 엄격하게.** 자료 맨 앞이나 상장일 근처를 요청하면
+    워밍업을 채울 자료가 없는 것이 정상이고, 그것은 거절할 이유가 아니라 평가 시작일을 미룰
+    이유다(001 contracts/evaluation-window.md 의 ``firstEvaluable``). 여기서 거절하면 백엔드가
+    계약대로 시작일을 밀어 접수시킨 요청을 워커가 되돌려 두 계층이 모순된다.
+
+    워밍업이 모자란 채로 계산이 시작되는 것은 ``engine_runner.evaluation_start()`` 가 막는다 —
+    ``test_portfolio_execution.py`` 의 되밀기 검사들이 그 짝이다.
+    """
+    provider, cursor = make_provider(build_database())
+
+    data = provider.load([SEMICONDUCTOR], START, END, DATASET, warmup_trading_days=99)
+
+    # 달력에 START 앞선 거래일이 7개뿐이다. 그 맨 앞까지 읽고 멈춘다.
+    assert data.prices[SEMICONDUCTOR].index[0].date() == date(2023, 12, 26)
+    assert len([day for day in data.trading_days if day < START]) == 7
+    assert params_for(cursor, "daily_price")[2] == date(2023, 12, 26)
 
 
 def test_day_missing_from_every_instrument_is_still_a_gap() -> None:

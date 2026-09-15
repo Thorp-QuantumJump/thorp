@@ -83,17 +83,6 @@ common: 모든 계층에서 참조 가능
   취소된 실행의 STARTED가 뒤늦게 오면 `handleStarted`가 CANCEL을 다시 보낸다. **`cancel_requested_at`이 있는 RUNNING 실행의 STARTED도
   마찬가지다** — 재전달(R-06)이면 워커가 실행을 끝낼 때 레지스트리의 취소 표시를 지웠으므로, 다시 보내지 않으면 취소한 실행이 끝까지 계산돼
   COMPLETED가 된다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
-- **실행 한도는 접수만 막고, 도는 것은 스위퍼가 끊는다**(`ExecutionLimitPolicy`·`RunLivenessSweeper`, R-19). `thorp.backtest.limits.*` 다섯 값은
-  모두 `@NotNull`이라 하나라도 비면 기동에 실패하고, **prod는 `${ENV}` 참조에 기본값을 두지 않아** 공통 설정의 임시값을 물려받지 않는다(FR-006을
-  설정 누락으로 우회할 수 없게 한 것이다). **두 대기 한도는 `SINGLE`만 센다** — 탐색·경제환경 파생 실행은 다른 큐(`backtest.jobs.bulk`)로
-  가고 한도의 대상이 아니다(R-20). 한 큐였을 때는 탐색을 세면 007 묶음이 영구 정지하고(`advance()`는 `BacktestFinished`로만 불린다) 안 세면
-  탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
-  세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
-  시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
-- **정체 판정은 `last_event_at`으로 한다.** `updated_at`으로 대신하면 발행 기록이 갱신될 때도 올라가 멈춘 실행이 살아 있는 것처럼 보인다 —
-  이 셈이 틀리는 방향은 "안 잡는 쪽"이라 워커가 묶인 것을 영영 못 잡는다. `cancel_reason`도 함께 남긴다: 강제 종결 시점에 조건을 다시 계산해
-  사유를 추론하면 그 사이 설정이 바뀌었을 때 사유가 뒤바뀐다. **스위퍼는 건마다 트랜잭션을 연다** — CANCEL 발행이 `AFTER_COMMIT`이라
-  트랜잭션이 없으면 이벤트가 조용히 버려진다
 - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
 - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다
 - 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `runId`(요청/실행 분리 전까지 `backtestId` 값과 같다)·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다

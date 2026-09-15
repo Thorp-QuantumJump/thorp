@@ -40,7 +40,7 @@ class DedupKeyCalculatorTest {
                 "FIXTURE-three_etf_24m",
                 "SPLIT-1",
                 "PROVISIONAL-DEMO-1",
-                "nautilus_trader 1.219.0 / worker 2.0.0",
+                "nautilus_trader 1.219.0 / worker 2.1.0",
                 "FULL_PERIOD",
                 null,
                 null);

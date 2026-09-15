@@ -98,7 +98,7 @@ done
 echo "  두 큐가 비었다. v1 실행의 결과는 DB에 반영됐다."
 
 echo "[5/6] 정지 → 큐 삭제 → v2 백엔드 기동"
-$COMPOSE stop backend worker worker-flex
+$COMPOSE stop backend worker
 rmq delete_queue "$JOBS_QUEUE"
 
 if $DEV; then
@@ -123,5 +123,5 @@ fi
 rmq list_queues name type arguments | grep "^$JOBS_QUEUE"
 
 echo "[6/6] v2 워커·nginx 기동"
-$COMPOSE up -d worker worker-flex nginx
+$COMPOSE up -d worker nginx
 echo "완료: $JOBS_QUEUE 는 quorum, x-delivery-limit=1. 백엔드·워커 모두 v2 이미지."

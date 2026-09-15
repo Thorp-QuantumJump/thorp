@@ -4,23 +4,15 @@ pika는 이 모듈에만 있다. 실행 Consumer 로직(``worker.consumer``)은 
 브로커 없이 테스트된다.
 
 **토폴로지를 선언하지 않는다.** exchange·queue·binding 선언은 백엔드 책임이므로(계약 §2)
-여기서는 소비할 큐가 실제로 있는지 passive declare로 확인만 하고, 없으면
+여기서는 ``backtest.jobs`` 가 실제로 있는지 passive declare로 확인만 하고, 없으면
 :class:`QueueMissingError` 로 명확히 알린다. 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과
 충돌해 훨씬 찾기 어려운 문제가 된다.
-
-**소비 루프는 역할에 따라 둘이다(R-20).** ``single`` 은 ``backtest.jobs`` 를 ``basic_consume``
-(push, prefetch 1)로 받는다. ``flex`` 는 ``backtest.jobs.bulk`` → ``backtest.jobs`` 순서로
-``basic_get`` (pull) 한 건씩 꺼낸다 — quorum 큐는 채널 전체 prefetch(global QoS)를 지원하지
-않아 한 채널에서 두 큐를 구독하며 "합쳐서 1건"을 표현할 수 없고, 컨슈머별 prefetch 1 로 두 큐를
-구독하면 처리하지도 않은 두 번째 메시지가 unacked 로 잡혀 크래시 때 유일한 재시도 기회
-(``x-delivery-limit=1``)를 실행 없이 태운다.
 """
 
 import logging
 import threading
 import time
-from collections.abc import Callable, Sequence
-from typing import Any
+from collections.abc import Callable
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel, BlockingConnection
@@ -34,8 +26,6 @@ from worker.messaging import (
     CONTROL_EXCHANGE,
     EVENTS_ROUTING_KEY,
     EXCHANGE,
-    FLEX_POLL_SECONDS,
-    FLEX_QUEUE_ORDER,
     JOBS_QUEUE,
     PREFETCH_COUNT,
     SCHEMA_VERSION,
@@ -48,19 +38,13 @@ logger = logging.getLogger(__name__)
 PUBLISH_ATTEMPTS = 3
 PUBLISH_RETRY_SECONDS = 1.0
 
-
-def queue_missing_message(queue: str) -> str:
-    return (
-        f"queue '{queue}' does not exist on the broker. Declaring the backtest topology "
-        "(exchanges, queues, bindings) is the backend's job (Spring Declarables; see "
-        "docs/specs/backtest-messaging/README.md section 2) and the worker must not create it: a "
-        "queue with mismatched arguments would collide with the backend declaration. Start the "
-        "backend once against this broker so the topology is declared, then start the worker "
-        "again."
-    )
-
-
-QUEUE_MISSING_MESSAGE = queue_missing_message(JOBS_QUEUE)
+QUEUE_MISSING_MESSAGE = (
+    f"queue '{JOBS_QUEUE}' does not exist on the broker. Declaring the backtest topology "
+    "(exchanges, queues, bindings) is the backend's job (Spring Declarables; see "
+    "docs/specs/backtest-messaging/README.md section 2) and the worker must not create it: a "
+    "queue with mismatched arguments would collide with the backend declaration. Start the "
+    "backend once against this broker so the topology is declared, then start the worker again."
+)
 
 
 class QueueMissingError(RuntimeError):
@@ -151,67 +135,20 @@ class PikaJobAcknowledger:
         self._channel.basic_nack(delivery_tag=self._delivery_tag, requeue=True)
 
 
-def require_jobs_queue(
-    connection: BlockingConnection, queues: Sequence[str] = (JOBS_QUEUE,)
-) -> None:
-    """소비할 큐의 존재만 확인한다. 없으면 :class:`QueueMissingError`.
+def require_jobs_queue(connection: BlockingConnection) -> None:
+    """``backtest.jobs`` 존재만 확인한다. 없으면 :class:`QueueMissingError`.
 
-    passive declare는 큐를 만들지 않고 없으면 404로 채널을 닫으므로, 큐마다 임시 채널에서
-    확인한다(닫힌 채널은 다시 쓸 수 없다).
+    passive declare는 큐를 만들지 않고 없으면 404로 채널을 닫으므로, 소비 채널이 아닌
+    임시 채널에서 확인한다.
     """
-    for queue in queues:
-        probe = connection.channel()
-        try:
-            probe.queue_declare(queue=queue, passive=True)
-        except ChannelClosedByBroker as exc:
-            if exc.reply_code == 404:
-                raise QueueMissingError(queue_missing_message(queue)) from exc
-            raise
-        probe.close()
-
-
-Delivery = tuple[str, Any, Any, bytes]
-
-
-def fetch_next_job(
-    channel: BlockingChannel, queues: Sequence[str] = FLEX_QUEUE_ORDER
-) -> Delivery | None:
-    """``queues`` 순서로 한 큐씩 ``basic_get`` 해 첫 메시지를 돌려준다. 모두 비면 None.
-
-    한 번에 한 건만 꺼내므로 unacked 는 항상 1건 이하다 — 두 큐에서 미리 받아 두지 않는다(R-20).
-    반환값은 ``(queue, method, properties, body)``.
-    """
-    for queue in queues:
-        method, properties, body = channel.basic_get(queue, auto_ack=False)
-        if method is not None:
-            return queue, method, properties, body
-    return None
-
-
-def run_flex_loop(
-    channel: BlockingChannel,
-    consumer: BacktestJobConsumer,
-    *,
-    keep_going: Callable[[], bool] = lambda: True,
-    sleep: Callable[[float], None] = time.sleep,
-    poll_seconds: float = FLEX_POLL_SECONDS,
-) -> None:
-    """공용 워커의 소비 루프: 벌크 먼저, 없으면 단건, 둘 다 없으면 잠시 기다린다.
-
-    처리·ACK 가 끝난 뒤에만 다음 메시지를 집는다. ``keep_going`` 은 테스트가 루프를 끝내는 자리다.
-    """
-    while keep_going():
-        fetched = fetch_next_job(channel)
-        if fetched is None:
-            sleep(poll_seconds)
-            continue
-        queue, method, properties, body = fetched
-        logger.info("received job role=flex queue=%s delivery_tag=%s", queue, method.delivery_tag)
-        consumer.handle(
-            body,
-            properties.headers if properties is not None else None,
-            PikaJobAcknowledger(channel, method.delivery_tag),
-        )
+    probe = connection.channel()
+    try:
+        probe.queue_declare(queue=JOBS_QUEUE, passive=True)
+    except ChannelClosedByBroker as exc:
+        if exc.reply_code == 404:
+            raise QueueMissingError(QUEUE_MISSING_MESSAGE) from exc
+        raise
+    probe.close()
 
 
 def bind_control_queue(channel: BlockingChannel) -> str:
@@ -287,21 +224,18 @@ def run_consumer(
     engine: BacktestEngine,
     registry: CancelRegistry | None = None,
     *,
-    role: str = "single",
     connect: Callable[[str], BlockingConnection] = _connect,
     control_listener: ControlListener = run_control_listener,
     ready_timeout: float = CONTROL_READY_TIMEOUT_SECONDS,
 ) -> None:
-    """작업 큐를 manual ACK · 한 번에 한 건으로 소비한다 (계약 §7, R-20).
+    """``backtest.jobs`` 를 manual ACK · prefetch 1로 소비한다 (계약 §7).
 
-    ``role="single"`` 은 ``backtest.jobs`` 를 prefetch 1 push 로, ``role="flex"`` 는 벌크 큐 →
-    단건 큐 순서의 pull 로 받는다. 한 연결·한 채널에서 소비와 발행을 함께 한다. BlockingConnection은
-    단일 스레드이므로 엔진 실행 중에는 다른 Job을 받지 않는다. ``registry`` 를 주면 제어 채널
-    스레드를 먼저 띄우고 **그 큐가 바인딩된 뒤에야** 작업을 받기 시작한다(R-04) — 그 전에 작업을
-    시작하면 그 사이 온 CANCEL 을 잃는다. 소비자와 엔진이 같은 레지스트리를 봐야 취소가 닿는다.
+    한 연결·한 채널에서 소비와 발행을 함께 한다. BlockingConnection은 단일 스레드이므로
+    엔진 실행 중에는 다른 Job을 받지 않는다(prefetch 1과 같은 방향이다). ``registry`` 를 주면
+    제어 채널 스레드를 먼저 띄우고 **그 큐가 바인딩된 뒤에야** 작업을 받기 시작한다(R-04) — 그 전에
+    작업을 시작하면 그 사이 온 CANCEL 을 잃는다. 소비자와 엔진이 같은 레지스트리를 봐야 취소가
+    닿는다.
     """
-    if role not in ("single", "flex"):
-        raise ValueError(f"unknown worker role {role!r}; expected 'single' or 'flex'")
     stop = threading.Event()
     ready = threading.Event()
     listener: threading.Thread | None = None
@@ -321,18 +255,11 @@ def run_consumer(
             )
     connection = connect(url)
     try:
-        queues = FLEX_QUEUE_ORDER if role == "flex" else (JOBS_QUEUE,)
-        require_jobs_queue(connection, queues)
+        require_jobs_queue(connection)
         channel = connection.channel()
         channel.confirm_delivery()  # publisher confirm: 발행 확인 후에만 반환한다
         channel.basic_qos(prefetch_count=PREFETCH_COUNT)
         consumer = BacktestJobConsumer(engine, PikaEventPublisher(channel), registry=registry)
-        if role == "flex":
-            logger.info("worker consuming role=flex queues=%s (pull, bulk first)", list(queues))
-            # time.sleep 이 아니라 connection.sleep — 기다리는 동안에도 heartbeat 를 처리해야
-            # 브로커가 이 연결을 죽은 것으로 보지 않는다.
-            run_flex_loop(channel, consumer, sleep=connection.sleep)
-            return
         logger.info("worker consuming queue=%s prefetch=%d", JOBS_QUEUE, PREFETCH_COUNT)
         for method, properties, body in channel.consume(JOBS_QUEUE, auto_ack=False):
             logger.info("received job delivery_tag=%s", method.delivery_tag)

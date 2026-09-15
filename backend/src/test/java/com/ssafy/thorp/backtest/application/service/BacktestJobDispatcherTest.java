@@ -114,7 +114,7 @@ class BacktestJobDispatcherTest {
 
         dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));
 
-        verify(publisher).publish(any(), eq(1), any());
+        verify(publisher).publish(any(), eq(1));
     }
 
     @Test
@@ -126,7 +126,7 @@ class BacktestJobDispatcherTest {
         dispatcher.republish(11L);
 
         verify(repository).recordPublishAttempt(11L);
-        verify(publisher).publish(any(), eq(2), any());
+        verify(publisher).publish(any(), eq(2));
     }
 
     @Test
@@ -134,7 +134,7 @@ class BacktestJobDispatcherTest {
     void publishFailureDoesNotEscape() {
         when(repository.findById(11L)).thenReturn(Optional.of(run()));
         when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));
-        doThrow(new AmqpException("broker down")).when(publisher).publish(any(), anyInt(), any());
+        doThrow(new AmqpException("broker down")).when(publisher).publish(any(), anyInt());
 
         assertThatCode(
                         () ->
@@ -158,7 +158,7 @@ class BacktestJobDispatcherTest {
                                 dispatcher.onRunAccepted(
                                         new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
-        verify(publisher).publish(any(), anyInt(), any());
+        verify(publisher).publish(any(), anyInt());
     }
 
     @Test
@@ -171,7 +171,7 @@ class BacktestJobDispatcherTest {
                                 dispatcher.onRunAccepted(
                                         new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
-        verify(publisher, never()).publish(any(), anyInt(), any());
+        verify(publisher, never()).publish(any(), anyInt());
     }
 
     @Test
@@ -184,6 +184,6 @@ class BacktestJobDispatcherTest {
                                 dispatcher.onRunAccepted(
                                         new BacktestJobDispatcher.RunAccepted(11L, 1)))
                 .doesNotThrowAnyException();
-        verify(publisher, never()).publish(any(), anyInt(), any());
+        verify(publisher, never()).publish(any(), anyInt());
     }
 }

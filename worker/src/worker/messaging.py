@@ -20,12 +20,8 @@ DEAD_LETTER_EXCHANGE = "backtest.dlx"
 #: 백엔드 → 워커 제어(CANCEL) fanout. 소비 루프는 취소 티켓(T011)에서 붙인다.
 CONTROL_EXCHANGE = "backtest.control"
 
-#: 단건(SINGLE) 작업 큐. 큐 분리(spec 004 R-20) 전의 유일한 작업 큐라 이름을 그대로 둔다.
 JOBS_QUEUE = "backtest.jobs"
 JOBS_ROUTING_KEY = "backtest.job.requested"
-#: 탐색·경제환경 파생 실행의 작업 큐. 단건 큐와 속성이 같고 DLX·DLQ 도 같다(R-20).
-BULK_JOBS_QUEUE = "backtest.jobs.bulk"
-BULK_JOBS_ROUTING_KEY = "backtest.job.requested.bulk"
 JOBS_DEAD_LETTER_QUEUE = "backtest.jobs.dlq"
 JOBS_DEAD_LETTER_ROUTING_KEY = "backtest.job.dead"
 
@@ -43,14 +39,6 @@ SCHEMA_VERSION = 2
 #: manual ACK + prefetch 1 (계약 §7). 한 번에 Job 하나만 받아 CPU 병목을 워커 수로 조절한다.
 #: 작업 큐는 quorum + x-delivery-limit=1 이라 requeue된 메시지는 한 번만 다시 배달된다.
 PREFETCH_COUNT = 1
-
-#: 공용(flex) 워커가 두 큐가 모두 비었을 때 다시 확인하기까지 기다리는 시간(초). 이만큼 단건 응답이
-#: 늦을 수 있다 — 단건 전용 워커는 push 라 즉시 받으므로 실질 영향은 작다(R-20).
-FLEX_POLL_SECONDS = 1.0
-
-#: 공용 워커가 큐를 확인하는 순서. 벌크 먼저, 없으면 단건 — 단건 최소 처리량은 단건 전용 워커가
-#: 보장하고, 공용 워커가 단건을 먼저 보면 단건이 계속 들어오는 동안 벌크가 굶는다(R-20).
-FLEX_QUEUE_ORDER = (BULK_JOBS_QUEUE, JOBS_QUEUE)
 
 
 # --- 오류 분류 (계약 §7·§8) ----------------------------------------------------------
