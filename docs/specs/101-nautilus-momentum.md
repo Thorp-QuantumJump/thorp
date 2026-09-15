@@ -1,3 +1,10 @@
+> **폐기 문서(2026-09-15, spec 004 T013).** 이 문서가 설명하는 단일 종목 모멘텀 엔진(`NautilusMomentumEngine`·
+> `nautilus_engine.py`·`strategies/`·yfinance 공급자)은 spec 004 T006에서 삭제됐다. 현재 계약과 엔진은 다음을 본다:
+> 메시지 계약 [`backtest-messaging/README.md`](backtest-messaging/README.md)(schemaVersion 2), HTTP 계약
+> [`backtest-api/README.md`](backtest-api/README.md), 엔진 `worker/src/worker/{engine_runner,portfolio_execution}.py`,
+> 설계 결정 [ADR-0006](../adr/0006-backtest-request-run-split.md). 아래 본문은 역사 기록으로만 남긴다 — 여기 적힌
+> 값(단일 종목·MOMENTUM·120거래일·yfinance)은 현재 코드에 없다. 진행 정도는 SSE가 아니라 실행 행에 저장되고 폴링으로 조회한다(R-05).
+
 # Jira 101: executable momentum engine contract
 
 `worker.engine_runner.NautilusMomentumEngine(data_provider=None).run(engine_input, on_progress)
