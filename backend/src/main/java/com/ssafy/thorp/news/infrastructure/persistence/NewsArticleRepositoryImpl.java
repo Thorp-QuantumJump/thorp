@@ -97,4 +97,24 @@ public class NewsArticleRepositoryImpl implements NewsArticleRepository {
                 .map(NewsPersistenceMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<NewsArticle> findForExport(
+            Instant from,
+            Instant to,
+            String sectorId,
+            com.ssafy.thorp.news.application.command.NewsArticleExportQuery.Cursor after,
+            int limit) {
+        return jpaRepository
+                .findForExport(
+                        from,
+                        to,
+                        sectorId == null || sectorId.isBlank() ? null : sectorId,
+                        after == null ? null : after.orderingInstant(),
+                        after == null ? null : after.articleId(),
+                        org.springframework.data.domain.PageRequest.of(0, limit))
+                .stream()
+                .map(NewsPersistenceMapper::toDomain)
+                .toList();
+    }
 }
