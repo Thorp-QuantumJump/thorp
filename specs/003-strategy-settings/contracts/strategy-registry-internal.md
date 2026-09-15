@@ -15,7 +15,7 @@
 | `ProvisionalFileParameterRegistry` | `paramsearch/infrastructure/registry/` | `strategy/infrastructure/registry/`의 정식 구현으로 교체한다 |
 | `parameter-registry-provisional.yml` | `resources/registry/` | `parameter-registry.yml`로 승격한다 |
 
-**007 운영 코드는 바뀌지 않는다.** `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver`가 포트 타입만 참조하고 구현을 직접 부르지 않으므로, import 경로 외에 손댈 곳이 없다. 이 사실은 옮기기 전에 테스트로 확인한다.
+**007 운영 코드에서 바뀌는 것은 import 경로뿐이다.** `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver`가 포트 타입만 주입받고 구현을 직접 부르지 않으므로 그 밖에 손댈 곳이 없다. 이 사실은 옮기기 전에 테스트로 확인한다.
 
 **교체 시점**: 스펙이 정한 대로 임시 구현 클래스의 주석("003이 완성되면 이 클래스를 003 구현체로 교체한다")을 따른다.
 
@@ -64,7 +64,7 @@
 
 | 메서드 | 돌려주는 것 | 누가 쓰나 |
 |---|---|---|
-| `analysisConditions()` | 시작 금액의 허용 범위와 기본값 | 003 화면 |
+| `analysisConditions()` | 시작 금액과 목표 변동성의 허용 범위·기본값 | 003 화면 |
 | `StrategyRegistration.active()` | 활성 여부 | 003 화면, 007의 `activeStrategies` 구현 |
 | `StrategyRegistration.warmup()` | 워밍업 산출 규칙(`sum` 배열) | 003 화면, 004 |
 
@@ -76,7 +76,7 @@
 
 1. `strategy` 패키지를 만들고 포트와 값 타입을 옮긴다. `paramsearch`는 새 위치를 import한다.
 2. 007 테스트를 돌려 통과를 확인한다. 이 단계에서 동작이 바뀌면 안 된다.
-3. YAML 로더를 `strategy` 쪽으로 옮기고 파일을 `parameter-registry.yml`로 승격한다. 새 필드(`active`·`warmup`·`analysisConditions`)를 더한다.
+3. YAML 로더를 `strategy` 쪽으로 옮기고 파일을 `parameter-registry.yml`로 승격한다. 새 필드(`active`·`warmup`·`analysisConditions`)를 더하고, 목록형 축의 `allowedRange`를 `values`로 채운다.
 4. 007 테스트를 다시 돌린다. 새 필드가 007 동작을 바꾸지 않아야 한다.
 5. 조회 API와 화면을 만든다.
 
