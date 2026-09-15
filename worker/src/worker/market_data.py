@@ -128,6 +128,19 @@ class SectorMapping:
 
 
 @dataclass(frozen=True)
+class DataUsage:
+    """한 실행이 읽은 자료의 양(데이터 원가, FR-008·원칙 IX). 금액이 아니라 원단위다.
+
+    ``rows`` 는 가격·분배금·분할 행 수의 합, ``bytes`` 는 메모리에 오른 가격 프레임의 크기
+    (``DataFrame.memory_usage(deep=True)``)다. 저장소가 실제로 읽은 바이트가 아니라 워커가
+    들고 있는 크기라 근사값이고, 같은 요청이면 같은 값이 나온다.
+    """
+
+    rows: int
+    bytes: int
+
+
+@dataclass(frozen=True)
 class MarketData:
     """한 실행이 읽는 자료 전부. 같은 ``dataset_id`` 로 일관된다.
 
@@ -144,6 +157,13 @@ class MarketData:
     splits: tuple[Split, ...] = ()
     mappings: tuple[SectorMapping, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    def usage(self) -> DataUsage:
+        """읽은 자료의 양. FINISHED ``resource.dataRows``·``dataBytes`` 로 나간다(T019)."""
+        rows = sum(len(frame) for frame in self.prices.values())
+        rows += len(self.distributions) + len(self.splits)
+        size = sum(int(frame.memory_usage(deep=True).sum()) for frame in self.prices.values())
+        return DataUsage(rows=rows, bytes=size)
 
     @property
     def trading_days(self) -> list[date]:

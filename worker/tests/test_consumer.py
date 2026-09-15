@@ -32,7 +32,7 @@ from worker.contracts.events import (
     StartedPayload,
 )
 from worker.engine_runner import PortfolioBacktestEngine
-from worker.market_data import CsvMarketDataProvider
+from worker.market_data import CsvMarketDataProvider, DataUsage
 from worker.messaging import SCHEMA_VERSION, PublishError
 
 #: 기준 본문(2023-01-02 ~ 01-10)의 평가 거래일 수.
@@ -464,3 +464,33 @@ def test_real_engine_output_rides_the_finished_event() -> None:
     assert output.portfolio_series[0].cash == Decimal("10000000")
     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS
     assert output.trades and output.weights_series
+
+
+def test_finished_carries_data_usage_when_the_engine_exposes_it() -> None:
+    """데이터 원가(T019): 엔진이 읽은 자료의 양을 선택 속성으로 내놓으면 FINISHED 에 싣는다."""
+    engine = FakeEngine(trading_days=3)
+    engine.last_data_usage = DataUsage(rows=1_439, bytes=245_760)  # type: ignore[attr-defined]
+
+    _, publisher = handle(engine=engine)
+
+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource
+    assert resource is not None
+    assert resource.data_rows == 1_439 and resource.data_bytes == 245_760
+
+
+def test_finished_omits_data_usage_when_the_engine_has_none() -> None:
+    """가짜·옛 엔진처럼 속성이 없으면 지어내지 않는다 — 키가 없다."""
+    _, publisher = handle(engine=FakeEngine(trading_days=3))
+
+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource
+    assert resource is not None
+    assert resource.data_rows is None and resource.data_bytes is None
+
+
+def test_real_engine_reports_data_usage_in_finished() -> None:
+    _, publisher = handle()
+
+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource
+    assert resource is not None
+    assert resource.data_rows is not None and resource.data_rows > 0
+    assert resource.data_bytes is not None and resource.data_bytes > 0

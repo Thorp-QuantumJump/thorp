@@ -30,7 +30,7 @@ from worker.contracts.engine_output import Warning as ContractWarning
 from worker.control import CancelRegistry
 from worker.costs import CostModel, Side, total_costs
 from worker.engine_support import unsupported_reasons
-from worker.market_data import MarketData, MarketDataError, MarketDataProvider
+from worker.market_data import DataUsage, MarketData, MarketDataError, MarketDataProvider
 from worker.performance import calculate_analytics, calculate_performance
 from worker.portfolio_execution import (
     REBALANCE_MONTH_END,
@@ -305,6 +305,9 @@ class PortfolioBacktestEngine:
     ) -> None:
         self.market_data = market_data
         self.cancel_registry = cancel_registry
+        # 마지막 실행이 읽은 자료의 양(T019). 소비자가 FINISHED resource 에 싣는다 — 엔진 경계
+        # Protocol 은 EngineOutput 만 돌려주고 자원 사용은 메시지 밖이라, 있으면 읽는 선택 속성이다.
+        self.last_data_usage: DataUsage | None = None
 
     def run(
         self,
@@ -323,6 +326,7 @@ class PortfolioBacktestEngine:
         """계약 메시지와 로컬 진단 산출물을 함께 돌려준다. 상태는 전부 지역 변수다."""
         request = EngineInput.model_validate(engine_input)
         started = datetime.now(UTC)
+        self.last_data_usage = None
         metadata = {
             "engineVersion": nautilus_trader.__version__,
             "inputHash": "sha256:"
@@ -378,6 +382,7 @@ class PortfolioBacktestEngine:
                 self._rejected(request, None, started, "DATA_INSUFFICIENT", str(exc)),
                 RunArtifacts(orders=orders, metadata=metadata),
             )
+        self.last_data_usage = market.usage()
         try:
             calendar = market.trading_days
             first_day = evaluation_start(request, calendar)
