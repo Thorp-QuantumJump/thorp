@@ -57,16 +57,29 @@ public interface CollectionStateJpaRepository
      * <p>매체와 뉴스원은 수집 키로 잇는다. 접두를 질의에 적어 넣지 않고 {@code NewsSourceKey.RSS_PREFIX}를 그대로 받는다. 리터럴을 복사하면
      * 키 형식이 바뀔 때 이 질의만 조용히 어긋나 수집이 성공해도 '아직 수집되지 않음'이 된다.
      */
+    default Optional<Instant> findLatestSuccessAt(boolean publicOnly, String rssPrefix) {
+        return findLatestSuccessAt(
+                publicOnly, rssPrefix, com.ssafy.thorp.news.domain.vo.PermissionStatus.ALLOWED);
+    }
+
+    /**
+     * 허가 상태를 값으로 받는 조회.
+     *
+     * <p>enum을 질의문에 패키지 경로째로 적지 않고 바인딩한다. 문자열로 박아 두면 패키지를 옮기는 순간 컴파일러가 아무 말도 하지 않고, 기동할 때에야 질의 파싱에서
+     * 터진다.
+     */
     @Query(
             "SELECT MAX(s.lastSuccessAt) FROM NewsCollectionStateJpaEntity s"
                     + " WHERE s.lastSuccessAt IS NOT NULL"
                     + " AND (:publicOnly = FALSE OR EXISTS ("
                     + "   SELECT 1 FROM NewsPublisherJpaEntity p"
                     + "   WHERE p.enabled = TRUE"
-                    + "   AND p.permissionStatus = com.ssafy.thorp.news.domain.vo.PermissionStatus.ALLOWED"
+                    + "   AND p.permissionStatus = :allowed"
                     + "   AND s.sourceKey = CONCAT(:rssPrefix, p.publisherKey)))")
     Optional<Instant> findLatestSuccessAt(
-            @Param("publicOnly") boolean publicOnly, @Param("rssPrefix") String rssPrefix);
+            @Param("publicOnly") boolean publicOnly,
+            @Param("rssPrefix") String rssPrefix,
+            @Param("allowed") com.ssafy.thorp.news.domain.vo.PermissionStatus allowed);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM NewsCollectionStateJpaEntity s WHERE s.sourceKey = :sourceKey")

@@ -47,6 +47,38 @@ class NewsQueryObservabilityTest {
     }
 
     @Test
+    @DisplayName("오류 분류 자리에 예외 메시지가 와도 접는다")
+    void 오류_분류도_접는다() {
+        metrics.recordIngestFailure(
+                "rss:example", "Connection refused: https://rss.example.co.kr/feed?key=abcd");
+
+        assertThat(counter("news.source.error.count", "category", "UNKNOWN"))
+                .as("예외 메시지를 그대로 넘기면 주소와 자격 증명이 지표 수집기로 나간다")
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("공백이나 특수문자가 섞인 사유도 접는다")
+    void 공백과_특수문자() {
+        metrics.recordExcluded("rss:example", "not relevant");
+        metrics.recordExcluded("rss:example", "TOPIC-MISSING");
+
+        assertThat(counter("news.ingest.excluded", "reason", "UNKNOWN"))
+                .as("label 가짓수가 늘면 시계열이 갈라진다")
+                .isEqualTo(2.0);
+    }
+
+    @Test
+    @DisplayName("정해진 분류 코드는 그대로 통과한다")
+    void 정상_코드는_통과() {
+        metrics.recordIngestFailure("rss:example", "RATE_LIMITED");
+
+        assertThat(counter("news.source.error.count", "category", "RATE_LIMITED"))
+                .as("접는 규칙이 지나치면 쓸 수 있는 분류까지 UNKNOWN이 된다")
+                .isEqualTo(1.0);
+    }
+
+    @Test
     @DisplayName("마지막 성공 경과 시간을 뉴스원별로 남긴다")
     void 마지막_성공_경과() {
         metrics.recordLastSuccessAge("rss:example", Optional.of(Duration.ofMinutes(20)));

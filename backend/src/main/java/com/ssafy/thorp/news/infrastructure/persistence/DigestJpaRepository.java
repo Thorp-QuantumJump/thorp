@@ -1,5 +1,6 @@
 package com.ssafy.thorp.news.infrastructure.persistence;
 
+import com.ssafy.thorp.news.domain.vo.PublicationTimeStatus;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -41,35 +42,58 @@ public interface DigestJpaRepository extends JpaRepository<NewsDigestJpaEntity, 
     List<NewsDigestJpaEntity> findRecentBySector(
             @Param("since") Instant since, @Param("sectorId") String sectorId);
 
-    /** 검증된 발행 시각이 구간 안인 기사를 가진 묶음(spec FR-006). */
-    @Query(
-            "SELECT DISTINCT d FROM NewsDigestJpaEntity d"
-                    + " JOIN NewsDigestArticleJpaEntity m ON m.key.digestId = d.id"
-                    + " JOIN NewsArticleJpaEntity a ON a.id = m.key.articleId"
-                    + " WHERE a.publishedAtStatus = com.ssafy.thorp.news.domain.vo.PublicationTimeStatus.VERIFIED"
-                    + " AND a.publishedAt BETWEEN :from AND :to"
-                    + " ORDER BY d.latestPublishedAt DESC NULLS LAST, d.digestId ASC")
-    List<NewsDigestJpaEntity> findVerifiedBetween(
-            @Param("from") Instant from, @Param("to") Instant to);
+    /**
+     * 검증된 발행 시각이 구간 안인 기사를 가진 묶음(spec FR-006).
+     *
+     * <p>"검증된 것만 본다"는 규칙은 호출자가 고를 값이 아니라 이 조회의 성질이다. 그래서 상태를 인자로 노출하지 않고 여기서 채운다. 호출자가 고를 수 있으면 언젠가
+     * 누군가 미확인 기사를 과거 구간에 넣는다.
+     */
+    default List<NewsDigestJpaEntity> findVerifiedBetween(Instant from, Instant to) {
+        return findBetweenWithStatus(from, to, PublicationTimeStatus.VERIFIED);
+    }
 
     /**
      * 과거 구간 조회에 섹터까지 걸어 한 번에 읽는다(spec FR-005·FR-006).
      *
      * <p>구간 전체를 읽은 뒤 섹터 목록과 메모리에서 교차하면 결과는 같지만 읽는 양이 섹터와 무관하게 구간 전체다. 기사가 쌓일수록 섹터 조회가 전체 조회만큼 비싸진다.
      */
+    default List<NewsDigestJpaEntity> findVerifiedBetweenAndSector(
+            Instant from, Instant to, String sectorId) {
+        return findBetweenWithStatusAndSector(from, to, PublicationTimeStatus.VERIFIED, sectorId);
+    }
+
+    /**
+     * 발행 시각 상태를 값으로 받아 거르는 구간 조회.
+     *
+     * <p>enum을 질의문에 패키지 경로째로 적지 않고 바인딩한다. 문자열로 박아 두면 패키지를 옮기는 순간 컴파일러가 아무 말도 하지 않고, 기동할 때에야 질의 파싱에서
+     * 터진다. 바인딩하면 그 참조를 컴파일러가 본다.
+     */
+    @Query(
+            "SELECT DISTINCT d FROM NewsDigestJpaEntity d"
+                    + " JOIN NewsDigestArticleJpaEntity m ON m.key.digestId = d.id"
+                    + " JOIN NewsArticleJpaEntity a ON a.id = m.key.articleId"
+                    + " WHERE a.publishedAtStatus = :status"
+                    + " AND a.publishedAt BETWEEN :from AND :to"
+                    + " ORDER BY d.latestPublishedAt DESC NULLS LAST, d.digestId ASC")
+    List<NewsDigestJpaEntity> findBetweenWithStatus(
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("status") PublicationTimeStatus status);
+
+    /** {@link #findBetweenWithStatus}에 섹터 조건을 더한 것. */
     @Query(
             "SELECT DISTINCT d FROM NewsDigestJpaEntity d"
                     + " JOIN NewsDigestArticleJpaEntity m ON m.key.digestId = d.id"
                     + " JOIN NewsArticleJpaEntity a ON a.id = m.key.articleId"
                     + " JOIN NewsArticleSectorJpaEntity s ON s.key.articleId = a.id"
                     + " WHERE s.key.sectorId = :sectorId"
-                    + " AND a.publishedAtStatus ="
-                    + " com.ssafy.thorp.news.domain.vo.PublicationTimeStatus.VERIFIED"
+                    + " AND a.publishedAtStatus = :status"
                     + " AND a.publishedAt BETWEEN :from AND :to"
                     + " ORDER BY d.latestPublishedAt DESC NULLS LAST, d.digestId ASC")
-    List<NewsDigestJpaEntity> findVerifiedBetweenAndSector(
+    List<NewsDigestJpaEntity> findBetweenWithStatusAndSector(
             @Param("from") Instant from,
             @Param("to") Instant to,
+            @Param("status") PublicationTimeStatus status,
             @Param("sectorId") String sectorId);
 
     /** 그 회차가 건드린 기사가 속한 묶음. 재생성 범위를 그 회차로 한정한다(spec FR-022). */

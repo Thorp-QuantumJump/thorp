@@ -40,6 +40,10 @@ public class MicrometerNewsMetrics implements NewsMetrics {
      * 갈아 끼운다. 매번 새로 등록하면 같은 이름의 gauge가 쌓이고 먼저 등록된 것이 계속 옛 값을 내보낸다.
      *
      * <p>한 번도 성공하지 못한 뉴스원은 음수를 담는다. 0으로 두면 "방금 성공했다"와 구별되지 않아 경보가 거꾸로 선다.
+     *
+     * <p><b>이 맵에서 항목을 빼지 않는 것은 의도다.</b> Micrometer는 gauge가 붙들 객체를 약한 참조로 잡으므로, 여기서 강하게 붙들지 않으면 객체가
+     * 회수되면서 지표가 조용히 {@code NaN}이 된다. 크기는 수집 상태 행 수(등록 매체 수 + GDELT)로 묶여 있다 — GDELT 기사에서 자동 등록되는 매체는
+     * {@code enabled=false}라 회차를 돌지 않아 수집 상태 행을 만들지 않는다.
      */
     private final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> lastSuccessAges =
             new java.util.concurrent.ConcurrentHashMap<>();
