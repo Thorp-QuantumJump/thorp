@@ -31,6 +31,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.amqp.AmqpException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
@@ -74,8 +75,11 @@ class JobRepublisherTest {
                 protected void doRollback(DefaultTransactionStatus status) {}
             };
 
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+
     private final BacktestJobDispatcher dispatcher =
-            new BacktestJobDispatcher(repository, publisher, assembler, transactionManager, clock);
+            new BacktestJobDispatcher(
+                    repository, publisher, assembler, events, transactionManager, clock);
 
     private final JobRepublisher republisher =
             new JobRepublisher(repository, dispatcher, clock, Duration.ofMinutes(1), 50);
