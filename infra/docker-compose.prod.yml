@@ -173,6 +173,8 @@ services:
       OPENBLAS_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
       TZ: Asia/Seoul
+      # 워커 역할(spec 004 R-20). 이 서비스는 단건 큐(backtest.jobs)만 push 로 받는 단건 전용이다.
+      WORKER_ROLE: single
     volumes:
       - ${DATA_DIR}/parquet:/data/parquet
       - ${DATA_DIR}/raw:/data/raw:ro
@@ -182,9 +184,24 @@ services:
       rabbitmq:
         condition: service_healthy
     deploy:
-      # 4 vCPU에서는 2개가 상한선. 이 값 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
+      # 4 vCPU에서는 두 워커 서비스 합쳐 2개가 상한선. 합 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
       # 백엔드는 동시 실행 상한을 따로 검사하지 않고 이 배치 값이 상한이다.
-      replicas: ${WORKER_REPLICAS}
+      replicas: ${WORKER_SINGLE_REPLICAS}
+      resources:
+        limits:
+          memory: 2500M
+          cpus: "1.0"
+    networks: [backend]
+
+  # 공용 워커: 벌크 큐(backtest.jobs.bulk)를 먼저 보고 비어 있으면 단건 큐를 집는다(pull, 1초 폴링).
+  # 이미지·환경·자원 제한은 worker 와 같고 역할만 다르다(spec 004 R-20).
+  worker-flex:
+    extends:
+      service: worker
+    environment:
+      WORKER_ROLE: flex
+    deploy:
+      replicas: ${WORKER_FLEX_REPLICAS}
       resources:
         limits:
           memory: 2500M
