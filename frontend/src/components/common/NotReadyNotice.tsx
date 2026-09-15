@@ -24,9 +24,15 @@ type NotReadyNoticeProps = {
  * 않는다. 이 컴포넌트는 예외를 던지지 않고 언제나 정상 화면을 그린다.
  */
 export function NotReadyNotice({ message, action, className }: NotReadyNoticeProps) {
+  // 행동을 받았다는 것은 사용자가 그 자리에서 다시 시도해 문장이 바뀔 수 있다는 뜻이므로,
+  // 그때만 문장을 읽어 주는 영역으로 표시한다. 행동이 없는 자리는 화면이 열릴 때 문장이
+  // 함께 만들어질 뿐 그 자리에서 바뀌지 않아, 읽어 주는 영역으로 두어도 대개 읽히지 않는다.
+  // 표시를 문장에만 두어 버튼 이름이 문장과 함께 읽히지 않게 한다.
   return (
-    <div className={className} role="status" aria-live="polite">
-      <p>{message}</p>
+    <div className={className}>
+      <p role={action ? 'status' : undefined} aria-live={action ? 'polite' : undefined}>
+        {message}
+      </p>
       {action ? (
         <button type="button" onClick={action.onAction}>
           {action.label}

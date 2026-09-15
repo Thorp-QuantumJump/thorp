@@ -71,11 +71,13 @@ describe('LandingPage', () => {
     const cta = screen.getByRole('link', { name: /비중 비교하기/ })
     expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')
 
-    // 행동 버튼이 하나라는 것은 첫 화면 머리 영역에 다른 행동이 나란히 놓이지 않는다는 뜻이다.
-    const hero = cta.closest('section')
-    expect(hero).not.toBeNull()
-    expect(within(hero as HTMLElement).getAllByRole('link')).toHaveLength(1)
-    expect(within(hero as HTMLElement).queryAllByRole('button')).toHaveLength(0)
+    // 행동 버튼이 하나라는 것은 이 버튼 옆에 다른 행동이 나란히 놓이지 않는다는 뜻이다.
+    // 검사 범위를 행동 줄로 좁혀 둔다. 히어로 안 다른 자리에 링크가 생겼다는 이유로
+    // 이 검사가 깨지면 실패 메시지가 실제 원인을 가리키지 못한다.
+    const actionRow = cta.parentElement
+    expect(actionRow).not.toBeNull()
+    expect(within(actionRow as HTMLElement).getAllByRole('link')).toHaveLength(1)
+    expect(within(actionRow as HTMLElement).queryAllByRole('button')).toHaveLength(0)
   })
 
   it('다른 화면으로 보내던 행동 유도가 남아 있지 않다', () => {

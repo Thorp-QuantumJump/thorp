@@ -5,7 +5,7 @@
     linear-gradient(var(--thorp-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
     var(--thorp-background);
-  background-size: 72px 72px, 72px 72px, auto, auto;
+  background-size: 72px 72px, 72px 72px, auto;
   color: var(--thorp-foreground);
 }
 
