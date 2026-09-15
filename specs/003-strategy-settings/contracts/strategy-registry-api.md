@@ -83,7 +83,7 @@ GET /strategies/registry?universeSize={n}
           "detail": "섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다."
         }
       ],
-      "warmupRule": { "basis": "lookbackDays", "plus": 0 }
+      "warmupRule": { "sum": ["lookbackDays"] }
     }
   ]
 }
@@ -98,7 +98,7 @@ GET /strategies/registry?universeSize={n}
 | `strategies[].selectable` | boolean | 카드를 고를 수 있는가. `universeSize`를 주면 유효성 제약과 활성 여부를 반영한다 |
 | `strategies[].unselectableReason` | string? | `selectable`이 false일 때만. 화면이 그대로 한 문장으로 보인다 |
 | `strategies[].warmupTradingDays` | integer | 기본 설정 기준 워밍업. 카드 목록의 판정에 쓴다 |
-| `strategies[].warmupRule` | object | 설정을 바꿀 때 화면이 다시 계산하는 규칙 (data-model 6) |
+| `strategies[].warmupRule` | object | 설정을 바꿀 때 화면이 다시 계산하는 규칙. `sum` 배열의 축 이름을 현재 값으로 바꿔 더한다 (data-model 6) |
 | `axes[].inputType` | `CHOICE` \| `NUMBER` | 목록형인가 입력형인가 |
 | `axes[].choices` | array | `CHOICE`일 때만. `selectable`이 false인 후보는 유효성 제약에 걸린 값이다 |
 | `axes[].range` | object | `NUMBER`일 때만 |

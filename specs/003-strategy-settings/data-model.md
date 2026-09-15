@@ -56,7 +56,9 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `defaultValue` | Object | 기본 시작값. 최적값·추천으로 표시하지 않는다 |
 | `allowedRange` | AllowedRange | **사용자가 고르거나 입력할 수 있는 범위** |
 
-**`searchValues`와 `allowedRange`의 관계**: 목록형 축에서는 `searchValues ⊆ allowedRange.values`여야 한다. 로더가 기동 시 검사하고 위반하면 기동을 실패시킨다 (R3).
+**`searchValues`와 `allowedRange`는 뜻이 다르다**: 값이 겹칠 수 있으나 합치지 않는다. `allowedRange.values`는 사용자가 상세 설정에서 고르는 선택지이고, `searchValues`는 007 자동 비교가 하나씩 전부 돌려볼 값이다. 후자를 늘리면 실행 횟수가 곱으로 늘어난다 (R3).
+
+목록형 축에서는 `searchValues ⊆ allowedRange.values`여야 한다. 로더가 기동 시 검사하고 위반하면 기동을 실패시킨다.
 
 ## 4. 허용 범위 (AllowedRange) — 기존 타입 유지
 
@@ -107,10 +109,11 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 | 필드 | 형 | 비고 |
 |---|---|---|
-| `basis` | String | 기준으로 삼을 축 이름. 그 축의 현재 값을 거래일 수로 읽는다 |
-| `plus` | int | 더할 거래일 수. 기본 0 |
+| `sum` | List\<String \| int\> | 축 이름 또는 상수. 축 이름은 그 축의 현재 값으로 바꿔 읽는다 |
 
-**계산**: `warmupTradingDays = <basis 축의 현재 값> + plus`. `basis`가 없으면 0이다.
+**계산**: `sum` 배열의 모든 항목을 더한 값이 `warmupTradingDays`다. `warmup`이 없으면 0이다.
+
+**상수만 더하는 형태로 두지 않는다**: 섹터 모멘텀의 '최근 구간 제외'는 사용자가 고르는 축이므로, 그 값이 바뀌면 워밍업도 바뀌어야 한다([research](research.md) R4).
 
 **누가 부르나**: 화면이 설정을 바꿀 때마다 다시 계산해 카드를 판정하고(FR-011), 서버가 분석 요청을 받을 때 같은 규칙으로 다시 계산한다. 백테스트에서 실제로 구간을 건너뛰는 것은 [004](../004-backtest-execution/spec.md)다.
 
@@ -118,13 +121,13 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 004 FR-018이 "가장 긴 관측 기간과 **최근 제외 구간**을 감안한 공통 워밍업"을 요구하며, `plus`가 그 최근 제외 구간에 대응한다.
 
-| 전략 | basis | plus |
-|---|---|---|
-| 고정 목표 비중 | 없음 | 0 |
-| 동일 비중 | 없음 | 0 |
-| 역변동성 | `lookbackDays` | 0 |
-| 섹터 모멘텀 | `lookbackDays` | 최근 구간 제외 일수 (PD-02) |
-| 최소분산 | `lookbackDays` | 0 |
+| 전략 | `sum` |
+|---|---|
+| 고정 목표 비중 | `warmup` 없음 → 0 |
+| 동일 비중 | `warmup` 없음 → 0 |
+| 역변동성 | `[lookbackDays]` |
+| 섹터 모멘텀 | `[lookbackDays, skipRecentDays]` — 둘 다 축이다 |
+| 최소분산 | `[lookbackDays]` |
 
 ## 7. 분석 조건 등록 정보 (AnalysisConditionRegistry)
 
