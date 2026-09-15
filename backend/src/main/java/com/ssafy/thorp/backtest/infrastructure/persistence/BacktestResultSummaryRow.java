@@ -45,4 +45,7 @@ interface BacktestResultSummaryRow {
 
     /** {@code jsonb_array_length(exceptions)}. 본문은 읽지 않는다. 컬럼이 null 이면 0 */
     Integer getExceptionCount();
+
+    /** {@code versions ->> 'worker'}. 결과를 낸 워커가 보고한 자기 버전. v2 이전 결과·실패 결과는 null */
+    String getWorkerVersion();
 }

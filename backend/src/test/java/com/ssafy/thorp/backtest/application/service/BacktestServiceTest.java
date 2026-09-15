@@ -85,8 +85,16 @@ class BacktestServiceTest {
     void stubRegistries() {
         when(strategyRulesService.requireRegistered("FIXED_WEIGHT", "1"))
                 .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        // 등록표 초기 행과 같다 — 역변동성 규칙은 PD-02 확정 전 임시(provisional=true)다.
         when(strategyRulesService.requireRegistered("INVERSE_VOLATILITY", "1"))
-                .thenReturn(rules("INVERSE_VOLATILITY", Map.of("lookbackDays", 63)));
+                .thenReturn(
+                        new StrategyRules(
+                                "INVERSE_VOLATILITY",
+                                "1",
+                                RulesStatus.REGISTERED,
+                                true,
+                                Map.of("lookbackDays", 63),
+                                "PD-02"));
         when(strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1"))
                 .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
         when(costProfileService.resolve(any()))
@@ -192,11 +200,41 @@ class BacktestServiceTest {
         assertThat(result.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
         assertThat(result.effectiveEnd()).isEqualTo(LocalDate.of(2024, 12, 31));
         assertThat(result.versions())
-                .containsEntry("rules", "1")
+                .containsEntry("mapping", "SECTOR-ETF-2026-09")
                 .containsEntry("data", "FIXTURE-three_etf_24m")
-                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
+                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0")
+                .containsEntry("evaluationSplit", "SPLIT-1")
+                .doesNotContainKeys("scenarioRules", "worker");
+        assertThat(result.versions().get("rules"))
+                .isEqualTo(Map.of("version", "1", "provisional", false));
         assertThat(result.versions().get("costProfile"))
                 .isEqualTo(Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
+    }
+
+    @Test
+    @DisplayName("임시 규칙(PD-02)으로 계산하는 실행은 versions.rules.provisional=true 로 표시된다")
+    void provisionalRulesAreVisibleInVersions() {
+        BacktestJobResult result =
+                service.create(
+                        command("INVERSE_VOLATILITY", null, null, Scenario.FULL_PERIOD, null));
+
+        assertThat(result.versions().get("rules"))
+                .isEqualTo(Map.of("version", "1", "provisional", true));
+    }
+
+    @Test
+    @DisplayName("목표 위험 시나리오는 오버레이 규칙 버전을 versions.scenarioRules 로 남긴다")
+    void targetRiskRecordsTheOverlayVersion() {
+        BacktestJobResult result =
+                service.create(
+                        command(
+                                "FIXED_WEIGHT",
+                                new BigDecimal("0.4000"),
+                                null,
+                                Scenario.TARGET_RISK,
+                                Map.of("targetVolatility", "0.1000")));
+
+        assertThat(result.versions()).containsEntry("scenarioRules", "TARGET_RISK_OVERLAY/1");
     }
 
     @Test

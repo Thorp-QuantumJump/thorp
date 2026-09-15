@@ -179,7 +179,7 @@ public class BacktestService {
         // 여기까지 왔으면 새 계산을 만든다. 합류·재사용은 위에서 끝났으므로 한도에 세지 않는다(R-19).
         executionLimitPolicy.requireAdmission(command.requesterId(), command.executionType());
 
-        Map<String, Object> versions = versions(costProfile, command.rulesVersion(), dataVersion);
+        Map<String, Object> versions = versions(command, rules, overlay, costProfile, dataVersion);
         RunPlan plan =
                 new RunPlan(
                         dedupKey,
@@ -433,21 +433,38 @@ public class BacktestService {
     // --- 저장할 사본 ---------------------------------------------------------
 
     /**
-     * 조회 {@code config}가 그대로 돌려줄 요청 사본.
+     * 결과에 표시할 참조 버전(FR-028, data-model {@code backtest_run.versions}).
      *
-     * <p>{@code warmupTradingDays}는 요청값이 아니라 <b>서버가 확정한 값</b>을 넣는다. 요청이 null 이었다고 null 을 돌려주면 "그래서
-     * 몇 거래일을 썼나"라는 질문에 답할 수 없다.
+     * <p>모양은 워커가 결과에 싣는 {@code versions}와 같다 — {@code rules}·{@code costProfile}은 {@code {version,
+     * provisional}}이고 {@code provisional=true}는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 뜻이다. 사용자가 확정 규칙 결과와
+     * 임시 규칙 결과를 구분할 수 있어야 하므로 접수 시점에 등록표 값을 그대로 옮긴다. {@code scenarioRules}는 오버레이가 있을 때만, {@code
+     * worker}는 계산을 마친 워커가 보고하는 값이라 여기 없고 조회가 결과 행에서 합친다({@code BacktestDetailResult}).
+     *
+     * <p>동일 버전 키({@code DedupKeyCalculator})는 이 맵을 보지 않는다 — 키는 버전 문자열만 쓴다.
      */
     private Map<String, Object> versions(
-            CostProfile costProfile, String rulesVersion, String dataVersion) {
-        Map<String, Object> costs = new LinkedHashMap<>();
-        costs.put("version", costProfile.version());
-        costs.put("provisional", costProfile.provisional());
+            CreateBacktestCommand command,
+            StrategyRules rules,
+            StrategyRules overlay,
+            CostProfile costProfile,
+            String dataVersion) {
         Map<String, Object> versions = new LinkedHashMap<>();
-        versions.put("costProfile", costs);
-        versions.put("rules", rulesVersion);
+        versions.put("mapping", command.mappingVersion());
+        versions.put("rules", versionOf(rules.rulesVersion(), rules.provisional()));
+        if (overlay != null) {
+            versions.put("scenarioRules", overlay.strategyId() + "/" + overlay.rulesVersion());
+        }
+        versions.put("costProfile", versionOf(costProfile.version(), costProfile.provisional()));
         versions.put("data", dataVersion);
         versions.put("engine", engineVersion);
+        versions.put("evaluationSplit", command.evaluationSplitVersion());
         return versions;
+    }
+
+    private static Map<String, Object> versionOf(String version, boolean provisional) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("version", version);
+        value.put("provisional", provisional);
+        return value;
     }
 }

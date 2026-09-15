@@ -98,11 +98,22 @@ public class EngineInputAssembler {
         Map<String, Object> rules =
                 plan.rulesVersion() == null
                         ? null
-                        : strategyRulesService
-                                .requireRegistered(run.getStrategyId(), plan.rulesVersion())
-                                .spec();
+                        : rulesCopy(
+                                strategyRulesService.requireRegistered(
+                                        run.getStrategyId(), plan.rulesVersion()));
         return new EngineInput.AllocationSpec(
                 run.getStrategyId(), rulesVersion, rules, run.getParameters());
+    }
+
+    /**
+     * 규칙 사본에 등록표의 {@code provisional} 을 함께 싣는다. 워커는 이 값을 결과 {@code versions.rules.provisional} 로
+     * 되돌려 주고, 그 값이 있어야 저장된 결과만 보고도 임시 규칙(PD-02)으로 계산했는지 알 수 있다(T008 결정 ③ 후속). 배분 모듈은 자기가 아는 키만 읽으므로
+     * 이 키가 계산을 바꾸지 않는다.
+     */
+    private static Map<String, Object> rulesCopy(StrategyRules registered) {
+        Map<String, Object> copy = new LinkedHashMap<>(registered.spec());
+        copy.put("provisional", registered.provisional());
+        return copy;
     }
 
     /** 비용은 실행이 고른 버전의 등록표 값을 그대로 싣는다. 값이 바뀌면 새 버전이 생기므로 옛 실행은 옛 값을 계속 본다. */

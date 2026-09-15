@@ -18,6 +18,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,16 +102,36 @@ class BacktestResultApiIT extends PostgresTestSupport {
     private BacktestRun newJob() {
         return jobRepository.save(
                 BacktestRun.create(
-                        "MA_CROSSOVER",
-                        "1.0.0",
-                        Map.of("shortWindow", 20, "longWindow", 60, "threshold", 0.05),
-                        List.of(new InstrumentId("005930.XKRX"), new InstrumentId("000660.XKRX")),
-                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
-                        new BigDecimal("10000000"),
-                        PositionSizingMode.STRATEGY_DEFINED,
-                        new BigDecimal("0.50"),
-                        new InstrumentId("069500.XKRX"),
-                        42));
+                                "MA_CROSSOVER",
+                                "1.0.0",
+                                Map.of("shortWindow", 20, "longWindow", 60, "threshold", 0.05),
+                                List.of(
+                                        new InstrumentId("005930.XKRX"),
+                                        new InstrumentId("000660.XKRX")),
+                                new BacktestPeriod(
+                                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                                new BigDecimal("10000000"),
+                                PositionSizingMode.STRATEGY_DEFINED,
+                                new BigDecimal("0.50"),
+                                new InstrumentId("069500.XKRX"),
+                                42)
+                        .withPlan(plannedVersions()));
+    }
+
+    /**
+     * 접수가 남기는 참조 버전(T018)만 있는 계획. 예시 {@code backtest-detail.json}의 {@code versions}와 같아야 하고, 상세는
+     * 여기에 결과 행의 {@code worker}(메시징 픽스처 {@code event-finished-completed.json}의 값)를 얹는다. 동일 버전 키는 두지
+     * 않는다 — 부분 유니크 인덱스가 COMPLETED 를 포함해서 테스트마다 같은 키로 완료 실행을 만들면 부딪힌다.
+     */
+    private static RunPlan plannedVersions() {
+        Map<String, Object> versions = new LinkedHashMap<>();
+        versions.put("mapping", "SECTOR-ETF-2026-09");
+        versions.put("rules", Map.of("version", "1", "provisional", false));
+        versions.put("costProfile", Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
+        versions.put("data", "FIXTURE-three_etf_24m");
+        versions.put("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
+        versions.put("evaluationSplit", "SPLIT-1");
+        return new RunPlan(null, null, null, null, null, null, null, null, versions, null);
     }
 
     /** 사용자가 호출하는 식별자는 <b>요청</b>의 것이다(R-02). 실행을 만들고 그것을 가리키는 요청을 붙여 그 식별자를 돌려준다. */
