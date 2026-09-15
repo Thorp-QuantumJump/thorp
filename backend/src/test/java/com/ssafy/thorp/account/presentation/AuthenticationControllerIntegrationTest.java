@@ -198,6 +198,16 @@ class AuthenticationControllerIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("앞뒤 공백과 대문자가 섞인 이메일도 정규형으로 같은 계정에 로그인한다")
+    void loginNormalizesTheSubmittedEmailBeforeValidatingIt() throws Exception {
+        // 정규화가 검증 뒤로 밀리면 앞뒤 공백 때문에 @Email이 먼저 걸려 400이 된다(커밋 7171ea62).
+        mockMvc.perform(login("  AUTH-IT-Member@Example.COM  ", PASSWORD))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(userId))
+                .andExpect(jsonPath("$.data.email").value(EMAIL));
+    }
+
+    @Test
     @DisplayName("이메일 형식이 아닌 로그인 요청은 자격 증명 오류와 구분되는 400으로 끝난다")
     void malformedLoginRequestIsInvalidInput() throws Exception {
         mockMvc.perform(login("not-an-email", PASSWORD))
