@@ -1,5 +1,6 @@
 package com.ssafy.thorp.paramsearch.presentation;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -80,6 +81,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     void previewReturnsFourSections() throws Exception {
         mockMvc.perform(
                         post("/param-searches/preview")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(previewBody()))
                 .andExpect(status().isOk())
@@ -107,6 +109,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         String created =
                 mockMvc.perform(
                                 post("/param-searches")
+                                        .with(csrf())
                                         .header(CurrentRequester.DEV_HEADER, requesterId)
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(createBody(registryVersion)))
@@ -135,6 +138,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     void staleVersionIsConflict() throws Exception {
         mockMvc.perform(
                         post("/param-searches")
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, requesterId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody("PROVISIONAL-19990101")))
@@ -161,6 +165,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
 
         mockMvc.perform(
                         post("/param-searches")
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, requesterId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
@@ -181,6 +186,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
 
         mockMvc.perform(
                         post("/param-searches/preview")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andExpect(status().isBadRequest())
@@ -196,6 +202,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         // 요청자를 null 로 통과시키면 발행 직전에 NullPointerException 으로 죽어 사용자에게 500이 나간다.
         mockMvc.perform(
                         post("/param-searches")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody(registryVersion)))
                 .andExpect(status().isBadRequest())
@@ -207,6 +214,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     void previewWorksWithoutRequester() throws Exception {
         mockMvc.perform(
                         post("/param-searches/preview")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(previewBody()))
                 .andExpect(status().isOk())
@@ -283,6 +291,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         String body =
                 mockMvc.perform(
                                 post("/param-searches/preview")
+                                        .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(previewBody()))
                         .andReturn()

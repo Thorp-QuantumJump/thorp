@@ -3,6 +3,7 @@ package com.ssafy.thorp.market.presentation.controller;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -73,7 +74,7 @@ class MarketControllerTest {
 
     @Test
     void methodErrorUsesExistingCommonEnvelope() throws Exception {
-        mvc.perform(post("/markets/kospi"))
+        mvc.perform(post("/markets/kospi").with(csrf()))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.data").value(nullValue()))

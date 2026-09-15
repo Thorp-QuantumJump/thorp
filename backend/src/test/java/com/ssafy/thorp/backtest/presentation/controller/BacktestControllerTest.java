@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -105,6 +106,7 @@ class BacktestControllerTest {
             throws Exception {
         return mockMvc.perform(
                 post("/backtests")
+                        .with(csrf())
                         .header(CurrentRequester.DEV_HEADER, USER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body));
@@ -180,6 +182,7 @@ class BacktestControllerTest {
     void missingRequesterHeaderIsRejected() throws Exception {
         mockMvc.perform(
                         post("/backtests")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(VALID_BODY))
                 .andExpect(status().isBadRequest());
@@ -346,6 +349,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
@@ -361,10 +365,11 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/cancel", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));
-        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID))
+        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID).with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -402,6 +407,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/retry", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
@@ -418,6 +424,7 @@ class BacktestControllerTest {
 
         mockMvc.perform(
                         post("/backtests/{id}/retry", BACKTEST_ID)
+                                .with(csrf())
                                 .header(CurrentRequester.DEV_HEADER, USER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_RETRYABLE"));

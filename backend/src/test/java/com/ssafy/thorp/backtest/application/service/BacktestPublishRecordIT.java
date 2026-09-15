@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,6 +93,7 @@ class BacktestPublishRecordIT extends PostgresTestSupport {
                 com.jayway.jsonpath.JsonPath.read(
                         mockMvc.perform(
                                         post("/backtests")
+                                                .with(csrf())
                                                 .header(CurrentRequester.DEV_HEADER, userId)
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .content(body))

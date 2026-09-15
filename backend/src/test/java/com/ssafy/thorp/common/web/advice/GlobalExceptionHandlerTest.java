@@ -1,6 +1,7 @@
 package com.ssafy.thorp.common.web.advice;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,6 +54,7 @@ class GlobalExceptionHandlerTest {
     void validationException() throws Exception {
         mockMvc.perform(
                         post("/test/validation")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"name\": \"\"}"))
                 .andExpect(status().isBadRequest())
@@ -86,6 +88,7 @@ class GlobalExceptionHandlerTest {
     void malformedJsonBody() throws Exception {
         mockMvc.perform(
                         post("/test/validation")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{oops"))
                 .andExpect(status().isBadRequest())
@@ -104,7 +107,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("허용되지 않는 메서드는 500이 아니라 405로 응답한다")
     void methodNotAllowed() throws Exception {
-        mockMvc.perform(delete("/test/business"))
+        mockMvc.perform(delete("/test/business").with(csrf()))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.success").value(false));
     }

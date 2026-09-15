@@ -69,11 +69,11 @@ class AuthSecurityIntegrationTest {
     @Test
     @DisplayName("상태 변경 요청은 유효한 CSRF 토큰이 있어야 통과한다")
     void mutationRequiresCsrfToken() throws Exception {
-        mockMvc.perform(post("/auth/security-probe"))
+        mockMvc.perform(post("/backtests/security-probe"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("CSRF_TOKEN_INVALID"));
 
-        mockMvc.perform(post("/auth/security-probe").with(csrf()))
+        mockMvc.perform(post("/backtests/security-probe").with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -113,7 +113,7 @@ class AuthSecurityIntegrationTest {
             return "authenticated";
         }
 
-        @PostMapping("/auth/security-probe")
+        @PostMapping("/backtests/security-probe")
         @ResponseStatus(HttpStatus.NO_CONTENT)
         void mutate(HttpServletRequest request) {}
     }

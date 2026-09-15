@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.util.function.Supplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,15 +24,11 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.AndRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /** 서버 세션 인증과 브라우저 요청 보안의 공통 경계를 정의한다. */
 @Configuration
@@ -46,8 +44,7 @@ public class SecurityConfig {
         return http.csrf(
                         csrf ->
                                 csrf.csrfTokenRepository(csrfTokenRepository())
-                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                                        .requireCsrfProtectionMatcher(csrfProtectionMatcher()))
+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
                 .authorizeHttpRequests(
                         authorize ->
                                 authorize
@@ -75,10 +72,8 @@ public class SecurityConfig {
                                                                 ErrorCode.AUTHENTICATION_REQUIRED))
                                         .accessDeniedHandler(
                                                 (request, response, exception) ->
-                                                        writeError(
-                                                                objectMapper,
-                                                                response,
-                                                                ErrorCode.CSRF_TOKEN_INVALID)))
+                                                        handleAccessDenied(
+                                                                objectMapper, response, exception)))
                 .requestCache(cache -> cache.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
@@ -107,16 +102,6 @@ public class SecurityConfig {
         return repository;
     }
 
-    private static RequestMatcher csrfProtectionMatcher() {
-        PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
-        return new AndRequestMatcher(
-                CsrfFilter.DEFAULT_CSRF_MATCHER,
-                new OrRequestMatcher(
-                        paths.matcher("/auth/**"),
-                        paths.matcher("/accounts/**"),
-                        paths.matcher("/api/accounts/**")));
-    }
-
     private static void writeError(
             ObjectMapper objectMapper, HttpServletResponse response, ErrorCode errorCode)
             throws IOException {
@@ -125,6 +110,18 @@ public class SecurityConfig {
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(
                 response.getOutputStream(), ApiResponse.fail(ErrorResponse.of(errorCode)));
+    }
+
+    private static void handleAccessDenied(
+            ObjectMapper objectMapper,
+            HttpServletResponse response,
+            AccessDeniedException exception)
+            throws IOException {
+        if (exception instanceof CsrfException) {
+            writeError(objectMapper, response, ErrorCode.CSRF_TOKEN_INVALID);
+            return;
+        }
+        response.sendError(HttpStatus.FORBIDDEN.value());
     }
 
     /** SPA가 cookie의 원본 토큰을 header로 돌려보낼 수 있게 하면서 BREACH 방어용 XOR 토큰도 유지한다. */
