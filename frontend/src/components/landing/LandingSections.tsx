@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUpRight, BarChart3, FlaskConical, Radar } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
+import { ArrowUpRight, BarChart3, FlaskConical, Radar } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'
@@ -39,15 +39,6 @@ const resultPath = buildPreviewPath('trend')
 
 /** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */
 export function HeroSection() {
-  const reducedMotion = useReducedMotion()
-
-  const moveToMarket = () => {
-    document.querySelector('#market-analysis')?.scrollIntoView({
-      behavior: reducedMotion ? 'auto' : 'smooth',
-      block: 'start',
-    })
-  }
-
   return (
     <section className={styles.hero} aria-labelledby="landing-title">
       <div className={styles.heroFallback} aria-hidden="true">
@@ -118,14 +109,11 @@ export function HeroSection() {
           variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
           transition={revealTransition}
         >
-          <Link className={styles.primaryCta} to="/dashboard">
-            시장 살펴보기
+          {/* 첫 화면의 가장 중요한 행동은 이 버튼 하나다. 다른 행동 유도를 나란히 두지 않는다. */}
+          <Link className={styles.primaryCta} to="/diagnosis/sectors">
+            비중 비교하기
             <ArrowUpRight aria-hidden="true" size={18} />
           </Link>
-          <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
-            서비스 알아보기
-            <ArrowDown aria-hidden="true" size={17} />
-          </button>
         </motion.div>
       </motion.div>
 
@@ -165,11 +153,6 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
         </div>
 
         <IndicatorConveyor indicators={indicators} />
-
-        <Link className={styles.textCta} to="/dashboard">
-          <span>시장 분석 보러 가기</span>
-          <ArrowUpRight aria-hidden="true" size={21} />
-        </Link>
       </div>
     </motion.section>
   )
@@ -251,10 +234,6 @@ export function BacktestIntroSection() {
           </div>
         </div>
 
-        <Link className={styles.textCta} to="/backtest">
-          <span>백테스트 시작하기</span>
-          <ArrowUpRight aria-hidden="true" size={21} />
-        </Link>
       </div>
       <div className={styles.sectionNumber} aria-hidden="true">
         02 / TEST THE PAST
