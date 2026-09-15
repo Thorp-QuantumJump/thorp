@@ -116,6 +116,8 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 **전략별 기준 축**:
 
+004 FR-018이 "가장 긴 관측 기간과 **최근 제외 구간**을 감안한 공통 워밍업"을 요구하며, `plus`가 그 최근 제외 구간에 대응한다.
+
 | 전략 | basis | plus |
 |---|---|---|
 | 고정 목표 비중 | 없음 | 0 |
@@ -130,6 +132,10 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 |---|---|---|
 | `initialAmount` | AllowedRange | 입력형. 최소·최대·간격 (R6) |
 | `initialAmountDefault` | Object | 기본 시작 금액 |
+| `targetVolatility` | AllowedRange | 입력형. 004 PD-18이 지정한 등록표 항목 (연 5~20%, 1% 간격) |
+| `targetVolatilityDefault` | Object | 기본 연 10% |
+
+**목표 변동성은 '목표 위험 맞춤' 시나리오에서만 쓴다.** 주 분석(연속 운용)에서는 화면에 보이지 않는다. 등록표에 자리를 두는 것은 004 PD-18이 그렇게 지정했기 때문이며, 화면에 언제 보일지는 그 시나리오를 만들 때 정한다.
 
 **비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전을 읽어 화면에 보이고, 등록표에 따로 담지 않는다.
 
@@ -156,6 +162,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `initialAmount` | number | 등록표의 허용 범위 안에서만 |
 | `costProfileVersion` | String | 004가 등록한 비용 조건의 버전. 읽기 전용 |
 | `scenario` | String | 연속 운용 기본 |
+| `targetVolatility` | number? | '목표 위험 맞춤' 시나리오일 때만 |
 
 ## 10. 분석 요청 (AnalysisRequest) — 004로 넘기는 것
 
