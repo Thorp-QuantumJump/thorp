@@ -6,8 +6,11 @@
   d/3 해석 불가 → 미확인
   d/4 수집 시각보다 5분 넘게 미래 → 미확인
   d/5 GMT 표기 → 파싱 성공
+  d/6 콜론을 넣은 오프셋 → 파싱 성공 (매일경제가 이 형식을 쓴다)
+  d/7 pubDate 없이 dc:date만 → 파싱 성공 (경향신문이 이 형식을 쓴다)
+  d/8 pubDate와 dc:date가 둘 다 있고 다름 → pubDate가 이긴다
 -->
-<rss version="2.0">
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
   <channel>
     <title>예시경제</title>
     <item>
@@ -34,6 +37,22 @@
       <title>GMT 표기</title>
       <link>https://rss.example.co.kr/d/5</link>
       <pubDate>Thu, 10 Sep 2026 04:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>콜론을 넣은 오프셋</title>
+      <link>https://rss.example.co.kr/d/6</link>
+      <pubDate>Thu, 10 Sep 2026 13:00:00 +09:00</pubDate>
+    </item>
+    <item>
+      <title>dc:date만 주는 매체</title>
+      <link>https://rss.example.co.kr/d/7</link>
+      <dc:date>2026-09-10T13:00:00+09:00</dc:date>
+    </item>
+    <item>
+      <title>pubDate와 dc:date가 어긋남</title>
+      <link>https://rss.example.co.kr/d/8</link>
+      <pubDate>Thu, 10 Sep 2026 13:00:00 +0900</pubDate>
+      <dc:date>2026-09-09T13:00:00+09:00</dc:date>
     </item>
   </channel>
 </rss>

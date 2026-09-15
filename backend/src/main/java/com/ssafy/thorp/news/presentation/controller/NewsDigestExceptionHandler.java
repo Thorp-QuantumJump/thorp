@@ -27,6 +27,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class NewsDigestExceptionHandler {
 
+    /** 필수 파라미터가 빠졌다. 내보내기는 기간이 필수라 이 경로가 실제로 쓰인다. */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<HttpApiResponse<Void>> handleMissingParameter(
+            org.springframework.web.bind.MissingServletRequestParameterException e) {
+        return ResponseEntity.badRequest()
+                .body(
+                        HttpApiResponse.fail(
+                                HttpStatus.BAD_REQUEST, "필수 파라미터가 빠졌습니다: " + e.getParameterName()));
+    }
+
     /** 시각 표기를 해석할 수 없을 때 돌려주는 말. 받은 값을 되비추지 않는다(spec FR-021). */
     private static final String MALFORMED_INSTANT = "시각은 ISO-8601 형식이어야 합니다.";
 

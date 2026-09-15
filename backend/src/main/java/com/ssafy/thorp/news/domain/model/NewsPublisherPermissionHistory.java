@@ -63,12 +63,20 @@ public record NewsPublisherPermissionHistory(
                 reference);
     }
 
-    /** 허가 회신을 기록한다. 허용 필드를 함께 남긴다. */
+    /**
+     * 허가 회신을 기록한다. 허용 필드를 함께 남긴다.
+     *
+     * <p><b>허용 필드가 비면 받지 않는다.</b> 보여 줄 것이 하나도 없는 허가는 불허와 같은데 상태만 {@code ALLOWED}로 남는다. 그러면 공개 조회가 그
+     * 매체를 노출 대상으로 세고, 투영 단계에서 필드가 전부 빠져 제목도 매체명도 없는 항목이 만들어진다. 불허라면 {@link #denied}를 쓴다.
+     */
     public static NewsPublisherPermissionHistory allowed(
             Long publisherId,
             Set<NewsAllowedField> allowedFields,
             Instant occurredAt,
             String reference) {
+        if (allowedFields == null || allowedFields.isEmpty()) {
+            throw new IllegalArgumentException("허가 회신에는 허용 필드가 하나 이상 있어야 한다");
+        }
         return new NewsPublisherPermissionHistory(
                 null,
                 publisherId,

@@ -126,6 +126,16 @@ class NewsIngestionServiceTest {
         public List<NewsArticle> findDisplayEligibleSince(Instant since) {
             return List.of();
         }
+
+        @Override
+        public List<NewsArticle> findForExport(
+                Instant from,
+                Instant to,
+                String sectorId,
+                com.ssafy.thorp.news.application.command.NewsArticleExportQuery.Cursor after,
+                int limit) {
+            return List.of();
+        }
     }
 
     /** 등록된 매체를 기억하는 저장소 대역. */

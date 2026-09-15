@@ -151,7 +151,7 @@ class NewsConfigTest {
     class PublisherRegistry {
 
         @Test
-        @DisplayName("실제 파일을 읽고 매체 항목은 비어 있어도 정상이다")
+        @DisplayName("실제 등록표 파일의 항목이 모두 등록 조건을 통과한다")
         void 파일_로딩() {
             NewsPublisherRegistry registry =
                     NewsConfig.read(
@@ -159,8 +159,76 @@ class NewsConfigTest {
                             NewsPublisherRegistry.class);
 
             assertThat(registry.version()).isEqualTo("news-publishers-v1");
-            assertThat(registry.publishers()).isEmpty();
-            assertThat(registry.enabledPublishers()).isEmpty();
+            assertThat(registry.publishers())
+                    .as("항목이 비어 있으면 수집할 채널이 없어 화면이 영영 '준비 중'이다")
+                    .isNotEmpty()
+                    .allSatisfy(
+                            publisher -> {
+                                assertThat(publisher.rssUrl()).startsWith("https://");
+                                assertThat(java.net.URI.create(publisher.rssUrl()).getHost())
+                                        .as("집계·재배포 feed를 공식 채널로 등록하지 않는다(spec FR-009)")
+                                        .endsWith(publisher.registeredDomain());
+                            });
+        }
+
+        @Test
+        @DisplayName("등록한 매체의 분류 값이 연결 등록표에 매핑돼 있다")
+        void 분류_매핑_존재() {
+            NewsLinkRegistry links =
+                    NewsConfig.read(
+                            new ClassPathResource(NewsConfig.LINK_REGISTRY_PATH),
+                            NewsLinkRegistry.class);
+
+            // 경향신문 경제 피드가 실제로 주는 분류 값이다. 하나라도 빠지면 그 분류의 기사가 통째로
+            // 제외되고, 제외는 조용해서 화면이 비어 보이는 것으로만 드러난다(spec FR-010).
+            //
+            // 저장된 문자열을 직접 비교하지 않고 조회를 부른다. 등록표가 대소문자를 접어 두므로
+            // 문자열 비교는 실제 동작과 어긋난다.
+            assertThat(
+                            List.of(
+                                            "경제 일반",
+                                            "금융·재테크",
+                                            "산업·통상",
+                                            "기업소식",
+                                            "생활경제·소비자",
+                                            "IT비즈·정책",
+                                            "PC·기기가전")
+                                    .stream()
+                                    .filter(category -> links.resolveTopicKey(category).isEmpty())
+                                    .toList())
+                    .as("매핑되지 않은 분류 값")
+                    .isEmpty();
+
+            assertThat(links.resolveTopicKey("부동산"))
+                    .as("매핑하지 않기로 한 값은 그대로 두고 미등록 건수로만 센다")
+                    .isEmpty();
+
+            // 매일경제가 실제로 주는 값.
+            assertThat(links.resolveTopicKey("증권")).contains("markets");
+            assertThat(links.resolveTopicKey("기업/경영")).contains("industry");
+        }
+
+        @Test
+        @DisplayName("채널 주제를 선언한 매체는 그 주제가 등록표에 있다")
+        void 채널_주제_존재() {
+            NewsPublisherRegistry registry =
+                    NewsConfig.read(
+                            new ClassPathResource(NewsConfig.PUBLISHER_REGISTRY_PATH),
+                            NewsPublisherRegistry.class);
+            NewsLinkRegistry links =
+                    NewsConfig.read(
+                            new ClassPathResource(NewsConfig.LINK_REGISTRY_PATH),
+                            NewsLinkRegistry.class);
+
+            // 등록표에 없는 주제를 적으면 보완 경로가 조용히 아무 일도 하지 않고, 그 채널의 기사가
+            // 전량 제외된다. 제외는 로그에 건수로만 남아 눈에 띄지 않는다.
+            assertThat(
+                            registry.publishers().stream()
+                                    .flatMap(publisher -> publisher.topicKeys().stream())
+                                    .filter(topicKey -> links.findTopic(topicKey).isEmpty())
+                                    .toList())
+                    .as("등록표에 없는 채널 주제")
+                    .isEmpty();
         }
 
         @Test

@@ -15,9 +15,12 @@ paths:
         - name: sectorId
           in: query
           required: false
+          description: >-
+            spec 001이 소유하는 섹터 식별자다. 012는 섹터를 만들지 않고 참조만 하므로
+            형식을 따로 검증하지 않고 001의 대응표에 있는지만 본다. 형식 규칙을 여기 적어 두면
+            001이 규칙을 바꾼 날 001은 발급할 수 있는데 뉴스는 거부하는 값이 생긴다.
           schema:
             type: string
-            pattern: '^[a-z0-9-]{1,64}$'
         - name: from
           in: query
           required: false
@@ -49,7 +52,9 @@ paths:
                 historicalEmpty:
                   externalValue: ./examples/historical-empty.json
         '400':
-          description: from/to 한쪽 누락, 역전된 기간, 93일 초과, 형식이 잘못되었거나 001에 등록되지 않은 sectorId
+          description: >-
+            from/to 한쪽 누락, 역전된 기간, 93일 초과, 001의 대응표에 등록되지 않은 sectorId.
+            대응표가 아직 발행되지 않은 동안의 섹터 지정 조회는 오류가 아니라 200 EMPTY다.
           content:
             application/json:
               schema:
@@ -67,9 +72,12 @@ paths:
         - name: sectorId
           in: query
           required: false
+          description: >-
+            spec 001이 소유하는 섹터 식별자다. 012는 섹터를 만들지 않고 참조만 하므로
+            형식을 따로 검증하지 않고 001의 대응표에 있는지만 본다. 형식 규칙을 여기 적어 두면
+            001이 규칙을 바꾼 날 001은 발급할 수 있는데 뉴스는 거부하는 값이 생긴다.
           schema:
             type: string
-            pattern: '^[a-z0-9-]{1,64}$'
         - name: from
           in: query
           required: true
@@ -88,7 +96,9 @@ paths:
           schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
       responses:
         '200':
-          description: 매체의 최신 회신에서 허용된 기사 메타데이터만 반환
+          description: >-
+            매체의 최신 회신에서 허용된 기사 메타데이터만 반환한다. 노출 모드와 무관하게
+            허가 필터를 적용하므로 내부 검증 환경에서도 회신 전 매체의 항목은 나오지 않는다.
           content:
             application/json:
               schema:
@@ -97,7 +107,9 @@ paths:
                 allowed:
                   externalValue: ./examples/export-allowed.json
         '400':
-          description: 잘못된 기간, 형식이 잘못되었거나 001에 등록되지 않은 sectorId, 잘못된 cursor 또는 limit
+          description: >-
+            잘못된 기간, 001의 대응표에 등록되지 않은 sectorId, 잘못된 cursor 또는 limit.
+            대응표가 아직 발행되지 않은 동안의 섹터 지정 요청은 오류가 아니라 200 빈 items다.
           content:
             application/json:
               schema:
@@ -116,7 +128,19 @@ components:
           $ref: '#/components/schemas/NewsDigestResult'
     NewsDigestResult:
       type: object
-      required: [context, state, stale, digests]
+      description: >-
+        값이 없는 필드는 키를 생략하지 않고 명시적 null로 보낸다. 화면이 "키가 없다"와
+        "값이 없다"를 구별하려 들면 상태 판정이 두 곳으로 갈라진다.
+      required:
+        - context
+        - state
+        - sectorId
+        - from
+        - to
+        - lastUpdatedAt
+        - stale
+        - statusMessage
+        - digests
       properties:
         context:
           type: string
@@ -150,6 +174,7 @@ components:
         - digestId
         - representativeTitle
         - factualSummary
+        - firstPublishedAt
         - publicationTimeStatus
         - publisherCount
         - sectors
@@ -188,7 +213,7 @@ components:
             $ref: '#/components/schemas/NewsArticle'
     NewsArticle:
       type: object
-      required: [articleId, title, publisher, publicationTimeStatus, originalUrl]
+      required: [articleId, title, publisher, publishedAt, publicationTimeStatus, originalUrl]
       properties:
         articleId:
           type: string
