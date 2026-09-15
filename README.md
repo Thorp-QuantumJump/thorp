@@ -7,8 +7,8 @@
 [`.specify/memory/constitution.md`](.specify/memory/constitution.md)다.
 
 > **현재 개발 범위**: 다섯 배분 전략(고정 비중·동일 비중·역변동성·섹터 모멘텀·최소분산), 자동 파라미터
-> 대량 탐색, 전략과 독립된 분야별 경제환경 검색. **현재 코드 상태**는 아래 "현재 구현 상태"대로 단일
-> KRX 종목 모멘텀 백테스트 DEMO다.
+> 대량 탐색, 전략과 독립된 분야별 경제환경 검색. **현재 코드 상태**는 아래 "현재 구현 상태"를 본다 —
+> 다종목 섹터 ETF 배분 백테스트가 접수부터 결과 조회까지 끝에서 끝까지 붙어 있다.
 
 ## 목표 아키텍처
 
@@ -28,20 +28,30 @@
 - Spark/Hadoop은 **계산량 실측 후** 도입을 결정한다. 그때를 대비해 연산은 Worker 뒤에,
   데이터는 Parquet 친화적으로 격리해 두었다.
 
-### 현재 구현 상태 (2026-09-08)
+### 현재 구현 상태 (2026-09-15, spec 004 T001~T015 병합 기준)
 
-- Backend는 Job API와 임시 로깅 Publisher까지 있고 실제 브로커 발행은 연결되지 않았다.
-  RabbitMQ 토폴로지 선언은 Backend가 하므로, Worker를 띄우기 전에 Backend를 한 번 실행해야 한다.
-- Worker의 Jira 101 Nautilus 모멘텀 엔진은 CLI/테스트로 독립 실행할 수 있고,
-  `python -m worker.main`은 RabbitMQ `backtest.jobs`를 소비해 엔진을 돌리고 `backtest.events`로
-  STARTED / PROGRESS / FINISHED를 발행한다.
-- Backend → 브로커 → Worker → PostgreSQL/SSE의 end-to-end 흐름은 아직 구현되지 않았다.
-  남은 구간은 Backend의 Job 발행과 결과 Consumer다.
-- 브로커는 RabbitMQ로 확정됐다(ADR-0002). Worker에서 Kafka 의존성·설정은 제거했다.
-  Kafka는 설치만 해둔 상태이며 Job 전달에 쓰지 않는다.
+- **끝에서 끝까지 붙어 있다.** `POST /backtests` 접수 → 커밋 뒤 RabbitMQ 발행 → 워커가 001 자료로 계산 →
+  `backtest.events`로 STARTED/PROGRESS/FINISHED → 백엔드 결과 Consumer가 PostgreSQL에 저장 → `GET /backtests/{id}`와
+  하위 리소스(시계열·거래·보유·비중·예외)로 조회. 계약은 [`docs/specs/backtest-api/`](docs/specs/backtest-api/)와
+  [`docs/specs/backtest-messaging/`](docs/specs/backtest-messaging/), 설계 결정은 [ADR-0006](docs/adr/0006-backtest-request-run-split.md).
+- **워커는 다종목 리밸런싱 엔진 하나**(`portfolio_execution.py` + `allocation/`)다. 다섯 배분 전략 중 고정 비중·동일 비중·역변동성은
+  실행되고, 섹터 모멘텀·최소분산은 계산 규칙이 팀 결정(PD-03·PD-04) 대기라 접수에서 `422 RULES_NOT_REGISTERED`로 거절한다.
+  목표 위험 맞춤(`TARGET_RISK`) 오버레이가 있다. 단일 종목 모멘텀 DEMO 엔진은 삭제됐다.
+- **요청과 실행은 다대일이다.** 같은 조건의 요청은 진행 중 실행에 합류하거나 완료 결과를 재사용한다. 취소는 요청 단위이고 실행 중 취소는
+  fanout 제어 채널로 워커를 실제로 멈춰 부분 결과를 남긴다. 실패·취소한 요청은 재시도할 수 있다.
+- **작업 큐는 둘**이다 — `backtest.jobs`(단건)·`backtest.jobs.bulk`(자동 탐색·경제환경 파생). quorum 큐 + `x-delivery-limit=1`로 워커
+  크래시는 한 번 자동 재시도되고 두 번째는 DLQ다. 워커는 단건 전용(`WORKER_ROLE=single`)과 벌크 우선 공용(`flex`) 두 역할로 배치한다.
+- **실행 한도 장치**(사용자별·단건 큐 전체 대기 상한 → 429, 실행 시간 상한·정체 → CANCEL, 취소 무응답 → 강제 종결)와 **측정 기록**
+  (`backtest_run_metric`, 뷰 `v_run_metric_summary`, 운영자 API `GET /internal/execution-metrics`)이 있다. 한도 **값**은 임시값이며
+  측정 자료로 팀이 정한다(PD-06).
+- **아직 없는 것**: 백테스트 요청자를 로그인 세션에서 읽는 것(spec 014의 세션·CSRF 경계와 `/auth/*`는 있지만 접수는 아직 개발용 `X-User-Id`
+  헤더, 운영자 경로는 `X-Ops-Token`), 실시간 진행 푸시(폴링으로 조회), 진짜 KRX 자료 버전을 접수가 가리키는 것(백엔드 자료 메타데이터가 아직 픽스처
+  상수 — 001 T019와 함께 풀 후속). 끝에서 끝까지 실제로 돈 기록은 [`docs/guides/backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md).
+- 브로커는 RabbitMQ(ADR-0002). Kafka는 설치만 돼 있고 Job 전달에 쓰지 않는다.
 
-처음 코드를 읽는다면 [Nautilus 모멘텀 엔진 이해하기](docs/guides/nautilus-momentum-engine.md)에서
-현재 범위, 실행 흐름, Java 관점의 파일 지도와 남은 부채를 먼저 확인한다.
+처음 코드를 읽는다면 [`backend/CLAUDE.md`](backend/CLAUDE.md)·[`worker/CLAUDE.md`](worker/CLAUDE.md)의 규칙과
+[ADR-0006](docs/adr/0006-backtest-request-run-split.md)을 먼저 본다. 끝에서 끝까지 직접 돌려 보려면
+[`specs/004-backtest-execution/quickstart.md`](specs/004-backtest-execution/quickstart.md)를 따른다.
 
 ## 폴더 구조
 
