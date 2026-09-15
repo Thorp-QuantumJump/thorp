@@ -7,6 +7,7 @@ import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.service.EngineInputAssembler;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
@@ -79,10 +80,12 @@ class RabbitBacktestJobPublisherIT {
     void publishesToJobsQueue() throws IOException {
         EngineInput input = sampleInput();
 
-        publisher.publish(input, 2);
+        publisher.publish(input, 2, ExecutionType.SINGLE);
 
         Message received = rabbitTemplate.receive(BacktestRabbitConfig.JOBS_QUEUE, 5000);
         assertThat(received).isNotNull();
+        // 단건은 벌크 큐에 가지 않는다.
+        assertThat(rabbitTemplate.receive(BacktestRabbitConfig.BULK_JOBS_QUEUE, 500)).isNull();
 
         var properties = received.getMessageProperties();
         assertThat(properties.getMessageId()).isEqualTo("JOB-BT-20260907-000001");
@@ -99,5 +102,24 @@ class RabbitBacktestJobPublisherIT {
 
         EngineInput body = mapper.readValue(received.getBody(), EngineInput.class);
         assertThat(body).isEqualTo(input);
+    }
+
+    @Test
+    @DisplayName("탐색·경제환경 파생 실행은 벌크 큐로 가고 본문·헤더 계약은 단건과 같다")
+    void publishesNonSingleToTheBulkQueue() throws IOException {
+        EngineInput input = sampleInput();
+
+        publisher.publish(input, 1, ExecutionType.SEARCH_BUNDLE);
+
+        // 사람이 기다리는 단건 큐에 배치가 섞이면 안 된다(R-20).
+        assertThat(rabbitTemplate.receive(BacktestRabbitConfig.JOBS_QUEUE, 500)).isNull();
+        Message received = rabbitTemplate.receive(BacktestRabbitConfig.BULK_JOBS_QUEUE, 5000);
+        assertThat(received).isNotNull();
+        var properties = received.getMessageProperties();
+        assertThat(properties.getCorrelationId()).isEqualTo("BT-20260907-000001");
+        Integer publishAttempt =
+                properties.getHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER);
+        assertThat(publishAttempt).isEqualTo(1);
+        assertThat(mapper.readValue(received.getBody(), EngineInput.class)).isEqualTo(input);
     }
 }

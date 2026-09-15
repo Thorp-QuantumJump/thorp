@@ -107,7 +107,8 @@ class BacktestRetryServiceTest {
                         LocalDate.of(2024, 12, 31),
                         63,
                         RequestSpecCodec.write(original(), Scenario.FULL_PERIOD, 63),
-                        Map.of()));
+                        Map.of(),
+                        null));
     }
 
     private static BacktestRequest requestOf(long requesterId, Instant cancelledAt) {
