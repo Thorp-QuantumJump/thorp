@@ -263,8 +263,9 @@ def assemble_output(
 def reference_versions(request: EngineInput, market: MarketData | None) -> Versions:
     """참조 버전(FR-028). 거절 결과에도 붙으므로 검증하지 않고 있는 값만 읽는다.
 
-    ``rules.provisional`` 은 규칙 사본에 ``provisional`` 키가 있을 때만 싣는다 — 등록표 열은
-    백엔드에 있고 조립기가 아직 사본에 넣지 않으므로, 없으면 모른다고(키 생략) 둔다.
+    ``rules.provisional`` 은 규칙 사본의 ``provisional`` 키를 그대로 옮긴다 — 백엔드 조립기가
+    등록표 열을 사본에 합쳐 보낸다(spec 004 T018). 키가 없는 사본(옛 픽스처·직접 만든 입력)은
+    모른다고(키 생략) 둔다. 워커가 등록표를 갖고 있지 않으므로 지어내지 않는다.
     """
     cost = request.execution.cost_profile
     overlay_version = (request.run.scenario_rules or {}).get("version")

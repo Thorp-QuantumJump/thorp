@@ -119,7 +119,8 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 `allocation.parameters`는 전략별 자유 형식 객체 — **정수는 정수, 소수는 JSON 숫자로 그대로 통과**시키고 문자열로 바꾸지 않는다(금액·비율 문자열 규칙은
 선언된 decimal 필드에만 적용). 픽스처의 `threshold: 0.05`가 이 규칙의 round-trip 검사용이다. `allocation.rules`는 전략 규칙 등록표의 사본이며
-없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터).
+없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터). 사본에는 등록표의 `provisional`(팀 결정 전 임시 규칙, PD-02)이 함께 실리고 워커는 그 값을
+결과 `versions.rules.provisional`로 되돌려 준다(T018) — 배분 모듈은 자기가 아는 키만 읽으므로 이 키는 계산을 바꾸지 않는다.
 
 ### 4.2 이벤트 envelope — `event-*.json` 공통
 
