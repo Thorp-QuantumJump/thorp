@@ -5,10 +5,12 @@
 T008 이 맡는다.
 """
 
+import json
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -24,8 +26,12 @@ from worker.contracts.engine_output import (
     WeightsSource,
 )
 from worker.contracts.events import ProgressPoint
-from worker.engine_runner import PortfolioBacktestEngine, evaluation_start
-from worker.market_data import CsvMarketDataProvider, MarketData
+from worker.engine_runner import (
+    PortfolioBacktestEngine,
+    evaluation_start,
+    required_warmup_trading_days,
+)
+from worker.market_data import CsvMarketDataProvider, MarketData, MarketDataError
 from worker.portfolio_execution import (
     HALT_DEFERRED,
     HALT_SUPERSEDED,
@@ -35,6 +41,8 @@ from worker.portfolio_execution import (
     execute_portfolio,
     plan_days,
 )
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 SPLIT_DAY = date(2024, 3, 4)
 HALT_DAY = date(2024, 6, 11)
@@ -346,15 +354,41 @@ def test_closed_trades_carry_both_sides_costs_and_pnl() -> None:
 # --- 워밍업·시나리오 ---------------------------------------------------------------------
 
 
-def test_warmup_consumes_trading_days_before_evaluation() -> None:
-    output = completed(**three_etf("2024-01-02", "2024-02-29", evaluation={"warmupTradingDays": 5}))
-    assert output.run.effective_start == date(2024, 1, 9)
-    assert output.portfolio_series[0].date == date(2024, 1, 9)
+def test_warmup_is_read_before_the_requested_period_not_consumed_from_it() -> None:
+    """워밍업 5거래일은 요청 구간 **앞에서** 읽는다(001 contracts/market-dataset.md 「읽기 규칙」).
+
+    집계는 요청한 첫 거래일(2024-01-02)부터다. 예전에는 이 5일을 요청 구간 안에서 소비해
+    2024-01-09 부터 집계했고, 그러면 한 해를 요청한 사용자가 아홉 달치 결과를 받는다.
+    """
+    body = EngineInput.model_validate(
+        engine_input_body(
+            **three_etf("2024-01-02", "2024-02-29", evaluation={"warmupTradingDays": 5})
+        )
+    )
+    output, artifacts = engine().run_with_artifacts(body, None)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2024, 1, 2)
+    assert output.portfolio_series[0].date == date(2024, 1, 2)
+    assert artifacts.metadata["requestedWarmupTradingDays"] == 5
+    assert artifacts.metadata["evaluationStart"] == "2024-01-02"
+    # 실제로 앞에서 읽었다는 증거: 요청 첫날보다 앞선 거래일이 정확히 5일 있다.
+    assert artifacts.metadata["warmupTradingDays"] == 5
+    warmed = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        [SEMICONDUCTOR, BATTERY, BIO], date(2024, 1, 2), date(2024, 2, 29), warmup_trading_days=5
+    )
+    # 달력 일수로 5일을 빼면 12-28 이다. 주말이 낀 만큼 거래일 5일 앞은 그보다 이틀 더 앞이다.
+    assert warmed.trading_days[0] == date(2023, 12, 26)
+    assert date(2024, 1, 2) - timedelta(days=5) == date(2023, 12, 28)
 
 
 def test_inverse_volatility_uses_rules_lookback_as_default_warmup() -> None:
+    """``evaluation.warmupTradingDays`` 가 없으면 규칙의 ``lookbackDays`` 가 워밍업이다.
+
+    그 63거래일은 요청 구간 앞에서 읽으므로 집계는 요청한 첫 거래일부터 시작하고, 첫 판단일에
+    세 종목 모두 관측 구간을 채운다(``INSUFFICIENT_HISTORY`` 0건).
+    """
     body = three_etf(
-        "2023-08-01",
+        "2023-10-27",
         "2024-01-31",
         allocation={
             "strategyId": "INVERSE_VOLATILITY",
@@ -370,15 +404,58 @@ def test_inverse_volatility_uses_rules_lookback_as_default_warmup() -> None:
     body["universe"] = {
         "items": [{k: v for k, v in item.items() if k != "targetWeight"} for item in THREE]
     }
-    output = completed(**body)
+    request = EngineInput.model_validate(engine_input_body(**body))
+    output, artifacts = engine().run_with_artifacts(request, None)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
     calendar = (
         CsvMarketDataProvider(THREE_ETF_DIR)
-        .load([SEMICONDUCTOR, BATTERY, BIO], date(2023, 8, 1), date(2024, 1, 31))
+        .load([SEMICONDUCTOR, BATTERY, BIO], date(2023, 10, 27), date(2024, 1, 31))
         .trading_days
     )
-    assert output.run.effective_start == calendar[63]
+    assert output.run.effective_start == calendar[0] == date(2023, 10, 27)
+    assert artifacts.metadata["requestedWarmupTradingDays"] == 63
+    assert artifacts.metadata["warmupTradingDays"] == 63
     assert output.weights_source is WeightsSource.COMPUTED
     assert not any(e.kind == "INSUFFICIENT_HISTORY" for e in output.exceptions or [])
+
+
+def test_warmup_that_predates_a_listing_excludes_that_instrument_with_a_reason() -> None:
+    """워밍업을 앞에서 읽어도 상장 전에는 자료가 없다. 그 종목은 **제외 사유와 함께** 빠진다.
+
+    `engine-input-three-etf-inverse_vol.json` 은 2023-08-01 부터 관측 63거래일을 요구하는데
+    BIO 는 2023-07-03 상장이라 그날 종가가 22건뿐이다. 자료를 지어내거나 짧은 표본으로 변동성을
+    계산하지 않고(짧은 표본의 역수는 다른 종목과 같은 척도가 아니다) 그 판단일의 배분에서 빼고
+    ``INSUFFICIENT_HISTORY`` 를 남긴다 — 요청 첫날부터의 결과를 돌려주되 무엇이 빠졌는지
+    말한다(001 계약, 원칙 VI).
+
+    **자료가 쌓이면 다시 들어온다.** 세 번째 판단일(2023-09-29)에는 65건이라 관측 구간(63일
+    수익률 = 종가 64건)을 채운다. 이 테스트가 "한 번 빠지면 영영 빠진다"와 갈라 준다.
+    """
+    body = json.loads(
+        (FIXTURES / "engine-input-three-etf-inverse_vol.json").read_text(encoding="utf-8")
+    )
+    output = engine().run(body)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2023, 8, 1), "집계는 요청한 첫날부터다"
+
+    excluded = [e for e in output.exceptions or [] if e.kind == "INSUFFICIENT_HISTORY"]
+    assert [(e.date, e.instrument_id) for e in excluded] == [
+        (date(2023, 8, 1), BIO),
+        (date(2023, 8, 31), BIO),
+    ], "첫 두 판단일의 BIO 만 빠진다 — 다른 종목도, 세 번째 판단일도 아니다"
+    assert all(e.rule == "lookbackDays=63" for e in excluded)
+
+    # 제외는 사유로만 남지 않고 실제 비중에 나타난다. 판단일 다음 거래일이 기록일이다.
+    target_on = {point.date: point.target for point in output.weights_series}
+    assert target_on[date(2023, 8, 2)][BIO] == Decimal(0)
+    assert target_on[date(2023, 9, 1)][BIO] == Decimal(0)
+    # 세 번째 판단일(2023-09-29) 뒤로는 세 종목 모두 싣는다.
+    assert target_on[date(2023, 10, 2)][BIO] > Decimal(0)
+    assert all(
+        point.target[BIO] > Decimal(0)
+        for point in output.weights_series
+        if point.date >= date(2023, 10, 2)
+    )
 
 
 def test_fresh_cash_from_starts_evaluation_at_the_scenario_date() -> None:
@@ -394,13 +471,20 @@ def test_fresh_cash_from_starts_evaluation_at_the_scenario_date() -> None:
     assert min(kst_date(t.entry_time) for t in output.trades) == date(2024, 2, 16)
 
 
-def test_evaluation_start_prefers_scenario_then_effective_start_then_warmup() -> None:
-    calendar = [date(2024, 1, 2) + timedelta(days=i) for i in range(10)]
+def test_evaluation_start_prefers_scenario_then_effective_start_then_the_requested_day() -> None:
+    """우선순위는 004 가 설계한 그대로다. 앞에 워밍업 자료가 있으면 집계는 **요청한 첫날부터**다.
+
+    ``calendar`` 는 워밍업 구간까지 포함해 읽어 온 전체 달력이다. 여기서는 요청 시작일
+    2024-01-02 앞에 3거래일(2023-12-30~2024-01-01)이 더 있다.
+    """
+    warmed = [date(2023, 12, 30) + timedelta(days=i) for i in range(3)]
+    calendar = warmed + [date(2024, 1, 2) + timedelta(days=i) for i in range(10)]
     base = engine_input_body(run={"start": "2024-01-02", "end": "2024-01-11"})
     warm = EngineInput.model_validate(
         {**base, "evaluation": {"warmupTradingDays": 3, "liquidationAtEnd": False}}
     )
-    assert evaluation_start(warm, calendar) == date(2024, 1, 5)
+    # 워밍업 3거래일은 요청 구간 앞에서 읽었으므로 집계는 요청한 첫 거래일부터다.
+    assert evaluation_start(warm, calendar) == date(2024, 1, 2)
     explicit = EngineInput.model_validate(
         {**base, "run": {**base["run"], "effectiveStart": "2024-01-08"}}
     )
@@ -418,6 +502,276 @@ def test_evaluation_start_prefers_scenario_then_effective_start_then_warmup() ->
     assert evaluation_start(fresh, calendar) == date(2024, 1, 10)
 
 
+def test_evaluation_start_is_pushed_only_by_the_warmup_the_calendar_cannot_cover() -> None:
+    """앞에 워밍업 자료가 모자라면 **모자란 만큼만** 밀린다 — 실패가 아니다.
+
+    ``max(요청 시작일, calendar[warmup])`` 의 두 경계를 여기서 함께 본다. 백엔드 두 곳도 같은
+    모양이지만 **"자료가 시작된 뒤"의 뜻이 다르다** — 백엔드는 가장 늦은 상장일, 워커는 읽어 온
+    가격 행의 합집합 첫날이다(``test_the_worker_floor_counts_from_the_union_of_price_rows``).
+    """
+    base = engine_input_body(run={"start": "2024-01-02", "end": "2024-01-11"})
+    warm = EngineInput.model_validate(
+        {**base, "evaluation": {"warmupTradingDays": 3, "liquidationAtEnd": False}}
+    )
+    # ⑴ 요청 시작일이 자료 시작보다 한참 뒤 — 밀리지 않는다.
+    plenty = [date(2023, 12, 1) + timedelta(days=i) for i in range(32)] + [
+        date(2024, 1, 2) + timedelta(days=i) for i in range(10)
+    ]
+    assert evaluation_start(warm, plenty) == date(2024, 1, 2)
+    # ⑵ 요청 시작일이 자료 시작보다 앞(상장이 늦은 종목) — 워밍업 3일을 채운 다음 날부터다.
+    #    자료는 2024-01-04 에 시작하므로 calendar[3] = 2024-01-07 이다. DATA_INSUFFICIENT 가 아니다.
+    late = [date(2024, 1, 4) + timedelta(days=i) for i in range(8)]
+    assert evaluation_start(warm, late) == date(2024, 1, 7)
+    # ⑵ 의 극단: 달력 전체로도 워밍업을 못 채우면 그때는 자료 부족이다.
+    with pytest.raises(MarketDataError):
+        evaluation_start(warm, [date(2024, 1, 9), date(2024, 1, 10)])
+
+
+def test_request_that_starts_before_the_listing_is_pushed_not_rejected() -> None:
+    """요청 시작일이 상장일보다 앞이면 상장 뒤 워밍업 63거래일을 채운 날부터 평가한다.
+
+    BIO 는 2023-07-03 상장이라 2023-06-01 요청에는 앞에 읽을 자료가 아예 없다. 그래도
+    ``DATA_INSUFFICIENT`` 가 아니라 **모자란 만큼만 밀린다** — 상장이 늦은 종목을 고르면 실행
+    자체가 안 되던 것이 아니라 시작이 늦어질 뿐이다(001 contracts/evaluation-window.md 의
+    ``commonStart`` 산식과 같은 값).
+    """
+    body = engine_input_body(
+        run={"start": "2023-06-01", "end": "2023-12-29"},
+        universe={"items": [{"sectorId": "BIO", "instrumentId": BIO, "targetWeight": "1.0"}]},
+        evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
+    )
+    output, artifacts = engine().run_with_artifacts(EngineInput.model_validate(body), None)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    calendar = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        [BIO], date(2023, 6, 1), date(2023, 12, 29), warmup_trading_days=63
+    )
+    # 자료는 상장일에 시작한다 — 요청 시작일 앞에는 한 거래일도 없다.
+    assert calendar.trading_days[0] == date(2023, 7, 3)
+    assert output.run.effective_start == calendar.trading_days[63] == date(2023, 9, 28)
+    assert artifacts.metadata["warmupTradingDays"] == 63
+
+
+def test_the_worker_floor_counts_from_the_union_of_price_rows() -> None:
+    """워커의 "자료가 시작된 뒤"는 **가격 행의 합집합 첫날**이다 — 가장 늦은 상장일이 아니다.
+
+    같은 요청을 백엔드 ``EffectivePeriodCalculator`` 에 주면 "가장 늦은 상장일(BIO 2023-07-03)
+    이후 63거래일" = 2023-09-28 을 낸다. 워커는 2015년 상장 종목의 행이 합집합을 2023-03-06 까지
+    끌어내려 ``calendar[63] == 2023-06-01`` 이 되고, 요청한 첫날이 그대로 평가 시작일이 된다.
+
+    **두 값이 갈린다.** 지금 드러나지 않는 것은 백엔드가 늘 ``run.effectiveStart`` 를 채워
+    보내서 워커가 이 갈래를 타지 않기 때문이다. "세 곳이 한 규칙"은 그런 뜻에서만 참이다 —
+    상장이 다른 종목을 섞고 ``effectiveStart`` 없이 오면 워커 쪽이 더 느슨하다.
+
+    상장 전 구간을 지어내지 않는다는 계약(FR-005·SC-003)은 읽기 쪽 ``_check_window``·
+    ``_check_prices`` 가 그대로 지킨다 — 이 검사가 완화하는 것은 "워밍업이 짧다"뿐이다.
+    """
+    body = engine_input_body(
+        run={"start": "2023-06-01", "end": "2023-12-29"},
+        universe={
+            "items": [
+                {"sectorId": "SEMICONDUCTOR", "instrumentId": SEMICONDUCTOR, "targetWeight": "0.5"},
+                {"sectorId": "BIO", "instrumentId": BIO, "targetWeight": "0.5"},
+            ]
+        },
+        evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
+    )
+    output, artifacts = engine().run_with_artifacts(EngineInput.model_validate(body), None)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2023, 6, 1), "합집합 기준이라 요청한 첫날 그대로다"
+    assert artifacts.metadata["warmupTradingDays"] == 63
+
+    provider = CsvMarketDataProvider(THREE_ETF_DIR)
+    mixed = provider.load(
+        [SEMICONDUCTOR, BIO], date(2023, 6, 1), date(2023, 12, 29), warmup_trading_days=63
+    )
+    only_late = provider.load([BIO], date(2023, 6, 1), date(2023, 12, 29), warmup_trading_days=63)
+    # 두 규칙이 실제로 갈리는 폭: 워커 바닥 2023-06-01, 백엔드 산식 2023-09-28.
+    assert mixed.trading_days[0] == date(2023, 3, 6), "2015년 상장 종목이 합집합을 끌어내린다"
+    assert mixed.trading_days[63] == date(2023, 6, 1)
+    assert only_late.trading_days[63] == date(2023, 9, 28)
+
+
+# --- 회귀: 요청 시작일이 자료 달력 맨 앞 근처일 때 ------------------------------------------
+#
+# 아래 셋은 워밍업을 앞에서 읽게 만든 변경이 자료 맨 앞 근처를 요청한 실행을 죽이지 않는지 본다.
+# 공급자가 요청 시작일 앞에서 워밍업을 "반드시" 확보하려 들면 세 건 모두 DATA_INSUFFICIENT 로
+# 죽는다. 실제로 그렇게 죽은 적이 있어 병합이 막혔다. 세 건의 기대값은 이 기능이 들어오기 전
+# `dev` 에서 실측한 값과 같다.
+
+
+def test_warmup_shortfall_only_delays_the_start() -> None:
+    """요청 시작일이 **자료의 첫날**이고 그 앞에 워밍업이 0일이어도 실행된다.
+
+    픽스처는 2023-01-02 에서 시작한다. 워밍업 5거래일을 앞에서 확보할 수 없지만, 읽기는 있는
+    만큼 하고 평가 시작일만 5거래일 뒤로 민다. 앞선 검사
+    ``test_request_that_starts_before_the_listing_is_pushed_not_rejected`` 는 단일 종목의
+    상장일만 봐서 이 경계를 비워 두었다 — 그 입력은 고치기 전 코드에서도 통과한다.
+    """
+    output, artifacts = engine().run_with_artifacts(
+        EngineInput.model_validate(
+            engine_input_body(
+                run={"start": "2023-01-02", "end": "2023-03-31"},
+                evaluation={"warmupTradingDays": 5, "liquidationAtEnd": False},
+            )
+        ),
+        None,
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2023, 1, 9)
+    assert artifacts.metadata["warmupAnchor"] == "2023-01-02"
+    # 앞에서 확보한 워밍업은 0거래일이다. 그래서 요청 구간 안에서 5거래일을 미뤘다.
+    assert artifacts.metadata["warmupTradingDays"] == 5
+
+
+def test_backend_pushed_start_is_honoured_when_the_request_starts_at_the_data_edge() -> None:
+    """``run.effectiveStart`` 를 그대로 쓴다 — 요청 첫날 앞의 자료를 요구하지 않는다.
+
+    워밍업은 ``effectiveStart`` 앞에서 읽으면 되는데, 앵커를 ``run.start`` 로 잡으면 2023-01-02
+    앞의 63거래일을 요구하다 죽는다. **백엔드가 민 시작일이 워커에서 무효가 되는 자리가 여기였다.**
+
+    **이 입력을 백엔드가 만들어 내지는 않는다.** 2023-04-04 는 픽스처 자료 앞에 63거래일이
+    남도록 손으로 고른 값이다 — 백엔드는 상장일(2015·2018)에서 세므로 같은 요청에
+    ``effectiveStart = run.start`` 를 낸다. 백엔드가 실제로 내는 값을 넣은 짝은
+    ``test_warmup_floor_applies_when_the_backend_start_has_no_warmup_behind_it`` 다.
+
+    여기서는 앵커 앞에 워밍업 63거래일이 꽉 차 있어 ``calendar[63] == 앵커`` 이고, 그래서
+    **워밍업 바닥이 아무 일도 하지 않는다.** 바닥이 워밍업을 두 번 소비하지 않는다는 증거다.
+    """
+    output, artifacts = engine().run_with_artifacts(
+        EngineInput.model_validate(
+            engine_input_body(
+                run={
+                    "start": "2023-01-02",
+                    "end": "2023-12-29",
+                    "effectiveStart": "2023-04-04",
+                },
+                evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
+            )
+        ),
+        None,
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2023, 4, 4)
+    assert artifacts.metadata["warmupAnchor"] == "2023-04-04"
+    calendar = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        [SEMICONDUCTOR, BATTERY], date(2023, 4, 4), date(2023, 12, 29), warmup_trading_days=63
+    )
+    assert calendar.trading_days[63] == date(2023, 4, 4), "바닥이 no-op 이라는 증거"
+
+
+def test_warmup_floor_applies_when_the_backend_start_has_no_warmup_behind_it() -> None:
+    """**백엔드가 실제로 내는 `effectiveStart` 앞에 워밍업이 없을 수 있다.** 그때도 되밀어 막는다.
+
+    백엔드 ``EffectivePeriodCalculator`` 는 ``firstEvaluable`` 을 **상장일**에서 센다(어댑터:
+    091160 은 2015-01-02, 305720 은 2018-09-12 상장). 그런데 워커가 읽는 자료는 **2023-01-02**
+    부터다 — 8년 어긋나 있다(백엔드 쪽 짝은 ``MarketFixtureAlignmentTest``). 그래서 2023-02-01
+    요청에 백엔드는 ``effectiveStart = 2023-02-01`` 을 그대로 내보내는데 그 앞에는 22거래일밖에
+    없다.
+
+    **바닥을 ``run.start`` 갈래에만 얹으면 여기서 꺼진다.** 운영 경로는 ``effectiveStart`` 가
+    늘 실려 오므로 되밀기를 타는 요청이 하나도 없고, 관측 63거래일이 필요한 전략이 워밍업 없이
+    첫 판단일을 맞아 ``CONSTRAINT_VIOLATION`` 으로 죽는다(실측: 이 입력이 그렇게 죽었다).
+
+    **남는 한계**: 평가가 2023-03-30 부터 시작하므로 화면이 말한 2023-02-01 과 갈린다. 실패보다
+    낫지만 완전한 해결은 아니다 — 근본은 백엔드가 데이터셋 첫 거래일을 모른다는 것이고 001의
+    자료 계층과 함께 옮긴다(001 tasks.md T029).
+    """
+    body = engine_input_body(
+        run={"start": "2023-02-01", "end": "2023-12-29", "effectiveStart": "2023-02-01"},
+        universe={
+            "items": [
+                {"sectorId": "SEMICONDUCTOR", "instrumentId": SEMICONDUCTOR},
+                {"sectorId": "BATTERY", "instrumentId": BATTERY},
+            ]
+        },
+        allocation={
+            "strategyId": "INVERSE_VOLATILITY",
+            "rulesVersion": "1",
+            "rules": {
+                "lookbackDays": 63,
+                "zeroVolatility": "EXCLUDE_THEN_ALLOCATE",
+                "weightCap": "1.0000",
+                "investedFraction": "1.0000",
+                "weightsSource": "COMPUTED",
+            },
+            "parameters": {"rebalance": "MONTH_END"},
+        },
+        evaluation={"warmupTradingDays": None, "liquidationAtEnd": False},
+    )
+    output, artifacts = engine().run_with_artifacts(EngineInput.model_validate(body), None)
+
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert artifacts.metadata["warmupAnchor"] == "2023-02-01"
+    # 앵커 앞에는 22거래일뿐이라 공급자가 자료 첫날까지만 읽었다.
+    calendar = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        [SEMICONDUCTOR, BATTERY], date(2023, 2, 1), date(2023, 12, 29), warmup_trading_days=63
+    )
+    assert calendar.trading_days[0] == date(2023, 1, 2)
+    assert len([day for day in calendar.trading_days if day < date(2023, 2, 1)]) == 22
+    # 되밀기가 모자란 41거래일만큼 미룬다. 백엔드가 말한 2023-02-01 이 아니다.
+    assert output.run.effective_start == calendar.trading_days[63] == date(2023, 3, 30)
+    assert output.weights_source is WeightsSource.COMPUTED
+
+
+def test_fresh_cash_reads_warmup_before_the_scenario_date_not_before_the_request() -> None:
+    """``FRESH_CASH_FROM`` 은 **시나리오 시작일** 앞에서 워밍업을 읽는다.
+
+    평가는 6월부터인데 1월 앞의 자료를 요구하면, 1월이 자료의 첫날인 요청이 읽기 단계에서
+    죽는다. 앵커가 시나리오 시작일이라야 한다.
+    """
+    output, artifacts = engine().run_with_artifacts(
+        EngineInput.model_validate(
+            engine_input_body(
+                run={
+                    "start": "2023-01-02",
+                    "end": "2023-12-29",
+                    "scenario": "FRESH_CASH_FROM",
+                    "scenarioParams": {"startDate": "2023-06-01"},
+                },
+                evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
+            )
+        ),
+        None,
+    )
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert output.run.effective_start == date(2023, 6, 1)
+    assert artifacts.metadata["warmupAnchor"] == "2023-06-01"
+    # 시나리오 시작일 앞에서 정확히 63거래일을 읽었다(요청 첫날 앞이 아니다).
+    assert artifacts.metadata["warmupTradingDays"] == 63
+
+
+def test_required_warmup_is_the_request_value_then_the_rule_lookback() -> None:
+    """공급자에 넘길 워밍업 거래일 수. 요청값 → 규칙의 ``lookbackDays`` → 오버레이와 큰 쪽."""
+    base = engine_input_body(run={"start": "2024-01-02", "end": "2024-01-11"})
+    asked = EngineInput.model_validate(
+        {**base, "evaluation": {"warmupTradingDays": 7, "liquidationAtEnd": False}}
+    )
+    assert required_warmup_trading_days(asked) == 7
+    from_rules = EngineInput.model_validate(
+        {
+            **base,
+            "allocation": {**base["allocation"], "rules": {"lookbackDays": 20}},
+            "evaluation": {"warmupTradingDays": None, "liquidationAtEnd": False},
+        }
+    )
+    assert required_warmup_trading_days(from_rules) == 20
+    overlay = EngineInput.model_validate(
+        {
+            **base,
+            "run": {
+                **base["run"],
+                "scenario": "TARGET_RISK",
+                "scenarioParams": {"targetVolatility": "0.1"},
+                "scenarioRules": TARGET_RISK_RULES,
+            },
+            "allocation": {**base["allocation"], "rules": {"lookbackDays": 20}},
+            "evaluation": {"warmupTradingDays": None, "liquidationAtEnd": False},
+        }
+    )
+    # 둘은 같은 자료를 보므로 더하지 않고 긴 쪽을 쓴다(백엔드 EffectivePeriodCalculator 와 같다).
+    assert required_warmup_trading_days(overlay) == 63
+
+
 # --- 실패는 계약 오류로 -------------------------------------------------------------------
 
 
@@ -428,10 +782,18 @@ def test_missing_rows_fail_as_data_insufficient() -> None:
     assert output.portfolio_series == [] and output.performance is None
 
 
-def test_warmup_longer_than_data_fails_as_data_insufficient() -> None:
+def test_warmup_longer_than_the_whole_calendar_fails_as_data_insufficient() -> None:
+    """**있는 만큼 읽어도** 워밍업을 못 채우면 그때는 자료 부족이다(원칙 VI).
+
+    "앞이 짧다"와 "이 자료로는 이 전략을 계산할 수 없다"는 다르다. 앞이 짧을 뿐이면 평가
+    시작일을 미루면 되지만(``test_warmup_shortfall_only_delays_the_start``), 읽어 온 달력
+    전체가 워밍업보다 짧으면 미룰 자리가 없다. 거절하는 곳은 공급자가 아니라
+    ``evaluation_start`` 다 — 메시지가 요청 시작일이 아니라 달력 길이를 가리킨다.
+    """
     output = run(evaluation={"warmupTradingDays": 500})
     assert output.run.error is not None and output.run.error.code == "DATA_INSUFFICIENT"
-    assert "warmup" in output.run.error.message
+    assert "need 500 warmup trading day" in output.run.error.message
+    assert "Trading calendar holds 7 day(s)" in output.run.error.message
 
 
 def test_allocation_error_code_is_carried_through() -> None:
@@ -523,7 +885,7 @@ def test_completed_output_carries_analytics_and_reference_versions() -> None:
     assert versions is not None
     import worker
 
-    assert versions.worker == f"thorp-worker {worker.__version__}" == "thorp-worker 0.1.1"
+    assert versions.worker == f"thorp-worker {worker.__version__}" == "thorp-worker 0.2.0"
     assert versions.rules is not None and versions.rules.provisional is True
     assert versions.engine == "nautilus_trader 1.219.0"
 
@@ -727,8 +1089,14 @@ TARGET_RISK_RULES: dict[str, Any] = {
 
 
 def target_risk(target: str, evaluation: dict[str, Any] | None = None) -> dict[str, Any]:
+    """오버레이 관측 63거래일을 첫 판단일에 채울 수 있는 요청 구간.
+
+    시작일이 2023-10-27 인 것은 워밍업 63거래일이 그 앞(2023-08-01~)에서 읽히고, BIO 상장일
+    (2023-07-03) 이후라 세 종목 공통 수익률이 63건 있기 때문이다. 워밍업을 요청 구간 안에서
+    소비하던 때의 실효 시작일이 바로 이 날이라, 평가 구간과 숫자는 그때와 같다.
+    """
     return three_etf(
-        "2023-08-01",
+        "2023-10-27",
         "2024-06-28",
         run={
             "scenario": "TARGET_RISK",
@@ -770,7 +1138,7 @@ def test_loose_target_never_scales_up_and_equals_the_main_analysis() -> None:
     assert all(point.risk_scale == 1 for point in loose.weights_series)
     main = completed(
         **three_etf(
-            "2023-08-01",
+            "2023-10-27",
             "2024-06-28",
             evaluation={"warmupTradingDays": 63, "liquidationAtEnd": False},
         )
@@ -781,13 +1149,21 @@ def test_loose_target_never_scales_up_and_equals_the_main_analysis() -> None:
 
 
 def test_target_risk_default_warmup_is_the_overlay_lookback() -> None:
-    output = completed(**target_risk("0.9000"))
-    calendar = (
-        CsvMarketDataProvider(THREE_ETF_DIR)
-        .load([SEMICONDUCTOR, BATTERY, BIO], date(2023, 8, 1), date(2024, 6, 28))
-        .trading_days
+    """``warmupTradingDays`` 가 없으면 오버레이 관측 길이가 워밍업이고, 그만큼 앞에서 읽는다."""
+    request = EngineInput.model_validate(engine_input_body(**target_risk("0.9000")))
+    output, artifacts = engine().run_with_artifacts(request, None)
+    assert output.run.status is RunStatus.COMPLETED, output.run.error
+    assert artifacts.metadata["requestedWarmupTradingDays"] == 63
+    assert artifacts.metadata["warmupTradingDays"] == 63
+    # 집계는 요청한 첫 거래일부터고, 앞의 63거래일은 요청 구간 밖(2023-08-01~)에서 읽었다.
+    assert output.run.effective_start == date(2023, 10, 27)
+    warmed = CsvMarketDataProvider(THREE_ETF_DIR).load(
+        [SEMICONDUCTOR, BATTERY, BIO],
+        date(2023, 10, 27),
+        date(2024, 6, 28),
+        warmup_trading_days=63,
     )
-    assert output.run.effective_start == calendar[63]
+    assert warmed.trading_days[0] == date(2023, 8, 1)
 
 
 def test_target_risk_without_enough_history_fails_estimation() -> None:

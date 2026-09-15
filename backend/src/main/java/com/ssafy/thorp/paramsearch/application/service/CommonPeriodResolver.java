@@ -18,6 +18,13 @@ import org.springframework.stereotype.Service;
  * <p><b>후보마다 구간이 다르면 비교가 성립하지 않는다.</b> 관측 기간이 긴 후보는 더 늦게 시작하는데, 그 후보만 짧은 구간으로 평가하면 수익률이 다른 기간의 값이
  * 되어 나란히 놓을 수 없다(원칙 IV). 그래서 <b>묶음 안에서 가장 긴 관측 기간</b>을 모든 후보에 똑같이 적용한다.
  *
+ * <p><b>평가 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일)</b>. 004 {@code
+ * EffectivePeriodCalculator}와 같은 규칙이다. 워밍업 기준점은 상장일 하나이고 요청 시작일은 마지막에 max 로만 합쳐진다 — 요청 앞에 워밍업 자료가
+ * 있으면 워커가 요청 구간보다 앞에서 읽으므로 요청 구간을 깎을 이유가 없다(001 {@code contracts/evaluation-window.md}·{@code
+ * contracts/market-dataset.md}). 워커 {@code engine_runner.evaluation_start()}도 같은 모양이지만 "자료가 시작된 뒤"를
+ * 상장일이 아니라 읽어 온 가격 행의 합집합 첫날에서 센다. <b>여기도 데이터셋 첫 거래일을 모르므로 이 값 앞에 워밍업 자료가 없을 수 있고</b>, 그때는 워커가 되밀어
+ * 막는다 — 자세한 것과 남는 한계는 {@code EffectivePeriodCalculator} 주석을 본다.
+ *
  * <p>공통 워밍업이 004 접수의 {@code warmupTradingDays}로 그대로 나간다. 004는 이 값이 전략 요구값보다 작으면 422로 거부하므로(R-15)
  * 계산이 틀리면 묶음이 시작 단계에서 드러난다.
  *
@@ -40,7 +47,8 @@ public class CommonPeriodResolver {
      *
      * @param instrumentIds 고정한 섹터 후보 집합. 가장 늦게 상장한 종목이 시작일을 정한다
      * @param space 탐색 공간. 워밍업은 여기 담긴 후보값에서 나온다 — 범위를 좁히면 워밍업도 줄어든다
-     * @param requestedStart 사용자가 고른 시작일. 없으면 상장일 기준으로 서버가 제시한다
+     * @param requestedStart 사용자가 고른 시작일. 없으면 상장일 기준으로 서버가 제시한다. 있으면 <b>상장일 기준값과 늦은 쪽</b>이다 — 워밍업을
+     *     여기서 또 소진하지 않는다
      * @param requestedEnd 사용자가 고른 끝일. 없으면 오늘
      */
     public CommonPeriod resolve(
@@ -50,14 +58,15 @@ public class CommonPeriodResolver {
             LocalDate requestedStart,
             LocalDate requestedEnd) {
         LocalDate listedFrom = latestListingDate(instrumentIds);
-        LocalDate notBefore =
-                requestedStart == null ? listedFrom : maxOf(requestedStart, listedFrom);
         LocalDate end = requestedEnd == null ? LocalDate.now(clock) : requestedEnd;
 
         WarmupRequirement warmup = warmupOf(space, targets);
-        LocalDate start =
+        // 워밍업 기준점은 상장일 하나다(001 contracts/evaluation-window.md). 요청 시작일은 여기
+        // 들어가지 않고 마지막에 max 로만 합쳐진다 — 요청 앞에 워밍업 자료가 있으면 워커가 요청
+        // 구간보다 앞에서 읽으므로 요청 구간을 깎을 이유가 없다(contracts/market-dataset.md).
+        LocalDate commonStart =
                 marketMetadata
-                        .evaluationStart(notBefore, warmup.tradingDays())
+                        .evaluationStart(listedFrom, warmup.tradingDays())
                         .orElseThrow(
                                 () ->
                                         new BusinessException(
@@ -65,10 +74,22 @@ public class CommonPeriodResolver {
                                                 "공통 평가 구간을 만들 수 있는 과거 자료가 부족합니다: 워밍업 "
                                                         + warmup.tradingDays()
                                                         + "거래일"));
+        // 요청 시작일이 없으면 서버가 제시하는 값이 곧 commonStart 다. 있으면 늦은 쪽을 쓰되
+        // 거래일로 맞춘다 — 주말을 시작일로 삼으면 004 접수가 고르는 날과 값이 갈린다.
+        LocalDate start =
+                requestedStart == null || !requestedStart.isAfter(commonStart)
+                        ? commonStart
+                        : marketMetadata
+                                .evaluationStart(requestedStart, 0)
+                                .orElseThrow(
+                                        () ->
+                                                new BusinessException(
+                                                        ErrorCode.INSUFFICIENT_HISTORY,
+                                                        "요청 시작일 이후에 거래일이 없습니다: " + requestedStart));
         if (!start.isBefore(end)) {
             throw new BusinessException(
                     ErrorCode.INSUFFICIENT_HISTORY,
-                    "워밍업을 소진하면 평가할 구간이 남지 않습니다: start=" + start + ", end=" + end);
+                    "상장일 이후 워밍업을 채우고 나면 평가할 구간이 남지 않습니다: start=" + start + ", end=" + end);
         }
         return new CommonPeriod(start, end, warmup.tradingDays(), warmup.shortenedBy());
     }
@@ -146,10 +167,6 @@ public class CommonPeriodResolver {
                 () ->
                         new BusinessException(
                                 ErrorCode.INVALID_INPUT, "상장일을 알 수 없는 종목입니다: " + instrumentId));
-    }
-
-    private static LocalDate maxOf(LocalDate left, LocalDate right) {
-        return left.isAfter(right) ? left : right;
     }
 
     /**
