@@ -76,6 +76,17 @@ class NewsRetryPolicyTest {
         }
 
         @Test
+        @DisplayName("음수 Retry-After를 받아도 음수만큼 기다리지 않는다")
+        void 음수_retry_after() {
+            Optional<Duration> delay =
+                    policy.delayBeforeRetry(1, rateLimited(Duration.ofSeconds(-30)));
+
+            assertThat(delay)
+                    .as("Duration.sleep에 음수가 가면 터진다. 뉴스원이 준 값이 우리 회차를 깨면 안 된다")
+                    .contains(Duration.ZERO);
+        }
+
+        @Test
         @DisplayName("간격은 시도마다 늘어나고 상한을 넘지 않는다")
         void 백오프() {
             Duration first = policy.delayBeforeRetry(1, transientFailure()).orElseThrow();
@@ -124,6 +135,14 @@ class NewsRetryPolicyTest {
             assertThat(policy.cooldown(INTERVAL, 100, transientFailure()))
                     .as("장애가 풀렸는데 한참 못 돌아오면 자료 구멍이 커진다")
                     .isEqualTo(INTERVAL.multipliedBy(8));
+        }
+
+        @Test
+        @DisplayName("음수 Retry-After는 냉각을 앞당기지 못한다")
+        void 음수는_냉각을_당기지_못한다() {
+            assertThat(policy.cooldown(INTERVAL, 1, rateLimited(Duration.ofSeconds(-600))))
+                    .as("망가진 헤더가 우리 수집 간격을 좁히면 상대 매체를 더 두드리게 된다")
+                    .isEqualTo(INTERVAL);
         }
 
         @Test

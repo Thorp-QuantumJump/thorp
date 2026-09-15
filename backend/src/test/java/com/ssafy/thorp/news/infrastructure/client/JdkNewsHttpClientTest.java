@@ -134,6 +134,26 @@ class JdkNewsHttpClientTest {
         }
 
         @Test
+        @DisplayName("long 범위를 넘는 값은 빈 값으로 둔다")
+        void 범위_초과() {
+            assertThat(
+                            JdkNewsHttpClient.retryAfter(
+                                    responseWith("retry-after", "99999999999999999999")))
+                    .as("해석하지 못한 것을 억지로 채우면 그 값이 어디까지 번지는지 알 수 없다")
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("음수도 읽은 그대로 넘긴다")
+        void 음수() {
+            // 여기서 0으로 접지 않는다. 뉴스원이 무엇을 줬는지는 그대로 넘기고, 그 값을 안전한
+            // 범위로 자르는 일은 재시도 규칙 한 곳에서만 한다. 두 곳에서 자르면 어느 쪽이 잘랐는지
+            // 나중에 알 수 없다.
+            assertThat(JdkNewsHttpClient.retryAfter(responseWith("retry-after", "-5")))
+                    .contains(Duration.ofSeconds(-5));
+        }
+
+        @Test
         @DisplayName("앞뒤 공백은 무시한다")
         void 공백() {
             assertThat(JdkNewsHttpClient.retryAfter(responseWith("retry-after", "  45 ")))
