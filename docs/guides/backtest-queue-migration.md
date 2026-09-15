@@ -91,7 +91,7 @@ docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl list_queues n
 |---|---|---|
 | `NUMBA_NUM_THREADS` `OMP_NUM_THREADS` `OPENBLAS_NUM_THREADS` `MKL_NUM_THREADS` | `1` | 결정성(research R-14). 수치 라이브러리가 호스트 vCPU 수만큼 스레드를 띄우면 합산 순서가 달라져 같은 입력에 다른 결과가 나올 수 있고, 워커 2개 × 4스레드가 4코어에서 경쟁한다. dev·prod compose 모두 적용 |
 | `MARKET_DATA_URL` | 시장 자료 읽기 전용 접속 | research R-09. 워커는 결과 DB에 쓰지 않는다(계약 §1). 시장 자료 공급자(T004)가 이 변수를 읽는다. 읽기 전용 role은 T003 마이그레이션이 만들며 그 전까지 dev는 일반 계정을 가리킨다 |
-| `WORKER_REPLICAS` × prefetch 1 | **동시 실행 상한** | research R-19. 백엔드는 접수 시 동시 실행 상한을 검사하지 않는다 — 검사해도 보장이 안 된다. competing consumers 구조에서 동시 실행 수는 정확히 replica × prefetch(1)이므로 이 값이 상한이다. 운영 4 vCPU에서 2 |
+| (`WORKER_SINGLE_REPLICAS` + `WORKER_FLEX_REPLICAS`) × prefetch 1 | **동시 실행 상한** | research R-19. 백엔드는 접수 시 동시 실행 상한을 검사하지 않는다 — 검사해도 보장이 안 된다. competing consumers 구조에서 동시 실행 수는 정확히 replica × prefetch(1)이므로 이 값이 상한이다. 운영 4 vCPU에서 1+1(R-20 큐 분리: 단건 전용 + 벌크 우선 공용) |
 
 ## 장애 시나리오 확인 (quickstart S6)
 

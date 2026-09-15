@@ -60,7 +60,8 @@ final class BacktestRunMapper {
                 plan.effectiveStart(),
                 plan.effectiveEnd(),
                 plan.requestSpec(),
-                plan.versions());
+                plan.versions(),
+                plan.executionType());
         RunLifecycle lifecycle = run.getLifecycle();
         entity.applyLifecycle(
                 lifecycle.queuedAt(),
@@ -111,7 +112,8 @@ final class BacktestRunMapper {
                 entity.getEffectiveEnd(),
                 warmup instanceof Number number ? number.intValue() : null,
                 requestSpec,
-                entity.getVersions());
+                entity.getVersions(),
+                entity.getExecutionType());
     }
 
     private static RunLifecycle toLifecycle(BacktestRunJpaEntity entity) {

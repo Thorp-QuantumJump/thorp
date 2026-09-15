@@ -190,7 +190,9 @@ public class BacktestService {
                         period.effectiveEnd(),
                         period.warmupTradingDays(),
                         RequestSpecCodec.write(command, scenario, period.warmupTradingDays()),
-                        versions);
+                        versions,
+                        // 발행 큐를 정한다(R-20). 첫 요청의 유형으로 고정하고 뒤에 합류하는 요청은 바꾸지 못한다.
+                        command.executionType());
 
         BacktestRun run =
                 BacktestRun.create(

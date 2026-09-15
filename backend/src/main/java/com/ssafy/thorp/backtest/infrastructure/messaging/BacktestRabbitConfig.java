@@ -39,8 +39,21 @@ public class BacktestRabbitConfig {
     public static final String EXCHANGE = "backtest";
     public static final String DEAD_LETTER_EXCHANGE = "backtest.dlx";
 
+    /**
+     * 단건({@code SINGLE}) 작업 큐. 큐 분리(R-20) 전의 유일한 작업 큐라 이름을 그대로 둔다 — 개명은 quorum 큐 교체 절차를 다시 요구한다.
+     */
     public static final String JOBS_QUEUE = "backtest.jobs";
+
     public static final String JOBS_ROUTING_KEY = "backtest.job.requested";
+
+    /**
+     * 탐색·경제환경 파생 실행({@code SEARCH_BUNDLE}·{@code REGIME_*})의 작업 큐(spec 004 R-20). 단건 큐와 속성이 같고
+     * DLX·DLQ 도 같다. 사람이 기다리는 단건과 후보를 순차 공급하는 배치가 한 큐를 쓰면 어느 한도 정책도 성립하지 않아 나눴다.
+     */
+    public static final String BULK_JOBS_QUEUE = "backtest.jobs.bulk";
+
+    public static final String BULK_JOBS_ROUTING_KEY = "backtest.job.requested.bulk";
+
     public static final String JOBS_DEAD_LETTER_QUEUE = "backtest.jobs.dlq";
     public static final String JOBS_DEAD_LETTER_ROUTING_KEY = "backtest.job.dead";
 
@@ -61,20 +74,15 @@ public class BacktestRabbitConfig {
      */
     public static final int JOBS_DELIVERY_LIMIT = 1;
 
-    /** exchange 3(direct 2 + fanout 1), queue 4, binding 4. DLQ로 간 메시지는 자동 재투입하지 않는다. */
+    /** exchange 3(direct 2 + fanout 1), queue 5, binding 5. DLQ로 간 메시지는 자동 재투입하지 않는다. */
     @Bean
     public Declarables backtestTopology() {
         DirectExchange exchange = new DirectExchange(EXCHANGE, true, false);
         DirectExchange dlx = new DirectExchange(DEAD_LETTER_EXCHANGE, true, false);
         FanoutExchange control = new FanoutExchange(CONTROL_EXCHANGE, true, false);
 
-        Queue jobs =
-                QueueBuilder.durable(JOBS_QUEUE)
-                        .quorum()
-                        .deliveryLimit(JOBS_DELIVERY_LIMIT)
-                        .deadLetterExchange(DEAD_LETTER_EXCHANGE)
-                        .deadLetterRoutingKey(JOBS_DEAD_LETTER_ROUTING_KEY)
-                        .build();
+        Queue jobs = jobsQueue(JOBS_QUEUE);
+        Queue bulkJobs = jobsQueue(BULK_JOBS_QUEUE);
         Queue events =
                 QueueBuilder.durable(EVENTS_QUEUE)
                         .deadLetterExchange(DEAD_LETTER_EXCHANGE)
@@ -88,13 +96,25 @@ public class BacktestRabbitConfig {
                 dlx,
                 control,
                 jobs,
+                bulkJobs,
                 events,
                 jobsDlq,
                 eventsDlq,
                 BindingBuilder.bind(jobs).to(exchange).with(JOBS_ROUTING_KEY),
+                BindingBuilder.bind(bulkJobs).to(exchange).with(BULK_JOBS_ROUTING_KEY),
                 BindingBuilder.bind(events).to(exchange).with(EVENTS_ROUTING_KEY),
                 BindingBuilder.bind(jobsDlq).to(dlx).with(JOBS_DEAD_LETTER_ROUTING_KEY),
                 BindingBuilder.bind(eventsDlq).to(dlx).with(EVENTS_DEAD_LETTER_ROUTING_KEY));
+    }
+
+    /** 두 작업 큐는 이름만 다르다. 재전달 상한·DLX 가 같아야 어느 큐에서 죽어도 같은 DLQ 집계(T010)를 탄다. */
+    private static Queue jobsQueue(String name) {
+        return QueueBuilder.durable(name)
+                .quorum()
+                .deliveryLimit(JOBS_DELIVERY_LIMIT)
+                .deadLetterExchange(DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(JOBS_DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     /**

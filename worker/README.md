@@ -142,9 +142,21 @@ uv run ruff check src tests scripts && uv run ruff format --check src tests scri
 
 ## 실행 Consumer (RabbitMQ)
 
-RabbitMQ `backtest.jobs` 큐에서 작업 메시지(`EngineInput` 전체)를 받아 엔진을 실행하고
+작업 큐에서 작업 메시지(`EngineInput` 전체)를 받아 엔진을 실행하고
 `backtest.events` 큐로 `STARTED` / `PROGRESS` / `FINISHED`를 발행한다. 같은 코드를 여러 개
-실행해(competing consumers) 수평 확장한다. 계약은
+실행해(competing consumers) 수평 확장한다. 작업 큐는 둘이고(spec 004 R-20) 워커 역할은
+`WORKER_ROLE`로 정한다:
+
+| 역할 | 큐 | 방식 |
+|---|---|---|
+| `single`(기본) | `backtest.jobs`(단건) | `basic_consume`, prefetch 1 — 지금까지와 같다 |
+| `flex` | `backtest.jobs.bulk` → 없으면 `backtest.jobs` | `basic_get` 한 건씩(pull). 둘 다 비면 1초 대기(`FLEX_POLL_SECONDS`) |
+
+단건 최소 처리량은 `single` 워커가 보장하고, `flex`는 탐색·경제환경 파생 실행을 맡되 벌크가 없을 때
+단건을 돕는다. `flex`가 pull인 이유: quorum 큐는 채널 전체 prefetch(global QoS)를 지원하지 않아
+두 큐를 `basic_consume`하며 "합쳐서 1건"을 표현할 수 없고, 컨슈머별 prefetch 1로 구독하면 처리하지도
+않은 두 번째 메시지가 unacked로 잡혀 크래시 때 유일한 재시도 기회(`x-delivery-limit=1`)를 실행 없이
+태운다. `flex`의 단건 응답은 최대 폴링 간격만큼 늦다. 계약은
 [`docs/specs/backtest-messaging/README.md`](../docs/specs/backtest-messaging/README.md)
 (§2 토폴로지, §3 메시지 속성, §4.2 envelope, §7 전달 규칙, §8 검증 책임)와
 [ADR-0002](../docs/adr/0002-rabbitmq-backtest-message-contract.md)다.
@@ -160,7 +172,7 @@ uv run python -m worker.main
 |---|---|
 | `messaging.py` | 계약 상수(exchange·queue·routing key, `SCHEMA_VERSION=2`, prefetch 1)와 경계 Protocol(`EventPublisher`, `JobAcknowledger`), 오류 분류. **pika 없음** |
 | `consumer.py` | `BacktestJobConsumer` — 검증 → 엔진 호출 → 발행 순서 → ACK 판단. 브로커 기술을 모른다 |
-| `rabbitmq.py` | pika 구현: publisher confirm + `mandatory` 발행, ACK/reject 매핑, 소비 루프 |
+| `rabbitmq.py` | pika 구현: publisher confirm + `mandatory` 발행, ACK/reject 매핑, 소비 루프 둘(`single` push / `flex` pull, `run_flex_loop`) |
 | `main.py` | 엔트리포인트(`python -m worker.main`) |
 
 동작 규칙:
@@ -199,7 +211,8 @@ uv run python -m worker.main
 - **벤치마크는 계약 v2에 없다.** `EngineInput.benchmark`도 `FINISHED.benchmark`도 사라졌고
   v1의 `consumer.strip_benchmark`도 제거했다. 벤치마크 비교는 별도 spec에서 다룬다.
 - **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드
-  (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,
+  (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 소비할 큐(`single`은 `backtest.jobs`,
+  `flex`는 `backtest.jobs.bulk`도) 존재만 확인하고,
   없으면 큐를 만들지 않고 "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다
   (exit code 1). 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌해 훨씬 찾기 어려워진다.
 
@@ -212,7 +225,7 @@ uv run python -m worker.main
 # 1. 브로커·DB (저장소 루트)
 docker compose -f docker-compose.dev.yml up -d rabbitmq postgres
 
-# 2. 백엔드를 한 번 띄워 토폴로지를 선언한다 (exchange 2, queue 4, binding 4)
+# 2. 백엔드를 한 번 띄워 토폴로지를 선언한다 (exchange 3, queue 5, binding 5)
 cd backend && ./gradlew bootRun
 
 # 3. 큐가 생겼는지 확인 (관리 UI http://localhost:15672, thorp/thorp)
@@ -227,7 +240,8 @@ cd worker && RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/ MARKET_DATA_URL=pos
 pytest는 브로커 없이 fake로 검증한다(아래 "테스트"). 실제 연동은 사람이 한 번 확인한다.
 
 위 "로컬 실행 절차" 1~4를 먼저 수행한다. 워커가
-`worker consuming queue=backtest.jobs prefetch=1` 을 남기면 준비된 상태다. 작업 메시지는 손으로
+`worker consuming queue=backtest.jobs prefetch=1`(single) 또는
+`worker consuming role=flex queues=['backtest.jobs.bulk', 'backtest.jobs']`(flex) 을 남기면 준비된 상태다. 작업 메시지는 손으로
 한 건 넣는다(백엔드가 넣을 것과 같은 속성으로 — 계약 §3). 본문은 계약 픽스처
 `docs/specs/backtest-messaging/examples/engine-input-target-risk.json` 을 바탕으로 `run.scenario` 를
 `FULL_PERIOD` 로 바꾸고 `marketData.dataVersion` 을 DB 의 `dataset_id` 로 맞춘 것을 쓴다.

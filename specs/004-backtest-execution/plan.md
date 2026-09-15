@@ -14,15 +14,15 @@
 
 **Primary Dependencies**: Backend: Spring Web·Data JPA·AMQP·Flyway, Jackson, ArchUnit. Worker: `nautilus_trader==1.219.0`(constitution이 정한 기준 엔진), pandas, numpy, pydantic v2, pika. 최소분산 솔버 라이브러리는 PD-04 확정 시 결정한다(후보 scipy SLSQP). 새 의존성은 그 전에 추가하지 않는다.
 
-**Storage**: PostgreSQL 16 (스칼라 조회 열만 컬럼, 소수·시계열은 JSONB — backend/CLAUDE.md 규칙 유지), RabbitMQ 3.13 (`backtest.jobs`를 quorum queue로 전환, 제어용 fanout exchange 추가). Parquet 친화 저장은 001 자료 계층의 책임이며 004는 읽기만 한다.
+**Storage**: PostgreSQL 16 (스칼라 조회 열만 컬럼, 소수·시계열은 JSONB — backend/CLAUDE.md 규칙 유지), RabbitMQ 3.13 (`backtest.jobs`를 quorum queue로 전환, 제어용 fanout exchange 추가, 탐색·경제환경 파생 실행용 `backtest.jobs.bulk` 분리 — R-20). Parquet 친화 저장은 001 자료 계층의 책임이며 004는 읽기만 한다.
 
 **Testing**: Backend JUnit 5 + Testcontainers(PostgreSQL, RabbitMQ) + ArchUnit, `./gradlew spotlessApply build`. Worker pytest + ruff, `ruff check src tests && ruff format --check src tests && pytest`. 메시지 계약 픽스처(`docs/specs/backtest-messaging/examples/*.json`)를 양쪽 테스트가 공유하는 방식을 유지하고 schemaVersion 2 픽스처를 추가한다.
 
-**Target Platform**: Linux 컨테이너(docker compose). 운영 워커는 4 vCPU에서 최대 2 replica, 1 CPU·2.5 GB 제한, 수치 라이브러리 단일 스레드.
+**Target Platform**: Linux 컨테이너(docker compose). 운영 워커는 4 vCPU에서 최대 2 replica(단건 전용 `single` 1 + 벌크 우선 공용 `flex` 1, R-20), 1 CPU·2.5 GB 제한, 수치 라이브러리 단일 스레드.
 
 **Project Type**: web-service (REST API 백엔드 + 메시지 소비 워커). 모노레포 `backend/`, `worker/`, `docs/specs/` 갱신.
 
-**Performance Goals**: PD-06(실측 후 고정). 이 spec은 목표치를 정하지 않고 측정 장치(실행 유형별 대기 포함 p50/p95·동시성·메모리·실패·자동 재시도·원가)를 먼저 만든다. **한도 값과 한도 장치를 분리한다**(R-19, plan 리뷰 4번): 값은 PD-06이 정하지만, 장치(설정 가능한 사용자별·전체 대기 상한과 실행 시간 상한, 초과 시 429 `EXECUTION_LIMIT`·실행 정지)는 T014에서 만들고, 동시 실행 상한은 워커 replica × prefetch로 배치가 강제한다(T002, R-19). 값이 정해지기 전에는 local 프로필 임시값으로만 동작하고 결과·응답에 임시임을 표시한다. 워커 replica 2·prefetch 1은 동시 실행만 제한하고 대기 누적·실행 시간은 제한하지 못하므로 그것만으로는 FR-006의 "무제한 실행 금지"를 충족하지 않는다.
+**Performance Goals**: PD-06(실측 후 고정). 이 spec은 목표치를 정하지 않고 측정 장치(실행 유형별 대기 포함 p50/p95·동시성·메모리·실패·자동 재시도·원가)를 먼저 만든다. **한도 값과 한도 장치를 분리한다**(R-19, plan 리뷰 4번): 값은 PD-06이 정하지만, 장치(설정 가능한 사용자별·전체 대기 상한과 실행 시간 상한, 초과 시 429 `EXECUTION_LIMIT`·실행 정지)는 T014에서 만들고, 동시 실행 상한은 워커 replica × prefetch로 배치가 강제한다(T002, R-19). 값이 정해지기 전에는 local 프로필 임시값으로만 동작하고 결과·응답에 임시임을 표시한다. 워커 replica 2·prefetch 1은 동시 실행만 제한하고 대기 누적·실행 시간은 제한하지 못하므로 그것만으로는 FR-006의 "무제한 실행 금지"를 충족하지 않는다. **한도는 단건 큐에만 건다**(R-20, T015): 대화형 단건과 배치 탐색이 한 큐를 쓰면 탐색을 세도(묶음 영구 정지) 안 세도(단건만 429) 정책이 성립하지 않아 큐를 `backtest.jobs`(단건)·`backtest.jobs.bulk`(탐색·경제환경)로 나누고, 워커를 단건 전용 N + 벌크 우선 공용 M으로 둔다. 탐색의 적재량은 007 `dispatch-window`와 M이 정한다.
 
 **Constraints**: Backend는 계산하지 않는다. 동일 버전 재계산은 100% 동일해야 한다(시드 고정, 정렬 고정, 단일 스레드 수치 연산). 판단은 bar-close 자료, 체결은 다음 거래일 시가(현행 엔진 규칙 유지). 워커는 DB에 쓰지 않고 이벤트로만 상태를 전달한다(현행 계약 유지).
 
@@ -81,14 +81,14 @@ backend/src/main/java/com/ssafy/thorp/backtest/
 ├── application/port/message/…                              # EngineInput v2, ControlMessage
 ├── domain/model/{BacktestRequest,BacktestRun,RunStatus,…}  # Job → Run/Request 분리
 ├── infrastructure/persistence/…                            # JPA 엔티티·매퍼·리포지토리
-├── infrastructure/messaging/BacktestRabbitConfig.java      # quorum queue, backtest.control
+├── infrastructure/messaging/BacktestRabbitConfig.java      # quorum queue ×2(backtest.jobs 단건 · backtest.jobs.bulk), backtest.control
 ├── infrastructure/messaging/BacktestDeadLetterListener.java# 신규: DLQ → FAILED(SYSTEM_FAILURE)
 └── …/operations/ExecutionMetricsController.java            # 신규: GET /internal/execution-metrics
 backend/src/main/resources/db/migration/V3__backtest_run_request.sql  # 신규 마이그레이션
 
 worker/src/worker/
 ├── consumer.py                 # 제어 채널 구독, 취소 플래그, FINISHED(CANCELLED) 발행
-├── rabbitmq.py                 # control exchange exclusive queue 구독 스레드
+├── rabbitmq.py                 # control exchange exclusive queue 구독 스레드, single(push)·flex(bulk 우선 pull) 두 소비 루프
 ├── nautilus_engine.py          # PortfolioRebalanceExecution(다종목 월말 리밸런싱, 취소 확인)
 ├── allocation/                 # 신규: fixed.py equal.py inverse_vol.py momentum.py min_variance.py
 ├── rules_registry.py           # 신규: 등록 규칙 버전 로드, PENDING이면 INVALID_REQUEST
@@ -113,3 +113,4 @@ Constitution 위반은 없다. 단순한 대안을 버린 선택 세 가지만 �
 | `backtest_job` 하나를 `backtest_request` + `backtest_run` 둘로 분리 | Clarify Q2·Q3: 요청과 실행이 다대일이고 결과는 요청자와 독립 저장 | 한 테이블에 self-reference로 합류를 표현하면 취소·상태 전파 규칙이 행마다 갈라져 SC-006 검증이 어렵다 |
 | 작업 발행을 커밋 후로 옮기고 `backtest_run.published_at`으로 재발행(outbox-lite) | plan 리뷰 1번: 트랜잭션 안 발행은 워커 응답이 커밋보다 먼저 도착해 버려질 수 있고, 커밋 뒤 발행 실패는 QUEUED로 멈춘 실행을 남긴다 | 별도 outbox 테이블 + 릴레이는 테이블·폴러가 하나 더 늘고, run 행이 이미 발행 대상과 1:1이라 열 하나로 같은 보장을 얻는다(R-18) |
 | 워커 제어용 fanout exchange 추가 | Clarify Q1: 실행 중 취소가 계산을 실제로 멈춰야 함(원칙 IX 자원) | 백엔드가 상태만 CANCELLED로 바꾸고 워커는 끝까지 계산하는 방식은 대기열 자원을 낭비하고 부분 결과 산출 시점을 정할 수 없다 |
+| 작업 큐를 단건·벌크 둘로 나누고 워커를 단건 전용 + 벌크 우선 공용으로 배치(R-20) | T014 리뷰: 한 큐에서는 탐색을 한도에 세면 묶음이 영구 정지하고 안 세면 단건만 429를 받는다 — 값으로 닫히지 않는 구조 문제 | 우선순위 큐 하나(`x-max-priority`)와 채널 global prefetch는 quorum 큐가 지원하지 않는다. 완전 분리(전용 워커 둘)는 4 vCPU에 워커 2개인 규모에서 벌크가 없을 때 절반을 놀린다 |

@@ -3,6 +3,8 @@ package com.ssafy.thorp.backtest.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,7 +24,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
-/** 접수 대기열 한도(spec 004 FR-006, R-19). 값이 아니라 "넘었는지"와 "무엇을 세는지"를 고정한다. */
+/** 접수 대기열 한도(spec 004 FR-006, R-19·R-20). 값이 아니라 "넘었는지"와 "무엇을 세는지"를 고정한다. */
 class ExecutionLimitPolicyTest {
 
     private static final long REQUESTER = 7L;
@@ -45,7 +47,7 @@ class ExecutionLimitPolicyTest {
     @DisplayName("한도 안이면 통과한다")
     void admitsWithinLimits() {
         when(runRepository.countQueuedSingleByRequester(REQUESTER)).thenReturn(4L);
-        when(runRepository.countQueued()).thenReturn(10L);
+        when(runRepository.countQueuedSingle()).thenReturn(10L);
 
         assertThatCode(
                         () ->
@@ -76,7 +78,7 @@ class ExecutionLimitPolicyTest {
                 .containsEntry("retryAfterSeconds", 1800L);
         assertThat(details).doesNotContainKey("provisional");
         // 사용자 한도에서 막혔으면 전체는 세지 않는다.
-        verify(runRepository, never()).countQueued();
+        verify(runRepository, never()).countQueuedSingle();
     }
 
     @Test
@@ -96,10 +98,10 @@ class ExecutionLimitPolicyTest {
     }
 
     @Test
-    @DisplayName("전체 대기 수가 상한에 닿으면 사용자가 여유로워도 막는다")
+    @DisplayName("단건 큐 전체가 상한에 닿으면 사용자가 여유로워도 막는다")
     void rejectsWhenTheServerQueueIsFull() {
         when(runRepository.countQueuedSingleByRequester(REQUESTER)).thenReturn(0L);
-        when(runRepository.countQueued()).thenReturn(50L);
+        when(runRepository.countQueuedSingle()).thenReturn(50L);
 
         assertThatThrownBy(
                         () ->
@@ -116,41 +118,22 @@ class ExecutionLimitPolicyTest {
     @EnumSource(
             value = ExecutionType.class,
             names = {"SEARCH_BUNDLE", "REGIME_SECTOR", "REGIME_TOTAL"})
-    @DisplayName("단건이 아닌 실행은 사용자별 한도에서 세지 않는다 — 적재량은 그쪽 발행 창이 통제한다")
-    void doesNotCountNonSingleAgainstTheUserLimit(ExecutionType executionType) {
-        // 세었다면 0 < 5 라 통과하겠지만, 애초에 묻지 않는 것이 요점이다. 두 곳에서 막으면
-        // 007 이 창을 키운 날 탐색이 접수에서 거절당해 묶음이 조용히 멈춘다.
-        when(runRepository.countQueued()).thenReturn(0L);
-
+    @DisplayName("단건이 아닌 실행은 한도의 대상이 아니다 — 다른 큐로 가고 적재량은 그쪽 발행 창과 워커 수가 정한다")
+    void ignoresNonSingleEntirely(ExecutionType executionType) {
+        // 한 큐였을 때는 세면 묶음이 영구 정지하고 안 세면 단건만 429 를 받았다(R-20). 큐를 나눈 뒤에는
+        // 이 정책이 배치를 알 필요가 없다 — 잠금도 조회도 하지 않는다.
         policyWith(5, 50, false).requireAdmission(REQUESTER, executionType);
 
-        verify(runRepository, never()).countQueuedSingleByRequester(REQUESTER);
-        verify(runRepository, never()).lockAdmission("backtest-admission:user:" + REQUESTER);
-        // 전체 한도는 종류를 가리지 않는다 — 그쪽은 서버 보호다.
-        verify(runRepository).countQueued();
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = ExecutionType.class,
-            names = {"SEARCH_BUNDLE", "REGIME_SECTOR", "REGIME_TOTAL"})
-    @DisplayName("전체 한도가 차도 단건이 아닌 실행은 거절하지 않는다 — 끊으면 그 묶음이 다시 깨어나지 못한다")
-    void doesNotRejectNonSingleOnTheTotalLimit(ExecutionType executionType) {
-        // 007 은 완료 이벤트로만 다음 후보를 내보낸다. 마지막 진행 후보가 끝난 순간 거절당하면
-        // 남은 후보가 PENDING 인 채로 깨울 신호가 없어져 묶음이 영구히 멈춘다.
-        when(runRepository.countQueued()).thenReturn(50L);
-
-        assertThatCode(() -> policyWith(5, 50, false).requireAdmission(REQUESTER, executionType))
-                .doesNotThrowAnyException();
-        // 세기는 센다 — 탐색이 서버를 채우면 단건이 먼저 막힌다.
-        verify(runRepository).countQueued();
+        verify(runRepository, never()).lockAdmission(anyString());
+        verify(runRepository, never()).countQueuedSingleByRequester(anyLong());
+        verify(runRepository, never()).countQueuedSingle();
     }
 
     @Test
     @DisplayName("세는 구간을 잠그고, 사용자 키를 전체 키보다 먼저 잡는다 — 순서가 엇갈리면 교착한다")
     void locksUserKeyBeforeTotalKey() {
         when(runRepository.countQueuedSingleByRequester(REQUESTER)).thenReturn(0L);
-        when(runRepository.countQueued()).thenReturn(0L);
+        when(runRepository.countQueuedSingle()).thenReturn(0L);
 
         policyWith(5, 50, false).requireAdmission(REQUESTER, ExecutionType.SINGLE);
 
@@ -158,6 +141,6 @@ class ExecutionLimitPolicyTest {
         order.verify(runRepository).lockAdmission("backtest-admission:user:" + REQUESTER);
         order.verify(runRepository).countQueuedSingleByRequester(REQUESTER);
         order.verify(runRepository).lockAdmission("backtest-admission:total");
-        order.verify(runRepository).countQueued();
+        order.verify(runRepository).countQueuedSingle();
     }
 }

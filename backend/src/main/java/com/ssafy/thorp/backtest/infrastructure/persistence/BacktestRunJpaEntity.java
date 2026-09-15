@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -102,11 +103,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
     /**
      * 아래는 워커 이벤트가 갱신하는 실행 기록이다(도메인 {@code RunState}).
      *
-     * <p>마이그레이션이 만든 나머지 컬럼(dedup_key·execution_type·rules_version·cost_profile_version·
-     * data_version·request_spec·versions·effective_start/end·queued_at·started_at·finished_at·
-     * published_at·publish_count·dlq_count)은 아직 매핑하지 않는다. 그 값을 쓰는 접수·재사용·측정 경로가 T005·T010·T012라서,
-     * 쓰는 코드와 같은 MR에서 매핑을 붙이는 편이 낫다. 컬럼이 실제로 있는지는 {@code FlywayMigrationTest}가 본다. NOT NULL 컬럼에는 모두
-     * 기본값이 있어 INSERT는 문제없다.
+     * <p>마이그레이션이 만든 컬럼은 그 값을 쓰는 경로와 같은 MR 에서 매핑을 붙였다(접수 T005, 발행 R-18, 취소 T011, 한도 T014, 큐 분리
+     * T015). 컬럼이 실제로 있는지는 {@code FlywayMigrationTest}가 본다.
      */
     @Column(nullable = false)
     private int attempt;
@@ -156,6 +154,11 @@ public class BacktestRunJpaEntity extends BaseEntity {
     private LocalDate effectiveStart;
 
     private LocalDate effectiveEnd;
+
+    /** 발행 큐를 정한 사용 맥락(R-20). 접수 시 한 번 쓰고 바꾸지 않는다. null = 접수 경로 이전의 행 */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ExecutionType executionType;
 
     // --- 전달 보장과 시각(R-18). publishCount 는 confirm 이 아니라 발행 시도 횟수다. ---
 
@@ -258,7 +261,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
             LocalDate effectiveStart,
             LocalDate effectiveEnd,
             Map<String, Object> requestSpec,
-            Map<String, Object> versions) {
+            Map<String, Object> versions,
+            ExecutionType executionType) {
         this.dedupKey = dedupKey;
         this.rulesVersion = rulesVersion;
         this.costProfileVersion = costProfileVersion;
@@ -267,6 +271,7 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.effectiveEnd = effectiveEnd;
         this.requestSpec = requestSpec;
         this.versions = versions;
+        this.executionType = executionType;
     }
 
     /** 발행 시도·confirm·DLQ·시각. 상태 전이와 따로 갱신된다(R-18). */
@@ -336,6 +341,10 @@ public class BacktestRunJpaEntity extends BaseEntity {
 
     public String getDedupKey() {
         return dedupKey;
+    }
+
+    public ExecutionType getExecutionType() {
+        return executionType;
     }
 
     public String getRulesVersion() {

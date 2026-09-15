@@ -59,6 +59,11 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   받아 `control.CancelRegistry`에 표시하고, 엔진은 `stop_after` 훅으로 거래일마다 자기 runId를 확인해 멈춘다(R-04). **레지스트리는 활성 실행만
   받는다** — 소비자가 STARTED 발행 앞에서 `begin(run_id)`, 끝나면 `end(run_id)`. fanout으로 오는 남의 실행·끝난 실행의 CANCEL은 버린다.
   `run_consumer`는 제어 큐가 바인딩된 뒤에야 작업을 받는다(30초 안에 안 되면 시작하지 않는다) — 그 전에 온 CANCEL은 이 워커에 닿지 않는다.
+- **작업 큐는 둘이고 워커 역할은 `WORKER_ROLE`이다**(spec 004 R-20). `single`(기본)은 `backtest.jobs`만 `basic_consume`(prefetch 1),
+  `flex`는 `backtest.jobs.bulk` → `backtest.jobs` 순서로 `basic_get` 한 건씩(`run_flex_loop`, 둘 다 비면 `connection.sleep` 1초 —
+  `time.sleep`이면 heartbeat가 멈춘다). **flex가 두 큐를 `basic_consume`하지 않는 이유**: quorum 큐는 global QoS를 지원하지 않고, 컨슈머별
+  prefetch 1이면 처리하지 않은 두 번째 메시지가 unacked로 잡혀 크래시 때 `x-delivery-limit=1`의 유일한 재시도를 실행 없이 태운다. 큐 이름 상수는
+  백엔드 `BacktestRabbitConfig`의 `public static final String` 전부와 같은 값이어야 한다(`test_topology_constants_match_the_backend`)
   엔진·소비자·리스너가 같은 레지스트리를 봐야 하므로 `main.py`가 하나를 만들어 셋에 넘긴다
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다

@@ -5,6 +5,7 @@ import com.ssafy.thorp.backtest.application.result.ResultPerformance;
 import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -172,8 +173,8 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
-    public long countQueued() {
-        return jpaRepository.countByStatus(RunStatus.QUEUED);
+    public long countQueuedSingle() {
+        return jpaRepository.countByStatusAndExecutionType(RunStatus.QUEUED, ExecutionType.SINGLE);
     }
 
     /**
