@@ -102,6 +102,7 @@ GET /strategies/registry?universeSize={n}
 | `axes[].inputType` | `CHOICE` \| `NUMBER` | 목록형인가 입력형인가 |
 | `axes[].choices` | array | `CHOICE`일 때만. `selectable`이 false인 후보는 유효성 제약에 걸린 값이다 |
 | `axes[].range` | object | `NUMBER`일 때만 |
+| `axes[].defaultValue` | any | 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다 |
 | `analysisConditions.targetVolatility.usedBy` | string | `TARGET_RISK` — '목표 위험 맞춤' 시나리오에서만 쓴다. 주 분석 화면에 보이지 않는다 (004 PD-18) |
 
 **비활성 전략은 목록에 실리지 않는다.** `selectable: false`는 활성이되 지금 조건에서 고를 수 없다는 뜻이다.
