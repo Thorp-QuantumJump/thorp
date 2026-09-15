@@ -1,6 +1,8 @@
 # Implementation Plan: 전략 선택·상세 설정
 
-**Branch**: `docs(fe)/226-spec-003-plan` (spec 디렉터리 식별자는 `003-strategy-settings`) | **Date**: 2026-09-15 | **Spec**: [spec.md](spec.md)
+**Spec 디렉터리**: `003-strategy-settings` | **Date**: 2026-09-15 | **Spec**: [spec.md](spec.md)
+
+> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다. 이 문서에 브랜치 이름을 적지 않는다.
 
 **Input**: Feature specification from `/specs/003-strategy-settings/spec.md`
 
@@ -18,13 +20,13 @@
 
 **Storage**: 등록표는 백엔드 자원 파일(YAML)로 유지한다. 전략 설정값은 서버에 저장하지 않고 브라우저 탭 수명 동안만 보관한다(FR-017). 근거는 [research.md](research.md) R1·R8.
 
-**Testing**: backend `./gradlew test`(ArchUnit 포함), frontend `npm run test`. 등록표 파일과 계약의 일치는 라운드트립 테스트로 확인한다.
+**Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build`와 `npm run test`. 등록표 파일과 계약의 일치는 라운드트립 테스트로 확인한다.
 
 **Target Platform**: 웹 브라우저(데스크톱 우선) + Spring Boot 서버
 
 **Project Type**: 웹 애플리케이션 (frontend + backend)
 
-**Performance Goals**: 등록표 조회는 기동 시 한 번 읽어 메모리에 들고 있으므로 DB 왕복이 없다. 화면이 전략 선택 단계에서 한 번 조회한다.
+**Performance Goals**: 정하지 않는다. 이 화면은 계산을 실행하지 않고 등록표를 한 번 조회할 뿐이라 지금 목표를 세울 근거가 없다. 필요해지면 그때 실측해 정한다.
 
 **Constraints**: PD-02와 PD-07이 미확정이므로 등록표 버전은 `PROVISIONAL-`로 시작하는 상태를 유지하고, 그 사실을 화면에 계속 표시한다. 등록표 값이 바뀌면 행을 고치지 않고 버전을 올린다.
 
@@ -36,18 +38,24 @@
 
 | 원칙 | 이 기능에서의 의미 | 판정 |
 |---|---|---|
-| II. 첫 화면은 단순하게 | 기본 화면에 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005) | **주의** — 아래 이탈 항목 참조 |
+| I. 중심 약속은 전략 진단이다 | 이 화면이 전략 진단의 두 번째 단계다 | 통과 |
+| II. 첫 화면은 단순하게 | 기본 화면에 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005) | **승인된 이탈** — 아래 항목 참조 |
 | III. 진단이지 추천이 아니다 | 기본값을 편의용 출발점으로 표기하고 최적값·투자 권고로 쓰지 않는다(FR-004) | 통과 |
 | IV. 비교는 같은 조건에서만 | 분석 기간은 공통 평가 가능 범위에서만 고를 수 있고(FR-009), 수수료·세금·기간을 수익이 높아지는 방향으로 자동 최적화하는 선택지를 두지 않는다(FR-010) | 통과 |
 | V. 당시에 알 수 있던 정보만 | 워밍업을 채우지 못하는 전략은 고를 수 없게 막는다(FR-011). 워밍업 계산은 등록표의 산출 규칙이 담당한다 | 통과 |
 | VI. 사용자 입력을 몰래 바꾸지 않는다 | 허용 범위 밖 값을 잘라 넣지 않고 저장을 거부한다(FR-006). 목표 비중은 002가 확정한 값을 읽기만 한다(FR-003) | 통과 |
+| VII. 탐색과 검증을 구분한다 | 해당 없음 — 자동 탐색은 [007](../007-auto-parameter-search/spec.md)이 맡고 003은 진입점만 제공한다 | 해당 없음 |
 | VIII. 재현할 수 있게 기록한다 | 등록표 버전을 분석 요청에 실어 004·006으로 넘긴다(FR-014) | 통과 |
+| IX. 실행 한도는 실측으로 정한다 | 해당 없음 — 이 화면은 계산을 실행하지 않는다 | 해당 없음 |
+| X. 자료는 이용 조건 안에서만 쓴다 | 해당 없음 — 이 화면은 시장 자료를 직접 읽지 않는다 | 해당 없음 |
 
-### 이탈 항목: 행동 버튼 두 개
+### 승인된 이탈: 행동 버튼 두 개
 
-constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버튼을 하나로 두라고 한다. spec 003은 FR-002에서 '분석하기'와 '설정 조합 자동 비교'를 같은 크기의 버튼 두 개로 두기로 정했다. 명료화 과정에서 사용자가 선택한 결정이며 spec에도 벗어나는 지점임을 적어 두었다.
+constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버튼을 하나로 두라고 한다. spec 003은 FR-002에서 '분석하기'와 '설정 조합 자동 비교'를 같은 크기의 버튼 두 개로 두기로 정했다.
 
-**이 계획은 spec을 따른다.** 다만 기획서를 고칠지 결정을 되돌릴지는 팀이 정해야 하고, 그 판단이 나오기 전까지 구현은 두 버튼을 같은 컴포넌트에서 나란히 렌더링해 한쪽을 지우는 변경이 한 곳에서 끝나도록 둔다.
+**이 이탈은 팀이 직접 판단해 승인한 것이다.** 명료화 과정에서 세 선택지(보조 링크로 두기 / 같은 크기 버튼 두 개 / 상세 설정 안에 넣기)를 놓고 두 번째를 골랐다. 자동 비교는 설정을 하나씩 바꾸는 수고를 대신하는 주된 경로이므로 보조 링크로 숨기지 않는다는 판단이다.
+
+**따라서 구현은 두 버튼을 그대로 만든다.** 결정이 뒤집힐 것을 전제한 대비를 두지 않는다. 기획서 §4.1의 문구를 이 결정에 맞춰 고치는 일은 별도 작업으로 남긴다.
 
 ### 게이트 결과 (Phase 0 전)
 
@@ -104,7 +112,7 @@ backend/src/main/resources/registry/
 └── parameter-registry.yml       # 007의 provisional 파일을 승격해 옮긴다
 
 backend/src/main/java/com/ssafy/thorp/paramsearch/
-└── infrastructure/registry/     # ProvisionalFileParameterRegistry 를 003 구현체 위임으로 교체
+└── infrastructure/registry/     # 비운다 — ProvisionalFileParameterRegistry 를 위로 옮기고 위임 계층을 남기지 않는다
 
 frontend/src/
 ├── api/strategyRegistry.ts      # 등록표 조회
