@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver.SearchTargets;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
+import com.ssafy.thorp.strategy.application.exception.RegistryUnavailableException;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

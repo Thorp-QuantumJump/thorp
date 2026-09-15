@@ -1,14 +1,14 @@
 package com.ssafy.thorp.paramsearch.application.service;
 
 import com.ssafy.thorp.common.exception.BusinessException;
-import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
 import com.ssafy.thorp.paramsearch.application.exception.StrategyNotExecutableException;
 import com.ssafy.thorp.paramsearch.application.exception.StrategyNotRegisteredException;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.exception.RegistryUnavailableException;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

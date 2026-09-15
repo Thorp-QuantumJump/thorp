@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

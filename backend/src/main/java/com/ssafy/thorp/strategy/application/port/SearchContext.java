@@ -1,4 +1,4 @@
-package com.ssafy.thorp.paramsearch.application.port;
+package com.ssafy.thorp.strategy.application.port;
 
 /**
  * 유효성 판정에 필요한 묶음 맥락(contracts/param-search-internal.md §1).

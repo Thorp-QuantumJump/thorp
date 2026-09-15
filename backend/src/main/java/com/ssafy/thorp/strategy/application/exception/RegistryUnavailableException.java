@@ -1,4 +1,4 @@
-package com.ssafy.thorp.paramsearch.application.exception;
+package com.ssafy.thorp.strategy.application.exception;
 
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;

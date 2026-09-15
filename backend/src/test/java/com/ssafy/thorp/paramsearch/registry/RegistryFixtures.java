@@ -1,13 +1,12 @@
 package com.ssafy.thorp.paramsearch.registry;
 
-import com.ssafy.thorp.paramsearch.application.port.AllowedRange;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
-import com.ssafy.thorp.paramsearch.application.port.ValidationVerdict;
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,7 +81,7 @@ public final class RegistryFixtures {
         return new FixtureRegistry("FIXTURE-BROKEN", List.of(), Map.of(), null) {
             @Override
             public ValidationVerdict validate(
-                    String strategyId, ParameterCombination combination, SearchContext context) {
+                    String strategyId, Map<String, Object> parameters, SearchContext context) {
                 throw new IllegalStateException("registry down");
             }
         };
@@ -110,7 +109,7 @@ public final class RegistryFixtures {
         public Builder rule(
                 String strategyId,
                 String reasonCode,
-                BiPredicate<ParameterCombination, SearchContext> violated) {
+                BiPredicate<Map<String, Object>, SearchContext> violated) {
             rules.computeIfAbsent(strategyId, key -> new ArrayList<>())
                     .add(new FixtureRule(reasonCode, violated));
             return this;
@@ -128,7 +127,7 @@ public final class RegistryFixtures {
     }
 
     private record FixtureRule(
-            String reasonCode, BiPredicate<ParameterCombination, SearchContext> violated) {}
+            String reasonCode, BiPredicate<Map<String, Object>, SearchContext> violated) {}
 
     private static class FixtureRegistry implements ParameterRegistryPort {
 
@@ -167,9 +166,9 @@ public final class RegistryFixtures {
 
         @Override
         public ValidationVerdict validate(
-                String strategyId, ParameterCombination combination, SearchContext context) {
+                String strategyId, Map<String, Object> parameters, SearchContext context) {
             for (FixtureRule rule : rules.getOrDefault(strategyId, List.of())) {
-                if (rule.violated().test(combination, context)) {
+                if (rule.violated().test(parameters, context)) {
                     return ValidationVerdict.violation(
                             rule.reasonCode(), rule.reasonCode() + " 위반입니다");
                 }

@@ -3,10 +3,9 @@ package com.ssafy.thorp.paramsearch.infrastructure.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -209,13 +208,7 @@ class ProvisionalFileParameterRegistryTest {
         @Test
         @DisplayName("규칙이 없는 전략은 모두 유효다 — 007이 규칙을 만들어 내지 않는다")
         void strategyWithoutRulesIsAlwaysValid() {
-            assertThat(
-                            synthetic
-                                    .validate(
-                                            "STRATEGY_Y",
-                                            ParameterCombination.of(Map.of()),
-                                            new SearchContext(1))
-                                    .valid())
+            assertThat(synthetic.validate("STRATEGY_Y", Map.of(), new SearchContext(1)).valid())
                     .isTrue();
         }
 
@@ -223,11 +216,7 @@ class ProvisionalFileParameterRegistryTest {
         @DisplayName("등록되지 않은 전략의 판정 요청은 예외다 — 호출자가 먼저 걸러야 한다")
         void unknownStrategyThrows() {
             assertThatThrownBy(
-                            () ->
-                                    synthetic.validate(
-                                            "STRATEGY_Z",
-                                            ParameterCombination.of(Map.of()),
-                                            new SearchContext(1)))
+                            () -> synthetic.validate("STRATEGY_Z", Map.of(), new SearchContext(1)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("unknown strategy");
         }
@@ -238,10 +227,10 @@ class ProvisionalFileParameterRegistryTest {
                 new ClassPathResource(ProvisionalFileParameterRegistry.RESOURCE_PATH));
     }
 
-    private static ParameterCombination combination(String axis, Object value) {
+    private static Map<String, Object> combination(String axis, Object value) {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put(axis, value);
-        return ParameterCombination.of(values);
+        return Map.copyOf(values);
     }
 
     private static BigDecimal decimal(Object value) {
