@@ -2,7 +2,9 @@
 
 **Spec 디렉터리**: `003-strategy-settings` | **Date**: 2026-09-15 | **Spec**: [spec.md](spec.md)
 
-> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다. 이 문서에 브랜치 이름을 적지 않는다.
+> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.
+> 브랜치 이름은 아래 "작업 묶음 구성"에 티켓 번호와 함께 적는다 — constitution이 묶음 구성을 plan에 두라고
+> 요구하고, 묶음마다 브랜치가 하나씩 딸리기 때문이다.
 
 **Input**: Feature specification from `/specs/003-strategy-settings/spec.md`
 
@@ -141,6 +143,63 @@ frontend/src/
 **구조 선택 근거**: 이 저장소는 `backend/`와 `frontend/`가 나뉜 웹 애플리케이션이고, 백엔드는 도메인별 패키지 안에서 `presentation → application → domain/infrastructure` 계층을 두는 구조를 ArchUnit으로 강제한다([ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)). 등록표는 `paramsearch`가 아니라 새 `strategy` 도메인에 둔다 — 등록표의 소유자는 003이고 007은 읽는 쪽이기 때문이다.
 
 **`domain/model`을 두지 않는다**: 등록표의 값 타입(`StrategyRegistration`·`ParameterAxis`·`AllowedRange`)은 지금 `paramsearch/application/port`에 있고, 옮길 때도 같은 자리에 둔다. 도메인 모델 층을 따로 만들면 같은 것이 두 곳에 생기고, 007이 참조하는 타입이 무엇인지 흐려진다.
+
+## 작업 묶음 구성 (티켓·Branch·MR 단위)
+
+constitution "Jira 연계"가 **`작업 묶음 = 1 Branch = 1 MR`**이고 **"묶음 구성은 plan을 시작할 때
+정한다"**고 요구한다. [tasks.md](tasks.md)의 `T###` 79개는 실행 지시의 최소 단위이며 티켓 단위가
+아니다. **Jira Task·브랜치·MR의 단위는 아래 묶음 열둘이다.**
+
+묶음마다 constitution이 정한 세 조건을 확인했다. 하나의 목적을 공유하는가, 독립적으로
+구현·검증·리뷰하고 다른 묶음을 건드리지 않고 되돌릴 수 있는가, 리뷰어가 한 번에 읽을 수 있고
+안에 미완성 task가 없는가.
+
+| 묶음 · 티켓 | Jira Task 제목 | 브랜치 | 포함 T### | 수 | 선행 |
+|---|---|---|---|---|---|
+| B01 · [S15P21E205-233](https://ssafy.atlassian.net/browse/S15P21E205-233) | `[BE] 등록표를 003 소유로 옮긴다` | `refactor(be)/233-registry-move` | T001, T007~T012 | 7 | 없음 |
+| B02 · [S15P21E205-234](https://ssafy.atlassian.net/browse/S15P21E205-234) | `[BE] 등록표가 화면에 필요한 항목을 담는다` | `feat(be)/234-registry-fields` | T013~T022(T018a 포함) | 11 | B01 |
+| B03 · [S15P21E205-235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | `feat(be)/235-registry-api` | T003, T004, T023~T028 | 8 | B02 |
+| B04 · [S15P21E205-236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | `feat(fe)/236-strategy-cards` | T005, T006, T029, T030, T033~T035, T043 | 8 | B03의 계약 |
+| B05 · [S15P21E205-237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | `feat(fe)/237-strategy-select-run` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | B04 |
+| B06 · [S15P21E205-238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/238-analysis-wiring` | T039, T042 | 2 | B05 + 외부 결정 |
+| B07 · [S15P21E205-239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | `feat(be)/239-settings-revalidation` | T002, T047~T051 | 6 | B02 |
+| B08 · [S15P21E205-240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | `feat(fe)/240-detail-settings` | T052~T057, T060~T063 | 10 | B05 |
+| B09 · [S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | `feat(fe)/241-live-verdict` | T058, T059, T064 | 3 | B08 |
+| B10 · [S15P21E205-242](https://ssafy.atlassian.net/browse/S15P21E205-242) | `[FE] 기간·금액·조건을 바꾼다` | `feat(fe)/242-analysis-conditions` | T065~T069 | 5 | B09 |
+| B11 · [S15P21E205-243](https://ssafy.atlassian.net/browse/S15P21E205-243) | `[FE] 설정 조합 자동 비교로 넘어간다` | `feat(fe)/243-autocompare-entry` | T070, T071 | 2 | B05 |
+| B12 · [S15P21E205-244](https://ssafy.atlassian.net/browse/S15P21E205-244) | `[DOCS] 문서 동기화와 최종 검증` | `docs(fe)/244-spec-003-wrapup` | T072~T078 | 7 | 전부 |
+
+**묶음 열둘 = 티켓 열둘 = 브랜치 열둘 = MR 열둘.** 79개 태스크를 빠짐도 중복도 없이 덮는다.
+**티켓 열둘과 브랜치 열둘을 2026-09-15에 만들었다.** 표의 링크가 그 티켓이다. 개별 `T###`
+번호는 MR 본문의 "주요 변경 사항"에 나열한다.
+
+```text
+B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B09 ─▶ B10 ─┐
+            │                       ├─▶ B11                 ├─▶ B12
+            └─▶ B07                 └─▶ B06 (외부 결정 대기) ┘
+```
+
+### 묶음 이름을 목적으로 붙인 이유
+
+초판은 계층으로 잘라 열여섯이었다. "값 타입 확장"·"화면 컴포넌트" 같은 이름은 그 MR이 머지돼도
+무엇이 달라지는지 말해 주지 않고, 조각마다 브랜치를 따는 동안 아무것도 완결되지 않는다. 묶음 조건
+1이 요구하는 "하나의 목적"을 크기에 맞추려다 잃은 것이다.
+
+지금 이름은 그대로 Jira Task 제목이 되고 "이게 끝나면 무엇이 되나"를 한 줄로 답한다. 대신 크기가
+둘에서 열하나까지 벌어지는데, 그것을 받아들였다. B02를 "값 타입"과 "로더"로 다시 자르면 앞 조각이
+혼자서는 아무 일도 하지 않아 묶음 조건 3의 "미완성 task 없음"을 어긴다.
+
+### 크기 위험
+
+B02와 B08이 열하나·열이라 가장 크다. 둘 다 더 쪼개면 목적이 흩어지므로 브랜치는 하나로 두고
+**안에서는 커밋으로 나눈다.** B01·B02의 007 회귀 확인(T011·T021)도 커밋 경계로 둔다.
+
+### 묶음에 넣지 않은 것
+
+없다. T001~T078과 T018a 전부가 어느 묶음엔가 속한다. 다만 **B06은 외부 결정을 기다린다** —
+[004](../004-backtest-execution/spec.md)의 규칙·비용 버전 조회 수단과 [001](../001-etf-market-data/spec.md)의
+평가 기간 엔드포인트가 정해지기 전에는 시작할 수 없다. 막히지 않은 열하나가 함께 서지 않도록
+따로 뺀 것이다.
 
 ## Complexity Tracking
 
