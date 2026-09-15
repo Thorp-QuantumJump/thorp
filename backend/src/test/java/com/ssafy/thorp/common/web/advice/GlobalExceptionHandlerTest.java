@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import jakarta.validation.Valid;
@@ -31,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>{@code @WebMvcTest} 슬라이스로 띄우므로 {@code JpaAuditingConfig}가 컨텍스트에서 제외되는지도 함께 확인된다.
  */
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.ThrowingController.class)
-@Import(GlobalExceptionHandlerTest.ThrowingController.class)
+@Import({SecurityConfig.class, GlobalExceptionHandlerTest.ThrowingController.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired private MockMvc mockMvc;
