@@ -2,7 +2,9 @@
 
 **Spec 디렉터리**: `003-strategy-settings` | **Date**: 2026-09-15 | **Spec**: [spec.md](spec.md)
 
-> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다. 이 문서에 브랜치 이름을 적지 않는다.
+> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.
+> 브랜치 이름은 아래 "작업 묶음 구성"에 티켓 번호와 함께 적는다 — constitution이 묶음 구성을 plan에 두라고
+> 요구하고, 묶음마다 브랜치가 하나씩 딸리기 때문이다.
 
 **Input**: Feature specification from `/specs/003-strategy-settings/spec.md`
 
@@ -152,23 +154,23 @@ constitution "Jira 연계"가 **`작업 묶음 = 1 Branch = 1 MR`**이고 **"묶
 구현·검증·리뷰하고 다른 묶음을 건드리지 않고 되돌릴 수 있는가, 리뷰어가 한 번에 읽을 수 있고
 안에 미완성 task가 없는가.
 
-| 묶음 | Jira Task 제목 | 브랜치 | 포함 T### | 수 | 선행 |
+| 묶음 · 티켓 | Jira Task 제목 | 브랜치 | 포함 T### | 수 | 선행 |
 |---|---|---|---|---|---|
-| B01 | `[BE] 등록표를 003 소유로 옮긴다` | `refactor(be)/{N}-registry-move` | T001, T007~T012 | 7 | 없음 |
-| B02 | `[BE] 등록표가 화면에 필요한 항목을 담는다` | `feat(be)/{N}-registry-fields` | T013~T022(T018a 포함) | 11 | B01 |
-| B03 | `[BE] 전략·파라미터 등록표 조회 API` | `feat(be)/{N}-registry-api` | T003, T004, T023~T028 | 8 | B02 |
-| B04 | `[FE] 전략 카드 다섯을 보인다` | `feat(fe)/{N}-strategy-cards` | T005, T006, T029, T030, T033~T035, T043 | 8 | B03의 계약 |
-| B05 | `[FE] 카드를 골라 분석을 시작한다` | `feat(fe)/{N}-strategy-select-run` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | B04 |
-| B06 | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/{N}-analysis-wiring` | T039, T042 | 2 | B05 + 외부 결정 |
-| B07 | `[BE] 접수 시점에 설정을 다시 검증한다` | `feat(be)/{N}-settings-revalidation` | T002, T047~T051 | 6 | B02 |
-| B08 | `[FE] 상세 설정을 열어 값을 바꾼다` | `feat(fe)/{N}-detail-settings` | T052~T057, T060~T063 | 10 | B05 |
-| B09 | `[FE] 바꾼 값을 그 자리에서 판정한다` | `feat(fe)/{N}-live-verdict` | T058, T059, T064 | 3 | B08 |
-| B10 | `[FE] 기간·금액·조건을 바꾼다` | `feat(fe)/{N}-analysis-conditions` | T065~T069 | 5 | B09 |
-| B11 | `[FE] 설정 조합 자동 비교로 넘어간다` | `feat(fe)/{N}-autocompare-entry` | T070, T071 | 2 | B05 |
-| B12 | `[DOCS] 문서 동기화와 최종 검증` | `docs(fe)/{N}-spec-003-wrapup` | T072~T078 | 7 | 전부 |
+| B01 · [S15P21E205-233](https://ssafy.atlassian.net/browse/S15P21E205-233) | `[BE] 등록표를 003 소유로 옮긴다` | `refactor(be)/233-registry-move` | T001, T007~T012 | 7 | 없음 |
+| B02 · [S15P21E205-234](https://ssafy.atlassian.net/browse/S15P21E205-234) | `[BE] 등록표가 화면에 필요한 항목을 담는다` | `feat(be)/234-registry-fields` | T013~T022(T018a 포함) | 11 | B01 |
+| B03 · [S15P21E205-235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | `feat(be)/235-registry-api` | T003, T004, T023~T028 | 8 | B02 |
+| B04 · [S15P21E205-236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | `feat(fe)/236-strategy-cards` | T005, T006, T029, T030, T033~T035, T043 | 8 | B03의 계약 |
+| B05 · [S15P21E205-237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | `feat(fe)/237-strategy-select-run` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | B04 |
+| B06 · [S15P21E205-238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/238-analysis-wiring` | T039, T042 | 2 | B05 + 외부 결정 |
+| B07 · [S15P21E205-239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | `feat(be)/239-settings-revalidation` | T002, T047~T051 | 6 | B02 |
+| B08 · [S15P21E205-240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | `feat(fe)/240-detail-settings` | T052~T057, T060~T063 | 10 | B05 |
+| B09 · [S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | `feat(fe)/241-live-verdict` | T058, T059, T064 | 3 | B08 |
+| B10 · [S15P21E205-242](https://ssafy.atlassian.net/browse/S15P21E205-242) | `[FE] 기간·금액·조건을 바꾼다` | `feat(fe)/242-analysis-conditions` | T065~T069 | 5 | B09 |
+| B11 · [S15P21E205-243](https://ssafy.atlassian.net/browse/S15P21E205-243) | `[FE] 설정 조합 자동 비교로 넘어간다` | `feat(fe)/243-autocompare-entry` | T070, T071 | 2 | B05 |
+| B12 · [S15P21E205-244](https://ssafy.atlassian.net/browse/S15P21E205-244) | `[DOCS] 문서 동기화와 최종 검증` | `docs(fe)/244-spec-003-wrapup` | T072~T078 | 7 | 전부 |
 
 **묶음 열둘 = 티켓 열둘 = 브랜치 열둘 = MR 열둘.** 79개 태스크를 빠짐도 중복도 없이 덮는다.
-`{N}`은 Jira Task 번호 자리이며, **티켓을 먼저 만들고 그 번호로 브랜치를 만든다.** 개별 `T###`
+**티켓 열둘과 브랜치 열둘을 2026-09-15에 만들었다.** 표의 링크가 그 티켓이다. 개별 `T###`
 번호는 MR 본문의 "주요 변경 사항"에 나열한다.
 
 ```text
