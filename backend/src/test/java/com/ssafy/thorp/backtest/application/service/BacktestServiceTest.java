@@ -223,6 +223,34 @@ class BacktestServiceTest {
     }
 
     @Test
+    @DisplayName("요청이 주지 않은 버전(평가 분할 등)은 versions 에 키를 만들지 않는다 — 007 launcher 가 비워 보낸다")
+    void absentVersionsAreOmittedNotNulled() {
+        CreateBacktestCommand base = fixedWeight();
+        CreateBacktestCommand withoutSplit =
+                new CreateBacktestCommand(
+                        base.requesterId(),
+                        base.executionType(),
+                        base.mappingVersion(),
+                        base.items(),
+                        base.strategyId(),
+                        base.rulesVersion(),
+                        base.registryVersion(),
+                        base.parameters(),
+                        base.start(),
+                        base.end(),
+                        base.initialCash(),
+                        base.costProfileVersion(),
+                        null,
+                        base.warmupTradingDays(),
+                        base.scenario(),
+                        base.scenarioParams());
+
+        BacktestJobResult result = service.create(withoutSplit);
+
+        assertThat(result.versions()).doesNotContainKey("evaluationSplit").containsKey("rules");
+    }
+
+    @Test
     @DisplayName("목표 위험 시나리오는 오버레이 규칙 버전을 versions.scenarioRules 로 남긴다")
     void targetRiskRecordsTheOverlayVersion() {
         BacktestJobResult result =

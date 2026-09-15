@@ -449,7 +449,9 @@ public class BacktestService {
             CostProfile costProfile,
             String dataVersion) {
         Map<String, Object> versions = new LinkedHashMap<>();
-        versions.put("mapping", command.mappingVersion());
+        // 요청이 주지 않은 버전은 키를 만들지 않는다 — null 을 채우면 "없다"와 "모른다"가 섞이고,
+        // RunPlan 이 Map.copyOf 로 사본을 뜨므로 null 값은 NPE 다(007 launcher 가 평가 분할을 비운다).
+        putIfPresent(versions, "mapping", command.mappingVersion());
         versions.put("rules", versionOf(rules.rulesVersion(), rules.provisional()));
         if (overlay != null) {
             versions.put("scenarioRules", overlay.strategyId() + "/" + overlay.rulesVersion());
@@ -457,8 +459,14 @@ public class BacktestService {
         versions.put("costProfile", versionOf(costProfile.version(), costProfile.provisional()));
         versions.put("data", dataVersion);
         versions.put("engine", engineVersion);
-        versions.put("evaluationSplit", command.evaluationSplitVersion());
+        putIfPresent(versions, "evaluationSplit", command.evaluationSplitVersion());
         return versions;
+    }
+
+    private static void putIfPresent(Map<String, Object> target, String key, Object value) {
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     private static Map<String, Object> versionOf(String version, boolean provisional) {
