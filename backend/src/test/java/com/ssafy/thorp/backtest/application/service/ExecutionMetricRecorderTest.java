@@ -99,7 +99,11 @@ class ExecutionMetricRecorderTest {
         recorder.record(
                 run(RunStatus.COMPLETED, 1, fullLifecycle(1), ExecutionType.SEARCH_BUNDLE),
                 new FinishedPayload.ResourceUsage(
-                        new BigDecimal("512.5"), new BigDecimal("3.210"), new BigDecimal("4.0")));
+                        new BigDecimal("512.5"),
+                        new BigDecimal("3.210"),
+                        new BigDecimal("4.0"),
+                        null,
+                        null));
 
         ExecutionMetricRecord m = recorded();
         assertThat(m.runId()).isEqualTo(11L);
@@ -115,6 +119,25 @@ class ExecutionMetricRecorderTest {
         assertThat(m.workerRole()).isEqualTo("flex");
         assertThat(m.recordedAt()).isEqualTo(NOW);
         assertThat(m.autoRetried()).isFalse();
+    }
+
+    @Test
+    @DisplayName("FINISHED 가 큐·역할을 실어 오면 그것이 먼저다 — 중복 실행에서는 마지막 STARTED 의 워커와 결과를 낸 워커가 다를 수 있다")
+    void finishedWorkerInfoWinsOverStarted() {
+        // 실행 행에는 재발행 뒤 마지막 STARTED 를 보낸 flex 가 남았지만, 결과는 single 이 냈다(R-18 중복 실행).
+        recorder.record(
+                run(RunStatus.COMPLETED, 1, fullLifecycle(2), ExecutionType.SINGLE),
+                new FinishedPayload.ResourceUsage(
+                        new BigDecimal("100.0"),
+                        new BigDecimal("1.000"),
+                        new BigDecimal("1.0"),
+                        "backtest.jobs",
+                        "single"));
+
+        ExecutionMetricRecord m = recorded();
+        assertThat(m.workerRole()).isEqualTo("single");
+        assertThat(m.servedQueue()).isEqualTo("backtest.jobs");
+        verify(repository, org.mockito.Mockito.never()).findWorkerInfo(anyLong());
     }
 
     @Test

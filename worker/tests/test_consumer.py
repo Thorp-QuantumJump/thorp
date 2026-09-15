@@ -357,6 +357,29 @@ def test_finished_payload_mirrors_run_block() -> None:
     assert finished.payload.resource is not None
     assert finished.payload.resource.wall_seconds is not None
     assert finished.payload.resource.cpu_seconds is not None
+    # 결과를 낸 워커의 큐·역할이 FINISHED 에도 실린다(T012) — 중복 실행에서 STARTED 와 다를 수 있다.
+    assert finished.payload.resource.queue == "backtest.jobs"
+    assert finished.payload.resource.role == "single"
+
+
+def test_peak_rss_is_the_max_sample_of_this_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """peakRssMb 는 프로세스 누적 최고값이 아니라 이 실행 동안 표본의 최댓값이다(리뷰 P2)."""
+    samples = iter([Decimal("120.0"), Decimal("310.5"), Decimal("200.0"), Decimal("150.0")])
+    monkeypatch.setattr("worker.consumer.current_rss_mb", lambda: next(samples, Decimal("90.0")))
+
+    _, publisher = handle(**progress(3))
+
+    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
+    assert finished.payload.resource is not None
+    assert finished.payload.resource.peak_rss_mb == Decimal("310.5")
+
+
+def test_peak_rss_is_omitted_when_it_cannot_be_measured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("worker.consumer.current_rss_mb", lambda: None)
+    _, publisher = handle()
+    finished = publisher.of_type(BacktestEventType.FINISHED)[0]
+    assert finished.payload.resource is not None
+    assert finished.payload.resource.peak_rss_mb is None
 
 
 # --- 멱등성: 재전달은 재실행 + 새 executionId -----------------------------------------

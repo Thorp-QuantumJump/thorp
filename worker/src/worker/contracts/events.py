@@ -65,11 +65,18 @@ class ProgressPayload(ContractModel):
 
 
 class ResourceUsage(ContractModel):
-    """실행 프로세스 자원 사용(측정 기록용). 못 잰 값은 생략."""
+    """실행 프로세스 자원 사용(측정 기록용). 못 잰 값은 생략.
+
+    ``peak_rss_mb`` 는 **이 실행 동안** 표본으로 잰 상주 메모리의 최댓값이다 — 프로세스 누적
+    최고값(``ru_maxrss``)이 아니다. ``queue``·``role`` 은 이 결과를 낸 워커의 것이다. 중복
+    실행(R-18)에서는 마지막 STARTED 의 워커와 다를 수 있어 백엔드가 FINISHED 값을 먼저 쓴다(T012).
+    """
 
     peak_rss_mb: Decimal | None = None
     cpu_seconds: Decimal | None = None
     wall_seconds: Decimal | None = None
+    queue: str | None = None
+    role: str | None = None
 
 
 class FinishedPayload(ContractModel):

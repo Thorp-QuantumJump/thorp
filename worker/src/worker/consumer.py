@@ -103,16 +103,22 @@ def _seconds(value: float) -> Decimal:
     return Decimal(f"{value:.3f}")
 
 
-def peak_rss_mb() -> Decimal | None:
-    """프로세스 최대 상주 메모리(MB). 못 재는 플랫폼(Windows)에서는 None → 키 생략."""
-    try:
-        import resource
-    except ImportError:
+def current_rss_mb() -> Decimal | None:
+    """지금 이 순간의 상주 메모리(MB). 못 재는 플랫폼에서는 None → 키 생략.
+
+    ``resource.getrusage().ru_maxrss`` 를 쓰지 않는다 — 그것은 **프로세스 시작 이후의** 최고값이라,
+    큰 실행을 한 번 하면 그 뒤의 작은 실행이 모두 그 값으로 기록된다(워커는 실행을 순차 처리한다).
+    실행별 최댓값은 실행 중 표본(STARTED·PROGRESS·FINISHED 시점)의 최댓값으로 잰다.
+    Linux 는 ``/proc/self/statm`` 두 번째 열(상주 페이지 수)이다.
+    """
+    if not sys.platform.startswith("linux"):
         return None
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    # Linux 는 KiB, macOS 는 bytes 로 준다.
-    divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
-    return Decimal(f"{peak / divisor:.1f}")
+    try:
+        with open("/proc/self/statm", encoding="ascii") as statm:
+            resident_pages = int(statm.read().split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return Decimal(f"{resident_pages * os.sysconf('SC_PAGE_SIZE') / (1024 * 1024):.1f}")
 
 
 class _EventStream:
@@ -139,12 +145,24 @@ class _EventStream:
         self._sequence = 0
         self._wall_started = time.monotonic()
         self._cpu_started = time.process_time()
+        # 이 실행 동안의 상주 메모리 표본 최댓값. 이벤트마다 한 번 잰다 — PROGRESS 가 20거래일마다
+        # 오므로 표본이 실행 길이에 비례해 늘고, 그 사이 순간 최고점은 놓칠 수 있다(추정치다).
+        self._peak_rss_mb: Decimal | None = None
+        self._queue: str | None = None
+        self._role: str | None = None
+
+    def _sample_rss(self) -> None:
+        now = current_rss_mb()
+        if now is not None and (self._peak_rss_mb is None or now > self._peak_rss_mb):
+            self._peak_rss_mb = now
 
     @property
     def sequence(self) -> int:
         return self._sequence
 
     def started(self, queue: str, role: str) -> None:
+        self._queue, self._role = queue, role
+        self._sample_rss()
         now = self._clock()
         payload = StartedPayload(
             started_at=now,
@@ -157,13 +175,18 @@ class _EventStream:
         self._emit(BacktestEventType.STARTED, payload, now)
 
     def progress(self, payload: ProgressPayload) -> None:
+        self._sample_rss()
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
     def finished(self, output: EngineOutput) -> None:
+        self._sample_rss()
         usage = ResourceUsage(
-            peak_rss_mb=peak_rss_mb(),
+            peak_rss_mb=self._peak_rss_mb,
             cpu_seconds=_seconds(time.process_time() - self._cpu_started),
             wall_seconds=_seconds(time.monotonic() - self._wall_started),
+            # 이 결과를 낸 워커. 중복 실행(R-18)에서 마지막 STARTED 와 다를 수 있어 다시 싣는다.
+            queue=self._queue,
+            role=self._role,
         )
         payload = FinishedPayload(
             status=output.run.status,

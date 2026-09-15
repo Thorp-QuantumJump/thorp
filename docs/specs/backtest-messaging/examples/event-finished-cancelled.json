@@ -794,7 +794,9 @@
     "resource": {
       "peakRssMb": "400.0",
       "cpuSeconds": "1.500",
-      "wallSeconds": "2.100"
+      "wallSeconds": "2.100",
+      "queue": "backtest.jobs",
+      "role": "single"
     }
   }
 }

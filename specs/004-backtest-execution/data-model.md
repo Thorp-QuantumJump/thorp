@@ -151,7 +151,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | peak_rss_mb / cpu_seconds | NUMERIC(12,1) / NUMERIC(12,3) (FINISHED payload `resource`. DLQ·강제 종결은 null) |
 | auto_retried | BOOLEAN (attempt > publish_count, R-18 — 재발행 중복은 재시도가 아니다) |
 | result_bytes | BIGINT (`backtest_result` 행의 `pg_column_size`. 결과 없는 종결은 0) |
-| served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 집었나 — R-20 N/M 비율 조정 근거. STARTED `resource.queue`·`resource.role`) |
+| served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 **결과를 냈나** — R-20 N/M 비율 조정 근거. FINISHED `resource.queue`·`role`이 먼저고, FINISHED 가 없는 종결은 STARTED 가 실행 행에 남긴 값) |
 | recorded_at | TIMESTAMPTZ |
 
 `backtest_run`에도 `served_queue`·`worker_role` 두 컬럼이 있다 — STARTED 를 받을 때 전용 UPDATE 로 쓰고(컬럼 소유 규칙) 종결 때 여기로 복사한다.
