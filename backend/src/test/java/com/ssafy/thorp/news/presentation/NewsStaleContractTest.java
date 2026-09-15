@@ -22,6 +22,9 @@ import org.junit.jupiter.api.Test;
  *
  * <p><b>지연은 오류가 아니다.</b> HTTP 200으로 상태를 실어 보내고 화면은 마지막 갱신 시각을 함께 보인다. 여기가 500이 되면 외부 뉴스원의 사정이 시장 흐름
  * 화면 전체를 내려 버린다.
+ *
+ * <p>준비 중(PREPARING) 응답은 {@code NewsPreparingContractTest}가 본다. 지연과 준비 중은 원인도 화면이 할 일도 달라 한 파일에 두면
+ * 무엇을 고정하려는 파일인지 흐려진다.
  */
 class NewsStaleContractTest {
 
@@ -50,35 +53,6 @@ class NewsStaleContractTest {
                         .getContentAsString(StandardCharsets.UTF_8);
 
         assertThat(MAPPER.readTree(body)).isEqualTo(example("current-stale.json"));
-    }
-
-    @Test
-    @DisplayName("PREPARING 응답이 계약 예시와 같다")
-    void 준비_중_계약_일치() throws Exception {
-        NewsDigestListResult preparing =
-                new NewsDigestListResult(
-                        NewsDigestQuery.Context.CURRENT,
-                        NewsDigestState.PREPARING,
-                        null,
-                        null,
-                        null,
-                        null,
-                        false,
-                        com.ssafy.thorp.news.application.service.NewsFreshnessPolicy
-                                .PREPARING_MESSAGE,
-                        List.of());
-
-        String body =
-                mockMvc(query -> preparing)
-                        .perform(get("/market-news/digests"))
-                        .andExpect(status().isOk())
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-
-        assertThat(MAPPER.readTree(body))
-                .as("문구가 계약과 다르면 화면이 준비한 안내와 서버가 보내는 말이 어긋난다")
-                .isEqualTo(example("public-preparing.json"));
     }
 
     @Test
