@@ -52,7 +52,7 @@
 - [X] T012 [P] [US1] Add RSS fixture and HTTP security tests for allowlisted hosts, redirect/time/size/content-type bounds, optional fields, opaque GUID, RFC-822 dates, conditional 304, ignored description, and XML entity rejection in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicyTest.java`, `RssNewsClientTest.java`, and `backend/src/test/resources/news/rss/`
 - [X] T013 [P] [US1] Add GDELT DOC/file fixture and HTTP boundary tests for bounded windows, result caps, title/URL metadata, recorded-time separation, and non-displayable records in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/GdeltNewsClientTest.java` and `backend/src/test/resources/news/gdelt/`
 - [X] T014 [P] [US1] Add deterministic URL normalization, topic linking, duplicate fallback, grouping-boundary, transitive-similarity, summary exclusion, and importance-order tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsProcessingRulesTest.java`
-- [ ] T015 [P] [US1] Add MockMvc response-contract tests for READY and fewer-than-three results using `specs/012-market-news-digest/contracts/examples/current-ready.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsDigestContractTest.java`
+- [X] T015 [P] [US1] Add MockMvc response-contract tests for READY and fewer-than-three results using `specs/012-market-news-digest/contracts/examples/current-ready.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsDigestContractTest.java`
 
 ### Implementation for User Story 1
 
@@ -62,8 +62,8 @@
 - [X] T019 [P] [US1] Implement deterministic representative selection, safe one-sentence metadata summary, exclusion fallback, and importance tuple ordering in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSummaryPolicy.java` and `NewsImportancePolicy.java`
 - [X] T020 [US1] Orchestrate period → relevance → deduplication → persistence → grouping with per-source commits, cursor-after-commit semantics, and idempotent reruns in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsIngestionService.java`, persisting sector/topic links through the new `application/repository/NewsArticleLinkRepository.java` boundary (implemented by `infrastructure/persistence/NewsArticleLinkRepositoryImpl.java` with `NewsTopicJpaEntity`/`NewsTopicJpaRepository`)
 - [X] T021 [US1] Add the 15-minute due-source scheduler and database lease boundary without holding transactions during network calls in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsCollectionScheduler.java` and `DatabaseNewsCollectionLease.java`
-- [ ] T022 [US1] Implement current digest query and result projection with maximum three items in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java` and `backend/src/main/java/com/ssafy/thorp/news/application/result/NewsDigestListResult.java`
-- [ ] T023 [US1] Implement the body-free `GET /market-news/digests` response using `HttpApiResponse` in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
+- [X] T022 [US1] Implement current digest query and result projection with maximum three items in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java` and `backend/src/main/java/com/ssafy/thorp/news/application/result/NewsDigestListResult.java`
+- [X] T023 [US1] Implement the body-free `GET /market-news/digests` response using `HttpApiResponse` in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
 
 **Checkpoint**: US1만으로 현재 뉴스 묶음 MVP를 fixture 기반으로 독립 시연할 수 있다.
 
@@ -77,14 +77,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Add sector/topic registry and overseas domestic-link classification tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsSectorLinkPolicyTest.java`
-- [ ] T025 [P] [US2] Add repository and MockMvc tests for canonical sector filtering, unknown sector validation, and EMPTY-without-fill behavior in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsSectorQueryIT.java` and `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsSectorDigestContractTest.java`
+- [X] T024 [P] [US2] Add sector/topic registry and overseas domestic-link classification tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsSectorLinkPolicyTest.java`
+- [X] T025 [P] [US2] Add repository and MockMvc tests for canonical sector filtering, unknown sector validation, and EMPTY-without-fill behavior in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsSectorQueryIT.java` and `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsSectorDigestContractTest.java`
 
 ### Implementation for User Story 2
 
-- [ ] T026 [P] [US2] Implement canonical sector validation and lookup against the foundational immutable registry without locally inventing sector IDs in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSectorQueryPolicy.java`
-- [ ] T027 [US2] Implement domestic and overseas article link rules with recorded rule version and evidence key in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSectorLinkPolicy.java`
-- [ ] T028 [US2] Extend digest query and controller validation for optional `sectorId` while preserving EMPTY semantics in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java`
+- [X] T026 [P] [US2] Implement canonical sector validation and lookup against the foundational immutable registry without locally inventing sector IDs in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSectorQueryPolicy.java`
+- [X] T027 [US2] Implement domestic and overseas article link rules with recorded rule version and evidence key in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsSectorLinkPolicy.java`
+- [X] T028 [US2] Extend digest query and controller validation for optional `sectorId` while preserving EMPTY semantics in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java`
 
 **Checkpoint**: US2는 US1 자료를 사용하지만 sector 필터 결과를 독립적으로 검증할 수 있다.
 
@@ -98,14 +98,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T029 [P] [US3] Add query validation tests for paired from/to, inclusive boundaries, reversed ranges, timezone offsets, and the 93-day maximum in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsHistoricalQueryValidationTest.java`
-- [ ] T030 [P] [US3] Add persistence and contract tests excluding UNKNOWN/out-of-range records and matching `specs/012-market-news-digest/contracts/examples/historical-empty.json` in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsHistoricalQueryIT.java` and `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsHistoricalDigestContractTest.java`
+- [X] T029 [P] [US3] Add query validation tests for paired from/to, inclusive boundaries, reversed ranges, timezone offsets, and the 93-day maximum in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsHistoricalQueryValidationTest.java`
+- [X] T030 [P] [US3] Add persistence and contract tests excluding UNKNOWN/out-of-range records and matching `specs/012-market-news-digest/contracts/examples/historical-empty.json` in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsHistoricalQueryIT.java` and `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsHistoricalDigestContractTest.java`
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Add current-versus-historical query command validation and UTC boundary normalization in `backend/src/main/java/com/ssafy/thorp/news/application/command/NewsDigestQuery.java`
-- [ ] T032 [US3] Implement permission-aware verified-publication historical projection without using GDELT record time as publication time in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
-- [ ] T033 [US3] Extend the endpoint response with HISTORICAL context, requested bounds, and historical empty message in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
+- [X] T031 [US3] Add current-versus-historical query command validation and UTC boundary normalization in `backend/src/main/java/com/ssafy/thorp/news/application/command/NewsDigestQuery.java`
+- [X] T032 [US3] Implement permission-aware verified-publication historical projection without using GDELT record time as publication time in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
+- [X] T033 [US3] Extend the endpoint response with HISTORICAL context, requested bounds, and historical empty message in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
 
 **Checkpoint**: 010/011의 화면 구현 없이도 날짜 계약만으로 당시 뉴스 API를 독립 검증할 수 있다.
 
@@ -119,15 +119,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Add retry classification, Retry-After, jitter bounds, failure cooldown, and independent-source recovery tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsRetryPolicyTest.java` and `NewsIngestionFailureTest.java`
-- [ ] T035 [P] [US4] Add EMPTY/STALE/READY freshness tests using a fixed Clock, data presence, the 30-minute threshold, and the initial `lastUpdatedAt=null` plus '아직 수집되지 않음' message in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsFreshnessPolicyTest.java`
-- [ ] T036 [P] [US4] Add response-contract and health-isolation tests using `specs/012-market-news-digest/contracts/examples/current-stale.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsStaleContractTest.java` and `backend/src/test/java/com/ssafy/thorp/news/NewsHealthIsolationIT.java`
+- [X] T034 [P] [US4] Add retry classification, Retry-After, jitter bounds, failure cooldown, and independent-source recovery tests in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsRetryPolicyTest.java` and `NewsIngestionFailureTest.java`
+- [X] T035 [P] [US4] Add EMPTY/STALE/READY freshness tests using a fixed Clock, data presence, the 30-minute threshold, and the initial `lastUpdatedAt=null` plus '아직 수집되지 않음' message in `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsFreshnessPolicyTest.java`
+- [X] T036 [P] [US4] Add response-contract and health-isolation tests using `specs/012-market-news-digest/contracts/examples/current-stale.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsStaleContractTest.java` and `backend/src/test/java/com/ssafy/thorp/news/NewsHealthIsolationIT.java`
 
 ### Implementation for User Story 4
 
-- [ ] T037 [P] [US4] Implement transient/terminal source-error classification, Retry-After precedence, and bounded exponential backoff with jitter in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetryPolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/application/exception/NewsSourceException.java`
-- [ ] T038 [P] [US4] Implement freshness state from aggregate last-success time and configurable 30-minute default without marking Actuator health DOWN in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsFreshnessPolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsHealthIndicator.java`
-- [ ] T039 [US4] Integrate per-source failure persistence and READY/EMPTY/STALE response projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsIngestionService.java` and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
+- [X] T037 [P] [US4] Implement transient/terminal source-error classification, Retry-After precedence, and bounded exponential backoff with jitter in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetryPolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/application/exception/NewsSourceException.java`
+- [X] T038 [P] [US4] Implement freshness state from aggregate last-success time and configurable 30-minute default without marking Actuator health DOWN in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsFreshnessPolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsHealthIndicator.java`
+- [X] T039 [US4] Integrate per-source failure persistence and READY/EMPTY/STALE response projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsIngestionService.java` and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
 
 **Checkpoint**: 외부 뉴스원 장애를 정상적인 뉴스 상태로 독립 시연할 수 있다.
 
@@ -161,7 +161,7 @@
 
 **Purpose**: 관측성, 종료 정리, 언어 정책, 성능, 계약 동치와 전체 검증을 마무리한다.
 
-- [ ] T048 [P] Add structured source-run metrics and sanitized logs for duration, processed/excluded/duplicate/grouped counts, retry, and freshness in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsObservability.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsObservabilityTest.java`
+- [X] T048 [P] Add structured source-run metrics and sanitized logs for duration, processed/excluded/duplicate/grouped counts, retry, and freshness in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsObservability.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsObservabilityTest.java`
 - [ ] T049 Add daily news-domain cleanup activated on/after 2026-11-07 with cascade deletion and repeat zero-row no-op semantics, without a long-term audit table, in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetentionService.java`, `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsRetentionScheduler.java`, and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsRetentionIT.java`
 - [X] T050 [P] Add version-controlled grouping-quality fixtures that prove duplicate and wrong-event merges are 0 and same-event split rate is at most 10%, plus language-policy cases excluding forecast, judgment, investment implication, and return-causation language, in `backend/src/test/resources/news/grouping-quality.json`, `summary-policy.json`, `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsGroupingQualityTest.java`, and `NewsSummaryLanguagePolicyTest.java`
 - [ ] T051 Synchronize API documentation and all response examples with implementation in `docs/specs/market-news-api.md`, `specs/012-market-news-digest/contracts/openapi.yaml`, and `specs/012-market-news-digest/contracts/examples/current-ready.json`, `current-stale.json`, `public-preparing.json`, `historical-empty.json`, `export-allowed.json`
@@ -336,3 +336,18 @@ Developer E: T015 → T022/T023 (조회 service와 HTTP 계약)
 - [X] T071 검증된 발행 시각이 없는 배포 레코드를 표시 후보로 만들지 않는다. `NewsIngestionService.save`의 `displayEligible`이 요약을 만들 수 있는지만 보는데, plan은 배포 레코드로 검증된 발행 시각과 제목을 확보하지 못하면 그 레코드를 연결·중복 판정 보조로만 쓰라고 한다. 배포 파일에는 발행 시각이 없으므로 이 경로의 기사는 항상 표시 후보에서 빠져야 한다 per plan "수집과 재시도", FR-006·FR-012 (partial)
 - [X] T072 표시할 수 없는 기사를 묶음 후보에서 뺀다. `NewsIngestionService.regroup`이 후보의 `displayEligible`을 보지 않아, 표시 불가 기사가 대표 기사로 뽑히거나 서로 다른 매체 수를 부풀린다. 대표가 표시되지 못하면 묶음 전체가 사라지고, 매체 수가 부풀면 주요도 순서가 틀어진다 per FR-001·FR-003·FR-004 (partial)
 - [X] T073 매핑되지 않은 분류 값의 건수를 남긴다. `NewsRelevanceClassifier.Relevance.unmappedCategories`를 계산만 하고 아무도 읽지 않아, 등록표에 빠진 분류 값이 얼마나 버려지는지 알 방법이 없다. 원문 값은 저장하지 않고 건수만 회차 로그에 남긴다 per FR-010 (partial)
+
+---
+
+## Phase 14: Convergence
+
+조회 경로가 생기고 나서 본 자리다. 앞선 회차들이 수집 안쪽을 다뤘다면 이번에 걸린 것은 화면이 실제로 보게 되는 값과, 운영자가 실제로 보게 되는 지표다. 기존 Task는 손대지 않는다.
+
+- [X] T074 '준비 중' 문구를 계약과 맞춘다. `NewsFreshnessPolicy.PREPARING_MESSAGE`가 "매체 이용 조건을 확인하는 중입니다."인데 계약 예시 `public-preparing.json`은 "뉴스 제공을 준비하고 있습니다."다. 화면은 예시를 보고 만들어졌고, 지금 문구는 매체 회신을 기다린다는 내부 사정까지 사용자에게 말한다 per FR-016, contracts/examples/public-preparing.json (contradicts)
+- [X] T075 발행 시각 미확인 묶음도 현재 조회 창으로 자른다. `DigestJpaRepository.findRecent`의 `latestPublishedAt IS NULL` 가지에 시간 하한이 없어, 검증 시각을 얻지 못한 묶음은 몇 달이 지나도 '현재 뉴스' 후보로 남는다. 정렬이 뒤로 밀어 주지만 볼 것이 적은 날에는 그대로 화면에 올라온다. 수집 시각 기준으로 같은 창을 적용한다 per FR-001·FR-004 (partial)
+- [X] T076 뉴스 신선도 지표를 실제로 볼 수 있게 한다. `NewsHealthIndicator`를 만들었지만 `management.endpoint.health.show-details`가 기본값이라 `/actuator/health/newsFreshness`가 404이고, 전체 health 집계에서 분리하지도 않았다. plan은 이 지표를 전용으로 노출하고 전체 집계에서는 빼라고 한다 per plan "보관과 관측성", FR-024 (partial)
+- [X] T077 뉴스원별 마지막 성공 경과 시간을 지표로 남긴다. plan이 이름까지 고정한 `news.source.last_success.age`가 없어, 어떤 뉴스원이 며칠째 못 들어오고 있는지 경보로 걸 수 없다. 수집이 조용히 멈춘 것은 실패보다 늦게 발견된다 per FR-023, plan "보관과 관측성" (partial)
+- [X] T078 제외 사유별 건수를 남긴다. `NewsIngestionService`가 제외를 한 숫자로만 세서 `news.ingest.excluded{reason}`을 채우지 못한다. 관련성 미달과 중복 열쇠 실패와 식별자 충돌은 대응이 서로 다른데 지표에서는 구별되지 않는다 per FR-023 (partial)
+- [X] T079 INTERNAL 모드에서는 저장된 사실 요약을 쓴다. `NewsDigestQueryService`가 모드와 무관하게 요약을 다시 만들어, 전체 멤버 기준으로 저장한 값을 내부 검증에서도 볼 수 없다. 공개 응답에서 다시 만드는 것은 그대로 두고 내부 모드만 저장 값을 쓴다 per plan "요약·정렬 규칙 v1", FR-003 (partial)
+- [X] T080 과거·섹터 조회를 한 질의로 합친다. `NewsDigestRepositoryImpl.findVerifiedBetween`이 구간 전체를 읽은 뒤 섹터 목록과 메모리에서 교차한다. 결과는 맞지만 읽는 양이 섹터와 무관하게 구간 전체라, 기사가 쌓일수록 섹터 조회가 전체 조회만큼 비싸진다 per plan 성능 목표 (partial)
+- [X] T081 노출 모드 enum을 하나로 모은다. `NewsProperties.ExposureMode`와 `NewsExposureMode`가 따로 있고 `NewsConfig`가 `valueOf`로 잇는다. 한쪽에만 값을 더하면 컴파일은 지나가고 기동에서 막히며, 그 사이 어디가 원인인지 보이지 않는다 per plan 설정 (unrequested)

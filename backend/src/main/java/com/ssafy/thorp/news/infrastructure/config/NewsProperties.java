@@ -1,5 +1,6 @@
 package com.ssafy.thorp.news.infrastructure.config;
 
+import com.ssafy.thorp.news.domain.vo.NewsExposureMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,7 +14,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * <p>수치의 근거는 specs/012-market-news-digest/plan.md다. HTTP 한도는 설정으로 더 엄격하게만 조일 수 있으며 기본값을 넘겨 완화하지
  * 않는다(spec FR-020).
  *
- * @param exposureMode 노출 모드. 클라이언트가 고를 수 없고 서버 설정으로만 정한다(spec FR-016).
+ * @param exposureMode 노출 모드. 클라이언트가 고를 수 없고 서버 설정으로만 정한다(spec FR-016). 도메인의 {@link
+ *     NewsExposureMode}를 그대로 쓴다. 설정용 enum을 따로 두면 한쪽에만 값을 더했을 때 컴파일은 지나가고 기동에서 막힌다.
  * @param staleThreshold 마지막 성공 시각이 이보다 오래되면 STALE로 판정한다(spec FR-014).
  * @param collectionInterval 수집 회차 시작 간격(spec FR-013).
  * @param leaseTtl 수집·정리 작업 점유의 만료 시간. 만료되면 다른 인스턴스가 회수한다(spec FR-022).
@@ -22,11 +24,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param maxHistoricalRangeDays 과거 조회 요청 구간 상한. 자료 존재를 보장하지 않는 별개 경계다.
  * @param maxPublishers 등록 매체 수 계획 상한. 검증된 운영 용량이 아니다.
  * @param maxDigests 한 응답의 묶음 수 상한(spec FR-001).
+ * @param currentWindow 현재 뉴스로 볼 최근 구간. 묶음 규칙의 시간 조건과 같은 48시간이 기본이며, 그보다 넓히면 어제 뉴스가 '현재'로 올라온다.
  * @param http 외부 호출 보안 경계.
  */
 @ConfigurationProperties(prefix = "thorp.news")
 public record NewsProperties(
-        @DefaultValue("INTERNAL") ExposureMode exposureMode,
+        @DefaultValue("PUBLIC") NewsExposureMode exposureMode,
         @DefaultValue("30m") Duration staleThreshold,
         @DefaultValue("15m") Duration collectionInterval,
         @DefaultValue("15m") Duration leaseTtl,
@@ -35,13 +38,8 @@ public record NewsProperties(
         @DefaultValue("93") int maxHistoricalRangeDays,
         @DefaultValue("20") int maxPublishers,
         @DefaultValue("3") int maxDigests,
+        @DefaultValue("48h") Duration currentWindow,
         @DefaultValue Http http) {
-
-    /** 노출 모드. 공개 조회는 허가된 매체만 사용한다. */
-    public enum ExposureMode {
-        INTERNAL,
-        PUBLIC
-    }
 
     /**
      * 외부 수집 호출의 공통 보안 경계(spec FR-020).
@@ -112,6 +110,6 @@ public record NewsProperties(
 
     /** 공개 노출 모드인지 여부. 공개 모드에서는 허가된 매체의 항목만 보인다(spec FR-016). */
     public boolean isPublic() {
-        return exposureMode == ExposureMode.PUBLIC;
+        return exposureMode.requiresPermissionFilter();
     }
 }

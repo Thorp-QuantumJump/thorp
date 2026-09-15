@@ -75,6 +75,21 @@ public class NewsArticleLinkRepositoryImpl implements NewsArticleLinkRepository 
     }
 
     @Override
+    public java.util.Map<Long, java.util.Set<String>> findSectorIdsByArticleIds(
+            java.util.Collection<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        java.util.Map<Long, java.util.Set<String>> result = new java.util.HashMap<>();
+        for (NewsArticleSectorJpaEntity link :
+                articleSectorRepository.findByKeyArticleIdIn(articleIds)) {
+            result.computeIfAbsent(link.getKey().getArticleId(), k -> new java.util.HashSet<>())
+                    .add(link.getKey().getSectorId());
+        }
+        return result;
+    }
+
+    @Override
     public java.util.Map<Long, java.util.Set<String>> findTopicKeysByArticleIds(
             java.util.Collection<Long> articleIds) {
         if (articleIds == null || articleIds.isEmpty()) {

@@ -45,6 +45,24 @@ public class NewsConfig {
         return read(new ClassPathResource(LINK_REGISTRY_PATH), NewsLinkRegistry.class);
     }
 
+    /**
+     * 조회 설정을 application 계층이 쓰는 모양으로 옮긴다.
+     *
+     * <p>설정 record를 조회 서비스에 그대로 넘기지 않는다. {@code NewsProperties}는 infrastructure에 있고 수집 한도까지 함께 들고
+     * 있어, application이 그것을 참조하면 계층 방향이 뒤집히고 시험이 쓰지 않는 값까지 채워야 한다.
+     */
+    @Bean
+    public com.ssafy.thorp.news.application.service.NewsDigestQueryService.NewsQuerySettings
+            newsQuerySettings(NewsProperties properties) {
+        return new com.ssafy.thorp.news.application.service.NewsDigestQueryService
+                .NewsQuerySettings(
+                properties.exposureMode(),
+                properties.staleThreshold(),
+                properties.maxDigests(),
+                properties.currentWindow(),
+                properties.maxHistoricalRangeDays());
+    }
+
     /** 등록표 파일을 읽는다. 모르는 필드는 허용해 파일에 주석용 키를 둘 수 있게 한다. */
     static <T> T read(Resource resource, Class<T> type) {
         ObjectMapper mapper =

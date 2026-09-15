@@ -40,4 +40,12 @@ public interface NewsArticleLinkRepository {
      */
     java.util.Map<Long, java.util.Set<String>> findTopicKeysByArticleIds(
             java.util.Collection<Long> articleIds);
+
+    /**
+     * 기사별로 연결된 섹터 식별자를 읽는다.
+     *
+     * <p>응답이 "이 묶음이 어느 섹터와 이어지는지" 보이려면 필요하다. 값은 spec 001이 소유하며 012는 저장된 연결을 그대로 돌려줄 뿐 새로 만들지 않는다.
+     */
+    java.util.Map<Long, java.util.Set<String>> findSectorIdsByArticleIds(
+            java.util.Collection<Long> articleIds);
 }

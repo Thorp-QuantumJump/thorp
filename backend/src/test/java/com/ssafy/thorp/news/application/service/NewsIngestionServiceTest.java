@@ -254,6 +254,11 @@ class NewsIngestionServiceTest {
         }
 
         @Override
+        public List<NewsCollectionState> findAll() {
+            return last == null ? List.of() : List.of(last);
+        }
+
+        @Override
         public Optional<Instant> findLatestSuccessAt(boolean publicOnly) {
             return Optional.empty();
         }
@@ -268,6 +273,12 @@ class NewsIngestionServiceTest {
                         boolean domesticLink,
                         String ruleVersion) {
                     return 1L;
+                }
+
+                @Override
+                public java.util.Map<Long, java.util.Set<String>> findSectorIdsByArticleIds(
+                        java.util.Collection<Long> articleIds) {
+                    return java.util.Map.of();
                 }
 
                 @Override
@@ -320,6 +331,10 @@ class NewsIngestionServiceTest {
                         new NewsGroupingPolicy(),
                         new NewsSummaryPolicy(topics),
                         topics,
+                        new NewsSectorLinkPolicy(
+                                new com.ssafy.thorp.news.support.StubSectorCatalog()),
+                        new NewsRetryPolicy(new java.util.Random(0)),
+                        new com.ssafy.thorp.news.support.RecordingNewsMetrics(),
                         directTransactions(),
                         Clock.fixed(NOW, ZoneOffset.UTC));
         return new Harness(service, articles, publishers);

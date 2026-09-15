@@ -59,6 +59,11 @@ public class NewsCollectionStateRepositoryImpl implements NewsCollectionStateRep
     }
 
     @Override
+    public List<NewsCollectionState> findAll() {
+        return jpaRepository.findAll().stream().map(NewsPersistenceMapper::toDomain).toList();
+    }
+
+    @Override
     public Optional<Instant> findLatestSuccessAt(boolean publicOnly) {
         return jpaRepository.findLatestSuccessAt(publicOnly, NewsSourceKey.RSS_PREFIX);
     }

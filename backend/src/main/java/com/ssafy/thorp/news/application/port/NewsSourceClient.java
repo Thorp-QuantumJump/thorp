@@ -39,11 +39,23 @@ public interface NewsSourceClient {
 
         private final String errorCategory;
         private final boolean retryable;
+        private final java.time.Duration retryAfter;
 
         public NewsSourceException(String errorCategory, boolean retryable) {
+            this(errorCategory, retryable, null);
+        }
+
+        /**
+         * 뉴스원이 {@code Retry-After}로 언제 다시 오라고 밝힌 경우.
+         *
+         * <p>이 값이 있으면 우리가 계산한 백오프보다 <b>먼저</b> 쓴다. 매체가 정한 간격을 우리 계산으로 덮으면 차단당할 수 있다(plan "수집과 재시도").
+         */
+        public NewsSourceException(
+                String errorCategory, boolean retryable, java.time.Duration retryAfter) {
             super(errorCategory);
             this.errorCategory = errorCategory;
             this.retryable = retryable;
+            this.retryAfter = retryAfter;
         }
 
         public String errorCategory() {
@@ -52,6 +64,11 @@ public interface NewsSourceClient {
 
         public boolean isRetryable() {
             return retryable;
+        }
+
+        /** 뉴스원이 밝힌 재시도 간격. 밝히지 않았으면 빈 값이다. */
+        public java.util.Optional<java.time.Duration> retryAfter() {
+            return java.util.Optional.ofNullable(retryAfter);
         }
     }
 }

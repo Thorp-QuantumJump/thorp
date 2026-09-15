@@ -62,6 +62,9 @@ public class NewsIngestionService {
     private final NewsGroupingPolicy grouping;
     private final NewsSummaryPolicy summaries;
     private final NewsTopicCatalog topicCatalog;
+    private final NewsSectorLinkPolicy sectorLinks;
+    private final NewsRetryPolicy retries;
+    private final com.ssafy.thorp.news.application.port.NewsMetrics metrics;
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
 
@@ -77,6 +80,9 @@ public class NewsIngestionService {
             NewsGroupingPolicy grouping,
             NewsSummaryPolicy summaries,
             NewsTopicCatalog topicCatalog,
+            NewsSectorLinkPolicy sectorLinks,
+            NewsRetryPolicy retries,
+            com.ssafy.thorp.news.application.port.NewsMetrics metrics,
             TransactionTemplate transactionTemplate,
             Clock clock) {
         this.sourceClient = sourceClient;
@@ -90,6 +96,9 @@ public class NewsIngestionService {
         this.grouping = grouping;
         this.summaries = summaries;
         this.topicCatalog = topicCatalog;
+        this.sectorLinks = sectorLinks;
+        this.retries = retries;
+        this.metrics = metrics;
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
     }
@@ -113,7 +122,7 @@ public class NewsIngestionService {
         NewsFetchResult fetched;
         try {
             // 네트워크는 트랜잭션 밖에서 부른다.
-            fetched = sourceClient.fetch(source);
+            fetched = withRetry(sourceKey, () -> sourceClient.fetch(source));
         } catch (NewsSourceClient.NewsSourceException e) {
             return failed(sourceKey, e);
         }
@@ -182,7 +191,7 @@ public class NewsIngestionService {
      * @return 최소 구간에서도 상한이 유지되면 참.
      */
     private boolean collectWindow(GdeltNewsSource window, List<CollectedNewsItem> sink) {
-        NewsFetchResult result = sourceClient.fetch(window);
+        NewsFetchResult result = withRetry(window.sourceKey(), () -> sourceClient.fetch(window));
         sink.addAll(result.items());
 
         if (!result.resultCapReached()) {
@@ -233,11 +242,19 @@ public class NewsIngestionService {
             unmappedCategories += link.unmappedCategories().size();
             if (!link.accepted()) {
                 excluded++;
+                metrics.recordExcluded(
+                        sourceKey,
+                        com.ssafy.thorp.news.application.port.NewsMetrics.ExclusionReason
+                                .NOT_RELEVANT);
                 continue;
             }
             Optional<CanonicalNewsUrl> canonical = urlNormalizer.canonicalize(item.url());
             if (canonical.isEmpty()) {
                 excluded++;
+                metrics.recordExcluded(
+                        sourceKey,
+                        com.ssafy.thorp.news.application.port.NewsMetrics.ExclusionReason
+                                .MALFORMED_URL);
                 continue;
             }
 
@@ -248,12 +265,20 @@ public class NewsIngestionService {
                     resolvePublisher(item, publisher, sourceType, canonical.get());
             if (owner.isEmpty()) {
                 excluded++;
+                metrics.recordExcluded(
+                        sourceKey,
+                        com.ssafy.thorp.news.application.port.NewsMetrics.ExclusionReason
+                                .NO_PUBLISHER);
                 continue;
             }
 
             Optional<String> duplicateKey = urlNormalizer.duplicateKey(item, owner.get().getId());
             if (duplicateKey.isEmpty()) {
                 excluded++;
+                metrics.recordExcluded(
+                        sourceKey,
+                        com.ssafy.thorp.news.application.port.NewsMetrics.ExclusionReason
+                                .NO_DUPLICATE_KEY);
                 continue;
             }
             if (!seenKeys.add(duplicateKey.get())) {
@@ -275,7 +300,12 @@ public class NewsIngestionService {
                             link,
                             linkRuleVersion);
             if (saved.isEmpty()) {
+                // save가 빈 값을 주는 경우는 외부 식별자 충돌 하나다(spec FR-025).
                 excluded++;
+                metrics.recordExcluded(
+                        sourceKey,
+                        com.ssafy.thorp.news.application.port.NewsMetrics.ExclusionReason
+                                .ID_COLLISION);
                 continue;
             }
             collected++;
@@ -304,6 +334,14 @@ public class NewsIngestionService {
                 excluded,
                 duplicates,
                 unmappedCategories,
+                digestsTouched);
+
+        metrics.recordIngestRun(
+                sourceKey,
+                java.time.Duration.between(collectedAt, now()),
+                collected,
+                excluded,
+                duplicates,
                 digestsTouched);
 
         return new IngestOutcome(
@@ -453,7 +491,13 @@ public class NewsIngestionService {
                                                     linkRuleVersion),
                                             topic.topicKey()));
         }
-        links.replaceLinks(stored.getId(), link.sectorIds(), topicEvidence, linkRuleVersion);
+        // 등록표가 제안한 섹터 중 spec 001에 실재하는 것만 연결한다. 없는 섹터로 연결하면 어떤 조회에도
+        // 걸리지 않는 연결이 저장소에 남는다(spec FR-005).
+        links.replaceLinks(
+                stored.getId(),
+                sectorLinks.resolve(link.sectorIds()),
+                topicEvidence,
+                linkRuleVersion);
         return Optional.of(stored);
     }
 
@@ -631,8 +675,49 @@ public class NewsIngestionService {
         }
     }
 
+    /**
+     * 한 회차 안에서 제한된 횟수만큼 다시 부른다(spec FR-013, plan "수집과 재시도").
+     *
+     * <p>일시 실패만 다시 시도한다. 401·403 같은 설정 오류는 다시 불러도 같은 답이 오므로 바로 던진다.
+     *
+     * <p>기다리는 동안 트랜잭션을 들고 있지 않다. 이 메서드는 트랜잭션 밖에서만 불린다 — 안에서 부르면 느린 뉴스원 하나가 커넥션을 잡은 채 잠든다.
+     *
+     * <p>대기 중 인터럽트가 오면 더 시도하지 않고 마지막 실패를 그대로 던진다. 종료 신호를 삼키고 계속 도는 쪽이 더 나쁘다.
+     */
+    private NewsFetchResult withRetry(
+            String sourceKey, java.util.function.Supplier<NewsFetchResult> fetch) {
+        NewsSourceClient.NewsSourceException last = null;
+        for (int attempt = 1; attempt <= NewsRetryPolicy.MAX_ATTEMPTS_PER_RUN; attempt++) {
+            try {
+                return fetch.get();
+            } catch (NewsSourceClient.NewsSourceException e) {
+                last = e;
+                java.util.Optional<java.time.Duration> delay = retries.delayBeforeRetry(attempt, e);
+                if (delay.isEmpty()) {
+                    throw e;
+                }
+                metrics.recordRetry(sourceKey);
+                log.warn(
+                        "뉴스원 호출을 다시 시도한다 source={} attempt={} category={}",
+                        sourceKey,
+                        attempt,
+                        e.errorCategory());
+                try {
+                    Thread.sleep(delay.get().toMillis());
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
+        }
+        throw last;
+    }
+
     private IngestOutcome failed(String sourceKey, NewsSourceClient.NewsSourceException e) {
         NewsCollectionState state = loadState(sourceKey);
+        // 연속 실패가 쌓이면 다음 회차를 뒤로 민다. 죽은 뉴스원을 15분마다 두드리지 않는다.
+        java.time.Duration cooldown =
+                retries.cooldown(COLLECTION_INTERVAL, state.getRetryCount() + 1, e);
         NewsCollectionState next =
                 state.failed(
                         e.isRetryable()
@@ -640,7 +725,12 @@ public class NewsIngestionService {
                                 : com.ssafy.thorp.news.domain.vo.NewsCollectionStatus.FAILED,
                         e.errorCategory(),
                         now(),
-                        nextAttempt());
+                        now().plus(cooldown));
+        if (!e.isRetryable()) {
+            // 설정 오류다. 사람이 등록 정보를 고치기 전에는 달라지지 않는다(plan "수집과 재시도").
+            log.warn("뉴스원을 비활성화 후보로 남긴다 source={} category={}", sourceKey, e.errorCategory());
+        }
+        metrics.recordIngestFailure(sourceKey, e.errorCategory());
         log.warn("뉴스 수집 실패 source={} category={}", sourceKey, e.errorCategory());
         return new IngestOutcome(sourceKey, collectionStates.save(next), 0, 0, 0, 0);
     }
