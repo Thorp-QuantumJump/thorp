@@ -1,5 +1,6 @@
 package com.ssafy.thorp.account.application.service;
 
+import com.ssafy.thorp.account.application.EmailNormalizer;
 import com.ssafy.thorp.account.application.port.VerificationMailSender;
 import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;
 import com.ssafy.thorp.account.application.repository.UserRepository;
@@ -55,15 +56,16 @@ public class EmailVerificationService {
      * 동안 DB 커넥션을 잡고 있으면 커넥션 풀이 마른다. 그래서 DB 작업만 트랜잭션으로 묶어 먼저 커밋하고, 메일 발송은 트랜잭션 밖에서 한다.
      */
     public void createVerificationCode(String email) {
-        String verificationCode = transactionTemplate.execute(status -> issueCode(email));
+        String canonicalEmail = EmailNormalizer.normalize(email);
+        String verificationCode = transactionTemplate.execute(status -> issueCode(canonicalEmail));
 
-        verificationMailSender.sendVerificationCode(email, verificationCode);
+        verificationMailSender.sendVerificationCode(canonicalEmail, verificationCode);
     }
 
     /** 인증번호를 만들어 해시로 저장하고 원문을 돌려준다. DB 작업만 하는 트랜잭션 단위. */
     private String issueCode(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 가입된 이메일입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         emailVerificationRepository.deleteByEmail(email);
@@ -83,13 +85,14 @@ public class EmailVerificationService {
     /** 인증번호가 일치하고 만료되지 않았을 때만 인증 완료로 기록한다. */
     @Transactional
     public void verifyCode(String email, String verificationCode) {
+        String canonicalEmail = EmailNormalizer.normalize(email);
         EmailVerification verification =
                 emailVerificationRepository
-                        .findLatestByEmail(email)
+                        .findLatestByEmail(canonicalEmail)
                         .orElseThrow(
                                 () ->
                                         new BusinessException(
-                                                ErrorCode.INVALID_INPUT, "이메일 인증 요청을 찾을 수 없습니다."));
+                                                ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
 
         // 이미 인증을 마친 요청을 다시 확인해도 실패시키지 않는다.
         if (verification.isVerified()) {
@@ -99,11 +102,11 @@ public class EmailVerificationService {
         Instant now = Instant.now();
 
         if (verification.isExpired(now)) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "인증번호가 만료되었습니다.");
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_EXPIRED);
         }
 
         if (!passwordEncoder.matches(verificationCode, verification.getVerificationCodeHash())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "인증번호가 올바르지 않습니다.");
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_INVALID);
         }
 
         verification.verify(now);
