@@ -193,6 +193,51 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("한도 거절이 호출자의 트랜잭션을 되돌리지 않는다 — 이미 끝난 남의 일이 함께 사라지면 안 된다")
+    void rejectionDoesNotPoisonTheCallerTransaction() {
+        long user = newUser("g");
+        // 상한 2를 채워 다음 접수가 반드시 429 가 되게 한다.
+        backtestService.create(request(user, 17, ExecutionType.SINGLE));
+        backtestService.create(request(user, 18, ExecutionType.SINGLE));
+
+        // 007 의 candidateFinished 와 같은 모양: 한 트랜잭션에서 남의 일을 커밋하고, 그 안에서
+        // 다음 접수를 시도한다. 기본 롤백 규칙이면 이 트랜잭션은 rollback-only 가 되어
+        // 아래 INSERT 까지 사라진다 — 접수를 거절하려다 이미 끝난 후보의 정산을 지우는 셈이다.
+        // phone_number 가 varchar(20) 이라 짧게 만든다.
+        String marker = "lim" + (System.nanoTime() % 1_000_000_000L);
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    jdbcTemplate.update(
+                            "INSERT INTO users (email, password_hash, nickname, phone_number,"
+                                    + " status, paper_ranking_enabled, live_ranking_enabled,"
+                                    + " ranking_display_nickname, created_at, updated_at)"
+                                    + " VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(),"
+                                    + " NOW())",
+                            marker + "@example.com",
+                            marker,
+                            marker);
+                    assertThat(
+                                    errorCodeOf(
+                                            catchThrowable(
+                                                    () ->
+                                                            backtestService.create(
+                                                                    request(
+                                                                            user,
+                                                                            19,
+                                                                            ExecutionType
+                                                                                    .SINGLE)))))
+                            .isEqualTo(ErrorCode.EXECUTION_LIMIT);
+                });
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM users WHERE email = ?",
+                                Integer.class,
+                                marker + "@example.com"))
+                .isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("취소에 응답하지 않으면 유예 뒤 FAILED 로 강제 종결하고, 상세는 500 이 아니라 그 사유를 보여 준다")
     void forceFinishesAnUnansweredCancel() throws Exception {
         long user = newUser("f");
