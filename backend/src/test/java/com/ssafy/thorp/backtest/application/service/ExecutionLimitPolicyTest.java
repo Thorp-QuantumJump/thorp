@@ -130,6 +130,22 @@ class ExecutionLimitPolicyTest {
         verify(runRepository).countQueued();
     }
 
+    @ParameterizedTest
+    @EnumSource(
+            value = ExecutionType.class,
+            names = {"SEARCH_BUNDLE", "REGIME_SECTOR", "REGIME_TOTAL"})
+    @DisplayName("전체 한도가 차도 단건이 아닌 실행은 거절하지 않는다 — 끊으면 그 묶음이 다시 깨어나지 못한다")
+    void doesNotRejectNonSingleOnTheTotalLimit(ExecutionType executionType) {
+        // 007 은 완료 이벤트로만 다음 후보를 내보낸다. 마지막 진행 후보가 끝난 순간 거절당하면
+        // 남은 후보가 PENDING 인 채로 깨울 신호가 없어져 묶음이 영구히 멈춘다.
+        when(runRepository.countQueued()).thenReturn(50L);
+
+        assertThatCode(() -> policyWith(5, 50, false).requireAdmission(REQUESTER, executionType))
+                .doesNotThrowAnyException();
+        // 세기는 센다 — 탐색이 서버를 채우면 단건이 먼저 막힌다.
+        verify(runRepository).countQueued();
+    }
+
     @Test
     @DisplayName("세는 구간을 잠그고, 사용자 키를 전체 키보다 먼저 잡는다 — 순서가 엇갈리면 교착한다")
     void locksUserKeyBeforeTotalKey() {
