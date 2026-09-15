@@ -34,7 +34,9 @@ public class CostProfileService {
      * <p>지정한 버전이 등록표에 없으면 입력 오류다(400). 서버 기본값이 없으면 설정과 마이그레이션이 어긋난 것이라 500으로 올린다 — 사용자가 고칠 수 있는 일이
      * 아니다.
      */
-    @Transactional(readOnly = true)
+    // noRollbackFor: 접수 트랜잭션(noRollbackFor) 안에서 불린다. 여기서 던지는 거절이 바깥을 rollback-only 로 표시하면
+    // 커밋 시점에 UnexpectedRollbackException(500) 이 된다 — StrategyRulesService 와 같은 이유(T013 S9).
+    @Transactional(readOnly = true, noRollbackFor = BusinessException.class)
     public CostProfile resolve(String version) {
         if (version == null || version.isBlank()) {
             return repository

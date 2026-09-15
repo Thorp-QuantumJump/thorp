@@ -238,6 +238,42 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("팀 결정 대기 전략의 거절은 422 다 — 안쪽 프록시가 트랜잭션을 rollback-only 로 표시해 500 이 되면 안 된다")
+    void pendingRulesRejectionIsA422NotASilentRollback() {
+        // quickstart S9(T013)에서 발견: create 는 noRollbackFor 인데
+        // StrategyRulesService.requireRegistered 의
+        // 프록시가 기본 규칙으로 바깥 트랜잭션을 rollback-only 로 표시해 커밋 시점에 UnexpectedRollbackException.
+        long user = newUser("p");
+        CreateBacktestCommand pending =
+                new CreateBacktestCommand(
+                        user,
+                        ExecutionType.SINGLE,
+                        "SECTOR-ETF-2026-09",
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "SEMICONDUCTOR", "091160.XKRX", null),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BATTERY", "305720.XKRX", null)),
+                        "SECTOR_MOMENTUM",
+                        "PENDING",
+                        "PARAM-2026-09",
+                        Map.of("rebalance", "MONTH_END"),
+                        LocalDate.of(2024, 2, 1),
+                        LocalDate.of(2024, 11, 29),
+                        new BigDecimal("10000000.00"),
+                        null,
+                        "SPLIT-1",
+                        null,
+                        Scenario.FULL_PERIOD,
+                        null);
+
+        Throwable thrown = catchThrowable(() -> backtestService.create(pending));
+
+        assertThat(thrown).isInstanceOf(BusinessException.class);
+        assertThat(errorCodeOf(thrown)).isEqualTo(ErrorCode.RULES_NOT_REGISTERED);
+    }
+
+    @Test
     @DisplayName("취소에 응답하지 않으면 유예 뒤 FAILED 로 강제 종결하고, 상세는 500 이 아니라 그 사유를 보여 준다")
     void forceFinishesAnUnansweredCancel() throws Exception {
         long user = newUser("f");
