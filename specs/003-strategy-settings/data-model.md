@@ -112,6 +112,21 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변동성 63거래일)과 임시 후보로 채우고, 등록표 버전에 `PROVISIONAL-` 접두를 유지해 확정값이 아님을 화면에 계속 표시한다.
 
+## 4-1. 유효성 규칙 (ValidationRule)
+
+전략마다 0개 이상 갖는다. 등록표가 소유하고 화면과 서버가 **같은 규칙을 각자 평가한다**.
+
+| 필드 | 형 | 비고 |
+|---|---|---|
+| `code` | String | 위반 사유 코드 |
+| `detail` | String | 사용자에게 보일 한 문장 |
+| `left` / `right` | Operand | `{axis}`·`{context}`·`{value}` 중 하나. `axis`에 `multiplyByContext`를 덧붙일 수 있다 |
+| `operator` | Enum | `GREATER_THAN` `GREATER_OR_EQUAL` `LESS_THAN` `LESS_OR_EQUAL` `EQUAL` `NOT_EQUAL` |
+
+**조건이 참이면 위반이다.** 맥락 키는 현재 `UNIVERSE_SIZE` 하나다.
+
+**화면도 이 규칙을 받아 평가한다**: 목록형 축은 서버가 `choices[].selectable`로 미리 걸러 주지만, 입력형 축(비중 상한 등)은 화면이 값이 바뀔 때마다 직접 평가해야 실행 전에 안내할 수 있다(FR-008). 화면은 축 이름이나 코드로 분기하지 않고 위 네 필드만 기계적으로 평가한다.
+
 ## 5. 리밸런싱 주기 값 (RebalancePeriod)
 
 목록형 축 `rebalancePeriod`의 후보 값 하나가 갖는 형태다 (R7).
@@ -153,10 +168,10 @@ PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변
 
 | 필드 | 형 | 비고 |
 |---|---|---|
-| `initialAmount` | AllowedRange | 입력형. 최소·최대·간격 (R6) |
-| `initialAmountDefault` | Object | 기본 시작 금액 |
-| `targetVolatility` | AllowedRange | 입력형. 004 PD-18이 지정한 등록표 항목 (연 5~20%, 1% 간격) |
-| `targetVolatilityDefault` | Object | 기본 연 10% |
+| `initialAmount` | AllowedRange + 기본값 | 입력형. 최소·최대·간격과 기본 시작 금액 (R6) |
+| `targetVolatility` | AllowedRange + 기본값 | 입력형. 004 PD-18이 지정한 등록표 항목 (연 5~20%, 1% 간격, 기본 연 10%) |
+
+기본값을 별도 필드로 빼지 않고 범위와 한 덩이로 둔다. 조회 응답도 같은 모양이다([계약](contracts/strategy-registry-api.md) §1).
 
 **목표 변동성은 '목표 위험 맞춤' 시나리오에서만 쓴다.** 주 분석(연속 운용)에서는 화면에 보이지 않는다. 등록표에 자리를 두는 것은 004 PD-18이 그렇게 지정했기 때문이며, 화면에 언제 보일지는 그 시나리오를 만들 때 정한다.
 

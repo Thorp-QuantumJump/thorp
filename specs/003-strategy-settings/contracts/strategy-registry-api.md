@@ -80,14 +80,30 @@ GET /strategies/registry?universeSize={n}
       "validationRules": [
         {
           "code": "MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE",
-          "detail": "섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다."
+          "detail": "섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다.",
+          "left": { "axis": "maxWeight", "multiplyByContext": "UNIVERSE_SIZE" },
+          "operator": "LESS_THAN",
+          "right": { "value": 100 }
         }
       ],
+      "warmupRule": { "sum": ["lookbackDays"] }
+    },
+    {
+      "strategyId": "MINIMUM_VARIANCE",
+      "name": "전체 변동성을 줄이도록 배분하기",
+      "description": "섹터들이 함께 움직이는 정도를 반영해 추정 포트폴리오 분산이 작아지는 비중을 계산한다.",
+      "selectable": false,
+      "unselectableReason": "선택한 섹터의 자료가 이 전략에 필요한 250거래일을 채우지 못합니다.",
+      "warmupTradingDays": 250,
+      "axes": [],
+      "validationRules": [],
       "warmupRule": { "sum": ["lookbackDays"] }
     }
   ]
 }
 ```
+
+> 두 번째 전략은 `selectable: false`인 모양을 보이려고 실었다. 실제 응답에서는 `axes`가 비어 있지 않다.
 
 ### 필드
 
@@ -103,11 +119,32 @@ GET /strategies/registry?universeSize={n}
 | `axes[].choices` | array | `CHOICE`일 때만. `selectable`이 false인 후보는 유효성 제약에 걸린 값이다 |
 | `axes[].range` | object | `NUMBER`일 때만 |
 | `axes[].defaultValue` | any | 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다 |
+| `analysisConditions.*.default` | any | 분석 조건의 기본값. 범위 안에 함께 싣는다 |
+| `strategies[].validationRules` | array | 화면이 실행 전에 평가할 조건. 아래 절 참조 |
 | `analysisConditions.targetVolatility.usedBy` | string | `TARGET_RISK` — '목표 위험 맞춤' 시나리오에서만 쓴다. 주 분석 화면에 보이지 않는다 (004 PD-18) |
 
 **비활성 전략은 목록에 실리지 않는다.** `selectable: false`는 활성이되 지금 조건에서 고를 수 없다는 뜻이다.
 
 **`choices[].selectable`**: 예를 들어 섹터를 둘 골랐으면 모멘텀 선정 수의 후보 3·4는 `selectable: false`로 실린다. 화면은 이 값을 흐리게 보이거나 감춘다. 목록에서 아예 빼지 않는 것은 사용자가 왜 고를 수 없는지 알 수 있어야 하기 때문이다.
+
+**`searchValues`는 이 응답에 싣지 않는다.** 자동 탐색 후보는 007이 내부 포트로 직접 읽고, 003 화면은 쓸 일이 없다. 뜻과 비용이 다른 두 목록을 화면에 함께 내리면 혼동만 생긴다([research](../research.md) R3).
+
+### 유효성 규칙 (`validationRules`)
+
+**화면이 판정할 수 있도록 조건을 그대로 내린다.** `code`와 `detail`만 주면 목록형 축은 서버가 미리 걸러 주니 괜찮지만, 입력형 축은 화면이 위반을 알 방법이 없다. 사용자가 비중 상한에 30을 입력하고 섹터가 셋이면 위반인데, 조건이 없으면 '분석하기'를 누른 뒤에야 알게 된다. spec FR-008은 **실행 전**에 안내하라고 요구한다.
+
+| 필드 | 설명 |
+|---|---|
+| `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |
+| `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |
+| `left` / `right` | 피연산자. `{ axis: <축 이름> }`·`{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |
+| `operator` | `GREATER_THAN` \| `GREATER_OR_EQUAL` \| `LESS_THAN` \| `LESS_OR_EQUAL` \| `EQUAL` \| `NOT_EQUAL` |
+
+**조건이 참이면 위반이다**(그 설정으로 분석을 시작하지 않는다). 맥락 키는 현재 `UNIVERSE_SIZE`(섹터 후보 집합의 크기) 하나다.
+
+이 문법은 등록표가 이미 쓰는 것과 같다. 화면은 규칙의 **뜻을 해석하지 않고** 위 네 필드만 기계적으로 평가한다 — 축 이름이나 코드로 분기하면 그것이 전략 지식의 중복이다.
+
+**서버도 같은 규칙으로 다시 판정한다.** 화면 평가는 사용자를 돕기 위한 것이고, 접수 시점의 판정은 서버가 등록표로 수행한다.
 
 ### 응답 503
 
@@ -129,6 +166,8 @@ GET /strategies/registry?universeSize={n}
 | `warmupTradingDays` | integer | 워밍업 규칙의 계산 결과 |
 | `initialAmount` | number | 등록표의 허용 범위 안 |
 | `periodStart` / `periodEnd` | date | 001이 산출한 공통 평가 가능 범위 안 |
+| `scenario` | string | 연속 운용이 기본 |
+| `targetVolatility` | number? | `scenario`가 '목표 위험 맞춤'일 때만 (004 PD-18) |
 
 ### 거절 응답
 
@@ -150,4 +189,5 @@ GET /strategies/registry?universeSize={n}
 | FR-006 목록형·입력형 구분, 서버 재검증 | `inputType`과 거절 응답 |
 | FR-011 워밍업 판정 | `warmupTradingDays`와 `warmupRule` |
 | FR-018 조회 실패 시 막는다 | 503과 그 처리 |
+| FR-008 유효성 위반을 실행 전에 안내 | `validationRules`의 조건을 화면이 평가하고, 서버가 접수 시점에 다시 본다 |
 | FR-014 등록표 버전을 요청에 싣는다 | `registryVersion`과 409 |
