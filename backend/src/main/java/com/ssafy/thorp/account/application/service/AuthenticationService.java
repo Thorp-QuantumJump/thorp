@@ -21,8 +21,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,7 +52,11 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+    private final CsrfTokenRepository csrfTokenRepository;
     private final Clock clock;
+
+    /** 세션 무효화와 {@code SecurityContext} 비우기. 세션이 없으면 아무 일도 하지 않으므로 로그아웃의 멱등성이 여기서 나온다. */
+    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
     /**
      * 계정을 찾지 못했을 때 대조할 버리는 해시.
@@ -65,11 +71,13 @@ public class AuthenticationService {
             PasswordEncoder passwordEncoder,
             SecurityContextRepository securityContextRepository,
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
+            CsrfTokenRepository csrfTokenRepository,
             Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.securityContextRepository = securityContextRepository;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
+        this.csrfTokenRepository = csrfTokenRepository;
         this.clock = clock;
         this.absentAccountPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
@@ -95,7 +103,48 @@ public class AuthenticationService {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, request, response);
 
+        rotateCsrfToken(request, response);
+
         return projectionOf(user);
+    }
+
+    /**
+     * 현재 요청의 세션을 끝낸다.
+     *
+     * <p><b>이미 비로그인이어도 같은 결과로 끝난다.</b> 로그아웃은 "이 브라우저에 인증 세션이 없게 만든다"는 뜻이고, 처음부터 없었다면 그 상태가 이미 참이다.
+     * 여기서 401이나 404를 돌려주면 FE는 세션이 정말 끝났는지 확인하지 못한 채 '로그아웃 미확인'에 머문다(FR-009).
+     *
+     * <p><b>끝내는 것은 이 세션 하나다.</b> 같은 계정으로 다른 브라우저에서 연 세션은 건드리지 않는다 — 한 기기에서 나간 것이 다른 기기에서 쫓겨날 이유가 되지
+     * 않는다. 전체 세션 종료가 필요해지면 그때 별도 동작으로 만든다.
+     *
+     * <p>세션 무효화는 Spring Session이 {@code spring_session} 행을 지우게 하고, 같은 응답에 만료된 {@code THORP_SESSION}
+     * 쿠키를 실어 보낸다.
+     */
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // 세션 식별자는 남기지 않는다. 로그에 남으면 그 줄을 본 사람이 세션을 그대로 흉내 낼 수 있다.
+        userId(authentication).ifPresent(id -> log.info("Logout: userId={}", id));
+
+        logoutHandler.logout(request, response, authentication);
+
+        rotateCsrfToken(request, response);
+    }
+
+    /**
+     * CSRF 토큰을 새 값으로 바꾼다.
+     *
+     * <p>토큰은 세션이 아니라 쿠키에 있다. 그래서 로그인 전에 브라우저에 자리 잡은 값이 로그인한 뒤에도, 로그아웃한 뒤에도 같은 값으로 남는다. 인증 경계가 바뀌는 두
+     * 지점에서 값을 갈아 브라우저가 들고 있는 토큰의 수명을 한 로그인 안으로 끊는다(research D3).
+     *
+     * <p><b>서버가 옛 값을 거절하지는 못한다.</b> 이중 제출 방식이라 쿠키와 헤더가 서로 맞기만 하면 통과하고, 저장소에 대조할 원본이 없다. 갈아 주는 효과는
+     * 브라우저에 남아 있던 값이 덮여 사라지는 데 있다.
+     *
+     * <p>새 값은 이 응답의 쿠키로 나가므로 SPA는 {@code /auth/csrf}를 다시 부르지 않고 다음 요청을 보낼 수 있다.
+     */
+    private void rotateCsrfToken(HttpServletRequest request, HttpServletResponse response) {
+        csrfTokenRepository.saveToken(
+                csrfTokenRepository.generateToken(request), request, response);
     }
 
     /**
