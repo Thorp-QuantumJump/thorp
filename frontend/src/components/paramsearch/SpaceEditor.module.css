@@ -1,0 +1,123 @@
+.editor {
+  display: grid;
+  gap: 18px;
+}
+
+.guide,
+.empty,
+.noAxis {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.strategy {
+  display: grid;
+  gap: 12px;
+  padding-top: 13px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.strategyHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.strategyHeader h3 {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.strategyHeader span {
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.axis {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.axisLegend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.unit {
+  padding: 1px 5px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 3px;
+  color: var(--thorp-muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.value {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  background: var(--thorp-surface);
+  color: var(--thorp-muted);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.value[data-on='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-foreground);
+}
+
+.value:hover {
+  border-color: var(--thorp-accent-soft);
+}
+
+.value:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.defaultMark {
+  color: var(--thorp-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.value[data-on='true'] .defaultMark {
+  color: var(--thorp-accent-soft);
+}
+
+.axisMeta {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}

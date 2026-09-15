@@ -401,3 +401,27 @@
     transition: none;
   }
 }
+
+/* 설정 조합 자동 비교로 넘어가는 보조 진입점. 이 화면의 주요 행동은 백테스트 실행 하나다. */
+.autoSearchLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  color: var(--thorp-accent-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.autoSearchLink:hover {
+  border-color: var(--thorp-accent-soft);
+}
+
+.autoSearchLink:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}

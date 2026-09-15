@@ -14,6 +14,35 @@ def ciSubject() {
     return env.JOB_NAME
 }
 
+// 이 파트가 이번 변경에 포함되는지 판단한다.
+//
+// 예전에는 when 의 changeset 지시어를 썼는데, 그것은 Jenkins 가 계산한 changelog 를 본다.
+// 이 Job 은 MR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가 있고,
+// 그러면 로그에 "Warning, empty changelog" 가 남으면서 네 파트가 모두 건너뛰어진 채
+// 빌드가 SUCCESS 로 끝난다. 실행되지 않은 검증이 통과로 세어진다.
+//
+// 비교 결과가 비면 참을 돌려준다. 무엇이 바뀌었는지 알아내지 못했을 때는 건너뛰는 쪽이
+// 아니라 전부 도는 쪽으로 기운다. 시간은 더 들지만 검증이 빈 채로 초록불이 뜨지는 않는다.
+def partChanged(String part) {
+    if (env.CI_RUN_ALL == 'true') {
+        return true
+    }
+
+    String changed = env.CHANGED_FILES
+    if (changed == null || changed.trim().isEmpty()) {
+        return true
+    }
+
+    // core.quotePath=false 로 한글 경로는 그대로 나오지만, 따옴표·역슬래시·제어문자가 든
+    // 경로는 git 이 여전히 따옴표로 감싼다. 그러면 그 줄이 part/ 로 시작하지 않아 바뀐 파트를
+    // 안 바뀐 것으로 읽는다. 그런 줄이 하나라도 있으면 비교를 믿지 않고 전체를 돌린다.
+    if (changed.startsWith('"') || changed.contains('\n"')) {
+        return true
+    }
+
+    return changed.split('\n').any { it.startsWith(part + '/') }
+}
+
 pipeline {
     agent any
 
@@ -24,6 +53,17 @@ pipeline {
         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에
         // 실패한다. 플러그인 목록은 infra/jenkins/Dockerfile 에 있다.
         ansiColor('xterm')
+
+        // updateGitlabCommitStatus 가 GitLab API 를 부를 때 쓰는 연결이다.
+        // Jenkins > Manage Jenkins > System 의 GitLab connections 에 있는 이름과 같아야 한다.
+        //
+        // 이름이 한 글자라도 다르거나 값이 비면 보고가 오류 없이 조용히 멈추고, 로그에
+        // "No GitLab connection configured" 한 줄만 남는다. 빌드는 초록색으로 끝난다.
+        //
+        // 이 선언은 Job 설정 화면의 GitLab Connection 보다 우선한다(선언을 넣은 첫 빌드만
+        // 예외다). 그러므로 이 줄을 지우면 다음 빌드에서 Job 의 연결 속성이 통째로 사라진다.
+        // Declarative 는 이전 Jenkinsfile 이 선언했던 속성을 지우기 때문이다 (JENKINS-44621).
+        gitLabConnection('ssafy-gitlab')
     }
 
     environment {
@@ -36,7 +76,7 @@ pipeline {
         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.
         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'
 
-        // 파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면
+        // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면
         // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.
         // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
         //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
@@ -57,30 +97,76 @@ pipeline {
                     usernameVariable: 'GIT_USERNAME',
                     passwordVariable: 'GIT_PASSWORD'
                 )]) {
-                    sh '''
-                        set -e
+                    // 기준을 이름이 아니라 커밋으로 확정한다.
+                    //
+                    // git fetch 가 확정적으로 갱신하는 것은 FETCH_HEAD 뿐이다. refs/remotes/origin/dev
+                    // 갱신은 Job 에 설정된 refspec 이 refs/heads/dev 를 덮을 때만 일어나는 부수 효과다.
+                    // 이름 origin/dev 를 그대로 쓰면 그 설정에 따라 낡은 커밋을 기준으로 삼게 되고,
+                    // 그러면 아래 --is-ancestor 가 참이 되어 병합하지 않은 채 성공으로 끝난다.
+                    // 병합 결과를 검증하겠다는 스테이지가 검증 없이 초록불을 주는 셈이다.
+                    script {
+                        env.DEV_BASE = sh(returnStdout: true, script: '''
+                            set -e
 
-                        # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.
-                        # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.
-                        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev
+                            # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.
+                            # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.
+                            # fetch 의 출력은 stderr 로 보내 반환값을 더럽히지 않는다.
+                            git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev >&2
 
-                        if git merge-base --is-ancestor origin/dev HEAD; then
-                            echo "이미 origin/dev 를 포함한다. 병합을 건너뛴다."
-                            exit 0
-                        fi
+                            git rev-parse FETCH_HEAD
+                        ''').trim()
+                    }
+                }
 
-                        # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
-                        #              post 단계에서 git merge --abort 로 되돌린다.
-                        # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
-                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
-                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
-                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
-                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then
-                            echo "origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
-                            exit 1
-                        fi
-                        echo "origin/dev 를 병합한 결과로 검증한다."
-                    '''
+                echo "기준 dev = ${env.DEV_BASE}"
+
+                sh '''
+                    set -e
+
+                    if git merge-base --is-ancestor "$DEV_BASE" HEAD; then
+                        echo "[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다."
+                        exit 0
+                    fi
+
+                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.
+                    #              post 단계에서 git merge --abort 로 되돌린다.
+                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.
+                    # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는
+                    #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로
+                    #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.
+                    if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff "$DEV_BASE"; then
+                        echo "[병합] 기준 dev 와 충돌한다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다." >&2
+                        exit 1
+                    fi
+                    echo "[병합] 기준 dev 를 합친 결과로 검증한다."
+                '''
+
+                // 어느 파트가 바뀌었는지는 위에서 확정한 기준과 직접 비교해서 정한다. partChanged 가
+                // 이 값을 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이
+                // dev 에 들어온 남의 변경은 세지 않는다.
+                //
+                // environment 블록이 아니라 여기서 계산하는 이유는 기준을 하나로 두기 위해서다.
+                // environment 는 fetch 보다 먼저 평가되어 Checkout SCM 시점의 값을 보게 된다.
+                // 스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지 않는다.
+                //
+                // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고
+                // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로
+                // 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이 건너뛰는
+                // 쪽이라 위험하므로 인용을 끈다.
+                //
+                // 병합은 --no-commit 이라 HEAD 를 움직이지 않는다. 커밋 사이의 비교이므로 이 값은
+                // 병합 전후 어디서 계산해도 같다.
+                script {
+                    env.CHANGED_FILES = sh(returnStdout: true, script: '''
+                        changed=$(git -c core.quotePath=false diff --name-only --no-renames "$DEV_BASE...HEAD" 2>/dev/null || true)
+
+                        # 값은 stdout 하나뿐이어야 하므로 사람이 읽을 줄은 stderr 로 보낸다.
+                        # 왜 어떤 파트를 건너뛰었는지가 빌드 로그에 남는다.
+                        echo "[파트 선별] 기준 대비 바뀐 파일:" >&2
+                        echo "$changed" >&2
+
+                        printf '%s' "$changed"
+                    ''').trim()
                 }
             }
 
@@ -99,7 +185,9 @@ pipeline {
 
         stage('Migration version') {
             steps {
-                sh 'bash infra/scripts/check-migration-version.sh origin/dev'
+                // Merge with dev 가 확정한 기준을 그대로 쓴다. 이름 origin/dev 를 다시 쓰면
+                // 검사 기준과 병합 기준이 서로 다른 커밋이 될 수 있다.
+                sh 'bash infra/scripts/check-migration-version.sh "$DEV_BASE"'
             }
 
             post {
@@ -111,10 +199,7 @@ pipeline {
 
         stage('Frontend') {
             when {
-                anyOf {
-                    changeset "frontend/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('frontend') }
             }
             stages {
                 stage('FE Install') {
@@ -174,10 +259,7 @@ pipeline {
 
         stage('Backend') {
             when {
-                anyOf {
-                    changeset "backend/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('backend') }
             }
             stages {
                 stage('BE Format') {
@@ -230,10 +312,7 @@ pipeline {
 
         stage('Worker') {
             when {
-                anyOf {
-                    changeset "worker/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('worker') }
             }
             stages {
                 stage('Worker Setup') {
@@ -282,10 +361,7 @@ pipeline {
 
         stage('Data') {
             when {
-                anyOf {
-                    changeset "data/**"
-                    environment name: 'CI_RUN_ALL', value: 'true'
-                }
+                expression { partChanged('data') }
             }
             stages {
                 stage('Data Setup') {

@@ -22,3 +22,9 @@
     justify-self: stretch;
   }
 }
+
+@media (max-width: 360px) {
+  .loginForm {
+    gap: 16px;
+  }
+}

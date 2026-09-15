@@ -13,6 +13,13 @@ const BacktestPage = lazy(() =>
 )
 
 // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.
+// 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.
+const ParamSearchPage = lazy(() =>
+  import('@/pages/ParamSearchPage').then((module) => ({
+    default: module.ParamSearchPage,
+  })),
+)
+
 const HomePage = lazy(() =>
   import('@/pages/HomePage').then((module) => ({
     default: module.HomePage,
@@ -67,6 +74,7 @@ function AnimatedRoutes() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
+            <Route path="/param-search" element={<ParamSearchPage />} />
             <Route
               path="/records/*"
               element={

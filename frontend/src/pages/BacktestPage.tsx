@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   ChartNoAxesCombined,
   CircleDollarSign,
   Play,
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { BacktestChart } from '@/components/backtest/BacktestChart'
 import { ResultTable } from '@/components/backtest/ResultTable'
 import { StrategySelector } from '@/components/backtest/StrategySelector'
@@ -268,6 +270,17 @@ export function BacktestPage() {
             <p className={styles.configNote}>
               현재 화면의 결과는 UI 검증을 위한 고정 예시 데이터입니다.
             </p>
+
+            {/*
+              설정 조합 자동 비교(spec 007)로 넘어가는 진입점이다. 대상 섹터·전략은 질의 문자열로
+              넘기는데, 이 화면의 전략은 아직 예시 데이터라 등록표의 전략 ID가 아니다 — 그래서
+              지금은 대상 없이 열리고 그 화면이 들어온 경로를 안내한다. 전략 화면이 등록표를
+              읽게 되면 여기서 고른 값을 그대로 붙인다.
+            */}
+            <Link to="/param-search" className={styles.autoSearchLink}>
+              설정 조합 자동 비교
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
           </aside>
         </div>
       </div>

@@ -1,0 +1,176 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgb(3 8 5 / 72%);
+  place-items: center;
+}
+
+.dialog {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 560px);
+  padding: 22px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 10px;
+  background: var(--thorp-surface-raised);
+  box-shadow: var(--thorp-shadow);
+  color: var(--thorp-foreground);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h2 {
+  margin: 0 0 4px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.close {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--thorp-copy);
+  cursor: pointer;
+}
+
+.close:hover {
+  border-color: var(--thorp-accent-soft);
+  color: var(--thorp-foreground);
+}
+
+.close:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.status,
+.retry {
+  padding: 2px 7px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 3px;
+  color: var(--thorp-copy);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.rows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.rows div {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.rows div:first-child {
+  border-top: 1px solid var(--thorp-line);
+}
+
+.rows dt {
+  color: var(--thorp-muted);
+  font-size: 0.72rem;
+}
+
+.rows dd {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.absent {
+  color: var(--thorp-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.rowNote {
+  color: var(--thorp-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.reason {
+  display: grid;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 6px;
+  background: var(--thorp-surface);
+}
+
+.reason h3 {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.outcome {
+  margin: 0;
+  color: var(--thorp-accent-soft);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.reasonText {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.runId {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+}
+
+.runId code {
+  overflow-wrap: anywhere;
+  color: var(--thorp-copy);
+  font-family: var(--thorp-font-mono);
+}
+
+@media (max-width: 560px) {
+  .rows div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+}

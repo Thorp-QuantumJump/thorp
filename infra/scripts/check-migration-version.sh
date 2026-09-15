@@ -39,7 +39,7 @@ if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
     fail "기준 ref '$BASE_REF' 를 찾지 못했다. 먼저 git fetch 하거나 기준 ref를 인자로 넘긴다."
 fi
 
-echo "기준 브랜치: $BASE_REF"
+echo "기준: $BASE_REF"
 
 # ---------------------------------------------------------------------------
 # 1) 현재 트리의 버전 중복

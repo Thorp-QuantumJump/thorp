@@ -1,0 +1,67 @@
+.section {
+  display: grid;
+  gap: 14px;
+  padding-top: 20px;
+  border-top: 1px solid var(--thorp-line-strong);
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.notes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--thorp-muted);
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.notes svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.cards {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 6px;
+  background: var(--thorp-surface);
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}

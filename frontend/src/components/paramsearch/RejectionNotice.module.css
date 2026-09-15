@@ -1,0 +1,44 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-negative);
+  border-radius: 6px;
+  background: var(--thorp-surface);
+}
+
+.notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--thorp-negative);
+}
+
+.notice > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.headline {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.detail,
+.next {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.record {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}

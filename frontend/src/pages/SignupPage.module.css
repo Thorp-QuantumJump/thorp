@@ -347,6 +347,25 @@
   }
 }
 
+@media (max-width: 360px) {
+  .header,
+  .layout {
+    width: min(100% - 24px, 1320px);
+  }
+
+  .formPanel {
+    padding: 20px 14px;
+  }
+
+  .panelHeading {
+    gap: 12px;
+  }
+
+  .stepProgress span {
+    width: 18px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ambient {
     filter: none;

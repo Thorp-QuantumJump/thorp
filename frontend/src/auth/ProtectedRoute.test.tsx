@@ -7,6 +7,8 @@ import { ProtectedRoute } from './ProtectedRoute'
 
 const authMock = vi.hoisted(() => ({
   status: 'anonymous' as AuthStateStatus,
+  logout: vi.fn(),
+  recheck: vi.fn(),
 }))
 
 vi.mock('./auth-context', () => ({
@@ -14,7 +16,8 @@ vi.mock('./auth-context', () => ({
     status: authMock.status,
     user: authMock.status === 'authenticated' ? authenticatedUser : null,
     login: vi.fn(),
-    recheck: vi.fn(),
+    logout: authMock.logout,
+    recheck: authMock.recheck,
   }),
 }))
 
@@ -39,6 +42,8 @@ function renderProtected(initialEntry = '/records/analysis-42?view=trades#loss')
 describe('ProtectedRoute', () => {
   beforeEach(() => {
     authMock.status = 'anonymous'
+    authMock.logout.mockReset()
+    authMock.recheck.mockReset()
     window.sessionStorage.clear()
   })
 
@@ -52,9 +57,13 @@ describe('ProtectedRoute', () => {
 
   it('로그인 사용자는 보호된 내 기록을 볼 수 있다', () => {
     authMock.status = 'authenticated'
+    authMock.recheck.mockResolvedValue({ status: 'authenticated', user: authenticatedUser })
     renderProtected()
 
-    expect(screen.getByRole('heading', { name: '보호된 내 기록' })).toBeTruthy()
+    return screen.findByRole('heading', { name: '보호된 내 기록' }).then((heading) => {
+      expect(heading).toBeTruthy()
+      expect(authMock.recheck).toHaveBeenCalledOnce()
+    })
   })
 
   it.each(['anonymous', 'expired'] as const)(
