@@ -133,6 +133,8 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 **비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전을 읽어 화면에 보이고, 등록표에 따로 담지 않는다.
 
+> **확인된 빈 구멍**: 지금 백엔드에 비용 조건을 조회하는 API가 없다. `CostProfileService`와 `CostProfileRepository`는 `backtest` 도메인 안에 있고, 밖으로는 `BacktestController`가 결과에 `costProfileVersion`을 실어 내보낼 뿐이다. 003 화면이 '기간·금액·조건'에서 비용 가정을 보이려면(FR-010) 조회 수단이 필요하다. 세 갈래가 있다 — ① 004가 조회 API를 연다 ② 003의 등록표 조회 응답에 현재 비용 조건을 함께 싣는다 ③ 화면이 비용 가정을 '적용됨/적용 안 됨'만 보이고 수치는 결과 화면에서 본다. **어느 쪽인지는 004와 함께 정해야 하며 이 계획이 단독으로 정하지 않는다.**
+
 ## 8. 전략 설정값 (StrategySettings) — 화면 상태
 
 서버에 저장하지 않는다. 브라우저 탭 수명 동안만 `sessionStorage`에 둔다 (R8).

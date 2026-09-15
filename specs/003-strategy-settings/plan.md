@@ -65,7 +65,7 @@ PD-02·PD-07 미확정을 제외하면 막는 위반이 없다. 두 결정 항�
 | VI | 허용 범위 밖 값은 400으로 거절하고 잘라 넣지 않는다. 화면 검증과 서버 검증이 같은 등록표를 본다 |
 | VIII | `registryVersion`·`warmupTradingDays`를 분석 요청에 실어 004·006으로 넘긴다 |
 
-**새로 확인한 사항**: 등록표를 `strategy` 패키지로 옮기면 `paramsearch → strategy` 한 방향 의존이 되어 [ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)의 계층 규칙과 어긋나지 않는다. 반대 방향이 생기면 ArchUnit이 빌드를 실패시킨다.
+**의존 방향은 사람이 지켜야 한다**: 등록표를 `strategy` 패키지로 옮기면 `paramsearch → strategy` 한 방향 의존이 된다. 다만 `ArchitectureTest`의 규칙은 계층 사이(presentation → application → domain)만 검사하고 **도메인 패키지 사이의 방향은 검사하지 않는다**(규칙 4는 `common`만 다룬다). 따라서 `strategy`가 `paramsearch`를 참조해도 빌드가 통과한다. 이 방향을 강제하려면 ArchUnit 규칙을 하나 더해야 하며, 그 작업을 구현 Task에 포함한다.
 
 ## Project Structure
 
