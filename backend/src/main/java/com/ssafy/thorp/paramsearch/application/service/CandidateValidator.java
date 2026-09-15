@@ -1,11 +1,11 @@
 package com.ssafy.thorp.paramsearch.application.service;
 
 import com.ssafy.thorp.common.exception.BusinessException;
-import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
-import com.ssafy.thorp.paramsearch.application.port.ValidationVerdict;
 import com.ssafy.thorp.paramsearch.application.service.GridExpander.GridPoint;
+import com.ssafy.thorp.strategy.application.exception.RegistryUnavailableException;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class CandidateValidator {
 
     private ValidationVerdict verdictOf(GridPoint point, SearchContext context) {
         try {
-            return registry.validate(point.strategyId(), point.parameters(), context);
+            return registry.validate(point.strategyId(), point.parameters().values(), context);
         } catch (BusinessException e) {
             throw e;
         } catch (RuntimeException e) {

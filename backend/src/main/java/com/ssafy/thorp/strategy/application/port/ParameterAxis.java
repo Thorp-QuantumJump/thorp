@@ -1,4 +1,4 @@
-package com.ssafy.thorp.paramsearch.application.port;
+package com.ssafy.thorp.strategy.application.port;
 
 import java.util.Collections;
 import java.util.List;

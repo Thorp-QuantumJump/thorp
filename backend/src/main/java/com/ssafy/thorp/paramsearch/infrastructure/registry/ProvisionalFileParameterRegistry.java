@@ -1,12 +1,11 @@
 package com.ssafy.thorp.paramsearch.infrastructure.registry;
 
-import com.ssafy.thorp.paramsearch.application.port.AllowedRange;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
-import com.ssafy.thorp.paramsearch.application.port.ValidationVerdict;
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -91,13 +90,13 @@ public class ProvisionalFileParameterRegistry implements ParameterRegistryPort {
 
     @Override
     public ValidationVerdict validate(
-            String strategyId, ParameterCombination combination, SearchContext context) {
+            String strategyId, Map<String, Object> parameters, SearchContext context) {
         List<RegistryRule> rules = rulesByStrategyId.get(strategyId);
         if (rules == null) {
             throw new IllegalArgumentException("unknown strategy: " + strategyId);
         }
         for (RegistryRule rule : rules) {
-            if (rule.isViolatedBy(combination, context)) {
+            if (rule.isViolatedBy(parameters, context)) {
                 return ValidationVerdict.violation(rule.code(), rule.detail());
             }
         }

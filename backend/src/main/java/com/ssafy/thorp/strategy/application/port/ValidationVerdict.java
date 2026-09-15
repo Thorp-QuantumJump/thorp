@@ -1,4 +1,4 @@
-package com.ssafy.thorp.paramsearch.application.port;
+package com.ssafy.thorp.strategy.application.port;
 
 /**
  * 조합 하나에 대한 등록표의 유효성 판정(contracts/param-search-internal.md §1, FR-006).

@@ -1,7 +1,7 @@
-package com.ssafy.thorp.paramsearch.application.port;
+package com.ssafy.thorp.strategy.application.port;
 
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,9 +24,16 @@ public interface ParameterRegistryPort {
     /** 전략 하나의 등록 정보. 등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026). */
     Optional<StrategyRegistration> find(String strategyId);
 
-    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 돌려준다(FR-006). */
+    /**
+     * 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 돌려준다(FR-006).
+     *
+     * <p><b>조합을 축 이름 → 값의 {@code Map}으로 받는 이유</b>: 007의 {@code ParameterCombination}을 받으면 등록표를 소유한
+     * 003이 007 도메인 VO에 의존해 없애려던 역방향 의존이 되살아난다. 호출자가 자기 표현을 풀어 넘긴다.
+     *
+     * @param parameters 축 이름 → 값. 값에 {@code null}을 담지 않는다
+     */
     ValidationVerdict validate(
-            String strategyId, ParameterCombination combination, SearchContext context);
+            String strategyId, Map<String, Object> parameters, SearchContext context);
 
     /**
      * 손실 제약의 기준으로 쓸 전략. 등록표가 기준 전략 역할로 지정한다(FR-013d). 지정이 없으면 empty다.

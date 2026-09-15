@@ -3,13 +3,13 @@ package com.ssafy.thorp.paramsearch.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
 import com.ssafy.thorp.paramsearch.application.service.CandidateValidator.ValidatedPoint;
 import com.ssafy.thorp.paramsearch.application.service.GridExpander.GridPoint;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
+import com.ssafy.thorp.strategy.application.exception.RegistryUnavailableException;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -37,8 +37,8 @@ class CandidateValidatorTest {
                         .rule(
                                 STRATEGY,
                                 "PICK_EXCEEDS_UNIVERSE",
-                                (combination, context) ->
-                                        (int) combination.valueOf("pick") > context.universeSize())
+                                (parameters, context) ->
+                                        (int) parameters.get("pick") > context.universeSize())
                         .build();
         List<GridPoint> points = expander.expand(space(List.of(1, 2, 3, 4)));
 

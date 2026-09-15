@@ -1,8 +1,8 @@
 package com.ssafy.thorp.paramsearch.infrastructure.registry;
 
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -33,9 +33,9 @@ record RegistryRule(String code, String detail, Operand left, Operator operator,
      *
      * <p>피연산자가 가리키는 축이 조합에 없으면 판정하지 않는다(false) — 판정할 수 없는 것을 위반으로 처리하면 사유 없는 제외가 생긴다.
      */
-    boolean isViolatedBy(ParameterCombination combination, SearchContext context) {
-        Object leftValue = left.resolve(combination, context);
-        Object rightValue = right.resolve(combination, context);
+    boolean isViolatedBy(Map<String, Object> parameters, SearchContext context) {
+        Object leftValue = left.resolve(parameters, context);
+        Object rightValue = right.resolve(parameters, context);
         if (leftValue == null || rightValue == null) {
             return false;
         }
@@ -71,14 +71,14 @@ record RegistryRule(String code, String detail, Operand left, Operator operator,
             return new Operand(null, null, literal, null);
         }
 
-        Object resolve(ParameterCombination combination, SearchContext context) {
+        Object resolve(Map<String, Object> parameters, SearchContext context) {
             if (contextKey != null) {
                 return contextValue(contextKey, context);
             }
             if (literal != null) {
                 return literal;
             }
-            Object value = combination.valueOf(axis);
+            Object value = parameters.get(axis);
             if (value == null || multiplyByContextKey == null) {
                 return value;
             }
