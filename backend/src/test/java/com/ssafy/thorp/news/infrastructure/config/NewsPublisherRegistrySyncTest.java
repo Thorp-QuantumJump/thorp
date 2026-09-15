@@ -109,6 +109,31 @@ class NewsPublisherRegistrySyncTest {
     }
 
     @Test
+    @DisplayName("같은 시각과 상태라도 허용 필드가 바뀌면 새 회신으로 기록한다")
+    void 허용_필드가_바뀐_회신() {
+        Harness harness = sync(entry(allowed()));
+        harness.target().afterSingletonsInstantiated();
+
+        new NewsPublisherRegistrySync(
+                        new NewsPublisherRegistry(
+                                "news-publishers-v1",
+                                List.of(
+                                        entry(
+                                                new NewsPublisherRegistry.Permission(
+                                                        PermissionStatus.ALLOWED,
+                                                        List.of(NewsAllowedField.TITLE),
+                                                        RESPONDED_AT,
+                                                        "2026-09-20 정정 회신")))),
+                        harness.publishers(),
+                        harness.history())
+                .afterSingletonsInstantiated();
+
+        assertThat(harness.history().saved).hasSize(2);
+        assertThat(harness.history().saved.get(1).allowedFields())
+                .containsExactly(NewsAllowedField.TITLE);
+    }
+
+    @Test
     @DisplayName("회신 시각이 바뀌면 새 회신으로 보고 다시 넣는다")
     void 답을_바꾼_경우() {
         Harness harness = sync(entry(allowed()));

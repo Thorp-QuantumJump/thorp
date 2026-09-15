@@ -125,7 +125,13 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {
                         .anyMatch(
                                 event ->
                                         event.occurredAt().equals(permission.respondedAt())
-                                                && event.permissionStatus() == permission.status());
+                                                && event.permissionStatus() == permission.status()
+                                                && event.allowedFields()
+                                                        .equals(
+                                                                Set.copyOf(
+                                                                        permission.allowedFields()))
+                                                && java.util.Objects.equals(
+                                                        event.reference(), permission.reference()));
         if (alreadyRecorded) {
             return false;
         }

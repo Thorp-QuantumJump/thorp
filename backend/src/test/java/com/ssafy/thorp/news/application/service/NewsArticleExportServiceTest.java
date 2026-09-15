@@ -318,6 +318,53 @@ class NewsArticleExportServiceTest {
 
             assertThat(result.items()).as("모자란 채로 돌려주면 클라이언트가 끝에 닿았다고 오해한다").hasSize(3);
         }
+
+        @Test
+        @DisplayName("필터로 여러 raw 페이지를 읽어도 다음 허가 기사를 건너뛰지 않는다")
+        void 필터_뒤_다음_페이지_누락_없음() {
+            List<NewsArticle> articles =
+                    List.of(
+                            article(100L, 2L, "https://a.example.com/0", PUBLISHED_AT),
+                            article(
+                                    101L,
+                                    1L,
+                                    "https://a.example.com/1",
+                                    PUBLISHED_AT.plusSeconds(1)),
+                            article(
+                                    102L,
+                                    2L,
+                                    "https://a.example.com/2",
+                                    PUBLISHED_AT.plusSeconds(2)),
+                            article(
+                                    103L,
+                                    1L,
+                                    "https://a.example.com/3",
+                                    PUBLISHED_AT.plusSeconds(3)),
+                            article(
+                                    104L,
+                                    1L,
+                                    "https://a.example.com/4",
+                                    PUBLISHED_AT.plusSeconds(4)));
+            NewsArticleExportService service =
+                    service(
+                            List.of(
+                                    publisher(1L, "allowed", PermissionStatus.ALLOWED),
+                                    publisher(2L, "pending", PermissionStatus.PENDING)),
+                            articles,
+                            Map.of(1L, Set.of(NewsAllowedField.TITLE)));
+
+            NewsArticleExportResult first = service.export(query(2));
+            NewsArticleExportResult second =
+                    service.export(
+                            NewsArticleExportQuery.of(null, FROM, TO, first.nextCursor(), 2, 93));
+
+            assertThat(first.items())
+                    .extracting(NewsArticleExportResult.Item::title)
+                    .containsExactly("제목 101", "제목 103");
+            assertThat(second.items())
+                    .extracting(NewsArticleExportResult.Item::title)
+                    .containsExactly("제목 104");
+        }
     }
 
     @Nested

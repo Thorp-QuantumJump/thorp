@@ -78,9 +78,11 @@ public class NewsArticleExportService {
         // 채워질 때까지 뒤로 읽어 나간다. 모자란 채로 돌려주면 클라이언트가 끝에 닿았다고 오해한다.
         List<NewsArticleExportResult.Item> items = new ArrayList<>();
         NewsArticleExportQuery.Cursor position = query.cursor();
+        NewsArticleExportQuery.Cursor resultPosition = null;
         boolean hasMore = false;
 
-        while (items.size() < query.limit()) {
+        outer:
+        while (true) {
             List<NewsArticle> page =
                     articles.findForExport(
                             query.from(),
@@ -95,31 +97,31 @@ public class NewsArticleExportService {
             List<NewsArticle> scanned = pageHadMore ? page.subList(0, query.limit()) : page;
 
             for (NewsArticle article : scanned) {
+                position = cursorAt(article);
                 NewsPublisher publisher = permitted.get(article.getPublisherId());
                 if (publisher == null) {
                     continue;
                 }
                 if (items.size() == query.limit()) {
                     hasMore = true;
-                    break;
+                    break outer;
                 }
                 items.add(project(article, publisher));
+                resultPosition = position;
             }
 
-            NewsArticle last = scanned.get(scanned.size() - 1);
-            position =
-                    new NewsArticleExportQuery.Cursor(
-                            orderingInstant(last), last.getArticleId().value());
             if (!pageHadMore) {
                 break;
             }
             if (items.size() == query.limit()) {
-                hasMore = true;
-                break;
+                // 다음 허가 기사가 실제로 있는지 확인할 때까지 계속 읽는다. raw 기사만 더 있다는
+                // 이유로 cursor를 주면 다음 요청이 빈 페이지가 될 수 있다.
+                continue;
             }
         }
 
-        return new NewsArticleExportResult(items, hasMore ? position.encode() : null);
+        return new NewsArticleExportResult(
+                items, hasMore && resultPosition != null ? resultPosition.encode() : null);
     }
 
     /**
@@ -165,5 +167,10 @@ public class NewsArticleExportService {
                         && article.getPublishedAt() != null
                 ? article.getPublishedAt()
                 : article.getCollectedAt();
+    }
+
+    private static NewsArticleExportQuery.Cursor cursorAt(NewsArticle article) {
+        return new NewsArticleExportQuery.Cursor(
+                orderingInstant(article), article.getArticleId().value());
     }
 }
