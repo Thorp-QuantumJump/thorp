@@ -70,6 +70,10 @@ S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVol
 
 local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
 
+## S13. 단건·벌크 큐 분리 (R-20, T015)
+
+dev compose는 `worker`(single, `WORKER_ROLE=single`) 1개 + `worker-flex`(`WORKER_ROLE=flex`) 1개다. 007로 탐색 묶음을 하나 시작한 뒤 `rabbitmqctl list_queues name messages_ready messages_unacknowledged`를 본다. 기대: 후보는 `backtest.jobs.bulk`에 쌓이고(`dispatch-window`=4 → ready 3·unacked 1) `backtest.jobs`는 0. 그 상태에서 단건을 요청하면 **single 워커가 즉시** 집어 RUNNING이 된다 — 벌크가 끝나기를 기다리지 않는다. 묶음이 끝나 bulk가 비면 flex 워커 로그에 `role=flex queue=backtest.jobs`가 찍히며 단건을 집는다(최대 1초 뒤). `max-queued-total=1`로 낮추고 bulk에 후보가 쌓인 상태에서 단건 첫 건을 요청하면 **429가 아니다** — 전체 한도는 `backtest.jobs`의 단건만 센다. 두 번째 단건은 `429 TOTAL`. `backtest.jobs.dlq`는 하나뿐이고 어느 큐에서 죽은 메시지든 T010 리스너가 `runId`·`publishAttempt`로 집계한다.
+
 ## 완료 판정
 
-S1~S12가 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).
+S1~S13이 모두 기대대로 나오면 "구현 완료"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).
