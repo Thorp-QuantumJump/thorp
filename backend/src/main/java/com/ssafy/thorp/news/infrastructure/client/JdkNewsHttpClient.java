@@ -114,26 +114,9 @@ public class JdkNewsHttpClient implements NewsHttpClient {
                     header(response, "etag"),
                     header(response, "last-modified"));
         }
-        if (status == 401 || status == 403) {
-            closeQuietly(response.body());
-            throw new NewsSourceClient.NewsSourceException(UNAUTHORIZED, false);
-        }
-        if (status == 429) {
-            closeQuietly(response.body());
-            // 매체가 언제 다시 오라고 밝혔으면 그 값을 실어 보낸다. 우리 백오프보다 우선한다(spec FR-013).
-            throw retryable(RATE_LIMITED, retryAfter(response).orElse(null));
-        }
-        if (status == 503) {
-            closeQuietly(response.body());
-            throw retryable(SERVER_ERROR, retryAfter(response).orElse(null));
-        }
-        if (status >= 500) {
-            closeQuietly(response.body());
-            throw retryable(SERVER_ERROR);
-        }
         if (status >= 400) {
             closeQuietly(response.body());
-            throw new NewsSourceClient.NewsSourceException(CLIENT_ERROR, false);
+            throw failureFor(status, retryAfter(response));
         }
 
         String contentType = header(response, "content-type");
@@ -193,6 +176,40 @@ public class JdkNewsHttpClient implements NewsHttpClient {
         } catch (IOException ignored) {
             // 닫기 실패는 수집 결과에 영향을 주지 않는다.
         }
+    }
+
+    /**
+     * 상태 코드를 재시도 분류로 옮긴다(spec FR-013, plan "수집과 재시도").
+     *
+     * <table>
+     *   <tr><th>상태</th><th>분류</th><th>다시 부를까</th></tr>
+     *   <tr><td>401·403</td><td>{@code UNAUTHORIZED}</td><td>아니오 — 등록 정보를 사람이 고쳐야 한다</td></tr>
+     *   <tr><td>429</td><td>{@code RATE_LIMITED}</td><td>예 — 매체가 밝힌 간격을 실어 보낸다</td></tr>
+     *   <tr><td>503</td><td>{@code SERVER_ERROR}</td><td>예 — 매체가 밝힌 간격을 실어 보낸다</td></tr>
+     *   <tr><td>그 밖의 5xx</td><td>{@code SERVER_ERROR}</td><td>예 — 우리 백오프로</td></tr>
+     *   <tr><td>그 밖의 4xx</td><td>{@code CLIENT_ERROR}</td><td>아니오 — 같은 요청은 같은 답을 받는다</td></tr>
+     * </table>
+     *
+     * <p>{@code Retry-After}를 429·503에서만 싣는 것은 그 둘이 <b>매체가 언제 오라고 말하는</b> 상태이기 때문이다. 500이 준 {@code
+     * Retry-After}는 뜻이 정해져 있지 않다.
+     *
+     * <p>분리해 둔 이유는 이 표가 규칙이라서다. {@code HttpResponse}를 만들지 않고도 시험이 표 전체를 고정할 수 있어야 한다.
+     */
+    static NewsSourceClient.NewsSourceException failureFor(
+            int status, Optional<Duration> retryAfter) {
+        if (status == 401 || status == 403) {
+            return new NewsSourceClient.NewsSourceException(UNAUTHORIZED, false);
+        }
+        if (status == 429) {
+            return retryable(RATE_LIMITED, retryAfter.orElse(null));
+        }
+        if (status == 503) {
+            return retryable(SERVER_ERROR, retryAfter.orElse(null));
+        }
+        if (status >= 500) {
+            return retryable(SERVER_ERROR);
+        }
+        return new NewsSourceClient.NewsSourceException(CLIENT_ERROR, false);
     }
 
     private static NewsSourceClient.NewsSourceException retryable(String category) {
