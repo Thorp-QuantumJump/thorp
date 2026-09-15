@@ -50,6 +50,13 @@ const MyRecordsEntryPage = lazy(() =>
   })),
 )
 
+// 아직 만들지 않은 메뉴를 정상 화면으로 받는다.
+const NotReadyPage = lazy(() =>
+  import('@/pages/NotReadyPage').then((module) => ({
+    default: module.NotReadyPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -75,6 +82,13 @@ function AnimatedRoutes() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />
+            {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}
+            <Route path="/learn" element={<NotReadyPage />} />
+            {/*
+              섹터·비중 선택 화면이 붙기 전까지만 준비 중 화면으로 받는다. 이 경로가 없으면
+              '비중 비교하기'가 아래 path="*" 규칙에 걸려 첫 화면으로 되돌아온다.
+            */}
+            <Route path="/diagnosis/sectors" element={<NotReadyPage />} />
             <Route
               path="/records/*"
               element={
