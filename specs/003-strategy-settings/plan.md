@@ -10,7 +10,7 @@
 
 사용자가 다섯 전략 카드에서 하나를 고르고, 그 전략에 해당하는 상세 설정만 허용 범위 안에서 조정한 뒤 분석을 시작하는 화면이다. 설정의 후보 값·허용 범위·기본값·유효성 제약은 서버가 보관하는 **파라미터 등록표**가 소유하며, 화면은 조회해 쓰기만 하고 서버가 실행 직전에 같은 검증을 다시 수행한다.
 
-이 등록표는 새로 만드는 것이 아니다. spec 007이 자기 작업을 진행하려고 `ParameterRegistryPort`와 임시 구현 `ProvisionalFileParameterRegistry`를 세워 두었고, 그 클래스 주석이 "003이 완성되면 이 클래스를 003 구현체로 교체한다"고 적어 두었다. **이 spec의 구현은 그 교체를 수행하고 등록표를 화면이 읽을 수 있도록 여는 일이다.** 007은 포트를 통해 계속 같은 값을 읽으므로 007 운영 코드는 바뀌지 않는다.
+이 등록표는 새로 만드는 것이 아니다. spec 007이 자기 작업을 진행하려고 `ParameterRegistryPort`와 임시 구현 `ProvisionalFileParameterRegistry`를 세워 두었고, 그 클래스 주석이 "003이 완성되면 이 클래스를 003 구현체로 교체한다"고 적어 두었다. **이 spec의 구현은 그 교체를 수행하고 등록표를 화면이 읽을 수 있도록 여는 일이다.** 007은 포트를 통해 계속 같은 값을 읽는다. **007 운영 코드에서 바뀌는 것은 import 경로뿐이다** — `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver` 셋 다 포트 타입만 주입받고 구현체를 직접 부르지 않는 것을 확인했다.
 
 ## Technical Context
 
@@ -20,7 +20,12 @@
 
 **Storage**: 등록표는 백엔드 자원 파일(YAML)로 유지한다. 전략 설정값은 서버에 저장하지 않고 브라우저 탭 수명 동안만 보관한다(FR-017). 근거는 [research.md](research.md) R1·R8.
 
-**Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build`와 `npm run test`. 등록표 파일과 계약의 일치는 라운드트립 테스트로 확인한다.
+**Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build`와 `npm run test`.
+
+등록표 검증은 둘이다. **라운드트립 테스트는 쓰지 않는다** — 그 방식은 자바와 파이썬이 같은 브로커 계약을 각자 구현하는 상황용이고(`BacktestMessageRoundTripTest`), 등록표는 YAML → 자바 → JSON → 화면 한 방향으로만 흘러 되돌아오는 경로가 없다.
+
+1. **로더가 기동 시 파일 구조를 검증한다.** 지금 `ProvisionalFileParameterRegistryTest`가 하는 일이며, 여기에 새 제약(`searchValues ⊆ allowedRange.values`, 목록형과 입력형을 동시에 채우지 않음)을 더한다.
+2. **계약 문서의 응답 예시를 픽스처로 두고 실제 응답과 대조한다.** `docs/specs/backtest-api/examples/`가 이미 쓰는 방식이다. 계약과 코드가 어긋나면 빌드가 실패한다.
 
 **Target Platform**: 웹 브라우저(데스크톱 우선) + Spring Boot 서버
 
@@ -39,7 +44,7 @@
 | 원칙 | 이 기능에서의 의미 | 판정 |
 |---|---|---|
 | I. 중심 약속은 전략 진단이다 | 이 화면이 전략 진단의 두 번째 단계다 | 통과 |
-| II. 첫 화면은 단순하게 | 기본 화면에 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005) | **승인된 이탈** — 아래 항목 참조 |
+| II. 첫 화면은 단순하게 | 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005). 다만 **행동 버튼이 '분석하기'와 '설정 조합 자동 비교' 둘이라 기획서 §4.1의 '버튼 하나'와 어긋난다**(FR-002) | **승인된 이탈** — 아래 설명 |
 | III. 진단이지 추천이 아니다 | 기본값을 편의용 출발점으로 표기하고 최적값·투자 권고로 쓰지 않는다(FR-004) | 통과 |
 | IV. 비교는 같은 조건에서만 | 분석 기간은 공통 평가 가능 범위에서만 고를 수 있고(FR-009), 수수료·세금·기간을 수익이 높아지는 방향으로 자동 최적화하는 선택지를 두지 않는다(FR-010) | 통과 |
 | V. 당시에 알 수 있던 정보만 | 워밍업을 채우지 못하는 전략은 고를 수 없게 막는다(FR-011). 워밍업 계산은 등록표의 산출 규칙이 담당한다 | 통과 |
@@ -63,7 +68,7 @@ PD-02·PD-07 미확정을 제외하면 막는 위반이 없다. 두 결정 항�
 
 ### 004와 대조한 결과 spec을 고쳤다
 
-계획을 세우며 [004](../004-backtest-execution/spec.md)를 대조해 spec 003의 두 곳을 고쳤다. 계획 문서가 아니라 spec 본문을 고친 것이므로 여기에 남긴다.
+계획을 세우며 [004](../004-backtest-execution/spec.md)를 대조해 spec 003의 세 곳을 고쳤다. 계획 문서가 아니라 spec 본문을 고친 것이므로 여기에 남긴다.
 
 | 무엇 | 왜 |
 |---|---|
@@ -110,10 +115,9 @@ specs/003-strategy-settings/
 ```text
 backend/src/main/java/com/ssafy/thorp/strategy/        # 새로 만드는 003 소유 영역
 ├── application/
-│   ├── port/            # ParameterRegistry 도메인 표현 (007 포트가 참조)
+│   ├── port/            # ParameterRegistryPort 와 값 타입 — 007이 옮겨 오는 그대로
 │   ├── result/          # 조회 결과 DTO
 │   └── service/         # 등록표 조회·검증 서비스
-├── domain/model/        # 등록표·축·허용 범위·워밍업 규칙
 ├── infrastructure/
 │   └── registry/        # YAML 로더 (007의 Provisional 로더를 옮겨 온다)
 └── presentation/
@@ -134,6 +138,8 @@ frontend/src/
 ```
 
 **구조 선택 근거**: 이 저장소는 `backend/`와 `frontend/`가 나뉜 웹 애플리케이션이고, 백엔드는 도메인별 패키지 안에서 `presentation → application → domain/infrastructure` 계층을 두는 구조를 ArchUnit으로 강제한다([ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)). 등록표는 `paramsearch`가 아니라 새 `strategy` 도메인에 둔다 — 등록표의 소유자는 003이고 007은 읽는 쪽이기 때문이다.
+
+**`domain/model`을 두지 않는다**: 등록표의 값 타입(`StrategyRegistration`·`ParameterAxis`·`AllowedRange`)은 지금 `paramsearch/application/port`에 있고, 옮길 때도 같은 자리에 둔다. 도메인 모델 층을 따로 만들면 같은 것이 두 곳에 생기고, 007이 참조하는 타입이 무엇인지 흐려진다.
 
 ## Complexity Tracking
 

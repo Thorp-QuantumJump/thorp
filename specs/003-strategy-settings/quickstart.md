@@ -30,7 +30,7 @@ cd backend && ./gradlew test --tests '*ParamSearch*'
 cd backend && ./gradlew test --tests '*ArchitectureTest*'
 ```
 
-기대: 통과. `paramsearch`가 `strategy`를 참조하는 것은 허용되고 그 반대는 막혀야 한다.
+기대: 통과. 다만 지금 규칙은 계층 사이만 검사하고 도메인 사이의 방향은 보지 않으므로, `strategy → paramsearch` 역방향을 막는 규칙을 이 작업에서 더한다([plan](plan.md) 게이트 재확인).
 
 ## 2. 등록표를 조회할 수 있는가
 

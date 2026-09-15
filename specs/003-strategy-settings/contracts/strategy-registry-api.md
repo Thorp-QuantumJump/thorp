@@ -6,6 +6,8 @@
 
 007이 쓰는 내부 포트 계약은 [strategy-registry-internal.md](strategy-registry-internal.md)에 따로 있다. 둘은 같은 등록표를 읽는다.
 
+**이 문서의 응답 예시는 픽스처로 뺀다.** `docs/specs/strategy-registry-api/examples/registry-response.json`에 두고 테스트가 그것을 읽어 실제 응답과 대조한다. `docs/specs/backtest-api/examples/`가 이미 쓰는 방식이며, 계약과 코드가 어긋나면 빌드가 실패한다.
+
 ## 1. 등록표 조회
 
 ```
