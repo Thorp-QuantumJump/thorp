@@ -142,7 +142,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "finished_at",
                         // 정체 판정 기준과 취소 사유 (T014, R-19)
                         "last_event_at",
-                        "cancel_reason");
+                        "cancel_reason",
+                        // 어느 큐·어느 워커가 집었나 (T012, R-20). 측정 기록으로 복사된다
+                        "served_queue",
+                        "worker_role");
     }
 
     /**
@@ -166,7 +169,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "cancel_requested_at",
                         // T014: 정체 판정 기준과 취소 사유(R-19)
                         "last_event_at",
-                        "cancel_reason");
+                        "cancel_reason",
+                        // T012: 매핑하지 않고 native 로만 쓰는 두 컬럼(R-20)
+                        "served_queue",
+                        "worker_role");
     }
 
     @Test
@@ -202,6 +208,68 @@ class FlywayMigrationTest extends PostgresTestSupport {
     void backtestRunDlqAttemptHasAllColumns() {
         assertThat(columnsOf("backtest_run_dlq_attempt"))
                 .containsExactlyInAnyOrder("run_id", "attempt", "at");
+    }
+
+    @Test
+    @DisplayName("backtest_run_metric 이 종결 측정에 필요한 컬럼을 갖고 run_id 가 유일하다 (R-10, T012)")
+    void backtestRunMetricHasAllColumns() {
+        assertThat(columnsOf("backtest_run_metric"))
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "run_id",
+                        "execution_type",
+                        "status",
+                        "failure_code",
+                        "queued_at",
+                        "started_at",
+                        "finished_at",
+                        "wait_ms",
+                        "run_ms",
+                        "concurrent_running",
+                        "peak_rss_mb",
+                        "cpu_seconds",
+                        "auto_retried",
+                        "result_bytes",
+                        // 어느 큐·어느 워커가 집었나 (R-20)
+                        "served_queue",
+                        "worker_role",
+                        "recorded_at");
+        // 종결은 한 번이다 — 늦은 중복 종결은 DB 가 막는다.
+        Integer unique =
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM pg_indexes WHERE tablename = 'backtest_run_metric'"
+                                + " AND indexname = 'uk_backtest_run_metric_run'",
+                        Integer.class);
+        assertThat(unique).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("backtest_limit_hit 가 접수 거절·실행 정지 둘을 한 표에 담는다 (FR-006, R-10 ②)")
+    void backtestLimitHitHasAllColumns() {
+        assertThat(columnsOf("backtest_limit_hit"))
+                .containsExactlyInAnyOrder(
+                        "id", "kind", "execution_type", "reason", "requester_id", "run_id", "at");
+    }
+
+    @Test
+    @DisplayName("v_run_metric_summary 뷰가 있고 PD-06·R-20 결정에 필요한 열을 낸다")
+    void runMetricSummaryViewExists() {
+        assertThat(columnsOf("v_run_metric_summary"))
+                .containsExactlyInAnyOrder(
+                        "execution_type",
+                        "count",
+                        "fail_rate",
+                        "cancel_rate",
+                        "auto_retry_rate",
+                        "wait_p50_ms",
+                        "wait_p95_ms",
+                        "wait_p99_ms",
+                        "run_p50_ms",
+                        "run_p95_ms",
+                        "peak_rss_p95_mb",
+                        "flex_served_rate",
+                        "reuse_count",
+                        "limit_hit_count");
     }
 
     @Test

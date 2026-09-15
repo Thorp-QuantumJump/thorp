@@ -51,16 +51,19 @@ public class BacktestEventService {
 
     private final BacktestRunRepository jobRepository;
     private final BacktestResultRepository resultRepository;
+    private final ExecutionMetricRecorder metrics;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestEventService(
             BacktestRunRepository jobRepository,
             BacktestResultRepository resultRepository,
+            ExecutionMetricRecorder metrics,
             ApplicationEventPublisher events,
             Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
+        this.metrics = metrics;
         this.events = events;
         this.clock = clock;
     }
@@ -100,6 +103,12 @@ public class BacktestEventService {
                 started.withLifecycle(started.getLifecycle().started(clock.instant())));
         // 워커가 살아 있다는 신호. 전용 UPDATE 라 상태 전이와 컬럼이 겹치지 않는다(R-19).
         jobRepository.recordEventReceived(job.getId(), clock.instant());
+        StartedPayload.ProcessInfo resource = event.payload().resource();
+        if (resource != null && (resource.queue() != null || resource.role() != null)) {
+            // 어느 큐에서 어느 워커가 집었나(R-20). 종결 때 측정 기록으로 복사된다 — flex 가 단건을 도운
+            // 비율의 유일한 근거다(T012).
+            jobRepository.recordWorkerInfo(job.getId(), resource.queue(), resource.role());
+        }
         if (job.getLifecycle().cancelRequestedAt() != null) {
             // 취소를 보낸 실행이 다시 STARTED 를 보냈다 = 재전달이나 중복 실행이다(R-06). 워커는 실행이
             // 끝날 때 레지스트리의 취소 표시를 지우므로 앞서 보낸 CANCEL 은 이 실행에 닿지 않는다 —
@@ -154,8 +163,11 @@ public class BacktestEventService {
         resultRepository.save(
                 new SaveBacktestResultCommand(
                         job.getId(), event.executionId(), event.eventId(), output, null));
-        jobRepository.update(
-                finished.withLifecycle(finished.getLifecycle().finished(clock.instant())));
+        BacktestRun settled =
+                finished.withLifecycle(finished.getLifecycle().finished(clock.instant()));
+        jobRepository.update(settled);
+        // 종결 한 번에 측정 한 행(R-10). 결과 저장 뒤라 result_bytes 가 보인다.
+        metrics.record(settled, event.payload().resource());
 
         // 트랜잭션 안에서 발행하고, 수신자가 AFTER_COMMIT으로 받는다. 커밋 전에 전달되면 수신자가
         // 아직 없는 결과를 읽는다(spec 007 research R6). 이 모듈은 수신자를 알지 못한다.
@@ -249,8 +261,12 @@ public class BacktestEventService {
                     counted.getLifecycle().publishCount());
             return;
         }
-        BacktestRun failed = counted.markFailed("SYSTEM_FAILURE", "작업 메시지가 모두 처리되지 못했습니다(DLQ).");
-        jobRepository.update(failed.withLifecycle(failed.getLifecycle().finished(clock.instant())));
+        BacktestRun failed =
+                counted.markFailed("SYSTEM_FAILURE", "작업 메시지가 모두 처리되지 못했습니다(DLQ).")
+                        .withLifecycle(counted.getLifecycle().finished(clock.instant()));
+        jobRepository.update(failed);
+        // 워커 응답이 없는 종결이라 자원 사용은 없다(null). 대기·소요 시각은 실행 행에서 나온다.
+        metrics.record(failed, null);
         log.warn(
                 "run failed: every published job message was dead-lettered: runId={} dlq={}/{}",
                 runId,

@@ -24,10 +24,17 @@ class ProcessingStage(StrEnum):
 
 
 class ProcessInfo(ContractModel):
-    """실행 프로세스 식별. 자동 재시도 진단용."""
+    """실행 프로세스 식별. 자동 재시도 진단용.
+
+    ``queue``·``role`` 은 이 작업을 어느 큐에서 어느 역할의 워커가 집었는지다(spec 004 R-20,
+    T012). 공용(flex) 워커가 단건을 지원한 비율은 이 값 없이 셀 수 없다. 선택 필드라 v2 안에서
+    하위호환이다.
+    """
 
     pid: int | None = None
     hostname: str | None = None
+    queue: str | None = None
+    role: str | None = None
 
 
 class StartedPayload(ContractModel):
@@ -58,11 +65,18 @@ class ProgressPayload(ContractModel):
 
 
 class ResourceUsage(ContractModel):
-    """실행 프로세스 자원 사용(측정 기록용). 못 잰 값은 생략."""
+    """실행 프로세스 자원 사용(측정 기록용). 못 잰 값은 생략.
+
+    ``peak_rss_mb`` 는 **이 실행 동안** 표본으로 잰 상주 메모리의 최댓값이다 — 프로세스 누적
+    최고값(``ru_maxrss``)이 아니다. ``queue``·``role`` 은 이 결과를 낸 워커의 것이다. 중복
+    실행(R-18)에서는 마지막 STARTED 의 워커와 다를 수 있어 백엔드가 FINISHED 값을 먼저 쓴다(T012).
+    """
 
     peak_rss_mb: Decimal | None = None
     cpu_seconds: Decimal | None = None
     wall_seconds: Decimal | None = None
+    queue: str | None = None
+    role: str | None = None
 
 
 class FinishedPayload(ContractModel):

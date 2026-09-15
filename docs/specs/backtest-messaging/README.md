@@ -136,9 +136,9 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 | type | payload | 예시 |
 |---|---|---|
-| `STARTED` | `{ startedAt, stage=PREPARING_DATA, resource? { pid, hostname } }` | [`event-started.json`](examples/event-started.json) |
+| `STARTED` | `{ startedAt, stage=PREPARING_DATA, resource? { pid, hostname, queue?, role? } }` — `queue`는 집은 작업 큐 이름, `role`은 워커 역할(`single`/`flex`). 둘 다 선택이며 백엔드는 측정 기록(`served_queue`·`worker_role`, spec 004 T012)에만 쓴다 | [`event-started.json`](examples/event-started.json) |
 | `PROGRESS` | `{ stage=COMPUTING, completedTradingDays, totalTradingDays, lastTradingDate, portfolioSeries[] { date, equity, cumulativeReturn, drawdown } }` — `progress.batchTradingDays` 단위, 이번 구간에서 새로 계산한 포인트만, 마지막 잔여 구간도 발행. `lastTradingDate`는 취소·한도 시 완료 범위 | [`event-progress.json`](examples/event-progress.json) |
-| `FINISHED` | `{ status, partial, lastTradingDate?, engineOutput, resource? { peakRssMb, cpuSeconds, wallSeconds } }` — `status`는 `engineOutput.run.status`와 같아야 한다. `partial=true`는 CANCELLED에서만 | [`event-finished-completed.json`](examples/event-finished-completed.json), [`event-finished-failed.json`](examples/event-finished-failed.json), [`event-finished-cancelled.json`](examples/event-finished-cancelled.json) |
+| `FINISHED` | `{ status, partial, lastTradingDate?, engineOutput, resource? { peakRssMb, cpuSeconds, wallSeconds, queue?, role? } }` — `status`는 `engineOutput.run.status`와 같아야 한다. `partial=true`는 CANCELLED에서만. `peakRssMb`는 **이 실행 동안** STARTED·PROGRESS·FINISHED 시점에 표본으로 잰 상주 메모리의 최댓값이다(프로세스 누적 최고값이 아니다 — 워커가 실행을 순차 처리하므로 누적값이면 큰 실행 뒤의 작은 실행이 모두 그 값이 된다). `queue`·`role`은 **이 결과를 낸** 워커의 것이다 — 중복 실행(R-18)에서는 마지막 STARTED 의 워커와 다를 수 있어 백엔드 측정 기록은 FINISHED 의 값을 먼저 쓴다(T012) | [`event-finished-completed.json`](examples/event-finished-completed.json), [`event-finished-failed.json`](examples/event-finished-failed.json), [`event-finished-cancelled.json`](examples/event-finished-cancelled.json) |
 
 ### 4.3 `EngineOutput`
 

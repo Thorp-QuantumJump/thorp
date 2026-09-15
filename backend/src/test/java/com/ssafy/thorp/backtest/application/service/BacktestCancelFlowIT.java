@@ -596,6 +596,13 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
         verify(controlPublisher, never()).cancel(anyString());
         assertThat(runRepository.findById(run.getId()).orElseThrow().getStatus())
                 .isEqualTo(RunStatus.CANCELLED);
+        // 실행 전 취소도 종결이다 — 측정에서 빠지면 cancelRate 가 실제보다 작아진다(T012 리뷰 1).
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT status FROM backtest_run_metric WHERE run_id = ?",
+                                String.class,
+                                run.getId()))
+                .isEqualTo("CANCELLED");
 
         JsonNode found = detail(id, user);
         assertThat(found.get("status").asText()).isEqualTo("CANCELLED");

@@ -58,6 +58,7 @@ class BacktestCancelServiceTest {
     @Mock private BacktestRunRepository runRepository;
     @Mock private BacktestRequestRepository requestRepository;
     @Mock private ApplicationEventPublisher events;
+    @Mock private ExecutionMetricRecorder metrics;
 
     private BacktestCancelService service;
 
@@ -65,7 +66,11 @@ class BacktestCancelServiceTest {
     void createService() {
         service =
                 new BacktestCancelService(
-                        runRepository, requestRepository, events, Clock.fixed(NOW, ZoneOffset.UTC));
+                        runRepository,
+                        requestRepository,
+                        metrics,
+                        events,
+                        Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static BacktestRequest request(long requesterId, Instant cancelledAt) {
@@ -161,6 +166,18 @@ class BacktestCancelServiceTest {
         assertThat(updatedRequest().isStoppedRun()).isTrue();
         verify(runRepository, never()).recordCancelRequested(any(), any(), any());
         verifyNoInteractions(events);
+        // 실행 전 취소도 종결이다 — 여기서 세지 않으면 이 실행은 측정에서 영영 빠진다(T012). 자원 사용은 없다.
+        verify(metrics).record(captor.getValue(), null);
+    }
+
+    @Test
+    @DisplayName("RUNNING 실행의 취소는 CANCEL 을 보내는 것이지 종결이 아니다 — 측정은 FINISHED(CANCELLED) 가 남긴다")
+    void runningCancelDoesNotRecordAMetricYet() {
+        given(run(RunStatus.RUNNING, PROGRESS_DATE), 1);
+
+        service.cancel(BACKTEST_ID, REQUESTER);
+
+        verifyNoInteractions(metrics);
     }
 
     @Test

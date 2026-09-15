@@ -127,6 +127,8 @@ services:
       THORP_LIMIT_STALE_RUN_SECONDS: ${THORP_LIMIT_STALE_RUN_SECONDS}
       THORP_LIMIT_CANCEL_GRACE_SECONDS: ${THORP_LIMIT_CANCEL_GRACE_SECONDS}
       THORP_LIMIT_PROVISIONAL: ${THORP_LIMIT_PROVISIONAL}
+      # 운영자 경로(/internal/execution-metrics)의 토큰(spec 004 T012). 비우면 그 경로는 404 다 — 기동은 된다.
+      THORP_OPS_TOKEN: ${THORP_OPS_TOKEN:-}
       # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.
       # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라
       # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.

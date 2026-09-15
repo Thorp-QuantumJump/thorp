@@ -57,13 +57,14 @@ class BacktestEventServiceTest {
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @Mock private ApplicationEventPublisher events;
+    @Mock private ExecutionMetricRecorder metrics;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service = new BacktestEventService(jobRepository, resultRepository, events, clock);
+        service = new BacktestEventService(jobRepository, resultRepository, metrics, events, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -126,6 +127,16 @@ class BacktestEventServiceTest {
         service.handleStarted(MessageFixtures.started());
 
         assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.RUNNING);
+    }
+
+    @Test
+    @DisplayName("STARTED: 어느 큐에서 어느 워커가 집었는지를 전용 UPDATE 로 남긴다 — 측정 기록이 복사한다(R-20, T012)")
+    void startedRecordsWorkerInfo() {
+        givenJob(RunStatus.QUEUED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(jobRepository).recordWorkerInfo(1L, "backtest.jobs", "single");
     }
 
     @ParameterizedTest

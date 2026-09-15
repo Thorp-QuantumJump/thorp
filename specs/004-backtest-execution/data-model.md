@@ -136,19 +136,39 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 ## backtest_run_metric (실행 측정 기록)
 
+종결 한 번에 한 행. `run_id`가 UNIQUE라 늦게 온 중복 종결은 `ON CONFLICT DO NOTHING`으로 무시된다(T012).
+
 | 컬럼 | 타입 |
 |---|---|
 | id | BIGINT PK |
-| run_id | BIGINT FK NOT NULL |
-| execution_type | VARCHAR(20) NOT NULL |
-| status | VARCHAR(20) NOT NULL (종결 상태) |
+| run_id | BIGINT FK NOT NULL UNIQUE, ON DELETE CASCADE (실행이 없는 측정은 뜻이 없다) |
+| execution_type | VARCHAR(20) NOT NULL (`backtest_run.execution_type`, 없으면 SINGLE) |
+| status | VARCHAR(20) NOT NULL (종결 상태 COMPLETED · FAILED · CANCELLED) |
+| failure_code | VARCHAR(64) (FAILED 의 엔진 오류·SYSTEM_FAILURE, EXECUTION_LIMIT 으로 끊긴 CANCELLED) |
 | queued_at / started_at / finished_at | TIMESTAMPTZ |
-| wait_ms / run_ms | BIGINT (started-queued, finished-started) |
-| concurrent_running | INTEGER (종결 시점의 RUNNING run 수) |
-| peak_rss_mb / cpu_seconds | NUMERIC (FINISHED payload `resource`) |
+| wait_ms / run_ms | BIGINT (started-queued, finished-started. STARTED 를 못 받은 실행은 null) |
+| concurrent_running | INTEGER (종결 시점의 RUNNING run 수, 자기 자신 제외) |
+| peak_rss_mb / cpu_seconds | NUMERIC(12,1) / NUMERIC(12,3) (FINISHED payload `resource`. DLQ·강제 종결은 null) |
 | auto_retried | BOOLEAN (attempt > publish_count, R-18 — 재발행 중복은 재시도가 아니다) |
-| result_bytes | BIGINT (JSONB 합계 길이) |
+| result_bytes | BIGINT (`backtest_result` 행의 `pg_column_size`. 결과 없는 종결은 0) |
+| served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 **결과를 냈나** — R-20 N/M 비율 조정 근거. FINISHED `resource.queue`·`role`이 먼저고, FINISHED 가 없는 종결은 STARTED 가 실행 행에 남긴 값) |
 | recorded_at | TIMESTAMPTZ |
+
+`backtest_run`에도 `served_queue`·`worker_role` 두 컬럼이 있다 — STARTED 를 받을 때 전용 UPDATE 로 쓰고(컬럼 소유 규칙) 종결 때 여기로 복사한다.
+
+## backtest_limit_hit (한도 도달 기록)
+
+실행 행이 없어도 남겨야 하는 사건(접수 거절)이 있어 측정 기록과 표를 나눈다. append-only.
+
+| 컬럼 | 타입 |
+|---|---|
+| id | BIGINT PK |
+| kind | VARCHAR(20) NOT NULL (`ADMISSION_REJECTED` 429 · `RUN_STOPPED` 실행 시간 상한으로 CANCEL) |
+| execution_type | VARCHAR(20) NOT NULL |
+| reason | VARCHAR(32) NOT NULL (`PER_USER` · `TOTAL` · `EXECUTION_LIMIT`) |
+| requester_id | BIGINT (거절은 있고 정지는 null) |
+| run_id | BIGINT FK (정지는 있고 거절은 null) |
+| at | TIMESTAMPTZ NOT NULL |
 
 ## backtest_reuse_event (재조회 기록)
 
@@ -156,7 +176,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 ## v_run_metric_summary (뷰)
 
-`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, reuse_count`(reuse_event 조인). `percentile_cont` 사용. 이 뷰가 PD-06 상한 결정의 근거 자료다.
+`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count`. `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 "공용 워커가 단건을 지원한 비율"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.
 
 ## 검증 규칙 (요청 접수 시, 백엔드)
 

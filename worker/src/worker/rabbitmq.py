@@ -211,6 +211,7 @@ def run_flex_loop(
             body,
             properties.headers if properties is not None else None,
             PikaJobAcknowledger(channel, method.delivery_tag),
+            queue=queue,
         )
 
 
@@ -326,7 +327,9 @@ def run_consumer(
         channel = connection.channel()
         channel.confirm_delivery()  # publisher confirm: 발행 확인 후에만 반환한다
         channel.basic_qos(prefetch_count=PREFETCH_COUNT)
-        consumer = BacktestJobConsumer(engine, PikaEventPublisher(channel), registry=registry)
+        consumer = BacktestJobConsumer(
+            engine, PikaEventPublisher(channel), registry=registry, role=role
+        )
         if role == "flex":
             logger.info("worker consuming role=flex queues=%s (pull, bulk first)", list(queues))
             # time.sleep 이 아니라 connection.sleep — 기다리는 동안에도 heartbeat 를 처리해야

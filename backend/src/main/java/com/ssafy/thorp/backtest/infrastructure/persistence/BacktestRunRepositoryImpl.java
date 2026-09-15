@@ -157,6 +157,11 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
+    public void recordWorkerInfo(Long runId, String queue, String role) {
+        jpaRepository.markWorkerInfo(runId, queue, role);
+    }
+
+    @Override
     public List<BacktestRun> findStaleRunning(Instant since, int limit) {
         return toDomain(jpaRepository.findStale(RunStatus.RUNNING, since, Limit.of(limit)));
     }

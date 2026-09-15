@@ -45,16 +45,19 @@ public class BacktestCancelService {
 
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
+    private final ExecutionMetricRecorder metrics;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BacktestCancelService(
             BacktestRunRepository runRepository,
             BacktestRequestRepository requestRepository,
+            ExecutionMetricRecorder metrics,
             ApplicationEventPublisher events,
             Clock clock) {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
+        this.metrics = metrics;
         this.events = events;
         this.clock = clock;
     }
@@ -94,8 +97,12 @@ public class BacktestCancelService {
         }
         if (run.getStatus() == RunStatus.QUEUED) {
             // 워커가 아직 없다. 실행을 바로 끝낸다 — 뒤늦게 STARTED 가 오면 이벤트 처리가 CANCEL 을 보낸다.
-            BacktestRun cancelled = run.markCancelled(null);
-            runRepository.update(cancelled.withLifecycle(cancelled.getLifecycle().finished(now)));
+            BacktestRun cancelled =
+                    run.markCancelled(null).withLifecycle(run.getLifecycle().finished(now));
+            runRepository.update(cancelled);
+            // 이것도 종결이다(R-10). 여기서 세지 않으면 늦은 FINISHED 는 최종 상태라 무시되므로 이 실행은
+            // 측정에서 영영 빠지고 cancelRate 가 실제보다 작아진다. 워커가 없었으니 자원 사용은 null.
+            metrics.record(cancelled, null);
             return new BacktestCancelResult(backtestId, RunStatus.CANCELLED, false);
         }
         // 취소 의도는 커밋되는 컬럼에 남기고(접수가 합류를 막고, 유예 감시가 기다리는 근거), CANCEL 은 커밋 뒤 보낸다.

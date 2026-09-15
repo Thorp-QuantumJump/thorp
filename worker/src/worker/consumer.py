@@ -43,6 +43,7 @@ from worker.contracts.events import (
 )
 from worker.control import CancelRegistry
 from worker.messaging import (
+    JOBS_QUEUE,
     SCHEMA_VERSION,
     ContractViolation,
     EventPublisher,
@@ -102,16 +103,22 @@ def _seconds(value: float) -> Decimal:
     return Decimal(f"{value:.3f}")
 
 
-def peak_rss_mb() -> Decimal | None:
-    """프로세스 최대 상주 메모리(MB). 못 재는 플랫폼(Windows)에서는 None → 키 생략."""
-    try:
-        import resource
-    except ImportError:
+def current_rss_mb() -> Decimal | None:
+    """지금 이 순간의 상주 메모리(MB). 못 재는 플랫폼에서는 None → 키 생략.
+
+    ``resource.getrusage().ru_maxrss`` 를 쓰지 않는다 — 그것은 **프로세스 시작 이후의** 최고값이라,
+    큰 실행을 한 번 하면 그 뒤의 작은 실행이 모두 그 값으로 기록된다(워커는 실행을 순차 처리한다).
+    실행별 최댓값은 실행 중 표본(STARTED·PROGRESS·FINISHED 시점)의 최댓값으로 잰다.
+    Linux 는 ``/proc/self/statm`` 두 번째 열(상주 페이지 수)이다.
+    """
+    if not sys.platform.startswith("linux"):
         return None
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    # Linux 는 KiB, macOS 는 bytes 로 준다.
-    divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
-    return Decimal(f"{peak / divisor:.1f}")
+    try:
+        with open("/proc/self/statm", encoding="ascii") as statm:
+            resident_pages = int(statm.read().split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return Decimal(f"{resident_pages * os.sysconf('SC_PAGE_SIZE') / (1024 * 1024):.1f}")
 
 
 class _EventStream:
@@ -138,28 +145,48 @@ class _EventStream:
         self._sequence = 0
         self._wall_started = time.monotonic()
         self._cpu_started = time.process_time()
+        # 이 실행 동안의 상주 메모리 표본 최댓값. 이벤트마다 한 번 잰다 — PROGRESS 가 20거래일마다
+        # 오므로 표본이 실행 길이에 비례해 늘고, 그 사이 순간 최고점은 놓칠 수 있다(추정치다).
+        self._peak_rss_mb: Decimal | None = None
+        self._queue: str | None = None
+        self._role: str | None = None
+
+    def _sample_rss(self) -> None:
+        now = current_rss_mb()
+        if now is not None and (self._peak_rss_mb is None or now > self._peak_rss_mb):
+            self._peak_rss_mb = now
 
     @property
     def sequence(self) -> int:
         return self._sequence
 
-    def started(self) -> None:
+    def started(self, queue: str, role: str) -> None:
+        self._queue, self._role = queue, role
+        self._sample_rss()
         now = self._clock()
         payload = StartedPayload(
             started_at=now,
             stage=ProcessingStage.PREPARING_DATA,
-            resource=ProcessInfo(pid=os.getpid(), hostname=socket.gethostname()),
+            # queue·role 은 백엔드 측정 기록용이다(R-20·T012) — flex 워커가 단건을 도운 비율의 근거.
+            resource=ProcessInfo(
+                pid=os.getpid(), hostname=socket.gethostname(), queue=queue, role=role
+            ),
         )
         self._emit(BacktestEventType.STARTED, payload, now)
 
     def progress(self, payload: ProgressPayload) -> None:
+        self._sample_rss()
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
     def finished(self, output: EngineOutput) -> None:
+        self._sample_rss()
         usage = ResourceUsage(
-            peak_rss_mb=peak_rss_mb(),
+            peak_rss_mb=self._peak_rss_mb,
             cpu_seconds=_seconds(time.process_time() - self._cpu_started),
             wall_seconds=_seconds(time.monotonic() - self._wall_started),
+            # 이 결과를 낸 워커. 중복 실행(R-18)에서 마지막 STARTED 와 다를 수 있어 다시 싣는다.
+            queue=self._queue,
+            role=self._role,
         )
         payload = FinishedPayload(
             status=output.run.status,
@@ -242,24 +269,31 @@ class BacktestJobConsumer:
         registry: CancelRegistry | None = None,
         new_id: IdFactory = _new_id,
         clock: Clock = utc_now,
+        role: str = "single",
     ) -> None:
         self._engine = engine
         self._publisher = publisher
         self._registry = registry
         self._new_id = new_id
         self._clock = clock
+        self._role = role
 
     def handle(
         self,
         body: bytes | str,
         headers: Mapping[str, Any] | None,
         acknowledger: JobAcknowledger,
+        *,
+        queue: str = JOBS_QUEUE,
     ) -> None:
         """수신 → 역직렬화 → 실행 → 발행 → ACK. 오류 3분류가 여기서 갈린다(계약 §7).
 
         같은 ``runId`` 가 재전달되면 그냥 다시 실행하고 ``executionId`` 만 새로 발급한다.
         워커는 DB에 쓰지 않아(계약 §1) 처리 이력을 남길 곳이 없다. 중복 방어는 계약 §7이
         백엔드 결과 Consumer에 요구하며 ``eventId`` 가 그 키다.
+
+        ``queue`` 는 이 메시지를 꺼낸 큐다. STARTED 의 ``resource.queue`` 로 나가 백엔드 측정
+        기록이 어느 큐의 일이었는지 안다(R-20). 단건 전용 워커는 기본값 그대로다.
         """
         try:
             engine_input = parse_job(body, headers)
@@ -273,7 +307,7 @@ class BacktestJobConsumer:
         run_id = engine_input.run.run_id
         execution_id = self._new_id()
         try:
-            output = self._execute(engine_input, run_id, execution_id)
+            output = self._execute(engine_input, run_id, execution_id, queue)
         except PublishError as exc:
             logger.error(
                 "event publication failed for runId=%s executionId=%s; not acking: %s",
@@ -315,14 +349,16 @@ class BacktestJobConsumer:
             output.run.status,
         )
 
-    def _execute(self, engine_input: EngineInput, run_id: str, execution_id: str) -> EngineOutput:
+    def _execute(
+        self, engine_input: EngineInput, run_id: str, execution_id: str, queue: str
+    ) -> EngineOutput:
         stream = _EventStream(self._publisher, run_id, execution_id, self._new_id, self._clock)
         # 활성 실행 등록은 STARTED 보다 앞선다 — STARTED 에 대한 답으로 오는 CANCEL 을 받아야
         # 한다(R-04).
         if self._registry is not None:
             self._registry.begin(run_id)
         try:
-            stream.started()
+            stream.started(queue, self._role)
             batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
             output = self._engine.run(engine_input, batcher.on_progress)
             batcher.flush()

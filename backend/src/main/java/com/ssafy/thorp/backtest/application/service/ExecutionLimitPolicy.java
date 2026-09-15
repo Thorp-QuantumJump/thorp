@@ -43,10 +43,15 @@ public class ExecutionLimitPolicy {
     private static final String TOTAL_LOCK = "backtest-admission:total";
 
     private final BacktestRunRepository runRepository;
+    private final ExecutionMetricRecorder metrics;
     private final ExecutionLimits limits;
 
-    public ExecutionLimitPolicy(BacktestRunRepository runRepository, ExecutionLimits limits) {
+    public ExecutionLimitPolicy(
+            BacktestRunRepository runRepository,
+            ExecutionMetricRecorder metrics,
+            ExecutionLimits limits) {
         this.runRepository = runRepository;
+        this.metrics = metrics;
         this.limits = limits;
     }
 
@@ -97,6 +102,8 @@ public class ExecutionLimitPolicy {
                 queued,
                 limit,
                 requesterId);
+        // 한도 도달 기록(FR-006, R-10 ②). 던지는 429 는 호출자 트랜잭션을 되돌리지 않으므로(noRollbackFor) 이 INSERT 는 남는다.
+        metrics.limitRejected(requesterId, ExecutionType.SINGLE, reason);
         return new BusinessException(
                 ErrorCode.EXECUTION_LIMIT, ErrorCode.EXECUTION_LIMIT.getMessage(), details);
     }
