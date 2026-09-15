@@ -40,7 +40,7 @@ cd backend && ./gradlew test --tests '*ArchitectureTest*'
 
 ## 2. 등록표를 조회할 수 있는가
 
-이 수동 확인은 PD-02·PD-03·PD-04 확정값으로 제품 등록표가 완성된 뒤 수행한다. 결정 전에는 아래 200 응답을 제품 동작으로 기대하지 않고, 계약의 합성 픽스처만 T026에서 검증한다.
+PD-02가 2026-09-15 확정([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254), [data-model](data-model.md) §4-2)됐으므로 T017로 실제 제품 등록표를 채운 뒤 이 수동 확인을 수행한다.
 
 서버를 띄우고:
 
@@ -62,7 +62,7 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=2' \
   | jq '.strategies[] | select(.strategyId=="SECTOR_MOMENTUM") | .axes[] | select(.name=="topN") | .choices'
 ```
 
-기대: 섹터가 둘이므로 등록된 선정 수 후보 중 2를 넘는 값은 `selectable: false`로 실리고 목록에서 사라지지 않는다. 합성 계약 픽스처에서는 3·4로 이 규칙을 검증하되, 그 숫자를 제품 후보값으로 간주하지 않는다.
+기대: 섹터가 둘이므로 등록된 선정 수 후보(`[2, 3, 4]`, PD-02 확정값) 중 2를 넘는 3·4가 `selectable: false`로 실리고 목록에서 사라지지 않는다. 단, `selectionMode`가 `TOP_N`일 때만 `topN` 축이 열린다 — 이 확인은 기본값(`selectionMode=TOP_N`) 기준이다.
 
 ```bash
 curl -s 'http://localhost:8080/strategies/registry?universeSize=3' \
@@ -157,6 +157,15 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.strategies[].strateg
 
 **늘어나지 않으면 `sum`의 둘째 항목을 읽지 않는 것이다.** 첫 설계(`{basis, plus}`)가 이 경우를 담지 못해 바꾼 것이므로([research](research.md) R4), 이 확인을 건너뛰면 같은 결함이 되살아나도 알 수 없다.
 
+### 7-2. 최소 평가 기간을 사용자가 고르면 그 값으로 다시 판정하는가 (FR-011a)
+
+공통 평가 가능 범위가 워밍업을 뺀 뒤 1년보다 조금 더 남게 섹터를 섞은 뒤:
+
+1. '기간·금액·조건'에서 최소 평가 기간을 기본(1년)으로 둔 채 카드가 선택 가능한지 확인한다.
+2. 최소 평가 기간을 엄격(3년)으로 바꾼다.
+
+기대: 같은 워밍업·같은 공통 평가 가능 범위인데도 카드가 선택 불가로 바뀌고 이유가 "최소 평가 기간(3년)에 못 미칩니다" 식으로 보인다. 완화(제한 없음)로 바꾸면 다시 선택 가능해진다.
+
 ## 8. 설정값이 탭 수명만큼 남는가 (SC-007)
 
 1. 전략과 상세 설정을 정한다.
@@ -196,7 +205,7 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.strategies[].strateg
 | 4 | SC-001, SC-005 |
 | 5 | SC-002 |
 | 5-1 | SC-003 |
-| 7, 7-1 | SC-004 |
+| 7, 7-1, 7-2 | SC-004 |
 | 8 | SC-007 |
 | 9 | SC-008 |
 
