@@ -83,7 +83,7 @@ backend/src/main/java/com/ssafy/thorp/backtest/
 ├── infrastructure/persistence/…                            # JPA 엔티티·매퍼·리포지토리
 ├── infrastructure/messaging/BacktestRabbitConfig.java      # quorum queue ×2(backtest.jobs 단건 · backtest.jobs.bulk), backtest.control
 ├── infrastructure/messaging/BacktestDeadLetterListener.java# 신규: DLQ → FAILED(SYSTEM_FAILURE)
-└── …/operations/ExecutionMetricsController.java            # 신규: GET /internal/execution-metrics
+└── presentation/controller/ExecutionMetricsController.java # 신규: GET /internal/execution-metrics (X-Ops-Token, OperatorGate)
 backend/src/main/resources/db/migration/V3__backtest_run_request.sql  # 신규 마이그레이션
 
 worker/src/worker/

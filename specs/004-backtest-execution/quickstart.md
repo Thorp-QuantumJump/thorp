@@ -60,7 +60,7 @@ pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 
 
 ## S10. 측정 기록 (US4, SC-007)
 
-S1~S6을 마친 뒤 `GET /internal/execution-metrics?type=SINGLE`(운영자 토큰). 기대: `count ≥ 6`, `failRate`·`cancelRate`·`autoRetryRate`가 0보다 크고, `waitP50Ms ≤ waitP95Ms`, `reuseCount ≥ 1`. `psql -c 'select * from v_run_metric_summary'`와 값이 같다.
+S1~S6을 마친 뒤 `GET /internal/execution-metrics?type=SINGLE`에 헤더 `X-Ops-Token: {thorp.ops.token}`(local은 `dev-ops-token`)을 붙여 부른다. 기대: `count ≥ 6`, `failRate`·`cancelRate`·`autoRetryRate`가 0보다 크고, `waitP50Ms ≤ waitP95Ms ≤ waitP99Ms`, `reuseCount ≥ 1`, S13을 거쳤으면 `flexServedRate > 0`. `psql -c 'select * from v_run_metric_summary'`와 값이 같다(`from`·`to`를 주지 않았을 때). 헤더가 없거나 틀리면 `404 RESOURCE_NOT_FOUND` — 토큰이 설정되지 않은 환경에서도 같다. S12를 거쳤으면 `backtest_limit_hit`에 `ADMISSION_REJECTED`(429)와 `RUN_STOPPED`(실행 시간 상한) 한 건씩, 응답 `limitHitCount ≥ 2`.
 
 ## S11. 목표 위험 맞춤 시나리오 (FR-016, PD-18)
 
@@ -68,7 +68,7 @@ S1과 같은 본문에 `"scenario": "TARGET_RISK", "scenarioParams": {"targetVol
 
 ## S12. 실행 한도 장치 (FR-006, R-19, T014)
 
-local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_run_metric.limit_hit`에 두 건이 남는다. **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
+local 기본값은 `max-queued-per-user=5`(R-19)이므로 이 시나리오에서만 `2`로 낮춰 짧게 확인한다. 같은 사용자가 서로 다른 조건 3건을 **동시에** 요청한다(경합 확인). **단건(`SINGLE`)만 세므로** 탐색 묶음은 이 상한에 걸리지 않는다. 기대: 세 번째가 `429 EXECUTION_LIMIT`, 본문에 `queued=2`·`retryAfterSeconds`, 응답에 `provisional=true`. 같은 조건 재요청(JOINED)은 429가 아니다. `max-run-seconds=5`로 낮춰 긴 구간을 요청하면 실행이 CANCEL 채널로 멈추고 `CANCELLED partial=true`·`failure.code=EXECUTION_LIMIT`·완료 범위가 보인다. `backtest_limit_hit`에 `ADMISSION_REJECTED`·`RUN_STOPPED` 한 건씩 남는다(T012). **값은 임시이며 PD-06이 정하기 전까지 prod에 적용하지 않는다.**
 
 ## S13. 단건·벌크 큐 분리 (R-20, T015)
 
