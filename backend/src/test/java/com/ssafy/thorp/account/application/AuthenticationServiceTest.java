@@ -38,6 +38,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 /**
  * 로그인 유스케이스의 판정 규칙을 단위로 고정한다.
@@ -62,6 +63,7 @@ class AuthenticationServiceTest {
             mock(SecurityContextRepository.class);
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy =
             mock(SessionAuthenticationStrategy.class);
+    private final CsrfTokenRepository csrfTokenRepository = mock(CsrfTokenRepository.class);
 
     private final MockHttpServletRequest request = new MockHttpServletRequest();
     private final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -78,6 +80,7 @@ class AuthenticationServiceTest {
                         passwordEncoder,
                         securityContextRepository,
                         sessionAuthenticationStrategy,
+                        csrfTokenRepository,
                         Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
