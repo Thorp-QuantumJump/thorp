@@ -142,6 +142,57 @@ class ExecutionMetricsApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("from·to 는 recorded_at 반열림 구간으로 자른다 — 그 구간의 측정·한도 도달만 센다")
+    void rangeFiltersByRecordedAt() throws Exception {
+        oneCompletedSingleRun();
+        // 방금 기록된 행의 시각을 기준으로 1초 창을 만든다. 공유 DB 의 잔여물은 창 밖이거나, 안에 있으면 DB 셈에도 함께 든다.
+        java.time.Instant from =
+                jdbcTemplate
+                        .queryForObject(
+                                "SELECT max(recorded_at) FROM backtest_run_metric"
+                                        + " WHERE execution_type = 'SINGLE'",
+                                java.time.OffsetDateTime.class)
+                        .toInstant();
+        java.time.Instant to = from.plusSeconds(1);
+
+        String body =
+                mockMvc.perform(
+                                get("/internal/execution-metrics")
+                                        .param("type", "SINGLE")
+                                        .param("from", from.toString())
+                                        .param("to", to.toString())
+                                        .header(OperatorGate.HEADER, "it-ops-token"))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        JsonNode row = objectMapper.readTree(body).path("data").path("rows").get(0);
+
+        Long expectedCount =
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM backtest_run_metric WHERE execution_type = 'SINGLE'"
+                                + " AND recorded_at >= ? AND recorded_at < ?",
+                        Long.class,
+                        java.time.OffsetDateTime.ofInstant(from, java.time.ZoneOffset.UTC),
+                        java.time.OffsetDateTime.ofInstant(to, java.time.ZoneOffset.UTC));
+        Long expectedHits =
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM backtest_limit_hit WHERE execution_type = 'SINGLE'"
+                                + " AND at >= ? AND at < ?",
+                        Long.class,
+                        java.time.OffsetDateTime.ofInstant(from, java.time.ZoneOffset.UTC),
+                        java.time.OffsetDateTime.ofInstant(to, java.time.ZoneOffset.UTC));
+        assertThat(row.path("count").asLong()).isEqualTo(expectedCount).isGreaterThanOrEqualTo(1L);
+        assertThat(row.path("limitHitCount").asLong()).isEqualTo(expectedHits);
+        // 전체 기간(뷰)보다 작거나 같다 — 창이 전체를 덮는 일은 없다.
+        Long viewCount =
+                jdbcTemplate.queryForObject(
+                        "SELECT count FROM v_run_metric_summary WHERE execution_type = 'SINGLE'",
+                        Long.class);
+        assertThat(row.path("count").asLong()).isLessThanOrEqualTo(viewCount);
+    }
+
+    @Test
     @DisplayName("기간을 거꾸로 주면 400, 미래 기간이면 빈 목록 — 0 으로 채운 행을 만들지 않는다")
     void rangeValidationAndEmptyRange() throws Exception {
         mockMvc.perform(

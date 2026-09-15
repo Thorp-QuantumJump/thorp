@@ -75,6 +75,10 @@ COMMENT ON COLUMN backtest_limit_hit.reason IS 'PER_USER · TOTAL(접수) · EXE
 
 CREATE INDEX idx_backtest_limit_hit_type_at ON backtest_limit_hit (execution_type, at);
 
+-- 집계의 reuse_count 서브쿼리가 유형·기간으로 재사용 기록을 센다. T010 이 만든 표에는 run_id 색인만 있어
+-- 유형별 셈이 전체를 훑었다 — limit_hit 와 같은 모양의 색인을 여기서 더한다(데이터 변경 없음).
+CREATE INDEX idx_backtest_reuse_event_type_at ON backtest_reuse_event (request_execution_type, at);
+
 -- 유형별 집계. GET /internal/execution-metrics 는 같은 SELECT 에 recorded_at 범위만 더한다(기록기 쪽 상수와 문장이 같다).
 -- percentile_cont 는 null 을 건너뛴다 — STARTED 를 못 받은 실행의 wait/run 은 분포에 들어가지 않는다.
 -- reuse_count 는 요청 유형으로, limit_hit_count 는 한도 유형으로 조인한다(둘 다 실행 행이 없을 수 있다).
