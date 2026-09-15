@@ -146,7 +146,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK가 있다")
+    @DisplayName("묶음 UNIQUE·후보 순번 UNIQUE와 FK가 있고, Job 인덱스는 UNIQUE가 아니다")
     void constraintsExist() {
         List<String> foreignKeyTables =
                 jdbcTemplate.queryForList(
@@ -163,14 +163,18 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
                         Integer.class);
         assertThat(candidateNoUnique).isEqualTo(1);
 
-        // backtest_job_id는 부분 UNIQUE 인덱스라 table_constraints가 아니라 pg_indexes에 있다.
-        Integer jobUnique =
-                jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM pg_indexes"
+        // backtest_job_id 인덱스는 조회용이며 UNIQUE 가 아니다. 004가 같은 조건의 요청을 한 실행에
+        // 합류시키므로(spec 004 R-02) 실행 하나에 후보가 여럿 걸린다 — UNIQUE 이던 시절에는 같은 조건을
+        // 두 번 접수하는 것만으로 접수가 500 이었다(S15P21E205-221).
+        List<String> jobIndexes =
+                jdbcTemplate.queryForList(
+                        "SELECT indexdef FROM pg_indexes"
                                 + " WHERE schemaname = 'public'"
-                                + " AND indexname = 'uk_search_candidate_job'",
-                        Integer.class);
-        assertThat(jobUnique).isEqualTo(1);
+                                + " AND tablename = 'search_candidate'"
+                                + " AND indexdef LIKE '%(backtest_job_id)%'",
+                        String.class);
+        assertThat(jobIndexes).hasSize(1);
+        assertThat(jobIndexes.get(0)).doesNotContain("UNIQUE");
     }
 
     @Test
@@ -318,8 +322,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(candidateRepository.findByBacktestJobId(9002L))
-                .get()
+        assertThat(candidateRepository.findAllByBacktestJobId(9002L))
+                .singleElement()
                 .satisfies(
                         reloaded -> {
                             assertThat(reloaded.getRetryCount()).isEqualTo(1);

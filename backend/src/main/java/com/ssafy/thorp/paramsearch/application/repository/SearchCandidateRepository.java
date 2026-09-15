@@ -3,7 +3,6 @@ package com.ssafy.thorp.paramsearch.application.repository;
 import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import java.util.List;
-import java.util.Optional;
 
 /** 탐색 후보 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. */
 public interface SearchCandidateRepository {
@@ -35,6 +34,11 @@ public interface SearchCandidateRepository {
 
     long countByStatus(Long paramSearchId, CandidateStatus status);
 
-    /** 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다. Job 하나는 후보 하나에만 붙는다. */
-    Optional<SearchCandidate> findByBacktestJobId(Long backtestJobId);
+    /**
+     * 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다.
+     *
+     * <p><b>실행 하나에 후보가 여럿 걸릴 수 있다.</b> 004가 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를 재사용하기 때문이다(spec 004
+     * R-02). 같은 조건을 두 번 접수하면 두 묶음의 후보가 같은 실행 행을 가리키므로, 걸린 후보를 <b>전부</b> 돌려주지 않으면 한쪽 묶음이 영영 끝나지 않는다.
+     */
+    List<SearchCandidate> findAllByBacktestJobId(Long backtestJobId);
 }
