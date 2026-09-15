@@ -6,7 +6,7 @@
 
 007이 쓰는 내부 포트 계약은 [strategy-registry-internal.md](strategy-registry-internal.md)에 따로 있다. 둘은 같은 등록표를 읽는다.
 
-**이 문서의 응답 예시는 픽스처로 뺀다.** `docs/specs/strategy-registry-api/examples/registry-response.json`에 두고 테스트가 그것을 읽어 실제 응답과 대조한다. `docs/specs/backtest-api/examples/`가 이미 쓰는 방식이며, 계약과 코드가 어긋나면 빌드가 실패한다.
+**이 문서의 응답 예시는 계약 형식만 검증하는 합성 픽스처다.** `docs/specs/strategy-registry-api/examples/registry-response.json`에 두고 합성 YAML을 읽은 응답과 대조한다. 아래 숫자와 `PROVISIONAL-20260911`은 제품 후보값·범위가 아니며 운영 등록표의 대체값으로 쓰지 않는다. `docs/specs/backtest-api/examples/`가 이미 쓰는 방식이며, 계약과 코드가 어긋나면 빌드가 실패한다.
 
 ## 1. 등록표 조회
 
@@ -110,7 +110,7 @@ GET /strategies/registry?universeSize={n}
 | 필드 | 형 | 설명 |
 |---|---|---|
 | `registryVersion` | string | 분석 요청에 그대로 실어 보낸다 |
-| `provisional` | boolean | true면 팀 확정 전 임시값이다. 화면이 그 사실을 계속 표시한다 |
+| `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다 |
 | `strategies[].selectable` | boolean | 카드를 고를 수 있는가. `universeSize`를 주면 유효성 제약과 활성 여부를 반영한다 |
 | `strategies[].unselectableReason` | string? | `selectable`이 false일 때만. 화면이 그대로 한 문장으로 보인다 |
 | `strategies[].warmupTradingDays` | integer | 기본 설정 기준 워밍업. 카드 목록의 판정에 쓴다 |

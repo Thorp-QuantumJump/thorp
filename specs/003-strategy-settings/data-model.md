@@ -10,8 +10,8 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 | 필드 | 형 | 제약 | 비고 |
 |---|---|---|---|
-| `version` | String | 비어 있지 않음 | PD-02 확정 전까지 `PROVISIONAL-`로 시작한다 |
-| `provisional` | boolean | — | `version`의 접두로 판정한다. 화면이 임시값 표시에 쓴다 |
+| `version` | String | 비어 있지 않음 | 값·축·순서가 바뀌면 새 버전. 007에서 이관한 미확정 값은 `PROVISIONAL-` 접두를 유지한다 |
+| `provisional` | boolean | — | `version`의 접두로 판정한다. `true`면 화면과 요청 결과에 임시값임을 표시한다 |
 | `baselineStrategyId` | String? | 활성 전략 중 하나이거나 없음 | 007의 손실 제약 기준 |
 | `strategies` | List\<StrategyRegistration\> | 1개 이상 | 순서를 보존한다 |
 | `analysisConditions` | AnalysisConditionRegistry | 필수 | 시작 금액·목표 변동성 등 전략 공통 조건 |
@@ -110,7 +110,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | 섹터 모멘텀 | 최근 구간 제외 기간, 배분 방식, 리밸런싱 주기 |
 | 최소분산 | 추정 방법, 리밸런싱 주기 |
 
-PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변동성 63거래일)과 임시 후보로 채우고, 등록표 버전에 `PROVISIONAL-` 접두를 유지해 확정값이 아님을 화면에 계속 표시한다.
+PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 값만 출처와 `PROVISIONAL-` 버전을 유지한 채 이관할 수 있다. 위 여덟 축과 그 값은 새로 지어내지 않는다. 따라서 T017의 제품 등록표 완성과 이에 의존하는 로더·종단 연결은 팀이 값을 확정할 때까지 차단하되, 구조·계약과 명시적으로 합성인 테스트 픽스처는 먼저 만들 수 있다.
 
 ## 4-1. 유효성 규칙 (ValidationRule)
 
@@ -177,9 +177,9 @@ PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변
 
 **목표 변동성은 '목표 위험 맞춤' 시나리오에서만 쓴다.** 주 분석(연속 운용)에서는 화면에 보이지 않는다. 등록표에 자리를 두는 것은 004 PD-18이 그렇게 지정했기 때문이며, 화면에 언제 보일지는 그 시나리오를 만들 때 정한다.
 
-**비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전을 읽어 화면에 보이고, 등록표에 따로 담지 않는다.
+**비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전·수치·`provisional` 여부를 읽기 전용으로 보이고, 파라미터 등록표에 따로 담지 않는다. PD-07 확정 전에는 004가 이미 등록한 `PROVISIONAL-DEMO-1`을 그대로 표시하므로 미확정 자체가 분석 차단 사유는 아니다.
 
-> **확인된 빈 구멍**: 지금 백엔드에 비용 조건을 조회하는 API가 없다. `CostProfileService`와 `CostProfileRepository`는 `backtest` 도메인 안에 있고, 밖으로는 `BacktestController`가 결과에 `costProfileVersion`을 실어 내보낼 뿐이다. 003 화면이 '기간·금액·조건'에서 비용 가정을 보이려면(FR-010) 조회 수단이 필요하다. 세 갈래가 있다 — ① 004가 조회 API를 연다 ② 003의 등록표 조회 응답에 현재 비용 조건을 함께 싣는다 ③ 화면이 비용 가정을 '적용됨/적용 안 됨'만 보이고 수치는 결과 화면에서 본다. **어느 쪽인지는 004와 함께 정해야 하며 이 계획이 단독으로 정하지 않는다.**
+> **확인된 빈 구멍**: 지금 백엔드에 비용 조건을 조회하는 API가 없다. `CostProfileService`와 `CostProfileRepository`는 `backtest` 도메인 안에 있고, 밖으로는 `BacktestController`가 결과에 `costProfileVersion`을 실어 내보낼 뿐이다. 003 화면이 FR-010의 수치·버전·임시 여부를 보이려면 004가 조회 API를 열거나, 004가 소유한 값을 003 등록표 조회 응답에 함께 싣는 계약이 필요하다. 단순히 '적용됨/적용 안 됨'만 보이는 안은 FR-010을 충족하지 않는다. **어느 조회 표면을 쓸지는 004와 함께 정하며 이 계획이 단독으로 정하지 않는다.**
 
 ## 8. 전략 설정값 (StrategySettings) — 화면 상태
 
@@ -187,7 +187,7 @@ PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변
 
 | 필드 | 형 | 비고 |
 |---|---|---|
-| `registryVersion` | String | 조회한 등록표 버전. 다르면 저장값을 버린다 |
+| `registryVersion` | String | 조회한 등록표 버전. 다르면 보관값을 새 범위·규칙으로 재검증해 유효한 값만 유지하고, 나머지는 복원 선택을 보인다 |
 | `selectedStrategyId` | String? | 고른 전략 |
 | `valuesByStrategy` | Map\<String, Map\<String, Object\>\> | 전략별로 따로 보관한다. 카드를 옮겨도 이전 전략의 값이 남는다 |
 | `analysisCondition` | AnalysisCondition | 아래 9 |
@@ -200,7 +200,7 @@ PD-02·PD-03 확정 전까지는 기획서 출발안(월말 리밸런싱, 역변
 |---|---|---|
 | `periodStart` / `periodEnd` | date | 001이 산출한 공통 평가 가능 범위 안에서만 (FR-009) |
 | `initialAmount` | number | 등록표의 허용 범위 안에서만 |
-| `costProfileVersion` | String | 004가 등록한 비용 조건의 버전. 읽기 전용 |
+| `costProfileVersion` | String | 004가 등록한 비용 조건의 버전. 수치·임시 여부와 함께 읽기 전용 |
 | `scenario` | String | 연속 운용 기본 |
 | `targetVolatility` | number? | '목표 위험 맞춤' 시나리오일 때만 |
 

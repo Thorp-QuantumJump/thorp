@@ -40,6 +40,8 @@ cd backend && ./gradlew test --tests '*ArchitectureTest*'
 
 ## 2. 등록표를 조회할 수 있는가
 
+이 수동 확인은 PD-02·PD-03·PD-04 확정값으로 제품 등록표가 완성된 뒤 수행한다. 결정 전에는 아래 200 응답을 제품 동작으로 기대하지 않고, 계약의 합성 픽스처만 T026에서 검증한다.
+
 서버를 띄우고:
 
 ```bash
@@ -47,8 +49,8 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=3' | jq '.regist
 ```
 
 기대:
-- `registryVersion`이 `PROVISIONAL-`로 시작한다 (PD-02 확정 전)
-- `provisional`이 `true`다
+- `registryVersion`이 비어 있지 않고 확정한 제품 등록표 버전과 같다
+- `provisional`이 `false`다. `PROVISIONAL-` 응답과 `true` 표시는 기존 007 값 이관·합성 픽스처 경로에서 별도로 검증한다
 - 활성 전략 다섯이 실린다
 
 로그인하지 않은 상태에서도 200이 와야 한다. 전략 진단은 비로그인 이용을 허용한다.
@@ -60,7 +62,7 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=2' \
   | jq '.strategies[] | select(.strategyId=="SECTOR_MOMENTUM") | .axes[] | select(.name=="topN") | .choices'
 ```
 
-기대: 섹터가 둘이므로 선정 수 후보 3·4가 `selectable: false`로 실린다. 목록에서 사라지지는 않는다.
+기대: 섹터가 둘이므로 등록된 선정 수 후보 중 2를 넘는 값은 `selectable: false`로 실리고 목록에서 사라지지 않는다. 합성 계약 픽스처에서는 3·4로 이 규칙을 검증하되, 그 숫자를 제품 후보값으로 간주하지 않는다.
 
 ```bash
 curl -s 'http://localhost:8080/strategies/registry?universeSize=3' \
