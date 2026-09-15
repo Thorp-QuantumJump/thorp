@@ -65,6 +65,7 @@ public class RunLivenessSweeper {
 
     private final BacktestRunRepository runRepository;
     private final BacktestCancelDispatcher cancelDispatcher;
+    private final ExecutionMetricRecorder metrics;
     private final ExecutionLimits limits;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -74,6 +75,7 @@ public class RunLivenessSweeper {
     public RunLivenessSweeper(
             BacktestRunRepository runRepository,
             BacktestCancelDispatcher cancelDispatcher,
+            ExecutionMetricRecorder metrics,
             ExecutionLimits limits,
             ApplicationEventPublisher events,
             PlatformTransactionManager transactionManager,
@@ -81,6 +83,7 @@ public class RunLivenessSweeper {
             @Value("${thorp.backtest.liveness.batch-size:50}") int batchSize) {
         this.runRepository = runRepository;
         this.cancelDispatcher = cancelDispatcher;
+        this.metrics = metrics;
         this.limits = limits;
         this.events = events;
         this.clock = clock;
@@ -166,8 +169,11 @@ public class RunLivenessSweeper {
                         ? CancelReason.USER
                         : run.getLifecycle().cancelReason();
         BacktestRun failed =
-                run.markFailed(reason.failureCode(), "취소에 응답하지 않아 강제 종결했습니다: reason=" + reason);
-        runRepository.update(failed.withLifecycle(failed.getLifecycle().finished(now)));
+                run.markFailed(reason.failureCode(), "취소에 응답하지 않아 강제 종결했습니다: reason=" + reason)
+                        .withLifecycle(run.getLifecycle().finished(now));
+        runRepository.update(failed);
+        // 종결 한 번에 측정 한 행(R-10). 워커 응답이 없으니 자원 사용은 null 이다.
+        metrics.record(failed, null);
         // 일반 FINISHED·DLQ 종결과 같이 완료를 알린다 — 자동 탐색은 이 이벤트로 후보를 정산한다.
         events.publishEvent(
                 new BacktestFinished(id, runId, RunStatus.FAILED, reason.failureCode()));
@@ -204,6 +210,10 @@ public class RunLivenessSweeper {
                             return;
                         }
                         runRepository.recordCancelRequested(run.getId(), now, reason);
+                        if (reason == CancelReason.EXECUTION_LIMIT) {
+                            // 한도 도달(FR-006). 종결은 워커 응답 뒤라 측정 행이 아니라 별표에 남긴다(R-10 ②).
+                            metrics.limitStopped(run);
+                        }
                         cancelDispatcher.publishAfterCommit(runId);
                         log.warn(
                                 "cancel sent by sweeper: runId={} reason={} ({})",

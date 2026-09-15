@@ -30,10 +30,12 @@ class ExecutionLimitPolicyTest {
     private static final long REQUESTER = 7L;
 
     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
+    private final ExecutionMetricRecorder metrics = mock(ExecutionMetricRecorder.class);
 
     private ExecutionLimitPolicy policyWith(int perUser, int total, boolean provisional) {
         return new ExecutionLimitPolicy(
                 runRepository,
+                metrics,
                 new ExecutionLimits(
                         perUser,
                         total,

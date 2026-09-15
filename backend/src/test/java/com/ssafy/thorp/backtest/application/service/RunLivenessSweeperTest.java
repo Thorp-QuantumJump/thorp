@@ -57,6 +57,7 @@ class RunLivenessSweeperTest {
 
     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
     private final BacktestCancelDispatcher dispatcher = mock(BacktestCancelDispatcher.class);
+    private final ExecutionMetricRecorder metrics = mock(ExecutionMetricRecorder.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
 
     private RunLivenessSweeper sweeper;
@@ -70,6 +71,7 @@ class RunLivenessSweeperTest {
                 new RunLivenessSweeper(
                         runRepository,
                         dispatcher,
+                        metrics,
                         new ExecutionLimits(5, 50, MAX_RUN, STALE, GRACE, true),
                         events,
                         transactionManager,

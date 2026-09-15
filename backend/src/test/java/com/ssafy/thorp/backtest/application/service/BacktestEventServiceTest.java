@@ -57,13 +57,14 @@ class BacktestEventServiceTest {
     @Mock private BacktestRunRepository jobRepository;
     @Mock private BacktestResultRepository resultRepository;
     @Mock private ApplicationEventPublisher events;
+    @Mock private ExecutionMetricRecorder metrics;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service = new BacktestEventService(jobRepository, resultRepository, events, clock);
+        service = new BacktestEventService(jobRepository, resultRepository, metrics, events, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
