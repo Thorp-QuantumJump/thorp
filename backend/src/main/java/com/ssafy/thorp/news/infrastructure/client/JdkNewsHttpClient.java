@@ -120,7 +120,12 @@ public class JdkNewsHttpClient implements NewsHttpClient {
         }
         if (status == 429) {
             closeQuietly(response.body());
-            throw retryable(RATE_LIMITED);
+            // 매체가 언제 다시 오라고 밝혔으면 그 값을 실어 보낸다. 우리 백오프보다 우선한다(spec FR-013).
+            throw retryable(RATE_LIMITED, retryAfter(response).orElse(null));
+        }
+        if (status == 503) {
+            closeQuietly(response.body());
+            throw retryable(SERVER_ERROR, retryAfter(response).orElse(null));
         }
         if (status >= 500) {
             closeQuietly(response.body());
@@ -192,6 +197,11 @@ public class JdkNewsHttpClient implements NewsHttpClient {
 
     private static NewsSourceClient.NewsSourceException retryable(String category) {
         return new NewsSourceClient.NewsSourceException(category, true);
+    }
+
+    private static NewsSourceClient.NewsSourceException retryable(
+            String category, Duration retryAfter) {
+        return new NewsSourceClient.NewsSourceException(category, true, retryAfter);
     }
 
     /** 응답의 `Retry-After`를 초 단위로 읽는다. 없거나 해석할 수 없으면 빈 값이다(spec FR-013). */

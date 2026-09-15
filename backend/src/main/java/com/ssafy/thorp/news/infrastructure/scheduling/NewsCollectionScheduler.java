@@ -44,6 +44,7 @@ public class NewsCollectionScheduler {
     private final NewsCollectionLease lease;
     private final NewsTopicCatalog topics;
     private final NewsIngestionService ingestion;
+    private final com.ssafy.thorp.news.application.port.NewsMetrics metrics;
     private final Clock clock;
 
     /** 이 인스턴스를 가리키는 이름. 점유 주인으로 기록한다. */
@@ -55,12 +56,14 @@ public class NewsCollectionScheduler {
             NewsCollectionLease lease,
             NewsTopicCatalog topics,
             NewsIngestionService ingestion,
+            com.ssafy.thorp.news.application.port.NewsMetrics metrics,
             Clock clock) {
         this.publishers = publishers;
         this.collectionStates = collectionStates;
         this.lease = lease;
         this.topics = topics;
         this.ingestion = ingestion;
+        this.metrics = metrics;
         this.clock = clock;
     }
 
@@ -77,6 +80,28 @@ public class NewsCollectionScheduler {
             runRss(publisher, now);
         }
         runGdelt(now);
+        reportFreshness(now);
+    }
+
+    /**
+     * 뉴스원마다 마지막 성공 이후 얼마나 지났는지 남긴다(spec FR-023).
+     *
+     * <p>회차가 돌 때마다 갱신한다. 실패 건수만으로는 <b>조용히 멈춘 뉴스원</b>을 찾지 못한다 — 회차 자체가 돌지 않으면 실패도 늘지 않기 때문이다. 이 값이
+     * 계속 커지는 것으로만 알 수 있다.
+     *
+     * <p>여기서 실패해도 수집에는 영향을 주지 않는다. 지표를 남기지 못한 것 때문에 회차가 깨지면 본말이 뒤집힌다.
+     */
+    private void reportFreshness(Instant now) {
+        try {
+            for (NewsCollectionState state : collectionStates.findAll()) {
+                metrics.recordLastSuccessAge(
+                        state.getSourceKey(),
+                        java.util.Optional.ofNullable(state.getLastSuccessAt())
+                                .map(lastSuccessAt -> Duration.between(lastSuccessAt, now)));
+            }
+        } catch (RuntimeException e) {
+            log.warn("뉴스원 신선도 지표를 남기지 못했다");
+        }
     }
 
     private void runRss(NewsPublisher publisher, Instant now) {

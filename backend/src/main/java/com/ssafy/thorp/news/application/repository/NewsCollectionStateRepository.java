@@ -20,6 +20,13 @@ public interface NewsCollectionStateRepository {
     List<NewsCollectionState> findDue(Instant now);
 
     /**
+     * 기록이 있는 모든 뉴스원의 상태.
+     *
+     * <p>신선도 지표를 남기는 데 쓴다. 실행할 뉴스원만 보면 조용히 멈춘 뉴스원이 지표에서도 사라져, 멈췄다는 사실 자체가 보이지 않는다(spec FR-023).
+     */
+    List<NewsCollectionState> findAll();
+
+    /**
      * 응답의 마지막 갱신 시각(spec FR-014).
      *
      * <p>활성화되고 현재 노출 가능한 뉴스원들의 마지막 성공 시각 중 가장 최근 값이다. 성공 이력이 없으면 빈 값이며, 화면은 '아직 수집되지 않음'으로 표시한다.

@@ -101,14 +101,10 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
 
     @Override
     public List<NewsDigest> findVerifiedBetween(Instant from, Instant to, String sectorId) {
-        List<NewsDigestJpaEntity> found = digestRepository.findVerifiedBetween(from, to);
-        if (sectorId == null) {
-            return loadAll(found);
-        }
-        List<NewsDigestJpaEntity> bySector = digestRepository.findRecentBySector(from, sectorId);
-        java.util.Set<Long> sectorIds =
-                bySector.stream().map(NewsDigestJpaEntity::getId).collect(Collectors.toSet());
-        return loadAll(found.stream().filter(d -> sectorIds.contains(d.getId())).toList());
+        return loadAll(
+                sectorId == null
+                        ? digestRepository.findVerifiedBetween(from, to)
+                        : digestRepository.findVerifiedBetweenAndSector(from, to, sectorId));
     }
 
     @Override

@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.common.config.JpaAuditingConfig;
+import com.ssafy.thorp.news.application.command.NewsDigestQuery;
 import com.ssafy.thorp.news.application.repository.NewsArticleRepository;
+import com.ssafy.thorp.news.application.result.NewsDigestListResult;
 import com.ssafy.thorp.news.domain.model.NewsArticle;
 import com.ssafy.thorp.news.domain.model.NewsCollectionState;
 import com.ssafy.thorp.news.domain.model.NewsDigest;
@@ -53,20 +55,34 @@ import org.springframework.jdbc.core.JdbcTemplate;
     NewsDigestRepositoryImpl.class,
     NewsRuleVersionRepositoryImpl.class,
     NewsCollectionStateRepositoryImpl.class,
-    DatabaseNewsCollectionLease.class
+    NewsArticleLinkRepositoryImpl.class,
+    DatabaseNewsCollectionLease.class,
+    // 조회 경로는 JPQL 조인이 핵심이라 실제 DB에서만 검증된다. 컨텍스트를 새로 만들지 않고 여기 얹는 이유는
+    // 이 저장소의 DB 테스트가 이미 공용 컨테이너의 커넥션을 거의 다 쓰고 있어서다.
+    com.ssafy.thorp.news.application.service.NewsDigestQueryService.class,
+    com.ssafy.thorp.news.application.service.NewsSummaryPolicy.class,
+    com.ssafy.thorp.news.application.service.NewsImportancePolicy.class,
+    com.ssafy.thorp.news.application.service.NewsFreshnessPolicy.class,
+    com.ssafy.thorp.news.application.service.NewsSectorQueryPolicy.class
 })
 class NewsPersistenceIT extends PostgresTestSupport {
 
     private static final Instant NOW = Instant.parse("2026-09-10T06:00:00Z");
     private static final String GROUPING_RULE = "news-grouping-v1";
     private static final String IMPORTANCE_RULE = "news-importance-v1";
+    private static final String LINK_RULE = "news-link-v1";
+
+    /** spec 001이 소유하는 섹터 식별자. 형식도 001이 정한다. */
+    private static final String SEMICONDUCTOR = "SEMICONDUCTOR";
+
+    private static final String BATTERY = "SECONDARY_BATTERY";
 
     @TestConfiguration
     static class NewsTestConfig {
         @Bean
         NewsProperties newsProperties() {
             return new NewsProperties(
-                    NewsProperties.ExposureMode.PUBLIC,
+                    com.ssafy.thorp.news.domain.vo.NewsExposureMode.PUBLIC,
                     Duration.ofMinutes(30),
                     Duration.ofMinutes(15),
                     Duration.ofMinutes(15),
@@ -75,6 +91,7 @@ class NewsPersistenceIT extends PostgresTestSupport {
                     93,
                     20,
                     3,
+                    Duration.ofHours(48),
                     new NewsProperties.Http(
                             3,
                             Duration.ofSeconds(5),
@@ -83,6 +100,48 @@ class NewsPersistenceIT extends PostgresTestSupport {
                             Set.of("application/xml"),
                             Set.of("application/json"),
                             List.of("api.gdeltproject.org")));
+        }
+
+        /** 조회에 쓰는 설정. 노출 모드는 위 {@code NewsProperties}와 같은 PUBLIC이다. */
+        @Bean
+        com.ssafy.thorp.news.application.service.NewsDigestQueryService.NewsQuerySettings
+                newsQuerySettings() {
+            return new com.ssafy.thorp.news.application.service.NewsDigestQueryService
+                    .NewsQuerySettings(
+                    com.ssafy.thorp.news.domain.vo.NewsExposureMode.PUBLIC,
+                    Duration.ofMinutes(30),
+                    3,
+                    Duration.ofHours(48),
+                    93);
+        }
+
+        /** 001의 대응표 대역. 시험이 필요한 섹터만 등록된 것으로 둔다. */
+        @Bean
+        com.ssafy.thorp.news.application.port.NewsSectorCatalog newsSectorCatalog() {
+            return new com.ssafy.thorp.news.support.StubSectorCatalog(
+                    Set.of(SEMICONDUCTOR, BATTERY));
+        }
+
+        @Bean
+        com.ssafy.thorp.news.application.port.NewsMetrics newsMetrics() {
+            return new com.ssafy.thorp.news.support.RecordingNewsMetrics();
+        }
+
+        /** 주제 등록표 대역. 요약 규칙이 주제 표시명을 찾는 데만 쓴다. */
+        @Bean
+        com.ssafy.thorp.news.application.port.NewsTopicCatalog newsTopicCatalog() {
+            return new com.ssafy.thorp.news.infrastructure.config.RegistryNewsTopicCatalog(
+                    new com.ssafy.thorp.news.infrastructure.config.NewsLinkRegistry(
+                            LINK_RULE,
+                            List.of(
+                                    new com.ssafy.thorp.news.infrastructure.config.NewsLinkRegistry
+                                            .Topic("semiconductor", "반도체", true, List.of())),
+                            List.of()));
+        }
+
+        @Bean
+        java.time.Clock newsClock() {
+            return java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC);
         }
     }
 
@@ -95,6 +154,9 @@ class NewsPersistenceIT extends PostgresTestSupport {
     @Autowired private NewsRuleVersionRepositoryImpl ruleVersionRepository;
     @Autowired private NewsCollectionStateRepositoryImpl collectionStateRepository;
     @Autowired private DatabaseNewsCollectionLease lease;
+    @Autowired private NewsArticleLinkRepositoryImpl linkRepository;
+
+    @Autowired private com.ssafy.thorp.news.application.service.NewsDigestQueryService queryService;
 
     private NewsPublisher savePublisher(String key, PermissionStatus status) {
         NewsPublisher publisher =
@@ -595,6 +657,176 @@ class NewsPersistenceIT extends PostgresTestSupport {
                             assertThat(rule.ruleVersion()).isEqualTo(GROUPING_RULE);
                             assertThat(rule.definition()).containsKey("titleJaccardThreshold");
                         });
+    }
+
+    /**
+     * 조회 경로를 실제 DB에서 확인한다(spec FR-005·FR-006, T025·T030·T032).
+     *
+     * <p>섹터 필터와 과거 구간 필터는 JPQL 조인이 전부라 대역으로는 확인할 수 없다. 조인 조건이 틀리면 대역에서는 통과하고 운영에서만 빈 화면이 된다.
+     */
+    /** 허가 매체 하나와 그 매체의 기사로 만든 묶음. 섹터 연결까지 붙인다. */
+    private NewsDigest seedDigest(
+            String key, String url, String title, Instant publishedAt, String sectorId) {
+        NewsPublisher publisher = savePublisher(key, PermissionStatus.ALLOWED);
+        NewsArticle article = saveArticle(publisher.getId(), url, title, publishedAt);
+        Long topicId = linkRepository.ensureTopic("semiconductor", "반도체", true, LINK_RULE);
+        linkRepository.replaceLinks(
+                article.getId(),
+                sectorId == null ? Set.of() : Set.of(sectorId),
+                java.util.Map.of(topicId, "semiconductor"),
+                LINK_RULE);
+        NewsDigest digest =
+                digestRepository.save(
+                        NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
+        flushAndClear();
+        return digest;
+    }
+
+    @Test
+    @DisplayName("섹터를 지정하면 그 섹터에 연결된 묶음만 돌려준다")
+    void 섹터_필터() {
+        seedDigest(
+                "semi",
+                "https://semi.example.com/1",
+                "반도체 수출 지표",
+                NOW.minusSeconds(3600),
+                SEMICONDUCTOR);
+        seedDigest(
+                "batt",
+                "https://batt.example.com/1",
+                "이차전지 수출 지표",
+                NOW.minusSeconds(3600),
+                BATTERY);
+
+        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(SEMICONDUCTOR));
+
+        assertThat(result.digests()).as("조인 조건이 틀리면 대역에서는 통과하고 운영에서만 다른 섹터가 섞인다").hasSize(1);
+        assertThat(result.digests().get(0).sectors()).containsExactly(SEMICONDUCTOR);
+        assertThat(result.sectorId()).isEqualTo(SEMICONDUCTOR);
+    }
+
+    @Test
+    @DisplayName("001에 등록되지 않은 섹터는 거부한다")
+    void 미등록_섹터() {
+        assertThatThrownBy(() -> queryService.query(NewsDigestQuery.current("NOT_REGISTERED")))
+                .isInstanceOf(com.ssafy.thorp.news.application.exception.NewsQueryException.class);
+    }
+
+    @Test
+    @DisplayName("연결된 자료가 없는 섹터는 오류가 아니라 빈 화면이다")
+    void 빈_섹터() {
+        seedDigest(
+                "semi",
+                "https://semi.example.com/1",
+                "반도체 수출 지표",
+                NOW.minusSeconds(3600),
+                SEMICONDUCTOR);
+
+        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(BATTERY));
+
+        assertThat(result.digests()).isEmpty();
+        assertThat(result.state())
+                .as("개수를 맞추려고 다른 섹터의 뉴스를 끌어오지 않는다")
+                .isEqualTo(com.ssafy.thorp.news.domain.vo.NewsDigestState.EMPTY);
+    }
+
+    @Test
+    @DisplayName("과거 조회는 발행 시각이 확인된 기사만 본다")
+    void 미확인_시각_제외() {
+        seedDigest("unknown", "https://unknown.example.com/1", "시각 미확인 기사", null, SEMICONDUCTOR);
+
+        NewsDigestListResult result =
+                queryService.query(new NewsDigestQuery(null, NOW.minus(Duration.ofDays(7)), NOW));
+
+        assertThat(result.digests()).as("그 기사가 정말 그 구간에 나왔는지 말할 수 없다(원칙 V)").isEmpty();
+    }
+
+    @Test
+    @DisplayName("과거 조회는 요청 구간 밖의 기사를 빼고 본다")
+    void 구간_밖_제외() {
+        Instant longAgo = NOW.minus(Duration.ofDays(30));
+        seedDigest("old", "https://old.example.com/1", "오래된 기사", longAgo, SEMICONDUCTOR);
+
+        NewsDigestListResult inRange =
+                queryService.query(
+                        new NewsDigestQuery(
+                                null,
+                                longAgo.minus(Duration.ofDays(1)),
+                                longAgo.plus(Duration.ofDays(1))));
+        NewsDigestListResult outOfRange =
+                queryService.query(new NewsDigestQuery(null, NOW.minus(Duration.ofDays(2)), NOW));
+
+        assertThat(inRange.digests()).hasSize(1);
+        assertThat(outOfRange.digests()).isEmpty();
+        assertThat(outOfRange.context()).isEqualTo(NewsDigestQuery.Context.HISTORICAL);
+    }
+
+    @Test
+    @DisplayName("회신하지 않은 매체의 기사는 공개 조회에 나오지 않는다")
+    void 미허가_매체_제외() {
+        NewsPublisher pending = savePublisher("pending", PermissionStatus.PENDING);
+        NewsArticle article =
+                saveArticle(
+                        pending.getId(),
+                        "https://pending.example.com/1",
+                        "회신 전 매체 기사",
+                        NOW.minusSeconds(600));
+        digestRepository.save(
+                NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
+        flushAndClear();
+
+        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(null));
+
+        assertThat(result.digests()).as("회신이 없는 매체의 항목은 공개 환경에 표시하지 않는다(spec FR-016)").isEmpty();
+    }
+
+    @Test
+    @DisplayName("발행 시각 미확인 묶음도 현재 조회 창 밖이면 빠진다")
+    void 미확인_묶음도_창을_지킨다() {
+        // 수집 시각은 고정 시계의 NOW다. 창(48시간)보다 훨씬 오래된 시각으로 옮겨 둔다.
+        NewsPublisher publisher = savePublisher("old", PermissionStatus.ALLOWED);
+        NewsArticle article =
+                saveArticle(publisher.getId(), "https://old.example.com/1", "시각 미확인 기사", null);
+        linkTopic(article);
+        digestRepository.save(
+                NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
+        flushAndClear();
+        jdbcTemplate.update(
+                "UPDATE news_article SET collected_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(NOW.minus(Duration.ofDays(90))),
+                article.getId());
+
+        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(null));
+
+        assertThat(result.digests()).as("몇 달 전 미확인 기사가 '현재 뉴스'로 올라오면 안 된다").isEmpty();
+    }
+
+    @Test
+    @DisplayName("발행 시각 미확인 묶음도 창 안이면 남는다")
+    void 창_안의_미확인_묶음() {
+        NewsPublisher publisher = savePublisher("fresh", PermissionStatus.ALLOWED);
+        NewsArticle article =
+                saveArticle(publisher.getId(), "https://fresh.example.com/1", "시각 미확인 기사", null);
+        linkTopic(article);
+        digestRepository.save(
+                NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
+        flushAndClear();
+
+        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(null));
+
+        assertThat(result.digests()).as("창을 좁히느라 방금 들어온 미확인 기사까지 버리면 안 된다").hasSize(1);
+    }
+
+    /**
+     * 요약 근거가 되는 주제를 붙인다.
+     *
+     * <p>이것이 없으면 요약 규칙이 근거 부족으로 묶음을 표시 대상에서 빼므로, 조회 창을 확인하려던 시험이 다른 이유로 통과한다(spec FR-003).
+     */
+    private void linkTopic(NewsArticle article) {
+        Long topicId = linkRepository.ensureTopic("semiconductor", "반도체", true, LINK_RULE);
+        linkRepository.replaceLinks(
+                article.getId(), Set.of(), java.util.Map.of(topicId, "semiconductor"), LINK_RULE);
+        flushAndClear();
     }
 
     private Integer countOf(String table) {

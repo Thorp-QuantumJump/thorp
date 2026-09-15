@@ -143,3 +143,12 @@ management:
     web:
       exposure:
         include: health, info
+  endpoint:
+    health:
+      group:
+        # 뉴스 신선도를 따로 볼 수 있는 자리. /actuator/health/news 로 열린다.
+        # 전체 health 를 show-details 로 열지 않는 이유는 DB·브로커 연결 정보까지 함께 나가기 때문이다.
+        # 뉴스 지표는 마지막 성공 시각과 지연 여부만 담아 그대로 보여도 문제가 없다 (spec FR-024).
+        news:
+          include: newsFreshness
+          show-details: always

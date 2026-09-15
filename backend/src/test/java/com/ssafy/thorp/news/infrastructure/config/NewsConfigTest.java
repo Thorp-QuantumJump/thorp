@@ -26,7 +26,7 @@ class NewsConfigTest {
                 List.of("api.gdeltproject.org"));
     }
 
-    private static NewsProperties properties(NewsProperties.ExposureMode mode) {
+    private static NewsProperties properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode mode) {
         return new NewsProperties(
                 mode,
                 Duration.ofMinutes(30),
@@ -37,6 +37,7 @@ class NewsConfigTest {
                 93,
                 20,
                 3,
+                Duration.ofHours(48),
                 defaultHttp());
     }
 
@@ -114,14 +115,21 @@ class NewsConfigTest {
         @Test
         @DisplayName("노출 모드는 서버 설정이 정한다 (spec FR-016)")
         void 노출_모드() {
-            assertThat(properties(NewsProperties.ExposureMode.INTERNAL).isPublic()).isFalse();
-            assertThat(properties(NewsProperties.ExposureMode.PUBLIC).isPublic()).isTrue();
+            assertThat(
+                            properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL)
+                                    .isPublic())
+                    .isFalse();
+            assertThat(
+                            properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.PUBLIC)
+                                    .isPublic())
+                    .isTrue();
         }
 
         @Test
         @DisplayName("삭제 기준일은 시간대와 함께 해석한다 (spec FR-019)")
         void 삭제_기준일() {
-            NewsProperties properties = properties(NewsProperties.ExposureMode.INTERNAL);
+            NewsProperties properties =
+                    properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL);
 
             assertThat(properties.retentionDate()).isEqualTo(LocalDate.of(2026, 11, 7));
             assertThat(properties.retentionZone()).isEqualTo("Asia/Seoul");
@@ -130,7 +138,8 @@ class NewsConfigTest {
         @Test
         @DisplayName("과거 조회 상한과 묶음 수 상한은 서로 다른 경계다")
         void 상한_분리() {
-            NewsProperties properties = properties(NewsProperties.ExposureMode.INTERNAL);
+            NewsProperties properties =
+                    properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL);
 
             assertThat(properties.maxHistoricalRangeDays()).isEqualTo(93);
             assertThat(properties.maxDigests()).isEqualTo(3);
