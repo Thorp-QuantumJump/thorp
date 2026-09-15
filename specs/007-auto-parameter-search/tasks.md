@@ -367,11 +367,11 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 
 - [ ] T117 (BE) **완료 불가(2026-09-14)** — 이번 묶음에서 끝낼 수 없다. 막는 것이 둘이다. (1) **저장할 곳이 없다**: `backtest`에 측정 클래스·테이블이 하나도 없고 `ExecutionType`에 `AUTO_SEARCH_BATCH`도 없다. `backtest_run`의 `queued_at`·`started_at`·`finished_at`·`publish_count`는 측정의 **입력**이지 측정 기록이 아니다. 내부 계약 §5가 "007이 새 측정 저장소를 만들지 않는다"고 정해 007 안에 만들 수도 없다. (2) **건당 원가를 정할 수 없다**: 무엇을 원가로 셀지(CPU초·워커 시간·스토리지)가 미정이라 임의로 정하면 PD-06 결정의 입력을 지어내는 셈이다(원칙 IX, constitution "실행 전 결정 임의 확정 금지"). 자원 사용은 워커가 기록할 몫이라 007 범위 밖이다. 소요 시간·동시 처리 수·실패 건수는 007이 이미 만들 수 있으므로, 004 T012(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다. 원래 내용: 실행 측정 기록 — 실행 유형 `AUTO_SEARCH_BATCH`로 대기 포함 소요 시간·동시 처리 수·실패·건당 원가 기록. 계산·데이터·저장 원가를 구분한다 (FR-010, FR-023, [contracts/param-search-internal.md](contracts/param-search-internal.md) §5). **측정값을 목표로 제시하지 않는다**
 - [X] T117a (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java` — 완료·부분 완료 묶음이 FR-020 기록 항목 전체(탐색 공간·탐색 방법·전체 후보·미실행 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전)를 갖는지, 제외 후보도 사유를 남기는지 검증. 이것이 FR-022가 요구하는 '한 묶음으로 다시 열리는' 저장 상태이며 006 화면 구성은 범위 밖이다 (SC-007, FR-022, 원칙 VIII)
-- [ ] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인
+- [X] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인
 
 ### Frontend
 
-- [ ] T119 (FE) `npm run lint`와 `npm test` 통과 확인
+- [X] T119 (FE) `npm run lint`와 `npm test` 통과 확인
 
 ### 문서
 
