@@ -134,7 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         nargs="+",
         metavar="ID",
-        help="종목 식별자({6자리}.XKRX) 또는 6자리 코드",
+        help="종목 식별자({6글자}.XKRX) 또는 6글자 단축코드",
     )
     parser.add_argument("--start", required=True, type=_parse_day, help="수집 시작일 YYYY-MM-DD")
     parser.add_argument("--until", required=True, type=_parse_day, help="수집 종료일 YYYY-MM-DD")
@@ -380,7 +380,7 @@ def instrument_profiles(
 
 
 def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
-    """6자리 코드와 ``{6자리}.XKRX``를 모두 받아 식별자로 맞춘다.
+    """6글자 단축코드와 ``{6글자}.XKRX``를 모두 받아 식별자로 맞춘다.
 
     같은 종목이 두 번 오면 거부한다. 두 번 담으면 ``daily_price``의 PK가 겹쳐 적재가 깨지고,
     그때는 절반만 들어간 표가 남는다.
@@ -648,13 +648,14 @@ def _report(
     else:
         print("  instrument_profile: 없음. --instrument-profiles로 지수 방법론·구성종목을 준다")
     if etf.unsupported_codes:
-        # 저장 스키마가 담을 수 없는 종목코드다(6자리 숫자가 아닌 표기). 모아 두기만 하고
-        # 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다
+        # 저장 스키마가 담을 수 없는 종목코드다(영숫자 대문자 6글자가 아닌 표기). 모아 두기만
+        # 하고 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다
         # (:func:`krx.collect_daily_quotes` 문서 참고).
         codes = sorted(etf.unsupported_codes)
         shown = ", ".join(codes[:5]) + (" …" if len(codes) > 5 else "")
         print(f"담을 수 없는 종목코드: {len(codes)}개 ({shown})")
-        print("  6자리 숫자가 아닌 표기라 저장 스키마의 instrument_id 형식에 맞지 않는다")
+        print("  영숫자 대문자 6글자가 아니라 저장 스키마의 instrument_id 형식에 맞지 않는다")
+        print("  자리 수나 문자 집합을 보고 형식을 다시 넓힐지 정한다 (spec 001 T031)")
     print(f"processed/ 파티션: {len(written)}개")
     if loaded is None:
         print("적재하지 않았다. PostgreSQL에 넣으려면 --commit을 붙인다 (발행본은 되돌릴 수 없다)")
