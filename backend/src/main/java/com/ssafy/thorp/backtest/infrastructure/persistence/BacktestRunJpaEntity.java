@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -169,6 +170,13 @@ public class BacktestRunJpaEntity extends BaseEntity {
     /** 마지막 활성 요청의 취소로 CANCEL 을 보낸 시각(R-04). 취소 경로 전용 UPDATE 로만 쓴다. null = 취소 대기 아님 */
     private Instant cancelRequestedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 32)
+    private CancelReason cancelReason;
+
+    /** STARTED·PROGRESS 를 받은 마지막 시각. 정체 판정 기준(R-19) — 발행 기록은 이 컬럼을 건드리지 않는다. */
+    private Instant lastEventAt;
+
     @Column(nullable = false)
     private Instant queuedAt;
 
@@ -269,7 +277,9 @@ public class BacktestRunJpaEntity extends BaseEntity {
             Instant publishedAt,
             int publishCount,
             int dlqCount,
-            Instant cancelRequestedAt) {
+            Instant cancelRequestedAt,
+            CancelReason cancelReason,
+            Instant lastEventAt) {
         if (queuedAt != null) {
             this.queuedAt = queuedAt;
         }
@@ -279,6 +289,8 @@ public class BacktestRunJpaEntity extends BaseEntity {
         this.publishCount = publishCount;
         this.dlqCount = dlqCount;
         this.cancelRequestedAt = cancelRequestedAt;
+        this.cancelReason = cancelReason;
+        this.lastEventAt = lastEventAt;
     }
 
     /**
@@ -360,6 +372,14 @@ public class BacktestRunJpaEntity extends BaseEntity {
 
     public int getPublishCount() {
         return publishCount;
+    }
+
+    public CancelReason getCancelReason() {
+        return cancelReason;
+    }
+
+    public Instant getLastEventAt() {
+        return lastEventAt;
     }
 
     public Instant getCancelRequestedAt() {

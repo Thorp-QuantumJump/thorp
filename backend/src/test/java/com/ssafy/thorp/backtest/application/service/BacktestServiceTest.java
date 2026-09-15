@@ -17,6 +17,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
@@ -57,6 +58,8 @@ class BacktestServiceTest {
             mock(BacktestRequestRepository.class);
     private final BacktestReuseEventRepository reuseEventRepository =
             mock(BacktestReuseEventRepository.class);
+    // 한도는 ExecutionLimitPolicyTest 가 따로 본다. 여기서는 통과하는 것으로 둔다.
+    private final ExecutionLimitPolicy limitPolicy = mock(ExecutionLimitPolicy.class);
     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
     private final CostProfileService costProfileService = mock(CostProfileService.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -68,6 +71,7 @@ class BacktestServiceTest {
                     runRepository,
                     requestRepository,
                     reuseEventRepository,
+                    limitPolicy,
                     strategyRulesService,
                     costProfileService,
                     new EffectivePeriodCalculator(marketMetadata),
@@ -275,7 +279,9 @@ class BacktestServiceTest {
     void doesNotJoinACancelPendingRun() {
         BacktestRun running = saved(runningRun(), 11L);
         BacktestRun cancelPending =
-                running.withLifecycle(running.getLifecycle().cancelRequested(NOW.minusSeconds(5)));
+                running.withLifecycle(
+                        running.getLifecycle()
+                                .cancelRequested(NOW.minusSeconds(5), CancelReason.USER));
         when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(cancelPending));
         when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(cancelPending));
 
@@ -297,7 +303,8 @@ class BacktestServiceTest {
                 .thenReturn(
                         Optional.of(
                                 running.withLifecycle(
-                                        running.getLifecycle().cancelRequested(NOW))));
+                                        running.getLifecycle()
+                                                .cancelRequested(NOW, CancelReason.USER))));
 
         assertThatThrownBy(() -> service.create(fixedWeight()))
                 .isInstanceOf(BusinessException.class)

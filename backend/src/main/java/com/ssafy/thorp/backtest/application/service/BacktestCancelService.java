@@ -6,6 +6,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -98,7 +99,7 @@ public class BacktestCancelService {
             return new BacktestCancelResult(backtestId, RunStatus.CANCELLED, false);
         }
         // 취소 의도는 커밋되는 컬럼에 남기고(접수가 합류를 막고, 유예 감시가 기다리는 근거), CANCEL 은 커밋 뒤 보낸다.
-        runRepository.recordCancelRequested(run.getId(), now);
+        runRepository.recordCancelRequested(run.getId(), now, CancelReason.USER);
         events.publishEvent(
                 new BacktestCancelDispatcher.CancelRequested(run.getBacktestId().value()));
         log.info(

@@ -4,15 +4,20 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.ResultPerformance;
 import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +34,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class BacktestRunRepositoryImpl implements BacktestRunRepository {
+
+    /** 취소 유예 감시가 보는 "아직 살아 있는" 상태. 종결된 실행은 무응답이 아니다. */
+    private static final List<RunStatus> ALIVE = List.of(RunStatus.QUEUED, RunStatus.RUNNING);
 
     /** 부분 유니크 인덱스 {@code uk_backtest_run_dedup_active} 와 같은 상태 집합이어야 한다. */
     private static final List<RunStatus> ACTIVE_FOR_REUSE =
@@ -62,7 +70,9 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
                     run.getLifecycle().publishedAt(),
                     run.getLifecycle().publishCount(),
                     run.getLifecycle().dlqCount(),
-                    run.getLifecycle().cancelRequestedAt());
+                    run.getLifecycle().cancelRequestedAt(),
+                    run.getLifecycle().cancelReason(),
+                    run.getLifecycle().lastEventAt());
         }
         return BacktestRunMapper.toDomain(jpaRepository.save(entity));
     }
@@ -136,8 +146,83 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
-    public void recordCancelRequested(Long runId, Instant at) {
-        jpaRepository.markCancelRequested(runId, at);
+    public void recordCancelRequested(Long runId, Instant at, CancelReason reason) {
+        jpaRepository.markCancelRequested(runId, at, reason);
+    }
+
+    @Override
+    public void recordEventReceived(Long runId, Instant at) {
+        jpaRepository.markEventReceived(runId, at);
+    }
+
+    @Override
+    public List<BacktestRun> findStaleRunning(Instant since, int limit) {
+        return toDomain(jpaRepository.findStale(RunStatus.RUNNING, since, Limit.of(limit)));
+    }
+
+    @Override
+    public List<BacktestRun> findOverrunning(Instant startedBefore, int limit) {
+        return toDomain(
+                jpaRepository.findOverrunning(RunStatus.RUNNING, startedBefore, Limit.of(limit)));
+    }
+
+    @Override
+    public List<BacktestRun> findCancelPending(int limit) {
+        return toDomain(jpaRepository.findCancelPending(ALIVE, Limit.of(limit)));
+    }
+
+    @Override
+    public long countQueued() {
+        return jpaRepository.countByStatus(RunStatus.QUEUED);
+    }
+
+    /**
+     * 요청 행과 조인해 이 사용자의 <b>단건</b> 대기 수를 센다. 취소한 요청은 빠진다 — 취소해 두고 다시 넣지 못하면 한도가 벌이 된다.
+     *
+     * <p>native 로 쓰는 이유: 요청은 다른 애그리게이트라 JPA 연관을 걸지 않았고(그 관계는 스칼라 id 뿐이다), 이 셈은 조회 한 번이면 끝난다.
+     */
+    @Override
+    public long countQueuedSingleByRequester(long requesterId) {
+        Number count =
+                (Number)
+                        entityManager
+                                .createNativeQuery(
+                                        "SELECT count(DISTINCT r.id) FROM backtest_run r"
+                                                + " JOIN backtest_request q ON q.run_id = r.id"
+                                                + " WHERE r.status = 'QUEUED'"
+                                                + " AND q.requester_id = ?1"
+                                                + " AND q.execution_type = 'SINGLE'"
+                                                + " AND q.cancelled_at IS NULL")
+                                .setParameter(1, requesterId)
+                                .getSingleResult();
+        return count.longValue();
+    }
+
+    /**
+     * {@code pg_advisory_xact_lock(bigint)}. 잠금 식별자는 키 문자열의 SHA-256 앞 64비트다 — {@link #lockDedupKey}
+     * 는 키가 이미 해시라 그대로 읽지만, 여기 키는 {@code "user:7"} 같은 평문이라 한 번 해싱해야 고르게 퍼진다.
+     */
+    @Override
+    public void lockAdmission(String key) {
+        entityManager
+                .createNativeQuery("SELECT pg_advisory_xact_lock(?1)")
+                .setParameter(1, lockIdOf(sha256Hex(key)))
+                .getSingleResult();
+    }
+
+    private static String sha256Hex(String value) {
+        try {
+            return HexFormat.of()
+                    .formatHex(
+                            MessageDigest.getInstance("SHA-256")
+                                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exc) {
+            throw new IllegalStateException("SHA-256 is required by the JDK", exc);
+        }
+    }
+
+    private static List<BacktestRun> toDomain(List<BacktestRunJpaEntity> entities) {
+        return entities.stream().map(BacktestRunMapper::toDomain).toList();
     }
 
     @Override

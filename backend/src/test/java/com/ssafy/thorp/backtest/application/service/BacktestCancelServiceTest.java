@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestCancelResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
@@ -139,7 +140,7 @@ class BacktestCancelServiceTest {
         // 범위는 FINISHED(CANCELLED)가 run 에 남긴다 — 워커는 마지막 PROGRESS 뒤 며칠을 더 계산한다(R-04)
         assertThat(cancelled.getCancelledLastTradingDate()).isNull();
         // 취소 의도는 커밋되는 컬럼에 남기고, CANCEL 발행은 커밋 뒤 디스패처가 한다(작업 발행과 같은 이유)
-        verify(runRepository).recordCancelRequested(RUN_PK, NOW);
+        verify(runRepository).recordCancelRequested(RUN_PK, NOW, CancelReason.USER);
         verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(RUN_ID));
         verify(runRepository, never()).update(any());
     }
@@ -158,7 +159,7 @@ class BacktestCancelServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(RunStatus.CANCELLED);
         assertThat(captor.getValue().getLifecycle().finishedAt()).isEqualTo(NOW);
         assertThat(updatedRequest().isStoppedRun()).isTrue();
-        verify(runRepository, never()).recordCancelRequested(any(), any());
+        verify(runRepository, never()).recordCancelRequested(any(), any(), any());
         verifyNoInteractions(events);
     }
 

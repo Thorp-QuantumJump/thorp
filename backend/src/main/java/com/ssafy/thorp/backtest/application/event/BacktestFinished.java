@@ -14,8 +14,10 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
  *
  * @param backtestJobId 실행 행({@code backtest_run})의 PK. 후보가 이 값으로 자기 실행을 찾는다
  * @param backtestId 사용자에게 노출되는 식별자
- * @param status COMPLETED 또는 FAILED
- * @param errorCode {@code status=FAILED}일 때만, 아니면 null
+ * @param status COMPLETED, FAILED, 또는 CANCELLED. <b>CANCELLED 도 끝난 것이다</b> — 실행 시간 상한으로 끊긴 실행은 부분
+ *     결과를 남기고 CANCELLED 로 끝나므로, 받는 쪽은 COMPLETED 가 아닌 것을 모두 "결과를 믿을 수 없는 종결"로 다루어야 한다(R-19)
+ * @param errorCode 실행 행에 남은 사유. FAILED 의 엔진 오류 코드이거나, 실행 시간 상한으로 끊긴 CANCELLED 의 {@code
+ *     EXECUTION_LIMIT} 이다. 정상 완료와 사용자가 스스로 멈춘 취소는 null
  */
 public record BacktestFinished(
         long backtestJobId, String backtestId, RunStatus status, String errorCode) {}
