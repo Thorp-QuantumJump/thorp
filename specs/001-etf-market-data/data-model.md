@@ -38,7 +38,7 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | 필드 | 타입 | 제약 | 근거 |
 |---|---|---|---|
 | `id` | bigint | PK | |
-| `instrument_id` | varchar | UNIQUE NOT NULL. `{6자리}.XKRX` 형식 | `engine_input.py:20`의 기존 패턴과 일치시킨다 |
+| `instrument_id` | varchar | UNIQUE NOT NULL. `{6글자}.XKRX` 형식이며 단축코드는 영숫자 대문자다 | `engine_input.py`의 패턴과 일치시킨다. 2026-09-15에 숫자 여섯 자리에서 넓혔다 (T031) |
 | `name` | varchar | NOT NULL | FR-001 |
 | `listed_on` | date | NOT NULL | FR-001 |
 | `delisted_on` | date | NULL = 상장 유지. NOT NULL이면 `> listed_on` | FR-004 |

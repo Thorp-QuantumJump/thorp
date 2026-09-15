@@ -332,10 +332,16 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
     - **자료 버전이 실행에 고정되지 않는다.** 조립 시점에 새로 고르므로 재발행이 며칠 뒤 일어나면 다른 메시지가 나간다. `EngineInputAssembler`가 스스로 적어 둔 "조립 시점에 새로 고르는 값이 없다"와 어긋나고, 중복 판정 키와 `versions.data`에도 그 값이 없다
   - **접수 시점에 정해 실행 계획에 저장하는 것이 넷을 한 번에 푸는 설계다.** 쓸 수 있는 묶음이 없으면 접수를 거절하고, 워커가 고르는 키를 그 값으로 바꾸거나 두 칸을 합친다
   - `docs/adr/0002`와 `specs/004-backtest-execution/contracts/messaging.md`가 아직 옛 상수를 계약으로 적고 있어 함께 고쳐야 한다. Jira `S15P21E205-203`에 보류되어 있다
-- [ ] T031 [DE] 종목 식별자 형식이 배제하는 영숫자 단축코드를 어떻게 다룰지 정한다 per data-model.md 「representative_etf」·FR-001·FR-002 (contradicts)
+- [X] T031 [DE] 종목 식별자 형식이 배제하는 영숫자 단축코드를 어떻게 다룰지 정한다 per data-model.md 「representative_etf」·FR-001·FR-002 (contradicts)
   - `data-model.md`가 `instrument_id`를 `{6자리}.XKRX` 형식으로 정했고 마이그레이션의 CHECK와 `krx.py`의 형식 검사가 그것을 강제한다
   - **실제 원천에는 그 형식을 벗어나는 ETF가 많다.** 2026-09-11 하루치를 실제로 불러 세어 보니 1,168종 중 **304종(26%)**이 `0184E0`·`0182R0` 같은 영숫자 단축코드다. 이 종목들은 대표 ETF로도 비교 대상으로도 넣을 수 없다
   - PD-01(T014)이 후보를 고르는 일이라 **이 제약이 그 선택지를 먼저 좁힌다.** 형식을 넓힐지, 좁은 채로 두고 그 사실을 문서에 적을지 정한다
+  - **2026-09-15 결정: 넓힌다.** 형식은 `[0-9A-Z]{6}\.XKRX`다. 자리 수는 여섯으로 그대로 두고 허용 문자에 영문 대문자만 더했다. 원천의 4분의 1을 후보에서 빼는 대가가, 좁은 채로 두고 그 사실만 적어 두는 이득보다 크다
+  - **소문자는 받지 않는다.** 원천이 대문자로만 주고, 둘 다 받으면 같은 종목이 `0111J0`과 `0111j0` 두 값으로 저장될 수 있다. 자리 수가 어긋난 코드도 그대로 거부한다
+  - 고친 곳은 정규식 열세 군데다 — `data/` 일곱(`corporate_actions`·`gaps`·`instrument_profile`·`krx` 둘·`reconciliation`·`repository`), `worker/` 둘(`contracts/engine_input`·`evaluation_window`), `backend/` 넷(`InstrumentId`·`RepresentativeEtf`·`ParamSearchPreviewRequest`·`EvaluationWindowService`). `sector_map.py`와 `index.py`는 `repository.py`의 패턴을 가져다 쓰므로 따라온다
+  - DB 제약 다섯 개는 새 마이그레이션 `V20260915163000__widen_instrument_id_format.sql`로 넓혔다. **기존 파일을 고치지 않은 까닭**은 그것이 이미 `dev`에 병합되어 팀원의 로컬 DB에 적용되었기 때문이다. 적용된 파일을 고치면 Flyway 체크섬이 어긋나 그 DB에서 기동이 막힌다
+  - **`krx.py`의 `unsupported_codes` 장치는 지우지 않고 남겼다.** 이제 영숫자 코드는 그 갈래에 오지 않지만, 원천이 아직 본 적 없는 모양을 보내오면 수집이 멈추지 않으면서도 무엇이 빠졌는지 드러나야 한다. 담지 못하는 것을 조용히 버리면 그 순간 검사가 사라진다
+  - **확인하지 못한 것: 304종 전부가 영숫자 여섯 글자 대문자인지는 검증하지 못했다.** 근거는 문서에 남은 예시 세 개(`0111J0`·`0182R0`·`0005D0`)와 `0184E0`뿐이다. T014에서 실제로 적재할 때 `unsupported_codes`가 비어 있는지 확인한다 — 비어 있지 않으면 그 모양에 맞춰 형식을 다시 본다
 - [X] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
   - 표가 아직 `RepositoryDataProvider`를 "`engine_runner.py:68`의 기본값이 된다"로 적는데 그 클래스는 만들어지지 않았고 004의 `PostgresMarketDataProvider`가 그 자리를 맡는다
   - 덧붙임이 "`YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고"라고 하는데 **그 파일은 없다.** 004 T006에서 삭제했다

@@ -58,7 +58,7 @@ REASON_MISSING_CORPORATE_ACTION: Final[str] = "MISSING_CORPORATE_ACTION"
 #: 나가지 않는다 — 구간의 끝은 언제나 계열의 마지막 날이다.
 ACTIONS_KNOWN_FROM_NEVER: Final[date] = date.max
 
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: 누적 곱셈의 작업 정밀도. 저장 자리수(아래)보다 넉넉히 두어 중간 계산에서 깎이지 않게 한다.
 #: 나눗셈이 끝나지 않는 계수(예: 204/10100)는 이 자리수에서 반올림되므로, 조정가의 비율
@@ -100,7 +100,7 @@ class CorporateAction:
     def __post_init__(self) -> None:
         if INSTRUMENT_ID_PATTERN.match(self.instrument_id) is None:
             raise CorporateActionError(
-                f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {self.instrument_id!r}"
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {self.instrument_id!r}"
             )
         if not isinstance(self.ex_date, date):
             raise CorporateActionError(f"ex_date는 date여야 한다: {self.ex_date!r}")
@@ -320,7 +320,7 @@ def build_adjustment_series(
     계수를 만들 수도 없다. 이 건너뜀은 자료 부족이 아니다.
     """
     if INSTRUMENT_ID_PATTERN.match(instrument_id) is None:
-        raise CorporateActionError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {instrument_id!r}")
+        raise CorporateActionError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {instrument_id!r}")
     close_by_date = _closes_by_date(closes)
     days = sorted(close_by_date)
     if actions_known_from is not None and not isinstance(actions_known_from, date):

@@ -316,7 +316,7 @@ def index_history_gap_rows(coverages: Iterable[IndexCoverage]) -> list[dict[str,
     for coverage in coverages:
         if INSTRUMENT_ID_PATTERN.match(coverage.instrument_id) is None:
             raise IndexDataError(
-                f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {coverage.instrument_id!r}"
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {coverage.instrument_id!r}"
             )
         rows.extend(coverage.to_gap_rows())
     return rows

@@ -65,9 +65,11 @@ ETF_DAILY_SERVICE: Final[tuple[str, str]] = ("etp", "etf_bydd_trd")
 #: 응답 본문이 자료를 담는 키. 이 원천의 모든 서비스가 같은 이름을 쓴다.
 RESPONSE_ROWS_KEY: Final[str] = "OutBlock_1"
 
-#: 종목 식별자 형식. ``engine_input.py``·마이그레이션의 ``{6자리}.XKRX``와 같다.
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
-ISSUE_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\Z")
+#: 종목 식별자 형식. ``engine_input.py``·마이그레이션의 ``{6글자 단축코드}.XKRX``와 같다.
+#: 단축코드에는 영문 대문자가 섞일 수 있다(2026-09-15 T031). 소문자를 받지 않는 것은 원천이
+#: 대문자로만 주고, 둘 다 받으면 같은 종목이 두 값으로 저장될 수 있기 때문이다.
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
+ISSUE_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\Z")
 
 _HTTP_UNAUTHORIZED: Final[int] = 401
 _HTTP_TOO_MANY_REQUESTS: Final[int] = 429
@@ -304,16 +306,19 @@ class RawArchivingSource:
 
 
 def instrument_id_for(issue_code: str) -> str:
-    """``069500`` → ``069500.XKRX``. 마이그레이션의 형식 CHECK와 같은 모양으로 만든다."""
+    """``069500`` → ``069500.XKRX``. 마이그레이션의 형식 CHECK와 같은 모양으로 만든다.
+
+    ``0184E0`` 처럼 영문이 섞인 단축코드도 그대로 붙인다. 대소문자를 접거나 다듬지 않는다.
+    """
     if not isinstance(issue_code, str) or ISSUE_CODE_PATTERN.match(issue_code.strip()) is None:
-        raise KrxResponseError(f"종목코드가 6자리 숫자가 아니다: {issue_code!r}")
+        raise KrxResponseError(f"종목코드가 6글자 영숫자(대문자)가 아니다: {issue_code!r}")
     return f"{issue_code.strip()}.XKRX"
 
 
 def issue_code_for(instrument_id: str) -> str:
     """``069500.XKRX`` → ``069500``. 원천 응답과 맞추기 위한 반대 변환이다."""
     if not isinstance(instrument_id, str) or INSTRUMENT_ID_PATTERN.match(instrument_id) is None:
-        raise KrxResponseError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {instrument_id!r}")
+        raise KrxResponseError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {instrument_id!r}")
     return instrument_id[:6]
 
 
@@ -439,7 +444,7 @@ class ListingWindow:
     def __post_init__(self) -> None:
         if INSTRUMENT_ID_PATTERN.match(self.instrument_id) is None:
             raise ListingBoundaryError(
-                f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {self.instrument_id!r}"
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {self.instrument_id!r}"
             )
         if not isinstance(self.listed_on, date):
             raise ListingBoundaryError(f"listed_on은 date여야 한다: {self.listed_on!r}")
@@ -568,14 +573,16 @@ def collect_daily_quotes(
     이용 한도에 걸리면 **중단하고 그때까지 모은 것을 돌려준다**(FR-014). 예외를 그대로
     올리면 부분 수집물이 사라지고, 사라지면 어디까지 모았는지 기록할 수 없다.
 
-    **6자리 숫자가 아닌 종목코드가 섞여 온다.** 2026-09-11에 실제 응답에서 확인한 것으로,
-    그날 값이 있는 ETF 1,168종목 가운데 304종목(26%)의 코드가 ``0184E0``처럼 숫자와 영문이
-    섞인 6글자였다. 이 표기는 2025년부터 나타나 빠르게 늘고 있다(2024-01 0종목 → 2025-01
-    6종목 → 2026-01 178종목 → 2026-09 304종목). 저장 스키마의
-    ``ck_daily_price_instrument_id_format``과 ``engine_input.py``가 ``{6자리}.XKRX``만
-    허용하므로 이 종목들은 담을 수 없다. 그래서 수집을 멈추지도 조용히 버리지도 않고
-    :attr:`KrxCollection.unsupported_codes` 에 모아 둔다. 형식을 넓히는 판단은 저장 스키마를
-    소유한 쪽(T003)의 몫이며 이 묶음에서 마이그레이션을 고치지 않는다.
+    **영문이 섞인 6글자 단축코드도 담는다.** 2026-09-11에 실제 응답에서 확인한 것으로, 그날
+    값이 있는 ETF 1,168종목 가운데 304종목(26%)의 코드가 ``0184E0``처럼 숫자와 영문이 섞인
+    6글자였다. 이 표기는 2025년부터 나타나 빠르게 늘고 있다(2024-01 0종목 → 2025-01 6종목 →
+    2026-01 178종목 → 2026-09 304종목). 처음에는 저장 스키마가 숫자만 받아 이 종목들을 담지
+    못했으나, 2026-09-15에 형식을 영숫자 6글자로 넓혔다(T031, 마이그레이션
+    ``V20260915163000__widen_instrument_id_format.sql``).
+
+    그래도 형식 밖 코드를 모아 두는 :attr:`KrxCollection.unsupported_codes` 는 남긴다. 원천이
+    그 밖의 모양을 보내오면 수집이 그 종목 때문에 멈추지 않으면서도 **어떤 코드가 빠졌는지는
+    드러나야** 하기 때문이다. 담지 못하는 것을 조용히 버리면 그 순간 검사가 사라진다.
     """
     group, endpoint = ETF_DAILY_SERVICE
     wanted_codes = (
@@ -601,15 +608,17 @@ def collect_daily_quotes(
             if not code:
                 raise KrxResponseError(f"{group}/{endpoint} {day:%Y%m%d} 행에 ISU_CD가 없다")
             if ISSUE_CODE_PATTERN.match(code) is None:
-                # 6자리 숫자가 아닌 종목코드다(예: ``0184E0``). 저장 스키마의
+                # 영숫자 6글자(대문자)가 아닌 종목코드다. 저장 스키마의
                 # ``ck_daily_price_instrument_id_format``과 ``engine_input.py``가 모두
-                # ``{6자리}.XKRX``만 허용하므로 담을 수 없다.
+                # ``{6글자}.XKRX``만 허용하므로 담을 수 없다. ``0184E0`` 같은 영숫자 코드는
+                # 2026-09-15부터 이 갈래에 오지 않는다(T031) — 여기 남는 것은 자리 수가 다르거나
+                # 소문자가 섞인, 아직 본 적 없는 모양이다.
                 #
                 # **찾는 종목만 걸러내기보다 이 검사를 먼저 둔다.** 진입점은 ``--instruments``를
-                # 필수로 받고 그 값은 이미 6자리로 검사되므로, 걸러내기를 먼저 하면 이 갈래에
-                # 아무도 도달하지 못해 모아 둔 목록이 늘 비고 보고도 나오지 않는다. 담을 수
-                # 없는 종목이 원천의 26%(2026-09-10 기준 304종목)라는 사실은 후보를 고르는
-                # 쪽에 필요한 정보라, 찾는 종목이 무엇이든 관측한 대로 알린다.
+                # 필수로 받고 그 값은 이미 같은 형식으로 검사되므로, 걸러내기를 먼저 하면 이
+                # 갈래에 아무도 도달하지 못해 모아 둔 목록이 늘 비고 보고도 나오지 않는다.
+                # 담을 수 없는 종목이 얼마나 되는지는 후보를 고르는 쪽에 필요한 정보라,
+                # 찾는 종목이 무엇이든 관측한 대로 알린다.
                 collection.unsupported_codes.add(code)
                 continue
             # 식별자로 바꾸기 전에 원천 코드로 걸러낸다. 하루를 부르면 그날 상장된 ETF

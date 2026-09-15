@@ -27,10 +27,14 @@ public record ParamSearchPreviewRequest(
         @Valid Portfolio portfolio,
         Map<String, Map<String, List<Object>>> space) {
 
-    /** 종목 형식은 004 접수와 같다 — 여섯 자리 종목코드에 거래소 접미가 붙는다. */
+    /** 종목 형식은 004 접수와 같다. 여섯 글자 단축코드에 거래소 접미가 붙고, 단축코드에는 영문 대문자가 섞일 수 있다(PD-01). */
     public record Universe(
             @NotEmpty @Size(max = 50)
-                    List<@Pattern(regexp = "\\d{6}\\.XKRX", message = "종목 코드 형식이 올바르지 않습니다") String>
+                    List<
+                                    @Pattern(
+                                            regexp = "[0-9A-Z]{6}\\.XKRX",
+                                            message = "종목 코드 형식이 올바르지 않습니다")
+                                    String>
                             instrumentIds) {}
 
     public record Strategy(@NotEmpty List<@Size(max = 64) String> strategyIds) {}

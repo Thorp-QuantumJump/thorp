@@ -190,7 +190,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 | 계산 불가 · 미지정 | **키 자체를 쓰지 않는다** (`null`도 쓰지 않음, 0·NaN 금지). 수신 측은 "키 없음 == null"로 읽고, 명시 `null`이 와도 같은 뜻으로 수용한다 | 래퍼 타입, 직렬화는 `NON_NULL` | `T \| None = None`, 덤프는 `exclude_none=True` |
 | 수익률 | 비율 (`0.125` = 12.5%). MDD·drawdown은 0 또는 음수 | | |
 | 식별자 문자열 (`eventId`·`executionId`·`tradeId`·`run.error.code`) | **255자 이하**. 초과는 계약 오류 → DLQ. 형식은 정하지 않는다(UUID·`EVT-000001` 모두 가능). `runId`는 비어 있지 않으면 된다 | `String`, 저장 컬럼 `VARCHAR(255)` | `str` |
-| 종목 식별자 (`instrumentId` — universe·trade·position) | `{6자리 종목코드}.XKRX` (ADR-0002 D4). 형식 위반은 계약 오류 → DLQ | `InstrumentId` VO의 패턴으로 검증, 저장 컬럼 `VARCHAR(32)` | `str` |
+| 종목 식별자 (`instrumentId` — universe·trade·position) | `{6글자 단축코드}.XKRX` (ADR-0002 D4). 단축코드는 영숫자 **대문자** 여섯 글자다(2026-09-15에 숫자 전용에서 넓혔다, spec 001 T031). 형식 위반은 계약 오류 → DLQ | `InstrumentId` VO의 패턴으로 검증, 저장 컬럼 `VARCHAR(32)` | `str` |
 
 지표 계산 규약(연환산 252, ddof=1, riskFreeRate 0.0, CAGR 달력일 기준, `tradeCount`는 CLOSED만)은 설계 문서를 따른다.
 이 규약을 바꾸면 `schemaVersion`이 아니라 결과 저장소의 지표 버전을 올린다.

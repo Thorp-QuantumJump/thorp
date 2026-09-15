@@ -19,7 +19,7 @@ class RepositoryDataProvider:
 |---|---|
 | `prices` | 요청 구간의 일봉. `validate_prices`를 통과한 것 |
 | `instrument_id` | `request.universe.instrument_ids[0]` |
-| `ticker` | 6자리 코드. `.KS` 접미사를 붙이지 않는다 — yfinance 표기였다 |
+| `ticker` | 6글자 단축코드(영숫자 대문자). `.KS` 접미사를 붙이지 않는다 — yfinance 표기였다 |
 | `source` | `dataset_version.source`를 그대로 쓴다. `KRX_OPEN_API`, 예시 자료이면 `FIXED_TEST_DATA` |
 | `adjustment` | `SPLIT_ADJUSTED` |
 | `metadata` | 아래 표 |

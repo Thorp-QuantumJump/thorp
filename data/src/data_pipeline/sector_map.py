@@ -310,7 +310,7 @@ class RepresentativeEtf:
             or INSTRUMENT_ID_PATTERN.match(self.instrument_id) is None
         ):
             raise SectorMapError(
-                f"instrument_id는 {{6자리}}.XKRX 형식이어야 한다: {self.instrument_id!r}"
+                f"instrument_id는 {{6글자}}.XKRX 형식이어야 한다: {self.instrument_id!r}"
             )
         _require_text(self.name, "대표 ETF 이름", max_length=_LEN_NAME)
         # 상장일과 기준 지수는 FR-001의 필수 항목이다. 저장 스키마도 NOT NULL이지만, 여기서

@@ -58,7 +58,7 @@ from data_pipeline.gaps import REASON_RECONCILIATION_UNKNOWN, validate_gap_rows
 from data_pipeline.krx import ListingWindow, windows_by_instrument
 
 #: 종목 식별자. ``$``는 끝에 붙은 줄바꿈 앞에서도 맞으므로 ``\A...\Z``로 닫는다.
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: ``reconciliation_record.sample_reason``. 마이그레이션의 CHECK와 같은 세 값뿐이다 (FR-016).
 SAMPLE_LISTING: Final[str] = "LISTING"
@@ -213,7 +213,7 @@ def _is_missing(value: object) -> bool:
 
 def _require_instrument_id(value: object) -> str:
     if not isinstance(value, str) or INSTRUMENT_ID_PATTERN.match(value) is None:
-        raise ReconciliationError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {value!r}")
+        raise ReconciliationError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {value!r}")
     return value
 
 
