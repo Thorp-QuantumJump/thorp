@@ -280,17 +280,65 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - 시나리오 1~7 어디에도 `GET /sectors/{code}/instrument-profile`을 실행해 보는 절차가 없다. 사용자 스토리 3만 실행 가능한 검증 절차가 비어 있다
   - 필수 항목 존재, `asOfCurrentComposition` 표시, `sourceAttribution`, 추적 차이 필드 부재, 409 구분을 확인한다
   - **딸린 어긋남**: 이 문서 맨 위 Input 줄과 T016이 quickstart를 "시나리오 1~7"로 센다. converge는 기존 항목을 고치지 않으므로 그대로 두었다. T016을 착수할 때 「시나리오 1~8」로 고쳐 새 시나리오가 검증 기록에서 빠지지 않게 한다
-- [ ] T023 [DOCS] plan.md의 마이그레이션 파일명을 실제와 맞춘다 per plan.md Storage·Project Structure (partial)
+- [X] T023 [DOCS] plan.md의 마이그레이션 파일명을 실제와 맞춘다 per plan.md Storage·Project Structure (partial)
   - plan.md 19행·113행이 `V3__etf_market_data.sql`을 가리키는데 실제 파일은 `V20260911114500__etf_market_data.sql`이고, `V3__param_search.sql`은 **다른** 마이그레이션으로 이미 존재한다. 지금 문서대로 읽으면 남의 파일을 가리킨다
   - T013이 만든 `V20260913103000__instrument_profile.sql`도 plan.md에 없다
 - [X] T024 [BE] 스키마 검사에 12번째 표를 넣는다 per data-model.md (partial)
   - `EtfMarketDataSchemaIT`의 표 검사가 11개만 세고 `instrument_profile`을 빼놓았다. 표시 문구도 "관계형 6개와 시계열 5개, 모두 11개 표"로 남아 있는데 data-model.md가 정의한 표는 12개다
   - T013이 그 표를 만들면서 검사를 함께 넓히지 않았다
-- [ ] T025 [DOCS] 일평균 거래대금의 저장 타입과 응답 타입 변환을 문서에 적는다 per data-model.md·contracts/sector-api.md (partial)
+- [X] T025 [DOCS] 일평균 거래대금의 저장 타입과 응답 타입 변환을 문서에 적는다 per data-model.md·contracts/sector-api.md (partial)
   - data-model.md는 `avg_daily_value_3m`을 "금액이므로 문자열로 둔다"고 하고, 계약은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 요구한다. 구현은 TEXT 열 → `BigDecimal` 도메인 → 지수 표기 없는 문자열 응답으로 양립시켰는데 **어느 문서도 그 변환을 말하지 않는다**
-- [ ] T026 [DOCS] 대표 상품 정보의 `isSample`이 무엇의 값인지 계약에 적는다 per contracts/sector-api.md (partial)
+- [X] T026 [DOCS] 대표 상품 정보의 `isSample`이 무엇의 값인지 계약에 적는다 per contracts/sector-api.md (partial)
   - 계약의 응답 예시에 `isSample`이 있는데 대응표의 것인지 자료 버전의 것인지 말하지 않는다. 구현은 research.md 결정 5("자료 버전 레코드에도 같은 뜻의 표시를 둔다")를 따라 **자료 버전** 기준으로 정했고, `GET /sectors`의 `isSample`은 대응표 기준이라 두 값이 다를 수 있다
-- [ ] T027 [DOCS] 대표 상품 정보 표에 불변성 적용 여부를 적는다 per data-model.md·FR-017 (partial)
+- [X] T027 [DOCS] 대표 상품 정보 표에 불변성 적용 여부를 적는다 per data-model.md·FR-017 (partial)
   - data-model.md 「instrument_profile」 불변식이 `(etf_id, dataset_version_id)` UNIQUE만 말하고 UPDATE·DELETE 거부를 적용하는지 침묵한다. 구현은 트리거를 걸지 않기로 정하고 그 근거를 마이그레이션 주석에만 남겼다(FR-017이 못 박은 대상은 자료 버전과 시계열이며 `reconciliation_record`도 같다)
-- [ ] T028 [DOCS] plan.md의 워커 공급자 이름을 실제와 맞춘다 per plan.md (partial)
+- [X] T028 [DOCS] plan.md의 워커 공급자 이름을 실제와 맞춘다 per plan.md (partial)
   - plan.md가 `RepositoryDataProvider`를 더하고 `engine_runner.py:68`의 기본값을 바꾸라고 적었는데, 실제로는 004가 만든 `PostgresMarketDataProvider`가 그 자리를 맡고 `PortfolioBacktestEngine`은 공급자에 **기본값을 두지 않아** 주입을 잊은 경로 자체가 없다. `YFinanceDataProvider`는 코드에서 사라졌다(남은 것은 세 CLAUDE.md의 서술뿐)
+
+---
+
+## Phase 9: Convergence
+
+**2026-09-14 `/speckit-converge` 산출.** `-204`·`-203`·`-202`·`-207` 네 갈래를 `dev`에 합친 나무에서 평가했다. 한 갈래씩 돌리면 나머지 셋의 작업을 "안 된 일"로 다시 찾아내므로 합친 상태에서 한 번만 돌렸다. 그 나무의 검증은 backend 920건·worker 332건·data 462건이 모두 통과하고 실패 0건이다. 기존 항목은 하나도 고치지 않았다.
+
+**다만 `-202`(T018)와 `-203`(T019)은 이 평가 뒤에 보류하기로 정했다.** 코드리뷰가 양쪽 모두에서 회귀를 찾아냈다 — 아래 T029와 T030을 본다. 따라서 `dev`에 들어가는 것은 `-204`와 `-207` 둘이고, **T018과 T019는 `[ ]`로 남는다.**
+
+두 건이 같은 뿌리를 공유한다. **001의 자료 계층이 아직 실행 경로에 이어져 있지 않은 채로 백엔드만 정직하게 만들면, 지금 도는 DEMO 경로가 끊긴다.** 자료가 실제로 적재되는 것과 함께 옮겨야 한다.
+
+판정: FR 17개·SC 7개·사용자 스토리 3개·research 결정 8개·constitution 원칙 10개를 확인했다. MUST 위반은 없다. 유형은 partial 6·contradicts 2이며 missing과 unrequested는 없다. 이미 열려 있는 T014~T017·T020·T021이 덮는 범위는 다시 만들지 않았다.
+
+- [ ] T029 [BE] 워밍업을 어디서 읽을지 세 곳에서 함께 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)
+  - **같은 규칙을 구현한 곳이 셋인데 두 가지 규약이 섞여 있다.** `contracts/market-dataset.md` 「읽기 규칙」은 **요청 구간보다 앞에서** 읽으라 하고, `contracts/evaluation-window.md`는 `firstEvaluable`을 "상장일 이후 warmup번째 거래일"로 정의해 **뒤로 밀라** 한다. 후자는 자바와 파이썬이 함께 읽는 공유 픽스처 `contracts/fixtures/evaluation-window-cases.json`이 붙박고 있다
+  - 세 곳은 `worker/src/worker/engine_runner.py`, `backend/.../EffectivePeriodCalculator.java`(→ `MarketMetadataPort.evaluationStart`), 그리고 위 공유 픽스처와 `paramsearch/CommonPeriodResolver`다
+  - **워커만 먼저 옮기면 회귀가 난다.** T018 시도에서 실측으로 드러났다 — ⑴ 백엔드가 민 `effectiveStart`를 워커가 그대로 받아 워밍업이 두 번 들어가고(요청 63일에 실제 130일), ⑵ 요청 시작일이 자료의 처음이나 상장일 근처면 **전에는 성공하던 실행이 `DATA_INSUFFICIENT`로 실패한다.** 백엔드는 `commonStart` 뒤쪽만 보장할 뿐 `run.start` 앞쪽에 자료가 있는지 보지 않는다
+  - 화면이 사용자에게 보여 주는 기간과 워커가 평가하는 기간이 반대 규칙으로 계산되는 것도 같은 뿌리다
+  - `effectiveStart`는 동일 버전 키에 들어가 재현을 보장하는 값이다(R-03). 바꾸면 같은 요청이 다른 키를 갖는다. **워밍업 부족 판정·재현 키·포트 이름을 함께 정해야 하며 004 계약에 닿는다.** Jira `S15P21E205-205`, 워커 쪽 시도는 `S15P21E205-202`에 보류되어 있다
+- [ ] T030 [BE] 자료 버전을 접수 시점에 정해 실행에 고정하고 고르는 키와 기록을 하나로 만든다 per research.md 결정 4·FR-013·SC-004 (contradicts)
+  - **`marketData.datasetId`는 지금 아무도 읽지 않는다.** `engine_runner.py`가 공급자에 넘기는 것은 `request.market_data.data_version`이고, 그 값은 `FixtureMarketMetadataAdapter`의 고정값이다. 그래서 기록과 선택이 서로 다른 것을 가리킨다
+  - T019 시도에서 실측으로 드러난 곁가지 셋이 함께 풀려야 한다
+    - **쓸 수 있는 자료 묶음이 없을 때 접수가 막히지 않는다.** 조립이 던진 예외를 `BacktestJobDispatcher.send`가 잡아 로그만 남기므로 API는 202를 돌려주고 실행은 `QUEUED`에 영원히 남는다. 오래된 `QUEUED`를 실패로 닫는 장치가 없다
+    - **재발행이 시도 횟수를 헛되이 올린다.** `republish`가 `recordPublishAttempt`를 먼저 부르고 그다음 조립이 실패한다. 그 값이 DLQ 종료 판정의 분모라(`RunLifecycle`) 나중에 실패로 닫을 수도 없게 된다
+    - **자료 버전이 실행에 고정되지 않는다.** 조립 시점에 새로 고르므로 재발행이 며칠 뒤 일어나면 다른 메시지가 나간다. `EngineInputAssembler`가 스스로 적어 둔 "조립 시점에 새로 고르는 값이 없다"와 어긋나고, 중복 판정 키와 `versions.data`에도 그 값이 없다
+  - **접수 시점에 정해 실행 계획에 저장하는 것이 넷을 한 번에 푸는 설계다.** 쓸 수 있는 묶음이 없으면 접수를 거절하고, 워커가 고르는 키를 그 값으로 바꾸거나 두 칸을 합친다
+  - `docs/adr/0002`와 `specs/004-backtest-execution/contracts/messaging.md`가 아직 옛 상수를 계약으로 적고 있어 함께 고쳐야 한다. Jira `S15P21E205-203`에 보류되어 있다
+- [ ] T031 [DE] 종목 식별자 형식이 배제하는 영숫자 단축코드를 어떻게 다룰지 정한다 per data-model.md 「representative_etf」·FR-001·FR-002 (contradicts)
+  - `data-model.md`가 `instrument_id`를 `{6자리}.XKRX` 형식으로 정했고 마이그레이션의 CHECK와 `krx.py`의 형식 검사가 그것을 강제한다
+  - **실제 원천에는 그 형식을 벗어나는 ETF가 많다.** 2026-09-11 하루치를 실제로 불러 세어 보니 1,168종 중 **304종(26%)**이 `0184E0`·`0182R0` 같은 영숫자 단축코드다. 이 종목들은 대표 ETF로도 비교 대상으로도 넣을 수 없다
+  - PD-01(T014)이 후보를 고르는 일이라 **이 제약이 그 선택지를 먼저 좁힌다.** 형식을 넓힐지, 좁은 채로 두고 그 사실을 문서에 적을지 정한다
+- [ ] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
+  - 표가 아직 `RepositoryDataProvider`를 "`engine_runner.py:68`의 기본값이 된다"로 적는데 그 클래스는 만들어지지 않았고 004의 `PostgresMarketDataProvider`가 그 자리를 맡는다
+  - 덧붙임이 "`YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고"라고 하는데 **그 파일은 없다.** 004 T006에서 삭제했다
+  - 같은 덧붙임의 "001 담당자 확인 필요"가 아직 달려 있다. 이제 확인되었다
+  - 42행이 워밍업 방식을 없어진 클래스 기준으로 설명한다. T018이 바꾼 실제 동작과 맞춘다
+- [ ] T033 [BE] 대조 생성기와 워커 픽스처의 자료 버전 이름을 규칙에 맞춘다 per research.md 결정 4 (partial)
+  - `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`가 아직 `KRX_DAILY_V1`을 박아 넣고, 그 산출물 `worker/tests/fixtures/manual_reconciliation.json`에 통째로 들어가 있다
+  - 생성기만 고치면 산출물과 갈라진다. **둘을 함께 고치고 재생성해 검증할 수 있는 작업에서 닫는다**
+  - 그 자리의 `dataVersion`이 `FIXTURE-three_etf_24m`이라 정직한 값이 KRX 날짜가 아니라 픽스처 식별자일 수 있다. T030과 함께 정하는 편이 낫다
+- [ ] T034 [DOCS] research.md의 워커 공급자 이름을 실제와 맞춘다 per research.md 결정 1 (partial)
+  - 26행과 198행이 아직 `RepositoryDataProvider`를 기본 공급자로 적는다. T028이 `plan.md`에서 고친 것과 같은 어긋남이다
+- [ ] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
+  - T022가 시나리오를 하나 더해 `quickstart.md`에 여덟 개가 있는데, 이 문서 3행의 Input 줄과 T016의 첫 항목이 아직 "시나리오 1~7"이다
+  - **T016을 적힌 대로 수행하면 새 시나리오가 검증 기록에서 빠진다.** T016 착수 전에 고쳐야 한다
+- [ ] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)
+  - `"KRX-2026-09-09"`는 `KRX_DAILY_{YYYYMMDD}`도 아니고 픽스처 식별자도 아니다. 어느 규칙에도 맞지 않는다
+  - T030이 두 칸의 뜻을 정한 뒤 그 규칙에 맞춘다

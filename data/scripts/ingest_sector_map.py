@@ -112,7 +112,7 @@ def main(argv: list[str] | None = None, *, repository: SectorMapRepository | Non
 
     if args.sample and not sector_map.is_sample:
         print(
-            f"거부: --sample로 발행하는 대응표는 isSample이 true여야 한다 (FR-002): {path}",
+            f"거부: --sample로 발행하는 대응표는 is_sample이 true여야 한다 (FR-002): {path}",
             file=sys.stderr,
         )
         return _EXIT_REJECTED
