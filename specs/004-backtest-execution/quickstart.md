@@ -58,6 +58,8 @@ S3 상태에서 사용자 A가 `POST /backtests/{A}/cancel`. 기대: A는 `CANCE
 
 존재하지 않는 거래일 구간이 생기도록 픽스처에서 한 종목의 일부 행을 지운 자료 버전으로 요청한다. 기대: `FAILED`, `failure.code=DATA_INSUFFICIENT`, `summary=null`(0으로 채우지 않음). `POST /backtests/{id}/retry` → `202` 새 id, `retryOf` 원 id. 자료를 복구한 새 `data_version`으로 요청하면 다른 키의 새 실행.
 
+> 로컬(2026-09-15): 백엔드 자료 버전이 상수라 "행을 지운 **다른** 자료 버전"을 만들 수 없다. 대신 `daily_price`의 불변 트리거를 잠시 끄고 한 종목 5행을 지워 요청(→ `DATA_INSUFFICIENT`), 임시 표에서 되돌린 뒤 `/retry`(→ 같은 키의 새 실행이 `COMPLETED`)로 앞 두 문장을 확인한다. 마지막 문장(자료 버전 갈아타기)은 어댑터가 001 표를 읽게 된 뒤 확인한다.
+
 ## S6. 시스템 장애 자동 재시도 1회 (Clarify Q5)
 
 RUNNING 중 워커 프로세스를 `kill -9`한다. 기대: 브로커 재전달로 다른 워커(또는 재시작한 워커)가 다시 실행, `GET`에 상태 변화 없이 `attempt=2`가 DB에 기록되고 완료된다. 두 번째 실행 중 다시 `kill -9`하면 메시지가 DLQ로 가고 백엔드가 `FAILED, failure.code=SYSTEM_FAILURE`로 종결한다. `backtest_run_metric.auto_retried=true`.

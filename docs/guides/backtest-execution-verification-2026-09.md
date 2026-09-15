@@ -27,7 +27,7 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 | S2 | 동일 버전 재사용 | **통과** | 사용자 2, 같은 본문 → 202 `COMPLETED` `REUSED`, 새 `backtestId`. `backtest_run` 1행 그대로, `backtest_reuse_event` `REUSED:SINGLE` 1 |
 | S3 | 진행 중 합류 | **통과** | A 접수 직후 B 같은 본문 → B는 `RUNNING` `JOINED`, 둘 다 `run_id=3`. `reuse_event` `JOINED` 1 |
 | S4 | 취소와 부분 결과 | **통과** | PROGRESS(2023-10-26) 뒤 취소 → 202 `CANCELLED cancelRequested=true` → 워커가 다음 거래일 처리 뒤 멈춤 → `CANCELLED partial=true lastTradingDate=2024-05-10`, `/timeseries` 200(그 날짜까지) |
-| S5 | 실패와 재시도 | **통과** | `scenario=COST_ESCALATION`(워커 미지원) → `FAILED INVALID_REQUEST` → `POST /retry` 202 `retryOf` → 재시도도 같은 사유로 FAILED(결정적) |
+| S5 | 실패와 재시도 | **통과(자료 버전 갈아타기는 미검증)** | 한 종목(305720)의 2024-03-04~08 가격 5행을 지운 상태로 요청 → 0.3초 만에 `FAILED DATA_INSUFFICIENT "305720.XKRX is missing 5 trading day(s): 2024-03-04, …"`, `summary=null`, `progress.stage=PREPARING_DATA`. 5행을 되돌린 뒤 `POST /retry` → 202 `retryOf=BT-000026` 새 id → **새 실행(run 22, 같은 동일 버전 키)** 이 3.5초 만에 `COMPLETED`(`totalReturn 0.0993`). 실패한 실행은 재사용되지 않았다. quickstart 마지막 문장 "복구된 새 `data_version`으로 요청하면 다른 키의 새 실행"은 **확인하지 못했다** — 백엔드가 붙이는 자료 버전이 상수라 다른 버전을 가리키는 요청을 만들 수 없다(「한계」). 첫 시도는 `scenario=COST_ESCALATION`(워커 미지원)으로 `FAILED INVALID_REQUEST` → retry → 같은 사유로 FAILED 였고, 그건 "실패 후 재접수"만 보인 것이라 원래 시나리오로 다시 돌렸다 |
 | S6 | 시스템 장애 자동 재시도 1회 | **통과** | 실행 중 single 워커 프로세스 강제 종료 → 브로커 재전달 → **flex 워커가 4초 안에 완료**, `attempt=2 publish_count=1 dlq_count=0`, 측정 `auto_retried=true worker_role=flex`(FINISHED 값 우선) |
 | S7 | 결정성 | **통과** | `worker.demo`로 같은 입력을 두 번 → `performance`·`portfolioSeries`·`trades` 완전 동일. 다른 것은 `run.startedAt`·`finishedAt`뿐 (`tests/fixtures/engine-input-three-etf-{fixed,inverse_vol}.json`) |
 | S8 | 수기 대조 | **통과(자동)** | `pytest tests/test_manual_reconciliation.py tests/test_determinism.py` 11 passed — 스프레드시트식 독립 계산(`reconcile.py`)과 엔진 출력이 `PROVISIONAL_TOLERANCE=0`에서 일치 |
@@ -37,7 +37,7 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 | S12 | 실행 한도 장치 | **통과** | (a) 워커 정지 상태에서 같은 사용자 3건째 → **429 PER_USER** `queued=2 limit=2 retryAfterSeconds=2 provisional=true`, 같은 본문 재요청은 `JOINED`로 429 아님, `backtest_limit_hit ADMISSION_REJECTED`. (b) max-run 1초 → 스위퍼가 CANCEL → `CANCELLED partial=true failure.code=EXECUTION_LIMIT` 261/392거래일, `backtest_limit_hit RUN_STOPPED`, 측정 `CANCELLED/EXECUTION_LIMIT` |
 | S13 | 단건·벌크 큐 분리 | **부분 통과 — 007 결함 발견** | 탐색 묶음 후보 3건이 **`backtest.jobs.bulk`로 가고 flex만 집었다**(flex 로그 bulk 3·single 0). 그 동안 들어온 단건은 **433ms 만에 RUNNING**(single 워커). 그러나 후보 3건 모두 **계약 위반으로 DLQ → FAILED SYSTEM_FAILURE**(아래 발견 2). DLQ 경로·집계(`SEARCH_BUNDLE 3, failRate 1.0, worker_role null`)는 설계대로 |
 
-전체 끝난 뒤 DB: `backtest_run` COMPLETED 12 · FAILED 5 · CANCELLED 2, `backtest_request` NEW 19 · REUSED 2 · JOINED 3.
+전체 끝난 뒤 DB: `backtest_run` COMPLETED 13 · FAILED 6 · CANCELLED 2, `backtest_request` NEW 21 · REUSED 2 · JOINED 3(S5 재실행 2건 포함).
 
 ## 발견
 
@@ -59,6 +59,7 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 
 ### 3. [기록] 작은 것들
 
+- [수정함, 리뷰 지적] 픽스처 적재기 초판이 이미 있는 `sector`·`representative_etf` 행을 `ON CONFLICT DO UPDATE`로 덮어썼다. 두 표는 버전을 타지 않는 공용 표라 이름을 바꾸면 발행된 대응표가 가리키는 내용이 바뀐다(001은 `SectorMasterConflictError`로 막는다). 지금은 같으면 기존 id 재사용, 다르면 `MasterConflictError`로 멈춘다. 로컬 DB에서 세 경로(같음·`date`↔문자열 정규화·다름 → 예외, 원래 값 유지)를 실제로 확인했다.
 - `peakRssP95Mb`가 null이다 — 워커 표본은 `/proc/self/statm`(Linux)만 읽고 이 검증은 Windows 호스트에서 돌렸다. 운영(Linux 컨테이너)에서는 채워진다. 컨테이너로 돌린 검증은 T013 뒤 별도.
 - S12(b) `failure.message`가 null이다 — `CANCELLED`의 `failure.code`만 채우고 문장은 없다. 화면이 코드로 문장을 만들면 되지만, 계약이 `message`를 약속하는지 API README를 다시 볼 것.
 - quickstart 초판의 `Authorization: Bearer $TOKEN`은 이 저장소에 없다 — spec 014의 세션·CSRF 경계는 있고 요청자 식별은 `X-User-Id`(개발용). 준비 절을 고쳤다.
@@ -66,7 +67,8 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 
 ## 한계 — 이 기록이 보증하지 않는 것
 
-- **진짜 시장 자료로는 돌지 않는다.** 백엔드가 접수 때 붙이는 자료 버전이 상수 `FIXTURE-three_etf_24m`(`FixtureMarketMetadataAdapter`)이다. 001이 KRX 자료를 다른 `dataset_id`로 넣어도 워커는 그 이름의 `dataset_version`을 찾는다. 001 T019(자료 버전 규칙)와 함께 백엔드 어댑터를 001 표에서 읽게 바꾸는 후속이 필요하다.
+- **진짜 시장 자료로는 돌지 않는다.** 백엔드가 접수 때 붙이는 자료 버전이 상수 `FIXTURE-three_etf_24m`(`FixtureMarketMetadataAdapter`)이다. 001이 KRX 자료를 다른 `dataset_id`로 넣어도 워커는 그 이름의 `dataset_version`을 찾는다. 001 T019(자료 버전 규칙)와 함께 백엔드 어댑터를 001 표에서 읽게 바꾸는 후속이 필요하다. 같은 이유로 **자료 버전이 바뀌면 동일 버전 키가 달라져 새 실행이 된다**(S5 마지막 문장, R-03)는 것은 이 기록이 보증하지 않는다 — 키 계산에 `data_version`이 들어가는 것은 `DedupKeyCalculatorTest`가 지키고, 실제 갈아타기는 어댑터가 바뀐 뒤 다시 돈다.
+- **S5의 자료 구멍은 불변 트리거를 잠시 끄고 만들었다.** 001 자료 표는 UPDATE·DELETE를 트리거가 거부한다(발행된 자료는 고치지 않는다, FR-003). 로컬에서 "행이 빠진 자료 버전"을 만들 다른 길이 없어 `ALTER TABLE daily_price DISABLE TRIGGER …` → DELETE 5행 → ENABLE, 검증 뒤 임시 표에서 INSERT로 되돌렸다. 운영에서는 하지 않는 조작이고, 되돌린 뒤 행 수(522)를 확인했다.
 - 성능 숫자(대기 40ms, 실행 1.7~4.2초)는 **합성 3종목·24개월·호스트 1대**의 값이다. PD-06 한도 값의 근거는 운영 자료·운영 배치에서 다시 재야 한다.
 - 컨테이너(`--profile app`) 배치로는 돌리지 않았다. 호스트 프로세스 배치와 다른 것은 네트워크 이름과 RSS 표본뿐이라고 보지만 확인한 것은 아니다.
 
