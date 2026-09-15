@@ -149,6 +149,46 @@ class ExecutionMetricRecordIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName(
+            "같은 실행의 기록이 동시에 들어와도 행은 하나고 어느 쪽도 예외를 내지 않는다 — run_id UNIQUE + ON CONFLICT DO NOTHING")
+    void concurrentRecordsLeaveExactlyOneRow() throws Exception {
+        BacktestRun run = newRun(1);
+        started(run);
+        BacktestRun running = runRepository.findById(run.getId()).orElseThrow();
+        BacktestRun settled =
+                running.markCompleted()
+                        .withLifecycle(running.getLifecycle().finished(clock.instant()));
+
+        // 두 스레드가 각자 트랜잭션에서 같은 실행을 기록한다(테스트 풀 상한 2). 한쪽이 INSERT 를 잡고 있는 동안
+        // 다른 쪽은 UNIQUE 로 막혀 0 건이 되어야 하고, 예외로 종결을 되돌리면 안 된다.
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.List<java.util.concurrent.Future<Boolean>> results = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < 2; i++) {
+                results.add(
+                        pool.submit(
+                                () -> {
+                                    go.await();
+                                    return transactionTemplate.execute(
+                                            status -> {
+                                                recorder.record(settled, null);
+                                                return true;
+                                            });
+                                }));
+            }
+            go.countDown();
+            for (java.util.concurrent.Future<Boolean> result : results) {
+                assertThat(result.get(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(metricCount(run)).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("DLQ 종결: STARTED 없이 끝나 대기·소요·자원은 null, 결과 크기는 0, 사유는 SYSTEM_FAILURE")
     void deadLetteredRunIsRecordedWithoutDurations() {
         BacktestRun run = newRun(1);
