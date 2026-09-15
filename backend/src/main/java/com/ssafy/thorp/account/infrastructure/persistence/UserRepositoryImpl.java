@@ -4,6 +4,7 @@ import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
@@ -38,6 +39,16 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return userJpaRepository.findByEmail(email).map(UserMapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findById(Long id) {
+        return userJpaRepository.findById(id).map(UserMapper::toDomain);
+    }
+
+    @Override
+    public void updateLastLoginAt(Long id, Instant lastLoginAt) {
+        userJpaRepository.updateLastLoginAt(id, lastLoginAt);
     }
 
     @Override
