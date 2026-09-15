@@ -7,6 +7,7 @@
 import json
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -21,8 +22,10 @@ from worker.contracts.events import (
     StartedPayload,
 )
 from worker.messaging import (
+    BULK_JOBS_QUEUE,
     EVENTS_ROUTING_KEY,
     EXCHANGE,
+    FLEX_QUEUE_ORDER,
     JOBS_QUEUE,
     SCHEMA_VERSION,
     PublishError,
@@ -33,7 +36,9 @@ from worker.rabbitmq import (
     PikaEventPublisher,
     PikaJobAcknowledger,
     QueueMissingError,
+    fetch_next_job,
     require_jobs_queue,
+    run_flex_loop,
 )
 
 BACKEND_CONFIG = (
@@ -196,13 +201,15 @@ class FakeProbeConnection:
     def __init__(self, error: Exception | None) -> None:
         self._error = error
         self.closed = False
+        self.probed: list[str] = []
 
     def channel(self) -> Any:
         connection = self
 
         class Probe:
             def queue_declare(self, queue: str, passive: bool) -> None:
-                assert queue == JOBS_QUEUE and passive is True
+                assert passive is True
+                connection.probed.append(queue)
                 if connection._error is not None:
                     raise connection._error
 
@@ -231,6 +238,113 @@ def test_existing_jobs_queue_passes_without_declaring() -> None:
     connection = FakeProbeConnection(None)
     require_jobs_queue(connection)
     assert connection.closed is True
+    assert connection.probed == [JOBS_QUEUE]
+
+
+def test_flex_worker_requires_both_queues() -> None:
+    """공용 워커는 벌크·단건 큐 둘 다 있어야 시작한다. 없는 큐 이름이 오류에 실린다."""
+    connection = FakeProbeConnection(None)
+    require_jobs_queue(connection, FLEX_QUEUE_ORDER)
+    assert connection.probed == [BULK_JOBS_QUEUE, JOBS_QUEUE]
+
+    missing = FakeProbeConnection(ChannelClosedByBroker(404, "NOT_FOUND - no queue"))
+    with pytest.raises(QueueMissingError) as caught:
+        require_jobs_queue(missing, FLEX_QUEUE_ORDER)
+    assert BULK_JOBS_QUEUE in str(caught.value)
+
+
+# --- 공용(flex) 워커 소비 루프 (R-20) -------------------------------------------------
+
+
+class FakeGetChannel:
+    """``basic_get`` 만 있는 채널 대역. 큐별로 미리 넣어 둔 메시지를 순서대로 내준다."""
+
+    def __init__(self, queues: dict[str, list[bytes]]) -> None:
+        self._queues = {name: list(bodies) for name, bodies in queues.items()}
+        self.gets: list[str] = []
+        self.acked: list[int] = []
+        self._tag = 0
+
+    def basic_get(self, queue: str, auto_ack: bool) -> tuple[Any, Any, Any]:
+        assert auto_ack is False  # manual ACK — 처리·발행 확인 뒤에만 ACK 한다(계약 §7)
+        self.gets.append(queue)
+        pending = self._queues.get(queue, [])
+        if not pending:
+            return None, None, None
+        self._tag += 1
+        method = SimpleNamespace(delivery_tag=self._tag)
+        properties = SimpleNamespace(headers={"schemaVersion": SCHEMA_VERSION})
+        return method, properties, pending.pop(0)
+
+    def basic_ack(self, delivery_tag: int) -> None:
+        self.acked.append(delivery_tag)
+
+
+class RecordingConsumer:
+    """받은 본문을 기록하고 바로 ACK 한다. 실행 사이의 unacked 수를 잡아내기 위한 대역."""
+
+    def __init__(self, channel: FakeGetChannel) -> None:
+        self._channel = channel
+        self.handled: list[tuple[bytes, int]] = []
+
+    def handle(self, body: bytes, headers: Any, acknowledger: Any) -> None:
+        # 처리 시점에 채널이 내준 메시지 수와 ACK 수의 차가 1 이어야 한다 — 미리 받아 둔 것이 없다.
+        outstanding = self._channel._tag - len(self._channel.acked)
+        self.handled.append((body, outstanding))
+        acknowledger.ack()
+
+
+def _run_flex(channel: FakeGetChannel, rounds: int) -> tuple[RecordingConsumer, list[float]]:
+    consumer = RecordingConsumer(channel)
+    slept: list[float] = []
+    remaining = [rounds]
+
+    def keep_going() -> bool:
+        remaining[0] -= 1
+        return remaining[0] >= 0
+
+    run_flex_loop(channel, consumer, keep_going=keep_going, sleep=slept.append, poll_seconds=0.5)  # type: ignore[arg-type]
+    return consumer, slept
+
+
+def test_flex_takes_bulk_first_then_single() -> None:
+    channel = FakeGetChannel({BULK_JOBS_QUEUE: [b"bulk-1", b"bulk-2"], JOBS_QUEUE: [b"single-1"]})
+
+    consumer, slept = _run_flex(channel, rounds=3)
+
+    assert [body for body, _ in consumer.handled] == [b"bulk-1", b"bulk-2", b"single-1"]
+    # 벌크가 남아 있는 동안은 단건 큐를 보지 않는다. 벌크가 비어서야 단건을 집는다.
+    assert channel.gets == [BULK_JOBS_QUEUE, BULK_JOBS_QUEUE, BULK_JOBS_QUEUE, JOBS_QUEUE]
+    assert slept == []
+
+
+def test_flex_holds_at_most_one_message_at_a_time() -> None:
+    """두 큐에서 미리 받아 두지 않는다 — 처리 중인 메시지 말고는 unacked 가 없다(R-20)."""
+    channel = FakeGetChannel({BULK_JOBS_QUEUE: [b"b"], JOBS_QUEUE: [b"s1", b"s2"]})
+
+    consumer, _ = _run_flex(channel, rounds=3)
+
+    assert [outstanding for _, outstanding in consumer.handled] == [1, 1, 1]
+    assert channel.acked == [1, 2, 3]
+
+
+def test_flex_waits_when_both_queues_are_empty() -> None:
+    channel = FakeGetChannel({BULK_JOBS_QUEUE: [], JOBS_QUEUE: []})
+
+    consumer, slept = _run_flex(channel, rounds=2)
+
+    assert consumer.handled == []
+    # 매 회 두 큐를 순서대로 확인한 뒤 폴링 간격만큼 기다린다 — 빈 큐를 쉼 없이 두드리지 않는다.
+    assert channel.gets == [BULK_JOBS_QUEUE, JOBS_QUEUE] * 2
+    assert slept == [0.5, 0.5]
+
+
+def test_fetch_next_job_returns_queue_name() -> None:
+    channel = FakeGetChannel({BULK_JOBS_QUEUE: [], JOBS_QUEUE: [b"s"]})
+    fetched = fetch_next_job(channel)  # type: ignore[arg-type]
+    assert fetched is not None
+    assert fetched[0] == JOBS_QUEUE and fetched[3] == b"s"
+    assert fetch_next_job(channel) is None  # type: ignore[arg-type]
 
 
 def test_queue_missing_message_points_at_the_backend() -> None:

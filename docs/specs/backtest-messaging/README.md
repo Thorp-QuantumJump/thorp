@@ -49,8 +49,10 @@ Backend ── CANCEL ──▶ [backtest.control] (fanout) ──▶ 모든 Wor
 | 항목 | 이름 | 속성 |
 |---|---|---|
 | Exchange | `backtest` | direct, durable |
-| 작업 큐 | `backtest.jobs` | **quorum**, `x-delivery-limit=1`, DLX `backtest.dlx`, dead-letter key `backtest.job.dead` |
-| 작업 binding | `backtest` → `backtest.jobs` | routing key `backtest.job.requested` |
+| 작업 큐(단건) | `backtest.jobs` | **quorum**, `x-delivery-limit=1`, DLX `backtest.dlx`, dead-letter key `backtest.job.dead`. `SINGLE` 실행 |
+| 작업 binding(단건) | `backtest` → `backtest.jobs` | routing key `backtest.job.requested` |
+| 작업 큐(벌크) | `backtest.jobs.bulk` | 단건 큐와 **같은 속성**(quorum, `x-delivery-limit=1`, 같은 DLX·dead-letter key). `SEARCH_BUNDLE`·`REGIME_SECTOR`·`REGIME_TOTAL` 실행(spec 004 R-20) |
+| 작업 binding(벌크) | `backtest` → `backtest.jobs.bulk` | routing key `backtest.job.requested.bulk` |
 | 이벤트 큐 | `backtest.events` | durable, DLX `backtest.dlx`, dead-letter key `backtest.event.dead` |
 | 이벤트 binding | `backtest` → `backtest.events` | routing key `backtest.event` |
 | 제어 exchange | `backtest.control` | **fanout**, durable. 워커마다 exclusive·auto-delete 큐를 바인딩한다(T011) |
@@ -59,6 +61,14 @@ Backend ── CANCEL ──▶ [backtest.control] (fanout) ──▶ 모든 Wor
 | 이벤트 DLQ | `backtest.events.dlq` | binding key `backtest.event.dead` |
 
 선언은 백엔드 애플리케이션이 한다(Spring `Declarables`, `BacktestRabbitConfig`). 인프라가 미리 만들어 두어도 같은 속성이면 충돌하지 않는다.
+
+**작업 큐가 둘인 이유(spec 004 R-20).** 사람이 결과를 기다리는 단건과 후보를 순차 공급하는 배치(자동 탐색·경제환경 파생)가 한 큐를 쓰면 어느 한도
+정책도 성립하지 않았다 — 배치를 접수 한도에 세면 007 묶음이 영구 정지하고, 세지 않으면 배치가 큐를 채우는 동안 단건만 429를 받았다. 백엔드는
+`backtest_run.execution_type`으로 routing key를 고르고(최초 발행·재발행 공통), **메시지 본문·헤더(`schemaVersion`·`publishAttempt`)·DLQ는 두 큐가
+같다.** 워커는 `WORKER_ROLE`로 역할이 갈린다: `single`은 `backtest.jobs`만 `basic_consume`(prefetch 1), `flex`는 `backtest.jobs.bulk` →
+`backtest.jobs` 순서로 `basic_get` 한 건씩 꺼내고 둘 다 비면 1초 기다린다. quorum 큐는 global QoS prefetch와 `x-max-priority`를 지원하지
+않으므로 "두 큐를 구독하되 합쳐서 1건"이나 "한 큐에 우선순위"는 쓸 수 없다. 단건 큐 이름을 `backtest.jobs`로 유지한 것은 개명이 quorum 큐 교체
+절차(아래 문단)를 다시 요구하기 때문이다.
 `x-delivery-limit=1`은 워커가 죽어 requeue된 작업을 **한 번만** 다시 배달하고 그 다음은 DLQ로 보낸다(spec 004 FR-023 자동 재시도 1회, research R-06).
 DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영자가 재처리한다.
 

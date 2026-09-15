@@ -4,11 +4,20 @@
 아니라 백엔드와 합의한 **계약 상수**이므로 여기가 아니라 ``worker.messaging`` 에 둔다.
 """
 
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+#: 워커 역할(spec 004 R-20). ``single`` 은 단건 큐만 push 로 소비하고, ``flex`` 는 벌크 큐를 먼저
+#: 확인한 뒤 비어 있으면 단건 큐를 pull 로 집는다. 큐 이름은 계약 상수(``worker.messaging``)다.
+WorkerRole = Literal["single", "flex"]
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # compose 가 WORKER_ROLE 로 주입한다. 기본은 단건 전용 — 값이 없으면 큐 분리 전과 같이 동작한다.
+    worker_role: WorkerRole = "single"
 
     # docker-compose.dev.yml 이 주입하는 이름·형태를 그대로 받는다(단일 AMQP URL).
     # host/port/user/password를 따로 받지 않는다.
