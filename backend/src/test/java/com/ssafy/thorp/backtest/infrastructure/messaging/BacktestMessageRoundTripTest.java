@@ -69,6 +69,9 @@ class BacktestMessageRoundTripTest {
         assertThat(event.sequence()).isZero();
         assertThat(event.payload().startedAt()).isEqualTo("2026-09-07T01:00:00Z");
         assertThat(event.payload().stage()).isEqualTo(ProcessingStage.PREPARING_DATA);
+        // 어느 큐·어느 워커가 집었나(R-20, T012). 선택 필드지만 픽스처는 채워 둔다.
+        assertThat(event.payload().resource().queue()).isEqualTo("backtest.jobs");
+        assertThat(event.payload().resource().role()).isEqualTo("single");
     }
 
     @Test

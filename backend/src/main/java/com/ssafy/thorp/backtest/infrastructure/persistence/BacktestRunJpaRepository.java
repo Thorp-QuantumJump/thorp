@@ -100,6 +100,19 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Query("update BacktestRunJpaEntity r set r.lastEventAt = :at where r.id = :id")
     int markEventReceived(@Param("id") Long id, @Param("at") Instant at);
 
+    /**
+     * 어느 큐·어느 워커가 집었나(R-20·T012). 엔티티에 매핑하지 않은 두 컬럼이라 native 로 쓴다 — 읽는 쪽도 측정 기록기 하나뿐이고 그쪽도 native
+     * 다. 다른 경로와 컬럼이 겹치지 않는다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+            value =
+                    "UPDATE backtest_run SET served_queue = :queue, worker_role = :role"
+                            + " WHERE id = :id",
+            nativeQuery = true)
+    int markWorkerInfo(
+            @Param("id") Long id, @Param("queue") String queue, @Param("role") String role);
+
     /** 정체 감지: RUNNING 인데 마지막 신호가 오래된 실행. 아직 CANCEL 을 보내지 않은 것만. */
     @Query(
             "select r from BacktestRunJpaEntity r where r.status = :status"

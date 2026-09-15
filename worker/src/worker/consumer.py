@@ -43,6 +43,7 @@ from worker.contracts.events import (
 )
 from worker.control import CancelRegistry
 from worker.messaging import (
+    JOBS_QUEUE,
     SCHEMA_VERSION,
     ContractViolation,
     EventPublisher,
@@ -143,12 +144,15 @@ class _EventStream:
     def sequence(self) -> int:
         return self._sequence
 
-    def started(self) -> None:
+    def started(self, queue: str, role: str) -> None:
         now = self._clock()
         payload = StartedPayload(
             started_at=now,
             stage=ProcessingStage.PREPARING_DATA,
-            resource=ProcessInfo(pid=os.getpid(), hostname=socket.gethostname()),
+            # queue·role 은 백엔드 측정 기록용이다(R-20·T012) — flex 워커가 단건을 도운 비율의 근거.
+            resource=ProcessInfo(
+                pid=os.getpid(), hostname=socket.gethostname(), queue=queue, role=role
+            ),
         )
         self._emit(BacktestEventType.STARTED, payload, now)
 
@@ -242,24 +246,31 @@ class BacktestJobConsumer:
         registry: CancelRegistry | None = None,
         new_id: IdFactory = _new_id,
         clock: Clock = utc_now,
+        role: str = "single",
     ) -> None:
         self._engine = engine
         self._publisher = publisher
         self._registry = registry
         self._new_id = new_id
         self._clock = clock
+        self._role = role
 
     def handle(
         self,
         body: bytes | str,
         headers: Mapping[str, Any] | None,
         acknowledger: JobAcknowledger,
+        *,
+        queue: str = JOBS_QUEUE,
     ) -> None:
         """수신 → 역직렬화 → 실행 → 발행 → ACK. 오류 3분류가 여기서 갈린다(계약 §7).
 
         같은 ``runId`` 가 재전달되면 그냥 다시 실행하고 ``executionId`` 만 새로 발급한다.
         워커는 DB에 쓰지 않아(계약 §1) 처리 이력을 남길 곳이 없다. 중복 방어는 계약 §7이
         백엔드 결과 Consumer에 요구하며 ``eventId`` 가 그 키다.
+
+        ``queue`` 는 이 메시지를 꺼낸 큐다. STARTED 의 ``resource.queue`` 로 나가 백엔드 측정
+        기록이 어느 큐의 일이었는지 안다(R-20). 단건 전용 워커는 기본값 그대로다.
         """
         try:
             engine_input = parse_job(body, headers)
@@ -273,7 +284,7 @@ class BacktestJobConsumer:
         run_id = engine_input.run.run_id
         execution_id = self._new_id()
         try:
-            output = self._execute(engine_input, run_id, execution_id)
+            output = self._execute(engine_input, run_id, execution_id, queue)
         except PublishError as exc:
             logger.error(
                 "event publication failed for runId=%s executionId=%s; not acking: %s",
@@ -315,14 +326,16 @@ class BacktestJobConsumer:
             output.run.status,
         )
 
-    def _execute(self, engine_input: EngineInput, run_id: str, execution_id: str) -> EngineOutput:
+    def _execute(
+        self, engine_input: EngineInput, run_id: str, execution_id: str, queue: str
+    ) -> EngineOutput:
         stream = _EventStream(self._publisher, run_id, execution_id, self._new_id, self._clock)
         # 활성 실행 등록은 STARTED 보다 앞선다 — STARTED 에 대한 답으로 오는 CANCEL 을 받아야
         # 한다(R-04).
         if self._registry is not None:
             self._registry.begin(run_id)
         try:
-            stream.started()
+            stream.started(queue, self._role)
             batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
             output = self._engine.run(engine_input, batcher.on_progress)
             batcher.flush()

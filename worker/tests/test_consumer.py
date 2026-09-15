@@ -189,6 +189,9 @@ def test_progress_carries_stage_and_last_trading_date() -> None:
     started = publisher.of_type(BacktestEventType.STARTED)[0]
     assert started.payload.stage is ProcessingStage.PREPARING_DATA
     assert started.payload.resource is not None and started.payload.resource.pid is not None
+    # 어느 큐·어느 워커가 집었나(R-20·T012). 기본은 단건 전용 워커가 단건 큐에서 집은 것이다.
+    assert started.payload.resource.queue == "backtest.jobs"
+    assert started.payload.resource.role == "single"
 
 
 def test_progress_points_are_not_republished() -> None:

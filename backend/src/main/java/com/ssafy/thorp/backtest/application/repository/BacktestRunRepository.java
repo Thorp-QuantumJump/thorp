@@ -58,6 +58,12 @@ public interface BacktestRunRepository {
      */
     void recordEventReceived(Long runId, Instant at);
 
+    /**
+     * 이 실행을 어느 큐에서 어느 역할의 워커가 집었는지(STARTED {@code resource.queue}·{@code role}, R-20·T012). 두 컬럼만
+     * 쓴다 — 측정 기록이 종결 때 복사한다. 공용(flex) 워커가 단건을 도운 비율은 이 값 없이 셀 수 없다.
+     */
+    void recordWorkerInfo(Long runId, String queue, String role);
+
     /** RUNNING 인데 마지막 신호가 {@code since} 보다 오래된 실행. 아직 CANCEL 을 보내지 않은 것만(R-19 정체 감지). */
     List<BacktestRun> findStaleRunning(Instant since, int limit);
 

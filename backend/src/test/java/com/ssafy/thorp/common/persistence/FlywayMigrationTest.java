@@ -142,7 +142,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "finished_at",
                         // 정체 판정 기준과 취소 사유 (T014, R-19)
                         "last_event_at",
-                        "cancel_reason");
+                        "cancel_reason",
+                        // 어느 큐·어느 워커가 집었나 (T012, R-20). 측정 기록으로 복사된다
+                        "served_queue",
+                        "worker_role");
     }
 
     /**
@@ -166,7 +169,10 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "cancel_requested_at",
                         // T014: 정체 판정 기준과 취소 사유(R-19)
                         "last_event_at",
-                        "cancel_reason");
+                        "cancel_reason",
+                        // T012: 매핑하지 않고 native 로만 쓰는 두 컬럼(R-20)
+                        "served_queue",
+                        "worker_role");
     }
 
     @Test

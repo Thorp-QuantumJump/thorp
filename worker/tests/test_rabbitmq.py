@@ -286,11 +286,13 @@ class RecordingConsumer:
     def __init__(self, channel: FakeGetChannel) -> None:
         self._channel = channel
         self.handled: list[tuple[bytes, int]] = []
+        self.queues: list[str] = []
 
-    def handle(self, body: bytes, headers: Any, acknowledger: Any) -> None:
+    def handle(self, body: bytes, headers: Any, acknowledger: Any, *, queue: str) -> None:
         # 처리 시점에 채널이 내준 메시지 수와 ACK 수의 차가 1 이어야 한다 — 미리 받아 둔 것이 없다.
         outstanding = self._channel._tag - len(self._channel.acked)
         self.handled.append((body, outstanding))
+        self.queues.append(queue)
         acknowledger.ack()
 
 
@@ -313,6 +315,8 @@ def test_flex_takes_bulk_first_then_single() -> None:
     consumer, slept = _run_flex(channel, rounds=3)
 
     assert [body for body, _ in consumer.handled] == [b"bulk-1", b"bulk-2", b"single-1"]
+    # 어느 큐에서 꺼냈는지를 소비자에 알린다 — STARTED resource.queue 로 측정 기록에 남는다(T012).
+    assert consumer.queues == [BULK_JOBS_QUEUE, BULK_JOBS_QUEUE, JOBS_QUEUE]
     # 벌크가 남아 있는 동안은 단건 큐를 보지 않는다. 벌크가 비어서야 단건을 집는다.
     assert channel.gets == [BULK_JOBS_QUEUE, BULK_JOBS_QUEUE, BULK_JOBS_QUEUE, JOBS_QUEUE]
     assert slept == []

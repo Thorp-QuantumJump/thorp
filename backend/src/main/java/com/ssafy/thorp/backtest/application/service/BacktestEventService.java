@@ -100,6 +100,12 @@ public class BacktestEventService {
                 started.withLifecycle(started.getLifecycle().started(clock.instant())));
         // 워커가 살아 있다는 신호. 전용 UPDATE 라 상태 전이와 컬럼이 겹치지 않는다(R-19).
         jobRepository.recordEventReceived(job.getId(), clock.instant());
+        StartedPayload.ProcessInfo resource = event.payload().resource();
+        if (resource != null && (resource.queue() != null || resource.role() != null)) {
+            // 어느 큐에서 어느 워커가 집었나(R-20). 종결 때 측정 기록으로 복사된다 — flex 가 단건을 도운
+            // 비율의 유일한 근거다(T012).
+            jobRepository.recordWorkerInfo(job.getId(), resource.queue(), resource.role());
+        }
         if (job.getLifecycle().cancelRequestedAt() != null) {
             // 취소를 보낸 실행이 다시 STARTED 를 보냈다 = 재전달이나 중복 실행이다(R-06). 워커는 실행이
             // 끝날 때 레지스트리의 취소 표시를 지우므로 앞서 보낸 CANCEL 은 이 실행에 닿지 않는다 —

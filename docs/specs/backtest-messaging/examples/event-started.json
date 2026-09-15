@@ -11,7 +11,9 @@
     "stage": "PREPARING_DATA",
     "resource": {
       "pid": 4242,
-      "hostname": "worker-1"
+      "hostname": "worker-1",
+      "queue": "backtest.jobs",
+      "role": "single"
     }
   }
 }
