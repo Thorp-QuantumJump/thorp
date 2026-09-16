@@ -96,12 +96,21 @@ public class StrategyRegistryQueryService {
         return warmup == null ? 0 : warmup.evaluate(defaults);
     }
 
+    /**
+     * 기본 설정. <b>조건 밖 축은 넣지 않는다</b>(spec FR-003) — 기본 선정 방식이 '상위 몇 개'면 임계값·상위 비율은 기본 설정에 없고, 그 축을
+     * 참조하는 규칙도 판정하지 않는다. 조건은 결정 축의 값에 달려 있어 조건 없는 축부터 채운 뒤 조건이 참이 된 축을 더한다.
+     */
     private static Map<String, Object> defaults(StrategyRegistration registration) {
         Map<String, Object> values = new LinkedHashMap<>();
-        for (ParameterAxis axis : registration.axes()) {
-            // 값에 null을 담지 않는다(포트 계약). 기본값이 비어 있으면 그 축을 조합에서 뺀다.
-            if (axis.defaultValue() != null) {
-                values.put(axis.name(), axis.defaultValue());
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (ParameterAxis axis : registration.applicableAxes(values)) {
+                // 값에 null을 담지 않는다(포트 계약). 기본값이 비어 있으면 그 축을 조합에서 뺀다.
+                if (axis.defaultValue() != null && !values.containsKey(axis.name())) {
+                    values.put(axis.name(), axis.defaultValue());
+                    changed = true;
+                }
             }
         }
         return values;
@@ -136,7 +145,12 @@ public class StrategyRegistryQueryService {
                         ? null
                         : new StrategyRegistryResult.RangeView(
                                 allowedRange.min(), allowedRange.max(), allowedRange.step()),
-                axis.defaultValue());
+                axis.defaultValue(),
+                axis.appliesWhen() == null
+                        ? null
+                        : new StrategyRegistryResult.AxisConditionView(
+                                axis.appliesWhen().axis(), axis.appliesWhen().value()),
+                axis.termId());
     }
 
     private List<StrategyRegistryResult.ChoiceView> toChoices(

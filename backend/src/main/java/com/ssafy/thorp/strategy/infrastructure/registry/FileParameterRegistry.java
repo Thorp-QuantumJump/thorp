@@ -3,6 +3,7 @@ package com.ssafy.thorp.strategy.infrastructure.registry;
 import com.ssafy.thorp.strategy.application.port.AllowedRange;
 import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
 import com.ssafy.thorp.strategy.application.port.AnalysisConditionRegistry;
+import com.ssafy.thorp.strategy.application.port.AxisCondition;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
@@ -152,14 +153,23 @@ public class FileParameterRegistry implements ParameterRegistryPort {
         for (Map<String, Object> axis : list(strategy, "axes")) {
             axes.add(toAxis(strategyId, axis));
         }
-        return new StrategyRegistration(
-                strategyId,
-                string(strategy, "name"),
-                string(strategy, "description"),
-                axes,
-                bool(strategy, "active"),
-                toWarmup(strategyId, map(strategy, "warmup")),
-                string(strategy, "targetWeightSource"));
+        StrategyRegistration registration;
+        try {
+            registration =
+                    new StrategyRegistration(
+                            strategyId,
+                            string(strategy, "name"),
+                            string(strategy, "description"),
+                            axes,
+                            bool(strategy, "active"),
+                            toWarmup(strategyId, map(strategy, "warmup")),
+                            string(strategy, "targetWeightSource"));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "invalid strategy registration: " + strategyId + " - " + e.getMessage(), e);
+        }
+        requireConditionValues(registration);
+        return registration;
     }
 
     private static ParameterAxis toAxis(String strategyId, Map<String, Object> axis) {
@@ -182,7 +192,46 @@ public class FileParameterRegistry implements ParameterRegistryPort {
                 string(axis, "unit"),
                 searchValues,
                 defaultValue,
-                allowedRange);
+                allowedRange,
+                toCondition(where, map(axis, "appliesWhen")),
+                string(axis, "termId"));
+    }
+
+    /**
+     * 축의 적용 조건(spec FR-003). 결정 축의 값이 그 축의 허용 범위 안인지는 전략의 축이 모두 모인 뒤 {@link
+     * #requireConditionValues}가 본다.
+     */
+    private static AxisCondition toCondition(String where, Map<String, Object> condition) {
+        if (condition == null) {
+            return null;
+        }
+        try {
+            return new AxisCondition(string(condition, "axis"), condition.get("value"));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new IllegalStateException(
+                    "invalid appliesWhen: " + where + " - " + e.getMessage(), e);
+        }
+    }
+
+    /** 조건이 가리키는 값이 결정 축의 후보에 없으면 그 축은 어떤 설정에서도 열리지 않는다. 등록표가 잘못 적힌 것이라 기동에서 막는다(data-model §3). */
+    private static void requireConditionValues(StrategyRegistration registration) {
+        for (ParameterAxis axis : registration.axes()) {
+            AxisCondition condition = axis.appliesWhen();
+            if (condition == null) {
+                continue;
+            }
+            ParameterAxis decider = registration.axis(condition.axis()).orElseThrow();
+            if (decider.allowedRange() == null
+                    || !decider.allowedRange().contains(condition.value())) {
+                throw new IllegalStateException(
+                        "appliesWhen.value is outside the deciding axis allowedRange: "
+                                + registration.strategyId()
+                                + "/"
+                                + axis.name()
+                                + " -> "
+                                + condition);
+            }
+        }
     }
 
     private static void requireWithinAllowedRange(

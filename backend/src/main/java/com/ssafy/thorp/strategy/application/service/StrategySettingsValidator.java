@@ -53,7 +53,7 @@ public class StrategySettingsValidator {
     public record Verified(int warmupTradingDays, String registryVersion) {}
 
     /**
-     * @param parameters 축 이름 → 값. 등록표에 등록된 축과 정확히 같은 집합이어야 한다
+     * @param parameters 축 이름 → 값. 등록표에 등록된 축 가운데 <b>이 설정에서 뜻을 갖는 축</b>과 정확히 같은 집합이어야 한다
      * @param registryVersion 화면이 읽은 등록표 버전
      * @param universeSize 이 요청이 고정한 섹터 후보 집합의 크기. 등록표 규칙이 쓴다
      * @param initialAmount 시작 금액
@@ -103,7 +103,10 @@ public class StrategySettingsValidator {
      * — 오타 난 축 이름이 조용히 버려지면 사용자는 자기가 바꾼 설정이 반영된 줄 안다.
      */
     private void requireSameAxes(StrategyRegistration registration, Map<String, Object> settings) {
-        Set<String> registered = new LinkedHashSet<>(registration.axisNames());
+        // 조건 밖 축은 등록표가 "이 설정에서는 쓰지 않는다"고 정한 축이다. 빠져도 결함이 아니고, 실려 와도 사용자가 정한
+        // 값이 아니라 남은 값이라 받지 않는다(spec FR-003). 조건은 등록표가 정하고 여기서 축 이름을 해석하지 않는다.
+        Set<String> registered = new LinkedHashSet<>();
+        registration.applicableAxes(settings).forEach(axis -> registered.add(axis.name()));
         List<String> unknown = new ArrayList<>();
         for (String name : settings.keySet()) {
             if (!registered.contains(name)) {
@@ -125,7 +128,7 @@ public class StrategySettingsValidator {
     /** 축마다 값이 허용 범위 안인가. 판정은 등록표의 {@code allowedRange}가 하고 여기서 범위를 다시 적지 않는다. */
     private void requireValuesInRange(
             StrategyRegistration registration, Map<String, Object> settings) {
-        for (ParameterAxis axis : registration.axes()) {
+        for (ParameterAxis axis : registration.applicableAxes(settings)) {
             Object value = settings.get(axis.name());
             if (axis.allowedRange() == null || !axis.allowedRange().contains(value)) {
                 throw StrategySettingsRejectedException.valueOutOfRange(

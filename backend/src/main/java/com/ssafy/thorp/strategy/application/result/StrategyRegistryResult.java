@@ -105,6 +105,8 @@ public record StrategyRegistryResult(
      * @param choices 목록형일 때만. 고를 수 없는 후보도 {@code selectable: false}로 남는다
      * @param range 입력형일 때만
      * @param defaultValue 등록표의 기본 시작값. 추천이나 최적값으로 표시하지 않는다(원칙 III)
+     * @param appliesWhen 이 축이 뜻을 갖는 조건. 없으면 늘 그린다. 화면은 조건이 거짓인 축을 그리지도 요청에 싣지도 않는다(spec FR-003)
+     * @param termId 013 용어 설명의 식별자. 없으면 도움말을 붙이지 않는다(spec FR-016)
      */
     public record AxisView(
             String name,
@@ -114,12 +116,17 @@ public record StrategyRegistryResult(
             InputType inputType,
             List<ChoiceView> choices,
             RangeView range,
-            Object defaultValue) {
+            Object defaultValue,
+            AxisConditionView appliesWhen,
+            String termId) {
 
         public AxisView {
             choices = choices == null ? null : List.copyOf(choices);
         }
     }
+
+    /** 축의 적용 조건. 결정 축 이름과 그 값이며 화면은 {@code equals}로만 견준다. */
+    public record AxisConditionView(String axis, Object value) {}
 
     /** 축을 목록으로 그릴지 입력칸으로 그릴지. 허용 범위의 형태가 정하며 축의 의미는 보지 않는다(계약 §1). */
     public enum InputType {

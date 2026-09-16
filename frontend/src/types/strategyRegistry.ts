@@ -103,6 +103,18 @@ export type WarmupRule = {
   sum: (string | number)[]
 }
 
+/**
+ * 축이 뜻을 갖는 조건(FR-003, 계약 §1 `appliesWhen`).
+ *
+ * 같은 전략의 `axis`가 `value`일 때만 이 축을 쓴다. 화면은 조건이 거짓인 축을 그리지도 요청에 싣지도
+ * 않고 기본값도 채우지 않는다. **조건은 등록표가 정하고 화면은 `equals`로 견줄 뿐 축 이름을 해석하지
+ * 않는다** — 선정 방식과 선정 수의 대응을 화면이 알면 그것이 FR-005가 막는 전략 지식의 중복이다.
+ */
+export type AxisCondition = {
+  axis: string
+  value: AxisValue
+}
+
 /** 목록형 축의 후보 하나. `label`은 등록표가 소유하며 화면이 만들지 않는다. */
 export type ChoiceView = {
   value: AxisValue
@@ -136,6 +148,13 @@ export type AxisView = {
   range?: RangeView
   /** 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다. */
   defaultValue: AxisValue
+  /** 없으면 늘 쓰는 축이다. */
+  appliesWhen?: AxisCondition
+  /**
+   * 013 용어 설명의 식별자(FR-016). 있으면 이 항목 옆에 도움말을 붙인다. **화면이 축 이름으로
+   * 식별자를 고르지 않게 하는 자리다.**
+   */
+  termId?: string
 }
 
 /**

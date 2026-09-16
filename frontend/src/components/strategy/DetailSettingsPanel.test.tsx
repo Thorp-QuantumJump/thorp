@@ -2,15 +2,18 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { GlossaryLookup } from '@/api/learningGlossary'
 import { useStrategySettings } from '@/hooks/useStrategySettings'
 import {
+  conditionalStrategy,
   plainStrategy,
   registryFixture,
   selectableStrategy,
   unselectableStrategy,
+  withConditionalStrategy,
 } from '@/test/strategyRegistryFixtures'
-import type { StrategyView } from '@/types/strategyRegistry'
+import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
 import { DetailSettingsPanel } from './DetailSettingsPanel'
 import type { TargetWeightRow } from './ReadOnlyTargetWeights'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
@@ -25,13 +28,36 @@ import { SettingsStatusBadge } from './SettingsStatusBadge'
 
 const UNIVERSE_SIZE = 6
 
+const fetchGlossaryEntry = vi.hoisted(() =>
+  vi.fn<(termId: string, signal?: AbortSignal) => Promise<GlossaryLookup>>(),
+)
+
+vi.mock('@/api/learningGlossary', () => ({ fetchGlossaryEntry }))
+
+beforeAll(() => {
+  // Popover의 위치 계산이 크기 관찰을 쓴다. jsdom에는 없다.
+  if (!('ResizeObserver' in globalThis)) {
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver
+  }
+})
+
 const weights: TargetWeightRow[] = [
   { sectorId: 'SEC-SYN-A', name: '합성 섹터 가', weightTenths: 600 },
   { sectorId: 'SEC-SYN-B', name: '합성 섹터 나', weightTenths: 400 },
 ]
 
-function Harness({ strategy }: { strategy: StrategyView }) {
-  const settings = useStrategySettings(registryFixture, UNIVERSE_SIZE)
+function Harness({
+  strategy,
+  registry = registryFixture,
+}: {
+  strategy: StrategyView
+  registry?: RegistryResponse
+}) {
+  const settings = useStrategySettings(registry, UNIVERSE_SIZE)
   const { ready, select } = settings
 
   useEffect(() => {
@@ -57,11 +83,11 @@ function Harness({ strategy }: { strategy: StrategyView }) {
   )
 }
 
-async function renderOpened(strategy: StrategyView) {
+async function renderOpened(strategy: StrategyView, registry?: RegistryResponse) {
   const user = userEvent.setup()
   render(
     <MemoryRouter>
-      <Harness strategy={strategy} />
+      <Harness strategy={strategy} registry={registry} />
     </MemoryRouter>,
   )
   const toggle = await screen.findByRole('button', { name: '상세 설정' })
@@ -76,6 +102,7 @@ let xhrSpy: ReturnType<typeof vi.spyOn>
 
 beforeEach(() => {
   window.sessionStorage.clear()
+  fetchGlossaryEntry.mockReset()
   fetchSpy = vi.spyOn(globalThis, 'fetch')
   xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
 })
@@ -185,6 +212,82 @@ describe('DetailSettingsPanel', () => {
 
     expect(screen.queryByRole('textbox')).toBeNull()
     expect(screen.getByRole('alert').textContent).toBe(selectableStrategy.validationRules[0].detail)
+  })
+
+  it('조건 밖 축은 그리지 않고, 결정 축을 바꾸면 그 자리에서 바뀐다', async () => {
+    const [gate, leftGap, rightPick] = conditionalStrategy.axes
+    const user = await renderOpened(conditionalStrategy, withConditionalStrategy())
+
+    expect(screen.getByText(leftGap.label)).not.toBeNull()
+    expect(screen.queryByText(rightPick.label)).toBeNull()
+    expect(screen.getByRole('status').textContent).toContain('기본 설정')
+
+    await user.click(screen.getByRole('radio', { name: '오른쪽' }))
+
+    expect(screen.queryByText(leftGap.label)).toBeNull()
+    expect(screen.getByText(rightPick.label)).not.toBeNull()
+    // 결정 축을 바꿨으니 기본 설정이 아니다. 새로 열린 축 자체는 기본값에서 시작한다.
+    expect(screen.getByRole('status').textContent).toContain('설정을 바꿈')
+    expect((screen.getByRole('radio', { name: '하나' }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByRole('group', { name: new RegExp(gate.label) })).not.toBeNull()
+  })
+
+  it('조건 밖으로 밀려난 축의 규칙 위반은 함께 사라진다', async () => {
+    const [, leftGap] = conditionalStrategy.axes
+    const rule = conditionalStrategy.validationRules[0]
+    const user = await renderOpened(conditionalStrategy, withConditionalStrategy())
+
+    const gap = screen.getByRole('textbox', { name: new RegExp(leftGap.label) })
+    await user.clear(gap)
+    await user.type(gap, '9')
+    expect(screen.getByRole('alert').textContent).toBe(rule.detail)
+
+    await user.click(screen.getByRole('radio', { name: '오른쪽' }))
+
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('등록표가 termId를 준 축에만 도움말이 붙고, 열면 013 원본 문구가 보이며 값은 그대로 남는다', async () => {
+    const [gate, leftGap] = conditionalStrategy.axes
+    fetchGlossaryEntry.mockResolvedValue({
+      status: 'ready',
+      entry: {
+        termId: 'synthetic-gate',
+        label: '문',
+        sentence: '문은 어느 쪽 값을 쓸지 정하는 용어다.',
+        articleId: 'synthetic-article',
+        articleTitle: '합성 글',
+      },
+    })
+    const user = await renderOpened(conditionalStrategy, withConditionalStrategy())
+
+    expect(screen.getByRole('button', { name: `${gate.label} 도움말` })).not.toBeNull()
+    expect(screen.queryByRole('button', { name: `${leftGap.label} 도움말` })).toBeNull()
+
+    const gap = screen.getByRole('textbox', { name: new RegExp(leftGap.label) })
+    await user.clear(gap)
+    await user.type(gap, '5')
+
+    await user.click(screen.getByRole('button', { name: `${gate.label} 도움말` }))
+    expect(fetchGlossaryEntry).toHaveBeenCalledWith('synthetic-gate', expect.any(AbortSignal))
+    expect(await screen.findByText('문은 어느 쪽 값을 쓸지 정하는 용어다.')).not.toBeNull()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByText('문은 어느 쪽 값을 쓸지 정하는 용어다.')).toBeNull()
+    expect((screen.getByRole('textbox', { name: new RegExp(leftGap.label) }) as HTMLInputElement).value).toBe('5')
+    expect(screen.getByRole('status').textContent).toContain('설정을 바꿈')
+  })
+
+  it('대응하는 설명이 없으면 도움말은 설명 준비 중만 보인다', async () => {
+    const [gate] = conditionalStrategy.axes
+    fetchGlossaryEntry.mockResolvedValue({ status: 'notReady' })
+    const user = await renderOpened(conditionalStrategy, withConditionalStrategy())
+
+    await user.click(screen.getByRole('button', { name: `${gate.label} 도움말` }))
+
+    expect(await screen.findByText('설명 준비 중')).not.toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('목록형 항목을 바꾸면 기본 설정 표시가 바뀌고 항목별 복원으로 돌아온다', async () => {

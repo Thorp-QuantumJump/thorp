@@ -146,6 +146,73 @@ export const plainStrategy: StrategyView = {
   validationRules: [],
 }
 
+/**
+ * 조건부 축과 용어 식별자를 가진 전략(계약 §1 `appliesWhen`·`termId`).
+ *
+ * <p>`gate`가 `LEFT`면 `leftGap`만, `RIGHT`면 `rightPick`만 뜻이 있다. 실제 등록표의 선정 방식과 선정 수·
+ * 임계값의 관계가 이 형태이며, 화면이 축 이름이 아니라 조건만 보고 가른다는 것을 지어낸 이름이 증명한다.
+ * `registryFixture`에는 넣지 않는다 — 카드 수를 세는 기존 검사를 흔들지 않기 위해서다. 필요한 검사가
+ * `withConditionalStrategy`로 한 벌을 만든다.
+ */
+export const conditionalStrategy: StrategyView = {
+  strategyId: 'GATED_SPLIT',
+  name: '문에 따라 나누기',
+  description: '고른 문 쪽의 값만 쓴다.',
+  targetWeightSource: 'COMPUTED',
+  selectable: true,
+  warmupTradingDays: 0,
+  axes: [
+    {
+      name: 'gate',
+      label: '문',
+      description: '어느 쪽 값을 쓸지 정한다.',
+      termId: 'synthetic-gate',
+      inputType: 'CHOICE',
+      choices: [
+        { value: 'LEFT', label: '왼쪽', selectable: true },
+        { value: 'RIGHT', label: '오른쪽', selectable: true },
+      ],
+      defaultValue: 'LEFT',
+    },
+    {
+      name: 'leftGap',
+      label: '왼쪽 간격',
+      description: '문이 왼쪽일 때 쓰는 간격이다.',
+      unit: '칸',
+      inputType: 'NUMBER',
+      range: { min: 1, max: 9, step: 1 },
+      defaultValue: 3,
+      appliesWhen: { axis: 'gate', value: 'LEFT' },
+    },
+    {
+      name: 'rightPick',
+      label: '오른쪽 고르기',
+      description: '문이 오른쪽일 때 고를 수다.',
+      inputType: 'CHOICE',
+      choices: [
+        { value: 1, label: '하나', selectable: true },
+        { value: 2, label: '둘', selectable: true },
+      ],
+      defaultValue: 1,
+      appliesWhen: { axis: 'gate', value: 'RIGHT' },
+    },
+  ],
+  validationRules: [
+    {
+      code: 'LEFT_GAP_EXCEEDS_UNIVERSE',
+      detail: '왼쪽 간격이 후보 섹터 집합의 크기보다 큽니다.',
+      left: { axis: 'leftGap' },
+      operator: 'GREATER_THAN',
+      right: { context: 'UNIVERSE_SIZE' },
+    },
+  ],
+}
+
+/** 기본 한 벌에 조건부 전략을 더한 등록표. */
+export function withConditionalStrategy(base: RegistryResponse = registryFixture): RegistryResponse {
+  return { ...base, strategies: [...base.strategies, conditionalStrategy] }
+}
+
 /** 등록표 한 벌. 응답의 `strategies` 순서가 곧 카드 순서다. */
 export const registryFixture: RegistryResponse = {
   registryVersion: 'TEST-REGISTRY-003-1',

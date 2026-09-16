@@ -82,6 +82,73 @@ class StrategyRegistryQueryServiceTest {
     }
 
     @Nested
+    @DisplayName("조건부 축과 용어 식별자")
+    class ConditionalAxes {
+
+        @Test
+        @DisplayName("계약 픽스처의 appliesWhen·termId가 그대로 응답에 실린다")
+        void conditionAndTermArePassedThrough() {
+            StrategyRegistryResult result = service.query(3);
+
+            StrategyRegistryResult.AxisView topN = axis(result, "SECTOR_MOMENTUM", "topN");
+            assertThat(topN.appliesWhen())
+                    .isEqualTo(
+                            new StrategyRegistryResult.AxisConditionView("selectionMode", "TOP_N"));
+            assertThat(axis(result, "SECTOR_MOMENTUM", "selectionMode").appliesWhen()).isNull();
+            assertThat(axis(result, "INVERSE_VOLATILITY", "lookbackDays").termId())
+                    .isEqualTo("volatility");
+            assertThat(topN.termId()).isNull();
+        }
+
+        @Test
+        @DisplayName("기본 선정 방식이 가리키지 않는 축은 기본 설정에 들어가지 않아 그 축의 규칙으로 카드가 잠기지 않는다")
+        void inapplicableAxisDoesNotJudgeTheCard() {
+            StrategyRegistryQueryService synthetic =
+                    new StrategyRegistryQueryService(
+                            SyntheticRegistry.of(
+                                    """
+                                    version: FIXTURE-1
+                                    analysisConditions:
+                                      initialAmount: { min: 1, max: 100, step: 1, default: 10, unit: 원 }
+                                      targetVolatility: { min: 5, max: 20, step: 1, default: 10, unit: 퍼센트, usedBy: TARGET_RISK }
+                                      minEvaluationYears: { values: [0, 1, 3], default: 1, unit: 년 }
+                                    strategies:
+                                      - id: STRATEGY_X
+                                        name: 합성 전략
+                                        targetWeightSource: COMPUTED
+                                        axes:
+                                          - name: mode
+                                            searchValues: [B]
+                                            defaultValue: B
+                                            allowedRange:
+                                              choices:
+                                                - value: A
+                                                  label: 가
+                                                - value: B
+                                                  label: 나
+                                          - name: pick
+                                            appliesWhen: { axis: mode, value: A }
+                                            searchValues: [9]
+                                            defaultValue: 9
+                                            allowedRange:
+                                              values: [1, 9]
+                                        validationRules:
+                                          - code: PICK_TOO_MANY
+                                            detail: 고를 수가 후보보다 많습니다.
+                                            left: { axis: pick }
+                                            operator: GREATER_THAN
+                                            right: { context: UNIVERSE_SIZE }
+                                    """));
+
+            StrategyRegistryResult.StrategyView view = strategy(synthetic.query(3), "STRATEGY_X");
+
+            // 기본 mode가 B라 pick은 기본 설정에 없다. pick의 기본값 9가 섹터 셋을 넘어도 카드는 고를 수 있다.
+            assertThat(view.selectable()).isTrue();
+            assertThat(view.unselectableReason()).isNull();
+        }
+    }
+
+    @Nested
     @DisplayName("섹터 수를 주지 않으면")
     class WithoutUniverseSize {
 
@@ -223,13 +290,17 @@ class StrategyRegistryQueryServiceTest {
                 .orElseThrow(() -> new AssertionError("no such strategy: " + strategyId));
     }
 
-    private static List<StrategyRegistryResult.ChoiceView> choices(
+    private static StrategyRegistryResult.AxisView axis(
             StrategyRegistryResult result, String strategyId, String axisName) {
         return strategy(result, strategyId).axes().stream()
                 .filter(axis -> axis.name().equals(axisName))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("no such axis: " + axisName))
-                .choices();
+                .orElseThrow(() -> new AssertionError("no such axis: " + axisName));
+    }
+
+    private static List<StrategyRegistryResult.ChoiceView> choices(
+            StrategyRegistryResult result, String strategyId, String axisName) {
+        return axis(result, strategyId, axisName).choices();
     }
 
     /** 활성 하나와 비활성 하나. 워밍업 규칙을 적지 않아 0인 경우도 함께 본다. */

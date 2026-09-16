@@ -122,6 +122,10 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 `selectionMode`가 `ALL`이면 부속 값이 없다. 화면은 고른 `selectionMode`에 해당하는 값 하나만 상세 설정에 열고 나머지 값은 저장하지 않는다(spec FR-003).
 
+**그 대응은 등록표가 적는다.** 축은 선택 필드 `appliesWhen: { axis, value }`를 가질 수 있고(`ParameterAxis.appliesWhen`, `AxisCondition`), 결정 축이 그 값일 때만 그 축을 쓴다. `topN`·`threshold`·`topPercent`가 각각 `selectionMode`의 `TOP_N`·`THRESHOLD`·`TOP_PERCENT`를 가리킨다. 화면·접수 관문(`StrategySettingsValidator`)·007 조합 생성이 모두 `StrategyRegistration.applicableAxes`로 같은 판정을 하고, 축 이름을 해석하지 않는다(FR-005). 로더는 결정 축이 같은 전략에 없거나 값이 그 축의 후보 밖이면 기동을 막는다.
+
+**용어 도움말도 등록표가 가리킨다.** 축의 선택 필드 `termId`가 [013 data-model §8](../013-learning-pages/data-model.md)의 식별자를 담고, 화면은 그 값이 있는 축에만 도움말을 붙인다(FR-016).
+
 ## 4-2. 확정 후보 값 (PD-02, 2026-09-15, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))
 
 **공통 `rebalancePeriod` 후보** (모든 전략 공통, §5 형태를 따른다):

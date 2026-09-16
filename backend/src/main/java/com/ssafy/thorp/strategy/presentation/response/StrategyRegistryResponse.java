@@ -126,7 +126,9 @@ public record StrategyRegistryResponse(
             String inputType,
             List<Choice> choices,
             Range range,
-            Object defaultValue) {
+            Object defaultValue,
+            AxisCondition appliesWhen,
+            String termId) {
 
         public static Axis from(StrategyRegistryResult.AxisView view) {
             return new Axis(
@@ -139,7 +141,18 @@ public record StrategyRegistryResponse(
                             ? null
                             : view.choices().stream().map(Choice::from).toList(),
                     Range.from(view.range()),
-                    view.defaultValue());
+                    view.defaultValue(),
+                    AxisCondition.from(view.appliesWhen()),
+                    view.termId());
+        }
+    }
+
+    /** 축의 적용 조건(계약 §1 {@code appliesWhen}). 조건이 없는 축에는 실리지 않는다. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record AxisCondition(String axis, Object value) {
+
+        public static AxisCondition from(StrategyRegistryResult.AxisConditionView view) {
+            return view == null ? null : new AxisCondition(view.axis(), view.value());
         }
     }
 

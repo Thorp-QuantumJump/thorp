@@ -330,9 +330,60 @@ function writeStoredSettings(state: StoredStrategySettings): void {
 // 재검증
 // ---------------------------------------------------------------------------
 
-/** 전략의 모든 축을 등록표 기본값으로 채운 값. 추천이 아니라 편의용 출발점이다(FR-004). */
+/** 지금 값에서 이 축을 쓰는가. 조건이 없으면 늘 참이고, 결정 축의 값이 없으면 거짓이다(계약 §1 `appliesWhen`). */
+export function axisApplies(axis: AxisView, values: AxisValues): boolean {
+  if (!axis.appliesWhen) return true
+  const decider = values[axis.appliesWhen.axis]
+  return decider !== undefined && axisValueEquals(decider, axis.appliesWhen.value)
+}
+
+/**
+ * 지금 값에서 뜻을 갖는 축만, 등록표 순서대로.
+ *
+ * 화면이 그리는 것, 요청에 싣는 것, 완성·기본 여부 판정이 모두 이 하나를 쓴다. 각자 따로 판정하면 한쪽만
+ * 조건을 빠뜨려 화면이 계약대로 보낸 요청이 서버에서 막힌다(FR-003).
+ */
+export function applicableAxes(strategy: StrategyView, values: AxisValues): AxisView[] {
+  return strategy.axes.filter((axis) => axisApplies(axis, values))
+}
+
+/**
+ * 조건에 맞게 값을 정돈한다. 조건 밖 축의 값은 지우고, 조건이 참인데 값이 없는 축은 기본값으로 채운다.
+ *
+ * <p>`keepEmpty`에 든 축은 채우지 않는다 — 재검증이 비워 두고 사용자의 복원을 기다리는 축이다. 결정 축이
+ * 바뀌면 다른 축의 조건이 함께 바뀌므로 더 바뀌는 것이 없을 때까지 되풀이한다.
+ */
+export function settleValues(
+  strategy: StrategyView,
+  values: AxisValues,
+  keepEmpty: ReadonlySet<string> = new Set(),
+): AxisValues {
+  let current: AxisValues = { ...values }
+  for (;;) {
+    const applicable = new Set(applicableAxes(strategy, current).map((axis) => axis.name))
+    let changed = false
+    const next: AxisValues = {}
+    for (const [name, value] of Object.entries(current)) {
+      if (applicable.has(name)) next[name] = value
+      else changed = true
+    }
+    for (const axis of strategy.axes) {
+      if (!applicable.has(axis.name) || axis.name in next || keepEmpty.has(axis.name)) continue
+      next[axis.name] = axis.defaultValue
+      changed = true
+    }
+    current = next
+    if (!changed) return current
+  }
+}
+
+/**
+ * 전략의 기본 설정. 추천이 아니라 편의용 출발점이다(FR-004).
+ *
+ * 조건 밖 축은 넣지 않는다 — 기본 선정 방식이 가리키지 않는 값은 사용자가 정한 적도 규칙이 볼 것도 아니다.
+ */
 export function defaultValuesOf(strategy: StrategyView): AxisValues {
-  return Object.fromEntries(strategy.axes.map((axis) => [axis.name, axis.defaultValue]))
+  return settleValues(strategy, {})
 }
 
 function toNumber(value: unknown): number | null {
@@ -459,20 +510,36 @@ export function reconcileStoredSettings(
       })
     }
 
+    // 채우지 않고 비워 둘 축: 방금 무효로 판정한 축과 앞서 비워 둔 채 복원을 기다리는 축.
+    const emptied = new Set(
+      invalidValues
+        .filter((entry) => entry.strategyId === strategyId && entry.axisName !== null && entry.restorable)
+        .map((entry) => entry.axisName as string),
+    )
     for (const axis of strategy.axes) {
-      if (axis.name in next) continue
-      if (isPending(strategyId, axis.name)) {
-        const entry = pending.find(
-          (candidate) => candidate.strategyId === strategyId && candidate.axisName === axis.name,
-        )
-        if (entry) invalidValues.push(entry)
-        continue
+      if (axis.name in next || !isPending(strategyId, axis.name)) continue
+      const entry = pending.find(
+        (candidate) => candidate.strategyId === strategyId && candidate.axisName === axis.name,
+      )
+      if (entry) {
+        invalidValues.push(entry)
+        emptied.add(axis.name)
       }
-      // 사용자 값이 없던 자리다. 등록표에 항목이 새로 생긴 경우가 여기에 해당한다.
-      if (!(axis.name in values)) next[axis.name] = axis.defaultValue
     }
 
-    valuesByStrategy[strategyId] = next
+    // 조건 밖 축의 값은 지우고, 조건이 참인데 사용자 값이 없던 자리(등록표에 새로 생긴 항목 등)는
+    // 기본값으로 채운다. 비워 둔 축은 채우지 않는다.
+    const settled = settleValues(strategy, next, emptied)
+    valuesByStrategy[strategyId] = settled
+
+    // 조건 밖으로 밀려난 축의 무효 안내는 지운다 — 그리지도 싣지도 않는 축을 고치라고 할 수 없다.
+    const visible = new Set(applicableAxes(strategy, settled).map((axis) => axis.name))
+    for (let index = invalidValues.length - 1; index >= 0; index -= 1) {
+      const entry = invalidValues[index]
+      if (entry.strategyId === strategyId && entry.axisName !== null && entry.restorable && !visible.has(entry.axisName)) {
+        invalidValues.splice(index, 1)
+      }
+    }
   }
 
   const conditionChoices = minEvaluationYearChoices(registry)
@@ -637,7 +704,7 @@ export function useStrategySettings(
       const strategy = strategies.get(strategyId)
       if (!strategy) return false
       const current = state.valuesByStrategy[strategyId] ?? defaultValuesOf(strategy)
-      return strategy.axes.every((axis) => axis.name in current)
+      return applicableAxes(strategy, current).every((axis) => axis.name in current)
     },
     [ready, state, strategies],
   )
@@ -648,7 +715,7 @@ export function useStrategySettings(
       const strategy = strategies.get(strategyId)
       if (!strategy) return false
       const current = state.valuesByStrategy[strategyId] ?? defaultValuesOf(strategy)
-      return strategy.axes.every(
+      return applicableAxes(strategy, current).every(
         (axis) => axis.name in current && axisValueEquals(current[axis.name], axis.defaultValue),
       )
     },
@@ -657,7 +724,7 @@ export function useStrategySettings(
 
   const warmupTradingDays = useMemo(() => {
     if (!selectedStrategy || !values) return null
-    if (!selectedStrategy.axes.every((axis) => axis.name in values)) return null
+    if (!applicableAxes(selectedStrategy, values).every((axis) => axis.name in values)) return null
     try {
       return evaluateWarmup(selectedStrategy.warmupRule, values)
     } catch {
@@ -699,13 +766,24 @@ export function useStrategySettings(
       if (!axis) return 'AXIS_REMOVED'
       const reason = checkAxisValue(axis, value)
       if (reason !== null) return reason
+      const strategy = strategies.get(strategyId)
+      if (!strategy) return 'STRATEGY_REMOVED'
       setState((current) => {
         if (current === null) return current
-        const strategyValues = { ...(current.valuesByStrategy[strategyId] ?? {}), [axisName]: value }
+        // 결정 축이 바뀌면 다른 축의 조건이 함께 바뀐다. 조건 밖으로 밀려난 축은 값과 안내를 지우고,
+        // 조건이 참이 된 축은 기본값에서 시작한다(사용자 값이 없던 자리).
+        const before = current.valuesByStrategy[strategyId] ?? {}
+        const strategyValues = settleValues(strategy, { ...before, [axisName]: value })
+        const hidden = new Set(
+          strategy.axes.map((candidate) => candidate.name).filter((name) => !(name in strategyValues)),
+        )
         return {
           ...current,
           valuesByStrategy: { ...current.valuesByStrategy, [strategyId]: strategyValues },
-          invalidValues: withoutInvalid(current.invalidValues, strategyId, axisName),
+          invalidValues: withoutInvalid(current.invalidValues, strategyId, axisName).filter(
+            (entry) =>
+              !(entry.strategyId === strategyId && entry.axisName !== null && hidden.has(entry.axisName)),
+          ),
         }
       })
       return null
@@ -715,14 +793,15 @@ export function useStrategySettings(
 
   const resetAxis = useCallback(
     (strategyId: string, axisName: string) => {
-      const axis = strategies.get(strategyId)?.axes.find((candidate) => candidate.name === axisName)
-      if (!axis) return
+      const strategy = strategies.get(strategyId)
+      const axis = strategy?.axes.find((candidate) => candidate.name === axisName)
+      if (!strategy || !axis) return
       setState((current) => {
         if (current === null) return current
-        const strategyValues = {
+        const strategyValues = settleValues(strategy, {
           ...(current.valuesByStrategy[strategyId] ?? {}),
           [axisName]: axis.defaultValue,
-        }
+        })
         return {
           ...current,
           valuesByStrategy: { ...current.valuesByStrategy, [strategyId]: strategyValues },

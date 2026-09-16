@@ -27,6 +27,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;
 import com.ssafy.thorp.paramsearch.domain.model.SelectionRule;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;
+import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
@@ -260,7 +261,8 @@ public class ParamSearchService {
         SearchSpace space = narrow(targets, narrowing);
         List<ValidatedPoint> validated =
                 candidateValidator.validate(
-                        gridExpander.expand(space), new SearchContext(instrumentIds.size()));
+                        withoutInapplicableAxes(targets, gridExpander.expand(space)),
+                        new SearchContext(instrumentIds.size()));
         CommonPeriod period =
                 commonPeriodResolver.resolve(instrumentIds, space, targets.targets(), start, end);
         return new Preflight(targets, space, validated, period, supportedIds());
@@ -533,6 +535,34 @@ public class ParamSearchService {
                             }
                         });
         return parameters;
+    }
+
+    /**
+     * 조건 밖 축의 값을 조합에서 뺀다(003 FR-003, {@code ParameterAxis.appliesWhen}).
+     *
+     * <p>그리드는 축을 모두 펼치므로 선정 방식이 '상위 몇 개'인 점에도 임계값·상위 비율이 딸려 온다. 그 값은 사용자가 고른 것도 규칙이 볼 것도 아니라 실행에 싣지
+     * 않는다. <b>좌표는 그대로 둔다</b> — 좌표는 그리드 안의 자리이지 실행 값이 아니고, 축을 빼면 같은 등록표 버전 안에서 인접 판정이 흔들린다(FR-013a).
+     * 조건은 등록표가 정하고 여기서 축 이름을 해석하지 않는다.
+     */
+    private static List<GridExpander.GridPoint> withoutInapplicableAxes(
+            SearchTargets targets, List<GridExpander.GridPoint> points) {
+        Map<String, StrategyRegistration> byId = new LinkedHashMap<>();
+        targets.targets().forEach(target -> byId.put(target.strategyId(), target));
+        List<GridExpander.GridPoint> trimmed = new ArrayList<>(points.size());
+        for (GridExpander.GridPoint point : points) {
+            StrategyRegistration registration = byId.get(point.strategyId());
+            Map<String, Object> values = point.parameters().values();
+            Map<String, Object> kept =
+                    registration == null ? values : registration.applicableValues(values);
+            trimmed.add(
+                    kept.size() == values.size()
+                            ? point
+                            : new GridExpander.GridPoint(
+                                    point.strategyId(),
+                                    ParameterCombination.of(kept),
+                                    point.coordinates()));
+        }
+        return List.copyOf(trimmed);
     }
 
     private static List<SearchCandidate> toCandidates(List<ValidatedPoint> validated) {

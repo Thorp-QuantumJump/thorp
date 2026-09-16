@@ -48,7 +48,8 @@
             { "value": 126, "label": "126거래일", "selectable": true },
             { "value": 252, "label": "252거래일", "selectable": true }
           ],
-          "defaultValue": 63
+          "defaultValue": 63,
+          "termId": "volatility"
         },
         {
           "name": "maxWeight",
@@ -57,7 +58,8 @@
           "unit": "퍼센트",
           "inputType": "NUMBER",
           "range": { "min": 10, "max": 100, "step": 5 },
-          "defaultValue": 40
+          "defaultValue": 40,
+          "termId": "weight"
         }
       ],
       "validationRules": [
@@ -128,7 +130,8 @@
             { "value": 3, "label": "3", "selectable": true },
             { "value": 4, "label": "4", "selectable": false }
           ],
-          "defaultValue": 4
+          "defaultValue": 4,
+          "appliesWhen": { "axis": "selectionMode", "value": "TOP_N" }
         }
       ],
       "validationRules": [

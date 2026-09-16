@@ -1,5 +1,7 @@
 import { useId, useState } from 'react'
-import type { AxisValues } from '@/hooks/useStrategySettings'
+import { TermHelp } from '@/components/learning/TermHelp'
+import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'
+import type { LearningReturnState } from '@/types/learning'
 import type { AxisValue, StrategyView, ValidationRule } from '@/types/strategyRegistry'
 import { evaluateRules } from '@/utils/validationRules'
 import { AxisChoiceField } from './AxisChoiceField'
@@ -23,6 +25,9 @@ interface DetailSettingsPanelProps {
 }
 
 const RULES_UNJUDGED = '설정 규칙을 판정하지 못했습니다.'
+
+/** 도움말에서 글로 갔다가 돌아올 자리. 이 화면의 경로와 이름이다(013 term-help-ui §3). */
+const RETURN_TO: LearningReturnState = { path: '/strategy', label: '전략 선택' }
 const AXIS_UNRENDERABLE = '이 항목의 허용 범위를 확인하지 못해 값을 바꿀 수 없습니다.'
 
 /**
@@ -37,9 +42,12 @@ const AXIS_UNRENDERABLE = '이 항목의 허용 범위를 확인하지 못해 �
  * <p><b>규칙 위반은 펼치지 않아도 보인다.</b> 값을 바꾼 뒤 패널을 접어도 위반 안내가 함께 접히면
  * 사용자는 왜 분석할 수 없는지 모른다. 판정은 값이 바뀔 때마다 화면 안에서 하고 서버에 묻지 않는다.
  *
- * <p><b>용어 도움말은 아직 붙이지 않는다.</b> 도움말(`components/learning/TermHelp`)은 013 용어
- * 식별자(`termId`)로 설명을 찾는데, 등록표 응답에 축마다 그 식별자가 없다. 축 이름으로 식별자를
- * 고르면 전략 지식의 중복이 되므로, 등록표가 식별자를 내려 줄 때 각 항목의 `help` 자리에 붙인다.
+ * <p><b>조건 밖 축은 그리지 않는다.</b> 선정 방식이 가리키지 않는 값은 보이지도 저장되지도 않는다
+ * (FR-003). 무엇이 조건 밖인지는 등록표의 `appliesWhen`이 정하고 화면은 `applicableAxes`로 기계적으로
+ * 가른다.
+ *
+ * <p><b>용어 도움말은 등록표가 `termId`를 준 축에만 붙인다</b>(FR-016). 어느 축이 어느 용어인지를 화면이
+ * 축 이름으로 고르면 전략 지식의 중복이다.
  */
 export function DetailSettingsPanel({
   strategy,
@@ -91,8 +99,11 @@ export function DetailSettingsPanel({
             <p className={styles.note}>이 전략에는 바꿀 수 있는 설정 항목이 없습니다.</p>
           ) : (
             <div className={styles.axes}>
-              {strategy.axes.map((axis) => {
+              {applicableAxes(strategy, values).map((axis) => {
                 const value = values[axis.name]
+                const help = axis.termId ? (
+                  <TermHelp termId={axis.termId} label={axis.label} returnTo={RETURN_TO} />
+                ) : undefined
                 if (axis.inputType === 'CHOICE') {
                   return (
                     <AxisChoiceField
@@ -101,6 +112,7 @@ export function DetailSettingsPanel({
                       value={value}
                       onChange={(next) => onChange(axis.name, next)}
                       onReset={() => onResetAxis(axis.name)}
+                      help={help}
                     />
                   )
                 }
@@ -124,6 +136,7 @@ export function DetailSettingsPanel({
                     value={typeof value === 'number' ? value : undefined}
                     onChange={(next) => onChange(axis.name, next)}
                     onReset={() => onResetAxis(axis.name)}
+                    help={help}
                   />
                 )
               })}
