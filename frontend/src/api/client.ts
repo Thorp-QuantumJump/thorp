@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AuthApiErrorCode, AuthFieldError } from '@/types/auth'
+import type { ApiErrorCode, AuthFieldError, ServiceApiErrorCode } from '@/types/auth'
 
 /** 공용 API 클라이언트. 개발 중에는 vite proxy(/api → localhost:8080)를 탄다. */
 export const apiClient = axios.create({
@@ -16,16 +16,31 @@ const authenticationRequiredListeners = new Set<AuthenticationRequiredListener>(
 
 type ApiClientErrorKind = 'api' | 'network' | 'unexpected'
 
+/**
+ * 알려진 오류 이름과 비교한다.
+ *
+ * 첫 인자는 서버가 보낸 열린 값이고 둘째 인자는 **닫힌 union**이라, 비교하는 쪽에서는
+ * 자동완성이 되고 오타는 컴파일 단계에서 걸린다. 값을 담을 때만 열어 두고 물을 때는 닫아 두는
+ * 것이 이 구조의 핵심이다.
+ */
+export function isApiErrorCode(
+  value: ApiErrorCode | null | undefined,
+  code: ServiceApiErrorCode,
+): boolean {
+  return value === code
+}
+
 export class ApiClientError extends Error {
   readonly kind: ApiClientErrorKind
-  readonly code: AuthApiErrorCode | null
+  /** 서버가 보낸 문자열 그대로다. 아는 이름이 아니어도 접거나 버리지 않는다. */
+  readonly code: ApiErrorCode | null
   readonly fieldErrors: AuthFieldError[]
 
   constructor(
     kind: ApiClientErrorKind,
     message: string,
     options?: {
-      code?: AuthApiErrorCode
+      code?: ApiErrorCode
       fieldErrors?: AuthFieldError[]
       cause?: unknown
     },
@@ -36,29 +51,15 @@ export class ApiClientError extends Error {
     this.code = options?.code ?? null
     this.fieldErrors = options?.fieldErrors ?? []
   }
+
+  /** 화면이 자주 묻는 질문 하나를 이름으로 둔다. 오타는 여기서 걸린다. */
+  is(code: ServiceApiErrorCode): boolean {
+    return isApiErrorCode(this.code, code)
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function isAuthApiErrorCode(value: unknown): value is AuthApiErrorCode {
-  return (
-    typeof value === 'string' &&
-    [
-      'INVALID_INPUT',
-      'DUPLICATE_EMAIL',
-      'DUPLICATE_PHONE',
-      'EMAIL_VERIFICATION_REQUIRED',
-      'EMAIL_VERIFICATION_NOT_FOUND',
-      'EMAIL_VERIFICATION_INVALID',
-      'EMAIL_VERIFICATION_EXPIRED',
-      'INVALID_CREDENTIALS',
-      'AUTHENTICATION_REQUIRED',
-      'CSRF_TOKEN_INVALID',
-      'INTERNAL_ERROR',
-    ].includes(value)
-  )
 }
 
 function isAuthFieldError(value: unknown): value is AuthFieldError {
@@ -75,7 +76,9 @@ function readApiError(value: unknown) {
   if (!isRecord(value) || value.success !== false || !isRecord(value.error)) return null
   const { error } = value
 
-  if (!isAuthApiErrorCode(error.code) || typeof error.message !== 'string') return null
+  // **아는 이름인지 묻지 않는다.** 모르는 이름이라고 본문 전체를 버리면 서버가 보낸 안내 문구가
+  // 함께 사라지고, 화면은 그 자리에 일반 문구를 대신 내보낸다.
+  if (typeof error.code !== 'string' || typeof error.message !== 'string') return null
 
   const fieldErrors = Array.isArray(error.fieldErrors)
     ? error.fieldErrors.filter(isAuthFieldError)
@@ -89,7 +92,7 @@ apiClient.interceptors.response.use(
   (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const apiError = readApiError(error.response.data)
-      if (apiError?.code === 'AUTHENTICATION_REQUIRED') {
+      if (isApiErrorCode(apiError?.code, 'AUTHENTICATION_REQUIRED')) {
         authenticationRequiredListeners.forEach((listener) => listener())
       }
     }
@@ -179,7 +182,7 @@ export async function runCsrfProtectedMutation<T>(request: () => Promise<T>): Pr
   } catch (error) {
     const normalizedError = normalizeApiError(error)
 
-    if (normalizedError.code === 'CSRF_TOKEN_INVALID') {
+    if (normalizedError.is('CSRF_TOKEN_INVALID')) {
       resetCsrfToken()
       try {
         await prepareCsrfToken()
