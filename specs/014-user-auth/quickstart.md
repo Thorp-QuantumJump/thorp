@@ -1,6 +1,6 @@
 # Quickstart: 사용자 인증 구현 검증
 
-이 문서는 [plan.md](plan.md)와 [API contract](contracts/auth-api.yaml)를 구현한 뒤 FE·BE·통합 동작을 재현하는 검증 가이드다. 현재 PLAN 단계에서는 아래 명령을 실행하거나 구현 코드를 변경하지 않는다.
+이 문서는 [plan.md](plan.md)와 [API contract](contracts/auth-api.yaml)를 구현한 뒤 FE·BE·통합 동작을 재현하는 검증 가이드다. 2026-09-16 실행 결과는 [verification/](verification/)에 기록했다.
 
 ## Prerequisites
 
@@ -142,5 +142,16 @@ npm run dev
 - desktop과 360px mobile의 인증 흐름 캡처
 - network failure·session expiry·CSRF 실패 검증 기록
 - 구현 완료, 사용성 확인, MR 병합을 서로 구분한 Jira/MR 기록
+
+2026-09-16 기준 실행 기록:
+
+- [Frontend lint/test/build](verification/frontend.md)
+- [Backend Spotless/PostgreSQL tests](verification/backend.md)
+- [7개 API operation 계약 대조](verification/contract.md)
+- [통합 흐름과 desktop/360px 화면 증거](verification/integration.md)
+
+현재 알려진 미완료 검증은 실제 SMTP 자격 증명을 사용한 메일 전달과 360px 회원가입 소개 문구의
+가로 잘림 수정 후 재검증이다. 반복 로그인·인증번호 발송 제한과 계정 잠금 정책은 별도 보안 Task로
+남아 있으며 014가 임의 수치를 정하지 않는다.
 
 Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수정 다섯 조건을 모두 충족해야 한다.

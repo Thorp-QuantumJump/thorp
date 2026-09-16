@@ -3,8 +3,8 @@ info:
   title: Thorp Account and Authentication API
   version: 0.1.0
   description: >-
-    014-user-auth의 외부 /api 계약이다. x-implementation-status가 existing인
-    operation은 현재 account 구현을 재사용하되 proxy 경로 정규화가 필요하다.
+    014-user-auth의 외부 /api 계약이다. 2026-09-16 기준 7개 operation은
+    Backend 내부 경로와 FE proxy 경로에서 구현·검증됐다.
 servers:
   - url: /api
 paths:
@@ -12,7 +12,7 @@ paths:
     post:
       operationId: requestEmailVerification
       summary: 이메일 인증번호 발송
-      x-implementation-status: existing-path-fix-required
+      x-implementation-status: implemented
       security:
         - csrfToken: []
       requestBody:
@@ -34,7 +34,7 @@ paths:
     post:
       operationId: confirmEmailVerification
       summary: 이메일 인증번호 확인
-      x-implementation-status: existing-path-fix-required
+      x-implementation-status: implemented
       security:
         - csrfToken: []
       requestBody:
@@ -56,7 +56,7 @@ paths:
     post:
       operationId: signup
       summary: 회원가입
-      x-implementation-status: existing-path-fix-required
+      x-implementation-status: implemented
       security:
         - csrfToken: []
       requestBody:
@@ -82,7 +82,7 @@ paths:
     get:
       operationId: prepareCsrfToken
       summary: SPA 상태 변경 요청용 CSRF token 준비
-      x-implementation-status: required
+      x-implementation-status: implemented
       responses:
         '204':
           description: XSRF-TOKEN cookie가 준비됨
@@ -97,7 +97,7 @@ paths:
     post:
       operationId: login
       summary: 이메일·비밀번호 로그인
-      x-implementation-status: required
+      x-implementation-status: implemented
       security:
         - csrfToken: []
       requestBody:
@@ -130,7 +130,7 @@ paths:
     get:
       operationId: getCurrentUser
       summary: 현재 로그인한 사용자 조회
-      x-implementation-status: required
+      x-implementation-status: implemented
       responses:
         '200':
           description: 유효한 로그인 상태
@@ -146,7 +146,7 @@ paths:
     delete:
       operationId: logout
       summary: 현재 server session 종료
-      x-implementation-status: required
+      x-implementation-status: implemented
       security:
         - sessionCookie: []
           csrfToken: []
