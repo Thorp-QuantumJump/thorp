@@ -139,30 +139,43 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 - [X] T029 [P] [US1] (FE) `frontend/src/api/strategyRegistry.ts` — `fetchStrategyRegistry(universeSize?: number)` → `GET /strategies/registry`, `ApiResponse` 껍데기를 벗겨 `RegistryResponse` 반환. `StrategyRegistryError`(`code`·`status`, `REGISTRY_UNAVAILABLE`과 네트워크 실패를 구분)는 `frontend/src/api/paramSearch.ts`의 `ParamSearchError`와 같은 방식. `apiClient` 경유, URL 하드코딩 금지
 - [X] T030 [P] [US1] (FE) `frontend/src/hooks/useSectorSelection.ts` — **002 경계.** 002가 확정한 섹터·비중(`mappingVersion`·`items[].{sectorId, instrumentId, targetWeight}`)을 읽는 유일한 통로다. 002 화면이 아직 없으므로 지금은 `sessionStorage` 키 `thorp.sectorSelection`과 질의 문자열 `?sectors=&instruments=`(007 `ParamSearchPage`와 같은 방식)에서 읽는 어댑터로 두고, **002가 구현되면 이 파일만 바꾼다**고 머리 주석에 적는다. 없으면 `null`을 돌려주고 화면이 "섹터·비중 단계를 먼저 마쳐 주세요" 안내를 보인다("착수 전에 알아둘 것" ⑤)
-- [ ] T031 [P] [US1] (FE) `frontend/src/utils/warmupRule.ts` — `evaluateWarmup(rule: WarmupRule, values: Record<string, unknown>): number`. `sum` 항목이 문자열이면 축 값, 숫자면 상수, 정수로 더한다. 축 값이 없거나 정수가 아니면 예외(값을 지어내지 않는다). 서버 `WarmupRule.evaluate`와 같은 규약
-- [ ] T032 [US1] (FE) `frontend/src/hooks/useStrategySettings.ts` — 화면 상태([data-model](data-model.md) §8·§9): `registryVersion`·`selectedStrategyId`·`valuesByStrategy`·`analysisCondition`. `sessionStorage` 키 `thorp.strategySettings`(research R8): 읽기·쓰기 모두 `try/catch`로 실패해도 되는 것으로 다룬다. 저장된 `registryVersion`이 조회한 버전과 다르거나 섹터 수가 바뀌면 각 보관값을 새 범위·규칙으로 재검증해 유효한 값은 유지하고, 유효하지 않은 값은 자동 보정하지 않은 채 이유와 기본값 복원 선택을 돌려준다. 이 로직을 T059의 409 처리도 재사용한다. 전략을 처음 고르면 그 전략 축의 `defaultValue`로 값을 채운다. `isDefault(strategyId)`는 저장하지 않고 매번 축 값 전부가 `defaultValue`와 같은지로 계산한다(FR-002). `analysisCondition.minEvaluationYears`는 등록표 `analysisConditions.minEvaluationYears.default`(1)로 시작한다(FR-011a). 제공 함수: `select`·`setValue`·`resetAxis`·`resetAll`·`setAnalysisCondition`. 현재 워밍업은 `evaluateWarmup`으로 파생한다 (T029·T031 의존)
+- [X] T031 [P] [US1] (FE) `frontend/src/utils/warmupRule.ts` — `evaluateWarmup(rule: WarmupRule, values: Record<string, unknown>): number`. `sum` 항목이 문자열이면 축 값, 숫자면 상수, 정수로 더한다. 축 값이 없거나 정수가 아니면 예외(값을 지어내지 않는다). 서버 `WarmupRule.evaluate`와 같은 규약
+- [X] T032 [US1] (FE) `frontend/src/hooks/useStrategySettings.ts` — 화면 상태([data-model](data-model.md) §8·§9): `registryVersion`·`selectedStrategyId`·`valuesByStrategy`·`analysisCondition`. `sessionStorage` 키 `thorp.strategySettings`(research R8): 읽기·쓰기 모두 `try/catch`로 실패해도 되는 것으로 다룬다. 저장된 `registryVersion`이 조회한 버전과 다르거나 섹터 수가 바뀌면 각 보관값을 새 범위·규칙으로 재검증해 유효한 값은 유지하고, 유효하지 않은 값은 자동 보정하지 않은 채 이유와 기본값 복원 선택을 돌려준다. 이 로직을 T059의 409 처리도 재사용한다. 전략을 처음 고르면 그 전략 축의 `defaultValue`로 값을 채운다. `isDefault(strategyId)`는 저장하지 않고 매번 축 값 전부가 `defaultValue`와 같은지로 계산한다(FR-002). `analysisCondition.minEvaluationYears`는 등록표 `analysisConditions.minEvaluationYears.default`(1)로 시작한다(FR-011a). 제공 함수: `select`·`setValue`·`resetAxis`·`resetAll`·`setAnalysisCondition`. 현재 워밍업은 `evaluateWarmup`으로 파생한다 (T029·T031 의존)
 
 ### Frontend — 컴포넌트
 
 - [X] T033 [P] [US1] (FE) `frontend/src/components/strategy/StrategyCard.tsx`·`StrategyCard.module.css` — `name`·`description`만 보인다(축·설정값은 절대 보이지 않는다). 키보드 선택이 가능하고 선택 상태를 `aria-pressed`, 선택 불가는 `aria-disabled`와 `unselectableReason` 한 문장으로 전달한다. 워밍업 판정(`'blocked' | 'reduced' | 'ok'`와 문장)을 prop으로 받아 표시하며 색만으로 알리지 않는다(NFR-001·NFR-002)
 - [X] T034 [US1] (FE) `frontend/src/components/strategy/StrategyCardList.tsx` — 응답 `strategies` 순서 그대로 카드를 그린다. 등록표 조회 중이면 카드 전부 선택 불가(skeleton), 실패면 카드 대신 `RegistryUnavailableNotice`. 카드 목록의 워밍업 판정은 각 전략의 `warmupTradingDays`(기본 설정 기준, FR-011) (T033·T035 의존)
 - [X] T035 [P] [US1] (FE) `frontend/src/components/strategy/RegistryUnavailableNotice.tsx` — FR-018: "전략 설정을 불러오지 못했습니다" + '다시 시도' 버튼(`onRetry`). 오류를 `role="alert"`로 알리고 재시도 성공 시 새 카드 영역, 실패 시 안내를 읽은 뒤 재시도 버튼으로 초점이 돌아오게 한다(NFR-001). 임시 값·예비 등록표로 대신 동작하는 경로를 두지 않는다
-- [ ] T036 [P] [US1] (FE) `frontend/src/components/strategy/SettingsStatusBadge.tsx` — `isDefault ? '기본 설정' : '설정을 바꿈'`. 누를 수 없는 상태 표시이며 토글이 아니다(FR-002). 옆에 "기본값은 편의용 출발점이며 최적값이 아닙니다"(FR-004, 원칙 III)
-- [ ] T037 [P] [US1] (FE) `frontend/src/components/strategy/ConditionSummaryLine.tsx` — 분석 기간·비교 대상(섹터 수)·비용 적용 여부 한 줄(FR-002). 값은 props로만 받는다
-- [ ] T038 [P] [US1] (FE) `frontend/src/components/strategy/ActionButtons.tsx` — constitution 3.4.0 승인([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253), 2026-09-15)으로 spec의 두 버튼 안이 확정됐다. '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001)
+- [X] T036 [P] [US1] (FE) `frontend/src/components/strategy/SettingsStatusBadge.tsx` — `isDefault ? '기본 설정' : '설정을 바꿈'`. 누를 수 없는 상태 표시이며 토글이 아니다(FR-002). 옆에 "기본값은 편의용 출발점이며 최적값이 아닙니다"(FR-004, 원칙 III)
+- [X] T037 [P] [US1] (FE) `frontend/src/components/strategy/ConditionSummaryLine.tsx` — 분석 기간·비교 대상(섹터 수)·비용 적용 여부 한 줄(FR-002). 값은 props로만 받는다
+- [X] T038 [P] [US1] (FE) `frontend/src/components/strategy/ActionButtons.tsx` — constitution 3.4.0 승인([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253), 2026-09-15)으로 spec의 두 버튼 안이 확정됐다. '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001)
 - [ ] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. `minEvaluationYears`는 004 계약에 아직 자리가 없어 이 요청에 싣지 않는다("착수 전에 알아둘 것" ⑧) — 그 값은 T042의 화면 판정에서만 쓰고 조용히 버린다. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**("착수 전에 알아둘 것" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 "분석 조건 버전을 확인할 수 없습니다"로 막는다. 값을 지어내 보내지 않는다
-- [ ] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)
-- [ ] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 "002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교" 흐름을 적는다 (T040 의존)
+- [X] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)
+- [X] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 "002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교" 흐름을 적는다 (T040 의존)
 - [ ] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + "최소 평가 기간(N년)에 못 미칩니다" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 한다"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다("착수 전에 알아둘 것" ①). 404·미구현·실패면 카드에 "공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)
 
 ### Frontend 테스트
 
 - [X] T043 [P] [US1] (FE 테스트) `frontend/src/components/strategy/StrategyCardList.test.tsx` — 픽스처 응답으로: 카드에 `name`·`description`만 있고 어떤 축 `label`도 보이지 않는다; 키보드로 카드를 고를 수 있고 `aria-pressed`가 바뀐다; `selectable:false` 카드는 눌러도 선택되지 않고 `aria-disabled`와 `unselectableReason`이 보인다; 조회 실패 상태면 카드 목록 대신 `RegistryUnavailableNotice`와 '다시 시도' 버튼이 보이며 재시도 성공·실패 뒤 초점이 NFR-001대로 이동한다(quickstart 9) (T034 의존)
-- [ ] T044 [P] [US1] (FE 테스트) `frontend/src/hooks/useStrategySettings.test.tsx` — 전략을 고르면 축 `defaultValue`로 채워진다; 값 하나를 바꾸면 `isDefault=false`, 모두 되돌리면 `true`(quickstart 6); 다른 전략으로 옮겨도 이전 전략 값이 남고 새 전략에 적용되지 않는다(Edge case); `sessionStorage`의 `registryVersion` 또는 섹터 수가 다르면 새 규칙으로 재검증해 유효한 값은 유지하고 유효하지 않은 값은 이유·복원 선택으로 돌려주며 자동 보정하지 않는다; `analysisCondition.minEvaluationYears`가 초기값 1로 시작하고 `setAnalysisCondition`으로 바꿀 수 있다(FR-011a); `sessionStorage` 접근이 예외를 던져도 훅이 동작한다(research R8) (T032 의존)
-- [ ] T045 [P] [US1] (FE 테스트) `frontend/src/utils/warmupRule.test.ts` — `{sum: ['lookbackDays', 'skipRecentDays']}`에 60·21을 넣으면 **81**(quickstart 7-1), 상수 항목 더하기, 축 값 없으면 예외. `frontend/vite.config.ts`의 `test.include`에 `'src/utils/warmupRule.test.ts'`를 더한다(지금 include는 `*.test.tsx`와 `src/api/auth.test.ts`·`src/auth/**`만이라 `.test.ts`가 잡히지 않는다) (T031 의존)
-- [ ] T046 [US1] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` — SC-001: 카드 한 번 + '분석하기' 한 번으로 `createBacktest`(mock)가 기본값 `parameters`·`registryVersion`·`warmupTradingDays`로 호출된다(quickstart 4); 상세 설정을 열지 않았다; 기본 화면의 입력은 전략 선택 하나다(SC-005); 등록표 조회가 실패하면 게이트에서 확정된 행동 버튼이 모두 의미 있는 `disabled` 상태다(SC-008, quickstart 9); 배지가 '기본 설정'; `provisional:true`면 문구가 있는 임시값 배지가 보이고 색상만으로 구분하지 않는다(NFR-002) (T040~T042 의존)
+- [X] T044 [P] [US1] (FE 테스트) `frontend/src/hooks/useStrategySettings.test.tsx` — 전략을 고르면 축 `defaultValue`로 채워진다; 값 하나를 바꾸면 `isDefault=false`, 모두 되돌리면 `true`(quickstart 6); 다른 전략으로 옮겨도 이전 전략 값이 남고 새 전략에 적용되지 않는다(Edge case); `sessionStorage`의 `registryVersion` 또는 섹터 수가 다르면 새 규칙으로 재검증해 유효한 값은 유지하고 유효하지 않은 값은 이유·복원 선택으로 돌려주며 자동 보정하지 않는다; `analysisCondition.minEvaluationYears`가 초기값 1로 시작하고 `setAnalysisCondition`으로 바꿀 수 있다(FR-011a); `sessionStorage` 접근이 예외를 던져도 훅이 동작한다(research R8) (T032 의존)
+- [X] T045 [P] [US1] (FE 테스트) `frontend/src/utils/warmupRule.test.ts` — `{sum: ['lookbackDays', 'skipRecentDays']}`에 60·21을 넣으면 **81**(quickstart 7-1), 상수 항목 더하기, 축 값 없으면 예외. `frontend/vite.config.ts`의 `test.include`에 `'src/utils/warmupRule.test.ts'`를 더한다(지금 include는 `*.test.tsx`와 `src/api/auth.test.ts`·`src/auth/**`만이라 `.test.ts`가 잡히지 않는다) (T031 의존)
+- [X] T046 [US1] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` — SC-001: 카드 한 번 + '분석하기' 한 번으로 `createBacktest`(mock)가 기본값 `parameters`·`registryVersion`·`warmupTradingDays`로 호출된다(quickstart 4); 상세 설정을 열지 않았다; 기본 화면의 입력은 전략 선택 하나다(SC-005); 등록표 조회가 실패하면 게이트에서 확정된 행동 버튼이 모두 의미 있는 `disabled` 상태다(SC-008, quickstart 9); 배지가 '기본 설정'; `provisional:true`면 문구가 있는 임시값 배지가 보이고 색상만으로 구분하지 않는다(NFR-002) (T040~T042 의존)
 
 **Checkpoint**: 카드 선택 한 번 + '분석하기' 한 번으로 기본값 요청이 만들어지고, 등록표 없이는 아무것도 시작되지 않는다. **US1 종단 데모는 "착수 전에 알아둘 것" ①·②가 풀린 뒤에 가능하다** — 그 전까지 화면은 정직하게 막힌 상태를 보인다
+
+**B05가 더한 파일 셋** (태스크가 이름을 적지 않았으나 B05 안에서 필요했다. constitution "묶음 구성이
+달라지면 사유를 남긴다"에 따라 적는다):
+
+| 파일 | 왜 B05에 들어왔나 |
+|---|---|
+| `frontend/src/types/backtestRequest.ts` | `POST /backtests` 요청 타입. `types/backtest.ts`는 데모 화면이 쓰는 v1 모양이라 그대로 쓸 수 없다. T039가 이 타입을 그대로 쓴다 |
+| `frontend/src/utils/analysisRequest.ts` | 요청 조립(등록표 값 → 계약 모양, 비중·금액의 decimal 문자열화). **T046이 "기본값 `parameters`·`registryVersion`·`warmupTradingDays`로 호출된다"를 단언하려면 조립이 B05 안에 있어야 한다.** T039는 이 함수의 결과를 보내기만 한다 |
+| `frontend/src/components/strategy/analysisSupport.ts` | 아직 없는 통로 셋(규칙·비용 버전 ②, 평가 기간 ①, 요청 전송)의 자리. 화면이 이 셋을 props로 받아 **없는 모듈을 import하지 않고도** 막힌 상태와 요청 조립을 검사로 고정한다. 기본값은 연결되지 않은 상태이며 값을 지어내지 않는다 |
+
+**B06과의 경계**: T039·T042는 위 세 자리를 실제 모듈(`api/backtest.ts`·`api/analysisVersions.ts`·
+`hooks/useEvaluationWindow.ts`)로 채우고 화면의 기본 `support`를 그것으로 바꾼다. 화면 본문은 바뀌지
+않는다.
 
 ---
 
@@ -499,3 +512,44 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 
 - [X] T089 (FE) 자리로 짝짓는 목록에서 중복 제거를 뺀다 per T087 · spec Edge Cases (partial) — `frontend/src/hooks/useSectorSelection.ts`의 `parseList`가 섹터와 종목 **양쪽에** 중복을 걸러 내는데, 종목은 섹터와 **자리로 짝지어지는 목록**이라 중복이 지워지면 개수가 어긋나 온전한 링크가 거부된다. 001의 섹터 계약(`specs/001-etf-market-data/contracts/sector-api.md`)은 서로 다른 섹터가 같은 대표 ETF를 가리키는 것을 금지하지 않으므로 **`?sectors=SEC-A,SEC-B&instruments=INS-X,INS-X`는 있을 수 있는 입력이고, 지금은 앞 단계를 마치지 않은 것으로 잘못 안내된다.** 중복 제거는 섹터 목록에만 남긴다 — 같은 섹터를 두 번 고른 것은 하나로 세는 것이 맞지만, 종목은 세는 목록이 아니라 짝짓는 목록이다. 두 목적에 같은 함수를 쓰지 않도록 이름과 주석으로 갈라 둔다. 검사로 고정한다: 두 섹터가 같은 종목을 가리키는 링크가 통과한다
 - [X] T090 (FE) 저장된 선택도 질의 문자열과 같은 잣대로 본다 per spec Edge Cases (partial) — 질의 문자열 경로는 `parseList`가 중복 섹터를 걸러 내지만 `readStoredSelection`은 걸러 내지 않아, 같은 섹터가 두 번 실린 저장 자료가 두 개짜리 선택으로 통과한다. spec Edge Cases가 "손상됐으면"을 앞 단계 미완료로 묶었고, **같은 섹터가 두 번 든 선택은 002가 만들 수 있는 자료가 아니다.** 두 출처가 서로 다른 잣대를 쓰면 같은 결함이 한쪽으로 들어올 때만 걸린다. 저장 경로에서도 섹터 중복을 손상으로 보고 전체를 버린다 — 중복만 접으면 사용자가 정한 적 없는 크기의 후보 집합이 만들어지고 그 수가 `universeSize`로 서버에 나간다. `sameSectors`가 길이 비교로 시작하는 것도 중복이 없다는 전제 위에 서 있으므로 같은 자리에서 정리한다 (T089 관련)
+
+---
+
+## Phase 13: Convergence
+
+**Purpose**: B05(카드를 골라 분석을 시작한다)를 spec·plan·quickstart와 대조한다. 카드 선택 한 번과
+'분석하기' 한 번으로 요청이 조립되고 등록표 없이는 아무것도 시작되지 않는 통로는 SC-001·SC-005·
+SC-008과 quickstart 9를 만족한다. 남은 간극은 아래 다섯이며, 아직 착수하지 않은 묶음(B06~B12)은
+위 단계가 이미 추적하므로 간극으로 세지 않았다.
+
+- [X] T091 (FE) 사용자 비중의 합계가 100%가 아니면 분석을 시작하지 않는다 per spec Edge Cases · 계약 §2 (missing) — `frontend/src/hooks/useSectorSelection.ts`에 합계 판정이 없다. **002 인계 계약의 불변식 3이 "합계가 1000이라는 보장은 없다"고 명시하고, 사용자가 입력을 마치지 못한 채 화면을 떠난 상태도 그대로 보관하라고 정한다** — 즉 합계가 어긋난 페이로드는 손상이 아니라 정상적으로 있을 수 있는 입력이다. 그런데 `frontend/src/utils/analysisRequest.ts`의 `formatWeightTenths`가 그 값을 그대로 `targetWeight`에 싣고, 004 계약(`docs/specs/backtest-api/README.md` §1)은 `targetWeight`의 합이 1이어야 한다고 요구한다. **`targetWeightSource: USER`인 전략에서 합계가 어긋나면 서버가 400으로 거절하고 사용자는 무엇을 고쳐야 할지 모른다.** 002 화면은 `diagnosis/weights.ts`의 `isBalanced`로 다음 단계 버튼을 막지만 그 판정이 003 통로에는 없어, 링크로 직접 들어오거나 002가 그 관문을 놓치면 그대로 통과한다. 판정을 `useSectorSelection`에 두어 없음·손상·두 개 미만과 같은 자리에서 다루되, **셋과 달리 앞 단계로 되돌리는 것이 아니라 그 전략에서만 막는 것인지 함께 정한다** — 합계는 자동 배분 전략에는 아무 뜻이 없어서 역변동성을 고른 사용자까지 되돌리면 필요 이상으로 넓게 막는다. 판정 기준은 `TOTAL_WEIGHT_TENTHS === 1000` 정수 비교를 그대로 쓰고 허용 오차를 두지 않는다(`weights.ts` 머리 주석, 원칙 VI). 검사로 고정한다: 합계가 어긋난 보관값에 `USER` 전략을 고르면 '분석하기'가 사유와 함께 막힌다, 같은 상태에서 자동 배분 전략은 막히지 않는다
+- [X] T092 (FE) 요청에 실리는 시작 금액을 화면이 보인다 per quickstart 4 · SC-001 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`가 등록표의 `analysisConditions.initialAmount.default`를 요청에 싣지만 `ConditionSummaryLine`은 분석 기간·비교 대상·비용 조건만 보인다. **quickstart 4의 4번이 "기간·금액·비용 한 줄이 보이는지 확인한다"를 SC-001 확인 절차로 두었는데 금액이 그 줄에 없다.** 지금 화면에서는 사용자가 한 번도 보지 못한 금액으로 분석이 접수된다 — 값 자체는 등록표가 준 것이라 지어낸 것이 아니지만, 보이지 않는 조건으로 결과가 만들어지는 것은 이 제품이 피하려는 것이다(FR-002의 "적용할 조건을 한 줄로 보인다"가 그 자리다). **spec FR-002의 열거에는 금액이 없고 quickstart 4에는 있다** — 둘 중 어느 쪽이 맞는지 정해 한쪽을 고친다. 금액을 넣기로 하면 `ConditionSummaryLine`에 단위와 함께 더하고(등록표 `unit`을 그대로 쓴다) T068의 검사 범위와 겹치지 않게 B10의 입력 항목과 구분한다. 빼기로 하면 quickstart 4를 고치고 그 근거를 적는다 (T037 관련)
+- [X] T093 (FE) 전략과 무관한 보관값의 무효 안내를 선택 전에도 보인다 per FR-017 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`가 `invalidForSelected` 목록을 선택한 전략이 있을 때만 그리는데, `useStrategySettings`의 `CONDITION_NOT_IN_CHOICES`(최소 평가 기간의 보관값이 현재 등록표 후보에 없는 경우)는 `strategyId`가 `null`이라 어느 전략에도 딸리지 않는다. **그래서 전략을 고르기 전에는 그 값이 기본값으로 되돌아간 사실을 아무도 말해 주지 않고, 고르고 나서야 전략 설정 안내에 섞여 나온다.** FR-017은 "유효하지 않은 값은 자동 보정하지 않고 이유와 기본값 복원 선택을 보인다"를 요구하며, 되돌아간 사실을 늦게 알리는 것은 조용히 바꾸는 것과 사용자 입장에서 같다. 전략에 딸린 안내와 전략과 무관한 안내를 두 자리로 가르고, 후자는 카드 목록 위에 선택 여부와 무관하게 둔다 — 최소 평가 기간은 카드의 선택 가능 여부를 바꾸는 값이라(FR-011a) 카드를 보기 전에 알아야 한다 (T032·T040 관련)
+- [X] T094 (FE) 분석 통로 객체의 참조가 바뀌어도 버전 조회가 되풀이되지 않게 한다 per plan: 통로 격리 · T040 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`의 버전 조회 효과가 `support` **객체 참조**를 의존성으로 둔다. 지금은 기본값이 모듈 상수이고 검사가 렌더마다 같은 객체를 넘겨 드러나지 않지만, **B06이 `{ fetchAnalysisVersions, judgeWarmup, createBacktest }`를 화면 안에서 조립해 넘기면 조회 → 상태 갱신 → 재렌더 → 새 객체 → 조회가 끝없이 돈다.** 참조가 아니라 `support.fetchAnalysisVersions` 하나에 의존하게 하거나, 통로를 ref에 담아 효과가 참조 변화를 보지 않게 한다. 어느 쪽을 골라도 `analysisSupport.ts` 머리 주석에 "이 객체는 렌더 사이에 안정된 참조여야 한다"를 계약으로 적어, 다음 사람이 인라인 객체를 넘기지 않게 한다. **되풀이가 실제로 멈추는지 검사로 고정한다** — 렌더마다 새 객체를 넘기는 호출자를 만들어 조회 횟수가 한 번에 머무르는지 본다. 검사가 없으면 고친 뒤에도 같은 형태가 되살아난다
+- [X] T095 [P] (FE) 분석 차단 판정을 완성 여부 하나로 모은다 per T032 (partial) — `useStrategySettings`가 `isComplete(strategyId)`(모든 축에 값이 있는가)를 내보내는데 화면은 그것을 쓰지 않고 `invalidValues` 가운데 복원 가능한 항목이 있는지(`hasEmptiedAxis`)로 같은 것을 따로 판정한다. **지금은 둘이 같은 답을 내지만 그것은 우연이 아니라 재검증 로직이 비운 축마다 복원 가능한 항목을 남기기 때문이고, 그 대응이 한 줄만 어긋나도 축이 빠진 요청이 서버로 나간다**(T048의 "등록된 축이 빠져 있으면 400"). 화면의 차단 판정을 `isComplete`로 바꾸고 `hasEmptiedAxis`는 안내를 그릴지 정하는 데만 쓴다 — 하나는 "보낼 수 있는가", 다른 하나는 "무엇을 알릴 것인가"로 목적이 다르다. 두 목적을 한 값으로 겸하지 않는다
+
+**T091·T092 결정 (2026-09-16, 사용자 선택)**:
+
+- **T091은 그 전략에서만 막는다.** 비중 합계는 `targetWeightSource: USER`인 전략에만 뜻이 있다. 합계
+  판정은 `useSectorSelection`이 002의 `summarizeWeights`로 하고 `ready` 상태에 `weights`로 싣는다 —
+  002 화면의 다음 단계 버튼과 같은 잣대다. 막을지는 전략을 아는 화면이 정한다. 앞 단계로 통째로
+  되돌리는 안과 카드를 고를 수 없게 하는 안은 버렸다. 앞의 것은 자동 배분 전략을 쓰려던 사용자까지
+  막고, 뒤의 것은 등록표·워밍업만 보던 카드 판정에 002 비중이라는 새 입력을 섞는다.
+- **T092는 요약 줄에 시작 금액을 더한다.** spec FR-002의 열거에 시작 금액을 적어 quickstart 4와
+  맞췄다. 요약 줄과 요청 조립이 같은 값 하나를 읽어, 보이는 금액과 보내는 금액이 갈라지지 않는다.
+  T037이 적은 "분석 기간·비교 대상·비용 적용 여부 한 줄"은 이 결정 전의 범위다.
+
+**T094 진단 정정 (구현 중 검사로 확인)**: 위 T094는 "조회 → 상태 갱신 → 재렌더 → 새 객체 → 조회가 끝없이
+돈다"고 적었으나 **틀렸다.** 조회가 바꾸는 것은 이 화면의 상태뿐이라 부모가 다시 그려지지 않고, 그래서
+조회가 스스로를 다시 부르지 못한다. 실제 결함은 더 작다 — **부모가 제 사정으로 다시 그릴 때마다 버전을
+한 번씩 더 조회하고, 그동안 화면이 '확인하는 중'으로 돌아가 '분석하기'가 잠깐씩 막힌다.** 이 사실은
+처음 쓴 검사가 고치기 전 코드에서도 통과한 데서 드러났다(부모를 다시 그리지 않아 결함을 건드리지
+못했다). 검사를 부모가 실제로 다시 그리도록 고쳤고, 고치기 전 코드로 되돌리면 조회가 한 번이 아니라
+세 번 나가 실패한다. 고친 방법(ref로 최신 통로를 읽는다)은 그대로 유효하다. 심각도는 MEDIUM보다
+낮게 보는 것이 맞다.
+
+**T095 검사의 한계**: 새로 둔 "축이 빠진 설정으로는 요청을 보내지 않는다" 검사는 옛 판정(`hasEmptiedAxis`)
+으로 되돌려도 통과한다. 두 판정이 지금은 같은 답을 내기 때문이다 — 재검증이 비운 축마다 복원 가능한
+안내를 남기는 한 둘은 갈라지지 않는다. 이 검사가 지키는 것은 **동작**(축이 빠지면 보내지 않는다)이지
+판정을 어느 쪽으로 했는지가 아니다. 둘이 갈라지는 상태는 훅이 만들어 내지 않으므로, 그 상태를 억지로
+만들려면 훅을 흉내 내야 하고 그것은 구현의 세부를 검사하는 셈이라 두지 않았다.

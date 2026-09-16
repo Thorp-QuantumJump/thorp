@@ -4,6 +4,7 @@ import {
   type DroppedSelection,
   type SelectionRestoreProblem,
 } from '@/diagnosis/selectionStorage'
+import { summarizeWeights } from '@/diagnosis/weights'
 import type { SectorSummary } from '@/types/sector'
 
 /**
@@ -73,6 +74,19 @@ export type SectorSelectionState =
       status: 'ready'
       selection: SectorSelection
       /**
+       * 비중 합계와 그것이 정확히 100%인가.
+       *
+       * <p><b>합계가 어긋나도 `ready`다.</b> 002 인계 계약 불변식 3이 합계 100%를 보장하지 않고,
+       * 사용자가 입력을 마치지 못한 채 떠난 상태도 그대로 보관하라고 정한다. 그러니 이것은 손상이
+       * 아니다. 그리고 합계는 <b>사용자가 정한 비중을 쓰는 전략에만</b> 뜻이 있다 — 자동 배분
+       * 전략은 이 비중을 읽지 않으므로 여기서 앞 단계로 되돌리면 그 전략을 쓰려던 사용자까지
+       * 막는다. 그래서 판정만 이 자리에서 하고, 막을지는 전략을 아는 화면이 정한다(T091).
+       *
+       * <p>판정은 002의 `summarizeWeights`를 그대로 쓴다. 002 화면의 다음 단계 버튼과 같은 잣대라야
+       * 한쪽에서 통과한 선택이 다른 쪽에서 막히지 않는다. 허용 오차는 두지 않는다(원칙 VI).
+       */
+      weights: { totalTenths: number; isBalanced: boolean }
+      /**
        * 보관되어 있었으나 선택에 남지 못한 항목.
        *
        * **비어 있지 않은데 화면이 말하지 않으면 안 된다.** 계약의 "읽는 쪽의 의무"가 빠진 항목을
@@ -123,9 +137,15 @@ export function useSectorSelection(
       })
     }
 
+    const { totalTenths, isBalanced } = summarizeWeights(
+      snapshot.selectedCodes,
+      snapshot.weightTenths,
+    )
+
     return {
       status: 'ready',
       selection: { mapVersion: snapshot.mapVersion, items },
+      weights: { totalTenths, isBalanced },
       dropped: restored.dropped,
     }
   }, [sectors])

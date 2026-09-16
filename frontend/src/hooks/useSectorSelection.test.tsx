@@ -83,6 +83,37 @@ describe('useSectorSelection', () => {
     ])
   })
 
+  it('비중 합계가 100%면 맞았다고 판정한다', () => {
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA', 'GAMMA'],
+      weightTenths: { ALPHA: 334, BETA: 333, GAMMA: 333 },
+      weightsTouched: true,
+    })
+
+    const result = renderSelection()
+    if (result.current.status !== 'ready') throw new Error('ready 가 아니다')
+    expect(result.current.weights).toEqual({ totalTenths: 1000, isBalanced: true })
+  })
+
+  it('비중 합계가 어긋나도 앞 단계 미완료로 보지 않고 합계만 알린다', () => {
+    // T091. 002 인계 계약 불변식 3이 합계 100%를 보장하지 않는다 — 입력을 마치지 못하고 떠난 상태도
+    // 정상으로 보관된다. 합계는 사용자 비중을 쓰는 전략에만 뜻이 있어, 막을지는 전략을 아는 화면이
+    // 정한다. 여기서 `incomplete`로 접으면 자동 배분 전략을 쓰려던 사용자까지 되돌린다.
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA', 'GAMMA'],
+      weightTenths: { ALPHA: 333, BETA: 333, GAMMA: 333 },
+      weightsTouched: true,
+    })
+
+    const result = renderSelection()
+    expect(result.current.status).toBe('ready')
+    if (result.current.status !== 'ready') return
+    // 허용 오차를 두지 않는다. 0.1%p 모자라도 맞지 않은 것이다(원칙 VI).
+    expect(result.current.weights).toEqual({ totalTenths: 999, isBalanced: false })
+  })
+
   it('종목은 페이로드가 아니라 섹터 목록에서 찾는다', () => {
     writeStoredSelection({
       mapVersion: 'SEM-TEST-1',

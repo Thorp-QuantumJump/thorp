@@ -24,6 +24,7 @@ export default defineConfig({
       'src/api/strategyRegistry.test.ts',
       'src/auth/**/*.test.ts',
       'src/diagnosis/**/*.test.ts',
+      'src/utils/warmupRule.test.ts',
     ],
     setupFiles: ['./src/test/setup.ts'],
   },
