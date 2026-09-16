@@ -72,10 +72,19 @@ public record ParameterAxis(
 ) {}
 
 /**
- * 입력 허용 범위. 목록형 축은 values만, 입력형 축은 min·max·step을 쓰며 둘을 동시에 채우지 않는다.
+ * 입력 허용 범위. 목록형 축은 후보 목록만, 입력형 축은 min·max·step을 쓰며 둘을 동시에 채우지 않는다.
  * 등록표가 준 형태를 그대로 옮긴다.
+ *
+ * 후보는 값과 화면 문구를 함께 담는다(003 내부 계약 §2.6). 007은 문구를 쓰지 않으므로
+ * values()로 값만 순서대로 읽는다 — 부분집합 검사·그리드 좌표·미리보기 응답은 그대로다.
  */
-public record AllowedRange(Object min, Object max, Object step, List<Object> values) {}
+public record AllowedRange(
+        Object min, Object max, Object step, List<RegisteredChoice> choices) {
+    public List<Object> values() { ... }   // 값만 순서대로
+}
+
+/** 목록형 후보 하나. label 은 003 화면이 쓰고 007은 보지 않는다. */
+public record RegisteredChoice(Object value, String label) {}
 
 public record ValidationVerdict(boolean valid, String reasonCode, String reasonDetail) {}
 
@@ -94,6 +103,9 @@ public record SearchContext(int universeSize) {}
   그 값은 [003](../../003-strategy-settings/spec.md)의 PD-02다.
 - `defaultValue`·`allowedRange`는 상세 변경 화면과 범위 검증이 그대로 쓴다. 007에 기본값 상수나
   범위 상수를 두지 않는다(FR-027). 기본값을 "추천"이나 "최적값"으로 표시하지 않는다(원칙 III).
+- **후보의 화면 문구는 003 것이다.** 003이 등록표에 후보별 `label`을 담기 시작했으나(003 내부 계약
+  §2.6) 007은 `values()`로 값만 읽으므로 **미리보기 응답의 `allowedRange` 모양은 바뀌지 않았다.**
+  007이 대응할 것은 없다 — 문구를 응답에 실으면 007이 화면 표현을 소유하는 셈이라 싣지 않는다.
 - 007은 등록표에 없는 값을 절대 만들지 않는다(FR-002). `space`에 등록표 밖 값이 오면 400이다.
 - 조회가 실패하면(구현체 예외) 접수를 거부한다 — `503 REGISTRY_UNAVAILABLE`. 캐시된 등록 정보나
   내부 기본값으로 대체하지 않는다(FR-028, R9).
