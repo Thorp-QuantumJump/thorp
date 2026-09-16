@@ -97,14 +97,6 @@
   transition: transform 220ms ease;
 }
 
-/* 보조 메뉴다. 숨기지 않되 주요 메뉴보다 약하게 보인다. */
-.desktopNavigation .secondaryMenuLink {
-  padding-left: clamp(12px, 1.6vw, 26px);
-  border-left: 1px solid var(--landing-line);
-  color: #8c9a92;
-  font-size: 0.74rem;
-}
-
 .desktopNavigation a:hover,
 .mobileNavigation a:hover {
   color: var(--landing-text);
@@ -348,8 +340,8 @@
   margin-top: 38px;
 }
 
-/* 첫 화면의 행동 버튼은 이 하나뿐이다. */
-.primaryCta {
+.primaryCta,
+.secondaryCta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -358,18 +350,37 @@
   padding: 0 21px;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--landing-accent);
-  color: var(--thorp-action-foreground);
   font-size: 0.82rem;
   font-weight: 680;
   text-decoration: none;
   transition: gap 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;
 }
 
-.primaryCta:hover {
+.primaryCta {
+  background: var(--landing-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.secondaryCta {
+  border-color: rgb(210 234 220 / 22%);
+  background: rgb(7 18 12 / 64%);
+  color: var(--landing-text);
+  cursor: pointer;
+}
+
+.primaryCta:hover,
+.secondaryCta:hover {
   gap: 16px;
-  background: #56e889;
   transform: translateY(-2px);
+}
+
+.primaryCta:hover {
+  background: #56e889;
+}
+
+.secondaryCta:hover {
+  border-color: rgb(134 242 168 / 48%);
+  background: rgb(14 34 23 / 88%);
 }
 
 .heroFootnote {
@@ -622,6 +633,26 @@
   stroke-linejoin: miter;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
+}
+
+.textCta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 720px);
+  padding: 18px 0;
+  border-top: 1px solid var(--landing-line);
+  border-bottom: 1px solid var(--landing-line);
+  color: var(--landing-text);
+  font-size: 0.83rem;
+  font-weight: 620;
+  text-decoration: none;
+  transition: color 180ms ease, padding 180ms ease;
+}
+
+.textCta:hover {
+  padding-right: 9px;
+  color: var(--landing-accent-soft);
 }
 
 .backtestVisual {
@@ -955,6 +986,8 @@
 .headerCta:focus-visible,
 .mobileNavigation a:focus-visible,
 .primaryCta:focus-visible,
+.secondaryCta:focus-visible,
+.textCta:focus-visible,
 .algorithmCard > a:focus-visible,
 .cardSelectButton:focus-visible,
 .menuButton:focus-visible {
@@ -1098,7 +1131,8 @@
     width: min(100%, 310px);
   }
 
-  .primaryCta {
+  .primaryCta,
+  .secondaryCta {
     width: 100%;
   }
 
@@ -1269,6 +1303,8 @@
   .headerCta,
   .desktopNavigation a::after,
   .primaryCta,
+  .secondaryCta,
+  .textCta,
   .algorithmCard > a {
     transition: none;
   }

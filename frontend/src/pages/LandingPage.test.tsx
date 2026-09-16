@@ -71,22 +71,35 @@ describe('LandingPage', () => {
     const cta = screen.getByRole('link', { name: /비중 비교하기/ })
     expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')
 
-    // 행동 버튼이 하나라는 것은 이 버튼 옆에 다른 행동이 나란히 놓이지 않는다는 뜻이다.
-    // 검사 범위를 행동 줄로 좁혀 둔다. 히어로 안 다른 자리에 링크가 생겼다는 이유로
-    // 이 검사가 깨지면 실패 메시지가 실제 원인을 가리키지 못한다.
+    // 행동 줄에서 다른 화면으로 보내는 것은 이 버튼 하나뿐이다. 옆에 있는 '서비스 알아보기'는
+    // 같은 페이지 안을 내려갈 뿐이라 이 제약이 세는 대상이 아니다.
+    // 검사 범위를 행동 줄로 좁혀 둔다. 첫 화면의 다른 자리에 링크가 생겼다는 이유로 이 검사가
+    // 깨지면 실패 메시지가 실제 원인을 가리키지 못한다.
     const actionRow = cta.parentElement
     expect(actionRow).not.toBeNull()
     expect(within(actionRow as HTMLElement).getAllByRole('link')).toHaveLength(1)
-    expect(within(actionRow as HTMLElement).queryAllByRole('button')).toHaveLength(0)
   })
 
-  it('다른 화면으로 보내던 행동 유도가 남아 있지 않다', () => {
+  it("보조 버튼 '서비스 알아보기'는 화면을 떠나지 않는다", () => {
     renderWithRouter(<LandingPage />)
 
+    const secondary = screen.getByRole('button', { name: /서비스 알아보기/ })
+    // 링크가 아니라 버튼이라는 사실 자체가 다른 화면으로 보내지 않는다는 뜻이다.
+    expect(secondary.tagName).toBe('BUTTON')
+  })
+
+  it('머리 영역의 주 버튼이 대시보드로 가지 않는다', () => {
+    renderWithRouter(<LandingPage />)
+
+    // 이 자리를 '비중 비교하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.
     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /서비스 알아보기/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /시장 분석 보러 가기/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /백테스트 시작하기/ })).toBeNull()
+  })
+
+  it('소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다', () => {
+    renderWithRouter(<LandingPage />)
+
+    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ })).toBeDefined()
+    expect(screen.getByRole('link', { name: /백테스트 시작하기/ })).toBeDefined()
   })
 
   it('소개 섹션은 그대로 남는다', () => {
