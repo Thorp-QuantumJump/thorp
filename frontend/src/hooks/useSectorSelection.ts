@@ -51,6 +51,26 @@ export type SectorSelection = {
 }
 
 /**
+ * 앞 단계의 선택을 쓸 수 없는 까닭.
+ *
+ * 002가 정한 둘(`unreadable`·`newerFormat`)에 003이 하나를 더한다.
+ *
+ * - `mapVersionChanged`: 선택을 만든 대응표 버전과 지금 받은 섹터 목록의 대응표 버전이 다르다.
+ *   **종목은 지금 목록에서 찾으므로 둘을 한 요청에 실으면 서로 다른 대응표에서 온 값이 섞인다.**
+ *   서버는 요청의 대응표 버전으로 (섹터, 종목) 쌍을 검증하므로 대표 ETF가 바뀐 섹터가 있으면
+ *   400으로 거절하고, 바뀌지 않았더라도 결과 기록의 대응표 버전이 실제로 쓴 종목을 말하지 않게
+ *   된다(원칙 VIII). 어느 쪽 버전으로 맞출지는 사용자가 앞 단계에서 다시 확인할 일이지 이 화면이
+ *   조용히 고를 일이 아니다.
+ */
+export type SectorSelectionProblem = SelectionRestoreProblem | 'mapVersionChanged'
+
+/** 섹터 목록 한 벌과 그 대응표 버전. 둘은 늘 함께 다닌다 — 따로 받으면 서로 다른 벌이 섞인다. */
+export type SectorCatalogForSelection = {
+  mapVersion: string
+  sectors: readonly SectorSummary[]
+}
+
+/**
  * 앞 단계의 상태.
  *
  * <p><b>"아직 알 수 없다"와 "마치지 않았다"를 가른다.</b> 섹터 목록을 받기 전에 후자로 접으면
@@ -67,7 +87,7 @@ export type SectorSelectionState =
   | {
       status: 'incomplete'
       /** 읽지 못한 까닭. 없으면 그냥 고른 것이 모자란 것이다. */
-      problem: SelectionRestoreProblem | null
+      problem: SectorSelectionProblem | null
       dropped: DroppedSelection[]
     }
   | {
@@ -98,23 +118,34 @@ export type SectorSelectionState =
 /**
  * 앞 단계에서 정한 섹터·비중.
  *
- * `sectors`는 `GET /sectors`로 받은 목록이며, 아직 받지 못했으면 `null`을 넘긴다. 돌려주는
- * `items`의 길이가 곧 등록표 조회의 `universeSize`다 — 화면이 그 수를 따로 세지 않는다.
+ * `catalog`는 `GET /sectors`로 받은 목록과 그 대응표 버전이며, 아직 받지 못했으면 `null`을 넘긴다.
+ * 돌려주는 `items`의 길이가 곧 등록표 조회의 `universeSize`다 — 화면이 그 수를 따로 세지 않는다.
  *
- * <p>계산은 `sectors`가 바뀔 때만 다시 한다. 호출자는 조회 결과를 그대로 넘겨 같은 목록이 매
- * 렌더 새 배열이 되지 않게 한다.
+ * <p><b>목록과 버전을 한 덩이로 받는다.</b> 종목을 찾는 목록과 그 목록이 속한 대응표 버전이 따로
+ * 들어오면, 호출자가 서로 다른 조회의 결과를 짝지어 넘겨도 이 훅이 알아챌 수 없다.
+ *
+ * <p>계산은 `catalog`가 바뀔 때만 다시 한다. 호출자는 조회 결과를 그대로 넘겨 같은 목록이 매
+ * 렌더 새 객체가 되지 않게 한다.
  */
 export function useSectorSelection(
-  sectors: readonly SectorSummary[] | null,
+  catalog: SectorCatalogForSelection | null,
 ): SectorSelectionState {
   return useMemo(() => {
-    if (sectors === null) return { status: 'pending' }
+    if (catalog === null) return { status: 'pending' }
+    const { sectors } = catalog
 
     const restored = readStoredSelection(sectors)
     const snapshot = restored.snapshot
 
     if (snapshot === null || snapshot.selectedCodes.length < MINIMUM_SECTOR_COUNT) {
       return { status: 'incomplete', problem: restored.problem, dropped: restored.dropped }
+    }
+
+    // 종목은 아래에서 지금 목록으로 찾는다. 선택이 다른 대응표에서 만들어졌다면 그 둘을 한 요청에
+    // 섞지 않는다 — 002가 보관한 버전을 지금 버전으로 덮어쓰지도, 종목을 옛 버전으로 추측하지도
+    // 않고 앞 단계에서 다시 확인하게 한다.
+    if (snapshot.mapVersion !== catalog.mapVersion) {
+      return { status: 'incomplete', problem: 'mapVersionChanged', dropped: restored.dropped }
     }
 
     const instrumentBySector = new Map(
@@ -148,5 +179,5 @@ export function useSectorSelection(
       weights: { totalTenths, isBalanced },
       dropped: restored.dropped,
     }
-  }, [sectors])
+  }, [catalog])
 }

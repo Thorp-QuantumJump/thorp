@@ -37,8 +37,16 @@ const catalog: SectorSummary[] = [
   sector('GAMMA', '다섹터'),
 ]
 
-function renderSelection(sectors: readonly SectorSummary[] | null = catalog) {
-  return renderHook(() => useSectorSelection(sectors)).result
+/** 검사가 보관하는 선택과 같은 대응표 버전. 목록도 이 버전에 속한다고 본다. */
+const CATALOG_MAP_VERSION = 'SEM-TEST-1'
+
+function renderSelection(
+  sectors: readonly SectorSummary[] | null = catalog,
+  mapVersion: string = CATALOG_MAP_VERSION,
+) {
+  return renderHook(() =>
+    useSectorSelection(sectors === null ? null : { mapVersion, sectors }),
+  ).result
 }
 
 afterEach(() => {
@@ -129,6 +137,23 @@ describe('useSectorSelection', () => {
     const result = renderSelection()
     if (result.current.status !== 'ready') throw new Error('ready 가 아니다')
     expect(result.current.selection.items[0].instrumentId).toBe('ALPHA.XKRX')
+  })
+
+  it('선택을 만든 대응표와 지금 목록의 대응표가 다르면 종목을 섞지 않고 앞 단계로 되돌린다', () => {
+    // S15P21E205-274. 종목은 지금 목록에서 찾는데 버전은 보관값이라, 그대로 실으면 서로 다른
+    // 대응표에서 온 값이 한 요청에 섞인다. 서버는 요청의 버전으로 (섹터, 종목) 쌍을 검증한다.
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA'],
+      weightTenths: { ALPHA: 500, BETA: 500 },
+      weightsTouched: true,
+    })
+
+    const result = renderSelection(catalog, 'SEM-TEST-2')
+
+    expect(result.current.status).toBe('incomplete')
+    if (result.current.status !== 'incomplete') return
+    expect(result.current.problem).toBe('mapVersionChanged')
   })
 
   it('섹터 목록을 받기 전에는 마치지 않았다고 말하지 않는다', () => {
