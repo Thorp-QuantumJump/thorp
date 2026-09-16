@@ -43,9 +43,18 @@ KIND(Korea Investor's Network for Disclosure system)는 거래소가 운영하�
   ISIN으로 맞출 수 없다.
 
 옛 모양을 조용히 버리면 빠진 분배를 아무도 모른다. 그래서 :func:`parse_distribution_rows` 는
-옛 모양도 읽되 ``isin``을 ``None``으로 두고, :func:`collect_distribution_history` 는 그런 공시를
-:class:`UnkeyedDisclosure` 로 **결과에 담아 드러낸다.** 목록이 비었다는 것과 읽지 못했다는 것은
-:attr:`DistributionHistory.is_complete` 가 가른다.
+옛 모양도 읽되 ``isin``을 ``None``으로 둔다.
+
+## 옛 공시를 우리 종목에 어떻게 붙이는가
+
+ISIN이 없으니 남은 단서는 ``종목`` 칸의 **펀드 정식명**뿐이다.
+:func:`collect_distribution_history` 에 ``fund_names`` (``{펀드 정식명: ISIN}``) 를 주면
+:func:`key_distribution_rows` 가 **갈래를 갈라** 붙인다 — ISIN이 있는 행은 ISIN으로,
+없는 행은 이름으로. 붙은 건은 :attr:`DistributionRecord.matched_by` 에 어느 갈래였는지 남는다.
+
+이름으로도 못 붙인 행은 버리지 않고 :class:`UnkeyedDisclosure` 로 **결과에 담아 드러낸다.**
+목록이 비었다는 것과 읽지 못했다는 것은 :attr:`DistributionHistory.is_complete` 가 가른다.
+왜 부분 일치가 아니라 완전 일치인지는 「6단계」 절의 주석에 실측 근거와 함께 적었다.
 
 ## 인코딩
 
@@ -57,7 +66,7 @@ from __future__ import annotations
 
 import re
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -105,10 +114,18 @@ _DOC_NO_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A\d{14}\Z")
 
 #: 가로 표(2020년 이후)의 열 이름. 공백을 지운 뒤 맞춘다.
 _COL_ISIN: Final[str] = "종목코드"
-_COL_SHORT_NAME: Final[str] = "종목약명"
 _COL_RECORD_DATE: Final[str] = "투자신탁분배금지급기준일"
 _COL_PAY_DATE: Final[str] = "투자신탁분배금지급예정일"
 _COL_AMOUNT: Final[str] = "분배금(원)"
+
+#: 종목 이름 열의 이름은 해에 따라 다르다. 둘 중 **하나만** 있으면 된다.
+#: ``종목약명``은 2020년 이후, ``종목명``은 2019년의 일괄공시에서 관측했다
+#: (2019-10-29 접수 ``20191029000131`` 실측). 하나로 못 박으면 2019년 일괄공시 22건이
+#: 통째로 :class:`KindParseError` 가 되어 그 해 수집이 멈춘다.
+_COL_SHORT_NAME_ALIASES: Final[tuple[str, ...]] = ("종목약명", "종목명")
+
+#: 열 자리표에서 종목 이름 열을 가리키는 내부 열쇠. 실제 열 이름이 둘이라 따로 둔다.
+_SHORT_NAME_KEY: Final[str] = "_short_name"
 
 #: 세로 표(2019년 이전)의 항목 이름. 금액 항목 이름이 가로 표와 다르다.
 _LEGACY_NAME: Final[str] = "종목"
@@ -163,9 +180,21 @@ class DistributionRow:
     amount: Decimal
 
 
+#: 종목코드(ISIN) 칸으로 맞춘 것. 2020년 이후 일괄공시가 이 갈래다.
+MATCH_BY_ISIN: Final[str] = "isin"
+
+#: 펀드 정식명으로 맞춘 것. 2019년 이전 공시가 이 갈래다.
+MATCH_BY_FUND_NAME: Final[str] = "fund_name"
+
+
 @dataclass(frozen=True)
 class DistributionRecord:
-    """어떤 종목의 분배 한 건. ``pay_date``가 이 모듈을 만든 이유다."""
+    """어떤 종목의 분배 한 건. ``pay_date``가 이 모듈을 만든 이유다.
+
+    ``matched_by``는 이 건을 **어느 갈래로 맞췄는지** 남긴다
+    (:data:`MATCH_BY_ISIN` 또는 :data:`MATCH_BY_FUND_NAME`). 이름으로 맞춘 건은 대응표가
+    맞다는 전제 위에 서 있으므로, 읽는 쪽이 둘을 구별할 수 있어야 한다.
+    """
 
     isin: str
     short_name: str
@@ -173,11 +202,15 @@ class DistributionRecord:
     pay_date: date
     amount: Decimal
     acpt_no: str
+    matched_by: str = MATCH_BY_ISIN
 
 
 @dataclass(frozen=True)
 class UnkeyedDisclosure:
-    """ISIN으로 맞출 수 없어 판정을 보류한 공시.
+    """어느 종목의 것인지 맞추지 못해 판정을 보류한 공시.
+
+    ISIN 칸도 없고 펀드 정식명도 대응표에 없을 때 남는다. ``row_count``와 ``names``는
+    **맞추지 못한 행만** 센다 — 같은 공시의 나머지 행이 붙었어도 못 붙은 행은 드러나야 한다.
 
     비어 있지 않다면 **"분배가 없다"고 말할 수 없다.** 결과가 이 사실을 담고 다닌다.
     """
@@ -566,18 +599,25 @@ def _parse_amount(text: str) -> Decimal:
         raise KindParseError(f"분배금을 읽지 못했다: {text!r}") from error
 
 
+def _has_short_name_column(labels: set[str]) -> bool:
+    """종목 이름 열이 어느 이름으로든 있는가."""
+    return any(alias in labels for alias in _COL_SHORT_NAME_ALIASES)
+
+
 def _bundled_header_index(table: list[list[str]]) -> int | None:
-    """가로 표의 머리글 줄 자리. 다섯 열 이름이 **모두** 있어야 머리글로 본다.
+    """가로 표의 머리글 줄 자리. 다섯 열이 **모두** 있어야 머리글로 본다.
 
     ``종목코드``만 보고 고르면 정정공시에 걸린다. 정정공시는 본문 앞에
     ``정정항목 | 정정전 | 정정후`` 표를 두는데 그 안에 ``종목코드``라는 **항목 이름**이 들어
     있다(2025-04-28 접수 ``20250428000383`` 실측). 그 표를 머리글로 착각하면 진짜 분배 표를
     영영 읽지 못한다.
+
+    종목 이름 열만 이름이 해마다 달라 :data:`_COL_SHORT_NAME_ALIASES` 중 하나면 인정한다.
     """
-    required = (_COL_ISIN, _COL_SHORT_NAME, _COL_RECORD_DATE, _COL_PAY_DATE, _COL_AMOUNT)
+    required = (_COL_ISIN, _COL_RECORD_DATE, _COL_PAY_DATE, _COL_AMOUNT)
     for index, cells in enumerate(table):
         labels = {_squeeze(cell) for cell in cells}
-        if all(name in labels for name in required):
+        if all(name in labels for name in required) and _has_short_name_column(labels):
             return index
     return None
 
@@ -589,10 +629,16 @@ def _parse_bundled_table(table: list[list[str]]) -> list[DistributionRow]:
         raise KindParseError(f"가로 표의 머리글({_COL_ISIN})을 찾지 못했다")
     header = [_squeeze(cell) for cell in table[header_index]]
     columns: dict[str, int] = {}
-    for name in (_COL_ISIN, _COL_SHORT_NAME, _COL_RECORD_DATE, _COL_PAY_DATE, _COL_AMOUNT):
+    for name in (_COL_ISIN, _COL_RECORD_DATE, _COL_PAY_DATE, _COL_AMOUNT):
         if name not in header:
             raise KindParseError(f"가로 표에 {name!r} 열이 없다: {header!r}")
         columns[name] = header.index(name)
+    short_name_alias = next((alias for alias in _COL_SHORT_NAME_ALIASES if alias in header), None)
+    if short_name_alias is None:
+        raise KindParseError(
+            f"가로 표에 종목 이름 열({_COL_SHORT_NAME_ALIASES!r})이 하나도 없다: {header!r}"
+        )
+    columns[_SHORT_NAME_KEY] = header.index(short_name_alias)
     width = max(columns.values()) + 1
     rows: list[DistributionRow] = []
     for cells in table[header_index + 1 :]:
@@ -608,7 +654,7 @@ def _parse_bundled_table(table: list[list[str]]) -> list[DistributionRow]:
         rows.append(
             DistributionRow(
                 isin=isin,
-                short_name=cells[columns[_COL_SHORT_NAME]].strip(),
+                short_name=cells[columns[_SHORT_NAME_KEY]].strip(),
                 record_date=_parse_body_date(cells[columns[_COL_RECORD_DATE]], "지급기준일"),
                 pay_date=_parse_body_date(cells[columns[_COL_PAY_DATE]], "지급예정일"),
                 amount=_parse_amount(cells[columns[_COL_AMOUNT]]),
@@ -668,6 +714,87 @@ def fetch_distribution_rows(source: KindPageSource, acpt_no: str) -> list[Distri
 
 
 # ---------------------------------------------------------------------------
+# 6단계 — 펀드 정식명으로 맞추기 (2019년 이전)
+# ---------------------------------------------------------------------------
+#
+# ## 왜 이름으로 맞추는가
+#
+# 2019년 이전 공시에는 종목코드(ISIN) 칸이 아예 없다. 남은 단서는 ``종목`` 칸의
+# **펀드 정식명**(``삼성 KODEX 은행증권상장지수투자신탁(주식)``)뿐이다.
+#
+# ## 왜 「브랜드명으로 시작하는가」로 맞추지 않는가 — 2026-09-16 실측 근거
+#
+# 브랜드명(``KODEX 은행``)이나 ``{브랜드명}증권상장지수투자신탁`` 같은 **부분 일치**는 셋 다
+# 실제로 틀린다. 아래는 2019년 공시 232건을 모두 받아 본 결과다.
+#
+# 1. 브랜드명이 정식명에 그대로 들어 있지 않다. 단축코드 ``102970``의 브랜드명은
+#    ``KODEX 증권``인데 정식명은 ``삼성 KODEX 증권주증권상장지수투자신탁(주식)``으로
+#    **``증권주``** 다(2019-04-26 접수 ``20190426000611``). ``KODEX 증권증권상장지수투자신탁``
+#    으로 만들어 맞추면 한 건도 못 찾는다.
+# 2. 운용사를 빼면 다른 운용사의 같은 업종 상품에 걸린다. 같은 해에
+#    ``미래에셋 TIGER 은행증권상장지수투자신탁(주식)``이 함께 있어 ``KODEX 은행``과 ``TIGER 은행``
+#    을 ``은행증권상장지수투자신탁(주식)``으로는 가를 수 없다.
+# 3. 뒤까지 포함해도 부분 일치는 위험하다. ``KB KBSTAR 200중공업증권상장지수투자신탁(주식)``은
+#    ``200중공업증권상장지수투자신탁(주식)``을 **통째로 품는다.** 그래서 미래에셋의
+#    ``TIGER 200중공업``을 찾으려고 뒤쪽 조각으로 맞추면 KB 상품까지 걸린다.
+#
+# ## 그래서 고른 방법 — 정식명 **전체가 똑같을 때만** 맞춘다
+#
+# 공백만 지우고(아래 :func:`normalize_fund_name`) **완전 일치**로 사전을 찾는다. 부분 일치를
+# 아예 쓰지 않으므로 ``KODEX 은행``이 ``KODEX 은행고배당``에 걸릴 길이 구조적으로 없다.
+# 대응표는 코드에 박지 않고 인자로 받는다 — 정식명은 관측으로만 확정할 수 있고, 뒤에서 보듯
+# 해마다 바뀌기 때문이다.
+#
+# 공백만 지우는 까닭도 관측이다. 같은 펀드의 정식명이 해마다 띄어쓰기만 달라진다.
+# ``삼성KODEX건설증권상장지수투자신탁[주식]``(2011~2015) →
+# ``삼성 KODEX 건설증권상장지수투자신탁(주식)``(2016~2019). 대괄호와 소괄호는 **지우지 않는다.**
+# ``[주식]``과 ``(주식)``은 서로 다른 시기의 서로 다른 표기이며, 둘을 같게 뭉개면 이름이 실제로
+# 다른 두 펀드를 가를 수단이 하나 줄어든다. 표기가 바뀌었으면 대응표에 **관측한 문자열을 모두**
+# 적는 것이 맞다.
+
+#: 공백으로 볼 글자. 일반 공백 말고도 줄바꿈·무너지지 않는 공백(NBSP)·전각 공백이 실제로 섞인다.
+_WHITESPACE: Final[re.Pattern[str]] = re.compile(r"[\s 　]+")
+
+
+def normalize_fund_name(name: str) -> str:
+    """펀드 정식명을 견줄 수 있는 꼴로 바꾼다. **공백만** 지운다.
+
+    괄호·대괄호는 손대지 않는다(위 주석의 까닭). 비교는 언제나 이 꼴끼리 한다.
+    """
+    return _WHITESPACE.sub("", name)
+
+
+def build_fund_name_index(fund_names: Mapping[str, str]) -> dict[str, str]:
+    """``{펀드 정식명: ISIN}`` 대응표를 견줌용 사전으로 바꾼다.
+
+    ``fund_names``는 **관측한 정식명**을 열쇠로 둔다. 한 종목의 이름이 시기마다 다르면 그만큼
+    여러 줄을 둔다(같은 ISIN을 여러 이름이 가리켜도 된다).
+
+    같은 이름이 서로 다른 ISIN을 가리키면 조용히 덮어쓰지 않고 알린다. 덮어쓰면 어느 쪽이
+    남았는지 아무도 모른 채 분배가 엉뚱한 종목에 붙는다.
+    """
+    index: dict[str, str] = {}
+    for name, isin in fund_names.items():
+        if ISIN_PATTERN.match(isin) is None:
+            raise ValueError(f"대응표의 ISIN이 KR로 시작하는 12글자가 아니다: {name!r} -> {isin!r}")
+        key = normalize_fund_name(name)
+        if not key:
+            raise ValueError("대응표에 빈 펀드 정식명이 있다")
+        previous = index.get(key)
+        if previous is not None and previous != isin:
+            raise ValueError(
+                f"같은 펀드 정식명이 두 ISIN을 가리킨다: {name!r} -> {previous!r}, {isin!r}"
+            )
+        index[key] = isin
+    return index
+
+
+def match_fund_name(name: str, index: Mapping[str, str]) -> str | None:
+    """정식명으로 ISIN을 찾는다. **완전 일치**만 인정하며 못 찾으면 ``None``이다."""
+    return index.get(normalize_fund_name(name))
+
+
+# ---------------------------------------------------------------------------
 # 한 종목의 분배 이력
 # ---------------------------------------------------------------------------
 
@@ -687,6 +814,40 @@ def iter_year_chunks(from_date: date, to_date: date) -> Iterator[tuple[date, dat
         year += 1
 
 
+def key_distribution_rows(
+    rows: list[DistributionRow],
+    fund_name_index: Mapping[str, str],
+) -> tuple[list[tuple[DistributionRow, str, str]], list[DistributionRow]]:
+    """본문 행을 **갈래를 갈라** 종목에 붙인다.
+
+    두 갈래를 한 덩어리로 섞지 않는다. 행에 종목코드(ISIN) 칸이 있으면 그것을 쓰고
+    (:data:`MATCH_BY_ISIN`), 없으면 펀드 정식명 대응표를 찾는다
+    (:data:`MATCH_BY_FUND_NAME`). ISIN이 있는 행에는 이름 대응표를 **아예 쓰지 않는다** —
+    원천이 준 열쇠를 두고 이름을 보면 대응표의 실수가 원천을 덮어쓴다.
+
+    돌려주는 것은 ``(붙은 행, 붙인 ISIN, 갈래)`` 목록과 **어디에도 붙지 못한 행** 목록이다.
+    붙지 못한 행을 버리지 않고 돌려주는 것이 이 함수의 요점이다.
+    """
+    keyed: list[tuple[DistributionRow, str, str]] = []
+    unmatched: list[DistributionRow] = []
+    for row in rows:
+        if row.isin is not None:
+            keyed.append((row, row.isin, MATCH_BY_ISIN))
+            continue
+        matched = match_fund_name(row.short_name, fund_name_index)
+        if matched is None:
+            unmatched.append(row)
+            continue
+        keyed.append((row, matched, MATCH_BY_FUND_NAME))
+    return keyed, unmatched
+
+
+def _unmatched_reason(has_index: bool) -> str:
+    if not has_index:
+        return "공시 본문에 종목코드(ISIN) 칸이 없고 펀드 정식명 대응표를 받지 않았다"
+    return "공시 본문에 종목코드(ISIN) 칸이 없고 펀드 정식명이 대응표에 없다"
+
+
 def collect_distribution_history(
     source: KindPageSource,
     isin: str,
@@ -694,16 +855,23 @@ def collect_distribution_history(
     to_date: date,
     *,
     page_size: int = DEFAULT_PAGE_SIZE,
+    fund_names: Mapping[str, str] | None = None,
 ) -> DistributionHistory:
     """한 종목(ISIN)의 분배 이력을 기간에서 모은다.
 
     단축코드를 ISIN으로 옮기는 일은 이 모듈이 하지 않는다. 대응표를 가진 쪽이 ISIN을 넘긴다.
+
+    ``fund_names``는 ``{펀드 정식명: ISIN}`` 대응표다. 2019년 이전 공시에는 종목코드 칸이 없어
+    이 대응표가 있어야 맞출 수 있다. **코드에 박지 않고 인자로 받는다** — 정식명은 관측으로만
+    확정되고 시기에 따라 달라지기 때문이다. 주지 않으면 옛 공시는 모두
+    :class:`UnkeyedDisclosure` 로 드러난다(지금까지의 동작 그대로다).
 
     ``(ISIN, 지급기준일, 지급예정일)`` 이 같으면 한 건으로 본다 — 정정공시가 같은 분배를 다시
     알리기 때문이다. 겹치면 **나중에 공시된 것**을 남긴다(정정이 원본을 대신한다).
     """
     if ISIN_PATTERN.match(isin) is None:
         raise ValueError(f"ISIN은 KR로 시작하는 12글자여야 한다: {isin!r}")
+    fund_name_index = build_fund_name_index(fund_names) if fund_names else {}
 
     refs: dict[str, DisclosureRef] = {}
     for chunk_from, chunk_to in iter_year_chunks(from_date, to_date):
@@ -714,20 +882,19 @@ def collect_distribution_history(
     unkeyed: list[UnkeyedDisclosure] = []
     for ref in sorted(refs.values(), key=lambda r: (r.disclosed_on, r.acpt_no)):
         rows = fetch_distribution_rows(source, ref.acpt_no)
-        keyed = [row for row in rows if row.isin is not None]
-        if not keyed:
+        keyed, unmatched = key_distribution_rows(rows, fund_name_index)
+        if unmatched:
             unkeyed.append(
                 UnkeyedDisclosure(
                     acpt_no=ref.acpt_no,
                     disclosed_on=ref.disclosed_on,
-                    row_count=len(rows),
-                    names=tuple(row.short_name for row in rows),
-                    reason="공시 본문에 종목코드(ISIN) 칸이 없어 ISIN으로 맞출 수 없다",
+                    row_count=len(unmatched),
+                    names=tuple(row.short_name for row in unmatched),
+                    reason=_unmatched_reason(bool(fund_name_index)),
                 )
             )
-            continue
-        for row in keyed:
-            if row.isin != isin:
+        for row, row_isin, matched_by in keyed:
+            if row_isin != isin:
                 continue
             record = DistributionRecord(
                 isin=isin,
@@ -736,6 +903,7 @@ def collect_distribution_history(
                 pay_date=row.pay_date,
                 amount=row.amount,
                 acpt_no=ref.acpt_no,
+                matched_by=matched_by,
             )
             key = (isin, row.record_date, row.pay_date)
             previous = chosen.get(key)

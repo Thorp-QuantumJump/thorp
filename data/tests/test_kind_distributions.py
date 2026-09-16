@@ -19,15 +19,21 @@ import pytest
 
 from data_pipeline.kind_distributions import (
     DISTRIBUTION_TITLE_PREFIX,
+    MATCH_BY_FUND_NAME,
+    MATCH_BY_ISIN,
     DisclosureRef,
     DistributionRow,
     KindParseError,
+    build_fund_name_index,
     collect_distribution_history,
     decode_kind_bytes,
     fetch_distribution_rows,
     find_distribution_disclosures,
     is_distribution_title,
     iter_year_chunks,
+    key_distribution_rows,
+    match_fund_name,
+    normalize_fund_name,
     parse_disclosure_refs,
     parse_distribution_rows,
     parse_document_number,
@@ -585,3 +591,290 @@ def test_DistributionRow는_얼어_있다() -> None:
     )
     with pytest.raises(AttributeError):
         row.amount = Decimal("1")  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# 2019년 이전 — 펀드 정식명으로 맞추기
+#
+# 아래 픽스처 이름의 숫자는 **접수번호**다(앞선 픽스처는 문서번호를 쓴다). 근거를 보고서와
+# 같은 번호로 가리키려고 접수번호로 두었다. 모두 2026-09-16에 KIND에서 실제로 받은 본문이다.
+# ---------------------------------------------------------------------------
+
+#: 2019-04-26 접수. 삼성자산운용 공시에서 사람이 따로 확인한 두 건이 여기 들어 있다.
+KODEX_SECURITIES_ACPT = "20190426000611"  # 삼성 KODEX 증권주… 2019-05-03 지급, 200원
+KODEX_BATTERY_ACPT = "20190426000633"  # 삼성 KODEX 2차전지산업… 2019-05-03 지급, 113원
+TIGER_HEAVY_ACPT = "20190426000435"  # 미래에셋 TIGER 200중공업… 2019-05-03 지급, 20원
+KBSTAR_HEAVY_ACPT = "20190426000663"  # KB KBSTAR 200중공업… 부분 일치 함정의 실물이다
+LEGACY_BUNDLED_ACPT = "20191029000131"  # 2019년 일괄공시. 이름 열이 「종목명」이다
+
+#: 2024-04-26 접수 20240426000498·20240426000640 본문에서 관측한 ISIN이다.
+KODEX_SECURITIES_ISIN = "KR7102970001"
+KODEX_BATTERY_ISIN = "KR7305720005"
+KODEX_BANK_ISIN = "KR7091170001"
+
+#: 2019-04-26 공시 본문에서 관측한 정식명 그대로다. 지어내지 않았다.
+FUND_NAMES_2019 = {
+    "삼성 KODEX 증권주증권상장지수투자신탁(주식)": KODEX_SECURITIES_ISIN,
+    "삼성 KODEX 2차전지산업증권상장지수투자신탁[주식형]": KODEX_BATTERY_ISIN,
+    "미래에셋 TIGER 200중공업증권상장지수투자신탁(주식)": TARGET_ISIN,
+}
+
+
+def legacy_table(name: str, record: str, pay: str, amount: str) -> str:
+    """2019년 이전 세로 표를 만든다. ISIN 칸이 없는 것이 이 모양의 핵심이다."""
+    return (
+        "<table>"
+        f"<tr><td>종목</td><td>{name}</td></tr>"
+        f"<tr><td>투자신탁 분배금 지급기준일</td><td>{record}</td></tr>"
+        f"<tr><td>투자신탁 분배금 지급예정일</td><td>{pay}</td></tr>"
+        f"<tr><td>1좌당 예상분배금(원)</td><td>{amount}</td></tr>"
+        "</table>"
+    )
+
+
+def legacy_ref(acpt_no: str, disclosed_on: date, issue_name: str) -> DisclosureRef:
+    return DisclosureRef(
+        acpt_no=acpt_no,
+        disclosed_on=disclosed_on,
+        issue_name=issue_name,
+        title="ETF이익금분배신고(분배금안내)",
+    )
+
+
+# --- 이름 다듬기 -------------------------------------------------------------
+
+
+def test_정식명은_공백만_지워_견준다() -> None:
+    """같은 펀드의 정식명이 해마다 띄어쓰기만 달라진다(2011~2019 실측)."""
+    assert normalize_fund_name("삼성KODEX건설증권상장지수투자신탁[주식]") == normalize_fund_name(
+        "삼성 KODEX 건설 증권상장지수투자신탁[주식]"
+    )
+
+
+def test_괄호_모양은_지우지_않는다() -> None:
+    """[주식]과 (주식)은 서로 다른 표기다. 뭉개면 가를 수단이 하나 줄어든다."""
+    assert normalize_fund_name("삼성 KODEX 건설증권상장지수투자신탁(주식)") != normalize_fund_name(
+        "삼성 KODEX 건설증권상장지수투자신탁[주식]"
+    )
+
+
+# --- 대응표 ------------------------------------------------------------------
+
+
+def test_대응표는_ISIN_형식을_확인한다() -> None:
+    with pytest.raises(ValueError):
+        build_fund_name_index({"삼성 KODEX 은행증권상장지수투자신탁(주식)": "091170"})
+
+
+def test_같은_이름이_두_ISIN을_가리키면_알린다() -> None:
+    """조용히 덮어쓰면 분배가 엉뚱한 종목에 붙고 아무도 모른다."""
+    with pytest.raises(ValueError):
+        build_fund_name_index(
+            {
+                "삼성 KODEX 은행증권상장지수투자신탁(주식)": KODEX_BANK_ISIN,
+                "삼성KODEX은행증권상장지수투자신탁(주식)": KODEX_SECURITIES_ISIN,
+            }
+        )
+
+
+def test_같은_ISIN을_여러_이름이_가리켜도_된다() -> None:
+    """정식명이 시기마다 달라 한 종목에 여러 줄이 필요하다."""
+    index = build_fund_name_index(
+        {
+            "삼성 KODEX 건설증권상장지수투자신탁(주식)": KODEX_BANK_ISIN,
+            "삼성KODEX건설증권상장지수투자신탁[주식]": KODEX_BANK_ISIN,
+        }
+    )
+    assert len(index) == 2
+
+
+# --- 부분 일치 함정 ----------------------------------------------------------
+
+
+def test_브랜드명_부분_일치에_걸리지_않는다() -> None:
+    """KODEX 은행이 KODEX 은행고배당에도 걸리면 분배가 남의 종목에 붙는다."""
+    index = build_fund_name_index({"삼성 KODEX 은행증권상장지수투자신탁(주식)": KODEX_BANK_ISIN})
+    assert match_fund_name("삼성 KODEX 은행증권상장지수투자신탁(주식)", index) == KODEX_BANK_ISIN
+    assert match_fund_name("삼성 KODEX 은행고배당증권상장지수투자신탁(주식)", index) is None
+
+
+def test_운용사가_다른_같은_업종에_걸리지_않는다() -> None:
+    """2019년 공시에 「미래에셋 TIGER 은행…」이 실제로 함께 있다."""
+    index = build_fund_name_index({"삼성 KODEX 은행증권상장지수투자신탁(주식)": KODEX_BANK_ISIN})
+    assert match_fund_name("미래에셋 TIGER 은행증권상장지수투자신탁(주식)", index) is None
+
+
+def test_뒤쪽_조각이_남의_이름에_통째로_들어_있어도_걸리지_않는다() -> None:
+    """KB KBSTAR 200중공업…(주식)은 200중공업…(주식)을 통째로 품는다.
+
+    실제 2019-04-26 접수 두 건으로 건다. 뒤쪽 조각으로 맞추는 방법이었다면 여기서 터진다.
+    """
+    index = build_fund_name_index(FUND_NAMES_2019)
+    ours = parse_distribution_rows(fixture(f"body_legacy_acpt{TIGER_HEAVY_ACPT}.html"))
+    theirs = parse_distribution_rows(fixture(f"body_legacy_acpt{KBSTAR_HEAVY_ACPT}.html"))
+    assert "200중공업증권상장지수투자신탁(주식)" in theirs[0].short_name
+    assert match_fund_name(ours[0].short_name, index) == TARGET_ISIN
+    assert match_fund_name(theirs[0].short_name, index) is None
+
+
+def test_브랜드명을_이어붙인_이름으로는_찾을_수_없다() -> None:
+    """단축코드 102970의 브랜드명은 KODEX 증권인데 정식명은 KODEX 증권주…다.
+
+    {브랜드명}증권상장지수투자신탁을 만들어 맞추는 방법이면 한 건도 못 찾는다.
+    """
+    (row,) = parse_distribution_rows(fixture(f"body_legacy_acpt{KODEX_SECURITIES_ACPT}.html"))
+    assert row.short_name == "삼성 KODEX 증권주증권상장지수투자신탁(주식)"
+    assert "KODEX 증권증권상장지수투자신탁" not in row.short_name
+
+
+# --- 갈래 가르기 -------------------------------------------------------------
+
+
+def test_ISIN이_있는_행은_이름표를_보지_않는다() -> None:
+    """원천이 준 열쇠를 두고 이름을 보면 대응표의 실수가 원천을 덮어쓴다."""
+    rows = parse_distribution_rows(fixture(f"body_bundled_{BUNDLED_DOC}.html"))
+    index = build_fund_name_index({"TIGER 200 중공업": KODEX_BANK_ISIN})
+    keyed, unmatched = key_distribution_rows(rows, index)
+    assert unmatched == []
+    assert {isin for _, isin, _ in keyed} == {"KR7227560000", "KR7139250005", TARGET_ISIN}
+    assert {how for _, _, how in keyed} == {MATCH_BY_ISIN}
+
+
+def test_이름으로_맞춘_행은_갈래가_드러난다() -> None:
+    rows = parse_distribution_rows(fixture(f"body_legacy_acpt{KODEX_BATTERY_ACPT}.html"))
+    keyed, unmatched = key_distribution_rows(rows, build_fund_name_index(FUND_NAMES_2019))
+    assert unmatched == []
+    assert [(isin, how) for _, isin, how in keyed] == [(KODEX_BATTERY_ISIN, MATCH_BY_FUND_NAME)]
+
+
+def test_대응표에_없는_행은_버려지지_않고_돌아온다() -> None:
+    rows = parse_distribution_rows(fixture(f"body_legacy_acpt{KBSTAR_HEAVY_ACPT}.html"))
+    keyed, unmatched = key_distribution_rows(rows, build_fund_name_index(FUND_NAMES_2019))
+    assert keyed == []
+    assert [row.short_name for row in unmatched] == [
+        "KB KBSTAR 200중공업증권상장지수투자신탁(주식)"
+    ]
+
+
+# --- 2019년 일괄공시의 열 이름 ------------------------------------------------
+
+
+def test_2019년_일괄공시는_열_이름이_종목명이다() -> None:
+    """「종목약명」으로 못 박으면 2019년 일괄공시 22건이 통째로 오류가 되어 그 해가 멈춘다."""
+    rows = parse_distribution_rows(fixture(f"body_bundled_acpt{LEGACY_BUNDLED_ACPT}.html"))
+    assert len(rows) == 4
+    assert rows[0].isin == "KR7293180006"
+    assert rows[0].short_name == "HANARO 200"
+    assert rows[0].record_date == date(2019, 10, 31)
+    assert rows[0].pay_date == date(2019, 11, 4)
+    assert rows[0].amount == Decimal("88")
+
+
+# --- 이력 수집 ---------------------------------------------------------------
+
+
+def test_정식명으로_2019년_분배를_모은다() -> None:
+    """삼성자산운용 공시에서 사람이 확인한 두 건이 그대로 나와야 한다."""
+    bodies = {
+        KODEX_SECURITIES_ACPT: fixture(f"body_legacy_acpt{KODEX_SECURITIES_ACPT}.html"),
+        KODEX_BATTERY_ACPT: fixture(f"body_legacy_acpt{KODEX_BATTERY_ACPT}.html"),
+    }
+    refs = [
+        legacy_ref(KODEX_SECURITIES_ACPT, date(2019, 4, 26), "KODEX 증권"),
+        legacy_ref(KODEX_BATTERY_ACPT, date(2019, 4, 26), "KODEX 2차전지산업"),
+    ]
+    source = ScriptedSource(refs, bodies)
+
+    securities = collect_distribution_history(
+        source,
+        KODEX_SECURITIES_ISIN,
+        date(2019, 1, 1),
+        date(2019, 12, 31),
+        fund_names=FUND_NAMES_2019,
+    )
+    assert [(r.pay_date, r.amount, r.matched_by) for r in securities.records] == [
+        (date(2019, 5, 3), Decimal("200"), MATCH_BY_FUND_NAME)
+    ]
+    assert securities.records[0].record_date == date(2019, 4, 30)
+
+    battery = collect_distribution_history(
+        source,
+        KODEX_BATTERY_ISIN,
+        date(2019, 1, 1),
+        date(2019, 12, 31),
+        fund_names=FUND_NAMES_2019,
+    )
+    assert [(r.pay_date, r.amount, r.matched_by) for r in battery.records] == [
+        (date(2019, 5, 3), Decimal("113"), MATCH_BY_FUND_NAME)
+    ]
+    assert battery.is_complete is True
+
+
+def test_대응표를_주어도_남의_공시는_결과에_드러난다() -> None:
+    """KB 상품 공시는 우리 대응표에 없다. 조용히 사라지면 「분배가 없다」를 잘못 말하게 된다."""
+    source = ScriptedSource(
+        [legacy_ref(KBSTAR_HEAVY_ACPT, date(2019, 4, 26), "KBSTAR 200중공업")],
+        {KBSTAR_HEAVY_ACPT: fixture(f"body_legacy_acpt{KBSTAR_HEAVY_ACPT}.html")},
+    )
+    history = collect_distribution_history(
+        source, TARGET_ISIN, date(2019, 1, 1), date(2019, 12, 31), fund_names=FUND_NAMES_2019
+    )
+    assert history.records == ()
+    assert history.is_complete is False
+    assert history.unkeyed[0].names == ("KB KBSTAR 200중공업증권상장지수투자신탁(주식)",)
+    assert "대응표에 없다" in history.unkeyed[0].reason
+
+
+def test_대응표를_주지_않으면_옛_동작_그대로다() -> None:
+    source = ScriptedSource(
+        [legacy_ref(TIGER_HEAVY_ACPT, date(2019, 4, 26), "TIGER 200중공업")],
+        {TIGER_HEAVY_ACPT: fixture(f"body_legacy_acpt{TIGER_HEAVY_ACPT}.html")},
+    )
+    history = collect_distribution_history(
+        source, TARGET_ISIN, date(2019, 1, 1), date(2019, 12, 31)
+    )
+    assert history.records == ()
+    assert history.is_complete is False
+    assert "대응표를 받지 않았다" in history.unkeyed[0].reason
+
+
+def test_은행고배당_함정은_이력에서도_막힌다() -> None:
+    """이름이 비슷한 두 공시를 나란히 두고, 우리 것만 집히는지 본다."""
+    ours = "삼성 KODEX 은행증권상장지수투자신탁(주식)"
+    theirs = "삼성 KODEX 은행고배당증권상장지수투자신탁(주식)"
+    source = ScriptedSource(
+        [
+            legacy_ref("20190426000612", date(2019, 4, 26), "KODEX 은행"),
+            legacy_ref("20190426000999", date(2019, 4, 26), "KODEX 은행고배당"),
+        ],
+        {
+            "20190426000612": legacy_table(ours, "2019-04-30", "2019-05-03", "300"),
+            "20190426000999": legacy_table(theirs, "2019-04-30", "2019-05-03", "999"),
+        },
+    )
+    history = collect_distribution_history(
+        source,
+        KODEX_BANK_ISIN,
+        date(2019, 1, 1),
+        date(2019, 12, 31),
+        fund_names={ours: KODEX_BANK_ISIN},
+    )
+    assert [r.amount for r in history.records] == [Decimal("300")]
+    assert history.unkeyed[0].names == (theirs,)
+
+
+def test_ISIN_매칭은_갈래_표시까지_그대로다() -> None:
+    """이름 매칭을 더해도 2020년 이후 경로가 흔들리면 안 된다."""
+    source = ScriptedSource(
+        [ref("20260729000001", date(2026, 7, 29))],
+        {
+            "20260729000001": wide_table(
+                [(TARGET_ISIN, "TIGER 200 중공업", "2026-07-31", "2026-08-04", "88")]
+            )
+        },
+    )
+    history = collect_distribution_history(
+        source, TARGET_ISIN, date(2026, 7, 1), date(2026, 8, 31), fund_names=FUND_NAMES_2019
+    )
+    assert [(r.amount, r.matched_by) for r in history.records] == [(Decimal("88"), MATCH_BY_ISIN)]
+    assert history.is_complete is True
