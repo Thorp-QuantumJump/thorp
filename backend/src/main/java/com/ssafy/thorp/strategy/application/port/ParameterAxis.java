@@ -14,6 +14,8 @@ import java.util.Objects;
  *
  * @param name 축 이름. 조합과 좌표의 키다
  * @param label 표시 문구. 007이 만들지 않는다
+ * @param description 항목의 의미 한 문장. 없으면 null. <b>화면이 축 이름으로 분기해 설명을 고르지 않게 하는 자리다</b>(research R7-1)
+ *     — FR-019의 상한 재배분 안내 문장도 여기에 온다
  * @param unit 단위. 없으면 null
  * @param searchValues 자동 탐색 후보값. 인덱스가 그리드 좌표다
  * @param defaultValue 기본 시작값. 007이 정하지 않으며 추천이나 최적값으로 표시하지 않는다(원칙 III)
@@ -22,6 +24,7 @@ import java.util.Objects;
 public record ParameterAxis(
         String name,
         String label,
+        String description,
         String unit,
         List<Object> searchValues,
         Object defaultValue,

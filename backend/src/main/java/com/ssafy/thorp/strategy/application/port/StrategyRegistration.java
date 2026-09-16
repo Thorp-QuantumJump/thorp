@@ -16,9 +16,20 @@ import java.util.Set;
  * @param name 표시용 전략명. 007이 만들지 않는다
  * @param description 표시용 설명. 없으면 null
  * @param axes 파라미터 축. <b>순서를 보존한다.</b> 파라미터가 없는 전략은 빈 목록이고 조합 1건이다
+ * @param active 활성 여부. 등록표에 적지 않으면 로더가 true로 읽는다. 비활성 전략은 카드에 보이지 않지만 등록표에서 사라지지는 않는다 — 과거 기록을
+ *     해석하려면 그 시점에 쓰인 이름과 축 구성이 필요하다(research R5, 내부 계약 §2.3)
+ * @param warmup 워밍업 산출 규칙. 없으면 워밍업 0이다(data-model §6)
+ * @param targetWeightSource 목표 비중의 출처. {@code USER}면 화면이 002가 확정한 비중을 읽기 전용으로 보이고, {@code
+ *     COMPUTED}면 FR-012의 자동 배분 설명을 보인다. 화면이 전략 ID로 분기하지 않게 하는 값이다
  */
 public record StrategyRegistration(
-        String strategyId, String name, String description, List<ParameterAxis> axes) {
+        String strategyId,
+        String name,
+        String description,
+        List<ParameterAxis> axes,
+        boolean active,
+        WarmupRule warmup,
+        String targetWeightSource) {
 
     public StrategyRegistration {
         if (strategyId == null || strategyId.isBlank()) {
