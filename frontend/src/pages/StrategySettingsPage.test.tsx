@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SectorCatalogResult } from '@/api/sectors'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
@@ -15,7 +15,11 @@ import {
   SECTOR_SELECTION_STORAGE_KEY,
 } from '@/diagnosis/selectionStorage'
 import { STRATEGY_SETTINGS_STORAGE_KEY } from '@/hooks/useStrategySettings'
-import { registryFixture, selectableStrategy } from '@/test/strategyRegistryFixtures'
+import {
+  registryFixture,
+  selectableStrategy,
+  unselectableStrategy,
+} from '@/test/strategyRegistryFixtures'
 import type { BacktestCreateRequest } from '@/types/backtestRequest'
 import type { SectorSummary } from '@/types/sector'
 import { StrategySettingsPage } from './StrategySettingsPage'
@@ -175,6 +179,43 @@ function renderPageWithSectorRoute(support: AnalysisSupport) {
       </AuthContext.Provider>
     </MemoryRouter>,
   )
+}
+
+/**
+ * 자동 비교로 넘어간 주소를 읽으려고 007 화면 자리에 지금 위치를 그대로 보이는 대역을 둔다.
+ * 007 화면 자체를 띄우지 않는 까닭은 이 검사가 **무엇을 넘기는가**만 보기 때문이다 — 넘긴 질의
+ * 문자열을 007이 어떻게 읽는지는 `ParamSearchPage.test.tsx`가 고정한다.
+ */
+function ParamSearchProbe() {
+  const location = useLocation()
+  return <p data-testid="param-search-location">{location.pathname + location.search}</p>
+}
+
+function renderPageWithParamSearchRoute(support: AnalysisSupport) {
+  const authValue: AuthContextValue = {
+    status: 'anonymous',
+    user: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    recheck: vi.fn(),
+  }
+
+  return render(
+    <MemoryRouter initialEntries={['/strategy']}>
+      <AuthContext.Provider value={authValue}>
+        <Routes>
+          <Route path="/strategy" element={<StrategySettingsPage support={support} />} />
+          <Route path="/param-search" element={<ParamSearchProbe />} />
+        </Routes>
+      </AuthContext.Provider>
+    </MemoryRouter>,
+  )
+}
+
+/** 행동 버튼에 이어진 이유 문장. 이유가 없으면 빈 문자열이다. */
+function reasonOf(button: HTMLElement): string {
+  const reasonId = button.getAttribute('aria-describedby')
+  return reasonId ? (document.getElementById(reasonId)?.textContent ?? '') : ''
 }
 
 /**
@@ -866,5 +907,108 @@ describe('StrategySettingsPage', () => {
     expect(alert.textContent).toContain('서버가 요청을 거절했습니다.')
     // 조용히 다시 보내지 않는다.
     expect(calls).toHaveLength(1)
+  })
+  describe('설정 조합 자동 비교로 넘어가기(FR-013, quickstart 11)', () => {
+    it('고른 전략 하나와 섹터 후보 집합 전부를 007 화면으로 넘긴다', async () => {
+      const user = userEvent.setup()
+      const { support, requests } = makeSupport()
+      renderPageWithParamSearchRoute(support)
+
+      // 다른 전략을 한 번 골랐다가 옮겨도 마지막에 고른 전략 하나만 넘어간다.
+      const other = registryFixture.strategies.find(
+        (strategy) => strategy.selectable && strategy.strategyId !== selectableStrategy.strategyId,
+      )!
+      await user.click(await findCardNamed(other.name))
+      await user.click(await findCardNamed(selectableStrategy.name))
+
+      await waitFor(() =>
+        expect(actionButton('설정 조합 자동 비교').getAttribute('aria-disabled')).toBe('false'),
+      )
+      await user.click(actionButton('설정 조합 자동 비교'))
+
+      const location = await screen.findByTestId('param-search-location')
+      const url = new URL(location.textContent!, 'http://localhost')
+      expect(url.pathname).toBe('/param-search')
+      expect(url.searchParams.get('strategies')).toBe(selectableStrategy.strategyId)
+      expect(url.searchParams.get('instruments')?.split(',')).toEqual(
+        catalogSectors.map((item) => item.representativeEtf.instrumentId),
+      )
+      // 질의 문자열은 둘뿐이다. 후보 숫자나 설정값을 싣지 않는다 — 탐색 범위는 007이 정한다.
+      expect([...url.searchParams.keys()].sort()).toEqual(['instruments', 'strategies'])
+      // 분석 요청을 대신 보내지 않는다.
+      expect(requests).toHaveLength(0)
+    })
+
+    it('분석 조건 버전이 없어 분석하기가 막혀도 자동 비교로는 넘어갈 수 있다', async () => {
+      // 버전은 '분석하기'의 요청 조립에만 필요하다. 자동 비교의 조건 확인은 007 화면이 한다.
+      const user = userEvent.setup()
+      renderPageWithParamSearchRoute(makeSupport({ fetchAnalysisVersions: async () => null }).support)
+
+      await user.click(await findCardNamed(selectableStrategy.name))
+      await waitFor(() => expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전'))
+      expect(actionButton('설정 조합 자동 비교').getAttribute('aria-disabled')).toBe('false')
+
+      await user.click(actionButton('설정 조합 자동 비교'))
+      expect(await screen.findByTestId('param-search-location')).toBeTruthy()
+    })
+
+    it('전략을 고르기 전에는 자동 비교가 그 이유로 막히고 이동하지 않는다', async () => {
+      const user = userEvent.setup()
+      renderPageWithParamSearchRoute(makeSupport().support)
+
+      await findCardNamed(selectableStrategy.name)
+      // 카드가 먼저 그려지고 보관값 확인이 뒤따르므로 이유가 자리 잡기를 기다린다.
+      await waitFor(() =>
+        expect(reasonOf(actionButton('설정 조합 자동 비교'))).toContain('전략 카드를 먼저'),
+      )
+      const autoCompare = actionButton('설정 조합 자동 비교')
+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')
+
+      await user.click(autoCompare)
+      expect(screen.queryByTestId('param-search-location')).toBeNull()
+    })
+
+    it('등록표를 받지 못했으면 자동 비교가 막히고 이동하지 않는다', async () => {
+      apiMocks.fetchStrategyRegistry.mockRejectedValue(new Error('registry down'))
+      const user = userEvent.setup()
+      renderPageWithParamSearchRoute(makeSupport().support)
+
+      expect(await screen.findByRole('alert')).toBeTruthy()
+      const autoCompare = actionButton('설정 조합 자동 비교')
+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')
+      expect(reasonOf(autoCompare)).toContain('불러오기 전에는')
+
+      await user.click(autoCompare)
+      expect(screen.queryByTestId('param-search-location')).toBeNull()
+    })
+
+    it('보관된 선택이 지금 고를 수 없는 전략이면 그 이유로 막힌다', async () => {
+      window.sessionStorage.setItem(
+        STRATEGY_SETTINGS_STORAGE_KEY,
+        JSON.stringify({
+          version: 1,
+          registryVersion: registryFixture.registryVersion,
+          universeSize: 3,
+          selectedStrategyId: unselectableStrategy.strategyId,
+          valuesByStrategy: {},
+          analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+          invalidValues: [],
+        }),
+      )
+      const user = userEvent.setup()
+      renderPageWithParamSearchRoute(makeSupport().support)
+
+      await findCardNamed(unselectableStrategy.name)
+      await waitFor(() =>
+        expect(reasonOf(actionButton('설정 조합 자동 비교'))).toContain(
+          unselectableStrategy.unselectableReason!,
+        ),
+      )
+      const autoCompare = actionButton('설정 조합 자동 비교')
+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')
+
+      await user.click(autoCompare)
+      expect(screen.queryByTestId('param-search-location')).toBeNull()
+    })
   })
 })

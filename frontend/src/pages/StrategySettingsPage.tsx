@@ -50,7 +50,6 @@ const INVALID_STORED_VALUES =
   '이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.'
 const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없습니다.'
 const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'
-const AUTO_COMPARE_NOT_READY = '설정 조합 자동 비교는 아직 준비 중입니다.'
 const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'
 const REQUEST_BUILD_FAILED =
   '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'
@@ -366,13 +365,40 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     return null
   })()
 
-  // 자동 비교 진입(FR-013)은 B11(T070)이 붙인다. 그 전까지는 이유와 함께 막힌다.
-  const autoCompareBlocker =
-    registry === null || !settings.ready
-      ? REGISTRY_NOT_LOADED
-      : !settings.selectedStrategy
-        ? SELECT_STRATEGY_FIRST
-        : AUTO_COMPARE_NOT_READY
+  /**
+   * 설정 조합 자동 비교로 넘어갈 수 있는가(FR-013).
+   *
+   * <p><b>'분석하기'보다 묻는 것이 적다.</b> 넘기는 것은 전략 하나와 섹터 후보 집합뿐이고, 설정값·
+   * 평가 기간·분석 조건 버전은 007이 확인 화면에서 스스로 정하고 검증한다. 여기서 그것까지 물으면
+   * 007이 판정할 일을 이 화면이 미리 막는 셈이 된다. 섹터 선택은 이 버튼이 그려지는 조건
+   * (`selection.status === 'ready'`)이 이미 보장한다.
+   */
+  const autoCompareBlocker = ((): string | null => {
+    if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED
+    const strategy = settings.selectedStrategy
+    if (!strategy) return SELECT_STRATEGY_FIRST
+    if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING
+    return null
+  })()
+
+  /**
+   * 007 실행 전 확인 화면으로 넘어간다.
+   *
+   * <p><b>전략은 하나만 싣는다.</b> 007은 여러 전략을 받을 수 있지만 003은 방금 고른 전략 하나를
+   * 넘기기로 정했다(FR-013, Clarifications). 질의 문자열 모양은 007 `ParamSearchPage`가 이미 읽는
+   * `strategies`·`instruments` 그대로이며, 후보 숫자나 설정값은 싣지 않는다 — 탐색 범위는 007이
+   * 등록표에서 정한다.
+   */
+  const handleAutoCompare = () => {
+    if (autoCompareBlocker !== null || selection.status !== 'ready' || !settings.selectedStrategy) {
+      return
+    }
+    const instrumentIds = selection.selection.items.map((item) => encodeURIComponent(item.instrumentId))
+    navigate(
+      `/param-search?strategies=${encodeURIComponent(settings.selectedStrategy.strategyId)}` +
+        `&instruments=${instrumentIds.join(',')}`,
+    )
+  }
 
   // --- 요청 조립과 전송 --------------------------------------------------------------------
   const [submission, setSubmission] = useState<Submission>({ status: 'idle' })
@@ -593,11 +619,14 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
                 reason: analyzeBlocker ?? undefined,
                 busy: submission.status === 'sending',
               }}
-              autoCompare={{ disabled: true, reason: autoCompareBlocker }}
+              autoCompare={{
+                disabled: autoCompareBlocker !== null,
+                reason: autoCompareBlocker ?? undefined,
+              }}
               onAnalyze={() => {
                 void handleAnalyze()
               }}
-              onAutoCompare={() => {}}
+              onAutoCompare={handleAutoCompare}
             />
 
             {submission.status === 'accepted' ? (
