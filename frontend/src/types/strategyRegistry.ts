@@ -18,8 +18,33 @@
  *   평가할 뿐 축 이름이나 코드로 분기하지 않는다 — 분기하면 그것이 전략 지식의 중복이다.
  */
 
-/** 축 값이 가질 수 있는 형. 목록형 후보와 입력형 값이 모두 이 안에 든다. */
-export type AxisValue = string | number
+/**
+ * 홑값. 유효성 규칙의 상수와 분석 조건의 후보가 갖는 형이다.
+ *
+ * 규칙의 연산자가 대소 비교뿐이라 피연산자는 견줄 수 있는 값이어야 하고, 분석 조건은 등록표가
+ * 숫자만 담는다(data-model §7). 그래서 이 둘은 축 값과 달리 넓히지 않는다.
+ */
+export type ScalarValue = string | number
+
+/**
+ * 여러 칸이 모여 하나의 뜻을 이루는 축 값이다.
+ *
+ * 리밸런싱 주기가 그렇다 — `{ mode: 'CALENDAR', unit: 'MONTH_END' }`처럼 방식과 그 방식의 값이
+ * 함께 와야 뜻이 선다(data-model §5).
+ *
+ * <b>칸 이름을 좁히지 않는다.</b> `mode`·`unit`·`days`를 타입에 적으면 화면이 리밸런싱 주기라는
+ * 특정 축을 아는 셈이 되고, 그것이 FR-005가 막으려는 전략 지식의 중복이다. 화면은 이 값의 뜻을
+ * 읽지 않고 등록표가 준 `label`로 보이며, 값 자체는 요청에 그대로 되돌려 보낸다.
+ */
+export type CompositeAxisValue = { readonly [field: string]: ScalarValue }
+
+/**
+ * 축의 후보와 기본값이 가질 수 있는 형.
+ *
+ * 홑값이 대부분이지만 합성 값도 온다. 백엔드가 이 자리를 `Object`로 둔 것도 같은 까닭이다
+ * (`StrategyRegistryResponse.Choice.value`·`Axis.defaultValue`).
+ */
+export type AxisValue = ScalarValue | CompositeAxisValue
 
 /**
  * 목표 비중이 어디에서 오는가.
@@ -52,7 +77,7 @@ export type RuleContextKey = 'UNIVERSE_SIZE'
 export type Operand =
   | { axis: string; multiplyByContext?: RuleContextKey }
   | { context: RuleContextKey }
-  | { value: AxisValue }
+  | { value: ScalarValue }
 
 /**
  * 화면이 실행 전에 평가하는 조건.
@@ -148,7 +173,7 @@ export type NumericCondition = {
 
 /** 목록형 분석 조건의 후보. 전략 축의 후보와 달리 `selectable`이 없다. */
 export type ConditionChoice = {
-  value: AxisValue
+  value: ScalarValue
   label: string
 }
 
@@ -160,7 +185,7 @@ export type ConditionChoice = {
  */
 export type ChoiceCondition = {
   choices: ConditionChoice[]
-  default: AxisValue
+  default: ScalarValue
   unit?: string
 }
 

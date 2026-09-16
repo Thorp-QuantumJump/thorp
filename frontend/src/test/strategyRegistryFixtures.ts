@@ -35,6 +35,19 @@ export const selectableStrategy: StrategyView = {
       defaultValue: 45,
     },
     {
+      name: 'resetTiming',
+      label: '되돌리는 시점',
+      description: '벌어진 비중을 언제 되돌릴지 정한다.',
+      // 합성 값을 갖는 축이다. 실제 등록표의 리밸런싱 주기가 이 형태이며(data-model §5),
+      // 화면이 칸 이름의 뜻을 읽지 않고 `label`만 쓴다는 것을 이 픽스처가 고정한다.
+      inputType: 'CHOICE',
+      choices: [
+        { value: { kind: 'PERIOD_END', unit: 'MONTH' }, label: '달 끝마다', selectable: true },
+        { value: { kind: 'FIXED_DAYS', span: 30 }, label: '30거래일마다', selectable: true },
+      ],
+      defaultValue: { kind: 'PERIOD_END', unit: 'MONTH' },
+    },
+    {
       name: 'bandWidth',
       label: '허용 이탈 폭',
       description: '이만큼 벌어지기 전까지는 되돌리지 않는다.',

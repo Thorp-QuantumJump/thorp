@@ -34,12 +34,14 @@ interface StrategyCardListProps {
    *
    * **기본 설정 기준의 `warmupTradingDays`로 판정한다.** 설정을 바꾼 뒤의 재판정은 상세 설정이
    * 소유하며 이 목록의 일이 아니다. 판정에는 001의 공통 평가 가능 범위와 사용자가 고른 최소 평가
-   * 기간이 함께 필요하므로, 그 둘을 아는 호출자가 계산해 넘긴다. 주지 않으면 전부 `ok`다.
+   * 기간이 함께 필요하므로, 그 둘을 아는 호출자가 계산해 넘긴다.
+   *
+   * **선택 항목으로 두지 않는다.** 기본값을 `ok`로 두면 호출자가 배선을 빠뜨려도 모든 카드가
+   * 고를 수 있는 상태로 정상처럼 그려지고, FR-011의 판정이 조용히 사라진다. 아직 판정할 수 없는
+   * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.
    */
-  judgeWarmup?: (strategy: StrategyView) => WarmupVerdict
+  judgeWarmup: (strategy: StrategyView) => WarmupVerdict
 }
-
-const OK: WarmupVerdict = { state: 'ok' }
 
 /**
  * 자리 표시 카드의 개수다.
@@ -121,7 +123,7 @@ export function StrategyCardList({
           key={strategy.strategyId}
           strategy={strategy}
           selected={selectedStrategyId === strategy.strategyId}
-          warmup={judgeWarmup?.(strategy) ?? OK}
+          warmup={judgeWarmup(strategy)}
           onSelect={() => onSelect(strategy.strategyId)}
         />
       ))}

@@ -6,6 +6,8 @@ import {
   selectableStrategy,
   unselectableStrategy,
 } from '@/test/strategyRegistryFixtures'
+import type { StrategyView } from '@/types/strategyRegistry'
+import type { WarmupVerdict } from './StrategyCard'
 import { StrategyCardList, type RegistryViewState } from './StrategyCardList'
 
 /**
@@ -27,12 +29,16 @@ function cardNamed(name: string): HTMLElement {
   return screen.getByRole('button', { name: (accessibleName) => accessibleName.includes(name) })
 }
 
+/** 워밍업을 따지지 않는 검사에서 쓰는 판정. 아무 전략에나 통과를 준다. */
+const allOk = () => ({ state: 'ok' }) as WarmupVerdict
+
 function renderList(
   state: RegistryViewState,
   overrides: {
     selectedStrategyId?: string | null
     onSelect?: (strategyId: string) => void
     onRetry?: () => void
+    judgeWarmup?: (strategy: StrategyView) => WarmupVerdict
   } = {},
 ) {
   const onSelect = overrides.onSelect ?? vi.fn()
@@ -43,6 +49,7 @@ function renderList(
       selectedStrategyId={overrides.selectedStrategyId ?? null}
       onSelect={onSelect}
       onRetry={onRetry}
+      judgeWarmup={overrides.judgeWarmup ?? allOk}
     />,
   )
   return { ...result, onSelect, onRetry }
@@ -101,6 +108,7 @@ describe('StrategyCardList', () => {
         selectedStrategyId={selectableStrategy.strategyId}
         onSelect={onSelect}
         onRetry={vi.fn()}
+        judgeWarmup={allOk}
       />,
     )
     expect(cardNamed(selectableStrategy.name).getAttribute('aria-pressed')).toBe('true')
@@ -130,19 +138,13 @@ describe('StrategyCardList', () => {
   it('워밍업 판정이 막으면 이유와 함께 고를 수 없다', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
-    render(
-      <StrategyCardList
-        state={loaded}
-        selectedStrategyId={null}
-        onSelect={onSelect}
-        onRetry={vi.fn()}
-        judgeWarmup={(strategy) =>
-          strategy.strategyId === selectableStrategy.strategyId
-            ? { state: 'blocked', message: '평가할 구간이 남지 않습니다.' }
-            : { state: 'ok' }
-        }
-      />,
-    )
+    renderList(loaded, {
+      onSelect,
+      judgeWarmup: (strategy) =>
+        strategy.strategyId === selectableStrategy.strategyId
+          ? { state: 'blocked', message: '평가할 구간이 남지 않습니다.' }
+          : { state: 'ok' },
+    })
 
     const card = cardNamed(selectableStrategy.name)
     expect(card.getAttribute('aria-disabled')).toBe('true')
@@ -188,6 +190,7 @@ describe('StrategyCardList', () => {
         selectedStrategyId={null}
         onSelect={vi.fn()}
         onRetry={onRetry}
+        judgeWarmup={allOk}
       />,
     )
 
@@ -203,10 +206,46 @@ describe('StrategyCardList', () => {
         selectedStrategyId={null}
         onSelect={vi.fn()}
         onRetry={vi.fn()}
+        judgeWarmup={allOk}
       />,
     )
 
     expect(document.activeElement).toBe(screen.getByRole('group', { name: '전략 고르기' }))
+  })
+
+  it('워밍업을 판정하지 못한 것을 통과로 접지 않는다', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    renderList(loaded, {
+      onSelect,
+      judgeWarmup: () => ({ state: 'unknown', message: '분석 기간을 아직 확인하지 못했습니다.' }),
+    })
+
+    const card = cardNamed(selectableStrategy.name)
+
+    // 판정하지 못했다는 사실이 화면에 남는다. 말하지 않으면 사용자는 판정을 통과한 줄로 읽는다.
+    expect(card.textContent).toContain('분석 기간을 아직 확인하지 못했습니다.')
+    expect(card.textContent).toContain('확인하지 못함')
+
+    // 다만 "판정하지 못했다"는 "고를 수 없다"가 아니다. 등록표가 내린 판정을 뒤집지 않는다.
+    expect(card.getAttribute('aria-disabled')).toBe('false')
+    await user.click(card)
+    expect(onSelect).toHaveBeenCalledWith(selectableStrategy.strategyId)
+  })
+
+  it('이유 없이 고를 수 없는 카드를 조용히 넘기지 않는다', () => {
+    // 계약은 selectable 이 false 면 이유를 반드시 싣는다. 싣지 않은 응답은 계약 위반이며,
+    // 화면이 이유 없는 비활성 카드로 덮어 버리면 사용자는 무엇을 고쳐야 할지 알 수 없다.
+    const withoutReason: StrategyView = { ...unselectableStrategy, unselectableReason: undefined }
+
+    renderList({
+      status: 'loaded',
+      registry: { ...registryFixture, strategies: [withoutReason] },
+    })
+
+    const card = cardNamed(unselectableStrategy.name)
+    expect(card.getAttribute('aria-disabled')).toBe('true')
+    expect(card.textContent).toContain('고를 수 없는 이유를 확인하지 못했습니다.')
   })
 
   it('불러오는 중에는 고를 수 있는 카드가 없다', () => {
