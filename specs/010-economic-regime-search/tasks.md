@@ -67,7 +67,7 @@ Worker(`worker/`)는 **변경하지 않는다.** 브로커도 쓰지 않는다 �
 | 묶음 | 머지 전에 이것이 참이어야 한다 |
 |---|---|
 | M1 | 시계열 픽스처 **아홉** 모양이 다 있고, `macro/fixture/` 밖에서 픽스처를 이름으로 참조하는 코드가 0건, `THORP_ENV=prod` + `--source fixture`면 적재 전에 실패 |
-| M2 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수는 계산 불가다. 한 달 결측이 그 **지표만** 두 달로 줄이고, 세 달 결측이 분야를 `QUERY_INPUT_MISSING`으로 만든다. 보정 상수가 `Φ⁻¹(0.75)` 실계산값이다 |
+| M2 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수는 **질의 쪽이면** 계산 불가, **후보 쪽이면 그 후보만 제외**다. 한 달 결측이 그 **지표만** 두 달로 줄이고, 세 달 결측이 분야를 `QUERY_INPUT_MISSING`으로 만든다. 보정 상수가 `Φ⁻¹(0.75)` 실계산값이다 |
 | M3 | 수기 계산과 정확히 일치한다. 전체 거리 0이면 기여 **키가 없다**. 명목 비중과 실제 거리 기여가 함께 나온다. `mode=FIELD`에 분야 기여도가 없다. **후보 z가 기준월과 무관하고, 질의 척도가 후보에 쓰인 자리가 0건이다** |
 | M4 | 12개월 이내 제외·**순차** ±6개월 건너뛰기·동률 오래된 월 우선이 고정됐다. 걸러진 만큼 아래 순위가 올라와 표시 개수를 채운다. 후보 부족 시 채우지 않는다. **전체 유효 후보 목록에는 건너뛰기가 적용되지 않는다.** 설명 문장에 자유 생성이 없다 |
 | M5 | `t ≥ M`만 다시 돈다. 배치를 **두 번 돌려도 행 수가 늘지 않는다**(`content_hash`). 결과가 달라지면 `revision`이 오른다. `regime_baseline_month`가 함께 적재되고 자료 버전이 `FIXTURE-`로 시작한다. **중간에 죽여도 부분 적재가 남지 않고 이전 `revision`이 그대로 조회된다** |
@@ -111,11 +111,11 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 - [ ] T003 (DE) `MacroIndicatorSource` 프로토콜을 `data/src/data_pipeline/regime/macro/source.py`에 작성 — `registry()`·`monthly_series()`·`raw_series()`·`baseline_months()`·`publication()`·`data_version()`·`changed_since()`·`is_sample_data()`. 시그니처와 뜻은 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §1
 - [ ] T004 [P] (DE) 소스가 돌려줄 값 타입을 `macro/types.py`에 dataclass로 작성 — `IndicatorRegistry`(분야 이름·순서 포함)·`MonthlyValue`·`BaselineMonths`·`Publication`. **결측월은 키가 없다**(0이나 직전 값으로 채우지 않는다)
-- [ ] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **아홉 모양을 모두 담는다**(8·9번은 2026-09-16 추가분: 한 달만 결측 / 세 달 전부 결측)
+- [ ] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **열 모양을 모두 담는다**(8·9는 2026-09-16 추가분, **10은 모델 v2 추가분** — 자료 시작 직후 구간으로 `NO_CASE_SCALE` 경로를 밟는다)
 - [ ] T006 (DE) ⚠ `FixtureMacroIndicatorSource`를 `macro/fixture/source.py`에 작성 — `data_version()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고 `is_sample_data()`는 `True`, `changed_since()`는 `None`(전 구간)
 - [ ] T007 (DE) 구현체 선택을 `macro/__init__.py`의 팩터리 한 곳에 모은다 — `--source` 플래그만 보고 고른다. **운영 코드가 픽스처 클래스를 이름으로 참조하지 않는다**
 - [ ] T008 (DE) 운영 적재 가드를 `data/scripts/precompute_regime.py`에 구현 — `THORP_ENV=prod`인데 `--source fixture`면 **적재 전에 종료**한다. 설정 실수로 가짜 자료가 운영에 나가는 경로를 없앤다
-- [ ] T009 [P] (DE 테스트) 픽스처 아홉 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다
+- [ ] T009 [P] (DE 테스트) 픽스처 **열** 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다
 - [ ] T010 [P] (DE 테스트) 소스 계약 테스트를 `data/tests/regime/test_macro_source.py`에 작성 — 결측월이 키 없음으로 오는지, 원값·변환값이 둘 다 오는지, 버전 셋이 함께 오는지, `registry()`에 분야 이름·순서가 있는지. **008 구현체가 와도 같은 테스트가 돈다**
 - [ ] T011 [P] (DE 테스트) prod 가드를 `data/tests/regime/test_guard.py`에 고정 — `THORP_ENV=prod` + `--source fixture`가 실패한다
 - [ ] T012 [P] (DE 테스트) 픽스처 격리 검사를 `data/tests/regime/test_fixture_isolation.py`에 작성 — `regime` 운영 코드에서 `macro/fixture/` 밖이 픽스처를 이름으로 참조하면 실패한다. 대상 파일은 **손 목록이 아니라 디렉터리를 훑어** 모은다

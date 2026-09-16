@@ -142,10 +142,12 @@
 
 | `statusReason` | 뜻 |
 |---|---|
-| `SCALE_WINDOW_TOO_SHORT` | 척도 연속 구간이 60개월 미만 (spec FR-005·FR-008) |
-| `SCALE_ZERO` | MAD도 IQR도 0 (spec FR-006) |
+| `SCALE_WINDOW_TOO_SHORT` | **질의** 척도의 연속 구간이 60개월 미만 (spec FR-005·FR-008) |
+| `SCALE_ZERO` | **질의** 척도의 MAD도 IQR도 0 (spec FR-006) |
 | `QUERY_INPUT_MISSING` | 어느 지표의 비교 시점이 하나도 없다 (spec FR-001·FR-007) |
 | `NO_CANDIDATE` | 유효 후보 0건 |
+
+**후보 척도가 60개월 미만이거나 0인 것은 위 사유가 아니다** — 검색은 정상이고 그 후보만 빠지며, `counts.excluded`의 `NO_CASE_SCALE`로 센다(spec FR-005·FR-012).
 
 **503을 쓰지 않는다.** 503은 "일시적이니 다시 오라"는 뜻인데, 척도가 0인 것은 다시 와도 같다.
 

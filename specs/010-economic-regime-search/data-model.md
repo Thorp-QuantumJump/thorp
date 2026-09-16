@@ -96,11 +96,15 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 
 | `status_reason` | 뜻 | 근거 |
 |---|---|---|
-| `SCALE_WINDOW_TOO_SHORT` | 척도 연속 구간이 60개월 미만 | spec FR-005·FR-008 |
-| `SCALE_ZERO` | MAD도 IQR도 0 | spec FR-006 |
+| `SCALE_WINDOW_TOO_SHORT` | **질의** 척도의 연속 구간이 60개월 미만 | spec FR-005·FR-008 |
+| `SCALE_ZERO` | **질의** 척도의 MAD도 IQR도 0 | spec FR-006 |
 | `QUERY_INPUT_MISSING` | **어느 지표의 비교 시점이 하나도 없다** | spec FR-001·FR-007 |
 | `NO_CANDIDATE` | 유효 후보 0건 | spec FR-012 |
 | `THRESHOLD_NOT_CALIBRATED` | 문턱 미교정(`NEAREST_ONLY`의 사유) | spec FR-020, research R6 |
+
+**둘 다 질의 척도에 대한 사유다**(모델 v2). 후보 척도가 60개월 미만이거나 0이면 **검색이 계산 불가가
+되는 것이 아니라 그 후보만 빠지고**, 그건 `candidate_counts.excluded.NO_CASE_SCALE`로 센다
+(spec FR-005·FR-006·FR-012).
 
 `QUERY_INPUT_MISSING`이 따로 있는 이유: 질의 입력이 없는 것은 척도 문제도 후보 문제도 아니다.
 다른 사유에 접어 넣으면 화면이 "척도가 60개월이 안 된다"고 잘못 말하게 된다.

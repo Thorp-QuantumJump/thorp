@@ -223,7 +223,7 @@ frontend/src/
 키·API 응답·기록에 전부 실려 다니므로 값이 어느 경로로 흘러가도 가짜임이 드러나고, 폐기가 조건
 한 줄로 끝난다. 절차는 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §3.3.
 
-**픽스처의 아홉 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,
+**픽스처의 열 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,
 그러면 `NOT_COMPUTABLE`·동률 경로가 검증 밖으로 나간다. 운영 대역(위 한 디렉터리)은 폐기하되 같은
 모양을 담은 **단위 테스트 픽스처**는 `data/tests/regime/fixtures/`에 남는다.
 

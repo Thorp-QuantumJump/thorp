@@ -71,7 +71,7 @@ curl -s "localhost:8080/regime-searches?mode=field&field=<시작이늦은분야>
 `displayed < 3`이고 `cases` 길이가 그 값과 같아야 한다. **빈자리를 채운 사례가 0건**이어야 한다 —
 거리가 먼 후보를 끌어와 3개를 맞추면 SC-004 위반이다.
 
-## S3. 척도를 구할 수 없으면 '계산 불가'다 (US2, SC-005)
+## S3. **질의** 척도를 구할 수 없으면 '계산 불가'다 (US2, SC-005)
 
 픽스처의 완전 상수 계열(모양 4: MAD=0, IQR=0)이 속한 분야를 고른다.
 
@@ -88,6 +88,16 @@ curl -s "localhost:8080/regime-searches?mode=field&field=<상수계열분야>" \
 
 구멍 뚫린 계열(모양 2, 연속 60개월 미만)도 같은 방식으로 확인한다 — `statusReason`이
 `SCALE_WINDOW_TOO_SHORT`.
+
+**후보 쪽은 다르다**(모델 v2) — 후보의 자를 못 만들면 **검색은 정상이고 그 후보만 빠진다.**
+픽스처 모양 10(자료 시작 직후 구간)으로 확인한다.
+
+```bash
+curl -s "localhost:8080/regime-searches?mode=field&field=LABOR" | jq '.result.counts'
+# NO_CASE_SCALE 이 0 이 아니어야 한다 — 0 이면 그 경로를 한 번도 안 밟은 것이다
+curl -s "localhost:8080/regime-searches?mode=field&field=LABOR" | jq '.result.status'
+# "NEAREST_ONLY" — 후보가 빠졌다고 계산 불가가 되지 않는다
+```
 
 ## S4. 비교 시점이 지표별로 정해지고, 빠진 달이 표기된다 (FR-001, FR-031, SC-007)
 
