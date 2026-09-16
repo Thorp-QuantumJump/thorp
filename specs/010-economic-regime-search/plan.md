@@ -16,7 +16,7 @@
 
 ## Summary
 
-지금과 비슷했던 과거 구간을 경제환경 모델 v1로 찾아, 분야별 검색을 기본으로 하고 Thorp 종합 비교를
+지금과 비슷했던 과거 구간을 경제환경 모델 v2로 찾아, 분야별 검색을 기본으로 하고 Thorp 종합 비교를
 선택해서 열 수 있게 한다. 거리순 사례를 처음 3개(더 보기 최대 10개) 보이고, 그 결과가 어느 상태인지
 (계산 불가 / 가까운 순서만 / 교정된 기준 충족)를 결과 옆에 항상 표시한다.
 
@@ -128,7 +128,8 @@ data/
 │   │   ├── source.py                  # MacroIndicatorSource 프로토콜 (008 경계)
 │   │   ├── postgres.py                # 008 완성 후 구현체
 │   │   └── fixture/                   # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제
-│   ├── scale.py                       # 연속 구간·중앙값·MAD·IQR — **질의와 후보 양쪽**이 쓴다
+│   ├── rounding.py                    # 12자리 반올림 — 저장·비교 직전 한 번
+│   ├── scale.py                       # `scale_for(지표, 관측 종료월)` — 연속 구간·중앙값·MAD·IQR. **질의와 후보 양쪽**이 같은 함수를 쓴다
 │   ├── comparison.py                  # 지표별 비교 시점 판정 (FR-001)
 │   ├── distance.py                    # z, E_i, D_g, 종합 거리, 지표·분야 기여
 │   ├── candidates.py                  # 12개월 초과·±6개월 건너뛰기·동률·전체 순위·상위 10
@@ -146,6 +147,7 @@ backend/src/main/java/com/ssafy/thorp/regime/     # 계산하지 않는다. 008�
 ├── domain/model|vo/                   # SearchStatus, StatusReason, SearchMode, SnapshotKey
 └── infrastructure/
     ├── persistence/                    # snapshot·baseline-month·case 조회
+    ├── config/RegimeProperties.java     # macro.source (fixture|macro) — 코드 기본값 없음
     └── macro/
         ├── MacroIndicatorAdapter.java  # 008 완성 후 작성
         └── fixture/                    # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제

@@ -247,7 +247,7 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 - [ ] T102 [P] (BE 테스트) `NOT_COMPUTABLE`이 200이고 `cases`가 빈 배열이며 `dataAsOf`·`basis`가 있음을 고정. **네 사유가 각각 `statusReason`으로 구분돼 나오는지**를 함께 고정한다(SC-005·SC-007·SC-009)
 - [ ] T103 [P] (BE 테스트) 조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않고, 중단된 배치가 남긴 부분 적재 항목이 조회되지 않음을 `RegimeSearchApiIT`에 고정(SC-010)
 - [ ] T104 [P] (BE 테스트) 응답에 **spec FR-022 ①의 13가지가 0건**이고 요청 파라미터에 전략·성과 항목이 0건임을 `RegimeSearchApiIT`에 고정(SC-006, FR-024·SC-001)
-- [ ] T105 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스 존재, `uk_regime_case_month`가 같은 월을 두 번 막고, `(mode, field_id, baseline_month, content_hash)` 유일성이 같은 내용의 중복 저장을 막으며, `case_scale`이 NOT NULL이며, **네 표 어디에도 이름·이메일 같은 개인 식별 컬럼이 0개**임을 함께 고정한다(spec FR-036)
+- [ ] T105 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스 존재, `uk_regime_case_month`가 같은 월을 두 번 막고, `(mode, field_id, baseline_month, content_hash)` 유일성이 같은 내용의 중복 저장을 막으며, `case_scale`이 NOT NULL이며, **네 표 어디에도 사용자 식별자·이름·이메일 같은 개인 식별 컬럼이 0개**임을 함께 고정한다(spec FR-036, SC-013)
 - [ ] T106 [P] (BE 테스트) 같은 요청을 두 번 보내면 응답이 **완전히 같음**을 `RegimeSearchApiIT`에 고정(SC-002)
 - [ ] T107 [P] (BE 테스트) **`regime` 패키지에 계산 코드가 0건**임을 `RegimeNoComputationTest.java`에 정적 검사로 고정(SC-002a) — 산술 연산·`Math.`·`BigDecimal` 산술이 나오면 실패
 - [ ] T108 [P] (BE 테스트) **`regime` 패키지가 지표 시계열(`macro_indicator_value` 등)을 읽지 않음**을 같은 테스트에 고정 — 008에서 읽는 것은 포트의 등록표뿐이다(포트 계약 §0.1)
@@ -421,7 +421,7 @@ Phase 7 Polish (M9)
 | FR-038 예시 자료 표시 | T116 · T099(`sampleData` 판정) |
 | FR-023 U01~U06 검증 전 동작 | T059(`NEAREST_ONLY` 고정) · T019·T020(MAD→IQR→계산 불가) · T112(최근접 참고 사례) — 표 전체를 덮는 단일 태스크는 없다 |
 | FR-024 · SC-001 전략 독립성 | T104(요청 파라미터에 전략 항목 0건) · quickstart S7 |
-| FR-036 개인정보 분리 | T105(개인정보 컬럼 0개 검사) · 삭제 동작은 **006·014 구현 시점** |
+| FR-036 · SC-013 개인정보 분리 | T105(개인 식별 컬럼 0개 검사) · 삭제 동작은 **006·014 구현 시점** |
 | FR-032 로그인 기록 | 표만 만든다(T085). **쓰는 코드는 014 이후** — 그 사실을 T152에 적는다 |
 | FR-033 측정 | T071·T150·T151 |
 | **FR-034 실패 처리** | **T069**(부분 적재 금지) · **T098**(조회 실패 구분) · **T103**(테스트) · **T120**(실패 화면) |
