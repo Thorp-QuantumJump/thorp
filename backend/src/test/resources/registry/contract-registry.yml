@@ -1,0 +1,107 @@
+# 계약 픽스처와 같은 내용의 합성 등록표.
+#
+# docs/specs/strategy-registry-api/examples/registry-response.json 이 이 파일을 universeSize=3 으로
+# 조회한 결과다. 둘이 어긋나면 StrategyRegistryContractTest 가 깨진다.
+#
+# **운영 등록표가 아니다.** 아래 수치는 계약 형식을 보이려는 합성 값이며 제품 후보값으로 쓰지 않는다.
+# 실제 제품 등록표는 backend/src/main/resources/registry/parameter-registry.yml 이다.
+#
+# 둘째 전략의 기본 설정(topN: 4)은 섹터 셋이라는 조건에서 규칙을 어긴다. 계약이 말하는 세 가지를
+# 한 응답으로 보이려고 그렇게 두었다 — 고를 수 없는 전략, 목록에 남는 고를 수 없는 후보,
+# universeSize 와 무관하게 늘 실리는 규칙 목록.
+
+version: "PROVISIONAL-20260911"
+
+analysisConditions:
+  initialAmount:
+    min: 1000000
+    max: 1000000000
+    step: 1000000
+    default: 10000000
+    unit: 원
+  targetVolatility:
+    min: 5
+    max: 20
+    step: 1
+    default: 10
+    unit: 퍼센트(연)
+    usedBy: TARGET_RISK
+  minEvaluationYears:
+    values: [0, 1, 3]
+    default: 1
+    unit: 년
+
+strategies:
+  - id: INVERSE_VOLATILITY
+    name: 변동성에 따라 나누기
+    description: 최근 변동성이 낮은 섹터에 더 큰 비중을 둔다.
+    targetWeightSource: COMPUTED
+    warmup:
+      sum: [lookbackDays]
+    axes:
+      - name: lookbackDays
+        label: 변동성 관측 기간
+        description: 변동성을 재는 데 쓸 과거 구간의 길이다. 길수록 최근 변화에 둔해진다.
+        unit: 거래일
+        searchValues: [21, 63, 126, 252]
+        defaultValue: 63
+        allowedRange:
+          values: [21, 63, 126, 252]
+      - name: maxWeight
+        label: 비중 상한
+        description: 한 섹터에 넣을 수 있는 최대 비중이다. 잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나눈다.
+        unit: 퍼센트
+        searchValues: [30, 40, 50]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
+    validationRules:
+      - code: MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE
+        detail: 섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByContext: UNIVERSE_SIZE
+        operator: LESS_THAN
+        right:
+          value: 100
+
+  - id: SECTOR_MOMENTUM
+    name: 흐름을 따라 배분하기
+    description: 최근 상승 폭이 큰 섹터를 골라 배분한다.
+    targetWeightSource: COMPUTED
+    warmup:
+      sum: [lookbackDays, skipRecentDays]
+    axes:
+      - name: lookbackDays
+        label: 관측 기간
+        description: 상승 폭을 재는 데 쓸 과거 구간의 길이다.
+        unit: 거래일
+        searchValues: [20, 60, 120]
+        defaultValue: 60
+        allowedRange:
+          values: [20, 60, 120]
+      - name: skipRecentDays
+        label: 최근 구간 제외 기간
+        description: 관측 구간의 맨 끝을 이만큼 빼고 본다. 직전 반등이 판단을 흔드는 것을 줄인다.
+        unit: 거래일
+        searchValues: [0, 21]
+        defaultValue: 21
+        allowedRange:
+          values: [0, 5, 10, 21]
+      - name: topN
+        label: 선정 섹터 수
+        description: 선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.
+        searchValues: [2, 3, 4]
+        defaultValue: 4
+        allowedRange:
+          values: [2, 3, 4]
+    validationRules:
+      - code: TOP_N_EXCEEDS_UNIVERSE
+        detail: 선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.
+        left:
+          axis: topN
+        operator: GREATER_THAN
+        right:
+          context: UNIVERSE_SIZE
