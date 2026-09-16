@@ -106,7 +106,7 @@
 - `versions.sampleData`가 `true`면 008 미구현 상태의 예시 자료다(008 FR-022). 화면은 이 표시를
   반드시 노출한다.
 - `distance`는 문자열이고 소수점 아래 12자리다(research R4).
-- `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전한 후보 수,
+- `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전하고 **자기 자를 만들 수 있는** 후보 수,
   `stored` 저장된 표시 후보 수(≤10), `displayed` 이번 응답에 담긴 수. **`stored`가 `displayed`보다
   크면 '더 보기'가 남아 있다** — 화면은 이 둘로 버튼 노출을 정하고 10을 가정하지 않는다.
   **`eligible`이 `stored`보다 크면 표시 상한에 걸린 것이다** — 화면은 *"가까운 순서로 10개까지

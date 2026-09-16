@@ -56,7 +56,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 | `query_scale` | JSONB NOT NULL | **질의 척도** — 지표별 `{m, s, method, windowStart, windowEnd, months}`(`t-122~t-3`). `method`는 `MAD` \| `IQR` |
 | `comparison_months` | JSONB NOT NULL | 지표별 `{months: [...], omitted: [...]}` — 비교 시점과 빠진 달(spec FR-001) |
 | `ranked_candidates` | JSONB NOT NULL | 전체 유효 후보 `[{endMonth, distance, rank}]`. 011의 가용성 필터 입력(spec FR-030) |
-| `candidate_counts` | JSONB NOT NULL | `{evaluated, excluded: {MISSING_INPUT: n, WITHIN_12_MONTHS: n, NEIGHBOR_SKIPPED: n}}` |
+| `candidate_counts` | JSONB NOT NULL | `{evaluated, excluded: {MISSING_INPUT: n, WITHIN_12_MONTHS: n, NEIGHBOR_SKIPPED: n, NO_CASE_SCALE: n}}`. `NO_CASE_SCALE`은 후보 직전 60개월로 자기 자를 만들 수 없어 빠진 수다(spec FR-005·FR-012) — 자료 초기 구간이 빠지는 경로라 따로 센다 |
 | `data_asof` | JSONB NOT NULL | 지표별 `{targetMonth, publishedAt, revisedAt?}`. 화면의 자료 기준 시점 표시(FR-031) |
 | `computed_at` | TIMESTAMP NOT NULL | 배치가 계산한 시각 |
 | `created_at` / `updated_at` | TIMESTAMP NOT NULL | |
