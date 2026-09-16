@@ -116,7 +116,10 @@ specs/010-economic-regime-search/
 ├── contracts/
 │   ├── regime-search-api.md           # HTTP 계약
 │   └── macro-indicator-port.md        # 008 경계 (포트·소스)
-├── checklists/requirements.md
+├── checklists/
+│   ├── requirements.md                # /speckit-specify 산출물
+│   └── review.md                      # 요구 품질 검토 78항목 (/speckit-checklist)
+├── d21-amendment.md                   # 기획서 D21·constitution 개정 제안 (팀 확정 대기)
 └── tasks.md                           # /speckit-tasks 산출물
 ```
 
