@@ -52,13 +52,15 @@ class ParamSearchWiringIT extends PostgresTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("포트 구현이 빈으로 주입되고 임시 등록표가 임시임을 밝힌다")
+    @DisplayName("포트 구현이 빈으로 주입되고 등록표가 확정 여부를 밝힌다")
     void portsAreWired() {
         assertThat(registry).isInstanceOf(FileParameterRegistry.class);
         assertThat(executionSupport).isInstanceOf(StrategyExecutionSupportAdapter.class);
         assertThat(launcher).isNotNull();
-        // 값이 팀 확정값이 아님을 응답·화면이 계속 표시할 수 있어야 한다(research R1 개정).
-        assertThat(registry.version()).startsWith("PROVISIONAL-");
+        assertThat(registry.version()).isNotBlank();
+        // 값이 팀 확정값인지를 응답·화면이 계속 표시할 수 있어야 한다(research R1 개정). PD-02가
+        // 2026-09-15에 확정돼 지금은 false이며, 미확정 값을 다시 담으면 version의 접두만으로 true가 된다.
+        assertThat(registry.provisional()).isFalse();
         assertThat(registry.activeStrategies()).isNotEmpty();
     }
 

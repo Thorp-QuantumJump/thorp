@@ -98,7 +98,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
 
         ParamSearchCancelResult result = cancelService.cancel(search.getSearchId().value());
 
-        assertThat(result.skipped()).isEqualTo(3);
+        assertThat(result.skipped()).isEqualTo(expectedSkipped());
         assertThat(result.inFlight()).isEqualTo(1);
         assertThat(result.status())
                 .as("발행된 후보가 완주하기 전까지는 아직 RUNNING 이다(계약 §5)")
@@ -106,7 +106,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
         assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING))
                 .isZero();
         assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED))
-                .isEqualTo(3);
+                .isEqualTo(expectedSkipped());
     }
 
     @Test
@@ -135,14 +135,14 @@ class ParamSearchCancelIT extends PostgresTestSupport {
         ParamSearch closed = paramSearchRepository.findById(search.getId()).orElseThrow();
         assertThat(closed.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);
         assertThat(closed.getStopReason()).isEqualTo(StopReason.CANCELLED);
-        assertThat(closed.getCounts().skipped()).isEqualTo(3);
+        assertThat(closed.getCounts().skipped()).isEqualTo(expectedSkipped());
         assertThat(closed.getSelection())
                 .as("취소된 묶음도 완료된 후보끼리는 비교할 수 있다(data-model §3)")
                 .isNotNull();
 
         ParamSearchResult view = paramSearchService.get(closed.getSearchId().value());
         assertThat(view.partial()).isTrue();
-        assertThat(view.partialNote()).contains("3");
+        assertThat(view.partialNote()).contains(String.valueOf(expectedSkipped()));
     }
 
     @Test
@@ -249,6 +249,23 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
+    /**
+     * 취소 시점에 미실행으로 확정될 후보 수. 발행 창이 1이라 나가 있던 한 건을 뺀 나머지다.
+     *
+     * <p><b>수를 적어 두지 않는다</b> — 등록표의 축이나 후보값이 늘면 조합 수가 곱으로 바뀐다. 적어 두면 등록표를 고칠 때마다 이 테스트가 이유 없이 깨지고,
+     * 그때 수만 고쳐 넣으면 취소가 실제로 무엇을 멈췄는지 보지 않게 된다.
+     */
+    private int expectedSkipped() {
+        long total =
+                registry.activeStrategies().stream()
+                        .filter(
+                                registration ->
+                                        searchableStrategyIds().contains(registration.strategyId()))
+                        .mapToLong(StrategyRegistration::combinationCount)
+                        .sum();
+        return (int) (total - 1);
+    }
+
     private List<String> searchableStrategyIds() {
         List<String> registered =
                 jdbcTemplate.queryForList(
@@ -257,6 +274,9 @@ class ParamSearchCancelIT extends PostgresTestSupport {
                         String.class);
         return registry.activeStrategies().stream()
                 .filter(registration -> !registration.axes().isEmpty())
+                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
+                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
+                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
                 .map(StrategyRegistration::strategyId)
                 .filter(registered::contains)
                 .toList();
