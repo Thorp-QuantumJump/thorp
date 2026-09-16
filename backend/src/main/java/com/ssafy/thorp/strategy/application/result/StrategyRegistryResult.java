@@ -1,5 +1,6 @@
 package com.ssafy.thorp.strategy.application.result;
 
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.ValidationRule;
 import java.util.List;
 
@@ -44,8 +45,11 @@ public record StrategyRegistryResult(
      *
      * <p>기본값을 범위와 한 덩이로 담는다 — 둘이 흩어지면 기본값이 범위 밖으로 벗어난 채 화면이 열릴 수 있다(data-model §7).
      *
-     * <p>목록형이면 {@code values}만, 입력형이면 {@code min}·{@code max}·{@code step}만 채운다. 나머지는 null이고 응답에
+     * <p>목록형이면 {@code choices}만, 입력형이면 {@code min}·{@code max}·{@code step}만 채운다. 나머지는 null이고 응답에
      * 실리지 않는다.
+     *
+     * <p><b>후보는 값과 표시 문구를 함께 싣는다.</b> {@code minEvaluationYears}의 {@code 0}이 "0년"이 아니라 "제한 없음"이라는
+     * 것은 등록표만 아는 사실이라, 값만 내려보내면 화면이 그 대응을 코드에 적게 된다(FR-005·FR-011a).
      *
      * @param defaultValue 계약 JSON에서는 {@code default}다. 자바 예약어라 이름을 바꿔 담고 표현 계층이 되돌린다
      */
@@ -53,13 +57,13 @@ public record StrategyRegistryResult(
             Object min,
             Object max,
             Object step,
-            List<Object> values,
+            List<RegisteredChoice> choices,
             Object defaultValue,
             String unit,
             String usedBy) {
 
         public ConditionView {
-            values = values == null ? null : List.copyOf(values);
+            choices = choices == null ? null : List.copyOf(choices);
         }
     }
 

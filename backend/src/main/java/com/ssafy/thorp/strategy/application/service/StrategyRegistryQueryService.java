@@ -5,6 +5,7 @@ import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
 import com.ssafy.thorp.strategy.application.port.AnalysisConditionRegistry;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.strategy.application.port.ValidationRule;
@@ -146,16 +147,16 @@ public class StrategyRegistryQueryService {
             SearchContext context) {
         List<ValidationRule> axisRules =
                 rules.stream().filter(rule -> references(rule, axis.name())).toList();
-        return allowedRange.values().stream()
+        return allowedRange.choices().stream()
                 .map(
-                        value ->
+                        choice ->
                                 new StrategyRegistryResult.ChoiceView(
-                                        value,
-                                        label(value, axis.unit()),
+                                        choice.value(),
+                                        label(choice, axis.unit()),
                                         choiceSelectable(
                                                 registration.strategyId(),
                                                 axis.name(),
-                                                value,
+                                                choice.value(),
                                                 defaults,
                                                 axisRules,
                                                 context)))
@@ -191,34 +192,16 @@ public class StrategyRegistryQueryService {
     }
 
     /**
-     * 후보의 표시 문구. <b>값의 형태만 보고 만들며 축 이름이나 전략 ID를 보지 않는다.</b>
+     * 후보의 표시 문구. <b>등록표가 적은 문구를 그대로 쓴다.</b>
      *
-     * <p>등록 구조에 후보별 라벨 자리가 아직 없어 여기에서 만든다. 자리를 더하는 날 이 메서드는 사라지고 등록표의 값을 그대로 쓴다 — 그때까지 이 변환에 전략 지식이
-     * 섞이지 않게 형태만 본다.
+     * <p>적지 않은 후보는 값과 축의 단위를 붙인다({@code 21} + {@code 거래일}). 숫자가 아닌 후보는 로더가 문구를 요구하므로 문구 없이 여기까지 오지
+     * 않는다 — 무엇이 문구를 가져야 하는지는 등록표가 정하고, 이 메서드는 값이나 축 이름을 해석하지 않는다(FR-005).
      */
-    private static String label(Object value, String unit) {
-        if (value instanceof Map<?, ?> map) {
-            Object mode = map.get("mode");
-            if ("CALENDAR".equals(mode)) {
-                return calendarLabel(map.get("unit"));
-            }
-            if ("TRADING_DAYS".equals(mode)) {
-                return map.get("days") + "거래일";
-            }
+    private static String label(RegisteredChoice choice, String unit) {
+        if (choice.label() != null) {
+            return choice.label();
         }
-        if (value instanceof Number && unit != null) {
-            return value + unit;
-        }
-        return String.valueOf(value);
-    }
-
-    private static String calendarLabel(Object unit) {
-        return switch (String.valueOf(unit)) {
-            case "MONTH_END" -> "월말";
-            case "QUARTER_END" -> "분기말";
-            case "HALF_END" -> "반기말";
-            default -> String.valueOf(unit);
-        };
+        return unit == null ? String.valueOf(choice.value()) : choice.value() + unit;
     }
 
     private static StrategyRegistryResult.RuleView toRuleView(ValidationRule rule) {
@@ -254,7 +237,7 @@ public class StrategyRegistryQueryService {
                 range.min(),
                 range.max(),
                 range.step(),
-                range.isEnumerated() ? range.values() : null,
+                range.isEnumerated() ? range.choices() : null,
                 condition.defaultValue(),
                 condition.unit(),
                 condition.usedBy());

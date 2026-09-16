@@ -41,6 +41,8 @@ GET /strategies/registry?universeSize={n}
 | `axes[].description` | `string?` | 항목의 의미 한 문장. **화면이 축 이름으로 분기해 설명을 고르지 않게 하는 자리다** |
 | `axes[].inputType` | `string` | `CHOICE` \| `NUMBER` |
 | `axes[].choices[]` | `array` | `CHOICE`일 때만. 고를 수 없는 후보도 `selectable: false`로 **목록에 남는다** |
+| `axes[].choices[].label` | `string` | 후보를 보일 문구. **화면이 만들지 않는다** — `TOP_N`이 무슨 뜻인지는 등록표만 안다. 등록표가 문구를 적지 않은 숫자 후보만 서버가 값과 `unit`으로 만든다 |
+| `analysisConditions.*.choices[]` | `array` | 목록형 조건일 때만. `{ value, label }`이며 `selectable`이 없다 — 유효성 규칙은 전략 축에만 걸린다 |
 | `axes[].range` | `object` | `NUMBER`일 때만. `min`·`max`·`step` |
 | `validationRules[]` | `array` | 화면이 실행 전에 그 자리에서 평가할 조건. `universeSize`와 무관하게 항상 실린다 |
 

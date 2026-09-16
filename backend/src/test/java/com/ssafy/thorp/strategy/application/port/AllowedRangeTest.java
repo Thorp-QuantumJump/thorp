@@ -111,9 +111,30 @@ class AllowedRangeTest {
     @DisplayName("목록형과 입력형을 동시에 채우면 거절한다")
     void rejectsBothFormsAtOnce() {
         // 둘을 함께 채우면 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없다(data-model §4).
-        assertThatThrownBy(() -> new AllowedRange(10, 100, 5, List.of(21, 63)))
+        assertThatThrownBy(
+                        () ->
+                                new AllowedRange(
+                                        10,
+                                        100,
+                                        5,
+                                        List.of(RegisteredChoice.of(21), RegisteredChoice.of(63))))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("values");
+    }
+
+    @Test
+    @DisplayName("문구를 담아도 값 판정과 값 목록은 달라지지 않는다 — 007은 문구를 보지 않는다")
+    void labelsDoNotAffectValues() {
+        AllowedRange labelled =
+                AllowedRange.ofChoices(
+                        List.of(
+                                new RegisteredChoice("TOP_N", "상위 몇 개"),
+                                new RegisteredChoice("ALL", "후보 전체")));
+
+        assertThat(labelled.values()).containsExactly("TOP_N", "ALL");
+        assertThat(labelled.contains("TOP_N")).isTrue();
+        // 문구로는 고를 수 없다. 판정의 기준은 값 하나다.
+        assertThat(labelled.contains("상위 몇 개")).isFalse();
     }
 
     @Test

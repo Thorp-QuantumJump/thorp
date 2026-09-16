@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.io.IOException;
@@ -106,7 +107,7 @@ class FileParameterRegistryTest {
                         assertThat(axis.allowedRange().min()).isEqualTo(fileRange.get("min"));
                         assertThat(axis.allowedRange().max()).isEqualTo(fileRange.get("max"));
                         assertThat(axis.allowedRange().step()).isEqualTo(fileRange.get("step"));
-                        assertThat(axis.allowedRange().values()).isEqualTo(fileRange.get("values"));
+                        assertThat(axis.allowedRange().choices()).isEqualTo(fileChoices(fileRange));
                     }
                 }
             }
@@ -398,6 +399,80 @@ class FileParameterRegistryTest {
         }
 
         @Test
+        @DisplayName("숫자가 아닌 후보를 문구 없이 적으면 기동하지 않는다")
+        void rejectsNonNumericChoiceWithoutLabel() {
+            // TOP_N 이 무슨 뜻인지는 등록표만 안다. 문구를 적지 않으면 화면이 TOP_N 을 그대로 보이거나
+            // 무슨 말로 보일지 화면 코드에 적게 된다(FR-005).
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: selectionMode
+                                                    searchValues: [TOP_N]
+                                                    defaultValue: TOP_N
+                                                    allowedRange:
+                                                      values: [TOP_N, ALL]
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("STRATEGY_X/selectionMode")
+                    .hasMessageContaining("TOP_N");
+        }
+
+        @Test
+        @DisplayName("문구를 적는 자리를 비우면 기동하지 않는다 — values 로 적은 것과 같아진다")
+        void rejectsChoiceWithoutLabel() {
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: selectionMode
+                                                    searchValues: [TOP_N]
+                                                    defaultValue: TOP_N
+                                                    allowedRange:
+                                                      choices:
+                                                        - value: TOP_N
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("label");
+        }
+
+        @Test
+        @DisplayName("값만 적는 형태와 문구를 함께 적는 형태를 같이 쓰면 기동하지 않는다")
+        void rejectsBothChoiceForms() {
+            // 어느 쪽이 후보 목록인지 정할 수 없다.
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: lookbackDays
+                                                    searchValues: [21]
+                                                    defaultValue: 21
+                                                    allowedRange:
+                                                      values: [21, 63]
+                                                      choices:
+                                                        - value: 21
+                                                          label: 21거래일
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("STRATEGY_X/lookbackDays");
+        }
+
+        @Test
         @DisplayName("분석 조건이 없으면 기동하지 않는다")
         void rejectsMissingAnalysisConditions() {
             Resource resource =
@@ -544,7 +619,31 @@ class FileParameterRegistryTest {
         assertThat(condition.range().min()).isEqualTo(fileCondition.get("min"));
         assertThat(condition.range().max()).isEqualTo(fileCondition.get("max"));
         assertThat(condition.range().step()).isEqualTo(fileCondition.get("step"));
-        assertThat(condition.range().values()).isEqualTo(fileCondition.get("values"));
+        assertThat(condition.range().choices())
+                .as("%s 후보", key)
+                .isEqualTo(fileChoices(fileCondition));
+    }
+
+    /**
+     * 파일이 적은 후보를 값과 문구의 짝으로 읽는다.
+     *
+     * <p>등록표는 둘 중 한 형태로 적는다 — 값만 적는 {@code values}와 문구를 함께 적는 {@code choices}. 여기서 그 둘을 한 모양으로 펴서
+     * 포트 결과와 대조한다. <b>기대값을 테스트에 적지 않는 방식을 유지한다</b> — 문구를 여기 옮겨 적으면 파일을 고쳐도 통과하는 테스트가 된다.
+     */
+    private static List<RegisteredChoice> fileChoices(Map<String, Object> fileRange) {
+        if (fileRange.get("values") instanceof List<?> values) {
+            return values.stream().map(RegisteredChoice::of).toList();
+        }
+        if (fileRange.get("choices") instanceof List<?> choices) {
+            return choices.stream()
+                    .map(entry -> (Map<?, ?>) entry)
+                    .map(
+                            entry ->
+                                    new RegisteredChoice(
+                                            entry.get("value"), String.valueOf(entry.get("label"))))
+                    .toList();
+        }
+        return null;
     }
 
     private static boolean isActive(Map<String, Object> strategy) {

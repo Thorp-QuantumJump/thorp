@@ -1,7 +1,9 @@
 package com.ssafy.thorp.strategy.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.result.StrategyRegistryResult;
 import com.ssafy.thorp.strategy.infrastructure.registry.SyntheticRegistry;
 import java.util.List;
@@ -158,6 +160,52 @@ class StrategyRegistryQueryServiceTest {
                 .containsExactly("ACTIVE_ONE");
     }
 
+    @Nested
+    @DisplayName("후보의 표시 문구는")
+    class ChoiceLabels {
+
+        @Test
+        @DisplayName("등록표가 적었으면 그대로 싣는다 — 화면이 값의 뜻을 짐작하지 않는다")
+        void comeFromTheRegistry() {
+            List<StrategyRegistryResult.ChoiceView> modes =
+                    choices(service.query(3), "SECTOR_MOMENTUM", "selectionMode");
+
+            assertThat(modes)
+                    .extracting(StrategyRegistryResult.ChoiceView::label)
+                    .containsExactly("상위 몇 개", "기준 수익률 이상");
+        }
+
+        @Test
+        @DisplayName("적지 않은 숫자 후보는 값과 축의 단위로 만든다")
+        void fallBackToValueAndUnit() {
+            List<StrategyRegistryResult.ChoiceView> lookback =
+                    choices(service.query(3), "INVERSE_VOLATILITY", "lookbackDays");
+
+            assertThat(lookback)
+                    .extracting(StrategyRegistryResult.ChoiceView::label)
+                    .containsExactly("21거래일", "63거래일", "126거래일", "252거래일");
+        }
+
+        @Test
+        @DisplayName("단위가 없는 숫자 후보는 값 그대로다")
+        void fallBackToValueAlone() {
+            assertThat(choices(service.query(3), "SECTOR_MOMENTUM", "topN"))
+                    .extracting(StrategyRegistryResult.ChoiceView::label)
+                    .containsExactly("2", "3", "4");
+        }
+
+        @Test
+        @DisplayName("분석 조건의 후보에도 실린다 — 0이 '0년'이 아니라 '제한 없음'이라는 것은 등록표만 안다")
+        void areCarriedOnAnalysisConditions() {
+            StrategyRegistryResult.ConditionView minEvaluationYears =
+                    service.query(3).analysisConditions().minEvaluationYears();
+
+            assertThat(minEvaluationYears.choices())
+                    .extracting(RegisteredChoice::value, RegisteredChoice::label)
+                    .containsExactly(tuple(0, "완화(제한 없음)"), tuple(1, "기본(1년)"), tuple(3, "엄격(3년)"));
+        }
+    }
+
     @Test
     @DisplayName("등록표 버전과 임시 여부를 그대로 싣는다")
     void versionIsCarriedThrough() {
@@ -217,10 +265,13 @@ class StrategyRegistryQueryServiceTest {
                       - { mode: CALENDAR, unit: MONTH_END }
                     defaultValue: { mode: CALENDAR, unit: MONTH_END }
                     allowedRange:
-                      values:
-                        - { mode: CALENDAR, unit: MONTH_END }
-                        - { mode: CALENDAR, unit: QUARTER_END }
-                        - { mode: TRADING_DAYS, days: 21 }
+                      choices:
+                        - value: { mode: CALENDAR, unit: MONTH_END }
+                          label: 월말
+                        - value: { mode: CALENDAR, unit: QUARTER_END }
+                          label: 분기말
+                        - value: { mode: TRADING_DAYS, days: 21 }
+                          label: 21거래일
               - id: RETIRED_ONE
                 name: 내린 전략
                 active: false

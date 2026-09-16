@@ -7,21 +7,24 @@ import java.util.List;
 /**
  * 축의 입력 허용 범위. 상세 변경 화면과 범위 검증이 그대로 쓴다(007 FR-027).
  *
- * <p>목록형 축은 {@code values}만, 입력형 축은 {@code min}·{@code max}·{@code step}을 쓴다. <b>007은 어느 쪽인지 판단하지
+ * <p>목록형 축은 {@code choices}만, 입력형 축은 {@code min}·{@code max}·{@code step}을 쓴다. <b>007은 어느 쪽인지 판단하지
  * 않고 등록표가 준 형태를 그대로 옮긴다</b> — 축의 종류를 007이 해석하기 시작하면 그것이 전략 지식이다(007 FR-025).
  *
  * <p><b>두 형태를 동시에 채우지 않는다.</b> 동시에 채우면 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없다(data-model §3·§4). 생성자가 막으므로
  * 등록표가 그렇게 적히면 기동이 실패한다.
  *
+ * <p><b>후보는 값과 표시 문구를 함께 담는다</b>({@link RegisteredChoice}). 값만 알고 문구를 모르면 화면이 {@code TOP_N}을 그대로
+ * 보이거나 무슨 말로 보일지 코드에 적게 된다(FR-005). 값만 필요한 호출자는 {@link #values()}를 쓴다 — 007이 그렇다.
+ *
  * <p>범위 상수를 007에 두지 않는다. 기본값과 범위의 출처는 등록표 하나다.
  */
-public record AllowedRange(Object min, Object max, Object step, List<Object> values) {
+public record AllowedRange(Object min, Object max, Object step, List<RegisteredChoice> choices) {
 
     public AllowedRange {
-        values = values == null ? null : Collections.unmodifiableList(List.copyOf(values));
-        boolean hasValues = values != null && !values.isEmpty();
+        choices = choices == null ? null : Collections.unmodifiableList(List.copyOf(choices));
+        boolean hasChoices = choices != null && !choices.isEmpty();
         boolean hasBounds = min != null || max != null || step != null;
-        if (hasValues && hasBounds) {
+        if (hasChoices && hasBounds) {
             throw new IllegalArgumentException(
                     "allowedRange must not fill both values and min/max/step");
         }
@@ -32,14 +35,33 @@ public record AllowedRange(Object min, Object max, Object step, List<Object> val
         return new AllowedRange(min, max, step, null);
     }
 
-    /** 목록형 축의 허용값 목록. */
+    /** 문구 없는 후보들로 만든 목록형 범위. 값 자체로 읽히는 후보에만 쓴다. */
     public static AllowedRange ofValues(List<Object> values) {
-        return new AllowedRange(null, null, null, values);
+        return new AllowedRange(
+                null,
+                null,
+                null,
+                values == null ? null : values.stream().map(RegisteredChoice::of).toList());
+    }
+
+    /** 값과 문구를 함께 담은 목록형 범위. */
+    public static AllowedRange ofChoices(List<RegisteredChoice> choices) {
+        return new AllowedRange(null, null, null, choices);
+    }
+
+    /**
+     * 허용값만 순서대로. 표시 문구를 쓰지 않는 호출자(007의 미리보기 응답·부분집합 검사)가 쓴다.
+     *
+     * <p>이름이 {@code values}인 record 컴포넌트였다가 {@link RegisteredChoice}로 바뀐 자리다. 호출부가 값만 보는 한 이 메서드로
+     * 충분해서 접근자 이름을 그대로 남겼다.
+     */
+    public List<Object> values() {
+        return choices == null ? null : choices.stream().map(RegisteredChoice::value).toList();
     }
 
     /** 허용값 목록으로 판정하는 축인가. 판정 방식만 구분하며 축의 의미는 보지 않는다. */
     public boolean isEnumerated() {
-        return values != null && !values.isEmpty();
+        return choices != null && !choices.isEmpty();
     }
 
     /**
@@ -57,7 +79,7 @@ public record AllowedRange(Object min, Object max, Object step, List<Object> val
             return false;
         }
         if (isEnumerated()) {
-            return values.contains(value);
+            return choices.stream().anyMatch(choice -> choice.value().equals(value));
         }
         if (min == null || max == null) {
             // 범위를 적지 않은 축은 판정할 근거가 없다. 없는 근거로 통과시키지 않는다.

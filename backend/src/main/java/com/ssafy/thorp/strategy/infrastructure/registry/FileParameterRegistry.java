@@ -5,6 +5,7 @@ import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
 import com.ssafy.thorp.strategy.application.port.AnalysisConditionRegistry;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.strategy.application.port.ValidationRule;
@@ -189,10 +190,9 @@ public class FileParameterRegistry implements ParameterRegistryPort {
         }
         if (allowedRange.isEnumerated()) {
             // 자동 탐색이 사용자가 고를 수 없는 값을 훑으면 그 결과를 상세 설정에서 재현할 수 없다(내부 계약 §2.5).
+            List<Object> allowed = allowedRange.values();
             List<Object> outside =
-                    searchValues.stream()
-                            .filter(value -> !allowedRange.values().contains(value))
-                            .toList();
+                    searchValues.stream().filter(value -> !allowed.contains(value)).toList();
             if (!outside.isEmpty()) {
                 throw new IllegalStateException(
                         "searchValues must be a subset of allowedRange.values: "
@@ -220,18 +220,70 @@ public class FileParameterRegistry implements ParameterRegistryPort {
         if (range == null) {
             return null;
         }
-        Object values = range.get("values");
+        List<RegisteredChoice> choices = toChoices(where, range);
         try {
-            return new AllowedRange(
-                    range.get("min"),
-                    range.get("max"),
-                    range.get("step"),
-                    values instanceof List<?> list ? List.copyOf(list) : null);
+            return new AllowedRange(range.get("min"), range.get("max"), range.get("step"), choices);
         } catch (IllegalArgumentException e) {
             // 어느 축인지 붙여 다시 던진다 — 기동 실패 로그에 축 이름이 없으면 등록표를 뒤져야 한다.
             throw new IllegalStateException(
                     "invalid allowedRange: " + where + " - " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 목록형 후보를 읽는다. 등록표는 둘 중 하나로 적는다 — 값만 적는 {@code values}, 값과 표시 문구를 함께 적는 {@code choices}.
+     *
+     * <p>둘을 함께 적으면 어느 쪽이 후보 목록인지 정할 수 없어 기동을 막는다.
+     */
+    private static List<RegisteredChoice> toChoices(String where, Map<String, Object> range) {
+        Object values = range.get("values");
+        Object labelled = range.get("choices");
+        if (values != null && labelled != null) {
+            throw new IllegalStateException(
+                    "allowedRange must not fill both values and choices: " + where);
+        }
+        if (values instanceof List<?> raw) {
+            return raw.stream().map(value -> readableWithoutLabel(where, value)).toList();
+        }
+        if (labelled instanceof List<?> raw) {
+            return raw.stream().map(entry -> toChoice(where, entry)).toList();
+        }
+        return null;
+    }
+
+    /**
+     * 표시 문구 없이 적을 수 있는 후보는 숫자뿐이다 — 값과 축의 단위를 붙이면 그대로 읽힌다.
+     *
+     * <p><b>{@code TOP_N}이나 {@code {mode: CALENDAR}}가 무슨 뜻인지는 등록표만 안다.</b> 문구 없이 두면 화면이 {@code
+     * TOP_N}을 그대로 보이거나 무슨 말로 보일지 코드에 적게 되고, 후자가 FR-005가 금지한 "화면 코드에 따로 적어 두는 안내"다.
+     */
+    private static RegisteredChoice readableWithoutLabel(String where, Object value) {
+        if (!(value instanceof Number)) {
+            throw new IllegalStateException(
+                    "non-numeric choice needs a label - use `choices:` instead of `values:`: "
+                            + where
+                            + " -> "
+                            + value);
+        }
+        return RegisteredChoice.of(value);
+    }
+
+    private static RegisteredChoice toChoice(String where, Object entry) {
+        if (!(entry instanceof Map<?, ?> choice)) {
+            throw new IllegalStateException(
+                    "choices entry must be a mapping of value and label: " + where);
+        }
+        Object value = choice.get("value");
+        if (value == null) {
+            throw new IllegalStateException("choices entry needs a value: " + where);
+        }
+        Object label = choice.get("label");
+        if (label == null) {
+            // 문구를 적으라고 만든 자리다. 비워 두면 values 로 적은 것과 같아진다.
+            throw new IllegalStateException(
+                    "choices entry needs a label: " + where + " -> " + value);
+        }
+        return new RegisteredChoice(value, String.valueOf(label));
     }
 
     private static WarmupRule toWarmup(String strategyId, Map<String, Object> warmup) {

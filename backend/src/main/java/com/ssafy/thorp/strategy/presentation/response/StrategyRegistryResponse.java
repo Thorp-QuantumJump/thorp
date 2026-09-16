@@ -2,6 +2,7 @@ package com.ssafy.thorp.strategy.presentation.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.result.StrategyRegistryResult;
 import java.util.List;
 
@@ -41,7 +42,7 @@ public record StrategyRegistryResponse(
     }
 
     /**
-     * 분석 조건 하나. 목록형이면 {@code values}만, 입력형이면 {@code min}·{@code max}·{@code step}만 실린다.
+     * 분석 조건 하나. 목록형이면 {@code choices}만, 입력형이면 {@code min}·{@code max}·{@code step}만 실린다.
      *
      * @param defaultValue 계약의 {@code default}다. 자바 예약어라 이름을 바꿔 담고 {@code @JsonProperty}로 되돌린다
      */
@@ -50,7 +51,7 @@ public record StrategyRegistryResponse(
             Object min,
             Object max,
             Object step,
-            List<Object> values,
+            List<ConditionChoice> choices,
             @JsonProperty("default") Object defaultValue,
             String unit,
             String usedBy) {
@@ -60,10 +61,26 @@ public record StrategyRegistryResponse(
                     view.min(),
                     view.max(),
                     view.step(),
-                    view.values(),
+                    view.choices() == null
+                            ? null
+                            : view.choices().stream().map(ConditionChoice::from).toList(),
                     view.defaultValue(),
                     view.unit(),
                     view.usedBy());
+        }
+    }
+
+    /**
+     * 분석 조건의 후보 하나.
+     *
+     * <p>전략 축의 {@link Choice}와 달리 {@code selectable}이 없다. 유효성 규칙은 전략 축에만 걸리므로 조건 후보에는 고를 수 없다는 판정이
+     * 아예 없고, 늘 참인 필드를 실어 보내면 화면이 있지도 않은 판정을 따지게 된다.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ConditionChoice(Object value, String label) {
+
+        public static ConditionChoice from(RegisteredChoice choice) {
+            return new ConditionChoice(choice.value(), choice.label());
         }
     }
 

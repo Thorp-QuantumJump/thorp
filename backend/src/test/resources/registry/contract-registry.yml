@@ -9,6 +9,11 @@
 # 둘째 전략의 기본 설정(topN: 4)은 섹터 셋이라는 조건에서 규칙을 어긴다. 계약이 말하는 세 가지를
 # 한 응답으로 보이려고 그렇게 두었다 — 고를 수 없는 전략, 목록에 남는 고를 수 없는 후보,
 # universeSize 와 무관하게 늘 실리는 규칙 목록.
+#
+# 목록형 후보를 적는 두 형태가 모두 들어 있다(data-model §4):
+#   values   숫자 후보. 화면 문구는 서버가 값과 unit 으로 만든다(21 + 거래일).
+#   choices  값과 문구를 함께 적는다. 숫자가 아닌 후보는 이 형태로만 적을 수 있다.
+# selectionMode 와 minEvaluationYears 가 choices 쪽이고 나머지는 values 쪽이다.
 
 version: "PROVISIONAL-20260911"
 
@@ -27,7 +32,13 @@ analysisConditions:
     unit: 퍼센트(연)
     usedBy: TARGET_RISK
   minEvaluationYears:
-    values: [0, 1, 3]
+    choices:
+      - value: 0
+        label: 완화(제한 없음)
+      - value: 1
+        label: 기본(1년)
+      - value: 3
+        label: 엄격(3년)
     default: 1
     unit: 년
 
@@ -90,6 +101,17 @@ strategies:
         defaultValue: 21
         allowedRange:
           values: [0, 5, 10, 21]
+      - name: selectionMode
+        label: 선정 방식
+        description: 어떤 기준으로 섹터를 추릴지 정한다.
+        searchValues: [TOP_N]
+        defaultValue: TOP_N
+        allowedRange:
+          choices:
+            - value: TOP_N
+              label: 상위 몇 개
+            - value: THRESHOLD
+              label: 기준 수익률 이상
       - name: topN
         label: 선정 섹터 수
         description: 선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.

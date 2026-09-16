@@ -18,7 +18,11 @@
       "usedBy": "TARGET_RISK"
     },
     "minEvaluationYears": {
-      "values": [0, 1, 3],
+      "choices": [
+        { "value": 0, "label": "완화(제한 없음)" },
+        { "value": 1, "label": "기본(1년)" },
+        { "value": 3, "label": "엄격(3년)" }
+      ],
       "default": 1,
       "unit": "년"
     }
@@ -102,6 +106,17 @@
             { "value": 21, "label": "21거래일", "selectable": true }
           ],
           "defaultValue": 21
+        },
+        {
+          "name": "selectionMode",
+          "label": "선정 방식",
+          "description": "어떤 기준으로 섹터를 추릴지 정한다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": "TOP_N", "label": "상위 몇 개", "selectable": true },
+            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true }
+          ],
+          "defaultValue": "TOP_N"
         },
         {
           "name": "topN",

@@ -52,7 +52,11 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
       "usedBy": "TARGET_RISK"
     },
     "minEvaluationYears": {
-      "values": [0, 1, 3],
+      "choices": [
+        { "value": 0, "label": "완화(제한 없음)" },
+        { "value": 1, "label": "기본(1년)" },
+        { "value": 3, "label": "엄격(3년)" }
+      ],
       "default": 1,
       "unit": "년"
     }
@@ -138,6 +142,17 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "defaultValue": 21
         },
         {
+          "name": "selectionMode",
+          "label": "선정 방식",
+          "description": "어떤 기준으로 섹터를 추릴지 정한다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": "TOP_N", "label": "상위 몇 개", "selectable": true },
+            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true }
+          ],
+          "defaultValue": "TOP_N"
+        },
+        {
           "name": "topN",
           "label": "선정 섹터 수",
           "description": "선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.",
@@ -183,6 +198,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | `axes[].description` | string? | 항목의 의미 한 문장. **화면이 축 이름으로 분기해 설명을 고르지 않게 하는 자리다**([research](../research.md) R7-1) — FR-019의 상한 재배분 안내 문장도 여기에 온다 |
 | `axes[].inputType` | `CHOICE` \| `NUMBER` | 목록형인가 입력형인가 |
 | `axes[].choices` | array | `CHOICE`일 때만. `selectable`이 false인 후보는 유효성 제약에 걸린 값이다 |
+| `axes[].choices[].label` | string | 후보를 사람에게 보일 문구. **화면이 만들지 않는다** — `TOP_N`이나 `{mode: CALENDAR, unit: MONTH_END}`가 무슨 뜻인지는 등록표만 안다. 등록표가 문구를 적지 않은 숫자 후보만 서버가 값과 `unit`으로 만든다(`21` + `거래일`) |
+| `analysisConditions.*.choices` | array | 목록형 조건일 때만. `{ value, label }`이며 전략 축의 `choices`와 달리 `selectable`이 없다 — 유효성 규칙은 전략 축에만 걸린다. `minEvaluationYears`의 `0`이 "0년"이 아니라 "제한 없음"이라는 것도 이 문구가 말한다(FR-011a) |
 | `axes[].range` | object | `NUMBER`일 때만 |
 | `axes[].defaultValue` | any | 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다 |
 | `analysisConditions.*.default` | any | 분석 조건의 기본값. 범위 안에 함께 싣는다 |
