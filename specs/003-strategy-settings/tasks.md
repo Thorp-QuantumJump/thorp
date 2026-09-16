@@ -249,8 +249,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 **Independent Test**: 전략 하나를 선택한 뒤 '설정 조합 자동 비교'를 눌러 그 전략과 섹터 집합이 유지된 채 `/param-search`가 열리는지, 다른 전략이 함께 넘어가지 않는지 확인한다(quickstart 11).
 
-- [ ] T070 [US4] (FE) `ActionButtons`의 둘째 버튼 동작을 `StrategySettingsPage.tsx`에 연결 — `navigate('/param-search?strategies=' + selectedStrategyId + '&instruments=' + instrumentIds.join(','))`. 007 `ParamSearchPage`가 읽는 질의 문자열 그대로이며 **전략은 하나만** 싣는다(FR-013, Clarifications). 전략 미선택·등록표 없음이면 `disabled`. 후보 숫자를 사용자에게 입력받지 않는다 (T040 의존)
-- [ ] T071 [US4] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 전략 하나 선택 후 자동 비교 클릭 → 이동 경로의 `strategies`에 그 전략 하나만, `instruments`에 섹터 집합 전부; 미선택이면 버튼 `disabled`; 등록표 실패 상태면 `disabled`(quickstart 11) (T070 의존)
+- [X] T070 [US4] (FE) `ActionButtons`의 둘째 버튼 동작을 `StrategySettingsPage.tsx`에 연결 — `navigate('/param-search?strategies=' + selectedStrategyId + '&instruments=' + instrumentIds.join(','))`. 007 `ParamSearchPage`가 읽는 질의 문자열 그대로이며 **전략은 하나만** 싣는다(FR-013, Clarifications). 전략 미선택·등록표 없음이면 `disabled`. 후보 숫자를 사용자에게 입력받지 않는다 (T040 의존)
+- [X] T071 [US4] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 전략 하나 선택 후 자동 비교 클릭 → 이동 경로의 `strategies`에 그 전략 하나만, `instruments`에 섹터 집합 전부; 미선택이면 버튼 `disabled`; 등록표 실패 상태면 `disabled`(quickstart 11) (T070 의존)
 
 **Checkpoint**: 네 스토리가 모두 독립적으로 동작한다
 
