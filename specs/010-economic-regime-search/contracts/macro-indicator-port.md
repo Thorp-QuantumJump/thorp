@@ -54,12 +54,14 @@ T_g로 검색하면 아직 snapshot이 없는 달이라 **404**가 난다. 화�
 |---|---|---|
 | `registry()` | 지표 목록(id·이름·단위·변환), 지표 → 분야 매핑, 등록표 버전 | FR-002·FR-003 |
 | `monthly_series(indicator_id)` | 대상월 → **변환값** 전 구간 | FR-006 |
-| `raw_series(indicator_id)` | 대상월 → **원값** 전 구간 | FR-006 |
+| `raw_series(indicator_id)` | 대상월 → **변환 전 원값** 전 구간 | FR-006 |
 | `baseline_months()` | 분야별 T_g, 17개 공통 T_all | FR-013 |
 | `publication(indicator_id, month)` | 그 값의 대상월·발표일·개정 여부 | FR-007 |
 | `data_version()` | 현재 자료 버전 | FR-009 |
 | `changed_since(data_version)` | 그 버전 이후 값이 새로 들어오거나 개정된 **가장 오래된 대상월 M** | FR-009·FR-017 |
 | `is_sample_data()` | 예시 자료인가 | FR-022 |
+
+> ⚠ **`raw_series()`는 010의 계산·표시 경로에서 쓰지 않는다.** 거리도 설명 문장도 `monthly_series()`의 **변환 후 값**을 쓴다(spec FR-015, research R8, D21 적용 세부). 이 메서드는 008이 원값을 보존하는지 확인하는 용도로만 둔다.
 
 `changed_since()`가 spec FR-030의 재계산 범위를 정한다 — `t ≥ M`인 기준월만 다시 계산한다
 (research R3). 008이 답할 수 없으면 `None`을 돌려주고, 그때는 계열 시작월을 M으로 삼아 전 구간을
@@ -183,8 +185,9 @@ cd data && python scripts/precompute_regime.py --source macro --all
 | 7 | 거리가 정확히 같은 두 후보 | 동률 → 오래된 월 우선 (spec FR-012) |
 | 8 | **질의 3개월 중 한 달만 결측** | 지표별 비교 시점, 빠진 지표·월 표기 (spec FR-001·FR-031) |
 | 9 | **질의 3개월이 전부 결측인 지표** | `QUERY_INPUT_MISSING` — 그 지표를 빼고 계산하지 않음 (spec FR-007) |
+| 10 | **자료 시작 직후 후보 구간**(비교 시점 입력은 있으나 그 직전 60개월은 없음), 질의 공통 척도는 유효 | 후보 자격은 유지하고 시대별 보조 설명만 제한한다(FR-012·FR-017) |
 
-8·9는 2026-09-16 Clarification으로 추가됐다. 이 경로가 픽스처에 없으면 검증 밖으로 나간다.
+8·9는 2026-09-16 Clarification으로 추가됐다. 10은 v1의 후보 자격과 보조 설명 가용성을 구분한다. 이 경로가 픽스처에 없으면 검증 밖으로 나간다.
 
 **이 모양들은 008이 와도 사라지면 안 된다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수
 있는데, 그러면 `NOT_COMPUTABLE`·동률 경로가 검증 밖으로 나간다. 그래서 **운영 픽스처(§4.1)는

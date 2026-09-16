@@ -4,6 +4,8 @@
 
 **Input**: Feature specification from `specs/010-economic-regime-search/spec.md`
 
+> **구현 기준**: D21의 모델 v1. v2는 [검증 대기 제안](d21-amendment.md)으로 분리했으며 이 계획의 선행 조건이 아니다. 사용성 관찰 M10은 구현 완료 뒤 별도 묶음으로 유지한다.
+
 > **2026-09-16 개정**: spec Clarifications(Session 2026-09-16) 8건을 반영했다. 설계에서 바뀐 것은
 > ① **008 경계를 둘로 나눠 각각의 필요에 맞췄다** — Backend의 `MacroIndicatorPort`는 등록표(이름·
 > 단위·순서)만, 시계열은 `data/` 배치의 `MacroIndicatorSource`만. 기준월은 배치가 표에 기록,
@@ -72,6 +74,8 @@ Phase 0에서 10건을 해소했고, 2026-09-16에 R1·R3을 개정했다. 상�
 
 *GATE: Phase 0 이전 통과 필수. Phase 1 이후 재확인.*
 
+판정 기준은 승인된 경제환경 검색 원칙이다. constitution의 미승인 3.3.0 Git·Jira 초안과 분리한 4.0.0 모델 변경안을 승인 근거로 쓰지 않는다.
+
 | 원칙 | 판정 | 근거 |
 |---|---|---|
 | I. 중심 약속은 전략 진단 | PASS | 경제환경 검색은 전략 진단의 입구다. 사례 이후 전략 결과는 011이 붙이고 010은 후보만 정한다 |
@@ -112,7 +116,10 @@ specs/010-economic-regime-search/
 ├── contracts/
 │   ├── regime-search-api.md           # HTTP 계약
 │   └── macro-indicator-port.md        # 008 경계 (포트·소스)
-├── checklists/requirements.md
+├── checklists/
+│   ├── requirements.md                # spec 품질 검토
+│   └── review.md                      # 요구 품질 검토 78항목
+├── d21-amendment.md                   # v2 검증 대기 제안 (구현 계약 아님)
 └── tasks.md                           # /speckit-tasks 산출물
 ```
 
@@ -125,6 +132,7 @@ data/
 │   │   ├── source.py                  # MacroIndicatorSource 프로토콜 (008 경계)
 │   │   ├── postgres.py                # 008 완성 후 구현체
 │   │   └── fixture/                   # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제
+│   ├── rounding.py                    # 12자리 반올림 — 저장·비교 직전
 │   ├── scale.py                       # 연속 구간 판정, 중앙값·MAD·IQR, 보정 상수
 │   ├── comparison.py                  # 지표별 비교 시점 판정 (FR-001)
 │   ├── distance.py                    # z, E_i, D_g, 종합 거리, 지표·분야 기여
@@ -144,6 +152,7 @@ backend/src/main/java/com/ssafy/thorp/regime/     # 계산하지 않는다. 008�
 ├── domain/model|vo/                   # SearchStatus, StatusReason, SearchMode, SnapshotKey
 └── infrastructure/
     ├── persistence/                    # snapshot·baseline-month·case 조회
+    ├── config/RegimeProperties.java     # macro.source (fixture|macro) — 코드 기본값 없음
     └── macro/
         ├── MacroIndicatorAdapter.java  # 008 완성 후 작성
         └── fixture/                    # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제
@@ -172,7 +181,7 @@ frontend/src/
 
 | 묶음 | 파트 | 내용 | 끝났다고 말할 근거 |
 |---|---|---|---|
-| **M1** | DE | 지표 소스 계약 + **격리된** 픽스처 대역 | 아홉 가지 모양이 다 들어 있고, 픽스처가 `macro/fixture/` 밖으로 나가지 않으며, 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod`에서 `--source fixture`면 적재 전에 실패한다 |
+| **M1** | DE | 지표 소스 계약 + **격리된** 픽스처 대역 | 열 가지 모양이 다 들어 있고, 픽스처가 `macro/fixture/` 밖으로 나가지 않으며, 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod`에서 `--source fixture`면 적재 전에 실패한다 |
 | **M2** | DE | `scale.py`·`comparison.py` — 연속 구간, 중앙값·MAD·IQR, 지표별 비교 시점 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수는 계산 불가다. 한 달 결측이 그 지표만 두 달로 줄이고, 세 달 결측이 분야를 계산 불가로 만든다 |
 | **M3** | DE | `distance.py`(z·E_i·D_g·종합·지표 기여·분야 기여) + `era.py`(시대별 위치) | 수기 계산과 일치(SC-003). 거리 0이면 기여 키가 없다. 명목 비중과 실제 기여가 함께 나온다 |
 | **M4** | DE | `candidates.py`·`explain.py` — 후보 제한·전체 순위·상위 10·설명 문장 | 12개월 이내 제외, ±6개월 건너뛰기, 동률 오래된 월 우선, 부족하면 부족한 대로. 전체 유효 후보 목록이 상위 10개 밖까지 나온다 |
@@ -181,6 +190,7 @@ frontend/src/
 | **M7** | FE | 결과 목록·상태 표시·자료 기준 시점·비교 시점 표기·역사 비교 표시 | 배지·확률 표현 0건, 후보 부족 시 빈자리 없음, 빠진 지표·월과 역사 비교 표시가 보인다 |
 | **M8** | FE | 사례 상세(거리·기여·z·척도) + 종합 비교 전환 + 기준월 지정 | 모드 전환 시 한 문장 알림, 기준월 표시, 유지율 0건 |
 | **M9** | DOCS | quickstart 실행 기록·폐기 예행연습 | S1~S9 실행 기록이 남고, 픽스처 디렉터리를 지웠을 때 운영 코드가 깨지지 않음을 확인했다 |
+| **M10** | DOCS | 사용성 관찰 6~8명 — M9까지 구현·검증을 마친 뒤 별도 티켓으로 수행(SC-008) | 참여자별 과제 수행·오해 여부·막힌 지점이 실제 관찰 기록으로 남는다. 구현 완료를 사용성 확인으로 보고하지 않는다 |
 
 **M2·M3·M4를 가장 먼저 두는 이유**: 이 셋이 010의 전부다. 화면과 API는 그 결과를 옮기는 일이고,
 틀렸을 때 드러나는 곳도 여기다. 007이 화면부터 만들어 워커 없이 숫자를 주입하게 된 전철을 밟지
@@ -221,7 +231,7 @@ frontend/src/
 키·API 응답·기록에 전부 실려 다니므로 값이 어느 경로로 흘러가도 가짜임이 드러나고, 폐기가 조건
 한 줄로 끝난다. 절차는 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §3.3.
 
-**픽스처의 아홉 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,
+**픽스처의 열 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,
 그러면 `NOT_COMPUTABLE`·동률 경로가 검증 밖으로 나간다. 운영 대역(위 한 디렉터리)은 폐기하되 같은
 모양을 담은 **단위 테스트 픽스처**는 `data/tests/regime/fixtures/`에 남는다.
 

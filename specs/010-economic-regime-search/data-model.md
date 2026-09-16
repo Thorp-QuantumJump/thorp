@@ -47,7 +47,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 | `field_id` | VARCHAR(32) | 분야 id. `COMPOSITE`이면 NULL |
 | `baseline_month` | DATE NOT NULL | 기준월 t. 월의 1일로 정규화 |
 | `revision` | INT NOT NULL | 같은 (모드·분야·기준월)에서 결과가 달라진 순번. 1부터 |
-| `content_hash` | CHAR(64) NOT NULL | 결과 본문의 해시. 직전 revision과 같으면 새 행을 만들지 않는다 |
+| `content_hash` | CHAR(64) NOT NULL | 공통 척도·사례·시대별 보조 설명을 포함한 결과 본문의 해시. 계산 시각은 제외하며 직전 revision과 같으면 새 행을 만들지 않는다 |
 | `data_version` | VARCHAR(40) NOT NULL | 이 내용을 **처음 낸** 008 자료 버전. **임시 대역이 계산한 행은 `FIXTURE-`로 시작한다** |
 | `registry_version` | VARCHAR(40) NOT NULL | 008 등록표 버전 |
 | `model_version` | VARCHAR(40) NOT NULL | 010 모델 버전 |
@@ -125,7 +125,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 ### 2.3 전체 유효 후보 (`ranked_candidates`)
 
 ```json
-[{"endMonth": "2012-03", "distance": "0.412938571034", "rank": 1}, ...]
+[{"endMonth": "2012-03", "distance": "0.412938571034", "rank": 1}]
 ```
 
 표시 후보 10개 **밖의** 후보까지 순위와 거리를 담는다(약 190개). **±6개월 건너뛰기는 적용하지 않은 원본 순위다**(spec FR-012) — 건너뛰기가 하나씩 담을 때마다 적용되는 순차 규칙이라, 걸러 둔 목록에 011이 가용성 필터를 얹으면 어느 후보가 걸러졌어야 하는지 다시 계산할 수 없다. [011](../011-regime-strategy-link/spec.md)
@@ -178,7 +178,7 @@ T_g(*"분야 지표들이 함께 확보된 최신월"*, 008 FR-013)보다 뒤로
 | `distance` | JSONB NOT NULL | `{value, byField: {...}, contribution: {...}}` — 전부 문자열 decimal |
 | `indicator_values` | JSONB NOT NULL | 지표별 `{queryRaw, caseRaw, queryZ, caseZ, unit, e, nominalWeight, distanceShare}` |
 | `explanation` | JSONB NOT NULL | `{similar: [문장], different: [문장]}` (research R8 템플릿 조립) |
-| `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족한 지표는 키가 없고, 전부 부족하면 NULL |
+| `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족하거나 보조 척도가 0인 지표는 키가 없고, 전부 계산 불가이면 NULL |
 | `created_at` / `updated_at` | TIMESTAMP NOT NULL | |
 
 - `CONSTRAINT uk_regime_case_rank UNIQUE (snapshot_id, rank)`
@@ -202,7 +202,7 @@ T_g(*"분야 지표들이 함께 확보된 최신월"*, 008 FR-013)보다 뒤로
 유사도처럼 읽힌다(spec FR-017·FR-022). 수기 대조에 필요한 값은 `method`·`windowStart`·`windowEnd`·
 `months`로 충분하다 — 그 구간과 방법이 있으면 독립 계산으로 같은 판정을 다시 만들 수 있다.
 
-**이 값은 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이 여러
+**이 값은 같은 자료·등록표·모델 버전에서 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이 여러
 snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 질의 쪽(§2.3, research R3)과 반대 성질이며,
 배치는 이 값을 **후보월마다 한 번만** 계산해 공유한다.
 
@@ -249,7 +249,7 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 �
 | 바뀌면 새 버전 | 근거 |
 |---|---|
 | 지표 집합·변환 | FR-004 |
-| 척도 규칙(구간 길이, 연속 판정, 분위수 방법, 보정 상수) | FR-005·FR-006, research R5 |
+| 척도 규칙(산출 구간, 구간 길이, 연속 판정, 분위수 방법, 보정 상수) | FR-005·FR-006, research R5 |
 | **비교 시점 규칙**(결측 달 제외, 지표 단위 적용) | FR-001 |
 | 거리식·가중 | FR-009·FR-010 |
 | **시대별 위치 판정 경계값**(문장이 '높은/낮은/비슷한'으로 갈리는 z 기준) | FR-017, research R8 |
