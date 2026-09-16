@@ -45,7 +45,7 @@ PD-02가 2026-09-15 확정([S15P21E205-254](https://ssafy.atlassian.net/browse/S
 서버를 띄우고:
 
 ```bash
-curl -s 'http://localhost:8080/strategies/registry?universeSize=3' | jq '.registryVersion, .provisional, [.strategies[].strategyId]'
+curl -s 'http://localhost:8080/strategies/registry?universeSize=3' | jq '.data.registryVersion, .data.provisional, [.data.strategies[].strategyId]'
 ```
 
 기대:
@@ -59,14 +59,14 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=3' | jq '.regist
 
 ```bash
 curl -s 'http://localhost:8080/strategies/registry?universeSize=2' \
-  | jq '.strategies[] | select(.strategyId=="SECTOR_MOMENTUM") | .axes[] | select(.name=="topN") | .choices'
+  | jq '.data.strategies[] | select(.strategyId=="SECTOR_MOMENTUM") | .axes[] | select(.name=="topN") | .choices'
 ```
 
 기대: 섹터가 둘이므로 등록된 선정 수 후보(`[2, 3, 4]`, PD-02 확정값) 중 2를 넘는 3·4가 `selectable: false`로 실리고 목록에서 사라지지 않는다. 단, `selectionMode`가 `TOP_N`일 때만 `topN` 축이 열린다 — 이 확인은 기본값(`selectionMode=TOP_N`) 기준이다.
 
 ```bash
 curl -s 'http://localhost:8080/strategies/registry?universeSize=3' \
-  | jq '.strategies[] | select(.strategyId=="MINIMUM_VARIANCE") | .validationRules'
+  | jq '.data.strategies[] | select(.strategyId=="MINIMUM_VARIANCE") | .validationRules'
 ```
 
 기대: `MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE` 규칙이 `left`·`operator`·`right`와 함께 실린다.
@@ -78,7 +78,7 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=3' \
 등록표에서 전략 하나에 `active: false`를 넣고 서버를 다시 띄운다.
 
 ```bash
-curl -s 'http://localhost:8080/strategies/registry' | jq '[.strategies[].strategyId]'
+curl -s 'http://localhost:8080/strategies/registry' | jq '[.data.strategies[].strategyId]'
 ```
 
 기대: 그 전략이 목록에 **없다.** `selectable: false`로 실리는 것과 다르다 — 비활성은 아예 빠지고, `selectable: false`는 실리되 고를 수 없는 것이다.

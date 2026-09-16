@@ -20,7 +20,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 ## 2. 전략 등록 정보 (StrategyRegistration) — 기존 타입 확장
 
-기존 `com.ssafy.thorp.paramsearch.application.port.StrategyRegistration`을 `strategy` 패키지로 옮기고 두 필드를 더한다.
+기존 `com.ssafy.thorp.paramsearch.application.port.StrategyRegistration`을 `strategy` 패키지로 옮기고 세 필드를 더한다.
 
 | 필드 | 형 | 상태 | 비고 |
 |---|---|---|---|
@@ -30,6 +30,9 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `axes` | List\<ParameterAxis\> | 기존 | 순서 보존 |
 | **`active`** | boolean | **추가** | 생략 시 true. 비활성 전략은 카드에 보이지 않는다 (R5) |
 | **`warmup`** | WarmupRule? | **추가** | 없으면 워밍업 0 (R4) |
+| **`targetWeightSource`** | String? | **추가** | `USER` \| `EQUAL` \| `COMPUTED`. 목표 비중이 어디에서 오는지를 등록표가 말한다. `USER`면 화면이 002가 확정한 비중을 읽기 전용으로 보이고, `COMPUTED`면 FR-012의 자동 배분 설명을 보인다 |
+
+**`targetWeightSource`를 두는 이유**: 이 값이 없으면 화면이 "고정 목표 비중이면 비중을 보이고 나머지는 자동 배분 설명을 보인다"를 전략 ID 분기로 적게 된다. 그것이 곧 전략 지식의 중복이고, 전략이 하나 늘 때마다 화면을 고쳐야 한다(FR-005, [research](research.md) R7-1). 조회 응답에도 같은 이름으로 실린다([계약](contracts/strategy-registry-api.md) §1).
 
 **화면 이름 대조**: 등록표의 `name`이 곧 화면에 보이는 이름이다. 코드나 화면에 전략 이름을 따로 두지 않는다.
 
@@ -43,14 +46,15 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 > 현재 임시 등록표의 `name`은 내부 전략명(`역변동성` 등)으로 적혀 있다. 정식 등록표에서는 화면 이름으로 바꾼다.
 
-## 3. 파라미터 축 (ParameterAxis) — 기존 타입 유지
+## 3. 파라미터 축 (ParameterAxis) — 기존 타입 확장
 
-기존 필드를 그대로 쓴다. 형태 판정은 `allowedRange`가 담당한다.
+형태 판정은 `allowedRange`가 담당한다. 기존 필드에 `description` 하나를 더한다.
 
 | 필드 | 형 | 비고 |
 |---|---|---|
 | `name` | String | 조합과 좌표의 키 |
 | `label` | String | 화면 표시 문구 |
+| **`description`** | String? | **추가.** 항목의 의미 한 문장. FR-003의 '의미'와 FR-019의 상한 재배분 안내 문장이 이 자리에 온다. 화면이 축 이름으로 분기해 설명을 고르지 않게 하는 자리다 (R7-1) |
 | `unit` | String? | 예: `거래일`, `퍼센트` |
 | `searchValues` | List\<Object\> | **007의 자동 탐색이 훑을 후보.** 인덱스가 그리드 좌표다 |
 | `defaultValue` | Object | 기본 시작값. 최적값·추천으로 표시하지 않는다 |
