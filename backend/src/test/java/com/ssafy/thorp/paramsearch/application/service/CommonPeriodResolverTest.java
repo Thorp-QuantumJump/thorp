@@ -17,11 +17,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * 007 공통 평가 구간이 004·워커와 같은 한 규칙을 쓰는지 본다.
+ * 007이 모든 후보에 똑같이 적용할 탐색 구간을 어떻게 정하는지 본다.
  *
- * <p><b>평가 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일).</b> 워밍업 기준점은 상장일 하나이고 요청 시작일은
- * 마지막에 max 로만 합쳐진다(001 {@code contracts/evaluation-window.md}). 이 두 항의 경계를 각각 덮는다 — 여기가 어긋나면 007
- * 묶음의 구간과 004 접수의 {@code effectiveStart}가 갈라져 나란히 놓은 숫자가 다른 구간의 값이 된다.
+ * <p><b>탐색 구간 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일).</b> 워밍업 기준점은 상장일 하나이고 요청
+ * 시작일은 마지막에 max 로만 합쳐진다(001 {@code contracts/evaluation-window.md}). 이 두 항의 경계를 각각 덮는다 — 여기가 어긋나면
+ * 묶음 안 후보들이 서로 다른 구간으로 평가되어 나란히 놓은 숫자가 비교가 되지 않는다.
+ *
+ * <p><b>004 {@code EffectivePeriodCalculator}와 같은 규칙이 아니다</b> — 004는 {@code S15P21E205-205}에서 미는 일을
+ * 걷어냈고 007이 따라갈지는 아직 열려 있다(001 {@code tasks.md} T037). 까닭은 {@link CommonPeriodResolver} 주석에 있다.
  */
 class CommonPeriodResolverTest {
 

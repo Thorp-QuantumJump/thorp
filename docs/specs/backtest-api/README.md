@@ -74,7 +74,9 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
   늘어나므로 **길이를 가정하지 말고 문자열로 다룬다.** 여러 요청이 한 실행을 가리킬 수 있어서(spec 004 R-02) 실행 식별자와는 다르다.
 - `resultSource`: `NEW` 새 계산 / `JOINED` 진행 중인 같은 조건 실행에 합류 / `REUSED` 완료 결과 재사용. **`REUSED`면 `status`가
   이미 `COMPLETED`이고 결과를 바로 조회할 수 있다** — 상태만 보고 폴링을 시작하지 말 것.
-- `effectiveStart`는 워밍업과 상장일을 반영한 실제 평가 시작일이라 요청 시작일보다 뒤일 수 있다.
+- `effectiveStart`는 요청 시작일이며 휴장일이면 그 뒤 첫 거래일이다. **워밍업만큼 밀린 값이 아니다** — 워밍업 자료는
+  요청 구간보다 앞에서 읽는다. 요청 앞에 워밍업 자료가 모자라면 워커가 모자란 만큼만 집계 시작일을 미루므로, 결과의
+  `effectiveStart`가 접수 때 돌려준 값보다 뒤일 수 있다.
 - `versions`는 결과 재현의 기준이다: `{ mapping, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit }`.
   `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
   (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.

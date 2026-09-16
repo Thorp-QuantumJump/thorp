@@ -28,14 +28,14 @@
 
 - `targetWeight`는 `FIXED_WEIGHT`에서만 필수, 다른 전략에서는 금지(400).
 - `costProfileVersion` null → 서버 기본(현재 `PROVISIONAL-DEMO-1`).
-- `warmupTradingDays`(선택, 정수 ≥ 0): 비교 묶음의 공통 워밍업. 003(다섯 전략 비교)·007(자동 탐색)이 후보 전체의 최대 관측 길이를 넘긴다. 서버는 이 값을 그대로 워밍업으로 써서 `effectiveStart`를 정하고 동일 버전 키에 넣는다(R-15·R-03). null이면 선택 전략의 관측 길이를 쓴다. 값이 선택 전략의 요구값보다 **작으면 올리지 않고** 422 `INSUFFICIENT_HISTORY`(본문에 필요 값)로 거부한다 — 묶음 최대값 계산이 틀렸다는 신호다. 같으면 통과, 크면 요청값 사용.
+- `warmupTradingDays`(선택, 정수 ≥ 0): 비교 묶음의 공통 워밍업. 003(다섯 전략 비교)·007(자동 탐색)이 후보 전체의 최대 관측 길이를 넘긴다. 서버는 이 값을 그대로 워밍업으로 써서 동일 버전 키에 넣는다(R-15·R-03). **이 값으로 `effectiveStart`를 뒤로 밀지는 않는다** — 워밍업 자료는 요청 구간보다 앞에서 읽고, 앞이 모자랄 때 집계 시작일을 미루는 판정은 워커가 단독으로 한다(001 `contracts/market-dataset.md` 「읽기 규칙」). null이면 선택 전략의 관측 길이를 쓴다. 값이 선택 전략의 요구값보다 **작으면 올리지 않고** 422 `INSUFFICIENT_HISTORY`(본문에 필요 값)로 거부한다 — 묶음 최대값 계산이 틀렸다는 신호다. 같으면 통과, 크면 요청값 사용.
 - `scenario`: `FULL_PERIOD`(주 분석) · `FRESH_CASH_FROM` · `COST_ESCALATION` · `TARGET_RISK` (FR-016, 별도 실행으로 기록).
 - `scenarioParams`: `TARGET_RISK`면 `{"targetVolatility": "0.1000"}` 필수(연환산, 0.0500~0.2000, 0.0100 간격, 기본값은 003 등록표가 제공). `FRESH_CASH_FROM`이면 `{"startDate": "2020-03-02"}`. `FULL_PERIOD`·`COST_ESCALATION`에서는 null. 규칙(63거래일 추정·월말 조절·하향만)은 서버가 `strategy_rules` `TARGET_RISK_OVERLAY/1`에서 채우며 사용자 입력이 아니다(PD-18).
 
 응답 `202 Accepted`:
 
 ```json
-{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": true}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.1.0", "evaluationSplit": "SPLIT-1"}}
+{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": true}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.2.0", "evaluationSplit": "SPLIT-1"}}
 ```
 
 - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).

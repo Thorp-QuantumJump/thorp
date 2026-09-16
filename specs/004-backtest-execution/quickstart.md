@@ -38,7 +38,7 @@ MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp WORKER_ROLE=flex  
 curl -s -X POST localhost:8080/backtests -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d @req.json
 ```
 
-기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`가 요청 시작일보다 뒤(워밍업). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. `versions.costProfile.provisional=true`가 보인다.
+기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`는 요청 시작일(휴장일이면 그 뒤 첫 거래일). **워밍업만큼 밀리지 않는다** — 미는 판정은 워커가 한다(R-15). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. `versions.costProfile.provisional=true`가 보인다.
 
 ## S2. 동일 버전 재사용 (US3-1, FR-003)
 
