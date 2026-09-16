@@ -259,6 +259,9 @@ cd backend && ./gradlew bootRun
 # 3. 큐가 생겼는지 확인 (관리 UI http://localhost:15672, thorp/thorp)
 docker exec thorp-rabbitmq rabbitmqctl list_queues name messages
 
+# 3.5 (로컬 검증용) 001 자료가 없으면 픽스처를 001 표에 넣는다 — 백엔드가 접수 때 붙이는 자료 버전이 이 이름이다
+cd worker && MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp python scripts/load_three_etf_fixture.py
+
 # 4. 워커 (MARKET_DATA_URL 은 001 이 적재한 표가 있는 DB)
 cd worker && RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/ MARKET_DATA_URL=postgresql://... uv run python -m worker.main
 ```

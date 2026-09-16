@@ -1,6 +1,5 @@
 package com.ssafy.thorp.news.infrastructure.persistence;
 
-import com.ssafy.thorp.news.domain.vo.NewsCollectionStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
@@ -26,20 +25,39 @@ public interface CollectionStateJpaRepository
      * 점유를 조건부로 잡는다. 이미 다른 인스턴스가 유효한 점유를 갖고 있으면 0을 돌려준다.
      *
      * <p>조건부 UPDATE 한 문장이라 인스턴스가 여럿이어도 하나만 성공한다(spec FR-022).
+     *
+     * <p><b>없으면 만든다.</b> 갱신만 하면 첫 회차가 영영 시작되지 않는다 — 점유를 잡아야 회차가 돌고 회차가 끝나야 행이 생기는데, 행이 없으면 점유를 잡을 수
+     * 없다. 마이그레이션이 seed하는 것은 정리 작업 행 하나뿐이고 수집 뉴스원의 행은 등록표가 바뀔 때마다 늘어나므로 seed로 메울 수도 없다(2026-09-15 첫
+     * 실행에서 드러났다).
+     *
+     * <p>만드는 것과 잡는 것을 한 문장으로 둔다. 조회 뒤 없으면 넣는 방식은 인스턴스 둘이 동시에 뜰 때 둘 다 넣으려 해서 한쪽이 기본키 충돌로 죽는다. {@code
+     * ON CONFLICT ... WHERE}는 이미 누가 잡고 있으면 0행을 돌려주므로 그 판정이 그대로 점유 실패가 된다.
+     *
+     * <p>JPQL이 아니라 native인 이유는 upsert가 JPQL에 없어서다. 상태는 문자열로 넘긴다 — native 경로에는 enum 변환이 걸리지 않는다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
-            "UPDATE NewsCollectionStateJpaEntity s"
-                    + " SET s.leaseOwner = :owner, s.leaseUntil = :leaseUntil,"
-                    + " s.status = :running, s.lastAttemptAt = :now"
-                    + " WHERE s.sourceKey = :sourceKey"
-                    + " AND (s.leaseUntil IS NULL OR s.leaseUntil <= :now)")
+            value =
+                    "INSERT INTO news_collection_state"
+                            + " (source_key, status, retry_count, lease_owner, lease_until,"
+                            + " last_attempt_at, created_at, updated_at)"
+                            + " VALUES (:sourceKey, :running, 0, :owner, :leaseUntil, :now, NOW(),"
+                            + " NOW())"
+                            + " ON CONFLICT (source_key) DO UPDATE SET"
+                            + " lease_owner = EXCLUDED.lease_owner,"
+                            + " lease_until = EXCLUDED.lease_until,"
+                            + " status = EXCLUDED.status,"
+                            + " last_attempt_at = EXCLUDED.last_attempt_at,"
+                            + " updated_at = NOW()"
+                            + " WHERE news_collection_state.lease_until IS NULL"
+                            + " OR news_collection_state.lease_until <= :now",
+            nativeQuery = true)
     int tryAcquireLease(
             @Param("sourceKey") String sourceKey,
             @Param("owner") String owner,
             @Param("now") Instant now,
             @Param("leaseUntil") Instant leaseUntil,
-            @Param("running") NewsCollectionStatus running);
+            @Param("running") String running);
 
     /** 점유를 놓는다. 이미 만료돼 다른 인스턴스가 가져갔으면 아무것도 하지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

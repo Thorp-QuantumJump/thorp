@@ -9,7 +9,7 @@ Worker와 Backend가 각자 구현하고 같은 픽스처로 검증하는 산식
 | 이름 | 타입 | 출처 |
 |---|---|---|
 | `candidates` | 대표 ETF 목록 | 요청한 후보 집합 |
-| `candidates[].instrumentId` | `{6자리}.XKRX` | `representative_etf` |
+| `candidates[].instrumentId` | `{6글자}.XKRX` (영숫자 대문자) | `representative_etf` |
 | `candidates[].listedOn` | date | `representative_etf` |
 | `candidates[].delistedOn` | date \| null | `representative_etf` |
 | `candidates[].dataGaps` | 구간 목록 | `data_gap` 표 |

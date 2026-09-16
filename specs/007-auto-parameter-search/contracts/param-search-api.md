@@ -121,6 +121,7 @@
 | 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반. `message`에 어느 제약인지 한 문장 (Edge Case) |
 | 422 | `STRATEGY_NOT_REGISTERED` | 요청 전략이 등록표의 활성 전략에 없음. `message`에 어느 전략인지 (FR-026) |
 | 422 | `STRATEGY_NOT_EXECUTABLE` | 등록돼 있으나 004가 실행을 지원하지 않음 (FR-026) |
+| 422 | `STRATEGY_NOT_SEARCHABLE` | 실행은 되지만 자동 탐색이 실행 입력을 다 만들 수 없음 — 목표 비중이 사용자에게서 오는 전략(`targetWeightSource: USER`)이다. 단건 분석으로는 실행된다 |
 | 409 | `REGISTRY_VERSION_CHANGED` | 요청의 `registryVersion`이 접수 시점 등록표 버전과 다름 (FR-028) |
 | 503 | `REGISTRY_UNAVAILABLE` | 등록 정보 또는 실행 지원 목록 조회 실패 (FR-028) |
 
@@ -302,6 +303,7 @@
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |
 | 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없는 전략 | 등록 후 |
 | 422 | `STRATEGY_NOT_EXECUTABLE` | 004가 실행을 지원하지 않는 전략 | 004 지원 후 |
+| 422 | `STRATEGY_NOT_SEARCHABLE` | 목표 비중을 사용자가 정하는 전략 | 자동 탐색 대신 분석하기로 |
 | 409 | `REGISTRY_VERSION_CHANGED` | 미리보기와 접수 시점의 등록표 버전이 다름 | 미리보기를 다시 본 뒤 |
 | 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·지원 목록 조회 실패 | 잠시 후 |
 | 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |

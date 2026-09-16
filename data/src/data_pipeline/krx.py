@@ -65,9 +65,11 @@ ETF_DAILY_SERVICE: Final[tuple[str, str]] = ("etp", "etf_bydd_trd")
 #: 응답 본문이 자료를 담는 키. 이 원천의 모든 서비스가 같은 이름을 쓴다.
 RESPONSE_ROWS_KEY: Final[str] = "OutBlock_1"
 
-#: 종목 식별자 형식. ``engine_input.py``·마이그레이션의 ``{6자리}.XKRX``와 같다.
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
-ISSUE_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\Z")
+#: 종목 식별자 형식. ``engine_input.py``·마이그레이션의 ``{6글자 단축코드}.XKRX``와 같다.
+#: 단축코드에는 영문 대문자가 섞일 수 있다(2026-09-15 T031). 소문자를 받지 않는 것은 원천이
+#: 대문자로만 주고, 둘 다 받으면 같은 종목이 두 값으로 저장될 수 있기 때문이다.
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
+ISSUE_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\Z")
 
 _HTTP_UNAUTHORIZED: Final[int] = 401
 _HTTP_TOO_MANY_REQUESTS: Final[int] = 429
@@ -112,6 +114,10 @@ class KrxQuotaExhaustedError(KrxError):
 
 class KrxResponseError(KrxError):
     """응답이 약속한 모양이 아니다. 값을 지어내지 않고 알린다."""
+
+
+class RawArchiveError(KrxError):
+    """``raw/`` 보관본을 읽을 수 없다. 원천 응답의 문제가 아니라 보관본의 문제다."""
 
 
 class ListingBoundaryError(KrxError):
@@ -248,6 +254,11 @@ def _rows_from_response(
     rows = body[RESPONSE_ROWS_KEY]
     if not isinstance(rows, list):
         raise KrxResponseError(f"{RESPONSE_ROWS_KEY}가 배열이 아니다: {where}")
+    return _rows_from_payload(rows, where)
+
+
+def _rows_from_payload(rows: list[Any], where: str) -> list[Mapping[str, str]]:
+    """행 배열이 매핑의 나열인지 확인한다. 응답과 보관본이 같은 검사를 거치게 한다."""
     for position, row in enumerate(rows):
         if not isinstance(row, Mapping):
             raise KrxResponseError(f"{where}의 {position}번째 행이 매핑이 아니다")
@@ -298,22 +309,63 @@ class RawArchivingSource:
         return rows
 
 
+@dataclass
+class ArchiveReadingSource:
+    """``raw/``의 보관본을 원천 대신 돌려준다. :class:`RawArchivingSource` 가 쓴 것을 읽는다.
+
+    보관의 목적이 **재수집 없이 다시 정제하는 것**이므로(research.md 결정 8) 읽는 길이 있어야
+    그 목적이 성립한다. 같은 자료를 다시 내려받지 않으니 이용 한도를 쓰지 않는다.
+
+    방향은 여전히 ``raw → processed → PostgreSQL`` 한 방향이다. 이 덮개는 ``raw/``를 **읽기만**
+    하며 되돌려 쓰지 않는다.
+
+    **보관본이 없는 날은 빈 배열이 아니라 오류다.** 빈 배열은 이 원천에서 "그날 값이 없다"를
+    뜻하고 지수 쪽에서는 곧 휴장일이므로(:func:`data_pipeline.index.collect_index_quotes`),
+    없는 파일을 빈 배열로 돌려주면 **받지 않은 날이 휴장일로 둔갑해** 거래일 달력에서 조용히
+    빠진다. 그 뒤로는 빠진 날을 아무도 알아채지 못한다.
+    """
+
+    root: Path
+
+    def path_for(self, group: str, endpoint: str, bas_dd: date) -> Path:
+        return self.root / group / endpoint / f"{bas_dd:%Y%m%d}.json"
+
+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:
+        path = self.path_for(group, endpoint, bas_dd)
+        if not path.is_file():
+            raise RawArchiveError(
+                f"{bas_dd:%Y-%m-%d}의 {group}/{endpoint} 보관본이 없다: {path}. "
+                "받지 않은 날을 휴장일로 볼 수 없어 진행하지 않는다"
+            )
+        try:
+            body = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError as error:
+            raise RawArchiveError(f"보관본이 JSON이 아니다: {path} ({error})") from error
+        rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None
+        if not isinstance(rows, list):
+            raise RawArchiveError(f"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}")
+        return _rows_from_payload(rows, f"보관본 {path}")
+
+
 # ---------------------------------------------------------------------------
 # 값 변환
 # ---------------------------------------------------------------------------
 
 
 def instrument_id_for(issue_code: str) -> str:
-    """``069500`` → ``069500.XKRX``. 마이그레이션의 형식 CHECK와 같은 모양으로 만든다."""
+    """``069500`` → ``069500.XKRX``. 마이그레이션의 형식 CHECK와 같은 모양으로 만든다.
+
+    ``0184E0`` 처럼 영문이 섞인 단축코드도 그대로 붙인다. 대소문자를 접거나 다듬지 않는다.
+    """
     if not isinstance(issue_code, str) or ISSUE_CODE_PATTERN.match(issue_code.strip()) is None:
-        raise KrxResponseError(f"종목코드가 6자리 숫자가 아니다: {issue_code!r}")
+        raise KrxResponseError(f"종목코드가 6글자 영숫자(대문자)가 아니다: {issue_code!r}")
     return f"{issue_code.strip()}.XKRX"
 
 
 def issue_code_for(instrument_id: str) -> str:
     """``069500.XKRX`` → ``069500``. 원천 응답과 맞추기 위한 반대 변환이다."""
     if not isinstance(instrument_id, str) or INSTRUMENT_ID_PATTERN.match(instrument_id) is None:
-        raise KrxResponseError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {instrument_id!r}")
+        raise KrxResponseError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {instrument_id!r}")
     return instrument_id[:6]
 
 
@@ -338,6 +390,25 @@ def parse_optional_decimal(text: object, field_name: str, where: str) -> Decimal
     return parsed if parsed > 0 else None
 
 
+def parse_optional_signed_decimal(text: object, field_name: str, where: str) -> Decimal | None:
+    """부호가 있는 값을 :class:`Decimal` 로 바꾼다. 빈 문자열만 값이 없다는 뜻이다.
+
+    :func:`parse_optional_decimal` 과 **다른 점이 둘**이다. 음수를 거부하지 않고, ``0``을
+    ``None``으로 바꾸지 않는다. 전일 대비(``CMPPREVDD_PRC``)처럼 내려간 날은 음수이고 보합인
+    날은 정확히 0인 값에 쓴다 — 여기서 0을 결측으로 바꾸면 "변동이 없었다"가 "모른다"가 되어
+    분배금을 되살릴 수 없다.
+
+    빈 문자열은 휴장일에서 나온다(2026-09-06 일요일 픽스처에서 확인). 그날은 종가도 비어 있어
+    행 자체가 만들어지지 않는다.
+    """
+    if _blank(text):
+        return None
+    try:
+        return Decimal(str(text).replace(",", "").strip())
+    except (InvalidOperation, ValueError) as error:
+        raise KrxResponseError(f"{where}의 {field_name}이(가) 숫자가 아니다: {text!r}") from error
+
+
 def parse_optional_int(text: object, field_name: str, where: str) -> int | None:
     if _blank(text):
         return None
@@ -359,6 +430,12 @@ class DailyQuote:
     직전 종가로 채우는 것이므로(contracts/market-dataset.md 「거래정지 처리」), 기준가를 그대로
     쓰지 않고 :mod:`data_pipeline.gaps` 가 직전 종가로 바꾼다. 여기서 바꾸지 않는 이유는
     직전 거래일을 알려면 거래일 달력이 필요하고, 그 달력은 지수 자료가 소유하기 때문이다.
+
+    ``previous_day_change``는 원천의 ``CMPPREVDD_PRC``(전일 대비)다. 종가끼리 뺀 값과 같아
+    보이지만 **거래소가 기준가에 대고 계산한 값**이라 분배락일에는 둘이 어긋나고, 어긋난 크기가
+    곧 주당 분배금이다(pd01-etf-candidates.md §3). 그래서 이 열을 버리지 않고 담는다. 원천이
+    이 값을 주지 않은 날(휴장일의 빈 문자열)에만 ``None``이며, 보합인 날은 ``None``이 아니라
+    ``0``이다.
     """
 
     instrument_id: str
@@ -369,6 +446,7 @@ class DailyQuote:
     low: Decimal | None
     volume: int
     value: int
+    previous_day_change: Decimal | None = None
 
     @property
     def traded(self) -> bool:
@@ -407,6 +485,9 @@ def normalize_etf_row(row: Mapping[str, str], *, expected_date: date) -> DailyQu
         low=parse_optional_decimal(row.get("TDD_LWPRC"), "TDD_LWPRC", where),
         volume=volume,
         value=value,
+        previous_day_change=parse_optional_signed_decimal(
+            row.get("CMPPREVDD_PRC"), "CMPPREVDD_PRC", where
+        ),
     )
     if quote.traded:
         high, low, opened = quote.high, quote.low, quote.open
@@ -439,7 +520,7 @@ class ListingWindow:
     def __post_init__(self) -> None:
         if INSTRUMENT_ID_PATTERN.match(self.instrument_id) is None:
             raise ListingBoundaryError(
-                f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {self.instrument_id!r}"
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {self.instrument_id!r}"
             )
         if not isinstance(self.listed_on, date):
             raise ListingBoundaryError(f"listed_on은 date여야 한다: {self.listed_on!r}")
@@ -568,14 +649,16 @@ def collect_daily_quotes(
     이용 한도에 걸리면 **중단하고 그때까지 모은 것을 돌려준다**(FR-014). 예외를 그대로
     올리면 부분 수집물이 사라지고, 사라지면 어디까지 모았는지 기록할 수 없다.
 
-    **6자리 숫자가 아닌 종목코드가 섞여 온다.** 2026-09-11에 실제 응답에서 확인한 것으로,
-    그날 값이 있는 ETF 1,168종목 가운데 304종목(26%)의 코드가 ``0184E0``처럼 숫자와 영문이
-    섞인 6글자였다. 이 표기는 2025년부터 나타나 빠르게 늘고 있다(2024-01 0종목 → 2025-01
-    6종목 → 2026-01 178종목 → 2026-09 304종목). 저장 스키마의
-    ``ck_daily_price_instrument_id_format``과 ``engine_input.py``가 ``{6자리}.XKRX``만
-    허용하므로 이 종목들은 담을 수 없다. 그래서 수집을 멈추지도 조용히 버리지도 않고
-    :attr:`KrxCollection.unsupported_codes` 에 모아 둔다. 형식을 넓히는 판단은 저장 스키마를
-    소유한 쪽(T003)의 몫이며 이 묶음에서 마이그레이션을 고치지 않는다.
+    **영문이 섞인 6글자 단축코드도 담는다.** 2026-09-11에 실제 응답에서 확인한 것으로, 그날
+    값이 있는 ETF 1,168종목 가운데 304종목(26%)의 코드가 ``0184E0``처럼 숫자와 영문이 섞인
+    6글자였다. 이 표기는 2025년부터 나타나 빠르게 늘고 있다(2024-01 0종목 → 2025-01 6종목 →
+    2026-01 178종목 → 2026-09 304종목). 처음에는 저장 스키마가 숫자만 받아 이 종목들을 담지
+    못했으나, 2026-09-15에 형식을 영숫자 6글자로 넓혔다(T031, 마이그레이션
+    ``V20260916163000__widen_instrument_id_format.sql``).
+
+    그래도 형식 밖 코드를 모아 두는 :attr:`KrxCollection.unsupported_codes` 는 남긴다. 원천이
+    그 밖의 모양을 보내오면 수집이 그 종목 때문에 멈추지 않으면서도 **어떤 코드가 빠졌는지는
+    드러나야** 하기 때문이다. 담지 못하는 것을 조용히 버리면 그 순간 검사가 사라진다.
     """
     group, endpoint = ETF_DAILY_SERVICE
     wanted_codes = (
@@ -601,15 +684,17 @@ def collect_daily_quotes(
             if not code:
                 raise KrxResponseError(f"{group}/{endpoint} {day:%Y%m%d} 행에 ISU_CD가 없다")
             if ISSUE_CODE_PATTERN.match(code) is None:
-                # 6자리 숫자가 아닌 종목코드다(예: ``0184E0``). 저장 스키마의
+                # 영숫자 6글자(대문자)가 아닌 종목코드다. 저장 스키마의
                 # ``ck_daily_price_instrument_id_format``과 ``engine_input.py``가 모두
-                # ``{6자리}.XKRX``만 허용하므로 담을 수 없다.
+                # ``{6글자}.XKRX``만 허용하므로 담을 수 없다. ``0184E0`` 같은 영숫자 코드는
+                # 2026-09-15부터 이 갈래에 오지 않는다(T031) — 여기 남는 것은 자리 수가 다르거나
+                # 소문자가 섞인, 아직 본 적 없는 모양이다.
                 #
                 # **찾는 종목만 걸러내기보다 이 검사를 먼저 둔다.** 진입점은 ``--instruments``를
-                # 필수로 받고 그 값은 이미 6자리로 검사되므로, 걸러내기를 먼저 하면 이 갈래에
-                # 아무도 도달하지 못해 모아 둔 목록이 늘 비고 보고도 나오지 않는다. 담을 수
-                # 없는 종목이 원천의 26%(2026-09-10 기준 304종목)라는 사실은 후보를 고르는
-                # 쪽에 필요한 정보라, 찾는 종목이 무엇이든 관측한 대로 알린다.
+                # 필수로 받고 그 값은 이미 같은 형식으로 검사되므로, 걸러내기를 먼저 하면 이
+                # 갈래에 아무도 도달하지 못해 모아 둔 목록이 늘 비고 보고도 나오지 않는다.
+                # 담을 수 없는 종목이 얼마나 되는지는 후보를 고르는 쪽에 필요한 정보라,
+                # 찾는 종목이 무엇이든 관측한 대로 알린다.
                 collection.unsupported_codes.add(code)
                 continue
             # 식별자로 바꾸기 전에 원천 코드로 걸러낸다. 하루를 부르면 그날 상장된 ETF

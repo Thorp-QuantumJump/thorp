@@ -27,15 +27,20 @@ import org.yaml.snakeyaml.Yaml;
  * <p>동작 테스트로는 이것을 잡을 수 없다. 전략 ID 분기가 하나 생겨도 그 전략을 쓰는 테스트는 여전히 통과하고, 새 전략을 넣어 보는 테스트를 누군가 지우면 그대로
  * 묻힌다. 그래서 소스를 읽어 <b>전략 이름이 운영 코드에 등장하는지</b>를 본다.
  *
- * <p>검사 대상은 {@code paramsearch} 운영 소스다. 테스트 fixture와 자원 파일은 뺀다 — 전략 데이터가 있어야 할 곳이 자원 파일이고, fixture는
- * FR-025의 명시적 예외다.
+ * <p>검사 대상은 {@code paramsearch} 운영 소스와 {@code strategy} 운영 소스 둘이다. 테스트 fixture와 자원 파일은 뺀다 — 전략 데이터가
+ * 있어야 할 곳이 자원 파일이고, fixture는 FR-025의 명시적 예외다.
  *
- * <p>임시 등록표를 읽는 로더({@code infrastructure/registry})도 대상이다. 로더는 파일 구조만 읽어야 하고 전략 이름을 알아서는 안 된다.
+ * <p><b>{@code strategy}를 함께 보는 이유</b>: 등록표를 읽는 로더가 003 소유로 옮겨 갔다. 검사 대상을 {@code paramsearch} 하나로
+ * 두면 "로더는 파일 구조만 읽고 전략 이름을 알아서는 안 된다"는 이 클래스의 본래 대상이 검사에서 조용히 빠진다 — 테스트는 여전히 초록이므로 아무도 알아채지 못한다.
+ * 이관으로 007 FR-025의 보장이 약해지지 않아야 한다.
  */
 class StrategyIndependenceTest {
 
-    private static final Path SOURCE_ROOT = Path.of("src/main/java/com/ssafy/thorp/paramsearch");
-    private static final String REGISTRY_RESOURCE = "registry/parameter-registry-provisional.yml";
+    private static final List<Path> SOURCE_ROOTS =
+            List.of(
+                    Path.of("src/main/java/com/ssafy/thorp/paramsearch"),
+                    Path.of("src/main/java/com/ssafy/thorp/strategy"));
+    private static final String REGISTRY_RESOURCE = "registry/parameter-registry.yml";
 
     /** 전략 분기의 흔한 형태. 축 이름 문자열도 같은 이유로 금지하고 싶지만 그것은 등록표 계약의 키라 대상이 아니다. */
     private static final List<Pattern> BRANCHING =
@@ -82,13 +87,17 @@ class StrategyIndependenceTest {
     }
 
     private static List<Path> productionSources() {
-        try (Stream<Path> paths = Files.walk(SOURCE_ROOT)) {
-            List<Path> sources = paths.filter(path -> path.toString().endsWith(".java")).toList();
-            assertThat(sources).as("검사할 운영 소스를 찾지 못했다: %s", SOURCE_ROOT).isNotEmpty();
-            return sources;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        List<Path> sources = new ArrayList<>();
+        for (Path root : SOURCE_ROOTS) {
+            try (Stream<Path> paths = Files.walk(root)) {
+                List<Path> found = paths.filter(path -> path.toString().endsWith(".java")).toList();
+                assertThat(found).as("검사할 운영 소스를 찾지 못했다: %s", root).isNotEmpty();
+                sources.addAll(found);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
+        return sources;
     }
 
     private static String read(Path source) {

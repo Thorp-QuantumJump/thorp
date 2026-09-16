@@ -1,0 +1,22 @@
+.list {
+  display: grid;
+  gap: 11px;
+}
+
+.list:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.loading {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.76rem;
+}
+
+.placeholder {
+  height: 92px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 7px;
+  background: var(--thorp-surface-raised);
+}

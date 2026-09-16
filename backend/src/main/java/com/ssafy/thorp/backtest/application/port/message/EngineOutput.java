@@ -204,6 +204,9 @@ public record EngineOutput(
      *
      * @param mapping 섹터-ETF 대응표 버전. null = 없음
      * @param scenarioRules 시나리오 규칙 버전. null = 주 분석
+     * @param evaluationSplit 요청의 {@code evaluation.splitVersion} 사본. null = 미지정. 결과 행이 실행 행 없이도 재현
+     *     기준을 다 갖도록 워커가 되돌려 준다(data-model {@code backtest_result.versions} = {@code run.versions}
+     *     사본, T018)
      */
     public record Versions(
             String mapping,
@@ -212,6 +215,7 @@ public record EngineOutput(
             RuleVersion costProfile,
             String data,
             String engine,
+            String evaluationSplit,
             String worker) {}
 
     /**

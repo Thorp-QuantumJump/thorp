@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
 import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -158,7 +158,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
     /** 등록된 후보값 중 앞의 둘만 남겨 범위를 좁힌다. 등록표 밖 값은 400이므로 안에서만 고른다(FR-002). */
     private Map<String, Map<String, List<Object>>> narrowedSpace() {
         Map<String, Map<String, List<Object>>> space = new java.util.LinkedHashMap<>();
-        for (String strategyId : searchableStrategyIds()) {
+        for (String strategyId : SearchableStrategies.of(registry, jdbcTemplate)) {
             StrategyRegistration registration = registry.find(strategyId).orElseThrow();
             Map<String, List<Object>> axes = new java.util.LinkedHashMap<>();
             for (ParameterAxis axis : registration.axes()) {
@@ -181,7 +181,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
                         new CreateParamSearchCommand(
                                 null,
                                 UNIVERSE,
-                                searchableStrategyIds(),
+                                SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
                                 null,
                                 null,
@@ -205,16 +205,4 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
-    private List<String> searchableStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
-    }
 }

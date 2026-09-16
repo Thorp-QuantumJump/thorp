@@ -1,0 +1,393 @@
+import { act, renderHook } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  registryFixture,
+  selectableStrategy,
+  unselectableStrategy,
+} from '@/test/strategyRegistryFixtures'
+import type { RegistryResponse } from '@/types/strategyRegistry'
+import {
+  STRATEGY_SETTINGS_PAYLOAD_VERSION,
+  STRATEGY_SETTINGS_STORAGE_KEY,
+  useStrategySettings,
+} from './useStrategySettings'
+
+/**
+ * 전략 설정값의 보관과 재검증을 고정한다(FR-002·FR-006·FR-017, quickstart 6·8).
+ *
+ * <p><b>픽스처의 전략과 축 이름은 등록표에 없는 것이다.</b> 실제 이름을 쓰면 훅이 그 전략을 알고
+ * 있어도 검사가 통과해 버린다 — 지어낸 이름이라야 "응답만 보고 판단한다"가 증명된다(FR-005).
+ */
+
+const UNIVERSE_SIZE = 3
+
+function renderSettings(
+  registry: RegistryResponse | null = registryFixture,
+  universeSize: number | null = UNIVERSE_SIZE,
+) {
+  return renderHook(
+    ({ registry: currentRegistry, universeSize: currentSize }) =>
+      useStrategySettings(currentRegistry, currentSize),
+    { initialProps: { registry, universeSize } },
+  )
+}
+
+function store(payload: Record<string, unknown>) {
+  window.sessionStorage.setItem(
+    STRATEGY_SETTINGS_STORAGE_KEY,
+    JSON.stringify({ version: STRATEGY_SETTINGS_PAYLOAD_VERSION, ...payload }),
+  )
+}
+
+function readStored(): Record<string, unknown> {
+  return JSON.parse(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY) ?? '{}')
+}
+
+/** 픽스처의 목록형 축 하나와 입력형 축 하나. 이름을 검사 안에 적지 않으려고 여기서 읽는다. */
+const choiceAxis = selectableStrategy.axes[0]
+const compositeAxis = selectableStrategy.axes[1]
+const numberAxis = selectableStrategy.axes[2]
+
+/**
+ * 입력형 축의 경계값도 픽스처에서 만든다.
+ *
+ * 숫자를 검사 안에 적으면 픽스처의 범위가 바뀔 때 검사가 실패하지 않고 <b>뜻만 조용히 달라진다</b> —
+ * "범위 밖"으로 적어 둔 값이 어느 날 범위 안이 되어도 아무것도 알려 주지 않는다.
+ */
+const numberRange = numberAxis.range!
+/** 범위 밖이면서 간격에는 맞는 값. 두 판정이 섞이지 않게 한다. */
+const belowMin = numberRange.min - numberRange.step
+/** 범위 안이고 간격에도 맞는, 기본값과 다른 값. */
+const withinRange =
+  Number(numberAxis.defaultValue) === numberRange.max
+    ? numberRange.max - numberRange.step
+    : Number(numberAxis.defaultValue) + numberRange.step
+/** 범위 안이지만 간격에 맞지 않는 값. */
+const offStep = withinRange - Math.max(1, Math.floor(numberRange.step / 2))
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  window.sessionStorage.clear()
+})
+
+describe('useStrategySettings', () => {
+  it('전략을 고르면 축이 등록표 기본값으로 채워진다', () => {
+    const { result } = renderSettings()
+
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    expect(result.current.selectedStrategyId).toBe(selectableStrategy.strategyId)
+    for (const axis of selectableStrategy.axes) {
+      expect(result.current.values?.[axis.name]).toEqual(axis.defaultValue)
+    }
+    expect(result.current.isDefault(selectableStrategy.strategyId)).toBe(true)
+  })
+
+  it('값을 하나 바꾸면 기본 설정이 아니고, 모두 되돌리면 다시 기본 설정이다', () => {
+    // quickstart 6. 이 표시는 저장하지 않고 매번 계산한다(FR-002).
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    const other = choiceAxis.choices!.find(
+      (choice) => choice.value !== choiceAxis.defaultValue,
+    )!
+    act(() => {
+      result.current.setValue(selectableStrategy.strategyId, choiceAxis.name, other.value)
+    })
+
+    expect(result.current.isDefault(selectableStrategy.strategyId)).toBe(false)
+
+    act(() => result.current.resetAll(selectableStrategy.strategyId))
+    expect(result.current.isDefault(selectableStrategy.strategyId)).toBe(true)
+  })
+
+  it('항목 하나만 되돌릴 수 있다', () => {
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    act(() => {
+      result.current.setValue(selectableStrategy.strategyId, numberAxis.name, withinRange)
+    })
+    expect(result.current.values?.[numberAxis.name]).toBe(withinRange)
+
+    act(() => result.current.resetAxis(selectableStrategy.strategyId, numberAxis.name))
+    expect(result.current.values?.[numberAxis.name]).toEqual(numberAxis.defaultValue)
+  })
+
+  it('합성 축 값도 같은 값으로 견준다', () => {
+    // 리밸런싱 주기처럼 여러 칸이 하나의 뜻을 이루는 값이다(data-model §5). 참조가 달라도 내용이
+    // 같으면 기본값과 같은 것으로 본다 — 참조로 견주면 보관값을 읽어 온 순간 '설정을 바꿈'이 된다.
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    act(() => {
+      result.current.setValue(selectableStrategy.strategyId, compositeAxis.name, {
+        ...(compositeAxis.defaultValue as Record<string, string | number>),
+      })
+    })
+
+    expect(result.current.isDefault(selectableStrategy.strategyId)).toBe(true)
+  })
+
+  it('허용 범위 밖 값은 반영하지 않고 이유를 돌려준다', () => {
+    // FR-006·SC-002. 잘라 넣지 않는다.
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    let reason: string | null = null
+    act(() => {
+      reason = result.current.setValue(selectableStrategy.strategyId, numberAxis.name, belowMin)
+    })
+
+    expect(reason).toBe('OUT_OF_RANGE')
+    expect(result.current.values?.[numberAxis.name]).toEqual(numberAxis.defaultValue)
+  })
+
+  it('등록된 간격에 맞지 않는 값도 반영하지 않는다', () => {
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    let reason: string | null = null
+    act(() => {
+      reason = result.current.setValue(selectableStrategy.strategyId, numberAxis.name, offStep)
+    })
+
+    expect(reason).toBe('OFF_STEP')
+    expect(result.current.values?.[numberAxis.name]).toEqual(numberAxis.defaultValue)
+  })
+
+  it('고를 수 없는 후보는 반영하지 않는다', () => {
+    const { result } = renderSettings()
+    act(() => result.current.select(unselectableStrategy.strategyId))
+
+    const blockedAxis = unselectableStrategy.axes.find((axis) =>
+      axis.choices?.some((choice) => !choice.selectable),
+    )!
+    const blocked = blockedAxis.choices!.find((choice) => !choice.selectable)!
+
+    let reason: string | null = null
+    act(() => {
+      reason = result.current.setValue(
+        unselectableStrategy.strategyId,
+        blockedAxis.name,
+        blocked.value,
+      )
+    })
+
+    expect(reason).toBe('CHOICE_UNSELECTABLE')
+  })
+
+  it('다른 전략으로 옮겨도 이전 전략 값이 남고 새 전략에 적용되지 않는다', () => {
+    // spec Edge Cases.
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+    act(() => {
+      result.current.setValue(selectableStrategy.strategyId, numberAxis.name, withinRange)
+    })
+
+    act(() => result.current.select(unselectableStrategy.strategyId))
+    expect(result.current.values).not.toHaveProperty(numberAxis.name)
+
+    act(() => result.current.select(selectableStrategy.strategyId))
+    expect(result.current.values?.[numberAxis.name]).toBe(withinRange)
+  })
+
+  it('보관한 값을 다음 렌더에서 그대로 읽는다', () => {
+    const first = renderSettings()
+    act(() => first.result.current.select(selectableStrategy.strategyId))
+    act(() => {
+      first.result.current.setValue(selectableStrategy.strategyId, numberAxis.name, withinRange)
+    })
+    first.unmount()
+
+    const second = renderSettings()
+    expect(second.result.current.selectedStrategyId).toBe(selectableStrategy.strategyId)
+    expect(second.result.current.values?.[numberAxis.name]).toBe(withinRange)
+  })
+
+  it('등록표 버전이 다르면 유효한 값은 유지하고 유효하지 않은 값만 비운다', () => {
+    // FR-017. 자동으로 고치지 않고 이유와 복원 선택을 돌려준다.
+    store({
+      registryVersion: 'OLD-REGISTRY',
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: selectableStrategy.strategyId,
+      valuesByStrategy: {
+        [selectableStrategy.strategyId]: {
+          [choiceAxis.name]: choiceAxis.choices![0].value,
+          [numberAxis.name]: 999,
+          [compositeAxis.name]: compositeAxis.defaultValue,
+        },
+      },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.registryVersion).toBe(registryFixture.registryVersion)
+    // 유효한 값은 그대로 남는다.
+    expect(result.current.values?.[choiceAxis.name]).toEqual(choiceAxis.choices![0].value)
+    // 유효하지 않은 값은 비워 두고 기본값으로 덮지 않는다.
+    expect(result.current.values).not.toHaveProperty(numberAxis.name)
+    expect(result.current.isComplete(selectableStrategy.strategyId)).toBe(false)
+
+    const invalid = result.current.invalidValues.find((entry) => entry.axisName === numberAxis.name)
+    expect(invalid?.reason).toBe('OUT_OF_RANGE')
+    expect(invalid?.storedValue).toBe(999)
+    expect(invalid?.restorable).toBe(true)
+    expect(invalid?.message).toContain(numberAxis.label)
+  })
+
+  it('비워 둔 값을 복원하면 안내가 사라지고 설정이 완성된다', () => {
+    store({
+      registryVersion: 'OLD-REGISTRY',
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: selectableStrategy.strategyId,
+      valuesByStrategy: {
+        [selectableStrategy.strategyId]: {
+          [choiceAxis.name]: choiceAxis.defaultValue,
+          [compositeAxis.name]: compositeAxis.defaultValue,
+          [numberAxis.name]: 999,
+        },
+      },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+    expect(result.current.isComplete(selectableStrategy.strategyId)).toBe(false)
+
+    act(() => result.current.resetAxis(selectableStrategy.strategyId, numberAxis.name))
+
+    expect(result.current.invalidValues).toHaveLength(0)
+    expect(result.current.isComplete(selectableStrategy.strategyId)).toBe(true)
+    expect(result.current.values?.[numberAxis.name]).toEqual(numberAxis.defaultValue)
+  })
+
+  it('섹터 수가 바뀌면 같은 등록표라도 다시 판정한다', () => {
+    const { result, rerender } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+    expect(result.current.ready).toBe(true)
+
+    rerender({ registry: registryFixture, universeSize: UNIVERSE_SIZE + 1 })
+
+    // 판정을 마친 상태의 섹터 수가 새 값으로 바뀌어야 다음 조회 응답의 `selectable`과 어긋나지 않는다.
+    expect(result.current.ready).toBe(true)
+    expect(readStored().universeSize).toBe(UNIVERSE_SIZE + 1)
+  })
+
+  it('등록표에서 사라진 전략의 보관값은 지우고 그 사실을 남긴다', () => {
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: 'GONE_STRATEGY',
+      valuesByStrategy: { GONE_STRATEGY: { someAxis: 1 } },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.selectedStrategyId).toBeNull()
+    expect(result.current.valuesByStrategy).not.toHaveProperty('GONE_STRATEGY')
+    const removed = result.current.invalidValues.find((entry) => entry.reason === 'STRATEGY_REMOVED')
+    expect(removed?.restorable).toBe(false)
+  })
+
+  it('최소 평가 기간은 등록표 기본값으로 시작하고 후보 안에서만 바뀐다', () => {
+    // FR-011a. 후보와 기본값은 등록표가 소유하며 화면이 숫자를 코드에 적지 않는다.
+    const condition = registryFixture.analysisConditions.minEvaluationYears
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition.minEvaluationYears).toBe(condition.default)
+
+    const another = condition.choices.find((choice) => choice.value !== condition.default)!
+    act(() => result.current.setAnalysisCondition({ minEvaluationYears: Number(another.value) }))
+    expect(result.current.analysisCondition.minEvaluationYears).toBe(Number(another.value))
+
+    act(() => result.current.setAnalysisCondition({ minEvaluationYears: 7 }))
+    expect(result.current.analysisCondition.minEvaluationYears).toBe(Number(another.value))
+  })
+
+  it('등록표 후보에 없는 최소 평가 기간 보관값은 기본값으로 시작하고 그 사실을 알린다', () => {
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: { minEvaluationYears: 99, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition.minEvaluationYears).toBe(
+      registryFixture.analysisConditions.minEvaluationYears.default,
+    )
+    expect(
+      result.current.invalidValues.some((entry) => entry.reason === 'CONDITION_NOT_IN_CHOICES'),
+    ).toBe(true)
+  })
+
+  it('선택 전략의 워밍업을 현재 설정으로 계산한다', () => {
+    const { result } = renderSettings()
+    act(() => result.current.select(unselectableStrategy.strategyId))
+
+    // 픽스처의 워밍업 규칙은 축 둘을 더한다. 기본값 합과 같아야 한다.
+    const [first, second] = unselectableStrategy.warmupRule!.sum as string[]
+    const expected =
+      Number(unselectableStrategy.axes.find((axis) => axis.name === first)!.defaultValue) +
+      Number(unselectableStrategy.axes.find((axis) => axis.name === second)!.defaultValue)
+    expect(result.current.warmupTradingDays).toBe(expected)
+
+    const skipAxis = unselectableStrategy.axes.find((axis) => axis.name === second)!
+    const other = skipAxis.choices!.find((choice) => choice.value !== skipAxis.defaultValue)!
+    act(() => {
+      result.current.setValue(unselectableStrategy.strategyId, skipAxis.name, other.value)
+    })
+
+    expect(result.current.warmupTradingDays).not.toBe(expected)
+  })
+
+  it('워밍업 규칙이 없는 전략은 0이다', () => {
+    const plain = registryFixture.strategies.find((strategy) => strategy.warmupRule === undefined)!
+    const { result } = renderSettings()
+    act(() => result.current.select(plain.strategyId))
+    expect(result.current.warmupTradingDays).toBe(0)
+  })
+
+  it('등록표를 받기 전에는 준비되지 않은 상태다', () => {
+    const { result, rerender } = renderSettings(null, null)
+
+    expect(result.current.ready).toBe(false)
+    expect(result.current.selectedStrategyId).toBeNull()
+
+    rerender({ registry: registryFixture, universeSize: UNIVERSE_SIZE })
+    expect(result.current.ready).toBe(true)
+  })
+
+  it('sessionStorage 접근이 예외를 던져도 훅이 동작한다', () => {
+    // 사생활 보호 모드 등에서 읽기·쓰기가 모두 막힐 수 있다(research R8).
+    const blocked = () => {
+      throw new Error('storage blocked')
+    }
+    vi.spyOn(window.Storage.prototype, 'getItem').mockImplementation(blocked)
+    vi.spyOn(window.Storage.prototype, 'setItem').mockImplementation(blocked)
+
+    const { result } = renderSettings()
+    act(() => result.current.select(selectableStrategy.strategyId))
+
+    expect(result.current.ready).toBe(true)
+    expect(result.current.values?.[choiceAxis.name]).toEqual(choiceAxis.defaultValue)
+  })
+
+  it('보관된 값의 모양이 어긋나면 통째로 버리고 기본 상태로 시작한다', () => {
+    window.sessionStorage.setItem(STRATEGY_SETTINGS_STORAGE_KEY, '{ not json')
+
+    const { result } = renderSettings()
+
+    expect(result.current.ready).toBe(true)
+    expect(result.current.selectedStrategyId).toBeNull()
+    expect(result.current.invalidValues).toHaveLength(0)
+  })
+})

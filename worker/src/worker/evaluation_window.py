@@ -50,7 +50,7 @@ __all__ = [
 # ``representative_etf`` · ``data_gap`` 의 CHECK 제약, 백엔드 ``RepresentativeEtf`` 와 같은
 # 형식이다. ``$`` 를 쓰지 않는다 — 파이썬의 ``$`` 는 끝에 붙은 줄바꿈 앞에서도 맞아서 자바
 # ``String.matches()`` 보다 넓어진다. ``fullmatch`` 는 그 차이가 없다.
-_INSTRUMENT_ID_PATTERN = re.compile(r"[0-9]{6}\.XKRX")
+_INSTRUMENT_ID_PATTERN = re.compile(r"[0-9A-Z]{6}\.XKRX")
 
 
 class EvaluationWindowError(ValueError):

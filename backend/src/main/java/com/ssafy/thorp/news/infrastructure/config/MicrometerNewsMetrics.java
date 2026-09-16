@@ -26,10 +26,16 @@ public class MicrometerNewsMetrics implements NewsMetrics {
     static final String LAST_SUCCESS_AGE = "news.source.last_success.age";
     static final String QUERY_DURATION = "news.query.duration";
     static final String QUERY_RESPONSES = "news.query.responses";
+    static final String RETENTION_DELETED = "news.retention.deleted";
+    static final String RETENTION_RUNS = "news.retention.runs";
 
     /** label로 받아들일 분류 코드의 모양. 이 밖의 값은 접는다. */
     private static final java.util.regex.Pattern SAFE_CATEGORY =
             java.util.regex.Pattern.compile("^[A-Z_]{1,64}$");
+
+    /** label로 받아들일 표 이름의 모양. */
+    private static final java.util.regex.Pattern SAFE_TABLE =
+            java.util.regex.Pattern.compile("^[a-z_]{1,64}$");
 
     private static final String UNKNOWN = "UNKNOWN";
 
@@ -113,6 +119,15 @@ public class MicrometerNewsMetrics implements NewsMetrics {
         registry.counter(QUERY_RESPONSES, tags).increment();
     }
 
+    @Override
+    public void recordRetentionRun(java.util.Map<String, Long> deletedRowsByTable) {
+        registry.counter(RETENTION_RUNS).increment();
+        deletedRowsByTable.forEach(
+                (table, rows) ->
+                        registry.counter(RETENTION_DELETED, Tags.of("table", table(table)))
+                                .increment(rows));
+    }
+
     /**
      * 뉴스원 식별자를 label로 쓸 수 있는 모양으로 줄인다.
      *
@@ -120,6 +135,16 @@ public class MicrometerNewsMetrics implements NewsMetrics {
      */
     private static String safe(String sourceKey) {
         return sourceKey == null || sourceKey.isBlank() ? UNKNOWN : sourceKey;
+    }
+
+    /**
+     * 표 이름을 label로 쓸 수 있는 모양으로 줄인다.
+     *
+     * <p>{@link #category(String)}를 쓸 수 없다 — 표 이름은 소문자와 밑줄이라 그 검사를 통과하지 못하고 전부 {@code UNKNOWN}으로
+     * 접힌다. 값은 코드 상수에서만 오지만, 검사를 두는 이유는 나중에 이 경로로 다른 값이 들어와도 시계열이 갈라지지 않게 하기 위함이다.
+     */
+    private static String table(String value) {
+        return value != null && SAFE_TABLE.matcher(value).matches() ? value : UNKNOWN;
     }
 
     private static String category(String value) {

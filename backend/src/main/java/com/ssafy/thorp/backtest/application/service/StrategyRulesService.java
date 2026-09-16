@@ -28,7 +28,10 @@ public class StrategyRulesService {
      *
      * <p>둘을 같은 오류로 묶는 이유: 사용자에게는 "지금 고를 수 없는 전략"으로 같고, 등록표에 행이 있는지 여부는 서버 사정이다.
      */
-    @Transactional(readOnly = true)
+    // noRollbackFor: 이 거절은 접수 트랜잭션 안에서 난다. 기본 규칙이면 이 프록시가 바깥 트랜잭션을 rollback-only 로
+    // 표시해, noRollbackFor 로 커밋하려는 BacktestService.create 가 UnexpectedRollbackException(500) 으로 끝난다
+    // — quickstart S9 에서 422 대신 500 이 나온 원인이다(T013).
+    @Transactional(readOnly = true, noRollbackFor = BusinessException.class)
     public StrategyRules requireRegistered(String strategyId, String rulesVersion) {
         StrategyRules rules =
                 repository

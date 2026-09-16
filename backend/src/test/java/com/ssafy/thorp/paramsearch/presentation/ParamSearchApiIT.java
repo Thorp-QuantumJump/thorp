@@ -9,11 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.paramsearch.SearchableStrategies;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,9 +93,10 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 .andExpect(
                         jsonPath("$.data.limits.provisional")
                                 .value(Matchers.hasItem("maxCandidates")))
+                // 접두를 단언하지 않는다 — PD-02 확정으로 접두가 사라졌고, 임시값을 다시 담는 날
+                // 이 단언이 또 낡는다. 응답이 나르는 것은 '지금 등록표의 버전'이다.
                 .andExpect(
-                        jsonPath("$.data.registryVersion")
-                                .value(Matchers.startsWith("PROVISIONAL-")))
+                        jsonPath("$.data.registryVersion").value(Matchers.is(registry.version())))
                 .andExpect(jsonPath("$.data.validationLabel").value("UNVALIDATED"))
                 .andExpect(jsonPath("$.data.commonPeriod.start").exists());
     }
@@ -273,14 +273,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
      * STRATEGY_NOT_REGISTERED}로 거부되어 이 테스트가 계약이 아니라 그 거부를 확인하게 된다.
      */
     private String supportedStrategyIdsJson() {
-        List<String> registeredIn004 =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .map(StrategyRegistration::strategyId)
-                .filter(registeredIn004::contains)
+        return SearchableStrategies.of(registry, jdbcTemplate).stream()
                 .map(id -> "\"" + id + "\"")
                 .reduce((left, right) -> left + ", " + right)
                 .map(joined -> "[" + joined + "]")

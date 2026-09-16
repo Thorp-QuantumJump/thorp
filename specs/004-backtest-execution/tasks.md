@@ -1,6 +1,6 @@
 # Tasks: 백테스트 실행
 
-**Input**: `specs/004-backtest-execution/` — plan.md, spec.md(Clarifications 5건), research.md(R-01~R-19), data-model.md, contracts/{rest-api,messaging,market-data-input}.md, quickstart.md(S1~S12)
+**Input**: `specs/004-backtest-execution/` — plan.md, spec.md(Clarifications 5건), research.md(R-01~R-20), data-model.md, contracts/{rest-api,messaging,market-data-input}.md, quickstart.md(S1~S13)
 
 **작업 단위 규칙** (constitution "문서 역할"·Jira 규칙): 아래 T항목 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **워커(Python, `worker/`) 작업도 백엔드 파트 소관이므로 `[BE]`로 표기한다(2026-09-10 확정). 파일 경로가 `worker/`인 Task가 워커 작업이다.** 한 사람이 전부 맡는 전제로 2026-09-10에 25개를 13개로 재편했다(같은 파트가 연속으로 하는 작업, 한쪽만 병합하면 반쪽이 되는 작업, 합쳐도 하루치인 문서 작업을 묶음). Jira 이슈는 발급되어 있다(Epic `S15P21E205-30 백테스트`; Story: US1→`-38`, Setup·Foundational·Polish→`-21`, US2→`-125`, US3→`-126`, US4→`-127`). 병합으로 흡수된 12개 이슈(131·132·133·136·139·141·144·150·151·152·155·156)는 `[병합→…]` 제목과 코멘트를 남기고 종결했다. 브랜치는 `{type}({position})/{JIRA_NUMBER}-{desc}`(예: `feat(be)/130-backtest-schema-v3-v4`)로 만든다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 각 Task의 완료 조건은 constitution "완료의 정의" 다섯 가지(구현·테스트/동작 확인·리뷰·MR 병합·문서)다.
 
@@ -146,13 +146,14 @@
   - T012 측정에 `limit_hit`(접수 거부·실행 정지 구분) 기록. quickstart S12
   - 구현 시 결정(T014): ① **사용자별 한도는 `SINGLE` 만 센다**(2026-09-14 팀 결정) — 탐색 적재량은 007 `dispatch-window` 가 통제하고, 두 곳에서 막으면 창을 키운 날 탐색이 429 를 받아 묶음이 영구 정지한다(007 `advance()` 는 `BacktestFinished` 로만 불린다). 전체 한도는 종류를 가리지 않는다 — 서버 보호다(**2026-09-15 T015 로 바뀜**: 전체 한도도 단건 큐만 센다. 한 큐로는 어느 정책도 성립하지 않아 큐를 나눴다, R-20) ② **정체 판정 기준으로 `last_event_at` 컬럼을 새로 둔다.** `updated_at` 으로 대신하면 발행 기록(`published_at`·`dlq_count`)이 갱신될 때도 올라가 멈춘 실행이 살아 있는 것처럼 보인다 — 이 셈이 틀리는 방향은 "안 잡는 쪽"이라 위험하다 ③ **`cancel_reason` 컬럼을 함께 둔다.** 강제 종결 시점에 조건을 다시 계산해 사유를 추론하면 그 사이 설정값이 바뀌었을 때 사유가 뒤바뀐다 ④ **스위퍼는 건마다 트랜잭션을 연다.** 하나가 터져도 나머지를 거두고, 무엇보다 CANCEL 발행이 `AFTER_COMMIT` 이라 트랜잭션이 없으면 이벤트가 조용히 버려진다 ⑤ **prod 는 `${ENV}` 참조에 기본값을 두지 않는다**(다른 연결 정보와 같은 방식) — 공통 설정의 임시값을 물려받지 않으므로 PD-06 을 넣기 전에는 기동하지 않는다 ⑥ 429 본문은 `error.details` 로 나간다. `ErrorResponse.details` 에만 `@JsonInclude(NON_NULL)` 를 걸어 다른 오류 응답의 모양을 바꾸지 않는다(전역 `NON_NULL` 은 금지돼 있다) ⑦ **전체 한도 분기는 IT 가 아니라 단위 테스트가 본다** — 스위트가 DB 를 공유해 다른 IT 의 대기 실행까지 세어지므로 몇 건에서 넘는지가 실행 순서에 따라 달라진다
 
-- [ ] T015 [US3] [BE] 단건·벌크 작업 큐 분리와 비대칭 워커 풀 (`backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher}.java`, `backtest/application/port/BacktestJobPublisher.java`, `backtest/application/service/{BacktestJobDispatcher,BacktestService,ExecutionLimitPolicy}.java`, `backtest/domain/model/RunPlan.java`, `backtest/infrastructure/persistence/{BacktestRunJpaEntity,BacktestRunMapper,BacktestRunRepositoryImpl}.java`, `worker/src/worker/{messaging,config,rabbitmq,main}.py`, `docker-compose.dev.yml`, `infra/{docker-compose.prod.yml,.env.prod.example}`, 테스트 `{BacktestRabbitConfigTest,RabbitBacktestJobPublisherIT,BacktestJobDispatcherTest,ExecutionLimitPolicyTest,ExecutionLimitFullQueueIT}`·`worker/tests/test_rabbitmq.py`, `docs/specs/backtest-messaging/README.md` §2, `docs/specs/backtest-api/README.md` §1.8, `backend/CLAUDE.md`, `worker/CLAUDE.md`) — Jira `S15P21E205-218`
+- [x] T015 [US3] [BE] 단건·벌크 작업 큐 분리와 비대칭 워커 풀 (`backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher}.java`, `backtest/application/port/BacktestJobPublisher.java`, `backtest/application/service/{BacktestJobDispatcher,BacktestService,ExecutionLimitPolicy}.java`, `backtest/domain/model/RunPlan.java`, `backtest/infrastructure/persistence/{BacktestRunJpaEntity,BacktestRunMapper,BacktestRunRepositoryImpl}.java`, `worker/src/worker/{messaging,config,rabbitmq,main}.py`, `docker-compose.dev.yml`, `infra/{docker-compose.prod.yml,.env.prod.example}`, 테스트 `{BacktestRabbitConfigTest,RabbitBacktestJobPublisherIT,BacktestJobDispatcherTest,ExecutionLimitPolicyTest,ExecutionLimitFullQueueIT}`·`worker/tests/test_rabbitmq.py`, `docs/specs/backtest-messaging/README.md` §2, `docs/specs/backtest-api/README.md` §1.8, `backend/CLAUDE.md`, `worker/CLAUDE.md`) — Jira `S15P21E205-218`
   - 큐 `backtest.jobs.bulk` 신설(quorum, `x-delivery-limit=1`, DLX `backtest.dlx` → 기존 `backtest.jobs.dlq`). `backtest.jobs`는 단건 큐로 **이름 그대로** 둔다(R-20 — 개명은 quorum 큐 교체 절차를 다시 요구한다). 백엔드 `Declarables`에 큐·binding 추가, 계약 상수를 워커 `messaging.py`에 같은 값으로(`test_topology_constants_match_the_backend`)
   - 접수가 `backtest_run.execution_type`(T003 이 만들고 매핑하지 않은 컬럼)을 `RunPlan.executionType`으로 고정한다. `BacktestJobDispatcher.send` 한 곳에서 `SINGLE` → `backtest.job.requested`, 그 외 → `backtest.job.requested.bulk`. 재발행도 같은 자리를 지나므로 자동으로 원래 큐. 테스트: 유형별 발행 큐(IT), 재발행이 bulk 로 가는지
   - 워커 `WORKER_ROLE=single|flex`(기본 `single`). single 은 지금 `run_consumer` 그대로. flex 는 `basic_get(bulk)` → 없으면 `basic_get(single)` → 둘 다 없으면 1초 대기, 한 건 처리·ACK 뒤에만 다음. 두 큐 모두 passive declare 로 존재만 확인. 취소 채널·`CancelRegistry`는 그대로. 테스트(fake 채널): bulk 우선, 단건 보조, 빈 큐 대기, unacked 1건
   - T014 정리: `max-queued-total`은 `QUEUED AND execution_type='SINGLE'`만 세고 비단건은 검사하지 않는다. "묶음은 세되 거절하지 않는다" 분기·경고 로그·`doesNotRejectNonSingleOnTheTotalLimit`·`ExecutionLimitFullQueueIT`의 묶음 통과 갈래·API README §1.8 "전체 한도와 자동 탐색" 절·`application.yml`/`.env.prod.example` 주석을 걷어낸다. `noRollbackFor`는 남긴다
   - compose: `worker`(single, `WORKER_SINGLE_REPLICAS`) + `worker-flex`(`WORKER_FLEX_REPLICAS`), 초기 1+1. `WORKER_REPLICAS`는 둘로 대체
   - T014(-168)와 같은 릴리즈로 배포. quickstart S13
+  - 구현 시 결정(T015, 2026-09-15 dev 병합): 결정 원본은 research R-20, 팀 전달본은 `docs/adr/0006` D8. ① 큐 이름은 `backtest.jobs`를 그대로 두고 `backtest.jobs.bulk`만 신설 — 개명은 quorum 큐 교체 절차(T002)를 다시 요구한다 ② flex가 두 큐를 `basic_consume`하지 않고 `basic_get`으로 한 건씩 집는 이유: quorum 큐는 global QoS를 지원하지 않아 컨슈머별 prefetch 1이면 처리하지 않은 두 번째 메시지가 unacked로 잡혀 크래시 때 `x-delivery-limit=1`의 유일한 재시도를 실행 없이 태운다. 빈 큐 대기는 `connection.sleep(1)`(`time.sleep`이면 heartbeat가 멈춘다) ③ T014의 전체 한도도 단건 큐만 세고(`countQueuedSingle`) 비단건은 잠금·조회 없이 통과 — "묶음은 세되 거절하지 않는다" 분기·경고·문서를 걷어냈다. `noRollbackFor`는 남겼다 ④ 1차 리뷰 P1: 운영 compose가 `THORP_LIMIT_*` 여섯을 백엔드에 넘기지 않았다 → 기본값 없는 env 여섯 추가(`6bf2490`). 배포는 -168과 같은 릴리즈. quickstart S13은 T013 검증 기록에서 실제 브로커로 확인(큐 분리·단건 즉시 처리 통과)
 
 **Checkpoint**: S2~S6·S12·S13 통과.
 
@@ -178,10 +179,11 @@
 
 ## Phase 7: Polish
 
-- [ ] T013 [BE] 마무리: 워커 레거시 제거·ADR-0005·README·quickstart 검증 기록 (`docs/adr/0005-backtest-request-run-split.md`, `README.md`, `worker/CLAUDE.md`, `backend/CLAUDE.md`, `docs/specs/101-nautilus-momentum.md`, `docs/guides/backtest-execution-verification-2026-09.md`, `specs/004-backtest-execution/quickstart.md`, `worker/src/worker/strategies/*`, `worker/src/worker/engine_support.py`, `worker/examples/momentum_fixture.csv`, `worker/tests/{test_momentum_engine,test_engine_support}.py`, `worker/pyproject.toml`) — Jira `S15P21E205-154`
+- [x] T013 [BE] 마무리: 워커 레거시 제거·ADR-0005·README·quickstart 검증 기록 (`docs/adr/0005-backtest-request-run-split.md`, `README.md`, `worker/CLAUDE.md`, `backend/CLAUDE.md`, `docs/specs/101-nautilus-momentum.md`, `docs/guides/backtest-execution-verification-2026-09.md`, `specs/004-backtest-execution/quickstart.md`, `worker/src/worker/strategies/*`, `worker/src/worker/engine_support.py`, `worker/examples/momentum_fixture.csv`, `worker/tests/{test_momentum_engine,test_engine_support}.py`, `worker/pyproject.toml`) — Jira `S15P21E205-154`
   - 레거시 제거: 단일 종목 `MomentumStrategy`·`STRATEGIES` 레지스트리·`yfinance` 의존·v1 전용 테스트 삭제. `psycopg` 유지, `SQLAlchemy` 미사용이면 제거
   - ADR-0005: research R-02(요청/실행 분리)·R-04(제어 채널)·R-06(quorum 큐) 결정과 버린 대안. README "현재 구현 상태"를 다종목·다섯 전략(세 개 실행 가능, 두 개 PD 대기)로 갱신. `101-nautilus-momentum.md` 개정 또는 폐기 표시(진행 정도는 폴링+DB 저장)
   - quickstart S1~S12 전체 실행, 실제 응답·DB 값·소요 시간 기록. 실패 항목은 실패로 남기고 원인 Task를 연다. "구현 완료"만 보고하고 사용성·효과 입증은 별도임을 명시
+  - 구현 시 결정(T013, 2026-09-15): ① 워커 레거시는 T006에서 이미 제거돼 `SQLAlchemy` 의존만 걷어냈다(워커는 psycopg만 쓴다). ADR은 `0005`가 007에 쓰여 **ADR-0006**이고 R-02·R-04·R-06·R-18·R-19·R-20·R-10을 한 문서에 모았다 ② **픽스처 적재 스크립트** `worker/scripts/load_three_etf_fixture.py` — 백엔드 자료 버전이 상수 `FIXTURE-three_etf_24m`이라 이 자료로만 S1이 돈다. 001 적재 계층은 `dataset_id` 형식을 검증해 픽스처 이름을 거부하므로 psycopg로 직접 넣는다. `daily_index`는 가격 날짜 합집합으로 합성(워커가 달력을 지수에서 읽는다). 공용 표 `sector`·`representative_etf`는 고치지 않는다 — 같으면 재사용, 다르면 `MasterConflictError`(리뷰 지적으로 `ON CONFLICT DO UPDATE`를 걷어냄) ③ **S1~S13 실제 실행 기록** `docs/guides/backtest-execution-verification-2026-09.md`. S5의 "복구된 새 `data_version`으로 다른 키의 새 실행"은 자료 버전이 상수라 **미검증**으로 남겼다(나머지 S5는 자료 구멍 → `DATA_INSUFFICIENT` → 복구 → retry → 새 실행 COMPLETED로 확인). S9가 500으로 실패해 고쳤다 — `noRollbackFor`는 호출 사슬 전체(`StrategyRulesService`·`CostProfileService`)에 붙여야 한다. S13은 큐 분리는 통과했으나 **007 후보가 워커 계약을 위반해 전부 DLQ**(`allocation.parameters`에 `rebalance` 없음·`lookbackDays` 초과) — 003/007 등록표와 004 규칙 모델의 정합 문제라 007 담당자에게 전달, 티켓은 담당자가 ④ quickstart 준비 절을 실제와 맞췄다: 로컬 볼륨 비우기·Flyway 켜기·CSRF(spec 014)·`X-User-Id`·S12용 환경변수
 
 ---
 
@@ -229,3 +231,42 @@
 - 각 Task 병합 전 AI 코드리뷰(CLAUDE.md 규칙)와 R-16 검증 명령 통과가 필요하다.
 - 기존 DEMO 데이터는 V3에서 폐기 전제다. 보존이 필요하면 T003 리뷰에서 마이그레이션 방식을 바꾼다.
 - analyze H1(임시 실행 한도)은 plan 리뷰 4번을 반영해 장치(T014, Jira -168)와 값(PD-06)을 분리했다. 팀이 값을 주면 prod 설정만 채우고 plan IX 판정을 PASS로 바꾼다. H2(`TARGET_RISK`)는 2026-09-10 PD-18로 확정해 T001·T003·T005·T006·T008에 나눠 넣었다. 목표 변동성 항목(기본 10%, 5~20%, 1%)을 003 파라미터 등록표에 올리는 일은 003 spec 쪽 작업이다.
+
+---
+
+## Phase 8: Convergence
+
+**2026-09-15 `/speckit-converge` 산출.** dev `d07a8d4`(T001~T015 전부 병합, T013 마무리 포함) 위에서 spec.md(FR 30·SC 8·US 4/AC 21·Edge 10)·plan.md 결정·research R-01~R-20·data-model·constitution 원칙 10개를 현재 코드와 대조했다. MUST 위반은 없다. 유형은 partial 4이며 missing·contradicts·unrequested는 없다. 기존 항목은 하나도 고치지 않았다(아래 「고치지 않은 어긋남」 참고). 007과 겹치는 후보 파라미터 계약 불일치는 004 Task로 만들지 않고 관찰로만 적는다(2026-09-15 사용자 지시).
+
+- [ ] T016 [BE] 접수가 붙이는 자료 메타데이터(대응표·자료 버전·상장일·거래일 달력)를 001 표에서 읽는 어댑터로 교체한다 per R-09·plan Constitution Check X·spec Edge "자료 버전이 갱신되면 새 요청은 새 버전으로 계산" (partial) — HIGH
+  - 지금은 `FixtureMarketMetadataAdapter`가 `dataVersion=FIXTURE-three_etf_24m`·대응표 `SECTOR-ETF-2026-09`·세 종목·평일 달력을 상수로 돌려준다(T005 결정 ②, analyze M1의 임시 구현). 그래서 001이 진짜 KRX 자료를 넣어도 접수는 픽스처를 가리키고, quickstart S5 마지막 문장(복구된 새 `data_version` → 다른 키의 새 실행)은 검증 기록에서 미검증으로 남았다(`docs/guides/backtest-execution-verification-2026-09.md` 「한계」)
+  - 할 일: `MarketMetadataPort` 구현을 `sector_etf_map_version`(열린 버전)·`sector_etf_map_entry`·`representative_etf.listed_on`·`dataset_version`(완료된 최신)·`daily_index` 날짜 집합에서 읽는 어댑터로 두고, 픽스처 어댑터는 테스트·local 프로필 전용 빈으로 남긴다. "현재 자료 버전"을 고르는 규칙(최신 `complete=true`? 마감 시각 기준?)은 001 `dataset_version` 몫이라 001 담당자와 먼저 맞춘다 — 004가 정하지 않는다
+  - 선행: 001 T014(PD-01 대표 ETF 확정, `-186`)와 대응표 발행. 그 전에는 001 예시 대응표와 픽스처 대응표가 같은 DB에 공존하지 못한다(`uk_sector_etf_map_version_open`, 적재기 주석)
+  - 완료 기준: 진짜 자료 버전으로 S1이 COMPLETED, S5 마지막 문장 검증, 검증 기록 「한계」 첫 항목 삭제, `load_three_etf_fixture.py`는 local 전용임을 유지
+- [ ] T017 [BE] 요청자 식별을 `X-User-Id` 헤더에서 spec 014 인증 주체(세션)로 바꾼다 per R-12·FR-009 (partial) — HIGH, **선행: 014 T027~T029(로그인·현재 사용자)**
+  - `CurrentRequester`는 `thorp.auth.trust-user-id-header`가 켜진 환경에서만 동작하고 운영은 fail-closed(500)다. 014의 `SecurityConfig`·세션·CSRF는 병합됐지만 로그인 엔드포인트(`AuthenticationController`)와 `SecurityContext` 저장(014 T028·T029)은 아직 `[ ]`라 읽을 주체가 없다
+  - 할 일: 014 T029 병합 뒤 `CurrentRequester`가 `SecurityContextHolder`의 주체에서 `users.id`를 읽고, 미인증은 014의 401 봉투로 나가게 한다. 헤더 경로는 local 프로필 전용으로 남기거나 제거한다(R-12 "이 클래스 하나만 바꾼다"). `OperatorGate`(`X-Ops-Token`)의 역할 검사 전환은 014가 운영자 역할을 정한 뒤 별도
+  - 완료 기준: 운영 프로필에서 `POST /backtests`가 로그인 세션으로 접수되고 `X-User-Id`는 무시된다. quickstart 준비 절의 헤더 안내를 세션 로그인으로 바꾼다
+- [x] T018 [BE] 상세·202 응답과 저장 결과의 `versions`를 data-model 정의(`{mapping, rules{version, provisional}, scenarioRules, costProfile{version, provisional}, data, engine, evaluationSplit, worker}`)에 맞춘다 per data-model `backtest_run.versions`·plan "AI 작업 방식(임시값은 provisional=true로 표시)"·FR-028 (partial) — MEDIUM
+  - 지금 `BacktestService.versions()`는 `costProfile{version, provisional}`·`rules`(문자열 "1")·`data`·`engine` 넷만 채운다. `strategy_rules.provisional`(INVERSE_VOLATILITY/1 = true, PD-02) 표시가 어디에도 나가지 않는다 — T008 결정 ③·T009 결정 ⑦이 "별도 티켓"으로 남긴 후속
+  - 할 일: ① 계획 `versions.rules`를 `{version, provisional}`로, `mapping`·`evaluationSplit`·`worker`(FINISHED 뒤 채움)를 추가 ② `EngineInputAssembler`가 규칙 사본에 `provisional`을 합쳐 워커 `versions.rules.provisional`이 저장 결과에도 남게 한다 ③ API README §2.1과 예시(`backtest-detail.json`의 `"versions": null`은 README "202와 같은 값"과 어긋난다)를 함께 고친다. `DedupKeyCalculator` 입력은 바꾸지 않는다(키는 버전 문자열만 본다)
+  - 완료 기준: `BacktestResultApiIT`가 상세 `versions.rules.provisional=true`(역변동성)와 `false`(고정 비중)를 단언, 예시 JSON round-trip 통과
+  - 구현 시 결정(T018, 2026-09-15, Jira `S15P21E205-250`): ① 계획 `versions`는 `BacktestService.versions()` 한 곳에서 `{mapping, rules{version, provisional}, scenarioRules?, costProfile{version, provisional}, data, engine, evaluationSplit}`로 만든다 — 워커 결과의 `versions`와 같은 모양이라 두 값을 나란히 놓고 비교할 수 있다. `scenarioRules`는 오버레이가 있을 때만 키를 둔다(null 채우지 않음) ② **`worker`는 접수가 아니라 조회가 채운다.** 어느 워커가 계산할지는 접수 시점에 모르므로 결과 행 `versions ->> 'worker'`를 요약 프로젝션(`BacktestResultSummary.workerVersion`)에 한 열 더 읽어 `BacktestDetailResult.of`가 계획 위에 얹는다. 결과가 없으면 키가 없다 — 실행 행(`backtest_run.versions`)은 접수 소유 컬럼이라 종결 때 UPDATE 하지 않는다 ③ 규칙 사본에 `provisional`을 합치는 자리는 `EngineInputAssembler.rulesCopy` 하나. 배분 모듈은 아는 키만 읽어 계산이 바뀌지 않고, 결정성 픽스처(`tests/fixtures/engine-input-three-etf-*.json`)는 그대로다(키 없으면 워커가 생략) ④ `DedupKeyCalculator`는 손대지 않았다 — 키는 버전 문자열만 본다 ⑤ 실제 등록표로 확인하는 IT `BacktestVersionsApiIT`(역변동성 true·고정 비중 false, 202와 상세 JSON 경로). 프론트는 `versions`를 읽지 않아(005 미착수) 모양 변경 통지 대상이 없다 ⑥ `backtest-detail.json` 예시의 `config`가 아직 v1(MA_CROSSOVER)이다 — `versions`만 고쳤고 나머지는 이 Task 범위 밖 ⑦ **요청이 주지 않은 버전은 키를 만들지 않는다.** 첫 전체 빌드에서 `ParamSearchLaunchIT` 4건이 NPE 로 깨졌다 — 007 launcher 가 `evaluationSplitVersion` 을 비워 보내고 `RunPlan` 이 `Map.copyOf` 로 사본을 뜨므로 null 값이 곧 NPE 다. 대상 테스트만 돌린 뒤 전체 빌드를 건너뛰었으면 놓쳤을 결함이라, 접수 경로를 건드린 MR 은 전체 빌드가 통과한 뒤에만 푸시한다 ⑧ **결과 행 `backtest_result.versions`에도 `evaluationSplit`이 남는다**(2차 리뷰 P2): 결과 행은 워커 출력 그대로라 워커 `Versions` 계약에 `evaluationSplit`(요청 `evaluation.splitVersion` 사본)을 더했다 — 상세가 실행 행 값을 쓰는 탓에 테스트가 이 누락을 가렸다. `BacktestResultRepositoryImplTest`가 DB JSONB 키(`versions ->> 'evaluationSplit'`)를 직접 본다. `worker`·`engine`(실측)과 달리 요청값 사본이라 워커가 되돌려 주는 것이 맞고, 백엔드가 저장 때 합치면 결과 행이 두 원천을 갖게 돼 택하지 않았다
+- [ ] T019 [BE] 실행 측정에 데이터 원가(읽은 가격·기업행위 행 수와 바이트)를 더한다 per FR-008·constitution IX "계산·데이터·저장 원가" (partial) — LOW
+  - `backtest_run_metric`은 계산(`cpu_seconds`·`peak_rss_mb`)과 저장(`result_bytes`)만 있고 데이터 원가 칸이 없다. R-10·data-model이 열을 정할 때 빠졌다
+  - 할 일: 워커 `MarketDataProvider.load` 결과의 행 수(가격·지수·기업행위)와 대략 바이트를 FINISHED `resource.dataRows`·`dataBytes`(선택 필드, 계약 v2 안)에 실어 `backtest_run_metric.data_rows`·`data_bytes`로 기록하고 뷰에 `data_rows_p50`을 더한다. 금액 단가는 넣지 않는다(PD-06·D19)
+  - 완료 기준: `ExecutionMetricRecorderTest`·`ExecutionMetricsApiIT` 갱신, 메시징 README §4.2 선택 필드 추가
+
+**고치지 않은 어긋남 (converge는 기존 항목을 고치지 않는다 — 다음 문서 커밋에서 손본다)**
+
+- T015(-218)는 2026-09-15 dev에 병합됐는데 위 체크박스가 `[ ]`다. `[x]`로 바꾸고 구현 시 결정(R-20 원본, `docs/adr/0006` D8)을 한 줄 붙인다
+- 맨 위 Input 줄이 "quickstart.md(S1~S12)"·"research.md(R-01~R-19)"인데 지금은 S13·R-20까지다
+- plan.md Project Structure의 `docs/adr/0005-…`는 실제로 `0006`(0005는 007이 썼다). plan은 converge가 고치지 않는다
+
+**관찰 (Task로 만들지 않음)**
+
+- **PD-06 값 미확정**(FR-006·SC-007·plan IX 조건부): 장치(T014·T015)와 측정(T012)은 있고 값만 팀 결정 대기다. 코드 작업이 아니라 결정이므로 Task를 만들지 않는다. `v_run_metric_summary`가 근거 자료다
+- **PD-07 미확정으로 `scenario=COST_ESCALATION`은 접수는 되지만 워커가 `INVALID_REQUEST`로 끝낸다**(FR-016 "비용 상승 시나리오"): 비용 프로필에 `escalation` 규칙이 없다(T007 결정). 값이 정해지면 `cost_profile` 행 추가로 끝난다
+- **PD-03·PD-04 미확정 전략**(FR-024·FR-025·US2/AC4~6·SC-008)은 spec대로 `422 RULES_NOT_REGISTERED`다. 확정 뒤 `allocation/momentum.py`·`min_variance.py`는 이 tasks.md 범위 밖(Implementation Strategy 4)
+- **007 후보가 워커 파라미터 계약을 위반해 전부 DLQ**(검증 기록 발견 2): `allocation.parameters`가 `{"lookbackDays": N}`이고 004 계약은 `{"rebalance": …}`뿐이다. 003/007 등록표와 004 규칙 모델의 정합 문제라 007 담당자에게 전달했고 결정은 그쪽이 한다. 004 쪽 변경이 결정되면 그때 Task로
+- `peakRssMb`는 Linux(`/proc/self/statm`)에서만 채워진다. 운영은 Linux 컨테이너라 가짜 값으로 채우지 않는다(원칙 VI)

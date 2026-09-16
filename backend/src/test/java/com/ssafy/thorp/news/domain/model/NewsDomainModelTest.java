@@ -295,6 +295,17 @@ class NewsDomainModelTest {
     class PermissionHistory {
 
         @Test
+        @DisplayName("허용 필드가 없는 허가 회신은 만들 수 없다")
+        void 빈_허가는_거부() {
+            assertThatThrownBy(
+                            () ->
+                                    NewsPublisherPermissionHistory.allowed(
+                                            1L, java.util.Set.of(), COLLECTED, "빈 회신"))
+                    .as("보여 줄 것이 없는 허가는 불허와 같은데 상태만 ALLOWED로 남는다")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
         @DisplayName("요청은 PENDING, 회신은 ALLOWED 또는 DENIED로만 기록한다")
         void 사건과_상태() {
             assertThat(

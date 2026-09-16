@@ -34,6 +34,7 @@ public class ParamSearchRejectedException extends BusinessException {
             case NO_VALID_CANDIDATE -> ErrorCode.NO_VALID_COMBINATION;
             case STRATEGY_NOT_REGISTERED -> ErrorCode.STRATEGY_NOT_REGISTERED;
             case STRATEGY_NOT_EXECUTABLE -> ErrorCode.STRATEGY_NOT_EXECUTABLE;
+            case STRATEGY_NOT_SEARCHABLE -> ErrorCode.STRATEGY_NOT_SEARCHABLE;
             // 취소·시간·실패 한도는 접수 거부가 아니라 실행 중 중단이다. 여기로 오면 호출 지점이 틀렸다.
             case CANCELLED, TIME_LIMIT, FAILURE_LIMIT ->
                     throw new IllegalArgumentException("not an intake rejection: " + stopReason);

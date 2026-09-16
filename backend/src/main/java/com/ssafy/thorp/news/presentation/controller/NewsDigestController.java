@@ -1,7 +1,9 @@
 package com.ssafy.thorp.news.presentation.controller;
 
 import com.ssafy.thorp.common.web.response.HttpApiResponse;
+import com.ssafy.thorp.news.application.service.NewsArticleExportService;
 import com.ssafy.thorp.news.application.service.NewsDigestQueryService;
+import com.ssafy.thorp.news.presentation.response.NewsArticleExportResponse;
 import com.ssafy.thorp.news.presentation.response.NewsDigestResponse;
 import java.time.Instant;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -30,9 +32,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class NewsDigestController {
 
     private final NewsDigestQueryService queryService;
+    private final NewsArticleExportService exportService;
 
-    public NewsDigestController(NewsDigestQueryService queryService) {
+    public NewsDigestController(
+            NewsDigestQueryService queryService, NewsArticleExportService exportService) {
         this.queryService = queryService;
+        this.exportService = exportService;
     }
 
     /**
@@ -52,6 +57,35 @@ public class NewsDigestController {
 
         return ResponseEntity.ok(
                 HttpApiResponse.ok(
-                        NewsDigestResponse.from(queryService.queryForPublic(sectorId, from, to))));
+                        NewsDigestResponse.from(queryService.query(sectorId, from, to))));
+    }
+
+    /**
+     * 허가 범위 안의 기사 메타데이터를 내보낸다(spec FR-017).
+     *
+     * <p><b>여기는 노출 모드를 보지 않는다.</b> 회신이 없거나 불허인 매체의 항목은 어떤 환경에서도 나가지 않는다. 화면은 닫으면 사라지지만 내보낸 자료는 남기
+     * 때문이다.
+     *
+     * <p>기간이 필수다. 범위를 정하지 않으면 저장된 전부를 뜨게 된다.
+     *
+     * @param sectorId 좁힐 섹터. 등록되지 않은 값은 400이다.
+     * @param from 구간 시작.
+     * @param to 구간 끝.
+     * @param cursor 이전 페이지의 마지막 자리. 첫 페이지면 생략한다.
+     * @param limit 한 페이지의 최대 항목 수. 생략하면 기본값을 쓴다.
+     */
+    @GetMapping("/articles/export")
+    public ResponseEntity<HttpApiResponse<NewsArticleExportResponse>> exportArticles(
+            @RequestParam(required = false) String sectorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) Integer limit) {
+
+        return ResponseEntity.ok(
+                HttpApiResponse.ok(
+                        "허가된 뉴스 메타데이터를 조회했습니다.",
+                        NewsArticleExportResponse.from(
+                                exportService.export(sectorId, from, to, cursor, limit))));
     }
 }

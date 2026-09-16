@@ -1,0 +1,36 @@
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  background: var(--thorp-surface);
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--thorp-foreground);
+  overflow-wrap: anywhere;
+}

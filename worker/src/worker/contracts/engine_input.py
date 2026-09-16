@@ -16,8 +16,9 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from worker.contracts.base import ContractModel
 from worker.contracts.strategy_params import STRATEGY_PARAMETERS
 
-# 종목 코드 표기: 6자리 숫자 + KRX 거래소 코드 (예 005930.XKRX)
-_INSTRUMENT_ID_PATTERN = re.compile(r"\d{6}\.XKRX")
+# 종목 코드 표기: 6글자 단축코드 + KRX 거래소 코드 (예 005930.XKRX, 0111J0.XKRX).
+# 단축코드에는 영문 대문자가 섞일 수 있다 — ETF 1,168종 중 304종이 그런 코드다(PD-01 실측).
+_INSTRUMENT_ID_PATTERN = re.compile(r"[0-9A-Z]{6}\.XKRX")
 # 통화 코드 표기: 3글자 대문자 (예 KRW)
 _CURRENCY_PATTERN = re.compile(r"[A-Z]{3}")
 
@@ -31,7 +32,7 @@ def _require_text(value: str, field: str) -> str:
 
 def _require_instrument_id(value: str, field: str) -> str:
     if not _INSTRUMENT_ID_PATTERN.fullmatch(value):
-        raise ValueError(f"{field} must look like '{{6-digit code}}.XKRX'; got {value!r}")
+        raise ValueError(f"{field} must look like '{{6-character code}}.XKRX'; got {value!r}")
     return value
 
 
@@ -124,7 +125,7 @@ class RunSpec(ContractModel):
 
 class UniverseItem(ContractModel):
     sector_id: str | None = None  # None = 대응표 없이 종목 직접 지정
-    instrument_id: str  # "{6자리코드}.XKRX"
+    instrument_id: str  # "{6글자 단축코드}.XKRX"
     target_weight: Decimal | None = None  # FIXED_WEIGHT에서만 존재
 
     @field_validator("instrument_id")

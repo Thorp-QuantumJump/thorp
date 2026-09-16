@@ -48,7 +48,9 @@ COST_PROFILE = {
     "taxBps": "0",
     "provisional": True,
 }
-RESOURCE = {"peakRssMb": "512.5", "cpuSeconds": "3.210", "wallSeconds": "4.000"}
+# queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.
+SERVED = {"queue": "backtest.jobs", "role": "single"}
+RESOURCE = {"peakRssMb": "512.5", "cpuSeconds": "3.210", "wallSeconds": "4.000", **SERVED}
 
 
 def money(x: Decimal) -> str:
@@ -393,6 +395,8 @@ VERSIONS = {
     "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": True},
     "data": "FIXTURE-2026-09-07",
     "engine": ENGINE_VERSION,
+    # 요청 evaluation.splitVersion 의 사본. 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
+    "evaluationSplit": "SPLIT-1",
     "worker": WORKER_VERSION,
 }
 
@@ -556,7 +560,7 @@ started = envelope(
     {
         "startedAt": "2026-09-07T01:00:00Z",
         "stage": "PREPARING_DATA",
-        "resource": {"pid": 4242, "hostname": "worker-1"},
+        "resource": {"pid": 4242, "hostname": "worker-1", **SERVED},
     },
 )
 
@@ -619,7 +623,7 @@ finished_failed = envelope(
             "versions": VERSIONS,
             "diagnostics": {"warnings": []},
         },
-        "resource": {"peakRssMb": "128.0", "cpuSeconds": "0.210", "wallSeconds": "0.900"},
+        "resource": {"peakRssMb": "128.0", "cpuSeconds": "0.210", "wallSeconds": "0.900", **SERVED},
     },
 )
 
@@ -634,7 +638,7 @@ finished_cancelled = envelope(
         "partial": True,
         "lastTradingDate": partial["lastTradingDate"],
         "engineOutput": engine_output(partial, "CANCELLED", True, "2026-09-07T01:00:03Z"),
-        "resource": {"peakRssMb": "400.0", "cpuSeconds": "1.500", "wallSeconds": "2.100"},
+        "resource": {"peakRssMb": "400.0", "cpuSeconds": "1.500", "wallSeconds": "2.100", **SERVED},
     },
 )
 

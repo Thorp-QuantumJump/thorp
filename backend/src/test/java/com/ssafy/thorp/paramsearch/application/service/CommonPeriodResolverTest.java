@@ -3,10 +3,10 @@ package com.ssafy.thorp.paramsearch.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;
-import com.ssafy.thorp.paramsearch.application.port.AllowedRange;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -50,10 +50,14 @@ class CommonPeriodResolverTest {
                             new ParameterAxis(
                                     AXIS,
                                     "관측 기간",
+                                    null,
                                     "거래일",
                                     List.of(20, 63),
                                     20,
-                                    AllowedRange.ofValues(List.of(20, 63)))));
+                                    AllowedRange.ofValues(List.of(20, 63)))),
+                    true,
+                    null,
+                    "COMPUTED");
 
     private static final SearchSpace SPACE =
             SearchSpace.of(

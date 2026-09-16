@@ -47,6 +47,19 @@ UNTRADED_DAYS: tuple[date, ...] = (date(2026, 9, 3), date(2026, 9, 8), date(2026
 PLACEHOLDER_KEY = "테스트용-가짜-키"
 
 
+def _quote_template(bas_dd: date) -> dict[str, str]:
+    """종목코드만 갈아 끼우면 되는 최소 응답 행. 값은 형식 검사와 무관하게 통과하는 값이다."""
+    return {
+        "BAS_DD": f"{bas_dd:%Y%m%d}",
+        "TDD_CLSPRC": "10000",
+        "TDD_OPNPRC": "10000",
+        "TDD_HGPRC": "10000",
+        "TDD_LWPRC": "10000",
+        "ACC_TRDVOL": "100",
+        "ACC_TRDVAL": "1000000",
+    }
+
+
 @dataclass(frozen=True)
 class FixtureSource:
     """저장해 둔 응답을 돌려주는 :class:`krx.DailyRowSource` 대역.
@@ -461,57 +474,96 @@ class TestResponseShape:
             krx.normalize_etf_row(row, expected_date=date(2026, 9, 10))
 
 
-class TestUnsupportedIssueCodes:
-    """6자리 숫자가 아닌 종목코드를 멈추지도 버리지도 않는다.
+class TestAlphanumericIssueCodes:
+    """영문이 섞인 6글자 단축코드를 숫자 코드와 똑같이 담는다.
 
     2026-09-11에 실제 응답에서 확인했다. 그날 값이 있는 ETF 1,168종목 가운데 304종목(26%)의
-    코드가 ``0184E0``처럼 숫자와 영문이 섞인 6글자였고, 2025년부터 빠르게 늘고 있다. 저장
-    스키마의 ``instrument_id`` 형식이 ``{6자리}.XKRX``라 담을 수 없으므로, 수집이 그 종목
-    때문에 멈추지 않으면서도 어떤 코드가 빠졌는지는 드러나야 한다.
+    코드가 ``0184E0``처럼 숫자와 영문이 섞인 6글자였고, 2025년부터 빠르게 늘고 있다
+    (2024-01 0종목 → 2025-01 6종목 → 2026-01 178종목 → 2026-09 304종목). 처음에는 저장
+    스키마가 숫자만 받아 이 종목들을 담지 못했으나, 2026-09-15에 형식을 넓혀 받아들이기로
+    정했다(T031). 원천의 4분의 1을 후보에서 빼는 대가가 너무 컸다.
     """
 
     class MixedSource:
         """숫자 코드 하나와 영문 섞인 코드 하나를 함께 주는 원천."""
 
         def rows(self, group: str, endpoint: str, bas_dd: date) -> list[dict[str, str]]:
-            template = {
-                "BAS_DD": f"{bas_dd:%Y%m%d}",
-                "TDD_CLSPRC": "10000",
-                "TDD_OPNPRC": "10000",
-                "TDD_HGPRC": "10000",
-                "TDD_LWPRC": "10000",
-                "ACC_TRDVOL": "100",
-                "ACC_TRDVAL": "1000000",
-            }
             return [
-                {**template, "ISU_CD": "069500", "ISU_NM": "KODEX 200"},
-                {**template, "ISU_CD": "0184E0", "ISU_NM": "1Q 200채권혼합50액티브"},
+                {**_quote_template(bas_dd), "ISU_CD": "069500", "ISU_NM": "KODEX 200"},
+                {
+                    **_quote_template(bas_dd),
+                    "ISU_CD": "0184E0",
+                    "ISU_NM": "1Q 200채권혼합50액티브",
+                },
+            ]
+
+    def test_both_codes_are_collected(self) -> None:
+        collection = krx.collect_daily_quotes(self.MixedSource(), [date(2026, 9, 10)])
+        assert collection.complete is True
+        # ``instrument_ids``는 정렬해 돌려주므로 ``0184E0``이 ``069500``보다 앞선다.
+        assert collection.instrument_ids == ["0184E0.XKRX", KODEX_200]
+
+    def test_the_alphanumeric_code_is_no_longer_reported_as_unsupported(self) -> None:
+        collection = krx.collect_daily_quotes(self.MixedSource(), [date(2026, 9, 10)])
+        assert collection.unsupported_codes == set()
+
+    def test_requesting_only_one_instrument_still_filters(self) -> None:
+        """형식이 넓어져도 찾는 종목만 담는 걸러내기는 그대로다."""
+        collection = krx.collect_daily_quotes(
+            self.MixedSource(), [date(2026, 9, 10)], instrument_ids=("0184E0.XKRX",)
+        )
+        assert collection.instrument_ids == ["0184E0.XKRX"]
+
+    def test_the_identifier_keeps_the_code_as_is(self) -> None:
+        """영문 대문자를 소문자로 접거나 다듬지 않는다. 같은 종목이 두 값이 되면 안 된다."""
+        assert krx.instrument_id_for("0184E0") == "0184E0.XKRX"
+        assert krx.issue_code_for("0184E0.XKRX") == "0184E0"
+
+
+class TestUnsupportedIssueCodes:
+    """형식 밖 종목코드를 멈추지도 조용히 버리지도 않는다.
+
+    2026-09-15에 형식을 넓혀 영숫자 6글자를 받게 되었지만 이 장치는 남긴다. 원천이 그 밖의
+    모양을 보내오면 수집이 그 종목 때문에 멈추지 않으면서도 **어떤 코드가 빠졌는지는 드러나야**
+    하기 때문이다. 못 담는 것을 조용히 버리는 구조를 만들면 그 순간 검사가 사라진다.
+    """
+
+    class OutOfFormatSource:
+        """받아들이는 코드 하나와 형식 밖 코드 둘을 함께 주는 원천."""
+
+        def rows(self, group: str, endpoint: str, bas_dd: date) -> list[dict[str, str]]:
+            return [
+                {**_quote_template(bas_dd), "ISU_CD": "069500", "ISU_NM": "KODEX 200"},
+                # 다섯 글자다. 자리 수가 어긋나면 담을 수 없다.
+                {**_quote_template(bas_dd), "ISU_CD": "0184E", "ISU_NM": "자리 수가 모자란 코드"},
+                # 소문자다. 같은 종목이 두 값으로 저장되지 않도록 대문자만 받는다.
+                {**_quote_template(bas_dd), "ISU_CD": "0184e0", "ISU_NM": "소문자가 섞인 코드"},
             ]
 
     def test_collection_does_not_stop(self) -> None:
-        collection = krx.collect_daily_quotes(self.MixedSource(), [date(2026, 9, 10)])
+        collection = krx.collect_daily_quotes(self.OutOfFormatSource(), [date(2026, 9, 10)])
         assert collection.complete is True
         assert collection.instrument_ids == [KODEX_200]
 
-    def test_the_code_is_reported_not_dropped(self) -> None:
-        collection = krx.collect_daily_quotes(self.MixedSource(), [date(2026, 9, 10)])
-        assert collection.unsupported_codes == {"0184E0"}
+    def test_the_codes_are_reported_not_dropped(self) -> None:
+        collection = krx.collect_daily_quotes(self.OutOfFormatSource(), [date(2026, 9, 10)])
+        assert collection.unsupported_codes == {"0184E", "0184e0"}
 
-    def test_the_code_is_reported_even_when_another_instrument_is_requested(self) -> None:
+    def test_the_codes_are_reported_even_when_another_instrument_is_requested(self) -> None:
         """찾는 종목을 지정해도 담을 수 없는 코드는 보고된다.
 
-        진입점은 ``--instruments``를 필수로 받고 그 값은 이미 6자리로 검사되므로, 형식 검사가
+        진입점은 ``--instruments``를 필수로 받고 그 값은 이미 형식 검사를 거치므로, 형식 검사가
         걸러내기 **뒤에** 오면 이 목록이 늘 비어 보고도 나오지 않는다. 담을 수 없는 종목이
-        원천의 26%라는 사실은 후보를 고르는 쪽에 필요한 정보다.
+        얼마나 되는지는 후보를 고르는 쪽에 필요한 정보다.
         """
         collection = krx.collect_daily_quotes(
-            self.MixedSource(), [date(2026, 9, 10)], instrument_ids=(KODEX_200,)
+            self.OutOfFormatSource(), [date(2026, 9, 10)], instrument_ids=(KODEX_200,)
         )
-        assert collection.unsupported_codes == {"0184E0"}
+        assert collection.unsupported_codes == {"0184E", "0184e0"}
         # 그러면서도 수집은 멈추지 않고 찾는 종목만 담는다.
         assert collection.instrument_ids == [KODEX_200]
 
-    def test_a_six_digit_code_is_never_reported_as_unsupported(self) -> None:
+    def test_a_six_character_code_is_never_reported_as_unsupported(self) -> None:
         assert collect().unsupported_codes == set()
 
 

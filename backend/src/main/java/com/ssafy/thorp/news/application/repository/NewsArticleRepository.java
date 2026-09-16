@@ -35,6 +35,23 @@ public interface NewsArticleRepository {
     /** 표시 가능한 최근 기사. 현재 뉴스 묶음의 후보다. */
     List<NewsArticle> findDisplayEligibleSince(Instant since);
 
+    /**
+     * 내보내기 한 페이지(spec FR-017).
+     *
+     * <p>기간은 확인된 발행 시각으로 재되 없으면 수집 시각으로 대신한다. 시각을 확인하지 못한 기사도 내보낼 수 있어야 하고, 그 사실은 응답의 {@code
+     * publicationTimeStatus}가 말한다.
+     *
+     * <p>{@code after}가 null이면 첫 페이지다. 허가 필터는 여기서 걸지 않는다 — 저장소는 있는 것을 돌려주고, 무엇을 내보낼지는 회신이 정한다.
+     *
+     * @param limit 읽을 최대 행 수. 다음 페이지가 있는지 알려면 호출부가 하나 더 요청한다.
+     */
+    List<NewsArticle> findForExport(
+            Instant from,
+            Instant to,
+            String sectorId,
+            com.ssafy.thorp.news.application.command.NewsArticleExportQuery.Cursor after,
+            int limit);
+
     /** 사업 키가 다른데 외부 식별자가 겹쳤다. 기존 기록을 덮어쓰지 않는다(spec FR-025). */
     class NewsArticleIdCollisionException extends RuntimeException {
 

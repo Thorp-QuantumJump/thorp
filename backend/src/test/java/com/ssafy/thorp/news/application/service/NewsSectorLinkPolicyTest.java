@@ -60,6 +60,74 @@ class NewsSectorLinkPolicyTest {
     }
 
     @Nested
+    @DisplayName("채널 주제 보완 (spec FR-010)")
+    class ChannelFallback {
+
+        private static NewsRelevanceClassifier classifier() {
+            return new NewsRelevanceClassifier(
+                    new com.ssafy.thorp.news.infrastructure.config.RegistryNewsTopicCatalog(
+                            new com.ssafy.thorp.news.infrastructure.config.NewsLinkRegistry(
+                                    "news-link-v1",
+                                    List.of(
+                                            new com.ssafy.thorp.news.infrastructure.config
+                                                    .NewsLinkRegistry.Topic(
+                                                    "prices", "물가", true, List.of()),
+                                            new com.ssafy.thorp.news.infrastructure.config
+                                                    .NewsLinkRegistry.Topic(
+                                                    "economy-general", "경제 일반", false, List.of())),
+                                    List.of(
+                                            new com.ssafy.thorp.news.infrastructure.config
+                                                    .NewsLinkRegistry.CategoryMapping(
+                                                    "물가", "prices")))));
+        }
+
+        @Test
+        @DisplayName("기사가 분류 값을 주지 않으면 채널 주제를 쓴다")
+        void 분류_없으면_채널() {
+            NewsRelevanceClassifier.Relevance link =
+                    classifier().classify(List.of(), false, List.of("economy-general"));
+
+            assertThat(link.accepted())
+                    .as("국내 경제 매체 대부분이 기사별 분류 값을 주지 않는다. 이 경로가 없으면 전량 제외된다")
+                    .isTrue();
+            assertThat(link.topicKeys()).containsExactly("economy-general");
+            assertThat(link.evidenceByTopicKey())
+                    .as("기사가 말한 것과 우리가 채널을 보고 판단한 것은 신뢰도가 다르다")
+                    .containsEntry("economy-general", NewsRelevanceClassifier.CHANNEL_EVIDENCE);
+        }
+
+        @Test
+        @DisplayName("기사가 분류 값을 주면 채널 주제는 쓰지 않는다")
+        void 기사가_우선() {
+            NewsRelevanceClassifier.Relevance link =
+                    classifier().classify(List.of("물가"), false, List.of("economy-general"));
+
+            assertThat(link.topicKeys()).containsExactly("prices");
+            assertThat(link.evidenceByTopicKey())
+                    .as("근거는 기사가 준 분류 값이다. 주제 키를 되풀이하면 아무것도 말해 주지 않는다")
+                    .containsEntry("prices", "물가");
+        }
+
+        @Test
+        @DisplayName("등록표에 없는 채널 주제는 쓰지 않는다")
+        void 미등록_채널_주제() {
+            NewsRelevanceClassifier.Relevance link =
+                    classifier().classify(List.of(), false, List.of("없는주제"));
+
+            assertThat(link.accepted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("채널 주제만으로는 해외 기사를 받지 않는다")
+        void 해외_기사는_국내_연결_주제가_필요하다() {
+            NewsRelevanceClassifier.Relevance link =
+                    classifier().classify(List.of(), true, List.of("economy-general"));
+
+            assertThat(link.accepted()).as("굵은 국내 분류는 해외 보도를 받아들이는 근거가 되지 못한다").isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("조회 검증")
     class Querying {
 

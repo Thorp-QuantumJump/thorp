@@ -3,18 +3,18 @@ package com.ssafy.thorp.paramsearch;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.service.CandidateValidator;
 import com.ssafy.thorp.paramsearch.application.service.CandidateValidator.ValidatedPoint;
 import com.ssafy.thorp.paramsearch.application.service.GridExpander;
 import com.ssafy.thorp.paramsearch.application.service.GridExpander.GridPoint;
 import com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver;
 import com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver.SearchTargets;
-import com.ssafy.thorp.paramsearch.infrastructure.registry.ProvisionalFileParameterRegistry;
 import com.ssafy.thorp.paramsearch.infrastructure.support.StrategyExecutionSupportAdapter;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.infrastructure.registry.FileParameterRegistry;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.List;
 import java.util.Set;
@@ -52,13 +52,15 @@ class ParamSearchWiringIT extends PostgresTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("포트 구현이 빈으로 주입되고 임시 등록표가 임시임을 밝힌다")
+    @DisplayName("포트 구현이 빈으로 주입되고 등록표가 확정 여부를 밝힌다")
     void portsAreWired() {
-        assertThat(registry).isInstanceOf(ProvisionalFileParameterRegistry.class);
+        assertThat(registry).isInstanceOf(FileParameterRegistry.class);
         assertThat(executionSupport).isInstanceOf(StrategyExecutionSupportAdapter.class);
         assertThat(launcher).isNotNull();
-        // 값이 팀 확정값이 아님을 응답·화면이 계속 표시할 수 있어야 한다(research R1 개정).
-        assertThat(registry.version()).startsWith("PROVISIONAL-");
+        assertThat(registry.version()).isNotBlank();
+        // 값이 팀 확정값인지를 응답·화면이 계속 표시할 수 있어야 한다(research R1 개정). PD-02가
+        // 2026-09-15에 확정돼 지금은 false이며, 미확정 값을 다시 담으면 version의 접두만으로 true가 된다.
+        assertThat(registry.provisional()).isFalse();
         assertThat(registry.activeStrategies()).isNotEmpty();
     }
 
@@ -103,7 +105,10 @@ class ParamSearchWiringIT extends PostgresTestSupport {
         assertThat(targets.notExecutable())
                 .allSatisfy(strategyId -> assertThat(supported).doesNotContain(strategyId));
         // 요청한 전략은 대상이거나 거부다. 조용히 사라지는 전략이 없어야 한다.
-        assertThat(targets.targets().size() + targets.notExecutable().size())
+        assertThat(
+                        targets.targets().size()
+                                + targets.notExecutable().size()
+                                + targets.notSearchable().size())
                 .isEqualTo(active.size());
     }
 
@@ -131,7 +136,7 @@ class ParamSearchWiringIT extends PostgresTestSupport {
                 .filteredOn(point -> !point.isValid())
                 .allSatisfy(point -> assertThat(point.verdict().reasonCode()).isNotBlank());
         // 판정이 실제로 돌아 결과가 채워졌는지만 본다. 지금 실행 지원되는 전략에 등록된 규칙이 없어
-        // 제외가 0건일 수 있다 — 규칙이 도는 경로는 ProvisionalFileParameterRegistryTest와
+        // 제외가 0건일 수 있다 — 규칙이 도는 경로는 FileParameterRegistryTest와
         // CandidateValidatorTest가 본다. 여기서 확인할 것은 배선이다.
         assertThat(validated).allSatisfy(point -> assertThat(point.verdict()).isNotNull());
     }

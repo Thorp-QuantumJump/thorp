@@ -31,22 +31,42 @@ public class NewsPublisherPermissionHistoryRepositoryImpl
     @Override
     @Transactional
     public NewsPublisherPermissionHistory appendAndApply(NewsPublisherPermissionHistory event) {
+        // 이력 추가와 상태 갱신 사이에 다른 사건이 끼어들지 않도록 매체 행을 잠근다.
         NewsPublisherJpaEntity publisher =
                 publisherRepository
-                        .findById(event.publisherId())
+                        .findByIdForUpdate(event.publisherId())
                         .orElseThrow(
                                 () ->
                                         new IllegalArgumentException(
                                                 "등록되지 않은 매체다: " + event.publisherId()));
 
+        boolean latest = isLatest(event);
+
         NewsPublisherPermissionHistoryJpaEntity saved =
                 historyRepository.save(NewsPersistenceMapper.toEntity(event));
 
-        // 요청 사건도 현재 상태를 PENDING으로 되돌린다. 재확인 중인 매체가 공개에 남지 않게 한다.
-        publisher.applyPermission(event.permissionStatus(), event.occurredAt());
-        publisherRepository.save(publisher);
+        if (latest) {
+            // 요청 사건도 현재 상태를 PENDING으로 되돌린다. 재확인 중인 매체가 공개에 남지 않게 한다.
+            publisher.applyPermission(event.permissionStatus(), event.occurredAt());
+            publisherRepository.save(publisher);
+        }
 
         return NewsPersistenceMapper.toDomain(saved);
+    }
+
+    /**
+     * 이 사건이 그 매체의 가장 최근 사건인지.
+     *
+     * <p><b>이력은 늘 남기되 현재 상태는 가장 늦은 사건만 반영한다.</b> 회신을 늦게 입력하는 일은 정상이다 — 메일함에 묻혀 있던 답장을 며칠 뒤에 넣을 수
+     * 있다. 그때 그 과거 회신이 현재 상태를 덮으면, 이미 받아 둔 최신 회신이 조용히 무효가 되고 공개 여부가 뒤집힌다.
+     *
+     * <p>같은 순간이면 새 사건을 최신으로 본다. 같은 시각에 두 회신이 들어오는 일은 사실상 없고, 있다면 나중에 기록한 쪽이 사람이 마지막으로 판단한 것이기 때문이다.
+     */
+    private boolean isLatest(NewsPublisherPermissionHistory event) {
+        return historyRepository
+                .findFirstByPublisherIdOrderByOccurredAtDescIdDesc(event.publisherId())
+                .map(last -> !event.occurredAt().isBefore(last.getOccurredAt()))
+                .orElse(true);
     }
 
     @Override

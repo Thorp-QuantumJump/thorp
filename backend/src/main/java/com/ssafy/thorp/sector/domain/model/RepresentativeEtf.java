@@ -20,8 +20,11 @@ public record RepresentativeEtf(
         String benchmarkIndex,
         String manager) {
 
-    /** {@code backtest.domain.vo.InstrumentId}와 같은 {6자리}.XKRX 형식이다(ADR-0002 D4). */
-    public static final String INSTRUMENT_ID_REGEX = "^\\d{6}\\.XKRX$";
+    /**
+     * {@code backtest.domain.vo.InstrumentId}와 같은 {6자리 단축코드}.XKRX 형식이다(ADR-0002 D4). 단축코드에는 영문 대문자가
+     * 섞일 수 있다(PD-01, spec 001 T031).
+     */
+    public static final String INSTRUMENT_ID_REGEX = "^[0-9A-Z]{6}\\.XKRX$";
 
     private static final Pattern INSTRUMENT_ID_PATTERN = Pattern.compile(INSTRUMENT_ID_REGEX);
 

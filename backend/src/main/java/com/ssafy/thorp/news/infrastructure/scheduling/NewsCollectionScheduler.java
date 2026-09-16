@@ -30,8 +30,17 @@ import org.springframework.stereotype.Component;
  * 느린 뉴스원 하나가 커넥션을 오래 잡아 다른 도메인까지 막는다.
  *
  * <p>한 뉴스원의 실패는 그 뉴스원에만 머문다. 다음 뉴스원과 시장 API로 번지지 않는다(spec FR-014).
+ *
+ * <p><b>{@code thorp.news.collection-enabled=false}로 끌 수 있다.</b> 켜 두는 것이 기본이다. 끄는 자리는 둘이다 — 시험은 바깥
+ * 망에 나가면 안 되고(나가면 그날의 실제 기사가 시험 결과를 바꾼다), 인스턴스를 늘렸을 때 수집을 한 대에만 맡기고 싶을 수 있다.
+ *
+ * <p>끄는 것은 수집뿐이고 조회는 그대로 돈다. 저장된 자료를 보여 주는 일과 새로 받아 오는 일은 서로 다른 책임이다.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "thorp.news.collection-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class NewsCollectionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(NewsCollectionScheduler.class);
@@ -43,6 +52,7 @@ public class NewsCollectionScheduler {
     private final NewsCollectionStateRepository collectionStates;
     private final NewsCollectionLease lease;
     private final NewsTopicCatalog topics;
+    private final com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry registry;
     private final NewsIngestionService ingestion;
     private final com.ssafy.thorp.news.application.port.NewsMetrics metrics;
     private final Clock clock;
@@ -55,6 +65,7 @@ public class NewsCollectionScheduler {
             NewsCollectionStateRepository collectionStates,
             NewsCollectionLease lease,
             NewsTopicCatalog topics,
+            com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry registry,
             NewsIngestionService ingestion,
             com.ssafy.thorp.news.application.port.NewsMetrics metrics,
             Clock clock) {
@@ -62,6 +73,7 @@ public class NewsCollectionScheduler {
         this.collectionStates = collectionStates;
         this.lease = lease;
         this.topics = topics;
+        this.registry = registry;
         this.ingestion = ingestion;
         this.metrics = metrics;
         this.clock = clock;
@@ -123,7 +135,8 @@ public class NewsCollectionScheduler {
                             publisher.getPublisherKey(),
                             publisher.getRssUrl(),
                             publisher.getEtag(),
-                            publisher.getLastModified());
+                            publisher.getLastModified(),
+                            channelTopicKeys(publisher.getPublisherKey()));
             ingestion.ingest(source, publisher);
         } catch (RuntimeException e) {
             // 한 뉴스원의 실패는 여기서 멈춘다. 다음 뉴스원과 시장 API로 번지지 않는다.
@@ -150,6 +163,24 @@ public class NewsCollectionScheduler {
         } finally {
             lease.release(sourceKey, instanceId);
         }
+    }
+
+    /**
+     * 그 채널이 선언한 주제. 등록표가 원본이다.
+     *
+     * <p>저장소가 아니라 등록표에서 읽는 이유는 이것이 채널 정보이기 때문이다. 매체 행에 컬럼을 더하면 같은 값이 두 곳에 생기고, 배포로만 바뀌는 값을 DB
+     * 마이그레이션으로 관리하게 된다.
+     *
+     * <p>기사가 분류 값을 주는 매체는 이 목록이 비어 있다. 비어 있으면 보완 경로가 돌지 않는다.
+     */
+    private List<String> channelTopicKeys(String publisherKey) {
+        return registry.publishers().stream()
+                .filter(entry -> entry.publisherKey().equals(publisherKey))
+                .findFirst()
+                .map(
+                        com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry.Publisher
+                                ::topicKeys)
+                .orElseGet(List::of);
     }
 
     /** 수집 위치에서 이어받는다. 위치가 없으면 최근 한 시간부터 시작한다. */

@@ -1,0 +1,398 @@
+.page {
+  min-height: 100svh;
+  overflow-x: clip;
+  background:
+    linear-gradient(var(--thorp-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
+    var(--thorp-background);
+  background-size: 72px 72px, 72px 72px, auto;
+  color: var(--thorp-foreground);
+}
+
+.main {
+  width: min(100% - 40px, 760px);
+  margin: 0 auto;
+  padding: clamp(90px, 15vh, 160px) 0 80px;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-size: clamp(1.7rem, 4.4vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.lead {
+  margin: 0 0 28px;
+  color: var(--thorp-copy);
+  font-size: clamp(0.92rem, 1.7vw, 1rem);
+  line-height: 1.7;
+}
+
+.loading {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+}
+
+/* 아직 줄 것이 없는 상태의 한 문장과 다시 불러오기 행동 하나가 놓이는 자리다. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+}
+
+.notice p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.notice button {
+  padding: 9px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.notice button:hover {
+  border-color: currentColor;
+}
+
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+/* 목록이 예시 대응표에서 왔다는 표시다. 비중 초깃값 예시 표시와는 다른 자리에 둔다. */
+.sampleNotice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--thorp-line);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+/* 보관해 둔 값을 그대로 쓰지 못했다는 한 문장이 놓이는 자리다. */
+.restoreNotice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+/* 비중 입력 묶음의 머리다. 비중 칸이 하나라도 있으면 언제나 보인다. */
+.initialValueNotice {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+  카드 자체는 여백을 갖지 않는다. 안의 label이 카드를 가득 채워야 어디를 눌러도 고를 수 있다.
+  고른 카드와 고르지 않은 카드가 한눈에 구분되도록 테두리와 바탕을 함께 바꾼다.
+*/
+.item {
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+  background: var(--thorp-surface);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.item:hover {
+  border-color: var(--thorp-line-strong);
+}
+
+.item[data-selected='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+/* 초점이 어디에 있는지 카드 단위로도 드러낸다. */
+.item:focus-within {
+  border-color: var(--thorp-accent-soft);
+}
+
+/*
+  고르는 자리다. 카드 전체를 덮으며 비중 조작 요소는 이 밖에 있다.
+  360px에서도 한 줄로 눌려 넘치지 않게 좁아지면 두 줄로 쌓는다.
+*/
+.item [data-slot='choice'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.item [data-slot='choice-box'] {
+  align-self: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--thorp-accent);
+  cursor: pointer;
+}
+
+.item [data-slot='heading'] {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.item [data-slot='name'] {
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.item [data-slot='classification'] {
+  padding: 2px 8px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  color: var(--thorp-copy);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.item [data-slot='etf'] {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  /* 이름 묶음과 붙지 않게 반대편으로 민다. 좁아져 줄이 바뀌면 아래 미디어 쿼리가 푼다. */
+  margin-left: auto;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+}
+
+.item [data-slot='etf-label'] {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.item [data-slot='etf-name'] {
+  overflow-wrap: anywhere;
+}
+
+/*
+  고른 섹터에만 나타나는 비중 묶음이다. 고르는 label 밖에 있어 여기를 만져도 섹터가 풀리지 않는다.
+  점선으로 카드 안에서 층이 나뉘는 것을 보인다.
+*/
+.item [data-slot='weight'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 16px;
+  padding: 12px 0 14px;
+  border-top: 1px dashed var(--thorp-line);
+}
+
+.item [data-slot='weight-label'] {
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* 슬라이더와 숫자 칸이 좁은 화면에서 서로를 밀어내지 않게 한 묶음으로 두고 함께 줄인다. */
+.item [data-slot='weight-controls'] {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.item [data-slot='weight-slider'] {
+  flex: 1 1 6rem;
+  min-width: 0;
+  accent-color: var(--thorp-accent);
+  cursor: pointer;
+}
+
+.item [data-slot='weight-number'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.item [data-slot='weight-field'] {
+  width: 5.5rem;
+  padding: 6px 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 8px;
+  background: var(--thorp-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.item [data-slot='weight-unit'] {
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+}
+
+/* 받지 않은 입력을 알리는 한 문장이다. 그 자리에 둔다. */
+.item [data-slot='weight-error'] {
+  flex-basis: 100%;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* 합계와 남은 비중이 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */
+.total {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+  background: var(--thorp-surface);
+}
+
+.total p {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* 100% 가운데 얼마가 찼고 얼마가 넘쳤는지를 눈으로 보인다. 문장이 읽어 주는 값과 같은 값이다. */
+.total [data-slot='weight-total-bar'] {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--thorp-surface-muted);
+}
+
+.total [data-slot='weight-total-fill'],
+.total [data-slot='weight-total-over'] {
+  flex: none;
+}
+
+.total [data-slot='weight-total-fill'] {
+  background: var(--thorp-accent);
+  transition: width 0.15s ease;
+}
+
+.total [data-slot='weight-total-bar'][data-state='short'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-warning);
+}
+
+.total [data-slot='weight-total-bar'][data-state='over'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-negative);
+}
+
+/* 100%를 넘은 몫이다. 채워진 몫과 다른 색으로 두어 얼마나 넘쳤는지 바로 보이게 한다. */
+.total [data-slot='weight-total-over'] {
+  background: var(--thorp-negative);
+  opacity: 0.55;
+}
+
+.total button {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 7px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.total button:hover {
+  border-color: currentColor;
+}
+
+/* 두 개 이상 골라야 한다는 안내다. 하나만 골랐을 때만 나타난다. */
+.constraintNotice {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.attribution {
+  margin: 4px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+  .main {
+    width: min(100% - 28px, 760px);
+    padding-top: 72px;
+  }
+
+  /* 좁은 화면에서는 이름 묶음과 대표 ETF를 아래위로 쌓는다. */
+  .item [data-slot='choice'] {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .item [data-slot='etf'] {
+    margin-left: 0;
+  }
+
+  /*
+    합계 문장과 되돌리기 버튼을 한 줄에 억지로 넣지 않는다. 슬라이더와 숫자 칸도 마찬가지로
+    한 줄에 갇히지 않게 두어 서로를 밀어내지 않는다.
+  */
+  .total {
+    grid-template-columns: 1fr;
+  }
+
+  .total button {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .total [data-slot='weight-total-bar'] {
+    grid-row: 3;
+  }
+}

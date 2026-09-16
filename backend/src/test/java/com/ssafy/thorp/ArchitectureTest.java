@@ -102,6 +102,22 @@ class ArchitectureTest {
                     .should()
                     .resideInAPackage("..infrastructure.persistence..");
 
+    /**
+     * 규칙 8: {@code strategy}(003)는 {@code paramsearch}(007)를 참조하지 않는다.
+     *
+     * <p>등록표의 소유자는 003이고 007이 읽는다. 방향은 {@code paramsearch → strategy} 하나다. 포트·값 타입이 007 패키지에 있던
+     * 동안에는 이 방향이 코드에 드러나지 않았고, 003 화면이 007을 참조해도 아무것도 막지 않았다. 위치를 옮기는 것만으로는 다시 섞이는 것을 막지 못하므로 규칙으로
+     * 세운다. 근거: specs/003-strategy-settings/contracts/strategy-registry-internal.md §4.
+     */
+    @ArchTest
+    static final ArchRule strategy는_paramsearch를_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage(ROOT + ".strategy..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".paramsearch..");
+
     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */
     @ArchTest
     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =

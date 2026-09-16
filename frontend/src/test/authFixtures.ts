@@ -1,9 +1,5 @@
-import type {
-  ApiErrorEnvelope,
-  ApiSuccessEnvelope,
-  AuthenticatedUser,
-  SignupResponse,
-} from '@/types/auth'
+import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
+import type { AuthenticatedUser, SignupResponse } from '@/types/auth'
 
 export const authenticatedUser: AuthenticatedUser = {
   userId: 7,

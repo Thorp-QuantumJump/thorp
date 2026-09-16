@@ -140,7 +140,28 @@ public record BacktestDetailResult(
                         : run.getFailureCode() == null
                                 ? null
                                 : new Failure(run.getFailureCode(), run.getFailureMessage());
-        return build(request, run, currency, now, summary, null, failure);
+        return build(
+                request,
+                run,
+                currency,
+                now,
+                summary,
+                null,
+                failure,
+                withWorker(run.getPlan().versions(), result.workerVersion()));
+    }
+
+    /**
+     * 접수가 확정한 참조 버전에 결과를 낸 워커의 자기 보고({@code versions.worker})를 얹는다. 접수 시점에는 어느 워커가 계산할지 모르므로 이 값만
+     * 결과 행에서 온다. 보고가 없으면 키를 만들지 않는다 — 모르는 값을 채우지 않는다.
+     */
+    private static Map<String, Object> withWorker(Map<String, Object> versions, String worker) {
+        if (worker == null || versions == null) {
+            return versions;
+        }
+        Map<String, Object> merged = new LinkedHashMap<>(versions);
+        merged.put("worker", worker);
+        return merged;
     }
 
     private static BacktestDetailResult build(
@@ -151,6 +172,26 @@ public record BacktestDetailResult(
             Summary summary,
             String unavailableReason,
             Failure failure) {
+        return build(
+                request,
+                run,
+                currency,
+                now,
+                summary,
+                unavailableReason,
+                failure,
+                run.getPlan().versions());
+    }
+
+    private static BacktestDetailResult build(
+            BacktestRequest request,
+            BacktestRun run,
+            String currency,
+            Instant now,
+            Summary summary,
+            String unavailableReason,
+            Failure failure,
+            Map<String, Object> versions) {
         boolean cancelledRequest = request.isCancelled();
         RunStatus status = cancelledRequest ? RunStatus.CANCELLED : run.getStatus();
         // 먼저 취소해 실행이 계속 도는 요청은 진행 수치가 실행의 최신 값이 아니라 자기 스냅샷 기준이다.
@@ -178,7 +219,7 @@ public record BacktestDetailResult(
                 run.getLifecycle().finishedAt(),
                 queueWaitSeconds(run, now),
                 config(run, currency),
-                run.getPlan().versions(),
+                versions,
                 visibleSummary,
                 summaryUnavailable,
                 failure);
