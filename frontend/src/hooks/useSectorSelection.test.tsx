@@ -1,206 +1,173 @@
 import { renderHook } from '@testing-library/react'
-import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SECTOR_SELECTION_STORAGE_KEY, useSectorSelection } from './useSectorSelection'
+import {
+  SECTOR_SELECTION_PAYLOAD_VERSION,
+  SECTOR_SELECTION_STORAGE_KEY,
+  writeStoredSelection,
+} from '@/diagnosis/selectionStorage'
+import type { SectorSummary } from '@/types/sector'
+import { useSectorSelection } from './useSectorSelection'
 
 /**
- * 002 경계의 읽기 규칙을 고정한다(T030).
+ * 002 → 003 인계 규약을 지키는지 고정한다.
  *
- * <p>이 훅은 002가 확정한 섹터·비중을 읽는 유일한 통로이고, 저장소와 질의 문자열이라는 두 출처를
- * 함께 본다. <b>어느 쪽을 언제 믿는지가 이 파일의 전부</b>이므로 그 규칙을 검사로 남긴다 — 규칙이
- * 주석에만 있으면 다음 사람이 우선순위를 바꿔도 아무것도 실패하지 않는다.
+ * <p>규약의 원본은 `specs/002-sector-weight-selection/contracts/selection-handoff.md` 1절이다.
+ * <b>이 파일의 첫 검사가 002의 쓰기 함수로 보관한 값을 003의 훅으로 읽는다</b> — 저장 키나 형식이
+ * 갈라지면 003이 002의 선택을 한 번도 읽지 못하게 되는데, 두 쪽을 각자 검사하면 그 어긋남이
+ * 어느 쪽에서도 드러나지 않는다.
  */
 
-function stored(value: unknown): void {
-  window.sessionStorage.setItem(SECTOR_SELECTION_STORAGE_KEY, JSON.stringify(value))
+function sector(code: string, name: string): SectorSummary {
+  return {
+    code,
+    name,
+    classification: 'INDUSTRY',
+    representativeEtf: {
+      instrumentId: `${code}.XKRX`,
+      name: `KODEX ${name}`,
+      listedOn: '2018-09-12',
+      benchmarkIndex: `KRX ${name}`,
+    },
+  }
 }
 
-function renderSelection(entry = '/') {
-  return renderHook(() => useSectorSelection(), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <MemoryRouter initialEntries={[entry]}>{children}</MemoryRouter>
-    ),
-  })
+const catalog: SectorSummary[] = [
+  sector('ALPHA', '가섹터'),
+  sector('BETA', '나섹터'),
+  sector('GAMMA', '다섹터'),
+]
+
+function renderSelection(sectors: readonly SectorSummary[] | null = catalog) {
+  return renderHook(() => useSectorSelection(sectors)).result
 }
 
 afterEach(() => {
-  window.sessionStorage.clear()
   vi.restoreAllMocks()
+  window.sessionStorage.clear()
 })
 
 describe('useSectorSelection', () => {
-  it('앞 단계를 아직 마치지 않았으면 null 을 돌려준다', () => {
-    const { result } = renderSelection()
-
-    // 임의의 섹터를 골라 대신 채우지 않는다. 화면이 안내를 보일 수 있게 없음을 그대로 알린다.
-    expect(result.current).toBeNull()
-  })
-
-  it('저장된 선택만 있으면 비중까지 읽는다', () => {
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.6 },
-        { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: 0.4 },
-      ],
+  it('002가 보관한 값을 그대로 읽는다', () => {
+    // 002의 쓰기 함수를 그대로 쓴다. 키나 형식이 갈라지면 여기서 드러난다.
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA'],
+      weightTenths: { ALPHA: 600, BETA: 400 },
+      weightsTouched: true,
     })
 
-    const { result } = renderSelection()
+    const result = renderSelection()
 
-    expect(result.current?.mappingVersion).toBe('MAP-TEST-1')
-    expect(result.current?.items).toHaveLength(2)
-    expect(result.current?.items[0].targetWeight).toBe(0.6)
-  })
-
-  it('질의 문자열만 있으면 비중을 null 로 둔다', () => {
-    const { result } = renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-A,INS-B')
-
-    // 링크에는 비중이 실리지 않는다. 0으로 채우면 사용자가 정한 적 없는 비중을 화면이 말하게 된다.
-    expect(result.current?.mappingVersion).toBeNull()
-    expect(result.current?.items).toEqual([
-      { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: null },
-      { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: null },
+    expect(result.current.status).toBe('ready')
+    if (result.current.status !== 'ready') return
+    expect(result.current.selection.mapVersion).toBe('SEM-TEST-1')
+    expect(result.current.selection.items).toEqual([
+      { sectorId: 'ALPHA', instrumentId: 'ALPHA.XKRX', weightTenths: 600 },
+      { sectorId: 'BETA', instrumentId: 'BETA.XKRX', weightTenths: 400 },
     ])
   })
 
-  it('질의 문자열과 저장된 섹터가 같으면 저장된 비중을 쓴다', () => {
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.7 },
-        { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: 0.3 },
-      ],
+  it('비중을 0.1%p 단위 정수 그대로 옮긴다', () => {
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA', 'GAMMA'],
+      weightTenths: { ALPHA: 334, BETA: 333, GAMMA: 333 },
+      weightsTouched: true,
     })
 
-    // 순서가 달라도 같은 집합이다.
-    const { result } = renderSelection('/?sectors=SEC-B,SEC-A')
-
-    expect(result.current?.mappingVersion).toBe('MAP-TEST-1')
-    expect(result.current?.items[0].targetWeight).toBe(0.7)
-  })
-
-  it('질의 문자열이 다른 섹터를 가리키면 저장된 비중을 얹지 않는다', () => {
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
-        { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: 0.5 },
-      ],
-    })
-
-    const { result } = renderSelection('/?sectors=SEC-C,SEC-D&instruments=INS-C,INS-D')
-
-    // 링크로 다른 섹터를 열었는데 앞선 세션의 비중이 따라오면 화면이 틀린 비중을 보인다.
-    expect(result.current?.mappingVersion).toBeNull()
-    expect(result.current?.items).toEqual([
-      { sectorId: 'SEC-C', instrumentId: 'INS-C', targetWeight: null },
-      { sectorId: 'SEC-D', instrumentId: 'INS-D', targetWeight: null },
+    // 소수로 바꾸면 합계 판정(sum === 1000)이 받는 쪽에서 흔들린다(계약 값 표현 규칙).
+    const result = renderSelection()
+    if (result.current.status !== 'ready') throw new Error('ready 가 아니다')
+    expect(result.current.selection.items.map((item) => item.weightTenths)).toEqual([
+      334, 333, 333,
     ])
   })
 
-  it('종목이 짝지어지지 않은 링크는 섹터 코드로 대신 채우지 않는다', () => {
-    // 종목을 아예 주지 않은 링크와, 섹터보다 적게 준 링크다. 빠진 자리를 섹터 코드로 메우면
-    // 존재하지 않는 종목 ID 가 분석 요청에 실린다(Constitution VI).
-    expect(renderSelection('/?sectors=SEC-A,SEC-B').result.current).toBeNull()
-    expect(renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-A').result.current).toBeNull()
+  it('종목은 페이로드가 아니라 섹터 목록에서 찾는다', () => {
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA'],
+      weightTenths: { ALPHA: 500, BETA: 500 },
+      weightsTouched: false,
+    })
+
+    // 보관된 페이로드에는 종목이 없다. 계약이 003은 GET /sectors 로 직접 받으라고 정한다.
+    const raw = window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY) ?? ''
+    expect(raw).not.toContain('instrumentId')
+
+    const result = renderSelection()
+    if (result.current.status !== 'ready') throw new Error('ready 가 아니다')
+    expect(result.current.selection.items[0].instrumentId).toBe('ALPHA.XKRX')
+  })
+
+  it('섹터 목록을 받기 전에는 마치지 않았다고 말하지 않는다', () => {
+    const result = renderSelection(null)
+
+    // 조회가 끝나기도 전에 "앞 단계를 마쳐 주세요"가 번쩍이면 판정하지 않은 결과를 말하는 것이다.
+    expect(result.current.status).toBe('pending')
+  })
+
+  it('보관된 선택이 없으면 앞 단계를 마치지 않은 것으로 다룬다', () => {
+    const result = renderSelection()
+
+    expect(result.current.status).toBe('incomplete')
+    if (result.current.status !== 'incomplete') return
+    expect(result.current.problem).toBeNull()
   })
 
   it('고른 섹터가 두 개 미만이면 앞 단계를 마치지 않은 것으로 다룬다', () => {
-    // 섹터가 하나면 어떤 배분 전략을 골라도 그 하나에 전액이 가서 다섯이 같은 결과를 낸다.
-    expect(renderSelection('/?sectors=SEC-A&instruments=INS-A').result.current).toBeNull()
-
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [{ sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 1 }],
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA'],
+      weightTenths: { ALPHA: 1000 },
+      weightsTouched: true,
     })
-    expect(renderSelection().result.current).toBeNull()
+
+    // 섹터가 하나면 어떤 배분 전략을 골라도 그 하나에 전액이 가서 다섯이 같은 결과를 낸다.
+    expect(renderSelection().current.status).toBe('incomplete')
   })
 
-  it('두 섹터가 같은 대표 ETF를 가리키는 링크를 거부하지 않는다', () => {
-    // 종목은 섹터와 자리로 짝지어지는 목록이다. 중복을 지우면 개수가 어긋나, 앞 단계를 마친
-    // 사용자에게 마치지 않았다고 안내하게 된다. 001 섹터 계약은 이 경우를 금지하지 않는다.
-    const { result } = renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-X,INS-X')
+  it('목록에서 사라진 섹터가 빠지면 그 사실을 함께 전한다', () => {
+    writeStoredSelection({
+      mapVersion: 'SEM-TEST-1',
+      selectedCodes: ['ALPHA', 'BETA', 'DELTA'],
+      weightTenths: { ALPHA: 400, BETA: 300, DELTA: 300 },
+      weightsTouched: true,
+    })
 
-    expect(result.current?.items).toEqual([
-      { sectorId: 'SEC-A', instrumentId: 'INS-X', targetWeight: null },
-      { sectorId: 'SEC-B', instrumentId: 'INS-X', targetWeight: null },
-    ])
+    const result = renderSelection()
+
+    // 조용히 버리면 사용자는 자기가 고른 섹터가 사라진 줄 모른 채 분석을 시작한다(원칙 VI).
+    if (result.current.status !== 'ready') throw new Error('ready 가 아니다')
+    expect(result.current.selection.items.map((item) => item.sectorId)).toEqual(['ALPHA', 'BETA'])
+    expect(result.current.dropped).toEqual([{ code: 'DELTA', reason: 'notInCatalog' }])
   })
 
-  it('종목 칸이 비어 있는 링크는 뒤 칸을 당겨 붙이지 않는다', () => {
-    // 빈 칸을 지우면 그 뒤 자리가 한 칸씩 밀려 SEC-B 의 종목이 SEC-A 에 붙는다. 개수가 우연히
-    // 맞아 짝짓기 방어를 통과해 버리므로, 빈 칸이 있는 시점에 온전하지 않은 링크로 본다.
-    expect(
-      renderSelection('/?sectors=SEC-A,SEC-B&instruments=,INS-A,INS-B').result.current,
-    ).toBeNull()
-    expect(
-      renderSelection('/?sectors=SEC-A,,SEC-B&instruments=INS-A,INS-B,INS-C').result.current,
-    ).toBeNull()
-  })
-
-  it('같은 섹터가 두 번 적혔는데 종목이 서로 다르면 접지 않는다', () => {
-    // 어느 쪽이 그 섹터의 대표 ETF 인지 알 방법이 없다. 하나를 골라 접으면 화면이 고르지 않은
-    // 종목을 고른 것처럼 만든다.
-    expect(
-      renderSelection('/?sectors=SEC-A,SEC-A,SEC-B&instruments=INS-A,INS-B,INS-C').result.current,
-    ).toBeNull()
-  })
-
-  it('같은 섹터가 두 번 적혔고 종목도 같으면 하나로 접는다', () => {
-    const { result } = renderSelection(
-      '/?sectors=SEC-A,SEC-A,SEC-B&instruments=INS-A,INS-A,INS-B',
+  it('아는 것보다 새로운 형식은 읽지 않고 그 사실을 전한다', () => {
+    window.sessionStorage.setItem(
+      SECTOR_SELECTION_STORAGE_KEY,
+      JSON.stringify({
+        version: SECTOR_SELECTION_PAYLOAD_VERSION + 1,
+        mapVersion: 'SEM-TEST-1',
+        selected: [{ code: 'ALPHA', weightTenths: 1000 }],
+        weightsTouched: true,
+      }),
     )
 
-    expect(result.current?.items).toEqual([
-      { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: null },
-      { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: null },
-    ])
+    const result = renderSelection()
+
+    expect(result.current.status).toBe('incomplete')
+    if (result.current.status !== 'incomplete') return
+    expect(result.current.problem).toBe('newerFormat')
   })
 
-  it('링크에 같은 섹터가 두 번 적혀 있으면 하나로 센다', () => {
-    // 표기가 겹친 것일 뿐 두 섹터를 고른 것이 아니므로, 하나로 세어 최소 섹터 수에 걸린다.
-    expect(
-      renderSelection('/?sectors=SEC-A,SEC-A&instruments=INS-A,INS-A').result.current,
-    ).toBeNull()
-  })
-
-  it('같은 섹터가 두 번 든 저장 자료는 손상으로 보고 버린다', () => {
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
-      ],
-    })
-
-    // 002가 만들 수 있는 자료가 아니다. 중복만 접으면 사용자가 정한 적 없는 크기의 후보 집합이
-    // 만들어지고 그 수가 universeSize 로 서버에 나간다.
-    expect(renderSelection().result.current).toBeNull()
-  })
-
-  it('모양이 어긋난 저장 자료는 한 항목만 어긋나도 전체를 버린다', () => {
-    stored({
-      mappingVersion: 'MAP-TEST-1',
-      items: [
-        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 1 },
-        { sectorId: 'SEC-B' },
-      ],
-    })
-
-    // 어긋난 항목만 빼면 비중의 합이 달라진 자료를 온전한 것처럼 쓰게 된다.
-    expect(renderSelection().result.current).toBeNull()
-  })
-
-  it('저장소를 쓸 수 없는 환경에서도 없음으로 다룬다', () => {
-    // 사생활 보호 모드 등에서는 접근 자체가 예외를 던진다. 화면이 그것으로 깨지지 않아야 한다.
+  it('저장소 접근이 막혀도 화면을 오류로 막지 않는다', () => {
+    // 사생활 보호 모드 등에서는 접근 자체가 예외를 던진다. 002의 읽기 함수가 그것을 삼키므로
+    // 003은 앞 단계를 마치지 않은 상태로 보면 되고, 예외가 화면까지 올라오지 않아야 한다.
     vi.spyOn(window.sessionStorage, 'getItem').mockImplementation(() => {
       throw new Error('storage is not available')
     })
 
-    expect(renderSelection().result.current).toBeNull()
-    expect(
-      renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-A,INS-B').result.current?.items,
-    ).toHaveLength(2)
+    expect(renderSelection().current.status).toBe('incomplete')
   })
 })
