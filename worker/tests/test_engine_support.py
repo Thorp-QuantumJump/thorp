@@ -207,3 +207,15 @@ def test_versions_carry_the_requested_evaluation_split() -> None:
     # 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).
     assert run(evaluation={"splitVersion": "SPLIT-1"}).versions.evaluation_split == "SPLIT-1"
     assert run().versions.evaluation_split is None
+
+
+def test_engine_exposes_how_much_data_the_last_run_read() -> None:
+    # 소비자가 FINISHED resource.dataRows·dataBytes 로 싣는 값(T019). 자료를 읽은 실행에만 있다.
+    engine = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))
+    assert engine.last_data_usage is None
+    engine.run(EngineInput.model_validate(engine_input_body()))
+    usage = engine.last_data_usage
+    assert usage is not None and usage.rows > 0 and usage.bytes > 0
+    # 거절된 실행은 자료에 닿지 않았으므로 값이 없다 — 앞 실행의 값이 남아 있으면 안 된다.
+    engine.run(EngineInput.model_validate(engine_input_body(run={"scenario": "COST_ESCALATION"})))
+    assert engine.last_data_usage is None

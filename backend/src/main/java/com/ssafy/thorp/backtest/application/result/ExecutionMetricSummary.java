@@ -11,6 +11,8 @@ import java.math.BigDecimal;
  * @param flexServedRate 공용(flex) 워커가 집은 비율. 단건 유형에서 이 값이 "공용 워커가 단건을 도운 비율"이다
  * @param reuseCount 이 유형의 요청이 새 계산 없이 합류·재사용한 수(FR-008)
  * @param limitHitCount 이 유형이 한도에 닿은 수(접수 거절 + 실행 정지)
+ * @param dataRowsP50 실행이 읽은 자료 행 수의 중앙값(데이터 원가, FR-008·T019). 표본 없으면 null
+ * @param dataBytesP50 읽은 가격 프레임 바이트의 중앙값. 표본 없으면 null
  */
 public record ExecutionMetricSummary(
         ExecutionType executionType,
@@ -26,4 +28,6 @@ public record ExecutionMetricSummary(
         BigDecimal peakRssP95Mb,
         BigDecimal flexServedRate,
         long reuseCount,
-        long limitHitCount) {}
+        long limitHitCount,
+        BigDecimal dataRowsP50,
+        BigDecimal dataBytesP50) {}

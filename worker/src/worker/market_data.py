@@ -128,6 +128,22 @@ class SectorMapping:
 
 
 @dataclass(frozen=True)
+class DataUsage:
+    """한 실행이 읽은 자료의 양(데이터 원가, FR-008·원칙 IX). 금액이 아니라 원단위다.
+
+    ``rows`` 는 읽은 가격·지수·기업행위(분배금·분할) 행 수의 합이고, ``bytes`` 는 메모리에 오른
+    가격 프레임의 크기(``DataFrame.memory_usage(deep=True)``)다. 저장소가 실제로 읽은 바이트가
+    아니라 워커가 들고 있는 크기라 근사값이고, 같은 요청이면 같은 값이 나온다.
+
+    지수는 ``rows`` 에만 들어가고 ``bytes`` 에는 없다 — 달력으로 쓰고 버려서 메모리에 남지
+    않는다. 읽은 행은 원가이므로 세고, 들고 있지 않은 바이트는 지어내지 않는다.
+    """
+
+    rows: int
+    bytes: int
+
+
+@dataclass(frozen=True)
 class MarketData:
     """한 실행이 읽는 자료 전부. 같은 ``dataset_id`` 로 일관된다.
 
@@ -144,6 +160,22 @@ class MarketData:
     splits: tuple[Split, ...] = ()
     mappings: tuple[SectorMapping, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
+    # 달력으로 읽은 지수 행 수(T019 데이터 원가). 행만 세고 프레임은 들고 있지 않다.
+    # 픽스처 공급자는 지수를 읽지 않으므로 0이다.
+    index_rows: int = 0
+
+    def usage(self) -> DataUsage:
+        """읽은 자료의 양. FINISHED ``resource.dataRows``·``dataBytes`` 로 나간다(T019).
+
+        ``rows`` 는 가격·지수·기업행위 셋을 모두 센다(tasks T019). 지수(거래일 달력)는 이 실행이
+        읽은 자료이므로 원가에 들어간다 — 프레임으로 들고 있지 않다는 것은 ``bytes`` 의 사정이지
+        읽지 않았다는 뜻이 아니다.
+        """
+        rows = sum(len(frame) for frame in self.prices.values())
+        rows += self.index_rows
+        rows += len(self.distributions) + len(self.splits)
+        size = sum(int(frame.memory_usage(deep=True).sum()) for frame in self.prices.values())
+        return DataUsage(rows=rows, bytes=size)
 
     @property
     def trading_days(self) -> list[date]:
@@ -406,6 +438,7 @@ def _build(
         splits=tuple(splits),
         mappings=tuple(mappings),
         metadata=dict(metadata or {}),
+        index_rows=len(calendar or ()),
     )
 
 

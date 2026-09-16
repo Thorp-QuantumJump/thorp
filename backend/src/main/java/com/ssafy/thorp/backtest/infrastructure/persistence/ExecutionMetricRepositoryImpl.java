@@ -43,7 +43,9 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository 
                    (SELECT count(*) FROM backtest_limit_hit h
                      WHERE h.execution_type = m.execution_type
                        AND (CAST(:from AS timestamptz) IS NULL OR h.at >= :from)
-                       AND (CAST(:to AS timestamptz) IS NULL OR h.at < :to))   AS limit_hit_count
+                       AND (CAST(:to AS timestamptz) IS NULL OR h.at < :to))   AS limit_hit_count,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_rows)    AS data_rows_p50,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_bytes)   AS data_bytes_p50
               FROM backtest_run_metric m
              WHERE (CAST(:type AS varchar) IS NULL OR m.execution_type = :type)
                AND (CAST(:from AS timestamptz) IS NULL OR m.recorded_at >= :from)
@@ -68,11 +70,13 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository 
                                         + " status, failure_code, queued_at, started_at,"
                                         + " finished_at, wait_ms, run_ms, concurrent_running,"
                                         + " peak_rss_mb, cpu_seconds, auto_retried, result_bytes,"
+                                        + " data_rows, data_bytes,"
                                         + " served_queue, worker_role, recorded_at)"
                                         + " VALUES (nextval('backtest_run_metric_seq'), :runId,"
                                         + " :type, :status, :failureCode, :queuedAt, :startedAt,"
                                         + " :finishedAt, :waitMs, :runMs, :concurrent,"
                                         + " :peakRssMb, :cpuSeconds, :autoRetried, :resultBytes,"
+                                        + " :dataRows, :dataBytes,"
                                         + " :servedQueue, :workerRole, :recordedAt)"
                                         + " ON CONFLICT (run_id) DO NOTHING")
                         .setParameter("runId", m.runId())
@@ -89,6 +93,8 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository 
                         .setParameter("cpuSeconds", m.cpuSeconds())
                         .setParameter("autoRetried", m.autoRetried())
                         .setParameter("resultBytes", m.resultBytes())
+                        .setParameter("dataRows", m.dataRows())
+                        .setParameter("dataBytes", m.dataBytes())
                         .setParameter("servedQueue", m.servedQueue())
                         .setParameter("workerRole", m.workerRole())
                         .setParameter("recordedAt", m.recordedAt())
@@ -184,7 +190,9 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository 
                 decimal(r[10]),
                 decimal(r[11]),
                 ((Number) r[12]).longValue(),
-                ((Number) r[13]).longValue());
+                ((Number) r[13]).longValue(),
+                decimal(r[14]),
+                decimal(r[15]));
     }
 
     /** percentile_cont 는 double, avg 는 numeric 으로 온다. 표본이 없으면 null 그대로 — 0 으로 채우지 않는다(원칙 VI). */

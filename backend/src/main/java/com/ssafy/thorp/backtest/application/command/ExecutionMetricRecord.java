@@ -26,6 +26,8 @@ public record ExecutionMetricRecord(
         BigDecimal cpuSeconds,
         boolean autoRetried,
         long resultBytes,
+        Long dataRows,
+        Long dataBytes,
         String servedQueue,
         String workerRole,
         Instant recordedAt) {}

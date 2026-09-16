@@ -24,11 +24,15 @@ public record FinishedPayload(
      * @param queue 이 실행을 <b>끝낸</b> 워커가 집었던 큐. 중복 실행(R-18)에서는 마지막 STARTED 의 워커와 결과를 낸 워커가 다를 수 있어 종결
      *     이벤트가 직접 싣는다(T012). 선택
      * @param role 끝낸 워커의 역할({@code single}/{@code flex}). 선택
+     * @param dataRows 이 실행이 읽은 자료 행 수(가격·분배금·분할). 데이터 원가(FR-008, T019). 자료를 읽지 못한 실행은 null
+     * @param dataBytes 읽은 가격 프레임이 워커 메모리에서 차지한 바이트(근사). 선택
      */
     public record ResourceUsage(
             BigDecimal peakRssMb,
             BigDecimal cpuSeconds,
             BigDecimal wallSeconds,
             String queue,
-            String role) {}
+            String role,
+            Long dataRows,
+            Long dataBytes) {}
 }

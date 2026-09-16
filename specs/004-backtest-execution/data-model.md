@@ -151,6 +151,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | peak_rss_mb / cpu_seconds | NUMERIC(12,1) / NUMERIC(12,3) (FINISHED payload `resource`. DLQ·강제 종결은 null) |
 | auto_retried | BOOLEAN (attempt > publish_count, R-18 — 재발행 중복은 재시도가 아니다) |
 | result_bytes | BIGINT (`backtest_result` 행의 `pg_column_size`. 결과 없는 종결은 0) |
+| data_rows / data_bytes | BIGINT (FINISHED `resource.dataRows`·`dataBytes` — 읽은 가격·지수·기업행위 행 수(지수는 달력으로 읽고 버려 행 수에만), 가격 프레임 메모리 바이트. 데이터 원가(FR-008, T019). 자료를 읽지 못한 종결은 null) |
 | served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 **결과를 냈나** — R-20 N/M 비율 조정 근거. FINISHED `resource.queue`·`role`이 먼저고, FINISHED 가 없는 종결은 STARTED 가 실행 행에 남긴 값) |
 | recorded_at | TIMESTAMPTZ |
 
@@ -176,7 +177,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 ## v_run_metric_summary (뷰)
 
-`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count`. `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 "공용 워커가 단건을 지원한 비율"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.
+`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count, data_rows_p50, data_bytes_p50`(뒤 둘은 T019가 끝에 덧붙였다 — 뷰는 열을 끝에만 더할 수 있다). `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 "공용 워커가 단건을 지원한 비율"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.
 
 ## 검증 규칙 (요청 접수 시, 백엔드)
 

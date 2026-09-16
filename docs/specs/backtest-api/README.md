@@ -193,7 +193,8 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
                         "failRate": "0.0476", "cancelRate": "0.0238", "autoRetryRate": "0.0238",
                         "waitP50Ms": "812", "waitP95Ms": "4310", "waitP99Ms": "9020",
                         "runP50Ms": "31200", "runP95Ms": "88000", "peakRssP95Mb": "512.5",
-                        "flexServedRate": "0.1904", "reuseCount": 7, "limitHitCount": 3 } ] },
+                        "flexServedRate": "0.1904", "reuseCount": 7, "limitHitCount": 3,
+                        "dataRowsP50": "1439", "dataBytesP50": "245760" } ] },
   "error": null }
 ```
 
@@ -201,6 +202,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   채우지 않는다.
 - `flexServedRate`는 공용(flex) 워커가 집은 비율이다. `SINGLE`에서 이 값이 곧 "공용 워커가 단건을 도운 비율"(R-20)이다.
 - `limitHitCount`는 접수 거절(429)과 실행 시간 상한 정지를 합친 수다. 종류별로 보려면 `backtest_limit_hit.kind`를 본다.
+- `dataRowsP50`·`dataBytesP50`은 실행이 읽은 자료의 양(가격·지수·기업행위 행 수, 가격 프레임 바이트)의 중앙값 — 데이터 원가(FR-008·원칙 IX)다. 계산(`peakRssP95Mb`)·저장(`result_bytes`)과 함께 건당 원가의 세 갈래를 이룬다. 금액 단가는 없다(PD-06·D19).
 - 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 여기 없다 — RabbitMQ 관리 UI.
 
 ## 2. 결과 조회

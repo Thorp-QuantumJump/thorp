@@ -42,6 +42,7 @@ from worker.contracts.events import (
     StartedPayload,
 )
 from worker.control import CancelRegistry
+from worker.market_data import DataUsage
 from worker.messaging import (
     JOBS_QUEUE,
     SCHEMA_VERSION,
@@ -178,7 +179,7 @@ class _EventStream:
         self._sample_rss()
         self._emit(BacktestEventType.PROGRESS, payload, self._clock())
 
-    def finished(self, output: EngineOutput) -> None:
+    def finished(self, output: EngineOutput, data_usage: DataUsage | None = None) -> None:
         self._sample_rss()
         usage = ResourceUsage(
             peak_rss_mb=self._peak_rss_mb,
@@ -187,6 +188,9 @@ class _EventStream:
             # 이 결과를 낸 워커. 중복 실행(R-18)에서 마지막 STARTED 와 다를 수 있어 다시 싣는다.
             queue=self._queue,
             role=self._role,
+            # 데이터 원가(T019). 자료를 읽지 못한 실행(거절·적재 실패)에는 없다 — 지어내지 않는다.
+            data_rows=None if data_usage is None else data_usage.rows,
+            data_bytes=None if data_usage is None else data_usage.bytes,
         )
         payload = FinishedPayload(
             status=output.run.status,
@@ -362,7 +366,9 @@ class BacktestJobConsumer:
             batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
             output = self._engine.run(engine_input, batcher.on_progress)
             batcher.flush()
-            stream.finished(output)
+            # 엔진 경계(Protocol)는 EngineOutput 만 돌려준다. 읽은 자료의 양은 메시지 밖 자원
+            # 사용이라 엔진이 선택 속성으로 내놓고, 없으면(가짜 엔진·옛 엔진) 싣지 않는다.
+            stream.finished(output, getattr(self._engine, "last_data_usage", None))
             return output
         finally:
             if self._registry is not None:

@@ -37,7 +37,9 @@ public record ExecutionMetricsResponse(Instant from, Instant to, List<Row> rows)
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal peakRssP95Mb,
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal flexServedRate,
             long reuseCount,
-            long limitHitCount) {
+            long limitHitCount,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal dataRowsP50,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal dataBytesP50) {
 
         static Row of(ExecutionMetricSummary s) {
             return new Row(
@@ -54,7 +56,9 @@ public record ExecutionMetricsResponse(Instant from, Instant to, List<Row> rows)
                     s.peakRssP95Mb(),
                     s.flexServedRate(),
                     s.reuseCount(),
-                    s.limitHitCount());
+                    s.limitHitCount(),
+                    s.dataRowsP50(),
+                    s.dataBytesP50());
         }
     }
 }

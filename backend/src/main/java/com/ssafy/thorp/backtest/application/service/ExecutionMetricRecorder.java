@@ -72,6 +72,9 @@ public class ExecutionMetricRecorder {
                         // 재발행으로 생긴 중복 실행은 재시도가 아니다 — 시도 수가 발행 수를 넘은 만큼만 재시도다(R-18).
                         run.getAttempt() > lc.publishCount(),
                         repository.resultBytes(run.getId()),
+                        // 데이터 원가(FR-008, T019). 워커가 자료를 읽은 실행에만 있다 — 없으면 null 그대로.
+                        resource == null ? null : resource.dataRows(),
+                        resource == null ? null : resource.dataBytes(),
                         worker.queue(),
                         worker.role(),
                         clock.instant());

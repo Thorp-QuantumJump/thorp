@@ -1455,7 +1455,9 @@
       "cpuSeconds": "3.210",
       "wallSeconds": "4.000",
       "queue": "backtest.jobs",
-      "role": "single"
+      "role": "single",
+      "dataRows": 258,
+      "dataBytes": 61920
     }
   }
 }
