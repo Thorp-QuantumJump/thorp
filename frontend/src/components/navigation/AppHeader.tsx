@@ -1,11 +1,11 @@
 import {
+  BookOpen,
   ChartNoAxesCombined,
   FolderClock,
-  Home,
+  Gauge,
   LogIn,
   LogOut,
   Menu,
-  Play,
   RefreshCw,
   UserRound,
   X,
@@ -22,26 +22,46 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/auth-context'
 import styles from './AppHeader.module.css'
 
+/**
+ * 첫 화면(`LandingHeader`)과 같은 메뉴 넷이다. 목적지도 같다.
+ *
+ * 첫 화면에서 메뉴를 눌러 들어온 화면의 헤더가 다른 메뉴를 보이면, 사용자는 한 번의 이동으로
+ * 서비스의 구성이 통째로 바뀐 것처럼 겪는다.
+ *
+ * '대시보드'(`/dashboard`)와 '백테스트'(`/backtest`)는 메뉴에서 뺐다. 003·005가 완성되면
+ * 대체될 임시 화면이라 언젠가 빠질 자리이기 때문이다. **두 경로 자체는 지우지 않았다.**
+ */
 const navigationItems = [
   {
-    label: '홈',
-    description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',
-    path: '/home',
-    icon: Home,
+    label: '전략 진단',
+    description: '섹터와 비중을 골라 과거 성과를 같은 조건에서 비교합니다.',
+    path: '/diagnosis/sectors',
+    icon: Gauge,
   },
   {
-    label: '대시보드',
-    description: '핵심 지표와 추천 전략을 빠르게 확인합니다.',
-    path: '/dashboard',
+    label: '시장 흐름',
+    description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',
+    path: '/home',
     icon: ChartNoAxesCombined,
   },
   {
-    label: '백테스트',
-    description: '여러 투자 전략의 성과를 비교합니다.',
-    path: '/backtest',
-    icon: Play,
+    label: '배우기',
+    description: '투자 개념과 지표 읽는 법을 익힙니다.',
+    path: '/learn',
+    icon: BookOpen,
+  },
+  {
+    label: '내 기록',
+    description: '저장한 분석과 전략 검증 기록을 확인합니다.',
+    path: '/records',
+    icon: FolderClock,
   },
 ]
+
+/** 하위 경로(`/records/…`)에 있어도 그 메뉴를 현재 위치로 표시한다. */
+function isCurrentPath(pathname: string, path: string): boolean {
+  return pathname === path || pathname.startsWith(`${path}/`)
+}
 
 /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
 export function AppHeader() {
@@ -261,7 +281,7 @@ export function AppHeader() {
           <nav className={styles.desktopNav} aria-label="주요 화면">
             {navigationItems.map((item) => {
               const Icon = item.icon
-              const isActive = location.pathname === item.path
+              const isActive = isCurrentPath(location.pathname, item.path)
 
               return (
                 <Link
@@ -276,17 +296,12 @@ export function AppHeader() {
             })}
           </nav>
 
-          <div className={styles.accountLinks}>
-            <Link
-              className={styles.recordsLink}
-              to="/records"
-              aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}
-            >
-              <FolderClock size={16} aria-hidden="true" />
-              내 기록
-            </Link>
-            {desktopAuthControl}
-          </div>
+          {/*
+            '내 기록'은 위 메뉴에 있으므로 여기 같은 이름의 링크를 따로 두지 않는다.
+            아래 로그인 표시는 목적지가 같아도 하는 일이 다르다. 메뉴 항목이 아니라 지금 누가
+            로그인해 있는지를 알리는 자리다.
+          */}
+          <div className={styles.accountLinks}>{desktopAuthControl}</div>
         </div>
       </header>
 
@@ -328,7 +343,7 @@ export function AppHeader() {
               <div className={styles.drawerLinks}>
                 {navigationItems.map((item, index) => {
                   const Icon = item.icon
-                  const isActive = location.pathname === item.path
+                  const isActive = isCurrentPath(location.pathname, item.path)
 
                   return (
                     <Link
@@ -350,21 +365,6 @@ export function AppHeader() {
                   )
                 })}
               </div>
-
-              <Link
-                className={`${styles.drawerLink} ${styles.drawerRecords}`}
-                to="/records"
-                aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <span className={styles.drawerIcon}>
-                  <FolderClock size={20} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>내 기록</strong>
-                  <small>저장한 분석과 전략 검증 기록을 확인합니다.</small>
-                </span>
-              </Link>
 
               {authStatus === 'authenticated' && user ? (
                 <div className={styles.drawerAuthActions}>
