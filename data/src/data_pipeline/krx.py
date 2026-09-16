@@ -116,6 +116,10 @@ class KrxResponseError(KrxError):
     """응답이 약속한 모양이 아니다. 값을 지어내지 않고 알린다."""
 
 
+class RawArchiveError(KrxError):
+    """``raw/`` 보관본을 읽을 수 없다. 원천 응답의 문제가 아니라 보관본의 문제다."""
+
+
 class ListingBoundaryError(KrxError):
     """상장 구간 밖의 가격 행이 나왔다 (FR-005, SC-003)."""
 
@@ -250,6 +254,11 @@ def _rows_from_response(
     rows = body[RESPONSE_ROWS_KEY]
     if not isinstance(rows, list):
         raise KrxResponseError(f"{RESPONSE_ROWS_KEY}가 배열이 아니다: {where}")
+    return _rows_from_payload(rows, where)
+
+
+def _rows_from_payload(rows: list[Any], where: str) -> list[Mapping[str, str]]:
+    """행 배열이 매핑의 나열인지 확인한다. 응답과 보관본이 같은 검사를 거치게 한다."""
     for position, row in enumerate(rows):
         if not isinstance(row, Mapping):
             raise KrxResponseError(f"{where}의 {position}번째 행이 매핑이 아니다")
@@ -298,6 +307,44 @@ class RawArchivingSource:
             encoding="utf-8",
         )
         return rows
+
+
+@dataclass
+class ArchiveReadingSource:
+    """``raw/``의 보관본을 원천 대신 돌려준다. :class:`RawArchivingSource` 가 쓴 것을 읽는다.
+
+    보관의 목적이 **재수집 없이 다시 정제하는 것**이므로(research.md 결정 8) 읽는 길이 있어야
+    그 목적이 성립한다. 같은 자료를 다시 내려받지 않으니 이용 한도를 쓰지 않는다.
+
+    방향은 여전히 ``raw → processed → PostgreSQL`` 한 방향이다. 이 덮개는 ``raw/``를 **읽기만**
+    하며 되돌려 쓰지 않는다.
+
+    **보관본이 없는 날은 빈 배열이 아니라 오류다.** 빈 배열은 이 원천에서 "그날 값이 없다"를
+    뜻하고 지수 쪽에서는 곧 휴장일이므로(:func:`data_pipeline.index.collect_index_quotes`),
+    없는 파일을 빈 배열로 돌려주면 **받지 않은 날이 휴장일로 둔갑해** 거래일 달력에서 조용히
+    빠진다. 그 뒤로는 빠진 날을 아무도 알아채지 못한다.
+    """
+
+    root: Path
+
+    def path_for(self, group: str, endpoint: str, bas_dd: date) -> Path:
+        return self.root / group / endpoint / f"{bas_dd:%Y%m%d}.json"
+
+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:
+        path = self.path_for(group, endpoint, bas_dd)
+        if not path.is_file():
+            raise RawArchiveError(
+                f"{bas_dd:%Y-%m-%d}의 {group}/{endpoint} 보관본이 없다: {path}. "
+                "받지 않은 날을 휴장일로 볼 수 없어 진행하지 않는다"
+            )
+        try:
+            body = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError as error:
+            raise RawArchiveError(f"보관본이 JSON이 아니다: {path} ({error})") from error
+        rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None
+        if not isinstance(rows, list):
+            raise RawArchiveError(f"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}")
+        return _rows_from_payload(rows, f"보관본 {path}")
 
 
 # ---------------------------------------------------------------------------

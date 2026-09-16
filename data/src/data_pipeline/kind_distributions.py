@@ -67,7 +67,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -103,6 +103,11 @@ DEFAULT_TIMEOUT_SECONDS: Final[float] = 60.0
 
 #: ISIN(국제증권식별번호). 국내 상장분은 ``KR`` + 10글자다.
 ISIN_PATTERN: Final[re.Pattern[str]] = re.compile(r"\AKR[0-9A-Z]{10}\Z")
+
+#: 종목 식별자. :data:`data_pipeline.krx.INSTRUMENT_ID_PATTERN` 과 같은 모양이며, 대응표
+#: 파일이 ISIN과 함께 들고 있는 값을 검사하는 데만 쓴다. 이 모듈이 :mod:`data_pipeline.krx`
+#: 를 끌어오지 않으려고 여기에 따로 둔다 — KIND 수집은 원천 API와 아무 관계가 없다.
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: 목록 행의 공시 링크에서 접수번호를 읽는다. 14글자이되 **숫자만은 아니다** — 2006~2009년
 #: 공시는 ``20061227U00003`` 처럼 날짜 여덟 자리 뒤에 영문 한 글자가 온다(2026-09-16 실측).
@@ -874,8 +879,57 @@ def load_fund_names(path: Path) -> dict[str, str]:
     return names
 
 
+def load_fund_isins(path: Path) -> dict[str, str]:
+    """같은 대응표 파일에서 ``{종목 식별자: ISIN}``을 읽는다.
+
+    :func:`collect_distribution_history` 는 ISIN으로 묻고 ``corporate_action``은 종목 식별자로
+    적재하므로, 둘을 잇는 대응이 어딘가에는 있어야 한다. 그 대응을 **관측 근거를 이미 요구하는
+    이 파일**이 함께 갖게 하면 짝이 어긋날 자리가 생기지 않는다. 파일을 따로 두면 한쪽만 고친
+    날 분배가 엉뚱한 종목에 붙는다.
+
+    ``official_names``는 읽지 않는다. 이름 대응이 필요한 쪽은 :func:`load_fund_names` 다.
+    """
+    if not path.is_file():
+        raise FundNameFileError(f"펀드 정식명 대응표 파일이 없다: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise FundNameFileError(f"대응표 파일이 JSON이 아니다: {path} ({error})") from error
+    root = _require_mapping(payload, f"대응표 파일 {path}의 최상위")
+    funds = root.get(_FUNDS_KEY)
+    if not isinstance(funds, list) or not funds:
+        raise FundNameFileError(f"대응표 파일에 {_FUNDS_KEY!r} 목록이 없거나 비었다: {path}")
+
+    isins: dict[str, str] = {}
+    for entry in funds:
+        fund = _require_mapping(entry, "종목 항목")
+        isin = _require_text(fund.get("isin"), "종목의 isin")
+        if ISIN_PATTERN.match(isin) is None:
+            raise FundNameFileError(f"ISIN이 KR로 시작하는 12글자가 아니다: {isin!r}")
+        instrument_id = _require_text(fund.get("instrument_id"), f"{isin}의 instrument_id")
+        if INSTRUMENT_ID_PATTERN.match(instrument_id) is None:
+            raise FundNameFileError(
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {instrument_id!r}"
+            )
+        if instrument_id in isins and isins[instrument_id] != isin:
+            raise FundNameFileError(
+                f"같은 종목 식별자가 두 ISIN을 가리킨다: {instrument_id} -> "
+                f"{isins[instrument_id]}, {isin}"
+            )
+        isins[instrument_id] = isin
+    reversed_map: dict[str, str] = {}
+    for instrument_id, isin in isins.items():
+        if isin in reversed_map:
+            raise FundNameFileError(
+                f"같은 ISIN을 두 종목 식별자가 가리킨다: {isin} -> "
+                f"{reversed_map[isin]}, {instrument_id}"
+            )
+        reversed_map[isin] = instrument_id
+    return isins
+
+
 # ---------------------------------------------------------------------------
-# 한 종목의 분배 이력
+# 분배 이력
 # ---------------------------------------------------------------------------
 
 
@@ -948,9 +1002,46 @@ def collect_distribution_history(
 
     ``(ISIN, 지급기준일, 지급예정일)`` 이 같으면 한 건으로 본다 — 정정공시가 같은 분배를 다시
     알리기 때문이다. 겹치면 **나중에 공시된 것**을 남긴다(정정이 원본을 대신한다).
+
+    여러 종목을 한 번에 모을 때는 :func:`collect_distribution_histories` 를 쓴다. 이 함수를
+    종목마다 부르면 같은 목록을 종목 수만큼 다시 훑는다.
     """
-    if ISIN_PATTERN.match(isin) is None:
-        raise ValueError(f"ISIN은 KR로 시작하는 12글자여야 한다: {isin!r}")
+    return collect_distribution_histories(
+        source, [isin], from_date, to_date, page_size=page_size, fund_names=fund_names
+    )[isin]
+
+
+def collect_distribution_histories(
+    source: KindPageSource,
+    isins: Iterable[str],
+    from_date: date,
+    to_date: date,
+    *,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    fund_names: Mapping[str, str] | None = None,
+) -> dict[str, DistributionHistory]:
+    """여러 종목(ISIN)의 분배 이력을 **목록을 한 번만 훑어** 모은다.
+
+    공시 목록에는 제목으로 걸러 주는 인자가 없어 기간의 전 페이지를 돌아야 하고, 그 비용은
+    찾는 종목 수와 무관하다(:func:`find_distribution_disclosures`). 종목마다
+    :func:`collect_distribution_history` 를 부르면 같은 목록과 같은 본문을 종목 수만큼 다시
+    받게 되므로, 여덟 종목의 전 이력을 모으는 일이 실무상 끝나지 않는다.
+
+    돌려주는 것은 ``{ISIN: 이력}`` 이며 **요청한 ISIN은 하나도 빠지지 않는다.** 분배가 한 건도
+    없는 종목도 빈 ``records``로 들어 있다. 빠뜨리면 부르는 쪽이 "없음"과 "묻지 않음"을 가릴 수
+    없다.
+
+    판정을 보류한 공시(:class:`UnkeyedDisclosure`)는 **요청한 모든 종목의 이력에 똑같이 담는다.**
+    어느 종목의 것인지 모르는 공시라 특정 종목에만 붙일 근거가 없고, 한 종목에만 붙이면 나머지
+    종목의 ``is_complete``가 근거 없이 참이 된다.
+    """
+    wanted = list(dict.fromkeys(isins))
+    if not wanted:
+        raise ValueError("ISIN을 하나도 주지 않았다")
+    for isin in wanted:
+        if ISIN_PATTERN.match(isin) is None:
+            raise ValueError(f"ISIN은 KR로 시작하는 12글자여야 한다: {isin!r}")
+    wanted_set = set(wanted)
     fund_name_index = build_fund_name_index(fund_names) if fund_names else {}
 
     refs: dict[str, DisclosureRef] = {}
@@ -974,10 +1065,10 @@ def collect_distribution_history(
                 )
             )
         for row, row_isin, matched_by in keyed:
-            if row_isin != isin:
+            if row_isin not in wanted_set:
                 continue
             record = DistributionRecord(
-                isin=isin,
+                isin=row_isin,
                 short_name=row.short_name,
                 record_date=row.record_date,
                 pay_date=row.pay_date,
@@ -985,22 +1076,24 @@ def collect_distribution_history(
                 acpt_no=ref.acpt_no,
                 matched_by=matched_by,
             )
-            key = (isin, row.record_date, row.pay_date)
+            key = (row_isin, row.record_date, row.pay_date)
             previous = chosen.get(key)
             if previous is None or previous[0] <= ref.disclosed_on:
                 chosen[key] = (ref.disclosed_on, record)
 
-    records = tuple(
-        record
-        for _, record in sorted(
-            chosen.values(), key=lambda item: (item[1].pay_date, item[1].record_date)
+    by_isin: dict[str, list[DistributionRecord]] = {isin: [] for isin in wanted}
+    for _, record in chosen.values():
+        by_isin[record.isin].append(record)
+    return {
+        isin: DistributionHistory(
+            isin=isin,
+            from_date=from_date,
+            to_date=to_date,
+            records=tuple(
+                sorted(by_isin[isin], key=lambda item: (item.pay_date, item.record_date))
+            ),
+            unkeyed=tuple(unkeyed),
+            disclosures_read=len(refs),
         )
-    )
-    return DistributionHistory(
-        isin=isin,
-        from_date=from_date,
-        to_date=to_date,
-        records=records,
-        unkeyed=tuple(unkeyed),
-        disclosures_read=len(refs),
-    )
+        for isin in wanted
+    }
