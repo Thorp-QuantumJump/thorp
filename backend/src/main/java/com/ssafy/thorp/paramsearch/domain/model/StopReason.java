@@ -21,5 +21,12 @@ public enum StopReason {
     /** 003 등록표의 활성 전략이 아니어서 조합 생성 전에 거부했다(FR-026). */
     STRATEGY_NOT_REGISTERED,
     /** 004가 실행을 지원하지 않는 전략이어서 조합 생성 전에 거부했다(FR-026). */
-    STRATEGY_NOT_EXECUTABLE
+    STRATEGY_NOT_EXECUTABLE,
+    /**
+     * 자동 탐색이 실행할 수 없는 전략이어서 조합 생성 전에 거부했다.
+     *
+     * <p>{@link #STRATEGY_NOT_EXECUTABLE}과 다르다 — 004는 이 전략을 실행할 수 있고 단건 분석은 그대로 된다. 자동 탐색이 못 하는 것은
+     * 목표 비중을 만들어 내는 일이다. 사용자가 할 일도 다르다: 기다리는 것이 아니라 분석하기로 실행하면 된다.
+     */
+    STRATEGY_NOT_SEARCHABLE
 }

@@ -43,6 +43,9 @@ public enum ErrorCode {
     UNREGISTERED_PARAMETER_VALUE(HttpStatus.BAD_REQUEST, "등록되지 않은 파라미터 값입니다."),
     STRATEGY_NOT_REGISTERED(HttpStatus.UNPROCESSABLE_ENTITY, "등록되지 않은 전략입니다."),
     STRATEGY_NOT_EXECUTABLE(HttpStatus.UNPROCESSABLE_ENTITY, "아직 실행을 지원하지 않는 전략입니다."),
+    STRATEGY_NOT_SEARCHABLE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "목표 비중을 직접 정하는 전략은 자동 탐색으로 비교할 수 없습니다. 분석하기에서 실행해 주세요."),
     REGISTRY_VERSION_CHANGED(HttpStatus.CONFLICT, "확인하신 사이에 전략 등록표가 바뀌었습니다. 바뀐 내용을 다시 확인해 주세요."),
     REGISTRY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "전략 등록 정보를 읽을 수 없습니다. 잠시 후 다시 시도해 주세요."),
     ALREADY_FINISHED(HttpStatus.CONFLICT, "이미 끝난 탐색입니다."),

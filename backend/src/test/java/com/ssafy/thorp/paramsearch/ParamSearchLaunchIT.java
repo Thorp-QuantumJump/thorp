@@ -15,7 +15,6 @@ import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +85,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Test
     @DisplayName("요청 전략에 기준이 없어도 접수가 기준과 후보를 실제로 발행한다")
     void acceptsAndLaunchesWithRealLauncher() {
-        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);
         assumeThat(targets).as("축이 있고 기준이 아닌 실행 가능 전략이 있어야 이 경로를 시험할 수 있다").isNotEmpty();
 
         ParamSearchResult accepted = paramSearchService.create(createCommand(targets));
@@ -123,7 +122,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Test
     @DisplayName("같은 조건을 두 번 접수해도 둘 다 받고, 두 묶음의 후보가 같은 실행을 나눠 쓴다")
     void sameConditionTwiceSharesRuns() {
-        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);
         assumeThat(targets).isNotEmpty();
 
         ParamSearchResult first = paramSearchService.create(createCommand(targets));
@@ -154,7 +153,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Test
     @DisplayName("공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다")
     void sharedRunFinishesEveryCandidateOnIt() {
-        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);
         assumeThat(targets).isNotEmpty();
 
         ParamSearchResult first = paramSearchService.create(createCommand(targets));
@@ -186,7 +185,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Test
     @DisplayName("기준 전략의 규칙 버전이 실행 조건 스냅샷에 들어 있다")
     void executionPlanCarriesBaselineRulesVersion() {
-        List<String> targets = searchableStrategyIdsExcludingBaseline();
+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);
         assumeThat(targets).isNotEmpty();
         String baselineStrategyId = registry.baselineStrategyId().orElse(null);
         assumeThat(baselineStrategyId).as("등록표가 기준 전략을 지정했을 때만 성립한다").isNotNull();
@@ -204,24 +203,6 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님. 전략 ID를 테스트에 적지 않는다(FR-025). */
-    private List<String> searchableStrategyIdsExcludingBaseline() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        String baselineStrategyId = registry.baselineStrategyId().orElse(null);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
-                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .filter(strategyId -> !strategyId.equals(baselineStrategyId))
-                .toList();
-    }
-
     private CreateParamSearchCommand createCommand(List<String> strategyIds) {
         return new CreateParamSearchCommand(
                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());
