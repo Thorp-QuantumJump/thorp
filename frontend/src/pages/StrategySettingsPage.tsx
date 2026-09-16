@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'
@@ -52,6 +52,8 @@ const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없�
 const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'
 const AUTO_COMPARE_NOT_READY = '설정 조합 자동 비교는 아직 준비 중입니다.'
 const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'
+const REQUEST_BUILD_FAILED =
+  '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'
 
 /**
  * 비중 합계가 어긋났다는 한 문장. 지금 합계를 함께 적어 얼마나 어긋났는지 보이게 한다.
@@ -72,7 +74,8 @@ interface InvalidValueListProps {
   /** 이 목록이 무엇에 대한 것인가. 보조기술이 두 목록을 구분할 이름이다 */
   label: string
   entries: InvalidStoredValue[]
-  onRestore: (strategyId: string, axisName: string) => void
+  /** 복원할 수 있는 항목 하나. 전략 축인지 분석 조건인지는 받는 쪽이 가른다 */
+  onRestore: (entry: InvalidStoredValue) => void
 }
 
 /**
@@ -88,12 +91,8 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) 
       {entries.map((entry) => (
         <li key={`${entry.strategyId ?? '-'}:${entry.axisName ?? '-'}`}>
           <span>{entry.message}</span>
-          {entry.restorable && entry.strategyId !== null && entry.axisName !== null ? (
-            <button
-              type="button"
-              className={styles.restoreButton}
-              onClick={() => onRestore(entry.strategyId as string, entry.axisName as string)}
-            >
+          {entry.restorable && entry.axisName !== null ? (
+            <button type="button" className={styles.restoreButton} onClick={() => onRestore(entry)}>
               기본값 복원
             </button>
           ) : null}
@@ -144,8 +143,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
 
   const reloadCatalog = useCallback(() => setCatalogReload((count) => count + 1), [])
 
-  const sectors = catalog?.status === 'loaded' ? catalog.catalog.sectors : null
-  const selection = useSectorSelection(sectors)
+  // 목록과 그 대응표 버전을 한 덩이로 넘긴다. 따로 넘기면 서로 다른 조회의 결과가 짝지어질 수 있다.
+  const selection = useSectorSelection(catalog?.status === 'loaded' ? catalog.catalog : null)
   const universeSize = selection.status === 'ready' ? selection.selection.items.length : null
 
   // --- 등록표 조회. 섹터 수를 알아야 유효성 제약을 미리 적용한 응답을 받는다 ----------------
@@ -194,29 +193,31 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')
 
   /**
-   * 통로 객체의 **최신 값**을 효과가 참조 변화 없이 읽는 자리다.
+   * 버전 조회는 **지금 넘겨받은 조회 함수**를 따른다.
    *
-   * <p>효과가 `support` 객체의 참조에 의존하면, 호출자가 렌더마다 새 객체를 만들어 넘길 때
-   * <b>부모가 다시 그려질 때마다 버전을 다시 조회한다.</b> 그때마다 화면이 '확인하는 중'으로
-   * 돌아가 '분석하기'가 잠깐씩 막히고, 사용자가 누르려던 순간에 버튼이 비활성으로 바뀐다.
+   * <p>한때 화면이 열릴 때 한 번만 조회했다(T094). 부모가 다시 그릴 때마다 조회가 되풀이되며
+   * '분석하기'가 잠깐씩 막히는 것을 없애려던 것인데, 그렇게 하면 호출자가 통로를 실제로 바꿨을 때도
+   * 버전 조회만 옛 통로에 멈춘다. 평가 기간 판정과 요청 전송은 새 통로를 쓰는데 버전은 옛 통로의
+   * 결과(예: 연결 전의 `null`)에 머물러 '분석하기'가 계속 막혔다.
    *
-   * <p><b>무한히 도는 것은 아니다.</b> 조회가 바꾸는 것은 이 화면의 상태뿐이라 부모는 다시 그려지지
-   * 않고, 그래서 조회가 스스로를 다시 부르지는 못한다. 되풀이는 부모가 제 사정으로 다시 그릴 때만
-   * 생긴다 — 드물지만 원인을 짐작하기 어려운 종류다.
+   * <p>그래서 두 가지를 갈라 푼다.
+   * <ul>
+   *   <li><b>무엇을 따를지는 조회 함수로 가른다.</b> 객체 참조가 아니라 함수 참조를 의존성으로 둔다.
+   *       통로 객체를 매번 새로 펼쳐 만들어도 같은 함수를 담고 있으면 다시 조회하지 않는다.</li>
+   *   <li><b>다시 조회하는 동안 받은 값을 거두지 않는다.</b> '확인하는 중'으로 되돌리지 않아 버튼이
+   *       깜빡이지 않는다. 새 결과가 오면 그 값으로 바뀌고, 조회가 실패하면 그때 막힌다.</li>
+   * </ul>
    *
-   * <p>통로를 `useMemo`로 감싸 달라는 계약을 아래 타입에 적어 두었으나, 계약만으로는 어겼다는
-   * 사실이 드러나지 않는다. 그래서 효과는 참조를 보지 않고 이 ref로 최신 통로를 읽는다. 조회는
-   * 화면이 열릴 때 한 번 돈다. 다시 조회할 수단은 B06이 등록표 조회처럼 재시도 토큰으로 더한다.
+   * <p><b>남는 비용</b>: 호출자가 렌더마다 조회 함수 자체를 새로 만들면 부모가 다시 그릴 때마다
+   * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않지만 요청은 헛돈다. 통로를 안정된 참조로 넘기라는
+   * 계약(`AnalysisSupport`)이 그 몫을 맡는다.
    */
-  const supportRef = useRef(support)
-  supportRef.current = support
+  const fetchAnalysisVersions = support.fetchAnalysisVersions
 
   useEffect(() => {
     const controller = new AbortController()
     let active = true
-    setVersions('loading')
-    supportRef.current
-      .fetchAnalysisVersions(controller.signal)
+    fetchAnalysisVersions(controller.signal)
       .then((next) => {
         if (active) setVersions(next)
       })
@@ -227,7 +228,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       active = false
       controller.abort()
     }
-  }, [])
+  }, [fetchAnalysisVersions])
 
   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------
   const minEvaluationYears = settings.ready
@@ -261,6 +262,23 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
   // 되돌아간 사실을 전략을 고른 뒤에야 알게 되고, 그것은 사용자 입장에서 조용히 바꾼 것과
   // 같다(FR-017).
   const globalInvalid = settings.invalidValues.filter((entry) => entry.strategyId === null)
+
+  /**
+   * 재검증이 비워 둔 시작 금액이 복원을 기다린다.
+   *
+   * 이 동안은 금액을 **모르는 것**으로 다룬다. 시작 금액이 비면 등록표 기본값이 쓰이므로, 여기서
+   * 기본값을 보이거나 보내면 사용자가 정한 적 없는 금액으로 조용히 바뀐 것과 같다(FR-017).
+   */
+  const amountAwaitsRestore = globalInvalid.some(
+    (entry) => entry.axisName === 'initialAmount' && entry.restorable,
+  )
+
+  /** 복원 버튼 하나가 전략 축과 분석 조건을 모두 받는다. 되돌릴 자리가 어디인지 항목이 말한다. */
+  const restoreInvalidValue = (entry: InvalidStoredValue) => {
+    if (entry.axisName === null) return
+    if (entry.strategyId !== null) settings.resetAxis(entry.strategyId, entry.axisName)
+    else if (entry.axisName === 'initialAmount') settings.resetAnalysisCondition('initialAmount')
+  }
   const strategyInvalid = settings.invalidValues.filter(
     (entry) => entry.strategyId !== null && entry.strategyId === settings.selectedStrategyId,
   )
@@ -295,7 +313,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
    * 채우면 그 값이 여기로 온다.
    */
   const initialAmount =
-    registry === null
+    registry === null || amountAwaitsRestore
       ? null
       : (settings.analysisCondition.initialAmount ?? registry.analysisConditions.initialAmount.default)
 
@@ -334,7 +352,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     const strategy = settings.selectedStrategy
     if (!strategy) return SELECT_STRATEGY_FIRST
     if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING
-    if (settingsIncomplete) return INVALID_STORED_VALUES
+    if (settingsIncomplete || amountAwaitsRestore) return INVALID_STORED_VALUES
     if (unbalancedUserWeights && selection.status === 'ready') {
       return weightsUnbalancedMessage(selection.weights.totalTenths)
     }
@@ -371,20 +389,34 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (analyzeBlocker !== null || prepared === null || submission.status === 'sending') return
 
     // 값을 만들지 않는다. 시작 금액은 요약 줄에 보인 값을 그대로 싣는다.
-    const request = buildBacktestRequest({
-      selection: prepared.selection,
-      strategy: prepared.strategy,
-      parameters: prepared.parameters,
-      registryVersion: prepared.registryVersion,
-      warmupTradingDays: prepared.warmupTradingDays,
-      versions: {
-        rulesVersion: prepared.versions.rulesVersion,
-        costProfileVersion: prepared.versions.costProfileVersion,
-      },
-      period: prepared.period,
-      initialAmount: prepared.initialAmount,
-      scenario: settings.analysisCondition.scenario,
-    })
+    //
+    // **조립도 실패를 알리는 길 안에 둔다.** 조립은 금액·비중이 계약 모양으로 옮겨지지 않으면 예외를
+    // 던지는데, 앞서는 이것이 `try` 밖이라 거부된 프로미스로 버려졌다. 버튼을 눌러도 진행 표시도
+    // 실패 안내도 없이 아무 일도 일어나지 않았다.
+    //
+    // 조립 실패는 서버가 한 말이 아니라 이 화면의 값이 계약에 맞지 않는다는 뜻이라, 예외 문장을
+    // 그대로 보이지 않고 사용자가 할 수 있는 일을 말한다. 원인은 개발 도구에서 볼 수 있게 남긴다.
+    let request
+    try {
+      request = buildBacktestRequest({
+        selection: prepared.selection,
+        strategy: prepared.strategy,
+        parameters: prepared.parameters,
+        registryVersion: prepared.registryVersion,
+        warmupTradingDays: prepared.warmupTradingDays,
+        versions: {
+          rulesVersion: prepared.versions.rulesVersion,
+          costProfileVersion: prepared.versions.costProfileVersion,
+        },
+        period: prepared.period,
+        initialAmount: prepared.initialAmount,
+        scenario: settings.analysisCondition.scenario,
+      })
+    } catch (error) {
+      console.error('분석 요청을 조립하지 못했습니다.', error)
+      setSubmission({ status: 'failed', message: REQUEST_BUILD_FAILED })
+      return
+    }
 
     setSubmission({ status: 'sending' })
     try {
@@ -441,7 +473,13 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         {selection.status === 'incomplete' ? (
           <NotReadyNotice
             className={styles.notice}
-            message="섹터·비중 단계를 먼저 마쳐 주세요. 비교하려면 섹터를 두 개 이상 골라야 합니다."
+            message={
+              // 대응표가 바뀐 경우는 "마치지 않았다"와 까닭이 달라, 같은 문장으로 알리면 사용자가
+              // 이미 고른 섹터를 왜 다시 골라야 하는지 모른다.
+              selection.problem === 'mapVersionChanged'
+                ? '섹터를 고른 뒤 섹터 대응표가 바뀌었습니다. 섹터·비중 단계에서 선택을 다시 확인해 주세요.'
+                : '섹터·비중 단계를 먼저 마쳐 주세요. 비교하려면 섹터를 두 개 이상 골라야 합니다.'
+            }
             action={{ label: '섹터·비중 단계로 이동', onAction: () => navigate('/diagnosis/sectors') }}
           />
         ) : null}
@@ -474,7 +512,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
               <InvalidValueList
                 label="다시 확인할 분석 조건"
                 entries={globalInvalid}
-                onRestore={settings.resetAxis}
+                onRestore={restoreInvalidValue}
               />
             ) : null}
 
@@ -527,7 +565,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
                   <InvalidValueList
                     label="다시 확인할 설정값"
                     entries={strategyInvalid}
-                    onRestore={settings.resetAxis}
+                    onRestore={restoreInvalidValue}
                   />
                 ) : null}
 

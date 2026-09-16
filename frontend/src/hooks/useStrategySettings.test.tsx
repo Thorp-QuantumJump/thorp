@@ -329,6 +329,95 @@ describe('useStrategySettings', () => {
     ).toBe(true)
   })
 
+  it('보관된 시작 금액이 등록표 범위 밖이면 비우고 복원을 기다린다', () => {
+    // S15P21E205-274, SC-002·FR-017. 축 값과 같은 잣대로 다시 판정한다.
+    const range = registryFixture.analysisConditions.initialAmount
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    // 범위 밖 값이 상태에도 저장소에도 남지 않는다.
+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()
+    expect((readStored().analysisCondition as Record<string, unknown>).initialAmount).toBeUndefined()
+
+    const entry = result.current.invalidValues.find((item) => item.axisName === 'initialAmount')
+    expect(entry).toMatchObject({ strategyId: null, reason: 'OUT_OF_RANGE', restorable: true })
+  })
+
+  it('간격에 맞지 않는 보관 금액도 비운다', () => {
+    const range = registryFixture.analysisConditions.initialAmount
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.min + 1 },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()
+    expect(result.current.invalidValues.find((item) => item.axisName === 'initialAmount')?.reason).toBe(
+      'OFF_STEP',
+    )
+  })
+
+  it('비워 둔 시작 금액의 안내는 새로 고쳐도 복원 전까지 남는다', () => {
+    // 옮기지 않으면 새로 고치는 순간 안내가 사라지고 기본값이 조용히 쓰인다.
+    const range = registryFixture.analysisConditions.initialAmount
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },
+      invalidValues: [],
+    })
+
+    renderSettings().unmount()
+    const { result } = renderSettings()
+
+    expect(result.current.invalidValues.some((item) => item.axisName === 'initialAmount')).toBe(true)
+  })
+
+  it('시작 금액 복원은 안내를 지우고 기본값을 쓰게 한다', () => {
+    const range = registryFixture.analysisConditions.initialAmount
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+    act(() => result.current.resetAnalysisCondition('initialAmount'))
+
+    expect(result.current.invalidValues.some((item) => item.axisName === 'initialAmount')).toBe(false)
+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()
+  })
+
+  it('범위 밖 시작 금액은 입력으로도 반영하지 않는다', () => {
+    // 복원 경로와 입력 경로가 다른 잣대를 쓰면 한쪽으로 범위 밖 값이 들어온다(SC-002).
+    const range = registryFixture.analysisConditions.initialAmount
+    const { result } = renderSettings()
+
+    act(() => result.current.setAnalysisCondition({ initialAmount: range.min - range.step }))
+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()
+
+    act(() => result.current.setAnalysisCondition({ initialAmount: range.min }))
+    expect(result.current.analysisCondition.initialAmount).toBe(range.min)
+  })
+
   it('선택 전략의 워밍업을 현재 설정으로 계산한다', () => {
     const { result } = renderSettings()
     act(() => result.current.select(unselectableStrategy.strategyId))

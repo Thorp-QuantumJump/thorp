@@ -171,12 +171,36 @@ export function checkAxisValue(
     return choice.selectable ? null : 'CHOICE_UNSELECTABLE'
   }
 
-  const range = axis.range
-  if (!range) return 'OUT_OF_RANGE'
+  if (!axis.range) return 'OUT_OF_RANGE'
+  return checkNumberInRange(value, axis.range)
+}
+
+/**
+ * 입력형 값 하나가 최소·최대 안이고 간격에 맞는가.
+ *
+ * 전략의 입력형 축과 분석 조건의 입력형 값(시작 금액)이 **같은 규칙**을 쓴다. 따로 두면 한쪽만
+ * 간격 판정을 빠뜨리는 일이 생긴다. 최솟값·최댓값과 정확히 같은 값은 허용한다(spec Edge Cases).
+ */
+export function checkNumberInRange(
+  value: unknown,
+  range: { min: number; max: number; step: number },
+): 'OUT_OF_RANGE' | 'OFF_STEP' | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 'OUT_OF_RANGE'
   if (value < range.min || value > range.max) return 'OUT_OF_RANGE'
   return isOnStep(value, range.min, range.step) ? null : 'OFF_STEP'
 }
+
+/**
+ * 사용자가 기본값 복원으로 되돌릴 수 있는 분석 조건.
+ *
+ * 지금은 시작 금액 하나다. 최소 평가 기간은 목록형이라 후보에 없으면 기본값으로 시작하고 알리기만
+ * 하며(되돌릴 값이 이미 기본값이다), 분석 기간은 001의 평가 가능 범위가 있어야 판정할 수 있어
+ * 이 재검증이 다루지 않는다 — B10이 기간 입력을 만들 때 함께 판정한다.
+ */
+export type RestorableCondition = 'initialAmount'
+
+/** 시작 금액을 가리키는 표시 이름. 요약 줄의 항목 이름과 같게 둔다. */
+const INITIAL_AMOUNT_LABEL = '시작 금액'
 
 function displayValue(value: unknown): string {
   if (isScalar(value)) return String(value)
@@ -466,19 +490,73 @@ export function reconcileStoredSettings(
     minEvaluationYears = fallback
   }
 
+  // --- 시작 금액 ---------------------------------------------------------------------------
+  //
+  // **축 값과 같은 잣대로 다시 판정한다.** 앞서는 분석 조건을 통째로 옮겨 시작 금액이 판정 없이
+  // 살아남았고, 등록표 범위가 좁아졌거나 저장소가 편집된 경우 범위 밖 금액이 화면에 보이고 요청으로
+  // 나갔다(SC-002, FR-017).
+  //
+  // **비우되, 비운 것이 곧 기본값이 되지 않게 한다.** 시작 금액이 없으면 화면은 등록표 기본값을
+  // 쓰므로, 비우기만 하면 사용자가 정한 적 없는 기본값으로 조용히 바뀐 것과 같다. 그래서 복원
+  // 가능한 안내를 남기고, 화면은 그 안내가 남아 있는 동안 금액을 모르는 것으로 다룬다. 사용자가
+  // 복원을 눌러야 안내가 사라지고 기본값이 쓰인다.
+  const { initialAmount: storedAmount, ...otherConditions } = stored.analysisCondition
+  let initialAmount: number | undefined = storedAmount
+  if (storedAmount !== undefined) {
+    const range = registry.analysisConditions.initialAmount
+    const reason = checkNumberInRange(storedAmount, range)
+    if (reason !== null) {
+      const unit = range.unit ?? ''
+      invalidValues.push({
+        strategyId: null,
+        axisName: 'initialAmount',
+        storedValue: storedAmount,
+        reason,
+        message:
+          reason === 'OUT_OF_RANGE'
+            ? `'${INITIAL_AMOUNT_LABEL}'의 저장값 ${displayValue(storedAmount)}${unit}은(는) 허용 범위(${range.min}~${range.max}${unit}) 밖입니다.`
+            : `'${INITIAL_AMOUNT_LABEL}'의 저장값 ${displayValue(storedAmount)}${unit}은(는) 등록된 간격(${range.step}${unit})에 맞지 않습니다.`,
+        restorable: true,
+      })
+      initialAmount = undefined
+    }
+  } else {
+    // 앞선 판정에서 비워 두고 아직 복원하지 않았으면 그 안내를 그대로 옮긴다. 옮기지 않으면
+    // 새로 고치는 순간 안내가 사라지고 기본값이 조용히 쓰인다.
+    const pendingAmount = stored.invalidValues.find(
+      (entry) => entry.strategyId === null && entry.axisName === 'initialAmount' && entry.restorable,
+    )
+    if (pendingAmount) invalidValues.push(pendingAmount)
+  }
+
   const selectedStrategyId =
     stored.selectedStrategyId !== null && strategies.has(stored.selectedStrategyId)
       ? stored.selectedStrategyId
       : null
+
+  const analysisCondition: AnalysisCondition = {
+    ...otherConditions,
+    minEvaluationYears,
+    scenario: 'FULL_PERIOD',
+  }
+  if (initialAmount !== undefined) analysisCondition.initialAmount = initialAmount
 
   return {
     registryVersion: registry.registryVersion,
     universeSize,
     selectedStrategyId,
     valuesByStrategy,
-    analysisCondition: { ...stored.analysisCondition, minEvaluationYears, scenario: 'FULL_PERIOD' },
+    analysisCondition,
     invalidValues,
   }
+}
+
+/** 전략과 무관한 분석 조건 하나의 무효 안내를 뺀다. */
+function withoutCondition(
+  entries: InvalidStoredValue[],
+  name: RestorableCondition,
+): InvalidStoredValue[] {
+  return entries.filter((entry) => !(entry.strategyId === null && entry.axisName === name))
 }
 
 // ---------------------------------------------------------------------------
@@ -508,6 +586,8 @@ export type StrategySettings = {
   resetAxis: (strategyId: string, axisName: string) => void
   resetAll: (strategyId: string) => void
   setAnalysisCondition: (patch: Partial<Omit<AnalysisCondition, 'scenario'>>) => void
+  /** 재검증이 비워 둔 분석 조건을 등록표 기본값으로 되돌리고 그 안내를 지운다 */
+  resetAnalysisCondition: (name: RestorableCondition) => void
 }
 
 /**
@@ -678,6 +758,7 @@ export function useStrategySettings(
       setState((current) => {
         if (current === null) return current
         const next: AnalysisCondition = { ...current.analysisCondition, ...patch, scenario: 'FULL_PERIOD' }
+        let invalidValues = current.invalidValues
         // 등록표 후보에 없는 최소 평가 기간은 반영하지 않는다(FR-006과 같은 규약).
         if (
           patch.minEvaluationYears !== undefined &&
@@ -685,11 +766,39 @@ export function useStrategySettings(
         ) {
           next.minEvaluationYears = current.analysisCondition.minEvaluationYears
         }
-        return { ...current, analysisCondition: next }
+        // 시작 금액도 보관값 재검증과 같은 잣대로 본다. 입력 경로와 복원 경로가 다른 잣대를 쓰면
+        // 한쪽으로 범위 밖 값이 들어온다(SC-002). 받아들인 값은 그 항목의 무효 안내를 지운다.
+        if ('initialAmount' in patch) {
+          if (
+            patch.initialAmount !== undefined &&
+            checkNumberInRange(patch.initialAmount, registry.analysisConditions.initialAmount) !== null
+          ) {
+            if (current.analysisCondition.initialAmount === undefined) delete next.initialAmount
+            else next.initialAmount = current.analysisCondition.initialAmount
+          } else if (patch.initialAmount !== undefined) {
+            invalidValues = withoutCondition(invalidValues, 'initialAmount')
+          }
+        }
+        return { ...current, analysisCondition: next, invalidValues }
       })
     },
     [registry],
   )
+
+  const resetAnalysisCondition = useCallback((name: RestorableCondition) => {
+    setState((current) => {
+      if (current === null) return current
+      // 값을 지워 등록표 기본값이 쓰이게 한다. 사용자가 복원을 눌렀으므로 이제 기본값은 사용자가
+      // 고른 값이다 — 재검증이 비워 둔 상태와 달리 안내도 함께 지운다.
+      const analysisCondition = { ...current.analysisCondition }
+      delete analysisCondition[name]
+      return {
+        ...current,
+        analysisCondition,
+        invalidValues: withoutCondition(current.invalidValues, name),
+      }
+    })
+  }, [])
 
   return {
     ready,
@@ -710,5 +819,6 @@ export function useStrategySettings(
     resetAxis,
     resetAll,
     setAnalysisCondition,
+    resetAnalysisCondition,
   }
 }
