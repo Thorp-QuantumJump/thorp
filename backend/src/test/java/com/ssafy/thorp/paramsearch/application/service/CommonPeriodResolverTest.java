@@ -50,10 +50,14 @@ class CommonPeriodResolverTest {
                             new ParameterAxis(
                                     AXIS,
                                     "관측 기간",
+                                    null,
                                     "거래일",
                                     List.of(20, 63),
                                     20,
-                                    AllowedRange.ofValues(List.of(20, 63)))));
+                                    AllowedRange.ofValues(List.of(20, 63)))),
+                    true,
+                    null,
+                    "COMPUTED");
 
     private static final SearchSpace SPACE =
             SearchSpace.of(

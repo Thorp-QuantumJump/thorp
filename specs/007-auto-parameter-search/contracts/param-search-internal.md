@@ -10,45 +10,71 @@
 
 ## 1. `ParameterRegistryPort` — 003과의 경계 (research R1, 2026-09-11 개정)
 
-003이 소유한 전략·파라미터 등록표를 007이 읽는 **유일한** 통로다. 003 완성 시 구현체만 교체한다.
+003이 소유한 전략·파라미터 등록표를 007이 읽는 **유일한** 통로다.
 007은 이 포트가 돌려주는 값 외에 전략에 대해 아무것도 알지 못한다(FR-025).
+
+**위치는 003 소유다.** 포트와 값 타입은 `backend/src/main/java/com/ssafy/thorp/strategy/application/port/`에,
+`RegistryUnavailableException`은 `strategy/application/exception/`에 있다. 007은 이 경로를 import할
+뿐이고 반대 방향 의존은 없다 — 방향은 `paramsearch → strategy` 하나이며 `ArchitectureTest` 규칙 8이
+지킨다([003 내부 계약](../../003-strategy-settings/contracts/strategy-registry-internal.md) §1).
 
 ```java
 public interface ParameterRegistryPort {
 
-    /** 등록표 버전. 임시 구현은 "PROVISIONAL-" 로 시작한다. */
+    /** 등록표 버전. 팀 미확정 값은 "PROVISIONAL-" 로 시작한다. */
     String version();
 
-    /** 활성 전략 전체. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026). */
+    /** 등록표의 값이 아직 팀 확정값이 아닌가. version()의 접두로 판정한다. */
+    boolean provisional();
+
+    /** 활성 전략만. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026). */
     List<StrategyRegistration> activeStrategies();
 
-    /** 전략 하나의 등록 정보. 등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026). */
+    /** 전략 하나의 등록 정보. 비활성 전략도 포함한다. 등록되지 않았으면 empty(FR-026). */
     Optional<StrategyRegistration> find(String strategyId);
 
-    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다(FR-006). */
-    ValidationVerdict validate(String strategyId, ParameterCombination combination, SearchContext context);
+    /** 그 전략의 유효성 규칙 목록. 003 조회 API가 쓴다 — 007은 부르지 않아도 된다. */
+    List<ValidationRule> rules(String strategyId);
+
+    /** 전략 공통 분석 조건(시작 금액·목표 변동성·최소 평가 기간). 003 화면이 쓴다. */
+    AnalysisConditionRegistry analysisConditions();
+
+    /**
+     * 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다(FR-006).
+     *
+     * 조합을 축 이름 → 값의 Map으로 받는다 — 007의 ParameterCombination을 받으면 등록표를 소유한
+     * 003이 007 도메인 VO에 의존해 없애려던 역방향 의존이 되살아난다. 호출자가 자기 표현을 풀어 넘긴다.
+     */
+    ValidationVerdict validate(String strategyId, Map<String, Object> parameters, SearchContext context);
 
     /** 손실 제약 기준으로 쓸 전략. 등록표가 '기준 전략' 역할로 지정한다(FR-013d). 지정이 없으면 empty. */
     Optional<String> baselineStrategyId();
 }
 
 public record StrategyRegistration(
-        String strategyId,          // "sector-momentum"
-        String name,                // "섹터 모멘텀" — 표시용. 007이 만들지 않는다
+        String strategyId,          // "SECTOR_MOMENTUM"
+        String name,                // "흐름을 따라 배분하기" — 표시용. 007이 만들지 않는다
         String description,         // 표시용, null 허용
-        List<ParameterAxis> axes    // 순서 보존. 축이 없으면 빈 목록(조합 1건)
+        List<ParameterAxis> axes,   // 순서 보존. 축이 없으면 빈 목록(조합 1건)
+        boolean active,             // 비활성 전략은 activeStrategies()에서 빠지고 find()에는 남는다
+        WarmupRule warmup,          // 워밍업 산출 규칙. 없으면 워밍업 0이다
+        String targetWeightSource   // USER | EQUAL | COMPUTED — 003 화면이 쓴다
 ) {}
 
 public record ParameterAxis(
         String name,            // "lookbackDays"
         String label,           // "관측 기간"
+        String description,     // 항목의 의미 한 문장. 003 화면이 쓴다, null 허용
         String unit,            // "거래일", null 허용
         List<Object> searchValues,   // 자동 탐색 후보값. 인덱스가 그리드 좌표다
         Object defaultValue,         // 기본 시작값. 007이 정하지 않는다(FR-027)
         AllowedRange allowedRange    // 입력 허용 범위. 상세 변경의 경계(FR-027)
 ) {}
 
-/** 입력 허용 범위. 열거형 축은 values만, 수치형 축은 min·max·step을 쓴다. 등록표가 준 형태를 그대로 옮긴다. */
+/**
+ * 입력 허용 범위. 목록형 축은 values만, 입력형 축은 min·max·step을 쓰며 둘을 동시에 채우지 않는다.
+ * 등록표가 준 형태를 그대로 옮긴다.
+ */
 public record AllowedRange(Object min, Object max, Object step, List<Object> values) {}
 
 public record ValidationVerdict(boolean valid, String reasonCode, String reasonDetail) {}
@@ -75,11 +101,15 @@ public record SearchContext(int universeSize) {}
   (`drawdownFilterApplied = false`). **007이 어느 전략이 기준인지 추정하지 않는다** — 기준 전략 ID를
   코드에 두면 그것이 FR-025 위반이고, 사용자 등록 전략이 늘어나면 곧바로 깨진다 (FR-013d·FR-025).
 
-**임시 구현 `ProvisionalFileParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고,
-전략·축·후보값·기본값·허용 범위·유효성 규칙은 자원 파일
-`backend/src/main/resources/registry/parameter-registry-provisional.yml`에서 읽는다. **Java 코드
-상수로 두지 않는다** — 그것이 곧 007의 하드코딩이다(FR-025). PD-02가 확정되지 않았으므로 **이 값은
-팀 확정값이 아니다**: API 응답의 `registryVersion`과 화면 표시로 임시임을 밝힌다.
+**구현 `FileParameterRegistry`**(`backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/`):
+전략·축·후보값·기본값·허용 범위·유효성 규칙·분석 조건을 자원 파일
+`backend/src/main/resources/registry/parameter-registry.yml`에서 읽는다. **Java 코드 상수로 두지
+않는다** — 그것이 곧 007의 하드코딩이다(FR-025). 잘못 적힌 등록표로는 기동하지 않는다.
+
+PD-02는 2026-09-15에 확정됐으므로([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))
+현재 값은 팀 확정값이고 `provisional()`은 `false`다. 미확정 값을 다시 담아야 하면 `version()`에
+`PROVISIONAL-` 접두를 붙이며, 그때 코드는 바뀌지 않는다 — API 응답의 `registryVersion`과 화면 표시가
+그 사실을 그대로 나른다.
 
 테스트는 같은 포트의 fixture 구현으로 한다. 여섯 번째 가짜 전략을 넣은 fixture로 미리보기·후보 조합
 생성이 운영 코드 변경 없이 동작함을 검증한다(SC-010).

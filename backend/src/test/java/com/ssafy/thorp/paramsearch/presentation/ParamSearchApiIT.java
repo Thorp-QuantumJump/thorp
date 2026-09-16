@@ -94,9 +94,10 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 .andExpect(
                         jsonPath("$.data.limits.provisional")
                                 .value(Matchers.hasItem("maxCandidates")))
+                // 접두를 단언하지 않는다 — PD-02 확정으로 접두가 사라졌고, 임시값을 다시 담는 날
+                // 이 단언이 또 낡는다. 응답이 나르는 것은 '지금 등록표의 버전'이다.
                 .andExpect(
-                        jsonPath("$.data.registryVersion")
-                                .value(Matchers.startsWith("PROVISIONAL-")))
+                        jsonPath("$.data.registryVersion").value(Matchers.is(registry.version())))
                 .andExpect(jsonPath("$.data.validationLabel").value("UNVALIDATED"))
                 .andExpect(jsonPath("$.data.commonPeriod.start").exists());
     }

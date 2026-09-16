@@ -15,14 +15,39 @@ import java.util.Optional;
  */
 public interface ParameterRegistryPort {
 
-    /** 등록표 버전. 접수 시점에 고정해 묶음에 저장한다(FR-028). 임시 구현은 {@code PROVISIONAL-}로 시작한다. */
+    /** 등록표 버전. 접수 시점에 고정해 묶음에 저장한다(FR-028). 임시 값은 {@code PROVISIONAL-}로 시작한다. */
     String version();
 
-    /** 활성 전략 전체. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026). */
+    /**
+     * 등록표의 값이 아직 팀 확정값이 아닌가. {@link #version()}이 {@code PROVISIONAL-}로 시작하는지로 판정한다.
+     *
+     * <p>접두를 떼는 날 코드가 바뀌면 안 되므로 로더가 접두를 강제하지 않고 이 메서드로 알린다. {@code true}면 화면과 요청 결과에 임시값임을 표시한다(내부
+     * 계약 §2.1).
+     */
+    boolean provisional();
+
+    /** <b>활성 전략만</b> 돌려준다. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026, 내부 계약 §2.3). */
     List<StrategyRegistration> activeStrategies();
 
-    /** 전략 하나의 등록 정보. 등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026). */
+    /**
+     * 전략 하나의 등록 정보. <b>비활성 전략도 포함한다</b>(내부 계약 §2.3) — 과거 기록을 해석할 때 그 시점에 쓰인 이름과 축 구성이 필요하기 때문이다.
+     *
+     * <p>등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026).
+     */
     Optional<StrategyRegistration> find(String strategyId);
+
+    /**
+     * 그 전략의 유효성 규칙 목록. 규칙이 없는 전략은 빈 목록이다.
+     *
+     * <p><b>빈 목록과 "등록되지 않은 전략"은 다르다.</b> 이 메서드는 둘을 구분하지 않으므로 등록 여부는 {@link #find}로 먼저 확인한다.
+     *
+     * <p>003 조회 API가 쓴다. 화면이 입력형 축의 값을 타이핑하는 동안 그 자리에서 판정하려면 판정 결과가 아니라 조건 자체가 필요하다(FR-008, 내부 계약
+     * §3). 007은 부르지 않아도 된다 — {@link #validate}로 충분하다.
+     */
+    List<ValidationRule> rules(String strategyId);
+
+    /** 전략과 무관한 공통 분석 조건(시작 금액·목표 변동성·최소 평가 기간). 003 화면이 쓴다(data-model §7, 내부 계약 §3). */
+    AnalysisConditionRegistry analysisConditions();
 
     /**
      * 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 돌려준다(FR-006).

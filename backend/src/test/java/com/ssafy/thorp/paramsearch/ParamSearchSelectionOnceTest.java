@@ -85,28 +85,34 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
     @DisplayName("마지막 후보가 끝나기 전에는 선정이 없고, 끝나면 한 번 생긴다")
     void selectionHappensOnlyWhenTheBatchDrains() {
         ParamSearch search = accept();
-        List<SearchCandidate> dispatched = dispatched(search);
-        assertThat(dispatched).as("중간 상태를 보려면 발행된 후보가 둘 이상이어야 한다").hasSizeGreaterThan(1);
+        int total = candidateRepository.findByParamSearchId(search.getId()).size();
+        assertThat(total).as("중간 상태를 보려면 후보가 둘 이상이어야 한다").isGreaterThan(1);
 
-        // 마지막 하나를 남기고 끝낸다.
-        for (int i = 0; i < dispatched.size() - 1; i++) {
-            finish(dispatched.get(i), "0.1000");
+        // 마지막 하나를 남기고 끝낸다. 발행 창이 좁아 한 번에 다 나와 있지 않으므로 끝낼 때마다 다시 본다.
+        for (int done = 0; done < total - 1; done++) {
+            finish(nextDispatched(search), "0.1000");
             assertThat(reload(search).getSelection()).as("아직 남은 후보가 있으면 분위가 확정되지 않는다").isNull();
         }
-        finish(dispatched.get(dispatched.size() - 1), "0.2000");
+        finish(nextDispatched(search), "0.2000");
 
         ParamSearch finished = reload(search);
         assertThat(finished.getSelection()).isNotNull();
         assertThat(finished.getStatus()).isEqualTo(ParamSearchStatus.COMPLETED);
-        assertThat(finished.getSelection())
-                .containsKeys("displayed", "shortOfDisplayCount", "note", "drawdownFilterApplied");
+        Map<String, Object> selection = finished.getSelection();
+        assertThat(selection)
+                .containsKeys("displayed", "shortOfDisplayCount", "drawdownFilterApplied");
+        // note 는 "표시 수를 채우지 못한 이유"라 채울 이유가 없으면 null이고, 저장 JSON 규칙이
+        // null 값의 키를 생략한다(읽는 쪽은 "키 없음 == null"). 채운 경우에만 키가 있어야 한다.
+        if (Boolean.TRUE.equals(selection.get("shortOfDisplayCount"))) {
+            assertThat(selection).containsKey("note");
+        }
     }
 
     @Test
     @DisplayName("이미 선정된 묶음을 다시 계산하지 않는다")
     void selectionIsNotRecomputed() {
         ParamSearch search = accept();
-        dispatched(search).forEach(candidate -> finish(candidate, "0.1000"));
+        drain(search);
 
         ParamSearch finished = reload(search);
         Map<String, Object> first = finished.getSelection();
@@ -121,7 +127,7 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
     @DisplayName("표시 후보에는 선정 사유가, 나머지에도 어느 단계에서 빠졌는지가 남는다")
     void everyCandidateKeepsItsReason() {
         ParamSearch search = accept();
-        dispatched(search).forEach(candidate -> finish(candidate, "0.1000"));
+        drain(search);
 
         List<SearchCandidate> candidates = candidateRepository.findByParamSearchId(search.getId());
         assertThat(candidates)
@@ -146,6 +152,25 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
                                 Map.of(),
                                 registry.version()));
         return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();
+    }
+
+    /**
+     * 후보가 하나도 남지 않을 때까지 끝낸다.
+     *
+     * <p><b>발행된 목록을 한 번 찍어 두고 그것만 끝내지 않는다</b> — 발행 창이 좁아 후보 하나가 끝나야 다음이 나간다. 등록표의 조합 수가 늘면 찍어 둔 목록이
+     * 전체의 일부가 되고, 묶음이 끝나지 않아 선정이 돌지 않는다.
+     */
+    private void drain(ParamSearch search) {
+        List<SearchCandidate> next;
+        while (!(next = dispatched(search)).isEmpty()) {
+            next.forEach(candidate -> finish(candidate, "0.1000"));
+        }
+    }
+
+    private SearchCandidate nextDispatched(ParamSearch search) {
+        return dispatched(search).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("발행된 후보가 없다"));
     }
 
     private List<SearchCandidate> dispatched(ParamSearch search) {
@@ -211,6 +236,9 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
                         String.class);
         return registry.activeStrategies().stream()
                 .filter(registration -> !registration.axes().isEmpty())
+                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
+                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
+                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
                 .map(StrategyRegistration::strategyId)
                 .filter(registered::contains)
                 .toList();
