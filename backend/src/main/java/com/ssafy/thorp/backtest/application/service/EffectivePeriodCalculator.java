@@ -13,31 +13,33 @@ import org.springframework.stereotype.Component;
 /**
  * 워밍업을 반영한 실제 평가 구간(spec 004 research R-15).
  *
- * <p><b>평가 시작일 = max(요청 시작일, 자료가 시작된 뒤 워밍업 {@code warmup}번째 거래일)</b>. 여기서 "자료가 시작된 뒤"는 가장 늦게 상장한
- * 종목의 상장일이다 — 그 전에는 공통 비교가 불가능하다. 001 {@code contracts/evaluation-window.md}가 정한 {@code
- * commonStart} 산식이 바로 뒤쪽 항이고, 산식의 기준점에 <b>요청 시작일은 들어가지 않는다</b>. 그 결과가 {@code effectiveStart}이고 같은
- * 값이 동일 버전 키에도 들어간다(R-03).
+ * <p><b>평가 시작일 = 요청 시작일 당일 또는 그 뒤 첫 거래일이다.</b> 워밍업만큼 뒤로 밀지 않는다. 워밍업 자료는 요청 구간보다 <b>앞에서</b> 읽고 앞이
+ * 모자라면 있는 만큼만 읽기 때문이다(001 {@code contracts/market-dataset.md} 「읽기 규칙」). 그래서 2020-01-01부터 보고 싶다는 요청은
+ * 2020-01-01부터 평가한다. 요청 시작일을 거래일에 맞추기만 하는 것은, 주말을 평가 첫날로 삼으면 워커가 고르는 첫 거래일과 값이 갈리기 때문이다.
  *
- * <p><b>워밍업은 요청 구간을 깎지 않는다.</b> 요청 시작일 앞에 워밍업 자료가 있으면 워커가 요청 구간보다 앞에서 읽는다(001 {@code
- * contracts/market-dataset.md} 「읽기 규칙」). 그래서 2020-01-01부터 보고 싶다는 요청은 2020-01-01부터 평가한다. 상장일이 요청보다
- * 늦을 때만 앞에 읽을 자료가 없으므로 밀린다. 007 {@code CommonPeriodResolver}가 같은 규칙을 쓴다.
+ * <p><b>미는 판정은 워커가 단독으로 한다.</b> 성과를 집계하기 시작하는 날은 {@code max(앵커, calendar[warmup])}이고 그 판정은 워커
+ * {@code engine_runner.evaluation_start()}의 몫이다(같은 계약). 백엔드가 여기서 먼저 밀면 그 값이 앵커로 실려 나가 <b>워커가 되돌릴 수
+ * 없다</b> — 밀린 날짜를 받은 워커는 그것이 요청 시작일인지 이미 밀린 값인지 구별하지 못한다. 그래서 판정하는 곳을 한 군데로 둔다. 앞이 모자라면 워커가 모자란 만큼만
+ * 미루고, 읽어 온 달력 전체로도 워밍업을 채우지 못하면 그때 {@code MarketDataError}로 멈춘다.
  *
- * <p><b>이 계산기는 데이터셋이 언제 시작하는지 모른다.</b> 계약이 요구하는 기준점은 사실 {@code max(상장일, 데이터셋 첫 거래일)}인데 {@link
- * com.ssafy.thorp.backtest.application.port.MarketMetadataPort}에 자료 시작일을 묻는 길이 없어 앞쪽 항만 쓴다. 픽스처에서
- * 둘은 8년 어긋나 있다 — 어댑터 상장일은 2015·2018이고 워커가 읽는 자료는 2023-01-02부터다({@code MarketFixtureAlignmentTest}가
- * 이 사실을 붙박는다). <b>그래서 이 클래스가 낸 {@code effectiveStart} 앞에 워밍업 자료가 없을 수 있다.</b>
+ * <p><b>{@code commonStart}는 계속 계산하되 {@code effectiveStart}를 정하는 데 쓰지 않는다.</b> 001 {@code
+ * contracts/evaluation-window.md}가 정한 "후보 집합을 평가할 수 있는 가장 이른 날"이고, 003 화면의 "이 섹터를 빼면 기간이 늘어납니다" 안내와
+ * 007의 탐색 구간 산출이 그 값을 쓴다(FR-007·FR-008). 여기서는 진단용으로 싣고, <b>그 값이 요청 종료일보다 뒤일 때만</b> 거절의 근거가 된다 — 요청
+ * 구간 안에 이 후보 집합으로 평가할 수 있는 날이 하루도 없다는 뜻이라 워커에게 보내도 결과가 나오지 않는다.
  *
- * <p>막는 곳은 워커 {@code engine_runner.evaluation_start()}다 — 읽어 온 달력으로 {@code max(앵커,
- * calendar[warmup])}를 한 번 더 적용한다. 워커의 "자료가 시작된 뒤"는 <b>읽어 온 가격 행의 합집합 첫날</b>이라 기준점이 여기와 다르다. <b>이 값이
- * 작업 메시지에 늘 실리므로 워커의 되밀기는 모든 실행에 걸린다</b> — 늘 실린다는 것이 안심의 근거가 아니라, 워커 쪽 바닥이 없으면 모든 실행이 위험해진다는 뜻이다.
+ * <p><b>이 계산기는 데이터셋이 언제 시작하는지 모른다.</b> {@link
+ * com.ssafy.thorp.backtest.application.port.MarketMetadataPort}에 자료 시작일을 묻는 길이 없어 {@code
+ * commonStart}의 기준점도 상장일 하나다. 픽스처에서 둘은 8년 어긋나 있다 — 어댑터 상장일은 2015·2018이고 워커가 읽는 자료는
+ * 2023-01-02부터다({@code MarketFixtureAlignmentTest}가 이 사실을 붙박는다). 요청 시작일을 그대로 쓰는 지금 규칙에서는 이 한계가
+ * {@code effectiveStart}를 틀리게 하지 않는다 — 사용자가 자료보다 앞을 고르면 워커가 되민다. 근본 해결은 포트가 자료 시작일을 알려 주는 것이며 001의
+ * 자료 계층과 함께 옮긴다(001 {@code tasks.md} T029).
  *
  * <p><b>남는 한계</b>: 되밀기가 일하면 사용자에게 보여 준 {@code effectiveStart}와 실제 평가 기간이 갈린다. 실패하는 것보다 낫지만 완전한 해결은
- * 아니다. 근본 해결은 포트가 자료 시작일을 알려 주고 이 계산기가 {@code max(상장일, 데이터셋 첫 거래일)}에서 세는 것이며, 001의 자료 계층과 함께
- * 옮긴다(001 {@code tasks.md} T029).
+ * 아니다. 픽스처 달력이 공휴일을 모르는 것도 같은 성격의 한계다.
  *
  * <p><b>요청값이 전략 요구값보다 작으면 조용히 올리지 않고 거절한다.</b> 비교 묶음(003 다섯 전략 화면, 007 자동 탐색)이 후보 전체의 최대 관측 길이를
- * 넘기기로 되어 있는데, 그보다 작은 값이 왔다는 것은 묶음 쪽 계산이 틀렸다는 신호다. {@code max()}로 고쳐 통과시키면 묶음 안 실행들의 {@code
- * effectiveStart}가 서로 어긋난 채 지나가고, 그러면 나란히 놓고 비교한 숫자가 사실은 다른 구간의 값이 된다.
+ * 넘기기로 되어 있는데, 그보다 작은 값이 왔다는 것은 묶음 쪽 계산이 틀렸다는 신호다. {@code max()}로 고쳐 통과시키면 묶음 안 실행들의 워밍업이 서로 어긋난 채
+ * 지나가고, 그러면 나란히 놓고 비교한 숫자가 사실은 다른 관측 길이로 낸 값이 된다.
  */
 @Component
 public class EffectivePeriodCalculator {
@@ -49,9 +51,11 @@ public class EffectivePeriodCalculator {
     }
 
     /**
+     * @param effectiveStart 요청 시작일 당일 또는 그 뒤 첫 거래일. <b>워밍업만큼 밀린 값이 아니다</b> — 미는 일은 워커가 한다
      * @param warmupTradingDays 서버가 확정한 실효 워밍업. 동일 버전 키에 들어간다
      * @param commonStart 001 {@code contracts/evaluation-window.md}의 {@code commonStart} — 가장 늦게
-     *     상장한 종목의 상장일 이후 워밍업 {@code warmupTradingDays}번째 거래일. <b>요청 시작일은 이 값에 들어가지 않는다.</b> 진단용
+     *     상장한 종목의 상장일 이후 워밍업 {@code warmupTradingDays}번째 거래일. <b>요청 시작일은 이 값에 들어가지 않고, 이 값도 {@code
+     *     effectiveStart}에 들어가지 않는다.</b> 진단용이며 요청 종료일을 넘을 때만 거절의 근거가 된다
      */
     public record EffectivePeriod(
             LocalDate effectiveStart,
@@ -113,38 +117,33 @@ public class EffectivePeriodCalculator {
                                                 ErrorCode.INSUFFICIENT_HISTORY,
                                                 "가장 늦게 상장한 종목의 상장일 %s 이후 워밍업 %d거래일을 채울 거래일이 달력에 없습니다."
                                                         .formatted(latestListed, effectiveWarmup)));
-        // max(요청 시작일, commonStart). 요청 시작일이 이기면 그 뒤 첫 거래일로 맞춰 준다 —
-        // 주말을 평가 첫날로 삼으면 워커가 고르는 첫 거래일과 값이 갈린다.
-        //
-        // 다만 이 달력은 공휴일을 모른다(FixtureMarketMetadataAdapter). 그래서 요청 시작일이
-        // 공휴일이면 여전히 워커와 갈린다 — 001이 실제 달력을 주기 전까지 남는 한계이고, 이
-        // 스냅은 주말 때문에 갈리는 흔한 경우만 없앤다.
-        boolean pushedByListing = !requestedStart.isAfter(commonStart);
+        // 요청 시작일을 거래일에 맞추기만 한다. commonStart 와 max 하지 않는다 — 여기서 밀면 그
+        // 값이 앵커로 실려 나가 워커가 되돌릴 수 없다(클래스 주석).
         LocalDate effectiveStart =
-                pushedByListing
-                        ? commonStart
-                        : marketMetadata
-                                .evaluationStart(requestedStart, 0)
-                                .orElseThrow(
-                                        () ->
-                                                new BusinessException(
-                                                        ErrorCode.INSUFFICIENT_HISTORY,
-                                                        "요청 시작일 %s 이후에 거래일이 없습니다."
-                                                                .formatted(requestedStart)));
-        if (effectiveStart.isAfter(requestedEnd)) {
-            // 밀어낸 것이 상장일인지 요청 시작일인지에 따라 해야 할 일이 다르다. 워밍업이 0인데
-            // "상장이 늦은 종목을 빼라"고 하면 틀린 조언이다.
+                marketMetadata
+                        .firstTradingDayOnOrAfter(requestedStart)
+                        .orElseThrow(
+                                () ->
+                                        new BusinessException(
+                                                ErrorCode.INSUFFICIENT_HISTORY,
+                                                "요청 시작일 %s 이후에 거래일이 없습니다."
+                                                        .formatted(requestedStart)));
+        // 밀지 않게 됐어도 거절해야 하는 경계는 남는다. 요청 구간 안에 이 후보 집합으로 평가할 수
+        // 있는 날이 하루도 없으면 보내 봐야 결과가 나오지 않는다 — 워커도 읽어 온 달력으로 워밍업을
+        // 채우지 못하면 MarketDataError 로 멈춘다. 접수에서 사유를 말해 주는 편이 낫다.
+        if (commonStart.isAfter(requestedEnd)) {
             throw new BusinessException(
                     ErrorCode.INSUFFICIENT_HISTORY,
-                    pushedByListing
-                            ? "가장 늦은 상장일 %s 이후 워밍업 %d거래일을 채우고 나면 평가 시작일이 %s가 되어 요청 종료일 %s를 넘습니다. 종료일을 늦추거나 상장이 늦은 종목을 빼 주세요."
-                                    .formatted(
-                                            latestListed,
-                                            effectiveWarmup,
-                                            effectiveStart,
-                                            requestedEnd)
-                            : "요청 시작일 %s 이후 첫 거래일 %s가 요청 종료일 %s를 넘습니다. 기간을 다시 골라 주세요."
-                                    .formatted(requestedStart, effectiveStart, requestedEnd));
+                    "가장 늦은 상장일 %s 이후 워밍업 %d거래일을 채우고 나면 평가할 수 있는 첫날이 %s라 요청 종료일 %s를 넘습니다. 종료일을 늦추거나 상장이 늦은 종목을 빼 주세요."
+                            .formatted(latestListed, effectiveWarmup, commonStart, requestedEnd));
+        }
+        // 요청 구간에 거래일이 아예 없는 경우다. 워밍업이 0이어도 걸리므로 "상장이 늦은 종목을
+        // 빼라"는 조언을 여기 쓰면 틀린다.
+        if (effectiveStart.isAfter(requestedEnd)) {
+            throw new BusinessException(
+                    ErrorCode.INSUFFICIENT_HISTORY,
+                    "요청 시작일 %s 이후 첫 거래일 %s가 요청 종료일 %s를 넘습니다. 기간을 다시 골라 주세요."
+                            .formatted(requestedStart, effectiveStart, requestedEnd));
         }
         return new EffectivePeriod(effectiveStart, requestedEnd, effectiveWarmup, commonStart);
     }
@@ -181,7 +180,7 @@ public class EffectivePeriodCalculator {
                 .orElse(0);
     }
 
-    /** 가장 늦게 상장한 종목이 공통 구간의 시작을 정한다(원칙 IV). 요청 시작일은 섞지 않는다 — 워밍업 기준점은 상장일이다. */
+    /** 가장 늦게 상장한 종목이 {@code commonStart}를 정한다(원칙 IV). 요청 시작일은 섞지 않는다 — 워밍업 기준점은 상장일이다. */
     private LocalDate latestListingDate(List<String> instrumentIds) {
         LocalDate latest = null;
         for (String instrumentId : instrumentIds) {

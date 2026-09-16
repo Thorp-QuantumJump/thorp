@@ -90,7 +90,7 @@ class BacktestServiceTest {
                     marketMetadata,
                     events,
                     Clock.fixed(NOW, ZoneOffset.UTC),
-                    "nautilus_trader 1.219.0 / worker 2.1.0");
+                    "nautilus_trader 1.219.0 / worker 2.2.0");
 
     @BeforeEach
     void stubRegistries() {
@@ -215,7 +215,7 @@ class BacktestServiceTest {
         assertThat(result.versions())
                 .containsEntry("mapping", "SECTOR-ETF-2026-09")
                 .containsEntry("data", "FIXTURE-three_etf_24m")
-                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0")
+                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.2.0")
                 .containsEntry("evaluationSplit", "SPLIT-1")
                 .doesNotContainKeys("scenarioRules", "worker");
         assertThat(result.versions().get("rules"))

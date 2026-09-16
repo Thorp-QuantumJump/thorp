@@ -98,6 +98,13 @@ public class FixtureMarketMetadataAdapter implements MarketMetadataPort {
         return Optional.empty();
     }
 
+    @Override
+    public Optional<LocalDate> firstTradingDayOnOrAfter(LocalDate date) {
+        // 같은 달력을 쓰되 워밍업을 소진하지 않는다. 뜻이 다른 두 질문이라 포트에서 이름을 갈랐고,
+        // 픽스처 달력에서는 warmup 0 이 곧 "그날 또는 그 뒤 첫 거래일"이다.
+        return evaluationStart(date, 0);
+    }
+
     /** 픽스처 달력: 주말만 제외한다. 공휴일은 001이 제공할 때 반영한다. */
     private static boolean isTradingDay(LocalDate day) {
         return !List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY).contains(day.getDayOfWeek());
