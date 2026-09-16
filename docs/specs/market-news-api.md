@@ -128,8 +128,11 @@ spec 006의 기사 내보내기는 저장소를 직접 조회하지 않고 이 A
 - 뉴스 집중 테스트 322개와 Architecture/Flyway 집중 테스트 31개가 모두 성공했다. 이 테스트들이
   quickstart 2~8·10의 로컬 fixture, MockMvc 응답 계약, 공개 허가 필터, cursor 내보내기, 장애 격리,
   보관 종료 시점과 반복 삭제를 검증한다.
-- 실제 외부 RSS/GDELT 호출은 opt-in 정책에 따라 수행하지 않았다. 100,000개 fixture 성능 측정과 수집
-  회차 측정(quickstart 9)은 별도 작업 T052에서 수행한다.
+- 실제 외부 RSS/GDELT 호출은 opt-in 정책에 따라 수행하지 않았다. 별도 작업 T052에서는 PostgreSQL 16에
+  100,000개 기사 fixture를 적재해 30회 준비 후 100회 현재 뉴스 조회의 p95 90.233ms를 측정했고,
+  외부망 대신 로컬 fixture를 사용한 RSS 20개와 GDELT 1개의 동시 due 수집 회차는 299.448ms였다.
+  각각 500ms와 15분 기준을 충족한다. 이 성능 시험은 `THORP_RUN_NEWS_PERFORMANCE=true`일 때만
+  실행한다. 수치는 2026-09-16 로컬 Docker 29.6.1의 PostgreSQL 16 Testcontainers 실행 결과다.
 
 아직 기능 전체 완료를 선언할 수는 없다. 고정 검증 표본을 대신해 실제 수집분 345건을 조사했을 때 현재
 한국어 어절 Jaccard 0.60 규칙은 같은 사건 후보를 한 쌍도 묶지 못해 SC-002의 분리율 기준을 충족하지
