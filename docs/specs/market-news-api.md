@@ -159,6 +159,20 @@ single-link로 완화해도, 오병합 0건을 지키면서 그 값을 만족할
 | v2 후보: 2-gram 0.45 | 0건 | 4/29 |
 | **v2: 2-gram 0.30 + 고유어 조건** | **0건** | **14/29 (48%)** |
 
+### 규칙을 바꿔도 옛 묶음은 다시 만들지 않는다
+
+수집은 그 회차가 건드린 기사가 속한 묶음만 다시 만든다(`NewsIngestionService.regroup`). 그래서 규칙을
+v2로 올린 뒤에도 **새 기사가 들어오지 않는 묶음은 v1 판정 그대로 남는다.** 현재 뉴스 조회는 48시간 창이라
+이틀이면 v2로 채워지지만, 과거 뉴스 조회는 창이 없어 v1으로 갈라진 묶음이 계속 보인다.
+
+이것은 고쳐야 할 결함이 아니라 정한 것이다. 원칙 VIII이 "규칙 변경은 기존 결과를 덮어쓰지 않고 새 버전으로
+식별한다"고 정했고, 저장된 묶음은 **그 규칙으로 그렇게 판정했다는 기록**이기 때문이다. 소급해서 다시 만들면
+당시 화면을 재현할 수 없게 된다.
+
+대신 어느 규칙으로 만든 묶음인지 값으로 남아 있다. `news_digest.grouping_rule_version`이 그것이고,
+`news_digest_article.title_similarity`의 척도도 이 값에 따라 다르다(v1은 어절 Jaccard, v2는 문자
+2-gram Jaccard).
+
 측정 근거는 `backend/src/test/resources/news/grouping-quality-v2.json`(실제 수집분 345건, 사람이
 판정한 복수 보도 사건 29개)이고 `NewsGroupingQualityTest`가 빌드마다 다시 잰다. 합성 표본
 `grouping-quality.json`은 v1 판정과 함께 그대로 두었다(원칙 VIII).
