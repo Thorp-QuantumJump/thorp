@@ -42,6 +42,10 @@ import org.springframework.stereotype.Component;
  * 같다. 기동 단계에서 트랜잭션 경계를 넓게 잡으면 그 안에서 나는 실패가 기동 자체를 막는다.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "thorp.news.registry-sync-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class NewsPublisherRegistrySync implements SmartInitializingSingleton {
 
     private static final Logger log = LoggerFactory.getLogger(NewsPublisherRegistrySync.class);
