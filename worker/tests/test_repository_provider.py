@@ -601,3 +601,25 @@ def test_window_beyond_the_data_deadline_is_rejected() -> None:
     with pytest.raises(MarketDataError) as caught:
         provider.load([SEMICONDUCTOR], START, date(2030, 1, 1), DATASET)
     assert "data deadline" in str(caught.value) or "complete through" in str(caught.value)
+
+
+def test_data_usage_counts_prices_index_and_corporate_actions() -> None:
+    """데이터 원가(T019)는 가격·지수·기업행위 셋을 모두 센다.
+
+    지수(거래일 달력)는 프레임으로 들고 있지 않아 ``bytes`` 에는 없지만, 공급자가 실제로 읽은
+    행이므로 ``rows`` 에는 들어간다. 빠뜨리면 실행 구간이 길수록 원가가 꾸준히 작게 기록되고,
+    그 값으로 PD-06 을 정하게 된다.
+    """
+    provider, _ = make_provider(build_database())
+
+    data = provider.load([SEMICONDUCTOR], START, END, DATASET)
+
+    window = [day for day in CALENDAR if START <= day <= END]
+    assert len(window) == 5
+    assert len(data.prices[SEMICONDUCTOR]) == 5  # 가격
+    assert data.index_rows == 5  # 지수(달력)
+    assert len(data.distributions) + len(data.splits) == 2  # 기업행위
+
+    usage = data.usage()
+    assert usage.rows == 12  # 5 + 5 + 2
+    assert usage.bytes > 0

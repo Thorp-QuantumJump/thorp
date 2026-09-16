@@ -151,7 +151,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | peak_rss_mb / cpu_seconds | NUMERIC(12,1) / NUMERIC(12,3) (FINISHED payload `resource`. DLQ·강제 종결은 null) |
 | auto_retried | BOOLEAN (attempt > publish_count, R-18 — 재발행 중복은 재시도가 아니다) |
 | result_bytes | BIGINT (`backtest_result` 행의 `pg_column_size`. 결과 없는 종결은 0) |
-| data_rows / data_bytes | BIGINT (FINISHED `resource.dataRows`·`dataBytes` — 읽은 가격·분배금·분할 행 수, 가격 프레임 메모리 바이트. 데이터 원가(FR-008, T019). 자료를 읽지 못한 종결은 null) |
+| data_rows / data_bytes | BIGINT (FINISHED `resource.dataRows`·`dataBytes` — 읽은 가격·지수·기업행위 행 수(지수는 달력으로 읽고 버려 행 수에만), 가격 프레임 메모리 바이트. 데이터 원가(FR-008, T019). 자료를 읽지 못한 종결은 null) |
 | served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 **결과를 냈나** — R-20 N/M 비율 조정 근거. FINISHED `resource.queue`·`role`이 먼저고, FINISHED 가 없는 종결은 STARTED 가 실행 행에 남긴 값) |
 | recorded_at | TIMESTAMPTZ |
 
