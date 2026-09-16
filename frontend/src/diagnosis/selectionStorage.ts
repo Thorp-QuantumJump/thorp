@@ -115,7 +115,12 @@ export function readStoredSelection(
   }
   if (payload.version > SECTOR_SELECTION_PAYLOAD_VERSION) {
     // 읽는 쪽이 아는 값보다 큰 형식은 해석하지 않는다. 억지로 읽으면 뜻이 달라진 필드를 그대로 쓴다.
-    // **이 값을 지우지도 않는다.** 보관된 값을 지키는 것이 이 분기의 목적이라 쓰는 쪽도 함께 막는다.
+    //
+    // **읽기를 거부할 뿐 보관을 영구히 막지는 않는다.** 화면이 열리는 것만으로 남의 값이 지워지는
+    // 일은 쓰는 쪽에서 막지만(`SectorSelectionProvider`가 첫 렌더에서는 쓰지 않는다), 그 뒤
+    // 사용자가 이 탭에서 섹터를 고르거나 비중을 넣으면 그 값을 보관한다. 새 형식을 지키겠다고
+    // 쓰기를 아주 막으면 **사용자가 방금 넣은 입력이 새로고침에 조용히 사라진다.** 지키려는 것은
+    // 남의 값이지 사용자의 명시적인 행동이 아니다.
     return { snapshot: null, dropped: [], problem: 'newerFormat' }
   }
   if (payload.version < SECTOR_SELECTION_PAYLOAD_VERSION) return unreadable()

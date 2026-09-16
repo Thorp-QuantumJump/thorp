@@ -258,6 +258,25 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBe(stored)
   })
 
+  it('읽지 못한 형식이라도 사용자가 값을 넣으면 그 값을 보관한다', () => {
+    window.sessionStorage.setItem(
+      SECTOR_SELECTION_STORAGE_KEY,
+      JSON.stringify({ version: SECTOR_SELECTION_PAYLOAD_VERSION + 1, shape: '아직 모르는 형식' }),
+    )
+
+    renderProvider()
+    run((value) => value.toggleSector('SEMICONDUCTOR', true))
+
+    // 읽기를 거부하는 것과 쓰기를 아주 막는 것은 다른 일이다. 지키려는 것은 화면이 열리는
+    // 것만으로 남의 값이 지워지는 일이지, 사용자가 방금 한 행동이 아니다. 여기서 쓰기를 막으면
+    // 사용자가 넣은 값이 새로고침에 조용히 사라진다.
+    const stored = window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)
+    expect(stored).not.toBeNull()
+    const payload = JSON.parse(stored as string)
+    expect(payload.version).toBe(SECTOR_SELECTION_PAYLOAD_VERSION)
+    expect(payload.selected).toEqual([{ code: 'SEMICONDUCTOR', weightTenths: 1000 }])
+  })
+
   it('아무것도 고르지 않은 채 화면만 열면 저장소에 아무것도 쓰지 않는다', () => {
     renderProvider()
 
