@@ -346,7 +346,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - **2026-09-15 결정: 넓힌다.** 형식은 `[0-9A-Z]{6}\.XKRX`다. 자리 수는 여섯으로 그대로 두고 허용 문자에 영문 대문자만 더했다. 원천의 4분의 1을 후보에서 빼는 대가가, 좁은 채로 두고 그 사실만 적어 두는 이득보다 크다
   - **소문자는 받지 않는다.** 원천이 대문자로만 주고, 둘 다 받으면 같은 종목이 `0111J0`과 `0111j0` 두 값으로 저장될 수 있다. 자리 수가 어긋난 코드도 그대로 거부한다
   - 고친 곳은 정규식 열세 군데다 — `data/` 일곱(`corporate_actions`·`gaps`·`instrument_profile`·`krx` 둘·`reconciliation`·`repository`), `worker/` 둘(`contracts/engine_input`·`evaluation_window`), `backend/` 넷(`InstrumentId`·`RepresentativeEtf`·`ParamSearchPreviewRequest`·`EvaluationWindowService`). `sector_map.py`와 `index.py`는 `repository.py`의 패턴을 가져다 쓰므로 따라온다
-  - DB 제약 다섯 개는 새 마이그레이션 `V20260915163000__widen_instrument_id_format.sql`로 넓혔다. **기존 파일을 고치지 않은 까닭**은 그것이 이미 `dev`에 병합되어 팀원의 로컬 DB에 적용되었기 때문이다. 적용된 파일을 고치면 Flyway 체크섬이 어긋나 그 DB에서 기동이 막힌다
+  - DB 제약 다섯 개는 새 마이그레이션 `V20260916163000__widen_instrument_id_format.sql`로 넓혔다. **기존 파일을 고치지 않은 까닭**은 그것이 이미 `dev`에 병합되어 팀원의 로컬 DB에 적용되었기 때문이다. 적용된 파일을 고치면 Flyway 체크섬이 어긋나 그 DB에서 기동이 막힌다
   - **`krx.py`의 `unsupported_codes` 장치는 지우지 않고 남겼다.** 이제 영숫자 코드는 그 갈래에 오지 않지만, 원천이 아직 본 적 없는 모양을 보내오면 수집이 멈추지 않으면서도 무엇이 빠졌는지 드러나야 한다. 담지 못하는 것을 조용히 버리면 그 순간 검사가 사라진다
   - **확인하지 못한 것: 304종 전부가 영숫자 여섯 글자 대문자인지는 검증하지 못했다.** 근거는 문서에 남은 예시 세 개(`0111J0`·`0182R0`·`0005D0`)와 `0184E0`뿐이다. T014에서 실제로 적재할 때 `unsupported_codes`가 비어 있는지 확인한다 — 비어 있지 않으면 그 모양에 맞춰 형식을 다시 본다
 - [X] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
