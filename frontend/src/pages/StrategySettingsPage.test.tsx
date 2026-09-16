@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SectorCatalogResult } from '@/api/sectors'
@@ -442,6 +443,131 @@ describe('StrategySettingsPage', () => {
     expect(calls).toHaveLength(1)
 
     pending.release()
+  })
+
+  it('전략과 무관한 보관값의 무효 안내는 전략을 고르기 전에 보인다', async () => {
+    // T093, FR-017. 최소 평가 기간은 카드의 선택 가능 여부를 바꾸는 값이라(FR-011a) 카드를 보기
+    // 전에 알아야 한다. 전략 설정 안내에 묶어 두면 고른 뒤에야 알게 된다.
+    const condition = registryFixture.analysisConditions.minEvaluationYears
+    const notAChoice = Math.max(...condition.choices.map((choice) => Number(choice.value))) + 99
+    window.sessionStorage.setItem(
+      STRATEGY_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        registryVersion: registryFixture.registryVersion,
+        universeSize: catalogSectors.length,
+        selectedStrategyId: null,
+        valuesByStrategy: {},
+        analysisCondition: { minEvaluationYears: notAChoice, scenario: 'FULL_PERIOD' },
+        invalidValues: [],
+      }),
+    )
+
+    const { support } = makeSupport()
+    renderPage(support)
+
+    // 전략을 하나도 고르지 않은 상태에서 보인다.
+    const notice = await screen.findByRole('status', { name: '다시 확인할 분석 조건' })
+    expect(notice.textContent).toContain(String(notAChoice))
+    expect(screen.queryByRole('status', { name: '다시 확인할 설정값' })).toBeNull()
+  })
+
+  it('부모가 다시 그리며 통로 객체를 새로 넘겨도 버전을 다시 조회하지 않는다', async () => {
+    // T094. 이 화면의 상태 변화만으로는 부모가 다시 그려지지 않아 조회가 스스로를 다시 부르지는
+    // 못한다. **되풀이는 부모가 제 사정으로 다시 그릴 때 생긴다** — 그때마다 화면이 '확인하는 중'
+    // 으로 돌아가 '분석하기'가 잠깐씩 막힌다. 그래서 검사도 부모를 실제로 다시 그린다.
+    let fetchCount = 0
+    const { support: base } = makeSupport()
+
+    function UnstableHost() {
+      const [, bump] = useState(0)
+      // 일부러 매 렌더 새 객체를 만든다. `useMemo`를 쓰지 않은 것이 이 검사의 요지다.
+      const support: AnalysisSupport = {
+        ...base,
+        fetchAnalysisVersions: async () => {
+          fetchCount += 1
+          return versionsFixture
+        },
+      }
+      return (
+        <>
+          <button type="button" onClick={() => bump((count) => count + 1)}>
+            부모 다시 그리기
+          </button>
+          <StrategySettingsPage support={support} />
+        </>
+      )
+    }
+
+    const authValue: AuthContextValue = {
+      status: 'anonymous',
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      recheck: vi.fn(),
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/strategy']}>
+        <AuthContext.Provider value={authValue}>
+          <UnstableHost />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    const user = userEvent.setup()
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    expect(fetchCount).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
+
+    // 다시 조회하지 않았으므로 '분석하기'가 '확인하는 중'으로 되돌아가 막히는 일도 없다.
+    expect(fetchCount).toBe(1)
+    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')
+  })
+
+  it('축이 빠진 설정으로는 요청을 보내지 않는다', async () => {
+    // T095. 차단 판정을 "복원 안내가 있는가"가 아니라 "축이 다 찼는가"로 묻는다. 축이 빠진 요청은
+    // 서버가 400으로 거절한다(T048).
+    const numberAxis = selectableStrategy.axes.find((axis) => axis.inputType === 'NUMBER')!
+    window.sessionStorage.setItem(
+      STRATEGY_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        registryVersion: 'OLD-REGISTRY',
+        universeSize: catalogSectors.length,
+        selectedStrategyId: selectableStrategy.strategyId,
+        valuesByStrategy: {
+          [selectableStrategy.strategyId]: { [numberAxis.name]: 9_999 },
+        },
+        analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+        invalidValues: [],
+      }),
+    )
+
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    const analyze = await screen.findByRole('button', {
+      name: (accessibleName) => accessibleName.includes('분석하기'),
+    })
+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))
+
+    await user.click(analyze)
+    expect(requests).toHaveLength(0)
+
+    // 복원하면 축이 다 차고 그제야 보낼 수 있다.
+    await user.click(screen.getByRole('button', { name: '기본값 복원' }))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+
+    for (const axis of selectableStrategy.axes) {
+      expect(requests[0].strategy.parameters[axis.name]).toEqual(axis.defaultValue)
+    }
   })
 
   it('전송에 실패하면 그 사실을 알리고 조용히 다시 보내지 않는다', async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'
@@ -17,7 +17,7 @@ import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine
 import { SettingsStatusBadge } from '@/components/strategy/SettingsStatusBadge'
 import { StrategyCardList, type RegistryViewState } from '@/components/strategy/StrategyCardList'
 import { useSectorSelection } from '@/hooks/useSectorSelection'
-import { useStrategySettings } from '@/hooks/useStrategySettings'
+import { useStrategySettings, type InvalidStoredValue } from '@/hooks/useStrategySettings'
 import type { BacktestAccepted, BacktestRequestStatus } from '@/types/backtestRequest'
 import type { StrategyView } from '@/types/strategyRegistry'
 import { buildBacktestRequest } from '@/utils/analysisRequest'
@@ -57,6 +57,41 @@ type Submission =
   | { status: 'sending' }
   | { status: 'accepted'; accepted: BacktestAccepted }
   | { status: 'failed'; message: string }
+
+interface InvalidValueListProps {
+  /** 이 목록이 무엇에 대한 것인가. 보조기술이 두 목록을 구분할 이름이다 */
+  label: string
+  entries: InvalidStoredValue[]
+  onRestore: (strategyId: string, axisName: string) => void
+}
+
+/**
+ * 현재 등록표에서 쓸 수 없게 된 보관값을 알린다(FR-017).
+ *
+ * <p><b>이유를 말하고 복원 선택을 준다. 값을 대신 고치지 않는다.</b> 복원할 수 있는 항목에만
+ * 버튼을 두는데, 등록표에서 전략이나 항목 자체가 사라진 경우는 되돌릴 자리가 없어 알리기만
+ * 한다.
+ */
+function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) {
+  return (
+    <ul className={styles.invalidList} role="status" aria-label={label}>
+      {entries.map((entry) => (
+        <li key={`${entry.strategyId ?? '-'}:${entry.axisName ?? '-'}`}>
+          <span>{entry.message}</span>
+          {entry.restorable && entry.strategyId !== null && entry.axisName !== null ? (
+            <button
+              type="button"
+              className={styles.restoreButton}
+              onClick={() => onRestore(entry.strategyId as string, entry.axisName as string)}
+            >
+              기본값 복원
+            </button>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 /**
  * 전략 선택 화면(US1, FR-001·FR-002·FR-018). 흐름은 002 섹터·비중 → <b>003 전략 선택</b> →
@@ -148,11 +183,29 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
   // --- 규칙·비용 버전(②). 결정 전에는 null이고 '분석하기'가 막힌다 ---------------------------
   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')
 
+  /**
+   * 통로 객체의 **최신 값**을 효과가 참조 변화 없이 읽는 자리다.
+   *
+   * <p>효과가 `support` 객체의 참조에 의존하면, 호출자가 렌더마다 새 객체를 만들어 넘길 때
+   * <b>부모가 다시 그려질 때마다 버전을 다시 조회한다.</b> 그때마다 화면이 '확인하는 중'으로
+   * 돌아가 '분석하기'가 잠깐씩 막히고, 사용자가 누르려던 순간에 버튼이 비활성으로 바뀐다.
+   *
+   * <p><b>무한히 도는 것은 아니다.</b> 조회가 바꾸는 것은 이 화면의 상태뿐이라 부모는 다시 그려지지
+   * 않고, 그래서 조회가 스스로를 다시 부르지는 못한다. 되풀이는 부모가 제 사정으로 다시 그릴 때만
+   * 생긴다 — 드물지만 원인을 짐작하기 어려운 종류다.
+   *
+   * <p>통로를 `useMemo`로 감싸 달라는 계약을 아래 타입에 적어 두었으나, 계약만으로는 어겼다는
+   * 사실이 드러나지 않는다. 그래서 효과는 참조를 보지 않고 이 ref로 최신 통로를 읽는다. 조회는
+   * 화면이 열릴 때 한 번 돈다. 다시 조회할 수단은 B06이 등록표 조회처럼 재시도 토큰으로 더한다.
+   */
+  const supportRef = useRef(support)
+  supportRef.current = support
+
   useEffect(() => {
     const controller = new AbortController()
     let active = true
     setVersions('loading')
-    support
+    supportRef.current
       .fetchAnalysisVersions(controller.signal)
       .then((next) => {
         if (active) setVersions(next)
@@ -164,7 +217,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       active = false
       controller.abort()
     }
-  }, [support])
+  }, [])
 
   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------
   const minEvaluationYears = settings.ready
@@ -190,11 +243,26 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     })
   }, [support, settings.selectedStrategy, settings.warmupTradingDays, minEvaluationYears])
 
-  // --- 행동 가능 여부 ---------------------------------------------------------------------
-  const invalidForSelected = settings.invalidValues.filter(
-    (entry) => entry.strategyId === null || entry.strategyId === settings.selectedStrategyId,
+  // --- 다시 확인할 보관값 -------------------------------------------------------------------
+  //
+  // **두 자리로 가른다.** 전략에 딸린 값은 그 전략을 고른 뒤에 보여야 뜻이 통하지만, 전략과
+  // 무관한 값(분석 조건)은 고르기 전에 알려야 한다 — 최소 평가 기간은 카드의 선택 가능 여부를
+  // 바꾸는 값이라(FR-011a) 카드를 보기 전에 그 값이 무엇인지 알아야 한다. 한 자리에 묶어 두면
+  // 되돌아간 사실을 전략을 고른 뒤에야 알게 되고, 그것은 사용자 입장에서 조용히 바꾼 것과
+  // 같다(FR-017).
+  const globalInvalid = settings.invalidValues.filter((entry) => entry.strategyId === null)
+  const strategyInvalid = settings.invalidValues.filter(
+    (entry) => entry.strategyId !== null && entry.strategyId === settings.selectedStrategyId,
   )
-  const hasEmptiedAxis = invalidForSelected.some((entry) => entry.restorable)
+
+  // --- 행동 가능 여부 ---------------------------------------------------------------------
+  //
+  // **"보낼 수 있는가"는 축이 다 찼는지 하나로만 묻는다.** 앞서는 "복원할 수 있는 안내가 있는가"로
+  // 대신 물었는데, 그 둘이 같은 답을 내는 것은 재검증이 비운 축마다 안내를 남기기 때문이지 그렇게
+  // 하라고 정해 둔 것이 아니다. 그 대응이 한 줄만 어긋나면 축이 빠진 요청이 서버로 나간다(T048의
+  // "등록된 축이 빠져 있으면 400"). 안내를 그릴지는 위 두 목록이 따로 정한다.
+  const settingsIncomplete =
+    settings.selectedStrategyId !== null && !settings.isComplete(settings.selectedStrategyId)
 
   const prepared = useMemo(() => {
     if (
@@ -204,6 +272,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       settings.registryVersion === null ||
       !settings.selectedStrategy ||
       !settings.values ||
+      !settings.isComplete(settings.selectedStrategy.strategyId) ||
       settings.warmupTradingDays === null ||
       !selectedJudgement?.window ||
       versions === 'loading' ||
@@ -228,7 +297,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     const strategy = settings.selectedStrategy
     if (!strategy) return SELECT_STRATEGY_FIRST
     if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING
-    if (hasEmptiedAxis) return INVALID_STORED_VALUES
+    if (settingsIncomplete) return INVALID_STORED_VALUES
     if (settings.warmupTradingDays === null) return WARMUP_UNCOMPUTABLE
     if (!selectedJudgement) return EVALUATION_WINDOW_UNAVAILABLE
     const verdict = selectedJudgement.verdict
@@ -359,6 +428,19 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
               </p>
             ) : null}
 
+            {/*
+              전략과 무관한 보관값의 안내다. **카드 목록보다 위에, 전략을 고르기 전에 보인다.**
+              최소 평가 기간이 그렇다 — 그 값이 카드의 선택 가능 여부를 정하므로(FR-011a) 카드를
+              보기 전에 지금 어떤 값이 쓰이고 있는지 알아야 한다.
+            */}
+            {globalInvalid.length > 0 ? (
+              <InvalidValueList
+                label="다시 확인할 분석 조건"
+                entries={globalInvalid}
+                onRestore={settings.resetAxis}
+              />
+            ) : null}
+
             <section className={styles.section} aria-labelledby="strategy-cards-title">
               <h2 id="strategy-cards-title" className={styles.sectionTitle}>
                 전략 카드
@@ -386,23 +468,12 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
                   costProfile={costProfile}
                 />
 
-                {invalidForSelected.length > 0 ? (
-                  <ul className={styles.invalidList} role="status" aria-label="다시 확인할 설정값">
-                    {invalidForSelected.map((entry) => (
-                      <li key={`${entry.strategyId ?? '-'}:${entry.axisName ?? '-'}`}>
-                        <span>{entry.message}</span>
-                        {entry.restorable && entry.strategyId !== null && entry.axisName !== null ? (
-                          <button
-                            type="button"
-                            className={styles.restoreButton}
-                            onClick={() => settings.resetAxis(entry.strategyId!, entry.axisName!)}
-                          >
-                            기본값 복원
-                          </button>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                {strategyInvalid.length > 0 ? (
+                  <InvalidValueList
+                    label="다시 확인할 설정값"
+                    entries={strategyInvalid}
+                    onRestore={settings.resetAxis}
+                  />
                 ) : null}
 
                 {selectedJudgement && selectedJudgement.verdict.state !== 'ok' ? (

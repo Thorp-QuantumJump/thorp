@@ -47,6 +47,16 @@ export type WarmupJudgement = {
   window: { start: string; end: string } | null
 }
 
+/**
+ * 화면에 넘기는 통로 한 벌.
+ *
+ * <p><b>렌더 사이에 안정된 참조로 넘긴다.</b> 모듈 상수이거나 `useMemo`로 감싼 값이어야 한다.
+ * 렌더마다 새 객체를 만들면 화면이 이 객체를 의존성으로 삼는 자리마다 일이 되풀이된다.
+ *
+ * <p>다만 <b>화면은 이 계약을 지키지 않아도 조회를 되풀이하지 않도록 스스로 막는다</b> — 버전
+ * 조회 효과는 참조가 아니라 ref로 최신 통로를 읽는다. 계약만 두면 어겼다는 사실이 드러나지 않고,
+ * 부모가 다시 그려질 때마다 조회가 한 번씩 더 나가며 그동안 '분석하기'가 잠깐씩 막힌다.
+ */
 export type AnalysisSupport = {
   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>
   judgeWarmup: (input: WarmupJudgeInput) => WarmupJudgement
