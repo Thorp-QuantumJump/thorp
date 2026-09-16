@@ -8,6 +8,27 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 ./gradlew spotlessApply build
 ```
 
+## 로컬 실행 (`./gradlew bootRun`)
+
+`backend/.env`가 필요하다. 없으면 `MAIL_USERNAME` 플레이스홀더를 풀지 못해 기동에 실패한다.
+`application.yml`이 읽는 `optional:file:./.env`의 `./`는 `bootRun`의 작업 디렉터리인 `backend/`라서,
+저장소 루트의 `.env`는 여기서 읽히지 않는다. 루트 `.env`는 docker-compose가 쓰는 파일이다.
+
+```bash
+# backend/.env — gitignore 대상이라 각자 만든다. 항목은 루트 .env.example 참고.
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+```
+
+메일 발송을 실제로 확인할 게 아니면 더미 값으로 충분하다. 값이 없을 때 기동이 실패하는 것은
+의도된 동작이다 — 설정 누락을 조용히 넘기지 않는다.
+
+DB와 브로커는 저장소 루트에서 띄운다.
+
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
+```
+
 ## 패키지 규칙 (`com.ssafy.thorp`)
 
 근거: [ADR-0001](../docs/adr/0001-be-layered-package-architecture.md). 규칙은 `ArchitectureTest`(ArchUnit)가 검증하며, 위반 시 빌드가 실패한다.

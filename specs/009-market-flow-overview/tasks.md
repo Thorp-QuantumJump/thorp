@@ -26,7 +26,7 @@ T015가 이 문제를 먼저 막는다.
 | 묶음 | Jira Task 제목 | T항목 | 근거 요구사항 | Jira |
 |---|---|---|---|---|
 | WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |
-| WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | 미발급 |
+| WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | `S15P21E205-272` |
 | WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |
 | WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |
 
@@ -100,42 +100,42 @@ T015가 이 문제를 먼저 막는다.
 **Independent Test**: 예시 자료를 넣고 `/market-flow/fields`와 `/market-flow/fields/{fieldId}`를 호출해
 [contracts/examples/](contracts/examples/)의 예시와 같은 모양이 오는지 확인한다.
 
-- [ ] T007 [WB02] [P] [US1] [BE] 서술 대상 지표 선정 규칙 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java`, 같은 경로의 테스트) · Jira 미발급
+- [x] T007 [WB02] [P] [US1] [BE] 서술 대상 지표 선정 규칙 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`
   - ① 방향 지속 길이 → ② 같은 단위끼리의 변화 폭 → ③ 등록표의 분야 내 고정 순서로 가른다. 최대 2개 ([research.md](research.md) R1, FR-004)
   - **단위가 다른 지표의 변화 폭을 비교하지 않는다.** 대외거래(수출 %, 무역수지 억달러)나 금융·주택(금리 %, 환율 원)에서 성립하지 않기 때문이다
   - **표준화 점수·거리를 계산에 쓰지 않는다.** 척도 선택은 010 PD-08의 몫이고, 009가 먼저 고르면 두 화면의 설명이 어긋난다
   - 1단계 값이 전부 0이면 빈 목록을 돌려준다. 억지로 하나를 고르지 않는다
   - 테스트: 단위가 섞인 분야에서 결과가 결정론적인지, 3개월 경로가 결측이면 빈 목록인지, 동률 입력에서 등록표 순서로 갈리는지
-- [ ] T008 [WB02] [P] [US1] [BE] 변화 요약 문장 formatter와 금지 어휘 검사 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java`, 같은 경로의 테스트) · Jira 미발급
+- [x] T008 [WB02] [P] [US1] [BE] 변화 요약 문장 formatter와 금지 어휘 검사 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`
   - (방향 × 지속 길이) 조합으로 고정된 문장 틀에 지표 이름·값·단위·기간만 채운다. 규칙 버전은 `market-flow-narrative-v1` ([research.md](research.md) R8)
   - **자유 생성 문장과 LLM 호출을 쓰지 않는다** (spec Assumptions, 원칙 VI)
   - 3개월 자료가 없으면 '최근 경로 없음'을 뜻하는 문장만 만들고 지어내지 않는다 (Edge Case)
   - 테스트: 금지 어휘(좋다·나쁘다·유망·전망·기대·추천·비중 확대 등) 목록 전체에 대해 출력에 등장하지 않는지. **SC-002의 "0건"을 코드로 받는 자리다**
-- [ ] T009 [WB02] [US3] [BE] 분야 상태 판정 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java`, 같은 경로의 테스트) · Jira 미발급
+- [x] T009 [WB02] [US3] [BE] 분야 상태 판정 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`
   - 판정 순서는 [data-model.md](data-model.md) "상태 전이"를 따른다
   - **시간 경과만으로 전이하지 않는다.** '얼마나 오래됐는지'로 지연을 판정하는 분기를 두지 않는다 (FR-011, 2026-09-16 clarify)
   - 테스트: 수집 실패 기록이 있으면 `COLLECTION_FAILED`, 예시 자료면 `EXAMPLE`, 지표 메타가 없으면 `EMPTY`. 오래된 대상월만으로는 상태가 바뀌지 않는다
-- [ ] T010 [WB02] [US1] [BE] 분야 요약 빌더 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java`, 같은 경로의 테스트) · Jira 미발급
+- [x] T010 [WB02] [US1] [BE] 분야 요약 빌더 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`
   - T007·T008·T009를 조합해 읽기 모델 행을 만들고 T006으로 적재한다
   - T_g를 물러나게 한 원인 지표를 `referenceMonthHeldBackBy`에 담는다 (Edge Case)
   - 테스트: 같은 `(registryVersion, datasetVersion)`으로 두 번 만들면 문장·서술 대상 지표·기준월이 100% 같은지 (원칙 VIII)
-- [ ] T011 [WB02] [US1] [BE] 분야 요약 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, `.../presentation/response/`, MockMvc 테스트) · Jira 미발급
+- [x] T011 [WB02] [US1] [BE] 분야 요약 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, `.../presentation/response/`, MockMvc 테스트) · Jira `S15P21E205-272`
   - `GET /market-flow/fields`. 외부 경로는 프록시가 `/api`를 제거하므로 `/market-flow`로 매핑한다 (docs/specs/market-api.md와 같은 규칙)
   - 응답 봉투는 `HttpApiResponse` 형식(`{httpStatus, isSuccess, message, code, result}`)을 따른다
-  - **섹터 파라미터를 받지 않는다.** 섹터가 경제환경 표시를 바꿀 수 없어야 하므로 요청 단계에서 차단한다 (FR-016, SC-004, 원칙 IV)
+  - **쿼리 파라미터를 하나도 받지 않는다. 이름과 무관하게 하나라도 붙으면 400이다.** 섹터가 경제환경 표시를 바꿀 수 없어야 하는데(FR-016, SC-004, 원칙 IV), 조용히 무시하면 호출자가 걸러진 줄 착각한다. 같은 화면이 쓰는 012 뉴스 API가 `sectorId`를 실제로 받아 필터하므로 그 호출을 복사해 오기 쉽다. `sectorId`라는 이름만 거부하면 `sector`·`sectorCode`가 통과하므로 허용 목록을 비워 둔다. 분야를 고르는 것은 경로 변수라 이 규칙과 무관하다
   - `historicalComparisonNotice`에 '최신 개정자료를 이용한 역사 비교' 고정 문구를 싣는다 (FR-012)
   - 인증을 요구하지 않는다 (FR-001, D02)
-  - 테스트: 7개 분야가 항상 오는지, `EMPTY`·`COLLECTION_FAILED`도 HTTP 200인지, 값이 없는 필드가 키 누락이 아니라 명시적 null인지
-- [ ] T012 [WB02] [US2] [BE] 분야 상세 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, MockMvc 테스트) · Jira 미발급
+  - 테스트: 7개 분야가 항상 오는지, `EMPTY`·`COLLECTION_FAILED`도 HTTP 200인지, 값이 없는 필드가 키 누락이 아니라 명시적 null인지, 임의의 쿼리 파라미터가 400인지
+- [x] T012 [WB02] [US2] [BE] 분야 상세 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, MockMvc 테스트) · Jira `S15P21E205-272`
   - `GET /market-flow/fields/{fieldId}`. 7개 고정 분야 밖의 값은 400
   - 지표마다 실제 값·단위·3개월 경로·대상월·발표일·출처·작성기관을 싣는다 (FR-007, FR-013, FR-015)
   - **값을 표준화 점수나 거리로 바꾸지 않는다** (FR-007, SC-003)
   - 테스트: 작성기관이 빠진 지표가 0개인지, 결측 값이 null로 오는지, 잘못된 `fieldId`가 400인지
-- [ ] T013 [WB02] [US2] [BE] T_g 이후 발표 분리 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira 미발급
+- [x] T013 [WB02] [US2] [BE] T_g 이후 발표 분리 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira `S15P21E205-272`
   - `afterReferenceMonthRelease`가 있는 지표에서 그 값이 `path`의 t-2·t-1·t 어디에도 들어가지 않는지 검증한다 (FR-008, 2026-09-16 clarify)
   - **그 값이 T007의 선정과 T008의 문장에도 쓰이지 않는지** 함께 검증한다. 경로에서만 빼고 서술에 쓰면 clarify 답을 절반만 지킨 것이 된다
   - `referenceMonth`가 분야 T_g보다 반드시 뒤인지 검증한다
-- [ ] T014 [WB02] [US1] [BE] 조회 성능 측정 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira 미발급
+- [x] T014 [WB02] [US1] [BE] 조회 성능 측정 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira `S15P21E205-272`
   - 17개 지표 × 120개월 fixture와 Testcontainers PostgreSQL 16에서 30회 warm-up 후 100회 측정한 `/market-flow/fields` p95를 기록한다 ([quickstart.md](quickstart.md) S5)
   - 측정값을 MR 본문에 남긴다. 목표를 못 맞추면 캐시를 더 얹기 전에 어디서 시간을 쓰는지부터 기록한다 (원칙 IX)
 
@@ -232,6 +232,7 @@ T015가 이 문제를 먼저 막는다.
 - [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira 미발급
   - `docs/specs/market-api.md`·`market-news-api.md`와 같은 형식으로 경로·응답·상태를 정리한다
   - 상태 집합에 `STALE`이 없는 이유(갱신 주기 차이)를 한 줄 적는다. 012 문서와 나란히 읽힐 문서라 다른 이유가 드러나 있어야 한다
+  - **분야 요약 조회가 쿼리 파라미터를 하나도 받지 않고 붙으면 400이라는 점을 적는다.** 012는 `sectorId`를 받아 필터하므로, 두 문서가 나란히 읽힐 때 왜 다른지가 드러나야 한다
 
 ---
 
