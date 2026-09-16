@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Thorp Market Flow Overview API
+  version: 1.0.0
+  description: >-
+    시장 흐름 기본 화면과 분야 상세가 소비할 읽기 전용 계약이다. 외부 경로의 /api는 프록시가
+    제거하므로 Spring controller 매핑은 /market-flow이다.
+
+    이 계약에는 경제 전체를 하나의 점수·등급·신호등으로 요약한 필드가 없다(spec FR-003, SC-002, D08).
+    지표 값은 언제나 실제 값과 단위로 보내며 표준화 점수나 거리로 바꾸지 않는다(FR-007, SC-003).
+
+    섹터는 요청 파라미터에 없다. 섹터 선택이 경제환경 표시를 바꿀 수 없어야 하므로(FR-016, SC-004,
+    원칙 IV) 요청 단계에서 아예 받지 않는다. 섹터는 화면이 전략·상품·뉴스 범위를 좁힐 때만 쓰고
+    브라우저 세션에 보관한다.
+
+    상태 집합에 STALE·DELAYED가 없는 것은 의도다. 2026-09-16 clarify가 지연 판정을 폐기했고,
+    대신 모든 항목이 대상월과 마지막 갱신 시각을 실어 사용자가 시점을 직접 판단한다(FR-011, SC-005).
+    012 뉴스 API가 STALE을 쓰는 것과 다른 이유는 갱신 주기다. 뉴스는 30분, 거시지표는 월 단위다.
+servers:
+  - url: /api
+paths:
+  /market-flow/fields:
+    get:
+      summary: 7개 분야의 이름과 변화 요약 조회
+      description: >-
+        기본 화면이 쓰는 목록이다. 인증이 필요하지 않다(FR-001, D02).
+        분야 순서는 008의 화면 분류 버전이 정하며 사용자 정렬 파라미터를 두지 않는다.
+      responses:
+        '200':
+          description: READY, EXAMPLE, EMPTY, COLLECTION_FAILED를 포함한 정상 조회
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldSummaryEnvelope'
+              examples:
+                allReady:
+                  externalValue: ./examples/fields-ready.json
+                exampleData:
+                  externalValue: ./examples/fields-example-data.json
+                collectionFailed:
+                  externalValue: ./examples/fields-collection-failed.json
+  /market-flow/fields/{fieldId}:
+    get:
+      summary: 한 분야의 지표 실제 값과 최근 3개월 경로 조회
+      description: >-
+        분야를 열었을 때 쓰는 상세다. 지표마다 실제 값·단위·최근 3개월 경로·대상월·발표일·
+        출처·작성기관을 보낸다(FR-007, FR-013, FR-015).
+      parameters:
+        - name: fieldId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/FieldId'
+      responses:
+        '200':
+          description: 정상 조회. 자료가 없는 분야도 오류가 아니라 상태로 반환한다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldDetailEnvelope'
+              examples:
+                ready:
+                  externalValue: ./examples/field-detail-ready.json
+        '400':
+          description: 7개 고정 분야에 없는 fieldId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  schemas:
+    FieldId:
+      type: string
+      enum:
+        - production
+        - consumption_investment
+        - external_trade
+        - labor
+        - prices_commodities
+        - finance_housing
+        - overseas
+    FieldStatus:
+      type: string
+      description: >-
+        READY 정상, EXAMPLE 예시 자료로 동작 중, EMPTY 표시할 지표 자료 없음,
+        COLLECTION_FAILED 최근 수집 실패. 넷 모두 HTTP 200이며 화면은 오류 화면으로 바꾸지 않는다.
+      enum: [READY, EXAMPLE, EMPTY, COLLECTION_FAILED]
+    FieldSummaryEnvelope:
+      type: object
+      required: [httpStatus, isSuccess, message, code, result]
+      properties:
+        httpStatus: { type: string, const: OK }
+        isSuccess: { type: boolean, const: true }
+        message: { type: string }
+        code: { type: integer, const: 200 }
+        result:
+          $ref: '#/components/schemas/FieldSummaryResult'
+    FieldSummaryResult:
+      type: object
+      description: >-
+        값이 없는 필드는 키를 생략하지 않고 명시적 null로 보낸다. 012와 같은 규칙이다.
+      required: [registryVersion, datasetVersion, narrativeRuleVersion, fields]
+      properties:
+        registryVersion:
+          type: string
+          description: 008이 소유하는 지표 등록표 버전
+        datasetVersion:
+          type: string
+          description: 008이 소유하는 자료 버전(개정 기준)
+        narrativeRuleVersion:
+          type: string
+          description: 변화 요약 서술 규칙 버전. 화면 분류·계산 가중 버전과 별개다(008 FR-003)
+        historicalComparisonNotice:
+          type: string
+          description: >-
+            '최신 개정자료를 이용한 역사 비교'임을 알리는 고정 문구(FR-012, D12).
+            당시 발표값 재현으로 표현하지 않는다.
+        fields:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items:
+            $ref: '#/components/schemas/FieldSummary'
+    FieldSummary:
+      type: object
+      required:
+        - fieldId
+        - displayName
+        - displayOrder
+        - status
+        - narrative
+        - narrativeSubjects
+        - referenceMonth
+        - referenceMonthHeldBackBy
+        - lastUpdatedAt
+        - isExampleData
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldId'
+        displayName: { type: string }
+        displayOrder: { type: integer }
+        status:
+          $ref: '#/components/schemas/FieldStatus'
+        narrative:
+          type: [string, 'null']
+          description: >-
+            그 분야에서 최근 3개월 경로 변화가 가장 뚜렷한 지표 1~2개를 지목해 실제 값 변화를
+            설명한 문장이다(FR-004). 판정·전망·투자 시사점 표현을 담지 않는다.
+            3개월 자료가 없으면 '최근 경로 없음'을 뜻하는 문장을 보내고 지어내지 않는다.
+        narrativeSubjects:
+          type: array
+          maxItems: 2
+          items: { type: string }
+          description: 서술에 쓴 지표 id. 비어 있으면 뚜렷한 방향 변화가 없었다는 뜻이다
+        referenceMonth:
+          type: [string, 'null']
+          pattern: '^\d{4}-\d{2}$'
+          description: 분야 기준월 T_g. 분야마다 다를 수 있다(FR-008, D22)
+        referenceMonthHeldBackBy:
+          type: array
+          items: { type: string }
+          description: >-
+            T_g를 물러나게 한 지표 id. 비어 있지 않으면 화면이 물러난 기준월과 원인 지표를
+            한 문장으로 안내한다(Edge Case)
+        lastUpdatedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 마지막 갱신 시각. '실시간'·'현재'로 표현하지 않는다(FR-011)
+        isExampleData:
+          type: boolean
+          description: 참이면 화면에 예시 자료임을 표시한다(FR-014, 008 FR-022)
+    FieldDetailEnvelope:
+      type: object
+      required: [httpStatus, isSuccess, message, code, result]
+      properties:
+        httpStatus: { type: string, const: OK }
+        isSuccess: { type: boolean, const: true }
+        message: { type: string }
+        code: { type: integer, const: 200 }
+        result:
+          $ref: '#/components/schemas/FieldDetailResult'
+    FieldDetailResult:
+      allOf:
+        - $ref: '#/components/schemas/FieldSummary'
+        - type: object
+          required: [multipleReferenceMonthNotice, indicators]
+          properties:
+            multipleReferenceMonthNotice:
+              type: string
+              description: 분야마다 기준월이 다를 수 있음을 알리는 한 문장(FR-008)
+            indicators:
+              type: array
+              items:
+                $ref: '#/components/schemas/IndicatorDisplay'
+    IndicatorDisplay:
+      type: object
+      required:
+        - indicatorId
+        - name
+        - unit
+        - value
+        - path
+        - referenceMonth
+        - releaseDate
+        - source
+        - agency
+        - afterReferenceMonthRelease
+      properties:
+        indicatorId: { type: string }
+        name: { type: string }
+        unit:
+          type: string
+          description: 표시용 단위. 값을 표준화 점수나 거리로 바꾸지 않는다(FR-007, SC-003)
+        value:
+          type: [number, 'null']
+          description: 기준월 실제 값. 결측은 null이며 보간하지 않는다(008 FR-008)
+        path:
+          type: array
+          minItems: 3
+          maxItems: 3
+          description: t-2·t-1·t 경로. T_g 이후 발표 값은 여기 넣지 않는다
+          items:
+            $ref: '#/components/schemas/PathPoint'
+        referenceMonth:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: 대상월. 자료가 가리키는 달이다
+        releaseDate:
+          type: [string, 'null']
+          format: date
+          description: 발표일. 기관이 공표한 날이며 대상월과 구분해 보인다(FR-013)
+        source: { type: string }
+        agency:
+          type: string
+          description: 작성기관. 표시 필수(FR-015, SC-003)
+        afterReferenceMonthRelease:
+          oneOf:
+            - $ref: '#/components/schemas/AfterReferenceMonthRelease'
+            - type: 'null'
+          description: >-
+            이 지표가 분야 T_g보다 최신 대상월 값을 가질 때만 채운다(FR-008, 2026-09-16 clarify).
+            화면은 지표 행 바로 아래 한 줄로 그리고 path와 섞지 않는다.
+            변화 요약 계산의 입력으로도 쓰지 않는다.
+    PathPoint:
+      type: object
+      required: [month, value]
+      properties:
+        month:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        value:
+          type: [number, 'null']
+    AfterReferenceMonthRelease:
+      type: object
+      required: [referenceMonth, value, unit]
+      properties:
+        referenceMonth:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        value: { type: number }
+        unit: { type: string }
+    ErrorEnvelope:
+      type: object
+      required: [httpStatus, isSuccess, message, code]
+      properties:
+        httpStatus: { type: string }
+        isSuccess: { type: boolean, const: false }
+        message: { type: string }
+        code: { type: integer }
