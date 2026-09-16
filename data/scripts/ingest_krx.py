@@ -192,6 +192,16 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--from-raw",
+        action="store_true",
+        help=(
+            "원천을 부르지 않고 raw/의 보관본을 읽는다. 같은 구간을 다시 적재할 때 이미 받아 "
+            "둔 자료를 다시 내려받지 않으려는 것이며, 보관을 둔 목적이 재수집 없는 재정제다 "
+            "(research.md 결정 8). 보관본이 없는 날이 있으면 휴장일로 보지 않고 멈춘다. "
+            "인증키를 읽지 않으므로 --simulate-quota-exhausted와 함께 쓸 수 없다"
+        ),
+    )
+    parser.add_argument(
         "--simulate-quota-exhausted",
         action="store_true",
         help=(
@@ -402,13 +412,29 @@ def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def build_source(*, env_file: Path | None, allowed_calls: int | None) -> krx.DailyRowSource:
+def build_source(
+    *, env_file: Path | None, allowed_calls: int | None, from_raw: bool = False
+) -> krx.DailyRowSource:
     """원천 호출 경로를 만든다.
 
     ``RawArchivingSource``가 응답 원본을 ``raw/``에 남기고(research.md 결정 8), 한도 재현
     덮개는 **그 바깥**에 둔다. 한도에 걸린 호출은 응답이 오지 않은 호출이므로 ``raw/``에도
     남지 않아야 한다.
+
+    ``from_raw``면 원천 대신 그 보관본을 읽는다. 같은 구간을 다시 적재할 때 이미 받아 둔 것을
+    다시 내려받지 않기 위한 것이며, 보관을 둔 목적이 바로 그 "재수집 없는 재정제"다. 인증키를
+    읽지 않으므로 키 없이도 돈다.
+
+    **한도 재현과는 함께 쓸 수 없다.** 부르지 않는 호출에 한도를 모의하는 것은 뜻이 성립하지
+    않는다. 조용히 무시하면 사용자가 준 인자가 아무 일도 하지 않은 채 결과만 달라진다.
     """
+    if from_raw:
+        if allowed_calls is not None:
+            raise IngestError(
+                "--from-raw는 원천을 부르지 않으므로 --simulate-quota-exhausted와 함께 쓸 수 "
+                "없다. 모의할 호출 자체가 없다"
+            )
+        return krx.ArchiveReadingSource(root=_RAW_ROOT)
     client = krx.KrxOpenApiClient.from_env(env_file)
     source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)
     if allowed_calls is not None:
@@ -518,7 +544,9 @@ def _collect(
     # 마감일이 "요청한 마지막 날짜"가 아니라 "실제로 수집한 마지막 거래일"이 되는 것을
     # 눈으로 확인할 수 있다 (quickstart 시나리오 7).
     allowed_calls = len(candidates) + 1 if args.simulate_quota_exhausted else None
-    source = build_source(env_file=args.env_file, allowed_calls=allowed_calls)
+    source = build_source(
+        env_file=args.env_file, allowed_calls=allowed_calls, from_raw=args.from_raw
+    )
 
     indices = index.collect_index_quotes(source, candidates)
     calendar = indices.trading_calendar()
