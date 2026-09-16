@@ -16,6 +16,7 @@ import {
 import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'
 import { SettingsStatusBadge } from '@/components/strategy/SettingsStatusBadge'
 import { StrategyCardList, type RegistryViewState } from '@/components/strategy/StrategyCardList'
+import { formatWeightTenths as formatDisplayWeight } from '@/diagnosis/weights'
 import { useSectorSelection } from '@/hooks/useSectorSelection'
 import { useStrategySettings, type InvalidStoredValue } from '@/hooks/useStrategySettings'
 import type { BacktestAccepted, BacktestRequestStatus } from '@/types/backtestRequest'
@@ -51,6 +52,15 @@ const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없�
 const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'
 const AUTO_COMPARE_NOT_READY = '설정 조합 자동 비교는 아직 준비 중입니다.'
 const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'
+
+/**
+ * 비중 합계가 어긋났다는 한 문장. 지금 합계를 함께 적어 얼마나 어긋났는지 보이게 한다.
+ * 표시 형식은 002 화면과 같은 `formatWeightTenths`를 쓴다 — 같은 선택이 두 화면에서 다른 숫자로
+ * 보이지 않게 한다.
+ */
+function weightsUnbalancedMessage(totalTenths: number): string {
+  return `섹터별 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 섹터·비중 단계에서 맞춰 주세요.`
+}
 
 type Submission =
   | { status: 'idle' }
@@ -264,10 +274,37 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
   const settingsIncomplete =
     settings.selectedStrategyId !== null && !settings.isComplete(settings.selectedStrategyId)
 
+  /**
+   * 고른 전략이 사용자가 정한 비중을 쓰는데 그 합계가 100%가 아니다(T091).
+   *
+   * <p><b>그 전략에서만 막는다.</b> 합계는 `targetWeightSource: USER`인 전략에만 뜻이 있고, 004
+   * 계약이 그 전략의 목표 비중 합을 1로 요구한다. 자동 배분 전략은 이 비중을 읽지 않으므로 같은
+   * 선택으로도 분석할 수 있다 — 앞 단계로 통째로 되돌리면 그 사용자까지 막는다. 전략 ID가 아니라
+   * 등록표가 내려 준 출처로 가른다(FR-005).
+   */
+  const unbalancedUserWeights =
+    selection.status === 'ready' &&
+    settings.selectedStrategy?.targetWeightSource === 'USER' &&
+    !selection.weights.isBalanced
+
+  /**
+   * 요청에 실을 시작 금액. **화면에 보이는 값과 보내는 값이 같은 자리에서 나온다(T092).**
+   *
+   * 사용자가 바꾸지 않았으면 등록표의 기본값이다. 요약 줄과 요청 조립이 이 값 하나를 함께 읽어,
+   * 한쪽만 바뀌어 보이는 금액과 보내는 금액이 갈라지는 일이 없게 한다. B10(T067)이 상태에 값을
+   * 채우면 그 값이 여기로 온다.
+   */
+  const initialAmount =
+    registry === null
+      ? null
+      : (settings.analysisCondition.initialAmount ?? registry.analysisConditions.initialAmount.default)
+
   const prepared = useMemo(() => {
     if (
       selection.status !== 'ready' ||
       registry === null ||
+      initialAmount === null ||
+      unbalancedUserWeights ||
       !settings.ready ||
       settings.registryVersion === null ||
       !settings.selectedStrategy ||
@@ -281,16 +318,16 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       return null
     }
     return {
-      registry,
       selection: selection.selection,
       strategy: settings.selectedStrategy,
       parameters: settings.values,
       registryVersion: settings.registryVersion,
       warmupTradingDays: settings.warmupTradingDays,
       period: selectedJudgement.window,
+      initialAmount,
       versions,
     }
-  }, [selection, registry, settings, selectedJudgement, versions])
+  }, [selection, registry, initialAmount, unbalancedUserWeights, settings, selectedJudgement, versions])
 
   const analyzeBlocker = ((): string | null => {
     if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED
@@ -298,6 +335,9 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (!strategy) return SELECT_STRATEGY_FIRST
     if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING
     if (settingsIncomplete) return INVALID_STORED_VALUES
+    if (unbalancedUserWeights && selection.status === 'ready') {
+      return weightsUnbalancedMessage(selection.weights.totalTenths)
+    }
     if (settings.warmupTradingDays === null) return WARMUP_UNCOMPUTABLE
     if (!selectedJudgement) return EVALUATION_WINDOW_UNAVAILABLE
     const verdict = selectedJudgement.verdict
@@ -330,8 +370,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
   const handleAnalyze = useCallback(async () => {
     if (analyzeBlocker !== null || prepared === null || submission.status === 'sending') return
 
-    // 값을 만들지 않는다. 시작 금액은 사용자가 아직 바꾸지 않았으면 등록표의 기본값이다(B10이 상태에
-    // 채우기 전까지는 등록표에서 직접 읽는다).
+    // 값을 만들지 않는다. 시작 금액은 요약 줄에 보인 값을 그대로 싣는다.
     const request = buildBacktestRequest({
       selection: prepared.selection,
       strategy: prepared.strategy,
@@ -343,9 +382,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         costProfileVersion: prepared.versions.costProfileVersion,
       },
       period: prepared.period,
-      initialAmount:
-        settings.analysisCondition.initialAmount ??
-        prepared.registry.analysisConditions.initialAmount.default,
+      initialAmount: prepared.initialAmount,
       scenario: settings.analysisCondition.scenario,
     })
 
@@ -465,8 +502,26 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
                 <ConditionSummaryLine
                   period={selectedJudgement?.window ?? null}
                   sectorCount={universeSize ?? 0}
+                  initialAmount={
+                    initialAmount === null
+                      ? null
+                      : { value: initialAmount, unit: registry?.analysisConditions.initialAmount.unit }
+                  }
                   costProfile={costProfile}
                 />
+
+                {/*
+                  사용자 비중의 합계가 어긋났다는 안내와 되돌아갈 길이다(T091). '분석하기' 아래의 이유
+                  문장만으로는 고칠 자리가 다른 화면이라는 것까지 알려 주지 못해 이동 수단을 함께 둔다.
+                */}
+                {unbalancedUserWeights && selection.status === 'ready' ? (
+                  <div className={styles.weightNotice} role="status">
+                    <p>{weightsUnbalancedMessage(selection.weights.totalTenths)}</p>
+                    <button type="button" onClick={() => navigate('/diagnosis/sectors')}>
+                      섹터·비중 단계로 이동
+                    </button>
+                  </div>
+                ) : null}
 
                 {strategyInvalid.length > 0 ? (
                   <InvalidValueList

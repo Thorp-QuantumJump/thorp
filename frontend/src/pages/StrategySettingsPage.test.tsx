@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SectorCatalogResult } from '@/api/sectors'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
@@ -138,6 +138,45 @@ function renderPage(support?: AnalysisSupport) {
   )
 }
 
+/** 합계가 100%에서 0.1%p 모자란 선택을 002 계약 형식대로 보관한다. 002는 이 상태도 정상으로 보관한다. */
+function storeUnbalancedSelection() {
+  window.sessionStorage.setItem(
+    SECTOR_SELECTION_STORAGE_KEY,
+    JSON.stringify({
+      version: SECTOR_SELECTION_PAYLOAD_VERSION,
+      mapVersion: 'SEM-TEST-1',
+      selected: [
+        { code: 'ALPHA', weightTenths: 333 },
+        { code: 'BETA', weightTenths: 333 },
+        { code: 'GAMMA', weightTenths: 333 },
+      ],
+      weightsTouched: true,
+    }),
+  )
+}
+
+/** 앞 단계로 이동하는 버튼이 실제로 그 경로에 닿는지 보려고 목적지 화면을 흉내 낸다. */
+function renderPageWithSectorRoute(support: AnalysisSupport) {
+  const authValue: AuthContextValue = {
+    status: 'anonymous',
+    user: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    recheck: vi.fn(),
+  }
+
+  return render(
+    <MemoryRouter initialEntries={['/strategy']}>
+      <AuthContext.Provider value={authValue}>
+        <Routes>
+          <Route path="/strategy" element={<StrategySettingsPage support={support} />} />
+          <Route path="/diagnosis/sectors" element={<p>섹터·비중 단계 화면</p>} />
+        </Routes>
+      </AuthContext.Provider>
+    </MemoryRouter>,
+  )
+}
+
 /**
  * 카드와 행동 버튼의 접근 가능 이름은 이름·설명·사유를 이어 붙인 글이라 전체 일치로는 찾을 수 없다.
  * 정규식이 아니라 함수로 견주는 까닭은 전략 이름에 괄호 같은 정규식 기호가 들어 있을 수 있기
@@ -233,6 +272,79 @@ describe('StrategySettingsPage', () => {
       0,
     )
     expect(total).toBeCloseTo(1, 4)
+  })
+
+  it('사용자 비중을 쓰는 전략은 비중 합계가 100%가 아니면 분석하기가 막히고 되돌아갈 길을 보인다', async () => {
+    // T091. 002는 합계가 어긋난 상태도 정상으로 보관하고, 004는 목표 비중 합을 1로 요구한다.
+    // 그 사이를 잇는 이 화면이 막지 않으면 서버가 400으로 거절하고 사용자는 무엇을 고칠지 모른다.
+    storeUnbalancedSelection()
+    const user = userEvent.setup()
+    const userWeighted = registryFixture.strategies.find(
+      (strategy) => strategy.targetWeightSource === 'USER',
+    )!
+    apiMocks.fetchStrategyRegistry.mockResolvedValue({
+      ...registryFixture,
+      strategies: [{ ...userWeighted, selectable: true, unselectableReason: undefined }],
+    })
+    const { support, requests } = makeSupport()
+    renderPageWithSectorRoute(support)
+
+    await user.click(await findCardNamed(userWeighted.name))
+
+    const analyze = actionButton('분석하기')
+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))
+    const reasonId = analyze.getAttribute('aria-describedby')
+    const reason = document.getElementById(reasonId!)?.textContent ?? ''
+    expect(reason).toContain('합계가 100%가 아닙니다')
+    // 얼마나 어긋났는지 002 화면과 같은 형식으로 보인다.
+    expect(reason).toContain('99.9%')
+
+    await user.click(analyze)
+    expect(requests).toHaveLength(0)
+
+    // 고칠 자리가 다른 화면이라 이동 수단을 함께 둔다.
+    await user.click(screen.getByRole('button', { name: '섹터·비중 단계로 이동' }))
+    expect(await screen.findByText('섹터·비중 단계 화면')).toBeTruthy()
+  })
+
+  it('비중 합계가 어긋나도 자동 배분 전략은 막지 않는다', async () => {
+    // T091. 자동 배분 전략은 이 비중을 읽지 않는다. 합계 때문에 막으면 필요 이상으로 넓게 막는다.
+    storeUnbalancedSelection()
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    // 픽스처의 이 전략은 등록표가 자동 배분(`COMPUTED`)이라고 말한다.
+    expect(selectableStrategy.targetWeightSource).not.toBe('USER')
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    expect(screen.queryByRole('button', { name: '섹터·비중 단계로 이동' })).toBeNull()
+
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    for (const item of requests[0].sectorAllocation.items) {
+      expect(item).not.toHaveProperty('targetWeight')
+    }
+  })
+
+  it('요약 줄에 보인 시작 금액이 그대로 요청에 실린다', async () => {
+    // T092, quickstart 4. 사용자가 보지 못한 금액으로 분석이 접수되지 않는다.
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    const amount = registryFixture.analysisConditions.initialAmount
+    const summary = screen.getByLabelText('분석 조건 요약')
+    expect(summary.textContent).toContain(
+      `${amount.default.toLocaleString('ko-KR')}${amount.unit ?? ''}`,
+    )
+
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2))
   })
 
   it('기본 화면의 입력은 전략 선택 하나다', async () => {
