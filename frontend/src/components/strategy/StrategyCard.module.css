@@ -1,0 +1,72 @@
+.card {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 16px 17px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 7px;
+  background: var(--thorp-surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.card:hover[data-selectable='true'] {
+  border-color: var(--thorp-accent-soft);
+}
+
+.card:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.card[data-selected='true'] {
+  border-color: var(--thorp-accent);
+  box-shadow: inset 0 0 0 1px var(--thorp-accent);
+}
+
+/* 고를 수 없는 카드는 흐려 보이되 초점과 문구는 그대로 읽힌다. */
+.card[data-selectable='false'] {
+  cursor: not-allowed;
+  background: var(--thorp-surface-raised);
+}
+
+.card[data-selectable='false'] .name,
+.card[data-selectable='false'] .description {
+  color: var(--thorp-muted);
+}
+
+.name {
+  color: var(--thorp-foreground);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.description {
+  color: var(--thorp-copy);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.notice {
+  display: grid;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.reason {
+  display: grid;
+  gap: 3px;
+  color: var(--thorp-copy);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.reasonLabel {
+  color: var(--thorp-warning);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.card[data-selectable='false'] .reasonLabel {
+  color: var(--thorp-neutral);
+}
