@@ -42,6 +42,9 @@ export type SectorCatalog = {
  *
  * 값의 원본은 백엔드의 `SectorExceptionHandler`이며 그 파일에 있는 넷을 그대로 옮겼다.
  * 계약 문서(`contracts/sector-api.md`)의 오류 표에는 `SECTOR_MAP_UNUSABLE`이 빠져 있다.
+ *
+ * 이 목록을 공용 `ServiceApiErrorCode`에 잇는 쪽은 `./api`다. **이 파일은 `./api`를 가져오지
+ * 않는다** — 공용이 도메인을 알고 도메인은 공용을 모르는 한 방향이라 순환 참조가 생기지 않는다.
  */
 export const sectorApiErrorCodes = [
   'SECTOR_MAP_NOT_READY',

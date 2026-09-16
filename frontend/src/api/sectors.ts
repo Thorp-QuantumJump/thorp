@@ -1,5 +1,5 @@
 import { ApiClientError, apiClient, normalizeApiError } from './client'
-import type { ApiErrorCode, ApiEnvelope, ServiceApiErrorCode } from '@/types/auth'
+import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
 import type { SectorCatalog, SectorClassification, SectorSummary } from '@/types/sector'
 
 /**

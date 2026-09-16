@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/auth'
+import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
 import type { SectorCatalog } from '@/types/sector'
 import { apiClient } from './client'
 import { fetchSectorCatalog } from './sectors'

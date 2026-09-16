@@ -1,5 +1,6 @@
 import axios from 'axios'
-import type { ApiErrorCode, AuthFieldError, ServiceApiErrorCode } from '@/types/auth'
+import type { ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
+import type { AuthFieldError } from '@/types/auth'
 
 /** 공용 API 클라이언트. 개발 중에는 vite proxy(/api → localhost:8080)를 탄다. */
 export const apiClient = axios.create({
