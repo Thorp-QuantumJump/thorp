@@ -64,6 +64,15 @@ const SectorSelectionPage = lazy(() =>
   })),
 )
 
+// 전략 진단의 두 번째 단계다(spec 003). 흐름은 002 섹터·비중(`/diagnosis/sectors`) → 003 전략
+// 선택(`/strategy`) → 004 분석 / 007 설정 조합 자동 비교(`/param-search`)이며, 앞 단계의 선택은
+// 같은 탭의 `sessionStorage`로 이어받는다.
+const StrategySettingsPage = lazy(() =>
+  import('@/pages/StrategySettingsPage').then((module) => ({
+    default: module.StrategySettingsPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -93,6 +102,8 @@ function AnimatedRoutes() {
             <Route path="/learn" element={<NotReadyPage />} />
             {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
+            {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
+            <Route path="/strategy" element={<StrategySettingsPage />} />
             <Route
               path="/records/*"
               element={
