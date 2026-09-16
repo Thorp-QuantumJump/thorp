@@ -123,7 +123,7 @@ describe('StrategyCardList', () => {
 
     // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 이유를 읽을 수 있다.
     expect(card.getAttribute('aria-disabled')).toBe('true')
-    expect(card.hasAttribute('aria-pressed')).toBe(false)
+    expect(card.getAttribute('aria-pressed')).toBe('false')
     expect(card.textContent).toContain(unselectableStrategy.unselectableReason)
 
     await user.click(card)
@@ -211,6 +211,20 @@ describe('StrategyCardList', () => {
     )
 
     expect(document.activeElement).toBe(screen.getByRole('group', { name: '전략 고르기' }))
+  })
+
+  it('고른 카드가 고를 수 없게 되어도 고른 사실을 계속 전달한다', () => {
+    // 고른 뒤에 최소 평가 기간이 바뀌어 워밍업 판정이 막히는 경우다(FR-011a). 테두리로는 선택
+    // 상태가 보이는데 스크린리더에만 전달되지 않으면 같은 사실이 보는 사람에 따라 달라진다.
+    renderList(loaded, {
+      selectedStrategyId: selectableStrategy.strategyId,
+      judgeWarmup: () => ({ state: 'blocked', message: '평가할 구간이 남지 않습니다.' }),
+    })
+
+    const card = cardNamed(selectableStrategy.name)
+    expect(card.getAttribute('aria-disabled')).toBe('true')
+    expect(card.getAttribute('aria-pressed')).toBe('true')
+    expect(card.getAttribute('data-selected')).toBe('true')
   })
 
   it('워밍업을 판정하지 못한 것을 통과로 접지 않는다', async () => {

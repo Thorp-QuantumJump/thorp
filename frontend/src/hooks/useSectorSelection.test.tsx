@@ -128,6 +128,36 @@ describe('useSectorSelection', () => {
     ])
   })
 
+  it('종목 칸이 비어 있는 링크는 뒤 칸을 당겨 붙이지 않는다', () => {
+    // 빈 칸을 지우면 그 뒤 자리가 한 칸씩 밀려 SEC-B 의 종목이 SEC-A 에 붙는다. 개수가 우연히
+    // 맞아 짝짓기 방어를 통과해 버리므로, 빈 칸이 있는 시점에 온전하지 않은 링크로 본다.
+    expect(
+      renderSelection('/?sectors=SEC-A,SEC-B&instruments=,INS-A,INS-B').result.current,
+    ).toBeNull()
+    expect(
+      renderSelection('/?sectors=SEC-A,,SEC-B&instruments=INS-A,INS-B,INS-C').result.current,
+    ).toBeNull()
+  })
+
+  it('같은 섹터가 두 번 적혔는데 종목이 서로 다르면 접지 않는다', () => {
+    // 어느 쪽이 그 섹터의 대표 ETF 인지 알 방법이 없다. 하나를 골라 접으면 화면이 고르지 않은
+    // 종목을 고른 것처럼 만든다.
+    expect(
+      renderSelection('/?sectors=SEC-A,SEC-A,SEC-B&instruments=INS-A,INS-B,INS-C').result.current,
+    ).toBeNull()
+  })
+
+  it('같은 섹터가 두 번 적혔고 종목도 같으면 하나로 접는다', () => {
+    const { result } = renderSelection(
+      '/?sectors=SEC-A,SEC-A,SEC-B&instruments=INS-A,INS-A,INS-B',
+    )
+
+    expect(result.current?.items).toEqual([
+      { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: null },
+      { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: null },
+    ])
+  })
+
   it('링크에 같은 섹터가 두 번 적혀 있으면 하나로 센다', () => {
     // 표기가 겹친 것일 뿐 두 섹터를 고른 것이 아니므로, 하나로 세어 최소 섹터 수에 걸린다.
     expect(

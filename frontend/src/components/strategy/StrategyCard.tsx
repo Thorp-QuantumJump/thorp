@@ -102,7 +102,11 @@ export function StrategyCard({ strategy, selected, warmup, onSelect }: StrategyC
       className={styles.card}
       // aria-disabled 는 "지금은 누를 수 없다"를 알리면서 초점은 남긴다.
       aria-disabled={!selectable}
-      aria-pressed={selectable ? selected : undefined}
+      // **고를 수 없게 되어도 고른 사실은 그대로 싣는다.** 고른 뒤에 최소 평가 기간이 바뀌어
+      // 워밍업 판정이 막히면 이 카드는 `selectable`을 잃지만 여전히 사용자가 고른 카드다.
+      // 여기서 속성을 빼면 테두리로는 선택 상태가 보이는데 스크린리더에는 전달되지 않아, 같은
+      // 사실이 보는 사람에 따라 달라진다(NFR-002).
+      aria-pressed={selected}
       aria-describedby={describedBy}
       data-selected={selected ? 'true' : undefined}
       data-selectable={selectable ? 'true' : 'false'}

@@ -48,36 +48,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값은 버리고 적힌 자리는 그대로 둔다. */
-function splitList(raw: string | null): string[] {
+/**
+ * 쉼표로 이어 붙인 질의 문자열을 **적힌 자리 그대로** 읽는다.
+ *
+ * <p>`sectors`와 `instruments`는 n번째끼리 짝을 이루므로, 어느 한쪽에서 칸을 지우면 그 뒤의 자리가
+ * 모두 한 칸씩 밀려 <b>다른 섹터의 종목이 앞 섹터에 붙는다.</b> 그래서 빈 칸도 지우지 않고, 빈
+ * 칸이 하나라도 있으면 자리와 값의 대응이 이미 깨진 링크로 보아 `null`을 돌려준다.
+ *
+ * <p>돌려주는 값의 뜻은 셋이다 — `[]`는 그 파라미터가 아예 없는 것, `null`은 적혀 있으나 온전하지
+ * 않은 것, 배열은 읽어 낸 자리다.
+ */
+function parsePositionalList(raw: string | null): string[] | null {
   if (!raw) return []
-  return raw
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-/**
- * **세는 목록.** 같은 것이 두 번 적혀 있으면 하나로 센다.
- *
- * 섹터가 이쪽이다. 링크는 사람이 손으로 고쳐 쓸 수 있고, 같은 섹터를 두 번 적은 것은 표기가
- * 겹친 것일 뿐 "두 섹터를 골랐다"는 뜻이 아니다. 007 `ParamSearchPage`도 대상 목록을 같은
- * 방식으로 읽는다.
- */
-function parseCountedList(raw: string | null): string[] {
-  return [...new Set(splitList(raw))]
-}
-
-/**
- * **짝짓는 목록.** 자리로 다른 목록과 짝을 이루므로 같은 값이 두 번 있어도 지우지 않는다.
- *
- * 종목이 이쪽이다. `instruments`의 n번째는 `sectors`의 n번째 섹터의 대표 ETF이고, 서로 다른
- * 섹터가 같은 대표 ETF를 가리키는 것을 001의 섹터 계약이 금지하지 않는다
- * (`specs/001-etf-market-data/contracts/sector-api.md`). **여기서 중복을 지우면 그런 온전한
- * 링크가 개수 불일치로 거부되어, 앞 단계를 마친 사용자에게 마치지 않았다고 안내하게 된다.**
- */
-function parsePairedList(raw: string | null): string[] {
-  return splitList(raw)
+  const tokens = raw.split(',').map((item) => item.trim())
+  return tokens.every(Boolean) ? tokens : null
 }
 
 /** 저장된 자료 하나를 읽는다. 모양이 다르면 `null`이며, 한 항목이라도 어긋나면 전체를 버린다. */
@@ -142,9 +126,9 @@ function readStoredSelection(): SectorSelection | null {
 /**
  * 두 섹터 집합이 같은가. 순서는 보지 않는다.
  *
- * 길이 비교로 시작할 수 있는 것은 **양쪽 모두 중복이 없기 때문이다** — 링크는
- * `parseCountedList`가 하나로 세고, 저장 자료는 중복이 있으면 `readStoredSelection`이 통째로
- * 버린다. 그 전제가 깨지면 이 비교도 함께 틀린다.
+ * 길이 비교로 시작할 수 있는 것은 **양쪽 모두 중복이 없기 때문이다** — 링크 쪽은 호출자가
+ * 중복을 접어 넘기고, 저장 자료는 중복이 있으면 `readStoredSelection`이 통째로 버린다. 그
+ * 전제가 깨지면 이 비교도 함께 틀린다.
  */
 function sameSectors(stored: SectorSelectionItem[], sectorIds: string[]): boolean {
   if (stored.length !== sectorIds.length) return false
@@ -171,17 +155,33 @@ const MINIMUM_SECTOR_COUNT = 2
  * 일부만 살리지 않고 전체를 온전하지 않은 입력으로 다룬다 — 종목 없이는 004 요청을 만들 수 없어
  * 반쪽짜리를 남겨도 쓸 곳이 없고, spec Edge Cases도 "손상됐으면"을 없는 것과 한 문장으로 묶었다.
  */
-function readLinkedSelection(sectorIds: string[], instrumentIds: string[]): SectorSelection | null {
-  if (instrumentIds.length !== sectorIds.length) return null
+function readLinkedSelection(
+  sectorTokens: string[],
+  instrumentTokens: string[],
+): SectorSelection | null {
+  if (instrumentTokens.length !== sectorTokens.length) return null
 
-  return {
-    mappingVersion: null,
-    items: sectorIds.map((sectorId, index) => ({
-      sectorId,
-      instrumentId: instrumentIds[index],
-      targetWeight: null,
-    })),
+  const items: SectorSelectionItem[] = []
+  const instrumentBySector = new Map<string, string>()
+
+  // **자리를 손대기 전에 먼저 짝을 짓는다.** 중복을 접은 뒤의 인덱스로 짝지으면 접기 전 자리와
+  // 어긋나, 개수가 우연히 맞는 링크에서 다른 섹터의 종목이 앞 섹터에 붙는다.
+  for (const [index, sectorId] of sectorTokens.entries()) {
+    const instrumentId = instrumentTokens[index]
+    const paired = instrumentBySector.get(sectorId)
+
+    if (paired === undefined) {
+      instrumentBySector.set(sectorId, instrumentId)
+      items.push({ sectorId, instrumentId, targetWeight: null })
+      continue
+    }
+
+    // 같은 섹터를 두 번 적은 것은 표기가 겹친 것이므로 하나로 센다. 다만 그 두 자리가 서로 다른
+    // 종목을 가리키면 어느 쪽이 맞는지 알 방법이 없으므로 접지 않고 온전하지 않은 링크로 다룬다.
+    if (paired !== instrumentId) return null
   }
+
+  return { mappingVersion: null, items }
 }
 
 /**
@@ -200,17 +200,24 @@ export function useSectorSelection(): SectorSelection | null {
   const instrumentsParam = params.get('instruments')
 
   return useMemo(() => {
-    const sectorIds = parseCountedList(sectorsParam)
-    const instrumentIds = parsePairedList(instrumentsParam)
+    const sectorTokens = parsePositionalList(sectorsParam)
+    const instrumentTokens = parsePositionalList(instrumentsParam)
+    if (sectorTokens === null || instrumentTokens === null) return null
+
     const stored = readStoredSelection()
 
+    // 같은 섹터를 두 번 적은 것은 표기가 겹친 것일 뿐 "두 섹터를 골랐다"는 뜻이 아니므로, 저장된
+    // 선택과 견줄 때는 하나로 세어 본다. 짝짓기에는 이 목록을 쓰지 않는다.
+    const countedSectorIds = [...new Set(sectorTokens)]
+
     const selection =
-      sectorIds.length === 0
+      sectorTokens.length === 0
         ? stored
-        : // 링크가 가리키는 섹터가 저장된 것과 같을 때만 비중을 가져온다.
-          stored && sameSectors(stored.items, sectorIds)
+        : // 링크가 가리키는 섹터가 저장된 것과 같을 때만 비중을 가져온다. 저장된 선택이 종목을
+          // 이미 갖고 있으므로 링크에 종목이 적혀 있지 않아도 온전하다.
+          stored && sameSectors(stored.items, countedSectorIds)
           ? stored
-          : readLinkedSelection(sectorIds, instrumentIds)
+          : readLinkedSelection(sectorTokens, instrumentTokens)
 
     if (selection === null || selection.items.length < MINIMUM_SECTOR_COUNT) return null
     return selection
