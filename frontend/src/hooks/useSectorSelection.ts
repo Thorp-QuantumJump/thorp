@@ -48,10 +48,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */
-function parseList(raw: string | null): string[] {
+/** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값은 버리고 적힌 자리는 그대로 둔다. */
+function splitList(raw: string | null): string[] {
   if (!raw) return []
-  return [...new Set(raw.split(',').map((item) => item.trim()).filter(Boolean))]
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+/**
+ * **세는 목록.** 같은 것이 두 번 적혀 있으면 하나로 센다.
+ *
+ * 섹터가 이쪽이다. 링크는 사람이 손으로 고쳐 쓸 수 있고, 같은 섹터를 두 번 적은 것은 표기가
+ * 겹친 것일 뿐 "두 섹터를 골랐다"는 뜻이 아니다. 007 `ParamSearchPage`도 대상 목록을 같은
+ * 방식으로 읽는다.
+ */
+function parseCountedList(raw: string | null): string[] {
+  return [...new Set(splitList(raw))]
+}
+
+/**
+ * **짝짓는 목록.** 자리로 다른 목록과 짝을 이루므로 같은 값이 두 번 있어도 지우지 않는다.
+ *
+ * 종목이 이쪽이다. `instruments`의 n번째는 `sectors`의 n번째 섹터의 대표 ETF이고, 서로 다른
+ * 섹터가 같은 대표 ETF를 가리키는 것을 001의 섹터 계약이 금지하지 않는다
+ * (`specs/001-etf-market-data/contracts/sector-api.md`). **여기서 중복을 지우면 그런 온전한
+ * 링크가 개수 불일치로 거부되어, 앞 단계를 마친 사용자에게 마치지 않았다고 안내하게 된다.**
+ */
+function parsePairedList(raw: string | null): string[] {
+  return splitList(raw)
 }
 
 /** 저장된 자료 하나를 읽는다. 모양이 다르면 `null`이며, 한 항목이라도 어긋나면 전체를 버린다. */
@@ -101,13 +127,25 @@ function readStoredSelection(): SectorSelection | null {
   }
   if (items.length === 0) return null
 
+  // **같은 섹터가 두 번 든 선택은 002가 만들 수 있는 자료가 아니다.** 링크의 중복과 달리 이것은
+  // 표기가 겹친 것이 아니라 저장된 자료가 깨진 것이므로, 중복만 접지 않고 전체를 버린다 —
+  // 접으면 사용자가 정한 적 없는 크기의 후보 집합이 만들어지고 그 수가 `universeSize`로 서버에
+  // 나간다(spec Edge Cases "손상됐거나").
+  if (new Set(items.map((item) => item.sectorId)).size !== items.length) return null
+
   return {
     mappingVersion: typeof parsed.mappingVersion === 'string' ? parsed.mappingVersion : null,
     items,
   }
 }
 
-/** 두 섹터 집합이 같은가. 순서는 보지 않는다. */
+/**
+ * 두 섹터 집합이 같은가. 순서는 보지 않는다.
+ *
+ * 길이 비교로 시작할 수 있는 것은 **양쪽 모두 중복이 없기 때문이다** — 링크는
+ * `parseCountedList`가 하나로 세고, 저장 자료는 중복이 있으면 `readStoredSelection`이 통째로
+ * 버린다. 그 전제가 깨지면 이 비교도 함께 틀린다.
+ */
 function sameSectors(stored: SectorSelectionItem[], sectorIds: string[]): boolean {
   if (stored.length !== sectorIds.length) return false
   const left = new Set(stored.map((item) => item.sectorId))
@@ -162,8 +200,8 @@ export function useSectorSelection(): SectorSelection | null {
   const instrumentsParam = params.get('instruments')
 
   return useMemo(() => {
-    const sectorIds = parseList(sectorsParam)
-    const instrumentIds = parseList(instrumentsParam)
+    const sectorIds = parseCountedList(sectorsParam)
+    const instrumentIds = parsePairedList(instrumentsParam)
     const stored = readStoredSelection()
 
     const selection =

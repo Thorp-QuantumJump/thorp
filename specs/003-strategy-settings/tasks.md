@@ -488,3 +488,14 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 
 - [X] T087 **CRITICAL** (FE) 종목 ID가 빠진 자리를 섹터 ID로 채우지 않는다 per Constitution VI · spec Edge Cases (contradicts) — `frontend/src/hooks/useSectorSelection.ts`의 대역 경로가 `instrumentId: instrumentIds[index] ?? sectorId`로 **없는 값을 지어낸다.** 원칙 VI는 "질의 기준 자료나 관측값의 결측을 임의 보간하지 않는다"를 정하고, spec Edge Cases는 "002에서 선택한 정보가 없거나 손상됐거나 선택 섹터가 두 개 미만이면 003은 **기본값을 만들지 않고** 이전 단계를 다시 완료하도록 안내한다"를 정한다. `instrumentId`는 대표 ETF의 실제 식별자이고(`types/sector.ts`의 `RepresentativeEtf`), 섹터 코드는 그 자리에 올 수 있는 값이 아니다 — 지금 구조에서는 `?sectors=A,B&instruments=X`처럼 개수가 어긋난 링크가 조용히 통과해 존재하지 않는 종목 ID가 분석 요청에 실린다. **섹터 하나라도 종목이 빠졌으면 그 입력 전체를 불완전한 것으로 보고 `null`을 돌려준다** — Edge Case가 "손상됐으면"을 없는 것과 같이 묶었고, 종목 없이는 004 요청을 만들 수 없으므로 일부만 살려도 쓸 곳이 없다. 다른 판단을 고르면 근거를 주석에 적는다. 검사로 고정한다: 종목이 아예 없는 링크, 섹터보다 종목이 적은 링크
 - [X] T088 (FE) 선택 섹터가 두 개 미만이면 앞 단계로 되돌린다 per spec Edge Cases · T030 (missing) — spec Edge Cases가 "선택 섹터가 두 개 미만이면 003은 기본값을 만들지 않고 이전 단계를 다시 완료하도록 안내한다"를 정하는데 **이 판정이 코드에도 tasks.md 어디에도 없다.** 섹터 하나로는 배분할 것이 없어 다섯 전략 어느 것도 뜻을 이루지 못하는데, 지금은 그대로 통과해 등록표를 `universeSize=1`로 조회하고 카드를 그린다. 판정을 `useSectorSelection`에 두어 없음·손상·두 개 미만 셋이 같은 자리에서 `null`이 되게 한다 — Edge Case가 셋을 한 문장으로 묶었고, 세 갈래가 다른 층에 흩어지면 화면이 한쪽을 빠뜨린다(`api/sectors.ts`가 "아직 줄 것이 없다"에 해당하는 상태를 모두 한 층에서 갈라 놓은 것과 같은 까닭이다). 최소 섹터 수를 상수로 두고 그 근거(무엇을 무엇과 견주는 일이라 둘이 필요하다)를 주석에 적는다. **`frontend/src/hooks/useSectorSelection.test.tsx`의 기존 검사 둘이 섹터 하나짜리 링크를 통과로 굳혀 두었으므로 함께 고친다** — 검사가 잘못된 동작을 지키고 있는 상태다 (T087 의존)
+
+---
+
+## Phase 12: Convergence
+
+**Purpose**: B04를 Success Criteria·plan 게이트·research 결정까지 넓혀 다시 대조한다. 그 영역에서는
+새 간극이 없었고, Phase 11이 세운 입력 판정 자체에 둘이 남았다. **둘 다 "앞 단계가 끝났는가"를
+두 출처가 서로 다른 잣대로 재는 문제다.**
+
+- [X] T089 (FE) 자리로 짝짓는 목록에서 중복 제거를 뺀다 per T087 · spec Edge Cases (partial) — `frontend/src/hooks/useSectorSelection.ts`의 `parseList`가 섹터와 종목 **양쪽에** 중복을 걸러 내는데, 종목은 섹터와 **자리로 짝지어지는 목록**이라 중복이 지워지면 개수가 어긋나 온전한 링크가 거부된다. 001의 섹터 계약(`specs/001-etf-market-data/contracts/sector-api.md`)은 서로 다른 섹터가 같은 대표 ETF를 가리키는 것을 금지하지 않으므로 **`?sectors=SEC-A,SEC-B&instruments=INS-X,INS-X`는 있을 수 있는 입력이고, 지금은 앞 단계를 마치지 않은 것으로 잘못 안내된다.** 중복 제거는 섹터 목록에만 남긴다 — 같은 섹터를 두 번 고른 것은 하나로 세는 것이 맞지만, 종목은 세는 목록이 아니라 짝짓는 목록이다. 두 목적에 같은 함수를 쓰지 않도록 이름과 주석으로 갈라 둔다. 검사로 고정한다: 두 섹터가 같은 종목을 가리키는 링크가 통과한다
+- [X] T090 (FE) 저장된 선택도 질의 문자열과 같은 잣대로 본다 per spec Edge Cases (partial) — 질의 문자열 경로는 `parseList`가 중복 섹터를 걸러 내지만 `readStoredSelection`은 걸러 내지 않아, 같은 섹터가 두 번 실린 저장 자료가 두 개짜리 선택으로 통과한다. spec Edge Cases가 "손상됐으면"을 앞 단계 미완료로 묶었고, **같은 섹터가 두 번 든 선택은 002가 만들 수 있는 자료가 아니다.** 두 출처가 서로 다른 잣대를 쓰면 같은 결함이 한쪽으로 들어올 때만 걸린다. 저장 경로에서도 섹터 중복을 손상으로 보고 전체를 버린다 — 중복만 접으면 사용자가 정한 적 없는 크기의 후보 집합이 만들어지고 그 수가 `universeSize`로 서버에 나간다. `sameSectors`가 길이 비교로 시작하는 것도 중복이 없다는 전제 위에 서 있으므로 같은 자리에서 정리한다 (T089 관련)

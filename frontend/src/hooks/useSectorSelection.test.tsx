@@ -117,6 +117,38 @@ describe('useSectorSelection', () => {
     expect(renderSelection().result.current).toBeNull()
   })
 
+  it('두 섹터가 같은 대표 ETF를 가리키는 링크를 거부하지 않는다', () => {
+    // 종목은 섹터와 자리로 짝지어지는 목록이다. 중복을 지우면 개수가 어긋나, 앞 단계를 마친
+    // 사용자에게 마치지 않았다고 안내하게 된다. 001 섹터 계약은 이 경우를 금지하지 않는다.
+    const { result } = renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-X,INS-X')
+
+    expect(result.current?.items).toEqual([
+      { sectorId: 'SEC-A', instrumentId: 'INS-X', targetWeight: null },
+      { sectorId: 'SEC-B', instrumentId: 'INS-X', targetWeight: null },
+    ])
+  })
+
+  it('링크에 같은 섹터가 두 번 적혀 있으면 하나로 센다', () => {
+    // 표기가 겹친 것일 뿐 두 섹터를 고른 것이 아니므로, 하나로 세어 최소 섹터 수에 걸린다.
+    expect(
+      renderSelection('/?sectors=SEC-A,SEC-A&instruments=INS-A,INS-A').result.current,
+    ).toBeNull()
+  })
+
+  it('같은 섹터가 두 번 든 저장 자료는 손상으로 보고 버린다', () => {
+    stored({
+      mappingVersion: 'MAP-TEST-1',
+      items: [
+        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
+        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
+      ],
+    })
+
+    // 002가 만들 수 있는 자료가 아니다. 중복만 접으면 사용자가 정한 적 없는 크기의 후보 집합이
+    // 만들어지고 그 수가 universeSize 로 서버에 나간다.
+    expect(renderSelection().result.current).toBeNull()
+  })
+
   it('모양이 어긋난 저장 자료는 한 항목만 어긋나도 전체를 버린다', () => {
     stored({
       mappingVersion: 'MAP-TEST-1',
