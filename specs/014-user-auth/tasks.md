@@ -176,11 +176,11 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 **Purpose**: 전체 계약·회귀·문서 증거를 확인하고 MR 단위로 마무리한다.
 
-- [ ] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`
-- [ ] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`
-- [ ] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`
-- [ ] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`
-- [ ] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`
+- [x] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`
+- [x] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`
+- [x] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`
+- [x] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`
+- [x] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`
 
 ---
 
