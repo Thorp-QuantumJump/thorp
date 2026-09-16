@@ -14,6 +14,9 @@
 #   values   숫자 후보. 화면 문구는 서버가 값과 unit 으로 만든다(21 + 거래일).
 #   choices  값과 문구를 함께 적는다. 숫자가 아닌 후보는 이 형태로만 적을 수 있다.
 # selectionMode 와 minEvaluationYears 가 choices 쪽이고 나머지는 values 쪽이다.
+#
+# 둘째 전략의 topN 은 appliesWhen 으로 selectionMode 가 TOP_N 일 때만 쓰는 축이고, 첫째 전략의 두 축은
+# termId 로 013 용어 설명을 가리킨다 — 계약 §1의 두 선택 필드가 응답에 실리는 모양을 보이기 위한 것이다.
 
 version: "PROVISIONAL-20260911"
 
@@ -51,6 +54,7 @@ strategies:
       sum: [lookbackDays]
     axes:
       - name: lookbackDays
+        termId: volatility
         label: 변동성 관측 기간
         description: 변동성을 재는 데 쓸 과거 구간의 길이다. 길수록 최근 변화에 둔해진다.
         unit: 거래일
@@ -59,6 +63,7 @@ strategies:
         allowedRange:
           values: [21, 63, 126, 252]
       - name: maxWeight
+        termId: weight
         label: 비중 상한
         description: 한 섹터에 넣을 수 있는 최대 비중이다. 잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나눈다.
         unit: 퍼센트
@@ -113,6 +118,7 @@ strategies:
             - value: THRESHOLD
               label: 기준 수익률 이상
       - name: topN
+        appliesWhen: { axis: selectionMode, value: TOP_N }
         label: 선정 섹터 수
         description: 선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.
         searchValues: [2, 3, 4]

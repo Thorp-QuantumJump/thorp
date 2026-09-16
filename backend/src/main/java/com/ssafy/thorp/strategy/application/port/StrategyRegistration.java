@@ -1,8 +1,10 @@
 package com.ssafy.thorp.strategy.application.port;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -48,7 +50,40 @@ public record StrategyRegistration(
                         "duplicate axis in registration: " + strategyId + "/" + axis.name());
             }
         }
+        for (ParameterAxis axis : axes) {
+            // 조건이 가리키는 축이 같은 전략에 없으면 그 조건은 영원히 거짓이라 축이 사라진 것과 같다. 기동에서 막는다.
+            AxisCondition condition = axis.appliesWhen();
+            if (condition != null && !seen.contains(condition.axis())) {
+                throw new IllegalArgumentException(
+                        "appliesWhen refers to an unknown axis: "
+                                + strategyId
+                                + "/"
+                                + axis.name()
+                                + " -> "
+                                + condition.axis());
+            }
+        }
         axes = Collections.unmodifiableList(List.copyOf(axes));
+    }
+
+    /**
+     * 지금 설정에서 뜻을 갖는 축만. 조건이 없는 축은 늘 들어가고, 조건이 있는 축은 결정 축의 값이 맞을 때만 들어간다(spec FR-003).
+     *
+     * <p>화면·접수 관문·조합 생성이 모두 이 하나로 판정한다. 각자 따로 판정하면 한쪽만 조건을 빠뜨려 화면이 계약대로 보낸 요청이 서버에서 막힌다.
+     */
+    public List<ParameterAxis> applicableAxes(Map<String, Object> settings) {
+        return axes.stream().filter(axis -> axis.appliesTo(settings)).toList();
+    }
+
+    /** 설정에서 뜻을 갖는 축의 값만 남긴다. 조건 밖 축의 값은 사용자가 정한 것이 아니라 등록표 기본값이 딸려 온 것이라 실행에 싣지 않는다. */
+    public Map<String, Object> applicableValues(Map<String, Object> settings) {
+        Map<String, Object> kept = new LinkedHashMap<>();
+        for (ParameterAxis axis : applicableAxes(settings)) {
+            if (settings.containsKey(axis.name())) {
+                kept.put(axis.name(), settings.get(axis.name()));
+            }
+        }
+        return Collections.unmodifiableMap(kept);
     }
 
     public List<String> axisNames() {
