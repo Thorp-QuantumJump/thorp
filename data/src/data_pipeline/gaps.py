@@ -60,7 +60,7 @@ from data_pipeline.corporate_actions import (
 )
 from data_pipeline.krx import DailyQuote, ListingWindow
 
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: ``data_gap.reason``으로 지금 쓸 수 있는 값. ``SUSPENDED_TOO_LONG``은 여기 없다 (FR-006).
 REASON_AMBIGUOUS_PRICE: Final[str] = "AMBIGUOUS_PRICE"
@@ -131,7 +131,7 @@ def build_daily_prices(
     기업행위가 없으면 직전 거래일의 조정가와 같아지고, 있으면 계수가 달라지는 것이 맞다.
     """
     if INSTRUMENT_ID_PATTERN.match(window.instrument_id) is None:
-        raise GapError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {window.instrument_id!r}")
+        raise GapError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {window.instrument_id!r}")
     by_date = {quote.date: quote for quote in quotes}
     if len(by_date) != len(quotes):
         raise GapError(f"같은 날짜의 시세가 두 번 들어 있다: {window.instrument_id}")
@@ -350,7 +350,7 @@ def validate_gap_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]
         if reason not in ALLOWED_GAP_REASONS:
             raise GapError(f"reason은 {sorted(ALLOWED_GAP_REASONS)} 중 하나여야 한다: {reason!r}")
         if INSTRUMENT_ID_PATTERN.match(str(row["instrument_id"])) is None:
-            raise GapError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {row['instrument_id']!r}")
+            raise GapError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {row['instrument_id']!r}")
         if row["end_date"] < row["start_date"]:
             raise GapError(
                 f"end_date는 start_date 이후여야 한다: {row['instrument_id']} "

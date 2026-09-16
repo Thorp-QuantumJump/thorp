@@ -1,0 +1,131 @@
+{
+  "$schemaNote": "data/src/data_pipeline/sector_map.py의 load_sector_map이 읽는 형식이다. `$`로 시작하는 키는 주석이며 읽는 쪽이 건너뛴다.",
+  "$purpose": "PD-01이 확정한 섹터-ETF 대응표다. 예시 대응표(specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json)를 대체하며 is_sample = false다.",
+  "$selection": "여덟 섹터는 2026-09-11 하루치 응답(ETF 1,168종)에서 레버리지·인버스·해외자산·채권혼합·커버드콜·광범위 시장지수를 걸러 432종을 남긴 뒤, 섹터마다 확보 가능 기간·기업행위 이력·최근 3개월 일평균 거래대금으로 후보를 비교해 골랐다. 근거와 탈락 사유는 specs/001-etf-market-data/pd01-etf-candidates.md §7이다.",
+  "$listedOn": "상장일은 관측된 첫날이 아니라 공시 상장일이다(data-model.md 「상장일을 무엇으로 적는가」). 2026-09-16에 토스증권 화면에서 옮겼고, 2010-01-04 이후 상장한 305720·228790·139230 셋은 원천 관측(첫 등장일)으로 교차 확인했다. 나머지 다섯은 원천 하한보다 앞서 확인할 수 없으며, 운용사 공시로 다시 대조해야 한다(SC-002).",
+  "$classification": "기준 지수가 KRX·코스피200 업종 지수면 INDUSTRY, 그 밖의 지수(FnGuide·WISE)면 THEME다. 예시 대응표의 분류 기준을 그대로 따른다.",
+  "$dataSource": "자료 원천 표시는 dataset_version.source가 맡는다. 이 파일은 대응표만 담는다.",
+  "is_sample": false,
+  "sectors": [
+    {
+      "code": "SEMICONDUCTOR",
+      "name": "반도체",
+      "classification": "INDUSTRY",
+      "description": "반도체 설계·제조·장비 업종.",
+      "representative_etf": {
+        "instrument_id": "091160.XKRX",
+        "name": "KODEX 반도체",
+        "listed_on": "2006-06-27",
+        "benchmark_index": "KRX 반도체",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "SECONDARY_BATTERY",
+      "name": "2차전지",
+      "classification": "THEME",
+      "description": "2차전지 소재·셀·장비 산업.",
+      "representative_etf": {
+        "instrument_id": "305720.XKRX",
+        "name": "KODEX 2차전지산업",
+        "listed_on": "2018-09-12",
+        "benchmark_index": "FnGuide 2차전지 산업 지수",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "BANK",
+      "name": "은행",
+      "classification": "INDUSTRY",
+      "description": "은행 업종.",
+      "representative_etf": {
+        "instrument_id": "091170.XKRX",
+        "name": "KODEX 은행",
+        "listed_on": "2006-06-27",
+        "benchmark_index": "KRX 은행",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "SECURITIES",
+      "name": "증권",
+      "classification": "INDUSTRY",
+      "description": "증권 업종.",
+      "representative_etf": {
+        "instrument_id": "102970.XKRX",
+        "name": "KODEX 증권",
+        "listed_on": "2008-05-29",
+        "benchmark_index": "KRX 증권",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "COSMETICS",
+      "name": "화장품",
+      "classification": "THEME",
+      "description": "화장품 제조·유통 산업.",
+      "representative_etf": {
+        "instrument_id": "228790.XKRX",
+        "name": "TIGER 화장품",
+        "listed_on": "2015-10-07",
+        "benchmark_index": "WISE 화장품 지수",
+        "manager": "미래에셋자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "CONSTRUCTION",
+      "name": "건설",
+      "classification": "INDUSTRY",
+      "description": "건설·건자재 업종.",
+      "representative_etf": {
+        "instrument_id": "117700.XKRX",
+        "name": "KODEX 건설",
+        "listed_on": "2009-10-30",
+        "benchmark_index": "KRX 건설",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "AUTO",
+      "name": "자동차",
+      "classification": "INDUSTRY",
+      "description": "완성차·부품 업종.",
+      "representative_etf": {
+        "instrument_id": "091180.XKRX",
+        "name": "KODEX 자동차",
+        "listed_on": "2006-06-27",
+        "benchmark_index": "KRX 자동차",
+        "manager": "삼성자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    },
+    {
+      "code": "HEAVY_INDUSTRY",
+      "name": "중공업",
+      "classification": "INDUSTRY",
+      "description": "조선·기계·플랜트 업종.",
+      "representative_etf": {
+        "instrument_id": "139230.XKRX",
+        "name": "TIGER 200 중공업",
+        "listed_on": "2011-04-06",
+        "benchmark_index": "코스피 200 중공업",
+        "manager": "미래에셋자산운용",
+        "leveraged": false,
+        "inverse": false
+      }
+    }
+  ]
+}

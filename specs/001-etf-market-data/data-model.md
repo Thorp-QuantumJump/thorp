@@ -38,9 +38,9 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | 필드 | 타입 | 제약 | 근거 |
 |---|---|---|---|
 | `id` | bigint | PK | |
-| `instrument_id` | varchar | UNIQUE NOT NULL. `{6자리}.XKRX` 형식 | `engine_input.py:20`의 기존 패턴과 일치시킨다 |
+| `instrument_id` | varchar | UNIQUE NOT NULL. `{6글자}.XKRX` 형식이며 단축코드는 영숫자 대문자다 | `engine_input.py`의 패턴과 일치시킨다. 2026-09-15에 숫자 여섯 자리에서 넓혔다 (T031) |
 | `name` | varchar | NOT NULL | FR-001 |
-| `listed_on` | date | NOT NULL | FR-001 |
+| `listed_on` | date | NOT NULL. **운용사 공시에서 옮긴 실제 상장일이며, 자료가 있는 가장 이른 날이 아니다** | FR-001, SC-002. 아래 「상장일을 무엇으로 적는가」 |
 | `delisted_on` | date | NULL = 상장 유지. NOT NULL이면 `> listed_on` | FR-004 |
 | `benchmark_index` | varchar | NOT NULL | FR-001 |
 | `manager` | varchar | NOT NULL. 운용사 | FR-001 |
@@ -48,6 +48,30 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | `inverse` | boolean | NOT NULL DEFAULT false. **true를 허용하지 않는다** | FR-001 |
 
 **불변식**: `leveraged`와 `inverse`는 모두 false여야 한다. 컬럼으로 두는 이유는 대응표를 만들 때 원천에서 읽은 값을 확인하고 거부한 근거를 남기기 위함이다. 값이 true인 행은 저장 자체를 거부한다.
+
+#### 상장일을 무엇으로 적는가 (2026-09-15 결정)
+
+**`listed_on`에는 운용사 공시에서 옮긴 실제 상장일을 적는다.** 자료가 있는 가장 이른 날을 적지
+않는다. KRX OPEN API의 종목기본정보 서비스에 활용 승인이 없어 상장일을 조회할 수 없고, 일봉 자료는
+2010-01-04까지만 거슬러 올라가므로 관측으로는 그 이전에 상장한 상품의 상장일을 알 수 없다.
+
+관측된 첫날을 적지 않는 까닭이 셋이다.
+
+1. **사실과 다르다.** 여덟 섹터 중 다섯의 관측 첫날이 원천 하한인 2010-01-04인데, 그 상품들은 그보다
+   앞서 상장했다. SC-002가 상장일을 운용사 공시와 대조하라고 요구하므로 공시값이 기준이다.
+2. **상장 전 자료를 막는 검사가 조용히 꺼진다.** `daily_price`의 불변식 「`date < listed_on`인 행은
+   존재할 수 없다」(SC-003)는 두 값이 다를 때만 일한다. 관측 첫날을 상장일로 적으면 위반이 정의상
+   생길 수 없어 검사가 언제나 통과한다.
+3. **같은 값을 두 곳에 두게 된다.** 자료가 언제부터 있는지는 `daily_price`를 조회하면 나온다.
+   `listed_on`은 조회로 알 수 없는 값을 담는 자리다.
+
+**상장일과 자료 시작일이 다른 값이라는 것은 이 시스템의 전제다.** 공통 평가 기간의 기준점은 사실
+`max(상장일, 데이터셋 첫 거래일)`이며, 백엔드가 뒤쪽 항을 몰라서 생긴 어긋남을 워커가 되밀기로 막고
+있다. 그 어긋남 자체를 `backend/.../MarketFixtureAlignmentTest`가 붙박아 두었고, 두 값이 같아지면
+그 검사가 빨개진다(tasks.md T029).
+
+**출처를 남긴다.** 공시에서 옮긴 값이므로 `reconciliation_record`에 `listed_on` 표본으로 남겨
+어디서 읽었는지 추적할 수 있게 한다(FR-016).
 
 ### sector_etf_map_version — 대응표 버전
 

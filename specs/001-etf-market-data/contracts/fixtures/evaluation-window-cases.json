@@ -462,7 +462,7 @@
     },
     {
       "name": "invalid-instrument-id",
-      "$boundary": "종목 식별자 형식 위반 — 오류. `{6자리}.XKRX`만 받는다",
+      "$boundary": "종목 식별자 형식 위반 — 오류. `{6글자}.XKRX`만 받는다. 단축코드는 영숫자 대문자다",
       "$why": "파이썬의 `$`는 끝에 붙은 줄바꿈 앞에서도 맞으므로 `re.fullmatch`로, 자바는 이미 전체 일치인 `String.matches`로 검사한다. 한쪽이 받는 값을 다른 쪽이 거부하면 안 된다.",
       "input": {
         "candidates": [

@@ -58,12 +58,14 @@ VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [
     ("run-effective-start-before-start", lambda b: _mutate(b, "run.effectiveStart", "2024-12-31")),
     ("run-effective-start-after-end", lambda b: _mutate(b, "run.effectiveStart", "2025-07-01")),
     ("run-unknown-scenario", lambda b: _mutate(b, "run.scenario", "STRESS")),
-    # UniverseSpec: 비어 있지 않고, {6자리}.XKRX 형식이며, 중복이 없다
+    # UniverseSpec: 비어 있지 않고, {6글자}.XKRX 형식이며, 중복이 없다
     ("universe-empty", lambda b: _mutate(b, "universe.items", [])),
     ("universe-not-krx", lambda b: _mutate(b, "universe.items", _items("AAPL"))),
     ("universe-wrong-venue", lambda b: _mutate(b, "universe.items", _items("005930.XNAS"))),
     ("universe-short-code", lambda b: _mutate(b, "universe.items", _items("5930.XKRX"))),
-    ("universe-nondigit-code", lambda b: _mutate(b, "universe.items", _items("00593A.XKRX"))),
+    # 영문 대문자는 받지만 소문자는 받지 않는다. 둘 다 받으면 같은 종목이 두 값이 된다.
+    ("universe-lowercase-code", lambda b: _mutate(b, "universe.items", _items("00593a.XKRX"))),
+    ("universe-long-code", lambda b: _mutate(b, "universe.items", _items("00593A0.XKRX"))),
     (
         "universe-duplicated",
         lambda b: _mutate(b, "universe.items", _items("005930.XKRX", "005930.XKRX")),
@@ -125,6 +127,17 @@ def test_invariant_violation_is_rejected(
 ) -> None:
     with pytest.raises(ValidationError):
         EngineInput.model_validate(break_it(fixture_body()))
+
+
+def test_alphanumeric_issue_code_is_allowed() -> None:
+    """영문이 섞인 6글자 단축코드를 받는다 (spec 001 T031, PD-01).
+
+    2026-09-11 실측에서 ETF 1,168종 가운데 304종(26%)의 코드가 ``0111J0``·``0182R0`` 같은
+    형태였다. 숫자만 받으면 원천의 4분의 1이 비교 대상에서 빠진다.
+    """
+    body = _mutate(fixture_body(), "universe.items", _items("0111J0.XKRX", "0182R0.XKRX"))
+    engine_input = EngineInput.model_validate(body)
+    assert engine_input.universe.instrument_ids == ["0111J0.XKRX", "0182R0.XKRX"]
 
 
 def test_same_start_and_end_is_allowed() -> None:
