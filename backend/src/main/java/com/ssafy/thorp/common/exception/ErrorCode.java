@@ -36,6 +36,14 @@ public enum ErrorCode {
     NO_PARTIAL_RESULT(HttpStatus.CONFLICT, "취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다."),
     CANCEL_PENDING(HttpStatus.CONFLICT, "같은 조건의 실행이 취소 처리 중입니다. 잠시 후 다시 요청해 주세요."),
 
+    // spec 003 전략 선택·상세 설정. 계약은
+    // specs/003-strategy-settings/contracts/strategy-registry-api.md §2.
+    // 나머지 넷(UNREGISTERED_PARAMETER_VALUE·STRATEGY_NOT_REGISTERED·REGISTRY_VERSION_CHANGED·
+    // REGISTRY_UNAVAILABLE)은 아래 007 블록의 것을 그대로 쓴다 — 같은 등록표가 내는 같은 거절이라
+    // 두 벌로 두면 화면이 코드로 분기할 때 갈라진다.
+    VALIDATION_RULE_VIOLATED(
+            HttpStatus.UNPROCESSABLE_ENTITY, "선택한 설정 조합은 실행할 수 없습니다. 안내를 확인해 주세요."),
+
     // spec 007 자동 파라미터 탐색. 계약은 specs/007-auto-parameter-search/contracts/param-search-api.md §6.
     CANDIDATE_LIMIT_EXCEEDED(
             HttpStatus.UNPROCESSABLE_ENTITY, "탐색할 후보가 한 번에 실행할 수 있는 수를 넘습니다. 범위를 좁혀 주세요."),
