@@ -270,4 +270,60 @@ describe('SectorSelectionPage', () => {
 
     expect(screen.getByRole('status').textContent).toContain('불러오는 중')
   })
+
+  it('불러오는 동안에는 다시 불러오기를 누를 수 없다', async () => {
+    apiMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))
+    renderPage()
+
+    // 요청이 겹칠 수 있는 첫 번째 길목을 화면 구조가 막는다. 앞선 요청이 끝나야 행동이 나타난다.
+    expect(screen.queryByRole('button', { name: '다시 불러오기' })).toBeNull()
+  })
+
+  it('다시 불러오면 앞선 요청을 취소한다', async () => {
+    const signals: AbortSignal[] = []
+    apiMocks.fetchSectorCatalog.mockImplementation((signal?: AbortSignal) => {
+      if (signal) signals.push(signal)
+      return Promise.resolve(networkFailure)
+    })
+
+    renderPage()
+    const retry = await screen.findByRole('button', { name: '다시 불러오기' })
+    expect(signals).toHaveLength(1)
+    expect(signals[0].aborted).toBe(false)
+
+    await userEvent.click(retry)
+    await waitFor(() => expect(signals).toHaveLength(2))
+
+    // 요청을 정리하는 일은 화면이 사라질 때만 하는 것이 아니다. 다시 불러올 때마다 앞선 요청이
+    // 먼저 취소되고 새 요청이 시작된다. 이 순서가 깨지면 앞선 응답이 뒤늦게 도착해 새 결과를
+    // 덮을 수 있다.
+    expect(signals[0].aborted).toBe(true)
+    expect(signals[1].aborted).toBe(false)
+  })
+
+  it('취소된 요청의 응답이 뒤늦게 와도 화면을 덮지 않는다', async () => {
+    // Promise를 만드는 함수는 그 자리에서 실행되므로 이 값은 아래에서 반드시 채워져 있다.
+    let settleSecond!: (result: SectorCatalogResult) => void
+    const secondCall = new Promise<SectorCatalogResult>((resolve) => {
+      settleSecond = resolve
+    })
+
+    apiMocks.fetchSectorCatalog
+      .mockImplementationOnce(() => Promise.resolve(networkFailure))
+      .mockImplementationOnce(() => secondCall)
+      .mockImplementationOnce(() => Promise.resolve(loaded(false)))
+
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }))
+
+    // 두 번째 요청이 답하지 않는 사이에 화면을 다시 마운트해 세 번째 요청이 결과를 채우게 한다.
+    const { unmount } = renderPage()
+    await screen.findAllByRole('listitem')
+
+    // 취소된 두 번째 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 사라진다.
+    settleSecond(networkFailure)
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0))
+
+    unmount()
+  })
 })
