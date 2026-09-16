@@ -44,7 +44,7 @@
 
 ```json
 {
-  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
+  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
   "mode": "FIELD",
   "field": {"id": "LABOR", "name": "노동"},
   "baselineMonth": "2026-07",
@@ -73,7 +73,7 @@
     "newerReleases": []
   },
   "versions": {
-    "data": "MACRO-20260915", "registry": "REG-3", "model": "REGIME-V2",
+    "data": "MACRO-20260915", "registry": "REG-3", "model": "REGIME-V1",
     "revision": 1, "sampleData": true
   },
   "counts": {"evaluated": 412, "eligible": 398, "stored": 10, "displayed": 3},
@@ -106,7 +106,7 @@
 - `versions.sampleData`가 `true`면 008 미구현 상태의 예시 자료다(008 FR-022). 화면은 이 표시를
   반드시 노출한다.
 - `distance`는 문자열이고 소수점 아래 12자리다(research R4).
-- `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전하고 **자기 자를 만들 수 있는** 후보 수,
+- `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전한 후보 수,
   `stored` 저장된 표시 후보 수(≤10), `displayed` 이번 응답에 담긴 수. **`stored`가 `displayed`보다
   크면 '더 보기'가 남아 있다** — 화면은 이 둘로 버튼 노출을 정하고 10을 가정하지 않는다.
   **`eligible`이 `stored`보다 크면 표시 상한에 걸린 것이다** — 화면은 *"가까운 순서로 10개까지
@@ -120,7 +120,7 @@
 
 ```json
 {
-  "searchId": "FIELD:CONSTRUCTION:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
+  "searchId": "FIELD:CONSTRUCTION:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
   "mode": "FIELD",
   "field": {"id": "CONSTRUCTION", "name": "건설"},
   "baselineMonth": "2026-07",
@@ -142,12 +142,10 @@
 
 | `statusReason` | 뜻 |
 |---|---|
-| `SCALE_WINDOW_TOO_SHORT` | **질의** 척도의 연속 구간이 60개월 미만 (spec FR-005·FR-008) |
-| `SCALE_ZERO` | **질의** 척도의 MAD도 IQR도 0 (spec FR-006) |
+| `SCALE_WINDOW_TOO_SHORT` | 척도 연속 구간이 60개월 미만 (spec FR-005·FR-008) |
+| `SCALE_ZERO` | MAD도 IQR도 0 (spec FR-006) |
 | `QUERY_INPUT_MISSING` | 어느 지표의 비교 시점이 하나도 없다 (spec FR-001·FR-007) |
 | `NO_CANDIDATE` | 유효 후보 0건 |
-
-**후보 척도가 60개월 미만이거나 0인 것은 위 사유가 아니다** — 검색은 정상이고 그 후보만 빠지며, `counts.excluded`의 `NO_CASE_SCALE`로 센다(spec FR-005·FR-012).
 
 **503을 쓰지 않는다.** 503은 "일시적이니 다시 오라"는 뜻인데, 척도가 0인 것은 다시 와도 같다.
 
@@ -192,21 +190,27 @@
     {
       "id": "UNEMPLOYMENT_RATE", "name": "실업률", "unit": "%",
       "queryRaw": "3.1", "caseRaw": "3.2",
-      "queryZ": "-0.590219224283", "caseZ": "-0.612004881230",
+      "queryZ": "-0.590178531422", "caseZ": "-0.421556093873",
       "comparisonMonths": ["2012-01", "2012-02", "2012-03"],
-      "e": "0.168634064081",
+      "e": "0.168622437549",
       "nominalWeight": "0.500000000000",
-      "distanceShare": "0.408372910114",
-      "queryScale": {"median": "3.45", "spread": "0.593040000000", "method": "MAD",
-                     "windowStart": "2016-05", "windowEnd": "2026-04", "months": 120},
-      "caseScale":  {"median": "3.50", "spread": "0.490000000000", "method": "MAD",
-                     "windowStart": "2002-01", "windowEnd": "2011-12", "months": 120}
+      "distanceShare": "0.204173755344",
+      "scale": {"median": "3.45", "spread": "0.593040887402", "method": "MAD",
+                "windowStart": "2016-05", "windowEnd": "2026-04", "months": 120}
     }
   ],
+  "eraPosition": {
+    "UNEMPLOYMENT_RATE": {
+      "sentence": "실업률 3.2%는 당시로서는 높은 편이었습니다.",
+      "method": "MAD", "windowStart": "2002-01", "windowEnd": "2011-12", "months": 120
+    }
+  },
   "postPeriod": {"endMonth": "2012-03", "available": false,
                  "note": "사례 이후 결과는 아직 연결되지 않았습니다."}
 }
 ```
+
+**위 응답은 필드 형태를 설명하는 축약 예시다.** 실업률의 세 비교 시점 값은 이 예시에서 각각 같다고 가정했고, 노동 분야의 나머지 지표는 생략했다. 전체 거리·기여도 수기 검증에는 T042의 전체 비교 시점·지표 픽스처를 사용한다.
 
 - `nominalWeight`(명목 비중 `1/n`)와 `distanceShare`(실제 거리 기여 `E_i ÷ 분야 안 ΣE_i`)를 **나란히**
   내보낸다 — spec FR-010이 기록하라는 값이고, 둘의 차이가 U02 검증의 관측 대상이다. 명목 비중이
@@ -216,12 +220,14 @@
   온다.
 - `contribution`은 전체 거리가 0이면 **키 자체를 생략한다**(spec Edge Cases). `distanceShare`도
   분야 안 `ΣE_i`가 0이면 같다.
+- `eraPosition`은 **그 사례가 당시 기준으로 어땠는지**를 지표별 문장으로 준다(spec FR-017). 이력이
+  부족하거나 보조 척도가 0인 지표는 **키가 없고**, 전부 계산 불가이면 `null`이다. **0으로 채우지 않는다.**
+- **`eraPosition`에 시대별 z 값·분위수·백분율을 넣지 않는다**(spec FR-017·FR-022) — 숫자로 놓이면 유사도처럼 읽힌다.
+  `method`·`windowStart`·`windowEnd`·`months`는 수기 대조용이고 화면에 그대로 내보내지 않는다.
+- 이 값은 **같은 자료·등록표·모델 버전에서 기준월과 무관**하다. 같은 `endMonth`면 어느 검색에서 열어도 같은 문장이 온다(SC-011).
 - `postPeriod.available`은 011이 붙기 전까지 `false`다. 빈 값을 만들어 내지 않는다.
-- `queryScale`·`caseScale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — **두 척도**의
-  중앙값·산포·방법·기준 구간과 비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다
-  (spec FR-028).
-- **`caseScale`은 기준월과 무관하다**(spec FR-005). 같은 `endMonth`면 어느 검색에서 열어도 같은 값이
-  온다(SC-011).
+- `indicators[].scale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — 중앙값·산포·방법·
+  기준 구간·비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다(spec FR-028).
 
 ## 4. `GET /regime-searches/candidates`
 
@@ -233,7 +239,7 @@
 
 ```json
 {
-  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
+  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
   "candidates": [{"endMonth": "2012-03", "distance": "0.412938571034", "rank": 1}]
 }
 ```
@@ -271,7 +277,7 @@ constitution 원칙 VI가 금지한 *"가용성 필터 결과로 전체 경제�
 | 무엇 | 왜 |
 |---|---|
 | 유사도 퍼센트, 신뢰도 | spec FR-022 |
-| z 값·분위수를 화면 문구로 | spec FR-015 — 설명은 원값과 '평소 대비' 말로만 |
+| 시대별 위치의 z 값·분위수 | spec FR-017 — 문장만 내보낸다 |
 | '충분히 유사'·'대표 유사국면' 배지 | spec FR-018·FR-020 |
 | 유지율 | spec FR-031 (기록에만) |
 | 가용성 필터가 적용된 순위 | spec FR-030 — 010은 필터를 적용하지 않는다. §4의 목록 위에서 011이 건다 |

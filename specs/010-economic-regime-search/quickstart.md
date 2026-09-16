@@ -5,9 +5,6 @@
 010이 실제로 동작하는지 확인하는 절차다. 각 시나리오는 **무엇이 보여야 하는지**와 **무엇이 보이면
 안 되는지**를 함께 적는다 — 010은 보이면 안 되는 것(확률·배지·채워진 빈자리)이 결함인 기능이다.
 
-> **2026-09-17 (모델 v2)**: 후보도 자기 직전 구간의 자로 잰다. 상세에 `queryScale`·`caseScale`이
-> 나란히 오고 `eraPosition`은 없어졌다.
->
 > **2026-09-16 개정**: `sector` → `field` 개명, 엔드포인트 5개, 비교 시점·역사 비교 표시 확인 추가,
 > 임시 대역이 두 디렉터리(시계열·등록표)로 정리된 것을 반영했다.
 
@@ -71,7 +68,7 @@ curl -s "localhost:8080/regime-searches?mode=field&field=<시작이늦은분야>
 `displayed < 3`이고 `cases` 길이가 그 값과 같아야 한다. **빈자리를 채운 사례가 0건**이어야 한다 —
 거리가 먼 후보를 끌어와 3개를 맞추면 SC-004 위반이다.
 
-## S3. **질의** 척도를 구할 수 없으면 '계산 불가'다 (US2, SC-005)
+## S3. 척도를 구할 수 없으면 '계산 불가'다 (US2, SC-005)
 
 픽스처의 완전 상수 계열(모양 4: MAD=0, IQR=0)이 속한 분야를 고른다.
 
@@ -88,16 +85,6 @@ curl -s "localhost:8080/regime-searches?mode=field&field=<상수계열분야>" \
 
 구멍 뚫린 계열(모양 2, 연속 60개월 미만)도 같은 방식으로 확인한다 — `statusReason`이
 `SCALE_WINDOW_TOO_SHORT`.
-
-**후보 쪽은 다르다**(모델 v2) — 후보의 자를 못 만들면 **검색은 정상이고 그 후보만 빠진다.**
-픽스처 모양 10(자료 시작 직후 구간)으로 확인한다.
-
-```bash
-curl -s "localhost:8080/regime-searches?mode=field&field=LABOR" | jq '.result.counts'
-# NO_CASE_SCALE 이 0 이 아니어야 한다 — 0 이면 그 경로를 한 번도 안 밟은 것이다
-curl -s "localhost:8080/regime-searches?mode=field&field=LABOR" | jq '.result.status'
-# "NEAREST_ONLY" — 후보가 빠졌다고 계산 불가가 되지 않는다
-```
 
 ## S4. 비교 시점이 지표별로 정해지고, 빠진 달이 표기된다 (FR-001, FR-031, SC-007)
 
@@ -154,13 +141,12 @@ curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR" | 
 ```
 
 **보여야 하는 것**: `queryRaw`·`caseRaw`·`queryZ`·`caseZ`·`comparisonMonths`·`e`·`nominalWeight`·
-`distanceShare`·**`queryScale`·`caseScale`** 각각 `{median, spread, method, windowStart, windowEnd, months}`
+`distanceShare`·`scale{median, spread, method, windowStart, windowEnd, months}`
 
 이 값들로 손계산이 되어야 한다.
 
 ```
-z_질의 = (질의 raw − queryScale.median) / queryScale.spread
-z_후보 = (후보 raw − caseScale.median)  / caseScale.spread     ← 자가 다르다
+z = (raw − median) / spread
 E_i = 그 지표의 비교 시점들의 |z_질의 − z_후보| 평균
 D_g = 분야 내 E_i 의 산술평균
 distanceShare = E_i ÷ 분야 안 ΣE_i
@@ -172,25 +158,26 @@ distanceShare = E_i ÷ 분야 안 ΣE_i
 **`mode=field`에는 `contribution`이 없어야 한다** — 분야가 하나라 늘 1이고 뜻 없는 숫자다.
 **거리가 0인 사례**가 있으면 `distanceShare` 키도 아예 없어야 한다.
 
-**두 척도가 나란히 온다**(FR-005, SC-011):
+**시대별 위치**(FR-017, SC-011):
 
 ```bash
-curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR"   | jq '.result.indicators[0] | {queryScale, caseScale}'
-# queryScale.windowEnd 가 2026-04  (기준월 2026-07 의 3개월 앞)
-# caseScale.windowEnd  가 2011-12  (후보 2012-03 의 3개월 앞)   ← 서로 다른 구간
+curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR" | jq '.result.eraPosition'
+# 지표별 {sentence, method, windowStart, windowEnd, months}
+# windowEnd 가 2012-03 보다 3개월 이상 앞이어야 한다 (c-122 ~ c-3)
 ```
 
-**보이면 안 되는 것**: 두 척도가 같은 구간 — 후보에 질의 자를 쓴 것이고 SC-011 위반이다.
+**보이면 안 되는 것**: `eraPosition` 안의 z 값·분위수·백분율 — **문장만** 온다.
 
-**기준월을 바꿔도 `caseScale`은 같아야 한다** — 후보 척도는 기준월과 무관하다.
+**같은 자료·등록표·모델 버전에서 기준월을 바꿔도 같아야 한다** — 시대별 보조 위치는 기준월과 무관하다. 비교할 두 응답의 버전이 다르면 이 확인의 대상으로 삼지 않는다.
 
 ```bash
-A=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2026-07" | jq -S '.result.indicators[].caseScale')
-B=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2025-01" | jq -S '.result.indicators[].caseScale')
+A=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2026-07" | jq -S '.result.eraPosition')
+B=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2025-01" | jq -S '.result.eraPosition')
 [ "$A" = "$B" ] && echo "동일"   # 다르면 SC-011 위반
 ```
 
-직전 연속 60개월로 자를 만들 수 없는 후보는 **목록에 아예 없어야** 한다.
+직전 연속 60개월이 부족하거나 보조 척도가 0인 지표는 **키가 없어야** 하고, 전부 계산 불가이면 `eraPosition`이 `null`이다 —
+`0`이나 `"-"`로 채우면 원칙 VI 위반이다. 픽스처 모양 10의 후보는 비교 입력이 있으므로 전체 후보 목록에 남아야 한다. 보조 설명 부족을 후보 제외 사유로 쓰면 안 된다.
 
 ## S7. 같은 검색은 늘 같은 결과다 (SC-001, SC-002)
 
@@ -280,11 +267,9 @@ THORP_ENV=prod .venv/Scripts/python scripts/precompute_regime.py --source fixtur
 
 | 무엇 | 왜 | 언제 |
 |---|---|---|
-| **모델 v2 자체를 써도 되는가** | 기획서 D21과 constitution 세 문장이 아직 "모든 후보에 같은 척도"를 정하고 있다. 개정 전까지 010은 **차단 상태**이며 M2 착수 불가([d21-amendment.md](d21-amendment.md)) | 전체 회의 승인 후 |
 | **사례가 실제로 그럴듯한가** | 픽스처 값이 지어낸 것이라 "2012년 3월이 가까웠다"가 경제적으로 맞는 말인지 알 수 없다 | 008 완성 후 |
 | 실제 과거 자료 범위와 그에 따른 후보 수 | 통계표별 과거 범위를 인증키 조회로 확인해야 안다(008 PD-11) | 008 완성 후 |
 | `changed_since()` 기반 증분 재계산 | 픽스처는 `None`을 돌려줘 늘 전 구간이다. `t ≥ M`만 도는 경로는 테스트로만 확인된다 | 008 완성 후 |
-| **자료 시작 연도에 따른 실제 탐색 범위** | 모델 v2는 각 지표 **자료 시작 + 5년**부터 탐색한다(후보도 자기 자가 필요하므로). 실제 과거 범위는 008 PD-11 확인 후에야 안다 | 008 완성 후 |
 | **기준월이 008보다 뒤처지는 상황** | 픽스처는 배치와 같은 시점이라 어긋나지 않는다. `regime_baseline_month`가 008의 최신 T_g보다 뒤에 있어도 404가 안 나는지는 실제 운영에서만 확인된다(포트 계약 §0.2·§5) | 008 완성 후 |
 | `THRESHOLD_APPLIED` 상태 | PD-09(U04) 미확정이라 그 상태에 도달할 수 없다. 화면·API 경로는 테스트로만 확인된다 | PD-09 확정 후 |
 | FR-021 "충족 사례 없음" 안내 | 위와 같은 이유 | PD-09 확정 후 |
@@ -294,6 +279,7 @@ THORP_ENV=prod .venv/Scripts/python scripts/precompute_regime.py --source fixtur
 | 사례 이후 시장·전략 결과 | 011 범위. `postPeriod.available`이 항상 `false` | 011 구현 후 |
 | 가용성 필터가 걸린 목록 | 010은 `candidates` 목록만 내준다. 필터는 011이 건다 | 011 구현 후 |
 | 지표별 최소 유효 척도에 의한 계산 불가 | PD-10(008 소유) 미확정. MAD→IQR→0 경로만 확인된다 | PD-10 확정 후 |
-| 사용성 관찰(SC-008) | **010 범위 안이지만 티켓이 따로다.** 구현이 끝나야 시작할 수 있고(spec SC-008) 사람 6~8명 섭외·관찰이라 기간이 주 단위다 | **M10(T154)** 별도 티켓 |
+| 사용성 관찰(SC-008) | **010 범위 안이며 구현이 끝난 뒤 수행**한다. 구현 완료와 사용성 확인을 구분한다 | **M10(T154)** 별도 티켓 |
+| v1·v2 중 어느 유사성이 사용자 목적에 맞는가 | 실제 자료 비교와 사용자 관찰 전에는 우열을 확정할 수 없다. [변경 제안서](d21-amendment.md)의 검증 계획이며 v1 구현 차단 조건이 아니다 | 비교 검증 후 재논의 |
 
 **여기 나온 숫자를 성과로 인용하지 않는다.** 픽스처 위의 결과이며 경제에 대해 아무것도 말하지 않는다.
