@@ -115,7 +115,8 @@ public class StrategyRegistryQueryService {
             SearchContext context) {
         AllowedRange allowedRange = axis.allowedRange();
         if (allowedRange == null) {
-            // 허용 범위가 없으면 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없다. 형태를 지어내지 않는다.
+            // 로더가 기동에서 이미 막으므로 여기까지 오지 않는다. 그래도 형태를 지어내지 않고 멈춘다 —
+            // 포트를 다른 구현으로 갈아 끼우는 날 이 자리가 조용히 빈 입력칸을 그리게 두지 않기 위함이다.
             throw new IllegalStateException(
                     "axis has no allowedRange: " + registration.strategyId() + "/" + axis.name());
         }

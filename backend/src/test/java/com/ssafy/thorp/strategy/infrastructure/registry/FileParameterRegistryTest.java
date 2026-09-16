@@ -284,9 +284,13 @@ class FileParameterRegistryTest {
                               - name: lookbackDays
                                 searchValues: [20, 60, 120]
                                 defaultValue: 60
+                                allowedRange:
+                                  values: [20, 60, 120]
                               - name: skipRecentDays
                                 searchValues: [0, 21]
                                 defaultValue: 0
+                                allowedRange:
+                                  values: [0, 21]
                           - id: STRATEGY_FLAT
                             name: 워밍업 없는 합성 전략
                             axes: []
@@ -393,6 +397,28 @@ class FileParameterRegistryTest {
                                                       max: 504
                                                       step: 1
                                                       values: [21, 63]
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("STRATEGY_X/lookbackDays");
+        }
+
+        @Test
+        @DisplayName("허용 범위를 적지 않은 축이 있으면 기동하지 않는다")
+        void rejectsAxisWithoutAllowedRange() {
+            // 허용 범위가 없으면 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없다. 조회할 때 드러나면
+            // 이미 사용자가 빈 화면을 보고 있다 — 기동에서 막는다.
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: lookbackDays
+                                                    searchValues: [21, 63]
+                                                    defaultValue: 21
                                             """))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("STRATEGY_X/lookbackDays");
@@ -532,6 +558,8 @@ class FileParameterRegistryTest {
                               - name: pick
                                 searchValues: [1, 2, 3]
                                 defaultValue: 2
+                                allowedRange:
+                                  values: [1, 2, 3]
                             validationRules:
                               - code: PICK_EXCEEDS_UNIVERSE
                                 detail: 고른 수가 후보 수보다 많습니다.

@@ -14,6 +14,9 @@
 #                       순서를 바꿔도 version 을 올릴 필요가 없다.
 #   제약: 목록형 축에서 searchValues ⊆ 허용 후보이고, defaultValue 는 allowedRange 안이다.
 #
+# 모든 축은 allowedRange 를 갖는다. 적지 않으면 화면이 그릴 형태도 입력값을 판정할 근거도 없어
+# 로더가 기동을 실패시킨다.
+#
 # allowedRange 는 목록형과 입력형(min/max/step) 중 하나만 채운다. 둘을 함께 채우면 화면이
 # 목록을 그릴지 입력칸을 그릴지 정할 수 없어 로더가 기동을 실패시킨다(data-model §4).
 #   그래서 관측 기간처럼 후보가 정해진 축은 min/max/step 을 적지 않는다.

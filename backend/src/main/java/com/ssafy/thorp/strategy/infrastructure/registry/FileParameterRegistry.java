@@ -166,6 +166,11 @@ public class FileParameterRegistry implements ParameterRegistryPort {
         String axisName = string(axis, "name");
         String where = strategyId + "/" + axisName;
         AllowedRange allowedRange = toAllowedRange(where, map(axis, "allowedRange"));
+        if (allowedRange == null) {
+            // 허용 범위가 없으면 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없고, 입력값을 판정할 근거도 없다.
+            // 조회할 때 드러나면 이미 늦다 — 그때는 사용자가 빈 화면을 보고 있다(data-model §3).
+            throw new IllegalStateException("axis needs an allowedRange: " + where);
+        }
         List<Object> searchValues = searchValues(axis);
         Object defaultValue = axis.get("defaultValue");
         requireWithinAllowedRange(where, allowedRange, searchValues, defaultValue);
@@ -185,9 +190,6 @@ public class FileParameterRegistry implements ParameterRegistryPort {
             AllowedRange allowedRange,
             List<Object> searchValues,
             Object defaultValue) {
-        if (allowedRange == null) {
-            return;
-        }
         if (allowedRange.isEnumerated()) {
             // 자동 탐색이 사용자가 고를 수 없는 값을 훑으면 그 결과를 상세 설정에서 재현할 수 없다(내부 계약 §2.5).
             List<Object> allowed = allowedRange.values();
