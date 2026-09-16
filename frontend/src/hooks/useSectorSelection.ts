@@ -115,9 +115,46 @@ function sameSectors(stored: SectorSelectionItem[], sectorIds: string[]): boolea
 }
 
 /**
+ * 003이 진행하려면 필요한 최소 섹터 수.
+ *
+ * 이 제품이 하는 일은 배분 방식이 만드는 차이를 견주는 것이고, **견주려면 나눌 곳이 둘은 있어야
+ * 한다.** 섹터가 하나면 어떤 배분 전략을 골라도 그 하나에 전액이 가므로 다섯 전략이 모두 같은
+ * 결과를 낸다. spec Edge Cases가 두 개 미만을 "이전 단계를 다시 완료하도록 안내"하는 상태로 둔
+ * 까닭이다.
+ */
+const MINIMUM_SECTOR_COUNT = 2
+
+/**
+ * 질의 문자열만으로 선택을 구성한다. 링크가 온전하지 않으면 `null`이다.
+ *
+ * <p><b>섹터마다 종목이 짝지어져 있어야 한다.</b> `instrumentId`는 대표 ETF의 실제 식별자이고
+ * (`types/sector.ts`의 `RepresentativeEtf`), 빠진 자리를 섹터 코드로 채우면 화면이 없는 값을
+ * 지어내는 것이다(Constitution VI). 짝이 맞지 않는 링크는 어느 섹터의 종목인지 알 수 없으므로
+ * 일부만 살리지 않고 전체를 온전하지 않은 입력으로 다룬다 — 종목 없이는 004 요청을 만들 수 없어
+ * 반쪽짜리를 남겨도 쓸 곳이 없고, spec Edge Cases도 "손상됐으면"을 없는 것과 한 문장으로 묶었다.
+ */
+function readLinkedSelection(sectorIds: string[], instrumentIds: string[]): SectorSelection | null {
+  if (instrumentIds.length !== sectorIds.length) return null
+
+  return {
+    mappingVersion: null,
+    items: sectorIds.map((sectorId, index) => ({
+      sectorId,
+      instrumentId: instrumentIds[index],
+      targetWeight: null,
+    })),
+  }
+}
+
+/**
  * 앞 단계에서 정한 섹터·비중. 아직 정해지지 않았으면 `null`이다.
  *
  * 돌려주는 `items`의 길이가 곧 등록표 조회의 `universeSize`다 — 화면이 그 수를 따로 세지 않는다.
+ *
+ * <p><b>"아직 마치지 않았다"에 해당하는 세 갈래를 한 자리에서 `null`로 만든다</b> — 선택이 없는
+ * 경우, 저장된 자료가 손상된 경우, 고른 섹터가 두 개 미만인 경우다. spec Edge Cases가 셋을 한
+ * 문장으로 묶었고, 갈래가 여러 층에 흩어지면 화면이 한쪽을 빠뜨린다(`api/sectors.ts`가 "아직 줄
+ * 것이 없다"를 모두 한 층에서 갈라 놓은 것과 같은 까닭이다).
  */
 export function useSectorSelection(): SectorSelection | null {
   const [params] = useSearchParams()
@@ -129,23 +166,15 @@ export function useSectorSelection(): SectorSelection | null {
     const instrumentIds = parseList(instrumentsParam)
     const stored = readStoredSelection()
 
-    if (sectorIds.length === 0) {
-      return stored
-    }
+    const selection =
+      sectorIds.length === 0
+        ? stored
+        : // 링크가 가리키는 섹터가 저장된 것과 같을 때만 비중을 가져온다.
+          stored && sameSectors(stored.items, sectorIds)
+          ? stored
+          : readLinkedSelection(sectorIds, instrumentIds)
 
-    // 링크가 가리키는 섹터가 저장된 것과 같을 때만 비중을 가져온다.
-    if (stored && sameSectors(stored.items, sectorIds)) {
-      return stored
-    }
-
-    // 대역 경로다. 비중은 담기지 않으므로 `null`로 둔다.
-    return {
-      mappingVersion: null,
-      items: sectorIds.map((sectorId, index) => ({
-        sectorId,
-        instrumentId: instrumentIds[index] ?? sectorId,
-        targetWeight: null,
-      })),
-    }
+    if (selection === null || selection.items.length < MINIMUM_SECTOR_COUNT) return null
+    return selection
   }, [sectorsParam, instrumentsParam])
 }

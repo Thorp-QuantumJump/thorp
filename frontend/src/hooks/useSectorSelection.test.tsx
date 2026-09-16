@@ -83,16 +83,38 @@ describe('useSectorSelection', () => {
   it('질의 문자열이 다른 섹터를 가리키면 저장된 비중을 얹지 않는다', () => {
     stored({
       mappingVersion: 'MAP-TEST-1',
-      items: [{ sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 1 }],
+      items: [
+        { sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 0.5 },
+        { sectorId: 'SEC-B', instrumentId: 'INS-B', targetWeight: 0.5 },
+      ],
     })
 
-    const { result } = renderSelection('/?sectors=SEC-C&instruments=INS-C')
+    const { result } = renderSelection('/?sectors=SEC-C,SEC-D&instruments=INS-C,INS-D')
 
     // 링크로 다른 섹터를 열었는데 앞선 세션의 비중이 따라오면 화면이 틀린 비중을 보인다.
     expect(result.current?.mappingVersion).toBeNull()
     expect(result.current?.items).toEqual([
       { sectorId: 'SEC-C', instrumentId: 'INS-C', targetWeight: null },
+      { sectorId: 'SEC-D', instrumentId: 'INS-D', targetWeight: null },
     ])
+  })
+
+  it('종목이 짝지어지지 않은 링크는 섹터 코드로 대신 채우지 않는다', () => {
+    // 종목을 아예 주지 않은 링크와, 섹터보다 적게 준 링크다. 빠진 자리를 섹터 코드로 메우면
+    // 존재하지 않는 종목 ID 가 분석 요청에 실린다(Constitution VI).
+    expect(renderSelection('/?sectors=SEC-A,SEC-B').result.current).toBeNull()
+    expect(renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-A').result.current).toBeNull()
+  })
+
+  it('고른 섹터가 두 개 미만이면 앞 단계를 마치지 않은 것으로 다룬다', () => {
+    // 섹터가 하나면 어떤 배분 전략을 골라도 그 하나에 전액이 가서 다섯이 같은 결과를 낸다.
+    expect(renderSelection('/?sectors=SEC-A&instruments=INS-A').result.current).toBeNull()
+
+    stored({
+      mappingVersion: 'MAP-TEST-1',
+      items: [{ sectorId: 'SEC-A', instrumentId: 'INS-A', targetWeight: 1 }],
+    })
+    expect(renderSelection().result.current).toBeNull()
   })
 
   it('모양이 어긋난 저장 자료는 한 항목만 어긋나도 전체를 버린다', () => {
@@ -115,6 +137,8 @@ describe('useSectorSelection', () => {
     })
 
     expect(renderSelection().result.current).toBeNull()
-    expect(renderSelection('/?sectors=SEC-A').result.current?.items).toHaveLength(1)
+    expect(
+      renderSelection('/?sectors=SEC-A,SEC-B&instruments=INS-A,INS-B').result.current?.items,
+    ).toHaveLength(2)
   })
 })
