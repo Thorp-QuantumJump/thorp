@@ -180,7 +180,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - `distributeEven(codes)`: `q = floor(1000 / n)`, `r = 1000 - q * n`을 구해 `r`을 **표시 순서상 첫 번째** 섹터에 몰아준다. 초깃값 자동 채움과 '동일하게 나누기'가 같은 함수를 쓴다 (FR-005, FR-007, research.md 결정 2)
   - 입력 파싱은 data-model.md 「사용자 입력 파싱」 표 그대로다. `33.4`는 `334`, `33`은 `330`, `0`은 `0`으로 받는다. `33.45`처럼 소수 둘째 자리 이하와 음수·100 초과·숫자가 아닌 값은 **받지 않고** 그 자리에 한 문장으로 알린다. **반올림하거나 상한으로 잘라 넣지 않는다** (원칙 VI, FR-016)
   - 빈 칸은 0으로 보지 않고 "아직 입력 중"으로 다룬다. 확정 시점에 이전 값을 그대로 둔다
-  - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `167/166×5`, 7개면 `144/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)
+  - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `170/166×5`, 7개면 `148/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)
   - 선행: T005(이 파일이 `.test.ts`다), T008(표시 순서)
 - [ ] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급
   - `sessionStorage` 항목 **하나**에 JSON으로 저장한다. 키는 `thorp.diagnosis.sectorSelection`이며 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다 (research.md 결정 3)
