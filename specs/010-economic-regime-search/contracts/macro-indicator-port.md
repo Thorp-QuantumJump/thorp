@@ -54,12 +54,14 @@ T_g로 검색하면 아직 snapshot이 없는 달이라 **404**가 난다. 화�
 |---|---|---|
 | `registry()` | 지표 목록(id·이름·단위·변환), 지표 → 분야 매핑, 등록표 버전 | FR-002·FR-003 |
 | `monthly_series(indicator_id)` | 대상월 → **변환값** 전 구간 | FR-006 |
-| `raw_series(indicator_id)` | 대상월 → **원값** 전 구간 | FR-006 |
+| `raw_series(indicator_id)` | 대상월 → **변환 전 원값** 전 구간 | FR-006 |
 | `baseline_months()` | 분야별 T_g, 17개 공통 T_all | FR-013 |
 | `publication(indicator_id, month)` | 그 값의 대상월·발표일·개정 여부 | FR-007 |
 | `data_version()` | 현재 자료 버전 | FR-009 |
 | `changed_since(data_version)` | 그 버전 이후 값이 새로 들어오거나 개정된 **가장 오래된 대상월 M** | FR-009·FR-017 |
 | `is_sample_data()` | 예시 자료인가 | FR-022 |
+
+> ⚠ **`raw_series()`는 010의 계산·표시 경로에서 쓰지 않는다.** 거리도 설명 문장도 `monthly_series()`의 **변환 후 값**을 쓴다(spec FR-015, research R8, D21 적용 세부). 이 메서드는 008이 원값을 보존하는지 확인하는 용도로만 둔다.
 
 `changed_since()`가 spec FR-030의 재계산 범위를 정한다 — `t ≥ M`인 기준월만 다시 계산한다
 (research R3). 008이 답할 수 없으면 `None`을 돌려주고, 그때는 계열 시작월을 M으로 삼아 전 구간을
