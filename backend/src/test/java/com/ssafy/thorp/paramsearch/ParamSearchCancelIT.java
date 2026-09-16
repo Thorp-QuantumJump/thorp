@@ -209,7 +209,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
                         new CreateParamSearchCommand(
                                 null,
                                 UNIVERSE,
-                                searchableStrategyIds(),
+                                SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
                                 null,
                                 null,
@@ -260,25 +260,10 @@ class ParamSearchCancelIT extends PostgresTestSupport {
                 registry.activeStrategies().stream()
                         .filter(
                                 registration ->
-                                        searchableStrategyIds().contains(registration.strategyId()))
+                                        SearchableStrategies.of(registry, jdbcTemplate)
+                                                .contains(registration.strategyId()))
                         .mapToLong(StrategyRegistration::combinationCount)
                         .sum();
         return (int) (total - 1);
-    }
-
-    private List<String> searchableStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
-                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
     }
 }

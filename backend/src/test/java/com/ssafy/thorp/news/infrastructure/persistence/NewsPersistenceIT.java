@@ -646,16 +646,32 @@ class NewsPersistenceIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 seed한 규칙 버전 네 개를 읽을 수 있다")
+    @DisplayName("그 시점에 유효했던 묶음 규칙을 읽는다")
     void seededRuleVersionsAreReadable() {
-        assertThat(ruleVersionRepository.findAll()).hasSize(4);
+        assertThat(ruleVersionRepository.findAll())
+                .extracting(NewsRuleVersion::ruleVersion)
+                .contains("news-grouping-v1", "news-grouping-v2");
 
+        // NOW는 2026-09-10이고 v2는 09-16부터다. 그때 판정에 쓰인 것은 v1이며 그 사실이 남아 있어야
+        // 당시에 만들어진 묶음을 재현할 수 있다(원칙 VIII).
         assertThat(ruleVersionRepository.findEffective(NewsRuleVersion.RuleType.GROUPING, NOW))
                 .get()
                 .satisfies(
                         rule -> {
                             assertThat(rule.ruleVersion()).isEqualTo(GROUPING_RULE);
                             assertThat(rule.definition()).containsKey("titleJaccardThreshold");
+                        });
+
+        assertThat(
+                        ruleVersionRepository.findEffective(
+                                NewsRuleVersion.RuleType.GROUPING,
+                                Instant.parse("2026-09-20T00:00:00Z")))
+                .get()
+                .satisfies(
+                        rule -> {
+                            assertThat(rule.ruleVersion()).isEqualTo("news-grouping-v2");
+                            assertThat(rule.definition())
+                                    .containsKey("titleBigramJaccardThreshold");
                         });
     }
 
