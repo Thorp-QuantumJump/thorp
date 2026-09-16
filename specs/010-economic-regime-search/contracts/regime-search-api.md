@@ -44,7 +44,7 @@
 
 ```json
 {
-  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
+  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
   "mode": "FIELD",
   "field": {"id": "LABOR", "name": "노동"},
   "baselineMonth": "2026-07",
@@ -73,7 +73,7 @@
     "newerReleases": []
   },
   "versions": {
-    "data": "MACRO-20260915", "registry": "REG-3", "model": "REGIME-V1",
+    "data": "MACRO-20260915", "registry": "REG-3", "model": "REGIME-V2",
     "revision": 1, "sampleData": true
   },
   "counts": {"evaluated": 412, "eligible": 398, "stored": 10, "displayed": 3},
@@ -120,7 +120,7 @@
 
 ```json
 {
-  "searchId": "FIELD:CONSTRUCTION:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
+  "searchId": "FIELD:CONSTRUCTION:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
   "mode": "FIELD",
   "field": {"id": "CONSTRUCTION", "name": "건설"},
   "baselineMonth": "2026-07",
@@ -190,21 +190,17 @@
     {
       "id": "UNEMPLOYMENT_RATE", "name": "실업률", "unit": "%",
       "queryRaw": "3.1", "caseRaw": "3.2",
-      "queryZ": "-0.590219224283", "caseZ": "-0.421585160202",
+      "queryZ": "-0.590219224283", "caseZ": "-0.612004881230",
       "comparisonMonths": ["2012-01", "2012-02", "2012-03"],
       "e": "0.168634064081",
       "nominalWeight": "0.500000000000",
       "distanceShare": "0.408372910114",
-      "scale": {"median": "3.45", "spread": "0.593040000000", "method": "MAD",
-                "windowStart": "2016-05", "windowEnd": "2026-04", "months": 120}
+      "queryScale": {"median": "3.45", "spread": "0.593040000000", "method": "MAD",
+                     "windowStart": "2016-05", "windowEnd": "2026-04", "months": 120},
+      "caseScale":  {"median": "3.50", "spread": "0.490000000000", "method": "MAD",
+                     "windowStart": "2002-01", "windowEnd": "2011-12", "months": 120}
     }
   ],
-  "eraPosition": {
-    "UNEMPLOYMENT_RATE": {
-      "sentence": "실업률 3.2%는 당시로서는 높은 편이었습니다.",
-      "method": "MAD", "windowStart": "2002-01", "windowEnd": "2011-12", "months": 120
-    }
-  },
   "postPeriod": {"endMonth": "2012-03", "available": false,
                  "note": "사례 이후 결과는 아직 연결되지 않았습니다."}
 }
@@ -218,14 +214,12 @@
   온다.
 - `contribution`은 전체 거리가 0이면 **키 자체를 생략한다**(spec Edge Cases). `distanceShare`도
   분야 안 `ΣE_i`가 0이면 같다.
-- `eraPosition`은 **그 사례가 당시 기준으로 어땠는지**를 지표별 문장으로 준다(spec FR-017). 이력이
-  부족한 지표는 **키가 없고**, 전부 부족하면 `null`이다. **0으로 채우지 않는다.**
-- **z 값·분위수·백분율을 넣지 않는다**(spec FR-017·FR-022) — 숫자로 놓이면 유사도처럼 읽힌다.
-  `method`·`windowStart`·`windowEnd`·`months`는 수기 대조용이고 화면에 그대로 내보내지 않는다.
-- 이 값은 **기준월과 무관**하다. 같은 `endMonth`면 어느 검색에서 열어도 같은 문장이 온다(SC-011).
 - `postPeriod.available`은 011이 붙기 전까지 `false`다. 빈 값을 만들어 내지 않는다.
-- `indicators[].scale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — 중앙값·산포·방법·
-  기준 구간·비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다(spec FR-028).
+- `queryScale`·`caseScale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — **두 척도**의
+  중앙값·산포·방법·기준 구간과 비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다
+  (spec FR-028).
+- **`caseScale`은 기준월과 무관하다**(spec FR-005). 같은 `endMonth`면 어느 검색에서 열어도 같은 값이
+  온다(SC-011).
 
 ## 4. `GET /regime-searches/candidates`
 
@@ -237,7 +231,7 @@
 
 ```json
 {
-  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
+  "searchId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V2",
   "candidates": [{"endMonth": "2012-03", "distance": "0.412938571034", "rank": 1}]
 }
 ```
@@ -275,7 +269,7 @@ constitution 원칙 VI가 금지한 *"가용성 필터 결과로 전체 경제�
 | 무엇 | 왜 |
 |---|---|
 | 유사도 퍼센트, 신뢰도 | spec FR-022 |
-| 시대별 위치의 z 값·분위수 | spec FR-017 — 문장만 내보낸다 |
+| z 값·분위수를 화면 문구로 | spec FR-015 — 설명은 원값과 '평소 대비' 말로만 |
 | '충분히 유사'·'대표 유사국면' 배지 | spec FR-018·FR-020 |
 | 유지율 | spec FR-031 (기록에만) |
 | 가용성 필터가 적용된 순위 | spec FR-030 — 010은 필터를 적용하지 않는다. §4의 목록 위에서 011이 건다 |

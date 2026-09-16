@@ -53,7 +53,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 | `model_version` | VARCHAR(40) NOT NULL | 010 모델 버전 |
 | `status` | VARCHAR(24) NOT NULL | `NOT_COMPUTABLE` \| `NEAREST_ONLY` \| `THRESHOLD_APPLIED` |
 | `status_reason` | VARCHAR(48) | 아래 사유 표(§2.1) |
-| `scale` | JSONB NOT NULL | 지표별 `{m, s, method, windowStart, windowEnd, months}`. `method`는 `MAD` \| `IQR` |
+| `query_scale` | JSONB NOT NULL | **질의 척도** — 지표별 `{m, s, method, windowStart, windowEnd, months}`(`t-122~t-3`). `method`는 `MAD` \| `IQR` |
 | `comparison_months` | JSONB NOT NULL | 지표별 `{months: [...], omitted: [...]}` — 비교 시점과 빠진 달(spec FR-001) |
 | `ranked_candidates` | JSONB NOT NULL | 전체 유효 후보 `[{endMonth, distance, rank}]`. 011의 가용성 필터 입력(spec FR-030) |
 | `candidate_counts` | JSONB NOT NULL | `{evaluated, excluded: {MISSING_INPUT: n, WITHIN_12_MONTHS: n, NEIGHBOR_SKIPPED: n}}` |
@@ -65,7 +65,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL         
 
 ```
 {mode}:{fieldId|ALL}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}
-예) FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1
+예) FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V2
 ```
 
 `VARCHAR(200)`인 이유: 위 여섯 조각의 최대 길이 합이 16+32+10+40+40+40+5 = 183자다. 예시가 48자라고
@@ -176,9 +176,9 @@ T_g(*"분야 지표들이 함께 확보된 최신월"*, 008 FR-013)보다 뒤로
 | `rank` | SMALLINT NOT NULL | 1부터. 거리 오름차순, 동률은 오래된 종료월 우선(FR-012) |
 | `end_month` | DATE NOT NULL | 사례의 관측 구간 종료월. **사례의 동일성은 이 값으로 판정한다** |
 | `distance` | JSONB NOT NULL | `{value, byField: {...}, contribution: {...}}` — 전부 문자열 decimal |
-| `indicator_values` | JSONB NOT NULL | 지표별 `{queryRaw, caseRaw, queryZ, caseZ, unit, e, nominalWeight, distanceShare}` |
+| `indicator_values` | JSONB NOT NULL | 지표별 `{queryRaw, caseRaw, queryZ, caseZ, unit, e, nominalWeight, distanceShare}`. `queryZ`는 질의 척도로, `caseZ`는 **후보 척도로** 낸 값이다 |
 | `explanation` | JSONB NOT NULL | `{similar: [문장], different: [문장]}` (research R8 템플릿 조립) |
-| `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족한 지표는 키가 없고, 전부 부족하면 NULL |
+| `case_scale` | JSONB NOT NULL | **후보 척도** — 지표별 `{m, s, method, windowStart, windowEnd, months}`(`c-122~c-3`). 기준월과 무관하므로 같은 종료월이면 어느 snapshot에서도 같다(spec FR-005) |
 | `created_at` / `updated_at` | TIMESTAMP NOT NULL | |
 
 - `CONSTRAINT uk_regime_case_rank UNIQUE (snapshot_id, rank)`
@@ -198,13 +198,12 @@ T_g(*"분야 지표들이 함께 확보된 최신월"*, 008 FR-013)보다 뒤로
 **분야 검색(`mode=FIELD`)에서는 `contribution` 키를 만들지 않는다.** 분야가 하나뿐이라 값이 늘
 `1`이고, 화면에 "기여도 100%"로 읽히면 뜻 없는 숫자가 하나 는다.
 
-**`era_position`은 문장만 담는다.** z 값·분위수를 저장해 두면 화면이 언젠가 그것을 내보내고, 그 순간
-유사도처럼 읽힌다(spec FR-017·FR-022). 수기 대조에 필요한 값은 `method`·`windowStart`·`windowEnd`·
-`months`로 충분하다 — 그 구간과 방법이 있으면 독립 계산으로 같은 판정을 다시 만들 수 있다.
+**`case_scale`은 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이
+여러 snapshot에 등장해도 값이 같다 — `query_scale`이 t마다 달라지는 것과 **정반대 성질**이고, 배치는
+이 값을 **후보월마다 한 번만** 계산해 모든 snapshot이 공유한다(research R3).
 
-**이 값은 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이 여러
-snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 질의 쪽(§2.3, research R3)과 반대 성질이며,
-배치는 이 값을 **후보월마다 한 번만** 계산해 공유한다.
+**두 척도를 모두 저장하는 이유**는 수기 대조다(spec FR-028). `queryZ`는 `query_scale`로, `caseZ`는
+`case_scale`로 나온 값이라 **두 구간과 방법이 다 있어야** 독립 계산으로 z를 다시 만들 수 있다.
 
 **사후 평가 구간(63/21거래일)은 여기 두지 않는다.** 사례 식별자(`snapshot_key` + `end_month`)와
 평가 날짜로 [011](../011-regime-strategy-link/spec.md)이 붙인다(spec Assumptions).
@@ -243,7 +242,7 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 �
 
 ## 6. 모델 버전
 
-`model_version`은 아래가 바뀌면 올린다(spec Key Entities). 값은 `REGIME-V1` 형태의 문자열이고
+`model_version`은 아래가 바뀌면 올린다(spec Key Entities). 값은 `REGIME-V2` 형태의 문자열이고
 사전 계산 배치가 상수로 들고 있다.
 
 | 바뀌면 새 버전 | 근거 |
@@ -252,7 +251,8 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 �
 | 척도 규칙(구간 길이, 연속 판정, 분위수 방법, 보정 상수) | FR-005·FR-006, research R5 |
 | **비교 시점 규칙**(결측 달 제외, 지표 단위 적용) | FR-001 |
 | 거리식·가중 | FR-009·FR-010 |
-| **시대별 위치 판정 경계값**(문장이 '높은/낮은/비슷한'으로 갈리는 z 기준) | FR-017, research R8 |
+| **척도를 어느 구간에서 만드는가**(질의 `t-122~t-3` / 후보 `c-122~c-3`) | FR-005 |
+| **문장 판정 경계값**('높은/낮은/평소 수준'이 갈리는 z 기준 0.5) | FR-015, research R8 |
 | 후보 제한(12개월·±6개월·동률) | FR-012 |
 | 표시 개수 | FR-013 |
 | 문턱 | FR-019·FR-020 |

@@ -5,6 +5,9 @@
 010이 실제로 동작하는지 확인하는 절차다. 각 시나리오는 **무엇이 보여야 하는지**와 **무엇이 보이면
 안 되는지**를 함께 적는다 — 010은 보이면 안 되는 것(확률·배지·채워진 빈자리)이 결함인 기능이다.
 
+> **2026-09-17 (모델 v2)**: 후보도 자기 직전 구간의 자로 잰다. 상세에 `queryScale`·`caseScale`이
+> 나란히 오고 `eraPosition`은 없어졌다.
+>
 > **2026-09-16 개정**: `sector` → `field` 개명, 엔드포인트 5개, 비교 시점·역사 비교 표시 확인 추가,
 > 임시 대역이 두 디렉터리(시계열·등록표)로 정리된 것을 반영했다.
 
@@ -141,12 +144,13 @@ curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR" | 
 ```
 
 **보여야 하는 것**: `queryRaw`·`caseRaw`·`queryZ`·`caseZ`·`comparisonMonths`·`e`·`nominalWeight`·
-`distanceShare`·`scale{median, spread, method, windowStart, windowEnd, months}`
+`distanceShare`·**`queryScale`·`caseScale`** 각각 `{median, spread, method, windowStart, windowEnd, months}`
 
 이 값들로 손계산이 되어야 한다.
 
 ```
-z = (raw − median) / spread
+z_질의 = (질의 raw − queryScale.median) / queryScale.spread
+z_후보 = (후보 raw − caseScale.median)  / caseScale.spread     ← 자가 다르다
 E_i = 그 지표의 비교 시점들의 |z_질의 − z_후보| 평균
 D_g = 분야 내 E_i 의 산술평균
 distanceShare = E_i ÷ 분야 안 ΣE_i
@@ -158,26 +162,25 @@ distanceShare = E_i ÷ 분야 안 ΣE_i
 **`mode=field`에는 `contribution`이 없어야 한다** — 분야가 하나라 늘 1이고 뜻 없는 숫자다.
 **거리가 0인 사례**가 있으면 `distanceShare` 키도 아예 없어야 한다.
 
-**시대별 위치**(FR-017, SC-011):
+**두 척도가 나란히 온다**(FR-005, SC-011):
 
 ```bash
-curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR" | jq '.result.eraPosition'
-# 지표별 {sentence, method, windowStart, windowEnd, months}
-# windowEnd 가 2012-03 보다 3개월 이상 앞이어야 한다 (c-122 ~ c-3)
+curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR"   | jq '.result.indicators[0] | {queryScale, caseScale}'
+# queryScale.windowEnd 가 2026-04  (기준월 2026-07 의 3개월 앞)
+# caseScale.windowEnd  가 2011-12  (후보 2012-03 의 3개월 앞)   ← 서로 다른 구간
 ```
 
-**보이면 안 되는 것**: `eraPosition` 안의 z 값·분위수·백분율 — **문장만** 온다.
+**보이면 안 되는 것**: 두 척도가 같은 구간 — 후보에 질의 자를 쓴 것이고 SC-011 위반이다.
 
-**기준월을 바꿔도 같아야 한다** — 시대 척도는 기준월과 무관하다.
+**기준월을 바꿔도 `caseScale`은 같아야 한다** — 후보 척도는 기준월과 무관하다.
 
 ```bash
-A=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2026-07" | jq -S '.result.eraPosition')
-B=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2025-01" | jq -S '.result.eraPosition')
+A=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2026-07" | jq -S '.result.indicators[].caseScale')
+B=$(curl -s "localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2025-01" | jq -S '.result.indicators[].caseScale')
 [ "$A" = "$B" ] && echo "동일"   # 다르면 SC-011 위반
 ```
 
-직전 연속 60개월이 부족한 지표는 **키가 없어야** 하고, 전부 부족하면 `eraPosition`이 `null`이다 —
-`0`이나 `"-"`로 채우면 원칙 VI 위반이다.
+직전 연속 60개월로 자를 만들 수 없는 후보는 **목록에 아예 없어야** 한다.
 
 ## S7. 같은 검색은 늘 같은 결과다 (SC-001, SC-002)
 
@@ -270,6 +273,7 @@ THORP_ENV=prod .venv/Scripts/python scripts/precompute_regime.py --source fixtur
 | **사례가 실제로 그럴듯한가** | 픽스처 값이 지어낸 것이라 "2012년 3월이 가까웠다"가 경제적으로 맞는 말인지 알 수 없다 | 008 완성 후 |
 | 실제 과거 자료 범위와 그에 따른 후보 수 | 통계표별 과거 범위를 인증키 조회로 확인해야 안다(008 PD-11) | 008 완성 후 |
 | `changed_since()` 기반 증분 재계산 | 픽스처는 `None`을 돌려줘 늘 전 구간이다. `t ≥ M`만 도는 경로는 테스트로만 확인된다 | 008 완성 후 |
+| **자료 시작 연도에 따른 실제 탐색 범위** | 모델 v2는 각 지표 **자료 시작 + 5년**부터 탐색한다(후보도 자기 자가 필요하므로). 실제 과거 범위는 008 PD-11 확인 후에야 안다 | 008 완성 후 |
 | **기준월이 008보다 뒤처지는 상황** | 픽스처는 배치와 같은 시점이라 어긋나지 않는다. `regime_baseline_month`가 008의 최신 T_g보다 뒤에 있어도 404가 안 나는지는 실제 운영에서만 확인된다(포트 계약 §0.2·§5) | 008 완성 후 |
 | `THRESHOLD_APPLIED` 상태 | PD-09(U04) 미확정이라 그 상태에 도달할 수 없다. 화면·API 경로는 테스트로만 확인된다 | PD-09 확정 후 |
 | FR-021 "충족 사례 없음" 안내 | 위와 같은 이유 | PD-09 확정 후 |

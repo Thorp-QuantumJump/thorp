@@ -20,7 +20,8 @@
 - [x] CHK004 IQR의 분위수 방법(선형 보간)과 보정 상수(근사값이 아닌 `Φ⁻¹(0.75)`)가 **요구 수준에서** 고정되어 있는가 — 바꾸면 결과가 달라지는 값이다 [Clarity, Spec §FR-005·FR-006]
 - [x] CHK005 지표별 비교 시점이 **종합 검색에서 분야를 넘어 어떻게 결합되는지** 명시되어 있는가 — 분야 A는 3개월, 분야 B는 2개월일 때의 결합 규칙 [Gap, Spec §FR-001·FR-009]
 - [x] CHK006 `E_i`의 "비교 시점들의 평균"이 시점 수가 다른 지표 간 비교 가능함을 요구가 **근거와 함께** 밝히고 있는가 [Clarity, Spec §FR-009]
-- [x] CHK007 "질의와 모든 후보에 같은 m·s"가 **척도 구간 밖 후보**(t-122보다 오래된 종료월)에도 적용됨이 명시되어 있는가 [Coverage, Spec §FR-005 · 원칙 IV]
+- [ ] CHK007 **질의와 후보가 각자의 자를 쓴다**는 규칙과 그 근거가 요구에 명시되어 있는가 — 그리고 서로 다른 자로 잰 z의 차이를 비교해도 되는 이유가 적혀 있는가? [Clarity, Spec §FR-005·FR-009 · 원칙 IV 재해석]
+  - ⚠ 2026-09-17 모델 v2 전환으로 **항목을 다시 씀**. 이전 항목은 v1(같은 자) 전제였다
 - [x] CHK008 지표별 `nominalWeight`와 `distanceShare`의 계산식이 요구에 정의되어 있는가, 아니면 data-model에만 있는가? [Traceability, Spec §FR-010 · data-model §4]
 - [x] CHK009 "전체 거리가 0이면 기여도를 표시하지 않는다"가 **분야 기여도·지표 기여 양쪽**에 대해 정의되어 있는가 [Completeness, Spec §Edge Cases]
 - [x] CHK010 분야 검색(`mode=FIELD`)에서 분야 기여도를 만들지 않는다는 결정이 **spec에** 있는가, 계약·data-model에만 있는가? [Traceability, Spec §FR-009 · contracts §3]
@@ -32,7 +33,8 @@
 - [x] CHK013 후보 제외 사유 세 가지(`MISSING_INPUT`·`WITHIN_12_MONTHS`·`NEIGHBOR_SKIPPED`)가 **빠짐없이** 열거되었는가 — 비교 시점 불일치로 빠진 후보가 어느 사유인지 [Completeness, Spec §FR-012 · data-model §2]
 - [x] CHK014 비슷한 점·다른 점 문장의 **개수 상한(양쪽 2개)**과 정렬 기준이 spec에 있는가, plan/research에만 있는가? [Traceability, Spec §Assumptions · research R8]
 - [x] CHK015 설명 문장에서 금지되는 표현의 **판정 기준**이 목록으로 정의되어 있는가 — "확률·추천·원인 단정"이 낱말 목록인지 의미 판단인지 [Measurability, Spec §FR-022 · tasks T050]
-- [x] CHK016 시대별 위치(`eraPosition`)의 계산 규칙이 요구에 정의되어 있는가 — tasks는 "이번 범위에서 계산하지 않는다"고 적었는데 FR-017은 제공을 요구한다 [Conflict, Spec §FR-017 · tasks 요구사항표]
+- [x] CHK016 후보를 그 시대 기준으로 재는 규칙이 요구에 정의되어 있는가? [Clarity, Spec §FR-005]
+  - ✅ 2026-09-17 모델 v2로 **기본 거리에 흡수**됐다. FR-017(보조 설명)은 폐지되고 FR-005가 그 역할을 한다 — 항목을 v2 기준으로 다시 씀
 - [x] CHK017 내부 비교 대안(0.7E+0.3M, 시대별 척도, 가격 추세·변동성)을 "유지한다"는 요구가 **어디에 어떤 형태로** 유지하는지 정의하는가 [Ambiguity, Spec §FR-026]
 
 ## 3. 표기·금지 표현 — 완결성과 측정 가능성 (M7·M8)
