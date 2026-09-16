@@ -39,7 +39,9 @@ login() {  # login <쿠키파일> <이메일> <비밀번호> — 계정은 회�
 }
 login a.jar user-a@example.com 'Password!1'
 login b.jar user-b@example.com 'Password!1'
-``` 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json` — 종목은 픽스처의 세 개
+```
+
+요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json` — 종목은 픽스처의 세 개
 (`091160`·`305720`·`244580.XKRX`), 대응표 버전 `SECTOR-ETF-2026-09`, 기간은 2023-01-02~2024-12-31 안이어야 한다.
 
 ## S1. 접수·상태·완료 (US1, SC-001)

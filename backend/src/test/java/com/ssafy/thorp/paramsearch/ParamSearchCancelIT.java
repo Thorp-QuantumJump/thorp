@@ -59,6 +59,9 @@ import org.springframework.transaction.support.TransactionTemplate;
         })
 class ParamSearchCancelIT extends PostgresTestSupport {
 
+    /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
+    private static final long OWNER = 7L;
+
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
     @Autowired private ParamSearchService paramSearchService;
@@ -96,7 +99,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
                 candidateRepository.countByStatus(search.getId(), CandidateStatus.DISPATCHED);
         assertThat(dispatchedBefore).as("발행 창이 1이라 한 건만 나가 있어야 한다").isEqualTo(1);
 
-        ParamSearchCancelResult result = cancelService.cancel(search.getSearchId().value());
+        ParamSearchCancelResult result = cancelService.cancel(search.getSearchId().value(), OWNER);
 
         assertThat(result.skipped()).isEqualTo(expectedSkipped());
         assertThat(result.inFlight()).isEqualTo(1);
@@ -113,7 +116,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @DisplayName("취소 뒤에는 후보가 끝나도 새로 발행하지 않는다")
     void noCandidateIsDispatchedAfterCancel() {
         ParamSearch search = accept();
-        cancelService.cancel(search.getSearchId().value());
+        cancelService.cancel(search.getSearchId().value(), OWNER);
         int launchesBefore = Mockito.mockingDetails(launcher).getInvocations().size();
 
         // 발행돼 있던 후보가 끝난다 — 평소라면 여기서 다음 후보가 창에 들어간다.
@@ -128,7 +131,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @DisplayName("남은 후보가 끝나면 PARTIAL로 닫히고 부분 결과와 선정이 남는다")
     void lastInFlightCandidateClosesTheBundleAsPartial() {
         ParamSearch search = accept();
-        cancelService.cancel(search.getSearchId().value());
+        cancelService.cancel(search.getSearchId().value(), OWNER);
 
         finish(inFlight(search));
 
@@ -149,7 +152,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @DisplayName("미실행 후보는 되돌아오지 않는다")
     void skippedCandidatesStaySkipped() {
         ParamSearch search = accept();
-        cancelService.cancel(search.getSearchId().value());
+        cancelService.cancel(search.getSearchId().value(), OWNER);
         finish(inFlight(search));
 
         assertThat(candidateRepository.findByParamSearchId(search.getId()))
@@ -167,10 +170,10 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @DisplayName("끝난 묶음을 취소하면 409 ALREADY_FINISHED다")
     void cancellingAFinishedBundleIsConflict() {
         ParamSearch search = accept();
-        cancelService.cancel(search.getSearchId().value());
+        cancelService.cancel(search.getSearchId().value(), OWNER);
         finish(inFlight(search));
 
-        assertThatThrownBy(() -> cancelService.cancel(search.getSearchId().value()))
+        assertThatThrownBy(() -> cancelService.cancel(search.getSearchId().value(), OWNER))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.ALREADY_FINISHED);
@@ -179,7 +182,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @Test
     @DisplayName("없는 묶음 취소는 404다")
     void cancellingAnUnknownBundleIsNotFound() {
-        assertThatThrownBy(() -> cancelService.cancel("PS-20000101-000001"))
+        assertThatThrownBy(() -> cancelService.cancel("PS-20000101-000001", OWNER))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
@@ -207,7 +210,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
         ParamSearchResult accepted =
                 paramSearchService.create(
                         new CreateParamSearchCommand(
-                                null,
+                                OWNER,
                                 UNIVERSE,
                                 SearchableStrategies.of(registry, jdbcTemplate),
                                 null,

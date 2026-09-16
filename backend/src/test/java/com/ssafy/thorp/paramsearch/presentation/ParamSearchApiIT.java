@@ -228,6 +228,46 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
     }
 
+    @Test
+    @DisplayName("취소·재시도는 소유자만 한다 — 비로그인은 401, 남이면 없는 묶음과 같은 404다")
+    void stateChangesRequireOwner() throws Exception {
+        String created =
+                mockMvc.perform(
+                                post("/param-searches")
+                                        .with(csrf())
+                                        .with(as(requesterId))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(createBody(registryVersionFromPreview())))
+                        .andExpect(status().isAccepted())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        String searchId = objectMapper.readTree(created).path("data").path("searchId").asText();
+        long stranger = newUser();
+
+        for (String path : java.util.List.of("/cancel", "/retry-failed")) {
+            mockMvc.perform(post("/param-searches/{id}" + path, searchId).with(csrf()))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
+
+            // 403이면 "그 식별자는 있다"가 새어 나간다. searchId 는 날짜+순번이라 추측할 수 있다.
+            mockMvc.perform(
+                            post("/param-searches/{id}" + path, searchId)
+                                    .with(csrf())
+                                    .with(as(stranger)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+        }
+
+        // 소유자는 그대로 취소할 수 있다.
+        mockMvc.perform(
+                        post("/param-searches/{id}/cancel", searchId)
+                                .with(csrf())
+                                .with(as(requesterId)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.searchId").value(searchId));
+    }
+
     /** 접수가 요구하는 요청자. backtest_request.requester_id 가 users 를 참조한다. */
     private long newUser() {
         String suffix = String.valueOf(System.nanoTime());

@@ -51,10 +51,12 @@ public class ParamSearchRetryService {
     /**
      * 실패 후보를 다시 발행한다.
      *
-     * @throws BusinessException 없는 묶음이면 404, 실패 후보가 없으면 409 {@code NOTHING_TO_RETRY}
+     * <p>남의 묶음은 403이 아니라 <b>404</b>다 — 취소와 같은 규칙이다.
+     *
+     * @throws BusinessException 없거나 남의 묶음이면 404, 실패 후보가 없으면 409 {@code NOTHING_TO_RETRY}
      */
     @Transactional
-    public ParamSearchRetryResult retryFailed(String searchId) {
+    public ParamSearchRetryResult retryFailed(String searchId, long requesterId) {
         ParamSearch found =
                 paramSearchRepository
                         .findBySearchId(searchId)
@@ -64,6 +66,11 @@ public class ParamSearchRetryService {
                                                 ErrorCode.RESOURCE_NOT_FOUND,
                                                 "탐색 묶음을 찾을 수 없습니다: " + searchId));
         ParamSearch locked = paramSearchRepository.findByIdForUpdate(found.getId()).orElseThrow();
+        if (!locked.ownedBy(requesterId)) {
+            // 없는 묶음과 같은 응답이다. 존재를 알려 주면 추측한 식별자가 맞았다는 확인이 된다.
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND, "탐색 묶음을 찾을 수 없습니다: " + searchId);
+        }
 
         List<SearchCandidate> failed =
                 candidateRepository.findByParamSearchIdAndStatus(

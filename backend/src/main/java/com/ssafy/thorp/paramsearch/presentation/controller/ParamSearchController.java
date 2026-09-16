@@ -97,7 +97,9 @@ public class ParamSearchController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(
                         ApiResponse.ok(
-                                ParamSearchCancelResponse.from(cancelService.cancel(searchId))));
+                                ParamSearchCancelResponse.from(
+                                        cancelService.cancel(
+                                                searchId, currentRequester.requireRequesterId()))));
     }
 
     /**
@@ -112,7 +114,9 @@ public class ParamSearchController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(
                         ApiResponse.ok(
-                                ParamSearchRetryResponse.from(retryService.retryFailed(searchId))));
+                                ParamSearchRetryResponse.from(
+                                        retryService.retryFailed(
+                                                searchId, currentRequester.requireRequesterId()))));
     }
 
     /**

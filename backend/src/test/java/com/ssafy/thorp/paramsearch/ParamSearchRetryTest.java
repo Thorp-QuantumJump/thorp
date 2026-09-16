@@ -58,6 +58,9 @@ import org.springframework.transaction.support.TransactionTemplate;
         })
 class ParamSearchRetryTest extends PostgresTestSupport {
 
+    /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
+    private static final long OWNER = 7L;
+
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
     @Autowired private ParamSearchService paramSearchService;
@@ -94,7 +97,8 @@ class ParamSearchRetryTest extends PostgresTestSupport {
         Map<String, Object> planBefore = search.getExecutionPlan();
         Map<String, Object> ruleBefore = search.getSelectionRule().toMap();
 
-        ParamSearchRetryResult result = retryService.retryFailed(search.getSearchId().value());
+        ParamSearchRetryResult result =
+                retryService.retryFailed(search.getSearchId().value(), OWNER);
 
         assertThat(result.searchId()).isEqualTo(search.getSearchId().value());
         assertThat(result.retried()).isEqualTo(1);
@@ -116,7 +120,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
         ParamSearch search = acceptAndFinish(1);
         assertThat(search.getSelection()).as("먼저 끝났을 때 선정이 있어야 비교가 된다").isNotNull();
 
-        retryService.retryFailed(search.getSearchId().value());
+        retryService.retryFailed(search.getSearchId().value(), OWNER);
 
         assertThat(paramSearchRepository.findById(search.getId()).orElseThrow().getSelection())
                 .as("후보가 더 붙으므로 이전 선정은 이미 사실이 아니다")
@@ -135,7 +139,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
     void retryCountRisesAndTheOldReasonIsCleared() {
         ParamSearch search = acceptAndFinish(1);
 
-        retryService.retryFailed(search.getSearchId().value());
+        retryService.retryFailed(search.getSearchId().value(), OWNER);
 
         SearchCandidate retried =
                 candidateRepository
@@ -151,14 +155,15 @@ class ParamSearchRetryTest extends PostgresTestSupport {
         ParamSearch search = accept();
         // 발행된 후보 하나를 실패로 끝내고, 나머지는 취소로 '미실행'이 되게 한다.
         finish(dispatched(search).get(0), true);
-        cancelService.cancel(search.getSearchId().value());
+        cancelService.cancel(search.getSearchId().value(), OWNER);
         finishAll(search);
 
         long skippedBefore =
                 candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED);
         assertThat(skippedBefore).as("취소로 빠진 후보가 있어야 이 검증이 성립한다").isPositive();
 
-        ParamSearchRetryResult result = retryService.retryFailed(search.getSearchId().value());
+        ParamSearchRetryResult result =
+                retryService.retryFailed(search.getSearchId().value(), OWNER);
 
         assertThat(result.retried()).isEqualTo(1);
         assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED))
@@ -171,7 +176,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
     void nothingToRetryIsConflict() {
         ParamSearch search = acceptAndFinish(0);
 
-        assertThatThrownBy(() -> retryService.retryFailed(search.getSearchId().value()))
+        assertThatThrownBy(() -> retryService.retryFailed(search.getSearchId().value(), OWNER))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOTHING_TO_RETRY);
@@ -180,7 +185,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
     @Test
     @DisplayName("없는 묶음 재시도는 404다")
     void retryingAnUnknownBundleIsNotFound() {
-        assertThatThrownBy(() -> retryService.retryFailed("PS-20000101-000001"))
+        assertThatThrownBy(() -> retryService.retryFailed("PS-20000101-000001", OWNER))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
@@ -229,7 +234,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
         ParamSearchResult accepted =
                 paramSearchService.create(
                         new CreateParamSearchCommand(
-                                null,
+                                OWNER,
                                 UNIVERSE,
                                 SearchableStrategies.of(registry, jdbcTemplate),
                                 null,

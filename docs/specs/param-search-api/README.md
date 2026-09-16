@@ -22,6 +22,10 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
 가는데 `backtest_request.requester_id`가 NOT NULL이기 때문이다(spec 004 R-12). 요청자는 spec 014 로그인 세션의
 주체이고, 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다.
 
+취소·재시도는 **소유자만** 한다. 남의 묶음은 403이 아니라 `404 RESOURCE_NOT_FOUND`로 숨긴다(spec 004 R-12와
+같은 규칙) — 403은 그 식별자가 존재한다는 사실을 알려 주고 `searchId`는 날짜+순번이라 추측할 수 있다. 소유자가
+없는 과거 묶음(인증 이전에 만들어진 행)도 404다.
+
 미리보기와 조회는 요청자가 없어도 된다 — 아무것도 저장하지 않고 실행도 만들지 않는다.
 
 ---
@@ -358,7 +362,8 @@ COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림
 
 | HTTP | `error.code` | 언제 | 재시도 |
 |---|---|---|---|
-| 400 | `INVALID_INPUT` | 종목 수·형식, 페이징·정렬 파라미터, 요청자 헤더 누락 | 값을 고친 뒤 |
+| 400 | `INVALID_INPUT` | 종목 수·형식, 페이징·정렬 파라미터 | 값을 고친 뒤 |
+| 401 | `AUTHENTICATION_REQUIRED` | 요청자를 요구하는 경로를 로그인 없이 호출 | 로그인 후 |
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |
 | 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수가 상한 초과 | 범위를 좁힌 뒤 |
 | 422 | `NO_VALID_COMBINATION` | 유효 조합 0건 | 섹터·범위를 바꾼 뒤 |

@@ -15,6 +15,10 @@
 등록표 데이터는 `backend/src/main/resources/registry/parameter-registry-provisional.yml`에 있다.
 축·후보값·기본값을 바꿔 보려면 그 파일만 고친다. 007 코드에는 전략·파라미터값이 없다(FR-025).
 
+**요청자를 요구하는 경로(`POST /param-searches`)는 로그인 세션이 필요하다**(004 T017, 2026-09-16).
+개발용 `X-User-Id` 헤더는 없어졌으므로 004 quickstart 준비 절의 `login` 함수로 쿠키 단지를 만들어
+`-b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)"`를 붙인다. 미리보기·조회는 로그인 없이도 된다.
+
 ```bash
 # 1. 인프라
 docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
@@ -143,7 +147,7 @@ curl -s "localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED" | 
 후보가 여러 건인 묶음을 실행하고 진행 중에 취소한다.
 
 ```bash
-curl -s -X POST -H 'X-User-Id: 1' localhost:8080/param-searches/{searchId}/cancel | jq
+curl -s -X POST localhost:8080/param-searches/{searchId}/cancel | jq
 curl -s localhost:8080/param-searches/{searchId} | jq '{status, stopReason, counts, partialNote}'
 ```
 
