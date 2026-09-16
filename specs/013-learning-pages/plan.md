@@ -78,7 +78,7 @@
 | 대상 | 필요한 일 | 담당 | 막는 범위 |
 |---|---|---|---|
 | [014 사용자 인증](../014-user-auth/spec.md) | Out of Scope의 '사용자 역할별 권한 관리와 관리자 계정'을 범위 안으로 옮겨 관리 권한 소유를 받아들인다 | 014 담당 | 막지 않는다. 그전까지 설정 허용 목록으로 동작한다([research](research.md) R5) |
-| [003 전략 선택](../003-strategy-settings/tasks.md) | T057a가 `components/strategy/TermHelp.tsx` 대신 013 공용 `components/learning/TermHelp.tsx`를 쓰도록 고친다 | 003 담당 | 003 T057a의 자리만. 013 B04가 먼저 서면 된다 |
+| [003 전략 선택](../003-strategy-settings/tasks.md) | T057a가 `components/strategy/TermHelp.tsx` 대신 013 공용 `components/learning/TermHelp.tsx`를 쓰도록 고친다. 함께 맞출 규칙 둘: ① T057a·T063은 조회 실패도 '설명 준비 중'으로 보이게 적었지만 013 FR-010은 실패를 '설명 준비 중'과 구분해 다시 시도 수단을 보인다([term-help-ui](contracts/term-help-ui.md) §1·§2). ② T057a는 축 `description` 옆에 013 원본을 붙이게 적었지만, 축의 의미·허용 범위 안내는 003 등록표가 소유하고 013 도움말은 그 안의 개념 용어에만 붙인다(013 FR-008, US3 시나리오 5). `fetchGlossaryEntry`의 인자는 표시 이름이 아니라 `termId`다 | 003 담당 | 003 T057a·T063의 자리만. 013 B04가 먼저 서면 된다 |
 | [002 섹터·비중](../002-sector-weight-selection/spec.md) | 도움말을 붙일 용어와 자리를 정한다. spec에 013 참조가 없다 | 002 담당 | 002의 도움말만. 013 구현은 막지 않는다 |
 | [005 결과 이해·비교](../005-result-comparison/spec.md) | 도움말을 붙일 용어와 자리를 정한다. 013 US3 시나리오 4가 '가장 크게 줄었던 폭' 도움말을 전제한다 | 005 담당 | 005의 도움말만 |
 | [001 대표 ETF 자료](../001-etf-market-data/contracts/sector-api.md) | 열린 대응표 조회. `SectorService.getSectors()`가 이미 있다 | — | 없음 |
@@ -180,8 +180,8 @@ constitution "Jira 연계"가 **작업 묶음 = 1 Branch = 1 MR**이고 **묶음
 
 | 묶음 | Jira Task 제목 | 브랜치 (번호는 착수 시) | 담는 것 | 스토리 | 선행 |
 |---|---|---|---|---|---|
-| B01 | `[BE] 배우기 글과 용어 설명을 보관하고 공개 조회한다` | `feat(be)/{번호}-learning-content-api` | 마이그레이션(다섯 테이블·초기 자리), 도메인 모델·식별자, JPA 매핑, `SectorMapPort`와 구현, 공개 조회 세 엔드포인트, 공개 오류 코드 둘, 계약 픽스처, ArchUnit 규칙 하나, 통합 테스트 | US1·US3 서버 | 없음 |
-| B02 | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | `feat(be)/{번호}-learning-admin-api` | `LearningAdminPolicy`와 허용 목록 구현, `SecurityConfig` 경로, 관리 일곱 엔드포인트, `PublishCheck`와 규칙 파일, 게시·게시 취소 트랜잭션, 관리 오류 코드 다섯, 통합 테스트 | US5 서버 | B01 |
+| B01 | `[BE] 배우기 글과 용어 설명을 보관하고 공개 조회한다` | `feat(be)/{번호}-learning-content-api` | 마이그레이션(다섯 테이블·초기 자리), 도메인 모델·식별자, JPA 매핑, `SectorMapPort`와 구현, 공개 조회 세 엔드포인트, 오류 코드 일곱(공개 둘과, 도메인 모델·게시 검사가 쓰는 관리 코드 다섯을 한 블록으로), 계약 픽스처, ArchUnit 규칙 하나, 통합 테스트 | US1·US3 서버 | 없음 |
+| B02 | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | `feat(be)/{번호}-learning-admin-api` | `LearningAdminPolicy`와 허용 목록 구현, `SecurityConfig` 경로, 관리 일곱 엔드포인트, `PublishCheck`와 규칙 파일, 게시·게시 취소 트랜잭션, 운영 환경 변수(`infra/docker-compose.prod.yml`·`infra/.env.prod.example`), 400 응답 보강, 통합 테스트 | US5 서버 | B01 |
 | B03 | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | `feat(fe)/{번호}-learning-pages` | 공개 타입·API, `/learn`·`/learn/:articleId`, 블록 그리기, 예시 002 진입과 연결 불가 안내, 빈 목록·볼 수 없는 글·불러오지 못함, 접근성 | US1·US2·US4 | B01 계약 |
 | B04 | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | `feat(fe)/{번호}-term-help` | `learningGlossary.ts`, 공용 `TermHelp`, 글 화면의 돌아가기 연결 | US3 | B03 |
 | B05 | `[FE] 관리 화면에서 글을 고치고 게시한다` | `feat(fe)/{번호}-learning-admin` | 권한 확인, 관리 목록, 편집기(블록·예시 섹터·용어), 게시 검사 결과 표시, 게시 취소, 편집 중 만료 보관, 409 처리 | US5 화면 | B02, B03 |
@@ -207,7 +207,8 @@ B01 ─┬─▶ B02 ─────────────┐
 
 - **014 역할 개정.** 014 담당의 몫이다([교차 의존](#교차-의존)).
 - **002·005 화면의 도움말 붙이기와 003 T057a 경로 수정.** 각 spec의 작업이다. 013은 공용 컴포넌트와 쓸 수 있는 `termId` 목록([data-model](data-model.md) §8)까지 제공한다.
-- **글 원고 작성.** 운영자가 관리 화면에서 한다. 코드 묶음이 아니다.
+- **글 원고 작성.** 운영자가 관리 화면에서 한다. 코드 묶음이 아니다. 진단 화면과 같은 이름을 쓰는 것(FR-006)과 글 하나가 질문 하나·예시 하나에 집중하는 것(FR-002)은 패턴으로 검사할 수 없으므로 게시 전 검사에 넣지 않고 원고를 쓰고 검토하는 사람이 지킨다.
+- **사용성 관찰(SC-005).** 코드 묶음이 아니다. constitution "완료의 정의"에 따라 구현 완료와 따로 보고하며, B06은 수행 여부만 적는다.
 
 ## Complexity Tracking
 

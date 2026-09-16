@@ -25,7 +25,7 @@
 | `(FE)` | 프론트엔드 React·TS | `fe` |
 | `(FE 테스트)` | 프론트엔드 Vitest | `fe` |
 | `(INFRA)` | 마이그레이션 SQL·자원 파일(YAML)·설정 | `be` (모두 백엔드 자원이다) |
-| `(DOCS)` | 계약 픽스처·CLAUDE.md·spec 문서·수동 확인 기록 | `docs` |
+| `(DOCS)` | 계약 픽스처·CLAUDE.md·spec 문서·수동 확인 기록 | 담긴 묶음을 따른다(T003은 B01 `be`, B06은 `fe`). `docs`는 브랜치 type이고 position이 아니다 |
 
 Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 새 라이브러리도 추가하지 않는다([research](research.md) R13).
 
@@ -39,7 +39,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 - ① **014 관리 권한** — 014에 역할이 아직 없어 관리 권한은 설정 허용 목록 `thorp.learning.admin-user-ids`로 판정한다([research](research.md) R5). 014 Out of Scope를 고치는 개정은 014 담당의 몫이며 013 구현을 막지 않는다. 014가 역할을 주면 `ConfiguredLearningAdminPolicy` 한 클래스만 바꾼다
 - ② **002 T020 미구현** — 002 tasks.md의 T020(배우기 예시 진입과 덮어쓰기 확인, Jira 미발급)이 아직 없다. 013 US2는 navigation state `sectorSelectionExample`을 **싣는 데까지**(T030·T032)가 범위이고, 002 화면이 그 값을 받아 채우는 종단 확인(quickstart 4-3)은 002 T020 뒤에 한다
-- ③ **003 T057a** — 003이 `components/strategy/TermHelp.tsx`로 계획한 자리를 013 공용 `components/learning/TermHelp.tsx`로 바꾸는 것은 003 담당의 몫이다. B04가 먼저 서면 된다. `frontend/src/api/learningGlossary.ts`의 실제 구현은 013이 소유하므로, 003이 그 파일에 대역을 먼저 두었으면 T036이 본문을 바꾼다
+- ③ **003 T057a** — 003이 `components/strategy/TermHelp.tsx`로 계획한 자리를 013 공용 `components/learning/TermHelp.tsx`로 바꾸는 것은 003 담당의 몫이다. B04가 먼저 서면 된다. `frontend/src/api/learningGlossary.ts`의 실제 구현은 013이 소유하므로, 003이 그 파일에 대역을 먼저 두었으면 T036이 본문을 바꾼다. 003 T057a·T063에는 013과 다른 규칙이 둘 있다. 조회 실패를 '설명 준비 중'으로 보이는 것(013 FR-010은 둘을 구분한다)과 축 `description` 옆에 013 원본을 붙이는 것(축 안내는 003 등록표 소유, 013 FR-008)이다. 맞추는 일은 003 담당의 몫이며 [plan](plan.md) "교차 의존"에 적었다
 - ④ **002·005 도움말 자리** — 어느 화면의 어떤 용어에 도움말을 붙일지는 각 spec이 정한다(spec FR-008). 쓸 수 있는 `termId` 목록은 [data-model](data-model.md) §8이다
 - ⑤ **로컬 프로필은 Flyway가 꺼져 있다** — 마이그레이션이 넣는 아홉 글·열네 용어 자리가 `local`에서는 생기지 않는다. 확인하려면 [quickstart](quickstart.md) §0의 명령으로 Flyway를 켠다
 - ⑥ **PD-16 미확정** — [data-model](data-model.md) §8의 제목·순서·용어 구성은 출발안이다. 팀이 확정해 달라지면 관리 화면에서 고치거나 새 마이그레이션으로 자리를 더한다. 적용된 마이그레이션은 고치지 않는다(constitution "스키마 변경 규칙")
@@ -48,7 +48,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 ## Path Conventions
 
 - 백엔드 013 소유 영역: `backend/src/main/java/com/ssafy/thorp/learning/...`, 테스트는 `backend/src/test/java/com/ssafy/thorp/learning/...`
-- 백엔드 공통 영역(한 줄씩만 만진다): `common/exception/ErrorCode.java`, `common/config/SecurityConfig.java`, `common/web/advice/GlobalExceptionHandler.java`
+- 백엔드 공통 영역: `common/exception/ErrorCode.java`(013 블록 추가)와 `common/config/SecurityConfig.java`(경로 한 줄)는 최소한으로만 만진다. `common/web/advice/GlobalExceptionHandler.java`는 예외다. T054가 메서드 하나를 override하고 모든 도메인의 400 응답에 `details.fields`를 더하므로 MR 리뷰 포인트에 적는다
 - 마이그레이션: `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__learning_content.sql` — 버전은 작성 시각 타임스탬프다([backend/CLAUDE.md](../../backend/CLAUDE.md))
 - 검사 규칙 파일: `backend/src/main/resources/learning/publish-checks-v1.yml`
 - 계약 픽스처: `docs/specs/learning-api/examples/*.json` (003의 `docs/specs/strategy-registry-api/` 방식)
@@ -198,7 +198,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Backend — 권한과 설정 (B02)
 
-- [ ] T045 [P] [US5] (BE) `backend/src/main/java/com/ssafy/thorp/learning/application/port/LearningAdminPolicy.java`(`boolean isAdmin(long userId)`)와 구현 `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/admin/ConfiguredLearningAdminPolicy.java` — 설정 `thorp.learning.admin-user-ids`(쉼표 구분 사용자 ID 목록)를 읽는다. 비어 있으면 아무도 관리자가 아니다([research](research.md) R5). `backend/src/main/resources/application.yml`에 `thorp.learning.admin-user-ids: ${THORP_LEARNING_ADMIN_USER_IDS:}`(주석: 비어 있으면 관리자 없음. 014가 역할을 주면 이 구현 한 클래스만 바꾼다), `application-prod.yml`에는 `${THORP_LEARNING_ADMIN_USER_IDS}`로 **기본값 없이** 둔다(`thorp.backtest.limits.*`와 같은 이유 — 운영자가 값을 명시해야 한다. 명시한 빈 값은 관리자 없음이다). `backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java`의 prod 러너에 그 환경 변수를 더한다
+- [ ] T045 [P] [US5] (BE) `backend/src/main/java/com/ssafy/thorp/learning/application/port/LearningAdminPolicy.java`(`boolean isAdmin(long userId)`)와 구현 `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/admin/ConfiguredLearningAdminPolicy.java` — 설정 `thorp.learning.admin-user-ids`(쉼표 구분 사용자 ID 목록)를 읽는다. 비어 있으면 아무도 관리자가 아니다([research](research.md) R5). `backend/src/main/resources/application.yml`에 `thorp.learning.admin-user-ids: ${THORP_LEARNING_ADMIN_USER_IDS:}`(주석: 비어 있으면 관리자 없음. 014가 역할을 주면 이 구현 한 클래스만 바꾼다), `application-prod.yml`에는 `${THORP_LEARNING_ADMIN_USER_IDS}`로 **기본값 없이** 둔다(`thorp.backtest.limits.*`와 같은 이유 — 운영자가 값을 명시해야 한다. 명시한 빈 값은 관리자 없음이다). `backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java`의 prod 러너에 그 환경 변수를 더한다. 운영 배포가 이 변수를 넘기도록 `infra/docker-compose.prod.yml`의 backend `environment`에 `THORP_LEARNING_ADMIN_USER_IDS: ${THORP_LEARNING_ADMIN_USER_IDS}`를, `infra/.env.prod.example`에 빈 값 예시와 주석(쉼표 구분 사용자 ID, 비우면 관리자 없음)을 더한다(`THORP_LIMIT_*`와 같은 방식). 빠지면 prod 기동이 자리표시자를 풀지 못해 실패하므로, 운영 `.env`에 값을 넣어야 한다는 것을 MR 본문 "리뷰 포인트"에 적는다
 - [ ] T046 [P] [US5] (BE) `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` — `/auth/me` 옆에 `.requestMatchers("/admin/learning/**").authenticated()` 한 줄. 비로그인은 기존 진입점이 401 `AUTHENTICATION_REQUIRED` 봉투를 낸다. 상태 변경 요청의 CSRF는 기존 설정이 그대로 적용된다([learning-admin-api](contracts/learning-admin-api.md) §0)
 - [ ] T047 [US5] (BE) `backend/src/main/java/com/ssafy/thorp/learning/presentation/support/LearningAdminAccess.java`(`@Component`) — `long requireAdminUserId()`: 인증 주체를 004 `backtest/presentation/support/CurrentRequester`와 **같은 규약**(세션의 `users.id` 문자열)으로 읽고, `LearningAdminPolicy.isAdmin`이 거짓이면 `BusinessException(ErrorCode.RESOURCE_NOT_FOUND)`(404, 경로의 존재를 알리지 않는다 — [research](research.md) R6). `CurrentRequester`를 import하지 않는다(`learning → backtest` 의존을 만들지 않는다). Javadoc에 "014가 역할을 제공하면 이 클래스와 `ConfiguredLearningAdminPolicy`만 바꾼다"를 적는다. 관리 컨트롤러의 모든 메서드가 첫 줄에서 이것을 부른다 (T045 의존)
 
@@ -228,7 +228,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [ ] T056 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/rules/YamlPublishCheckRulesLoaderTest.java` — 실제 파일이 읽히고 `version`이 `learning-publish-checks-v1`이며 표현·패턴 수가 파일과 같다; 합성 YAML(`ByteArrayResource`)에서 `version` 누락·패턴 문법 오류가 기동 실패로 이어진다 (T049 의존)
 - [ ] T057 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/admin/ConfiguredLearningAdminPolicyTest.java` — 빈 값이면 모두 거짓; `"1, 2"`처럼 공백이 있어도 파싱; 숫자가 아닌 항목은 기동 실패 (T045 의존)
 - [ ] T058 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningAdminAccessIT.java`(`@SpringBootTest` + `@AutoConfigureMockMvc` + `PostgresTestSupport`, `thorp.learning.admin-user-ids=7`) — 비로그인 `GET /admin/learning/access`·`GET /admin/learning/articles`가 401 `AUTHENTICATION_REQUIRED`; `support/Requesters.as(8)`(허용 목록에 없음)은 일곱 엔드포인트 모두 404 `RESOURCE_NOT_FOUND`이고 `admin:false` 200이 없다; `as(7)`의 `PUT`·`POST`에 `csrf()`가 없으면 403 `CSRF_TOKEN_INVALID`; `as(7)`의 `access`는 200 `{admin:true}`(quickstart 1 "권한", 3-1) (T046·T047·T053 의존)
-- [ ] T059 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningAdminApiIT.java`(같은 기동 방식, `as(7)` + `csrf()`, `LearningSeeds`로 001 대응표를 심는다) — 목록이 초기 자리 아홉이고 모두 `DRAFT`·`lastPublication: null`; 만들기 201과 같은 `articleId` 409 `LEARNING_ARTICLE_ID_TAKEN`, `Bad_Key` 400; 없는 글 404 `LEARNING_ARTICLE_NOT_FOUND`; 저장 200에 `draftVersion` 1 증가, 옛 `expectedDraftVersion` 409 `LEARNING_DRAFT_CHANGED`와 `details.currentDraftVersion`(quickstart 1 "덮어쓰기 방지"), 다른 글의 `termId` 409 `LEARNING_TERM_ID_TAKEN`과 `details.termId`·`ownerArticleId`, 알 수 없는 블록 `type` 400 봉투, 요청에서 뺀 용어가 초안에서 빠진다; quickstart 3-2 초안 게시 → 422이고 `error`가 `docs/specs/learning-api/examples/publish-check-failed.json`과 동치, 판·이벤트 행이 0이고 공개 조회가 그대로 404; 고친 초안 게시 → 200이 `publish-success.json` 모양(`revisionNo 1`)이고 같은 요청 직후 공개 목록·글·용어가 새 판을 본다(quickstart 3-3, SC-003), 관리 목록 `lastPublication.actorUserId`가 7(FR-018); 게시 뒤 문단만 저장하면 공개 응답이 그대로이고 `hasUnpublishedChanges: true`(quickstart 3-5, SC-006); 대응표에서 예시 코드를 빼면 `needsUpdate: true`, 대응표 행을 지우면 `null`; 게시 취소 200 `unpublishedRevisionNo 1` 뒤 공개 글·용어가 404이고 이벤트가 `UNPUBLISH`(quickstart 3-8); 한 번 더 취소하면 200 `null`이고 이벤트 수가 그대로; 다시 게시하면 `revisionNo 2`; 대응표가 없는 DB에서 게시하면 `EXAMPLE_SECTOR_IN_MAP`(quickstart 3-4) (T003·T053·T054 의존)
+- [ ] T059 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningAdminApiIT.java`(같은 기동 방식, `as(7)` + `csrf()`, `LearningSeeds`로 001 대응표를 심는다) — 목록이 초기 자리 아홉이고 모두 `DRAFT`·`lastPublication: null`; 만들기 201과 같은 `articleId` 409 `LEARNING_ARTICLE_ID_TAKEN`, `Bad_Key` 400; 없는 글 404 `LEARNING_ARTICLE_NOT_FOUND`; 저장 200에 `draftVersion` 1 증가, 옛 `expectedDraftVersion` 409 `LEARNING_DRAFT_CHANGED`와 `details.currentDraftVersion`(quickstart 1 "덮어쓰기 방지"), 다른 글의 `termId` 409 `LEARNING_TERM_ID_TAKEN`과 `details.termId`·`ownerArticleId`, 알 수 없는 블록 `type` 400 봉투, 요청에서 뺀 용어가 초안에서 빠진다; quickstart 3-2 초안 게시 → 422이고 `error`가 `docs/specs/learning-api/examples/publish-check-failed.json`과 동치, 판·이벤트 행이 0이고 공개 조회가 그대로 404; 고친 초안 게시 → 200이 `publish-success.json` 모양(`revisionNo 1`)이고 같은 요청 직후 공개 목록·글·용어가 새 판을 본다(quickstart 3-3, SC-003), 관리 목록 `lastPublication.actorUserId`가 7(FR-018); 게시 뒤 문단만 저장하면 공개 응답이 그대로이고 `hasUnpublishedChanges: true`(quickstart 3-5, SC-006); 대응표에서 예시 코드를 빼면 `needsUpdate: true`, 대응표 행을 지우면 `null`; 대응표를 되돌린 뒤 글 제목과 용어 `label`·`sentence`를 바꿔 다시 게시하면(`revisionNo 2`) 같은 `articleId`·`termId`의 공개 글·용어가 200이고 새 제목·문장을 보인다(US3 시나리오 7, SC-003, quickstart 5-3의 서버 쪽); 게시 취소 200 `unpublishedRevisionNo 2` 뒤 공개 글·용어가 404이고 이벤트가 `UNPUBLISH`(quickstart 3-8); 한 번 더 취소하면 200 `null`이고 이벤트 수가 그대로; 다시 게시하면 `revisionNo 3`; 대응표가 없는 DB에서 게시하면 `EXAMPLE_SECTOR_IN_MAP`(quickstart 3-4) (T003·T053·T054 의존)
 
 ### Frontend — 관리 API와 편집기 부품 (B05)
 
@@ -264,7 +264,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 - [ ] T073 [P] (DOCS) `backend/CLAUDE.md` "규칙"에 세 줄 추가 — "배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다"; "게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 재작성을 같은 트랜잭션에서 한다 — 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003)"; "관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다". `frontend/CLAUDE.md` "규칙"에 두 줄 — "용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015)"; "`sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`(관리 화면의 저장하지 않은 편집 내용, 저장 성공 시 지운다). 일반 사용자 배우기 화면은 저장소에 쓰지 않는다"
 - [ ] T074 [P] (DOCS) spec 문서 동기화 — `specs/013-learning-pages/data-model.md` §3-6 snapshot 예시에 `draftVersion`을 더하고 `hasUnpublishedChanges` 판정 근거임을 적는다(T009·T052); `plan.md` "Source Code" 트리의 파일 이름을 구현과 맞춘다(`presentation/support/LearningAdminAccess`, `LearningQueryService`·`LearningAdminService`, `admin/adminDraftStorage.ts` 등); `research.md` R5·R11에 "착수 전에 알아둘 것" ①~③의 현재 상태를 반영한다; `specs/README.md` 013 행은 바뀐 것이 없으면 그대로 둔다
-- [ ] T075 (DOCS) [quickstart.md](quickstart.md) 0~5 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 002 T020이 아직 없으면 4-3은 T032로 대신하고 그 사실을 적는다; 003 화면이 공용 `TermHelp`를 아직 쓰지 않으면 5-1~5-4는 T042로 대신한다(quickstart §5 머리말); 로컬 확인은 §0의 Flyway 켜기 명령으로 한다. SC-002는 검사 통과로 증명되지 않는다는 것을 그대로 적는다(quickstart §6)
+- [ ] T075 (DOCS) [quickstart.md](quickstart.md) 0~5 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 002 T020이 아직 없으면 4-3은 T032로 대신하고 그 사실을 적는다; 003 화면이 공용 `TermHelp`를 아직 쓰지 않으면 5-1~5-4는 T042로 대신한다(quickstart §5 머리말); 로컬 확인은 §0의 Flyway 켜기 명령으로 한다. SC-002는 검사 통과로 증명되지 않는다는 것을 그대로 적는다(quickstart §6). SC-005 사용성 관찰은 이 태스크가 수행하지 않으며, constitution "완료의 정의"에 따라 구현 완료와 구분해 "사용성 확인: 미수행"(또는 수행 결과)으로 따로 적는다
 
 ### 코드 정리
 
@@ -343,7 +343,7 @@ B01 ─┬─▶ B02 ─────────────┐
 
 ### Within Each User Story
 
-- 테스트를 먼저 쓰고 실패시킨 뒤 구현한다
+- 테스트를 먼저 쓰고 실패시킨 뒤 구현한다. 테스트 태스크에 적힌 "(T### 의존)"은 대상 클래스·경로·계약이 정해져 있어야 한다는 뜻이며, 구현을 끝낸 뒤에 테스트를 쓰라는 뜻이 아니다
 - BE: 값 타입·모델 → 저장소 → 서비스 → 컨트롤러 → 계약 테스트
 - FE: 타입·픽스처 → API 함수(상태 union) → 컴포넌트 → 페이지 조립 → 라우트 → 페이지 테스트
 
@@ -387,7 +387,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 3. **멈추고 검증**: quickstart 2-1·2-2·4-1·4-2, 4-3은 T032까지(002 T020 대기), 4-4는 통합 테스트로 심은 판
 4. 데모 — 통합 테스트로 심은 판 하나로 목록 → 글 → '이 예시로 비중 비교하기'가 002 계약 모양으로 넘어가는 데까지. **실제 원고 게시는 B02·B05 뒤다**
 
-**MVP = 묶음 둘(B01 + B03) = 티켓·브랜치·MR 둘.** T001~T035 가운데 T005·T036~T042를 뺀 것에 T043·T044를 더한 것이다.
+**MVP = 묶음 둘(B01 + B03) = 티켓·브랜치·MR 둘.** B01의 19개와 B03의 17개, 합계 36개다(T001~T035에서 T005를 빼고 T043·T044를 더한 것과 같다).
 
 ### Incremental Delivery
 
