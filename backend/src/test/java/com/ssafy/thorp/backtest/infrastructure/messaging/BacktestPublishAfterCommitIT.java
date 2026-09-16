@@ -1,12 +1,12 @@
 package com.ssafy.thorp.backtest.infrastructure.messaging;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +42,6 @@ import org.springframework.transaction.support.TransactionTemplate;
             "spring.rabbitmq.listener.simple.auto-startup=false",
             // 스케줄러가 제멋대로 끼어들지 않게 끄고, 재발행은 테스트가 직접 부른다.
             "thorp.backtest.republish.enabled=false",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -99,7 +98,7 @@ class BacktestPublishAfterCommitIT extends PostgresTestSupport {
                         mockMvc.perform(
                                         post("/backtests")
                                                 .with(csrf())
-                                                .header(CurrentRequester.DEV_HEADER, userId)
+                                                .with(as(userId))
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .content(body))
                                 .andExpect(status().isAccepted())

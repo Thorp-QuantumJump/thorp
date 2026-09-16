@@ -17,7 +17,6 @@ import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchCancelRespon
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchPreviewResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchResponse;
 import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchRetryResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -65,18 +64,17 @@ public class ParamSearchController {
 
     @PostMapping("/preview")
     public ResponseEntity<ApiResponse<ParamSearchPreviewResponse>> preview(
-            @Valid @RequestBody ParamSearchPreviewRequest request, HttpServletRequest http) {
+            @Valid @RequestBody ParamSearchPreviewRequest request) {
         ParamSearchPreviewResult result =
-                paramSearchService.preview(request.toCommand(optionalRequesterId(http)));
+                paramSearchService.preview(request.toCommand(optionalRequesterId()));
         return ResponseEntity.ok(ApiResponse.ok(ParamSearchPreviewResponse.from(result)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ParamSearchResponse>> create(
-            @Valid @RequestBody ParamSearchCreateRequest request, HttpServletRequest http) {
+            @Valid @RequestBody ParamSearchCreateRequest request) {
         ParamSearchResult result =
-                paramSearchService.create(
-                        request.toCommand(currentRequester.requireRequesterId(http)));
+                paramSearchService.create(request.toCommand(currentRequester.requireRequesterId()));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(ParamSearchResponse.accepted(result)));
     }
@@ -139,7 +137,7 @@ public class ParamSearchController {
     }
 
     /**
-     * 저장하지 않는 경로의 요청자. 인증(spec 014) 전에는 개발용 헤더를 켠 환경에서만 값이 있고 기본은 null이다(research R4).
+     * 저장하지 않는 경로의 요청자. 로그인 세션이 없으면 null이다(research R4).
      *
      * <p>미리보기만 이걸 쓴다. 아무것도 저장하지 않고 아무 실행도 만들지 않으므로 요청자를 몰라도 성립한다.
      *
@@ -148,7 +146,7 @@ public class ParamSearchController {
      * NullPointerException으로 죽어 사용자에게 500이 나간다 — "소유자 필터가 없다"는 것과 "요청자를 몰라도 실행을 만들 수 있다"는 것은 다른
      * 말이다.
      */
-    private Long optionalRequesterId(HttpServletRequest http) {
-        return currentRequester.findRequesterId(http).orElse(null);
+    private Long optionalRequesterId() {
+        return currentRequester.findRequesterId().orElse(null);
     }
 }

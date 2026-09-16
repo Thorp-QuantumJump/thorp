@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,7 +38,6 @@ import org.springframework.test.web.servlet.ResultActions;
             "spring.rabbitmq.connection-timeout=1s",
             "spring.rabbitmq.listener.simple.auto-startup=false",
             "thorp.backtest.republish.enabled=false",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -113,7 +113,7 @@ class BacktestIntakeRegistryIT extends PostgresTestSupport {
         return mockMvc.perform(
                 post("/backtests")
                         .with(csrf())
-                        .header("X-User-Id", user)
+                        .with(as(user))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody));
     }

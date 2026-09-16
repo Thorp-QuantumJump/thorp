@@ -27,22 +27,32 @@ MARKET_DATA_URL=postgresql://thorp:thorp@localhost:5432/thorp WORKER_ROLE=flex  
 전부 컨테이너로 띄우려면 `docker compose -f docker-compose.dev.yml --profile app up -d --build` — 이때도 백엔드에
 `SPRING_FLYWAY_ENABLED=true`를 넘겨야 001 표가 생긴다(dev compose 기본은 Hibernate `update`).
 
-**인증은 아직 없다**(spec 014 전). local 프로필은 `thorp.auth.trust-user-id-header=true`라 사용자는 헤더 `X-User-Id: {users.id}`로
-대신한다 — 아래의 `$TOKEN`은 `-H "X-User-Id: 1"`, `$TOKEN_B`는 `-H "X-User-Id: 2"`로 읽는다(`users` 행이 있어야 한다). 운영자 경로는
-`X-Ops-Token: dev-ops-token`. 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json` — 종목은 픽스처의 세 개
+**요청자는 로그인 세션으로 식별한다**(spec 014, T017). 아래에서 사용자 A는 `-b a.jar`, 사용자 B는 `-b b.jar`로 읽는다.
+상태를 바꾸는 요청(POST·DELETE)에는 쿠키 단지의 CSRF 토큰을 헤더로 함께 보낸다. 운영자 경로는 세션이 아니라
+`X-Ops-Token: dev-ops-token`이다(014가 운영자 역할을 정하면 바뀐다).
+
+```bash
+csrf() { awk '$6 == "XSRF-TOKEN" { print $7 }' "$1"; }
+login() {  # login <쿠키파일> <이메일> <비밀번호> — 계정은 회원가입(spec 014)으로 미리 만든다
+  curl -s -c "$1" localhost:8080/auth/csrf > /dev/null
+  curl -s -b "$1" -c "$1" -X POST localhost:8080/auth/sessions -H 'Content-Type: application/json'     -H "X-XSRF-TOKEN: $(csrf "$1")" -d "{\"email\": \"$2\", \"password\": \"$3\"}"
+}
+login a.jar user-a@example.com 'Password!1'
+login b.jar user-b@example.com 'Password!1'
+``` 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json` — 종목은 픽스처의 세 개
 (`091160`·`305720`·`244580.XKRX`), 대응표 버전 `SECTOR-ETF-2026-09`, 기간은 2023-01-02~2024-12-31 안이어야 한다.
 
 ## S1. 접수·상태·완료 (US1, SC-001)
 
 ```bash
-curl -s -X POST localhost:8080/backtests -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d @req.json
+curl -s -X POST localhost:8080/backtests -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)"   -H 'Content-Type: application/json' -d @req.json
 ```
 
 기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`가 요청 시작일보다 뒤(워밍업). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. `versions.costProfile.provisional=true`가 보인다.
 
 ## S2. 동일 버전 재사용 (US3-1, FR-003)
 
-S1 완료 뒤 같은 본문을 사용자 B 토큰으로 다시 보낸다. 기대: `202`, `status=COMPLETED`, `resultSource=REUSED`, 새 `backtestId`. `backtest_run` 행 수는 늘지 않고 `backtest_reuse_event`에 `REUSED` 1건.
+S1 완료 뒤 같은 본문을 사용자 B(`-b b.jar`)로 다시 보낸다. 기대: `202`, `status=COMPLETED`, `resultSource=REUSED`, 새 `backtestId`. `backtest_run` 행 수는 늘지 않고 `backtest_reuse_event`에 `REUSED` 1건.
 
 ## S3. 진행 중 합류 (Clarify Q3)
 

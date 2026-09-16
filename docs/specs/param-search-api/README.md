@@ -19,8 +19,8 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
 ## 요청자 식별
 
 `POST /param-searches`·`/cancel`·`/retry-failed`는 **요청자를 요구한다.** 실행이 004의 접수 유스케이스로
-가는데 `backtest_request.requester_id`가 NOT NULL이기 때문이다(spec 004 R-12). 인증(spec 014) 전에는
-`thorp.auth.trust-user-id-header`를 켠 환경에서 `X-User-Id` 헤더로 대신하며 **이것은 인증이 아니다**.
+가는데 `backtest_request.requester_id`가 NOT NULL이기 때문이다(spec 004 R-12). 요청자는 spec 014 로그인 세션의
+주체이고, 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다.
 
 미리보기와 조회는 요청자가 없어도 된다 — 아무것도 저장하지 않고 실행도 만들지 않는다.
 

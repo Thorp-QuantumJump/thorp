@@ -1,5 +1,6 @@
 package com.ssafy.thorp.paramsearch.presentation;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.paramsearch.SearchableStrategies;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
@@ -40,7 +40,6 @@ import org.springframework.test.web.servlet.MockMvc;
             "thorp.backtest.republish.enabled=false",
             "thorp.param-search.enabled=true",
             // 접수는 요청자를 요구한다 — backtest_request.requester_id 가 NOT NULL 이다(spec 004 R-12).
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -110,7 +109,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 mockMvc.perform(
                                 post("/param-searches")
                                         .with(csrf())
-                                        .header(CurrentRequester.DEV_HEADER, requesterId)
+                                        .with(as(requesterId))
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(createBody(registryVersion)))
                         .andExpect(status().isAccepted())
@@ -139,7 +138,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         mockMvc.perform(
                         post("/param-searches")
                                 .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, requesterId)
+                                .with(as(requesterId))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody("PROVISIONAL-19990101")))
                 .andExpect(status().isConflict())
@@ -166,7 +165,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         mockMvc.perform(
                         post("/param-searches")
                                 .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, requesterId)
+                                .with(as(requesterId))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andExpect(status().isBadRequest())
@@ -194,7 +193,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("요청자 없이 실행하면 처리된 오류다 — 500이 아니다")
+    @DisplayName("로그인 없이 실행하면 처리된 오류다 — 500이 아니다")
     void createWithoutRequesterIsHandled() throws Exception {
         String registryVersion = registryVersionFromPreview();
 
@@ -205,8 +204,8 @@ class ParamSearchApiIT extends PostgresTestSupport {
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody(registryVersion)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test

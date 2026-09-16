@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -54,7 +55,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -65,11 +65,10 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(BacktestController.class)
 @Import({SecurityConfig.class, CurrentRequester.class})
-@TestPropertySource(properties = "thorp.auth.trust-user-id-header=true")
 class BacktestControllerTest {
 
     private static final String BACKTEST_ID = "BT-20260911-000001";
-    private static final String USER = "7";
+    private static final long USER = 7;
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path REQUEST_FIXTURE =
@@ -107,7 +106,7 @@ class BacktestControllerTest {
         return mockMvc.perform(
                 post("/backtests")
                         .with(csrf())
-                        .header(CurrentRequester.DEV_HEADER, USER)
+                        .with(as(USER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body));
     }
@@ -178,14 +177,15 @@ class BacktestControllerTest {
     }
 
     @Test
-    @DisplayName("요청자 헤더가 없으면 400이고 접수하지 않는다")
-    void missingRequesterHeaderIsRejected() throws Exception {
+    @DisplayName("로그인하지 않으면 401이고 접수하지 않는다")
+    void anonymousRequestIsRejected() throws Exception {
         mockMvc.perform(
                         post("/backtests")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(VALID_BODY))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
 
         verify(backtestService, never()).create(any());
     }
@@ -247,9 +247,7 @@ class BacktestControllerTest {
         when(queryService.getDetail(eq(BACKTEST_ID), anyLong()))
                 .thenReturn(detail(RunStatus.RUNNING));
 
-        mockMvc.perform(
-                        get("/backtests/{id}", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("RUNNING"))
                 .andExpect(jsonPath("$.data.partial").value(false))
@@ -265,14 +263,12 @@ class BacktestControllerTest {
         when(queryService.getDetail(eq(BACKTEST_ID), anyLong()))
                 .thenThrow(new BacktestNotFoundException(BACKTEST_ID));
 
-        mockMvc.perform(
-                        get("/backtests/{id}", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("하위 리소스도 요청자 헤더가 없으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다")
+    @DisplayName("하위 리소스도 로그인하지 않으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다")
     void subResourcesRequireRequester() throws Exception {
         for (String path :
                 List.of(
@@ -282,7 +278,7 @@ class BacktestControllerTest {
                         "/weights",
                         "/exceptions")) {
             mockMvc.perform(get("/backtests/" + BACKTEST_ID + path))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isUnauthorized());
         }
         verifyNoInteractions(queryService);
     }
@@ -305,9 +301,7 @@ class BacktestControllerTest {
                                                 null,
                                                 null))));
 
-        mockMvc.perform(
-                        get("/backtests/{id}/weights", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}/weights", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.weightsSource").value("USER"))
                 .andExpect(jsonPath("$.data.partial").value(false))
@@ -332,9 +326,7 @@ class BacktestControllerTest {
                                                 "DEFER_TO_NEXT_TRADABLE",
                                                 "planned 2024-06-11 -> next tradable day"))));
 
-        mockMvc.perform(
-                        get("/backtests/{id}/exceptions", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}/exceptions", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.partial").value(true))
                 .andExpect(jsonPath("$.data.items[0].kind").value("HALT_DEFERRED"))
@@ -347,10 +339,7 @@ class BacktestControllerTest {
         when(cancelService.cancel(eq(BACKTEST_ID), anyLong()))
                 .thenReturn(new BacktestCancelResult(BACKTEST_ID, RunStatus.CANCELLED, true));
 
-        mockMvc.perform(
-                        post("/backtests/{id}/cancel", BACKTEST_ID)
-                                .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID).with(csrf()).with(as(USER)))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"))
@@ -358,19 +347,16 @@ class BacktestControllerTest {
     }
 
     @Test
-    @DisplayName("끝난 분석의 취소는 409 NOT_CANCELLABLE 이고 요청자 헤더가 없으면 400 이다")
+    @DisplayName("끝난 분석의 취소는 409 NOT_CANCELLABLE 이고 로그인하지 않으면 401 이다")
     void cancelRejections() throws Exception {
         when(cancelService.cancel(eq(BACKTEST_ID), anyLong()))
                 .thenThrow(new BusinessException(ErrorCode.NOT_CANCELLABLE));
 
-        mockMvc.perform(
-                        post("/backtests/{id}/cancel", BACKTEST_ID)
-                                .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID).with(csrf()).with(as(USER)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));
         mockMvc.perform(post("/backtests/{id}/cancel", BACKTEST_ID).with(csrf()))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -379,9 +365,7 @@ class BacktestControllerTest {
         when(queryService.getTimeseries(eq(BACKTEST_ID), anyLong()))
                 .thenThrow(new BacktestResultNotReadyException(BACKTEST_ID, RunStatus.RUNNING));
 
-        mockMvc.perform(
-                        get("/backtests/{id}/timeseries", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}/timeseries", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
     }
@@ -392,9 +376,7 @@ class BacktestControllerTest {
         when(queryService.getTrades(eq(BACKTEST_ID), anyLong(), any()))
                 .thenThrow(new BacktestFailedException(BACKTEST_ID));
 
-        mockMvc.perform(
-                        get("/backtests/{id}/trades", BACKTEST_ID)
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(get("/backtests/{id}/trades", BACKTEST_ID).with(as(USER)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
     }
@@ -402,13 +384,9 @@ class BacktestControllerTest {
     @Test
     @DisplayName("POST /backtests/{id}/retry 는 202 와 retryOf 를 돌려준다")
     void retryReturnsAccepted() throws Exception {
-        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))
-                .thenReturn(accepted().withRetryOf(BACKTEST_ID));
+        when(retryService.retry(BACKTEST_ID, USER)).thenReturn(accepted().withRetryOf(BACKTEST_ID));
 
-        mockMvc.perform(
-                        post("/backtests/{id}/retry", BACKTEST_ID)
-                                .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(post("/backtests/{id}/retry", BACKTEST_ID).with(csrf()).with(as(USER)))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
@@ -419,13 +397,10 @@ class BacktestControllerTest {
     @Test
     @DisplayName("재시도할 수 없는 상태면 409 NOT_RETRYABLE 을 그대로 전한다")
     void retryConflictIsPropagated() throws Exception {
-        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))
+        when(retryService.retry(BACKTEST_ID, USER))
                 .thenThrow(new BusinessException(ErrorCode.NOT_RETRYABLE, "아직 돌고 있습니다"));
 
-        mockMvc.perform(
-                        post("/backtests/{id}/retry", BACKTEST_ID)
-                                .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, USER))
+        mockMvc.perform(post("/backtests/{id}/retry", BACKTEST_ID).with(csrf()).with(as(USER)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_RETRYABLE"));
     }
