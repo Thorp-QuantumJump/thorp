@@ -28,6 +28,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -61,6 +62,15 @@ class BacktestServiceTest {
     // 한도는 ExecutionLimitPolicyTest 가 따로 본다. 여기서는 통과하는 것으로 둔다.
     private final ExecutionLimitPolicy limitPolicy = mock(ExecutionLimitPolicy.class);
     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
+
+    /**
+     * 이 테스트의 요청들은 {@code registryVersion}을 싣지 않아 등록표 판정을 타지 않는다(003 과도기 경로). 목만 두고 상호작용을 단언하지 않는
+     * 이유는, 여기서 보는 것이 004 접수 규칙이고 등록표 판정은 {@code StrategySettingsValidatorTest}와 {@code
+     * BacktestIntakeRegistryIT}가 보기 때문이다.
+     */
+    private final StrategySettingsValidator strategySettingsValidator =
+            mock(StrategySettingsValidator.class);
+
     private final CostProfileService costProfileService = mock(CostProfileService.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final FixtureMarketMetadataAdapter marketMetadata =
@@ -73,6 +83,7 @@ class BacktestServiceTest {
                     reuseEventRepository,
                     limitPolicy,
                     strategyRulesService,
+                    strategySettingsValidator,
                     costProfileService,
                     new EffectivePeriodCalculator(marketMetadata),
                     new DedupKeyCalculator(),
@@ -173,7 +184,9 @@ class BacktestServiceTest {
                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),
                 strategyId,
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 1, 2),
                 LocalDate.of(2024, 12, 31),

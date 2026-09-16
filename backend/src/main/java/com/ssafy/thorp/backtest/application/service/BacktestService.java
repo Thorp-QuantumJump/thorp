@@ -22,6 +22,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -29,6 +30,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -54,11 +57,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BacktestService {
 
+    private static final Logger log = LoggerFactory.getLogger(BacktestService.class);
+
     private final BacktestRunRepository runRepository;
     private final BacktestRequestRepository requestRepository;
     private final BacktestReuseEventRepository reuseEventRepository;
     private final ExecutionLimitPolicy executionLimitPolicy;
     private final StrategyRulesService strategyRulesService;
+    private final StrategySettingsValidator strategySettingsValidator;
     private final CostProfileService costProfileService;
     private final EffectivePeriodCalculator effectivePeriodCalculator;
     private final DedupKeyCalculator dedupKeyCalculator;
@@ -73,6 +79,7 @@ public class BacktestService {
             BacktestReuseEventRepository reuseEventRepository,
             ExecutionLimitPolicy executionLimitPolicy,
             StrategyRulesService strategyRulesService,
+            StrategySettingsValidator strategySettingsValidator,
             CostProfileService costProfileService,
             EffectivePeriodCalculator effectivePeriodCalculator,
             DedupKeyCalculator dedupKeyCalculator,
@@ -85,6 +92,7 @@ public class BacktestService {
         this.reuseEventRepository = reuseEventRepository;
         this.executionLimitPolicy = executionLimitPolicy;
         this.strategyRulesService = strategyRulesService;
+        this.strategySettingsValidator = strategySettingsValidator;
         this.costProfileService = costProfileService;
         this.effectivePeriodCalculator = effectivePeriodCalculator;
         this.dedupKeyCalculator = dedupKeyCalculator;
@@ -122,6 +130,7 @@ public class BacktestService {
                 strategyRulesService.requireRegistered(
                         command.strategyId(), command.rulesVersion());
         validateWeights(command, rules);
+        Integer warmupTradingDays = verifyRegistrySettings(command);
         StrategyRules overlay = scenario == Scenario.TARGET_RISK ? targetRiskOverlay() : null;
         CostProfile costProfile = costProfileService.resolve(command.costProfileVersion());
 
@@ -132,7 +141,7 @@ public class BacktestService {
                         command.instrumentIds(),
                         command.start(),
                         command.end(),
-                        command.warmupTradingDays());
+                        warmupTradingDays);
 
         String dataVersion = marketMetadata.currentDataVersion();
         String dedupKey =
@@ -291,6 +300,48 @@ public class BacktestService {
     }
 
     // --- 검증 ---------------------------------------------------------------
+
+    /**
+     * 003 등록표로 설정을 다시 판정한다(FR-006). <b>지금은 {@code registryVersion}이 실린 요청에만 건다.</b>
+     *
+     * <p><b>[미완료: 004 워커 메시지 정합 전]</b> 관문을 모든 요청에 걸면 004·007의 기존 접수가 막힌다. 워커는 아직 {@code
+     * parameters.rebalance} 문자열과 {@code rules.lookbackDays}만 읽고, 003 등록표의 {@code rebalancePeriod}
+     * 객체값이나 {@code maxWeight}·{@code topN} 같은 축 이름이 메시지 계약에 자리가 없다({@code
+     * docs/specs/backtest-messaging/}). 그 계약은 004가 소유한다.
+     *
+     * <p>그래서 {@code registryVersion}이 없는 요청은 종전처럼 통과시키고 경고만 남긴다. <b>이 호환 경로가 남아 있는 동안 FR-006과
+     * SC-003은 닫히지 않는다</b> — 화면을 우회한 요청이 {@code registryVersion}을 빼면 판정을 건너뛸 수 있기 때문이다. 004가 워커 계약을
+     * 맞춘 뒤 모든 요청에 {@code registryVersion}과 등록표 검증을 필수화하는 후속 변경까지 끝나야 요구사항이 닫힌다.
+     *
+     * <p>등록표가 산출한 워밍업이 004 규칙이 요구하는 관측 길이보다 짧으면 {@link EffectivePeriodCalculator}가 422 {@code
+     * INSUFFICIENT_HISTORY}로 거절한다. 그 자리에서 큰 쪽으로 올리지 않는 이유는 004와 같다 — 두 값이 어긋났다는 것은 등록표와 규칙 중 하나가
+     * 틀렸다는 신호이고, 고쳐 통과시키면 어긋난 채로 계속 간다.
+     *
+     * @return 실행에 쓸 워밍업 거래일 수. 요청이 값을 보냈으면 그대로 두고(004의 기존 규칙이 판정한다), 보내지 않았고 등록표 판정을 거쳤으면 등록표가 산출한
+     *     값이다
+     */
+    private Integer verifyRegistrySettings(CreateBacktestCommand command) {
+        if (command.registryVersion() == null) {
+            log.warn(
+                    "등록표 검증을 건너뛴 접수다(과도기 호환): strategyId={}, requesterId={}."
+                            + " registryVersion 이 없는 요청이라 003 FR-006 관문을 걸지 않았다.",
+                    command.strategyId(),
+                    command.requesterId());
+            return command.warmupTradingDays();
+        }
+        StrategySettingsValidator.Verified verified =
+                strategySettingsValidator.verify(
+                        command.strategyId(),
+                        command.parameters(),
+                        command.registryVersion(),
+                        command.items().size(),
+                        command.initialCash());
+        // 요청이 워밍업을 실어 보냈으면 그것이 비교 묶음이 계산한 공통 워밍업이다(R-15).
+        // 전략 요구값보다 작으면 EffectivePeriodCalculator 가 422 INSUFFICIENT_HISTORY 로 거절한다.
+        return command.warmupTradingDays() == null
+                ? verified.warmupTradingDays()
+                : command.warmupTradingDays();
+    }
 
     /**
      * 시나리오와 그 입력값이 서로 맞는지. 맞지 않는 조합은 조용히 무시하지 않고 거절한다 — 무시하면 사용자가 고른 것과 다른 조건의 결과가 그 조건의 결과로 저장된다.

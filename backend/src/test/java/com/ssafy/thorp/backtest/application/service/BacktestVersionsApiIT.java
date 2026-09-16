@@ -87,7 +87,9 @@ class BacktestVersionsApiIT extends PostgresTestSupport {
                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),
                 strategyId,
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 5, day),
                 LocalDate.of(2024, 10, 31),

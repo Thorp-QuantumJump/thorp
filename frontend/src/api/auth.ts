@@ -5,8 +5,8 @@ import {
   resetCsrfToken,
   runCsrfProtectedMutation,
 } from './client'
+import type { ApiEnvelope } from '@/types/api'
 import type {
-  ApiEnvelope,
   AuthenticatedUser,
   EmailVerificationConfirmRequest,
   EmailVerificationRequest,

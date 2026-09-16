@@ -23,7 +23,7 @@
   "strategy": {
     "strategyId": "FIXED_WEIGHT",
     "rulesVersion": "1",
-    "registryVersion": "PARAM-2026-09",
+    "registryVersion": null,
     "parameters": {
       "rebalance": "MONTH_END"
     }

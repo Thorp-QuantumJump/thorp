@@ -48,7 +48,10 @@ public record BacktestJobRequest(
             @Digits(integer = 1, fraction = 4) BigDecimal targetWeight) {}
 
     /**
-     * @param registryVersion 003 파라미터 등록표 버전. 지금은 기록만 하고 검증하지 않는다(003 미구현)
+     * @param registryVersion 003 파라미터 등록표 버전. <b>이 값이 실린 요청만</b> 접수 시점에 등록표로 설정을 다시 판정한다(003
+     *     FR-006, {@code StrategySettingsValidator}) — 버전이 다르면 409, 미등록·비활성 전략은 422, 축이나 값이 등록표와
+     *     어긋나면 400, 등록표 규칙 위반은 422다. <b>[미완료]</b> 값을 빼고 보내면 종전처럼 검증 없이 통과하고 경고 로그만 남는다. 004 워커가 아직
+     *     등록표 축 이름을 읽지 못해 관문을 전부에 걸 수 없기 때문이며, 워커 계약 정합 뒤 이 필드를 필수로 바꾼다
      */
     public record StrategyRequest(
             @NotBlank @Size(max = BacktestRun.MAX_STRATEGY_ID_LENGTH) String strategyId,
