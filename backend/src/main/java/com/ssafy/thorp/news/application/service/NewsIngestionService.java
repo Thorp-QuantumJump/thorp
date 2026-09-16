@@ -148,7 +148,8 @@ public class NewsIngestionService {
                                 NewsSourceType.RSS,
                                 false,
                                 null,
-                                nextAttempt));
+                                nextAttempt,
+                                source.channelTopicKeys()));
     }
 
     /**
@@ -182,7 +183,9 @@ public class NewsIngestionService {
                                 NewsSourceType.GDELT_DOC,
                                 true,
                                 partial ? null : cursor,
-                                nextAttempt()));
+                                nextAttempt(),
+                                // GDELT는 조회에 쓴 주제가 항목마다 실려 오므로 채널 보완이 필요 없다.
+                                List.of()));
     }
 
     /**
@@ -222,7 +225,8 @@ public class NewsIngestionService {
             NewsSourceType sourceType,
             boolean overseas,
             String cursor,
-            Instant nextAttempt) {
+            Instant nextAttempt,
+            List<String> channelTopicKeys) {
 
         Instant collectedAt = now();
         String ingestRunId = UUID.randomUUID().toString();
@@ -238,7 +242,7 @@ public class NewsIngestionService {
 
         for (CollectedNewsItem item : fetched.items()) {
             NewsRelevanceClassifier.Relevance link =
-                    relevance.classify(item.sourceCategories(), overseas);
+                    relevance.classify(item.sourceCategories(), overseas, channelTopicKeys);
             unmappedCategories += link.unmappedCategories().size();
             if (!link.accepted()) {
                 excluded++;
@@ -489,7 +493,12 @@ public class NewsIngestionService {
                                                     topic.displayName(),
                                                     topic.domesticLink(),
                                                     linkRuleVersion),
-                                            topic.topicKey()));
+                                            // 기사가 준 분류 값이거나 "channel"이다. 주제 키를 다시
+                                            // 적으면 근거가 결론을 되풀이할 뿐이라 아무것도 말해 주지
+                                            // 않는다(원칙 VIII).
+                                            link.evidenceByTopicKey()
+                                                    .getOrDefault(
+                                                            topic.topicKey(), topic.topicKey())));
         }
         // 등록표가 제안한 섹터 중 spec 001에 실재하는 것만 연결한다. 없는 섹터로 연결하면 어떤 조회에도
         // 걸리지 않는 연결이 저장소에 남는다(spec FR-005).

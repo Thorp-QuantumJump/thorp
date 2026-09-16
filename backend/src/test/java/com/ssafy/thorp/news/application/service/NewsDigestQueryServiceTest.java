@@ -130,25 +130,36 @@ class NewsDigestQueryServiceTest {
     }
 
     @Test
-    @DisplayName("공개 경로는 설정이 INTERNAL이어도 미허가 매체를 거른다")
-    void 공개_경로는_설정과_무관하게_거른다() {
+    @DisplayName("공개 모드는 회신하지 않은 매체를 거른다")
+    void 공개_모드는_미허가를_거른다() {
         NewsDigestListResult result =
-                service(NewsExposureMode.INTERNAL, PENDING_PUBLISHER)
-                        .queryForPublic(null, null, null);
+                service(NewsExposureMode.PUBLIC, PENDING_PUBLISHER).query(null, null, null);
 
-        assertThat(result.digests())
-                .as("노출 여부를 설정으로만 가르면 설정 한 줄을 빠뜨렸을 때 회신 전 매체가 공개 주소로 나간다")
-                .isEmpty();
+        assertThat(result.digests()).as("회신이 없는 매체의 항목은 공개 환경에 표시하지 않는다(spec FR-016)").isEmpty();
         assertThat(result.state())
                 .as("공개할 수 있는 매체가 없으니 '준비 중'이다")
                 .isEqualTo(com.ssafy.thorp.news.domain.vo.NewsDigestState.PREPARING);
+        assertThat(result.lastUpdatedAt()).as("허가 매체가 없으면 공개 화면이 말할 수 있는 갱신 시각도 없다").isNull();
+        assertThat(result.stale()).as("한 번도 공개한 적이 없는 것은 지연이 아니다").isFalse();
+        assertThat(result.statusMessage()).isEqualTo(NewsFreshnessPolicy.PREPARING_MESSAGE);
     }
 
     @Test
-    @DisplayName("공개 경로는 허가된 매체의 요약을 다시 만든다")
-    void 공개_경로는_요약을_재계산한다() {
+    @DisplayName("내부 모드는 회신 전 매체도 보여 준다")
+    void 내부_모드는_회신_전도_본다() {
         NewsDigestListResult result =
-                service(NewsExposureMode.INTERNAL, PUBLISHER).queryForPublic(null, null, null);
+                service(NewsExposureMode.INTERNAL, PENDING_PUBLISHER).query(null, null, null);
+
+        assertThat(result.digests())
+                .as("회신을 기다리는 동안 수집이 제대로 도는지 내부에서 확인할 길이 있어야 한다(spec FR-016)")
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("공개 모드는 허가된 매체라도 요약 근거가 없으면 뺀다")
+    void 공개_모드는_요약을_재계산한다() {
+        NewsDigestListResult result =
+                service(NewsExposureMode.PUBLIC, PUBLISHER).query(null, null, null);
 
         assertThat(result.digests())
                 .as("주제 근거가 없으면 요약을 만들 수 없어 그 묶음은 표시하지 않는다(spec FR-003)")
@@ -298,9 +309,15 @@ class NewsDigestQueryServiceTest {
             return List.of();
         }
 
+        /**
+         * 마지막 갱신 시각.
+         *
+         * <p>{@code publicOnly}면 빈 값이다. 실제 질의가 공개 노출 가능한 매체의 뉴스원만 세는데, 이 대역이 그것을 무시하면 허가 매체가 없는
+         * 상황에서도 시각이 실려 '준비 중'인데 갱신 시각이 있는 응답이 만들어진다.
+         */
         @Override
         public Optional<Instant> findLatestSuccessAt(boolean publicOnly) {
-            return Optional.of(NOW.minus(Duration.ofMinutes(5)));
+            return publicOnly ? Optional.empty() : Optional.of(NOW.minus(Duration.ofMinutes(5)));
         }
     }
 

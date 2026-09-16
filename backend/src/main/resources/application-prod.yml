@@ -43,6 +43,10 @@ spring:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
 
 server:
+  # nginx가 TLS를 끝내고 평문 HTTP로 넘긴다. 이 값이 없으면 request.isSecure()가 false라
+  # 코드에서 만드는 XSRF-TOKEN 쿠키에 Secure가 붙지 않는다 — 세션 쿠키는 아래에서 직접 지정하지만
+  # CSRF 쿠키는 요청이 HTTPS인지 보고 정하기 때문이다(SecurityConfig.csrfTokenRepository).
+  forward-headers-strategy: framework
   servlet:
     session:
       cookie:

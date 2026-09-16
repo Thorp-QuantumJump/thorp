@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/accounts/email-verifications")
+@RequestMapping("/accounts/email-verifications")
 public class EmailVerificationController {
     private final EmailVerificationService emailVerificationService;
 

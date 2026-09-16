@@ -105,7 +105,9 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                 "BATTERY", "305720.XKRX", new BigDecimal("0.6000"))),
                 "FIXED_WEIGHT",
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 2, day),
                 LocalDate.of(2024, 11, 29),
@@ -235,6 +237,44 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                 Integer.class,
                                 marker + "@example.com"))
                 .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("팀 결정 대기 전략의 거절은 422 다 — 안쪽 프록시가 트랜잭션을 rollback-only 로 표시해 500 이 되면 안 된다")
+    void pendingRulesRejectionIsA422NotASilentRollback() {
+        // quickstart S9(T013)에서 발견: create 는 noRollbackFor 인데
+        // StrategyRulesService.requireRegistered 의
+        // 프록시가 기본 규칙으로 바깥 트랜잭션을 rollback-only 로 표시해 커밋 시점에 UnexpectedRollbackException.
+        long user = newUser("p");
+        CreateBacktestCommand pending =
+                new CreateBacktestCommand(
+                        user,
+                        ExecutionType.SINGLE,
+                        "SECTOR-ETF-2026-09",
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "SEMICONDUCTOR", "091160.XKRX", null),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BATTERY", "305720.XKRX", null)),
+                        "SECTOR_MOMENTUM",
+                        "PENDING",
+                        // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                        // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                        null,
+                        Map.of("rebalance", "MONTH_END"),
+                        LocalDate.of(2024, 2, 1),
+                        LocalDate.of(2024, 11, 29),
+                        new BigDecimal("10000000.00"),
+                        null,
+                        "SPLIT-1",
+                        null,
+                        Scenario.FULL_PERIOD,
+                        null);
+
+        Throwable thrown = catchThrowable(() -> backtestService.create(pending));
+
+        assertThat(thrown).isInstanceOf(BusinessException.class);
+        assertThat(errorCodeOf(thrown)).isEqualTo(ErrorCode.RULES_NOT_REGISTERED);
     }
 
     @Test

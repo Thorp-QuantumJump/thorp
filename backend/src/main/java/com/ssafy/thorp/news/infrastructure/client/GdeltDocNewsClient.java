@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * GDELT DOC 2.0 ArticleList로 해외 보도를 보완 수집한다(research Decision 3).
+ * GDELT DOC 2.0 기사 목록({@code mode=artlist})으로 해외 보도를 보완 수집한다(research Decision 3).
  *
  * <p>기간과 주제로 조회를 제한하고 장기 원천 전체를 적재하지 않는다(spec FR-013).
  *
@@ -73,7 +73,10 @@ public class GdeltDocNewsClient {
         return ENDPOINT
                 + "?query="
                 + URLEncoder.encode(query, StandardCharsets.UTF_8)
-                + "&mode=ArticleList&format=json"
+                // mode 값은 GDELT가 정한 소문자 토큰이다. 'ArticleList' 같은 다른 표기를 보내면
+                // 질의가 성립하지 않고, 그때 GDELT는 오류 상태가 아니라 200에 "Invalid mode."라는
+                // 평문을 실어 보낸다. 2026-09-16 실제 호출에서 드러났다 — fixture로는 잡히지 않는다.
+                + "&mode=artlist&format=json"
                 + "&startdatetime="
                 + GdeltTimestamps.format(source.windowStart())
                 + "&enddatetime="
@@ -82,12 +85,35 @@ public class GdeltDocNewsClient {
                 + maxRecords;
     }
 
-    /** 등록된 주제 키로 조회를 좁힌다. 주제가 없으면 국내 관련 기본 질의를 쓴다. */
+    /**
+     * 등록된 주제 키로 조회를 좁힌다. 주제가 없으면 국내 관련 기본 질의를 쓴다.
+     *
+     * <p>GDELT 질의 문법에 두 가지 제약이 있고 둘 다 지키지 않으면 오류 상태가 아니라 200에 평문 안내가 온다. 그래서 fixture로는 드러나지 않고
+     * 운영에서만 매 회차가 빈손으로 끝난다(2026-09-16 실제 호출에서 셋을 연달아 만났다).
+     *
+     * <ul>
+     *   <li><b>하이픈이 든 낱말은 따옴표로 감싼다.</b> {@code monetary-policy}처럼 우리 주제 키에 하이픈이 흔하다. 빠뜨리면 {@code
+     *       "One or more of your keywords contained an illegal character."}가 온다
+     *   <li><b>OR로 이은 항목은 괄호로 감싼다.</b> 빠뜨리면 {@code "Queries containing OR'd terms must be
+     *       surrounded by ()."}가 온다
+     * </ul>
+     *
+     * <p>주제가 하나뿐이면 OR가 없으므로 괄호를 씌우지 않는다. 따옴표는 하이픈이 있을 때만 붙인다 — 없는 낱말까지 감싸도 통하지만 질의를 읽기 어렵게 만든다.
+     */
     private static String buildQuery(List<String> topicKeys) {
         if (topicKeys.isEmpty()) {
             return "sourcecountry:southkorea";
         }
-        return String.join(" OR ", topicKeys);
+        List<String> terms = topicKeys.stream().map(GdeltDocNewsClient::quoteIfNeeded).toList();
+        if (terms.size() == 1) {
+            return terms.get(0);
+        }
+        return "(" + String.join(" OR ", terms) + ")";
+    }
+
+    /** 하이픈이 든 낱말만 따옴표로 감싼다. GDELT가 하이픈을 연산자로 읽기 때문이다. */
+    private static String quoteIfNeeded(String term) {
+        return term.indexOf('-') >= 0 ? "\"" + term + "\"" : term;
     }
 
     private JsonNode readArticles(byte[] body) {

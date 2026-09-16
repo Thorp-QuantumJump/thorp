@@ -646,16 +646,32 @@ class NewsPersistenceIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V3가 seed한 규칙 버전 네 개를 읽을 수 있다")
+    @DisplayName("그 시점에 유효했던 묶음 규칙을 읽는다")
     void seededRuleVersionsAreReadable() {
-        assertThat(ruleVersionRepository.findAll()).hasSize(4);
+        assertThat(ruleVersionRepository.findAll())
+                .extracting(NewsRuleVersion::ruleVersion)
+                .contains("news-grouping-v1", "news-grouping-v2");
 
+        // NOW는 2026-09-10이고 v2는 09-16부터다. 그때 판정에 쓰인 것은 v1이며 그 사실이 남아 있어야
+        // 당시에 만들어진 묶음을 재현할 수 있다(원칙 VIII).
         assertThat(ruleVersionRepository.findEffective(NewsRuleVersion.RuleType.GROUPING, NOW))
                 .get()
                 .satisfies(
                         rule -> {
                             assertThat(rule.ruleVersion()).isEqualTo(GROUPING_RULE);
                             assertThat(rule.definition()).containsKey("titleJaccardThreshold");
+                        });
+
+        assertThat(
+                        ruleVersionRepository.findEffective(
+                                NewsRuleVersion.RuleType.GROUPING,
+                                Instant.parse("2026-09-20T00:00:00Z")))
+                .get()
+                .satisfies(
+                        rule -> {
+                            assertThat(rule.ruleVersion()).isEqualTo("news-grouping-v2");
+                            assertThat(rule.definition())
+                                    .containsKey("titleBigramJaccardThreshold");
                         });
     }
 
@@ -778,6 +794,53 @@ class NewsPersistenceIT extends PostgresTestSupport {
         NewsDigestListResult result = queryService.query(NewsDigestQuery.current(null));
 
         assertThat(result.digests()).as("회신이 없는 매체의 항목은 공개 환경에 표시하지 않는다(spec FR-016)").isEmpty();
+    }
+
+    @Test
+    @DisplayName("늦게 입력한 과거 회신이 현재 허가 상태를 덮지 않는다")
+    void 과거_회신은_현재_상태를_덮지_않는다() {
+        NewsPublisher publisher = savePublisher("late", PermissionStatus.PENDING);
+
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.allowed(
+                        publisher.getId(), Set.of(NewsAllowedField.TITLE), NOW, "9월 10일 허가 회신"));
+        // 메일함에 묻혀 있던 옛 불허 회신을 뒤늦게 입력한다.
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.denied(
+                        publisher.getId(), NOW.minus(Duration.ofDays(5)), "9월 5일 불허 회신"));
+        flushAndClear();
+
+        assertThat(permissionHistoryRepository.findByPublisherId(publisher.getId()))
+                .as("이력은 늘 남긴다. 늦게 넣었다고 근거가 사라지면 안 된다")
+                .hasSize(2);
+        assertThat(publisherRepository.findById(publisher.getId()))
+                .get()
+                .satisfies(
+                        p ->
+                                assertThat(p.getPermissionStatus())
+                                        .as("이미 받아 둔 최신 회신이 옛 회신에 조용히 뒤집히면 공개 여부가 바뀐다")
+                                        .isEqualTo(PermissionStatus.ALLOWED));
+    }
+
+    @Test
+    @DisplayName("같은 시각의 사건은 나중에 기록한 쪽이 현재 상태가 된다")
+    void 같은_시각이면_나중_기록() {
+        NewsPublisher publisher = savePublisher("tie", PermissionStatus.PENDING);
+
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.allowed(
+                        publisher.getId(), Set.of(NewsAllowedField.TITLE), NOW, "허가"));
+        permissionHistoryRepository.appendAndApply(
+                NewsPublisherPermissionHistory.denied(publisher.getId(), NOW, "불허"));
+        flushAndClear();
+
+        assertThat(publisherRepository.findById(publisher.getId()))
+                .get()
+                .satisfies(
+                        p ->
+                                assertThat(p.getPermissionStatus())
+                                        .as("사람이 마지막으로 판단한 것을 따른다")
+                                        .isEqualTo(PermissionStatus.DENIED));
     }
 
     @Test

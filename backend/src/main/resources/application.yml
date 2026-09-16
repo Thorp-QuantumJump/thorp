@@ -14,7 +14,9 @@ spring:
 
   # 인증 상태는 서버가 관리하고 PostgreSQL에 저장한다. 테이블 초기화 방식은 프로필별로 정한다.
   session:
-    timeout: 30m
+    # 마지막 요청에서 이만큼 지나면 세션이 만료된다. 로그인 유지 선택지는 제공하지 않으므로 이 값이 유일한 기준이고,
+    # FE는 남은 시간을 추정하지 않는다(plan Constraints). 만료된 세션의 요청은 401 AUTHENTICATION_REQUIRED다.
+    timeout: ${SPRING_SESSION_TIMEOUT:30m}
 
   # 스키마 관리 정책은 프로필별로 갈린다.
   #  - local: Hibernate ddl-auto=update (Flyway 비활성)

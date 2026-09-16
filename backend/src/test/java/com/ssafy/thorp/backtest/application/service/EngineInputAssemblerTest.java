@@ -145,7 +145,10 @@ class EngineInputAssemblerTest {
                 .containsExactly("SEMICONDUCTOR", "BATTERY");
         assertThat(input.universe().items().get(0).targetWeight()).isEqualByComparingTo("0.4000");
         assertThat(input.allocation().rulesVersion()).isEqualTo("1");
-        assertThat(input.allocation().rules()).containsEntry("lookbackDays", 63);
+        assertThat(input.allocation().rules())
+                .containsEntry("lookbackDays", 63)
+                // 등록표의 임시 표시가 사본에 실려 워커 결과 versions.rules.provisional 로 되돌아온다
+                .containsEntry("provisional", true);
         assertThat(input.marketData().dataVersion()).isEqualTo("FIXTURE-three_etf_24m");
         assertThat(input.execution().costProfile().version()).isEqualTo("PROVISIONAL-DEMO-1");
         assertThat(input.execution().costProfile().provisional()).isTrue();

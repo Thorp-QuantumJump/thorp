@@ -28,6 +28,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -61,6 +62,15 @@ class BacktestServiceTest {
     // 한도는 ExecutionLimitPolicyTest 가 따로 본다. 여기서는 통과하는 것으로 둔다.
     private final ExecutionLimitPolicy limitPolicy = mock(ExecutionLimitPolicy.class);
     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
+
+    /**
+     * 이 테스트의 요청들은 {@code registryVersion}을 싣지 않아 등록표 판정을 타지 않는다(003 과도기 경로). 목만 두고 상호작용을 단언하지 않는
+     * 이유는, 여기서 보는 것이 004 접수 규칙이고 등록표 판정은 {@code StrategySettingsValidatorTest}와 {@code
+     * BacktestIntakeRegistryIT}가 보기 때문이다.
+     */
+    private final StrategySettingsValidator strategySettingsValidator =
+            mock(StrategySettingsValidator.class);
+
     private final CostProfileService costProfileService = mock(CostProfileService.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final FixtureMarketMetadataAdapter marketMetadata =
@@ -73,6 +83,7 @@ class BacktestServiceTest {
                     reuseEventRepository,
                     limitPolicy,
                     strategyRulesService,
+                    strategySettingsValidator,
                     costProfileService,
                     new EffectivePeriodCalculator(marketMetadata),
                     new DedupKeyCalculator(),
@@ -85,8 +96,16 @@ class BacktestServiceTest {
     void stubRegistries() {
         when(strategyRulesService.requireRegistered("FIXED_WEIGHT", "1"))
                 .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        // 등록표 초기 행과 같다 — 역변동성 규칙은 PD-02 확정 전 임시(provisional=true)다.
         when(strategyRulesService.requireRegistered("INVERSE_VOLATILITY", "1"))
-                .thenReturn(rules("INVERSE_VOLATILITY", Map.of("lookbackDays", 63)));
+                .thenReturn(
+                        new StrategyRules(
+                                "INVERSE_VOLATILITY",
+                                "1",
+                                RulesStatus.REGISTERED,
+                                true,
+                                Map.of("lookbackDays", 63),
+                                "PD-02"));
         when(strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1"))
                 .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
         when(costProfileService.resolve(any()))
@@ -165,7 +184,9 @@ class BacktestServiceTest {
                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),
                 strategyId,
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 1, 2),
                 LocalDate.of(2024, 12, 31),
@@ -192,11 +213,69 @@ class BacktestServiceTest {
         assertThat(result.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));
         assertThat(result.effectiveEnd()).isEqualTo(LocalDate.of(2024, 12, 31));
         assertThat(result.versions())
-                .containsEntry("rules", "1")
+                .containsEntry("mapping", "SECTOR-ETF-2026-09")
                 .containsEntry("data", "FIXTURE-three_etf_24m")
-                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
+                .containsEntry("engine", "nautilus_trader 1.219.0 / worker 2.1.0")
+                .containsEntry("evaluationSplit", "SPLIT-1")
+                .doesNotContainKeys("scenarioRules", "worker");
+        assertThat(result.versions().get("rules"))
+                .isEqualTo(Map.of("version", "1", "provisional", false));
         assertThat(result.versions().get("costProfile"))
                 .isEqualTo(Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
+    }
+
+    @Test
+    @DisplayName("임시 규칙(PD-02)으로 계산하는 실행은 versions.rules.provisional=true 로 표시된다")
+    void provisionalRulesAreVisibleInVersions() {
+        BacktestJobResult result =
+                service.create(
+                        command("INVERSE_VOLATILITY", null, null, Scenario.FULL_PERIOD, null));
+
+        assertThat(result.versions().get("rules"))
+                .isEqualTo(Map.of("version", "1", "provisional", true));
+    }
+
+    @Test
+    @DisplayName("요청이 주지 않은 버전(평가 분할 등)은 versions 에 키를 만들지 않는다 — 007 launcher 가 비워 보낸다")
+    void absentVersionsAreOmittedNotNulled() {
+        CreateBacktestCommand base = fixedWeight();
+        CreateBacktestCommand withoutSplit =
+                new CreateBacktestCommand(
+                        base.requesterId(),
+                        base.executionType(),
+                        base.mappingVersion(),
+                        base.items(),
+                        base.strategyId(),
+                        base.rulesVersion(),
+                        base.registryVersion(),
+                        base.parameters(),
+                        base.start(),
+                        base.end(),
+                        base.initialCash(),
+                        base.costProfileVersion(),
+                        null,
+                        base.warmupTradingDays(),
+                        base.scenario(),
+                        base.scenarioParams());
+
+        BacktestJobResult result = service.create(withoutSplit);
+
+        assertThat(result.versions()).doesNotContainKey("evaluationSplit").containsKey("rules");
+    }
+
+    @Test
+    @DisplayName("목표 위험 시나리오는 오버레이 규칙 버전을 versions.scenarioRules 로 남긴다")
+    void targetRiskRecordsTheOverlayVersion() {
+        BacktestJobResult result =
+                service.create(
+                        command(
+                                "FIXED_WEIGHT",
+                                new BigDecimal("0.4000"),
+                                null,
+                                Scenario.TARGET_RISK,
+                                Map.of("targetVolatility", "0.1000")));
+
+        assertThat(result.versions()).containsEntry("scenarioRules", "TARGET_RISK_OVERLAY/1");
     }
 
     @Test

@@ -58,6 +58,9 @@ common: 모든 계층에서 참조 가능
   `backtestId`는 문자열이며 DB PK(Long)는 노출하지 않는다(ADR-0002 D2). HTTP 계약과 예시는 `docs/specs/backtest-api/`
 - 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED | CANCELLED` (Worker 이벤트가 갱신, backend는 조회 제공). `CANCELLED`는 취소·실행 시간 한도로 끊긴 실행이며 부분 결과가 붙는다(`partial=true`). **요청(`backtest_request`)과 실행(`backtest_run`)은 다대일이다** — 같은 조건의 요청은 진행 중 실행에 합류하거나 완료 결과를 재사용한다(spec 004 R-02). 접수 경로는 T005에서 그 모델로 바뀌었다 — 사용자가 보는 `backtestId`는 **요청**의 것이고, 이벤트 envelope의 `runId`는 **실행**의 것이라 값이 다르다
 - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다
+- 전략·파라미터 등록표(`registry/parameter-registry.yml`)는 `strategy` 도메인이 소유하고 `paramsearch`는 `ParameterRegistryPort`로만 읽는다. 값이 바뀌면 행을 고치지 말고 버전을 올린다(`cost_profile`·`strategy_rules`와 같은 규칙)
+- **접수 시점 등록표 재검증(`StrategySettingsValidator`)은 아직 `strategy.registryVersion`이 실린 요청에만 건다**(003 FR-006, 미완료). 판정 순서는 버전 불일치 409 → 미등록·비활성 전략 422 → 축 불일치 400 → 값 범위 밖 400 → 등록표 규칙 위반 422 → 시작 금액 범위 밖 400이고, 어느 단계에서도 **값을 잘라 넣거나 빠진 축을 기본값으로 채워 통과시키지 않는다**(원칙 VI). 위반 문구는 등록표가 준 `detail`을 그대로 쓴다.
+  **관문을 전부에 걸지 않은 이유**: 워커가 아직 `parameters.rebalance`와 `rules.lookbackDays`만 읽어 003의 축 이름(`rebalancePeriod`·`maxWeight`·`topN` 등)이 `docs/specs/backtest-messaging/` 계약에 없다 — 전부에 걸면 004·007의 기존 접수가 막힌다. **`registryVersion`이 없는 요청이 202를 받는 것은 FR-006·SC-003 통과가 아니다.** 004가 워커 계약을 맞춘 뒤 이 필드를 필수화하는 후속 변경까지 끝나야 닫힌다. 의존 방향은 `backtest → strategy` 한 방향이고 `strategy`는 `backtest`를 참조하지 않는다
 - 비용 조건(`cost_profile`)·전략 규칙(`strategy_rules`)은 **마이그레이션이 채우는 읽기 전용 등록표**다. 실행은 버전 문자열만 들고 다니고 값은 등록표에서 읽는다. 값이 바뀌면 행을 고치지 말고 새 버전을 넣는다 — 끝난 실행을 나중 값으로 재해석하면 재현이 깨진다. 팀 미확정 전략은 `PENDING_DECISION` 행만 두고 접수에서 422 `RULES_NOT_REGISTERED`
 - `BacktestRunJpaEntity`는 마이그레이션이 만든 컬럼 전부를 매핑하지 않는다. 접수·재사용·취소·측정이 쓰는 컬럼은 그 코드와 같은 MR에서 매핑을 붙인다. `ddl-auto=validate`는 매핑된 컬럼만 보므로 **미매핑 컬럼의 존재는 `FlywayMigrationTest`가 지킨다**
 - **`AFTER_COMMIT` 안에서 DB를 건드릴 때는 새 트랜잭션(`REQUIRES_NEW`)을 연다.** 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 **변경이 다시 커밋되지 않는다**. 조용히 사라지므로 테스트가 없으면 알아채지 못한다
@@ -90,6 +93,10 @@ common: 모든 계층에서 참조 가능
   탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
   세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
   시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
+- **접수 트랜잭션 안에서 `BusinessException`을 던지는 `@Transactional` 메서드는 모두 `noRollbackFor = BusinessException.class`다**
+  (`BacktestService.create`·`StrategyRulesService.requireRegistered`·`CostProfileService.resolve`). 하나라도 기본 규칙이면 그 프록시가 바깥
+  트랜잭션을 rollback-only로 표시해 `create`의 커밋이 `UnexpectedRollbackException`(500)으로 끝난다 — quickstart S9에서 422 대신 500이 난 원인.
+  단위 테스트(목)로는 보이지 않으니 실제 프록시를 지나는 IT(`ExecutionLimitApiIT`)로 고정한다
 - **실행 측정은 종결 네 지점이 `ExecutionMetricRecorder.record(run, resource)`를 직접 부른다**(R-10, T012) — `handleFinished`·
   `handleDeadLetter`·`RunLivenessSweeper.settleOne`·`BacktestCancelService`(실행 전 취소). 종결 경로를 새로 만들면 그곳도 불러야 한다 — 빠진 종결은
   늦은 FINISHED 가 최종 상태라 무시되어 측정에서 영영 빠진다. 큐·워커 역할은 FINISHED `resource.queue`·`role`이 먼저고(중복 실행에서 마지막 STARTED 의

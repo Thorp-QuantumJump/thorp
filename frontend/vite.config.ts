@@ -14,7 +14,17 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts'],
+    // 허용 목록이다. 여기에 걸리지 않는 테스트 파일은 실패하지 않고 조용히 수집되지 않으므로,
+    // 새 `.test.ts`를 만들 때마다 이 목록을 함께 넓힌다.
+    // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.
+    include: [
+      'src/**/*.test.tsx',
+      'src/api/auth.test.ts',
+      'src/api/sectors.test.ts',
+      'src/api/strategyRegistry.test.ts',
+      'src/auth/**/*.test.ts',
+      'src/diagnosis/**/*.test.ts',
+    ],
     setupFiles: ['./src/test/setup.ts'],
   },
   server: {

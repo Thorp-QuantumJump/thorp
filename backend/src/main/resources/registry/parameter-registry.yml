@@ -1,0 +1,363 @@
+# 전략·파라미터 등록표. 이 파일의 소유자는 spec 003(전략 선택·상세 설정)이다.
+#
+# 007(자동 파라미터 탐색)은 ParameterRegistryPort 로만 이 내용을 읽는다. 007 운영 코드에는 전략 ID·전략명·
+# 파라미터값·허용 범위가 나타나지 않는다(007 FR-025). 로더(FileParameterRegistry)는 아래 구조만 읽고
+# 전략별 해석을 하지 않으므로, 파일에 전략을 더해도 코드는 바뀌지 않는다.
+#
+# 값이 바뀌면 행을 고치지 말고 version 을 올린다 —
+#   끝난 탐색을 나중 값으로 재해석하면 재현이 깨진다. cost_profile·strategy_rules 와 같은 규칙이다.
+#
+# 두 목록의 뜻이 다르다(내부 계약 §2.1·§2.5):
+#   searchValues        007 자동 탐색이 하나씩 전부 돌려볼 값. 인덱스가 grid_coordinates 의 뜻이다.
+#                       같은 version 안에서 순서를 바꾸지 않는다. 늘리면 조합 수가 곱으로 는다(research R3).
+#   allowedRange        사용자가 상세 설정에서 고르는 선택지. 화면 표시 순서일 뿐 저장되는 것이 없으므로
+#                       순서를 바꿔도 version 을 올릴 필요가 없다.
+#   제약: 목록형 축에서 searchValues ⊆ 허용 후보이고, defaultValue 는 allowedRange 안이다.
+#
+# 모든 축은 allowedRange 를 갖는다. 적지 않으면 화면이 그릴 형태도 입력값을 판정할 근거도 없어
+# 로더가 기동을 실패시킨다.
+#
+# allowedRange 는 목록형과 입력형(min/max/step) 중 하나만 채운다. 둘을 함께 채우면 화면이
+# 목록을 그릴지 입력칸을 그릴지 정할 수 없어 로더가 기동을 실패시킨다(data-model §4).
+#   그래서 관측 기간처럼 후보가 정해진 축은 min/max/step 을 적지 않는다.
+#
+# 목록형은 둘 중 한 형태로 적는다(함께 적으면 기동이 실패한다):
+#   values    값만 적는다. 값과 축의 unit 을 붙이면 그대로 읽히는 숫자 후보에만 쓴다(21 + 거래일).
+#   choices   값과 화면에 보일 문구를 함께 적는다. { value: <값>, label: <문구> } 의 목록이다.
+#
+# 숫자가 아닌 후보는 choices 로만 적을 수 있고 로더가 그것을 요구한다.
+#   TOP_N 이나 { mode: CALENDAR, unit: MONTH_END } 가 무슨 뜻인지는 이 파일만 안다. 문구를 적지 않으면
+#   화면이 TOP_N 을 그대로 보이거나, 무슨 말로 보일지 화면 코드에 적게 된다. 후자가 FR-005 가 금지한
+#   "화면 코드에 따로 적어 두는 안내"다.
+#
+# validationRules 문법(로더가 읽는 전부다. 규칙의 뜻은 등록표가 정하고 007은 코드만 옮긴다):
+#   code      위반 사유 코드. 후보에 그대로 저장되고 화면에 표시된다
+#   detail    사용자에게 보여줄 한 문장
+#   left/right 피연산자. 아래 셋 중 하나를 쓴다
+#       axis: <축 이름>        그 설정의 축 값
+#       context: <맥락 키>     현재 UNIVERSE_SIZE(후보 섹터 집합의 크기) 하나다
+#       value: <상수>
+#     axis 피연산자에는 multiplyByContext: <맥락 키> 를 덧붙여 곱할 수 있다
+#   operator  GREATER_THAN | GREATER_OR_EQUAL | LESS_THAN | LESS_OR_EQUAL | EQUAL | NOT_EQUAL
+#   조건이 참이면 그 조합은 위반이다(제외된다).
+#
+# 값의 출처: 아래 수치는 PD-02가 2026-09-15에 확정한 값이다(S15P21E205-254, data-model §4-2).
+#   미확정으로 남은 것은 MINIMUM_VARIANCE 의 estimationMethod 하나이며 그 자리에 따로 적었다.
+
+# 1.1.0: 목록형 후보에 화면 문구(choices[].label)를 담기 시작했다. 값은 1.0.0 과 같다.
+version: "1.1.0"
+
+# 손실 제약의 기준으로 쓸 전략(007 FR-013d). 007 코드에 기준 전략 ID를 두지 않기 위해 여기서 지정한다.
+# 비우면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다.
+baselineStrategyId: EQUAL_WEIGHT
+
+# 전략과 무관한 공통 분석 조건(data-model §7). 전략마다 되풀이해 적으면 값이 갈라진다.
+analysisConditions:
+  initialAmount:
+    min: 1000000
+    max: 1000000000
+    step: 1000000
+    default: 10000000
+    unit: 원
+  # 004 PD-18이 등록표 항목으로 지정한 값이다. '목표 위험 맞춤' 시나리오에서만 화면에 보인다.
+  targetVolatility:
+    min: 5
+    max: 20
+    step: 1
+    default: 10
+    unit: 퍼센트(연)
+    usedBy: TARGET_RISK
+  # 워밍업과 별개로 "평가할 구간이 남는가"를 판정하는 기준이다(FR-011a).
+  # 숫자지만 값만으로는 뜻이 읽히지 않아(0 은 "0년"이 아니라 "제한 없음"이다) 문구를 함께 적는다.
+  minEvaluationYears:
+    choices:
+      - value: 0
+        label: 완화(제한 없음)
+      - value: 1
+        label: 기본(1년)
+      - value: 3
+        label: 엄격(3년)
+    default: 1
+    unit: 년
+
+# 전략 순서는 spec FR-001 표의 순서다. 화면이 이 순서를 그대로 쓴다.
+strategies:
+  - id: FIXED_WEIGHT
+    name: 내가 정한 비중
+    description: 내가 정한 비중을 그대로 유지한다.
+    active: true
+    # 목표 비중은 002가 확정한 값을 읽기만 한다. 화면은 이 값을 읽기 전용으로 보인다.
+    targetWeightSource: USER
+    axes:
+      - name: rebalancePeriod
+        label: 리밸런싱 주기
+        description: 정해 둔 비중에서 벌어진 만큼을 얼마마다 되돌릴지 정한다.
+        searchValues:
+          - { mode: CALENDAR, unit: MONTH_END }
+        defaultValue: { mode: CALENDAR, unit: MONTH_END }
+        allowedRange:
+          choices:
+            - value: { mode: CALENDAR, unit: MONTH_END }
+              label: 월말
+            - value: { mode: CALENDAR, unit: QUARTER_END }
+              label: 분기말
+            - value: { mode: TRADING_DAYS, days: 21 }
+              label: 21거래일
+            - value: { mode: TRADING_DAYS, days: 63 }
+              label: 63거래일
+      - name: maxWeight
+        label: 섹터당 최대 비중
+        description: 한 섹터에 넣을 수 있는 최대 비중이다.
+        unit: 퍼센트
+        searchValues: [30, 40, 50]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
+
+  - id: EQUAL_WEIGHT
+    name: 똑같이 나누기
+    description: 투자 가능한 섹터에 같은 금액을 배분한다.
+    active: true
+    targetWeightSource: EQUAL
+    axes:
+      - name: rebalancePeriod
+        label: 리밸런싱 주기
+        description: 같은 비중에서 벌어진 만큼을 얼마마다 되돌릴지 정한다.
+        searchValues:
+          - { mode: CALENDAR, unit: MONTH_END }
+        defaultValue: { mode: CALENDAR, unit: MONTH_END }
+        allowedRange:
+          choices:
+            - value: { mode: CALENDAR, unit: MONTH_END }
+              label: 월말
+            - value: { mode: CALENDAR, unit: QUARTER_END }
+              label: 분기말
+            - value: { mode: TRADING_DAYS, days: 21 }
+              label: 21거래일
+            - value: { mode: TRADING_DAYS, days: 63 }
+              label: 63거래일
+
+  - id: INVERSE_VOLATILITY
+    name: 변동성에 따라 나누기
+    description: 변동이 작았던 섹터에 더 많이 배분한다.
+    active: true
+    targetWeightSource: COMPUTED
+    warmup:
+      sum: [lookbackDays]
+    axes:
+      - name: lookbackDays
+        label: 변동성 관측 기간
+        description: 변동성을 재는 데 쓸 과거 구간의 길이다. 길수록 최근 변화에 둔해진다.
+        unit: 거래일
+        searchValues: [21, 63, 126, 252]
+        defaultValue: 63
+        allowedRange:
+          values: [21, 63, 126, 252]
+      - name: rebalancePeriod
+        label: 리밸런싱 주기
+        description: 계산한 비중을 얼마마다 다시 맞출지 정한다.
+        searchValues:
+          - { mode: CALENDAR, unit: MONTH_END }
+        defaultValue: { mode: CALENDAR, unit: MONTH_END }
+        allowedRange:
+          choices:
+            - value: { mode: CALENDAR, unit: MONTH_END }
+              label: 월말
+            - value: { mode: CALENDAR, unit: QUARTER_END }
+              label: 분기말
+            - value: { mode: TRADING_DAYS, days: 21 }
+              label: 21거래일
+            - value: { mode: TRADING_DAYS, days: 63 }
+              label: 63거래일
+      - name: maxWeight
+        label: 섹터당 최대 비중
+        description: 한 섹터에 넣을 수 있는 최대 비중이다. 잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나누고, 더 나눌 곳이 없을 때만 남긴다.
+        unit: 퍼센트
+        searchValues: [30, 40, 50]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
+
+  - id: SECTOR_MOMENTUM
+    name: 흐름을 따라 배분하기
+    description: 최근 상승 폭이 큰 섹터를 골라 배분한다.
+    active: true
+    targetWeightSource: COMPUTED
+    # 관측 기간과 최근 제외 구간을 모두 감안한다(004 FR-018). 둘 다 사용자가 고르는 축이므로
+    # 값이 바뀌면 워밍업도 따라 바뀐다(research R4).
+    warmup:
+      sum: [lookbackDays, skipRecentDays]
+    axes:
+      - name: lookbackDays
+        label: 관측 기간
+        description: 상승 폭을 재는 데 쓸 과거 구간의 길이다.
+        unit: 거래일
+        searchValues: [20, 60, 120]
+        defaultValue: 60
+        allowedRange:
+          values: [20, 60, 120]
+      - name: skipRecentDays
+        label: 최근 구간 제외 기간
+        description: 관측 구간의 맨 끝을 이만큼 빼고 본다. 직전 반등이 판단을 흔드는 것을 줄인다.
+        unit: 거래일
+        searchValues: [0, 21]
+        defaultValue: 0
+        allowedRange:
+          values: [0, 5, 10, 21]
+      - name: selectionMode
+        label: 선정 방식
+        description: 어떤 기준으로 섹터를 추릴지 정한다. 고른 방식에 해당하는 값 하나만 아래에서 쓴다.
+        searchValues: [TOP_N]
+        defaultValue: TOP_N
+        allowedRange:
+          choices:
+            - value: TOP_N
+              label: 상위 몇 개
+            - value: THRESHOLD
+              label: 기준 수익률 이상
+            - value: TOP_PERCENT
+              label: 상위 몇 퍼센트
+            - value: ALL
+              label: 후보 전체
+      - name: topN
+        label: 선정 섹터 수
+        description: 선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.
+        searchValues: [2, 3, 4]
+        defaultValue: 3
+        allowedRange:
+          values: [2, 3, 4]
+      - name: threshold
+        label: 임계값
+        description: 선정 방식이 '기준 수익률 이상'일 때, 이 값을 넘는 섹터만 고른다.
+        unit: 퍼센트
+        searchValues: [0]
+        defaultValue: 0
+        allowedRange:
+          min: -20
+          max: 50
+          step: 1
+      - name: topPercent
+        label: 상위 비율
+        description: 선정 방식이 '상위 몇 퍼센트'일 때, 후보 중 상위 이 비율을 고른다.
+        unit: 퍼센트
+        searchValues: [50]
+        defaultValue: 50
+        allowedRange:
+          min: 10
+          max: 100
+          step: 10
+      - name: allocationMethod
+        label: 배분 방식
+        description: 고른 섹터에 금액을 나누는 방식이다. 똑같이 나누거나 점수에 비례해 나눈다.
+        searchValues: [EQUAL]
+        defaultValue: EQUAL
+        allowedRange:
+          choices:
+            - value: EQUAL
+              label: 똑같이 나누기
+            - value: SCORE_WEIGHTED
+              label: 점수에 비례해 나누기
+      - name: maxWeight
+        label: 섹터당 최대 비중
+        description: 한 섹터에 넣을 수 있는 최대 비중이다. 잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나누고, 더 나눌 곳이 없을 때만 남긴다.
+        unit: 퍼센트
+        searchValues: [30, 40, 50]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
+      - name: rebalancePeriod
+        label: 리밸런싱 주기
+        description: 고른 섹터와 비중을 얼마마다 다시 정할지 정한다.
+        searchValues:
+          - { mode: CALENDAR, unit: MONTH_END }
+        defaultValue: { mode: CALENDAR, unit: MONTH_END }
+        allowedRange:
+          choices:
+            - value: { mode: CALENDAR, unit: MONTH_END }
+              label: 월말
+            - value: { mode: CALENDAR, unit: QUARTER_END }
+              label: 분기말
+            - value: { mode: TRADING_DAYS, days: 21 }
+              label: 21거래일
+            - value: { mode: TRADING_DAYS, days: 63 }
+              label: 63거래일
+    validationRules:
+      # 후보 섹터보다 많이 고를 수는 없다. 계산 없이 판정되므로 조합 생성 단계에서 제외한다(007 FR-006).
+      - code: TOP_N_EXCEEDS_UNIVERSE
+        detail: 선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.
+        left:
+          axis: topN
+        operator: GREATER_THAN
+        right:
+          context: UNIVERSE_SIZE
+
+  - id: MINIMUM_VARIANCE
+    name: 전체 변동성을 줄이도록 배분하기
+    description: 전체 변동이 가장 작아지는 비중을 찾는다.
+    active: true
+    targetWeightSource: COMPUTED
+    warmup:
+      sum: [lookbackDays]
+    axes:
+      - name: lookbackDays
+        label: 공분산 관측 기간
+        description: 섹터끼리 함께 움직인 정도를 재는 데 쓸 과거 구간의 길이다.
+        unit: 거래일
+        searchValues: [60, 120, 250]
+        defaultValue: 120
+        allowedRange:
+          values: [60, 120, 250]
+      - name: estimationMethod
+        label: 추정 방법
+        description: 섹터끼리 함께 움직인 정도를 어떤 방법으로 추정할지 정한다.
+        # !! 후보가 하나뿐인 것은 오류가 아니다 — 004 PD-04(공분산 추정 방법) 대기 !!
+        #   004가 축소추정(shrinkage)을 실제로 구현·확정하기 전에 후보로 얹으면, 화면이 004가 계산할 수 없는
+        #   선택지를 제공하는 셈이다(constitution 원칙 VI). PD-04가 확정되면 version 을 올려 후보를 늘린다.
+        searchValues: [SAMPLE_COV]
+        defaultValue: SAMPLE_COV
+        allowedRange:
+          choices:
+            - value: SAMPLE_COV
+              label: 표본공분산
+      - name: maxWeight
+        label: 섹터당 최대 비중
+        description: 한 섹터에 넣을 수 있는 최대 비중이다. 계산의 제약으로 들어가 잘리는 몫이 생기지 않는다.
+        unit: 퍼센트
+        searchValues: [30, 40, 50]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
+      - name: rebalancePeriod
+        label: 리밸런싱 주기
+        description: 계산한 비중을 얼마마다 다시 맞출지 정한다.
+        searchValues:
+          - { mode: CALENDAR, unit: MONTH_END }
+        defaultValue: { mode: CALENDAR, unit: MONTH_END }
+        allowedRange:
+          choices:
+            - value: { mode: CALENDAR, unit: MONTH_END }
+              label: 월말
+            - value: { mode: CALENDAR, unit: QUARTER_END }
+              label: 분기말
+            - value: { mode: TRADING_DAYS, days: 21 }
+              label: 21거래일
+            - value: { mode: TRADING_DAYS, days: 63 }
+              label: 63거래일
+    validationRules:
+      # 섹터당 상한(%) × 후보 섹터 수가 100에 못 미치면 전액을 배분할 수 없다.
+      - code: MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE
+        detail: 섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByContext: UNIVERSE_SIZE
+        operator: LESS_THAN
+        right:
+          value: 100

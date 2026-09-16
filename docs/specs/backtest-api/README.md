@@ -31,7 +31,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `sectorAllocation.items[].targetWeight` | `string` (decimal) | 조건부 | **`FIXED_WEIGHT`에서만 필수이고 다른 전략에서는 금지**(400). 합이 1이어야 한다 |
 | `strategy.strategyId` | `string` | 필수 | 등록표에 `REGISTERED`인 전략만. 팀 미확정 전략은 422 `RULES_NOT_REGISTERED` |
 | `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다 |
-| `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. 지금은 기록만 한다 |
+| `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 "등록표 검증의 과도기 상태") |
 | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |
 | `conditions.start` / `end` | `date` | 필수 | `start`가 `end`보다 늦을 수 없다 |
 | `conditions.initialCash` | `string` (decimal) | 필수 | 0보다 큼. 소수점 2자리까지 |
@@ -42,6 +42,22 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `conditions.scenarioParams` | `object` | 조건부 | `TARGET_RISK`면 `targetVolatility`(0.0500~0.2000, 0.0100 간격) 필수, `FRESH_CASH_FROM`이면 `startDate` 필수, 그 외에는 금지 |
 
 금액과 비율은 **문자열**로 보낸다(부동소수 오차 방지).
+
+#### 등록표 검증의 과도기 상태 (003 FR-006, 미완료)
+
+`strategy.registryVersion`이 실린 요청만 003 등록표로 설정을 다시 판정한다. 값이 없는 요청은 종전처럼 통과하고
+경고 로그만 남는다.
+
+**관문을 모든 요청에 걸지 않은 이유**: 워커는 아직 `parameters.rebalance` 문자열과 `rules.lookbackDays`만 읽고,
+003 등록표의 `rebalancePeriod` 객체값이나 `maxWeight`·`topN`·`skipRecentDays` 같은 축 이름은
+`docs/specs/backtest-messaging/`의 메시지 계약에 자리가 없다. 전부에 걸면 004·007의 기존 접수가 그 자리에서 막힌다.
+
+`examples/backtest-request.json`의 `registryVersion`이 `null`인 것은 그래서다. 이 예시의 `parameters`는 워커가 읽는
+`rebalance` 문자열이라 등록표 축 이름과 맞지 않고, 버전을 실으면 판정에 걸려 400이 된다. 두 값은 함께 바뀐다.
+
+**그래서 FR-006과 SC-003은 아직 닫히지 않았다.** 화면을 우회한 요청이 `registryVersion`을 빼면 판정을 건너뛸 수 있다.
+004가 워커 메시지 계약을 등록표 축 이름에 맞춘 뒤, 이 필드를 필수로 바꾸고 모든 요청에 검증을 거는 후속 변경까지
+끝나야 요구사항이 닫힌다. 그때 위 표의 "선택"도 "필수"로 바뀐다.
 
 **인증**: 모든 엔드포인트가 요청자를 요구한다(spec 004 R-12). 남의 요청은 403이 아니라 **404**로 숨긴다 — 403은 그 식별자가
 존재한다는 사실을 알려 준다. 이 저장소에는 아직 로그인이 없어서, 개발 환경에서만 `thorp.auth.trust-user-id-header=true`와
@@ -59,7 +75,10 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 - `resultSource`: `NEW` 새 계산 / `JOINED` 진행 중인 같은 조건 실행에 합류 / `REUSED` 완료 결과 재사용. **`REUSED`면 `status`가
   이미 `COMPLETED`이고 결과를 바로 조회할 수 있다** — 상태만 보고 폴링을 시작하지 말 것.
 - `effectiveStart`는 워밍업과 상장일을 반영한 실제 평가 시작일이라 요청 시작일보다 뒤일 수 있다.
-- `versions`는 결과 재현의 기준(비용 조건·규칙·자료·엔진)이고 `costProfile.provisional=true`는 팀 확정 전 임시값이라는 뜻이다.
+- `versions`는 결과 재현의 기준이다: `{ mapping, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit }`.
+  `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
+  (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.
+  계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).
 - 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014), 503 `BROKER_UNAVAILABLE`.
 
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
@@ -242,7 +261,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   `CANCEL_UNANSWERED`는 T014.
 - 실행을 실제로 멈춘 취소(마지막 활성 요청의 취소)는 `CANCELLED`·`partial=true`이고 `summary`는 **부분 구간 기준** 값이다. `progress.lastTradingDate`는
   워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.
-- `versions`는 202 응답과 같은 값이다.
+- `versions`는 202 응답과 같은 값에 결과를 낸 워커의 자기 보고 `worker`(워커 패키지 버전)를 얹은 것이다. 결과가 없으면(대기·실행 중·결과 없는 실패) `worker` 키가 없다.
 - `failure.code`는 엔진이 준 값(`SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION`
   `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다.
 

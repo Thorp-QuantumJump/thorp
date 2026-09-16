@@ -201,3 +201,9 @@ def test_failed_run_carries_no_warnings() -> None:
     output = run(run={"runId": "EMPTY", "start": "2030-01-01", "end": "2030-01-02"})
     assert output.run.status is RunStatus.FAILED
     assert output.diagnostics.warnings == []
+
+
+def test_versions_carry_the_requested_evaluation_split() -> None:
+    # 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).
+    assert run(evaluation={"splitVersion": "SPLIT-1"}).versions.evaluation_split == "SPLIT-1"
+    assert run().versions.evaluation_split is None

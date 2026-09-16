@@ -6,7 +6,20 @@
 
 ## Summary
 
-기존 Spring Boot의 회원가입·이메일 인증 기능을 보존하고, 누락된 로그인·현재 사용자 조회·로그아웃을 서버 관리 세션으로 추가한다. 인증 상태는 PostgreSQL-backed HTTP session과 `HttpOnly` 쿠키로 유지하며 SPA의 상태 변경 요청은 CSRF 토큰으로 보호한다. React는 공용 Axios 클라이언트와 단일 인증 Provider를 통해 `확인 중 / 로그인됨 / 비로그인 / 만료 / 확인 실패 / 로그아웃 미확인` 상태를 표현하고, `내 기록`만 보호한다. 실제 구현은 이후 FE·BE·통합 작업 묶음으로 나누며 이 PLAN은 문서만 생성한다.
+기존 Spring Boot의 회원가입·이메일 인증 기능을 보존하고, 누락됐던 로그인·현재 사용자 조회·로그아웃을 서버 관리 세션으로 추가했다. 인증 상태는 PostgreSQL-backed HTTP session과 `HttpOnly` 쿠키로 유지하며 SPA의 상태 변경 요청은 CSRF 토큰으로 보호한다. React는 공용 Axios 클라이언트와 단일 인증 Provider를 통해 `확인 중 / 로그인됨 / 비로그인 / 만료 / 확인 실패 / 로그아웃 미확인` 상태를 표현하고, `내 기록`만 보호한다.
+
+## Implementation Status (2026-09-16)
+
+- T001~T055의 FE·BE 구현이 현재 소스 트리에 반영됐다.
+- FE lint/build와 149개 테스트, BE Spotless/build와 1,272개 테스트를 실행했다. 인증 및 PostgreSQL
+  테스트는 skip 없이 통과했다. 상세 결과는 [verification/frontend.md](verification/frontend.md)와
+  [verification/backend.md](verification/backend.md)에 있다.
+- 계약 7개 operation과 로컬 회원가입→로그인→복원→만료/로그아웃 흐름을 검증했다.
+  [verification/contract.md](verification/contract.md),
+  [verification/integration.md](verification/integration.md)를 기준 기록으로 사용한다.
+- 확인된 편차는 두 가지다. 360px 회원가입 화면의 큰 소개 문구가 viewport 밖으로 잘리며, 실제 SMTP
+  전달은 운영 자격 증명이 없어 자동 계약 테스트와 확인 완료 fixture 이후의 가입 흐름까지만 검증했다.
+  둘 다 확인되지 않은 상태를 PASS로 표시하지 않고 release 전 후속 확인 대상으로 남긴다.
 
 ## Technical Context
 
@@ -144,6 +157,8 @@ backend/
 - 반복 로그인·인증번호 발송의 횟수 제한, 관측 구간, 계정 잠금 여부는 현재 팀 정책과 Backend 구현에서 확인되지 않아 이 feature에서 임의의 수치로 정하지 않는다.
 - 운영 배포 전 별도 BE 보안 Task에서 정책·429 오류 계약·로그 및 지표를 합의한다. 014의 FE는 해당 정책이 추가되더라도 공통 오류 envelope를 사용자 조치 가능 안내로 표시할 수 있어야 한다.
 - 이메일 발송은 외부 SMTP 지연을 포함하므로 별도 pending 상태와 재시도 동작을 가진다.
+- 2026-09-16 Phase 8 검증 시점에도 rate-limit 수치와 계정 잠금 정책은 구현 범위 밖이다. 별도
+  `[BE] 인증 요청 남용 방지 정책 수립 및 적용` Jira Task에서 정책·429 계약·관측 기준을 확정해야 한다.
 
 ## Work Partition for Task Generation
 

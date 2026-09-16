@@ -12,8 +12,6 @@ import com.ssafy.thorp.paramsearch.application.exception.ParamSearchRejectedExce
 import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;
@@ -25,6 +23,8 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.ArrayList;
 import java.util.List;
@@ -350,32 +350,25 @@ class ParamSearchIntakeIT extends PostgresTestSupport {
 
     private PreviewParamSearchCommand previewCommand() {
         return new PreviewParamSearchCommand(
-                null, UNIVERSE, supportedStrategyIds(), null, null, null, Map.of());
+                null,
+                UNIVERSE,
+                SearchableStrategies.of(registry, jdbcTemplate),
+                null,
+                null,
+                null,
+                Map.of());
     }
 
     private CreateParamSearchCommand createCommand(String registryVersion) {
         return new CreateParamSearchCommand(
                 null,
                 UNIVERSE,
-                supportedStrategyIds(),
+                SearchableStrategies.of(registry, jdbcTemplate),
                 null,
                 null,
                 null,
                 Map.of(),
                 registryVersion);
-    }
-
-    /** 등록표와 004 지원 목록의 교집합. 전략 이름을 테스트에 적지 않는다(FR-025). */
-    private List<String> supportedStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
     }
 
     private int countSearches() {

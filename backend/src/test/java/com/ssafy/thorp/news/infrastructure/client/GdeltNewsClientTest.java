@@ -13,6 +13,7 @@ import com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -154,6 +155,84 @@ class GdeltNewsClientTest {
             assertThat(query).contains("enddatetime=20260910050000");
             assertThat(query).contains("maxrecords=3");
             assertThat(query).as("장기 전체 적재를 하지 않는다").doesNotContain("timespan=full");
+        }
+
+        @Test
+        @DisplayName("GDELT가 정한 mode 토큰을 그대로 보낸다")
+        void 모드_토큰() {
+            StubHttpClient http = StubHttpClient.json("doc-response.json");
+
+            new GdeltDocNewsClient(http, policy(), 3).fetch(WINDOW);
+
+            // 값을 여기 박아 두는 이유가 있다. 다른 표기를 보내면 GDELT는 오류 상태가 아니라 200에
+            // "Invalid mode."라는 평문을 실어 보내고, 그러면 fixture로 도는 나머지 시험은 전부
+            // 통과한 채 운영에서만 매 회차가 빈손으로 끝난다(2026-09-16 실제 호출에서 드러났다).
+            assertThat(http.requested.get(0).getQuery())
+                    .as("GDELT의 mode는 소문자 artlist다. ArticleList 같은 표기는 받지 않는다")
+                    .contains("mode=artlist");
+        }
+
+        @Test
+        @DisplayName("OR로 이은 주제는 괄호로 감싼다")
+        void 질의_괄호() {
+            StubHttpClient http = StubHttpClient.json("doc-response.json");
+
+            new GdeltDocNewsClient(http, policy(), 3)
+                    .fetch(
+                            new GdeltNewsSource(
+                                    "gdelt:doc",
+                                    WINDOW.windowStart(),
+                                    WINDOW.windowEnd(),
+                                    List.of("semiconductor", "trade")));
+
+            // 괄호가 없으면 GDELT는 오류 상태가 아니라 200에 "Queries containing OR'd terms must be
+            // surrounded by ()."라는 평문을 실어 보낸다. mode와 같은 종류의 함정이라 값을 박아 둔다.
+            assertThat(
+                            java.net.URLDecoder.decode(
+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))
+                    .as("괄호를 빠뜨리면 질의가 성립하지 않는다")
+                    .contains("query=(semiconductor OR trade)");
+        }
+
+        @Test
+        @DisplayName("하이픈이 든 주제는 따옴표로 감싼다")
+        void 하이픈_주제() {
+            StubHttpClient http = StubHttpClient.json("doc-response.json");
+
+            new GdeltDocNewsClient(http, policy(), 3)
+                    .fetch(
+                            new GdeltNewsSource(
+                                    "gdelt:doc",
+                                    WINDOW.windowStart(),
+                                    WINDOW.windowEnd(),
+                                    List.of("monetary-policy", "prices")));
+
+            // 감싸지 않으면 GDELT가 하이픈을 연산자로 읽고 200에 "One or more of your keywords
+            // contained an illegal character."를 실어 보낸다. 우리 주제 키에 하이픈이 흔하다.
+            assertThat(
+                            java.net.URLDecoder.decode(
+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))
+                    .contains("(\"monetary-policy\" OR prices)");
+        }
+
+        @Test
+        @DisplayName("주제가 하나면 괄호를 씌우지 않는다")
+        void 단일_주제() {
+            StubHttpClient http = StubHttpClient.json("doc-response.json");
+
+            new GdeltDocNewsClient(http, policy(), 3)
+                    .fetch(
+                            new GdeltNewsSource(
+                                    "gdelt:doc",
+                                    WINDOW.windowStart(),
+                                    WINDOW.windowEnd(),
+                                    List.of("semiconductor")));
+
+            assertThat(
+                            java.net.URLDecoder.decode(
+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))
+                    .contains("query=semiconductor&")
+                    .doesNotContain("(");
         }
 
         @Test

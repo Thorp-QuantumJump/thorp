@@ -118,8 +118,10 @@ export function HeroSection() {
           variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
           transition={revealTransition}
         >
-          <Link className={styles.primaryCta} to="/dashboard">
-            시장 살펴보기
+          {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
+              다른 화면으로 보내지 않는다. */}
+          <Link className={styles.primaryCta} to="/diagnosis/sectors">
+            비중 비교하기
             <ArrowUpRight aria-hidden="true" size={18} />
           </Link>
           <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>

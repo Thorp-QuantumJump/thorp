@@ -154,6 +154,25 @@ class ApplicationProfileConfigTest {
                         });
     }
 
+    /**
+     * 운영은 nginx가 TLS를 끝내고 평문으로 넘기므로 이 값이 없으면 {@code request.isSecure()}가 false다.
+     *
+     * <p>세션 쿠키는 위에서 {@code secure: true}로 못 박지만 XSRF-TOKEN 쿠키는 요청이 HTTPS인지 보고 정하기 때문에, 이 값이 빠지면
+     * 운영에서만 {@code Secure} 없는 CSRF 쿠키가 나간다. 동작 자체는 {@code ProxySecureCookieIntegrationTest}가 지킨다.
+     */
+    @Test
+    void prodProfileTrustsTheReverseProxyForwardedHeaders() {
+        prodContextRunner()
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(
+                                            context.getEnvironment()
+                                                    .getProperty("server.forward-headers-strategy"))
+                                    .isEqualTo("framework");
+                        });
+    }
+
     private ApplicationContextRunner prodContextRunner() {
         return contextRunner.withPropertyValues(
                 "spring.profiles.active=prod",

@@ -50,6 +50,20 @@ const MyRecordsEntryPage = lazy(() =>
   })),
 )
 
+// 아직 만들지 않은 메뉴를 정상 화면으로 받는다.
+const NotReadyPage = lazy(() =>
+  import('@/pages/NotReadyPage').then((module) => ({
+    default: module.NotReadyPage,
+  })),
+)
+
+// 전략 진단의 첫 단계다. 섹터 목록을 받아 보이는 화면이며 접근 시점에 불러온다.
+const SectorSelectionPage = lazy(() =>
+  import('@/pages/SectorSelectionPage').then((module) => ({
+    default: module.SectorSelectionPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -75,6 +89,10 @@ function AnimatedRoutes() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />
+            {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}
+            <Route path="/learn" element={<NotReadyPage />} />
+            {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
+            <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             <Route
               path="/records/*"
               element={

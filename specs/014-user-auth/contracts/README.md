@@ -6,15 +6,17 @@
 
 | External API | Backend internal path | 상태 |
 |---|---|---|
-| `POST /api/accounts/email-verifications` | `POST /accounts/email-verifications` | 기존 기능 재사용, controller mapping 정규화 필요 |
-| `POST /api/accounts/email-verifications/confirm` | `POST /accounts/email-verifications/confirm` | 기존 기능 재사용, controller mapping 정규화 필요 |
-| `POST /api/accounts` | `POST /accounts` | 기존 기능 재사용, controller mapping 정규화 필요 |
-| `GET /api/auth/csrf` | `GET /auth/csrf` | 신규 필요 |
-| `POST /api/auth/sessions` | `POST /auth/sessions` | 신규 필요 |
-| `GET /api/auth/me` | `GET /auth/me` | 신규 필요 |
-| `DELETE /api/auth/sessions/current` | `DELETE /auth/sessions/current` | 신규 필요 |
+| `POST /api/accounts/email-verifications` | `POST /accounts/email-verifications` | 구현·계약 검증 완료 |
+| `POST /api/accounts/email-verifications/confirm` | `POST /accounts/email-verifications/confirm` | 구현·계약 검증 완료 |
+| `POST /api/accounts` | `POST /accounts` | 구현·계약 검증 완료 |
+| `GET /api/auth/csrf` | `GET /auth/csrf` | 구현·계약 검증 완료 |
+| `POST /api/auth/sessions` | `POST /auth/sessions` | 구현·계약 검증 완료 |
+| `GET /api/auth/me` | `GET /auth/me` | 구현·계약 검증 완료 |
+| `DELETE /api/auth/sessions/current` | `DELETE /auth/sessions/current` | 구현·계약 검증 완료 |
 
-현재 Account controller는 내부 경로에도 `/api`를 포함하지만 proxy가 이미 접두사를 제거한다. 구현 단계에서 proxy를 바꾸지 않고 Account controller를 `/accounts` 기준으로 맞춘다.
+2026-09-16에 Vite proxy와 Backend 내부 경로, 성공·오류 응답을 대조했다. Account controller는
+내부 `/accounts`, 인증 controller는 내부 `/auth`를 사용하며 외부 `/api`와 중복되지 않는다.
+상세 결과는 [verification/contract.md](../verification/contract.md)에 있다.
 
 ## Cookie and CSRF
 

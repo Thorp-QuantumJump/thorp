@@ -69,6 +69,18 @@ public interface NewsMetrics {
      */
     void recordQuery(String state, Duration duration);
 
+    /**
+     * 보관 기한 일괄 삭제 회차의 결과(spec FR-019·FR-023).
+     *
+     * <p>지운 행 수를 표마다 남긴다. 합계만 남기면 어느 표가 지워지지 않았는지 알 수 없고, "예외로 보존한 표가 0개"라는 기준(SC-007)을 지표로 확인할 수
+     * 없다.
+     *
+     * <p>지운 행이 0건인 회차도 기록한다. 기한 뒤에는 그것이 정상이고, 기록이 없으면 작업이 도는지 멈췄는지 구별되지 않는다.
+     *
+     * @param deletedRowsByTable 표 이름 → 지운 행 수. 표 이름은 코드에 고정된 값이라 label 가짓수가 늘지 않는다.
+     */
+    void recordRetentionRun(java.util.Map<String, Long> deletedRowsByTable);
+
     /** 제외 사유. 지표 label로 그대로 나가므로 대문자와 밑줄만 쓴다. */
     final class ExclusionReason {
 

@@ -95,28 +95,26 @@ public class NewsDigestQueryService {
             int maxHistoricalRangeDays) {}
 
     /**
-     * <b>공개 경로의 조회.</b> 인증 없이 열려 있는 엔드포인트가 부르는 자리다.
+     * 요청 파라미터로 조회를 만들어 실행한다. 엔드포인트가 부르는 자리다.
      *
-     * <p><b>설정과 무관하게 허가 필터를 건다.</b> 노출 모드를 설정으로만 가르면, 설정을 한 줄 빠뜨렸을 때 회신하지 않은 매체의 기사가 공개 주소로 그대로
-     * 나간다. 그런 실수는 배포된 뒤에도 아무 신호를 내지 않는다 — 응답이 오히려 더 풍성해 보이기 때문이다. 공개 여부는 설정이 아니라 <b>어느 문으로
-     * 들어왔는지</b>가 정해야 한다(spec FR-016, 원칙 X).
+     * <p><b>노출 모드는 배포 단위가 정한다.</b> 내부 검증 환경은 {@code INTERNAL}로 떠서 회신 전 매체의 기사까지 보고, 공개 환경은 {@code
+     * PUBLIC}으로 떠서 허가된 매체만 내보낸다. 클라이언트는 이 값을 고를 수 없다(plan "조회와 상태").
+     *
+     * <p>설정 하나가 곧 공개 범위라 위험하다. 그래서 두 겹으로 막는다 — 기본값이 {@code PUBLIC}이고, 운영 프로필에서 {@code INTERNAL}이면
+     * {@code NewsExposureModeGuard}가 기동을 막는다. 여기서 모드를 강제하지 않는 이유는 그러면 내부 검증 환경이 존재할 수 없기 때문이다 (spec
+     * FR-016).
      *
      * <p>구간 상한이 설정값이라 조회 객체를 만드는 일도 여기 있다. 컨트롤러가 만들면 설정을 읽어야 하고, 설정 record는 infrastructure에 있어
      * presentation이 infrastructure를 참조하게 된다(ADR-0001 계층 방향).
      */
     @Transactional(readOnly = true)
-    public NewsDigestListResult queryForPublic(String sectorId, Instant from, Instant to) {
+    public NewsDigestListResult query(String sectorId, Instant from, Instant to) {
         return query(
                 NewsDigestQuery.of(sectorId, from, to, settings.maxHistoricalRangeDays()),
-                NewsExposureMode.PUBLIC);
+                settings.exposureMode());
     }
 
-    /**
-     * 설정이 정한 모드로 조회한다. 내부 검증용 경로다.
-     *
-     * <p>{@code INTERNAL}이면 허가 필터를 걸지 않고 저장된 요약을 그대로 보인다 — 수집이 무엇을 만들어 저장했는지 확인하려는 것이기 때문이다. 이 메서드를
-     * 공개 엔드포인트에 연결하면 안 된다.
-     */
+    /** 설정이 정한 모드로 조회한다. */
     @Transactional(readOnly = true)
     public NewsDigestListResult query(NewsDigestQuery query) {
         return query(query, settings.exposureMode());
@@ -156,9 +154,27 @@ public class NewsDigestQueryService {
         visible.forEach(publisher -> byId.put(publisher.getId(), publisher));
         Predicate<NewsArticle> permitted = article -> byId.containsKey(article.getPublisherId());
 
+        List<NewsDigest> candidates = candidates(query, now);
+        Map<Long, Set<String>> candidateTopics =
+                mode.requiresPermissionFilter()
+                        ? links.findTopicKeysByArticleIds(
+                                candidates.stream()
+                                        .flatMap(digest -> digest.getArticles().stream())
+                                        .map(NewsArticle::getId)
+                                        .distinct()
+                                        .toList())
+                        : Map.of();
         List<NewsDigest.Projection> projections =
-                candidates(query, now).stream()
-                        .map(digest -> project(digest, permitted, query, mode))
+                candidates.stream()
+                        .map(
+                                digest ->
+                                        project(
+                                                digest,
+                                                permitted,
+                                                query,
+                                                mode,
+                                                byId,
+                                                candidateTopics))
                         .flatMap(Optional::stream)
                         .toList();
 
@@ -205,12 +221,15 @@ public class NewsDigestQueryService {
             NewsDigest digest,
             Predicate<NewsArticle> permitted,
             NewsDigestQuery query,
-            NewsExposureMode mode) {
+            NewsExposureMode mode,
+            Map<Long, NewsPublisher> publishersById,
+            Map<Long, Set<String>> topicsByArticle) {
         Predicate<NewsArticle> filter = permitted;
         if (query.isHistorical()) {
             filter = filter.and(article -> withinRequestedRange(article, query));
         }
-        return digest.projectFor(filter, summaryRuleFor(digest, mode));
+        return digest.projectFor(
+                filter, summaryRuleFor(digest, mode, publishersById, topicsByArticle));
     }
 
     private static boolean withinRequestedRange(NewsArticle article, NewsDigestQuery query) {
@@ -232,11 +251,16 @@ public class NewsDigestQueryService {
      * <p><b>내부 모드에서는 저장된 값을 쓴다.</b> 그 값이 바로 검증 대상이다 — 수집이 무엇을 만들어 저장했는지 보려는 것인데 조회가 다시 만들어 버리면 저장된
      * 문장을 영영 확인할 수 없다.
      */
-    private NewsDigest.SummaryRule summaryRuleFor(NewsDigest digest, NewsExposureMode mode) {
+    private NewsDigest.SummaryRule summaryRuleFor(
+            NewsDigest digest,
+            NewsExposureMode mode,
+            Map<Long, NewsPublisher> publishersById,
+            Map<Long, Set<String>> topicsByArticle) {
         if (!mode.requiresPermissionFilter()) {
             return (representative, members) -> Optional.of(digest.getFactualSummary());
         }
-        return this::summarize;
+        return (representative, members) ->
+                summarize(representative, members, publishersById, topicsByArticle);
     }
 
     /**
@@ -244,15 +268,16 @@ public class NewsDigestQueryService {
      *
      * <p>요약 근거가 부족하면 빈 값을 돌려주고, 그러면 그 묶음은 표시되지 않는다.
      */
-    private Optional<String> summarize(NewsArticle representative, List<NewsArticle> members) {
+    private Optional<String> summarize(
+            NewsArticle representative,
+            List<NewsArticle> members,
+            Map<Long, NewsPublisher> publishersById,
+            Map<Long, Set<String>> topicsByArticle) {
         String publisherName =
-                publishers
-                        .findById(representative.getPublisherId())
+                Optional.ofNullable(publishersById.get(representative.getPublisherId()))
                         .map(NewsPublisher::getDisplayName)
                         .orElse(null);
-        Set<String> topicKeys =
-                links.findTopicKeysByArticleIds(List.of(representative.getId()))
-                        .getOrDefault(representative.getId(), Set.of());
+        Set<String> topicKeys = topicsByArticle.getOrDefault(representative.getId(), Set.of());
         int distinctPublishers =
                 (int) members.stream().map(NewsArticle::getPublisherId).distinct().count();
         return summaries.summarize(

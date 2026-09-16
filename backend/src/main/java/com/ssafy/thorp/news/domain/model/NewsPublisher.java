@@ -135,6 +135,34 @@ public class NewsPublisher {
     }
 
     /** 조건부 요청 값을 갱신한다. RSS가 304를 주면 cursor와 기사 데이터는 두고 이 값만 유지·갱신한다(spec FR-013). */
+    /**
+     * 등록표가 소유하는 채널 정보만 갈아 끼운다(spec FR-009).
+     *
+     * <p><b>허가 상태는 건드리지 않는다.</b> 채널 정보의 원본은 버전 관리되는 등록표 파일이고, 허가 상태의 원본은 매체 회신 이력이다. 기동할 때마다 등록표로 행
+     * 전체를 덮으면 이미 받아 둔 회신이 매번 지워져 공개가 조용히 닫힌다 — 되돌리기도 어렵다(spec FR-015·FR-016).
+     *
+     * <p>조건부 요청 값({@code etag}·{@code lastModified})도 유지한다. 그것은 수집이 쌓은 상태이지 등록표가 아는 값이 아니다.
+     */
+    public NewsPublisher withChannel(
+            String displayName,
+            String language,
+            String registeredDomain,
+            String rssUrl,
+            boolean enabled) {
+        return new NewsPublisher(
+                id,
+                publisherKey,
+                displayName,
+                language,
+                registeredDomain,
+                rssUrl,
+                permissionStatus,
+                permissionUpdatedAt,
+                enabled,
+                etag,
+                lastModified);
+    }
+
     public NewsPublisher withConditionalRequestState(String etag, String lastModified) {
         return new NewsPublisher(
                 id,

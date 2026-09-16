@@ -57,15 +57,15 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] Add failing service tests for canonical email use, phone validation, verification lifecycle, and detailed account error codes in `backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java`
-- [ ] T014 [P] [US1] Add failing controller tests for the three existing account operations, internal proxy paths, CSRF, and contract responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java`
+- [x] T013 [P] [US1] Add failing service tests for canonical email use, phone validation, verification lifecycle, and detailed account error codes in `backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java`
+- [x] T014 [P] [US1] Add failing controller tests for the three existing account operations, internal proxy paths, CSRF, and contract responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java`
 - [x] T015 [P] [US1] Add failing component tests for validation, send/confirm/signup pending states, duplicate submission, accessible errors, and email-only handoff in `frontend/src/pages/SignupPage.test.tsx`
 - [x] T016 [P] [US1] Add failing auth client tests for email verification and signup success/error envelopes in `frontend/src/api/auth.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement trim-and-lowercase email normalization at the Backend trust boundary in `backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java`, `backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`
-- [ ] T018 [US1] Normalize Account controller mappings to internal `/accounts`, return the stable rejection codes, and preserve 204/201 success contracts in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java`
+- [x] T017 [US1] Implement trim-and-lowercase email normalization at the Backend trust boundary in `backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java`, `backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`
+- [x] T018 [US1] Normalize Account controller mappings to internal `/accounts`, return the stable rejection codes, and preserve 204/201 success contracts in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java`
 - [x] T019 [P] [US1] Implement CSRF-aware email verification and signup client functions in `frontend/src/api/auth.ts`
 - [x] T020 [P] [US1] Implement reusable labeled auth fields, status announcements, first-error focus, and submit controls in `frontend/src/components/auth/AuthField.tsx`, `frontend/src/components/auth/AuthStatus.tsx`, and `frontend/src/components/auth/AuthForm.module.css`
 - [x] T021 [US1] Implement the responsive email verification and signup flow with request identity guards in `frontend/src/pages/SignupPage.tsx` and `frontend/src/pages/SignupPage.module.css` after T019 and T020
@@ -83,16 +83,16 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add failing repository and service tests for normalized-email lookup, password verification, inactive-account concealment, and last-login update in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`
-- [ ] T024 [P] [US2] Add failing MockMvc and PostgreSQL session tests for login and current-user contracts in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`
+- [x] T023 [P] [US2] Add failing repository and service tests for normalized-email lookup, password verification, inactive-account concealment, and last-login update in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`
+- [x] T024 [P] [US2] Add failing MockMvc and PostgreSQL session tests for login and current-user contracts in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`
 - [x] T025 [P] [US2] Add failing tests for checking/authenticated/anonymous/error transitions and bootstrap deduplication in `frontend/src/auth/AuthProvider.test.tsx`
 - [x] T026 [P] [US2] Add failing login page tests for canonical email, generic credential failure, pending submission, signup-email prefill, and authenticated redirect in `frontend/src/pages/LoginPage.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Add normalized-email lookup and authenticated account projection in `backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java`, `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java`
-- [ ] T028 [US2] Implement credential validation, account-state concealment, last-login update, and explicit SecurityContext persistence in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` and `backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java`
-- [ ] T029 [US2] Implement login, current-user, and CSRF endpoints plus request/response DTOs in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java`, `backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java`, and `backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java`
+- [x] T027 [US2] Add normalized-email lookup and authenticated account projection in `backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java`, `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java`
+- [x] T028 [US2] Implement credential validation, account-state concealment, last-login update, and explicit SecurityContext persistence in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` and `backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java`
+- [x] T029 [US2] Implement login, current-user, and CSRF endpoints plus request/response DTOs in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java`, `backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java`, and `backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java`
 - [x] T030 [P] [US2] Add login and current-user operations to `frontend/src/api/auth.ts`
 - [x] T031 [US2] Implement the single-owner authentication state machine and startup restoration in `frontend/src/auth/AuthProvider.tsx` after T025 and T030
 - [x] T032 [US2] Complete the login form, signup navigation, generic credential error, status announcement, and `/home` redirect for authenticated users in `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/LoginPage.module.css`
@@ -134,12 +134,12 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`
+- [x] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`
 - [x] T043 [P] [US4] Add failing provider and header tests for logout start, 204 completion, network uncertainty, retry, recheck, and immediate data removal in `frontend/src/auth/LogoutFlow.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042
+- [x] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042
 - [x] T045 [P] [US4] Add current-session logout operation to `frontend/src/api/auth.ts`
 - [x] T046 [US4] Implement `logoutUnconfirmed`, retry, and current-user recheck transitions with immediate credential-free state clearing in `frontend/src/auth/AuthProvider.tsx` after T043 and T045
 - [x] T047 [US4] Add accessible logout, retry, and status UI without blocking public navigation in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`
@@ -156,14 +156,14 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 ### Tests for User Story 5
 
-- [ ] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`
+- [x] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`
 - [x] T049 [P] [US5] Add failing FE tests for authenticated 401 expiry, CSRF refresh without automatic mutation replay, stale-response rejection, and public-page availability in `frontend/src/auth/AuthRecovery.test.tsx`
 - [x] T050 [P] [US5] Add failing browser-state tests for tab reactivation, protected-entry recheck, back-forward cache restoration, and stale protected-data clearing in `frontend/src/auth/AuthRevalidation.test.tsx`
 - [x] T051 [P] [US5] Add failing accessibility and 360px responsive tests for pending, error, expired, and logout-unconfirmed states in `frontend/src/pages/AuthAccessibility.test.tsx`
 
 ### Implementation for User Story 5
 
-- [ ] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048
+- [x] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048
 - [x] T053 [US5] Implement request identity/abort handling, authenticated 401 expiry, one-time CSRF refresh, and user-driven retry without automatic mutation replay in `frontend/src/api/client.ts` and `frontend/src/auth/AuthProvider.tsx`
 - [x] T054 [US5] Revalidate authentication on tab activation, protected-route entry, and page-cache restoration while leaving public screens available in `frontend/src/auth/AuthProvider.tsx` and `frontend/src/auth/ProtectedRoute.tsx`
 - [x] T055 [US5] Complete focus movement, live status announcements, reduced-motion-safe feedback, and 360px auth layouts in `frontend/src/components/auth/AuthStatus.tsx`, `frontend/src/pages/LoginPage.module.css`, and `frontend/src/pages/SignupPage.module.css`
@@ -176,11 +176,11 @@ description: "로그인·회원가입·로그아웃 사용자 기능의 실행 �
 
 **Purpose**: 전체 계약·회귀·문서 증거를 확인하고 MR 단위로 마무리한다.
 
-- [ ] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`
-- [ ] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`
-- [ ] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`
-- [ ] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`
-- [ ] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`
+- [x] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`
+- [x] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`
+- [x] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`
+- [x] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`
+- [x] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`
 
 ---
 

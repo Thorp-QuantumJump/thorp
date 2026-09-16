@@ -63,10 +63,26 @@ public class NewsConfig {
                 properties.maxHistoricalRangeDays());
     }
 
+    /**
+     * 보관 기한 설정을 application 계층이 쓰는 모양으로 옮긴다(spec FR-019).
+     *
+     * <p>시간대 문자열은 여기서 {@link java.time.ZoneId}로 바꾼다. 이름이 틀리면 기동에서 막히는 편이 낫다 — 삭제 시점에야 알면 기한을 넘긴 뒤다.
+     */
+    @Bean
+    public com.ssafy.thorp.news.application.service.NewsRetentionService.RetentionSettings
+            newsRetentionSettings(NewsProperties properties) {
+        return new com.ssafy.thorp.news.application.service.NewsRetentionService.RetentionSettings(
+                properties.retentionDate(), java.time.ZoneId.of(properties.retentionZone()));
+    }
+
     /** 등록표 파일을 읽는다. 모르는 필드는 허용해 파일에 주석용 키를 둘 수 있게 한다. */
     static <T> T read(Resource resource, Class<T> type) {
+        // 시간 모듈을 넣는다. 허가 회신 시각이 ISO-8601 문자열이라 이것 없이는 읽지 못하고,
+        // 그 실패가 기동 실패로 나타난다.
         ObjectMapper mapper =
-                new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                new ObjectMapper()
+                        .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         try (InputStream in = resource.getInputStream()) {
             T value = mapper.readValue(in, type);
             if (value == null) {
