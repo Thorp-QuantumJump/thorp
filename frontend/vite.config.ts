@@ -21,6 +21,7 @@ export default defineConfig({
       'src/**/*.test.tsx',
       'src/api/auth.test.ts',
       'src/api/sectors.test.ts',
+      'src/api/strategyRegistry.test.ts',
       'src/auth/**/*.test.ts',
       'src/diagnosis/**/*.test.ts',
     ],
