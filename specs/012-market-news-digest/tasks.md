@@ -351,3 +351,13 @@ Developer E: T015 → T022/T023 (조회 service와 HTTP 계약)
 - [X] T079 INTERNAL 모드에서는 저장된 사실 요약을 쓴다. `NewsDigestQueryService`가 모드와 무관하게 요약을 다시 만들어, 전체 멤버 기준으로 저장한 값을 내부 검증에서도 볼 수 없다. 공개 응답에서 다시 만드는 것은 그대로 두고 내부 모드만 저장 값을 쓴다 per plan "요약·정렬 규칙 v1", FR-003 (partial)
 - [X] T080 과거·섹터 조회를 한 질의로 합친다. `NewsDigestRepositoryImpl.findVerifiedBetween`이 구간 전체를 읽은 뒤 섹터 목록과 메모리에서 교차한다. 결과는 맞지만 읽는 양이 섹터와 무관하게 구간 전체라, 기사가 쌓일수록 섹터 조회가 전체 조회만큼 비싸진다 per plan 성능 목표 (partial)
 - [X] T081 노출 모드 enum을 하나로 모은다. `NewsProperties.ExposureMode`와 `NewsExposureMode`가 따로 있고 `NewsConfig`가 `valueOf`로 잇는다. 한쪽에만 값을 더하면 컴파일은 지나가고 기동에서 막히며, 그 사이 어디가 원인인지 보이지 않는다 per plan 설정 (unrequested)
+
+---
+
+## Phase 15: Convergence
+
+T052까지 dev에 통합된 상태에서 본 일곱 번째 수렴 검토다. 앞선 회차들이 수집·조회·공개 경로의 이음매를
+맞췄고 실행 Task는 전부 끝났다. 이번에 걸린 것은 **완료 기준을 재는 자 자체**다. 기존 Task는 손대지 않는다.
+
+- [X] T082 CRITICAL: 묶음 품질 표본을 실제 보도로 바꾸고 그 위에서 묶음 규칙을 다시 정한다. 지금 `grouping-quality.json`은 같은 사건 기사 쌍 11개 중 9개의 제목이 글자 그대로 같아(Jaccard 1.000, 평균 0.909) 어떤 토큰화를 쓰든 통과한다. 실제 수집분 345건에서 같은 주제·다른 매체 쌍 8,539개를 재면 0.60에 닿는 쌍이 0개이고 최대가 0.455라, 운영에서는 같은 사건이 한 번도 묶이지 않는다. 원인은 문턱값이 아니라 조사·어미가 붙는 한국어 어절 토큰화이므로 문턱만 낮추면 다른 사건이 붙는다. 실제 수집분에서 뽑은 표본을 `grouping-quality-v2`로 추가하고(v1과 그 판정은 덮어쓰지 않는다), 토큰화와 문턱을 `news-grouping-v2`로 새로 정해 두 표본 모두에서 오병합 0건·분리율 10% 이하를 다시 측정한다. 측정 절차와 수치를 저장소에 남겨 다음 사람이 재현할 수 있게 한다 per SC-002, FR-011, US1/AC1, 원칙 VIII (partial)
+- [X] T083 `docs/specs/market-news-api.md`의 PD-15 문단을 등록표의 실제 상태와 맞춘다. 문단이 "등록표의 경향신문·한국경제·매일경제 항목과 `permission` 값은 내부 fixture 검증용"이라고 적었지만 `news-publishers-v1.json`에는 `permission` 키가 없고 세 매체 모두 `PENDING`으로 등록된다. 지금 문장은 회신을 흉내 낸 값이 파일에 들어 있다는 인상을 주어, 읽는 사람이 공개 게이트가 이미 열려 있는지 의심하게 만든다 per FR-016, T053 (partial)
