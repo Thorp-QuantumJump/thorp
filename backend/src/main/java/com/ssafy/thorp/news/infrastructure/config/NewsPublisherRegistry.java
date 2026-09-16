@@ -154,32 +154,22 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
      *
      * <p>회신이 없는 매체는 이 항목을 적지 않는다. {@code PENDING}을 적는 자리가 아니다 — 그것은 회신이 없다는 뜻이고, 없는 것을 적어 둘 이유가 없다.
      *
+     * <p><b>2026-09-16 현재 등록표의 값은 매체 회신이 아니다.</b> 어느 매체에서도 답을 받지 않았고, 각 매체가 공개한 RSS 안내를 읽고 팀이 사용
+     * 여부를 정한 기록이다. 근거는 이 서비스가 SSAFY 교육 과정의 팀 프로젝트로 수익을 내지 않고, 기사 본문을 저장하거나 표시하지 않으며 제목·매체명·발행 시각·원문
+     * 링크만 쓰고, 공개 범위를 발표와 심사로 한정해 2026-09-28 최종 발표 뒤 배포를 중단한다는 것이다. 팀은 이 조건이라면 불특정 다수를 상대로 한 배포나 영리
+     * 이용에 해당하지 않는다고 보았다.
+     *
+     * <p>다만 경향신문 RSS 안내에는 홈페이지를 통해 다수와 공유하려면 사전 허락이 필요하다는 문구가 있고, 그 문구는 영리 여부를 따지지 않는다. 확인하고 내린
+     * 결정이며 매체의 동의를 받은 것이 아니다. <b>이 판단은 위 조건이 유지되는 동안에만 유효하다</b> — 서비스를 계속 운영하거나 수익 모델을 붙이려면 각 매체와
+     * 이용 계약을 맺어야 한다. 근거와 확인한 주소는 등록표 파일의 {@code _permission}과 각 항목의 {@code reference}에 있다.
+     *
+     * <p>이 사정은 코드와 등록표에만 남기고 화면이나 API 응답에는 싣지 않는다. 사용자에게 보일 내용이 아니다.
+     *
      * @param status 회신 결과. {@code ALLOWED} 또는 {@code DENIED}만 쓴다.
      * @param allowedFields 허용된 필드. {@code ALLOWED}면 하나 이상이어야 한다.
      * @param respondedAt 회신을 받은 시각. 같은 회신을 두 번 반영하지 않는 기준이 된다.
      * @param reference 회신의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.
      */
-    /**
-     * 매체에 허가를 요청한 사실(spec FR-015).
-     *
-     * <p><b>회신과 따로 적는다.</b> 요청했는데 답이 없는 것과 아예 요청하지 않은 것은 전혀 다른 상태인데, 회신만 적을 수 있으면 둘이 똑같이 빈칸으로 보인다.
-     * 프로젝트가 끝날 때 "우리가 요청은 했는가"에 답하려면 이 자리가 있어야 한다.
-     *
-     * <p>요청은 매체의 현재 상태를 {@code PENDING}으로 둔다. 요청했다는 것과 공개해도 된다는 것은 다르다.
-     *
-     * @param requestedAt 요청을 보낸 시각.
-     * @param reference 요청의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.
-     */
-    public record PermissionRequest(java.time.Instant requestedAt, String reference) {
-
-        public PermissionRequest {
-            java.util.Objects.requireNonNull(requestedAt, "requestedAt");
-            if (reference == null || reference.isBlank()) {
-                throw new IllegalArgumentException("reference는 비어 있을 수 없다. 요청의 근거를 적는다");
-            }
-        }
-    }
-
     public record Permission(
             com.ssafy.thorp.news.domain.vo.PermissionStatus status,
             java.util.List<com.ssafy.thorp.news.domain.vo.NewsAllowedField> allowedFields,
@@ -202,6 +192,27 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
             if (status == com.ssafy.thorp.news.domain.vo.PermissionStatus.ALLOWED
                     && allowedFields.isEmpty()) {
                 throw new IllegalArgumentException("허가 회신에는 허용 필드가 하나 이상 있어야 한다");
+            }
+        }
+    }
+
+    /**
+     * 매체에 허가를 요청한 사실(spec FR-015).
+     *
+     * <p><b>회신과 따로 적는다.</b> 요청했는데 답이 없는 것과 아예 요청하지 않은 것은 전혀 다른 상태인데, 회신만 적을 수 있으면 둘이 똑같이 빈칸으로 보인다.
+     * 프로젝트가 끝날 때 "우리가 요청은 했는가"에 답하려면 이 자리가 있어야 한다.
+     *
+     * <p>요청은 매체의 현재 상태를 {@code PENDING}으로 둔다. 요청했다는 것과 공개해도 된다는 것은 다르다.
+     *
+     * @param requestedAt 요청을 보낸 시각.
+     * @param reference 요청의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.
+     */
+    public record PermissionRequest(java.time.Instant requestedAt, String reference) {
+
+        public PermissionRequest {
+            java.util.Objects.requireNonNull(requestedAt, "requestedAt");
+            if (reference == null || reference.isBlank()) {
+                throw new IllegalArgumentException("reference는 비어 있을 수 없다. 요청의 근거를 적는다");
             }
         }
     }
