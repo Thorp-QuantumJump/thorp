@@ -323,7 +323,17 @@ class PortfolioBacktestEngine:
         engine_input: EngineInput | dict,
         on_progress: ProgressCallback | None = None,
     ) -> tuple[EngineOutput, RunArtifacts]:
-        """계약 메시지와 로컬 진단 산출물을 함께 돌려준다. 상태는 전부 지역 변수다."""
+        """계약 메시지와 로컬 진단 산출물을 함께 돌려준다.
+
+        계산 상태는 전부 지역 변수다. **예외는 ``last_data_usage`` 하나**다(T019) — 소비자가
+        ``run()`` 이 끝난 뒤 읽어 FINISHED ``resource`` 에 싣는다. 엔진 Protocol 이
+        ``EngineOutput`` 만 돌려주고 자원 사용은 메시지 밖이라 반환값에 태울 자리가 없다.
+
+        그래서 **엔진 인스턴스 하나는 한 번에 한 작업만 돌려야 한다.** 소비자가 프로세스당 인스턴스
+        하나를 단일 스레드로 쓰는 지금 구조가 그 전제다. 두 작업이 한 인스턴스를 공유하면 뒤 실행의
+        FINISHED 가 앞 실행의 자료량을 싣고, 데이터 원가가 엉뚱한 실행에 붙는다 — 값이 그럴듯해서
+        아무도 알아채지 못한다. 동시 실행을 도입한다면 이 속성부터 걷어내야 한다.
+        """
         request = EngineInput.model_validate(engine_input)
         started = datetime.now(UTC)
         self.last_data_usage = None
