@@ -20,11 +20,13 @@ export default defineConfig({
     include: [
       'src/**/*.test.tsx',
       'src/api/auth.test.ts',
+      'src/api/learningGlossary.test.ts',
       'src/api/sectors.test.ts',
       'src/api/strategyRegistry.test.ts',
       'src/auth/**/*.test.ts',
       'src/diagnosis/**/*.test.ts',
       'src/utils/warmupRule.test.ts',
+      'src/utils/validationRules.test.ts',
     ],
     setupFiles: ['./src/test/setup.ts'],
   },

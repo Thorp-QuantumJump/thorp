@@ -1,0 +1,126 @@
+/* 목록형·입력형 설정 항목이 함께 쓰는 틀이다. 두 항목이 같은 자리에 같은 순서로 놓여야 읽는 흐름이 흔들리지 않는다. */
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 0;
+}
+
+.label {
+  color: var(--thorp-foreground);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.unit {
+  margin-left: 6px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.description {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--thorp-accent);
+}
+
+.choice:has(input:focus-visible) {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 고를 수 없는 후보는 빼지 않고 흐리게 둔다. 낱말로도 알린다. */
+.choice[data-selectable='false'] {
+  color: var(--thorp-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.input {
+  width: min(100%, 180px);
+  padding: 7px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--thorp-warning);
+}
+
+.inputRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+}
+
+.problem {
+  margin: 0;
+  color: var(--thorp-warning);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.reset {
+  padding: 4px 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.reset:hover {
+  border-color: currentColor;
+}
