@@ -63,6 +63,7 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {
     public void afterSingletonsInstantiated() {
         int added = 0;
         int updated = 0;
+        int requests = 0;
         int responses = 0;
         for (NewsPublisherRegistry.Publisher entry : registry.publishers()) {
             Optional<NewsPublisher> existing = publishers.findByPublisherKey(entry.publisherKey());
@@ -91,17 +92,107 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {
                                         entry.enabled()));
                 added++;
             }
+            // 요청을 먼저 넣는다. 등록표에 둘 다 적혀 있을 때 이력이 실제 순서대로 쌓인다.
+            if (applyRequest(publisher, entry.permissionRequest())) {
+                requests++;
+            }
             if (applyPermission(publisher, entry.permission())) {
                 responses++;
             }
         }
+        reportPermissionProgress();
         // 주소는 남기지 않는다. 매체 키와 건수면 무엇이 반영됐는지 알 수 있다(spec FR-021).
         log.info(
-                "매체 등록표를 반영했다 version={} added={} updated={} responses={}",
+                "매체 등록표를 반영했다 version={} added={} updated={} requests={} responses={}",
                 registry.version(),
                 added,
                 updated,
+                requests,
                 responses);
+    }
+
+    /**
+     * 등록표에 적힌 허가 요청을 이력으로 반영한다(spec FR-015).
+     *
+     * <p><b>요청했는데 답이 없는 것과 아예 요청하지 않은 것은 다른 상태다.</b> 이 경로가 없으면 둘이 똑같이 {@code PENDING}으로 보이고, 프로젝트가
+     * 끝날 때 "우리가 요청은 했는가"에 답할 근거가 메일함에만 남는다.
+     *
+     * <p>회신과 같은 이유로 매체 행에 직접 쓰지 않고 이력을 통한다. 같은 요청을 두 번 넣지 않는 것도 같다 — 기동할 때마다 도는 코드라 그냥 두면 재시작 횟수만큼
+     * 이력이 불어난다.
+     *
+     * @return 이번에 새로 반영했으면 참.
+     */
+    private boolean applyRequest(
+            NewsPublisher publisher, NewsPublisherRegistry.PermissionRequest request) {
+        if (request == null) {
+            return false;
+        }
+        boolean alreadyRecorded =
+                permissions.findByPublisherId(publisher.getId()).stream()
+                        .anyMatch(
+                                event ->
+                                        event.eventType()
+                                                        == com.ssafy.thorp.news.domain.vo
+                                                                .PermissionEventType.REQUESTED
+                                                && event.occurredAt().equals(request.requestedAt())
+                                                && java.util.Objects.equals(
+                                                        event.reference(), request.reference()));
+        if (alreadyRecorded) {
+            return false;
+        }
+        permissions.appendAndApply(
+                NewsPublisherPermissionHistory.requested(
+                        publisher.getId(), request.requestedAt(), request.reference()));
+        return true;
+    }
+
+    /**
+     * PD-15가 어디까지 왔는지 기동 로그에 남긴다.
+     *
+     * <p>공개 게이트가 열렸는지는 배포할 때마다 확인하게 되는 값인데, 지금은 DB를 직접 봐야만 알 수 있다. 매체 키와 상태만 남기므로 가림 규칙을 어기지
+     * 않는다(spec FR-021).
+     *
+     * <p>여기서 실패해도 기동을 막지 않는다. 진행 상황을 못 적은 것 때문에 서비스가 안 뜨면 본말이 뒤집힌다.
+     */
+    private void reportPermissionProgress() {
+        try {
+            int allowed = 0;
+            int denied = 0;
+            int awaiting = 0;
+            int neverRequested = 0;
+            for (NewsPublisher publisher : publishers.findEnabled()) {
+                switch (publisher.getPermissionStatus()) {
+                    case ALLOWED -> allowed++;
+                    case DENIED -> denied++;
+                    default -> {
+                        boolean requested =
+                                permissions.findByPublisherId(publisher.getId()).stream()
+                                        .anyMatch(
+                                                event ->
+                                                        event.eventType()
+                                                                == com.ssafy.thorp.news.domain.vo
+                                                                        .PermissionEventType
+                                                                        .REQUESTED);
+                        if (requested) {
+                            awaiting++;
+                        } else {
+                            neverRequested++;
+                        }
+                    }
+                }
+            }
+            log.info(
+                    "매체 허가 진행(PD-15) allowed={} denied={} awaitingReply={} notRequested={}",
+                    allowed,
+                    denied,
+                    awaiting,
+                    neverRequested);
+            if (allowed == 0) {
+                log.info("허가된 매체가 없어 공개 조회는 준비 중 상태로 답한다(spec FR-016)");
+            }
+        } catch (RuntimeException e) {
+            log.warn("매체 허가 진행 상황을 남기지 못했다");
+        }
     }
 
     /**

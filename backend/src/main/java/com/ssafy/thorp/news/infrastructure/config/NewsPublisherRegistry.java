@@ -28,6 +28,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
      * @param rssUrl 공식 RSS 채널 주소. 서버 전용이며 응답·로그에 노출하지 않는다(spec FR-021).
      * @param enabled 수집 활성화 여부.
      * @param topicKeys 이 채널이 다루는 주제. 기사가 분류 값을 주지 않는 매체에만 적는다.
+     * @param permissionRequest 매체에 허가를 요청한 사실. 요청하지 않았으면 null이다.
      * @param permission 매체가 보낸 허가 회신. 아직 회신이 없으면 null이고 그 매체는 {@code PENDING}으로 남는다.
      */
     public record Publisher(
@@ -38,6 +39,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
             String rssUrl,
             boolean enabled,
             java.util.List<String> topicKeys,
+            PermissionRequest permissionRequest,
             Permission permission) {
 
         /** 채널 주제도 회신도 적지 않은 매체. */
@@ -57,6 +59,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
                     rssUrl,
                     enabled,
                     topicKeys,
+                    null,
                     null);
         }
 
@@ -91,6 +94,13 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
             if (!KEY.matcher(publisherKey).matches()) {
                 throw new IllegalArgumentException(
                         "publisherKey는 영문 소문자·숫자·하이픈만 쓴다: " + publisherKey);
+            }
+            // 답이 요청보다 먼저 올 수는 없다. 시각을 잘못 적으면 이력의 앞뒤가 뒤집혀 현재 상태가
+            // 요청(PENDING)으로 굳는다 — 허가받은 매체가 조용히 공개에서 빠진다.
+            if (permissionRequest != null
+                    && permission != null
+                    && permission.respondedAt().isBefore(permissionRequest.requestedAt())) {
+                throw new IllegalArgumentException("회신 시각이 요청 시각보다 빠르다: " + publisherKey);
             }
             registeredDomain = registeredDomain.toLowerCase(Locale.ROOT);
             String host = hostOf(rssUrl);
@@ -149,6 +159,27 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers) 
      * @param respondedAt 회신을 받은 시각. 같은 회신을 두 번 반영하지 않는 기준이 된다.
      * @param reference 회신의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.
      */
+    /**
+     * 매체에 허가를 요청한 사실(spec FR-015).
+     *
+     * <p><b>회신과 따로 적는다.</b> 요청했는데 답이 없는 것과 아예 요청하지 않은 것은 전혀 다른 상태인데, 회신만 적을 수 있으면 둘이 똑같이 빈칸으로 보인다.
+     * 프로젝트가 끝날 때 "우리가 요청은 했는가"에 답하려면 이 자리가 있어야 한다.
+     *
+     * <p>요청은 매체의 현재 상태를 {@code PENDING}으로 둔다. 요청했다는 것과 공개해도 된다는 것은 다르다.
+     *
+     * @param requestedAt 요청을 보낸 시각.
+     * @param reference 요청의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.
+     */
+    public record PermissionRequest(java.time.Instant requestedAt, String reference) {
+
+        public PermissionRequest {
+            java.util.Objects.requireNonNull(requestedAt, "requestedAt");
+            if (reference == null || reference.isBlank()) {
+                throw new IllegalArgumentException("reference는 비어 있을 수 없다. 요청의 근거를 적는다");
+            }
+        }
+    }
+
     public record Permission(
             com.ssafy.thorp.news.domain.vo.PermissionStatus status,
             java.util.List<com.ssafy.thorp.news.domain.vo.NewsAllowedField> allowedFields,
