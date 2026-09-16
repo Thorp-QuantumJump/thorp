@@ -43,3 +43,5 @@ Jenkins 재생성 동안 관리 화면과 웹훅 수신에 짧은 중단이 생�
   executor=2를 함께 복원하고 Jenkins만 재생성한다. 사용 중인 메모리보다 낮게 즉시 축소하지 않는다.
 
 관련 티켓: [S15P21E205-288](https://ssafy.atlassian.net/browse/S15P21E205-288)
+
+조사 근거와 적용 결과: [Notion 트러블슈팅](https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e)
