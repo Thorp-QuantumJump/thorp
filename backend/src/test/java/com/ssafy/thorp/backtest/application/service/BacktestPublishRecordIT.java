@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,7 +10,6 @@ import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,7 +40,6 @@ import org.springframework.transaction.support.TransactionTemplate;
         properties = {
             "spring.rabbitmq.listener.simple.auto-startup=false",
             "thorp.backtest.republish.enabled=false",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -94,7 +93,7 @@ class BacktestPublishRecordIT extends PostgresTestSupport {
                         mockMvc.perform(
                                         post("/backtests")
                                                 .with(csrf())
-                                                .header(CurrentRequester.DEV_HEADER, userId)
+                                                .with(as(userId))
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .content(body))
                                 .andExpect(status().isAccepted())

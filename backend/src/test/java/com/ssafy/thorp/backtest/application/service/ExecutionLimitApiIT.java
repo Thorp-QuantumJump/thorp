@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,7 +13,6 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -63,7 +63,6 @@ import org.springframework.transaction.support.TransactionTemplate;
             "thorp.backtest.limits.stale-run-seconds=300",
             "thorp.backtest.limits.cancel-grace-seconds=1",
             "thorp.backtest.limits.provisional=true",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -305,9 +304,7 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                 Integer.class,
                                 runId))
                 .isZero();
-        mockMvc.perform(
-                        get("/backtests/{id}", backtestId)
-                                .header(CurrentRequester.DEV_HEADER, user))
+        mockMvc.perform(get("/backtests/{id}", backtestId).with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("FAILED"))
                 .andExpect(jsonPath("$.data.failure.code").value("SYSTEM_FAILURE"))

@@ -16,7 +16,7 @@ spec의 Clarifications 13개는 "무엇을 보일지"를 정했다. 이 문서�
 
 - **Decision**: `backtest_request.requester_id`를 nullable로 완화하고, 요청자가 없는 요청은 `public_token`만으로 식별한다. 취소·재시도 권한은 "로그인 사용자는 `requester_id` 일치, 비로그인은 `public_token` 소지"로 판정한다. `CurrentRequester`는 요청자를 못 찾아도 예외를 던지지 않는 경로(`findRequesterId`)를 쓰고, 소유자 필터가 필요한 자리에서만 토큰을 확인한다.
 - **Rationale**: 004 research R-12가 이 경우를 미리 열어 두었다. 그 문서의 Alternatives에 "인증·006 spec에서 익명을 허용하기로 하면 컬럼을 nullable로 완화한다"고 적혀 있다. 005가 비로그인 실행·열람을 택했으므로 그 조건이 성립한다. 014 SC-005("로그인하지 않은 사용자가 전략 진단을 이용하는 시험 100%에서 인증이 강제되지 않는다")와도 이 방향이라야 맞는다.
-- **주의**: 현재 `CurrentRequester.requireRequesterId`는 `thorp.auth.trust-user-id-header`가 꺼져 있으면 무조건 `INTERNAL_ERROR`를 던진다. 즉 **지금 코드로는 결과 조회가 어떤 경로로도 동작하지 않는다.** 005 구현은 이 완화 없이는 화면을 붙일 수 없으므로 선행 작업이다.
+- ~~**주의**: 현재 `CurrentRequester.requireRequesterId`는 `thorp.auth.trust-user-id-header`가 꺼져 있으면 무조건 `INTERNAL_ERROR`를 던진다.~~ **해소됨(004 T017, 2026-09-16).** 요청자는 spec 014 로그인 세션에서 읽고, 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다. 005 화면은 로그인 세션으로 결과를 조회한다.
 - **Alternatives**: 비로그인 요청에 시스템 사용자 id를 부여하기 — 여러 사람의 요청이 한 사용자 아래 섞여 취소 권한을 판정할 수 없고, 원칙 VIII(개인 식별정보와 계산 기록 분리)의 취지와도 어긋난다.
 
 ## R-03 비로그인 결과의 만료

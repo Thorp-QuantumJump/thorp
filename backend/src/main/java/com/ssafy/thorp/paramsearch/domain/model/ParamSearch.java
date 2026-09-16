@@ -326,6 +326,15 @@ public class ParamSearch {
         return ownerUserId;
     }
 
+    /**
+     * 이 묶음을 바꿀 수 있는 사람인지.
+     *
+     * <p>소유자가 없는 묶음(인증 이전에 만들어진 행)은 누구의 것도 아니므로 아무도 바꾸지 못한다 — 비어 있음을 "누구나"로 읽으면 그 행들이 전부 열린다.
+     */
+    public boolean ownedBy(long userId) {
+        return ownerUserId != null && ownerUserId == userId;
+    }
+
     public List<String> getStrategyIds() {
         return strategyIds;
     }

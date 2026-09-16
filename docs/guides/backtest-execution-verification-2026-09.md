@@ -63,6 +63,7 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 - `peakRssP95Mb`가 null이다 — 워커 표본은 `/proc/self/statm`(Linux)만 읽고 이 검증은 Windows 호스트에서 돌렸다. 운영(Linux 컨테이너)에서는 채워진다. 컨테이너로 돌린 검증은 T013 뒤 별도.
 - S12(b) `failure.message`가 null이다 — `CANCELLED`의 `failure.code`만 채우고 문장은 없다. 화면이 코드로 문장을 만들면 되지만, 계약이 `message`를 약속하는지 API README를 다시 볼 것.
 - quickstart 초판의 `Authorization: Bearer $TOKEN`은 이 저장소에 없다 — spec 014의 세션·CSRF 경계는 있고 요청자 식별은 `X-User-Id`(개발용). 준비 절을 고쳤다.
+- **[2026-09-16 갱신]** 위 표와 이 줄의 `X-User-Id` 경로는 T017(`S15P21E205-287`)에서 없어졌다 — 요청자는 로그인 세션(`POST /auth/sessions` → `THORP_SESSION` 쿠키)에서 읽는다. 이 문서는 2026-09-15 실행 기록이라 당시 절차를 그대로 남긴다. 다시 검증할 때는 004 quickstart 준비 절의 `login` 함수를 쓴다.
 - 두 워커가 같은 호스트에서 돌면 `S6`에서 어느 쪽이 먼저 집는지는 push(single)가 항상 이긴다 — flex는 1초 폴링이라 단건을 "돕는" 것은 single이 바쁠 때만이다. 설계대로다(R-20).
 
 ## 한계 — 이 기록이 보증하지 않는 것

@@ -55,6 +55,9 @@ import org.springframework.transaction.support.TransactionTemplate;
         })
 class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
 
+    /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
+    private static final long OWNER = 7L;
+
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
     @Autowired private ParamSearchService paramSearchService;
@@ -99,7 +102,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @DisplayName("취소로 끝난 묶음도 기록이 덜하지 않다")
     void aPartialBundleCarriesEveryRecordItemToo() {
         ParamSearch accepted = accept();
-        cancelService.cancel(accepted.getSearchId().value());
+        cancelService.cancel(accepted.getSearchId().value(), OWNER);
         ParamSearch search = finishEverything(accepted);
 
         assertThat(search.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);
@@ -112,7 +115,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @DisplayName("계산하지 않은 후보도 사유를 남긴다")
     void uncomputedCandidatesKeepTheirReason() {
         ParamSearch accepted = accept();
-        cancelService.cancel(accepted.getSearchId().value());
+        cancelService.cancel(accepted.getSearchId().value(), OWNER);
         ParamSearch search = finishEverything(accepted);
 
         List<SearchCandidate> uncomputed =
@@ -202,7 +205,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
         ParamSearchResult accepted =
                 paramSearchService.create(
                         new CreateParamSearchCommand(
-                                null,
+                                OWNER,
                                 UNIVERSE,
                                 SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
