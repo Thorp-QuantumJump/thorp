@@ -343,6 +343,25 @@ def parse_optional_decimal(text: object, field_name: str, where: str) -> Decimal
     return parsed if parsed > 0 else None
 
 
+def parse_optional_signed_decimal(text: object, field_name: str, where: str) -> Decimal | None:
+    """부호가 있는 값을 :class:`Decimal` 로 바꾼다. 빈 문자열만 값이 없다는 뜻이다.
+
+    :func:`parse_optional_decimal` 과 **다른 점이 둘**이다. 음수를 거부하지 않고, ``0``을
+    ``None``으로 바꾸지 않는다. 전일 대비(``CMPPREVDD_PRC``)처럼 내려간 날은 음수이고 보합인
+    날은 정확히 0인 값에 쓴다 — 여기서 0을 결측으로 바꾸면 "변동이 없었다"가 "모른다"가 되어
+    분배금을 되살릴 수 없다.
+
+    빈 문자열은 휴장일에서 나온다(2026-09-06 일요일 픽스처에서 확인). 그날은 종가도 비어 있어
+    행 자체가 만들어지지 않는다.
+    """
+    if _blank(text):
+        return None
+    try:
+        return Decimal(str(text).replace(",", "").strip())
+    except (InvalidOperation, ValueError) as error:
+        raise KrxResponseError(f"{where}의 {field_name}이(가) 숫자가 아니다: {text!r}") from error
+
+
 def parse_optional_int(text: object, field_name: str, where: str) -> int | None:
     if _blank(text):
         return None
@@ -364,6 +383,12 @@ class DailyQuote:
     직전 종가로 채우는 것이므로(contracts/market-dataset.md 「거래정지 처리」), 기준가를 그대로
     쓰지 않고 :mod:`data_pipeline.gaps` 가 직전 종가로 바꾼다. 여기서 바꾸지 않는 이유는
     직전 거래일을 알려면 거래일 달력이 필요하고, 그 달력은 지수 자료가 소유하기 때문이다.
+
+    ``previous_day_change``는 원천의 ``CMPPREVDD_PRC``(전일 대비)다. 종가끼리 뺀 값과 같아
+    보이지만 **거래소가 기준가에 대고 계산한 값**이라 분배락일에는 둘이 어긋나고, 어긋난 크기가
+    곧 주당 분배금이다(pd01-etf-candidates.md §3). 그래서 이 열을 버리지 않고 담는다. 원천이
+    이 값을 주지 않은 날(휴장일의 빈 문자열)에만 ``None``이며, 보합인 날은 ``None``이 아니라
+    ``0``이다.
     """
 
     instrument_id: str
@@ -374,6 +399,7 @@ class DailyQuote:
     low: Decimal | None
     volume: int
     value: int
+    previous_day_change: Decimal | None = None
 
     @property
     def traded(self) -> bool:
@@ -412,6 +438,9 @@ def normalize_etf_row(row: Mapping[str, str], *, expected_date: date) -> DailyQu
         low=parse_optional_decimal(row.get("TDD_LWPRC"), "TDD_LWPRC", where),
         volume=volume,
         value=value,
+        previous_day_change=parse_optional_signed_decimal(
+            row.get("CMPPREVDD_PRC"), "CMPPREVDD_PRC", where
+        ),
     )
     if quote.traded:
         high, low, opened = quote.high, quote.low, quote.open
