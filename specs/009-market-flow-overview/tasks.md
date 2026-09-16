@@ -25,7 +25,7 @@ T015가 이 문제를 먼저 막는다.
 
 | 묶음 | Jira Task 제목 | T항목 | 근거 요구사항 | Jira |
 |---|---|---|---|---|
-| WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | 미발급 |
+| WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |
 | WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | 미발급 |
 | WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |
 | WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |
@@ -62,30 +62,30 @@ T015가 이 문제를 먼저 막는다.
 **Independent Test**: 예시 자료 fixture를 넣고 포트가 7개 분야의 T_g와 지표별 3개월 경로를 돌려주는지,
 결측이 결측으로 남는지 확인한다. 화면과 API 없이 검증할 수 있다.
 
-- [ ] T001 [WB01] [P] [US2] [BE] 지표 스냅샷 포트 정의 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java`) · Jira 미발급
+- [x] T001 [WB01] [P] [US2] [BE] 지표 스냅샷 포트 정의 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java`) · Jira `S15P21E205-268`
   - 조회 넷을 둔다: `loadFieldReferenceMonths()`, `loadRecentPath(indicatorId, t)`, `loadIndicatorMeta(registryVersion)`, `loadCollectionState()` ([data-model.md](data-model.md) "읽기 포트")
   - **결측은 결측으로 돌려준다.** 포트가 빈 값을 채우면 008 FR-008과 원칙 VI를 009가 어기게 된다
   - `application/port`에는 인터페이스만 둔다. 구현체는 `infrastructure`에 둔다 (backend/CLAUDE.md, ArchUnit 규칙)
   - **시그니처를 확정하기 전에 008 담당자와 맞춘다.** 이 네 조회는 008 spec을 읽고 009가 혼자 정한 모양이라, 008이 다른 형태로 만들면 합류 시점에 어댑터 교체가 아니라 포트 재설계가 된다. 확인할 것은 ① T_g와 지표별 최신 확보월을 009가 계산하지 않고 받는가 ② 임의 기준월 t의 3개월 경로를 조회 단위로 주는가 ③ 수집 실패·예시 자료 여부를 **지표 단위로** 구분해 주는가 ([research.md](research.md) R2 합류 위험)
-- [ ] T002 [WB01] [P] [US2] [BE] 도메인 모델과 VO (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/`, `backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/`) · Jira 미발급
+- [x] T002 [WB01] [P] [US2] [BE] 도메인 모델과 VO (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/`, `backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/`) · Jira `S15P21E205-268`
   - `MarketFlowField`, `IndicatorDisplay`, `AfterReferenceMonthRelease`, `PathPoint`, `FieldStatus`를 만든다 ([data-model.md](data-model.md))
   - **분야 전체를 좋고 나쁨으로 요약하는 필드를 두지 않는다.** 점수·등급·신호등에 해당하는 값이 모델에 없어야 FR-003·SC-002를 구조로 막을 수 있다
   - `FieldStatus`는 `READY`·`EXAMPLE`·`EMPTY`·`COLLECTION_FAILED` 넷뿐이다. `STALE`·`DELAYED`를 두지 않는다 ([research.md](research.md) R6)
   - `domain`은 Spring·JPA·Jackson을 import하지 않는다 (backend/CLAUDE.md)
-- [ ] T003 [WB01] [P] [US3] [BE] 예시 자료 fixture (`backend/src/main/resources/marketflow/macro-indicators-example-v1.json`) · Jira 미발급
+- [x] T003 [WB01] [P] [US3] [BE] 예시 자료 fixture (`backend/src/main/resources/marketflow/macro-indicators-example-v1.json`) · Jira `S15P21E205-268`
   - 008 FR-001의 7개 분야 17개 지표를 모두 담고, 지표마다 이름·단위·최근 3개월 값·대상월·발표일·출처·작성기관을 둔다
   - 분야마다 T_g가 다른 경우와 T_g 이후 발표가 있는 지표를 최소 한 건씩 넣는다. FR-008을 테스트할 자료가 여기 없으면 T013이 검증할 대상을 못 만든다
   - 파일 이름에 버전을 박는다. 008이 실제 등록표를 내면 이 파일은 지우지 않고 테스트 fixture로 남긴다
-- [ ] T004 [WB01] [US3] [BE] 예시 자료 어댑터 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java`, 같은 경로의 테스트) · Jira 미발급
+- [x] T004 [WB01] [US3] [BE] 예시 자료 어댑터 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java`, 같은 경로의 테스트) · Jira `S15P21E205-268`
   - T001의 포트를 T003의 fixture로 구현한다
   - 이 어댑터가 돌려주는 자료에는 예시 표시가 붙는다. 예시 자료를 `READY`로 표현하지 않는다 (FR-014, 008 FR-022)
   - 008이 실제 저장소를 만들면 **이 클래스만 교체한다.** 포트 시그니처와 읽기 모델은 그대로 둔다
   - 테스트: 7개 분야가 모두 오는지, 결측 지표의 값이 null로 남는지, 분야별 T_g가 서로 다를 수 있는지
-- [ ] T005 [WB01] [US1] [BE] 읽기 모델 마이그레이션 (`backend/src/main/resources/db/migration/V20260916xxxxxx__market_flow_field_summary.sql`) · Jira 미발급
+- [x] T005 [WB01] [US1] [BE] 읽기 모델 마이그레이션 (`backend/src/main/resources/db/migration/V20260916xxxxxx__market_flow_field_summary.sql`) · Jira `S15P21E205-268`
   - 컬럼 구성은 [data-model.md](data-model.md) "저장 — 읽기 모델 한 벌"을 따른다
   - PK에 `field_id`·`registry_version`·`dataset_version`을 넣는다. 버전이 PK에 없으면 같은 버전으로 다시 만들었을 때 같은 값이 나오는지 보장할 자리가 사라진다 (원칙 VIII)
   - 파일명의 타임스탬프는 만들 때의 실제 시각으로 정한다. 기존 마이그레이션 명명 규칙(`V20260916104500__...`)을 따른다
-- [ ] T006 [WB01] [US1] [BE] 읽기 모델 적재·조회 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/`, `backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/`) · Jira 미발급
+- [x] T006 [WB01] [US1] [BE] 읽기 모델 적재·조회 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/`, `backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/`) · Jira `S15P21E205-268`
   - `application/repository`에 인터페이스, `infrastructure/persistence`에 `@Entity`와 구현을 둔다 (backend/CLAUDE.md)
   - 갱신은 등록표 버전 또는 자료 버전이 바뀔 때만 한다. 사용자 요청이 재계산을 부르지 않는다 ([research.md](research.md) R7)
   - 테스트: Testcontainers PostgreSQL 16에서 같은 `(registry_version, dataset_version)`으로 두 번 적재하면 행이 같은지
