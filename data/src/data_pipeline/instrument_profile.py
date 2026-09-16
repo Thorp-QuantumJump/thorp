@@ -74,7 +74,7 @@ _WON: Final[Decimal] = Decimal(1)
 #: 비중 자리수. 계약 예시(``"0.2431"``)와 같은 소수 넷째 자리다.
 _WEIGHT_EXPONENT: Final[Decimal] = Decimal("0.0001")
 
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: 파일 입력이 받는 키. 여기 없는 키는 거부한다 — 특히 추적 차이(PD-21)가 조용히 섞이지 않게 한다.
 #: ``source_attribution``을 받지 않는 이유는 그 값이 종목마다 다른 자료가 아니라 원천이 정해 주는
@@ -195,7 +195,7 @@ def _require_nonnegative_integer(value: object, field: str) -> Decimal:
 
 def require_instrument_id(value: object) -> str:
     if not isinstance(value, str) or not INSTRUMENT_ID_PATTERN.match(value):
-        raise InstrumentProfileError(f"instrument_id는 {{6자리}}.XKRX 형식이어야 한다: {value!r}")
+        raise InstrumentProfileError(f"instrument_id는 {{6글자}}.XKRX 형식이어야 한다: {value!r}")
     return value
 
 

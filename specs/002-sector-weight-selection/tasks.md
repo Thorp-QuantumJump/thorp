@@ -180,7 +180,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - `distributeEven(codes)`: `q = floor(1000 / n)`, `r = 1000 - q * n`을 구해 `r`을 **표시 순서상 첫 번째** 섹터에 몰아준다. 초깃값 자동 채움과 '동일하게 나누기'가 같은 함수를 쓴다 (FR-005, FR-007, research.md 결정 2)
   - 입력 파싱은 data-model.md 「사용자 입력 파싱」 표 그대로다. `33.4`는 `334`, `33`은 `330`, `0`은 `0`으로 받는다. `33.45`처럼 소수 둘째 자리 이하와 음수·100 초과·숫자가 아닌 값은 **받지 않고** 그 자리에 한 문장으로 알린다. **반올림하거나 상한으로 잘라 넣지 않는다** (원칙 VI, FR-016)
   - 빈 칸은 0으로 보지 않고 "아직 입력 중"으로 다룬다. 확정 시점에 이전 값을 그대로 둔다
-  - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `167/166×5`, 7개면 `144/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)
+  - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `170/166×5`, 7개면 `148/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)
   - 선행: T005(이 파일이 `.test.ts`다), T008(표시 순서)
 - [ ] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급
   - `sessionStorage` 항목 **하나**에 JSON으로 저장한다. 키는 `thorp.diagnosis.sectorSelection`이며 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다 (research.md 결정 3)
@@ -404,3 +404,54 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5
 - 002는 `frontend/` 밖을 고치지 않는다. `backend/`·`worker/`·`data/`·`infra/`에 변경이 없다 (research.md 결정 4)
 - 구현 중 묶음 범위가 달라지면 그 사유와 새 구성을 MR 본문에 남긴다 (constitution 「Jira 연계」)
 - 화면 문구는 이 tasks가 정하지 않는다. 각 task는 문장이 놓일 자리와 나타나는 조건까지 만든다
+
+---
+
+## Phase 6: Convergence (M6: 앞 묶음이 남긴 정리)
+
+`/speckit-converge`가 M1·M2가 병합·커밋된 상태의 코드를 spec·plan·tasks와 맞대어 본 결과다. **M3~M5가 아직 없는 것은 예정된 순서이므로 여기 담지 않는다.** 아래 두 항목은 M1·M2를 하면서 tasks.md 밖에서 함께 넣은 변경이 남긴 뒷정리이며, 근거를 항목마다 적었다. 기존 T001~T023의 번호와 내용은 건드리지 않았다.
+
+검증 기준선(2026-09-16, 이 브랜치): `npm run lint` 오류 0(경고 19, 모두 기존 차트·UI 파일), `npm run build` 통과, `npm test` Vitest 29파일 189건 통과·`skipped` 0, `test:legacy` 13건 통과·`skipped` 0. `src/diagnosis/`의 테스트가 수집 목록에 있다(quickstart 시나리오 0 충족). 아래 두 항목을 마친 뒤에도 이 숫자가 줄지 않아야 한다.
+
+- [ ] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급
+  - **남은 일이라고 판단한 근거**: 이 브랜치의 커밋 `80e1900`이 `AppHeader`에서 '대시보드'와 '백테스트'를 뺐고 그 사유를 "003·005가 완성되면 대체될 임시 화면"이라고 적었다. 그런데 같은 첫 화면이 여전히 그 두 화면을 소개 경로로 안내한다. `LandingSections.tsx:171`이 `/dashboard`로("시장 분석 보러 가기"), `LandingSections.tsx:256`과 `AlgorithmOrbit.tsx:203`이 `/backtest`로 보낸다. 메뉴에서 뺀 화면을 첫 화면이 계속 권하면 두 판단이 서로를 무효로 만든다
+  - 더 좁게 어긋난 자리가 하나 있다. 헤더의 '시장 흐름' 메뉴는 `/home`인데 첫 화면의 "시장 분석 보러 가기"는 `/dashboard`다. **같은 성격의 목적지가 둘로 갈렸다.** research.md 결정 5가 "메뉴의 목적지는 이미 화면이 있으면 그 경로로 연결한다(시장 흐름은 `/home`)"고 정한 자리다
+  - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 "머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다
+  - `/dashboard`·`/backtest` 경로 자체는 지우지 않는다. 003·005가 소유할 자리다 (research.md 결정 5)
+  - 테스트: `LandingPage.test.tsx`의 "소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다
+- [ ] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급
+  - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다
+  - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 "백엔드 DTO와 1:1 대응 타입"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다
+  - **지금 고치는 편이 싸다.** M5의 T021이 `INSTRUMENT_PROFILE_NOT_READY`로 같은 경로를 한 번 더 쓰고, 003·005도 각자 조회를 만들 때 같은 import를 되풀이한다. 도메인이 늘수록 되돌리는 비용만 커진다
+  - 옮기는 것은 **자리뿐이고 동작은 그대로 둔다.** 열린 `ApiErrorCode`와 닫힌 `ServiceApiErrorCode`를 나눈 구조(`1a5f483`이 세운 것)를 흔들지 않는다. `AuthApiErrorCode`·`AuthFieldError`·`AuthApiError`는 인증의 것이므로 `types/auth.ts`에 남긴다
+  - 옮긴 뒤 `types/auth.ts`가 `types/sector.ts`를 가져오지 않게 된다. 새 도메인이 오류 이름을 더할 때 인증 파일을 고치지 않아도 되는지 함께 확인한다
+  - 테스트: 새 검사를 만들기보다 기존 `src/api/sectors.test.ts`와 `src/api/auth.test.ts`가 그대로 통과하는지로 받는다. 타입 자리 이동이라 `npm run build`(`tsc -b`)가 실질적인 검사다
+
+**Checkpoint**: 첫 화면의 메뉴와 소개 섹션이 같은 곳을 가리키고, 공용 봉투 타입이 도메인 파일 밖에 있다. 위 검증 기준선의 숫자가 그대로다.
+
+---
+
+## Phase 7: Convergence (M7: M3까지 맞대어 본 결과)
+
+`/speckit-converge`가 M1·M2·M3이 구현된 상태의 코드를 spec·plan·data-model·contracts와 맞대어 본
+결과다. **M4·M5가 아직 없는 것은 예정된 순서이므로 여기 담지 않는다.** M6의 T025(공용 봉투 타입
+분리)는 이미 처리되어 `frontend/src/types/api.ts`가 있고 `api/sectors.ts`가 그 파일에서 봉투를
+가져오므로 다시 세우지 않는다. M6의 T024는 아직 그대로 남아 있으므로(첫 화면 소개 섹션이 여전히
+`/dashboard`·`/backtest`를 가리킨다) 여기서 되풀이하지 않는다. 기존 T001~T025의 번호와 내용은
+건드리지 않았다.
+
+검증 기준선(2026-09-16, 이 브랜치에서 직접 돌린 값): `npm run lint` 오류 0(경고 19, 모두 기존
+차트·UI 파일), `npm run build` 통과, `npm test`의 Vitest 34파일 301건 통과·`skipped` 0,
+`test:legacy` 13건 통과·`skipped` 0. `src/diagnosis/`의 테스트가 수집 목록에 있고 T005의 수집
+가드가 통과한다(quickstart 시나리오 0 충족). 아래 항목을 마친 뒤에도 이 숫자가 줄지 않아야 한다.
+
+- [x] T026 [M7] [US1] [FE] 보관된 값이 '아직 모르는 새 형식'일 때 쓰는 쪽의 실제 동작을 적어 둔 것과 맞춘다 (`frontend/src/diagnosis/SectorSelectionProvider.tsx`, `frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/SectorSelectionProvider.test.tsx`) · FR-014 / [contracts/selection-handoff.md](./contracts/selection-handoff.md) 「형식이 바뀔 때」 / 원칙 VI (contradicts) · Jira 미발급
+  - **남은 일이라고 판단한 근거**: `selectionStorage.ts`의 `newerFormat` 분기 주석이 "**이 값을 지우지도 않는다.** 보관된 값을 지키는 것이 이 분기의 목적이라 **쓰는 쪽도 함께 막는다**"고 적었는데, 쓰는 쪽에는 그 검사가 없다. `SectorSelectionProvider.tsx`의 보관 효과는 `restored.problem`을 보지 않으므로, 사용자가 섹터를 하나 고르는 순간 `writeStoredSelection`이 `version: 1` 페이로드로 그 값을 덮어쓴다. **적어 둔 설명과 실제 동작이 다르다**
+  - 지금 있는 검사가 이것을 잡지 못한다. `SectorSelectionProvider.test.tsx`의 "화면이 뜨는 것만으로는 보관된 값을 건드리지 않는다"는 **렌더 직후만** 본다. 사용자가 한 번이라도 고친 뒤의 저장소를 보는 검사가 없어 어긋남이 조용히 남았다
+  - 어느 쪽으로 맞출지는 이 task가 미리 정하지 않는다. **(가)** 주석대로 `newerFormat`인 동안 쓰기를 막는다. **(나)** 막지 않기로 하고 "쓰는 쪽도 함께 막는다"는 문장을 지운다. 계약이 요구하는 것은 "그 페이로드를 쓰지 않고 빈 상태로 시작하되 한 문장으로 알린다"까지이고 보존까지는 요구하지 않으므로 **(나)도 계약 위반이 아니다.** 다만 틀린 설명을 남겨 두는 것은 설명이 없는 것보다 나쁘다
+  - (가)를 고르면 그 탭에서 사용자가 넣은 값은 메모리에만 남는다. 저장소가 막힌 환경과 같은 동작이고 spec Edge Cases가 이미 허용한 상태이므로 새 요구사항이 생기지 않는다. 그 사실을 화면의 `restoreProblem` 문장에 담을지는 문구가 확정될 때 함께 본다
+  - **처리함 (2026-09-16, M3 묶음 안에서). (나)를 골랐다.** 지키려는 것은 화면이 열리는 것만으로 남의 값이 지워지는 일이지 사용자가 방금 한 행동이 아니다. (가)를 고르면 그 탭에서 사용자가 넣은 값이 새로고침에 조용히 사라지는데, 사용자 입력을 말없이 잃는 쪽이 더 나쁘다. 주석을 실제 동작에 맞게 고치고, "읽지 못한 형식이라도 사용자가 값을 넣으면 그 값을 보관한다"를 `SectorSelectionProvider.test.tsx`의 검사로 고정했다. 이 판단이 뒤집히면 그 검사가 실패한다
+  - 테스트: 어느 쪽을 고르든 "보관된 값이 새 형식일 때 사용자가 섹터를 고른 뒤 저장소가 어떻게 되는가"를 값으로 고정하는 검사를 하나 둔다. 검사 없이 주석만 고치면 다음에 같은 어긋남이 조용히 돌아온다
+  - 선행 없음. M4·M5와 파일이 겹치지 않으므로 그 묶음과 병행할 수 있다
+
+**Checkpoint**: 보관된 값의 형식이 앞설 때 쓰는 쪽이 어떻게 움직이는지가 코드와 설명에서 같은 말을 하고, 그 동작을 고정하는 검사가 하나 있다. 위 검증 기준선의 숫자가 그대로다.

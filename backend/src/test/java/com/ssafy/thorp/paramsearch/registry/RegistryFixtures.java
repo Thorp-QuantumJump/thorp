@@ -1,19 +1,23 @@
 package com.ssafy.thorp.paramsearch.registry;
 
-import com.ssafy.thorp.paramsearch.application.port.AllowedRange;
-import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
-import com.ssafy.thorp.paramsearch.application.port.ValidationVerdict;
-import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
+import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
+import com.ssafy.thorp.strategy.application.port.AnalysisConditionRegistry;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.application.port.ValidationRule;
+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;
+import com.ssafy.thorp.strategy.application.port.WarmupRule;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
+import java.util.function.UnaryOperator;
 
 /**
  * 테스트용 등록표 fixture(T127).
@@ -26,6 +30,16 @@ import java.util.function.BiPredicate;
  */
 public final class RegistryFixtures {
 
+    private static final String DEFAULT_TARGET_WEIGHT_SOURCE = "COMPUTED";
+
+    /** 분석 조건은 007 검증의 대상이 아니다. 포트가 null을 돌려주지 않도록 최소값만 채운다. */
+    private static final AnalysisConditionRegistry FIXTURE_CONDITIONS =
+            new AnalysisConditionRegistry(
+                    new AnalysisCondition(AllowedRange.between(1, 100, 1), 10, "픽스처 단위", null),
+                    new AnalysisCondition(AllowedRange.between(1, 100, 1), 10, "픽스처 단위", null),
+                    new AnalysisCondition(
+                            AllowedRange.ofValues(List.of(0, 1, 3)), 1, "픽스처 단위", null));
+
     private RegistryFixtures() {}
 
     public static Builder registry(String version) {
@@ -37,6 +51,7 @@ public final class RegistryFixtures {
         return new ParameterAxis(
                 name,
                 name + " 라벨",
+                null,
                 null,
                 searchValues,
                 searchValues.get(0),
@@ -82,7 +97,7 @@ public final class RegistryFixtures {
         return new FixtureRegistry("FIXTURE-BROKEN", List.of(), Map.of(), null) {
             @Override
             public ValidationVerdict validate(
-                    String strategyId, ParameterCombination combination, SearchContext context) {
+                    String strategyId, Map<String, Object> parameters, SearchContext context) {
                 throw new IllegalStateException("registry down");
             }
         };
@@ -101,16 +116,78 @@ public final class RegistryFixtures {
 
         public Builder strategy(String strategyId, ParameterAxis... axes) {
             strategies.add(
-                    new StrategyRegistration(strategyId, strategyId + " 이름", null, List.of(axes)));
+                    new StrategyRegistration(
+                            strategyId,
+                            strategyId + " 이름",
+                            null,
+                            List.of(axes),
+                            true,
+                            null,
+                            DEFAULT_TARGET_WEIGHT_SOURCE));
             rules.computeIfAbsent(strategyId, key -> new ArrayList<>());
             return this;
+        }
+
+        /** 그 전략의 활성 여부. 지정하지 않으면 활성이다. */
+        public Builder active(String strategyId, boolean active) {
+            return replace(
+                    strategyId,
+                    before ->
+                            new StrategyRegistration(
+                                    before.strategyId(),
+                                    before.name(),
+                                    before.description(),
+                                    before.axes(),
+                                    active,
+                                    before.warmup(),
+                                    before.targetWeightSource()));
+        }
+
+        /** 그 전략의 워밍업 산출 규칙. 지정하지 않으면 워밍업이 없다(0이다). */
+        public Builder warmup(String strategyId, List<Object> sum) {
+            return replace(
+                    strategyId,
+                    before ->
+                            new StrategyRegistration(
+                                    before.strategyId(),
+                                    before.name(),
+                                    before.description(),
+                                    before.axes(),
+                                    before.active(),
+                                    new WarmupRule(sum),
+                                    before.targetWeightSource()));
+        }
+
+        /** 그 전략의 목표 비중 출처. 지정하지 않으면 {@code COMPUTED}다. */
+        public Builder targetWeightSource(String strategyId, String targetWeightSource) {
+            return replace(
+                    strategyId,
+                    before ->
+                            new StrategyRegistration(
+                                    before.strategyId(),
+                                    before.name(),
+                                    before.description(),
+                                    before.axes(),
+                                    before.active(),
+                                    before.warmup(),
+                                    targetWeightSource));
+        }
+
+        private Builder replace(String strategyId, UnaryOperator<StrategyRegistration> change) {
+            for (int i = 0; i < strategies.size(); i++) {
+                if (strategies.get(i).strategyId().equals(strategyId)) {
+                    strategies.set(i, change.apply(strategies.get(i)));
+                    return this;
+                }
+            }
+            throw new IllegalArgumentException("fixture has no such strategy: " + strategyId);
         }
 
         /** 유효성 규칙. 조건이 참이면 위반이다 — 등록표가 판정을 소유한다는 계약을 fixture도 그대로 따른다. */
         public Builder rule(
                 String strategyId,
                 String reasonCode,
-                BiPredicate<ParameterCombination, SearchContext> violated) {
+                BiPredicate<Map<String, Object>, SearchContext> violated) {
             rules.computeIfAbsent(strategyId, key -> new ArrayList<>())
                     .add(new FixtureRule(reasonCode, violated));
             return this;
@@ -128,7 +205,7 @@ public final class RegistryFixtures {
     }
 
     private record FixtureRule(
-            String reasonCode, BiPredicate<ParameterCombination, SearchContext> violated) {}
+            String reasonCode, BiPredicate<Map<String, Object>, SearchContext> violated) {}
 
     private static class FixtureRegistry implements ParameterRegistryPort {
 
@@ -154,8 +231,27 @@ public final class RegistryFixtures {
         }
 
         @Override
+        public boolean provisional() {
+            return version != null && version.startsWith("PROVISIONAL-");
+        }
+
+        @Override
         public List<StrategyRegistration> activeStrategies() {
-            return strategies;
+            return strategies.stream().filter(StrategyRegistration::active).toList();
+        }
+
+        /**
+         * fixture의 규칙은 {@link BiPredicate}라 조건을 밖으로 내보낼 형태가 아니다. 규칙 목록을 읽는 쪽(003 조회 API)의 검증은 실제
+         * 로더로 하고 여기서는 빈 목록을 돌려준다.
+         */
+        @Override
+        public List<ValidationRule> rules(String strategyId) {
+            return List.of();
+        }
+
+        @Override
+        public AnalysisConditionRegistry analysisConditions() {
+            return FIXTURE_CONDITIONS;
         }
 
         @Override
@@ -167,9 +263,9 @@ public final class RegistryFixtures {
 
         @Override
         public ValidationVerdict validate(
-                String strategyId, ParameterCombination combination, SearchContext context) {
+                String strategyId, Map<String, Object> parameters, SearchContext context) {
             for (FixtureRule rule : rules.getOrDefault(strategyId, List.of())) {
-                if (rule.violated().test(combination, context)) {
+                if (rule.violated().test(parameters, context)) {
                     return ValidationVerdict.violation(
                             rule.reasonCode(), rule.reasonCode() + " 위반입니다");
                 }

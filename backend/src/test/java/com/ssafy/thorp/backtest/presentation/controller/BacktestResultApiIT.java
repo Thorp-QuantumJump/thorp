@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.presentation.controller;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,7 +23,6 @@ import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -62,7 +62,6 @@ import org.springframework.transaction.support.TransactionTemplate;
             "spring.rabbitmq.connection-timeout=1s",
             "spring.rabbitmq.listener.simple.auto-startup=false",
             "thorp.backtest.republish.enabled=false",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -194,7 +193,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
 
     private JsonNode actualData(String url) throws Exception {
         String body =
-                mockMvc.perform(get(url).header(CurrentRequester.DEV_HEADER, requesterId))
+                mockMvc.perform(get(url).with(as(requesterId)))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -285,14 +284,12 @@ class BacktestResultApiIT extends PostgresTestSupport {
                         "/positions?date=2025-01-02",
                         "/weights",
                         "/exceptions")) {
-            mockMvc.perform(
-                            get("/backtests/" + id + path)
-                                    .header(CurrentRequester.DEV_HEADER, requesterId))
+            mockMvc.perform(get("/backtests/" + id + path).with(as(requesterId)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value("RESULT_NOT_READY"));
         }
         // 상세는 200이고 config만 있다
-        mockMvc.perform(get("/backtests/" + id).header(CurrentRequester.DEV_HEADER, requesterId))
+        mockMvc.perform(get("/backtests/" + id).with(as(requesterId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andExpect(jsonPath("$.data.config.strategyId").value("MA_CROSSOVER"))
@@ -304,7 +301,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
     void failedJobExposesErrorButNotSubResources() throws Exception {
         String id = requestFor(failedJob());
 
-        mockMvc.perform(get("/backtests/" + id).header(CurrentRequester.DEV_HEADER, requesterId))
+        mockMvc.perform(get("/backtests/" + id).with(as(requesterId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("FAILED"))
                 .andExpect(jsonPath("$.data.failure.code").value("DATA_INSUFFICIENT"))
@@ -317,9 +314,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
                         "/positions?date=2025-01-02",
                         "/weights",
                         "/exceptions")) {
-            mockMvc.perform(
-                            get("/backtests/" + id + path)
-                                    .header(CurrentRequester.DEV_HEADER, requesterId))
+            mockMvc.perform(get("/backtests/" + id + path).with(as(requesterId)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value("BACKTEST_FAILED"));
         }
@@ -347,9 +342,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
                         "/positions?date=2025-01-22",
                         "/weights",
                         "/exceptions")) {
-            mockMvc.perform(
-                            get("/backtests/" + id + path)
-                                    .header(CurrentRequester.DEV_HEADER, requesterId))
+            mockMvc.perform(get("/backtests/" + id + path).with(as(requesterId)))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"));
         }
@@ -388,9 +381,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
                         "/positions?date=2025-01-02",
                         "/weights",
                         "/exceptions")) {
-            mockMvc.perform(
-                            get("/backtests/" + missing + path)
-                                    .header(CurrentRequester.DEV_HEADER, requesterId))
+            mockMvc.perform(get("/backtests/" + missing + path).with(as(requesterId)))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
         }

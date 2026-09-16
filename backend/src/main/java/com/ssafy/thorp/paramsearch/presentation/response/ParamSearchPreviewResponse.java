@@ -1,6 +1,7 @@
 package com.ssafy.thorp.paramsearch.presentation.response;
 
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
 import java.time.LocalDate;
 import java.util.List;
 

@@ -106,7 +106,7 @@ class BaselineAbsenceTest {
 
     /** 임시 등록표 파일에서 전략 ID만 긁는다. YAML 파서를 끌어오지 않는 이유는 이 검증이 값 하나만 쓰기 때문이다. */
     private static List<String> registryStrategyIds() throws IOException {
-        Path registry = Path.of("src/main/resources/registry/parameter-registry-provisional.yml");
+        Path registry = Path.of("src/main/resources/registry/parameter-registry.yml");
         try (Stream<String> lines = Files.lines(registry, StandardCharsets.UTF_8)) {
             return lines.map(String::strip)
                     .filter(line -> line.startsWith("- id:"))

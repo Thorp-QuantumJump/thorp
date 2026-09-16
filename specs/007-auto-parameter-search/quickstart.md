@@ -15,6 +15,12 @@
 등록표 데이터는 `backend/src/main/resources/registry/parameter-registry-provisional.yml`에 있다.
 축·후보값·기본값을 바꿔 보려면 그 파일만 고친다. 007 코드에는 전략·파라미터값이 없다(FR-025).
 
+**요청자를 요구하는 경로(`POST /param-searches`)는 로그인 세션이 필요하다**(004 T017, 2026-09-16).
+개발용 `X-User-Id` 헤더는 없어졌으므로 004 quickstart 준비 절의 `login`·`csrf` 함수로 쿠키 단지를 만든다.
+아래 `POST` 예시에는 모두 `-b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)"`가 붙어 있다 — **상태를 바꾸지 않는
+미리보기도 POST라 CSRF 토큰은 필요하다**(없으면 `403 CSRF_TOKEN_INVALID`). 미리보기는 로그인 없이도 되고,
+`GET` 조회는 둘 다 필요 없다.
+
 ```bash
 # 1. 인프라
 docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
@@ -38,7 +44,7 @@ cd frontend && npm install && npm run dev
 
 ```bash
 # 실행 전 확인. 후보 숫자를 하나도 넣지 않는다
-curl -s -X POST localhost:8080/param-searches/preview \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches/preview \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["INVERSE_VOLATILITY"]}}' | jq
 ```
@@ -48,7 +54,7 @@ curl -s -X POST localhost:8080/param-searches/preview \
 
 ```bash
 # 같은 본문으로 실행
-curl -s -X POST localhost:8080/param-searches \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["INVERSE_VOLATILITY"]}}' | jq
 ```
@@ -68,7 +74,7 @@ GROUP BY status;
 섹터 2개를 고르고 `topN`에 섹터 수보다 큰 값이 든 축을 포함해 실행한다.
 
 ```bash
-curl -s -X POST localhost:8080/param-searches \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX","305720.XKRX"]},
        "strategy":{"strategyIds":["SECTOR_MOMENTUM"]},
@@ -143,7 +149,7 @@ curl -s "localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED" | 
 후보가 여러 건인 묶음을 실행하고 진행 중에 취소한다.
 
 ```bash
-curl -s -X POST -H 'X-User-Id: 1' localhost:8080/param-searches/{searchId}/cancel | jq
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches/{searchId}/cancel | jq
 curl -s localhost:8080/param-searches/{searchId} | jq '{status, stopReason, counts, partialNote}'
 ```
 
@@ -174,7 +180,7 @@ curl -s "localhost:8080/param-searches/{searchId}/candidates?selected=true" | jq
 실패 후보가 있는 묶음에서 재시도한다.
 
 ```bash
-curl -s -X POST localhost:8080/param-searches/{searchId}/retry-failed | jq
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches/{searchId}/retry-failed | jq
 ```
 
 **기대**: `retried`·`remainingFailed`가 반환되고 `searchId`가 **그대로**다(새 묶음이 생기지 않는다).
@@ -207,7 +213,7 @@ FROM search_candidate WHERE param_search_id IN (:a, :b) GROUP BY param_search_id
 
 ```bash
 # 1. 미리보기의 전략 목록·축·기본값이 모두 등록표에서 오는지 (FR-025, FR-027)
-curl -s -X POST localhost:8080/param-searches/preview \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches/preview \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["INVERSE_VOLATILITY"]}}' \
   | jq '{registryVersion, strategies, spaceSummary}'
@@ -218,13 +224,13 @@ curl -s -X POST localhost:8080/param-searches/preview \
 
 # 3. 그 전략으로 미리보기가 동작하고 조합 수가 맞는지 (SC-010, SC-011)
 #    전체 조합 수 = 전략별 (축별 후보 개수의 곱)의 합
-curl -s -X POST localhost:8080/param-searches/preview \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches/preview \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["<새-전략-id>"]}}' \
   | jq '.data.workload'
 
 # 4. 등록표에 없는 전략 → 422 STRATEGY_NOT_REGISTERED (SC-012)
-curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8080/param-searches \
+curl -s -o /dev/null -w '%{http_code}\n' -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["no-such-strategy"]},"registryVersion":"PROVISIONAL-20260911"}'
 
@@ -232,7 +238,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8080/param-searches \
 #    위 2단계에서 추가한 전략이 워커에 없으므로 그대로 실행을 시도하면 이 코드가 나온다.
 
 # 6. 미리보기와 다른 registryVersion으로 실행 → 409 REGISTRY_VERSION_CHANGED (FR-028)
-curl -s -X POST localhost:8080/param-searches \
+curl -s -X POST -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)" localhost:8080/param-searches \
   -H 'Content-Type: application/json' \
   -d '{"universe":{"instrumentIds":["091160.XKRX"]},"strategy":{"strategyIds":["INVERSE_VOLATILITY"]},"registryVersion":"PROVISIONAL-1999-01-01"}' | jq '.error'
 ```

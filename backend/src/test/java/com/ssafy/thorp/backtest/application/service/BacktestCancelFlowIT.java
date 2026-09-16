@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -26,7 +27,6 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -61,7 +61,6 @@ import org.springframework.transaction.support.TransactionTemplate;
             "spring.rabbitmq.connection-timeout=1s",
             "spring.rabbitmq.listener.simple.auto-startup=false",
             "thorp.backtest.republish.enabled=false",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -183,7 +182,9 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                                 "BATTERY", "305720.XKRX", new BigDecimal("0.6000"))),
                 "FIXED_WEIGHT",
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 1, 2),
                 LocalDate.of(2024, 12, 31),
@@ -208,7 +209,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                 mockMvc.perform(
                                 post("/backtests/{id}/cancel", backtestId)
                                         .with(csrf())
-                                        .header(CurrentRequester.DEV_HEADER, user))
+                                        .with(as(user)))
                         .andExpect(status().isAccepted())
                         .andReturn()
                         .getResponse()
@@ -218,9 +219,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
 
     private JsonNode detail(String backtestId, long user) throws Exception {
         String body =
-                mockMvc.perform(
-                                get("/backtests/{id}", backtestId)
-                                        .header(CurrentRequester.DEV_HEADER, user))
+                mockMvc.perform(get("/backtests/{id}", backtestId).with(as(user)))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -230,9 +229,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
 
     private JsonNode timeseries(String backtestId, long user) throws Exception {
         String body =
-                mockMvc.perform(
-                                get("/backtests/{id}/timeseries", backtestId)
-                                        .header(CurrentRequester.DEV_HEADER, user))
+                mockMvc.perform(get("/backtests/{id}/timeseries", backtestId).with(as(user)))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -242,9 +239,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
 
     private void expectConflict(String backtestId, long user, String code) throws Exception {
         for (String path : List.of("/timeseries", "/trades", "/weights", "/exceptions")) {
-            mockMvc.perform(
-                            get("/backtests/" + backtestId + path)
-                                    .header(CurrentRequester.DEV_HEADER, user))
+            mockMvc.perform(get("/backtests/" + backtestId + path).with(as(user)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error.code").value(code));
         }
@@ -617,10 +612,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                 .isEqualTo(RunStatus.CANCELLED);
 
         // 두 번 취소는 409
-        mockMvc.perform(
-                        post("/backtests/{id}/cancel", id)
-                                .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, user))
+        mockMvc.perform(post("/backtests/{id}/cancel", id).with(csrf()).with(as(user)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("NOT_CANCELLABLE"));
     }

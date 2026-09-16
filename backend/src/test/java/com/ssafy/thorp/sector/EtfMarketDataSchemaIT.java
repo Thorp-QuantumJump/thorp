@@ -412,11 +412,24 @@ class EtfMarketDataSchemaIT {
         }
 
         @Test
-        @DisplayName("종목 식별자가 {6자리}.XKRX 형식이 아니면 거부된다")
+        @DisplayName("종목 식별자가 {6글자}.XKRX 형식이 아니면 거부된다")
         void instrumentIdFormatEnforced() {
             assertThat(rejectionOf(INSERT_ETF, "091160.KS", null, false, false))
                     .as("yfinance 표기(.KS)를 그대로 넣지 못하게 한다")
                     .isNotNull();
+            assertThat(rejectionOf(INSERT_ETF, "0111j0.XKRX", null, false, false))
+                    .as("소문자를 받으면 같은 종목이 두 값으로 저장될 수 있다")
+                    .isNotNull();
+            assertThat(rejectionOf(INSERT_ETF, "0111J00.XKRX", null, false, false))
+                    .as("자리 수가 어긋난 코드는 담지 않는다")
+                    .isNotNull();
+        }
+
+        @Test
+        @DisplayName("영문 대문자가 섞인 6글자 단축코드는 저장된다")
+        void alphanumericShortCodeAccepted() {
+            // 2026-09-11 실측에서 ETF 1,168종 중 304종(26%)이 이런 코드였다 (PD-01, T031).
+            assertThat(rejectionOf(INSERT_ETF, "0111J0.XKRX", null, false, false)).isNull();
         }
     }
 
@@ -898,7 +911,7 @@ class EtfMarketDataSchemaIT {
         }
 
         @Test
-        @DisplayName("가격 행의 종목 식별자도 {6자리}.XKRX 형식이어야 한다")
+        @DisplayName("가격 행의 종목 식별자도 {6글자}.XKRX 형식이어야 한다")
         void instrumentIdFormatEnforced() {
             assertThat(
                             rejectionOf(

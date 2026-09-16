@@ -601,19 +601,28 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("V4가 규칙 버전 네 개를 seed한다 (원칙 VIII)")
-    void v4SeedsRuleVersions() {
-        List<String> versions =
+    @DisplayName("규칙 종류마다 지금 유효한 버전이 정확히 하나다 (원칙 VIII)")
+    void ruleVersionsAreSeededPerType() {
+        // 개수를 세지 않는다. 규칙은 덮어쓰지 않고 새 버전을 더하므로 행 수는 계속 늘어난다.
+        // 지켜야 할 것은 "종류마다 지금 쓰는 규칙이 하나"라는 것이다 — 둘이면 어느 것으로 판정했는지
+        // 알 수 없고, 없으면 그 단계가 규칙 없이 돈다.
+        List<String> effective =
                 jdbcTemplate.queryForList(
-                        "SELECT rule_version FROM news_rule_version ORDER BY rule_version",
+                        "SELECT rule_type FROM news_rule_version WHERE retired_at IS NULL"
+                                + " ORDER BY rule_type",
                         String.class);
 
-        assertThat(versions)
-                .containsExactly(
-                        "news-grouping-v1",
-                        "news-importance-v1",
-                        "news-link-v1",
-                        "news-url-normalization-v1");
+        assertThat(effective)
+                .containsExactlyInAnyOrder("GROUPING", "IMPORTANCE", "LINK", "URL_NORMALIZATION");
+
+        // 물러난 버전도 남아 있어야 그때의 판정을 재현할 수 있다.
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT rule_version FROM news_rule_version"
+                                        + " WHERE retired_at IS NOT NULL",
+                                String.class))
+                .as("규칙을 바꿀 때 옛 행을 지우면 그 규칙으로 만든 묶음의 근거가 사라진다")
+                .contains("news-grouping-v1");
     }
 
     @Test

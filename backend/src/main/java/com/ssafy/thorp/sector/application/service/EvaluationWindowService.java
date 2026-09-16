@@ -60,7 +60,7 @@ public class EvaluationWindowService {
      * <p>{@link String#matches(String)}는 전체 일치라 워커의 {@code re.fullmatch}와 허용 범위가 같다. 파이썬 쪽에서 {@code
      * $}를 쓰면 끝에 붙은 줄바꿈 앞에서도 맞아 한쪽이 받는 값을 다른 쪽이 거부하게 된다.
      */
-    private static final Pattern INSTRUMENT_ID_PATTERN = Pattern.compile("[0-9]{6}\\.XKRX");
+    private static final Pattern INSTRUMENT_ID_PATTERN = Pattern.compile("[0-9A-Z]{6}\\.XKRX");
 
     /**
      * 공통 평가 가능 기간을 산출한다.

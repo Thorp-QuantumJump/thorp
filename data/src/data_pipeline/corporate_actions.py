@@ -43,6 +43,8 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Any, Final
 
+from data_pipeline.krx import DailyQuote
+
 #: ``corporate_action.event_type``. 마이그레이션의 CHECK와 같은 두 값뿐이다.
 EVENT_DISTRIBUTION: Final[str] = "DISTRIBUTION"
 EVENT_SPLIT: Final[str] = "SPLIT"
@@ -58,7 +60,7 @@ REASON_MISSING_CORPORATE_ACTION: Final[str] = "MISSING_CORPORATE_ACTION"
 #: 나가지 않는다 — 구간의 끝은 언제나 계열의 마지막 날이다.
 ACTIONS_KNOWN_FROM_NEVER: Final[date] = date.max
 
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 #: 누적 곱셈의 작업 정밀도. 저장 자리수(아래)보다 넉넉히 두어 중간 계산에서 깎이지 않게 한다.
 #: 나눗셈이 끝나지 않는 계수(예: 204/10100)는 이 자리수에서 반올림되므로, 조정가의 비율
@@ -100,7 +102,7 @@ class CorporateAction:
     def __post_init__(self) -> None:
         if INSTRUMENT_ID_PATTERN.match(self.instrument_id) is None:
             raise CorporateActionError(
-                f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {self.instrument_id!r}"
+                f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {self.instrument_id!r}"
             )
         if not isinstance(self.ex_date, date):
             raise CorporateActionError(f"ex_date는 date여야 한다: {self.ex_date!r}")
@@ -320,7 +322,7 @@ def build_adjustment_series(
     계수를 만들 수도 없다. 이 건너뜀은 자료 부족이 아니다.
     """
     if INSTRUMENT_ID_PATTERN.match(instrument_id) is None:
-        raise CorporateActionError(f"종목 식별자가 {{6자리}}.XKRX 형식이 아니다: {instrument_id!r}")
+        raise CorporateActionError(f"종목 식별자가 {{6글자}}.XKRX 형식이 아니다: {instrument_id!r}")
     close_by_date = _closes_by_date(closes)
     days = sorted(close_by_date)
     if actions_known_from is not None and not isinstance(actions_known_from, date):
@@ -420,3 +422,134 @@ def quantize_adjusted_close(value: Decimal) -> Decimal:
 def quantize_adjustment_factor(value: Decimal) -> Decimal:
     """누적 계수를 저장 자리수로 맞춘다 (``NUMERIC(20, 12)``)."""
     return value.quantize(ADJUSTMENT_FACTOR_EXPONENT, rounding=ROUND_HALF_UP)
+
+
+# ---------------------------------------------------------------------------
+# 원천 응답에서 분배락 되살리기
+# ---------------------------------------------------------------------------
+
+#: 0으로 볼 잔차의 경계(원). 이 값 **이하**는 분배가 아니다.
+#:
+#: 근거는 둘이다. ⑴ 값은 :class:`~decimal.Decimal` 로 읽으므로 뺄셈 자체에는 오차가 없다.
+#: 부동소수로 읽었다면 0.1 + 0.2 ≠ 0.3 같은 어긋남이 그대로 잔차에 섞이지만, 이 파트는 가격을
+#: 모두 ``Decimal``로 다루므로(``krx.parse_optional_decimal``) 그 갈래가 없다. ⑵ 남는 것은
+#: **원천이 반올림해 준 값끼리 빼면서 생기는 차이**다. 이 서비스의 가격 필드는 소수 둘째 자리
+#: 까지 오므로 두 값이 각각 최대 0.005씩 어긋날 수 있고, 잔차에는 최대 0.01이 남는다. 그 절반인
+#: 0.005를 경계로 두면 "반올림 때문에 남은 잔차"와 "가장 작은 실제 분배금(원 단위로 오는 1원)"이
+#: 섞이지 않는다.
+DISTRIBUTION_RESIDUAL_EPSILON: Final[Decimal] = Decimal("0.005")
+
+
+@dataclass(frozen=True)
+class ObservedDistribution:
+    """원천 응답만으로 되살린 분배 한 건. ``ex_date``와 금액뿐이고 **지급일은 없다.**
+
+    수식이 주는 것이 분배락일과 주당 분배금 둘뿐이라, 지급일을 요구하는
+    :class:`CorporateAction` 으로 바로 바꿀 수 없다. 지급일을 어디서 받을지는 사람이 정할
+    문제이므로 여기서 지어내지 않는다(원칙 VI).
+
+    ``previous_close``와 ``change``는 그 금액이 어떻게 나왔는지를 되짚기 위한 근거다.
+    """
+
+    instrument_id: str
+    ex_date: date
+    amount: Decimal
+    previous_close: Decimal
+    close: Decimal
+    change: Decimal
+
+
+@dataclass(frozen=True)
+class DistributionScan:
+    """:func:`observe_distributions` 의 결과. 찾은 것과 **판단하지 못한 날**을 함께 담는다.
+
+    ``undecidable``에 담기는 날은 값이 이상해서 버린 날이 아니라 **이 수식으로는 판단할 수 없는
+    날**이다(아래 함수 설명의 두 갈래). 결과에 함께 실어 두지 않으면 "분배가 없었다"와 "판단하지
+    못했다"가 같은 모양이 되어, 판단하지 못한 날이 늘어도 아무도 모른다.
+    """
+
+    instrument_id: str
+    distributions: tuple[ObservedDistribution, ...]
+    undecidable: tuple[tuple[date, str], ...]
+
+
+def observe_distributions(quotes: Sequence[DailyQuote]) -> DistributionScan:
+    """한 종목의 일봉에서 분배락일과 주당 분배금을 되살린다 (pd01-etf-candidates.md §3).
+
+    ```
+    분배금(t) = CMPPREVDD_PRC(t) − ( TDD_CLSPRC(t) − TDD_CLSPRC(t−1) )
+    ```
+
+    거래소가 말하는 전일 대비(``CMPPREVDD_PRC``)는 **기준가**에 대고 잰 값이다. 분배락일의
+    기준가는 ``직전 종가 − 주당 분배금``이라 종가끼리 뺀 값과 어긋나고, 어긋난 크기가 곧 주당
+    분배금이다. 분배가 없던 날은 두 값이 같아 잔차가 0이 된다.
+
+    ``quotes``는 한 종목의 :class:`~data_pipeline.krx.DailyQuote` 나열이며 날짜 오름차순으로
+    정렬해 쓴다. **순수 함수다** — DB·파일·네트워크를 건드리지 않는다.
+
+    판단하지 못하는 날은 ``undecidable``로 돌려준다.
+
+    ``no_previous_close``
+        계열의 첫날이다. 직전 종가가 없으면 종가 차이를 만들 수 없다.
+    ``untraded_basis_price``
+        그날 또는 직전 거래일에 **체결이 없었다.** 원천은 체결이 없던 날 종가 자리에 거래소
+        기준가를 낸다(``krx`` 모듈 문서 3번). 기준가는 체결가가 아니므로 이 수식의 종가 자리에
+        그대로 넣으면 없던 분배가 만들어지거나 있던 분배가 가려진다. 값을 손보는 것은 지어내는
+        일이라(원칙 VI) 판단을 미루고, **미뤘다는 사실을 결과에 남긴다.**
+
+    ``CMPPREVDD_PRC``가 없는 날(휴장일의 빈 문자열)은 애초에 행이 만들어지지 않으므로 여기에
+    오지 않는다. 그래도 값이 ``None``이면 조용히 넘기지 않고 알린다.
+
+    잔차가 **음수**면 분배가 아니다. 분배금은 양수이고 저장 스키마의
+    ``ck_corporate_action_amount_positive``도 그것을 요구한다. 음수는 이 수식의 전제가 깨졌다는
+    뜻이므로 버리지 않고 :class:`CorporateActionError` 로 알린다 — 조용히 버리면 원천이 바뀌어도
+    아무 일도 일어나지 않는 것처럼 보인다.
+    """
+    ordered = sorted(quotes, key=lambda quote: quote.date)
+    instrument_ids = {quote.instrument_id for quote in ordered}
+    if len(instrument_ids) > 1:
+        raise CorporateActionError(f"한 종목의 시세만 받는다. 섞여 있다: {sorted(instrument_ids)}")
+    instrument_id = next(iter(instrument_ids), "")
+
+    found: list[ObservedDistribution] = []
+    undecidable: list[tuple[date, str]] = []
+    previous: DailyQuote | None = None
+    for quote in ordered:
+        if previous is None:
+            undecidable.append((quote.date, "no_previous_close"))
+            previous = quote
+            continue
+        if not quote.traded or not previous.traded:
+            undecidable.append((quote.date, "untraded_basis_price"))
+            previous = quote
+            continue
+        change = quote.previous_day_change
+        if change is None:
+            raise CorporateActionError(
+                f"{instrument_id} {quote.date}: 전일 대비가 없어 분배를 판단할 수 없다"
+            )
+        residual = change - (quote.close - previous.close)
+        if residual < -DISTRIBUTION_RESIDUAL_EPSILON:
+            raise CorporateActionError(
+                f"{instrument_id} {quote.date}: 분배금 잔차가 음수다 ({residual}). "
+                f"전일 대비 {change}, 종가 {previous.close} → {quote.close}. "
+                "분배금은 양수여야 하므로 값을 고치지 않고 자료를 확인해야 한다"
+            )
+        if residual > DISTRIBUTION_RESIDUAL_EPSILON:
+            found.append(
+                ObservedDistribution(
+                    instrument_id=instrument_id,
+                    ex_date=quote.date,
+                    amount=residual,
+                    previous_close=previous.close,
+                    close=quote.close,
+                    change=change,
+                )
+            )
+        previous = quote
+
+    return DistributionScan(
+        instrument_id=instrument_id,
+        distributions=tuple(found),
+        undecidable=tuple(undecidable),
+    )

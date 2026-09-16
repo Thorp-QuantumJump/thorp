@@ -209,7 +209,7 @@ class RssNewsClientTest {
         void 시각_파싱() {
             NewsFetchResult result = client(StubHttpClient.ok("dates.xml")).fetch(SOURCE);
 
-            assertThat(result.items()).hasSize(5);
+            assertThat(result.items()).hasSize(8);
             assertThat(result.items().get(0).parsedPublishedAt())
                     .as("두 자리 연도 + 오프셋")
                     .isEqualTo(Instant.parse("2026-09-10T04:00:00Z"));
@@ -219,6 +219,29 @@ class RssNewsClientTest {
             assertThat(result.items().get(2).parsedPublishedAt()).as("해석할 수 없으면 비운다").isNull();
             assertThat(result.items().get(4).parsedPublishedAt())
                     .as("GMT 표기")
+                    .isEqualTo(Instant.parse("2026-09-10T04:00:00Z"));
+        }
+
+        @Test
+        @DisplayName("규약을 벗어난 표기도 시간대가 있으면 읽는다")
+        void 변형_표기() {
+            NewsFetchResult result = client(StubHttpClient.ok("dates.xml")).fetch(SOURCE);
+
+            assertThat(result.items().get(5).parsedPublishedAt())
+                    .as("콜론을 넣은 오프셋. RFC 822가 아니지만 쓰는 매체가 있다")
+                    .isEqualTo(Instant.parse("2026-09-10T04:00:00Z"));
+            assertThat(result.items().get(6).parsedPublishedAt())
+                    .as("pubDate 없이 dc:date만 주는 매체. 읽지 않으면 그 매체 기사가 전부 시각 미확인이 된다")
+                    .isEqualTo(Instant.parse("2026-09-10T04:00:00Z"));
+        }
+
+        @Test
+        @DisplayName("pubDate와 dc:date가 어긋나면 pubDate를 믿는다")
+        void 시각_요소_우선순위() {
+            NewsFetchResult result = client(StubHttpClient.ok("dates.xml")).fetch(SOURCE);
+
+            assertThat(result.items().get(7).parsedPublishedAt())
+                    .as("어느 쪽을 믿을지 매번 다르게 정하면 같은 기사가 회차마다 다른 시각으로 저장된다")
                     .isEqualTo(Instant.parse("2026-09-10T04:00:00Z"));
         }
 

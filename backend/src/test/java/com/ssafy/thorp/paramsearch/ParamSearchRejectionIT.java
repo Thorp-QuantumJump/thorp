@@ -7,7 +7,6 @@ import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.exception.ParamSearchRejectedException;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;
@@ -16,6 +15,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +118,7 @@ class ParamSearchRejectionIT extends PostgresTestSupport {
         useRegistry(
                 RegistryFixtures.registry(VERSION)
                         .strategy(STRATEGY, RegistryFixtures.axisOfSize("x", 2))
-                        .rule(STRATEGY, "ALWAYS_VIOLATED", (combination, context) -> true)
+                        .rule(STRATEGY, "ALWAYS_VIOLATED", (parameters, context) -> true)
                         .build());
 
         assertThatThrownBy(() -> paramSearchService.create(command()))

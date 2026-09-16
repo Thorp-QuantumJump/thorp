@@ -1,6 +1,6 @@
 # Tasks: 대표 ETF 자료 확보
 
-**Input**: `specs/001-etf-market-data/` — plan.md, spec.md(Clarifications 5건), research.md(결정 1~8), data-model.md, contracts/{sector-api,evaluation-window,market-dataset}.md, quickstart.md(시나리오 1~7)
+**Input**: `specs/001-etf-market-data/` — plan.md, spec.md(Clarifications 5건), research.md(결정 1~8), data-model.md, contracts/{sector-api,evaluation-window,market-dataset}.md, quickstart.md(시나리오 1~8)
 
 **작업 단위 규칙** (constitution v3.0.0 "Jira 연계"): 아래 T항목 하나는 실행 지시의 최소 단위이며, 여러 T항목을 묶은 작업 묶음 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나다. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **`data/` 수집 파이프라인은 DATA 파트라 `[DE]`, `backend/`와 `worker/`는 백엔드 파트라 `[BE]`로 표기한다**(워커의 파트 소속은 004 tasks가 2026-09-10에 확정). 2026-09-11에 개별 task 76개를 아래 16개 묶음으로 재편했다. 묶음 기준은 constitution의 세 조건(하나의 목적 공유 / 독립 구현·검증·롤백 / 리뷰어가 한 번에 읽을 범위)이며, 같은 파트가 연속으로 하는 작업과 한쪽만 병합하면 반쪽이 되는 작업을 묶었다. **2026-09-11에 T001~T013을 Jira Task 6개로 다시 묶고 이슈를 발급했다.** 묶음을 16개에서 6개로 줄인 까닭은 Jira Task 하나의 단위를 speckit task 여러 개로 두기로 정했고, 같은 파트가 연속으로 수행하며 함께 병합해야 뜻이 통하는 작업을 한 묶음에 담는 편이 리뷰에 유리하기 때문이다(constitution 「Jira 연계」가 요구하는 묶음 구성 변경 기록이다). 발급 결과는 Epic `S15P21E205-30 백테스트` 아래 Story 3개(US1 `-173`, US2 `-174`, US3 `-175`)와 Task 6개다: T001·T002 → `-176`(SP 3), T003·T004 → `-177`(SP 5), T005·T006 → `-178`(SP 5), T007·T008·T009 → `-179`(SP 8), T010·T011 → `-180`(SP 5), T012·T013 → `-181`(SP 3). Story에는 담당자와 스토리 포인트를 지정하지 않고 Task에만 지정한다. 브랜치는 `feat(be)/{JIRA_NUMBER}-{desc}` 형식이며, 서브에이전트가 쓰는 작업 브랜치에는 Jira 번호를 붙이지 않는다. T014~T016은 실제 자료 확보가 선행 조건이라 아직 발급하지 않았다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 완료 조건은 constitution "완료의 정의" 다섯 가지다.
 
@@ -162,11 +162,18 @@
 
 **2026-09-11: KRX OPEN API 키를 확보해 T014~T016의 착수 조건이 해소되었다.** 세 작업은 실자료 조회가 선행 조건이라 그때까지 Jira를 발급하지 않았는데, 키가 생겨 각각 Task로 발급했다(T014 `-186`, T015 `-187`, T016 `-188`). 착수 차례는 JT4(`-179`)가 수집 코드를 완성한 뒤 T014부터다. JT4가 만드는 조회 도구로 후보 비교를 하는 편이 자연스럽기 때문이다(2026-09-11 결정).
 
-- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
+- [x] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
   - **선행 조건은 T001뿐이다.** 본선(T003~T013)과 의존 관계가 없어 병행할 수 있다
   - 자료 이용 승인을 신청하고 진행 상태를 기록한다
   - 섹터마다 후보 3~5개를 골라 확보 가능 기간·기업행위 이력 완전성·최근 3개월 일평균 거래대금을 실제 조회로 채운 비교표를 만든다. **후보끼리 비교하는 것이며 예시 자료 결과와 비교하는 것이 아니다**
   - 확정한 대응표를 새 버전으로 발행하고 `is_sample`·`isSample`을 false로 바꾼다. `specs/README.md`의 PD-01과 spec의 결정 항목 표를 갱신한다
+  - **2026-09-15: 여덟 섹터를 실측으로 정했다.** 반도체·2차전지·은행·증권·화장품·건설·자동차·중공업이며 근거는 `pd01-etf-candidates.md` §7이다. 에너지화학은 유동성이 10억 미만이라 뺐고 건설이 그 자리를 대신한다. 방산은 이력이 짧아 미확정으로 남겼다
+  - **2026-09-15: 종목 식별자 형식 제약이 풀렸다(T031).** 영숫자 단축코드를 담을 수 있게 되어 후보를 좁히던 제약이 사라졌다. 다만 §7에서 영숫자 코드 후보가 탈락한 까닭은 형식이 아니라 이력·유동성이었으므로 **여덟 섹터 선택은 그대로다**
+  - **2026-09-15 결정: `listed_on`에는 운용사 공시에서 옮긴 실제 상장일을 적는다.** 자료가 있는 가장 이른 날을 적지 않는다. 까닭 셋은 `data-model.md`의 「상장일을 무엇으로 적는가」에 적었다 — 사실과 다르다는 것, SC-003의 상장 전 자료 검사가 조용히 꺼진다는 것, 자료 시작일은 `daily_price` 조회로 나오므로 같은 값을 두 곳에 두게 된다는 것이다
+  - 남은 일은 셋이다. **⑴ 여덟 종목의 상장일과 운용사를 공시에서 확인한다**(같은 공시를 한 번 열면 둘 다 얻으므로 함께 한다). 2차전지·화장품·중공업은 관측 경계가 분기 범위로 알려져 있어 공시값이 그 범위에 드는지로 교차 확인이 된다. 나머지 다섯은 2010-01-04보다 앞이기만 하면 된다. **⑵ 대응표를 여덟 섹터로 갱신한다. ⑶ 새 버전으로 발행해 적재한다**
+  - **적재할 때 「담을 수 없는 종목코드」 줄이 나오는지 확인한다.** 나오지 않으면 T031이 남긴 한계(304종 전부가 영숫자 여섯 글자인지 확인하지 못했다)도 함께 닫힌다
+  - **2026-09-16 완료.** 대응표 `SEM-2026-09-16-001`을 `is_sample=false`로 발행하고 2024-09-19~2026-09-15 484거래일을 `KRX_DAILY_20260915`로 적재했다(`daily_price` 3,872행). 「담을 수 없는 종목코드」 줄은 나오지 않았다. `specs/README.md`의 PD-01과 위 결정 항목 표를 갱신했다
+  - **분배 기업행위 입력 파일을 손으로 적지 않는다.** `data/scripts/build_distributions.py`가 일봉에서 락일·금액을 되살리고 KIND 공시에서 지급일을 받아 `ingest_krx.py --corporate-actions`가 먹는 JSON을 만든다. 2년 구간 44건이 빠짐없이 붙었고 결과는 `data/config/corporate-actions-2026-09.json`이다. **아직 DB에는 넣지 않았다** — 같은 마감일로는 자료 버전을 다시 발행할 수 없다(아래 Phase 7의 미해결 항목)
 - [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187
   - **선행 조건은 T008이다.** 본선이 쌓아 둔 `suspension_period` 기록이 입력이다
   - 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포
@@ -179,7 +186,7 @@
 ## Phase 7: Polish
 
 - [ ] T016 [DOCS] 검증 기록과 문서 마무리 (`docs/guides/etf-market-data-verification-2026-09.md`, `specs/001-etf-market-data/quickstart.md`, `README.md`, `docs/specs/market-api.md`) — S15P21E205-188
-  - quickstart 시나리오 1~7을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
+  - quickstart 시나리오 1~8을 순서대로 실행하고 결과를 검증 기록 문서에 남긴다
   - constitution 「기능·계산 확인」이 요구하는 수기 대조를 한 건 수행한다. 분배금 지급일 하나를 골라 운용사 공시의 주당 분배금과 `corporate_action.amount`를 눈으로 확인하고 `reconciliation_record`에 남긴다
   - `README.md`의 "현재 구현 상태"에서 자료 원천이 바뀐 사실을 반영한다
   - `docs/specs/market-api.md`와 `docs/adr/0004`가 001의 결정과 어긋나는 부분을 확인해 갱신 대상 목록을 남긴다. `specs/README.md`가 이미 갱신 대상으로 기록했으므로 001 범위에서 직접 고치지는 않는다
@@ -332,11 +339,17 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
     - **자료 버전이 실행에 고정되지 않는다.** 조립 시점에 새로 고르므로 재발행이 며칠 뒤 일어나면 다른 메시지가 나간다. `EngineInputAssembler`가 스스로 적어 둔 "조립 시점에 새로 고르는 값이 없다"와 어긋나고, 중복 판정 키와 `versions.data`에도 그 값이 없다
   - **접수 시점에 정해 실행 계획에 저장하는 것이 넷을 한 번에 푸는 설계다.** 쓸 수 있는 묶음이 없으면 접수를 거절하고, 워커가 고르는 키를 그 값으로 바꾸거나 두 칸을 합친다
   - `docs/adr/0002`와 `specs/004-backtest-execution/contracts/messaging.md`가 아직 옛 상수를 계약으로 적고 있어 함께 고쳐야 한다. Jira `S15P21E205-203`에 보류되어 있다
-- [ ] T031 [DE] 종목 식별자 형식이 배제하는 영숫자 단축코드를 어떻게 다룰지 정한다 per data-model.md 「representative_etf」·FR-001·FR-002 (contradicts)
+- [X] T031 [DE] 종목 식별자 형식이 배제하는 영숫자 단축코드를 어떻게 다룰지 정한다 per data-model.md 「representative_etf」·FR-001·FR-002 (contradicts)
   - `data-model.md`가 `instrument_id`를 `{6자리}.XKRX` 형식으로 정했고 마이그레이션의 CHECK와 `krx.py`의 형식 검사가 그것을 강제한다
   - **실제 원천에는 그 형식을 벗어나는 ETF가 많다.** 2026-09-11 하루치를 실제로 불러 세어 보니 1,168종 중 **304종(26%)**이 `0184E0`·`0182R0` 같은 영숫자 단축코드다. 이 종목들은 대표 ETF로도 비교 대상으로도 넣을 수 없다
   - PD-01(T014)이 후보를 고르는 일이라 **이 제약이 그 선택지를 먼저 좁힌다.** 형식을 넓힐지, 좁은 채로 두고 그 사실을 문서에 적을지 정한다
-- [ ] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
+  - **2026-09-15 결정: 넓힌다.** 형식은 `[0-9A-Z]{6}\.XKRX`다. 자리 수는 여섯으로 그대로 두고 허용 문자에 영문 대문자만 더했다. 원천의 4분의 1을 후보에서 빼는 대가가, 좁은 채로 두고 그 사실만 적어 두는 이득보다 크다
+  - **소문자는 받지 않는다.** 원천이 대문자로만 주고, 둘 다 받으면 같은 종목이 `0111J0`과 `0111j0` 두 값으로 저장될 수 있다. 자리 수가 어긋난 코드도 그대로 거부한다
+  - 고친 곳은 정규식 열세 군데다 — `data/` 일곱(`corporate_actions`·`gaps`·`instrument_profile`·`krx` 둘·`reconciliation`·`repository`), `worker/` 둘(`contracts/engine_input`·`evaluation_window`), `backend/` 넷(`InstrumentId`·`RepresentativeEtf`·`ParamSearchPreviewRequest`·`EvaluationWindowService`). `sector_map.py`와 `index.py`는 `repository.py`의 패턴을 가져다 쓰므로 따라온다
+  - DB 제약 다섯 개는 새 마이그레이션 `V20260916163000__widen_instrument_id_format.sql`로 넓혔다. **기존 파일을 고치지 않은 까닭**은 그것이 이미 `dev`에 병합되어 팀원의 로컬 DB에 적용되었기 때문이다. 적용된 파일을 고치면 Flyway 체크섬이 어긋나 그 DB에서 기동이 막힌다
+  - **`krx.py`의 `unsupported_codes` 장치는 지우지 않고 남겼다.** 이제 영숫자 코드는 그 갈래에 오지 않지만, 원천이 아직 본 적 없는 모양을 보내오면 수집이 멈추지 않으면서도 무엇이 빠졌는지 드러나야 한다. 담지 못하는 것을 조용히 버리면 그 순간 검사가 사라진다
+  - **확인하지 못한 것: 304종 전부가 영숫자 여섯 글자 대문자인지는 검증하지 못했다.** 근거는 문서에 남은 예시 세 개(`0111J0`·`0182R0`·`0005D0`)와 `0184E0`뿐이다. T014에서 실제로 적재할 때 `unsupported_codes`가 비어 있는지 확인한다 — 비어 있지 않으면 그 모양에 맞춰 형식을 다시 본다
+- [X] T032 [DOCS] contracts/market-dataset.md의 「기존 provider 정리」를 실제와 맞춘다 per plan.md·004 T004 (partial)
   - 표가 아직 `RepositoryDataProvider`를 "`engine_runner.py:68`의 기본값이 된다"로 적는데 그 클래스는 만들어지지 않았고 004의 `PostgresMarketDataProvider`가 그 자리를 맡는다
   - 덧붙임이 "`YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고"라고 하는데 **그 파일은 없다.** 004 T006에서 삭제했다
   - 같은 덧붙임의 "001 담당자 확인 필요"가 아직 달려 있다. 이제 확인되었다
@@ -345,9 +358,9 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`가 아직 `KRX_DAILY_V1`을 박아 넣고, 그 산출물 `worker/tests/fixtures/manual_reconciliation.json`에 통째로 들어가 있다
   - 생성기만 고치면 산출물과 갈라진다. **둘을 함께 고치고 재생성해 검증할 수 있는 작업에서 닫는다**
   - 그 자리의 `dataVersion`이 `FIXTURE-three_etf_24m`이라 정직한 값이 KRX 날짜가 아니라 픽스처 식별자일 수 있다. T030과 함께 정하는 편이 낫다
-- [ ] T034 [DOCS] research.md의 워커 공급자 이름을 실제와 맞춘다 per research.md 결정 1 (partial)
+- [X] T034 [DOCS] research.md의 워커 공급자 이름을 실제와 맞춘다 per research.md 결정 1 (partial)
   - 26행과 198행이 아직 `RepositoryDataProvider`를 기본 공급자로 적는다. T028이 `plan.md`에서 고친 것과 같은 어긋남이다
-- [ ] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
+- [X] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
   - T022가 시나리오를 하나 더해 `quickstart.md`에 여덟 개가 있는데, 이 문서 3행의 Input 줄과 T016의 첫 항목이 아직 "시나리오 1~7"이다
   - **T016을 적힌 대로 수행하면 새 시나리오가 검증 기록에서 빠진다.** T016 착수 전에 고쳐야 한다
 - [ ] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)

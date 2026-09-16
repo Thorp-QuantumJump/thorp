@@ -2,8 +2,6 @@ package com.ssafy.thorp.paramsearch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.SearchContext;
 import com.ssafy.thorp.paramsearch.application.service.CandidateValidator;
 import com.ssafy.thorp.paramsearch.application.service.CandidateValidator.ValidatedPoint;
 import com.ssafy.thorp.paramsearch.application.service.GridExpander;
@@ -11,6 +9,8 @@ import com.ssafy.thorp.paramsearch.application.service.GridExpander.GridPoint;
 import com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver;
 import com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver.SearchTargets;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.SearchContext;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -81,7 +81,7 @@ class StrategyAgnosticSearchTest {
                         .rule(
                                 "S1",
                                 "A_IS_ZERO",
-                                (combination, context) -> combination.valueOf("a").equals(0))
+                                (parameters, context) -> parameters.get("a").equals(0))
                         .build();
         SearchTargets targets = resolve(registry, List.of("S1", "S2", "S3"), "S1", "S2", "S3");
 

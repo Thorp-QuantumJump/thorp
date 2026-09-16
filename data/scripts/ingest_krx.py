@@ -134,7 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         nargs="+",
         metavar="ID",
-        help="종목 식별자({6자리}.XKRX) 또는 6자리 코드",
+        help="종목 식별자({6글자}.XKRX) 또는 6글자 단축코드",
     )
     parser.add_argument("--start", required=True, type=_parse_day, help="수집 시작일 YYYY-MM-DD")
     parser.add_argument("--until", required=True, type=_parse_day, help="수집 종료일 YYYY-MM-DD")
@@ -189,6 +189,16 @@ def build_parser() -> argparse.ArgumentParser:
             "지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 "
             "같이 파일로 받는다. 일평균 거래대금은 이 파일이 아니라 방금 만든 daily_price의 "
             "거래대금에서 계산한다 (FR-015)"
+        ),
+    )
+    parser.add_argument(
+        "--from-raw",
+        action="store_true",
+        help=(
+            "원천을 부르지 않고 raw/의 보관본을 읽는다. 같은 구간을 다시 적재할 때 이미 받아 "
+            "둔 자료를 다시 내려받지 않으려는 것이며, 보관을 둔 목적이 재수집 없는 재정제다 "
+            "(research.md 결정 8). 보관본이 없는 날이 있으면 휴장일로 보지 않고 멈춘다. "
+            "인증키를 읽지 않으므로 --simulate-quota-exhausted와 함께 쓸 수 없다"
         ),
     )
     parser.add_argument(
@@ -380,7 +390,7 @@ def instrument_profiles(
 
 
 def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
-    """6자리 코드와 ``{6자리}.XKRX``를 모두 받아 식별자로 맞춘다.
+    """6글자 단축코드와 ``{6글자}.XKRX``를 모두 받아 식별자로 맞춘다.
 
     같은 종목이 두 번 오면 거부한다. 두 번 담으면 ``daily_price``의 PK가 겹쳐 적재가 깨지고,
     그때는 절반만 들어간 표가 남는다.
@@ -402,13 +412,29 @@ def resolve_instrument_ids(values: Sequence[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def build_source(*, env_file: Path | None, allowed_calls: int | None) -> krx.DailyRowSource:
+def build_source(
+    *, env_file: Path | None, allowed_calls: int | None, from_raw: bool = False
+) -> krx.DailyRowSource:
     """원천 호출 경로를 만든다.
 
     ``RawArchivingSource``가 응답 원본을 ``raw/``에 남기고(research.md 결정 8), 한도 재현
     덮개는 **그 바깥**에 둔다. 한도에 걸린 호출은 응답이 오지 않은 호출이므로 ``raw/``에도
     남지 않아야 한다.
+
+    ``from_raw``면 원천 대신 그 보관본을 읽는다. 같은 구간을 다시 적재할 때 이미 받아 둔 것을
+    다시 내려받지 않기 위한 것이며, 보관을 둔 목적이 바로 그 "재수집 없는 재정제"다. 인증키를
+    읽지 않으므로 키 없이도 돈다.
+
+    **한도 재현과는 함께 쓸 수 없다.** 부르지 않는 호출에 한도를 모의하는 것은 뜻이 성립하지
+    않는다. 조용히 무시하면 사용자가 준 인자가 아무 일도 하지 않은 채 결과만 달라진다.
     """
+    if from_raw:
+        if allowed_calls is not None:
+            raise IngestError(
+                "--from-raw는 원천을 부르지 않으므로 --simulate-quota-exhausted와 함께 쓸 수 "
+                "없다. 모의할 호출 자체가 없다"
+            )
+        return krx.ArchiveReadingSource(root=_RAW_ROOT)
     client = krx.KrxOpenApiClient.from_env(env_file)
     source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)
     if allowed_calls is not None:
@@ -518,7 +544,9 @@ def _collect(
     # 마감일이 "요청한 마지막 날짜"가 아니라 "실제로 수집한 마지막 거래일"이 되는 것을
     # 눈으로 확인할 수 있다 (quickstart 시나리오 7).
     allowed_calls = len(candidates) + 1 if args.simulate_quota_exhausted else None
-    source = build_source(env_file=args.env_file, allowed_calls=allowed_calls)
+    source = build_source(
+        env_file=args.env_file, allowed_calls=allowed_calls, from_raw=args.from_raw
+    )
 
     indices = index.collect_index_quotes(source, candidates)
     calendar = indices.trading_calendar()
@@ -648,13 +676,14 @@ def _report(
     else:
         print("  instrument_profile: 없음. --instrument-profiles로 지수 방법론·구성종목을 준다")
     if etf.unsupported_codes:
-        # 저장 스키마가 담을 수 없는 종목코드다(6자리 숫자가 아닌 표기). 모아 두기만 하고
-        # 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다
+        # 저장 스키마가 담을 수 없는 종목코드다(영숫자 대문자 6글자가 아닌 표기). 모아 두기만
+        # 하고 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다
         # (:func:`krx.collect_daily_quotes` 문서 참고).
         codes = sorted(etf.unsupported_codes)
         shown = ", ".join(codes[:5]) + (" …" if len(codes) > 5 else "")
         print(f"담을 수 없는 종목코드: {len(codes)}개 ({shown})")
-        print("  6자리 숫자가 아닌 표기라 저장 스키마의 instrument_id 형식에 맞지 않는다")
+        print("  영숫자 대문자 6글자가 아니라 저장 스키마의 instrument_id 형식에 맞지 않는다")
+        print("  자리 수나 문자 집합을 보고 형식을 다시 넓힐지 정한다 (spec 001 T031)")
     print(f"processed/ 파티션: {len(written)}개")
     if loaded is None:
         print("적재하지 않았다. PostgreSQL에 넣으려면 --commit을 붙인다 (발행본은 되돌릴 수 없다)")

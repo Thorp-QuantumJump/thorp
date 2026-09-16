@@ -26,7 +26,7 @@ COMMITTED에서 두 실행이 같은 ``dataset_id``를 동시에 다루면 확�
 적재 경로가 다르다. 시계열 표는
 ``dataset_id`` **문자열**을 갖고 그 값으로 ``dataset_version``을 참조하지만, 이 표는
 ``dataset_version_id``·``etf_id`` **bigint 외래 키**를 갖는다(data-model.md). 파이프라인이 다루는
-값은 문자열 ``dataset_id``와 ``{6자리}.XKRX`` 종목 식별자뿐이므로, 적재 전에 두 식별자를 찾아
+값은 문자열 ``dataset_id``와 ``{6글자}.XKRX`` 종목 식별자뿐이므로, 적재 전에 두 식별자를 찾아
 바꿔 넣어야 한다(:meth:`MarketDataRepository.load_reconciliation_records`). 없는 자료 버전이나
 대응표에 없는 종목이면 FK 위반 메시지 대신 무엇이 없는지 말하는 오류를 낸다 — 여기서는 열 이름만
 같은 표가 아니라 두 표를 잇는 조회가 끼기 때문에 원인 설명이 더 필요하다. ``etf_id`` 조회를
@@ -97,7 +97,7 @@ from data_pipeline.reconciliation import ReconciliationRecord
 # 끝을 ``$``가 아니라 ``\Z``로 닫는다. 파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞아
 # "091160.XKRX\n"이 통과한다. 저장 스키마의 CHECK는 그것을 거부하므로, 그대로 두면 뜻이 분명한
 # 오류 대신 제약 이름만 돌아온다.
-INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9]{6}\.XKRX\Z")
+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"\A[0-9A-Z]{6}\.XKRX\Z")
 
 CORPORATE_ACTION_EVENT_TYPES: Final[frozenset[str]] = frozenset({"DISTRIBUTION", "SPLIT"})
 DATA_GAP_REASONS: Final[frozenset[str]] = frozenset(
@@ -349,7 +349,7 @@ def _as_date(value: object, field: str) -> date:
 
 def _require_instrument_id(value: object, field: str = "instrument_id") -> str:
     if not isinstance(value, str) or INSTRUMENT_ID_PATTERN.match(value) is None:
-        raise RowValidationError(f"{field}은(는) {{6자리}}.XKRX 형식이어야 한다: {value!r}")
+        raise RowValidationError(f"{field}은(는) {{6글자}}.XKRX 형식이어야 한다: {value!r}")
     return value
 
 

@@ -40,11 +40,24 @@ public class RssNewsClient {
     public static final String MALFORMED_XML = "MALFORMED_XML";
 
     /** RFC 822 계열 형식. 두 자리 연도와 GMT 같은 관용 표기까지 받는다. */
+    /**
+     * 받아들이는 발행 시각 형식.
+     *
+     * <p>규약은 RFC 822 하나지만 실제 매체는 제각각이다. 조사해 보니 국내 경제 매체만 해도 세 갈래를 쓴다 — 표준 {@code +0900}, 콜론을 넣은
+     * {@code +09:00}, 그리고 {@code dc:date}의 ISO-8601이다. 읽지 못하면 그 기사는 발행 시각 미확인으로 저장되어 과거 조회에서 통째로
+     * 빠지므로, 형식 하나를 놓치는 비용이 크다.
+     *
+     * <p>시간대가 없는 값은 어느 형식으로도 읽지 않는다. 서버 시간대를 붙여 추정하면 그 추정이 검증된 시각처럼 저장된다(spec FR-012).
+     */
     private static final List<DateTimeFormatter> DATE_FORMATS =
             List.of(
                     // 두 자리 연도를 먼저 본다. RFC_1123은 느슨해서 "26"을 서기 26년으로 읽어 버린다.
                     twoDigitYearFormat(),
                     DateTimeFormatter.RFC_1123_DATE_TIME,
+                    // 콜론을 넣은 오프셋. RFC 822가 아니지만 쓰는 매체가 있다(매일경제).
+                    DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss XXX", Locale.ENGLISH),
+                    // dc:date와 일부 매체의 pubDate가 쓰는 형식.
+                    DateTimeFormatter.ISO_OFFSET_DATE_TIME,
                     DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH),
                     DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss Z", Locale.ENGLISH));
 
@@ -201,6 +214,9 @@ public class RssNewsClient {
             case "link" -> builder.link = textOf(reader);
             case "guid" -> builder.guid = textOf(reader);
             case "pubDate" -> builder.pubDate = textOf(reader);
+            // <dc:date>. 네임스페이스 접두는 떼고 지역 이름으로 들어온다. pubDate를 주지 않고
+            // 이것만 주는 매체가 있어(경향신문) 읽지 않으면 그 매체의 기사가 전부 시각 미확인이 된다.
+            case "date" -> builder.dcDate = textOf(reader);
             case "category" -> {
                 String category = textOf(reader);
                 if (category != null && !category.isBlank()) {
@@ -254,6 +270,10 @@ public class RssNewsClient {
         private String link;
         private String guid;
         private String pubDate;
+
+        /** {@code dc:date}. {@code pubDate}가 없을 때만 쓴다. */
+        private String dcDate;
+
         private final List<String> categories = new ArrayList<>();
 
         Optional<CollectedNewsItem> build(RssNewsSource source, String channelLanguage) {
@@ -269,10 +289,21 @@ public class RssNewsClient {
                             blankToNull(link),
                             title,
                             language,
-                            parsePublishedAt(pubDate).orElse(null),
+                            publishedAt().orElse(null),
                             null,
                             List.copyOf(categories),
                             com.ssafy.thorp.news.domain.vo.NewsSourceType.RSS));
+        }
+
+        /**
+         * 발행 시각. {@code pubDate}를 먼저 보고 없으면 {@code dc:date}를 본다.
+         *
+         * <p>둘 다 있으면 {@code pubDate}가 이긴다. 그것이 RSS 2.0이 정한 자리이고, 두 값이 어긋나는 매체가 있을 때 어느 쪽을 믿을지 매번
+         * 다르게 정하면 같은 기사가 회차마다 다른 시각으로 저장된다.
+         */
+        private Optional<Instant> publishedAt() {
+            Optional<Instant> fromPubDate = parsePublishedAt(pubDate);
+            return fromPubDate.isPresent() ? fromPubDate : parsePublishedAt(dcDate);
         }
 
         private static String blankToNull(String value) {

@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,7 +13,6 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.support.PostgresTestSupport;
@@ -63,7 +63,6 @@ import org.springframework.transaction.support.TransactionTemplate;
             "thorp.backtest.limits.stale-run-seconds=300",
             "thorp.backtest.limits.cancel-grace-seconds=1",
             "thorp.backtest.limits.provisional=true",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -105,7 +104,9 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                 "BATTERY", "305720.XKRX", new BigDecimal("0.6000"))),
                 "FIXED_WEIGHT",
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 2, day),
                 LocalDate.of(2024, 11, 29),
@@ -256,7 +257,9 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                         "BATTERY", "305720.XKRX", null)),
                         "SECTOR_MOMENTUM",
                         "PENDING",
-                        "PARAM-2026-09",
+                        // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                        // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                        null,
                         Map.of("rebalance", "MONTH_END"),
                         LocalDate.of(2024, 2, 1),
                         LocalDate.of(2024, 11, 29),
@@ -301,9 +304,7 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                                 Integer.class,
                                 runId))
                 .isZero();
-        mockMvc.perform(
-                        get("/backtests/{id}", backtestId)
-                                .header(CurrentRequester.DEV_HEADER, user))
+        mockMvc.perform(get("/backtests/{id}", backtestId).with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("FAILED"))
                 .andExpect(jsonPath("$.data.failure.code").value("SYSTEM_FAILURE"))

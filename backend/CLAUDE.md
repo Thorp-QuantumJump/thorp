@@ -8,6 +8,27 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.
 ./gradlew spotlessApply build
 ```
 
+## 로컬 실행 (`./gradlew bootRun`)
+
+`backend/.env`가 필요하다. 없으면 `MAIL_USERNAME` 플레이스홀더를 풀지 못해 기동에 실패한다.
+`application.yml`이 읽는 `optional:file:./.env`의 `./`는 `bootRun`의 작업 디렉터리인 `backend/`라서,
+저장소 루트의 `.env`는 여기서 읽히지 않는다. 루트 `.env`는 docker-compose가 쓰는 파일이다.
+
+```bash
+# backend/.env — gitignore 대상이라 각자 만든다. 항목은 루트 .env.example 참고.
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+```
+
+메일 발송을 실제로 확인할 게 아니면 더미 값으로 충분하다. 값이 없을 때 기동이 실패하는 것은
+의도된 동작이다 — 설정 누락을 조용히 넘기지 않는다.
+
+DB와 브로커는 저장소 루트에서 띄운다.
+
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq
+```
+
 ## 패키지 규칙 (`com.ssafy.thorp`)
 
 근거: [ADR-0001](../docs/adr/0001-be-layered-package-architecture.md). 규칙은 `ArchitectureTest`(ArchUnit)가 검증하며, 위반 시 빌드가 실패한다.
@@ -58,6 +79,9 @@ common: 모든 계층에서 참조 가능
   `backtestId`는 문자열이며 DB PK(Long)는 노출하지 않는다(ADR-0002 D2). HTTP 계약과 예시는 `docs/specs/backtest-api/`
 - 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED | CANCELLED` (Worker 이벤트가 갱신, backend는 조회 제공). `CANCELLED`는 취소·실행 시간 한도로 끊긴 실행이며 부분 결과가 붙는다(`partial=true`). **요청(`backtest_request`)과 실행(`backtest_run`)은 다대일이다** — 같은 조건의 요청은 진행 중 실행에 합류하거나 완료 결과를 재사용한다(spec 004 R-02). 접수 경로는 T005에서 그 모델로 바뀌었다 — 사용자가 보는 `backtestId`는 **요청**의 것이고, 이벤트 envelope의 `runId`는 **실행**의 것이라 값이 다르다
 - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다
+- 전략·파라미터 등록표(`registry/parameter-registry.yml`)는 `strategy` 도메인이 소유하고 `paramsearch`는 `ParameterRegistryPort`로만 읽는다. 값이 바뀌면 행을 고치지 말고 버전을 올린다(`cost_profile`·`strategy_rules`와 같은 규칙)
+- **접수 시점 등록표 재검증(`StrategySettingsValidator`)은 아직 `strategy.registryVersion`이 실린 요청에만 건다**(003 FR-006, 미완료). 판정 순서는 버전 불일치 409 → 미등록·비활성 전략 422 → 축 불일치 400 → 값 범위 밖 400 → 등록표 규칙 위반 422 → 시작 금액 범위 밖 400이고, 어느 단계에서도 **값을 잘라 넣거나 빠진 축을 기본값으로 채워 통과시키지 않는다**(원칙 VI). 위반 문구는 등록표가 준 `detail`을 그대로 쓴다.
+  **관문을 전부에 걸지 않은 이유**: 워커가 아직 `parameters.rebalance`와 `rules.lookbackDays`만 읽어 003의 축 이름(`rebalancePeriod`·`maxWeight`·`topN` 등)이 `docs/specs/backtest-messaging/` 계약에 없다 — 전부에 걸면 004·007의 기존 접수가 막힌다. **`registryVersion`이 없는 요청이 202를 받는 것은 FR-006·SC-003 통과가 아니다.** 004가 워커 계약을 맞춘 뒤 이 필드를 필수화하는 후속 변경까지 끝나야 닫힌다. 의존 방향은 `backtest → strategy` 한 방향이고 `strategy`는 `backtest`를 참조하지 않는다
 - 비용 조건(`cost_profile`)·전략 규칙(`strategy_rules`)은 **마이그레이션이 채우는 읽기 전용 등록표**다. 실행은 버전 문자열만 들고 다니고 값은 등록표에서 읽는다. 값이 바뀌면 행을 고치지 말고 새 버전을 넣는다 — 끝난 실행을 나중 값으로 재해석하면 재현이 깨진다. 팀 미확정 전략은 `PENDING_DECISION` 행만 두고 접수에서 422 `RULES_NOT_REGISTERED`
 - `BacktestRunJpaEntity`는 마이그레이션이 만든 컬럼 전부를 매핑하지 않는다. 접수·재사용·취소·측정이 쓰는 컬럼은 그 코드와 같은 MR에서 매핑을 붙인다. `ddl-auto=validate`는 매핑된 컬럼만 보므로 **미매핑 컬럼의 존재는 `FlywayMigrationTest`가 지킨다**
 - **`AFTER_COMMIT` 안에서 DB를 건드릴 때는 새 트랜잭션(`REQUIRES_NEW`)을 연다.** 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 **변경이 다시 커밋되지 않는다**. 조용히 사라지므로 테스트가 없으면 알아채지 못한다
@@ -65,8 +89,8 @@ common: 모든 계층에서 참조 가능
 - **작업 발행은 접수 트랜잭션이 커밋된 뒤에 한다**(spec 004 R-18, `BacktestJobDispatcher`). 트랜잭션 안에서 발행하면 워커의 STARTED가 커밋을 앞질러 도착해 결과 Consumer가 모르는 실행이라며 버린다. 브로커에 닿지 못해도 접수는 202이고 실행은 `QUEUED`·`published_at NULL`로 남아 `JobRepublisher`(30초)가 다시 보낸다. `publish_count`는 **confirm 수가 아니라 발행 시도 수**이며 시도 직전에 올린다 — 실제 메시지 수의 상한이어야 DLQ 종결 판정이 살아 있는 실행을 끊지 않는다
 - **동일 버전 키(`DedupKeyCalculator`)는 소수·날짜를 맵에 넣기 전에 문자열로 정규화한다.** 직렬화 설정에 표기를 맡기면 그 설정이 바뀐 날 모든 키가 조용히 바뀌고 진행 중이던 재사용 판정이 어긋난다. 메시지 ObjectMapper를 빌려 쓸 수 없다(infrastructure에 있다). 키에 **실효 워밍업 거래일 수**를 반드시 넣는다 — 빠지면 공통 워밍업이 다른 두 실행이 한 키로 묶인다
 - **요청 워밍업이 전략 요구값보다 작으면 `max()`로 올리지 말고 422로 거절한다**(R-15). 올려서 통과시키면 비교 묶음 안 실행들의 `effectiveStart`가 어긋난 채 지나가고, 나란히 놓고 본 숫자가 사실은 다른 구간의 값이 된다
-- **요청자 확인은 상세뿐 아니라 하위 리소스에도 적용한다.** 상세만 막고 시계열·거래·보유를 열어 두면 식별자만 알면 남의 결과를 읽을 수 있고, 개발용 헤더를 끈 운영에서도 그 경로만 열려 있게 된다
-- **요청자 식별은 `CurrentRequester` 한 곳이다.** 지금은 `thorp.auth.trust-user-id-header`를 켠 환경에서만 `X-User-Id` 헤더를 읽고 기본값은 꺼짐이다 — **헤더를 믿는 것은 인증이 아니다.** spec 014가 들어오면 이 클래스만 인증 주체를 읽도록 바꾼다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
+- **요청자 확인은 상세뿐 아니라 하위 리소스에도 적용한다.** 상세만 막고 시계열·거래·보유를 열어 두면 식별자만 알면 남의 결과를 읽을 수 있다 — 로그인을 요구하는 경로와 요구하지 않는 경로가 섞이면 그 틈이 곧 우회로다
+- **요청자 식별은 `CurrentRequester` 한 곳이다.** spec 014 로그인이 세션에 넣어 둔 주체(`authentication.getName()` = `users.id`)를 읽고, 그 형태가 아니면 로그인으로 보지 않는다. 백테스트 경로는 `SecurityConfig`에서 `permitAll`이라 익명 요청도 컨트롤러까지 오므로 **인증 요구는 이 클래스가 한다** — `requireRequesterId`가 던지는 401은 `GlobalExceptionHandler`를 거쳐 `SecurityConfig` 진입점과 같은 봉투가 된다. 소유자를 기록만 하는 경로(007 미리보기)는 `findRequesterId`로 없어도 진행한다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
 - **시장 자료 메타데이터(대응표·자료 버전·상장일·거래일 달력)는 `MarketMetadataPort`로만 읽는다.** 원본은 spec 001 소유이고 구현은 001 적재 전까지 픽스처다(`FixtureMarketMetadataAdapter`, 워커 픽스처와 같은 세 종목·평일 달력). 가격은 이 포트로 읽지 않는다 — 가격을 읽는 것은 워커다
 - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다
 - **취소는 요청 단위다**(`BacktestCancelService`, R-04). 이 요청에 `cancelled_at`을 남기고, 같은 실행의 마지막 활성 요청일 때만 실행을 멈춘다 —

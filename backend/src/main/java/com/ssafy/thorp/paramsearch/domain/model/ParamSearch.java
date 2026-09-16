@@ -76,7 +76,12 @@ public class ParamSearch {
         this.status = builder.status;
         this.stopReason = builder.stopReason;
         this.counts = builder.counts;
-        this.selection = builder.selection == null ? null : Map.copyOf(builder.selection);
+        // executionPlan과 같은 이유로 Map.copyOf를 쓰지 않는다 — 선정 결과에는 값이 null인 항목(채울 이유가
+        // 없을 때의 note)이 있고 Map.copyOf는 null 값에서 NPE를 던진다. 키 순서는 계약 §3의 예시 순서다.
+        this.selection =
+                builder.selection == null
+                        ? null
+                        : Collections.unmodifiableMap(new LinkedHashMap<>(builder.selection));
         this.dataVersionChanged = builder.dataVersionChanged;
         this.startedAt = builder.startedAt;
         this.finishedAt = builder.finishedAt;
@@ -319,6 +324,15 @@ public class ParamSearch {
 
     public Long getOwnerUserId() {
         return ownerUserId;
+    }
+
+    /**
+     * 이 묶음을 바꿀 수 있는 사람인지.
+     *
+     * <p>소유자가 없는 묶음(인증 이전에 만들어진 행)은 누구의 것도 아니므로 아무도 바꾸지 못한다 — 비어 있음을 "누구나"로 읽으면 그 행들이 전부 열린다.
+     */
+    public boolean ownedBy(long userId) {
+        return ownerUserId != null && ownerUserId == userId;
     }
 
     public List<String> getStrategyIds() {

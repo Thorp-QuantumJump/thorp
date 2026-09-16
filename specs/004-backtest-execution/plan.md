@@ -99,7 +99,7 @@ worker/src/worker/
 └── contracts/                  # EngineInput/EngineOutput/Events v2, ControlMessage
 
 docs/specs/backtest-api/, docs/specs/backtest-messaging/   # contracts/ 확정 후 갱신 + examples v2
-docs/adr/0005-backtest-request-run-split.md               # 신규 ADR(요청/실행 분리·quorum queue·제어 채널)
+docs/adr/0006-backtest-request-run-split.md               # 신규 ADR(요청/실행 분리·quorum queue·제어 채널)
 ```
 
 **Structure Decision**: 기존 모노레포 배치와 ADR-0001 계층 구조를 유지한다. 새 개념(요청/실행 분리, 배분 모듈, 등록표)은 기존 패키지 안에 추가하고 새 프로젝트를 만들지 않는다. 프론트엔드 파일은 건드리지 않는다.

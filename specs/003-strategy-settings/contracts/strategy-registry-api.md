@@ -26,6 +26,11 @@ GET /strategies/registry?universeSize={n}
 
 ### 응답 200
 
+**아래는 `universeSize=3`으로 조회한 응답이다.** 다른 API와 같은 `ApiResponse` 껍데기(`{ success, data,
+error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
+[`docs/specs/strategy-registry-api/examples/registry-response.json`](../../../docs/specs/strategy-registry-api/examples/registry-response.json)에
+픽스처로 있고 계약 테스트가 실제 응답과 대조한다.
+
 ```json
 {
   "registryVersion": "PROVISIONAL-20260911",
@@ -45,6 +50,15 @@ GET /strategies/registry?universeSize={n}
       "default": 10,
       "unit": "퍼센트(연)",
       "usedBy": "TARGET_RISK"
+    },
+    "minEvaluationYears": {
+      "choices": [
+        { "value": 0, "label": "완화(제한 없음)" },
+        { "value": 1, "label": "기본(1년)" },
+        { "value": 3, "label": "엄격(3년)" }
+      ],
+      "default": 1,
+      "unit": "년"
     }
   },
   "strategies": [
@@ -52,12 +66,14 @@ GET /strategies/registry?universeSize={n}
       "strategyId": "INVERSE_VOLATILITY",
       "name": "변동성에 따라 나누기",
       "description": "최근 변동성이 낮은 섹터에 더 큰 비중을 둔다.",
+      "targetWeightSource": "COMPUTED",
       "selectable": true,
       "warmupTradingDays": 63,
       "axes": [
         {
           "name": "lookbackDays",
           "label": "변동성 관측 기간",
+          "description": "변동성을 재는 데 쓸 과거 구간의 길이다. 길수록 최근 변화에 둔해진다.",
           "unit": "거래일",
           "inputType": "CHOICE",
           "choices": [
@@ -71,6 +87,7 @@ GET /strategies/registry?universeSize={n}
         {
           "name": "maxWeight",
           "label": "비중 상한",
+          "description": "한 섹터에 넣을 수 있는 최대 비중이다. 잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나눈다.",
           "unit": "퍼센트",
           "inputType": "NUMBER",
           "range": { "min": 10, "max": 100, "step": 5 },
@@ -89,21 +106,83 @@ GET /strategies/registry?universeSize={n}
       "warmupRule": { "sum": ["lookbackDays"] }
     },
     {
-      "strategyId": "MINIMUM_VARIANCE",
-      "name": "전체 변동성을 줄이도록 배분하기",
-      "description": "섹터들이 함께 움직이는 정도를 반영해 추정 포트폴리오 분산이 작아지는 비중을 계산한다.",
+      "strategyId": "SECTOR_MOMENTUM",
+      "name": "흐름을 따라 배분하기",
+      "description": "최근 상승 폭이 큰 섹터를 골라 배분한다.",
+      "targetWeightSource": "COMPUTED",
       "selectable": false,
-      "unselectableReason": "선택한 섹터의 자료가 이 전략에 필요한 250거래일을 채우지 못합니다.",
-      "warmupTradingDays": 250,
-      "axes": [],
-      "validationRules": [],
-      "warmupRule": { "sum": ["lookbackDays"] }
+      "unselectableReason": "선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.",
+      "warmupTradingDays": 81,
+      "axes": [
+        {
+          "name": "lookbackDays",
+          "label": "관측 기간",
+          "description": "상승 폭을 재는 데 쓸 과거 구간의 길이다.",
+          "unit": "거래일",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": 20, "label": "20거래일", "selectable": true },
+            { "value": 60, "label": "60거래일", "selectable": true },
+            { "value": 120, "label": "120거래일", "selectable": true }
+          ],
+          "defaultValue": 60
+        },
+        {
+          "name": "skipRecentDays",
+          "label": "최근 구간 제외 기간",
+          "description": "관측 구간의 맨 끝을 이만큼 빼고 본다. 직전 반등이 판단을 흔드는 것을 줄인다.",
+          "unit": "거래일",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": 0, "label": "0거래일", "selectable": true },
+            { "value": 5, "label": "5거래일", "selectable": true },
+            { "value": 10, "label": "10거래일", "selectable": true },
+            { "value": 21, "label": "21거래일", "selectable": true }
+          ],
+          "defaultValue": 21
+        },
+        {
+          "name": "selectionMode",
+          "label": "선정 방식",
+          "description": "어떤 기준으로 섹터를 추릴지 정한다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": "TOP_N", "label": "상위 몇 개", "selectable": true },
+            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true }
+          ],
+          "defaultValue": "TOP_N"
+        },
+        {
+          "name": "topN",
+          "label": "선정 섹터 수",
+          "description": "선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": 2, "label": "2", "selectable": true },
+            { "value": 3, "label": "3", "selectable": true },
+            { "value": 4, "label": "4", "selectable": false }
+          ],
+          "defaultValue": 4
+        }
+      ],
+      "validationRules": [
+        {
+          "code": "TOP_N_EXCEEDS_UNIVERSE",
+          "detail": "선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.",
+          "left": { "axis": "topN" },
+          "operator": "GREATER_THAN",
+          "right": { "context": "UNIVERSE_SIZE" }
+        }
+      ],
+      "warmupRule": { "sum": ["lookbackDays", "skipRecentDays"] }
     }
   ]
 }
 ```
 
-> 두 번째 전략은 `selectable: false`인 모양을 보이려고 실었다. 실제 응답에서는 `axes`가 비어 있지 않다.
+> 위 수치는 계약 형식을 보이려는 합성 값이다. 두 번째 전략은 기본 설정(`topN: 4`)이 섹터 셋이라는 조건에서
+> 규칙을 어기므로 `selectable: false`이고, 그 축의 후보 `4`도 같은 이유로 `selectable: false`이되 목록에 남는다.
+> 값이 없는 필드(`unit`이 없는 축, 워밍업이 없는 전략의 `warmupRule`)는 `null`로 싣지 않고 생략한다.
 
 ### 필드
 
@@ -111,12 +190,16 @@ GET /strategies/registry?universeSize={n}
 |---|---|---|
 | `registryVersion` | string | 분석 요청에 그대로 실어 보낸다 |
 | `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다 |
+| `strategies[].targetWeightSource` | `USER` \| `EQUAL` \| `COMPUTED` | 목표 비중이 어디에서 오는가. `USER`면 화면이 [002](../../002-sector-weight-selection/spec.md)가 확정한 비중을 읽기 전용으로 보이고, `COMPUTED`면 FR-012의 자동 배분 설명을 보인다. **화면이 전략 ID로 분기하지 않게 하는 값이다** |
 | `strategies[].selectable` | boolean | 카드를 고를 수 있는가. `universeSize`를 주면 유효성 제약과 활성 여부를 반영한다 |
 | `strategies[].unselectableReason` | string? | `selectable`이 false일 때만. 화면이 그대로 한 문장으로 보인다 |
 | `strategies[].warmupTradingDays` | integer | 기본 설정 기준 워밍업. 카드 목록의 판정에 쓴다 |
 | `strategies[].warmupRule` | object | 설정을 바꿀 때 화면이 다시 계산하는 규칙. `sum` 배열의 축 이름을 현재 값으로 바꿔 더한다 (data-model 6) |
+| `axes[].description` | string? | 항목의 의미 한 문장. **화면이 축 이름으로 분기해 설명을 고르지 않게 하는 자리다**([research](../research.md) R7-1) — FR-019의 상한 재배분 안내 문장도 여기에 온다 |
 | `axes[].inputType` | `CHOICE` \| `NUMBER` | 목록형인가 입력형인가 |
 | `axes[].choices` | array | `CHOICE`일 때만. `selectable`이 false인 후보는 유효성 제약에 걸린 값이다 |
+| `axes[].choices[].label` | string | 후보를 사람에게 보일 문구. **화면이 만들지 않는다** — `TOP_N`이나 `{mode: CALENDAR, unit: MONTH_END}`가 무슨 뜻인지는 등록표만 안다. 등록표가 문구를 적지 않은 숫자 후보만 서버가 값과 `unit`으로 만든다(`21` + `거래일`) |
+| `analysisConditions.*.choices` | array | 목록형 조건일 때만. `{ value, label }`이며 전략 축의 `choices`와 달리 `selectable`이 없다 — 유효성 규칙은 전략 축에만 걸린다. `minEvaluationYears`의 `0`이 "0년"이 아니라 "제한 없음"이라는 것도 이 문구가 말한다(FR-011a) |
 | `axes[].range` | object | `NUMBER`일 때만 |
 | `axes[].defaultValue` | any | 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다 |
 | `analysisConditions.*.default` | any | 분석 조건의 기본값. 범위 안에 함께 싣는다 |
@@ -126,6 +209,8 @@ GET /strategies/registry?universeSize={n}
 **비활성 전략은 목록에 실리지 않는다.** `selectable: false`는 활성이되 지금 조건에서 고를 수 없다는 뜻이다.
 
 **`choices[].selectable`**: 예를 들어 섹터를 둘 골랐으면 모멘텀 선정 수의 후보 3·4는 `selectable: false`로 실린다. 화면은 이 값을 흐리게 보이거나 감춘다. 목록에서 아예 빼지 않는 것은 사용자가 왜 고를 수 없는지 알 수 있어야 하기 때문이다.
+
+**후보 하나를 판정하는 방법**: 기본 설정에서 **그 축의 값 하나만** 후보로 바꾼 조합을 만들고, **그 축을 피연산자로 참조하는 규칙만** 평가한다. 그 축과 무관한 규칙까지 함께 보면, 다른 축 때문에 생긴 위반이 이 축의 후보를 고를 수 없는 것처럼 보인다 — 선정 수가 후보 섹터보다 많다는 이유로 관측 기간 후보까지 전부 잠기면 사용자는 틀린 안내를 받는다. 전략 카드 자체의 `selectable`은 기본 설정 전체를 모든 규칙으로 판정한 결과이며, 이 둘은 서로 다른 판정이다.
 
 **`searchValues`는 이 응답에 싣지 않는다.** 자동 탐색 후보는 007이 내부 포트로 직접 읽고, 003 화면은 쓸 일이 없다. 뜻과 비용이 다른 두 목록을 화면에 함께 내리면 혼동만 생긴다([research](../research.md) R3).
 
@@ -147,6 +232,8 @@ GET /strategies/registry?universeSize={n}
 **서버도 같은 규칙으로 다시 판정한다.** 화면 평가는 사용자를 돕기 위한 것이고, 접수 시점의 판정은 서버가 등록표로 수행한다.
 
 ### 응답 503
+
+아래는 `ApiResponse`의 `error`에 담기는 내용이다.
 
 ```json
 { "code": "REGISTRY_UNAVAILABLE", "message": "전략 설정을 불러오지 못했습니다." }

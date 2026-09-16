@@ -1,5 +1,6 @@
 package com.ssafy.thorp.paramsearch.presentation;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,12 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.paramsearch.SearchableStrategies;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +40,6 @@ import org.springframework.test.web.servlet.MockMvc;
             "thorp.backtest.republish.enabled=false",
             "thorp.param-search.enabled=true",
             // 접수는 요청자를 요구한다 — backtest_request.requester_id 가 NOT NULL 이다(spec 004 R-12).
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -94,9 +92,10 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 .andExpect(
                         jsonPath("$.data.limits.provisional")
                                 .value(Matchers.hasItem("maxCandidates")))
+                // 접두를 단언하지 않는다 — PD-02 확정으로 접두가 사라졌고, 임시값을 다시 담는 날
+                // 이 단언이 또 낡는다. 응답이 나르는 것은 '지금 등록표의 버전'이다.
                 .andExpect(
-                        jsonPath("$.data.registryVersion")
-                                .value(Matchers.startsWith("PROVISIONAL-")))
+                        jsonPath("$.data.registryVersion").value(Matchers.is(registry.version())))
                 .andExpect(jsonPath("$.data.validationLabel").value("UNVALIDATED"))
                 .andExpect(jsonPath("$.data.commonPeriod.start").exists());
     }
@@ -110,7 +109,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
                 mockMvc.perform(
                                 post("/param-searches")
                                         .with(csrf())
-                                        .header(CurrentRequester.DEV_HEADER, requesterId)
+                                        .with(as(requesterId))
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(createBody(registryVersion)))
                         .andExpect(status().isAccepted())
@@ -139,7 +138,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         mockMvc.perform(
                         post("/param-searches")
                                 .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, requesterId)
+                                .with(as(requesterId))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody("PROVISIONAL-19990101")))
                 .andExpect(status().isConflict())
@@ -166,7 +165,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
         mockMvc.perform(
                         post("/param-searches")
                                 .with(csrf())
-                                .header(CurrentRequester.DEV_HEADER, requesterId)
+                                .with(as(requesterId))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andExpect(status().isBadRequest())
@@ -194,7 +193,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("요청자 없이 실행하면 처리된 오류다 — 500이 아니다")
+    @DisplayName("로그인 없이 실행하면 처리된 오류다 — 500이 아니다")
     void createWithoutRequesterIsHandled() throws Exception {
         String registryVersion = registryVersionFromPreview();
 
@@ -205,8 +204,8 @@ class ParamSearchApiIT extends PostgresTestSupport {
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(createBody(registryVersion)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test
@@ -227,6 +226,46 @@ class ParamSearchApiIT extends PostgresTestSupport {
         mockMvc.perform(get("/param-searches/{searchId}", "PS-20000101-000001"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("취소·재시도는 소유자만 한다 — 비로그인은 401, 남이면 없는 묶음과 같은 404다")
+    void stateChangesRequireOwner() throws Exception {
+        String created =
+                mockMvc.perform(
+                                post("/param-searches")
+                                        .with(csrf())
+                                        .with(as(requesterId))
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(createBody(registryVersionFromPreview())))
+                        .andExpect(status().isAccepted())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        String searchId = objectMapper.readTree(created).path("data").path("searchId").asText();
+        long stranger = newUser();
+
+        for (String path : java.util.List.of("/cancel", "/retry-failed")) {
+            mockMvc.perform(post("/param-searches/{id}" + path, searchId).with(csrf()))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
+
+            // 403이면 "그 식별자는 있다"가 새어 나간다. searchId 는 날짜+순번이라 추측할 수 있다.
+            mockMvc.perform(
+                            post("/param-searches/{id}" + path, searchId)
+                                    .with(csrf())
+                                    .with(as(stranger)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+        }
+
+        // 소유자는 그대로 취소할 수 있다.
+        mockMvc.perform(
+                        post("/param-searches/{id}/cancel", searchId)
+                                .with(csrf())
+                                .with(as(requesterId)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.searchId").value(searchId));
     }
 
     /** 접수가 요구하는 요청자. backtest_request.requester_id 가 users 를 참조한다. */
@@ -273,14 +312,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
      * STRATEGY_NOT_REGISTERED}로 거부되어 이 테스트가 계약이 아니라 그 거부를 확인하게 된다.
      */
     private String supportedStrategyIdsJson() {
-        List<String> registeredIn004 =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .map(StrategyRegistration::strategyId)
-                .filter(registeredIn004::contains)
+        return SearchableStrategies.of(registry, jdbcTemplate).stream()
                 .map(id -> "\"" + id + "\"")
                 .reduce((left, right) -> left + ", " + right)
                 .map(joined -> "[" + joined + "]")

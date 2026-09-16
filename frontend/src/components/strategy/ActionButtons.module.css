@@ -1,0 +1,70 @@
+.actions {
+  display: grid;
+  gap: 10px;
+}
+
+/* 두 버튼이 같은 폭을 나눈다. 어느 쪽도 더 크지 않다. */
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.button {
+  min-height: 46px;
+  padding: 11px 16px;
+  border: 1px solid var(--thorp-accent);
+  border-radius: 9px;
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover:not([aria-disabled='true']) {
+  background: var(--thorp-accent-soft);
+  border-color: var(--thorp-accent-soft);
+}
+
+.button:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+/* 누를 수 없는 상태. 초점은 받되 눌리지 않는다. 이유는 아래 문장이 말한다. */
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  border-color: var(--thorp-line-strong);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-muted);
+}
+
+.reasons {
+  display: grid;
+  gap: 4px;
+}
+
+.reason {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.reasonLabel {
+  color: var(--thorp-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .buttons {
+    grid-template-columns: 1fr;
+  }
+}

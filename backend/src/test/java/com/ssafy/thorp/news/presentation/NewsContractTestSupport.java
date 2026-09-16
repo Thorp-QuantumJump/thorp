@@ -68,7 +68,7 @@ final class NewsContractTestSupport {
         NewsDigestQueryService service = new StubQueryService(stub, MAX_RANGE_DAYS);
         MappingJackson2HttpMessageConverter converter =
                 new MappingJackson2HttpMessageConverter(MAPPER);
-        return MockMvcBuilders.standaloneSetup(new NewsDigestController(service))
+        return MockMvcBuilders.standaloneSetup(new NewsDigestController(service, null))
                 .setControllerAdvice(new NewsDigestExceptionHandler())
                 .setMessageConverters(converter)
                 .build();
@@ -122,7 +122,7 @@ final class NewsContractTestSupport {
         }
 
         @Override
-        public NewsDigestListResult queryForPublic(String sectorId, Instant from, Instant to) {
+        public NewsDigestListResult query(String sectorId, Instant from, Instant to) {
             return query(NewsDigestQuery.of(sectorId, from, to, maxRangeDays));
         }
 

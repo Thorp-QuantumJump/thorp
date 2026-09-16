@@ -6,8 +6,6 @@ import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
-import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
 import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;
 import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;
@@ -18,6 +16,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +54,9 @@ import org.springframework.transaction.support.TransactionTemplate;
             "spring.mail.password=test"
         })
 class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
+
+    /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
+    private static final long OWNER = 7L;
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -100,7 +102,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @DisplayName("취소로 끝난 묶음도 기록이 덜하지 않다")
     void aPartialBundleCarriesEveryRecordItemToo() {
         ParamSearch accepted = accept();
-        cancelService.cancel(accepted.getSearchId().value());
+        cancelService.cancel(accepted.getSearchId().value(), OWNER);
         ParamSearch search = finishEverything(accepted);
 
         assertThat(search.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);
@@ -113,7 +115,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @DisplayName("계산하지 않은 후보도 사유를 남긴다")
     void uncomputedCandidatesKeepTheirReason() {
         ParamSearch accepted = accept();
-        cancelService.cancel(accepted.getSearchId().value());
+        cancelService.cancel(accepted.getSearchId().value(), OWNER);
         ParamSearch search = finishEverything(accepted);
 
         List<SearchCandidate> uncomputed =
@@ -203,9 +205,9 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
         ParamSearchResult accepted =
                 paramSearchService.create(
                         new CreateParamSearchCommand(
-                                null,
+                                OWNER,
                                 UNIVERSE,
-                                searchableStrategyIds(),
+                                SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
                                 null,
                                 null,
@@ -245,16 +247,4 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
-    private List<String> searchableStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
-    }
 }

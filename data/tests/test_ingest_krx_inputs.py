@@ -29,7 +29,12 @@ from data_pipeline.corporate_actions import (
 )
 from data_pipeline.gaps import REASON_MISSING_CORPORATE_ACTION, build_instrument_series
 from data_pipeline.instrument_profile import InstrumentProfileError
-from data_pipeline.krx import DailyQuote, ListingWindow
+from data_pipeline.krx import (
+    ArchiveReadingSource,
+    DailyQuote,
+    ListingWindow,
+    RawArchiveError,
+)
 from data_pipeline.reconciliation import listing_windows_from_records
 
 INSTRUMENT_ID = "091160.XKRX"
@@ -288,3 +293,42 @@ class TestMissingCorporateActionFile:
         )
         assert all(row["adjustment_factor"] == Decimal(1) for row in built.price_rows)
         assert all(row["adjusted_close"] == row["close"] for row in built.price_rows)
+
+
+# ---------------------------------------------------------------------------
+# --from-raw — 같은 구간을 다시 적재할 때 원천을 다시 부르지 않는다
+# ---------------------------------------------------------------------------
+
+
+class TestFromRaw:
+    """보관본을 읽는 갈래. 보관을 둔 목적이 재수집 없는 재정제다 (research.md 결정 8).
+
+    이 갈래가 없으면 분배를 붙여 다시 적재할 때 이미 갖고 있는 것과 똑같은 자료를 천 번 넘게
+    다시 내려받는다. 이용 한도를 그만큼 쓰고, 원천이 그 사이에 값을 고치면 같은 구간의 두
+    자료 버전이 서로 다른 가격을 담게 된다.
+    """
+
+    def test_인증키_없이도_보관본을_읽는다(self, tmp_path: Path) -> None:
+        source = ingest_krx.build_source(env_file=None, allowed_calls=None, from_raw=True)
+        assert isinstance(source, ArchiveReadingSource)
+
+    def test_한도_재현과_함께_쓸_수_없다(self) -> None:
+        """부르지 않는 호출에 한도를 모의하는 것은 뜻이 성립하지 않는다. 조용히 무시하지 않는다."""
+        with pytest.raises(ingest_krx.IngestError):
+            ingest_krx.build_source(env_file=None, allowed_calls=3, from_raw=True)
+
+    def test_보관본이_없는_날은_휴장일로_보지_않는다(self, tmp_path: Path) -> None:
+        """빈 배열로 돌려주면 받지 않은 날이 휴장일로 둔갑해 거래일 달력에서 조용히 빠진다."""
+        source = ArchiveReadingSource(root=tmp_path)
+        with pytest.raises(RawArchiveError):
+            source.rows("etp", "etf_bydd_trd", DAYS[0])
+
+    def test_보관본을_그대로_돌려준다(self, tmp_path: Path) -> None:
+        target = tmp_path / "etp" / "etf_bydd_trd" / f"{DAYS[0]:%Y%m%d}.json"
+        target.parent.mkdir(parents=True)
+        target.write_text(
+            json.dumps({"OutBlock_1": [{"ISU_CD": "091160"}]}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        source = ArchiveReadingSource(root=tmp_path)
+        assert source.rows("etp", "etf_bydd_trd", DAYS[0]) == [{"ISU_CD": "091160"}]

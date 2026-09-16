@@ -141,17 +141,17 @@
 
 ### Tests for User Story 5
 
-- [ ] T040 [P] [US5] Add append-only permission request/response history, allowed-field validation, and atomic current-state transition tests in `backend/src/test/java/com/ssafy/thorp/news/domain/model/NewsPublisherPermissionTest.java`
-- [ ] T041 [P] [US5] Add public projection tests for permission-before-ranking, mixed-digest representative replacement, denied-source removal, and all-pending state in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsPublicProjectionIT.java`
-- [ ] T042 [P] [US5] Add PUBLIC PREPARING contract and client-mode-override rejection tests using `specs/012-market-news-digest/contracts/examples/public-preparing.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsPreparingContractTest.java`
+- [X] T040 [P] [US5] Add append-only permission request/response history, allowed-field validation, and atomic current-state transition tests in `backend/src/test/java/com/ssafy/thorp/news/domain/model/NewsPublisherPermissionTest.java`
+- [X] T041 [P] [US5] Add public projection tests for permission-before-ranking, mixed-digest representative replacement, denied-source removal, and all-pending state in `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsPublicProjectionIT.java`
+- [X] T042 [P] [US5] Add PUBLIC PREPARING contract and client-mode-override rejection tests using `specs/012-market-news-digest/contracts/examples/public-preparing.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsPreparingContractTest.java`
 
 ### Implementation for User Story 5
 
-- [ ] T043 [P] [US5] Implement publisher current permission state plus append-only request/response history and validated atomic transitions in `backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsPublisher.java`, `NewsPublisherPermissionHistory.java`, and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsPublisherPermissionService.java`
-- [ ] T044 [US5] Implement server-owned INTERNAL/PUBLIC exposure policy and permission filtering before digest summary/count/ranking projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsExposurePolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
-- [ ] T045 [US5] Add PREPARING response projection without an externally selectable exposure parameter in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
-- [ ] T046 [P] [US5] Add MockMvc and persistence tests for permission-filtered fields, PENDING/DENIED exclusion, stable cursor pagination, 500-item limit, and `specs/012-market-news-digest/contracts/examples/export-allowed.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsArticleExportContractTest.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsArticleExportIT.java`
-- [ ] T047 [US5] Implement body-free `GET /market-news/articles/export` with period/sector validation, stable cursor pagination, and allowed-field projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsArticleExportService.java`, `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsArticleExportController.java`, and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsArticleExportResponse.java`
+- [X] T043 [P] [US5] Implement publisher current permission state plus append-only request/response history and validated atomic transitions in `backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsPublisher.java`, `NewsPublisherPermissionHistory.java`, and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsPublisherPermissionService.java`
+- [X] T044 [US5] Implement server-owned INTERNAL/PUBLIC exposure policy and permission filtering before digest summary/count/ranking projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsExposurePolicy.java` and `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java`
+- [X] T045 [US5] Add PREPARING response projection without an externally selectable exposure parameter in `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsDigestController.java` and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsDigestResponse.java`
+- [X] T046 [P] [US5] Add MockMvc and persistence tests for permission-filtered fields, PENDING/DENIED exclusion, stable cursor pagination, 500-item limit, and `specs/012-market-news-digest/contracts/examples/export-allowed.json` in `backend/src/test/java/com/ssafy/thorp/news/presentation/NewsArticleExportContractTest.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsArticleExportIT.java`
+- [X] T047 [US5] Implement body-free `GET /market-news/articles/export` with period/sector validation, stable cursor pagination, and allowed-field projection in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsArticleExportService.java`, `backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsArticleExportController.java`, and `backend/src/main/java/com/ssafy/thorp/news/presentation/response/NewsArticleExportResponse.java`
 
 **Checkpoint**: PD-15 회신 전에도 내부 검증은 가능하고 공개 데이터 누출은 차단된다.
 
@@ -162,11 +162,11 @@
 **Purpose**: 관측성, 종료 정리, 언어 정책, 성능, 계약 동치와 전체 검증을 마무리한다.
 
 - [X] T048 [P] Add structured source-run metrics and sanitized logs for duration, processed/excluded/duplicate/grouped counts, retry, and freshness in `backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsObservability.java` and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsObservabilityTest.java`
-- [ ] T049 Add daily news-domain cleanup activated on/after 2026-11-07 with cascade deletion and repeat zero-row no-op semantics, without a long-term audit table, in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetentionService.java`, `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsRetentionScheduler.java`, and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsRetentionIT.java`
+- [X] T049 Add daily news-domain cleanup activated on/after 2026-11-07 with cascade deletion and repeat zero-row no-op semantics, without a long-term audit table, in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetentionService.java`, `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsRetentionScheduler.java`, and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsRetentionIT.java`
 - [X] T050 [P] Add version-controlled grouping-quality fixtures that prove duplicate and wrong-event merges are 0 and same-event split rate is at most 10%, plus language-policy cases excluding forecast, judgment, investment implication, and return-causation language, in `backend/src/test/resources/news/grouping-quality.json`, `summary-policy.json`, `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsGroupingQualityTest.java`, and `NewsSummaryLanguagePolicyTest.java`
-- [ ] T051 Synchronize API documentation and all response examples with implementation in `docs/specs/market-news-api.md`, `specs/012-market-news-digest/contracts/openapi.yaml`, and `specs/012-market-news-digest/contracts/examples/current-ready.json`, `current-stale.json`, `public-preparing.json`, `historical-empty.json`, `export-allowed.json`
-- [ ] T052 Add repeatable PostgreSQL Testcontainers performance tests with 100,000 article fixtures, 30 warm-up/100 measured digest queries at p95 ≤500ms, and a local 20-RSS-plus-one-GDELT collection cycle ≤15 minutes in `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`
-- [ ] T053 Run and record `backend/.\gradlew.bat spotlessApply build`, confirm PostgreSQL Testcontainers/Flyway tests were not skipped, execute every scenario in `specs/012-market-news-digest/quickstart.md`, and document verified scope and remaining PD-15 limitation in `docs/specs/market-news-api.md`
+- [X] T051 Synchronize API documentation and all response examples with implementation in `docs/specs/market-news-api.md`, `specs/012-market-news-digest/contracts/openapi.yaml`, and `specs/012-market-news-digest/contracts/examples/current-ready.json`, `current-stale.json`, `public-preparing.json`, `historical-empty.json`, `export-allowed.json`
+- [X] T052 Add repeatable PostgreSQL Testcontainers performance tests with 100,000 article fixtures, 30 warm-up/100 measured digest queries at p95 ≤500ms, and a local 20-RSS-plus-one-GDELT collection cycle ≤15 minutes in `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`
+- [X] T053 Run and record `backend/.\gradlew.bat spotlessApply build`, confirm PostgreSQL Testcontainers/Flyway tests were not skipped, execute the WB04 quickstart scenarios while excluding the T052 performance scenario tracked in its separate Jira Task/branch/MR, and document the verified scope, SC-002 shortfall, and remaining PD-15 limitation in `docs/specs/market-news-api.md`
 
 ---
 
@@ -351,3 +351,23 @@ Developer E: T015 → T022/T023 (조회 service와 HTTP 계약)
 - [X] T079 INTERNAL 모드에서는 저장된 사실 요약을 쓴다. `NewsDigestQueryService`가 모드와 무관하게 요약을 다시 만들어, 전체 멤버 기준으로 저장한 값을 내부 검증에서도 볼 수 없다. 공개 응답에서 다시 만드는 것은 그대로 두고 내부 모드만 저장 값을 쓴다 per plan "요약·정렬 규칙 v1", FR-003 (partial)
 - [X] T080 과거·섹터 조회를 한 질의로 합친다. `NewsDigestRepositoryImpl.findVerifiedBetween`이 구간 전체를 읽은 뒤 섹터 목록과 메모리에서 교차한다. 결과는 맞지만 읽는 양이 섹터와 무관하게 구간 전체라, 기사가 쌓일수록 섹터 조회가 전체 조회만큼 비싸진다 per plan 성능 목표 (partial)
 - [X] T081 노출 모드 enum을 하나로 모은다. `NewsProperties.ExposureMode`와 `NewsExposureMode`가 따로 있고 `NewsConfig`가 `valueOf`로 잇는다. 한쪽에만 값을 더하면 컴파일은 지나가고 기동에서 막히며, 그 사이 어디가 원인인지 보이지 않는다 per plan 설정 (unrequested)
+
+---
+
+## Phase 15: Convergence
+
+T052까지 dev에 통합된 상태에서 본 일곱 번째 수렴 검토다. 앞선 회차들이 수집·조회·공개 경로의 이음매를
+맞췄고 실행 Task는 전부 끝났다. 이번에 걸린 것은 **완료 기준을 재는 자 자체**다. 기존 Task는 손대지 않는다.
+
+- [X] T082 CRITICAL: 묶음 품질 표본을 실제 보도로 바꾸고 그 위에서 묶음 규칙을 다시 정한다. 지금 `grouping-quality.json`은 같은 사건 기사 쌍 11개 중 9개의 제목이 글자 그대로 같아(Jaccard 1.000, 평균 0.909) 어떤 토큰화를 쓰든 통과한다. 실제 수집분 345건에서 같은 주제·다른 매체 쌍 8,539개를 재면 0.60에 닿는 쌍이 0개이고 최대가 0.455라, 운영에서는 같은 사건이 한 번도 묶이지 않는다. 원인은 문턱값이 아니라 조사·어미가 붙는 한국어 어절 토큰화이므로 문턱만 낮추면 다른 사건이 붙는다. 실제 수집분에서 뽑은 표본을 `grouping-quality-v2`로 추가하고(v1과 그 판정은 덮어쓰지 않는다), 토큰화와 문턱을 `news-grouping-v2`로 새로 정해 두 표본 모두에서 오병합 0건·분리율 10% 이하를 다시 측정한다. 측정 절차와 수치를 저장소에 남겨 다음 사람이 재현할 수 있게 한다 per SC-002, FR-011, US1/AC1, 원칙 VIII (partial)
+- [X] T083 `docs/specs/market-news-api.md`의 PD-15 문단을 등록표의 실제 상태와 맞춘다. 문단이 "등록표의 경향신문·한국경제·매일경제 항목과 `permission` 값은 내부 fixture 검증용"이라고 적었지만 `news-publishers-v1.json`에는 `permission` 키가 없고 세 매체 모두 `PENDING`으로 등록된다. 지금 문장은 회신을 흉내 낸 값이 파일에 들어 있다는 인상을 주어, 읽는 사람이 공개 게이트가 이미 열려 있는지 의심하게 만든다 per FR-016, T053 (partial)
+
+---
+
+## Phase 16: Convergence
+
+묶음 규칙 v2가 dev에 들어간 뒤 본 여덟 번째 수렴 검토다. 규칙을 바꾼 것이 저장된 자료에 어떻게 닿는지를 살폈다.
+기존 Task는 손대지 않는다.
+
+- [X] T084 규칙 버전이 바뀐 뒤 옛 판정으로 저장된 묶음을 어떻게 할지 정하고 그대로 처리한다. `NewsIngestionService.regroup`은 이번 회차가 건드린 기사가 속한 묶음만 다시 만들므로, v2로 바꾼 뒤에도 새 기사가 들어오지 않는 묶음은 v1 판정 그대로 남는다. 현재 조회는 48시간 창이라 이틀이면 v2로 채워지지만 과거 조회는 창이 없어 갈라진 묶음이 영구히 보인다. 어제 묶이는 사건을 1개에서 14개로 늘린 개선이 과거 자료에는 닿지 않는다는 뜻이다. **원칙 VIII과 정면으로 부딪히는 자리라 코드로 결정하지 말 것** — "기존 결과를 덮어쓰지 않는다"는 원칙대로면 옛 묶음은 그대로 두는 것이 맞고, 그러면 사용자는 어느 규칙으로 만든 화면인지 모른 채 중복이 정리되지 않은 과거 화면을 본다. 재생성할지, 그대로 두고 그 사실을 화면과 문서에 드러낼지 사람이 정한 뒤 그에 맞게 처리한다 per SC-002, FR-006, 원칙 VIII (partial)
+- [X] T085 `news_digest_article.title_similarity`가 어느 척도로 잰 값인지 읽는 쪽이 알 수 있게 한다. v1 묶음 행에는 어절 Jaccard가, v2 묶음 행에는 문자 2-gram Jaccard가 들어 있어 같은 컬럼에 뜻이 다른 두 값이 섞인다. `news_digest.grouping_rule_version`을 함께 보면 구분할 수 있지만 그 사실이 코드에도 스키마 주석에도 없어, 나중에 이 값으로 문턱을 다시 재는 사람이 두 척도를 한 분포로 읽는다 per 원칙 VIII, data-model `NewsDigestArticle` (partial)

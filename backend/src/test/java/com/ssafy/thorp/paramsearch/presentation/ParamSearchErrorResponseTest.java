@@ -5,10 +5,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.common.config.SecurityConfig;
-import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;
 import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;
 import com.ssafy.thorp.paramsearch.application.exception.StrategyNotExecutableException;
 import com.ssafy.thorp.paramsearch.application.exception.StrategyNotRegisteredException;
+import com.ssafy.thorp.strategy.application.exception.RegistryUnavailableException;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

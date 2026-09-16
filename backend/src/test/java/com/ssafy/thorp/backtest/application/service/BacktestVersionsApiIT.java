@@ -1,5 +1,6 @@
 package com.ssafy.thorp.backtest.application.service;
 
+import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -9,7 +10,6 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
-import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,7 +45,6 @@ import org.springframework.test.web.servlet.MockMvc;
             "thorp.backtest.limits.stale-run-seconds=300",
             "thorp.backtest.limits.cancel-grace-seconds=1",
             "thorp.backtest.limits.provisional=true",
-            "thorp.auth.trust-user-id-header=true",
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
@@ -87,7 +86,9 @@ class BacktestVersionsApiIT extends PostgresTestSupport {
                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),
                 strategyId,
                 "1",
-                "PARAM-2026-09",
+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고
+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.
+                null,
                 Map.of("rebalance", "MONTH_END"),
                 LocalDate.of(2024, 5, day),
                 LocalDate.of(2024, 10, 31),
@@ -113,9 +114,7 @@ class BacktestVersionsApiIT extends PostgresTestSupport {
                 .containsEntry("mapping", "SECTOR-ETF-2026-09")
                 .containsEntry("evaluationSplit", "SPLIT-1");
 
-        mockMvc.perform(
-                        get("/backtests/{id}", accepted.backtestId())
-                                .header(CurrentRequester.DEV_HEADER, user))
+        mockMvc.perform(get("/backtests/{id}", accepted.backtestId()).with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.versions.rules.version").value("1"))
                 .andExpect(jsonPath("$.data.versions.rules.provisional").value(true))
@@ -134,9 +133,7 @@ class BacktestVersionsApiIT extends PostgresTestSupport {
 
         assertThat(accepted.versions().get("rules"))
                 .isEqualTo(Map.of("version", "1", "provisional", false));
-        mockMvc.perform(
-                        get("/backtests/{id}", accepted.backtestId())
-                                .header(CurrentRequester.DEV_HEADER, user))
+        mockMvc.perform(get("/backtests/{id}", accepted.backtestId()).with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.versions.rules.provisional").value(false));
     }

@@ -1,0 +1,228 @@
+.page {
+  min-height: 100svh;
+  overflow-x: clip;
+  background:
+    linear-gradient(var(--thorp-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
+    var(--thorp-background);
+  background-size: 72px 72px, 72px 72px, auto;
+  color: var(--thorp-foreground);
+}
+
+.main {
+  display: grid;
+  gap: 22px;
+  width: min(100% - 40px, 760px);
+  margin: 0 auto;
+  padding: clamp(90px, 15vh, 160px) 0 80px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.7rem, 4.4vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.lead {
+  margin: -10px 0 0;
+  color: var(--thorp-copy);
+  font-size: clamp(0.92rem, 1.7vw, 1rem);
+  line-height: 1.7;
+}
+
+.loading {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+}
+
+/* 아직 줄 것이 없는 상태의 한 문장과 행동 하나가 놓이는 자리다(002 화면과 같은 모양). */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+}
+
+.notice p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.notice button,
+.restoreButton {
+  padding: 7px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.notice button:hover,
+.restoreButton:hover {
+  border-color: currentColor;
+}
+
+.restoreNotice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+/* 임시 등록표 표시. 배지와 문장이 함께 있어 색을 못 읽어도 뜻이 남는다. */
+.provisional {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--thorp-warning);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.invalidList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 10px;
+  list-style: none;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.invalidList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.judgement {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.judgement[data-state='blocked'],
+.judgement[data-state='unknown'] {
+  color: var(--thorp-warning);
+}
+
+/* 다음 묶음이 채우는 자리. 접힌 상태가 기본이다. */
+.folded {
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.folded summary {
+  color: var(--thorp-foreground);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.folded summary:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.folded p {
+  margin: 8px 0 0;
+}
+
+.result {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-accent-soft);
+  border-radius: 10px;
+  color: var(--thorp-foreground);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-negative);
+  border-radius: 10px;
+  color: var(--thorp-negative);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .main {
+    width: min(100% - 28px, 760px);
+    padding-top: 72px;
+  }
+}
+
+/* 사용자 비중의 합계가 어긋났다는 안내와 되돌아갈 버튼(T091). 테두리 색과 함께 문장이 뜻을 말한다. */
+.weightNotice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.weightNotice p {
+  margin: 0;
+}
+
+.weightNotice button {
+  padding: 7px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.weightNotice button:hover {
+  border-color: currentColor;
+}

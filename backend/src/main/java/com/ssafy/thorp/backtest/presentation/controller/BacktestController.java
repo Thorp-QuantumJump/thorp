@@ -29,7 +29,6 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -81,9 +80,9 @@ public class BacktestController {
      */
     @PostMapping("/{backtestId}/cancel")
     public ResponseEntity<ApiResponse<BacktestCancelResponse>> cancel(
-            @PathVariable String backtestId, HttpServletRequest http) {
+            @PathVariable String backtestId) {
         BacktestCancelResult result =
-                cancelService.cancel(backtestId, currentRequester.requireRequesterId(http));
+                cancelService.cancel(backtestId, currentRequester.requireRequesterId());
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestCancelResponse.from(result)));
     }
@@ -91,17 +90,17 @@ public class BacktestController {
     /** 실패·취소한 분석을 같은 조건으로 다시 접수한다. 재시도도 동일 버전 판정을 받으므로 합류·재사용이 될 수 있다(T010). */
     @PostMapping("/{backtestId}/retry")
     public ResponseEntity<ApiResponse<BacktestRetryResponse>> retry(
-            @PathVariable String backtestId, HttpServletRequest http) {
+            @PathVariable String backtestId) {
         BacktestJobResult result =
-                retryService.retry(backtestId, currentRequester.requireRequesterId(http));
+                retryService.retry(backtestId, currentRequester.requireRequesterId());
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestRetryResponse.from(result)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(
-            @Valid @RequestBody BacktestJobRequest request, HttpServletRequest http) {
-        long requesterId = currentRequester.requireRequesterId(http);
+            @Valid @RequestBody BacktestJobRequest request) {
+        long requesterId = currentRequester.requireRequesterId();
         BacktestJobResult result = backtestService.create(toCommand(request, requesterId));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));
@@ -113,8 +112,8 @@ public class BacktestController {
      */
     @GetMapping("/{backtestId}")
     public ResponseEntity<ApiResponse<BacktestDetailResponse>> get(
-            @PathVariable String backtestId, HttpServletRequest http) {
-        long requesterId = currentRequester.requireRequesterId(http);
+            @PathVariable String backtestId) {
+        long requesterId = currentRequester.requireRequesterId();
         BacktestDetailResult result = queryService.getDetail(backtestId, requesterId);
         return ResponseEntity.ok(ApiResponse.ok(BacktestDetailResponse.from(result)));
     }
@@ -122,9 +121,9 @@ public class BacktestController {
     /** 차트용 거래일별 시계열. 결과가 없으면 409다(§2.5) — 빈 배열을 만들어 내지 않는다. */
     @GetMapping("/{backtestId}/timeseries")
     public ResponseEntity<ApiResponse<BacktestTimeseriesResponse>> getTimeseries(
-            @PathVariable String backtestId, HttpServletRequest http) {
+            @PathVariable String backtestId) {
         BacktestTimeseriesResult result =
-                queryService.getTimeseries(backtestId, currentRequester.requireRequesterId(http));
+                queryService.getTimeseries(backtestId, currentRequester.requireRequesterId());
         return ResponseEntity.ok(ApiResponse.ok(BacktestTimeseriesResponse.from(result)));
     }
 
@@ -135,12 +134,10 @@ public class BacktestController {
      */
     @GetMapping("/{backtestId}/trades")
     public ResponseEntity<ApiResponse<BacktestTradePageResponse>> getTrades(
-            @PathVariable String backtestId,
-            @Valid @ModelAttribute TradePageQuery query,
-            HttpServletRequest http) {
+            @PathVariable String backtestId, @Valid @ModelAttribute TradePageQuery query) {
         BacktestTradePageResult result =
                 queryService.getTrades(
-                        backtestId, currentRequester.requireRequesterId(http), toQuery(query));
+                        backtestId, currentRequester.requireRequesterId(), toQuery(query));
         return ResponseEntity.ok(ApiResponse.ok(BacktestTradePageResponse.from(result)));
     }
 
@@ -152,29 +149,27 @@ public class BacktestController {
     @GetMapping("/{backtestId}/positions")
     public ResponseEntity<ApiResponse<BacktestPositionsResponse>> getPositions(
             @PathVariable String backtestId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            HttpServletRequest http) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         BacktestPositionsResult result =
-                queryService.getPositions(
-                        backtestId, currentRequester.requireRequesterId(http), date);
+                queryService.getPositions(backtestId, currentRequester.requireRequesterId(), date);
         return ResponseEntity.ok(ApiResponse.ok(BacktestPositionsResponse.from(result)));
     }
 
     /** 리밸런싱마다 목표·실제 비중(FR-026). {@code weightsSource}로 사용자 입력 비중과 계산 비중을 구분한다. */
     @GetMapping("/{backtestId}/weights")
     public ResponseEntity<ApiResponse<BacktestWeightsResponse>> getWeights(
-            @PathVariable String backtestId, HttpServletRequest http) {
+            @PathVariable String backtestId) {
         BacktestWeightsResult result =
-                queryService.getWeights(backtestId, currentRequester.requireRequesterId(http));
+                queryService.getWeights(backtestId, currentRequester.requireRequesterId());
         return ResponseEntity.ok(ApiResponse.ok(BacktestWeightsResponse.from(result)));
     }
 
     /** 예외 처리 기록(FR-020·FR-030). 005가 "결과 옆 한 문장"에 쓰는 원천이다. */
     @GetMapping("/{backtestId}/exceptions")
     public ResponseEntity<ApiResponse<BacktestExceptionsResponse>> getExceptions(
-            @PathVariable String backtestId, HttpServletRequest http) {
+            @PathVariable String backtestId) {
         BacktestExceptionsResult result =
-                queryService.getExceptions(backtestId, currentRequester.requireRequesterId(http));
+                queryService.getExceptions(backtestId, currentRequester.requireRequesterId());
         return ResponseEntity.ok(ApiResponse.ok(BacktestExceptionsResponse.from(result)));
     }
 
