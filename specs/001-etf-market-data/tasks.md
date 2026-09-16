@@ -162,7 +162,7 @@
 
 **2026-09-11: KRX OPEN API 키를 확보해 T014~T016의 착수 조건이 해소되었다.** 세 작업은 실자료 조회가 선행 조건이라 그때까지 Jira를 발급하지 않았는데, 키가 생겨 각각 Task로 발급했다(T014 `-186`, T015 `-187`, T016 `-188`). 착수 차례는 JT4(`-179`)가 수집 코드를 완성한 뒤 T014부터다. JT4가 만드는 조회 도구로 후보 비교를 하는 편이 자연스럽기 때문이다(2026-09-11 결정).
 
-- [ ] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
+- [x] T014 [DE] PD-01 대표 ETF 확정과 예시 자료 교체 (`specs/001-etf-market-data/pd01-etf-candidates.md`, `specs/README.md`, `specs/001-etf-market-data/spec.md`, `data/scripts/ingest_sector_map.py`) — S15P21E205-186
   - **선행 조건은 T001뿐이다.** 본선(T003~T013)과 의존 관계가 없어 병행할 수 있다
   - 자료 이용 승인을 신청하고 진행 상태를 기록한다
   - 섹터마다 후보 3~5개를 골라 확보 가능 기간·기업행위 이력 완전성·최근 3개월 일평균 거래대금을 실제 조회로 채운 비교표를 만든다. **후보끼리 비교하는 것이며 예시 자료 결과와 비교하는 것이 아니다**
@@ -172,6 +172,8 @@
   - **2026-09-15 결정: `listed_on`에는 운용사 공시에서 옮긴 실제 상장일을 적는다.** 자료가 있는 가장 이른 날을 적지 않는다. 까닭 셋은 `data-model.md`의 「상장일을 무엇으로 적는가」에 적었다 — 사실과 다르다는 것, SC-003의 상장 전 자료 검사가 조용히 꺼진다는 것, 자료 시작일은 `daily_price` 조회로 나오므로 같은 값을 두 곳에 두게 된다는 것이다
   - 남은 일은 셋이다. **⑴ 여덟 종목의 상장일과 운용사를 공시에서 확인한다**(같은 공시를 한 번 열면 둘 다 얻으므로 함께 한다). 2차전지·화장품·중공업은 관측 경계가 분기 범위로 알려져 있어 공시값이 그 범위에 드는지로 교차 확인이 된다. 나머지 다섯은 2010-01-04보다 앞이기만 하면 된다. **⑵ 대응표를 여덟 섹터로 갱신한다. ⑶ 새 버전으로 발행해 적재한다**
   - **적재할 때 「담을 수 없는 종목코드」 줄이 나오는지 확인한다.** 나오지 않으면 T031이 남긴 한계(304종 전부가 영숫자 여섯 글자인지 확인하지 못했다)도 함께 닫힌다
+  - **2026-09-16 완료.** 대응표 `SEM-2026-09-16-001`을 `is_sample=false`로 발행하고 2024-09-19~2026-09-15 484거래일을 `KRX_DAILY_20260915`로 적재했다(`daily_price` 3,872행). 「담을 수 없는 종목코드」 줄은 나오지 않았다. `specs/README.md`의 PD-01과 위 결정 항목 표를 갱신했다
+  - **분배 기업행위 입력 파일을 손으로 적지 않는다.** `data/scripts/build_distributions.py`가 일봉에서 락일·금액을 되살리고 KIND 공시에서 지급일을 받아 `ingest_krx.py --corporate-actions`가 먹는 JSON을 만든다. 2년 구간 44건이 빠짐없이 붙었고 결과는 `data/config/corporate-actions-2026-09.json`이다. **아직 DB에는 넣지 않았다** — 같은 마감일로는 자료 버전을 다시 발행할 수 없다(아래 Phase 7의 미해결 항목)
 - [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187
   - **선행 조건은 T008이다.** 본선이 쌓아 둔 `suspension_period` 기록이 입력이다
   - 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포
