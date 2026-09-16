@@ -16,7 +16,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +181,7 @@ class ParamSearchLimitReachedTest extends PostgresTestSupport {
                         new CreateParamSearchCommand(
                                 null,
                                 UNIVERSE,
-                                searchableStrategyIds(),
+                                SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
                                 null,
                                 null,
@@ -222,19 +221,4 @@ class ParamSearchLimitReachedTest extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
-    private List<String> searchableStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
-                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
-    }
 }

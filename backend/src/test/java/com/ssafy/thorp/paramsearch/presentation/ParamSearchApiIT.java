@@ -9,11 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.paramsearch.SearchableStrategies;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -274,14 +273,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
      * STRATEGY_NOT_REGISTERED}로 거부되어 이 테스트가 계약이 아니라 그 거부를 확인하게 된다.
      */
     private String supportedStrategyIdsJson() {
-        List<String> registeredIn004 =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .map(StrategyRegistration::strategyId)
-                .filter(registeredIn004::contains)
+        return SearchableStrategies.of(registry, jdbcTemplate).stream()
                 .map(id -> "\"" + id + "\"")
                 .reduce((left, right) -> left + ", " + right)
                 .map(joined -> "[" + joined + "]")

@@ -57,6 +57,65 @@ class SearchTargetResolverTest {
     }
 
     @Test
+    @DisplayName("목표 비중이 사용자에게서 오는 전략은 탐색 대상에서 빠진다")
+    void strategyNeedingUserWeightsIsRejected() {
+        // 자동 탐색은 목표 비중을 만들지 않는다. 그대로 발행하면 후보 전량이 접수에서 거절돼 실행 자원을 버린다.
+        ParameterRegistryPort withUserWeights =
+                RegistryFixtures.registry("FIXTURE-1")
+                        .strategy("STRATEGY_A", RegistryFixtures.axisOfSize("x", 3))
+                        .strategy("STRATEGY_B", RegistryFixtures.axisOfSize("y", 2))
+                        .targetWeightSource("STRATEGY_B", "USER")
+                        .build();
+
+        SearchTargets targets =
+                resolver(withUserWeights, "STRATEGY_A", "STRATEGY_B")
+                        .resolve(List.of("STRATEGY_A", "STRATEGY_B"));
+
+        assertThat(targets.isRejected()).isTrue();
+        assertThat(targets.notSearchable()).containsExactly("STRATEGY_B");
+        assertThat(targets.notExecutable())
+                .as("004는 이 전략을 실행할 수 있다 — 두 사유를 뭉치면 사용자가 '기다리면 되는 일'로 읽는다")
+                .isEmpty();
+        assertThat(targets.stopReason()).isEqualTo(StopReason.STRATEGY_NOT_SEARCHABLE);
+        assertThat(targets.toException().getErrorCode())
+                .isEqualTo(ErrorCode.STRATEGY_NOT_SEARCHABLE);
+    }
+
+    @Test
+    @DisplayName("축이 없어도 목표 비중을 계산하는 전략이면 탐색 대상이다")
+    void axisCountDoesNotDecideSearchability() {
+        // 예전 판정이던 "축이 있는가"로 갈랐다면 여기서 빠졌을 전략이다. 축의 유무는 설정할 항목이 있는지를
+        // 말할 뿐 실행 입력을 누가 대는지를 말하지 않는다.
+        ParameterRegistryPort noAxis =
+                RegistryFixtures.registry("FIXTURE-1").strategy("STRATEGY_C").build();
+
+        SearchTargets targets = resolver(noAxis, "STRATEGY_C").resolve(List.of("STRATEGY_C"));
+
+        assertThat(targets.isRejected()).isFalse();
+        assertThat(targets.targets())
+                .extracting(StrategyRegistration::strategyId)
+                .containsExactly("STRATEGY_C");
+    }
+
+    @Test
+    @DisplayName("미등록이 탐색 불가보다 먼저 알려진다 — 사용자가 할 일의 순서와 같다")
+    void unregisteredIsReportedBeforeNotSearchable() {
+        ParameterRegistryPort withUserWeights =
+                RegistryFixtures.registry("FIXTURE-1")
+                        .strategy("STRATEGY_B", RegistryFixtures.axisOfSize("y", 2))
+                        .targetWeightSource("STRATEGY_B", "USER")
+                        .build();
+
+        SearchTargets targets =
+                resolver(withUserWeights, "STRATEGY_B")
+                        .resolve(List.of("STRATEGY_MISSING", "STRATEGY_B"));
+
+        assertThat(targets.notRegistered()).containsExactly("STRATEGY_MISSING");
+        assertThat(targets.notSearchable()).containsExactly("STRATEGY_B");
+        assertThat(targets.stopReason()).isEqualTo(StopReason.STRATEGY_NOT_REGISTERED);
+    }
+
+    @Test
     @DisplayName("지원 목록에 전략을 더하면 007 코드 변경 없이 대상이 된다")
     void addingSupportMakesItATargetWithoutCodeChange() {
         SearchTargets before = resolver(registry, "STRATEGY_A").resolve(List.of("STRATEGY_B"));

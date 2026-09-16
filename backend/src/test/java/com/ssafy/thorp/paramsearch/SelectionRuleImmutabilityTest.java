@@ -158,7 +158,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
     /** 등록된 후보값 중 앞의 둘만 남겨 범위를 좁힌다. 등록표 밖 값은 400이므로 안에서만 고른다(FR-002). */
     private Map<String, Map<String, List<Object>>> narrowedSpace() {
         Map<String, Map<String, List<Object>>> space = new java.util.LinkedHashMap<>();
-        for (String strategyId : searchableStrategyIds()) {
+        for (String strategyId : SearchableStrategies.of(registry, jdbcTemplate)) {
             StrategyRegistration registration = registry.find(strategyId).orElseThrow();
             Map<String, List<Object>> axes = new java.util.LinkedHashMap<>();
             for (ParameterAxis axis : registration.axes()) {
@@ -181,7 +181,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
                         new CreateParamSearchCommand(
                                 null,
                                 UNIVERSE,
-                                searchableStrategyIds(),
+                                SearchableStrategies.of(registry, jdbcTemplate),
                                 null,
                                 null,
                                 null,
@@ -205,19 +205,4 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
     }
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
-    private List<String> searchableStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .filter(registration -> !registration.axes().isEmpty())
-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지
-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.
-                .filter(registration -> !"USER".equals(registration.targetWeightSource()))
-                .map(StrategyRegistration::strategyId)
-                .filter(registered::contains)
-                .toList();
-    }
 }

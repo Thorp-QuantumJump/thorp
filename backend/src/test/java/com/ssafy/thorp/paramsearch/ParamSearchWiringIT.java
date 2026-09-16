@@ -105,7 +105,10 @@ class ParamSearchWiringIT extends PostgresTestSupport {
         assertThat(targets.notExecutable())
                 .allSatisfy(strategyId -> assertThat(supported).doesNotContain(strategyId));
         // 요청한 전략은 대상이거나 거부다. 조용히 사라지는 전략이 없어야 한다.
-        assertThat(targets.targets().size() + targets.notExecutable().size())
+        assertThat(
+                        targets.targets().size()
+                                + targets.notExecutable().size()
+                                + targets.notSearchable().size())
                 .isEqualTo(active.size());
     }
 
