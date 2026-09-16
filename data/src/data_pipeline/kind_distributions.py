@@ -64,6 +64,7 @@ ISIN이 없으니 남은 단서는 ``종목`` 칸의 **펀드 정식명**뿐이�
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from collections.abc import Iterator, Mapping
@@ -71,7 +72,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
-from typing import Final, Protocol
+from pathlib import Path
+from typing import Any, Final, Protocol
 
 import requests
 
@@ -102,7 +104,10 @@ DEFAULT_TIMEOUT_SECONDS: Final[float] = 60.0
 #: ISIN(국제증권식별번호). 국내 상장분은 ``KR`` + 10글자다.
 ISIN_PATTERN: Final[re.Pattern[str]] = re.compile(r"\AKR[0-9A-Z]{10}\Z")
 
-_VIEWER_CALL: Final[re.Pattern[str]] = re.compile(r"openDisclsViewer\(\s*'(\d{14})'")
+#: 목록 행의 공시 링크에서 접수번호를 읽는다. 14글자이되 **숫자만은 아니다** — 2006~2009년
+#: 공시는 ``20061227U00003`` 처럼 날짜 여덟 자리 뒤에 영문 한 글자가 온다(2026-09-16 실측).
+#: 숫자로만 못 박으면 그 시기 목록에서 접수번호를 하나도 읽지 못해 수집이 멈춘다.
+_VIEWER_CALL: Final[re.Pattern[str]] = re.compile(r"openDisclsViewer\(\s*'([0-9A-Za-z]{14})'")
 _PAGING: Final[re.Pattern[str]] = re.compile(
     r"전체\s*<em>([\d,]+)</em>\s*건\s*:\s*<strong>(\d+)</strong>\s*/\s*(\d+)"
 )
@@ -792,6 +797,81 @@ def build_fund_name_index(fund_names: Mapping[str, str]) -> dict[str, str]:
 def match_fund_name(name: str, index: Mapping[str, str]) -> str | None:
     """정식명으로 ISIN을 찾는다. **완전 일치**만 인정하며 못 찾으면 ``None``이다."""
     return index.get(normalize_fund_name(name))
+
+
+# ---------------------------------------------------------------------------
+# 대응표 파일
+# ---------------------------------------------------------------------------
+
+
+class FundNameFileError(KindError):
+    """펀드 정식명 대응표 파일이 약속한 모양이 아니다."""
+
+
+#: 대응표 파일의 종목 목록을 담은 키. ``$``로 시작하는 키는 주석이라 읽지 않는다
+#: (``data/config/sector-map-2026-09.json``과 같은 방식이다).
+_FUNDS_KEY: Final[str] = "funds"
+
+
+def _require_mapping(value: Any, where: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise FundNameFileError(f"{where}이 객체가 아니다: {value!r}")
+    return value
+
+
+def _require_text(value: Any, where: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise FundNameFileError(f"{where}이 비어 있지 않은 글자가 아니다: {value!r}")
+    return value
+
+
+def load_fund_names(path: Path) -> dict[str, str]:
+    """펀드 정식명 대응표 파일을 읽어 ``{정식명: ISIN}``으로 돌려준다.
+
+    :func:`collect_distribution_history` 의 ``fund_names`` 인자에 그대로 넣는 꼴이다.
+
+    **이름마다 관측 근거(``observed``)를 요구한다.** 근거가 없으면 읽지 않고 알린다. 정식명은
+    지어낼 수 있는 값이 아니라 공시에서 본 그대로여야 하며, 근거 없는 줄을 조용히 받아 주면
+    아무도 확인할 수 없는 추측이 대응표에 섞인다.
+
+    파일이 없으면 빈 대응표로 넘어가지 않고 알린다 — 조용히 비면 2019년 이전 분배가 통째로
+    사라지고 아무도 모른다.
+    """
+    if not path.is_file():
+        raise FundNameFileError(f"펀드 정식명 대응표 파일이 없다: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise FundNameFileError(f"대응표 파일이 JSON이 아니다: {path} ({error})") from error
+    root = _require_mapping(payload, f"대응표 파일 {path}의 최상위")
+    funds = root.get(_FUNDS_KEY)
+    if not isinstance(funds, list) or not funds:
+        raise FundNameFileError(f"대응표 파일에 {_FUNDS_KEY!r} 목록이 없거나 비었다: {path}")
+
+    names: dict[str, str] = {}
+    for entry in funds:
+        fund = _require_mapping(entry, "종목 항목")
+        isin = _require_text(fund.get("isin"), "종목의 isin")
+        official = fund.get("official_names")
+        if not isinstance(official, list) or not official:
+            raise FundNameFileError(f"{isin}에 official_names가 없거나 비었다")
+        for item in official:
+            record = _require_mapping(item, f"{isin}의 official_names 항목")
+            name = _require_text(record.get("name"), f"{isin}의 정식명")
+            observed = record.get("observed")
+            if not isinstance(observed, list) or not observed:
+                raise FundNameFileError(f"{isin}의 정식명 {name!r}에 관측 근거(observed)가 없다")
+            for sighting in observed:
+                seen = _require_mapping(sighting, f"{name!r}의 관측 근거")
+                _require_text(seen.get("acpt_no"), f"{name!r} 관측 근거의 acpt_no")
+                _require_text(seen.get("disclosed_on"), f"{name!r} 관측 근거의 disclosed_on")
+            if name in names and names[name] != isin:
+                raise FundNameFileError(
+                    f"같은 정식명이 두 ISIN을 가리킨다: {name!r} -> {names[name]}, {isin}"
+                )
+            names[name] = isin
+    build_fund_name_index(names)
+    return names
 
 
 # ---------------------------------------------------------------------------

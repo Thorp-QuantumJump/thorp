@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -23,6 +24,7 @@ from data_pipeline.kind_distributions import (
     MATCH_BY_ISIN,
     DisclosureRef,
     DistributionRow,
+    FundNameFileError,
     KindParseError,
     build_fund_name_index,
     collect_distribution_history,
@@ -32,6 +34,7 @@ from data_pipeline.kind_distributions import (
     is_distribution_title,
     iter_year_chunks,
     key_distribution_rows,
+    load_fund_names,
     match_fund_name,
     normalize_fund_name,
     parse_disclosure_refs,
@@ -878,3 +881,120 @@ def test_ISIN_매칭은_갈래_표시까지_그대로다() -> None:
     )
     assert [(r.amount, r.matched_by) for r in history.records] == [(Decimal("88"), MATCH_BY_ISIN)]
     assert history.is_complete is True
+
+
+# ---------------------------------------------------------------------------
+# 옛 접수번호 — 2006~2009년은 숫자만이 아니다
+# ---------------------------------------------------------------------------
+
+
+def test_영문이_섞인_접수번호도_읽는다() -> None:
+    """2006~2009년 접수번호는 ``20061227U00003``처럼 영문 한 글자를 품는다(2026-09-16 실측).
+
+    숫자 14자리로 못 박으면 그 시기 목록에서 접수번호를 하나도 읽지 못하고 :class:`KindParseError`
+    로 멈춘다. 그러면 상장일부터 훑는 수집이 첫 해에서 끝난다.
+    """
+    refs = parse_disclosure_refs(fixture("list_page_2006.html"))
+    assert [ref.acpt_no for ref in refs] == ["20061227U00003", "20061226U00008"]
+    assert refs[0].issue_name == "KODEX 200"
+    assert refs[0].disclosed_on == date(2006, 12, 27)
+
+
+# ---------------------------------------------------------------------------
+# 펀드 정식명 대응표 파일
+# ---------------------------------------------------------------------------
+
+FUND_NAMES_PATH = Path(__file__).resolve().parents[1] / "config" / "fund-names.json"
+
+#: 여덟 섹터 ETF의 ISIN. 대응표 파일이 이 여덟을 모두 담아야 2019년 이전 분배를 붙일 수 있다.
+EIGHT_ISINS = {
+    "KR7091160002",  # KODEX 반도체
+    "KR7091170001",  # KODEX 은행
+    "KR7091180000",  # KODEX 자동차
+    "KR7102970001",  # KODEX 증권
+    "KR7117700005",  # KODEX 건설
+    "KR7305720005",  # KODEX 2차전지산업
+    "KR7139230007",  # TIGER 200 중공업
+    "KR7228790002",  # TIGER 화장품
+}
+
+
+def test_대응표_파일은_여덟_종목을_모두_담는다() -> None:
+    """한 종목이라도 빠지면 그 종목의 2019년 이전 분배가 통째로 사라진다."""
+    names = load_fund_names(FUND_NAMES_PATH)
+    assert set(names.values()) == EIGHT_ISINS
+
+
+def test_대응표의_모든_이름이_제_종목을_가리킨다() -> None:
+    """이름 수와 열쇠 수는 다를 수 있다 — 띄어쓰기만 다른 표기는 같은 열쇠가 된다.
+
+    걸어야 할 것은 개수가 아니라 **어긋남이 없다**는 것이다. 이름 하나가 엉뚱한 ISIN을
+    가리키면 그 종목의 분배가 남의 것으로 붙는다.
+    """
+    names = load_fund_names(FUND_NAMES_PATH)
+    index = build_fund_name_index(names)
+    for name, isin in names.items():
+        assert match_fund_name(name, index) == isin
+
+
+def test_대응표가_2019년_본문의_정식명을_맞춘다() -> None:
+    """픽스처는 2019-04-26에 실제로 공시된 본문이다. 대응표가 이것을 못 맞추면 헛것이다."""
+    index = build_fund_name_index(load_fund_names(FUND_NAMES_PATH))
+    for acpt_no, expected in (
+        (KODEX_SECURITIES_ACPT, "KR7102970001"),
+        (KODEX_BATTERY_ACPT, "KR7305720005"),
+        (TIGER_HEAVY_ACPT, TARGET_ISIN),
+    ):
+        (row,) = parse_distribution_rows(fixture(f"body_legacy_acpt{acpt_no}.html"))
+        assert match_fund_name(row.short_name, index) == expected
+
+
+def test_대응표는_남의_상품을_맞추지_않는다() -> None:
+    """KB KBSTAR 200중공업은 TIGER 것의 뒷조각을 통째로 품는다. 완전 일치라 걸리지 않아야 한다."""
+    index = build_fund_name_index(load_fund_names(FUND_NAMES_PATH))
+    (row,) = parse_distribution_rows(fixture(f"body_legacy_acpt{KBSTAR_HEAVY_ACPT}.html"))
+    assert match_fund_name(row.short_name, index) is None
+
+
+def test_근거_없는_이름은_받아주지_않는다(tmp_path: Path) -> None:
+    """정식명은 지어낼 수 있는 값이 아니다. 근거 없는 줄을 받으면 추측이 섞인다."""
+    path = tmp_path / "fund-names.json"
+    path.write_text(
+        json.dumps(
+            {"funds": [{"isin": TARGET_ISIN, "official_names": [{"name": "지어낸 이름"}]}]},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(FundNameFileError, match="관측 근거"):
+        load_fund_names(path)
+
+
+def test_파일이_없으면_조용히_비지_않는다(tmp_path: Path) -> None:
+    with pytest.raises(FundNameFileError):
+        load_fund_names(tmp_path / "없는파일.json")
+
+
+def test_대응표_파일도_같은_이름이_두_ISIN을_가리키면_알린다(tmp_path: Path) -> None:
+    path = tmp_path / "fund-names.json"
+    seen = [{"acpt_no": "20190426000435", "disclosed_on": "2019-04-26"}]
+    path.write_text(
+        json.dumps(
+            {
+                "funds": [
+                    {
+                        "isin": TARGET_ISIN,
+                        "official_names": [{"name": "같은 이름", "observed": seen}],
+                    },
+                    {
+                        "isin": KODEX_BANK_ISIN,
+                        "official_names": [{"name": "같은 이름", "observed": seen}],
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(FundNameFileError, match="두 ISIN"):
+        load_fund_names(path)
