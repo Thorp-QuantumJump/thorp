@@ -178,6 +178,44 @@ function renderPageWithSectorRoute(support: AnalysisSupport) {
 }
 
 /**
+ * 부모를 다시 그릴 수 있는 호스트로 화면을 띄운다.
+ *
+ * `makeSupportFor`는 부모가 그릴 때마다 불리며 몇 번째로 다시 그렸는지(`generation`)를 받는다.
+ * 통로를 렌더마다 새로 만드는 호출자를 흉내 내려는 것이다 — 이 화면의 상태 변화는 부모를 다시
+ * 그리지 않으므로, 부모 쪽 사정으로 다시 그리는 경우는 이렇게 따로 만들어야 검사가 닿는다.
+ */
+function renderHost(makeSupportFor: (generation: number) => AnalysisSupport) {
+  function Host() {
+    const [generation, bump] = useState(0)
+    const support = makeSupportFor(generation)
+    return (
+      <>
+        <button type="button" onClick={() => bump((count) => count + 1)}>
+          부모 다시 그리기
+        </button>
+        <StrategySettingsPage support={support} />
+      </>
+    )
+  }
+
+  const authValue: AuthContextValue = {
+    status: 'anonymous',
+    user: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    recheck: vi.fn(),
+  }
+
+  return render(
+    <MemoryRouter initialEntries={['/strategy']}>
+      <AuthContext.Provider value={authValue}>
+        <Host />
+      </AuthContext.Provider>
+    </MemoryRouter>,
+  )
+}
+
+/**
  * 카드와 행동 버튼의 접근 가능 이름은 이름·설명·사유를 이어 붙인 글이라 전체 일치로는 찾을 수 없다.
  * 정규식이 아니라 함수로 견주는 까닭은 전략 이름에 괄호 같은 정규식 기호가 들어 있을 수 있기
  * 때문이다(`똑같이 나누기(시험용)`).
@@ -584,60 +622,187 @@ describe('StrategySettingsPage', () => {
     expect(screen.queryByRole('status', { name: '다시 확인할 설정값' })).toBeNull()
   })
 
-  it('부모가 다시 그리며 통로 객체를 새로 넘겨도 버전을 다시 조회하지 않는다', async () => {
-    // T094. 이 화면의 상태 변화만으로는 부모가 다시 그려지지 않아 조회가 스스로를 다시 부르지는
-    // 못한다. **되풀이는 부모가 제 사정으로 다시 그릴 때 생긴다** — 그때마다 화면이 '확인하는 중'
-    // 으로 돌아가 '분석하기'가 잠깐씩 막힌다. 그래서 검사도 부모를 실제로 다시 그린다.
+  it('부모가 같은 조회 함수를 담아 통로를 새로 펼쳐도 버전을 다시 조회하지 않는다', async () => {
+    // T094. 통로 객체의 참조가 아니라 조회 함수의 참조를 따른다. 호출자가 렌더마다 `{ ...base }`로
+    // 새 객체를 만들어도 담긴 함수가 같으면 요청은 한 번이다.
     let fetchCount = 0
     const { support: base } = makeSupport()
-
-    function UnstableHost() {
-      const [, bump] = useState(0)
-      // 일부러 매 렌더 새 객체를 만든다. `useMemo`를 쓰지 않은 것이 이 검사의 요지다.
-      const support: AnalysisSupport = {
-        ...base,
-        fetchAnalysisVersions: async () => {
-          fetchCount += 1
-          return versionsFixture
-        },
-      }
-      return (
-        <>
-          <button type="button" onClick={() => bump((count) => count + 1)}>
-            부모 다시 그리기
-          </button>
-          <StrategySettingsPage support={support} />
-        </>
-      )
+    const stableFetch: AnalysisSupport['fetchAnalysisVersions'] = async () => {
+      fetchCount += 1
+      return versionsFixture
     }
 
-    const authValue: AuthContextValue = {
-      status: 'anonymous',
-      user: null,
-      login: vi.fn(),
-      logout: vi.fn(),
-      recheck: vi.fn(),
-    }
-
-    render(
-      <MemoryRouter initialEntries={['/strategy']}>
-        <AuthContext.Provider value={authValue}>
-          <UnstableHost />
-        </AuthContext.Provider>
-      </MemoryRouter>,
-    )
+    renderHost(() => ({ ...base, fetchAnalysisVersions: stableFetch }))
 
     const user = userEvent.setup()
     await user.click(await findCardNamed(selectableStrategy.name))
     await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
-    expect(fetchCount).toBe(1)
 
     await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
     await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
 
-    // 다시 조회하지 않았으므로 '분석하기'가 '확인하는 중'으로 되돌아가 막히는 일도 없다.
     expect(fetchCount).toBe(1)
     expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')
+  })
+
+  it('다시 조회하는 동안 받은 버전을 거두지 않아 분석하기가 깜빡이지 않는다', async () => {
+    // T094가 막으려던 사용자 쪽 결함은 요청 횟수가 아니라, 다시 조회하는 동안 '확인하는 중'으로
+    // 돌아가 '분석하기'가 잠깐씩 막히는 것이다. **두 번째 조회를 끝나지 않게 붙들어** 그 틈을 검사가
+    // 반드시 보게 한다. 되돌아간다면 이 틈에서 버튼이 막혀 있다.
+    let fetchCount = 0
+    const { support: base } = makeSupport()
+
+    renderHost(() => ({
+      ...base,
+      // 일부러 렌더마다 새 함수를 만든다. 첫 조회만 끝나고 뒤의 조회는 끝나지 않는다.
+      fetchAnalysisVersions: () => {
+        fetchCount += 1
+        return fetchCount === 1 ? Promise.resolve(versionsFixture) : new Promise<never>(() => {})
+      },
+    }))
+
+    const user = userEvent.setup()
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+
+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
+
+    // 조회는 다시 나갔고(함수가 바뀌었으므로) 아직 끝나지 않았다. 그래도 버튼은 막히지 않는다.
+    expect(fetchCount).toBeGreaterThan(1)
+    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')
+  })
+
+  it('통로를 실제로 바꾸면 버전 조회도 새 통로를 따른다', async () => {
+    // S15P21E205-274. 화면이 열릴 때 한 번만 조회하던 때는 연결 전 통로의 `null`에 머물러, 새 통로로
+    // 바꿔도 '분석하기'가 "분석 조건 버전을 확인할 수 없습니다"로 계속 막혔다.
+    const { support: connected } = makeSupport()
+    const disconnected: AnalysisSupport = { ...connected, fetchAnalysisVersions: async () => null }
+
+    renderHost((generation) => (generation === 0 ? disconnected : connected))
+
+    const user = userEvent.setup()
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => {
+      const reasonId = actionButton('분석하기').getAttribute('aria-describedby')
+      expect(document.getElementById(reasonId!)?.textContent).toContain('분석 조건 버전')
+    })
+
+    // 부모가 연결된 통로로 바꾼다.
+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))
+
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+  })
+
+  it('보관된 시작 금액이 등록표 범위 밖이면 그 금액을 보이지도 보내지도 않고 복원을 기다린다', async () => {
+    // S15P21E205-274, SC-002·FR-017. 재검증이 분석 조건을 통째로 옮겨 범위 밖 금액이 살아남던 결함이다.
+    // 비운 금액이 곧 기본값이 되면 조용히 바뀐 것과 같으므로, 복원을 누르기 전까지 금액을 모른다.
+    const amount = registryFixture.analysisConditions.initialAmount
+    const outOfRange = amount.min - amount.step
+    window.sessionStorage.setItem(
+      STRATEGY_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        registryVersion: registryFixture.registryVersion,
+        universeSize: catalogSectors.length,
+        selectedStrategyId: null,
+        valuesByStrategy: {},
+        analysisCondition: {
+          minEvaluationYears: registryFixture.analysisConditions.minEvaluationYears.default,
+          scenario: 'FULL_PERIOD',
+          initialAmount: outOfRange,
+        },
+        invalidValues: [],
+      }),
+    )
+
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    // 전략을 고르기 전에도 안내가 보인다(T093과 같은 자리).
+    const notice = await screen.findByRole('status', { name: '다시 확인할 분석 조건' })
+    expect(notice.textContent).toContain(String(outOfRange))
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    // 기본값으로 대신 보이지 않는다.
+    const summary = screen.getByLabelText('분석 조건 요약')
+    expect(summary.textContent).not.toContain(amount.default.toLocaleString('ko-KR'))
+    expect(summary.textContent).toContain('확인할 수 없음')
+
+    const analyze = actionButton('분석하기')
+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))
+    await user.click(analyze)
+    expect(requests).toHaveLength(0)
+
+    // 사용자가 복원을 누르면 그제야 기본값이 쓰인다.
+    await user.click(within(notice).getByRole('button', { name: '기본값 복원' }))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2))
+  })
+
+  it('요청을 조립하다 실패하면 실패 안내를 보인다', async () => {
+    // S15P21E205-274. 조립 예외가 `try` 밖이라 거부된 프로미스로 버려져, 버튼을 눌러도 아무 일도
+    // 일어나지 않았다. 계약을 어긴 등록표(기본 시작 금액 0)로 조립이 반드시 실패하게 만든다.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    apiMocks.fetchStrategyRegistry.mockResolvedValue({
+      ...registryFixture,
+      analysisConditions: {
+        ...registryFixture.analysisConditions,
+        initialAmount: { ...registryFixture.analysisConditions.initialAmount, default: 0 },
+      },
+    })
+
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('분석 요청을 만들지 못했습니다')
+    // 내부 예외 문장을 사용자에게 그대로 보이지 않는다.
+    expect(alert.textContent).not.toContain('RangeError')
+    expect(requests).toHaveLength(0)
+    // 원인은 개발 도구에 남긴다.
+    expect(consoleError).toHaveBeenCalled()
+    // 이 파일의 afterEach는 모의를 지우기만 하고 되돌리지 않는다. 되돌리지 않으면 뒤의 검사에서
+    // 오류가 조용히 삼켜진다.
+    consoleError.mockRestore()
+  })
+
+  it('선택을 만든 뒤 섹터 대응표가 바뀌었으면 요청을 만들지 않고 앞 단계로 안내한다', async () => {
+    // S15P21E205-274, 원칙 VIII. 종목은 지금 목록에서, 버전은 보관값에서 오면 서로 다른 대응표가
+    // 한 요청에 섞인다. 서버는 요청의 버전으로 (섹터, 종목) 쌍을 검증한다.
+    window.sessionStorage.setItem(
+      SECTOR_SELECTION_STORAGE_KEY,
+      JSON.stringify({
+        version: SECTOR_SELECTION_PAYLOAD_VERSION,
+        mapVersion: 'SEM-TEST-0',
+        selected: [
+          { code: 'ALPHA', weightTenths: 500 },
+          { code: 'BETA', weightTenths: 500 },
+        ],
+        weightsTouched: true,
+      }),
+    )
+
+    const { support } = makeSupport()
+    renderPage(support)
+
+    expect(await screen.findByText(/섹터 대응표가 바뀌었습니다/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: '섹터·비중 단계로 이동' })).toBeTruthy()
+    // 앞 단계를 확인하기 전에는 카드도 등록표 조회도 없다.
+    expect(
+      screen.queryByRole('button', {
+        name: (accessibleName) => accessibleName.includes(selectableStrategy.name),
+      }),
+    ).toBeNull()
+    expect(apiMocks.fetchStrategyRegistry).not.toHaveBeenCalled()
   })
 
   it('축이 빠진 설정으로는 요청을 보내지 않는다', async () => {
