@@ -70,6 +70,7 @@
 | comparisonKind | `BASIC`(기본 설정) 또는 `AUTO_SEARCH`(자동 탐색 후보) — 화면에서 구분 표시 (FR-011) |
 | commonConditions | 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준 |
 | periodMismatch | 두 결과의 평가 기간이 다를 때 공통 구간과 재계산 대상 두 건 |
+| candidateWarmupHint | 비교 대상 목록의 전략마다, 003 등록표에서 읽은 준비 기간이 기준 결과보다 길면 "비교 기간이 N일 짧아진다"는 표시. 화면은 값을 읽기만 하고 계산하지 않는다 (R-13) |
 
 `targetState`가 `READY`가 아니면 그래프에 기준만 그린다. `FAILED`는 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases).
 
