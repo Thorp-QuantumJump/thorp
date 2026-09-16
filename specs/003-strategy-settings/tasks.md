@@ -444,3 +444,14 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 - 등록표 값을 코드·화면·테스트 기대값에 옮겨 적지 않는다. 운영 코드는 응답·포트에서 읽고, 테스트는 합성 등록표(`RegistryFixtures`·`strategyRegistryFixtures.ts`)나 파일 재독으로 대조한다
 - 태스크마다 커밋하고, 체크포인트마다 멈춰 해당 quickstart 항목을 돈다
 - 등록표 값을 바꿀 일이 생기면 행을 고치지 말고 `version`을 올린다(내부 계약 §2.1)
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: 완료한 묶음(B01~B03)을 spec·plan과 대조해 남은 간극을 메운다. 아직 착수하지 않은 묶음(B04~B12)은
+위 단계가 이미 추적하므로 여기 옮겨 적지 않는다.
+
+- [ ] T079 (INFRA·BE) 등록표가 목록형 후보의 표시 문구를 소유하게 한다 per FR-005·FR-011a (partial) — 지금은 그 문구가 세 곳에 흩어져 있다: `parameter-registry.yml`의 `minEvaluationYears`는 완화/기본/엄격을 **주석으로만** 적어 두었고(`AnalysisCondition`의 컴포넌트가 `range`·`defaultValue`·`unit`·`usedBy` 넷뿐이라 담을 자리 자체가 없다), `StrategyRegistryQueryService.label`은 `MONTH_END`→월말·`TRADING_DAYS`→"N거래일" 같은 문구를 서버 코드 상수로 들고 있으며, 문자열 후보(`TOP_N`·`THRESHOLD`·`TOP_PERCENT`·`ALL`·`EQUAL`·`SCORE_WEIGHTED`·`SAMPLE_COV`)는 값 그대로 `choices[].label`이 되어 화면에 `TOP_N`이 보인다. **라벨이 등록표에서 오지 않으면 화면이 `0`·`1`·`3`을 무슨 말로 보일지 코드에 적어야 하고, 그것이 FR-005가 금지한 "화면 코드에 따로 적어 두는 안내"다.** 축 `allowedRange.values`와 `analysisConditions.*.values`의 후보마다 라벨을 적을 자리를 등록 구조에 두고, 로더가 읽어 조회 응답이 그대로 싣게 한다. **`minEvaluationYears`만 따로 푸는 형태를 고르지 않는다** — `rebalancePeriod`의 `{mode: CALENDAR, unit: MONTH_END}`도 같은 필요가 있어 축 쪽에서 같은 문제를 다시 풀게 된다. 계약 §1의 `ChoiceView`와 같은 모양으로 맞춘다. 그러면 `label` 메서드의 상수가 사라지고 T065가 화면더러 만들라고 한 완화/기본/엄격 라벨도 등록표에서 온다. **등록표 값이 바뀌므로 `version`을 올린다**(내부 계약 §2.1, 현재 `1.0.0`). 계약 §1 필드 표와 `docs/specs/strategy-registry-api/examples/registry-response.json` 픽스처, `backend/src/test/resources/registry/contract-registry.yml`을 함께 고친다 — 셋이 어긋나면 `StrategyRegistryContractTest`가 깨진다
+- [ ] T080 `allowedRange`가 없는 축으로는 기동하지 못하게 막는다 per plan "Testing" 1 (partial) — `FileParameterRegistry.toAllowedRange`가 `allowedRange` 절이 없는 축에 null을 돌려주고 `requireWithinAllowedRange`도 null이면 그냥 지나간다. 그런 축은 화면이 목록을 그릴지 입력칸을 그릴지 정할 수 없어 `StrategyRegistryQueryService.toAxisView`가 조회 시점에 `IllegalStateException`(500)을 던진다. **잘못 적힌 등록표는 기동에서 걸러야 한다**(data-model §3, 로더 Javadoc이 스스로 말하는 원칙). 로더에 검사를 더하고 `FileParameterRegistryTest`의 "새 제약을 어긴 합성 YAML이 기동 실패한다" 묶음에 한 건 더한다. 검사가 생기면 조회 쪽 방어는 그대로 두되 Javadoc에서 "로더가 이미 막는다"로 고친다
+- [ ] T081 [P] `data-model.md` §4-2의 후보·허용범위 표기를 구현과 맞춘다 per plan: data-model §4-2 (contradicts) — §4-2 표가 `lookbackDays`를 "목록형 `[21,63,126,252]`, 허용범위 10~504 간격 1"로, 최소분산 `maxWeight`를 "목록형 `[30,40,50]`, 허용범위 10~100 간격 5"로 적었다. **`AllowedRange`는 목록형(`values`)과 입력형(`min`/`max`/`step`)을 동시에 채우는 것을 생성자로 막으므로**(§4, T014) 그대로는 구현할 수 없고, 실제 등록표는 관측 기간을 목록형으로, 최소분산 상한을 입력형으로 하나씩만 채웠다. 표의 "후보/범위" 열이 `searchValues`와 `allowedRange`를 한 칸에 섞어 적은 것이 원인이므로 두 열로 가르거나 어느 쪽인지 밝혀 적는다. T072가 클래스 이름·경로만 다루므로 이 표기는 그 태스크가 덮지 않는다
