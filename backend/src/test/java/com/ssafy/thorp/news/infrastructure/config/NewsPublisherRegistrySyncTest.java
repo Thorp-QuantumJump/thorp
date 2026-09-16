@@ -1,12 +1,14 @@
 package com.ssafy.thorp.news.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.news.application.repository.NewsPublisherPermissionHistoryRepository;
 import com.ssafy.thorp.news.application.repository.NewsPublisherRepository;
 import com.ssafy.thorp.news.domain.model.NewsPublisher;
 import com.ssafy.thorp.news.domain.model.NewsPublisherPermissionHistory;
 import com.ssafy.thorp.news.domain.vo.NewsAllowedField;
+import com.ssafy.thorp.news.domain.vo.PermissionEventType;
 import com.ssafy.thorp.news.domain.vo.PermissionStatus;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,7 +28,15 @@ class NewsPublisherRegistrySyncTest {
 
     private static final Instant RESPONDED_AT = Instant.parse("2026-09-20T01:00:00Z");
 
+    private static final Instant REQUESTED_AT = Instant.parse("2026-09-16T01:00:00Z");
+
     private static NewsPublisherRegistry.Publisher entry(
+            NewsPublisherRegistry.Permission permission) {
+        return entry(null, permission);
+    }
+
+    private static NewsPublisherRegistry.Publisher entry(
+            NewsPublisherRegistry.PermissionRequest request,
             NewsPublisherRegistry.Permission permission) {
         return new NewsPublisherRegistry.Publisher(
                 "khan-economy",
@@ -36,7 +46,12 @@ class NewsPublisherRegistrySyncTest {
                 "https://www.khan.co.kr/rss/rssdata/economy_news.xml",
                 true,
                 List.of(),
+                request,
                 permission);
+    }
+
+    private static NewsPublisherRegistry.PermissionRequest requested() {
+        return new NewsPublisherRegistry.PermissionRequest(REQUESTED_AT, "2026-09-16 요청 메일");
     }
 
     private static NewsPublisherRegistry.Permission allowed() {
@@ -203,6 +218,71 @@ class NewsPublisherRegistrySyncTest {
     }
 
     /** 매체 저장소 대역. */
+    @Test
+    @DisplayName("등록표에 적힌 허가 요청을 이력으로 남긴다")
+    void 요청_반영() {
+        Harness harness = sync(entry(requested(), null));
+
+        harness.target().afterSingletonsInstantiated();
+
+        assertThat(harness.history().saved)
+                .as("요청했는데 답이 없는 것과 아예 요청하지 않은 것은 다른 상태다")
+                .singleElement()
+                .satisfies(
+                        event -> {
+                            assertThat(event.eventType()).isEqualTo(PermissionEventType.REQUESTED);
+                            assertThat(event.permissionStatus())
+                                    .isEqualTo(PermissionStatus.PENDING);
+                            assertThat(event.occurredAt()).isEqualTo(REQUESTED_AT);
+                            assertThat(event.reference()).isEqualTo("2026-09-16 요청 메일");
+                        });
+    }
+
+    @Test
+    @DisplayName("같은 요청을 다시 기동해도 이력이 늘지 않는다")
+    void 요청_멱등() {
+        Harness harness = sync(entry(requested(), null));
+
+        harness.target().afterSingletonsInstantiated();
+        harness.target().afterSingletonsInstantiated();
+
+        assertThat(harness.history().saved)
+                .as("기동할 때마다 도는 코드라 막지 않으면 재시작 횟수만큼 이력이 불어난다")
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("요청과 회신이 모두 적혀 있으면 둘 다 남고 회신이 현재 상태가 된다")
+    void 요청과_회신() {
+        Harness harness = sync(entry(requested(), allowed()));
+
+        harness.target().afterSingletonsInstantiated();
+
+        assertThat(harness.history().saved)
+                .extracting(NewsPublisherPermissionHistory::eventType)
+                .containsExactly(PermissionEventType.REQUESTED, PermissionEventType.RESPONDED);
+        assertThat(harness.publishers().findByPublisherKey("khan-economy"))
+                .get()
+                .satisfies(
+                        publisher ->
+                                assertThat(publisher.getPermissionStatus())
+                                        .as("요청이 나중에 반영돼 회신을 덮으면 허가받은 매체가 공개에서 빠진다")
+                                        .isEqualTo(PermissionStatus.ALLOWED));
+    }
+
+    @Test
+    @DisplayName("회신 시각이 요청보다 빠른 등록표는 기동에서 막는다")
+    void 뒤집힌_시각은_거부() {
+        assertThatThrownBy(
+                        () ->
+                                entry(
+                                        new NewsPublisherRegistry.PermissionRequest(
+                                                RESPONDED_AT.plusSeconds(1), "요청"),
+                                        allowed()))
+                .as("이력의 앞뒤가 뒤집히면 현재 상태가 요청(PENDING)으로 굳는다")
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private static final class PublisherStore implements NewsPublisherRepository {
         private final java.util.Map<String, NewsPublisher> byKey = new java.util.LinkedHashMap<>();
         private final AtomicLong ids = new AtomicLong();

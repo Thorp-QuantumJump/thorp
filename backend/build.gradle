@@ -91,6 +91,17 @@ tasks.named('test') {
     // 그날 상태에 달리는 것이 가장 나쁘다.
     systemProperty 'thorp.news.collection-enabled', 'false'
 
+    // 등록표 동기화도 같은 이유로 끈다.
+    //
+    // 기동할 때 도는 코드라 @SpringBootTest 컨텍스트에서 등록표의 매체를 공용 Testcontainer DB에
+    // 커밋한다. 수집과 달리 바깥 망에 나가지는 않지만, 결과는 같다 — 뒤에 오는 DB 시험이 자기가 만들지
+    // 않은 매체 행을 보게 된다. 등록표에 허가 상태를 적자 "허가된 매체가 없을 때"를 확인하는 시험이
+    // 전제를 만들 수 없게 되면서 드러났다(2026-09-16).
+    //
+    // 동기화 자체의 동작은 NewsPublisherRegistrySyncTest가 대역으로 본다. 그쪽은 컨텍스트를 띄우지
+    // 않고 직접 호출하므로 이 설정에 영향받지 않는다.
+    systemProperty 'thorp.news.registry-sync-enabled', 'false'
+
     // 저장소 밖(backend/ 바깥)에 있는 공유 픽스처를 이 태스크의 입력으로 선언한다.
     //
     // 계약 픽스처는 워커(Python)와 백엔드(Java)가 같은 파일 하나를 읽어 두 구현을 묶는

@@ -199,6 +199,11 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
      * 대표 기사와의 제목 유사도. 왜 이 기사가 이 묶음에 들어왔는지 남긴다(원칙 VIII).
      *
      * <p>대표 기사 자신은 비교 대상이 아니므로 값을 두지 않는다.
+     *
+     * <p><b>이 값이 어느 척도인지는 같은 묶음의 {@code groupingRuleVersion}이 정한다.</b> {@code news-grouping-v1}
+     * 묶음에는 어절 Jaccard가, {@code news-grouping-v2} 묶음에는 문자 2-gram Jaccard가 들어 있다. 규칙을 바꾸면서 옛 행을 다시
+     * 계산하지 않기 때문이다(원칙 VIII). 이 컬럼만 모아 문턱을 다시 재려는 사람은 규칙 버전으로 먼저 갈라야 한다 — 섞어서 한 분포로 읽으면 두 척도의 평균을 보게
+     * 된다.
      */
     private Double titleSimilarity(NewsDigest digest, NewsArticle member) {
         NewsArticle representative = digest.getRepresentative();
