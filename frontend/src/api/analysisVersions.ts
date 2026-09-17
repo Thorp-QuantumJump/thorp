@@ -15,8 +15,7 @@ import type { ApiEnvelope } from '@/types/api'
  * 003 등록표 응답에 싣는 안은 `strategy`가 `backtest`를 참조하게 되어, `rulesVersion`을 선택 필드로 바꾸는
  * 안은 FR-010의 비용 수치·임시 여부를 채우지 못해 버렸다.
  *
- * <p><b>2026-09-17 기준 이 엔드포인트는 dev에 없다.</b> 필드 이름(`strategyRules`·`defaultCostProfile`)은 004
- * 담당자가 확인했다. 004는 전략마다 현재 버전 한 행만 내리고, 버전이 바뀐 옛 행은 `SUPERSEDED`로 빼며,
+ * <p>계약은 `docs/specs/backtest-api/README.md` §1.11이다(004 T025, 2026-09-17 dev 머지). 004는 전략마다 현재 버전 한 행만 내리고, 버전이 바뀐 옛 행은 `SUPERSEDED`로 빼며,
  * `PENDING_DECISION` 행은 상태 그대로 내린다. 요청에는 `defaultCostProfile.version`을 명시해 싣는다.
  *
  * <p><b>값을 지어내지 않는다.</b> 응답이 계약과 어긋나면 일부만 살리지 않고 거부하며, 화면은 '분석하기'를

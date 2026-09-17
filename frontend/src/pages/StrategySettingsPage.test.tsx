@@ -51,6 +51,19 @@ vi.mock('@/api/sectors', async () => {
   return { ...actual, ...apiMocks }
 })
 
+// 기본 통로가 부르는 004 조회·전송의 자리. 통로를 넘기는 검사는 쓰지 않는다.
+const backtestMocks = vi.hoisted(() => ({
+  fetchAnalysisVersions: vi.fn(),
+  createBacktest: vi.fn(),
+}))
+
+vi.mock('@/api/analysisVersions', () => ({ fetchAnalysisVersions: backtestMocks.fetchAnalysisVersions }))
+
+vi.mock('@/api/backtest', async () => {
+  const actual = await vi.importActual<typeof import('@/api/backtest')>('@/api/backtest')
+  return { ...actual, createBacktest: backtestMocks.createBacktest }
+})
+
 vi.mock('@/api/strategyRegistry', async () => {
   const actual =
     await vi.importActual<typeof import('@/api/strategyRegistry')>('@/api/strategyRegistry')
@@ -557,7 +570,7 @@ describe('StrategySettingsPage', () => {
     expect(requests).toHaveLength(0)
   })
 
-  describe('라우트가 쓰는 기본 통로(T107)', () => {
+  describe('라우트가 쓰는 기본 통로(T107·T110)', () => {
     /** 기본 설정 워밍업 45일이면 줄어들기만 하고, 최소 평가 기간 1년을 채우는 합성 응답 */
     function defaultWindow() {
       const days = Array.from({ length: 91 }, (_, index) =>
@@ -579,11 +592,13 @@ describe('StrategySettingsPage', () => {
       }
     }
 
-    it('공통 평가 기간은 실제 조회로 한 번 받아 카드를 판정하고, 버전은 연결 전이라 분석을 막는다', async () => {
+    it('평가 기간과 004 registry를 한 번씩 받아 카드를 판정하고, registry의 버전을 실어 보낸다', async () => {
       const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
       try {
         const user = userEvent.setup()
         apiMocks.fetchEvaluationWindow.mockResolvedValue(defaultWindow())
+        backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
+        backtestMocks.createBacktest.mockResolvedValue({ backtestId: 'BT-20260917-000009', status: 'QUEUED' })
         renderPage()
 
         const card = await findCardNamed(selectableStrategy.name)
@@ -595,13 +610,16 @@ describe('StrategySettingsPage', () => {
         })
 
         await user.click(card)
-        await waitFor(() =>
-          expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전을 확인할 수 없습니다'),
-        )
+        await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
         await user.click(actionButton('분석하기'))
-        // 004가 없는 지금 버전 조회도 전송도 서버로 나가지 않는다.
+
+        await waitFor(() => expect(backtestMocks.createBacktest).toHaveBeenCalledTimes(1))
+        const request = backtestMocks.createBacktest.mock.calls[0][0] as BacktestCreateRequest
+        expect(request.strategy.rulesVersion).toBe(RULES_VERSION)
+        expect(request.conditions.costProfileVersion).toBe(versionsFixture.costProfileVersion)
+        expect(backtestMocks.fetchAnalysisVersions).toHaveBeenCalledTimes(1)
+        // 조회·전송은 모두 대역이라 실제 네트워크로는 아무것도 나가지 않는다.
         expect(xhrSpy).not.toHaveBeenCalled()
-        expect(screen.queryByText(/분석 요청 전송이 아직 연결되지 않았습니다/)).toBeNull()
       } finally {
         xhrSpy.mockRestore()
       }
@@ -609,6 +627,7 @@ describe('StrategySettingsPage', () => {
 
     it('공통 평가 기간을 받지 못하면 카드가 판정하지 못했다는 사실을 보이고 분석은 막힌다', async () => {
       apiMocks.fetchEvaluationWindow.mockRejectedValue(new Error('404'))
+      backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
       renderPage()
 
       await findCardNamed(selectableStrategy.name)
