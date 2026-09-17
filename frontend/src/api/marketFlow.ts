@@ -96,6 +96,14 @@ function readEnvelopeResult(value: unknown): unknown {
   return value.result
 }
 
+/**
+ * `historicalComparisonNotice`를 `string`으로 **의무화한 것은 의도한 선택이다.**
+ * FR-012가 역사 비교를 보일 때 이 문구를 함께 두라고 요구하므로, 문구 없이 분야 자료만
+ * 그리는 것은 표시해서는 안 되는 상태다. 백엔드도 상수로 항상 채워 보내고
+ * (`MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE`), 계약의 `required`에도 들어 있다.
+ * 값이 비어 오면 그것은 계약 위반이므로 조용히 넘기지 않고 여기서 막는다.
+ * **`isNullableString`으로 느슨하게 바꾸지 말 것.**
+ */
 function parseSummaryEnvelope(value: unknown): MarketFlowSuccessEnvelope<FieldSummaryResult> {
   const result = readEnvelopeResult(value)
   if (

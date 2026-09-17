@@ -135,6 +135,21 @@ describe('시장 흐름 API', () => {
 
   // 봉투는 멀쩡한데 result가 계약과 다른 경우다. 타입 단언만 있고 검사가 없으면
   // 여기서 통과해 화면이 undefined를 렌더하다 죽는다.
+  // FR-012는 역사 비교를 보일 때 안내 문구를 함께 두라고 요구한다. 문구 없이 분야 자료만
+  // 그리는 편이 낫다고 판단해 파서를 느슨하게 풀면 이 두 테스트가 막는다.
+  // 계약도 이 필드를 required로 두고, 백엔드도 상수로 항상 채운다.
+  it.each([
+    ['키가 없으면', { historicalComparisonNotice: undefined }],
+    ['null로 오면', { historicalComparisonNotice: null }],
+  ])('역사 비교 안내 문구가 %s 목록 전체를 막는다', async (_label, brokenResult) => {
+    const body = validSummaryBody()
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      response({ ...body, result: { ...body.result, ...brokenResult } }),
+    )
+
+    await expectRejectedByParser(fetchMarketFlowFields(), SUMMARY_MESSAGE)
+  })
+
   it.each([
     ['fields가 배열이 아니면', { fields: {} }],
     ['registryVersion이 없으면', { registryVersion: undefined }],
