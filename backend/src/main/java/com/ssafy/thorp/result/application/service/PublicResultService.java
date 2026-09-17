@@ -18,6 +18,7 @@ import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
@@ -56,6 +57,7 @@ public class PublicResultService {
     private final BacktestResultQueryService queryService;
     private final BacktestRetryService retryService;
     private final ParameterRegistryPort registry;
+    private final ExpiredPublicTokenRepository expiredTokens;
     private final Clock clock;
 
     public PublicResultService(
@@ -63,11 +65,13 @@ public class PublicResultService {
             BacktestResultQueryService queryService,
             BacktestRetryService retryService,
             ParameterRegistryPort registry,
+            ExpiredPublicTokenRepository expiredTokens,
             Clock clock) {
         this.requestRepository = requestRepository;
         this.queryService = queryService;
         this.retryService = retryService;
         this.registry = registry;
+        this.expiredTokens = expiredTokens;
         this.clock = clock;
     }
 
@@ -75,6 +79,9 @@ public class PublicResultService {
      * 토큰을 요청으로 바꾼다. 순서가 곧 응답 코드의 우선순위다: 형식 → 존재 → 만료.
      *
      * <p>형식이 틀리면 조회하지 않는다. 로그인 사용자의 결과는 만료가 없다({@link BacktestRequest#isPublicExpired}가 false).
+     *
+     * <p><b>요청이 없어도 묘비가 있으면 410이다</b>(T087). 정리 작업이 만료된 요청 행을 지우면서 토큰 해시를 남기므로, 지운 뒤에 들어온 주소도 "잘못된
+     * 주소"가 아니라 "결과가 남아 있지 않다"로 안내된다. 묘비의 보관 기한이 지나면 404다.
      */
     public BacktestRequest resolve(String token) {
         PublicResultToken parsed;
@@ -84,10 +91,16 @@ public class PublicResultService {
             // 값 타입의 메시지에는 입력이 그대로 들어 있다. 받은 문자열을 되돌려 줄 이유가 없다.
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
+        PublicResultToken found = parsed;
         BacktestRequest request =
                 requestRepository
-                        .findByPublicToken(parsed)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+                        .findByPublicToken(found)
+                        .orElseThrow(
+                                () ->
+                                        new BusinessException(
+                                                expiredTokens.exists(PublicTokenDigest.of(found))
+                                                        ? ErrorCode.RESULT_EXPIRED
+                                                        : ErrorCode.RESOURCE_NOT_FOUND));
         if (request.isPublicExpired(clock.instant())) {
             throw new BusinessException(ErrorCode.RESULT_EXPIRED);
         }

@@ -66,4 +66,5 @@ thorp:
     public-token-ttl: PT1H
     expiry-sweep-interval: PT1M
     expiry-sweep-batch-size: 100
+    tombstone-retention: PT2H
     trades-page-size: 100

@@ -410,3 +410,8 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 - 문장은 `summarySentences.ts`·`statusSentences.ts` 두 파일에서만 나온다. 컴포넌트가 문장을 만들면 SC-004의 검수 대상이 흩어진다
 - `backtestId`(`BT-…`)는 백엔드 `result` 패키지의 응답과 프론트엔드 결과 화면 어디에도 없어야 한다(SC-009). T084·T085가 검사한다
 - 각 묶음의 MR 본문 "주요 변경 사항"에 포함한 T### 번호를 나열해 추적한다(constitution "Jira 연계")
+
+## Phase 9: Convergence
+
+- [X] T087 (BE) 만료 정리 뒤에도 만료 주소가 404(잘못된 주소)가 아니라 410 `RESULT_EXPIRED` 안내를 받게 한다 — 지금은 `PublicResultExpirySweeper`가 요청 행을 지우면 `PublicResultService.resolve`가 404를 내서, 만료 뒤 다음 정리 주기 이후로는 안내가 사라진다. FR-021의 "요청과 공개 토큰을 지운다"와 함께 지킬 방식(예: 토큰 원문이 아니라 해시와 만료 시각만 남기는 묘비 행)을 정해 구현하고, `PublicResultExpirySweeperIT`·`ResultApiIT`에 "정리 뒤에도 410" 단언을 더한다. 방식이 스키마를 바꾸면 constitution "스키마 변경 규칙"대로 같은 MR에 담는다 per spec Edge Case(만료된 결과 주소 안내), US1 (contradicts)
+- [X] T088 (BE 테스트) `PublicResultExpirySweeperIT`의 공유 실행 시나리오에 결과 행(`backtest_result`)을 붙이고, 만료 요청을 지운 뒤 실행과 결과가 모두 남는지 단언한다 per T026 (partial)

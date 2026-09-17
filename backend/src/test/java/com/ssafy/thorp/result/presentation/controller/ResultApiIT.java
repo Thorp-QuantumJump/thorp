@@ -16,6 +16,7 @@ import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
@@ -29,12 +30,17 @@ import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
+import com.ssafy.thorp.result.application.service.PublicResultExpirySweeper;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -97,6 +103,11 @@ class ResultApiIT extends PostgresTestSupport {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private BacktestReuseEventRepository reuseEventRepository;
+    @Autowired private ExpiredPublicTokenRepository expiredTokens;
+
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     /** 브로커는 띄우지 않는다. 발행은 커밋 뒤라 접수 응답에 영향을 주지 않는다. */
     @MockitoBean private BacktestJobPublisher publisher;
@@ -394,6 +405,42 @@ class ResultApiIT extends PostgresTestSupport {
                     .andExpect(status().isGone())
                     .andExpect(jsonPath("$.error.code").value("RESULT_EXPIRED"));
         }
+    }
+
+    @Test
+    @DisplayName("정리 작업이 만료된 요청을 지운 뒤에도 그 주소는 404 가 아니라 410 이고 본문이 예시와 같다 (T087, SC-008)")
+    void expiredResultStaysGoneAfterSweep() throws Exception {
+        String token = anonymousTokenFor(completedRun());
+        jdbcTemplate.update(
+                "UPDATE backtest_request SET public_token_expires_at = NOW() - INTERVAL '1 hour'"
+                        + " WHERE public_token = ?",
+                token);
+
+        new PublicResultExpirySweeper(
+                        requestRepository,
+                        reuseEventRepository,
+                        expiredTokens,
+                        transactionManager,
+                        Clock.fixed(Instant.now(), ZoneOffset.UTC),
+                        1000,
+                        Duration.ofDays(30))
+                .sweep();
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM backtest_request WHERE public_token = ?",
+                                Long.class,
+                                token))
+                .as("요청 행은 지워졌다")
+                .isZero();
+        assertThat(objectMapper.readTree(body(get("/results/" + token), 410)))
+                .isEqualTo(example("result-expired.json"));
+        mockMvc.perform(get("/results/" + token + "/timeseries"))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.error.code").value("RESULT_EXPIRED"));
+        // 한 번도 발급되지 않은 토큰은 여전히 404 다.
+        mockMvc.perform(get("/results/" + PublicResultToken.generate().value()))
+                .andExpect(status().isNotFound());
     }
 
     @Test
