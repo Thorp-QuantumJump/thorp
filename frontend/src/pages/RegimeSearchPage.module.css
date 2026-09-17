@@ -7,9 +7,13 @@
 .searchForm { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 26px 0; }
 .searchForm label { width: 100%; color: var(--thorp-copy); font-size: .8rem; }
 .searchForm select { min-width: min(100%, 280px); min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
+.monthControl { display: grid; gap: 6px; }
+.monthControl label { width: auto; }
+.monthControl input { min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
 .searchForm button { min-height: 46px; padding: 8px 20px; border: 1px solid var(--thorp-accent); border-radius: 5px; color: var(--thorp-action-foreground); background: var(--thorp-accent); font: 600 .85rem/1.3 var(--thorp-font-body); cursor: pointer; }
 .searchForm button:disabled { opacity: .55; cursor: not-allowed; }
-.searchForm select:focus-visible, .searchForm button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
+.searchForm .compositeButton { color: var(--thorp-foreground); background: var(--thorp-surface); border-color: var(--thorp-line-strong); }
+.searchForm select:focus-visible, .searchForm button:focus-visible, .monthControl input:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { margin: 24px 0; color: var(--thorp-copy); font-size: .85rem; }
 .results { min-width: 0; }
 .resultHeading { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--thorp-line-strong); padding: 22px 0; }
@@ -17,11 +21,5 @@
 .resultHeading > p { margin: 0; color: var(--thorp-copy); font-size: .82rem; }
 .resultHeading strong { color: var(--thorp-foreground); font-variant-numeric: tabular-nums; }
 .disclosures { display: grid; gap: 8px; margin-bottom: 20px; }
-.dataAsOf { border-top: 1px solid var(--thorp-line); padding: 18px 0 24px; color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }
-.dataAsOf > p { margin: 0 0 8px; }
-.dataAsOf dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
-.dataAsOf dl > div { display: flex; flex-wrap: wrap; gap: 4px 8px; }
-.dataAsOf dt { color: var(--thorp-foreground); }
-.dataAsOf dd { margin: 0; }
 @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }
-@media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button { width: 100%; } }
+@media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button, .monthControl, .monthControl input { width: 100%; } }
