@@ -322,13 +322,13 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **묶음 M8** · `feat(fe)/{티켓}-regime-detail-composite`
 
-- [ ] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다
-- [ ] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)
+- [X] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다
+- [X] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)
 - [ ] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)
 - [ ] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **"Thorp의 설계 선택"** 이라고 적고 *"모든 지표의 중요성이 같다"* 고 쓰지 않는다(FR-010, US3 시나리오 5)
-- [ ] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)
+- [X] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)
 - [ ] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)
-- [ ] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정
+- [X] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정
 
 ---
 

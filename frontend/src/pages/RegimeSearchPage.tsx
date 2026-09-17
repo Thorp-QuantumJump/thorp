@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { getRegimeBaselineMonths } from '@/api/regime'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { BasisNotice } from '@/components/regime/BasisNotice'
+import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'
 import { CaseList } from '@/components/regime/CaseList'
 import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'
 import { Disclosure } from '@/components/regime/Disclosure'
 import { EmptyResult } from '@/components/regime/EmptyResult'
 import { LoadError } from '@/components/regime/LoadError'
+import { NewerReleases } from '@/components/regime/NewerReleases'
 import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'
 import { useRegimeSearch } from '@/hooks/useRegimeSearch'
 import type { RegimeBaselineMonths, RegimeSearchQuery } from '@/types/regime'
@@ -18,6 +20,7 @@ export function RegimeSearchPage() {
   const [baselineRetry, setBaselineRetry] = useState(0)
   const [fieldId, setFieldId] = useState('')
   const [query, setQuery] = useState<RegimeSearchQuery | null>(null)
+  const [baselineChangeNote, setBaselineChangeNote] = useState<string | null>(null)
   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query)
 
   useEffect(() => {
@@ -38,11 +41,24 @@ export function RegimeSearchPage() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!fieldId) return
+    const nextBaseline = baselines?.byField.find((field) => field.id === fieldId)?.baselineMonth
+    setBaselineChangeNote(
+      result && nextBaseline && result.baselineMonth !== nextBaseline ? baselines?.note ?? null : null,
+    )
     if (query?.field === fieldId) {
       retry()
     } else {
       setQuery({ mode: 'field', field: fieldId })
     }
+  }
+
+  const openComposite = () => {
+    if (!baselines?.composite) return
+    setBaselineChangeNote(
+      result && result.baselineMonth !== baselines.composite ? baselines.note : null,
+    )
+    if (query?.mode === 'composite' && !query.baselineMonth) retry()
+    else setQuery({ mode: 'composite' })
   }
 
   const context = result
@@ -73,6 +89,9 @@ export function RegimeSearchPage() {
               ))}
             </select>
             <button type="submit" disabled={!fieldId || isLoading}>과거 사례 찾기</button>
+            <button type="button" disabled={!baselines.composite || isLoading} onClick={openComposite} className={styles.compositeButton}>
+              Thorp 종합 비교
+            </button>
           </form>
         )}
 
@@ -89,6 +108,7 @@ export function RegimeSearchPage() {
                   <p>기준월 <strong>{result.baselineMonth}</strong></p>
                 </div>
                 <div className={styles.disclosures}>
+                  {baselineChangeNote && <BaselineChangeNotice note={baselineChangeNote} context={context} />}
                   <SearchStatusBadge result={result} context={context} />
                   {result.versions.sampleData && (
                     <Disclosure label="예시 자료" context={context} tone="warning">
@@ -97,6 +117,7 @@ export function RegimeSearchPage() {
                   )}
                   <ComparisonMonthsNotice comparisonMonths={result.comparisonMonths} context={context} />
                   <BasisNotice basis={result.basis} context={context} />
+                  <NewerReleases releases={result.dataAsOf.newerReleases} context={context} />
                 </div>
                 <section className={styles.dataAsOf} aria-label={`${context}: 자료 기준 시점`}>
                   {result.dataAsOf.note && <p>{result.dataAsOf.note}</p>}

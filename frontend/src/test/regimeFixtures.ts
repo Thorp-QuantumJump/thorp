@@ -1,4 +1,4 @@
-import type { RegimeSearchResult } from '@/types/regime'
+import type { RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'
 
 export function regimeResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSearchResult {
   return {
@@ -20,6 +20,23 @@ export function regimeResult(overrides: Partial<RegimeSearchResult> = {}): Regim
       distance: '0.412938571034', similar: ['시험 지표가 비슷합니다.'],
       different: ['다른 움직임이 있습니다.'], detailAvailable: true,
     }],
+    ...overrides,
+  }
+}
+
+export function regimeDetail(overrides: Partial<RegimeCaseDetail> = {}): RegimeCaseDetail {
+  return {
+    searchId: 'search-1', endMonth: '2012-03', observationMonths: ['2012-01', '2012-02', '2012-03'],
+    distance: '0.412938571034', byField: { 'field-1': '0.412938571034' },
+    indicators: [{
+      id: 'indicator-1', name: '시험 지표', unit: '%',
+      comparisonMonths: ['2026-05'], caseMonths: ['2012-01'],
+      queryRaw: ['3.1'], caseRaw: ['3.2'], queryZ: ['-0.590178531422'], caseZ: ['-0.421556093873'],
+      e: '0.168622437549', nominalWeight: '0.500000000000', distanceShare: '0.204173755344',
+      scale: { median: '3.45', spread: '0.593040887402', method: 'MAD', windowStart: '2016-05', windowEnd: '2026-04', months: 120 },
+    }],
+    eraPosition: { 'indicator-1': { sentence: '시험 지표는 당시 평소보다 높은 편이었습니다.', method: 'MAD', windowStart: '2002-01', windowEnd: '2011-12', months: 120 } },
+    postPeriod: { endMonth: '2012-03', available: false, note: '사례 이후 결과는 아직 연결되지 않았습니다.' },
     ...overrides,
   }
 }

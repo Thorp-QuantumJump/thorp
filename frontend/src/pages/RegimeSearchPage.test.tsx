@@ -65,4 +65,18 @@ describe('경제환경 검색 화면', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: '비교할 수 있는 과거 시점이 없습니다.' })).toBeNull()
   })
+
+  it('종합으로 전환하며 기준월이 달라질 때 API 문구를 알리고 종합 계산 불가는 그대로 둔다', async () => {
+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => query.mode === 'composite'
+      ? regimeResult({ mode: 'COMPOSITE', field: null, baselineMonth: '2026-05', baselineOrigin: 'T_ALL', status: 'NOT_COMPUTABLE', statusNote: '종합 비교를 계산할 수 없습니다.', cases: [] })
+      : regimeResult())
+    await search()
+    await screen.findByText('2012-03')
+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
+    expect(await screen.findByRole('heading', { name: '종합 비교를 계산할 수 없습니다.' })).toBeTruthy()
+    expect(screen.getByRole('status', { name: '종합 2026-05 검색 결과: 기준월 변경' }).textContent).toContain('전환 안내')
+    expect(screen.queryByText('2012-03')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
+    expect(await screen.findByText('2012-03')).toBeTruthy()
+  })
 })
