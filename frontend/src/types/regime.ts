@@ -29,7 +29,7 @@ export interface RegimeDataAsOf {
     targetMonth: string | null
     publishedAt: string | null
   }[]
-  note: string
+  note: string | null
   revisions: {
     indicatorId: string
     indicator: string | null

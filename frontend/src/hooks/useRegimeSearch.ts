@@ -15,18 +15,19 @@ export function useRegimeSearch(query: RegimeSearchQuery | null): RegimeSearchSt
   const [result, setResult] = useState<RegimeSearchResult | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [limit, setLimit] = useState<3 | 10>(3)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
   const sequence = useRef(0)
   const mode = query?.mode
   const field = query?.field
   const baselineMonth = query?.baselineMonth
+  const queryKey = `${mode ?? ''}|${field ?? ''}|${baselineMonth ?? ''}`
+  const limit: 3 | 10 = expandedKey === queryKey ? 10 : 3
 
-  const showMore = useCallback(() => setLimit(10), [])
+  const showMore = useCallback(() => setExpandedKey(queryKey), [queryKey])
   const retry = useCallback(() => setRetryKey((current) => current + 1), [])
 
   useEffect(() => {
-    setLimit(3)
     setResult(null)
     setError(null)
   }, [mode, field, baselineMonth])
