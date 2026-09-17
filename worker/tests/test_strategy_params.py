@@ -29,15 +29,34 @@ def test_parameter_model_keeps_camel_alias_and_forbids_extra() -> None:
     assert Probe.model_validate({"lookback_days": 5}).lookback_days == 5
 
 
-def test_registry_covers_the_three_registered_allocation_strategies() -> None:
-    """미확정 두 전략(PD-03·04)은 파라미터 모양도 미정이라 등록하지 않는다."""
+def test_registry_covers_the_registered_allocation_strategies() -> None:
+    """미확정 전략(PD-03)은 파라미터 모양도 미정이라 등록하지 않는다."""
     assert STRATEGY_PARAMETERS == {
         "FIXED_WEIGHT": RebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
         "INVERSE_VOLATILITY": RebalanceParameters,
+        "MINIMUM_VARIANCE": RebalanceParameters,
     }
     assert "SECTOR_MOMENTUM" not in STRATEGY_PARAMETERS
-    assert "MINIMUM_VARIANCE" not in STRATEGY_PARAMETERS
+
+
+def test_max_weight_is_an_integer_percent_and_optional() -> None:
+    """003 축이 정수 %다. 소수·범위 밖은 조용히 고쳐지지 않고 거절된다(T022)."""
+    typed = AllocationSpec.model_validate(
+        spec("MINIMUM_VARIANCE", {"rebalance": "MONTH_END", "maxWeight": 40})
+    )
+    assert typed.typed_parameters.max_weight == 40
+    assert (
+        AllocationSpec.model_validate(
+            spec("MINIMUM_VARIANCE", {"rebalance": "MONTH_END"})
+        ).typed_parameters.max_weight
+        is None
+    )
+    for rejected in (0, 101, 0.4):
+        with pytest.raises(ValidationError, match="maxWeight"):
+            AllocationSpec.model_validate(
+                spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "maxWeight": rejected})
+            )
 
 
 @pytest.mark.parametrize("strategy_id", sorted(STRATEGY_PARAMETERS))

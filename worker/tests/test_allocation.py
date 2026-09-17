@@ -27,6 +27,8 @@ INVERSE_RULES = {
     "lookbackDays": 3,
     "zeroVolatility": "EXCLUDE_THEN_ALLOCATE",
     "weightCap": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
     "investedFraction": "1.0000",
     "weightsSource": "COMPUTED",
 }
@@ -239,19 +241,60 @@ def test_weight_cap_is_enforced():
     assert sum(result.weights.values()) == pytest.approx(Decimal(1))
 
 
-def test_unreachable_cap_is_a_constraint_violation():
-    """상한 x 종목 수가 투자 비중에 못 미치면 어떤 배분도 조건을 만족하지 못한다."""
+def test_unreachable_cap_leaves_the_remainder_in_cash():
+    """상한 x 종목 수가 투자 비중에 못 미쳐도 멈추지 않는다 — 못 채운 몫은 현금이고 사유를 남긴다.
+
+    상한을 몰래 풀어 사용자가 고른 조건과 다른 포트폴리오를 돌리는 것보다 낫다(PD-03 6).
+    """
     rules = {**INVERSE_RULES, "weightCap": "0.3000"}
 
-    with pytest.raises(AllocationError) as caught:
-        compute_weights(
-            allocation("INVERSE_VOLATILITY", rules),
-            [item(SEMI), item(BATTERY)],
-            history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
-            AS_OF,
-        )
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", rules),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
+        AS_OF,
+    )
 
-    assert caught.value.code == "CONSTRAINT_VIOLATION"
+    assert result.weights == {SEMI: Decimal("0.3"), BATTERY: Decimal("0.3")}
+    assert [record.kind for record in result.exceptions] == ["CAP_OVERFLOW_CASH"]
+
+
+def test_request_max_weight_overrides_the_registry_cap():
+    """화면에서 고른 상한(정수 %)이 규칙표 기본값보다 앞선다(PD-03 6)."""
+    spec = AllocationSpec.model_validate(
+        {
+            "strategyId": "INVERSE_VOLATILITY",
+            "rulesVersion": "1",
+            "rules": INVERSE_RULES,
+            "parameters": {"rebalance": "MONTH_END", "maxWeight": 30},
+        }
+    )
+
+    result = compute_weights(
+        spec,
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
+        AS_OF,
+    )
+
+    assert max(result.weights.values()) == Decimal("0.3")
+    assert [record.kind for record in result.exceptions] == ["CAP_OVERFLOW_CASH"]
+
+
+def test_weights_land_on_the_fixed_output_unit():
+    """세 종목 1/3 은 딱 떨어지지 않는다. 0.000001 단위로 내리고 남은 단위를 되돌려 준다."""
+    flat = [100.0, 101.0, 100.0, 101.0]
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(**{SEMI: flat, BATTERY: flat, BIO: flat}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    unit = Decimal("0.000001")
+    assert all(weight % unit == 0 for weight in result.weights.values())
 
 
 @pytest.mark.parametrize(
@@ -281,10 +324,142 @@ def test_unknown_zero_volatility_policy_is_rejected():
         )
 
 
+# --- 최소분산 ----------------------------------------------------------------
+
+MIN_VARIANCE_RULES = {
+    "lookbackDays": 3,
+    "estimationMethod": "SAMPLE_COV",
+    "weightCap": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
+    "investedFraction": "1.0000",
+    "weightsSource": "COMPUTED",
+}
+
+
+def min_variance(parameters: dict | None = None, **rule_overrides) -> AllocationSpec:
+    return AllocationSpec.model_validate(
+        {
+            "strategyId": "MINIMUM_VARIANCE",
+            "rulesVersion": "1",
+            "rules": {**MIN_VARIANCE_RULES, **rule_overrides},
+            "parameters": {"rebalance": "MONTH_END", **(parameters or {})},
+        }
+    )
+
+
+def test_minimum_variance_leans_on_the_calmer_instrument():
+    """AC5: 비중은 비음수·상한 이하이고 합이 투자 비중이다. 분산이 작은 쪽이 더 무겁다."""
+    calm = [100.0, 100.5, 100.0, 100.5]
+    wild = [100.0, 110.0, 95.0, 115.0]
+
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: calm, BATTERY: wild}),
+        AS_OF,
+    )
+
+    assert result.source is WeightsSource.COMPUTED
+    assert all(weight >= 0 for weight in result.weights.values())
+    assert max(result.weights.values()) <= Decimal(1)
+    assert sum(result.weights.values()) == Decimal(1)
+    assert result.weights[SEMI] > result.weights[BATTERY]
+
+
+def test_cap_fixes_the_effective_target_before_optimising():
+    """상한 40%·계산 가능 2개면 채울 수 있는 최대가 80%다. 나머지 20%는 현금이고 사유가 남는다."""
+    result = compute_weights(
+        min_variance({"maxWeight": 40}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal("0.8")
+    assert max(result.weights.values()) <= Decimal("0.4")
+    reduced = [record for record in result.exceptions if record.kind == "EFFECTIVE_TARGET_REDUCED"]
+    assert len(reduced) == 1
+    assert "0.8" in (reduced[0].action or "")
+
+
+def test_single_computable_instrument_skips_the_optimiser():
+    result = compute_weights(
+        min_variance({"maxWeight": 40}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 101.0]}),
+        AS_OF,
+    )
+
+    assert result.weights == {SEMI: Decimal("0.4")}
+    kinds = [record.kind for record in result.exceptions]
+    assert kinds == ["INSUFFICIENT_HISTORY", "EFFECTIVE_TARGET_REDUCED", "SINGLE_ASSET_FALLBACK"]
+
+
+def test_no_computable_instrument_holds_cash():
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0], BATTERY: [100.0, 101.0]}),
+        AS_OF,
+    )
+
+    assert result.weights == {}
+    assert "EFFECTIVE_TARGET_REDUCED" in [record.kind for record in result.exceptions]
+
+
+def test_unusable_covariance_fails_the_whole_run():
+    """자료가 망가져 공분산이 유한값이 아니면 보정하지 않고 실행 전체를 실패시킨다(PD-04 3)."""
+    with pytest.raises(AllocationError) as caught:
+        compute_weights(
+            min_variance(),
+            [item(SEMI), item(BATTERY)],
+            history(**{SEMI: [100.0, 0.0, 100.0, 101.0], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+            AS_OF,
+        )
+
+    assert caught.value.code == "ESTIMATION_FAILED"
+
+
+def test_minimum_variance_is_repeatable():
+    """같은 입력이면 같은 답이다 — 솔버가 끼어도 마찬가지다(SC-002)."""
+    prices = {
+        SEMI: [100.0, 100.5, 100.0, 100.5],
+        BATTERY: [100.0, 110.0, 95.0, 115.0],
+        BIO: [100.0, 102.0, 101.0, 103.0],
+    }
+    universe = [item(SEMI), item(BATTERY), item(BIO)]
+
+    first = compute_weights(min_variance(), universe, history(**prices), AS_OF)
+    second = compute_weights(min_variance(), list(reversed(universe)), history(**prices), AS_OF)
+
+    assert first.weights == second.weights
+
+
+@pytest.mark.parametrize("missing", ["lookbackDays", "estimationMethod", "capOverflow"])
+def test_minimum_variance_missing_rule_value_stops(missing):
+    rules = {key: value for key, value in MIN_VARIANCE_RULES.items() if key != missing}
+
+    with pytest.raises(AllocationError, match=missing):
+        compute_weights(
+            AllocationSpec.model_validate(
+                {
+                    "strategyId": "MINIMUM_VARIANCE",
+                    "rulesVersion": "1",
+                    "rules": rules,
+                    "parameters": {"rebalance": "MONTH_END"},
+                }
+            ),
+            [item(SEMI)],
+            history(**{SEMI: [100.0, 101.0, 100.5, 102.0]}),
+            AS_OF,
+        )
+
+
 # --- 레지스트리 ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("strategy_id", ["SECTOR_MOMENTUM", "MINIMUM_VARIANCE"])
+@pytest.mark.parametrize("strategy_id", ["SECTOR_MOMENTUM"])
 def test_pending_decision_strategies_say_so(strategy_id):
     """팀 결정 대기와 엔진 미구현은 사용자가 할 일이 다르다 — 메시지도 달라야 한다."""
     with pytest.raises(AllocationError) as caught:

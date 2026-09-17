@@ -122,6 +122,9 @@ public class BacktestService {
     private static final BigDecimal MAX_TARGET_VOLATILITY = new BigDecimal("0.2000");
     private static final BigDecimal TARGET_VOLATILITY_STEP = new BigDecimal("0.0100");
 
+    /** 003 축은 %, 규칙표와 워커는 소수다. 변환은 {@link #effectiveWeightCap} 한 곳에서만 한다. */
+    private static final BigDecimal HUNDRED = new BigDecimal("100");
+
     @Transactional(noRollbackFor = BusinessException.class)
     public BacktestJobResult create(CreateBacktestCommand command) {
         return create(command, null);
@@ -465,7 +468,7 @@ public class BacktestService {
             }
         }
 
-        BigDecimal cap = decimal(rules.spec(), "weightCap");
+        BigDecimal cap = effectiveWeightCap(command.parameters(), rules);
         if (cap != null) {
             BigDecimal invested =
                     Optional.ofNullable(decimal(rules.spec(), "investedFraction"))
@@ -473,8 +476,8 @@ public class BacktestService {
             BigDecimal reachable = cap.multiply(BigDecimal.valueOf(items.size()));
             if (reachable.compareTo(invested) < 0) {
                 throw new BusinessException(
-                        ErrorCode.INVALID_INPUT,
-                        "종목별 상한 %s × %d종목 = %s 로는 투자 비중 %s 를 채울 수 없습니다. 종목을 늘리거나 상한이 다른 규칙을 고르세요."
+                        ErrorCode.VALIDATION_RULE_VIOLATED,
+                        "종목별 상한 %s × %d종목 = %s 로는 투자 비중 %s 를 채울 수 없습니다. 종목을 늘리거나 상한을 높이세요."
                                 .formatted(
                                         cap.toPlainString(),
                                         items.size(),
@@ -482,6 +485,41 @@ public class BacktestService {
                                         invested.toPlainString()));
             }
         }
+    }
+
+    /**
+     * 이 실행에 실제로 적용하는 종목별 상한(PD-03 ⑥).
+     *
+     * <p><b>요청의 {@code allocation.parameters.maxWeight}(003 축, 정수 %)가 있으면 그것을 100으로 나눈 값이고, 없으면
+     * 규칙표의 {@code weightCap}이다.</b> 사용자가 화면에서 고른 상한이 우선이고 규칙표 값은 그것을 고르지 않은 요청의 기본값 역할을 한다.
+     *
+     * <p>접수와 워커가 같은 규칙으로 읽어야 한다 — 규칙표 값만 보면 역변동성 {@code /1}의 {@code weightCap}이 1.0000이라 "상한 40% ×
+     * 2종목"이 접수를 통과하고 워커에서야 조건을 못 채운다. 워커 쪽 같은 규칙은 {@code worker/src/worker/allocation/base.py}의
+     * {@code effective_cap}이다.
+     *
+     * @return 소수 표기의 유효 상한. 규칙표에도 요청에도 상한이 없으면 {@code null}(제한 없음)
+     */
+    private static BigDecimal effectiveWeightCap(
+            Map<String, Object> parameters, StrategyRules rules) {
+        Object raw = parameters == null ? null : parameters.get("maxWeight");
+        if (raw == null) {
+            return decimal(rules.spec(), "weightCap");
+        }
+        BigDecimal percent;
+        try {
+            percent = new BigDecimal(String.valueOf(raw));
+        } catch (NumberFormatException exc) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "maxWeight 는 정수 퍼센트여야 합니다: " + raw);
+        }
+        if (percent.stripTrailingZeros().scale() > 0
+                || percent.signum() <= 0
+                || percent.compareTo(HUNDRED) > 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT,
+                    "maxWeight 는 1~100 사이의 정수 퍼센트여야 합니다: " + percent.toPlainString());
+        }
+        return percent.divide(HUNDRED);
     }
 
     private StrategyRules targetRiskOverlay() {

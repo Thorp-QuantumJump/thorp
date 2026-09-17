@@ -33,6 +33,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다 |
 | `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 "등록표 검증의 과도기 상태") |
 | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |
+| `strategy.parameters.maxWeight` | `int` | 선택 | 종목별 비중 상한, **정수 %**(003 축과 같은 단위. 1~100). 배분 세 전략(역변동성·섹터 모멘텀·최소분산) 공통이다. 생략하면 규칙표의 `weightCap`을 쓴다. 접수와 워커가 **같은 값**을 유효 상한으로 읽으므로, 상한 × 종목 수가 투자 비중에 못 미치면 접수에서 422 `VALIDATION_RULE_VIOLATED`다(PD-03 ⑥) |
 | `conditions.start` / `end` | `date` | 필수 | `start`가 `end`보다 늦을 수 없다 |
 | `conditions.initialCash` | `string` (decimal) | 필수 | 0보다 큼. 소수점 2자리까지 |
 | `conditions.costProfileVersion` | `string` | 선택 | `null` = 서버 기본(현재 `PROVISIONAL-DEMO-1`) |
@@ -48,9 +49,10 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 `strategy.registryVersion`이 실린 요청만 003 등록표로 설정을 다시 판정한다. 값이 없는 요청은 종전처럼 통과하고
 경고 로그만 남는다.
 
-**관문을 모든 요청에 걸지 않은 이유**: 워커는 아직 `parameters.rebalance` 문자열과 `rules.lookbackDays`만 읽고,
-003 등록표의 `rebalancePeriod` 객체값이나 `maxWeight`·`topN`·`skipRecentDays` 같은 축 이름은
+**관문을 모든 요청에 걸지 않은 이유**: 워커는 아직 `parameters.rebalance`·`parameters.maxWeight`와 규칙 사본만 읽고,
+003 등록표의 `rebalancePeriod` 객체값이나 `topN`·`skipRecentDays` 같은 축 이름은
 `docs/specs/backtest-messaging/`의 메시지 계약에 자리가 없다. 전부에 걸면 004·007의 기존 접수가 그 자리에서 막힌다.
+(`maxWeight`는 2026-09-17 T022가 계약에 넣어 접수·워커가 같은 유효 상한으로 읽는다. 나머지 축은 T023이 넓힌다.)
 
 `examples/backtest-request.json`의 `registryVersion`이 `null`인 것은 그래서다. 이 예시의 `parameters`는 워커가 읽는
 `rebalance` 문자열이라 등록표 축 이름과 맞지 않고, 버전을 실으면 판정에 걸려 400이 된다. 두 값은 함께 바뀐다.
@@ -90,7 +92,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
   `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
   (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.
   계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).
-- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014, `reason`: `PER_USER`·`ANONYMOUS`·`TOTAL`), 503 `BROKER_UNAVAILABLE`.
+- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 422 `VALIDATION_RULE_VIOLATED`(유효 상한 × 종목 수 < 투자 비중), 429 `EXECUTION_LIMIT`(T014, `reason`: `PER_USER`·`ANONYMOUS`·`TOTAL`), 503 `BROKER_UNAVAILABLE`.
 
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
 예전처럼 503으로 거절하고 롤백하지 않는다 — 워커의 이벤트가 커밋을 앞질러 도착하면 결과를 잃기 때문이다.
@@ -276,7 +278,8 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.
 - `versions`는 202 응답과 같은 값에 결과를 낸 워커의 자기 보고 `worker`(워커 패키지 버전)를 얹은 것이다. 결과가 없으면(대기·실행 중·결과 없는 실패) `worker` 키가 없다.
 - `failure.code`는 엔진이 준 값(`SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION`
-  `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다.
+  `ESTIMATION_FAILED` `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다. `ESTIMATION_FAILED`는 최소분산의 공분산
+  검사·솔버가 실패한 경우다 — 그 달만 건너뛰지 않고 **실행 전체가 실패한다**(PD-04 ③).
 
 **`config.initialCash`의 자릿수는 요청과 다를 수 있다.** 저장 컬럼이 `NUMERIC(19,2)`이라 `"10000000"`으로 보낸 값이
 `"10000000.00"`으로 돌아온다. 값은 같고 표기 자릿수만 컬럼 scale로 정규화된다.
@@ -368,7 +371,7 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 
 `items[{date, instrumentId?, kind, rule?, action?}]`. `kind`는 개방 집합이다 — `HALT_DEFERRED`(거래 불가 이월), `HALT_SUPERSEDED`(이월 주문이
 다음 판단일을 넘겨 새 목표로 교체), `WEIGHT_ROUNDING`(정수 수량으로 한 주도 못 삼), `SPLIT_FRACTION`(분할 단주), `ZERO_VOLATILITY`, `NO_SELECTION`,
-`ESTIMATION_FAILED`, `CONSTRAINT_VIOLATION` 등. 포트폴리오 전체에 걸린 예외는 `instrumentId`가 없다. 정렬은 날짜 오름차순(엔진 기록 순).
+`ESTIMATION_FAILED`, `CONSTRAINT_VIOLATION`, `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`(상한 잔여를 현금으로), `EFFECTIVE_TARGET_REDUCED`(계산 가능 종목 부족으로 투자 목표 축소), `SINGLE_ASSET_FALLBACK`(계산 가능 1종목) 등. 포트폴리오 전체에 걸린 예외는 `instrumentId`가 없다. 정렬은 날짜 오름차순(엔진 기록 순).
 예시: [`examples/backtest-exceptions.json`](examples/backtest-exceptions.json).
 
 ## 3. 오류 응답
@@ -381,7 +384,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 
 | HTTP | `error.code` | 언제 |
 |---|---|---|
-| 400 | `INVALID_INPUT` | 필수 필드 누락, 종목 형식·개수 위반, 소수 자릿수 초과, `maxPositionPct` 범위 위반, `start > end`, `parameters` 값에 `null` |
+| 400 | `INVALID_INPUT` | 필수 필드 누락, 종목 형식·개수 위반, 소수 자릿수 초과, `start > end`, `parameters` 값에 `null`, `parameters.maxWeight`가 1~100 정수가 아님 |
+| 422 | `VALIDATION_RULE_VIOLATED` | **유효 상한 × 종목 수 < 투자 비중.** 어떤 배분으로도 조건을 만족할 수 없다 — 종목을 늘리거나 상한을 높여야 한다. 유효 상한은 `parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표의 `weightCap`이다(PD-03 ⑥). 2026-09-17 전에는 같은 거절이 400 `INVALID_INPUT`이었다 |
 | 404 | `RESOURCE_NOT_FOUND` | 없는 `backtestId` 조회 |
 | 409 | `RESULT_NOT_READY` | 하위 리소스(`/timeseries`·`/trades`·`/positions`)를 조회했는데 Job이 `QUEUED`·`RUNNING`이다. **재시도하면 된다** |
 | 409 | `BACKTEST_FAILED` | 하위 리소스를 조회했는데 Job이 `FAILED`다. **재시도해도 같다** — `GET /backtests/{id}`의 `error`를 본다 |
