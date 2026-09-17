@@ -28,9 +28,9 @@ const inFlightStatuses: ResultStatus[] = ['QUEUED', 'RUNNING']
 
 /**
  * 볼 결과가 있는 상태인가. 시작 전에 취소된 결과는 하위 자원이 `409 NO_PARTIAL_RESULT`라 부르지 않는다.
- * 실패한 결과도 `409 BACKTEST_FAILED`라 부르지 않는다.
+ * 실패한 결과도 `409 BACKTEST_FAILED`라 부르지 않는다. 결과 화면의 '자세히 보기'도 같은 판정으로 연다.
  */
-function hasViewableResult(detail: PublicResultDetail): boolean {
+export function hasViewableResult(detail: PublicResultDetail): boolean {
   if (detail.status === 'COMPLETED') return true
   return detail.status === 'CANCELLED' && detail.summaryUnavailable !== 'CANCELLED_BEFORE_START'
 }

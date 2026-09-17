@@ -1,9 +1,14 @@
 import type {
   PublicResultDetail,
   ResultEnvelope,
+  ResultExceptions,
+  ResultPositions,
   ResultTimeseries,
   ResultTimeseriesPoint,
+  ResultTradePage,
+  ResultWeights,
 } from '@/types/result'
+import type { InstrumentProfile, SectorCatalog } from '@/types/sector'
 
 /**
  * 005 결과 화면 테스트용 픽스처.
@@ -203,4 +208,165 @@ export function makeEquitySeries({
 export const resultTimeseries: ResultTimeseries = {
   partial: false,
   points: makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 }),
+}
+
+/*
+ * 상세 패널(B07)이 여는 하위 자원. 모양은 004 예시(`docs/specs/backtest-api/examples/backtest-*.json`)에서
+ * `backtestId`만 뺀 것이다(contracts "공개 응답에서 버리는 필드"). 종목은 `resultDetailCompleted.config.items`의
+ * 합성 종목을 쓴다.
+ */
+
+export const resultWeights: ResultWeights = {
+  partial: false,
+  weightsSource: 'COMPUTED',
+  points: [
+    {
+      date: '2023-07-03',
+      target: { '900001.XKRX': '0.400000', '900002.XKRX': '0.300000' },
+      actual: { '900001.XKRX': '0.398100', '900002.XKRX': '0.301200' },
+      weightError: '0.003100',
+    },
+    {
+      date: '2024-12-02',
+      target: { '900001.XKRX': '0.450000', '900003.XKRX': '0.250000' },
+      actual: { '900001.XKRX': '0.447300', '900003.XKRX': '0.251900' },
+      weightError: '0.004600',
+    },
+  ],
+}
+
+export const resultExceptions: ResultExceptions = {
+  partial: false,
+  items: [
+    {
+      date: '2024-02-26',
+      instrumentId: '900002.XKRX',
+      kind: 'HALT_DEFERRED',
+      rule: 'DEFER_TO_NEXT_TRADABLE',
+      action: 'Order deferred to the next tradable session.',
+    },
+  ],
+}
+
+export const resultTradePage: ResultTradePage = {
+  partial: false,
+  page: 0,
+  size: 50,
+  totalElements: 2,
+  totalPages: 1,
+  content: [
+    {
+      tradeId: 'TRD-000001',
+      instrumentId: '900001.XKRX',
+      side: 'LONG',
+      status: 'CLOSED',
+      entryDate: '2023-07-03',
+      exitDate: '2024-03-12',
+      entryPrice: '53700.00',
+      exitPrice: '52800.00',
+      quantity: '90',
+      grossPnl: '-81000.00',
+      commission: '1437.75',
+      slippageCost: '4792.50',
+      realizedPnl: '-87230.25',
+      returnRate: '-0.018049',
+      reason: 'REBALANCE',
+    },
+    {
+      tradeId: 'TRD-000002',
+      instrumentId: '900003.XKRX',
+      side: 'LONG',
+      status: 'OPEN',
+      entryDate: '2024-12-02',
+      exitDate: null,
+      entryPrice: '60000.00',
+      exitPrice: null,
+      quantity: '40',
+      grossPnl: null,
+      commission: '360.00',
+      slippageCost: '1200.00',
+      realizedPnl: null,
+      returnRate: null,
+      reason: 'REBALANCE',
+    },
+  ],
+}
+
+export const resultPositions: ResultPositions = {
+  partial: false,
+  requestedDate: '2025-03-24',
+  snapshotDate: '2025-03-21',
+  positions: [
+    {
+      instrumentId: '900001.XKRX',
+      quantity: '90',
+      marketValue: '4833000.00',
+      weight: '0.483452',
+      unrealizedPnl: '-12000.00',
+    },
+  ],
+}
+
+/** 001 `GET /sectors`의 합성 목록. 결과의 세 섹터와 같은 대표 ETF를 담는다 */
+export const resultSectorCatalog: SectorCatalog = {
+  mapVersion: 'SECTOR-ETF-TEST-1',
+  isSample: true,
+  sectors: [
+    {
+      code: 'HARBOR',
+      name: '항구',
+      classification: 'INDUSTRY',
+      representativeEtf: {
+        instrumentId: '900001.XKRX',
+        name: '합성 항구 ETF',
+        listedOn: '2015-01-02',
+        benchmarkIndex: '합성 항구 지수',
+      },
+    },
+    {
+      code: 'LIGHTHOUSE',
+      name: '등대',
+      classification: 'INDUSTRY',
+      representativeEtf: {
+        instrumentId: '900002.XKRX',
+        name: '합성 등대 ETF',
+        listedOn: '2015-01-02',
+        benchmarkIndex: '합성 등대 지수',
+      },
+    },
+    {
+      code: 'DOCKYARD',
+      name: '조선소',
+      classification: 'THEME',
+      representativeEtf: {
+        instrumentId: '900003.XKRX',
+        name: '합성 조선소 ETF',
+        listedOn: '2015-01-02',
+        benchmarkIndex: '합성 조선소 지수',
+      },
+    },
+  ],
+}
+
+/** 001 `GET /sectors/{code}/instrument-profile`의 합성 응답. 문구가 그대로 보이는지 확인하려고 지어낸 문장을 쓴다 */
+export const resultInstrumentProfile: InstrumentProfile = {
+  instrumentId: '900001.XKRX',
+  name: '합성 항구 ETF',
+  benchmarkIndex: '합성 항구 지수',
+  indexMethodologySummary: '합성 항구 지수는 물때표 순서로 구성한다고 가정한 시험용 문장입니다.',
+  listedOn: '2015-01-02',
+  manager: '합성 운용',
+  holdingsOverlap: {
+    asOfCurrentComposition: true,
+    topHoldings: [
+      { name: '갈매기 조선', weight: '0.2431' },
+      { name: '밀물 해운', weight: '0.2107' },
+    ],
+  },
+  avgDailyValue3m: '1240000000',
+  sourceAttribution: '시험용 출처 표기',
+  survivorshipNote: '시험용 생존 편향 안내 문장입니다.',
+  datasetId: 'KRX_DAILY_TEST',
+  dataDeadline: '2026-09-07T09:00:00Z',
+  isSample: true,
 }

@@ -1,0 +1,289 @@
+/* 결과 근처에서 여는 보기(자세히 보기·손실이 커진 때 보기)가 함께 쓰는 모양이다. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  padding: 22px 24px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+  background: var(--thorp-surface);
+}
+
+.panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.panelTitle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px 24px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.itemTitle {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.subTitle {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.value {
+  margin: 0;
+  font-family: var(--thorp-font-mono);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.84rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+/* 계산이 제한되었거나 아직 제공되지 않는 항목. 값 자리에 0을 두지 않고 이 표시만 둔다(FR-009). */
+.limited {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--thorp-warning);
+  color: var(--thorp-copy);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.facts dt {
+  color: var(--thorp-muted);
+}
+
+.facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* 표는 이 틀 안에서만 가로로 움직인다. 화면 전체에 가로 스크롤을 만들지 않는다. */
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tableScroll[data-tall='true'] {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table caption {
+  padding-bottom: 6px;
+  color: var(--thorp-muted);
+  font-size: 0.76rem;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table th {
+  color: var(--thorp-copy);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+}
+
+.field input,
+.field select {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 8px;
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.alert {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+/* 001 대표 상품 정보 패널(`InstrumentProfilePanel`)은 모양을 쓰는 쪽이 정한다. 섹터 선택 화면의 규칙을 줄여 옮긴다. */
+.profile [data-slot='profile-panel'] {
+  padding: 10px 0 2px;
+}
+
+.profile [data-slot='profile-loading'],
+.profile [data-slot='composition-caveat'],
+.profile [data-slot='profile-methodology'],
+.profile [data-slot='profile-survivorship'],
+.profile [data-slot='profile-sample'] {
+  margin: 0 0 8px;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.profile [data-slot='composition-caveat'] {
+  padding-left: 10px;
+  border-left: 2px solid var(--thorp-warning);
+}
+
+.profile [data-slot='composition-bar'] {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  margin: 10px 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--thorp-surface-muted);
+}
+
+.profile [data-slot='composition-segment'] {
+  flex: none;
+  border-right: 1px solid var(--thorp-surface);
+  background: var(--thorp-accent);
+}
+
+.profile [data-slot='composition-segment'][data-rest='true'] {
+  background: var(--thorp-line-strong);
+}
+
+.profile [data-slot='holdings'] {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.profile [data-slot='holding'] {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile [data-slot='profile-facts'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 0 0 10px;
+}
+
+.profile [data-slot='profile-facts'] dt {
+  color: var(--thorp-muted);
+  font-size: 0.72rem;
+}
+
+.profile [data-slot='profile-facts'] dd {
+  margin: 2px 0 0;
+  font-size: 0.84rem;
+}
+
+.profile [data-slot='profile-source'] {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.72rem;
+}
+
+.profileList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 600px) {
+  .panel {
+    padding: 18px 16px;
+  }
+}

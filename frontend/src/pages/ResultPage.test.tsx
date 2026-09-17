@@ -1,16 +1,25 @@
-import { act, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import { act, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResultError } from '@/api/result'
 import { RESULT_POLL_INTERVAL_MS } from '@/components/result/constants'
+import { LOSS_WINDOW_UNAVAILABLE } from '@/components/result/LossWindowView'
 import { EXPIRED_MESSAGE, NOT_FOUND_MESSAGE } from '@/components/result/ResultUnavailableNotice'
 import {
   resultDetailCancelledNoSummary,
   resultDetailCompleted,
   resultDetailRunning,
+  resultExceptions,
+  resultPositions,
+  resultSectorCatalog,
   resultTimeseries,
   resultToken,
+  resultTradePage,
+  resultWeights,
 } from '@/test/resultFixtures'
+import { registryFixture } from '@/test/strategyRegistryFixtures'
+import type { PublicResultDetail } from '@/types/result'
 import { ResultPage } from './ResultPage'
 
 /** 005 T037. SC-001·SC-008·SC-009, quickstart 1·7·8. */
@@ -29,21 +38,47 @@ vi.mock('@/api/result', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/result')>()
   return { ...actual, ...apiMocks }
 })
+// 첫 화면이 등록표·섹터 목록·대표 상품 정보를 부르지 않는지 본다(SC-001). B07의 보기와 이동이 쓴다.
+const otherMocks = vi.hoisted(() => ({
+  fetchStrategyRegistry: vi.fn(),
+  fetchSectorCatalog: vi.fn(),
+  fetchInstrumentProfile: vi.fn(),
+}))
+
+vi.mock('@/api/strategyRegistry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/strategyRegistry')>()
+  return { ...actual, fetchStrategyRegistry: otherMocks.fetchStrategyRegistry }
+})
+vi.mock('@/api/sectors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/sectors')>()
+  return {
+    ...actual,
+    fetchSectorCatalog: otherMocks.fetchSectorCatalog,
+    fetchInstrumentProfile: otherMocks.fetchInstrumentProfile,
+  }
+})
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
+
+function LocationProbe() {
+  const location = useLocation()
+  return <output aria-label="현재 주소">{location.pathname + location.search}</output>
+}
 
 function renderResult(token = resultToken) {
   return render(
     <MemoryRouter initialEntries={[`/results/${token}`]}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
+        <Route path="/strategy" element={<h1>전략 설정 화면</h1>} />
       </Routes>
+      <LocationProbe />
     </MemoryRouter>,
   )
 }
 
 describe('ResultPage', () => {
   beforeEach(() => {
-    for (const mock of Object.values(apiMocks)) mock.mockReset()
+    for (const mock of [...Object.values(apiMocks), ...Object.values(otherMocks)]) mock.mockReset()
   })
 
   afterEach(() => {
@@ -68,6 +103,9 @@ describe('ResultPage', () => {
     expect(apiMocks.fetchResultPositions).not.toHaveBeenCalled()
     expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
     expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
+    expect(otherMocks.fetchStrategyRegistry).not.toHaveBeenCalled()
+    expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()
+    expect(otherMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
   })
 
   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {
@@ -229,5 +267,116 @@ describe('ResultPage', () => {
 
     expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은/)).not.toBeNull()
     expect(apiMocks.fetchResult).toHaveBeenCalledTimes(2)
+  })
+
+  describe('자세히 보기와 다음 분석 (B07)', () => {
+    /** 요약의 최대 하락 폭을 시계열 저점과 맞춘 결과. 구간을 찾을 수 있다 */
+    const troughPoint = resultTimeseries.points.reduce((lowest, point) =>
+      Number(point.drawdown) < Number(lowest.drawdown) ? point : lowest,
+    )
+    const matchingDetail: PublicResultDetail = {
+      ...resultDetailCompleted,
+      summary: resultDetailCompleted.summary && {
+        ...resultDetailCompleted.summary,
+        maxDrawdown: troughPoint.drawdown,
+      },
+    }
+
+    beforeEach(() => {
+      apiMocks.fetchResult.mockResolvedValue(matchingDetail)
+      apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
+      apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)
+      apiMocks.fetchResultExceptions.mockResolvedValue(resultExceptions)
+      apiMocks.fetchResultTrades.mockResolvedValue(resultTradePage)
+      apiMocks.fetchResultPositions.mockResolvedValue(resultPositions)
+      otherMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
+      otherMocks.fetchInstrumentProfile.mockResolvedValue({ status: 'notReady', message: '준비 중' })
+      otherMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture)
+      window.sessionStorage.clear()
+    })
+
+    it('자세히 보기는 주소를 바꾸지 않고 결과 아래에서 열리며 그때 상세 자원을 받는다 (SC-006, quickstart 6)', async () => {
+      const user = userEvent.setup()
+      renderResult()
+      const toggle = await screen.findByRole('button', { name: '자세히 보기' })
+      const before = screen.getByLabelText('현재 주소').textContent
+
+      await user.click(toggle)
+
+      const panel = await screen.findByRole('region', { name: '자세히 보기' })
+      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)
+      expect(toggle.getAttribute('aria-expanded')).toBe('true')
+      expect(await within(panel).findByText('HALT_DEFERRED')).not.toBeNull()
+      expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
+      expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)
+      // 대표 상품 정보도 패널 안에서 펼치고 001 화면으로 옮기지 않는다.
+      await user.click(await within(panel).findByRole('button', { name: '항구 · 합성 항구 ETF' }))
+      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)
+
+      await user.click(within(panel).getByRole('button', { name: '닫기' }))
+      expect(screen.queryByRole('region', { name: '자세히 보기' })).toBeNull()
+      expect(document.activeElement).toBe(toggle)
+    })
+
+    it('손실이 커진 때 보기는 고점~저점 구간의 거래와 저점일 보유를 연다', async () => {
+      const user = userEvent.setup()
+      renderResult()
+
+      await user.click(await screen.findByRole('button', { name: '손실이 커진 때 보기' }))
+
+      const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })
+      expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(troughPoint.date)
+      await within(view).findByRole('table', { name: '구간 거래' })
+      expect(apiMocks.fetchResultTrades.mock.calls[0][1]).toMatchObject({ to: troughPoint.date })
+      expect(apiMocks.fetchResultPositions.mock.calls[0][1]).toBe(troughPoint.date)
+    })
+
+    it('최대 하락 구간을 확인할 수 없으면 손실이 커진 때 보기를 비활성하고 이유를 적는다', async () => {
+      // 픽스처의 요약 값은 시계열 저점과 다르다. 이 계열로 요약 숫자를 설명할 수 없다(R-05).
+      apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+      renderResult()
+
+      const button = (await screen.findByRole('button', {
+        name: '손실이 커진 때 보기',
+      })) as HTMLButtonElement
+      expect(button.disabled).toBe(true)
+      const reasonId = button.getAttribute('aria-describedby') ?? ''
+      expect(document.getElementById(reasonId)?.textContent).toBe(LOSS_WINDOW_UNAVAILABLE)
+    })
+
+    it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {
+      const user = userEvent.setup()
+      renderResult()
+
+      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
+
+      expect(await screen.findByRole('heading', { name: '전략 설정 화면' })).not.toBeNull()
+      expect(screen.getByLabelText('현재 주소').textContent).toBe('/strategy')
+      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(
+        resultDetailCompleted.config.strategyId,
+      )
+    })
+
+    it('B07이 둔 버튼은 모두 보조 모양이다 (착수 전에 알아둘 것 ⑧)', async () => {
+      renderResult()
+      await screen.findByRole('button', { name: '자세히 보기' })
+
+      for (const name of ['자세히 보기', '손실이 커진 때 보기', '다른 조건으로 비교']) {
+        expect(screen.getByRole('button', { name }).getAttribute('data-variant'), name).toBe(
+          'outline',
+        )
+      }
+      expect(document.querySelector('[data-slot="button"][data-variant="default"]')).toBeNull()
+    })
+
+    it('볼 결과가 없으면 자세히 보기와 손실 구간 보기를 두지 않는다', async () => {
+      apiMocks.fetchResult.mockResolvedValue(resultDetailRunning)
+      renderResult()
+      await screen.findByText(/전체 380거래일 중 180거래일을 마쳤습니다/)
+
+      expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()
+      expect(screen.queryByRole('button', { name: '손실이 커진 때 보기' })).toBeNull()
+      expect(screen.getByRole('button', { name: '다른 조건으로 비교' })).not.toBeNull()
+    })
   })
 })

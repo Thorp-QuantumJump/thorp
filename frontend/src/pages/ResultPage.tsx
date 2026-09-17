@@ -1,10 +1,17 @@
+import { useId, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { strategyLabel } from '@/components/result/conditionLine'
+import { DetailPanel } from '@/components/result/DetailPanel'
+import { findDrawdownWindow } from '@/components/result/drawdownWindow'
+import { LOSS_WINDOW_UNAVAILABLE, LossWindowView } from '@/components/result/LossWindowView'
+import { OtherConditionsButton } from '@/components/result/OtherConditionsButton'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
-import { type TimeseriesState, useResult } from '@/hooks/useResult'
+import { Button } from '@/components/ui/button'
+import { useDisclosure } from '@/hooks/useDisclosure'
+import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'
 import type { PublicResultDetail } from '@/types/result'
 import styles from './ResultPage.module.css'
 
@@ -16,8 +23,10 @@ import styles from './ResultPage.module.css'
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>그래프(B04 T044)·상태 한 문장(B06 T075)·자세히 보기(B07 T064)·비교(B05 T050)는 뒤 묶음이
- * 표시한 자리에 끼운다.
+ * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면
+ * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).
+ *
+ * <p>그래프(B04 T044)·상태 한 문장(B06 T075)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.
  */
 export function ResultPage() {
   const { token = '' } = useParams()
@@ -52,7 +61,7 @@ function ResultScreen({ token }: { token: string }) {
         ) : null}
 
         {result.status === 'ready' ? (
-          <ResultView detail={result.detail} timeseries={result.timeseries} />
+          <ResultView token={token} detail={result.detail} timeseries={result.timeseries} />
         ) : null}
       </main>
     </div>
@@ -60,14 +69,32 @@ function ResultScreen({ token }: { token: string }) {
 }
 
 function ResultView({
+  token,
   detail,
   timeseries,
 }: {
+  token: string
   detail: PublicResultDetail
   timeseries: TimeseriesState
 }) {
   const completedThrough = completedRange(detail, timeseries)
   const { summary } = detail
+
+  const viewable = hasViewableResult(detail)
+  // 그래프 음영(B04)과 '손실이 커진 때 보기'가 같은 구간을 쓴다. 요약과 어긋나면 `null`이다(R-05).
+  const lossWindow = useMemo(
+    () =>
+      summary && timeseries.status === 'loaded'
+        ? findDrawdownWindow(timeseries.data.points, summary.maxDrawdown)
+        : null,
+    [summary, timeseries],
+  )
+
+  const detailPanelId = useId()
+  const lossPanelId = useId()
+  const lossReasonId = useId()
+  const detailView = useDisclosure(detailPanelId)
+  const lossView = useDisclosure(lossPanelId)
 
   return (
     <article className={styles.result} aria-labelledby="result-title">
@@ -87,7 +114,10 @@ function ResultView({
 
       <ResultSummaryCard detail={detail} completedThrough={completedThrough} />
 
-      {/* B04 T044: 자산가치 곡선과 최대 하락 구간 음영이 이 자리에 온다. */}
+      {/*
+        B04 T044: 자산가치 곡선과 최대 하락 구간 음영이 이 자리에 온다. '손실이 커진 때 보기'가 열려 있으면
+        (`lossView.open`) 같은 `lossWindow`를 그래프에서 강조한다(FR-010).
+      */}
 
       {summary ? (
         <p className={styles.sentence}>
@@ -104,7 +134,45 @@ function ResultView({
       ) : null}
 
       {/* B06 T075: 결과 의미를 바꾸는 상태의 한 문장이 이 자리에 온다. */}
-      {/* B07 T064: '자세히 보기'가 이 자리에 온다. */}
+
+      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
+      <div className={styles.actions}>
+        {viewable ? (
+          <Button type="button" variant="outline" {...detailView.toggleProps}>
+            자세히 보기
+          </Button>
+        ) : null}
+        {viewable ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={lossWindow === null}
+            aria-describedby={lossWindow === null ? lossReasonId : undefined}
+            {...lossView.toggleProps}
+          >
+            손실이 커진 때 보기
+          </Button>
+        ) : null}
+        <OtherConditionsButton config={detail.config} />
+      </div>
+      {viewable && lossWindow === null ? (
+        <p id={lossReasonId} className={styles.hint}>
+          {LOSS_WINDOW_UNAVAILABLE}
+        </p>
+      ) : null}
+
+      {detailView.open ? (
+        <DetailPanel id={detailPanelId} token={token} detail={detail} onClose={detailView.close} />
+      ) : null}
+      {lossView.open && lossWindow ? (
+        <LossWindowView
+          id={lossPanelId}
+          token={token}
+          lossWindow={lossWindow}
+          items={detail.config.items}
+          onClose={lossView.close}
+        />
+      ) : null}
 
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>
