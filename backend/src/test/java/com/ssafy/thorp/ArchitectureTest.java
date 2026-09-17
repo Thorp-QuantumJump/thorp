@@ -118,6 +118,22 @@ class ArchitectureTest {
                     .dependOnClassesThat()
                     .resideInAPackage(ROOT + ".paramsearch..");
 
+    /**
+     * 규칙 9: {@code sector}(001)는 {@code learning}(013)을 참조하지 않는다.
+     *
+     * <p>대응표의 소유자는 001이고 013이 포트({@code SectorMapPort})로 읽는다. 방향은 {@code learning → sector} 하나다.
+     * 거꾸로 된 참조가 생기면 001의 대응표 변경이 배우기 글의 사정에 묶인다. 근거: specs/013-learning-pages/plan.md "교차 의존",
+     * research R8.
+     */
+    @ArchTest
+    static final ArchRule sector는_learning을_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage(ROOT + ".sector..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".learning..");
+
     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */
     @ArchTest
     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =
