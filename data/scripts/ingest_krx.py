@@ -436,7 +436,8 @@ def build_source(
             )
         return krx.ArchiveReadingSource(root=_RAW_ROOT)
     client = krx.KrxOpenApiClient.from_env(env_file)
-    source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)
+    # 보관본이 있으면 원천을 부르지 않는다. 여러 해를 모으는 수집이 중간에 끊겨도 이어받는다.
+    source: krx.DailyRowSource = krx.ResumableArchivingSource(inner=client, root=_RAW_ROOT)
     if allowed_calls is not None:
         source = krx.QuotaLimitedSource(inner=source, allowed_calls=allowed_calls)
     return source
