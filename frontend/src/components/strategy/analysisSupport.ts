@@ -22,11 +22,29 @@ import type { StrategyView } from '@/types/strategyRegistry'
  * (원칙 IV·VI, FR-018).
  */
 
-/** 분석 요청에 실을 규칙·비용 버전과, 비용 조건이 임시값인지(FR-002·FR-010). */
+/**
+ * 004가 등록한 비용 조건의 수치(bps). 화면은 읽기 전용으로만 보인다(FR-010).
+ *
+ * 004 `CostProfile`의 네 칸과 같다. 화면이 수치를 짓거나 고치는 경로를 두지 않는다.
+ */
+export type CostRates = {
+  commissionBps: number
+  spreadBps: number
+  slippageBps: number
+  taxBps: number
+}
+
+/**
+ * 분석 요청에 실을 규칙·비용 버전과, 그 비용 조건의 수치·임시 여부(FR-002·FR-010).
+ *
+ * <p><b>버전과 수치는 한 덩이로 온다.</b> 버전만 알고 수치를 모르는 상태를 두면 화면이 "적용됨"만
+ * 보이게 되고, 그것은 FR-010을 충족하지 않는다(data-model §7). 채우는 통로는 B06이 정한다.
+ */
 export type AnalysisVersions = {
   rulesVersion: string
   costProfileVersion: string
   costProfileProvisional: boolean
+  costRates: CostRates
 }
 
 export type WarmupJudgeInput = {
@@ -37,14 +55,29 @@ export type WarmupJudgeInput = {
   minEvaluationYears: number
 }
 
+/**
+ * 워밍업 때문에 공통 평가 구간의 시작이 늦춰졌다는 사실과 그 원인(FR-011, SC-004).
+ *
+ * 001 `GET /sectors/evaluation-window`가 돌려주는 값에서 옮긴다. 화면이 날짜를 계산하지 않는다.
+ */
+export type PeriodReduction = {
+  /** 워밍업 없이 계산했을 때의 공통 시작일 */
+  startWithoutWarmup: string
+  /** 시작일을 정한 후보의 `instrumentId`(001 `bindingCandidate`) */
+  bindingCandidate: string
+}
+
 export type WarmupJudgement = {
   verdict: WarmupVerdict
   /**
-   * 워밍업을 뺀 뒤 실제로 평가하는 기간. `ok`·`reduced`일 때만 있다.
+   * 워밍업을 채운 뒤 평가할 수 있는 공통 범위(001의 `commonStart`~`commonEnd`). `ok`·`reduced`일 때만 있다.
    *
-   * 분석 요청의 `conditions.start`·`end`가 이 값에서 온다. 사용자가 기간을 바꾸는 것은 B10이 붙인다.
+   * <p>사용자가 고르는 분석 기간은 **이 범위 안에서만** 움직인다(FR-009). 사용자가 기간을 고르지 않았으면
+   * 이 범위 전체가 분석 요청의 `conditions.start`·`end`가 된다.
    */
   window: { start: string; end: string } | null
+  /** 워밍업 때문에 시작일이 늦춰졌으면 그 사실. 늦춰지지 않았거나 판정하지 못했으면 `null` */
+  reduction: PeriodReduction | null
 }
 
 /**
@@ -141,6 +174,7 @@ export const notConnectedSupport: AnalysisSupport = {
   judgeWarmup: () => ({
     verdict: { state: 'unknown', message: EVALUATION_WINDOW_UNAVAILABLE },
     window: null,
+    reduction: null,
   }),
   createBacktest: async () => {
     throw new Error('분석 요청 전송이 아직 연결되지 않았습니다.')
