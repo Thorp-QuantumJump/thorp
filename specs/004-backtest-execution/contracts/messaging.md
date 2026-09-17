@@ -65,7 +65,7 @@
 | 항목 | 백엔드(발행 전) | 워커(수신 후) |
 |---|---|---|
 | 규칙 등록 여부(PD 미확정) | 422 거부 | `rules` 없으면 INVALID_REQUEST |
-| 비중 합·상한 합계 | 400 거부 | 재검증 후 CONSTRAINT_VIOLATION |
+| 비중 합·상한 합계 | 비중 합은 400 거부, 상한 합계의 정적 모순(상한 × 투자 대상 종목 수 < 투자 비중)은 422 `VALIDATION_RULE_VIOLATED` 거부(2026-09-17 PD-04 ④) | 재검증; 정적 모순이 새면 CONSTRAINT_VIOLATION, 실행 중 이력 부족으로 줄어든 경우는 현금 잔여·정상 완료(PD-03 ⑥) |
 | 워밍업·가용 기간 | 422 거부 | 자료 로드 후 재검증 → DATA_INSUFFICIENT |
 | 자료 정합(OHLC·중복·비단조) | — | `validate_prices` fail-closed |
 | fillPrice/signalPrice 고정값 | 고정 | 다르면 INVALID_REQUEST |
