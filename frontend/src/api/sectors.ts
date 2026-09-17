@@ -192,9 +192,23 @@ export type InstrumentProfileResult =
 
 const UNREADABLE_PROFILE_MESSAGE = '대표 상품 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
+/**
+ * 보유 종목 하나를 읽는다.
+ *
+ * **문자열인지만 보지 않고 숫자로 읽히는지까지 본다.** `"N/A"`나 빈 문자열은 문자열 검사만으로는
+ * 통과하는데, 그대로 두면 화면이 그 종목을 `0.00%`로 그리고 실제 몫은 '그 외'에 슬그머니 섞인다.
+ * 합이 맞지 않는 구성이 사실처럼 보이는 것이 바로 이 함수가 막으려는 것이다.
+ *
+ * 범위는 백엔드 도메인의 불변식과 같은 `(0, 1]`이다(`InstrumentProfile.Holding`). 0이나 음수가
+ * 오면 계약 위반이므로 받지 않는다.
+ */
 function readHolding(value: unknown): InstrumentHolding | null {
   if (!isRecord(value)) return null
   if (typeof value.name !== 'string' || typeof value.weight !== 'string') return null
+
+  const weight = Number(value.weight)
+  if (!Number.isFinite(weight) || weight <= 0 || weight > 1) return null
+
   return { name: value.name, weight: value.weight }
 }
 
@@ -202,6 +216,10 @@ function readHoldingsOverlap(value: unknown): HoldingsOverlap | null {
   if (!isRecord(value)) return null
   if (typeof value.asOfCurrentComposition !== 'boolean') return null
   if (!Array.isArray(value.topHoldings)) return null
+
+  // 백엔드 도메인이 빈 목록을 금지한다. 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를
+  // 그려, "무엇을 담았는지 모른다"를 자료인 것처럼 보이게 한다.
+  if (value.topHoldings.length === 0) return null
 
   const topHoldings: InstrumentHolding[] = []
   for (const item of value.topHoldings) {

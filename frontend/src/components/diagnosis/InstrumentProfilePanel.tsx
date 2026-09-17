@@ -68,9 +68,39 @@ function formatWon(amount: string): string | null {
   return `${Math.round(value).toLocaleString('ko-KR')}원`
 }
 
-/** ISO 시각에서 날짜만 떼어 낸다. 시각까지 보일 만큼 정밀한 자료가 아니다. */
+/**
+ * ISO 시각을 한국 날짜로 옮긴다. 시각까지 보일 만큼 정밀한 자료가 아니다.
+ *
+ * **앞 열 글자를 자르지 않는다.** 그렇게 하면 UTC 날짜가 나온다. 지금은 수집이 한국 시각
+ * 15:30에 찍혀 두 날짜가 같지만, 마감이 09:00 이전으로 바뀌면 사용자에게 하루 앞선 날짜를
+ * 보이게 된다. 이 저장소의 다른 화면도 시간대를 명시해 옮긴다.
+ */
 function toDateText(isoInstant: string): string {
-  return isoInstant.slice(0, 10)
+  const at = new Date(isoInstant)
+  if (Number.isNaN(at.getTime())) return isoInstant
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(at)
+    .replace(/\.\s*$/, '')
+    .replace(/\.\s*/g, '-')
+}
+
+/**
+ * 실패한 까닭을 화면 문장으로 옮긴다.
+ *
+ * 화면 문구는 이 작업이 확정하지 않는다. 갈래와 나타나는 조건까지가 이 함수의 몫이다.
+ */
+function failureMessage(result: Extract<InstrumentProfileResult, { status: 'failed' }>): string {
+  if (result.retryable) return '대표 상품 정보를 불러오지 못했습니다.'
+  if (result.code === 'SECTOR_NOT_FOUND') return '이 섹터의 대표 상품 정보를 찾을 수 없습니다.'
+
+  // 서버에 저장된 자료를 고쳐야 풀린다. 사용자가 다시 눌러서 될 일이 아니다.
+  return '서버에 저장된 상품 자료에 문제가 있어 지금은 보여드릴 수 없습니다.'
 }
 
 type CompositionSegment = {
@@ -250,16 +280,17 @@ export function InstrumentProfilePanel({
       ) : null}
 
       {/*
-        실패는 두 갈래다. 다시 눌러 달라질 수 있으면 행동을 주고, 없는 섹터처럼 달라지지 않으면
-        행동 없이 문장만 둔다(research.md 결정 6).
+        실패는 세 갈래다. 다시 눌러 달라질 수 있으면 행동을 주고, 달라지지 않는 두 경우는 행동
+        없이 문장만 둔다(research.md 결정 6).
+
+        **없는 섹터와 망가진 자료를 같은 문장으로 알리지 않는다.** 둘 다 다시 눌러도 달라지지
+        않지만 사용자가 해야 할 일이 다르다. 목록에 멀쩡히 보이는 섹터를 펼쳤는데 "찾을 수
+        없습니다"라고 하면, 실제로는 서버 자료가 망가진 것인데 사용자는 자기가 잘못 눌렀다고
+        읽는다. 이 엔드포인트는 저장된 대응표가 불변식을 어길 때 500을 낸다.
       */}
       {result?.status === 'failed' ? (
         <NotReadyNotice
-          message={
-            result.retryable
-              ? '대표 상품 정보를 불러오지 못했습니다.'
-              : '이 섹터의 대표 상품 정보를 찾을 수 없습니다.'
-          }
+          message={failureMessage(result)}
           action={result.retryable ? { label: '다시 불러오기', onAction: reload } : undefined}
         />
       ) : null}

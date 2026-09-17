@@ -179,9 +179,13 @@ describe('대표 상품 정보 패널', () => {
 
   it('SC-012. 409에서 빈 자리가 아니라 한 문장과 다시 불러오기가 보인다', async () => {
     const user = userEvent.setup()
+    /*
+      서버 문장과 화면 문장이 겹치지 않는 값을 쓴다. 겹치면 화면이 어느 쪽을 보였는지 이 검사가
+      구별하지 못해, 둘 중 무엇이 바뀌어도 통과한다.
+    */
     apiMocks.fetchInstrumentProfile.mockResolvedValue({
       status: 'notReady',
-      message: '상품 정보 준비 중',
+      message: '서버가 보낸 문장',
     } satisfies InstrumentProfileResult)
     await openPage()
 
@@ -189,13 +193,15 @@ describe('대표 상품 정보 패널', () => {
 
     const panel = await waitFor(() => {
       const found = panelFor('SEMICONDUCTOR')
-      expect(found?.textContent).toContain('준비 중')
+      expect(found?.textContent).toContain('대표 상품 정보가 아직 준비 중입니다')
       return found as HTMLElement
     })
     expect(within(panel).getByRole('button', { name: '다시 불러오기' })).toBeTruthy()
+    // 문구는 화면이 정한다(research.md 결정 6). 서버 문장을 그대로 내보내지 않는다.
+    expect(panel.textContent).not.toContain('서버가 보낸 문장')
   })
 
-  it('다시 눌러도 달라지지 않는 상태에는 행동을 두지 않는다', async () => {
+  it('없는 섹터에는 행동을 두지 않는다', async () => {
     const user = userEvent.setup()
     apiMocks.fetchInstrumentProfile.mockResolvedValue({
       status: 'failed',
@@ -213,6 +219,32 @@ describe('대표 상품 정보 패널', () => {
       expect(found?.textContent).toContain('찾을 수 없습니다')
       return found as HTMLElement
     })
+    expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
+  })
+
+  it('서버 자료가 망가진 경우를 없는 섹터와 같은 문장으로 알리지 않는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchInstrumentProfile.mockResolvedValue({
+      status: 'failed',
+      kind: 'api',
+      code: 'SECTOR_MAP_UNUSABLE',
+      message: '대응표가 망가졌습니다',
+      retryable: false,
+    } satisfies InstrumentProfileResult)
+    await openPage()
+
+    await user.click(toggleFor('반도체'))
+
+    const panel = await waitFor(() => {
+      const found = panelFor('SEMICONDUCTOR')
+      expect(found?.textContent).toContain('서버에 저장된 상품 자료에 문제가 있어')
+      return found as HTMLElement
+    })
+    /*
+      목록에 멀쩡히 보이는 섹터를 두고 "찾을 수 없습니다"라고 하면, 사용자는 자기가 잘못 눌렀다고
+      읽는다. 둘 다 다시 눌러 달라지지 않지만 해야 할 일이 다르다.
+    */
+    expect(panel.textContent).not.toContain('찾을 수 없습니다')
     expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
   })
 
@@ -354,12 +386,34 @@ describe('대표 상품 정보 패널', () => {
   it('펼침 버튼이 어느 패널을 여는지 보조 기술에 알린다', async () => {
     const user = userEvent.setup()
     await openPage()
+
+    // 접혀 있을 때는 패널이 없다. 없는 id를 가리키면 보조 기술이 그 관계를 버릴 수 있다.
+    expect(toggleFor('반도체').getAttribute('aria-controls')).toBeNull()
+
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
     const toggle = toggleFor('반도체')
     const controlled = toggle.getAttribute('aria-controls')
     expect(controlled).toBeTruthy()
     expect(panelFor('SEMICONDUCTOR')?.id).toBe(controlled)
+  })
+
+  it('자료 시점을 한국 날짜로 보인다', async () => {
+    const user = userEvent.setup()
+    /*
+      한국 시각으로는 2026-09-07 오전 8시이고 UTC로는 전날이다. 앞 열 글자를 자르면 하루 앞선
+      날짜가 나온다.
+    */
+    apiMocks.fetchInstrumentProfile.mockResolvedValue({
+      status: 'loaded',
+      profile: { ...profile, dataDeadline: '2026-09-06T23:00:00Z' },
+    } satisfies InstrumentProfileResult)
+    await openPage()
+    await openProfile(user, '반도체', 'SEMICONDUCTOR')
+
+    const source = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot="profile-source"]')
+    expect(source?.textContent).toContain('2026-09-07')
+    expect(source?.textContent).not.toContain('2026-09-06')
   })
 
   it('펼치는 것과 섹터를 고르는 것이 서로 섞이지 않는다', async () => {

@@ -123,7 +123,12 @@ export function SectorListItem({
           type="button"
           data-slot="profile-toggle"
           aria-expanded={profileOpen}
-          aria-controls={panelId}
+          /*
+            접혀 있을 때는 패널이 아예 없으므로 가리키지 않는다. 없는 id를 가리키면 보조 기술에
+            따라 그 관계를 통째로 버리는 것이 있어, 펼친 뒤에도 무엇을 여는 버튼인지 전해지지
+            않는다.
+          */
+          aria-controls={profileOpen ? panelId : undefined}
           aria-label={`${sector.name}에 담긴 종목 보기`}
           onClick={() => setProfileOpen((open) => !open)}
         >

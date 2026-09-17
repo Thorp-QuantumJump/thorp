@@ -310,3 +310,66 @@ describe('대표 상품 정보 조회', () => {
     expect(result.profile.holdingsOverlap.topHoldings[0]?.weight).toBe('0.2431')
   })
 })
+
+describe('보유 종목 불변식', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function withHoldings(topHoldings: unknown): ApiSuccessEnvelope<InstrumentProfile> {
+    return {
+      success: true,
+      data: { ...profile, holdingsOverlap: { asOfCurrentComposition: true, topHoldings } },
+      error: null,
+    } as ApiSuccessEnvelope<InstrumentProfile>
+  }
+
+  it.each([['빈 문자열', ''], ['숫자가 아닌 값', 'N/A'], ['0', '0'], ['음수', '-0.1'], ['1 초과', '1.5']])(
+    '비중이 %s이면 그 항목만 0%%로 그리지 않고 전체를 읽지 못한 것으로 다룬다',
+    async (_label, weight) => {
+      /*
+        문자열인지만 보면 통과하는 값들이다. 그대로 두면 그 종목이 0.00%로 그려지고 실제 몫은
+        '그 외'에 섞여, 합이 맞지 않는 구성이 사실처럼 보인다.
+      */
+      vi.spyOn(apiClient, 'get').mockResolvedValue(
+        axiosResponse(withHoldings([{ name: '삼성전자', weight }])),
+      )
+
+      expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+        status: 'failed',
+        kind: 'unexpected',
+      })
+    },
+  )
+
+  it('보유 종목이 하나도 없으면 받지 않는다', async () => {
+    // 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를 그려, 모른다는 사실을 자료처럼 보인다.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(withHoldings([])))
+
+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
+  it('범위 안의 비중은 문자열 그대로 통과한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse(withHoldings([{ name: '삼성전자', weight: '1' }])),
+    )
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+    expect(result.status).toBe('loaded')
+  })
+
+  it('망가진 대응표의 500은 다시 눌러도 달라지지 않는 상태로 둔다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(500, errorEnvelope('SECTOR_MAP_UNUSABLE', '대응표가 망가졌습니다')),
+    )
+
+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+      status: 'failed',
+      code: 'SECTOR_MAP_UNUSABLE',
+      retryable: false,
+    })
+  })
+})
