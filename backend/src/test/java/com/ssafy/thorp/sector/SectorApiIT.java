@@ -97,6 +97,22 @@ class SectorApiIT extends PostgresTestSupport {
                         + " (SELECT id FROM sector_etf_map_version WHERE version = ?)",
                 MAP_VERSION);
         jdbcTemplate.update("DELETE FROM sector_etf_map_version WHERE version = ?", MAP_VERSION);
+        // 공통 준비 단계(PostgresTestSupport)가 심는 씨앗을 함께 치운다. 씨앗은 같은 섹터·종목을
+        // 참조하고 대응표 하나를 열어 두므로, 남겨 두면 이 검사가 섹터를 지우지도 자기 대응표를
+        // 열지도 못한다. 씨앗은 다음 검사 전에 다시 심긴다.
+        jdbcTemplate.update(
+                "UPDATE sector_etf_map_version"
+                        + " SET effective_to = effective_from + INTERVAL '1 second'"
+                        + " WHERE effective_to IS NULL");
+        jdbcTemplate.update(
+                "DELETE FROM sector_etf_map_entry WHERE sector_id IN"
+                        + " (SELECT id FROM sector WHERE code IN (?, ?))"
+                        + " OR etf_id IN"
+                        + " (SELECT id FROM representative_etf WHERE instrument_id IN (?, ?))",
+                SEMICONDUCTOR,
+                BATTERY,
+                SEMICONDUCTOR_ETF,
+                BATTERY_ETF);
         jdbcTemplate.update("DELETE FROM sector WHERE code IN (?, ?)", SEMICONDUCTOR, BATTERY);
         jdbcTemplate.update(
                 "DELETE FROM representative_etf WHERE instrument_id IN (?, ?)",
