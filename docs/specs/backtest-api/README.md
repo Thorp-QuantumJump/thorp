@@ -62,7 +62,8 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 **인증**: **접수(`POST /backtests`)를 뺀** 모든 엔드포인트가 요청자를 요구한다(spec 004 R-12). 요청자는 spec 014 로그인 세션의 주체이며
 (`POST /auth/sessions`가 만든 세션 쿠키), 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다.
 접수는 로그인하지 않아도 받는다(spec 005 B01) — 요청자 없이 저장되고 결과는 응답의 `publicToken`으로만 연다
-(`/results/{publicToken}`, spec 005 계약). 비로그인 요청은 사용자별 대기 한도를 셀 수 없어 **전체 한도만** 받는다. 남의 요청은 403이
+(`/results/{publicToken}`, spec 005 계약). 비로그인 요청은 사람을 가릴 수 없어 사용자별 대기 한도 대신 **비로그인 요청 전부가 나눠 쓰는 몫**(`max-queued-anonymous`)과 전체 한도를 받는다.
+몫이 차면 `429 EXECUTION_LIMIT`의 `reason`이 `ANONYMOUS`다. 이 몫은 전체 한도보다 작아서, 비로그인 요청이 몰려도 로그인 사용자의 자리가 남는다. 남의 요청은 403이
 아니라 **404**로 숨긴다 — 403은 그 식별자가 존재한다는 사실을 알려 준다. 상태를 바꾸는 요청에는 CSRF 헤더
 (`X-XSRF-TOKEN`)가 함께 필요하다. 식별은 `CurrentRequester` 한 곳에서만 한다.
 
@@ -87,7 +88,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
   `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
   (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.
   계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).
-- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014), 503 `BROKER_UNAVAILABLE`.
+- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014, `reason`: `PER_USER`·`ANONYMOUS`·`TOTAL`), 503 `BROKER_UNAVAILABLE`.
 
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
 예전처럼 503으로 거절하고 롤백하지 않는다 — 워커의 이벤트가 커밋을 앞질러 도착하면 결과를 잃기 때문이다.

@@ -31,9 +31,10 @@ import org.springframework.stereotype.Component;
  * 처리까지 지우게 된다.</b> 큐 분리 뒤 배치는 이 검사를 지나지 않지만, 다른 거절(예: 미등록 규칙 422)도 같은 자리에서 나므로 설정은 남긴다. 그 설정이 안전한
  * 근거는 검사가 어떤 쓰기보다도 먼저 일어난다는 것이다.
  *
- * <p><b>비로그인 요청은 전체 한도만 받는다</b>(spec 005 B01, T012). 요청자가 없어 사용자별 대기 수를 셀 열쇠가 없다. 사용자별 한도를 건너뛰는 대신
- * 전체 한도는 반드시 지난다 — 상한 장치 없이 열지 않는다(원칙 IX). 비로그인 요청이 전체 한도를 먼저 채워 로그인 사용자까지 429 를 받는 경우는 PD-06
- * 담당(004)이 실측 뒤 판단한다.
+ * <p><b>비로그인 요청은 사용자별 한도 대신 비로그인 합계 한도를 받는다</b>(spec 005 B01, T012). 요청자가 없어 사람별로 셀 열쇠가 없다. 사용자별
+ * 한도만 건너뛰고 끝내면 비로그인 클라이언트 하나가 전체 한도를 다 채워 로그인 사용자까지 429 를 받는다. 그래서 비로그인 요청 전부가 나눠 쓰는 몫 ({@code
+ * max-queued-anonymous})을 전체 한도보다 작게 두고, 그 뒤에 전체 한도도 지난다 — 상한 장치 없이 열지 않는다(원칙 IX). 비로그인끼리의
+ * 공정성(IP·세션 단위)은 이 몫 안의 문제이고, 값과 함께 PD-06 담당(004)이 실측 뒤 판단한다.
  *
  * <p>이 한도는 접수만 막는다. 동시 <b>실행</b> 수는 여기서 보지 않는다(R-19) — 접수 시점에 실행 중인 것이 없으면 모두 통과한 뒤 워커가 동시에 소비하므로
  * 접수 검사로는 보장되지 않는다. 실제 상한은 워커 replica × prefetch(1)이고 그 배치 값이 곧 상한이다.
@@ -45,6 +46,9 @@ public class ExecutionLimitPolicy {
 
     /** 단건 큐 전체를 세는 동안 잡는 잠금. 사용자 키와 달리 하나뿐이라 상수다. */
     private static final String TOTAL_LOCK = "backtest-admission:total";
+
+    /** 비로그인 요청 전부가 나눠 쓰는 몫을 세는 동안 잡는 잠금. 사용자 키 자리에서 잡으므로 전체 키보다 먼저다. */
+    private static final String ANONYMOUS_LOCK = "backtest-admission:anonymous";
 
     private final BacktestRunRepository runRepository;
     private final ExecutionMetricRecorder metrics;
@@ -65,7 +69,7 @@ public class ExecutionLimitPolicy {
      * <p>호출자는 <b>새 실행을 만들기로 정한 뒤에만</b> 부른다 — 합류·재사용으로 끝나는 요청은 큐를 늘리지 않으므로 세지 않는다. 단건이 아니면 아무것도 잠그지
      * 않고 그대로 통과한다 — 그 실행은 다른 큐로 가고 이 한도의 대상이 아니다(R-20).
      *
-     * @param requesterId null = 비로그인 요청. 사용자별 한도를 건너뛰고 전체 한도만 본다
+     * @param requesterId null = 비로그인 요청. 사용자별 한도 대신 비로그인 합계 한도를 보고, 전체 한도도 본다
      */
     public void requireAdmission(Long requesterId, ExecutionType executionType) {
         if (executionType != ExecutionType.SINGLE) {
@@ -76,6 +80,12 @@ public class ExecutionLimitPolicy {
             long queued = runRepository.countQueuedSingleByRequester(requesterId);
             if (queued >= limits.maxQueuedPerUser()) {
                 throw rejected("PER_USER", queued, limits.maxQueuedPerUser(), requesterId);
+            }
+        } else {
+            runRepository.lockAdmission(ANONYMOUS_LOCK);
+            long queued = runRepository.countQueuedSingleAnonymous();
+            if (queued >= limits.maxQueuedAnonymous()) {
+                throw rejected("ANONYMOUS", queued, limits.maxQueuedAnonymous(), null);
             }
         }
         runRepository.lockAdmission(TOTAL_LOCK);

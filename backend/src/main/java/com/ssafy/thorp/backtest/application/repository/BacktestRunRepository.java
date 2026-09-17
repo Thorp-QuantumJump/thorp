@@ -88,6 +88,12 @@ public interface BacktestRunRepository {
      */
     long countQueuedSingleByRequester(long requesterId);
 
+    /**
+     * <b>비로그인 요청이 새로 만든</b> 단건 대기 실행 수(spec 005 B01). 실행을 만든 요청({@code result_source = 'NEW'})의
+     * 요청자가 없는 것만 센다 — 비로그인 요청이 남의 실행에 합류해도 큐는 늘지 않으므로 세지 않는다. 취소한 요청은 빠진다.
+     */
+    long countQueuedSingleAnonymous();
+
     /** 같은 키의 접수를 직렬화한다. 잠금 이름이 다르면 서로 기다리지 않는다. */
     void lockAdmission(String key);
 

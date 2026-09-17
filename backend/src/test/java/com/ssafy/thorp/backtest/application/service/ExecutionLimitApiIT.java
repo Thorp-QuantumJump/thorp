@@ -59,6 +59,8 @@ import org.springframework.transaction.support.TransactionTemplate;
             "thorp.backtest.liveness.interval=PT1H",
             "thorp.backtest.limits.max-queued-per-user=2",
             "thorp.backtest.limits.max-queued-total=1000",
+            // 공유 컨테이너에 다른 IT 가 남긴 비로그인 대기 실행이 섞인다. 몫의 판정은 ExecutionLimitPolicyTest 가, 셈은 증가분으로 본다.
+            "thorp.backtest.limits.max-queued-anonymous=1000",
             "thorp.backtest.limits.max-run-seconds=1800",
             "thorp.backtest.limits.stale-run-seconds=300",
             "thorp.backtest.limits.cancel-grace-seconds=1",
@@ -142,7 +144,7 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("비로그인 요청은 사용자별 한도에 걸리지 않고 전체 한도만 센다 — 요청자를 셀 열쇠가 없다(spec 005 T012)")
+    @DisplayName("비로그인 요청은 사용자별 한도에 걸리지 않는다 — 요청자를 셀 열쇠가 없어 비로그인 몫과 전체 한도로 센다(spec 005 T012)")
     void anonymousRequestsAreNotCountedAgainstAPerUserLimit() {
         // 사용자별 상한(2)을 넘는 세 건이다. 시작일은 다른 테스트와 겹치지 않게 20일대를 쓴다.
         for (int day = 20; day <= 22; day++) {
@@ -168,6 +170,54 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
 
             assertThat(backtestService.create(anonymous).publicToken()).matches("^[0-9a-f]{32}$");
         }
+    }
+
+    /**
+     * 비로그인 몫의 셈이 무엇을 세는지 실제 DB 로 고정한다. 컨테이너를 공유해 다른 IT 가 남긴 대기 실행이 섞이므로 절대값이 아니라 <b>증가분</b>을 본다(전체
+     * 한도를 여기서 보지 않는 것과 같은 이유).
+     */
+    @Test
+    @DisplayName("비로그인 몫은 비로그인 요청이 새로 만든 대기 실행만 센다 — 로그인 요청과 비로그인 합류는 세지 않는다(spec 005 B01)")
+    void anonymousShareCountsOnlyRunsCreatedByAnonymousRequests() {
+        long before = runRepository.countQueuedSingleAnonymous();
+
+        backtestService.create(anonymousRequest(24));
+        assertThat(runRepository.countQueuedSingleAnonymous()).isEqualTo(before + 1);
+
+        // 로그인 사용자가 만든 실행은 세지 않는다.
+        long user = newUser("anon-share");
+        backtestService.create(request(user, 25, ExecutionType.SINGLE));
+        assertThat(runRepository.countQueuedSingleAnonymous()).isEqualTo(before + 1);
+
+        // 비로그인 요청이 그 실행에 합류해도 큐는 늘지 않으므로 세지 않는다.
+        assertThat(backtestService.create(anonymousRequest(25)).resultSource())
+                .isEqualTo(com.ssafy.thorp.backtest.domain.model.ResultSource.JOINED);
+        assertThat(runRepository.countQueuedSingleAnonymous()).isEqualTo(before + 1);
+
+        // 같은 조건으로 다시 낸 비로그인 요청도 합류라 늘지 않는다.
+        backtestService.create(anonymousRequest(24));
+        assertThat(runRepository.countQueuedSingleAnonymous()).isEqualTo(before + 1);
+    }
+
+    private static CreateBacktestCommand anonymousRequest(int day) {
+        CreateBacktestCommand base = request(0L, day, ExecutionType.SINGLE);
+        return new CreateBacktestCommand(
+                null,
+                base.executionType(),
+                base.mappingVersion(),
+                base.items(),
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
     }
 
     @Test

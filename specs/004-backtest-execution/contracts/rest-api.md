@@ -38,12 +38,12 @@
 {"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": true}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.1.0", "evaluationSplit": "SPLIT-1"}, "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e"}
 ```
 
-- **로그인하지 않아도 접수한다**(spec 005 B01). 요청자 없이 저장되고(`backtest_request.requester_id` NULL, R-12가 열어 둔 경로) 결과는 `publicToken`으로만 연다. 취소·재시도·조회(`/backtests/{backtestId}/**`)는 그대로 소유자 경로라 비로그인은 401이다. 비로그인 요청은 사용자별 대기 한도를 셀 수 없어 전체 대기 한도만 받는다(이 판단은 PD-06 담당이 실측 뒤 다시 본다).
+- **로그인하지 않아도 접수한다**(spec 005 B01). 요청자 없이 저장되고(`backtest_request.requester_id` NULL, R-12가 열어 둔 경로) 결과는 `publicToken`으로만 연다. 취소·재시도·조회(`/backtests/{backtestId}/**`)는 그대로 소유자 경로라 비로그인은 401이다. 비로그인 요청은 사용자별 대기 한도 대신 비로그인 요청 전부가 나눠 쓰는 몫(`max-queued-anonymous`, 전체 한도보다 작다)과 전체 한도를 받는다. 몫이 차면 429 `reason: ANONYMOUS`. 값과 비로그인끼리의 공정성(IP·세션 단위)은 PD-06 담당이 실측 뒤 정한다.
 - `publicToken`(spec 005 FR-019): 요청마다 발급하는 소문자 16진 32자. NEW·JOINED·REUSED 모두 새로 받는다. 로그인 요청은 만료가 없고, 비로그인 요청은 접수 시각 + 유효 시간(spec 005 PD-23 확정 전 임시값)에 닫힌다.
 
 - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).
 - `versions`(FR-028, data-model `backtest_run.versions`): `rules`·`costProfile`은 `{version, provisional}`이고 `provisional=true`는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 표시다. `scenarioRules`는 `TARGET_RISK`일 때만(`TARGET_RISK_OVERLAY/1`). 결과를 낸 워커의 자기 보고 `worker`는 결과가 저장된 뒤 상세에만 붙는다(T018).
-- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).
+- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·비로그인 합계·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).
 
 ## GET /backtests/{backtestId} — 상태·요약
 
