@@ -12,7 +12,7 @@
 
 **Language/Version**: Backend Java 21 (Spring Boot 3.5.4, Gradle) / Worker Python 3.11. 프론트엔드 변경은 이 spec 범위가 아니다(결과 표시는 005).
 
-**Primary Dependencies**: Backend: Spring Web·Data JPA·AMQP·Flyway, Jackson, ArchUnit. Worker: `nautilus_trader==1.219.0`(constitution이 정한 기준 엔진), pandas, numpy, pydantic v2, pika. 최소분산 솔버 라이브러리는 PD-04 확정 시 결정한다(후보 scipy SLSQP). 새 의존성은 그 전에 추가하지 않는다.
+**Primary Dependencies**: Backend: Spring Web·Data JPA·AMQP·Flyway, Jackson, ArchUnit. Worker: `nautilus_trader==1.219.0`(constitution이 정한 기준 엔진), pandas, numpy, pydantic v2, pika. 최소분산 솔버는 scipy SLSQP로 확정했다(PD-04, 2026-09-17). 정확한 버전을 `uv.lock`에 고정하고 T022에서 추가한다.
 
 **Storage**: PostgreSQL 16 (스칼라 조회 열만 컬럼, 소수·시계열은 JSONB — backend/CLAUDE.md 규칙 유지), RabbitMQ 3.13 (`backtest.jobs`를 quorum queue로 전환, 제어용 fanout exchange 추가, 탐색·경제환경 파생 실행용 `backtest.jobs.bulk` 분리 — R-20). Parquet 친화 저장은 001 자료 계층의 책임이며 004는 읽기만 한다.
 
@@ -38,13 +38,13 @@
 | III 진단이지 추천 아님 | PASS | 004는 결과 산출만 하며 승자·추천 비중을 만들지 않는다. 자동 배분 비중은 `weightsSource=COMPUTED`로 사용자 입력과 구분한다(FR-026). |
 | IV 같은 조건에서만 비교 | PASS | 공통 평가 기간은 서버가 자료에서 산출하고, 공통 워밍업은 비교 묶음(003·007)이 `conditions.warmupTradingDays`로 넘긴 값으로 고정하고, 그 값이 선택 전략 요구값보다 작으면 올리지 않고 거부한다(R-15). 워밍업·비용 버전을 실행 키에 넣는다(R-03). |
 | V 당시 정보만 사용 | PASS | 신호는 판단일까지의 조정 자료, 체결은 다음 거래일 원시 시가(현행 Nautilus 경계 유지). 상장 전 합성·미래 채움 없음. |
-| VI 없는 결과를 만들지 않음 | PASS | 취소·실패·제약 위반·자료 부족을 별도 상태·코드로 기록. 미등록 규칙(PD-03·04)의 전략은 실행을 거부하고 사유를 돌려준다. 0 대체 없음. |
+| VI 없는 결과를 만들지 않음 | PASS | 취소·실패·제약 위반·자료 부족을 별도 상태·코드로 기록. 미등록 규칙의 전략은 실행을 거부하고 사유를 돌려준다(PD-03·04는 확정됐고 규칙표 행은 T022·T023이 추가한다). 0 대체 없음. |
 | VII 탐색·검증 구분 | PASS | 평가 분할 버전을 실행 키에 포함해 잠금 구간 결과가 다른 버전으로 남는다. 검증 절차 자체는 007 소관. |
 | VIII 재현 기록 | PASS | 실행마다 전략·파라미터·대응표·자료·비용·엔진·규칙·분할 버전을 `versions` JSONB로 남기고, 캐시 키는 constitution "실행·캐시" 항목을 모두 포함한다. |
 | IX 실측으로 한도 결정 · FR-006 무제한 실행 금지 | **조건부(PD-06 대기)** | 단일 서버 작업 큐 유지, 분산 미도입. 측정 테이블·집계 뷰를 먼저 만든다(T012). 재조회와 새 계산을 구분 기록한다. 한도 장치는 T014가 만들되 값은 PD-06 전까지 비어 있으므로 팀이 값을 넣기 전에는 FR-006이 미충족이다. 사용자 공개 전 확인 항목(R-19). |
 | X 자료 이용 조건 | PASS(조건부) | 실행 경로의 가격 원천은 001이 확보한 자료만 쓴다. 현행 yfinance 경로는 개발 도구로만 남기고 실행 경로에서 제외한다. |
 | 계산·데이터 규칙 "Nautilus 기준 엔진" | PASS | Nautilus 유지. 배분 규칙은 순수 함수 모듈로 분리하되 체결·회계는 Nautilus가 한다. |
-| AI 작업 방식 "실행 전 결정 임의 확정 금지" | PASS | PD-03·04·06·07 값을 정하지 않는다. 등록표에 `PENDING_DECISION`으로 두고 확정 시 행만 추가한다. 비용 임시값은 현행 데모 값을 `provisional=true`로 재사용하며 결과에 표시한다. |
+| AI 작업 방식 "실행 전 결정 임의 확정 금지" | PASS | PD-03·04·07은 2026-09-17 팀이 확정했다(spec PD 표). PD-06은 실측 후 정한다. 등록표에는 확정 시 행만 추가한다(`PENDING_DECISION` 행과 `PROVISIONAL-DEMO-1` 행은 불변). 비용 임시값은 확정 행이 들어가기 전까지 `provisional=true`로 결과에 표시한다. |
 | Git·Jira 규칙 | 참고 | tasks.md의 작업 단위를 `[BE]/[DE]/[INFRA]/[DOCS] 작업 내용` 형식, 1 Task = 1 Branch = 1 MR로 맞춘다. |
 | "넣지 않은 영역"(API 규약·DB 명명·테스트 기준) | 기록 | 이 영역에서 내린 선택은 research.md R-13·R-16에 근거를 남긴다. |
 
