@@ -10,12 +10,14 @@ function windowFor(datasetId: string): EvaluationWindow {
     commonEnd: '2026-01-05',
     warmupTradingDays: 0,
     bindingCandidate: '000001.XKRX',
+    bindingSector: 'A',
     excludedRanges: [],
     evaluable: true,
     datasetId,
     warmupBaseDate: '2024-01-02',
     tradingDaysFromBase: ['2024-01-02'],
     maxWarmupTradingDays: 0,
+    excludedRangesFromBase: [],
   }
 }
 
@@ -35,7 +37,8 @@ describe('useEvaluationWindow(T042)', () => {
     rerender({ query: { sectors: ['A', 'B'], maxWarmupTradingDays: 90 } })
 
     expect(fetch).toHaveBeenCalledTimes(1)
-    expect(result.current.status).toBe('loaded')
+    // 판정이 달력이 끝난 것과 요청 밖을 가를 수 있게 보낸 상한을 함께 담는다.
+    expect(result.current).toMatchObject({ status: 'loaded', requestedMaxWarmup: 90 })
   })
 
   it('섹터 집합이 바뀌면 다시 조회하고, 늦게 온 옛 응답은 새 집합을 판정하지 않는다', async () => {

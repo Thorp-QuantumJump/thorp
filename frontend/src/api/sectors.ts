@@ -182,12 +182,27 @@ function readExcludedRange(value: unknown): ExcludedRange | null {
   return { start: value.start, end: value.end, reason: value.reason }
 }
 
+function readExcludedRanges(value: unknown): ExcludedRange[] | null {
+  if (!Array.isArray(value)) return null
+  const ranges: ExcludedRange[] = []
+  for (const item of value) {
+    const range = readExcludedRange(item)
+    if (!range) return null
+    ranges.push(range)
+  }
+  return ranges
+}
+
 /**
  * 평가 기간 응답을 읽는다. 계약과 어긋나면 `null`이다.
  *
  * <p><b>거래일 목록의 불변식까지 본다.</b> 화면은 `tradingDaysFromBase[N]`을 워밍업 N일의 공통 시작일로
- * 믿고 쓴다. 첫 원소가 기준일이 아니거나, 오름차순이 아니거나, 상한이 목록 길이와 어긋나면 그 계산이
- * 조용히 틀린 날짜를 내므로, 일부만 살리지 않고 응답 전체를 읽지 못한 것으로 다룬다(원칙 VI).
+ * 믿고 쓴다. 첫 원소가 기준일이 아니거나, 오름차순이 아니거나, 마지막 날이 `commonEnd`를 넘거나, 상한이
+ * 목록 길이와 어긋나면 그 계산이 조용히 틀린 날짜를 내므로, 일부만 살리지 않고 응답 전체를 읽지 못한 것으로
+ * 다룬다(원칙 VI).
+ *
+ * <p><b>빈 목록은 정상이다.</b> 기준일이 이미 `commonEnd`를 넘은 경우이며, 그때 001은 상한 키를 싣지 않는다.
+ * 목록이 비었는데 상한이 오거나, 목록이 있는데 상한이 없으면 계약 위반이다.
  */
 export function readEvaluationWindow(value: unknown): EvaluationWindow | null {
   if (!isRecord(value)) return null
@@ -196,7 +211,7 @@ export function readEvaluationWindow(value: unknown): EvaluationWindow | null {
     commonEnd,
     warmupTradingDays,
     bindingCandidate,
-    excludedRanges,
+    bindingSector,
     evaluable,
     datasetId,
     warmupBaseDate,
@@ -205,26 +220,24 @@ export function readEvaluationWindow(value: unknown): EvaluationWindow | null {
   } = value
 
   if (
-    !isDate(commonStart) ||
+    (commonStart !== null && !isDate(commonStart)) ||
     !isDate(commonEnd) ||
     !isNonNegativeInteger(warmupTradingDays) ||
     typeof bindingCandidate !== 'string' ||
-    !Array.isArray(excludedRanges) ||
+    typeof bindingSector !== 'string' ||
     typeof evaluable !== 'boolean' ||
     typeof datasetId !== 'string' ||
     !isDate(warmupBaseDate) ||
-    !Array.isArray(tradingDaysFromBase) ||
-    !isNonNegativeInteger(maxWarmupTradingDays)
+    !Array.isArray(tradingDaysFromBase)
   ) {
     return null
   }
+  // 시작일을 잡지 못했는데 평가할 수 있다고 하면 두 칸이 서로 어긋난다.
+  if (commonStart === null && evaluable) return null
 
-  const ranges: ExcludedRange[] = []
-  for (const item of excludedRanges) {
-    const range = readExcludedRange(item)
-    if (!range) return null
-    ranges.push(range)
-  }
+  const excludedRanges = readExcludedRanges(value.excludedRanges)
+  const excludedRangesFromBase = readExcludedRanges(value.excludedRangesFromBase)
+  if (!excludedRanges || !excludedRangesFromBase) return null
 
   const days: string[] = []
   for (const day of tradingDaysFromBase) {
@@ -232,19 +245,32 @@ export function readEvaluationWindow(value: unknown): EvaluationWindow | null {
     if (!isDate(day) || (days.length > 0 && day <= days[days.length - 1])) return null
     days.push(day)
   }
-  if (days[0] !== warmupBaseDate || maxWarmupTradingDays !== days.length - 1) return null
+
+  let limit: number | null
+  if (days.length === 0) {
+    if (maxWarmupTradingDays !== undefined) return null
+    limit = null
+  } else {
+    if (days[0] !== warmupBaseDate || days[days.length - 1] > commonEnd) return null
+    if (!isNonNegativeInteger(maxWarmupTradingDays) || maxWarmupTradingDays !== days.length - 1) {
+      return null
+    }
+    limit = maxWarmupTradingDays
+  }
 
   return {
     commonStart,
     commonEnd,
     warmupTradingDays,
     bindingCandidate,
-    excludedRanges: ranges,
+    bindingSector,
+    excludedRanges,
     evaluable,
     datasetId,
     warmupBaseDate,
     tradingDaysFromBase: days,
-    maxWarmupTradingDays,
+    maxWarmupTradingDays: limit,
+    excludedRangesFromBase,
   }
 }
 
@@ -252,6 +278,9 @@ const UNREADABLE_WINDOW_MESSAGE = '공통 평가 기간을 확인하지 못했�
 
 /**
  * 후보 섹터 집합의 공통 평가 기간과 워밍업 계산 재료를 받아 온다(003 T042).
+ *
+ * <p>계약은 001 `contracts/sector-api.md`의 「GET /sectors/evaluation-window」 절이다. 자료가 아직 없으면
+ * 409 `EVALUATION_WINDOW_NOT_READY`, 인자가 잘못되면 400이다.
  *
  * <p><b>섹터 집합이 바뀔 때만 부른다.</b> 워밍업은 `maxWarmupTradingDays`까지 이 응답 하나로 계산하므로
  * 설정값을 바꾸는 동안 다시 부르지 않는다(research R7-1).
@@ -284,6 +313,12 @@ export async function fetchEvaluationWindow(
     throw new ApiClientError('api', body.error.message, { code: body.error.code })
   }
   const window = readEvaluationWindow(body.data)
-  if (!window) throw new ApiClientError('unexpected', UNREADABLE_WINDOW_MESSAGE)
+  // 계약상 목록 길이는 요청한 상한 + 1을 넘지 않는다. 넘으면 다른 요청의 응답을 읽고 있는 것이다.
+  if (
+    !window ||
+    (window.maxWarmupTradingDays !== null && window.maxWarmupTradingDays > query.maxWarmupTradingDays)
+  ) {
+    throw new ApiClientError('unexpected', UNREADABLE_WINDOW_MESSAGE)
+  }
   return window
 }

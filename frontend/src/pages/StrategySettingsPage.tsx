@@ -344,14 +344,17 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     ) {
       return null
     }
-    const { bindingCandidate } = selectedJudgement.reduction
-    const item =
-      selection.status === 'ready'
+    const { bindingCandidate, bindingSector } = selectedJudgement.reduction
+    // 001이 섹터 코드를 함께 주면 그것을 쓰고, 주지 않으면 002 선택에서 종목 코드로 되짚는다.
+    const sectorCode =
+      bindingSector ??
+      (selection.status === 'ready'
         ? selection.selection.items.find((candidate) => candidate.instrumentId === bindingCandidate)
-        : undefined
+            ?.sectorId
+        : undefined)
     const sectorName =
-      item && catalog?.status === 'loaded'
-        ? catalog.catalog.sectors.find((sector) => sector.code === item.sectorId)?.name
+      sectorCode !== undefined && catalog?.status === 'loaded'
+        ? catalog.catalog.sectors.find((sector) => sector.code === sectorCode)?.name
         : undefined
     // 값이 수가 아닌 항목(합성 값 등)은 워밍업에 더해질 수 없으므로 원인에서 뺀다. 이름을 지어 붙이지 않는다.
     const values = settings.values ?? {}
@@ -568,6 +571,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       period,
       initialAmount,
       rulesVersion: rulesVersion.rulesVersion,
+      costProfileVersion: versions.costProfileVersion,
     }
   }, [
     selection,
@@ -699,8 +703,12 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         parameters: prepared.parameters,
         registryVersion: prepared.registryVersion,
         warmupTradingDays: prepared.warmupTradingDays,
-        // 비용 버전은 싣지 않는다. 서버가 기본 비용 조건을 쓰며, 화면은 그 기본값을 보인다(004 결정).
-        versions: { rulesVersion: prepared.rulesVersion, costProfileVersion: null },
+        // 비용 버전은 화면에 보인 기본 비용 조건의 버전을 그대로 싣는다. 비워 보내면 조회와 접수 사이에 서버
+        // 기본값이 바뀌었을 때 사용자가 본 적 없는 조건이 적용된다(004 결정, T105).
+        versions: {
+          rulesVersion: prepared.rulesVersion,
+          costProfileVersion: prepared.costProfileVersion,
+        },
         period: prepared.period,
         initialAmount: prepared.initialAmount,
         scenario: settings.analysisCondition.scenario,

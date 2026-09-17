@@ -24,8 +24,8 @@ export const WARMUP_LIMIT_UNKNOWN =
 export const NOT_EVALUABLE =
   '이 섹터 조합에서는 워밍업을 채우고 나면 평가할 기간이 남지 않아 분석할 수 없습니다.'
 
-function beyondCalendarMessage(warmup: number, limit: number): string {
-  return `워밍업 ${warmup}거래일은 받아 둔 거래일 자료(최대 ${limit}거래일)를 넘어 판정할 수 없습니다.`
+function beyondRequestMessage(warmup: number, limit: number): string {
+  return `워밍업 ${warmup}거래일은 조회한 범위(최대 ${limit}거래일)를 넘어 판정할 수 없습니다.`
 }
 
 function tooShortMessage(years: number): string {
@@ -98,7 +98,9 @@ export function maxWarmupOfRegistry(registry: RegistryResponse): number | null {
 /**
  * 화면이 보낼 평가 기간 조회. 상한을 계산하지 못하면 `'uncomputable'`이다.
  *
- * 섹터 코드는 정렬해 싣는다. 같은 집합을 고른 순서만 달리 넘겨도 같은 조회가 되게 하기 위해서다.
+ * <p><b>섹터 순서를 바꾸지 않는다.</b> 001 산식은 `bindingCandidate`가 동점일 때 입력 순서로 고르고, 접수
+ * 요청도 002 선택 순서대로 섹터를 싣는다. 여기서 정렬하면 화면이 안내한 원인 섹터와 접수 경로의 판정이
+ * 갈릴 수 있다. `strategy`는 싣지 않는다 — 재판정 재료는 섹터 집합만으로 정해진다(001 답변).
  */
 export function evaluationWindowQuery(
   sectorCodes: readonly string[],
@@ -106,7 +108,7 @@ export function evaluationWindowQuery(
 ): EvaluationWindowQuery | 'uncomputable' {
   const maxWarmupTradingDays = maxWarmupOfRegistry(registry)
   if (maxWarmupTradingDays === null) return 'uncomputable'
-  return { sectors: [...sectorCodes].sort(), maxWarmupTradingDays }
+  return { sectors: [...sectorCodes], maxWarmupTradingDays }
 }
 
 function unknown(message: string): WarmupJudgement {
@@ -122,9 +124,10 @@ function blocked(message: string): WarmupJudgement {
  *
  * <ul>
  *   <li>아직 받지 못했거나 받지 못했으면 `unknown`이다. 값을 지어내지 않는다.</li>
- *   <li>워밍업이 받은 거래일 목록을 넘으면 계산할 수 없어 `unknown`이다. 001이 달력이 모자랄 때 목록을
- *       줄여 주기로 하면(T042 보완 질문 1) 이 경우는 "분석할 수 없음"으로 바뀔 수 있다.</li>
- *   <li>공통 시작일이 `commonEnd`보다 늦으면 `blocked`다.</li>
+ *   <li>워밍업이 <b>요청한</b> 상한을 넘으면 받은 자료로는 알 수 없어 `unknown`이다.</li>
+ *   <li>요청한 상한 안인데 받은 목록을 넘으면 `blocked`다. 001은 목록을 `commonEnd`까지만 주고 달력이
+ *       모자라면 상한을 줄이므로, 목록이 끝났다는 것은 그 워밍업으로 평가할 날이 없다는 뜻이다. 목록이
+ *       비었으면(기준일이 이미 `commonEnd`를 넘음) 어떤 워밍업이든 `blocked`다(001 답변 ①).</li>
  *   <li>남는 기간이 최소 평가 기간에 못 미치면 `blocked`다.</li>
  *   <li>워밍업 때문에 시작일이 기준일보다 늦춰졌으면 `reduced`, 아니면 `ok`다.</li>
  * </ul>
@@ -137,14 +140,15 @@ export function judgeWarmupFromWindow(
   if (state.status === 'uncomputable') return unknown(WARMUP_LIMIT_UNKNOWN)
   if (state.status === 'unavailable') return unknown(EVALUATION_WINDOW_UNAVAILABLE)
 
-  const { window } = state
+  const { window, requestedMaxWarmup } = state
   const warmup = input.warmupTradingDays
   if (!Number.isInteger(warmup) || warmup < 0) return unknown(EVALUATION_WINDOW_UNAVAILABLE)
-  if (warmup > window.maxWarmupTradingDays) {
-    return unknown(beyondCalendarMessage(warmup, window.maxWarmupTradingDays))
-  }
+  if (warmup > requestedMaxWarmup) return unknown(beyondRequestMessage(warmup, requestedMaxWarmup))
 
-  const start = window.tradingDaysFromBase[warmup]
+  const days = window.tradingDaysFromBase
+  if (warmup >= days.length) return blocked(NOT_EVALUABLE)
+  const start = days[warmup]
+  // 읽는 층이 마지막 날이 `commonEnd`를 넘지 않음을 이미 확인했다. 그래도 날짜를 견주는 판정은 여기 둔다.
   if (start > window.commonEnd) return blocked(NOT_EVALUABLE)
 
   const period = { start, end: window.commonEnd }
@@ -158,6 +162,10 @@ export function judgeWarmupFromWindow(
   return {
     verdict: { state: 'reduced', message: reducedMessage(warmup, window.warmupBaseDate, start) },
     window: period,
-    reduction: { startWithoutWarmup: window.warmupBaseDate, bindingCandidate: window.bindingCandidate },
+    reduction: {
+      startWithoutWarmup: window.warmupBaseDate,
+      bindingCandidate: window.bindingCandidate,
+      bindingSector: window.bindingSector,
+    },
   }
 }

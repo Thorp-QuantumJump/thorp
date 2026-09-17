@@ -55,8 +55,8 @@ export type StrategyRulesEntry = {
  * `resolveRulesVersion`으로 찾는다. 전략을 바꿀 때마다 서버에 묻지 않는다.
  *
  * <p><b>비용 버전과 수치는 한 덩이로 온다.</b> 버전만 알고 수치를 모르는 상태를 두면 화면이 "적용됨"만
- * 보이게 되고, 그것은 FR-010을 충족하지 않는다(data-model §7). 요청에는 비용 버전을 싣지 않고(서버
- * 기본값), 이 값은 그 기본값이 무엇인지 보이는 데만 쓴다(004 결정).
+ * 보이게 되고, 그것은 FR-010을 충족하지 않는다(data-model §7). 화면은 이 기본 비용 조건을 보이고, 요청에도
+ * 같은 버전을 명시해 싣는다 — 사용자가 본 조건이 그대로 적용되고 재현 기준이 요청에 남는다(004 결정).
  */
 export type AnalysisVersions = {
   strategyRules: StrategyRulesEntry[]
@@ -107,7 +107,12 @@ export type EvaluationWindowState =
   | { status: 'uncomputable' }
   /** 조회가 실패했거나 응답이 계약과 어긋났다 */
   | { status: 'unavailable' }
-  | { status: 'loaded'; window: EvaluationWindow }
+  | {
+      status: 'loaded'
+      window: EvaluationWindow
+      /** 이 응답을 받을 때 보낸 상한. 받은 상한이 이보다 작으면 달력이 거기서 끝났다는 뜻이다 */
+      requestedMaxWarmup: number
+    }
 
 export type WarmupJudgeInput = {
   strategy: StrategyView
@@ -129,6 +134,8 @@ export type PeriodReduction = {
   startWithoutWarmup: string
   /** 시작일을 정한 후보의 `instrumentId`(001 `bindingCandidate`) */
   bindingCandidate: string
+  /** 그 후보가 대표하는 섹터 코드(001 `bindingSector`). 통로가 주지 않으면 화면이 종목 코드로 되짚는다 */
+  bindingSector?: string
 }
 
 export type WarmupJudgement = {

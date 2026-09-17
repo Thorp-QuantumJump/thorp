@@ -43,7 +43,12 @@ export function useEvaluationWindow(
     let active = true
     fetchEvaluationWindow(request, controller.signal)
       .then((window) => {
-        if (active) setLoaded({ key, state: { status: 'loaded', window } })
+        if (active) {
+          setLoaded({
+            key,
+            state: { status: 'loaded', window, requestedMaxWarmup: request.maxWarmupTradingDays },
+          })
+        }
       })
       .catch(() => {
         if (active) setLoaded({ key, state: { status: 'unavailable' } })

@@ -170,6 +170,12 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
     모았으나 **페이지 기본 통로는 아직 `notConnectedSupport`다** — 지금 바꾸면 화면은 똑같이 막히면서 없는 주소로 요청만 나간다.
     001(T042)과 004(`GET /backtests/registry`)가 모두 머지되면 실제 응답으로 두 읽기 함수를 확인하고, 기본값을 이 통로로 바꾼 뒤
     quickstart 7·7-1·7-2와 US1 종단 데모를 돈다.
+  - **004 답변 반영 (2026-09-17 추가 답변)**: (1) 필드 이름은 `strategyRules[]`·`defaultCostProfile` 그대로다. (2) registry는 전략마다
+    **현재 버전 한 행만** 내린다. 버전이 바뀌면 옛 행은 `SUPERSEDED`로 빼되 접수는 그 버전을 명시한 요청을 재현용으로 계속 받는다.
+    `PENDING_DECISION` 행은 상태 그대로 나간다. 화면의 "등록된 행이 둘 이상이면 막는다"는 방어로 남긴다(곧 `INVERSE_VOLATILITY/2`가
+    들어올 예정이다). (3) **`costProfileVersion`은 받은 `defaultCostProfile.version`을 명시해 싣는다.** 기본값은 배포 때만 바뀌지만 확정
+    비용 버전(`KR-ETF-2026-09`) 배포가 예정되어 조회와 접수 사이의 창이 실제로 생기고, 명시하면 사용자가 본 조건이 그대로 적용되며
+    재현 기준이 요청에 남는다. 이것으로 T105를 닫았다.
 - [X] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)
 - [X] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 "002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교" 흐름을 적는다 (T040 의존)
 - [ ] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + "최소 평가 기간(N년)에 못 미칩니다" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 한다"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다("착수 전에 알아둘 것" ①). 404·미구현·실패면 카드에 "공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)
@@ -201,6 +207,20 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
     판정은 통로가 한다. 보완 질문 3이 미결이라 조회에 `strategy`를 싣지 않는다. 001이 필수로 두면 등록표의 아무 전략 하나를
     실으면 된다(새 필드는 전략과 무관하다). **남은 일**: 001이 머지되면 실제 응답으로 `readEvaluationWindow`를 확인하고,
     답에 따라 상한 초과(질문 1)와 `excludedRanges` 기준(질문 2)을 반영한 뒤 페이지 기본 통로를 바꾼다(T039 메모).
+  - **001 답변 반영 (2026-09-17, 001 MR !183 `feat(be)/325-evaluation-window-api`, 계약은 001 `contracts/sector-api.md`의
+    「GET /sectors/evaluation-window」 절)**: 보완 질문 넷이 모두 풀렸다. (1) 달력이 상한보다 짧으면 있는 만큼만 주고
+    `maxWarmupTradingDays`를 줄이며 목록은 `commonEnd`까지다. 워밍업으로 시작일을 잡지 못하면 `evaluable: false`·`commonStart: null`이고,
+    기준일이 이미 `commonEnd`를 넘으면 목록이 비고 상한 키가 없다. **그래서 화면은 요청한 상한 안에서 목록을 넘는 워밍업을 "분석할
+    수 없음"(`blocked`)으로 바꿨다** — 요청한 상한 자체를 넘을 때만 "판정할 수 없음"으로 남긴다. 상한을 가르려고 훅이 받은 상태에
+    보낸 상한(`requestedMaxWarmup`)을 함께 담는다. (2) 기존 `excludedRanges`는 워커와 공유하는 픽스처가 뜻을 고정해 바꾸지 않고
+    `excludedRangesFromBase`([`warmupBaseDate`, `commonEnd`])를 따로 낸다. 화면의 판정은 자료 부족 구간을 쓰지 않으므로 읽어 두기만
+    한다. (3) `strategy`는 생략할 수 있고 생략하면 워밍업 0으로 판정한다. 지금처럼 싣지 않는다. (4) 상한이 없을 때 400이 아니라
+    재료 세 칸의 키를 빼는 것으로 정했다. 화면은 늘 보내므로 차이가 없고, 읽는 층은 목록이 있는데 상한이 없으면 계약 위반으로 본다.
+    상한은 0~6000이다. **덧붙은 것**: 응답에 `bindingSector`가 더해져 줄어든 기간 안내가 종목 코드를 되짚지 않고 섹터 이름을 찾으며,
+    오류 409 `EVALUATION_WINDOW_NOT_READY`와 422 `STRATEGY_NOT_REGISTERED`(전략을 실을 때만)가 늘었다. 어느 쪽이든 화면은 확인할 수
+    없음으로 막는다. **계약을 읽다 고친 것**: 001은 섹터 순서를 보존하고 `bindingCandidate` 동점 규칙이 입력 순서를 쓴다. 앞서 화면이
+    섹터를 정렬해 보내 접수 경로와 원인 섹터가 갈릴 수 있었으므로 002 선택 순서 그대로 보낸다. 픽스처(`evaluation-window-cases.json`)는
+    산식의 입출력만 고정하는 파일이라 새 필드를 넣지 않았다는 001 판단을 따른다.
 
 ### Frontend 테스트
 
@@ -776,5 +796,11 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
 
 - [ ] T103 (DOCS) spec의 선행 조건 표와 plan의 B06 선행 설명을 T098·004 결정에 맞춘다 per spec 선행 조건 표 · plan "묶음에 넣지 않은 것" (contradicts) — `specs/003-strategy-settings/spec.md` 선행 조건 표의 "001 평가 기간 계약" 행은 "003은 `warmupTradingDays`·`minEvaluationYears`를 질의 값으로 넘기기만 한다"고 적었으나, T098 결정은 **화면이 등록표에서 계산한 `maxWarmupTradingDays`만 보내고 받은 거래일 목록으로 판정한다**(research R7-1, T042 구현 메모). 같은 표의 "004 규칙·비용 버전 조회" 행은 "조회 계약 없음"이고 `plan.md`의 "묶음에 넣지 않은 것"은 004 조회 수단을 "여전히 팀 결정 대기"로 적었으나, 2026-09-17 004가 `GET /backtests/registry`를 열기로 정했다(T039 메모). **intent 문서가 구현과 다른 방식을 말하면 다음 대조에서 맞는 구현이 모순으로 잡힌다.** 두 행을 결정과 남은 선행(각 엔드포인트의 구현)으로 고치고, plan의 문장도 같게 고친다. 001 계약 문서(`specs/001-etf-market-data/contracts/sector-api.md`)는 001 소유라 고치지 않는다
 - [ ] T104 (FE) 규칙 버전이 바뀌어 거절되면 004 등록표를 다시 받고 알린다 per T039 004 결정 · 계약 §2 거절 응답(research R9와 같은 성격) (partial) — `frontend/src/pages/StrategySettingsPage.tsx`는 004 규칙 등록표(`fetchAnalysisVersions`)를 화면이 열릴 때 한 번 받는다. 004가 규칙 버전을 올리면 접수가 422 `RULES_NOT_REGISTERED`로 거절되는데, `handleAnalyze`는 이 코드를 `default` 분기에서 서버 문장으로만 보이고 등록표를 다시 받지 않는다. **새로 고치기 전까지 같은 옛 버전으로 같은 거절이 되풀이된다** — 409 `REGISTRY_VERSION_CHANGED`에 R9가 정한 처리가 규칙 버전에는 없는 셈이다. `analysisSupport.ts`의 `BacktestRejectionCode`에 `RULES_NOT_REGISTERED`를 더하고, 받으면 버전 조회를 다시 하고(다시 조회하는 동안 받은 값을 거두지 않는 기존 규약 유지) "분석 규칙이 바뀌어 다시 확인했습니다" 식으로 알리되 **자동으로 다시 보내지 않는다.** 다시 받은 등록표에서 그 전략이 `PENDING_DECISION`이면 기존 차단 문장이 이어받는다. 검사로 고정한다: 422 `RULES_NOT_REGISTERED` 뒤 버전 조회가 한 번 더 나가고 요청은 한 건에 머무르며, 새 버전을 받은 뒤 '분석하기'를 누르면 새 `rulesVersion`이 실린다
-- [ ] T105 (FE) 화면에 보인 비용 조건과 실제 접수된 비용 조건이 갈라지지 않게 한다 per FR-010 · FR-014 (partial) — 004 결정대로 요청의 `costProfileVersion`을 `null`로 보내고 화면은 `GET /backtests/registry`의 `defaultCostProfile`을 보인다. 그런데 **조회와 접수 사이에 서버 기본값이 바뀌면 사용자가 본 적 없는 비용 조건으로 분석이 접수되고**, `api/backtest.ts`는 202 응답의 `versions.costProfile { version, provisional }`을 읽지 않아 그 사실을 알 수 없다(FR-014는 비용 가정이 요청과 함께 보존되기를 요구한다). 004 담당자에게 드린 질문 3의 답에 따라 둘 중 하나로 닫는다: (a) 기본값이 바뀔 수 있으면 받은 `defaultCostProfile.version`을 요청에 명시해 싣는다, (b) 배포 때만 바뀐다면 `null`을 유지하되 202의 `versions.costProfile.version`을 `BacktestAccepted`에 읽어 화면에 보인 버전과 다르면 접수 결과와 함께 알린다. 답이 오기 전에는 착수하지 않고, 고른 쪽과 근거를 T039 메모에 적는다
+- [X] T105 (FE) 화면에 보인 비용 조건과 실제 접수된 비용 조건이 갈라지지 않게 한다 per FR-010 · FR-014 (partial) — 004 결정대로 요청의 `costProfileVersion`을 `null`로 보내고 화면은 `GET /backtests/registry`의 `defaultCostProfile`을 보인다. 그런데 **조회와 접수 사이에 서버 기본값이 바뀌면 사용자가 본 적 없는 비용 조건으로 분석이 접수되고**, `api/backtest.ts`는 202 응답의 `versions.costProfile { version, provisional }`을 읽지 않아 그 사실을 알 수 없다(FR-014는 비용 가정이 요청과 함께 보존되기를 요구한다). 004 담당자에게 드린 질문 3의 답에 따라 둘 중 하나로 닫는다: (a) 기본값이 바뀔 수 있으면 받은 `defaultCostProfile.version`을 요청에 명시해 싣는다, (b) 배포 때만 바뀐다면 `null`을 유지하되 202의 `versions.costProfile.version`을 `BacktestAccepted`에 읽어 화면에 보인 버전과 다르면 접수 결과와 함께 알린다. 답이 오기 전에는 착수하지 않고, 고른 쪽과 근거를 T039 메모에 적는다
+  - **T105 구현 메모**: 004 답변 (3)에 따라 (a)를 골랐다. 화면이 받은 `defaultCostProfile.version`을 요청의 `costProfileVersion`에
+    그대로 싣는다. 페이지 검사가 요청의 비용 버전이 통로가 준 버전과 같은지 본다.
+  - **T104 전제 변경 (004 답변 (2))**: 004는 옛 규칙 버전을 명시한 요청도 재현용으로 계속 받으므로, 규칙 버전이 바뀌어도 화면이 받은
+    옛 버전은 422 `RULES_NOT_REGISTERED`로 거절되지 않는다. T104가 적은 "같은 거절의 되풀이"는 생기지 않고, 대신 **화면을 연 뒤 버전이
+    바뀌면 옛 규칙으로 조용히 접수된다.** 그것이 막아야 할 일인지(재현 가능한 옛 버전이라 괜찮은지)는 004와 정할 일이라 T104는 착수하지
+    않고 남긴다.
 - [ ] T106 [P] (FE 테스트) 페이지 검사가 실제 통로의 판정 연결을 쓰게 한다 per T039·T042 "B06과의 경계" (partial) — `frontend/src/pages/StrategySettingsPage.test.tsx`의 "공통 평가 기간 연결(T042, T098)" 두 검사는 `judgeWarmup`을 `({ evaluationWindow, warmupTradingDays, minEvaluationYears }) => judgeWarmupFromWindow(...)` 람다로 **따로 적어** 쓴다. `frontend/src/components/strategy/connectedAnalysisSupport.ts`의 같은 연결이 인자를 빠뜨리거나 뒤바꿔도 모든 검사가 통과하고, 그 통로는 기본값으로 바뀌는 순간에야 처음 쓰인다. 두 검사가 `{ ...base, fetchEvaluationWindow: 흉내, judgeWarmup: connectedAnalysisSupport.judgeWarmup }`처럼 실제 판정 연결을 가져다 쓰게 한다(조회·전송은 계속 흉내). 연결을 일부러 어긋나게 바꿔 검사가 실패하는지 한 번 확인한 뒤 되돌린다

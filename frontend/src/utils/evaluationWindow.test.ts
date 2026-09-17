@@ -24,18 +24,23 @@ function windowOf(overrides: Partial<EvaluationWindow> = {}): EvaluationWindow {
     commonEnd: '2026-01-05',
     warmupTradingDays: 2,
     bindingCandidate: '000001.XKRX',
+    bindingSector: 'SEC-A',
     excludedRanges: [],
     evaluable: true,
     datasetId: 'TEST-DATASET-1',
     warmupBaseDate: days[0],
     tradingDaysFromBase: days,
     maxWarmupTradingDays: days.length - 1,
+    excludedRangesFromBase: [],
     ...overrides,
   }
 }
 
-function loaded(window: EvaluationWindow = windowOf()): EvaluationWindowState {
-  return { status: 'loaded', window }
+function loaded(
+  window: EvaluationWindow = windowOf(),
+  requestedMaxWarmup: number = days.length - 1,
+): EvaluationWindowState {
+  return { status: 'loaded', window, requestedMaxWarmup }
 }
 
 describe('받아 둔 평가 기간으로 워밍업을 판정한다(T042)', () => {
@@ -48,6 +53,7 @@ describe('받아 둔 평가 기간으로 워밍업을 판정한다(T042)', () =>
     expect(judgement.reduction).toEqual({
       startWithoutWarmup: '2024-01-02',
       bindingCandidate: '000001.XKRX',
+      bindingSector: 'SEC-A',
     })
   })
 
@@ -98,11 +104,39 @@ describe('받아 둔 평가 기간으로 워밍업을 판정한다(T042)', () =>
     })
   })
 
-  it('워밍업이 받은 거래일 목록을 넘으면 날짜를 지어내지 않고 판정하지 못한다', () => {
+  it('워밍업이 요청한 상한을 넘으면 날짜를 지어내지 않고 판정하지 못한다', () => {
     const judgement = judgeWarmupFromWindow(loaded(), { warmupTradingDays: 5, minEvaluationYears: 0 })
 
     expect(judgement.verdict.state).toBe('unknown')
     expect(judgement.window).toBeNull()
+  })
+
+  it('요청한 상한 안인데 달력이 먼저 끝났으면 그 워밍업으로는 분석할 수 없다', () => {
+    // 90거래일까지 달라고 했는데 001이 4거래일까지만 줬다. 목록은 commonEnd까지이므로 5일째 평가할 날이 없다.
+    const window = windowOf({ commonEnd: days[4] })
+
+    expect(
+      judgeWarmupFromWindow(loaded(window, 90), { warmupTradingDays: 4, minEvaluationYears: 0 }).verdict.state,
+    ).toBe('reduced')
+    expect(judgeWarmupFromWindow(loaded(window, 90), { warmupTradingDays: 5, minEvaluationYears: 0 })).toEqual({
+      verdict: { state: 'blocked', message: NOT_EVALUABLE },
+      window: null,
+      reduction: null,
+    })
+  })
+
+  it('기준일이 이미 commonEnd를 넘어 목록이 비었으면 워밍업 0도 분석할 수 없다', () => {
+    const window = windowOf({
+      commonStart: null,
+      commonEnd: '2023-12-29',
+      evaluable: false,
+      tradingDaysFromBase: [],
+      maxWarmupTradingDays: null,
+    })
+
+    expect(
+      judgeWarmupFromWindow(loaded(window, 90), { warmupTradingDays: 0, minEvaluationYears: 0 }).verdict,
+    ).toEqual({ state: 'blocked', message: NOT_EVALUABLE })
   })
 
   it('받기 전·받지 못함·상한 계산 불가는 모두 판정하지 못한 상태다', () => {
@@ -160,9 +194,10 @@ describe('등록표에서 워밍업 상한을 계산한다(T042)', () => {
     expect(evaluationWindowQuery(['A', 'B'], registry)).toBe('uncomputable')
   })
 
-  it('조회에는 정렬한 섹터 코드와 상한을 싣고 전략은 싣지 않는다', () => {
+  it('조회에는 고른 순서 그대로의 섹터 코드와 상한을 싣고 전략은 싣지 않는다', () => {
+    // 001 산식은 동점일 때 입력 순서로 bindingCandidate를 고른다. 정렬하면 접수 경로와 원인이 갈릴 수 있다.
     expect(evaluationWindowQuery(['SEC-B', 'SEC-A'], registryFixture)).toEqual({
-      sectors: ['SEC-A', 'SEC-B'],
+      sectors: ['SEC-B', 'SEC-A'],
       maxWarmupTradingDays: 90,
     })
   })

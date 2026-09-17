@@ -345,8 +345,8 @@ describe('StrategySettingsPage', () => {
     expect(request.strategy.strategyId).toBe(selectableStrategy.strategyId)
     expect(request.strategy.registryVersion).toBe(registryFixture.registryVersion)
     expect(request.strategy.rulesVersion).toBe(RULES_VERSION)
-    // 비용 버전은 싣지 않는다. 서버 기본 비용 조건을 쓰고 화면은 그 기본값을 보인다(004 결정).
-    expect(request.conditions.costProfileVersion).toBeNull()
+    // 비용 버전은 화면에 보인 기본 비용 조건의 버전을 명시해 싣는다(004 결정, T105).
+    expect(request.conditions.costProfileVersion).toBe(versionsFixture.costProfileVersion)
 
     // 등록표의 기본값 그대로다. 사용자는 값을 하나도 입력하지 않았다.
     for (const axis of selectableStrategy.axes) {
@@ -1891,12 +1891,14 @@ describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
       commonEnd: '2025-03-01',
       warmupTradingDays: 45,
       bindingCandidate: 'BETA.XKRX',
+      bindingSector: 'BETA',
       excludedRanges: [],
       evaluable: true,
       datasetId: 'TEST-DATASET-1',
       warmupBaseDate: days[0],
       tradingDaysFromBase: days,
       maxWarmupTradingDays: 90,
+      excludedRangesFromBase: [],
     }
   }
 
