@@ -11,4 +11,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  */
 @MockitoBean(types = CandidateJobLauncher.class)
 public abstract class LauncherMockedIntegrationTestSupport
-        extends PortMockedIntegrationTestSupport {}
+        extends PortMockedIntegrationTestSupport {
+
+    /** 발행 창을 1로 좁히는 속성. 이 값을 쓰는 검사끼리 컨텍스트를 함께 쓰려면 문자열이 글자 그대로 같아야 하므로 각자 적지 말고 이 상수를 가리킨다. */
+    public static final String NARROW_DISPATCH_WINDOW = "thorp.param-search.dispatch-window=1";
+}

@@ -46,9 +46,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 남는가.
  */
 // 창을 1로 좁혀 '발행된 1건 + 대기 3건'을 만든다. 취소가 무엇을 남기고 무엇을 막는지 갈라 보려면 두 무리가 동시에 있어야 한다.
-// 이 속성 때문에 기반 컨텍스트와 따로 뜬다. 같은 속성을 쓰는 ParamSearchRecordCompletenessTest·ParamSearchRetryTest와는
-// 컨텍스트를 함께 쓰므로 글자 그대로 같게 둔다.
-@TestPropertySource(properties = "thorp.param-search.dispatch-window=1")
+// 이 속성 때문에 기반 컨텍스트와 따로 뜨고, 같은 상수를 쓰는 검사끼리 그 컨텍스트를 함께 쓴다.
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW)
 class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */

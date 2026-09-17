@@ -2,6 +2,7 @@ package com.ssafy.thorp.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -171,6 +172,27 @@ class ApplicationProfileConfigTest {
                                                     .getProperty("server.forward-headers-strategy"))
                                     .isEqualTo("framework");
                         });
+    }
+
+    /**
+     * 공개 결과 만료 스케줄러가 읽는 주기 키가 설정에 있어야 한다.
+     *
+     * <p>{@code @Scheduled(fixedDelayString = "${thorp.result.expiry-sweep-interval}")}에는 기본값이 없어,
+     * 키 이름이 바뀌거나 값이 빠지면 기동이 막힌다. 통합 테스트는 이 스케줄러를 꺼 두고 띄우므로(공용 컨텍스트가 공용 DB를 건드리지 않게) 그쪽에서는 드러나지 않는다.
+     * 나머지 두 스케줄러({@code thorp.backtest.republish.interval}·{@code
+     * thorp.backtest.liveness.interval})는 애노테이션에 기본값이 있어 키가 없어도 기동한다.
+     */
+    @Test
+    void scheduledIntervalWithoutAnnotationDefaultIsPresent() {
+        contextRunner.run(
+                context -> {
+                    assertThat(context).hasNotFailed();
+                    String interval =
+                            context.getEnvironment()
+                                    .getProperty("thorp.result.expiry-sweep-interval");
+                    assertThat(interval).isNotNull();
+                    assertThat(Duration.parse(interval)).isPositive();
+                });
     }
 
     private ApplicationContextRunner prodContextRunner() {

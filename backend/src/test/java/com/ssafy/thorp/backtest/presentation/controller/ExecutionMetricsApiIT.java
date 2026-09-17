@@ -98,7 +98,9 @@ class ExecutionMetricsApiIT extends IntegrationTestSupport {
                 mockMvc.perform(
                                 get("/internal/execution-metrics")
                                         .param("type", "SINGLE")
-                                        .header(OperatorGate.HEADER, "it-ops-token"))
+                                        .header(
+                                                OperatorGate.HEADER,
+                                                IntegrationTestSupport.OPS_TOKEN))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.rows[0].executionType").value("SINGLE"))
@@ -150,7 +152,9 @@ class ExecutionMetricsApiIT extends IntegrationTestSupport {
                                         .param("type", "SINGLE")
                                         .param("from", from.toString())
                                         .param("to", to.toString())
-                                        .header(OperatorGate.HEADER, "it-ops-token"))
+                                        .header(
+                                                OperatorGate.HEADER,
+                                                IntegrationTestSupport.OPS_TOKEN))
                         .andExpect(status().isOk())
                         .andReturn()
                         .getResponse()
@@ -188,14 +192,14 @@ class ExecutionMetricsApiIT extends IntegrationTestSupport {
                         get("/internal/execution-metrics")
                                 .param("from", "2026-09-16T00:00:00Z")
                                 .param("to", "2026-09-15T00:00:00Z")
-                                .header(OperatorGate.HEADER, "it-ops-token"))
+                                .header(OperatorGate.HEADER, IntegrationTestSupport.OPS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
         mockMvc.perform(
                         get("/internal/execution-metrics")
                                 .param("from", "2099-01-01T00:00:00Z")
                                 .param("to", "2099-01-02T00:00:00Z")
-                                .header(OperatorGate.HEADER, "it-ops-token"))
+                                .header(OperatorGate.HEADER, IntegrationTestSupport.OPS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.rows").isEmpty());
     }

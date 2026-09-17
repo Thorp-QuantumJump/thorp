@@ -18,6 +18,7 @@ import com.ssafy.thorp.paramsearch.infrastructure.persistence.SearchCandidateRep
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -56,14 +57,22 @@ import org.springframework.context.annotation.Import;
 })
 public abstract class RepositoryTestSupport extends PostgresTestSupport {
 
-    /** 저장소가 식별자의 날짜({@code BT-20260907-…})를 이 시계로 붙인다. */
+    /** 저장소가 식별자의 날짜를 이 시계로 붙인다. 날짜를 단언하는 검사는 값을 적지 말고 {@link #idDate()}를 쓴다. */
     public static final Instant NOW = Instant.parse("2026-09-07T03:00:00Z");
+
+    /** 식별자의 날짜는 거래소 현지 기준이다. */
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
+    /** 이 시계로 만들어진 식별자의 날짜 부분({@code BT-<여기>-000001}). */
+    public static String idDate() {
+        return DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZONE).format(NOW);
+    }
 
     @TestConfiguration(proxyBeanMethods = false)
     public static class FixedClock {
         @Bean
         Clock clock() {
-            return Clock.fixed(NOW, ZoneId.of("Asia/Seoul"));
+            return Clock.fixed(NOW, ZONE);
         }
     }
 }

@@ -43,8 +43,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>완료와 부분 완료 둘 다 본다. 취소된 묶음이라고 기록이 덜 남으면, 사용자가 "여기까지 계산했다"를 되짚을 수 없다.
  */
-// 창을 1로 좁힌다. ParamSearchCancelIT·ParamSearchRetryTest와 컨텍스트를 함께 쓰므로 글자 그대로 같게 둔다.
-@TestPropertySource(properties = "thorp.param-search.dispatch-window=1")
+// 창을 1로 좁힌다. 같은 상수를 쓰는 검사끼리 컨텍스트를 함께 쓴다.
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW)
 class ParamSearchRecordCompletenessTest extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */

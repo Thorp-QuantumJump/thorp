@@ -88,7 +88,7 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(saved.getBacktestId().value()).startsWith("BT-20260907-");
+        assertThat(saved.getBacktestId().value()).startsWith("BT-" + idDate() + "-");
         BacktestRequest found =
                 requests.findByBacktestId(saved.getBacktestId().value()).orElseThrow();
         assertThat(found.getRunId()).isEqualTo(runId);

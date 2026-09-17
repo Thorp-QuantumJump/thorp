@@ -40,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
@@ -77,6 +78,11 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private Clock clock;
+
+    /** 운영이 읽는 기본값과 같은 수를 쓴다. 테스트에 수를 박아 두면 설정이 바뀌어도 이 검사만 옛 수로 남는다. */
+    @Value("${thorp.backtest.liveness.batch-size:50}")
+    private int sweepBatchSize;
+
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private TransactionTemplate transactionTemplate;
 
@@ -94,7 +100,7 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {
                         events,
                         transactionManager,
                         clock,
-                        50);
+                        sweepBatchSize);
     }
 
     private long newUser(String tag) {

@@ -7,9 +7,9 @@ import org.springframework.boot.test.context.SpringBootTest;
  * 애플리케이션 전체를 띄우는 테스트의 공통 기반. <b>이 클래스를 상속한 테스트는 Spring 컨텍스트 하나를 함께 쓴다.</b>
  *
  * <p>Spring은 설정이 글자 그대로 같은 테스트끼리만 컨텍스트를 재사용한다. 속성의 순서, {@code webEnvironment}, {@code
- * AutoConfigureMockMvc}의 유무, {@code @MockitoBean}의 대상과 필드 이름 가운데 하나라도 다르면 컨텍스트를 새로 만든다. 클래스마다 속성을
- * 조금씩 다르게 적던 시절에는 전체 테스트가 컨텍스트를 55번 만들었고 그 기동에만 테스트 시간의 3분의 1 넘게 들었다. 그래서 설정은 여기에만 두고, 상속한 테스트는
- * {@code @SpringBootTest}·{@code @AutoConfigureMockMvc}·{@code @MockitoBean}을 따로 붙이지 않는다.
+ * AutoConfigureMockMvc}의 유무, {@code @MockitoBean}의 대상과 필드 이름 가운데 하나라도 다르면 컨텍스트를 새로 만든다. 그래서 설정은
+ * 여기에만 두고, 상속한 테스트는 {@code @SpringBootTest}·{@code @AutoConfigureMockMvc}·{@code @MockitoBean}을 따로
+ * 붙이지 않는다.
  *
  * <p>목이 필요하면 {@link PortMockedIntegrationTestSupport} 또는 {@link
  * LauncherMockedIntegrationTestSupport}를 상속한다. 테스트 하나를 위해 속성을 바꿔야 한다면 먼저 테스트가 그 값 없이 확인할 방법이 없는지
@@ -44,9 +44,16 @@ import org.springframework.boot.test.context.SpringBootTest;
             "thorp.backtest.limits.max-queued-per-user=1000",
             "thorp.backtest.limits.max-queued-total=1000",
             "thorp.backtest.limits.max-queued-anonymous=1000",
-            "thorp.ops.token=it-ops-token",
+            // 기본값과 같은 값이지만 적어 둔다. 자동 탐색 빈은 이 플래그가 켜져 있어야 만들어지므로,
+            // 기본값이 바뀌면 여러 테스트가 "빈이 없다"로 깨지고 원인이 코드 어디에도 남지 않는다.
+            "thorp.param-search.enabled=true",
+            "thorp.ops.token=" + IntegrationTestSupport.OPS_TOKEN,
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
 @AutoConfigureMockMvc
-public abstract class IntegrationTestSupport extends PostgresTestSupport {}
+public abstract class IntegrationTestSupport extends PostgresTestSupport {
+
+    /** 운영자 경로({@code /internal/**})를 여는 토큰. 요청 헤더에 실을 값과 설정값이 갈라지지 않게 여기 하나만 둔다. */
+    public static final String OPS_TOKEN = "it-ops-token";
+}

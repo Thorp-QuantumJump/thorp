@@ -43,7 +43,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 // 연속 실패 한도 1은 실패 후보가 있는 다른 자동 탐색 테스트의 묶음을 닫아 버리므로 이 테스트만 쓴다(컨텍스트를 따로 만든다).
 @TestPropertySource(
         properties = {
-            "thorp.param-search.dispatch-window=1",
+            LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW,
             "thorp.param-search.consecutive-failure-limit=1"
         })
 class ParamSearchLimitReachedTest extends LauncherMockedIntegrationTestSupport {

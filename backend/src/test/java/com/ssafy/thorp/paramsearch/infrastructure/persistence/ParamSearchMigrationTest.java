@@ -159,7 +159,8 @@ class ParamSearchMigrationTest extends RepositoryTestSupport {
 
         assertThat(saved.getId()).isNotNull();
         // searchId는 저장 시점에 PK와 고정 Clock 날짜로 조립된다.
-        assertThat(saved.getSearchId().value()).isEqualTo("PS-20260907-" + pad(saved.getId()));
+        assertThat(saved.getSearchId().value())
+                .isEqualTo("PS-" + idDate() + "-" + pad(saved.getId()));
 
         List<SearchCandidate> savedCandidates =
                 candidateRepository.saveAll(
