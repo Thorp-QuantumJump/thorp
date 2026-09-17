@@ -2,6 +2,7 @@ package com.ssafy.thorp.sector.presentation.controller;
 
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.common.web.response.ErrorResponse;
+import com.ssafy.thorp.sector.application.exception.EvaluationWindowNotReadyException;
 import com.ssafy.thorp.sector.application.exception.InstrumentProfileNotReadyException;
 import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;
 import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;
@@ -22,9 +23,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *   <tr><td>대응표가 발행되지 않음</td><td>409</td><td>{@code SECTOR_MAP_NOT_READY}</td></tr>
  *   <tr><td>없는 섹터 코드</td><td>404</td><td>{@code SECTOR_NOT_FOUND}</td></tr>
  *   <tr><td>대표 상품 정보가 아직 없음</td><td>409</td><td>{@code INSTRUMENT_PROFILE_NOT_READY}</td></tr>
+ *   <tr><td>평가 기간 산출 자료가 아직 없음</td><td>409</td><td>{@code EVALUATION_WINDOW_NOT_READY}</td></tr>
  * </table>
  *
- * <p>이 셋만 처리한다. 나머지(예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 — catch-all을 여기에 두면
+ * <p>이 넷만 처리한다. 나머지(예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 — catch-all을 여기에 두면
  * 전역 처리기의 로깅·메시지 정책이 이 도메인에서만 달라진다.
  *
  * <p>코드 문자열을 {@code common.exception.ErrorCode} enum에 더하지 않고 {@link ErrorResponse}의 문자열 생성자로 만든다.
@@ -39,6 +41,7 @@ public class SectorExceptionHandler {
     static final String SECTOR_MAP_UNUSABLE = "SECTOR_MAP_UNUSABLE";
     static final String SECTOR_NOT_FOUND = "SECTOR_NOT_FOUND";
     static final String INSTRUMENT_PROFILE_NOT_READY = "INSTRUMENT_PROFILE_NOT_READY";
+    static final String EVALUATION_WINDOW_NOT_READY = "EVALUATION_WINDOW_NOT_READY";
 
     /** 저장된 자료의 결함을 그대로 내보내지 않는다. 클라이언트가 할 수 있는 일이 없고 원문은 로그에 남는다. */
     private static final String MAP_UNUSABLE_MESSAGE = "대응표를 읽을 수 없다. 서버 자료를 확인해야 한다";
@@ -79,6 +82,22 @@ public class SectorExceptionHandler {
                 .body(
                         ApiResponse.fail(
                                 new ErrorResponse(INSTRUMENT_PROFILE_NOT_READY, e.getMessage())));
+    }
+
+    /**
+     * 평가 기간 산출 자료 미적재. 섹터도 대응표도 있으므로 404가 아니고, 파이프라인이 적재하면 달라지므로 409다.
+     *
+     * <p><b>평가 불가는 여기로 오지 않는다.</b> 워밍업을 채울 거래일이 모자라거나 구간이 뒤집힌 것은 오류가 아니라 {@code evaluable = false}인
+     * 200이며, 화면은 "이 조합은 분석할 수 없습니다" 한 문장을 보인다(원칙 VI). 둘을 같은 실패로 뭉개면 화면이 "잠시 후 다시"와 "이 조합은 안 됩니다"를
+     * 가릴 수 없다.
+     */
+    @ExceptionHandler(EvaluationWindowNotReadyException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEvaluationWindowNotReady(
+            EvaluationWindowNotReadyException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(
+                        ApiResponse.fail(
+                                new ErrorResponse(EVALUATION_WINDOW_NOT_READY, e.getMessage())));
     }
 
     /**
