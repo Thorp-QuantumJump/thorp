@@ -39,7 +39,7 @@
         "provisional": true
       },
       "data": "FIXTURE-three_etf_24m",
-      "engine": "nautilus_trader 1.219.0 / worker 2.1.0",
+      "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
       "evaluationSplit": "SPLIT-1",
       "worker": "2.0.0"
     },

@@ -66,7 +66,64 @@ export type WarmupJudgement = {
 export type AnalysisSupport = {
   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>
   judgeWarmup: (input: WarmupJudgeInput) => WarmupJudgement
+  /**
+   * 요청을 보낸다. 거절되면 **서버가 보낸 오류 이름을 `code`에, 응답의 `details`를 `details`에 실은
+   * 오류로** 거부하고, 메시지는 서버가 보낸 문장을 쓴다.
+   *
+   * 화면은 `code`로 거절마다 계약 §2의 처리를 가르고(`readBacktestRejection`), 400이면 `details.axis`로
+   * 항목 이름을 찾는다. 공용 `ApiClientError`는 `code`는 싣지만 `details`는 싣지 않는다. Axios 오류를
+   * 그대로 던지면 그 `code`는 `ERR_BAD_REQUEST` 같은 전송 계층 이름이라 가를 수 없으니, B06(T039)의
+   * `BacktestRequestError`가 둘을 정규화한 뒤 던진다.
+   */
   createBacktest: (request: BacktestCreateRequest) => Promise<BacktestAccepted>
+}
+
+/**
+ * 분석 요청의 거절 가운데 화면이 따로 처리하는 것(계약 §2 거절 응답).
+ *
+ * 422 `VALIDATION_RULE_VIOLATED`는 여기 없다. 서버가 규칙의 `detail`을 메시지로 싣고, 화면은 그
+ * 메시지를 그대로 보이면 계약을 만족하기 때문이다.
+ */
+export const BacktestRejectionCode = {
+  /** 400. 축 값이나 시작 금액이 허용 범위 밖이다 */
+  UNREGISTERED_PARAMETER_VALUE: 'UNREGISTERED_PARAMETER_VALUE',
+  /** 409. 요청을 보낸 사이에 등록표 버전이 바뀌었다 */
+  REGISTRY_VERSION_CHANGED: 'REGISTRY_VERSION_CHANGED',
+  /** 422. 고른 전략이 등록표의 활성 전략에 없다 */
+  STRATEGY_NOT_REGISTERED: 'STRATEGY_NOT_REGISTERED',
+  /** 503. 서버가 등록표를 읽지 못했다 */
+  REGISTRY_UNAVAILABLE: 'REGISTRY_UNAVAILABLE',
+} as const
+
+/** `createBacktest`가 던진 오류에서 화면이 읽는 두 가지. 모르는 모양이면 둘 다 `null`이다. */
+export type BacktestRejection = {
+  /** 서버가 보낸 오류 이름 그대로. 아는 이름이 아니어도 접지 않는다 */
+  code: string | null
+  /** 거절 응답의 `details`. 400이면 `axis`·`value`·`allowedRange`를 싣는다 */
+  details: Record<string, unknown> | null
+}
+
+/**
+ * `createBacktest`가 던진 오류를 읽는다.
+ *
+ * 오류 클래스를 묻지 않고 `code`와 `details`만 본다. 전송 통로는 B06이 채우므로, 이 화면이 특정 클래스를
+ * 알면 통로를 바꿀 때 판별이 조용히 빗나간다.
+ */
+export function readBacktestRejection(error: unknown): BacktestRejection {
+  if (typeof error !== 'object' || error === null) return { code: null, details: null }
+  const { code, details } = error as { code?: unknown; details?: unknown }
+  return {
+    code: typeof code === 'string' ? code : null,
+    details:
+      typeof details === 'object' && details !== null && !Array.isArray(details)
+        ? (details as Record<string, unknown>)
+        : null,
+  }
+}
+
+/** `createBacktest`가 던진 오류가 등록표 버전 변경(409)인가. */
+export function isRegistryVersionChanged(error: unknown): boolean {
+  return readBacktestRejection(error).code === BacktestRejectionCode.REGISTRY_VERSION_CHANGED
 }
 
 export const ANALYSIS_VERSIONS_UNAVAILABLE = '분석 조건 버전을 확인할 수 없습니다.'

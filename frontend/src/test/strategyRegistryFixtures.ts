@@ -54,7 +54,10 @@ export const selectableStrategy: StrategyView = {
       unit: '퍼센트',
       inputType: 'NUMBER',
       range: { min: 5, max: 50, step: 5 },
-      defaultValue: 20,
+      // 섹터 셋에서도 기본 설정이 규칙(× 섹터 수 < 100이면 위반)을 지키는 값이다(35 × 3 = 105). 카드가
+      // `selectable: true`인데 기본값이 규칙을 어기면, 서버가 내리지 않을 조합이라 화면 검사가 거짓 전제에
+      // 선다 — 페이지는 규칙 위반이면 '분석하기'를 막는다(T058).
+      defaultValue: 35,
     },
   ],
   validationRules: [
