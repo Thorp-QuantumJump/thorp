@@ -32,6 +32,21 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **검증 명령**: `data/`는 `ruff check src scripts tests`와 `pytest`, `backend/`는 `./gradlew spotlessApply build`. DB 통합 테스트는 `THORP_REQUIRE_DOCKER=true`로 실행하고 skip 건수를 확인한다.
 
+## Existing Seams
+
+008을 기다리며 이미 들어와 있는 코드다. 009·010이 임시 대역을 먼저 넣고 008이 오기를 기다리는 구조라, 이 표가 비면 교체 작업이 통째로 빠진다.
+
+| 자리 (파일·심볼) | 지금 상태 | 008이 할 일 | 담당 작업 |
+|---|---|---|---|
+| `regime/application/port/MacroIndicatorPort` | 등록표 조회 포트. 구현체 없음 | 구현 | T070 |
+| `regime/infrastructure/macro/PendingMacroIndicatorAdapter` | 부르면 실패하는 자리지킴 | 교체 | T070 |
+| `data_pipeline.regime.macro.postgres` | **아직 없는 모듈.** `regime/macro/__init__.py`의 팩터리가 이 경로로 찾는다 | 구현 (`create_source()` 하나) | T068 |
+| `marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter` | 예시 자료 어댑터 | 008 스냅샷 조회로 교체 | T064 |
+| `thorp.regime.macro.source: fixture` (`application.yml`·`application-local.yml`) | 공통 기본이 임시 대역 | `macro`로 전환 | T071 |
+| `regime/infrastructure/macro/fixture/`, `data_pipeline/regime/macro/fixture/`, `marketflow/macro-indicators-example-v1.json` | 픽스처·예시 자료 | 폐기 | T071 |
+
+`regime_baseline_month`는 010이 소유하며 008이 건드리지 않는다 — 검색 가능월은 008의 `T_g`가 아니라 010 배치 결과다(FR-013).
+
 ---
 
 ## Phase 1: Setup (공용 기반)
@@ -175,8 +190,9 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T068 [P] `data/src/data_pipeline/regime/macro/postgres.py`에 010이 쓸 시계열 읽기를 만든다. `regime/macro/source.py`의 `MacroIndicatorSource` 프로토콜을 구현하고 `create_source()` 하나를 내놓는다 — `regime/macro/__init__.py`의 팩터리가 바로 이 모듈 경로로 찾으므로 다른 자리에 두면 010 배치가 구현체를 못 찾는다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다
 - [ ] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
 - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
-- [ ] T071 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)
+- [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
 - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 네 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
+- [ ] T073 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)
 
 ---
 
@@ -235,8 +251,8 @@ T032 → T033 → T034·T035
 | F. 상태 드러내기 | T044~T052 | DE·BE | US3 전체. 지연·실패·결측·개정 |
 | G. 이용 조건 | T053~T063 | DE·BE | US4 전체. 한도 준수와 권리 철회 대응과 예시 자료 격리 |
 | H. 009 연동 | T064~T067 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않으므로 009 담당자와 먼저 합의하고 연다 |
-| I. 010 연동과 마무리 | T068·T069·T070·T072 | DE·BE | 시계열 읽기와 등록표 구현체 교체와 최종 검증 |
-| J. 재조회 구간 확정 | T071 | DE | 정기 수집을 몇 달 관찰해야 정해진다. 묶음 I에 두면 I가 그동안 병합되지 못한다 |
+| I. 010 연동과 마무리 | T068~T072 | DE·BE | 시계열 읽기와 구현체 교체와 임시 대역 폐기와 최종 검증 |
+| J. 재조회 구간 확정 | T073 | DE | 정기 수집을 몇 달 관찰해야 정해진다. 묶음 I에 두면 I가 그동안 병합되지 못한다 |
 
 열 묶음이다. 단계가 일곱인데 묶음이 더 많은 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.
 
@@ -260,6 +276,6 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 
 ## 주의
 
-- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T071), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)
+- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T073), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
 - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다
