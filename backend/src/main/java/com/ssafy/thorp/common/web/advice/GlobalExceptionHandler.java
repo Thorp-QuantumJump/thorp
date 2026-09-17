@@ -4,6 +4,8 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.common.web.response.ErrorResponse;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -75,20 +78,44 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INTERNAL_ERROR)));
     }
 
-    /** 요청 DTO 검증 실패. 어느 필드가 왜 틀렸는지 첫 번째 오류만 알려준다. */
+    /**
+     * 요청 DTO 검증 실패. {@code message}에는 첫 번째 필드 오류를, {@code details.fields}에는 필드 오류 전부({@code
+     * field}·{@code message})를 싣는다.
+     *
+     * <p>{@code details.fields}는 한 요청에 필드가 많아 첫 오류만으로는 어디를 고칠지 알 수 없는 화면(배우기 관리 초안 저장,
+     * learning-admin-api §5)이 위치를 그 자리에 보이려고 쓴다. 다른 경로의 400에는 키가 하나 늘 뿐이다.
+     */
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
             HttpHeaders headers,
             HttpStatusCode status,
             WebRequest request) {
+        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
         String message =
-                ex.getBindingResult().getFieldErrors().stream()
+                fieldErrors.stream()
                         .findFirst()
                         .map(error -> error.getField() + ": " + error.getDefaultMessage())
                         .orElse(ErrorCode.INVALID_INPUT.getMessage());
+        Map<String, Object> details =
+                fieldErrors.isEmpty()
+                        ? null
+                        : Map.of(
+                                "fields",
+                                fieldErrors.stream()
+                                        .map(
+                                                error ->
+                                                        Map.of(
+                                                                "field",
+                                                                error.getField(),
+                                                                "message",
+                                                                String.valueOf(
+                                                                        error.getDefaultMessage())))
+                                        .toList());
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())
-                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INVALID_INPUT, message)));
+                .body(
+                        ApiResponse.fail(
+                                ErrorResponse.of(ErrorCode.INVALID_INPUT, message, details)));
     }
 
     /**

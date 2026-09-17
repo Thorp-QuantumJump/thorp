@@ -231,7 +231,7 @@ POST /admin/learning/articles/{articleId}/publish
 | `location.part` | 추가 필드 | 가리키는 곳 |
 |---|---|---|
 | `title` · `question` · `example` | 없음 | 해당 필드 |
-| `block` | `index` (0부터) | `blocks` 순번 |
+| `block` | `index` (0부터) | `blocks` 순번. 본문 전체를 가리킬 때(`REQUIRED_FIELDS`의 문단 없음)는 `index`가 없다 |
 | `term` | `termId` | 용어 설명 |
 
 `check` 값은 [research](../research.md) R7 표의 아홉 가지다. 화면은 `message`를 **그대로** 보이고 문장을 새로 짓지 않는다. `matched`는 걸린 표현·숫자이며 해당 검사일 때만 온다.
