@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;
 import com.ssafy.thorp.backtest.application.port.message.ControlMessage;
+import com.ssafy.thorp.support.RabbitTestSupport;
 import java.io.IOException;
 import java.time.Clock;
 import org.junit.jupiter.api.DisplayName;
@@ -22,11 +23,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * CANCEL 이 fanout {@code backtest.control}로 나가는지 실제 브로커로 확인한다(계약 §4.4).
@@ -40,8 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             RabbitBacktestControlPublisherIT.ClockConfig.class
         })
 @ImportAutoConfiguration(RabbitAutoConfiguration.class)
-@Testcontainers(disabledWithoutDocker = true)
-class RabbitBacktestControlPublisherIT {
+class RabbitBacktestControlPublisherIT extends RabbitTestSupport {
 
     /** 발행기가 requestedAt 에 쓰는 시계. 메시징 슬라이스에는 앱의 Clock 빈이 없다. */
     @TestConfiguration
@@ -51,9 +47,6 @@ class RabbitBacktestControlPublisherIT {
             return Clock.systemUTC();
         }
     }
-
-    @Container @ServiceConnection
-    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
 
