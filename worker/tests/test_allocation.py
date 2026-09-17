@@ -8,6 +8,7 @@
 from datetime import date
 from decimal import Decimal
 
+import numpy as np
 import pandas as pd
 import pytest
 from pydantic import ValidationError
@@ -438,6 +439,67 @@ def test_unusable_covariance_fails_the_whole_run():
         )
 
     assert caught.value.code == "ESTIMATION_FAILED"
+
+
+def test_non_psd_covariance_is_not_repaired(monkeypatch):
+    """허용오차보다 큰 음의 고유값은 잘라 내지 않고 실행 전체를 실패시킨다(PD-04 1).
+
+    표본공분산은 구조상 양의 준정부호라 **가격 입력으로는 이 가지에 닿지 않는다** — 검사는
+    부동소수 잔잌과 밖에서 들어온 행렬을 위한 것이다. 그래서 행렬을 직접 갈아끼워 검사만 넣고
+    본다. ``[[1, 2], [2, 1]]`` 은 대칭이고 유한해 앞선 두 검사를 통과하고 고유값이 3·-1 이다.
+    """
+    monkeypatch.setattr(
+        "worker.allocation.min_variance.np.cov",
+        lambda *args, **kwargs: np.array([[1.0, 2.0], [2.0, 1.0]]),
+    )
+
+    with pytest.raises(AllocationError) as caught:
+        compute_weights(
+            min_variance(),
+            [item(SEMI), item(BATTERY)],
+            history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+            AS_OF,
+        )
+
+    assert caught.value.code == "ESTIMATION_FAILED"
+    assert "positive semi-definite" in str(caught.value)
+
+
+def test_cap_that_intake_accepts_is_filled_without_cash():
+    """접수가 통과시킨 상한은 워커에서 죽지 않는다 — 두 층이 같은 규칙을 읽는지의 경계다.
+
+    접수는 ``상한 × 종목 수 >= 투자 비중`` 을 보고 못 미치면 422 로 거절한다
+    (``BacktestServiceTest.userChosenCapThatCannotBeFilledIsRejected``). 그 반대쪽 — 경계를
+    간슬히 넘긴 요청이 워커에서 현금을 남기거나 실패하지 않는다 — 는 여기서 볼 수밖에 없다.
+    상한 50% × 2종목 = 1.0 이 그 경계다.
+
+    경계 아래로 떨어지는 길은 **이력 부족으로 종목이 빠질 때뿐**이고, 그건 접수가 알 수 없다.
+    그때는 멈추지 않고 목표를 줄인 뒤 그 사유를 남긴다(PD-03 6 ``capOverflow: CASH``).
+    """
+    both = {SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}
+
+    filled = compute_weights(
+        min_variance({"maxWeight": 50}), [item(SEMI), item(BATTERY)], history(**both), AS_OF
+    )
+
+    assert sum(filled.weights.values()) == Decimal(1)
+    assert max(filled.weights.values()) <= Decimal("0.5")
+    assert filled.exceptions == []
+
+    short_history = {**both, BATTERY: [100.0, 101.0]}
+    reduced = compute_weights(
+        min_variance({"maxWeight": 50}),
+        [item(SEMI), item(BATTERY)],
+        history(**short_history),
+        AS_OF,
+    )
+
+    assert sum(reduced.weights.values()) == Decimal("0.5")
+    assert [record.kind for record in reduced.exceptions] == [
+        "INSUFFICIENT_HISTORY",
+        "EFFECTIVE_TARGET_REDUCED",
+        "SINGLE_ASSET_FALLBACK",
+    ]
 
 
 def test_minimum_variance_is_repeatable():
