@@ -47,7 +47,7 @@
 .chartGrid line { stroke: var(--thorp-chart-grid); stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
 .chartGrid text, .chartEmpty { fill: var(--thorp-copy); font: 11px var(--thorp-font-display); }
 .chartEmpty { font-family: var(--thorp-font-body); font-size: 13px; }
-.chartLine { fill: none; stroke: var(--thorp-chart-line-primary); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.chartLine { fill: none; stroke: var(--chart-line-primary); stroke-width: 2; stroke-linejoin: round; }
 .chartPoint { fill: var(--thorp-background); stroke: var(--thorp-accent-soft); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .crosshair { stroke: var(--thorp-line-strong); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
 .path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0 0 14px; padding: 0; border-top: 1px solid var(--thorp-line); border-bottom: 1px solid var(--thorp-line); }
