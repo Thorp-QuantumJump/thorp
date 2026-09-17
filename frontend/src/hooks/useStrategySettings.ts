@@ -648,6 +648,8 @@ export type StrategySettings = {
   /** 모든 축에 값이 있는가. 비워 둔 축이 있으면 분석을 시작할 수 없다 */
   isComplete: (strategyId: string) => boolean
   select: (strategyId: string) => void
+  /** 고른 전략을 내려놓는다. 전략별로 바꿔 둔 값은 지우지 않는다 — 다시 고르면 그대로 돌아온다 */
+  clearSelection: () => void
   /** 허용 범위 안이면 반영하고 `null`, 밖이면 반영하지 않고 이유를 돌려준다(FR-006) */
   setValue: (strategyId: string, axisName: string, value: AxisValue) => InvalidStoredValueReason | null
   resetAxis: (strategyId: string, axisName: string) => void
@@ -749,6 +751,14 @@ export function useStrategySettings(
     },
     [strategies],
   )
+
+  const clearSelection = useCallback(() => {
+    setState((current) =>
+      current === null || current.selectedStrategyId === null
+        ? current
+        : { ...current, selectedStrategyId: null },
+    )
+  }, [])
 
   const withoutInvalid = (
     entries: InvalidStoredValue[],
@@ -894,6 +904,7 @@ export function useStrategySettings(
     isDefault,
     isComplete,
     select,
+    clearSelection,
     setValue,
     resetAxis,
     resetAll,
