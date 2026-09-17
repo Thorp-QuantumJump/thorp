@@ -6,6 +6,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
@@ -88,7 +89,14 @@ class BacktestRequestRepositoryImplTest extends PostgresTestSupport {
 
     private BacktestRequest save(long runId, long requesterId, ResultSource source) {
         return requests.save(
-                BacktestRequest.create(runId, requesterId, ExecutionType.SINGLE, source, null));
+                BacktestRequest.create(
+                        runId,
+                        requesterId,
+                        ExecutionType.SINGLE,
+                        source,
+                        null,
+                        PublicResultToken.generate(),
+                        null));
     }
 
     @Test
@@ -167,5 +175,93 @@ class BacktestRequestRepositoryImplTest extends PostgresTestSupport {
                 .isNull();
         assertThat(reloadedLast.isStoppedRun()).isTrue();
         assertThat(requests.countActiveByRunId(runId)).isZero();
+    }
+
+    // ---------- 비로그인 요청과 공개 토큰(spec 005 B01, T013) ----------
+
+    private BacktestRequest saveAnonymous(long runId, Instant expiresAt) {
+        return requests.save(
+                BacktestRequest.create(
+                        runId,
+                        null,
+                        ExecutionType.SINGLE,
+                        ResultSource.NEW,
+                        null,
+                        PublicResultToken.generate(),
+                        expiresAt));
+    }
+
+    @Test
+    @DisplayName("비로그인 요청이 요청자 없이 저장되고 토큰·만료 시각이 그대로 돌아온다")
+    void savesAnonymousRequestWithPublicToken() {
+        long runId = newRun();
+        Instant expiresAt = Instant.parse("2026-09-18T03:00:00Z");
+        BacktestRequest saved = saveAnonymous(runId, expiresAt);
+        entityManager.flush();
+        entityManager.clear();
+
+        BacktestRequest found = requests.findByPublicToken(saved.getPublicToken()).orElseThrow();
+        assertThat(found.getBacktestId()).isEqualTo(saved.getBacktestId());
+        assertThat(found.getRequesterId()).isNull();
+        assertThat(found.isAnonymous()).isTrue();
+        assertThat(found.getPublicTokenExpiresAt()).isEqualTo(expiresAt);
+        assertThat(requests.findByPublicToken(PublicResultToken.generate())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("만료된 비로그인 요청만 만료 순서대로 개수만큼 찾는다 — 로그인 요청과 아직 유효한 요청은 나오지 않는다")
+    void findsExpiredAnonymousRequestsOnly() {
+        long runId = newRun();
+        Instant now = Instant.parse("2026-09-11T03:00:00Z");
+        BacktestRequest older = saveAnonymous(runId, now.minusSeconds(7200));
+        BacktestRequest atBoundary = saveAnonymous(runId, now);
+        BacktestRequest newer = saveAnonymous(runId, now.minusSeconds(60));
+        BacktestRequest stillValid = saveAnonymous(runId, now.plusSeconds(1));
+        BacktestRequest loggedIn = save(runId, newUser("f@example.com"), ResultSource.JOINED);
+        entityManager.flush();
+        entityManager.clear();
+
+        List<String> expired =
+                requests.findExpiredAnonymous(now, 10).stream()
+                        .map(request -> request.getBacktestId().value())
+                        .toList();
+        assertThat(expired)
+                .containsExactly(
+                        older.getBacktestId().value(),
+                        newer.getBacktestId().value(),
+                        atBoundary.getBacktestId().value())
+                .doesNotContain(
+                        stillValid.getBacktestId().value(), loggedIn.getBacktestId().value());
+        assertThat(requests.findExpiredAnonymous(now, 2)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("요청 행을 지워도 실행은 남는다")
+    void deletesOnlyTheRequestRow() {
+        long runId = newRun();
+        BacktestRequest saved = saveAnonymous(runId, Instant.parse("2026-09-10T00:00:00Z"));
+        entityManager.flush();
+
+        requests.deleteById(saved.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(requests.findByBacktestId(saved.getBacktestId().value())).isEmpty();
+        assertThat(runs.findById(runId)).isPresent();
+    }
+
+    @Test
+    @DisplayName("DB 도 만료 시각 없는 비로그인 요청을 막는다 — 도메인을 우회한 쓰기에 대한 마지막 방어")
+    void databaseRejectsAnonymousRequestWithoutExpiry() {
+        long runId = newRun();
+        BacktestRequest saved = save(runId, newUser("g@example.com"), ResultSource.NEW);
+        entityManager.flush();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () ->
+                                jdbcTemplate.update(
+                                        "UPDATE backtest_request SET requester_id = NULL WHERE id = ?",
+                                        saved.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 }

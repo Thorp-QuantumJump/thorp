@@ -152,3 +152,32 @@ export function evaluateRules(
     return test(rule.operator, left, right, rule.code)
   })
 }
+
+/**
+ * 규칙 판정 한 번의 결과. 위반 목록과, 판정 자체를 하지 못했는지를 함께 담는다.
+ *
+ * <p><b>판정하지 못한 것을 "위반 없음"으로 접지 않는다.</b> `unjudged`가 참이면 `violations`가 비어
+ * 있어도 통과가 아니다.
+ */
+export type RuleCheck = {
+  violations: ValidationRule[]
+  unjudged: boolean
+}
+
+/**
+ * `evaluateRules`를 부르되 규칙 문법 위반을 예외 대신 결과로 돌려준다.
+ *
+ * <p><b>안내를 그리는 패널과 '분석하기'를 막는 페이지가 이 하나를 쓴다.</b> 둘이 각자 예외를 다루면
+ * 한쪽만 판정 실패를 통과로 접어, 안내는 보이는데 버튼은 눌리는 화면이 생긴다.
+ */
+export function checkRules(
+  rules: readonly ValidationRule[],
+  values: Record<string, unknown>,
+  context: RuleContext,
+): RuleCheck {
+  try {
+    return { violations: evaluateRules(rules, values, context), unjudged: false }
+  } catch {
+    return { violations: [], unjudged: true }
+  }
+}

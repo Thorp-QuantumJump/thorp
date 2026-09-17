@@ -8,3 +8,5 @@ pyarrow>=17.0
 SQLAlchemy>=2.0
 psycopg[binary]>=3.2
 python-dotenv>=1.0
+# 정규분포 보정 상수 Φ⁻¹(0.75) 실계산 (010 FR-005, research R5 — 근사값 1.4826을 쓰지 않는다)
+scipy>=1.14

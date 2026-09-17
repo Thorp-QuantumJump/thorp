@@ -73,10 +73,17 @@ public class EngineInputAssembler {
                 ExecutionPolicy.PROGRESS);
     }
 
+    /**
+     * 자료 관련 두 값은 <b>같은 것</b>이다.
+     *
+     * <p>spec 001 research.md 결정 4가 "새 필드를 만들지 않고 기존 {@code marketData.datasetId} 를 자료 버전 식별자로 쓴다"고
+     * 정했다. 그래서 둘에 같은 값을 싣는다. 예전에 {@code datasetId} 가 자리 표시 상수({@code KRX_DAILY_V1})였던 것은 001이 자료를
+     * 적재하기 전이라 실제 값을 가져올 곳이 없었기 때문이다. 이제는 접수 시점에 정해져 실행에 고정된 자료 버전이 그 값이다.
+     */
     private EngineInput.MarketDataSpec marketData(RunPlan plan) {
         EngineInput.MarketDataSpec fixed = ExecutionPolicy.MARKET_DATA;
         return new EngineInput.MarketDataSpec(
-                fixed.datasetId(),
+                plan.dataVersion(),
                 plan.dataVersion(),
                 fixed.interval(),
                 fixed.adjustment(),

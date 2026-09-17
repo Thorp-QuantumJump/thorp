@@ -85,8 +85,12 @@ public class ExecutionMetricRecorder {
         }
     }
 
-    /** 접수가 429 로 거절했다(FR-006). 실행 행이 없으므로 요청자·유형·사유만 남는다. */
-    public void limitRejected(long requesterId, ExecutionType executionType, String reason) {
+    /**
+     * 접수가 429 로 거절했다(FR-006). 실행 행이 없으므로 요청자·유형·사유만 남는다.
+     *
+     * @param requesterId null = 비로그인 요청(spec 005 B01). 거절 사유는 {@code TOTAL} 뿐이다
+     */
+    public void limitRejected(Long requesterId, ExecutionType executionType, String reason) {
         repository.recordLimitHit(
                 new LimitHitRecord(
                         LimitHitRecord.Kind.ADMISSION_REJECTED,

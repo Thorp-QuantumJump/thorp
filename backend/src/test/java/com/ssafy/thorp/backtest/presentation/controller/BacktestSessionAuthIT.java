@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.presentation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -122,5 +123,46 @@ class BacktestSessionAuthIT extends PostgresTestSupport {
                         Long.class,
                         backtestId);
         assertThat(storedRequester).isEqualTo(sessionUser).isNotEqualTo(otherUser);
+        String publicToken = JsonPath.read(response, "$.data.publicToken");
+        assertThat(publicToken).matches("^[0-9a-f]{32}$");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT public_token_expires_at IS NULL FROM backtest_request"
+                                        + " WHERE backtest_id = ?",
+                                Boolean.class,
+                                backtestId))
+                .as("로그인 요청은 만료가 없다")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("로그인하지 않아도 접수는 202 이고 공개 토큰과 만료 시각이 붙는다 — 소유자 조회 경로는 그대로 401 이다(spec 005 B01)")
+    void acceptsAnonymousIntakeButKeepsOwnerRoutesClosed() throws Exception {
+        String response =
+                mockMvc.perform(
+                                post("/backtests")
+                                        .with(csrf())
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(uniqueBody()))
+                        .andExpect(status().isAccepted())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+
+        String backtestId = JsonPath.read(response, "$.data.backtestId");
+        String publicToken = JsonPath.read(response, "$.data.publicToken");
+        assertThat(publicToken).matches("^[0-9a-f]{32}$");
+
+        java.util.Map<String, Object> row =
+                jdbcTemplate.queryForMap(
+                        "SELECT requester_id, public_token, public_token_expires_at"
+                                + " FROM backtest_request WHERE backtest_id = ?",
+                        backtestId);
+        assertThat(row.get("requester_id")).isNull();
+        assertThat(row.get("public_token")).isEqualTo(publicToken);
+        assertThat(row.get("public_token_expires_at")).isNotNull();
+
+        // 비로그인 사용자는 /results/{token}(B02)으로 본다. 식별자만 알아서는 소유자 경로가 열리지 않는다.
+        mockMvc.perform(get("/backtests/" + backtestId)).andExpect(status().isUnauthorized());
     }
 }

@@ -98,8 +98,8 @@ Worker(`worker/`)는 **변경하지 않는다.** 브로커도 쓰지 않는다 �
 
 **Purpose**: 패키지 골격과 진입점 자리 만들기 · **묶음 M1**
 
-- [ ] T001 (DE) `data/src/data_pipeline/regime/__init__.py`와 하위 모듈 자리(`rounding.py`·`scale.py`·`comparison.py`·`distance.py`·`era.py`·`candidates.py`·`explain.py`·`snapshot.py`·`watermark.py`·`load.py`, 그리고 `macro/` 패키지)를 빈 파일로 만들고 각 모듈의 책임을 docstring에 적는다
-- [ ] T002 [P] (DE) `data/scripts/precompute_regime.py` 진입점 골격을 argparse로 만든다 — `--source`(`fixture` 또는 `macro`, 기본 `macro`)·`--all`·`--since`·`--baseline-month`·`--dry-run` 플래그만 정의하고 본체는 M5에서 채운다
+- [X] T001 (DE) `data/src/data_pipeline/regime/__init__.py`와 하위 모듈 자리(`rounding.py`·`scale.py`·`comparison.py`·`distance.py`·`era.py`·`candidates.py`·`explain.py`·`snapshot.py`·`watermark.py`·`load.py`, 그리고 `macro/` 패키지)를 빈 파일로 만들고 각 모듈의 책임을 docstring에 적는다
+- [X] T002 [P] (DE) `data/scripts/precompute_regime.py` 진입점 골격을 argparse로 만든다 — `--source`(`fixture` 또는 `macro`, 기본 `macro`)·`--all`·`--since`·`--baseline-month`·`--dry-run` 플래그만 정의하고 본체는 M5에서 채운다
 
 **Checkpoint**: 골격이 서고 `ruff check`가 통과한다
 
@@ -114,17 +114,17 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **Goal**: 008이 없어도 배치가 돌 자리를 만들되, 008이 오면 **`macro/fixture/` 한 디렉터리를 지우면 끝나도록** 격리한다. Backend 쪽 등록표 대역은 M6에 있다.
 
-- [ ] T003 (DE) `MacroIndicatorSource` 프로토콜을 `data/src/data_pipeline/regime/macro/source.py`에 작성 — `registry()`·`monthly_series()`·`raw_series()`·`baseline_months()`·`publication()`·`data_version()`·`changed_since()`·`is_sample_data()`. 시그니처와 뜻은 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §1
-- [ ] T004 [P] (DE) 소스가 돌려줄 값 타입을 `macro/types.py`에 dataclass로 작성 — `IndicatorRegistry`(분야 이름·순서 포함)·`MonthlyValue`·`BaselineMonths`·`Publication`. **결측월은 키가 없다**(0이나 직전 값으로 채우지 않는다)
-- [ ] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **열 모양을 모두 담는다**. 모양 10은 관측 입력은 있지만 후보 직전 60개월은 없는 구간으로, **후보 유지·시대별 보조 설명 제한**을 검증한다(FR-012·FR-017)
-- [ ] T006 (DE) ⚠ `FixtureMacroIndicatorSource`를 `macro/fixture/source.py`에 작성 — `data_version()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고 `is_sample_data()`는 `True`, `changed_since()`는 `None`(전 구간)
-- [ ] T007 (DE) 구현체 선택을 `macro/__init__.py`의 팩터리 한 곳에 모은다 — `--source` 플래그만 보고 고른다. **운영 코드가 픽스처 클래스를 이름으로 참조하지 않는다**
-- [ ] T008 (DE) 운영 적재 가드를 `data/scripts/precompute_regime.py`에 구현 — `THORP_ENV=prod`인데 `--source fixture`면 **적재 전에 종료**한다. 설정 실수로 가짜 자료가 운영에 나가는 경로를 없앤다
-- [ ] T009 [P] (DE 테스트) 픽스처 **열** 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다
-- [ ] T010 [P] (DE 테스트) 소스 계약 테스트를 `data/tests/regime/test_macro_source.py`에 작성 — 결측월이 키 없음으로 오는지, 원값·변환값이 둘 다 오는지, 버전 셋이 함께 오는지, `registry()`에 분야 이름·순서가 있는지. **008 구현체가 와도 같은 테스트가 돈다**
-- [ ] T011 [P] (DE 테스트) prod 가드를 `data/tests/regime/test_guard.py`에 고정 — `THORP_ENV=prod` + `--source fixture`가 실패한다
-- [ ] T012 [P] (DE 테스트) 픽스처 격리 검사를 `data/tests/regime/test_fixture_isolation.py`에 작성 — `regime` 운영 코드에서 `macro/fixture/` 밖이 픽스처를 이름으로 참조하면 실패한다. 대상 파일은 **손 목록이 아니라 디렉터리를 훑어** 모은다
-- [ ] T013 [P] (DE 테스트) 지표 id·지표명·분야 이름이 `macro/fixture/` 밖 파이프라인 코드에 **0건**임을 `data/tests/regime/test_indicator_agnostic.py`에 고정(spec FR-004)
+- [X] T003 (DE) `MacroIndicatorSource` 프로토콜을 `data/src/data_pipeline/regime/macro/source.py`에 작성 — `registry()`·`monthly_series()`·`raw_series()`·`baseline_months()`·`publication()`·`data_version()`·`changed_since()`·`is_sample_data()`. 시그니처와 뜻은 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §1
+- [X] T004 [P] (DE) 소스가 돌려줄 값 타입을 `macro/types.py`에 dataclass로 작성 — `IndicatorRegistry`(분야 이름·순서 포함)·`MonthlyValue`·`BaselineMonths`·`Publication`. **결측월은 키가 없다**(0이나 직전 값으로 채우지 않는다)
+- [X] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **열 모양을 모두 담는다**. 모양 10은 관측 입력은 있지만 후보 직전 60개월은 없는 구간으로, **후보 유지·시대별 보조 설명 제한**을 검증한다(FR-012·FR-017)
+- [X] T006 (DE) ⚠ `FixtureMacroIndicatorSource`를 `macro/fixture/source.py`에 작성 — `data_version()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고 `is_sample_data()`는 `True`, `changed_since()`는 `None`(전 구간)
+- [X] T007 (DE) 구현체 선택을 `macro/__init__.py`의 팩터리 한 곳에 모은다 — `--source` 플래그만 보고 고른다. **운영 코드가 픽스처 클래스를 이름으로 참조하지 않는다**
+- [X] T008 (DE) 운영 적재 가드를 `data/scripts/precompute_regime.py`에 구현 — `THORP_ENV=prod`인데 `--source fixture`면 **적재 전에 종료**한다. 설정 실수로 가짜 자료가 운영에 나가는 경로를 없앤다
+- [X] T009 [P] (DE 테스트) 픽스처 **열** 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다
+- [X] T010 [P] (DE 테스트) 소스 계약 테스트를 `data/tests/regime/test_macro_source.py`에 작성 — 결측월이 키 없음으로 오는지, 원값·변환값이 둘 다 오는지, 버전 셋이 함께 오는지, `registry()`에 분야 이름·순서가 있는지. **008 구현체가 와도 같은 테스트가 돈다**
+- [X] T011 [P] (DE 테스트) prod 가드를 `data/tests/regime/test_guard.py`에 고정 — `THORP_ENV=prod` + `--source fixture`가 실패한다
+- [X] T012 [P] (DE 테스트) 픽스처 격리 검사를 `data/tests/regime/test_fixture_isolation.py`에 작성 — `regime` 운영 코드에서 `macro/fixture/` 밖이 픽스처를 이름으로 참조하면 실패한다. 대상 파일은 **손 목록이 아니라 디렉터리를 훑어** 모은다
+- [X] T013 [P] (DE 테스트) 지표 id·지표명·분야 이름이 `macro/fixture/` 밖 파이프라인 코드에 **0건**임을 `data/tests/regime/test_indicator_agnostic.py`에 고정(spec FR-004)
 
 **Checkpoint**: 008 없이도 배치가 지표를 읽을 수 있고, 지울 곳이 `macro/fixture/` 하나로 모였다
 
@@ -133,21 +133,21 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 **Goal**: 질의 직전 자료로 공통 척도(m·s)를 만들고, 어느 달을 비교할지 정한다.
 거리 계산에서는 모든 후보에 이 척도를 적용한다. 시대별 보조 설명만 같은 산출 함수를 후보월로 호출한다(FR-005·FR-017).
 
-- [ ] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)
-- [ ] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)
-- [ ] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)
-- [ ] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)
-- [ ] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`
-- [ ] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)
-- [ ] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)
-- [ ] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)
-- [ ] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)
-- [ ] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다
-- [ ] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정
-- [ ] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다
-- [ ] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)
-- [ ] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다
-- [ ] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정
+- [X] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)
+- [X] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)
+- [X] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)
+- [X] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)
+- [X] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`
+- [X] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)
+- [X] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)
+- [X] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)
+- [X] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)
+- [X] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다
+- [X] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정
+- [X] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다
+- [X] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)
+- [X] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다
+- [X] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정
 
 **Checkpoint**: 질의 직전 구간의 공통 척도를 만들고, 만들 수 없을 때 사유를 말한다
 

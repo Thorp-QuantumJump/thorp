@@ -8,6 +8,9 @@ import com.ssafy.thorp.backtest.application.port.message.EngineInput;
 import com.ssafy.thorp.backtest.application.service.EngineInputAssembler;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
+import com.ssafy.thorp.backtest.domain.model.RunState;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -45,6 +48,14 @@ class EngineInputFixtureTest {
                     org.mockito.Mockito.mock(
                             com.ssafy.thorp.backtest.application.service.CostProfileService.class));
 
+    /**
+     * 계약 픽스처가 보이는 자료 버전. 규칙은 {@code KRX_DAILY_{자료마감일}[_R{판}]} 이다(spec 001 research.md 결정 4).
+     *
+     * <p>접수가 저장된 자료 버전에서 정해 실행에 고정하는 값이라 계약 예시도 그 모양이어야 한다. 예전 자리 표시였던 {@code KRX_DAILY_V1} 은 001이
+     * 자료를 적재하기 전이라 실제 값을 가져올 곳이 없어 둔 것이었다.
+     */
+    private static final String FIXTURE_DATA_VERSION = "KRX_DAILY_20260907";
+
     /** 픽스처의 run/universe/allocation/portfolio 값을 그대로 담은 Job. 벤치마크 종목은 v2 메시지에 실리지 않는다. */
     private static BacktestRun fixtureJob(InstrumentId benchmark) {
         return BacktestRun.restore(
@@ -60,7 +71,10 @@ class EngineInputFixtureTest {
                 new BigDecimal("0.50"),
                 benchmark,
                 42,
-                RunStatus.QUEUED);
+                RunState.of(RunStatus.QUEUED),
+                new RunPlan(
+                        null, null, null, FIXTURE_DATA_VERSION, null, null, null, null, null, null),
+                new RunLifecycle(null, null, null, null, 0, 0, null, null, null));
     }
 
     @Test

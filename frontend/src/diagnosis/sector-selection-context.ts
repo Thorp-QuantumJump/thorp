@@ -38,6 +38,18 @@ export type SectorSelectionContextValue = {
   setWeight: (code: string, weightTenths: number) => void
   /** '동일하게 나누기'다. 값을 다시 채우면서 `weightsTouched`를 false로 되돌린다. */
   distributeEvenly: () => void
+  /**
+   * 선택과 비중을 **한 번에** 바꾼다. 배우기 예시가 들어오는 경로가 쓴다(FR-012).
+   *
+   * 고르기와 비중 넣기를 여러 번 나눠 부르지 않는 까닭은, 그 사이에 동일 비중 자동 채움이
+   * 끼어들어 예시가 정한 값이 잠시 다른 값으로 바뀌기 때문이다. 예시는 섹터와 비중을 함께
+   * 정해서 오므로 상태 전이도 한 번이어야 한다.
+   *
+   * 받은 값은 부르는 쪽에서 이미 검증된 것이며(현재 목록에 있는 코드, 0 이상 1000 이하 정수),
+   * 여기서도 목록에 없는 코드는 받지 않는다. **합계를 맞추지 않는다.** 합계가 1000이 아닌
+   * 예시도 그대로 채우고 부족·초과 안내로 처리한다(계약 2절).
+   */
+  applySelection: (codes: readonly string[], weightTenths: Readonly<Record<string, number>>) => void
 }
 
 export const SectorSelectionContext = createContext<SectorSelectionContextValue | null>(null)

@@ -22,11 +22,29 @@ import type { StrategyView } from '@/types/strategyRegistry'
  * (원칙 IV·VI, FR-018).
  */
 
-/** 분석 요청에 실을 규칙·비용 버전과, 비용 조건이 임시값인지(FR-002·FR-010). */
+/**
+ * 004가 등록한 비용 조건의 수치(bps). 화면은 읽기 전용으로만 보인다(FR-010).
+ *
+ * 004 `CostProfile`의 네 칸과 같다. 화면이 수치를 짓거나 고치는 경로를 두지 않는다.
+ */
+export type CostRates = {
+  commissionBps: number
+  spreadBps: number
+  slippageBps: number
+  taxBps: number
+}
+
+/**
+ * 분석 요청에 실을 규칙·비용 버전과, 그 비용 조건의 수치·임시 여부(FR-002·FR-010).
+ *
+ * <p><b>버전과 수치는 한 덩이로 온다.</b> 버전만 알고 수치를 모르는 상태를 두면 화면이 "적용됨"만
+ * 보이게 되고, 그것은 FR-010을 충족하지 않는다(data-model §7). 채우는 통로는 B06이 정한다.
+ */
 export type AnalysisVersions = {
   rulesVersion: string
   costProfileVersion: string
   costProfileProvisional: boolean
+  costRates: CostRates
 }
 
 export type WarmupJudgeInput = {
@@ -37,14 +55,29 @@ export type WarmupJudgeInput = {
   minEvaluationYears: number
 }
 
+/**
+ * 워밍업 때문에 공통 평가 구간의 시작이 늦춰졌다는 사실과 그 원인(FR-011, SC-004).
+ *
+ * 001 `GET /sectors/evaluation-window`가 돌려주는 값에서 옮긴다. 화면이 날짜를 계산하지 않는다.
+ */
+export type PeriodReduction = {
+  /** 워밍업 없이 계산했을 때의 공통 시작일 */
+  startWithoutWarmup: string
+  /** 시작일을 정한 후보의 `instrumentId`(001 `bindingCandidate`) */
+  bindingCandidate: string
+}
+
 export type WarmupJudgement = {
   verdict: WarmupVerdict
   /**
-   * 워밍업을 뺀 뒤 실제로 평가하는 기간. `ok`·`reduced`일 때만 있다.
+   * 워밍업을 채운 뒤 평가할 수 있는 공통 범위(001의 `commonStart`~`commonEnd`). `ok`·`reduced`일 때만 있다.
    *
-   * 분석 요청의 `conditions.start`·`end`가 이 값에서 온다. 사용자가 기간을 바꾸는 것은 B10이 붙인다.
+   * <p>사용자가 고르는 분석 기간은 **이 범위 안에서만** 움직인다(FR-009). 사용자가 기간을 고르지 않았으면
+   * 이 범위 전체가 분석 요청의 `conditions.start`·`end`가 된다.
    */
   window: { start: string; end: string } | null
+  /** 워밍업 때문에 시작일이 늦춰졌으면 그 사실. 늦춰지지 않았거나 판정하지 못했으면 `null` */
+  reduction: PeriodReduction | null
 }
 
 /**
@@ -66,7 +99,64 @@ export type WarmupJudgement = {
 export type AnalysisSupport = {
   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>
   judgeWarmup: (input: WarmupJudgeInput) => WarmupJudgement
+  /**
+   * 요청을 보낸다. 거절되면 **서버가 보낸 오류 이름을 `code`에, 응답의 `details`를 `details`에 실은
+   * 오류로** 거부하고, 메시지는 서버가 보낸 문장을 쓴다.
+   *
+   * 화면은 `code`로 거절마다 계약 §2의 처리를 가르고(`readBacktestRejection`), 400이면 `details.axis`로
+   * 항목 이름을 찾는다. 공용 `ApiClientError`는 `code`는 싣지만 `details`는 싣지 않는다. Axios 오류를
+   * 그대로 던지면 그 `code`는 `ERR_BAD_REQUEST` 같은 전송 계층 이름이라 가를 수 없으니, B06(T039)의
+   * `BacktestRequestError`가 둘을 정규화한 뒤 던진다.
+   */
   createBacktest: (request: BacktestCreateRequest) => Promise<BacktestAccepted>
+}
+
+/**
+ * 분석 요청의 거절 가운데 화면이 따로 처리하는 것(계약 §2 거절 응답).
+ *
+ * 422 `VALIDATION_RULE_VIOLATED`는 여기 없다. 서버가 규칙의 `detail`을 메시지로 싣고, 화면은 그
+ * 메시지를 그대로 보이면 계약을 만족하기 때문이다.
+ */
+export const BacktestRejectionCode = {
+  /** 400. 축 값이나 시작 금액이 허용 범위 밖이다 */
+  UNREGISTERED_PARAMETER_VALUE: 'UNREGISTERED_PARAMETER_VALUE',
+  /** 409. 요청을 보낸 사이에 등록표 버전이 바뀌었다 */
+  REGISTRY_VERSION_CHANGED: 'REGISTRY_VERSION_CHANGED',
+  /** 422. 고른 전략이 등록표의 활성 전략에 없다 */
+  STRATEGY_NOT_REGISTERED: 'STRATEGY_NOT_REGISTERED',
+  /** 503. 서버가 등록표를 읽지 못했다 */
+  REGISTRY_UNAVAILABLE: 'REGISTRY_UNAVAILABLE',
+} as const
+
+/** `createBacktest`가 던진 오류에서 화면이 읽는 두 가지. 모르는 모양이면 둘 다 `null`이다. */
+export type BacktestRejection = {
+  /** 서버가 보낸 오류 이름 그대로. 아는 이름이 아니어도 접지 않는다 */
+  code: string | null
+  /** 거절 응답의 `details`. 400이면 `axis`·`value`·`allowedRange`를 싣는다 */
+  details: Record<string, unknown> | null
+}
+
+/**
+ * `createBacktest`가 던진 오류를 읽는다.
+ *
+ * 오류 클래스를 묻지 않고 `code`와 `details`만 본다. 전송 통로는 B06이 채우므로, 이 화면이 특정 클래스를
+ * 알면 통로를 바꿀 때 판별이 조용히 빗나간다.
+ */
+export function readBacktestRejection(error: unknown): BacktestRejection {
+  if (typeof error !== 'object' || error === null) return { code: null, details: null }
+  const { code, details } = error as { code?: unknown; details?: unknown }
+  return {
+    code: typeof code === 'string' ? code : null,
+    details:
+      typeof details === 'object' && details !== null && !Array.isArray(details)
+        ? (details as Record<string, unknown>)
+        : null,
+  }
+}
+
+/** `createBacktest`가 던진 오류가 등록표 버전 변경(409)인가. */
+export function isRegistryVersionChanged(error: unknown): boolean {
+  return readBacktestRejection(error).code === BacktestRejectionCode.REGISTRY_VERSION_CHANGED
 }
 
 export const ANALYSIS_VERSIONS_UNAVAILABLE = '분석 조건 버전을 확인할 수 없습니다.'
@@ -84,6 +174,7 @@ export const notConnectedSupport: AnalysisSupport = {
   judgeWarmup: () => ({
     verdict: { state: 'unknown', message: EVALUATION_WINDOW_UNAVAILABLE },
     window: null,
+    reduction: null,
   }),
   createBacktest: async () => {
     throw new Error('분석 요청 전송이 아직 연결되지 않았습니다.')

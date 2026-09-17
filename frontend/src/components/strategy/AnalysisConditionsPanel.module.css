@@ -1,0 +1,54 @@
+.panel {
+  display: grid;
+  gap: 12px;
+}
+
+.toggle {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle::after {
+  content: ' ▾';
+  color: var(--thorp-copy);
+}
+
+.toggle[aria-expanded='true']::after {
+  content: ' ▴';
+}
+
+.toggle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.body {
+  display: grid;
+  gap: 10px;
+}
+
+.dateLabel {
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+}
+
+/* 읽기 전용 값은 입력칸처럼 보이지 않게 글로만 늘어놓는다. */
+.readOnly {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}

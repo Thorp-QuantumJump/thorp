@@ -23,6 +23,7 @@ export default defineConfig({
       'src/auth/**/*.test.ts',
       'src/diagnosis/**/*.test.ts',
       'src/marketflow/**/*.test.ts',
+      'src/utils/analysisPeriod.test.ts',
       'src/utils/warmupRule.test.ts',
       'src/utils/validationRules.test.ts',
     ],

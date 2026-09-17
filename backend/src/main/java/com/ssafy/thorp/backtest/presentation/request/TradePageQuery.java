@@ -3,6 +3,8 @@ package com.ssafy.thorp.backtest.presentation.request;
 import com.ssafy.thorp.backtest.application.port.message.TradeStatus;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * {@code GET /backtests/{backtestId}/trades}의 질의 파라미터. 계약: {@code
@@ -17,13 +19,18 @@ import jakarta.validation.constraints.Min;
  * ConstraintViolationException}이 나고, 그건 MVC 표준 예외가 아니라 500이 된다. {@code @Valid @ModelAttribute}는 요청
  * DTO 검증의 기존 경로를 그대로 타므로 그 분기를 따질 필요가 없다.
  *
- * <p>기본값 적용과 {@code instrumentId} 형식 검증은 컨트롤러가 한다({@code FindBacktestTradesQuery}로 변환하면서).
+ * <p>기본값 적용과 {@code instrumentId} 형식 검증, {@code from ≤ to} 확인은 컨트롤러가 한다({@code
+ * FindBacktestTradesQuery}로 변환하면서).
+ *
+ * <p>{@code from}·{@code to}(spec 005 T015)는 진입 또는 청산이 그 기간(양 끝 포함) 안에 있는 거래만 남긴다. 둘 중 하나만 보내도 된다.
  */
 public record TradePageQuery(
         @Min(0) Integer page,
         @Min(1) @Max(1000) Integer size,
         String instrumentId,
-        TradeStatus status) {
+        TradeStatus status,
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 100;

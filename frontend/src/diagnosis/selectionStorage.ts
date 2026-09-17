@@ -192,13 +192,20 @@ export function readStoredSelection(
 }
 
 /**
- * 선택 상태를 보관한다.
+ * 선택 상태를 보관한다. 보관에 성공했는지를 돌려준다.
  *
- * **합계를 저장 시점에 맞추지 않는다.** 합계가 1000이 아닌 상태도 그대로 보관한다. 사용자가
- * 입력을 마치지 못한 채 화면을 떠났다가 돌아오면 그 상태 그대로 보여야 하며, 저장하면서 맞추면
- * 사용자 입력을 몰래 바꾸는 것이 된다(계약 불변식 3, 원칙 VI).
+ * **값을 손대지 않는다.** 합계를 저장 시점에 1000으로 맞추는 조정, 표시 정밀도를 넘어선 반올림,
+ * 비중이 0인 섹터 제외를 모두 하지 않는다. 사용자가 입력을 마치지 못한 채 화면을 떠났다가
+ * 돌아오면 그 상태 그대로 보여야 하며, 저장하면서 맞추면 사용자 입력을 몰래 바꾸는 것이 된다
+ * (계약 불변식 3, FR-013, 원칙 VI). 003이 읽는 값도 이 함수가 쓴 값 하나이므로, 여기서 값을
+ * 건드리지 않는 것이 곧 SC-013이 요구하는 "마지막 입력과 다르지 않음"이다.
+ *
+ * **돌려주는 값이 필요한 까닭**: 저장소가 막힌 환경에서는 예외를 삼키고 메모리 상태로만
+ * 동작한다(계약 「읽는 쪽의 의무」). 그 상태로도 이 화면은 정상 동작하지만, 003으로 넘기는
+ * 수단은 이 저장소 항목 하나뿐이라 보관이 실패하면 **인계할 방법이 없다.** 넘기는 쪽이 그
+ * 사실을 알 수 있어야 사용자를 빈 다음 화면으로 보내지 않는다(원칙 VI).
  */
-export function writeStoredSelection(snapshot: SectorSelectionSnapshot): void {
+export function writeStoredSelection(snapshot: SectorSelectionSnapshot): boolean {
   const payload = {
     version: SECTOR_SELECTION_PAYLOAD_VERSION,
     mapVersion: snapshot.mapVersion,
@@ -211,8 +218,10 @@ export function writeStoredSelection(snapshot: SectorSelectionSnapshot): void {
 
   try {
     window.sessionStorage.setItem(SECTOR_SELECTION_STORAGE_KEY, JSON.stringify(payload))
+    return true
   } catch {
     // 저장소가 막힌 환경에서는 메모리 상태로만 동작한다. 화면을 오류로 막지 않는다.
+    return false
   }
 }
 

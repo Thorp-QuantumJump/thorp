@@ -13,6 +13,7 @@ from data_pipeline.dataset_version import (
     InvalidDatasetIdError,
     build_dataset_id,
     dataset_deadline_date,
+    dataset_revision,
     validate_dataset_id,
 )
 
@@ -48,6 +49,57 @@ class TestDatasetId:
 
     def test_validate_accepts_expected_format(self) -> None:
         assert validate_dataset_id("KRX_DAILY_20260911") == "KRX_DAILY_20260911"
+
+
+class TestRevision:
+    """같은 마감일을 다시 발행하기 위한 판 번호 (research.md 결정 4의 2026-09-17 보완).
+
+    발행본은 고칠 수 없으므로(FR-017) 같은 기간의 자료를 내용만 바꿔 다시 내려면 이름이 달라야
+    한다. 마감일 하나로만 정하면 그 길이 없다.
+    """
+
+    def test_첫_판에는_판_번호를_붙이지_않는다(self) -> None:
+        """붙이면 이미 발행된 이름들을 모두 바꿔야 한다."""
+        assert build_dataset_id(date(2026, 9, 11)) == "KRX_DAILY_20260911"
+        assert build_dataset_id(date(2026, 9, 11), revision=1) == "KRX_DAILY_20260911"
+
+    def test_두_번째_판부터_번호가_붙는다(self) -> None:
+        assert build_dataset_id(date(2026, 9, 11), revision=2) == "KRX_DAILY_20260911_R2"
+        assert build_dataset_id(date(2026, 9, 11), revision=10) == "KRX_DAILY_20260911_R10"
+
+    @pytest.mark.parametrize("revision", [0, -1, 1.5, True, "2"])
+    def test_판_번호는_1_이상의_정수여야_한다(self, revision: object) -> None:
+        with pytest.raises(InvalidDatasetIdError):
+            build_dataset_id(date(2026, 9, 11), revision=revision)  # type: ignore[arg-type]
+
+    def test_판_번호가_붙은_식별자를_받아들인다(self) -> None:
+        assert validate_dataset_id("KRX_DAILY_20260911_R2") == "KRX_DAILY_20260911_R2"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "KRX_DAILY_20260911_R1",  # 첫 판은 번호를 붙이지 않으므로 _R1은 없는 표기다
+            "KRX_DAILY_20260911_R0",
+            "KRX_DAILY_20260911_R",
+            "KRX_DAILY_20260911_r2",
+            "KRX_DAILY_20260911_R2_R3",
+        ],
+    )
+    def test_어긋난_판_표기를_거부한다(self, value: str) -> None:
+        with pytest.raises(InvalidDatasetIdError):
+            validate_dataset_id(value)
+
+    def test_판_번호를_읽는다(self) -> None:
+        assert dataset_revision("KRX_DAILY_20260911") == 1
+        assert dataset_revision("KRX_DAILY_20260911_R2") == 2
+
+    def test_판_번호는_마감일을_바꾸지_않는다(self) -> None:
+        """판이 달라도 담은 구간의 끝은 같다. 다른 것은 내용이다."""
+        assert dataset_deadline_date("KRX_DAILY_20260911_R2") == date(2026, 9, 11)
+
+    def test_나중_판이_이름_정렬에서_뒤에_온다(self) -> None:
+        """현재 판을 고르는 규칙이 '마감 시각이 같으면 식별자 내림차순'이라 이 성질에 기댄다."""
+        assert "KRX_DAILY_20260911" < "KRX_DAILY_20260911_R2" < "KRX_DAILY_20260911_R3"
 
     @pytest.mark.parametrize(
         "value",
