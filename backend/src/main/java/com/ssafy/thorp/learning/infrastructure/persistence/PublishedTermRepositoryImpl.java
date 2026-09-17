@@ -40,6 +40,11 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
     }
 
     @Override
+    public Optional<ArticleId> findOwnerArticleKey(TermId termId) {
+        return publishedTermJpaRepository.findOwnerArticleKey(termId.value()).map(ArticleId::new);
+    }
+
+    @Override
     public void replaceForArticle(ArticleId articleId, long revisionId, List<LearningTerm> terms) {
         Long articleInternalId =
                 PersistenceLookups.requireArticleId(articleJpaRepository, articleId);

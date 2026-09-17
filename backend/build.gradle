@@ -83,6 +83,12 @@ spotless {
 tasks.named('test') {
     useJUnitPlatform()
 
+    // 시험 JVM 힙. Gradle 기본값은 512MB인데, 전체 시험은 설정이 다른 Spring 컨텍스트를 20개 넘게 캐시해
+    // 그 한도에 닿는다. 닿으면 실패로 끝나지 않고 OutOfMemoryError를 낸 채 멈춘다(2026-09-17, JPA 컨텍스트
+    // 25개·힙 475/512MB에서 1시간 넘게 진행 없음). 컨텍스트 캐시를 줄이면 설정마다 기동을 다시 해 느려지므로
+    // 힙을 올린다. 컨텍스트가 더 늘면 이 값부터 다시 본다.
+    maxHeapSize = '1g'
+
     // 시험은 바깥 망에 나가지 않는다.
     //
     // 뉴스 수집 스케줄러는 @SpringBootTest 컨텍스트에서도 돌아, 그대로 두면 시험이 그날의 실제 기사를
@@ -119,6 +125,10 @@ tasks.named('test') {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(file('../docs/specs/backtest-api/examples'))
             .withPropertyName('backtestApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 배우기 계약 예시(spec 013). LearningPublicApiIT·LearningAdminApiIT가 읽는다.
+    inputs.dir(file('../docs/specs/learning-api/examples'))
+            .withPropertyName('learningApiFixtures')
             .withPathSensitivity(PathSensitivity.RELATIVE)
     // 워커 픽스처의 첫 거래일이 FixtureMarketMetadataAdapter 의 상장일과 어긋난다는 사실을
     // MarketFixtureAlignmentTest 가 붙박는다. 그 파일이 바뀌면 이 태스크가 다시 돌아야 한다.

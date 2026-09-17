@@ -54,6 +54,10 @@ public class SecurityConfig {
                                 authorize
                                         .requestMatchers("/auth/me")
                                         .authenticated()
+                                        // 배우기 관리(spec 013). 비로그인은 여기서 401이고, 관리 권한은
+                                        // LearningAdminAccess가 판정한다(권한이 없으면 404).
+                                        .requestMatchers("/admin/learning/**")
+                                        .authenticated()
                                         .anyRequest()
                                         .permitAll())
                 .securityContext(
