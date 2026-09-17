@@ -79,18 +79,34 @@
 - 현행 세 개 유지. `409 RESULT_NOT_READY`(QUEUED·RUNNING), `409 BACKTEST_FAILED`(FAILED). `CANCELLED`는 `200`에 부분 구간 데이터 + `partial=true`. 먼저 취소한 요청(스냅샷 있음)은 공용 실행이 끝난 뒤 `cancelled_last_trading_date`까지만 날짜로 잘라 준다(읽기 필터, 재계산 없음). **공용 실행이 아직 종결 전이면 `409 RESULT_NOT_READY`**(상세 결과가 저장되기 전), **공용 실행이 `FAILED`로 끝나면 `409 BACKTEST_FAILED`**(부분 결과를 확보하지 못함). 완료한 거래일이 없는 취소 요청(스냅샷 NULL)은 `409 NO_PARTIAL_RESULT`. `/weights`·`/trades`·`/positions`·`/exceptions`도 같다.
 - 신규 `GET /backtests/{backtestId}/weights`: `[{date, target:{instrumentId: weight}, actual:{…}, weightError}]`, `weightsSource: USER|COMPUTED`.
 - `/trades` 항목에 `reason`(`REBALANCE` `HALT_DEFERRED` `LIQUIDATION`)·`plannedDate` 추가. 질의 `from`·`to`(선택, `YYYY-MM-DD`, 양 끝 포함, spec 005 T015): 진입 또는 청산이 그 기간 안인 거래만. `from > to`는 400 `INVALID_INPUT`. `/timeseries` 항목에 `cashFlows[{type: DISTRIBUTION, instrumentId, amount}]` 추가.
-- `GET /backtests/{backtestId}/exceptions`: `[{date, instrumentId, kind, rule, action}]` — 005가 "결과 옆 한 문장"에 쓰는 원천.
+- `GET /backtests/{backtestId}/exceptions`: `[{date, instrumentId, kind, rule, action}]` — 005가 "결과 옆 한 문장"에 쓰는 원천. `kind`는 기존 `INSUFFICIENT_HISTORY`·`ZERO_VOLATILITY`에 `CAP_OVERFLOW_CASH`·`EFFECTIVE_TARGET_REDUCED`·`SINGLE_ASSET_FALLBACK`·`NO_SELECTION`이 더해진다(2026-09-17 PD-03·04, T022·T023).
 
 ## GET /internal/execution-metrics?type=&from=&to= (운영자)
 
 `v_run_metric_summary` 행을 그대로 반환: `executionType, count, failRate, cancelRate, autoRetryRate, waitP50Ms, waitP95Ms, runP50Ms, runP95Ms, peakRssP95Mb, reuseCount`. 운영자 권한 필요. 사용자 화면에 노출하지 않는다.
 
+## GET /backtests/registry — 규칙·비용 버전 조회 (T025, 2026-09-17)
+
+003 화면이 요청에 실을 `strategy.rulesVersion`(필수)과 명시할 `conditions.costProfileVersion`을 읽는다. 로그인 불필요.
+
+```json
+{ "strategyRules": [ { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED", "provisional": true },
+                     { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "PENDING_DECISION", "provisional": false } ],
+  "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
+                          "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0" } }
+```
+
+- `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.
+- 화면은 `defaultCostProfile.version`을 요청에 **명시해** 보낸다(기본 버전이 배포로 바뀌어도 사용자가 본 조건이 적용되도록). 비용 수치는 문자열 decimal.
+
 ## 오류 코드 추가분
 
 | code | HTTP | 뜻 |
 |---|---|---|
-| RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(PD-03·04) |
+| RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(`PENDING_DECISION`) |
+| VALIDATION_RULE_VIOLATED | 422 | 접수 때 알 수 있는 설정 모순: `상한 × 투자 대상 종목 수 < 투자 비중`(PD-04 ④, 기존 400 `INVALID_INPUT`에서 옮김) |
 | INSUFFICIENT_HISTORY | 422 | 가용 기간이 워밍업보다 짧음 |
+| ESTIMATION_FAILED | `failure.code` | 최소분산 공분산 검사·SLSQP 수렴·사후 검증 실패 → 실행 전체 실패(PD-04 ③, T022) |
 | EXECUTION_LIMIT | 429 / `failure.code` | 접수: 대기열 상한 초과(사용자별·전체, 본문 `retryAfterSeconds`). 실행: 실행 시간 상한 초과로 정지(run `CANCELLED partial=true`, `failure.code=EXECUTION_LIMIT`). 값은 PD-06(R-19) |
 | NOT_CANCELLABLE / NOT_RETRYABLE | 409 | 상태 전이 불가 |
 | NO_PARTIAL_RESULT | 409 | 취소 요청에 완료한 거래일이 없음(첫 PROGRESS 전 취소). 재시도 무의미 |
