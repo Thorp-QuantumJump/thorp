@@ -68,6 +68,19 @@ const LearningArticlePage = lazy(() =>
   })),
 )
 
+// 013 배우기 관리. 운영자는 주소로 들어오며 `AppHeader`에 메뉴를 두지 않는다(US5 시나리오 1).
+const AdminLearningListPage = lazy(() =>
+  import('@/pages/AdminLearningListPage').then((module) => ({
+    default: module.AdminLearningListPage,
+  })),
+)
+
+const AdminLearningEditPage = lazy(() =>
+  import('@/pages/AdminLearningEditPage').then((module) => ({
+    default: module.AdminLearningEditPage,
+  })),
+)
+
 // 전략 진단의 첫 단계다. 섹터 목록을 받아 보이는 화면이며 접근 시점에 불러온다.
 const SectorSelectionPage = lazy(() =>
   import('@/pages/SectorSelectionPage').then((module) => ({
@@ -132,6 +145,23 @@ function AnimatedRoutes() {
               element={
                 <ProtectedRoute>
                   <MyRecordsEntryPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* 관리 화면은 로그인이 전제다. 권한 판정은 서버가 하고 화면은 200일 때만 그린다. */}
+            <Route
+              path="/admin/learning"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/learning/:articleId"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningEditPage />
                 </ProtectedRoute>
               }
             />
