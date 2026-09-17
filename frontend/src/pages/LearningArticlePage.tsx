@@ -4,6 +4,7 @@ import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning
 import { ArticleBlocks } from '@/components/learning/ArticleBlocks'
 import { ExampleEntry } from '@/components/learning/ExampleEntry'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
+import { ReturnToDiagnosisLink } from '@/components/learning/ReturnToDiagnosisLink'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { LearningArticle } from '@/types/learning'
 import styles from './LearningArticlePage.module.css'
@@ -52,7 +53,7 @@ export function LearningArticlePage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main}>
-        {/* B04: '하던 진단으로 돌아가기'(ReturnToDiagnosisLink)가 이 자리에 온다. */}
+        <ReturnToDiagnosisLink state={location.state} />
 
         {state.status === 'loading' ? (
           <p className={styles.loading} role="status">

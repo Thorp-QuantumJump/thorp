@@ -152,6 +152,38 @@ describe('LearningArticlePage', () => {
     expect(listState).toEqual(received)
   })
 
+  it('도움말에서 온 글에만 하던 진단으로 돌아가는 연결을 보인다', async () => {
+    apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })
+
+    renderArticle({
+      pathname: '/learn/tide-reading',
+      state: { learningReturn: { path: '/strategy', label: '전략 선택' } },
+    })
+
+    const back = await screen.findByRole('link', { name: /하던 진단으로 돌아가기/ })
+    expect(back.getAttribute('href')).toBe('/strategy')
+    // 글 화면의 행동 버튼은 예시 진입 하나다(원칙 II).
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      '이 예시로 비중 비교하기',
+    ])
+  })
+
+  it('배우기 메뉴로 직접 들어오거나 허용 목록 밖에서 온 글에는 돌아가기 연결이 없다', async () => {
+    apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })
+
+    const { unmount } = renderArticle('/learn/tide-reading')
+    await screen.findByRole('heading', { level: 1, name: '물때 읽기' })
+    expect(screen.queryByRole('link', { name: /하던 진단으로 돌아가기/ })).toBeNull()
+    unmount()
+
+    renderArticle({
+      pathname: '/learn/tide-reading',
+      state: { learningReturn: { path: '//evil.example', label: '밖' } },
+    })
+    await screen.findByRole('heading', { level: 1, name: '물때 읽기' })
+    expect(screen.queryByRole('link', { name: /하던 진단으로 돌아가기/ })).toBeNull()
+  })
+
   it('글을 열고 닫는 동안 브라우저 저장소에 쓰지 않는다', async () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
     apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })
