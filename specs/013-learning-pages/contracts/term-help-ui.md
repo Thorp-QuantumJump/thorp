@@ -31,7 +31,7 @@ export function fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promis
 | 이름 | 형 | 필수 | 뜻 |
 |---|---|---|---|
 | `termId` | `string` | ✓ | 가리킬 용어 |
-| `label` | `string` | ✓ | 트리거 버튼에 보일 이름. 화면이 이미 보이는 이름을 넘긴다. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 |
+| `label` | `string` | ✓ | 트리거 버튼의 접근 가능한 이름(`${label} 도움말`)에 쓴다. 화면이 이미 보이는 이름을 넘긴다. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 |
 | `returnTo` | `{ path: string; label: string }` | ✓ | 글로 이동했다가 돌아올 자리. 보통 현재 화면의 경로와 이름이다(§3) |
 
 ### 상태와 표시
@@ -50,7 +50,7 @@ export function fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promis
 
 ### 접근성 (FR-019)
 
-- `radix-ui` Popover로 만든다. 트리거는 `button`이다.
+- `radix-ui` Popover로 만든다. 트리거는 '?'를 보이는 `button`이고 이름은 `${label} 도움말`이다. 붙이는 화면이 용어 이름을 옆에 이미 보이므로 버튼 글자로 한 번 더 보이지 않는다.
 - 키보드로 열고, Esc로 닫고, 닫으면 초점이 트리거로 돌아온다.
 - 글 연결과 다시 시도는 Tab으로 닿는 `a`·`button`이다.
 
