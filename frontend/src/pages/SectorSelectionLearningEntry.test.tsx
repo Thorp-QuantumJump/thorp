@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SectorSelectionPage } from './SectorSelectionPage'
 import type { SectorCatalogResult } from '@/api/sectors'
@@ -133,6 +133,12 @@ function overwriteDialog(): HTMLElement | null {
   return screen.queryByRole('alertdialog')
 }
 
+/** 지금 주소의 질의 문자열을 화면에 드러내 값으로 확인한다. */
+function SearchProbe() {
+  const location = useLocation()
+  return <output data-testid="search">{location.search}</output>
+}
+
 describe('배우기 예시 진입과 덮어쓰기 확인', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -208,7 +214,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
     expect(screen.getByText(/합계를 100%로 맞추면/)).toBeTruthy()
   })
 
-  it('현재 목록에 없는 코드는 받지 않고 남은 섹터만 채운다', async () => {
+  it('현재 목록에 없는 코드는 받지 않고, 채우지 않았다는 사실을 알린다 (원칙 VI)', async () => {
     await openPage(
       exampleState([
         { code: 'SEMICONDUCTOR', weightTenths: 500 },
@@ -217,9 +223,11 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
     )
 
     expect(selectedNames()).toEqual(['반도체'])
+    // 조용히 버리면 사용자는 합계가 왜 50%인지 알 수 없다.
+    expect(screen.getByText(/섹터 1개가 지금 목록에 없어 채우지 않았습니다/)).toBeTruthy()
   })
 
-  it('비중으로 쓸 수 없는 값이 실려 오면 그 섹터를 받지 않는다', async () => {
+  it('비중으로 쓸 수 없는 값이 실려 오면 그 섹터를 받지 않고 다른 문장으로 알린다', async () => {
     await openPage(
       exampleState([
         { code: 'SEMICONDUCTOR', weightTenths: 500 },
@@ -229,6 +237,32 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
     )
 
     expect(selectedNames()).toEqual(['반도체'])
+    // 까닭이 다르면 다른 문장이다. 목록에 멀쩡히 있는 섹터를 두고 없다고 말하면 안 된다.
+    expect(screen.getByText(/비중을 그대로 쓸 수 없어 채우지/)).toBeTruthy()
+    expect(screen.queryByText(/지금 목록에 없어 채우지/)).toBeNull()
+  })
+
+  it('빠진 것이 없으면 채우지 않았다는 안내도 없다', async () => {
+    await openPage(exampleState(반도체_2차전지_예시))
+
+    expect(screen.queryByText(/채우지 않았습니다/)).toBeNull()
+  })
+
+  it("덮어쓰지 않기로 하면 예시를 쓰지 않았으므로 빠진 항목도 알리지 않는다", async () => {
+    const user = userEvent.setup()
+    const first = await openPage()
+    await select(user, '조선', '철강')
+    first.unmount()
+
+    await openPage(
+      exampleState([
+        { code: 'SEMICONDUCTOR', weightTenths: 500 },
+        { code: 'GONE_SECTOR', weightTenths: 500 },
+      ]),
+    )
+    await user.click(screen.getByText('그대로 두기'))
+
+    expect(screen.queryByText(/채우지 않았습니다/)).toBeNull()
   })
 
   it('예시가 실려 있지 않으면 아무것도 채우지 않는다', async () => {
@@ -236,6 +270,43 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 
     expect(overwriteDialog()).toBeNull()
     expect(selectedNames()).toEqual([])
+  })
+
+  it('예시를 소비하면서 주소의 질의 문자열을 지우지 않는다', async () => {
+    const authValue: AuthContextValue = {
+      status: 'anonymous',
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      recheck: vi.fn(),
+    }
+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded)
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/diagnosis/sectors',
+            search: '?from=learn',
+            state: exampleState(반도체_2차전지_예시),
+          },
+        ]}
+      >
+        <AuthContext.Provider value={authValue}>
+          <Routes>
+            <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
+          </Routes>
+        </AuthContext.Provider>
+        <SearchProbe />
+      </MemoryRouter>,
+    )
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-sector-code]').length).toBeGreaterThan(0)
+    })
+
+    // 지우는 것은 실어 온 state뿐이다. 013이 붙여 보낸 값까지 함께 사라지면 안 된다.
+    expect(selectedNames()).toEqual(['반도체', '2차전지'])
+    expect(screen.getByTestId('search').textContent).toBe('?from=learn')
   })
 })
 

@@ -302,6 +302,27 @@ describe('다음 단계 버튼과 003 인계', () => {
     expect(shownWeights()).toEqual([50, 50])
   })
 
+  it('인계 실패 표시는 사용자가 값을 고치면 사라진다', async () => {
+    const user = userEvent.setup()
+    await openPage()
+    await select(user, '반도체', '자동차')
+
+    const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage is blocked')
+    })
+    await user.click(proceedButton())
+    expect(screen.queryByRole('alert')).not.toBeNull()
+
+    /*
+      지난 한 번의 실패를 알리는 문장이 세션 내내 남으면, 지금 상태를 두고 하는 말처럼 읽힌다.
+      사용자가 값을 고치면 거둔다.
+    */
+    blocked.mockRestore()
+    await select(user, '조선')
+
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('시나리오 11. 화면에 계산식·자료 공급원·서버 설정 입력 항목이 없다 (FR-011, SC-005)', async () => {
     const user = userEvent.setup()
     const { container } = await openPage()

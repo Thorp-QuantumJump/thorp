@@ -58,6 +58,20 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
   const missingCount = selection.dropped.filter((item) => item.reason === 'notInCatalog').length
   const unusableCount = selection.dropped.length - missingCount
 
+  // 배우기 예시에서 끝내 채우지 못한 항목이다. 보관된 값을 복원할 때와 같은 구분을 쓴다.
+  const exampleMissingCount = learningEntry.dropped.filter(
+    (item) => item.reason === 'notInCatalog',
+  ).length
+  const exampleUnusableCount = learningEntry.dropped.length - exampleMissingCount
+
+  /*
+    사용자가 값을 고치면 인계 실패 표시를 거둔다. 거두지 않으면 그 문장이 세션 내내 남아, 지금
+    상태를 두고 하는 말처럼 읽힌다. 실제로는 그때 한 번 넘기지 못했다는 지난 사실이다.
+  */
+  useEffect(() => {
+    setHandoffBlocked(false)
+  }, [selection.selectedCodes, selection.weightTenths])
+
   /*
     상장일 안내는 선택한 섹터의 상장일만 견준다. 목록 전체를 넘기면 고르지 않은 섹터의 상장일까지
     최댓값 후보가 되어 사실과 다른 날짜를 말하게 된다.
@@ -136,6 +150,22 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
         <p className={styles.restoreNotice} role="status">
           이전에 골랐던 섹터 {unusableCount}개는 보관된 값을 그대로 쓸 수 없어 선택에서
           빠졌습니다.
+        </p>
+      ) : null}
+
+      {/*
+        배우기에서 온 예시 가운데 채우지 못한 것이 있으면 알린다. 조용히 넘어가면 사용자는 예시가
+        섹터 셋을 실어 왔는데 왜 둘만 채워졌는지, 합계가 왜 100%가 아닌지 알 수 없다(원칙 VI).
+      */}
+      {exampleMissingCount > 0 ? (
+        <p className={styles.restoreNotice} role="status">
+          배우기 예시의 섹터 {exampleMissingCount}개가 지금 목록에 없어 채우지 않았습니다.
+        </p>
+      ) : null}
+      {exampleUnusableCount > 0 ? (
+        <p className={styles.restoreNotice} role="status">
+          배우기 예시의 섹터 {exampleUnusableCount}개는 실려 온 비중을 그대로 쓸 수 없어 채우지
+          않았습니다.
         </p>
       ) : null}
 
