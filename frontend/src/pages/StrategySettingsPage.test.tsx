@@ -42,6 +42,8 @@ import { StrategySettingsPage } from './StrategySettingsPage'
 const apiMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchStrategyRegistry: vi.fn(),
+  // 기본 통로(`defaultAnalysisSupport`)가 부르는 실제 조회의 자리. 통로를 넘기는 검사는 쓰지 않는다.
+  fetchEvaluationWindow: vi.fn(),
 }))
 
 vi.mock('@/api/sectors', async () => {
@@ -555,14 +557,67 @@ describe('StrategySettingsPage', () => {
     expect(requests).toHaveLength(0)
   })
 
-  it('아무것도 연결되지 않은 기본 상태에서는 두 통로가 모두 막힌 것으로 보인다', async () => {
-    // ①·② 둘 다 미결일 때의 화면이다. 카드는 판정하지 못했다는 사실을 보이고 분석은 막힌다.
-    renderPage()
+  describe('라우트가 쓰는 기본 통로(T107)', () => {
+    /** 기본 설정 워밍업 45일이면 줄어들기만 하고, 최소 평가 기간 1년을 채우는 합성 응답 */
+    function defaultWindow() {
+      const days = Array.from({ length: 91 }, (_, index) =>
+        new Date(Date.UTC(2024, 0, 1 + index)).toISOString().slice(0, 10),
+      )
+      return {
+        commonStart: days[0],
+        commonEnd: '2026-01-05',
+        warmupTradingDays: 0,
+        bindingCandidate: 'BETA.XKRX',
+        bindingSector: 'BETA',
+        excludedRanges: [],
+        evaluable: true,
+        datasetId: 'TEST-DATASET-1',
+        warmupBaseDate: days[0],
+        tradingDaysFromBase: days,
+        maxWarmupTradingDays: 90,
+        excludedRangesFromBase: [],
+      }
+    }
 
-    await findCardNamed(selectableStrategy.name)
+    it('공통 평가 기간은 실제 조회로 한 번 받아 카드를 판정하고, 버전은 연결 전이라 분석을 막는다', async () => {
+      const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
+      try {
+        const user = userEvent.setup()
+        apiMocks.fetchEvaluationWindow.mockResolvedValue(defaultWindow())
+        renderPage()
 
-    expect(screen.getAllByText(/공통 평가 기간을 확인할 수 없어/).length).toBeGreaterThan(0)
-    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+        const card = await findCardNamed(selectableStrategy.name)
+        await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('reduced'))
+        expect(apiMocks.fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+        expect(apiMocks.fetchEvaluationWindow.mock.calls[0][0]).toEqual({
+          sectors: ['ALPHA', 'BETA', 'GAMMA'],
+          maxWarmupTradingDays: 90,
+        })
+
+        await user.click(card)
+        await waitFor(() =>
+          expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전을 확인할 수 없습니다'),
+        )
+        await user.click(actionButton('분석하기'))
+        // 004가 없는 지금 버전 조회도 전송도 서버로 나가지 않는다.
+        expect(xhrSpy).not.toHaveBeenCalled()
+        expect(screen.queryByText(/분석 요청 전송이 아직 연결되지 않았습니다/)).toBeNull()
+      } finally {
+        xhrSpy.mockRestore()
+      }
+    })
+
+    it('공통 평가 기간을 받지 못하면 카드가 판정하지 못했다는 사실을 보이고 분석은 막힌다', async () => {
+      apiMocks.fetchEvaluationWindow.mockRejectedValue(new Error('404'))
+      renderPage()
+
+      await findCardNamed(selectableStrategy.name)
+
+      await waitFor(() =>
+        expect(screen.getAllByText(/공통 평가 기간을 확인할 수 없어/).length).toBeGreaterThan(0),
+      )
+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+    })
   })
 
   it('워밍업을 채우지 못하는 전략은 고를 수 없고 분석도 막힌다', async () => {

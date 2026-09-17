@@ -274,6 +274,8 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `strategyId` + 축 값 | 8 | |
 | 분석 조건 | 9 | |
 | `registryVersion` | 8 | 다르면 서버가 409로 거절한다 (R9) |
+| `rulesVersion` | 004 `GET /backtests/registry`의 `strategyRules` | 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`·행 없음·등록된 행 둘 이상이면 보내지 않는다. 대체된 버전이면 서버가 409로 거절하고 화면은 두 등록표를 다시 받는다 (§7, 2026-09-17 004 결정) |
+| `costProfileVersion` | 9 (004 `defaultCostProfile.version`) | 화면에 보인 기본 비용 조건의 버전을 명시해 싣는다 (§7) |
 | `warmupTradingDays` | 6의 계산 결과 | 여러 전략을 비교할 때는 가장 긴 값을 공통으로 쓴다 (FR-014, 004 R-15) |
 | `minEvaluationYears` | 9 | **004 계약에 자리 없음 (착수 전에 알아둘 것 ⑧)** — 합의되면 서버가 `periodEnd - periodStart`와 산술로 재확인한다. 그 전까지는 화면의 `useEvaluationWindow` 판정만으로 막는다 (FR-011a) |
 

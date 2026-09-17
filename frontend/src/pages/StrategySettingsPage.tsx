@@ -13,7 +13,6 @@ import {
   BacktestRejectionCode,
   RULES_PENDING_DECISION,
   RULES_VERSION_UNAVAILABLE,
-  notConnectedSupport,
   readBacktestRejection,
   resolveRulesVersion,
   type AnalysisSupport,
@@ -22,6 +21,7 @@ import {
   type WarmupJudgement,
 } from '@/components/strategy/analysisSupport'
 import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'
+import { defaultAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'
 import { DetailSettingsPanel } from '@/components/strategy/DetailSettingsPanel'
 import { ReducedPeriodNotice } from '@/components/strategy/ReducedPeriodNotice'
 import {
@@ -53,8 +53,9 @@ interface StrategySettingsPageProps {
   /**
    * 분석을 시작하기 위해 바깥에서 받아야 하는 세 통로(규칙·비용 버전, 워밍업 판정, 요청 전송).
    *
-   * 기본값은 아직 아무것도 연결되지 않은 상태다 — '분석하기'가 정직하게 막힌다. B06(T039·T042)이
-   * 실제 모듈로 채운다. 검사는 흉내를 넘겨 요청 조립을 고정한다.
+   * 기본값은 `defaultAnalysisSupport`다. dev에 있는 공통 평가 기간 조회·판정만 실제 모듈이고, 버전 조회와
+   * 전송은 004가 머지될 때까지 연결 전 상태라 '분석하기'가 정직하게 막힌다(T107). 검사는 흉내를 넘겨 요청
+   * 조립을 고정한다.
    */
   support?: AnalysisSupport
 }
@@ -180,10 +181,10 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) 
  * (spec Edge Cases).
  *
  * <p><b>아직 알 수 없는 값은 알 수 없다고 보인다.</b> 규칙·비용 버전(②)과 공통 평가 기간(①)은
- * `support`로 받으며 기본값은 연결되지 않은 상태다. 그때 '분석하기'는 이유와 함께 막히고 카드는
- * 판정하지 못했다는 사실을 보인다 — 값을 지어내 채우지 않는다(원칙 IV·VI).
+ * `support`로 받는다. 받지 못한 통로가 있으면 '분석하기'는 이유와 함께 막히고 카드는 판정하지 못했다는
+ * 사실을 보인다 — 값을 지어내 채우지 않는다(원칙 IV·VI).
  */
-export function StrategySettingsPage({ support = notConnectedSupport }: StrategySettingsPageProps) {
+export function StrategySettingsPage({ support = defaultAnalysisSupport }: StrategySettingsPageProps) {
   const navigate = useNavigate()
 
   // --- 002 경계: 섹터 목록을 받아 앞 단계의 선택을 확인한다 ---------------------------------
