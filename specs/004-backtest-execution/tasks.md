@@ -278,7 +278,7 @@
 
 **2026-09-17 팀 확정.** PD-03(섹터 모멘텀)·PD-04(최소분산)·PD-07 ㉮(기본 비용 숫자)를 확정했고 규칙 전문은 spec.md Pre-Implementation Decisions 표에 있다.
 
-**범위 결정(2026-09-17, 발표용 MVP)**: 이 Phase는 **계산 의미와 화면 실행**만 지킨다. 다른 OS·CPU·이미지에서의 바이트 단위 재현, 과거 규칙 버전의 재실행, 의존성·이미지 버전 추적, 규칙 버전 수명주기(`/2`·`SUPERSEDED`)는 **Phase 10(발표 후)**으로 뺀다. 전제는 "보존해야 할 실제 백테스트 결과가 없다"이다 — 규칙 행을 제자리에서 갱신하므로 배포 전 `backtest_request`·`backtest_run`·`backtest_result`·`backtest_trade`·`backtest_run_metric`을 비운다(001 시세 표는 무관하며 건드리지 않는다). 이미 결과가 있다면 Phase 10의 버전 수명주기를 먼저 해야 한다. 이 Phase는 그 결정이 만든 구현 Task다. Implementation Strategy 4가 "범위 밖"으로 둔 `allocation/momentum.py`·`min_variance.py`가 여기서 범위 안으로 들어온다. PD-06은 여전히 T016과 운영 유사 실측 뒤에 정한다.
+**범위 결정(2026-09-17, 발표용 MVP)**: 이 Phase는 **계산 의미와 화면 실행**만 지킨다. 다른 OS·CPU·이미지에서의 바이트 단위 재현, 과거 규칙 버전의 재실행, 의존성·이미지 버전 추적, 규칙 버전 수명주기(`/2`·`SUPERSEDED`)는 **Phase 10(발표 후)**으로 뺀다. 전제는 "보존해야 할 실제 백테스트 결과가 없다"이다 — 규칙 `INVERSE_VOLATILITY/1`을 제자리에서 갱신하므로 배포 전에 `SELECT COUNT(*) FROM backtest_run;`이 **0**인지 확인한다 — 0이면 과거 결과가 재해석될 일이 없다. 삭제 스크립트나 초기화 절차는 만들지 않는다. 실행이 존재하는 환경에는 이 변경을 적용하지 않고 Phase 10의 규칙 버전 수명주기(T029)를 먼저 적용한다. 001의 시세·기업행위 표는 무관하며 건드리지 않는다. 이 Phase는 그 결정이 만든 구현 Task다. Implementation Strategy 4가 "범위 밖"으로 둔 `allocation/momentum.py`·`min_variance.py`가 여기서 범위 안으로 들어온다. PD-06은 여전히 T016과 운영 유사 실측 뒤에 정한다.
 
 - [x] T020 [DOCS] PD-03·04·07 확정을 specs/README·004 spec·plan·data-model·ADR-0004에 반영하고 이 Phase를 tasks.md에 추가한다 — Jira `S15P21E205-324`
 - [ ] T021 [BE] 비용 프로필 확정 행을 추가하고 기본 버전을 교체한다 per PD-07·FR-019·data-model `cost_profile`
@@ -301,7 +301,7 @@
   - 접수 관문 확장(`BacktestService`): T022가 422 `VALIDATION_RULE_VIOLATED`로 옮긴 `상한 × 종목 수 < investedFraction` 검사의 종목 수를 요청의 투자 대상 섹터 수 N(`items.size()`, 사용자가 고른 섹터 수이며 8이 아니다) 기준으로 `TOP_N`=topN, `TOP_PERCENT`=ceil(N×p/100), `ALL`=N으로 계산한다(`THRESHOLD`는 검사 불가). 섹터 2·3·8개 경계 테스트를 둔다. 실행 중 이력 부족으로 줄어든 경우는 현금 잔여, 자료 손상·계산 실패는 실행 실패로 세 갈래를 유지. 이 판정은 007 자동 탐색 조합 생성과 **같은 함수**를 쓰게 두고, 003 탐색 후보(topN 2·3·4 × 상한 30·40·50) 중 걸리는 셋(2·30, 2·40, 3·30)을 007이 건너뛰는지 007 담당자와 확인
   - 결과 기록: 선정 유형, 시점별 선정 섹터·점수, 이력 부족으로 제외된 섹터와 첫 편입 시점, 상한 잔여 현금 비중과 사유(PD-03 ⑤·⑥ 안내 항목). 안내 문구는 "계산에 필요한 과거 가격 이력이 충분하지 않았다"
   - 완료 기준: 네 `selectionMode` × 두 배분 조합이 422 아닌 COMPLETED, 동점·`TOP_PERCENT` 올림·전액 현금·이력 부족 편입 각 단위 테스트, topN 2·상한 40 접수 422, 같은 입력 결과 해시 동일
-- [ ] T024 [003] [교차 spec] 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수
+- [ ] T024 [003] [교차 spec] (발표 전 필수) 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수
   - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨("변동성이 낮은 섹터에 더 나누기") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음
   - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인
   - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, 계약 테스트 통과
@@ -325,7 +325,7 @@
 2. T026 — 003 화면 연결과 버전 명시 전송(다른 담당자)
 3. T022 — 최소분산과 공통 현금 정책(lite)
 4. T023 — 섹터 모멘텀
-5. T024 — 시간이 남으면. 미루면 모멘텀은 `EQUAL` 배분만으로 실행되고, 독립 역변동성 전략이 따로 있어 다섯 전략 시연에는 지장이 없다
+5. T024 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다
 6. T021 — 시간이 남으면. 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 "임시 비용 조건"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다
 
 발표 전 목표: 다섯 전략이 화면에서 실행된다 · 모멘텀과 최소분산이 정상 결과를 낸다 · 이력 부족·상한 잔여 현금·잘못된 설정을 올바르게 처리한다 · 같은 개발 환경에서 같은 입력은 같은 결과가 나온다. T023의 `EQUAL` 배분은 T024 없이 동작하지만 사용자가 역변동성 배분을 고르려면 T024가 머지돼야 한다. T016은 여전히 001 T030(`-203`) 대기이고 이 Phase와 독립이다.
@@ -335,8 +335,8 @@
 Phase 9에서 뺀 것이다. 정확성이 아니라 **다른 환경·다른 시점과의 재현**을 위한 작업이며, 결정 내용은 spec PD-04 표의 "발표 후" 문구와 `004-확정한-결정.md`에 남아 있다. 착수 조건: 보존해야 할 실제 결과가 생기기 전에 규칙 버전 수명주기(아래 ③)를 먼저 넣는다.
 
 - [ ] T027 [INFRA] [WORKER] 워커 실행환경 잠금 — Docker가 `pyproject.toml`·`uv.lock`을 복사해 `uv sync --frozen --no-dev`로 설치하고 그 가상환경으로 실행, `worker/requirements.txt` 삭제, 기반 이미지 `python:3.11-slim`을 digest로 고정. 완료 기준: `uv sync --frozen` 성공·`uv pip check` 통과·컨테이너 안 numpy·scipy·nautilus_trader 버전이 lock과 일치
-- [ ] T028 [BE] [WORKER] 의존성 버전 기록 — 결과 `versions.dependencies{numpy, scipy}`(메시징 계약 §4 선택 필드, 워커 `contracts/engine_output.py Versions`·백엔드 `EngineOutput.Versions`·data-model `backtest_run.versions`·픽스처 함께), 재현 키 쪽은 `thorp.backtest.engine-version` 설정 문자열에 워커 이미지 digest 또는 `uv.lock` fingerprint를 포함(재현 키는 워커 실행 전에 만들어져 결과 값을 쓸 수 없다). `backtest_run.versions`와 `backtest_result.versions`의 병합 규칙과 상세 조회 표시를 함께 정한다
-- [ ] T029 [BE] [WORKER] 규칙 버전 수명주기 — 규칙이 바뀌면 새 버전 행(`/2`)을 더하고 옛 행은 `SUPERSEDED`(CHECK 제약 확장). 검사를 둘로: 신규 접수 `requireCurrent`(REGISTERED만, PENDING 422, SUPERSEDED `409 REGISTRY_VERSION_CHANGED` — 화면은 두 등록표를 다시 받는다) / 저장된 실행의 조립·재발행·실패·취소 재시도 `requireExecutable`(SUPERSEDED 통과, README §1.6 동일 버전 재시도 계약). 워커는 `capOverflow`·`weightUnit` 규칙 키로 분기하고 버전별 골든을 나란히 둔다. registry 조회는 SUPERSEDED를 뺀다
+- [ ] T028 [BE] [WORKER] 의존성 버전 기록 — 결과 `versions.dependencies{numpy, scipy}`(메시징 계약 §4 선택 필드, 워커 `contracts/engine_output.py Versions`·백엔드 `EngineOutput.Versions`·data-model `backtest_run.versions`·픽스처 함께), 재현 키 쪽은 `thorp.backtest.engine-version` 설정 문자열에 워커 이미지 digest 또는 `uv.lock` fingerprint를 포함(재현 키는 워커 실행 전에 만들어져 결과 값을 쓸 수 없다). 실제 numpy·scipy 버전은 **`backtest_result.versions`에 기록한다** — `backtest_run.versions`는 실행 전 계획 정보라 실제 워커 환경을 알 수 없다. 상세 조회에서 둘을 어떻게 합쳐 보일지 함께 정한다
+- [ ] T029 [BE] [WORKER] 규칙 버전 수명주기 — 규칙이 바뀌면 새 버전 행(`/2`)을 더하고 옛 행은 `SUPERSEDED`(CHECK 제약 확장). 검사를 둘로: 신규 접수 `requireCurrent`(REGISTERED만, PENDING 422, SUPERSEDED `409 REGISTRY_VERSION_CHANGED` — 화면은 두 등록표를 다시 받는다) / 저장된 실행의 조립·재발행·실패·취소 재시도 `requireExecutable`(SUPERSEDED 통과, README §1.6 동일 버전 재시도 계약). 과거 버전 재실행에는 전략 규칙뿐 아니라 **003의 과거 `registryVersion` 검증도 포함**한다 — 재시도가 신규 접수용 등록표 검증(`StrategySettingsValidator`)에 걸려 거절되지 않도록 같은 방식으로 검사를 분리한다. 워커는 `capOverflow`·`weightUnit` 규칙 키로 분기하고 버전별 골든을 나란히 둔다. registry 조회는 SUPERSEDED를 뺀다
 - [ ] T030 [WORKER] 환경 간 재현 검증 — 다른 OS·CPU·이미지에서 같은 입력의 결과 해시 비교, 의존성·이미지 변경 시 골든 재생성 정책을 worker/CLAUDE.md에
 
 **후속 후보 (Task로 만들지 않음)**
