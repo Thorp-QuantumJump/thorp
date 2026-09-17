@@ -87,7 +87,6 @@
 | code | HTTP | 뜻 |
 |---|---|---|
 | RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(`PENDING_DECISION`) |
-| REGISTRY_VERSION_CHANGED | 409 | 요청의 `rulesVersion`이 대체된 옛 버전(`SUPERSEDED`). 003 등록표 버전 불일치와 같은 코드 — 화면은 두 등록표를 다시 받는다(2026-09-17) |
 | VALIDATION_RULE_VIOLATED | 422 | 접수 때 알 수 있는 설정 모순: `상한 × 투자 대상 종목 수 < 투자 비중`(PD-04 ④, 기존 400 `INVALID_INPUT`에서 옮김) |
 | INSUFFICIENT_HISTORY | 422 | 가용 기간이 워밍업보다 짧음 |
 | EXECUTION_LIMIT | 429 / `failure.code` | 접수: 대기열 상한 초과(사용자별·전체, 본문 `retryAfterSeconds`). 실행: 실행 시간 상한 초과로 정지(run `CANCELLED partial=true`, `failure.code=EXECUTION_LIMIT`). 값은 PD-06(R-19) |

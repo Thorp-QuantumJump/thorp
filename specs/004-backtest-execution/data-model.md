@@ -51,7 +51,7 @@
 | cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |
 | data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |
 | request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |
-| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker, dependencies?}` + provisional 플래그. `dependencies{numpy, scipy}`는 워커가 실제 import한 버전(선택 필드, 2026-09-17 PD-04 재현성, T022) |
+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. `dependencies{numpy, scipy}` 선택 필드는 발표 후(Phase 10 T028) |
 | effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |
 | progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |
 | progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |
@@ -128,13 +128,13 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 |---|---|---|
 | strategy_id | VARCHAR(32) | PK 일부 |
 | rules_version | VARCHAR(32) | PK 일부 |
-| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` · `SUPERSEDED`(새 버전으로 대체된 옛 행. 화면 조회에서 빼고 접수는 `409 REGISTRY_VERSION_CHANGED`로 거절한다. 저장된 결과의 재현 근거로만 남는다. 2026-09-17, T022에서 CHECK 제약 확장) |
+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION`. 새 버전으로 대체된 옛 행을 뜻하는 `SUPERSEDED`는 발표 후(Phase 10 T029)에 CHECK 제약과 함께 추가한다 |
 | provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |
 | spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |
 | decision_ref | TEXT | PD 번호·회의 기록 |
 | created_at | TIMESTAMPTZ | |
 
-초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/1`, `MINIMUM_VARIANCE/1` PENDING_DECISION(decision_ref PD-03·PD-04 — 2026-09-17 확정. 실제 SQL의 rules_version은 `1`이다. T022(최소분산)·T023(모멘텀)이 **이 행을** REGISTERED provisional=false로 바꾸고 spec을 채운다 — 가리키는 실행이 없어 재현이 깨지지 않는다. 규칙 명세는 spec PD 표를 따른다); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
+초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/1`, `MINIMUM_VARIANCE/1` PENDING_DECISION(decision_ref PD-03·PD-04 — 2026-09-17 확정. 실제 SQL의 rules_version은 `1`이다. T022(최소분산)·T023(모멘텀)이 **이 행을** REGISTERED provisional=false로 바꾸고 spec을 채운다 — 가리키는 실행이 없어 재현이 깨지지 않는다. `INVERSE_VOLATILITY/1`도 T022가 제자리에서 갱신한다(`capOverflow`·`weightUnit` 추가, provisional=true 유지) — R-08이 임시 행은 확정 시 갱신한다고 계획했고 보존할 결과가 없다. 규칙 명세는 spec PD 표를 따른다); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
 
 ## backtest_run_metric (실행 측정 기록)
 
@@ -185,7 +185,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
 - 비중 상한 합계 ≥ 고정 투자 비중 합계 — 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
-- `strategy_rules.status`: 신규 접수는 `REGISTERED`만 통과. `PENDING_DECISION`은 422 `RULES_NOT_REGISTERED`, `SUPERSEDED`는 409 `REGISTRY_VERSION_CHANGED`(003 등록표 버전 불일치와 같은 처리). 저장된 실행의 조립·재발행·재시도는 `SUPERSEDED`도 통과한다(2026-09-17, T022).
+- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`). 대체된 옛 버전의 409 처리는 발표 후(Phase 10 T029).
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
 - `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.

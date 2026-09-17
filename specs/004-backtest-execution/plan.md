@@ -44,7 +44,7 @@
 | IX 실측으로 한도 결정 · FR-006 무제한 실행 금지 | **조건부(PD-06 대기)** | 단일 서버 작업 큐 유지, 분산 미도입. 측정 테이블·집계 뷰를 먼저 만든다(T012). 재조회와 새 계산을 구분 기록한다. 한도 장치는 T014가 만들되 값은 PD-06 전까지 비어 있으므로 팀이 값을 넣기 전에는 FR-006이 미충족이다. 사용자 공개 전 확인 항목(R-19). |
 | X 자료 이용 조건 | PASS(조건부) | 실행 경로의 가격 원천은 001이 확보한 자료만 쓴다. 현행 yfinance 경로는 개발 도구로만 남기고 실행 경로에서 제외한다. |
 | 계산·데이터 규칙 "Nautilus 기준 엔진" | PASS | Nautilus 유지. 배분 규칙은 순수 함수 모듈로 분리하되 체결·회계는 Nautilus가 한다. |
-| AI 작업 방식 "실행 전 결정 임의 확정 금지" | PASS | PD-03·04·07은 2026-09-17 팀이 확정했다(spec PD 표). PD-06은 실측 후 정한다. 등록표에서 `PROVISIONAL-DEMO-1` 행은 불변이고 비용 확정은 새 행이다. `SECTOR_MOMENTUM/1`·`MINIMUM_VARIANCE/1`의 `PENDING_DECISION` 행은 가리키는 실행이 없으므로(접수 거절) 그 행을 REGISTERED로 바꾸고 spec을 채운다. 이미 실행이 참조하는 REGISTERED 행은 바꾸지 않고 새 버전 행을 더하며 옛 행은 `SUPERSEDED`로 돌린다. 비용 임시값은 확정 행이 들어가기 전까지 `provisional=true`로 결과에 표시한다. |
+| AI 작업 방식 "실행 전 결정 임의 확정 금지" | PASS | PD-03·04·07은 2026-09-17 팀이 확정했다(spec PD 표). PD-06은 실측 후 정한다. 등록표에서 `PROVISIONAL-DEMO-1` 행은 불변이고 비용 확정은 새 행이다. `SECTOR_MOMENTUM/1`·`MINIMUM_VARIANCE/1`의 `PENDING_DECISION` 행은 가리키는 실행이 없으므로(접수 거절) 그 행을 REGISTERED로 바꾸고 spec을 채운다. `INVERSE_VOLATILITY/1`은 provisional 임시 행이라 R-08 계획대로 제자리에서 갱신한다(보존할 결과가 없다는 전제, tasks Phase 9 범위 결정). 실행이 참조하는 확정 행을 바꿔야 하는 날부터는 새 버전 행 + `SUPERSEDED`(Phase 10 T029)다. 비용 임시값은 확정 행이 들어가기 전까지 `provisional=true`로 결과에 표시한다. |
 | Git·Jira 규칙 | 참고 | tasks.md의 작업 단위를 `[BE]/[DE]/[INFRA]/[DOCS] 작업 내용` 형식, 1 Task = 1 Branch = 1 MR로 맞춘다. |
 | "넣지 않은 영역"(API 규약·DB 명명·테스트 기준) | 기록 | 이 영역에서 내린 선택은 research.md R-13·R-16에 근거를 남긴다. |
 

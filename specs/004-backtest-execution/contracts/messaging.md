@@ -58,7 +58,7 @@
 
 ## EngineOutput v2 추가 필드
 
-`run{runId, status, partial, lastTradingDate, effectiveStart, effectiveEnd, error}`, `performance{…현행 + netTotalReturn, maxDrawdown, totalTradingCost}`, `portfolioSeries[{date, equity, cash, positions, cashFlows[{type: DISTRIBUTION, instrumentId, amount}]}]`, `weightsSeries[…]`, `weightsSource`, `trades[{…현행 + reason, plannedDate}]`, `costs{commission, spread, slippage, tax, total}`, `liquidation{markToMarket, liquidated}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method}`, `exceptions[{date, instrumentId, kind, rule, action}]`, `versions{mapping, rules, costProfile, data, engine, evaluationSplit, worker, dependencies?{numpy, scipy}}`, `diagnostics{…현행}`(자원 사용량은 EngineOutput이 아니라 FINISHED payload `resource`).
+`run{runId, status, partial, lastTradingDate, effectiveStart, effectiveEnd, error}`, `performance{…현행 + netTotalReturn, maxDrawdown, totalTradingCost}`, `portfolioSeries[{date, equity, cash, positions, cashFlows[{type: DISTRIBUTION, instrumentId, amount}]}]`, `weightsSeries[…]`, `weightsSource`, `trades[{…현행 + reason, plannedDate}]`, `costs{commission, spread, slippage, tax, total}`, `liquidation{markToMarket, liquidated}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method}`, `exceptions[{date, instrumentId, kind, rule, action}]`, `versions{mapping, rules, costProfile, data, engine, evaluationSplit, worker}`, `diagnostics{…현행}`(자원 사용량은 EngineOutput이 아니라 FINISHED payload `resource`).
 
 ## 검증 책임 (§8 갱신)
 
