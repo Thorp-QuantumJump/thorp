@@ -73,7 +73,13 @@ export function TradeTable({
   )
 }
 
-/** 질의 하나에 대한 페이지 조회와 표. 질의가 바뀌면 첫 페이지부터 다시 받는다. */
+/**
+ * 질의 하나에 대한 페이지 조회와 표.
+ *
+ * <p>질의가 바뀌면 `key`로 `PagedTrades`를 새로 만든다. 페이지 번호뿐 아니라 **앞 조건으로 받아 둔 표까지**
+ * 버리기 위해서다. 남겨 두면 새 조건을 받는 동안 앞 조건의 거래와 건수가 새 조건의 것처럼 보인다.
+ * 값으로 비교하므로 부모가 다시 그려지는 것만으로는 새로 만들지 않는다.
+ */
 export function TradeList({
   token,
   filter,
@@ -88,14 +94,30 @@ export function TradeList({
   const { instrumentId, status, from, to } = filter
   const filterKey = [instrumentId, status, from, to].join('|')
 
+  return (
+    <PagedTrades
+      key={filterKey}
+      token={token}
+      filter={filter}
+      labels={labels}
+      caption={caption}
+    />
+  )
+}
+
+function PagedTrades({
+  token,
+  filter,
+  labels,
+  caption,
+}: {
+  token: string
+  filter: TradeFilter
+  labels: SectorLabels
+  caption: string
+}) {
+  const { instrumentId, status, from, to } = filter
   const [page, setPage] = useState(0)
-  const [pageFilterKey, setPageFilterKey] = useState(filterKey)
-  // 질의가 바뀌면 앞서 보던 페이지 번호를 버린다. 새 조건의 셋째 페이지는 사용자가 고른 적이 없다.
-  // 객체가 아니라 값으로 비교한다 — 부모가 다시 그려질 때마다 첫 페이지로 돌아가지 않게 한다.
-  if (pageFilterKey !== filterKey) {
-    setPageFilterKey(filterKey)
-    setPage(0)
-  }
 
   const load = useCallback(
     (signal: AbortSignal) =>

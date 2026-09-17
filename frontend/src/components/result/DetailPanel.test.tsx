@@ -248,6 +248,25 @@ describe('DetailPanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('입력 칸에서 누른 Esc는 패널을 닫지 않는다 — 채우던 조건이 사라지지 않는다', async () => {
+    const user = userEvent.setup()
+    const { onClose, panel } = renderPanel()
+    await user.click(await within(panel).findByRole('button', { name: '거래 내역 보기' }))
+
+    const from = within(panel).getByLabelText('시작일')
+    await user.type(from, '2024-01-01')
+    from.focus()
+    await user.keyboard('{Escape}')
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect((from as HTMLInputElement).value).toBe('2024-01-01')
+
+    // 입력 칸 밖에서 누른 Esc는 그대로 닫는다.
+    within(panel).getByRole('heading', { name: '자세히 보기' }).focus()
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('키보드만으로 열고 Esc로 닫으면 초점이 버튼으로 돌아온다', async () => {
     const user = userEvent.setup()
     render(<Harness />)

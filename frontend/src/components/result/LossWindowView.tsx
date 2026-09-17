@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { fetchResultPositions } from '@/api/result'
 import { Button } from '@/components/ui/button'
 import { useResource } from '@/hooks/useResource'
@@ -6,6 +6,7 @@ import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type { ResultConfigItem } from '@/types/result'
 import type { DrawdownWindow } from './drawdownWindow'
 import { formatMoney, formatRatio } from './formatResult'
+import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { buildSectorLabels } from './sectorLabels'
 import { TradeList } from './TradeHistory'
@@ -51,11 +52,7 @@ export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWi
   const catalog = useSectorCatalogState()
   const labels = buildSectorLabels(items, catalog.status === 'loaded' ? catalog.catalog : null)
 
-  const closeOnEscape = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape') return
-    event.stopPropagation()
-    onClose()
-  }
+  const closeOnEscape = closePanelOnEscape(onClose)
 
   return (
     <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>

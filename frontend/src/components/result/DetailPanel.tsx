@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef } from 'react'
 import { fetchResultExceptions, fetchResultWeights } from '@/api/result'
 import { Button } from '@/components/ui/button'
 import { type ResourceState, useResource } from '@/hooks/useResource'
@@ -13,6 +13,7 @@ import { COMPUTED_WEIGHTS_NOTE, strategyLabel } from './conditionLine'
 import { formatMoney, formatRatio } from './formatResult'
 import { HoldingDifference } from './HoldingDifference'
 import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'
+import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { SUMMARY_NOT_CALCULATED } from './ResultSummaryCard'
 import { type SectorLabels, buildSectorLabels } from './sectorLabels'
@@ -77,11 +78,7 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
     catalog.status === 'loaded' ? catalog.catalog : null,
   )
 
-  const closeOnEscape = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape') return
-    event.stopPropagation()
-    onClose()
-  }
+  const closeOnEscape = closePanelOnEscape(onClose)
 
   return (
     <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>

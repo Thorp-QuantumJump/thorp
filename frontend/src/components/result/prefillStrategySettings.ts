@@ -6,11 +6,13 @@ import {
   type SectorSelectionSnapshot,
   writeStoredSelection,
 } from '@/diagnosis/selectionStorage'
-import { distributeEven } from '@/diagnosis/weights'
+import { distributeEven, isValidWeightTenths } from '@/diagnosis/weights'
+import { MINIMUM_SECTOR_COUNT } from '@/hooks/useSectorSelection'
 import {
   type AxisValues,
   type StoredStrategySettings,
   isAxisValue,
+  readStoredStrategySettings,
   reconcileStoredSettings,
   writeStoredStrategySettings,
 } from '@/hooks/useStrategySettings'
@@ -25,12 +27,16 @@ import type { RegistryResponse } from '@/types/strategyRegistry'
  * 전략 설정(`writeStoredStrategySettings`)을 이 결과의 `config`로 쓰고 `/strategy`로 옮긴다. 거기서 분석하면
  * 새 분석으로 접수된다 — 이 결과는 바뀌지 않는다.
  *
- * <p><b>값을 고치지 않는다.</b> 등록표 범위 밖이 된 값, 지금 목록에 없는 섹터를 여기서 걸러 내지 않는다. 003
- * 화면(`reconcileStoredSettings`)과 002 화면(`readStoredSelection`)이 다시 판정하고 무엇이 왜 빠졌는지 알린다.
- * 여기서 맞추면 사용자는 결과의 조건이 바뀐 줄 모른다(원칙 VI).
+ * <p><b>설정 화면이 그 값을 쓸 수 있을 때만 옮긴다.</b> 003은 002 선택을 `useSectorSelection`으로 읽어 섹터가
+ * 둘 미만이거나 대응표 버전이 지금과 다르면 조건을 이어받지 않고 앞 단계로 되돌린다. 그런 결과는 보관값을
+ * 건드리지 않고 사유를 돌려준다 — 옮겨 놓고 빈 화면을 보이면 사용자가 고르던 선택만 잃는다.
  *
- * <p><b>결과에 없는 값은 003이 처음 열릴 때와 같이 둔다.</b> 요청 사본에는 최소 평가 기간이 없어 등록표 기본값을
- * 넣는다. 그 값으로 기간이 짧다고 판정되면 003 화면이 그 사실을 알린다.
+ * <p><b>값을 고치지 않는다.</b> 등록표 범위 밖이 된 값을 여기서 걸러 내지 않는다. 003 화면
+ * (`reconcileStoredSettings`)이 다시 판정하고 무엇이 왜 빠졌는지 알린다. 여기서 맞추면 사용자는 결과의 조건이
+ * 바뀐 줄 모른다(원칙 VI). 같은 탭에서 다른 전략에 맞춰 둔 설정값도 지우지 않고 그대로 둔다.
+ *
+ * <p><b>결과에 없는 값은 앞서 고른 값이나 등록표 기본값으로 둔다.</b> 요청 사본에는 최소 평가 기간이 없어, 이
+ * 탭에서 고른 값이 있으면 그것을, 없으면 003이 처음 열릴 때와 같은 등록표 기본값을 넣는다.
  *
  * <p>006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019).
  */
@@ -48,12 +54,16 @@ export type PrefillOutcome =
 const MAIN_SCENARIO = 'FULL_PERIOD'
 
 const REGISTRY_FAILED = '설정 화면에 넘길 전략 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+const CATALOG_FAILED = '설정 화면에 넘길 섹터 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 const STORAGE_FAILED =
   '이 브라우저에서는 조건을 설정 화면으로 넘길 수 없습니다. 설정 화면에서 조건을 직접 골라 주세요.'
 const CONFIG_UNREADABLE =
   '이 결과의 조건을 설정 화면이 읽는 모양으로 옮길 수 없습니다. 설정 화면에서 조건을 직접 골라 주세요.'
 const SCENARIO_UNSUPPORTED =
   '이 결과는 별도 시나리오로 계산한 결과라 설정 화면으로 조건을 넘길 수 없습니다. 원래 결과에서 다시 시작해 주세요.'
+const MAPPING_CHANGED =
+  '이 결과를 만든 뒤 섹터 대응표가 바뀌어 조건을 그대로 넘길 수 없습니다. 섹터·비중 단계에서 섹터를 다시 골라 주세요.'
+const TOO_FEW_SECTORS = `설정 화면은 섹터가 ${MINIMUM_SECTOR_COUNT}개 이상일 때 조건을 이어받습니다. 이 결과의 섹터로는 이어갈 수 없어 섹터·비중 단계에서 다시 골라 주세요.`
 
 /**
  * 계약의 비중 문자열을 002의 0.1%p 정수로 옮긴다. `"0.4000"` → `400`.
@@ -113,7 +123,19 @@ export function buildSelectionSnapshot(
 }
 
 /**
- * 003의 설정 보관 모양. 결과에 없는 값(최소 평가 기간)은 등록표 기본값으로 둔다 — 003이 처음 열릴 때와 같다.
+ * 003이 이 선택으로 조건을 이어받을 수 있는가. 002의 `readStoredSelection`이 지금 목록에 없는 섹터와 쓸 수 없는
+ * 비중을 버리고, `useSectorSelection`이 그 결과가 둘 미만이면 앞 단계로 되돌린다.
+ */
+function usableSectorCount(snapshot: SectorSelectionSnapshot, catalog: SectorCatalog): number {
+  const known = new Set(catalog.sectors.map((sector) => sector.code))
+  return snapshot.selectedCodes.filter(
+    (code) => known.has(code) && isValidWeightTenths(snapshot.weightTenths[code]),
+  ).length
+}
+
+/**
+ * 003의 설정 보관 모양. 같은 탭에 보관된 값이 있으면 다른 전략의 설정값과 복원을 기다리는 안내를 그대로 두고,
+ * 이 결과의 전략·기간·금액만 얹는다.
  *
  * @returns 결과의 조건을 옮길 수 없으면 `null`
  */
@@ -131,15 +153,21 @@ export function buildStrategySettings(
   const initialAmount = Number(config.initialCash)
   if (config.initialCash.trim() === '' || !Number.isFinite(initialAmount)) return null
 
-  // 보관값이 없을 때 003이 만드는 처음 상태다. 여기에 결과의 조건을 얹는다.
+  // 보관값이 없을 때 003이 만드는 처음 상태다. 여기에 이 탭의 앞선 값과 결과의 조건을 얹는다.
   const fresh = reconcileStoredSettings(null, registry, config.items.length)
+  const previous = readStoredStrategySettings()
 
   return {
     ...fresh,
     selectedStrategyId: config.strategyId,
-    valuesByStrategy: { [config.strategyId]: values },
+    // 다른 전략에 맞춰 둔 값은 이 결과와 무관하다. 지우면 사용자가 넣은 값이 말없이 사라진다(원칙 VI).
+    valuesByStrategy: { ...(previous?.valuesByStrategy ?? {}), [config.strategyId]: values },
+    invalidValues: previous?.invalidValues ?? [],
     analysisCondition: {
       ...fresh.analysisCondition,
+      // 결과에 없는 값이라 이 탭에서 고른 값을 두고, 없으면 등록표 기본값을 쓴다.
+      minEvaluationYears:
+        previous?.analysisCondition.minEvaluationYears ?? fresh.analysisCondition.minEvaluationYears,
       periodStart: config.start,
       periodEnd: config.end,
       initialAmount,
@@ -165,17 +193,11 @@ function restoreRaw(key: string, raw: string | null): void {
   }
 }
 
-/** 등록표 조회와 함께 보내는 섹터 목록. 잔여분 자리를 정하는 데만 쓰므로 받지 못해도 멈추지 않는다 */
-async function loadCatalogForOrder(signal?: AbortSignal): Promise<SectorCatalog | null> {
-  const result = await fetchSectorCatalog(signal)
-  return result.status === 'loaded' ? result.catalog : null
-}
-
 /**
- * 결과의 조건을 보관하고 설정 화면으로 옮긴다. 넘기지 못하면 옮기지 않고, 보관해 둔 002 선택도 앞선 값으로
- * 되돌린다 — 빈 설정 화면은 조건이 채워진 화면으로 읽히고, 반쯤 덮인 선택은 사용자가 고르던 것을 지운다.
+ * 결과의 조건을 보관하고 설정 화면으로 옮긴다. 넘기지 못하면 옮기지도, 보관하지도 않는다 — 빈 설정 화면은 조건이
+ * 채워진 화면으로 읽히고, 덮어쓴 선택은 사용자가 고르던 것을 지운다.
  *
- * <p>등록표는 사용자가 누를 때 받는다. 결과 첫 화면은 등록표를 부르지 않는다(SC-001).
+ * <p>등록표와 섹터 목록은 사용자가 누를 때 받는다. 결과 첫 화면은 둘 다 부르지 않는다(SC-001).
  */
 export async function prefillStrategySettings(
   config: ResultConfig,
@@ -185,25 +207,38 @@ export async function prefillStrategySettings(
   if (config.scenario !== MAIN_SCENARIO) return { status: 'failed', message: SCENARIO_UNSUPPORTED }
 
   let registry: RegistryResponse
-  let catalog: SectorCatalog | null = null
+  let catalog: SectorCatalog
   try {
-    const [loadedRegistry, loadedCatalog] = await Promise.all([
+    const [loadedRegistry, catalogResult] = await Promise.all([
       fetchStrategyRegistry(config.items.length, signal),
-      carriesUserWeights(config) ? Promise.resolve(null) : loadCatalogForOrder(signal),
+      fetchSectorCatalog(signal),
     ])
+    if (signal?.aborted) return { status: 'canceled' }
+    // 목록을 읽지 못하면 대응표 버전이 같은지 판정할 수 없다. 003도 같은 목록으로 앞 단계를 확인한다.
+    if (catalogResult.status !== 'loaded') return { status: 'failed', message: CATALOG_FAILED }
     registry = loadedRegistry
-    catalog = loadedCatalog
+    catalog = catalogResult.catalog
   } catch (error) {
-    if (normalizeStrategyRegistryError(error).canceled) return { status: 'canceled' }
+    if (signal?.aborted || normalizeStrategyRegistryError(error).canceled) {
+      return { status: 'canceled' }
+    }
     return { status: 'failed', message: REGISTRY_FAILED }
   }
-  if (signal?.aborted) return { status: 'canceled' }
+
+  if (config.mappingVersion !== catalog.mapVersion) {
+    return { status: 'failed', message: MAPPING_CHANGED }
+  }
+
+  const selection = buildSelectionSnapshot(config, catalog)
+  if (usableSectorCount(selection, catalog) < MINIMUM_SECTOR_COUNT) {
+    return { status: 'failed', message: TOO_FEW_SECTORS }
+  }
 
   const settings = buildStrategySettings(config, registry)
   if (settings === null) return { status: 'failed', message: CONFIG_UNREADABLE }
 
   const previousSelection = readRaw(SECTOR_SELECTION_STORAGE_KEY)
-  if (!writeStoredSelection(buildSelectionSnapshot(config, catalog))) {
+  if (!writeStoredSelection(selection)) {
     return { status: 'failed', message: STORAGE_FAILED }
   }
   if (!writeStoredStrategySettings(settings)) {

@@ -262,7 +262,7 @@ function isInvalidStoredValue(value: unknown): value is InvalidStoredValue {
  * 보관된 값을 읽는다. 모양이 어긋나면 통째로 버리고 `null`이다 — 일부만 살려 쓰면 어느 값이
  * 사용자의 것인지 알 수 없다. 저장소가 막혀 있어도 예외를 올리지 않는다.
  */
-function readStoredSettings(): StoredStrategySettings | null {
+export function readStoredStrategySettings(): StoredStrategySettings | null {
   let raw: string | null
   try {
     raw = window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY)
@@ -714,7 +714,7 @@ export function useStrategySettings(
   registry: RegistryResponse | null,
   universeSize: number | null,
 ): StrategySettings {
-  const [state, setState] = useState<StoredStrategySettings | null>(readStoredSettings)
+  const [state, setState] = useState<StoredStrategySettings | null>(readStoredStrategySettings)
 
   const ready =
     state !== null &&

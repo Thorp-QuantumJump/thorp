@@ -132,6 +132,23 @@ describe('TradeHistory', () => {
     expect(await screen.findByText('전체 5건 중 3~4번째')).not.toBeNull()
   })
 
+  it('조건을 바꾸면 앞 조건의 거래와 건수를 남기지 않는다', async () => {
+    apiMocks.fetchResultTrades
+      .mockResolvedValueOnce({ ...resultTradePage, size: 2, totalElements: 2, totalPages: 1 })
+      .mockImplementationOnce(() => new Promise(() => {}))
+    const user = userEvent.setup()
+    renderHistory()
+    await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
+    await screen.findByText('전체 2건 중 1~2번째')
+
+    await user.selectOptions(screen.getByLabelText('상태'), 'OPEN')
+    await user.click(screen.getByRole('button', { name: '조건 적용' }))
+
+    expect(screen.getByRole('status').textContent).toBe('거래 내역을 불러오는 중입니다.')
+    expect(screen.queryByRole('table', { name: '거래 내역' })).toBeNull()
+    expect(screen.queryByText('전체 2건 중 1~2번째')).toBeNull()
+  })
+
   it('부분 결과면 비어 있어도 거래가 없었다고 단정하지 않는다', async () => {
     apiMocks.fetchResultTrades.mockResolvedValue({
       ...resultTradePage,
