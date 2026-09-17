@@ -29,17 +29,17 @@
 - [x] CHK011 17개 전부의 유효값이 필요한 발행 조건과 공통월 `T_all`이 없어도 발행한다는 조건이 같은 용어·판정 순서로 서술되어 있는가? [Consistency, Spec §FR-011, §FR-013, §SC-008]
 - [x] CHK012 계산 등록표·표시 분류·자료 버전을 독립 변경한다는 요구와 동일 버전 재조회 시 재현성이 유지된다는 기준이 양립하도록 서술되어 있는가? [Consistency, Spec §FR-003, §FR-009, §SC-004, §SC-005]
 - [x] CHK013 첫 완결 버전이 없는 상태의 17개 등록 정보 제공 요구와 값·기준월·자료 버전 부재 요구가 서로 모순되지 않는가? [Consistency, Spec §FR-011, §FR-023, §SC-008]
-- [ ] CHK014 008의 최신 자료월 표시와 010의 검색 완료월만 검색 진입에 쓴다는 원칙이 009의 관련 요구·계약에도 동일하게 반영되도록 변경 범위가 정의되어 있는가? [Conflict, Spec §FR-013, Plan §Integration Risks and Exit Criteria]
+- [x] CHK014 008의 최신 자료월 표시와 010의 검색 완료월만 검색 진입에 쓴다는 원칙이 009의 관련 요구·계약에도 동일하게 반영되도록 변경 범위가 정의되어 있는가? [Conflict, Spec §FR-013, Plan §Integration Risks and Exit Criteria]
 - [x] CHK015 무자료 또는 `T_g=null`일 때 최근 경로·기준월·지연 원인 지표의 의미가 008 제공 정보와 009 화면 요구에서 일관되는가? [Consistency, Spec §FR-023, Plan §Integration Risks and Exit Criteria]
 - [x] CHK016 010의 종합 공통월 부재·검색 계산 불가와 분야별 검색 유지 요구가 008의 null 기준월 정의와 충돌 없이 서술되어 있는가? [Conflict, Spec §FR-013, Plan §Integration Risks and Exit Criteria]
 
 ## Acceptance Criteria Quality
 
 - [x] CHK017 17개 지표·7개 분야·필수 등록 항목의 누락 여부를 객관적으로 판정할 기준이 명시되어 있는가? [Measurability, Spec §SC-001, §SC-008]
-- [ ] CHK018 원값에서 변환값을 독립 대조할 표본 대상월·변환 유형·허용 오차를 정할 책임과 시점이 명시되어 있는가? [Measurability, Spec §SC-007, §PD-11]
+- [x] CHK018 원값에서 변환값을 독립 대조할 표본 대상월·변환 유형·허용 오차를 정할 책임과 시점이 명시되어 있는가? [Measurability, Spec §SC-007, §PD-11]
 - [x] CHK019 자료 버전과 등록표 버전이 같을 때 무엇이 동일해야 하는지(관측값·기준월·표시 정보·수집 상태)를 구분해 측정 가능하게 적었는가? [Measurability, Spec §SC-004, §FR-003, §FR-011]
 - [x] CHK020 '완결 자료 버전'의 17개 처리 완료·유효값 조건과 발행 보류 사유를 개별적으로 판정할 수 있는가? [Measurability, Spec §FR-011, §SC-008]
-- [ ] CHK021 PD-10·PD-11이 미확정일 때의 허용된 중간 상태와 각 결정이 완료될 때의 증거·판정 책임이 명시되어 있는가? [Acceptance Criteria, Spec §FR-015, §FR-022, §PD-10, §PD-11]
+- [x] CHK021 PD-10·PD-11이 미확정일 때의 허용된 중간 상태와 각 결정이 완료될 때의 증거·판정 책임이 명시되어 있는가? [Acceptance Criteria, Spec §FR-015, §FR-022, §PD-10, §PD-11]
 
 ## Scenario & Edge Case Coverage
 
@@ -70,9 +70,6 @@
 
 | 항목 | 판단 근거 | 고칠 문서 |
 |---|---|---|
-| CHK014 | plan의 연동 위험 목록이 009와의 충돌을 구체적으로 나열하지만, 어느 spec이 무엇을 고치는지 소유 경계가 정해지지 않았다. 008 문서만으로는 009 쪽 변경이 일어나지 않는다 | plan.md 연동 항목, 009 spec |
-| CHK018 | SC-007이 표본 대상월을 '팀이 정한다'로 두고, 누가 언제 정하는지와 허용 오차가 없다. 정하는 사람이 없으면 검증이 미뤄진다 | spec.md SC-007 |
-| CHK021 | PD-10·PD-11의 중간 상태는 적혀 있으나 무엇을 증거로 보고 누가 완료를 판정하는지가 없다 | spec.md PD 표 |
 
 2026-09-17 명확화 세션과 그에 따른 spec 수정으로 CHK004·CHK006·CHK015·CHK026이 해소되어 위 표에서 뺐다.
 

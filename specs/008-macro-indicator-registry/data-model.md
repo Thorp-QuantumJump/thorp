@@ -7,14 +7,14 @@
 - `indicator_id`: 17개 지표의 안정적인 영문 snake_case ID. 이름·원천 코드는 바뀔 수 있어 PK로 사용하지 않는다. 009의 기존 예시 ID는 연동 시 대조하고, PD-11의 실제 항목 코드와 혼동하지 않는다.
 - `field_id`: 009 계약과 같은 `production`, `consumption_investment`, `external_trade`, `labor`, `prices_commodities`, `finance_housing`, `overseas`. 010의 대문자 예시는 경계에서 정규화한다.
 - `target_month`: ISO `YYYY-MM` (저장 시 매월 1일 `date` 또는 연·월 쌍 중 하나로 고정). `released_at`(원천 발표 시각/날짜), `received_at`(수신 시각), `source_revision_key`(원천 제공 시), `observed_revision`(자체 수신 순번)을 별개로 둔다. 원천에 발표일/개정 ID가 없으면 null 및 근거 상태로 기록하며 수신시각을 발표일로 위조하지 않는다.
-- 숫자는 변환 전후 모두 고정밀 decimal로 보존하고 표시 반올림은 공표 정밀도에 따른다. 소수 자릿수/범위는 PD-11 실응답 확인 뒤 정한다. 결측은 값 null과 사유 코드로 기록하며 0과 구별한다. 사유 코드는 최소한 원천 미발표, 수집 실패, 변환 불가(비교 대상월 결측·0, 계열 시작 이전, 월 평균 표본 미완성), 개편 구간 제외를 서로 구분한다. `trading_calendar`는 월 기말·월 평균 판정에 쓰는 지표별 거래일 달력의 출처다.
+- 숫자는 변환 전후 모두 고정밀 decimal로 보존하고 표시 반올림은 공표 정밀도에 따른다. 소수 자릿수/범위는 PD-11 실응답 확인 뒤 정한다. 결측은 값 null과 사유 코드로 기록하며 0과 구별한다. 사유 코드는 최소한 원천 미발표, 수집 실패, 변환 불가(비교 대상월 결측·0, 계열 시작 이전, 월 평균 표본 미완성), 개편 구간 제외를 서로 구분한다. `trading_calendar`는 월 기말·월 평균 판정에 쓰는 지표별 거래일 달력의 출처다. `license_review_status`는 이용 권리 판정 상태다 — 확인 완료, **권리 확인 대기**(조건은 공개되어 있으나 해당 계열이 어느 쪽인지 확인할 창구가 없음), 미확인(조건 자체를 모름)을 구분한다. 미확인만 발행 보류 대상이다. `revision_history_available`은 그 원천이 과거 값 개정을 추적할 수 있게 주는지를 나타낸다 — 거짓이면 그 지표는 FR-009의 개정 이력 보장 대상이 아니다.
 
 ## 2. 엔터티
 
 | 엔터티 (예상 테이블) | 핵심 필드 | 제약/책임 |
 |---|---|---|
 | `macro_calculation_registry_version` | `id`, `created_at`, `value_rule_fingerprint`, `change_reason`, `status` | 발행 후 불변. 값 규칙과 매핑·명목 가중을 포함한 계산 등록표 버전 |
-| `macro_indicator_definition` | `(registry_version_id, indicator_id)`, `field_id`, `primary_source`, `table_code`, `item_code`, `raw_unit`, `transformed_unit`, `transform_rule`, `release_rule`, `break_link_rule`, `missing_rule`, `agency`, `attribution`, `license_status`, `published_precision`, `minimum_effective_scale`, `refresh_months_n`, `nominal_weight`, `trading_calendar` | 버전마다 정확히 17개, 각 지표는 정확히 한 분야. 미확인 PD-10/11은 값 대신 상태/근거로 구분; 공개 실자료 버전에는 필수 PD-11 검증 완료 |
+| `macro_indicator_definition` | `(registry_version_id, indicator_id)`, `field_id`, `primary_source`, `table_code`, `item_code`, `raw_unit`, `transformed_unit`, `transform_rule`, `release_rule`, `break_link_rule`, `missing_rule`, `agency`, `attribution`, `license_status`, `published_precision`, `minimum_effective_scale`, `refresh_months_n`, `nominal_weight`, `trading_calendar`, `license_review_status`, `revision_history_available` | 버전마다 정확히 17개, 각 지표는 정확히 한 분야. 미확인 PD-10/11은 값 대신 상태/근거로 구분; 공개 실자료 버전에는 필수 PD-11 검증 완료 |
 | `macro_display_version` / `macro_display_field` | `id`, `field_id`, `display_name`, `display_order`, `description`; 지표 표시명/순서 | 버전마다 7개 분야와 17개 지표 표시. 계산 규칙·자료에 영향 없음 |
 | `macro_collection_attempt` / `macro_collection_item_status` | `attempt_id`, 시작/종료 시각, 원천/지표, `status`, `last_success_at`, `last_error_at`, `error_class`, quota 상태, raw 위치 | mutable 운영 상태. 공개 버전과 별도. 원본은 일부 성공해도 보존 |
 | `macro_raw_revision` | `indicator_id`, `source`, `target_month`, 원본 값/단위, `released_at`, `received_at`, `source_revision_key`, raw 경로·해시, 순번 | append-only 원천별·지표별 이력. 동일 응답 재수집은 해시/원천 키로 중복 제거하되 실제 개정은 새 행. 일별 원천은 월별 변환에 기여한 여러 행을 보존 |
