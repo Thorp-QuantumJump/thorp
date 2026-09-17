@@ -8,20 +8,21 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
- * spec 001이 자료를 적재하기 전까지 쓰는 픽스처 구현(analyze M1).
+ * 검사가 쓰는 결정적인 {@link MarketMetadataPort} 대역이다.
+ *
+ * <p><b>운영 구현이 아니다.</b> 001이 표를 적재하기 전까지는 이 클래스가 운영 구현이었고, 실제 자료가 들어온 뒤 {@link
+ * DatabaseMarketMetadataAdapter} 가 그 자리를 대신했다. 지우지 않고 검사 소스로 옮긴 까닭은 단위 검사가 <b>매번 같은 답</b>을 요구하기
+ * 때문이다. DB 를 보게 하면 적재한 자료가 바뀔 때마다 검사 결과가 따라 바뀐다.
  *
  * <p><b>실제 시장 자료가 아니다.</b> 상장일·대응표는 워커 픽스처 {@code worker/examples/three_etf_24m/} 와 같은 세 종목이고, 자료
- * 버전도 같은 {@code FIXTURE-three_etf_24m} 이다. 이 값이 동일 버전 키와 결과 {@code versions.data} 에 그대로 들어가므로 픽스처로
- * 만든 실행은 실제 자료로 만든 실행과 절대 같은 키를 갖지 않는다 — 001이 들어와도 옛 결과를 재사용하지 않는다.
+ * 버전도 같은 {@code FIXTURE-three_etf_24m} 이다. 이름이 {@code FIXTURE-} 로 시작하는 것이 안전장치다 — 이 값이 동일 버전 키와 결과
+ * {@code versions.data} 에 그대로 들어가므로, 픽스처로 만든 실행은 실제 자료로 만든 실행과 절대 같은 키를 갖지 않는다.
  *
- * <p><b>거래일 달력은 주말만 뺀 평일이다.</b> KRX 공휴일 목록을 지어내지 않는다. 그래서 이 구현이 계산한 {@code effectiveStart} 는 공휴일
- * 수만큼 실제보다 이르다. 001이 달력을 제공하면 이 클래스만 바꾼다.
+ * <p><b>거래일 달력은 주말만 뺀 평일이다.</b> KRX 공휴일 목록을 지어내지 않는다. 그래서 이 구현이 세는 거래일은 공휴일 수만큼 실제보다 이르다. 운영 구현은
+ * 적재된 지수 자료의 날짜를 그대로 쓰므로 그 어긋남이 없다.
  */
-@Component
 public class FixtureMarketMetadataAdapter implements MarketMetadataPort {
 
     /** 워커 픽스처와 같은 값. 바꾸면 동일 버전 키가 통째로 바뀐다. */
@@ -39,8 +40,7 @@ public class FixtureMarketMetadataAdapter implements MarketMetadataPort {
     /** 달력 상한. 이 뒤는 거래일을 셀 수 없으므로 워밍업이 모자라면 422로 거절한다. */
     private final LocalDate calendarEnd;
 
-    public FixtureMarketMetadataAdapter(
-            @Value("${thorp.backtest.fixture-calendar-end:2026-12-31}") LocalDate calendarEnd) {
+    public FixtureMarketMetadataAdapter(LocalDate calendarEnd) {
         this.calendarEnd = calendarEnd;
     }
 
