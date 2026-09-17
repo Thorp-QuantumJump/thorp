@@ -128,7 +128,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 |---|---|---|
 | strategy_id | VARCHAR(32) | PK 일부 |
 | rules_version | VARCHAR(32) | PK 일부 |
-| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` · `SUPERSEDED`(새 버전으로 대체된 옛 행. 명시 요청은 받되 화면 조회에서는 뺀다. 2026-09-17, T022에서 CHECK 제약 확장) |
+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` · `SUPERSEDED`(새 버전으로 대체된 옛 행. 화면 조회에서 빼고 접수는 `409 REGISTRY_VERSION_CHANGED`로 거절한다. 저장된 결과의 재현 근거로만 남는다. 2026-09-17, T022에서 CHECK 제약 확장) |
 | provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |
 | spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |
 | decision_ref | TEXT | PD 번호·회의 기록 |
