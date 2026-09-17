@@ -17,8 +17,9 @@
   저장되므로, dev를 반영하지 않은 브랜치가 빌드되면 옛 설정이 되살아났다. 지금은 dev에서 읽지만 Job
   설정을 되돌리면 같은 일이 생긴다. 시작 스크립트는 thorp-ci 설정이 저장될 때마다
   `disableConcurrentBuilds`를 지우고 throttle 상한을 다시 확인한다.
-- CI의 Gradle·Java 테스트·Node는 Jenkins 컨테이너 안에서 실행된다.
-  CD의 Node 컨테이너·Docker 이미지 빌드와 Testcontainers DB·브로커는 별도 자원을 쓴다.
+- CI의 Gradle·Java 테스트·Node와 CD의 백엔드 JAR 빌드(`scripts/build-backend-jar.sh`)는 Jenkins 컨테이너
+  안에서 실행된다. CD의 JAR 빌드는 CI와 같은 Gradle 캐시와 메모리 4GiB를 나눠 쓰며, 빌드 JVM 힙은 512MiB로 묶는다.
+  CD의 Node 컨테이너·Docker 이미지 빌드(JAR 복사와 워커 이미지)와 Testcontainers DB·브로커는 별도 자원을 쓴다.
   이 설정은 수동 SSH 빌드나 별도 에이전트, Pipeline 내부 병렬 실행까지 제한하지 않는다.
 
 ## 적용

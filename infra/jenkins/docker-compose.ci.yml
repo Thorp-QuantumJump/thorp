@@ -39,8 +39,8 @@ services:
     deploy:
       resources:
         limits:
-          # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.
-          # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.
+          # CI의 Gradle·Java 테스트·Node와 CD의 백엔드 JAR 빌드는 Jenkins 내부에서 실행된다.
+          # CD의 Node 컨테이너·이미지 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.
           memory: 4G
           cpus: "2.0"
 

@@ -65,6 +65,9 @@ if $DEV; then
 else
     # 내리기 전에 빌드한다. 5단계의 `up -d backend`가 이 이미지를 쓴다.
     echo "[2/6] v2 백엔드·워커 이미지 빌드 (기존 서비스는 계속 실행)"
+    # 운영 backend 이미지는 미리 만든 JAR를 넣기만 한다(docker-compose.prod.yml 의 target: prebuilt).
+    # JAR를 먼저 만들지 않으면 이미지 빌드가 실패하거나, 남아 있던 옛 JAR로 v1 백엔드가 다시 뜬다.
+    ./scripts/build-backend-jar.sh
     $COMPOSE build backend worker
 fi
 

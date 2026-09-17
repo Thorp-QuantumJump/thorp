@@ -1,0 +1,12 @@
+# 백엔드 이미지(infra/docker/backend.Dockerfile)에 필요한 파일만 빌드 컨텍스트로 보낸다.
+#
+# 운영 배포는 이미지 빌드 전에 이 폴더에서 JAR를 만들어 build/ 와 .gradle/ 이 생긴다. 목록을 두지 않으면
+# 컴파일 결과와 Gradle 캐시까지 배포마다 Docker 로 보낸다. 로컬 개발 빌드(source 단계)가 쓰는 소스와
+# 운영 배포(prebuilt 단계)가 쓰는 JAR만 남긴다.
+*
+!gradlew
+!gradle
+!settings.gradle
+!build.gradle
+!src
+!build/libs/*.jar

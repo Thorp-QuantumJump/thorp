@@ -18,7 +18,7 @@ ENV_FILE=".env.prod"
 # 상태(Started·Healthy·Error)가 색으로 갈리면 어느 컨테이너가 문제인지 바로 보인다.
 COMPOSE="docker compose --ansi always -f docker-compose.prod.yml --env-file $ENV_FILE"
 
-step "[0/4] 작업 큐 타입 확인 (spec 004 R-06)"
+step "[0/5] 작업 큐 타입 확인 (spec 004 R-06)"
 # 계약 v2 백엔드는 backtest.jobs를 quorum으로 선언한다. classic 큐가 남아 있으면 재선언이
 # PRECONDITION_FAILED로 실패하고 delivery-limit이 적용되지 않으므로, 먼저 1회 전환해야 한다.
 if [[ -n "$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)" ]]; then
@@ -33,22 +33,27 @@ if [[ -n "$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)" ]]; then
     fi
 fi
 
-step "[1/4] 프론트엔드 빌드"
+step "[1/5] 프론트엔드 빌드"
 # 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이 적용되지 않는다. 여기서 직접 건다.
 docker run --rm --memory=2g --cpus=2 \
     -v "$PWD/../frontend:/app" \
     -w /app \
     node:20-alpine sh -c "npm ci && npm run build"
 
-step "[2/4] 정적 파일 교체"
+step "[2/5] 정적 파일 교체"
 rm -rf nginx/html/*
 cp -r ../frontend/dist/. nginx/html/
 
-step "[3/4] 백엔드/워커 이미지 빌드 및 기동"
+step "[3/5] 백엔드 JAR 빌드"
+# 백엔드 이미지는 컴파일하지 않고 이 JAR를 넣기만 한다(docker-compose.prod.yml 의 target: prebuilt).
+# 이미지 빌드 안에서 컴파일하지 않는 이유와 실행 위치별 경로는 스크립트 머리말에 있다.
+./scripts/build-backend-jar.sh
+
+step "[4/5] 백엔드/워커 이미지 빌드 및 기동"
 $COMPOSE build backend worker
 $COMPOSE up -d
 
-step "[4/4] nginx 재적용 및 정리"
+step "[5/5] nginx 재적용 및 정리"
 # bind mount된 템플릿 변경은 컨테이너 재시작 없이 자동 반영되지 않는다.
 # 공식 nginx entrypoint 스크립트로 설정을 다시 생성한 뒤 유효한 경우에만 reload한다.
 $COMPOSE exec -T nginx /docker-entrypoint.d/20-envsubst-on-templates.sh
