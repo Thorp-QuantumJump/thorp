@@ -33,7 +33,10 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
                                         row.getLabel(),
                                         row.getSentence(),
                                         row.getArticleId(),
-                                        row.getArticleTitle()));
+                                        // 제목만 판 JSON에서 온다. 나머지는 NOT NULL 컬럼이다.
+                                        // 키가 없으면 null 제목으로 200을 내보내지 않는다(T079와 같은 규칙).
+                                        LearningContentJson.required(
+                                                row.getArticleTitle(), "title")));
     }
 
     @Override

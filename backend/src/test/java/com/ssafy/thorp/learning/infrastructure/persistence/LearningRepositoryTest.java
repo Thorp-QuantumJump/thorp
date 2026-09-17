@@ -352,6 +352,23 @@ class LearningRepositoryTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("판 JSON에 title이 없으면 용어 조회도 articleTitle을 null로 내보내지 않고 실패한다")
+    void missingTitleFailsTermLookup() {
+        long revisionId =
+                insertPublishedRevision(COMPLETE_SNAPSHOT.replace("\"title\":\"수익과 손실\",", ""));
+        jdbcTemplate.update(
+                "INSERT INTO learning_published_term (term_key, article_id, revision_id, label,"
+                        + " sentence) SELECT 'max-drawdown', id, ?, '가장 크게 줄었던 폭', '문장'"
+                        + " FROM learning_article WHERE article_key = ?",
+                revisionId,
+                ARTICLE.value());
+
+        assertThatThrownBy(() -> publishedTermRepository.findPublished(MAX_DRAWDOWN))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("title");
+    }
+
+    @Test
     @DisplayName("판 JSON에 terms가 없으면 실패한다")
     void missingTermsFails() {
         long id = insertPublishedRevision(COMPLETE_SNAPSHOT.replace("\"terms\":[],", ""));

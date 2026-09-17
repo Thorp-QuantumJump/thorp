@@ -422,3 +422,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 ## Phase 9: Convergence
 
 - [X] T079 (BE) `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningContentJson.java`가 판·초안 JSON에서 필수 키가 빠졌을 때 조용히 채우지 않고 실패하게 한다 — `SnapshotJson.readingOrder`·`draftVersion`, `SectorWeightJson.weightTenths`는 원시 `int`라 키가 없으면 0이 되고(메시지 ObjectMapper는 `FAIL_ON_MISSING_CREATOR_PROPERTIES`를 켜지 않는다), `blocksFromJson`·`sourcesFromJson`·`snapshotFromJson`은 null 목록을 `List.of()`로 바꾼다. 선택 값(`example`, 블록의 `text`/`termId`, 출처 `url`)은 "키 없음 = null" 그대로 두고, 필수 값은 래퍼 타입으로 받아 null이면 `IllegalStateException`을 던진다. `LearningRepositoryTest`에 `readingOrder`·`weightTenths`·`bodyBlocks` 키를 뺀 판 JSON을 SQL로 넣고 읽으면 실패하는 경우를 더한다 per Constitution VI, tasks "착수 전에 알아둘 것" ⑦ (partial)
+
+## Phase 10: Convergence
+
+- [X] T080 (BE) `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PublishedTermRepositoryImpl.java`의 `findPublished`가 판 JSON에서 꺼낸 글 제목(`articleTitle`, `r.snapshot ->> 'title'`)을 `LearningContentJson.required`로 확인해, 판에 `title` 키가 없으면 `GET /learning/terms/{termId}`가 200에 `articleTitle: null`을 내보내지 않고 실패하게 한다. 같은 판을 읽는 목록 투영·단건 조회(T079)와 규칙을 맞춘다. `LearningRepositoryTest`에 `title` 키를 뺀 판과 그 판을 가리키는 게시 용어 색인 행을 SQL로 넣고 `findPublished`가 실패하는 경우를 더한다 per Constitution VI, T079 (partial)
