@@ -420,6 +420,90 @@ describe('useStrategySettings', () => {
     expect(result.current.analysisCondition.initialAmount).toBe(range.min)
   })
 
+  it('분석 기간은 처음에 비어 있고 두 날짜가 맞을 때만 함께 반영된다', () => {
+    // T067. 비어 있으면 화면이 평가 가능 범위 전체를 쓴다. 범위를 상태에 복사해 두지 않는다.
+    const { result } = renderSettings()
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+
+    // 한쪽만 있으면 기간이 아니다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04' }))
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04', periodEnd: '2023-12-28' }))
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+
+    // 시작이 종료보다 늦어지거나 날짜가 아니면 앞의 기간을 그대로 둔다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2024-01-02' }))
+    act(() => result.current.setAnalysisCondition({ periodEnd: '2023-02-30' }))
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+    expect(readStored().analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+
+    act(() => result.current.resetAnalysisCondition('period'))
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+  })
+
+  it('읽을 수 없는 보관 기간은 지우고 그 사실을 알린다', () => {
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: 'FULL_PERIOD',
+        periodStart: '2023-06-01',
+        periodEnd: '2022-06-01',
+      },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+    const notice = result.current.invalidValues.find((item) => item.axisName === 'period')
+    expect(notice).toMatchObject({ strategyId: null, reason: 'PERIOD_UNREADABLE', restorable: false })
+
+    // 새 기간을 고르면 "지웠다"는 안내는 지금 기간과 어긋나므로 사라진다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04', periodEnd: '2023-12-28' }))
+    expect(result.current.invalidValues.some((item) => item.axisName === 'period')).toBe(false)
+  })
+
+  it('읽을 수 있는 보관 기간은 등록표를 다시 받아도 그대로 남는다', () => {
+    store({
+      registryVersion: 'OLD-VERSION',
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: 'FULL_PERIOD',
+        periodStart: '2021-01-04',
+        periodEnd: '2023-12-28',
+      },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+    expect(result.current.invalidValues).toHaveLength(0)
+  })
+
   it('선택 전략의 워밍업을 현재 설정으로 계산한다', () => {
     const { result } = renderSettings()
     act(() => result.current.select(unselectableStrategy.strategyId))

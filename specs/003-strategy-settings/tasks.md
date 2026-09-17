@@ -233,14 +233,62 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend
 
-- [ ] T065 [US3] (FE) **[BLOCKED: 004 비용 버전 조회 계약]** `frontend/src/components/strategy/AnalysisConditionsPanel.tsx` — 접힌 상태가 기본. 열면: 분석 기간 시작·종료(`useEvaluationWindow`의 `commonStart`~`commonEnd`를 `min`/`max`로 두어 **범위 밖은 선택할 수 없다**, FR-009); 시작 금액(`AxisNumberField` 재사용, `analysisConditions.initialAmount`의 `range`·`default`·`unit`); 비용 가정은 004에서 조회한 수수료·호가 차이·슬리피지·세금 수치와 버전·`provisional` 여부를 한 줄의 읽기 전용 값으로 보인다. 조회 계약이 없을 때 일반 문구로 대체하지 않고 "비용 조건을 확인할 수 없습니다"로 분석을 막는다. 최소 평가 기간은 등록표 `analysisConditions.minEvaluationYears`의 후보(`[0,1,3]`)를 완화·기본·엄격 라벨로 보이는 라디오/셀렉트이며, 바뀌면 `setAnalysisCondition`으로 반영해 T042의 카드 판정이 다시 돈다(FR-011a). 시나리오는 '연속 운용' 고정 표시하고 목표 변동성은 이 화면에 보이지 않는다. 수수료·세금·기간을 사용자가 바꾸거나 최적화하는 선택지는 두지 않는다(FR-010, 원칙 IV) (T032·T042·T054 의존)
-- [ ] T066 [US3] (FE) `frontend/src/components/strategy/ReducedPeriodNotice.tsx` — 실행 전 안내(FR-011, SC-004): 워밍업 때문에 `commonStart`가 밀렸으면 줄어든 구간과 원인(`bindingCandidate` 섹터, 현재 관측 기간·최근 제외 기간) 한 문장. '분석하기' 바로 위와 선택 카드에 함께 보인다. 줄지 않았으면 렌더하지 않는다 (T042 의존)
-- [ ] T067 [US3] (FE) `frontend/src/hooks/useStrategySettings.ts`의 `analysisCondition` 기본값 채움과 연결 — 처음 `periodStart`/`periodEnd`는 evaluation window의 `commonStart`/`commonEnd`, `initialAmount`는 등록표 `default`, `minEvaluationYears`는 등록표 `default`(1), `scenario`는 `FULL_PERIOD`. `ConditionSummaryLine`(T037)이 이 값을 읽고, `createBacktest`(T039)가 `conditions`에 싣는다. 사용자가 바꾼 기간은 `sessionStorage`에 함께 남는다(FR-017) (T065 의존)
+- [X] T065 [US3] (FE) **[BLOCKED: 004 비용 버전 조회 계약]** `frontend/src/components/strategy/AnalysisConditionsPanel.tsx` — 접힌 상태가 기본. 열면: 분석 기간 시작·종료(`useEvaluationWindow`의 `commonStart`~`commonEnd`를 `min`/`max`로 두어 **범위 밖은 선택할 수 없다**, FR-009); 시작 금액(`AxisNumberField` 재사용, `analysisConditions.initialAmount`의 `range`·`default`·`unit`); 비용 가정은 004에서 조회한 수수료·호가 차이·슬리피지·세금 수치와 버전·`provisional` 여부를 한 줄의 읽기 전용 값으로 보인다. 조회 계약이 없을 때 일반 문구로 대체하지 않고 "비용 조건을 확인할 수 없습니다"로 분석을 막는다. 최소 평가 기간은 등록표 `analysisConditions.minEvaluationYears`의 후보(`[0,1,3]`)를 완화·기본·엄격 라벨로 보이는 라디오/셀렉트이며, 바뀌면 `setAnalysisCondition`으로 반영해 T042의 카드 판정이 다시 돈다(FR-011a). 시나리오는 '연속 운용' 고정 표시하고 목표 변동성은 이 화면에 보이지 않는다. 수수료·세금·기간을 사용자가 바꾸거나 최적화하는 선택지는 두지 않는다(FR-010, 원칙 IV) (T032·T042·T054 의존)
+- [X] T066 [US3] (FE) `frontend/src/components/strategy/ReducedPeriodNotice.tsx` — 실행 전 안내(FR-011, SC-004): 워밍업 때문에 `commonStart`가 밀렸으면 줄어든 구간과 원인(`bindingCandidate` 섹터, 현재 관측 기간·최근 제외 기간) 한 문장. '분석하기' 바로 위와 선택 카드에 함께 보인다. 줄지 않았으면 렌더하지 않는다 (T042 의존)
+- [X] T067 [US3] (FE) `frontend/src/hooks/useStrategySettings.ts`의 `analysisCondition` 기본값 채움과 연결 — 처음 `periodStart`/`periodEnd`는 evaluation window의 `commonStart`/`commonEnd`, `initialAmount`는 등록표 `default`, `minEvaluationYears`는 등록표 `default`(1), `scenario`는 `FULL_PERIOD`. `ConditionSummaryLine`(T037)이 이 값을 읽고, `createBacktest`(T039)가 `conditions`에 싣는다. 사용자가 바꾼 기간은 `sessionStorage`에 함께 남는다(FR-017) (T065 의존)
 
 ### Frontend 테스트
 
-- [ ] T068 [P] [US3] (FE 테스트) `frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx` — 기간 입력의 `min`/`max`가 evaluation window와 같고 범위 밖 값은 반영되지 않는다; 시작 금액의 빈 값·비숫자·최소 미만·최대 초과·간격 불일치는 저장되지 않고 경계값은 허용된다(SC-002); 수수료·세금 편집과 "최적화"·"수익 극대화" 컨트롤이 없다(FR-010); 비용 수치·버전·임시 문구가 함께 보이며 조회 실패 때 분석 차단 사유가 보인다; 최소 평가 기간을 완화·기본·엄격 중 바꾸면 `setAnalysisCondition`이 그 값으로 호출된다(FR-011a, quickstart 7-2); 목표 변동성 컨트롤이 없다 (T065 의존)
-- [ ] T069 [P] [US3] (FE 테스트) `frontend/src/components/strategy/ReducedPeriodNotice.test.tsx` — 줄어든 구간과 `bindingCandidate`가 문장에 있다; 줄지 않았으면 렌더되지 않는다 (T066 의존)
+- [X] T068 [P] [US3] (FE 테스트) `frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx` — 기간 입력의 `min`/`max`가 evaluation window와 같고 범위 밖 값은 반영되지 않는다; 시작 금액의 빈 값·비숫자·최소 미만·최대 초과·간격 불일치는 저장되지 않고 경계값은 허용된다(SC-002); 수수료·세금 편집과 "최적화"·"수익 극대화" 컨트롤이 없다(FR-010); 비용 수치·버전·임시 문구가 함께 보이며 조회 실패 때 분석 차단 사유가 보인다; 최소 평가 기간을 완화·기본·엄격 중 바꾸면 `setAnalysisCondition`이 그 값으로 호출된다(FR-011a, quickstart 7-2); 목표 변동성 컨트롤이 없다 (T065 의존)
+- [X] T069 [P] [US3] (FE 테스트) `frontend/src/components/strategy/ReducedPeriodNotice.test.tsx` — 줄어든 구간과 `bindingCandidate`가 문장에 있다; 줄지 않았으면 렌더되지 않는다 (T066 의존)
+
+**B10 구현 메모 (S15P21E205-242, `feat(fe)/242-analysis-conditions`)**:
+
+- **T065의 비용 표시는 통로만 넓혔고 실제 연결은 B06에 남는다(2026-09-17 사용자 선택).** 비용 조건을 조회하는
+  백엔드 API가 아직 없다(data-model §7 "확인된 빈 구멍"). `AnalysisSupport`의 `AnalysisVersions`에 `costRates`(004
+  `CostProfile`의 bps 네 칸)를 더해 **버전과 수치가 한 덩이로** 오게 했다 — 버전만 받는 모양을 두면 화면이 "적용됨"만
+  보이게 되고 그것은 FR-010을 충족하지 않는다. 지금 기본 통로는 연결되지 않은 상태라 패널은 "비용 조건을 확인할 수
+  없습니다"를 보이고 '분석하기'는 이미 있던 버전 차단으로 막힌다. 위 Quality Gate의 "B06·B10 실제 연결 차단"은 그대로다.
+- **평가 가능 범위와 줄어든 원인도 같은 통로로 받는다.** `WarmupJudgement.window`의 뜻을 "001의
+  `commonStart`~`commonEnd`"로 못 박고 `reduction`(`startWithoutWarmup`·`bindingCandidate`)을 더했다. T042(B06)가
+  `GET /sectors/evaluation-window` 응답을 이 모양으로 옮기면 된다. `startWithoutWarmup`은 001 출력에 없는 값이라 B06이
+  워밍업 0으로 한 번 더 조회하거나 001과 필드를 정해야 한다.
+- **T067: 기간·금액은 사용자가 바꿨을 때만 상태에 담는다.** 처음 값을 복사해 두지 않고, 없으면 화면이 평가 가능 범위
+  전체와 등록표 `default`를 쓴다. 범위는 고른 전략과 워밍업마다 달라서, 복사해 두면 사용자가 고른 적 없는 옛 범위가
+  "바꾼 기간"처럼 남는다. B05가 시작 금액에 이미 쓴 규약과 같다.
+- **고른 기간이 나중에 범위를 벗어나면 잘라 맞추지 않고 막는다.** 전략이나 관측 기간을 바꾸면 범위가 줄어 먼저 고른
+  기간이 밖으로 나갈 수 있다. 요약 줄은 고른 기간을 그대로 보이고, '분석하기'가 이유와 함께 막히며, 패널이 접혀 있어도
+  보이는 안내에 '범위 전체로 되돌리기'를 둔다(FR-017). 보관값 재검증(`reconcileStoredSettings`)은 범위를 모르므로 날짜로
+  읽히는지만 보고, 읽을 수 없으면 지우고 알린다(`PERIOD_UNREADABLE`).
+- **사용자가 고른 기간이 최소 평가 기간보다 짧아도 막는다.** 범위 전체의 판정은 카드(T042)가 하지만, 사용자가 범위 안에서
+  기간을 좁히면 그 판정을 빠져나간다. 비교는 `utils/analysisPeriod.ts`의 달력 기준 N년 더하기다(365일 곱셈은 윤년에서 하루가
+  모자란다). **고르지 않은 기간(범위 전체)에는 이 판정을 걸지 않는다** — 001 산식과 경계에서 갈리면 카드는 고를 수 있다는데
+  '분석하기'만 막히고 되돌릴 기간도 없다. data-model §10의 서버 재확인은 아직 없고(⑧), 생기면 같은 규약이어야 한다.
+- **T066: 줄어든 기간 문장은 `reducedPeriod.ts`의 함수 하나로 짓는다.** 고른 카드와 '분석하기' 바로 위가 같은 문장을
+  쓴다(SC-004). 원인 가운데 섹터는 002 선택과 섹터 목록에서 이름을 찾고, 워밍업 항목은 등록표 `warmupRule.sum`이 가리키는
+  축의 `label`·`unit`과 지금 값을 쓴다 — "관측 기간·최근 제외 기간"을 화면에 적으면 FR-005 위반이다. 통로가 원인
+  (`reduction`)을 싣지 않은 줄어든 판정이면 판정 문장을 그대로 보여 자리를 비우지 않는다. 선택 전략 영역의 판정 문단은 이제
+  `blocked`·`unknown`만 그린다(`reduced`까지 그리면 같은 문장이 세 번 나온다).
+- **검사**: T068·T069 말고도 `utils/analysisPeriod.test.ts`(`vite.config.ts` `include`에 추가), 훅의 기간 반영·복원·보관값
+  재검증, 페이지의 기간·금액이 요약과 요청에 함께 실리는지, 비용 표시와 확인 불가, 줄어든 기간 안내의 두 자리, 최소 평가
+  기간 재판정(quickstart 7-2), 짧은 기간과 범위 밖 기간 차단, 새로 그린 뒤 기간 유지(quickstart 8)를 더했다.
+
+**B10 코드리뷰 후속 (MR 전 AI 코드리뷰, 같은 브랜치)**: 아래를 고치고, 고친 곳마다 되돌리면 실패하는 검사를 두었다(되돌려
+돌려 보고 실패를 확인한 뒤 복구했다).
+
+- **날짜 입력 도중의 중간 날짜가 요청에 남았다.** 날짜 칸은 한 글자마다 바뀜을 보내 `31`을 치는 도중의 `03`이 먼저
+  반영되는데, 마지막 날짜가 무효가 되어도 되돌리지 않았다. 입력칸은 "저장하지 않았습니다"라는데 요약·요청은 중간 날짜였다.
+  지금은 입력을 시작할 때의 기간으로 되돌리고, 고르지 않은 상태에서 시작했으면 범위 전체로 돌린다(`AxisNumberField`와 같은
+  규약).
+- **원인 없는 줄어든 판정이 '분석하기' 위에서 사라졌다.** 위 T066 메모의 대체 문장으로 고쳤다.
+- **범위 전체에도 최소 평가 기간을 다시 판정했다.** 위 메모대로 고른 기간에만 건다.
+- **입력이 무효로 끝나 기본 금액으로 돌아가면 기본값이 사용자 값으로 저장됐다.** 금액이 등록표 기본값과 같아지면 값을
+  담지 않는다.
+- **새 기간을 골라도 "읽을 수 없어 지웠다" 안내가 남았다.** 받아들인 기간이 그 안내를 지운다.
+- 접근성: 문제인 날짜 칸에만 `aria-invalid`를 붙이고, 범위 밖으로 밀려난 보관 기간도 칸에 표시하며, 접힌 동안
+  `aria-controls`가 없는 요소를 가리키지 않게 했다. 접힌 패널 검사가 날짜 칸까지 보게 했다.
+- **남긴 것**: 기간이 막혔을 때 패널을 펼치면 '범위 전체로 되돌리기' 버튼이 패널과 안내에 하나씩, 두 개 보인다. 패널이 접혀
+  있어도 되돌릴 수 있어야 해서 안내 쪽을 두었다.
 
 **Checkpoint**: 기간·금액·비용이 요약 한 줄과 패널에 보이고, 기간은 공통 범위 안에서만, 금액은 등록표 범위 안에서만 바뀐다
 
@@ -655,3 +703,18 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
 - **보내는 동안 다른 카드를 고르면 늦게 온 422가 새로 고른 전략을 내려놓았다(T099).** 카드는 보내는 동안에도 고를 수
   있다. 지금은 보낸 전략을 아직 고르고 있을 때만 선택을 풀고 알리며, 등록표는 어느 경우에도 다시 받는다. 응답 시점의
   선택은 ref로 읽는다 — `handleAnalyze`가 잡은 값은 누른 시점의 것이다.
+
+---
+
+## Phase 17: Convergence
+
+**Purpose**: B10(기간·금액·조건을 바꾼다)을 spec·plan·tasks와 대조한다. 기간·금액·비용·줄어든 기간 안내와 코드리뷰 후속은
+코드와 검사로 닫혔다. 실제 연결(001 평가 기간, 004 비용 조회)은 B06이 추적하므로 여기서 세지 않았다. 남은 간극은 아래 하나다.
+
+- [X] T102 (FE) 최소 평가 기간을 전략을 고르기 전에도 바꿀 수 있게 한다 per FR-011a · US3/AC5 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`가 `AnalysisConditionsPanel`을 선택한 전략이 있을 때만 그리는데, 최소 평가 기간은 **카드의 선택 가능 여부를 바꾸는 값**이고 `StrategyCard`는 `blocked` 판정인 카드를 고를 수 없게 한다. 그래서 보관된 값이 엄격(3년)이고 고른 전략이 없으면(등록표에서 전략이 사라져 재검증이 선택을 비운 경우, 422 뒤 `clearSelection`) 모든 카드가 막힌 채 그 값을 되돌릴 입력에 닿을 수 없다. T093이 같은 까닭으로 이 값의 무효 안내를 카드 목록 위로 옮겼지만 입력은 옮기지 않았다. 최소 평가 기간 입력을 선택 여부와 무관하게 닿는 자리에 두되 기본 화면의 입력을 늘리지 않는다(SC-005 — 접힌 상태 유지). 기간·금액은 고른 전략의 평가 가능 범위가 있어야 뜻이 있으므로 선택 뒤에 두는 지금 구조를 유지해도 된다. 검사로 고정한다: 엄격(3년) 보관값과 전략 미선택 상태에서 모든 카드가 막혀도 최소 평가 기간을 완화로 바꿀 수 있고 카드가 다시 고를 수 있게 된다
+
+**T102 구현 메모**: `AnalysisConditionsPanel`을 선택 전략 영역 밖으로 옮겨, 등록표 재검증을 마치면 선택과 무관하게 그린다.
+접힌 채로 시작하므로 기본 화면의 입력은 늘지 않는다(SC-005). 전략을 고르기 전에는 평가 가능 범위가 없어 기간 칸을
+막고 "전략을 고르면 평가할 수 있는 범위가 정해진다"는 까닭을 적는다(`rangeUnavailableMessage`). 금액·최소 평가 기간·
+비용 표시는 선택 전에도 쓸 수 있다. 검사는 엄격(3년) 보관값과 미선택 상태에서 카드가 막히고 눌러도 선택되지 않다가,
+패널에서 완화로 바꾸면 카드를 고를 수 있게 되는지 본다. 옮기기 전 코드에서 패널을 찾지 못해 실패하는 것을 확인했다.
