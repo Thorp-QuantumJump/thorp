@@ -18,19 +18,20 @@ import org.springframework.stereotype.Service;
  * <p><b>후보마다 구간이 다르면 비교가 성립하지 않는다.</b> 관측 기간이 긴 후보는 더 늦게 시작하는데, 그 후보만 짧은 구간으로 평가하면 수익률이 다른 기간의 값이
  * 되어 나란히 놓을 수 없다(원칙 IV). 그래서 <b>묶음 안에서 가장 긴 관측 기간</b>을 모든 후보에 똑같이 적용한다.
  *
- * <p><b>탐색 구간 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일)</b>. 워밍업 기준점은 상장일 하나이고 요청
- * 시작일은 마지막에 max 로만 합쳐진다. 요청 시작일이 없을 수도 있는데, 그때는 뒤쪽 항(001 {@code contracts/evaluation-window.md}의
- * {@code commonStart})이 곧 서버가 제시하는 값이다.
+ * <p><b>탐색 구간 시작일 = 요청 시작일 당일 또는 그 뒤 첫 거래일.</b> 워밍업만큼 뒤로 늦추지 않는다. 워밍업 자료는 요청 구간보다 <b>앞에서</b> 읽고, 앞이
+ * 모자랄 때 집계 시작일을 늦추는 판정은 워커 {@code engine_runner.evaluation_start()}가 단독으로 맡는다(001 {@code
+ * contracts/market-dataset.md} 「읽기 규칙」). 004 {@code EffectivePeriodCalculator}와 같은 규칙이며, 두 곳이 갈라져
+ * 있던 것을 {@code S15P21E205-205}·T037에서 맞췄다.
  *
- * <p><b>004 {@code EffectivePeriodCalculator}와 같은 규칙이 아니다</b>(2026-09-16, {@code S15P21E205-205}).
- * 004의 {@code effectiveStart}는 이제 요청 시작일을 거래일에 맞춘 값일 뿐이고 {@code commonStart}로 밀지 않는다 — 워밍업 자료는 요청
- * 구간보다 앞에서 읽고, 앞이 모자랄 때 집계 시작일을 미루는 판정은 워커 {@code engine_runner.evaluation_start()}가 단독으로 맡는다(001
- * {@code contracts/market-dataset.md} 「읽기 규칙」).
+ * <p><b>맞춰야 하는 까닭은 같은 요청이 화면에 따라 다른 구간을 내는 것이었다.</b> 단건 접수로 2023-01-02부터 요청하면 그날부터 평가하는데, 같은 조건을 자동
+ * 탐색으로 넣으면 상장일 기준으로 늦춰진 날부터 평가했다. 사용자는 그 차이의 까닭을 알 수 없다.
  *
- * <p><b>007도 같이 걷어내야 하는지는 아직 정하지 않았다</b>(001 {@code tasks.md} T037). 여기 값은 004의 {@code
- * effectiveStart}로 바로 나가지 않고 후보마다 <b>접수의 요청 시작일</b>로 들어가며, 같은 값이 {@code
- * ParamSearchPreviewResult.CommonPeriod}로 사용자에게 "이 구간을 탐색할 수 있다"고 제안되고 FR-008의 탐색·잠금 구간을 가르는 기준이
- * 된다. 앞부분을 평가할 수 없는 구간을 제안값으로 내놓아도 되는지가 그 결정의 핵심이라, 모양이 같다는 이유만으로 따라 바꾸지 않았다.
+ * <p><b>요청 시작일이 없으면 {@code commonStart}가 곧 서버의 제안값이다.</b> 제시할 다른 값이 없다. 001 {@code
+ * contracts/evaluation-window.md}가 정한 "후보 집합을 평가할 수 있는 가장 이른 날"이며, 요청 시작일이 있을 때는 그 값을 요청 구간 안에 평가할
+ * 수 있는 날이 하루도 없는지 가리는 데만 쓴다.
+ *
+ * <p><b>비교는 그대로 성립한다.</b> 후보마다 관측 길이가 달라도 묶음 전체에 공통 워밍업 하나를 똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가
+ * 같은 날부터 시작한다(원칙 IV).
  *
  * <p>공통 워밍업이 004 접수의 {@code warmupTradingDays}로 그대로 나간다. 004는 이 값이 전략 요구값보다 작으면 422로 거부하므로(R-15)
  * 계산이 틀리면 묶음이 시작 단계에서 드러난다.
@@ -54,8 +55,8 @@ public class CommonPeriodResolver {
      *
      * @param instrumentIds 고정한 섹터 후보 집합. 가장 늦게 상장한 종목이 시작일을 정한다
      * @param space 탐색 공간. 워밍업은 여기 담긴 후보값에서 나온다 — 범위를 좁히면 워밍업도 줄어든다
-     * @param requestedStart 사용자가 고른 시작일. 없으면 상장일 기준으로 서버가 제시한다. 있으면 <b>상장일 기준값과 늦은 쪽</b>이다 — 워밍업을
-     *     여기서 또 소진하지 않는다
+     * @param requestedStart 사용자가 고른 시작일. 있으면 <b>그날 또는 그 뒤 첫 거래일</b>이고 워밍업만큼 늦추지 않는다. 없으면 상장일 기준으로
+     *     서버가 제시한다
      * @param requestedEnd 사용자가 고른 끝일. 없으면 오늘
      */
     public CommonPeriod resolve(
@@ -81,22 +82,33 @@ public class CommonPeriodResolver {
                                                 "공통 평가 구간을 만들 수 있는 과거 자료가 부족합니다: 워밍업 "
                                                         + warmup.tradingDays()
                                                         + "거래일"));
-        // 요청 시작일이 없으면 서버가 제시하는 값이 곧 commonStart 다. 있으면 늦은 쪽을 쓰되
-        // 거래일로 맞춘다 — 주말을 시작일로 삼으면 004 접수가 고르는 날과 값이 갈린다.
+        // 요청 시작일이 없으면 서버가 제시하는 값이 곧 commonStart 다. 있으면 그것을 거래일에
+        // 맞추기만 한다 — commonStart 와 max 하지 않는다(클래스 주석). 거래일 스냅을 남기는 것은
+        // 주말을 시작일로 삼으면 004 접수가 고르는 날과 값이 갈리기 때문이다.
         LocalDate start =
-                requestedStart == null || !requestedStart.isAfter(commonStart)
+                requestedStart == null
                         ? commonStart
                         : marketMetadata
-                                .evaluationStart(requestedStart, 0)
+                                .firstTradingDayOnOrAfter(requestedStart)
                                 .orElseThrow(
                                         () ->
                                                 new BusinessException(
                                                         ErrorCode.INSUFFICIENT_HISTORY,
                                                         "요청 시작일 이후에 거래일이 없습니다: " + requestedStart));
+        // 늦추지 않게 됐어도 거절해야 하는 경계는 남는다. 구간 안에 이 후보 집합으로 평가할 수 있는
+        // 날이 하루도 없으면 탐색을 시작해 봐야 후보가 전부 실패한다. 004 접수와 같은 판정이다.
+        if (!commonStart.isBefore(end)) {
+            throw new BusinessException(
+                    ErrorCode.INSUFFICIENT_HISTORY,
+                    "상장일 이후 워밍업을 채우고 나면 평가할 구간이 남지 않습니다: commonStart="
+                            + commonStart
+                            + ", end="
+                            + end);
+        }
         if (!start.isBefore(end)) {
             throw new BusinessException(
                     ErrorCode.INSUFFICIENT_HISTORY,
-                    "상장일 이후 워밍업을 채우고 나면 평가할 구간이 남지 않습니다: start=" + start + ", end=" + end);
+                    "요청 시작일 이후 첫 거래일이 끝일 이후입니다: start=" + start + ", end=" + end);
         }
         return new CommonPeriod(start, end, warmup.tradingDays(), warmup.shortenedBy());
     }
