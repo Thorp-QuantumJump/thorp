@@ -25,7 +25,9 @@
 | id | BIGINT PK (seq) | |
 | backtest_id | VARCHAR(32) UNIQUE NOT NULL | `BT-{yyyyMMdd}-{id %06d}` (현행 규칙 유지, 사용자에게 보이는 식별자) |
 | run_id | BIGINT FK → backtest_run NOT NULL | 합류·재사용 시 기존 run |
-| requester_id | BIGINT FK → users NOT NULL | 취소·재시도 권한 주체. 계산 기록에는 복사하지 않는다 |
+| requester_id | BIGINT FK → users NULL 허용 | 취소·재시도 권한 주체. 계산 기록에는 복사하지 않는다. NULL = 비로그인 요청(spec 005 B01, 결과는 공개 토큰으로만 연다) |
+| public_token | VARCHAR(32) NOT NULL UNIQUE | 결과 공개 토큰(spec 005 FR-019). 소문자 16진 32자 |
+| public_token_expires_at | TIMESTAMPTZ NULL | 비로그인 요청만 채운다. `requester_id IS NOT NULL OR public_token_expires_at IS NOT NULL` 제약 |
 | execution_type | VARCHAR(20) NOT NULL | `SINGLE` · `SEARCH_BUNDLE` · `REGIME_SECTOR` · `REGIME_TOTAL` (007·010이 지정) |
 | result_source | VARCHAR(10) NOT NULL | `NEW` · `JOINED` · `REUSED` |
 | retry_of_request_id | BIGINT FK → backtest_request NULL | 재시도 원본 |
@@ -51,7 +53,7 @@
 | cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |
 | data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |
 | request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |
-| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그 |
+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. `dependencies{numpy, scipy}` 선택 필드는 발표 후(Phase 10 T028) |
 | effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |
 | progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |
 | progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |
@@ -120,19 +122,21 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 초기 행: `PROVISIONAL-DEMO-1 (0, 0, 5, 0, null, true, 'ADR-0004 데모 값 재사용, PD-07 확정 전')`.
 
+확정 행(PD-07, 2026-09-17, T021이 추가): `KR-ETF-2026-09 (1.5, 3, 5, 0, null, false, 'PD-07 확정 2026-09-17')`. 기존 행은 고치지 않고 `default-cost-profile`만 새 버전으로 바꾼다.
+
 ## strategy_rules (전략 규칙 버전)
 
 | 컬럼 | 타입 | 규칙 |
 |---|---|---|
 | strategy_id | VARCHAR(32) | PK 일부 |
 | rules_version | VARCHAR(32) | PK 일부 |
-| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` |
+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION`. 새 버전으로 대체된 옛 행을 뜻하는 `SUPERSEDED`는 발표 후(Phase 10 T029)에 CHECK 제약과 함께 추가한다 |
 | provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |
 | spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |
 | decision_ref | TEXT | PD 번호·회의 기록 |
 | created_at | TIMESTAMPTZ | |
 
-초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/PENDING`, `MINIMUM_VARIANCE/PENDING` PENDING_DECISION(decision_ref PD-03·PD-04); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
+초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/1`, `MINIMUM_VARIANCE/1` PENDING_DECISION(decision_ref PD-03·PD-04 — 2026-09-17 확정. 실제 SQL의 rules_version은 `1`이다. T022(최소분산)·T023(모멘텀)이 **이 행을** REGISTERED provisional=false로 바꾸고 spec을 채운다 — 가리키는 실행이 없어 재현이 깨지지 않는다. `INVERSE_VOLATILITY/1`도 T022가 제자리에서 갱신한다(`capOverflow`·`weightUnit` 추가, provisional=true 유지) — R-08이 임시 행은 확정 시 갱신한다고 계획했고 보존할 결과가 없다. 규칙 명세는 spec PD 표를 따른다); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
 
 ## backtest_run_metric (실행 측정 기록)
 
@@ -179,11 +183,21 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 `execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count, data_rows_p50, data_bytes_p50`(뒤 둘은 T019가 끝에 덧붙였다 — 뷰는 열을 끝에만 더할 수 있다). `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 "공용 워커가 단건을 지원한 비율"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.
 
+## 용어 (2026-09-17, analyze I7)
+
+| 이름 | 어디에 | 뜻 |
+|---|---|---|
+| `investedFraction` | 규칙표 `strategy_rules.spec`(소수, 기본 `1.0000`) | 투자 대상 비중 합계. 산문의 "투자 비중"·"고정 투자 비중 합계" |
+| 유효 투자 목표 | 계산 시 파생 | `min(investedFraction, 유효 상한 × 계산 가능 종목 수)`. 최소분산 합계 제약(PD-04) |
+| `weightCap` | 규칙표 `strategy_rules.spec`(소수) | 종목별 상한의 기본값 |
+| `maxWeight` | 003 축 → 요청 `allocation.parameters.maxWeight`(정수 %) | 사용자가 고른 종목별 상한. 있으면 `weightCap`보다 우선 |
+| 유효 상한 | 접수·워커 공통 | `maxWeight/100` 또는 `weightCap`. 산문의 "상한"·"비중 상한" |
+
 ## 검증 규칙 (요청 접수 시, 백엔드)
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
-- 비중 상한 합계 ≥ 고정 투자 비중 합계(아니면 400 `INVALID_INPUT`, Edge Case).
-- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`).
+- 유효 상한 × 종목 수 ≥ `investedFraction` — **유효 상한 = 요청 `allocation.parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표 `weightCap`**(analyze U1, T022). 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
+- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`). 대체된 옛 버전의 409 처리는 발표 후(Phase 10 T029).
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
 - `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.

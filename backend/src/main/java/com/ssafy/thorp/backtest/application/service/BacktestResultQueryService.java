@@ -44,6 +44,11 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>{@code BacktestService}(생성·발행)와 분리한 이유: 저쪽은 생성 트랜잭션이 관심사고 발행기·조립기를 의존한다. 조회는 읽기 전용 트랜잭션과 저장소
  * 둘만 필요하다.
  *
+ * <p><b>읽기는 두 입구가 같은 몸통을 쓴다</b>(spec 005 T014). {@code (backtestId, requesterId)} 메서드는 소유자
+ * 경로({@code /backtests/**})라 요청자를 확인한 뒤 {@link BacktestRequest}를 받는 오버로드로 넘긴다. 공개 토큰 경로({@code
+ * result})는 토큰·만료 판정을 끝낸 요청으로 오버로드를 바로 부른다. 접근 판정을 오버로드 안에 두지 않는 이유는 두 경로의 판정이 다르기 때문이다 — 한쪽 규칙을
+ * 몸통에 넣으면 다른 경로가 우회하거나 막힌다.
+ *
  * <p>상태별 응답 규칙은 HTTP 계약 {@code docs/specs/backtest-api/README.md} §2.1·§2.5다. 요약해서:
  *
  * <ul>
@@ -84,7 +89,15 @@ public class BacktestResultQueryService {
      * <p>남의 요청을 403이 아니라 404로 숨기는 이유: 403은 "그 식별자는 존재한다"를 알려 준다(R-12).
      */
     public BacktestDetailResult getDetail(String backtestId, long requesterId) {
-        RequestAndRun found = requireOwned(backtestId, requesterId);
+        return getDetail(requireOwned(backtestId, requesterId));
+    }
+
+    /**
+     * {@link #getDetail(String, long)}의 몸통. <b>접근 판정은 호출자가 끝냈다</b> — 공개 토큰 경로({@code result})와 소유자
+     * 경로가 같은 읽기를 쓴다.
+     */
+    public BacktestDetailResult getDetail(BacktestRequest request) {
+        RequestAndRun found = load(request);
         BacktestRun job = found.run();
         if (!job.getStatus().isFinal()) {
             return BacktestDetailResult.withoutResult(
@@ -117,7 +130,13 @@ public class BacktestResultQueryService {
      * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.
      */
     public BacktestTimeseriesResult getTimeseries(String backtestId, long requesterId) {
-        ResultView view = requireResultReady(backtestId, requesterId);
+        return getTimeseries(requireOwned(backtestId, requesterId));
+    }
+
+    /** {@link #getTimeseries(String, long)}의 몸통. 접근 판정은 호출자가 끝냈다. */
+    public BacktestTimeseriesResult getTimeseries(BacktestRequest request) {
+        String backtestId = request.getBacktestId().value();
+        ResultView view = requireResultReady(request);
         BacktestSeries series =
                 require(resultRepository.findTimeseries(view.run().getId()), view.run());
         Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());
@@ -140,7 +159,13 @@ public class BacktestResultQueryService {
 
     /** 리밸런싱마다 목표·실제 비중(FR-026). 결과 행이 없으면 500, 블록이 비어 있으면 빈 목록이다. */
     public BacktestWeightsResult getWeights(String backtestId, long requesterId) {
-        ResultView view = requireResultReady(backtestId, requesterId);
+        return getWeights(requireOwned(backtestId, requesterId));
+    }
+
+    /** {@link #getWeights(String, long)}의 몸통. 접근 판정은 호출자가 끝냈다. */
+    public BacktestWeightsResult getWeights(BacktestRequest request) {
+        String backtestId = request.getBacktestId().value();
+        ResultView view = requireResultReady(request);
         BacktestResultBlocks blocks = requireBlocks(view.run());
         return new BacktestWeightsResult(
                 backtestId,
@@ -151,7 +176,13 @@ public class BacktestResultQueryService {
 
     /** 예외 처리 기록(FR-020·FR-030). */
     public BacktestExceptionsResult getExceptions(String backtestId, long requesterId) {
-        ResultView view = requireResultReady(backtestId, requesterId);
+        return getExceptions(requireOwned(backtestId, requesterId));
+    }
+
+    /** {@link #getExceptions(String, long)}의 몸통. 접근 판정은 호출자가 끝냈다. */
+    public BacktestExceptionsResult getExceptions(BacktestRequest request) {
+        String backtestId = request.getBacktestId().value();
+        ResultView view = requireResultReady(request);
         BacktestResultBlocks blocks = requireBlocks(view.run());
         return new BacktestExceptionsResult(
                 backtestId,
@@ -172,7 +203,14 @@ public class BacktestResultQueryService {
      */
     public BacktestTradePageResult getTrades(
             String backtestId, long requesterId, FindBacktestTradesQuery query) {
-        ResultView view = requireResultReady(backtestId, requesterId);
+        return getTrades(requireOwned(backtestId, requesterId), query);
+    }
+
+    /** {@link #getTrades(String, long, FindBacktestTradesQuery)}의 몸통. 접근 판정은 호출자가 끝냈다. */
+    public BacktestTradePageResult getTrades(
+            BacktestRequest request, FindBacktestTradesQuery query) {
+        String backtestId = request.getBacktestId().value();
+        ResultView view = requireResultReady(request);
         BacktestRun job = view.run();
         if (!resultRepository.exists(job.getId())) {
             throw missingResultRow(job);
@@ -201,7 +239,13 @@ public class BacktestResultQueryService {
      */
     public BacktestPositionsResult getPositions(
             String backtestId, long requesterId, LocalDate date) {
-        ResultView view = requireResultReady(backtestId, requesterId);
+        return getPositions(requireOwned(backtestId, requesterId), date);
+    }
+
+    /** {@link #getPositions(String, long, LocalDate)}의 몸통. 접근 판정은 호출자가 끝냈다. */
+    public BacktestPositionsResult getPositions(BacktestRequest request, LocalDate date) {
+        String backtestId = request.getBacktestId().value();
+        ResultView view = requireResultReady(request);
         BacktestRun job = view.run();
         List<EngineOutput.PortfolioSnapshot> series =
                 view.visible(
@@ -272,17 +316,21 @@ public class BacktestResultQueryService {
     }
 
     /**
-     * 요청 식별자로 요청과 실행을 함께 찾고, <b>요청자가 본인인지 확인한다</b>.
+     * 요청 식별자로 요청을 찾고 <b>요청자가 본인인지 확인한다</b>. 비로그인 요청은 누구의 것도 아니라 여기서 404 다 — 그 결과는 공개 토큰 경로로 본다.
      *
      * <p>상세뿐 아니라 하위 리소스(시계열·거래·보유)도 이 관문을 지난다. 상세만 막고 하위를 열어 두면 식별자만 알면 남의 결과를 그대로 읽을 수 있고, 개발용 헤더를
      * 끈 운영에서도 그 경로만 열려 있게 된다.
      */
-    private RequestAndRun requireOwned(String backtestId, long requesterId) {
-        BacktestRequest request =
-                requestRepository
-                        .findByBacktestId(backtestId)
-                        .filter(found -> found.getRequesterId() == requesterId)
-                        .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+    private BacktestRequest requireOwned(String backtestId, long requesterId) {
+        return requestRepository
+                .findByBacktestId(backtestId)
+                .filter(found -> found.isOwnedBy(requesterId))
+                .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+    }
+
+    /** 요청이 가리키는 실행을 붙인다. 실행이 없으면 요청 행만 남은 것이라 404 로 숨긴다. */
+    private RequestAndRun load(BacktestRequest request) {
+        String backtestId = request.getBacktestId().value();
         BacktestRun run =
                 jobRepository
                         .findById(request.getRunId())
@@ -329,7 +377,12 @@ public class BacktestResultQueryService {
      * NO_PARTIAL_RESULT} — 실행이 나중에 계산한 범위로 대신하지 않는다.
      */
     ResultView requireResultReady(String backtestId, long requesterId) {
-        RequestAndRun found = requireOwned(backtestId, requesterId);
+        return requireResultReady(requireOwned(backtestId, requesterId));
+    }
+
+    private ResultView requireResultReady(BacktestRequest owned) {
+        String backtestId = owned.getBacktestId().value();
+        RequestAndRun found = load(owned);
         BacktestRun job = found.run();
         switch (job.getStatus()) {
             case QUEUED, RUNNING ->

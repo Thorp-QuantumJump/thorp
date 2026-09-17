@@ -55,4 +55,7 @@ USER jenkins
 #                        각 lint 출력을 연결하는 일은 실제 Jenkins에서 파서와 출력 형식을
 #                        맞춰 봐야 하므로 후속 작업으로 남긴다. 설치가 먼저 있어야 그 작업을
 #                        시작할 수 있다.
-RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor mattermost warnings-ng
+#   throttle-concurrents thorp-ci 를 동시에 2개까지만 실행하고 나머지를 대기열에 남긴다.
+#                        설정은 init.groovy.d/20-ci-concurrency.groovy 가 건다. 이 플러그인이
+#                        없으면 그 스크립트가 실패해 상한 없이 실행 슬롯 수만큼 돈다.
+RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor mattermost warnings-ng throttle-concurrents

@@ -82,7 +82,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
             { "value": 126, "label": "126거래일", "selectable": true },
             { "value": 252, "label": "252거래일", "selectable": true }
           ],
-          "defaultValue": 63
+          "defaultValue": 63,
+          "termId": "volatility"
         },
         {
           "name": "maxWeight",
@@ -91,7 +92,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "unit": "퍼센트",
           "inputType": "NUMBER",
           "range": { "min": 10, "max": 100, "step": 5 },
-          "defaultValue": 40
+          "defaultValue": 40,
+          "termId": "weight"
         }
       ],
       "validationRules": [
@@ -162,7 +164,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
             { "value": 3, "label": "3", "selectable": true },
             { "value": 4, "label": "4", "selectable": false }
           ],
-          "defaultValue": 4
+          "defaultValue": 4,
+          "appliesWhen": { "axis": "selectionMode", "value": "TOP_N" }
         }
       ],
       "validationRules": [
@@ -202,6 +205,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | `analysisConditions.*.choices` | array | 목록형 조건일 때만. `{ value, label }`이며 전략 축의 `choices`와 달리 `selectable`이 없다 — 유효성 규칙은 전략 축에만 걸린다. `minEvaluationYears`의 `0`이 "0년"이 아니라 "제한 없음"이라는 것도 이 문구가 말한다(FR-011a) |
 | `axes[].range` | object | `NUMBER`일 때만 |
 | `axes[].defaultValue` | any | 등록표의 기본 시작값. 반드시 `choices` 또는 `range` 안의 값이다 |
+| `axes[].appliesWhen` | object? | `{ axis, value }`. **같은 전략의 `axis`가 `value`일 때만 이 축을 쓴다**(FR-003). 없으면 늘 쓴다. 화면은 조건이 거짓인 축을 그리지도 요청에 싣지도 않고, 기본값도 채우지 않는다. 결정 축의 값이 바뀌어 조건이 참이 되면 그 축은 기본값에서 시작한다. 서버의 접수 관문도 같은 조건으로 "이 설정에서 뜻을 갖는 축"만 요구한다(§2). 비교는 `equals`뿐이며 화면이 축 이름을 해석하지 않는다 |
+| `axes[].termId` | string? | [013](../../013-learning-pages/spec.md) 용어 설명의 식별자([013 data-model §8](../../013-learning-pages/data-model.md)). 있으면 화면이 그 항목 옆에 용어 도움말을 붙인다(FR-016). **화면이 축 이름으로 식별자를 고르지 않게 하는 자리다** |
 | `analysisConditions.*.default` | any | 분석 조건의 기본값. 범위 안에 함께 싣는다 |
 | `strategies[].validationRules` | array | 화면이 실행 전에 평가할 조건. 아래 절 참조 |
 | `analysisConditions.targetVolatility.usedBy` | string | `TARGET_RISK` — '목표 위험 맞춤' 시나리오에서만 쓴다. 주 분석 화면에 보이지 않는다 (004 PD-18) |
@@ -248,7 +253,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 필드 | 형 | 비고 |
 |---|---|---|
 | `strategyId` | string | 등록표의 활성 전략 |
-| `parameters` | object | 축 이름 → 값. 등록표의 허용 범위 안이어야 한다 |
+| `parameters` | object | 축 이름 → 값. 등록표의 허용 범위 안이어야 한다. **`appliesWhen`이 거짓인 축은 싣지 않는다** — 서버는 이 설정에서 뜻을 갖는 축의 집합과 정확히 같아야 받는다(FR-003) |
 | `registryVersion` | string | 조회한 버전. 접수 시점과 다르면 409 |
 | `warmupTradingDays` | integer | 워밍업 규칙의 계산 결과 |
 | `initialAmount` | number | 등록표의 허용 범위 안 |

@@ -26,7 +26,7 @@ export function MyRecordsEntryPage() {
             전략 검증하기
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
-          <Link to="/home">시장 흐름 보기</Link>
+          <Link to="/market-flow">시장 흐름 보기</Link>
         </div>
         <p className={styles.scopeNote}>
           이 화면은 사용자별 기록을 보호하는 진입점이며, 기록 목록은 spec 006 범위입니다.

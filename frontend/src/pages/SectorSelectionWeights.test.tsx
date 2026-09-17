@@ -174,9 +174,18 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     await select(user, '반도체')
 
     expect(screen.getByText(/두 개 이상/)).toBeTruthy()
-    // 다음 단계 버튼 자체는 M4가 만든다. 이 시점에는 어느 쪽으로도 넘어갈 수단이 없다.
-    expect(screen.queryByRole('button', { name: /다음/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /다음/ })).toBeNull()
+    /*
+      M4가 다음 단계 버튼을 만든 뒤에도 하나만 고른 상태로는 넘어가지 못한다. 버튼을 숨기지 않고
+      눌리지 않게 두는 까닭은, 무엇을 더 해야 다음으로 갈 수 있는지가 위 안내와 함께 읽혀야 하기
+      때문이다. 넘어가는 다른 수단은 두지 않는다.
+    */
+    expect(
+      (screen.getByRole('button', { name: '전략 고르러 가기' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    // 버튼을 우회해 다음 단계로 바로 가는 링크를 두지 않는다. 머리 영역의 메뉴는 이 화면의 것이 아니다.
+    expect(
+      within(screen.getByRole('main')).queryByRole('link', { name: /전략|다음/ }),
+    ).toBeNull()
 
     await select(user, '자동차')
     expect(screen.queryByText(/두 개 이상/)).toBeNull()
@@ -430,9 +439,21 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     await select(user, '반도체', '자동차')
     await replaceWeight(user, '반도체', '60')
 
-    // 사용자가 스스로 누르는 '동일하게 나누기' 하나뿐이다. 누르기 전에는 값이 바뀌지 않는다.
-    const buttons = within(screen.getByRole('main')).getAllByRole('button')
-    expect(buttons.map((button) => button.textContent)).toEqual(['동일하게 나누기'])
+    /*
+      값을 바꾸는 수단은 사용자가 스스로 누르는 '동일하게 나누기' 하나뿐이다. 누르기 전에는 값이
+      바뀌지 않는다.
+
+      목록 항목 안의 버튼은 세지 않는다. M5의 대표 상품 정보 펼침은 항목마다 하나씩 있고 비중을
+      건드리지 않으므로, 그것까지 세면 이 검사가 무엇을 지키는지 흐려진다. M4가 더한 '전략 고르러
+      가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.
+    */
+    const buttons = within(screen.getByRole('main'))
+      .getAllByRole('button')
+      .filter((button) => button.closest('[data-slot="profile"]') === null)
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      '동일하게 나누기',
+      '전략 고르러 가기',
+    ])
     expect(shownWeights()).toEqual([60, 50])
   })
 

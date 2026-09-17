@@ -28,6 +28,7 @@ import org.mockito.Mockito;
 class ExecutionLimitPolicyTest {
 
     private static final long REQUESTER = 7L;
+    private static final int ANONYMOUS = 10;
 
     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
     private final ExecutionMetricRecorder metrics = mock(ExecutionMetricRecorder.class);
@@ -39,6 +40,7 @@ class ExecutionLimitPolicyTest {
                 new ExecutionLimits(
                         perUser,
                         total,
+                        ANONYMOUS,
                         Duration.ofSeconds(1800),
                         Duration.ofSeconds(300),
                         Duration.ofSeconds(120),
@@ -144,5 +146,71 @@ class ExecutionLimitPolicyTest {
         order.verify(runRepository).countQueuedSingleByRequester(REQUESTER);
         order.verify(runRepository).lockAdmission("backtest-admission:total");
         order.verify(runRepository).countQueuedSingle();
+    }
+
+    @Test
+    @DisplayName("비로그인 요청은 사용자별 한도 대신 비로그인 몫을 먼저 세고, 그다음 전체 한도를 센다(spec 005 T012)")
+    void anonymousRequestCountsTheAnonymousShareThenTheTotal() {
+        when(runRepository.countQueuedSingleAnonymous()).thenReturn(9L);
+        when(runRepository.countQueuedSingle()).thenReturn(10L);
+
+        assertThatCode(() -> policyWith(5, 50, false).requireAdmission(null, ExecutionType.SINGLE))
+                .doesNotThrowAnyException();
+
+        verify(runRepository, never()).countQueuedSingleByRequester(anyLong());
+        InOrder order = Mockito.inOrder(runRepository);
+        order.verify(runRepository).lockAdmission("backtest-admission:anonymous");
+        order.verify(runRepository).countQueuedSingleAnonymous();
+        order.verify(runRepository).lockAdmission("backtest-admission:total");
+        order.verify(runRepository).countQueuedSingle();
+    }
+
+    @Test
+    @DisplayName("비로그인 몫이 차면 전체가 여유로워도 429 ANONYMOUS 다 — 비로그인 클라이언트 하나가 전체 대기열을 채우지 못한다")
+    void anonymousShareIsBoundedBeforeTheTotal() {
+        when(runRepository.countQueuedSingleAnonymous()).thenReturn(10L);
+
+        assertThatThrownBy(
+                        () -> policyWith(5, 50, false).requireAdmission(null, ExecutionType.SINGLE))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(
+                        exc ->
+                                assertThat(((BusinessException) exc).getDetails())
+                                        .containsEntry("reason", "ANONYMOUS")
+                                        .containsEntry("queued", 10L)
+                                        .containsEntry("limit", ANONYMOUS));
+        verify(runRepository, never()).countQueuedSingle();
+        verify(metrics).limitRejected(null, ExecutionType.SINGLE, "ANONYMOUS");
+    }
+
+    @Test
+    @DisplayName("로그인 요청은 비로그인 몫을 세지 않는다 — 비로그인 몫이 가득 차도 로그인 사용자는 통과한다")
+    void loggedInRequestIgnoresTheAnonymousShare() {
+        when(runRepository.countQueuedSingleByRequester(REQUESTER)).thenReturn(0L);
+        when(runRepository.countQueuedSingle()).thenReturn(10L);
+
+        assertThatCode(
+                        () ->
+                                policyWith(5, 50, false)
+                                        .requireAdmission(REQUESTER, ExecutionType.SINGLE))
+                .doesNotThrowAnyException();
+
+        verify(runRepository, never()).countQueuedSingleAnonymous();
+    }
+
+    @Test
+    @DisplayName("비로그인 요청도 전체 한도에는 막힌다 — 상한 장치 없이 열지 않는다(원칙 IX)")
+    void anonymousRequestIsStillBoundByTheTotal() {
+        when(runRepository.countQueuedSingleAnonymous()).thenReturn(0L);
+        when(runRepository.countQueuedSingle()).thenReturn(50L);
+
+        assertThatThrownBy(
+                        () -> policyWith(5, 50, false).requireAdmission(null, ExecutionType.SINGLE))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(
+                        exc ->
+                                assertThat(((BusinessException) exc).getDetails())
+                                        .containsEntry("reason", "TOTAL"));
+        verify(metrics).limitRejected(null, ExecutionType.SINGLE, "TOTAL");
     }
 }

@@ -7,6 +7,9 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
 import com.ssafy.thorp.strategy.application.exception.StrategySettingsRejectedException;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
+import com.ssafy.thorp.strategy.application.port.AxisCondition;
+import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -237,6 +240,76 @@ class StrategySettingsValidatorTest {
                                     .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);
                             assertThat(exc.getDetails()).containsKey("allowedRange");
                         });
+    }
+
+    /**
+     * 조건부 축(spec FR-003, {@code appliesWhen}). {@code mode}가 {@code A}일 때만 {@code aOnly}를 쓴다. 축 이름은
+     * 합성 값이다 — 실제 선정 방식의 이름을 쓰면 "그 축이라서 되는 것"과 "조건이 적힌 축이면 되는 것"을 구분할 수 없다.
+     */
+    private static ParameterRegistryPort conditionalRegistry() {
+        return RegistryFixtures.registry(VERSION)
+                .strategy(
+                        STRATEGY,
+                        RegistryFixtures.axis("mode", java.util.List.of("A", "B")),
+                        new ParameterAxis(
+                                "aOnly",
+                                "aOnly 라벨",
+                                null,
+                                null,
+                                java.util.List.of(1, 2),
+                                1,
+                                AllowedRange.ofValues(java.util.List.of(1, 2)),
+                                new AxisCondition("mode", "A"),
+                                null))
+                .build();
+    }
+
+    @Test
+    @DisplayName("조건 밖 축은 빠져 있어도 받는다 — 등록표가 이 설정에서 쓰지 않는다고 정한 축이다")
+    void 조건_밖_축은_빠져도_통과() {
+        StrategySettingsValidator.Verified verified =
+                validatorOf(conditionalRegistry())
+                        .verify(STRATEGY, settings("mode", "B"), VERSION, 3, VALID_AMOUNT);
+
+        assertThat(verified.registryVersion()).isEqualTo(VERSION);
+    }
+
+    @Test
+    @DisplayName("조건 밖 축이 실려 오면 등록되지 않은 축과 같게 400이다 — 사용자가 정한 값이 아니다")
+    void 조건_밖_축이_실리면_400() {
+        assertThatThrownBy(
+                        () ->
+                                validatorOf(conditionalRegistry())
+                                        .verify(
+                                                STRATEGY,
+                                                settings("mode", "B", "aOnly", 1),
+                                                VERSION,
+                                                3,
+                                                VALID_AMOUNT))
+                .isInstanceOfSatisfying(
+                        StrategySettingsRejectedException.class,
+                        exc ->
+                                assertThat(exc.getDetails())
+                                        .containsEntry("unknownAxes", java.util.List.of("aOnly")));
+    }
+
+    @Test
+    @DisplayName("조건이 참인 축이 빠지면 기본값으로 채우지 않고 400이다")
+    void 조건_참인_축이_빠지면_400() {
+        assertThatThrownBy(
+                        () ->
+                                validatorOf(conditionalRegistry())
+                                        .verify(
+                                                STRATEGY,
+                                                settings("mode", "A"),
+                                                VERSION,
+                                                3,
+                                                VALID_AMOUNT))
+                .isInstanceOfSatisfying(
+                        StrategySettingsRejectedException.class,
+                        exc ->
+                                assertThat(exc.getDetails())
+                                        .containsEntry("missingAxes", java.util.List.of("aOnly")));
     }
 
     @Test

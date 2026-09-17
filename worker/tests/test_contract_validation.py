@@ -155,10 +155,20 @@ def test_absent_max_position_pct_is_allowed() -> None:
 def test_optional_v2_blocks_may_be_absent() -> None:
     """dataVersion·mappingVersion·rules·scenarioParams·effectiveStart는 계약상 생략 가능하다."""
     engine_input = EngineInput.model_validate(fixture_body())
-    assert engine_input.market_data.data_version is None
     assert engine_input.allocation.rules is None
     assert engine_input.run.scenario_params is None and engine_input.run.effective_start is None
     assert engine_input.evaluation.warmup_trading_days is None
+
+
+def test_absent_data_version_is_allowed() -> None:
+    """dataVersion 은 생략 가능하다.
+
+    **픽스처에 값이 없는 것으로는 이 성질을 더 보일 수 없다.** 백엔드가 접수 시점에 자료 버전을
+    정해 실행에 고정하게 되면서 계약 예시도 그 값을 담게 됐다(spec 001 research.md 결정 4).
+    그래서 키를 지워서 확인한다 — maxPositionPct 와 같은 방식이다.
+    """
+    body = _drop(fixture_body(), "marketData.dataVersion")
+    assert EngineInput.model_validate(body).market_data.data_version is None
 
 
 def test_validation_message_names_the_field() -> None:

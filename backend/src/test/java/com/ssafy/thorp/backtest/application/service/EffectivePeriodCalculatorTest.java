@@ -78,7 +78,7 @@ class EffectivePeriodCalculatorTest {
                 .isEqualTo(63);
     }
 
-    // --- 한 규칙의 두 경계: effectiveStart = max(요청 시작일, 상장일 이후 warmup번째 거래일) ---
+    // --- 한 규칙: effectiveStart = 요청 시작일 당일 또는 그 뒤 첫 거래일 ---
 
     @Test
     @DisplayName("요청 시작일이 상장일보다 한참 뒤면 워밍업이 요청 구간을 깎지 않는다 — 앞에서 읽는다")
@@ -101,10 +101,12 @@ class EffectivePeriodCalculatorTest {
     }
 
     @Test
-    @DisplayName("요청 시작일이 상장일보다 앞이면 상장일 이후 워밍업 번째 거래일부터다 (계약 commonStart)")
-    void warmupAfterALateListingPushesTheStart() {
-        // BIO 는 2023-07-03 상장이다. 그 앞에는 읽을 자료가 없으므로 밀 수밖에 없고, 밀리는 양은
-        // 계약 evaluation-window.md 의 commonStart 와 정확히 같다 — 요청 시작일은 이 계산에 들어가지 않는다.
+    @DisplayName("요청 시작일이 상장일보다 앞이어도 백엔드는 밀지 않는다 — 미는 일은 워커 하나가 한다")
+    void aLateListingNoLongerPushesTheStart() {
+        // BIO 는 2023-07-03 상장이라 요청 앞부분에 읽을 자료가 없다. 그래도 여기서 밀지 않는다.
+        // 밀어 놓으면 그 값이 앵커로 실려 나가 워커가 되돌릴 수 없고, 판정하는 곳이 둘이 된다
+        // (001 contracts/market-dataset.md 「읽기 규칙」). 워커가 읽어 온 달력으로
+        // max(앵커, calendar[warmup]) 을 한 번 더 적용해 모자란 만큼만 미룬다.
         EffectivePeriodCalculator.EffectivePeriod period =
                 calculator.resolve(
                         INVERSE_VOLATILITY,
@@ -113,8 +115,10 @@ class EffectivePeriodCalculatorTest {
                         LocalDate.of(2024, 12, 31),
                         null);
 
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2023, 1, 2));
+        // 계약 commonStart 자체는 그대로 계산해 싣는다 — 003 의 "이 섹터를 빼면 기간이 늘어납니다"
+        // 안내와 007 의 탐색 구간이 이 값을 쓴다. effectiveStart 를 정하는 데만 쓰지 않는다.
         assertThat(period.commonStart()).isEqualTo(LocalDate.of(2023, 9, 28));
-        assertThat(period.effectiveStart()).isEqualTo(period.commonStart());
     }
 
     @Test
@@ -182,8 +186,9 @@ class EffectivePeriodCalculatorTest {
     }
 
     @Test
-    @DisplayName("가장 늦게 상장한 종목이 공통 시작을 정한다")
-    void latestListingDominates() {
+    @DisplayName("가장 늦게 상장한 종목이 commonStart 를 정한다 — 그래도 effectiveStart 는 요청 시작일이다")
+    void latestListingDominatesCommonStartOnly() {
+        // 워밍업이 0인 전략이라 commonStart 는 곧 가장 늦은 상장일(BIO 2023-07-03)이다.
         EffectivePeriodCalculator.EffectivePeriod period =
                 calculator.resolve(
                         FIXED_WEIGHT,
@@ -193,7 +198,7 @@ class EffectivePeriodCalculatorTest {
                         null);
 
         assertThat(period.commonStart()).isEqualTo(LocalDate.of(2023, 7, 3));
-        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2023, 7, 3));
+        assertThat(period.effectiveStart()).isEqualTo(LocalDate.of(2023, 1, 2));
     }
 
     // --- R-15 경계 세 가지 ---------------------------------------------------
@@ -261,10 +266,11 @@ class EffectivePeriodCalculatorTest {
     }
 
     @Test
-    @DisplayName("상장일 이후 워밍업을 채우면 종료일을 넘는 기간은 422다")
-    void warmupBeyondEndIsRejected() {
-        // BIO(2023-07-03 상장) + 관측 63거래일이면 평가는 2023-09-28 부터인데 요청은 8월에 끝난다.
-        // 요청 시작일을 앞당겨도 해결되지 않으므로 메시지가 종료일을 가리켜야 한다.
+    @DisplayName("commonStart 가 요청 종료일을 넘으면 422다 — 요청 구간 안에 평가할 수 있는 날이 없다")
+    void commonStartBeyondEndIsRejected() {
+        // BIO(2023-07-03 상장) + 관측 63거래일이면 이 후보 집합을 평가할 수 있는 첫날이 2023-09-28
+        // 인데 요청은 8월에 끝난다. 밀지 않게 됐어도 이 경계는 남는다 — 보내 봐야 워커가 읽어 온
+        // 달력으로도 워밍업을 못 채워 MarketDataError 로 멈춘다. 접수에서 사유를 말해 주는 편이 낫다.
         assertThatThrownBy(
                         () ->
                                 calculator.resolve(
@@ -274,7 +280,25 @@ class EffectivePeriodCalculatorTest {
                                         LocalDate.of(2023, 8, 31),
                                         null))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("요청 종료일");
+                .hasMessageContaining("요청 종료일")
+                .hasMessageContaining("상장이 늦은 종목을 빼 주세요");
+    }
+
+    @Test
+    @DisplayName("요청 구간에 거래일이 하나도 없으면 422이고, 상장 탓이 아니므로 메시지가 다르다")
+    void aRequestWithoutAnyTradingDayIsRejected() {
+        // 2024-06-01 토요일 ~ 2024-06-02 일요일. 상장일은 2015년이라 commonStart 는 멀쩡하다.
+        assertThatThrownBy(
+                        () ->
+                                calculator.resolve(
+                                        FIXED_WEIGHT,
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 6, 1),
+                                        LocalDate.of(2024, 6, 2),
+                                        null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("요청 시작일")
+                .hasMessageNotContaining("상장이 늦은 종목");
     }
 
     @Test

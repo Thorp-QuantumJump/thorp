@@ -227,7 +227,7 @@
 
 ## Notes
 
-- PD-03·04·06·07 값은 어느 Task에서도 정하지 않는다. 등록표 행·상수 자리만 만든다.
+- PD-06 값은 어느 Task에서도 정하지 않는다(실측 후). PD-03·04·07은 2026-09-17 팀이 확정해 Phase 9가 구현한다.
 - 각 Task 병합 전 AI 코드리뷰(CLAUDE.md 규칙)와 R-16 검증 명령 통과가 필요하다.
 - 기존 DEMO 데이터는 V3에서 폐기 전제다. 보존이 필요하면 T003 리뷰에서 마이그레이션 방식을 바꾼다.
 - analyze H1(임시 실행 한도)은 plan 리뷰 4번을 반영해 장치(T014, Jira -168)와 값(PD-06)을 분리했다. 팀이 값을 주면 prod 설정만 채우고 plan IX 판정을 PASS로 바꾼다. H2(`TARGET_RISK`)는 2026-09-10 PD-18로 확정해 T001·T003·T005·T006·T008에 나눠 넣었다. 목표 변동성 항목(기본 10%, 5~20%, 1%)을 003 파라미터 등록표에 올리는 일은 003 spec 쪽 작업이다.
@@ -268,8 +268,82 @@
 **관찰 (Task로 만들지 않음)**
 
 - **PD-06 값 미확정**(FR-006·SC-007·plan IX 조건부): 장치(T014·T015)와 측정(T012)은 있고 값만 팀 결정 대기다. 코드 작업이 아니라 결정이므로 Task를 만들지 않는다. `v_run_metric_summary`가 근거 자료다
-- **PD-07 미확정으로 `scenario=COST_ESCALATION`은 접수는 되지만 워커가 `INVALID_REQUEST`로 끝낸다**(FR-016 "비용 상승 시나리오"): 비용 프로필에 `escalation` 규칙이 없다(T007 결정). 값이 정해지면 `cost_profile` 행 추가로 끝난다
-- **PD-03·PD-04 미확정 전략**(FR-024·FR-025·US2/AC4~6·SC-008)은 spec대로 `422 RULES_NOT_REGISTERED`다. 확정 뒤 `allocation/momentum.py`·`min_variance.py`는 이 tasks.md 범위 밖(Implementation Strategy 4)
+- (2026-09-17 갱신: 기본 비용은 PD-07로 확정 → T021. `escalation`은 여전히 미확정) **PD-07 미확정으로 `scenario=COST_ESCALATION`은 접수는 되지만 워커가 `INVALID_REQUEST`로 끝낸다**(FR-016 "비용 상승 시나리오"): 비용 프로필에 `escalation` 규칙이 없다(T007 결정). 값이 정해지면 `cost_profile` 행 추가로 끝난다
+- (2026-09-17 갱신: 둘 다 확정 → Phase 9 T022·T023) **PD-03·PD-04 미확정 전략**(FR-024·FR-025·US2/AC4~6·SC-008)은 spec대로 `422 RULES_NOT_REGISTERED`다. 확정 뒤 `allocation/momentum.py`·`min_variance.py`는 이 tasks.md 범위 밖(Implementation Strategy 4)
 - **007 `POST /param-searches/{id}/cancel`·`/retry-failed`에 소유권 검증이 없다**(T017 리뷰 지적, 2026-09-16): 두 엔드포인트는 `searchId`만 받고 `CurrentRequester`를 부르지 않아 로그인하지 않은 사용자도 남의 탐색을 취소·재시도할 수 있다. `searchId`는 날짜+순번이라 추측 가능하다. **T017이 만든 결함이 아니다** — 헤더 시절에도 같았고, T017은 같은 컨트롤러의 `preview`·`create`만 건드렸다. 고치는 방법은 작다(`ParamSearch.ownerUserId`가 이미 있으니 잠근 뒤 요청자와 비교, 불일치는 404). **리뷰 판단으로 이 MR에서 함께 닫았다**(2026-09-16): 새 요구사항 추가가 아니라 param-search API README 가 처음부터 적어 둔 계약에 구현을 맞추는 일이고, 고치는 범위가 작아 별도 티켓으로 떼면 전달·재현·재리뷰 비용이 더 크다. `ParamSearch.ownedBy(userId)` 로 잠근 객체를 판정하고 불일치·소유자 없음은 404. 007 담당자(문성웅)에게는 MR 로 알린다
 - **007 후보가 워커 파라미터 계약을 위반해 전부 DLQ**(검증 기록 발견 2): `allocation.parameters`가 `{"lookbackDays": N}`이고 004 계약은 `{"rebalance": …}`뿐이다. 003/007 등록표와 004 규칙 모델의 정합 문제라 007 담당자에게 전달했고 결정은 그쪽이 한다. 004 쪽 변경이 결정되면 그때 Task로
 - `peakRssMb`는 Linux(`/proc/self/statm`)에서만 채워진다. 운영은 Linux 컨테이너라 가짜 값으로 채우지 않는다(원칙 VI)
+
+## Phase 9: Decision Follow-ups (PD-03·04·07 확정, 2026-09-17)
+
+**2026-09-17 팀 확정.** PD-03(섹터 모멘텀)·PD-04(최소분산)·PD-07 ㉮(기본 비용 숫자)를 확정했고 규칙 전문은 spec.md Pre-Implementation Decisions 표에 있다.
+
+**범위 결정(2026-09-17, 발표용 MVP)**: 이 Phase는 **계산 의미와 화면 실행**만 지킨다. 다른 OS·CPU·이미지에서의 바이트 단위 재현, 과거 규칙 버전의 재실행, 의존성·이미지 버전 추적, 규칙 버전 수명주기(`/2`·`SUPERSEDED`)는 **Phase 10(발표 후)**으로 뺀다. 전제는 "보존해야 할 실제 백테스트 결과가 없다"이다 — 규칙 `INVERSE_VOLATILITY/1`을 제자리에서 갱신하므로 배포 전에 `SELECT COUNT(*) FROM backtest_run;`이 **0**인지 확인한다 — 0이면 과거 결과가 재해석될 일이 없다. **dev DB에 남아 있는 실행은 팀원이 테스트하며 만든 것이라 보존할 의미가 없다**(검증 기록의 COMPLETED 13건 등). 그래도 사람의 확인에만 맡기지 않는다 — T022 마이그레이션이 `INVERSE_VOLATILITY/1`을 참조하는 `backtest_run`이 있으면 예외를 던져 기동을 막고, 그때 결과 표를 비운 뒤 다시 배포한다(analyze C1). 재현 키에 `rulesVersion`이 들어가므로 행이 하나라도 남으면 새 의미의 요청이 옛 의미의 결과를 `REUSED`로 받는다. 보존해야 할 실제 결과가 생긴 환경에는 이 변경을 적용하지 않고 Phase 10의 규칙 버전 수명주기(T029)를 먼저 적용한다. 001의 시세·기업행위 표는 무관하며 건드리지 않는다. 이 Phase는 그 결정이 만든 구현 Task다. Implementation Strategy 4가 "범위 밖"으로 둔 `allocation/momentum.py`·`min_variance.py`가 여기서 범위 안으로 들어온다. PD-06은 여전히 T016과 운영 유사 실측 뒤에 정한다.
+
+- [x] T020 [DOCS] PD-03·04·07 확정을 specs/README·004 spec·plan·data-model·ADR-0004에 반영하고 이 Phase를 tasks.md에 추가한다 — Jira `S15P21E205-324`
+- [ ] T021 [BE] 비용 프로필 확정 행을 추가하고 기본 버전을 교체한다 per PD-07·FR-019·data-model `cost_profile` — 선행 T025·T026(화면이 명시 버전을 보내고 있어야 한다)
+  - 마이그레이션 한 파일: `cost_profile`에 `KR-ETF-2026-09 (1.5, 3, 5, 0, null, false, 'PD-07 확정 2026-09-17')` INSERT. `PROVISIONAL-DEMO-1` 행은 고치지 않는다(과거 결과 재해석 금지). 번호는 dev 최고 번호보다 크게 하고 커밋 뒤 `check-migration-version.sh`로 확인
+  - `application.yml` `default-cost-profile: KR-ETF-2026-09`. 결과의 `versions.costProfile.provisional`이 false가 된다
+  - 계약 문서(API·메시징 README)·픽스처(`generate_fixtures.py` 재생성)·테스트의 비용 기댓값 갱신. 데모 행을 명시적으로 가리키는 테스트는 그대로 두고 기본 버전을 쓰는 테스트만 바뀐다
+  - 완료 기준: 기본 요청의 결과 `costs`가 매수 9.5bps·매도 9.5bps 비율로 나오고 `provisional=false`, 기존 데모 버전을 명시한 요청은 예전 값 그대로
+  - 범위 밖: `escalation`(`COST_ESCALATION`) — 계약·조립기·워커 계산·지원 목록을 모두 손봐야 하는 별도 Task 후보
+- [ ] T022 [BE] 최소분산 계산 모듈과 배분 비중 공통 출력 규칙·상한 잔여 정책을 넣는다 per PD-04·FR-025·FR-026·US2/AC5·AC6·SC-008 — T023보다 먼저(공통 함수를 T023이 쓴다). **발표용 범위(lite)** — 실행환경 잠금·버전 기록·규칙 수명주기는 Phase 10
+  - 의존성: `scipy`를 **정확한 버전**으로 `worker/pyproject.toml`과 지금 Docker가 쓰는 `worker/requirements.txt` **둘 다**에 추가(`nautilus_trader==1.219.0`과 같은 방식)하고 `uv.lock` 갱신. Docker/uv 전환·기반 이미지 digest·의존성 fingerprint는 하지 않는다(Phase 10)
+  - **접수 관문 코드 교체**: `BacktestService`의 `weightCap × 종목 수 < investedFraction` 검사가 지금 `INVALID_INPUT`(400)을 던진다. 결정은 422이므로 003의 `VALIDATION_RULE_VIOLATED`로 옮긴다(새 코드 없음). API README §3 오류표에 `422 VALIDATION_RULE_VIOLATED` 행 추가, §1 요약(:83) 갱신, v1 필드명 `maxPositionPct` 삭제
+  - **유효 상한의 출처(analyze U1)**: 지금 접수 검사는 규칙표 `weightCap`(역변동성 `/1`은 1.0000)만 읽고, 사용자가 003에서 고르는 `maxWeight`(기본 40%)는 메시지 계약에 자리가 없어 접수·워커 어디에도 닿지 않는다 — 그대로면 "topN 2·상한 40 → 422"가 재현 불가(1.0×2 ≥ 1.0)다. 규칙: **유효 상한 = 요청 `allocation.parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표 `weightCap`**(data-model 검증 규칙·spec PD-04 ④에 명시). 이 Task에서 계약 v2 `parameters`에 `maxWeight`(정수 %, 세 전략 공통)를 싣고 `EngineInputAssembler`·접수 관문·워커 `base.apply_cap`·세 배분 모듈이 같은 유효 상한을 읽게 한다. 단위는 003 축이 %, 규칙표·워커가 소수임을 변환 한 곳(`EngineInputAssembler`)에서 처리
+  - `allocation/base.py` 공통 함수 둘: ① **고정 단위 출력** — 종목코드 정렬 → 0.000001 단위 내림 → 잔여 단위를 소수부 큰 순(동률 종목코드 순, 상한 종목 제외)으로 배분 → 합·비음수·상한 재검증(실패면 `AllocationError`) → Decimal. 목표 합계는 상한 적용 뒤의 비중 합이라 현금 잔여를 채우지 않는다 ② **`apply_cap` 정책 변경** — `cap × n < invested`를 `CONSTRAINT_VIOLATION`으로 끊지 않고 반복 재분배 뒤 남는 비중을 현금으로 돌려 준다(연관 결정). `inverse_vol.py`의 후속 재정규화 줄은 상한을 다시 깨므로 제거. 세 전략(역변동성·모멘텀·최소분산)이 모두 ①②를 거친다
+  - `allocation/min_variance.py`: `SAMPLE_COV`(`adjusted_close` 일별 단순수익률, ddof=1, `lookbackDays`) → 행렬 검사(유한값 아니면 실패; `max abs(Σ−Σᵀ) ≤ 1e-12`면 `(Σ+Σᵀ)/2` 대칭화, 넘으면 실패; λmin < −1e-10 실패, [−1e-10, 0)은 `eigh`로 고유분해해 음의 고유값을 모두 0으로 자르고 `Q·diag(λ)·Qᵀ`로 행렬을 재구성) → **유효 투자 목표** `min(investedFraction, weightCap × 계산 가능 종목 수)`를 최적화 전에 고정 → SciPy `SLSQP`(목적 wᵀΣw, 기울기 2Σw, 제약 합=유효 투자 목표·0≤w≤`weightCap`, 초기값 `유효 투자 목표/n`(예: 목표 80%·2종목이면 0.4/0.4 — 처음부터 합계·상한 제약을 만족), 종목코드 오름차순, `maxiter=1000`·`ftol=1e-9`) → 사후 검증(`success=False`면 보정 없이 실패; 유한값; `[−1e-8, 0)`→0·`(cap, cap+1e-8]`→cap 보정, 그 밖은 실패; 합 차이 ≤ 1e-8) → ① 고정 단위 출력(여기서는 정확 일치). 실패는 `AllocationError`(실행 전체 계산 실패, 그 달 건너뜀 없음). 이력 부족 종목은 `INSUFFICIENT_HISTORY` 제외 후 자동 편입; 계산 가능 0개 → 유효 목표 0%·현금 100%, 1개 → 최적화 없이 `min(investedFraction, weightCap)`을 그 종목에 두고 "자료 부족 예외의 단일 종목 배분"으로 기록, 2개 이상 → 최적화. 결과에 원래 투자 비중·계산 가능 종목 수·유효 투자 목표·현금 비중·목표가 줄어든 사유를 기록. 거래정지일은 수익률 0으로 포함
+  - 규칙표(마이그레이션 하나, 번호는 dev 최고 번호보다 크게): ⓐ 기존 `MINIMUM_VARIANCE/1` PENDING_DECISION 행을 REGISTERED provisional=false로 바꾸고 spec(추정 방법·솔버 설정·행렬 검사와 사후 검증 허용오차·`weightCap`·`investedFraction`·출력 단위)을 채운다 ⓑ **`INVERSE_VOLATILITY/1`은 제자리에서 갱신**한다 — spec에 `capOverflow: CASH`·`weightUnit: 0.000001`을 더한다. 새 버전을 만들지 않는 근거: research R-08이 이 행을 `provisional=true`로 등록하며 "PD-02가 확정되면 그 값으로 행을 갱신한다"고 처음부터 계획했고, 보존할 결과가 없다(Phase 9 범위 결정). provisional은 PD-02가 아직 미확정이라 true 그대로. `decision_ref`에 "PD-03 ⑥·PD-04 공통 출력(2026-09-17)"을 병기한다(analyze C2). **마이그레이션 첫 문장은 가드다(analyze C1)**: `DO $$ BEGIN IF EXISTS (SELECT 1 FROM backtest_run WHERE strategy_id = 'INVERSE_VOLATILITY' AND rules_version = '1') THEN RAISE EXCEPTION 'INVERSE_VOLATILITY/1 결과가 남아 있다 — 결과 표를 비우거나 Phase 10 T029를 먼저 적용'; END IF; END $$;` — "결과 없음" 전제를 코드가 강제한다. 새로 채우는 두 행과 갱신하는 `/1`의 `weightCap`·`investedFraction`은 모두 `1.0000`(사용자 `maxWeight`가 우선이라 규칙표 값은 기본값 역할). `EngineInputAssembler`가 싣는다. 접수 관문 검사(위에서 422로 옮긴 것)가 최소분산에도 요청의 투자 대상 섹터 수 기준으로 적용됨을 테스트로 고정
+  - 재현 기준: 역변동성 골든 결과(`worker/tests/conftest.py` 픽스처·`docs/specs/backtest-messaging/examples` 예시)는 상한 잔여·소수점 6자리 때문에 값이 바뀌므로 **재생성한다**. 옛 골든은 보존하지 않는다(보존할 결과가 없다는 전제). MR 본문에 차이 폭을 적는다. SC-003 수기 대조 픽스처(`manual_reconciliation.json`, T008)는 수기 계산이라 재생성 대상이 아니다 — 대표 거래일 수량이 바뀌는지 확인하고 바뀌면 손으로 다시 도출해 MR에 근거를 적는다(analyze U5). 검증 기록 `docs/guides/backtest-execution-verification-2026-09.md` S1의 `totalReturn`은 `/1` 옛 의미 값이라 "의미 변경 이전 값" 각주 한 줄(analyze I14)
+  - **예외·실패 코드(analyze U4)**: 결과 `exceptions[].kind`에 새 코드를 정한다 — `INSUFFICIENT_HISTORY`(기존), `CAP_OVERFLOW_CASH`(상한 잔여 현금), `EFFECTIVE_TARGET_REDUCED`(유효 투자 목표 축소, 원래 비중·계산 가능 수·유효 목표·현금 비중), `SINGLE_ASSET_FALLBACK`(1개 종목 배분). 최소분산의 행렬 검사·SLSQP 실패는 FINISHED `failure.code = ESTIMATION_FAILED`(새 코드)로 실행 전체 실패. `contracts/rest-api.md`·`contracts/messaging.md`·`docs/specs/backtest-messaging/README.md`에 코드 목록 추가. quickstart S7·Phase 4 Independent Test의 "두 전략은 422" 문구를 실행 시나리오로 개정(analyze I8)
+  - 완료 기준: 최소분산 요청이 422 아닌 COMPLETED, `weightsSource=COMPUTED`(FR-026) 단언, AC5(비음수·상한·합) 단언, 마이그레이션 가드가 `/1` 참조 실행이 있는 DB에서 기동을 막는 테스트, `parameters.maxWeight=40`·유니버스 2개 요청이 422·`maxWeight` 없는 요청은 규칙표 `weightCap` 사용, 인위적 특이 공분산 픽스처에서 계산 실패 코드, 상한 40%·계산 가능 2개 픽스처에서 유효 목표 80%·현금 20% 기록, **같은 개발 환경에서** 같은 입력 두 번 실행 결과 해시 동일, `requirements.txt`와 `pyproject.toml`의 scipy 버전 일치, 워커 `pytest` 전부 통과
+- [ ] T023 [BE] 섹터 모멘텀 계산 모듈과 접수 관문 확장을 넣는다 per PD-03·FR-024·FR-026·US2/AC4·AC6 — 선행 T022(공통 함수), 역변동성 배분 선택지는 T024 머지 뒤 사용 가능
+  - `allocation/momentum.py`: 점수 `P(t-S)/P(t-S-L)-1`(`adjusted_close`, 공통 거래일 순서) → `selectionMode` 하나만 적용(`TOP_N`·`TOP_PERCENT` 상대, `THRESHOLD` 절대, `ALL` 선별 없음; 유형을 결과에 기록, `ALL`은 `선별 없음`) → 동점은 대표 ETF 종목코드 오름차순으로 잘라 개수 유지(`THRESHOLD`·`ALL`은 동점 모두 포함) → `TOP_PERCENT` 개수 = ceil(계산 가능 후보 × p/100), 후보 ≥1이면 최소 1 → 조건 통과 없음이면 전액 현금(이력 부족·계산 오류와 사유 구분) → 배분 `EQUAL` 또는 역변동성(모멘텀 `lookbackDays`만, S 미적용, 0 변동성은 `EXCLUDE_THEN_ALLOCATE`, 전부 0이면 실패) → T022 ②① 상한·고정 단위. 이력 부족 기준은 **`L+S+1`**(독립 역변동성의 `L+1`과 다름), 부족 섹터는 제외·예외 기록·자동 편입, 전부 부족이면 현금 100% 정상 진행(③과 다른 사유 코드)
+  - 규칙표: 기존 `SECTOR_MOMENTUM/1` PENDING_DECISION 행을 마이그레이션으로 REGISTERED provisional=false로 바꾸고 spec(점수 산식·가격 필드·동점·올림·선정 없음·이력 부족·상한 잔여·역변동성 배분 규칙·`weightCap`·`investedFraction`)을 채운다(T022의 최소분산 행과 같은 방식). 003 축(`lookbackDays`·`skipRecentDays`·`selectionMode`·`topN`·`threshold`·`topPercent`·`allocationMethod`·`maxWeight`)은 `allocation.parameters`로 실린다 — 007 후보가 계약을 위반해 DLQ로 가는 기존 관찰(위)과 같은 자리라 계약 v2 parameters 절을 함께 넓힌다
+  - 접수 관문 확장(`BacktestService`): T022가 422 `VALIDATION_RULE_VIOLATED`로 옮긴 `상한 × 종목 수 < investedFraction` 검사의 종목 수를 요청의 투자 대상 섹터 수 N(`items.size()`, 사용자가 고른 섹터 수이며 8이 아니다) 기준으로 `TOP_N`=topN, `TOP_PERCENT`=ceil(N×p/100), `ALL`=N으로 계산한다(`THRESHOLD`는 검사 불가). 섹터 2·3·8개 경계 테스트를 둔다. 실행 중 이력 부족으로 줄어든 경우는 현금 잔여, 자료 손상·계산 실패는 실행 실패로 세 갈래를 유지. 이 판정은 007 자동 탐색 조합 생성과 **같은 함수**를 쓰게 두고, 003 탐색 후보(topN 2·3·4 × 상한 30·40·50) 중 걸리는 셋(2·30, 2·40, 3·30)을 007이 건너뛰는지 007 담당자와 확인
+  - 결과 기록: 선정 유형, 시점별 선정 섹터·점수, 이력 부족으로 제외된 섹터와 첫 편입 시점, 상한 잔여 현금 비중과 사유(PD-03 ⑤·⑥ 안내 항목). 안내 문구는 "계산에 필요한 과거 가격 이력이 충분하지 않았다"
+  - 예외 `kind`(analyze U4): `NO_SELECTION`(조건 통과 섹터 없음 → 전액 현금), `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`, 선정 유형 기록(`RELATIVE`·`ABSOLUTE`·`NONE`). T022가 넓힌 계약 목록에 추가
+  - 완료 기준: 네 `selectionMode` × 두 배분 조합이 422 아닌 COMPLETED, `weightsSource=COMPUTED`(FR-026) 단언, 동점·`TOP_PERCENT` 올림·전액 현금·이력 부족 편입 각 단위 테스트, `parameters.maxWeight=40`·topN 2 접수 422, 같은 입력 결과 해시 동일, quickstart S7 개정 반영
+- [ ] T024 [BE] [교차 spec: 003 소유] (발표 전 필수) 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수
+  - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨("변동성이 낮은 섹터에 더 나누기") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음
+  - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인
+  - **화면 판정 규칙 추가(analyze I6)**: 003 등록표의 검증 규칙은 `SECTOR_MOMENTUM`에 `TOP_N_EXCEEDS_UNIVERSE`만 있고 다른 전략은 `maxWeight × UNIVERSE_SIZE < 100`을 쓴다. 그대로면 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다. `SECTOR_MOMENTUM`에 `maxWeight × topN < 100`(`appliesWhen selectionMode=TOP_N`)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent/100) < 100`(`TOP_PERCENT`) 규칙을 같은 버전 인상에 넣어 화면·접수·007 판정을 맞춘다
+  - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, topN 2·상한 40이 화면에서 규칙 위반으로 표시, 계약 테스트 통과
+
+- [ ] T025 [BE] 003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 읽는 `GET /backtests/registry`를 연다 per 003 FR-010·004 FR-028·README §1 "rulesVersion 필수" — Jira `S15P21E205-326`
+  - 배경(2026-09-17): 003 화면(T039 `fetchAnalysisVersions()`)이 `strategy.rulesVersion`(필수)을 읽을 HTTP 경로가 없다. 003 등록표 응답에 싣는 안은 backend/CLAUDE.md "strategy는 backtest를 참조하지 않는다"와 충돌하고, `rulesVersion`을 선택으로 바꾸는 안은 "결과 재현의 기준" 선언과 어긋나며 FR-010이 요구하는 비용 수치·임시 여부 표시도 못 채운다. 004가 조회 API를 여는 것이 유일하게 규칙을 안 깨는 길이다
+  - 응답: `{ strategyRules: [{ strategyId, rulesVersion, status, provisional }], defaultCostProfile: { version, provisional, commissionBps, spreadBps, slippageBps, taxBps } }`. `strategyRules`는 **전략당 한 행**(REGISTERED 또는 PENDING_DECISION — PENDING은 화면이 "분석하기"를 막을 수 있게 status 그대로 포함). 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체와 옛 버전 요청 처리는 Phase 10. `TARGET_RISK_OVERLAY`는 시나리오 규칙이지만 같은 표라 그대로 나간다 — 화면은 strategyId로 조인만 한다. 비용 수치는 다른 응답과 같이 문자열 decimal
+  - 기존 것만 붙인다: `StrategyRulesService.findAll()`·`CostProfileService.resolve(null)`. 컨트롤러 메서드 하나·응답 record 하나·IT 하나. 로그인 불필요(등록표 조회는 사용자 데이터가 아니고 003 등록표 조회와 같은 성격). `GET /backtests/{backtestId}`와 겹치지 않는다(Spring은 리터럴 경로를 패턴보다 먼저 고른다)
+  - 003에 요청할 것: `costProfileVersion`을 비우지 말고 registry에서 받은 `defaultCostProfile.version`을 **명시해서** 보낸다. T021이 기본값을 바꾸면 화면이 본 조건과 적용 조건이 어긋나는 창이 생기기 때문이고, 재현 기준을 요청에 다 싣는 rulesVersion 원칙과 같다
+  - 완료 기준: IT가 시드 여섯 행 중 REGISTERED 넷과 `PROVISIONAL-DEMO-1` 기본 비용을 단언, API README §1.11과 `specs/004-backtest-execution/contracts/rest-api.md`에 `GET /backtests/registry` 절 추가(analyze I3), 003 담당자에게 경로·응답 확정 통보
+  - 순서: **T021보다 먼저** 머지한다. 기본 비용이 바뀌기 전에 화면이 명시 버전을 보내고 있어야 한다
+
+- [ ] T026 [FE] [교차 spec: 003 소유] 003 화면이 `GET /backtests/registry`를 소비한다 per 003 FR-010·T039·T059 — 003 담당자 소유, 004는 T025 머지 뒤 통보하고 **T021의 선행 조건**으로 둔다
+  - 지금 003 쪽은 `AnalysisVersions.rulesVersion` 단일 값을 기대하고 `fetchAnalysisVersions()`는 아직 null이며, 409 처리(T059)는 003 파라미터 등록표만 다시 조회한다. registry는 전략별 배열을 주므로 연결 작업이 반드시 있다: ① 선택한 `strategyId`의 REGISTERED 행에서 `rulesVersion`을 고르고 PENDING이면 '분석하기'를 막는다 ② `costProfileVersion`을 비우지 않고 `defaultCostProfile.version`을 명시해 보낸다 ③ `409 REGISTRY_VERSION_CHANGED`(003 등록표가 바뀐 경우, 기존 의미 그대로)를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다 ④ 화면의 "비용 조건이 임시값입니다" 표시는 `defaultCostProfile.provisional`로 판단
+  - 003 T039·T059 본문에 위 네 가지를 반영하는 것은 003 담당자가 한다. 004는 이 항목으로 순서만 고정한다 — "통보"만으로는 배포 순서가 보장되지 않아 T021이 기본 비용을 바꾸는 순간 화면이 본 조건과 적용 조건이 어긋난다
+  - 완료 기준: 003 화면에서 '분석하기'가 registry의 버전을 실어 202를 받고, 임시 비용 문구가 registry 값으로 켜진다
+
+### Phase 9 순서 (발표 전)
+
+1. T025 — 규칙·비용 조회 API
+2. T026 — 003 화면 연결과 버전 명시 전송(다른 담당자)
+3. T022 — 최소분산과 공통 현금 정책(lite)
+4. T023 — 섹터 모멘텀
+5. T024 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다
+6. T021 — 시간이 남으면. 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 "임시 비용 조건"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다
+
+발표 전 목표: 다섯 전략이 화면에서 실행된다 · 모멘텀과 최소분산이 정상 결과를 낸다 · 이력 부족·상한 잔여 현금·잘못된 설정을 올바르게 처리한다 · 같은 개발 환경에서 같은 입력은 같은 결과가 나온다. T023의 `EQUAL` 배분은 T024 없이 동작하지만 사용자가 역변동성 배분을 고르려면 T024가 머지돼야 한다. T016은 여전히 001 T030(`-203`) 대기이고 이 Phase와 독립이다.
+
+## Phase 10: 발표 후 — 재현성·규칙 버전 수명주기 (2026-09-17 범위 결정으로 이관)
+
+Phase 9에서 뺀 것이다. 정확성이 아니라 **다른 환경·다른 시점과의 재현**을 위한 작업이며, 결정 내용은 spec PD-04 표의 "발표 후" 문구에 남아 있다(팀 결정 기록 원본은 저장소 밖 결정 문서). 착수 조건: 보존해야 할 실제 결과가 생기기 전에 규칙 버전 수명주기(아래 ③)를 먼저 넣는다.
+
+- [ ] T027 [INFRA] 워커 실행환경 잠금 — Docker가 `pyproject.toml`·`uv.lock`을 복사해 `uv sync --frozen --no-dev`로 설치하고 그 가상환경으로 실행, `worker/requirements.txt` 삭제, 기반 이미지 `python:3.11-slim`을 digest로 고정. 완료 기준: `uv sync --frozen` 성공·`uv pip check` 통과·컨테이너 안 numpy·scipy·nautilus_trader 버전이 lock과 일치
+- [ ] T028 [BE] 의존성 버전 기록 — 결과 `versions.dependencies{numpy, scipy}`(메시징 계약 §4 선택 필드, 워커 `contracts/engine_output.py Versions`·백엔드 `EngineOutput.Versions`·data-model `backtest_run.versions`·픽스처 함께), 재현 키 쪽은 `thorp.backtest.engine-version` 설정 문자열에 워커 이미지 digest 또는 `uv.lock` fingerprint를 포함(재현 키는 워커 실행 전에 만들어져 결과 값을 쓸 수 없다). 실제 numpy·scipy 버전은 **`backtest_result.versions`에 기록한다** — `backtest_run.versions`는 실행 전 계획 정보라 실제 워커 환경을 알 수 없다. 상세 조회에서 둘을 어떻게 합쳐 보일지 함께 정한다
+- [ ] T029 [BE] 규칙 버전 수명주기 — 규칙이 바뀌면 새 버전 행(`/2`)을 더하고 옛 행은 `SUPERSEDED`(CHECK 제약 확장). 검사를 둘로: 신규 접수 `requireCurrent`(REGISTERED만, PENDING 422, SUPERSEDED `409 REGISTRY_VERSION_CHANGED` — 화면은 두 등록표를 다시 받는다) / 저장된 실행의 조립·재발행·실패·취소 재시도 `requireExecutable`(SUPERSEDED 통과, README §1.6 동일 버전 재시도 계약). 과거 버전 재실행에는 전략 규칙뿐 아니라 **003의 과거 `registryVersion` 검증도 포함**한다 — 재시도가 신규 접수용 등록표 검증(`StrategySettingsValidator`)에 걸려 거절되지 않도록 같은 방식으로 검사를 분리한다. 워커는 `capOverflow`·`weightUnit` 규칙 키로 분기하고 버전별 골든을 나란히 둔다. registry 조회는 SUPERSEDED를 뺀다
+- [ ] T030 [BE] 환경 간 재현 검증 — 다른 OS·CPU·이미지에서 같은 입력의 결과 해시 비교, 의존성·이미지 변경 시 골든 재생성 정책을 worker/CLAUDE.md에
+
+**후속 후보 (Task로 만들지 않음)**
+
+- **사용자가 고르는 현금 비중 축**: "항상 현금 X%"는 상한 우회가 아니라 별도 축으로 받는다. 규칙표 `investedFraction`과 워커 정규화·상한 함수가 이미 이 값을 쓰므로 계산 로직은 없고, 003 축 추가(예: 0~50%, 5% 간격, 기본 0)와 백엔드→워커 전달 배관만 필요하다. 첫 출시 범위 판단 뒤 Task로
+- **PD-07 ㉯ 비용 상승 시나리오(`COST_ESCALATION`)**: 위 관찰 그대로. 계약·조립기·워커 계산·지원 목록·테스트를 모두 손보는 별도 Task

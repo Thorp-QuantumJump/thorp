@@ -20,9 +20,9 @@ const ParamSearchPage = lazy(() =>
   })),
 )
 
-const HomePage = lazy(() =>
-  import('@/pages/HomePage').then((module) => ({
-    default: module.HomePage,
+const MarketFlowPage = lazy(() =>
+  import('@/pages/MarketFlowPage').then((module) => ({
+    default: module.MarketFlowPage,
   })),
 )
 
@@ -50,10 +50,16 @@ const MyRecordsEntryPage = lazy(() =>
   })),
 )
 
-// 아직 만들지 않은 메뉴를 정상 화면으로 받는다.
-const NotReadyPage = lazy(() =>
-  import('@/pages/NotReadyPage').then((module) => ({
-    default: module.NotReadyPage,
+// 013 배우기. 글의 예시는 002 `/diagnosis/sectors`로 넘어간다.
+const LearningListPage = lazy(() =>
+  import('@/pages/LearningListPage').then((module) => ({
+    default: module.LearningListPage,
+  })),
+)
+
+const LearningArticlePage = lazy(() =>
+  import('@/pages/LearningArticlePage').then((module) => ({
+    default: module.LearningArticlePage,
   })),
 )
 
@@ -70,6 +76,13 @@ const SectorSelectionPage = lazy(() =>
 const StrategySettingsPage = lazy(() =>
   import('@/pages/StrategySettingsPage').then((module) => ({
     default: module.StrategySettingsPage,
+  })),
+)
+
+// 결과 화면(spec 005)이다. 공개 토큰만 있으면 로그인 없이 연다.
+const ResultPage = lazy(() =>
+  import('@/pages/ResultPage').then((module) => ({
+    default: module.ResultPage,
   })),
 )
 
@@ -94,16 +107,20 @@ function AnimatedRoutes() {
         <Suspense fallback={<div role="status" aria-label="페이지를 불러오는 중" />}>
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/home" element={<HomePage />} />
+            <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />
-            {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}
-            <Route path="/learn" element={<NotReadyPage />} />
+            {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}
+            <Route path="/learn" element={<LearningListPage />} />
+            <Route path="/learn/:articleId" element={<LearningArticlePage />} />
             {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
             <Route path="/strategy" element={<StrategySettingsPage />} />
+            {/* 결과 주소는 받은 사람 누구나 연다. 보호 경로 밖에 둔다(005 FR-019). */}
+            <Route path="/results/:token" element={<ResultPage />} />
             <Route
               path="/records/*"
               element={

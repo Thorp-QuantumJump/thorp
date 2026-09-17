@@ -34,7 +34,7 @@
     ]
   },
   "marketData": {
-    "datasetId": "KRX_DAILY_V1",
+    "datasetId": "FIXTURE-three_etf_24m",
     "dataVersion": "KRX-2026-09-09",
     "interval": "1D",
     "adjustment": "SPLIT_ADJUSTED",

@@ -95,22 +95,22 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 저장된 상태가 없는 새 탭으로 `/`에 들어가 메뉴 넷이 모두 보이고 행동 버튼이 하나인지 확인한다. 배우기를 열면 준비 중 한 문장이 보이고 행동 버튼이 없다.
 
-- [ ] T001 [M1] [P] [US4] [FE] 아직 줄 것이 없는 상태의 공용 표시 컴포넌트 (`frontend/src/components/common/NotReadyNotice.tsx`, `frontend/src/components/common/NotReadyNotice.test.tsx`) · Jira 미발급
+- [X] T001 [M1] [P] [US4] [FE] 아직 줄 것이 없는 상태의 공용 표시 컴포넌트 (`frontend/src/components/common/NotReadyNotice.tsx`, `frontend/src/components/common/NotReadyNotice.test.tsx`) · Jira 미발급
   - 받는 것은 **한 문장과 선택적인 행동 하나**뿐이다. 행동을 주지 않으면 버튼을 그리지 않는다 (research.md 결정 6)
   - 이 컴포넌트 하나를 '아직 만들지 않은 메뉴'와 `409 SECTOR_MAP_NOT_READY`와 네트워크 실패가 함께 쓴다. 표시를 한 곳에 모아야 SC-008이 두 경우를 같은 기준으로 셀 수 있다
   - 오류 경계(Error Boundary)나 빈 화면으로 떨어지지 않는다. 렌더링 분기는 예외가 아니라 상태 값이다
   - 테스트: 행동을 주지 않으면 버튼 개수가 0, 주면 1. 문장이 언제나 하나 보인다
-- [ ] T002 [M1] [US4] [FE] 아직 만들지 않은 메뉴의 정상 화면 (`frontend/src/pages/NotReadyPage.tsx`, `frontend/src/pages/NotReadyPage.module.css`) · Jira 미발급
+- [X] T002 [M1] [US4] [FE] 아직 만들지 않은 메뉴의 정상 화면 (`frontend/src/pages/NotReadyPage.tsx`, `frontend/src/pages/NotReadyPage.module.css`) · Jira 미발급
   - T001을 써서 한 문장만 보이고 행동 버튼은 두지 않는다. 다시 눌러도 바뀌지 않는 상태이기 때문이다 (research.md 결정 6)
   - 첫 화면으로 돌아가는 길은 기존 내비게이션이 준다. 이 화면이 행동 버튼을 새로 만들지 않는다 (원칙 II)
-- [ ] T003 [M1] [P] [US4] [FE] 첫 화면 개편 (`frontend/src/pages/LandingPage.tsx`, `frontend/src/pages/LandingPage.module.css`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급
+- [X] T003 [M1] [P] [US4] [FE] 첫 화면 개편 (`frontend/src/pages/LandingPage.tsx`, `frontend/src/pages/LandingPage.module.css`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급
   - 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와 보조 메뉴 '내 기록'을 **모두** 보인다. 아직 화면이 없는 메뉴도 숨기지 않는다 (FR-001, SC-008)
   - 가장 중요한 행동 버튼을 '비중 비교하기' 하나로 줄인다. 지금 화면에 다른 행동 유도가 있으면 걷어낸다 (원칙 II, research.md 결정 5)
   - 설문·숙련도 분류·사전 학습 수강을 요구하는 단계를 두지 않는다 (FR-002)
   - 메뉴 목적지는 이미 화면이 있으면 그 경로로 잇는다. 시장 흐름은 `/home`, 내 기록은 `/records`, 배우기는 `/learn`이다. 최종 목적지 확정은 각 소유 spec의 몫이므로 여기서 정리하지 않는다 (research.md 결정 5)
   - `/`를 옮기지 않는다. 기존 `path="*"` 규칙이 모두 `/`로 보내고 있어 자리를 옮기면 그 규칙까지 흔들린다
   - 테스트: 메뉴 링크 네 개가 모두 있고, 가장 중요한 행동 버튼이 하나이며, 그 버튼이 `/diagnosis/sectors`로 간다
-- [ ] T004 [M1] [US4] [FE] 라우트 추가 (`frontend/src/App.tsx`) · Jira 미발급
+- [X] T004 [M1] [US4] [FE] 라우트 추가 (`frontend/src/App.tsx`) · Jira 미발급
   - `/learn`을 T002의 준비 중 화면에 잇는다
   - `/diagnosis/sectors`도 **잠시** 같은 준비 중 화면에 잇는다. M2가 실제 화면으로 바꾼다. 이 연결이 없으면 '비중 비교하기'가 `path="*"` 규칙에 걸려 첫 화면으로 되돌아오고, FR-001이 요구한 "정상 화면으로 처리한다"를 M1 혼자서는 만족하지 못한다
   - 기존 경로(`/home`·`/dashboard`·`/backtest`·`/param-search`·`/records/*`·`/login`·`/signup`)를 **지우지 않는다.** 각각 003·006·007·009가 소유할 자리다 (research.md 결정 5)
@@ -126,7 +126,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: `/diagnosis/sectors`에 들어가 섹터 목록이 표시 순서대로 보이는지, 응답의 `isSample`이 true일 때만 예시 표시가 붙는지, 409와 네트워크 실패에서 빈 목록이나 오류 화면이 아니라 한 문장 안내와 다시 불러오기 하나가 보이는지 확인한다.
 
-- [ ] T005 [M2] [FE] 테스트 수집 경로 확장과 수집 가드 (`frontend/vite.config.ts`, `frontend/src/diagnosis/testCollection.guard.test.tsx`) · Jira 미발급
+- [X] T005 [M2] [FE] 테스트 수집 경로 확장과 수집 가드 (`frontend/vite.config.ts`, `frontend/src/diagnosis/testCollection.guard.test.tsx`) · Jira 미발급
   - **이 묶음의 다른 어떤 `.test.ts`보다 먼저 한다.** 현재 `test.include`는 `['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts']`라서 새로 만드는 `.test.ts`는 **실패하지 않고 그냥 수집되지 않는다** (`frontend/vite.config.ts:17`, quickstart 시나리오 0)
   - `include`에 `'src/diagnosis/**/*.test.ts'`를 더한다. 앞으로 다른 폴더에 `.test.ts`가 생기면 같은 함정이 되풀이되므로 아래 가드가 그 사실을 알린다
   - 가드 테스트는 확장자를 **`.tsx`로 만든다.** 확장자 변경 없이도 반드시 수집되는 패턴은 `src/**/*.test.tsx` 하나뿐이고, 가드 자신이 수집되지 않으면 아무것도 지키지 못한다
@@ -135,27 +135,27 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 패턴 대조는 새 의존성 없이 처리한다. 지금 쓰는 표현은 `dir/**/*.ext`와 정확 경로 두 가지뿐이므로 그 두 형태만 해석하는 짧은 대조 함수를 같은 파일에 둔다. **해석할 수 없는 형태의 패턴이 들어오면 그 자체로 실패시킨다.** 모르는 패턴을 통과로 처리하면 검사가 조용히 사라진다
   - 파일을 하나도 찾지 못했을 때도 실패시킨다. 현재 저장소에 `*.test.ts`가 여섯 개 있으므로(`src/api/auth.test.ts`, `src/api/market.test.ts`, `src/auth/returnTarget.test.ts`, `src/utils/` 셋) 0개는 순회가 잘못되었다는 뜻이다
   - 확인 절차: 일부러 틀린 단언을 하나 넣어 실제로 실패가 나는지 보고 되돌린다. `npm test`의 `skipped` 수가 0인지 함께 본다 (quickstart 시나리오 0)
-- [ ] T006 [M2] [P] [US1] [FE] 섹터 응답 타입 (`frontend/src/types/sector.ts`) · Jira 미발급
+- [X] T006 [M2] [P] [US1] [FE] 섹터 응답 타입 (`frontend/src/types/sector.ts`) · Jira 미발급
   - `GET /sectors` 응답을 camelCase로 1:1 옮긴다. `mapVersion`·`isSample`·`sectors[].{code,name,classification,representativeEtf{name,listedOn}}` (data-model.md 「SectorCatalog」)
   - 필드 정의의 원본은 [001의 섹터 조회 계약](../001-etf-market-data/contracts/sector-api.md)이다. **002가 재정의하지 않는다**
   - 계약의 불변식("모든 항목에 `representativeEtf`가 있다")을 타입에서 선택 값으로 풀지 않는다. 없는 항목이 오면 그것은 계약 위반이며 화면이 숨겨서 넘기지 않는다
-- [ ] T007 [M2] [US1] [FE] 섹터 목록 조회 (`frontend/src/api/sectors.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
+- [X] T007 [M2] [US1] [FE] 섹터 목록 조회 (`frontend/src/api/sectors.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
   - `src/api/client.ts`의 공용 `apiClient`만 거친다. 컴포넌트에서 axios를 직접 부르지 않는다 (`frontend/CLAUDE.md`)
   - 오류 분류는 014가 이미 만든 `normalizeApiError`의 `api | network | unexpected`를 그대로 쓴다. 002가 새 분류를 만들지 않는다 (research.md 결정 6)
   - `409 SECTOR_MAP_NOT_READY`를 예외가 아니라 화면이 분기할 수 있는 상태 값으로 돌려준다
   - 화면 진입마다 이 호출 **한 번**이다. `GET /sectors/evaluation-window`는 부르지 않는다 (research.md 결정 4, contracts/README.md)
   - 선행: T005(이 파일이 `.test.ts`라 include 확장 전에는 수집되지 않는다)
-- [ ] T008 [M2] [P] [US1] [FE] 표시 순서와 출처 문구 상수 (`frontend/src/diagnosis/sectorOrder.ts`, `frontend/src/diagnosis/sectorOrder.test.ts`, `frontend/src/diagnosis/attribution.ts`) · Jira 미발급
+- [X] T008 [M2] [P] [US1] [FE] 표시 순서와 출처 문구 상수 (`frontend/src/diagnosis/sectorOrder.ts`, `frontend/src/diagnosis/sectorOrder.test.ts`, `frontend/src/diagnosis/attribution.ts`) · Jira 미발급
   - 표시 순서는 `classification`(`INDUSTRY` 먼저, `THEME` 다음) 다음에 `Intl.Collator('ko')`로 이름 정렬이다 (research.md 결정 2)
   - **서버 응답의 배열 순서에 기대지 않는다.** 001 계약이 `sectors` 배열의 정렬을 정하지 않아, 응답 순서에 기대면 백엔드 구현이 바뀔 때 화면 규칙이 조용히 따라 바뀐다
   - 이 순서가 M3의 잔여분 자리를 정한다. 같은 집합을 다른 순서로 골라도 결과가 같아야 한다
   - `attribution.ts`에 KRX 출처 문구 상수를 **한 곳에만** 둔다. 값을 지어내는 것이 아니라 001이 이미 고정 값처럼 내보내는 문구를 옮겨 적는 것이다 (research.md 결정 8, 원칙 X)
   - 선행: T005
-- [ ] T009 [M2] [US1] [FE] 섹터 목록 항목 (`frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/SectorListItem.test.tsx`) · Jira 미발급
+- [X] T009 [M2] [US1] [FE] 섹터 목록 항목 (`frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/SectorListItem.test.tsx`) · Jira 미발급
   - 한 항목에 섹터 이름·대표 ETF 이름·업종/테마 구분을 함께 보인다 (FR-003)
   - 이 시점에는 표시만 한다. 체크박스는 M3의 T015가, 대표 상품 정보 펼침은 M5의 T022가 더한다
   - 계산식·자료 공급원·거리 함수·실험 식별자·서버 설정을 보이지 않는다 (FR-011)
-- [ ] T010 [M2] [US1] [US4] [FE] 섹터 선택 화면과 조회 상태 분기 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionPage.module.css`, `frontend/src/pages/SectorSelectionPage.test.tsx`, `frontend/src/App.tsx`) · Jira 미발급
+- [X] T010 [M2] [US1] [US4] [FE] 섹터 선택 화면과 조회 상태 분기 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionPage.module.css`, `frontend/src/pages/SectorSelectionPage.test.tsx`, `frontend/src/App.tsx`) · Jira 미발급
   - `App.tsx`의 `/diagnosis/sectors`를 T004의 임시 연결에서 이 화면으로 바꾼다
   - 상태 분기 네 가지를 모두 정상 화면으로 처리한다. 불러오는 중 / 목록 / `409 SECTOR_MAP_NOT_READY` / 네트워크 실패·5xx. 뒤의 둘은 T001의 컴포넌트에 다시 불러오기 행동 하나를 주어 표시한다 (FR-017, research.md 결정 6)
   - 409 상태에서는 섹터를 고를 수 없으므로 다음 단계 버튼 자체를 두지 않는다 (FR-017)
@@ -174,7 +174,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 섹터 3개를 골라 `33.4 / 33.3 / 33.3`이 채워지는지, 한 섹터를 올렸을 때 나머지가 그대로이고 초과가 표시되는지, 새로고침 뒤에도 값이 남는지 확인한다. 비중 규칙은 화면 없이 단위 테스트로 먼저 검증한다.
 
-- [ ] T011 [M3] [US2] [FE] 비중 정수 모형과 순수 규칙 (`frontend/src/diagnosis/weights.ts`, `frontend/src/diagnosis/weights.test.ts`) · Jira 미발급
+- [X] T011 [M3] [US2] [FE] 비중 정수 모형과 순수 규칙 (`frontend/src/diagnosis/weights.ts`, `frontend/src/diagnosis/weights.test.ts`) · Jira 미발급
   - 비중을 **0.1%p 단위 정수**로 다룬다. 100%가 `1000`이고 33.4%가 `334`다. 표시할 때만 10으로 나눈다 (research.md 결정 1)
   - 합계 판정은 `sum === 1000`이라는 정수 비교다. **허용 오차(epsilon)를 두지 않는다.** 원칙 VI가 임의 epsilon으로 판정을 만드는 처리를 금지한다
   - `distributeEven(codes)`: `q = floor(1000 / n)`, `r = 1000 - q * n`을 구해 `r`을 **표시 순서상 첫 번째** 섹터에 몰아준다. 초깃값 자동 채움과 '동일하게 나누기'가 같은 함수를 쓴다 (FR-005, FR-007, research.md 결정 2)
@@ -182,7 +182,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 빈 칸은 0으로 보지 않고 "아직 입력 중"으로 다룬다. 확정 시점에 이전 값을 그대로 둔다
   - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `170/166×5`, 7개면 `148/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)
   - 선행: T005(이 파일이 `.test.ts`다), T008(표시 순서)
-- [ ] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급
+- [X] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급
   - `sessionStorage` 항목 **하나**에 JSON으로 저장한다. 키는 `thorp.diagnosis.sectorSelection`이며 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다 (research.md 결정 3)
   - 페이로드 구조와 불변식의 원본은 [contracts/selection-handoff.md](./contracts/selection-handoff.md)다. `version`·`mapVersion`·`selected[]`·`weightsTouched`를 담는다
   - **읽어 온 값을 신뢰하지 않는다.** `sessionStorage`는 사용자가 편집할 수 있다. 섹터 코드는 현재 `GET /sectors` 응답에 있는 코드만, 비중은 0 이상 1000 이하 정수만 받아들인다
@@ -192,7 +192,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 저장소 접근이 막힌 환경에서는 예외를 삼키고 메모리 상태로만 동작한다. 화면을 오류로 막지 않는다 (spec Edge Cases)
   - 테스트: 왕복 보존, 목록에 없는 코드 제거와 `droppedCodes` 보고, 음수·1000 초과·정수가 아닌 값 거부, 0 허용, 합계 불일치 보존, `version` 상향 시 빈 상태, 저장소 예외에서 화면이 죽지 않음
   - 선행: T005
-- [ ] T013 [M3] [US1] [US2] [FE] 선택 상태 Context와 상태 전이 (`frontend/src/diagnosis/SectorSelectionProvider.tsx`, `frontend/src/diagnosis/SectorSelectionProvider.test.tsx`) · Jira 미발급
+- [X] T013 [M3] [US1] [US2] [FE] 선택 상태 Context와 상태 전이 (`frontend/src/diagnosis/SectorSelectionProvider.tsx`, `frontend/src/diagnosis/SectorSelectionProvider.test.tsx`) · Jira 미발급
   - data-model.md 「상태 전이」 표의 아홉 행을 그대로 구현한다. 분기값은 `weightsTouched`다
   - 아직 고치지 않았으면 섹터를 더하거나 뺄 때마다 **전체를** 동일 비중으로 다시 채운다. 한 번이라도 고쳤으면 기존 값을 건드리지 않고 새 섹터에만 0을 준다 (FR-005, SC-009)
   - 섹터를 뺄 때는 남은 값을 그대로 둔다. 합계가 100% 아래로 내려가는 것은 오류가 아니라 FR-007이 안내하는 정상 상태다
@@ -203,7 +203,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 전역 상태 라이브러리를 도입하지 않는다. React Context로 충분하다 (plan 「Structure Decision」)
   - 테스트: 전이 표의 행마다 한 건씩. 특히 "고친 뒤 섹터 추가"에서 기존 값이 하나도 바뀌지 않고 새 섹터가 0인지(SC-009), 세션 복원 뒤 값이 그대로인지(SC-006)
   - 선행: T011, T012
-- [ ] T014 [M3] [US2] [FE] 비중 입력 칸 (`frontend/src/components/diagnosis/WeightInput.tsx`, `frontend/src/components/diagnosis/WeightInput.test.tsx`) · Jira 미발급
+- [X] T014 [M3] [US2] [FE] 비중 입력 칸 (`frontend/src/components/diagnosis/WeightInput.tsx`, `frontend/src/components/diagnosis/WeightInput.test.tsx`) · Jira 미발급
   - 섹터를 고르면 **같은 화면 그 자리에** 나타난다. 다른 화면으로 나누지 않는다 (spec 범위 요약, FR-005)
   - 값 검사는 T011의 파싱 규칙 하나만 쓴다. 컴포넌트가 따로 판정하지 않는다
   - `step`을 0.1로 두되 **붙여넣기처럼 `step`을 우회하는 경로도 같은 검사를 거친다** (research.md 결정 1)
@@ -211,7 +211,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 0%를 거부하지 않는다 (FR-016, SC-010)
   - 키보드만으로 입력과 확정을 끝낼 수 있어야 한다 (`checklists/ux.md` CHK033)
   - 테스트: `33.45`·음수·`120`·문자 입력이 거부되고 안내가 보인다. 거부된 뒤 이전 값이 그대로다. `0` 입력이 통과한다
-- [ ] T015 [M3] [US1] [US2] [FE] 합계 표시·동일하게 나누기·두 개 이상 제약 결선 (`frontend/src/components/diagnosis/WeightTotal.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionWeights.test.tsx`) · Jira 미발급
+- [X] T015 [M3] [US1] [US2] [FE] 합계 표시·동일하게 나누기·두 개 이상 제약 결선 (`frontend/src/components/diagnosis/WeightTotal.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionWeights.test.tsx`) · Jira 미발급
   - 목록 항목에 체크박스를 더하고 화면을 T013의 Context에 연결한다
   - 합계가 1000이 아니면 **그 위치에** 남은 비중을 부족·초과로 표시한다. 별도 알림 영역으로 빼지 않는다 (FR-007, 원칙 VI, research.md 결정 7)
   - 비중을 자동으로 정규화하거나 조정하지 않는다 (SC-002)
@@ -232,14 +232,14 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 상장일이 서로 다른 섹터를 골라 언제부터 비교할 수 있는지와 어느 섹터 때문인지 한 문장이 보이는지 확인한다. 합계를 맞춘 뒤 다음 단계로 넘겨 보관된 값이 마지막 입력과 한 글자도 다르지 않은지 확인한다.
 
-- [ ] T016 [M4] [P] [US3] [FE] 상장일 기준 공통 비교 시작일 (`frontend/src/diagnosis/listingWindow.ts`, `frontend/src/diagnosis/listingWindow.test.ts`) · Jira 미발급
+- [X] T016 [M4] [P] [US3] [FE] 상장일 기준 공통 비교 시작일 (`frontend/src/diagnosis/listingWindow.ts`, `frontend/src/diagnosis/listingWindow.test.ts`) · Jira 미발급
   - `commonStartFromListing = max(선택 섹터의 representativeEtf.listedOn)`과 그 최댓값을 만든 `bindingSectorCode`를 구한다 (research.md 결정 4)
   - **`GET /sectors/evaluation-window`를 부르지 않는다.** 그 산식은 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받아 전략을 고르기 전에는 채울 수 없다 (contracts/README.md)
   - 경계: 선택 섹터가 두 개 미만이거나 상장일이 모두 같으면 안내할 사실이 없다. `commonStartFromListing`이 오늘 이후면 비교할 기간이 남지 않은 것으로 본다. **이 판정은 근사치다.** 정확한 판정은 003이 `evaluable: false`로 받는다 (research.md 결정 4의 경계 동작)
   - 화면이 음수 기간을 계산해 이상한 문장을 만들지 않게 방어한다
   - 테스트: 상장일이 같을 때 안내 없음, 다를 때 최댓값과 원인 섹터, 선택 1개 이하, 최댓값이 오늘 이후인 경우
   - 선행: T005
-- [ ] T017 [M4] [US3] [FE] 상장일 차이 안내 (`frontend/src/components/diagnosis/ListingWindowNotice.tsx`, `frontend/src/components/diagnosis/ListingWindowNotice.test.tsx`) · Jira 미발급
+- [X] T017 [M4] [US3] [FE] 상장일 차이 안내 (`frontend/src/components/diagnosis/ListingWindowNotice.tsx`, `frontend/src/components/diagnosis/ListingWindowNotice.test.tsx`) · Jira 미발급
   - 선택 섹터가 둘 이상이고 상장일이 서로 다를 때만 선택 요약 옆에 한 문장으로 나타난다 (research.md 결정 7)
   - 문장이 담을 것 셋: 언제부터 비교할 수 있는지, 어느 섹터의 상장일 때문인지, **이 값이 상장일만 반영한 것이며 전략 워밍업 몫은 003이 알린다는 사실** (FR-008)
   - 데이터 입력이나 자료 공급원 선택을 요구하지 않는다 (FR-008, SC-005)
@@ -247,12 +247,12 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 대표 ETF가 없는 섹터는 001 계약의 불변식에 따라 목록에 실리지 않으므로 그 경우의 안내를 두지 않는다 (spec Clarifications)
   - 테스트: 상장일이 같으면 보이지 않고 다르면 보인다(SC-003). `GET /sectors` 외의 호출이 일어나지 않는다
   - 선행: T016
-- [ ] T018 [M4] [US3] [US2] [FE] 후보 집합과 0%의 뜻 안내 (`frontend/src/components/diagnosis/SelectionMeaningNotice.tsx`, `frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx`) · Jira 미발급
+- [X] T018 [M4] [US3] [US2] [FE] 후보 집합과 0%의 뜻 안내 (`frontend/src/components/diagnosis/SelectionMeaningNotice.tsx`, `frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx`) · Jira 미발급
   - 섹터를 하나 이상 고른 뒤 **항상** 비중 입력 묶음의 꼬리에 한 문장을 둔다. 선택 섹터는 자동 배분 전략의 투자 후보 집합이며 매번 모두 보유한다는 뜻이 아니고, 사용자가 입력한 비중은 '내가 정한 비중'에 쓰여 자동 전략의 출력 비중과 구분된다 (FR-009, research.md 결정 7)
   - 비중이 0인 섹터가 하나 이상일 때만 같은 자리에 한 문장을 더한다. 0%인 섹터는 '내가 정한 비중'에는 담기지 않지만 후보 집합에는 그대로 남는다 (FR-016)
   - 0%인 섹터를 선택 목록에서 빼지 않는다. 003이 선택 섹터 개수로 유효성 제약을 계산하므로 빼면 003의 계산과 어긋난다 (SC-010)
   - 테스트: 0인 섹터가 없을 때 0% 안내가 보이지 않는다. 있을 때만 보인다
-- [ ] T019 [M4] [US1] [FE] 다음 단계 버튼과 003 인계 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/pages/SectorSelectionHandoff.test.tsx`) · Jira 미발급
+- [X] T019 [M4] [US1] [FE] 다음 단계 버튼과 003 인계 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/pages/SectorSelectionHandoff.test.tsx`) · Jira 미발급
   - 다음 단계 버튼의 활성 조건은 `selectedCodes.length >= 2 && isBalanced`다 (data-model.md 파생값)
   - 합계가 맞지 않는 상태로는 넘어가지 않고 한 문장으로 안내한다. **그 자리에서 비중을 자동으로 조정하지 않는다** (FR-007)
   - **넘기기 전에 값을 손대지 않는다.** 합계를 100%로 맞추는 조정, 표시 정밀도를 넘어선 반올림, 0%인 섹터 제외를 모두 하지 않는다 (FR-013, SC-013)
@@ -263,7 +263,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 화면 전체에 계산식·자료 공급원·거리 함수·실험 식별자·서버 설정 입력 항목이 0개인지 이 시점에 함께 확인한다 (FR-011, SC-005, quickstart 시나리오 11)
   - **테스트가 SC-013을 받는다.** quickstart에 SC-013 시나리오가 없기 때문이다. 마지막 입력값과 보관된 페이로드를 값으로 비교하고, 0%인 섹터가 빠지지 않았는지와 `mapVersion`이 함께 실렸는지 확인한다
   - 선행: T013, T015
-- [ ] T020 [M4] [US4] [FE] 배우기 예시 진입과 덮어쓰기 확인 (`frontend/src/diagnosis/learningExample.ts`, `frontend/src/components/diagnosis/OverwriteConfirmDialog.tsx`, `frontend/src/pages/SectorSelectionLearningEntry.test.tsx`) · Jira 미발급
+- [X] T020 [M4] [US4] [FE] 배우기 예시 진입과 덮어쓰기 확인 (`frontend/src/diagnosis/learningExample.ts`, `frontend/src/components/diagnosis/OverwriteConfirmDialog.tsx`, `frontend/src/pages/SectorSelectionLearningEntry.test.tsx`) · Jira 미발급
   - 예시 값은 React Router의 navigation state로 받는다. 페이로드 형태는 [contracts/selection-handoff.md](./contracts/selection-handoff.md) 2절이다 (research.md 결정 9)
   - 받은 값은 T012와 **같은 검증**을 거친다. 현재 목록에 있는 코드, 0 이상 1000 이하 정수 비중
   - 아직 아무것도 입력하지 않았으면 **묻지 않고** 채운다. 이미 고른 섹터나 입력한 비중이 있으면 덮어쓸지 먼저 묻고, 거절하면 기존 값을 그대로 둔다 (FR-012, SC-011)
@@ -285,12 +285,12 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 목록의 모든 항목에서 대표 상품 정보를 열 수 있는지, 여는 동안 화면을 떠나지 않는지, `409 INSTRUMENT_PROFILE_NOT_READY`에서 빈 패널이 아니라 한 문장이 보이는지 확인한다.
 
-- [ ] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
+- [X] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
   - `GET /sectors/{code}/instrument-profile`을 T007과 같은 `apiClient` 경로로 더한다
   - `409 INSTRUMENT_PROFILE_NOT_READY`를 예외가 아니라 화면이 분기할 수 있는 상태 값으로 돌려준다 (research.md 결정 6)
   - 응답의 `isSample`은 **자료 버전 기준**이며 `GET /sectors`의 `isSample`(대응표 기준)과 다른 것을 가리킨다. 한쪽 값으로 다른 쪽을 짐작하지 않는다 (data-model.md)
   - M2가 만든 두 파일을 다시 고치므로 M2와 병행하지 않는다
-- [ ] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급
+- [X] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급
   - **같은 화면에서 펼친다.** 상세를 보려고 다른 화면으로 이동시키지 않는다 (FR-010, 원칙 II)
   - 값을 가공하지 않고 그대로 표시한다. `sourceAttribution`도 응답 값을 쓴다(목록 화면의 상수와 달리 여기서는 계약이 값을 준다)
   - `holdingsOverlap.asOfCurrentComposition`이 true면 당시 구성을 재현했다고 표현하지 않는다 (원칙 V, 001 계약)
@@ -298,7 +298,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 여는 방법·닫는 방법을 키보드로도 쓸 수 있게 한다 (`checklists/ux.md` CHK005·CHK033)
   - **테스트가 SC-012를 받는다.** quickstart에 SC-012 시나리오가 없기 때문이다. 목록의 모든 항목에서 열리는지, 여는 동안 경로가 `/diagnosis/sectors`에서 바뀌지 않는지, 409에서 빈 자리가 아니라 한 문장이 보이는지 확인한다
   - 선행: T021, T015(같은 `SectorListItem.tsx`를 고친다)
-- [ ] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급
+- [X] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급
   - 각 묶음은 자기 몫의 시나리오를 이미 그 묶음 안에서 돌렸다. 여기서는 모두 병합된 상태로 처음부터 끝까지 한 번 더 밟는다
   - **시나리오 0을 먼저 한다.** `npm test`의 수집된 파일 수와 `skipped` 수를 보고, `src/diagnosis/`의 테스트가 목록에 있는지 확인한다. T005의 가드가 통과하는지도 함께 본다
   - `npm run lint && npm run build`와 `npm test`를 모두 돌린다
@@ -419,7 +419,9 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5
   - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 "머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다
   - `/dashboard`·`/backtest` 경로 자체는 지우지 않는다. 003·005가 소유할 자리다 (research.md 결정 5)
   - 테스트: `LandingPage.test.tsx`의 "소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다
-- [ ] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급
+  - **2026-09-17 판단: 지금은 그대로 둔다. 다만 의문은 닫지 않았으므로 이 task를 열어 둔다.** 세 링크를 지우지도 옮기지도 않았다. 003·005가 `/dashboard`·`/backtest`를 실제로 대체하면 그 화면들이 어디로 가야 하는지가 그때 정해지므로, 지금 옮겨 두면 두 번 고치게 된다. **답하지 못한 물음은 이것이다 — 메뉴에서 뺀 화면을 첫 화면 본문이 계속 권해도 되는가.** 특히 헤더의 '시장 흐름'이 `/market-flow`인데 본문의 "시장 분석 보러 가기"는 `/dashboard`라, 같은 성격의 목적지가 둘로 갈린 상태가 그대로 남았다. 009가 들어오면서 헤더 쪽 경로가 `/home`에서 `/market-flow`로 바뀌어 간격이 처음 적었을 때보다 더 벌어졌다
+  - **이 task를 닫는 조건**: 003·005가 각자 화면을 내어 `/dashboard`·`/backtest`의 자리를 대신할 때, 또는 그 전에 첫 화면의 안내 구조를 다시 볼 때다. 둘 중 무엇이 먼저든 그 시점에 지울지 옮길지 정한다
+- [X] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급
   - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다
   - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 "백엔드 DTO와 1:1 대응 타입"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다
   - **지금 고치는 편이 싸다.** M5의 T021이 `INSTRUMENT_PROFILE_NOT_READY`로 같은 경로를 한 번 더 쓰고, 003·005도 각자 조회를 만들 때 같은 import를 되풀이한다. 도메인이 늘수록 되돌리는 비용만 커진다

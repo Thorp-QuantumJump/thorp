@@ -27,8 +27,8 @@ T015가 이 문제를 먼저 막는다.
 |---|---|---|---|---|
 | WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |
 | WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | `S15P21E205-272` |
-| WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |
-| WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |
+| WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | S15P21E205-314 |
+| WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | S15P21E205-322 |
 
 **세 조건을 어떻게 만족하는가**
 
@@ -148,42 +148,42 @@ T015가 이 문제를 먼저 막는다.
 **Independent Test**: `/market-flow`에 들어가 7개 분야 요약이 보이고, 경제 전체를 하나의 점수·등급으로
 요약한 요소가 0개이며, 분야를 열면 지표 실제 값·단위·3개월 경로·대상월·출처가 보이는지 확인한다.
 
-- [ ] T015 [WB03] [FE] 테스트 수집 목록 확장 (`frontend/vite.config.ts`) · Jira 미발급
+- [x] T015 [WB03] [FE] 테스트 수집 목록 확장 (`frontend/vite.config.ts`) · Jira S15P21E205-314
   - `test.include`에 `'src/api/*.test.ts'`와 `'src/marketflow/**/*.test.ts'`를 더한다
   - **이 task가 먼저다.** 지금 목록은 `src/api/auth.test.ts`와 `src/auth/**/*.test.ts`만 이름으로 집어 넣고 있어, T017과 T024가 만드는 `.ts` 테스트가 실패하지 않고 조용히 빠진다 (frontend/CLAUDE.md)
   - 확장 뒤 `npm test`의 수집 파일 수가 늘었는지 눈으로 확인한다
-- [ ] T016 [WB03] [P] [US1] [FE] 계약 대응 타입 (`frontend/src/types/marketFlow.ts`) · Jira 미발급
+- [x] T016 [WB03] [P] [US1] [FE] 계약 대응 타입 (`frontend/src/types/marketFlow.ts`) · Jira S15P21E205-314
   - [contracts/openapi.yaml](contracts/openapi.yaml)의 schema와 1:1로 맞춘다. 필드는 camelCase (frontend/CLAUDE.md)
   - `FieldStatus`는 넷뿐이다. `STALE`을 타입에 두지 않는다
-- [ ] T017 [WB03] [P] [US1] [FE] 조회 함수 (`frontend/src/api/marketFlow.ts`, `frontend/src/api/marketFlow.test.ts`) · Jira 미발급
+- [x] T017 [WB03] [P] [US1] [FE] 조회 함수 (`frontend/src/api/marketFlow.ts`, `frontend/src/api/marketFlow.test.ts`) · Jira S15P21E205-314
   - `apiClient`를 경유한다. 컴포넌트에서 axios를 직접 부르지 않고 URL을 하드코딩하지 않는다 (frontend/CLAUDE.md)
   - `EMPTY`·`COLLECTION_FAILED`는 오류가 아니라 정상 응답이다. 예외로 던지지 않는다
   - 테스트: 네 상태 예시 JSON을 모두 통과시키는지
-- [ ] T018 [WB03] [US1] [FE] 분야 요약 카드 (`frontend/src/components/marketflow/FieldSummaryCard.tsx`, `frontend/src/components/marketflow/FieldSummaryCard.test.tsx`) · Jira 미발급
+- [x] T018 [WB03] [US1] [FE] 분야 요약 카드 (`frontend/src/components/marketflow/FieldSummaryCard.tsx`, `frontend/src/components/marketflow/FieldSummaryCard.test.tsx`) · Jira S15P21E205-314
   - 분야 이름·변화 요약 문장·기준월·상태·마지막 갱신 시각을 그린다
   - **점수·등급·신호등을 그리지 않는다.** 색으로 좋고 나쁨을 표현하는 것도 등급 표시다 (FR-003, SC-002)
   - 테스트: `narrative`가 null인 상태에서 빈 요약 대신 상태 표시가 보이는지
-- [ ] T019 [WB03] [US2] [FE] 분야 상세 (`frontend/src/components/marketflow/FieldDetail.tsx`, `frontend/src/components/marketflow/FieldDetail.test.tsx`) · Jira 미발급
+- [x] T019 [WB03] [US2] [FE] 분야 상세 (`frontend/src/components/marketflow/FieldDetail.tsx`, `frontend/src/components/marketflow/FieldDetail.test.tsx`) · Jira S15P21E205-314
   - 지표마다 실제 값·단위·3개월 경로(t-2·t-1·t)·대상월·발표일·출처·작성기관을 보인다 (FR-007, FR-013, FR-015)
   - **T_g 이후 발표는 그 지표 행 바로 아래 한 줄**로, 3개월 경로와 구분된 서식으로 그린다 (FR-008, 2026-09-16 clarify)
   - 분야 기준월과 "분야마다 기준월이 다를 수 있습니다" 한 문장 안내를 보인다
   - 테스트: `afterReferenceMonthRelease`가 있는 지표에서 그 값이 경로 3칸 안에 렌더되지 않는지
-- [ ] T020 [WB03] [US3] [FE] 자료 시점·상태 표시 (`frontend/src/components/marketflow/DataStateNotice.tsx`, `frontend/src/components/marketflow/DataStateNotice.test.tsx`) · Jira 미발급
+- [x] T020 [WB03] [US3] [FE] 자료 시점·상태 표시 (`frontend/src/components/marketflow/DataStateNotice.tsx`, `frontend/src/components/marketflow/DataStateNotice.test.tsx`) · Jira S15P21E205-314
   - `EXAMPLE`·`EMPTY`·`COLLECTION_FAILED`를 오류 화면이 아닌 상태 표시로 그린다 (FR-014, SC-005)
   - 대상월과 마지막 갱신 시각을 항상 함께 보인다. **'실시간'·'현재' 표현과 '지연' 판정 표시를 쓰지 않는다** (FR-011)
   - '최신 개정자료를 이용한 역사 비교' 표시를 화면에 둔다 (FR-012)
   - 테스트: 세 상태 각각에서 오류 경계로 떨어지지 않는지, 금지 표현이 렌더되지 않는지
-- [ ] T021 [WB03] [US1] [FE] 시장 흐름 화면 조립 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/pages/MarketFlowPage.module.css`, `frontend/src/pages/MarketFlowPage.test.tsx`) · Jira 미발급
+- [x] T021 [WB03] [US1] [FE] 시장 흐름 화면 조립 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/pages/MarketFlowPage.module.css`, `frontend/src/pages/MarketFlowPage.test.tsx`) · Jira S15P21E205-314
   - 7개 분야 요약을 먼저 그리고, 뉴스·국내 시장 참고 정보 영역은 늦게 채워져도 요약 표시를 막지 않는다 (SC-007, FR-017)
   - 가장 중요한 행동 버튼은 하나다. 기본 화면은 분야 열기, 열린 분야에서는 '비슷했던 때 보기' (FR-005)
   - 자료 공급원·API 이름을 고르는 입력을 두지 않는다 (FR-006)
   - 테스트: 로그인하지 않은 상태로 7개 분야가 보이는지(SC-001), 그리고 **경제 전체를 하나의 점수·등급으로 요약한 요소가 0개인지(SC-002)**
-- [ ] T022 [WB03] [US1] [FE] 라우트와 메뉴 전환 (`frontend/src/App.tsx`, `frontend/src/components/landing/LandingHeader.tsx`, `frontend/src/components/navigation/AppHeader.tsx`, `frontend/src/pages/MyRecordsEntryPage.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급
+- [x] T022 [WB03] [US1] [FE] 라우트와 메뉴 전환 (`frontend/src/App.tsx`, `frontend/src/components/landing/LandingHeader.tsx`, `frontend/src/components/navigation/AppHeader.tsx`, `frontend/src/pages/MyRecordsEntryPage.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · Jira S15P21E205-314
   - `/market-flow` 라우트를 더하고 `/home`은 `/market-flow`로 영구 리다이렉트한다 ([research.md](research.md) R4)
   - 메뉴 링크를 바꾼다: `LandingHeader.tsx:13`의 `'시장 흐름' → '/home'`, `AppHeader.tsx`의 시장 흐름 항목, `MyRecordsEntryPage.tsx:29`의 '시장 흐름 보기'
   - `LandingPage.test.tsx:53`이 `{ label: '시장 흐름', href: '/home' }`을 기대하고 있으므로 함께 고친다. **이 테스트를 지우지 말고 새 경로로 바꾼다**
   - 리다이렉트를 먼저 넣어야 외부에 이미 퍼진 `/home` 링크가 깨지지 않는다
-- [ ] T023 [WB03] [US1] [FE] 목업 진단 화면 제거 (`frontend/src/pages/HomePage.tsx`, `frontend/src/pages/HomePage.module.css`, `frontend/src/components/home/MarketRegimeHero.tsx`, `frontend/src/components/home/MarketRegimeHero.module.css`, `frontend/src/components/home/SimilarMarketPanel.tsx`, `frontend/src/components/home/SimilarMarketPanel.module.css`, `frontend/src/data/marketMock.ts`) · Jira 미발급
+- [x] T023 [WB03] [US1] [FE] 목업 진단 화면 제거 (`frontend/src/pages/HomePage.tsx`, `frontend/src/pages/HomePage.module.css`, `frontend/src/components/home/MarketRegimeHero.tsx`, `frontend/src/components/home/MarketRegimeHero.module.css`, `frontend/src/components/home/SimilarMarketPanel.tsx`, `frontend/src/components/home/SimilarMarketPanel.module.css`, `frontend/src/data/marketMock.ts`) · Jira S15P21E205-314
   - **지우는 것**: `HomePage`(T022의 리다이렉트로 대체됨), `MarketRegimeHero`, `SimilarMarketPanel`. 세 파일 모두 `HomePage`만 쓰고 있어 함께 지울 수 있다
     - `MarketRegimeHero`는 `regime.headline`으로 "지금은 조심하되, 완전히 나쁜 시장은 아닙니다."라는 경제 전체 판정을 띄운다. **이것이 남아 있으면 SC-002를 통과할 수 없다** (FR-003, D08, 원칙 II)
     - `SimilarMarketPanel`은 010이 소유할 검색 결과를 목업으로 선점한다
@@ -202,34 +202,34 @@ T015가 이 문제를 먼저 막는다.
 **Independent Test**: 섹터 선택 전후로 분야 요약·지표 값·기준월이 같은지, 새로고침 뒤 선택이 남고
 탭을 다시 열면 풀리는지 확인한다.
 
-- [ ] T024 [WB04] [P] [US4] [FE] 섹터 선택 세션 보관 (`frontend/src/marketflow/sectorLink.ts`, `frontend/src/marketflow/sectorLink.test.ts`) · Jira 미발급
+- [x] T024 [WB04] [P] [US4] [FE] 섹터 선택 세션 보관 (`frontend/src/marketflow/sectorLink.ts`, `frontend/src/marketflow/sectorLink.test.ts`) · Jira S15P21E205-322
   - `sessionStorage` 키 하나에 선택 섹터를 담는다. 계정·서버에 저장하지 않는다 (FR-016, [research.md](research.md) R5)
   - 읽기·쓰기를 `try/catch`로 감싼다. 저장소를 쓸 수 없어도 예외를 밖으로 던지지 않는다
   - 화면 없이 단위 테스트할 수 있게 순수 함수로 둔다. `src/auth/returnTarget.ts`와 같은 방식이다
   - 테스트: 저장 후 읽으면 같은 값인지, 저장소가 막힌 환경에서 읽기가 null을 돌려주고 예외가 새지 않는지
   - **T015가 먼저 끝나야 이 `.ts` 테스트가 수집된다**
-- [ ] T025 [WB04] [US4] [FE] 섹터 선택 UI와 경제환경 불변 검증 (`frontend/src/components/marketflow/SectorSelector.tsx`, `frontend/src/components/marketflow/SectorSelector.test.tsx`, `frontend/src/pages/MarketFlowPage.tsx`) · Jira 미발급
+- [x] T025 [WB04] [US4] [FE] 섹터 선택 UI와 경제환경 불변 검증 (`frontend/src/components/marketflow/SectorSelector.tsx`, `frontend/src/components/marketflow/SectorSelector.test.tsx`, `frontend/src/pages/MarketFlowPage.tsx`) · Jira S15P21E205-322
   - 섹터 목록은 002와 같은 목록을 쓴다 (spec Assumptions)
   - 선택은 연결할 전략·대표 상품·뉴스 범위만 좁힌다 (FR-016)
   - **섹터를 분야 요약·상세 요청에 넣지 않는다.** 계약에 파라미터가 없으므로 넣을 자리도 없어야 한다
   - 테스트: 섹터 선택 전후로 분야 요약·지표 값·기준월 렌더 결과가 같은지(SC-004), 새로고침 모사 후 선택이 남고 세션을 비우면 풀리는지
-- [ ] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira 미발급
+- [x] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira S15P21E205-322
   - 기존 `/api/markets/kospi`를 호출해 가격 추세·변동성을 **경제환경 지표와 구분된 별도 영역**에 그린다 (FR-017)
   - '한국거래소 통계정보' 출처를 표시한다 (FR-015)
   - 자료가 없으면 이 영역만 비우고 분야 요약은 정상 표시한다 (Edge Case)
   - 테스트: 이 영역의 값이 '비슷했던 때 보기' 요청에 실리지 않는지
-- [ ] T027 [WB04] [US2] [FE] '비슷했던 때 보기' 진입점 (`frontend/src/components/marketflow/FieldDetail.tsx`) · Jira 미발급
+- [x] T027 [WB04] [US2] [FE] '비슷했던 때 보기' 진입점 (`frontend/src/components/marketflow/FieldDetail.tsx`) · Jira S15P21E205-322
   - 열린 분야에서 분야 g와 그 분야의 기준월 T_g를 유지한 채 010으로 넘어간다 (FR-009)
   - 010이 아직 없으므로 **넘기는 값이 무엇인지까지만** 만든다. 목적지 화면을 여기서 만들지 않는다
   - 섹터를 골랐어도 넘기는 분야·기준월은 달라지지 않는다 (FR-016)
-- [ ] T028 [WB04] [US4] [FE] '이 기간으로 전략 비교' 진입점 (`frontend/src/components/marketflow/`) · Jira 미발급
+- [x] T028 [WB04] [US4] [FE] '이 기간으로 전략 비교' 진입점 (`frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 선택 섹터(있으면)와 사례 식별자를 011로 넘긴다 (FR-018)
   - 011이 아직 없으므로 넘기는 값까지만 만든다
-- [ ] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira 미발급
+- [x] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 이미 있는 `/api/market-news/digests`를 호출해 같은 기본 화면에 꽂는다. 내용·수집·표시 규칙은 012가 정한다 (FR-019)
   - **뉴스가 없거나 늦어도 분야 요약은 정상 표시한다** (FR-019, SC-007)
   - 012의 `PREPARING`·`EMPTY`·`STALE` 상태를 그대로 받아 그린다. 009가 다시 판정하지 않는다
-- [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira 미발급
+- [x] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira S15P21E205-322
   - `docs/specs/market-api.md`·`market-news-api.md`와 같은 형식으로 경로·응답·상태를 정리한다
   - 상태 집합에 `STALE`이 없는 이유(갱신 주기 차이)를 한 줄 적는다. 012 문서와 나란히 읽힐 문서라 다른 이유가 드러나 있어야 한다
   - **분야 요약 조회가 쿼리 파라미터를 하나도 받지 않고 붙으면 400이라는 점을 적는다.** 012는 `sectorId`를 받아 필터하므로, 두 문서가 나란히 읽힐 때 왜 다른지가 드러나야 한다

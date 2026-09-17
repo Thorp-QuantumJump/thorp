@@ -1,0 +1,36 @@
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--thorp-negative);
+  border-radius: 14px;
+}
+
+.failure p {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.failure button {
+  padding: 9px 16px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.failure button:hover {
+  border-color: currentColor;
+}
+
+.failure button:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}

@@ -20,7 +20,7 @@
 {
   "run": {"runId": "RUN-000123", "effectiveStart": "2018-04-02", "start": "2018-01-02", "end": "2025-12-30", "randomSeed": 42, "scenario": "FULL_PERIOD", "scenarioParams": null, "scenarioRules": null},
   "universe": {"mappingVersion": "SECTOR-ETF-2026-09", "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "targetWeight": "0.4000"}]},
-  "marketData": {"datasetId": "KRX_DAILY_V1", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
+  "marketData": {"datasetId": "KRX_DAILY_20260915", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
   "allocation": {"strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "rules": {"lookbackDays": 63, "zeroVolatility": "EXCLUDE_THEN_ALLOCATE", "weightCap": "1.0000", "investedFraction": "1.0000"}, "parameters": {"rebalance": "MONTH_END"}},
   "portfolio": {"initialCash": "10000000.00", "currency": "KRW", "integerLots": true, "shortSelling": false, "leverage": "1.0"},
   "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "PROVISIONAL-DEMO-1", "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0", "provisional": true}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},
@@ -29,7 +29,7 @@
 }
 ```
 
-- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.
+- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. 2026-09-17 PD-03·04 확정으로 세 배분 전략 공통 키가 둘 더 생긴다(T022): `capOverflow`(허용값 `CASH` 하나 — 상한 잔여를 현금으로 두고 정상 완료)·`weightUnit`(소수 문자열, `"0.000001"` — 고정 단위 출력). `allocation.parameters`에는 003 축 `maxWeight`(정수 %)가 실리며 있으면 `rules.weightCap`보다 우선한다(T022). `exceptions[].kind`에 `CAP_OVERFLOW_CASH`·`EFFECTIVE_TARGET_REDUCED`·`SINGLE_ASSET_FALLBACK`·`NO_SELECTION`, FINISHED `failure.code`에 `ESTIMATION_FAILED`가 추가된다(T022·T023). `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.
 - `run.scenario=TARGET_RISK`면 `run.scenarioParams={"targetVolatility": "0.1000"}`와 `run.scenarioRules={"version": "TARGET_RISK_OVERLAY/1", "lookbackDays": 63, "adjustAt": "REBALANCE", "scaleDownOnly": true}`가 함께 온다(둘 다 백엔드가 채움). 워커는 리밸런싱 판단일마다 최근 `lookbackDays` 포트폴리오 일별 수익률 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱한다. `weightsSeries[]`에 `riskScale`·`estimatedVolatility`를 기록한다. `FRESH_CASH_FROM`이면 `run.scenarioParams={"startDate": "…"}`. 규칙이 빠진 `TARGET_RISK`는 `INVALID_REQUEST`.
 - `marketData.fillPrice=RAW`, `signalPrice=ADJUSTED`는 FR-013을 고정한 값이며 다른 값은 거부.
 - `benchmark` 블록은 v2에서 제거(005 보조 보기는 별도 spec).
@@ -65,7 +65,7 @@
 | 항목 | 백엔드(발행 전) | 워커(수신 후) |
 |---|---|---|
 | 규칙 등록 여부(PD 미확정) | 422 거부 | `rules` 없으면 INVALID_REQUEST |
-| 비중 합·상한 합계 | 400 거부 | 재검증 후 CONSTRAINT_VIOLATION |
+| 비중 합·상한 합계 | 비중 합은 400 거부, 상한 합계의 정적 모순(상한 × 투자 대상 종목 수 < 투자 비중)은 422 `VALIDATION_RULE_VIOLATED` 거부(2026-09-17 PD-04 ④) | 재검증; 정적 모순이 새면 CONSTRAINT_VIOLATION, 실행 중 이력 부족으로 줄어든 경우는 현금 잔여·정상 완료(PD-03 ⑥) |
 | 워밍업·가용 기간 | 422 거부 | 자료 로드 후 재검증 → DATA_INSUFFICIENT |
 | 자료 정합(OHLC·중복·비단조) | — | `validate_prices` fail-closed |
 | fillPrice/signalPrice 고정값 | 고정 | 다르면 INVALID_REQUEST |

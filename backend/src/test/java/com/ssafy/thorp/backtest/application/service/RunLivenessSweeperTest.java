@@ -72,7 +72,7 @@ class RunLivenessSweeperTest {
                         runRepository,
                         dispatcher,
                         metrics,
-                        new ExecutionLimits(5, 50, MAX_RUN, STALE, GRACE, true),
+                        new ExecutionLimits(5, 50, 10, MAX_RUN, STALE, GRACE, true),
                         events,
                         transactionManager,
                         Clock.fixed(NOW, ZoneOffset.UTC),

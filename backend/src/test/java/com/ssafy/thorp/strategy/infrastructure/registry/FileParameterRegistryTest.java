@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.strategy.application.port.AnalysisCondition;
+import com.ssafy.thorp.strategy.application.port.AxisCondition;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
@@ -328,6 +329,99 @@ class FileParameterRegistryTest {
     @Nested
     @DisplayName("기동 검사")
     class StartupChecks {
+
+        @Test
+        @DisplayName("appliesWhen과 termId를 읽는다 — 조건은 결정 축과 값, 식별자는 문자열 그대로다")
+        void readsConditionAndTerm() {
+            FileParameterRegistry synthetic =
+                    load(
+                            """
+                            version: FIXTURE-1
+                            strategies:
+                              - id: STRATEGY_X
+                                name: 합성 전략
+                                axes:
+                                  - name: mode
+                                    termId: synthetic-term
+                                    searchValues: [A]
+                                    defaultValue: A
+                                    allowedRange:
+                                      choices:
+                                        - value: A
+                                          label: 가
+                                        - value: B
+                                          label: 나
+                                  - name: aOnly
+                                    appliesWhen: { axis: mode, value: A }
+                                    searchValues: [1]
+                                    defaultValue: 1
+                                    allowedRange:
+                                      values: [1, 2]
+                            """);
+
+            StrategyRegistration registration = synthetic.find("STRATEGY_X").orElseThrow();
+            assertThat(registration.axis("mode").orElseThrow().termId())
+                    .isEqualTo("synthetic-term");
+            assertThat(registration.axis("mode").orElseThrow().appliesWhen()).isNull();
+            assertThat(registration.axis("aOnly").orElseThrow().appliesWhen())
+                    .isEqualTo(new AxisCondition("mode", "A"));
+            assertThat(registration.axis("aOnly").orElseThrow().termId()).isNull();
+            assertThat(registration.applicableAxes(Map.of("mode", "B")))
+                    .extracting(ParameterAxis::name)
+                    .containsExactly("mode");
+        }
+
+        @Test
+        @DisplayName("appliesWhen이 같은 전략에 없는 축을 가리키면 기동하지 않는다")
+        void rejectsConditionOnUnknownAxis() {
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: aOnly
+                                                    appliesWhen: { axis: ghost, value: A }
+                                                    searchValues: [1]
+                                                    defaultValue: 1
+                                                    allowedRange:
+                                                      values: [1, 2]
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("ghost");
+        }
+
+        @Test
+        @DisplayName("appliesWhen의 값이 결정 축의 후보 밖이면 기동하지 않는다 — 어떤 설정에서도 열리지 않는 축이다")
+        void rejectsConditionValueOutsideDecider() {
+            assertThatThrownBy(
+                            () ->
+                                    load(
+                                            """
+                                            version: FIXTURE-1
+                                            strategies:
+                                              - id: STRATEGY_X
+                                                name: 합성 전략
+                                                axes:
+                                                  - name: mode
+                                                    searchValues: [1]
+                                                    defaultValue: 1
+                                                    allowedRange:
+                                                      values: [1, 2]
+                                                  - name: aOnly
+                                                    appliesWhen: { axis: mode, value: 9 }
+                                                    searchValues: [1]
+                                                    defaultValue: 1
+                                                    allowedRange:
+                                                      values: [1, 2]
+                                            """))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("appliesWhen")
+                    .hasMessageContaining("STRATEGY_X/aOnly");
+        }
 
         @Test
         @DisplayName("탐색 후보가 사용자 선택지를 벗어나면 기동하지 않는다")

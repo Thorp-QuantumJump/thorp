@@ -115,7 +115,10 @@ public record BacktestDetailResponse(
                         : new Failure(result.failure().code(), result.failure().message()));
     }
 
-    private static Summary summary(BacktestDetailResult.Summary source) {
+    /**
+     * 요약 변환. 공개 열람 응답(spec 005 {@code result})이 같은 모양의 요약을 내보내려고 함께 쓴다 — 두 벌로 두면 필드가 늘 때 한쪽만 바뀐다.
+     */
+    public static Summary summary(BacktestDetailResult.Summary source) {
         return new Summary(
                 source.initialEquity(),
                 source.finalEquity(),

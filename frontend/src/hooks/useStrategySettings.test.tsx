@@ -1,9 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  conditionalStrategy,
   registryFixture,
   selectableStrategy,
   unselectableStrategy,
+  withConditionalStrategy,
 } from '@/test/strategyRegistryFixtures'
 import type { RegistryResponse } from '@/types/strategyRegistry'
 import {
@@ -418,6 +420,90 @@ describe('useStrategySettings', () => {
     expect(result.current.analysisCondition.initialAmount).toBe(range.min)
   })
 
+  it('분석 기간은 처음에 비어 있고 두 날짜가 맞을 때만 함께 반영된다', () => {
+    // T067. 비어 있으면 화면이 평가 가능 범위 전체를 쓴다. 범위를 상태에 복사해 두지 않는다.
+    const { result } = renderSettings()
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+
+    // 한쪽만 있으면 기간이 아니다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04' }))
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04', periodEnd: '2023-12-28' }))
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+
+    // 시작이 종료보다 늦어지거나 날짜가 아니면 앞의 기간을 그대로 둔다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2024-01-02' }))
+    act(() => result.current.setAnalysisCondition({ periodEnd: '2023-02-30' }))
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+    expect(readStored().analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+
+    act(() => result.current.resetAnalysisCondition('period'))
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+  })
+
+  it('읽을 수 없는 보관 기간은 지우고 그 사실을 알린다', () => {
+    store({
+      registryVersion: registryFixture.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: 'FULL_PERIOD',
+        periodStart: '2023-06-01',
+        periodEnd: '2022-06-01',
+      },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition.periodStart).toBeUndefined()
+    expect(result.current.analysisCondition.periodEnd).toBeUndefined()
+    const notice = result.current.invalidValues.find((item) => item.axisName === 'period')
+    expect(notice).toMatchObject({ strategyId: null, reason: 'PERIOD_UNREADABLE', restorable: false })
+
+    // 새 기간을 고르면 "지웠다"는 안내는 지금 기간과 어긋나므로 사라진다.
+    act(() => result.current.setAnalysisCondition({ periodStart: '2021-01-04', periodEnd: '2023-12-28' }))
+    expect(result.current.invalidValues.some((item) => item.axisName === 'period')).toBe(false)
+  })
+
+  it('읽을 수 있는 보관 기간은 등록표를 다시 받아도 그대로 남는다', () => {
+    store({
+      registryVersion: 'OLD-VERSION',
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: 'FULL_PERIOD',
+        periodStart: '2021-01-04',
+        periodEnd: '2023-12-28',
+      },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings()
+
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: '2021-01-04',
+      periodEnd: '2023-12-28',
+    })
+    expect(result.current.invalidValues).toHaveLength(0)
+  })
+
   it('선택 전략의 워밍업을 현재 설정으로 계산한다', () => {
     const { result } = renderSettings()
     act(() => result.current.select(unselectableStrategy.strategyId))
@@ -478,5 +564,102 @@ describe('useStrategySettings', () => {
     expect(result.current.ready).toBe(true)
     expect(result.current.selectedStrategyId).toBeNull()
     expect(result.current.invalidValues).toHaveLength(0)
+  })
+})
+
+/**
+ * 조건부 축(FR-003, 계약 §1 `appliesWhen`). 결정 축 `gate`가 `LEFT`면 `leftGap`만, `RIGHT`면 `rightPick`만
+ * 뜻이 있다. 훅은 축 이름을 모르고 조건만 본다.
+ */
+describe('useStrategySettings — 조건부 축', () => {
+  const registry = withConditionalStrategy()
+  const id = conditionalStrategy.strategyId
+  const gate = conditionalStrategy.axes[0]
+  const leftGap = conditionalStrategy.axes[1]
+  const rightPick = conditionalStrategy.axes[2]
+
+  afterEach(() => {
+    window.sessionStorage.clear()
+  })
+
+  it('처음 고르면 조건이 참인 축만 기본값으로 채우고 나머지는 만들지 않는다', () => {
+    const { result } = renderSettings(registry)
+    act(() => result.current.select(id))
+
+    expect(result.current.values).toEqual({
+      [gate.name]: gate.defaultValue,
+      [leftGap.name]: leftGap.defaultValue,
+    })
+    expect(result.current.isComplete(id)).toBe(true)
+    expect(result.current.isDefault(id)).toBe(true)
+    // 보관값에도 조건 밖 축이 없다.
+    const stored = readStored() as { valuesByStrategy: Record<string, Record<string, unknown>> }
+    expect(stored.valuesByStrategy[id]).not.toHaveProperty(rightPick.name)
+  })
+
+  it('결정 축을 바꾸면 밀려난 축의 값은 지우고 새로 열린 축은 기본값에서 시작한다', () => {
+    const { result } = renderSettings(registry)
+    act(() => result.current.select(id))
+    act(() => {
+      result.current.setValue(id, leftGap.name, 5)
+    })
+    expect(result.current.values?.[leftGap.name]).toBe(5)
+
+    act(() => {
+      result.current.setValue(id, gate.name, 'RIGHT')
+    })
+
+    expect(result.current.values).toEqual({
+      [gate.name]: 'RIGHT',
+      [rightPick.name]: rightPick.defaultValue,
+    })
+    expect(result.current.isComplete(id)).toBe(true)
+    // 바꾼 값(5)은 조건 밖으로 밀려나 남지 않는다. 다시 돌아오면 기본값에서 시작한다.
+    act(() => {
+      result.current.setValue(id, gate.name, 'LEFT')
+    })
+    expect(result.current.values?.[leftGap.name]).toBe(leftGap.defaultValue)
+    expect(result.current.values).not.toHaveProperty(rightPick.name)
+  })
+
+  it('보관값의 조건 밖 축은 무효 안내 없이 지우고, 조건이 참인데 없는 축은 기본값으로 채운다', () => {
+    store({
+      registryVersion: registry.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: id,
+      // gate가 RIGHT인데 leftGap이 남아 있고(범위 밖 값이라도) rightPick이 없다.
+      valuesByStrategy: { [id]: { [gate.name]: 'RIGHT', [leftGap.name]: 999 } },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings(registry)
+
+    expect(result.current.values).toEqual({
+      [gate.name]: 'RIGHT',
+      [rightPick.name]: rightPick.defaultValue,
+    })
+    // 그리지도 싣지도 않는 축을 고치라고 하지 않는다.
+    expect(result.current.invalidValues).toHaveLength(0)
+    expect(result.current.isComplete(id)).toBe(true)
+  })
+
+  it('조건이 참인 축의 보관값이 무효면 비워 두고 안내한다 — 조건이 안내를 삼키지 않는다', () => {
+    store({
+      registryVersion: registry.registryVersion,
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: id,
+      valuesByStrategy: { [id]: { [gate.name]: 'LEFT', [leftGap.name]: 999 } },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings(registry)
+
+    expect(result.current.values).toEqual({ [gate.name]: 'LEFT' })
+    expect(result.current.invalidValues).toEqual([
+      expect.objectContaining({ strategyId: id, axisName: leftGap.name, restorable: true }),
+    ])
+    expect(result.current.isComplete(id)).toBe(false)
   })
 })

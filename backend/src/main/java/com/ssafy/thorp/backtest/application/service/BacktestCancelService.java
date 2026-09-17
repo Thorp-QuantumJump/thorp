@@ -69,7 +69,7 @@ public class BacktestCancelService {
         BacktestRequest request =
                 requestRepository
                         .findByBacktestIdForUpdate(backtestId)
-                        .filter(found -> found.getRequesterId() == requesterId)
+                        .filter(found -> found.isOwnedBy(requesterId))
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
         // 이어서 실행 행을 잠근다(잠금 순서: 요청 → 실행) — 같은 실행의 서로 다른 요청이 동시에 취소하면
         // 마지막 활성 요청 판정이 어긋난다.

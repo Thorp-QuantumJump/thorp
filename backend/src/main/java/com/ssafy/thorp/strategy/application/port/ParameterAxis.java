@@ -20,6 +20,9 @@ import java.util.Objects;
  * @param searchValues 자동 탐색 후보값. 인덱스가 그리드 좌표다
  * @param defaultValue 기본 시작값. 007이 정하지 않으며 추천이나 최적값으로 표시하지 않는다(원칙 III)
  * @param allowedRange 입력 허용 범위. 상세 변경의 경계다
+ * @param appliesWhen 이 축이 뜻을 갖는 조건. 없으면 늘 쓴다(spec FR-003, {@link AxisCondition})
+ * @param termId 013 배우기가 소유한 용어 설명의 식별자. 없으면 null이며 화면이 도움말을 붙이지 않는다(spec FR-016). <b>화면이 축 이름으로
+ *     식별자를 고르지 않게 하는 자리다</b>
  */
 public record ParameterAxis(
         String name,
@@ -28,7 +31,21 @@ public record ParameterAxis(
         String unit,
         List<Object> searchValues,
         Object defaultValue,
-        AllowedRange allowedRange) {
+        AllowedRange allowedRange,
+        AxisCondition appliesWhen,
+        String termId) {
+
+    /** 조건도 용어도 없는 축. 007 픽스처와 옛 호출부가 그대로 쓴다. */
+    public ParameterAxis(
+            String name,
+            String label,
+            String description,
+            String unit,
+            List<Object> searchValues,
+            Object defaultValue,
+            AllowedRange allowedRange) {
+        this(name, label, description, unit, searchValues, defaultValue, allowedRange, null, null);
+    }
 
     public ParameterAxis {
         if (name == null || name.isBlank()) {
@@ -42,6 +59,14 @@ public record ParameterAxis(
             throw new IllegalArgumentException("search values must not contain null: " + name);
         }
         searchValues = Collections.unmodifiableList(List.copyOf(searchValues));
+        if (appliesWhen != null && appliesWhen.axis().equals(name)) {
+            throw new IllegalArgumentException("axis must not depend on itself: " + name);
+        }
+    }
+
+    /** 지금 설정에서 이 축을 쓰는가. 조건이 없으면 늘 참이다. */
+    public boolean appliesTo(java.util.Map<String, Object> settings) {
+        return appliesWhen == null || appliesWhen.isSatisfiedBy(settings);
     }
 
     /**

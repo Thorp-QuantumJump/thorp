@@ -1,0 +1,112 @@
+{
+  "success": true,
+  "data": {
+    "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+    "status": "COMPLETED",
+    "resultSource": "NEW",
+    "partial": false,
+    "cancelRequested": false,
+    "expiresAt": "2026-09-23T04:11:00Z",
+    "progress": null,
+    "queuedAt": "2026-09-16T04:11:00Z",
+    "startedAt": "2026-09-16T04:11:03Z",
+    "finishedAt": "2026-09-16T04:12:41Z",
+    "queueWaitSeconds": null,
+    "config": {
+      "end": "2024-12-31",
+      "items": [
+        {
+          "sectorId": "SEMICONDUCTOR",
+          "instrumentId": "091160.XKRX",
+          "targetWeight": "0.4000"
+        },
+        {
+          "sectorId": "BATTERY",
+          "instrumentId": "305720.XKRX",
+          "targetWeight": "0.3000"
+        },
+        {
+          "sectorId": "BIO",
+          "instrumentId": "244580.XKRX",
+          "targetWeight": "0.3000"
+        }
+      ],
+      "initialCash": "11110000.00",
+      "parameters": {
+        "rebalance": "MONTH_END"
+      },
+      "mappingVersion": "SECTOR-ETF-2026-09",
+      "start": "2023-07-03",
+      "evaluationSplitVersion": "SPLIT-1",
+      "warmupTradingDays": 0,
+      "scenario": "FULL_PERIOD",
+      "rulesVersion": "1",
+      "strategyId": "FIXED_WEIGHT",
+      "currency": "KRW",
+      "effectiveStart": "2023-07-03",
+      "effectiveEnd": "2024-12-31"
+    },
+    "versions": {
+      "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
+      "rules": {
+        "version": "1",
+        "provisional": false
+      },
+      "data": "FIXTURE-three_etf_24m",
+      "evaluationSplit": "SPLIT-1",
+      "costProfile": {
+        "version": "PROVISIONAL-DEMO-1",
+        "provisional": true
+      },
+      "mapping": "SECTOR-ETF-2026-09"
+    },
+    "summary": {
+      "initialEquity": "10000000.00",
+      "finalEquity": "11666521.51",
+      "currency": "KRW",
+      "totalReturn": "0.166652",
+      "cagr": "0.366917",
+      "maxDrawdown": "-0.041757",
+      "sharpeRatio": "2.342630",
+      "volatility": "0.132307",
+      "tradeCount": 2,
+      "winRate": "0.500000",
+      "totalCommission": "3941.19",
+      "totalSlippageCost": "13137.30",
+      "netTotalReturn": "0.166652",
+      "totalTradingCost": "17078.49",
+      "costs": {
+        "commission": "3941.19",
+        "spread": "0.00",
+        "slippage": "13137.30",
+        "tax": "0.00",
+        "total": "17078.49"
+      },
+      "liquidation": {
+        "markToMarket": {
+          "finalEquity": "11666521.51",
+          "totalReturn": "0.166652"
+        },
+        "liquidated": {
+          "finalEquity": "11662525.96",
+          "totalReturn": "0.166253",
+          "liquidationCost": "3995.55"
+        }
+      },
+      "analytics": {
+        "recoveryDays": 9,
+        "turnover": "1.219991"
+      },
+      "exceptionCount": 1
+    },
+    "summaryUnavailable": null,
+    "failure": null,
+    "validationTier": "UNVALIDATED",
+    "strategyName": "내가 정한 비중",
+    "weightsSource": "COMPUTED",
+    "exceptionKinds": [
+      "HALT_DEFERRED"
+    ]
+  },
+  "error": null
+}

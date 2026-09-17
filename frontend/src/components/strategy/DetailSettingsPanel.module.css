@@ -1,0 +1,112 @@
+.panel {
+  display: grid;
+  gap: 12px;
+}
+
+.toggle {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle::after {
+  content: ' ▾';
+  color: var(--thorp-copy);
+}
+
+.toggle[aria-expanded='true']::after {
+  content: ' ▴';
+}
+
+.toggle:focus-visible,
+.resetAll:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.body {
+  display: grid;
+  gap: 14px;
+}
+
+.axes {
+  display: grid;
+  gap: 10px;
+}
+
+.note {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.weights {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+}
+
+.weightTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.weightTable th,
+.weightTable td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+}
+
+.weightTable td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.resetAll {
+  padding: 7px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.resetAll:hover {
+  border-color: currentColor;
+}
+
+.violations {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 10px;
+  color: var(--thorp-foreground);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.violations ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}

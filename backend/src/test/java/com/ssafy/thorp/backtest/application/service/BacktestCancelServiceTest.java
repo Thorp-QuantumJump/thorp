@@ -18,6 +18,7 @@ import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunState;
@@ -84,7 +85,9 @@ class BacktestCancelServiceTest {
                 null,
                 cancelledAt,
                 null,
-                false);
+                false,
+                PublicResultToken.generate(),
+                null);
     }
 
     private static BacktestRun run(RunStatus status, LocalDate progressDate) {

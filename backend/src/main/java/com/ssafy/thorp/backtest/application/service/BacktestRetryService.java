@@ -45,14 +45,31 @@ public class BacktestRetryService {
         this.runRepository = runRepository;
     }
 
-    @Transactional
+    /**
+     * 소유자 경로. 한도 거절(429)의 기록이 남도록 {@code BusinessException}으로 되돌리지 않는다 — 접수 안쪽이 이미 {@code
+     * noRollbackFor}인데 여기만 기본 규칙이면 그 기록이 바깥 롤백과 함께 사라진다({@code backend/CLAUDE.md}).
+     */
+    @Transactional(noRollbackFor = BusinessException.class)
     public BacktestJobResult retry(String backtestId, long requesterId) {
         // 남의 요청은 403 이 아니라 404 로 숨긴다(R-12) — 403 은 그 식별자가 존재한다고 알려 준다.
         BacktestRequest request =
                 requestRepository
                         .findByBacktestId(backtestId)
-                        .filter(found -> found.getRequesterId() == requesterId)
+                        .filter(found -> found.isOwnedBy(requesterId))
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
+        return retry(request, requesterId);
+    }
+
+    /**
+     * {@link #retry(String, long)}의 몸통. <b>접근 판정은 호출자가 끝냈다</b> — 공개 토큰 경로(spec 005 {@code result})는
+     * 토큰·만료를 판정한 요청으로 바로 부른다({@code BacktestResultQueryService}의 요청 기준 오버로드와 같은 구조다).
+     *
+     * @param requesterId 새 요청의 요청자. <b>원 요청의 요청자가 아니라 지금 다시 시도하는 사람이다</b> — 공개 주소를 받은 비로그인 사용자가 다시
+     *     시도하면 남의 이름으로 요청이 생기면 안 된다. null = 비로그인
+     */
+    @Transactional(noRollbackFor = BusinessException.class)
+    public BacktestJobResult retry(BacktestRequest request, Long requesterId) {
+        String backtestId = request.getBacktestId().value();
         BacktestRun run =
                 runRepository
                         .findById(request.getRunId())

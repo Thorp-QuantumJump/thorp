@@ -116,7 +116,8 @@ components:
       type: object
       description: >-
         값이 없는 필드는 키를 생략하지 않고 명시적 null로 보낸다. 012와 같은 규칙이다.
-      required: [registryVersion, datasetVersion, narrativeRuleVersion, fields]
+      required:
+        [registryVersion, datasetVersion, narrativeRuleVersion, historicalComparisonNotice, fields]
       properties:
         registryVersion:
           type: string
