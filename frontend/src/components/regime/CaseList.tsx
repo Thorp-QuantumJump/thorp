@@ -24,11 +24,10 @@ export function CaseList({ result, onShowMore, isLoading, context }: CaseListPro
           <p>{result.caseLabel}</p>
         </Disclosure>
       )}
-      <ol className={styles.cases}>
+      <ul className={styles.cases}>
         {result.cases.map((item) => (
           <li key={item.endMonth} className={styles.case}>
             <div className={styles.caseHeading}>
-              <span className={styles.rank}>{String(item.rank).padStart(2, '0')}</span>
               <h3>{item.endMonth}</h3>
             </div>
             <p className={styles.months}>
@@ -46,7 +45,7 @@ export function CaseList({ result, onShowMore, isLoading, context }: CaseListPro
             </div>
           </li>
         ))}
-      </ol>
+      </ul>
       {result.counts.stored > result.counts.displayed && (
         <button className={styles.more} type="button" onClick={onShowMore} disabled={isLoading}>
           {isLoading ? '불러오는 중' : '더 보기'}

@@ -35,6 +35,7 @@ describe('사례 목록', () => {
     const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context="시험 검색" />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
     expect(screen.getByText('2012-03')).toBeTruthy()
+    expect(screen.queryByText('01')).toBeNull()
     expect(screen.queryByText('0.412938571034')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '더 보기' }))
     expect(onShowMore).toHaveBeenCalledOnce()
