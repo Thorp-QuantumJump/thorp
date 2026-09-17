@@ -84,7 +84,20 @@ pipeline {
 
     options {
         timestamps()
-        disableConcurrentBuilds()
+
+        // 실행 슬롯은 CI와 배포가 함께 쓴다(infra/jenkins/init.groovy.d). 끝나지 않는 빌드가
+        // 슬롯을 붙잡으면 뒤에 온 빌드가 한 단계도 돌지 못한 채 대기열에 쌓인다
+        // (2026-09-17 #152~#154). 제한 시간이 지나면 timeout 은 중단 신호에 응답하지 않는
+        // 단계까지 강제로 끝내므로, 사람이 중단 버튼을 누르는 것보다 확실하게 슬롯을 돌려준다.
+        //
+        // 이 시간은 슬롯을 받은 뒤부터 센다. 최상위 agent 를 잡은 안쪽에서 적용되기 때문이다.
+        // 두 빌드가 CPU 를 나눠 쓰면 혼자 돌 때보다 느려지므로 배포(30분)보다 넉넉히 둔다.
+        timeout(time: 45, unit: 'MINUTES')
+
+        // disableConcurrentBuilds() 는 두지 않는다. 서로 다른 MR 의 CI 가 동시에 돌 수 있어야
+        // 대기가 줄어든다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를 thorp-ci, thorp-ci@2 로
+        // 나눠 주고, 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로 섞이지 않는다.
+
         // gradle·ruff·pytest 출력의 ANSI 색상을 콘솔에 그대로 표시한다.
         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에
         // 실패한다. 플러그인 목록은 infra/jenkins/Dockerfile 에 있다.
@@ -486,7 +499,15 @@ pipeline {
             //
             // 워크스페이스 정리를 GitLab 보고보다 먼저 한다. 보고가 어떤 이유로 멈추더라도
             // 다음 빌드가 병합이 걸린 워크스페이스를 물려받지 않게 하기 위함이다.
-            sh 'git merge --abort >/dev/null 2>&1 || true'
+            //
+            // 슬롯을 받기 전에 취소된 빌드는 워크스페이스가 없어 sh 가 실패하고, 그 자리에서
+            // always 블록이 끊겨 아래 GitLab 정리까지 건너뛴다. NODE_NAME 은 슬롯을 받은
+            // 안쪽에서만 채워지므로 그것으로 가른다. 이 경우엔 되돌릴 병합도 없다.
+            script {
+                if (env.NODE_NAME) {
+                    sh 'git merge --abort >/dev/null 2>&1 || true'
+                }
+            }
 
             // 앞 스테이지가 실패해 뒤가 아예 돌지 못하면 그 검사는 미리 올린 상태 그대로
             // 남는다. GitLab 은 끝나지 않은 검사를 계속 기다리므로 MR 이 실패도 성공도 아닌
