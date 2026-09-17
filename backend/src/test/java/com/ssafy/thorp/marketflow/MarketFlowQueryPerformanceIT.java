@@ -12,7 +12,7 @@ import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;
 import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;
 import com.ssafy.thorp.marketflow.domain.vo.PathPoint;
 import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -24,8 +24,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -33,14 +31,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(
-        properties = {
-            "spring.mail.username=market-flow-test",
-            "spring.mail.password=market-flow-test"
-        })
-@AutoConfigureMockMvc
 @Import(MarketFlowQueryPerformanceIT.LongHistoryFixtureConfig.class)
-class MarketFlowQueryPerformanceIT extends PostgresTestSupport {
+class MarketFlowQueryPerformanceIT extends IntegrationTestSupport {
 
     private static final int WARM_UP_COUNT = 30;
     private static final int MEASURE_COUNT = 100;

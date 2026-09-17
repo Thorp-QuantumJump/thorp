@@ -15,7 +15,7 @@ import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,7 +24,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -34,17 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>핵심 단언은 <b>동일 버전 키가 같다</b>는 것이다. 사본은 JSONB 로 저장되면서 decimal 이 문자열이 되므로, 한 칸이라도 잘못 읽으면 키가 달라진다 —
  * 키가 같다는 것은 결과 숫자를 바꾸는 값이 전부 제대로 왕복했다는 뜻이다(R-03).
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class BacktestRetryIT extends PostgresTestSupport {
+class BacktestRetryIT extends IntegrationTestSupport {
 
     @Autowired private BacktestService backtestService;
     @Autowired private BacktestRetryService retryService;

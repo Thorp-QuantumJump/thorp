@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 
@@ -44,6 +45,9 @@ import org.testcontainers.junit.jupiter.Container;
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
+// 클래스가 끝나면 @Container 브로커가 내려가는데, 캐시에 남은 컨텍스트의 리스너는 테스트가 모두 끝날 때까지 5초마다 재접속을 시도한다.
+// 이 설정을 쓰는 테스트는 이 클래스뿐이라 닫아도 컨텍스트를 다시 만드는 일은 없다.
+@DirtiesContext
 class BacktestEventListenerIT extends PostgresTestSupport {
 
     @Container @ServiceConnection

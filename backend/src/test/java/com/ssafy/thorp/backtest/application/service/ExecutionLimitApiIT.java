@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.port.ExecutionLimits;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
@@ -21,8 +22,9 @@ import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -34,56 +36,66 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 실행 한도 장치(spec 004 T014, FR-006, R-19). 실제 DB 로 접수 거절과 강제 종결을 고정한다.
  *
- * <p>한도를 작게 눌러(사용자 2·전체 3) 시나리오를 짧게 만든다 — <b>값이 아니라 장치를 보는 테스트</b>다. 실제 값은 PD-06 이 실측 뒤 정한다.
+ * <p>사용자별 한도를 2로 눌러 시나리오를 짧게 만든다 — <b>값이 아니라 장치를 보는 테스트</b>다. 실제 값은 PD-06 이 실측 뒤 정한다.
  *
  * <p><b>전체 한도는 여기서 보지 않는다.</b> 스위트가 PostgreSQL 컨테이너를 공유하므로 다른 IT 가 남긴 대기 실행까지 함께 세어져, 몇 건을 넣어야 넘는지가
  * 실행 순서에 따라 달라진다. 그 분기는 {@code ExecutionLimitPolicyTest} 가 목으로 고정한다 — 여기서는 넉넉히 두어 사용자별 한도만 보이게 한다.
  *
- * <p>스케줄러는 꺼 두고 {@code sweep()} 을 직접 부른다. 주기를 기다리면 테스트가 시간에 의존하고, 우리가 보려는 것은 "주기가 도는가"가 아니라 "무엇을
- * 거두는가"다.
+ * <p>스케줄러로 도는 스위퍼 빈은 쓰지 않고, 같은 빈들로 스위퍼를 직접 만들어 {@code sweep()} 을 부른다. 주기를 기다리면 테스트가 시간에 의존하고, 우리가
+ * 보려는 것은 "주기가 도는가"가 아니라 "무엇을 거두는가"다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+// 한도를 좁히므로 기반 컨텍스트와 따로 뜬다.
+@TestPropertySource(
         properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.backtest.liveness.interval=PT1H",
             "thorp.backtest.limits.max-queued-per-user=2",
-            "thorp.backtest.limits.max-queued-total=1000",
-            // 공유 컨테이너에 다른 IT 가 남긴 비로그인 대기 실행이 섞인다. 몫의 판정은 ExecutionLimitPolicyTest 가, 셈은 증가분으로 본다.
-            "thorp.backtest.limits.max-queued-anonymous=1000",
-            "thorp.backtest.limits.max-run-seconds=1800",
-            "thorp.backtest.limits.stale-run-seconds=300",
-            "thorp.backtest.limits.cancel-grace-seconds=1",
-            "thorp.backtest.limits.provisional=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
+            // 취소를 요청한 지 1초만 지나도 무응답으로 보고 강제 종결하게 해 sweep() 한 번으로 확인한다.
+            "thorp.backtest.limits.cancel-grace-seconds=1"
         })
-@AutoConfigureMockMvc
-class ExecutionLimitApiIT extends PostgresTestSupport {
+class ExecutionLimitApiIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private BacktestService backtestService;
     @Autowired private BacktestRunRepository runRepository;
     @Autowired private BacktestRequestRepository requestRepository;
-    @Autowired private RunLivenessSweeper sweeper;
+    @Autowired private BacktestCancelDispatcher cancelDispatcher;
+    @Autowired private ExecutionMetricRecorder metrics;
+    @Autowired private ExecutionLimits limits;
+    @Autowired private ApplicationEventPublisher events;
+    @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private Clock clock;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private TransactionTemplate transactionTemplate;
+
+    /** 스케줄러 빈을 띄우면 컨텍스트가 뜨자마자 한 번 돌아 첫 테스트와 커넥션을 다툰다. 그래서 기반 설정대로 꺼 두고, 운영과 같은 빈으로 직접 만든다. */
+    private RunLivenessSweeper sweeper;
+
+    @BeforeEach
+    void createSweeper() {
+        sweeper =
+                new RunLivenessSweeper(
+                        runRepository,
+                        cancelDispatcher,
+                        metrics,
+                        limits,
+                        events,
+                        transactionManager,
+                        clock,
+                        50);
+    }
 
     private long newUser(String tag) {
         String suffix = tag + (System.nanoTime() % 1_000_000_000L);

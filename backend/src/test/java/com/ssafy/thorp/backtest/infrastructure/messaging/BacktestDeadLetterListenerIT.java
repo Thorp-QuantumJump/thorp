@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -35,6 +36,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(classes = {BacktestRabbitConfig.class, BacktestDeadLetterListener.class})
 @ImportAutoConfiguration(RabbitAutoConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
+// 클래스가 끝나면 @Container 브로커가 내려가는데, 캐시에 남은 컨텍스트의 리스너는 테스트가 모두 끝날 때까지 5초마다 재접속을 시도한다.
+// 이 설정을 쓰는 테스트는 이 클래스뿐이라 닫아도 컨텍스트를 다시 만드는 일은 없다.
+@DirtiesContext
 class BacktestDeadLetterListenerIT {
 
     private static final String RUN_ID = "BT-20260914-000077";

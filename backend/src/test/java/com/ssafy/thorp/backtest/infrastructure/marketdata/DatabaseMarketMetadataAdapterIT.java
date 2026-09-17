@@ -4,13 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.MarketCatalogSeed;
-import com.ssafy.thorp.support.PostgresTestSupport;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -22,21 +21,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>여기서 고정하는 성질은 넷이다. <b>판 번호를 어떻게 고르는가</b>, <b>부분 갱신본을 고르지 않는가</b>, <b>자료가 없으면 지어내지 않고 멈추는가</b>,
  * <b>달력을 거래일로 세는가</b>.
  */
-// 설정값을 다른 통합 검사와 똑같이 둔다. Spring 이 애플리케이션 컨텍스트를 설정 단위로 캐시하므로
-// 한 글자라도 다르면 컨텍스트를 하나 더 띄워 전체 검사가 느려진다. 메일·브로커 값은 이 검사가 쓰지
-// 않지만, 없으면 그 빈들이 만들어지지 못해 컨텍스트 자체가 뜨지 않는다.
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
 @DisplayName("적재된 자료를 읽는 시장 메타데이터 구현")
-class DatabaseMarketMetadataAdapterIT extends PostgresTestSupport {
+class DatabaseMarketMetadataAdapterIT extends IntegrationTestSupport {
 
     @Autowired private DatabaseMarketMetadataAdapter adapter;
     @Autowired private JdbcTemplate jdbcTemplate;

@@ -21,7 +21,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,10 +31,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -45,18 +44,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>선정을 다시 계산해야 하는 이유는 안정성 필터가 묶음 내 상대 분위이기 때문이다. 후보 하나가 늘면 분위 자체가 달라져 이전 선정은 더 이상 사실이 아니다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            // 창을 1로 좁힌다. 취소가 '미실행'으로 돌릴 대기 후보가 남아 있어야
-            // 재시도가 그것을 되살리지 않는다는 것을 볼 수 있다.
-            "thorp.param-search.dispatch-window=1",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchRetryTest extends PostgresTestSupport {
+// 창을 1로 좁힌다. 취소가 '미실행'으로 돌릴 대기 후보가 남아 있어야 재시도가 그것을 되살리지 않는다는 것을 볼 수 있다.
+// ParamSearchCancelIT·ParamSearchRecordCompletenessTest와 컨텍스트를 함께 쓰므로 글자 그대로 같게 둔다.
+@TestPropertySource(properties = "thorp.param-search.dispatch-window=1")
+class ParamSearchRetryTest extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
     private static final long OWNER = 7L;
@@ -73,7 +64,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(950_000L);
 

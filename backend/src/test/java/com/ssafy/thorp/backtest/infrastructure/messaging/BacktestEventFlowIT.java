@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,7 +23,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -31,17 +31,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>브로커 컨테이너는 띄우지 않는다. 죽은 포트를 브로커로 지정하고 리스너를 끈다. DB는 {@link PostgresTestSupport}의 PostgreSQL
  * 컨테이너다. 브로커를 경유하는 확인은 {@code BacktestEventListenerIT}가 한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            // 전체 컨텍스트라 메일 발송 빈이 만들어진다. 운영에서만 주입되는 값이므로 더미를 넣는다.
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class BacktestEventFlowIT extends PostgresTestSupport {
+class BacktestEventFlowIT extends IntegrationTestSupport {
 
     @Autowired private BacktestEventService service;
     @Autowired private BacktestRunRepository jobRepository;
