@@ -37,9 +37,13 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest(
         properties = {
-            "spring.mail.username=regime-test",
-            "spring.mail.password=regime-test",
-            "thorp.regime.macro.source=fixture"
+            // 다른 IT 다수가 쓰는 값과 같게 둔다. 컨텍스트 캐시 키는 프로퍼티 조합이라 값이
+            // 다르면 Spring 이 컨텍스트를 따로 하나 더 만들어 캐시에 얹는다.
+            //
+            // thorp.regime.macro.source 는 적지 않는다 — application.yml 의 기본값이 이미
+            // fixture 라 적을 필요가 없고, 적으면 이 클래스만 다른 버킷으로 빠진다.
+            "spring.mail.username=test@example.com",
+            "spring.mail.password=test"
         })
 @AutoConfigureMockMvc
 @DisplayName("조회 실패 구분")
