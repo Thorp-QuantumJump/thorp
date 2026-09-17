@@ -246,4 +246,118 @@ class LearningRepositoryTest extends PostgresTestSupport {
         assertThatThrownBy(() -> revisionRepository.save(existing))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    /** 온전한 판 JSON. 테스트마다 필수 키 하나를 빼고 넣는다. */
+    private static final String COMPLETE_SNAPSHOT =
+            """
+            {"articleId":"returns-and-losses","title":"수익과 손실","question":"질문","readingOrder":8,
+             "bodyBlocks":[{"type":"paragraph","text":"문단"}],
+             "example":{"sectors":[{"code":"SEMICONDUCTOR","weightTenths":500},{"code":"BATTERY","weightTenths":500}]},
+             "sources":[],"terms":[],"draftVersion":3}
+            """;
+
+    /** 판 JSON을 SQL로 직접 넣고 글을 그 판으로 게시한다. 저장 경로는 필수 키를 늘 쓰므로 빠진 판은 이렇게만 만들 수 있다. */
+    private long insertPublishedRevision(String snapshotJson) {
+        long articleId =
+                jdbcTemplate.queryForObject(
+                        "SELECT id FROM learning_article WHERE article_key = ?",
+                        Long.class,
+                        ARTICLE.value());
+        long revisionId =
+                jdbcTemplate.queryForObject(
+                        "INSERT INTO learning_article_revision (article_id, revision_no, snapshot,"
+                                + " check_version, sector_map_version, published_by_user_id,"
+                                + " published_at) VALUES (?, 1, CAST(? AS JSONB), 'v', 'm', 1, now())"
+                                + " RETURNING id",
+                        Long.class,
+                        articleId,
+                        snapshotJson);
+        jdbcTemplate.update(
+                "UPDATE learning_article SET status = 'PUBLISHED', published_revision_id = ?"
+                        + " WHERE id = ?",
+                revisionId,
+                articleId);
+        return revisionId;
+    }
+
+    @Test
+    @DisplayName("온전한 판 JSON은 SQL로 넣어도 그대로 읽힌다 (아래 실패 테스트의 대조군)")
+    void completeRawSnapshotIsReadable() {
+        long id = insertPublishedRevision(COMPLETE_SNAPSHOT);
+
+        ArticleRevision revision = revisionRepository.findById(id).orElseThrow();
+
+        assertThat(revision.snapshot().readingOrder()).isEqualTo(8);
+        assertThat(revision.snapshot().draftVersion()).isEqualTo(3);
+        assertThat(articleRepository.findPublishedOrdered()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("판 JSON에 readingOrder가 없으면 0으로 채우지 않고 목록·단건 모두 실패한다 (원칙 VI)")
+    void missingScalarKeysFailInsteadOfZero() {
+        long noOrder =
+                insertPublishedRevision(COMPLETE_SNAPSHOT.replace("\"readingOrder\":8,", ""));
+        assertThatThrownBy(() -> revisionRepository.findById(noOrder))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("readingOrder");
+        assertThatThrownBy(() -> articleRepository.findPublishedOrdered())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("readingOrder");
+    }
+
+    @Test
+    @DisplayName("판 JSON에 draftVersion이 없으면 실패한다")
+    void missingDraftVersionFails() {
+        long id = insertPublishedRevision(COMPLETE_SNAPSHOT.replace(",\"draftVersion\":3", ""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("draftVersion");
+    }
+
+    @Test
+    @DisplayName("예시 섹터에 weightTenths가 없으면 비중 0으로 채우지 않고 실패한다")
+    void missingWeightFails() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "{\"code\":\"BATTERY\",\"weightTenths\":500}",
+                                "{\"code\":\"BATTERY\"}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("weightTenths");
+    }
+
+    @Test
+    @DisplayName("판 JSON에 bodyBlocks가 없으면 빈 본문으로 채우지 않고 실패한다")
+    void missingBodyBlocksFails() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "\"bodyBlocks\":[{\"type\":\"paragraph\",\"text\":\"문단\"}],", ""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bodyBlocks");
+    }
+
+    @Test
+    @DisplayName("판 JSON에 sources가 없으면 빈 목록으로 채우지 않고 실패한다")
+    void missingListKeysFail() {
+        long noSources = insertPublishedRevision(COMPLETE_SNAPSHOT.replace("\"sources\":[],", ""));
+        assertThatThrownBy(() -> revisionRepository.findById(noSources))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("sources");
+    }
+
+    @Test
+    @DisplayName("판 JSON에 terms가 없으면 실패한다")
+    void missingTermsFails() {
+        long id = insertPublishedRevision(COMPLETE_SNAPSHOT.replace("\"terms\":[],", ""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("terms");
+    }
 }

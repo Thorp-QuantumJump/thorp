@@ -21,7 +21,13 @@ import java.util.List;
  * BlockJson})의 {@code type}으로 펼치는 이유도 같다. 저장 키 이름은 data-model §3-6과 1:1이다.
  *
  * <p><b>이 JSON은 메시지 ObjectMapper로 직렬화된다</b>({@code MessageJsonPersistenceConfig}). null 필드는 키가
- * 생략되므로 읽는 쪽은 <b>키 없음을 null로</b> 받는다. {@code heading} 블록의 {@code termId}, 출처의 {@code url}이 그렇다.
+ * 생략되므로 읽는 쪽은 <b>키 없음을 null로</b> 받는다.
+ *
+ * <p><b>선택 값과 필수 값을 가른다.</b> 선택 값(판의 {@code example}, 출처의 {@code url})은 null 그대로 둔다. 필수 값(순서·비중·초안
+ * 판 번호·본문·출처·용어 목록, 블록 종류에 따른 {@code text}/{@code termId})이 없으면 0이나 빈 목록으로 채우지 않고 {@link
+ * IllegalStateException}으로 실패시킨다. 저장 경로는 필수 값을 늘 쓰므로 빠졌다면 저장 데이터가 깨진 것이고, 채워 넣으면 순서 0인 글이나 본문 없는 글을
+ * 공개하게 된다(원칙 VI). 숫자를 원시 타입이 아니라 래퍼로 받는 이유도 같다. 원시 타입이면 어느 키가 빠졌는지 모르는 역직렬화 예외가 나거나, 매퍼 설정에 따라 0이
+ * 된다.
  */
 public final class LearningContentJson {
 
@@ -35,7 +41,7 @@ public final class LearningContentJson {
     /** 본문 블록. {@code term}이면 {@code termId}만, 나머지는 {@code text}만 있다. */
     public record BlockJson(String type, String text, String termId) {}
 
-    public record SectorWeightJson(String code, int weightTenths) {}
+    public record SectorWeightJson(String code, Integer weightTenths) {}
 
     public record ExampleJson(List<SectorWeightJson> sectors) {}
 
@@ -48,21 +54,33 @@ public final class LearningContentJson {
             String articleId,
             String title,
             String question,
-            int readingOrder,
+            Integer readingOrder,
             List<BlockJson> bodyBlocks,
             ExampleJson example,
             List<SourceJson> sources,
             List<TermJson> terms,
-            int draftVersion) {}
+            Integer draftVersion) {}
+
+    /**
+     * 저장된 JSON에서 필수 키의 값을 꺼낸다.
+     *
+     * @throws IllegalStateException 키가 없거나 null일 때. 메시지에 키 이름을 담는다
+     */
+    static <T> T required(T value, String key) {
+        if (value == null) {
+            throw new IllegalStateException("stored learning JSON is missing required key: " + key);
+        }
+        return value;
+    }
 
     static List<BlockJson> blocksToJson(List<ArticleBlock> blocks) {
         return blocks.stream().map(LearningContentJson::blockToJson).toList();
     }
 
     static List<ArticleBlock> blocksFromJson(List<BlockJson> blocks) {
-        return blocks == null
-                ? List.of()
-                : blocks.stream().map(LearningContentJson::blockFromJson).toList();
+        return required(blocks, "bodyBlocks").stream()
+                .map(LearningContentJson::blockFromJson)
+                .toList();
     }
 
     static ExampleJson exampleToJson(ExampleAllocation example) {
@@ -75,16 +93,20 @@ public final class LearningContentJson {
                         .toList());
     }
 
+    /** 예시 자체는 선택 값이다. 있으면 섹터 목록과 각 섹터의 코드·비중은 필수다. */
     static ExampleAllocation exampleFromJson(ExampleJson example) {
         if (example == null) {
             return null;
         }
         return new ExampleAllocation(
-                example.sectors().stream()
+                required(example.sectors(), "example.sectors").stream()
                         .map(
                                 sector ->
                                         new ExampleAllocation.SectorWeight(
-                                                sector.code(), sector.weightTenths()))
+                                                required(sector.code(), "example.sectors[].code"),
+                                                required(
+                                                        sector.weightTenths(),
+                                                        "example.sectors[].weightTenths")))
                         .toList());
     }
 
@@ -95,11 +117,12 @@ public final class LearningContentJson {
     }
 
     static List<ArticleSource> sourcesFromJson(List<SourceJson> sources) {
-        return sources == null
-                ? List.of()
-                : sources.stream()
-                        .map(source -> new ArticleSource(source.label(), source.url()))
-                        .toList();
+        return required(sources, "sources").stream()
+                .map(
+                        source ->
+                                new ArticleSource(
+                                        required(source.label(), "sources[].label"), source.url()))
+                .toList();
     }
 
     static SnapshotJson snapshotToJson(ArticleSnapshot snapshot) {
@@ -124,24 +147,23 @@ public final class LearningContentJson {
 
     static ArticleSnapshot snapshotFromJson(SnapshotJson snapshot) {
         return new ArticleSnapshot(
-                new ArticleId(snapshot.articleId()),
-                snapshot.title(),
-                snapshot.question(),
-                snapshot.readingOrder(),
+                new ArticleId(required(snapshot.articleId(), "articleId")),
+                required(snapshot.title(), "title"),
+                required(snapshot.question(), "question"),
+                required(snapshot.readingOrder(), "readingOrder"),
                 blocksFromJson(snapshot.bodyBlocks()),
                 exampleFromJson(snapshot.example()),
                 sourcesFromJson(snapshot.sources()),
-                snapshot.terms() == null
-                        ? List.of()
-                        : snapshot.terms().stream()
-                                .map(
-                                        term ->
-                                                new LearningTerm(
-                                                        new TermId(term.termId()),
-                                                        term.label(),
-                                                        term.sentence()))
-                                .toList(),
-                snapshot.draftVersion());
+                required(snapshot.terms(), "terms").stream()
+                        .map(
+                                term ->
+                                        new LearningTerm(
+                                                new TermId(
+                                                        required(term.termId(), "terms[].termId")),
+                                                required(term.label(), "terms[].label"),
+                                                required(term.sentence(), "terms[].sentence")))
+                        .toList(),
+                required(snapshot.draftVersion(), "draftVersion"));
     }
 
     private static BlockJson blockToJson(ArticleBlock block) {
@@ -159,12 +181,12 @@ public final class LearningContentJson {
      * 버리면 공개 글에서 문단이 사라진 채 나간다(원칙 VI).
      */
     private static ArticleBlock blockFromJson(BlockJson block) {
-        String type = block.type() == null ? "" : block.type();
+        String type = required(block.type(), "bodyBlocks[].type");
         return switch (type) {
-            case HEADING -> new HeadingBlock(block.text());
-            case PARAGRAPH -> new ParagraphBlock(block.text());
-            case TERM -> new TermBlock(new TermId(block.termId()));
-            case HYPOTHETICAL -> new HypotheticalBlock(block.text());
+            case HEADING -> new HeadingBlock(required(block.text(), "bodyBlocks[].text"));
+            case PARAGRAPH -> new ParagraphBlock(required(block.text(), "bodyBlocks[].text"));
+            case TERM -> new TermBlock(new TermId(required(block.termId(), "bodyBlocks[].termId")));
+            case HYPOTHETICAL -> new HypotheticalBlock(required(block.text(), "bodyBlocks[].text"));
             default -> throw new IllegalStateException("unknown stored block type: " + type);
         };
     }

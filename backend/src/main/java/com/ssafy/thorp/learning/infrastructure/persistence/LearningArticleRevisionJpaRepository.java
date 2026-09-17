@@ -27,7 +27,8 @@ public interface LearningArticleRevisionJpaRepository
 
         String getQuestion();
 
-        int getReadingOrder();
+        /** 래퍼 타입이다. 판에 키가 없으면 null이 오고, 호출자가 0으로 바꾸지 않고 실패시킨다. */
+        Integer getReadingOrder();
     }
 
     /** 지금 공개 중인 글의 목록 항목. 판의 제목·질문·순서만 JSONB에서 꺼내고 본문은 읽지 않는다. 글의 상태와 공개 판 포인터가 함께 맞는 것만 읽는다. */

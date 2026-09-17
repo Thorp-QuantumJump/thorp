@@ -59,10 +59,12 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                 .map(
                         row ->
                                 new LearningArticleSummaryResult(
-                                        row.getArticleId(),
-                                        row.getTitle(),
-                                        row.getQuestion(),
-                                        row.getReadingOrder()))
+                                        LearningContentJson.required(
+                                                row.getArticleId(), "articleId"),
+                                        LearningContentJson.required(row.getTitle(), "title"),
+                                        LearningContentJson.required(row.getQuestion(), "question"),
+                                        LearningContentJson.required(
+                                                row.getReadingOrder(), "readingOrder")))
                 .toList();
     }
 

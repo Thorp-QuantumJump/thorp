@@ -416,3 +416,9 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 - 테스트가 먼저 실패하는 것을 확인한 뒤 구현한다
 - 태스크 하나 또는 논리적 묶음마다 커밋한다
 - 피할 것: 모호한 태스크, 같은 파일 충돌, 스토리 독립성을 깨는 교차 의존, **판·이벤트를 고치는 저장소 메서드**, **초안 `learning_term`을 읽어 공개 응답을 만드는 경로**
+
+---
+
+## Phase 9: Convergence
+
+- [X] T079 (BE) `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningContentJson.java`가 판·초안 JSON에서 필수 키가 빠졌을 때 조용히 채우지 않고 실패하게 한다 — `SnapshotJson.readingOrder`·`draftVersion`, `SectorWeightJson.weightTenths`는 원시 `int`라 키가 없으면 0이 되고(메시지 ObjectMapper는 `FAIL_ON_MISSING_CREATOR_PROPERTIES`를 켜지 않는다), `blocksFromJson`·`sourcesFromJson`·`snapshotFromJson`은 null 목록을 `List.of()`로 바꾼다. 선택 값(`example`, 블록의 `text`/`termId`, 출처 `url`)은 "키 없음 = null" 그대로 두고, 필수 값은 래퍼 타입으로 받아 null이면 `IllegalStateException`을 던진다. `LearningRepositoryTest`에 `readingOrder`·`weightTenths`·`bodyBlocks` 키를 뺀 판 JSON을 SQL로 넣고 읽으면 실패하는 경우를 더한다 per Constitution VI, tasks "착수 전에 알아둘 것" ⑦ (partial)
