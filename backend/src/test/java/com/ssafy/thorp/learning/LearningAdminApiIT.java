@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -675,24 +676,37 @@ class LearningAdminApiIT extends PostgresTestSupport {
                 hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword());
     }
 
-    /** 다른 세션이 잠금을 기다릴 때까지 기다린다. 요청이 제약 앞에 선 것을 확인한 뒤에 막고 있던 행을 커밋해야 경쟁이 재현된다. */
-    private static void awaitLockWait(Connection watcher) throws Exception {
+    /**
+     * 요청이 {@code holder}의 커밋하지 않은 행에 막혀 기다릴 때까지 기다린다. 그 뒤에 커밋해야 요청이 존재 검사를 이미 통과한 채 UNIQUE 제약에 걸려,
+     * 컨트롤러의 "제약 위반 → 409" 변환 경로를 실제로 탄다.
+     *
+     * <p>DB 전체의 잠금 대기를 세면 안 된다. 같은 컨테이너를 쓰는 다른 세션(스케줄러의 advisory lock 등)이 기다리는 순간 곧바로 넘어가, 요청이 제약
+     * 앞에 서기 전에 커밋하게 된다. 그러면 요청은 일반 존재 검사에서 409를 받아 테스트는 통과하지만 변환 경로는 한 번도 돌지 않는다. 그래서 {@code
+     * holder}에게 막힌 세션만 센다({@code pg_blocking_pids}).
+     */
+    private static void awaitBlockedBy(Connection holder, Connection watcher) throws Exception {
+        int holderPid;
+        try (ResultSet pid = holder.createStatement().executeQuery("SELECT pg_backend_pid()")) {
+            pid.next();
+            holderPid = pid.getInt(1);
+        }
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
         while (System.nanoTime() < deadline) {
-            try (ResultSet rows =
-                    watcher.createStatement()
-                            .executeQuery(
-                                    "SELECT count(*) FROM pg_stat_activity"
-                                            + " WHERE wait_event_type = 'Lock'"
-                                            + " AND datname = current_database()")) {
-                rows.next();
-                if (rows.getInt(1) > 0) {
-                    return;
+            try (PreparedStatement blocked =
+                    watcher.prepareStatement(
+                            "SELECT count(*) FROM pg_stat_activity"
+                                    + " WHERE ? = ANY (pg_blocking_pids(pid))")) {
+                blocked.setInt(1, holderPid);
+                try (ResultSet rows = blocked.executeQuery()) {
+                    rows.next();
+                    if (rows.getInt(1) > 0) {
+                        return;
+                    }
                 }
             }
             Thread.sleep(50);
         }
-        throw new AssertionError("request never waited on the unique constraint");
+        throw new AssertionError("request never waited on the row held by pid " + holderPid);
     }
 
     @Test
@@ -717,7 +731,7 @@ class LearningAdminApiIT extends PostgresTestSupport {
                                                             "{\"articleId\":\"race-article\",\"title\":\"늦은 글\",\"readingOrder\":10}"),
                                             409));
 
-            awaitLockWait(watcher);
+            awaitBlockedBy(holder, watcher);
             holder.commit();
 
             assertThat(late.get(20, TimeUnit.SECONDS).at("/error/code").asText())
@@ -748,7 +762,7 @@ class LearningAdminApiIT extends PostgresTestSupport {
                                     + " FROM learning_article WHERE article_key = 'backtest'");
             Future<JsonNode> late = executor.submit(() -> admin(saveDraft(body), 409));
 
-            awaitLockWait(watcher);
+            awaitBlockedBy(holder, watcher);
             holder.commit();
 
             JsonNode error = late.get(20, TimeUnit.SECONDS).get("error");
