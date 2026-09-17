@@ -30,4 +30,23 @@ describe('경제환경 검색 훅', () => {
     await act(async () => first.resolve(regimeResult({ field: { id: 'old', name: '옛 분야' } })))
     expect(result.current.result?.field?.id).toBe('new')
   })
+
+  it('더 보기 뒤 다른 분야를 찾으면 처음 세 건부터 조회한다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())
+    const { result, rerender } = renderHook(
+      ({ field }: { field: string }) => useRegimeSearch({ mode: 'field', field }),
+      { initialProps: { field: 'old' } },
+    )
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    act(() => result.current.showMore())
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      { mode: 'field', field: 'old', baselineMonth: undefined, limit: 10 },
+      expect.any(AbortSignal),
+    ))
+    rerender({ field: 'new' })
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      { mode: 'field', field: 'new', baselineMonth: undefined, limit: 3 },
+      expect.any(AbortSignal),
+    ))
+  })
 })

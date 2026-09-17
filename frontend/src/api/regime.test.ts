@@ -52,4 +52,12 @@ describe('경제환경 검색 API', () => {
     vi.spyOn(apiClient, 'get').mockRejectedValue(failure)
     await expect(getRegimeSearch({ mode: 'field', field: 'test-field' })).rejects.toBe(failure)
   })
+
+  it('성공 봉투가 어긋나면 빈 결과로 취급하지 않는다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      ...response({ cases: [] }),
+      data: { httpStatus: 'SERVICE_UNAVAILABLE', isSuccess: false, message: '조회 실패', code: 503, result: { cases: [] } },
+    })
+    await expect(getRegimeSearch({ mode: 'field', field: 'test-field' })).rejects.toThrow()
+  })
 })

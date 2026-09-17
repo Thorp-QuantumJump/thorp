@@ -5,8 +5,7 @@ import styles from './EmptyResult.module.css'
 export function EmptyResult({ result }: { result: RegimeSearchResult }) {
   return (
     <section className={styles.empty} aria-labelledby="regime-empty-title">
-      <h2 id="regime-empty-title">표시할 과거 사례가 없습니다</h2>
-      <p>{result.statusNote}</p>
+      <h2 id="regime-empty-title">{result.statusNote}</h2>
     </section>
   )
 }

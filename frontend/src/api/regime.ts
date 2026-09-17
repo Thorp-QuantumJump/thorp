@@ -17,7 +17,13 @@ interface Envelope<T> {
 }
 
 function resultOf<T>(body: Envelope<T>): T {
-  if (body?.isSuccess !== true || body.code !== 200 || body.result == null) {
+  if (
+    body?.httpStatus !== 'OK' ||
+    body.isSuccess !== true ||
+    typeof body.message !== 'string' ||
+    body.code !== 200 ||
+    body.result == null
+  ) {
     throw new Error('경제환경 검색 응답을 읽을 수 없습니다.')
   }
   return body.result
