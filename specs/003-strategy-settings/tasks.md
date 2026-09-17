@@ -821,3 +821,15 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
   두 가지를 확인했다. 워밍업과 최소 평가 기간을 서로 바꿔 넘기면 첫 검사(값을 바꾸며 다시 판정)가 실패하고, 받아 둔 평가 기간
   상태 대신 '조회 중'을 넘기면 두 검사가 모두 실패한다. 둘째 검사는 조회 실패 상태만 보므로 앞의 뒤바뀜은 잡지 않는다. 확인한 뒤
   연결을 되돌렸다.
+
+---
+
+## Phase 19: Convergence
+
+**Purpose**: Phase 18을 닫은 뒤 B06을 다시 대조한다. 그사이 001의 `GET /sectors/evaluation-window`가 dev에 머지되었고
+(`12fc23c`, MR !183), 머지된 `EvaluationWindowResponse`는 화면의 `readEvaluationWindow`와 모양이 맞는다 — `commonStart`는 null이어도
+키가 남고, 상한을 주면 `tradingDaysFromBase`·`excludedRangesFromBase`가 늘 오며, 목록이 비면 `maxWarmupTradingDays` 키가 빠지고,
+`bindingSector`는 늘 채워진다. 004 `GET /backtests/registry`는 아직 dev에 없어 T039의 실제 연결은 기존 메모가 추적한다. 남은 간극은 둘이다.
+
+- [ ] T107 (FE) 001 머지를 받아 평가 기간 조회와 워밍업 판정만 실제 통로로 연결한다 per FR-011 · FR-011a · US1 · T042 (partial) — B06 브랜치는 001 머지 이전의 dev 위에 있고, `frontend/src/pages/StrategySettingsPage.tsx`의 기본 `support`는 여전히 `notConnectedSupport`라 **실제 화면에서는 모든 카드가 "공통 평가 기간을 확인할 수 없습니다"로 판정되지 못한다.** T042·T039 메모는 "둘 다 머지되면 기본값을 바꾼다"고 적었지만, 이 묶음의 인계 순서는 001만 풀리면 T042를 실제 API로 연결하고 버전은 막힌 채 두기로 했다. 할 일: (1) origin/dev를 이 브랜치에 병합한다. (2) 라우트가 쓰는 기본 통로를 **평가 기간 조회(`fetchEvaluationWindow`)와 판정(`judgeWarmup`)만 실제 모듈로, 버전 조회와 전송은 연결 전 상태로** 둔 한 벌로 바꾼다 — `notConnectedSupport`와 `connectedAnalysisSupport`를 섞은 모듈 상수로 두어 안정 참조 계약을 지키고, 004가 머지되면 이 한 벌을 `connectedAnalysisSupport`로 바꾸면 되게 한다. 004가 없는 지금 `fetchAnalysisVersions`를 실제로 부르면 없는 주소로 요청만 나가므로 부르지 않는다. (3) 로컬 백엔드로 quickstart 7·7-1·7-2를 돌려 카드가 실제 응답으로 `reduced`·`blocked`를 가르는지, 최소 평가 기간을 바꾸면 요청 없이 다시 판정되는지 확인하고 결과를 이 태스크 메모에 적는다. (4) T042를 체크한다 — 원문의 "선택 전략은 현재 설정으로 조회"는 T098 결정으로 대체되었다는 점을 체크 근거에 밝힌다. 검사로 고정한다: 라우트가 그리는 페이지(`App.tsx` 경로)가 평가 기간 조회를 한 번 부르고, 버전은 "분석 조건 버전을 확인할 수 없습니다"로 막히며, 요청이 나가지 않는다
+- [ ] T108 [P] (DOCS) 계약 §2와 data-model §10이 실제로 싣는 필드와 출처를 적게 한다 per FR-014 · 계약 §2 · T039 004 결정 (partial) — `specs/003-strategy-settings/contracts/strategy-registry-api.md` §2 "003이 채워 보내는 필드" 표에 `rulesVersion`·`costProfileVersion`이 없다. 2026-09-17 결정으로 003 화면이 둘 다 `GET /backtests/registry`에서 읽어 **명시해 싣는데**, 표만 보면 003이 버전을 채우지 않는 것처럼 읽힌다. 같은 표의 `initialAmount`·`periodStart`/`periodEnd`는 실제 004 요청 이름(`conditions.initialCash`(decimal 문자열)·`conditions.start`/`end`, `docs/specs/backtest-api/README.md` §1)과 다르고, 코드(`utils/analysisRequest.ts`)는 004 이름으로 보낸다. `specs/003-strategy-settings/data-model.md` §10에도 `rulesVersion`의 출처 행이 없다(§9의 `costProfileVersion` 행은 있다). 두 문서에 `strategy.rulesVersion`(004 registry의 고른 전략 `REGISTERED` 행, `PENDING_DECISION`이면 보내지 않음, 대체되면 409)과 `conditions.costProfileVersion`(받은 `defaultCostProfile.version` 명시)을 더하고, 표의 필드 이름을 004 요청 경로로 맞춘다. 004 계약 문서는 004 소유라 고치지 않는다
