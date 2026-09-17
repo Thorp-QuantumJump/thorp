@@ -51,6 +51,14 @@ from data_pipeline.regime.scale import Scale, scale_for, shift_month
 SCALE_REASON_ORDER: Final[tuple[str, ...]] = ("SCALE_WINDOW_TOO_SHORT", "SCALE_ZERO")
 
 
+class UnknownScaleReasonError(LookupError):
+    """`scale.py`가 `SCALE_REASON_ORDER`에 없는 사유를 돌려줬다.
+
+    research R7이 최소 유효 척도 사유를 더할 자리를 예고해 뒀다. 그때 이 목록을 함께 고치지
+    않으면 사유를 고르는 자리에서 이름 없는 오류가 배치 한가운데 떨어진다.
+    """
+
+
 class CandidateInputMissingError(LookupError):
     """후보에게 질의 비교 시점에 대응하는 입력이 없다.
 
@@ -192,6 +200,10 @@ class DistanceModel:
         measured_fields = [self._measure_field(field, end_month) for field in self.fields]
         raw_d = [field_distance for _, _, field_distance in measured_fields]
         total_d = sum(raw_d)
+        # **저장되는 값으로 판정한다.** 반올림 전 합이 1e-16이면 기여도는 만들어지는데 정작
+        # 거리는 전부 0으로 저장되어 "거리 0인데 기여 73%"인 행이 남는다. 그 73%는 자료가
+        # 아니라 부동소수점 찌꺼기다(research R4, spec Edge Cases).
+        zero_total = round_for_storage(total_d) == 0.0
         single_field = len(measured_fields) == 1
 
         fields = tuple(
@@ -201,7 +213,7 @@ class DistanceModel:
                 d=round_for_storage(field_distance),
                 contribution=(
                     None
-                    if single_field or total_d == 0.0
+                    if single_field or zero_total
                     else round_for_storage(field_distance / total_d)
                 ),
             )
@@ -277,7 +289,8 @@ def _with_shares(
     """명목 비중과 실제 거리 기여를 채운다 (spec FR-010).
 
     **분모는 반올림 전 E_i의 합이다.** 반올림된 값으로 나누면 몫의 합이 1에서 미세하게 어긋나고,
-    그 어긋남은 12자리 안에 보이는 자리에서 생긴다.
+    그 어긋남은 12자리 안에 보이는 자리에서 생긴다. 다만 **합이 0인지는 저장값으로 판정한다** —
+    찌꺼기만 한 합을 0이 아니라고 보면 E_i가 전부 0으로 저장된 행에 기여도가 붙는다.
     """
     return IndicatorDistance(
         indicator_id=item.indicator_id,
@@ -288,8 +301,34 @@ def _with_shares(
         case_z=item.case_z,
         e=item.e,
         nominal_weight=round_for_storage(1 / count),
-        distance_share=(None if field_total == 0.0 else round_for_storage(raw_e / field_total)),
+        distance_share=(
+            None
+            if round_for_storage(field_total) == 0.0
+            else round_for_storage(raw_e / field_total)
+        ),
     )
+
+
+def _requested_fields(
+    registry: IndicatorRegistry, field_ids: Sequence[str] | None
+) -> tuple[FieldEntry, ...]:
+    """요청한 분야를 등록표 순서로 돌려준다. **모르는 id는 하나라도 있으면 막는다.**
+
+    아는 것만 추려 통과시키면, 오타 난 분야를 뺀 좁은 범위로 계산해 놓고 부른 쪽은 넓은 범위를
+    받았다고 믿는다. 게다가 남은 분야가 하나면 기여도까지 사라져 결과 모양마저 달라지는데,
+    그 답이 다른 질문의 답이라고 말해 주는 곳이 없다.
+    """
+    ordered = registry.ordered_fields()
+    if field_ids is None:
+        return ordered
+    wanted = tuple(dict.fromkeys(field_ids))
+    if not wanted:
+        raise LookupError("계산할 분야를 하나도 주지 않았다")
+    known = {field.id for field in ordered}
+    unknown = [field_id for field_id in wanted if field_id not in known]
+    if unknown:
+        raise LookupError(f"등록표에 없는 분야다: {unknown}")
+    return tuple(field for field in ordered if field.id in set(wanted))
 
 
 def build_model(
@@ -307,12 +346,7 @@ def build_model(
     계산 불가라는 뜻이며, **문제가 있는 지표를 빼고 나머지로 계산하지 않는다**(FR-007·FR-008).
     """
     require_month(baseline_month, "기준월")
-    wanted = None if field_ids is None else set(field_ids)
-    fields = tuple(
-        field for field in registry.ordered_fields() if wanted is None or field.id in wanted
-    )
-    if not fields:
-        raise LookupError(f"등록표에 없는 분야다: {sorted(wanted or ())}")
+    fields = _requested_fields(registry, field_ids)
     indicators = tuple(entry for field in fields for entry in registry.indicators_of(field.id))
 
     comparison = comparison_for_scope(
@@ -339,7 +373,12 @@ def build_model(
     if failures:
         # 사유가 섞이면 data-model §2.1 순서대로 하나를 고른다. 둘을 합친 새 사유를 만들지
         # 않는다 — 어휘에 없는 값이 화면과 기록으로 새어 나간다.
-        reason = next(name for name in SCALE_REASON_ORDER if name in failures)
+        reason = next((name for name in SCALE_REASON_ORDER if name in failures), None)
+        if reason is None:
+            raise UnknownScaleReasonError(
+                f"data-model §2.1에 없는 척도 사유다: {sorted(failures)} — "
+                "SCALE_REASON_ORDER에 순서를 함께 더한다"
+            )
         return ModelUnavailable(
             baseline_month=baseline_month,
             reason=reason,

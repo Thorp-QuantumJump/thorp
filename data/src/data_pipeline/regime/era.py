@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Final
 
+from data_pipeline.regime.explain import format_value, topic_particle
 from data_pipeline.regime.macro.types import IndicatorEntry, MonthlyValue, require_month
 from data_pipeline.regime.scale import Scale, scale_for
 
@@ -59,31 +60,6 @@ class EraPosition:
     window_start: date
     window_end: date
     months: int
-
-
-def _topic_particle(text: str) -> str:
-    """앞 글자에 받침이 있으면 ``은``, 없으면 ``는``.
-
-    R8의 틀은 ``는``으로 적혀 있고 예시 단위가 ``%``라 그대로 맞지만, 단위가 ``명``·``원``처럼
-    받침으로 끝나면 "명는"이 된다. 틀을 바꾸는 것이 아니라 같은 틀을 한국어로 옳게 적는 일이다.
-    """
-    if not text:
-        return "는"
-    last = text[-1]
-    if "가" <= last <= "힣":
-        return "는" if (ord(last) - 0xAC00) % 28 == 0 else "은"
-    return "는"
-
-
-def format_value(value: float) -> str:
-    """문장에 넣을 값 표기.
-
-    **자릿수를 임의로 정하지 않는다.** 표시 자릿수 규칙은 spec에 없고, 여기서 "소수 첫째 자리"
-    같은 규칙을 만들면 모델 버전에 없는 규칙이 하나 느는 셈이다. 값이 가진 자릿수를 그대로 쓰되
-    정수로 떨어지는 값의 꼬리 ``.0``만 덜어 낸다(정보가 줄지 않는다).
-    """
-    text = repr(float(value))
-    return text[:-2] if text.endswith(".0") else text
 
 
 def verdict_for(scale: Scale, value: float) -> str:
@@ -126,7 +102,7 @@ def era_position_for(
         name=indicator.name,
         value=format_value(observed.value),
         unit=indicator.unit,
-        particle=_topic_particle(indicator.unit),
+        particle=topic_particle(indicator.unit),
         verdict=verdict_for(scale, observed.value),
     )
     return EraPosition(
@@ -162,6 +138,14 @@ class EraPositionCache:
     510,000회가 되고, 월 단위로 묶으면 7,497회다. **값이 t와 무관하다는 성질이 없으면 이
     캐시는 틀린 값을 준다** — 그래서 키에 t가 없다.
 
+    **키는 (지표, 후보월)이다.** 후보월만으로 묶으면 분야 검색(지표 2~3개)이 먼저 채운 결과를
+    종합 검색(17개)이 그대로 받아 나머지 지표의 설명이 통째로 사라진다. 그 빠짐은 "만들지 못한
+    지표는 키가 없다"와 생김새가 같아서 아래쪽 어디에서도 알아챌 수 없다. 지표 단위로 두면
+    모드가 달라도 겹치는 만큼 그대로 나눠 쓴다.
+
+    만들지 못한 지표(`None`)도 기억한다. 그러지 않으면 이력이 부족한 지표마다 120개월 척도를
+    부르는 시도가 사례를 만날 때마다 되풀이된다.
+
     **버전이 바뀌면 이 객체를 버린다.** 무효화 규칙을 캐시 안에 두지 않는 이유는, 자료·등록표·
     모델 버전을 아는 곳이 배치이기 때문이다. 여기에 두면 버전을 모르는 자리에서 낡은 문장이
     조용히 살아남는다.
@@ -169,18 +153,30 @@ class EraPositionCache:
 
     def __init__(self, series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]]) -> None:
         self._series = series_by_indicator
-        self._cached: dict[date, dict[str, EraPosition]] = {}
+        self._cached: dict[tuple[str, date], EraPosition | None] = {}
+
+    def position_for(self, indicator: IndicatorEntry, end_month: date) -> EraPosition | None:
+        key = (indicator.id, end_month)
+        if key not in self._cached:
+            self._cached[key] = era_position_for(
+                indicator, end_month, self._series[indicator.id]
+            )
+        return self._cached[key]
 
     def positions_for(
         self, indicators: Iterable[IndicatorEntry], end_month: date
     ) -> dict[str, EraPosition]:
-        cached = self._cached.get(end_month)
-        if cached is None:
-            cached = era_positions_for(indicators, end_month, self._series)
-            self._cached[end_month] = cached
-        return cached
+        """그 후보월의 지표별 보조 위치. **매번 새 dict를 돌려준다.**
+
+        안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가 캐시에 남아, 다음 사례부터
+        조용히 줄어든 설명을 받는다.
+        """
+        found = ((indicator, self.position_for(indicator, end_month)) for indicator in indicators)
+        return {
+            indicator.id: position for indicator, position in found if position is not None
+        }
 
     @property
     def months(self) -> tuple[date, ...]:
         """구해 둔 후보월. 배치가 몇 번 계산했는지 기록할 때 쓴다(spec FR-033)."""
-        return tuple(sorted(self._cached))
+        return tuple(sorted({month for _, month in self._cached}))
