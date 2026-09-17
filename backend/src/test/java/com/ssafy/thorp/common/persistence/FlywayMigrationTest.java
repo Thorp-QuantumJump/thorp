@@ -245,6 +245,25 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("backtest_reuse_event 의 요청 참조는 끊을 수 있고 살아 있는 요청의 중복 기록은 여전히 막는다 (spec 005 T022)")
+    void backtestReuseEventRequestIsDetachable() {
+        // 만료된 비로그인 요청을 지워도 기록은 reuse_count 근거로 남기고 request_id 만 NULL 로 끊는다.
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT is_nullable FROM information_schema.columns"
+                                        + " WHERE table_name = 'backtest_reuse_event'"
+                                        + " AND column_name = 'request_id'",
+                                String.class))
+                .isEqualTo("YES");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT indexname FROM pg_indexes"
+                                        + " WHERE tablename = 'backtest_reuse_event'",
+                                String.class))
+                .contains("uk_backtest_reuse_event_request");
+    }
+
+    @Test
     @DisplayName("backtest_run_dlq_attempt 가 DLQ 멱등 판정에 필요한 컬럼만 갖는다 (R-18 ③)")
     void backtestRunDlqAttemptHasAllColumns() {
         assertThat(columnsOf("backtest_run_dlq_attempt"))
