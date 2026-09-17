@@ -12,6 +12,7 @@ import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * JSONB 컬럼({@code body_blocks}·{@code example}·{@code sources}·{@code snapshot})에 저장하는 모양과 도메인 사이
@@ -28,6 +29,11 @@ import java.util.List;
  * IllegalStateException}으로 실패시킨다. 저장 경로는 필수 값을 늘 쓰므로 빠졌다면 저장 데이터가 깨진 것이고, 채워 넣으면 순서 0인 글이나 본문 없는 글을
  * 공개하게 된다(원칙 VI). 숫자를 원시 타입이 아니라 래퍼로 받는 이유도 같다. 원시 타입이면 어느 키가 빠졌는지 모르는 역직렬화 예외가 나거나, 매퍼 설정에 따라 0이
  * 된다.
+ *
+ * <p><b>키는 있는데 값이 도메인 규칙을 어기면</b>(형식이 틀린 식별자, 한도를 넘는 길이·비중) 도메인 생성자의 {@link
+ * IllegalArgumentException}을 키 이름을 담은 {@link IllegalStateException}으로 감싼다({@link #storedValue}). 요청
+ * 입력이 아니라 저장 데이터의 문제라는 것을 예외 종류로 드러내려는 것이다. 지금은 저장소 구현의 {@code @Repository} 예외 변환이 둘 다 500으로 만들지만,
+ * 그 변환에 기대지 않는다.
  */
 public final class LearningContentJson {
 
@@ -73,13 +79,27 @@ public final class LearningContentJson {
         return value;
     }
 
+    /**
+     * 저장된 값으로 도메인 객체를 만든다. 도메인 규칙 위반({@link IllegalArgumentException})은 키 이름을 담은 {@link
+     * IllegalStateException}으로 바꾸고 원인을 남긴다. 키 누락({@link #required})의 {@code IllegalStateException}은
+     * 그대로 통과한다.
+     */
+    static <T> T storedValue(String key, Supplier<T> build) {
+        try {
+            return build.get();
+        } catch (IllegalArgumentException invalid) {
+            throw new IllegalStateException(
+                    "stored learning JSON has an invalid value at key: " + key, invalid);
+        }
+    }
+
     static List<BlockJson> blocksToJson(List<ArticleBlock> blocks) {
         return blocks.stream().map(LearningContentJson::blockToJson).toList();
     }
 
     static List<ArticleBlock> blocksFromJson(List<BlockJson> blocks) {
         return required(blocks, "bodyBlocks").stream()
-                .map(LearningContentJson::blockFromJson)
+                .map(block -> storedValue("bodyBlocks", () -> blockFromJson(block)))
                 .toList();
     }
 
@@ -98,16 +118,21 @@ public final class LearningContentJson {
         if (example == null) {
             return null;
         }
-        return new ExampleAllocation(
-                required(example.sectors(), "example.sectors").stream()
-                        .map(
-                                sector ->
-                                        new ExampleAllocation.SectorWeight(
-                                                required(sector.code(), "example.sectors[].code"),
-                                                required(
-                                                        sector.weightTenths(),
-                                                        "example.sectors[].weightTenths")))
-                        .toList());
+        return storedValue(
+                "example",
+                () ->
+                        new ExampleAllocation(
+                                required(example.sectors(), "example.sectors").stream()
+                                        .map(
+                                                sector ->
+                                                        new ExampleAllocation.SectorWeight(
+                                                                required(
+                                                                        sector.code(),
+                                                                        "example.sectors[].code"),
+                                                                required(
+                                                                        sector.weightTenths(),
+                                                                        "example.sectors[].weightTenths")))
+                                        .toList()));
     }
 
     static List<SourceJson> sourcesToJson(List<ArticleSource> sources) {
@@ -147,7 +172,9 @@ public final class LearningContentJson {
 
     static ArticleSnapshot snapshotFromJson(SnapshotJson snapshot) {
         return new ArticleSnapshot(
-                new ArticleId(required(snapshot.articleId(), "articleId")),
+                storedValue(
+                        "articleId",
+                        () -> new ArticleId(required(snapshot.articleId(), "articleId"))),
                 required(snapshot.title(), "title"),
                 required(snapshot.question(), "question"),
                 required(snapshot.readingOrder(), "readingOrder"),
@@ -158,8 +185,13 @@ public final class LearningContentJson {
                         .map(
                                 term ->
                                         new LearningTerm(
-                                                new TermId(
-                                                        required(term.termId(), "terms[].termId")),
+                                                storedValue(
+                                                        "terms[].termId",
+                                                        () ->
+                                                                new TermId(
+                                                                        required(
+                                                                                term.termId(),
+                                                                                "terms[].termId"))),
                                                 required(term.label(), "terms[].label"),
                                                 required(term.sentence(), "terms[].sentence")))
                         .toList(),

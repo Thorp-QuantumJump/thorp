@@ -377,4 +377,49 @@ class LearningRepositoryTest extends PostgresTestSupport {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("terms");
     }
+
+    @Test
+    @DisplayName("판 JSON의 articleId 형식이 틀리면 입력 오류(IllegalArgumentException)가 아니라 저장 데이터 오류로 실패한다")
+    void invalidStoredArticleIdIsDataError() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "\"articleId\":\"returns-and-losses\"",
+                                "\"articleId\":\"Bad_Key\""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("articleId")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("판 JSON의 블록 길이가 한도를 넘으면 저장 데이터 오류로 실패한다")
+    void oversizedStoredBlockIsDataError() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "{\"type\":\"paragraph\",\"text\":\"문단\"}",
+                                "{\"type\":\"heading\",\"text\":\"" + "가".repeat(101) + "\"}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bodyBlocks")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("판 JSON의 비중이 범위를 넘으면 저장 데이터 오류로 실패한다")
+    void outOfRangeStoredWeightIsDataError() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "{\"code\":\"BATTERY\",\"weightTenths\":500}",
+                                "{\"code\":\"BATTERY\",\"weightTenths\":1500}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("example")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
 }

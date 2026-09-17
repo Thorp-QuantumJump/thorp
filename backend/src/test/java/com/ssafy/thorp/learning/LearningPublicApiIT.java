@@ -233,6 +233,27 @@ class LearningPublicApiIT extends PostgresTestSupport {
                 .containsExactly(500, 500);
     }
 
+    /**
+     * 저장된 판의 값이 깨졌을 때 공개 조회는 서버 오류다. 요청은 올바르므로 400 {@code INVALID_INPUT}으로 답하면 클라이언트 탓이 되고, 로그도
+     * WARN으로 남아 운영자가 알아채지 못한다. 응답 메시지에 내부 값을 싣지 않는다. 이 동작을 고정해, 변환 위치가 {@code @Repository} 밖으로 옮겨져도
+     * 400으로 바뀌지 않게 한다.
+     */
+    @Test
+    @DisplayName("판에 저장된 값이 도메인 규칙을 어기면 400이 아니라 500 INTERNAL_ERROR다")
+    void corruptStoredValueIsServerError() throws Exception {
+        seedFullSectorMap();
+        com.fasterxml.jackson.databind.node.ObjectNode article =
+                (com.fasterxml.jackson.databind.node.ObjectNode) example("article.json");
+        ((com.fasterxml.jackson.databind.node.ObjectNode) article.at("/example/sectors/1"))
+                .put("weightTenths", 1500);
+        seeds.publishFromResponse(article, 8);
+
+        JsonNode body = call("/learning/articles/" + ARTICLE, 500);
+
+        assertThat(body.at("/error/code").asText()).isEqualTo("INTERNAL_ERROR");
+        assertThat(body.at("/error/message").asText()).doesNotContain("1500");
+    }
+
     @Test
     @DisplayName("대응표에서 코드 하나가 빠지면 SECTOR_NOT_IN_MAP과 빠진 코드다 (quickstart 4-4 서버 쪽)")
     void exampleUnavailableWhenSectorMissing() throws Exception {
