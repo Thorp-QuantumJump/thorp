@@ -1,5 +1,6 @@
 package com.ssafy.thorp.learning.application.repository;
 
+import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
@@ -27,11 +28,13 @@ public interface LearningArticleRepository {
     List<LearningArticle> findAllOrdered();
 
     /**
-     * 지금 공개 중인 판 전부. 판 내용의 {@code readingOrder}, {@code articleId} 오름차순이다.
+     * 지금 공개 중인 글의 목록 항목. 판 내용의 {@code readingOrder}, {@code articleId} 오름차순이다.
      *
      * <p>순서를 초안 컬럼({@code reading_order})이 아니라 판에서 읽는다. 게시 뒤 초안의 순서만 바꿔도 공개 목록은 바뀌지 않아야 한다(SC-006).
+     *
+     * <p>본문·용어·예시를 읽지 않는다. 목록에 필요 없는 값을 도메인 객체로 만들면 판 하나의 본문이 깨졌을 때 멀쩡한 글까지 목록에서 사라진다.
      */
-    List<ArticleRevision> findPublishedOrdered();
+    List<LearningArticleSummaryResult> findPublishedOrdered();
 
     /** 이 글의 공개 중인 판. 초안이거나 없는 글이면 비어 있다. */
     Optional<ArticleRevision> findPublishedRevision(ArticleId articleId);

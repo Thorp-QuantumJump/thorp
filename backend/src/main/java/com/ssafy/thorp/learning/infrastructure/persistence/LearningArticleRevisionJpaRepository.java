@@ -19,12 +19,32 @@ public interface LearningArticleRevisionJpaRepository
 
     List<LearningArticleRevisionJpaEntity> findByArticleIdOrderByRevisionNoAsc(Long articleId);
 
-    /** 지금 공개 중인 판 전부. 글의 상태와 공개 판 포인터가 함께 맞는 것만 읽는다. */
+    /** 공개 목록 한 줄. native alias는 PostgreSQL이 소문자로 접으므로 따옴표로 감싼다. */
+    interface PublishedSummaryRow {
+        String getArticleId();
+
+        String getTitle();
+
+        String getQuestion();
+
+        int getReadingOrder();
+    }
+
+    /** 지금 공개 중인 글의 목록 항목. 판의 제목·질문·순서만 JSONB에서 꺼내고 본문은 읽지 않는다. 글의 상태와 공개 판 포인터가 함께 맞는 것만 읽는다. */
     @Query(
-            "select r from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
-                    + " where a.publishedRevisionId = r.id"
-                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED")
-    List<LearningArticleRevisionJpaEntity> findCurrentlyPublished();
+            value =
+                    """
+                    SELECT r.snapshot ->> 'articleId' AS "articleId",
+                           r.snapshot ->> 'title' AS "title",
+                           r.snapshot ->> 'question' AS "question",
+                           CAST(r.snapshot ->> 'readingOrder' AS INTEGER) AS "readingOrder"
+                    FROM learning_article a
+                    JOIN learning_article_revision r ON r.id = a.published_revision_id
+                    WHERE a.status = 'PUBLISHED'
+                    ORDER BY CAST(r.snapshot ->> 'readingOrder' AS INTEGER), r.snapshot ->> 'articleId'
+                    """,
+            nativeQuery = true)
+    List<PublishedSummaryRow> findPublishedSummaries();
 
     /** 이 글의 공개 중인 판. */
     @Query(

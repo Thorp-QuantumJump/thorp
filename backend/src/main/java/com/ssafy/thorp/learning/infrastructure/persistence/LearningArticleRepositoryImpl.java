@@ -1,23 +1,17 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
 import com.ssafy.thorp.learning.application.repository.LearningArticleRepository;
+import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import jakarta.persistence.EntityManager;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class LearningArticleRepositoryImpl implements LearningArticleRepository {
-
-    /** 판 내용의 읽는 순서, 같으면 글 식별자 순(learning-public-api §1). */
-    private static final Comparator<ArticleRevision> PUBLISHED_ORDER =
-            Comparator.comparingInt(
-                            (ArticleRevision revision) -> revision.snapshot().readingOrder())
-                    .thenComparing(revision -> revision.snapshot().articleId().value());
 
     private final LearningArticleJpaRepository articleJpaRepository;
     private final LearningTermJpaRepository termJpaRepository;
@@ -59,12 +53,16 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                 .toList();
     }
 
-    /** 공개 중인 판을 읽어 판 내용의 순서로 정렬한다. 순서 값이 JSONB 안에 있어 DB 정렬 대신 여기서 정렬한다. 글은 수십 편 규모다. */
     @Override
-    public List<ArticleRevision> findPublishedOrdered() {
-        return revisionJpaRepository.findCurrentlyPublished().stream()
-                .map(ArticleRevisionMapper::toDomain)
-                .sorted(PUBLISHED_ORDER)
+    public List<LearningArticleSummaryResult> findPublishedOrdered() {
+        return revisionJpaRepository.findPublishedSummaries().stream()
+                .map(
+                        row ->
+                                new LearningArticleSummaryResult(
+                                        row.getArticleId(),
+                                        row.getTitle(),
+                                        row.getQuestion(),
+                                        row.getReadingOrder()))
                 .toList();
     }
 

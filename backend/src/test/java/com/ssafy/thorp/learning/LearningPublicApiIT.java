@@ -250,8 +250,13 @@ class LearningPublicApiIT extends PostgresTestSupport {
 
     // --- §3 용어 ---
 
+    /**
+     * 두 번째 단언은 SC-003의 증명이 아니다. {@link LearningSeeds}가 색인과 판의 용어를 같은 값으로 함께 심으므로 여기서는 늘 참이다. 두 경로가
+     * 같은 문장을 돌려주도록 "응답 조립"이 서로 다른 원천을 섞지 않는지만 본다. 게시 경로를 거친 SC-003 확인은 B02의 {@code
+     * LearningAdminApiIT}가 한다.
+     */
     @Test
-    @DisplayName("게시된 용어 응답이 term.json과 같고, 문장이 같은 글의 term 블록 문장과 같다 (SC-003)")
+    @DisplayName("게시된 용어 응답이 term.json과 같고, 글의 term 블록과 같은 문장을 돌려준다")
     void termMatchesExampleAndArticleBlock() throws Exception {
         seedFullSectorMap();
         publishListFixture();

@@ -62,16 +62,7 @@ public class LearningQueryService {
      * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)
      */
     public List<LearningArticleSummaryResult> listPublished() {
-        return articleRepository.findPublishedOrdered().stream()
-                .map(ArticleRevision::snapshot)
-                .map(
-                        snapshot ->
-                                new LearningArticleSummaryResult(
-                                        snapshot.articleId().value(),
-                                        snapshot.title(),
-                                        snapshot.question(),
-                                        snapshot.readingOrder()))
-                .toList();
+        return articleRepository.findPublishedOrdered();
     }
 
     /**
@@ -85,6 +76,15 @@ public class LearningQueryService {
                         .flatMap(articleRepository::findPublishedRevision)
                         .orElseThrow(ArticleUnavailableException::new);
         ArticleSnapshot snapshot = revision.snapshot();
+        // 공개 판 포인터가 다른 글의 판을 가리키면 그 글의 본문을 이 주소로 내보내게 된다.
+        // 스키마가 막지 않는 관계라 여기서 확인하고, 어긋나면 조용히 보이지 않고 실패시킨다.
+        if (!snapshot.articleId().value().equals(articleId)) {
+            throw new IllegalStateException(
+                    "published revision of "
+                            + articleId
+                            + " belongs to another article: "
+                            + snapshot.articleId());
+        }
         return new LearningArticleResult(
                 snapshot.articleId().value(),
                 snapshot.title(),

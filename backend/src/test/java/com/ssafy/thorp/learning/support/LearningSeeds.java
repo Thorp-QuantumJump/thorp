@@ -212,7 +212,11 @@ public final class LearningSeeds {
                 MAP_VERSION);
         jdbc.update("DELETE FROM sector_etf_map_version WHERE version = ?", MAP_VERSION);
         jdbc.update("DELETE FROM representative_etf WHERE instrument_id LIKE '9900__.XKRX'");
-        jdbc.update("DELETE FROM sector WHERE code IN ('SEMICONDUCTOR', 'BATTERY')");
+        // 이 클래스가 쓰는 코드라도 다른 대응표 항목이 가리키는 섹터 행은 남긴다. 다른 IT가 정리에 실패해
+        // 남긴 항목 때문에 여기서 FK 위반이 나면 원인과 무관한 배우기 테스트 전부가 깨진다.
+        jdbc.update(
+                "DELETE FROM sector WHERE code IN ('SEMICONDUCTOR', 'BATTERY')"
+                        + " AND NOT EXISTS (SELECT 1 FROM sector_etf_map_entry e WHERE e.sector_id = sector.id)");
     }
 
     private static String etfInstrumentId(int serial) {

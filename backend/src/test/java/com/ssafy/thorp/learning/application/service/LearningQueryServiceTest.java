@@ -18,6 +18,7 @@ import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.Block;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.UnavailableReason;
+import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
@@ -193,14 +194,24 @@ class LearningQueryServiceTest {
     }
 
     @Test
-    @DisplayName("목록은 대응표를 읽지 않는다")
+    @DisplayName("목록은 저장소의 항목을 그대로 돌려주고 대응표를 읽지 않는다")
     void listDoesNotReadSectorMap() {
-        when(articleRepository.findPublishedOrdered()).thenReturn(List.of(revision("s")));
+        LearningArticleSummaryResult item =
+                new LearningArticleSummaryResult("returns-and-losses", "수익과 손실", "질문", 8);
+        when(articleRepository.findPublishedOrdered()).thenReturn(List.of(item));
 
-        assertThat(service.listPublished())
-                .singleElement()
-                .satisfies(item -> assertThat(item.articleId()).isEqualTo("returns-and-losses"));
+        assertThat(service.listPublished()).containsExactly(item);
         verify(sectorMapPort, never()).currentMap();
+    }
+
+    @Test
+    @DisplayName("공개 판이 다른 글의 것이면 그 본문을 내보내지 않고 실패한다")
+    void rejectsRevisionOfAnotherArticle() {
+        when(articleRepository.findPublishedRevision(new ArticleId("backtest")))
+                .thenReturn(Optional.of(revision("s")));
+
+        assertThatThrownBy(() -> service.getPublished("backtest"))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

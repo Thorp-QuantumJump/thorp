@@ -23,6 +23,7 @@
 
 - `blocks[]`는 `type`마다 키가 다르다. `heading`·`paragraph`·`hypothetical`은 `text`, `term`은 `termId`·`label`·`sentence`다. 해당하지 않는 키는 싣지 않는다.
 - `example.unavailableReason`은 `available=true`면 명시적 `null`이다. `example.sectors[].name`은 대응표에 없는 코드면 `null`이다.
+- `example.missingSectorCodes`는 `SECTOR_MAP_NOT_READY`일 때도 빈 배열이다(판정하지 못했다). 안내 문장은 `unavailableReason`으로 가른다.
 - `sources[].url`은 없으면 키를 싣지 않는다.
 - `weightTenths`는 0.1%p 단위 정수이고 `1000`이 100%다(002 selection-handoff 계약과 같다).
 

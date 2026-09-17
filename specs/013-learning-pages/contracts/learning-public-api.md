@@ -88,7 +88,7 @@ GET /learning/articles/{articleId}
 | `blocks[].type=hypothetical` | 화면이 '가상의 계산 예' 표시를 붙인다(FR-005) |
 | `example.available` | 조회 시점의 열린 대응표에 예시 섹터가 모두 있는가([research](../research.md) R8) |
 | `example.sectors[].name` | 열린 대응표의 섹터 이름. 대응표에 없는 코드는 `name: null` |
-| `example.missingSectorCodes` | 대응표에 없는 코드. `available=true`면 빈 배열 |
+| `example.missingSectorCodes` | 대응표에 없는 코드. `available=true`면 빈 배열이다. 대응표를 확인할 수 없는 `SECTOR_MAP_NOT_READY`도 판정하지 못했으므로 빈 배열이다. 화면은 이 배열의 길이가 아니라 `unavailableReason`으로 안내 문장을 가른다 |
 | `example.unavailableReason` | `available=false`일 때만 값이 있다. `SECTOR_NOT_IN_MAP` \| `SECTOR_MAP_NOT_READY` |
 | `sources` | FR-007. `url`은 없을 수 있고, 있으면 `http`·`https`만 온다 |
 
