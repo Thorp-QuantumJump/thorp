@@ -120,6 +120,24 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                                         expiresAt)));
     }
 
+    /** 결과 행은 실행에 붙는다. 정리가 실행을 건드리지 않는지를 결과까지 두고 본다(004 FR-003). */
+    private void saveResult(BacktestRun run) {
+        jdbcTemplate.update(
+                "INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,"
+                        + " finished_at, portfolio_series, diagnostics, created_at, updated_at)"
+                        + " VALUES (?, 'EX-1', 'EV-1', NOW(), NOW(), CAST('[]' AS jsonb),"
+                        + " CAST('{}' AS jsonb), NOW(), NOW())",
+                run.getId());
+    }
+
+    private boolean resultExists(BacktestRun run) {
+        return jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM backtest_result WHERE run_id = ?",
+                        Long.class,
+                        run.getId())
+                > 0;
+    }
+
     private boolean exists(BacktestRequest request) {
         return jdbcTemplate.queryForObject(
                         "SELECT count(*) FROM backtest_request WHERE id = ?",
@@ -167,6 +185,7 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
     void deletesExpiredAnonymousRequestOnly() {
         Instant now = Instant.parse("2001-06-01T00:00:00Z");
         BacktestRun run = newRun();
+        saveResult(run);
         long user = transactionTemplate.execute(status -> newUser());
 
         BacktestRequest loggedIn = request(run, user, null, ResultSource.NEW, null);
@@ -204,6 +223,7 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                 .as("재시도 요청은 남고 원본 참조만 끊긴다")
                 .isNull();
         assertThat(runRepository.findById(run.getId())).as("실행은 다른 요청이 볼 수 있어 지우지 않는다").isPresent();
+        assertThat(resultExists(run)).as("결과도 남은 요청이 열 수 있어 지우지 않는다").isTrue();
     }
 
     @Test
