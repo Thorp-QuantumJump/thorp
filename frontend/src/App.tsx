@@ -20,9 +20,9 @@ const ParamSearchPage = lazy(() =>
   })),
 )
 
-const HomePage = lazy(() =>
-  import('@/pages/HomePage').then((module) => ({
-    default: module.HomePage,
+const MarketFlowPage = lazy(() =>
+  import('@/pages/MarketFlowPage').then((module) => ({
+    default: module.MarketFlowPage,
   })),
 )
 
@@ -94,7 +94,8 @@ function AnimatedRoutes() {
         <Suspense fallback={<div role="status" aria-label="페이지를 불러오는 중" />}>
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/home" element={<HomePage />} />
+            <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />

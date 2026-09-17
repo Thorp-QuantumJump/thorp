@@ -50,7 +50,7 @@ beforeAll(() => {
 /** FR-001이 첫 화면에 요구하는 메뉴 넷과 각 목적지다. */
 const expectedMenus = [
   { label: '전략 진단', href: '/diagnosis/sectors' },
-  { label: '시장 흐름', href: '/home' },
+  { label: '시장 흐름', href: '/market-flow' },
   { label: '배우기', href: '/learn' },
   { label: '내 기록', href: '/records' },
 ]

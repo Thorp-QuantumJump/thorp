@@ -10,7 +10,7 @@ import styles from '@/pages/LandingPage.module.css'
  */
 const primaryMenuItems = [
   { to: '/diagnosis/sectors', label: '전략 진단' },
-  { to: '/home', label: '시장 흐름' },
+  { to: '/market-flow', label: '시장 흐름' },
   { to: '/learn', label: '배우기' },
 ]
 

@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,16 +19,16 @@ export default defineConfig({
     // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.
     include: [
       'src/**/*.test.tsx',
-      'src/api/auth.test.ts',
-      'src/api/learningGlossary.test.ts',
-      'src/api/sectors.test.ts',
-      'src/api/strategyRegistry.test.ts',
+      'src/api/*.test.ts',
       'src/auth/**/*.test.ts',
       'src/diagnosis/**/*.test.ts',
+      'src/marketflow/**/*.test.ts',
       'src/utils/analysisPeriod.test.ts',
       'src/utils/warmupRule.test.ts',
       'src/utils/validationRules.test.ts',
     ],
+    // 이 파일은 node:test 전용이며 아래 package.json의 test:legacy에서 별도로 실행한다.
+    exclude: [...configDefaults.exclude, 'src/api/market.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
   },
   server: {
