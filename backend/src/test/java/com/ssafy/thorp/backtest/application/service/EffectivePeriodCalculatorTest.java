@@ -78,6 +78,43 @@ class EffectivePeriodCalculatorTest {
                 .isEqualTo(63);
     }
 
+    @Test
+    @DisplayName("화면이 고른 관측 기간이 규칙표보다 길면 요구값도 그것으로 잰다 — 짧은 공통 워밍업은 422다")
+    void chosenLookbackDecidesTheWarmupRequirement() {
+        // 최소분산 규칙표 기본값은 120이고 003 축은 60·120·250이다. 250을 고른 요청에 워밍업 120이
+        // 실려 오면 규칙표만 보는 판정은 통과시킨다 — 워커는 120거래일만 읽고 250거래일로 계산해
+        // 초반 종목이 INSUFFICIENT_HISTORY 로 빠진 현금 포트폴리오를 정상 완료로 저장한다.
+        StrategyRules minimumVariance = rules("MINIMUM_VARIANCE", 120);
+
+        assertThatThrownBy(
+                        () ->
+                                calculator.resolve(
+                                        minimumVariance,
+                                        null,
+                                        Map.of("rebalance", "MONTH_END", "lookbackDays", 250),
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        120))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_HISTORY)
+                .hasMessageContaining("250");
+
+        // 축을 고르지 않은 요청은 규칙표 값이 요구값이다 — 같은 워밍업이 그대로 통과한다.
+        assertThat(
+                        calculator
+                                .resolve(
+                                        minimumVariance,
+                                        null,
+                                        Map.of("rebalance", "MONTH_END"),
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        120)
+                                .warmupTradingDays())
+                .isEqualTo(120);
+    }
+
     // --- 한 규칙: effectiveStart = 요청 시작일 당일 또는 그 뒤 첫 거래일 ---
 
     @Test

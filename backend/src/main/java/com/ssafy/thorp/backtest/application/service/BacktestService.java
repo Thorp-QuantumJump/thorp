@@ -152,6 +152,7 @@ public class BacktestService {
                 effectivePeriodCalculator.resolve(
                         rules,
                         overlay,
+                        command.parameters(),
                         command.instrumentIds(),
                         command.start(),
                         command.end(),
