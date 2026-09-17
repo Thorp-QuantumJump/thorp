@@ -11,6 +11,7 @@ from worker.contracts.base import ContractModel
 from worker.contracts.engine_input import AllocationSpec, EngineInput
 from worker.contracts.strategy_params import (
     STRATEGY_PARAMETERS,
+    CappedRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
 )
@@ -36,9 +37,9 @@ def test_parameter_model_keeps_camel_alias_and_forbids_extra() -> None:
 def test_registry_covers_the_registered_allocation_strategies() -> None:
     """미확정 전략(PD-03)은 파라미터 모양도 미정이라 등록하지 않는다."""
     assert STRATEGY_PARAMETERS == {
-        "FIXED_WEIGHT": RebalanceParameters,
+        "FIXED_WEIGHT": CappedRebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
-        "INVERSE_VOLATILITY": RebalanceParameters,
+        "INVERSE_VOLATILITY": CappedRebalanceParameters,
         "MINIMUM_VARIANCE": MinimumVarianceParameters,
     }
     assert "SECTOR_MOMENTUM" not in STRATEGY_PARAMETERS
@@ -104,6 +105,27 @@ def test_misspelled_or_extra_parameter_key_is_rejected() -> None:
         AllocationSpec.model_validate(
             spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "lookbackDays": 63})
         )
+
+
+def test_axis_keys_are_camel_case_only() -> None:
+    """필드 이름(snake_case) 철자는 거절한다.
+
+    계산은 원본 dict 를 ``maxWeight`` 로 읽으므로, ``max_weight`` 를 받아주면 검증만 통과하고
+    상한은 규칙표 기본값으로 조용히 바뀜다.
+    """
+    with pytest.raises(ValidationError, match="max_weight"):
+        AllocationSpec.model_validate(
+            spec("FIXED_WEIGHT", {"rebalance": "MONTH_END", "max_weight": 40})
+        )
+
+
+def test_equal_weight_does_not_take_a_cap() -> None:
+    """003 에 ``maxWeight`` 축이 없는 전략은 받지 않는다 — 1/N 은 상한을 지킬 수 없다."""
+    with pytest.raises(ValidationError, match="maxWeight"):
+        AllocationSpec.model_validate(
+            spec("EQUAL_WEIGHT", {"rebalance": "MONTH_END", "maxWeight": 20})
+        )
+    AllocationSpec.model_validate(spec("FIXED_WEIGHT", {"rebalance": "MONTH_END", "maxWeight": 20}))
 
 
 def test_typed_parameters_do_not_change_serialization() -> None:

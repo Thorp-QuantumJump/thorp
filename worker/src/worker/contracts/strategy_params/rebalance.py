@@ -20,16 +20,31 @@ from worker.contracts.base import ContractModel
 
 
 class RebalanceParameters(ContractModel):
-    """고정 비중·동일 비중. 사용자가 고르는 것은 주기와 상한뿐이다."""
+    """동일 비중. 사용자가 고르는 것은 주기뿐이다.
 
-    model_config = ConfigDict(extra="forbid")
+    ``validate_by_name=False`` 은 일부러다. ``ContractModel`` 은 필드 이름(snake_case)도
+    받아주지만, 여기서는 003 축 이름(camelCase)만 받는다 — 계산은 원본 dict 를 축
+    이름으로 읽으므로(``effective_cap`` 등), 다른 철자를 받아주면 검증은 통과하고
+    계산은 그 값을 못 본 채 규칙표 기본값으로 조용히 빠진다.
+    """
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=False)
 
     rebalance: Literal["MONTH_END"]
+
+
+class CappedRebalanceParameters(RebalanceParameters):
+    """종목별 상한 축을 가진 전략(고정 비중·역변동성·최소분산).
+
+    동일 비중은 003 에 ``maxWeight`` 축이 없어 여기 들어오지 않는다 — 받아 놓고 1/N 을
+    그대로 내면 상한을 고른 사용자가 상한 없는 결과를 받는다.
+    """
+
     # None = 미지정. 그때는 규칙표의 weightCap 을 쓴다(PD-03 6).
     max_weight: int | None = Field(default=None, gt=0, le=100)
 
 
-class MinimumVarianceParameters(RebalanceParameters):
+class MinimumVarianceParameters(CappedRebalanceParameters):
     """최소분산(PD-04). 003 축 ``lookbackDays``·``estimationMethod`` 를 더 받는다.
 
     **여기서 받지 않으면 화면이 고른 관측 기간이 조용히 무시된다** — 사용자가 250거래일을 골라도

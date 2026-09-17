@@ -74,8 +74,10 @@ def compute(
         if parameters.get("lookbackDays") is not None
         else int_rule(rules, "lookbackDays", STRATEGY_ID)
     )
-    method = parameters.get("estimationMethod") or require_rule_value(
-        rules, "estimationMethod", STRATEGY_ID
+    method = (
+        parameters["estimationMethod"]
+        if parameters.get("estimationMethod") is not None
+        else require_rule_value(rules, "estimationMethod", STRATEGY_ID)
     )
     overflow = require_rule_value(rules, "capOverflow", STRATEGY_ID)
     cap = effective_cap(parameters, rules, STRATEGY_ID)
@@ -144,9 +146,12 @@ def _computable(
     computable: list[str] = []
     exceptions: list[ExceptionRecord] = []
     for instrument in sorted({item.instrument_id for item in universe}):
-        if instrument not in history.columns:
+        column = history.get(instrument)
+        # 판단일 종가가 없으면 살 수 없다 — 상장폐지된 종목은 꼬리가 NaN 이지만 앞쪽
+        # 이력은 그대로 남아 길이만 보면 "관측 구간을 채웠다"가 된다(``equal.py`` 와 같은 판단).
+        if column is None or column.empty or pd.isna(column.iloc[-1]):
             continue
-        if len(history[instrument].dropna()) < lookback + 1:
+        if len(column.dropna()) < lookback + 1:
             exceptions.append(
                 ExceptionRecord(
                     date=as_of,

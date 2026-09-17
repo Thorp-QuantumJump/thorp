@@ -15,6 +15,7 @@
 
 from worker.contracts.base import ContractModel
 from worker.contracts.strategy_params.rebalance import (
+    CappedRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
 )
@@ -22,10 +23,15 @@ from worker.contracts.strategy_params.rebalance import (
 #: ``allocation.strategyId`` → 파라미터 모델. 미등록 전략은 여기서 거부하지 않는다
 #: (지원 범위 판단은 엔진 몫이다).
 STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {
-    "FIXED_WEIGHT": RebalanceParameters,
+    "FIXED_WEIGHT": CappedRebalanceParameters,
     "EQUAL_WEIGHT": RebalanceParameters,
-    "INVERSE_VOLATILITY": RebalanceParameters,
+    "INVERSE_VOLATILITY": CappedRebalanceParameters,
     "MINIMUM_VARIANCE": MinimumVarianceParameters,
 }
 
-__all__ = ["STRATEGY_PARAMETERS", "MinimumVarianceParameters", "RebalanceParameters"]
+__all__ = [
+    "STRATEGY_PARAMETERS",
+    "CappedRebalanceParameters",
+    "MinimumVarianceParameters",
+    "RebalanceParameters",
+]

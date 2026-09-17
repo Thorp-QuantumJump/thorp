@@ -397,6 +397,24 @@ def test_single_computable_instrument_skips_the_optimiser():
     assert kinds == ["INSUFFICIENT_HISTORY", "EFFECTIVE_TARGET_REDUCED", "SINGLE_ASSET_FALLBACK"]
 
 
+def test_delisted_instrument_is_not_computable():
+    """길이만 보면 관측 구간을 채웠지만 판단일 종가가 없는 종목(상장폐지)은 살 수 없다."""
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(
+            **{
+                SEMI: [100.0, 100.5, 100.0, 100.5, 100.2],
+                BATTERY: [100.0, 110.0, 95.0, 115.0, float("nan")],
+            }
+        ),
+        AS_OF,
+    )
+
+    assert BATTERY not in result.weights
+    assert result.weights == {SEMI: Decimal(1)}
+
+
 def test_no_computable_instrument_holds_cash():
     result = compute_weights(
         min_variance(),
