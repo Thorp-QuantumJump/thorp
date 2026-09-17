@@ -298,7 +298,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 여는 방법·닫는 방법을 키보드로도 쓸 수 있게 한다 (`checklists/ux.md` CHK005·CHK033)
   - **테스트가 SC-012를 받는다.** quickstart에 SC-012 시나리오가 없기 때문이다. 목록의 모든 항목에서 열리는지, 여는 동안 경로가 `/diagnosis/sectors`에서 바뀌지 않는지, 409에서 빈 자리가 아니라 한 문장이 보이는지 확인한다
   - 선행: T021, T015(같은 `SectorListItem.tsx`를 고친다)
-- [ ] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급
+- [X] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급
   - 각 묶음은 자기 몫의 시나리오를 이미 그 묶음 안에서 돌렸다. 여기서는 모두 병합된 상태로 처음부터 끝까지 한 번 더 밟는다
   - **시나리오 0을 먼저 한다.** `npm test`의 수집된 파일 수와 `skipped` 수를 보고, `src/diagnosis/`의 테스트가 목록에 있는지 확인한다. T005의 가드가 통과하는지도 함께 본다
   - `npm run lint && npm run build`와 `npm test`를 모두 돌린다
