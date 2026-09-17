@@ -78,15 +78,24 @@ RUNNING 중 워커 프로세스를 `kill -9`한다. 기대: 브로커 재전달�
 
 ## S7. 결정성 (SC-002, FR-004)
 
-pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 EngineOutput JSON이 바이트 단위로 같다. 통합: S1 결과와 강제 재계산(테스트용 내부 플래그 또는 다른 `data_version` 라벨로 같은 데이터) 결과의 `summary`·`/trades`·`/weights`가 완전히 같다.
+pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 EngineOutput JSON이 바이트 단위로 같다.
+**발표 전에는 같은 개발 환경에서의 재현만 보장한다**(T022). scipy를 정확한 버전으로 고정하고 모든 배분 비중을
+0.000001 단위로 떨어뜨려 마지막 자리 차이를 줄였지만, 다른 OS·CPU·이미지에서의 바이트 동일은 워커 이미지 잠금과
+`versions.dependencies` 기록(Phase 10 T027·T028)이 들어간 뒤에 말할 수 있다. 통합: S1 결과와 강제 재계산(테스트용 내부 플래그 또는 다른 `data_version` 라벨로 같은 데이터) 결과의 `summary`·`/trades`·`/weights`가 완전히 같다.
 
 ## S8. 수기 대조 (US2, SC-003, SC-004)
 
 `worker/examples/three_etf_24m/`(3개 ETF, 24개월, 분배금 2건, 거래 정지 1일 포함) 픽스처로 `FIXED_WEIGHT`·`EQUAL_WEIGHT`·`INVERSE_VOLATILITY`를 실행한다. pytest `test_manual_reconciliation.py`가 `fixtures/manual_reconciliation.json`(스프레드시트로 계산한 대표 거래일 3개의 체결일·수량·현금·비용·분배금)과 정확히 일치하는지 확인한다. 확인 항목: 모든 체결일 = 판단일 다음 거래일, 정수 수량, 거래 정지일 체결이 다음 거래 가능일로 이월되고 `reason=HALT_DEFERRED`, 분배금이 `cashFlows`에 한 번만, 결과 시작일 = 워밍업 이후.
 
-## S9. 미확정 규칙 거부 (FR-010, PD-03·04)
+## S9. 미확정 규칙 거부와 최소분산 실행 (FR-010·FR-025, PD-03·04)
 
-`strategyId=SECTOR_MOMENTUM`으로 요청. 기대: `422 RULES_NOT_REGISTERED`, 실행 생성 없음. `MINIMUM_VARIANCE`도 같다. 팀이 규칙을 등록하면 이 시나리오는 실행 시나리오로 바뀐다.
+`strategyId=SECTOR_MOMENTUM`으로 요청. 기대: `422 RULES_NOT_REGISTERED`, 실행 생성 없음. T023이 규칙을 등록하면 이 갈래도 실행 시나리오가 된다.
+
+`MINIMUM_VARIANCE`는 PD-04가 확정돼 **실행 시나리오다**(T022). S1과 같은 본문에 전략만 바꿔 요청하면 `COMPLETED`이고
+`/weights`의 `weightsSource=COMPUTED`, 각 항목의 비중이 비음수·상한 이하이며 합이 투자 목표와 같다(AC5).
+`strategy.parameters.maxWeight`(정수 %)를 함께 보내면 그 값이 유효 상한이다 — **상한 40%에 종목 2개면 채울 수 있는 최대가
+80%라 접수가 `422 VALIDATION_RULE_VIOLATED`로 거절한다.** 종목 3개면 통과하고, 그중 이력이 모자란 종목이 있는 달에는
+유효 투자 목표가 줄어 나머지가 현금으로 남고 `exceptions`에 `EFFECTIVE_TARGET_REDUCED`가 기록된다.
 
 ## S10. 측정 기록 (US4, SC-007)
 

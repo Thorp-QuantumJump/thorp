@@ -81,13 +81,14 @@ class BacktestRegistryApiIT extends PostgresTestSupport {
                         "MINIMUM_VARIANCE",
                         "TARGET_RISK_OVERLAY");
 
-        // 시드의 REGISTERED 는 넷(고정 비중·동일 비중·역변동성·목표 위험 오버레이)이고
-        // 나머지 둘(섹터 모멘텀·최소분산)은 PD-03·04 구현 전이라 PENDING_DECISION 이다.
+        // 시드의 REGISTERED 는 다섯(고정 비중·동일 비중·역변동성·목표 위험 오버레이·최소분산)이고
+        // 나머지 하나(섹터 모멘텀)만 PD-03 구현 전이라 PENDING_DECISION 이다.
+        // 최소분산은 티켓 #330 이 MINIMUM_VARIANCE/1 을 REGISTERED 로 채우면서 넘어왔다.
         assertThat(
                         nodes(objectMapper.readTree(body).at("/data/strategyRules"))
                                 .filter(row -> "REGISTERED".equals(row.get("status").asText()))
                                 .count())
-                .isEqualTo(4);
+                .isEqualTo(5);
 
         // 전략당 한 행 — 화면이 어느 버전을 실을지 고를 필요가 없다는 것이 이 API 의 계약이다.
         // 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다(버전 교체는 Phase 10).
