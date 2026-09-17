@@ -19,7 +19,7 @@
 - ~~FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌~~ — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 해제됐다. B05·B11 착수를 막지 않는다
 - ~~PD-02 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 2026-09-15 확정([data-model](data-model.md) §4-2). T017·B02 착수를 막지 않는다. 최소분산 `estimationMethod`만 004 PD-04 대기로 후보 하나로 시작한다(003 쪽 구조는 막히지 않는다)
 - ~~001 평가 기간 입력 계약과 최소 평가 길이 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 정정. 001이 이미 만든 `EvaluationWindowService`에 호출부만 붙이면 되고, 최소 평가 길이는 사용자가 고르는 항목(FR-011a)으로 확정했다. T042는 001이 호출부를 붙이는 대로 연결한다(001 작업 완료가 남은 선행 조건, 팀 결정 대기가 아니다)
-- 004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단. PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음
+- ~~004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단~~ — [S15P21E205-326](https://ssafy.atlassian.net/browse/S15P21E205-326)(004 T025)이 `GET /backtests/registry`를 열어 해소. 응답은 `{strategyRules[{strategyId, rulesVersion, status, provisional}], defaultCostProfile{version, provisional, commissionBps, spreadBps, slippageBps, taxBps}}`로 **버전과 수치가 한 덩이**라 `AnalysisVersions.costRates`가 기대한 모양 그대로다. 계약은 `docs/specs/backtest-api/README.md` §1.11. 남은 003 작업 둘: ① T039·T059가 이 응답을 소비하고 `costProfileVersion`을 **비우지 말고 받은 버전을 명시해** 보낸다(004 T021이 기본 비용을 바꾸면 화면이 본 조건과 갈린다) ② 등록표 `allocationMethod`를 `EQUAL`/`INVERSE_VOLATILITY`로 교체(004 PD-03 ⓪ 확정). PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음
 - 004 상한 재배분 규칙과 워커 메시지 계약 미확정: FR-006·FR-019의 종단 완료 판정 보류
 
 ## Format: `[ID] [P?] [Story] (파트) Description`
@@ -313,8 +313,9 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 **B10 구현 메모 (S15P21E205-242, `feat(fe)/242-analysis-conditions`)**:
 
-- **T065의 비용 표시는 통로만 넓혔고 실제 연결은 B06에 남는다(2026-09-17 사용자 선택).** 비용 조건을 조회하는
-  백엔드 API가 아직 없다(data-model §7 "확인된 빈 구멍"). `AnalysisSupport`의 `AnalysisVersions`에 `costRates`(004
+- **T065의 비용 표시는 통로만 넓혔고 실제 연결은 B06에 남는다(2026-09-17 사용자 선택).** ~~비용 조건을 조회하는
+  백엔드 API가 아직 없다~~(data-model §7 "확인된 빈 구멍") — 2026-09-17 `GET /backtests/registry`(004 T025,
+  `S15P21E205-326`)가 열렸다. `defaultCostProfile`이 버전과 bps 네 칸을 함께 주므로 `costRates`에 그대로 담긴다. `AnalysisSupport`의 `AnalysisVersions`에 `costRates`(004
   `CostProfile`의 bps 네 칸)를 더해 **버전과 수치가 한 덩이로** 오게 했다 — 버전만 받는 모양을 두면 화면이 "적용됨"만
   보이게 되고 그것은 FR-010을 충족하지 않는다. 지금 기본 통로는 연결되지 않은 상태라 패널은 "비용 조건을 확인할 수
   없습니다"를 보이고 '분석하기'는 이미 있던 버전 차단으로 막힌다. 위 Quality Gate의 "B06·B10 실제 연결 차단"은 그대로다.

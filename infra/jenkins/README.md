@@ -12,9 +12,10 @@
 - 슬롯 수는 288 이전 2개였고, S15P21E205-288에서 CI와 배포의 자원 경합을 줄이려고 1개로 줄였다.
   2026-09-17 한 빌드가 끝나지 않고 그 슬롯을 붙잡아 뒤의 CI가 전부 멈춘 뒤, CI에 45분 제한을 걸고
   CI 2개 + 배포 1개로 나눴다(S15P21E205-319).
-- CI 상한을 Jenkinsfile이 아니라 Jenkins 시작 스크립트에 두는 이유: thorp-ci는 Jenkinsfile을 MR 소스
-  브랜치에서 읽는다. Jenkinsfile의 `options`는 빌드가 시작될 때 Job 속성으로 저장되므로, dev를
-  반영하지 않은 브랜치가 빌드되면 옛 설정이 되살아난다. 시작 스크립트는 thorp-ci 설정이 저장될 때마다
+- CI 상한을 Jenkinsfile이 아니라 Jenkins 시작 스크립트에 두는 이유: thorp-ci는 S15P21E205-332 전까지
+  Jenkinsfile을 MR 소스 브랜치에서 읽었다. Jenkinsfile의 `options`는 빌드가 시작될 때 Job 속성으로
+  저장되므로, dev를 반영하지 않은 브랜치가 빌드되면 옛 설정이 되살아났다. 지금은 dev에서 읽지만 Job
+  설정을 되돌리면 같은 일이 생긴다. 시작 스크립트는 thorp-ci 설정이 저장될 때마다
   `disableConcurrentBuilds`를 지우고 throttle 상한을 다시 확인한다.
 - CI의 Gradle·Java 테스트·Node는 Jenkins 컨테이너 안에서 실행된다.
   CD의 Node 컨테이너·Docker 이미지 빌드와 Testcontainers DB·브로커는 별도 자원을 쓴다.
@@ -83,8 +84,56 @@ Jenkins 재생성 동안 관리 화면과 웹훅 수신에 짧은 중단이 생�
 - 288 이전 자원 상한으로 되돌릴 때는 빌드 종료 후 Compose RAM=2G, `memswap_limit: 4G`를 복원하고
   Jenkins만 재생성한다. 사용 중인 메모리보다 낮게 즉시 축소하지 않는다.
 
+## CI가 읽는 Jenkinsfile
+
+thorp-ci는 검사 절차(`Jenkinsfile`)를 dev에서 읽고, MR 소스 커밋과 dev를 병합한 결과를 검사한다.
+Jenkins 컨테이너는 `docker.sock`을 마운트해 호스트 root와 같은 권한을 가지므로, MR에서 고친 절차가
+리뷰·머지 전에 그 권한으로 돌지 않게 한다(S15P21E205-332).
+
+Job 설정은 Jenkins 볼륨에만 저장되므로 여기에 남긴다. thorp-ci → Configure → Pipeline:
+
+| 항목 | 값 |
+|---|---|
+| Definition | Pipeline script from SCM |
+| SCM | Git |
+| Repository URL | `https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205.git` |
+| Credentials | `gitlab-deploy-token` |
+| Branch Specifier | `refs/heads/dev` |
+| Script Path | `Jenkinsfile` |
+| Lightweight checkout | 켬 |
+
+- Branch Specifier는 `refs/heads/dev` 형태로 적는다. `origin/dev`처럼 적으면 Lightweight checkout을
+  쓰지 못하고 전체 체크아웃으로 넘어간다. 전체 체크아웃은 GitLab 트리거가 빌드에 붙인 MR 커밋
+  (RevisionParameterAction)을 브랜치보다 먼저 쓴다. 지금은 트리거가 알려 준 저장소 주소(SSH)와 Job의
+  주소(HTTPS)가 달라 그 커밋을 건너뛸 뿐이다. Lightweight checkout은 그 커밋을 보지 않는다.
+- Jenkinsfile은 `skipDefaultCheckout()`으로 기본 체크아웃을 끄고, `Merge with dev` 스테이지에서
+  `gitlabMergeRequestLastCommit`을 직접 체크아웃한다. 기본 체크아웃을 되살리면 모든 MR이 dev 자신을
+  검사하고 초록불을 받는다.
+- GitLab 검사 상태는 gitlab-plugin이 웹훅의 MR 마지막 커밋에 붙인다. 체크아웃한 커밋과 같다.
+
+확인: 콘솔 로그 첫머리에 `Obtained Jenkinsfile from git https://lab.ssafy.com/...`이 나오고
+`thorp-ci@script`로 체크아웃하는 줄이 없다. `Merge with dev`의 `Checking out Revision`은 MR의 마지막
+커밋이다.
+
+되돌리기: Branch Specifier를 `origin/${gitlabSourceBranch}`로 바꾼다. Jenkinsfile은 그 설정에서도 MR
+커밋을 직접 받으므로 고치지 않는다. 반대로 Branch Specifier를 dev로 바꾸는 일은 `skipDefaultCheckout()`이
+든 Jenkinsfile이 dev에 머지된 뒤에만 한다. 먼저 바꾸면 옛 Jenkinsfile의 기본 체크아웃이 dev를 받는다.
+
+### Jenkinsfile을 고치는 MR을 머지 전에 확인하기
+
+MR 이벤트 빌드는 dev의 절차로 돌므로 바뀐 절차를 검사하지 않는다. 그 MR의 빌드에서 Replay를 열고,
+Jenkinsfile 내용을 MR의 것으로 바꾼 뒤 `environment` 블록에 한 줄을 더해 실행한다.
+
+```groovy
+CI_SOURCE_COMMIT = '<MR 소스 커밋 40자리 SHA>'
+```
+
+Replay는 웹훅 정보를 물려받지 않아 이 값이 없으면 검사할 커밋을 알 수 없고, 그 이유를 알리며 실패한다.
+지금 빌드도 같은 이유로 실패한다. Replay 결과는 체크아웃한 커밋에 GitLab 검사 상태로 붙는다.
+
 관련 티켓: [S15P21E205-288](https://ssafy.atlassian.net/browse/S15P21E205-288),
-[S15P21E205-319](https://ssafy.atlassian.net/browse/S15P21E205-319)
+[S15P21E205-319](https://ssafy.atlassian.net/browse/S15P21E205-319),
+[S15P21E205-332](https://ssafy.atlassian.net/browse/S15P21E205-332)
 
 조사 근거와 적용 결과: [288 트러블슈팅](https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e),
 [319 트러블슈팅](https://app.notion.com/p/3de61b3dc08f8122ad4ad545feb7a108)

@@ -1,5 +1,7 @@
 package com.ssafy.thorp.common.web.advice;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -64,6 +66,25 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("요청 검증 실패는 details.fields에 필드 오류 전부를 싣는다")
+    void validationExceptionListsAllFieldErrors() throws Exception {
+        mockMvc.perform(
+                        post("/test/validation-many")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\": \"\", \"code\": \"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.error.details.fields.length()").value(2))
+                .andExpect(
+                        jsonPath("$.error.details.fields[*].field")
+                                .value(containsInAnyOrder("name", "code")))
+                .andExpect(
+                        jsonPath("$.error.details.fields[?(@.field == 'code')].message")
+                                .value(contains("코드는 필수입니다")));
+    }
+
+    @Test
     @DisplayName("도메인 불변식 위반(IllegalArgumentException)은 400으로 응답한다")
     void illegalArgumentException() throws Exception {
         mockMvc.perform(get("/test/illegal-argument"))
@@ -94,6 +115,20 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    @DisplayName("본문 값의 형식이 틀리면 details.fields에 그 위치를 싣고 파서 메시지는 싣지 않는다")
+    void unreadableValueReportsItsPath() throws Exception {
+        mockMvc.perform(
+                        post("/test/validation-many")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\": \"a\", \"code\": {\"nested\": 1}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.error.details.fields[0].field").value("code"))
+                .andExpect(jsonPath("$.error.details.fields[0].message").value("형식이 맞지 않는 값입니다"));
     }
 
     @Test
@@ -135,6 +170,9 @@ class GlobalExceptionHandlerTest {
         @PostMapping("/validation")
         void validation(@Valid @RequestBody SampleRequest request) {}
 
+        @PostMapping("/validation-many")
+        void validationMany(@Valid @RequestBody TwoFieldRequest request) {}
+
         @GetMapping("/number/{value}")
         void number(@PathVariable Long value) {}
 
@@ -150,4 +188,8 @@ class GlobalExceptionHandlerTest {
     }
 
     record SampleRequest(@NotBlank(message = "이름은 필수입니다") String name) {}
+
+    record TwoFieldRequest(
+            @NotBlank(message = "이름은 필수입니다") String name,
+            @NotBlank(message = "코드는 필수입니다") String code) {}
 }

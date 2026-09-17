@@ -12,11 +12,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /**
  * 배우기 통합 테스트용 시드. 판·게시 용어 색인·글 상태와 001 대응표를 JDBC로 직접 심는다.
  *
- * <p>게시 유스케이스(B02)가 아직 없어서 저장소 대신 SQL을 쓴다. 대응표도 백엔드에 쓰기 경로가 없으므로({@code SectorApiIT}와 같은 사정) SQL로
- * 넣는다.
+ * <p>공개 조회 테스트는 게시 유스케이스를 거치지 않고 판을 SQL로 심는다. 조회가 "판 → 응답" 변환만 확인하게 하려는 것이다. 대응표도 백엔드에 쓰기 경로가
+ * 없으므로({@code SectorApiIT}와 같은 사정) SQL로 넣는다.
  *
- * <p><b>컨텍스트와 DB 컨테이너를 다른 테스트와 공유한다.</b> 이 클래스가 심은 것은 {@link #reset()}이 마이그레이션 직후 상태로 되돌린다. {@code
- * LearningMigrationTest}는 아홉 글이 모두 초안이고 용어 문장이 비어 있기를 기대한다.
+ * <p><b>컨텍스트와 DB 컨테이너를 다른 테스트와 공유한다.</b> 이 클래스가 심은 것과 관리 API가 바꾼 초안은 {@link #reset()}이 마이그레이션 직후
+ * 상태로 되돌린다. {@code LearningMigrationTest}는 아홉 글이 모두 초안이고 용어 문장이 비어 있기를 기대한다.
+ *
+ * <p><b>대응표는 {@code MarketCatalogSeed}와 함께 쓴다.</b> 그 시드가 검사마다 자기 대응표를 열어 두고, 열린 대응표는 하나뿐이어야
+ * 한다({@code uk_sector_etf_map_version_open}). 그래서 {@link #reset()}은 열린 대응표를 모두 닫아 "대응표 없음"에서 시작하고,
+ * {@link #seedSectorMap}은 다른 열린 버전을 닫은 뒤 자기 버전을 연다. 닫힌 시드 대응표는 다음 검사 전에 {@code MarketCatalogSeed}가
+ * 다시 연다.
  */
 public final class LearningSeeds {
 
@@ -32,14 +37,80 @@ public final class LearningSeeds {
         this.objectMapper = objectMapper;
     }
 
-    /** 공개 판·기록·색인을 지우고 글을 초안으로, 용어 문장을 빈 문자열로 되돌린다. 대응표도 지운다. */
+    /** data-model §8 초기 자리의 글. 마이그레이션과 같은 값이다. */
+    private static final String[][] INITIAL_ARTICLES = {
+        {"sectors-and-etf", "섹터와 ETF", "1"},
+        {"weights-and-rebalancing", "비중과 리밸런싱", "2"},
+        {"inverse-volatility", "변동성에 따라 나누기", "3"},
+        {"sector-momentum", "섹터 모멘텀", "4"},
+        {"minimum-variance", "최소분산", "5"},
+        {"backtest", "백테스트", "6"},
+        {"transaction-cost", "거래비용", "7"},
+        {"returns-and-losses", "수익과 손실", "8"},
+        {"past-is-not-future", "과거가 미래를 보장하지 않는 이유", "9"}
+    };
+
+    /** data-model §8 초기 자리의 용어. termId, articleId, 이름 순이다. */
+    private static final String[][] INITIAL_TERMS = {
+        {"sector", "sectors-and-etf", "섹터"},
+        {"representative-etf", "sectors-and-etf", "대표 ETF"},
+        {"weight", "weights-and-rebalancing", "비중"},
+        {"rebalancing", "weights-and-rebalancing", "리밸런싱"},
+        {"fixed-weight", "weights-and-rebalancing", "내가 정한 비중"},
+        {"equal-weight", "weights-and-rebalancing", "똑같이 나누기"},
+        {"volatility", "inverse-volatility", "변동성"},
+        {"inverse-volatility", "inverse-volatility", "변동성에 따라 나누기"},
+        {"sector-momentum", "sector-momentum", "섹터 모멘텀"},
+        {"minimum-variance", "minimum-variance", "최소분산"},
+        {"backtest", "backtest", "백테스트"},
+        {"transaction-cost", "transaction-cost", "거래비용"},
+        {"net-total-return", "returns-and-losses", "비용 차감 후 전체 수익률"},
+        {"max-drawdown", "returns-and-losses", "가장 크게 줄었던 폭"}
+    };
+
+    /**
+     * 마이그레이션 직후 상태로 되돌린다. 공개 판·기록·색인을 지우고, 관리 API가 만든 글을 지우고, 아홉 글의 초안 컬럼과 열네 용어를 초기 자리로 되돌린다. 이
+     * 클래스가 넣은 대응표를 지우고 남은 열린 대응표도 닫는다.
+     */
     public void reset() {
         jdbc.update("DELETE FROM learning_published_term");
         jdbc.update("DELETE FROM learning_publication_event");
         jdbc.update("UPDATE learning_article SET status = 'DRAFT', published_revision_id = NULL");
         jdbc.update("DELETE FROM learning_article_revision");
-        jdbc.update("UPDATE learning_term SET sentence = ''");
+        jdbc.update("DELETE FROM learning_term");
+        String[] initialKeys = new String[INITIAL_ARTICLES.length];
+        for (int i = 0; i < INITIAL_ARTICLES.length; i++) {
+            initialKeys[i] = INITIAL_ARTICLES[i][0];
+        }
+        jdbc.update(
+                "DELETE FROM learning_article WHERE NOT (article_key = ANY (?))",
+                (Object) initialKeys);
+        for (String[] article : INITIAL_ARTICLES) {
+            jdbc.update(
+                    """
+                    UPDATE learning_article
+                       SET title = ?, question = '', reading_order = ?, body_blocks = '[]'::jsonb,
+                           example = NULL, sources = '[]'::jsonb, draft_version = 0
+                     WHERE article_key = ?
+                    """,
+                    article[1],
+                    Integer.parseInt(article[2]),
+                    article[0]);
+        }
+        for (String[] term : INITIAL_TERMS) {
+            jdbc.update(
+                    """
+                    INSERT INTO learning_term (term_key, article_id, label, sentence, created_at, updated_at)
+                    SELECT ?, id, ?, '', now(), now() FROM learning_article WHERE article_key = ?
+                    """,
+                    term[0],
+                    term[2],
+                    term[1]);
+        }
         clearSectorMap();
+        jdbc.update(
+                "UPDATE sector_etf_map_version SET effective_to = effective_from + INTERVAL '1 second'"
+                        + " WHERE effective_to IS NULL");
     }
 
     /**
@@ -161,8 +232,16 @@ public final class LearningSeeds {
         return revisionId;
     }
 
-    /** 열린 대응표 하나를 심는다. 섹터마다 대표 ETF를 하나씩 만든다. */
+    /**
+     * 열린 대응표 하나를 심는다. 섹터마다 대표 ETF를 하나씩 만든다.
+     *
+     * <p>다른 열린 버전을 먼저 닫는다. 이미 있는 섹터 행은 새로 넣지 않고 그 행을 쓴다. {@code MarketCatalogSeed}가 같은 코드를 먼저 넣어 두기
+     * 때문이다. 이름은 그 행의 값이 쓰인다.
+     */
     public void seedSectorMap(Map<String, String> namesByCode) {
+        jdbc.update(
+                "UPDATE sector_etf_map_version SET effective_to = effective_from + INTERVAL '1 second'"
+                        + " WHERE effective_to IS NULL");
         Long mapVersionId =
                 jdbc.queryForObject(
                         """
@@ -177,13 +256,14 @@ public final class LearningSeeds {
         int serial = 0;
         for (Map.Entry<String, String> sector : new LinkedHashMap<>(namesByCode).entrySet()) {
             serial++;
+            jdbc.update(
+                    "INSERT INTO sector (code, name, classification) VALUES (?, ?, 'INDUSTRY')"
+                            + " ON CONFLICT (code) DO NOTHING",
+                    sector.getKey(),
+                    sector.getValue());
             long sectorId =
                     jdbc.queryForObject(
-                            "INSERT INTO sector (code, name, classification) VALUES (?, ?, 'INDUSTRY')"
-                                    + " RETURNING id",
-                            Long.class,
-                            sector.getKey(),
-                            sector.getValue());
+                            "SELECT id FROM sector WHERE code = ?", Long.class, sector.getKey());
             long etfId =
                     jdbc.queryForObject(
                             """
