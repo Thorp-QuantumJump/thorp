@@ -51,7 +51,7 @@ public class BacktestRetryService {
         BacktestRequest request =
                 requestRepository
                         .findByBacktestId(backtestId)
-                        .filter(found -> found.getRequesterId() == requesterId)
+                        .filter(found -> found.isOwnedBy(requesterId))
                         .orElseThrow(() -> new BacktestNotFoundException(backtestId));
         BacktestRun run =
                 runRepository

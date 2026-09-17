@@ -17,6 +17,7 @@ import java.util.Map;
  *     읽는다(001 {@code contracts/market-dataset.md} 「읽기 규칙」). 요청 앞에 워밍업 자료가 모자라면 워커가 모자란 만큼만 미루므로, 실제
  *     집계가 시작된 날은 이 값보다 뒤일 수 있다
  * @param retryOf 재시도라면 원본 요청의 backtestId. 접수(T005) 경로에서는 null 이고 응답에도 싣지 않는다
+ * @param publicToken 이 요청의 결과 공개 토큰(spec 005 FR-019). 재시도는 새 요청이라 원본과 다른 토큰이다
  */
 public record BacktestJobResult(
         String backtestId,
@@ -25,7 +26,8 @@ public record BacktestJobResult(
         LocalDate effectiveStart,
         LocalDate effectiveEnd,
         Map<String, Object> versions,
-        String retryOf) {
+        String retryOf,
+        String publicToken) {
 
     /** 재시도 응답용. 접수 결과 자체는 원본을 알지 못하므로 재시도 유스케이스가 붙인다. */
     public BacktestJobResult withRetryOf(String originalBacktestId) {
@@ -36,7 +38,8 @@ public record BacktestJobResult(
                 effectiveStart,
                 effectiveEnd,
                 versions,
-                originalBacktestId);
+                originalBacktestId,
+                publicToken);
     }
 
     public static BacktestJobResult of(BacktestRequest request, BacktestRun run) {
@@ -47,6 +50,7 @@ public record BacktestJobResult(
                 run.getPlan().effectiveStart(),
                 run.getPlan().effectiveEnd(),
                 run.getPlan().versions(),
-                null);
+                null,
+                request.getPublicToken().value());
     }
 }

@@ -19,6 +19,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -124,7 +125,9 @@ class BacktestRetryServiceTest {
                 null,
                 cancelledAt,
                 null,
-                cancelledAt != null);
+                cancelledAt != null,
+                PublicResultToken.generate(),
+                null);
     }
 
     private void given(BacktestRequest request, RunStatus runStatus) {
@@ -142,7 +145,8 @@ class BacktestRetryServiceTest {
                                 LocalDate.of(2024, 4, 1),
                                 LocalDate.of(2024, 12, 31),
                                 Map.of(),
-                                null));
+                                null,
+                                "0123456789abcdef0123456789abcdef"));
     }
 
     @Test

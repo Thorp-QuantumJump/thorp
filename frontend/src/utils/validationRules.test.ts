@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RuleOperator, ValidationRule } from '@/types/strategyRegistry'
-import { RuleEvaluationError, evaluateRules } from './validationRules'
+import { RuleEvaluationError, checkRules, evaluateRules } from './validationRules'
 
 /**
  * 화면의 규칙 평가기(T052)가 서버 `RegistryRule.isViolatedBy`와 같은 답을 내는가.
@@ -94,5 +94,22 @@ describe('evaluateRules', () => {
       RuleEvaluationError,
     )
     expect(() => evaluateRules([capRule], { cap: 'wide' }, context)).toThrow(RuleEvaluationError)
+  })
+})
+
+describe('checkRules', () => {
+  it('판정하지 못하면 위반 목록을 비우되 통과로 접지 않고 unjudged를 세운다', () => {
+    // 대소 비교에 숫자가 아닌 값이 왔다. 빈 위반 목록만 보고 통과로 읽으면 안 된다(T101).
+    const result = checkRules([rule()], { knob: { kind: 'OBJECT' } }, context)
+    expect(result).toEqual({ violations: [], unjudged: true })
+  })
+
+  it('정상 규칙이면 unjudged가 거짓이고 위반을 그대로 돌려준다', () => {
+    const target = rule()
+    expect(checkRules([target], { knob: 11 }, context)).toEqual({
+      violations: [target],
+      unjudged: false,
+    })
+    expect(checkRules([target], { knob: 9 }, context)).toEqual({ violations: [], unjudged: false })
   })
 })

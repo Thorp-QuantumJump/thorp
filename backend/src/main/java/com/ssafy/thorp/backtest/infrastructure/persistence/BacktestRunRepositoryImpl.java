@@ -182,6 +182,23 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
         return jpaRepository.countByStatusAndExecutionType(RunStatus.QUEUED, ExecutionType.SINGLE);
     }
 
+    @Override
+    public long countQueuedSingleAnonymous() {
+        Number count =
+                (Number)
+                        entityManager
+                                .createNativeQuery(
+                                        "SELECT count(DISTINCT r.id) FROM backtest_run r"
+                                                + " JOIN backtest_request q ON q.run_id = r.id"
+                                                + " WHERE r.status = 'QUEUED'"
+                                                + " AND r.execution_type = 'SINGLE'"
+                                                + " AND q.requester_id IS NULL"
+                                                + " AND q.result_source = 'NEW'"
+                                                + " AND q.cancelled_at IS NULL")
+                                .getSingleResult();
+        return count.longValue();
+    }
+
     /**
      * 요청 행과 조인해 이 사용자의 <b>단건</b> 대기 수를 센다. 취소한 요청은 빠진다 — 취소해 두고 다시 넣지 못하면 한도가 벌이 된다.
      *

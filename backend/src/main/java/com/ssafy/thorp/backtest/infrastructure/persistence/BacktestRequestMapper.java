@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 
 /** 도메인 모델과 JPA Entity 사이의 변환. */
@@ -19,7 +20,9 @@ final class BacktestRequestMapper {
                 request.getRetryOfRequestId(),
                 request.getCancelledAt(),
                 request.getCancelledLastTradingDate(),
-                request.isStoppedRun());
+                request.isStoppedRun(),
+                request.getPublicToken().value(),
+                request.getPublicTokenExpiresAt());
     }
 
     static BacktestRequest toDomain(BacktestRequestJpaEntity entity) {
@@ -33,6 +36,8 @@ final class BacktestRequestMapper {
                 entity.getRetryOfRequestId(),
                 entity.getCancelledAt(),
                 entity.getCancelledLastTradingDate(),
-                entity.isStoppedRun());
+                entity.isStoppedRun(),
+                PublicResultToken.of(entity.getPublicToken()),
+                entity.getPublicTokenExpiresAt());
     }
 }

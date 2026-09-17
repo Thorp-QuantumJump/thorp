@@ -22,7 +22,7 @@ import { SettingsStatusBadge } from './SettingsStatusBadge'
  * 상세 설정 패널(T056)을 실제 설정 훅과 함께 돌린다(FR-003·FR-006·FR-008·FR-012, quickstart 5-1·6).
  *
  * <p><b>섹터 수를 여섯으로 둔다.</b> 픽스처의 규칙은 "허용 이탈 폭 × 섹터 수 < 100이면 위반"이라,
- * 기본값 20에서 섹터 여섯이면 120으로 통과하고 15로 바꾸면 90으로 위반한다. 기본 설정이 이미 위반인
+ * 기본값 35에서 섹터 여섯이면 210으로 통과하고 15로 바꾸면 90으로 위반한다. 기본 설정이 이미 위반인
  * 조건에서는 "바꾸면 생기고 복원하면 사라진다"를 볼 수 없다.
  */
 
@@ -185,7 +185,7 @@ describe('DetailSettingsPanel', () => {
 
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.getByRole('status').textContent).toContain('기본 설정')
-    expect((band as HTMLInputElement).value).toBe(String(20))
+    expect((band as HTMLInputElement).value).toBe(String(selectableStrategy.axes[2].defaultValue))
 
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(xhrSpy).not.toHaveBeenCalled()

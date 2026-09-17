@@ -118,6 +118,23 @@ class ArchitectureTest {
                     .dependOnClassesThat()
                     .resideInAPackage(ROOT + ".paramsearch..");
 
+    /**
+     * 규칙 9: {@code backtest}(004)는 {@code result}(005)를 참조하지 않는다.
+     *
+     * <p>공개 열람 경계 {@code result}는 {@code backtest}를 읽고, 방향은 {@code result → backtest} 하나다. 공개 토큰은
+     * 004 접수가 발급하므로 값 타입({@code PublicResultToken})도 {@code backtest}에 두었고, 유효 시간은 설정 키로만
+     * 읽는다({@code ResultProperties}를 주입받지 않는다). 이 규칙이 없으면 004 서비스가 005 설정·응답을 편하게 가져다 쓰는 순간 순환이 생긴다.
+     * 근거: specs/005-result-comparison/tasks.md "착수 전에 알아둘 것" ⑥.
+     */
+    @ArchTest
+    static final ArchRule backtest는_result를_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage(ROOT + ".backtest..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".result..");
+
     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */
     @ArchTest
     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =
