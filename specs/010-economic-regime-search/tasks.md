@@ -133,21 +133,21 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 **Goal**: 질의 직전 자료로 공통 척도(m·s)를 만들고, 어느 달을 비교할지 정한다.
 거리 계산에서는 모든 후보에 이 척도를 적용한다. 시대별 보조 설명만 같은 산출 함수를 후보월로 호출한다(FR-005·FR-017).
 
-- [ ] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)
-- [ ] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)
-- [ ] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)
-- [ ] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)
-- [ ] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`
-- [ ] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)
-- [ ] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)
-- [ ] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)
-- [ ] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)
-- [ ] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다
-- [ ] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정
-- [ ] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다
-- [ ] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)
-- [ ] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다
-- [ ] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정
+- [X] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)
+- [X] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)
+- [X] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)
+- [X] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)
+- [X] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`
+- [X] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)
+- [X] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)
+- [X] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)
+- [X] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)
+- [X] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다
+- [X] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정
+- [X] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다
+- [X] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)
+- [X] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다
+- [X] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정
 
 **Checkpoint**: 질의 직전 구간의 공통 척도를 만들고, 만들 수 없을 때 사유를 말한다
 
