@@ -8,11 +8,13 @@
 from datetime import date
 from decimal import Decimal
 
+import numpy as np
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 from worker.allocation import compute_weights
-from worker.allocation.base import AllocationError
+from worker.allocation.base import AllocationError, effective_cap
 from worker.contracts.engine_input import AllocationSpec, UniverseItem
 from worker.contracts.engine_output import WeightsSource
 
@@ -27,6 +29,8 @@ INVERSE_RULES = {
     "lookbackDays": 3,
     "zeroVolatility": "EXCLUDE_THEN_ALLOCATE",
     "weightCap": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
     "investedFraction": "1.0000",
     "weightsSource": "COMPUTED",
 }
@@ -239,19 +243,60 @@ def test_weight_cap_is_enforced():
     assert sum(result.weights.values()) == pytest.approx(Decimal(1))
 
 
-def test_unreachable_cap_is_a_constraint_violation():
-    """상한 x 종목 수가 투자 비중에 못 미치면 어떤 배분도 조건을 만족하지 못한다."""
+def test_unreachable_cap_leaves_the_remainder_in_cash():
+    """상한 x 종목 수가 투자 비중에 못 미쳐도 멈추지 않는다 — 못 채운 몫은 현금이고 사유를 남긴다.
+
+    상한을 몰래 풀어 사용자가 고른 조건과 다른 포트폴리오를 돌리는 것보다 낫다(PD-03 6).
+    """
     rules = {**INVERSE_RULES, "weightCap": "0.3000"}
 
-    with pytest.raises(AllocationError) as caught:
-        compute_weights(
-            allocation("INVERSE_VOLATILITY", rules),
-            [item(SEMI), item(BATTERY)],
-            history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
-            AS_OF,
-        )
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", rules),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
+        AS_OF,
+    )
 
-    assert caught.value.code == "CONSTRAINT_VIOLATION"
+    assert result.weights == {SEMI: Decimal("0.3"), BATTERY: Decimal("0.3")}
+    assert [record.kind for record in result.exceptions] == ["CAP_OVERFLOW_CASH"]
+
+
+def test_request_max_weight_overrides_the_registry_cap():
+    """화면에서 고른 상한(정수 %)이 규칙표 기본값보다 앞선다(PD-03 6)."""
+    spec = AllocationSpec.model_validate(
+        {
+            "strategyId": "INVERSE_VOLATILITY",
+            "rulesVersion": "1",
+            "rules": INVERSE_RULES,
+            "parameters": {"rebalance": "MONTH_END", "maxWeight": 30},
+        }
+    )
+
+    result = compute_weights(
+        spec,
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),
+        AS_OF,
+    )
+
+    assert max(result.weights.values()) == Decimal("0.3")
+    assert [record.kind for record in result.exceptions] == ["CAP_OVERFLOW_CASH"]
+
+
+def test_weights_land_on_the_fixed_output_unit():
+    """세 종목 1/3 은 딱 떨어지지 않는다. 0.000001 단위로 내리고 남은 단위를 되돌려 준다."""
+    flat = [100.0, 101.0, 100.0, 101.0]
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(**{SEMI: flat, BATTERY: flat, BIO: flat}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    unit = Decimal("0.000001")
+    assert all(weight % unit == 0 for weight in result.weights.values())
 
 
 @pytest.mark.parametrize(
@@ -281,10 +326,308 @@ def test_unknown_zero_volatility_policy_is_rejected():
         )
 
 
+# --- 최소분산 ----------------------------------------------------------------
+
+MIN_VARIANCE_RULES = {
+    "lookbackDays": 3,
+    "estimationMethod": "SAMPLE_COV",
+    "weightCap": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
+    "investedFraction": "1.0000",
+    "weightsSource": "COMPUTED",
+}
+
+
+def min_variance(parameters: dict | None = None, **rule_overrides) -> AllocationSpec:
+    return AllocationSpec.model_validate(
+        {
+            "strategyId": "MINIMUM_VARIANCE",
+            "rulesVersion": "1",
+            "rules": {**MIN_VARIANCE_RULES, **rule_overrides},
+            "parameters": {"rebalance": "MONTH_END", **(parameters or {})},
+        }
+    )
+
+
+def test_minimum_variance_leans_on_the_calmer_instrument():
+    """AC5: 비중은 비음수·상한 이하이고 합이 투자 비중이다. 분산이 작은 쪽이 더 무겁다."""
+    calm = [100.0, 100.5, 100.0, 100.5]
+    wild = [100.0, 110.0, 95.0, 115.0]
+
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: calm, BATTERY: wild}),
+        AS_OF,
+    )
+
+    assert result.source is WeightsSource.COMPUTED
+    assert all(weight >= 0 for weight in result.weights.values())
+    assert max(result.weights.values()) <= Decimal(1)
+    assert sum(result.weights.values()) == Decimal(1)
+    assert result.weights[SEMI] > result.weights[BATTERY]
+
+
+def test_cap_fixes_the_effective_target_before_optimising():
+    """상한 40%·계산 가능 2개면 채울 수 있는 최대가 80%다. 나머지 20%는 현금이고 사유가 남는다."""
+    result = compute_weights(
+        min_variance({"maxWeight": 40}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal("0.8")
+    assert max(result.weights.values()) <= Decimal("0.4")
+    reduced = [record for record in result.exceptions if record.kind == "EFFECTIVE_TARGET_REDUCED"]
+    assert len(reduced) == 1
+    assert "0.8" in (reduced[0].action or "")
+
+
+def test_single_computable_instrument_skips_the_optimiser():
+    result = compute_weights(
+        min_variance({"maxWeight": 40}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 101.0]}),
+        AS_OF,
+    )
+
+    assert result.weights == {SEMI: Decimal("0.4")}
+    kinds = [record.kind for record in result.exceptions]
+    assert kinds == ["INSUFFICIENT_HISTORY", "EFFECTIVE_TARGET_REDUCED", "SINGLE_ASSET_FALLBACK"]
+
+
+def test_delisted_instrument_is_not_computable():
+    """길이만 보면 관측 구간을 채웠지만 판단일 종가가 없는 종목(상장폐지)은 살 수 없다."""
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(
+            **{
+                SEMI: [100.0, 100.5, 100.0, 100.5, 100.2],
+                BATTERY: [100.0, 110.0, 95.0, 115.0, float("nan")],
+            }
+        ),
+        AS_OF,
+    )
+
+    assert BATTERY not in result.weights
+    assert result.weights == {SEMI: Decimal(1)}
+
+
+def test_no_computable_instrument_holds_cash():
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 101.0], BATTERY: [100.0, 101.0]}),
+        AS_OF,
+    )
+
+    assert result.weights == {}
+    assert "EFFECTIVE_TARGET_REDUCED" in [record.kind for record in result.exceptions]
+
+
+def test_unusable_covariance_fails_the_whole_run():
+    """자료가 망가져 공분산이 유한값이 아니면 보정하지 않고 실행 전체를 실패시킨다(PD-04 3)."""
+    with pytest.raises(AllocationError) as caught:
+        compute_weights(
+            min_variance(),
+            [item(SEMI), item(BATTERY)],
+            history(**{SEMI: [100.0, 0.0, 100.0, 101.0], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+            AS_OF,
+        )
+
+    assert caught.value.code == "ESTIMATION_FAILED"
+
+
+def test_normalisation_rounding_does_not_leak_into_cash():
+    """정규화가 남긴 Decimal 잔차를 현금으로 오인하지 않는다.
+
+    ``1/3`` 을 셋 더하면 1 보다 1ulp 작다. 그 합을 채워야 할 목표로 쓰면 멀줦한 100% 배분이
+    99.9999% 로 깎이고, 상한은 아무 일도 하지 않았는데 ``CAP_OVERFLOW_CASH`` 기록까지 남는다.
+    아래 가격은 그 어긋나는 조합을 무작위 탐색으로 찾은 것이다(상한 100%, 세 종목 전부 투자 가능).
+    """
+    prices = {
+        SEMI: [100.0, 106.01, 97.02, 103.12, 101.51],
+        BATTERY: [100.0, 101.28, 99.3, 105.44, 107.11],
+        BIO: [100.0, 99.59, 102.63, 92.97, 103.22],
+    }
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(**prices),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    assert result.exceptions == []
+
+
+def test_non_psd_covariance_is_not_repaired(monkeypatch):
+    """허용오차보다 큰 음의 고유값은 잘라 내지 않고 실행 전체를 실패시킨다(PD-04 1).
+
+    표본공분산은 구조상 양의 준정부호라 **가격 입력으로는 이 가지에 닿지 않는다** — 검사는
+    부동소수 잔잌과 밖에서 들어온 행렬을 위한 것이다. 그래서 행렬을 직접 갈아끼워 검사만 넣고
+    본다. ``[[1, 2], [2, 1]]`` 은 대칭이고 유한해 앞선 두 검사를 통과하고 고유값이 3·-1 이다.
+    """
+    monkeypatch.setattr(
+        "worker.allocation.min_variance.np.cov",
+        lambda *args, **kwargs: np.array([[1.0, 2.0], [2.0, 1.0]]),
+    )
+
+    with pytest.raises(AllocationError) as caught:
+        compute_weights(
+            min_variance(),
+            [item(SEMI), item(BATTERY)],
+            history(**{SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}),
+            AS_OF,
+        )
+
+    assert caught.value.code == "ESTIMATION_FAILED"
+    assert "positive semi-definite" in str(caught.value)
+
+
+def test_cap_that_intake_accepts_is_filled_without_cash():
+    """접수가 통과시킨 상한은 워커에서 죽지 않는다 — 두 층이 같은 규칙을 읽는지의 경계다.
+
+    접수는 ``상한 × 종목 수 >= 투자 비중`` 을 보고 못 미치면 422 로 거절한다
+    (``BacktestServiceTest.userChosenCapThatCannotBeFilledIsRejected``). 그 반대쪽 — 경계를
+    간슬히 넘긴 요청이 워커에서 현금을 남기거나 실패하지 않는다 — 는 여기서 볼 수밖에 없다.
+    상한 50% × 2종목 = 1.0 이 그 경계다.
+
+    경계 아래로 떨어지는 길은 **이력 부족으로 종목이 빠질 때뿐**이고, 그건 접수가 알 수 없다.
+    그때는 멈추지 않고 목표를 줄인 뒤 그 사유를 남긴다(PD-03 6 ``capOverflow: CASH``).
+    """
+    both = {SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}
+
+    filled = compute_weights(
+        min_variance({"maxWeight": 50}), [item(SEMI), item(BATTERY)], history(**both), AS_OF
+    )
+
+    assert sum(filled.weights.values()) == Decimal(1)
+    assert max(filled.weights.values()) <= Decimal("0.5")
+    assert filled.exceptions == []
+
+    short_history = {**both, BATTERY: [100.0, 101.0]}
+    reduced = compute_weights(
+        min_variance({"maxWeight": 50}),
+        [item(SEMI), item(BATTERY)],
+        history(**short_history),
+        AS_OF,
+    )
+
+    assert sum(reduced.weights.values()) == Decimal("0.5")
+    assert [record.kind for record in reduced.exceptions] == [
+        "INSUFFICIENT_HISTORY",
+        "EFFECTIVE_TARGET_REDUCED",
+        "SINGLE_ASSET_FALLBACK",
+    ]
+
+
+def test_minimum_variance_is_repeatable():
+    """같은 입력이면 같은 답이다 — 솔버가 끼어도 마찬가지다(SC-002)."""
+    prices = {
+        SEMI: [100.0, 100.5, 100.0, 100.5],
+        BATTERY: [100.0, 110.0, 95.0, 115.0],
+        BIO: [100.0, 102.0, 101.0, 103.0],
+    }
+    universe = [item(SEMI), item(BATTERY), item(BIO)]
+
+    first = compute_weights(min_variance(), universe, history(**prices), AS_OF)
+    second = compute_weights(min_variance(), list(reversed(universe)), history(**prices), AS_OF)
+
+    assert first.weights == second.weights
+
+
+def test_user_lookback_beats_the_registry_default():
+    """003 축이 오면 그 값으로 계산한다 — 받아 놓고 쓰지 않으면 고른 것과 다른 결과가 나온다."""
+    prices = {
+        SEMI: [100.0, 101.0, 100.0, 102.0, 101.0, 103.0],
+        BATTERY: [100.0, 99.0, 101.0, 98.0, 102.0, 97.0],
+    }
+    universe = [item(SEMI), item(BATTERY)]
+
+    chosen = compute_weights(min_variance({"lookbackDays": 3}), universe, history(**prices), AS_OF)
+    same_by_rule = compute_weights(
+        min_variance(**{"lookbackDays": 3}), universe, history(**prices), AS_OF
+    )
+    longer = compute_weights(min_variance({"lookbackDays": 5}), universe, history(**prices), AS_OF)
+
+    assert chosen.weights == same_by_rule.weights, "축이 규칙표 기본값과 같으면 결과도 같다"
+    assert chosen.weights != longer.weights, "관측 기간을 바꾸면 결과가 바뀌어야 한다"
+
+
+def test_max_weight_accepts_the_same_shapes_the_contract_does():
+    """계약이 40·40.0·"40" 을 모두 40으로 받으므로 계산도 같게 읽는다.
+
+    계약은 봉투를 모델로 검증하지만 배분 모듈에는 **원본 dict** 가 그대로 간다. 두 곳이 다르게
+    읽으면 접수와 계약을 통과한 요청이 계산에서 죽는다.
+    """
+    prices = {SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}
+    universe = [item(SEMI), item(BATTERY)]
+    reference = compute_weights(min_variance({"maxWeight": 40}), universe, history(**prices), AS_OF)
+
+    for equivalent in (40.0, "40"):
+        result = compute_weights(
+            min_variance({"maxWeight": equivalent}), universe, history(**prices), AS_OF
+        )
+        assert result.weights == reference.weights
+
+
+def test_fractional_max_weight_is_rejected_by_both_layers():
+    """40.5 는 40과 다른 값이다 — 깎아서 통과시키면 고른 것과 다른 조건으로 계산하게 된다."""
+    with pytest.raises(ValidationError, match="maxWeight"):
+        min_variance({"maxWeight": 40.5})
+
+    with pytest.raises(AllocationError, match="whole number"):
+        effective_cap({"maxWeight": 40.5}, MIN_VARIANCE_RULES, "MINIMUM_VARIANCE")
+
+
+def test_singular_but_valid_covariance_still_computes():
+    """완전히 같이 움직이는 두 종목의 공분산은 특이 행렬이다 — 그래도 계산은 된다.
+
+    최소분산이 멈추는 것은 "역행렬이 없을 때"가 아니라 **믿을 수 없는 행렬일 때**다(비유한값이거나
+    허용오차보다 큰 음의 고유값). 특이 행렬은 양의 준정부호라 최소 분산 해가 멀쩡히 존재한다.
+    """
+    moves = [100.0, 101.0, 100.0, 102.0]
+
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: moves, BATTERY: [value * 2 for value in moves]}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    assert all(weight >= 0 for weight in result.weights.values())
+
+
+@pytest.mark.parametrize("missing", ["lookbackDays", "estimationMethod", "capOverflow"])
+def test_minimum_variance_missing_rule_value_stops(missing):
+    rules = {key: value for key, value in MIN_VARIANCE_RULES.items() if key != missing}
+
+    with pytest.raises(AllocationError, match=missing):
+        compute_weights(
+            AllocationSpec.model_validate(
+                {
+                    "strategyId": "MINIMUM_VARIANCE",
+                    "rulesVersion": "1",
+                    "rules": rules,
+                    "parameters": {"rebalance": "MONTH_END"},
+                }
+            ),
+            [item(SEMI)],
+            history(**{SEMI: [100.0, 101.0, 100.5, 102.0]}),
+            AS_OF,
+        )
+
+
 # --- 레지스트리 ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("strategy_id", ["SECTOR_MOMENTUM", "MINIMUM_VARIANCE"])
+@pytest.mark.parametrize("strategy_id", ["SECTOR_MOMENTUM"])
 def test_pending_decision_strategies_say_so(strategy_id):
     """팀 결정 대기와 엔진 미구현은 사용자가 할 일이 다르다 — 메시지도 달라야 한다."""
     with pytest.raises(AllocationError) as caught:
