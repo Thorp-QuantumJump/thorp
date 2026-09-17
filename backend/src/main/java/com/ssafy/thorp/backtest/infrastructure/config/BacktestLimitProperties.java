@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated;
 /**
  * 실행 한도 설정(spec 004 T014, research R-19). {@code thorp.backtest.limits.*}
  *
- * <p><b>다섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 애플리케이션이 기동에 실패한다 — FR-006 "상한을 정하기 전에 무제한 실행을
+ * <p><b>여섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 애플리케이션이 기동에 실패한다 — FR-006 "상한을 정하기 전에 무제한 실행을
  * 허용하지 않는다"를 설정 누락으로 우회할 수 없게 하려는 것이다. 운영에 값 없이 올라가는 것이 가장 나쁜 결과다.
  *
  * <p><b>값 자체는 이 Task 의 것이 아니다.</b> PD-06 이 실측(T012 집계 뷰) 뒤에 정한다. 그때까지 들어 있는 수는 임시값이고, 임시값으로 도는 동안
@@ -30,6 +30,14 @@ public class BacktestLimitProperties {
     @NotNull
     @Min(1)
     private Integer maxQueuedTotal;
+
+    /**
+     * 비로그인 요청이 만든 단건 대기 실행의 합계(spec 005 B01). 사용자별 한도를 걸 수 없는 비로그인 요청 전부가 이 몫을 나눠 쓴다. 전체 한도보다 작게
+     * 두어야 로그인 사용자 몫이 남는다.
+     */
+    @NotNull
+    @Min(1)
+    private Integer maxQueuedAnonymous;
 
     /** 실행 하나가 돌 수 있는 최대 시간(초). 넘으면 CANCEL 을 보내 완료 범위와 함께 멈춘다. */
     @NotNull
@@ -63,6 +71,14 @@ public class BacktestLimitProperties {
 
     public void setMaxQueuedTotal(Integer maxQueuedTotal) {
         this.maxQueuedTotal = maxQueuedTotal;
+    }
+
+    public Integer getMaxQueuedAnonymous() {
+        return maxQueuedAnonymous;
+    }
+
+    public void setMaxQueuedAnonymous(Integer maxQueuedAnonymous) {
+        this.maxQueuedAnonymous = maxQueuedAnonymous;
     }
 
     public Long getMaxRunSeconds() {

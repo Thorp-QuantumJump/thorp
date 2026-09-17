@@ -18,9 +18,11 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Final
 
-#: ``KRX_DAILY_{YYYYMMDD}`` 형식이다 (research.md 결정 4). 옛 표기 ``KRX_DAILY_V1``은 쓰지 않는다.
+#: ``KRX_DAILY_{YYYYMMDD}[_R{판}]`` 형식이다 (research.md 결정 4). 옛 표기 ``KRX_DAILY_V1``은
+#: 쓰지 않는다. 판 번호는 같은 마감일을 다시 발행할 때만 붙고 2부터 센다 — 까닭은
+#: :func:`build_dataset_id` 에 있다.
 DATASET_ID_PREFIX: Final[str] = "KRX_DAILY_"
-DATASET_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^KRX_DAILY_(\d{8})$")
+DATASET_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^KRX_DAILY_(\d{8})(?:_R([2-9]\d*))?$")
 
 #: ``dataset_version.source``에 들어가는 값. 예시 자료는 워커의 기존 표시를 그대로 쓴다
 #: (research.md 결정 5, ``worker/src/worker/market_data.py``).
@@ -68,11 +70,23 @@ class DatasetAlreadyLoadedError(DatasetVersionError):
     """이미 적재가 끝난 자료 버전에 같은 시계열을 다시 넣으려 했다 (FR-017)."""
 
 
-def build_dataset_id(data_deadline: datetime | date) -> str:
-    """데이터 마감 시각에서 ``KRX_DAILY_{YYYYMMDD}`` 식별자를 만든다.
+def build_dataset_id(data_deadline: datetime | date, revision: int = 1) -> str:
+    """데이터 마감 시각에서 ``KRX_DAILY_{YYYYMMDD}[_R{판}]`` 식별자를 만든다.
 
     ``datetime``을 받으면 그 시각의 날짜를 쓴다. 시간대 변환은 하지 않는다 — 마감 시각을
     어느 시간대로 정할지는 부르는 쪽의 결정이고, 여기서 임의로 바꾸면 하루가 밀린다.
+
+    ``revision``은 **같은 마감일을 다시 발행할 때** 쓴다. 첫 판(1)은 판 번호를 붙이지 않고,
+    두 번째부터 ``_R2``·``_R3``이 붙는다. 첫 판에 ``_R1``을 붙이면 이미 발행된 이름들을 모두
+    바꿔야 하기 때문이다.
+
+    **판 번호가 필요한 까닭**은 발행본을 고칠 수 없기 때문이다(FR-017). 같은 기간의 자료를
+    내용만 바꿔 다시 내려면 이름이 달라야 하는데, 마감일 하나로만 정하면 그 길이 없다.
+    구간 끝을 하루 늘려 피할 수도 있으나 장이 열리지 않은 날이나 과거 구간을 고칠 때는 그
+    방법이 통하지 않는다 (research.md 결정 4의 2026-09-17 보완).
+
+    판을 올릴지는 **부르는 쪽이 정한다.** 이 함수가 이미 발행된 것을 조회해 스스로 올리면,
+    같은 인자로 부른 두 번이 다른 값을 내어 재현이 깨진다.
     """
     if isinstance(data_deadline, datetime):
         day = data_deadline.date()
@@ -82,7 +96,10 @@ def build_dataset_id(data_deadline: datetime | date) -> str:
         raise InvalidDatasetIdError(
             f"데이터 마감 시각은 date 또는 datetime이어야 한다: {type(data_deadline).__name__}"
         )
-    return f"{DATASET_ID_PREFIX}{day:%Y%m%d}"
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+        raise InvalidDatasetIdError(f"판 번호는 1 이상의 정수여야 한다: {revision!r}")
+    suffix = "" if revision == 1 else f"_R{revision}"
+    return f"{DATASET_ID_PREFIX}{day:%Y%m%d}{suffix}"
 
 
 def validate_dataset_id(dataset_id: object) -> str:
@@ -92,7 +109,8 @@ def validate_dataset_id(dataset_id: object) -> str:
     matched = DATASET_ID_PATTERN.match(dataset_id)
     if matched is None:
         raise InvalidDatasetIdError(
-            f"dataset_id는 {DATASET_ID_PREFIX}{{YYYYMMDD}} 형식이어야 한다: {dataset_id!r}"
+            f"dataset_id는 {DATASET_ID_PREFIX}{{YYYYMMDD}}[_R{{판}}] 형식이어야 한다: "
+            f"{dataset_id!r}"
         )
     try:
         datetime.strptime(matched.group(1), "%Y%m%d")
@@ -103,10 +121,21 @@ def validate_dataset_id(dataset_id: object) -> str:
     return dataset_id
 
 
-def dataset_deadline_date(dataset_id: str) -> date:
-    """``dataset_id``가 담은 데이터 마감일을 돌려준다."""
+def dataset_revision(dataset_id: str) -> int:
+    """``dataset_id``가 몇 번째 판인지 돌려준다. 판 번호가 없으면 1이다."""
     validate_dataset_id(dataset_id)
-    return datetime.strptime(dataset_id[len(DATASET_ID_PREFIX) :], "%Y%m%d").date()
+    matched = DATASET_ID_PATTERN.match(dataset_id)
+    assert matched is not None  # validate_dataset_id가 이미 확인했다
+    suffix = matched.group(2)
+    return 1 if suffix is None else int(suffix)
+
+
+def dataset_deadline_date(dataset_id: str) -> date:
+    """``dataset_id``가 담은 데이터 마감일을 돌려준다. 판 번호는 마감일을 바꾸지 않는다."""
+    validate_dataset_id(dataset_id)
+    matched = DATASET_ID_PATTERN.match(dataset_id)
+    assert matched is not None  # validate_dataset_id가 이미 확인했다
+    return datetime.strptime(matched.group(1), "%Y%m%d").date()
 
 
 def _require_aware(value: object, field: str) -> datetime:

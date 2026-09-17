@@ -45,10 +45,23 @@ public interface MarketMetadataPort {
     Optional<LocalDate> listedOn(String instrumentId);
 
     /**
-     * {@code notBefore} 이후 워밍업 거래일을 소진하고 나서 평가를 시작할 수 있는 첫 거래일.
+     * 001 {@code contracts/evaluation-window.md}의 {@code firstEvaluable} — <b>상장일</b>{@code
+     * (notBefore)} 이후 워밍업 거래일을 소진하고 나서 그 종목을 평가할 수 있는 첫 거래일. 후보 집합에서 이 값의 최댓값이 계약의 {@code
+     * commonStart}다.
      *
-     * <p>{@code warmupTradingDays == 0}이면 {@code notBefore} 당일 또는 그 뒤 첫 거래일이다. 달력이 모자라면 비어 있고, 호출자는
-     * 422 {@code INSUFFICIENT_HISTORY}로 거절한다(R-15).
+     * <p><b>사용자가 고른 시작일을 이 함수에 넣지 않는다.</b> 요청 앞에 워밍업 자료가 있으면 워커가 요청 구간보다 앞에서 읽으므로 요청 구간을 깎을 이유가
+     * 없다(001 {@code contracts/market-dataset.md} 「읽기 규칙」). 요청 시작일을 거래일에 맞추는 일은 {@link
+     * #firstTradingDayOnOrAfter}가 맡는다 — 워밍업을 소진하지 않는다는 점에서 하는 일이 다르다.
+     *
+     * <p>달력이 모자라면 비어 있고, 호출자는 422 {@code INSUFFICIENT_HISTORY}로 거절한다(R-15).
      */
     Optional<LocalDate> evaluationStart(LocalDate notBefore, int warmupTradingDays);
+
+    /**
+     * {@code date} 당일 또는 그 뒤 첫 거래일. <b>워밍업을 소진하지 않는다.</b>
+     *
+     * <p>사용자가 고른 시작일을 그대로 쓰되 휴장일이면 다음 거래일로 맞추는 용도다 — 주말을 평가 첫날로 삼으면 워커가 고르는 첫 거래일과 값이 갈린다. 달력 끝까지
+     * 거래일이 하나도 없으면 비어 있다.
+     */
+    Optional<LocalDate> firstTradingDayOnOrAfter(LocalDate date);
 }

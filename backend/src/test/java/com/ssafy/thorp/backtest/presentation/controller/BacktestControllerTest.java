@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
@@ -69,6 +70,7 @@ class BacktestControllerTest {
 
     private static final String BACKTEST_ID = "BT-20260911-000001";
     private static final long USER = 7;
+    private static final String PUBLIC_TOKEN = "0123456789abcdef0123456789abcdef";
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path REQUEST_FIXTURE =
@@ -98,7 +100,8 @@ class BacktestControllerTest {
                 LocalDate.of(2023, 7, 3),
                 LocalDate.of(2024, 12, 31),
                 Map.of("rules", "1"),
-                null);
+                null,
+                PUBLIC_TOKEN);
     }
 
     private org.springframework.test.web.servlet.ResultActions postBody(String body)
@@ -123,7 +126,8 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andExpect(jsonPath("$.data.resultSource").value("NEW"))
                 .andExpect(jsonPath("$.data.effectiveStart").value("2023-07-03"))
-                .andExpect(jsonPath("$.data.versions.rules").value("1"));
+                .andExpect(jsonPath("$.data.versions.rules").value("1"))
+                .andExpect(jsonPath("$.data.publicToken").value(PUBLIC_TOKEN));
     }
 
     @Test
@@ -177,15 +181,32 @@ class BacktestControllerTest {
     }
 
     @Test
-    @DisplayName("로그인하지 않으면 401이고 접수하지 않는다")
-    void anonymousRequestIsRejected() throws Exception {
+    @DisplayName("로그인하지 않아도 접수된다 — 요청자 없이 넘기고 결과는 공개 토큰으로 연다(spec 005 B01)")
+    void anonymousRequestIsAcceptedWithoutRequester() throws Exception {
+        when(backtestService.create(any())).thenReturn(accepted());
+
         mockMvc.perform(
                         post("/backtests")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(VALID_BODY))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.publicToken").value(PUBLIC_TOKEN));
+
+        ArgumentCaptor<CreateBacktestCommand> captor =
+                ArgumentCaptor.forClass(CreateBacktestCommand.class);
+        verify(backtestService).create(captor.capture());
+        assertThat(captor.getValue().requesterId()).isNull();
+    }
+
+    @Test
+    @DisplayName("비로그인 접수도 CSRF 토큰이 없으면 403 이다 — 공개로 연 것은 인증이지 쿠키 규약이 아니다")
+    void anonymousRequestStillNeedsCsrf() throws Exception {
+        mockMvc.perform(
+                        post("/backtests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(VALID_BODY))
+                .andExpect(status().isForbidden());
 
         verify(backtestService, never()).create(any());
     }
@@ -391,7 +412,62 @@ class BacktestControllerTest {
                 .andExpect(jsonPath("$.data.backtestId").value(BACKTEST_ID))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andExpect(jsonPath("$.data.resultSource").value("NEW"))
-                .andExpect(jsonPath("$.data.retryOf").value(BACKTEST_ID));
+                .andExpect(jsonPath("$.data.retryOf").value(BACKTEST_ID))
+                .andExpect(jsonPath("$.data.publicToken").value(PUBLIC_TOKEN));
+    }
+
+    @Test
+    @DisplayName("재시도는 여전히 소유자 경로다 — 로그인하지 않으면 401")
+    void anonymousRetryIsRejected() throws Exception {
+        mockMvc.perform(post("/backtests/{id}/retry", BACKTEST_ID).with(csrf()))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(retryService);
+    }
+
+    @Test
+    @DisplayName("거래 내역의 from·to 를 조회 조건으로 옮긴다(spec 005 T015)")
+    void tradesPeriodIsMappedToQuery() throws Exception {
+        when(queryService.getTrades(eq(BACKTEST_ID), anyLong(), any()))
+                .thenThrow(new BacktestFailedException(BACKTEST_ID));
+
+        mockMvc.perform(
+                get("/backtests/{id}/trades", BACKTEST_ID)
+                        .param("from", "2024-03-01")
+                        .param("to", "2024-03-31")
+                        .with(as(USER)));
+
+        ArgumentCaptor<FindBacktestTradesQuery> captor =
+                ArgumentCaptor.forClass(FindBacktestTradesQuery.class);
+        verify(queryService).getTrades(eq(BACKTEST_ID), eq(USER), captor.capture());
+        assertThat(captor.getValue().from()).isEqualTo(LocalDate.of(2024, 3, 1));
+        assertThat(captor.getValue().to()).isEqualTo(LocalDate.of(2024, 3, 31));
+    }
+
+    @Test
+    @DisplayName("from 이 to 보다 늦으면 400 이다 — 빈 페이지로 돌려주면 그 기간에 거래가 없다는 거짓이 된다")
+    void reversedTradesPeriodIsBadRequest() throws Exception {
+        mockMvc.perform(
+                        get("/backtests/{id}/trades", BACKTEST_ID)
+                                .param("from", "2024-04-01")
+                                .param("to", "2024-03-31")
+                                .with(as(USER)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
+    @DisplayName("from 날짜 형식이 틀리면 400 이다")
+    void malformedTradesPeriodIsBadRequest() throws Exception {
+        mockMvc.perform(
+                        get("/backtests/{id}/trades", BACKTEST_ID)
+                                .param("from", "2024/04/01")
+                                .with(as(USER)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(queryService);
     }
 
     @Test

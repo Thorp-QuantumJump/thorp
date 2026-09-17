@@ -34,7 +34,7 @@ ENGINE_INPUT_BODY: dict[str, Any] = {
         ],
     },
     "marketData": {
-        "datasetId": "KRX_DAILY_V1",
+        "datasetId": "FIXTURE-three_etf_24m",
         "dataVersion": THREE_ETF_DATASET,
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",

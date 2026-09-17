@@ -40,13 +40,20 @@ async function fetchMarketIndicator(code: MarketIndicatorCode) {
   return body.result
 }
 
-/** 한 원천기관의 실패가 다른 지표를 가리지 않도록 11개 요청 결과를 독립적으로 모은다. */
-export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {
-  const settled = await Promise.allSettled(marketIndicatorCodes.map(fetchMarketIndicator))
+/**
+ * 한 원천기관의 실패가 다른 지표를 가리지 않도록 요청 결과를 독립적으로 모은다.
+ *
+ * 필요한 지표만 고를 수 있게 목록을 받는다. 참고 정보 영역 하나 때문에 11개를 모두
+ * 부르면 그 영역의 지연이 다른 화면까지 끌고 간다.
+ */
+export async function fetchMarketIndicatorsFor(
+  codes: readonly MarketIndicatorCode[],
+): Promise<MarketIndicatorBatch> {
+  const settled = await Promise.allSettled(codes.map(fetchMarketIndicator))
   const batch: MarketIndicatorBatch = { data: {}, errors: {} }
 
   settled.forEach((result, index) => {
-    const code = marketIndicatorCodes[index]
+    const code = codes[index]
     if (result.status === 'fulfilled') {
       batch.data[code] = result.value
       return
@@ -58,4 +65,9 @@ export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatc
   })
 
   return batch
+}
+
+/** 대시보드가 쓰는 11개 전부다. */
+export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {
+  return fetchMarketIndicatorsFor(marketIndicatorCodes)
 }

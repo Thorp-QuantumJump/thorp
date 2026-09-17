@@ -1,10 +1,13 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,4 +23,27 @@ interface BacktestRequestJpaRepository extends JpaRepository<BacktestRequestJpaE
     List<BacktestRequestJpaEntity> findByRunId(Long runId);
 
     long countByRunIdAndCancelledAtIsNull(Long runId);
+
+    Optional<BacktestRequestJpaEntity> findByPublicToken(String publicToken);
+
+    /**
+     * 부분 인덱스 {@code idx_backtest_request_public_expiry}를 탄다 — 조건에 {@code publicTokenExpiresAt IS
+     * NOT NULL}이 함축되고 로그인 요청은 인덱스에 없다. 개수는 {@code Pageable}로 자른다.
+     */
+    @Query(
+            """
+            SELECT r FROM BacktestRequestJpaEntity r
+             WHERE r.requesterId IS NULL
+               AND r.publicTokenExpiresAt <= :now
+             ORDER BY r.publicTokenExpiresAt ASC, r.id ASC
+            """)
+    List<BacktestRequestJpaEntity> findExpiredAnonymous(
+            @Param("now") Instant now, Pageable pageable);
+
+    /** 일괄 UPDATE 라 영속성 컨텍스트를 거치지 않는다. 호출 뒤 같은 트랜잭션에서 재시도 요청을 다시 읽지 않는다. */
+    @Modifying(flushAutomatically = true)
+    @Query(
+            "UPDATE BacktestRequestJpaEntity r SET r.retryOfRequestId = NULL"
+                    + " WHERE r.retryOfRequestId = :requestId")
+    int clearRetryOf(@Param("requestId") long requestId);
 }

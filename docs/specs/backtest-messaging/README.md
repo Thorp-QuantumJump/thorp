@@ -107,7 +107,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 | 경로 | 고정값 |
 |---|---|
 | `run.scenario` | `FULL_PERIOD` (주 분석). 시나리오 `FRESH_CASH_FROM`·`COST_ESCALATION`·`TARGET_RISK`는 T009 |
-| `marketData` | `datasetId=KRX_DAILY_V1`, `interval=1D`, `adjustment=SPLIT_ADJUSTED`, `priceType=LAST`, `fillPrice=RAW`, `signalPrice=ADJUSTED`, `distributions=CASH_ON_PAY_DATE` |
+| `marketData` | `datasetId`=접수가 정한 자료 버전, `interval=1D`, `adjustment=SPLIT_ADJUSTED`, `priceType=LAST`, `fillPrice=RAW`, `signalPrice=ADJUSTED`, `distributions=CASH_ON_PAY_DATE` |
 | `portfolio.currency` / `shortSelling` / `leverage` / `integerLots` | `KRW` / `false` / `"1.0"` / `true` |
 | `execution.signalTiming` / `executionTiming` | `BAR_CLOSE` / `NEXT_BAR_OPEN` (t 종가 신호 → t+1 시가 체결) |
 | `execution.orderTypes` | `["MARKET"]` |

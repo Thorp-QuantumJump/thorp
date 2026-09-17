@@ -22,6 +22,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -134,6 +135,8 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
                                                 requesterId,
                                                 ExecutionType.SINGLE,
                                                 source,
+                                                null,
+                                                PublicResultToken.generate(),
                                                 null))
                                 .getBacktestId()
                                 .value());

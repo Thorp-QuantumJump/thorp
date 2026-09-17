@@ -206,11 +206,18 @@ class CandidateListApiIT extends PostgresTestSupport {
         return GridCoordinates.of(Map.of("x", index));
     }
 
-    /** 후보가 FK로 가리킬 실행 행. 값 자체는 이 테스트의 관심사가 아니다. */
+    /**
+     * 후보가 FK로 가리킬 실행 행. 값 자체는 이 테스트의 관심사가 아니다.
+     *
+     * <p><b>최댓값은 이 테스트 몫의 대역(930000~939999) 안에서만 센다.</b> 표 전체의 최댓값을 쓰면 시퀀스로 실행 행을 만든 다른 IT가 먼저 돈 경우
+     * 시퀀스가 다음에 줄 id를 여기서 차지해, 뒤에 도는 IT의 저장이 기본 키 충돌로 깨진다. 다른 007 테스트도 각자 대역을 쓴다.
+     */
     private long nextRunId() {
         Long id =
                 jdbcTemplate.queryForObject(
-                        "SELECT COALESCE(MAX(id), 930000) + 1 FROM backtest_run", Long.class);
+                        "SELECT COALESCE(MAX(id), 930000) + 1 FROM backtest_run"
+                                + " WHERE id >= 930000 AND id < 940000",
+                        Long.class);
         jdbcTemplate.update(
                 "INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,"
                         + " parameters, instrument_ids, start_date, end_date, initial_cash,"

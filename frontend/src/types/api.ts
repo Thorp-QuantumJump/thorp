@@ -1,4 +1,5 @@
 import type { AuthApiErrorCode, AuthFieldError } from './auth'
+import type { LearningApiErrorCode } from './learning'
 import type { SectorApiErrorCode } from './sector'
 
 /**
@@ -26,7 +27,7 @@ import type { SectorApiErrorCode } from './sector'
  *
  * 화면이 "이 오류인가?"를 물을 때 쓴다. 닫혀 있어서 자동완성이 되고 오타가 걸린다.
  */
-export type ServiceApiErrorCode = AuthApiErrorCode | SectorApiErrorCode
+export type ServiceApiErrorCode = AuthApiErrorCode | SectorApiErrorCode | LearningApiErrorCode
 
 /**
  * 서버가 실제로 보내는 오류 이름이다. **열려 있다.**

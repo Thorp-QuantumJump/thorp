@@ -448,7 +448,7 @@ engine_input = {
     },
     "universe": {"items": [{"instrumentId": inst} for inst in INSTRUMENTS]},
     "marketData": {
-        "datasetId": "KRX_DAILY_V1",
+        "datasetId": "FIXTURE-three_etf_24m",
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",
         "priceType": "LAST",
@@ -510,7 +510,7 @@ engine_input_target_risk = {
         ],
     },
     "marketData": {
-        "datasetId": "KRX_DAILY_V1",
+        "datasetId": "FIXTURE-three_etf_24m",
         "dataVersion": "KRX-2026-09-09",
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",

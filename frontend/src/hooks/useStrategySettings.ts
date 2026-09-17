@@ -5,6 +5,7 @@ import type {
   RegistryResponse,
   StrategyView,
 } from '@/types/strategyRegistry'
+import { isIsoDate } from '@/utils/analysisPeriod'
 import { evaluateWarmup } from '@/utils/warmupRule'
 
 /**
@@ -39,10 +40,14 @@ export const STRATEGY_SETTINGS_PAYLOAD_VERSION = 1
 export type AxisValues = Record<string, AxisValue>
 
 /**
- * 분석 조건(data-model §9). B05는 `minEvaluationYears`·`scenario`만 채운다.
+ * 분석 조건(data-model §9).
  *
- * `periodStart`·`periodEnd`·`initialAmount`는 B10(T067)이 평가 기간 조회와 등록표 기본값으로 채운다.
- * 그때까지 요청 조립은 등록표의 `initialAmount.default`와 판정이 돌려준 기간을 쓴다.
+ * <p><b>`periodStart`·`periodEnd`·`initialAmount`는 사용자가 바꿨을 때만 담는다.</b> 없으면 화면은 기간을
+ * 001의 평가 가능 범위 전체로, 금액을 등록표 `default`로 쓴다(T067). 처음 값을 상태에 복사해 두지 않는
+ * 까닭은 평가 가능 범위가 고른 전략과 워밍업에 따라 바뀌기 때문이다 — 복사해 두면 사용자가 고른 적 없는
+ * 옛 범위가 "사용자가 바꾼 기간"처럼 남는다. 등록표 기본값도 같은 이유로 복사하지 않는다.
+ *
+ * <p>기간은 두 날짜가 늘 함께 있거나 함께 없다.
  */
 export type AnalysisCondition = {
   /** 등록표 `analysisConditions.minEvaluationYears` 후보 중 하나. `0`은 제한 없음이다(FR-011a) */
@@ -69,6 +74,8 @@ export type InvalidStoredValueReason =
   | 'OFF_STEP'
   /** 최소 평가 기간의 보관값이 등록표 후보에 없어 기본값으로 시작했다 */
   | 'CONDITION_NOT_IN_CHOICES'
+  /** 보관된 분석 기간을 날짜로 읽을 수 없어 지웠다 */
+  | 'PERIOD_UNREADABLE'
 
 /**
  * 보관되어 있었으나 현재 등록표에서 쓸 수 없는 값 하나.
@@ -193,11 +200,15 @@ export function checkNumberInRange(
 /**
  * 사용자가 기본값 복원으로 되돌릴 수 있는 분석 조건.
  *
- * 지금은 시작 금액 하나다. 최소 평가 기간은 목록형이라 후보에 없으면 기본값으로 시작하고 알리기만
- * 하며(되돌릴 값이 이미 기본값이다), 분석 기간은 001의 평가 가능 범위가 있어야 판정할 수 있어
- * 이 재검증이 다루지 않는다 — B10이 기간 입력을 만들 때 함께 판정한다.
+ * <p>최소 평가 기간은 목록형이라 후보에 없으면 기본값으로 시작하고 알리기만 한다(되돌릴 값이 이미
+ * 기본값이다).
+ *
+ * <p><b>분석 기간은 이 재검증이 범위를 판정하지 않는다.</b> 범위는 001의 평가 가능 범위이고 고른 전략과
+ * 워밍업마다 달라서, 등록표를 받는 시점에는 알 수 없다. 여기서는 날짜로 읽히는지만 보고, 범위 밖인지는
+ * 화면이 판정한 범위를 받을 때마다 본다(`StrategySettingsPage`). `period`를 복원하면 두 날짜를 함께 지워
+ * 평가 가능 범위 전체로 돌아간다.
  */
-export type RestorableCondition = 'initialAmount'
+export type RestorableCondition = 'initialAmount' | 'period'
 
 /** 시작 금액을 가리키는 표시 이름. 요약 줄의 항목 이름과 같게 둔다. */
 const INITIAL_AMOUNT_LABEL = '시작 금액'
@@ -567,7 +578,33 @@ export function reconcileStoredSettings(
   // 쓰므로, 비우기만 하면 사용자가 정한 적 없는 기본값으로 조용히 바뀐 것과 같다. 그래서 복원
   // 가능한 안내를 남기고, 화면은 그 안내가 남아 있는 동안 금액을 모르는 것으로 다룬다. 사용자가
   // 복원을 눌러야 안내가 사라지고 기본값이 쓰인다.
-  const { initialAmount: storedAmount, ...otherConditions } = stored.analysisCondition
+  // --- 분석 기간 ---------------------------------------------------------------------------
+  //
+  // 날짜로 읽을 수 없거나, 한쪽만 있거나, 시작이 종료보다 늦으면 사용자가 고른 기간이 무엇이었는지
+  // 말할 수 없다. 둘 다 지우고 알린다 — 지우면 평가 가능 범위 전체가 쓰이므로 알리지 않으면 조용히
+  // 바뀐 것과 같다(FR-017). 되돌릴 값이 곧 지운 상태라 복원 버튼은 두지 않는다.
+  const {
+    initialAmount: storedAmount,
+    periodStart: storedStart,
+    periodEnd: storedEnd,
+    ...otherConditions
+  } = stored.analysisCondition
+  let period: { periodStart: string; periodEnd: string } | null = null
+  if (storedStart !== undefined || storedEnd !== undefined) {
+    if (isIsoDate(storedStart) && isIsoDate(storedEnd) && storedStart <= storedEnd) {
+      period = { periodStart: storedStart, periodEnd: storedEnd }
+    } else {
+      invalidValues.push({
+        strategyId: null,
+        axisName: 'period',
+        storedValue: { periodStart: storedStart, periodEnd: storedEnd },
+        reason: 'PERIOD_UNREADABLE',
+        message: '저장된 분석 기간을 읽을 수 없어 지웠습니다. 평가 가능한 범위 전체로 시작합니다.',
+        restorable: false,
+      })
+    }
+  }
+
   let initialAmount: number | undefined = storedAmount
   if (storedAmount !== undefined) {
     const range = registry.analysisConditions.initialAmount
@@ -607,6 +644,7 @@ export function reconcileStoredSettings(
     scenario: 'FULL_PERIOD',
   }
   if (initialAmount !== undefined) analysisCondition.initialAmount = initialAmount
+  if (period !== null) Object.assign(analysisCondition, period)
 
   return {
     registryVersion: registry.registryVersion,
@@ -648,6 +686,8 @@ export type StrategySettings = {
   /** 모든 축에 값이 있는가. 비워 둔 축이 있으면 분석을 시작할 수 없다 */
   isComplete: (strategyId: string) => boolean
   select: (strategyId: string) => void
+  /** 고른 전략을 내려놓는다. 전략별로 바꿔 둔 값은 지우지 않는다 — 다시 고르면 그대로 돌아온다 */
+  clearSelection: () => void
   /** 허용 범위 안이면 반영하고 `null`, 밖이면 반영하지 않고 이유를 돌려준다(FR-006) */
   setValue: (strategyId: string, axisName: string, value: AxisValue) => InvalidStoredValueReason | null
   resetAxis: (strategyId: string, axisName: string) => void
@@ -750,6 +790,14 @@ export function useStrategySettings(
     [strategies],
   )
 
+  const clearSelection = useCallback(() => {
+    setState((current) =>
+      current === null || current.selectedStrategyId === null
+        ? current
+        : { ...current, selectedStrategyId: null },
+    )
+  }, [])
+
   const withoutInvalid = (
     entries: InvalidStoredValue[],
     strategyId: string,
@@ -845,6 +893,24 @@ export function useStrategySettings(
         ) {
           next.minEvaluationYears = current.analysisCondition.minEvaluationYears
         }
+        // 분석 기간은 두 날짜를 한 덩이로 본다. 합친 결과가 날짜 둘이 아니거나 시작이 종료보다 늦으면
+        // 둘 다 받지 않는다. 평가 가능 범위 안인지는 이 훅이 모르므로 입력하는 화면이 먼저 거른다.
+        if ('periodStart' in patch || 'periodEnd' in patch) {
+          const { periodStart, periodEnd } = next
+          if (!isIsoDate(periodStart) || !isIsoDate(periodEnd) || periodStart > periodEnd) {
+            delete next.periodStart
+            delete next.periodEnd
+            if (current.analysisCondition.periodStart !== undefined) {
+              next.periodStart = current.analysisCondition.periodStart
+            }
+            if (current.analysisCondition.periodEnd !== undefined) {
+              next.periodEnd = current.analysisCondition.periodEnd
+            }
+          } else {
+            // 새 기간을 받았으면 "읽을 수 없어 지웠다"는 옛 안내는 지금 기간과 어긋나는 말이 된다.
+            invalidValues = withoutCondition(invalidValues, 'period')
+          }
+        }
         // 시작 금액도 보관값 재검증과 같은 잣대로 본다. 입력 경로와 복원 경로가 다른 잣대를 쓰면
         // 한쪽으로 범위 밖 값이 들어온다(SC-002). 받아들인 값은 그 항목의 무효 안내를 지운다.
         if ('initialAmount' in patch) {
@@ -870,7 +936,12 @@ export function useStrategySettings(
       // 값을 지워 등록표 기본값이 쓰이게 한다. 사용자가 복원을 눌렀으므로 이제 기본값은 사용자가
       // 고른 값이다 — 재검증이 비워 둔 상태와 달리 안내도 함께 지운다.
       const analysisCondition = { ...current.analysisCondition }
-      delete analysisCondition[name]
+      if (name === 'period') {
+        delete analysisCondition.periodStart
+        delete analysisCondition.periodEnd
+      } else {
+        delete analysisCondition[name]
+      }
       return {
         ...current,
         analysisCondition,
@@ -894,6 +965,7 @@ export function useStrategySettings(
     isDefault,
     isComplete,
     select,
+    clearSelection,
     setValue,
     resetAxis,
     resetAll,

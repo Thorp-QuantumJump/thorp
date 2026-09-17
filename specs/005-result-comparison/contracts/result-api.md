@@ -10,56 +10,90 @@
 |---|---|---|
 | `GET /results/{publicToken}` | `GET /backtests/{backtestId}` | 상태·요약·조건 |
 | `GET /results/{publicToken}/timeseries` | `GET /backtests/{backtestId}/timeseries` | 그래프 |
-| `GET /results/{publicToken}/trades` | `GET /backtests/{backtestId}/trades` | 페이지 질의 그대로 전달 |
+| `GET /results/{publicToken}/trades` | `GET /backtests/{backtestId}/trades` | 질의(`page`·`size`·`instrumentId`·`status`·`from`·`to`)를 그대로 전달하되 `size`는 공개 상한으로 자른다 |
 | `GET /results/{publicToken}/positions` | `GET /backtests/{backtestId}/positions` | `date` 필수 |
 | `GET /results/{publicToken}/weights` | `GET /backtests/{backtestId}/weights` | |
 | `GET /results/{publicToken}/exceptions` | `GET /backtests/{backtestId}/exceptions` | 결과 옆 한 문장의 원천 |
 | `POST /results/{publicToken}/retry` | `POST /backtests/{backtestId}/retry` | 실패한 비교 대상의 다시 시도 |
 
-`publicToken`은 32자 16진 문자열이다. 형식이 맞지 않으면 조회하지 않고 `400 INVALID_INPUT`이다.
+`publicToken`은 32자 소문자 16진 문자열이다. 형식이 맞지 않으면 조회하지 않고 `400 INVALID_INPUT`이다. 로그인하지 않아도 모든 경로를 쓸 수 있고, `POST`에는 저장소의 CSRF 규약이 그대로 적용된다.
 
 ## GET /results/{publicToken}
 
-`200`. 004의 상세 응답에서 공개해도 되는 필드만 골라 담는다.
+`200`. 004의 상세 응답에서 공개해도 되는 필드만 골라 담는다. `summary`·`progress`·`failure`의 모양은 004 상세(`docs/specs/backtest-api/README.md` §2.1)와 같다. 전체 예시는 `docs/specs/result-api/examples/result-detail-completed.json`이고 아래는 발췌다.
 
 ```json
 {
   "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
   "status": "COMPLETED",
+  "resultSource": "NEW",
   "partial": false,
+  "cancelRequested": false,
   "expiresAt": "2026-09-23T04:11:00Z",
-  "config": { "…": "요청 원문 + effectiveStart/End" },
-  "versions": { "…": "mapping·rules·costProfile·data·engine" },
+  "progress": null,
+  "queuedAt": "2026-09-16T04:11:00Z",
+  "startedAt": "2026-09-16T04:11:03Z",
+  "finishedAt": "2026-09-16T04:12:41Z",
+  "queueWaitSeconds": null,
+  "config": { "…": "요청 사본(items·strategyId·parameters·start·end·initialCash·warmupTradingDays 등) + currency·effectiveStart·effectiveEnd" },
+  "versions": { "…": "mapping·rules·costProfile·data·engine (worker 제외)" },
   "summary": {
-    "netTotalReturn": "0.2143",
-    "maxDrawdown": "-0.1872",
-    "totalTradingCost": "184300",
-    "liquidation": { "markToMarket": "12143000", "liquidated": "12128700" },
-    "analytics": { "recoveryDays": 143, "turnover": "1.84" }
+    "netTotalReturn": "0.166652",
+    "maxDrawdown": "-0.041757",
+    "totalTradingCost": "17078.49",
+    "…": "004 상세 summary 와 같은 필드"
   },
   "summaryUnavailable": null,
   "failure": null,
-  "validationTier": "UNVALIDATED"
+  "validationTier": "UNVALIDATED",
+  "strategyName": "내가 정한 비중",
+  "weightsSource": "COMPUTED",
+  "exceptionKinds": ["HALT_DEFERRED"]
 }
 ```
 
-- **`backtestId`를 담지 않는다.** 004의 내부 실행 식별자가 화면에 드러나면 SC-009를 어긴다. 취소·재시도도 공개 토큰으로 받는다.
+- **`backtestId`를 담지 않는다.** 004의 내부 실행 식별자가 화면에 드러나면 SC-009를 어긴다. 재시도도 공개 토큰으로 받는다. 공개 취소 경로는 두지 않는다.
 - `expiresAt`은 비로그인 결과에만 있다. 로그인 사용자의 결과에서는 `null`이다.
 - `validationTier`는 PD-12 확정 전까지 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이라는 뜻이며 화면도 그렇게 쓴다.
 - `progress`·`queueWaitSeconds`는 `status`가 `QUEUED`·`RUNNING`일 때만 담는다. 비교 대상 자리의 진행 상태 표시에 쓴다.
+- `strategyName`은 서버가 003 등록표에서 `config.strategyId`로 찾아 채운다. 첫 화면이 등록표를 따로 부르면 SC-001의 요청 수를 넘기기 때문이다. 등록표에 없거나 읽지 못하면 `null`이고, 화면은 이름을 지어내지 않는다.
+- `weightsSource`(`USER`|`COMPUTED`)는 FR-014를 첫 화면에서 보이려고 `/weights` 없이 담는다. `exceptionKinds`는 예외 기록 `kind`의 중복 없는 목록(처음 나온 순서)이며 결과 옆 한 문장을 `/exceptions` 없이 만들기 위해 담는다(R-12). 둘 다 `status`가 `COMPLETED`·`CANCELLED`이고 볼 결과가 있을 때만 값이 있다. 결과를 볼 수 없으면(계산 중, 실패, 시작 전 취소) `null`이고, `exceptionKinds`의 빈 목록은 "예외 없음"이다.
+
+## 비교 주소
+
+`/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
+
+## POST /results/{publicToken}/retry
+
+`202`. 실패·취소한 결과를 같은 조건으로 다시 접수한다. 004 재시도를 그대로 타므로 동일 버전 합류·재사용과 `429 EXECUTION_LIMIT`도 같다.
+
+```json
+{
+  "publicToken": "b41e0c9a7d2f35618ce4a09b7f1d2c63",
+  "status": "QUEUED",
+  "resultSource": "NEW",
+  "retryOfToken": "9f2c1a7b4e0d83526af1c9d0b7e34512"
+}
+```
+
+- `publicToken`은 새 요청의 토큰이고 `retryOfToken`은 원 요청의 토큰이다. 004 응답의 `backtestId`·`retryOf`를 이 둘로 바꾼다.
+- 새 요청의 요청자는 **지금 다시 시도한 사람**이다. 비로그인이면 요청자가 없고 만료 시각이 붙는다. 공개 주소는 남에게 건네질 수 있으므로 원 요청의 요청자를 물려받지 않는다.
+- 실패·취소가 아니면 `409 NOT_RETRYABLE`이다.
 
 ## 오류
 
 | code | HTTP | 뜻 | 화면 처리 |
 |---|---|---|---|
-| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지나 삭제되었다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |
+| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지났다. 정리 작업이 요청 행을 지운 뒤에는 아래 404가 된다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |
 | RESOURCE_NOT_FOUND | 404 | 그런 토큰이 없다 | 잘못된 주소 안내. 만료와 다르게 보인다 |
 | INVALID_INPUT | 400 | 토큰 형식 오류 | 위와 같다 |
 | RESULT_NOT_READY | 409 | 아직 계산 중이라 하위 자원이 없다 | 진행 상태를 보인다 |
 | BACKTEST_FAILED | 409 | 실패해 부분 결과도 없다 | 사유와 다시 시도 선택 |
 | NO_PARTIAL_RESULT | 409 | 취소 요청에 완료한 거래일이 없다 | 숫자 자리를 채우지 않는다 |
 
-004의 코드를 그대로 통과시키고 `RESULT_EXPIRED`만 새로 더한다.
+004의 코드를 그대로 통과시키고 `RESULT_EXPIRED`만 새로 더한다. 그밖에 `/trades`의 뒤집힌 기간·잘못된 종목 형식, `/positions`의 `date` 누락은 `400 INVALID_INPUT`, 재시도의 `409 NOT_RETRYABLE`·`429 EXECUTION_LIMIT`도 004와 같다.
+
+**004에서 온 오류의 문구는 코드의 기본 문구다.** 입력 검증의 400(거래 질의·`date` 누락)은 원인 문구를 그대로 싣는다. 004 예외의 문구에는 `backtestId`가 들어 있어 공개 경로는 문구를 바꿔 내보낸다. 코드·HTTP 상태·`details`(예: `retryAfterSeconds`)는 그대로다. 만료 응답 예시는 `docs/specs/result-api/examples/result-expired.json`이다.
 
 **410과 404를 나누는 근거**: 만료(410)와 없음(404)을 다르게 답하면 "이 토큰이 한 번 존재했다"는 사실이 밖으로 드러난다. 그러나 토큰이 안전한 난수 최소 128비트라 이웃 값을 맞출 가능성이 사실상 0이어서 존재 여부를 훑어 알아내는 것 자체가 불가능하고, 알아낸다 해도 내용은 얻을 수 없다. 반면 사용자에게는 "사라졌다"와 "잘못된 주소"가 다른 안내여야 한다(SC-008, Edge Cases). 그래서 구분을 유지한다.
 
@@ -73,7 +107,11 @@
 | `backtestId` | 004의 순번 식별자. 노출되면 SC-009 위반 |
 | run 식별자(`runId`, `RUN-…`) | 내부 계산 단위. 여러 요청이 공유한다 |
 | `worker`(워커 자기 보고) | 운영 정보. 사용자 화면에 노출하지 않는다 |
-| `retryOf`의 내부 식별자 | 원 요청의 `backtestId`. 필요하면 원 요청의 공개 토큰으로 바꿔 담는다 |
+| `retryOf`의 내부 식별자 | 원 요청의 `backtestId`. 재시도 응답은 원 요청의 공개 토큰(`retryOfToken`)으로 바꿔 담는다 |
+| `versions.worker` | 결과를 낸 워커의 자기 보고. 위 `worker`와 같은 이유다 |
+| 오류 문구 속 식별자 | 004 예외 문구에 `backtestId`가 들어 있다. 공개 경로는 코드의 기본 문구로 바꾼다 |
+
+하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다.
 
 ## 비교 요청
 
@@ -100,10 +138,10 @@
 
 ## 예시 파일
 
-`docs/specs/result-api/examples/`에 다음을 둔다. 003·004가 쓰는 방식대로 계약 예시를 픽스처로 삼아 실제 응답과 대조한다.
+`docs/specs/result-api/examples/`에 다음을 둔다. 003·004가 쓰는 방식대로 계약 예시를 픽스처로 삼아 실제 응답과 대조한다(`ResultApiIT`). 모두 `ApiResponse` 봉투 전체이고, 어디에도 `BT-` 문자열이 없다.
 
 - `result-detail-completed.json`
 - `result-detail-running.json`
 - `result-detail-cancelled-no-summary.json`
 - `result-expired.json`
-- `result-timeseries.json`
+- `result-timeseries.json` — 129점 전체. 최대 하락 구간(고점 뒤 2025-03-19 저점, `-0.041757`)이 있어 음영 테스트에 쓴다

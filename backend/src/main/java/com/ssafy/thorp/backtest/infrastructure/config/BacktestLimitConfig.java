@@ -21,6 +21,7 @@ public class BacktestLimitConfig {
         return new ExecutionLimits(
                 properties.getMaxQueuedPerUser(),
                 properties.getMaxQueuedTotal(),
+                properties.getMaxQueuedAnonymous(),
                 Duration.ofSeconds(properties.getMaxRunSeconds()),
                 Duration.ofSeconds(properties.getStaleRunSeconds()),
                 Duration.ofSeconds(properties.getCancelGraceSeconds()),

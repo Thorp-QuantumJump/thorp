@@ -23,6 +23,10 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit
      * 거래 목록은 전체 진입 내역이 아니며, 경계 시점 보유는 {@code /positions}가 준다. {@code exitTime IS NULL} 은 비교가 거짓이라
      * 자연히 빠진다.
      *
+     * <p>{@code periodStart}·{@code periodEnd}(null = 그쪽 제한 없음, 끝은 포함하지 않음)는 spec 005 기간 필터다. 진입 또는
+     * 청산 시각이 구간 안이면 남긴다({@code FindBacktestTradesQuery}). 두 값이 모두 null 이면 진입 쪽 조건이 참이라 필터가 없는 것과
+     * 같다. OPEN 거래의 {@code exitTime}은 null 이라 청산 쪽 비교는 거짓이고 진입 쪽으로만 판정된다.
+     *
      * <p>정렬을 쿼리에 박아 {@code Pageable}의 {@code Sort}를 무시한다 — 계약이 고정했고 인덱스 {@code (run_id, entry_time,
      * id)}를 그대로 탄다.
      */
@@ -34,6 +38,10 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit
                AND (:status IS NULL OR t.status = :status)
                AND (CAST(:visibleBefore AS java.time.Instant) IS NULL
                     OR t.exitTime < :visibleBefore)
+               AND (((CAST(:periodStart AS java.time.Instant) IS NULL OR t.entryTime >= :periodStart)
+                     AND (CAST(:periodEnd AS java.time.Instant) IS NULL OR t.entryTime < :periodEnd))
+                    OR ((CAST(:periodStart AS java.time.Instant) IS NULL OR t.exitTime >= :periodStart)
+                     AND (CAST(:periodEnd AS java.time.Instant) IS NULL OR t.exitTime < :periodEnd)))
              ORDER BY t.entryTime ASC, t.id ASC
             """)
     Page<BacktestTradeJpaEntity> findPage(
@@ -41,5 +49,7 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit
             @Param("instrumentId") String instrumentId,
             @Param("status") TradeStatus status,
             @Param("visibleBefore") Instant visibleBefore,
+            @Param("periodStart") Instant periodStart,
+            @Param("periodEnd") Instant periodEnd,
             Pageable pageable);
 }

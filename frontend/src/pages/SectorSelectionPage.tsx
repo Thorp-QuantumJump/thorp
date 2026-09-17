@@ -1,15 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
+import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
+import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
 import { SectorListItem } from '@/components/diagnosis/SectorListItem'
+import { SelectionMeaningNotice } from '@/components/diagnosis/SelectionMeaningNotice'
 import { WeightTotal } from '@/components/diagnosis/WeightTotal'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'
+import { useLearningExampleEntry } from '@/diagnosis/learningExample'
+import { describeListingWindow, pickSelectedSectors } from '@/diagnosis/listingWindow'
 import { useSectorSelection } from '@/diagnosis/sector-selection-context'
 import { SectorSelectionProvider } from '@/diagnosis/SectorSelectionProvider'
 import { sortSectorsForDisplay } from '@/diagnosis/sectorOrder'
+import { writeStoredSelection } from '@/diagnosis/selectionStorage'
 import type { SectorSummary } from '@/types/sector'
 import styles from './SectorSelectionPage.module.css'
+
+/**
+ * 진단 흐름의 다음 단계다. 003이 소유하는 전략 선택 화면이며 `App.tsx`가 그 경로에 두었다.
+ *
+ * 값은 이 경로에 실어 보내지 않는다. 003은 같은 탭의 `sessionStorage`를 직접 읽으며, 그 읽는
+ * 쪽이 `useSectorSelection`에서 이 화면과 **같은** `readStoredSelection`·`summarizeWeights`를
+ * 쓴다. 한쪽에서 통과한 선택이 다른 쪽에서 막히지 않게 하려는 것이다.
+ */
+const NEXT_STEP_PATH = '/strategy'
 
 type SectorCatalogBoardProps = {
   /** 이미 표시 순서로 정렬된 목록이다. */
@@ -24,12 +40,77 @@ type SectorCatalogBoardProps = {
  * 안내가 나타나는 조건은 research.md 결정 7의 표를 그대로 따른다.
  */
 function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
+  const navigate = useNavigate()
   const selection = useSectorSelection()
   const selectedCount = selection.selectedCodes.length
+
+  // 배우기(013)에서 예시를 밀어 넣는 경로다. 013이 아직 없어도 입구는 여기 있다.
+  const learningEntry = useLearningExampleEntry(sectors)
+
+  /**
+   * 인계에 실패한 상태다. 저장소가 막혀 003이 읽을 값을 남길 수 없을 때만 true가 된다.
+   *
+   * 이 경우 다음 화면으로 보내지 않는다. 보내면 사용자는 방금 입력한 값이 사라진 빈 화면을 만난다.
+   */
+  const [handoffBlocked, setHandoffBlocked] = useState(false)
 
   // 006이 제안을 소유하는 경우(목록에서 사라진 섹터)와 보관된 값 자체를 쓸 수 없던 경우를 나눈다.
   const missingCount = selection.dropped.filter((item) => item.reason === 'notInCatalog').length
   const unusableCount = selection.dropped.length - missingCount
+
+  // 배우기 예시에서 끝내 채우지 못한 항목이다. 보관된 값을 복원할 때와 같은 구분을 쓴다.
+  const exampleMissingCount = learningEntry.dropped.filter(
+    (item) => item.reason === 'notInCatalog',
+  ).length
+  const exampleUnusableCount = learningEntry.dropped.length - exampleMissingCount
+
+  /*
+    사용자가 값을 고치면 인계 실패 표시를 거둔다. 거두지 않으면 그 문장이 세션 내내 남아, 지금
+    상태를 두고 하는 말처럼 읽힌다. 실제로는 그때 한 번 넘기지 못했다는 지난 사실이다.
+  */
+  useEffect(() => {
+    setHandoffBlocked(false)
+  }, [selection.selectedCodes, selection.weightTenths])
+
+  /*
+    상장일 안내는 선택한 섹터의 상장일만 견준다. 목록 전체를 넘기면 고르지 않은 섹터의 상장일까지
+    최댓값 후보가 되어 사실과 다른 날짜를 말하게 된다.
+  */
+  const listingWindow = useMemo(
+    () => describeListingWindow(pickSelectedSectors(sectors, selection.selectedCodes)),
+    [sectors, selection.selectedCodes],
+  )
+
+  /**
+   * 다음 단계로 넘긴다. **넘기기 전에 값을 손대지 않는다**(FR-013, SC-013).
+   *
+   * 합계를 100%로 맞추는 조정, 표시 정밀도를 넘어선 반올림, 0%인 섹터 제외를 모두 하지 않는다.
+   * 여기서 하는 일은 지금 상태를 그대로 보관하고 이동하는 것뿐이다.
+   *
+   * 인계 수단은 탭 세션 보관 항목 하나다. URL이나 navigation state로 따로 싣지 않는다. 새로고침
+   * 으로 화면이 다시 뜨는 경우와 같은 경로를 쓰기 위해서다(contracts/selection-handoff.md).
+   * 섹터 이름과 대표 ETF 이름은 싣지 않는다 — 003이 `GET /sectors`로 직접 받는다. 비중도 백분율
+   * 소수로 바꾸지 않는다. 004 메시지 계약으로의 변환은 003의 몫이다.
+   *
+   * 값을 만들 당시의 `mapVersion`을 함께 남긴다. 003·004가 재현 기록에 넣을 수 있게 하기
+   * 위해서다(원칙 VIII).
+   */
+  const proceed = useCallback(() => {
+    const persisted = writeStoredSelection({
+      mapVersion: selection.mapVersion,
+      selectedCodes: [...selection.selectedCodes],
+      weightTenths: { ...selection.weightTenths },
+      weightsTouched: selection.weightsTouched,
+    })
+
+    if (!persisted) {
+      setHandoffBlocked(true)
+      return
+    }
+
+    setHandoffBlocked(false)
+    void navigate(NEXT_STEP_PATH)
+  }, [navigate, selection])
 
   return (
     <section className={styles.catalog} aria-labelledby="sector-list-title">
@@ -69,6 +150,22 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
         <p className={styles.restoreNotice} role="status">
           이전에 골랐던 섹터 {unusableCount}개는 보관된 값을 그대로 쓸 수 없어 선택에서
           빠졌습니다.
+        </p>
+      ) : null}
+
+      {/*
+        배우기에서 온 예시 가운데 채우지 못한 것이 있으면 알린다. 조용히 넘어가면 사용자는 예시가
+        섹터 셋을 실어 왔는데 왜 둘만 채워졌는지, 합계가 왜 100%가 아닌지 알 수 없다(원칙 VI).
+      */}
+      {exampleMissingCount > 0 ? (
+        <p className={styles.restoreNotice} role="status">
+          배우기 예시의 섹터 {exampleMissingCount}개가 지금 목록에 없어 채우지 않았습니다.
+        </p>
+      ) : null}
+      {exampleUnusableCount > 0 ? (
+        <p className={styles.restoreNotice} role="status">
+          배우기 예시의 섹터 {exampleUnusableCount}개는 실려 온 비중을 그대로 쓸 수 없어 채우지
+          않았습니다.
         </p>
       ) : null}
 
@@ -122,9 +219,22 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
       ) : null}
 
       {/*
-        섹터를 하나만 고르면 비교할 대상이 없다(FR-004). 다음 단계 버튼 자체는 M4가 만들며,
-        이 묶음은 넘어가지 않는다는 제약과 그 안내까지를 맡는다.
+        상장일 차이로 공통 비교 기간이 줄어든다는 사실이다(FR-008). 선택 요약 바로 옆에 두어
+        합계를 보는 자리에서 함께 읽히게 한다. 접어 두지 않는다(원칙 II).
       */}
+      <ListingWindowNotice className={styles.listingNotice} listingWindow={listingWindow} />
+
+      {/*
+        비중 입력 묶음의 꼬리다. 고른 섹터가 무엇을 뜻하는지(FR-009)와 0%인 섹터가 어떻게
+        다뤄지는지(FR-016)를 알린다.
+      */}
+      <SelectionMeaningNotice
+        className={styles.meaningNotice}
+        selectedCount={selectedCount}
+        hasZeroWeight={selection.hasZeroWeight}
+      />
+
+      {/* 섹터를 하나만 고르면 비교할 대상이 없다(FR-004). */}
       {selectedCount === 1 ? (
         <p className={styles.constraintNotice} role="status">
           비교하려면 섹터를 두 개 이상 골라야 합니다.
@@ -132,10 +242,60 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
       ) : null}
 
       {/*
+        합계가 맞지 않으면 넘어가지 않는다는 사실을 한 문장으로 알린다(FR-007). **그 자리에서
+        비중을 자동으로 조정하지 않는다.** 얼마가 모자라거나 넘쳤는지는 위의 합계 표시가 이미
+        말하고 있으므로 여기서는 다음 단계가 막힌 까닭만 말한다.
+      */}
+      {selectedCount >= 2 && !selection.isBalanced ? (
+        <p className={styles.constraintNotice} role="status">
+          비중의 합계를 100%로 맞추면 다음 단계로 넘어갈 수 있습니다.
+        </p>
+      ) : null}
+
+      {/*
+        보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 입력이 사라진 빈
+        화면을 만난다(원칙 VI). 이 화면 안에서는 값이 그대로 남아 있으므로 화면을 막지는 않는다.
+      */}
+      {handoffBlocked ? (
+        <p className={styles.constraintNotice} role="alert">
+          브라우저가 이 탭의 저장을 막고 있어 다음 단계로 값을 넘기지 못했습니다. 비공개 창이라면
+          일반 창에서 다시 시도해 주세요.
+        </p>
+      ) : null}
+
+      {/*
+        다음 단계로 넘어가는 자리다. 활성 조건은 섹터 두 개 이상과 합계 100%다(data-model.md
+        파생값). 조건을 채우지 못했을 때 버튼을 숨기지 않는 까닭은, 무엇을 더 해야 다음으로 갈 수
+        있는지가 위 두 문장과 함께 읽혀야 하기 때문이다.
+      */}
+      {selectedCount > 0 ? (
+        <button
+          type="button"
+          className={styles.proceed}
+          onClick={proceed}
+          disabled={!selection.canProceed}
+          data-slot="proceed"
+        >
+          전략 고르러 가기
+        </button>
+      ) : null}
+
+      {/*
         KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 대표 상품 정보 패널을 펼쳐야만 보이는
         구조는 목록만 보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.
       */}
       <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+
+      {/*
+        배우기 예시가 기존 입력을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만
+        열린다. 입력이 하나도 없는 상태로 들어왔으면 묻지 않고 이미 채워져 있다(SC-011).
+      */}
+      <OverwriteConfirmDialog
+        open={learningEntry.pending !== null}
+        exampleSectorCount={learningEntry.pending?.codes.length ?? 0}
+        onConfirm={learningEntry.confirmOverwrite}
+        onCancel={learningEntry.cancelOverwrite}
+      />
     </section>
   )
 }
