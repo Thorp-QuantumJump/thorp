@@ -107,12 +107,14 @@ common: 모든 계층에서 참조 가능
   취소된 실행의 STARTED가 뒤늦게 오면 `handleStarted`가 CANCEL을 다시 보낸다. **`cancel_requested_at`이 있는 RUNNING 실행의 STARTED도
   마찬가지다** — 재전달(R-06)이면 워커가 실행을 끝낼 때 레지스트리의 취소 표시를 지웠으므로, 다시 보내지 않으면 취소한 실행이 끝까지 계산돼
   COMPLETED가 된다. `FINISHED(CANCELLED)`는 부분 결과를 저장하고 실행을 `CANCELLED·partial`로 끝낸다
-- **실행 한도는 접수만 막고, 도는 것은 스위퍼가 끊는다**(`ExecutionLimitPolicy`·`RunLivenessSweeper`, R-19). `thorp.backtest.limits.*` 다섯 값은
+- **실행 한도는 접수만 막고, 도는 것은 스위퍼가 끊는다**(`ExecutionLimitPolicy`·`RunLivenessSweeper`, R-19). `thorp.backtest.limits.*` 여섯 값은
   모두 `@NotNull`이라 하나라도 비면 기동에 실패하고, **prod는 `${ENV}` 참조에 기본값을 두지 않아** 공통 설정의 임시값을 물려받지 않는다(FR-006을
   설정 누락으로 우회할 수 없게 한 것이다). **두 대기 한도는 `SINGLE`만 센다** — 탐색·경제환경 파생 실행은 다른 큐(`backtest.jobs.bulk`)로
   가고 한도의 대상이 아니다(R-20). 한 큐였을 때는 탐색을 세면 007 묶음이 영구 정지하고(`advance()`는 `BacktestFinished`로만 불린다) 안 세면
   탐색이 큐를 채우는 동안 단건만 429를 받았다 — 값이 아니라 구조 문제라 큐를 나눴다. `ExecutionLimitPolicy`는 비단건이면 잠금도 조회도 없이 통과한다.
-  세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
+  세는 구간은 `pg_advisory_xact_lock`으로 직렬화하고 **잠금 순서는 사용자 키 → 전체 키**다. **비로그인 요청(spec 005 B01)은 사용자 키 자리에서
+  비로그인 합계 키를 잡고 `max-queued-anonymous`를 센다** — 사용자별 한도만 건너뛰면 비로그인 클라이언트 하나가 전체 한도를 채워 로그인 사용자까지
+  429 를 받는다. 이 몫은 비로그인 요청이 **새로 만든**(`result_source='NEW'`) 대기 실행만 센다. **동시 실행 상한은 백엔드에 두지 않는다** — 접수
   시점 검사로는 보장되지 않고 실제 상한은 워커 replica × prefetch(1)이다
 - **접수 트랜잭션 안에서 `BusinessException`을 던지는 `@Transactional` 메서드는 모두 `noRollbackFor = BusinessException.class`다**
   (`BacktestService.create`·`StrategyRulesService.requireRegistered`·`CostProfileService.resolve`). 하나라도 기본 규칙이면 그 프록시가 바깥

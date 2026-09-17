@@ -1,6 +1,8 @@
 package com.ssafy.thorp.backtest.application.repository;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +32,21 @@ public interface BacktestRequestRepository {
 
     /** 취소되지 않은 요청 수. 0이면 이 실행을 멈춰도 된다(R-04). */
     long countActiveByRunId(Long runId);
+
+    /** 공개 토큰으로 요청을 찾는다(spec 005 공개 열람). 만료 판정은 호출자가 한다 — 여기서 거르면 404 와 410 을 가를 수 없다. */
+    Optional<BacktestRequest> findByPublicToken(PublicResultToken publicToken);
+
+    /**
+     * 만료된 <b>비로그인</b> 요청을 만료 시각이 이른 순서로 {@code limit}건 찾는다(spec 005 정리 작업). 로그인 요청은 만료가 없어 나오지 않는다.
+     *
+     * <p>만료는 {@code public_token_expires_at <= now}다 — {@link BacktestRequest#isPublicExpired}와 같은
+     * 경계다.
+     */
+    List<BacktestRequest> findExpiredAnonymous(Instant now, int limit);
+
+    /**
+     * 요청 행 하나를 지운다. 이 행을 참조하는 재사용 기록·재시도 자식의 참조는 호출자가 먼저 정리한다(spec 005 T022). 실행과 결과는 다른 요청이 볼 수
+     * 있으므로 지우지 않는다.
+     */
+    void deleteById(long id);
 }

@@ -18,6 +18,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
@@ -128,7 +129,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
         versions.put("rules", Map.of("version", "1", "provisional", false));
         versions.put("costProfile", Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
         versions.put("data", "FIXTURE-three_etf_24m");
-        versions.put("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
+        versions.put("engine", "nautilus_trader 1.219.0 / worker 2.2.0");
         versions.put("evaluationSplit", "SPLIT-1");
         return new RunPlan(null, null, null, null, null, null, null, null, versions, null);
     }
@@ -142,6 +143,8 @@ class BacktestResultApiIT extends PostgresTestSupport {
                                 requesterId,
                                 ExecutionType.SINGLE,
                                 ResultSource.NEW,
+                                null,
+                                PublicResultToken.generate(),
                                 null))
                 .getBacktestId()
                 .value();

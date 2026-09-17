@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  * MarketMetadataPort}와 같은 방식이다(research R8).
  *
  * <p>의존 방향은 {@code learning → sector} 하나다. {@code SectorListResult}가 {@code Sector} 도메인 모델을 노출하므로 그
- * 타입까지 읽는다. {@code sector}가 {@code learning}을 참조하면 {@code ArchitectureTest} 규칙 9가 빌드를 막는다.
+ * 타입까지 읽는다. {@code sector}가 {@code learning}을 참조하면 {@code ArchitectureTest} 규칙 10이 빌드를 막는다.
  *
  * <p>{@link SectorMapNotReadyException}만 {@link Optional#empty()}로 바꾼다. DB 장애 같은 다른 실패는 그대로 올려 보낸다.
  * 그것까지 "대응표 없음"으로 뭉개면 장애가 '예시로 진입할 수 없음' 안내로 숨는다.

@@ -366,3 +366,48 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
 - [ ] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)
   - `"KRX-2026-09-09"`는 `KRX_DAILY_{YYYYMMDD}`도 아니고 픽스처 식별자도 아니다. 어느 규칙에도 맞지 않는다
   - T030이 두 칸의 뜻을 정한 뒤 그 규칙에 맞춘다
+
+---
+
+## Phase 10: Convergence
+
+**2026-09-16 `/speckit-converge` 산출.** `S15P21E205-205`가 백엔드의 평가 시작일 산식을 바꾼 나무에서 평가했다.
+그 나무의 검증은 backend 1,369건(실패 0·오류 0·건너뜀 4)·worker 356건·data 583건이 모두 통과한다. 기존 항목은
+하나도 고치지 않았다.
+
+**판정**: FR 17개·SC 7개·사용자 스토리 3개·plan 결정·constitution 원칙 10개를 확인했고 MUST 위반은 없다.
+새로 찾은 어긋남 넷은 **전부 205 변경이 만든 것**이다 — 205 이전부터 남아 있던 몫은 이미 열려 있는
+T015~T017·T019~T021·T030·T033·T036이 덮으므로 다시 만들지 않았다. 유형은 contradicts 3·partial 1이며
+missing과 unrequested는 없다.
+
+**205가 바꾼 것**: 백엔드는 이제 평가 시작일을 워밍업만큼 밀지 않는다. `effectiveStart`는 **요청 시작일 당일
+또는 그 뒤 첫 거래일**이고, 미는 판정은 워커 `engine_runner.evaluation_start()`가 단독으로 맡는다
+(`contracts/market-dataset.md` 「읽기 규칙」). T029가 남긴 **`max(요청 시작일, 자료가 시작된 뒤 warmup번째
+거래일)`은 더 이상 백엔드의 산식이 아니다** — 백엔드가 밀어 놓으면 그 값이 앵커로 실려 나가 워커가 되돌릴 수
+없어서, 판정하는 곳을 하나로 줄였다. `commonStart`는 그대로 계산해 싣되(003 안내·007 탐색 구간이 쓴다)
+`effectiveStart`를 정하는 데는 쓰지 않는다. converge는 기존 항목을 고치지 않으므로 T029의 본문은 그대로 두었다.
+
+- [X] T037 [BE] `CommonPeriodResolver`가 요청 시작일을 밀지 말지 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)
+  - 007 경로는 아직 `requestedStart == null || !requestedStart.isAfter(commonStart)` 일 때 `commonStart`를 쓴다. 205가 004에서 걷어낸 것과 **같은 모양**이다
+  - **그러나 같은 문제라고 단정하지 못했다.** 세 가지가 다르다. ⑴ 007은 요청 시작일이 **없을 수도 있고** 그때 `commonStart`가 곧 서버의 제안값이라 그 갈래는 옳다. ⑵ 이 값은 004의 `effectiveStart`로 바로 나가지 않고 후보마다 **접수의 요청 시작일**(`command.start()`)로 들어간다. ⑶ 같은 값이 `ParamSearchPreviewResult.CommonPeriod`로 **사용자에게 "이 구간을 탐색할 수 있다"고 제안**되고 FR-008의 탐색·잠금 구간을 가르는 기준이 된다. 앞부분을 평가할 수 없는 구간을 제안값으로 내놓아도 되는지가 이 결정의 핵심이다
+  - 205는 **주석의 거짓말만 걷어냈다.** `CommonPeriodResolver`와 그 테스트가 "004 `EffectivePeriodCalculator`와 같은 규칙이다"라고 적고 있었는데 이제 아니므로, 두 곳이 어떻게 다른지와 이 결정이 열려 있다는 사실을 적었다. **동작은 손대지 않았다**
+  - **2026-09-17 결정: 맞춘다**(`S15P21E205-316`). 007도 요청 시작일을 늦추지 않는다. 결정의 근거는 위 ⑶이 아니라 **같은 요청이 화면에 따라 다른 구간을 낸다는 사실**이었다. 단건으로 2023-01-02부터 요청하면 그날부터 평가하는데 같은 조건을 자동 탐색에 넣으면 2023-09-28부터 평가했고, 사용자는 그 차이의 까닭을 알 수 없다
+  - **위 ⑶의 걱정은 남지만 새로 생긴 것이 아니다.** 제안 구간의 앞부분을 평가하지 못할 수 있다는 것은 004가 T029 이후 이미 안고 있는 한계와 같다(화면에 보이는 기간과 실제 평가 기간이 갈릴 수 있다). 두 경로가 같은 한계를 같은 모양으로 지는 편이, 한쪽만 다른 규칙을 쓰는 것보다 낫다고 보았다. 근본 해결은 접수가 자료 시작일을 알게 되는 것이며 T029가 적어 둔 후속 조건과 같다
+  - **⑵의 비교 성립 걱정은 확인 결과 문제가 되지 않는다.** 묶음 전체에 공통 워밍업 하나를 똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가 같은 날부터 시작한다(원칙 IV)
+  - **요청 시작일이 없는 갈래는 그대로 두었다.** 그때는 상장일 기준값이 곧 서버의 제안값이고 제시할 다른 값이 없다
+  - 구간 안에 평가할 수 있는 날이 하루도 없을 때의 거절은 004 접수와 같은 모양으로 남겼다. 탐색을 시작해 봐야 후보가 전부 실패한다
+  - 두 경로가 또 갈라지면 드러나도록, 같은 조건을 양쪽에 넣어 같은 시작일이 나오는지 보는 검사를 더했다
+- [X] T038 [BE] `effectiveStart`를 "워밍업 이후"로 적은 주석을 실제와 맞춘다 per 004 research R-15·contracts/rest-api.md (contradicts)
+  - `BacktestJobResult`가 "요청 시작일보다 뒤다", `RunPlan`이 "워밍업을 소진한 뒤 실제 평가가 시작되는 거래일", `EngineInput`·`EngineOutput`이 "워밍업 이후 실제 평가 시작일"이라 적었다. 205 뒤로는 넷 다 거짓이다
+  - **틀린 설명은 없는 설명보다 나쁘다.** 값이 바뀌는 변경과 같은 MR에서 닫는다
+  - 2026-09-16 `S15P21E205-205`에서 해결
+- [X] T039 [DOCS] 004 계약·연구·quickstart와 backtest-api README의 `effectiveStart` 정의를 맞춘다 per contracts/rest-api.md·quickstart S1 (contradicts)
+  - `docs/specs/backtest-api/README.md`가 "워밍업과 상장일을 반영한 실제 평가 시작일", `specs/004-backtest-execution/contracts/rest-api.md`가 "이 값을 그대로 워밍업으로 써서 `effectiveStart`를 정하고", `research.md` R-15가 "공통 평가 기간과 워밍업 거래일 수를 합해 `effectiveStart`를 계산해"라고 적는다
+  - **`quickstart.md` S1은 기대값 자체가 틀렸다** — "`effectiveStart`가 요청 시작일보다 뒤(워밍업)"를 확인하라고 한다. 지금 코드로 그대로 돌리면 어긋나므로 검증 절차가 거짓 실패를 낸다
+  - 워밍업 거래일 수가 **동일 버전 키에 들어간다**는 R-15의 나머지 절반은 그대로 유효하다. 바뀐 것은 그 값으로 시작일을 미느냐 하나다
+  - 2026-09-16 `S15P21E205-205`에서 해결
+- [X] T040 [DOCS] 엔진 버전 표기를 실제 값과 맞춘다 per 004 R-03 (partial)
+  - 205가 `thorp.backtest.engine-version`을 `worker 2.1.0 → 2.2.0`으로 올렸다. 계산 규칙이 바뀌었는데 동일 버전 키에 들어가는 날짜는 **사용자가 요청한** 값이라 키가 달라지지 않아, 올리지 않으면 옛 규칙으로 계산된 결과가 `REUSED`로 돌아간다
+  - `specs/004-backtest-execution/contracts/rest-api.md`와 `docs/specs/backtest-api/examples/{backtest-accepted,backtest-detail}.json`이 옛 값을 적고 있었다
+  - `docs/specs/param-search-api/README.md`는 `worker 2.0.0`으로 더 낡아 있다. **예시 payload의 버전 문자열은 원래부터 따라오지 않는 값**이라 이번에 004 계약과 backtest-api 예시까지만 맞췄다
+  - 2026-09-16 `S15P21E205-205`에서 해결

@@ -14,7 +14,8 @@ import java.util.Objects;
  * @param rulesVersion 적용한 전략 규칙 버전({@code strategy_rules})
  * @param costProfileVersion 적용한 비용 조건 버전({@code cost_profile})
  * @param dataVersion 적용한 시장 자료 버전(001 {@code dataset_version})
- * @param effectiveStart 워밍업을 소진한 뒤 실제 평가가 시작되는 거래일(R-15). 202 응답과 조회에 그대로 나간다
+ * @param effectiveStart 요청 시작일 당일 또는 그 뒤 첫 거래일(R-15). <b>워밍업을 소진한 값이 아니다</b> — 미는 판정은 워커 {@code
+ *     engine_runner.evaluation_start()}가 단독으로 맡는다. 202 응답과 조회에 그대로 나간다
  * @param effectiveEnd 평가 종료일. 지금은 요청 종료일과 같고, 자료 마감으로 당겨질 여지를 위해 따로 둔다
  * @param warmupTradingDays 서버가 확정한 실효 워밍업 거래일 수. 키에 들어가므로 같이 보관한다
  * @param requestSpec 접수한 요청의 canonical 사본. 조회 {@code config}가 이것을 그대로 돌려준다 — 섹터·목표 비중처럼 실행 스칼라 컬럼에

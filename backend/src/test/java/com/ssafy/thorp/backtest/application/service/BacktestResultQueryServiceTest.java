@@ -30,6 +30,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
@@ -95,7 +96,9 @@ class BacktestResultQueryServiceTest {
                 null,
                 null,
                 null,
-                false);
+                false,
+                PublicResultToken.generate(),
+                null);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -190,7 +193,9 @@ class BacktestResultQueryServiceTest {
                 null,
                 Instant.parse("2026-09-07T01:00:10Z"),
                 snapshot,
-                false);
+                false,
+                PublicResultToken.generate(),
+                null);
     }
 
     private void givenCancelledJoined(LocalDate snapshot) {
@@ -312,7 +317,9 @@ class BacktestResultQueryServiceTest {
                 null,
                 Instant.parse("2026-09-07T01:00:10Z"),
                 null,
-                true);
+                true,
+                PublicResultToken.generate(),
+                null);
     }
 
     private static BacktestRun cancelledRun(LocalDate lastTradingDate) {

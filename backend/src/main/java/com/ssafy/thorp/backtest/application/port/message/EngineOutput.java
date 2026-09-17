@@ -40,7 +40,8 @@ public record EngineOutput(
      * @param runId envelope의 {@code runId}와 같다
      * @param partial true = 취소·한도 도달로 끊긴 부분 결과. null = false
      * @param lastTradingDate 처리한 마지막 거래일. 부분 결과의 완료 범위
-     * @param effectiveStart 워밍업 이후 실제 평가 시작일
+     * @param effectiveStart 엔진이 실제로 성과를 집계하기 시작한 날. {@code EngineInput}의 앵커 앞에 워밍업이 모자랐으면 그만큼 뒤로 밀린
+     *     값이라 보낸 값과 다를 수 있다
      * @param error null = 성공
      */
     public record RunResult(

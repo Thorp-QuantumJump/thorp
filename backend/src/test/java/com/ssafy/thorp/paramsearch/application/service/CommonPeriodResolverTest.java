@@ -1,8 +1,14 @@
 package com.ssafy.thorp.paramsearch.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.ssafy.thorp.backtest.application.service.EffectivePeriodCalculator;
+import com.ssafy.thorp.backtest.domain.model.RulesStatus;
+import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.strategy.application.port.AllowedRange;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
@@ -17,11 +23,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * 007 공통 평가 구간이 004·워커와 같은 한 규칙을 쓰는지 본다.
+ * 007이 모든 후보에 똑같이 적용할 탐색 구간을 어떻게 정하는지 본다.
  *
- * <p><b>평가 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일).</b> 워밍업 기준점은 상장일 하나이고 요청 시작일은
- * 마지막에 max 로만 합쳐진다(001 {@code contracts/evaluation-window.md}). 이 두 항의 경계를 각각 덮는다 — 여기가 어긋나면 007
- * 묶음의 구간과 004 접수의 {@code effectiveStart}가 갈라져 나란히 놓은 숫자가 다른 구간의 값이 된다.
+ * <p><b>탐색 구간 시작일 = 요청 시작일 당일 또는 그 뒤 첫 거래일.</b> 워밍업만큼 뒤로 늦추지 않는다(001 {@code
+ * contracts/market-dataset.md} 「읽기 규칙」). 004 {@code EffectivePeriodCalculator}와 같은 규칙이며, <b>같은 요청이
+ * 화면에 따라 다른 구간을 내지 않는지</b>가 여기서 지켜야 할 것이다. 요청 시작일이 없을 때만 상장일 기준값이 제안값으로 나간다.
  */
 class CommonPeriodResolverTest {
 
@@ -92,16 +98,42 @@ class CommonPeriodResolverTest {
     }
 
     @Test
-    @DisplayName("요청 시작일이 상장일보다 앞이면 상장일 이후 워밍업 번째 거래일부터다")
-    void warmupAfterALateListingPushesTheStart() {
-        // BIO 는 2023-07-03 상장이라 그 앞에는 읽을 자료가 없다. 밀리는 양은 계약 commonStart 와 같다.
+    @DisplayName("요청 시작일이 상장일보다 앞이어도 늦추지 않는다 — 004 접수와 같은 날이 나와야 한다")
+    void aLateListingNoLongerPushesTheStart() {
+        // BIO 는 2023-07-03 상장이라 요청 앞부분에 읽을 자료가 없다. 그래도 여기서 늦추지 않는다.
+        // 늦추면 같은 조건을 단건으로 넣었을 때와 탐색으로 넣었을 때의 구간이 갈리고, 사용자는 그
+        // 차이의 까닭을 알 수 없다. 앞이 모자란 만큼 뒤로 미루는 일은 워커가 단독으로 맡는다.
         CommonPeriodResolver.CommonPeriod period =
                 resolve(
                         List.of(SEMICONDUCTOR, BIO),
                         LocalDate.of(2023, 1, 2),
                         LocalDate.of(2024, 12, 31));
 
-        assertThat(period.start()).isEqualTo(BIO_COMMON_START);
+        assertThat(period.start()).isEqualTo(LocalDate.of(2023, 1, 2));
+    }
+
+    @Test
+    @DisplayName("같은 조건이면 004 접수와 탐색이 같은 시작일을 낸다")
+    void theSearchWindowAgreesWithTheSingleRunIntake() {
+        EffectivePeriodCalculator intake =
+                new EffectivePeriodCalculator(
+                        new FixtureMarketMetadataAdapter(LocalDate.of(2026, 12, 31)));
+        StrategyRules rules =
+                new StrategyRules(
+                        STRATEGY,
+                        "1",
+                        RulesStatus.REGISTERED,
+                        true,
+                        Map.of("lookbackDays", 63),
+                        null);
+        LocalDate start = LocalDate.of(2023, 1, 2);
+        LocalDate end = LocalDate.of(2024, 12, 31);
+
+        LocalDate searchStart = resolve(List.of(SEMICONDUCTOR, BIO), start, end).start();
+        LocalDate intakeStart =
+                intake.resolve(rules, List.of(SEMICONDUCTOR, BIO), start, end, 63).effectiveStart();
+
+        assertThat(searchStart).isEqualTo(intakeStart);
     }
 
     @Test
@@ -134,5 +166,21 @@ class CommonPeriodResolverTest {
                         LocalDate.of(2024, 12, 31));
 
         assertThat(period.start()).isEqualTo(LocalDate.of(2024, 6, 3));
+    }
+
+    @Test
+    @DisplayName("구간 안에 평가할 수 있는 날이 하루도 없으면 거절한다 — 늦추지 않게 됐어도 이 경계는 남는다")
+    void aWindowWithNoEvaluableDayIsRejected() {
+        // BIO(2023-07-03 상장) + 관측 63거래일이면 평가할 수 있는 첫날이 2023-09-28 인데 끝일이 8월이다.
+        // 탐색을 시작해 봐야 후보가 전부 실패하므로 여기서 사유를 알려 준다.
+        assertThatThrownBy(
+                        () ->
+                                resolve(
+                                        List.of(SEMICONDUCTOR, BIO),
+                                        LocalDate.of(2023, 1, 2),
+                                        LocalDate.of(2023, 8, 31)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.INSUFFICIENT_HISTORY);
     }
 }

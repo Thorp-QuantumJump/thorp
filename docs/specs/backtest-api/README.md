@@ -59,8 +59,11 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 004가 워커 메시지 계약을 등록표 축 이름에 맞춘 뒤, 이 필드를 필수로 바꾸고 모든 요청에 검증을 거는 후속 변경까지
 끝나야 요구사항이 닫힌다. 그때 위 표의 "선택"도 "필수"로 바뀐다.
 
-**인증**: 모든 엔드포인트가 요청자를 요구한다(spec 004 R-12). 요청자는 spec 014 로그인 세션의 주체이며
-(`POST /auth/sessions`가 만든 세션 쿠키), 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다. 남의 요청은 403이
+**인증**: **접수(`POST /backtests`)를 뺀** 모든 엔드포인트가 요청자를 요구한다(spec 004 R-12). 요청자는 spec 014 로그인 세션의 주체이며
+(`POST /auth/sessions`가 만든 세션 쿠키), 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다.
+접수는 로그인하지 않아도 받는다(spec 005 B01) — 요청자 없이 저장되고 결과는 응답의 `publicToken`으로만 연다
+(`/results/{publicToken}`, spec 005 계약). 비로그인 요청은 사람을 가릴 수 없어 사용자별 대기 한도 대신 **비로그인 요청 전부가 나눠 쓰는 몫**(`max-queued-anonymous`)과 전체 한도를 받는다.
+몫이 차면 `429 EXECUTION_LIMIT`의 `reason`이 `ANONYMOUS`다. 이 몫은 전체 한도보다 작아서, 비로그인 요청이 몰려도 로그인 사용자의 자리가 남는다. 남의 요청은 403이
 아니라 **404**로 숨긴다 — 403은 그 식별자가 존재한다는 사실을 알려 준다. 상태를 바꾸는 요청에는 CSRF 헤더
 (`X-XSRF-TOKEN`)가 함께 필요하다. 식별은 `CurrentRequester` 한 곳에서만 한다.
 
@@ -68,19 +71,26 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 
 ```json
 { "success": true, "data": { "backtestId": "BT-20260911-000001", "status": "QUEUED", "resultSource": "NEW",
-  "effectiveStart": "2023-07-03", "effectiveEnd": "2024-12-31", "versions": { … } }, "error": null }
+  "effectiveStart": "2023-07-03", "effectiveEnd": "2024-12-31", "versions": { … },
+  "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e" }, "error": null }
 ```
+
+- `publicToken`은 이 **요청**의 결과 공개 토큰이다(spec 005 FR-019). 소문자 16진 32자(128비트)이고 추측할 수 있는 조각이 없다.
+  새 계산·합류·재사용 모두 요청마다 새로 발급하므로 같은 실행을 보는 두 요청도 토큰이 다르다. 로그인 요청의 토큰은 만료가 없고,
+  비로그인 요청의 토큰은 접수 시각부터 설정된 유효 시간이 지나면 닫힌다(값은 spec 005 PD-23 확정 전 임시값이며 문서에 적지 않는다).
 
 - `backtestId`는 **요청**의 식별자다 `BT-{yyyyMMdd}-{6자리 이상 순번}`(ADR-0002 D2). 순번이 999,999를 넘으면 자릿수가
   늘어나므로 **길이를 가정하지 말고 문자열로 다룬다.** 여러 요청이 한 실행을 가리킬 수 있어서(spec 004 R-02) 실행 식별자와는 다르다.
 - `resultSource`: `NEW` 새 계산 / `JOINED` 진행 중인 같은 조건 실행에 합류 / `REUSED` 완료 결과 재사용. **`REUSED`면 `status`가
   이미 `COMPLETED`이고 결과를 바로 조회할 수 있다** — 상태만 보고 폴링을 시작하지 말 것.
-- `effectiveStart`는 워밍업과 상장일을 반영한 실제 평가 시작일이라 요청 시작일보다 뒤일 수 있다.
+- `effectiveStart`는 요청 시작일이며 휴장일이면 그 뒤 첫 거래일이다. **워밍업만큼 밀린 값이 아니다** — 워밍업 자료는
+  요청 구간보다 앞에서 읽는다. 요청 앞에 워밍업 자료가 모자라면 워커가 모자란 만큼만 집계 시작일을 미루므로, 결과의
+  `effectiveStart`가 접수 때 돌려준 값보다 뒤일 수 있다.
 - `versions`는 결과 재현의 기준이다: `{ mapping, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit }`.
   `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만
   (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.
   계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).
-- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014), 503 `BROKER_UNAVAILABLE`.
+- 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014, `reason`: `PER_USER`·`ANONYMOUS`·`TOTAL`), 503 `BROKER_UNAVAILABLE`.
 
 **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.
 예전처럼 503으로 거절하고 롤백하지 않는다 — 워커의 이벤트가 커밋을 앞질러 도착하면 결과를 잃기 때문이다.
@@ -108,8 +118,8 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 
 ## 1.6 재시도 — `POST /backtests/{backtestId}/retry`
 
-`202` `{backtestId, status, resultSource, retryOf}`. 실패하거나 취소한 분석을 **같은 조건으로 다시 접수**한다(spec 004 T010, FR-002).
-`backtestId`는 새로 만들어진 요청의 것이고 `retryOf`가 원본이다.
+`202` `{backtestId, status, resultSource, retryOf, publicToken}`. 실패하거나 취소한 분석을 **같은 조건으로 다시 접수**한다(spec 004 T010, FR-002).
+`backtestId`는 새로 만들어진 요청의 것이고 `retryOf`가 원본이다. `publicToken`도 새 요청의 것이라 원본의 토큰과 다르다(spec 005).
 
 - **재시도도 접수를 다시 탄다.** 실행을 복제하지 않고 저장해 둔 요청 사본(`backtest_run.request_spec`)을 접수 명령으로 되돌려 `POST /backtests`와
   같은 경로를 태운다. 그래서 그 사이 전략 등록표가 내려갔으면 `422 RULES_NOT_REGISTERED`이고, 같은 조건을 이미 누가 돌리고 있으면 새로 계산하지
@@ -304,6 +314,12 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 | `size` | integer | `100` | 1~1000. **생략과 `size=0`은 다르다** — 생략은 100, `0`은 400 |
 | `instrumentId` | string | (없음) | 종목 형식과 같음. 위반은 400이고 빈 페이지가 아니다 |
 | `status` | enum | (없음) | `OPEN` \| `CLOSED` |
+| `from` | date | (없음) | `YYYY-MM-DD`. 이 날 포함. 형식 위반은 400 |
+| `to` | date | (없음) | `YYYY-MM-DD`. 이 날 포함. `from`보다 이르면 400 `INVALID_INPUT`(빈 페이지가 아니다) |
+
+`from`·`to`(spec 005 T015)는 **진입 또는 청산이 그 기간 안에 있는 거래**만 남긴다. 둘 중 하나만 보내도 된다. 기간 전에 사서 기간 중에 판
+거래는 들어오고, 기간 내내 들고만 있던 거래는 들어오지 않는다 — 그 기간의 보유는 §2.4가 보인다. 날짜는 거래소 현지(Asia/Seoul) 기준이며
+`entryDate`·`exitDate`와 같은 기준이다. 005 '손실이 커진 때 보기'(FR-010)가 최대 하락 구간의 매매를 보이는 데 쓴다.
 
 정렬은 `entryDate` 오름차순 **고정**이다(같은 날은 안정 순서). 정렬 파라미터는 없다.
 거래가 0건이면 `content: []`와 200이다.

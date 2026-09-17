@@ -2,8 +2,8 @@ import { useId, useState } from 'react'
 import { TermHelp } from '@/components/learning/TermHelp'
 import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'
 import type { LearningReturnState } from '@/types/learning'
-import type { AxisValue, StrategyView, ValidationRule } from '@/types/strategyRegistry'
-import { evaluateRules } from '@/utils/validationRules'
+import type { AxisValue, StrategyView } from '@/types/strategyRegistry'
+import { checkRules } from '@/utils/validationRules'
 import { AxisChoiceField } from './AxisChoiceField'
 import { AxisNumberField } from './AxisNumberField'
 import styles from './DetailSettingsPanel.module.css'
@@ -24,7 +24,7 @@ interface DetailSettingsPanelProps {
   onResetAll: () => void
 }
 
-const RULES_UNJUDGED = '설정 규칙을 판정하지 못했습니다.'
+const RULES_UNJUDGED ='설정 규칙을 판정하지 못했습니다.'
 
 /** 도움말에서 글로 갔다가 돌아올 자리. 이 화면의 경로와 이름이다(013 term-help-ui §3). */
 const RETURN_TO: LearningReturnState = { path: '/strategy', label: '전략 선택' }
@@ -61,14 +61,11 @@ export function DetailSettingsPanel({
   const [open, setOpen] = useState(false)
   const bodyId = useId()
 
-  let violations: ValidationRule[] = []
-  let rulesUnjudged = false
-  try {
-    violations = evaluateRules(strategy.validationRules, values, { UNIVERSE_SIZE: universeSize })
-  } catch {
-    // 등록표가 규칙 문법을 어겼다. 통과로 접지 않고 판정하지 못했다고 알린다.
-    rulesUnjudged = true
-  }
+  // 등록표가 규칙 문법을 어겼으면 통과로 접지 않고 판정하지 못했다고 알린다. 페이지가 '분석하기'를
+  // 막을 때도 같은 함수를 쓴다.
+  const { violations, unjudged: rulesUnjudged } = checkRules(strategy.validationRules, values, {
+    UNIVERSE_SIZE: universeSize,
+  })
 
   return (
     <section className={styles.panel} aria-label="상세 설정">
