@@ -20,7 +20,7 @@
 {
   "run": {"runId": "RUN-000123", "effectiveStart": "2018-04-02", "start": "2018-01-02", "end": "2025-12-30", "randomSeed": 42, "scenario": "FULL_PERIOD", "scenarioParams": null, "scenarioRules": null},
   "universe": {"mappingVersion": "SECTOR-ETF-2026-09", "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "targetWeight": "0.4000"}]},
-  "marketData": {"datasetId": "KRX_DAILY_V1", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
+  "marketData": {"datasetId": "KRX_DAILY_20260915", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
   "allocation": {"strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "rules": {"lookbackDays": 63, "zeroVolatility": "EXCLUDE_THEN_ALLOCATE", "weightCap": "1.0000", "investedFraction": "1.0000"}, "parameters": {"rebalance": "MONTH_END"}},
   "portfolio": {"initialCash": "10000000.00", "currency": "KRW", "integerLots": true, "shortSelling": false, "leverage": "1.0"},
   "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "PROVISIONAL-DEMO-1", "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0", "provisional": true}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},

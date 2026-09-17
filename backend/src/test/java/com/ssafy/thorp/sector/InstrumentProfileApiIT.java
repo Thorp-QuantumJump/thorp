@@ -120,10 +120,19 @@ class InstrumentProfileApiIT extends PostgresTestSupport {
                 MAP_VERSION);
         // 자료 버전은 대응표 버전을 참조하므로 대응표 버전 행은 지우지 않고 닫아 둔다. 트리거가
         // dataset_version의 DELETE를 막아 FK 때문에 지울 수 없기 때문이다.
+        // 자기 버전만이 아니라 **열려 있는 모든 버전**을 닫는다. 공통 준비 단계가 심는 씨앗도 하나를
+        // 열어 두는데, 열린 버전은 부분 UNIQUE 인덱스가 하나로 강제하므로 남겨 두면 이 검사가 자기
+        // 대응표를 열지 못한다.
         jdbcTemplate.update(
-                "UPDATE sector_etf_map_version SET effective_to = TIMESTAMPTZ '2026-09-30 00:00:00+09'"
-                        + " WHERE version = ? AND effective_to IS NULL",
-                MAP_VERSION);
+                "UPDATE sector_etf_map_version"
+                        + " SET effective_to = effective_from + INTERVAL '1 second'"
+                        + " WHERE effective_to IS NULL");
+        // 씨앗의 대응표 항목도 같은 섹터를 참조한다. 남기면 섹터를 지울 때 외래키에 걸린다.
+        jdbcTemplate.update(
+                "DELETE FROM sector_etf_map_entry WHERE sector_id IN"
+                        + " (SELECT id FROM sector WHERE code IN (?, ?))",
+                SEMICONDUCTOR,
+                BANK);
         jdbcTemplate.update("DELETE FROM sector WHERE code IN (?, ?)", SEMICONDUCTOR, BANK);
     }
 
@@ -164,7 +173,10 @@ class InstrumentProfileApiIT extends PostgresTestSupport {
                 INSERT INTO representative_etf
                     (instrument_id, name, listed_on, benchmark_index, manager)
                 VALUES (?, ?, DATE '2006-06-27', ?, '삼성자산운용')
-                ON CONFLICT (instrument_id) DO UPDATE SET name = EXCLUDED.name
+                ON CONFLICT (instrument_id) DO UPDATE
+                    SET name = EXCLUDED.name,
+                        listed_on = EXCLUDED.listed_on,
+                        benchmark_index = EXCLUDED.benchmark_index
                 RETURNING id
                 """,
                 Long.class,

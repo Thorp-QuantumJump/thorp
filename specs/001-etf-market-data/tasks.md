@@ -272,9 +272,11 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - 계약은 "워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다
   - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다
   - **001 혼자 못 고친다.** `evaluation_start`는 004가 `run.effectiveStart`·`evaluation.warmupTradingDays` 우선순위로 설계한 것이라, 호출을 바꾸면 모든 백테스트의 `evaluationStart`와 지표가 움직이고 004의 재현 픽스처가 함께 깨진다. 두 계약 중 어느 쪽을 기준으로 삼을지 팀이 정해야 한다
-- [ ] T019 [BE] `datasetId` 값 규칙을 저장된 자료 버전에서 읽는다 per research.md 결정 4 (contradicts)
+- [x] T019 [BE] `datasetId` 값 규칙을 저장된 자료 버전에서 읽는다 per research.md 결정 4 (contradicts)
   - `ExecutionPolicy.java:43`과 `docs/specs/backtest-messaging/`의 픽스처가 아직 `KRX_DAILY_V1`이다. 규칙은 `KRX_DAILY_{YYYYMMDD}`다
   - T011이 적어 둔 대로 **004 연동에서 푼다.** 상수에 날짜를 박으면 내일부터 거짓말이 되고, 올바른 해결은 백엔드가 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. 값 규칙 자체는 `dataset_version.build_dataset_id`가 이미 세우고 검증한다
+  - **2026-09-17 완료 (S15P21E205-203).** 시장 메타데이터 구현을 픽스처 상수에서 DB 조회로 바꿨다. 포트는 그대로 두고 구현체만 갈아끼웠으므로 부르는 쪽(접수·기간 산출·자동 탐색)은 바뀌지 않는다. **자료 버전·대응표 버전·종목 상장일·거래일 달력 넷을 함께 옮겼다** — 하나만 옮기면 결과에 찍힌 딱지는 실제 자료를 가리키는데 접수 검사는 그 자료에 없는 종목을 통과시킨다. 옛 자리 표시 `KRX_DAILY_V1`을 걷어내고 `datasetId`와 `dataVersion`에 같은 값을 싣는다(결정 4가 둘을 같은 것으로 정했다). 픽스처 구현은 지우지 않고 검사 소스로 옮겼다 — 단위 검사는 매번 같은 답을 요구하므로 결정적인 대역이 필요하다. **T030·T033·T036도 같은 변경으로 닫혔다.**
+  - **함께 정한 것: 자료 버전 이름에 판 번호를 더했다.** 같은 마감일의 자료를 내용만 바꿔 다시 발행할 수 없던 것을 풀었다. 규칙과 까닭은 research.md 결정 4의 2026-09-17 보완이다
 - [ ] T020 [DE] 대조 표본에 가격과 지수를 더한다 per FR-016·SC-002 (partial)
   - FR-016은 "대표 ETF**와 지수**의 조회값"을, SC-002는 "**가격**·분배금·분할·상장일"을 공시와 대조하라고 한다. 지금 `build_queried_values`는 `listed_on`·`amount`·`pay_date`·`ex_date`만 채우고, 자기 docstring이 "여기서는 가격을 채우지 않고, 가격까지 대조하려면 부르는 쪽이 그 항목을 더한다"고 적어 두었는데 `reconcile.py`가 더하지 않는다
   - 지수 표본은 아예 없다. `build_samples`는 `ListingWindow`와 `CorporateAction`만 받는다
@@ -331,7 +333,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - **⑵의 `DATA_INSUFFICIENT` 회귀를 막는 것은 max 산식이 아니라 읽기 쪽 두 가지다.** 처음 고쳤을 때는 산식만 맞추고 `MarketDataProvider`에 요청 시작일을 앵커로 넘겨, 자료 맨 앞 근처를 요청한 실행이 **읽기 단계에서** 같은 회귀로 죽었다(`run.start=자료 첫날, warmup=5`도 죽었다). 둘을 함께 고쳤다 — ⑴ 앵커를 요청 첫날이 아니라 **평가가 실제로 시작될 날**(`scenarioParams.startDate` → `run.effectiveStart` → `run.start`)로 바꾸고, ⑵ 공급자가 앞이 모자라면 거절하지 않고 **있는 만큼** 읽게 했다. **읽기는 관대하게, 평가 시작일 판정은 엄격하게** — 되밀기는 `evaluation_start` 한 곳이 맡는다. 상장 전 구간을 지어내지 않는다는 계약(FR-005·SC-003)은 `_check_window`·`_check_prices`가 그대로 지킨다
   - **`effectiveStart`가 키에 없어 옛 결과가 재사용된다.** 동일 버전 키 입력(`start`·`end`·`warmupTradingDays`)은 하나도 안 바뀌는데 결과 숫자가 움직인다. 그래서 키에 들어가는 `thorp.backtest.engine-version`을 `worker 2.0.0 → 2.1.0`으로, 결과 `versions.worker`가 싣는 워커 `__version__`을 `0.1.1 → 0.2.0`으로 올렸다. 계산 규칙이 바뀌면 이 둘을 올린다
   - 004 재현 픽스처는 바뀌지 않았다. `EngineInputAssembler`가 저장된 계획값을 읽을 뿐 이 계산기를 부르지 않는다
-- [ ] T030 [BE] 자료 버전을 접수 시점에 정해 실행에 고정하고 고르는 키와 기록을 하나로 만든다 per research.md 결정 4·FR-013·SC-004 (contradicts)
+- [x] T030 [BE] 자료 버전을 접수 시점에 정해 실행에 고정하고 고르는 키와 기록을 하나로 만든다 per research.md 결정 4·FR-013·SC-004 (contradicts)
   - **`marketData.datasetId`는 지금 아무도 읽지 않는다.** `engine_runner.py`가 공급자에 넘기는 것은 `request.market_data.data_version`이고, 그 값은 `FixtureMarketMetadataAdapter`의 고정값이다. 그래서 기록과 선택이 서로 다른 것을 가리킨다
   - T019 시도에서 실측으로 드러난 곁가지 셋이 함께 풀려야 한다
     - **쓸 수 있는 자료 묶음이 없을 때 접수가 막히지 않는다.** 조립이 던진 예외를 `BacktestJobDispatcher.send`가 잡아 로그만 남기므로 API는 202를 돌려주고 실행은 `QUEUED`에 영원히 남는다. 오래된 `QUEUED`를 실패로 닫는 장치가 없다
@@ -354,7 +356,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
   - 덧붙임이 "`YFinanceDataProvider`는 `worker/scripts/yfinance_provider.py`로 옮겼고"라고 하는데 **그 파일은 없다.** 004 T006에서 삭제했다
   - 같은 덧붙임의 "001 담당자 확인 필요"가 아직 달려 있다. 이제 확인되었다
   - 42행이 워밍업 방식을 없어진 클래스 기준으로 설명한다. T018이 바꾼 실제 동작과 맞춘다
-- [ ] T033 [BE] 대조 생성기와 워커 픽스처의 자료 버전 이름을 규칙에 맞춘다 per research.md 결정 4 (partial)
+- [x] T033 [BE] 대조 생성기와 워커 픽스처의 자료 버전 이름을 규칙에 맞춘다 per research.md 결정 4 (partial)
   - `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`가 아직 `KRX_DAILY_V1`을 박아 넣고, 그 산출물 `worker/tests/fixtures/manual_reconciliation.json`에 통째로 들어가 있다
   - 생성기만 고치면 산출물과 갈라진다. **둘을 함께 고치고 재생성해 검증할 수 있는 작업에서 닫는다**
   - 그 자리의 `dataVersion`이 `FIXTURE-three_etf_24m`이라 정직한 값이 KRX 날짜가 아니라 픽스처 식별자일 수 있다. T030과 함께 정하는 편이 낫다
@@ -363,7 +365,7 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
 - [X] T035 [DOCS] tasks.md가 세는 quickstart 시나리오 수를 8로 맞춘다 per quickstart.md (partial)
   - T022가 시나리오를 하나 더해 `quickstart.md`에 여덟 개가 있는데, 이 문서 3행의 Input 줄과 T016의 첫 항목이 아직 "시나리오 1~7"이다
   - **T016을 적힌 대로 수행하면 새 시나리오가 검증 기록에서 빠진다.** T016 착수 전에 고쳐야 한다
-- [ ] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)
+- [x] T036 [BE] engine-input-target-risk.json의 dataVersion 값 규칙을 정한다 per research.md 결정 4 (contradicts)
   - `"KRX-2026-09-09"`는 `KRX_DAILY_{YYYYMMDD}`도 아니고 픽스처 식별자도 아니다. 어느 규칙에도 맞지 않는다
   - T030이 두 칸의 뜻을 정한 뒤 그 규칙에 맞춘다
 
