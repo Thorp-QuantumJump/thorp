@@ -160,11 +160,11 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend — 그래프
 
-- [ ] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: "004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)"
+- [X] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: "004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)"
 - [ ] T041 [US2] (FE) `frontend/src/components/result/EquityChart.tsx`(plan의 `ComparisonChart`) — `frontend/src/components/charts/line-chart.tsx`의 `LineChart`·`Line`으로 세로축 원화 자산가치(사용자가 입력한 금액에서 출발), 기준 실선·비교 대상 파선(`Line`의 `dashArray`), 시작 금액 수준의 기준선(`Grid`의 `highlightRow*`). **점 수를 줄이지 않는다** — `decimate-time-series.ts`를 import하지 않는다(R-08, FR-001). 두 계열의 날짜 축을 병합한다. `equity`가 없는 날은 선을 끊어 빈 채로 두고 앞뒤 값을 잇거나 보간하지 않는다(spec Edge Case, 원칙 VI. `Line`에 끊는 수단이 없으면 T042와 같은 한 곳에서 최소로 더한다). `role="img"`와 대안 텍스트(세 숫자와 비교 대상 유무를 문장으로, FR-022)
 - [ ] T042 [US2] (FE) `frontend/src/components/result/DrawdownShade.tsx` — 고점~저점 구간 음영: 색 채움과 **상단 점선 경계**를 함께 그려 회색조에서도 경계가 보인다(R-09). `LineChart`의 자식으로 x 스케일을 읽어 `<rect>`로 그린다. 자식이 스케일을 읽을 수단이 없으면 `frontend/src/components/charts/line-chart.tsx`에 자식용 스케일 컨텍스트를 최소로 추가한다(차트 시스템 변경은 이 한 곳으로 제한하고 MR 본문에 적는다). 비교 대상의 음영은 빗금 패턴으로 기준과 구분한다
 - [ ] T043 [US2] (FE) `frontend/src/components/result/SeriesEndLabel.tsx` — 곡선 오른쪽 끝에 직접 붙는 이름표(기준·비교 대상의 전략 이름). 두 이름표가 겹치면 위아래로 민다. 범례만으로 구분하지 않는다(SC-010). 차트 시스템에는 이름표 컴포넌트가 없어 새로 만든다(`line-series-terminal-marker.tsx`는 점만 그린다)
-- [ ] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다
+- [ ] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다. 구간은 `ResultPage`가 이미 계산해 둔 `lossWindow`를 쓰고, '손실이 커진 때 보기'가 열려 있으면(`lossView.open`) 그 구간을 그래프에서 강조한다(FR-010. B07이 보기만 만들고 강조는 그래프를 그리는 이 태스크로 넘겼다)
 
 ### Frontend — 비교 대상 선택과 실행 요청
 
@@ -181,7 +181,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend 테스트
 
-- [ ] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다
+- [X] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다
 - [ ] T056 [US2] (FE 테스트) `frontend/src/components/result/EquityChart.test.tsx` — 두 계열이면 `stroke-dasharray`가 있는 경로와 이름표 텍스트 둘이 DOM에 있다(SC-010의 자동 확인 부분, R-09); 음영 `<rect>`와 점선 경계가 있고 구간이 `null`이면 없다(quickstart 2); 입력 점 수와 렌더 점 수가 같다(축소 없음); `role="img"` 대안 텍스트에 세 숫자; 기준만 있으면 파선이 없다; `equity`가 빠진 날이 있으면 경로가 그 자리에서 끊긴다(보간 없음)
 - [ ] T057 [US2] (FE 테스트) `frontend/src/components/result/compareQuery.test.ts` — 파싱·조립 왕복, 형식 오류 무시, `searchId` 보존, 비교 해제 시 기준 주소만 남음
 - [ ] T058 [US2] (FE 테스트) `frontend/src/components/result/CompareTargetPicker.test.tsx` — 워밍업이 긴 전략에만 "짧아집니다" 문구(R-13); `selectable: false`는 이유와 함께 비활성; 키보드로 선택; 등록표 실패 시 목록 대신 사유
@@ -201,20 +201,30 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend
 
-- [ ] T062 [US3] (FE) `frontend/src/api/sectors.ts`에 `fetchInstrumentProfile(code, signal?)`(`GET /sectors/{code}/instrument-profile`, 계약 `specs/001-etf-market-data/contracts/sector-api.md`)와 대응 타입을 더한다. 001 소유 파일이라 리뷰어에 001 담당을 지정한다(착수 전에 알아둘 것 ④)
-- [ ] T063 [US3] (FE) `frontend/src/components/instrument/InstrumentProfileDisclosure.tsx` — 001 대표 상품 정보를 접힌 항목으로 펼치는 **공용** 컴포넌트(R-10): 구성종목 중복·대표 ETF 구성·출처·한계 문구는 응답 문자열을 그대로 보이고 005가 다시 쓰지 않는다(FR-007). 머리 주석에 "001의 화면도 이 컴포넌트를 쓴다. 문구의 소유자는 001이다"
-- [ ] T064 [US3] (FE) `frontend/src/components/result/DetailPanel.tsx` — '자세히 보기' 버튼으로 결과 근처에서 여는 패널(주소 변경 없음, SC-006). 열 때 `/weights`·`/exceptions`를 받는다(첫 화면에서는 부르지 않는다, SC-001). 항목: 회복 기간·회전율(`summary.analytics`, 값이 없으면 계산 제한 표시), 상관관계·위험 기여·손실 기여("제공되지 않음" — 004가 노출하기 전. 추정 기간·산정법 자리를 함께 둔다), 비용 가정·비교 규칙(`config` + `versions`), 목표·실제 비중(`weightsSource`로 사용자 입력과 규칙 계산을 구분, FR-014), 계산 제한 항목(`exceptions`의 `kind`·`rule`을 그대로. 0·임의 값 없음, FR-009), 섹터 후보 집합 **전체**의 대표 ETF별 `InstrumentProfileDisclosure`(실제 보유 여부와 무관, 접힘 기본, 연 것만 조회). 키보드로 열고 닫으며 닫으면 초점이 버튼으로 돌아온다(FR-022)
-- [ ] T065 [US3] (FE) `frontend/src/components/result/TradeHistory.tsx` — 전체 거래 내역의 페이지 조회(`fetchResultTrades`, 한 번에 받는 건수는 `constants.ts`의 `TRADES_PAGE_SIZE` 한 곳, R-11), 종목·기간·상태 필터를 서버 질의로 넘긴다(Edge Case "기간·종목으로 좁혀"). 패널 안의 '거래 내역'을 열 때만 부른다. 첫 화면에 나열하지 않는다
-- [ ] T066 [US3] (FE) '손실이 커진 때 보기' `frontend/src/components/result/LossWindowView.tsx` — T040의 구간 **하나**를 그래프에서 강조하고(FR-010, 임계값 없음) 그 구간의 거래(`from`·`to` 질의), 저점일 보유(`/positions?date=troughDate`), 거래별 비용 열을 보인다. 구간이 `null`이면 버튼을 비활성하고 이유("최대 하락 구간을 확인할 수 없습니다")를 적는다. 구간 합계는 004가 주는 값이 없으므로 내지 않는다(원칙 VI)
-- [ ] T067 [US3] (FE) `frontend/src/components/result/HoldingDifference.tsx` — 비교 대상이 READY이고 두 결과의 `/weights` 실제 보유 섹터 집합이 다르면 상세에 "기준에 없던 섹터·빠진 섹터"(선정 효과)와 공통 섹터의 비중을 나란히(배분 효과) 보인다(FR-008). 새 숫자를 계산하지 않고 두 결과의 값을 나란히 둔다
-- [ ] T068 [US3] (FE) '다른 조건으로 비교' `frontend/src/components/result/prefillStrategySettings.ts` — 기준 `config`를 002의 `writeStoredSelection(SectorSelectionSnapshot)`(`frontend/src/diagnosis/selectionStorage.ts`)과 003의 `StoredStrategySettings`(`frontend/src/hooks/useStrategySettings.ts`의 `STRATEGY_SETTINGS_STORAGE_KEY`·`STRATEGY_SETTINGS_PAYLOAD_VERSION`)로 저장한 뒤 `/strategy`로 이동한다(FR-010). 003 모듈에 쓰기 함수가 없으므로 `writeStoredStrategySettings`를 그 파일에 더한다(003 소유, 리뷰어 지정). 006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019). 값을 몰래 바꾸지 않는다 — 등록표 범위 밖 값의 처리는 003 화면(`reconcileStoredSettings`)이 한다
+- [X] T062 [US3] (FE) `frontend/src/api/sectors.ts`에 `fetchInstrumentProfile(code, signal?)`(`GET /sectors/{code}/instrument-profile`, 계약 `specs/001-etf-market-data/contracts/sector-api.md`)와 대응 타입을 더한다. 001 소유 파일이라 리뷰어에 001 담당을 지정한다(착수 전에 알아둘 것 ④)
+- [X] T063 [US3] (FE) `frontend/src/components/instrument/InstrumentProfileDisclosure.tsx` — 001 대표 상품 정보를 접힌 항목으로 펼치는 **공용** 컴포넌트(R-10): 구성종목 중복·대표 ETF 구성·출처·한계 문구는 응답 문자열을 그대로 보이고 005가 다시 쓰지 않는다(FR-007). 머리 주석에 "001의 화면도 이 컴포넌트를 쓴다. 문구의 소유자는 001이다"
+- [X] T064 [US3] (FE) `frontend/src/components/result/DetailPanel.tsx` — '자세히 보기' 버튼으로 결과 근처에서 여는 패널(주소 변경 없음, SC-006). 열 때 `/weights`·`/exceptions`를 받는다(첫 화면에서는 부르지 않는다, SC-001). 항목: 회복 기간·회전율(`summary.analytics`, 값이 없으면 계산 제한 표시), 상관관계·위험 기여·손실 기여("제공되지 않음" — 004가 노출하기 전. 추정 기간·산정법 자리를 함께 둔다), 비용 가정·비교 규칙(`config` + `versions`), 목표·실제 비중(`weightsSource`로 사용자 입력과 규칙 계산을 구분, FR-014), 계산 제한 항목(`exceptions`의 `kind`·`rule`을 그대로. 0·임의 값 없음, FR-009), 섹터 후보 집합 **전체**의 대표 ETF별 `InstrumentProfileDisclosure`(실제 보유 여부와 무관, 접힘 기본, 연 것만 조회). 키보드로 열고 닫으며 닫으면 초점이 버튼으로 돌아온다(FR-022)
+- [X] T065 [US3] (FE) `frontend/src/components/result/TradeHistory.tsx` — 전체 거래 내역의 페이지 조회(`fetchResultTrades`, 한 번에 받는 건수는 `constants.ts`의 `TRADES_PAGE_SIZE` 한 곳, R-11), 종목·기간·상태 필터를 서버 질의로 넘긴다(Edge Case "기간·종목으로 좁혀"). 패널 안의 '거래 내역'을 열 때만 부른다. 첫 화면에 나열하지 않는다
+- [X] T066 [US3] (FE) '손실이 커진 때 보기' `frontend/src/components/result/LossWindowView.tsx` — T040의 구간 **하나**를 그래프에서 강조하고(FR-010, 임계값 없음) 그 구간의 거래(`from`·`to` 질의), 저점일 보유(`/positions?date=troughDate`), 거래별 비용 열을 보인다. 구간이 `null`이면 버튼을 비활성하고 이유("최대 하락 구간을 확인할 수 없습니다")를 적는다. 구간 합계는 004가 주는 값이 없으므로 내지 않는다(원칙 VI)
+- [X] T067 [US3] (FE) `frontend/src/components/result/HoldingDifference.tsx` — 비교 대상이 READY이고 두 결과의 `/weights` 실제 보유 섹터 집합이 다르면 상세에 "기준에 없던 섹터·빠진 섹터"(선정 효과)와 공통 섹터의 비중을 나란히(배분 효과) 보인다(FR-008). 새 숫자를 계산하지 않고 두 결과의 값을 나란히 둔다
+- [X] T068 [US3] (FE) '다른 조건으로 비교' `frontend/src/components/result/prefillStrategySettings.ts` — 기준 `config`를 002의 `writeStoredSelection(SectorSelectionSnapshot)`(`frontend/src/diagnosis/selectionStorage.ts`)과 003의 `StoredStrategySettings`(`frontend/src/hooks/useStrategySettings.ts`의 `STRATEGY_SETTINGS_STORAGE_KEY`·`STRATEGY_SETTINGS_PAYLOAD_VERSION`)로 저장한 뒤 `/strategy`로 이동한다(FR-010). 003 모듈에 쓰기 함수가 없으므로 `writeStoredStrategySettings`를 그 파일에 더한다(003 소유, 리뷰어 지정). 006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019). 값을 몰래 바꾸지 않는다 — 등록표 범위 밖 값의 처리는 003 화면(`reconcileStoredSettings`)이 한다
 
 ### Frontend 테스트
 
-- [ ] T069 [US3] (FE 테스트) `frontend/src/components/instrument/InstrumentProfileDisclosure.test.tsx` — 응답 문자열이 그대로 보인다; 접힘 기본; 여러 ETF가 각각 접힌다; 조회 실패 시 즉석 문장 없이 '불러오지 못했습니다'
-- [ ] T070 [US3] (FE 테스트) `frontend/src/components/result/DetailPanel.test.tsx` — 열기 전 `fetchResultWeights`·`fetchResultExceptions` 0회, 연 뒤 각 1회(SC-001); 열어도 `location`이 같다(SC-006, quickstart 6); FR-007 항목 10종의 제목이 있다; `analytics`가 없으면 '계산 제한'이 있고 텍스트 '0'이 없다(FR-009); 미노출 3항목이 '제공되지 않음'; 대표 상품 정보가 패널 안에 있고 이동이 없다; 키보드로 닫으면 초점이 버튼으로 돌아온다
-- [ ] T071 [US3] (FE 테스트) `frontend/src/components/result/TradeHistory.test.tsx`와 `LossWindowView.test.tsx` — 페이지·필터가 질의 인자로 넘어간다; 구간 보기의 `from`·`to`가 고점·저점 날짜이고 `fetchResultPositions`가 저점일로 불린다; 구간이 `null`이면 비활성과 이유; 첫 렌더에서 거래 조회 0회
-- [ ] T072 [US3] (FE 테스트) `frontend/src/components/result/prefillStrategySettings.test.ts` — 저장 키·페이로드 버전·값이 `config`와 같다; 이동 경로가 `/strategy`; 기준 결과의 값을 바꾸지 않는다
+- [X] T069 [US3] (FE 테스트) `frontend/src/components/instrument/InstrumentProfileDisclosure.test.tsx` — 응답 문자열이 그대로 보인다; 접힘 기본; 여러 ETF가 각각 접힌다; 조회 실패 시 즉석 문장 없이 '불러오지 못했습니다'
+- [X] T070 [US3] (FE 테스트) `frontend/src/components/result/DetailPanel.test.tsx` — 열기 전 `fetchResultWeights`·`fetchResultExceptions` 0회, 연 뒤 각 1회(SC-001); 열어도 `location`이 같다(SC-006, quickstart 6); FR-007 항목 10종의 제목이 있다; `analytics`가 없으면 '계산 제한'이 있고 텍스트 '0'이 없다(FR-009); 미노출 3항목이 '제공되지 않음'; 대표 상품 정보가 패널 안에 있고 이동이 없다; 키보드로 닫으면 초점이 버튼으로 돌아온다
+- [X] T071 [US3] (FE 테스트) `frontend/src/components/result/TradeHistory.test.tsx`와 `LossWindowView.test.tsx` — 페이지·필터가 질의 인자로 넘어간다; 구간 보기의 `from`·`to`가 고점·저점 날짜이고 `fetchResultPositions`가 저점일로 불린다; 구간이 `null`이면 비활성과 이유; 첫 렌더에서 거래 조회 0회
+- [X] T072 [US3] (FE 테스트) `frontend/src/components/result/prefillStrategySettings.test.ts` — 저장 키·페이로드 버전·값이 `config`와 같다; 이동 경로가 `/strategy`; 기준 결과의 값을 바꾸지 않는다
+
+**B07 구현에서 태스크와 달라진 것** ([S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311)):
+
+- **T040·T055를 B07이 만들었다.** T066이 같은 구간을 써야 하는데 B04가 시작 전이었다. 착수 전에 알아둘 것 ③과 같은 방식(먼저 병합되는 쪽이 만든다)이며, B04는 이 함수를 재사용하고 T041~T044·T056만 한다.
+- **T062는 할 일이 없었다.** 001이 `fetchInstrumentProfile`을 이미 `frontend/src/api/sectors.ts`에 만들었다.
+- **T063은 새 공용 컴포넌트를 만들지 않았다.** 001의 `components/diagnosis/InstrumentProfilePanel.tsx`가 이미 R-10이 말한 공용 패널이라, 005는 섹터마다 접는 틀만 `components/result/InstrumentProfileDisclosure.tsx`에 두고 그 패널을 쓴다(`components/instrument/`는 만들지 않았다). 섹터 이름과 대표 ETF를 알려고 패널을 열 때 `GET /sectors`를 부르며, **지금 대응표의 대표 ETF가 결과가 쓴 종목과 다르면 펼치지 않는다** — 상품 정보 조회가 섹터 코드로 지금의 ETF를 돌려주기 때문이다.
+- **T066의 버튼 비활성·이유는 `ResultPage`에 있다.** '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'를 한 줄에 두려고 여는 버튼은 페이지가, 보기는 컴포넌트가 가진다(`hooks/useDisclosure.ts`). 그래프 위 강조는 T044로 넘겼다.
+- **T067은 `DetailPanel`의 `compare` 인자로 연결한다.** 비교 대상이 아직 없어(B05) 지금은 넘기는 곳이 없다. B05 T050이 대상이 READY일 때 `{token, name, items}`를 넘기면 보인다.
+- **T068은 누를 때 등록표를 받는다.** 결과에 최소 평가 기간이 없어 003이 처음 열릴 때와 같은 등록표 기본값을 넣으려면 등록표가 필요하다. 003의 `writeStoredSettings`는 보관 성공 여부를 돌려주는 `writeStoredStrategySettings`로 공개했다(003 소유, 리뷰어 지정). 규칙이 비중을 계산한 결과는 002가 손대지 않은 선택처럼 `distributeEven`으로 넘긴다.
+- **B07이 더한 파일**: `hooks/useResource.ts`(열 때 한 번 받는 자원), `hooks/useDisclosure.ts`(여닫기와 초점 복귀), `hooks/useSectorCatalogState.ts`(섹터 목록), `components/result/{sectorLabels.ts,OtherConditionsButton.tsx,resultDetail.module.css}`. `types/result.ts`의 `ResultTradePage`에 빠져 있던 `partial`을 더했다(004 §2 "하위 리소스 다섯 개는 모두 `partial`을 싣는다"). 새 픽스처 넷을 004 예시와 키 집합으로 대조하다 드러났다.
 
 **Checkpoint**: 상세 근거가 결과 근처에서 열리고, 계산 제한은 제한으로, 미노출은 미제공으로 보인다.
 
@@ -304,10 +314,10 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 | B01 · [S15P21E205-291](https://ssafy.atlassian.net/browse/S15P21E205-291) `feat(be)/291-public-result-token` | `[BE] 비로그인 요청을 받고 결과마다 공개 토큰을 발급한다` | T004, T008~T018 | 12 | `be` · `feat` | 없음 |
 | B02 · [S15P21E205-318](https://ssafy.atlassian.net/browse/S15P21E205-318) `feat(be)/318-public-result-read` | `[BE] 공개 토큰으로 결과를 열고 만료되면 닫는다` | T001, T002, T003, T019~T026 | 11 | `be` · `feat` | B01 |
 | B03 · 미발급 | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |
-| B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 | 7 | `fe` · `feat` | B03 |
+| B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |
 | B05 · 미발급 | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |
 | B06 · 미발급 | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |
-| B07 · 미발급 | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |
+| B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |
 | B08 · 미발급 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |
 | B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |
 
