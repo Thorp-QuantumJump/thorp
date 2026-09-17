@@ -27,8 +27,8 @@ from data_pipeline.regime.era import (
     EraPositionCache,
     era_position_for,
     era_positions_for,
-    format_value,
 )
+from data_pipeline.regime.explain import format_value
 from data_pipeline.regime.macro.types import IndicatorEntry
 from data_pipeline.regime.scale import NORMAL_QUARTILE
 
@@ -113,6 +113,12 @@ class TestSentence:
         assert format_value(3.2) == "3.2"
         assert format_value(112.0) == "112"
         assert format_value(-0.25) == "-0.25"
+
+    def test_지수_표기가_문장에_실리지_않는다(self) -> None:
+        position = era_position_for(indicator(), END_MONTH, series_with(0.00005))
+        assert position is not None
+        assert "e-" not in position.sentence
+        assert "0.00005%" in position.sentence
 
     def test_좋다_나쁘다를_쓰지_않는다(self) -> None:
         for value in (4.0, WINDOW_MEDIAN, 20.0):
@@ -208,16 +214,40 @@ class TestBaselineIndependent:
         assert first is not None and second is not None
         assert first.window_end != second.window_end
 
-    def test_같은_후보월은_한_번만_구한다(self) -> None:
+    def test_같은_지표_같은_후보월은_한_번만_구한다(self) -> None:
         cache = EraPositionCache({indicator().id: series_with(20.0)})
-        first = cache.positions_for([indicator()], END_MONTH)
-        second = cache.positions_for([indicator()], END_MONTH)
+        first = cache.position_for(indicator(), END_MONTH)
+        second = cache.position_for(indicator(), END_MONTH)
         assert first is second, "후보월마다 한 번만 구해 나눠 쓴다(research R3)"
         assert cache.months == (END_MONTH,)
 
+    def test_지표_집합이_달라도_각_지표를_다_돌려준다(self) -> None:
+        """분야 검색이 먼저 채운 캐시를 종합 검색이 그대로 받으면 안 된다."""
+        other = IndicatorEntry(
+            id="OTHER",
+            name="다른 지표",
+            field_id="FIELD_A",
+            unit="%",
+            transform="LEVEL",
+            display_order=2,
+        )
+        cache = EraPositionCache(
+            {indicator().id: series_with(20.0), other.id: series_with(4.0)}
+        )
+        narrow = cache.positions_for([indicator()], END_MONTH)
+        wide = cache.positions_for([indicator(), other], END_MONTH)
+        assert set(narrow) == {indicator().id}
+        assert set(wide) == {indicator().id, other.id}
+
+    def test_돌려준_결과를_고쳐도_캐시가_상하지_않는다(self) -> None:
+        cache = EraPositionCache({indicator().id: series_with(20.0)})
+        first = cache.positions_for([indicator()], END_MONTH)
+        first.clear()
+        assert set(cache.positions_for([indicator()], END_MONTH)) == {indicator().id}
+
     def test_캐시_키에_기준월이_없다(self) -> None:
-        names = list(inspect.signature(EraPositionCache.positions_for).parameters)
-        assert names == ["self", "indicators", "end_month"]
+        names = list(inspect.signature(EraPositionCache.position_for).parameters)
+        assert names == ["self", "indicator", "end_month"]
 
 
 class TestDoesNotTouchRanking:

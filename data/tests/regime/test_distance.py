@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import date
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from data_pipeline.regime.distance import (
     DistanceModel,
     IndicatorDistance,
     ModelUnavailable,
+    UnknownScaleReasonError,
     build_model,
     months_between,
 )
@@ -33,7 +35,7 @@ from data_pipeline.regime.macro.types import (
     parse_month,
 )
 from data_pipeline.regime.rounding import to_storage_text
-from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT
+from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, ScaleUnavailable
 
 FIXTURE = Path(__file__).parent / "fixtures" / "manual_reconciliation.json"
 
@@ -344,3 +346,62 @@ class TestModelUnavailable:
     def test_등록표에_없는_분야를_요구하면_멈춘다(self) -> None:
         with pytest.raises(LookupError):
             build({"FIELD_A": ["A1"]}, {"A1": ramp(7, 0.5, 1.0)}, field_ids=["FIELD_X"])
+
+    def test_하나라도_모르는_분야가_섞이면_멈춘다(self) -> None:
+        """아는 것만 추려 통과시키면 부른 쪽이 다른 범위의 답을 제 것으로 믿는다."""
+        with pytest.raises(LookupError, match="FIELD_X"):
+            build(
+                {"FIELD_A": ["A1"], "FIELD_B": ["B1"]},
+                {"A1": ramp(7, 0.5, 1.0), "B1": ramp(11, 0.2)},
+                field_ids=["FIELD_A", "FIELD_X"],
+            )
+
+    def test_분야를_하나도_주지_않으면_멈춘다(self) -> None:
+        with pytest.raises(LookupError):
+            build({"FIELD_A": ["A1"]}, {"A1": ramp(7, 0.5, 1.0)}, field_ids=[])
+
+    def test_어휘에_없는_척도_사유는_이름_있는_오류다(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """research R7이 사유를 더할 때 순서 목록을 함께 안 고치면 여기서 잡힌다."""
+
+        def unknown_reason(indicator_id: str, observation_end: date, series: object):
+            return ScaleUnavailable(
+                indicator_id=indicator_id,
+                observation_end=observation_end,
+                reason="SCALE_BELOW_MINIMUM",
+                window_length=120,
+            )
+
+        monkeypatch.setattr("data_pipeline.regime.distance.scale_for", unknown_reason)
+        with pytest.raises(UnknownScaleReasonError, match="SCALE_BELOW_MINIMUM"):
+            build({"FIELD_A": ["A1"]}, {"A1": ramp(7, 0.5, 1.0)})
+
+
+class TestNoiseIsNotDistance:
+    """반올림하면 0인 거리에 기여도를 붙이지 않는다 (research R4, spec Edge Cases)."""
+
+    LAYOUT = {"FIELD_A": ["A1", "A2"], "FIELD_B": ["B1"]}
+
+    def values(self) -> dict[str, list[float | None]]:
+        #: 주기 12라 질의와 후보의 값이 같다. 한 달만 1 ulp 어긋뜨려 '찌꺼기 거리'를 만든다.
+        perturbed = ramp(12, 0.5, 1.0)
+        perturbed[MONTHS - 1] = math.nextafter(perturbed[MONTHS - 1], math.inf)
+        return {"A1": perturbed, "A2": ramp(12, 1.25, 10.0), "B1": ramp(12, 0.2)}
+
+    def test_찌꺼기는_저장값이_0이다(self) -> None:
+        distance = build(self.LAYOUT, self.values()).distance_for(date(2015, 6, 1))
+        assert distance.value == 0.0
+        assert indicator_of(distance, "A1").e == 0.0
+
+    def test_찌꺼기_합에_기여도를_붙이지_않는다(self) -> None:
+        distance = build(self.LAYOUT, self.values()).distance_for(date(2015, 6, 1))
+        assert distance.contribution is None
+        assert indicator_of(distance, "A1").distance_share is None
+
+    def test_찌꺼기가_아니면_기여도가_나온다(self) -> None:
+        distance = build(
+            {"FIELD_A": ["A1", "A2"], "FIELD_B": ["B1"]},
+            {"A1": ramp(7, 0.5, 1.0), "A2": ramp(9, 1.25, 10.0), "B1": ramp(11, 0.2)},
+        ).distance_for(date(2015, 6, 1))
+        assert distance.contribution is not None
