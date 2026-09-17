@@ -53,7 +53,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Purpose**: 패키지 뼈대와 접속 정보를 준비한다
 
-- [ ] T001 `data/src/data_pipeline/macro/` 패키지를 만들고 `__init__.py`와 하위 모듈 자리(`sources/`, `transform/`, `publish/`)를 둔다
+- [ ] T001 `data/src/data_pipeline/macro/` 패키지를 만들고 `__init__.py`와 하위 모듈 자리(`sources/`, `transform/`, `publish.py`)를 둔다
 - [ ] T002 `data/.env.example`에 `ECOS_API_KEY`·`KOSIS_API_KEY`·`DATA_GO_KR_SERVICE_KEY` 이름을 추가한다. 키 값은 적지 않는다
 - [ ] T003 [P] `data/src/data_pipeline/macro/config.py`에 원천별 기본 URL·타임아웃·재시도 설정을 환경변수에서 읽는 구조로 둔다. 재시도 출발값은 최대 3회, 간격 1초에서 2배씩(1·2·4초)이고 원천별로 덮어쓸 수 있다. 실측 뒤 조정한다
 - [ ] T004 [P] `data/tests/fixtures/macro/`에 원천별 응답 표본을 둘 자리를 만들고 실제 키가 없어도 테스트가 돌도록 한다
