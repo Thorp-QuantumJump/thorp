@@ -228,25 +228,54 @@ LABOR_CLUSTER_VALUES: Final[dict[str, tuple[float, ...]]] = {
 }
 
 
-def _apply_shapes(spec: IndicatorSpec, values: dict[int, float]) -> dict[int, float]:
+def _require_in_range(spec: IndicatorSpec, months: list[int], index: int, label: str) -> int:
+    """모양을 심을 달이 그 지표의 기간 안인지 확인한다.
+
+    **밖이면 조용히 사라진다.** ``build_indicator``가 ``months``만 훑어 배열을 만들므로 기간
+    밖에 쓴 값은 그대로 버려지고, 생성기는 아무 말 없이 끝난다. 그렇게 만들어진 픽스처는
+    모양 하나가 빠진 채로 멀쩡해 보이고, 그 판정 경로는 검증 밖으로 나간다.
+
+    시험이 잡아 줄 것이라고 기대할 수도 없다 — 모양에 따라 다른 모양이 같은 성질을 우연히
+    제공해 통과해 버린다(척도 구멍은 질의 결측이 만든 공백으로도 성립한다). 그래서 사라지는
+    자리에서 바로 멈춘다.
+    """
+    if not months[0] <= index <= months[-1]:
+        raise ValueError(
+            f"{label} 상수가 {spec.id}의 기간"
+            f"({month_label(months[0])}~{month_label(months[-1])}) 밖이다: {month_label(index)}. "
+            "그대로 두면 그 모양이 빠진 픽스처가 조용히 만들어진다"
+        )
+    return index
+
+
+def _apply_shapes(
+    spec: IndicatorSpec, values: dict[int, float], months: list[int]
+) -> dict[int, float]:
     """계약 §4.4의 모양을 심는다. 결측은 키를 지워 만든다 — 값으로 표시하지 않는다."""
     if spec.id == SCALE_HOLE_INDICATOR:
-        values.pop(month_index(SCALE_HOLE_MONTH), None)
+        values.pop(_require_in_range(spec, months, month_index(SCALE_HOLE_MONTH), "모양 2"), None)
 
     if spec.id == QUERY_ONE_MISSING_INDICATOR:
-        values.pop(month_index(QUERY_ONE_MISSING_MONTH), None)
+        values.pop(
+            _require_in_range(spec, months, month_index(QUERY_ONE_MISSING_MONTH), "모양 8"), None
+        )
 
     if spec.id == QUERY_ALL_MISSING_INDICATOR:
         for month in QUERY_ALL_MISSING_MONTHS:
-            values.pop(month_index(month), None)
+            values.pop(_require_in_range(spec, months, month_index(month), "모양 9"), None)
 
     if spec.id == FLAT_INDICATOR:
-        start, end = (month_index(bound) for bound in FLAT_WINDOW)
+        start, end = (
+            _require_in_range(spec, months, month_index(bound), "모양 4") for bound in FLAT_WINDOW
+        )
         for index in range(start, end + 1):
             values[index] = FLAT_VALUE
 
     if spec.id == MAD_ZERO_INDICATOR:
-        start, end = (month_index(bound) for bound in MAD_ZERO_WINDOW)
+        start, end = (
+            _require_in_range(spec, months, month_index(bound), "모양 3")
+            for bound in MAD_ZERO_WINDOW
+        )
         window = list(range(start, end + 1))
         below, equal = 30, 61
         for position, index in enumerate(window):
@@ -260,16 +289,18 @@ def _apply_shapes(spec: IndicatorSpec, values: dict[int, float]) -> dict[int, fl
     if spec.id in LABOR_QUERY_VALUES:
         last = month_index(spec.last_month)
         for offset, value in enumerate(LABOR_QUERY_VALUES[spec.id]):
-            values[last - 2 + offset] = value
+            values[_require_in_range(spec, months, last - 2 + offset, "질의 값")] = value
 
         cluster_start = month_index(CLUSTER_WINDOW[0])
         for offset, value in enumerate(LABOR_CLUSTER_VALUES[spec.id]):
-            values[cluster_start + offset] = value
+            values[_require_in_range(spec, months, cluster_start + offset, "모양 6")] = value
 
         # 모양 7은 마지막에 둔다. 앞의 덮어쓰기가 복사 원본을 바꾸면 동률이 깨진다.
         source_end, target_end = month_index(TIE_SOURCE_END), month_index(TIE_TARGET_END)
         for back in range(3):
-            values[target_end - back] = values[source_end - back]
+            source = _require_in_range(spec, months, source_end - back, "모양 7 원본")
+            target = _require_in_range(spec, months, target_end - back, "모양 7 사본")
+            values[target] = values[source]
 
     return values
 
@@ -301,7 +332,7 @@ def _raw_series(
 
 def build_indicator(spec: IndicatorSpec) -> dict[str, object]:
     months = months_between(spec.first_month, spec.last_month)
-    values = _apply_shapes(spec, _walk(spec, months))
+    values = _apply_shapes(spec, _walk(spec, months), months)
     raw = _raw_series(spec, values, months)
     # 개정 여부를 시험할 자리. 가장 최근 두 달을 개정분으로 둔다 (008 FR-007).
     revised = [month_label(index) for index in months[-2:] if index in values]
