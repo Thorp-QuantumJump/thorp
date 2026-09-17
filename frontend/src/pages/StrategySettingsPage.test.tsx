@@ -93,8 +93,18 @@ function storeSelection(codes: string[] = ['ALPHA', 'BETA', 'GAMMA']) {
   )
 }
 
+/** 004 등록표 흉내. 픽스처의 전략은 모두 등록되어 있고, 시나리오 규칙 행이 섞여 있다. */
+const RULES_VERSION = 'RULES-TEST-1'
 const versionsFixture: AnalysisVersions = {
-  rulesVersion: 'RULES-TEST-1',
+  strategyRules: [
+    ...registryFixture.strategies.map((strategy) => ({
+      strategyId: strategy.strategyId,
+      rulesVersion: RULES_VERSION,
+      status: 'REGISTERED',
+      provisional: true,
+    })),
+    { strategyId: 'TARGET_RISK_OVERLAY', rulesVersion: '1', status: 'REGISTERED', provisional: true },
+  ],
   costProfileVersion: 'PROVISIONAL-DEMO-1',
   costProfileProvisional: true,
   costRates: { commissionBps: 1.5, spreadBps: 5, slippageBps: 2, taxBps: 20 },
@@ -334,7 +344,9 @@ describe('StrategySettingsPage', () => {
     expect(request.executionType).toBe('SINGLE')
     expect(request.strategy.strategyId).toBe(selectableStrategy.strategyId)
     expect(request.strategy.registryVersion).toBe(registryFixture.registryVersion)
-    expect(request.strategy.rulesVersion).toBe(versionsFixture.rulesVersion)
+    expect(request.strategy.rulesVersion).toBe(RULES_VERSION)
+    // 비용 버전은 싣지 않는다. 서버 기본 비용 조건을 쓰고 화면은 그 기본값을 보인다(004 결정).
+    expect(request.conditions.costProfileVersion).toBeNull()
 
     // 등록표의 기본값 그대로다. 사용자는 값을 하나도 입력하지 않았다.
     for (const axis of selectableStrategy.axes) {
@@ -1950,5 +1962,72 @@ describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
 
     await user.click(actionButton('분석하기'))
     expect(requests).toHaveLength(0)
+  })
+})
+
+describe('StrategySettingsPage 규칙 버전(T039, 004 GET /backtests/registry)', () => {
+  function withRulesFor(
+    status: string,
+    extra: AnalysisVersions['strategyRules'] = [],
+  ): AnalysisVersions {
+    return {
+      ...versionsFixture,
+      strategyRules: [
+        ...versionsFixture.strategyRules.filter(
+          (row) => row.strategyId !== selectableStrategy.strategyId,
+        ),
+        { strategyId: selectableStrategy.strategyId, rulesVersion: 'R-2', status, provisional: true },
+        ...extra,
+      ],
+    }
+  }
+
+  const withoutRow: AnalysisVersions = {
+    ...versionsFixture,
+    strategyRules: versionsFixture.strategyRules.filter(
+      (row) => row.strategyId !== selectableStrategy.strategyId,
+    ),
+  }
+
+  it.each([
+    ['계산 규칙이 확정되지 않은 전략', withRulesFor('PENDING_DECISION'), '계산 규칙이 아직 확정되지 않아'],
+    ['등록표에 행이 없는 전략', withoutRow, '계산 규칙 버전을 확인할 수 없어'],
+    [
+      '등록된 행이 둘인 전략',
+      withRulesFor('REGISTERED', [
+        {
+          strategyId: selectableStrategy.strategyId,
+          rulesVersion: 'R-3',
+          status: 'REGISTERED',
+          provisional: true,
+        },
+      ]),
+      '계산 규칙 버전을 확인할 수 없어',
+    ],
+  ])('%s은 버전을 고르지 않고 분석하기를 막는다', async (_, versions, reason) => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({ fetchAnalysisVersions: async () => versions })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(reasonOf(actionButton('분석하기'))).toContain(reason))
+
+    await user.click(actionButton('분석하기'))
+    expect(requests).toHaveLength(0)
+  })
+
+  it('고른 전략의 등록된 버전을 싣는다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({
+      fetchAnalysisVersions: async () => withRulesFor('REGISTERED'),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].strategy.rulesVersion).toBe('R-2')
   })
 })

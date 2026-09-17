@@ -11,8 +11,11 @@ import {
   ANALYSIS_VERSIONS_UNAVAILABLE,
   EVALUATION_WINDOW_UNAVAILABLE,
   BacktestRejectionCode,
+  RULES_PENDING_DECISION,
+  RULES_VERSION_UNAVAILABLE,
   notConnectedSupport,
   readBacktestRejection,
+  resolveRulesVersion,
   type AnalysisSupport,
   type AnalysisVersions,
   type BacktestRejection,
@@ -526,6 +529,12 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       (choice) => Number(choice.value) === minEvaluationYears,
     )?.label ?? String(minEvaluationYears)
 
+  /** 고른 전략의 규칙 버전. 버전을 받지 못했거나 전략을 고르지 않았으면 `null`이다 */
+  const rulesVersion = useMemo(() => {
+    if (versions === 'loading' || versions === null || !settings.selectedStrategy) return null
+    return resolveRulesVersion(versions, settings.selectedStrategy.strategyId)
+  }, [versions, settings.selectedStrategy])
+
   const prepared = useMemo(() => {
     if (
       selection.status !== 'ready' ||
@@ -545,7 +554,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       periodOutOfRange ||
       periodTooShort ||
       versions === 'loading' ||
-      versions === null
+      versions === null ||
+      rulesVersion?.status !== 'registered'
     ) {
       return null
     }
@@ -557,7 +567,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       warmupTradingDays: settings.warmupTradingDays,
       period,
       initialAmount,
-      versions,
+      rulesVersion: rulesVersion.rulesVersion,
     }
   }, [
     selection,
@@ -572,6 +582,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     periodOutOfRange,
     periodTooShort,
     versions,
+    rulesVersion,
   ])
 
   const analyzeBlocker = ((): string | null => {
@@ -594,6 +605,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel)
     if (versions === 'loading') return VERSIONS_LOADING
     if (versions === null) return ANALYSIS_VERSIONS_UNAVAILABLE
+    if (rulesVersion?.status === 'pendingDecision') return RULES_PENDING_DECISION
+    if (rulesVersion?.status !== 'registered') return RULES_VERSION_UNAVAILABLE
     return null
   })()
 
@@ -686,10 +699,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         parameters: prepared.parameters,
         registryVersion: prepared.registryVersion,
         warmupTradingDays: prepared.warmupTradingDays,
-        versions: {
-          rulesVersion: prepared.versions.rulesVersion,
-          costProfileVersion: prepared.versions.costProfileVersion,
-        },
+        // 비용 버전은 싣지 않는다. 서버가 기본 비용 조건을 쓰며, 화면은 그 기본값을 보인다(004 결정).
+        versions: { rulesVersion: prepared.rulesVersion, costProfileVersion: null },
         period: prepared.period,
         initialAmount: prepared.initialAmount,
         scenario: settings.analysisCondition.scenario,
