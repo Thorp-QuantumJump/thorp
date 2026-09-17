@@ -42,7 +42,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             // PostgreSQL 기본 max_connections(100)를 넘겨 "too many clients already"가 난다.
             // 테스트는 단일 스레드라 컨텍스트당 2개로 충분하다.
             "spring.datasource.hikari.maximum-pool-size=2",
-            "spring.datasource.hikari.minimum-idle=0"
+            "spring.datasource.hikari.minimum-idle=0",
+            // 배우기 관리 IT(spec 013 B02)의 관리 계정. 클래스마다 속성을 따로 주면 컨텍스트가 갈라져 공용 컨테이너의
+            // 연결이 모자라므로 여기 한 곳에 둔다. 다른 도메인은 이 값을 읽지 않는다.
+            "thorp.learning.admin-user-ids=7"
         })
 public abstract class PostgresTestSupport {
 

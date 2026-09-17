@@ -305,21 +305,26 @@
   - 결과 기록: 선정 유형, 시점별 선정 섹터·점수, 이력 부족으로 제외된 섹터와 첫 편입 시점, 상한 잔여 현금 비중과 사유(PD-03 ⑤·⑥ 안내 항목). 안내 문구는 "계산에 필요한 과거 가격 이력이 충분하지 않았다"
   - 예외 `kind`(analyze U4): `NO_SELECTION`(조건 통과 섹터 없음 → 전액 현금), `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`, 선정 유형 기록(`RELATIVE`·`ABSOLUTE`·`NONE`). T022가 넓힌 계약 목록에 추가
   - 완료 기준: 네 `selectionMode` × 두 배분 조합이 422 아닌 COMPLETED, `weightsSource=COMPUTED`(FR-026) 단언, 동점·`TOP_PERCENT` 올림·전액 현금·이력 부족 편입 각 단위 테스트, `parameters.maxWeight=40`·topN 2 접수 422, 같은 입력 결과 해시 동일, quickstart S7 개정 반영
-- [ ] T024 [BE] [교차 spec: 003 소유] (발표 전 필수) 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수
-  - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨("변동성이 낮은 섹터에 더 나누기") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음
-  - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인
-  - **화면 판정 규칙 추가(analyze I6)**: 003 등록표의 검증 규칙은 `SECTOR_MOMENTUM`에 `TOP_N_EXCEEDS_UNIVERSE`만 있고 다른 전략은 `maxWeight × UNIVERSE_SIZE < 100`을 쓴다. 그대로면 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다. `SECTOR_MOMENTUM`에 `maxWeight × topN < 100`(`appliesWhen selectionMode=TOP_N`)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent/100) < 100`(`TOP_PERCENT`) 규칙을 같은 버전 인상에 넣어 화면·접수·007 판정을 맞춘다
-  - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, topN 2·상한 40이 화면에서 규칙 위반으로 표시, 계약 테스트 통과
-
-- [ ] T025 [BE] 003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 읽는 `GET /backtests/registry`를 연다 per 003 FR-010·004 FR-028·README §1 "rulesVersion 필수" — Jira `S15P21E205-326`
+- [x] T025 [BE] 003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 읽는 `GET /backtests/registry`를 연다 per 003 FR-010·004 FR-028·README §1 "rulesVersion 필수" — Jira `S15P21E205-326`
   - 배경(2026-09-17): 003 화면(T039 `fetchAnalysisVersions()`)이 `strategy.rulesVersion`(필수)을 읽을 HTTP 경로가 없다. 003 등록표 응답에 싣는 안은 backend/CLAUDE.md "strategy는 backtest를 참조하지 않는다"와 충돌하고, `rulesVersion`을 선택으로 바꾸는 안은 "결과 재현의 기준" 선언과 어긋나며 FR-010이 요구하는 비용 수치·임시 여부 표시도 못 채운다. 004가 조회 API를 여는 것이 유일하게 규칙을 안 깨는 길이다
   - 응답: `{ strategyRules: [{ strategyId, rulesVersion, status, provisional }], defaultCostProfile: { version, provisional, commissionBps, spreadBps, slippageBps, taxBps } }`. `strategyRules`는 **전략당 한 행**(REGISTERED 또는 PENDING_DECISION — PENDING은 화면이 "분석하기"를 막을 수 있게 status 그대로 포함). 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체와 옛 버전 요청 처리는 Phase 10. `TARGET_RISK_OVERLAY`는 시나리오 규칙이지만 같은 표라 그대로 나간다 — 화면은 strategyId로 조인만 한다. 비용 수치는 다른 응답과 같이 문자열 decimal
   - 기존 것만 붙인다: `StrategyRulesService.findAll()`·`CostProfileService.resolve(null)`. 컨트롤러 메서드 하나·응답 record 하나·IT 하나. 로그인 불필요(등록표 조회는 사용자 데이터가 아니고 003 등록표 조회와 같은 성격). `GET /backtests/{backtestId}`와 겹치지 않는다(Spring은 리터럴 경로를 패턴보다 먼저 고른다)
   - 003에 요청할 것: `costProfileVersion`을 비우지 말고 registry에서 받은 `defaultCostProfile.version`을 **명시해서** 보낸다. T021이 기본값을 바꾸면 화면이 본 조건과 적용 조건이 어긋나는 창이 생기기 때문이고, 재현 기준을 요청에 다 싣는 rulesVersion 원칙과 같다
   - 완료 기준: IT가 시드 여섯 행 중 REGISTERED 넷과 `PROVISIONAL-DEMO-1` 기본 비용을 단언, API README §1.11과 `specs/004-backtest-execution/contracts/rest-api.md`에 `GET /backtests/registry` 절 추가(analyze I3), 003 담당자에게 경로·응답 확정 통보
   - 순서: **T021보다 먼저** 머지한다. 기본 비용이 바뀌기 전에 화면이 명시 버전을 보내고 있어야 한다
+  - 구현 시 결정(T025, 2026-09-17, Jira `S15P21E205-326`): ① **규칙 명세(`spec`)는 응답에 싣지 않는다.** 화면이 쓰는 것은 버전 문자열과 고를 수 있는지 여부뿐이고, 명세는 접수 때 워커로 복사되는 실행 입력이라 조회 응답에 두면 계약이 둘로 갈린다 ② **`PENDING_DECISION`을 걸러내지 않는다.** 걸러내면 화면이 '분석하기'를 막을 근거를 잃고 "없는 전략"과 "아직 못 고르는 전략"이 구분되지 않는다 ③ `TARGET_RISK_OVERLAY` 행도 그대로 나간다 — 전략이 아니라 시나리오 오버레이지만 같은 표이고, 화면은 `strategyId`로 조인하므로 자연히 빠진다. 거르는 코드를 두면 004가 003 화면의 조인 방식을 가정하게 된다 ④ IT는 시드 행을 그대로 단언한다(별도 준비 없음) — 전략당 한 행이라는 계약을 `hasSize(1)`로 고정해, 나중에 버전이 늘면(Phase 10) 이 테스트가 먼저 깨져 화면 계약을 다시 보게 한다 ⑤ 004 tasks.md의 T024·T026을 「다른 spec에 넘긴 것」으로 옮겼다 — 003 소유라 번호와 티켓을 004가 들고 있으면 003 tasks.md의 B06·B10 차단과 이중 관리가 된다(AGENTS.md "곁가지는 티켓으로 만들지 않는다")
 
-- [ ] T026 [FE] [교차 spec: 003 소유] 003 화면이 `GET /backtests/registry`를 소비한다 per 003 FR-010·T039·T059 — 003 담당자 소유, 004는 T025 머지 뒤 통보하고 **T021의 선행 조건**으로 둔다
+### 다른 spec에 넘긴 것 (004는 순서만 고정한다)
+
+아래 둘은 **003 소유**이고 티켓도 003 담당자가 만든다(AGENTS.md "곁가지는 티켓으로 만들지 않는다. 지금 손대지 않을 일은 말이나 문서로 알리고, 티켓으로 세울지는 사람이 정한다"). 003 tasks.md 머리에 "004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단"으로 이미 추적되고 있어, 004가 번호를 들고 있으면 같은 일이 두 곳에서 관리된다. **004는 통보만 하고 기다리지 않는다** — T022·T023은 둘과 무관하게 진행하고, 막히는 지점은 T023의 최종 확인(두 배분 조합)과 T021뿐이다.
+
+**[003] 등록표 배분 방식 교체** (발표 전 필수, 옛 T024) — 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수
+  - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨("변동성이 낮은 섹터에 더 나누기") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음
+  - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인
+  - **화면 판정 규칙 추가(analyze I6)**: 003 등록표의 검증 규칙은 `SECTOR_MOMENTUM`에 `TOP_N_EXCEEDS_UNIVERSE`만 있고 다른 전략은 `maxWeight × UNIVERSE_SIZE < 100`을 쓴다. 그대로면 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다. `SECTOR_MOMENTUM`에 `maxWeight × topN < 100`(`appliesWhen selectionMode=TOP_N`)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent/100) < 100`(`TOP_PERCENT`) 규칙을 같은 버전 인상에 넣어 화면·접수·007 판정을 맞춘다
+  - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, topN 2·상한 40이 화면에서 규칙 위반으로 표시, 계약 테스트 통과
+
+**[003] 화면이 registry를 소비** (옛 T026) — 003 화면이 `GET /backtests/registry`를 소비한다 per 003 FR-010·T039·T059 — 003 담당자 소유, 004는 T025 머지 뒤 통보하고 **T021의 선행 조건**으로 둔다
   - 지금 003 쪽은 `AnalysisVersions.rulesVersion` 단일 값을 기대하고 `fetchAnalysisVersions()`는 아직 null이며, 409 처리(T059)는 003 파라미터 등록표만 다시 조회한다. registry는 전략별 배열을 주므로 연결 작업이 반드시 있다: ① 선택한 `strategyId`의 REGISTERED 행에서 `rulesVersion`을 고르고 PENDING이면 '분석하기'를 막는다 ② `costProfileVersion`을 비우지 않고 `defaultCostProfile.version`을 명시해 보낸다 ③ `409 REGISTRY_VERSION_CHANGED`(003 등록표가 바뀐 경우, 기존 의미 그대로)를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다 ④ 화면의 "비용 조건이 임시값입니다" 표시는 `defaultCostProfile.provisional`로 판단
   - 003 T039·T059 본문에 위 네 가지를 반영하는 것은 003 담당자가 한다. 004는 이 항목으로 순서만 고정한다 — "통보"만으로는 배포 순서가 보장되지 않아 T021이 기본 비용을 바꾸는 순간 화면이 본 조건과 적용 조건이 어긋난다
   - 완료 기준: 003 화면에서 '분석하기'가 registry의 버전을 실어 202를 받고, 임시 비용 문구가 registry 값으로 켜진다
@@ -327,11 +332,11 @@
 ### Phase 9 순서 (발표 전)
 
 1. T025 — 규칙·비용 조회 API
-2. T026 — 003 화면 연결과 버전 명시 전송(다른 담당자)
-3. T022 — 최소분산과 공통 현금 정책(lite)
-4. T023 — 섹터 모멘텀
-5. T024 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다
-6. T021 — 시간이 남으면. 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 "임시 비용 조건"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다
+2. T022 — 최소분산과 공통 현금 정책(lite). **T025와 병렬 가능**(만지는 파일이 겹치지 않는다)
+3. T023 — 섹터 모멘텀. 선행 T022(공통 함수)
+4. T021 — 시간이 남으면. 선행은 아래 [003] 화면 연결
+5. [003] 등록표 교체 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다
+6. [003] 화면 연결 — T025 머지 뒤 착수 가능하고 T021의 선행이다. T021을 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 "임시 비용 조건"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다
 
 발표 전 목표: 다섯 전략이 화면에서 실행된다 · 모멘텀과 최소분산이 정상 결과를 낸다 · 이력 부족·상한 잔여 현금·잘못된 설정을 올바르게 처리한다 · 같은 개발 환경에서 같은 입력은 같은 결과가 나온다. T023의 `EQUAL` 배분은 T024 없이 동작하지만 사용자가 역변동성 배분을 고르려면 T024가 머지돼야 한다. T016은 여전히 001 T030(`-203`) 대기이고 이 Phase와 독립이다.
 

@@ -12,10 +12,13 @@ import org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty
 // 나머지 하나는 배포 몫이다. 배포 Job 은 자기 Jenkinsfile 의 disableConcurrentBuilds() 로 1개를 넘지 않는다.
 //
 // 이 제한을 Jenkinsfile 이 아니라 여기서 거는 이유는, thorp-ci 가 Jenkinsfile 을 MR 소스 브랜치에서
-// 읽기 때문이다. dev 를 반영하지 않은 브랜치가 빌드되면 그 브랜치의 옛 Jenkinsfile 이 Job 속성을
-// 바꾼다. 실제로 disableConcurrentBuilds() 를 뺀 뒤에도 옛 브랜치 빌드가 그것을 다시 켜서 CI 가
+// 읽었기 때문이다. dev 를 반영하지 않은 브랜치가 빌드되면 그 브랜치의 옛 Jenkinsfile 이 Job 속성을
+// 바꿨다. 실제로 disableConcurrentBuilds() 를 뺀 뒤에도 옛 브랜치 빌드가 그것을 다시 켜서 CI 가
 // 하나씩만 돌았다(2026-09-17, S15P21E205-319). Declarative 는 자기가 선언하지 않은 속성은 건드리지
 // 않으므로, 여기서 붙인 throttle 속성은 어느 브랜치가 빌드되어도 남는다.
+//
+// S15P21E205-332 부터는 Jenkinsfile 을 dev 에서 읽는다. 그래도 Job 설정의 브랜치를 되돌리면 같은 일이
+// 다시 생기므로 이 리스너는 두고, 지울지는 옛 브랜치가 정리된 뒤 판단한다(infra/jenkins/README.md).
 //
 // throttle 은 대기열 단계에서 막는다. 그래서 2개를 넘는 빌드는 시작하지 않고 Pending 에 남으며,
 // 대기열에 있으므로 GitLab 트리거의 "대기 중인 이전 빌드 취소"도 동작한다. 실행 슬롯만으로 막으면

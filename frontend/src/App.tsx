@@ -25,6 +25,11 @@ const MarketFlowPage = lazy(() =>
     default: module.MarketFlowPage,
   })),
 )
+const RegimeSearchPage = lazy(() =>
+  import('@/pages/RegimeSearchPage').then((module) => ({
+    default: module.RegimeSearchPage,
+  })),
+)
 
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
@@ -79,6 +84,13 @@ const StrategySettingsPage = lazy(() =>
   })),
 )
 
+// 결과 화면(spec 005)이다. 공개 토큰만 있으면 로그인 없이 연다.
+const ResultPage = lazy(() =>
+  import('@/pages/ResultPage').then((module) => ({
+    default: module.ResultPage,
+  })),
+)
+
 /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */
 function AnimatedRoutes() {
   const location = useLocation()
@@ -101,6 +113,7 @@ function AnimatedRoutes() {
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/regime-search" element={<RegimeSearchPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
@@ -112,6 +125,8 @@ function AnimatedRoutes() {
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
             <Route path="/strategy" element={<StrategySettingsPage />} />
+            {/* 결과 주소는 받은 사람 누구나 연다. 보호 경로 밖에 둔다(005 FR-019). */}
+            <Route path="/results/:token" element={<ResultPage />} />
             <Route
               path="/records/*"
               element={
