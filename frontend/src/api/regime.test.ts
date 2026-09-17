@@ -1,5 +1,6 @@
 import { AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { regimeResult } from '@/test/regimeFixtures'
 import { apiClient } from './client'
 import {
   getRegimeBaselineMonths,
@@ -23,7 +24,12 @@ describe('경제환경 검색 API', () => {
   beforeEach(() => vi.restoreAllMocks())
 
   it('다섯 조회 경로를 공용 클라이언트로 호출하고 decimal 문자열을 보존한다', async () => {
-    const get = vi.spyOn(apiClient, 'get').mockResolvedValue(response({ distance: '0.412938571034' }))
+    const get = vi.spyOn(apiClient, 'get')
+      .mockResolvedValueOnce(response(regimeResult()))
+      .mockResolvedValueOnce(response(regimeResult()))
+      .mockResolvedValueOnce(response({ distance: '0.412938571034' }))
+      .mockResolvedValueOnce(response({ candidates: [] }))
+      .mockResolvedValueOnce(response({ byField: [{ id: 'field-1', name: '시험 분야' }] }))
     const query = { mode: 'field' as const, field: 'test-field', limit: 3 as const }
     const search = await getRegimeSearch(query)
     await getRegimeSearchById('FIELD:one/two', 10)
@@ -31,7 +37,7 @@ describe('경제환경 검색 API', () => {
     await getRegimeCandidates({ searchId: 'FIELD:one/two' })
     await getRegimeBaselineMonths()
 
-    expect(search).toHaveProperty('distance', '0.412938571034')
+    expect(search.cases[0].distance).toBe('0.412938571034')
     expect(get).toHaveBeenNthCalledWith(1, '/regime-searches', { params: query, signal: undefined })
     expect(get).toHaveBeenNthCalledWith(2, '/regime-searches/FIELD%3Aone%2Ftwo', {
       params: { limit: 10 }, signal: undefined,
@@ -59,5 +65,12 @@ describe('경제환경 검색 API', () => {
       data: { httpStatus: 'SERVICE_UNAVAILABLE', isSuccess: false, message: '조회 실패', code: 503, result: { cases: [] } },
     })
     await expect(getRegimeSearch({ mode: 'field', field: 'test-field' })).rejects.toThrow()
+  })
+
+  it('빠진 달의 안내가 없는 200 응답을 실패로 올린다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(response(regimeResult({
+      comparisonMonths: [{ indicatorId: 'one', indicator: '시험 지표', months: [], omitted: ['2026-06'] }],
+    })))
+    await expect(getRegimeSearch({ mode: 'field', field: 'test-field' })).rejects.toThrow('계약과 다릅니다')
   })
 })
