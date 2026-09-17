@@ -72,13 +72,13 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [X] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다
 - [X] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다
 - [X] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다
-- [ ] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다. 한국은행과 국가통계포털이 겹치는 지표는 주 공급원을 하나만 적고 나머지는 등록하지 않는다 (FR-005)
-- [ ] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)
-- [ ] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)
-- [ ] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다
-- [ ] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지, 지표마다 주 공급원이 정확히 하나인지 확인한다 (SC-001, FR-005)
+- [X] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다. 한국은행과 국가통계포털이 겹치는 지표는 주 공급원을 하나만 적고 나머지는 등록하지 않는다 (FR-005)
+- [X] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)
+- [X] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)
+- [X] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다
+- [X] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지, 지표마다 주 공급원이 정확히 하나인지 확인한다 (SC-001, FR-005)
 - [X] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다
-- [ ] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다
+- [X] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다
 
 **Checkpoint**: 등록표와 저장소가 준비되어 원천 수집을 붙일 수 있다
 
@@ -191,7 +191,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
 - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
 - [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
-- [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 네 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
+- [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
 - [ ] T073 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)
 
 ---
