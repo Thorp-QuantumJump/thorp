@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,4 +39,11 @@ interface BacktestRequestJpaRepository extends JpaRepository<BacktestRequestJpaE
             """)
     List<BacktestRequestJpaEntity> findExpiredAnonymous(
             @Param("now") Instant now, Pageable pageable);
+
+    /** 일괄 UPDATE 라 영속성 컨텍스트를 거치지 않는다. 호출 뒤 같은 트랜잭션에서 재시도 요청을 다시 읽지 않는다. */
+    @Modifying(flushAutomatically = true)
+    @Query(
+            "UPDATE BacktestRequestJpaEntity r SET r.retryOfRequestId = NULL"
+                    + " WHERE r.retryOfRequestId = :requestId")
+    int clearRetryOf(@Param("requestId") long requestId);
 }

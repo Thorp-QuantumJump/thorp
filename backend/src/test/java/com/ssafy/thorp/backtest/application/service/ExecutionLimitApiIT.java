@@ -3,13 +3,19 @@ package com.ssafy.thorp.backtest.application.service;
 import static com.ssafy.thorp.support.Requesters.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -74,6 +80,7 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private BacktestService backtestService;
     @Autowired private BacktestRunRepository runRepository;
+    @Autowired private BacktestRequestRepository requestRepository;
     @Autowired private RunLivenessSweeper sweeper;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private TransactionTemplate transactionTemplate;
@@ -388,5 +395,48 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
                 .andExpect(jsonPath("$.data.status").value("FAILED"))
                 .andExpect(jsonPath("$.data.failure.code").value("SYSTEM_FAILURE"))
                 .andExpect(jsonPath("$.data.summary").doesNotExist());
+    }
+
+    @Test
+    @DisplayName(
+            "재시도가 한도에 걸리면 소유자 경로·공개 경로 모두 429 이고 거절 기록이 남는다 — 바깥 트랜잭션이 기록을 되돌리지 않는다(spec 005 B02)")
+    void retryRejectedByLimitKeepsTheRecordOnBothRoutes() throws Exception {
+        long user = newUser("r");
+        // 실패한 요청을 먼저 만든다. 상한을 채운 뒤에 만들면 그 접수부터 429 다.
+        BacktestJobResult failed = backtestService.create(request(user, 22, ExecutionType.SINGLE));
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    BacktestRequest found =
+                            requestRepository.findByBacktestId(failed.backtestId()).orElseThrow();
+                    BacktestRun run = runRepository.findById(found.getRunId()).orElseThrow();
+                    runRepository.update(run.markFailed("DATA_INSUFFICIENT", "no data"));
+                });
+        backtestService.create(request(user, 20, ExecutionType.SINGLE));
+        backtestService.create(request(user, 21, ExecutionType.SINGLE));
+
+        String hits = "SELECT count(*) FROM backtest_limit_hit WHERE requester_id = ?";
+        int before = jdbcTemplate.queryForObject(hits, Integer.class, user);
+
+        mockMvc.perform(
+                        post("/backtests/" + failed.backtestId() + "/retry")
+                                .with(csrf())
+                                .with(as(user)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("EXECUTION_LIMIT"));
+        assertThat(jdbcTemplate.queryForObject(hits, Integer.class, user)).isEqualTo(before + 1);
+
+        String body =
+                mockMvc.perform(
+                                post("/results/" + failed.publicToken() + "/retry")
+                                        .with(csrf())
+                                        .with(as(user)))
+                        .andExpect(status().isTooManyRequests())
+                        .andExpect(jsonPath("$.error.code").value("EXECUTION_LIMIT"))
+                        .andExpect(jsonPath("$.error.details.retryAfterSeconds").exists())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertThat(body).doesNotContain("BT-");
+        assertThat(jdbcTemplate.queryForObject(hits, Integer.class, user)).isEqualTo(before + 2);
     }
 }

@@ -114,4 +114,9 @@ public class BacktestRequestRepositoryImpl implements BacktestRequestRepository 
     public void deleteById(long id) {
         jpaRepository.deleteById(id);
     }
+
+    @Override
+    public int clearRetryOf(long requestId) {
+        return jpaRepository.clearRetryOf(requestId);
+    }
 }
