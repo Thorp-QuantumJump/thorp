@@ -285,12 +285,12 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 목록의 모든 항목에서 대표 상품 정보를 열 수 있는지, 여는 동안 화면을 떠나지 않는지, `409 INSTRUMENT_PROFILE_NOT_READY`에서 빈 패널이 아니라 한 문장이 보이는지 확인한다.
 
-- [ ] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
+- [X] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급
   - `GET /sectors/{code}/instrument-profile`을 T007과 같은 `apiClient` 경로로 더한다
   - `409 INSTRUMENT_PROFILE_NOT_READY`를 예외가 아니라 화면이 분기할 수 있는 상태 값으로 돌려준다 (research.md 결정 6)
   - 응답의 `isSample`은 **자료 버전 기준**이며 `GET /sectors`의 `isSample`(대응표 기준)과 다른 것을 가리킨다. 한쪽 값으로 다른 쪽을 짐작하지 않는다 (data-model.md)
   - M2가 만든 두 파일을 다시 고치므로 M2와 병행하지 않는다
-- [ ] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급
+- [X] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급
   - **같은 화면에서 펼친다.** 상세를 보려고 다른 화면으로 이동시키지 않는다 (FR-010, 원칙 II)
   - 값을 가공하지 않고 그대로 표시한다. `sourceAttribution`도 응답 값을 쓴다(목록 화면의 상수와 달리 여기서는 계약이 값을 준다)
   - `holdingsOverlap.asOfCurrentComposition`이 true면 당시 구성을 재현했다고 표현하지 않는다 (원칙 V, 001 계약)
