@@ -18,12 +18,19 @@ import org.springframework.stereotype.Service;
  * <p><b>후보마다 구간이 다르면 비교가 성립하지 않는다.</b> 관측 기간이 긴 후보는 더 늦게 시작하는데, 그 후보만 짧은 구간으로 평가하면 수익률이 다른 기간의 값이
  * 되어 나란히 놓을 수 없다(원칙 IV). 그래서 <b>묶음 안에서 가장 긴 관측 기간</b>을 모든 후보에 똑같이 적용한다.
  *
- * <p><b>평가 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일)</b>. 004 {@code
- * EffectivePeriodCalculator}와 같은 규칙이다. 워밍업 기준점은 상장일 하나이고 요청 시작일은 마지막에 max 로만 합쳐진다 — 요청 앞에 워밍업 자료가
- * 있으면 워커가 요청 구간보다 앞에서 읽으므로 요청 구간을 깎을 이유가 없다(001 {@code contracts/evaluation-window.md}·{@code
- * contracts/market-dataset.md}). 워커 {@code engine_runner.evaluation_start()}도 같은 모양이지만 "자료가 시작된 뒤"를
- * 상장일이 아니라 읽어 온 가격 행의 합집합 첫날에서 센다. <b>여기도 데이터셋 첫 거래일을 모르므로 이 값 앞에 워밍업 자료가 없을 수 있고</b>, 그때는 워커가 되밀어
- * 막는다 — 자세한 것과 남는 한계는 {@code EffectivePeriodCalculator} 주석을 본다.
+ * <p><b>탐색 구간 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일)</b>. 워밍업 기준점은 상장일 하나이고 요청
+ * 시작일은 마지막에 max 로만 합쳐진다. 요청 시작일이 없을 수도 있는데, 그때는 뒤쪽 항(001 {@code contracts/evaluation-window.md}의
+ * {@code commonStart})이 곧 서버가 제시하는 값이다.
+ *
+ * <p><b>004 {@code EffectivePeriodCalculator}와 같은 규칙이 아니다</b>(2026-09-16, {@code S15P21E205-205}).
+ * 004의 {@code effectiveStart}는 이제 요청 시작일을 거래일에 맞춘 값일 뿐이고 {@code commonStart}로 밀지 않는다 — 워밍업 자료는 요청
+ * 구간보다 앞에서 읽고, 앞이 모자랄 때 집계 시작일을 미루는 판정은 워커 {@code engine_runner.evaluation_start()}가 단독으로 맡는다(001
+ * {@code contracts/market-dataset.md} 「읽기 규칙」).
+ *
+ * <p><b>007도 같이 걷어내야 하는지는 아직 정하지 않았다</b>(001 {@code tasks.md} T037). 여기 값은 004의 {@code
+ * effectiveStart}로 바로 나가지 않고 후보마다 <b>접수의 요청 시작일</b>로 들어가며, 같은 값이 {@code
+ * ParamSearchPreviewResult.CommonPeriod}로 사용자에게 "이 구간을 탐색할 수 있다"고 제안되고 FR-008의 탐색·잠금 구간을 가르는 기준이
+ * 된다. 앞부분을 평가할 수 없는 구간을 제안값으로 내놓아도 되는지가 그 결정의 핵심이라, 모양이 같다는 이유만으로 따라 바꾸지 않았다.
  *
  * <p>공통 워밍업이 004 접수의 {@code warmupTradingDays}로 그대로 나간다. 004는 이 값이 전략 요구값보다 작으면 422로 거부하므로(R-15)
  * 계산이 틀리면 묶음이 시작 단계에서 드러난다.

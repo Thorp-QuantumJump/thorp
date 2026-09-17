@@ -30,7 +30,9 @@ public record EngineInput(
 
     /**
      * @param runId 실행 식별자. 이벤트 envelope의 {@code runId}와 같다
-     * @param effectiveStart 워밍업 이후 실제 평가 시작일. null = 미산출(엔진이 자료로 정한다)
+     * @param effectiveStart 성과 집계를 시작할 날의 <b>앵커</b>. 접수가 정한 요청 시작일(당일 또는 그 뒤 첫 거래일)이며 워밍업만큼 밀린 값이
+     *     아니다. 엔진은 읽어 온 달력으로 {@code max(앵커, calendar[warmup])}를 한 번 더 적용하므로 실제 집계 시작일은 이 값보다 뒤일 수
+     *     있다. null = 미산출(엔진이 자료로 정한다)
      * @param randomSeed null = 미지정
      * @param scenario 주 분석 또는 별도 시나리오(FR-016)
      * @param scenarioParams 시나리오 입력값. TARGET_RISK면 {@code targetVolatility}, FRESH_CASH_FROM이면

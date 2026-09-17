@@ -128,7 +128,7 @@ class BacktestResultApiIT extends PostgresTestSupport {
         versions.put("rules", Map.of("version", "1", "provisional", false));
         versions.put("costProfile", Map.of("version", "PROVISIONAL-DEMO-1", "provisional", true));
         versions.put("data", "FIXTURE-three_etf_24m");
-        versions.put("engine", "nautilus_trader 1.219.0 / worker 2.1.0");
+        versions.put("engine", "nautilus_trader 1.219.0 / worker 2.2.0");
         versions.put("evaluationSplit", "SPLIT-1");
         return new RunPlan(null, null, null, null, null, null, null, null, versions, null);
     }
