@@ -36,4 +36,63 @@ describe('MarketFlowPage', () => {
     fireEvent.click(buttons[3])
     await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith('labor', expect.any(AbortSignal)))
   })
+
+  describe('분야 목록 키보드 이동', () => {
+    async function renderFieldButtons() {
+      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
+      vi.mocked(fetchMarketFlowField).mockImplementation(async (fieldId) => ({
+        ...fields.find((item) => item.fieldId === fieldId)!,
+        multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.',
+        indicators: [],
+      }))
+      renderWithRouter(<MarketFlowPage />)
+      return await screen.findAllByRole('button', { name: /분야 열기/ })
+    }
+
+    /**
+     * 목록은 화살표로 옮겨 다니는 한 벌이라 Tab 정지점이 일곱 개로 늘어나지 않는다.
+     * 그래서 포커스만 옮기고 끝내면 안 되고, 옮긴 분야가 실제로 열려야 한다.
+     */
+    it.each([
+      ['ArrowDown', 0, 1, 'consumption_investment'],
+      ['ArrowUp', 2, 1, 'consumption_investment'],
+      ['Home', 4, 0, 'production'],
+      ['End', 0, 6, 'overseas'],
+    ])('%s는 %i번에서 %i번 분야로 포커스와 선택을 함께 옮긴다', async (key, from, to, expectedId) => {
+      const buttons = await renderFieldButtons()
+      buttons[from].focus()
+
+      fireEvent.keyDown(buttons[from], { key })
+
+      expect(document.activeElement).toBe(buttons[to])
+      await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith(expectedId, expect.any(AbortSignal)))
+      expect(buttons[to].getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it.each([
+      ['ArrowUp', 0, 6],
+      ['ArrowDown', 6, 0],
+    ])('%s는 끝에서 반대쪽 끝으로 돈다', async (key, from, to) => {
+      const buttons = await renderFieldButtons()
+      buttons[from].focus()
+
+      fireEvent.keyDown(buttons[from], { key })
+
+      expect(document.activeElement).toBe(buttons[to])
+    })
+
+    it('목록이 쓰지 않는 키는 가로채지 않는다', async () => {
+      const buttons = await renderFieldButtons()
+      buttons[2].focus()
+
+      // Tab·Enter는 브라우저와 button 기본 동작에 맡긴다. 여기서 preventDefault하면
+      // 키보드 사용자가 목록 밖으로 나가지 못한다.
+      for (const key of ['Tab', 'Enter', 'ArrowLeft']) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+        buttons[2].dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(false)
+      }
+      expect(document.activeElement).toBe(buttons[2])
+    })
+  })
 })
