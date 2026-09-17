@@ -93,7 +93,7 @@
 { "strategyRules": [ { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED", "provisional": true },
                      { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "PENDING_DECISION", "provisional": false } ],
   "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
-                          "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0" } }
+                          "commissionBps": "0.0000", "spreadBps": "0.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } }
 ```
 
 - `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.

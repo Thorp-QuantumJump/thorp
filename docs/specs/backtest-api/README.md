@@ -227,7 +227,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
                               { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED",       "provisional": true  },
                               { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "PENDING_DECISION", "provisional": false } ],
             "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
-                                    "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0" } },
+                                    "commissionBps": "0.0000", "spreadBps": "0.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } },
   "error": null }
 ```
 
@@ -239,7 +239,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 - **`conditions.costProfileVersion`은 비우지 말고 `defaultCostProfile.version`을 명시해 보낸다.** 비우면 서버
   기본값을 쓰는데, 그 기본값이 배포로 바뀌면 화면이 보여 준 비용 조건과 실제 적용된 조건이 갈린다. 재현 기준을 요청에
   다 싣는 `rulesVersion` 원칙과 같다. 화면의 "임시 비용 조건" 표시는 `defaultCostProfile.provisional`로 판단한다.
-- 비용 수치는 다른 응답과 같이 **문자열 decimal**이고 단위는 bps다.
+- 비용 수치는 다른 응답과 같이 **문자열 decimal**이고 단위는 bps다. 컬럼이 `NUMERIC(8,4)`라 소수 네 자리로 나간다(`"5.0000"`). 화면은 문자열을 그대로 보여 주지 말고 수치로 파싱해 표시한다.
 - 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는
   004 tasks Phase 10이다.
 

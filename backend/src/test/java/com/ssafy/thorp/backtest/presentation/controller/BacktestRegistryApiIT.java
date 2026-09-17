@@ -52,9 +52,16 @@ class BacktestRegistryApiIT extends PostgresTestSupport {
                                 jsonPath("$.data.defaultCostProfile.version")
                                         .value("PROVISIONAL-DEMO-1"))
                         .andExpect(jsonPath("$.data.defaultCostProfile.provisional").value(true))
-                        // 비용 수치는 다른 응답과 같이 문자열 decimal 이다.
-                        .andExpect(jsonPath("$.data.defaultCostProfile.commissionBps").isString())
-                        .andExpect(jsonPath("$.data.defaultCostProfile.slippageBps").isString())
+                        // 비용 수치는 다른 응답과 같이 문자열 decimal 이고, 값은 시드 행 그대로다.
+                        // 003 이 "비용 조건을 읽기 전용으로 확인"(FR-010)하는 값이라 정확히 고정한다.
+                        // 소수 네 자리는 컬럼이 NUMERIC(8,4) 라서다 — 화면은 문자열을 그대로 믿지 말고
+                        // 수치로 파싱해 표시한다.
+                        .andExpect(
+                                jsonPath("$.data.defaultCostProfile.commissionBps").value("0.0000"))
+                        .andExpect(jsonPath("$.data.defaultCostProfile.spreadBps").value("0.0000"))
+                        .andExpect(
+                                jsonPath("$.data.defaultCostProfile.slippageBps").value("5.0000"))
+                        .andExpect(jsonPath("$.data.defaultCostProfile.taxBps").value("0.0000"))
                         .andReturn()
                         .getResponse()
                         .getContentAsString();
@@ -73,6 +80,14 @@ class BacktestRegistryApiIT extends PostgresTestSupport {
                         "SECTOR_MOMENTUM",
                         "MINIMUM_VARIANCE",
                         "TARGET_RISK_OVERLAY");
+
+        // 시드의 REGISTERED 는 넷(고정 비중·동일 비중·역변동성·목표 위험 오버레이)이고
+        // 나머지 둘(섹터 모멘텀·최소분산)은 PD-03·04 구현 전이라 PENDING_DECISION 이다.
+        assertThat(
+                        nodes(objectMapper.readTree(body).at("/data/strategyRules"))
+                                .filter(row -> "REGISTERED".equals(row.get("status").asText()))
+                                .count())
+                .isEqualTo(4);
 
         // 전략당 한 행 — 화면이 어느 버전을 실을지 고를 필요가 없다는 것이 이 API 의 계약이다.
         // 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다(버전 교체는 Phase 10).
