@@ -202,34 +202,34 @@ T015가 이 문제를 먼저 막는다.
 **Independent Test**: 섹터 선택 전후로 분야 요약·지표 값·기준월이 같은지, 새로고침 뒤 선택이 남고
 탭을 다시 열면 풀리는지 확인한다.
 
-- [ ] T024 [WB04] [P] [US4] [FE] 섹터 선택 세션 보관 (`frontend/src/marketflow/sectorLink.ts`, `frontend/src/marketflow/sectorLink.test.ts`) · Jira 미발급
+- [x] T024 [WB04] [P] [US4] [FE] 섹터 선택 세션 보관 (`frontend/src/marketflow/sectorLink.ts`, `frontend/src/marketflow/sectorLink.test.ts`) · Jira S15P21E205-322
   - `sessionStorage` 키 하나에 선택 섹터를 담는다. 계정·서버에 저장하지 않는다 (FR-016, [research.md](research.md) R5)
   - 읽기·쓰기를 `try/catch`로 감싼다. 저장소를 쓸 수 없어도 예외를 밖으로 던지지 않는다
   - 화면 없이 단위 테스트할 수 있게 순수 함수로 둔다. `src/auth/returnTarget.ts`와 같은 방식이다
   - 테스트: 저장 후 읽으면 같은 값인지, 저장소가 막힌 환경에서 읽기가 null을 돌려주고 예외가 새지 않는지
   - **T015가 먼저 끝나야 이 `.ts` 테스트가 수집된다**
-- [ ] T025 [WB04] [US4] [FE] 섹터 선택 UI와 경제환경 불변 검증 (`frontend/src/components/marketflow/SectorSelector.tsx`, `frontend/src/components/marketflow/SectorSelector.test.tsx`, `frontend/src/pages/MarketFlowPage.tsx`) · Jira 미발급
+- [x] T025 [WB04] [US4] [FE] 섹터 선택 UI와 경제환경 불변 검증 (`frontend/src/components/marketflow/SectorSelector.tsx`, `frontend/src/components/marketflow/SectorSelector.test.tsx`, `frontend/src/pages/MarketFlowPage.tsx`) · Jira S15P21E205-322
   - 섹터 목록은 002와 같은 목록을 쓴다 (spec Assumptions)
   - 선택은 연결할 전략·대표 상품·뉴스 범위만 좁힌다 (FR-016)
   - **섹터를 분야 요약·상세 요청에 넣지 않는다.** 계약에 파라미터가 없으므로 넣을 자리도 없어야 한다
   - 테스트: 섹터 선택 전후로 분야 요약·지표 값·기준월 렌더 결과가 같은지(SC-004), 새로고침 모사 후 선택이 남고 세션을 비우면 풀리는지
-- [ ] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira 미발급
+- [ ] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira S15P21E205-322
   - 기존 `/api/markets/kospi`를 호출해 가격 추세·변동성을 **경제환경 지표와 구분된 별도 영역**에 그린다 (FR-017)
   - '한국거래소 통계정보' 출처를 표시한다 (FR-015)
   - 자료가 없으면 이 영역만 비우고 분야 요약은 정상 표시한다 (Edge Case)
   - 테스트: 이 영역의 값이 '비슷했던 때 보기' 요청에 실리지 않는지
-- [ ] T027 [WB04] [US2] [FE] '비슷했던 때 보기' 진입점 (`frontend/src/components/marketflow/FieldDetail.tsx`) · Jira 미발급
+- [x] T027 [WB04] [US2] [FE] '비슷했던 때 보기' 진입점 (`frontend/src/components/marketflow/FieldDetail.tsx`) · Jira S15P21E205-322
   - 열린 분야에서 분야 g와 그 분야의 기준월 T_g를 유지한 채 010으로 넘어간다 (FR-009)
   - 010이 아직 없으므로 **넘기는 값이 무엇인지까지만** 만든다. 목적지 화면을 여기서 만들지 않는다
   - 섹터를 골랐어도 넘기는 분야·기준월은 달라지지 않는다 (FR-016)
-- [ ] T028 [WB04] [US4] [FE] '이 기간으로 전략 비교' 진입점 (`frontend/src/components/marketflow/`) · Jira 미발급
+- [x] T028 [WB04] [US4] [FE] '이 기간으로 전략 비교' 진입점 (`frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 선택 섹터(있으면)와 사례 식별자를 011로 넘긴다 (FR-018)
   - 011이 아직 없으므로 넘기는 값까지만 만든다
-- [ ] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira 미발급
+- [ ] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 이미 있는 `/api/market-news/digests`를 호출해 같은 기본 화면에 꽂는다. 내용·수집·표시 규칙은 012가 정한다 (FR-019)
   - **뉴스가 없거나 늦어도 분야 요약은 정상 표시한다** (FR-019, SC-007)
   - 012의 `PREPARING`·`EMPTY`·`STALE` 상태를 그대로 받아 그린다. 009가 다시 판정하지 않는다
-- [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira 미발급
+- [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira S15P21E205-322
   - `docs/specs/market-api.md`·`market-news-api.md`와 같은 형식으로 경로·응답·상태를 정리한다
   - 상태 집합에 `STALE`이 없는 이유(갱신 주기 차이)를 한 줄 적는다. 012 문서와 나란히 읽힐 문서라 다른 이유가 드러나 있어야 한다
   - **분야 요약 조회가 쿼리 파라미터를 하나도 받지 않고 붙으면 400이라는 점을 적는다.** 012는 `sectorId`를 받아 필터하므로, 두 문서가 나란히 읽힐 때 왜 다른지가 드러나야 한다

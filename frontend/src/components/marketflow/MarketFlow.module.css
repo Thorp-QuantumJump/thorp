@@ -100,3 +100,22 @@
   .summaryCard, .openButton svg, .pathPoint { transition: none; }
   .openButton:hover svg, .openButton:focus-visible svg { transform: none; }
 }
+
+/* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */
+.sectorPicker { padding: 22px 0 0; border-top: 1px solid var(--thorp-line); }
+.sectorPicker h3 { margin: 0 0 8px; font-size: .95rem; letter-spacing: -.02em; }
+.sectorNote { margin: 0 0 12px; font-size: .78rem; line-height: 1.55; color: var(--thorp-copy); }
+.sectorChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sectorChip {
+  padding: 7px 13px; border: 1px solid var(--thorp-line-strong); border-radius: 999px;
+  background: none; color: inherit; font: inherit; font-size: .8rem; cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.sectorChip:hover { border-color: var(--thorp-ink); }
+/* 선택은 굵기와 테두리로만 드러낸다. 좋고 나쁨을 뜻하는 색을 쓰지 않는다(FR-003). */
+.sectorChip[aria-pressed='true'] { border-color: var(--thorp-ink); background: var(--thorp-ink); color: var(--thorp-paper); }
+.sectorRetry {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0;
+  border: 0; background: none; color: inherit; font: inherit; font-size: .78rem;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}

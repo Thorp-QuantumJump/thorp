@@ -4,6 +4,8 @@ import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } f
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
 import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'
+import { SectorSelector } from '@/components/marketflow/SectorSelector'
+import { buildStrategyComparisonHandoff } from '@/marketflow/handoff'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'
 import styles from './MarketFlowPage.module.css'
@@ -27,6 +29,12 @@ export function MarketFlowPage() {
   const [selectedId, setSelectedId] = useState<MarketFlowFieldId | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [detailRequest, setDetailRequest] = useState(0)
+  /**
+   * 고른 섹터다. **분야 요약·상세 조회의 의존성에 넣지 않는다**(FR-016, SC-004).
+   * 여기 들어가는 순간 섹터를 바꿀 때마다 경제환경 자료를 다시 부르게 되고,
+   * 같은 값이 다시 그려진다는 보장이 사라진다.
+   */
+  const [sectorCode, setSectorCode] = useState<string | null>(null)
   const selected = summary?.fields.find((field) => field.fieldId === selectedId) ?? summary?.fields[0]
   const selectedFieldId = selected?.fieldId
 
@@ -78,6 +86,11 @@ export function MarketFlowPage() {
     buttons[nextIndex].click()
   }
 
+  /**
+   * 011로 넘길 값이다. 사례는 010의 검색 결과에서 고르는 값이라 010이 붙기 전에는 언제나
+   * `null`이고, 따라서 지금은 넘길 값이 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어간다.
+   */
+  const strategyComparison = buildStrategyComparisonHandoff({ sectorCode, caseId: null })
   const displayedDetail = detail?.fieldId === selectedFieldId ? detail : null
   const introMotion = reducedMotion ? false : { opacity: 0, y: 7 }
 
@@ -134,6 +147,7 @@ export function MarketFlowPage() {
               </div>
             </div>
             <p className={styles.historyNotice}>{summary.historicalComparisonNotice}</p>
+            <SectorSelector onSelectionChange={setSectorCode} />
           </>
         )}
 
@@ -143,7 +157,7 @@ export function MarketFlowPage() {
           <div className={styles.connectionGrid}>
             <article><ChartNoAxesCombined size={22} aria-hidden="true" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>국내 지수와 섹터를 함께 살펴볼 수 있도록 연결을 준비하고 있습니다.</p><button type="button" disabled>국내 시장과 섹터 보기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
             <article><Newspaper size={22} aria-hidden="true" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식을 한곳에서 읽을 수 있도록 뉴스 묶음을 준비하고 있습니다.</p><button type="button" disabled>관련 뉴스 읽기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
-            <article><Waypoints size={22} aria-hidden="true" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type="button" disabled>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
+            <article><Waypoints size={22} aria-hidden="true" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type="button" disabled data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
           </div>
         </section>
       </main>
