@@ -68,7 +68,9 @@ describe('ReturnToDiagnosisLink', () => {
     const link = screen.getByRole('link', { name: /하던 진단으로 돌아가기/ })
     expect(link.tagName).toBe('A')
     expect(link.getAttribute('href')).toBe('/strategy')
-    expect(link.textContent).toContain('전략 선택')
+    // 안내와 돌아갈 화면 이름이 붙어 한 낱말로 읽히지 않는다(FR-019).
+    expect(link.textContent).toBe('← 하던 진단으로 돌아가기 (전략 선택)')
+    expect(link.querySelector('[aria-hidden="true"]')?.textContent).toBe('←')
     expect(screen.queryByRole('button')).toBeNull()
 
     await user.click(link)

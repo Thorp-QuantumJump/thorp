@@ -56,8 +56,9 @@ export function ReturnToDiagnosisLink({ state }: ReturnToDiagnosisLinkProps) {
 
   return (
     <Link className={styles.link} to={target.path}>
-      ← 하던 진단으로 돌아가기
-      <span className={styles.label}>{target.label}</span>
+      <span aria-hidden="true">←</span>
+      {' 하던 진단으로 돌아가기 '}
+      <span className={styles.label}>({target.label})</span>
     </Link>
   )
 }
