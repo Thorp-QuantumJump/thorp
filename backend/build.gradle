@@ -126,6 +126,10 @@ tasks.named('test') {
     inputs.dir(file('../docs/specs/backtest-api/examples'))
             .withPropertyName('backtestApiFixtures')
             .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 배우기 계약 예시(spec 013). LearningPublicApiIT·LearningAdminApiIT가 읽는다.
+    inputs.dir(file('../docs/specs/learning-api/examples'))
+            .withPropertyName('learningApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     // 워커 픽스처의 첫 거래일이 FixtureMarketMetadataAdapter 의 상장일과 어긋난다는 사실을
     // MarketFixtureAlignmentTest 가 붙박는다. 그 파일이 바뀌면 이 태스크가 다시 돌아야 한다.
     inputs.dir(file('../worker/examples/three_etf_24m'))
