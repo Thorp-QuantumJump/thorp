@@ -227,36 +227,36 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **Goal**: 적재된 행을 HTTP로 내준다. **계산 코드도 지표 시계열 조회도 이 묶음에 없다.**
 
-- [ ] T080 (BE) `MacroIndicatorPort` 인터페이스를 `backend/src/main/java/com/ssafy/thorp/regime/application/port/MacroIndicatorPort.java`에 작성 — `registryVersion()`·`fields()`·`indicator(indicatorId)` **셋뿐**. 시계열 메서드를 두지 않는다(포트 계약 §2)
-- [ ] T081 [P] (BE) 포트가 돌려줄 값 타입을 `regime/application/port/`에 record로 작성 — `FieldRegistration`(id·이름·표시 순서)·`IndicatorRegistration`(이름·단위)
-- [ ] T082 (BE) ⚠ `FixtureMacroIndicatorAdapter`를 `regime/infrastructure/macro/fixture/`에 작성 — `@ConditionalOnProperty(prefix="thorp.regime.macro", name="source", havingValue="fixture")`. `registryVersion()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고, 담는 것은 **이름·단위·순서뿐**이라 `data/` 픽스처와 겹치지 않는다
-- [ ] T083 (BE) `RegimeProperties`(`macro.source`, `@NotNull`)를 `regime/infrastructure/config/`에 작성하고 `application-local.yml`에 `fixture`, `application-prod.yml`에 `macro`를 둔다. **코드에 기본값을 박지 않는다**
-- [ ] T084 [P] (BE 테스트) 포트 계약 테스트를 `MacroIndicatorPortContractTest.java`에 작성 — 등록되지 않은 지표가 empty로 오는지, 분야 순서가 오는지, 버전이 오는지, 조회 실패를 이름 없이 대체하지 않는지. **008 구현체가 와도 같은 테스트가 돈다**
-- [ ] T085 [P] (BE 테스트) prod 프로파일 + `thorp.regime.macro.source=fixture`면 **기동에 실패**함을 `RegimeProfileGuardTest.java`에, 운영 코드가 `macro/fixture/` 밖에서 픽스처를 이름으로 참조하지 않음을 `FixtureIsolationTest.java`에 고정
-- [ ] T086 (DB) Flyway 마이그레이션 `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__regime_search.sql` 작성 — `regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`. 컬럼·제약·인덱스는 [data-model.md](data-model.md) §2~§5. decimal은 JSONB, `snapshot_key`는 `VARCHAR(200)`, snapshot의 공통 `scale`과 사례의 nullable `era_position`을 두고, `regime_search_log.snapshot_id`는 **ON DELETE SET NULL** + `snapshot_key` 사본
-- [ ] T087 [P] (BE) 도메인 모델을 `regime/domain/`에 작성 — `SearchStatus`·`StatusReason`·`SearchMode`(`FIELD`/`COMPOSITE`)·`BaselineOrigin` enum과 `SnapshotKey` VO. Spring·JPA·Jackson import 금지(ADR-0001)
-- [ ] T088 [P] (BE) JPA 엔티티 `RegimeSnapshotJpaEntity`·`RegimeBaselineMonthJpaEntity`·`RegimeCaseJpaEntity`를 `regime/infrastructure/persistence/`에 작성 — JSONB 컬럼은 `@JdbcTypeCode(JSON)`
-- [ ] T089 (BE) `*Mapper`(정적 `toDomain`)와 저장소 구현을 `regime/infrastructure/persistence/`에, 포트는 `regime/application/repository/`에 작성 — 조회 전용이라 저장 메서드를 두지 않는다
-- [ ] T090 (BE) `RegimeSearchService`를 `regime/application/service/`에 작성 — (모드·분야·기준월)의 **최신 `revision`** 을 읽고 없으면 404. **척도·거리를 계산하는 코드가 없어야 하고**, 008에서 읽는 것은 포트의 등록표뿐이어야 한다
-- [ ] T091 (BE) `baselineOrigin`을 **요청을 보고 판단**하는 로직을 서비스에 구현 — `baselineMonth`가 오면 `USER_SPECIFIED`, 없으면 `mode`에 따라 `T_G`/`T_ALL`. 저장값을 읽지 않는다(계약 §1)
-- [ ] T092 (BE) `GET /regime-searches`를 `regime/presentation/controller/RegimeSearchController.java`에 작성 — 계약 §1. `limit`은 3 또는 10만 허용
-- [ ] T093 (BE) `GET /regime-searches/{searchId}`를 같은 컨트롤러에 작성 — 계약 §2. **006 기록이 고정한 항목을 그대로 연다**. **철회되어 없는 경우와 정리되어 없는 경우를 응답에서 구분**한다(spec FR-035)
-- [ ] T094 (BE) `GET /regime-searches/cases/{endMonth}`를 같은 컨트롤러에 작성 — 계약 §3. `mode`·`field`·`baselineMonth` 또는 `searchId`를 함께 받는다
-- [ ] T095 (BE) `GET /regime-searches/candidates`를 같은 컨트롤러에 작성 — 계약 §4. **010은 이 목록에 필터도 ±6개월 건너뛰기도 적용하지 않는다**
-- [ ] T096 (BE) `GET /regime-searches/baseline-months`를 같은 컨트롤러에 작성 — 계약 §5. **분야 이름은 포트에서, 기준월·범위는 `regime_baseline_month` 표에서** 만든다. 기준월을 008에 직접 묻지 않는다(포트 계약 §0.2)
-- [ ] T097 [P] (BE) 응답 DTO를 `regime/presentation/response/`에 record로 작성 — `comparisonMonths`·`basis`·`dataAsOf.newerReleases`·`counts{evaluated,eligible,stored,displayed}`와 사례 상세의 공통 `scale`·보조 `eraPosition`을 포함한다. decimal은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열. 전역 등록하지 않는다(계약 §3)
-- [ ] T098 (BE) `NOT_COMPUTABLE`을 **200**으로 내보내는 경로를 구현하고, 그 응답에도 `dataAsOf`·`versions`·`basis`를 채운다 — 503·500을 쓰지 않는다(계약 §1, SC-007·SC-009). 자료 범위 밖 기준월만 404다
-- [ ] T099 (BE) **조회 실패를 '계산 불가'와 구분해** 내보내는 경로를 구현 — 저장된 결과를 읽지 못하면 실패로 알리고 빈 결과나 `NOT_COMPUTABLE`로 바꾸지 않는다(spec FR-034, 계약 §1)
-- [ ] T100 (BE) `sampleData`를 `data_version`의 `FIXTURE-` 접두사로 판정한다 — 008에 묻지 않는다. 등록표 버전도 `FIXTURE-`로 시작하면 함께 표시한다
-- [ ] T101 [P] (BE 테스트) 계약 예시와 응답의 동치를 `RegimeSearchApiIT.java`에 고정 — 다섯 엔드포인트 전부
-- [ ] T102 [P] (BE 테스트) 사례 상세의 **공통 scale로 queryZ·caseZ를 모두 대조할 수 있음**과 `eraPosition`이 별도 문장으로만 제공됨을 `RegimeSearchApiIT`에 고정 — 보조 위치의 z·분위수는 없고, 보조 설명을 계산할 수 없어도 사례가 조회된다(FR-017·SC-003·SC-011)
-- [ ] T103 [P] (BE 테스트) `NOT_COMPUTABLE`이 200이고 `cases`가 빈 배열이며 `dataAsOf`·`basis`가 있음을 고정. **네 사유가 각각 `statusReason`으로 구분돼 나오는지**를 함께 고정한다(SC-005·SC-007·SC-009)
-- [ ] T104 [P] (BE 테스트) 조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않고, 중단된 배치가 남긴 부분 적재 항목이 조회되지 않음을 `RegimeSearchApiIT`에 고정(SC-010)
-- [ ] T105 [P] (BE 테스트) 응답에 **spec FR-022 ①의 13가지가 0건**이고 요청 파라미터에 전략·성과 항목이 0건임을 `RegimeSearchApiIT`에 고정(SC-006, FR-024·SC-001)
-- [ ] T106 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스, `uk_regime_case_month`, 내용 중복 방지, 공통 `scale`과 nullable `era_position`을 확인한다. 사전 계산 snapshot·case·baseline 표에 개인 식별 컬럼이 없고, `regime_search_log.user_id`만 006·014가 관리하는 비식별 참조 키임을 확인한다(FR-036·SC-013, data-model §5)
-- [ ] T107 [P] (BE 테스트) 같은 요청을 두 번 보내면 응답이 **완전히 같음**을 `RegimeSearchApiIT`에 고정(SC-002)
-- [ ] T108 [P] (BE 테스트) **`regime` 패키지에 계산 코드가 0건**임을 `RegimeNoComputationTest.java`에 정적 검사로 고정(SC-002a) — 산술 연산·`Math.`·`BigDecimal` 산술이 나오면 실패
-- [ ] T109 [P] (BE 테스트) **`regime` 패키지가 지표 시계열(`macro_indicator_value` 등)을 읽지 않음**을 같은 테스트에 고정 — 008에서 읽는 것은 포트의 등록표뿐이다(포트 계약 §0.1)
+- [X] T080 (BE) `MacroIndicatorPort` 인터페이스를 `backend/src/main/java/com/ssafy/thorp/regime/application/port/MacroIndicatorPort.java`에 작성 — `registryVersion()`·`fields()`·`indicator(indicatorId)` **셋뿐**. 시계열 메서드를 두지 않는다(포트 계약 §2)
+- [X] T081 [P] (BE) 포트가 돌려줄 값 타입을 `regime/application/port/`에 record로 작성 — `FieldRegistration`(id·이름·표시 순서)·`IndicatorRegistration`(이름·단위)
+- [X] T082 (BE) ⚠ `FixtureMacroIndicatorAdapter`를 `regime/infrastructure/macro/fixture/`에 작성 — `@ConditionalOnProperty(prefix="thorp.regime.macro", name="source", havingValue="fixture")`. `registryVersion()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고, 담는 것은 **이름·단위·순서뿐**이라 `data/` 픽스처와 겹치지 않는다
+- [X] T083 (BE) `RegimeProperties`(`macro.source`, `@NotNull`)를 `regime/infrastructure/config/`에 작성하고 `application-local.yml`에 `fixture`, `application-prod.yml`에 `macro`를 둔다. **코드에 기본값을 박지 않는다**
+- [X] T084 [P] (BE 테스트) 포트 계약 테스트를 `MacroIndicatorPortContractTest.java`에 작성 — 등록되지 않은 지표가 empty로 오는지, 분야 순서가 오는지, 버전이 오는지, 조회 실패를 이름 없이 대체하지 않는지. **008 구현체가 와도 같은 테스트가 돈다**
+- [X] T085 [P] (BE 테스트) prod 프로파일 + `thorp.regime.macro.source=fixture`면 **기동에 실패**함을 `RegimeProfileGuardTest.java`에, 운영 코드가 `macro/fixture/` 밖에서 픽스처를 이름으로 참조하지 않음을 `FixtureIsolationTest.java`에 고정
+- [X] T086 (DB) Flyway 마이그레이션 `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__regime_search.sql` 작성 — `regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`. 컬럼·제약·인덱스는 [data-model.md](data-model.md) §2~§5. decimal은 JSONB, `snapshot_key`는 `VARCHAR(200)`, snapshot의 공통 `scale`과 사례의 nullable `era_position`을 두고, `regime_search_log.snapshot_id`는 **ON DELETE SET NULL** + `snapshot_key` 사본
+- [X] T087 [P] (BE) 도메인 모델을 `regime/domain/`에 작성 — `SearchStatus`·`StatusReason`·`SearchMode`(`FIELD`/`COMPOSITE`)·`BaselineOrigin` enum과 `SnapshotKey` VO. Spring·JPA·Jackson import 금지(ADR-0001)
+- [X] T088 [P] (BE) JPA 엔티티 `RegimeSnapshotJpaEntity`·`RegimeBaselineMonthJpaEntity`·`RegimeCaseJpaEntity`를 `regime/infrastructure/persistence/`에 작성 — JSONB 컬럼은 `@JdbcTypeCode(JSON)`
+- [X] T089 (BE) `*Mapper`(정적 `toDomain`)와 저장소 구현을 `regime/infrastructure/persistence/`에, 포트는 `regime/application/repository/`에 작성 — 조회 전용이라 저장 메서드를 두지 않는다
+- [X] T090 (BE) `RegimeSearchService`를 `regime/application/service/`에 작성 — (모드·분야·기준월)의 **최신 `revision`** 을 읽고 없으면 404. **척도·거리를 계산하는 코드가 없어야 하고**, 008에서 읽는 것은 포트의 등록표뿐이어야 한다
+- [X] T091 (BE) `baselineOrigin`을 **요청을 보고 판단**하는 로직을 서비스에 구현 — `baselineMonth`가 오면 `USER_SPECIFIED`, 없으면 `mode`에 따라 `T_G`/`T_ALL`. 저장값을 읽지 않는다(계약 §1)
+- [X] T092 (BE) `GET /regime-searches`를 `regime/presentation/controller/RegimeSearchController.java`에 작성 — 계약 §1. `limit`은 3 또는 10만 허용
+- [X] T093 (BE) `GET /regime-searches/{searchId}`를 같은 컨트롤러에 작성 — 계약 §2. **006 기록이 고정한 항목을 그대로 연다**. **철회되어 없는 경우와 정리되어 없는 경우를 응답에서 구분**한다(spec FR-035)
+- [X] T094 (BE) `GET /regime-searches/cases/{endMonth}`를 같은 컨트롤러에 작성 — 계약 §3. `mode`·`field`·`baselineMonth` 또는 `searchId`를 함께 받는다
+- [X] T095 (BE) `GET /regime-searches/candidates`를 같은 컨트롤러에 작성 — 계약 §4. **010은 이 목록에 필터도 ±6개월 건너뛰기도 적용하지 않는다**
+- [X] T096 (BE) `GET /regime-searches/baseline-months`를 같은 컨트롤러에 작성 — 계약 §5. **분야 이름은 포트에서, 기준월·범위는 `regime_baseline_month` 표에서** 만든다. 기준월을 008에 직접 묻지 않는다(포트 계약 §0.2)
+- [X] T097 [P] (BE) 응답 DTO를 `regime/presentation/response/`에 record로 작성 — `comparisonMonths`·`basis`·`dataAsOf.newerReleases`·`counts{evaluated,eligible,stored,displayed}`와 사례 상세의 공통 `scale`·보조 `eraPosition`을 포함한다. decimal은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열. 전역 등록하지 않는다(계약 §3)
+- [X] T098 (BE) `NOT_COMPUTABLE`을 **200**으로 내보내는 경로를 구현하고, 그 응답에도 `dataAsOf`·`versions`·`basis`를 채운다 — 503·500을 쓰지 않는다(계약 §1, SC-007·SC-009). 자료 범위 밖 기준월만 404다
+- [X] T099 (BE) **조회 실패를 '계산 불가'와 구분해** 내보내는 경로를 구현 — 저장된 결과를 읽지 못하면 실패로 알리고 빈 결과나 `NOT_COMPUTABLE`로 바꾸지 않는다(spec FR-034, 계약 §1)
+- [X] T100 (BE) `sampleData`를 `data_version`의 `FIXTURE-` 접두사로 판정한다 — 008에 묻지 않는다. 등록표 버전도 `FIXTURE-`로 시작하면 함께 표시한다
+- [X] T101 [P] (BE 테스트) 계약 예시와 응답의 동치를 `RegimeSearchApiIT.java`에 고정 — 다섯 엔드포인트 전부
+- [X] T102 [P] (BE 테스트) 사례 상세의 **공통 scale로 queryZ·caseZ를 모두 대조할 수 있음**과 `eraPosition`이 별도 문장으로만 제공됨을 `RegimeSearchApiIT`에 고정 — 보조 위치의 z·분위수는 없고, 보조 설명을 계산할 수 없어도 사례가 조회된다(FR-017·SC-003·SC-011)
+- [X] T103 [P] (BE 테스트) `NOT_COMPUTABLE`이 200이고 `cases`가 빈 배열이며 `dataAsOf`·`basis`가 있음을 고정. **네 사유가 각각 `statusReason`으로 구분돼 나오는지**를 함께 고정한다(SC-005·SC-007·SC-009)
+- [X] T104 [P] (BE 테스트) 조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않고, 중단된 배치가 남긴 부분 적재 항목이 조회되지 않음을 `RegimeSearchApiIT`에 고정(SC-010)
+- [X] T105 [P] (BE 테스트) 응답에 **spec FR-022 ①의 13가지가 0건**이고 요청 파라미터에 전략·성과 항목이 0건임을 `RegimeSearchApiIT`에 고정(SC-006, FR-024·SC-001)
+- [X] T106 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스, `uk_regime_case_month`, 내용 중복 방지, 공통 `scale`과 nullable `era_position`을 확인한다. 사전 계산 snapshot·case·baseline 표에 개인 식별 컬럼이 없고, `regime_search_log.user_id`만 006·014가 관리하는 비식별 참조 키임을 확인한다(FR-036·SC-013, data-model §5)
+- [X] T107 [P] (BE 테스트) 같은 요청을 두 번 보내면 응답이 **완전히 같음**을 `RegimeSearchApiIT`에 고정(SC-002)
+- [X] T108 [P] (BE 테스트) **`regime` 패키지에 계산 코드가 0건**임을 `RegimeNoComputationTest.java`에 정적 검사로 고정(SC-002a) — 산술 연산·`Math.`·`BigDecimal` 산술이 나오면 실패
+- [X] T109 [P] (BE 테스트) **`regime` 패키지가 지표 시계열(`macro_indicator_value` 등)을 읽지 않음**을 같은 테스트에 고정 — 008에서 읽는 것은 포트의 등록표뿐이다(포트 계약 §0.1)
 
 **Checkpoint**: API가 계약대로 답한다. 여기까지가 Foundational이고, 이제 화면을 붙일 수 있다
 
