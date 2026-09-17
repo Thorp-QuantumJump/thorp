@@ -67,17 +67,17 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **이 단계를 마쳐야 사용자 스토리에 들어갈 수 있다**
 
-- [ ] T006 `backend/src/main/resources/db/migration/`에 Flyway 마이그레이션으로 `macro_calculation_registry_version`·`macro_indicator_definition` 테이블을 만든다. 컬럼은 data-model.md 2절을 따르고 `license_review_status`·`license_verified_at`·`license_suspended_at`·`license_suspended_reason`·`revision_history_available`·`trading_calendar`·`refresh_months_n`을 포함한다. 뒤의 권리 수명주기 세 컬럼은 T055·T057이 쓴다
-- [ ] T007 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_display_version`·`macro_display_field`를 만든다. 계산 등록표와 별도 버전이다
-- [ ] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다
-- [ ] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다
-- [ ] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다
+- [X] T006 `backend/src/main/resources/db/migration/`에 Flyway 마이그레이션으로 `macro_calculation_registry_version`·`macro_indicator_definition` 테이블을 만든다. 컬럼은 data-model.md 2절을 따르고 `license_review_status`·`license_verified_at`·`license_suspended_at`·`license_suspended_reason`·`revision_history_available`·`trading_calendar`·`refresh_months_n`을 포함한다. 뒤의 권리 수명주기 세 컬럼은 T055·T057이 쓴다
+- [X] T007 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_display_version`·`macro_display_field`를 만든다. 계산 등록표와 별도 버전이다
+- [X] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다
+- [X] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다
+- [X] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다
 - [ ] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다. 한국은행과 국가통계포털이 겹치는 지표는 주 공급원을 하나만 적고 나머지는 등록하지 않는다 (FR-005)
 - [ ] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)
 - [ ] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)
 - [ ] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다
 - [ ] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지, 지표마다 주 공급원이 정확히 하나인지 확인한다 (SC-001, FR-005)
-- [ ] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다
+- [X] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다
 - [ ] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다
 
 **Checkpoint**: 등록표와 저장소가 준비되어 원천 수집을 붙일 수 있다
