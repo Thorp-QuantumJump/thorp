@@ -1,6 +1,13 @@
 import { ApiClientError, apiClient, normalizeApiError } from './client'
 import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
-import type { SectorCatalog, SectorClassification, SectorSummary } from '@/types/sector'
+import type {
+  HoldingsOverlap,
+  InstrumentHolding,
+  InstrumentProfile,
+  SectorCatalog,
+  SectorClassification,
+  SectorSummary,
+} from '@/types/sector'
 
 /**
  * 섹터 목록 조회의 결과다.
@@ -161,5 +168,168 @@ export async function fetchSectorCatalog(signal?: AbortSignal): Promise<SectorCa
     return { status: 'loaded', catalog }
   } catch (error) {
     return toFailureResult(normalizeApiError(error))
+  }
+}
+
+/**
+ * 대표 상품 정보 조회의 결과다.
+ *
+ * 목록 조회와 같은 방식으로 **"아직 줄 것이 없다"를 예외가 아니라 상태로** 돌려준다
+ * (research.md 결정 6). 그래야 화면이 빈 패널 대신 한 문장 안내를 낼 수 있다.
+ */
+export type InstrumentProfileResult =
+  | { status: 'loaded'; profile: InstrumentProfile }
+  /** 상품 정보를 만들 자료가 아직 없다(409 `INSTRUMENT_PROFILE_NOT_READY`). */
+  | { status: 'notReady'; message: string }
+  | {
+      status: 'failed'
+      kind: 'api' | 'network' | 'unexpected'
+      code: ApiErrorCode | null
+      message: string
+      /** 다시 눌러 달라질 수 있는가. 판정은 오류 이름을 아는 이 층에서 한다. */
+      retryable: boolean
+    }
+
+const UNREADABLE_PROFILE_MESSAGE = '대표 상품 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+/**
+ * 보유 종목 하나를 읽는다.
+ *
+ * **문자열인지만 보지 않고 숫자로 읽히는지까지 본다.** `"N/A"`나 빈 문자열은 문자열 검사만으로는
+ * 통과하는데, 그대로 두면 화면이 그 종목을 `0.00%`로 그리고 실제 몫은 '그 외'에 슬그머니 섞인다.
+ * 합이 맞지 않는 구성이 사실처럼 보이는 것이 바로 이 함수가 막으려는 것이다.
+ *
+ * 범위는 백엔드 도메인의 불변식과 같은 `(0, 1]`이다(`InstrumentProfile.Holding`). 0이나 음수가
+ * 오면 계약 위반이므로 받지 않는다.
+ */
+function readHolding(value: unknown): InstrumentHolding | null {
+  if (!isRecord(value)) return null
+  if (typeof value.name !== 'string' || typeof value.weight !== 'string') return null
+
+  const weight = Number(value.weight)
+  if (!Number.isFinite(weight) || weight <= 0 || weight > 1) return null
+
+  return { name: value.name, weight: value.weight }
+}
+
+function readHoldingsOverlap(value: unknown): HoldingsOverlap | null {
+  if (!isRecord(value)) return null
+  if (typeof value.asOfCurrentComposition !== 'boolean') return null
+  if (!Array.isArray(value.topHoldings)) return null
+
+  // 백엔드 도메인이 빈 목록을 금지한다. 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를
+  // 그려, "무엇을 담았는지 모른다"를 자료인 것처럼 보이게 한다.
+  if (value.topHoldings.length === 0) return null
+
+  const topHoldings: InstrumentHolding[] = []
+  for (const item of value.topHoldings) {
+    const holding = readHolding(item)
+    // 항목 하나가 깨졌는데 나머지만 그리면 합이 맞지 않는 구성이 사실처럼 보인다.
+    if (!holding) return null
+    topHoldings.push(holding)
+  }
+
+  return { asOfCurrentComposition: value.asOfCurrentComposition, topHoldings }
+}
+
+/**
+ * 응답을 읽어 타입으로 옮긴다. 필드 하나라도 계약과 다르면 전체를 읽지 못한 것으로 다룬다.
+ *
+ * 일부만 그리지 않는 까닭은 이 패널이 "무엇을 사는 것인가"를 답하는 자리이기 때문이다. 구성이나
+ * 출처가 빠진 채로 나머지를 보이면 사용자가 빠진 것을 모르고 판단한다(원칙 VI).
+ */
+function readInstrumentProfile(value: unknown): InstrumentProfile | null {
+  if (!isRecord(value)) return null
+
+  const holdingsOverlap = readHoldingsOverlap(value.holdingsOverlap)
+  if (!holdingsOverlap) return null
+
+  if (
+    typeof value.instrumentId !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.benchmarkIndex !== 'string' ||
+    typeof value.indexMethodologySummary !== 'string' ||
+    typeof value.listedOn !== 'string' ||
+    typeof value.manager !== 'string' ||
+    typeof value.avgDailyValue3m !== 'string' ||
+    typeof value.sourceAttribution !== 'string' ||
+    typeof value.survivorshipNote !== 'string' ||
+    typeof value.datasetId !== 'string' ||
+    typeof value.dataDeadline !== 'string' ||
+    typeof value.isSample !== 'boolean'
+  ) {
+    return null
+  }
+
+  return {
+    instrumentId: value.instrumentId,
+    name: value.name,
+    benchmarkIndex: value.benchmarkIndex,
+    indexMethodologySummary: value.indexMethodologySummary,
+    listedOn: value.listedOn,
+    manager: value.manager,
+    holdingsOverlap,
+    avgDailyValue3m: value.avgDailyValue3m,
+    sourceAttribution: value.sourceAttribution,
+    survivorshipNote: value.survivorshipNote,
+    datasetId: value.datasetId,
+    dataDeadline: value.dataDeadline,
+    isSample: value.isSample,
+  }
+}
+
+/** 서버가 보낸 오류를 화면이 분기할 상태 값으로 옮긴다. */
+function toProfileFailure(error: ApiClientError): InstrumentProfileResult {
+  if (error.kind === 'api' && error.is('INSTRUMENT_PROFILE_NOT_READY')) {
+    return { status: 'notReady', message: error.message }
+  }
+
+  return {
+    status: 'failed',
+    kind: error.kind,
+    code: error.code,
+    message: error.message,
+    // 없는 섹터를 다시 물어도 답이 달라지지 않는다. 대응표가 망가진 경우도 같다.
+    retryable: !error.is('SECTOR_NOT_FOUND') && !error.is('SECTOR_MAP_UNUSABLE'),
+  }
+}
+
+/**
+ * 한 섹터의 대표 상품 정보를 받아 온다.
+ *
+ * 목록 조회와 **같은 `apiClient` 경로**를 쓴다. 화면이 열릴 때가 아니라 사용자가 펼칠 때 부르므로,
+ * 목록만 보는 사용자는 이 왕복을 치르지 않는다.
+ */
+export async function fetchInstrumentProfile(
+  code: string,
+  signal?: AbortSignal,
+): Promise<InstrumentProfileResult> {
+  try {
+    const response = await apiClient.get<ApiEnvelope<InstrumentProfile>>(
+      `/sectors/${encodeURIComponent(code)}/instrument-profile`,
+      { signal },
+    )
+    const body = response.data
+
+    if (!body.success) {
+      return toProfileFailure(
+        new ApiClientError('api', body.error.message, { code: body.error.code }),
+      )
+    }
+
+    const profile = readInstrumentProfile(body.data)
+    if (!profile) {
+      return {
+        status: 'failed',
+        kind: 'unexpected',
+        code: null,
+        message: UNREADABLE_PROFILE_MESSAGE,
+        retryable: true,
+      }
+    }
+
+    return { status: 'loaded', profile }
+  } catch (error) {
+    return toProfileFailure(normalizeApiError(error))
   }
 }

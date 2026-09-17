@@ -68,6 +68,12 @@ excludedRanges = 모든 후보의 dataGaps를 합집합한 뒤 [commonStart, com
 | 상장폐지된 후보가 섞임 | `commonEnd`가 그 폐지일로 당겨진다 |
 | 자료 부족 구간이 `commonStart`를 포함 | 구간을 잘라내지 않고 `excludedRanges`로 알린다. 시작일을 조용히 밀지 않는다(원칙 VI) |
 
+## HTTP 표면
+
+이 산식을 밖으로 내보내는 것은 `GET /sectors/evaluation-window`다([sector-api.md](./sector-api.md)). 그 엔드포인트는 여기 출력에 **화면이 다른 워밍업으로 스스로 다시 판정할 재료**를 더해 내려 준다. **이 문서의 산식과 출력 여섯 칸은 그 때문에 바뀌지 않았다** — 그 여섯은 아래 픽스처가 고정하고 워커와 백엔드가 함께 읽으므로, 조회 경로의 사정으로 고치지 않는다.
+
+다만 그 엔드포인트는 경계 동작 하나를 다르게 다룬다. **달력이 워밍업에 모자라 `CALENDAR_TOO_SHORT`가 나는 경우를 오류가 아니라 `evaluable: false`로 옮긴다.** 화면이 여러 워밍업을 훑는 용도로 부르는 조회라, 훑는 도중 값 하나가 달력을 넘었다고 조회 전체가 실패하면 나머지 판정까지 잃기 때문이다. 산식 자체는 그대로 오류를 낸다.
+
 ## 픽스처
 
 `fixtures/evaluation-window-cases.json`에 위 경계 동작마다 입력과 기대 출력을 둔다. Worker의 pytest와 Backend의 JUnit이 같은 파일을 읽는다.

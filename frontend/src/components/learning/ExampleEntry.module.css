@@ -1,0 +1,40 @@
+/* 글 화면의 유일한 행동 버튼이다(원칙 II). */
+.start {
+  align-self: flex-start;
+  padding: 11px 22px;
+  border: 1px solid var(--thorp-accent);
+  border-radius: 999px;
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.start:hover {
+  filter: brightness(1.08);
+}
+
+.start:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.unavailable p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.unavailable a {
+  color: var(--thorp-accent-soft);
+  font-size: 0.9rem;
+}
