@@ -176,3 +176,74 @@ textarea {
     @apply font-sans;
   }
 }
+
+/*
+  배우기 예시 덮어쓰기 확인 대화상자다(002 FR-012).
+
+  `radix-ui`의 `AlertDialog`는 포털로 `body` 아래에 그려지므로 화면의 CSS 모듈 범위가 닿지
+  않는다. 그래서 이 한 곳에 전역으로 둔다. 문구가 아니라 자리와 층위를 정하는 규칙이다.
+*/
+[data-slot='overwrite-overlay'] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(3 8 5 / 72%);
+}
+
+[data-slot='overwrite-dialog'] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100% - 32px, 420px);
+  padding: 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background: var(--thorp-surface-raised);
+  box-shadow: var(--thorp-shadow);
+  color: var(--thorp-foreground);
+}
+
+[data-slot='overwrite-dialog'] h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+[data-slot='overwrite-dialog'] p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* 좁은 화면에서 두 선택지가 한 줄에 눌려 넘치지 않게 감싼다. */
+[data-slot='overwrite-actions'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+[data-slot='overwrite-cancel'],
+[data-slot='overwrite-confirm'] {
+  padding: 9px 18px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+[data-slot='overwrite-confirm'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
