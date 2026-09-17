@@ -232,14 +232,14 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
 
 **Independent Test**: 상장일이 서로 다른 섹터를 골라 언제부터 비교할 수 있는지와 어느 섹터 때문인지 한 문장이 보이는지 확인한다. 합계를 맞춘 뒤 다음 단계로 넘겨 보관된 값이 마지막 입력과 한 글자도 다르지 않은지 확인한다.
 
-- [ ] T016 [M4] [P] [US3] [FE] 상장일 기준 공통 비교 시작일 (`frontend/src/diagnosis/listingWindow.ts`, `frontend/src/diagnosis/listingWindow.test.ts`) · Jira 미발급
+- [X] T016 [M4] [P] [US3] [FE] 상장일 기준 공통 비교 시작일 (`frontend/src/diagnosis/listingWindow.ts`, `frontend/src/diagnosis/listingWindow.test.ts`) · Jira 미발급
   - `commonStartFromListing = max(선택 섹터의 representativeEtf.listedOn)`과 그 최댓값을 만든 `bindingSectorCode`를 구한다 (research.md 결정 4)
   - **`GET /sectors/evaluation-window`를 부르지 않는다.** 그 산식은 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받아 전략을 고르기 전에는 채울 수 없다 (contracts/README.md)
   - 경계: 선택 섹터가 두 개 미만이거나 상장일이 모두 같으면 안내할 사실이 없다. `commonStartFromListing`이 오늘 이후면 비교할 기간이 남지 않은 것으로 본다. **이 판정은 근사치다.** 정확한 판정은 003이 `evaluable: false`로 받는다 (research.md 결정 4의 경계 동작)
   - 화면이 음수 기간을 계산해 이상한 문장을 만들지 않게 방어한다
   - 테스트: 상장일이 같을 때 안내 없음, 다를 때 최댓값과 원인 섹터, 선택 1개 이하, 최댓값이 오늘 이후인 경우
   - 선행: T005
-- [ ] T017 [M4] [US3] [FE] 상장일 차이 안내 (`frontend/src/components/diagnosis/ListingWindowNotice.tsx`, `frontend/src/components/diagnosis/ListingWindowNotice.test.tsx`) · Jira 미발급
+- [X] T017 [M4] [US3] [FE] 상장일 차이 안내 (`frontend/src/components/diagnosis/ListingWindowNotice.tsx`, `frontend/src/components/diagnosis/ListingWindowNotice.test.tsx`) · Jira 미발급
   - 선택 섹터가 둘 이상이고 상장일이 서로 다를 때만 선택 요약 옆에 한 문장으로 나타난다 (research.md 결정 7)
   - 문장이 담을 것 셋: 언제부터 비교할 수 있는지, 어느 섹터의 상장일 때문인지, **이 값이 상장일만 반영한 것이며 전략 워밍업 몫은 003이 알린다는 사실** (FR-008)
   - 데이터 입력이나 자료 공급원 선택을 요구하지 않는다 (FR-008, SC-005)
@@ -247,12 +247,12 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 대표 ETF가 없는 섹터는 001 계약의 불변식에 따라 목록에 실리지 않으므로 그 경우의 안내를 두지 않는다 (spec Clarifications)
   - 테스트: 상장일이 같으면 보이지 않고 다르면 보인다(SC-003). `GET /sectors` 외의 호출이 일어나지 않는다
   - 선행: T016
-- [ ] T018 [M4] [US3] [US2] [FE] 후보 집합과 0%의 뜻 안내 (`frontend/src/components/diagnosis/SelectionMeaningNotice.tsx`, `frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx`) · Jira 미발급
+- [X] T018 [M4] [US3] [US2] [FE] 후보 집합과 0%의 뜻 안내 (`frontend/src/components/diagnosis/SelectionMeaningNotice.tsx`, `frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx`) · Jira 미발급
   - 섹터를 하나 이상 고른 뒤 **항상** 비중 입력 묶음의 꼬리에 한 문장을 둔다. 선택 섹터는 자동 배분 전략의 투자 후보 집합이며 매번 모두 보유한다는 뜻이 아니고, 사용자가 입력한 비중은 '내가 정한 비중'에 쓰여 자동 전략의 출력 비중과 구분된다 (FR-009, research.md 결정 7)
   - 비중이 0인 섹터가 하나 이상일 때만 같은 자리에 한 문장을 더한다. 0%인 섹터는 '내가 정한 비중'에는 담기지 않지만 후보 집합에는 그대로 남는다 (FR-016)
   - 0%인 섹터를 선택 목록에서 빼지 않는다. 003이 선택 섹터 개수로 유효성 제약을 계산하므로 빼면 003의 계산과 어긋난다 (SC-010)
   - 테스트: 0인 섹터가 없을 때 0% 안내가 보이지 않는다. 있을 때만 보인다
-- [ ] T019 [M4] [US1] [FE] 다음 단계 버튼과 003 인계 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/pages/SectorSelectionHandoff.test.tsx`) · Jira 미발급
+- [X] T019 [M4] [US1] [FE] 다음 단계 버튼과 003 인계 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/pages/SectorSelectionHandoff.test.tsx`) · Jira 미발급
   - 다음 단계 버튼의 활성 조건은 `selectedCodes.length >= 2 && isBalanced`다 (data-model.md 파생값)
   - 합계가 맞지 않는 상태로는 넘어가지 않고 한 문장으로 안내한다. **그 자리에서 비중을 자동으로 조정하지 않는다** (FR-007)
   - **넘기기 전에 값을 손대지 않는다.** 합계를 100%로 맞추는 조정, 표시 정밀도를 넘어선 반올림, 0%인 섹터 제외를 모두 하지 않는다 (FR-013, SC-013)
@@ -263,7 +263,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차�
   - 화면 전체에 계산식·자료 공급원·거리 함수·실험 식별자·서버 설정 입력 항목이 0개인지 이 시점에 함께 확인한다 (FR-011, SC-005, quickstart 시나리오 11)
   - **테스트가 SC-013을 받는다.** quickstart에 SC-013 시나리오가 없기 때문이다. 마지막 입력값과 보관된 페이로드를 값으로 비교하고, 0%인 섹터가 빠지지 않았는지와 `mapVersion`이 함께 실렸는지 확인한다
   - 선행: T013, T015
-- [ ] T020 [M4] [US4] [FE] 배우기 예시 진입과 덮어쓰기 확인 (`frontend/src/diagnosis/learningExample.ts`, `frontend/src/components/diagnosis/OverwriteConfirmDialog.tsx`, `frontend/src/pages/SectorSelectionLearningEntry.test.tsx`) · Jira 미발급
+- [X] T020 [M4] [US4] [FE] 배우기 예시 진입과 덮어쓰기 확인 (`frontend/src/diagnosis/learningExample.ts`, `frontend/src/components/diagnosis/OverwriteConfirmDialog.tsx`, `frontend/src/pages/SectorSelectionLearningEntry.test.tsx`) · Jira 미발급
   - 예시 값은 React Router의 navigation state로 받는다. 페이로드 형태는 [contracts/selection-handoff.md](./contracts/selection-handoff.md) 2절이다 (research.md 결정 9)
   - 받은 값은 T012와 **같은 검증**을 거친다. 현재 목록에 있는 코드, 0 이상 1000 이하 정수 비중
   - 아직 아무것도 입력하지 않았으면 **묻지 않고** 채운다. 이미 고른 섹터나 입력한 비중이 있으면 덮어쓸지 먼저 묻고, 거절하면 기존 값을 그대로 둔다 (FR-012, SC-011)
