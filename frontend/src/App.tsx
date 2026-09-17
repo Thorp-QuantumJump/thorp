@@ -50,10 +50,16 @@ const MyRecordsEntryPage = lazy(() =>
   })),
 )
 
-// 아직 만들지 않은 메뉴를 정상 화면으로 받는다.
-const NotReadyPage = lazy(() =>
-  import('@/pages/NotReadyPage').then((module) => ({
-    default: module.NotReadyPage,
+// 013 배우기. 글의 예시는 002 `/diagnosis/sectors`로 넘어간다.
+const LearningListPage = lazy(() =>
+  import('@/pages/LearningListPage').then((module) => ({
+    default: module.LearningListPage,
+  })),
+)
+
+const LearningArticlePage = lazy(() =>
+  import('@/pages/LearningArticlePage').then((module) => ({
+    default: module.LearningArticlePage,
   })),
 )
 
@@ -99,8 +105,9 @@ function AnimatedRoutes() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />
-            {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}
-            <Route path="/learn" element={<NotReadyPage />} />
+            {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}
+            <Route path="/learn" element={<LearningListPage />} />
+            <Route path="/learn/:articleId" element={<LearningArticlePage />} />
             {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
