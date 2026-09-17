@@ -49,4 +49,12 @@ public interface BacktestRequestRepository {
      * 있으므로 지우지 않는다.
      */
     void deleteById(long id);
+
+    /**
+     * 이 요청을 원본으로 가리키는 재시도 요청들의 참조({@code retry_of_request_id})를 끊는다(spec 005 T022). 원본 요청 행을 지우기 전에
+     * 부른다 — 외래 키가 막는다. 재시도 요청 자체는 다른 사람의 것일 수 있어 지우지 않는다.
+     *
+     * @return 참조를 끊은 요청 수
+     */
+    int clearRetryOf(long requestId);
 }

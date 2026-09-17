@@ -36,6 +36,11 @@ public enum ErrorCode {
     NO_PARTIAL_RESULT(HttpStatus.CONFLICT, "취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다."),
     CANCEL_PENDING(HttpStatus.CONFLICT, "같은 조건의 실행이 취소 처리 중입니다. 잠시 후 다시 요청해 주세요."),
 
+    // spec 005 결과 이해·비교. 계약은 specs/005-result-comparison/contracts/result-api.md "오류".
+    // 나머지(INVALID_INPUT·RESOURCE_NOT_FOUND·RESULT_NOT_READY·BACKTEST_FAILED·NO_PARTIAL_RESULT·
+    // NOT_RETRYABLE·EXECUTION_LIMIT)는 위 004 블록의 것을 그대로 쓴다 — 공개 경로가 같은 거절을 다른 코드로 내면 화면이 두 벌로 분기한다.
+    RESULT_EXPIRED(HttpStatus.GONE, "결과가 더 이상 남아 있지 않습니다. 같은 조건으로 다시 분석할 수 있습니다."),
+
     // spec 003 전략 선택·상세 설정. 계약은
     // specs/003-strategy-settings/contracts/strategy-registry-api.md §2.
     // 나머지 넷(UNREGISTERED_PARAMETER_VALUE·STRATEGY_NOT_REGISTERED·REGISTRY_VERSION_CHANGED·
