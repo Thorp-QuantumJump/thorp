@@ -10,20 +10,35 @@
 
 ## 사전 준비
 
-```bash
-# 1) 자료 파이프라인
-cd data
-.venv/Scripts/python scripts/precompute_regime.py --source fixture --all
-# 사전 계산 후 PostgreSQL 적재. 소요 시간과 다시 계산한 기준월 수가 출력된다(FR-033 기록 대상)
+**백엔드를 먼저 띄운다.** `local` 프로파일은 Flyway를 끄고 `ddl-auto=update`로 돌기 때문에
+`regime_*` 표는 백엔드가 뜰 때 생긴다 — 빈 DB에 사전 계산을 먼저 돌리면 적재할 표가 없다.
 
-# 2) 백엔드
-cd ../backend
-./gradlew bootRun
+```bash
+# 0) 도커 (postgres·rabbitmq·kafka)
+docker compose -f docker-compose.dev.yml up -d
+
+# 1) 백엔드 — 표를 만들고 조회를 연다
+cd backend
+SPRING_PROFILES_ACTIVE=local MAIL_USERNAME=dev@example.com MAIL_PASSWORD=dummy ./gradlew bootRun
+# MAIL_* 는 010과 무관한 회원가입 메일 설정이지만 application.yml 이 기본값 없이 참조해
+# 없으면 기동이 실패한다. Spring 은 .env 를 읽지 않으므로 환경 변수로 넘긴다
+
+# 2) 자료 파이프라인 — 사전 계산 후 PostgreSQL 적재
+cd ../data
+.venv/Scripts/python scripts/precompute_regime.py --source fixture --all
+# 소요 시간과 다시 계산한 기준월 수가 출력된다(FR-033 기록 대상)
 
 # 3) 프론트
 cd ../frontend
 npm run dev
 ```
+
+`data/.venv`가 없으면 먼저 만든다. `data/CLAUDE.md`는 `uv`를 전제하지만 없으면
+`python -m venv .venv` 뒤 `.venv/Scripts/python -m pip install -r requirements.txt -r requirements-dev.txt`
+로도 된다. `data/.env`에 `DATABASE_URL`이 필요하다(`.env.example` 복사).
+
+아래 명령은 `jq`를 쓴다. 없으면 같은 조회를 다른 도구로 해도 되며, 확인할 항목은 명령이 아니라
+그 아래의 '보여야 하는 것'·'보이면 안 되는 것'이다.
 
 **지금은 008이 없어 픽스처 자료로 돕니다.** 모든 응답의 `versions.sampleData`가 `true`,
 `versions.data`가 `FIXTURE-`로 시작해야 하고 화면에 예시 자료 표시가 있어야 한다(008 FR-022).
@@ -59,14 +74,20 @@ curl -s "localhost:8080/regime-searches?mode=field&field=LABOR&limit=10" | jq '.
 
 ## S2. 후보가 부족하면 채우지 않는다 (FR-013, SC-004)
 
-픽스처에서 시작 연도가 늦은 계열(모양 5)의 분야를 고른다. 후보가 3개 미만이어야 한다.
+시작 연도가 늦은 계열(모양 5)은 `G20_LEADING_INDEX`(2005-01)이고 그 분야는 `GLOBAL_ECONOMY`다.
 
 ```bash
-curl -s "localhost:8080/regime-searches?mode=field&field=<시작이늦은분야>" | jq '.result.counts'
+curl -s "localhost:8080/regime-searches?mode=field&field=GLOBAL_ECONOMY" | jq '.result.counts'
 ```
 
-`displayed < 3`이고 `cases` 길이가 그 값과 같아야 한다. **빈자리를 채운 사례가 0건**이어야 한다 —
-거리가 먼 후보를 끌어와 3개를 맞추면 SC-004 위반이다.
+`cases` 길이가 `displayed`와 같아야 한다. **빈자리를 채운 사례가 0건**이어야 한다 — 거리가 먼 후보를
+끌어와 3개를 맞추면 SC-004 위반이다.
+
+> ⚠ **`0 < displayed < 3`인 기준월은 지금 픽스처에 없다**(2026-09-17 실행 기록). 기준월을 훑으면
+> 2010-02까지 `SCALE_WINDOW_TOO_SHORT`(eligible 0)였다가 2010-03에서 곧바로 eligible 48이 된다 —
+> 척도 60개월이 차는 달이 후보가 넉넉해지는 달보다 늦다. **'부족하면 부족한 대로'가 실제로 그려지는
+> 화면은 이 경로로 확인되지 않으며 단위 테스트로만 확인된다.** API로 보려면 더 늦게 시작하는 계열이
+> 픽스처에 하나 더 있어야 한다.
 
 ## S3. 척도를 구할 수 없으면 '계산 불가'다 (US2, SC-005)
 
@@ -129,9 +150,12 @@ curl -s "localhost:8080/regime-searches?mode=composite" | jq '.result | {baselin
 
 **한 분야가 계산 불가이면 종합도 계산 불가**여야 한다 — 남은 분야로 계산하면 US3 시나리오 6 위반.
 
+상수 계열(모양 4)의 창은 과거 한 구간이라 **기본 T_all 에서는 걸리지 않는다** — 기본 기준월의
+종합은 정상 계산된다. 이 규칙은 그 창에 걸리는 기준월을 지정해서 본다.
+
 ```bash
-curl -s "localhost:8080/regime-searches?mode=composite" | jq '.result.status'
-# 상수 계열 분야가 있으므로 NOT_COMPUTABLE 이어야 한다
+curl -s "localhost:8080/regime-searches?mode=composite&baselineMonth=2011-06" | jq '.result | {status, statusReason}'
+# FINANCE_HOUSING 이 SCALE_ZERO 인 기준월이므로 종합도 NOT_COMPUTABLE 이어야 한다
 ```
 
 ## S6. 사례 상세로 수기 대조가 된다 (FR-028, SC-003)
@@ -239,8 +263,14 @@ curl -s "localhost:8080/regime-searches?mode=field&field=LABOR" | jq '.result.ve
 
 # 2) 픽스처가 두 디렉터리 밖으로 새지 않았는가
 grep -rn "Fixture" data/src/data_pipeline/regime | grep -v "/macro/fixture/"
-grep -rn "Fixture" backend/src/main/java/com/ssafy/thorp/regime --include=*.java | grep -v "/macro/fixture/"
-# 둘 다 결과가 없어야 한다. 운영 코드는 인터페이스만 알고 픽스처를 이름으로 참조하지 않는다
+# 결과가 없어야 한다
+
+grep -rln "Fixture" backend/src/main/java/com/ssafy/thorp/regime --include=*.java | grep -v "/macro/fixture/"
+# 아래 셋만 나와야 한다. 셋 다 접두사 문자열만 알고 픽스처 구현을 import 하지 않는다
+#   domain/model/RegimeSnapshot.java          FIXTURE- 로 versions.sampleData 를 판정 (계약 §4.2)
+#   infrastructure/config/RegimeFixtureGuard.java   아래 '가드 둘'의 prod 가드 자신
+#   infrastructure/config/RegimeProperties.java     source: fixture|macro 설정값
+# 넷째가 나오면 경계가 샌 것이다
 
 # 3) DB 행이 전부 표시돼 있는가
 psql -c "SELECT DISTINCT data_version FROM regime_search_snapshot;"
@@ -295,7 +325,7 @@ Python **3.12.10**(문서가 정한 3.11은 이 기기에 없다) · pandas 3.0.
 
 **여기 숫자는 픽스처 위의 측정값이다.** 목표치가 아니고 경제에 대해 아무것도 말하지 않는다.
 
-#### 사전 준비가 문서와 달랐던 것 — 넷 다 quickstart를 고쳐야 한다
+#### 사전 준비가 문서와 달랐던 것 — 넷 다 같은 커밋에서 위 본문을 고쳤다
 
 1. **순서가 반대다.** `local` 프로파일은 `flyway.enabled=false` + `ddl-auto=update`라 **백엔드가 먼저
    떠야** `regime_search_snapshot`이 생긴다. 빈 DB에 사전 계산을 먼저 돌리면 적재할 표가 없다.
@@ -339,7 +369,7 @@ research R9의 p95 300ms는 **측정 목표이지 한도가 아니다**. 004 FR-
 훑으면 **2010-02까지 `SCALE_WINDOW_TOO_SHORT`(eligible 0)였다가 2010-03에서 곧바로 eligible 48**이
 된다. 척도 구간 60개월이 차는 시점이 후보가 넉넉해지는 시점보다 늦어, `0 < displayed < 3`인 기준월이
 없다. **SC-004의 "부족하면 부족한 대로"는 API 경로로 확인되지 않았고 단위 테스트로만 확인된다.**
-이 모양을 API로 보려면 픽스처에 더 늦게 시작하는 계열이 하나 더 있어야 한다.
+이 모양을 API로 보려면 픽스처에 더 늦게 시작하는 계열이 하나 더 있어야 한다. 위 S2에 이 사실을 적어 두었다.
 
 #### S9 격리 검사 명령이 오탐을 낸다
 
@@ -352,7 +382,7 @@ quickstart는 `grep -rn "Fixture" backend/…/regime | grep -v "/macro/fixture/"
 | `infrastructure/config/RegimeFixtureGuard.java` | S9가 요구하는 prod 가드 자신이다 |
 | `infrastructure/config/RegimeProperties.java` | `source: fixture|macro` 설정값 |
 
-`data` 쪽은 결과가 없어 격리가 성립한다. 검사 문장을 "이 셋 외에 0건"으로 고쳐야 한다.
+`data` 쪽은 결과가 없어 격리가 성립한다. 위 S9의 검사 문장을 "이 셋만 나온다"로 고쳤다.
 
 #### 가드 둘
 
