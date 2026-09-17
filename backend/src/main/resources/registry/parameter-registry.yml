@@ -53,7 +53,10 @@
 #   미확정으로 남은 것은 MINIMUM_VARIANCE 의 estimationMethod 하나이며 그 자리에 따로 적었다.
 
 # 1.1.0: 목록형 후보에 화면 문구(choices[].label)를 담기 시작했다. 값은 1.0.0 과 같다.
-version: "1.2.0"
+# 1.3.0: 상한 축이 있는 전략 전부에 MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE 를 넓혔다(최소분산에만 있었다).
+#        004 접수가 같은 조건을 422 로 거절하기 시작해(spec 004 PD-04 ④, T022), 규칙이 없으면
+#        007 이 거르지 못한 조합이 접수에서 죽는다. 모멘텀의 선정 방식별 상한 규칙은 T024 가 잇는다.
+version: "1.3.0"
 
 # 손실 제약의 기준으로 쓸 전략(007 FR-013d). 007 코드에 기준 전략 ID를 두지 않기 위해 여기서 지정한다.
 # 비우면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다.
@@ -126,6 +129,20 @@ strategies:
           max: 100
           step: 5
 
+    validationRules:
+      # 섹터당 상한(%) × 후보 섹터 수가 100에 못 미치면 전액을 배분할 수 없다.
+      # 최소분산에만 있던 규칙을 상한 축이 있는 전략 전부로 넓힌다 — 004 접수가 2026-09-17부터
+      # 이 조건을 422 VALIDATION_RULE_VIOLATED 로 거절하므로(spec 004 PD-04 ④), 규칙이 없으면
+      # 007 이 걸러내지 못한 조합이 접수에서 죽는다.
+      - code: MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE
+        detail: 섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByContext: UNIVERSE_SIZE
+        operator: LESS_THAN
+        right:
+          value: 100
+
   - id: EQUAL_WEIGHT
     name: 똑같이 나누기
     description: 투자 가능한 섹터에 같은 금액을 배분한다.
@@ -195,6 +212,20 @@ strategies:
           min: 10
           max: 100
           step: 5
+
+    validationRules:
+      # 섹터당 상한(%) × 후보 섹터 수가 100에 못 미치면 전액을 배분할 수 없다.
+      # 최소분산에만 있던 규칙을 상한 축이 있는 전략 전부로 넓힌다 — 004 접수가 2026-09-17부터
+      # 이 조건을 422 VALIDATION_RULE_VIOLATED 로 거절하므로(spec 004 PD-04 ④), 규칙이 없으면
+      # 007 이 걸러내지 못한 조합이 접수에서 죽는다.
+      - code: MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE
+        detail: 섹터당 최대 비중이 낮아 후보 섹터만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByContext: UNIVERSE_SIZE
+        operator: LESS_THAN
+        right:
+          value: 100
 
   - id: SECTOR_MOMENTUM
     name: 흐름을 따라 배분하기

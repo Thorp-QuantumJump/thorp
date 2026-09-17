@@ -22,8 +22,10 @@ from worker.allocation.base import (
     AllocationResult,
     apply_cap,
     decimal_rule,
+    effective_cap,
     int_rule,
     normalise,
+    quantise,
     require_rule_value,
 )
 from worker.contracts.engine_input import UniverseItem
@@ -44,7 +46,7 @@ def compute(
 ) -> AllocationResult:
     lookback = int_rule(rules, "lookbackDays", STRATEGY_ID)
     zero_policy = require_rule_value(rules, "zeroVolatility", STRATEGY_ID)
-    cap = decimal_rule(rules, "weightCap", STRATEGY_ID)
+    cap = effective_cap(parameters, rules, STRATEGY_ID)
     invested = decimal_rule(rules, "investedFraction", STRATEGY_ID)
     if zero_policy != EXCLUDE_THEN_ALLOCATE:
         raise AllocationError(
@@ -65,8 +67,13 @@ def compute(
 
     inverse = {instrument: Decimal(1) / value for instrument, value in investable.items()}
     weights = normalise(inverse, invested)
-    weights = apply_cap(weights, cap, invested, STRATEGY_ID)
-    weights = normalise(weights, invested) if sum(weights.values()) != invested else weights
+    # 상한 뒤에 다시 정규화하면 상한을 도로 깬다. 채우지 못한 몫은 현금으로 둔다(PD-03 6).
+    weights, cap_exceptions = apply_cap(weights, cap, invested, rules, STRATEGY_ID, as_of)
+    exceptions.extend(cap_exceptions)
+    # 채워야 할 합계는 **정책**이 정한다(최소분산과 같은 식) — 정규화 결과의 합을 그대로 쓰면
+    # Decimal 잔차로 1 에 미치지 못한 합이 목표가 되고, 단위 내림이 멀쩡한 100% 배분을
+    # 99.9999% 로 깎는다.
+    weights = quantise(weights, min(invested, cap * len(weights)), cap, rules, STRATEGY_ID)
     return AllocationResult(weights=weights, source=WeightsSource.COMPUTED, exceptions=exceptions)
 
 

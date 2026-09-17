@@ -23,7 +23,7 @@ T001~T015가 dev에 병합된 시점(dev `1adef09` 위, 브랜치 `docs(be)/154-
 
 | S | 시나리오 | 결과 | 핵심 관측 |
 |---|---|---|---|
-| S1 | 접수·상태·완료 | **통과** | 202 `QUEUED` → `RUNNING` → `COMPLETED` **5.9초**(대기 0.28초, 실행 4.2초, 392거래일). `summary.totalReturn=0.16298…`, `versions.costProfile.provisional=true`, `effectiveStart=2023-07-03`(BIO 상장일로 당겨짐) |
+| S1 | 접수·상태·완료 | **통과** | 202 `QUEUED` → `RUNNING` → `COMPLETED` **5.9초**(대기 0.28초, 실행 4.2초, 392거래일). `summary.totalReturn=0.16298…`(**의미 변경 이전 값** — 2026-09-17 T022가 `INVERSE_VOLATILITY/1`을 제자리에서 갱신해 상한 잔여를 현금으로 두고 비중을 0.000001 단위로 떨어뜨린다. 같은 요청의 수치가 달라진다), `versions.costProfile.provisional=true`, `effectiveStart=2023-07-03`(BIO 상장일로 당겨짐) |
 | S2 | 동일 버전 재사용 | **통과** | 사용자 2, 같은 본문 → 202 `COMPLETED` `REUSED`, 새 `backtestId`. `backtest_run` 1행 그대로, `backtest_reuse_event` `REUSED:SINGLE` 1 |
 | S3 | 진행 중 합류 | **통과** | A 접수 직후 B 같은 본문 → B는 `RUNNING` `JOINED`, 둘 다 `run_id=3`. `reuse_event` `JOINED` 1 |
 | S4 | 취소와 부분 결과 | **통과** | PROGRESS(2023-10-26) 뒤 취소 → 202 `CANCELLED cancelRequested=true` → 워커가 다음 거래일 처리 뒤 멈춤 → `CANCELLED partial=true lastTradingDate=2024-05-10`, `/timeseries` 200(그 날짜까지) |

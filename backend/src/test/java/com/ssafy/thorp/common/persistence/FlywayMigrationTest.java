@@ -1,6 +1,7 @@
 package com.ssafy.thorp.common.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -352,13 +353,13 @@ class FlywayMigrationTest extends PostgresTestSupport {
                 .isTrue();
 
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
-        // (constitution "실행 전 결정 임의 확정 금지").
+        // (constitution "실행 전 결정 임의 확정 금지"). PD-04가 확정돼 최소분산은 빠졌다(T022).
         assertThat(
                         jdbcTemplate.queryForList(
                                 "SELECT strategy_id FROM strategy_rules"
                                         + " WHERE status = 'PENDING_DECISION' AND spec IS NULL",
                                 String.class))
-                .containsExactlyInAnyOrder("SECTOR_MOMENTUM", "MINIMUM_VARIANCE");
+                .containsExactly("SECTOR_MOMENTUM");
 
         // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
         assertThat(
@@ -367,6 +368,62 @@ class FlywayMigrationTest extends PostgresTestSupport {
                                         + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
                                 Boolean.class))
                 .isTrue();
+    }
+
+    @Test
+    @DisplayName("공통 출력 규칙 두 키가 상한을 쓰는 전략 모두에 있다 — 한 전략만 빠지면 그 전략이 다른 규칙으로 돈다")
+    void commonOutputKeysAreOnEveryStrategyThatUsesACap() {
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT strategy_id FROM strategy_rules"
+                                        + " WHERE spec -> 'weightCap' IS NOT NULL"
+                                        + " AND (spec -> 'capOverflow' IS NULL"
+                                        + "      OR spec -> 'weightUnit' IS NULL)",
+                                String.class))
+                .as("상한이 있는데 잔여 정책·출력 단위가 없는 규칙 행")
+                .isEmpty();
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT spec ->> 'estimationMethod' FROM strategy_rules"
+                                        + " WHERE strategy_id = 'MINIMUM_VARIANCE'"
+                                        + " AND status = 'REGISTERED' AND provisional = false",
+                                String.class))
+                .isEqualTo("SAMPLE_COV");
+    }
+
+    @Test
+    @DisplayName("가드: 옛 의미로 계산한 INVERSE_VOLATILITY/1 결과가 남아 있으면 마이그레이션이 기동을 막는다")
+    void theGuardRefusesToRunWhenOldResultsWouldBeReinterpreted() {
+        // 재현 키에 rulesVersion이 들어가므로 옛 결과가 한 건이라도 남으면 새 의미의 요청이
+        // 옛 의미의 결과를 REUSED로 받는다 — 오류도 표시도 없이. 그래서 기동을 막는다.
+        repository.save(
+                BacktestRun.create(
+                        "INVERSE_VOLATILITY",
+                        "1",
+                        Map.of("rebalance", "MONTH_END"),
+                        List.of(new InstrumentId("069500.XKRX")),
+                        PERIOD,
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42));
+        entityManager.flush();
+        jdbcTemplate.update(
+                "UPDATE backtest_run SET rules_version = '1'"
+                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'");
+
+        assertThatThrownBy(() -> jdbcTemplate.execute(guardStatement()))
+                .hasMessageContaining("INVERSE_VOLATILITY/1 결과가 남아 있다");
+    }
+
+    /** 마이그레이션 파일의 가드 블록 그대로. 문장을 여기 옮겨 적으면 파일이 바뀌어도 테스트만 통과한다. */
+    private static String guardStatement() {
+        String sql = MigrationFiles.read("V20260917190000__minimum_variance_rules.sql");
+        int begin = sql.indexOf("DO $$");
+        int end = sql.indexOf("$$;", begin) + "$$;".length();
+        return sql.substring(begin, end);
     }
 
     @Test
