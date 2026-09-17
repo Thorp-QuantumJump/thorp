@@ -324,10 +324,10 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 - [X] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다
 - [X] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)
-- [ ] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)
-- [ ] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **"Thorp의 설계 선택"** 이라고 적고 *"모든 지표의 중요성이 같다"* 고 쓰지 않는다(FR-010, US3 시나리오 5)
+- [X] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)
+- [X] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **"Thorp의 설계 선택"** 이라고 적고 *"모든 지표의 중요성이 같다"* 고 쓰지 않는다(FR-010, US3 시나리오 5)
 - [X] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)
-- [ ] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)
+- [X] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)
 - [X] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정
 
 ---
@@ -342,13 +342,13 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 **묶음 M8 (이어서)** · 같은 브랜치
 
 - [ ] T138 [US4] (FE) 기준월 지정을 `RegimeSearchPage.tsx`에 붙인다 — 지정한 월을 유지하고 **화면에 항상 표시한다**(spec FR-003). 범위는 `baseline-months`의 `range`
-- [ ] T139 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)
-- [ ] T140 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)
-- [ ] T141 [US4] (FE) 설명 문장을 `CaseList.tsx`·`CaseDetail.tsx`에 표시 — 응답의 `similar`·`different`를 그대로 쓴다. **실제 값과 단위**를 보여주고 시대별 상대 위치를 기본 검색 이유로 섞지 않는다(FR-015·FR-017)
-- [ ] T142 [US4] (FE) 사례 상세에 `eraPosition`을 **당시 평소 대비 위치라는 별도 보조 설명**으로 표시한다 — 문장만 보이고 시대별 z·분위수·백분율로 바꾸지 않는다. 설명이 없는 지표는 보조 설명을 계산할 수 없다고 안내하되 사례와 순위는 유지한다(FR-017·SC-011)
-- [ ] T143 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)
-- [ ] T144 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정
-- [ ] T145 [P] [US4] (FE 테스트) 상세에 명목 비중·실제 거리 기여와 공통 척도가 보여 손계산이 가능함을 `CaseDetail.test.tsx`에 고정(SC-003). 시대별 위치는 별도 보조 문장으로 표시되고, 그 영역의 z·분위수·백분율이 0건이며 보조 설명이 없어도 사례가 유지됨을 확인한다(SC-011)
+- [X] T139 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)
+- [X] T140 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)
+- [X] T141 [US4] (FE) 설명 문장을 `CaseList.tsx`·`CaseDetail.tsx`에 표시 — 응답의 `similar`·`different`를 그대로 쓴다. **실제 값과 단위**를 보여주고 시대별 상대 위치를 기본 검색 이유로 섞지 않는다(FR-015·FR-017)
+- [X] T142 [US4] (FE) 사례 상세에 `eraPosition`을 **당시 평소 대비 위치라는 별도 보조 설명**으로 표시한다 — 문장만 보이고 시대별 z·분위수·백분율로 바꾸지 않는다. 설명이 없는 지표는 보조 설명을 계산할 수 없다고 안내하되 사례와 순위는 유지한다(FR-017·SC-011)
+- [X] T143 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)
+- [X] T144 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정
+- [X] T145 [P] [US4] (FE 테스트) 상세에 명목 비중·실제 거리 기여와 공통 척도가 보여 손계산이 가능함을 `CaseDetail.test.tsx`에 고정(SC-003). 시대별 위치는 별도 보조 문장으로 표시되고, 그 영역의 z·분위수·백분율이 0건이며 보조 설명이 없어도 사례가 유지됨을 확인한다(SC-011)
 - [ ] T146 (FE) 검색·더 보기·모드 전환·기준월 지정·상세 열기를 **키보드만으로** 할 수 있게 한다 — 포커스 순서가 화면 순서와 맞고, 다섯 표시가 그 경로에서 모두 도달 가능하다(spec FR-037)
 - [ ] T147 [P] (FE 테스트) 키보드만으로 다섯 표시에 도달함과, **좁은 폭에서 잘리거나 접히지 않음**을 고정한다(SC-014)
 - [ ] T148 [P] (FE 테스트) 010 화면 코드에 **지표 ID·지표명·분야 이름이 0건**임을 `frontend/src/components/regime/indicatorAgnostic.test.tsx`에 고정 — 007의 전략명 검사와 같은 방식이고, 대상 파일은 **손 목록이 아니라 `src`를 훑어** 모은다. **결과·상태·안내 영역에 하드코딩된 문구가 0건**임도 함께 고정한다 — 그 자리 문장은 전부 API 응답에서 와야 한다(spec FR-022 ②, SC-006)

@@ -1,10 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'
-import { regimeResult } from '@/test/regimeFixtures'
+import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
+import { regimeDetail, regimeResult } from '@/test/regimeFixtures'
 import { RegimeSearchPage } from './RegimeSearchPage'
 
-vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn() }))
+vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => null }))
 
 const baseline = {
@@ -78,5 +78,16 @@ describe('경제환경 검색 화면', () => {
     expect(screen.queryByText('2012-03')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
     expect(await screen.findByText('2012-03')).toBeTruthy()
+  })
+
+  it('사례 상세를 검색 식별자에 고정해 조회하고 종합 분야 내역을 표시한다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({ mode: 'COMPOSITE', field: null }))
+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail({ contribution: { 'field-1': '1.000000000000' } }))
+    await search()
+    await screen.findByText('2012-03')
+    fireEvent.click(screen.getByRole('button', { name: '상세 보기' }))
+    expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
+    expect(vi.mocked(getRegimeCaseDetail)).toHaveBeenCalledWith('2012-03', { searchId: 'search-1' }, expect.any(AbortSignal))
+    expect(screen.getByText('실제 거리 기여 1.000000000000')).toBeTruthy()
   })
 })

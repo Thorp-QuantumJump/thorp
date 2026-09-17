@@ -18,11 +18,5 @@
 .resultHeading > p { margin: 0; color: var(--thorp-copy); font-size: .82rem; }
 .resultHeading strong { color: var(--thorp-foreground); font-variant-numeric: tabular-nums; }
 .disclosures { display: grid; gap: 8px; margin-bottom: 20px; }
-.dataAsOf { border-top: 1px solid var(--thorp-line); padding: 18px 0 24px; color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }
-.dataAsOf > p { margin: 0 0 8px; }
-.dataAsOf dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
-.dataAsOf dl > div { display: flex; flex-wrap: wrap; gap: 4px 8px; }
-.dataAsOf dt { color: var(--thorp-foreground); }
-.dataAsOf dd { margin: 0; }
 @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }
 @media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button { width: 100%; } }

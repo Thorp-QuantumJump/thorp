@@ -5,6 +5,7 @@ import { BasisNotice } from '@/components/regime/BasisNotice'
 import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'
 import { CaseList } from '@/components/regime/CaseList'
 import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'
+import { DataAsOf } from '@/components/regime/DataAsOf'
 import { Disclosure } from '@/components/regime/Disclosure'
 import { EmptyResult } from '@/components/regime/EmptyResult'
 import { LoadError } from '@/components/regime/LoadError'
@@ -119,26 +120,11 @@ export function RegimeSearchPage() {
                   <BasisNotice basis={result.basis} context={context} />
                   <NewerReleases releases={result.dataAsOf.newerReleases} context={context} />
                 </div>
-                <section className={styles.dataAsOf} aria-label={`${context}: 자료 기준 시점`}>
-                  {result.dataAsOf.note && <p>{result.dataAsOf.note}</p>}
-                  <dl>
-                    {result.dataAsOf.indicators.map((indicator) => (
-                      <div key={indicator.indicatorId}>
-                        <dt>{indicator.indicator}</dt>
-                        <dd>대상월 {indicator.targetMonth ?? '—'} · 발표일 {indicator.publishedAt ?? '—'}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {result.dataAsOf.revisions.map((revision) => (
-                    <p key={`${revision.indicatorId}-${revision.month}`}>
-                      개정 · {revision.indicator} {revision.month} · {revision.revisedAt}
-                    </p>
-                  ))}
-                </section>
+                <DataAsOf data={result.dataAsOf} context={context} />
                 {result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (
                   <EmptyResult result={result} />
                 ) : (
-                  <CaseList result={result} onShowMore={showMore} isLoading={isLoading} context={context} />
+                  <CaseList key={result.searchId} result={result} onShowMore={showMore} isLoading={isLoading} context={context} fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])} />
                 )}
               </>
             )}

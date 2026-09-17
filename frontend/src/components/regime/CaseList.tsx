@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { RegimeSearchResult } from '@/types/regime'
+import { CaseDetailLoader } from './CaseDetailLoader'
 import { Disclosure } from './Disclosure'
 import styles from './CaseList.module.css'
 
@@ -7,10 +9,12 @@ interface CaseListProps {
   onShowMore: () => void
   isLoading: boolean
   context: string
+  fieldNames: Record<string, string>
 }
 
 /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */
-export function CaseList({ result, onShowMore, isLoading, context }: CaseListProps) {
+export function CaseList({ result, onShowMore, isLoading, context, fieldNames }: CaseListProps) {
+  const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)
   return (
     <section aria-labelledby="regime-cases-title" className={styles.list}>
       <div className={styles.heading}>
@@ -43,6 +47,21 @@ export function CaseList({ result, onShowMore, isLoading, context }: CaseListPro
                 <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
               </section>
             </div>
+            {item.detailAvailable && (
+              <button
+                type="button" className={styles.detailButton}
+                aria-expanded={selectedEndMonth === item.endMonth}
+                aria-controls={`regime-detail-${item.endMonth}`}
+                onClick={() => setSelectedEndMonth((current) => current === item.endMonth ? null : item.endMonth)}
+              >
+                {selectedEndMonth === item.endMonth ? '상세 닫기' : '상세 보기'}
+              </button>
+            )}
+            {selectedEndMonth === item.endMonth && (
+              <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>
+                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} />
+              </div>
+            )}
           </li>
         ))}
       </ul>

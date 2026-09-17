@@ -32,14 +32,14 @@ function result(displayed: number, stored = 10, eligible = 12): RegimeSearchResu
 describe('사례 목록', () => {
   it('처음 세 개를 보이고 저장된 사례가 더 있을 때만 더 보기를 요청한다', () => {
     const onShowMore = vi.fn()
-    const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context="시험 검색" />)
+    const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context="시험 검색" fieldNames={{}} />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
     expect(screen.getByText('2012-03')).toBeTruthy()
     expect(screen.queryByText('01')).toBeNull()
     expect(screen.queryByText('0.412938571034')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '더 보기' }))
     expect(onShowMore).toHaveBeenCalledOnce()
-    rerender(<CaseList result={result(10)} onShowMore={onShowMore} isLoading={false} context="시험 검색" />)
+    rerender(<CaseList result={result(10)} onShowMore={onShowMore} isLoading={false} context="시험 검색" fieldNames={{}} />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(10)
     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()
     expect(screen.getByText('가까운 순서로 10개까지 보입니다.')).toBeTruthy()
@@ -48,7 +48,7 @@ describe('사례 목록', () => {
   })
 
   it('후보가 둘이면 빈자리를 만들거나 더 보기를 표시하지 않는다', () => {
-    render(<CaseList result={result(2, 2, 2)} onShowMore={vi.fn()} isLoading={false} context="시험 검색" />)
+    render(<CaseList result={result(2, 2, 2)} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2)
     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()
     expect(screen.queryByText('가까운 순서로 10개까지 보입니다.')).toBeNull()
