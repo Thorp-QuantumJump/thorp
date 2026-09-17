@@ -1,5 +1,6 @@
 package com.ssafy.thorp.support;
 
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.annotation.DirtiesContext;
@@ -32,9 +33,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @DirtiesContext
 public abstract class RabbitTestSupport {
 
+    /**
+     * 기동 대기는 기본값(60초)보다 길게 둔다. 브로커가 "Server startup complete"를 찍기까지 걸리는 시간은 그때 기계가 얼마나 바쁜지에 달려 있는데,
+     * 이제 네 클래스가 이 한 번의 기동에 함께 기대므로 한 번 모자라면 그 자리에서 클래스가 통째로 실패한다(2026-09-17 부하가 걸린 로컬에서 실제로 났다). CI
+     * 는 빌드 둘이 CPU 2개를 나눠 쓰므로 로컬보다 느릴 수 있다.
+     */
     @ServiceConnection
     public static final RabbitMQContainer RABBITMQ =
-            new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+            new RabbitMQContainer("rabbitmq:3.13-management-alpine")
+                    .withStartupTimeout(Duration.ofMinutes(3));
 
     @BeforeAll
     public static void startContainerOnce() {
