@@ -37,7 +37,7 @@ export function MarketStatusSummary({ regime }: MarketStatusSummaryProps) {
         </dl>
         <div className={styles.metaRow}>
           <span>분석 기준 {formatDataDate(regime.asOf)}</span>
-          <Link className={styles.detailLink} to="/home">
+          <Link className={styles.detailLink} to="/market-flow">
             자세히 보기 <ArrowUpRight size={14} aria-hidden="true" />
           </Link>
         </div>

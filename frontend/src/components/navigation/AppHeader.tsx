@@ -41,7 +41,7 @@ const navigationItems = [
   {
     label: '시장 흐름',
     description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',
-    path: '/home',
+    path: '/market-flow',
     icon: ChartNoAxesCombined,
   },
   {

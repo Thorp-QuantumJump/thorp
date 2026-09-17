@@ -46,7 +46,7 @@ function collectPlainTypeScriptTests(directory: string = sourceRoot): string[] {
 type PatternMatcher = (relativePath: string) => boolean
 
 /**
- * 지금 쓰는 표현은 `dir/**` + `/*.ext`와 정확 경로 두 가지뿐이다. 그 둘만 해석하고,
+ * 지금 쓰는 표현은 재귀 `dir/**` + `/*.ext`, 한 폴더 `dir/*.ext`, 정확 경로다.
  * **해석할 수 없는 형태가 들어오면 통과시키지 않고 예외를 던진다.** 모르는 패턴을 통과로
  * 처리하면 검사가 조용히 사라진다.
  */
@@ -55,6 +55,21 @@ export function compilePattern(pattern: string): PatternMatcher {
   const globIndex = pattern.indexOf(globToken)
 
   if (globIndex === -1) {
+    const singleGlobIndex = pattern.indexOf('*')
+
+    if (singleGlobIndex !== -1 && pattern.indexOf('*', singleGlobIndex + 1) === -1) {
+      const prefix = pattern.slice(0, singleGlobIndex)
+      const suffix = pattern.slice(singleGlobIndex + 1)
+
+      if (prefix.endsWith('/') && !suffix.includes('/') && !pattern.includes('{') && !pattern.includes('?')) {
+        return (relativePath) => {
+          if (!relativePath.startsWith(prefix) || !relativePath.endsWith(suffix)) return false
+          const wildcardValue = relativePath.slice(prefix.length, relativePath.length - suffix.length)
+          return wildcardValue.length > 0 && !wildcardValue.includes('/')
+        }
+      }
+    }
+
     if (pattern.includes('*') || pattern.includes('{') || pattern.includes('?')) {
       throw new Error(`해석할 수 없는 수집 패턴이다: ${pattern}`)
     }
@@ -152,15 +167,19 @@ describe('테스트 수집 경로', () => {
 
   it('해석할 수 없는 형태의 패턴은 통과시키지 않고 실패시킨다', () => {
     expect(() => compilePattern('src/**/{a,b}.test.ts')).toThrow()
-    expect(() => compilePattern('src/*.test.ts')).toThrow()
+    expect(() => compilePattern('src/*/*.test.ts')).toThrow()
     expect(() => compilePattern('src/api/?.test.ts')).toThrow()
   })
 
-  it('알고 있는 두 형태를 바르게 해석한다', () => {
+  it('알고 있는 세 형태를 바르게 해석한다', () => {
     const glob = compilePattern('src/**/*.test.tsx')
     expect(glob('src/pages/LandingPage.test.tsx')).toBe(true)
     expect(glob('src/pages/LandingPage.test.ts')).toBe(false)
     expect(glob('src/.test.tsx')).toBe(false)
+
+    const oneDirectory = compilePattern('src/api/*.test.ts')
+    expect(oneDirectory('src/api/marketFlow.test.ts')).toBe(true)
+    expect(oneDirectory('src/api/nested/marketFlow.test.ts')).toBe(false)
 
     const exact = compilePattern('src/api/auth.test.ts')
     expect(exact('src/api/auth.test.ts')).toBe(true)

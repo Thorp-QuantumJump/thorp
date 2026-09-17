@@ -6,7 +6,7 @@ import { authenticatedUser } from '@/test/authFixtures'
 import App from './App'
 
 vi.mock('@/pages/LandingPage', () => ({ LandingPage: () => <h1>랜딩 화면</h1> }))
-vi.mock('@/pages/HomePage', () => ({ HomePage: () => <h1>홈 화면</h1> }))
+vi.mock('@/pages/MarketFlowPage', () => ({ MarketFlowPage: () => <h1>시장 흐름 화면</h1> }))
 vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 화면</h1> }))
 vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))
 vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))
@@ -45,13 +45,18 @@ describe('App authentication routes', () => {
   })
 
   it.each([
-    ['/home', '홈 화면'],
+    ['/market-flow', '시장 흐름 화면'],
     ['/dashboard', '대시보드 화면'],
     ['/backtest', '백테스트 화면'],
   ])('비로그인 상태에서도 공개 경로 %s를 이용할 수 있다', async (path, heading) => {
     renderApp(path)
 
     expect(await screen.findByRole('heading', { name: heading })).toBeTruthy()
+  })
+
+  it('/home은 새 시장 흐름 경로로 연결한다', async () => {
+    renderApp('/home')
+    expect(await screen.findByRole('heading', { name: '시장 흐름 화면' })).toBeTruthy()
   })
 
   it('내 기록 경로만 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {

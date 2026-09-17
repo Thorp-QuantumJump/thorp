@@ -250,7 +250,7 @@ describe('SectorSelectionPage', () => {
       links.map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([
       ['전략 진단', '/diagnosis/sectors'],
-      ['시장 흐름', '/home'],
+      ['시장 흐름', '/market-flow'],
       ['배우기', '/learn'],
       ['내 기록', '/records'],
     ])
