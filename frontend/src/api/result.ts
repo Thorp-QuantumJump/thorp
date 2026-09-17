@@ -18,9 +18,12 @@ import type {
  * 계약은 `docs/specs/result-api/README.md`다. 로그인하지 않아도 부를 수 있고, 경로에는 공개 토큰만
  * 쓴다 — 004의 `backtestId`는 이 모듈 어디에도 나오지 않는다(SC-009).
  *
- * <p><b>토큰은 `encodeURIComponent`를 거친다.</b> 정상 토큰은 32자 소문자 16진이라 바뀌지 않는다.
- * 주소창에서 온 값에 `/`나 `..`가 섞여도 다른 경로를 부르지 않고 서버가 `400 INVALID_INPUT`으로 막게 한다.
+ * <p><b>형식이 틀린 토큰은 요청하지 않는다.</b> 토큰은 32자 소문자 16진이고, 아니면 서버도 조회하지 않고
+ * `400 INVALID_INPUT`이다. 주소창에서 온 `..`나 `/`를 경로에 넣으면 브라우저가 경로를 정리해 다른 자원을
+ * 부를 수 있으므로, 같은 400을 요청 없이 돌려준다. 형식이 맞는 토큰은 그대로 경로에 쓴다.
  */
+
+const publicTokenPattern = /^[0-9a-f]{32}$/
 
 const basePath = '/results'
 
@@ -120,13 +123,20 @@ function unwrap<T>(body: ResultEnvelope<T>): T {
   return body.data
 }
 
+/** 형식이 틀린 토큰이면 서버와 같은 `400 INVALID_INPUT`을 던진다. */
 function resultPath(token: string, suffix = ''): string {
-  return `${basePath}/${encodeURIComponent(token)}${suffix}`
+  if (!publicTokenPattern.test(token)) {
+    throw new ResultError('결과 주소의 형식이 올바르지 않습니다.', {
+      code: 'INVALID_INPUT',
+      status: 400,
+    })
+  }
+  return `${basePath}/${token}${suffix}`
 }
 
-async function getResource<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function getResource<T>(path: () => string, signal?: AbortSignal): Promise<T> {
   try {
-    const response = await apiClient.get<ResultEnvelope<T>>(path, { signal })
+    const response = await apiClient.get<ResultEnvelope<T>>(path(), { signal })
     return unwrap(response.data)
   } catch (error) {
     throw normalizeResultError(error)
@@ -140,7 +150,7 @@ async function getResource<T>(path: string, signal?: AbortSignal): Promise<T> {
  * 없는 토큰은 `404 RESOURCE_NOT_FOUND`, 형식 오류는 `400 INVALID_INPUT`이다.
  */
 export function fetchResult(token: string, signal?: AbortSignal): Promise<PublicResultDetail> {
-  return getResource(resultPath(token), signal)
+  return getResource(() => resultPath(token), signal)
 }
 
 /** 그래프용 시계열. 받은 그대로 그리고 점 수를 줄이지 않는다(R-08). */
@@ -148,7 +158,7 @@ export function fetchResultTimeseries(
   token: string,
   signal?: AbortSignal,
 ): Promise<ResultTimeseries> {
-  return getResource(resultPath(token, '/timeseries'), signal)
+  return getResource(() => resultPath(token, '/timeseries'), signal)
 }
 
 /** 거래 내역 질의. 정하지 않은 항목은 보내지 않는다 — 기본값과 상한은 서버가 정한다. */
@@ -179,7 +189,7 @@ export function fetchResultTrades(
   if (query.to) params.set('to', query.to)
 
   const search = params.toString()
-  return getResource(resultPath(token, `/trades${search ? `?${search}` : ''}`), signal)
+  return getResource(() => resultPath(token, `/trades${search ? `?${search}` : ''}`), signal)
 }
 
 /** 그날 이하에서 가장 최근 스냅샷의 보유 구성. 응답의 `snapshotDate`를 함께 보인다. */
@@ -189,12 +199,12 @@ export function fetchResultPositions(
   signal?: AbortSignal,
 ): Promise<ResultPositions> {
   const params = new URLSearchParams({ date })
-  return getResource(resultPath(token, `/positions?${params.toString()}`), signal)
+  return getResource(() => resultPath(token, `/positions?${params.toString()}`), signal)
 }
 
 /** 리밸런싱마다의 목표·실제 비중과 비중 출처. */
 export function fetchResultWeights(token: string, signal?: AbortSignal): Promise<ResultWeights> {
-  return getResource(resultPath(token, '/weights'), signal)
+  return getResource(() => resultPath(token, '/weights'), signal)
 }
 
 /** 예외 처리 기록. */
@@ -202,7 +212,7 @@ export function fetchResultExceptions(
   token: string,
   signal?: AbortSignal,
 ): Promise<ResultExceptions> {
-  return getResource(resultPath(token, '/exceptions'), signal)
+  return getResource(() => resultPath(token, '/exceptions'), signal)
 }
 
 /**
@@ -212,8 +222,10 @@ export function fetchResultExceptions(
  */
 export async function retryResult(token: string): Promise<ResultRetryAccepted> {
   try {
+    // 공용 mutation 안에서 던지면 형식 오류가 '예상 못한 오류'로 감싸진다. 보내기 전에 먼저 검사한다.
+    const path = resultPath(token, '/retry')
     const response = await runCsrfProtectedMutation(() =>
-      apiClient.post<ResultEnvelope<ResultRetryAccepted>>(resultPath(token, '/retry'), null),
+      apiClient.post<ResultEnvelope<ResultRetryAccepted>>(path, null),
     )
     return unwrap(response.data)
   } catch (error) {

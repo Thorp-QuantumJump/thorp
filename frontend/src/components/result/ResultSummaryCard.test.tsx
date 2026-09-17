@@ -50,7 +50,8 @@ describe('ResultSummaryCard', () => {
     )
 
     expect(screen.queryByRole('definition')).toBeNull()
-    expect(container.textContent).not.toMatch(/\d+\.\d+%|원\b/)
+    // `\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.
+    expect(container.textContent).not.toMatch(/\d%|\d원/)
     expect(container.textContent).toContain(SUMMARY_NOT_CALCULATED)
     expect(container.textContent).toContain('완료된 거래일이 없습니다')
   })

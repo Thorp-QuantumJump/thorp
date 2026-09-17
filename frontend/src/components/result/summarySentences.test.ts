@@ -64,6 +64,15 @@ describe('해석 요약 문장 틀', () => {
     )
   })
 
+  it('수로 읽히지 않는 값이 있으면 비교하지 않고 같다고도 쓰지 않는다', () => {
+    const unreadable = target({ netTotalReturn: 'N/A' })
+
+    expect(selectTemplateKey({ base, target: unreadable })).toBe('single')
+    expect(selectTemplateKey({ base: { ...base, maxDrawdown: '' }, target: target({}) })).toBe(
+      'single',
+    )
+  })
+
   it('모든 틀이 값 자리를 남기지 않고 채워진다', () => {
     const cases = [
       { base },

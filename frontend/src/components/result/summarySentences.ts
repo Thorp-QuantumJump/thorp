@@ -31,13 +31,13 @@ export const SENTENCE_TEMPLATES = {
   higherSmaller:
     '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 작았습니다({targetDrawdown}, 기준 {baseDrawdown}).',
   higherSame:
-    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같습니다({baseDrawdown}).',
+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같았습니다({baseDrawdown}).',
   lowerLarger:
     '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 컸습니다({targetDrawdown}, 기준 {baseDrawdown}).',
   lowerSmaller:
     '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭도 작았습니다({targetDrawdown}, 기준 {baseDrawdown}).',
   lowerSame:
-    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같습니다({baseDrawdown}).',
+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같았습니다({baseDrawdown}).',
   sameLarger:
     '같은 조건에서 두 결과의 수익률은 같고({baseReturn}) 가장 크게 줄었던 폭은 비교 대상({targetName})이 기준({baseName})보다 컸습니다({targetDrawdown}, 기준 {baseDrawdown}).',
   sameSmaller:
@@ -80,10 +80,28 @@ function compare(target: string, base: string, displayed: (value: string) => str
   return t > b ? 'higher' : 'lower'
 }
 
-/** 조건에 맞는 틀의 이름을 고른다. */
+function isNumeric(value: string): boolean {
+  return value.trim() !== '' && Number.isFinite(Number(value))
+}
+
+/**
+ * 조건에 맞는 틀의 이름을 고른다.
+ *
+ * 두 결과 가운데 하나라도 수로 읽히지 않는 값이 있으면 방향을 정할 수 없으므로 비교하지 않고 기준
+ * 결과만 말한다. 읽지 못한 값을 0으로 보고 "같다"고 쓰지 않는다.
+ */
 export function selectTemplateKey(input: SentenceInput): SentenceTemplateKey {
   const { base, target } = input
   if (!target) return 'single'
+
+  const subjects = [base, target]
+  const comparable = subjects.every(
+    (subject) =>
+      isNumeric(subject.netTotalReturn) &&
+      isNumeric(subject.maxDrawdown) &&
+      isNumeric(subject.totalTradingCost),
+  )
+  if (!comparable) return 'single'
 
   const returnDirection = compare(target.netTotalReturn, base.netTotalReturn, formatRatio)
   // 가장 크게 줄었던 폭은 0 이하의 비율이다. 값이 더 낮으면(더 음수면) 폭이 더 크다.

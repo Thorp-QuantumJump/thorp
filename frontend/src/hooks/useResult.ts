@@ -35,10 +35,22 @@ function hasViewableResult(detail: PublicResultDetail): boolean {
   return detail.status === 'CANCELLED' && detail.summaryUnavailable !== 'CANCELLED_BEFORE_START'
 }
 
+/**
+ * 코드가 없으면 HTTP 상태로 가른다. 응답 봉투 없이 404·400이 오는 경우(프록시나 보안 필터가 먼저
+ * 답한 경우)에도 잘못된 주소 안내가 떠야 한다 — 다시 불러오기를 주면 같은 실패를 반복한다.
+ */
 function toFailureState(error: unknown): ResultState {
   const failure = error instanceof ResultError ? error : new ResultError('결과를 불러오지 못했습니다.')
-  if (failure.is('RESULT_EXPIRED')) return { status: 'expired' }
-  if (failure.is('RESOURCE_NOT_FOUND') || failure.is('INVALID_INPUT')) return { status: 'notFound' }
+  if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {
+    return { status: 'expired' }
+  }
+  if (
+    failure.is('RESOURCE_NOT_FOUND') ||
+    failure.is('INVALID_INPUT') ||
+    (failure.code === null && (failure.status === 404 || failure.status === 400))
+  ) {
+    return { status: 'notFound' }
+  }
   return { status: 'error', message: failure.message }
 }
 
@@ -96,7 +108,7 @@ export function useResult(token: string): ResultState & { retry: () => void } {
         const failure =
           error instanceof ResultError ? error : new ResultError('그래프 자료를 불러오지 못했습니다.')
         // 상세를 받은 뒤 만료 시각을 넘긴 경우다. 이미 받은 숫자를 남기지 않고 만료로 닫는다(SC-008).
-        if (failure.is('RESULT_EXPIRED')) {
+        if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {
           if (active) setState({ status: 'expired' })
           return
         }

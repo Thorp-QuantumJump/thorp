@@ -21,6 +21,12 @@ import styles from './ResultPage.module.css'
  */
 export function ResultPage() {
   const { token = '' } = useParams()
+  // 토큰만 바뀌면 라우터가 같은 화면을 다시 쓴다. 앞 결과의 숫자가 새 주소 아래 한순간이라도 보이지
+  // 않도록 토큰마다 새로 그린다.
+  return <ResultScreen key={token} token={token} />
+}
+
+function ResultScreen({ token }: { token: string }) {
   const result = useResult(token)
 
   return (

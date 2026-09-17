@@ -87,13 +87,17 @@ describe('api/result', () => {
     ])
   })
 
-  it('주소창에서 온 경로 문자가 다른 경로를 부르지 않는다', async () => {
-    clientMocks.get.mockResolvedValue(ok({}))
+  it.each(['..', '../backtests/1', 'ABCDEF0123456789ABCDEF0123456789', `${resultToken}0`, ''])(
+    '형식이 틀린 토큰 %j 은 요청하지 않고 400 INVALID_INPUT이다',
+    async (token) => {
+      await expect(fetchResult(token)).rejects.toMatchObject({ code: 'INVALID_INPUT', status: 400 })
+      await expect(fetchResultTimeseries(token)).rejects.toMatchObject({ code: 'INVALID_INPUT' })
+      await expect(retryResult(token)).rejects.toMatchObject({ code: 'INVALID_INPUT' })
 
-    await fetchResult('../backtests/1')
-
-    expect(clientMocks.get.mock.calls[0][0]).toBe('/results/..%2Fbacktests%2F1')
-  })
+      expect(clientMocks.get).not.toHaveBeenCalled()
+      expect(clientMocks.runCsrfProtectedMutation).not.toHaveBeenCalled()
+    },
+  )
 
   it('거래 질의의 size·from·to 등을 질의 문자열에 싣고 정하지 않은 항목은 뺀다', async () => {
     clientMocks.get.mockResolvedValue(ok({ content: [] }))
