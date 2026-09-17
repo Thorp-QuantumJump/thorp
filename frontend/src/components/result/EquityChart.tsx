@@ -94,10 +94,13 @@ function buildRows(base: ResultTimeseriesPoint[], target?: ResultTimeseriesPoint
 /**
  * 세로축의 범위. 시작 금액을 아래끝으로 삼되 곡선이 그보다 더 내려간 적이 있으면 그만큼 넓힌다.
  * 위아래에 약간의 여백을 두어 시작 금액 기준선이 그림 가장자리에 붙어 잘리지 않게 한다.
+ *
+ * <p>시작 금액을 읽을 수 없으면 곡선의 값만으로 범위를 잡는다. 0을 대신 넣으면 곡선이 그림 위쪽에
+ * 한 줄로 눌려 하락 구간을 알아볼 수 없다.
  */
-function resolveYDomain(rows: ChartRow[], initialCash: number): [number, number] {
-  let lowest = initialCash
-  let highest = initialCash
+function resolveYDomain(rows: ChartRow[], initialCash: number | null): [number, number] {
+  let lowest = initialCash ?? Number.POSITIVE_INFINITY
+  let highest = initialCash ?? Number.NEGATIVE_INFINITY
   for (const row of rows) {
     for (const value of [row.base, row.target]) {
       if (value == null) continue
@@ -105,6 +108,7 @@ function resolveYDomain(rows: ChartRow[], initialCash: number): [number, number]
       if (value > highest) highest = value
     }
   }
+  if (!Number.isFinite(lowest) || !Number.isFinite(highest)) return [0, 100]
   const span = highest - lowest
   const padding = span > 0 ? span * 0.08 : Math.max(Math.abs(highest) * 0.01, 1)
   return [lowest - padding, highest + padding]
@@ -136,7 +140,7 @@ export function EquityChart(props: EquityChartProps) {
   const { base, target, initialCash } = props
   const rows = useMemo(() => buildRows(base.points, target?.points), [base.points, target?.points])
   const initial = toNumber(initialCash)
-  const yDomain = useMemo(() => resolveYDomain(rows, initial ?? 0), [rows, initial])
+  const yDomain = useMemo(() => resolveYDomain(rows, initial), [rows, initial])
 
   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
   const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null

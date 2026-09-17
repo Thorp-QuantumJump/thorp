@@ -260,7 +260,11 @@ export function Line({
     yDomainTweenDuration,
   } = useChartStable();
   const yScale = useYScale(yAxisId);
-  const useDataTransitionPath = animate && chartPhase === "ready";
+  // The animated path is rebuilt from raw points and cannot express a gap, so a
+  // series that breaks on missing values must skip it — otherwise the gap would
+  // quietly close once the chart settles.
+  const useDataTransitionPath =
+    animate && chartPhase === "ready" && defined == null;
   const { pathD: animatedPathD } = useAnimatedSeriesPath({
     chartPhase,
     curve,

@@ -22,8 +22,13 @@ export type SeriesEndLabelItem = {
 /** 두 이름표가 겹쳐 읽히지 않도록 유지하는 세로 간격(화소) */
 const MIN_GAP = 16
 
-/** 오른쪽 여백에 들어가는 글자 수. 넘치면 줄이고 전체 이름은 `<title>`에 남긴다 */
-const MAX_CHARS = 9
+/**
+ * 오른쪽 여백에 들어가는 글자 수. 넘치면 줄이고 전체 이름은 `<title>`에 남긴다.
+ *
+ * 12px 한글 한 글자가 약 12px을 차지하고 `EquityChart`가 오른쪽에 88px을 비워 두므로, 곡선에서
+ * 9px 떨어뜨려 놓고도 잘리지 않는 길이가 여섯 글자다. 등록된 다섯 전략 이름이 모두 여기 들어간다.
+ */
+const MAX_CHARS = 6
 
 type PlacedLabel = SeriesEndLabelItem & { x: number; y: number }
 
