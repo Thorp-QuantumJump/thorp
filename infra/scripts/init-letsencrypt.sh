@@ -71,6 +71,11 @@ echo "[2/5] nginx 기동용 임시 인증서 생성"
 make_dummy_cert
 
 echo "[3/5] nginx 기동 (80번 포트로 인증 요청을 받는다)"
+# nginx 는 backend 에 의존하므로 새 서버처럼 backend 이미지가 없으면 compose 가 여기서 만든다. 운영 이미지는
+# 미리 만든 JAR를 넣기만 하므로(docker-compose.prod.yml 의 target: prebuilt) 그때는 JAR부터 만든다.
+if ! docker image inspect thorp-backend:latest >/dev/null 2>&1; then
+    ./scripts/build-backend-jar.sh
+fi
 $COMPOSE up -d nginx
 sleep 5
 

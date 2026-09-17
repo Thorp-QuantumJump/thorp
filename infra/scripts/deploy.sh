@@ -33,21 +33,22 @@ if [[ -n "$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)" ]]; then
     fi
 fi
 
-step "[1/5] 프론트엔드 빌드"
+step "[1/5] 백엔드 JAR 빌드"
+# 백엔드 이미지는 컴파일하지 않고 이 JAR를 넣기만 한다(docker-compose.prod.yml 의 target: prebuilt).
+# 이미지 빌드 안에서 컴파일하지 않는 이유와 실행 위치별 경로는 스크립트 머리말에 있다.
+# 정적 파일을 바꾸기 전에 만든다. 이 빌드가 실패해도 운영 중인 화면과 백엔드는 그대로 남는다.
+./scripts/build-backend-jar.sh
+
+step "[2/5] 프론트엔드 빌드"
 # 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이 적용되지 않는다. 여기서 직접 건다.
 docker run --rm --memory=2g --cpus=2 \
     -v "$PWD/../frontend:/app" \
     -w /app \
     node:20-alpine sh -c "npm ci && npm run build"
 
-step "[2/5] 정적 파일 교체"
+step "[3/5] 정적 파일 교체"
 rm -rf nginx/html/*
 cp -r ../frontend/dist/. nginx/html/
-
-step "[3/5] 백엔드 JAR 빌드"
-# 백엔드 이미지는 컴파일하지 않고 이 JAR를 넣기만 한다(docker-compose.prod.yml 의 target: prebuilt).
-# 이미지 빌드 안에서 컴파일하지 않는 이유와 실행 위치별 경로는 스크립트 머리말에 있다.
-./scripts/build-backend-jar.sh
 
 step "[4/5] 백엔드/워커 이미지 빌드 및 기동"
 $COMPOSE build backend worker

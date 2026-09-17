@@ -6,8 +6,9 @@
 #             (2026-09-17 배포 중 서버 유휴 CPU 0~20%, S15P21E205-331).
 #   source    로컬 개발(docker-compose.dev.yml, target 미지정 시 기본값). 소스에서 JAR를 만든다.
 #
-# BuildKit 은 지정한 target 에 필요한 단계만 빌드하므로 prebuilt 는 build 단계를 돌리지 않는다.
-# prebuilt 를 build 보다 앞에 두어 BuildKit 이 아닌 옛 빌더에서도 build 단계를 건너뛰게 한다.
+# BuildKit 은 지정한 target 에 필요한 단계만 빌드하므로 prebuilt 는 build 단계를 돌리지 않고, source 는
+# prebuilt 단계를 돌리지 않는다. BuildKit 을 끈 옛 빌더는 target 앞의 단계를 모두 돌려 이 구분이 깨지므로
+# 쓰지 않는다(Docker 23 부터 BuildKit 이 기본값이다).
 
 # --- runtime base ---
 FROM eclipse-temurin:21-jre AS runtime

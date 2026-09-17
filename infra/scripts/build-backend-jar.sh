@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 운영 백엔드 이미지에 넣을 JAR를 만든다. deploy.sh 와 migrate-jobs-queue.sh 가 이미지 빌드 직전에 부른다.
+# 운영 백엔드 이미지에 넣을 JAR를 만든다. 운영 compose 로 backend 이미지를 만들기 전에 부른다
+# (deploy.sh, migrate-jobs-queue.sh, init-letsencrypt.sh).
 #
 # 왜 이미지 빌드 밖에서 만드는가 (S15P21E205-331): `docker compose build` 안에서 컴파일하면 그 빌드는
 # 서버 Docker 데몬에서 돌아 Jenkins 컨테이너의 CPU 2개·메모리 4GB 상한을 받지 않는다. 2026-09-17 배포 중
@@ -29,15 +30,17 @@ GRADLE_JVMARGS="-Xmx512m -XX:MaxMetaspaceSize=384m"
 rm -rf "$BACKEND_DIR/build/libs"
 
 if command -v javac >/dev/null 2>&1 && javac -version 2>&1 | grep -qE '^javac 21(\.|$)'; then
-    (cd "$BACKEND_DIR" && ./gradlew -Dorg.gradle.jvmargs="$GRADLE_JVMARGS" bootJar --no-daemon --console=plain)
+    # Jenkins 컨테이너에는 Jenkins 본체용 JAVA_OPTS(-Xmx1024m)가 걸려 있고 gradlew 는 그것을 클라이언트 JVM 에
+    # 그대로 넘긴다. 클라이언트는 빌드를 하지 않으므로 gradlew 기본값(-Xmx64m)으로 띄운다.
+    (cd "$BACKEND_DIR" && env -u JAVA_OPTS -u GRADLE_OPTS \
+        ./gradlew -Dorg.gradle.jvmargs="$GRADLE_JVMARGS" bootJar --no-daemon --console=plain)
 else
-    # 컨테이너 사용자를 호출한 사용자와 맞춘다. root 로 돌면 build/ 와 .gradle/ 이 root 소유가 되어, 다음
-    # Jenkins 배포(uid 1000)가 그 안에 쓰지 못해 실패한다. 호출한 uid 가 이미지에 없거나 그 홈에 쓸 수 없을 수
-    # 있으므로 HOME 과 Gradle 캐시를 쓸 수 있는 곳으로 준다. 캐시는 backend/.gradle 아래라 git 이 무시하고
-    # 이미지 빌드 컨텍스트에서도 빠진다.
+    # 컨테이너 사용자를 backend 폴더의 소유자로 맞춘다. root 로 돌면 build/ 와 .gradle/ 이 root 소유가 되어,
+    # 다음 Jenkins 배포(uid 1000)가 그 안에 쓰지 못해 실패한다. 호출한 사용자가 아니라 폴더 소유자를 쓰므로
+    # sudo 로 실행해도 같다. Gradle 캐시는 컨테이너가 끝나도 남도록 backend/.gradle 아래에 둔다. 그 경로는
+    # git 이 무시하고 이미지 빌드 컨텍스트에서도 빠진다.
     docker run --rm --memory=2g --cpus=2 \
-        --user "$(id -u):$(id -g)" \
-        -e HOME=/tmp \
+        --user "$(stat -c '%u:%g' "$BACKEND_DIR")" \
         -e GRADLE_USER_HOME=/app/.gradle/user-home \
         -v "$BACKEND_DIR:/app" \
         -w /app \

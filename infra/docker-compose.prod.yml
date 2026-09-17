@@ -100,8 +100,10 @@ services:
       context: ../backend
       dockerfile: ../infra/docker/backend.Dockerfile
       # 소스를 컴파일하지 않고 scripts/build-backend-jar.sh 가 만든 build/libs 의 JAR를 넣기만 한다.
-      # 그 스크립트를 거치지 않고 `build`나 `up --build`를 직접 돌리면 JAR가 없어 실패하거나, 남아 있던
-      # 옛 JAR로 이미지를 만든다. 백엔드 이미지는 deploy.sh 로만 만든다.
+      # 그 스크립트를 먼저 돌리지 않고 이미지를 만들면 JAR가 없어 실패하거나, 남아 있던 옛 JAR로 이미지를
+      # 만든다. `build`·`up --build` 뿐 아니라 thorp-backend 이미지가 없을 때의 `up`(backend 에 의존하는
+      # nginx 포함)도 이미지를 만든다. 운영 스크립트(deploy.sh, migrate-jobs-queue.sh, init-letsencrypt.sh)는
+      # 이미지를 만들기 전에 그 스크립트를 부른다.
       target: prebuilt
     image: thorp-backend:latest
     container_name: thorp-backend
