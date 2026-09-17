@@ -206,8 +206,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T057 [P] [US2] (FE) `frontend/src/components/strategy/RuleViolationNotice.tsx` — 위반 규칙의 `detail`을 **그대로** 보인다(화면이 문장을 짓지 않는다, quickstart 5-1). `role="alert"`
 - [X] T057a [P] [US2] (FE) `frontend/src/components/strategy/TermHelp.tsx` — FR-016의 용어 도움말이다. 전략 카드 설명과 상세 설정 축 `description` 옆에서 [013](../013-learning-pages/spec.md) FR-008~FR-010이 소유하는 단일 원본을 읽어 보인다. 013 화면이 아직 없으므로 조회를 `frontend/src/api/learningGlossary.ts` 한 파일의 `fetchGlossaryEntry(term)`에 격리하고 **013이 구현되면 이 파일만 바꾼다**고 머리 주석에 적는다(T030 `useSectorSelection`과 같은 경계 방식). 대응하는 설명이 없거나 조회가 실패하면 즉석 문장을 만들지 않고 '설명 준비 중'을 보인다(013 FR-010). 도움말에는 해당 주제 글 연결을 두고, 도움말을 열거나 그 연결을 눌러도 `useStrategySettings` 상태가 초기화되지 않는다(013 FR-009, FR-017). 키보드로 열고 닫을 수 있으며 닫으면 초점이 호출한 자리로 돌아온다(NFR-001)
   - **구현 메모 (B08, S15P21E205-240)**: [013 term-help-ui](../013-learning-pages/contracts/term-help-ui.md) §2·§5가 이 자리를 공용 컴포넌트로 바꿨으므로 `components/strategy/TermHelp.tsx`가 아니라 `frontend/src/components/learning/TermHelp.tsx`(인자 `termId`·`label`·`returnTo`)와 `frontend/src/api/learningGlossary.ts`(세 상태 `ready`·`notReady`·`failed`)로 만들었다. 처음에는 상세 설정 축에 붙이지 않았다 — 등록표 응답에 축마다 013 `termId`가 없어, 화면이 축 이름으로 식별자를 고르면 FR-005·research R7-1을 어기기 때문이다(2026-09-16 사용자 결정). **T097이 등록표에 `axes[].termId`를 더해 같은 브랜치에서 붙였다**
-- [ ] T058 [US2] (FE) `StrategySettingsPage.tsx`에 상세 설정 연결 — 값이 바뀔 때마다 `evaluateRules` 재평가·`evaluateWarmup` 재계산·선택 카드 재판정(`useEvaluationWindow`에 현재 워밍업 전달)·배지 갱신. 위반이 있거나 워밍업 미충족이면 '분석하기' `disabled`. **값을 만질 때 서버 요청이 나가지 않는다**(research R7-1 기각 대안) (T056 의존)
-- [ ] T059 [US2] (FE) 등록표 버전 변경 처리(research R9, quickstart 10) — `createBacktest`가 `REGISTRY_VERSION_CHANGED`(409)를 돌려주면 등록표를 다시 조회하고 T032의 공통 재검증 로직으로 유효한 값은 유지한 채 "확인하신 사이에 등록표가 바뀌었습니다"를 알리며, 유효하지 않은 값은 이유와 기본값 복원을 제안한다 → `frontend/src/components/strategy/RegistryChangedNotice.tsx`. 자동 보정하거나 다시 보내지 않는다 (T058 의존)
+- [X] T058 [US2] (FE) `StrategySettingsPage.tsx`에 상세 설정 연결 — 값이 바뀔 때마다 `evaluateRules` 재평가·`evaluateWarmup` 재계산·선택 카드 재판정(`useEvaluationWindow`에 현재 워밍업 전달)·배지 갱신. 위반이 있거나 워밍업 미충족이면 '분석하기' `disabled`. **값을 만질 때 서버 요청이 나가지 않는다**(research R7-1 기각 대안) (T056 의존)
+- [X] T059 [US2] (FE) 등록표 버전 변경 처리(research R9, quickstart 10) — `createBacktest`가 `REGISTRY_VERSION_CHANGED`(409)를 돌려주면 등록표를 다시 조회하고 T032의 공통 재검증 로직으로 유효한 값은 유지한 채 "확인하신 사이에 등록표가 바뀌었습니다"를 알리며, 유효하지 않은 값은 이유와 기본값 복원을 제안한다 → `frontend/src/components/strategy/RegistryChangedNotice.tsx`. 자동 보정하거나 다시 보내지 않는다 (T058 의존)
 
 ### Frontend 테스트
 
@@ -216,7 +216,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T062 [P] [US2] (FE 테스트) `frontend/src/components/strategy/AxisChoiceField.test.tsx` — 등록 후보만 렌더; `selectable:false` 후보는 보이되 선택되지 않음; 객체값은 `label`로 보이고 선택 시 원래 객체가 전달됨 (T053 의존)
 - [X] T063 [US2] (FE 테스트) `frontend/src/components/strategy/DetailSettingsPanel.test.tsx` — 선택 전략 축만 보이고 다른 전략 축 `label`이 없다; `USER`면 읽기 전용 비중과 이동 안내, `COMPUTED`면 FR-012 설명; 값을 바꾸면 규칙 위반 `detail`이 **즉시** 보이고 `fetch` mock 호출이 0건; 모두 복원하면 위반이 사라지고 배지가 '기본 설정'(quickstart 6); 축 도움말을 열면 013 원본 문구가 보이고 대응 항목이 없는 용어는 '설명 준비 중'이며 도움말을 열고 닫아도 바꾼 값이 남는다(FR-016) (T056·T057a·T058 의존)
   - **구현 메모 (B08)**: 페이지 연결(T058)은 B09라, 이 검사는 실제 `useStrategySettings`와 `SettingsStatusBadge`를 묶은 틀로 돌린다. 요청이 0건인지는 `fetch`와 `XMLHttpRequest.open` 둘 다 본다. 축 도움말 항목은 처음에 빠졌다가 **T097에서 채웠다**(도움말이 붙는 축은 등록표의 `termId`가 정하고, 열어도 값이 남는다). 세 상태·키보드는 `components/learning/TermHelp.test.tsx`가 따로 고정한다. 구현 중 T054에서 결함 하나를 찾아 고쳤다: 글자를 칠 때마다 판정하므로 `105`를 치는 도중의 `10`이 먼저 반영되고, 마지막 글이 범위 밖이어도 그 중간 값이 상태에 남았다. 지금은 글이 무효가 되면 입력을 시작하기 전 값으로 되돌린다
-- [ ] T064 [US2] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 관측 기간을 늘리면 선택 카드의 워밍업 안내가 그 자리에서 갱신된다(quickstart 7, `useEvaluationWindow` mock); 409 응답 뒤 등록표를 다시 조회하고 알림이 보이며 자동 재전송이 없다(quickstart 10) (T058·T059 의존)
+- [X] T064 [US2] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 관측 기간을 늘리면 선택 카드의 워밍업 안내가 그 자리에서 갱신된다(quickstart 7, `useEvaluationWindow` mock); 409 응답 뒤 등록표를 다시 조회하고 알림이 보이며 자동 재전송이 없다(quickstart 10) (T058·T059 의존)
+  - **구현 메모 (B09)**: `useEvaluationWindow`와 `createBacktest`는 아직 B06이라, 판정과 전송은 B05가 만든 `support` 통로로 받고 검사는 그 흉내로 돈다. 고른 카드만 지금 설정의 워밍업으로 판정하고 다른 카드는 기본 설정 기준이다. 규칙 판정은 패널과 페이지가 `checkRules` 하나를 함께 써서, 판정하지 못한 경우를 한쪽만 통과로 접는 일을 막았다. 409 판별은 오류 클래스가 아니라 `code === 'REGISTRY_VERSION_CHANGED'` 하나로 한다 — **B06(T039)은 Axios 오류를 정규화해 서버 오류 이름을 `code`에 실어 던져야 한다**(`analysisSupport.ts`의 `createBacktest` 설명). 알림은 다음 '분석하기'를 누를 때 거두며, 등록표에서 전략 자체가 사라진 경우의 안내도 이 알림이 전한다. 작업 중 픽스처 결함 하나를 고쳤다: `selectableStrategy`의 `bandWidth` 기본값 20이 섹터 셋에서 규칙을 어기는데 카드는 `selectable: true`였다. 페이지가 규칙 위반으로 막기 시작하자 드러났고, 기본값을 35로 올렸다. 사용자 비중 전략을 고를 수 있게 바꾼 페이지 검사 둘도 같은 까닭으로 기본값을 규칙에 맞춘 응답을 쓴다
 
 **Checkpoint**: 목록형은 등록 후보만, 입력형은 범위 안 값만 받고, 규칙 위반은 입력 즉시 안내되며 서버도 같은 요청을 거절한다
 
@@ -597,3 +598,60 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
   `conditionalStrategy`(`registryFixture`에는 넣지 않고 `withConditionalStrategy`로 합친다)를 두고 훅(처음 고르기·결정 축 바꾸기·
   보관값 정돈·조건 참인 축의 무효 안내)과 패널(조건 밖 축 미표시·결정 축 바꾸면 즉시 교체·밀려난 축의 위반 소멸·`termId` 있는 축에만
   도움말·열어도 값 유지·설명 준비 중)을 고정한다.
+
+---
+
+## Phase 15: Convergence
+
+**Purpose**: B09(바꾼 값을 그 자리에서 판정한다)를 spec·계약·quickstart와 대조한다. 값을 바꾸면 규칙 위반과
+워밍업 판정이 한 렌더 안에서 다시 계산되고, 그동안 서버로 요청이 나가지 않으며, 409를 받으면 다시 조회해
+알리되 자동으로 다시 보내지 않는다. 이것으로 FR-008·FR-011·FR-017과 quickstart 5-1·7·10을 만족한다. 남은
+간극은 셋이다. B06·B10·B12는 위 단계가 이미 추적하므로 간극으로 세지 않았다.
+
+- [ ] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 "선택 전략은 현재 설정으로 조회"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 "값을 만지는 동안 서버로 요청이 나가지 않는다"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다
+- [X] T099 (FE) 분석 요청의 거절 코드마다 계약이 정한 화면 처리를 붙인다 per 계약 §2 거절 응답 · FR-018 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`의 `handleAnalyze`는 409 `REGISTRY_VERSION_CHANGED`(T059) 말고는 모든 거절을 `error.message` 한 줄로 보인다. 계약 §2가 정한 처리 가운데 422 `STRATEGY_NOT_REGISTERED`의 "전략 선택으로 되돌린다"와 503 `REGISTRY_UNAVAILABLE`의 "다시 시도를 제안한다"가 없다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙의 `detail`을 메시지로 싣고(`StrategySettingsRejectedException.ruleViolated`) 화면이 그대로 보이므로 이미 만족한다. 400 `UNREGISTERED_PARAMETER_VALUE`는 서버 메시지가 `허용 범위를 벗어난 값입니다: strategyId=…, 항목=…` 같은 개발용 문장이라 그대로 보이면 사용자가 읽을 수 없다 — 응답 `details`의 `axis`·`allowedRange`로 등록표 라벨과 범위를 찾아 안내하거나, 그럴 수 없으면 일반 문장과 등록표 다시 조회를 제안한다. 판별은 T059와 같이 `analysisSupport.ts`에서 오류의 `code` 하나로 하고(`isRegistryVersionChanged`와 나란히), T039의 `BacktestRequestError`가 `code`와 `details`를 싣도록 그 태스크의 구현 메모에 적는다. 검사는 `StrategySettingsPage.test.tsx`에 코드마다 하나씩 두고, 어느 경우에도 자동으로 다시 보내지 않는지 함께 본다
+- [X] T100 [P] (FE) 고른 카드의 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않고 판정하지 못한 사실을 보인다 per FR-011 · Constitution VI (contradicts) — `frontend/src/pages/StrategySettingsPage.tsx`의 `judgeWarmup`은 주석에 "지금 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않는다"고 적었는데, 코드는 `currentWarmup === null`일 때 `strategy.warmupTradingDays`로 판정한다. 재검증이 축을 비워 복원을 기다리는 동안 고른 카드가 기본값 기준의 `ok`나 `reduced`를 보여, 화면이 하지 않은 판정의 결과를 말한다. '분석하기'는 `INVALID_STORED_VALUES`로 막히므로 요청은 나가지 않는다. 고른 전략이고 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 `{ state: 'unknown', message: '현재 설정으로 워밍업을 계산할 수 없습니다.' }`를 넘긴다(`unknown`은 고를 수 없다는 뜻이 아니라 카드는 눌린 채 남는다). 검사: 보관값의 축 하나가 새 등록표 범위 밖이라 비워진 상태로 전략을 고르면 카드의 `data-warmup`이 `unknown`이고, 복원하면 지금 설정의 판정으로 돌아온다
+
+**T099·T100 구현 메모 (같은 브랜치 `feat(fe)/241-live-verdict`)**:
+
+- **T100**: 고른 전략의 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 카드에 `unknown`을 넘긴다. 검사는
+  호출 횟수가 아니라 카드의 `data-warmup`으로 본다 — 재검증을 마치기 전 첫 렌더에서는 고른 전략이 없어 카드 목록이
+  기본 설정으로 판정하는 것이 맞기 때문이다.
+- **T099**: `analysisSupport.ts`에 `readBacktestRejection`(오류의 `code`·`details`)과 `BacktestRejectionCode`를 두고
+  페이지가 코드마다 가른다. 409는 T059 그대로다. 422 `STRATEGY_NOT_REGISTERED`는 `useStrategySettings`에 새로 둔
+  `clearSelection`으로 고른 전략만 내려놓고(전략별로 바꿔 둔 값은 남는다) 등록표를 다시 받는다. 503은 서버 문장과
+  '다시 시도' 버튼을 보이고 누르기 전에는 보내지 않는다. 400은 등록표를 다시 받지 않는다 — 버전이 같으면 범위도
+  같아 다시 받아도 달라질 것이 없다. `details.axis`로 고른 전략의 라벨을 찾고, 찾지 못하면 어느 항목인지 지어내지
+  않고 일반 문장을 쓴다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙 `detail`을 메시지로 실어 따로 처리하지 않는다.
+  **B06(T039)의 `BacktestRequestError`는 `code`와 함께 응답 `details`도 실어야 한다** — 공용 `ApiClientError`는
+  `details`를 싣지 않는다.
+- **곁에서 고친 것**: 기존 검사 "전략을 고르기 전에는 분석하기가 그 이유로 막힌다"가 실행마다 결과가 달랐다. 카드는
+  등록표를 받자마자 그려지는데 보관값 재검증은 다음 렌더에 끝나, 그 사이에 읽으면 이유가 '불러오기 전'이다.
+  `waitFor`로 기다리게 했다.
+- **T098은 남는다.** 001과 정할 결정이라 구현으로 닫을 수 없다.
+
+---
+
+## Phase 16: Convergence
+
+**Purpose**: Phase 15를 구현한 뒤 B09를 다시 대조한다. T099(거절 코드별 화면 처리)와 T100(워밍업을 계산할 수
+없을 때의 카드 판정)은 코드와 검사로 닫혔다. T098은 001과 정할 결정이라 위에서 열린 채 추적한다. 남은 간극은
+아래 하나다.
+
+- [X] T101 [P] (FE 테스트) 규칙을 판정하지 못한 경우를 통과로 접지 않는다는 것을 검사로 고정한다 per FR-008 · T058 (partial) — `frontend/src/utils/validationRules.ts`의 `checkRules`는 `evaluateRules`가 던지면 `{ violations: [], unjudged: true }`를 돌려주고, `frontend/src/pages/StrategySettingsPage.tsx`는 `unjudged`이면 '분석하기'를 `RULES_UNJUDGED`로 막는다. 그런데 이 두 분기를 부르는 검사가 없어, `unjudged`를 통과로 바꿔도 모든 검사가 통과한다. 위반이 없는 빈 목록과 판정 실패를 가르는 것이 이 함수를 둔 까닭이므로 다음 둘을 고정한다. ① `validationRules.test.ts`: 대소 비교에 숫자가 아닌 축 값이 오면 `unjudged: true`이고 `violations`가 비며, 정상 규칙이면 `unjudged: false`다. ② `StrategySettingsPage.test.tsx`: 규칙 피연산자가 목록형 객체값 축(`resetTiming`)을 대소 비교하는 등록표를 넘기면, 상세 설정 아래에 "설정 규칙을 판정하지 못했습니다."가 보이고 '분석하기'가 그 이유로 막히며 요청이 0건이다
+
+**T101 구현 메모**: ①은 대소 비교에 객체값이 온 경우와 정상 규칙 둘을 본다. ②는 합성 값 축 `resetTiming`을 대소 비교하는
+규칙을 실은 등록표로, 안내가 보이고 규칙의 `detail`은 보이지 않으며 '분석하기'가 막히고 요청이 0건인지 본다. 두 검사가
+실제로 지키는지 확인하려고 `checkRules`가 `unjudged: false`를 돌려주고 페이지가 `unjudged`를 무시하게 바꿔 돌렸고, 둘 다
+실패한 뒤 되돌렸다.
+
+**코드리뷰 후속 (MR 전 AI 코드리뷰, 같은 브랜치)**: 결함 둘을 찾아 고쳤다. 둘 다 고치기 전 코드에서 실패하는 검사를 먼저 두었다.
+
+- **409 알림이 새 등록표를 보기 전에 "그대로 두었습니다"를 그렸다(T059).** 409 직후 첫 렌더에는 다시 조회가 아직
+  시작되지 않아 옛 등록표가 '받음' 상태로 남는데, 알림은 받았는지만 보고 판정했다. `status` 영역이라 읽힐 수 있고,
+  T064의 "유효한 값은 둔다" 검사도 다시 받은 결과와 무관하게 이 렌더에서 통과할 수 있었다. 지금은 409를 받을 때 쓰던
+  등록표를 붙들어 두고 그와 **다른** 등록표를 받은 뒤에만 다시 받았다고 판정한다. 검사는 다시 받는 조회를 붙든 채
+  화면에 그려진 글을 `MutationObserver`로 모두 기록해, 풀기 전에 그 문장이 한 번도 없었는지 본다.
+- **보내는 동안 다른 카드를 고르면 늦게 온 422가 새로 고른 전략을 내려놓았다(T099).** 카드는 보내는 동안에도 고를 수
+  있다. 지금은 보낸 전략을 아직 고르고 있을 때만 선택을 풀고 알리며, 등록표는 어느 경우에도 다시 받는다. 응답 시점의
+  선택은 ref로 읽는다 — `handleAnalyze`가 잡은 값은 누른 시점의 것이다.
