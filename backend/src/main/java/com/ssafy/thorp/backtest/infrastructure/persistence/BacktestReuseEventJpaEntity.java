@@ -38,8 +38,8 @@ public class BacktestReuseEventJpaEntity {
     @Column(nullable = false)
     private Long runId;
 
-    @Column(nullable = false)
-    private Long requestId;
+    /** 만료된 비로그인 요청이 정리되면 null이다(spec 005 T022). */
+    @Column private Long requestId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

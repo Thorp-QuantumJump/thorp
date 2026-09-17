@@ -35,8 +35,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 만료된 비로그인 요청 정리를 실제 PostgreSQL 외래 키로 본다(spec 005 T026, FR-021).
  *
- * <p>목으로는 확인할 수 없는 것이 핵심이다 — 재사용 기록·재시도 요청이 요청 행을 외래 키로 가리키므로 지우는 순서가 틀리면 DB가 거절한다. 그리고 <b>같은 실행을
- * 가리키는 로그인 요청과 실행·결과는 남아야 한다</b>(004 FR-003).
+ * <p>목으로는 확인할 수 없는 것이 핵심이다 — 재사용 기록·재시도 요청이 요청 행을 외래 키로 가리키므로 참조를 끊는 순서가 틀리면 DB가 거절한다. 그리고 <b>같은
+ * 실행을 가리키는 로그인 요청과 실행·결과는 남아야 한다</b>(004 FR-003). <b>재사용·합류 기록도 남아</b> 집계 뷰의 {@code reuse_count}가
+ * 정리로 줄지 않아야 한다(원칙 IX).
  *
  * <p>스케줄러는 끄고 시각을 고정한 인스턴스를 직접 만든다. 만료 시각을 2000년대 초로 두어 같은 컨테이너를 쓰는 다른 IT가 남긴 만료 행보다 앞에 오게 한다 — 정리는
  * 만료가 이른 순서로 배치 크기만큼 지운다.
@@ -127,8 +128,42 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                 > 0;
     }
 
+    private BacktestReuseEvent reuseEvent(
+            BacktestRun run, BacktestRequest request, ResultSource kind, Instant at) {
+        return transactionTemplate.execute(
+                status ->
+                        reuseEventRepository.save(
+                                BacktestReuseEvent.of(
+                                        run.getId(),
+                                        request.getId(),
+                                        kind,
+                                        ExecutionType.SINGLE,
+                                        at)));
+    }
+
+    private Long requestIdOf(BacktestReuseEvent event) {
+        return jdbcTemplate.queryForObject(
+                "SELECT request_id FROM backtest_reuse_event WHERE id = ?", Long.class, event.id());
+    }
+
+    /** 집계 뷰는 측정 행이 있는 유형만 보인다. 이 IT는 워커를 돌리지 않으므로 종결 측정 한 행을 직접 넣어 SINGLE 줄을 만든다. */
+    private void recordFinishedMetric(BacktestRun run) {
+        jdbcTemplate.update(
+                "INSERT INTO backtest_run_metric (id, run_id, execution_type, status,"
+                        + " concurrent_running, auto_retried, result_bytes, recorded_at)"
+                        + " VALUES (nextval('backtest_run_metric_seq'), ?, 'SINGLE', 'COMPLETED',"
+                        + " 0, false, 0, NOW())",
+                run.getId());
+    }
+
+    private long singleReuseCount() {
+        return jdbcTemplate.queryForObject(
+                "SELECT reuse_count FROM v_run_metric_summary WHERE execution_type = 'SINGLE'",
+                Long.class);
+    }
+
     @Test
-    @DisplayName("만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행은 남긴다. 재사용 기록은 지우고 재시도의 참조는 끊는다")
+    @DisplayName("만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행은 남긴다. 재사용 기록과 재시도 요청은 남기고 참조만 끊는다")
     void deletesExpiredAnonymousRequestOnly() {
         Instant now = Instant.parse("2001-06-01T00:00:00Z");
         BacktestRun run = newRun();
@@ -142,16 +177,8 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                         null,
                         ResultSource.JOINED,
                         Instant.parse("2001-01-01T00:00:00Z"));
-        transactionTemplate.executeWithoutResult(
-                status ->
-                        reuseEventRepository.save(
-                                new BacktestReuseEvent(
-                                        null,
-                                        run.getId(),
-                                        expired.getId(),
-                                        ResultSource.JOINED,
-                                        ExecutionType.SINGLE,
-                                        now.minusSeconds(86_400 * 150))));
+        BacktestReuseEvent joined =
+                reuseEvent(run, expired, ResultSource.JOINED, now.minusSeconds(86_400 * 150));
         BacktestRequest retryChild =
                 request(
                         run,
@@ -168,12 +195,7 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
         assertThat(exists(loggedIn)).isTrue();
         assertThat(exists(retryChild)).isTrue();
         assertThat(exists(notYetExpired)).isTrue();
-        assertThat(
-                        jdbcTemplate.queryForObject(
-                                "SELECT count(*) FROM backtest_reuse_event WHERE request_id = ?",
-                                Long.class,
-                                expired.getId()))
-                .isZero();
+        assertThat(requestIdOf(joined)).as("재사용 기록은 남고 지워진 요청과의 연결만 끊긴다").isNull();
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT retry_of_request_id FROM backtest_request WHERE id = ?",
@@ -182,6 +204,41 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                 .as("재시도 요청은 남고 원본 참조만 끊긴다")
                 .isNull();
         assertThat(runRepository.findById(run.getId())).as("실행은 다른 요청이 볼 수 있어 지우지 않는다").isPresent();
+    }
+
+    @Test
+    @DisplayName("재사용·합류 기록을 지우지 않아 정리 전후로 reuse_count 가 같다 — 끊긴 기록 여럿이 요청 유일 색인에 걸리지 않는다")
+    void keepsReuseCountAcrossSweep() {
+        Instant now = Instant.parse("2001-07-01T00:00:00Z");
+        BacktestRun run = newRun();
+        recordFinishedMetric(run);
+        BacktestRequest joinedRequest =
+                request(
+                        run,
+                        null,
+                        null,
+                        ResultSource.JOINED,
+                        Instant.parse("2001-06-10T00:00:00Z"));
+        BacktestRequest reusedRequest =
+                request(
+                        run,
+                        null,
+                        null,
+                        ResultSource.REUSED,
+                        Instant.parse("2001-06-11T00:00:00Z"));
+        BacktestReuseEvent joined =
+                reuseEvent(run, joinedRequest, ResultSource.JOINED, now.minusSeconds(86_400 * 30));
+        BacktestReuseEvent reused =
+                reuseEvent(run, reusedRequest, ResultSource.REUSED, now.minusSeconds(86_400 * 29));
+        long before = singleReuseCount();
+
+        sweeperAt(now, 1000).sweep();
+
+        assertThat(exists(joinedRequest)).isFalse();
+        assertThat(exists(reusedRequest)).isFalse();
+        assertThat(requestIdOf(joined)).isNull();
+        assertThat(requestIdOf(reused)).isNull();
+        assertThat(singleReuseCount()).as("동일 결과 재조회 기록(원칙 IX)이 정리로 줄지 않는다").isEqualTo(before);
     }
 
     @Test

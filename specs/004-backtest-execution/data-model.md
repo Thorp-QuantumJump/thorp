@@ -177,7 +177,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 ## backtest_reuse_event (재조회 기록)
 
-`id, run_id FK, request_id FK, kind VARCHAR(10) (JOINED | REUSED), at TIMESTAMPTZ`. 원가 기록에서 새 계산과 구분한다(FR-008).
+`id, run_id FK, request_id FK NULL, kind VARCHAR(10) (JOINED | REUSED), at TIMESTAMPTZ`. 원가 기록에서 새 계산과 구분한다(FR-008). `request_id`는 spec 005의 만료 정리가 비로그인 요청을 지울 때 NULL로 끊긴다. 기록 행은 지우지 않으므로 `reuse_count`가 정리로 줄지 않는다(005 FR-021·T022).
 
 ## v_run_metric_summary (뷰)
 
