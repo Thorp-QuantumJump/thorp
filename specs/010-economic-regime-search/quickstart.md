@@ -279,7 +279,111 @@ THORP_ENV=prod .venv/Scripts/python scripts/precompute_regime.py --source fixtur
 | 사례 이후 시장·전략 결과 | 011 범위. `postPeriod.available`이 항상 `false` | 011 구현 후 |
 | 가용성 필터가 걸린 목록 | 010은 `candidates` 목록만 내준다. 필터는 011이 건다 | 011 구현 후 |
 | 지표별 최소 유효 척도에 의한 계산 불가 | PD-10(008 소유) 미확정. MAD→IQR→0 경로만 확인된다 | PD-10 확정 후 |
-| 사용성 관찰(SC-008) | **010 범위 안이며 구현이 끝난 뒤 수행**한다. 구현 완료와 사용성 확인을 구분한다 | **M10(T154)** 별도 티켓 |
+| 사용성 관찰(SC-008) | **010 범위 안이며 구현이 끝난 뒤 수행**한다. 구현 완료와 사용성 확인을 구분한다 | **M10(T155)** 별도 티켓 |
+| **후보가 3개 미만인 화면**(SC-004) | 픽스처의 늦은 시작 계열이 하나뿐이고, 척도 60개월이 차는 달과 후보가 넉넉해지는 달이 겹쳐 `0 < displayed < 3`인 기준월이 없다(2026-09-17 실행 기록). 단위 테스트로만 확인된다 | 픽스처에 더 늦게 시작하는 계열을 더하거나 008 완성 후 |
+| **임시 대역을 지웠을 때 무엇이 깨지는가**(T150) | 디렉터리 삭제·이동이 실행 환경에서 차단돼 예행연습을 하지 못했다. grep 결과로 격리를 추정했을 뿐이다 | 삭제 권한이 있는 환경에서 |
 | v1·v2 중 어느 유사성이 사용자 목적에 맞는가 | 실제 자료 비교와 사용자 관찰 전에는 우열을 확정할 수 없다. [변경 제안서](d21-amendment.md)의 검증 계획이며 v1 구현 차단 조건이 아니다 | 비교 검증 후 재논의 |
 
 **여기 나온 숫자를 성과로 인용하지 않는다.** 픽스처 위의 결과이며 경제에 대해 아무것도 말하지 않는다.
+
+## 실행 기록
+
+### 2026-09-17 · M9(T149~T154) · 임시 대역 `FIXTURE-20260915`
+
+**환경**: Windows 11 / Java 21 / PostgreSQL 16·RabbitMQ·Kafka(도커) / 백엔드 `local` 프로파일 /
+Python **3.12.10**(문서가 정한 3.11은 이 기기에 없다) · pandas 3.0.5 · `data` 테스트 836개 통과.
+
+**여기 숫자는 픽스처 위의 측정값이다.** 목표치가 아니고 경제에 대해 아무것도 말하지 않는다.
+
+#### 사전 준비가 문서와 달랐던 것 — 넷 다 quickstart를 고쳐야 한다
+
+1. **순서가 반대다.** `local` 프로파일은 `flyway.enabled=false` + `ddl-auto=update`라 **백엔드가 먼저
+   떠야** `regime_search_snapshot`이 생긴다. 빈 DB에 사전 계산을 먼저 돌리면 적재할 표가 없다.
+2. **`MAIL_USERNAME`·`MAIL_PASSWORD`가 없으면 기동이 실패한다.** `application.yml`이 기본값 없이
+   참조하는데 `application-local.yml`에도 없고 Spring은 `.env`를 읽지 않는다. 010과 무관한 회원가입
+   메일 설정이지만 기동을 막는다. 실행에 쓴 명령:
+   `SPRING_PROFILES_ACTIVE=local MAIL_USERNAME=dev@example.com MAIL_PASSWORD=dummy ./gradlew bootRun`
+3. **`uv`가 없어 `python -m venv`로 만들었다.** `data/CLAUDE.md`는 `uv`를 전제한다.
+4. **`jq`가 없어** 모든 조회를 Python으로 대신했다. quickstart 명령은 전부 `jq` 기반이다.
+
+#### S1~S9 결과
+
+| | 결과 | 확인한 것 |
+|---|---|---|
+| S1 | **통과** | `LABOR` 3개, `NEAREST_ONLY`/`최근접 참고 사례`, `basis=HISTORICAL_REVISION`, `distance` 문자열 12자리, `counts` 넷 다 있음. 금지 표현·`sector` **0건**. `limit=10`에서 `stored=displayed=10`이라 '더 보기'가 사라진다 |
+| S2 | **부분** | 빈자리를 채운 사례 **0건**(`displayed == len(cases)`). 다만 **후보 3개 미만 상황이 재현되지 않았다** — 아래 참조 |
+| S3 | **통과** | `FINANCE_HOUSING`@2011-06 → `SCALE_ZERO`, `EXTERNAL_TRADE`@2015-01 → `SCALE_WINDOW_TOO_SHORT`. 둘 다 HTTP 200·`cases=[]`이고 `dataAsOf`·`basis`·`versions`가 모두 있다 |
+| S4 | **통과** | `PRODUCTION` 기본 기준월에서 결측 지표만 `months=2`·`omitted=[2026-05]`·`note` 있음, 나머지 둘은 `months=3` 그대로. `CONSUMPTION_INVESTMENT`@2015-03 → `QUERY_INPUT_MISSING`(남은 지표로 계산한 결과가 나오지 않는다) |
+| S5 | **통과** | `composite=2026-04`가 `byField`(2026-06)보다 이르다. `baselineOrigin=T_ALL`, `newerReleases` 16건이 질의값과 분리돼 나온다. 한 분야가 계산 불가인 2011-06에서 종합도 `NOT_COMPUTABLE` |
+| S6 | **통과(정확 일치)** | 사례 2014-04에서 `z=(raw−median)/spread`, `E_i`, `D_g`를 손계산해 응답과 **12자리까지 같다**. `ΣdistanceShare=1`, `mode=field`에 `contribution` 없음. `eraPosition`은 문장만이고 `windowEnd=2014-01`(c−3). 기준월 2026-06/2026-05에서 `eraPosition` 동일(SC-011) |
+| S7 | **통과** | 두 번 호출 결과 완전 동일. `searchId`가 T_g 경로와 지정 경로에서 같고 `baselineOrigin`만 `T_G`/`USER_SPECIFIED`로 다르다. **배치 재실행: 새 revision 0개·같은 내용 2984개 건너뜀·행 수 2984 그대로** |
+| S8 | **통과** | `regime` 패키지에 시계열을 읽는 코드 0건(주석 제외). 응답 시간은 아래 측정값 |
+| S9 | **부분** | 가드 둘 다 동작. 격리 검사 명령은 **오탐을 낸다** — 아래 참조. **폐기 예행연습(T150)은 미실행** |
+
+#### 측정값 (T151·T152)
+
+| 항목 | 값 |
+|---|---|
+| 사전 계산 1회차(빈 DB) | **235.1초** · 다시 계산한 기준월 **2984개** · 새 revision **2984개** · 중간 산출 파티션 253개 |
+| 사전 계산 2회차(같은 자료) | **66.2초** · 새 revision **0개** · 같은 내용 건너뜀 2984개 · 보관 정리 0개 |
+| `regime_search_snapshot` 행 수 | 2984 (재실행 후에도 같음) |
+| 조회 응답 시간 (`mode=field&field=LABOR`, n=20) | 최소 11.9ms · 중앙값 13.6ms · p95 **19.0ms** · 최대 20.6ms |
+| 조회 실패 | **0건** |
+
+research R9의 p95 300ms는 **측정 목표이지 한도가 아니다**. 004 FR-007의 실행 유형 기록에 붙이는 일은
+004 완성 후로 미룬다 — 지금 붙일 자리가 없다.
+
+#### S2가 부분인 이유 — 후보 3개 미만이 재현되지 않는다
+
+시작이 늦은 계열은 `G20_LEADING_INDEX`(2005-01) 하나이고 그 분야는 `GLOBAL_ECONOMY`다. 기준월을
+훑으면 **2010-02까지 `SCALE_WINDOW_TOO_SHORT`(eligible 0)였다가 2010-03에서 곧바로 eligible 48**이
+된다. 척도 구간 60개월이 차는 시점이 후보가 넉넉해지는 시점보다 늦어, `0 < displayed < 3`인 기준월이
+없다. **SC-004의 "부족하면 부족한 대로"는 API 경로로 확인되지 않았고 단위 테스트로만 확인된다.**
+이 모양을 API로 보려면 픽스처에 더 늦게 시작하는 계열이 하나 더 있어야 한다.
+
+#### S9 격리 검사 명령이 오탐을 낸다
+
+quickstart는 `grep -rn "Fixture" backend/…/regime | grep -v "/macro/fixture/"`의 **결과가 없어야
+한다**고 적었지만 셋이 나오고 **셋 다 있어야 하는 코드**다.
+
+| 파일 | 왜 이름을 알아야 하나 |
+|---|---|
+| `domain/model/RegimeSnapshot.java` | `FIXTURE-` 접두사로 `versions.sampleData`를 판정한다. 008이 없어서 쓰는 대역인데 그 판정을 008에 맡기면 순환이다(계약 §4.2) |
+| `infrastructure/config/RegimeFixtureGuard.java` | S9가 요구하는 prod 가드 자신이다 |
+| `infrastructure/config/RegimeProperties.java` | `source: fixture|macro` 설정값 |
+
+`data` 쪽은 결과가 없어 격리가 성립한다. 검사 문장을 "이 셋 외에 0건"으로 고쳐야 한다.
+
+#### 가드 둘
+
+- **배치**: `THORP_ENV=prod … --source fixture` → 종료 코드 **1**, 적재 없음(행 수 2984 유지)
+- **Backend**: `RegimeProfileGuardTest` 통과. 실제 prod 기동은 운영 환경변수 전체가 필요해 돌리지 않았다
+
+#### 하지 못한 것
+
+- **T150 폐기 예행연습 — 미실행.** 두 디렉터리를 지우거나 옮기는 조작이 이 실행 환경에서 차단됐다.
+  격리 여부는 위의 grep 결과로만 추정했을 뿐 **컴파일·테스트가 어디서 깨지는지는 확인하지 않았다.**
+- **화면 확인(S5의 문구·표시)** — 프론트를 띄워 눈으로 보지 않았다. 해당 문구·금지 표현·키보드 도달은
+  M7·M8의 프론트 테스트가 고정하고 있으나, **그것은 테스트가 통과했다는 뜻이지 화면을 봤다는 뜻이 아니다.**
+
+#### T154 · 문서 상태와 008 계약 재확인
+
+**`specs/README.md`는 고치지 않았다.** 그 표에는 구현 상태 열이 없고 범위·§8.1 항목·우선순위만 적는다.
+PD-08은 `기획서 확정`인데 이는 **기획 결정의 상태**이지 구현 상태가 아니므로 그대로 둔다 — M9가 끝났다고
+올릴 칸이 아니다. 010의 모델 v1 기준도 그대로다.
+
+**008이 약속한 `MacroIndicatorSource`와 010이 요구하는 것이 아직 어긋난다.** 지금 구현된 프로토콜
+(`data/src/data_pipeline/regime/macro/source.py`)은 010 계약 쪽 형태다.
+
+| | 008 [`macro-indicator-source.md`](../008-macro-indicator-registry/contracts/macro-indicator-source.md) | 010 [`macro-indicator-port.md`](contracts/macro-indicator-port.md) · 현재 구현 |
+|---|---|---|
+| 버전 인자 | `registry(version)`·`monthly_series(id, data_version)`·`baseline_months(data_version, registry_version)` 등 **호출마다 버전을 고정** | `registry()`·`monthly_series(id)`·`baseline_months()` — **인자 없음** |
+| 자료 버전 | current 포인터를 한 번 읽어 고정 (`data_version()` 없음) | `data_version()`이 따로 있다 |
+| `changed_since` | `(previous, target)` 두 버전 | `(data_version)` 하나 |
+| 결측 사유 | 네 가지(원천 미발표·수집 실패·변환 불가·개편 제외)를 값과 함께 | 계약 표에는 사유 언급 없음 |
+| `T_all=null` | 010이 `composite:null`·분야 `baselineMonth:null`을 명시하고 `NOT_COMPUTABLE`로 처리하도록 **010 계약을 갱신하라**고 요구 | 현재 픽스처는 `composite`가 늘 있어 **이 경로가 실행되지 않았다** |
+
+008 문서도 *"기존 010 계약의 인자 없는 `registry()`·`data_version()`과 현재 표시명 조회는 버전 고정
+규칙에 맞춰 정합화해야 한다"* 고 스스로 적어 두었다. **어느 쪽으로 맞출지는 정해지지 않았고, M9에서
+정하지 않는다** — 008 구현이 시작될 때 두 spec이 함께 결정할 일이다. 여기서는 어긋나 있다는 사실만
+남긴다. 정합화 전까지 010은 현재 프로토콜로 돌고, 008 완성 시 구현체 교체만으로 끝나지 않는다.
