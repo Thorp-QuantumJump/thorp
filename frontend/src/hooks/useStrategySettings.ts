@@ -326,14 +326,23 @@ function readStoredSettings(): StoredStrategySettings | null {
   }
 }
 
-function writeStoredSettings(state: StoredStrategySettings): void {
+/**
+ * 보관한다. 보관에 성공했는지를 돌려준다.
+ *
+ * spec 005의 '다른 조건으로 비교'(T068)가 결과의 조건을 이 화면에 넘길 때도 쓴다. 넘기는 수단이 이 저장소
+ * 항목뿐이라, 보관이 실패하면 넘기는 쪽이 그 사실을 알아야 사용자를 빈 설정 화면으로 보내지 않는다. 이
+ * 화면 안에서는 결과를 쓰지 않는다 — 실패해도 화면 상태로 계속 동작한다.
+ */
+export function writeStoredStrategySettings(state: StoredStrategySettings): boolean {
   try {
     window.sessionStorage.setItem(
       STRATEGY_SETTINGS_STORAGE_KEY,
       JSON.stringify({ version: STRATEGY_SETTINGS_PAYLOAD_VERSION, ...state }),
     )
+    return true
   } catch {
     // 저장소가 막힌 환경에서는 화면 상태로만 동작한다. 화면을 오류로 막지 않는다(research R8).
+    return false
   }
 }
 
@@ -721,7 +730,7 @@ export function useStrategySettings(
 
   // 판정을 마친 상태만 보관한다. 판정 전의 값은 이미 보관되어 있던 것이다.
   useEffect(() => {
-    if (ready && state !== null) writeStoredSettings(state)
+    if (ready && state !== null) writeStoredStrategySettings(state)
   }, [ready, state])
 
   const strategies = useMemo(
