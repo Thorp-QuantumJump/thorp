@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
 
@@ -15,7 +15,12 @@ import pytest
 
 from data_pipeline.regime.macro import SOURCE_FIXTURE, create_source
 from data_pipeline.regime.macro.source import MacroIndicatorSource
-from data_pipeline.regime.macro.types import MonthlyValue
+from data_pipeline.regime.macro.types import (
+    FieldEntry,
+    IndicatorEntry,
+    IndicatorRegistry,
+    MonthlyValue,
+)
 
 #: 계약 시험을 돌릴 구현체. 008이 오면 `SOURCE_MACRO`를 더한다.
 SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE,)
@@ -62,3 +67,32 @@ def make_series(
             series[current] = MonthlyValue(month=current, value=value, raw=value)
         year, month = (year + 1, 1) if month == 12 else (year, month + 1)
     return series
+
+
+def make_registry(
+    layout: Mapping[str, Sequence[str]], *, version: str = "test-v1", unit: str = "%"
+) -> IndicatorRegistry:
+    """분야 id → 지표 id 목록으로 등록표를 짓는다.
+
+    **분야 수·지표 수를 시험마다 다르게 준다.** 계산 쪽이 등록표가 준 수를 쓰는지(spec FR-010)
+    확인하려면 7분야 17지표 한 벌로는 부족하다 — 개수를 상수로 박아도 그 한 벌에서는 통과한다.
+    """
+    fields = tuple(
+        FieldEntry(id=field_id, name=f"{field_id} 분야", display_order=order)
+        for order, field_id in enumerate(layout, start=1)
+    )
+    indicators = tuple(
+        IndicatorEntry(
+            id=indicator_id,
+            name=f"{indicator_id} 지표",
+            field_id=field_id,
+            unit=unit,
+            transform="LEVEL",
+            display_order=order,
+        )
+        for order, (field_id, indicator_id) in enumerate(
+            ((field_id, member) for field_id, members in layout.items() for member in members),
+            start=1,
+        )
+    )
+    return IndicatorRegistry(version=version, fields=fields, indicators=indicators)
