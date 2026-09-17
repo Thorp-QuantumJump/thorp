@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
 import { regimeDetail, regimeResult } from '@/test/regimeFixtures'
 import { RegimeSearchPage } from './RegimeSearchPage'
@@ -89,5 +90,96 @@ describe('경제환경 검색 화면', () => {
     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
     expect(vi.mocked(getRegimeCaseDetail)).toHaveBeenCalledWith('2012-03', { searchId: 'search-1' }, expect.any(AbortSignal))
     expect(screen.getByText('실제 거리 기여 1.000000000000')).toBeTruthy()
+  })
+
+  it('과거 기준월을 지정하면 요청과 입력, 결과 제목에 그 월을 유지한다', async () => {
+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => regimeResult({
+      baselineMonth: query.baselineMonth ?? '2026-07',
+      baselineOrigin: query.baselineMonth ? 'USER_SPECIFIED' : 'T_G',
+    }))
+    await search()
+    await screen.findByText('2012-03')
+    const month = screen.getByLabelText('기준월 지정') as HTMLInputElement
+    expect(month.min).toBe('1995-04')
+    expect(month.max).toBe('2026-07')
+    fireEvent.change(month, { target: { value: '2020-04' } })
+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      { mode: 'field', field: 'field-1', baselineMonth: '2020-04', limit: 3 },
+      expect.any(AbortSignal),
+    ))
+    expect(month.value).toBe('2020-04')
+    expect(await screen.findByText('2020-04')).toBeTruthy()
+    expect(screen.getByRole('status', { name: '시험 분야 2020-04 검색 결과: 기준월 변경' }).textContent).toContain('기준월을 2020-04로')
+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      { mode: 'composite', field: undefined, baselineMonth: '2020-04', limit: 3 },
+      expect.any(AbortSignal),
+    ))
+  })
+
+  it('선택한 월이 종합 최신월보다 뒤이면 종합 모드의 최신월로 전환한다', async () => {
+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => regimeResult({
+      mode: query.mode === 'composite' ? 'COMPOSITE' : 'FIELD',
+      field: query.mode === 'composite' ? null : { id: 'field-1', name: '시험 분야' },
+      baselineMonth: query.mode === 'composite' ? '2026-05' : '2026-07',
+    }))
+    await search()
+    await screen.findByText('2012-03')
+    fireEvent.change(screen.getByLabelText('기준월 지정'), { target: { value: '2026-07' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      { mode: 'composite', field: undefined, baselineMonth: undefined, limit: 3 },
+      expect.any(AbortSignal),
+    ))
+    expect((screen.getByLabelText('기준월 지정') as HTMLInputElement).value).toBe('')
+    expect(screen.getByRole('status', { name: '종합 2026-05 검색 결과: 기준월 변경' }).textContent).toContain('전환 안내')
+  })
+
+  it('키보드로 검색·기준월·모드 전환·더 보기·상세 열기와 다섯 표시에 도달한다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({
+      comparisonMonths: [{ indicatorId: 'indicator-1', indicator: '시험 지표', months: ['2026-05'], omitted: ['2026-06'], note: '빠진 달 안내' }],
+      counts: { evaluated: 10, eligible: 10, stored: 10, displayed: 1 },
+    }))
+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail())
+    await search()
+    await screen.findByText('2012-03')
+    const user = userEvent.setup()
+    screen.getByLabelText('경제 분야').focus()
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByLabelText('기준월 지정'))
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '과거 사례 찾기' }))
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
+    const reached: string[] = []
+    for (let index = 0; index < 5; index += 1) {
+      await user.tab()
+      reached.push(document.activeElement?.getAttribute('aria-label') ?? '')
+    }
+    // 접어 두는 자리에 넣지 않는다 — 펼치기 전에 이미 탭 순서에 있다(FR-037 ⑤).
+    for (const element of screen.getAllByRole('status')) {
+      expect(element.closest('details,[aria-expanded]')).toBeNull()
+    }
+    expect(reached).toEqual([
+      '시험 분야 2026-07 검색 결과: 검색 상태',
+      '시험 분야 2026-07 검색 결과: 예시 자료',
+      '시험 분야 2026-07 검색 결과: 빠진 비교 시점',
+      '시험 분야 2026-07 검색 결과: 역사 비교',
+      '시험 분야 2026-07 검색 결과: 사례 구분',
+    ])
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '상세 보기' }))
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '더 보기' }))
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 10 }),
+      expect.any(AbortSignal),
+    ))
+    await user.tab({ shift: true })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '상세 보기' }))
+    await user.keyboard('{Enter}')
+    expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
   })
 })

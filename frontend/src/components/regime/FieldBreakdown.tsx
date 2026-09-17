@@ -1,4 +1,5 @@
 import type { RegimeCaseDetail, RegimeCaseSummary } from '@/types/regime'
+import * as copy from './fixedCopy'
 import styles from './FieldBreakdown.module.css'
 
 interface Props {
@@ -12,7 +13,7 @@ export function FieldBreakdown({ detail, summary, fieldNames }: Props) {
   return (
     <section className={styles.breakdown} aria-label="분야별 비교">
       <h4>분야별 거리와 기여</h4>
-      <p>분야별 거리를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.</p>
+      <p>{copy.equalWeightNote}</p>
       <ul>
         {Object.entries(detail.byField).map(([id, distance]) => (
           <li key={id}>

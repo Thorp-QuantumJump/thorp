@@ -1,5 +1,6 @@
 import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'
 import { FieldBreakdown } from './FieldBreakdown'
+import * as copy from './fixedCopy'
 import styles from './CaseDetail.module.css'
 
 interface Props {
@@ -33,7 +34,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {
           </p>
           {indicator.scale ? (
             <p>공통 척도 · {indicator.scale.method} · 중앙값 {indicator.scale.median} · 산포 {indicator.scale.spread} · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>
-          ) : <p>공통 척도 정보를 확인할 수 없습니다.</p>}
+          ) : <p>{copy.scaleMissingNote}</p>}
           <div className={styles.tableScroll}>
             <table>
               <caption>비교 시점별 실제 값과 공통 척도 z</caption>
@@ -49,7 +50,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {
           </div>
           <div className={styles.era} aria-label={`${indicator.name} 당시 평소 대비 위치`}>
             <strong>당시 평소 대비 위치 · 보조 설명</strong>
-            <p>{detail.eraPosition?.[indicator.id]?.sentence ?? '당시 평소 대비 위치를 계산할 수 없습니다.'}</p>
+            <p>{detail.eraPosition?.[indicator.id]?.sentence ?? copy.eraPositionMissingNote}</p>
           </div>
         </section>
       ))}
