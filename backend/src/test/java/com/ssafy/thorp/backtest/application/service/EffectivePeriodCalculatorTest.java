@@ -100,6 +100,22 @@ class EffectivePeriodCalculatorTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_HISTORY)
                 .hasMessageContaining("250");
 
+        // 워밍업을 싣지 않은 요청(003 화면의 보통 경로)은 실효 워밍업이 고른 축 값이다.
+        // 여기서 규칙표 값을 쓰면 그 120이 그대로 워커에 실려 나가, 워커는 120거래일만 읽고
+        // 250거래일로 계산한다 — 사용자가 고른 조건과 다른 결과가 그 조건의 결과로 저장된다.
+        assertThat(
+                        calculator
+                                .resolve(
+                                        minimumVariance,
+                                        null,
+                                        Map.of("rebalance", "MONTH_END", "lookbackDays", 250),
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        null)
+                                .warmupTradingDays())
+                .isEqualTo(250);
+
         // 축을 고르지 않은 요청은 규칙표 값이 요구값이다 — 같은 워밍업이 그대로 통과한다.
         assertThat(
                         calculator
