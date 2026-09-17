@@ -3,7 +3,9 @@ import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
+import { DomesticMarketReference } from '@/components/marketflow/DomesticMarketReference'
 import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'
+import { NewsDigestSection } from '@/components/marketflow/NewsDigestSection'
 import { SectorSelector } from '@/components/marketflow/SectorSelector'
 import { buildStrategyComparisonHandoff } from '@/marketflow/handoff'
 import { AppHeader } from '@/components/navigation/AppHeader'
@@ -155,8 +157,8 @@ export function MarketFlowPage() {
         <section className={styles.connections} aria-labelledby="reference-title">
           <div className={styles.connectionHeader}><span className={styles.eyebrow}>NEXT PERSPECTIVE</span><h2 id="reference-title">흐름을 더 넓게 읽는 방법</h2><p>분야의 변화에서 다음 질문으로.</p></div>
           <div className={styles.connectionGrid}>
-            <article><ChartNoAxesCombined size={22} aria-hidden="true" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>국내 지수와 섹터를 함께 살펴볼 수 있도록 연결을 준비하고 있습니다.</p><button type="button" disabled>국내 시장과 섹터 보기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
-            <article><Newspaper size={22} aria-hidden="true" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식을 한곳에서 읽을 수 있도록 뉴스 묶음을 준비하고 있습니다.</p><button type="button" disabled>관련 뉴스 읽기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
+            <article><ChartNoAxesCombined size={22} aria-hidden="true" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>분야별 경제 흐름과는 별개로, 국내 주가지수의 수준과 변동성을 참고로 둡니다.</p><DomesticMarketReference /></article>
+            <article><Newspaper size={22} aria-hidden="true" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식입니다. 무엇을 싣고 어떻게 묶을지는 뉴스 묶음이 정합니다.</p><NewsDigestSection sectorCode={sectorCode} /></article>
             <article><Waypoints size={22} aria-hidden="true" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type="button" disabled data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
           </div>
         </section>

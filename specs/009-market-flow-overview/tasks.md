@@ -28,7 +28,7 @@ T015가 이 문제를 먼저 막는다.
 | WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |
 | WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | `S15P21E205-272` |
 | WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | S15P21E205-314 |
-| WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |
+| WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | S15P21E205-322 |
 
 **세 조건을 어떻게 만족하는가**
 
@@ -213,7 +213,7 @@ T015가 이 문제를 먼저 막는다.
   - 선택은 연결할 전략·대표 상품·뉴스 범위만 좁힌다 (FR-016)
   - **섹터를 분야 요약·상세 요청에 넣지 않는다.** 계약에 파라미터가 없으므로 넣을 자리도 없어야 한다
   - 테스트: 섹터 선택 전후로 분야 요약·지표 값·기준월 렌더 결과가 같은지(SC-004), 새로고침 모사 후 선택이 남고 세션을 비우면 풀리는지
-- [ ] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira S15P21E205-322
+- [x] T026 [WB04] [US4] [FE] 국내 시장 참고 정보 (`frontend/src/components/marketflow/DomesticMarketReference.tsx`, `frontend/src/components/marketflow/DomesticMarketReference.test.tsx`) · Jira S15P21E205-322
   - 기존 `/api/markets/kospi`를 호출해 가격 추세·변동성을 **경제환경 지표와 구분된 별도 영역**에 그린다 (FR-017)
   - '한국거래소 통계정보' 출처를 표시한다 (FR-015)
   - 자료가 없으면 이 영역만 비우고 분야 요약은 정상 표시한다 (Edge Case)
@@ -225,11 +225,11 @@ T015가 이 문제를 먼저 막는다.
 - [x] T028 [WB04] [US4] [FE] '이 기간으로 전략 비교' 진입점 (`frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 선택 섹터(있으면)와 사례 식별자를 011로 넘긴다 (FR-018)
   - 011이 아직 없으므로 넘기는 값까지만 만든다
-- [ ] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira S15P21E205-322
+- [x] T029 [WB04] [US1] [FE] 뉴스 묶음 영역 연결 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/components/marketflow/`) · Jira S15P21E205-322
   - 이미 있는 `/api/market-news/digests`를 호출해 같은 기본 화면에 꽂는다. 내용·수집·표시 규칙은 012가 정한다 (FR-019)
   - **뉴스가 없거나 늦어도 분야 요약은 정상 표시한다** (FR-019, SC-007)
   - 012의 `PREPARING`·`EMPTY`·`STALE` 상태를 그대로 받아 그린다. 009가 다시 판정하지 않는다
-- [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira S15P21E205-322
+- [x] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira S15P21E205-322
   - `docs/specs/market-api.md`·`market-news-api.md`와 같은 형식으로 경로·응답·상태를 정리한다
   - 상태 집합에 `STALE`이 없는 이유(갱신 주기 차이)를 한 줄 적는다. 012 문서와 나란히 읽힐 문서라 다른 이유가 드러나 있어야 한다
   - **분야 요약 조회가 쿼리 파라미터를 하나도 받지 않고 붙으면 400이라는 점을 적는다.** 012는 `sectorId`를 받아 필터하므로, 두 문서가 나란히 읽힐 때 왜 다른지가 드러나야 한다

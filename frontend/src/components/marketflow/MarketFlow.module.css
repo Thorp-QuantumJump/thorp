@@ -119,3 +119,20 @@
   border: 0; background: none; color: inherit; font: inherit; font-size: .78rem;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
+
+/* 국내 시장 참고 정보. 경제환경 지표와 눈으로도 구분되게 다른 블록으로 둔다(FR-017). */
+.referenceBlock { margin-top: 14px; }
+.referenceValues { display: grid; gap: 12px; margin: 0 0 10px; }
+.referenceValues > div { display: grid; gap: 2px; }
+.referenceValues dt { font-size: .74rem; color: var(--thorp-copy); }
+.referenceValues dd { margin: 0; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.referenceValues dd small { font-size: .72rem; color: var(--thorp-copy); }
+.referenceObserved { font-size: .72rem !important; color: var(--thorp-copy); }
+.referenceSource { margin: 0; font-size: .72rem; color: var(--thorp-copy); }
+
+/* 뉴스 묶음. 내용 규칙은 012가 소유하고 009는 자리만 내준다. */
+.newsBlock { margin-top: 14px; }
+.newsList { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.newsList a { display: inline-flex; align-items: center; gap: 4px; font-size: .88rem; color: inherit; }
+.newsList p { margin: 4px 0 2px; font-size: .78rem; line-height: 1.5; color: var(--thorp-copy); }
+.newsMeta { font-size: .72rem; color: var(--thorp-copy); }

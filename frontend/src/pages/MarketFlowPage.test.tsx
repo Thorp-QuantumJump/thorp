@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
+import { fetchMarketIndicatorsFor } from '@/api/market'
+import { fetchMarketNewsDigests } from '@/api/marketNews'
 import { fetchSectorCatalog } from '@/api/sectors'
 import { MARKET_FLOW_SECTOR_KEY } from '@/marketflow/sectorLink'
 import { renderWithRouter } from '@/test/renderWithRouter'
@@ -10,6 +12,8 @@ import { MarketFlowPage } from './MarketFlowPage'
 vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarketFlowField: vi.fn() }))
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 vi.mock('@/api/sectors', () => ({ fetchSectorCatalog: vi.fn() }))
+vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))
+vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn() }))
 
 const sectorCatalog = {
   status: 'loaded' as const,
@@ -41,6 +45,12 @@ const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({
 describe('MarketFlowPage', () => {
   beforeEach(() => {
     vi.mocked(fetchSectorCatalog).mockResolvedValue(sectorCatalog)
+    // 참고 정보는 늦거나 빠질 수 있다. 기본값은 '없음'으로 두고 필요한 테스트만 채운다.
+    vi.mocked(fetchMarketIndicatorsFor).mockResolvedValue({ data: {}, errors: {} })
+    vi.mocked(fetchMarketNewsDigests).mockResolvedValue({
+      context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,
+      lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],
+    })
     window.sessionStorage.clear()
   })
 
@@ -202,6 +212,39 @@ describe('MarketFlowPage', () => {
       expect(
         screen.getByRole('button', { name: /전략 비교로 이어가기/ }).getAttribute('data-handoff'),
       ).toBeNull()
+    })
+
+    // FR-017: 참고 정보와 뉴스는 분야 요약보다 늦게 채워질 수 있고 요약 표시를 막지 않는다.
+    it('국내 시장 참고 정보를 못 얻어도 분야 요약은 그대로 보인다', async () => {
+      vi.mocked(fetchMarketIndicatorsFor).mockRejectedValue(new Error('원천 인증 거부'))
+      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
+      vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
+      renderWithRouter(<MarketFlowPage />)
+
+      for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
+    })
+
+    // SC-007: 뉴스가 없거나 늦어도 분야 요약 표시를 막지 않는다(FR-019).
+    it('뉴스를 못 얻어도 분야 요약은 그대로 보인다', async () => {
+      vi.mocked(fetchMarketNewsDigests).mockRejectedValue(new Error('뉴스원 장애'))
+      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
+      vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
+      renderWithRouter(<MarketFlowPage />)
+
+      for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
+    })
+
+    it('섹터를 고르면 뉴스만 그 섹터로 다시 조회한다', async () => {
+      await renderWithSectors()
+      const summaryCalls = vi.mocked(fetchMarketFlowFields).mock.calls.length
+
+      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
+      await waitFor(() =>
+        expect(fetchMarketNewsDigests).toHaveBeenLastCalledWith('SEMICONDUCTOR', expect.any(AbortSignal)),
+      )
+
+      // 뉴스만 좁혀지고 경제환경 자료는 건드리지 않는다(FR-016).
+      expect(vi.mocked(fetchMarketFlowFields).mock.calls.length).toBe(summaryCalls)
     })
 
     it('섹터 목록을 못 얻어도 분야 요약은 그대로 보인다', async () => {
