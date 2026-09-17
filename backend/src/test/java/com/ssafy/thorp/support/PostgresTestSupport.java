@@ -40,9 +40,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             "spring.jpa.hibernate.ddl-auto=validate",
             // 컨텍스트마다 Hikari 기본 10개를 잡으면 DB 테스트 클래스가 늘수록
             // PostgreSQL 기본 max_connections(100)를 넘겨 "too many clients already"가 난다.
-            // 테스트는 단일 스레드라 컨텍스트당 2개로 충분하다.
-            "spring.datasource.hikari.maximum-pool-size=2",
-            "spring.datasource.hikari.minimum-idle=0"
+            //
+            // 그렇다고 2개로는 모자란다. 테스트 스레드 하나가 동시에 3개를 쥐는 경로가 있다 — 바깥
+            // 트랜잭션이 커넥션을 쥔 채 커밋 후 발행(BacktestJobDispatcher)이 REQUIRES_NEW 로 하나를
+            // 더 열고, 그 안의 조회가 또 하나를 쓴다. 여기에 같은 컨텍스트의 스케줄러(RunLivenessSweeper
+            // 등)가 겹친다. 2개일 때 ParamSearchLaunchIT·BacktestVersionsApiIT 가 풀을 30초씩 기다렸다
+            // (S15P21E205-327).
+            //
+            // 대신 쉬는 커넥션을 빨리 닫는다. 캐시에 남은 컨텍스트들이 풀을 쥐고 있지 않게 해서, 동시에
+            // 열려 있는 연결이 지금 도는 컨텍스트 몇 개의 몫을 넘지 않게 한다. 10초는 Hikari 가 허용하는
+            // 최솟값이다.
+            "spring.datasource.hikari.maximum-pool-size=4",
+            "spring.datasource.hikari.minimum-idle=0",
+            "spring.datasource.hikari.idle-timeout=10000"
         })
 public abstract class PostgresTestSupport {
 
