@@ -264,10 +264,15 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한
 
 **2026-09-13 `/speckit-converge` 산출.** 현재 코드를 spec.md·plan.md·contracts·data-model.md와 대조해 남은 일을 덧붙였다. 기존 항목은 하나도 고치지 않았다. T014~T016은 이미 열려 있으므로 다시 만들지 않는다. 판정: FR 17개·SC 7개·사용자 스토리 3개·plan 결정 10개·constitution 원칙 10개를 확인했고 MUST 위반은 없다. 유형은 missing 2·partial 9·contradicts 1이며 unrequested는 없다.
 
-- [ ] T017 [BE] `GET /sectors/evaluation-window`를 붙인다 per contracts/sector-api.md·FR-007 (missing)
-  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있다
-  - **001이 지금 만들 수 없다.** 산식 입력 다섯 중 `warmupTradingDays`를 `evaluation-window.md` 입력표가 "전략 등록표(003 소유)에서 온다. 001은 이 값을 정하지 않고 받는다"로 못 박았고, `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. T010의 2026-09-11 보류 판단이 그대로 유효하다
-  - 붙일 때 필요한 것은 T010이 적어 둔 다섯 가지다. `EvaluationWindowService`는 입력을 전부 인자로 받으므로 고치지 않고 호출부만 더하면 된다
+- [X] T017 [BE] `GET /sectors/evaluation-window`를 붙였다 per contracts/sector-api.md·FR-007 (missing) — `S15P21E205-325`
+  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없었다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있었다
+  - **보류 사유가 풀렸다.** 산식 입력 다섯 중 `warmupTradingDays`는 전략 등록표(003 소유)에서 오는데, 003이 등록표를 열어 `ParameterRegistryPort`로 읽을 수 있게 됐다. 나머지 네은 001 자료가 적재되면서 `dataset_version`·`daily_index`·`data_gap`·`representative_etf`에서 읽힌다. `delisted_on`은 도메인 모델에 넣지 않고 조회 전용 저장소가 SQL로 읽는다
+  - **구현 메모**: 003과 2026-09-17에 합의한 것은 ①안이다 — 응답에 워밍업 0일 때의 기준일(`warmupBaseDate`)과 그 뒤 거래일 목록(`tradingDaysFromBase`)을 실어 보내고 화면이 `commonStart(N) = tradingDaysFromBase[N]`으로 계산한다. 값을 만지는 동안 서버로 요청이 나가지 않아야 하는 003 B09의 완료 기준을 지키기 위함이다(003 T098)
+  - **기존 산식과 픽스처는 고치지 않았다.** `excludedRanges`는 워밍업을 반영한 구간으로 잘린 그대로 두고, 기준일부터의 부족 구간은 `excludedRangesFromBase`로 따로 내린다 — 기존 필드의 뜻을 바꾸면 워커가 함께 읽는 `contracts/fixtures/evaluation-window-cases.json`이 깨진다
+  - **달력이 워밍업에 모자라도 오류가 아니다.** 산식의 `CALENDAR_TOO_SHORT`를 조회 계층에서 `evaluable: false`로 옮겼다. 화면이 여러 워밍업을 훑는 조회라 값 하나 때문에 전체가 실패하면 나머지 판정까지 잃는다
+  - **`strategy`를 생략할 수 있다.** 생략하면 워밍업 0으로 판정하고, 003은 그 한 번의 응답으로 카드 다섯 장을 판정한다. `maxWarmupTradingDays`를 안 보냈을 때 등록표 최대값으로 채우지 않는다 — 001이 003 등록표의 축 구성을 읽지 않게 하려는 것이 그 인자를 둔 까닭이다
+  - **자료 버전은 열린 대응표 기준으로 고른다.** 대표 상품 정보와 같은 세 조건이다. 접수 경로(`DatabaseMarketMetadataAdapter`)는 대응표를 보지 않아 과도기에 갈릴 수 있는데, 그때 이 조회는 409가 되고 접수는 옥 자료로 받는다 — 막는 쪽으로 갈리는 편이 안전하다
+  - **검증**: `EvaluationWindowQueryServiceTest` 13건(DB 없는 조립 규칙, 핵심은 "화면의 계산과 서버의 계산이 같은 날을 가리킨다")·`EvaluationWindowApiIT` 7건(실제 자료 위의 계약·오류 구분)
 - [X] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)
   - 계약은 "워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다
   - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다
