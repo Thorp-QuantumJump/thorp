@@ -72,6 +72,18 @@ export interface LineProps {
   /** Dash pattern for the tail segment when `dashFromIndex` is set. Default: "6,4" */
   dashArray?: string;
   /**
+   * Dash pattern for the WHOLE stroke (SVG `stroke-dasharray`) — lets two
+   * series be told apart without relying on color. Unrelated to `dashArray`,
+   * which only dashes the tail after `dashFromIndex`. Default: solid.
+   */
+  strokeDasharray?: string;
+  /**
+   * Whether a datum has a value worth drawing. Returning `false` breaks the
+   * path at that point instead of joining the neighbours across the gap.
+   * Default: every datum is drawn.
+   */
+  defined?: (datum: Record<string, unknown>) => boolean;
+  /**
    * Show the loading pulse overlay. Default: follows chart loading phase.
    * Set `false` to disable even during loading.
    */
@@ -95,9 +107,11 @@ export interface LineProps {
 function LineSeriesStroke({
   animatedPathD,
   curve,
+  defined,
   getY,
   pathRef,
   renderData,
+  strokeDasharray,
   strokeWidth,
   useDataTransitionPath,
   visibleStroke,
@@ -106,9 +120,11 @@ function LineSeriesStroke({
 }: {
   animatedPathD: string;
   curve: CurveFactory;
+  defined?: (datum: Record<string, unknown>) => boolean;
   getY: (datum: Record<string, unknown>) => number;
   pathRef: RefObject<SVGPathElement | null>;
   renderData: Record<string, unknown>[];
+  strokeDasharray?: string;
   strokeWidth: number;
   useDataTransitionPath: boolean;
   visibleStroke: string;
@@ -122,6 +138,7 @@ function LineSeriesStroke({
         fill="none"
         ref={pathRef}
         stroke={visibleStroke}
+        strokeDasharray={strokeDasharray}
         strokeLinecap="round"
         strokeWidth={strokeWidth}
       />
@@ -132,8 +149,10 @@ function LineSeriesStroke({
     <LinePath
       curve={curve}
       data={renderData}
+      defined={defined}
       innerRef={pathRef}
       stroke={visibleStroke}
+      strokeDasharray={strokeDasharray}
       strokeLinecap="round"
       strokeWidth={strokeWidth}
       x={(d) => xScale(xAccessor(d)) ?? 0}
@@ -213,6 +232,8 @@ export function Line({
   markers,
   dashFromIndex,
   dashArray = "6,4",
+  strokeDasharray,
+  defined,
   loading,
   loadingStroke = chartCssVars.foreground,
   loadingStrokeOpacity = 0.5,
@@ -338,9 +359,11 @@ export function Line({
         <LineSeriesStroke
           animatedPathD={animatedPathD}
           curve={curve}
+          defined={defined}
           getY={getY}
           pathRef={pathRef}
           renderData={renderData}
+          strokeDasharray={strokeDasharray}
           strokeWidth={strokeWidth}
           useDataTransitionPath={useDataTransitionPath}
           visibleStroke={visibleStroke}

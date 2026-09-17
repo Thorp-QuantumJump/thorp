@@ -33,6 +33,11 @@ export default defineConfig({
     // 이 파일은 node:test 전용이며 아래 package.json의 test:legacy에서 별도로 실행한다.
     exclude: [...configDefaults.exclude, 'src/api/market.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
+    // 파일마다 jsdom을 새로 만들어 병렬로 돌기 때문에, 입력을 한 글자씩 흘려 넣는 무거운 화면
+    // 테스트는 기본 한계 5초를 넘길 때가 있다. 코드가 멀쩡한데도 실행할 때마다 다른 파일이 실패하면
+    // 결과를 믿을 수 없으므로 한계를 늘린다. 단언은 그대로이니 진짜 멈춘 테스트는 여전히 실패한다.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
   server: {
     port: 5173,
