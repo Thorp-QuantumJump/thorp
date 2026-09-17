@@ -76,15 +76,21 @@ describe('SectorListItem', () => {
   })
 
   it('섹터 이름으로 읽히는 체크박스 하나로 고른다', async () => {
-    // M2는 이 자리에 "고르는 수단을 두지 않는다"를 고정해 두었다. M3이 체크박스를 더하면서
-    // 그 검사를 함께 뒤집는다. 대표 상품 정보 펼침 버튼은 아직 없으므로 버튼은 여전히 0개다.
+    /*
+      M2는 이 자리에 "고르는 수단을 두지 않는다"를 고정해 두었고 M3이 체크박스를 더하면서 그
+      검사를 뒤집었다. M5가 대표 상품 정보 펼침 버튼을 더하므로 버튼이 0개라는 부분도 함께
+      고친다. 지키려는 것은 **고르는 수단이 하나뿐**이라는 사실이지 버튼이 없다는 사실이 아니다.
+    */
     const onSelectedChange = vi.fn()
     renderItem(semiconductor, { onSelectedChange })
     const item = screen.getByRole('listitem')
 
     const checkbox = within(item).getByRole('checkbox', { name: '반도체' })
     expect(within(item).queryAllByRole('checkbox')).toHaveLength(1)
-    expect(within(item).queryAllByRole('button')).toHaveLength(0)
+
+    // 버튼은 펼침 하나뿐이고, 그것은 고르는 수단이 아니다.
+    const buttons = within(item).queryAllByRole('button')
+    expect(buttons.map((button) => button.textContent)).toEqual(['담긴 종목 보기'])
 
     await userEvent.click(checkbox)
     expect(onSelectedChange).toHaveBeenCalledWith(true)

@@ -441,9 +441,15 @@ describe('섹터 선택 화면의 비중 규칙', () => {
 
     /*
       값을 바꾸는 수단은 사용자가 스스로 누르는 '동일하게 나누기' 하나뿐이다. 누르기 전에는 값이
-      바뀌지 않는다. M4가 더한 '전략 고르러 가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.
+      바뀌지 않는다.
+
+      목록 항목 안의 버튼은 세지 않는다. M5의 대표 상품 정보 펼침은 항목마다 하나씩 있고 비중을
+      건드리지 않으므로, 그것까지 세면 이 검사가 무엇을 지키는지 흐려진다. M4가 더한 '전략 고르러
+      가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.
     */
-    const buttons = within(screen.getByRole('main')).getAllByRole('button')
+    const buttons = within(screen.getByRole('main'))
+      .getAllByRole('button')
+      .filter((button) => button.closest('[data-slot="profile"]') === null)
     expect(buttons.map((button) => button.textContent)).toEqual([
       '동일하게 나누기',
       '전략 고르러 가기',
