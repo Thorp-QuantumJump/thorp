@@ -101,6 +101,10 @@ components:
       required: [status, lastSuccessfulAt, lastAttemptAt, failedIndicatorIds, quotaLimited]
       properties:
         status: {type: string, enum: [NEVER_COLLECTED, SUCCEEDED, RUNNING, FAILED, HELD]}
+        licenseUnverifiedIndicatorIds:
+          description: 이용 권리를 확인하지 못해 공개 자료 버전에 넣지 않은 지표. 비어 있지 않으면 완결 버전 발행이 보류된다.
+          type: array
+          items: {type: string}
         lastSuccessfulAt: {type: [string, 'null'], format: date-time}
         lastAttemptAt: {type: [string, 'null'], format: date-time}
         failedIndicatorIds:
@@ -183,3 +187,7 @@ components:
         rawValue: {type: [number, 'null']}
         transformedValue: {type: [number, 'null']}
         releaseDate: {type: [string, 'null'], format: date}
+        missingReason:
+          description: transformedValue 가 null 인 이유. 값이 있으면 생략한다. 원천 미발표와 변환 불가를 구분한다.
+          type: [string, 'null']
+          enum: [NOT_RELEASED, COLLECTION_FAILED, NOT_TRANSFORMABLE, BREAK_EXCLUDED, null]

@@ -10,7 +10,7 @@
 |---|---|
 | `registry(version)` | 17개 안정 ID, 원천/단위/변환/공표 정밀도, 지표→7개 분야 매핑과 명목 가중. 표시 분류 버전은 별도 |
 | `raw_series(indicator_id, data_version)` | 대상월→원값, 결측은 null/없음으로 구분; 전 가용 구간 |
-| `monthly_series(indicator_id, data_version)` | 대상월→변환값, 유효값 없는 월은 값 없음; 임의 보간 금지 |
+| `monthly_series(indicator_id, data_version)` | 대상월→변환값, 유효값 없는 월은 값 없음과 사유(원천 미발표·수집 실패·변환 불가·개편 제외)를 함께 반환; 임의 보간 금지. 비교 대상월 결측·0, 계열 시작 이전, 월 평균 표본 미완성은 모두 '변환 불가'다 |
 | `publication(indicator_id, month, data_version)` | 원천 발표일(없으면 unknown), 수신 시각, 원천 개정/자체 개정 식별자, 원본 근거 |
 | `baseline_months(data_version, registry_version)` | 분야별 `T_g`, 전체 `T_all` (null 가능). 자료 확보월이며 검색 계산 완료월이 아님 |
 | `changed_since(previous_data_version, target_data_version)` | 고정한 두 버전 사이에 값·사용 가능성 변경이 발생한 **가장 오래된 대상월**. 정확히 판정 불가 시 `None`으로 전 구간 재계산 요구 |
