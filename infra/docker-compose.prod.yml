@@ -133,6 +133,10 @@ services:
       THORP_RESULT_EXPIRY_SWEEP_INTERVAL: ${THORP_RESULT_EXPIRY_SWEEP_INTERVAL}
       THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}
       THORP_RESULT_TRADES_PAGE_SIZE: ${THORP_RESULT_TRADES_PAGE_SIZE}
+      # 배우기 관리 계정 허용 목록(spec 013). application-prod.yml 이 기본값 없이 참조한다. 쉼표로 구분한 사용자 ID이고
+      # 빈 값으로 적으면 관리자가 없다(관리 경로가 모두 404). ${VAR} 로만 두면 compose 가 없는 변수를 경고만 남기고 빈 문자열로
+      # 넘겨 설정 누락이 "관리자 없음"과 구분되지 않는다 — ? 로 두어 .env.prod 에 변수가 없으면 compose 명령이 멈추게 한다.
+      THORP_LEARNING_ADMIN_USER_IDS: ${THORP_LEARNING_ADMIN_USER_IDS?.env.prod 에 THORP_LEARNING_ADMIN_USER_IDS 를 넣으세요. 빈 값이면 관리자 없음}
       # 운영자 경로(/internal/execution-metrics)의 토큰(spec 004 T012). 비우면 그 경로는 404 다 — 기동은 된다.
       THORP_OPS_TOKEN: ${THORP_OPS_TOKEN:-}
       # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.

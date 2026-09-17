@@ -159,7 +159,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
   아니다(spec 004 R-20). 그쪽의 적재량은 007의 발행 창과 벌크를 집는 워커 수가 정한다. 따라서 `429`는 **단건끼리의 경쟁**만 뜻한다 —
   탐색이 아무리 돌아도 '분석하기'를 누른 사람에게는 보이지 않는다.
 - **합류(`JOINED`)·재사용(`REUSED`)은 세지 않는다.** 새 계산을 만들지 않으므로 큐에 아무것도 더하지 않는다.
-- `details`는 이 오류에만 실린다. 다른 오류 응답에는 키가 없다.
+- `details`는 이 오류와 요청 검증 400에만 실린다. 요청 검증 400의 `details.fields`는 위반 위치 목록(`[{ field, message }]`)이다(공통 `GlobalExceptionHandler`, spec 013 B02에서 더했다). 다른 오류 응답에는 키가 없다.
 
 **왜 단건만 세는가.** 한 큐에 단건과 탐색이 함께 있던 때(T014 초판)는 어느 쪽도 성립하지 않았다 — 탐색을 세서 거절하면 007이 완료
 이벤트로만 다음 후보를 내보내는 탓에 마지막 진행 후보 뒤의 거절이 **묶음을 영구 정지**시켰고, 탐색을 세되 거절하지 않으면 묶음 수 × 발행 창이
@@ -214,6 +214,34 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 - `limitHitCount`는 접수 거절(429)과 실행 시간 상한 정지를 합친 수다. 종류별로 보려면 `backtest_limit_hit.kind`를 본다.
 - `dataRowsP50`·`dataBytesP50`은 실행이 읽은 자료의 양(가격·지수·기업행위 행 수, 가격 프레임 바이트)의 중앙값 — 데이터 원가(FR-008·원칙 IX)다. 계산(`peakRssP95Mb`)·저장(`result_bytes`)과 함께 건당 원가의 세 갈래를 이룬다. 금액 단가는 없다(PD-06·D19).
 - 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 여기 없다 — RabbitMQ 관리 UI.
+
+## 1.11 규칙·비용 버전 조회 — `GET /backtests/registry`
+
+화면이 `POST /backtests`에 실을 값을 읽는 곳이다(spec 004 T025, 003 FR-010). `strategy.rulesVersion`은 필수이고
+결과 재현의 기준이라 화면이 지어낼 수 없으며, 비용 조건은 003이 "현재 버전의 수치·버전·임시 여부를 읽기 전용으로
+확인"하도록 요구한다. **로그인이 필요 없다** — 사용자 데이터가 아니라 등록표다.
+
+```json
+{ "success": true,
+  "data": { "strategyRules": [ { "strategyId": "FIXED_WEIGHT",       "rulesVersion": "1", "status": "REGISTERED",       "provisional": false },
+                              { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED",       "provisional": true  },
+                              { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "PENDING_DECISION", "provisional": false } ],
+            "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
+                                    "commissionBps": "0.0000", "spreadBps": "0.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } },
+  "error": null }
+```
+
+- `strategyRules`는 **전략당 한 행**이다. 화면은 고른 `strategyId`로 조인해 `status`가 `REGISTERED`인 행의
+  `rulesVersion`을 요청에 싣고, `PENDING_DECISION`이면 '분석하기'를 막는다. 상태를 걸러내지 않고 그대로 내보내는
+  이유가 이것이다. `TARGET_RISK_OVERLAY` 행도 나가는데 전략이 아니라 시나리오 오버레이 규칙이므로 조인에서 자연히 빠진다.
+- `provisional=true`는 팀 결정 전 임시 규칙이라는 뜻이다(역변동성은 PD-02 대기). 결과의
+  `versions.rules.provisional`과 같은 값이다.
+- **`conditions.costProfileVersion`은 비우지 말고 `defaultCostProfile.version`을 명시해 보낸다.** 비우면 서버
+  기본값을 쓰는데, 그 기본값이 배포로 바뀌면 화면이 보여 준 비용 조건과 실제 적용된 조건이 갈린다. 재현 기준을 요청에
+  다 싣는 `rulesVersion` 원칙과 같다. 화면의 "임시 비용 조건" 표시는 `defaultCostProfile.provisional`로 판단한다.
+- 비용 수치는 다른 응답과 같이 **문자열 decimal**이고 단위는 bps다. 컬럼이 `NUMERIC(8,4)`라 소수 네 자리로 나간다(`"5.0000"`). 화면은 문자열을 그대로 보여 주지 말고 수치로 파싱해 표시한다.
+- 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는
+  004 tasks Phase 10이다.
 
 ## 2. 결과 조회
 

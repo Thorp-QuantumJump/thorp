@@ -66,6 +66,10 @@ thorp:
   regime:
     macro:
       source: macro
+  # 배우기 관리 계정 허용 목록(spec 013). 실행 한도와 같이 기본값을 두지 않는다 — 누가 글을 게시하는지는 운영자가
+  # 명시한다. 명시한 빈 값은 "관리자 없음"이다.
+  learning:
+    admin-user-ids: ${THORP_LEARNING_ADMIN_USER_IDS}
   backtest:
     limits:
       max-queued-per-user: ${THORP_LIMIT_MAX_QUEUED_PER_USER}

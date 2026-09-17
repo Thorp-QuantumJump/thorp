@@ -1,5 +1,6 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,10 +76,51 @@ function renderHelp() {
   return { user, trigger: screen.getByRole('button', { name: '합성 용어 도움말' }) }
 }
 
+/** 도움말을 붙인 진단 화면 대역. 입력 하나와 도움말 하나를 가진다. */
+function HostForm() {
+  const [value, setValue] = useState('')
+  return (
+    <form>
+      <label>
+        합성 입력
+        <input value={value} onChange={(event) => setValue(event.target.value)} />
+      </label>
+      <TermHelp
+        termId="synthetic-term"
+        label="합성 용어"
+        returnTo={{ path: '/strategy', label: '전략 선택' }}
+      />
+    </form>
+  )
+}
+
 describe('TermHelp', () => {
-  it('열기 전에는 설명을 요청하지 않는다', () => {
-    renderHelp()
+  it('열기 전에는 설명을 요청하지 않고 트리거는 button이다', () => {
+    const { trigger } = renderHelp()
     expect(fetchGlossaryEntry).not.toHaveBeenCalled()
+    expect(trigger.tagName).toBe('BUTTON')
+    expect(trigger.getAttribute('type')).toBe('button')
+  })
+
+  it('열고 닫는 동안 호출한 화면의 입력이 그대로다', async () => {
+    fetchGlossaryEntry.mockResolvedValue({ status: 'notReady' })
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/strategy']}>
+        <HostForm />
+      </MemoryRouter>,
+    )
+    const input = screen.getByRole('textbox', { name: '합성 입력' })
+    fireEvent.change(input, { target: { value: '12.5' } })
+
+    await user.click(screen.getByRole('button', { name: '합성 용어 도움말' }))
+    expect(await screen.findByText('설명 준비 중')).not.toBeNull()
+    await user.keyboard('{Escape}')
+    await act(async () => {})
+
+    expect((screen.getByRole('textbox', { name: '합성 입력' }) as HTMLInputElement).value).toBe(
+      '12.5',
+    )
   })
 
   it('열면 받은 문장을 그대로 보이고 글로 가는 연결은 돌아올 자리만 싣는다', async () => {
@@ -90,7 +132,10 @@ describe('TermHelp', () => {
     expect(fetchGlossaryEntry).toHaveBeenCalledWith('synthetic-term', expect.any(AbortSignal))
     expect(await screen.findByText('합성 용어를 설명하는 한 문장이다.')).not.toBeNull()
 
-    await user.click(screen.getByRole('link', { name: /합성 글/ }))
+    const articleLink = screen.getByRole('link', { name: /합성 글/ })
+    expect(articleLink.getAttribute('href')).toBe('/learn/synthetic-article')
+    expect(articleLink.getAttribute('target')).toBeNull()
+    await user.click(articleLink)
 
     const location = screen.getByTestId('location').textContent ?? ''
     expect(location).toContain('/learn/synthetic-article')

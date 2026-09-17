@@ -44,7 +44,7 @@ curl -s localhost:8080/sectors | jq '[.sectors[] | select(.representativeEtf == 
 
 ```bash
 cd data
-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07
+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --until 2026-09-15
 uv run scripts/verify_listing_boundary.py     # 상장 전 행을 세는 검증 스크립트
 ```
 
@@ -69,7 +69,7 @@ uv run pytest tests/test_repository_provider.py -k reproducible
 
 ```bash
 psql -h localhost -U thorp -d thorp -c \
-  "UPDATE dataset_version SET data_deadline = now() WHERE dataset_id = 'KRX_DAILY_20260907';"
+  "UPDATE dataset_version SET data_deadline = now() WHERE dataset_id = 'KRX_DAILY_20260915';"
 ```
 
 **기대 결과**: 갱신이 거부된다. 발행된 버전을 고치는 경로가 없어야 한다(FR-017).
@@ -87,17 +87,31 @@ cd ../backend && ./gradlew test --tests '*EvaluationWindowTest'
 
 **기대 결과**: 양쪽이 같은 픽스처(`contracts/fixtures/evaluation-window-cases.json`)를 읽어 같은 값을 낸다. 한쪽만 고치면 실패한다.
 
-이어서 HTTP 표면을 확인한다.
+이어서 HTTP 표면을 확인한다. 계약은 [contracts/sector-api.md](./contracts/sector-api.md)의 「GET /sectors/evaluation-window」 절이 기준이다.
 
 ```bash
-curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM' | jq
+# ① 전략을 주면 그 전략의 기본 설정 워밍업을 반영해 판정한다
+curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,SECONDARY_BATTERY&strategy=SECTOR_MOMENTUM' | jq
+
+# ② 전략을 생략하고 상한만 주면 화면이 직접 재판정할 재료를 받는다
+curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,SECONDARY_BATTERY&maxWarmupTradingDays=200' | jq
 ```
 
-**기대 결과**
+**기대 결과 (①)**
 
-- 상장일이 늦은 쪽이 `bindingCandidate`로 나온다
+- 상장일이 늦은 쪽이 `bindingCandidate`로 나오고 그 섬터 코드가 `bindingSector`다
 - `commonStart`가 그 후보의 상장일에서 워밍업 거래일만큼 뒤다
 - **잠금 구간이 빠지지 않은 전체 범위**가 나온다 (FR-008)
+- 상한을 주지 않았으므로 `tradingDaysFromBase`·`maxWarmupTradingDays`·`excludedRangesFromBase`는 **키 자체가 없다**
+
+**기대 결과 (②)**
+
+- `warmupTradingDays`가 0이고 `commonStart`가 `warmupBaseDate`와 같다
+- `tradingDaysFromBase`의 길이가 `maxWarmupTradingDays + 1`이고 목록 끝이 `commonEnd`를 넘지 않는다
+- 워밍업 N을 넣었을 때의 시작일은 `tradingDaysFromBase[N]`이다. ①의 `commonStart`와 같은 날을 가리킨다
+- 달력이 상한에 모자라면 오류가 아니라 `maxWarmupTradingDays`가 실제 길이 − 1로 줄어든다
+
+조합을 평가할 수 없으면 오류가 아니라 `evaluable: false`인 200이다. 자료가 아직 없으면 409 `EVALUATION_WINDOW_NOT_READY`로 갈라, 화면이 "잠시 후 다시"와 "이 조합은 안 됩니다"를 구분할 수 있다.
 
 ## 시나리오 5 — 기업행위가 반영되고 중복 차감되지 않는다
 
@@ -105,7 +119,7 @@ curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,BATTERY&
 
 ```bash
 cd data
-uv run scripts/reconcile.py --dataset KRX_DAILY_20260907
+uv run scripts/reconcile.py --dataset KRX_DAILY_20260915
 ```
 
 **기대 결과**
@@ -137,7 +151,7 @@ cd worker && uv run pytest tests/test_repository_provider.py -k "suspended or ga
 
 ```bash
 cd data
-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-exhausted
+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --simulate-quota-exhausted
 ```
 
 **기대 결과**
@@ -154,7 +168,7 @@ uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-e
 
 ```bash
 cd data
-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07 \
+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --until 2026-09-15 \
     --instrument-profiles raw/instrument-profiles.json
 ```
 
