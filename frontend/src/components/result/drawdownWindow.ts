@@ -16,7 +16,7 @@ import type { ResultTimeseriesPoint } from '@/types/result'
  */
 
 export type DrawdownWindow = {
-  /** 저점 직전에 자산가치가 가장 높았던 날 */
+  /** 저점 직전에 자산가치가 고점에 있던 마지막 날. 시작 금액이 고점이었으면 계열의 첫날이다 */
   peakDate: string
   /** `drawdown`이 가장 낮은 날. 같은 값이 여러 날이면 처음 날이다 */
   troughDate: string
@@ -57,17 +57,18 @@ export function findDrawdownWindow(
   if (troughIndex < 0 || troughValue >= 0) return null
   if (troughValue !== expected) return null
 
-  let peakIndex = -1
-  let peakEquity = Number.NEGATIVE_INFINITY
-  for (let index = 0; index < troughIndex; index += 1) {
-    const equity = readNumber(points[index].equity)
-    // 같은 고점이 다시 오면 뒤의 날을 둔다 — 하락은 마지막으로 고점에 있던 날부터 시작한다.
-    if (equity !== null && equity >= peakEquity) {
-      peakEquity = equity
+  // 고점도 `drawdown` 계열에서 고른다. 워커는 고점을 **시작 금액**에서 시작해 자산가치가 그 위로 오를 때만
+  // 올린다(`portfolio_execution.py`의 `self.peak`). 그래서 고점인 날은 `drawdown`이 0이고, 저점 앞에 그런 날이
+  // 없으면 시작 금액이 고점이었다는 뜻이라 계열의 첫날부터가 구간이다. 계열 안의 자산가치 최댓값으로 찾으면
+  // 시작 금액 아래에서 출발한 결과의 구간을 늦게 잡는다.
+  let peakIndex = 0
+  for (let index = troughIndex - 1; index >= 0; index -= 1) {
+    const drawdown = readNumber(points[index].drawdown)
+    if (drawdown !== null && drawdown >= 0) {
       peakIndex = index
+      break
     }
   }
-  if (peakIndex < 0) return null
 
   return { peakDate: points[peakIndex].date, troughDate: points[troughIndex].date }
 }

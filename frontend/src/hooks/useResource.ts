@@ -7,7 +7,8 @@ import { ResultError } from '@/api/result'
  * <p>받지 못했다고 빈 값으로 바꾸지 않는다. 빈 표는 "기록이 없었다"는 거짓이 된다(원칙 VI).
  */
 export type ResourceState<T> =
-  | { status: 'loading' }
+  /** `stale`은 다시 받는 동안 남겨 둔 앞선 응답이다. 페이지를 넘길 때 표와 버튼이 사라지지 않게 한다 */
+  | { status: 'loading'; stale?: T }
   | { status: 'loaded'; data: T }
   | { status: 'failed'; message: string }
 
@@ -30,7 +31,10 @@ export function useResource<T>(
     const controller = new AbortController()
     let active = true
 
-    setState({ status: 'loading' })
+    // 앞선 응답이 있으면 남겨 둔다. 지우면 누른 버튼이 함께 사라져 키보드 초점을 잃는다(FR-022).
+    setState((previous) =>
+      previous.status === 'loaded' ? { status: 'loading', stale: previous.data } : { status: 'loading' },
+    )
     load(controller.signal).then(
       (data) => {
         if (active) setState({ status: 'loaded', data })

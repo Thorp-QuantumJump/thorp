@@ -4,7 +4,12 @@ import { AppHeader } from '@/components/navigation/AppHeader'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
-import { LOSS_WINDOW_UNAVAILABLE, LossWindowView } from '@/components/result/LossWindowView'
+import { isZeroValue } from '@/components/result/formatResult'
+import {
+  LOSS_WINDOW_NONE,
+  LOSS_WINDOW_UNAVAILABLE,
+  LossWindowView,
+} from '@/components/result/LossWindowView'
 import { OtherConditionsButton } from '@/components/result/OtherConditionsButton'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
@@ -157,7 +162,7 @@ function ResultView({
       </div>
       {viewable && lossWindow === null ? (
         <p id={lossReasonId} className={styles.hint}>
-          {LOSS_WINDOW_UNAVAILABLE}
+          {summary && isZeroValue(summary.maxDrawdown) ? LOSS_WINDOW_NONE : LOSS_WINDOW_UNAVAILABLE}
         </p>
       ) : null}
 

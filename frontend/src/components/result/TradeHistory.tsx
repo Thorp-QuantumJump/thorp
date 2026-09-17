@@ -5,6 +5,7 @@ import { useResource } from '@/hooks/useResource'
 import type { ResultConfigItem, ResultTrade } from '@/types/result'
 import { TRADES_PAGE_SIZE } from './constants'
 import { formatMoney } from './formatResult'
+import { ResourceArea } from './ResourceArea'
 import type { SectorLabels } from './sectorLabels'
 import styles from './resultDetail.module.css'
 
@@ -106,61 +107,69 @@ export function TradeList({
     [token, page, instrumentId, status, from, to],
   )
   const trades = useResource(load)
-
-  if (trades.status === 'loading') {
-    return (
-      <p className={styles.copy} role="status">
-        거래 내역을 불러오는 중입니다.
-      </p>
-    )
-  }
-
-  if (trades.status === 'failed') {
-    return (
-      <div className={styles.row} role="alert">
-        <p className={styles.alert}>{trades.message}</p>
-        <Button type="button" variant="outline" size="sm" onClick={trades.retry}>
-          다시 불러오기
-        </Button>
-      </div>
-    )
-  }
-
-  const { content, totalElements, totalPages, size } = trades.data
-  if (content.length === 0) {
-    return <p className={styles.copy}>이 조건에 해당하는 거래가 없습니다.</p>
-  }
-
-  const first = trades.data.page * size + 1
-  const last = trades.data.page * size + content.length
+  const loading = trades.status === 'loading'
 
   return (
-    <>
-      <TradeTable trades={content} labels={labels} caption={caption} />
-      <div className={styles.row}>
-        <p className={styles.muted}>
-          전체 {totalElements}건 중 {first}~{last}번째
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={trades.data.page <= 0}
-          onClick={() => setPage((current) => current - 1)}
-        >
-          이전
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={trades.data.page + 1 >= totalPages}
-          onClick={() => setPage((current) => current + 1)}
-        >
-          다음
-        </Button>
-      </div>
-    </>
+    <ResourceArea resource={trades} loadingText="거래 내역을 불러오는 중입니다.">
+      {(data) => {
+        const { content, totalElements, totalPages, size, partial } = data
+        // 부분 결과는 완료 범위 뒤의 거래가 없다. 비어 있어도 "없었다"고 단정하지 않는다(004 §2.5).
+        const partialNote = partial ? (
+          <p className={styles.muted}>완료 범위까지의 거래입니다. 그 뒤는 계산되지 않았습니다.</p>
+        ) : null
+
+        if (content.length === 0) {
+          return (
+            <>
+              <p className={styles.copy}>
+                {partial
+                  ? '완료 범위 안에서는 이 조건에 해당하는 거래가 없습니다.'
+                  : '이 조건에 해당하는 거래가 없습니다.'}
+              </p>
+              {partialNote}
+            </>
+          )
+        }
+
+        const first = data.page * size + 1
+        const last = data.page * size + content.length
+
+        return (
+          <>
+            <TradeTable trades={content} labels={labels} caption={caption} />
+            {partialNote}
+            <div className={styles.row}>
+              <p className={styles.muted}>
+                전체 {totalElements}건 중 {first}~{last}번째
+              </p>
+              {/* 받는 동안에는 누른 버튼을 그대로 두고 두 번 넘기지 않는다. 비활성하면 초점을 잃는다. */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={data.page <= 0}
+                onClick={() => {
+                  if (!loading) setPage(data.page - 1)
+                }}
+              >
+                이전
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={data.page + 1 >= totalPages}
+                onClick={() => {
+                  if (!loading) setPage(data.page + 1)
+                }}
+              >
+                다음
+              </Button>
+            </div>
+          </>
+        )
+      }}
+    </ResourceArea>
   )
 }
 

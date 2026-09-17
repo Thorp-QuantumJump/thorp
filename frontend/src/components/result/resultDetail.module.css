@@ -146,6 +146,18 @@
   font-weight: 600;
 }
 
+/* 열 때 받는 자원 한 자리. 다시 받을 때 초점을 받아 두는 자리라 테두리를 그리지 않는다. */
+.area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.area:focus {
+  outline: none;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;

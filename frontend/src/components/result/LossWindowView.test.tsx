@@ -93,6 +93,13 @@ describe('LossWindowView', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
+  it('부분 결과의 보유는 완료 범위까지의 기록이라고 적는다', async () => {
+    apiMocks.fetchResultPositions.mockResolvedValue({ ...resultPositions, partial: true })
+    const { view } = renderView()
+
+    expect(await within(view).findByText(/완료 범위까지의 기록입니다/)).not.toBeNull()
+  })
+
   it('보유를 받지 못하면 사유와 다시 불러오기를 두고 빈 표를 그리지 않는다', async () => {
     const { ResultError } = await import('@/api/result')
     apiMocks.fetchResultPositions.mockRejectedValueOnce(new ResultError('보유 구성 실패'))

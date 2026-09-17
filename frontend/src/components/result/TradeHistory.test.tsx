@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resultDetailCompleted, resultSectorCatalog, resultToken, resultTradePage } from '@/test/resultFixtures'
@@ -79,6 +79,77 @@ describe('TradeHistory', () => {
     })
   })
 
+  it('다른 페이지를 보다가 조건을 바꾸면 첫 페이지부터 받는다', async () => {
+    apiMocks.fetchResultTrades.mockImplementation(async (_token: string, query: { page: number }) => ({
+      ...resultTradePage,
+      page: query.page,
+      size: 2,
+      totalElements: 5,
+      totalPages: 3,
+    }))
+    const user = userEvent.setup()
+    renderHistory()
+    await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
+    await screen.findByText('전체 5건 중 1~2번째')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await screen.findByText('전체 5건 중 3~4번째')
+
+    await user.selectOptions(screen.getByLabelText('상태'), 'OPEN')
+    await user.click(screen.getByRole('button', { name: '조건 적용' }))
+
+    await vi.waitFor(() => expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(3))
+    expect(apiMocks.fetchResultTrades.mock.calls[2][1]).toMatchObject({ page: 0, status: 'OPEN' })
+  })
+
+  it('페이지를 넘기는 동안 표와 누른 버튼을 남겨 초점을 잃지 않는다', async () => {
+    let resolveNext: (value: unknown) => void = () => {}
+    apiMocks.fetchResultTrades
+      .mockResolvedValueOnce({ ...resultTradePage, size: 2, totalElements: 5, totalPages: 3 })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve
+          }),
+      )
+    const user = userEvent.setup()
+    renderHistory()
+    await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
+    const next = await screen.findByRole('button', { name: '다음' })
+
+    next.focus()
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('status').textContent).toBe('거래 내역을 불러오는 중입니다.')
+    expect(screen.getByRole('table', { name: '거래 내역' })).not.toBeNull()
+    expect(document.activeElement).toBe(next)
+    // 받는 동안 한 번 더 눌러도 두 번 넘기지 않는다.
+    await user.keyboard('{Enter}')
+    expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      resolveNext({ ...resultTradePage, page: 1, size: 2, totalElements: 5, totalPages: 3 })
+    })
+    expect(await screen.findByText('전체 5건 중 3~4번째')).not.toBeNull()
+  })
+
+  it('부분 결과면 비어 있어도 거래가 없었다고 단정하지 않는다', async () => {
+    apiMocks.fetchResultTrades.mockResolvedValue({
+      ...resultTradePage,
+      partial: true,
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+    })
+    const user = userEvent.setup()
+    renderHistory()
+
+    await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
+
+    expect(await screen.findByText('완료 범위 안에서는 이 조건에 해당하는 거래가 없습니다.')).not.toBeNull()
+    expect(screen.queryByText('이 조건에 해당하는 거래가 없습니다.')).toBeNull()
+    expect(screen.getByText(/완료 범위까지의 거래입니다/)).not.toBeNull()
+  })
+
   it('시작일이 종료일보다 늦으면 요청하지 않고 알린다', async () => {
     const user = userEvent.setup()
     renderHistory()
@@ -124,6 +195,8 @@ describe('TradeHistory', () => {
     expect(await screen.findByText('거래 내역 실패')).not.toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
     await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
+    // 누른 버튼이 사라져도 초점이 문서 처음으로 밀려나지 않는다(FR-022).
+    expect(document.activeElement).not.toBe(document.body)
     expect(await screen.findByRole('table', { name: '거래 내역' })).not.toBeNull()
   })
 })

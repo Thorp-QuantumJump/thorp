@@ -139,8 +139,57 @@ describe('DetailPanel', () => {
     const turnover = within(panel).getByRole('heading', { name: '회전율' }).closest('section') as HTMLElement
     for (const section of [recovery, turnover]) {
       expect(within(section).getByText(new RegExp(CALCULATION_LIMITED))).not.toBeNull()
-      expect(within(section).queryByText(/^0/)).toBeNull()
     }
+    // 값 자리(`거래일`·`연 …%`)가 어떤 숫자로도 채워지지 않는다.
+    expect(within(recovery).queryByText(/거래일$/)).toBeNull()
+    expect(within(turnover).queryByText(/^연 /)).toBeNull()
+  })
+
+  it('요약 자체가 없는 결과는 계산 제한이 아니라 지표가 계산되지 않았다고 보인다', async () => {
+    const withoutSummary: PublicResultDetail = {
+      ...resultDetailCompleted,
+      status: 'CANCELLED',
+      partial: true,
+      summary: null,
+      summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',
+    }
+    const { panel } = renderPanel(withoutSummary)
+    await screen.findByText('HALT_DEFERRED')
+
+    for (const title of ['회복 기간', '회전율', '비용 가정']) {
+      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement
+      expect(within(section).getByText('취소 시점까지의 지표는 계산되지 않았습니다.'), title).not.toBeNull()
+      expect(within(section).queryByText(new RegExp(CALCULATION_LIMITED)), title).toBeNull()
+    }
+  })
+
+  it('마지막 리밸런싱에 담은 종목이 없으면 머리글만 있는 표 대신 그 사실을 적는다', async () => {
+    apiMocks.fetchResultWeights.mockResolvedValue({
+      ...resultWeights,
+      points: [...resultWeights.points, { date: '2024-12-30', target: {}, actual: {}, weightError: '0.000000' }],
+    })
+    const { panel } = renderPanel()
+
+    expect(await within(panel).findByText(/마지막 리밸런싱\(2024-12-30\)에서는 담은 종목이 없습니다/)).not.toBeNull()
+    const weightsSection = within(panel).getByRole('heading', { name: '목표·실제 비중' }).closest('section') as HTMLElement
+    expect(within(weightsSection).queryByRole('table')).toBeNull()
+  })
+
+  it.each([
+    [{ status: 'emptyCatalog', catalog: { ...resultSectorCatalog, sectors: [] } }],
+    [{ status: 'mapNotReady', message: '준비 중' }],
+  ])('섹터 목록이 아직 준비 중(%o)이면 섹터가 빠졌다고 하지 않고 다시 불러오기를 준다', async (result) => {
+    sectorMocks.fetchSectorCatalog.mockResolvedValueOnce(result)
+    const user = userEvent.setup()
+    const { panel } = renderPanel()
+
+    const profile = within(panel).getByRole('heading', { name: /대표 ETF 구성/ }).closest('section') as HTMLElement
+    expect(await within(profile).findByText(/섹터 목록이 아직 준비 중이라/)).not.toBeNull()
+    expect(within(profile).queryByText(/지금 섹터 목록에 없는 섹터라/)).toBeNull()
+
+    await user.click(within(profile).getByRole('button', { name: '다시 불러오기' }))
+    expect(await within(profile).findByRole('button', { name: '항구 · 합성 항구 ETF' })).not.toBeNull()
+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(2)
   })
 
   it('회복 기간의 null은 계산 제한이 아니라 끝까지 회복하지 못했다는 뜻이다', async () => {

@@ -13,6 +13,8 @@ import { COMPUTED_WEIGHTS_NOTE, strategyLabel } from './conditionLine'
 import { formatMoney, formatRatio } from './formatResult'
 import { HoldingDifference } from './HoldingDifference'
 import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'
+import { ResourceArea } from './ResourceArea'
+import { SUMMARY_NOT_CALCULATED } from './ResultSummaryCard'
 import { type SectorLabels, buildSectorLabels } from './sectorLabels'
 import { TradeHistory } from './TradeHistory'
 import styles from './resultDetail.module.css'
@@ -130,7 +132,9 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
       </div>
 
       <Item title="목표·실제 비중">
-        <WeightsBody weights={weights} labels={labels} />
+        <ResourceArea resource={weights} loadingText="비중 기록을 불러오는 중입니다.">
+          {(data) => <WeightsBody weights={data} labels={labels} />}
+        </ResourceArea>
       </Item>
 
       {compare ? (
@@ -142,7 +146,9 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
       ) : null}
 
       <Item title="계산 제한 항목">
-        <ExceptionsBody exceptions={exceptions} labels={labels} />
+        <ResourceArea resource={exceptions} loadingText="예외 처리 기록을 불러오는 중입니다.">
+          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
+        </ResourceArea>
       </Item>
 
       <Item title="전체 거래 내역">
@@ -168,31 +174,14 @@ function Item({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function Loading({ children }: { children: ReactNode }) {
-  return (
-    <p className={styles.copy} role="status">
-      {children}
-    </p>
-  )
-}
-
-function Failed({ message, retry }: { message: string; retry: () => void }) {
-  return (
-    <div className={styles.row} role="alert">
-      <p className={styles.alert}>{message}</p>
-      <Button type="button" variant="outline" size="sm" onClick={retry}>
-        다시 불러오기
-      </Button>
-    </div>
-  )
-}
-
 /** 회복 기간. 004 정의: 하락이 없으면 0, 끝까지 회복하지 못하면 `null`이다(워커 `calculate_analytics`). */
 function RecoveryItem({ detail }: { detail: PublicResultDetail }) {
   const analytics = detail.summary?.analytics ?? null
 
   let body: ReactNode
-  if (analytics === null) {
+  if (detail.summary === null) {
+    body = <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>
+  } else if (analytics === null) {
     body = <p className={styles.limited}>{CALCULATION_LIMITED}: 이 결과에는 회복 기간이 계산되지 않았습니다.</p>
   } else if (analytics.recoveryDays === null) {
     body = <p className={styles.copy}>분석 기간이 끝날 때까지 이전 고점을 되찾지 못했습니다.</p>
@@ -215,7 +204,9 @@ function TurnoverItem({ detail }: { detail: PublicResultDetail }) {
 
   return (
     <Item title="회전율">
-      {turnover === null ? (
+      {detail.summary === null ? (
+        <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>
+      ) : turnover === null ? (
         <p className={styles.limited}>{CALCULATION_LIMITED}: 이 결과에는 회전율이 계산되지 않았습니다.</p>
       ) : (
         <p className={styles.value}>연 {formatRatio(turnover)}</p>
@@ -255,7 +246,8 @@ function CostItem({ detail }: { detail: PublicResultDetail }) {
           </>
         ) : null}
       </dl>
-      {costs ? null : <p className={styles.limited}>{CALCULATION_LIMITED}: 비용 내역이 계산되지 않았습니다.</p>}
+      {/* 요약이 없는 결과(취소 뒤 지표 없음)는 계산 제한과 다른 갈래다. 004가 `summaryUnavailable`로 이유를 준다. */}
+      {costs ? null : <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>}
     </Item>
   )
 }
@@ -303,17 +295,8 @@ function RulesItem({ detail, labels }: { detail: PublicResultDetail; labels: Sec
   )
 }
 
-function WeightsBody({
-  weights,
-  labels,
-}: {
-  weights: ResourceState<ResultWeights> & { retry: () => void }
-  labels: SectorLabels
-}) {
-  if (weights.status === 'loading') return <Loading>비중 기록을 불러오는 중입니다.</Loading>
-  if (weights.status === 'failed') return <Failed message={weights.message} retry={weights.retry} />
-
-  const { points, weightsSource, partial } = weights.data
+function WeightsBody({ weights, labels }: { weights: ResultWeights; labels: SectorLabels }) {
+  const { points, weightsSource, partial } = weights
   const sourceNote =
     weightsSource === 'COMPUTED' ? COMPUTED_WEIGHTS_NOTE : '입력한 비중을 목표로 삼았습니다.'
   const last = points.at(-1)
@@ -328,6 +311,18 @@ function WeightsBody({
   }
 
   const instrumentIds = [...new Set([...Object.keys(last.target), ...Object.keys(last.actual)])]
+  if (instrumentIds.length === 0) {
+    // 004 예시에도 있는 모양이다(리밸런싱에서 모두 판 날). 머리글만 있는 표를 그리지 않는다.
+    return (
+      <>
+        <p className={styles.copy}>{sourceNote}</p>
+        <p className={styles.copy}>
+          마지막 리밸런싱({last.date})에서는 담은 종목이 없습니다. 리밸런싱 {points.length}회
+        </p>
+        {partial ? <p className={styles.muted}>완료 범위까지의 기록입니다.</p> : null}
+      </>
+    )
+  }
 
   return (
     <>
@@ -365,15 +360,10 @@ function ExceptionsBody({
   exceptions,
   labels,
 }: {
-  exceptions: ResourceState<ResultExceptions> & { retry: () => void }
+  exceptions: ResultExceptions
   labels: SectorLabels
 }) {
-  if (exceptions.status === 'loading') return <Loading>예외 처리 기록을 불러오는 중입니다.</Loading>
-  if (exceptions.status === 'failed') {
-    return <Failed message={exceptions.message} retry={exceptions.retry} />
-  }
-
-  const { items, partial } = exceptions.data
+  const { items, partial } = exceptions
   if (items.length === 0) {
     return <p className={styles.copy}>계산을 제한하거나 처리 방식을 바꾼 기록이 없습니다.</p>
   }
@@ -430,18 +420,19 @@ function CompareHoldings({
   )
   const targetWeights = useResource(loadTargetWeights)
 
-  // 기준 쪽 실패는 '목표·실제 비중'이 이미 알린다. 여기서는 비교 대상 쪽 실패만 알린다.
+  // 기준 쪽 실패는 '목표·실제 비중'이 이미 알린다. 여기서는 비교 대상 쪽만 알린다.
   if (base.weights.status !== 'loaded') return null
-  if (targetWeights.status === 'loading') return <Loading>비교 대상의 비중 기록을 불러오는 중입니다.</Loading>
-  if (targetWeights.status === 'failed') {
-    return <Failed message={targetWeights.message} retry={targetWeights.retry} />
-  }
+  const baseWeights = base.weights.data
 
   return (
-    <HoldingDifference
-      base={{ name: base.name, items: base.items, weights: base.weights.data }}
-      target={{ name: target.name, items: target.items, weights: targetWeights.data }}
-      labels={labels}
-    />
+    <ResourceArea resource={targetWeights} loadingText="비교 대상의 비중 기록을 불러오는 중입니다.">
+      {(data) => (
+        <HoldingDifference
+          base={{ name: base.name, items: base.items, weights: baseWeights }}
+          target={{ name: target.name, items: target.items, weights: data }}
+          labels={labels}
+        />
+      )}
+    </ResourceArea>
   )
 }

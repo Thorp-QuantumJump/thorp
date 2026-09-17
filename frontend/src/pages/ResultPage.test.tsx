@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-rou
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResultError } from '@/api/result'
 import { RESULT_POLL_INTERVAL_MS } from '@/components/result/constants'
-import { LOSS_WINDOW_UNAVAILABLE } from '@/components/result/LossWindowView'
+import { LOSS_WINDOW_NONE, LOSS_WINDOW_UNAVAILABLE } from '@/components/result/LossWindowView'
 import { EXPIRED_MESSAGE, NOT_FOUND_MESSAGE } from '@/components/result/ResultUnavailableNotice'
 import {
   resultDetailCancelledNoSummary,
@@ -327,8 +327,27 @@ describe('ResultPage', () => {
       const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })
       expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(troughPoint.date)
       await within(view).findByRole('table', { name: '구간 거래' })
-      expect(apiMocks.fetchResultTrades.mock.calls[0][1]).toMatchObject({ to: troughPoint.date })
+      // 합성 계열은 40번째 점이 마지막 고점이다(`resultFixtures.ts`).
+      expect(apiMocks.fetchResultTrades.mock.calls[0][1]).toMatchObject({
+        from: resultTimeseries.points[40].date,
+        to: troughPoint.date,
+      })
       expect(apiMocks.fetchResultPositions.mock.calls[0][1]).toBe(troughPoint.date)
+    })
+
+    it('하락이 없던 결과는 구간을 확인하지 못한 것과 다른 이유를 적는다', async () => {
+      apiMocks.fetchResult.mockResolvedValue({
+        ...matchingDetail,
+        summary: matchingDetail.summary && { ...matchingDetail.summary, maxDrawdown: '0.000000' },
+      })
+      renderResult()
+
+      const button = (await screen.findByRole('button', {
+        name: '손실이 커진 때 보기',
+      })) as HTMLButtonElement
+      expect(button.disabled).toBe(true)
+      const reason = document.getElementById(button.getAttribute('aria-describedby') ?? '')
+      expect(reason?.textContent).toBe(LOSS_WINDOW_NONE)
     })
 
     it('최대 하락 구간을 확인할 수 없으면 손실이 커진 때 보기를 비활성하고 이유를 적는다', async () => {

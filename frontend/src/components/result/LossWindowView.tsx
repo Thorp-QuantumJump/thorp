@@ -6,6 +6,7 @@ import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type { ResultConfigItem } from '@/types/result'
 import type { DrawdownWindow } from './drawdownWindow'
 import { formatMoney, formatRatio } from './formatResult'
+import { ResourceArea } from './ResourceArea'
 import { buildSectorLabels } from './sectorLabels'
 import { TradeList } from './TradeHistory'
 import styles from './resultDetail.module.css'
@@ -21,6 +22,8 @@ import styles from './resultDetail.module.css'
  */
 
 export const LOSS_WINDOW_UNAVAILABLE = '최대 하락 구간을 확인할 수 없어 이 보기를 열 수 없습니다.'
+/** 하락이 없던 결과. 구간을 확인하지 못한 것과 다르므로 문장을 나눈다 */
+export const LOSS_WINDOW_NONE = '분석 기간 동안 자산가치가 줄어든 적이 없어 볼 구간이 없습니다.'
 
 type LossWindowViewProps = {
   id: string
@@ -71,51 +74,45 @@ export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWi
 
       <div className={styles.item}>
         <h3 className={styles.itemTitle}>저점일의 보유</h3>
-        {positions.status === 'loading' ? (
-          <p className={styles.copy} role="status">
-            보유 구성을 불러오는 중입니다.
-          </p>
-        ) : null}
-        {positions.status === 'failed' ? (
-          <div className={styles.row} role="alert">
-            <p className={styles.alert}>{positions.message}</p>
-            <Button type="button" variant="outline" size="sm" onClick={positions.retry}>
-              다시 불러오기
-            </Button>
-          </div>
-        ) : null}
-        {positions.status === 'loaded' ? (
-          positions.data.positions.length === 0 ? (
-            <p className={styles.copy}>{positions.data.snapshotDate} 기준 보유한 종목이 없습니다.</p>
-          ) : (
-            <div className={styles.tableScroll}>
-              <table className={styles.table}>
-                {/* 스냅샷은 보유가 바뀐 날에만 있어 요청한 날보다 앞선 날짜일 수 있다(004 §2.4). */}
-                <caption>{positions.data.snapshotDate} 기준 보유 구성</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">종목</th>
-                    <th scope="col">수량</th>
-                    <th scope="col">평가 금액</th>
-                    <th scope="col">비중</th>
-                    <th scope="col">평가 손익</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.data.positions.map((position) => (
-                    <tr key={position.instrumentId}>
-                      <td>{labels.instrument(position.instrumentId)}</td>
-                      <td>{position.quantity}</td>
-                      <td>{formatMoney(position.marketValue)}</td>
-                      <td>{formatRatio(position.weight)}</td>
-                      <td>{formatMoney(position.unrealizedPnl)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : null}
+        <ResourceArea resource={positions} loadingText="보유 구성을 불러오는 중입니다.">
+          {(data) => (
+            <>
+              {data.positions.length === 0 ? (
+                <p className={styles.copy}>{data.snapshotDate} 기준 보유한 종목이 없습니다.</p>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    {/* 스냅샷은 보유가 바뀐 날에만 있어 요청한 날보다 앞선 날짜일 수 있다(004 §2.4). */}
+                    <caption>{data.snapshotDate} 기준 보유 구성</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">종목</th>
+                        <th scope="col">수량</th>
+                        <th scope="col">평가 금액</th>
+                        <th scope="col">비중</th>
+                        <th scope="col">평가 손익</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.positions.map((position) => (
+                        <tr key={position.instrumentId}>
+                          <td>{labels.instrument(position.instrumentId)}</td>
+                          <td>{position.quantity}</td>
+                          <td>{formatMoney(position.marketValue)}</td>
+                          <td>{formatRatio(position.weight)}</td>
+                          <td>{formatMoney(position.unrealizedPnl)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {data.partial ? (
+                <p className={styles.muted}>완료 범위까지의 기록입니다. 그 뒤는 계산되지 않았습니다.</p>
+              ) : null}
+            </>
+          )}
+        </ResourceArea>
       </div>
 
       <div className={styles.item}>
