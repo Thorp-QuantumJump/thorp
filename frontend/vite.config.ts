@@ -24,6 +24,7 @@ export default defineConfig({
       'src/diagnosis/**/*.test.ts',
       'src/marketflow/**/*.test.ts',
       'src/utils/analysisPeriod.test.ts',
+      'src/utils/evaluationWindow.test.ts',
       'src/utils/warmupRule.test.ts',
       'src/utils/validationRules.test.ts',
     ],

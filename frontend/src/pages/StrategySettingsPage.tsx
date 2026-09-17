@@ -35,12 +35,14 @@ import { SettingsStatusBadge } from '@/components/strategy/SettingsStatusBadge'
 import type { WarmupVerdict } from '@/components/strategy/StrategyCard'
 import { StrategyCardList, type RegistryViewState } from '@/components/strategy/StrategyCardList'
 import { formatWeightTenths as formatDisplayWeight } from '@/diagnosis/weights'
+import { useEvaluationWindow } from '@/hooks/useEvaluationWindow'
 import { useSectorSelection } from '@/hooks/useSectorSelection'
 import { useStrategySettings, type InvalidStoredValue } from '@/hooks/useStrategySettings'
 import type { BacktestAccepted, BacktestRequestStatus } from '@/types/backtestRequest'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
 import { isWithin, meetsMinimumYears, type AnalysisPeriod } from '@/utils/analysisPeriod'
 import { buildBacktestRequest } from '@/utils/analysisRequest'
+import { evaluationWindowQuery } from '@/utils/evaluationWindow'
 import { checkRules } from '@/utils/validationRules'
 import styles from './StrategySettingsPage.module.css'
 
@@ -287,6 +289,18 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     }
   }, [fetchAnalysisVersions])
 
+  // --- 공통 평가 기간(①). 섹터 집합과 등록표의 워밍업 상한이 바뀔 때만 조회한다 ---------------
+  //
+  // 값을 바꾸는 동안에는 받아 둔 거래일 목록으로 판정하므로 요청이 나가지 않는다(T098, research R7-1).
+  const windowQuery = useMemo(() => {
+    if (selection.status !== 'ready' || !registry) return null
+    return evaluationWindowQuery(
+      selection.selection.items.map((item) => item.sectorId),
+      registry,
+    )
+  }, [selection, registry])
+  const evaluationWindow = useEvaluationWindow(support.fetchEvaluationWindow, windowQuery)
+
   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------
   const minEvaluationYears = settings.ready
     ? settings.analysisCondition.minEvaluationYears
@@ -299,10 +313,11 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (!settings.selectedStrategy || settings.warmupTradingDays === null) return null
     return support.judgeWarmup({
       strategy: settings.selectedStrategy,
+      evaluationWindow,
       warmupTradingDays: settings.warmupTradingDays,
       minEvaluationYears,
     })
-  }, [support, settings.selectedStrategy, settings.warmupTradingDays, minEvaluationYears])
+  }, [support, evaluationWindow, settings.selectedStrategy, settings.warmupTradingDays, minEvaluationYears])
 
   /**
    * 고른 전략의 평가 구간이 워밍업 때문에 줄었다는 안내의 재료(FR-011, SC-004). 줄지 않았으면 `null`이다.
@@ -382,6 +397,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       }
       const verdict = support.judgeWarmup({
         strategy,
+        evaluationWindow,
         warmupTradingDays: selected && currentWarmup !== null ? currentWarmup : strategy.warmupTradingDays,
         minEvaluationYears,
       }).verdict
@@ -392,7 +408,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       }
       return verdict
     },
-    [support, minEvaluationYears, selectedStrategyId, currentWarmup, reducedPeriod],
+    [support, evaluationWindow, minEvaluationYears, selectedStrategyId, currentWarmup, reducedPeriod],
   )
 
   // --- 다시 확인할 보관값 -------------------------------------------------------------------

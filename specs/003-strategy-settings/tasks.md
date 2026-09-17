@@ -173,6 +173,15 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
       만큼만 주고 `maxWarmupTradingDays`를 줄이며 목록 끝이 `commonEnd`를 넘지 않게 할 것 — 답이 오기 전까지 화면은 상한 초과를
       판정하지 못한 상태로 막는다. (2) `excludedRanges`를 `warmupBaseDate`부터 자를 것(또는 별도 필드). (3) 상한을 줄 때
       `strategy`를 생략할 수 있게 해 카드 다섯 장을 요청 한 번으로 판정할 것. (4) `maxWarmupTradingDays`가 없으면 400으로 둘 것.
+  - **B06 진행 메모 (2026-09-17, `feat(fe)/238-analysis-request-connect`, 대역 뒤에서 멈춤)**: 001 엔드포인트와 합의한 필드
+    셋이 dev에 없어 **체크하지 않는다.** 만든 것은 조회·판정·상태 셋이다. `api/sectors.ts`의 `fetchEvaluationWindow`는
+    거래일 목록의 불변식(첫 날 = 기준일, 엄격한 오름차순, 상한 = 길이 − 1)이 어긋나면 응답 전체를 읽지 않는다.
+    `utils/evaluationWindow.ts`가 위 계산 규칙과 등록표의 상한 계산을 맡고, `hooks/useEvaluationWindow.ts`는 섹터 목록과
+    상한을 이은 글을 열쇠로 조회해 늦게 온 응답이 새 집합을 판정하지 않게 한다. 통로에는 `fetchEvaluationWindow`를 더하고
+    판정 입력에 받아 둔 상태(`evaluationWindow`)를 실었다 — `judgeWarmup`이 동기 함수라 섹터를 모르므로 조회는 화면이,
+    판정은 통로가 한다. 보완 질문 3이 미결이라 조회에 `strategy`를 싣지 않는다. 001이 필수로 두면 등록표의 아무 전략 하나를
+    실으면 된다(새 필드는 전략과 무관하다). **남은 일**: 001이 머지되면 실제 응답으로 `readEvaluationWindow`를 확인하고,
+    답에 따라 상한 초과(질문 1)와 `excludedRanges` 기준(질문 2)을 반영한 뒤 페이지 기본 통로를 바꾼다(T039 메모).
 
 ### Frontend 테스트
 

@@ -22,8 +22,10 @@ import {
   unselectableStrategy,
 } from '@/test/strategyRegistryFixtures'
 import type { BacktestCreateRequest } from '@/types/backtestRequest'
+import type { EvaluationWindow } from '@/types/evaluationWindow'
 import type { StrategyView } from '@/types/strategyRegistry'
 import type { SectorSummary } from '@/types/sector'
+import { judgeWarmupFromWindow } from '@/utils/evaluationWindow'
 import { StrategySettingsPage } from './StrategySettingsPage'
 
 /**
@@ -118,9 +120,14 @@ function makeSupport(overrides: Partial<AnalysisSupport> = {}) {
     reduction: null,
   })
   const fetchAnalysisVersions: AnalysisSupport['fetchAnalysisVersions'] = async () => versionsFixture
+  // 판정은 위 `judgeWarmup` 흉내가 하므로 조회 결과는 쓰이지 않는다. 네트워크에 닿지 않고 실패만 한다.
+  const fetchEvaluationWindow: AnalysisSupport['fetchEvaluationWindow'] = async () => {
+    throw new Error('평가 기간 조회를 흉내 내지 않았습니다.')
+  }
 
   const support: AnalysisSupport = {
     fetchAnalysisVersions,
+    fetchEvaluationWindow,
     judgeWarmup,
     createBacktest,
     ...overrides,
@@ -1854,5 +1861,94 @@ describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2�
     await waitFor(() =>
       expect(screen.getByLabelText('분석 조건 요약').textContent).toContain('2021-01-04 ~ 2024-12-30'),
     )
+  })
+})
+
+describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
+  /**
+   * 합성 거래일 목록. 날마다 하루씩 이어진다 — 이 검사는 달력의 모양이 아니라 N번째 날을 쓴다는 것만 본다.
+   * `commonEnd`는 워밍업 45일(기본 설정)이면 최소 평가 기간 1년을 채우고 90일이면 못 채우는 날로 두었다.
+   */
+  function syntheticWindow(): EvaluationWindow {
+    const days = Array.from({ length: 91 }, (_, index) => {
+      const date = new Date(Date.UTC(2024, 0, 1 + index))
+      return date.toISOString().slice(0, 10)
+    })
+    return {
+      commonStart: days[45],
+      commonEnd: '2025-03-01',
+      warmupTradingDays: 45,
+      bindingCandidate: 'BETA.XKRX',
+      excludedRanges: [],
+      evaluable: true,
+      datasetId: 'TEST-DATASET-1',
+      warmupBaseDate: days[0],
+      tradingDaysFromBase: days,
+      maxWarmupTradingDays: 90,
+    }
+  }
+
+  it('섹터 집합으로 한 번만 조회하고, 값을 바꾸는 동안에는 받아 둔 거래일로 다시 판정한다', async () => {
+    const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
+    try {
+      const user = userEvent.setup()
+      const fetchEvaluationWindow = vi.fn<AnalysisSupport['fetchEvaluationWindow']>(async () =>
+        syntheticWindow(),
+      )
+      const { support } = makeSupport({
+        fetchEvaluationWindow,
+        judgeWarmup: ({ evaluationWindow, warmupTradingDays, minEvaluationYears }) =>
+          judgeWarmupFromWindow(evaluationWindow, { warmupTradingDays, minEvaluationYears }),
+      })
+      renderPage(support)
+
+      await user.click(await findCardNamed(selectableStrategy.name))
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+      expect(fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+      // 등록표에서 계산한 상한(표류 균형 맞추기의 90)과 섹터 코드를 싣는다. 전략은 싣지 않는다.
+      expect(fetchEvaluationWindow.mock.calls[0][0]).toEqual({
+        sectors: ['ALPHA', 'BETA', 'GAMMA'],
+        maxWarmupTradingDays: 90,
+      })
+
+      await user.click(screen.getByRole('button', { name: '상세 설정' }))
+      await user.click(screen.getByRole('radio', { name: '90거래일' }))
+
+      const card = await findCardNamed(selectableStrategy.name)
+      expect(card.getAttribute('data-warmup')).toBe('blocked')
+      expect(within(card).getByText(/최소 평가 기간\(1년\)에 못 미칩니다/)).toBeTruthy()
+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+
+      await user.click(screen.getByRole('radio', { name: '15거래일' }))
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+
+      expect(fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+      expect(xhrSpy).not.toHaveBeenCalled()
+    } finally {
+      xhrSpy.mockRestore()
+    }
+  })
+
+  it('평가 기간을 받지 못하면 카드가 그 사실을 보이고 분석하기를 막는다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({
+      judgeWarmup: ({ evaluationWindow, warmupTradingDays, minEvaluationYears }) =>
+        judgeWarmupFromWindow(evaluationWindow, { warmupTradingDays, minEvaluationYears }),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() =>
+      expect(reasonOf(actionButton('분석하기'))).toContain('공통 평가 기간을 확인할 수 없어'),
+    )
+    const card = await findCardNamed(selectableStrategy.name)
+    expect(card.getAttribute('data-warmup')).toBe('unknown')
+
+    await user.click(actionButton('분석하기'))
+    expect(requests).toHaveLength(0)
   })
 })

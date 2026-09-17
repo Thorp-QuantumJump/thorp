@@ -1,5 +1,6 @@
 import type { WarmupVerdict } from './StrategyCard'
 import type { BacktestAccepted, BacktestCreateRequest } from '@/types/backtestRequest'
+import type { EvaluationWindow, EvaluationWindowQuery } from '@/types/evaluationWindow'
 import type { StrategyView } from '@/types/strategyRegistry'
 
 /**
@@ -12,8 +13,9 @@ import type { StrategyView } from '@/types/strategyRegistry'
  *       미결이다. 결정 전에는 `null`이고 화면은 '분석하기'를 "분석 조건 버전을 확인할 수 없습니다"로
  *       막는다. T039가 `api/analysisVersions.ts` 한 파일로 격리해 채운다.</li>
  *   <li>워밍업 판정(①): 001의 `GET /sectors/evaluation-window`가 아직 없다. 그 전까지는 판정할 수
- *       없다는 사실을 `unknown`으로 넘기고 카드가 그대로 보인다(T084). T042가 `useEvaluationWindow`로
- *       채운다.</li>
+ *       없다는 사실을 `unknown`으로 넘기고 카드가 그대로 보인다(T084). T042가 조회
+ *       (`fetchEvaluationWindow`)와 판정(`judgeWarmupFromWindow`)으로 나눠 채운다. 화면은 섹터 집합이
+ *       바뀔 때만 조회하고(`useEvaluationWindow`), 받은 상태를 판정 입력으로 넘긴다(T098).</li>
  *   <li>요청 전송: `POST /backtests`. T039가 `api/backtest.ts`로 채운다.</li>
  * </ol>
  *
@@ -47,8 +49,23 @@ export type AnalysisVersions = {
   costRates: CostRates
 }
 
+/**
+ * 화면이 받아 둔 공통 평가 기간의 상태. 판정은 이것만으로 한다 — 값을 바꾸는 동안 서버에 묻지 않는다
+ * (research R7-1, T098).
+ */
+export type EvaluationWindowState =
+  /** 조회 중이거나 아직 조회할 조건(섹터·등록표)이 갖춰지지 않았다 */
+  | { status: 'loading' }
+  /** 등록표에서 워밍업 상한을 계산하지 못해 조회하지 않았다 */
+  | { status: 'uncomputable' }
+  /** 조회가 실패했거나 응답이 계약과 어긋났다 */
+  | { status: 'unavailable' }
+  | { status: 'loaded'; window: EvaluationWindow }
+
 export type WarmupJudgeInput = {
   strategy: StrategyView
+  /** 받아 둔 공통 평가 기간. 카드마다 같은 값이다 */
+  evaluationWindow: EvaluationWindowState
   /** 판정할 설정의 워밍업. 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준이다(FR-011) */
   warmupTradingDays: number
   /** 사용자가 고른 최소 평가 기간(연). `0`은 제한 없음이다(FR-011a) */
@@ -98,6 +115,11 @@ export type WarmupJudgement = {
  */
 export type AnalysisSupport = {
   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>
+  /**
+   * 섹터 집합의 공통 평가 기간을 받는다. 실패하면 거부한다. 화면은 섹터 집합이나 상한이 바뀔 때만
+   * 부른다.
+   */
+  fetchEvaluationWindow: (query: EvaluationWindowQuery, signal?: AbortSignal) => Promise<EvaluationWindow>
   judgeWarmup: (input: WarmupJudgeInput) => WarmupJudgement
   /**
    * 요청을 보낸다. 거절되면 **서버가 보낸 오류 이름을 `code`에, 응답의 `details`를 `details`에 실은
@@ -171,6 +193,9 @@ export const EVALUATION_WINDOW_UNAVAILABLE =
  */
 export const notConnectedSupport: AnalysisSupport = {
   fetchAnalysisVersions: async () => null,
+  fetchEvaluationWindow: async () => {
+    throw new Error('공통 평가 기간 조회가 아직 연결되지 않았습니다.')
+  },
   judgeWarmup: () => ({
     verdict: { state: 'unknown', message: EVALUATION_WINDOW_UNAVAILABLE },
     window: null,
