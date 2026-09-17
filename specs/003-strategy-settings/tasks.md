@@ -154,6 +154,25 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)
 - [X] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 "002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교" 흐름을 적는다 (T040 의존)
 - [ ] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + "최소 평가 기간(N년)에 못 미칩니다" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 한다"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다("착수 전에 알아둘 것" ①). 404·미구현·실패면 카드에 "공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)
+  - **구현 방향 (T098 결정, 2026-09-17 001 담당자와 합의)**: 위 원문의 "선택 전략은 현재 설정으로 조회"는 **쓰지 않는다.**
+    값이 바뀔 때마다 서버를 부르면 T058·티켓 241의 "값을 만지는 동안 요청 0건"이 깨진다. 대신 001 응답이 워밍업 0일 때의
+    기준일과 그 뒤 거래일 목록을 함께 내리고 화면이 계산한다(research R7-1).
+    - **요청**: `GET /sectors/evaluation-window?sectors=…&strategy=…&maxWarmupTradingDays=N`. `maxWarmupTradingDays`는
+      화면이 훑을 워밍업의 상한이며 **화면이 등록표에서 계산해 항상 보낸다** — 전략마다 `warmupRule.sum`에 축별 최대값(입력형은
+      `range.max`, 목록형은 후보 가운데 최대값)을 넣은 값의 최대다. 001이 003의 파라미터 조합을 몰라도 된다.
+    - **응답에 더해지는 필드 셋**: `warmupBaseDate`(워밍업 0일 때의 `commonStart`), `tradingDaysFromBase`(그날부터의 거래일
+      오름차순 목록), `maxWarmupTradingDays`(= 목록 길이 − 1). 기존 여섯 필드와 `datasetId`는 그대로다.
+    - **화면 계산**: `commonStart(N) = tradingDaysFromBase[N]`(0-기준, 001 `firstEvaluable`·픽스처 `$firstEvaluable`과 같다).
+      `commonStart(N) > commonEnd`면 분석할 수 없다. `bindingCandidate`는 모든 후보가 같은 달력을 쓰므로 워밍업과 무관해 다시
+      계산하지 않는다. 남는 기간을 `minEvaluationYears`와 견주어 `blocked`·`reduced`로 가르는 것은 원문과 같다.
+      `N > maxWarmupTradingDays`면 계산할 수 없으므로 값을 지어내지 않고 판정하지 못한 상태로 막는다.
+    - **조회 시점**: 섹터 집합(과 등록표에서 계산한 상한)이 바뀔 때만 조회한다. 값을 바꾸는 동안에는 받아 둔 응답으로만 판정한다.
+    - **기각한 갈래**: ② 전략별 워밍업 후보를 한 번에 조회 — 001이 003의 파라미터 조합을 알아야 하고, 입력형 축은 후보가
+      유한하지 않다. ③ 매번 조회하고 늦게 온 응답은 버림 — research R7-1이 기각한 방식이며, 입력 도중 요청이 계속 나간다.
+    - **001에 보낸 보완 질문 넷 (2026-09-17 기준 미결)**: (1) 달력이 워밍업 상한보다 짧을 때 `CALENDAR_TOO_SHORT` 대신 있는
+      만큼만 주고 `maxWarmupTradingDays`를 줄이며 목록 끝이 `commonEnd`를 넘지 않게 할 것 — 답이 오기 전까지 화면은 상한 초과를
+      판정하지 못한 상태로 막는다. (2) `excludedRanges`를 `warmupBaseDate`부터 자를 것(또는 별도 필드). (3) 상한을 줄 때
+      `strategy`를 생략할 수 있게 해 카드 다섯 장을 요청 한 번으로 판정할 것. (4) `maxWarmupTradingDays`가 없으면 400으로 둘 것.
 
 ### Frontend 테스트
 
@@ -656,7 +675,7 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
 알리되 자동으로 다시 보내지 않는다. 이것으로 FR-008·FR-011·FR-017과 quickstart 5-1·7·10을 만족한다. 남은
 간극은 셋이다. B06·B10·B12는 위 단계가 이미 추적하므로 간극으로 세지 않았다.
 
-- [ ] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 "선택 전략은 현재 설정으로 조회"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 "값을 만지는 동안 서버로 요청이 나가지 않는다"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다
+- [X] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 "선택 전략은 현재 설정으로 조회"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 "값을 만지는 동안 서버로 요청이 나가지 않는다"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다
 - [X] T099 (FE) 분석 요청의 거절 코드마다 계약이 정한 화면 처리를 붙인다 per 계약 §2 거절 응답 · FR-018 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`의 `handleAnalyze`는 409 `REGISTRY_VERSION_CHANGED`(T059) 말고는 모든 거절을 `error.message` 한 줄로 보인다. 계약 §2가 정한 처리 가운데 422 `STRATEGY_NOT_REGISTERED`의 "전략 선택으로 되돌린다"와 503 `REGISTRY_UNAVAILABLE`의 "다시 시도를 제안한다"가 없다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙의 `detail`을 메시지로 싣고(`StrategySettingsRejectedException.ruleViolated`) 화면이 그대로 보이므로 이미 만족한다. 400 `UNREGISTERED_PARAMETER_VALUE`는 서버 메시지가 `허용 범위를 벗어난 값입니다: strategyId=…, 항목=…` 같은 개발용 문장이라 그대로 보이면 사용자가 읽을 수 없다 — 응답 `details`의 `axis`·`allowedRange`로 등록표 라벨과 범위를 찾아 안내하거나, 그럴 수 없으면 일반 문장과 등록표 다시 조회를 제안한다. 판별은 T059와 같이 `analysisSupport.ts`에서 오류의 `code` 하나로 하고(`isRegistryVersionChanged`와 나란히), T039의 `BacktestRequestError`가 `code`와 `details`를 싣도록 그 태스크의 구현 메모에 적는다. 검사는 `StrategySettingsPage.test.tsx`에 코드마다 하나씩 두고, 어느 경우에도 자동으로 다시 보내지 않는지 함께 본다
 - [X] T100 [P] (FE) 고른 카드의 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않고 판정하지 못한 사실을 보인다 per FR-011 · Constitution VI (contradicts) — `frontend/src/pages/StrategySettingsPage.tsx`의 `judgeWarmup`은 주석에 "지금 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않는다"고 적었는데, 코드는 `currentWarmup === null`일 때 `strategy.warmupTradingDays`로 판정한다. 재검증이 축을 비워 복원을 기다리는 동안 고른 카드가 기본값 기준의 `ok`나 `reduced`를 보여, 화면이 하지 않은 판정의 결과를 말한다. '분석하기'는 `INVALID_STORED_VALUES`로 막히므로 요청은 나가지 않는다. 고른 전략이고 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 `{ state: 'unknown', message: '현재 설정으로 워밍업을 계산할 수 없습니다.' }`를 넘긴다(`unknown`은 고를 수 없다는 뜻이 아니라 카드는 눌린 채 남는다). 검사: 보관값의 축 하나가 새 등록표 범위 밖이라 비워진 상태로 전략을 고르면 카드의 `data-warmup`이 `unknown`이고, 복원하면 지금 설정의 판정으로 돌아온다
 
