@@ -441,6 +441,30 @@ def test_unusable_covariance_fails_the_whole_run():
     assert caught.value.code == "ESTIMATION_FAILED"
 
 
+def test_normalisation_rounding_does_not_leak_into_cash():
+    """정규화가 남긴 Decimal 잔차를 현금으로 오인하지 않는다.
+
+    ``1/3`` 을 셋 더하면 1 보다 1ulp 작다. 그 합을 채워야 할 목표로 쓰면 멀줦한 100% 배분이
+    99.9999% 로 깎이고, 상한은 아무 일도 하지 않았는데 ``CAP_OVERFLOW_CASH`` 기록까지 남는다.
+    아래 가격은 그 어긋나는 조합을 무작위 탐색으로 찾은 것이다(상한 100%, 세 종목 전부 투자 가능).
+    """
+    prices = {
+        SEMI: [100.0, 106.01, 97.02, 103.12, 101.51],
+        BATTERY: [100.0, 101.28, 99.3, 105.44, 107.11],
+        BIO: [100.0, 99.59, 102.63, 92.97, 103.22],
+    }
+
+    result = compute_weights(
+        allocation("INVERSE_VOLATILITY", INVERSE_RULES),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(**prices),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    assert result.exceptions == []
+
+
 def test_non_psd_covariance_is_not_repaired(monkeypatch):
     """허용오차보다 큰 음의 고유값은 잘라 내지 않고 실행 전체를 실패시킨다(PD-04 1).
 

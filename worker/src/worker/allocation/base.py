@@ -197,14 +197,17 @@ def apply_cap(
         for key, value in free.items():
             capped[key] = value + spill * (cap - value) / room
     exceptions: list[ExceptionRecord] = []
-    total = sum(capped.values(), ZERO)
-    if total < invested:
+    # 판정은 **상한 용량**으로 한다 — 재분배한 합으로 보면 Decimal 나눗셈 잔차(1/3 을 셋 더하면
+    # 1 보다 1ulp 작다)가 "상한 때문에 현금을 남겼다"는 기록을 남긴다.
+    # 상한은 아무 일도 하지 않았는데도.
+    capacity = cap * len(capped)
+    if capacity < invested:
         exceptions.append(
             ExceptionRecord(
                 date=as_of,
                 kind=CAP_OVERFLOW_CASH,
                 rule=f"weightCap={cap} x {len(capped)} instruments < investedFraction={invested}",
-                action=f"남은 {invested - total} 은 현금으로 보유",
+                action=f"남은 {invested - capacity} 은 현금으로 보유",
             )
         )
     return capped, exceptions
