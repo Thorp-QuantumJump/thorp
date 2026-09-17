@@ -65,8 +65,8 @@ public abstract class PostgresTestSupport {
      * 마이그레이션으로 한 번만 심지 않는 까닭은 {@link MarketCatalogSeed} 의 설명에 있다 — 요약하면 자기 자료를 직접 넣고 지우는 검사와 부딪히기
      * 때문이다.
      *
-     * <p>JUnit 이 상위 클래스의 {@code @BeforeEach} 를 먼저 돌리므로, 자기 자료를 따로 준비하는 검사는 그 위에서 마음대로 치우고 넣어도 된다. 다음
-     * 검사 전에 여기서 다시 심긴다.
+     * <p>JUnit 이 상위 클래스의 {@code @BeforeEach} 를 먼저 돌리므로, 자기 자료를 따로 준비하는 검사는 그 위에서 마음대로 치우고 넣어도 된다.
+     * 다음 검사 전에 여기서 다시 심긴다.
      */
     @BeforeEach
     void seedMarketCatalog() {

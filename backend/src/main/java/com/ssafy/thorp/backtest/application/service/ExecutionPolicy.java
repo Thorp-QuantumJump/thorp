@@ -41,9 +41,9 @@ public final class ExecutionPolicy {
     /**
      * 자료 읽기 규칙의 고정 부분. <b>자료 버전 두 값은 여기서 정하지 않는다.</b>
      *
-     * <p>접수가 저장된 자료 버전에서 정해 실행에 고정하며, 메시지를 조립하는 단계가 채운다({@code
-     * EngineInputAssembler.marketData}). 여기에 상수로 두면 그 값이 실제 자료와 어긋나도 아무도 알아채지 못한다. 예전 자리 표시였던 {@code
-     * KRX_DAILY_V1} 을 걷어낸 까닭이다(spec 001 research.md 결정 4).
+     * <p>접수가 저장된 자료 버전에서 정해 실행에 고정하며, 메시지를 조립하는 단계가 채운다({@code EngineInputAssembler.marketData}).
+     * 여기에 상수로 두면 그 값이 실제 자료와 어긋나도 아무도 알아채지 못한다. 예전 자리 표시였던 {@code KRX_DAILY_V1} 을 걷어낸 까닭이다(spec 001
+     * research.md 결정 4).
      */
     public static final EngineInput.MarketDataSpec MARKET_DATA =
             new EngineInput.MarketDataSpec(
