@@ -281,6 +281,31 @@ class PublicResultServiceTest {
     }
 
     @Test
+    @DisplayName("비로그인 사용자는 단건이 아닌 요청을 다시 시도할 수 없다 — 재시도가 실행 한도를 건너뛰는 입구가 되지 않는다 (T089)")
+    void anonymousCannotRetryNonSingleRequest() {
+        BacktestRequest bundle =
+                BacktestRequest.restore(
+                        1L,
+                        new BacktestId(BACKTEST_ID),
+                        11L,
+                        7L,
+                        ExecutionType.SEARCH_BUNDLE,
+                        ResultSource.NEW,
+                        null,
+                        null,
+                        null,
+                        false,
+                        PublicResultToken.of(TOKEN),
+                        null);
+        stored(bundle);
+
+        assertThatThrownBy(() -> service.retry(TOKEN, null))
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+        verify(retryService, never()).retry(any(BacktestRequest.class), any());
+    }
+
+    @Test
     @DisplayName("재시도는 호출한 사람의 이름으로 접수하고, 원 요청의 backtestId 대신 원 토큰을 돌려준다")
     void retryTranslatesIdentifiersToTokens() {
         BacktestRequest original = request(7L, null);
