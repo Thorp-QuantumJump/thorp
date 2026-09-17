@@ -34,6 +34,8 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 "등록표 검증의 과도기 상태") |
 | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |
 | `strategy.parameters.maxWeight` | `int` | 선택 | 종목별 비중 상한, **정수 %**(003 축과 같은 단위. 1~100). 배분 세 전략(역변동성·섹터 모멘텀·최소분산) 공통이다. 생략하면 규칙표의 `weightCap`을 쓴다. 접수와 워커가 **같은 값**을 유효 상한으로 읽으므로, 상한 × 종목 수가 투자 비중에 못 미치면 접수에서 422 `VALIDATION_RULE_VIOLATED`다(PD-03 ⑥) |
+| `strategy.parameters.lookbackDays` · `estimationMethod` | `int` · `string` | 조건부 | 최소분산의 003 축. 실리면 **규칙표 기본값보다 우선해 계산에 쓰인다** — 받아 놓고 쓰지 않으면 250거래일을 고른 사용자가 120거래일짜리 결과를 받는다 |
+| `strategy.parameters.rebalancePeriod` | `object` | 선택 | 003 축(`{mode, unit}`). `mode=CALENDAR`면 서버가 엔진이 읽는 `rebalance` 문자열로 옮겨 보낸다. 저장된 요청에는 003 이름 그대로 남는다 |
 | `conditions.start` / `end` | `date` | 필수 | `start`가 `end`보다 늦을 수 없다 |
 | `conditions.initialCash` | `string` (decimal) | 필수 | 0보다 큼. 소수점 2자리까지 |
 | `conditions.costProfileVersion` | `string` | 선택 | `null` = 서버 기본(현재 `PROVISIONAL-DEMO-1`) |

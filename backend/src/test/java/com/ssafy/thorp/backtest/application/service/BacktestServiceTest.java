@@ -210,7 +210,33 @@ class BacktestServiceTest {
 
     private static CreateBacktestCommand withParameters(
             String strategyId, Map<String, Object> parameters) {
-        CreateBacktestCommand base = command(strategyId, null, null, Scenario.FULL_PERIOD, null);
+        return withParameters(
+                command(strategyId, null, null, Scenario.FULL_PERIOD, null), parameters);
+    }
+
+    private static CreateBacktestCommand withItems(
+            CreateBacktestCommand base, List<CreateBacktestCommand.AllocationItem> items) {
+        return new CreateBacktestCommand(
+                base.requesterId(),
+                base.executionType(),
+                base.mappingVersion(),
+                items,
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
+    }
+
+    private static CreateBacktestCommand withParameters(
+            CreateBacktestCommand base, Map<String, Object> parameters) {
         return new CreateBacktestCommand(
                 base.requesterId(),
                 base.executionType(),
@@ -262,6 +288,33 @@ class BacktestServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
                 .hasMessageContaining("상한 0.4 × 2종목");
+    }
+
+    @Test
+    @DisplayName("고정 비중은 목표 비중 하나가 상한을 넘어도 422 다 — 재분배할 것이 없어 그대로 실행된다")
+    void fixedWeightAboveTheCapIsRejected() {
+        // 0.6 + 0.2 + 0.2 = 1 이라 합 검사는 통과하고, 0.4 x 3종목 >= 1 이라 도달 가능 검사도 통과한다.
+        // 그래도 0.6 은 사용자가 고른 상한 40%를 넘는다 — 재분배할 것이 없으니 그대로 실행됐을 값이다.
+        CreateBacktestCommand base =
+                withItems(
+                        command("FIXED_WEIGHT", null, null, Scenario.FULL_PERIOD, null),
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "SEMICONDUCTOR", "091160.XKRX", new BigDecimal("0.6000")),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BATTERY", "305720.XKRX", new BigDecimal("0.2000")),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BIO", "244580.XKRX", new BigDecimal("0.2000"))));
+
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                base,
+                                                Map.of("rebalance", "MONTH_END", "maxWeight", 40))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
+                .hasMessageContaining("0.6000");
     }
 
     @Test

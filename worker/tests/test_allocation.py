@@ -10,9 +10,10 @@ from decimal import Decimal
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 from worker.allocation import compute_weights
-from worker.allocation.base import AllocationError
+from worker.allocation.base import AllocationError, effective_cap
 from worker.contracts.engine_input import AllocationSpec, UniverseItem
 from worker.contracts.engine_output import WeightsSource
 
@@ -434,6 +435,69 @@ def test_minimum_variance_is_repeatable():
     second = compute_weights(min_variance(), list(reversed(universe)), history(**prices), AS_OF)
 
     assert first.weights == second.weights
+
+
+def test_user_lookback_beats_the_registry_default():
+    """003 축이 오면 그 값으로 계산한다 — 받아 놓고 쓰지 않으면 고른 것과 다른 결과가 나온다."""
+    prices = {
+        SEMI: [100.0, 101.0, 100.0, 102.0, 101.0, 103.0],
+        BATTERY: [100.0, 99.0, 101.0, 98.0, 102.0, 97.0],
+    }
+    universe = [item(SEMI), item(BATTERY)]
+
+    chosen = compute_weights(min_variance({"lookbackDays": 3}), universe, history(**prices), AS_OF)
+    same_by_rule = compute_weights(
+        min_variance(**{"lookbackDays": 3}), universe, history(**prices), AS_OF
+    )
+    longer = compute_weights(min_variance({"lookbackDays": 5}), universe, history(**prices), AS_OF)
+
+    assert chosen.weights == same_by_rule.weights, "축이 규칙표 기본값과 같으면 결과도 같다"
+    assert chosen.weights != longer.weights, "관측 기간을 바꾸면 결과가 바뀌어야 한다"
+
+
+def test_max_weight_accepts_the_same_shapes_the_contract_does():
+    """계약이 40·40.0·"40" 을 모두 40으로 받으므로 계산도 같게 읽는다.
+
+    계약은 봉투를 모델로 검증하지만 배분 모듈에는 **원본 dict** 가 그대로 간다. 두 곳이 다르게
+    읽으면 접수와 계약을 통과한 요청이 계산에서 죽는다.
+    """
+    prices = {SEMI: [100.0, 100.5, 100.0, 100.5], BATTERY: [100.0, 110.0, 95.0, 115.0]}
+    universe = [item(SEMI), item(BATTERY)]
+    reference = compute_weights(min_variance({"maxWeight": 40}), universe, history(**prices), AS_OF)
+
+    for equivalent in (40.0, "40"):
+        result = compute_weights(
+            min_variance({"maxWeight": equivalent}), universe, history(**prices), AS_OF
+        )
+        assert result.weights == reference.weights
+
+
+def test_fractional_max_weight_is_rejected_by_both_layers():
+    """40.5 는 40과 다른 값이다 — 깎아서 통과시키면 고른 것과 다른 조건으로 계산하게 된다."""
+    with pytest.raises(ValidationError, match="maxWeight"):
+        min_variance({"maxWeight": 40.5})
+
+    with pytest.raises(AllocationError, match="whole number"):
+        effective_cap({"maxWeight": 40.5}, MIN_VARIANCE_RULES, "MINIMUM_VARIANCE")
+
+
+def test_singular_but_valid_covariance_still_computes():
+    """완전히 같이 움직이는 두 종목의 공분산은 특이 행렬이다 — 그래도 계산은 된다.
+
+    최소분산이 멈추는 것은 "역행렬이 없을 때"가 아니라 **믿을 수 없는 행렬일 때**다(비유한값이거나
+    허용오차보다 큰 음의 고유값). 특이 행렬은 양의 준정부호라 최소 분산 해가 멀쩡히 존재한다.
+    """
+    moves = [100.0, 101.0, 100.0, 102.0]
+
+    result = compute_weights(
+        min_variance(),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: moves, BATTERY: [value * 2 for value in moves]}),
+        AS_OF,
+    )
+
+    assert sum(result.weights.values()) == Decimal(1)
+    assert all(weight >= 0 for weight in result.weights.values())
 
 
 @pytest.mark.parametrize("missing", ["lookbackDays", "estimationMethod", "capOverflow"])

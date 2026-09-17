@@ -484,6 +484,24 @@ public class BacktestService {
                                         reachable.toPlainString(),
                                         invested.toPlainString()));
             }
+            // 고정 비중은 사용자가 비중을 직접 준다 — 재분배할 것이 없으므로 상한은 "넘지 않았는지"의
+            // 뜻뿐이다. 접수에서 보지 않으면 상한 40%를 고르고 60%를 준 요청이 그대로 실행되고,
+            // 결과가 사용자가 고른 조건을 어긴 채 그 조건의 결과로 저장된다.
+            if (fixedWeight) {
+                items.stream()
+                        .filter(item -> item.targetWeight().compareTo(cap) > 0)
+                        .findFirst()
+                        .ifPresent(
+                                item -> {
+                                    throw new BusinessException(
+                                            ErrorCode.VALIDATION_RULE_VIOLATED,
+                                            "%s 의 목표 비중 %s 가 종목별 상한 %s 를 넘습니다. 비중을 낮추거나 상한을 높이세요."
+                                                    .formatted(
+                                                            item.instrumentId(),
+                                                            item.targetWeight().toPlainString(),
+                                                            cap.toPlainString()));
+                                });
+            }
         }
     }
 

@@ -106,6 +106,32 @@ def int_rule(rules: Mapping[str, Any], key: str, strategy_id: str) -> int:
     return raw
 
 
+def int_parameter(parameters: Mapping[str, Any], key: str) -> int:
+    """``parameters`` 의 정수 축을 읽는다. **정수로 떨어지는 표기면 전부 같은 값으로 본다.**
+
+    계약 모델(pydantic)은 ``40``·``40.0``·``"40"`` 을 모두 40으로 받아들이는데, 계산 경로는 원본
+    dict 를 그대로 보므로 여기서도 같게 읽지 않으면 **접수와 계약을 통과한 요청이 계산에서 죽는다.**
+    소수부가 있는 값은 다른 값이므로 거절한다 — 40.5 를 40으로 깎으면 사용자가 고른 것과 다른
+    조건으로 계산하게 된다.
+    """
+    raw = parameters[key]
+    if isinstance(raw, bool):
+        raise AllocationError(
+            "INVALID_REQUEST", f"allocation.parameters.{key} must be a number: {raw!r}"
+        )
+    try:
+        value = Decimal(str(raw))
+    except (ArithmeticError, ValueError) as exc:
+        raise AllocationError(
+            "INVALID_REQUEST", f"allocation.parameters.{key} is not a number: {raw!r}"
+        ) from exc
+    if value != value.to_integral_value():
+        raise AllocationError(
+            "INVALID_REQUEST", f"allocation.parameters.{key} must be a whole number: {raw!r}"
+        )
+    return int(value)
+
+
 def effective_cap(
     parameters: Mapping[str, Any], rules: Mapping[str, Any], strategy_id: str
 ) -> Decimal:
@@ -121,16 +147,12 @@ def effective_cap(
     raw = parameters.get("maxWeight")
     if raw is None:
         return decimal_rule(rules, "weightCap", strategy_id)
-    if isinstance(raw, bool) or not isinstance(raw, int):
+    percent = int_parameter(parameters, "maxWeight")
+    if not 0 < percent <= 100:
         raise AllocationError(
-            "INVALID_REQUEST",
-            f"allocation.parameters.maxWeight must be an integer percent: {raw!r}",
+            "INVALID_REQUEST", f"allocation.parameters.maxWeight must be in (0, 100]: {raw!r}"
         )
-    if not 0 < raw <= 100:
-        raise AllocationError(
-            "INVALID_REQUEST", f"allocation.parameters.maxWeight must be in (0, 100]: {raw}"
-        )
-    return Decimal(raw) / Decimal(100)
+    return Decimal(percent) / Decimal(100)
 
 
 def apply_cap(

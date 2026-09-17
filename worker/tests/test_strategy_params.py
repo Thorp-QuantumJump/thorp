@@ -9,7 +9,11 @@ from pydantic import ConfigDict, ValidationError
 
 from worker.contracts.base import ContractModel
 from worker.contracts.engine_input import AllocationSpec, EngineInput
-from worker.contracts.strategy_params import STRATEGY_PARAMETERS, RebalanceParameters
+from worker.contracts.strategy_params import (
+    STRATEGY_PARAMETERS,
+    MinimumVarianceParameters,
+    RebalanceParameters,
+)
 
 
 def spec(strategy_id: str, parameters: dict[str, Any]) -> dict[str, Any]:
@@ -35,7 +39,7 @@ def test_registry_covers_the_registered_allocation_strategies() -> None:
         "FIXED_WEIGHT": RebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
         "INVERSE_VOLATILITY": RebalanceParameters,
-        "MINIMUM_VARIANCE": RebalanceParameters,
+        "MINIMUM_VARIANCE": MinimumVarianceParameters,
     }
     assert "SECTOR_MOMENTUM" not in STRATEGY_PARAMETERS
 
@@ -65,6 +69,28 @@ def test_month_end_rebalance_is_the_only_approved_cadence(strategy_id: str) -> N
     assert isinstance(typed.typed_parameters, RebalanceParameters)
     with pytest.raises(ValidationError):
         AllocationSpec.model_validate(spec(strategy_id, {"rebalance": "WEEKLY"}))
+
+
+def test_minimum_variance_takes_the_003_axes_it_offers() -> None:
+    """003이 최소분산에 두는 축은 넷이다. 하나라도 받지 못하면 화면이 만든 요청이 거절된다.
+
+    ``rebalancePeriod``는 003이 객체로 두는 축이고 백엔드 ``EngineInputAssembler``가
+    ``rebalance``로 옮겨 싣는다 — 워커에는 옮겨진 이름으로 온다.
+    """
+    typed = AllocationSpec.model_validate(
+        spec(
+            "MINIMUM_VARIANCE",
+            {
+                "rebalance": "MONTH_END",
+                "maxWeight": 40,
+                "lookbackDays": 250,
+                "estimationMethod": "SAMPLE_COV",
+            },
+        )
+    ).typed_parameters
+
+    assert isinstance(typed, MinimumVarianceParameters)
+    assert (typed.lookback_days, typed.estimation_method) == (250, "SAMPLE_COV")
 
 
 def test_misspelled_or_extra_parameter_key_is_rejected() -> None:

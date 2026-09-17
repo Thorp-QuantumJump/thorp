@@ -6,7 +6,12 @@
 
 **추정 분산이 작다는 것과 앞으로 덜 잃는다는 것은 다른 말이다.** 이 모듈은 앞의 것만 계산한다.
 
-규칙 값은 하나도 갖고 있지 않고 전부 ``allocation.rules`` 에서 읽는다(R-08).
+**계산 조건은 요청에서만 읽는다**(R-08). 관측 기간·추정 방법·상한·투자 비중은 사용자가 고른
+``allocation.parameters`` 가 있으면 그 값, 없으면 규칙표 사본 ``allocation.rules`` 의 기본값이다.
+
+다만 **수치 허용오차와 솔버 설정은 이 모듈의 상수다**(아래 네 상수). 계산의 *의미*를 정하는 값이
+아니라 부동소수 계산을 어디까지 믿을지의 기준이라 요청마다 달라질 것이 아니고, 규칙표에는 어떤
+기준으로 계산했는지를 남기기 위해 같은 값을 기록만 해 둔다(발표용 MVP 결정, T022).
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from worker.allocation.base import (
     AllocationResult,
     decimal_rule,
     effective_cap,
+    int_parameter,
     int_rule,
     quantise,
     require_rule_value,
@@ -61,8 +67,16 @@ def compute(
     rules: Mapping[str, Any],
     as_of: date,
 ) -> AllocationResult:
-    lookback = int_rule(rules, "lookbackDays", STRATEGY_ID)
-    method = require_rule_value(rules, "estimationMethod", STRATEGY_ID)
+    # 003 축이 오면 그것이 사용자가 고른 값이고, 없으면 규칙표 값이 기본값이다(PD-03 6과 같은 규칙).
+    # 받아 놓고 쓰지 않으면 250거래일을 고른 사용자가 120거래일짜리 결과를 받는다.
+    lookback = (
+        int_parameter(parameters, "lookbackDays")
+        if parameters.get("lookbackDays") is not None
+        else int_rule(rules, "lookbackDays", STRATEGY_ID)
+    )
+    method = parameters.get("estimationMethod") or require_rule_value(
+        rules, "estimationMethod", STRATEGY_ID
+    )
     overflow = require_rule_value(rules, "capOverflow", STRATEGY_ID)
     cap = effective_cap(parameters, rules, STRATEGY_ID)
     invested = decimal_rule(rules, "investedFraction", STRATEGY_ID)
