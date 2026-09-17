@@ -118,6 +118,13 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
                 });
     }
 
+    /** 결과 행이 없는 종결 실행. 정리 작업은 실행이 끝난 요청만 지운다(T093). */
+    private BacktestRun finishedRun() {
+        BacktestRun run = newRun();
+        return transactionTemplate.execute(
+                status -> runRepository.update(run.markFailed("DATA_INSUFFICIENT", "no data")));
+    }
+
     private long newUser() {
         String suffix = Long.toString(System.nanoTime() % 1_000_000_000L);
         String email = "sweeper-" + suffix + "@example.com";
@@ -234,10 +241,34 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("만료됐어도 가리키는 실행이 끝나지 않았으면 지우지 않고, 끝난 뒤 다음 주기에 지운다 — 비로그인 대기 몫에서 빠지지 않는다 (T093)")
+    void keepsExpiredRequestWhileItsRunIsUnfinished() {
+        Instant expiresAt = Instant.parse("2003-01-01T00:00:00Z");
+        BacktestRun queued = newRun();
+        BacktestRequest waiting = request(queued, null, null, ResultSource.NEW, expiresAt);
+
+        sweeperAt(expiresAt.plusSeconds(60), 1000).sweep();
+        assertThat(exists(waiting)).as("QUEUED 실행의 요청은 남는다").isTrue();
+        assertThat(tombstoneExpiry(waiting)).as("지우지 않았으니 묘비도 없다").isNull();
+
+        transactionTemplate.executeWithoutResult(
+                status ->
+                        runRepository.update(
+                                runRepository
+                                        .findById(queued.getId())
+                                        .orElseThrow()
+                                        .markFailed("DATA_INSUFFICIENT", "no data")));
+        sweeperAt(expiresAt.plusSeconds(120), 1000).sweep();
+        assertThat(exists(waiting)).isFalse();
+        assertThat(tombstoneExpiry(waiting)).isEqualTo(expiresAt);
+    }
+
+    @Test
     @DisplayName("만료 시각과 같은 순간부터 지운다 — 조회의 410 경계와 같다")
     void expiryBoundaryIsInclusive() {
         Instant expiresAt = Instant.parse("2002-01-01T00:00:00Z");
-        BacktestRequest atBoundary = request(newRun(), null, null, ResultSource.NEW, expiresAt);
+        BacktestRequest atBoundary =
+                request(finishedRun(), null, null, ResultSource.NEW, expiresAt);
 
         sweeperAt(expiresAt.minusMillis(1), 1000).sweep();
         assertThat(exists(atBoundary)).isTrue();
@@ -249,7 +280,7 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
     @Test
     @DisplayName("한 주기에 배치 크기만큼, 만료가 이른 것부터 지운다")
     void deletesAtMostBatchSize() {
-        BacktestRun run = newRun();
+        BacktestRun run = finishedRun();
         BacktestRequest first =
                 request(run, null, null, ResultSource.NEW, Instant.parse("2000-01-01T00:00:00Z"));
         BacktestRequest second =

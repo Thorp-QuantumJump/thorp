@@ -425,3 +425,7 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 ## Phase 11: Convergence
 
 - [X] T092 (DOCS) `data-model.md` §1을 코드·계약에 맞춘다 — ① "권한 판정"에서 비로그인 취소를 빼고 "비로그인은 공개 토큰으로 재시도만 한다. 공개 취소 경로는 두지 않는다(spec Clarification: 비교 대상을 바꿔도 앞선 실행을 취소하지 않는다, contracts/result-api.md)"로 고친다. 재시도의 새 요청자는 호출한 사람이고 비로그인 재시도는 단건만 받는다(T089)는 점도 적는다 ② `public_token` 형을 마이그레이션과 같게 `VARCHAR(32)` + 형식 CHECK(`^[0-9a-f]{32}$`)로 고치고, CHAR가 아닌 이유(Hibernate 스키마 검증이 String 매핑과 다른 형으로 본다)를 적는다 per plan: data-model §1 (contradicts)
+
+## Phase 12: Code Review
+
+- [X] T093 (BE) 정리 작업이 실행이 끝나지 않은 비로그인 요청을 지우지 않게 한다 — 만료는 생성 시각부터 세므로 대기열이 유효 시간보다 밀리면 대기 중인 요청도 만료되는데, 그 행을 지우면 비로그인 대기 몫(`countQueuedSingleAnonymous`가 요청 행과 조인해 센다)에서 빠져 `max-queued-anonymous`가 새고 볼 사람이 없는 실행이 워커를 차지한다. `BacktestRequestJpaRepository.findExpiredAnonymous`가 종결(COMPLETED·FAILED·CANCELLED) 실행을 가리키는 요청만 고르게 하고(배치를 뽑은 뒤 거르면 끝나지 않은 행이 배치를 채워 정리가 멈춘다), `PublicResultExpirySweeperIT`에 "QUEUED 실행의 만료 요청은 남고, 실행이 끝난 뒤 지워진다"를 더한다 per /code-review 발견 (contradicts)
