@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +32,7 @@ import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -53,6 +55,7 @@ class BacktestServiceTest {
 
     private static final long REQUESTER = 7L;
     private static final Instant NOW = Instant.parse("2026-09-11T04:00:00Z");
+    private static final Duration TOKEN_TTL = Duration.ofDays(7);
 
     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);
     private final BacktestRequestRepository requestRepository =
@@ -90,7 +93,8 @@ class BacktestServiceTest {
                     marketMetadata,
                     events,
                     Clock.fixed(NOW, ZoneOffset.UTC),
-                    "nautilus_trader 1.219.0 / worker 2.2.0");
+                    "nautilus_trader 1.219.0 / worker 2.2.0",
+                    TOKEN_TTL);
 
     @BeforeEach
     void stubRegistries() {
@@ -162,7 +166,9 @@ class BacktestServiceTest {
                 request.getRetryOfRequestId(),
                 null,
                 null,
-                false);
+                false,
+                request.getPublicToken(),
+                request.getPublicTokenExpiresAt());
     }
 
     private static CreateBacktestCommand command(
@@ -344,6 +350,108 @@ class BacktestServiceTest {
         service.create(fixedWeight());
 
         verify(reuseEventRepository, never()).save(any());
+    }
+
+    // ---------- 공개 토큰 발급(spec 005 B01, T011) ----------
+
+    private static CreateBacktestCommand anonymous(CreateBacktestCommand base) {
+        return new CreateBacktestCommand(
+                null,
+                base.executionType(),
+                base.mappingVersion(),
+                base.items(),
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
+    }
+
+    private List<BacktestRequest> savedRequests(int times) {
+        ArgumentCaptor<BacktestRequest> captor = ArgumentCaptor.forClass(BacktestRequest.class);
+        verify(requestRepository, times(times)).save(captor.capture());
+        return captor.getAllValues();
+    }
+
+    @Test
+    @DisplayName("비로그인 접수는 요청자 없이 저장되고 만료 시각은 접수 시각 + 유효 시간이다")
+    void anonymousIntakeGetsTokenAndExpiry() {
+        BacktestJobResult result = service.create(anonymous(fixedWeight()));
+
+        BacktestRequest saved = savedRequests(1).get(0);
+        assertThat(saved.getRequesterId()).isNull();
+        assertThat(saved.getPublicTokenExpiresAt()).isEqualTo(NOW.plus(TOKEN_TTL));
+        assertThat(result.publicToken())
+                .matches("^[0-9a-f]{32}$")
+                .isEqualTo(saved.getPublicToken().value());
+        // 전체 한도는 비로그인 요청에도 건다 — 사용자별 한도를 건너뛰는 판단은 정책이 한다.
+        verify(limitPolicy).requireAdmission(null, ExecutionType.SINGLE);
+    }
+
+    @Test
+    @DisplayName("로그인 접수도 공개 토큰을 받지만 만료가 없다")
+    void loggedInIntakeGetsTokenWithoutExpiry() {
+        BacktestJobResult result = service.create(fixedWeight());
+
+        BacktestRequest saved = savedRequests(1).get(0);
+        assertThat(saved.getRequesterId()).isEqualTo(REQUESTER);
+        assertThat(saved.getPublicTokenExpiresAt()).isNull();
+        assertThat(result.publicToken()).matches("^[0-9a-f]{32}$");
+    }
+
+    @Test
+    @DisplayName("합류(JOINED)한 요청도 자기 토큰을 받는다 — 같은 실행을 봐도 토큰은 요청마다 다르고 만료는 요청자 기준이다")
+    void joinedRequestsGetTheirOwnTokens() {
+        BacktestRun running = saved(runningRun(), 11L);
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(running));
+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(running));
+
+        BacktestJobResult first = service.create(anonymous(fixedWeight()));
+        BacktestJobResult second = service.create(fixedWeight());
+
+        assertThat(first.resultSource()).isEqualTo(ResultSource.JOINED);
+        assertThat(second.resultSource()).isEqualTo(ResultSource.JOINED);
+        assertThat(first.publicToken()).matches("^[0-9a-f]{32}$");
+        assertThat(second.publicToken())
+                .matches("^[0-9a-f]{32}$")
+                .isNotEqualTo(first.publicToken());
+        List<BacktestRequest> saved = savedRequests(2);
+        assertThat(saved.get(0).getPublicTokenExpiresAt()).isEqualTo(NOW.plus(TOKEN_TTL));
+        assertThat(saved.get(1).getPublicTokenExpiresAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("재사용(REUSED)한 요청도 공개 토큰을 받는다")
+    void reusedRequestGetsToken() {
+        when(runRepository.findActiveByDedupKey(any()))
+                .thenReturn(Optional.of(saved(completedRun(), 11L)));
+        when(runRepository.findByIdForUpdate(11L))
+                .thenReturn(Optional.of(saved(completedRun(), 11L)));
+
+        BacktestJobResult result = service.create(anonymous(fixedWeight()));
+
+        assertThat(result.resultSource()).isEqualTo(ResultSource.REUSED);
+        assertThat(result.publicToken())
+                .isEqualTo(savedRequests(1).get(0).getPublicToken().value());
+    }
+
+    @Test
+    @DisplayName("재시도로 만든 요청은 원본과 다른 새 토큰을 받는다")
+    void retriedRequestGetsANewToken() {
+        BacktestJobResult original = service.create(fixedWeight());
+        BacktestJobResult retried = service.create(fixedWeight(), 21L);
+
+        assertThat(retried.publicToken())
+                .matches("^[0-9a-f]{32}$")
+                .isNotEqualTo(original.publicToken());
+        assertThat(savedRequests(2).get(1).getRetryOfRequestId()).isEqualTo(21L);
     }
 
     private BacktestReuseEvent recordedReuse() {

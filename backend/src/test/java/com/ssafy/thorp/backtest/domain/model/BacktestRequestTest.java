@@ -32,7 +32,9 @@ class BacktestRequestTest {
                 null,
                 null,
                 null,
-                false);
+                false,
+                PublicResultToken.generate(),
+                null);
     }
 
     @Test
@@ -95,7 +97,86 @@ class BacktestRequestTest {
                                         null,
                                         null,
                                         D1,
-                                        false))
+                                        false,
+                                        PublicResultToken.generate(),
+                                        null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ---------- 비로그인 요청과 공개 토큰(spec 005 B01) ----------
+
+    private static final Instant EXPIRES = Instant.parse("2026-09-18T02:00:00Z");
+
+    private static BacktestRequest anonymous(Instant expiresAt) {
+        return BacktestRequest.create(
+                10L,
+                null,
+                ExecutionType.SINGLE,
+                ResultSource.NEW,
+                null,
+                PublicResultToken.generate(),
+                expiresAt);
+    }
+
+    @Test
+    @DisplayName("비로그인 요청은 만료 시각이 있어야 한다 — 만료 없는 익명 결과는 정리 작업이 영영 지우지 못한다")
+    void anonymousRequestRequiresExpiry() {
+        assertThatThrownBy(() -> anonymous(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("공개 토큰이 없는 요청은 만들 수 없다")
+    void publicTokenIsRequired() {
+        assertThatThrownBy(
+                        () ->
+                                BacktestRequest.create(
+                                        10L,
+                                        99L,
+                                        ExecutionType.SINGLE,
+                                        ResultSource.NEW,
+                                        null,
+                                        null,
+                                        null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    @DisplayName("만료 시각 직전까지는 열려 있고, 만료 시각과 같은 순간부터 만료다")
+    void publicExpiryBoundary() {
+        BacktestRequest request = anonymous(EXPIRES);
+
+        assertThat(request.isAnonymous()).isTrue();
+        assertThat(request.isPublicExpired(EXPIRES.minusNanos(1))).isFalse();
+        assertThat(request.isPublicExpired(EXPIRES)).isTrue();
+        assertThat(request.isPublicExpired(EXPIRES.plusSeconds(1))).isTrue();
+    }
+
+    @Test
+    @DisplayName("로그인 요청은 만료가 없다")
+    void loggedInRequestNeverExpires() {
+        BacktestRequest request = joined();
+
+        assertThat(request.isAnonymous()).isFalse();
+        assertThat(request.getPublicTokenExpiresAt()).isNull();
+        assertThat(request.isPublicExpired(Instant.MAX)).isFalse();
+    }
+
+    @Test
+    @DisplayName("비로그인 요청은 누구의 것도 아니다 — 요청자가 null 이어도 NPE 없이 false 다")
+    void anonymousRequestIsOwnedByNobody() {
+        assertThat(anonymous(EXPIRES).isOwnedBy(99L)).isFalse();
+        assertThat(joined().isOwnedBy(99L)).isTrue();
+        assertThat(joined().isOwnedBy(98L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("취소해도 공개 토큰과 만료 시각은 그대로다")
+    void cancellationKeepsPublicToken() {
+        BacktestRequest request = anonymous(EXPIRES);
+
+        BacktestRequest cancelled = request.cancel(AT, D1, false);
+
+        assertThat(cancelled.getPublicToken()).isEqualTo(request.getPublicToken());
+        assertThat(cancelled.getPublicTokenExpiresAt()).isEqualTo(EXPIRES);
     }
 }

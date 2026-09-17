@@ -294,6 +294,41 @@ class BacktestResultProjectionTest extends PostgresTestSupport {
                 .containsExactly("TRD-000001", "TRD-000002");
     }
 
+    private List<String> tradeIdsIn(Long jobId, LocalDate from, LocalDate to) {
+        return resultRepository
+                .findTrades(jobId, new FindBacktestTradesQuery(0, 100, null, null, from, to), null)
+                .getContent()
+                .stream()
+                .map(EngineOutput.TradeResult::tradeId)
+                .toList();
+    }
+
+    @Test
+    @DisplayName("기간 필터는 진입 또는 청산이 기간(양 끝 포함) 안에 있는 거래만 남긴다(spec 005 T015)")
+    void filtersTradesByPeriod() {
+        Long jobId = saveFixtureResult();
+        // 픽스처: TRD-000001 01-22 → 03-12 CLOSED, TRD-000002 02-06 → 04-03 CLOSED, TRD-000003 05-14
+        // OPEN (모두 2025)
+
+        // 청산만 기간 안
+        assertThat(tradeIdsIn(jobId, LocalDate.parse("2025-03-01"), LocalDate.parse("2025-03-31")))
+                .containsExactly("TRD-000001");
+        // 진입만 기간 안 — 01-22 에 사서 03-12 에 판 거래는 2월 내내 들고만 있어 빠진다
+        assertThat(tradeIdsIn(jobId, LocalDate.parse("2025-02-01"), LocalDate.parse("2025-02-28")))
+                .containsExactly("TRD-000002");
+        // 시작만: 04-03 청산이 경계 당일이라 들어온다
+        assertThat(tradeIdsIn(jobId, LocalDate.parse("2025-04-03"), null))
+                .containsExactly("TRD-000002", "TRD-000003");
+        // 끝만: 01-22 진입이 경계 당일이라 들어온다
+        assertThat(tradeIdsIn(jobId, null, LocalDate.parse("2025-01-22")))
+                .containsExactly("TRD-000001");
+        // 보유만 이어진 기간 — 매매가 없으면 빈 페이지다
+        assertThat(tradeIdsIn(jobId, LocalDate.parse("2025-04-10"), LocalDate.parse("2025-05-01")))
+                .isEmpty();
+        // 기간이 없으면 필터가 없는 것과 같다
+        assertThat(tradeIdsIn(jobId, null, null)).hasSize(3);
+    }
+
     @Test
     @DisplayName("거래의 detail을 꺼내면 계약 형태의 거래가 그대로 나온다")
     void tradeContentIsContractShape() {

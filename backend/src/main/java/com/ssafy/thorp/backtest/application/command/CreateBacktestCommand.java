@@ -10,7 +10,8 @@ import java.util.Map;
 /**
  * 접수 유스케이스 입력(spec 004 T005). 컨트롤러가 요청 DTO를 이 모양으로 바꿔 넘긴다.
  *
- * @param requesterId 요청자. 계산 기록이 아니라 요청에만 붙는다(R-12). 취소·조회 권한의 근거다
+ * @param requesterId 요청자. 계산 기록이 아니라 요청에만 붙는다(R-12). 취소·조회 권한의 근거다. null = 비로그인 요청(spec 005 B01) —
+ *     결과는 공개 토큰으로만 열리고 토큰에 만료가 붙는다
  * @param warmupTradingDays null = 선택 전략의 관측 길이를 쓴다
  * @param scenarioParams 시나리오 입력값. 없으면 null
  */

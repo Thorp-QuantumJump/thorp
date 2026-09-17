@@ -97,10 +97,16 @@ public class BacktestController {
                 .body(ApiResponse.ok(BacktestRetryResponse.from(result)));
     }
 
+    /**
+     * 분석을 접수한다. <b>로그인하지 않아도 된다</b>(spec 005 B01) — 비로그인 요청은 요청자 없이 저장되고, 결과는 응답의 {@code
+     * publicToken}으로만 연다. 취소·재시도·조회({@code /backtests/{id}/**})는 그대로 소유자 경로다.
+     *
+     * <p>비로그인 요청은 사용자별 대기 한도를 셀 수 없어 전체 한도만 받는다({@code ExecutionLimitPolicy}).
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(
             @Valid @RequestBody BacktestJobRequest request) {
-        long requesterId = currentRequester.requireRequesterId();
+        Long requesterId = currentRequester.findRequesterId().orElse(null);
         BacktestJobResult result = backtestService.create(toCommand(request, requesterId));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));
@@ -184,8 +190,18 @@ public class BacktestController {
         if (query.instrumentId() != null) {
             new InstrumentId(query.instrumentId());
         }
+        if (query.from() != null && query.to() != null && query.from().isAfter(query.to())) {
+            // 뒤집힌 기간을 빈 페이지로 돌려주면 "그 기간에 거래가 없다"는 거짓이 된다.
+            throw new IllegalArgumentException(
+                    "from 은 to 보다 늦을 수 없습니다: from=" + query.from() + ", to=" + query.to());
+        }
         return new FindBacktestTradesQuery(
-                query.pageOrDefault(), query.sizeOrDefault(), query.instrumentId(), query.status());
+                query.pageOrDefault(),
+                query.sizeOrDefault(),
+                query.instrumentId(),
+                query.status(),
+                query.from(),
+                query.to());
     }
 
     /**
@@ -193,7 +209,7 @@ public class BacktestController {
      *
      * <p>{@code scenario} 생략은 주 분석({@code FULL_PERIOD})이다.
      */
-    private static CreateBacktestCommand toCommand(BacktestJobRequest request, long requesterId) {
+    private static CreateBacktestCommand toCommand(BacktestJobRequest request, Long requesterId) {
         BacktestJobRequest.ConditionsRequest conditions = request.conditions();
         return new CreateBacktestCommand(
                 requesterId,

@@ -13,6 +13,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
@@ -25,6 +26,8 @@ import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,6 +56,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><b>발행은 커밋 뒤에</b> 한다(R-18, {@link BacktestJobDispatcher}). 트랜잭션 안에서 발행하면 워커의 STARTED가 커밋을 앞질러
  * 모르는 실행으로 버려진다.
+ *
+ * <p><b>요청 행마다 공개 토큰을 발급한다</b>(spec 005 B01). 새 계산·합류·재사용 세 경로 모두 새 요청 행을 만들므로 셋 다 토큰이 붙는다 — 같은 실행을
+ * 보는 두 요청도 토큰은 다르다. 요청자가 없으면(비로그인) 요청 생성 시각에 유효 시간을 더한 만료 시각을 함께 남긴다(005 R-03).
  */
 @Service
 public class BacktestService {
@@ -72,6 +78,7 @@ public class BacktestService {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final String engineVersion;
+    private final Duration publicTokenTtl;
 
     public BacktestService(
             BacktestRunRepository runRepository,
@@ -86,7 +93,10 @@ public class BacktestService {
             MarketMetadataPort marketMetadata,
             ApplicationEventPublisher events,
             Clock clock,
-            @Value("${thorp.backtest.engine-version}") String engineVersion) {
+            @Value("${thorp.backtest.engine-version}") String engineVersion,
+            // ResultProperties(result 패키지)를 주입받지 않고 키만 읽는다 — 의존 방향이 result → backtest 하나다(ArchUnit
+            // 규칙 9).
+            @Value("${thorp.result.public-token-ttl}") Duration publicTokenTtl) {
         this.runRepository = runRepository;
         this.requestRepository = requestRepository;
         this.reuseEventRepository = reuseEventRepository;
@@ -100,6 +110,7 @@ public class BacktestService {
         this.events = events;
         this.clock = clock;
         this.engineVersion = engineVersion;
+        this.publicTokenTtl = publicTokenTtl;
     }
 
     /** 목표 비중을 지정하는 유일한 전략. 나머지 전략에서 비중을 보내면 무시하지 않고 거절한다. */
@@ -223,12 +234,7 @@ public class BacktestService {
 
         BacktestRequest request =
                 requestRepository.save(
-                        BacktestRequest.create(
-                                saved.getId(),
-                                command.requesterId(),
-                                command.executionType(),
-                                ResultSource.NEW,
-                                retryOfRequestId));
+                        newRequest(command, saved.getId(), ResultSource.NEW, retryOfRequestId));
         events.publishEvent(
                 new BacktestJobDispatcher.RunAccepted(
                         saved.getId(), saved.getLifecycle().publishCount()));
@@ -261,13 +267,7 @@ public class BacktestService {
         ResultSource source =
                 run.getStatus() == RunStatus.COMPLETED ? ResultSource.REUSED : ResultSource.JOINED;
         BacktestRequest request =
-                requestRepository.save(
-                        BacktestRequest.create(
-                                run.getId(),
-                                command.requesterId(),
-                                command.executionType(),
-                                source,
-                                retryOfRequestId));
+                requestRepository.save(newRequest(command, run.getId(), source, retryOfRequestId));
         // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.
         reuseEventRepository.save(
                 BacktestReuseEvent.of(
@@ -277,6 +277,25 @@ public class BacktestService {
                         command.executionType(),
                         clock.instant()));
         return Optional.of(BacktestJobResult.of(request, run));
+    }
+
+    /**
+     * 요청 행 하나. 공개 토큰은 경로와 상관없이 새로 발급하고, 비로그인이면 만료 시각을 붙인다.
+     *
+     * <p>만료 기준이 요청 생성 시각인 것은 임시다(005 R-03). PD-23 이 "결과 완료 시각"으로 정하면 완료 이벤트 쪽에서 채우도록 바꾼다.
+     */
+    private BacktestRequest newRequest(
+            CreateBacktestCommand command, Long runId, ResultSource source, Long retryOfRequestId) {
+        Instant expiresAt =
+                command.requesterId() == null ? clock.instant().plus(publicTokenTtl) : null;
+        return BacktestRequest.create(
+                runId,
+                command.requesterId(),
+                command.executionType(),
+                source,
+                retryOfRequestId,
+                PublicResultToken.generate(),
+                expiresAt);
     }
 
     /** 동일 버전 부분 유니크 인덱스 {@code uk_backtest_run_dedup_active} 와 같은 상태 집합이다. */

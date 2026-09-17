@@ -15,6 +15,10 @@ import java.util.Objects;
  * Cases). 그래서 취소한 요청은 그 시점까지의 범위만 자기 결과로 본다 — 실행이 뒤에 더 계산해도 그 범위는 늘어나지 않는다(R-04).
  *
  * <p>접수 유스케이스(T005)가 이 모델을 만들어 저장한다. T003은 스키마·모델만 둔다.
+ *
+ * <p><b>요청자가 없을 수 있다</b>(spec 005 B01). 로그인하지 않은 사용자도 분석을 요청하고, 결과는 모든 요청에 붙는 공개 토큰({@link
+ * PublicResultToken})으로 연다. 비로그인 요청은 토큰 만료 시각이 반드시 있다 — 만료 없는 익명 결과는 정리 작업이 영영 지우지 못한다(005
+ * data-model §1). 로그인 요청은 만료가 없다.
  */
 public class BacktestRequest {
 
@@ -28,6 +32,8 @@ public class BacktestRequest {
     private final Instant cancelledAt;
     private final LocalDate cancelledLastTradingDate;
     private final boolean stoppedRun;
+    private final PublicResultToken publicToken;
+    private final Instant publicTokenExpiresAt;
 
     private BacktestRequest(
             Long id,
@@ -39,11 +45,13 @@ public class BacktestRequest {
             Long retryOfRequestId,
             Instant cancelledAt,
             LocalDate cancelledLastTradingDate,
-            boolean stoppedRun) {
+            boolean stoppedRun,
+            PublicResultToken publicToken,
+            Instant publicTokenExpiresAt) {
         this.id = id;
         this.backtestId = backtestId;
         this.runId = Objects.requireNonNull(runId, "runId must not be null");
-        this.requesterId = Objects.requireNonNull(requesterId, "requesterId must not be null");
+        this.requesterId = requesterId;
         this.executionType =
                 Objects.requireNonNull(executionType, "executionType must not be null");
         this.resultSource = Objects.requireNonNull(resultSource, "resultSource must not be null");
@@ -51,19 +59,32 @@ public class BacktestRequest {
         this.cancelledAt = cancelledAt;
         this.cancelledLastTradingDate = cancelledLastTradingDate;
         this.stoppedRun = stoppedRun;
+        this.publicToken = Objects.requireNonNull(publicToken, "publicToken must not be null");
+        this.publicTokenExpiresAt = publicTokenExpiresAt;
+        if (requesterId == null && publicTokenExpiresAt == null) {
+            throw new IllegalArgumentException(
+                    "anonymous request requires publicTokenExpiresAt: runId=" + runId);
+        }
         if (cancelledAt == null && (cancelledLastTradingDate != null || stoppedRun)) {
             throw new IllegalArgumentException(
                     "cancel details require cancelledAt: runId=" + runId);
         }
     }
 
-    /** 새 요청. id·backtestId는 저장 전이라 null이다. */
+    /**
+     * 새 요청. id·backtestId는 저장 전이라 null이다.
+     *
+     * @param requesterId null = 비로그인 요청. 그때는 {@code publicTokenExpiresAt}이 필요하다
+     * @param publicTokenExpiresAt null = 만료 없음(로그인 요청)
+     */
     public static BacktestRequest create(
             Long runId,
             Long requesterId,
             ExecutionType executionType,
             ResultSource resultSource,
-            Long retryOfRequestId) {
+            Long retryOfRequestId,
+            PublicResultToken publicToken,
+            Instant publicTokenExpiresAt) {
         return new BacktestRequest(
                 null,
                 null,
@@ -74,7 +95,9 @@ public class BacktestRequest {
                 retryOfRequestId,
                 null,
                 null,
-                false);
+                false,
+                publicToken,
+                publicTokenExpiresAt);
     }
 
     /** 저장소에서 읽어온 상태를 복원한다. */
@@ -88,7 +111,9 @@ public class BacktestRequest {
             Long retryOfRequestId,
             Instant cancelledAt,
             LocalDate cancelledLastTradingDate,
-            boolean stoppedRun) {
+            boolean stoppedRun,
+            PublicResultToken publicToken,
+            Instant publicTokenExpiresAt) {
         return new BacktestRequest(
                 id,
                 backtestId,
@@ -99,7 +124,9 @@ public class BacktestRequest {
                 retryOfRequestId,
                 cancelledAt,
                 cancelledLastTradingDate,
-                stoppedRun);
+                stoppedRun,
+                publicToken,
+                publicTokenExpiresAt);
     }
 
     /**
@@ -124,11 +151,38 @@ public class BacktestRequest {
                 retryOfRequestId,
                 at,
                 stoppedRun ? null : runLastTradingDate,
-                stoppedRun);
+                stoppedRun,
+                publicToken,
+                publicTokenExpiresAt);
     }
 
     public boolean isCancelled() {
         return cancelledAt != null;
+    }
+
+    /** 로그인하지 않고 낸 요청인가. */
+    public boolean isAnonymous() {
+        return requesterId == null;
+    }
+
+    /**
+     * 이 사람이 낸 요청인가. 비로그인 요청은 누구의 것도 아니다 — 소유자 경로({@code /backtests/**})로는 열리지 않고 공개 토큰으로만 본다.
+     *
+     * <p>{@code getRequesterId() == requesterId}로 비교하지 않는 이유: 요청자가 null이면 언박싱에서 NPE가 나 404 대신 500이
+     * 된다.
+     */
+    public boolean isOwnedBy(long requesterId) {
+        return this.requesterId != null && this.requesterId == requesterId;
+    }
+
+    /**
+     * 공개 토큰이 만료됐는가. 만료 시각과 <b>같은 순간부터</b> 만료다. 로그인 요청은 만료가 없어 늘 false다.
+     *
+     * @param now 판정 시각
+     */
+    public boolean isPublicExpired(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        return publicTokenExpiresAt != null && !now.isBefore(publicTokenExpiresAt);
     }
 
     /**
@@ -157,6 +211,7 @@ public class BacktestRequest {
         return runId;
     }
 
+    /** null = 비로그인 요청. 소유자 판정은 {@link #isOwnedBy(long)}로 한다. */
     public Long getRequesterId() {
         return requesterId;
     }
@@ -186,5 +241,14 @@ public class BacktestRequest {
     /** true = 이 취소가 실행을 멈췄다. */
     public boolean isStoppedRun() {
         return stoppedRun;
+    }
+
+    public PublicResultToken getPublicToken() {
+        return publicToken;
+    }
+
+    /** null = 만료 없음(로그인 요청). */
+    public Instant getPublicTokenExpiresAt() {
+        return publicTokenExpiresAt;
     }
 }
