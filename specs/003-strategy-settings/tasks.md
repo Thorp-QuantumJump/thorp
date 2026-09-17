@@ -765,3 +765,16 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
 막고 "전략을 고르면 평가할 수 있는 범위가 정해진다"는 까닭을 적는다(`rangeUnavailableMessage`). 금액·최소 평가 기간·
 비용 표시는 선택 전에도 쓸 수 있다. 검사는 엄격(3년) 보관값과 미선택 상태에서 카드가 막히고 눌러도 선택되지 않다가,
 패널에서 완화로 바꾸면 카드를 고를 수 있게 되는지 본다. 옮기기 전 코드에서 패널을 찾지 못해 실패하는 것을 확인했다.
+
+---
+
+## Phase 18: Convergence
+
+**Purpose**: B06(분석 요청과 평가 기간을 연결한다)을 spec·plan·계약과 대조한다. 조회·판정·전송은 대역 뒤에서 FR-011·FR-011a·
+SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI 위반은 없다. T039·T042의 체크와 기본 통로 전환, 001 보완
+질문 1은 위 두 태스크의 메모가 추적하므로 세지 않았다. 남은 간극은 넷이다.
+
+- [ ] T103 (DOCS) spec의 선행 조건 표와 plan의 B06 선행 설명을 T098·004 결정에 맞춘다 per spec 선행 조건 표 · plan "묶음에 넣지 않은 것" (contradicts) — `specs/003-strategy-settings/spec.md` 선행 조건 표의 "001 평가 기간 계약" 행은 "003은 `warmupTradingDays`·`minEvaluationYears`를 질의 값으로 넘기기만 한다"고 적었으나, T098 결정은 **화면이 등록표에서 계산한 `maxWarmupTradingDays`만 보내고 받은 거래일 목록으로 판정한다**(research R7-1, T042 구현 메모). 같은 표의 "004 규칙·비용 버전 조회" 행은 "조회 계약 없음"이고 `plan.md`의 "묶음에 넣지 않은 것"은 004 조회 수단을 "여전히 팀 결정 대기"로 적었으나, 2026-09-17 004가 `GET /backtests/registry`를 열기로 정했다(T039 메모). **intent 문서가 구현과 다른 방식을 말하면 다음 대조에서 맞는 구현이 모순으로 잡힌다.** 두 행을 결정과 남은 선행(각 엔드포인트의 구현)으로 고치고, plan의 문장도 같게 고친다. 001 계약 문서(`specs/001-etf-market-data/contracts/sector-api.md`)는 001 소유라 고치지 않는다
+- [ ] T104 (FE) 규칙 버전이 바뀌어 거절되면 004 등록표를 다시 받고 알린다 per T039 004 결정 · 계약 §2 거절 응답(research R9와 같은 성격) (partial) — `frontend/src/pages/StrategySettingsPage.tsx`는 004 규칙 등록표(`fetchAnalysisVersions`)를 화면이 열릴 때 한 번 받는다. 004가 규칙 버전을 올리면 접수가 422 `RULES_NOT_REGISTERED`로 거절되는데, `handleAnalyze`는 이 코드를 `default` 분기에서 서버 문장으로만 보이고 등록표를 다시 받지 않는다. **새로 고치기 전까지 같은 옛 버전으로 같은 거절이 되풀이된다** — 409 `REGISTRY_VERSION_CHANGED`에 R9가 정한 처리가 규칙 버전에는 없는 셈이다. `analysisSupport.ts`의 `BacktestRejectionCode`에 `RULES_NOT_REGISTERED`를 더하고, 받으면 버전 조회를 다시 하고(다시 조회하는 동안 받은 값을 거두지 않는 기존 규약 유지) "분석 규칙이 바뀌어 다시 확인했습니다" 식으로 알리되 **자동으로 다시 보내지 않는다.** 다시 받은 등록표에서 그 전략이 `PENDING_DECISION`이면 기존 차단 문장이 이어받는다. 검사로 고정한다: 422 `RULES_NOT_REGISTERED` 뒤 버전 조회가 한 번 더 나가고 요청은 한 건에 머무르며, 새 버전을 받은 뒤 '분석하기'를 누르면 새 `rulesVersion`이 실린다
+- [ ] T105 (FE) 화면에 보인 비용 조건과 실제 접수된 비용 조건이 갈라지지 않게 한다 per FR-010 · FR-014 (partial) — 004 결정대로 요청의 `costProfileVersion`을 `null`로 보내고 화면은 `GET /backtests/registry`의 `defaultCostProfile`을 보인다. 그런데 **조회와 접수 사이에 서버 기본값이 바뀌면 사용자가 본 적 없는 비용 조건으로 분석이 접수되고**, `api/backtest.ts`는 202 응답의 `versions.costProfile { version, provisional }`을 읽지 않아 그 사실을 알 수 없다(FR-014는 비용 가정이 요청과 함께 보존되기를 요구한다). 004 담당자에게 드린 질문 3의 답에 따라 둘 중 하나로 닫는다: (a) 기본값이 바뀔 수 있으면 받은 `defaultCostProfile.version`을 요청에 명시해 싣는다, (b) 배포 때만 바뀐다면 `null`을 유지하되 202의 `versions.costProfile.version`을 `BacktestAccepted`에 읽어 화면에 보인 버전과 다르면 접수 결과와 함께 알린다. 답이 오기 전에는 착수하지 않고, 고른 쪽과 근거를 T039 메모에 적는다
+- [ ] T106 [P] (FE 테스트) 페이지 검사가 실제 통로의 판정 연결을 쓰게 한다 per T039·T042 "B06과의 경계" (partial) — `frontend/src/pages/StrategySettingsPage.test.tsx`의 "공통 평가 기간 연결(T042, T098)" 두 검사는 `judgeWarmup`을 `({ evaluationWindow, warmupTradingDays, minEvaluationYears }) => judgeWarmupFromWindow(...)` 람다로 **따로 적어** 쓴다. `frontend/src/components/strategy/connectedAnalysisSupport.ts`의 같은 연결이 인자를 빠뜨리거나 뒤바꿔도 모든 검사가 통과하고, 그 통로는 기본값으로 바뀌는 순간에야 처음 쓰인다. 두 검사가 `{ ...base, fetchEvaluationWindow: 흉내, judgeWarmup: connectedAnalysisSupport.judgeWarmup }`처럼 실제 판정 연결을 가져다 쓰게 한다(조회·전송은 계속 흉내). 연결을 일부러 어긋나게 바꿔 검사가 실패하는지 한 번 확인한 뒤 되돌린다
