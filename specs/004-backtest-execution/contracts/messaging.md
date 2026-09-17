@@ -29,7 +29,7 @@
 }
 ```
 
-- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.
+- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. 2026-09-17 PD-03·04 확정으로 세 배분 전략 공통 키가 둘 더 생긴다(T022): `capOverflow`(허용값 `CASH` 하나 — 상한 잔여를 현금으로 두고 정상 완료)·`weightUnit`(소수 문자열, `"0.000001"` — 고정 단위 출력). `allocation.parameters`에는 003 축 `maxWeight`(정수 %)가 실리며 있으면 `rules.weightCap`보다 우선한다(T022). `exceptions[].kind`에 `CAP_OVERFLOW_CASH`·`EFFECTIVE_TARGET_REDUCED`·`SINGLE_ASSET_FALLBACK`·`NO_SELECTION`, FINISHED `failure.code`에 `ESTIMATION_FAILED`가 추가된다(T022·T023). `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.
 - `run.scenario=TARGET_RISK`면 `run.scenarioParams={"targetVolatility": "0.1000"}`와 `run.scenarioRules={"version": "TARGET_RISK_OVERLAY/1", "lookbackDays": 63, "adjustAt": "REBALANCE", "scaleDownOnly": true}`가 함께 온다(둘 다 백엔드가 채움). 워커는 리밸런싱 판단일마다 최근 `lookbackDays` 포트폴리오 일별 수익률 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱한다. `weightsSeries[]`에 `riskScale`·`estimatedVolatility`를 기록한다. `FRESH_CASH_FROM`이면 `run.scenarioParams={"startDate": "…"}`. 규칙이 빠진 `TARGET_RISK`는 `INVALID_REQUEST`.
 - `marketData.fillPrice=RAW`, `signalPrice=ADJUSTED`는 FR-013을 고정한 값이며 다른 값은 거부.
 - `benchmark` 블록은 v2에서 제거(005 보조 보기는 별도 spec).

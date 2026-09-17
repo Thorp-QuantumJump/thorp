@@ -181,10 +181,20 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 `execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count, data_rows_p50, data_bytes_p50`(뒤 둘은 T019가 끝에 덧붙였다 — 뷰는 열을 끝에만 더할 수 있다). `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 "공용 워커가 단건을 지원한 비율"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.
 
+## 용어 (2026-09-17, analyze I7)
+
+| 이름 | 어디에 | 뜻 |
+|---|---|---|
+| `investedFraction` | 규칙표 `strategy_rules.spec`(소수, 기본 `1.0000`) | 투자 대상 비중 합계. 산문의 "투자 비중"·"고정 투자 비중 합계" |
+| 유효 투자 목표 | 계산 시 파생 | `min(investedFraction, 유효 상한 × 계산 가능 종목 수)`. 최소분산 합계 제약(PD-04) |
+| `weightCap` | 규칙표 `strategy_rules.spec`(소수) | 종목별 상한의 기본값 |
+| `maxWeight` | 003 축 → 요청 `allocation.parameters.maxWeight`(정수 %) | 사용자가 고른 종목별 상한. 있으면 `weightCap`보다 우선 |
+| 유효 상한 | 접수·워커 공통 | `maxWeight/100` 또는 `weightCap`. 산문의 "상한"·"비중 상한" |
+
 ## 검증 규칙 (요청 접수 시, 백엔드)
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
-- 비중 상한 합계 ≥ 고정 투자 비중 합계 — 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
+- 유효 상한 × 종목 수 ≥ `investedFraction` — **유효 상한 = 요청 `allocation.parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표 `weightCap`**(analyze U1, T022). 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
 - `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`). 대체된 옛 버전의 409 처리는 발표 후(Phase 10 T029).
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
