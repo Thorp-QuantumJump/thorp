@@ -28,6 +28,7 @@ learning_published_term (게시 용어 색인)
 | `termId` | 같은 형식, 2~64자 | 만든 뒤 바뀌지 않고 다른 글로 옮길 수 없다 | R4, FR-008 |
 
 - `articleId`는 모든 글 안에서 유일하다. `termId`는 **모든 글의 초안 용어 전체**에서 유일하다.
+- `termId`는 **다른 글이 게시 중인 용어**와도 겹칠 수 없다. 글 A가 초안에서 뺀 용어도 A를 다시 게시하거나 게시 취소하기 전까지는 A의 공개 판과 게시 용어 색인에 남아 있으므로, 다른 글이 그 `termId`를 초안에 넣거나 게시하면 409 `LEARNING_TERM_ID_TAKEN`이다. 게시 용어 색인의 기본키가 `term_key` 하나라서, 막지 않으면 다른 글의 게시가 A의 도움말 행을 덮어써 A 본문과 도움말 문장이 갈라진다(SC-003).
 - DB 대리키(`id BIGINT`)는 응답에 내보내지 않는다.
 - `articleId`가 [002 selection-handoff 계약](../002-sector-weight-selection/contracts/selection-handoff.md) §2의 `topicId`로 쓰인다.
 

@@ -166,7 +166,7 @@ PUT /admin/learning/articles/{articleId}
 | `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `sources[].url`이 `http`·`https`가 아님([data-model](../data-model.md) §4·§5). `error.details.fields`에 위반 위치를 싣는다 |
 | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |
 | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion`이 서버 값과 다르다(R12). `error.details.currentDraftVersion`을 싣는다 |
-| `409 LEARNING_TERM_ID_TAKEN` | `terms[].termId`를 다른 글이 쓰고 있다. `error.details.termId`·`ownerArticleId`를 싣는다 |
+| `409 LEARNING_TERM_ID_TAKEN` | `terms[].termId`를 다른 글이 초안에 두었거나 **게시 중이다**(초안에서 뺐어도 그 글을 다시 게시하거나 게시 취소하기 전까지 게시 중이다, [data-model](../data-model.md) §2). `error.details.termId`·`ownerArticleId`를 싣는다. 게시(§6)도 같은 이유로 이 코드를 돌려줄 수 있다 |
 
 ## 6. 게시
 
@@ -244,6 +244,7 @@ POST /admin/learning/articles/{articleId}/publish
 |---|---|
 | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |
 | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion` 불일치. 운영자가 보지 않은 초안을 게시하지 않는다 |
+| `409 LEARNING_TERM_ID_TAKEN` | 이 글의 `termId`를 다른 글이 게시 중이다(§5와 같은 규칙). `error.details.termId`·`ownerArticleId`를 싣는다 |
 
 ## 7. 게시 취소
 

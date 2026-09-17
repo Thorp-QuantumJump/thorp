@@ -14,14 +14,23 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.thorp.learning.support.LearningSeeds;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import com.ssafy.thorp.support.Requesters;
+import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -75,6 +84,7 @@ class LearningAdminApiIT extends PostgresTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private DataSource dataSource;
 
     private LearningSeeds seeds;
 
@@ -654,5 +664,100 @@ class LearningAdminApiIT extends PostgresTestSupport {
         assertThat(adminData(publish(3), 200).get("revisionNo").asInt()).isEqualTo(3);
         assertThat(publicCall("/learning/terms/max-drawdown", 200).at("/data/sentence").asText())
                 .isEqualTo("바꾼 용어 문장이다.");
+    }
+
+    // --- 동시 요청이 UNIQUE 제약에 부딪힐 때 (T082) ---
+
+    /** 테스트 연결 풀(2개)과 별개인 연결. 커밋하지 않은 행으로 요청을 제약 앞에 세워 두는 데 쓴다. */
+    private Connection rawConnection() throws Exception {
+        HikariDataSource hikari = dataSource.unwrap(HikariDataSource.class);
+        return DriverManager.getConnection(
+                hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword());
+    }
+
+    /** 다른 세션이 잠금을 기다릴 때까지 기다린다. 요청이 제약 앞에 선 것을 확인한 뒤에 막고 있던 행을 커밋해야 경쟁이 재현된다. */
+    private static void awaitLockWait(Connection watcher) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+        while (System.nanoTime() < deadline) {
+            try (ResultSet rows =
+                    watcher.createStatement()
+                            .executeQuery(
+                                    "SELECT count(*) FROM pg_stat_activity"
+                                            + " WHERE wait_event_type = 'Lock'"
+                                            + " AND datname = current_database()")) {
+                rows.next();
+                if (rows.getInt(1) > 0) {
+                    return;
+                }
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("request never waited on the unique constraint");
+    }
+
+    @Test
+    @DisplayName("같은 articleId를 동시에 만들면 늦은 쪽은 500이 아니라 409 LEARNING_ARTICLE_ID_TAKEN이다")
+    void concurrentCreateWithSameArticleIdIsConflict() throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try (Connection holder = rawConnection();
+                Connection watcher = rawConnection()) {
+            holder.setAutoCommit(false);
+            holder.createStatement()
+                    .executeUpdate(
+                            "INSERT INTO learning_article (article_key, title, question, reading_order,"
+                                    + " status, created_at, updated_at)"
+                                    + " VALUES ('race-article', '먼저 만든 글', '', 10, 'DRAFT', now(), now())");
+            Future<JsonNode> late =
+                    executor.submit(
+                            () ->
+                                    admin(
+                                            post("/admin/learning/articles")
+                                                    .contentType(MediaType.APPLICATION_JSON)
+                                                    .content(
+                                                            "{\"articleId\":\"race-article\",\"title\":\"늦은 글\",\"readingOrder\":10}"),
+                                            409));
+
+            awaitLockWait(watcher);
+            holder.commit();
+
+            assertThat(late.get(20, TimeUnit.SECONDS).at("/error/code").asText())
+                    .isEqualTo("LEARNING_ARTICLE_ID_TAKEN");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("같은 새 termId를 두 글이 동시에 저장하면 늦은 쪽은 409 LEARNING_TERM_ID_TAKEN과 소유 글이다")
+    void concurrentSaveWithSameTermIdIsConflict() throws Exception {
+        ObjectNode body = goodDraft(0);
+        ((ArrayNode) body.get("terms"))
+                .addObject()
+                .put("termId", "race-term")
+                .put("label", "경쟁 용어")
+                .put("sentence", "동시에 넣은 용어다.");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try (Connection holder = rawConnection();
+                Connection watcher = rawConnection()) {
+            holder.setAutoCommit(false);
+            holder.createStatement()
+                    .executeUpdate(
+                            "INSERT INTO learning_term (term_key, article_id, label, sentence,"
+                                    + " created_at, updated_at)"
+                                    + " SELECT 'race-term', id, '먼저 넣은 용어', '', now(), now()"
+                                    + " FROM learning_article WHERE article_key = 'backtest'");
+            Future<JsonNode> late = executor.submit(() -> admin(saveDraft(body), 409));
+
+            awaitLockWait(watcher);
+            holder.commit();
+
+            JsonNode error = late.get(20, TimeUnit.SECONDS).get("error");
+            assertThat(error.get("code").asText()).isEqualTo("LEARNING_TERM_ID_TAKEN");
+            assertThat(error.at("/details/termId").asText()).isEqualTo("race-term");
+            assertThat(error.at("/details/ownerArticleId").asText()).isEqualTo("backtest");
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
     }
 }

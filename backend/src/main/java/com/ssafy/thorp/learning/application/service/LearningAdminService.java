@@ -154,16 +154,7 @@ public class LearningAdminService {
         if (!article.isDraftVersion(command.expectedDraftVersion())) {
             throw new DraftChangedException(article.draftVersion());
         }
-        for (LearningTerm term : command.terms()) {
-            termRepository
-                    .findOwnerArticleKey(term.termId())
-                    .or(() -> publishedTermRepository.findOwnerArticleKey(term.termId()))
-                    .filter(owner -> !owner.equals(id))
-                    .ifPresent(
-                            owner -> {
-                                throw new TermIdTakenException(term.termId(), owner);
-                            });
-        }
+        requireTermIdsAvailable(id, command.terms());
         LearningArticle saved =
                 article.saveDraft(
                         command.expectedDraftVersion(),
@@ -353,6 +344,32 @@ public class LearningAdminService {
         }
         return example.sectors().stream()
                 .anyMatch(sector -> !openSectorCodes.get().contains(sector.code()));
+    }
+
+    /**
+     * 동시에 저장·게시한 다른 요청이 먼저 커밋해 UNIQUE 제약에 걸린 뒤, 어느 글이 그 {@code termId}를 가져갔는지 새 트랜잭션에서 다시 본다. 호출자는
+     * 실패한 요청의 트랜잭션이 끝난 뒤(컨트롤러)에서 부른다.
+     *
+     * @throws ArticleNotFoundException 없는 글
+     * @throws TermIdTakenException 다른 글이 초안에 두었거나 게시 중인 용어가 있다
+     */
+    @Transactional(readOnly = true)
+    public void requireTermIdsAvailable(String articleId, List<LearningTerm> terms) {
+        requireTermIdsAvailable(parseArticleId(articleId), terms);
+    }
+
+    /** 다른 글의 초안이나 게시 색인이 가진 {@code termId}를 이 글이 쓰지 못하게 한다. */
+    private void requireTermIdsAvailable(ArticleId id, List<LearningTerm> terms) {
+        for (LearningTerm term : terms) {
+            termRepository
+                    .findOwnerArticleKey(term.termId())
+                    .filter(owner -> !owner.equals(id))
+                    .ifPresent(
+                            owner -> {
+                                throw new TermIdTakenException(term.termId(), owner);
+                            });
+        }
+        requireTermsNotPublishedElsewhere(id, terms);
     }
 
     /**

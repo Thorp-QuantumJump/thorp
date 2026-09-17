@@ -5,6 +5,7 @@ import com.ssafy.thorp.learning.application.command.CreateArticleCommand;
 import com.ssafy.thorp.learning.application.command.PublishCommand;
 import com.ssafy.thorp.learning.application.command.SaveDraftCommand;
 import com.ssafy.thorp.learning.application.command.UnpublishCommand;
+import com.ssafy.thorp.learning.application.exception.ArticleIdTakenException;
 import com.ssafy.thorp.learning.application.service.LearningAdminService;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleSource;
@@ -21,7 +22,10 @@ import com.ssafy.thorp.learning.presentation.response.AdminArticleResponse;
 import com.ssafy.thorp.learning.presentation.response.PublishResponse;
 import com.ssafy.thorp.learning.presentation.response.UnpublishResponse;
 import com.ssafy.thorp.learning.presentation.support.LearningAdminAccess;
+import com.ssafy.thorp.learning.presentation.support.UniqueConstraintViolations;
 import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -75,13 +79,22 @@ public class LearningAdminController {
     public ResponseEntity<ApiResponse<AdminArticleResponse>> createArticle(
             @Valid @RequestBody CreateArticleRequest request) {
         adminAccess.requireAdminUserId();
-        AdminArticleResponse created =
-                AdminArticleResponse.from(
-                        adminService.create(
-                                new CreateArticleCommand(
-                                        new ArticleId(request.articleId()),
-                                        request.title(),
-                                        request.readingOrder())));
+        CreateArticleCommand command =
+                new CreateArticleCommand(
+                        new ArticleId(request.articleId()),
+                        request.title(),
+                        request.readingOrder());
+        AdminArticleResponse created;
+        try {
+            created = AdminArticleResponse.from(adminService.create(command));
+        } catch (DataIntegrityViolationException violation) {
+            // 같은 articleId를 동시에 만든 다른 요청이 먼저 커밋했다.
+            if (UniqueConstraintViolations.violates(
+                    violation, UniqueConstraintViolations.ARTICLE_KEY)) {
+                throw new ArticleIdTakenException();
+            }
+            throw violation;
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created));
     }
 
@@ -99,10 +112,14 @@ public class LearningAdminController {
     public ResponseEntity<ApiResponse<AdminArticleResponse>> saveDraft(
             @PathVariable String articleId, @Valid @RequestBody SaveDraftRequest request) {
         adminAccess.requireAdminUserId();
-        return ResponseEntity.ok(
-                ApiResponse.ok(
-                        AdminArticleResponse.from(
-                                adminService.saveDraft(articleId, toCommand(request)))));
+        SaveDraftCommand command = toCommand(request);
+        try {
+            return ResponseEntity.ok(
+                    ApiResponse.ok(
+                            AdminArticleResponse.from(adminService.saveDraft(articleId, command))));
+        } catch (DataIntegrityViolationException violation) {
+            throw termConflictOr(violation, articleId, command.terms());
+        }
     }
 
     /** 게시. 게시 전 검사에 걸리면 422이고 아무것도 바뀌지 않는다. */
@@ -110,13 +127,19 @@ public class LearningAdminController {
     public ResponseEntity<ApiResponse<PublishResponse>> publish(
             @PathVariable String articleId, @Valid @RequestBody PublishRequest request) {
         long actorUserId = adminAccess.requireAdminUserId();
-        return ResponseEntity.ok(
-                ApiResponse.ok(
-                        PublishResponse.from(
-                                adminService.publish(
-                                        articleId,
-                                        new PublishCommand(
-                                                request.expectedDraftVersion(), actorUserId)))));
+        try {
+            return ResponseEntity.ok(
+                    ApiResponse.ok(
+                            PublishResponse.from(
+                                    adminService.publish(
+                                            articleId,
+                                            new PublishCommand(
+                                                    request.expectedDraftVersion(),
+                                                    actorUserId)))));
+        } catch (DataIntegrityViolationException violation) {
+            List<LearningTerm> terms = adminService.getDraft(articleId).article().terms();
+            throw termConflictOr(violation, articleId, terms);
+        }
     }
 
     /** 게시 취소. 본문이 없다. 이미 초안이면 아무것도 바꾸지 않고 200이다. */
@@ -129,6 +152,20 @@ public class LearningAdminController {
                         UnpublishResponse.from(
                                 adminService.unpublish(
                                         articleId, new UnpublishCommand(actorUserId)))));
+    }
+
+    /**
+     * 용어 식별자의 UNIQUE 제약 위반이면 어느 글이 가져갔는지 새로 읽어 409로 바꾼다. 그 사이 먼저 커밋한 요청이 되돌려져 겹치는 글이 없으면 원래 예외를 그대로
+     * 둔다. 판정할 수 없는 충돌을 409로 꾸며 내지 않는다.
+     */
+    private RuntimeException termConflictOr(
+            DataIntegrityViolationException violation, String articleId, List<LearningTerm> terms) {
+        if (UniqueConstraintViolations.violates(violation, UniqueConstraintViolations.TERM_KEY)
+                || UniqueConstraintViolations.violates(
+                        violation, UniqueConstraintViolations.PUBLISHED_TERM_KEY)) {
+            adminService.requireTermIdsAvailable(articleId, terms);
+        }
+        return violation;
     }
 
     private static SaveDraftCommand toCommand(SaveDraftRequest request) {
