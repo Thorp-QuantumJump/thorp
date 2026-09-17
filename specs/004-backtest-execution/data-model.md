@@ -51,7 +51,7 @@
 | cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |
 | data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |
 | request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |
-| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그 |
+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker, dependencies?}` + provisional 플래그. `dependencies{numpy, scipy}`는 워커가 실제 import한 버전(선택 필드, 2026-09-17 PD-04 재현성, T022) |
 | effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |
 | progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |
 | progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |
@@ -185,7 +185,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
 - 비중 상한 합계 ≥ 고정 투자 비중 합계 — 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
-- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`).
+- `strategy_rules.status`: 신규 접수는 `REGISTERED`만 통과. `PENDING_DECISION`은 422 `RULES_NOT_REGISTERED`, `SUPERSEDED`는 409 `REGISTRY_VERSION_CHANGED`(003 등록표 버전 불일치와 같은 처리). 저장된 실행의 조립·재발행·재시도는 `SUPERSEDED`도 통과한다(2026-09-17, T022).
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
 - `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.
