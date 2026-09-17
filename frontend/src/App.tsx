@@ -25,6 +25,11 @@ const MarketFlowPage = lazy(() =>
     default: module.MarketFlowPage,
   })),
 )
+const RegimeSearchPage = lazy(() =>
+  import('@/pages/RegimeSearchPage').then((module) => ({
+    default: module.RegimeSearchPage,
+  })),
+)
 
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
@@ -108,6 +113,7 @@ function AnimatedRoutes() {
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/regime-search" element={<RegimeSearchPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />

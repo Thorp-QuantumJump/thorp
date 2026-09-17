@@ -273,15 +273,15 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **묶음 M7** · `feat(fe)/{티켓}-regime-result`
 
-- [ ] T110 [P] [US1] (FE) 타입 정의를 `frontend/src/types/regime.ts`에 작성 — 계약 응답 그대로. decimal은 `string`
-- [ ] T111 [P] [US1] (FE) API 클라이언트를 `frontend/src/api/regime.ts`에 작성 — 다섯 엔드포인트. 오류를 화면 문구로 바꾸지 않고 그대로 올린다
-- [ ] T112 [US1] (FE) `useRegimeSearch` 훅을 `frontend/src/hooks/useRegimeSearch.ts`에 작성 — 늦게 온 응답이 최신 것을 덮지 않도록 순번으로 막는다(`useSearchCandidates`와 같은 방식)
-- [ ] T113 [US1] (FE) 사례 목록을 `frontend/src/components/regime/CaseList.tsx`에 작성 — 관측 구간·비슷한 점·다른 점을 **먼저** 보이고 거리·기여는 상세로 넘긴다(spec FR-015)
-- [ ] T114 [US1] (FE) '더 보기' 동작을 `CaseList.tsx`에 붙인다 — `limit=10`으로 다시 부른다. **버튼 노출은 `counts.stored > counts.displayed`로 정하고 10을 가정하지 않는다**. 후보가 부족하면 부족한 대로 보이고 빈자리를 만들지 않는다. **`eligible > stored`면 상한 안내**(*\"가까운 순서로 10개까지 보입니다\"*)를 보이고 **후보 수는 표시하지 않는다**(spec FR-013, SC-004)
-- [ ] T115 [P] [US1] (FE) 검색 페이지를 `frontend/src/pages/RegimeSearchPage.tsx`에 작성 — 분야 선택(`baseline-months` 응답의 분야 목록)과 결과 영역. **거리 함수·척도·지표 조합을 고르는 항목을 두지 않는다**(US1 시나리오 5)
-- [ ] T116 [P] [US1] (FE) CSS Module을 컴포넌트마다 작성 — `--thorp-*` 토큰만 쓴다(`frontend/docs/design-system.md`)
-- [ ] T117 [P] [US1] (FE 테스트) 사례 3개 표시와 '더 보기' 10개를 `CaseList.test.tsx`에 고정. 상한에 걸린 경우 **안내가 보이고 `evaluated`·`eligible` 숫자가 화면에 0건**임을 함께 고정한다(SC-004)
-- [ ] T118 [P] [US1] (FE 테스트) 후보 2개일 때 **빈자리가 렌더링되지 않고 '더 보기'가 없음**을 `CaseList.test.tsx`에 고정(SC-004)
+- [X] T110 [P] [US1] (FE) 타입 정의를 `frontend/src/types/regime.ts`에 작성 — 계약 응답 그대로. decimal은 `string`
+- [X] T111 [P] [US1] (FE) API 클라이언트를 `frontend/src/api/regime.ts`에 작성 — 다섯 엔드포인트. 오류를 화면 문구로 바꾸지 않고 그대로 올린다
+- [X] T112 [US1] (FE) `useRegimeSearch` 훅을 `frontend/src/hooks/useRegimeSearch.ts`에 작성 — 늦게 온 응답이 최신 것을 덮지 않도록 순번으로 막는다(`useSearchCandidates`와 같은 방식)
+- [X] T113 [US1] (FE) 사례 목록을 `frontend/src/components/regime/CaseList.tsx`에 작성 — 관측 구간·비슷한 점·다른 점을 **먼저** 보이고 거리·기여는 상세로 넘긴다(spec FR-015)
+- [X] T114 [US1] (FE) '더 보기' 동작을 `CaseList.tsx`에 붙인다 — `limit=10`으로 다시 부른다. **버튼 노출은 `counts.stored > counts.displayed`로 정하고 10을 가정하지 않는다**. 후보가 부족하면 부족한 대로 보이고 빈자리를 만들지 않는다. **`eligible > stored`면 상한 안내**(*\"가까운 순서로 10개까지 보입니다\"*)를 보이고 **후보 수는 표시하지 않는다**(spec FR-013, SC-004)
+- [X] T115 [P] [US1] (FE) 검색 페이지를 `frontend/src/pages/RegimeSearchPage.tsx`에 작성 — 분야 선택(`baseline-months` 응답의 분야 목록)과 결과 영역. **거리 함수·척도·지표 조합을 고르는 항목을 두지 않는다**(US1 시나리오 5)
+- [X] T116 [P] [US1] (FE) CSS Module을 컴포넌트마다 작성 — `--thorp-*` 토큰만 쓴다(`frontend/docs/design-system.md`)
+- [X] T117 [P] [US1] (FE 테스트) 사례 3개 표시와 '더 보기' 10개를 `CaseList.test.tsx`에 고정. 상한에 걸린 경우 **안내가 보이고 `evaluated`·`eligible` 숫자가 화면에 0건**임을 함께 고정한다(SC-004)
+- [X] T118 [P] [US1] (FE 테스트) 후보 2개일 때 **빈자리가 렌더링되지 않고 '더 보기'가 없음**을 `CaseList.test.tsx`에 고정(SC-004)
 
 **Checkpoint**: US1이 독립적으로 동작한다 — 분야를 고르면 사례가 보인다
 
@@ -296,18 +296,18 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **묶음 M7 (이어서)** · 같은 브랜치
 
-- [ ] T119 [US2] (FE) 검색 상태 표시를 `frontend/src/components/regime/SearchStatusBadge.tsx`에 작성 — 세 상태와 사유를 **첫 사례와 같은 화면에** 둔다(spec FR-019). 상태 문구는 응답의 `statusNote`를 쓰고 화면에서 지어내지 않는다
-- [ ] T120 [US2] (FE) '최근접 참고 사례' 표시를 `CaseList.tsx`에 붙인다 — 응답의 `caseLabel`이 있을 때만(spec FR-020)
-- [ ] T121 [US2] (FE) **조회 실패 안내**를 `frontend/src/components/regime/LoadError.tsx`에 작성 — 빈 상태(`EmptyResult`)와 **다른 화면**으로 그리고 다시 시도할 수 있게 한다. 실패를 빈 결과처럼 보이지 않는다(spec FR-034)
-- [ ] T122 [US2] (FE) FR-037의 **다섯 표시에 공통 규약**을 `frontend/src/components/regime/Disclosure.tsx`로 묶는다 — 문구를 반드시 동반하고, 어느 결과에 대한 것인지 보조기술이 알 수 있게 연결하며, 상태가 바뀌면 그 사실이 전달된다. **접히는 영역에 넣지 않는다**(spec FR-037)
-- [ ] T123 [US2] (FE) `NOT_COMPUTABLE`·후보 0건을 **정상 화면 + 한 문장 안내**로 그리는 빈 상태를 `frontend/src/components/regime/EmptyResult.tsx`에 작성 — **오류 화면을 쓰지 않는다**(US2 시나리오 4). 네 사유(`SCALE_WINDOW_TOO_SHORT`·`SCALE_ZERO`·`QUERY_INPUT_MISSING`·`NO_CANDIDATE`)를 모두 그린다
-- [ ] T124 [US2] (FE) **빠진 지표·월 표기**를 `frontend/src/components/regime/ComparisonMonthsNotice.tsx`에 작성 — `comparisonMonths[].omitted`가 비어 있지 않으면 그 `note`를 **숨길 수 없는 자리에** 보인다(spec FR-031, SC-007)
-- [ ] T125 [US2] (FE) **역사 비교 표시**를 `frontend/src/components/regime/BasisNotice.tsx`에 작성 — `basis.note`를 결과 옆에 상시 표시한다. *"당시 재현"* 으로 읽힐 문구를 화면에서 만들지 않는다(spec FR-027, SC-009)
-- [ ] T126 [US2] (FE) 예시 자료 표시를 `RegimeSearchPage.tsx`에 붙인다 — `versions.sampleData`가 `true`면 **숨길 수 없는 자리에** 표시한다(008 FR-022)
-- [ ] T127 [P] [US2] (FE 테스트) 세 상태의 표시와 `'% 유사'`·`'충분히 유사'`·`'대표 유사국면'` 낱말 **0건**을 `SearchStatusBadge.test.tsx`에 고정(SC-006)
-- [ ] T128 [P] [US2] (FE 테스트) 다섯 표시가 **문구 없이 색·아이콘·호버로만 구별되지 않고**, 보조기술이 읽을 수 있으며, `--thorp-*` 토큰 조합이 **명암비 4.5:1**(굵은 큰 글자 3:1)을 만족함을 고정한다(SC-014). 토큰 기준은 `frontend/docs/design-system.md`
-- [ ] T129 [P] [US2] (FE 테스트) 계산 불가에서 오류 화면이 뜨지 않고 네 사유가 각각 한 문장으로 그려짐을 `EmptyResult.test.tsx`에 고정(SC-005)
-- [ ] T130 [P] [US2] (FE 테스트) 빠진 달이 있으면 표기가 보이고 없으면 안 보임, `basis` 표시는 **항상** 보임을 `ComparisonMonthsNotice.test.tsx`·`BasisNotice.test.tsx`에 고정(SC-007·SC-009)
+- [X] T119 [US2] (FE) 검색 상태 표시를 `frontend/src/components/regime/SearchStatusBadge.tsx`에 작성 — 세 상태와 사유를 **첫 사례와 같은 화면에** 둔다(spec FR-019). 상태 문구는 응답의 `statusNote`를 쓰고 화면에서 지어내지 않는다
+- [X] T120 [US2] (FE) '최근접 참고 사례' 표시를 `CaseList.tsx`에 붙인다 — 응답의 `caseLabel`이 있을 때만(spec FR-020)
+- [X] T121 [US2] (FE) **조회 실패 안내**를 `frontend/src/components/regime/LoadError.tsx`에 작성 — 빈 상태(`EmptyResult`)와 **다른 화면**으로 그리고 다시 시도할 수 있게 한다. 실패를 빈 결과처럼 보이지 않는다(spec FR-034)
+- [X] T122 [US2] (FE) FR-037의 **다섯 표시에 공통 규약**을 `frontend/src/components/regime/Disclosure.tsx`로 묶는다 — 문구를 반드시 동반하고, 어느 결과에 대한 것인지 보조기술이 알 수 있게 연결하며, 상태가 바뀌면 그 사실이 전달된다. **접히는 영역에 넣지 않는다**(spec FR-037)
+- [X] T123 [US2] (FE) `NOT_COMPUTABLE`·후보 0건을 **정상 화면 + 한 문장 안내**로 그리는 빈 상태를 `frontend/src/components/regime/EmptyResult.tsx`에 작성 — **오류 화면을 쓰지 않는다**(US2 시나리오 4). 네 사유(`SCALE_WINDOW_TOO_SHORT`·`SCALE_ZERO`·`QUERY_INPUT_MISSING`·`NO_CANDIDATE`)를 모두 그린다
+- [X] T124 [US2] (FE) **빠진 지표·월 표기**를 `frontend/src/components/regime/ComparisonMonthsNotice.tsx`에 작성 — `comparisonMonths[].omitted`가 비어 있지 않으면 그 `note`를 **숨길 수 없는 자리에** 보인다(spec FR-031, SC-007)
+- [X] T125 [US2] (FE) **역사 비교 표시**를 `frontend/src/components/regime/BasisNotice.tsx`에 작성 — `basis.note`를 결과 옆에 상시 표시한다. *"당시 재현"* 으로 읽힐 문구를 화면에서 만들지 않는다(spec FR-027, SC-009)
+- [X] T126 [US2] (FE) 예시 자료 표시를 `RegimeSearchPage.tsx`에 붙인다 — `versions.sampleData`가 `true`면 **숨길 수 없는 자리에** 표시한다(008 FR-022)
+- [X] T127 [P] [US2] (FE 테스트) 세 상태의 표시와 `'% 유사'`·`'충분히 유사'`·`'대표 유사국면'` 낱말 **0건**을 `SearchStatusBadge.test.tsx`에 고정(SC-006)
+- [X] T128 [P] [US2] (FE 테스트) 다섯 표시가 **문구 없이 색·아이콘·호버로만 구별되지 않고**, 보조기술이 읽을 수 있으며, `--thorp-*` 토큰 조합이 **명암비 4.5:1**(굵은 큰 글자 3:1)을 만족함을 고정한다(SC-014). 토큰 기준은 `frontend/docs/design-system.md`
+- [X] T129 [P] [US2] (FE 테스트) 계산 불가에서 오류 화면이 뜨지 않고 네 사유가 각각 한 문장으로 그려짐을 `EmptyResult.test.tsx`에 고정(SC-005)
+- [X] T130 [P] [US2] (FE 테스트) 빠진 달이 있으면 표기가 보이고 없으면 안 보임, `basis` 표시는 **항상** 보임을 `ComparisonMonthsNotice.test.tsx`·`BasisNotice.test.tsx`에 고정(SC-007·SC-009)
 
 **Checkpoint**: 결과를 과신할 수 없게 상태가 늘 함께 보인다
 
