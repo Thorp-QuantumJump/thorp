@@ -253,6 +253,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
 
   // --- 규칙·비용 버전(②). 결정 전에는 null이고 '분석하기'가 막힌다 ---------------------------
   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')
+  const [versionsReload, setVersionsReload] = useState(0)
 
   /**
    * 버전 조회는 **지금 넘겨받은 조회 함수**를 따른다.
@@ -273,6 +274,10 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
    * <p><b>남는 비용</b>: 호출자가 렌더마다 조회 함수 자체를 새로 만들면 부모가 다시 그릴 때마다
    * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않지만 요청은 헛돈다. 통로를 안정된 참조로 넘기라는
    * 계약(`AnalysisSupport`)이 그 몫을 맡는다.
+   *
+   * <p><b>409 뒤에는 일부러 다시 조회한다(`versionsReload`).</b> 004는 대체된 옛 규칙 버전을 실은 새 요청을
+   * 409 `REGISTRY_VERSION_CHANGED`로 거절한다(2026-09-17 004 결정). 그때는 받아 둔 버전이 이미 틀린 값이라
+   * 거두고 '확인하는 중'으로 되돌린다 — 두면 다시 누르는 순간 같은 409가 되풀이된다.
    */
   const fetchAnalysisVersions = support.fetchAnalysisVersions
 
@@ -290,7 +295,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       active = false
       controller.abort()
     }
-  }, [fetchAnalysisVersions])
+  }, [fetchAnalysisVersions, versionsReload])
 
   // --- 공통 평가 기간(①). 섹터 집합과 등록표의 워밍업 상한이 바뀔 때만 조회한다 ---------------
   //
@@ -732,9 +737,14 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       switch (rejection.code) {
         case BacktestRejectionCode.REGISTRY_VERSION_CHANGED:
           // 다시 받아 보관값을 새 등록표로 재검증한다(`useStrategySettings`가 등록표를 받을 때마다 한다).
+          //
+          // **004 규칙 등록표도 함께 다시 받는다.** 같은 409가 003 등록표 버전의 불일치에도, 004가 대체한 옛
+          // 규칙 버전에도 오고 화면은 둘을 가를 수 없다(004 결정). 둘 다 받은 뒤에 사용자가 다시 누른다.
           setSubmission({ status: 'idle' })
           if (registry !== null) setRegistryChange({ stale: registry })
           reloadRegistry()
+          setVersions('loading')
+          setVersionsReload((count) => count + 1)
           return
         case BacktestRejectionCode.STRATEGY_NOT_REGISTERED:
           // 등록표는 늘 다시 받는다. 보낸 전략이 목록에서 빠졌는지는 사용자가 카드를 옮겼어도 보여야 한다.
@@ -783,7 +793,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         : 'failed'
       : registryState.status === 'loaded' &&
           registryState.registry !== registryChange?.stale &&
-          settings.ready
+          settings.ready &&
+          versions !== 'loading'
         ? 'reloaded'
         : 'reloading'
 

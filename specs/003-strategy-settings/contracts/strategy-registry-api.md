@@ -266,7 +266,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 상태 | 코드 | 언제 | 화면 처리 |
 |---|---|---|---|
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | 축 값이 허용 범위 밖 | 허용 범위를 안내하고 값을 저장하지 않는다 |
-| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 버전이 현재와 다름 | 등록표를 다시 조회하고 바뀐 사실을 알린다 (research R9) |
+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 등록표 버전이 현재와 다르거나, 실은 규칙 버전(004)이 대체됨 | 등록표와 004 규칙 등록표를 모두 다시 조회하고 바뀐 사실을 알린다. 자동으로 다시 보내지 않는다 (research R9, 2026-09-17 004 결정) |
 | 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없음 | 전략 선택으로 되돌린다 |
 | 422 | `VALIDATION_RULE_VIOLATED` | 유효성 제약 위반 | 위반한 규칙의 `detail`을 보인다 |
 | 503 | `REGISTRY_UNAVAILABLE` | 등록표를 읽지 못함 | 다시 시도를 제안한다 |

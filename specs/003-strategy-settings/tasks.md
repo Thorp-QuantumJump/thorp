@@ -171,7 +171,9 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
     001(T042)과 004(`GET /backtests/registry`)가 모두 머지되면 실제 응답으로 두 읽기 함수를 확인하고, 기본값을 이 통로로 바꾼 뒤
     quickstart 7·7-1·7-2와 US1 종단 데모를 돈다.
   - **004 답변 반영 (2026-09-17 추가 답변)**: (1) 필드 이름은 `strategyRules[]`·`defaultCostProfile` 그대로다. (2) registry는 전략마다
-    **현재 버전 한 행만** 내린다. 버전이 바뀌면 옛 행은 `SUPERSEDED`로 빼되 접수는 그 버전을 명시한 요청을 재현용으로 계속 받는다.
+    **현재 버전 한 행만** 내린다. 버전이 바뀌면 옛 행은 `SUPERSEDED`로 뺀다. (정정: 처음에는 "옛 버전 명시 요청은 재현용으로 받는다"고 답했으나
+    004가 바로잡았다 — **새 요청은 현재 버전만 받고, 대체된 버전이면 409 `REGISTRY_VERSION_CHANGED`로 거절한다.** 재현은 저장된 결과가
+    버전을 기록하는 것으로 보장된다.)
     `PENDING_DECISION` 행은 상태 그대로 나간다. 화면의 "등록된 행이 둘 이상이면 막는다"는 방어로 남긴다(곧 `INVERSE_VOLATILITY/2`가
     들어올 예정이다). (3) **`costProfileVersion`은 받은 `defaultCostProfile.version`을 명시해 싣는다.** 기본값은 배포 때만 바뀌지만 확정
     비용 버전(`KR-ETF-2026-09`) 배포가 예정되어 조회와 접수 사이의 창이 실제로 생기고, 명시하면 사용자가 본 조건이 그대로 적용되며
@@ -795,12 +797,16 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
 질문 1은 위 두 태스크의 메모가 추적하므로 세지 않았다. 남은 간극은 넷이다.
 
 - [ ] T103 (DOCS) spec의 선행 조건 표와 plan의 B06 선행 설명을 T098·004 결정에 맞춘다 per spec 선행 조건 표 · plan "묶음에 넣지 않은 것" (contradicts) — `specs/003-strategy-settings/spec.md` 선행 조건 표의 "001 평가 기간 계약" 행은 "003은 `warmupTradingDays`·`minEvaluationYears`를 질의 값으로 넘기기만 한다"고 적었으나, T098 결정은 **화면이 등록표에서 계산한 `maxWarmupTradingDays`만 보내고 받은 거래일 목록으로 판정한다**(research R7-1, T042 구현 메모). 같은 표의 "004 규칙·비용 버전 조회" 행은 "조회 계약 없음"이고 `plan.md`의 "묶음에 넣지 않은 것"은 004 조회 수단을 "여전히 팀 결정 대기"로 적었으나, 2026-09-17 004가 `GET /backtests/registry`를 열기로 정했다(T039 메모). **intent 문서가 구현과 다른 방식을 말하면 다음 대조에서 맞는 구현이 모순으로 잡힌다.** 두 행을 결정과 남은 선행(각 엔드포인트의 구현)으로 고치고, plan의 문장도 같게 고친다. 001 계약 문서(`specs/001-etf-market-data/contracts/sector-api.md`)는 001 소유라 고치지 않는다
-- [ ] T104 (FE) 규칙 버전이 바뀌어 거절되면 004 등록표를 다시 받고 알린다 per T039 004 결정 · 계약 §2 거절 응답(research R9와 같은 성격) (partial) — `frontend/src/pages/StrategySettingsPage.tsx`는 004 규칙 등록표(`fetchAnalysisVersions`)를 화면이 열릴 때 한 번 받는다. 004가 규칙 버전을 올리면 접수가 422 `RULES_NOT_REGISTERED`로 거절되는데, `handleAnalyze`는 이 코드를 `default` 분기에서 서버 문장으로만 보이고 등록표를 다시 받지 않는다. **새로 고치기 전까지 같은 옛 버전으로 같은 거절이 되풀이된다** — 409 `REGISTRY_VERSION_CHANGED`에 R9가 정한 처리가 규칙 버전에는 없는 셈이다. `analysisSupport.ts`의 `BacktestRejectionCode`에 `RULES_NOT_REGISTERED`를 더하고, 받으면 버전 조회를 다시 하고(다시 조회하는 동안 받은 값을 거두지 않는 기존 규약 유지) "분석 규칙이 바뀌어 다시 확인했습니다" 식으로 알리되 **자동으로 다시 보내지 않는다.** 다시 받은 등록표에서 그 전략이 `PENDING_DECISION`이면 기존 차단 문장이 이어받는다. 검사로 고정한다: 422 `RULES_NOT_REGISTERED` 뒤 버전 조회가 한 번 더 나가고 요청은 한 건에 머무르며, 새 버전을 받은 뒤 '분석하기'를 누르면 새 `rulesVersion`이 실린다
+- [X] T104 (FE) 규칙 버전이 바뀌어 거절되면 004 등록표를 다시 받고 알린다 per T039 004 결정 · 계약 §2 거절 응답(research R9와 같은 성격) (partial) — `frontend/src/pages/StrategySettingsPage.tsx`는 004 규칙 등록표(`fetchAnalysisVersions`)를 화면이 열릴 때 한 번 받는다. 004가 규칙 버전을 올리면 접수가 422 `RULES_NOT_REGISTERED`로 거절되는데, `handleAnalyze`는 이 코드를 `default` 분기에서 서버 문장으로만 보이고 등록표를 다시 받지 않는다. **새로 고치기 전까지 같은 옛 버전으로 같은 거절이 되풀이된다** — 409 `REGISTRY_VERSION_CHANGED`에 R9가 정한 처리가 규칙 버전에는 없는 셈이다. `analysisSupport.ts`의 `BacktestRejectionCode`에 `RULES_NOT_REGISTERED`를 더하고, 받으면 버전 조회를 다시 하고(다시 조회하는 동안 받은 값을 거두지 않는 기존 규약 유지) "분석 규칙이 바뀌어 다시 확인했습니다" 식으로 알리되 **자동으로 다시 보내지 않는다.** 다시 받은 등록표에서 그 전략이 `PENDING_DECISION`이면 기존 차단 문장이 이어받는다. 검사로 고정한다: 422 `RULES_NOT_REGISTERED` 뒤 버전 조회가 한 번 더 나가고 요청은 한 건에 머무르며, 새 버전을 받은 뒤 '분석하기'를 누르면 새 `rulesVersion`이 실린다
 - [X] T105 (FE) 화면에 보인 비용 조건과 실제 접수된 비용 조건이 갈라지지 않게 한다 per FR-010 · FR-014 (partial) — 004 결정대로 요청의 `costProfileVersion`을 `null`로 보내고 화면은 `GET /backtests/registry`의 `defaultCostProfile`을 보인다. 그런데 **조회와 접수 사이에 서버 기본값이 바뀌면 사용자가 본 적 없는 비용 조건으로 분석이 접수되고**, `api/backtest.ts`는 202 응답의 `versions.costProfile { version, provisional }`을 읽지 않아 그 사실을 알 수 없다(FR-014는 비용 가정이 요청과 함께 보존되기를 요구한다). 004 담당자에게 드린 질문 3의 답에 따라 둘 중 하나로 닫는다: (a) 기본값이 바뀔 수 있으면 받은 `defaultCostProfile.version`을 요청에 명시해 싣는다, (b) 배포 때만 바뀐다면 `null`을 유지하되 202의 `versions.costProfile.version`을 `BacktestAccepted`에 읽어 화면에 보인 버전과 다르면 접수 결과와 함께 알린다. 답이 오기 전에는 착수하지 않고, 고른 쪽과 근거를 T039 메모에 적는다
   - **T105 구현 메모**: 004 답변 (3)에 따라 (a)를 골랐다. 화면이 받은 `defaultCostProfile.version`을 요청의 `costProfileVersion`에
     그대로 싣는다. 페이지 검사가 요청의 비용 버전이 통로가 준 버전과 같은지 본다.
-  - **T104 전제 변경 (004 답변 (2))**: 004는 옛 규칙 버전을 명시한 요청도 재현용으로 계속 받으므로, 규칙 버전이 바뀌어도 화면이 받은
-    옛 버전은 422 `RULES_NOT_REGISTERED`로 거절되지 않는다. T104가 적은 "같은 거절의 되풀이"는 생기지 않고, 대신 **화면을 연 뒤 버전이
-    바뀌면 옛 규칙으로 조용히 접수된다.** 그것이 막아야 할 일인지(재현 가능한 옛 버전이라 괜찮은지)는 004와 정할 일이라 T104는 착수하지
-    않고 남긴다.
+  - **T104 구현 메모 (004 재답변, 2026-09-17)**: 태스크는 422 `RULES_NOT_REGISTERED`를 전제했으나 004가 **대체된 옛 규칙 버전을 409
+    `REGISTRY_VERSION_CHANGED`로 거절한다**고 정했다. 옛 규칙으로 조용히 접수하거나 "옛 규칙으로 접수됨"만 표시하는 안은 버렸다 —
+    사용자가 고른 것은 전략이지 버전이 아니므로, 새 규칙이 있는데 옛 규칙으로 계산한 결과는 다른 전략과 견줄 때 다른 규칙의 숫자가
+    된다. 화면은 같은 409를 003 등록표 불일치와 가를 수 없으므로 **409를 받으면 003 등록표와 004 규칙 등록표를 둘 다 다시 받는다.**
+    규칙 등록표는 받아 둔 값을 거두고 '확인하는 중'으로 돌린다(두면 누르는 순간 같은 409가 되풀이된다). 알림은 두 조회가 모두 끝나야
+    '다시 받음'이 되고 제목을 "등록표나 분석 규칙이 바뀌었습니다"로 넓혔다. 자동으로 다시 보내지 않는다. 검사는 409 뒤 규칙 조회가 한 번
+    더 나가고, 새 버전을 받기 전에는 '분석하기'가 막혀 요청이 한 건에 머무르며, 받은 뒤 다시 누르면 새 `rulesVersion`이 실리는지 본다.
+    다시 조회하는 코드를 빼면 이 검사가 실패하는 것을 확인했다.
 - [ ] T106 [P] (FE 테스트) 페이지 검사가 실제 통로의 판정 연결을 쓰게 한다 per T039·T042 "B06과의 경계" (partial) — `frontend/src/pages/StrategySettingsPage.test.tsx`의 "공통 평가 기간 연결(T042, T098)" 두 검사는 `judgeWarmup`을 `({ evaluationWindow, warmupTradingDays, minEvaluationYears }) => judgeWarmupFromWindow(...)` 람다로 **따로 적어** 쓴다. `frontend/src/components/strategy/connectedAnalysisSupport.ts`의 같은 연결이 인자를 빠뜨리거나 뒤바꿔도 모든 검사가 통과하고, 그 통로는 기본값으로 바뀌는 순간에야 처음 쓰인다. 두 검사가 `{ ...base, fetchEvaluationWindow: 흉내, judgeWarmup: connectedAnalysisSupport.judgeWarmup }`처럼 실제 판정 연결을 가져다 쓰게 한다(조회·전송은 계속 흉내). 연결을 일부러 어긋나게 바꿔 검사가 실패하는지 한 번 확인한 뒤 되돌린다

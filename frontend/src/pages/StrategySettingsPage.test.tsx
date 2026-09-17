@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -1204,7 +1204,7 @@ describe('StrategySettingsPage', () => {
       apiMocks.fetchStrategyRegistry.mockResolvedValue(nextRegistry())
       await user.click(actionButton('분석하기'))
 
-      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
       await waitFor(() =>
         expect(notice.parentElement?.textContent).toContain(
           '바뀐 등록표에서도 쓸 수 있어 그대로 두었습니다',
@@ -1224,7 +1224,62 @@ describe('StrategySettingsPage', () => {
       expect(calls[1].strategy.registryVersion).toBe('TEST-REGISTRY-003-2')
       expect(calls[1].strategy.parameters.driftWindow).toBe(15)
       // 다시 누르면 앞선 알림을 거둔다.
-      expect(screen.queryByText(/확인하신 사이에 등록표가 바뀌었습니다/)).toBeNull()
+      expect(screen.queryByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)).toBeNull()
+    })
+
+    it('규칙 버전이 대체되어 409로 거절되면 004 규칙 등록표도 다시 받고, 받기 전에는 다시 보낼 수 없다', async () => {
+      // 004 결정: 대체된 옛 규칙 버전을 실은 새 요청은 409 REGISTRY_VERSION_CHANGED다. 003 등록표는 그대로다.
+      const user = userEvent.setup()
+      const calls: BacktestCreateRequest[] = []
+      const rulesFor = (rulesVersion: string): AnalysisVersions => ({
+        ...versionsFixture,
+        strategyRules: versionsFixture.strategyRules.map((row) =>
+          row.strategyId === selectableStrategy.strategyId ? { ...row, rulesVersion } : row,
+        ),
+      })
+      let releaseSecond: (versions: AnalysisVersions) => void = () => {}
+      const fetchAnalysisVersions = vi.fn<AnalysisSupport['fetchAnalysisVersions']>()
+      fetchAnalysisVersions.mockResolvedValueOnce(rulesFor('R-1')).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseSecond = resolve
+          }),
+      )
+      const { support } = makeSupport({
+        fetchAnalysisVersions,
+        createBacktest: async (request) => {
+          calls.push(request)
+          if (calls.length === 1) throw registryVersionChangedError()
+          return { backtestId: 'BT-20260917-000003', status: 'QUEUED' }
+        },
+      })
+      renderPage(support)
+
+      await user.click(await findCardNamed(selectableStrategy.name))
+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+      // 003 등록표는 바뀌지 않았다. 실제 조회처럼 같은 내용의 새 응답을 돌려준다.
+      apiMocks.fetchStrategyRegistry.mockResolvedValue({ ...registryFixture })
+      await user.click(actionButton('분석하기'))
+      await waitFor(() => expect(calls).toHaveLength(1))
+      expect(calls[0].strategy.rulesVersion).toBe('R-1')
+
+      // 새 규칙 버전을 받기 전에는 옛 버전으로 다시 보낼 수 없고, 다시 받았다고 말하지도 않는다.
+      await waitFor(() => expect(fetchAnalysisVersions).toHaveBeenCalledTimes(2))
+      expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전을 확인하는 중입니다')
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
+      expect(notice.parentElement?.getAttribute('data-phase')).toBe('reloading')
+      await user.click(actionButton('분석하기'))
+      expect(calls).toHaveLength(1)
+
+      await act(async () => releaseSecond(rulesFor('R-2')))
+      await waitFor(() => expect(notice.parentElement?.getAttribute('data-phase')).toBe('reloaded'))
+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+      // 자동으로 다시 보내지 않는다.
+      expect(calls).toHaveLength(1)
+
+      await user.click(actionButton('분석하기'))
+      await waitFor(() => expect(calls).toHaveLength(2))
+      expect(calls[1].strategy.rulesVersion).toBe('R-2')
     })
 
     it('409 직후 새 등록표를 받기 전에는 바뀐 등록표로 확인했다고 말하지 않는다', async () => {
@@ -1259,7 +1314,7 @@ describe('StrategySettingsPage', () => {
       observer.observe(document.body, { subtree: true, childList: true, characterData: true })
       try {
         await user.click(actionButton('분석하기'))
-        const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+        const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
         await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))
         expect(notice.parentElement?.textContent).toContain('불러오는 중')
 
@@ -1304,7 +1359,7 @@ describe('StrategySettingsPage', () => {
       )
       await user.click(actionButton('분석하기'))
 
-      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
       await waitFor(() =>
         expect(notice.parentElement?.textContent).toContain('쓸 수 없게 된 값이 있습니다'),
       )

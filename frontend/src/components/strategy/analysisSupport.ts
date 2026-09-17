@@ -196,7 +196,7 @@ export type AnalysisSupport = {
 export const BacktestRejectionCode = {
   /** 400. 축 값이나 시작 금액이 허용 범위 밖이다 */
   UNREGISTERED_PARAMETER_VALUE: 'UNREGISTERED_PARAMETER_VALUE',
-  /** 409. 요청을 보낸 사이에 등록표 버전이 바뀌었다 */
+  /** 409. 요청을 보낸 사이에 003 등록표 버전이 바뀌었거나, 실은 규칙 버전을 004가 대체했다 */
   REGISTRY_VERSION_CHANGED: 'REGISTRY_VERSION_CHANGED',
   /** 422. 고른 전략이 등록표의 활성 전략에 없다 */
   STRATEGY_NOT_REGISTERED: 'STRATEGY_NOT_REGISTERED',
