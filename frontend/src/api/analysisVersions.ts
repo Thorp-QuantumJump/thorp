@@ -41,8 +41,19 @@ function readRulesEntry(value: unknown): StrategyRulesEntry | null {
   return { strategyId, rulesVersion, status, provisional }
 }
 
-function isRate(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+const DECIMAL = /^\d+(\.\d+)?$/
+
+/**
+ * 비용 수치(bps)를 읽는다. 읽을 수 없으면 `null`이다.
+ *
+ * <p><b>004는 비용 수치를 문자열 decimal로 보낸다</b>(`"0.0000"`, 컬럼이 `NUMERIC(8,4)`라 소수 네 자리).
+ * 다른 응답의 금액·비율과 같은 규약이다. 화면은 읽기 전용으로 보이기만 하므로 수로 옮기되, 음수·지수 표기·
+ * 빈 글처럼 decimal이 아닌 값은 받지 않는다. 숫자로 오는 값도 받는다 — 표기만 다르고 뜻은 같다.
+ */
+function readRate(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null
+  if (typeof value !== 'string' || !DECIMAL.test(value)) return null
+  return Number(value)
 }
 
 /** 응답 본문을 읽는다. 계약과 어긋나면 `null`이다. */
@@ -52,8 +63,11 @@ export function readBacktestRegistry(value: unknown): AnalysisVersions | null {
   if (!isRecord(cost) || typeof cost.version !== 'string' || typeof cost.provisional !== 'boolean') {
     return null
   }
-  const { commissionBps, spreadBps, slippageBps, taxBps } = cost
-  if (!isRate(commissionBps) || !isRate(spreadBps) || !isRate(slippageBps) || !isRate(taxBps)) {
+  const commissionBps = readRate(cost.commissionBps)
+  const spreadBps = readRate(cost.spreadBps)
+  const slippageBps = readRate(cost.slippageBps)
+  const taxBps = readRate(cost.taxBps)
+  if (commissionBps === null || spreadBps === null || slippageBps === null || taxBps === null) {
     return null
   }
 

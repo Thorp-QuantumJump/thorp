@@ -72,11 +72,34 @@ describe('규칙·비용 버전 조회(T039, 004 GET /backtests/registry)', () =
       { ...body, strategyRules: [{ strategyId: 'A', rulesVersion: '1', status: 'REGISTERED' }] },
     ],
     [
-      '비용 수치가 수가 아니다',
-      { ...body, defaultCostProfile: { ...body.defaultCostProfile, taxBps: '20' } },
+      '비용 수치가 decimal이 아닌 글이다',
+      { ...body, defaultCostProfile: { ...body.defaultCostProfile, taxBps: '20bp' } },
+    ],
+    [
+      '비용 수치가 음수다',
+      { ...body, defaultCostProfile: { ...body.defaultCostProfile, taxBps: '-1.0000' } },
     ],
   ])('%s면 일부만 살리지 않는다', (_, data) => {
     expect(readBacktestRegistry(data)).toBeNull()
+  })
+})
+
+describe('004가 실제로 보내는 비용 수치 표기(T026)', () => {
+  it('문자열 decimal("0.0000")을 수로 읽는다', () => {
+    // 004 BacktestRegistryResponse는 비용 수치를 PlainBigDecimalSerializer로 문자열 decimal로 보낸다.
+    const versions = readBacktestRegistry({
+      ...body,
+      defaultCostProfile: {
+        version: 'PROVISIONAL-DEMO-1',
+        provisional: true,
+        commissionBps: '0.0000',
+        spreadBps: '5.0000',
+        slippageBps: '1.5000',
+        taxBps: '20.0000',
+      },
+    })
+
+    expect(versions?.costRates).toEqual({ commissionBps: 0, spreadBps: 5, slippageBps: 1.5, taxBps: 20 })
   })
 })
 

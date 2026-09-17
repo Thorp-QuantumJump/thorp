@@ -845,3 +845,16 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
   못했다** — 이 기계에 적재된 KRX 자료로 뜬 백엔드가 없다. 자료가 있는 환경에서 확인한 뒤 T107과 T042를 체크한다.
 - **T108**: 계약 §2 표를 004 요청 경로 이름(`strategy.*`·`conditions.*`)으로 다시 적고 `rulesVersion`·`costProfileVersion`의 출처를
   더했다. data-model §10에도 두 행을 더했다.
+
+---
+
+## Phase 20: 004에서 넘겨받은 작업
+
+**Purpose**: spec 004 tasks.md의 T024·T026은 처음부터 "교차 spec: 003 소유"로 적혀 있었고, 2026-09-17 두 담당자가 **003에서
+하기로 합의했다.** 004 tasks.md에는 004의 순서(T025 → T026 → … → T024 → T021)가 남고, 작업과 체크는 여기서 한다. 004 T021(기본
+비용 버전 교체)은 T110이 dev에 들어간 뒤에만 머지할 수 있다 — 화면이 비용 버전을 명시해 보내고 있어야 기본값을 바꿔도 사용자가 본
+조건과 적용 조건이 갈리지 않는다.
+
+- [ ] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 "변동성이 낮은 섹터에 더 나누기")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다
+- [ ] T110 (FE) [004 T026] 003 화면이 `GET /backtests/registry`를 소비해 규칙·비용 버전을 실어 202를 받는다 per 003 FR-010 · T039 · T059 · 004 FR-028 — 004 T026의 네 가지는 B06에서 이미 구현했다: ① 고른 전략의 `REGISTERED` 행 `rulesVersion`을 싣고 `PENDING_DECISION`이면 막는다(T039 004 결정) ② `costProfileVersion`을 받은 `defaultCostProfile.version`으로 명시한다(T105) ③ 409를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다(T104) ④ 임시 비용 문구는 `defaultCostProfile.provisional`로 켠다(T065 통로). 남은 일: (a) 004 T025(`feat(be)/326-backtest-registry`, `S15P21E205-326`)가 머지되면 origin/dev를 받고 `defaultAnalysisSupport`를 `connectedAnalysisSupport`로 바꾼다(T107 메모) (b) 로컬 백엔드에서 '분석하기'가 registry의 버전을 실어 202를 받고 임시 비용 문구가 registry 값으로 켜지는지 확인한다 — 이것이 004 T026의 완료 기준이다. 머지 뒤 004 담당자에게 T021을 진행해도 된다고 알린다
+  - **구현 메모 (2026-09-17, B06 브랜치)**: T025 브랜치의 `BacktestRegistryResponse`를 읽다가 **비용 수치 네 칸이 문자열 decimal(`"0.0000"`, `NUMERIC(8,4)`)**인 것을 확인했다. 화면의 `readBacktestRegistry`는 숫자만 받아, 그대로 머지되면 응답 전체를 읽지 못해 '분석하기'가 막혔을 것이다. 문자열 decimal을 수로 읽고(음수·지수 표기·단위가 붙은 글은 거부), 숫자로 와도 받게 고쳤다. 규칙 행의 `status`는 서버 enum 이름 그대로 문자열이라 기존 비교(`'REGISTERED'`·`'PENDING_DECISION'`)가 맞는다
