@@ -118,6 +118,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("본문 값의 형식이 틀리면 details.fields에 그 위치를 싣고 파서 메시지는 싣지 않는다")
+    void unreadableValueReportsItsPath() throws Exception {
+        mockMvc.perform(
+                        post("/test/validation-many")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\": \"a\", \"code\": {\"nested\": 1}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.error.details.fields[0].field").value("code"))
+                .andExpect(jsonPath("$.error.details.fields[0].message").value("형식이 맞지 않는 값입니다"));
+    }
+
+    @Test
     @DisplayName("경로 변수 타입 불일치는 500이 아니라 400으로 응답한다")
     void pathVariableTypeMismatch() throws Exception {
         mockMvc.perform(get("/test/number/abc"))

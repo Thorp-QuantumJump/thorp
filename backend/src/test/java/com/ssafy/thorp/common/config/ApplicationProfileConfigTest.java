@@ -2,6 +2,7 @@ package com.ssafy.thorp.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
@@ -189,6 +190,8 @@ class ApplicationProfileConfigTest {
                                                     .getProperty("thorp.learning.admin-user-ids"))
                                     .isEqualTo("12,34");
                         });
+        // 실행 환경에 같은 이름의 변수가 있으면 자리표시자가 풀려 "기본값 없음"을 확인할 수 없다.
+        assumeTrue(System.getenv("THORP_LEARNING_ADMIN_USER_IDS") == null);
         contextRunner
                 .withPropertyValues("spring.profiles.active=prod")
                 .run(

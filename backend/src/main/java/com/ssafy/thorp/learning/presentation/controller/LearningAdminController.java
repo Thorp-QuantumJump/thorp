@@ -39,8 +39,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <p><b>모든 메서드가 {@link LearningAdminAccess#requireAdminUserId()}로 시작한다.</b> 비로그인은 {@code
  * SecurityConfig}가 먼저 401로 막고, 관리 권한이 없으면 404다. 상태 변경 요청의 CSRF는 기존 보안 설정이 403으로 막는다.
  *
- * <p>요청 본문 검증(400)은 메서드 본문보다 먼저 돈다. 그래서 권한 없는 계정이 틀린 본문을 보내면 404가 아니라 400을 받는다. 경로가 있다는 사실이 그만큼
- * 드러나지만, 허용되지 않는 메서드의 405도 같은 사실을 알리므로 여기서 더 막지 않는다.
+ * <p>권한 판정은 {@code LearningAdminWebConfig}의 인터셉터가 요청 본문 검증보다 먼저 한 번 더 한다. 그래서 권한 없는 계정은 본문이 틀려도
+ * 404를 받는다. 메서드 첫 줄의 호출은 게시 기록에 남길 사용자 식별자를 얻는 자리이기도 하다.
  */
 @RestController
 @RequestMapping("/admin/learning")

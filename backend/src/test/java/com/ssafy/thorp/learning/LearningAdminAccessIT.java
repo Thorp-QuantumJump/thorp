@@ -114,7 +114,25 @@ class LearningAdminAccessIT extends PostgresTestSupport {
 
             assertThat(body.get("success").asBoolean()).isFalse();
             assertThat(body.at("/error/code").asText()).isEqualTo("RESOURCE_NOT_FOUND");
-            assertThat(body.path("data").path("admin").isMissingNode()).isTrue();
+            assertThat(body.get("data").isNull()).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("권한 없는 계정이 틀린 본문을 보내도 400과 필드 목록이 아니라 404다 (research R6)")
+    void nonAdminWithInvalidBodyGetsNotFound() throws Exception {
+        for (String url : List.of(ARTICLE, "/admin/learning/articles", ARTICLE + "/publish")) {
+            MockHttpServletRequestBuilder request = url.equals(ARTICLE) ? put(url) : post(url);
+            JsonNode body =
+                    call(
+                            request.contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"blocks\":[{\"type\":\"video\"}]}")
+                                    .with(Requesters.as(NOT_ADMIN))
+                                    .with(csrf()),
+                            404);
+
+            assertThat(body.at("/error/code").asText()).isEqualTo("RESOURCE_NOT_FOUND");
+            assertThat(body.at("/error/details").isMissingNode()).isTrue();
         }
     }
 

@@ -1,5 +1,7 @@
 package com.ssafy.thorp.common.web.advice;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.common.web.response.ApiResponse;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.validation.FieldError;
@@ -116,6 +119,57 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(
                         ApiResponse.fail(
                                 ErrorResponse.of(ErrorCode.INVALID_INPUT, message, details)));
+    }
+
+    /**
+     * 본문을 읽지 못했다. JSON 매핑 단계에서 위치를 알 수 있으면(알 수 없는 블록 {@code type}, 숫자 자리의 문자열 등) {@code
+     * details.fields}에 그 위치를 싣는다. 파서 메시지는 내부 정보가 섞일 수 있어 싣지 않고 고정 문장만 쓴다. 위치를 모르면(깨진 JSON) 공통 출구로
+     * 보낸다.
+     */
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+        if (ex.getCause() instanceof JsonMappingException mapping && !mapping.getPath().isEmpty()) {
+            String field = fieldPath(mapping.getPath());
+            String message =
+                    mapping instanceof InvalidTypeIdException ? "알 수 없는 종류입니다" : "형식이 맞지 않는 값입니다";
+            log.warn(
+                    "Unreadable request body: field={}, type={}",
+                    field,
+                    mapping.getClass().getSimpleName());
+            return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())
+                    .body(
+                            ApiResponse.fail(
+                                    ErrorResponse.of(
+                                            ErrorCode.INVALID_INPUT,
+                                            field + ": " + message,
+                                            Map.of(
+                                                    "fields",
+                                                    List.of(
+                                                            Map.of(
+                                                                    "field", field, "message",
+                                                                    message))))));
+        }
+        return handleExceptionInternal(ex, null, headers, status, request);
+    }
+
+    /** Jackson 경로를 Bean Validation 필드 표기({@code blocks[5].text})와 같은 모양으로 바꾼다. */
+    private static String fieldPath(List<JsonMappingException.Reference> path) {
+        StringBuilder field = new StringBuilder();
+        for (JsonMappingException.Reference reference : path) {
+            if (reference.getFieldName() != null) {
+                if (!field.isEmpty()) {
+                    field.append('.');
+                }
+                field.append(reference.getFieldName());
+            } else if (reference.getIndex() >= 0) {
+                field.append('[').append(reference.getIndex()).append(']');
+            }
+        }
+        return field.toString();
     }
 
     /**

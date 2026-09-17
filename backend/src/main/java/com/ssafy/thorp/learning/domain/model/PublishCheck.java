@@ -9,6 +9,7 @@ import com.ssafy.thorp.learning.domain.model.PublishCheckRules.ForbiddenGroup;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -30,7 +31,8 @@ import java.util.regex.Pattern;
  */
 public final class PublishCheck {
 
-    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern WHITESPACE =
+            Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
 
     private PublishCheck() {}
 
@@ -50,9 +52,14 @@ public final class PublishCheck {
         return new PublishCheckResult(failures);
     }
 
-    /** 공백 문자 연속을 공백 하나로 줄인다. 금지 표현은 이렇게 줄인 문자열에서 찾는다. */
+    /**
+     * 호환 문자를 표준 문자로 바꾸고(NFKC) 공백 문자 연속을 공백 하나로 줄인다. 금지 표현과 결과성 숫자는 이렇게 바꾼 문자열에서 찾는다.
+     *
+     * <p>문서에서 붙여 넣은 줄바꿈 없는 공백(U+00A0)·전각 공백과 전각 숫자·{@code ％}가 검사를 비켜 가지 않게 하려는 것이다. 걸린 문자열({@code
+     * matched})도 바꾼 뒤의 값이다.
+     */
     public static String collapseWhitespace(String text) {
-        return WHITESPACE.matcher(text).replaceAll(" ");
+        return WHITESPACE.matcher(Normalizer.normalize(text, Normalizer.Form.NFKC)).replaceAll(" ");
     }
 
     private static void requiredFields(LearningArticle draft, List<PublishCheckFailure> failures) {
@@ -62,7 +69,11 @@ public final class PublishCheck {
         if (draft.question().isBlank()) {
             failures.add(fail(Check.REQUIRED_FIELDS, CheckLocation.question(), "질문이 비어 있습니다."));
         }
-        if (draft.blocks().stream().noneMatch(ParagraphBlock.class::isInstance)) {
+        if (draft.blocks().stream()
+                .noneMatch(
+                        block ->
+                                block instanceof ParagraphBlock paragraph
+                                        && !paragraph.text().isBlank())) {
             failures.add(fail(Check.REQUIRED_FIELDS, CheckLocation.body(), "본문에 문단이 하나도 없습니다."));
         }
     }

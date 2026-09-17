@@ -363,4 +363,41 @@ class PublishCheckTest {
 
         assertThat(failures).extracting(PublishCheckFailure::matched).containsExactly("추천 비중");
     }
+
+    @Test
+    @DisplayName("줄바꿈 없는 공백·전각 문자로 적어도 금지 표현과 숫자를 찾는다")
+    void compatibilityCharactersAreNormalized() {
+        List<ArticleBlock> blocks = passingBlocks();
+        blocks.set(2, new ParagraphBlock("이것이 추천\u00A0비중이고 수익률은 ３０％다."));
+
+        List<PublishCheckFailure> failures =
+                run(draft("수익과 손실", blocks, example(500, 500), passingTerms()));
+
+        assertThat(failures)
+                .extracting(PublishCheckFailure::check, PublishCheckFailure::matched)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(Check.FORBIDDEN_EXPRESSION, "추천 비중"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                Check.RESULT_NUMBER_OUTSIDE_HYPOTHETICAL, "30%"));
+    }
+
+    @Test
+    @DisplayName("'50:50 배분'·'제1원칙'은 결과성 숫자로 걸리지 않는다")
+    void allocationWordsAreNotResultNumbers() {
+        List<ArticleBlock> blocks = passingBlocks();
+        blocks.set(2, new ParagraphBlock("50:50 배분과 60:40배분은 제1원칙을 따른다."));
+
+        assertThat(run(draft("수익과 손실", blocks, example(500, 500), passingTerms()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("공백만 담은 문단은 문단으로 세지 않는다")
+    void blankParagraphDoesNotCount() {
+        List<ArticleBlock> blocks = passingBlocks();
+        blocks.set(0, new ParagraphBlock(" "));
+        blocks.set(2, new ParagraphBlock("  "));
+
+        assertOnly(
+                draft("수익과 손실", blocks, example(500, 500), passingTerms()), Check.REQUIRED_FIELDS);
+    }
 }

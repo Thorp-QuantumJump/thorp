@@ -260,6 +260,7 @@ class LearningAdminApiIT extends PostgresTestSupport {
                             assertThat(item.get("status").asText()).isEqualTo("DRAFT");
                             assertThat(item.get("draftVersion").asInt()).isZero();
                             assertThat(item.get("hasUnpublishedChanges").asBoolean()).isFalse();
+                            assertThat(item.get("needsUpdate").isBoolean()).isTrue();
                             assertThat(item.get("needsUpdate").asBoolean()).isFalse();
                             assertThat(item.get("lastPublication").isNull()).isTrue();
                         });
@@ -398,7 +399,73 @@ class LearningAdminApiIT extends PostgresTestSupport {
         JsonNode error = adminError(saveDraft(body), 400);
 
         assertThat(error.get("code").asText()).isEqualTo("INVALID_INPUT");
+        assertThat(error.at("/details/fields"))
+                .extracting(field -> field.get("field").asText())
+                .containsExactly("blocks[5]");
         assertThat(adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
+    }
+
+    @Test
+    @DisplayName("한 요청 안의 중복 termId는 400이고 위치가 terms다")
+    void duplicateTermIdInRequestIsRejected() throws Exception {
+        ObjectNode body = goodDraft(0);
+        ((ArrayNode) body.get("terms"))
+                .addObject()
+                .put("termId", "max-drawdown")
+                .put("label", "또 하나")
+                .put("sentence", "겹친 용어다.");
+
+        JsonNode error = adminError(saveDraft(body), 400);
+
+        assertThat(error.at("/details/fields"))
+                .extracting(field -> field.get("field").asText())
+                .containsExactly("terms");
+    }
+
+    @Test
+    @DisplayName("옛 버전에 다른 글의 termId까지 실으면 LEARNING_DRAFT_CHANGED가 먼저다")
+    void staleVersionIsReportedBeforeTakenTermId() throws Exception {
+        adminData(saveDraft(goodDraft(0)), 200);
+        ObjectNode body = goodDraft(0);
+        ((ArrayNode) body.get("terms"))
+                .addObject()
+                .put("termId", "rebalancing")
+                .put("label", "리밸런싱")
+                .put("sentence", "비중을 되돌리는 일이다.");
+
+        assertThat(adminError(saveDraft(body), 409).get("code").asText())
+                .isEqualTo("LEARNING_DRAFT_CHANGED");
+    }
+
+    /**
+     * 글 A가 초안에서 뺐지만 아직 공개 중인 용어를 글 B가 가져가지 못한다. 막지 않으면 B의 게시가 A의 게시 색인 행을 덮어써 A 본문의 도움말이 B의 문장을
+     * 가리키고, B를 게시 취소하면 A가 공개 중인데도 도움말이 사라진다(SC-003).
+     */
+    @Test
+    @DisplayName("다른 글이 게시 중인 termId는 초안에서 빠졌어도 409 LEARNING_TERM_ID_TAKEN이다")
+    void publishedTermIdCannotBeTakenByAnotherArticle() throws Exception {
+        seedFullSectorMap();
+        adminData(saveDraft(goodDraft(0)), 200);
+        adminData(publish(1), 200);
+        ObjectNode withoutMaxDrawdown = goodDraft(1);
+        ((ArrayNode) withoutMaxDrawdown.get("terms")).remove(0);
+        adminData(saveDraft(withoutMaxDrawdown), 200);
+
+        ObjectNode other = goodDraft(0);
+        ((ArrayNode) other.get("terms")).remove(1);
+        JsonNode error =
+                adminError(
+                        put("/admin/learning/articles/backtest")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(other.toString()),
+                        409);
+
+        assertThat(error.get("code").asText()).isEqualTo("LEARNING_TERM_ID_TAKEN");
+        assertThat(error.at("/details/termId").asText()).isEqualTo("max-drawdown");
+        assertThat(error.at("/details/ownerArticleId").asText()).isEqualTo(ARTICLE);
+        JsonNode term = publicCall("/learning/terms/max-drawdown", 200).get("data");
+        assertThat(term.get("articleId").asText()).isEqualTo(ARTICLE);
+        assertThat(term.get("sentence").asText()).isEqualTo(GOOD_SENTENCE);
     }
 
     @Test
@@ -514,6 +581,7 @@ class LearningAdminApiIT extends PostgresTestSupport {
         JsonNode listed = adminListItem(ARTICLE);
         assertThat(listed.get("status").asText()).isEqualTo("PUBLISHED");
         assertThat(listed.get("hasUnpublishedChanges").asBoolean()).isFalse();
+        assertThat(listed.get("needsUpdate").isBoolean()).isTrue();
         assertThat(listed.get("needsUpdate").asBoolean()).isFalse();
         assertThat(listed.at("/lastPublication/action").asText()).isEqualTo("PUBLISH");
         assertThat(listed.at("/lastPublication/revisionNo").asInt()).isEqualTo(1);

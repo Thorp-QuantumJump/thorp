@@ -139,9 +139,11 @@ public class LearningAdminService {
     /**
      * 초안을 통째로 바꾼다. 공개 내용은 바뀌지 않는다(data-model §7).
      *
+     * <p>판 번호를 먼저 본다. 옛 화면에서 온 요청이면 다른 실패보다 "새로 불러오라"가 먼저다.
+     *
      * @throws ArticleNotFoundException 없는 글
-     * @throws TermIdTakenException 요청의 {@code termId}를 다른 글이 쓰고 있다
      * @throws DraftChangedException 읽은 뒤 다른 곳에서 초안이 저장됐다
+     * @throws TermIdTakenException 요청의 {@code termId}를 다른 글이 초안에 두었거나 게시 중이다
      */
     public AdminArticleResult saveDraft(String articleId, SaveDraftCommand command) {
         ArticleId id = parseArticleId(articleId);
@@ -149,9 +151,13 @@ public class LearningAdminService {
                 articleRepository
                         .findByArticleKeyForUpdate(id)
                         .orElseThrow(ArticleNotFoundException::new);
+        if (!article.isDraftVersion(command.expectedDraftVersion())) {
+            throw new DraftChangedException(article.draftVersion());
+        }
         for (LearningTerm term : command.terms()) {
             termRepository
                     .findOwnerArticleKey(term.termId())
+                    .or(() -> publishedTermRepository.findOwnerArticleKey(term.termId()))
                     .filter(owner -> !owner.equals(id))
                     .ifPresent(
                             owner -> {
@@ -207,6 +213,8 @@ public class LearningAdminService {
                                 () ->
                                         new IllegalStateException(
                                                 "publish check passed without a sector map"));
+
+        requireTermsNotPublishedElsewhere(id, article.terms());
 
         Instant now = now();
         int revisionNo =
@@ -345,6 +353,24 @@ public class LearningAdminService {
         }
         return example.sectors().stream()
                 .anyMatch(sector -> !openSectorCodes.get().contains(sector.code()));
+    }
+
+    /**
+     * 다른 글이 게시 중인 {@code termId}를 이 글이 가져가지 못하게 한다. 초안 용어의 유일성만 보면, 글 A가 초안에서 뺐지만 아직 공개 중인 용어를 글 B가
+     * 넣고 게시해 A의 도움말을 가져간다.
+     *
+     * @throws TermIdTakenException 다른 글이 그 용어를 게시 중이다
+     */
+    private void requireTermsNotPublishedElsewhere(ArticleId id, List<LearningTerm> terms) {
+        for (LearningTerm term : terms) {
+            publishedTermRepository
+                    .findOwnerArticleKey(term.termId())
+                    .filter(owner -> !owner.equals(id))
+                    .ifPresent(
+                            owner -> {
+                                throw new TermIdTakenException(term.termId(), owner);
+                            });
+        }
     }
 
     private Integer publishedRevisionNo(ArticleId id) {
