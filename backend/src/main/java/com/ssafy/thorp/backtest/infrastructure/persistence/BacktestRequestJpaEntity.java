@@ -46,7 +46,8 @@ public class BacktestRequestJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private Long runId;
 
-    @Column(nullable = false)
+    /** null = 비로그인 요청(spec 005 B01). */
+    @Column(nullable = true)
     private Long requesterId;
 
     @Enumerated(EnumType.STRING)
@@ -66,6 +67,14 @@ public class BacktestRequestJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean stoppedRun;
 
+    /** 결과 공개 토큰(spec 005 FR-019). 발급 뒤 바뀌지 않는다. */
+    @Column(length = 32, nullable = false, unique = true, updatable = false)
+    private String publicToken;
+
+    /** null = 만료 없음(로그인 요청). */
+    @Column(updatable = false)
+    private Instant publicTokenExpiresAt;
+
     /** backtestId에 쓸 날짜 접두. 저장 전 한 번 예약하고 PK와의 결합은 PrePersist가 한다. */
     @Transient private LocalDate backtestIdDate;
 
@@ -81,7 +90,9 @@ public class BacktestRequestJpaEntity extends BaseEntity {
             Long retryOfRequestId,
             Instant cancelledAt,
             LocalDate cancelledLastTradingDate,
-            boolean stoppedRun) {
+            boolean stoppedRun,
+            String publicToken,
+            Instant publicTokenExpiresAt) {
         this.id = id;
         this.backtestId = backtestId;
         this.runId = runId;
@@ -92,6 +103,8 @@ public class BacktestRequestJpaEntity extends BaseEntity {
         this.cancelledAt = cancelledAt;
         this.cancelledLastTradingDate = cancelledLastTradingDate;
         this.stoppedRun = stoppedRun;
+        this.publicToken = publicToken;
+        this.publicTokenExpiresAt = publicTokenExpiresAt;
     }
 
     /** 저장 직전 한 번만 외부 식별자를 예약한다. 이미 값이 있으면 거부한다. */
@@ -155,5 +168,13 @@ public class BacktestRequestJpaEntity extends BaseEntity {
 
     public boolean isStoppedRun() {
         return stoppedRun;
+    }
+
+    public String getPublicToken() {
+        return publicToken;
+    }
+
+    public Instant getPublicTokenExpiresAt() {
+        return publicTokenExpiresAt;
     }
 }

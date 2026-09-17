@@ -9,7 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
- * 요청자 식별. spec 004 R-12는 모든 백테스트 엔드포인트에 인증을 요구하고 {@code backtest_request.requester_id}는 NOT NULL이다.
+ * 요청자 식별. spec 004 R-12는 백테스트 엔드포인트에 인증을 요구한다. 예외는 접수 하나다 — spec 005 B01부터 비로그인 접수를 받아 {@code
+ * backtest_request.requester_id}가 비어 있을 수 있고, 그 결과는 공개 토큰으로만 연다.
  *
  * <p>인증 주체는 spec 014 로그인이 세션에 넣어 둔 {@code users.id}다({@code
  * UsernamePasswordAuthenticationToken.authenticated(String.valueOf(user.getId()), …)}). 그 형태가 아니면

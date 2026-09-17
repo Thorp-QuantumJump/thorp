@@ -142,6 +142,35 @@ class ExecutionLimitApiIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("비로그인 요청은 사용자별 한도에 걸리지 않고 전체 한도만 센다 — 요청자를 셀 열쇠가 없다(spec 005 T012)")
+    void anonymousRequestsAreNotCountedAgainstAPerUserLimit() {
+        // 사용자별 상한(2)을 넘는 세 건이다. 시작일은 다른 테스트와 겹치지 않게 20일대를 쓴다.
+        for (int day = 20; day <= 22; day++) {
+            CreateBacktestCommand anonymous = request(0L, day, ExecutionType.SINGLE);
+            anonymous =
+                    new CreateBacktestCommand(
+                            null,
+                            anonymous.executionType(),
+                            anonymous.mappingVersion(),
+                            anonymous.items(),
+                            anonymous.strategyId(),
+                            anonymous.rulesVersion(),
+                            anonymous.registryVersion(),
+                            anonymous.parameters(),
+                            anonymous.start(),
+                            anonymous.end(),
+                            anonymous.initialCash(),
+                            anonymous.costProfileVersion(),
+                            anonymous.evaluationSplitVersion(),
+                            anonymous.warmupTradingDays(),
+                            anonymous.scenario(),
+                            anonymous.scenarioParams());
+
+            assertThat(backtestService.create(anonymous).publicToken()).matches("^[0-9a-f]{32}$");
+        }
+    }
+
+    @Test
     @DisplayName("탐색 묶음은 사용자별 한도에 걸리지 않는다 — 적재량은 007 의 발행 창이 통제한다")
     void searchBundlesAreNotCountedAgainstThePerUserLimit() {
         long user = newUser("b");

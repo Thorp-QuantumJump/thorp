@@ -9,7 +9,7 @@ import java.time.Instant;
  *
  * @param kind {@link Kind}
  * @param reason 접수 거절은 {@code PER_USER}·{@code TOTAL}, 정지는 {@code EXECUTION_LIMIT}
- * @param requesterId 거절에만 있다
+ * @param requesterId 거절에만 있다. 비로그인 요청의 거절이면 거절이어도 null 이다(spec 005 B01)
  * @param runId 정지에만 있다
  */
 public record LimitHitRecord(

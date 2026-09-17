@@ -145,4 +145,32 @@ class ExecutionLimitPolicyTest {
         order.verify(runRepository).lockAdmission("backtest-admission:total");
         order.verify(runRepository).countQueuedSingle();
     }
+
+    @Test
+    @DisplayName("비로그인 요청은 사용자별 한도를 건너뛰고 전체 한도만 센다(spec 005 T012)")
+    void anonymousRequestCountsOnlyTheTotal() {
+        when(runRepository.countQueuedSingle()).thenReturn(10L);
+
+        assertThatCode(() -> policyWith(5, 50, false).requireAdmission(null, ExecutionType.SINGLE))
+                .doesNotThrowAnyException();
+
+        verify(runRepository, never()).countQueuedSingleByRequester(anyLong());
+        verify(runRepository).lockAdmission("backtest-admission:total");
+        verify(runRepository).countQueuedSingle();
+    }
+
+    @Test
+    @DisplayName("비로그인 요청도 전체 한도에는 막힌다 — 상한 장치 없이 열지 않는다(원칙 IX)")
+    void anonymousRequestIsStillBoundByTheTotal() {
+        when(runRepository.countQueuedSingle()).thenReturn(50L);
+
+        assertThatThrownBy(
+                        () -> policyWith(5, 50, false).requireAdmission(null, ExecutionType.SINGLE))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(
+                        exc ->
+                                assertThat(((BusinessException) exc).getDetails())
+                                        .containsEntry("reason", "TOTAL"));
+        verify(metrics).limitRejected(null, ExecutionType.SINGLE, "TOTAL");
+    }
 }

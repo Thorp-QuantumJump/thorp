@@ -61,3 +61,9 @@ thorp:
     # 실행시간 상한 5분. 로컬에서 한도 도달 → PARTIAL 전이를 기다릴 수 있는 길이다.
     time-limit-seconds: 300
     consecutive-failure-limit: 3
+  result:
+    # 결과 공개 열람(spec 005) 로컬 개발값. 만료 화면(410)을 손으로 확인하기 쉽게 유효 시간을 짧게 둔다.
+    public-token-ttl: PT1H
+    expiry-sweep-interval: PT1M
+    expiry-sweep-batch-size: 100
+    trades-page-size: 100

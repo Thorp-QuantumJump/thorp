@@ -35,8 +35,11 @@
 응답 `202 Accepted`:
 
 ```json
-{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": true}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.1.0", "evaluationSplit": "SPLIT-1"}}
+{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "PROVISIONAL-DEMO-1", "provisional": true}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.1.0", "evaluationSplit": "SPLIT-1"}, "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e"}
 ```
+
+- **로그인하지 않아도 접수한다**(spec 005 B01). 요청자 없이 저장되고(`backtest_request.requester_id` NULL, R-12가 열어 둔 경로) 결과는 `publicToken`으로만 연다. 취소·재시도·조회(`/backtests/{backtestId}/**`)는 그대로 소유자 경로라 비로그인은 401이다. 비로그인 요청은 사용자별 대기 한도를 셀 수 없어 전체 대기 한도만 받는다(이 판단은 PD-06 담당이 실측 뒤 다시 본다).
+- `publicToken`(spec 005 FR-019): 요청마다 발급하는 소문자 16진 32자. NEW·JOINED·REUSED 모두 새로 받는다. 로그인 요청은 만료가 없고, 비로그인 요청은 접수 시각 + 유효 시간(spec 005 PD-23 확정 전 임시값)에 닫힌다.
 
 - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).
 - `versions`(FR-028, data-model `backtest_run.versions`): `rules`·`costProfile`은 `{version, provisional}`이고 `provisional=true`는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 표시다. `scenarioRules`는 `TARGET_RISK`일 때만(`TARGET_RISK_OVERLAY/1`). 결과를 낸 워커의 자기 보고 `worker`는 결과가 저장된 뒤 상세에만 붙는다(T018).
@@ -69,13 +72,13 @@
 
 ## POST /backtests/{backtestId}/retry
 
-`202` 새 `{backtestId, status: QUEUED, resultSource, retryOf}`. 원 요청이 `FAILED` 또는 `CANCELLED`일 때만. 아니면 `409 NOT_RETRYABLE`. 같은 조건이므로 동일 버전 규칙이 그대로 적용된다(다른 사용자가 이미 완료했으면 `REUSED`).
+`202` 새 `{backtestId, status: QUEUED, resultSource, retryOf, publicToken}`(`publicToken`은 새 요청의 것, spec 005). 원 요청이 `FAILED` 또는 `CANCELLED`일 때만. 아니면 `409 NOT_RETRYABLE`. 같은 조건이므로 동일 버전 규칙이 그대로 적용된다(다른 사용자가 이미 완료했으면 `REUSED`).
 
 ## GET /backtests/{backtestId}/timeseries · /trades · /positions · /weights
 
 - 현행 세 개 유지. `409 RESULT_NOT_READY`(QUEUED·RUNNING), `409 BACKTEST_FAILED`(FAILED). `CANCELLED`는 `200`에 부분 구간 데이터 + `partial=true`. 먼저 취소한 요청(스냅샷 있음)은 공용 실행이 끝난 뒤 `cancelled_last_trading_date`까지만 날짜로 잘라 준다(읽기 필터, 재계산 없음). **공용 실행이 아직 종결 전이면 `409 RESULT_NOT_READY`**(상세 결과가 저장되기 전), **공용 실행이 `FAILED`로 끝나면 `409 BACKTEST_FAILED`**(부분 결과를 확보하지 못함). 완료한 거래일이 없는 취소 요청(스냅샷 NULL)은 `409 NO_PARTIAL_RESULT`. `/weights`·`/trades`·`/positions`·`/exceptions`도 같다.
 - 신규 `GET /backtests/{backtestId}/weights`: `[{date, target:{instrumentId: weight}, actual:{…}, weightError}]`, `weightsSource: USER|COMPUTED`.
-- `/trades` 항목에 `reason`(`REBALANCE` `HALT_DEFERRED` `LIQUIDATION`)·`plannedDate` 추가. `/timeseries` 항목에 `cashFlows[{type: DISTRIBUTION, instrumentId, amount}]` 추가.
+- `/trades` 항목에 `reason`(`REBALANCE` `HALT_DEFERRED` `LIQUIDATION`)·`plannedDate` 추가. 질의 `from`·`to`(선택, `YYYY-MM-DD`, 양 끝 포함, spec 005 T015): 진입 또는 청산이 그 기간 안인 거래만. `from > to`는 400 `INVALID_INPUT`. `/timeseries` 항목에 `cashFlows[{type: DISTRIBUTION, instrumentId, amount}]` 추가.
 - `GET /backtests/{backtestId}/exceptions`: `[{date, instrumentId, kind, rule, action}]` — 005가 "결과 옆 한 문장"에 쓰는 원천.
 
 ## GET /internal/execution-metrics?type=&from=&to= (운영자)

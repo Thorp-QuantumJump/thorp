@@ -25,7 +25,9 @@
 | id | BIGINT PK (seq) | |
 | backtest_id | VARCHAR(32) UNIQUE NOT NULL | `BT-{yyyyMMdd}-{id %06d}` (현행 규칙 유지, 사용자에게 보이는 식별자) |
 | run_id | BIGINT FK → backtest_run NOT NULL | 합류·재사용 시 기존 run |
-| requester_id | BIGINT FK → users NOT NULL | 취소·재시도 권한 주체. 계산 기록에는 복사하지 않는다 |
+| requester_id | BIGINT FK → users NULL 허용 | 취소·재시도 권한 주체. 계산 기록에는 복사하지 않는다. NULL = 비로그인 요청(spec 005 B01, 결과는 공개 토큰으로만 연다) |
+| public_token | VARCHAR(32) NOT NULL UNIQUE | 결과 공개 토큰(spec 005 FR-019). 소문자 16진 32자 |
+| public_token_expires_at | TIMESTAMPTZ NULL | 비로그인 요청만 채운다. `requester_id IS NOT NULL OR public_token_expires_at IS NOT NULL` 제약 |
 | execution_type | VARCHAR(20) NOT NULL | `SINGLE` · `SEARCH_BUNDLE` · `REGIME_SECTOR` · `REGIME_TOTAL` (007·010이 지정) |
 | result_source | VARCHAR(10) NOT NULL | `NEW` · `JOINED` · `REUSED` |
 | retry_of_request_id | BIGINT FK → backtest_request NULL | 재시도 원본 |

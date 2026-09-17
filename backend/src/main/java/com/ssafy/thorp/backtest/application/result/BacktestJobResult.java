@@ -15,6 +15,7 @@ import java.util.Map;
  * @param resultSource NEW 새 계산 / JOINED 진행 중 실행에 합류 / REUSED 완료 결과 재사용
  * @param effectiveStart 워밍업 이후 실제 평가 시작일. 요청 시작일보다 뒤다
  * @param retryOf 재시도라면 원본 요청의 backtestId. 접수(T005) 경로에서는 null 이고 응답에도 싣지 않는다
+ * @param publicToken 이 요청의 결과 공개 토큰(spec 005 FR-019). 재시도는 새 요청이라 원본과 다른 토큰이다
  */
 public record BacktestJobResult(
         String backtestId,
@@ -23,7 +24,8 @@ public record BacktestJobResult(
         LocalDate effectiveStart,
         LocalDate effectiveEnd,
         Map<String, Object> versions,
-        String retryOf) {
+        String retryOf,
+        String publicToken) {
 
     /** 재시도 응답용. 접수 결과 자체는 원본을 알지 못하므로 재시도 유스케이스가 붙인다. */
     public BacktestJobResult withRetryOf(String originalBacktestId) {
@@ -34,7 +36,8 @@ public record BacktestJobResult(
                 effectiveStart,
                 effectiveEnd,
                 versions,
-                originalBacktestId);
+                originalBacktestId,
+                publicToken);
     }
 
     public static BacktestJobResult of(BacktestRequest request, BacktestRun run) {
@@ -45,6 +48,7 @@ public record BacktestJobResult(
                 run.getPlan().effectiveStart(),
                 run.getPlan().effectiveEnd(),
                 run.getPlan().versions(),
-                null);
+                null,
+                request.getPublicToken().value());
     }
 }

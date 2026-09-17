@@ -190,8 +190,49 @@ class FlywayMigrationTest extends PostgresTestSupport {
                         "cancelled_at",
                         "cancelled_last_trading_date",
                         "stopped_run",
+                        "public_token",
+                        "public_token_expires_at",
                         "created_at",
                         "updated_at");
+    }
+
+    @Test
+    @DisplayName(
+            "backtest_request 가 비로그인 요청과 공개 토큰을 받는다 — 요청자 nullable·토큰 유일·익명 만료 필수 (spec 005 B01)")
+    void backtestRequestAcceptsAnonymousRequestsWithPublicToken() {
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT is_nullable FROM information_schema.columns"
+                                        + " WHERE table_name = 'backtest_request'"
+                                        + " AND column_name = ?",
+                                String.class,
+                                "requester_id"))
+                .isEqualTo("YES");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT is_nullable FROM information_schema.columns"
+                                        + " WHERE table_name = 'backtest_request'"
+                                        + " AND column_name = ?",
+                                String.class,
+                                "public_token"))
+                .isEqualTo("NO");
+
+        List<String> constraints =
+                jdbcTemplate.queryForList(
+                        "SELECT conname FROM pg_constraint"
+                                + " WHERE conrelid = 'backtest_request'::regclass",
+                        String.class);
+        assertThat(constraints)
+                .contains(
+                        "ck_backtest_request_public_expiry",
+                        "ck_backtest_request_public_token_format");
+
+        List<String> indexes =
+                jdbcTemplate.queryForList(
+                        "SELECT indexname FROM pg_indexes WHERE tablename = 'backtest_request'",
+                        String.class);
+        assertThat(indexes)
+                .contains("uk_backtest_request_public_token", "idx_backtest_request_public_expiry");
     }
 
     @Test

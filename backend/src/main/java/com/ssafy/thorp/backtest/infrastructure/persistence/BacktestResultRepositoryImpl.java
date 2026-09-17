@@ -13,9 +13,11 @@ import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;
 import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;
 import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.ResultPerformance;
+import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;
 import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -165,9 +167,17 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                         query.instrumentId(),
                         query.status(),
                         visibleBefore,
+                        startOfExchangeDay(query.from()),
+                        // 끝 날짜를 포함하므로 다음 날 0시 전까지다.
+                        query.to() == null ? null : startOfExchangeDay(query.to().plusDays(1)),
                         PageRequest.of(query.page(), query.size()))
                 // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다
                 .map(BacktestTradeJpaEntity::getDetail);
+    }
+
+    /** 거래소 현지 날짜의 0시. 응답의 {@code entryDate}가 같은 기준으로 날짜를 자른다. */
+    private static Instant startOfExchangeDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay(ExecutionPolicy.EXCHANGE_ZONE).toInstant();
     }
 
     /** {@code jsonb}에 문자열로 저장된 decimal을 값과 scale 그대로 되돌린다. */

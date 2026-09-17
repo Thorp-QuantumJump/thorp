@@ -171,6 +171,18 @@ thorp:
     # 007은 접수 즉시 QUEUED를 반환하고 진행 상태를 폴링하는 비동기 설계라 요청이 막히지는 않는다.
     # 이 값은 "언제 남은 후보를 포기할지"를 정하는 자원 한도다.
     time-limit-seconds: 120
+  result:
+    # 결과 공개 열람(spec 005 T004). **네 값 모두 임시값이다** — 유효 시간은 PD-23, 거래 내역 페이지 크기는
+    # R-11 이 정한다. 확정 전까지 수치는 이 파일에만 두고 spec 문서에 적지 않는다.
+    # 네 값이 모두 @NotNull 이라 하나라도 비면 기동에 실패한다(ResultProperties).
+    #
+    # 비로그인 요청의 공개 토큰 유효 시간. 기준은 요청 생성 시각이다(R-03). 로그인 요청은 만료가 없다.
+    public-token-ttl: P7D
+    # 만료된 비로그인 요청을 훑는 주기와 한 번에 지우는 수(B02 정리 작업).
+    expiry-sweep-interval: PT10M
+    expiry-sweep-batch-size: 100
+    # 공개 경로 /results/{token}/trades 의 페이지 크기이자 상한. 004 거래 내역 기본값과 같게 둔다.
+    trades-page-size: 100
 
 server:
   port: 8080

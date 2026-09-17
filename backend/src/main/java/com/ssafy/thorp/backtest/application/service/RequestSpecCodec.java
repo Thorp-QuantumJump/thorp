@@ -70,11 +70,11 @@ final class RequestSpecCodec {
      * 사본을 접수 명령으로 되돌린다. 재시도는 이 명령으로 접수를 <b>다시</b> 탄다 — 그래야 그 사이 전략 등록표가 내려갔거나 자료 버전이 움직인 것을 지금 기준으로
      * 다시 판정한다.
      *
-     * @param requesterId 재시도를 누른 사람. 원 요청자와 같다(관문이 먼저 확인한다)
+     * @param requesterId 재시도를 누른 사람. 원 요청자와 같다(관문이 먼저 확인한다). null = 비로그인 재시도(spec 005 공개 토큰 경로)
      */
     static CreateBacktestCommand toCommand(
             Map<String, Object> spec,
-            long requesterId,
+            Long requesterId,
             ExecutionType executionType,
             String costProfileVersion) {
         if (spec == null || spec.isEmpty()) {

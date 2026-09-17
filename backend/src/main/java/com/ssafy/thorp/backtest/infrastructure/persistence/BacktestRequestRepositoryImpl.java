@@ -2,11 +2,14 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -91,5 +94,24 @@ public class BacktestRequestRepositoryImpl implements BacktestRequestRepository 
     @Override
     public long countActiveByRunId(Long runId) {
         return jpaRepository.countByRunIdAndCancelledAtIsNull(runId);
+    }
+
+    @Override
+    public Optional<BacktestRequest> findByPublicToken(PublicResultToken publicToken) {
+        return jpaRepository
+                .findByPublicToken(publicToken.value())
+                .map(BacktestRequestMapper::toDomain);
+    }
+
+    @Override
+    public List<BacktestRequest> findExpiredAnonymous(Instant now, int limit) {
+        return jpaRepository.findExpiredAnonymous(now, PageRequest.of(0, limit)).stream()
+                .map(BacktestRequestMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void deleteById(long id) {
+        jpaRepository.deleteById(id);
     }
 }
