@@ -21,6 +21,7 @@ export default defineConfig({
       'src/**/*.test.tsx',
       'src/api/*.test.ts',
       'src/auth/**/*.test.ts',
+      'src/components/marketflow/*.test.ts',
       'src/diagnosis/**/*.test.ts',
       'src/marketflow/**/*.test.ts',
       'src/utils/analysisPeriod.test.ts',

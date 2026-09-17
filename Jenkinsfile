@@ -94,9 +94,11 @@ pipeline {
         // 두 빌드가 CPU 를 나눠 쓰면 혼자 돌 때보다 느려지므로 배포(30분)보다 넉넉히 둔다.
         timeout(time: 45, unit: 'MINUTES')
 
-        // disableConcurrentBuilds() 는 두지 않는다. 서로 다른 MR 의 CI 가 동시에 돌 수 있어야
-        // 대기가 줄어든다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를 thorp-ci, thorp-ci@2 로
-        // 나눠 주고, 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로 섞이지 않는다.
+        // disableConcurrentBuilds() 는 두지 않는다. 동시 실행 상한(2개)은 Jenkins 쪽
+        // infra/jenkins/init.groovy.d/20-ci-concurrency.groovy 가 건다. 여기 두면 이 파일이 MR 소스
+        // 브랜치에서 읽히므로, dev 를 반영하지 않은 브랜치가 빌드될 때마다 상한이 그 브랜치의 값으로
+        // 바뀐다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를 thorp-ci, thorp-ci@2 로 나눠 주고,
+        // 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로 섞이지 않는다.
 
         // gradle·ruff·pytest 출력의 ANSI 색상을 콘솔에 그대로 표시한다.
         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에

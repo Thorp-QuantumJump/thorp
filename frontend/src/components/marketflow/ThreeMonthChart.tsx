@@ -2,21 +2,20 @@ import { scaleLinear } from '@visx/scale'
 import { motion, useReducedMotion } from 'motion/react'
 import { useId, useMemo, useState } from 'react'
 import type { IndicatorDisplay } from '@/types/marketFlow'
-import { formatObservation } from './marketFlowFormat'
+import { buildAxisDomain, formatObservation } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 const plot = { width: 640, height: 172, left: 58, right: 622, top: 14, bottom: 146 }
 
-/** 실제 세 관측점만 직선으로 연결한다. 0을 포함한 축, 결측 구간의 단절을 유지한다. */
+/** 실제 세 관측점만 직선으로 연결한다. 축 범위는 buildAxisDomain이 정하고 결측 구간은 잇지 않는다. */
 export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) {
   const reducedMotion = useReducedMotion()
   const descriptionId = useId()
   const [activePoint, setActivePoint] = useState<number | null>(null)
   const chart = useMemo(() => {
     const values = indicator.path.flatMap(({ value }) => value === null ? [] : [value])
-    const min = Math.min(0, ...values)
-    const max = Math.max(0, ...values)
-    const y = scaleLinear({ domain: min === max ? [0, 1] : [min, max], range: [plot.bottom, plot.top], nice: true })
+    const axis = buildAxisDomain(values)
+    const y = scaleLinear({ domain: axis.domain, range: [plot.bottom, plot.top], nice: true })
     const x = (index: number) => plot.left + index * (plot.right - plot.left) / 2
     // M은 새 구간 시작이다. null 양옆의 값을 L로 이어서 보간하지 않는다.
     const path = indicator.path.map((point, index) => {
@@ -24,13 +23,20 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
       const command = index === 0 || indicator.path[index - 1].value === null ? 'M' : 'L'
       return `${command}${x(index)},${y(point.value)}`
     }).join(' ')
-    return { x, y, path, ticks: y.ticks(3), hasValues: values.length > 0 }
+    return { x, y, path, ticks: y.ticks(3), hasValues: values.length > 0, axis }
   }, [indicator.path])
 
   return (
     <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)}>
       <div className={styles.chartCaption} id={descriptionId}>
-        <span>최근 3개월 경로</span><span>0을 포함한 축 · 단위 {indicator.unit}</span>
+        <span>최근 3개월 경로</span>
+        <span>
+          {chart.axis.includesZero
+            ? '0을 포함한 축'
+            /* 0을 뺐으면 축이 어디서 어디까지인지 밝힌다. 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. */
+            : `축 ${formatObservation(chart.axis.domain[0])}~${formatObservation(chart.axis.domain[1])}`}
+          {' · 단위 '}{indicator.unit}
+        </span>
       </div>
       <svg
         viewBox={`0 0 ${plot.width} ${plot.height}`}

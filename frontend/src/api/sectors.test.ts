@@ -1,9 +1,9 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
-import type { SectorCatalog } from '@/types/sector'
+import type { InstrumentProfile, SectorCatalog } from '@/types/sector'
 import { apiClient } from './client'
-import { fetchEvaluationWindow, fetchSectorCatalog, readEvaluationWindow } from './sectors'
+import { fetchEvaluationWindow, fetchInstrumentProfile, fetchSectorCatalog, readEvaluationWindow } from './sectors'
 
 function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {
   return {
@@ -193,6 +193,184 @@ describe('섹터 목록 조회', () => {
     const result = await fetchSectorCatalog()
 
     expect(result).toEqual({ status: 'mapNotReady', message: '준비 중' })
+  })
+})
+
+const profile: InstrumentProfile = {
+  instrumentId: '091160.XKRX',
+  name: 'KODEX 반도체',
+  benchmarkIndex: 'KRX 반도체',
+  indexMethodologySummary: 'KRX 반도체 지수를 추종하며 시가총액 가중으로 담는다.',
+  listedOn: '2006-06-27',
+  manager: '삼성자산운용',
+  holdingsOverlap: {
+    asOfCurrentComposition: true,
+    topHoldings: [
+      { name: '삼성전자', weight: '0.2431' },
+      { name: 'SK하이닉스', weight: '0.2107' },
+    ],
+  },
+  avgDailyValue3m: '1240000000',
+  sourceAttribution: '한국거래소 통계정보',
+  survivorshipNote: '현재 상장되어 있는 상품만 다룹니다.',
+  datasetId: 'KRX_DAILY_20260907',
+  dataDeadline: '2026-09-07T09:00:00Z',
+  isSample: true,
+}
+
+const profileSuccess: ApiSuccessEnvelope<InstrumentProfile> = {
+  success: true,
+  data: profile,
+  error: null,
+}
+
+describe('대표 상품 정보 조회', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('공용 apiClient로 해당 섹터의 경로를 부른다', async () => {
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+
+    expect(getSpy).toHaveBeenCalledWith('/sectors/SEMICONDUCTOR/instrument-profile', {
+      signal: undefined,
+    })
+    expect(result).toEqual({ status: 'loaded', profile })
+  })
+
+  it('섹터 코드를 주소에 안전하게 싣는다', async () => {
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))
+
+    await fetchInstrumentProfile('A/B?C')
+
+    expect(getSpy).toHaveBeenCalledWith('/sectors/A%2FB%3FC/instrument-profile', {
+      signal: undefined,
+    })
+  })
+
+  it('409는 예외가 아니라 화면이 분기할 상태 값으로 돌려준다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(409, errorEnvelope('INSTRUMENT_PROFILE_NOT_READY', '상품 정보 준비 중')),
+    )
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+
+    expect(result).toEqual({ status: 'notReady', message: '상품 정보 준비 중' })
+  })
+
+  it('없는 섹터는 다시 물어도 달라지지 않으므로 행동을 주지 않는다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(404, errorEnvelope('SECTOR_NOT_FOUND', '섹터를 찾지 못했습니다')),
+    )
+
+    const result = await fetchInstrumentProfile('GONE')
+
+    expect(result).toMatchObject({ status: 'failed', retryable: false })
+  })
+
+  it('연결 실패는 다시 눌러 달라질 수 있는 상태로 둔다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(new AxiosError('Network Error'))
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+
+    expect(result).toMatchObject({ status: 'failed', kind: 'network', retryable: true })
+  })
+
+  it('보유 종목 항목이 깨져 있으면 나머지만 그리지 않고 전체를 읽지 못한 것으로 다룬다', async () => {
+    // 하나를 빼고 나머지만 보이면 합이 맞지 않는 구성이 사실처럼 보인다.
+    const broken = {
+      ...profile,
+      holdingsOverlap: {
+        asOfCurrentComposition: true,
+        topHoldings: [{ name: '삼성전자', weight: 0.2431 }],
+      },
+    }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: broken, error: null }),
+    )
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+
+    expect(result).toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('비중과 거래대금을 숫자로 바꾸지 않고 문자열 그대로 둔다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+
+    // 소수로 옮겨 두면 표시 단계에서 부동소수 오차가 섞인다.
+    expect(result).toMatchObject({
+      status: 'loaded',
+      profile: { avgDailyValue3m: '1240000000' },
+    })
+    if (result.status !== 'loaded') throw new Error('loaded가 아니다')
+    expect(result.profile.holdingsOverlap.topHoldings[0]?.weight).toBe('0.2431')
+  })
+})
+
+describe('보유 종목 불변식', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function withHoldings(topHoldings: unknown): ApiSuccessEnvelope<InstrumentProfile> {
+    return {
+      success: true,
+      data: { ...profile, holdingsOverlap: { asOfCurrentComposition: true, topHoldings } },
+      error: null,
+    } as ApiSuccessEnvelope<InstrumentProfile>
+  }
+
+  it.each([['빈 문자열', ''], ['숫자가 아닌 값', 'N/A'], ['0', '0'], ['음수', '-0.1'], ['1 초과', '1.5']])(
+    '비중이 %s이면 그 항목만 0%%로 그리지 않고 전체를 읽지 못한 것으로 다룬다',
+    async (_label, weight) => {
+      /*
+        문자열인지만 보면 통과하는 값들이다. 그대로 두면 그 종목이 0.00%로 그려지고 실제 몫은
+        '그 외'에 섞여, 합이 맞지 않는 구성이 사실처럼 보인다.
+      */
+      vi.spyOn(apiClient, 'get').mockResolvedValue(
+        axiosResponse(withHoldings([{ name: '삼성전자', weight }])),
+      )
+
+      expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+        status: 'failed',
+        kind: 'unexpected',
+      })
+    },
+  )
+
+  it('보유 종목이 하나도 없으면 받지 않는다', async () => {
+    // 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를 그려, 모른다는 사실을 자료처럼 보인다.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(withHoldings([])))
+
+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
+  it('범위 안의 비중은 문자열 그대로 통과한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse(withHoldings([{ name: '삼성전자', weight: '1' }])),
+    )
+
+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')
+    expect(result.status).toBe('loaded')
+  })
+
+  it('망가진 대응표의 500은 다시 눌러도 달라지지 않는 상태로 둔다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(500, errorEnvelope('SECTOR_MAP_UNUSABLE', '대응표가 망가졌습니다')),
+    )
+
+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({
+      status: 'failed',
+      code: 'SECTOR_MAP_UNUSABLE',
+      retryable: false,
+    })
   })
 })
 

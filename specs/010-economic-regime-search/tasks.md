@@ -176,21 +176,21 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **Goal**: 줄 세우고 솎아내고, 왜 비슷한지 사람 말로 적는다.
 
-- [ ] T043 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보만 쓴다. 후보에게 질의보다 많은 시점을 요구하지 않고, **후보 직전 60개월 이력이나 시대별 보조 척도를 자격 조건으로 쓰지 않는다**(FR-012·FR-017)
-- [ ] T044 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)
-- [ ] T045 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률**(반올림된 값이 같을 때)이면 더 오래된 종료월 우선
-- [ ] T046 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)
-- [ ] T047 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-030, data-model §2.3)
-- [ ] T048 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)
-- [ ] T049 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED` 세 가지다. 시대별 보조 설명 부족은 후보 제외 사유가 아니다(FR-012·FR-017)
-- [ ] T050 (DE) 설명 문장 조립을 `explain.py`에 구현 — 공통 척도로 계산한 지표 거리 큰 순으로 다른 점 최대 2개, 작은 순으로 비슷한 점 최대 2개를 골라 **실제 값과 단위**로 서술한다(research R8). **값은 `monthly_series()`의 변환 후 값이다 — 증가율 지표면 증가율이지 지수 원수준이 아니다**(spec FR-015). 시대별 위치는 `era.py`의 별도 보조 문장으로 두고 기본 검색 이유에 혼용하지 않는다. 자유 생성하지 않는다(FR-015·FR-017·FR-022)
-- [ ] T051 [P] (DE 테스트) 12개월 제한과 **순차** ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채운다**
-- [ ] T052 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정
-- [ ] T053 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)
-- [ ] T054 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고 순위가 연속이며 건너뛰기가 적용되지 않았음**을 `test_candidates.py`에 고정
-- [ ] T055 [P] (DE 테스트) **후보 직전 이력이 없어도 비교 입력이 있으면 후보로 남고 보조 설명만 제한됨**을 `test_candidates.py`에 고정 — 픽스처 모양 10을 쓴다. 보조 척도가 0인 경우도 후보 자격·순위·거리에 영향이 없음을 확인한다(FR-012·FR-017)
-- [ ] T056 [P] (DE 테스트) 설명 문장에 실제 값과 단위가 들어가고 시대별 상대 위치를 기본 검색 이유로 섞지 않으며, **spec FR-022 ①의 13가지가 0건**임을 `data/tests/regime/test_explain.py`에 고정 — 금지 목록을 구현이나 태스크가 지어내지 않는다
-- [ ] T057 [P] (DE 테스트) **증가율 지표의 문장 값이 변환 후 값임**을 `test_explain.py`에 고정 — 지수 원수준이 들어가면 실패한다. 더해 `regime` 패키지 전체에서 **`raw_series` 호출이 0건**임을 정적으로 확인한다(spec FR-015, 포트 계약 §1)
+- [X] T043 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보만 쓴다. 후보에게 질의보다 많은 시점을 요구하지 않고, **후보 직전 60개월 이력이나 시대별 보조 척도를 자격 조건으로 쓰지 않는다**(FR-012·FR-017)
+- [X] T044 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)
+- [X] T045 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률**(반올림된 값이 같을 때)이면 더 오래된 종료월 우선
+- [X] T046 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)
+- [X] T047 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-030, data-model §2.3)
+- [X] T048 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)
+- [X] T049 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED` 세 가지다. 시대별 보조 설명 부족은 후보 제외 사유가 아니다(FR-012·FR-017)
+- [X] T050 (DE) 설명 문장 조립을 `explain.py`에 구현 — 공통 척도로 계산한 지표 거리 큰 순으로 다른 점 최대 2개, 작은 순으로 비슷한 점 최대 2개를 골라 **실제 값과 단위**로 서술한다(research R8). **값은 `monthly_series()`의 변환 후 값이다 — 증가율 지표면 증가율이지 지수 원수준이 아니다**(spec FR-015). 시대별 위치는 `era.py`의 별도 보조 문장으로 두고 기본 검색 이유에 혼용하지 않는다. 자유 생성하지 않는다(FR-015·FR-017·FR-022)
+- [X] T051 [P] (DE 테스트) 12개월 제한과 **순차** ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채운다**
+- [X] T052 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정
+- [X] T053 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)
+- [X] T054 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고 순위가 연속이며 건너뛰기가 적용되지 않았음**을 `test_candidates.py`에 고정
+- [X] T055 [P] (DE 테스트) **후보 직전 이력이 없어도 비교 입력이 있으면 후보로 남고 보조 설명만 제한됨**을 `test_candidates.py`에 고정 — 픽스처 모양 10을 쓴다. 보조 척도가 0인 경우도 후보 자격·순위·거리에 영향이 없음을 확인한다(FR-012·FR-017)
+- [X] T056 [P] (DE 테스트) 설명 문장에 실제 값과 단위가 들어가고 시대별 상대 위치를 기본 검색 이유로 섞지 않으며, **spec FR-022 ①의 13가지가 0건**임을 `data/tests/regime/test_explain.py`에 고정 — 금지 목록을 구현이나 태스크가 지어내지 않는다
+- [X] T057 [P] (DE 테스트) **증가율 지표의 문장 값이 변환 후 값임**을 `test_explain.py`에 고정 — 지수 원수준이 들어가면 실패한다. 더해 `regime` 패키지 전체에서 **`raw_series` 호출이 0건**임을 정적으로 확인한다(spec FR-015, 포트 계약 §1)
 
 **Checkpoint**: 사례 목록이 나오고, 왜 비슷한지 오해 없는 문장으로 설명된다
 
@@ -198,28 +198,28 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.
 
 **Goal**: 바뀐 만큼만 다시 계산해 DB에 넣는다. 조회는 이 결과를 읽을 뿐이다.
 
-- [ ] T058 (DE) **재계산 범위 판정**을 `watermark.py`에 구현 — `changed_since()`가 준 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 대상이다. `None`이면 계열 시작월을 M으로 삼아 전 구간(spec FR-030, research R3)
-- [ ] T059 [P] (DE 테스트) `t ≥ M` 규칙을 `data/tests/regime/test_watermark.py`에 고정 — 질의 비교 시점 / 공통 척도 구간 / 후보 관측 구간 / **시대별 보조 척도 구간** 네 경로의 경계값을 확인한다. 마지막 경로는 순위가 같아도 보조 설명이 바뀔 수 있다(FR-017·FR-030, research R3)
-- [ ] T060 (DE) 검색 상태 판정을 `snapshot.py`에 구현 — `NOT_COMPUTABLE` / `NEAREST_ONLY`와 사유 네 가지. **문턱 값을 코드에 두지 않는다**(PD-09 미확정, research R6)
-- [ ] T061 (DE) 한 분야가 `NOT_COMPUTABLE`이면 **종합도 `NOT_COMPUTABLE`** 로 만드는 규칙과 **반대 방향**(종합 후보 0건이나 T_all 없음 → 종합만 불가, 분야는 정상)을 `snapshot.py`에 구현(spec FR-039, US3 시나리오 6)
-- [ ] T062 (DE) 기준월 하나의 snapshot 조립을 `snapshot.py`에 구현 — **공통 척도**·비교 시점·전체 유효 후보 목록·후보 집계·`data_asof`(대상월·발표일·개정 여부 복사본)·버전 셋(data-model §2)
-- [ ] T063 (DE) 사례 행 조립을 `snapshot.py`에 구현 — 거리·분야 기여·지표별 원값과 공통 척도 z·지표 기여·설명 문장·**시대별 보조 위치(`era_position`)**. 보조 설명을 만들 수 없는 지표는 키를 생략하고 전부 없으면 NULL이다(data-model §4)
-- [ ] T064 (DE) `snapshot_key` 조립을 `snapshot.py`에 구현 — `{mode}:{fieldId|ALL}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}`. **검색 경로와 `baseline_origin`은 키에 넣지 않는다**(data-model §2)
-- [ ] T065 (DE) `content_hash` 계산을 `snapshot.py`에 구현 — 결과 본문만 해시한다. **공통 척도와 시대별 보조 설명을 포함**하고, `computed_at` 같은 매번 바뀌는 시각 값은 넣지 않는다. 순위가 같아도 보조 설명이 바뀌면 새 결과다(FR-030)
-- [ ] T066 (DE) 모델 버전 상수 `REGIME-V1`을 `snapshot.py`에 두고, 무엇이 바뀌면 올려야 하는지를 주석으로 적는다(data-model §6). v2 검증 제안을 기본 계산 경로에 넣지 않는다(PD-08)
-- [ ] T067 (DE) PostgreSQL 적재를 `load.py`에 구현 — 직전 `revision`과 `content_hash`가 같으면 **새 행을 만들지 않고**, 다르면 `revision + 1`로 넣는다(spec FR-030)
-- [ ] T068 (DE) **기준월 기록**을 `load.py`에 구현 — `baseline_months()`가 준 분야별 T_g와 T_all, 사전 계산이 있는 가장 오래된 기준월을 `regime_baseline_month`에 **적재와 같은 트랜잭션에서** 쓴다(data-model §3, 포트 계약 §0.2)
-- [ ] T069 (DE) **보관 정리**를 `load.py`에 구현 — **적재를 마친 뒤 같은 실행에서** 돌린다(spec FR-029). 각 (모드·분야·기준월)의 최신 revision과 `regime_search_log`가 가리키는 revision만 남긴다(data-model §7)
-- [ ] T070 (DE) **실패가 부분 적재를 남기지 않게** `load.py`에 구현 — 기준월 하나의 snapshot·사례·기준월 기록을 한 트랜잭션으로 쓰고, 실패하면 그 기준월은 **이전 `revision`이 그대로 남는다**. 실패한 범위와 사유를 기록한다(spec FR-034, SC-010)
-- [ ] T071 (DE) **철회 명령**을 `data/scripts/precompute_regime.py`에 `--withdraw`로 구현 — 사람이 지정한 범위의 `revision`을 지워 이전 것이 다시 최신이 되게 하고, **철회한 식별 키·범위·사유·시각을 기록**한다. 배치 본체는 철회를 스스로 판단하지 않는다(spec FR-035, SC-012)
-- [ ] T072 (DE) 순회를 `data/scripts/precompute_regime.py`에 구현 — 워터마크가 정한 기준월 × 모드 8. **소요 시간과 다시 계산한 기준월 수를 출력한다**(spec FR-033, 목표로 제시하지 않는다)
-- [ ] T073 (DE) 중간 산출을 `data/processed/`에 Parquet로 남긴다 — 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지)
-- [ ] T074 [P] (DE 테스트) 배치를 두 번 돌려도 **행 수가 늘지 않음**을 `data/tests/regime/test_precompute.py`에 고정(멱등, SC-002)
-- [ ] T075 [P] (DE 테스트) M월 지표 값을 바꾸면 **t ≥ M만 재계산하고 결과 내용이 달라진 항목만 revision이 오름**을 `test_precompute.py`에 고정 — 내용이 같은 항목과 t < M 항목은 그대로다. 순위는 같고 시대별 보조 설명만 바뀌는 경우도 포함한다(FR-017·FR-030)
-- [ ] T076 [P] (DE 테스트) `era_position`이 사례 행에 저장되고 같은 자료·등록표·모델 버전과 후보월이면 기준월이 달라도 같은 보조 문장임을 `test_precompute.py`에 고정. 설명 불가를 0으로 채우지 않는다(SC-011, data-model §4)
-- [ ] T077 [P] (DE 테스트) 자료 버전이 `FIXTURE-`로 시작함을 `test_precompute.py`에 고정 — 접두사가 빠지면 폐기 조건이 무너진다
-- [ ] T078 [P] (DE 테스트) 한 분야 계산 불가가 종합으로 전파되고, **반대 방향**(모든 분야 정상 + 종합만 불가)도 픽스처 모양 5로 성립함을 `test_precompute.py`에 고정(spec FR-039)
-- [ ] T079 [P] (DE 테스트) `snapshot_key`에 검색 경로·`baseline_origin`이 들어가지 않음을 `test_precompute.py`에 고정 — 같은 월을 T_g로 얻든 지정하든 결과가 하나여야 한다
+- [X] T058 (DE) **재계산 범위 판정**을 `watermark.py`에 구현 — `changed_since()`가 준 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 대상이다. `None`이면 계열 시작월을 M으로 삼아 전 구간(spec FR-030, research R3)
+- [X] T059 [P] (DE 테스트) `t ≥ M` 규칙을 `data/tests/regime/test_watermark.py`에 고정 — 질의 비교 시점 / 공통 척도 구간 / 후보 관측 구간 / **시대별 보조 척도 구간** 네 경로의 경계값을 확인한다. 마지막 경로는 순위가 같아도 보조 설명이 바뀔 수 있다(FR-017·FR-030, research R3)
+- [X] T060 (DE) 검색 상태 판정을 `snapshot.py`에 구현 — `NOT_COMPUTABLE` / `NEAREST_ONLY`와 사유 네 가지. **문턱 값을 코드에 두지 않는다**(PD-09 미확정, research R6)
+- [X] T061 (DE) 한 분야가 `NOT_COMPUTABLE`이면 **종합도 `NOT_COMPUTABLE`** 로 만드는 규칙과 **반대 방향**(종합 후보 0건이나 T_all 없음 → 종합만 불가, 분야는 정상)을 `snapshot.py`에 구현(spec FR-039, US3 시나리오 6)
+- [X] T062 (DE) 기준월 하나의 snapshot 조립을 `snapshot.py`에 구현 — **공통 척도**·비교 시점·전체 유효 후보 목록·후보 집계·`data_asof`(대상월·발표일·개정 여부 복사본)·버전 셋(data-model §2)
+- [X] T063 (DE) 사례 행 조립을 `snapshot.py`에 구현 — 거리·분야 기여·지표별 원값과 공통 척도 z·지표 기여·설명 문장·**시대별 보조 위치(`era_position`)**. 보조 설명을 만들 수 없는 지표는 키를 생략하고 전부 없으면 NULL이다(data-model §4)
+- [X] T064 (DE) `snapshot_key` 조립을 `snapshot.py`에 구현 — `{mode}:{fieldId|ALL}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}`. **검색 경로와 `baseline_origin`은 키에 넣지 않는다**(data-model §2)
+- [X] T065 (DE) `content_hash` 계산을 `snapshot.py`에 구현 — 결과 본문만 해시한다. **공통 척도와 시대별 보조 설명을 포함**하고, `computed_at` 같은 매번 바뀌는 시각 값은 넣지 않는다. 순위가 같아도 보조 설명이 바뀌면 새 결과다(FR-030)
+- [X] T066 (DE) 모델 버전 상수 `REGIME-V1`을 `snapshot.py`에 두고, 무엇이 바뀌면 올려야 하는지를 주석으로 적는다(data-model §6). v2 검증 제안을 기본 계산 경로에 넣지 않는다(PD-08)
+- [X] T067 (DE) PostgreSQL 적재를 `load.py`에 구현 — 직전 `revision`과 `content_hash`가 같으면 **새 행을 만들지 않고**, 다르면 `revision + 1`로 넣는다(spec FR-030)
+- [X] T068 (DE) **기준월 기록**을 `load.py`에 구현 — `baseline_months()`가 준 분야별 T_g와 T_all, 사전 계산이 있는 가장 오래된 기준월을 `regime_baseline_month`에 **적재와 같은 트랜잭션에서** 쓴다(data-model §3, 포트 계약 §0.2)
+- [X] T069 (DE) **보관 정리**를 `load.py`에 구현 — **적재를 마친 뒤 같은 실행에서** 돌린다(spec FR-029). 각 (모드·분야·기준월)의 최신 revision과 `regime_search_log`가 가리키는 revision만 남긴다(data-model §7)
+- [X] T070 (DE) **실패가 부분 적재를 남기지 않게** `load.py`에 구현 — 기준월 하나의 snapshot·사례·기준월 기록을 한 트랜잭션으로 쓰고, 실패하면 그 기준월은 **이전 `revision`이 그대로 남는다**. 실패한 범위와 사유를 기록한다(spec FR-034, SC-010)
+- [X] T071 (DE) **철회 명령**을 `data/scripts/precompute_regime.py`에 `--withdraw`로 구현 — 사람이 지정한 범위의 `revision`을 지워 이전 것이 다시 최신이 되게 하고, **철회한 식별 키·범위·사유·시각을 기록**한다. 배치 본체는 철회를 스스로 판단하지 않는다(spec FR-035, SC-012)
+- [X] T072 (DE) 순회를 `data/scripts/precompute_regime.py`에 구현 — 워터마크가 정한 기준월 × 모드 8. **소요 시간과 다시 계산한 기준월 수를 출력한다**(spec FR-033, 목표로 제시하지 않는다)
+- [X] T073 (DE) 중간 산출을 `data/processed/`에 Parquet로 남긴다 — 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지)
+- [X] T074 [P] (DE 테스트) 배치를 두 번 돌려도 **행 수가 늘지 않음**을 `data/tests/regime/test_precompute.py`에 고정(멱등, SC-002)
+- [X] T075 [P] (DE 테스트) M월 지표 값을 바꾸면 **t ≥ M만 재계산하고 결과 내용이 달라진 항목만 revision이 오름**을 `test_precompute.py`에 고정 — 내용이 같은 항목과 t < M 항목은 그대로다. 순위는 같고 시대별 보조 설명만 바뀌는 경우도 포함한다(FR-017·FR-030)
+- [X] T076 [P] (DE 테스트) `era_position`이 사례 행에 저장되고 같은 자료·등록표·모델 버전과 후보월이면 기준월이 달라도 같은 보조 문장임을 `test_precompute.py`에 고정. 설명 불가를 0으로 채우지 않는다(SC-011, data-model §4)
+- [X] T077 [P] (DE 테스트) 자료 버전이 `FIXTURE-`로 시작함을 `test_precompute.py`에 고정 — 접두사가 빠지면 폐기 조건이 무너진다
+- [X] T078 [P] (DE 테스트) 한 분야 계산 불가가 종합으로 전파되고, **반대 방향**(모든 분야 정상 + 종합만 불가)도 픽스처 모양 5로 성립함을 `test_precompute.py`에 고정(spec FR-039)
+- [X] T079 [P] (DE 테스트) `snapshot_key`에 검색 경로·`baseline_origin`이 들어가지 않음을 `test_precompute.py`에 고정 — 같은 월을 T_g로 얻든 지정하든 결과가 하나여야 한다
 
 **Checkpoint**: DB에 검색 결과가 들어 있고, 다시 돌려도 늘지 않으며, 바뀐 것만 새 행이 된다
 

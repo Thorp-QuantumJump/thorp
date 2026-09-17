@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { useId, useRef, useState } from 'react'
+import { InstrumentProfilePanel } from './InstrumentProfilePanel'
 import { WeightInput } from './WeightInput'
 import type { SectorClassification, SectorSummary } from '@/types/sector'
 
@@ -51,6 +52,16 @@ export function SectorListItem({
   className,
 }: SectorListItemProps) {
   const nameId = useId()
+  const panelId = useId()
+
+  /**
+   * 대표 상품 정보를 펼쳤는가.
+   *
+   * 고른 섹터에만 두지 않는다. 고르기 **전에** 무엇을 사는지 보고 정하는 것이 이 패널의 목적이라,
+   * 고른 뒤에만 열 수 있으면 순서가 뒤집힌다(FR-010).
+   */
+  const [profileOpen, setProfileOpen] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   return (
     <li className={className} data-sector-code={sector.code} data-selected={selected}>
@@ -83,6 +94,51 @@ export function SectorListItem({
           onCommit={weight.onCommit}
         />
       ) : null}
+
+      {/*
+        대표 상품 정보를 펼치는 자리다. 이것도 `label` 밖이다 — 안에 두면 펼치려다 섹터가 고쳐진다.
+
+        `button` 하나로 여닫으므로 Enter와 Space가 그대로 동작한다. 직접 만든 펼침 장치를 쓰면
+        키보드 조작을 손으로 다시 구현해야 하고, 그러다 빠뜨린 부분만큼 못 쓰는 사람이 생긴다.
+        `aria-expanded`와 `aria-controls`가 지금 상태와 여는 대상을 보조 기술에 알린다.
+      */}
+      <div
+        data-slot="profile"
+        onKeyDown={(event) => {
+          // 펼친 안쪽에서 Esc로 닫고 초점을 버튼으로 돌려준다. 초점을 두고 오면 키보드만 쓰는
+          // 사용자가 목록의 처음부터 다시 찾아 내려와야 한다.
+          if (event.key !== 'Escape' || !profileOpen) return
+          event.stopPropagation()
+          setProfileOpen(false)
+          toggleRef.current?.focus()
+        }}
+      >
+        {/*
+          이름을 카드에 이미 한 번 적었으므로 버튼에서 되풀이하지 않는다. 대신 보조 기술에는
+          어느 섹터의 것인지 실어 준다 — 항목마다 버튼 이름이 똑같으면 목록에서 셋째 버튼이
+          무엇을 여는 것인지 소리만 듣고는 알 수 없다.
+        */}
+        <button
+          ref={toggleRef}
+          type="button"
+          data-slot="profile-toggle"
+          aria-expanded={profileOpen}
+          /*
+            접혀 있을 때는 패널이 아예 없으므로 가리키지 않는다. 없는 id를 가리키면 보조 기술에
+            따라 그 관계를 통째로 버리는 것이 있어, 펼친 뒤에도 무엇을 여는 버튼인지 전해지지
+            않는다.
+          */
+          aria-controls={profileOpen ? panelId : undefined}
+          aria-label={`${sector.name}에 담긴 종목 보기`}
+          onClick={() => setProfileOpen((open) => !open)}
+        >
+          담긴 종목 보기
+        </button>
+
+        {profileOpen ? (
+          <InstrumentProfilePanel sectorCode={sector.code} id={panelId} />
+        ) : null}
+      </div>
     </li>
   )
 }

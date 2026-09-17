@@ -27,8 +27,9 @@ services:
     volumes:
       - jenkins-home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      # 기존 jenkins-home에도 재기동 때 적용한다. CI와 CD가 실행 슬롯 두 개를 함께 쓴다.
-      - ./init.groovy.d/10-build-executors.groovy:/var/jenkins_home/init.groovy.d/10-build-executors.groovy:ro
+      # 기존 jenkins-home에도 재기동 때 적용한다. 실행 슬롯 수와 CI 동시 실행 상한을 건다.
+      # 폴더째 마운트하므로 스크립트를 더할 때 이 줄을 고치지 않아도 된다.
+      - ./init.groovy.d:/var/jenkins_home/init.groovy.d:ro
       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는
       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.
       - ${DEPLOY_DIR}:${DEPLOY_DIR}
