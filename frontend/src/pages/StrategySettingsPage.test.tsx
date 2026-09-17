@@ -10,6 +10,7 @@ import {
   type AnalysisVersions,
   type WarmupJudgement,
 } from '@/components/strategy/analysisSupport'
+import { connectedAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'
 import {
   SECTOR_SELECTION_PAYLOAD_VERSION,
   SECTOR_SELECTION_STORAGE_KEY,
@@ -25,7 +26,6 @@ import type { BacktestCreateRequest } from '@/types/backtestRequest'
 import type { EvaluationWindow } from '@/types/evaluationWindow'
 import type { StrategyView } from '@/types/strategyRegistry'
 import type { SectorSummary } from '@/types/sector'
-import { judgeWarmupFromWindow } from '@/utils/evaluationWindow'
 import { StrategySettingsPage } from './StrategySettingsPage'
 
 /**
@@ -1966,8 +1966,8 @@ describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
       )
       const { support } = makeSupport({
         fetchEvaluationWindow,
-        judgeWarmup: ({ evaluationWindow, warmupTradingDays, minEvaluationYears }) =>
-          judgeWarmupFromWindow(evaluationWindow, { warmupTradingDays, minEvaluationYears }),
+        // 판정은 실제 통로의 연결을 쓴다. 조회만 흉내 낸다(T106).
+        judgeWarmup: connectedAnalysisSupport.judgeWarmup,
       })
       renderPage(support)
 
@@ -2005,8 +2005,7 @@ describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
   it('평가 기간을 받지 못하면 카드가 그 사실을 보이고 분석하기를 막는다', async () => {
     const user = userEvent.setup()
     const { support, requests } = makeSupport({
-      judgeWarmup: ({ evaluationWindow, warmupTradingDays, minEvaluationYears }) =>
-        judgeWarmupFromWindow(evaluationWindow, { warmupTradingDays, minEvaluationYears }),
+      judgeWarmup: connectedAnalysisSupport.judgeWarmup,
     })
     renderPage(support)
 
