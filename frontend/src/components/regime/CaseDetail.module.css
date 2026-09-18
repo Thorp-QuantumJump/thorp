@@ -1,0 +1,15 @@
+.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: 6px; background: var(--thorp-surface); overflow-wrap: anywhere; }
+.detail h4 { margin: 0 0 10px; font-size: 1.05rem; }
+.detail h5 { margin: 18px 0 8px; font-size: .9rem; }
+.detail p { margin: 6px 0; color: var(--thorp-copy); font-size: .8rem; }
+.detail strong { color: var(--thorp-foreground); }
+.reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.reasons ul { padding-left: 18px; }
+.indicator { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--thorp-line); }
+.indicator h6 { margin: 0 0 8px; font-size: .85rem; }
+.tableScroll { max-width: 100%; overflow-x: auto; }
+.tableScroll table { min-width: 650px; border-collapse: collapse; font-size: .72rem; }
+.tableScroll caption { text-align: left; padding: 8px 0; color: var(--thorp-copy); }
+.tableScroll th, .tableScroll td { padding: 7px 10px; border-bottom: 1px solid var(--thorp-line); text-align: left; }
+.era { margin-top: 14px; padding: 10px 12px; border-left: 2px solid var(--thorp-accent-soft); background: var(--thorp-background); }
+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: 12px; } }

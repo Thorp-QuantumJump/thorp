@@ -3,7 +3,6 @@ package com.ssafy.thorp.result.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
@@ -19,7 +18,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
 import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -32,30 +31,21 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 만료된 비로그인 요청 정리를 실제 PostgreSQL 외래 키로 본다(spec 005 T026·T087·T088, FR-021).
  *
- * <p>목으로는 확인할 수 없는 것이 핵심이다 — 재사용 기록·재시도 요청이 요청 행을 외래 키로 가리키므로 지우는 순서가 틀리면 DB가 거절한다. 그리고 <b>같은 실행을
- * 가리키는 로그인 요청과 실행·결과는 남아야 한다</b>(004 FR-003). 지운 토큰은 해시 묘비로 남아야 한다(T087).
+ * <p>목으로는 확인할 수 없는 것이 핵심이다 — 재사용 기록·재시도 요청이 요청 행을 외래 키로 가리키므로 참조를 끊는 순서가 틀리면 DB가 거절한다. 그리고 <b>같은
+ * 실행을 가리키는 로그인 요청과 실행·결과는 남아야 한다</b>(004 FR-003). <b>재사용·합류 기록도 남아</b> 집계 뷰의 {@code reuse_count}가
+ * 정리로 줄지 않아야 하며(원칙 IX), 지운 토큰은 해시 묘비로 남아야 한다(T087).
  *
  * <p>스케줄러는 끄고 시각을 고정한 인스턴스를 직접 만든다. 만료 시각을 2000년대 초로 두어 같은 컨테이너를 쓰는 다른 IT가 남긴 만료 행보다 앞에 오게 한다 — 정리는
  * 만료가 이른 순서로 배치 크기만큼 지운다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.result.expiry-sweep.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class PublicResultExpirySweeperIT extends PostgresTestSupport {
+class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {
 
     private static final Duration RETENTION = Duration.ofDays(30);
 
@@ -67,9 +57,6 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
-
-    /** 브로커는 띄우지 않는다. 이 IT는 접수를 부르지 않지만 발행기 빈이 브로커에 붙지 않게 목으로 둔다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     private PublicResultExpirySweeper sweeperAt(Instant now, int batchSize) {
         return new PublicResultExpirySweeper(
@@ -174,9 +161,42 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
         return found.isEmpty() ? null : found.get(0).toInstant();
     }
 
+    private BacktestReuseEvent reuseEvent(
+            BacktestRun run, BacktestRequest request, ResultSource kind, Instant at) {
+        return transactionTemplate.execute(
+                status ->
+                        reuseEventRepository.save(
+                                BacktestReuseEvent.of(
+                                        run.getId(),
+                                        request.getId(),
+                                        kind,
+                                        ExecutionType.SINGLE,
+                                        at)));
+    }
+
+    private Long requestIdOf(BacktestReuseEvent event) {
+        return jdbcTemplate.queryForObject(
+                "SELECT request_id FROM backtest_reuse_event WHERE id = ?", Long.class, event.id());
+    }
+
+    /** 집계 뷰는 측정 행이 있는 유형만 보인다. 이 IT는 워커를 돌리지 않으므로 종결 측정 한 행을 직접 넣어 SINGLE 줄을 만든다. */
+    private void recordFinishedMetric(BacktestRun run) {
+        jdbcTemplate.update(
+                "INSERT INTO backtest_run_metric (id, run_id, execution_type, status,"
+                        + " concurrent_running, auto_retried, result_bytes, recorded_at)"
+                        + " VALUES (nextval('backtest_run_metric_seq'), ?, 'SINGLE', 'COMPLETED',"
+                        + " 0, false, 0, NOW())",
+                run.getId());
+    }
+
+    private long singleReuseCount() {
+        return jdbcTemplate.queryForObject(
+                "SELECT reuse_count FROM v_run_metric_summary WHERE execution_type = 'SINGLE'",
+                Long.class);
+    }
+
     @Test
-    @DisplayName(
-            "만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행·결과는 남긴다. 재사용 기록은 지우고 재시도의 참조는 끊고, 토큰은 해시 묘비로 남긴다")
+    @DisplayName("만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행·결과와 재사용 기록은 남긴다. 요청 참조를 끊고 토큰은 해시 묘비로 남긴다")
     void deletesExpiredAnonymousRequestOnly() {
         Instant now = Instant.parse("2001-06-01T00:00:00Z");
         Instant expiredAt = Instant.parse("2001-05-20T00:00:00Z");
@@ -185,16 +205,8 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
 
         BacktestRequest loggedIn = request(run, user, null, ResultSource.NEW, null);
         BacktestRequest expired = request(run, null, null, ResultSource.REUSED, expiredAt);
-        transactionTemplate.executeWithoutResult(
-                status ->
-                        reuseEventRepository.save(
-                                new BacktestReuseEvent(
-                                        null,
-                                        run.getId(),
-                                        expired.getId(),
-                                        ResultSource.REUSED,
-                                        ExecutionType.SINGLE,
-                                        expiredAt.minus(Duration.ofDays(7)))));
+        BacktestReuseEvent reused =
+                reuseEvent(run, expired, ResultSource.REUSED, expiredAt.minus(Duration.ofDays(7)));
         BacktestRequest retryChild =
                 request(
                         run,
@@ -211,11 +223,7 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
         assertThat(exists(loggedIn)).isTrue();
         assertThat(exists(retryChild)).isTrue();
         assertThat(exists(notYetExpired)).isTrue();
-        assertThat(
-                        count(
-                                "SELECT count(*) FROM backtest_reuse_event WHERE request_id = ?",
-                                expired.getId()))
-                .isZero();
+        assertThat(requestIdOf(reused)).as("재사용 기록은 남고 지워진 요청과의 연결만 끊긴다").isNull();
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT retry_of_request_id FROM backtest_request WHERE id = ?",
@@ -261,6 +269,41 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
         sweeperAt(expiresAt.plusSeconds(120), 1000).sweep();
         assertThat(exists(waiting)).isFalse();
         assertThat(tombstoneExpiry(waiting)).isEqualTo(expiresAt);
+    }
+
+    @Test
+    @DisplayName("재사용·합류 기록을 지우지 않아 정리 전후로 reuse_count 가 같다 — 끊긴 기록 여럿이 요청 유일 색인에 걸리지 않는다")
+    void keepsReuseCountAcrossSweep() {
+        Instant now = Instant.parse("2001-07-01T00:00:00Z");
+        BacktestRun run = finishedRun();
+        recordFinishedMetric(run);
+        BacktestRequest joinedRequest =
+                request(
+                        run,
+                        null,
+                        null,
+                        ResultSource.JOINED,
+                        Instant.parse("2001-06-10T00:00:00Z"));
+        BacktestRequest reusedRequest =
+                request(
+                        run,
+                        null,
+                        null,
+                        ResultSource.REUSED,
+                        Instant.parse("2001-06-11T00:00:00Z"));
+        BacktestReuseEvent joined =
+                reuseEvent(run, joinedRequest, ResultSource.JOINED, now.minusSeconds(86_400 * 30));
+        BacktestReuseEvent reused =
+                reuseEvent(run, reusedRequest, ResultSource.REUSED, now.minusSeconds(86_400 * 29));
+        long before = singleReuseCount();
+
+        sweeperAt(now, 1000).sweep();
+
+        assertThat(exists(joinedRequest)).isFalse();
+        assertThat(exists(reusedRequest)).isFalse();
+        assertThat(requestIdOf(joined)).isNull();
+        assertThat(requestIdOf(reused)).isNull();
+        assertThat(singleReuseCount()).as("동일 결과 재조회 기록(원칙 IX)이 정리로 줄지 않는다").isEqualTo(before);
     }
 
     @Test

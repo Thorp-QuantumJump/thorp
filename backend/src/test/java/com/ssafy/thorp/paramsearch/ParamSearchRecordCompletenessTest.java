@@ -17,7 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,10 +27,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -44,16 +43,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>완료와 부분 완료 둘 다 본다. 취소된 묶음이라고 기록이 덜 남으면, 사용자가 "여기까지 계산했다"를 되짚을 수 없다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "thorp.param-search.dispatch-window=1",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
+// 창을 1로 좁힌다. 같은 상수를 쓰는 검사끼리 컨텍스트를 함께 쓴다.
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW)
+class ParamSearchRecordCompletenessTest extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
     private static final long OWNER = 7L;
@@ -69,7 +61,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(990_000L);
 
@@ -149,7 +141,10 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
                 .isEqualTo(storedCandidates);
         assertThat(space.strategyIds())
                 .as("전략별로 축과 후보값이 남아 있어야 한다")
-                .isEqualTo(search.getStrategyIds());
+                // 순서는 보지 않는다 — 탐색 공간은 jsonb 로 저장되고 jsonb 는 객체 키 순서를 보존하지
+                // 않는다(키 길이 → 바이트 순으로 다시 정렬한다). 뜻이 있는 순서는 축과 값의 순서이고
+                // (SearchSpace 주석·FR-029) 전략의 순서는 아니다.
+                .containsExactlyInAnyOrderElementsOf(search.getStrategyIds());
     }
 
     /** FR-020이 요구하는 항목을 하나씩 본다. 비면 그 묶음은 나중에 다시 읽을 수 없다. */

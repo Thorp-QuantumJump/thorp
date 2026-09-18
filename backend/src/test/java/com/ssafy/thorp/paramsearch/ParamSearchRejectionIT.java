@@ -16,7 +16,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,8 +24,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
@@ -40,17 +40,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * <p>등록표는 fixture다. 운영 등록표로는 이 두 경로를 만들 수 없다 — 상한(운영 120·로컬 24)을 넘기려면 후보값이 그만큼 필요한데 등록된 축이 작고, 유효
  * 조합 0건을 만들려면 모든 조합을 걸러 내는 규칙이 필요한데 그런 전략은 실행 지원 목록에 없어 그 앞에서 다른 사유로 거부된다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            // 상한을 낮춰 둔다. 여기서 볼 것은 상한 값이 아니라 넘겼을 때의 동작이다.
-            "thorp.param-search.max-candidates=2",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchRejectionIT extends PostgresTestSupport {
+// 상한을 낮춰 둔다. 여기서 볼 것은 상한 값이 아니라 넘겼을 때의 동작이다.
+// 등록표까지 목으로 바꾸므로 어차피 컨텍스트를 따로 만든다.
+@TestPropertySource(properties = "thorp.param-search.max-candidates=2")
+class ParamSearchRejectionIT extends LauncherMockedIntegrationTestSupport {
 
     private static final String VERSION = "FIXTURE-REJECT-1";
     private static final String STRATEGY = "FIXTURE_STRATEGY";
@@ -63,7 +56,7 @@ class ParamSearchRejectionIT extends PostgresTestSupport {
 
     @MockitoBean private ParameterRegistryPort registry;
     @MockitoBean private StrategyExecutionSupportPort executionSupport;
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     @BeforeEach
     void prepare() {

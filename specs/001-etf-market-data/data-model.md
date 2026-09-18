@@ -102,7 +102,7 @@ spec의 Key Entities를 저장 가능한 모형으로 옮긴다. 검증 규칙�
 | 필드 | 타입 | 제약 | 근거 |
 |---|---|---|---|
 | `id` | bigint | PK | |
-| `dataset_id` | varchar | UNIQUE NOT NULL. `KRX_DAILY_{YYYYMMDD}` | research.md 결정 4 |
+| `dataset_id` | varchar | UNIQUE NOT NULL. `KRX_DAILY_{YYYYMMDD}[_R{판}]`. 같은 마감일을 다시 발행할 때만 판 번호를 붙이고 2부터 센다 | research.md 결정 4 |
 | `data_deadline` | timestamptz | NOT NULL. 데이터 마감 시각 | FR-013 |
 | `collected_at` | timestamptz | NOT NULL | FR-013 |
 | `last_success_at` | timestamptz | NOT NULL. 마지막으로 성공한 갱신 시각 | FR-014 |

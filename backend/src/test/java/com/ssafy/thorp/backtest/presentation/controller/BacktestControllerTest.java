@@ -29,6 +29,8 @@ import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
+import com.ssafy.thorp.backtest.application.service.CostProfileService;
+import com.ssafy.thorp.backtest.application.service.StrategyRulesService;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
@@ -91,6 +93,8 @@ class BacktestControllerTest {
     @MockitoBean private BacktestResultQueryService queryService;
     @MockitoBean private BacktestCancelService cancelService;
     @MockitoBean private BacktestRetryService retryService;
+    @MockitoBean private StrategyRulesService strategyRulesService;
+    @MockitoBean private CostProfileService costProfileService;
 
     private static BacktestJobResult accepted() {
         return new BacktestJobResult(

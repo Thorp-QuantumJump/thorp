@@ -73,10 +73,17 @@ public class EngineInputAssembler {
                 ExecutionPolicy.PROGRESS);
     }
 
+    /**
+     * 자료 관련 두 값은 <b>같은 것</b>이다.
+     *
+     * <p>spec 001 research.md 결정 4가 "새 필드를 만들지 않고 기존 {@code marketData.datasetId} 를 자료 버전 식별자로 쓴다"고
+     * 정했다. 그래서 둘에 같은 값을 싣는다. 예전에 {@code datasetId} 가 자리 표시 상수({@code KRX_DAILY_V1})였던 것은 001이 자료를
+     * 적재하기 전이라 실제 값을 가져올 곳이 없었기 때문이다. 이제는 접수 시점에 정해져 실행에 고정된 자료 버전이 그 값이다.
+     */
     private EngineInput.MarketDataSpec marketData(RunPlan plan) {
         EngineInput.MarketDataSpec fixed = ExecutionPolicy.MARKET_DATA;
         return new EngineInput.MarketDataSpec(
-                fixed.datasetId(),
+                plan.dataVersion(),
                 plan.dataVersion(),
                 fixed.interval(),
                 fixed.adjustment(),
@@ -102,7 +109,38 @@ public class EngineInputAssembler {
                                 strategyRulesService.requireRegistered(
                                         run.getStrategyId(), plan.rulesVersion()));
         return new EngineInput.AllocationSpec(
-                run.getStrategyId(), rulesVersion, rules, run.getParameters());
+                run.getStrategyId(), rulesVersion, rules, engineParameters(run.getParameters()));
+    }
+
+    /**
+     * 003 축 이름을 엔진이 읽는 이름으로 옮긴다. <b>지금은 {@code rebalancePeriod} 하나다.</b>
+     *
+     * <p>003 등록표는 리밸런싱 주기를 객체({@code {mode, unit}})로 두고 엔진은 문자열 하나({@code rebalance})를 읽는다. 화면은 축
+     * 이름을 그대로 실어 보내므로(003 FR-005 — 화면에 전략 ID·축 이름을 두지 않는다) 누군가는 옮겨야 하고, 그 자리는 <b>발행 경로 하나뿐인 이
+     * 조립기</b>다. 접수가 저장하는 {@code backtest_run.parameters}는 003 이름 그대로 남는다 — 사용자가 무엇을 골랐는지의 기록이고 재현
+     * 기준이기 때문이다.
+     *
+     * <p>이미 {@code rebalance}가 실려 온 요청(quickstart·워커 픽스처·기존 007 경로)은 건드리지 않는다. 옮길 수 없는 모양은 <b>지어내지
+     * 않고 그대로 둔다</b> — 엔진이 "무엇을 받았고 무엇을 지원하는지"를 그대로 말하게 하는 편이, 백엔드가 엔진의 지원 범위를 따로 들고 있다가 어긋나는 것보다
+     * 낫다.
+     *
+     * <p>나머지 축({@code topN}·{@code skipRecentDays} 등)은 이름이 그대로라 옮길 것이 없다.
+     */
+    private static Map<String, Object> engineParameters(Map<String, Object> parameters) {
+        if (parameters == null
+                || parameters.containsKey("rebalance")
+                || !(parameters.get("rebalancePeriod") instanceof Map<?, ?> period)) {
+            return parameters;
+        }
+        Object mode = period.get("mode");
+        Object unit = period.get("unit");
+        if (!"CALENDAR".equals(mode) || unit == null) {
+            return parameters;
+        }
+        Map<String, Object> moved = new LinkedHashMap<>(parameters);
+        moved.remove("rebalancePeriod");
+        moved.put("rebalance", unit);
+        return moved;
     }
 
     /**

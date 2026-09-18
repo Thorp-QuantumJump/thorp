@@ -107,7 +107,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 | 경로 | 고정값 |
 |---|---|
 | `run.scenario` | `FULL_PERIOD` (주 분석). 시나리오 `FRESH_CASH_FROM`·`COST_ESCALATION`·`TARGET_RISK`는 T009 |
-| `marketData` | `datasetId=KRX_DAILY_V1`, `interval=1D`, `adjustment=SPLIT_ADJUSTED`, `priceType=LAST`, `fillPrice=RAW`, `signalPrice=ADJUSTED`, `distributions=CASH_ON_PAY_DATE` |
+| `marketData` | `datasetId`=접수가 정한 자료 버전, `interval=1D`, `adjustment=SPLIT_ADJUSTED`, `priceType=LAST`, `fillPrice=RAW`, `signalPrice=ADJUSTED`, `distributions=CASH_ON_PAY_DATE` |
 | `portfolio.currency` / `shortSelling` / `leverage` / `integerLots` | `KRW` / `false` / `"1.0"` / `true` |
 | `execution.signalTiming` / `executionTiming` | `BAR_CLOSE` / `NEXT_BAR_OPEN` (t 종가 신호 → t+1 시가 체결) |
 | `execution.orderTypes` | `["MARKET"]` |
@@ -164,7 +164,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `analytics { recoveryDays?, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method }` 파생 지표(FR-027).
   정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method="sample-covariance-daily"`. 계산 불가 항목은 키 생략.
 - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,
-  `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING` 등 개방 집합.
+  `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING`, `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`(상한 잔여를 현금으로), `EFFECTIVE_TARGET_REDUCED`(계산 가능 종목 부족으로 투자 목표 축소), `SINGLE_ASSET_FALLBACK`(계산 가능 1종목) 등 개방 집합.
 - `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit?, worker }` 참조 버전(FR-028). `evaluationSplit`은 요청 `evaluation.splitVersion`의 사본이다 — 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
 - 계산 불가 성과 지표(설계 OUTPUT Spec 규칙): 변동성 0 → `sharpeRatio`만 null. 관측치 2개 미만 → `volatility`·`sharpeRatio` null.
   CLOSED 거래 0건 → `winRate` null. `initialEquity ≤ 0` → `totalReturn`·`cagr` null. 기간이 1년 미만이라는 이유로 `cagr`을 null로 만들지 않는다.

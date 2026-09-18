@@ -15,6 +15,8 @@ import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
+import com.ssafy.thorp.backtest.application.service.CostProfileService;
+import com.ssafy.thorp.backtest.application.service.StrategyRulesService;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
@@ -24,6 +26,7 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;
+import com.ssafy.thorp.backtest.presentation.response.BacktestRegistryResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestRetryResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
@@ -63,18 +66,39 @@ public class BacktestController {
     private final BacktestCancelService cancelService;
     private final BacktestRetryService retryService;
     private final CurrentRequester currentRequester;
+    private final StrategyRulesService strategyRulesService;
+    private final CostProfileService costProfileService;
 
     public BacktestController(
             BacktestService backtestService,
             BacktestResultQueryService queryService,
             BacktestCancelService cancelService,
             BacktestRetryService retryService,
-            CurrentRequester currentRequester) {
+            CurrentRequester currentRequester,
+            StrategyRulesService strategyRulesService,
+            CostProfileService costProfileService) {
         this.backtestService = backtestService;
         this.queryService = queryService;
         this.cancelService = cancelService;
         this.retryService = retryService;
         this.currentRequester = currentRequester;
+        this.strategyRulesService = strategyRulesService;
+        this.costProfileService = costProfileService;
+    }
+
+    /**
+     * 화면이 요청에 실을 규칙 버전과 기본 비용 조건(T025, README §1.11). 등록표 행을 그대로 내보낸다.
+     *
+     * <p>로그인을 요구하지 않는다 — 사용자 데이터가 아니라 등록표이고, 003 등록표 조회와 같은 성격이다.
+     *
+     * <p>{@code /{backtestId}}와 겹치지 않는다: Spring 은 리터럴 경로를 패턴 변수보다 먼저 고른다.
+     */
+    @GetMapping("/registry")
+    public ResponseEntity<ApiResponse<BacktestRegistryResponse>> registry() {
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        BacktestRegistryResponse.of(
+                                strategyRulesService.findAll(), costProfileService.resolve(null))));
     }
 
     /**

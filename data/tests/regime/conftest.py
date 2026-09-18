@@ -7,12 +7,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from data_pipeline.regime.macro import SOURCE_FIXTURE, create_source
 from data_pipeline.regime.macro.source import MacroIndicatorSource
+from data_pipeline.regime.macro.types import (
+    FieldEntry,
+    IndicatorEntry,
+    IndicatorRegistry,
+    MonthlyValue,
+)
 
 #: 계약 시험을 돌릴 구현체. 008이 오면 `SOURCE_MACRO`를 더한다.
 SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE,)
@@ -37,3 +45,54 @@ def production_sources() -> list[Path]:
 @pytest.fixture(params=SOURCE_NAMES)
 def macro_source(request: pytest.FixtureRequest) -> MacroIndicatorSource:
     return create_source(request.param)
+
+
+def make_series(
+    start: tuple[int, int], values: Sequence[float | None]
+) -> dict[date, MonthlyValue]:
+    """단위 시험용 월별 계열 — ``None``인 달은 **키를 만들지 않는다**.
+
+    008 대역이 아니라 여기서 계열을 짓는 이유는 계약 §4.4가 정한 바다. 운영 픽스처는 008이
+    오면 사라지지만 `SCALE_ZERO`·동률 같은 모양은 실제 자료에 없을 수 있어, 같은 모양을 담은
+    **단위 시험 입력은 남겨야** 그 경로가 검증 밖으로 나가지 않는다.
+
+    원값은 변환값과 같게 둔다. 척도·비교 시점 판정은 변환값만 보므로(spec FR-009) 원값이
+    무엇이든 결과가 달라지지 않고, 다르게 두면 읽는 사람이 그 차이에 뜻이 있다고 여긴다.
+    """
+    series: dict[date, MonthlyValue] = {}
+    year, month = start
+    for value in values:
+        current = date(year, month, 1)
+        if value is not None:
+            series[current] = MonthlyValue(month=current, value=value, raw=value)
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return series
+
+
+def make_registry(
+    layout: Mapping[str, Sequence[str]], *, version: str = "test-v1", unit: str = "%"
+) -> IndicatorRegistry:
+    """분야 id → 지표 id 목록으로 등록표를 짓는다.
+
+    **분야 수·지표 수를 시험마다 다르게 준다.** 계산 쪽이 등록표가 준 수를 쓰는지(spec FR-010)
+    확인하려면 7분야 17지표 한 벌로는 부족하다 — 개수를 상수로 박아도 그 한 벌에서는 통과한다.
+    """
+    fields = tuple(
+        FieldEntry(id=field_id, name=f"{field_id} 분야", display_order=order)
+        for order, field_id in enumerate(layout, start=1)
+    )
+    indicators = tuple(
+        IndicatorEntry(
+            id=indicator_id,
+            name=f"{indicator_id} 지표",
+            field_id=field_id,
+            unit=unit,
+            transform="LEVEL",
+            display_order=order,
+        )
+        for order, (field_id, indicator_id) in enumerate(
+            ((field_id, member) for field_id, members in layout.items() for member in members),
+            start=1,
+        )
+    )
+    return IndicatorRegistry(version=version, fields=fields, indicators=indicators)

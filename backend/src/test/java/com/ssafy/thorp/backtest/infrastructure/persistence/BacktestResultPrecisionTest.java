@@ -12,24 +12,16 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -44,14 +36,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>유일한 예외는 음수 scale({@code 1E+2})이다. 계약 표기가 plain 문자열이라 {@code "100"}으로 저장되고 다시 읽으면 scale이 0이 된다.
  * 값은 같다. 계약 JSON은 plain 표기만 쓰므로 실제 메시지에서 음수 scale이 생기는 일은 없다. 이 동작을 테스트로 고정해 둔다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    MessageJsonPersistenceConfig.class,
-    BacktestRunRepositoryImpl.class,
-    BacktestResultRepositoryImpl.class
-})
-class BacktestResultPrecisionTest extends PostgresTestSupport {
+class BacktestResultPrecisionTest extends RepositoryTestSupport {
 
     /** 소수 20자리. NUMERIC(28,10)·(38,18) 모두 반올림하는 값이다. */
     private static final BigDecimal LONG_SCALE = new BigDecimal("53726.85123456789012345678");
@@ -67,14 +52,6 @@ class BacktestResultPrecisionTest extends PostgresTestSupport {
 
     private static final Instant T0 = Instant.parse("2025-01-02T00:00:00Z");
     private static final LocalDate D0 = LocalDate.of(2025, 1, 2);
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
 
     @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;

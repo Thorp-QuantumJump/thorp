@@ -91,9 +91,71 @@ User Story 3의 펼쳐 보는 층이다.
 
 003의 "이 조합은 언제부터 비교 가능합니다" 안내가 쓴다. 산식과 경계 동작은 [evaluation-window.md](./evaluation-window.md)가 기준이며, 이 엔드포인트는 그 산식의 HTTP 표면이다.
 
-**요청**: `?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM`
+**요청**: `?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM&maxWarmupTradingDays=200`
 
-**응답**: `evaluation-window.md`의 출력 구조에 `datasetId`를 더한 것
+| 인자 | 필수 | 뜻 |
+|---|---|---|
+| `sectors` | 예 | 후보 섹터 코드. 쉼표로 잇는다. 중복은 앞선 것만 남기고 **순서를 보존한다**(산식의 `bindingCandidate` 동점 규칙이 입력 순서를 쓴다) |
+| `strategy` | 아니오 | 워밍업을 정할 전략. 001은 이 값을 정하지 않고 전략 등록표(003 소유)에서 **기본 설정** 워밍업을 읽는다 |
+| `maxWarmupTradingDays` | 아니오 | 화면이 훑을 워밍업의 상한. 주면 아래 네 필드를 함께 내려 준다 |
+
+**둘 다 생략할 수는 없다.** `strategy`도 `maxWarmupTradingDays`도 없으면 워밍업을 적용할 수도, 화면이 스스로 계산할 재료를 내릴 수도 없어 400이다. `strategy`만 생략하면 워밍업 0으로 판정하며, 이것이 **전략 카드 여러 장을 요청 한 번으로 판정하는 경로**다.
+
+`maxWarmupTradingDays`를 두는 까닭은 **001이 003의 파라미터 조합을 몰라도 되게 하기 위함이다.** 화면이 자기가 필요한 만큼(등록표 축 상한으로 계산한 값)을 말하고 001은 그만큼만 내려 준다. 생략했을 때 등록표의 최대값으로 대신 채우지 않는다 — 그러면 001이 003 등록표의 축 구성을 읽어야 한다. 값의 허용 범위는 0 이상 6000 이하이며 넘으면 400이다.
+
+### 응답
+
+```json
+{
+  "commonStart": "2019-04-18",
+  "commonEnd": "2026-09-07",
+  "warmupTradingDays": 147,
+  "bindingCandidate": "305720.XKRX",
+  "bindingSector": "BATTERY",
+  "excludedRanges": [],
+  "evaluable": true,
+  "datasetId": "KRX_DAILY_20260915",
+
+  "warmupBaseDate": "2018-09-12",
+  "tradingDaysFromBase": ["2018-09-12", "2018-09-13", "2018-09-14", "..."],
+  "maxWarmupTradingDays": 200,
+  "excludedRangesFromBase": []
+}
+```
+
+앞의 여섯 칸은 `evaluation-window.md`의 출력이고, 나머지는 이 엔드포인트가 더한 것이다.
+
+| 필드 | 뜻 |
+|---|---|
+| `bindingSector` | `bindingCandidate`가 대표하는 섹터 코드. 화면이 종목 코드를 섹터 이름으로 되짚지 않게 하는 자리다 |
+| `datasetId` | 이 응답을 만든 자료 버전(FR-013) |
+| `warmupBaseDate` | 워밍업이 0일 때의 `commonStart`. 기준 후보의 상장일을 거래일 달력에 맞춘 날이다 |
+| `tradingDaysFromBase` | `warmupBaseDate`부터 `commonEnd`까지의 거래일 오름차순 목록. 길이는 `maxWarmupTradingDays + 1`을 넘지 않는다 |
+| `maxWarmupTradingDays` | 화면이 계산할 수 있는 워밍업의 상한. `tradingDaysFromBase.length - 1`과 같다 |
+| `excludedRangesFromBase` | `[warmupBaseDate, commonEnd]` 안의 자료 부족 구간 |
+
+**왜 재료를 함께 내리는가.** 003 화면은 사용자가 관측 기간 같은 값을 바꿀 때마다 워밍업이 달라지고 그 자리에서 "기간이 줄어듭니다 / 분석할 수 없습니다"를 다시 판정한다. 그런데 그 화면의 완료 기준이 "값을 만지는 동안 서버로 요청이 나가지 않는다"여서 값이 바뀔 때마다 이 엔드포인트를 다시 부르는 방식은 쓸 수 없다. 워밍업을 뺀 시작일은 거래일 달력이 있어야 구해지므로, 한 번의 응답에 달력 조각을 실어 보내고 **화면이 `commonStart(N) = tradingDaysFromBase[N]`으로 계산한다**(0-기준, 003 T098의 2026-09-17 합의).
+
+`excludedRangesFromBase`를 따로 두는 까닭은 `excludedRanges`가 워밍업을 반영한 `[commonStart, commonEnd]`로 잘려 있어 **그 앞의 자료 부족 구간을 알 수 없기** 때문이다. 화면은 더 짧은 워밍업으로 다시 계산할 때 이 목록을 자기 시작일에 맞춰 다시 자른다. 기존 필드의 뜻은 바꾸지 않았다 — 그 뜻은 워커와 공유하는 픽스처 `fixtures/evaluation-window-cases.json`이 고정하고 있다.
+
+### 경계 동작
+
+`evaluation-window.md`의 경계 동작에 더해 이 엔드포인트가 정하는 것들이다.
+
+| 상황 | 결과 |
+|---|---|
+| `maxWarmupTradingDays`가 남은 거래일보다 큼 | **오류가 아니다.** 있는 만큼만 내려 주고 `maxWarmupTradingDays`를 실제 길이 − 1로 줄인다 |
+| 워밍업을 채울 거래일이 모자람 | **오류가 아니다.** `evaluable: false`이고 `commonStart`는 `null`이다(키는 남는다). 재판정 재료 네 칸은 그대로 내려 준다 |
+| `warmupBaseDate`가 이미 `commonEnd`를 넘음 | `tradingDaysFromBase`가 빈 배열이고 `maxWarmupTradingDays`는 없다. 어떤 워밍업으로도 평가할 수 없다는 뜻이다 |
+| `maxWarmupTradingDays`를 주지 않음 | 재판정 재료 네 칸 가운데 `warmupBaseDate`만 내려 주고 나머지 셋은 **키 자체가 없다** |
+
+산식이 `CALENDAR_TOO_SHORT`로 실패하는 경우를 여기서 `evaluable: false`로 옮기는 이유는, 화면이 여러 워밍업을 훑는 용도로 부르는 조회라 값 하나가 달력을 넘었다고 조회 전체가 실패하면 나머지 판정까지 잃기 때문이다. **없는 날짜를 지어내는 것과는 다르다** — 날짜를 만들지 않고 "그 워밍업으로는 평가할 수 없다"고 말한다.
+
+### 자료 버전을 고르는 규칙
+
+지금 열린 대응표를 대상으로 수집됐고, 완전하며(`complete = true`), 그중 `data_deadline`이 가장 늦은 것이다. 대표 상품 정보와 같은 세 조건이라 같은 화면의 두 응답이 같은 판을 가리킨다. 접수 경로(`MarketMetadataPort`의 DB 구현)는 대응표를 조건에 넣지 않는데, 파이프라인이 자료를 현재 열린 대응표에 붙여 발행하는 한 두 규칙은 같은 행을 고른다. 갈리는 때는 대응표만 새로 열고 자료는 아직 옛 대응표를 가리키는 과도기이며, 그때 이 조회는 `EVALUATION_WINDOW_NOT_READY`가 되고 접수는 옛 자료로 계속 받는다. **막는 쪽으로 갈리는 것이 안전하다** — 반대로 갈리면 화면이 안내한 첫날이 접수에서 거절된다.
+
+거래일 달력은 `daily_index`의 `KOSPI` 행이다. `data_pipeline.index.CALENDAR_INDEX_CODE`·접수 경로와 같은 값이어야 하며, 세 곳이 갈라지면 같은 날을 두 달력으로 세게 된다.
 
 ## 오류
 
@@ -105,5 +167,7 @@ User Story 3의 펼쳐 보는 층이다.
 | 대응표가 발행되지 않음 | 409 | `SECTOR_MAP_NOT_READY` |
 | 대표 상품 정보가 아직 만들어지지 않음 | 409 | `INSTRUMENT_PROFILE_NOT_READY` |
 | 후보 목록이 빈 요청 | 400 | 검증 실패 |
+| 평가 기간 산출 자료가 아직 없음 | 409 | `EVALUATION_WINDOW_NOT_READY` |
+| 등록되지 않은 전략 | 422 | `STRATEGY_NOT_REGISTERED` |
 
 409를 쓰는 이유는 `backend/CLAUDE.md`가 결과 조회에 적용한 판단과 같다. 자료가 없는 상태를 빈 배열이나 0으로 내보내지 않고 재시도 가능한 상태로 구분한다.
