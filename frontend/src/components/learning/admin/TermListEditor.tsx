@@ -47,7 +47,10 @@ export function TermListEditor({ terms, savedTermIds, onChange }: TermListEditor
         {terms.map((term, index) => {
           const isSaved = savedTermIds.includes(term.termId)
           return (
-            <li key={term.termId || index} className={styles.row}>
+            // 순번을 키로 쓴다. `termId`는 새 행에서 고칠 수 있는 값이라 키로 쓰면 글자마다 행이
+            // 다시 만들어져 초점을 잃고, 같은 식별자 두 행이 키를 다툰다. 입력은 모두 제어 입력이라
+            // 행을 지워도 값이 엇갈리지 않는다.
+            <li key={index} className={styles.row}>
               <label className={styles.field}>
                 <span>식별자</span>
                 <input
