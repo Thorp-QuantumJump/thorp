@@ -25,8 +25,9 @@ BACKEND_DIR="$(cd "$(dirname "$0")/../../backend" && pwd)"
 GRADLE_JVMARGS="-Xmx512m -XX:MaxMetaspaceSize=384m"
 
 # 이전 배포의 JAR가 남아 있으면, 이번 빌드가 JAR를 만들지 못했는데도 옛 JAR로 이미지를 만든다. JAR가 둘이면
-# Dockerfile 의 `COPY build/libs/*.jar` 는 실패하지 않고 그중 하나만 넣는다. 그래서 매번 비우고 시작하고,
-# 끝에서 하나인지 확인한다. 컴파일 결과(build/classes)는 남겨 두므로 바뀐 소스만 다시 컴파일한다.
+# Dockerfile 의 `COPY build/libs/*.jar` 는 빌더에 따라 실패하거나(옛 빌더) 그중 하나만 넣는다(BuildKit). 그래서
+# 매번 비우고 시작하고, 끝에서 하나인지 확인한다. 컴파일 결과(build/classes)는 남겨 두므로 바뀐 소스만 다시
+# 컴파일한다.
 rm -rf "$BACKEND_DIR/build/libs"
 
 if command -v javac >/dev/null 2>&1 && javac -version 2>&1 | grep -qE '^javac 21(\.|$)'; then
