@@ -4,9 +4,8 @@ import type { AxisValue } from './strategyRegistry'
  * `POST /backtests`(schema v2, spec 004)의 요청·202 응답 타입.
  *
  * 원본 계약은 `docs/specs/backtest-api/README.md` §1이며, 그 원본은
- * `specs/004-backtest-execution/contracts/rest-api.md`다. 003 화면이 채우는 필드만 담았고
- * (`specs/003-strategy-settings/contracts/strategy-registry-api.md` §2), 이 화면이 쓰지 않는
- * `evaluationSplitVersion`·`scenarioParams`는 두지 않았다 — B10·별도 시나리오 화면이 필요할 때 넓힌다.
+ * `specs/004-backtest-execution/contracts/rest-api.md`다. 003의 분석 요청과 005의 비교 요청이 공유한다.
+ * `evaluationSplitVersion`·`scenarioParams`는 005가 원본 결과의 평가 조건을 보존할 때 사용한다.
  *
  * `types/backtest.ts`는 v1 데모 화면(`BacktestPage`)이 쓰는 이전 모양이라 여기와 다르다.
  *
@@ -41,7 +40,7 @@ export type BacktestCreateRequest = {
     /** 전략 규칙 버전. 필수이며 출처는 004와 함께 정한다("착수 전에 알아둘 것" ②) */
     rulesVersion: string
     /** 003 등록표 버전. 실린 요청만 접수 시점에 등록표로 재검증된다(FR-006) */
-    registryVersion: string
+    registryVersion?: string
     /** 축 이름 → 값. 등록표의 허용 범위 안이어야 한다 */
     parameters: Record<string, AxisValue>
   }
@@ -55,6 +54,8 @@ export type BacktestCreateRequest = {
     /** 워밍업 규칙의 계산 결과. 선택 전략의 요구값보다 작으면 422 */
     warmupTradingDays: number
     scenario: BacktestScenario
+    evaluationSplitVersion?: string | null
+    scenarioParams?: Record<string, unknown>
   }
 }
 
@@ -63,6 +64,8 @@ export type BacktestRequestStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED
 /** 202 응답의 `data`에서 화면이 읽는 부분. `backtestId`는 길이를 가정하지 않고 문자열로 다룬다. */
 export type BacktestAccepted = {
   backtestId: string
+  /** 공개 결과 화면은 이 토큰만 보관한다. 이전 접수 응답에는 없을 수 있다. */
+  publicToken?: string
   status: BacktestRequestStatus
   /** `REUSED`면 이미 완료된 결과라 폴링을 시작하지 않는다 */
   resultSource?: 'NEW' | 'JOINED' | 'REUSED'
