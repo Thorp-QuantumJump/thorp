@@ -134,8 +134,21 @@ describe('prefillStrategySettings', () => {
     expect(restored.snapshot?.weightsTouched).toBe(true)
   })
 
-  it('결과를 만든 뒤 대응표가 바뀌었으면 보관값을 건드리지 않고 사유를 돌려준다', async () => {
-    // 003은 보관된 대응표 버전이 지금과 다르면 조건을 이어받지 않고 앞 단계로 되돌린다.
+  /** 섹터만 넘기지 못했을 때: 002 선택은 그대로이고, 003 설정에는 결과의 전략·기간·금액이 있다 */
+  function expectOnlySettingsKept(previousSelection: string | null) {
+    expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBe(previousSelection)
+    const stored = readStored(STRATEGY_SETTINGS_STORAGE_KEY)
+    expect(stored.selectedStrategyId).toBe(config.strategyId)
+    expect(stored.valuesByStrategy).toEqual({ [config.strategyId]: config.parameters })
+    expect(stored.analysisCondition).toMatchObject({
+      periodStart: config.start,
+      periodEnd: config.end,
+      initialAmount: 10_000_000,
+    })
+  }
+
+  it('대응표가 다른 결과는 002 선택을 건드리지 않고 나머지 조건만 채워 둔다', async () => {
+    // 003은 보관된 대응표 버전이 지금과 다르면 섹터를 이어받지 않는다. 다른 대응표의 선택을 옮기지도 않는다.
     sectorMock.fetchSectorCatalog.mockResolvedValue({
       status: 'loaded',
       catalog: { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' },
@@ -146,24 +159,60 @@ describe('prefillStrategySettings', () => {
 
     const outcome = await prefillStrategySettings(config, navigate)
 
-    expect(outcome).toMatchObject({ status: 'failed', reselectSectors: true })
+    expect(outcome.status).toBe('reselectSectors')
+    // 어느 쪽 대응표가 나중인지는 알 수 없다. 다르다는 사실만 말한다.
+    expect(outcome).toHaveProperty('message', expect.stringContaining('지금 대응표와 달라'))
     expect(navigate).not.toHaveBeenCalled()
-    expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBe(previous)
-    expect(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY)).toBeNull()
+    expectOnlySettingsKept(previous)
   })
 
-  it('설정 화면이 이어받을 수 있는 섹터가 둘 미만이면 넘기지 않는다', async () => {
+  it('섹터를 다시 고르고 설정 화면에 가면 결과의 전략·기간·금액이 이어진다', async () => {
+    const nextCatalog = { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' }
+    sectorMock.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: nextCatalog })
+    await prefillStrategySettings(config, vi.fn())
+
+    // 사용자가 섹터·비중 단계에서 지금 대응표로 섹터를 다시 고른다.
+    window.sessionStorage.setItem(
+      SECTOR_SELECTION_STORAGE_KEY,
+      JSON.stringify({
+        version: SECTOR_SELECTION_PAYLOAD_VERSION,
+        mapVersion: nextCatalog.mapVersion,
+        selected: [
+          { code: 'HARBOR', weightTenths: 500 },
+          { code: 'LIGHTHOUSE', weightTenths: 500 },
+        ],
+        weightsTouched: true,
+      }),
+    )
+    const restored = readStoredSelection(nextCatalog.sectors)
+    const { result } = renderHook(() =>
+      useStrategySettings(registryFixture, restored.snapshot?.selectedCodes.length ?? null),
+    )
+
+    expect(result.current.ready).toBe(true)
+    expect(result.current.selectedStrategy?.strategyId).toBe(config.strategyId)
+    expect(result.current.values).toEqual(config.parameters)
+    expect(result.current.analysisCondition).toMatchObject({
+      periodStart: config.start,
+      periodEnd: config.end,
+      initialAmount: 10_000_000,
+    })
+  })
+
+  it('이 결과의 섹터가 둘 미만이면 섹터는 넘기지 않고 나머지 조건만 채워 둔다', async () => {
     const single: ResultConfig = { ...config, items: config.items.slice(0, 1) }
     const navigate = vi.fn()
 
     const outcome = await prefillStrategySettings(single, navigate)
 
-    expect(outcome).toMatchObject({ status: 'failed', reselectSectors: true })
+    expect(outcome.status).toBe('reselectSectors')
+    expect(outcome).toHaveProperty('message', expect.stringContaining('지금 고를 수 있는 섹터가'))
     expect(navigate).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBeNull()
+    expect(readStored(STRATEGY_SETTINGS_STORAGE_KEY).selectedStrategyId).toBe(config.strategyId)
   })
 
-  it('지금 목록에 없는 섹터를 빼면 둘 미만이 되는 결과도 넘기지 않는다', async () => {
+  it('지금 목록에 없는 섹터를 빼면 둘 미만이 되는 결과도 섹터는 넘기지 않는다', async () => {
     sectorMock.fetchSectorCatalog.mockResolvedValue({
       status: 'loaded',
       catalog: {
@@ -173,8 +222,26 @@ describe('prefillStrategySettings', () => {
     })
     const navigate = vi.fn()
 
-    expect((await prefillStrategySettings(config, navigate)).status).toBe('failed')
+    const outcome = await prefillStrategySettings(config, navigate)
+
+    expect(outcome.status).toBe('reselectSectors')
+    expect(outcome).toHaveProperty('message', expect.stringContaining('지금 고를 수 있는 섹터가'))
     expect(navigate).not.toHaveBeenCalled()
+    expectOnlySettingsKept(null)
+  })
+
+  it('비중을 0.1%p 단위로 옮길 수 없는 결과는 그 사실을 사유로 알린다', async () => {
+    const finerWeights: ResultConfig = {
+      ...config,
+      items: config.items.map((item) => ({ ...item, targetWeight: '0.33333' })),
+    }
+
+    const outcome = await prefillStrategySettings(finerWeights, vi.fn())
+
+    expect(outcome.status).toBe('reselectSectors')
+    // 섹터는 셋 다 있다. 섹터 수가 모자란다고 말하지 않는다.
+    expect(outcome).toHaveProperty('message', expect.stringContaining('0.1%p'))
+    expect(outcome).not.toHaveProperty('message', expect.stringContaining('지금 고를 수 있는 섹터가'))
   })
 
   it('섹터 목록을 받지 못하면 넘기지 않는다 — 이어받을 수 있는지 판정할 수 없다', async () => {
@@ -189,9 +256,8 @@ describe('prefillStrategySettings', () => {
 
     const outcome = await prefillStrategySettings(config, navigate)
 
+    // 다시 시도하면 풀릴 수 있는 실패다. 섹터를 다시 고르라고 하지 않고 아무것도 보관하지 않는다.
     expect(outcome.status).toBe('failed')
-    // 다시 시도하면 풀릴 수 있는 실패다. 섹터를 다시 고르라고 하지 않는다.
-    expect(outcome).not.toHaveProperty('reselectSectors')
     expect(navigate).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY)).toBeNull()
   })

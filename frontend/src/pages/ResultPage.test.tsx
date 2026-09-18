@@ -377,7 +377,7 @@ describe('ResultPage', () => {
       )
     })
 
-    it('결과를 만든 뒤 대응표가 바뀌었으면 옮기지 않고 사유와 섹터·비중 단계 연결을 보인다', async () => {
+    it('대응표가 다른 결과는 나머지 조건만 채워 두고 섹터·비중 단계 연결을 보인다', async () => {
       otherMocks.fetchSectorCatalog.mockResolvedValue({
         status: 'loaded',
         catalog: { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' },
@@ -388,9 +388,14 @@ describe('ResultPage', () => {
       await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
 
       const alert = await screen.findByRole('alert')
-      expect(alert.textContent).toContain('섹터 대응표가 바뀌어')
+      expect(alert.textContent).toContain('섹터는 넘기지 않았습니다')
+      expect(alert.textContent).toContain('섹터만 다시 골라 주세요')
       expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
-      expect(window.sessionStorage.getItem('thorp.strategySettings')).toBeNull()
+      // 섹터 선택은 건드리지 않고, 대응표와 무관한 조건은 설정 화면에 채워 둔다.
+      expect(window.sessionStorage.getItem('thorp.diagnosis.sectorSelection')).toBeNull()
+      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(
+        resultDetailCompleted.config.strategyId,
+      )
 
       await user.click(within(alert).getByRole('link', { name: '섹터·비중 단계로 가기' }))
       expect(await screen.findByRole('heading', { name: '섹터 선택 화면' })).not.toBeNull()

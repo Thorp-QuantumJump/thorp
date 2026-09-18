@@ -27,9 +27,12 @@ import type { RegistryResponse } from '@/types/strategyRegistry'
  * 전략 설정(`writeStoredStrategySettings`)을 이 결과의 `config`로 쓰고 `/strategy`로 옮긴다. 거기서 분석하면
  * 새 분석으로 접수된다 — 이 결과는 바뀌지 않는다.
  *
- * <p><b>설정 화면이 그 값을 쓸 수 있을 때만 옮긴다.</b> 003은 002 선택을 `useSectorSelection`으로 읽어 섹터가
- * 둘 미만이거나 대응표 버전이 지금과 다르면 조건을 이어받지 않고 앞 단계로 되돌린다. 그런 결과는 보관값을
- * 건드리지 않고 사유를 돌려준다 — 옮겨 놓고 빈 화면을 보이면 사용자가 고르던 선택만 잃는다.
+ * <p><b>섹터는 설정 화면이 이어받을 수 있을 때만 넘긴다.</b> 003은 002 선택을 `useSectorSelection`으로 읽어 섹터가
+ * 둘 미만이거나 대응표 버전이 지금과 다르면 조건을 이어받지 않고 앞 단계로 되돌린다. 다른 대응표에서 만든 선택을
+ * 지금 버전으로 옮기지도 않는다(원칙 VIII). 그런 결과는 002 선택을 건드리지 않고, 대응표와 무관한 003 설정
+ * (전략·설정값·기간·금액)만 보관한 뒤 `reselectSectors`로 알린다. 사용자가 섹터·비중 단계에서 섹터만 다시 고르고
+ * 설정 화면으로 가면, 003이 새 섹터 수로 보관값을 다시 판정해(`reconcileStoredSettings`) 나머지 조건이 이어진다.
+ * 섹터까지 넘기려면 002의 선택 인계 계약을 바꿔야 한다.
  *
  * <p><b>값을 고치지 않는다.</b> 등록표 범위 밖이 된 값을 여기서 걸러 내지 않는다. 003 화면
  * (`reconcileStoredSettings`)이 다시 판정하고 무엇이 왜 빠졌는지 알린다. 여기서 맞추면 사용자는 결과의 조건이
@@ -49,10 +52,12 @@ export const SECTOR_SELECTION_PATH = '/diagnosis/sectors'
 export type PrefillOutcome =
   | { status: 'moved' }
   /**
-   * 넘기지 못했다. 이동하지 않고 이 문장을 결과 화면에 보인다. `reselectSectors`면 섹터를 다시 골라야 풀리는
-   * 경우라(대응표가 바뀌었거나 이어받을 섹터가 모자람) 화면이 섹터·비중 단계로 가는 연결을 함께 둔다
+   * 전략·설정값·기간·금액은 보관했지만 섹터는 넘기지 못했다. 이동하지 않고 이 문장과 함께 섹터·비중 단계로 가는
+   * 연결을 보인다
    */
-  | { status: 'failed'; message: string; reselectSectors?: true }
+  | { status: 'reselectSectors'; message: string }
+  /** 아무것도 넘기지 못했다. 이동하지 않고 이 문장을 결과 화면에 보인다 */
+  | { status: 'failed'; message: string }
   /** 화면을 떠나 요청을 끊었다. 사용자에게 보일 실패가 아니다 */
   | { status: 'canceled' }
 
@@ -67,9 +72,11 @@ const CONFIG_UNREADABLE =
   '이 결과의 조건을 설정 화면이 읽는 모양으로 옮길 수 없습니다. 설정 화면에서 조건을 직접 골라 주세요.'
 const SCENARIO_UNSUPPORTED =
   '이 결과는 별도 시나리오로 계산한 결과라 설정 화면으로 조건을 넘길 수 없습니다. 원래 결과에서 다시 시작해 주세요.'
-const MAPPING_CHANGED =
-  '이 결과를 만든 뒤 섹터 대응표가 바뀌어 조건을 그대로 넘길 수 없습니다. 섹터·비중 단계에서 섹터를 다시 골라 주세요.'
-const TOO_FEW_SECTORS = `설정 화면은 섹터가 ${MINIMUM_SECTOR_COUNT}개 이상일 때 조건을 이어받습니다. 이 결과의 섹터로는 이어갈 수 없어 섹터·비중 단계에서 다시 골라 주세요.`
+const KEPT_OTHER_CONDITIONS =
+  '전략·설정값·분석 기간·시작 금액은 설정 화면에 채워 두었으니 섹터·비중 단계에서 섹터만 다시 골라 주세요.'
+const MAPPING_DIFFERS = `이 결과의 섹터 대응표가 지금 대응표와 달라 섹터는 넘기지 않았습니다. ${KEPT_OTHER_CONDITIONS}`
+const TOO_FEW_KNOWN_SECTORS = `이 결과의 섹터 가운데 지금 고를 수 있는 섹터가 ${MINIMUM_SECTOR_COUNT}개보다 적어 섹터는 넘기지 않았습니다. ${KEPT_OTHER_CONDITIONS}`
+const WEIGHTS_UNREADABLE = `이 결과의 섹터 비중을 섹터·비중 단계가 읽는 단위(0.1%p)로 옮길 수 없어 섹터는 넘기지 않았습니다. ${KEPT_OTHER_CONDITIONS}`
 
 /**
  * 계약의 비중 문자열을 002의 0.1%p 정수로 옮긴다. `"0.4000"` → `400`.
@@ -129,14 +136,21 @@ export function buildSelectionSnapshot(
 }
 
 /**
- * 003이 이 선택으로 조건을 이어받을 수 있는가. 002의 `readStoredSelection`이 지금 목록에 없는 섹터와 쓸 수 없는
- * 비중을 버리고, `useSectorSelection`이 그 결과가 둘 미만이면 앞 단계로 되돌린다.
+ * 003이 이 선택을 이어받지 못하는 까닭. 이어받을 수 있으면 `null`이다.
+ *
+ * <p>002의 `readStoredSelection`이 지금 목록에 없는 섹터와 쓸 수 없는 비중을 버리고, `useSectorSelection`이 대응표
+ * 버전이 다르거나 남은 섹터가 둘 미만이면 앞 단계로 되돌린다. 사용자에게 알릴 문장이 달라 까닭을 나눈다.
  */
-function usableSectorCount(snapshot: SectorSelectionSnapshot, catalog: SectorCatalog): number {
+function selectionProblem(snapshot: SectorSelectionSnapshot, catalog: SectorCatalog): string | null {
+  if (snapshot.mapVersion !== catalog.mapVersion) return MAPPING_DIFFERS
+
   const known = new Set(catalog.sectors.map((sector) => sector.code))
-  return snapshot.selectedCodes.filter(
-    (code) => known.has(code) && isValidWeightTenths(snapshot.weightTenths[code]),
-  ).length
+  const knownCodes = snapshot.selectedCodes.filter((code) => known.has(code))
+  if (knownCodes.length < MINIMUM_SECTOR_COUNT) return TOO_FEW_KNOWN_SECTORS
+
+  const usable = knownCodes.filter((code) => isValidWeightTenths(snapshot.weightTenths[code]))
+  if (usable.length < MINIMUM_SECTOR_COUNT) return WEIGHTS_UNREADABLE
+  return null
 }
 
 /**
@@ -200,8 +214,9 @@ function restoreRaw(key: string, raw: string | null): void {
 }
 
 /**
- * 결과의 조건을 보관하고 설정 화면으로 옮긴다. 넘기지 못하면 옮기지도, 보관하지도 않는다 — 빈 설정 화면은 조건이
- * 채워진 화면으로 읽히고, 덮어쓴 선택은 사용자가 고르던 것을 지운다.
+ * 결과의 조건을 보관하고 설정 화면으로 옮긴다. 섹터를 넘길 수 없으면 002 선택은 건드리지 않고 003 설정만 보관한 뒤
+ * 옮기지 않는다 — 섹터가 빠진 설정 화면은 조건이 다 채워진 화면으로 읽히고, 덮어쓴 선택은 사용자가 고르던 것을
+ * 지운다. 아무것도 넘길 수 없으면 아무것도 보관하지 않는다.
  *
  * <p>등록표와 섹터 목록은 사용자가 누를 때 받는다. 결과 첫 화면은 둘 다 부르지 않는다(SC-001).
  */
@@ -231,17 +246,16 @@ export async function prefillStrategySettings(
     return { status: 'failed', message: REGISTRY_FAILED }
   }
 
-  if (config.mappingVersion !== catalog.mapVersion) {
-    return { status: 'failed', message: MAPPING_CHANGED, reselectSectors: true }
-  }
-
-  const selection = buildSelectionSnapshot(config, catalog)
-  if (usableSectorCount(selection, catalog) < MINIMUM_SECTOR_COUNT) {
-    return { status: 'failed', message: TOO_FEW_SECTORS, reselectSectors: true }
-  }
-
   const settings = buildStrategySettings(config, registry)
   if (settings === null) return { status: 'failed', message: CONFIG_UNREADABLE }
+
+  const selection = buildSelectionSnapshot(config, catalog)
+  const problem = selectionProblem(selection, catalog)
+  if (problem !== null) {
+    // 대응표와 무관한 조건은 넘긴다. 섹터를 다시 고르면 설정 화면이 이 값으로 이어진다.
+    if (!writeStoredStrategySettings(settings)) return { status: 'failed', message: STORAGE_FAILED }
+    return { status: 'reselectSectors', message: problem }
+  }
 
   const previousSelection = readRaw(SECTOR_SELECTION_STORAGE_KEY)
   if (!writeStoredSelection(selection)) {
