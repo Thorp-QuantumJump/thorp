@@ -84,3 +84,7 @@ notes/
 
 # 요약·정리용 개인 작업 공간: 저장소에 올리지 않는다
 summary/
+
+# 03-load-server.sql 같은 생성물은 커밋하지 않는다. 02-export-local.py 로 언제든 다시 만든다.
+# 5MB가 넘고 로컬 DB 상태에 딸린 값이라 저장소에 두면 곧 실제와 어긋난다.
+data/sql/*-load-server.sql
