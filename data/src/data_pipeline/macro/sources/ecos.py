@@ -37,6 +37,10 @@ _ROW_KEYS: Final[tuple[str, ...]] = ("TIME", "DATA_VALUE", "ITEM_CODE1", "UNIT_N
 #: 주기별 대상 기간 표기 길이. 일별은 ``YYYYMMDD``, 월별은 ``YYYYMM`` 이다.
 _CYCLE_LENGTH: Final[Mapping[str, int]] = {"D": 8, "M": 6}
 
+#: 응답이 담을 수 있는 항목 자리 전부. **등록표가 언급하지 않은 자리도 본다** — 언급한
+#: 수만큼만 확인하면 원천이 항목을 *더했을* 때 검증을 빠져나간다.
+_MAX_ITEM_LEVELS: Final[int] = 4
+
 
 def cycle_for(indicator: IndicatorDefinition) -> str:
     """등록표의 확보 구간 표기로 주기를 가른다.
@@ -126,9 +130,12 @@ def parse(indicator: IndicatorDefinition, payload: Any) -> list[SourceObservatio
         row = require_mapping(raw_row, f"{context} {index}번째 행")
         require_keys(row, _ROW_KEYS, f"{context} {index}번째 행")
 
+        # 등록표가 언급한 자리 뒤까지 본다. 두바이유는 항목이 하나뿐이라 예전에는
+        # ITEM_CODE2 를 아예 확인하지 않았고, 원천이 항목2 구분을 더하면 같은 대상월에
+        # 서로 다른 값의 두 행이 들어와도 통과했다.
         actual = tuple(
             str(row[f"ITEM_CODE{level}"])
-            for level in range(1, len(expected) + 1)
+            for level in range(1, _MAX_ITEM_LEVELS + 1)
             if row.get(f"ITEM_CODE{level}") is not None
         )
         if actual != expected:
@@ -147,5 +154,15 @@ def parse(indicator: IndicatorDefinition, payload: Any) -> list[SourceObservatio
                 # 한국은행은 발표일을 주지 않는다. 수신 시각으로 대신하지 않는다 (FR-007).
                 source_updated_at=None,
             )
+        )
+
+    # 항목 검사가 놓친 갈래가 있으면 여기서 드러난다. 겹친 채로 내보내면 뒤의 월 기말·
+    # 증가율이 같은 기간의 여러 행 중 하나를 임의로 골라 값이 조용히 틀린다.
+    periods = [o.period for o in observations]
+    duplicated = sorted({p for p in periods if periods.count(p) > 1})
+    if duplicated:
+        raise SourceContractError(
+            f"{context}: 같은 기간이 여러 번 왔다({', '.join(duplicated[:5])})."
+            " 계열이 하나로 좁혀지지 않았다"
         )
     return observations

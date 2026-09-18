@@ -148,6 +148,13 @@ def parse_decimal(raw: object, context: str) -> Decimal | None:
 
     숫자로 읽히지 않는 값은 ``None`` 으로 넘기지 않고 멈춘다 — 원천이 형식을 바꾼 것이라
     결측으로 조용히 묻으면 계열이 줄어든 이유를 나중에 되짚지 못한다.
+
+    **``NaN`` 과 ``Infinity`` 도 멈춘다.** :class:`~decimal.Decimal` 은 이 둘을 정상적으로
+    받아들이므로 그냥 두면 "값이 있는 관측"으로 통과해 버린다. 그러면 결측도 계약 위반도
+    아닌 세 번째 상태가 생기는데, 그것이 가장 나쁘다 — 증가율 계산에 들어가면 결과도 ``NaN``
+    이 되고 결측 사유는 비어 있으므로, 값이 있다고 적힌 관측이 실제로는 비교할 수 없는 값이
+    된다. ``NaN`` 과의 비교는 모두 거짓이라 010 의 거리·순위가 조용히 어긋난다(원칙 VI).
+    ``sNaN`` 은 더 나쁘다 — 산술에 닿는 순간 예외가 터져 파싱과 무관한 자리에서 실패한다.
     """
     if raw is None:
         return None
@@ -155,11 +162,17 @@ def parse_decimal(raw: object, context: str) -> Decimal | None:
     if text in _BLANK_VALUES:
         return None
     try:
-        return Decimal(text)
+        value = Decimal(text)
     except InvalidOperation:
         raise SourceContractError(
             f"{context}: 값을 숫자로 읽지 못했다({raw!r}). 원천이 형식을 바꿨는지 본다"
         ) from None
+    if not value.is_finite():
+        raise SourceContractError(
+            f"{context}: 값이 유한한 수가 아니다({raw!r})."
+            " 결측으로 두지 않는다 — 원천이 이 자리에 무엇을 뜻하려 했는지 확인해야 한다"
+        )
+    return value
 
 
 def require_mapping(payload: Any, context: str) -> Mapping[str, Any]:

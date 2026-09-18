@@ -38,7 +38,11 @@ _ROW_KEYS: Final[tuple[str, ...]] = ("PRD_DE", "DT", "ITM_ID", "TBL_ID", "ORG_ID
 _ROW_KEYS_WITHOUT_UNIT: Final[tuple[str, ...]] = tuple(k for k in _ROW_KEYS if k != "UNIT_NM")
 
 #: 요청의 분류 이름 → 응답의 분류 이름. 같은 것을 가리키는 두 이름이다.
-_RESPONSE_DIMENSION: Final[Mapping[str, str]] = {"objL1": "C1", "objL2": "C2"}
+_RESPONSE_DIMENSION: Final[Mapping[str, str]] = {"objL1": "C1", "objL2": "C2", "objL3": "C3"}
+
+#: 응답에 나타날 수 있는 분류 자리 전부. **등록표가 언급하지 않은 자리도 본다** —
+#: 언급한 것만 대조하면 원천이 차원을 *더했을* 때 검증을 빠져나간다.
+_ALL_RESPONSE_DIMENSIONS: Final[tuple[str, ...]] = ("C1", "C2", "C3")
 
 #: 월별 자료만 받는다. 등록표의 17개가 모두 월 단위다.
 PERIOD_MONTHLY: Final[str] = "M"
@@ -159,6 +163,21 @@ def _check_classification(
                 " 다른 계열이 섞였는지 본다"
             )
 
+    # 등록표가 고르지 않은 자리에 값이 들어 있으면 원천이 분류를 더한 것이다. 그대로 두면
+    # 그 자리의 갈래마다 행이 늘어 같은 대상월이 여러 번 들어온다.
+    known = {_RESPONSE_DIMENSION[dimension] for dimension, _ in classification}
+    extra = [
+        field
+        for field in _ALL_RESPONSE_DIMENSIONS
+        if field not in known and row.get(field) is not None
+    ]
+    if extra:
+        raise SourceContractError(
+            f"{context}: 등록표가 고르지 않은 분류가 응답에 있다"
+            f" ({', '.join(f'{f}={row[f]}' for f in extra)})."
+            " 원천이 분류를 더하면 같은 대상월 행이 여러 개 되므로 그대로 쓰지 않는다"
+        )
+
 
 def _check_identity(
     org_id: str, table_code: str, item_code: str, row: Mapping[str, Any], context: str
@@ -223,7 +242,24 @@ def parse_series(
                 source_updated_at=row.get("LST_CHN_DE"),
             )
         )
+
+    # 여기까지 왔는데 대상월이 겹치면 위의 검사가 놓친 갈래가 있다는 뜻이다. 겹친 채로
+    # 내보내면 뒤의 증가율이 분모를 임의의 한 행으로 골라 값이 조용히 틀린다.
+    _reject_duplicate_periods(observations, context)
     return observations
+
+
+def _reject_duplicate_periods(
+    observations: Sequence[SourceObservation], context: str
+) -> None:
+    """한 계열에 같은 대상월이 두 번 나오면 멈춘다 (FR-011b)."""
+    seen: set[str] = set()
+    duplicated = sorted({o.period for o in observations if o.period in seen or seen.add(o.period)})
+    if duplicated:
+        raise SourceContractError(
+            f"{context}: 같은 대상월이 여러 번 왔다({', '.join(duplicated[:5])})."
+            " 계열이 하나로 좁혀지지 않았다"
+        )
 
 
 def parse(indicator: IndicatorDefinition, payload: Any) -> list[SourceObservation]:

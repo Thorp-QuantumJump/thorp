@@ -136,6 +136,38 @@ class TestContractViolations:
         with pytest.raises(SourceContractError, match="대상 기간 표기"):
             ecos.parse(BY_ID["dubai_crude"], payload)
 
+    @pytest.mark.parametrize("special", ["NaN", "sNaN", "Infinity", "-Infinity"])
+    def test_유한하지_않은_수를_값으로_받지_않는다(self, special: str) -> None:
+        """Decimal 은 NaN·Infinity 를 정상적으로 받으므로 그냥 두면 '값 있는 관측'이 된다.
+
+        결측도 계약 위반도 아닌 세 번째 상태가 되어 증가율이 NaN 인데 결측 사유는 비고,
+        NaN 과의 비교는 모두 거짓이라 010 의 거리·순위가 조용히 어긋난다 (원칙 VI).
+        """
+        payload = load("dubai_crude_monthly")
+        payload["StatisticSearch"]["row"][0]["DATA_VALUE"] = special  # type: ignore[index]
+
+        with pytest.raises(SourceContractError, match="유한한 수가 아니다"):
+            ecos.parse(BY_ID["dubai_crude"], payload)
+
+    def test_등록표가_모르는_항목_자리가_생기면_멈춘다(self) -> None:
+        """항목이 하나뿐인 계열은 예전에 ITEM_CODE2 를 아예 확인하지 않았다."""
+        payload = load("dubai_crude_monthly")
+        payload["StatisticSearch"]["row"][0]["ITEM_CODE2"] = "S1"  # type: ignore[index]
+
+        with pytest.raises(SourceContractError, match="다른 계열이 섞였는지"):
+            ecos.parse(BY_ID["dubai_crude"], payload)
+
+    def test_같은_기간이_두_번_오면_멈춘다(self) -> None:
+        """겹친 채로 내보내면 월 기말·증가율이 임의의 한 행을 골라 값이 틀린다."""
+        payload = load("dubai_crude_monthly")
+        rows = payload["StatisticSearch"]["row"]  # type: ignore[index]
+        duplicate = dict(rows[0])
+        duplicate["DATA_VALUE"] = "999"
+        payload["StatisticSearch"]["row"] = [rows[0], duplicate]  # type: ignore[index]
+
+        with pytest.raises(SourceContractError, match="같은 기간이 여러 번"):
+            ecos.parse(BY_ID["dubai_crude"], payload)
+
     def test_숫자가_아닌_값은_결측으로_묻지_않는다(self) -> None:
         payload = load("dubai_crude_monthly")
         payload["StatisticSearch"]["row"][0]["DATA_VALUE"] = "8x.5"  # type: ignore[index]

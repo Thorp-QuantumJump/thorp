@@ -156,6 +156,22 @@ class TestContractViolations:
         with pytest.raises(SourceContractError, match="UNIT_NM"):
             kosis.parse(BY_ID["consumer_price_index"], payload)
 
+    def test_등록표가_고르지_않은_분류가_생기면_멈춘다(self) -> None:
+        """등록표가 언급한 차원만 대조하면 원천이 차원을 *더했을* 때 빠져나간다."""
+        payload = load("cpi")
+        payload[0]["C2"] = "X1"  # type: ignore[index]
+
+        with pytest.raises(SourceContractError, match="고르지 않은 분류"):
+            kosis.parse(BY_ID["consumer_price_index"], payload)
+
+    def test_같은_대상월이_두_번_오면_멈춘다(self) -> None:
+        """겹친 채로 내보내면 증가율이 분모를 임의의 한 행으로 골라 값이 조용히 틀린다."""
+        payload = load("cpi")
+        payload.append(dict(payload[0]))  # type: ignore[attr-defined]
+
+        with pytest.raises(SourceContractError, match="같은 대상월이 여러 번"):
+            kosis.parse(BY_ID["consumer_price_index"], payload)
+
     def test_월별이_아닌_기간_표기는_멈춘다(self) -> None:
         payload = load("cpi")
         payload[0]["PRD_DE"] = "2026"  # type: ignore[index]
