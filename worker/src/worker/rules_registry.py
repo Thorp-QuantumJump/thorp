@@ -13,7 +13,6 @@ from __future__ import annotations
 #: 팀 결정을 기다리는 전략 → 결정 항목. 값이 정해지면 등록표 행을 채우고 여기서 뺀다.
 PENDING_DECISION: dict[str, str] = {
     "SECTOR_MOMENTUM": "PD-03",
-    "MINIMUM_VARIANCE": "PD-04",
 }
 
 

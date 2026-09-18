@@ -52,7 +52,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             // 최솟값이다.
             "spring.datasource.hikari.maximum-pool-size=4",
             "spring.datasource.hikari.minimum-idle=0",
-            "spring.datasource.hikari.idle-timeout=10000"
+            "spring.datasource.hikari.idle-timeout=10000",
+            // 배우기 관리 IT(spec 013 B02)의 관리 계정. 클래스마다 속성을 따로 주면 컨텍스트가 갈라져 공용 컨테이너의
+            // 연결이 모자라므로 여기 한 곳에 둔다. 다른 도메인은 이 값을 읽지 않는다.
+            "thorp.learning.admin-user-ids=7"
         })
 public abstract class PostgresTestSupport {
 

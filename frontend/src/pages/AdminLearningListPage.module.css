@@ -1,0 +1,98 @@
+.main {
+  width: min(100% - 40px, 1080px);
+  margin: 0 auto;
+  padding: 60px 0 80px;
+  color: var(--thorp-foreground);
+}
+
+.title {
+  margin: 0 0 24px;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  letter-spacing: -0.04em;
+}
+
+.caption {
+  margin-bottom: 10px;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--thorp-copy);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.createForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 420px;
+  margin-top: 36px;
+  padding: 20px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+}
+
+.createForm h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+
+.field input {
+  padding: 9px 12px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.notice {
+  margin: 0;
+  color: var(--thorp-negative);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.main button {
+  padding: 8px 15px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.main button:hover:not(:disabled) {
+  border-color: currentColor;
+}

@@ -25,6 +25,11 @@ const MarketFlowPage = lazy(() =>
     default: module.MarketFlowPage,
   })),
 )
+const RegimeSearchPage = lazy(() =>
+  import('@/pages/RegimeSearchPage').then((module) => ({
+    default: module.RegimeSearchPage,
+  })),
+)
 
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
@@ -63,6 +68,19 @@ const LearningArticlePage = lazy(() =>
   })),
 )
 
+// 013 배우기 관리. 운영자는 주소로 들어오며 `AppHeader`에 메뉴를 두지 않는다(US5 시나리오 1).
+const AdminLearningListPage = lazy(() =>
+  import('@/pages/AdminLearningListPage').then((module) => ({
+    default: module.AdminLearningListPage,
+  })),
+)
+
+const AdminLearningEditPage = lazy(() =>
+  import('@/pages/AdminLearningEditPage').then((module) => ({
+    default: module.AdminLearningEditPage,
+  })),
+)
+
 // 전략 진단의 첫 단계다. 섹터 목록을 받아 보이는 화면이며 접근 시점에 불러온다.
 const SectorSelectionPage = lazy(() =>
   import('@/pages/SectorSelectionPage').then((module) => ({
@@ -76,6 +94,13 @@ const SectorSelectionPage = lazy(() =>
 const StrategySettingsPage = lazy(() =>
   import('@/pages/StrategySettingsPage').then((module) => ({
     default: module.StrategySettingsPage,
+  })),
+)
+
+// 결과 화면(spec 005)이다. 공개 토큰만 있으면 로그인 없이 연다.
+const ResultPage = lazy(() =>
+  import('@/pages/ResultPage').then((module) => ({
+    default: module.ResultPage,
   })),
 )
 
@@ -101,6 +126,7 @@ function AnimatedRoutes() {
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/regime-search" element={<RegimeSearchPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
@@ -112,11 +138,30 @@ function AnimatedRoutes() {
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
             <Route path="/strategy" element={<StrategySettingsPage />} />
+            {/* 결과 주소는 받은 사람 누구나 연다. 보호 경로 밖에 둔다(005 FR-019). */}
+            <Route path="/results/:token" element={<ResultPage />} />
             <Route
               path="/records/*"
               element={
                 <ProtectedRoute>
                   <MyRecordsEntryPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* 관리 화면은 로그인이 전제다. 권한 판정은 서버가 하고 화면은 200일 때만 그린다. */}
+            <Route
+              path="/admin/learning"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/learning/:articleId"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningEditPage />
                 </ProtectedRoute>
               }
             />

@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -18,8 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,27 +28,14 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>확인하는 것은 다섯 가지다 — 응답이 계약 예시와 같은지, 필수 항목이 모두 있는지(FR-015), <b>추적 차이 필드가 없는지</b>(PD-21), 과거 구성 이력이
  * 없을 때 현재 구성 기준 표시가 붙는지, 그리고 없는 섹터(404)와 자료 미적재(409)가 구분되는지다.
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를
- * {@code SectorApiIT}와 글자 그대로 같게 맞춰 두었다. 속성 하나라도 바꾸면 컨텍스트가 갈라지고, 이 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의
- * {@code max_connections}를 거의 다 쓰고 있어 나중에 뜨는 다른 DB 테스트가 접속을 얻지 못한다. <b>이 애노테이션 묶음은 건드리지 않는다.</b>
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  *
  * <p>자료를 넣는 경로가 JDBC인 이유: 대응표도 대표 상품 정보도 원본은 파이썬 파이프라인이고 백엔드에는 쓰기 경로가 아예 없다(research.md 결정 7). 저장소
  * 인터페이스로 픽스처를 만들 수 없는 것이 정상이다.
  *
  * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class InstrumentProfileApiIT extends PostgresTestSupport {
+class InstrumentProfileApiIT extends IntegrationTestSupport {
 
     private static final String MAP_VERSION = "SEM-2026-09-13-001";
     private static final String SEMICONDUCTOR = "SEMICONDUCTOR";

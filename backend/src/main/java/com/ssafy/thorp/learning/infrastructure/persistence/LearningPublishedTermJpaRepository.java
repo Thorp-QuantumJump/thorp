@@ -45,6 +45,18 @@ public interface LearningPublishedTermJpaRepository
             nativeQuery = true)
     Optional<PublishedTermRow> findPublished(@Param("termKey") String termKey);
 
+    /** 이 용어의 색인 행이 속한 글. */
+    @Query(
+            value =
+                    """
+                    SELECT a.article_key
+                    FROM learning_published_term pt
+                    JOIN learning_article a ON a.id = pt.article_id
+                    WHERE pt.term_key = :termKey
+                    """,
+            nativeQuery = true)
+    Optional<String> findOwnerArticleKey(@Param("termKey") String termKey);
+
     /** 벌크 삭제로 즉시 지운다. 같은 {@code term_key}를 곧바로 다시 넣으므로 flush 순서에 맡기지 않는다. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from LearningPublishedTermJpaEntity t where t.articleId = :articleId")

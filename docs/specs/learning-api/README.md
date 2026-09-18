@@ -8,8 +8,11 @@
 - 화면 부품(도움말·돌아가기·002 예시 진입): [term-help-ui.md](../../../specs/013-learning-pages/contracts/term-help-ui.md)
 
 **예시 파일이 계약의 기준이다.** 백엔드 통합 테스트(`LearningPublicApiIT`, B02의 `LearningAdminApiIT`)가 이 파일을
-읽어 실제 응답과 JSON 동치로 대조하므로, 계약과 구현이 어긋나면 빌드가 실패한다. 값은 계약 형식을 보이는
-합성 값이며 원고나 추천 예시가 아니다.
+읽어 실제 응답과 대조하므로, 계약과 구현이 어긋나면 빌드가 실패한다. 대조 방식은 파일마다 다르다. 공개 조회 예시와
+`publish-check-failed.json`은 **JSON 동치**로 비교한다. 나머지 관리 예시는 시각·대응표 버전처럼 실행마다 달라지는 값이
+있어 **키 구성**(객체의 키 집합, 배열은 첫 원소)만 비교하고, 값은 테스트가 따로 단언한다. 값은 계약 형식을 보이는
+합성 값이며 원고나 추천 예시가 아니다. 예시 파일만 고쳐도 테스트가 다시 돌도록 이 폴더는 `backend/build.gradle`의
+테스트 입력으로 선언되어 있다.
 
 응답은 다른 API와 같은 `ApiResponse` 껍데기(`{ success, data, error }`)를 쓴다. 아래 파일은 달리 적지 않으면 그 안의 `data`다.
 
@@ -29,10 +32,10 @@
 
 ## 관리 (B02, 관리 계정만)
 
-| 파일 | 원본 절 |
-|---|---|
-| [`admin-articles-list.json`](examples/admin-articles-list.json) | 관리 계약 §2 `GET /admin/learning/articles` 200 `data` |
-| [`admin-article.json`](examples/admin-article.json) | §4 `GET /admin/learning/articles/{articleId}` 200 `data` |
-| [`publish-success.json`](examples/publish-success.json) | §6 `POST …/publish` 200 `data` |
-| [`publish-check-failed.json`](examples/publish-check-failed.json) | §6 422 — **`error` 전체**다 |
-| [`unpublish.json`](examples/unpublish.json) | §7 `POST …/unpublish` 200 `data` |
+| 파일 | 원본 절 | `LearningAdminApiIT` 대조 방식 |
+|---|---|---|
+| [`admin-articles-list.json`](examples/admin-articles-list.json) | 관리 계약 §2 `GET /admin/learning/articles` 200 `data` | 키 구성 |
+| [`admin-article.json`](examples/admin-article.json) | §4 `GET /admin/learning/articles/{articleId}` 200 `data`(만들기 201·저장 200도 같은 모양) | 키 구성 |
+| [`publish-success.json`](examples/publish-success.json) | §6 `POST …/publish` 200 `data` | 키 구성 (`publishedAt`·`sectorMapVersion`이 실행마다 다르다) |
+| [`publish-check-failed.json`](examples/publish-check-failed.json) | §6 422 — **`error` 전체**다 | JSON 동치 |
+| [`unpublish.json`](examples/unpublish.json) | §7 `POST …/unpublish` 200 `data` | 키 구성 (값은 `unpublishedRevisionNo` 등을 따로 단언) |

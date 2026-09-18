@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.learning.support.LearningSeeds;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,8 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,21 +30,9 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>게시 유스케이스(B02)가 아직 없어 판·색인·글 상태를 {@link LearningSeeds}가 SQL로 심는다. 심는 값은 예시 파일에서 거꾸로 만든다. 그래서
  * 예시를 바꾸면 심는 판도 함께 바뀌고, 비교가 스스로를 확인하는 것이 아니라 "판 → 응답" 변환을 확인한다.
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성을 {@code SectorApiIT}와 글자 그대로 같게 두어
- * 캐시된 컨텍스트를 재사용한다. 속성 하나라도 바꾸면 컨텍스트가 갈라져 공용 컨테이너의 연결 수가 모자라게 된다.
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class LearningPublicApiIT extends PostgresTestSupport {
+class LearningPublicApiIT extends IntegrationTestSupport {
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path EXAMPLES = Path.of("..", "docs", "specs", "learning-api", "examples");

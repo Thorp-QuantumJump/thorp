@@ -4,7 +4,7 @@ import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventReposit
 import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;
 import org.springframework.stereotype.Repository;
 
-/** 재사용·합류 기록 저장. 추가와, 만료된 비로그인 요청 정리를 위한 삭제만 있다. */
+/** 재사용·합류 기록 저장. 추가와, 만료된 비로그인 요청 정리를 위한 요청 참조 끊기만 있다. */
 @Repository
 public class BacktestReuseEventRepositoryImpl implements BacktestReuseEventRepository {
 
@@ -38,7 +38,7 @@ public class BacktestReuseEventRepositoryImpl implements BacktestReuseEventRepos
     }
 
     @Override
-    public int deleteByRequestId(long requestId) {
-        return jpaRepository.deleteByRequestId(requestId);
+    public int clearRequestId(long requestId) {
+        return jpaRepository.clearRequestId(requestId);
     }
 }

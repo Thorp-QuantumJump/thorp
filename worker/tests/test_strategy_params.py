@@ -9,7 +9,12 @@ from pydantic import ConfigDict, ValidationError
 
 from worker.contracts.base import ContractModel
 from worker.contracts.engine_input import AllocationSpec, EngineInput
-from worker.contracts.strategy_params import STRATEGY_PARAMETERS, RebalanceParameters
+from worker.contracts.strategy_params import (
+    STRATEGY_PARAMETERS,
+    CappedRebalanceParameters,
+    MinimumVarianceParameters,
+    RebalanceParameters,
+)
 
 
 def spec(strategy_id: str, parameters: dict[str, Any]) -> dict[str, Any]:
@@ -29,15 +34,34 @@ def test_parameter_model_keeps_camel_alias_and_forbids_extra() -> None:
     assert Probe.model_validate({"lookback_days": 5}).lookback_days == 5
 
 
-def test_registry_covers_the_three_registered_allocation_strategies() -> None:
-    """미확정 두 전략(PD-03·04)은 파라미터 모양도 미정이라 등록하지 않는다."""
+def test_registry_covers_the_registered_allocation_strategies() -> None:
+    """미확정 전략(PD-03)은 파라미터 모양도 미정이라 등록하지 않는다."""
     assert STRATEGY_PARAMETERS == {
-        "FIXED_WEIGHT": RebalanceParameters,
+        "FIXED_WEIGHT": CappedRebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
-        "INVERSE_VOLATILITY": RebalanceParameters,
+        "INVERSE_VOLATILITY": CappedRebalanceParameters,
+        "MINIMUM_VARIANCE": MinimumVarianceParameters,
     }
     assert "SECTOR_MOMENTUM" not in STRATEGY_PARAMETERS
-    assert "MINIMUM_VARIANCE" not in STRATEGY_PARAMETERS
+
+
+def test_max_weight_is_an_integer_percent_and_optional() -> None:
+    """003 축이 정수 %다. 소수·범위 밖은 조용히 고쳐지지 않고 거절된다(T022)."""
+    typed = AllocationSpec.model_validate(
+        spec("MINIMUM_VARIANCE", {"rebalance": "MONTH_END", "maxWeight": 40})
+    )
+    assert typed.typed_parameters.max_weight == 40
+    assert (
+        AllocationSpec.model_validate(
+            spec("MINIMUM_VARIANCE", {"rebalance": "MONTH_END"})
+        ).typed_parameters.max_weight
+        is None
+    )
+    for rejected in (0, 101, 0.4):
+        with pytest.raises(ValidationError, match="maxWeight"):
+            AllocationSpec.model_validate(
+                spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "maxWeight": rejected})
+            )
 
 
 @pytest.mark.parametrize("strategy_id", sorted(STRATEGY_PARAMETERS))
@@ -46,6 +70,28 @@ def test_month_end_rebalance_is_the_only_approved_cadence(strategy_id: str) -> N
     assert isinstance(typed.typed_parameters, RebalanceParameters)
     with pytest.raises(ValidationError):
         AllocationSpec.model_validate(spec(strategy_id, {"rebalance": "WEEKLY"}))
+
+
+def test_minimum_variance_takes_the_003_axes_it_offers() -> None:
+    """003이 최소분산에 두는 축은 넷이다. 하나라도 받지 못하면 화면이 만든 요청이 거절된다.
+
+    ``rebalancePeriod``는 003이 객체로 두는 축이고 백엔드 ``EngineInputAssembler``가
+    ``rebalance``로 옮겨 싣는다 — 워커에는 옮겨진 이름으로 온다.
+    """
+    typed = AllocationSpec.model_validate(
+        spec(
+            "MINIMUM_VARIANCE",
+            {
+                "rebalance": "MONTH_END",
+                "maxWeight": 40,
+                "lookbackDays": 250,
+                "estimationMethod": "SAMPLE_COV",
+            },
+        )
+    ).typed_parameters
+
+    assert isinstance(typed, MinimumVarianceParameters)
+    assert (typed.lookback_days, typed.estimation_method) == (250, "SAMPLE_COV")
 
 
 def test_misspelled_or_extra_parameter_key_is_rejected() -> None:
@@ -59,6 +105,27 @@ def test_misspelled_or_extra_parameter_key_is_rejected() -> None:
         AllocationSpec.model_validate(
             spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "lookbackDays": 63})
         )
+
+
+def test_axis_keys_are_camel_case_only() -> None:
+    """필드 이름(snake_case) 철자는 거절한다.
+
+    계산은 원본 dict 를 ``maxWeight`` 로 읽으므로, ``max_weight`` 를 받아주면 검증만 통과하고
+    상한은 규칙표 기본값으로 조용히 바뀜다.
+    """
+    with pytest.raises(ValidationError, match="max_weight"):
+        AllocationSpec.model_validate(
+            spec("FIXED_WEIGHT", {"rebalance": "MONTH_END", "max_weight": 40})
+        )
+
+
+def test_equal_weight_does_not_take_a_cap() -> None:
+    """003 에 ``maxWeight`` 축이 없는 전략은 받지 않는다 — 1/N 은 상한을 지킬 수 없다."""
+    with pytest.raises(ValidationError, match="maxWeight"):
+        AllocationSpec.model_validate(
+            spec("EQUAL_WEIGHT", {"rebalance": "MONTH_END", "maxWeight": 20})
+        )
+    AllocationSpec.model_validate(spec("FIXED_WEIGHT", {"rebalance": "MONTH_END", "maxWeight": 20}))
 
 
 def test_typed_parameters_do_not_change_serialization() -> None:

@@ -28,11 +28,16 @@ interface ConditionSummaryLineProps {
    * 하려고 이 줄에 둔다(T092, quickstart 4).
    */
   initialAmount: SummaryAmount | null
-  /** 004가 등록한 비용 조건의 버전과 임시 여부. 조회할 수 없으면 `null` */
-  costProfile: SummaryCostProfile | null
+  /**
+   * 004가 등록한 비용 조건의 버전과 임시 여부. 조회하는 중이면 `'loading'`, 조회할 수 없으면 `null`이다.
+   *
+   * 두 상태를 한 값으로 접지 않는다 — 곧 끝날 조회를 "확인할 수 없음"으로 보이면 실패한 것처럼 읽힌다.
+   */
+  costProfile: SummaryCostProfile | 'loading' | null
 }
 
 const UNAVAILABLE = '확인할 수 없음'
+const LOADING = '확인하는 중'
 
 /** 금액을 자릿점과 등록표의 단위로 보인다. 단위가 없으면 숫자만 보인다. */
 function formatAmount(amount: SummaryAmount): string {
@@ -78,8 +83,14 @@ export function ConditionSummaryLine({
       <span className={styles.item}>
         <span className={styles.label}>비용 조건</span>
         <span className={styles.value}>
-          {costProfile ? costProfile.version : UNAVAILABLE}
-          {costProfile?.provisional ? <ProvisionalBadge label="비용 조건" /> : null}
+          {costProfile === 'loading'
+            ? LOADING
+            : costProfile
+              ? costProfile.version
+              : UNAVAILABLE}
+          {costProfile !== 'loading' && costProfile?.provisional ? (
+            <ProvisionalBadge label="비용 조건" />
+          ) : null}
         </span>
       </span>
     </p>

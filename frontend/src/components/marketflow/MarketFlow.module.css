@@ -47,7 +47,7 @@
 .chartGrid line { stroke: var(--thorp-chart-grid); stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
 .chartGrid text, .chartEmpty { fill: var(--thorp-copy); font: 11px var(--thorp-font-display); }
 .chartEmpty { font-family: var(--thorp-font-body); font-size: 13px; }
-.chartLine { fill: none; stroke: var(--thorp-chart-line-primary); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.chartLine { fill: none; stroke: var(--chart-line-primary); stroke-width: 2; stroke-linejoin: round; }
 .chartPoint { fill: var(--thorp-background); stroke: var(--thorp-accent-soft); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .crosshair { stroke: var(--thorp-line-strong); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
 .path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0 0 14px; padding: 0; border-top: 1px solid var(--thorp-line); border-bottom: 1px solid var(--thorp-line); }
@@ -100,3 +100,39 @@
   .summaryCard, .openButton svg, .pathPoint { transition: none; }
   .openButton:hover svg, .openButton:focus-visible svg { transform: none; }
 }
+
+/* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */
+.sectorPicker { padding: 22px 0 0; border-top: 1px solid var(--thorp-line); }
+.sectorPicker h3 { margin: 0 0 8px; font-size: .95rem; letter-spacing: -.02em; }
+.sectorNote { margin: 0 0 12px; font-size: .78rem; line-height: 1.55; color: var(--thorp-copy); }
+.sectorChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sectorChip {
+  padding: 7px 13px; border: 1px solid var(--thorp-line-strong); border-radius: 999px;
+  background: none; color: inherit; font: inherit; font-size: .8rem; cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.sectorChip:hover { border-color: var(--thorp-ink); }
+/* 선택은 굵기와 테두리로만 드러낸다. 좋고 나쁨을 뜻하는 색을 쓰지 않는다(FR-003). */
+.sectorChip[aria-pressed='true'] { border-color: var(--thorp-ink); background: var(--thorp-ink); color: var(--thorp-paper); }
+.sectorRetry {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0;
+  border: 0; background: none; color: inherit; font: inherit; font-size: .78rem;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+
+/* 국내 시장 참고 정보. 경제환경 지표와 눈으로도 구분되게 다른 블록으로 둔다(FR-017). */
+.referenceBlock { margin-top: 14px; }
+.referenceValues { display: grid; gap: 12px; margin: 0 0 10px; }
+.referenceValues > div { display: grid; gap: 2px; }
+.referenceValues dt { font-size: .74rem; color: var(--thorp-copy); }
+.referenceValues dd { margin: 0; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.referenceValues dd small { font-size: .72rem; color: var(--thorp-copy); }
+.referenceObserved { font-size: .72rem !important; color: var(--thorp-copy); }
+.referenceSource { margin: 0; font-size: .72rem; color: var(--thorp-copy); }
+
+/* 뉴스 묶음. 내용 규칙은 012가 소유하고 009는 자리만 내준다. */
+.newsBlock { margin-top: 14px; }
+.newsList { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.newsList a { display: inline-flex; align-items: center; gap: 4px; font-size: .88rem; color: inherit; }
+.newsList p { margin: 4px 0 2px; font-size: .78rem; line-height: 1.5; color: var(--thorp-copy); }
+.newsMeta { font-size: .72rem; color: var(--thorp-copy); }
