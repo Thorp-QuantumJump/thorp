@@ -32,6 +32,10 @@ CAP_OVERFLOW_CASH = "CAP_OVERFLOW_CASH"
 EFFECTIVE_TARGET_REDUCED = "EFFECTIVE_TARGET_REDUCED"
 #: 계산 가능 종목이 하나뿐이라 최적화 없이 배분했다(PD-04 ⑦).
 SINGLE_ASSET_FALLBACK = "SINGLE_ASSET_FALLBACK"
+#: 선정 조건을 통과한 종목이 없어 그 시점을 전액 현금으로 넘겼다(PD-03 ③).
+NO_SELECTION = "NO_SELECTION"
+#: 관측 구간이 모자라 그 시점의 계산에서 뺐다. 이력이 쌓이면 다음 시점부터 다시 들어온다(PD-03 ⑤).
+INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"
 
 #: ``rules.capOverflow`` 가 가질 수 있는 값. 모르는 값은 임의 해석하지 않고 거절한다.
 CASH = "CASH"
@@ -260,6 +264,22 @@ def quantise(
     result = {key: units[key] * unit for key in keys}
     _verify(result, _floor_units(total, unit) * unit, cap, strategy_id)
     return result
+
+
+def volatility_of(closes: pd.Series, lookback: int) -> Decimal | None:
+    """관측 구간 일별 수익률의 표본 표준편차. 구간이 모자라면 ``None``.
+
+    역변동성 전략과 섹터 모멘텀의 역변동성 배분이 같은 값을 써야 한다 — 두 곳에서 따로 재면
+    같은 종목의 위험이 화면마다 달라진다(PD-03 ⓪이 "공통 함수로 분리해 재사용"으로 정한 자리).
+    모자란 구간을 ``None`` 으로 돌려주고 **그것을 어떻게 기록할지는 부르는 쪽이 정한다** — 제외
+    사유가 전략마다 다르기 때문이다.
+    """
+    series = closes.dropna()
+    if len(series) < lookback + 1:
+        return None
+    returns = series.iloc[-(lookback + 1) :].pct_change().dropna()
+    deviation = returns.std(ddof=1)
+    return ZERO if pd.isna(deviation) else Decimal(str(deviation))
 
 
 def _floor_units(value: Decimal, unit: Decimal) -> int:

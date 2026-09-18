@@ -60,13 +60,28 @@ class RegistryRepositoryTest extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("팀 결정 대기 전략은 명세 없이 PENDING_DECISION으로 올라온다")
-    void pendingRulesHaveNoSpec() {
+    @DisplayName("섹터 모멘텀은 PD-03 확정 값으로 등록돼 있다")
+    void momentumRulesCarryTheDecidedSpec() {
         StrategyRules momentum = strategyRules.find("SECTOR_MOMENTUM", "1").orElseThrow();
 
-        assertThat(momentum.status()).isEqualTo(RulesStatus.PENDING_DECISION);
-        assertThat(momentum.isRegistered()).isFalse();
-        assertThat(momentum.spec()).isNull();
+        assertThat(momentum.status()).isEqualTo(RulesStatus.REGISTERED);
+        assertThat(momentum.isRegistered()).isTrue();
+        assertThat(momentum.provisional()).isFalse();
+        assertThat(momentum.spec())
+                .containsEntry("scoreMethod", "SIMPLE_RETURN")
+                .containsEntry("priceField", "ADJUSTED_CLOSE")
+                .containsEntry("tieBreak", "INSTRUMENT_ID_ASC")
+                .containsEntry("noSelection", "CASH")
+                .containsEntry("capOverflow", "CASH");
+        assertThat(momentum.decisionRef()).contains("PD-03");
+    }
+
+    @Test
+    @DisplayName("팀 결정 대기로 남은 전략은 없다 — 다섯이 모두 확정됐다")
+    void noStrategyIsStillPending() {
+        assertThat(strategyRules.findAll())
+                .filteredOn(rules -> rules.status() == RulesStatus.PENDING_DECISION)
+                .isEmpty();
     }
 
     @Test

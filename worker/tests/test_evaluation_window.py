@@ -155,3 +155,21 @@ def test_none_instrument_id_matches_the_java_error() -> None:
     with pytest.raises(EvaluationWindowError) as caught:
         _require_instrument_id(None)
     assert caught.value.code == "INVALID_INSTRUMENT_ID"
+
+
+def test_strategy_warmup_adds_the_skipped_window():
+    """요청이 워밍업을 안 실으면 엔진이 전략 요구값을 계산한다 — 모멘텀은 ``L + S`` 다.
+
+    점수가 ``P(t-S)/P(t-S-L)`` 이라 ``L`` 만 확보하면 ``S`` 거래일이 모자라고, 그만큼 초기 구간이
+    이력 부족으로 빠져 결과 기간과 수익률이 조용히 달라진다(PD-03 ⑤).
+    """
+    request = momentum_request(lookback=60, skip=21, warmup=None)
+
+    assert warmup_trading_days(request) == 81
+
+
+def test_requested_warmup_wins_over_the_strategy_requirement():
+    """백엔드가 확정한 값이 오면 그것을 쓴다 — 비교 묶음의 공통 워밍업이 그 값이다(R-15)."""
+    request = momentum_request(lookback=60, skip=21, warmup=120)
+
+    assert warmup_trading_days(request) == 120

@@ -227,7 +227,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 |---|---|
 | `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |
 | `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |
-| `left` / `right` | 피연산자. `{ axis: <축 이름> }`·`{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |
+| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |
 | `operator` | `GREATER_THAN` \| `GREATER_OR_EQUAL` \| `LESS_THAN` \| `LESS_OR_EQUAL` \| `EQUAL` \| `NOT_EQUAL` |
 
 **조건이 참이면 위반이다**(그 설정으로 분석을 시작하지 않는다). 맥락 키는 현재 `UNIVERSE_SIZE`(섹터 후보 집합의 크기) 하나다.

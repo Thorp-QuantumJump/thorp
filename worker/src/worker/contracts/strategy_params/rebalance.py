@@ -55,3 +55,24 @@ class MinimumVarianceParameters(CappedRebalanceParameters):
     # None = 미지정. 그때는 규칙표의 lookbackDays·estimationMethod 를 쓴다.
     lookback_days: int | None = Field(default=None, gt=0)
     estimation_method: str | None = None
+
+
+class SectorMomentumParameters(CappedRebalanceParameters):
+    """섹터 모멘텀(PD-03). 003 축 여섯을 더 받는다.
+
+    ``topN``·``threshold``·``topPercent`` 는 003 등록표에서 ``selectionMode`` 에 딸린 축이라
+    (``appliesWhen``) 고른 방식의 것 하나만 온다. 계약이 셋을 다 선택으로 두는 이유는 어느 것이
+    오는지가 다른 축의 값에 달려 있어서이고, **그 짝이 맞는지는 등록표를 든 접수 관문이 본다** —
+    메시지만 보고 판단할 수 있는 불변식이 아니다(계약과 지원 범위의 경계).
+
+    ``threshold`` 는 수익률 %라 음수가 될 수 있어 ``gt=0`` 을 걸지 않는다.
+    """
+
+    # None = 미지정. 그때는 규칙표 값이 기본값이다.
+    lookback_days: int | None = Field(default=None, gt=0)
+    skip_recent_days: int | None = Field(default=None, ge=0)
+    selection_mode: Literal["TOP_N", "THRESHOLD", "TOP_PERCENT", "ALL"] | None = None
+    top_n: int | None = Field(default=None, gt=0)
+    threshold: float | None = None
+    top_percent: int | None = Field(default=None, gt=0, le=100)
+    allocation_method: Literal["EQUAL", "INVERSE_VOLATILITY"] | None = None

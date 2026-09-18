@@ -13,7 +13,8 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from worker.allocation import compute_weights
+from worker import rules_registry
+from worker.allocation import ALLOCATION_RULES, compute_weights
 from worker.allocation.base import AllocationError, effective_cap
 from worker.contracts.engine_input import AllocationSpec, UniverseItem
 from worker.contracts.engine_output import WeightsSource
@@ -624,15 +625,289 @@ def test_minimum_variance_missing_rule_value_stops(missing):
         )
 
 
+# --- 섹터 모멘텀 --------------------------------------------------------------
+
+MOMENTUM_RULES = {
+    "lookbackDays": 2,
+    "skipRecentDays": 0,
+    "selectionMode": "TOP_N",
+    "topN": 2,
+    "threshold": 0,
+    "topPercent": 50,
+    "allocationMethod": "EQUAL",
+    "scoreMethod": "SIMPLE_RETURN",
+    "priceField": "ADJUSTED_CLOSE",
+    "tieBreak": "INSTRUMENT_ID_ASC",
+    "topPercentRounding": "CEIL",
+    "noSelection": "CASH",
+    "insufficientHistory": "EXCLUDE_THEN_INCLUDE",
+    "selectionTypes": {
+        "TOP_N": "RELATIVE",
+        "TOP_PERCENT": "RELATIVE",
+        "THRESHOLD": "ABSOLUTE",
+        "ALL": "NONE",
+    },
+    "inverseVolAllocation": {
+        "lookbackSource": "MOMENTUM_LOOKBACK",
+        "zeroVolatility": "EXCLUDE_THEN_ALLOCATE",
+    },
+    "weightCap": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
+    "investedFraction": "1.0000",
+    "weightsSource": "COMPUTED",
+}
+
+
+def momentum(parameters: dict | None = None, **rule_overrides) -> AllocationSpec:
+    return AllocationSpec.model_validate(
+        {
+            "strategyId": "SECTOR_MOMENTUM",
+            "rulesVersion": "1",
+            "rules": {**MOMENTUM_RULES, **rule_overrides},
+            "parameters": {"rebalance": "MONTH_END", **(parameters or {})},
+        }
+    )
+
+
+def test_momentum_picks_the_strongest_and_splits_equally():
+    """AC4: 점수 순으로 고르고 고른 섹터에 똑같이 나눈다."""
+    result = compute_weights(
+        momentum({"topN": 2}),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(
+            **{
+                SEMI: [100.0, 100.0, 130.0],  # +30%
+                BATTERY: [100.0, 100.0, 120.0],  # +20%
+                BIO: [100.0, 100.0, 90.0],  # -10%
+            }
+        ),
+        AS_OF,
+    )
+
+    assert result.source is WeightsSource.COMPUTED
+    assert set(result.weights) == {SEMI, BATTERY}
+    assert result.weights[SEMI] == result.weights[BATTERY] == Decimal("0.500000")
+
+
+def test_momentum_skips_the_recent_window():
+    """최근 구간 제외는 점수를 만드는 구간을 앞으로 민다 — 직전 급등은 보지 않는다.
+
+    ``skipRecentDays=1`` 이면 마지막 값을 빼고 그 앞 두 거래일로 잰다. 그 구간에서는
+    BATTERY 가 이겼는데 마지막 날 SEMI 가 급등한다 — 제외가 동작하면 BATTERY 를 고른다.
+    """
+    result = compute_weights(
+        momentum({"skipRecentDays": 1, "topN": 1}),
+        [item(SEMI), item(BATTERY)],
+        history(
+            **{
+                SEMI: [100.0, 100.0, 100.0, 300.0],
+                BATTERY: [100.0, 100.0, 150.0, 150.0],
+            }
+        ),
+        AS_OF,
+    )
+
+    assert set(result.weights) == {BATTERY}
+
+
+def test_momentum_breaks_ties_by_instrument_id():
+    """PD-03 ④: 동점이면 종목코드 오름차순으로 잘라 선정 수를 지킨다.
+
+    셋 다 같은 점수인데 둘만 고른다. 종목코드가 작은 둘(``091160`` < ``244580`` < ``305720``)이
+    남아야 같은 입력이 언제나 같은 결과를 낸다(FR-004).
+    """
+    flat = [100.0, 100.0, 110.0]
+    result = compute_weights(
+        momentum({"topN": 2}),
+        [item(BATTERY), item(BIO), item(SEMI)],
+        history(**{SEMI: flat, BATTERY: flat, BIO: flat}),
+        AS_OF,
+    )
+
+    assert set(result.weights) == {SEMI, BIO}
+
+
+def test_momentum_top_percent_rounds_up_on_computable_candidates():
+    """PD-03 ④: 상위 %는 **그 시점에 계산 가능한 후보 수**에 올림한다.
+
+    후보 셋에 50%면 1.5 를 올려 둘이다. 전체 섹터 수에 올림하면 이력 부족으로 빠진 섹터 자리까지
+    세게 된다.
+    """
+    result = compute_weights(
+        momentum({"selectionMode": "TOP_PERCENT", "topPercent": 50}),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(
+            **{
+                SEMI: [100.0, 100.0, 130.0],
+                BATTERY: [100.0, 100.0, 120.0],
+                BIO: [100.0, 100.0, 90.0],
+            }
+        ),
+        AS_OF,
+    )
+
+    assert set(result.weights) == {SEMI, BATTERY}
+
+
+def test_momentum_holds_cash_when_nothing_clears_the_threshold():
+    """PD-03 ③: 기준을 넘는 섹터가 없으면 제일 나은 하나를 억지로 사지 않고 전액 현금이다."""
+    result = compute_weights(
+        momentum({"selectionMode": "THRESHOLD", "threshold": 10}),
+        [item(SEMI), item(BATTERY)],
+        history(
+            **{
+                SEMI: [100.0, 100.0, 105.0],  # +5%
+                BATTERY: [100.0, 100.0, 101.0],  # +1%
+            }
+        ),
+        AS_OF,
+    )
+
+    assert result.weights == {}
+    kinds = [record.kind for record in result.exceptions]
+    assert "NO_SELECTION" in kinds
+    # 이력 부족과 구분되는 사유여야 한다(PD-03 ⑤와 ③은 다른 일이다).
+    assert "INSUFFICIENT_HISTORY" not in kinds
+
+
+def test_momentum_excludes_short_history_and_takes_it_back_later():
+    """PD-03 ⑤: 관측이 ``L+S+1`` 에 못 미치는 섹터는 그 시점만 빼고 이력이 쌓이면 돌아온다."""
+    long_enough = [100.0, 100.0, 130.0]
+    short = [100.0, 120.0]  # 앞이 NaN 이라 2거래일뿐 — L+S+1 = 3 에 못 미친다
+
+    excluded = compute_weights(
+        momentum({"selectionMode": "ALL"}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: long_enough, BATTERY: short}),
+        AS_OF,
+    )
+
+    assert set(excluded.weights) == {SEMI}
+    record = next(r for r in excluded.exceptions if r.kind == "INSUFFICIENT_HISTORY")
+    assert record.instrument_id == BATTERY
+
+    # 하루가 더 쌓이면 같은 규칙으로 다시 들어온다 — 편입 시점을 따로 정하지 않아도 된다.
+    included = compute_weights(
+        momentum({"selectionMode": "ALL"}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, *long_enough], BATTERY: [100.0, *short]}),
+        AS_OF,
+    )
+
+    assert set(included.weights) == {SEMI, BATTERY}
+
+
+def test_momentum_holds_cash_when_no_sector_has_enough_history():
+    """이력이 모자라 점수를 만든 섹터가 하나도 없으면 현금 100%로 그 시점을 넘긴다."""
+    result = compute_weights(
+        momentum({"selectionMode": "ALL"}),
+        [item(SEMI), item(BATTERY)],
+        history(**{SEMI: [100.0, 110.0], BATTERY: [100.0, 120.0]}),
+        AS_OF,
+    )
+
+    assert result.weights == {}
+    kinds = [record.kind for record in result.exceptions]
+    assert kinds.count("INSUFFICIENT_HISTORY") == 2
+    assert "NO_SELECTION" not in kinds
+
+
+def test_momentum_can_lean_on_the_calmer_of_the_picked_sectors():
+    """PD-03 ⓪: 선정 뒤 배분을 역변동성으로 고르면 덜 출렁인 섹터가 더 무겁다."""
+    result = compute_weights(
+        momentum({"selectionMode": "ALL", "allocationMethod": "INVERSE_VOLATILITY"}),
+        [item(SEMI), item(BATTERY)],
+        history(
+            **{
+                SEMI: [100.0, 100.5, 101.0],  # 잔잔하다
+                BATTERY: [100.0, 130.0, 101.0],  # 출렁인다
+            }
+        ),
+        AS_OF,
+    )
+
+    assert result.weights[SEMI] > result.weights[BATTERY]
+    assert sum(result.weights.values()) == Decimal("1.000000")
+
+
+def test_momentum_leaves_the_cap_remainder_in_cash():
+    """PD-03 ⑥: 상한 × 선정 수가 투자 비중에 못 미치면 남는 몫은 현금이고 사유가 남는다."""
+    result = compute_weights(
+        momentum({"topN": 2, "maxWeight": 40}),
+        [item(SEMI), item(BATTERY), item(BIO)],
+        history(
+            **{
+                SEMI: [100.0, 100.0, 130.0],
+                BATTERY: [100.0, 100.0, 120.0],
+                BIO: [100.0, 100.0, 90.0],
+            }
+        ),
+        AS_OF,
+    )
+
+    assert result.weights == {SEMI: Decimal("0.400000"), BATTERY: Decimal("0.400000")}
+    assert "CAP_OVERFLOW_CASH" in [record.kind for record in result.exceptions]
+
+
+def test_momentum_is_deterministic():
+    """FR-004: 같은 입력은 같은 결과다 — 재사용 판정의 전제다."""
+    prices = {
+        SEMI: [100.0, 101.0, 130.0],
+        BATTERY: [100.0, 99.0, 120.0],
+        BIO: [100.0, 103.0, 121.0],
+    }
+    runs = [
+        compute_weights(
+            momentum({"selectionMode": "ALL", "allocationMethod": "INVERSE_VOLATILITY"}),
+            [item(SEMI), item(BATTERY), item(BIO)],
+            history(**prices),
+            AS_OF,
+        ).weights
+        for _ in range(2)
+    ]
+
+    assert runs[0] == runs[1]
+
+
+def test_momentum_rejects_a_rule_value_it_does_not_implement():
+    """모르는 배분 값은 임의 해석하지 않는다 — 점수비례는 PD-03 ⓪에서 뺐다.
+
+    **막는 곳이 둘이다.** 003 축으로 오면 계약 모델이 먼저 거절하고(``Literal``), 규칙표 쪽에
+    남아 있으면 엔진이 거절한다. 여기서는 뒤를 본다 — 등록표에 옛 값이 남은 채 배포된 경우다.
+    """
+    with pytest.raises(AllocationError) as caught:
+        compute_weights(
+            momentum(allocationMethod="SCORE_WEIGHTED"),
+            [item(SEMI)],
+            history(**{SEMI: [100.0, 100.0, 130.0]}),
+            AS_OF,
+        )
+
+    assert caught.value.code == "INVALID_REQUEST"
+    assert "SCORE_WEIGHTED" in str(caught.value)
+
+
+def test_momentum_contract_rejects_a_retired_allocation_axis():
+    """003 축으로 온 ``SCORE_WEIGHTED`` 는 계약에서 걸린다 — 엔진까지 가지 않는다."""
+    with pytest.raises(ValidationError):
+        momentum({"allocationMethod": "SCORE_WEIGHTED"})
+
+
 # --- 레지스트리 ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("strategy_id", ["SECTOR_MOMENTUM"])
-def test_pending_decision_strategies_say_so(strategy_id):
-    """팀 결정 대기와 엔진 미구현은 사용자가 할 일이 다르다 — 메시지도 달라야 한다."""
+def test_pending_decision_strategies_say_so(monkeypatch):
+    """팀 결정 대기와 엔진 미구현은 사용자가 할 일이 다르다 — 메시지도 달라야 한다.
+
+    다섯 전략이 모두 확정돼 지금 대기 중인 전략은 없다(``PENDING_DECISION`` 이 비었다). 그래도
+    구분은 살아 있어야 하므로 표에 하나를 넣어 두고 확인한다 — 규칙 없는 전략을 나중에 더할 때
+    이 갈림이 다시 필요하다.
+    """
+    monkeypatch.setitem(rules_registry.PENDING_DECISION, "FUTURE_STRATEGY", "PD-99")
     with pytest.raises(AllocationError) as caught:
         compute_weights(
-            allocation(strategy_id, {"anything": 1}),
+            allocation("FUTURE_STRATEGY", {"anything": 1}),
             [item(SEMI)],
             history(**{SEMI: [100.0]}),
             AS_OF,
@@ -641,6 +916,19 @@ def test_pending_decision_strategies_say_so(strategy_id):
     assert caught.value.code == "INVALID_REQUEST"
     assert "RULES_NOT_REGISTERED" in str(caught.value)
     assert "not decided yet" in str(caught.value)
+    assert "PD-99" in str(caught.value)
+
+
+def test_every_registered_strategy_is_computable():
+    """등록표에 있는 전략은 전부 계산 함수가 있다 — 확정했는데 붙이지 않은 전략이 없어야 한다."""
+    assert not rules_registry.PENDING_DECISION
+    assert set(ALLOCATION_RULES) == {
+        "FIXED_WEIGHT",
+        "EQUAL_WEIGHT",
+        "INVERSE_VOLATILITY",
+        "MINIMUM_VARIANCE",
+        "SECTOR_MOMENTUM",
+    }
 
 
 def test_unknown_strategy_is_rejected_without_a_decision_reference():
