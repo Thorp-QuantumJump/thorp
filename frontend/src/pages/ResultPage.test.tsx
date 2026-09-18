@@ -70,6 +70,7 @@ function renderResult(token = resultToken) {
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
         <Route path="/strategy" element={<h1>전략 설정 화면</h1>} />
+        <Route path="/diagnosis/sectors" element={<h1>섹터 선택 화면</h1>} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>,
@@ -374,6 +375,43 @@ describe('ResultPage', () => {
       expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(
         resultDetailCompleted.config.strategyId,
       )
+    })
+
+    it('결과를 만든 뒤 대응표가 바뀌었으면 옮기지 않고 사유와 섹터·비중 단계 연결을 보인다', async () => {
+      otherMocks.fetchSectorCatalog.mockResolvedValue({
+        status: 'loaded',
+        catalog: { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' },
+      })
+      const user = userEvent.setup()
+      renderResult()
+
+      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
+
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain('섹터 대응표가 바뀌어')
+      expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
+      expect(window.sessionStorage.getItem('thorp.strategySettings')).toBeNull()
+
+      await user.click(within(alert).getByRole('link', { name: '섹터·비중 단계로 가기' }))
+      expect(await screen.findByRole('heading', { name: '섹터 선택 화면' })).not.toBeNull()
+    })
+
+    it('다시 시도하면 풀릴 수 있는 실패에는 섹터·비중 단계 연결을 두지 않는다', async () => {
+      otherMocks.fetchSectorCatalog.mockResolvedValue({
+        status: 'failed',
+        kind: 'network',
+        code: null,
+        message: '연결 실패',
+        retryable: true,
+      })
+      const user = userEvent.setup()
+      renderResult()
+
+      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
+
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain('섹터 목록을 불러오지 못했습니다')
+      expect(within(alert).queryByRole('link')).toBeNull()
     })
 
     it('B07이 둔 버튼은 모두 보조 모양이다 (착수 전에 알아둘 것 ⑧)', async () => {

@@ -146,7 +146,7 @@ describe('prefillStrategySettings', () => {
 
     const outcome = await prefillStrategySettings(config, navigate)
 
-    expect(outcome.status).toBe('failed')
+    expect(outcome).toMatchObject({ status: 'failed', reselectSectors: true })
     expect(navigate).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBe(previous)
     expect(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY)).toBeNull()
@@ -158,7 +158,7 @@ describe('prefillStrategySettings', () => {
 
     const outcome = await prefillStrategySettings(single, navigate)
 
-    expect(outcome.status).toBe('failed')
+    expect(outcome).toMatchObject({ status: 'failed', reselectSectors: true })
     expect(navigate).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)).toBeNull()
   })
@@ -190,6 +190,8 @@ describe('prefillStrategySettings', () => {
     const outcome = await prefillStrategySettings(config, navigate)
 
     expect(outcome.status).toBe('failed')
+    // 다시 시도하면 풀릴 수 있는 실패다. 섹터를 다시 고르라고 하지 않는다.
+    expect(outcome).not.toHaveProperty('reselectSectors')
     expect(navigate).not.toHaveBeenCalled()
     expect(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY)).toBeNull()
   })

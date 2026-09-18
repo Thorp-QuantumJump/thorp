@@ -43,10 +43,16 @@ import type { RegistryResponse } from '@/types/strategyRegistry'
 
 export const STRATEGY_SETTINGS_PATH = '/strategy'
 
+/** 002 섹터·비중 단계. 설정 화면이 조건을 이어받을 수 없을 때 사용자가 섹터를 다시 고르는 자리다 */
+export const SECTOR_SELECTION_PATH = '/diagnosis/sectors'
+
 export type PrefillOutcome =
   | { status: 'moved' }
-  /** 넘기지 못했다. 이동하지 않고 이 문장을 결과 화면에 보인다 */
-  | { status: 'failed'; message: string }
+  /**
+   * 넘기지 못했다. 이동하지 않고 이 문장을 결과 화면에 보인다. `reselectSectors`면 섹터를 다시 골라야 풀리는
+   * 경우라(대응표가 바뀌었거나 이어받을 섹터가 모자람) 화면이 섹터·비중 단계로 가는 연결을 함께 둔다
+   */
+  | { status: 'failed'; message: string; reselectSectors?: true }
   /** 화면을 떠나 요청을 끊었다. 사용자에게 보일 실패가 아니다 */
   | { status: 'canceled' }
 
@@ -226,12 +232,12 @@ export async function prefillStrategySettings(
   }
 
   if (config.mappingVersion !== catalog.mapVersion) {
-    return { status: 'failed', message: MAPPING_CHANGED }
+    return { status: 'failed', message: MAPPING_CHANGED, reselectSectors: true }
   }
 
   const selection = buildSelectionSnapshot(config, catalog)
   if (usableSectorCount(selection, catalog) < MINIMUM_SECTOR_COUNT) {
-    return { status: 'failed', message: TOO_FEW_SECTORS }
+    return { status: 'failed', message: TOO_FEW_SECTORS, reselectSectors: true }
   }
 
   const settings = buildStrategySettings(config, registry)
