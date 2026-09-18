@@ -61,6 +61,8 @@
 
 ## 비교 주소
 
+`config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.
+
 `/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
 
 ## POST /results/{publicToken}/retry
@@ -116,6 +118,10 @@
 하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다.
 
 ## 비교 요청
+
+실제 비용 기준은 요청 사본 `config`가 아니라 `versions.costProfile.version`에서 가져온다. 새 전략은 003 등록표의 기본 설정과 004 규칙 등록표의 해당 전략 버전을 쓴다. 원본 두 건을 다시 계산할 때는 각 원본의 설정·비중·평가 분할·시나리오를 보존한다.
+
+준비 기간 부족의 구조화된 필요 값은 `error.details.requiredWarmupTradingDays`다. 요청값이 요구값보다 작은 경우 `requestedWarmupTradingDays`도 담고, 준비 기간을 채운 첫날이 요청 종료일 뒤인 경우 `requiredStartDate`를 담는다. 필요 값이나 공통 기간을 확인할 수 없으면 확인창에 사유만 보이고 재계산을 막는다.
 
 비교 대상 결과가 없을 때 화면이 새 실행을 요청하는 경로는 004의 `POST /backtests`를 그대로 쓴다. 005가 새 접수 경로를 만들지 않는다. 요청 본문은 기준 결과의 `config`에서 전략만 바꾸고 나머지(섹터 후보·기간·금액·비용·`warmupTradingDays`)를 그대로 옮긴다.
 

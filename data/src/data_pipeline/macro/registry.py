@@ -47,6 +47,13 @@ FIELD_IDS: Final[tuple[str, ...]] = (
     FIELD_OVERSEAS,
 )
 
+#: 원천이 값을 주는 주기. **어댑터가 통계표 코드로 추측하지 않는다** — 새 일별 계열이
+#: 들어올 때 코드를 고쳐야 하는 자리가 생기고, 그 자리는 등록표가 들어야 한다(FR-005).
+CYCLE_DAILY: Final[str] = "D"
+CYCLE_MONTHLY: Final[str] = "M"
+
+CYCLE_IDS: Final[tuple[str, ...]] = (CYCLE_DAILY, CYCLE_MONTHLY)
+
 #: 변환 여섯 (FR-001 표). 앞의 넷은 계산하고 뒤의 둘은 원천 값을 그대로 쓴다.
 TRANSFORM_YOY: Final[str] = "YOY_GROWTH"
 TRANSFORM_MOM: Final[str] = "MOM_GROWTH"
@@ -104,6 +111,13 @@ class IndicatorDefinition:
     break_link_rule: str | None = None
     missing_rule: str | None = None
     refresh_months_n: int = DEFAULT_REFRESH_MONTHS_N
+    #: 원천이 값을 주는 주기. 17개 중 국고채만 일별이고 나머지는 월별이다.
+    #:
+    #: 변환이 이 값을 본다. 월 기말·월 평균은 원천이 일별로 줄 때만 접는 일이 필요하고,
+    #: 증가율은 월 값끼리 견주는 것이라 일별 계열에 그대로 걸 수 없다. 관측의 기간 표기를
+    #: 훑어 주기를 추측하지 않는 이유는, 추측은 자료가 비었을 때 답을 내지 못하고 원천이
+    #: 주기를 바꿨을 때도 조용히 따라가기 때문이다.
+    source_cycle: str = CYCLE_MONTHLY
     #: 개편으로 나뉜 계열을 잇는 통계표 사슬. 비어 있으면 표 하나로 받는 보통 지표다.
     #:
     #: **비어 있지 않으면 보통 경로로 받으면 안 된다.** 위의 ``table_code`` 는 사슬의 첫
@@ -333,7 +347,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     IndicatorDefinition(
         indicator_id="treasury_bond_3y", field_id=FIELD_FINANCE_HOUSING,
         primary_source=SOURCE_ECOS, table_code="817Y002", item_code="010200000", org_id=None,
-        classification=(), raw_unit="연%",
+        classification=(), source_cycle=CYCLE_DAILY, raw_unit="연%",
         transformed_unit="연%", transform_rule=TRANSFORM_MONTH_END, agency="한국은행",
         attribution=_ECOS_ATTRIBUTION, license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1998-11",
@@ -420,6 +434,11 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:
             )
         if indicator.refresh_months_n < 1:
             raise RegistryError(f"{indicator.indicator_id}의 재조회 구간이 1보다 작다")
+        if indicator.source_cycle not in CYCLE_IDS:
+            raise RegistryError(
+                f"{indicator.indicator_id}의 주기가 {', '.join(CYCLE_IDS)} 밖이다:"
+                f" {indicator.source_cycle}"
+            )
 
     used_fields = {indicator.field_id for indicator in indicators}
     missing = set(FIELD_IDS) - used_fields

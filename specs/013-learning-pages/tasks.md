@@ -38,8 +38,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 013 혼자 닫을 수 없는 항목이다. 여기서 티켓을 만들지 않고 각 담당이 판단한다([plan](plan.md) "교차 의존").
 
 - ① **014 관리 권한** — 014에 역할이 아직 없어 관리 권한은 설정 허용 목록 `thorp.learning.admin-user-ids`로 판정한다([research](research.md) R5). 014 Out of Scope를 고치는 개정은 014 담당의 몫이며 013 구현을 막지 않는다. 014가 역할을 주면 `ConfiguredLearningAdminPolicy` 한 클래스만 바꾼다
-- ② **002 T020 미구현** — 002 tasks.md의 T020(배우기 예시 진입과 덮어쓰기 확인, Jira 미발급)이 아직 없다. 013 US2는 navigation state `sectorSelectionExample`을 **싣는 데까지**(T030·T032)가 범위이고, 002 화면이 그 값을 받아 채우는 종단 확인(quickstart 4-3)은 002 T020 뒤에 한다
-- ③ **003 T057a** — 003이 `components/strategy/TermHelp.tsx`로 계획한 자리를 013 공용 `components/learning/TermHelp.tsx`로 바꾸는 것은 003 담당의 몫이다. B04가 먼저 서면 된다. `frontend/src/api/learningGlossary.ts`의 실제 구현은 013이 소유하므로, 003이 그 파일에 대역을 먼저 두었으면 T036이 본문을 바꾼다. 003 T057a·T063에는 013과 다른 규칙이 둘 있다. 조회 실패를 '설명 준비 중'으로 보이는 것(013 FR-010은 둘을 구분한다)과 축 `description` 옆에 013 원본을 붙이는 것(축 안내는 003 등록표 소유, 013 FR-008)이다. 맞추는 일은 003 담당의 몫이며 [plan](plan.md) "교차 의존"에 적었다
+- ② **002 T020 구현됨** — 예시 수신과 덮어쓰기 확인이 현재 코드에 있다. B06은 T032만으로 대신하지 않고 실제 002 화면에서 예시 적용·거절 시 입력 보존을 확인했다([검증 기록](validation.md) 4-3)
+- ③ **003 공용 도움말 연결 구현됨** — T097이 등록표 `axes[].termId`를 공용 `components/learning/TermHelp.tsx`에 연결한다. 실제 API가 설명 없음과 조회 실패를 구분한다. 003 T057a·T063의 옛 경로·실패 처리 문구 정리는 003 담당의 문서 동기화 대상이다. 실제 왕복·입력 유지 확인은 [검증 기록](validation.md) 5-1~5-4에 둔다
 - ④ **002·005 도움말 자리** — 어느 화면의 어떤 용어에 도움말을 붙일지는 각 spec이 정한다(spec FR-008). 쓸 수 있는 `termId` 목록은 [data-model](data-model.md) §8이다
 - ⑤ **로컬 프로필은 Flyway가 꺼져 있다** — 마이그레이션이 넣는 아홉 글·열네 용어 자리가 `local`에서는 생기지 않는다. 확인하려면 [quickstart](quickstart.md) §0의 명령으로 Flyway를 켠다
 - ⑥ **PD-16 미확정** — [data-model](data-model.md) §8의 제목·순서·용어 구성은 출발안이다. 팀이 확정해 달라지면 관리 화면에서 고치거나 새 마이그레이션으로 자리를 더한다. 적용된 마이그레이션은 고치지 않는다(constitution "스키마 변경 규칙")
@@ -262,18 +262,20 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### 문서
 
-- [ ] T073 [P] (DOCS) `backend/CLAUDE.md` "규칙"에 세 줄 추가 — "배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다"; "게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 재작성을 같은 트랜잭션에서 한다 — 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003)"; "관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다". `frontend/CLAUDE.md` "규칙"에 두 줄 — "용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015)"; "`sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`(관리 화면의 저장하지 않은 편집 내용, 저장 성공 시 지운다). 일반 사용자 배우기 화면은 저장소에 쓰지 않는다"
-- [ ] T074 [P] (DOCS) spec 문서 동기화 — `specs/013-learning-pages/data-model.md` §3-6 snapshot 예시에 `draftVersion`을 더하고 `hasUnpublishedChanges` 판정 근거임을 적는다(T009·T052); `plan.md` "Source Code" 트리의 파일 이름을 구현과 맞춘다(`presentation/support/LearningAdminAccess`, `LearningQueryService`·`LearningAdminService`, `admin/adminDraftStorage.ts` 등); `research.md` R5·R11에 "착수 전에 알아둘 것" ①~③의 현재 상태를 반영한다; `specs/README.md` 013 행은 바뀐 것이 없으면 그대로 둔다
+- [X] T073 [P] (DOCS) `backend/CLAUDE.md` "규칙"에 세 줄 추가 — "배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다"; "게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 재작성을 같은 트랜잭션에서 한다 — 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003)"; "관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다". `frontend/CLAUDE.md` "규칙"에 두 줄 — "용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015)"; "`sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`(관리 화면의 저장하지 않은 편집 내용, 저장 성공 시 지운다). 일반 사용자 배우기 화면은 저장소에 쓰지 않는다"
+- [X] T074 [P] (DOCS) spec 문서 동기화 — `specs/013-learning-pages/data-model.md` §3-6 snapshot 예시에 `draftVersion`을 더하고 `hasUnpublishedChanges` 판정 근거임을 적는다(T009·T052); `plan.md` "Source Code" 트리의 파일 이름을 구현과 맞춘다(`presentation/support/LearningAdminAccess`, `LearningQueryService`·`LearningAdminService`, `admin/adminDraftStorage.ts` 등); `research.md` R5·R11에 "착수 전에 알아둘 것" ①~③의 현재 상태를 반영한다; `specs/README.md` 013 행은 바뀐 것이 없으면 그대로 둔다
 - [ ] T075 (DOCS) [quickstart.md](quickstart.md) 0~5 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 002 T020이 아직 없으면 4-3은 T032로 대신하고 그 사실을 적는다; 003 화면이 공용 `TermHelp`를 아직 쓰지 않으면 5-1~5-4는 T042로 대신한다(quickstart §5 머리말); 로컬 확인은 §0의 Flyway 켜기 명령으로 한다. SC-002는 검사 통과로 증명되지 않는다는 것을 그대로 적는다(quickstart §6). SC-005 사용성 관찰은 이 태스크가 수행하지 않으며, constitution "완료의 정의"에 따라 구현 완료와 구분해 "사용성 확인: 미수행"(또는 수행 결과)으로 따로 적는다
+
+> B06 실행 기록: [validation.md](validation.md). T075는 HTTP·자동 검증과 일부 실제 화면 확인까지 수행했다. 남은 화면·스크린 리더 확인은 완료로 세지 않으며 T075를 열린 상태로 둔다.
 
 ### 코드 정리
 
-- [ ] T076 [P] (FE) 잔재·하드코딩 확인 — `grep -n "NotReadyPage" frontend/src/App.tsx`에서 `/learn` 경로가 0건; `grep -rn "dangerouslySetInnerHTML" frontend/src/components/learning frontend/src/pages/Learning*`가 0건(R3); `grep -rn "components/strategy/TermHelp" frontend/src`는 003 T057a의 몫이므로 결과만 MR에 적는다; `frontend/src/components/learning`·`frontend/src/pages/Learning*Page.tsx`에 [data-model](data-model.md) §8의 `termId`·제목 문자열이 상수로 없다(FR-015. 테스트·픽스처는 제외)
+- [X] T076 [P] (FE) 잔재·하드코딩 확인 — `grep -n "NotReadyPage" frontend/src/App.tsx`에서 `/learn` 경로가 0건; `grep -rn "dangerouslySetInnerHTML" frontend/src/components/learning frontend/src/pages/Learning*`가 0건(R3); `grep -rn "components/strategy/TermHelp" frontend/src`는 003 T057a의 몫이므로 결과만 MR에 적는다; `frontend/src/components/learning`·`frontend/src/pages/Learning*Page.tsx`에 [data-model](data-model.md) §8의 `termId`·제목 문자열이 상수로 없다(FR-015. 테스트·픽스처는 제외)
 
 ### 전체 검증
 
-- [ ] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 9 포함)·마이그레이션·계약·통합 테스트 전부. `skipped`가 Docker 부재 때문인지 확인하고 건너뛴 테스트를 통과로 세지 않는다([backend/CLAUDE.md](../../backend/CLAUDE.md), quickstart 1)
-- [ ] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm test` — Vitest include에 새 `.test.ts` 셋(`learning`·`learningGlossary`·`learningAdmin`)이 들어갔는지 결과 목록에서 확인한다. 빠졌으면 `src/diagnosis/testCollection.guard.test.tsx`가 먼저 실패한다
+- [X] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 9 포함)·마이그레이션·계약·통합 테스트 전부. `skipped`가 Docker 부재 때문인지 확인하고 건너뛴 테스트를 통과로 세지 않는다([backend/CLAUDE.md](../../backend/CLAUDE.md), quickstart 1)
+- [X] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm test` — Vitest include에 새 `.test.ts` 셋(`learning`·`learningGlossary`·`learningAdmin`)이 들어갔는지 결과 목록에서 확인한다. 빠졌으면 `src/diagnosis/testCollection.guard.test.tsx`가 먼저 실패한다
 
 ---
 
@@ -303,11 +305,11 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 | 묶음 · 티켓 | Jira Task 제목 | 포함 T### | 수 | position | 선행 |
 |---|---|---|---|---|---|
 | B01 · [S15P21E205-294](https://ssafy.atlassian.net/browse/S15P21E205-294) | `[BE] 배우기 글과 용어 설명을 보관하고 공개 조회한다` | T001~T003, T007~T019, T033~T035 | 19 | `be` | 없음 |
-| B02 · 미발급 | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | T045~T059 | 15 | `be` | B01 |
+| B02 · [S15P21E205-295](https://ssafy.atlassian.net/browse/S15P21E205-295) | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | T045~T059 | 15 | `be` | B01 |
 | B03 · [S15P21E205-321](https://ssafy.atlassian.net/browse/S15P21E205-321) | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | T004, T006, T020~T032, T043, T044 | 17 | `fe` | B01의 계약(T003) |
 | B04 · [S15P21E205-328](https://ssafy.atlassian.net/browse/S15P21E205-328) | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | T036~T042 | 7 | `fe` | B03 |
 | B05 · [S15P21E205-299](https://ssafy.atlassian.net/browse/S15P21E205-299) | `[FE] 관리 화면에서 글을 고치고 게시한다` | T005, T060~T072 | 14 | `fe` | B02, B03 |
-| B06 · 미발급 | `[DOCS] spec 013 문서 동기화와 최종 검증` | T073~T078 | 6 | `fe` | 전부 |
+| B06 · [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302) | `[DOCS] spec 013 문서 동기화와 최종 검증` | T073~T078 | 6 | `fe` | 전부 |
 
 ```text
 B01 ─┬─▶ B02 ─────────────┐
@@ -461,3 +463,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 ## Phase 16: Convergence
 
 - [X] T096 (FE) `frontend/src/components/learning/admin/ExampleEditor.tsx`에서 대응표가 `emptyCatalog`(발행됐지만 섹터가 0개)일 때도 새 섹터를 고를 수 없다는 한 문장을 보인다. 지금은 `canPickSector`가 거짓이라 '섹터 추가'와 기존 행의 `select`가 막히는데, 안내 문장은 `mapNotReady`·`failed`일 때만 나와 이유 없이 막힌다. `emptyCatalog`는 대응표가 없는 것과 다른 사실이므로 "열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다"처럼 구분해 적는다. `ExampleEditor.test.tsx`에 `emptyCatalog` 응답에서 이 문장이 보이고 '섹터 추가'가 막히는지 더한다 per T063 (partial)
+
+## Phase 17: Convergence
+
+- [ ] T097 (DOCS) [validation.md](validation.md)에 남은 quickstart 0~5 수동 확인을 실제 화면에서 마친다 — 빈 목록·게시 취소 글 화면, 일반 계정의 관리 화면 차단, 관리 목록의 미게시 변경·갱신 필요 표시, 게시 취소 뒤 공개 목록·글·기록, 공개 화면의 브라우저 저장소 미사용, 실패 화면의 자동 재요청 없음, 대응표에서 사라진 예시의 대체 안내, 키보드 Tab 경로와 NVDA 또는 VoiceOver 읽기, 실제 003 도움말의 실패·재시도와 제목 변경 뒤 연결을 확인한다. 각 결과를 `validation.md`와 MR 본문 "테스트" 절에 성공·실패·미수행으로 구분해 기록하고 모두 확인된 뒤 T075와 이 태스크를 완료한다. SC-002 패턴 검사의 한계와 SC-005 사용성 확인 미수행 표시는 유지한다 per T075, FR-019, SC-008 (partial)
