@@ -160,11 +160,11 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend — 그래프
 
-- [ ] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: "004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)"
-- [ ] T041 [US2] (FE) `frontend/src/components/result/EquityChart.tsx`(plan의 `ComparisonChart`) — `frontend/src/components/charts/line-chart.tsx`의 `LineChart`·`Line`으로 세로축 원화 자산가치(사용자가 입력한 금액에서 출발), 기준 실선·비교 대상 파선(`Line`의 `dashArray`), 시작 금액 수준의 기준선(`Grid`의 `highlightRow*`). **점 수를 줄이지 않는다** — `decimate-time-series.ts`를 import하지 않는다(R-08, FR-001). 두 계열의 날짜 축을 병합한다. `equity`가 없는 날은 선을 끊어 빈 채로 두고 앞뒤 값을 잇거나 보간하지 않는다(spec Edge Case, 원칙 VI. `Line`에 끊는 수단이 없으면 T042와 같은 한 곳에서 최소로 더한다). `role="img"`와 대안 텍스트(세 숫자와 비교 대상 유무를 문장으로, FR-022)
-- [ ] T042 [US2] (FE) `frontend/src/components/result/DrawdownShade.tsx` — 고점~저점 구간 음영: 색 채움과 **상단 점선 경계**를 함께 그려 회색조에서도 경계가 보인다(R-09). `LineChart`의 자식으로 x 스케일을 읽어 `<rect>`로 그린다. 자식이 스케일을 읽을 수단이 없으면 `frontend/src/components/charts/line-chart.tsx`에 자식용 스케일 컨텍스트를 최소로 추가한다(차트 시스템 변경은 이 한 곳으로 제한하고 MR 본문에 적는다). 비교 대상의 음영은 빗금 패턴으로 기준과 구분한다
-- [ ] T043 [US2] (FE) `frontend/src/components/result/SeriesEndLabel.tsx` — 곡선 오른쪽 끝에 직접 붙는 이름표(기준·비교 대상의 전략 이름). 두 이름표가 겹치면 위아래로 민다. 범례만으로 구분하지 않는다(SC-010). 차트 시스템에는 이름표 컴포넌트가 없어 새로 만든다(`line-series-terminal-marker.tsx`는 점만 그린다)
-- [ ] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다
+- [X] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: "004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)"
+- [X] T041 [US2] (FE) `frontend/src/components/result/EquityChart.tsx`(plan의 `ComparisonChart`) — `frontend/src/components/charts/line-chart.tsx`의 `LineChart`·`Line`으로 세로축 원화 자산가치(사용자가 입력한 금액에서 출발), 기준 실선·비교 대상 파선(`Line`의 `dashArray`), 시작 금액 수준의 기준선(`Grid`의 `highlightRow*`). **점 수를 줄이지 않는다** — `decimate-time-series.ts`를 import하지 않는다(R-08, FR-001). 두 계열의 날짜 축을 병합한다. `equity`가 없는 날은 선을 끊어 빈 채로 두고 앞뒤 값을 잇거나 보간하지 않는다(spec Edge Case, 원칙 VI. `Line`에 끊는 수단이 없으면 T042와 같은 한 곳에서 최소로 더한다). `role="img"`와 대안 텍스트(세 숫자와 비교 대상 유무를 문장으로, FR-022)
+- [X] T042 [US2] (FE) `frontend/src/components/result/DrawdownShade.tsx` — 고점~저점 구간 음영: 색 채움과 **상단 점선 경계**를 함께 그려 회색조에서도 경계가 보인다(R-09). `LineChart`의 자식으로 x 스케일을 읽어 `<rect>`로 그린다. 자식이 스케일을 읽을 수단이 없으면 `frontend/src/components/charts/line-chart.tsx`에 자식용 스케일 컨텍스트를 최소로 추가한다(차트 시스템 변경은 이 한 곳으로 제한하고 MR 본문에 적는다). 비교 대상의 음영은 빗금 패턴으로 기준과 구분한다
+- [X] T043 [US2] (FE) `frontend/src/components/result/SeriesEndLabel.tsx` — 곡선 오른쪽 끝에 직접 붙는 이름표(기준·비교 대상의 전략 이름). 두 이름표가 겹치면 위아래로 민다. 범례만으로 구분하지 않는다(SC-010). 차트 시스템에는 이름표 컴포넌트가 없어 새로 만든다(`line-series-terminal-marker.tsx`는 점만 그린다)
+- [X] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다
 
 ### Frontend — 비교 대상 선택과 실행 요청
 
@@ -181,8 +181,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Frontend 테스트
 
-- [ ] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다
-- [ ] T056 [US2] (FE 테스트) `frontend/src/components/result/EquityChart.test.tsx` — 두 계열이면 `stroke-dasharray`가 있는 경로와 이름표 텍스트 둘이 DOM에 있다(SC-010의 자동 확인 부분, R-09); 음영 `<rect>`와 점선 경계가 있고 구간이 `null`이면 없다(quickstart 2); 입력 점 수와 렌더 점 수가 같다(축소 없음); `role="img"` 대안 텍스트에 세 숫자; 기준만 있으면 파선이 없다; `equity`가 빠진 날이 있으면 경로가 그 자리에서 끊긴다(보간 없음)
+- [X] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다
+- [X] T056 [US2] (FE 테스트) `frontend/src/components/result/EquityChart.test.tsx` — 두 계열이면 `stroke-dasharray`가 있는 경로와 이름표 텍스트 둘이 DOM에 있다(SC-010의 자동 확인 부분, R-09); 음영 `<rect>`와 점선 경계가 있고 구간이 `null`이면 없다(quickstart 2); 입력 점 수와 렌더 점 수가 같다(축소 없음); `role="img"` 대안 텍스트에 세 숫자; 기준만 있으면 파선이 없다; `equity`가 빠진 날이 있으면 경로가 그 자리에서 끊긴다(보간 없음)
 - [ ] T057 [US2] (FE 테스트) `frontend/src/components/result/compareQuery.test.ts` — 파싱·조립 왕복, 형식 오류 무시, `searchId` 보존, 비교 해제 시 기준 주소만 남음
 - [ ] T058 [US2] (FE 테스트) `frontend/src/components/result/CompareTargetPicker.test.tsx` — 워밍업이 긴 전략에만 "짧아집니다" 문구(R-13); `selectable: false`는 이유와 함께 비활성; 키보드로 선택; 등록표 실패 시 목록 대신 사유
 - [ ] T059 [US2] (FE 테스트) `frontend/src/hooks/useCompareTarget.test.tsx`와 `frontend/src/components/result/CompareTargetSlot.test.tsx` — 고르면 `createBacktest`가 1회 호출되고 본문의 섹터·기간·금액·비용·워밍업이 기준 `config`와 같으며 전략만 다르다(SC-003, quickstart 3); `REUSED`면 즉시 READY; RUNNING이면 단계·비율, QUEUED면 기다린 시간; 429면 `retryAfterSeconds`가 보이고 자동 재요청 0회, 버튼을 누르면 1회; FAILED면 사유와 '다시 시도'가 `retryResult`를 부른다; 410이면 기준이 그대로 그려지고 안내가 있다; 비교 대상을 바꿔도 취소 호출이 없다
@@ -414,3 +414,19 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 - 문장은 `summarySentences.ts`·`statusSentences.ts` 두 파일에서만 나온다. 컴포넌트가 문장을 만들면 SC-004의 검수 대상이 흩어진다
 - `backtestId`(`BT-…`)는 백엔드 `result` 패키지의 응답과 프론트엔드 결과 화면 어디에도 없어야 한다(SC-009). T084·T085가 검사한다
 - 각 묶음의 MR 본문 "주요 변경 사항"에 포함한 T### 번호를 나열해 추적한다(constitution "Jira 연계")
+
+---
+
+## Phase 9: Convergence
+
+B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
+
+- [X] T089 (FE) 그릴 점이 없을 때 그래프 자리에 그 사실을 한 문장으로 알린다 — `frontend/src/pages/ResultPage.tsx`의 `ResultChartSlot`이 `timeseries.status === 'loaded'`인데 `points`가 비어 있는 경우를 따로 가른다. 지금은 `frontend/src/components/result/EquityChart.tsx`가 `null`을 돌려주고 화면에는 빈 칸만 남는다. 취소된 부분 결과처럼 거래일이 하나도 저장되지 않은 결과에서 일어난다 per 원칙 VI · FR-001 (partial)
+- [X] T090 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)
+- [X] T091 (FE 테스트) `frontend/src/test/resultFixtures.ts`의 `resultTimeseries`와 `resultDetailCompleted.summary.maxDrawdown`을 서로 맞춘다 — 지금은 계열의 최저 하락 폭이 -0.050000인데 상세는 -0.041757이라 R-05 규칙에 걸려 픽스처로 그린 화면에 음영이 한 번도 나오지 않는다. 계약 예시(`docs/specs/result-api/examples/`)는 둘이 맞으므로 픽스처를 그쪽에 맞춘다. `resultFixtures.test.ts`·`ResultSummaryCard.test.tsx`가 계속 통과하는지 확인한다 per T002 · T006 (contradicts)
+
+## Phase 10: Convergence
+
+Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
+
+- [X] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 "변동성에 …"처럼 잘린다. 같은 파일 주석의 "등록된 다섯 전략 이름이 모두 여기 들어간다"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)
