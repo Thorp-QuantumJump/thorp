@@ -310,6 +310,45 @@ class RawArchivingSource:
 
 
 @dataclass
+class ResumableArchivingSource:
+    """보관본이 있으면 그것을 쓰고, 없을 때만 원천을 부른다. 끊긴 수집을 이어받는 덮개다.
+
+    :class:`RawArchivingSource` 는 파일이 있든 없든 언제나 원천을 부른다. 하루치 수집이라면
+    문제가 없지만, **여러 해를 한 번에 모으는 수집이 중간에 끊기면 처음부터 다시 받게 된다.**
+    2010-01-04부터 모으면 호출이 만 번에 가깝고 두세 시간이 걸리므로, 한 번 끊길 때마다 그
+    시간과 이용 한도를 다시 쓴다.
+
+    이 덮개는 그 자리에서 이렇게 갈라진다.
+
+    * 보관본이 **있으면** 그것을 읽어 돌려준다. 원천을 부르지 않으므로 이용 한도를 쓰지 않는다
+    * 보관본이 **없으면** 원천을 부르고 :class:`RawArchivingSource` 와 같은 자리에 남긴다
+
+    **이미 받은 날을 다시 받지 않는 것이 요점이다.** 값이 달라질 걱정은 없다 — 발행된 자료는
+    바뀌지 않고(FR-017), 원천도 지난 거래일의 값을 고치지 않는다. 원천이 값을 고쳤는지
+    확인해야 한다면 그것은 대조(FR-016)가 할 일이지 수집이 할 일이 아니다.
+
+    **처음부터 다시 받아야 할 때는 보관본을 지운다.** 덮개에 "무시하고 다시 받기" 같은 인자를
+    두지 않는 까닭은, 그 인자가 켜진 채로 긴 수집을 돌리면 이어받기가 조용히 꺼지기 때문이다.
+    지우는 것은 손으로 해야 하는 일이라 실수로 일어나지 않는다.
+    """
+
+    inner: DailyRowSource
+    root: Path
+
+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:
+        target = self.root / group / endpoint / f"{bas_dd:%Y%m%d}.json"
+        if target.is_file():
+            return _rows_from_archive(target)
+        rows = self.inner.rows(group, endpoint, bas_dd)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps({RESPONSE_ROWS_KEY: rows}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return rows
+
+
+@dataclass
 class ArchiveReadingSource:
     """``raw/``의 보관본을 원천 대신 돌려준다. :class:`RawArchivingSource` 가 쓴 것을 읽는다.
 
@@ -337,14 +376,23 @@ class ArchiveReadingSource:
                 f"{bas_dd:%Y-%m-%d}의 {group}/{endpoint} 보관본이 없다: {path}. "
                 "받지 않은 날을 휴장일로 볼 수 없어 진행하지 않는다"
             )
-        try:
-            body = json.loads(path.read_text(encoding="utf-8"))
-        except ValueError as error:
-            raise RawArchiveError(f"보관본이 JSON이 아니다: {path} ({error})") from error
-        rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None
-        if not isinstance(rows, list):
-            raise RawArchiveError(f"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}")
-        return _rows_from_payload(rows, f"보관본 {path}")
+        return _rows_from_archive(path)
+
+
+def _rows_from_archive(path: Path) -> list[Mapping[str, str]]:
+    """보관본 파일 하나를 행 목록으로 읽는다.
+
+    보관본을 읽는 두 덮개(:class:`ResumableArchivingSource`·:class:`ArchiveReadingSource`)가
+    같은 규칙으로 읽도록 한곳에 둔다. 한쪽만 느슨하면 같은 파일이 덮개에 따라 다르게 읽힌다.
+    """
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as error:
+        raise RawArchiveError(f"보관본이 JSON이 아니다: {path} ({error})") from error
+    rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None
+    if not isinstance(rows, list):
+        raise RawArchiveError(f"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}")
+    return _rows_from_payload(rows, f"보관본 {path}")
 
 
 # ---------------------------------------------------------------------------

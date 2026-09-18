@@ -26,6 +26,19 @@ description: "Task list template for feature implementation"
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
 
+## Existing Seams
+
+Code already in the repository that this feature must replace, implement, or remove. Upstream
+features are the usual case: consumers ship a stand-in first and keep serving it until something
+here takes its place. An empty table hides that work entirely.
+
+| Seam (file:symbol) | Current state | What this feature does | Task |
+|---|---|---|---|
+| [path:symbol] | [stand-in / empty impl / expected module path] | [replace / implement / remove] | [TNNN] |
+
+Write "None" if the search found nothing. Do not leave this section blank - a blank table cannot be
+told apart from a search that never happened.
+
 <!--
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
