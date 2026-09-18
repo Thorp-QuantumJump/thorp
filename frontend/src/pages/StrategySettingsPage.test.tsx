@@ -637,6 +637,27 @@ describe('StrategySettingsPage', () => {
       )
       expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
     })
+
+    it('평가 기간을 받지 못했다가 다시 불러오면 그 응답으로 카드를 판정한다', async () => {
+      // 409 EVALUATION_WINDOW_NOT_READY처럼 곧 풀리는 실패는 새로 고치지 않고도 다시 불러올 수 있어야 한다.
+      const user = userEvent.setup()
+      apiMocks.fetchEvaluationWindow
+        .mockRejectedValueOnce(new Error('409 EVALUATION_WINDOW_NOT_READY'))
+        .mockResolvedValueOnce(defaultWindow())
+      backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
+      renderPage()
+
+      const retry = await screen.findByRole('button', { name: '평가 기간 다시 불러오기' })
+      expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('unknown')
+
+      await user.click(retry)
+
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+      expect(apiMocks.fetchEvaluationWindow).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole('button', { name: '평가 기간 다시 불러오기' })).toBeNull()
+    })
   })
 
   it('워밍업을 채우지 못하는 전략은 고를 수 없고 분석도 막힌다', async () => {
@@ -1342,6 +1363,10 @@ describe('StrategySettingsPage', () => {
       expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전을 확인하는 중입니다')
       const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
       expect(notice.parentElement?.getAttribute('data-phase')).toBe('reloading')
+      // 다시 받는 동안 비용 조건을 "확인할 수 없음"으로 말하지 않는다. '분석하기' 사유와 같은 말을 한다.
+      const summary = screen.getByLabelText('분석 조건 요약')
+      expect(summary.textContent).toContain('확인하는 중')
+      expect(summary.textContent).not.toContain('확인할 수 없음')
       await user.click(actionButton('분석하기'))
       expect(calls).toHaveLength(1)
 

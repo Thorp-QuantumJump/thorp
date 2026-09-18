@@ -53,8 +53,8 @@ interface StrategySettingsPageProps {
   /**
    * 분석을 시작하기 위해 바깥에서 받아야 하는 세 통로(규칙·비용 버전, 워밍업 판정, 요청 전송).
    *
-   * 기본값은 `defaultAnalysisSupport`다. dev에 있는 공통 평가 기간 조회·판정만 실제 모듈이고, 버전 조회와
-   * 전송은 004가 머지될 때까지 연결 전 상태라 '분석하기'가 정직하게 막힌다(T107). 검사는 흉내를 넘겨 요청
+   * 기본값은 `defaultAnalysisSupport`로, 001 평가 기간 조회와 004 규칙·비용 버전 조회, 요청 전송이 모두 실제
+   * 모듈이다(T107·T110). 받지 못한 통로가 있으면 '분석하기'가 그 이유로 막힌다. 검사는 흉내를 넘겨 요청
    * 조립을 고정한다.
    */
   support?: AnalysisSupport
@@ -308,7 +308,11 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
       registry,
     )
   }, [selection, registry])
-  const evaluationWindow = useEvaluationWindow(support.fetchEvaluationWindow, windowQuery)
+  const {
+    state: evaluationWindow,
+    retry: retryEvaluationWindow,
+    retrying: evaluationWindowRetrying,
+  } = useEvaluationWindow(support.fetchEvaluationWindow, windowQuery)
 
   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------
   const minEvaluationYears = settings.ready
@@ -809,18 +813,24 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
       weightTenths: item.weightTenths,
     }))
   }, [selection, catalog])
+  // 조회 중과 조회 실패를 가른다. 409 뒤 다시 받는 동안을 "확인할 수 없음"으로 보이면 곧 끝날 조회가 실패로
+  // 읽히고, 같은 화면의 '분석하기' 사유("확인하는 중")와 두 말을 하게 된다.
   const costProfile =
-    versions !== 'loading' && versions !== null
-      ? { version: versions.costProfileVersion, provisional: versions.costProfileProvisional }
-      : null
+    versions === 'loading'
+      ? ('loading' as const)
+      : versions !== null
+        ? { version: versions.costProfileVersion, provisional: versions.costProfileProvisional }
+        : null
   const costAssumption =
-    versions !== 'loading' && versions !== null
-      ? {
-          version: versions.costProfileVersion,
-          provisional: versions.costProfileProvisional,
-          rates: versions.costRates,
-        }
-      : null
+    versions === 'loading'
+      ? ('loading' as const)
+      : versions !== null
+        ? {
+            version: versions.costProfileVersion,
+            provisional: versions.costProfileProvisional,
+            rates: versions.costRates,
+          }
+        : null
 
   return (
     <div className={styles.page}>
@@ -905,6 +915,24 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
               <h2 id="strategy-cards-title" className={styles.sectionTitle}>
                 전략 카드
               </h2>
+              {/*
+                평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중
+                (409 EVALUATION_WINDOW_NOT_READY)이거나 잠깐의 연결 오류일 수 있어 다시 불러 달라질 수 있으므로,
+                등록표 조회와 같이 다시 시도할 길을 둔다(FR-018과 같은 규약). 다시 받는 동안에는 안내를 거두지
+                않아 읽히는 문장이 깜빡이지 않는다.
+              */}
+              {evaluationWindow.status === 'unavailable' ? (
+                <div className={styles.notice} role="status">
+                  <p>공통 평가 기간을 불러오지 못해 카드의 워밍업을 판정하지 못했습니다.</p>
+                  <button
+                    type="button"
+                    onClick={retryEvaluationWindow}
+                    disabled={evaluationWindowRetrying}
+                  >
+                    {evaluationWindowRetrying ? '다시 불러오는 중' : '평가 기간 다시 불러오기'}
+                  </button>
+                </div>
+              ) : null}
               <StrategyCardList
                 state={registryState}
                 selectedStrategyId={selectedId}

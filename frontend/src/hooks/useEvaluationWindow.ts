@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   AnalysisSupport,
   EvaluationWindowState,
@@ -6,6 +6,14 @@ import type {
 import type { EvaluationWindowQuery } from '@/types/evaluationWindow'
 
 type Loaded = { key: string; state: EvaluationWindowState }
+
+export type EvaluationWindowHandle = {
+  state: EvaluationWindowState
+  /** 같은 조회를 한 번 더 보낸다. 받지 못한 상태에서 사용자가 다시 시도할 때 쓴다 */
+  retry: () => void
+  /** 받지 못한 뒤 다시 받는 중인가. 이 동안에도 상태는 `unavailable`에 머물러 안내가 깜빡이지 않는다 */
+  retrying: boolean
+}
 
 // 렌더마다 새 객체를 돌려주면 이 상태에 기대는 판정 메모가 매번 다시 계산된다.
 const LOADING: EvaluationWindowState = { status: 'loading' }
@@ -32,8 +40,10 @@ function keyOf(query: EvaluationWindowQuery): string {
 export function useEvaluationWindow(
   fetchEvaluationWindow: AnalysisSupport['fetchEvaluationWindow'],
   query: EvaluationWindowQuery | 'uncomputable' | null,
-): EvaluationWindowState {
+): EvaluationWindowHandle {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [inFlight, setInFlight] = useState(false)
   const request = query !== null && query !== 'uncomputable' ? query : null
   const key = request ? keyOf(request) : null
 
@@ -41,6 +51,7 @@ export function useEvaluationWindow(
     if (request === null || key === null) return
     const controller = new AbortController()
     let active = true
+    setInFlight(true)
     fetchEvaluationWindow(request, controller.signal)
       .then((window) => {
         if (active) {
@@ -53,15 +64,24 @@ export function useEvaluationWindow(
       .catch(() => {
         if (active) setLoaded({ key, state: { status: 'unavailable' } })
       })
+      .finally(() => {
+        if (active) setInFlight(false)
+      })
     return () => {
       active = false
       controller.abort()
     }
-    // 질의 객체의 참조는 보지 않는다. 내용은 `key`가 대신한다.
+    // 질의 객체의 참조는 보지 않는다. 내용은 `key`가 대신한다. `attempt`는 사용자가 다시 시도할 때만 바뀐다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchEvaluationWindow, key])
+  }, [fetchEvaluationWindow, key, attempt])
 
-  if (query === 'uncomputable') return UNCOMPUTABLE
-  if (key === null || loaded === null || loaded.key !== key) return LOADING
-  return loaded.state
+  // 받지 못한 뒤에만 뜻이 있다. 받은 상태에서 부르면 같은 응답을 한 번 더 받을 뿐이다.
+  const retry = useCallback(() => setAttempt((count) => count + 1), [])
+
+  let state: EvaluationWindowState
+  if (query === 'uncomputable') state = UNCOMPUTABLE
+  else if (key === null || loaded === null || loaded.key !== key) state = LOADING
+  else state = loaded.state
+
+  return { state, retry, retrying: inFlight && state.status === 'unavailable' }
 }
