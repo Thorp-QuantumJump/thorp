@@ -192,6 +192,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--revision",
+        type=int,
+        default=1,
+        help=(
+            "자료 버전의 판 번호(선택, 기본 1). 같은 마감일의 자료를 "
+            "**내용만 바꿔 다시 발행할 때** "
+            "2 이상을 준다. 첫 판은 번호가 붙지 않고(KRX_DAILY_20260915) 두 번째부터 붙는다"
+            "(KRX_DAILY_20260915_R2). 발행본은 UPDATE·DELETE가 막혀 있어(FR-017) 같은 이름으로 "
+            "다시 낼 수 없으므로, 분배금을 반영하거나 구간을 넓혀 다시 낼 때 이 인자가 필요하다 "
+            "(research.md 결정 4의 2026-09-17 보완). "
+            "판을 올릴지는 부르는 쪽이 정한다 — 스크립트가 이미 발행된 것을 조회해 스스로 올리면 "
+            "같은 명령을 두 번 부른 결과가 달라져 재현이 깨진다"
+        ),
+    )
+    parser.add_argument(
         "--from-raw",
         action="store_true",
         help=(
@@ -706,7 +721,7 @@ def run(args: argparse.Namespace) -> int:
 
     indices, etf, calendar = _collect(args, windows, instrument_ids)
     deadline = data_deadline(etf, indices)
-    dataset_id = build_dataset_id(deadline)
+    dataset_id = build_dataset_id(deadline, args.revision)
     reason = failure_reason(etf, indices)
     tables, series = _build_tables(
         etf,
