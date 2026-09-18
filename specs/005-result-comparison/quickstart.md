@@ -9,7 +9,7 @@
 - 백엔드·워커·PostgreSQL·RabbitMQ가 떠 있어야 한다(저장소 루트 README의 개발 환경 구성).
 - 001의 KRX 자료가 적재되어 있어야 결과가 나온다.
 - 004의 백테스트 실행 경로가 동작해야 한다. `POST /backtests`가 `202`를 돌려주고 잠시 뒤 `COMPLETED`가 되는지 먼저 확인한다.
-- **공개 열람 경계(plan의 묶음 A)가 병합되기 전에는 결과 화면이 뜨지 않는다.** 현재 `CurrentRequester.requireRequesterId`가 인증 없이는 예외를 던지기 때문이다.
+- 공개 열람 경계(B01·B02)가 병합되어 있어야 한다. 비로그인 요청은 `requester_id` 없이 공개 토큰과 만료 시각을 받고, 결과 화면은 토큰만으로 조회한다.
 
 ## 실행
 
@@ -43,7 +43,7 @@ cd frontend && npm run dev
 
 ### 4. 추천으로 읽힐 표현이 없다 (SC-004)
 
-`frontend/src/features/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.
+`frontend/src/components/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.
 
 ```bash
 cd frontend && npm run test
