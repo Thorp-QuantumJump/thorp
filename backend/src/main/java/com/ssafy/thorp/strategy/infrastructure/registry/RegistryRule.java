@@ -3,6 +3,7 @@ package com.ssafy.thorp.strategy.infrastructure.registry;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
 import com.ssafy.thorp.strategy.application.port.ValidationRule;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Objects;
 
@@ -73,6 +74,23 @@ record RegistryRule(ValidationRule rule) {
             }
             return toNumber(value, operand.axis())
                     .multiply(toNumber(factor, operand.multiplyByAxis()));
+        }
+        if (operand.multiplyByCeil() != null) {
+            ValidationRule.CeilingFactor factor = operand.multiplyByCeil();
+            Object axisValue = parameters.get(factor.axis());
+            // TOP_PERCENT가 아닌 선정 방식에는 topPercent가 없다. 그때 이 규칙은 무관하다.
+            if (axisValue == null) {
+                return null;
+            }
+            BigDecimal divisor = toNumber(factor.divisor(), "multiplyByCeil.divisor");
+            if (divisor.signum() <= 0) {
+                throw new IllegalArgumentException("multiplyByCeil divisor must be positive");
+            }
+            BigDecimal selectedCount =
+                    toNumber(contextValue(factor.context(), context), factor.context())
+                            .multiply(toNumber(axisValue, factor.axis()))
+                            .divide(divisor, 0, RoundingMode.CEILING);
+            return toNumber(value, operand.axis()).multiply(selectedCount);
         }
         return value;
     }

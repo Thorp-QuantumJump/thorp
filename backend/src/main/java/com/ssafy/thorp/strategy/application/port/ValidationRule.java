@@ -1,5 +1,6 @@
 package com.ssafy.thorp.strategy.application.port;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -42,13 +43,16 @@ public record ValidationRule(
      *     multiplyByContext}와 같이 쓰지 않는다. 섹터 모멘텀처럼 <b>후보 전체가 아니라 그중 몇 개에만</b> 비중이 가는 전략을 판정하려면 필요하다
      *     — {@code maxWeight × topN}이 그 예다(PD-03, T023). 곱할 축이 그 설정에 없으면(다른 선정 방식을 골랐다) 이 규칙은 위반이
      *     아니다
+     * @param multiplyByCeil 축 값에 곱할 올림 비율. {@code context × axis ÷ divisor}를 올림한 뒤 곱한다. {@code
+     *     maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)}이 그 예다. 참조 축이 그 설정에 없으면 이 규칙은 판정하지 않는다
      */
     public record Operand(
             String axis,
             String context,
             Object value,
             String multiplyByContext,
-            String multiplyByAxis) {
+            String multiplyByAxis,
+            CeilingFactor multiplyByCeil) {
 
         public Operand {
             long filled = Stream.of(axis, context, value).filter(Objects::nonNull).count();
@@ -56,30 +60,61 @@ public record ValidationRule(
                 throw new IllegalArgumentException(
                         "operand must set exactly one of axis, context, value");
             }
-            if ((multiplyByContext != null || multiplyByAxis != null) && axis == null) {
+            if ((multiplyByContext != null || multiplyByAxis != null || multiplyByCeil != null)
+                    && axis == null) {
                 throw new IllegalArgumentException(
-                        "multiplyByContext/multiplyByAxis is only valid with an axis");
+                        "operand multipliers are only valid with an axis");
             }
-            if (multiplyByContext != null && multiplyByAxis != null) {
-                throw new IllegalArgumentException(
-                        "operand cannot multiply by both a context and an axis");
+            long multipliers =
+                    Stream.of(multiplyByContext, multiplyByAxis, multiplyByCeil)
+                            .filter(Objects::nonNull)
+                            .count();
+            if (multipliers > 1) {
+                throw new IllegalArgumentException("operand cannot set more than one multiplier");
             }
         }
 
         public static Operand ofAxis(String axis, String multiplyByContext) {
-            return new Operand(axis, null, null, multiplyByContext, null);
+            return new Operand(axis, null, null, multiplyByContext, null, null);
         }
 
         public static Operand ofAxisTimesAxis(String axis, String multiplyByAxis) {
-            return new Operand(axis, null, null, null, multiplyByAxis);
+            return new Operand(axis, null, null, null, multiplyByAxis, null);
+        }
+
+        public static Operand ofAxisTimesCeilingFactor(
+                String axis, String context, String factorAxis, Object divisor) {
+            return new Operand(
+                    axis, null, null, null, null, new CeilingFactor(context, factorAxis, divisor));
         }
 
         public static Operand ofContext(String context) {
-            return new Operand(null, context, null, null, null);
+            return new Operand(null, context, null, null, null, null);
         }
 
         public static Operand ofValue(Object value) {
-            return new Operand(null, null, value, null, null);
+            return new Operand(null, null, value, null, null, null);
+        }
+    }
+
+    /** {@code ceil(context × axis ÷ divisor)}로 계산하는 곱셈 인자. */
+    public record CeilingFactor(String context, String axis, Object divisor) {
+
+        public CeilingFactor {
+            if (context == null || context.isBlank()) {
+                throw new IllegalArgumentException("ceiling factor context must not be blank");
+            }
+            if (axis == null || axis.isBlank()) {
+                throw new IllegalArgumentException("ceiling factor axis must not be blank");
+            }
+            Objects.requireNonNull(divisor, "ceiling factor divisor must not be null");
+            try {
+                if (new BigDecimal(String.valueOf(divisor)).signum() <= 0) {
+                    throw new IllegalArgumentException("ceiling factor divisor must be positive");
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("ceiling factor divisor must be a number", e);
+            }
         }
     }
 
