@@ -1,10 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
-import {
-  formatWeightTenths,
-  parseWeightInput,
-  TOTAL_WEIGHT_TENTHS,
-} from '@/diagnosis/weights'
+import { formatWeightTenths, parseWeightInput, TOTAL_WEIGHT_TENTHS } from '@/diagnosis/weights'
 import type { AdminDraftExample, AdminDraftExampleSector } from '@/types/learningAdmin'
 import styles from './ExampleEditor.module.css'
 
@@ -28,6 +24,74 @@ interface ExampleEditorProps {
 }
 
 type CatalogState = { status: 'loading' } | SectorCatalogResult
+
+interface WeightFieldProps {
+  /** 0.1%p 단위 정수다. 표시할 때만 10으로 나눈다 */
+  valueTenths: number
+  /** 받아들인 값만 올라온다. 거부된 입력은 여기까지 오지 않는다 */
+  onCommit: (weightTenths: number) => void
+}
+
+/**
+ * 예시 한 줄의 비중 칸이다. 002 `components/diagnosis/WeightInput`의 숫자 칸과 같은 방식이다.
+ *
+ * <p><b>치고 있는 문자열을 확정된 값과 따로 둔다.</b> 확정된 값을 글자마다 `formatWeightTenths`로 다시
+ * 그리면 "5"가 "5.0"이 되고 커서가 끝으로 가서, 다음 글자 "0"이 "5.00"으로 읽혀 50%를 넣을 수
+ * 없다. 사용자가 친 글자를 화면이 몰래 바꾸는 것이다(constitution 원칙 VI).
+ *
+ * <p><b>판정은 `diagnosis/weights.ts` 한 곳이다.</b> 받지 않은 입력은 말없이 버리지 않고 그 칸 옆에 한
+ * 문장으로 알린다. 칸을 벗어나면 확정된 값의 표시로 돌아간다.
+ */
+function WeightField({ valueTenths, onCommit }: WeightFieldProps) {
+  const inputId = useId()
+  const errorId = useId()
+  /** `null`이면 치는 중이 아니며 화면은 확정된 값을 보인다 */
+  const [draft, setDraft] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const settle = () => {
+    setDraft(null)
+    setErrorMessage(null)
+  }
+
+  return (
+    <div className={styles.field}>
+      <label htmlFor={inputId}>비중 (%)</label>
+      <input
+        id={inputId}
+        type="text"
+        inputMode="decimal"
+        value={draft ?? formatWeightTenths(valueTenths)}
+        onChange={(event) => {
+          const raw = event.target.value
+          setDraft(raw)
+          const parsed = parseWeightInput(raw)
+          if (parsed.status === 'parsed') {
+            setErrorMessage(null)
+            onCommit(parsed.weightTenths)
+            return
+          }
+          // 빈 칸은 0으로 보지 않는다. 아직 입력 중이므로 이전 값을 그대로 둔다.
+          setErrorMessage(parsed.status === 'rejected' ? parsed.message : null)
+        }}
+        onBlur={settle}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            settle()
+          }
+        }}
+        aria-invalid={errorMessage === null ? undefined : true}
+        aria-describedby={errorMessage === null ? undefined : errorId}
+      />
+      {errorMessage === null ? null : (
+        <span id={errorId} role="alert" className={styles.weightError}>
+          {errorMessage}
+        </span>
+      )}
+    </div>
+  )
+}
 
 export function ExampleEditor({ example, onChange }: ExampleEditorProps) {
   const [catalog, setCatalog] = useState<CatalogState>({ status: 'loading' })
@@ -105,21 +169,10 @@ export function ExampleEditor({ example, onChange }: ExampleEditorProps) {
                   </select>
                 </label>
 
-                <label className={styles.field}>
-                  <span>비중 (%)</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={formatWeightTenths(sector.weightTenths)}
-                    onChange={(event) => {
-                      const parsed = parseWeightInput(event.target.value)
-                      // 아직 입력 중이거나 규칙을 벗어난 값은 마지막 값을 그대로 둔다.
-                      if (parsed.status === 'parsed') {
-                        updateAt(index, { weightTenths: parsed.weightTenths })
-                      }
-                    }}
-                  />
-                </label>
+                <WeightField
+                  valueTenths={sector.weightTenths}
+                  onCommit={(weightTenths) => updateAt(index, { weightTenths })}
+                />
 
                 <button
                   type="button"
