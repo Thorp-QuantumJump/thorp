@@ -141,7 +141,10 @@ class ParamSearchRecordCompletenessTest extends LauncherMockedIntegrationTestSup
                 .isEqualTo(storedCandidates);
         assertThat(space.strategyIds())
                 .as("전략별로 축과 후보값이 남아 있어야 한다")
-                .isEqualTo(search.getStrategyIds());
+                // 순서는 보지 않는다 — 탐색 공간은 jsonb 로 저장되고 jsonb 는 객체 키 순서를 보존하지
+                // 않는다(키 길이 → 바이트 순으로 다시 정렬한다). 뜻이 있는 순서는 축과 값의 순서이고
+                // (SearchSpace 주석·FR-029) 전략의 순서는 아니다.
+                .containsExactlyInAnyOrderElementsOf(search.getStrategyIds());
     }
 
     /** FR-020이 요구하는 항목을 하나씩 본다. 비면 그 묶음은 나중에 다시 읽을 수 없다. */

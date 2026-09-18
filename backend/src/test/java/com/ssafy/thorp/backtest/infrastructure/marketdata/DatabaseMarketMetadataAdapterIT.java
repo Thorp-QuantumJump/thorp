@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 적재된 자료를 읽는 {@link DatabaseMarketMetadataAdapter} 의 동작.
@@ -28,15 +29,16 @@ class DatabaseMarketMetadataAdapterIT extends IntegrationTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     /**
-     * 씨앗의 자료 버전으로 <b>시작하는지</b>만 본다.
+     * 씨앗의 자료 버전을 <b>정확히</b> 읽는지 본다.
      *
-     * <p>{@code dataset_version} 에는 불변 트리거가 걸려 있어(FR-017) 검사가 넣은 행을 지울 수 없다. 아래 판 번호 검사가 {@code
-     * _R2} 를 넣고 나면 그쪽이 현재 판이 되며, 그 상태는 되돌릴 수 없다. 그래서 정확한 일치가 아니라 접두사로 건다 — 검사 순서에 기대지 않기 위함이다.
+     * <p>자료 버전을 더하는 아래 두 검사가 트랜잭션 롤백으로 격리되므로, 이 검사가 돌 때 공용 DB 에는 씨앗의 자료 버전만 남아 있어야 한다. 접두사가 아니라 정확한
+     * 일치로 거는 것이 그 격리를 지키는 장치다 — 격리가 풀려 {@code _R2} 가 남으면 여기서 먼저 걸리고, 같은 자료 버전을 기대하는 다른 스펙의 검사(005
+     * {@code ResultApiIT} 의 계약 예시 비교)까지 번지지 않는다.
      */
     @Test
     @DisplayName("씨앗이 심은 자료 버전과 대응표를 읽는다")
     void readsSeededCatalog() {
-        assertThat(adapter.currentDataVersion()).startsWith(MarketCatalogSeed.DATA_VERSION);
+        assertThat(adapter.currentDataVersion()).isEqualTo(MarketCatalogSeed.DATA_VERSION);
         assertThat(adapter.currentMappingVersion()).isEqualTo(MarketCatalogSeed.MAP_VERSION);
     }
 
@@ -96,6 +98,7 @@ class DatabaseMarketMetadataAdapterIT extends IntegrationTestSupport {
     }
 
     @Test
+    @Transactional
     @DisplayName("같은 마감일을 다시 발행하면 나중 판을 고른다")
     void prefersTheLaterRevision() {
         // 판 번호가 붙은 식별자는 이름 정렬에서 뒤에 온다(research.md 결정 4의 2026-09-17 보완).
@@ -107,17 +110,23 @@ class DatabaseMarketMetadataAdapterIT extends IntegrationTestSupport {
     }
 
     @Test
+    @Transactional
     @DisplayName("부분 갱신된 묶음은 고르지 않는다")
     void ignoresIncompleteDatasets() {
         // 이용 한도로 중간에 끊긴 자료다(FR-014). 그것으로 낸 결과는 다음 실행과 재현되지 않는다.
         // 마감 시각을 어느 것보다도 늦게 두어도 뽑히면 안 된다.
         insertDatasetVersion("FIXTURE-incomplete", "2027-01-31 15:30:00+09", false);
 
-        assertThat(adapter.currentDataVersion()).isNotEqualTo("FIXTURE-incomplete");
-        assertThat(adapter.currentDataVersion()).startsWith(MarketCatalogSeed.DATA_VERSION);
+        assertThat(adapter.currentDataVersion()).isEqualTo(MarketCatalogSeed.DATA_VERSION);
     }
 
-    /** {@code dataset_version} 은 불변 트리거 때문에 지울 수 없으므로 검사마다 다른 식별자를 쓴다. */
+    /**
+     * 검사용 자료 버전을 하나 넣는다. <b>부르는 검사는 {@code @Transactional} 이어야 한다.</b>
+     *
+     * <p>{@code dataset_version} 에는 불변 트리거가 걸려 있어(FR-017) 한 번 커밋된 행은 DELETE 로 치울 수 없다. 반면 트랜잭션 롤백은
+     * 트리거를 타지 않으므로, 검사를 롤백 경계 안에 두는 것이 이 표를 되돌리는 유일한 길이다. 롤백하지 않으면 여기서 넣은 행이 공용 DB 에 그대로 남아 뒤따르는
+     * 검사의 현재 자료 버전을 바꿔 놓는다.
+     */
     private void insertDatasetVersion(String datasetId, String deadline, boolean complete) {
         jdbcTemplate.update(
                 """

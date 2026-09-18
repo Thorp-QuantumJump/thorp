@@ -4,7 +4,7 @@
 부르고 어떤 전략이 있는지 모른다.
 
 **여기 없는 전략은 임의로 계산하지 않는다.** 팀이 규칙을 확정하지 않은 전략
-(``SECTOR_MOMENTUM``·``MINIMUM_VARIANCE``, PD-03·PD-04)을 그럴듯한 기본값으로 돌리면, 나중에
+(``SECTOR_MOMENTUM``, PD-03)을 그럴듯한 기본값으로 돌리면, 나중에
 규칙이 정해졌을 때 같은 요청이 다른 숫자를 내고 그 차이를 아무도 설명할 수 없다. 실행을 멈추고
 왜 멈췄는지 말한다(FR-010).
 """
@@ -17,7 +17,7 @@ from typing import Any
 
 import pandas as pd
 
-from worker.allocation import equal, fixed, inverse_vol
+from worker.allocation import equal, fixed, inverse_vol, min_variance
 from worker.allocation.base import (
     AllocationError,
     AllocationResult,
@@ -31,6 +31,7 @@ ALLOCATION_RULES: dict[str, AllocationRule] = {
     fixed.STRATEGY_ID: fixed.compute,
     equal.STRATEGY_ID: equal.compute,
     inverse_vol.STRATEGY_ID: inverse_vol.compute,
+    min_variance.STRATEGY_ID: min_variance.compute,
 }
 
 

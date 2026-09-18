@@ -22,7 +22,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
@@ -89,10 +88,12 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
         long dispatchedBefore =
                 candidateRepository.countByStatus(search.getId(), CandidateStatus.DISPATCHED);
         assertThat(dispatchedBefore).as("발행 창이 1이라 한 건만 나가 있어야 한다").isEqualTo(1);
+        int expectedSkipped = pendingBefore(search);
+        assertThat(expectedSkipped).as("멈출 대기 후보가 있어야 취소를 볼 수 있다").isPositive();
 
         ParamSearchCancelResult result = cancelService.cancel(search.getSearchId().value(), OWNER);
 
-        assertThat(result.skipped()).isEqualTo(expectedSkipped());
+        assertThat(result.skipped()).isEqualTo(expectedSkipped);
         assertThat(result.inFlight()).isEqualTo(1);
         assertThat(result.status())
                 .as("발행된 후보가 완주하기 전까지는 아직 RUNNING 이다(계약 §5)")
@@ -100,7 +101,7 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
         assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING))
                 .isZero();
         assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED))
-                .isEqualTo(expectedSkipped());
+                .isEqualTo(expectedSkipped);
     }
 
     @Test
@@ -122,6 +123,7 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
     @DisplayName("남은 후보가 끝나면 PARTIAL로 닫히고 부분 결과와 선정이 남는다")
     void lastInFlightCandidateClosesTheBundleAsPartial() {
         ParamSearch search = accept();
+        int expectedSkipped = pendingBefore(search);
         cancelService.cancel(search.getSearchId().value(), OWNER);
 
         finish(inFlight(search));
@@ -129,14 +131,14 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
         ParamSearch closed = paramSearchRepository.findById(search.getId()).orElseThrow();
         assertThat(closed.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);
         assertThat(closed.getStopReason()).isEqualTo(StopReason.CANCELLED);
-        assertThat(closed.getCounts().skipped()).isEqualTo(expectedSkipped());
+        assertThat(closed.getCounts().skipped()).isEqualTo(expectedSkipped);
         assertThat(closed.getSelection())
                 .as("취소된 묶음도 완료된 후보끼리는 비교할 수 있다(data-model §3)")
                 .isNotNull();
 
         ParamSearchResult view = paramSearchService.get(closed.getSearchId().value());
         assertThat(view.partial()).isTrue();
-        assertThat(view.partialNote()).contains(String.valueOf(expectedSkipped()));
+        assertThat(view.partialNote()).contains(String.valueOf(expectedSkipped));
     }
 
     @Test
@@ -244,20 +246,16 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
 
     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
     /**
-     * 취소 시점에 미실행으로 확정될 후보 수. 발행 창이 1이라 나가 있던 한 건을 뺀 나머지다.
+     * 취소 시점에 미실행으로 확정될 후보 수 — <b>취소 직전에 대기 중이던 후보를 센다.</b>
      *
      * <p><b>수를 적어 두지 않는다</b> — 등록표의 축이나 후보값이 늘면 조합 수가 곱으로 바뀐다. 적어 두면 등록표를 고칠 때마다 이 테스트가 이유 없이 깨지고,
      * 그때 수만 고쳐 넣으면 취소가 실제로 무엇을 멈췄는지 보지 않게 된다.
+     *
+     * <p>등록표의 {@code combinationCount}(격자 크기)를 쓰지 않는 이유: 격자는 유효성 규칙을 모른다. 후보 섹터가 둘인 이 묶음에서는 {@code
+     * MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE}가 상한 30·40 조합을 계산 전에 걸러내므로(007 FR-006) 실제 후보가 격자보다 적다. 취소가 멈춘
+     * 것은 <b>대기 중이던 후보</b>이지 격자의 점이 아니다.
      */
-    private int expectedSkipped() {
-        long total =
-                registry.activeStrategies().stream()
-                        .filter(
-                                registration ->
-                                        SearchableStrategies.of(registry, jdbcTemplate)
-                                                .contains(registration.strategyId()))
-                        .mapToLong(StrategyRegistration::combinationCount)
-                        .sum();
-        return (int) (total - 1);
+    private int pendingBefore(ParamSearch search) {
+        return (int) candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING);
     }
 }
