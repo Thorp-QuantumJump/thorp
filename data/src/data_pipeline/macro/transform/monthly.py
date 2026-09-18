@@ -26,6 +26,8 @@ from decimal import Decimal
 from typing import Final
 
 from data_pipeline.macro.registry import (
+    CYCLE_DAILY,
+    CYCLE_MONTHLY,
     TRANSFORM_MOM,
     TRANSFORM_MONTH_AVERAGE,
     TRANSFORM_MONTH_END,
@@ -289,6 +291,35 @@ def passthrough(observations: Sequence[SourceObservation]) -> list[MonthlyValue]
 # --------------------------------------------------------------------------
 # 등록표가 고른 규칙으로 보내기
 # --------------------------------------------------------------------------
+#: 주기별 기간 표기 길이. 월별은 ``YYYY-MM``, 일별은 ``YYYY-MM-DD`` 다.
+_PERIOD_LENGTH: Final[Mapping[str, int]] = {CYCLE_MONTHLY: 7, CYCLE_DAILY: 10}
+
+
+def _require_declared_cycle(
+    indicator: IndicatorDefinition, observations: Sequence[SourceObservation]
+) -> bool:
+    """등록표가 선언한 주기와 관측의 기간 표기가 맞는지 본다. 월별이면 참이다.
+
+    **관측을 훑어 주기를 추측하지 않는다.** 추측은 자료가 비었을 때 답을 내지 못하고,
+    원천이 주기를 바꿨을 때도 조용히 따라가 버린다. 등록표가 선언한 것을 기준으로 삼고
+    어긋나면 멈추면, 두 방향의 어긋남이 모두 드러난다 — 월별이라 적힌 계열에 일별이 온
+    경우와 그 반대 모두.
+    """
+    expected = _PERIOD_LENGTH.get(indicator.source_cycle)
+    if expected is None:
+        raise ValueError(
+            f"{indicator.indicator_id}: 등록표의 주기가 모르는 값이다({indicator.source_cycle})"
+        )
+    wrong = [o.period for o in observations if len(o.period) != expected]
+    if wrong:
+        raise ValueError(
+            f"{indicator.indicator_id}: 등록표는 주기를 {indicator.source_cycle} 로"
+            f" 선언했는데 기간 표기가 다른 관측이 {len(wrong)}건 있다({', '.join(wrong[:3])})."
+            " 원천이 주기를 바꿨는지 본다"
+        )
+    return indicator.source_cycle == CYCLE_MONTHLY
+
+
 def apply(
     indicator: IndicatorDefinition,
     observations: Sequence[SourceObservation],
@@ -302,7 +333,7 @@ def apply(
     (환율의 말일자료, 두바이유의 월 평균) 그 값을 그대로 쓴다 — 등록표가 그 사실을 적어 둔다.
     """
     rule = indicator.transform_rule
-    monthly_source = all(len(o.period) == 7 for o in observations)
+    monthly_source = _require_declared_cycle(indicator, observations)
 
     if rule in (TRANSFORM_OFFICIAL_AMOUNT, TRANSFORM_SEASONAL_RATE):
         return passthrough(observations)
@@ -329,9 +360,9 @@ def apply(
             # 분모로 골라 값이 조용히 틀린다. 일별을 월로 접는 규칙은 등록표가 정할 일이라
             # 여기서 고르지 않는다(FR-005).
             raise ValueError(
-                f"{indicator.indicator_id}: {rule} 는 월 값끼리 견주는 변환인데 원천이 일별"
-                " 값을 줬다. 등록표가 일별을 월로 접는 규칙(월 기말·월 평균)을 먼저 정해야"
-                " 한다 — 접지 않고 견주면 같은 달이 여러 번 나온다"
+                f"{indicator.indicator_id}: {rule} 는 월 값끼리 견주는 변환인데 등록표가"
+                " 일별 계열이라고 선언했다. 일별을 월로 접는 규칙(월 기말·월 평균)을 먼저"
+                " 정해야 한다 — 접지 않고 견주면 같은 달이 여러 번 나온다"
             )
         levels = passthrough(observations)
         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month

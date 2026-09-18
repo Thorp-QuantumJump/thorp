@@ -43,12 +43,18 @@ _MAX_ITEM_LEVELS: Final[int] = 4
 
 
 def cycle_for(indicator: IndicatorDefinition) -> str:
-    """등록표의 확보 구간 표기로 주기를 가른다.
+    """등록표가 선언한 주기를 그대로 쓴다. **여기서 추측하지 않는다**(FR-005).
 
     국고채만 일별이다. 월별 표(721Y001)는 항목2 구분이 없는 평균값이라 월 기말을 얻을 수
-    없어서 일별 표를 쓴다(pd11 §1).
+    없어서 일별 표를 쓴다(pd11 §1). 그 사실은 등록표가 들고, 이 함수는 옮길 뿐이다 —
+    통계표 코드로 갈랐을 때는 새 일별 계열이 들어올 때마다 이 코드를 고쳐야 했다.
     """
-    return "D" if indicator.table_code == "817Y002" else "M"
+    if indicator.source_cycle not in _CYCLE_LENGTH:
+        raise SourceContractError(
+            f"{indicator.indicator_id}: 등록표의 주기가 한국은행이 아는 값이 아니다"
+            f" ({indicator.source_cycle})"
+        )
+    return indicator.source_cycle
 
 
 def item_codes(indicator: IndicatorDefinition) -> tuple[str, ...]:
