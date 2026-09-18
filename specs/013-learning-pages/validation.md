@@ -1,6 +1,6 @@
 # B06 검증 기록
 
-**기준일**: 2026-09-18 · **기준 코드**: `26ec510a` · **티켓**: [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302)
+**기준일**: 2026-09-18 · **병합 기준**: `origin/dev` `da929d3f` · **티켓**: [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302)
 
 T073·T074·T076·T077·T078을 완료했다. **T075는 부분 수행**이며 아래 남은 수동 확인을 끝내기 전에는 B06 완료로 표시하지 않는다. 원래 작업 디렉터리의 미커밋 변경을 제외한 별도 worktree에서 확인했다.
 
@@ -16,10 +16,10 @@ T073·T074·T076·T077·T078을 완료했다. **T075는 부분 수행**이며 �
 
 | 명령 | 결과 |
 |---|---|
-| `cd backend && ./gradlew spotlessApply build` | 성공. XML 집계 1,723개 중 1,719개 통과, 실패 0, 오류 0, 조건부 건너뜀 4 |
+| `cd backend && ./gradlew spotlessApply build` | 성공. XML 집계 1,739개 중 1,735개 통과, 실패 0, 오류 0, 조건부 건너뜀 4 |
 | `cd frontend && npm run lint` | 성공. 오류 0, 기존 경고 20(React Hooks·Fast Refresh) |
 | `cd frontend && npm run build` | 성공 |
-| `cd frontend && npm test` | 성공. Vitest 110파일·1,095개 및 Node 테스트 13개 통과, 건너뜀 0 |
+| `cd frontend && npm test` | 성공. Vitest 110파일·1,097개 및 Node 테스트 13개 통과, 건너뜀 0 |
 | `git diff --check` | 통과 |
 
 백엔드 건너뜀은 Docker 부재가 아니다. 실제 PostgreSQL·RabbitMQ Testcontainers가 실행됐다.
