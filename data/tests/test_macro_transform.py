@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import json
 import pathlib
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
 import pytest
 
-from data_pipeline.macro.registry import INDICATORS
+from data_pipeline.macro.registry import CYCLE_DAILY, INDICATORS
 from data_pipeline.macro.sources import ecos
 from data_pipeline.macro.sources.base import SourceObservation
 from data_pipeline.macro.transform import monthly
@@ -297,15 +298,35 @@ class TestApply:
 
         assert result["2026-07"].value == Decimal("0.500000")
 
-    def test_증가율_지표에_일별_원천이_오면_멈춘다(self) -> None:
+    def test_등록표가_선언한_주기와_다른_관측은_멈춘다(self) -> None:
+        """관측을 훑어 주기를 추측하지 않는다. 등록표 선언이 기준이고 어긋나면 멈춘다."""
+        daily = [
+            obs("all_industry_production", "2025-01-29", "100"),
+            obs("all_industry_production", "2025-01-30", "101"),
+        ]
+
+        with pytest.raises(ValueError, match="주기를 M 로 선언했는데"):
+            monthly.apply(BY_ID["all_industry_production"], daily)
+
+    def test_월별로_선언한_계열에_일별_표기가_섞여도_멈춘다(self) -> None:
+        mixed = [
+            obs("all_industry_production", "2025-01", "100"),
+            obs("all_industry_production", "2025-02-03", "101"),
+        ]
+
+        with pytest.raises(ValueError, match="기간 표기가 다른 관측이 1건"):
+            monthly.apply(BY_ID["all_industry_production"], mixed)
+
+    def test_증가율은_일별로_선언한_계열에_걸지_않는다(self) -> None:
         """접지 않고 견주면 month_of 가 여러 날을 같은 달로 접어 대상월이 중복된다."""
+        daily_growth = replace(BY_ID["all_industry_production"], source_cycle=CYCLE_DAILY)
         daily = [
             obs("all_industry_production", "2025-01-29", "100"),
             obs("all_industry_production", "2025-01-30", "101"),
         ]
 
         with pytest.raises(ValueError, match="월 값끼리 견주는 변환"):
-            monthly.apply(BY_ID["all_industry_production"], daily)
+            monthly.apply(daily_growth, daily)
 
     def test_모르는_규칙은_조용히_넘기지_않는다(self) -> None:
         broken = BY_ID["exports"].__class__(

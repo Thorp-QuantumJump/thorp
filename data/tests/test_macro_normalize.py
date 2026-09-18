@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import json
 import pathlib
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from data_pipeline.macro.normalize import normalize
-from data_pipeline.macro.registry import INDICATORS
+from data_pipeline.macro.registry import CYCLE_DAILY, INDICATORS
 from data_pipeline.macro.sources import ecos, kosis
 from data_pipeline.macro.sources.base import SourceObservation
 from data_pipeline.macro.transform import monthly
@@ -19,6 +20,11 @@ from data_pipeline.macro.transform import monthly
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "macro"
 
 BY_ID = {indicator.indicator_id: indicator for indicator in INDICATORS}
+
+#: 일별 원천에서 월 평균을 내는 지표. **등록표에는 없다** — 두바이유는 변환이 월 평균이지만
+#: 원천이 월값을 직접 주므로 접는 일이 없다(pd11 §1). 접기 경로를 검증하려면 주기를 일별로
+#: 선언한 지표가 필요하고, 그것을 여기서 만든다. 새 일별 원천이 들어오면 등록표 쪽이 생긴다.
+DAILY_AVERAGE = replace(BY_ID["dubai_crude"], source_cycle=CYCLE_DAILY)
 
 
 def obs(indicator_id: str, period: str, value: str | None) -> SourceObservation:
@@ -81,7 +87,7 @@ class TestMonthAverageLineage:
         ]
         calendar_days = {"2026-01": ["2026-01-02", "2026-01-05", "2026-01-06"]}
 
-        result = normalize(BY_ID["dubai_crude"], daily, trading_days=calendar_days)
+        result = normalize(DAILY_AVERAGE, daily, trading_days=calendar_days)
 
         assert result[0].transformed_value == Decimal("82.000000")
         assert result[0].lineage_periods == ("2026-01-02", "2026-01-05", "2026-01-06")
@@ -173,10 +179,9 @@ class TestTimestamps:
             SourceObservation("x", "2026-01-02", Decimal("80"), source_updated_at="2026-02-01"),
             SourceObservation("x", "2026-01-05", Decimal("82"), source_updated_at="2026-03-01"),
         ]
-        indicator = BY_ID["dubai_crude"]
         calendar_days = {"2026-01": ["2026-01-02", "2026-01-05"]}
 
-        result = normalize(indicator, daily, trading_days=calendar_days)
+        result = normalize(DAILY_AVERAGE, daily, trading_days=calendar_days)
 
         assert result[0].source_updated_at == "2026-03-01"
 
