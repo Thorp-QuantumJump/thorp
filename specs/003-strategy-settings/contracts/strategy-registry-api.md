@@ -192,7 +192,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 필드 | 형 | 설명 |
 |---|---|---|
 | `registryVersion` | string | 분석 요청에 그대로 실어 보낸다 |
-| `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다 |
+| `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다. 임시 여부만으로 차단하지 않고 다른 실행 조건을 모두 검증한다(FR-005a) |
 | `strategies[].targetWeightSource` | `USER` \| `EQUAL` \| `COMPUTED` | 목표 비중이 어디에서 오는가. `USER`면 화면이 [002](../../002-sector-weight-selection/spec.md)가 확정한 비중을 읽기 전용으로 보이고, `COMPUTED`면 FR-012의 자동 배분 설명을 보인다. **화면이 전략 ID로 분기하지 않게 하는 값이다** |
 | `strategies[].selectable` | boolean | 카드를 고를 수 있는가. `universeSize`를 주면 유효성 제약과 활성 여부를 반영한다 |
 | `strategies[].unselectableReason` | string? | `selectable`이 false일 때만. 화면이 그대로 한 문장으로 보인다 |
@@ -288,3 +288,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | FR-018 조회 실패 시 막는다 | 503과 그 처리 |
 | FR-008 유효성 위반을 실행 전에 안내 | `validationRules`의 조건을 화면이 평가하고, 서버가 접수 시점에 다시 본다 |
 | FR-014 등록표 버전을 요청에 싣는다 | `registryVersion`과 409 |
+
+### 조회 실패 복구 (FR-018a·FR-018b)
+
+003 등록표 조회·재시도 중에는 두 행동 버튼을 막고, 성공 후 보관값을 재검증한다. 004 규칙·비용 조회 실패는 분석만 막으며 '분석 조건 다시 불러오기'를 제공한다. 재시도 중 중복 조회를 막고 성공해도 분석 요청은 자동 전송하지 않는다. 자동 비교 진입은 FR-013의 별도 조건을 따른다.
