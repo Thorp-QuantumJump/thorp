@@ -72,6 +72,8 @@
 
 ### 3-2. 비교 뷰 (FR-004, FR-005)
 
+공개 `config.executionType`은 실행 사본이 아닌 요청 행에서 온다. 비용 기준은 `versions.costProfile.version`, 선택 전략의 기본값·준비 기간은 003 등록표, 규칙 버전은 004 규칙 등록표를 사용한다. `EXECUTION_LIMIT`은 실행 상태와 별도로 표시하는 요청 거절 상태이며, `retryAfterSeconds`를 안내하고 명시적 재시도만 허용한다.
+
 | 필드 | 설명 |
 |---|---|
 | base | 기준 결과. 사용자 고정 비중 또는 동일 비중 |
