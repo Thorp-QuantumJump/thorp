@@ -108,7 +108,7 @@ navigate('/diagnosis/sectors', {
 | 화면 | 지금 상태 | 필요한 일 |
 |---|---|---|
 | [002](../../002-sector-weight-selection/spec.md) | spec에 013 도움말 참조가 없다 | 002 담당이 붙일 용어와 자리를 정한다 |
-| [003](../../003-strategy-settings/spec.md) | FR-016·T057a가 013을 참조한다 | T057a가 `components/strategy/TermHelp.tsx` 대신 이 공용 컴포넌트를 쓰도록 003 tasks를 고친다 |
+| [003](../../003-strategy-settings/spec.md) | T097에서 등록표 `axes[].termId`를 받아 `DetailSettingsPanel`이 이 공용 컴포넌트를 쓴다(2026-09-18 코드 확인) | T057a·T063의 옛 경로·실패 처리 문구를 현재 구현에 맞추는 것은 003 담당이다. 축 설명은 003 등록표가 계속 소유한다 |
 | [005](../../005-result-comparison/spec.md) | spec에 013 도움말 참조가 없다. 013 US3 시나리오 4가 '가장 크게 줄었던 폭' 도움말을 전제한다 | 005 담당이 붙일 용어와 자리를 정한다 |
 
 쓸 수 있는 `termId` 목록은 [data-model](../data-model.md) §8이다.

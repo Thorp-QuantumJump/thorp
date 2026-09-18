@@ -69,7 +69,7 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사
 
 ## R5. 관리 계정인지 누가 어떻게 판정하는가
 
-**결정**: 포트 `learning/application/port/LearningAdminPolicy`가 로그인한 사용자 식별자를 받아 관리 권한 여부를 답한다. 지금 구현은 설정값 `thorp.learning.admin-user-ids`(쉼표로 구분한 사용자 ID 목록)를 읽는 `ConfiguredLearningAdminPolicy`다. **운영 설정에는 기본값을 두지 않는다.** 값을 넣지 않으면 아무도 관리자가 아니다. [014](../014-user-auth/spec.md)가 역할을 제공하면 이 구현 한 클래스만 역할을 읽도록 바꾼다.
+**결정**: 포트 `learning/application/port/LearningAdminPolicy`가 로그인한 사용자 식별자를 받아 관리 권한 여부를 답한다. 지금 구현은 설정값 `thorp.learning.admin-user-ids`(쉼표로 구분한 사용자 ID 목록)를 읽는 `ConfiguredLearningAdminPolicy`다. **운영 설정에는 기본값을 두지 않는다.** `THORP_LEARNING_ADMIN_USER_IDS`를 누락하면 운영 Compose가 배포를 멈추고, 빈 값으로 명시하면 아무도 관리자가 아니다. [014](../014-user-auth/spec.md)가 역할을 제공하면 이 구현 한 클래스만 역할을 읽도록 바꾼다.
 
 **근거**:
 - spec FR-016은 "관리 계정으로 **로그인**한 운영자만"을 요구한다. 설정 허용 목록은 014의 실제 로그인 세션(서버 세션, 주체 = 사용자 ID)을 그대로 쓰므로 이 요구를 지킨다.
@@ -77,6 +77,11 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사
 - 같은 성격의 선례가 있다. 004의 `CurrentRequester`와 `OperatorGate`가 "014가 들어오면 이 클래스만 바꾼다"는 경계를 두었다.
 
 **남는 의존**: 014 spec의 Out of Scope를 고쳐 관리 권한의 소유를 받아들이는 개정이 필요하다. 그 개정은 014 담당의 몫이고 이 plan의 작업 묶음에 넣지 않는다. 개정 전에도 허용 목록으로 기능이 동작하므로 013 구현을 막지 않는다. [plan.md](plan.md) "교차 의존"에 이 사실을 남긴다.
+
+**B06 코드 대조(2026-09-18)**: 014의 역할·관리자 계정 제외 항목은 그대로다. 관리 경로는
+`LearningAdminAccess`가 로그인 주체를 읽고 `LearningAdminPolicy`로 판정한다. 허용 목록과
+운영 환경 변수 전달은 구현되어 있다. 운영 계정 생성·권한 설정의 실제 완료 여부는 이 코드
+확인으로 판단하지 않는다.
 
 **기각한 대안**:
 - **`users.role` 컬럼 추가**: 014 소유 스키마·도메인을 013이 바꾼다. 역할 부여 절차까지 정해야 하는데 그것은 spec 013 Out of Scope다.
@@ -170,6 +175,14 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사
 - navigation state는 URL에 드러나지 않아 공유 링크로 복사되지 않는다. 배우기 메뉴나 외부 링크로 들어오면 state가 없으니 연결이 보이지 않는다(spec Edge Cases).
 - 002 계약이 예시 인계에 같은 수단을 이미 쓴다.
 - 허용 목록과 경로 검사는 state 값을 조작해 임의 경로로 보내는 것을 막는다. 검사 함수는 014가 로그인 복귀에 이미 쓰는 것을 재사용한다.
+
+**B06 코드 대조(2026-09-18)**: 002 T020의 `useLearningExampleEntry`·덮어쓰기 확인과
+`SectorSelectionLearningEntry.test.tsx`가 구현되어 있다. 예시 인계는 T032만으로 대신하지 않고
+002 수신 동작까지 확인한다. 003은 T097에서 등록표의 `axes[].termId`를 받아
+`DetailSettingsPanel`에 공용 `components/learning/TermHelp.tsx`를 연결했다. 축의 설명은
+003 등록표에 남고 개념 용어 조회는 013이 맡는다. `learningGlossary.ts`도 실제 공개 API를
+부르며 '설명 준비 중'과 조회 실패를 구분한다. 003 T057a·T063에 남은 옛 경로·실패 처리
+문구는 003 담당의 문서 동기화 대상이다. 검증 결과와 미실행 범위는 [검증 기록](validation.md)에 둔다.
 
 **기각한 대안**:
 - **쿼리 문자열 `?from=`**: 공유 링크와 새로고침 뒤에도 남는다.
