@@ -38,8 +38,13 @@ from data_pipeline.macro.normalize import NormalizedObservation
 from data_pipeline.macro.registry import (
     EXPECTED_INDICATOR_COUNT,
     FIELD_IDS,
-    REVIEW_UNVERIFIED,
+    REVIEW_PENDING_RIGHTS,
+    REVIEW_VERIFIED,
     IndicatorDefinition,
+    RegistryError,
+)
+from data_pipeline.macro.registry import (
+    validate as validate_registry,
 )
 
 #: 전체 지표를 묶는 기준월의 범위 식별자. 7개 분야 id 와 같은 자리에 들어간다(data-model §2).
@@ -50,7 +55,12 @@ BLOCK_NO_VALID_VALUE: Final[str] = "NO_VALID_VALUE"
 """유효한 월별 변환값이 0건이다. 원값만 있는 달은 세지 않는다 (FR-011, SC-008)."""
 
 BLOCK_LICENSE_UNVERIFIED: Final[str] = "LICENSE_UNVERIFIED"
-"""이용 조건을 모른다. 권리 확인 대기와 구분되며 이것만 발행을 막는다 (FR-016a)."""
+"""이용 조건이 미확인이거나 권리 상태가 알려진 허용값이 아니다 (FR-016a)."""
+
+PUBLISHABLE_LICENSE_REVIEW_STATUSES: Final[frozenset[str]] = frozenset(
+    {REVIEW_VERIFIED, REVIEW_PENDING_RIGHTS}
+)
+"""확인 완료와 명시된 권리 확인 대기만 발행할 수 있다."""
 
 BLOCK_NOT_COLLECTED: Final[str] = "NOT_COLLECTED"
 """등록표에 있는데 관측이 아예 오지 않았다. 유효 건수 0 과 구분한다 — 전자는 수집이 돌지
@@ -138,13 +148,15 @@ def gate(
             f"발행 판정은 등록표의 {EXPECTED_INDICATOR_COUNT}개 전부를 받아야 한다:"
             f" {len(indicators)}개가 왔다"
         )
+    try:
+        validate_registry(tuple(indicators))
+    except RegistryError as error:
+        raise PublishError(f"발행 등록표가 유효하지 않다: {error}") from error
 
     blockers: list[PublicationBlocker] = []
     for indicator in indicators:
-        if indicator.license_review_status == REVIEW_UNVERIFIED:
-            blockers.append(
-                PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED)
-            )
+        if indicator.license_review_status not in PUBLISHABLE_LICENSE_REVIEW_STATUSES:
+            blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED))
         received = observations.get(indicator.indicator_id)
         if received is None:
             blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_NOT_COLLECTED))
@@ -176,9 +188,7 @@ def _baseline_for_scope(
         held_back: tuple[str, ...] = ()
     else:
         held_back = tuple(
-            indicator_id
-            for indicator_id in members
-            if candidate not in valid[indicator_id]
+            indicator_id for indicator_id in members if candidate not in valid[indicator_id]
         )
     return Baseline(scope_id=scope_id, reference_month=reference_month, held_back_by=held_back)
 
@@ -202,12 +212,9 @@ def baselines(
         members_by_field[indicator.field_id].append(indicator.indicator_id)
 
     result = [
-        _baseline_for_scope(field_id, members_by_field[field_id], valid)
-        for field_id in FIELD_IDS
+        _baseline_for_scope(field_id, members_by_field[field_id], valid) for field_id in FIELD_IDS
     ]
-    result.append(
-        _baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in indicators], valid)
-    )
+    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in indicators], valid))
     return tuple(result)
 
 
@@ -223,9 +230,7 @@ def plan_publication(
     """
     blockers = gate(indicators, observations)
     counts = {
-        indicator.indicator_id: len(
-            valid_months(observations.get(indicator.indicator_id, ()))
-        )
+        indicator.indicator_id: len(valid_months(observations.get(indicator.indicator_id, ())))
         for indicator in indicators
     }
     return PublicationDecision(
