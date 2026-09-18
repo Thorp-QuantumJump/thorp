@@ -9,35 +9,27 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 /**
  * PostgreSQL 라운드트립. {@code @DataJpaTest}는 {@code @Configuration}·{@code @Repository} 구현체를 스캔하지 않으므로
- * 둘을 명시 등록한다. Auditing이 없으면 {@code created_at NOT NULL} 제약에 걸려 저장이 실패한다.
+ * {@link RepositoryTestSupport}가 둘을 명시 등록한다. Auditing이 없으면 {@code created_at NOT NULL} 제약에 걸려 저장이
+ * 실패한다.
  *
  * <p>Clock은 고정해 {@code backtestId}의 날짜 접두를 단언할 수 있게 한다. 순번은 시퀀스라 테스트 간에 이어지므로 값이 아니라 저장된 PK로 만든 값과
  * 같은지를 본다.
  */
-@DataJpaTest
-@Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
-class BacktestRunRepositoryImplTest extends PostgresTestSupport {
+class BacktestRunRepositoryImplTest extends RepositoryTestSupport {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 7);
     private static final BacktestPeriod PERIOD =
@@ -60,14 +52,6 @@ class BacktestRunRepositoryImplTest extends PostgresTestSupport {
                 new BigDecimal("0.5000"),
                 new InstrumentId("069500.XKRX"),
                 42);
-    }
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
     }
 
     @Autowired private BacktestRunRepositoryImpl repository;

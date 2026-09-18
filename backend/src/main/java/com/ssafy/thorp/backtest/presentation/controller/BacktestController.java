@@ -17,6 +17,7 @@ import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.application.service.CostProfileService;
 import com.ssafy.thorp.backtest.application.service.StrategyRulesService;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;
 import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;
@@ -31,6 +32,8 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -126,11 +129,19 @@ public class BacktestController {
      * publicToken}으로만 연다. 취소·재시도·조회({@code /backtests/{id}/**})는 그대로 소유자 경로다.
      *
      * <p>비로그인 요청은 사용자별 대기 한도를 셀 수 없어 전체 한도만 받는다({@code ExecutionLimitPolicy}).
+     *
+     * <p><b>비로그인 요청은 단건({@code SINGLE})만 받는다</b>(spec 005 T089, 원칙 IX). 실행 한도는 단건 큐에만 있어서, 본문의
+     * {@code executionType}을 그대로 믿으면 비로그인 클라이언트가 {@code SEARCH_BUNDLE}로 보내 한도 없이 대기열을 채울 수 있다.
+     * 묶음·경제환경 파생 실행은 로그인한 사용자의 유스케이스(007·010)가 만든다.
      */
     @PostMapping
     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(
             @Valid @RequestBody BacktestJobRequest request) {
         Long requesterId = currentRequester.findRequesterId().orElse(null);
+        if (requesterId == null && request.executionType() != ExecutionType.SINGLE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "로그인하지 않은 요청은 단건 분석(SINGLE)만 접수합니다.");
+        }
         BacktestJobResult result = backtestService.create(toCommand(request, requesterId));
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));

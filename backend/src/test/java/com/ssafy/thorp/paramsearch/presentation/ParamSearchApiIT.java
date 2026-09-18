@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.paramsearch.SearchableStrategies;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.concurrent.atomic.AtomicLong;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -34,17 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>여기서 보는 것은 <b>화면이 읽는 모양</b>이다 — 확인 화면의 네 덩어리가 다 있는지, 임시값 표시가 실리는지, 접수가 202와 식별자를 돌려주는지, 상태 조회가
  * 접수 시점 스냅샷을 그대로 보여 주는지.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            // 접수는 요청자를 요구한다 — backtest_request.requester_id 가 NOT NULL 이다(spec 004 R-12).
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class ParamSearchApiIT extends PostgresTestSupport {
+class ParamSearchApiIT extends LauncherMockedIntegrationTestSupport {
 
     private static final String UNIVERSE = "[\"091160.XKRX\", \"305720.XKRX\"]";
 
@@ -53,7 +40,7 @@ class ParamSearchApiIT extends PostgresTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private ParameterRegistryPort registry;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(910_000L);
 

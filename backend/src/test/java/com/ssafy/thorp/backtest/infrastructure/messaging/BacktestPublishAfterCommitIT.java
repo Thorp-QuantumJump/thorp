@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,8 +15,6 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,20 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>브로커 컨테이너는 띄우지 않는다 — 아무도 듣지 않는 포트를 지정해 연결 실패를 만든다. DB는 {@link PostgresTestSupport}의 PostgreSQL
  * 컨테이너라 Docker가 없으면 건너뛴다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            // 결과 이벤트 리스너가 죽은 브로커에 계속 재연결을 시도하지 않도록 끈다.
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            // 스케줄러가 제멋대로 끼어들지 않게 끄고, 재발행은 테스트가 직접 부른다.
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestPublishAfterCommitIT extends PostgresTestSupport {
+class BacktestPublishAfterCommitIT extends IntegrationTestSupport {
 
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");

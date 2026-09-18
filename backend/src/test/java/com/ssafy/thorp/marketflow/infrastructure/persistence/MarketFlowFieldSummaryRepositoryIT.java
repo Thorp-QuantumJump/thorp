@@ -5,19 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;
 import com.ssafy.thorp.marketflow.domain.vo.FieldId;
 import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@DataJpaTest
-@Import(MarketFlowFieldSummaryRepositoryImpl.class)
-class MarketFlowFieldSummaryRepositoryIT extends PostgresTestSupport {
+class MarketFlowFieldSummaryRepositoryIT extends RepositoryTestSupport {
 
     private static final String REGISTRY_VERSION = "macro-registry-example-v1";
     private static final String DATASET_VERSION = "macro-dataset-example-2026-09-16";
