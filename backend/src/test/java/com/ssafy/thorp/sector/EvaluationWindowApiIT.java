@@ -4,7 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.time.LocalDate;
 import java.util.Locale;
 import org.hamcrest.Matchers;
@@ -13,8 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,26 +27,13 @@ import org.springframework.test.web.servlet.MockMvc;
  * 두므로 이 검사는 달력을 따로 심지 않는다. 그래서 여기서 기간을 좁히는 손잡이는 달력 길이가 아니라 <b>자료 마감일과 상장일</b>이다. 그 달력에 공휴일이 없으므로
  * 날짜는 평일로만 골랐다.
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를
- * {@code SectorApiIT}·{@code InstrumentProfileApiIT}와 글자 그대로 같게 맞춰 두었다. 속성 하나라도 바꾸면 컨텍스트가 갈라지고, 이
- * 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의 {@code max_connections}를 거의 다 쓰고 있다. <b>이 애노테이션 묶음은 건드리지 않는다.</b>
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  *
  * <p>자료를 넣는 경로가 JDBC인 이유는 대응표도 시계열도 원본이 파이썬 파이프라인이고 백엔드에 쓰기 경로가 없기 때문이다(research.md 결정 7).
  *
  * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class EvaluationWindowApiIT extends PostgresTestSupport {
+class EvaluationWindowApiIT extends IntegrationTestSupport {
 
     /**
      * 실행마다 새로 짓는 꼬리표.

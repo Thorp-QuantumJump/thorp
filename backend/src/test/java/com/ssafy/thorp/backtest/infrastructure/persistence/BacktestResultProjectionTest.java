@@ -15,11 +15,8 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -29,11 +26,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -48,22 +41,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p>Hibernate {@code Statistics}로 select 목록을 검사하는 방식은 쓰지 않는다 — 구현 세부에 결합돼 쉽게 깨진다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    MessageJsonPersistenceConfig.class,
-    BacktestRunRepositoryImpl.class,
-    BacktestResultRepositoryImpl.class
-})
-class BacktestResultProjectionTest extends PostgresTestSupport {
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
+class BacktestResultProjectionTest extends RepositoryTestSupport {
 
     @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;

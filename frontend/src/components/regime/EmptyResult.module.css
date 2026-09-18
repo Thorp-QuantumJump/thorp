@@ -1,0 +1,2 @@
+.empty { border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 40px; }
+.empty h2 { margin: 0; color: var(--thorp-foreground); font-size: 1.2rem; line-height: 1.5; }

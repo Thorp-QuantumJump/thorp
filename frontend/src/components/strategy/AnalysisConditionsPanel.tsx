@@ -36,8 +36,11 @@ interface AnalysisConditionsPanelProps {
   /** 지금 쓰이는 시작 금액. 재검증이 비워 두고 복원을 기다리면 `undefined`다 */
   initialAmount: number | undefined
   minEvaluationYears: number
-  /** 비용 조건을 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않는다 */
-  cost: CostAssumptionView | null
+  /**
+   * 비용 조건. 조회하는 중이면 `'loading'`, 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않고, 조회 중을
+   * 확인 불가로 접지 않는다
+   */
+  cost: CostAssumptionView | 'loading' | null
   /** 허용된 값일 때만 불린다. 받는 쪽(`setAnalysisCondition`)이 같은 잣대로 한 번 더 거른다 */
   onChange: (patch: AnalysisConditionPatch) => void
   onReset: (name: RestorableCondition) => void
@@ -45,6 +48,7 @@ interface AnalysisConditionsPanelProps {
 
 export const COST_UNAVAILABLE =
   '비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.'
+export const COST_LOADING = '비용 조건을 확인하는 중입니다.'
 const RANGE_UNAVAILABLE = '평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.'
 
 function toNumber(value: unknown): number | null {
@@ -304,7 +308,11 @@ export function AnalysisConditionsPanel({
 
           <div className={fieldStyles.field} role="group" aria-label="비용 가정">
             <span className={fieldStyles.label}>비용 가정 (읽기 전용)</span>
-            {cost ? (
+            {cost === 'loading' ? (
+              <p className={styles.readOnly} role="status">
+                {COST_LOADING}
+              </p>
+            ) : cost ? (
               <p className={styles.readOnly}>
                 <span>수수료 {formatBps(cost.rates.commissionBps)}</span>
                 <span>호가 차이 {formatBps(cost.rates.spreadBps)}</span>
@@ -320,7 +328,7 @@ export function AnalysisConditionsPanel({
                 {COST_UNAVAILABLE}
               </p>
             )}
-            {cost?.provisional ? (
+            {cost !== 'loading' && cost?.provisional ? (
               <p className={fieldStyles.hint}>
                 팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.
               </p>

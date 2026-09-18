@@ -11,14 +11,17 @@ import {
   ANALYSIS_VERSIONS_UNAVAILABLE,
   EVALUATION_WINDOW_UNAVAILABLE,
   BacktestRejectionCode,
-  notConnectedSupport,
+  RULES_PENDING_DECISION,
+  RULES_VERSION_UNAVAILABLE,
   readBacktestRejection,
+  resolveRulesVersion,
   type AnalysisSupport,
   type AnalysisVersions,
   type BacktestRejection,
   type WarmupJudgement,
 } from '@/components/strategy/analysisSupport'
 import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'
+import { defaultAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'
 import { DetailSettingsPanel } from '@/components/strategy/DetailSettingsPanel'
 import { ReducedPeriodNotice } from '@/components/strategy/ReducedPeriodNotice'
 import {
@@ -35,12 +38,14 @@ import { SettingsStatusBadge } from '@/components/strategy/SettingsStatusBadge'
 import type { WarmupVerdict } from '@/components/strategy/StrategyCard'
 import { StrategyCardList, type RegistryViewState } from '@/components/strategy/StrategyCardList'
 import { formatWeightTenths as formatDisplayWeight } from '@/diagnosis/weights'
+import { useEvaluationWindow } from '@/hooks/useEvaluationWindow'
 import { useSectorSelection } from '@/hooks/useSectorSelection'
 import { useStrategySettings, type InvalidStoredValue } from '@/hooks/useStrategySettings'
 import type { BacktestAccepted, BacktestRequestStatus } from '@/types/backtestRequest'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
 import { isWithin, meetsMinimumYears, type AnalysisPeriod } from '@/utils/analysisPeriod'
 import { buildBacktestRequest } from '@/utils/analysisRequest'
+import { evaluationWindowQuery } from '@/utils/evaluationWindow'
 import { checkRules } from '@/utils/validationRules'
 import styles from './StrategySettingsPage.module.css'
 
@@ -48,8 +53,9 @@ interface StrategySettingsPageProps {
   /**
    * 분석을 시작하기 위해 바깥에서 받아야 하는 세 통로(규칙·비용 버전, 워밍업 판정, 요청 전송).
    *
-   * 기본값은 아직 아무것도 연결되지 않은 상태다 — '분석하기'가 정직하게 막힌다. B06(T039·T042)이
-   * 실제 모듈로 채운다. 검사는 흉내를 넘겨 요청 조립을 고정한다.
+   * 기본값은 `defaultAnalysisSupport`로, 001 평가 기간 조회와 004 규칙·비용 버전 조회, 요청 전송이 모두 실제
+   * 모듈이다(T107·T110). 받지 못한 통로가 있으면 '분석하기'가 그 이유로 막힌다. 검사는 흉내를 넘겨 요청
+   * 조립을 고정한다.
    */
   support?: AnalysisSupport
 }
@@ -175,10 +181,10 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) 
  * (spec Edge Cases).
  *
  * <p><b>아직 알 수 없는 값은 알 수 없다고 보인다.</b> 규칙·비용 버전(②)과 공통 평가 기간(①)은
- * `support`로 받으며 기본값은 연결되지 않은 상태다. 그때 '분석하기'는 이유와 함께 막히고 카드는
- * 판정하지 못했다는 사실을 보인다 — 값을 지어내 채우지 않는다(원칙 IV·VI).
+ * `support`로 받는다. 받지 못한 통로가 있으면 '분석하기'는 이유와 함께 막히고 카드는 판정하지 못했다는
+ * 사실을 보인다 — 값을 지어내 채우지 않는다(원칙 IV·VI).
  */
-export function StrategySettingsPage({ support = notConnectedSupport }: StrategySettingsPageProps) {
+export function StrategySettingsPage({ support = defaultAnalysisSupport }: StrategySettingsPageProps) {
   const navigate = useNavigate()
 
   // --- 002 경계: 섹터 목록을 받아 앞 단계의 선택을 확인한다 ---------------------------------
@@ -248,6 +254,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
 
   // --- 규칙·비용 버전(②). 결정 전에는 null이고 '분석하기'가 막힌다 ---------------------------
   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')
+  const [versionsReload, setVersionsReload] = useState(0)
 
   /**
    * 버전 조회는 **지금 넘겨받은 조회 함수**를 따른다.
@@ -268,6 +275,10 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
    * <p><b>남는 비용</b>: 호출자가 렌더마다 조회 함수 자체를 새로 만들면 부모가 다시 그릴 때마다
    * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않지만 요청은 헛돈다. 통로를 안정된 참조로 넘기라는
    * 계약(`AnalysisSupport`)이 그 몫을 맡는다.
+   *
+   * <p><b>409 뒤에는 일부러 다시 조회한다(`versionsReload`).</b> 004는 대체된 옛 규칙 버전을 실은 새 요청을
+   * 409 `REGISTRY_VERSION_CHANGED`로 거절한다(2026-09-17 004 결정). 그때는 받아 둔 버전이 이미 틀린 값이라
+   * 거두고 '확인하는 중'으로 되돌린다 — 두면 다시 누르는 순간 같은 409가 되풀이된다.
    */
   const fetchAnalysisVersions = support.fetchAnalysisVersions
 
@@ -285,7 +296,23 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       active = false
       controller.abort()
     }
-  }, [fetchAnalysisVersions])
+  }, [fetchAnalysisVersions, versionsReload])
+
+  // --- 공통 평가 기간(①). 섹터 집합과 등록표의 워밍업 상한이 바뀔 때만 조회한다 ---------------
+  //
+  // 값을 바꾸는 동안에는 받아 둔 거래일 목록으로 판정하므로 요청이 나가지 않는다(T098, research R7-1).
+  const windowQuery = useMemo(() => {
+    if (selection.status !== 'ready' || !registry) return null
+    return evaluationWindowQuery(
+      selection.selection.items.map((item) => item.sectorId),
+      registry,
+    )
+  }, [selection, registry])
+  const {
+    state: evaluationWindow,
+    retry: retryEvaluationWindow,
+    retrying: evaluationWindowRetrying,
+  } = useEvaluationWindow(support.fetchEvaluationWindow, windowQuery)
 
   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------
   const minEvaluationYears = settings.ready
@@ -299,10 +326,11 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (!settings.selectedStrategy || settings.warmupTradingDays === null) return null
     return support.judgeWarmup({
       strategy: settings.selectedStrategy,
+      evaluationWindow,
       warmupTradingDays: settings.warmupTradingDays,
       minEvaluationYears,
     })
-  }, [support, settings.selectedStrategy, settings.warmupTradingDays, minEvaluationYears])
+  }, [support, evaluationWindow, settings.selectedStrategy, settings.warmupTradingDays, minEvaluationYears])
 
   /**
    * 고른 전략의 평가 구간이 워밍업 때문에 줄었다는 안내의 재료(FR-011, SC-004). 줄지 않았으면 `null`이다.
@@ -326,14 +354,17 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     ) {
       return null
     }
-    const { bindingCandidate } = selectedJudgement.reduction
-    const item =
-      selection.status === 'ready'
+    const { bindingCandidate, bindingSector } = selectedJudgement.reduction
+    // 001이 섹터 코드를 함께 주면 그것을 쓰고, 주지 않으면 002 선택에서 종목 코드로 되짚는다.
+    const sectorCode =
+      bindingSector ??
+      (selection.status === 'ready'
         ? selection.selection.items.find((candidate) => candidate.instrumentId === bindingCandidate)
-        : undefined
+            ?.sectorId
+        : undefined)
     const sectorName =
-      item && catalog?.status === 'loaded'
-        ? catalog.catalog.sectors.find((sector) => sector.code === item.sectorId)?.name
+      sectorCode !== undefined && catalog?.status === 'loaded'
+        ? catalog.catalog.sectors.find((sector) => sector.code === sectorCode)?.name
         : undefined
     // 값이 수가 아닌 항목(합성 값 등)은 워밍업에 더해질 수 없으므로 원인에서 뺀다. 이름을 지어 붙이지 않는다.
     const values = settings.values ?? {}
@@ -382,6 +413,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       }
       const verdict = support.judgeWarmup({
         strategy,
+        evaluationWindow,
         warmupTradingDays: selected && currentWarmup !== null ? currentWarmup : strategy.warmupTradingDays,
         minEvaluationYears,
       }).verdict
@@ -392,7 +424,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       }
       return verdict
     },
-    [support, minEvaluationYears, selectedStrategyId, currentWarmup, reducedPeriod],
+    [support, evaluationWindow, minEvaluationYears, selectedStrategyId, currentWarmup, reducedPeriod],
   )
 
   // --- 다시 확인할 보관값 -------------------------------------------------------------------
@@ -510,6 +542,12 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       (choice) => Number(choice.value) === minEvaluationYears,
     )?.label ?? String(minEvaluationYears)
 
+  /** 고른 전략의 규칙 버전. 버전을 받지 못했거나 전략을 고르지 않았으면 `null`이다 */
+  const rulesVersion = useMemo(() => {
+    if (versions === 'loading' || versions === null || !settings.selectedStrategy) return null
+    return resolveRulesVersion(versions, settings.selectedStrategy.strategyId)
+  }, [versions, settings.selectedStrategy])
+
   const prepared = useMemo(() => {
     if (
       selection.status !== 'ready' ||
@@ -529,7 +567,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       periodOutOfRange ||
       periodTooShort ||
       versions === 'loading' ||
-      versions === null
+      versions === null ||
+      rulesVersion?.status !== 'registered'
     ) {
       return null
     }
@@ -541,7 +580,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       warmupTradingDays: settings.warmupTradingDays,
       period,
       initialAmount,
-      versions,
+      rulesVersion: rulesVersion.rulesVersion,
+      costProfileVersion: versions.costProfileVersion,
     }
   }, [
     selection,
@@ -556,6 +596,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     periodOutOfRange,
     periodTooShort,
     versions,
+    rulesVersion,
   ])
 
   const analyzeBlocker = ((): string | null => {
@@ -578,6 +619,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel)
     if (versions === 'loading') return VERSIONS_LOADING
     if (versions === null) return ANALYSIS_VERSIONS_UNAVAILABLE
+    if (rulesVersion?.status === 'pendingDecision') return RULES_PENDING_DECISION
+    if (rulesVersion?.status !== 'registered') return RULES_VERSION_UNAVAILABLE
     return null
   })()
 
@@ -670,9 +713,11 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         parameters: prepared.parameters,
         registryVersion: prepared.registryVersion,
         warmupTradingDays: prepared.warmupTradingDays,
+        // 비용 버전은 화면에 보인 기본 비용 조건의 버전을 그대로 싣는다. 비워 보내면 조회와 접수 사이에 서버
+        // 기본값이 바뀌었을 때 사용자가 본 적 없는 조건이 적용된다(004 결정, T105).
         versions: {
-          rulesVersion: prepared.versions.rulesVersion,
-          costProfileVersion: prepared.versions.costProfileVersion,
+          rulesVersion: prepared.rulesVersion,
+          costProfileVersion: prepared.costProfileVersion,
         },
         period: prepared.period,
         initialAmount: prepared.initialAmount,
@@ -697,9 +742,14 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       switch (rejection.code) {
         case BacktestRejectionCode.REGISTRY_VERSION_CHANGED:
           // 다시 받아 보관값을 새 등록표로 재검증한다(`useStrategySettings`가 등록표를 받을 때마다 한다).
+          //
+          // **004 규칙 등록표도 함께 다시 받는다.** 같은 409가 003 등록표 버전의 불일치에도, 004가 대체한 옛
+          // 규칙 버전에도 오고 화면은 둘을 가를 수 없다(004 결정). 둘 다 받은 뒤에 사용자가 다시 누른다.
           setSubmission({ status: 'idle' })
           if (registry !== null) setRegistryChange({ stale: registry })
           reloadRegistry()
+          setVersions('loading')
+          setVersionsReload((count) => count + 1)
           return
         case BacktestRejectionCode.STRATEGY_NOT_REGISTERED:
           // 등록표는 늘 다시 받는다. 보낸 전략이 목록에서 빠졌는지는 사용자가 카드를 옮겼어도 보여야 한다.
@@ -748,7 +798,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
         : 'failed'
       : registryState.status === 'loaded' &&
           registryState.registry !== registryChange?.stale &&
-          settings.ready
+          settings.ready &&
+          versions !== 'loading'
         ? 'reloaded'
         : 'reloading'
 
@@ -762,18 +813,24 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
       weightTenths: item.weightTenths,
     }))
   }, [selection, catalog])
+  // 조회 중과 조회 실패를 가른다. 409 뒤 다시 받는 동안을 "확인할 수 없음"으로 보이면 곧 끝날 조회가 실패로
+  // 읽히고, 같은 화면의 '분석하기' 사유("확인하는 중")와 두 말을 하게 된다.
   const costProfile =
-    versions !== 'loading' && versions !== null
-      ? { version: versions.costProfileVersion, provisional: versions.costProfileProvisional }
-      : null
+    versions === 'loading'
+      ? ('loading' as const)
+      : versions !== null
+        ? { version: versions.costProfileVersion, provisional: versions.costProfileProvisional }
+        : null
   const costAssumption =
-    versions !== 'loading' && versions !== null
-      ? {
-          version: versions.costProfileVersion,
-          provisional: versions.costProfileProvisional,
-          rates: versions.costRates,
-        }
-      : null
+    versions === 'loading'
+      ? ('loading' as const)
+      : versions !== null
+        ? {
+            version: versions.costProfileVersion,
+            provisional: versions.costProfileProvisional,
+            rates: versions.costRates,
+          }
+        : null
 
   return (
     <div className={styles.page}>
@@ -858,6 +915,24 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy
               <h2 id="strategy-cards-title" className={styles.sectionTitle}>
                 전략 카드
               </h2>
+              {/*
+                평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중
+                (409 EVALUATION_WINDOW_NOT_READY)이거나 잠깐의 연결 오류일 수 있어 다시 불러 달라질 수 있으므로,
+                등록표 조회와 같이 다시 시도할 길을 둔다(FR-018과 같은 규약). 다시 받는 동안에는 안내를 거두지
+                않아 읽히는 문장이 깜빡이지 않는다.
+              */}
+              {evaluationWindow.status === 'unavailable' ? (
+                <div className={styles.notice} role="status">
+                  <p>공통 평가 기간을 불러오지 못해 카드의 워밍업을 판정하지 못했습니다.</p>
+                  <button
+                    type="button"
+                    onClick={retryEvaluationWindow}
+                    disabled={evaluationWindowRetrying}
+                  >
+                    {evaluationWindowRetrying ? '다시 불러오는 중' : '평가 기간 다시 불러오기'}
+                  </button>
+                </div>
+              ) : null}
               <StrategyCardList
                 state={registryState}
                 selectedStrategyId={selectedId}

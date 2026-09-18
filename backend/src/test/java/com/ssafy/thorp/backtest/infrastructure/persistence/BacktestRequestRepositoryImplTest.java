@@ -10,23 +10,16 @@ import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -35,21 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>접수 유스케이스는 T005가 붙이지만 스키마·매핑은 여기서 확정된다. 특히 취소 스냅샷 두 컬럼은 DB 제약(취소하지 않았는데 부산물만 있는 행 금지)과 도메인 불변식이
  * 같은 규칙을 말하는지 확인한다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    BacktestRequestRepositoryImpl.class,
-    BacktestRunRepositoryImpl.class
-})
-class BacktestRequestRepositoryImplTest extends PostgresTestSupport {
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-11T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
+class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
 
     @Autowired private BacktestRequestRepositoryImpl requests;
     @Autowired private BacktestRunRepositoryImpl runs;
@@ -109,7 +88,7 @@ class BacktestRequestRepositoryImplTest extends PostgresTestSupport {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(saved.getBacktestId().value()).startsWith("BT-20260911-");
+        assertThat(saved.getBacktestId().value()).startsWith("BT-" + idDate() + "-");
         BacktestRequest found =
                 requests.findByBacktestId(saved.getBacktestId().value()).orElseThrow();
         assertThat(found.getRunId()).isEqualTo(runId);

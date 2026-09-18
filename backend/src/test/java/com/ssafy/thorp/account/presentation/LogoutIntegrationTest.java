@@ -11,14 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.account.domain.model.UserStatus;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,18 +31,7 @@ import org.springframework.test.web.servlet.MvcResult;
  *
  * <p>브라우저가 하는 일을 그대로 따라 한다 — {@code GET /auth/csrf}로 받은 쿠키를 헤더로 돌려보내고 로그인 응답의 세션 쿠키를 다음 요청에 싣는다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class LogoutIntegrationTest extends PostgresTestSupport {
+class LogoutIntegrationTest extends IntegrationTestSupport {
 
     private static final String EMAIL = "logout-it-member@example.com";
     private static final String OTHER_EMAIL = "logout-it-other@example.com";

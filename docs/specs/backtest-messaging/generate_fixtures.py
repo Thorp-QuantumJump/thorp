@@ -526,6 +526,8 @@ engine_input_target_risk = {
             "lookbackDays": 63,
             "zeroVolatility": "EXCLUDE_THEN_ALLOCATE",
             "weightCap": "1.0000",
+            "capOverflow": "CASH",
+            "weightUnit": "0.000001",
             "investedFraction": "1.0000",
         },
         "parameters": {"rebalance": "MONTH_END"},

@@ -44,12 +44,16 @@ class EngineInputAssemblerTest {
             new EngineInputAssembler(strategyRulesService, costProfileService);
 
     private static BacktestRun run(RunPlan plan) {
+        return run(plan, Map.of("rebalance", "MONTH_END"));
+    }
+
+    private static BacktestRun run(RunPlan plan, Map<String, Object> parameters) {
         return BacktestRun.restore(
                         1L,
                         BacktestId.from("BT-20260907-000001"),
                         "INVERSE_VOLATILITY",
                         "1",
-                        Map.of("rebalance", "MONTH_END"),
+                        parameters,
                         List.of(new InstrumentId("091160.XKRX"), new InstrumentId("305720.XKRX")),
                         PERIOD,
                         new BigDecimal("10000000"),
@@ -157,6 +161,53 @@ class EngineInputAssemblerTest {
         assertThat(input.progress().batchTradingDays()).isEqualTo(20);
         assertThat(input.portfolio().positionSizing().type())
                 .isEqualTo(PositionSizingType.STRATEGY_DEFINED);
+    }
+
+    @Test
+    @DisplayName("003 축 rebalancePeriod 를 엔진이 읽는 rebalance 로 옮겨 싣는다 — 저장된 요청은 그대로 둔다")
+    void movesTheRegistryRebalanceAxisToTheEngineName() {
+        registryAnswers();
+        Map<String, Object> chosen =
+                Map.of(
+                        "rebalancePeriod",
+                        Map.of("mode", "CALENDAR", "unit", "MONTH_END"),
+                        "maxWeight",
+                        40);
+        BacktestRun saved = run(acceptedPlan("FULL_PERIOD", null), chosen);
+
+        EngineInput input = assembler.assemble(saved);
+
+        assertThat(input.allocation().parameters())
+                .as("화면은 003 축 이름을 그대로 보내고 엔진은 rebalance 문자열만 읽는다")
+                .containsEntry("rebalance", "MONTH_END")
+                .containsEntry("maxWeight", 40)
+                .doesNotContainKey("rebalancePeriod");
+        assertThat(saved.getParameters())
+                .as("사용자가 무엇을 골랐는지의 기록이자 재현 기준이라 저장된 요청은 003 이름 그대로다")
+                .containsKey("rebalancePeriod");
+    }
+
+    @Test
+    @DisplayName("이미 rebalance 가 실린 요청은 건드리지 않는다")
+    void leavesAnEngineShapedRequestAlone() {
+        registryAnswers();
+        Map<String, Object> already = Map.of("rebalance", "MONTH_END");
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), already));
+
+        assertThat(input.allocation().parameters()).isEqualTo(already);
+    }
+
+    @Test
+    @DisplayName("옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다")
+    void leavesAnUnmappableCadenceUntouched() {
+        registryAnswers();
+        Map<String, Object> tradingDays =
+                Map.of("rebalancePeriod", Map.of("mode", "TRADING_DAYS", "days", 21));
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), tradingDays));
+
+        assertThat(input.allocation().parameters()).isEqualTo(tradingDays);
     }
 
     @Test

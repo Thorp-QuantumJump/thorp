@@ -8,7 +8,7 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -31,17 +30,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>브로커는 띄우지 않는다 — 합류·재사용은 <b>발행하지 않는 것</b>이 요점이라 발행 경로를 탈 일이 없다. 접수 자체는 커밋 뒤 발행이므로 브로커가 없어도 202
  * 다(T005 {@code BacktestPublishAfterCommitIT}).
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class BacktestDedupIT extends PostgresTestSupport {
+class BacktestDedupIT extends IntegrationTestSupport {
 
     @Autowired private BacktestService backtestService;
     @Autowired private BacktestRequestRepository requestRepository;

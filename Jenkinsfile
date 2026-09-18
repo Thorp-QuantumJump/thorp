@@ -14,6 +14,30 @@ def ciSubject() {
     return env.JOB_NAME
 }
 
+// 이번 빌드가 검사할 MR 소스 커밋을 돌려준다.
+//
+// 이 파일은 Job 설정에서 dev 로 고정해 읽는다(infra/jenkins/README.md). 그러면 Declarative 의 기본
+// 체크아웃도 dev 를 받아, 모든 MR 이 dev 자신을 검사하고 초록불을 받는다. 그래서 기본 체크아웃을 끄고
+// 이 커밋을 직접 받는다.
+//
+// MR 이벤트로 시작한 빌드에는 gitlab-plugin 이 MR 의 마지막 커밋을 gitlabMergeRequestLastCommit 에 넣는다.
+// updateGitlabCommitStatus 도 같은 커밋에 상태를 붙이므로, 검사한 커밋과 결과가 붙는 커밋이 같다.
+//
+// Replay 와 지금 빌드에는 그 값이 없다. Replay 로 Jenkinsfile 변경을 머지 전에 확인할 때는 편집 화면의
+// environment 블록에 CI_SOURCE_COMMIT = '<커밋 SHA>' 를 더한다. MR 이벤트의 값을 먼저 보는 이유는,
+// 그 줄이 실수로 dev 에 들어가도 MR 빌드가 고정된 커밋을 검사하지 않게 하기 위해서다.
+//
+// 브랜치 이름은 받지 않는다. 이름이 가리키는 커밋은 빌드 도중에도 바뀔 수 있어, 무엇을 검사했는지가
+// 흔들린다. 기준 dev 를 커밋으로 확정하는 것과 같은 이유다.
+def sourceCommit() {
+    String commit = env.gitlabMergeRequestLastCommit ?: env.CI_SOURCE_COMMIT
+    if (!commit || !commit.matches('[0-9a-f]{40}')) {
+        error("검사할 커밋을 알 수 없다(받은 값: ${commit}). MR 이벤트로 시작한 빌드만 커밋을 받는다. " +
+              "Replay 라면 environment 블록에 CI_SOURCE_COMMIT = '<40자리 커밋 SHA>' 를 더한다.")
+    }
+    return commit
+}
+
 // 이 파트가 이번 변경에 포함되는지 판단한다.
 //
 // 예전에는 when 의 changeset 지시어를 썼는데, 그것은 Jenkins 가 계산한 changelog 를 본다.
@@ -85,6 +109,10 @@ pipeline {
     options {
         timestamps()
 
+        // 기본 체크아웃은 Job 에 설정된 브랜치(dev)를 받으므로 끈다. 검사할 커밋은 Merge with dev
+        // 스테이지가 직접 받는다(sourceCommit 참고).
+        skipDefaultCheckout()
+
         // 실행 슬롯은 CI와 배포가 함께 쓴다(infra/jenkins/init.groovy.d). 끝나지 않는 빌드가
         // 슬롯을 붙잡으면 뒤에 온 빌드가 한 단계도 돌지 못한 채 대기열에 쌓인다
         // (2026-09-17 #152~#154). 제한 시간이 지나면 timeout 은 중단 신호에 응답하지 않는
@@ -95,10 +123,12 @@ pipeline {
         timeout(time: 45, unit: 'MINUTES')
 
         // disableConcurrentBuilds() 는 두지 않는다. 동시 실행 상한(2개)은 Jenkins 쪽
-        // infra/jenkins/init.groovy.d/20-ci-concurrency.groovy 가 건다. 여기 두면 이 파일이 MR 소스
-        // 브랜치에서 읽히므로, dev 를 반영하지 않은 브랜치가 빌드될 때마다 상한이 그 브랜치의 값으로
-        // 바뀐다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를 thorp-ci, thorp-ci@2 로 나눠 주고,
-        // 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로 섞이지 않는다.
+        // infra/jenkins/init.groovy.d/20-ci-concurrency.groovy 가 건다. options 는 빌드가 시작될 때 Job
+        // 속성으로 저장되므로, 이 파일을 MR 소스 브랜치에서 읽던 때는 dev 를 반영하지 않은 브랜치가
+        // 빌드될 때마다 상한이 그 브랜치의 값으로 바뀌었다. Job 설정의 브랜치를 되돌리면 같은 일이
+        // 다시 생기므로 상한은 계속 Jenkins 쪽에 둔다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를
+        // thorp-ci, thorp-ci@2 로 나눠 주고, 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로
+        // 섞이지 않는다.
 
         // gradle·ruff·pytest 출력의 ANSI 색상을 콘솔에 그대로 표시한다.
         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에
@@ -126,12 +156,6 @@ pipeline {
         // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을
         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.
         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'
-
-        // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면
-        // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.
-        // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
-        //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
-        CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF "[ci-all]" && echo true || echo false').trim()
     }
 
     stages {
@@ -145,6 +169,24 @@ pipeline {
                 script {
                     openCheck('Merge with dev', 'running')
                     openCheck('Migration version', 'pending')
+                }
+
+                script {
+                    // 검사할 MR 소스 커밋을 받는다. 저장소 주소와 자격은 Job 설정(scm)의 것을 그대로
+                    // 쓰고 브랜치 자리에 커밋을 넣는다. 기본 체크아웃이 쓰던 저장소·자격과 같다.
+                    checkout scmGit(
+                        branches: [[name: sourceCommit()]],
+                        userRemoteConfigs: scm.userRemoteConfigs
+                    )
+
+                    // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면
+                    // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.
+                    // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.
+                    //   git commit --allow-empty -m "chore: CI 전체 확인 [ci-all]"
+                    //
+                    // environment 블록이 아니라 체크아웃 뒤에 읽는다. environment 는 스테이지보다 먼저
+                    // 평가되므로, 기본 체크아웃이 없으면 앞선 빌드가 남긴 워크스페이스의 커밋을 읽는다.
+                    env.CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF "[ci-all]" && echo true || echo false').trim()
                 }
 
                 // checkout 스텝은 GIT_ASKPASS 로 자격을 주입하지만, sh 스텝은 별개 프로세스라
@@ -204,7 +246,7 @@ pipeline {
                 // dev 에 들어온 남의 변경은 세지 않는다.
                 //
                 // environment 블록이 아니라 여기서 계산하는 이유는 기준을 하나로 두기 위해서다.
-                // environment 는 fetch 보다 먼저 평가되어 Checkout SCM 시점의 값을 보게 된다.
+                // environment 는 스테이지보다 먼저 평가되어, 검사할 커밋을 받기 전의 워크스페이스를 본다.
                 // 스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지 않는다.
                 //
                 // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고
@@ -347,9 +389,14 @@ pipeline {
                         script { openCheck('Backend', 'running') }
 
                         dir('backend') {
-                            // clean 은 백엔드 단계 전체에서 여기 한 번만 수행한다.
-                            // 뒤따르는 스테이지가 같은 build 디렉토리를 이어서 쓴다.
-                            sh './gradlew clean spotlessCheck'
+                            // clean 을 하지 않는다. 워크스페이스는 빌드마다 새로 받지 않아 앞선 빌드의
+                            // backend/build 와 backend/.gradle 이 남아 있고, Gradle 은 그것을 이어받아
+                            // 입력 내용이 바뀐 태스크만 다시 돌린다. clean 은 이 기록을 지워 BE Test 가
+                            // 매번 main·test 를 처음부터 컴파일하게 만들었다.
+                            //
+                            // 다른 MR 의 빌드가 남긴 산출물은 섞이지 않는다. Gradle 은 소스·리소스가
+                            // 사라지면 그 클래스 파일과 복사본(마이그레이션 SQL 포함)도 지운다.
+                            sh './gradlew spotlessCheck'
                         }
                     }
                 }
@@ -357,7 +404,13 @@ pipeline {
                 stage('BE Test') {
                     steps {
                         dir('backend') {
-                            sh './gradlew test'
+                            // cleanTest 로 테스트 결과만 지워 테스트를 반드시 다시 돌린다. 컴파일은
+                            // 앞 빌드의 결과를 이어 쓴다.
+                            //
+                            // 빼면 입력이 앞 빌드와 같을 때 test 가 UP-TO-DATE 로 건너뛰어지고, 아래
+                            // junit 은 앞 빌드가 남긴 XML 을 이번 결과로 모은다. Docker 이미지나 날짜처럼
+                            // Gradle 이 입력으로 보지 않는 것이 달라져도 테스트가 돌지 않은 채 통과한다.
+                            sh './gradlew cleanTest test'
                         }
                     }
                     post {

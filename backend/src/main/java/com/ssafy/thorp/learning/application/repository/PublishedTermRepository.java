@@ -22,7 +22,13 @@ public interface PublishedTermRepository {
      */
     Optional<LearningTermResult> findPublished(TermId termId);
 
-    /** 이 글의 색인 행을 모두 지우고 새 판의 용어로 다시 채운다. */
+    /** 이 {@code termId}가 지금 게시 색인에 올라 있는 글. 초안에서 뺀 용어도 그 글을 다시 게시하거나 게시 취소하기 전까지는 여기 남는다. */
+    Optional<ArticleId> findOwnerArticleKey(TermId termId);
+
+    /**
+     * 이 글의 색인 행을 모두 지우고 새 판의 용어로 다시 채운다. 다른 글의 행과 {@code termId}가 겹치면 덮어쓰지 않고 실패한다. 호출자가 먼저 {@link
+     * #findOwnerArticleKey}로 막는다.
+     */
     void replaceForArticle(ArticleId articleId, long revisionId, List<LearningTerm> terms);
 
     /** 이 글의 색인 행을 모두 지운다(게시 취소). */

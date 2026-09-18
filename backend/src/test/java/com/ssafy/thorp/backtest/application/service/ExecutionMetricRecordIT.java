@@ -12,7 +12,7 @@ import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -21,7 +21,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -30,18 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>스위트가 컨테이너를 공유하므로 집계는 절대값이 아니라 "이 실행이 들어간 뒤 count 가 하나 늘었다"와 "API 질의 = 뷰"로 본다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.backtest.liveness.interval=PT1H",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ExecutionMetricRecordIT extends PostgresTestSupport {
+class ExecutionMetricRecordIT extends IntegrationTestSupport {
 
     @Autowired private BacktestEventService events;
     @Autowired private BacktestRunRepository runRepository;

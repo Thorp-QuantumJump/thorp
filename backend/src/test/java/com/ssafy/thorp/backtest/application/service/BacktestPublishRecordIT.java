@@ -6,21 +6,17 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -36,15 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>두 번째 시험은 <b>덮어쓰기</b>다. 발행 경로와 이벤트 처리는 서로 다른 스레드에서 동시에 돈다. 발행 경로가 실행 전체를 읽어 통째로 저장하면, 그 사이 이벤트가
  * 바꿔 놓은 상태를 되돌린다. 발행 경로는 자기 컬럼만 써야 한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestPublishRecordIT extends PostgresTestSupport {
+class BacktestPublishRecordIT extends PortMockedIntegrationTestSupport {
 
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
@@ -55,9 +43,6 @@ class BacktestPublishRecordIT extends PostgresTestSupport {
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
-
-    /** 브로커 없이 발행을 성공시킨다. 이 테스트의 관심사는 발행 자체가 아니라 그 뒤의 DB 기록이다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     /**
      * 계약 예시를 그대로 쓰되 시작 금액만 매번 다르게 한다.

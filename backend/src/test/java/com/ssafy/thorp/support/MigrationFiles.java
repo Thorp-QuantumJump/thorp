@@ -3,6 +3,7 @@ package com.ssafy.thorp.support;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -67,6 +68,18 @@ public final class MigrationFiles {
                     .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("마이그레이션 파일 목록을 읽지 못했다: " + LOCATION_PATTERN, e);
+        }
+    }
+
+    /** 마이그레이션 한 파일의 SQL 원문. 테스트가 SQL 문장을 베껴 적지 않게 한다. */
+    public static String read(String fileName) {
+        Resource resource =
+                new PathMatchingResourcePatternResolver()
+                        .getResource("classpath:db/migration/" + fileName);
+        try {
+            return resource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException("마이그레이션 파일을 읽지 못했다: " + fileName, e);
         }
     }
 
