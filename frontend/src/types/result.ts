@@ -181,6 +181,8 @@ export type ResultTrade = {
 
 /** `GET /results/{token}/trades` */
 export type ResultTradePage = {
+  /** 하위 자원 다섯 개가 모두 싣는다(004 README §2). 취소·한도로 끊긴 부분 결과라는 뜻이다 */
+  partial: boolean
   page: number
   size: number
   totalElements: number
