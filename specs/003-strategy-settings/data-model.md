@@ -2,7 +2,7 @@
 
 **Spec**: [spec.md](spec.md) | **Research**: [research.md](research.md) | **Date**: 2026-09-15
 
-spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `paramsearch` 패키지에 있는 타입을 그대로 쓰는 곳과 새로 더하는 곳을 구분해 적는다.
+spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타입은 `strategy/application/port`, 로더는 `strategy/infrastructure/registry/FileParameterRegistry`에 있고 007은 포트를 통해 읽는다.
 
 ## 1. 파라미터 등록표 (ParameterRegistry)
 
@@ -20,7 +20,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 ## 2. 전략 등록 정보 (StrategyRegistration) — 기존 타입 확장
 
-기존 `com.ssafy.thorp.paramsearch.application.port.StrategyRegistration`을 `strategy` 패키지로 옮기고 세 필드를 더한다.
+`com.ssafy.thorp.strategy.application.port.StrategyRegistration`은 007에서 이관한 값 타입에 활성 여부·워밍업·목표 비중 출처를 더한 정식 등록 정보다.
 
 | 필드 | 형 | 상태 | 비고 |
 |---|---|---|---|
@@ -44,7 +44,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `SECTOR_MOMENTUM` | 흐름을 따라 배분하기 | 섹터 모멘텀 |
 | `MINIMUM_VARIANCE` | 전체 변동성을 줄이도록 배분하기 | 최소분산 |
 
-> 현재 임시 등록표의 `name`은 내부 전략명(`역변동성` 등)으로 적혀 있다. 정식 등록표에서는 화면 이름으로 바꾼다.
+> 정식 등록표의 `name`이 화면 이름을 소유한다. 과거 007 임시 등록표의 내부 전략명은 화면에 사용하지 않는다.
 
 ## 3. 파라미터 축 (ParameterAxis) — 기존 타입 확장
 
@@ -116,7 +116,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다 |
 | 섹터 모멘텀 | 리밸런싱 주기 | 목록형 |
 | 최소분산 | 공분산 관측 기간 | 목록형 |
-| 최소분산 | 추정 방법 (`estimationMethod`) | 목록형 — 현재 후보 하나(표본공분산). 004 PD-04 확정 시 축소추정을 추가한다 |
+| 최소분산 | 추정 방법 (`estimationMethod`) | 목록형 — 현재 후보 하나(표본공분산). 004 PD-04 확정값이며 추가 방법은 별도 결정한다 |
 | 최소분산 | 비중 상한 | 입력형 |
 | 최소분산 | 리밸런싱 주기 | 목록형 |
 
@@ -157,18 +157,18 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | 섹터 모멘텀 | `allocationMethod` | `[EQUAL]` | 목록형 — 똑같이 나누기 / 변동성이 낮은 섹터에 더 나누기 | `EQUAL` | 신규, 004 PD-03 ⓪ 확정으로 후보 교체(등록표 `1.4.0`) |
 | 섹터 모멘텀 | `maxWeight` | `[30, 40, 50]` | 입력형 10~100, 5 간격, 단위 % | 40 | 신규 |
 | 최소분산 | `lookbackDays` | `[60, 120, 250]` | 목록형 `[60, 120, 250]` | 120 | 007 이관 |
-| 최소분산 | `estimationMethod` | `[SAMPLE_COV]` | 목록형 — 표본공분산 (후보 하나) | `SAMPLE_COV` | 신규, 004 PD-04 대기 |
+| 최소분산 | `estimationMethod` | `[SAMPLE_COV]` | 목록형 — 표본공분산 (후보 하나) | `SAMPLE_COV` | 신규, 004 PD-04 확정(2026-09-17) |
 | 최소분산 | `maxWeight` | `[30, 40, 50]` | 입력형 10~100, 5 간격, 단위 % | 40 | 007 이관 |
 
 숫자가 아닌 후보는 허용 범위 칸에 **화면 문구**로 적었다. 값(`TOP_N`·`EQUAL`·`SAMPLE_COV`)과 그 문구의 짝은 등록표의 `choices`가 소유한다(§3).
 
 **시작 금액** (`analysisConditions.initialAmount`): 입력형, 최소 1,000,000원, 최대 1,000,000,000원, 간격 1,000,000원, 기본 10,000,000원, 단위 원.
 
-**"007 이관"** 값은 `parameter-registry-provisional.yml`에 이미 있던 수치를 그대로 확정값으로 승격한 것이다. **"신규"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.
+**"007 이관"** 값은 007이 먼저 사용하던 수치를 정식 등록표 `backend/src/main/resources/registry/parameter-registry.yml`로 승격한 것이다. **"신규"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.
 
 **임시 등록표가 목록형과 입력형을 함께 갖던 축은 목록형으로 정리했다**(§4). `lookbackDays`의 "10~504 간격 1" 같은 폭은 그 시절의 흔적이며 정식 등록표에는 없다 — 관측 기간처럼 후보가 정해진 축에 입력칸을 열면 등록되지 않은 값을 고를 경로가 생긴다(FR-006).
 
-**`estimationMethod`가 후보 하나뿐인 이유**: PD-04(004 소유)가 "공분산 관측 기간·추정 방법(표본/축소)·해법"을 아직 확정하지 않았다. 004가 축소추정(shrinkage)을 실제로 구현·확정하기 전에 003이 후보로 얹으면 화면이 004가 계산할 수 없는 선택지를 제공하는 셈이라(원칙 VI), 표본공분산 하나로 시작한다. PD-04가 확정되면 등록표 버전을 올려 후보를 늘린다 — 기존 버전의 값은 고치지 않는다.
+**`estimationMethod`가 후보 하나뿐인 이유**: 004 PD-04가 2026-09-17 표본공분산 `SAMPLE_COV` 하나로 확정됐다. 축소추정 등 추가 방법은 현재 승인 범위가 아니며, 나중에 채택되면 004 규칙과 003 등록표 버전을 함께 바꾼다.
 
 ## 4-1. 유효성 규칙 (ValidationRule)
 
@@ -240,7 +240,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 
 **비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전·수치·`provisional` 여부를 읽기 전용으로 보이고, 파라미터 등록표에 따로 담지 않는다. PD-07 확정 전에는 004가 이미 등록한 `PROVISIONAL-DEMO-1`을 그대로 표시하므로 미확정 자체가 분석 차단 사유는 아니다.
 
-> **확인된 빈 구멍**: 지금 백엔드에 비용 조건을 조회하는 API가 없다. `CostProfileService`와 `CostProfileRepository`는 `backtest` 도메인 안에 있고, 밖으로는 `BacktestController`가 결과에 `costProfileVersion`을 실어 내보낼 뿐이다. 003 화면이 FR-010의 수치·버전·임시 여부를 보이려면 004가 조회 API를 열거나, 004가 소유한 값을 003 등록표 조회 응답에 함께 싣는 계약이 필요하다. 단순히 '적용됨/적용 안 됨'만 보이는 안은 FR-010을 충족하지 않는다. **어느 조회 표면을 쓸지는 004와 함께 정하며 이 계획이 단독으로 정하지 않는다.** **2026-09-17 결정**: 004가 `GET /backtests/registry`를 열어 규칙 등록표 전체 행(`strategyId`·`rulesVersion`·`status`·`provisional`)과 `defaultCostProfile { version, provisional, commissionBps, spreadBps, slippageBps, taxBps }`를 내린다. 규칙 버전도 같은 응답에서 읽는다(고른 전략의 `REGISTERED` 행, `PENDING_DECISION`이면 분석을 막는다). 화면은 이 응답의 기본 비용 조건을 보이고, 요청의 `costProfileVersion`에 그 버전을 명시해 싣는다 — 조회와 접수 사이에 기본값이 바뀌어도 사용자가 본 조건이 적용되고 재현 기준이 요청에 남는다. 003 등록표 응답에 싣는 안은 `strategy`가 `backtest`를 참조하게 되어 버렸다(tasks.md T039 메모).
+> **조회 경로(2026-09-17 확정·구현)**: 004의 `GET /backtests/registry`가 전략별 `strategyId`·`rulesVersion`·`status`·`provisional`과 `defaultCostProfile { version, provisional, commissionBps, spreadBps, slippageBps, taxBps }`를 내린다. 003은 고른 전략의 `REGISTERED` 행과 기본 비용 조건을 읽고 두 버전을 요청에 명시한다. `PENDING_DECISION`·조회 실패는 분석을 막는다. `strategy`가 `backtest`를 참조하지 않도록 003 등록표 응답과는 분리한다.
 
 ## 8. 전략 설정값 (StrategySettings) — 화면 상태
 
@@ -274,7 +274,7 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params
 | `strategyId` + 축 값 | 8 | |
 | 분석 조건 | 9 | |
 | `registryVersion` | 8 | 다르면 서버가 409로 거절한다 (R9) |
-| `rulesVersion` | 004 `GET /backtests/registry`의 `strategyRules` | 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`·행 없음·등록된 행 둘 이상이면 보내지 않는다. 대체된 버전이면 서버가 409로 거절하고 화면은 두 등록표를 다시 받는다 (§7, 2026-09-17 004 결정) |
+| `rulesVersion` | 004 `GET /backtests/registry`의 `strategyRules` | 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`·행 없음·등록된 행 둘 이상이면 보내지 않는다. 대체된 버전의 409 거절은 목표 계약이며 004 Phase 10 T029 미구현이다. 003의 두 등록표 재조회 UI는 구현되어 있다 (§7) |
 | `costProfileVersion` | 9 (004 `defaultCostProfile.version`) | 화면에 보인 기본 비용 조건의 버전을 명시해 싣는다 (§7) |
 | `warmupTradingDays` | 6의 계산 결과 | 여러 전략을 비교할 때는 가장 긴 값을 공통으로 쓴다 (FR-014, 004 R-15) |
 | `minEvaluationYears` | 9 | **004 계약에 자리 없음 (착수 전에 알아둘 것 ⑧)** — 합의되면 서버가 `periodEnd - periodStart`와 산술로 재확인한다. 그 전까지는 화면의 `useEvaluationWindow` 판정만으로 막는다 (FR-011a) |
