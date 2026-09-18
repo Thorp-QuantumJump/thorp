@@ -66,6 +66,13 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
                 .getId();
     }
 
+    /** 종결 실행. 정리 조회는 실행이 끝난 요청만 고른다(spec 005 T093). */
+    private long newFinishedRun() {
+        long id = newRun();
+        runs.update(runs.findById(id).orElseThrow().markFailed("DATA_INSUFFICIENT", "no data"));
+        return id;
+    }
+
     private BacktestRequest save(long runId, long requesterId, ResultSource source) {
         return requests.save(
                 BacktestRequest.create(
@@ -188,15 +195,18 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
     }
 
     @Test
-    @DisplayName("만료된 비로그인 요청만 만료 순서대로 개수만큼 찾는다 — 로그인 요청과 아직 유효한 요청은 나오지 않는다")
+    @DisplayName("만료된 비로그인 요청만 만료 순서대로 개수만큼 찾는다 — 로그인 요청, 아직 유효한 요청, 실행이 끝나지 않은 요청은 나오지 않는다")
     void findsExpiredAnonymousRequestsOnly() {
-        long runId = newRun();
+        long runId = newFinishedRun();
+        long queuedRunId = newRun();
         Instant now = Instant.parse("2026-09-11T03:00:00Z");
         BacktestRequest older = saveAnonymous(runId, now.minusSeconds(7200));
         BacktestRequest atBoundary = saveAnonymous(runId, now);
         BacktestRequest newer = saveAnonymous(runId, now.minusSeconds(60));
         BacktestRequest stillValid = saveAnonymous(runId, now.plusSeconds(1));
         BacktestRequest loggedIn = save(runId, newUser("f@example.com"), ResultSource.JOINED);
+        // 만료가 가장 이르지만 실행이 아직 QUEUED 다. 지우면 비로그인 대기 몫에서 빠진다(T093).
+        BacktestRequest unfinished = saveAnonymous(queuedRunId, now.minusSeconds(86_400));
         entityManager.flush();
         entityManager.clear();
 
@@ -210,7 +220,9 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
                         newer.getBacktestId().value(),
                         atBoundary.getBacktestId().value())
                 .doesNotContain(
-                        stillValid.getBacktestId().value(), loggedIn.getBacktestId().value());
+                        stillValid.getBacktestId().value(),
+                        loggedIn.getBacktestId().value(),
+                        unfinished.getBacktestId().value());
         assertThat(requests.findExpiredAnonymous(now, 2)).hasSize(2);
     }
 

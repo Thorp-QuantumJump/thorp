@@ -30,7 +30,7 @@
 
 **Primary Dependencies**: Spring Boot 3.5, Gradle / Vite 6, react-router-dom 7, @visx(shape·scale·grid·responsive), d3-array, d3-shape, axios, Vitest, Testing Library
 
-**Storage**: 새 테이블을 만들지 않는다. 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.
+**Storage**: 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 새 테이블은 만료로 지운 토큰의 묘비 `expired_public_token`(토큰 SHA-256 해시·만료 시각) 하나다 — FR-021이 요청과 토큰을 지우라고 하고 Edge Case가 만료 주소에 "남아 있지 않다" 안내를 요구해서, 지운 뒤에도 410을 주려면 원문 없이 만료 사실만 남겨야 한다(2026-09-17 T087, [research.md](research.md) R-03). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.
 
 **Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build && npm run test`. 계약 검증은 003·004가 쓰는 방식을 따라 `docs/specs/` 아래 응답 예시를 픽스처로 두고 실제 응답과 대조한다.
 
@@ -127,10 +127,11 @@ backend/src/main/java/com/ssafy/thorp/
 └── result/                            # 신규. 공개 열람 경계
     ├── presentation/controller/        #   GET /results/{token} 및 하위 자원
     ├── presentation/response/          #   004 응답을 공개용으로 감싼 DTO
-    ├── application/                    #   토큰 → backtestId 해석, 만료 판정
-    └── domain/                         #   PublicResultToken 값 타입
+    ├── application/                    #   토큰 → 요청 해석, 만료 판정, 만료 정리
+    ├── application/repository/         #   묘비 저장소 포트(이 패키지의 유일한 저장소)
+    └── infrastructure/persistence/     #   expired_public_token 매핑
 
-backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화 마이그레이션
+backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화, expired_public_token 마이그레이션
 
 frontend/src/
 ├── pages/
