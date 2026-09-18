@@ -39,7 +39,7 @@
 
 ⑤ **미확정 결정과 유보**: PD-22(AI 해설)는 만들지 않는다. PD-23(유효 시간)은 값을 설정 파일에만 두고 문서에 수치를 적지 않는다(T004). PD-12 확정 전 `validationTier`는 항상 `UNVALIDATED`다(T020·T073). 응답 시간 목표와 거래 내역 페이지 크기는 유보하되 임시 상한을 설정으로 둔다(R-11, T004·T021).
 
-⑥ **plan과 다르게 정한 것 셋**: (a) 프론트엔드 위치는 plan의 `features/result/`가 아니라 `components/result/`다. `frontend/CLAUDE.md` 폴더 규칙에 `features/`가 없고, 003(`components/strategy/`)·007(`components/paramsearch/`)이 같은 상황을 그렇게 풀었다. (b) `PublicResultToken` 값 타입은 plan의 `result/domain`이 아니라 `backtest/domain/model`에 둔다. 발급 시점이 004의 접수(`BacktestService.create`)라 `result/domain`에 두면 `backtest → result` 의존이 생겨 `result → backtest`와 순환한다. (c) 공개 토큰 유효 시간은 `thorp.result.public-token-ttl` 키에 두되, 발급하는 `BacktestService`는 `ResultProperties` 클래스를 주입받지 않고 `@Value`로 키만 읽는다. 클래스를 주입하면 `backtest → result` 의존이 생겨 ArchUnit 규칙 8(T017)을 어기기 때문이다(B01 구현을 따른다). (a)·(b)는 T081이 plan·research·data-model·quickstart에 반영한다.
+⑥ **plan과 다르게 정한 것 셋**: (a) 프론트엔드 위치는 plan의 `features/result/`가 아니라 `components/result/`다. `frontend/CLAUDE.md` 폴더 규칙에 `features/`가 없고, 003(`components/strategy/`)·007(`components/paramsearch/`)이 같은 상황을 그렇게 풀었다. (b) `PublicResultToken` 값 타입은 plan의 `result/domain`이 아니라 `backtest/domain/model`에 둔다. 발급 시점이 004의 접수(`BacktestService.create`)라 `result/domain`에 두면 `backtest → result` 의존이 생겨 `result → backtest`와 순환한다. (c) 공개 토큰 유효 시간은 `thorp.result.public-token-ttl` 키에 두되, 발급하는 `BacktestService`는 `ResultProperties` 클래스를 주입받지 않고 `@Value`로 키만 읽는다. 클래스를 주입하면 `backtest → result` 의존이 생겨 ArchUnit 규칙 9(T017)을 어기기 때문이다(B01 구현을 따른다). (a)·(b)는 T081이 plan·research·data-model·quickstart에 반영한다.
 
 ⑦ 기존 `frontend/src/pages/BacktestPage.tsx`(목 데이터 DEMO)는 대체하지 않는다(plan Summary).
 
@@ -105,7 +105,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T014 (BE) `backtest/application/service/BacktestResultQueryService.java`에 요청 기준 오버로드 — `getDetail(BacktestRequest)`, `getTimeseries(BacktestRequest)`, `getWeights(BacktestRequest)`, `getExceptions(BacktestRequest)`, `getTrades(BacktestRequest, FindBacktestTradesQuery)`, `getPositions(BacktestRequest, LocalDate)`. 기존 `(String backtestId, long requesterId)` 메서드(`:86`·`:119`·`:142`·`:153`·`:173`·`:202`)는 `requireOwned` 뒤 이 오버로드로 위임한다. Javadoc: "접근 판정은 호출자가 끝냈다. 공개 토큰 경로(`result`)와 소유자 경로가 같은 읽기를 쓴다"
 - [X] T015 (BE) `/trades` 기간 필터 — `backtest/presentation/request/TradePageQuery.java`에 `LocalDate from`·`LocalDate to`(선택, `from ≤ to` 아니면 400)를 더하고 `FindBacktestTradesQuery`·거래 리포지토리 질의에 반영한다. `docs/specs/backtest-api/README.md` §2.3과 `specs/004-backtest-execution/contracts/rest-api.md`의 같은 자리를 갱신한다. 004 소유 영역이라 리뷰어에 004 담당을 지정한다(착수 전에 알아둘 것 ①)
 - [X] T016 (DOCS) 004 계약 갱신 — `docs/specs/backtest-api/README.md`의 접수·재시도 응답에 `publicToken`, `docs/specs/backtest-api/examples/backtest-accepted.json`에 값 추가, `specs/004-backtest-execution/contracts/rest-api.md`의 `POST /backtests`·`/retry` 절에 같은 내용. `backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java`가 픽스처와 계속 맞는지 확인한다
-- [X] T017 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java`에 규칙 8 추가 — `noClasses().that().resideInAPackage("com.ssafy.thorp.backtest..").should().dependOnClassesThat().resideInAPackage("com.ssafy.thorp.result..")`. Javadoc에 "공개 열람 경계 `result`는 `backtest`를 읽고, 방향은 `result → backtest` 하나다"를 적는다. **규칙이 동작하는지 일부러 어겨 확인한다**(003 T012 방식): `backtest` 안 클래스에 `result` 타입 import 한 줄을 넣어 실패를 본 뒤 지우고, 그 결과를 MR 본문 "테스트" 절에 적는다
+- [X] T017 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java`에 규칙 9 추가 — `noClasses().that().resideInAPackage("com.ssafy.thorp.backtest..").should().dependOnClassesThat().resideInAPackage("com.ssafy.thorp.result..")`. Javadoc에 "공개 열람 경계 `result`는 `backtest`를 읽고, 방향은 `result → backtest` 하나다"를 적는다. **규칙이 동작하는지 일부러 어겨 확인한다**(003 T012 방식): `backtest` 안 클래스에 `result` 타입 import 한 줄을 넣어 실패를 본 뒤 지우고, 그 결과를 MR 본문 "테스트" 절에 적는다
 - [X] T018 (BE 테스트) B01 검증 — `backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestRequestTest.java`(익명이면 만료 시각 필수 불변식, `isPublicExpired` 경계), `backtest/application/service/BacktestServiceTest.java` 확장(익명 접수 202·`publicToken` 32자·`expiresAt` = 생성 시각 + TTL, 로그인 요청은 `expiresAt` null, NEW·JOINED·REUSED 모두 토큰이 있음, 재시도도 새 토큰), `backtest/presentation/controller/BacktestSessionAuthIT.java` 확장(익명 `POST /backtests` 202, 익명 `GET /backtests/{id}` 401 유지), `backtest/application/service/ExecutionLimitApiIT.java` 확장(익명은 전체 상한만 세고 사용자별 상한에 걸리지 않는다), `common/persistence/FlywayMigrationTest.java`·`MigrationFileConventionTest.java` 통과. quickstart "전제"의 "공개 열람 경계가 병합되기 전에는 결과 화면이 뜨지 않는다"가 이 묶음으로 풀린다
 
 **Checkpoint**: 비로그인으로도 `POST /backtests`가 202와 `publicToken`을 돌려주고, 로그인 요청은 만료가 없다. `backtest`는 `result`를 모른다.
@@ -120,7 +120,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### Backend — 공개 열람 경로
 
-- [X] T019 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/result/package-info.java` — 계층 규약(ADR-0001)과 "004의 결과를 공개 토큰으로 읽는 경계다. 값을 계산하지 않고 필드를 고른다. `backtest`를 읽되 `backtest`는 `result`를 모른다(ArchUnit 규칙 8)"를 명시. 하위 패키지 `presentation/{controller,response}`, `application/{service,result}`, `infrastructure/config`(T004)
+- [X] T019 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/result/package-info.java` — 계층 규약(ADR-0001)과 "004의 결과를 공개 토큰으로 읽는 경계다. 값을 계산하지 않고 필드를 고른다. `backtest`를 읽되 `backtest`는 `result`를 모른다(ArchUnit 규칙 9)"를 명시. 하위 패키지 `presentation/{controller,response}`, `application/{service,result}`, `infrastructure/config`(T004)
 - [X] T020 [US1] (BE) `result/application/service/PublicResultService.java` — `resolve(String token)`: `PublicResultToken.of` 실패 → `INVALID_INPUT`(400), `findByPublicToken` 없음 → `RESOURCE_NOT_FOUND`(404), 익명이고 `isPublicExpired(now)` → `RESULT_EXPIRED`(410), 아니면 `BacktestRequest`. `getDetail`·`getTimeseries`·`getTrades`·`getPositions`·`getWeights`·`getExceptions`는 T014 오버로드에, `retry(token)`은 `BacktestRetryService`에 위임한다. 상세는 `result/application/result/PublicResultDetail.java`로 옮겨 담으며 `publicToken`·`expiresAt`(로그인 결과는 null)·`validationTier = UNVALIDATED`(PD-12 확정 전 고정)·`strategyName`(`strategy/application/port/ParameterRegistryPort`에서 읽고 없으면 null)·`weightsSource`(저장 결과에서)·`exceptionKinds`(종결 상태일 때 `getExceptions`의 `kind` 중복 제거)를 더하고 `backtestId`를 담지 않는다. 재시도 결과의 `retryOf`는 원 요청의 공개 토큰(`retryOfToken`)으로 바꿔 담는다
 - [X] T021 [US1] (BE) `result/presentation/controller/ResultController.java` `@RequestMapping("/results")` — `GET /{token}`, `/{token}/timeseries`, `/{token}/trades`(T015의 질의 + `size` 기본값과 상한을 `ResultProperties.tradesPageSize()`로 고정. 원칙 IX의 임시 상한, R-11), `/{token}/positions?date=`, `/{token}/weights`, `/{token}/exceptions`, `POST /{token}/retry`. `result/presentation/response/PublicResultDetailResponse.java`(`backtestId`·`runId`·`worker` 없음. `config` 사본에는 요청자가 원래 없다 — `RequestSpecCodec` 주석), `PublicResultRetryResponse{publicToken, status, resultSource, retryOfToken}`. 시계열·거래·보유·비중·예외는 004 response record에 `backtestId` 필드가 없으면 재사용하고, 있으면 공개용 record로 감싼다(contracts "공개 응답에서 버리는 필드"). SecurityConfig는 `/auth/me` 외 전부 `permitAll`이라 고치지 않는다. CSRF 쿠키 규약은 그대로 적용된다
 - [X] T022 [US1] (BE) 만료 정리 `result/application/service/PublicResultExpirySweeper.java` — `@Scheduled(fixedDelayString = "${thorp.result.expiry-sweep-interval:PT10M}")`(`news/infrastructure/scheduling/NewsRetentionScheduler.java` 선례, `common/config/SchedulingConfig.java`로 이미 활성). `findExpiredAnonymous(now, batchSize)`로 찾아 건마다 트랜잭션(`RunLivenessSweeper` 방식)으로 `backtest_reuse_event`의 참조 행은 지우지 않고 `request_id`만 NULL로 끊음(새 마이그레이션 `ALTER TABLE backtest_reuse_event ALTER COLUMN request_id DROP NOT NULL`과 `BacktestReuseEvent`·`BacktestReuseEventJpaEntity`의 `requestId` nullable을 같은 MR에 담는다. `uk_backtest_reuse_event_request`는 NULL 여러 개를 허용하므로 그대로 둔다. 원칙 IX의 동일 결과 재조회 기록 보존, `backtest_run_metric`의 `reuse_count`) → 자식 요청의 `retry_of_request_id`를 NULL → 요청 행 삭제. `backtest_run`·결과는 지우지 않는다(착수 전에 알아둘 것 ① 다섯째). 로그에는 건수만 남긴다(개인 식별 정보·토큰을 적지 않는다)
@@ -270,19 +270,19 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### 문서
 
-- [ ] T081 [P] (DOCS) `specs/005-result-comparison/{plan.md,research.md,data-model.md,quickstart.md}` 동기화 — `features/result/` → `components/result/`(plan Project Structure, research R-07, data-model §3-5, quickstart 4), `PublicResultToken` 위치(`backtest/domain/model`, 순환 회피), 공개 상세 응답의 추가 필드(`strategyName`·`weightsSource`·`exceptionKinds`)와 `?search=` 인자·`/trades`의 `from`·`to`·재시도 응답(T001에서 contracts에 이미 적었다), plan "004에 필요한 변경"에 이 tasks가 찾은 접점 둘(거래 기간 필터, 익명 실행 상한)과 그 처리를 추가, plan "작업 묶음 구성"을 B01~B09로 갱신. 004가 `maxDrawdownWindow`·`analytics` 노출을 넣었으면 T040·T064의 임시 처리를 지웠는지 함께 확인한다
-- [ ] T082 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 — "결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009)"와 "해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(SC-004). 문장을 컴포넌트에서 짓지 않는다". `backend/CLAUDE.md` "규칙"에 한 줄 — "`result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 8). 비로그인 요청은 `requester_id` NULL이고 `public_token_expires_at`이 필수다"
-- [ ] T083 (DOCS) [quickstart.md](quickstart.md) 1~10 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 004 변경 ③·④가 아직이면 2(음영 생략)와 상세 3항목(제공되지 않음)을 기대 동작으로 적는다. 007 연결이 아직이면 3의 자동 탐색 후보 부분은 `?search=`를 직접 넣어 확인하고 그 사실을 적는다
+- [X] T081 [P] (DOCS) `specs/005-result-comparison/{plan.md,research.md,data-model.md,quickstart.md}` 동기화 — `features/result/` → `components/result/`(plan Project Structure, research R-07, data-model §3-5, quickstart 4), `PublicResultToken` 위치(`backtest/domain/model`, 순환 회피), 공개 상세 응답의 추가 필드(`strategyName`·`weightsSource`·`exceptionKinds`)와 `?search=` 인자·`/trades`의 `from`·`to`·재시도 응답(T001에서 contracts에 이미 적었다), plan "004에 필요한 변경"에 이 tasks가 찾은 접점 둘(거래 기간 필터, 익명 실행 상한)과 그 처리를 추가, plan "작업 묶음 구성"을 B01~B09로 갱신. 004가 `maxDrawdownWindow`·`analytics` 노출을 넣었으면 T040·T064의 임시 처리를 지웠는지 함께 확인한다
+- [X] T082 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 — "결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009)"와 "해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(SC-004). 문장을 컴포넌트에서 짓지 않는다". `backend/CLAUDE.md` "규칙"에 한 줄 — "`result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id` NULL이고 `public_token_expires_at`이 필수다"
+- [X] T083 (DOCS) [quickstart.md](quickstart.md) 1~10 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 004 변경 ③·④가 아직이면 2(음영 생략)와 상세 3항목(제공되지 않음)을 기대 동작으로 적는다. 007 연결이 아직이면 3의 자동 탐색 후보 부분은 `?search=`를 직접 넣어 확인하고 그 사실을 적는다
 - [ ] T083a (DOCS) 사용성 관찰 항목(SC-002·SC-007·SC-010) — PD-14 회차에 과제 셋(상세를 열지 않고 세 숫자의 뜻을 말하기, 진행자 도움 없이 손실이 커진 때·거래 내역·비용 가정 찾기, 회색조 인쇄물에서 기준과 비교 대상 구분하기)을 넣고, 관찰 기록과 조치 내역을 `specs/005-result-comparison/` 아래 결과 문서로 남긴 뒤 MR 본문에 요약한다. 두 명 이상이 같은 지점에서 오해하면 요약 화면을 고친다(SC-002). **코드 구현이 아니라 관찰 절차이므로 B09 병합을 막지 않으며, 회차 일정은 002·003과 함께 잡는다**(003 T074a 방식)
 
 ### 코드 정리·금지 검사
 
-- [ ] T084 [P] (FE) 잔재·금지 검사 — `grep -rn "BT-\|backtestId" frontend/src/components/result frontend/src/pages/ResultPage.tsx frontend/src/api/result.ts frontend/src/types/result.ts frontend/src/hooks/useResult.ts frontend/src/hooks/useCompareTarget.ts`가 0건(테스트·픽스처 제외, SC-009); `grep -rn "decimate" frontend/src/components/result` 0건(R-08); 전략 ID 문자열 리터럴(`FIXED_WEIGHT` 등) 0건(003 T076과 같은 검사, 화면은 `strategyName`·`weightsSource`·`executionType`으로만 분기); `<ul>`로 나열한 경고 목록이 `ResultStatusLine`에 없다
-- [ ] T085 [P] (BE) 잔재 검사 — `grep -rn "requireRequesterId" backend/src/main/java/com/ssafy/thorp/result` 0건(공개 경로에 인증 요구 없음); `result/presentation/response/` record에 `backtestId`·`runId`·`requesterId` 컴포넌트 0건; `PublicResultToken`이 로그 문자열에 찍히지 않는다(`grep -rn "publicToken" backend/src/main/java --include=*.java | grep -i "log\."` 0건)
+- [X] T084 [P] (FE) 잔재·금지 검사 — 결과 코드의 문자열·프로퍼티·타입에 `BT-`·`backtestId`가 0건(테스트·픽스처와 금지 이유를 설명하는 주석 제외, SC-009); `EquityChart`는 `decimate={false}`이고 `decimate={true}`가 0건(R-08); 전략 ID 문자열 리터럴(`FIXED_WEIGHT` 등) 0건(003 T076과 같은 검사, 화면은 `strategyName`·`weightsSource`·`executionType`으로만 분기); `<ul>`로 나열한 경고 목록이 `ResultStatusLine`에 없다
+- [X] T085 [P] (BE) 잔재 검사 — `grep -rn "requireRequesterId" backend/src/main/java/com/ssafy/thorp/result` 0건(공개 경로에 인증 요구 없음); `result/presentation/response/` record에 `backtestId`·`runId`·`requesterId` 컴포넌트 0건; `PublicResultToken`이 로그 문자열에 찍히지 않는다(`grep -rn "publicToken" backend/src/main/java --include=*.java | grep -i "log\."` 0건)
 
 ### 전체 검증
 
-- [ ] T086 (DOCS) 전체 검증 — `cd backend && ./gradlew spotlessApply build`(ArchUnit 규칙 8·`FlywayMigrationTest` 포함), `cd frontend && npm run lint && npm run build && npm test`(`skipped` 0 확인), `infra/scripts/check-migration-version.sh`(버전 역전 없음). 결과를 MR 본문 "테스트" 절에 적는다
+- [X] T086 (DOCS) 전체 검증 — `cd backend && ./gradlew spotlessApply build`(ArchUnit 규칙 9·`FlywayMigrationTest` 포함), `cd frontend && npm run lint && npm run build && npm test`(`skipped` 0 확인), `infra/scripts/check-migration-version.sh`(버전 역전 없음). 결과를 MR 본문 "테스트" 절에 적는다
 
 ---
 
@@ -307,7 +307,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 **`T###`는 티켓 단위가 아니다.** constitution "Jira 연계"가 `작업 묶음 = 1 Branch = 1 MR`로 정한다. 아래 아홉이 Jira Task·브랜치·MR의 단위이고, 89개 태스크는 그 안에서 실행 지시의 최소 단위로 남는다.
 
-**묶음 티켓은 아직 만들지 않았다.** AGENTS.md가 "곧 브랜치를 딸 작업 묶음이 아니면 티켓을 세우지 않는다"고 정한다. 각 묶음에 착수할 때 Jira Task를 먼저 만들고(제목은 아래 표의 것, 에픽 `S15P21E205-30 백테스트`, 구현 대상 Story와 `relates to`, 담당·스프린트·포인트), 그 번호로 브랜치를 만든 뒤 이 표의 티켓 열을 채운다.
+모든 묶음은 착수할 때 Jira Task를 먼저 만들고(에픽 `S15P21E205-30 백테스트`, 구현 대상 Story와 `relates to`, 담당·스프린트·포인트), 그 번호로 브랜치를 만들었다. 아래 표가 실제 티켓·브랜치 대응의 기준이다.
 
 **묶음 이름은 계층이 아니라 목적으로 붙였다**(003과 같은 방식). 이름이 그대로 Jira Task 제목이 된다.
 
@@ -315,13 +315,13 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 |---|---|---|---|---|---|
 | B01 · [S15P21E205-291](https://ssafy.atlassian.net/browse/S15P21E205-291) `feat(be)/291-public-result-token` | `[BE] 비로그인 요청을 받고 결과마다 공개 토큰을 발급한다` | T004, T008~T018 | 12 | `be` · `feat` | 없음 |
 | B02 · [S15P21E205-318](https://ssafy.atlassian.net/browse/S15P21E205-318) `feat(be)/318-public-result-read` | `[BE] 공개 토큰으로 결과를 열고 만료되면 닫는다` | T001, T002, T003, T019~T026 | 11 | `be` · `feat` | B01 |
-| B03 · 미발급 | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |
-| B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |
+| B03 · [S15P21E205-307](https://ssafy.atlassian.net/browse/S15P21E205-307) `feat(fe)/307-result-first-screen` | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |
+| B04 · [S15P21E205-308](https://ssafy.atlassian.net/browse/S15P21E205-308) `feat(fe)/308-result-equity-chart` | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |
 | B05 · [S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309) · `feat(fe)/309-result-comparison` | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |
 | B06 · [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346) `feat(fe)/346-result-status-line` | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |
 | B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |
-| B08 · S15P21E205-312 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat(fe)/312-result-auxiliary-views` | B05, B07 (+ 001 소유 조회 리뷰) |
-| B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |
+| B08 · [S15P21E205-312](https://ssafy.atlassian.net/browse/S15P21E205-312) `feat(fe)/312-result-auxiliary-views` | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |
+| B09 · [S15P21E205-313](https://ssafy.atlassian.net/browse/S15P21E205-313) `docs(fe)/313-spec-005-wrapup` | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |
 
 ```text
 B01 ─▶ B02 ─▶ B03 ─┬─▶ B04 ─▶ B05 ─┬─▶ B08 ─┐

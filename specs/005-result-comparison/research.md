@@ -16,7 +16,7 @@ spec의 Clarifications 13개는 "무엇을 보일지"를 정했다. 이 문서�
 
 - **Decision**: `backtest_request.requester_id`를 nullable로 완화하고, 요청자가 없는 요청은 `public_token`만으로 식별한다. 취소·재시도 권한은 "로그인 사용자는 `requester_id` 일치, 비로그인은 `public_token` 소지"로 판정한다. `CurrentRequester`는 요청자를 못 찾아도 예외를 던지지 않는 경로(`findRequesterId`)를 쓰고, 소유자 필터가 필요한 자리에서만 토큰을 확인한다.
 - **Rationale**: 004 research R-12가 이 경우를 미리 열어 두었다. 그 문서의 Alternatives에 "인증·006 spec에서 익명을 허용하기로 하면 컬럼을 nullable로 완화한다"고 적혀 있다. 005가 비로그인 실행·열람을 택했으므로 그 조건이 성립한다. 014 SC-005("로그인하지 않은 사용자가 전략 진단을 이용하는 시험 100%에서 인증이 강제되지 않는다")와도 이 방향이라야 맞는다.
-- ~~**주의**: 현재 `CurrentRequester.requireRequesterId`는 `thorp.auth.trust-user-id-header`가 꺼져 있으면 무조건 `INTERNAL_ERROR`를 던진다.~~ **해소됨(004 T017, 2026-09-16).** 요청자는 spec 014 로그인 세션에서 읽고, 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다. 005 화면은 로그인 세션으로 결과를 조회한다.
+- **구현 결과(B01·B02)**: 접수 경로는 로그인 세션이 있으면 요청자를 기록하고, 없으면 `requester_id`를 비운 채 공개 토큰 만료 시각을 반드시 기록한다. 공개 결과 경로는 로그인 세션 없이 토큰으로 조회·재시도할 수 있고 공개 취소 경로는 두지 않는다.
 - **Alternatives**: 비로그인 요청에 시스템 사용자 id를 부여하기 — 여러 사람의 요청이 한 사용자 아래 섞여 취소 권한을 판정할 수 없고, 원칙 VIII(개인 식별정보와 계산 기록 분리)의 취지와도 어긋난다.
 
 ## R-03 비로그인 결과의 만료
@@ -29,13 +29,13 @@ spec의 Clarifications 13개는 "무엇을 보일지"를 정했다. 이 문서�
 
 ## R-04 비교 상태의 주소 표현
 
-- **Decision**: `/results/{publicToken}?compare={comparePublicToken}` 형태로 질의 문자열에 비교 대상 토큰을 싣는다. 서버에 비교 자원을 만들지 않는다. 비교 대상이 만료·삭제되었으면 기준만 그리고 비교 자리에 안내를 보인다.
+- **Decision**: `/results/{publicToken}?compare={comparePublicToken}&search={searchId}` 형태로 질의 문자열에 비교 대상 토큰과 선택적인 자동 탐색 식별자를 싣는다. 서버에 비교 자원을 만들지 않는다. `search`가 있으면 화면은 자동 탐색 후보임을 표시하고 007 상세로 돌아갈 진입점을 둔다. 비교 대상이 만료·삭제되었으면 기준만 그리고 비교 자리에 안내를 보인다.
 - **Rationale**: spec Clarification이 "기준 결과 주소에 비교 대상 식별자를 덧붙인다"로 정했다. 경로 세그먼트가 아니라 질의 문자열을 쓰는 이유는, 비교 대상을 바꾸거나 해제해도 기준 결과의 주소가 그대로 남아 뒤로 가기가 자연스럽기 때문이다.
 - **주의**: 토큰이 주소에 노출되므로 비교 링크를 건넨 상대는 두 결과를 모두 본다. 결과에 개인 식별 정보를 담지 않는다는 FR-019 조건이 여기서도 전제다.
 
 ## R-05 최대 하락 구간을 어디서 얻는가
 
-- **Decision**: 당장은 `GET /backtests/{id}/timeseries`가 주는 일자별 `drawdown` 계열에서 최솟값 지점(저점)과 그 직전 고점을 찾아 음영 구간으로 쓴다. 다만 이 값이 `summary.maxDrawdown`과 어긋나면 그리지 않고 음영을 생략한다. **동시에 004에 `summary.maxDrawdownWindow{peakDate, troughDate, recoveredDate}` 추가를 요청 사항으로 남긴다.**
+- **Decision**: 당장은 공개 경로 `GET /results/{publicToken}/timeseries`가 감싸서 주는 일자별 `drawdown` 계열에서 최솟값 지점(저점)과 그 직전 고점을 찾아 음영 구간으로 쓴다. 다만 이 값이 `summary.maxDrawdown`과 어긋나면 그리지 않고 음영을 생략한다. **동시에 004에 `summary.maxDrawdownWindow{peakDate, troughDate, recoveredDate}` 추가를 요청 사항으로 남긴다.**
 - **Rationale**: spec FR-001이 최대 하락 구간을 음영으로 겹쳐 그리라고 정했는데, 004의 `summary`는 `maxDrawdown` 숫자만 준다(`contracts/rest-api.md:64`). 구간을 계산하는 것은 005 Assumptions("이 spec은 값을 계산하지 않는다")에 어긋나므로 004가 내려주는 것이 옳다. 그러나 004 계약 변경은 이 티켓 범위 밖이라, 값이 이미 계산되어 있는 `drawdown` 계열을 읽는 선에서 시작하고 일치 검증으로 안전장치를 둔다.
 - **Alternatives**: 004 변경이 끝날 때까지 음영을 만들지 않기 — SC-002(상세를 열지 않고 고점 대비 하락과 시작 금액 대비 손실을 구분)를 첫 화면만으로 통과하기 어려워진다.
 
@@ -51,7 +51,7 @@ spec의 Clarifications 13개는 "무엇을 보일지"를 정했다. 이 문서�
   | 조건 한 줄 | `config`(기간·금액·비용 적용 여부) + `versions` |
   | 비교 그래프 | `/timeseries`의 `equity`, 음영은 `drawdown`(R-05) |
   | 종료 시 평가 구분 | `summary.liquidation{markToMarket, liquidated}` (FR-015) |
-  | 결과 옆 한 문장 | `/exceptions` 요약 + `summaryUnavailable` + `partial` (FR-013) |
+  | 결과 옆 한 문장 | 공개 상세의 `exceptionKinds` + `summaryUnavailable` + `partial` (FR-013). 첫 화면에서 `/exceptions`를 따로 부르지 않는다 |
   | 회복 기간·회전율 | `summary.analytics{recoveryDays, turnover}` |
   | 상관관계·위험 기여·손실 기여 | 저장은 되지만 **조회 경로가 없다** — 아래 확인 결과 참고 |
   | 구성종목 중복·대표 ETF 구성·출처 | `GET /sectors/{code}/instrument-profile` (R-10) |
@@ -60,7 +60,7 @@ spec의 Clarifications 13개는 "무엇을 보일지"를 정했다. 이 문서�
 
 ## R-07 해석 요약 1문장의 문장 틀
 
-- **Decision**: 문장 틀을 서버가 아니라 화면이 가지며, 틀 목록을 `frontend/src/features/result/summarySentences.ts` 한 파일에 모아 검수 대상으로 둔다. 조건 분기는 (비교 대상 유무) × (두 결과의 차이 방향) × (부분 결과 여부)로 제한하고, 각 틀은 값 자리만 비운다. 금지 표현이 섞이지 않았는지 확인하는 단위 테스트를 같은 폴더에 둔다.
+- **Decision**: 문장 틀을 서버가 아니라 화면이 가지며, 틀 목록을 `frontend/src/components/result/summarySentences.ts` 한 파일에 모아 검수 대상으로 둔다. 조건 분기는 (비교 대상 유무) × (두 결과의 차이 방향) × (부분 결과 여부)로 제한하고, 각 틀은 값 자리만 비운다. 금지 표현이 섞이지 않았는지 확인하는 단위 테스트를 같은 폴더에 둔다.
 - **Rationale**: spec FR-006이 고정 틀에서 골라 채우도록 정했고 SC-004가 "0건"을 요구한다. 틀이 한 파일에 모여 있어야 사람이 전부 읽고 검수할 수 있다. 서버에 두면 004·005의 역할이 섞이고, 문구를 고칠 때마다 배포가 필요하다.
 - **금지 어휘 목록**: '추천', '최적', '승자', '우승', '유리하다', '좋다', '~할 것이다', 확률·유사도 표현. 테스트가 틀 문자열에 이 어휘가 없음을 확인한다(원칙 III, FR-016).
 
