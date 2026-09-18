@@ -18,10 +18,12 @@ import {
   LOSS_WINDOW_UNAVAILABLE,
   LossWindowView,
 } from '@/components/result/LossWindowView'
-import { OtherConditionsButton } from '@/components/result/OtherConditionsButton'
+import { IndexComparisonView } from '@/components/result/IndexComparisonView'
+import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
+import { TargetRiskView } from '@/components/result/TargetRiskView'
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
@@ -206,7 +208,6 @@ function ResultView({
             손실이 커진 때 보기
           </Button>
         ) : null}
-        <OtherConditionsButton config={detail.config} />
       </div>
       {picker.open ? (
         <div id={pickerId}>
@@ -288,6 +289,10 @@ function ResultView({
           onClose={lossView.close}
         />
       ) : null}
+
+      <IndexComparisonView token={token} disabled={!viewable} />
+      <TargetRiskView base={detail} disabled={!viewable} />
+      <NextStepLinks config={detail.config} />
 
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>

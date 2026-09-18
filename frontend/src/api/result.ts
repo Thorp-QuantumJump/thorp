@@ -5,6 +5,7 @@ import type {
   ResultEnvelope,
   ResultErrorCode,
   ResultExceptions,
+  ResultIndexComparison,
   ResultPositions,
   ResultRetryAccepted,
   ResultTimeseries,
@@ -159,6 +160,14 @@ export function fetchResultTimeseries(
   signal?: AbortSignal,
 ): Promise<ResultTimeseries> {
   return getResource(() => resultPath(token, '/timeseries'), signal)
+}
+
+/** KOSPI 보조 비교. 첫 화면에서는 부르지 않고 사용자가 보기를 열 때만 받는다. */
+export function fetchResultIndexComparison(
+  token: string,
+  signal?: AbortSignal,
+): Promise<ResultIndexComparison> {
+  return getResource(() => resultPath(token, '/index-comparison'), signal)
 }
 
 /** 거래 내역 질의. 정하지 않은 항목은 보내지 않는다 — 기본값과 상한은 서버가 정한다. */
