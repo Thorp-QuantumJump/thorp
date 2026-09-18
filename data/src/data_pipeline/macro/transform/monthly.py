@@ -323,6 +323,16 @@ def apply(
         return fold_month_average(observations, trading_days=trading_days or {})
 
     if rule in (TRANSFORM_YOY, TRANSFORM_MOM):
+        if not monthly_source:
+            # 증가율은 월 값끼리 견주는 것이다. 일별을 그대로 통과시키면 `month_of` 가 여러
+            # 날을 같은 달로 접어 같은 대상월이 여러 번 나오고, 증가율은 그중 임의의 한 행을
+            # 분모로 골라 값이 조용히 틀린다. 일별을 월로 접는 규칙은 등록표가 정할 일이라
+            # 여기서 고르지 않는다(FR-005).
+            raise ValueError(
+                f"{indicator.indicator_id}: {rule} 는 월 값끼리 견주는 변환인데 원천이 일별"
+                " 값을 줬다. 등록표가 일별을 월로 접는 규칙(월 기말·월 평균)을 먼저 정해야"
+                " 한다 — 접지 않고 견주면 같은 달이 여러 번 나온다"
+            )
         levels = passthrough(observations)
         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month
         return growth(levels, series_start=indicator.series_start)

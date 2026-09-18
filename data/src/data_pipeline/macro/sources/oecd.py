@@ -156,14 +156,30 @@ def parse(
 
     result: list[SourceObservation] = []
     for raw_index, cell in observations_by_index.items():
-        index = int(raw_index)
+        # 자리 번호가 숫자가 아니면 원천이 관측 차원 구성을 바꾼 것이다. 맨 ValueError 로
+        # 올리면 base 의 원천 오류 분류를 벗어나 재시도·자동 수집 중단 처리가 걸리지 않는다.
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            raise SourceContractError(
+                f"{context}: 관측 자리 번호가 숫자가 아니다({raw_index!r})."
+                " dimensionAtObservation 구성이 바뀌었는지 본다"
+            ) from None
         if index >= len(periods):
             raise SourceContractError(
                 f"{context}: 관측 자리 {index} 에 맞는 대상월이 없다."
                 f" 대상월은 {len(periods)}개다"
             )
         period = periods[index]
-        value = cell[0] if isinstance(cell, Sequence) and cell else None
+        # 관측 칸은 `[값, 상태...]` 꼴이다. 다른 모양이면 결측으로 넘기지 않고 멈춘다 —
+        # 결측으로 두면 사유가 '원천이 값을 안 줬다'로 남아 실제 원인(응답 구조 변경)을
+        # 가린다. 그러면 원천을 잘못 지목한 채 전 구간이 비어 발행이 보류된다.
+        if not isinstance(cell, Sequence) or isinstance(cell, str) or not cell:
+            raise SourceContractError(
+                f"{context} {period}: 관측 칸이 목록이 아니다({cell!r})."
+                " 응답 구조가 바뀌었는지 본다"
+            )
+        value = cell[0]
         result.append(
             SourceObservation(
                 indicator_id=indicator.indicator_id,

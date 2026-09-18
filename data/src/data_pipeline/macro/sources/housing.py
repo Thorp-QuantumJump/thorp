@@ -198,11 +198,18 @@ def segments_from(
 def _overlap_ratios(
     anchor: Mapping[str, Decimal], older: Segment
 ) -> dict[str, Decimal]:
-    """겹치는 달마다 ``anchor / older`` 를 잰다. 분모가 0인 달은 뺀다."""
+    """겹치는 달마다 ``anchor / older`` 를 잰다. **어느 쪽이든 0인 달은 뺀다.**
+
+    분자(이어 붙일 대상)의 0을 빼는 이유가 분모의 0을 빼는 이유보다 무섭다. 분모가 0이면
+    나눗셈이 터지지만, 분자가 0이면 계수가 조용히 0이 되어 **옛 구간 전체가 0으로 발행된다.**
+    게다가 비율이 하나뿐이거나 최솟값이 0이면 편차도 0으로 나와 `Link.ratio_is_stable` 이
+    참이 되므로, 정상 연결과 구분되지 않는다. 지수가 0이 될 일은 드물지만 원천이 개편 중
+    그 달을 0으로 채워 보내면 일어난다.
+    """
     return {
         period: anchor[period] / older.values[period]
         for period in sorted(set(anchor) & set(older.values))
-        if older.values[period] != 0
+        if older.values[period] != 0 and anchor[period] != 0
     }
 
 
@@ -239,7 +246,8 @@ def link(segments: Sequence[Segment]) -> LinkedSeries:
         ratios = _overlap_ratios(linked_values, older)
         if not ratios:
             raise HousingLinkError(
-                f"{older.table_code}(기준 {older.base_month})는 앞선 계열과 겹치는 달이 없다."
+                f"{older.table_code}(기준 {older.base_month})는 앞선 계열과 비율을 잴 수 있는"
+                " 달이 없다. 겹치는 달이 아예 없거나, 겹치는 달의 값이 양쪽 다 0이다."
                 " 겹침 없이 이으면 두 구간의 수준이 이어지지 않는다"
             )
         # 겹침 구간에서 가장 최근 달에서 잇는다. 그 달이 두 표 모두에서 가장 덜 오래된

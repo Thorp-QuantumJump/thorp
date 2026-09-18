@@ -136,6 +136,25 @@ class TestContractViolations:
         with pytest.raises(SourceContractError, match="맞는 대상월이 없다"):
             oecd.parse(G20_CLI, payload)
 
+    def test_관측_칸이_목록이_아니면_결측으로_넘기지_않는다(self) -> None:
+        """결측으로 두면 사유가 '원천이 값을 안 줬다'로 남아 실제 원인을 가린다."""
+        payload = load()
+        series = payload["data"]["dataSets"][0]["series"]
+        cells = next(iter(series.values()))["observations"]
+        next(iter(series.values()))["observations"] = {k: v[0] for k, v in list(cells.items())[:3]}
+
+        with pytest.raises(SourceContractError, match="관측 칸이 목록이 아니다"):
+            oecd.parse(G20_CLI, payload)
+
+    def test_관측_자리_번호가_숫자가_아니면_계약_오류로_멈춘다(self) -> None:
+        """맨 ValueError 로 올리면 base 의 원천 오류 분류를 벗어나 재시도·중단이 안 걸린다."""
+        payload = load()
+        series = payload["data"]["dataSets"][0]["series"]
+        next(iter(series.values()))["observations"] = {"0:0": [1.0, 0]}
+
+        with pytest.raises(SourceContractError, match="관측 자리 번호가 숫자가 아니다"):
+            oecd.parse(G20_CLI, payload)
+
     def test_자료가_없으면_빈_목록이지_실패가_아니다(self) -> None:
         payload = load()
         payload["data"]["dataSets"][0]["series"] = {}

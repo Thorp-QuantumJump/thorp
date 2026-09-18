@@ -297,6 +297,16 @@ class TestApply:
 
         assert result["2026-07"].value == Decimal("0.500000")
 
+    def test_증가율_지표에_일별_원천이_오면_멈춘다(self) -> None:
+        """접지 않고 견주면 month_of 가 여러 날을 같은 달로 접어 대상월이 중복된다."""
+        daily = [
+            obs("all_industry_production", "2025-01-29", "100"),
+            obs("all_industry_production", "2025-01-30", "101"),
+        ]
+
+        with pytest.raises(ValueError, match="월 값끼리 견주는 변환"):
+            monthly.apply(BY_ID["all_industry_production"], daily)
+
     def test_모르는_규칙은_조용히_넘기지_않는다(self) -> None:
         broken = BY_ID["exports"].__class__(
             **{**BY_ID["exports"].__dict__, "transform_rule": "MADE_UP"}

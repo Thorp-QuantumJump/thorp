@@ -260,8 +260,39 @@ class TestErrors:
             Segment("2011-06", "old", {"2000-01": Decimal(50)}),
         ]
 
-        with pytest.raises(HousingLinkError, match="겹치는 달이 없다"):
+        with pytest.raises(HousingLinkError, match="비율을 잴 수 있는 달이 없다"):
             link(detached)
+
+    def test_연결_지점_값이_0이면_그_달을_쓰지_않는다(self) -> None:
+        """분자가 0이면 계수가 0이 되어 옛 구간 전체가 0으로 발행된다.
+
+        게다가 최솟값이 0이면 편차도 0으로 나와 ratio_is_stable 이 참이 되므로 정상
+        연결과 구분되지 않는다.
+        """
+        current = Segment(
+            "2026-06", "cur", {"2021-06": Decimal("100"), "2021-07": Decimal("0")}
+        )
+        older = Segment(
+            "2011-06",
+            "old",
+            {"2000-01": Decimal("50"), "2021-06": Decimal("90"), "2021-07": Decimal("95")},
+        )
+
+        linked = link([current, older])
+
+        record = linked.links[0]
+        assert record.splice_period == "2021-06"
+        assert record.coefficient > 0
+        assert linked.values["2000-01"] > 0
+
+    def test_겹치는_달의_값이_양쪽_다_0이면_잇지_않는다(self) -> None:
+        pair = [
+            Segment("2026-06", "cur", {"2021-06": Decimal("0")}),
+            Segment("2011-06", "old", {"2000-01": Decimal("50"), "2021-06": Decimal("0")}),
+        ]
+
+        with pytest.raises(HousingLinkError, match="비율을 잴 수 있는 달이 없다"):
+            link(pair)
 
     def test_이을_표가_없으면_멈춘다(self) -> None:
         with pytest.raises(HousingLinkError, match="이을 표가 없다"):
