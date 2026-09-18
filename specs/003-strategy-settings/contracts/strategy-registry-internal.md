@@ -4,29 +4,24 @@
 
 007이 003의 등록표를 읽는 통로다. [007의 param-search-internal.md](../../007-auto-parameter-search/contracts/param-search-internal.md) §1이 007 쪽에서 본 같은 계약을 적고 있으며, 이 문서는 **003이 그 계약에 대해 약속하는 것**을 적는다.
 
-## 1. 현재 상태와 이 spec이 바꾸는 것
+## 1. 현재 소유와 위치
 
-007이 자기 작업을 진행하려고 포트와 임시 구현을 먼저 세워 두었다.
+007에서 시작한 포트·값 타입·예외·파일 로더를 003으로 이관했다. 현재 위치는 다음과 같다.
 
-| 것 | 지금 위치 | 003 구현 후 |
-|---|---|---|
-| `ParameterRegistryPort` | `paramsearch/application/port/` | `strategy/application/port/`로 옮긴다 |
-| `StrategyRegistration` `ParameterAxis` `AllowedRange` | `paramsearch/application/port/` | 같이 옮긴다 |
-| `RegistryUnavailableException` | `paramsearch/application/exception/` | `strategy/application/exception/`으로 옮긴다 |
-| `ProvisionalFileParameterRegistry` | `paramsearch/infrastructure/registry/` | `strategy/infrastructure/registry/`로 옮기고 이름을 바꾼다 (아래) |
-| `parameter-registry-provisional.yml` | `resources/registry/` | `parameter-registry.yml`로 승격한다 |
+| 구성 | 현재 위치 |
+|---|---|
+| `ParameterRegistryPort`·등록표 값 타입 | `strategy/application/port/` |
+| `RegistryUnavailableException` | `strategy/application/exception/` |
+| `FileParameterRegistry`·`RegistryRule` | `strategy/infrastructure/registry/` |
+| 정식 등록표 | `src/main/resources/registry/parameter-registry.yml` |
 
-**로더에 하는 일은 셋이다.** '교체'나 '이동' 한 단어로 뭉치면 읽는 사람이 자기 해석대로 움직인다.
+`paramsearch/infrastructure/registry/`에는 구현이나 위임 계층을 남기지 않는다.
+007의 `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver`는 포트만 참조한다.
+`validate`의 설정 인자는 `Map<String, Object>`다. 007 도메인 값 타입을 받으면
+`strategy → paramsearch` 역방향 의존이 생기므로 호출자가 값을 풀어 넘긴다.
 
-1. **옮긴다** — 기존 파싱과 검사 로직을 그대로 살린다. 지금 로더는 축 이름 중복·빈 `searchValues`·`null` 값을 기동 시에 막고 있다. 새로 짜면 이 중 하나를 빠뜨려도 알아채지 못한다.
-2. **이름을 바꾼다** — 임시 대역이 아니라 정식 구현이 되므로 `Provisional`이 맞지 않는다.
-3. **읽는 항목을 늘린다** — `active`·`warmup`·`analysisConditions`를 파싱하고, 새 제약 셋(§2.5, `defaultValue`가 허용 범위 안, 목록형·입력형 배타)을 검사에 더한다.
-
-**예외를 함께 옮기는 이유**: 이 예외의 뜻은 "등록표를 읽지 못했다"이고 등록표의 주인이 003이 된다. 003 조회 API도 같은 상황에서 503 `REGISTRY_UNAVAILABLE`을 내야 하는데, 예외가 007 패키지에 남으면 003이 007을 참조하게 되어 없애려던 역방향 의존이 되살아난다. 007은 옮긴 예외를 가져다 쓰며 지금처럼 자기 호출부를 감싸는 방식은 그대로 둔다.
-
-**007 운영 코드에서 바뀌는 것은 import 경로뿐이다.** `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver`가 포트 타입만 주입받고 구현을 직접 부르지 않으므로 그 밖에 손댈 곳이 없다. 이 사실은 옮기기 전에 테스트로 확인한다.
-
-**교체 시점**: 스펙이 정한 대로 임시 구현 클래스의 주석("003이 완성되면 이 클래스를 003 구현체로 교체한다")을 따른다.
+로더는 기존 파싱·검사를 유지하면서 활성 여부·워밍업·분석 조건과 허용 범위·표시 문구·조건부 축의
+검사를 더했다. 이관 당시 실행 순서는 §4에 보존하며, 현재 회귀 검증은 quickstart 1을 따른다.
 
 ## 2. 003이 약속하는 것
 
