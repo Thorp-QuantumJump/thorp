@@ -30,7 +30,7 @@
 
 **Primary Dependencies**: Spring Boot 3.5, Gradle / Vite 6, react-router-dom 7, @visx(shape·scale·grid·responsive), d3-array, d3-shape, axios, Vitest, Testing Library
 
-**Storage**: 새 테이블을 만들지 않는다. 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.
+**Storage**: 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 새 테이블은 만료로 지운 토큰의 묘비 `expired_public_token`(토큰 SHA-256 해시·만료 시각) 하나다 — FR-021이 요청과 토큰을 지우라고 하고 Edge Case가 만료 주소에 "남아 있지 않다" 안내를 요구해서, 지운 뒤에도 410을 주려면 원문 없이 만료 사실만 남겨야 한다(2026-09-17 T087, [research.md](research.md) R-03). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.
 
 **Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build && npm run test`. 계약 검증은 003·004가 쓰는 방식을 따라 `docs/specs/` 아래 응답 예시를 픽스처로 두고 실제 응답과 대조한다.
 
@@ -127,10 +127,11 @@ backend/src/main/java/com/ssafy/thorp/
 └── result/                            # 신규. 공개 열람 경계
     ├── presentation/controller/        #   GET /results/{token} 및 하위 자원
     ├── presentation/response/          #   004 응답을 공개용으로 감싼 DTO
-    ├── application/                    #   토큰 → backtestId 해석, 만료 판정
-    └── domain/                         #   PublicResultToken 값 타입
+    ├── application/                    #   토큰 → 요청 해석, 만료 판정, 만료 정리
+    ├── application/repository/         #   묘비 저장소 포트(이 패키지의 유일한 저장소)
+    └── infrastructure/persistence/     #   expired_public_token 매핑
 
-backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화 마이그레이션
+backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화, expired_public_token 마이그레이션
 
 frontend/src/
 ├── pages/
@@ -161,6 +162,16 @@ constitution이 작업 묶음을 plan에 두라고 요구한다. 아래는 제�
 | E. 상세 패널 | '자세히 보기', 거래 내역 페이지 조회, 001 대표 상품 정보 펼치기, 계산 제한 표시 | FE | B |
 
 A가 없으면 나머지가 화면을 띄울 수 없다. B~E는 A 뒤에서 병렬로 갈 수 있으나 C는 B의 화면 골격을 쓴다.
+
+## B05 구현 경계 보정 (2026-09-18, S15P21E205-309)
+
+- 브랜치는 `feat(fe)/309-result-comparison`이고 T045~T054·T057~T061을 한 묶음으로 구현한다.
+- 비교 요청 조립 함수는 `PublicResultDetail`과 선택한 전략의 등록 정보를 받는다. 실제 공개 `config`에는 비용 버전이 없으므로 `versions.costProfile.version`을 쓰며, 새 전략의 기본 설정은 003 등록표, 규칙 버전은 004 `GET /backtests/registry`에서 읽는다. 등록표 조회는 비교 목록을 열 때만 한다.
+- 원본 재계산은 원본 설정·비중·평가 분할·시나리오를 보존한다. 새 전략이 사용자 비중을 요구하는데 원본에 그 비중이 없으면 임의로 균등 배분하지 않고 선택을 막는다.
+- 워밍업이 길어도 요청 구간 앞에 자료가 충분하면 평가 기간이 줄지 않는다(004 R-15). 목록을 열 때 001의 평가 가능 기간·거래일 달력을 받아 실제로 줄어드는 거래일 수만 안내한다. 공통 기간을 확인하지 못하면 해당 후보를 막는다. 더 긴 워밍업은 두 결과 재계산에 동의한 뒤 적용한다.
+- 구현 중 확인한 계약 누락 두 곳을 같은 흐름에서 보강한다: 공개 `config.executionType`은 원 요청에서 읽어 `SEARCH_BUNDLE`을 구분하고, 004의 준비 기간 부족 오류는 `details.requiredWarmupTradingDays`·`requestedWarmupTradingDays`를 보낸다. 준비 기간을 채운 첫날이 종료일 뒤인 오류는 `requiredStartDate`도 보낸다. 저장 스키마·계산 방식은 바꾸지 않는다.
+- 두 번째 재계산 요청만 실패하면 먼저 접수한 토큰을 보존해 명시적 재시도에서 두 번째만 보낸다. 금액·비용·자료/엔진 기준·섹터·시나리오가 다르면 기간만 맞춰 겹치지 않는다.
+- T059·T060의 상태 표시와 확인창 흐름은 `useCompareTarget.test.tsx`에서 함께 검증하고, T061의 화면 연결은 `ResultPage.comparison.test.tsx`에서 검증한다.
 
 ## Complexity Tracking
 

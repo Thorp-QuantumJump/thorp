@@ -399,8 +399,11 @@ public class FileParameterRegistry implements ParameterRegistryPort {
             throw new IllegalStateException("validation rule needs both operands");
         }
         if (operand.get("axis") != null) {
-            return ValidationRule.Operand.ofAxis(
-                    String.valueOf(operand.get("axis")), string(operand, "multiplyByContext"));
+            String axis = String.valueOf(operand.get("axis"));
+            String byAxis = string(operand, "multiplyByAxis");
+            return byAxis == null
+                    ? ValidationRule.Operand.ofAxis(axis, string(operand, "multiplyByContext"))
+                    : ValidationRule.Operand.ofAxisTimesAxis(axis, byAxis);
         }
         if (operand.get("context") != null) {
             return ValidationRule.Operand.ofContext(String.valueOf(operand.get("context")));

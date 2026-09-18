@@ -28,6 +28,7 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
@@ -60,6 +61,8 @@ class PublicResultServiceTest {
     private final BacktestResultQueryService queryService = mock(BacktestResultQueryService.class);
     private final BacktestRetryService retryService = mock(BacktestRetryService.class);
     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);
+    private final ExpiredPublicTokenRepository expiredTokens =
+            mock(ExpiredPublicTokenRepository.class);
 
     private final PublicResultService service =
             new PublicResultService(
@@ -67,15 +70,21 @@ class PublicResultServiceTest {
                     queryService,
                     retryService,
                     registry,
+                    expiredTokens,
                     Clock.fixed(NOW, ZoneOffset.UTC));
 
     private static BacktestRequest request(Long requesterId, Instant expiresAt) {
+        return request(requesterId, expiresAt, ExecutionType.SINGLE);
+    }
+
+    private static BacktestRequest request(
+            Long requesterId, Instant expiresAt, ExecutionType type) {
         return BacktestRequest.restore(
                 1L,
                 new BacktestId(BACKTEST_ID),
                 11L,
                 requesterId,
-                ExecutionType.SINGLE,
+                type,
                 ResultSource.NEW,
                 null,
                 null,
@@ -137,6 +146,21 @@ class PublicResultServiceTest {
     }
 
     @Test
+    @DisplayName(
+            "요청은 없지만 정리 작업이 남긴 묘비가 있으면 404 가 아니라 410 이다 — 묘비는 토큰 원문이 아니라 SHA-256 으로 찾는다 (T087)")
+    void deletedExpiredTokenIsGoneNotNotFound() {
+        when(requestRepository.findByPublicToken(any())).thenReturn(Optional.empty());
+        // echo -n 0123456789abcdef0123456789abcdef | sha256sum
+        when(expiredTokens.exists(
+                        "3eb1bd439947eb762998e566ccc2e099c791118b2f40579cc4f7da2b5061b7f9"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.getDetail(TOKEN))
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.RESULT_EXPIRED);
+    }
+
+    @Test
     @DisplayName("비로그인 결과는 만료 시각이 되면 410 이고 하위 자원도 읽지 않는다")
     void expiredAnonymousResultIsGone() {
         stored(request(null, NOW));
@@ -171,6 +195,7 @@ class PublicResultServiceTest {
         PublicResultDetail result = service.getDetail(TOKEN);
 
         assertThat(result.publicToken()).isEqualTo(TOKEN);
+        assertThat(result.config()).containsEntry("executionType", "SINGLE");
         assertThat(result.expiresAt()).isEqualTo(expiresAt);
         assertThat(result.validationTier()).isEqualTo(ValidationTier.UNVALIDATED);
         assertThat(result.strategyName()).isEqualTo("똑같이 나누기");
@@ -208,6 +233,17 @@ class PublicResultServiceTest {
         assertThat(result.queueWaitSeconds()).isNull();
         assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);
         assertThat(result.exceptionKinds()).containsExactly("HALT_DEFERRED", "DELISTED");
+    }
+
+    @Test
+    @DisplayName("공개 결과는 원 요청의 자동 탐색 종류를 유지한다")
+    void searchBundleKindIsVisibleWithoutSearchQuery() {
+        stored(request(7L, null, ExecutionType.SEARCH_BUNDLE));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(detail(RunStatus.QUEUED));
+
+        assertThat(service.getDetail(TOKEN).config())
+                .containsEntry("executionType", "SEARCH_BUNDLE");
     }
 
     @Test
@@ -259,6 +295,31 @@ class PublicResultServiceTest {
                             assertThat(exc.getDetails()).containsEntry("retryAfterSeconds", 30);
                             assertThat(exc.getMessage()).doesNotContain("BT-");
                         });
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 단건이 아닌 요청을 다시 시도할 수 없다 — 재시도가 실행 한도를 건너뛰는 입구가 되지 않는다 (T089)")
+    void anonymousCannotRetryNonSingleRequest() {
+        BacktestRequest bundle =
+                BacktestRequest.restore(
+                        1L,
+                        new BacktestId(BACKTEST_ID),
+                        11L,
+                        7L,
+                        ExecutionType.SEARCH_BUNDLE,
+                        ResultSource.NEW,
+                        null,
+                        null,
+                        null,
+                        false,
+                        PublicResultToken.of(TOKEN),
+                        null);
+        stored(bundle);
+
+        assertThatThrownBy(() -> service.retry(TOKEN, null))
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+        verify(retryService, never()).retry(any(BacktestRequest.class), any());
     }
 
     @Test

@@ -231,7 +231,11 @@ public class StrategyRegistryQueryService {
     private static StrategyRegistryResult.OperandView toOperandView(
             ValidationRule.Operand operand) {
         return new StrategyRegistryResult.OperandView(
-                operand.axis(), operand.context(), operand.value(), operand.multiplyByContext());
+                operand.axis(),
+                operand.context(),
+                operand.value(),
+                operand.multiplyByContext(),
+                operand.multiplyByAxis());
     }
 
     private static StrategyRegistryResult.WarmupRuleView toWarmupRuleView(WarmupRule warmup) {

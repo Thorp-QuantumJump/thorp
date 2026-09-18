@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -288,6 +289,108 @@ class BacktestServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
                 .hasMessageContaining("상한 0.4 × 2종목");
+    }
+
+    /** 섹터 모멘텀 규칙표 행(T023 마이그레이션과 같은 값 가운데 접수가 읽는 것만). */
+    private void stubSectorMomentum() {
+        when(strategyRulesService.requireRegistered("SECTOR_MOMENTUM", "1"))
+                .thenReturn(
+                        rules(
+                                "SECTOR_MOMENTUM",
+                                Map.of(
+                                        "weightCap",
+                                        "1.0000",
+                                        "investedFraction",
+                                        "1.0000",
+                                        "capOverflow",
+                                        "CASH",
+                                        "weightUnit",
+                                        "0.000001")));
+    }
+
+    /** 섹터 셋짜리 요청. 후보 수와 선정 수를 갈라 보려면 둘로는 모자라다. */
+    private static CreateBacktestCommand threeSectors(String strategyId) {
+        CreateBacktestCommand base = command(strategyId, null, null, Scenario.FULL_PERIOD, null);
+        return withItems(
+                base,
+                List.of(
+                        new CreateBacktestCommand.AllocationItem(
+                                "SEMICONDUCTOR", "091160.XKRX", null),
+                        new CreateBacktestCommand.AllocationItem("BATTERY", "305720.XKRX", null),
+                        new CreateBacktestCommand.AllocationItem("BIO", "244580.XKRX", null)));
+    }
+
+    @Test
+    @DisplayName("모멘텀은 후보 수가 아니라 선정 수로 상한을 잰다 — topN 2·상한 40%는 422 다")
+    void momentumCountsTheSelectedSectorsNotTheUniverse() {
+        stubSectorMomentum();
+
+        // 후보 셋으로 재면 0.4 × 3 = 1.2 라 통과한다. 하지만 둘만 고르므로 0.8 밖에 못 채운다.
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                threeSectors("SECTOR_MOMENTUM"),
+                                                Map.of(
+                                                        "rebalance",
+                                                        "MONTH_END",
+                                                        "selectionMode",
+                                                        "TOP_N",
+                                                        "topN",
+                                                        2,
+                                                        "maxWeight",
+                                                        40))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
+                .hasMessageContaining("상한 0.4 × 2종목");
+    }
+
+    @Test
+    @DisplayName("상위 %는 올림한 선정 수로 잰다 — 셋의 50%는 둘이다")
+    void momentumTopPercentRoundsUpBeforeMeasuring() {
+        stubSectorMomentum();
+
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                threeSectors("SECTOR_MOMENTUM"),
+                                                Map.of(
+                                                        "rebalance",
+                                                        "MONTH_END",
+                                                        "selectionMode",
+                                                        "TOP_PERCENT",
+                                                        "topPercent",
+                                                        50,
+                                                        "maxWeight",
+                                                        40))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
+                .hasMessageContaining("상한 0.4 × 2종목");
+    }
+
+    @Test
+    @DisplayName("기준 수익률 이상은 접수 때 셀 수 없어 검사하지 않는다 — 실행 중 부족은 현금이다")
+    void momentumThresholdIsNotCheckedAtIntake() {
+        stubSectorMomentum();
+
+        // 상한 10%로는 어떤 조합도 100%를 못 채우지만, 몇 개가 기준을 넘을지는 가격을 봐야 안다.
+        // 여기서 막으면 "고를 수 있었는데 막혔다"가 되고, 실제로 모자라면 워커가 현금으로 둔다.
+        assertThatCode(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                threeSectors("SECTOR_MOMENTUM"),
+                                                Map.of(
+                                                        "rebalance",
+                                                        "MONTH_END",
+                                                        "selectionMode",
+                                                        "THRESHOLD",
+                                                        "threshold",
+                                                        0,
+                                                        "maxWeight",
+                                                        10))))
+                .doesNotThrowAnyException();
     }
 
     @Test

@@ -4,7 +4,8 @@ import { formatMoney, formatRatio, isZeroValue } from './formatResult'
 import styles from './ResultSummaryCard.module.css'
 
 export const METRIC_DEFINITIONS = {
-  netTotalReturn: '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',
+  netTotalReturn:
+    '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',
   maxDrawdown:
     '운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',
   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',
@@ -12,6 +13,7 @@ export const METRIC_DEFINITIONS = {
 
 type ResultSummaryCardProps = {
   detail: PublicResultDetail
+  target?: PublicResultDetail | null
 }
 
 /**
@@ -22,8 +24,12 @@ type ResultSummaryCardProps = {
  *
  * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).
  */
-export function ResultSummaryCard({ detail }: ResultSummaryCardProps) {
-  const condition = buildConditionLine(detail)
+export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
+  const condition = buildConditionLine({
+    ...detail,
+    targetName: target?.strategyName ?? target?.config.strategyId,
+    targetWeightsSource: target?.weightsSource,
+  })
   const { summary } = detail
 
   return (
@@ -78,7 +84,15 @@ export function ResultSummaryCard({ detail }: ResultSummaryCardProps) {
   )
 }
 
-function Metric({ label, value, definition }: { label: string; value: string; definition: string }) {
+function Metric({
+  label,
+  value,
+  definition,
+}: {
+  label: string
+  value: string
+  definition: string
+}) {
   return (
     <div className={styles.metric}>
       <dt className={styles.metricLabel}>{label}</dt>

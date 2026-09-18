@@ -18,6 +18,7 @@
     "finishedAt": null,
     "queueWaitSeconds": 3,
     "config": {
+      "executionType": "SINGLE",
       "end": "2024-12-31",
       "items": [
         {

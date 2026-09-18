@@ -188,12 +188,27 @@ public record StrategyRegistryResponse(
         }
     }
 
-    /** 비교 대상 하나. {@code axis}·{@code context}·{@code value} 중 채워진 것만 실린다. */
+    /**
+     * 비교 대상 하나. {@code axis}·{@code context}·{@code value} 중 채워진 것만 실린다.
+     *
+     * <p>{@code multiplyByAxis}를 빠뜨리면 화면이 {@code maxWeight × topN < 100}을 {@code maxWeight < 100}으로
+     * 읽어 상한 30·40·50을 전부 위반으로 막는다 — 곱셈 인자가 사라진 규칙은 더 엄격해진다.
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Operand(String axis, String context, Object value, String multiplyByContext) {
+    public record Operand(
+            String axis,
+            String context,
+            Object value,
+            String multiplyByContext,
+            String multiplyByAxis) {
 
         public static Operand from(StrategyRegistryResult.OperandView view) {
-            return new Operand(view.axis(), view.context(), view.value(), view.multiplyByContext());
+            return new Operand(
+                    view.axis(),
+                    view.context(),
+                    view.value(),
+                    view.multiplyByContext(),
+                    view.multiplyByAxis());
         }
     }
 

@@ -74,12 +74,9 @@ UNSUPPORTED: list[tuple[str, dict[str, Any], str]] = [
     ("partial-fill", {"execution": {"partialFill": True}}, "execution.partialFill"),
     # 규칙 사본 없이 온 요청은 엔진이 기본값을 지어내지 않고 멈춘다(R-08).
     ("rules-missing", {"allocation": {"rules": None}}, "allocation.rules"),
-    # 팀 미확정 전략은 "정하지 않았다"로, 모르는 전략은 "구현하지 않았다"로 거절한다.
-    (
-        "strategy-pending-decision",
-        {"allocation": {"strategyId": "SECTOR_MOMENTUM", "parameters": {"rebalance": "MONTH_END"}}},
-        "PD-03",
-    ),
+    # 모르는 전략은 "구현하지 않았다"로 거절한다. 팀 미확정 전략은 "정하지 않았다"로 갈리는데
+    # 2026-09-17 PD-03·PD-04 확정으로 대기 중인 전략이 없어졌다 — 그 갈림은
+    # tests/test_allocation.py 가 표에 하나를 넣어 확인한다.
     (
         "strategy-unknown-everywhere",
         {"allocation": {"strategyId": "NOT_A_STRATEGY", "parameters": {"anything": 1}}},

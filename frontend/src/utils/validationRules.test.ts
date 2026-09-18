@@ -54,6 +54,28 @@ describe('evaluateRules', () => {
     expect(evaluateRules([capRule], { cap: 34 }, context)).toEqual([])
   })
 
+  // 004 PD-03: 모멘텀은 후보 전체가 아니라 topN 개에만 비중이 간다. 곱셈 인자가 빠지면
+  // `maxWeight × topN < 100` 이 `maxWeight < 100` 이 되어 상한을 전부 위반으로 막는다.
+  const selectionRule = rule({
+    code: 'MAX_WEIGHT_TOO_LOW_FOR_SELECTION',
+    left: { axis: 'maxWeight', multiplyByAxis: 'topN' },
+    operator: 'LESS_THAN',
+    right: { value: 100 },
+  })
+
+  it('다른 축을 곱한 값으로 판정한다', () => {
+    expect(evaluateRules([selectionRule], { maxWeight: 40, topN: 2 }, context)).toEqual([
+      selectionRule,
+    ])
+    expect(evaluateRules([selectionRule], { maxWeight: 40, topN: 3 }, context)).toEqual([])
+  })
+
+  it('곱할 축이 설정에 없으면 판정하지 않는다 — 다른 선정 방식은 무관하다', () => {
+    // 003은 고른 selectionMode 에 딸린 축 하나만 저장한다(FR-003). topN 이 없는 설정에서
+    // 값을 그대로 쓰면 상한 10%가 위반으로 막힌다.
+    expect(evaluateRules([selectionRule], { maxWeight: 10 }, context)).toEqual([])
+  })
+
   it('곱한 값이 경계와 정확히 같으면 이진 부동소수 오차로 뒤집히지 않는다', () => {
     const decimalRule = rule({
       left: { axis: 'ratio', multiplyByContext: 'UNIVERSE_SIZE' },

@@ -125,7 +125,10 @@ public class EffectivePeriodCalculator {
                         ErrorCode.INSUFFICIENT_HISTORY,
                         "요청한 공통 워밍업 %d거래일이 %s 전략이 필요로 하는 %d거래일보다 짧습니다. 비교 묶음의 최대 관측 길이를 다시 계산해 주세요."
                                 .formatted(
-                                        requestedWarmupTradingDays, rules.strategyId(), required));
+                                        requestedWarmupTradingDays, rules.strategyId(), required),
+                        Map.of(
+                                "requiredWarmupTradingDays", required,
+                                "requestedWarmupTradingDays", requestedWarmupTradingDays));
             }
             warmup = requestedWarmupTradingDays;
         }
@@ -160,7 +163,12 @@ public class EffectivePeriodCalculator {
             throw new BusinessException(
                     ErrorCode.INSUFFICIENT_HISTORY,
                     "가장 늦은 상장일 %s 이후 워밍업 %d거래일을 채우고 나면 평가할 수 있는 첫날이 %s라 요청 종료일 %s를 넘습니다. 종료일을 늦추거나 상장이 늦은 종목을 빼 주세요."
-                            .formatted(latestListed, effectiveWarmup, commonStart, requestedEnd));
+                            .formatted(latestListed, effectiveWarmup, commonStart, requestedEnd),
+                    Map.of(
+                            "requiredWarmupTradingDays",
+                            effectiveWarmup,
+                            "requiredStartDate",
+                            commonStart.toString()));
         }
         // 요청 구간에 거래일이 아예 없는 경우다. 워밍업이 0이어도 걸리므로 "상장이 늦은 종목을
         // 빼라"는 조언을 여기 쓰면 틀린다.
@@ -191,14 +199,14 @@ public class EffectivePeriodCalculator {
     /** 요청이 003 축 {@code lookbackDays}를 실어 보냈으면 그것이 계산에 쓰이는 값이므로 요구값도 그것으로 잰다. */
     public static int requiredWarmupTradingDays(
             StrategyRules rules, StrategyRules scenarioOverlay, Map<String, Object> parameters) {
-        int strategy = lookback(rules, parameters) + skipRecent(rules);
+        int strategy = lookback(rules, parameters) + skipRecent(rules, parameters);
         // 오버레이는 003 축이 아니라 서버가 채우는 규칙이라 요청 파라미터를 보지 않는다.
         int overlay = scenarioOverlay == null ? 0 : lookback(scenarioOverlay, null);
         return Math.max(strategy, overlay);
     }
 
     private static int lookback(StrategyRules rules, Map<String, Object> parameters) {
-        Integer chosen = chosenLookback(parameters);
+        Integer chosen = chosenAxis(parameters, "lookbackDays");
         if (chosen != null) {
             return chosen;
         }
@@ -206,12 +214,12 @@ public class EffectivePeriodCalculator {
     }
 
     /**
-     * 요청 {@code allocation.parameters.lookbackDays}. 숫자가 아니거나 없으면 {@code null}이다.
+     * 요청 {@code allocation.parameters}의 정수 축. 숫자가 아니거나 없으면 {@code null}이다.
      *
      * <p>값의 유효성은 등록표 관문({@code StrategySettingsValidator})이 본다. 여기서 되받아 거절하면 같은 판정이 두 곳에 생긴다.
      */
-    private static Integer chosenLookback(Map<String, Object> parameters) {
-        Object raw = parameters == null ? null : parameters.get("lookbackDays");
+    private static Integer chosenAxis(Map<String, Object> parameters, String axis) {
+        Object raw = parameters == null ? null : parameters.get(axis);
         if (raw instanceof Number number) {
             return number.intValue();
         }
@@ -225,7 +233,17 @@ public class EffectivePeriodCalculator {
         return null;
     }
 
-    private static int skipRecent(StrategyRules rules) {
+    /**
+     * 최근 제외 구간. <b>관측 기간과 같은 규칙으로 읽는다</b> — 003 축이 오면 그것이 사용자가 고른 값이고 없으면 규칙표 값이 기본값이다.
+     *
+     * <p>규칙표만 보면 기본값 0이라, 최근 제외 21일을 고른 요청의 요구 워밍업이 {@code L}로 계산되고 {@code L+S}가 필요한 실행이 통과한다. 그러면
+     * 초기 21거래일이 이력 부족으로 빠져 결과 구간과 수익률이 조용히 달라진다(PD-03 ⑤).
+     */
+    private static int skipRecent(StrategyRules rules, Map<String, Object> parameters) {
+        Integer chosen = chosenAxis(parameters, "skipRecentDays");
+        if (chosen != null) {
+            return chosen;
+        }
         return rules.spec() == null ? 0 : intValue(rules.spec(), "skipRecentDays");
     }
 

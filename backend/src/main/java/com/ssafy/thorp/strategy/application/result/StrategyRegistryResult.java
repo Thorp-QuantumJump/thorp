@@ -157,9 +157,18 @@ public record StrategyRegistryResult(
             ValidationRule.Operator operator,
             OperandView right) {}
 
-    /** 비교 대상 하나. {@code axis}·{@code context}·{@code value} 중 하나만 채워져 있고 나머지는 응답에 실리지 않는다. */
+    /**
+     * 비교 대상 하나. {@code axis}·{@code context}·{@code value} 중 하나만 채워져 있고 나머지는 응답에 실리지 않는다.
+     *
+     * <p>{@code multiplyByAxis}는 축 값에 곱할 다른 축이다(예: {@code maxWeight × topN}). 화면과 007 이 같은 판정을 하려면
+     * 응답에도 실려야 한다(FR-005).
+     */
     public record OperandView(
-            String axis, String context, Object value, String multiplyByContext) {}
+            String axis,
+            String context,
+            Object value,
+            String multiplyByContext,
+            String multiplyByAxis) {}
 
     /** 워밍업 산출 규칙. {@code sum}의 축 이름을 현재 값으로 바꿔 모두 더한다(data-model §6). */
     public record WarmupRuleView(List<Object> sum) {

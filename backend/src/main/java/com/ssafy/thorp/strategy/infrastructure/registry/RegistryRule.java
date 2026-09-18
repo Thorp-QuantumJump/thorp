@@ -53,14 +53,28 @@ record RegistryRule(ValidationRule rule) {
             return operand.value();
         }
         Object value = parameters.get(operand.axis());
-        if (value == null || operand.multiplyByContext() == null) {
-            return value;
+        if (value == null) {
+            return null;
         }
-        return toNumber(value, operand.axis())
-                .multiply(
-                        toNumber(
-                                contextValue(operand.multiplyByContext(), context),
-                                operand.axis()));
+        if (operand.multiplyByContext() != null) {
+            return toNumber(value, operand.axis())
+                    .multiply(
+                            toNumber(
+                                    contextValue(operand.multiplyByContext(), context),
+                                    operand.axis()));
+        }
+        if (operand.multiplyByAxis() != null) {
+            Object factor = parameters.get(operand.multiplyByAxis());
+            // 곱할 축이 이 설정에 없으면 판정하지 않는다. 003 은 고른 selectionMode 에 딸린 축
+            // 하나만 저장하므로(FR-003), TOP_N 을 고르지 않은 설정에는 topN 이 없다 — 그때
+            // "maxWeight × topN" 규칙은 위반이 아니라 무관이다.
+            if (factor == null) {
+                return null;
+            }
+            return toNumber(value, operand.axis())
+                    .multiply(toNumber(factor, operand.multiplyByAxis()));
+        }
+        return value;
     }
 
     private static Object contextValue(String key, SearchContext context) {
