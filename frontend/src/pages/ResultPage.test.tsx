@@ -253,6 +253,35 @@ describe('ResultPage', () => {
     expect(container.textContent).not.toMatch(/\d%|\d원/)
   })
 
+  it('실패 사유를 보이고 다시 시도하면 새 공개 결과 주소로 이동한다', async () => {
+    const newToken = 'b41e0c9a7d2f35618ce4a09b7f1d2c63'
+    const failed: PublicResultDetail = {
+      ...resultDetailCompleted,
+      status: 'FAILED',
+      summary: null,
+      failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },
+      weightsSource: null,
+      exceptionKinds: null,
+    }
+    apiMocks.fetchResult
+      .mockResolvedValueOnce(failed)
+      .mockResolvedValueOnce({ ...resultDetailRunning, publicToken: newToken })
+    apiMocks.retryResult.mockResolvedValue({
+      publicToken: newToken,
+      status: 'QUEUED',
+      resultSource: 'NEW',
+      retryOfToken: resultToken,
+    })
+    const user = userEvent.setup()
+
+    renderResult()
+    expect(await screen.findByText(/계산 엔진이 응답하지 않았습니다/)).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+
+    expect(apiMocks.retryResult).toHaveBeenCalledWith(resultToken)
+    expect((await screen.findByLabelText('현재 주소')).textContent).toBe(`/results/${newToken}`)
+  })
+
   it.each([
     ['점이 하나도 없으면', []],
     ['모든 날의 자산가치가 비어 있으면', resultTimeseries.points.map((point) => ({ ...point, equity: '' }))],
