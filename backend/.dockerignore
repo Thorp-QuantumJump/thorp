@@ -1,7 +1,10 @@
 .git
 .gradle
 build
+out
+node_modules
+coverage
 .env*
-*.log
+*.log*
 Dockerfile*
 .dockerignore

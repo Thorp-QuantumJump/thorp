@@ -4,6 +4,8 @@
 
 구현이 spec을 만족하는지 재현하는 검증 가이드다. 계약·필드의 정의는 [contracts/](contracts/)와 [data-model.md](data-model.md)를 본다. 이 문서는 무엇을 실행하고 무엇이 나와야 하는지만 적는다.
 
+B06 실행 결과·검증 환경·미실행 항목은 [validation.md](validation.md)에 따로 기록한다.
+
 ## 0. 준비
 
 - Java 21, Node.js·npm, Docker(PostgreSQL Testcontainers와 로컬 DB)
@@ -14,8 +16,12 @@
 **로컬 프로필 주의**: `application-local.yml`은 Flyway를 끄고 Hibernate가 스키마를 만든다. 이 상태에서는 마이그레이션이 넣는 **아홉 글·열네 용어 자리가 생기지 않는다.** 초기 자리를 확인하려면 아래처럼 Flyway를 켠다.
 
 ```bash
-SPRING_PROFILES_ACTIVE=local SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate THORP_LEARNING_ADMIN_USER_IDS=1 ./gradlew bootRun
+SPRING_PROFILES_ACTIVE=local SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=never THORP_LEARNING_ADMIN_USER_IDS=1 ./gradlew bootRun
 ```
+
+Flyway가 Spring Session 테이블도 만들므로 이 확인에서는 별도 세션 스키마 초기화를 끈다.
+`backend/.env`의 메일 설정도 필요하다([backend/CLAUDE.md](../../backend/CLAUDE.md)). 메일을
+보내지 않는 검증에는 더미 값을 쓴다. 아래의 게시·대응표 변경은 합성 자료 전용 로컬 DB에서 한다.
 
 ## 1. 자동 검증
 
@@ -84,6 +90,10 @@ curl -s localhost:8080/learning/terms/max-drawdown
 ### 3-2. 검사에 걸리는 게시 (US5 시나리오 3)
 
 `returns-and-losses`를 열어 아래처럼 저장한 뒤 게시한다.
+
+먼저 제목·질문·설명 문단·예시 두 섹터를 채우고, 이 글의 두 용어(`max-drawdown`·
+`net-total-return`)에 이름·문장을 넣어 각각 본문의 `term` 블록에 한 번씩 연결한다.
+이 준비 없이 초기 초안을 바로 게시하면 아래 세 항목 외에 필수 항목 검사도 걸린다.
 
 - 예시 섹터 두 개, 비중 50.0%·45.0%
 - `paragraph` 블록에 `추천 비중` 포함
@@ -177,19 +187,22 @@ curl -s localhost:8080/learning/terms/max-drawdown
 
 ## 5. 진단 화면 도움말 (US3)
 
-003의 도움말이 공용 `TermHelp`를 쓰는 상태에서 확인한다. 003 화면이 아직 붙지 않았으면 컴포넌트 테스트로만 확인한다.
+003의 `DetailSettingsPanel`은 등록표 `axes[].termId`가 있는 축에 공용 `TermHelp`를 붙인다
+(T097 구현). `/strategy`의 실제 도움말을 확인한다. 003에 없는 용어는 공용 컴포넌트 테스트로
+확인하고, 그 결과를 화면 종단 확인과 구분해 기록한다.
 
 ### 5-1. 세 상태 (FR-010)
 
 | 준비 | 도움말을 열면 |
 |---|---|
-| 게시된 `max-drawdown` | 이름·문장·글 연결 |
-| 초안뿐인 `rebalancing` | '설명 준비 중', 연결 없음 |
+| `weights-and-rebalancing`을 게시한 뒤 `rebalancing` 도움말 | 이름·문장·글 연결 |
+| 같은 글을 게시 취소한 뒤 `rebalancing` 도움말 | '설명 준비 중', 연결 없음 |
 | `/api/learning/terms/*` 요청을 막음 | 불러오지 못했다는 문장과 다시 시도. 진단 입력·'분석하기'는 그대로 쓸 수 있다 |
 
 ### 5-2. 같은 탭 이동과 돌아가기 (FR-009)
 
-`/strategy`에서 전략을 고르고 설정 하나를 바꾼 뒤, 도움말의 글 연결을 누른다.
+요청 차단을 풀고 `weights-and-rebalancing`을 다시 게시한다. `/strategy`에서 전략을 고르고
+설정 하나를 바꾼 뒤, 도움말의 글 연결을 누른다.
 
 **기대**:
 - 같은 탭에서 글이 열리고 '하던 진단으로 돌아가기'가 보인다
@@ -198,7 +211,10 @@ curl -s localhost:8080/learning/terms/max-drawdown
 
 ### 5-3. 제목을 바꿔도 끊기지 않음 (US3 시나리오 7)
 
-관리 화면에서 `returns-and-losses`의 제목과 `max-drawdown`의 문장을 고쳐 게시한다.
+관리 화면에서 `weights-and-rebalancing`의 제목과 `rebalancing`의 문장을 고쳐 게시한다.
+§5-1에서 게시 취소했으면 다시 게시한 상태로 확인한다. 이 글의 나머지 용어도 본문에 한 번씩
+연결되어 있어야 한다. `max-drawdown`·`returns-and-losses`의 동일 식별자 재게시는 서버 계약
+테스트에서도 확인한다.
 
 **기대**: 도움말의 글 연결이 같은 주소로 열리고 새 문장이 보인다.
 
