@@ -16,7 +16,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,10 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -41,17 +40,13 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>연속 실패 한도를 1로 좁혀 둔다. 여기서 볼 것은 한도 값이 아니라 <b>닿았을 때의 동작</b>이다. 실행시간 한도는 같은 자리에서 같은 방식으로 판정하므로
  * ({@code applyLimits}) 사유 이름만 다르다.
  */
-@SpringBootTest(
+// 연속 실패 한도 1은 실패 후보가 있는 다른 자동 탐색 테스트의 묶음을 닫아 버리므로 이 테스트만 쓴다(컨텍스트를 따로 만든다).
+@TestPropertySource(
         properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "thorp.param-search.dispatch-window=1",
-            "thorp.param-search.consecutive-failure-limit=1",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
+            LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW,
+            "thorp.param-search.consecutive-failure-limit=1"
         })
-class ParamSearchLimitReachedTest extends PostgresTestSupport {
+class ParamSearchLimitReachedTest extends LauncherMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -63,7 +58,7 @@ class ParamSearchLimitReachedTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(960_000L);
 

@@ -62,7 +62,19 @@ public enum ErrorCode {
     REGISTRY_VERSION_CHANGED(HttpStatus.CONFLICT, "확인하신 사이에 전략 등록표가 바뀌었습니다. 바뀐 내용을 다시 확인해 주세요."),
     REGISTRY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "전략 등록 정보를 읽을 수 없습니다. 잠시 후 다시 시도해 주세요."),
     ALREADY_FINISHED(HttpStatus.CONFLICT, "이미 끝난 탐색입니다."),
-    NOTHING_TO_RETRY(HttpStatus.CONFLICT, "다시 시도할 실패 후보가 없습니다.");
+    NOTHING_TO_RETRY(HttpStatus.CONFLICT, "다시 시도할 실패 후보가 없습니다."),
+
+    // spec 013 배우기. 계약은 specs/013-learning-pages/contracts/README.md "새 오류 코드".
+    // 공개 조회의 두 404(글·용어)를 한 코드로 합치지 않는다 — 화면이 '볼 수 없는 글'과
+    // '설명 준비 중'을 코드로 가른다(research R10).
+    LEARNING_ARTICLE_UNAVAILABLE(HttpStatus.NOT_FOUND, "지금은 볼 수 없는 글입니다."),
+    LEARNING_TERM_NOT_READY(HttpStatus.NOT_FOUND, "설명을 준비하고 있습니다."),
+    LEARNING_ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "관리할 글을 찾을 수 없습니다."),
+    LEARNING_ARTICLE_ID_TAKEN(HttpStatus.CONFLICT, "이미 쓰이고 있는 글 식별자입니다."),
+    LEARNING_TERM_ID_TAKEN(HttpStatus.CONFLICT, "다른 글이 쓰고 있는 용어 식별자입니다."),
+    LEARNING_DRAFT_CHANGED(HttpStatus.CONFLICT, "다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요."),
+    LEARNING_PUBLISH_CHECK_FAILED(
+            HttpStatus.UNPROCESSABLE_ENTITY, "게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.");
 
     private final HttpStatus status;
     private final String message;

@@ -1,0 +1,9 @@
+.breakdown { min-width: 0; border-top: 1px solid var(--thorp-line); padding-top: 16px; }
+.breakdown h4, .breakdown h5 { margin: 0 0 8px; }
+.breakdown p { color: var(--thorp-copy); }
+.breakdown > ul { list-style: none; padding: 0; }
+.breakdown > ul li { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 8px 0; border-bottom: 1px solid var(--thorp-line); }
+.breakdown > ul strong { min-width: 100px; }
+.reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.reasons ul { padding-left: 18px; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } }

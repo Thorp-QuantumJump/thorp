@@ -1,0 +1,26 @@
+{
+  "code": "LEARNING_PUBLISH_CHECK_FAILED",
+  "message": "게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.",
+  "details": {
+    "checkVersion": "learning-publish-checks-v1",
+    "failures": [
+      {
+        "check": "EXAMPLE_WEIGHT_SUM",
+        "location": { "part": "example" },
+        "message": "예시 비중의 합계가 100%가 아닙니다. 지금 합계는 95.0%입니다."
+      },
+      {
+        "check": "FORBIDDEN_EXPRESSION",
+        "location": { "part": "block", "index": 2 },
+        "matched": "추천 비중",
+        "message": "추천으로 읽히는 표현이 있습니다."
+      },
+      {
+        "check": "RESULT_NUMBER_OUTSIDE_HYPOTHETICAL",
+        "location": { "part": "term", "termId": "max-drawdown" },
+        "matched": "-30%",
+        "message": "실제 결과로 읽히는 숫자는 가상의 계산 예 블록에만 쓸 수 있습니다."
+      }
+    ]
+  }
+}

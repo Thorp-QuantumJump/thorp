@@ -243,6 +243,9 @@ OHLCV만 골라 쓰므로 검증에 영향이 없다.)
   `YFINANCE_DAILY`를 쓴다. 계약에서 이 필드는 enum이 아니라 자유 문자열이라 역직렬화를 막지
   않으므로 **엔진은 이 값을 검증하지 않는다.** 실제 출처는 산출물 `metadata.dataSource`에
   기록된다. KRX 데이터 연결은 별도 티켓이다.
+  **2026-09-17 보충**: 그 별도 티켓이 끝났다. `datasetId`는 더 이상 계약 고정값이 아니라 접수
+  시점에 저장된 자료 버전에서 정해지며, 값 규칙은 `KRX_DAILY_{자료마감일}[_R{판}]`이다(spec 001
+  research.md 결정 4). **엔진이 이 값을 검증하지 않는다는 판단은 그대로다.**
 - 계약 `StrategySpec.parameters`는 `dict[str, Any]` 봉투이므로 엔진 호출부를
   `request.strategy.typed_parameters`로 바꿨다(`nautilus_engine.py`, `market_data.py`).
   전략과 준비 기간 조립은 `strategies/__init__.py` 레지스트리가 맡는다.

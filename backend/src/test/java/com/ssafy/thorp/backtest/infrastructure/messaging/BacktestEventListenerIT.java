@@ -12,11 +12,13 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RabbitTestSupport;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,8 +31,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
 
 /**
  * 계약 픽스처를 실제 브로커의 {@code backtest.events}에 발행하고 리스너가 소비해 DB에 반영하는지, 계약 오류가 DLQ로 가는지 확인한다.
@@ -44,10 +46,16 @@ import org.testcontainers.junit.jupiter.Container;
             "spring.mail.username=test@example.com",
             "spring.mail.password=test"
         })
+@DirtiesContext
 class BacktestEventListenerIT extends PostgresTestSupport {
 
-    @Container @ServiceConnection
-    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+    /** DB 기반을 상속하므로 {@link RabbitTestSupport}의 브로커를 필드로 받아 쓴다. 컨텍스트를 닫는 이유는 그 클래스 설명에 있다. */
+    @ServiceConnection static final RabbitMQContainer RABBITMQ = RabbitTestSupport.RABBITMQ;
+
+    @BeforeAll
+    static void startRabbitOnce() {
+        RabbitTestSupport.startContainerOnce();
+    }
 
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
 

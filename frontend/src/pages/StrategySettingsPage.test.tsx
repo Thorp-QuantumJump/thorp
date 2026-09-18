@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -10,6 +10,7 @@ import {
   type AnalysisVersions,
   type WarmupJudgement,
 } from '@/components/strategy/analysisSupport'
+import { connectedAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'
 import {
   SECTOR_SELECTION_PAYLOAD_VERSION,
   SECTOR_SELECTION_STORAGE_KEY,
@@ -22,6 +23,7 @@ import {
   unselectableStrategy,
 } from '@/test/strategyRegistryFixtures'
 import type { BacktestCreateRequest } from '@/types/backtestRequest'
+import type { EvaluationWindow } from '@/types/evaluationWindow'
 import type { StrategyView } from '@/types/strategyRegistry'
 import type { SectorSummary } from '@/types/sector'
 import { StrategySettingsPage } from './StrategySettingsPage'
@@ -40,11 +42,26 @@ import { StrategySettingsPage } from './StrategySettingsPage'
 const apiMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchStrategyRegistry: vi.fn(),
+  // 기본 통로(`defaultAnalysisSupport`)가 부르는 실제 조회의 자리. 통로를 넘기는 검사는 쓰지 않는다.
+  fetchEvaluationWindow: vi.fn(),
 }))
 
 vi.mock('@/api/sectors', async () => {
   const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')
   return { ...actual, ...apiMocks }
+})
+
+// 기본 통로가 부르는 004 조회·전송의 자리. 통로를 넘기는 검사는 쓰지 않는다.
+const backtestMocks = vi.hoisted(() => ({
+  fetchAnalysisVersions: vi.fn(),
+  createBacktest: vi.fn(),
+}))
+
+vi.mock('@/api/analysisVersions', () => ({ fetchAnalysisVersions: backtestMocks.fetchAnalysisVersions }))
+
+vi.mock('@/api/backtest', async () => {
+  const actual = await vi.importActual<typeof import('@/api/backtest')>('@/api/backtest')
+  return { ...actual, createBacktest: backtestMocks.createBacktest }
 })
 
 vi.mock('@/api/strategyRegistry', async () => {
@@ -91,10 +108,21 @@ function storeSelection(codes: string[] = ['ALPHA', 'BETA', 'GAMMA']) {
   )
 }
 
+/** 004 등록표 흉내. 픽스처의 전략은 모두 등록되어 있고, 시나리오 규칙 행이 섞여 있다. */
+const RULES_VERSION = 'RULES-TEST-1'
 const versionsFixture: AnalysisVersions = {
-  rulesVersion: 'RULES-TEST-1',
+  strategyRules: [
+    ...registryFixture.strategies.map((strategy) => ({
+      strategyId: strategy.strategyId,
+      rulesVersion: RULES_VERSION,
+      status: 'REGISTERED',
+      provisional: true,
+    })),
+    { strategyId: 'TARGET_RISK_OVERLAY', rulesVersion: '1', status: 'REGISTERED', provisional: true },
+  ],
   costProfileVersion: 'PROVISIONAL-DEMO-1',
   costProfileProvisional: true,
+  costRates: { commissionBps: 1.5, spreadBps: 5, slippageBps: 2, taxBps: 20 },
 }
 
 const windowFixture = { start: '2020-01-02', end: '2024-12-30' }
@@ -114,11 +142,17 @@ function makeSupport(overrides: Partial<AnalysisSupport> = {}) {
   const judgeWarmup: AnalysisSupport['judgeWarmup'] = (): WarmupJudgement => ({
     verdict: { state: 'ok' },
     window: windowFixture,
+    reduction: null,
   })
   const fetchAnalysisVersions: AnalysisSupport['fetchAnalysisVersions'] = async () => versionsFixture
+  // 판정은 위 `judgeWarmup` 흉내가 하므로 조회 결과는 쓰이지 않는다. 네트워크에 닿지 않고 실패만 한다.
+  const fetchEvaluationWindow: AnalysisSupport['fetchEvaluationWindow'] = async () => {
+    throw new Error('평가 기간 조회를 흉내 내지 않았습니다.')
+  }
 
   const support: AnalysisSupport = {
     fetchAnalysisVersions,
+    fetchEvaluationWindow,
     judgeWarmup,
     createBacktest,
     ...overrides,
@@ -325,7 +359,9 @@ describe('StrategySettingsPage', () => {
     expect(request.executionType).toBe('SINGLE')
     expect(request.strategy.strategyId).toBe(selectableStrategy.strategyId)
     expect(request.strategy.registryVersion).toBe(registryFixture.registryVersion)
-    expect(request.strategy.rulesVersion).toBe(versionsFixture.rulesVersion)
+    expect(request.strategy.rulesVersion).toBe(RULES_VERSION)
+    // 비용 버전은 화면에 보인 기본 비용 조건의 버전을 명시해 싣는다(004 결정, T105).
+    expect(request.conditions.costProfileVersion).toBe(versionsFixture.costProfileVersion)
 
     // 등록표의 기본값 그대로다. 사용자는 값을 하나도 입력하지 않았다.
     for (const axis of selectableStrategy.axes) {
@@ -534,14 +570,94 @@ describe('StrategySettingsPage', () => {
     expect(requests).toHaveLength(0)
   })
 
-  it('아무것도 연결되지 않은 기본 상태에서는 두 통로가 모두 막힌 것으로 보인다', async () => {
-    // ①·② 둘 다 미결일 때의 화면이다. 카드는 판정하지 못했다는 사실을 보이고 분석은 막힌다.
-    renderPage()
+  describe('라우트가 쓰는 기본 통로(T107·T110)', () => {
+    /** 기본 설정 워밍업 45일이면 줄어들기만 하고, 최소 평가 기간 1년을 채우는 합성 응답 */
+    function defaultWindow() {
+      const days = Array.from({ length: 91 }, (_, index) =>
+        new Date(Date.UTC(2024, 0, 1 + index)).toISOString().slice(0, 10),
+      )
+      return {
+        commonStart: days[0],
+        commonEnd: '2026-01-05',
+        warmupTradingDays: 0,
+        bindingCandidate: 'BETA.XKRX',
+        bindingSector: 'BETA',
+        excludedRanges: [],
+        evaluable: true,
+        datasetId: 'TEST-DATASET-1',
+        warmupBaseDate: days[0],
+        tradingDaysFromBase: days,
+        maxWarmupTradingDays: 90,
+        excludedRangesFromBase: [],
+      }
+    }
 
-    await findCardNamed(selectableStrategy.name)
+    it('평가 기간과 004 registry를 한 번씩 받아 카드를 판정하고, registry의 버전을 실어 보낸다', async () => {
+      const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
+      try {
+        const user = userEvent.setup()
+        apiMocks.fetchEvaluationWindow.mockResolvedValue(defaultWindow())
+        backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
+        backtestMocks.createBacktest.mockResolvedValue({ backtestId: 'BT-20260917-000009', status: 'QUEUED' })
+        renderPage()
 
-    expect(screen.getAllByText(/공통 평가 기간을 확인할 수 없어/).length).toBeGreaterThan(0)
-    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+        const card = await findCardNamed(selectableStrategy.name)
+        await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('reduced'))
+        expect(apiMocks.fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+        expect(apiMocks.fetchEvaluationWindow.mock.calls[0][0]).toEqual({
+          sectors: ['ALPHA', 'BETA', 'GAMMA'],
+          maxWarmupTradingDays: 90,
+        })
+
+        await user.click(card)
+        await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+        await user.click(actionButton('분석하기'))
+
+        await waitFor(() => expect(backtestMocks.createBacktest).toHaveBeenCalledTimes(1))
+        const request = backtestMocks.createBacktest.mock.calls[0][0] as BacktestCreateRequest
+        expect(request.strategy.rulesVersion).toBe(RULES_VERSION)
+        expect(request.conditions.costProfileVersion).toBe(versionsFixture.costProfileVersion)
+        expect(backtestMocks.fetchAnalysisVersions).toHaveBeenCalledTimes(1)
+        // 조회·전송은 모두 대역이라 실제 네트워크로는 아무것도 나가지 않는다.
+        expect(xhrSpy).not.toHaveBeenCalled()
+      } finally {
+        xhrSpy.mockRestore()
+      }
+    })
+
+    it('공통 평가 기간을 받지 못하면 카드가 판정하지 못했다는 사실을 보이고 분석은 막힌다', async () => {
+      apiMocks.fetchEvaluationWindow.mockRejectedValue(new Error('404'))
+      backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
+      renderPage()
+
+      await findCardNamed(selectableStrategy.name)
+
+      await waitFor(() =>
+        expect(screen.getAllByText(/공통 평가 기간을 확인할 수 없어/).length).toBeGreaterThan(0),
+      )
+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+    })
+
+    it('평가 기간을 받지 못했다가 다시 불러오면 그 응답으로 카드를 판정한다', async () => {
+      // 409 EVALUATION_WINDOW_NOT_READY처럼 곧 풀리는 실패는 새로 고치지 않고도 다시 불러올 수 있어야 한다.
+      const user = userEvent.setup()
+      apiMocks.fetchEvaluationWindow
+        .mockRejectedValueOnce(new Error('409 EVALUATION_WINDOW_NOT_READY'))
+        .mockResolvedValueOnce(defaultWindow())
+      backtestMocks.fetchAnalysisVersions.mockResolvedValue(versionsFixture)
+      renderPage()
+
+      const retry = await screen.findByRole('button', { name: '평가 기간 다시 불러오기' })
+      expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('unknown')
+
+      await user.click(retry)
+
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+      expect(apiMocks.fetchEvaluationWindow).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole('button', { name: '평가 기간 다시 불러오기' })).toBeNull()
+    })
   })
 
   it('워밍업을 채우지 못하는 전략은 고를 수 없고 분석도 막힌다', async () => {
@@ -551,6 +667,7 @@ describe('StrategySettingsPage', () => {
       judgeWarmup: () => ({
         verdict: { state: 'blocked', message: '최소 평가 기간(3년)에 못 미칩니다.' },
         window: null,
+        reduction: null,
       }),
     })
     renderPage(support)
@@ -1043,7 +1160,9 @@ describe('StrategySettingsPage', () => {
      * 구간이 사라지는 것으로 둔다. **줄어드는 것과 막히는 것을 구분하는지** 함께 본다(quickstart 7).
      */
     const judgeByWarmup: AnalysisSupport['judgeWarmup'] = ({ warmupTradingDays }) => {
-      if (warmupTradingDays <= 15) return { verdict: { state: 'ok' }, window: windowFixture }
+      if (warmupTradingDays <= 15) {
+        return { verdict: { state: 'ok' }, window: windowFixture, reduction: null }
+      }
       if (warmupTradingDays <= 45) {
         return {
           verdict: {
@@ -1051,6 +1170,7 @@ describe('StrategySettingsPage', () => {
             message: `워밍업 ${warmupTradingDays}거래일만큼 평가 기간이 줄어듭니다.`,
           },
           window: windowFixture,
+          reduction: null,
         }
       }
       return {
@@ -1059,6 +1179,7 @@ describe('StrategySettingsPage', () => {
           message: `워밍업 ${warmupTradingDays}거래일을 채우면 평가할 구간이 남지 않습니다.`,
         },
         window: null,
+        reduction: null,
       }
     }
 
@@ -1178,7 +1299,7 @@ describe('StrategySettingsPage', () => {
       apiMocks.fetchStrategyRegistry.mockResolvedValue(nextRegistry())
       await user.click(actionButton('분석하기'))
 
-      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
       await waitFor(() =>
         expect(notice.parentElement?.textContent).toContain(
           '바뀐 등록표에서도 쓸 수 있어 그대로 두었습니다',
@@ -1198,7 +1319,66 @@ describe('StrategySettingsPage', () => {
       expect(calls[1].strategy.registryVersion).toBe('TEST-REGISTRY-003-2')
       expect(calls[1].strategy.parameters.driftWindow).toBe(15)
       // 다시 누르면 앞선 알림을 거둔다.
-      expect(screen.queryByText(/확인하신 사이에 등록표가 바뀌었습니다/)).toBeNull()
+      expect(screen.queryByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)).toBeNull()
+    })
+
+    it('규칙 버전이 대체되어 409로 거절되면 004 규칙 등록표도 다시 받고, 받기 전에는 다시 보낼 수 없다', async () => {
+      // 004 결정: 대체된 옛 규칙 버전을 실은 새 요청은 409 REGISTRY_VERSION_CHANGED다. 003 등록표는 그대로다.
+      const user = userEvent.setup()
+      const calls: BacktestCreateRequest[] = []
+      const rulesFor = (rulesVersion: string): AnalysisVersions => ({
+        ...versionsFixture,
+        strategyRules: versionsFixture.strategyRules.map((row) =>
+          row.strategyId === selectableStrategy.strategyId ? { ...row, rulesVersion } : row,
+        ),
+      })
+      let releaseSecond: (versions: AnalysisVersions) => void = () => {}
+      const fetchAnalysisVersions = vi.fn<AnalysisSupport['fetchAnalysisVersions']>()
+      fetchAnalysisVersions.mockResolvedValueOnce(rulesFor('R-1')).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseSecond = resolve
+          }),
+      )
+      const { support } = makeSupport({
+        fetchAnalysisVersions,
+        createBacktest: async (request) => {
+          calls.push(request)
+          if (calls.length === 1) throw registryVersionChangedError()
+          return { backtestId: 'BT-20260917-000003', status: 'QUEUED' }
+        },
+      })
+      renderPage(support)
+
+      await user.click(await findCardNamed(selectableStrategy.name))
+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+      // 003 등록표는 바뀌지 않았다. 실제 조회처럼 같은 내용의 새 응답을 돌려준다.
+      apiMocks.fetchStrategyRegistry.mockResolvedValue({ ...registryFixture })
+      await user.click(actionButton('분석하기'))
+      await waitFor(() => expect(calls).toHaveLength(1))
+      expect(calls[0].strategy.rulesVersion).toBe('R-1')
+
+      // 새 규칙 버전을 받기 전에는 옛 버전으로 다시 보낼 수 없고, 다시 받았다고 말하지도 않는다.
+      await waitFor(() => expect(fetchAnalysisVersions).toHaveBeenCalledTimes(2))
+      expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전을 확인하는 중입니다')
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
+      expect(notice.parentElement?.getAttribute('data-phase')).toBe('reloading')
+      // 다시 받는 동안 비용 조건을 "확인할 수 없음"으로 말하지 않는다. '분석하기' 사유와 같은 말을 한다.
+      const summary = screen.getByLabelText('분석 조건 요약')
+      expect(summary.textContent).toContain('확인하는 중')
+      expect(summary.textContent).not.toContain('확인할 수 없음')
+      await user.click(actionButton('분석하기'))
+      expect(calls).toHaveLength(1)
+
+      await act(async () => releaseSecond(rulesFor('R-2')))
+      await waitFor(() => expect(notice.parentElement?.getAttribute('data-phase')).toBe('reloaded'))
+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+      // 자동으로 다시 보내지 않는다.
+      expect(calls).toHaveLength(1)
+
+      await user.click(actionButton('분석하기'))
+      await waitFor(() => expect(calls).toHaveLength(2))
+      expect(calls[1].strategy.rulesVersion).toBe('R-2')
     })
 
     it('409 직후 새 등록표를 받기 전에는 바뀐 등록표로 확인했다고 말하지 않는다', async () => {
@@ -1233,7 +1413,7 @@ describe('StrategySettingsPage', () => {
       observer.observe(document.body, { subtree: true, childList: true, characterData: true })
       try {
         await user.click(actionButton('분석하기'))
-        const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+        const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
         await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))
         expect(notice.parentElement?.textContent).toContain('불러오는 중')
 
@@ -1278,7 +1458,7 @@ describe('StrategySettingsPage', () => {
       )
       await user.click(actionButton('분석하기'))
 
-      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)
+      const notice = await screen.findByText(/확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다/)
       await waitFor(() =>
         expect(notice.parentElement?.textContent).toContain('쓸 수 없게 된 값이 있습니다'),
       )
@@ -1509,5 +1689,500 @@ describe('StrategySettingsPage', () => {
       expect(alert.textContent).toContain('허용 범위 밖이라 접수되지 않았습니다')
       expect(alert.textContent).not.toContain('허용 범위=x')
     })
+  })
+})
+
+describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2·8, SC-004)', () => {
+  /** 기간 판정 흉내. 줄어든 기간과 그 원인을 001 응답 모양 그대로 넘긴다 */
+  const reducedJudgement = (): WarmupJudgement => ({
+    verdict: { state: 'reduced', message: '통로가 지은 문장' },
+    window: windowFixture,
+    reduction: { startWithoutWarmup: '2019-09-02', bindingCandidate: 'BETA.XKRX' },
+  })
+
+  function storeCondition(condition: Record<string, unknown>) {
+    window.sessionStorage.setItem(
+      STRATEGY_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        registryVersion: registryFixture.registryVersion,
+        universeSize: 3,
+        selectedStrategyId: null,
+        valuesByStrategy: {},
+        analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', ...condition },
+        invalidValues: [],
+      }),
+    )
+  }
+
+  async function openConditions(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: '기간·금액·조건' }))
+    return screen.getByRole('region', { name: '기간·금액·조건' })
+  }
+
+  it('패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+
+    fireEvent.change(within(panel).getByLabelText('시작일'), { target: { value: '2021-01-04' } })
+    fireEvent.change(within(panel).getByLabelText('종료일'), { target: { value: '2023-12-28' } })
+    const amount = registryFixture.analysisConditions.initialAmount
+    const chosenAmount = amount.default + amount.step
+    fireEvent.change(within(panel).getByRole('textbox', { name: /시작 금액/ }), {
+      target: { value: String(chosenAmount) },
+    })
+
+    const summary = screen.getByLabelText('분석 조건 요약')
+    expect(summary.textContent).toContain('2021-01-04 ~ 2023-12-28')
+    expect(summary.textContent).toContain(chosenAmount.toLocaleString('ko-KR'))
+
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.start).toBe('2021-01-04')
+    expect(requests[0].conditions.end).toBe('2023-12-28')
+    expect(requests[0].conditions.initialCash).toBe(chosenAmount.toFixed(2))
+  })
+
+  it('패널의 비용 가정은 통로가 준 수치·버전·임시 여부를 읽기 전용으로 보인다', async () => {
+    const user = userEvent.setup()
+    const { support } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+    await waitFor(() =>
+      expect(within(panel).getByRole('group', { name: '비용 가정' }).textContent).toContain(
+        versionsFixture.costProfileVersion,
+      ),
+    )
+    const group = within(panel).getByRole('group', { name: '비용 가정' })
+    expect(group.textContent).toContain('수수료 1.5bp')
+    expect(group.textContent).toContain('세금 20bp')
+    expect(group.textContent).toContain('임시값')
+  })
+
+  it('비용 조건을 확인할 수 없으면 패널이 그 사실을 말하고 분석하기가 막힌다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({ fetchAnalysisVersions: async () => null })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+
+    await waitFor(() => expect(within(panel).getByText(/비용 조건을 확인할 수 없습니다/)).toBeTruthy())
+    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+    expect(requests).toHaveLength(0)
+  })
+
+  it('줄어든 기간과 원인을 고른 카드와 분석하기 바로 위에 같은 문장으로 보인다', async () => {
+    // SC-004. 원인은 시작일을 정한 섹터의 이름과 워밍업을 이루는 항목의 등록표 라벨이다.
+    const user = userEvent.setup()
+    const { support } = makeSupport({ judgeWarmup: reducedJudgement })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    const notice = await screen.findByRole('status', { name: '줄어든 평가 기간' })
+    const sentence = notice.textContent ?? ''
+    expect(sentence).toContain('나섹터')
+    expect(sentence).toContain('표류 관측 창')
+    expect(sentence).toContain(`${windowFixture.start} ~ ${windowFixture.end}`)
+    expect(sentence).toContain('2019-09-02')
+
+    const card = await findCardNamed(selectableStrategy.name)
+    expect(within(card).getByText(sentence)).toBeTruthy()
+
+    // 안내는 '분석하기'보다 앞에 놓인다.
+    expect(
+      notice.compareDocumentPosition(actionButton('분석하기')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('줄지 않았으면 줄어든 기간 안내가 없다', async () => {
+    const user = userEvent.setup()
+    const { support } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    expect(screen.queryByRole('status', { name: '줄어든 평가 기간' })).toBeNull()
+  })
+
+  it('최소 평가 기간을 바꾸면 그 값으로 카드 판정을 다시 한다', async () => {
+    // quickstart 7-2. 같은 범위·워밍업인데 엄격(3년)이면 막히고 완화로 돌리면 풀린다.
+    const user = userEvent.setup()
+    const { support } = makeSupport({
+      judgeWarmup: ({ minEvaluationYears }) =>
+        minEvaluationYears >= 3
+          ? {
+              verdict: { state: 'blocked', message: '최소 평가 기간(3년)에 못 미칩니다.' },
+              window: null,
+              reduction: null,
+            }
+          : { verdict: { state: 'ok' }, window: windowFixture, reduction: null },
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+
+    await user.click(within(panel).getByRole('radio', { name: '엄격(3년)' }))
+    const card = await findCardNamed(selectableStrategy.name)
+    await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('blocked'))
+    expect(reasonOf(actionButton('분석하기'))).toContain('최소 평가 기간(3년)에 못 미칩니다')
+
+    await user.click(within(panel).getByRole('radio', { name: '완화(제한 없음)' }))
+    await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('ok'))
+  })
+
+  it('고른 기간이 최소 평가 기간보다 짧으면 분석하기가 막히고 최소 평가 기간을 풀면 열린다', async () => {
+    const user = userEvent.setup()
+    storeCondition({ periodStart: '2022-01-03', periodEnd: '2022-06-30' })
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() =>
+      expect(reasonOf(actionButton('분석하기'))).toContain('최소 평가 기간(기본(1년))보다 짧습니다'),
+    )
+
+    const panel = await openConditions(user)
+    await user.click(within(panel).getByRole('radio', { name: '완화(제한 없음)' }))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.start).toBe('2022-01-03')
+    expect(requests[0].conditions.end).toBe('2022-06-30')
+  })
+
+  it('보관된 기간이 지금 범위를 벗어나면 잘라 맞추지 않고 막으며, 되돌리면 범위 전체로 보낸다', async () => {
+    // FR-017. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다.
+    const user = userEvent.setup()
+    storeCondition({ periodStart: '2019-03-04', periodEnd: '2023-12-28' })
+    const { support, requests } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const outOfRange = '범위(2020-01-02 ~ 2024-12-30) 밖입니다'
+    await waitFor(() => expect(reasonOf(actionButton('분석하기'))).toContain(outOfRange))
+    // 요약 줄은 사용자가 고른 기간을 그대로 보인다. 경계로 잘라 보이지 않는다.
+    expect(screen.getByLabelText('분석 조건 요약').textContent).toContain('2019-03-04 ~ 2023-12-28')
+
+    const notice = screen
+      .getAllByRole('status')
+      .find((element) => element.textContent?.includes(outOfRange))
+    expect(notice).toBeTruthy()
+    await user.click(
+      within(notice as HTMLElement).getByRole('button', { name: '범위 전체로 되돌리기' }),
+    )
+
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.start).toBe(windowFixture.start)
+    expect(requests[0].conditions.end).toBe(windowFixture.end)
+  })
+
+  it('원인을 받지 못한 줄어든 판정도 분석하기 바로 위에 보인다', async () => {
+    // SC-004. 통로가 `reduction`을 싣지 않아도 안내 자리가 비지 않는다.
+    const user = userEvent.setup()
+    const { support } = makeSupport({
+      judgeWarmup: () => ({
+        verdict: { state: 'reduced', message: '평가 기간이 줄어듭니다.' },
+        window: windowFixture,
+        reduction: null,
+      }),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    const notice = await screen.findByRole('status', { name: '줄어든 평가 기간' })
+    expect(notice.textContent).toBe('평가 기간이 줄어듭니다.')
+  })
+
+  it('고르지 않은 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다', async () => {
+    // 범위 전체의 판정은 001 산식을 따르는 카드 판정이 맡는다. 달력 규약으로는 하루 모자라는 범위다.
+    const user = userEvent.setup()
+    const shortWindow = { start: '2023-06-01', end: '2024-05-31' }
+    const { support } = makeSupport({
+      judgeWarmup: () => ({ verdict: { state: 'ok' }, window: shortWindow, reduction: null }),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    expect(reasonOf(actionButton('분석하기'))).not.toContain('최소 평가 기간')
+  })
+
+  it('고른 뒤 범위가 줄어 기간이 밖으로 나가면 그때 막는다', async () => {
+    // 최소 평가 기간을 바꾸는 등으로 판정이 바뀌면 범위도 달라질 수 있다. 흉내는 엄격할수록 범위를 좁힌다.
+    const user = userEvent.setup()
+    const narrow = { start: '2022-01-03', end: '2024-12-30' }
+    const { support, requests } = makeSupport({
+      judgeWarmup: ({ minEvaluationYears }) => ({
+        verdict: { state: 'ok' },
+        window: minEvaluationYears === 0 ? windowFixture : narrow,
+        reduction: null,
+      }),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+    await user.click(within(panel).getByRole('radio', { name: '완화(제한 없음)' }))
+    fireEvent.change(within(panel).getByLabelText('시작일'), { target: { value: '2021-01-04' } })
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+
+    await user.click(within(panel).getByRole('radio', { name: '기본(1년)' }))
+
+    await waitFor(() =>
+      expect(reasonOf(actionButton('분석하기'))).toContain('범위(2022-01-03 ~ 2024-12-30) 밖입니다'),
+    )
+    expect(screen.getByLabelText('분석 조건 요약').textContent).toContain('2021-01-04 ~ 2024-12-30')
+    expect(within(panel).getByLabelText('시작일').getAttribute('aria-invalid')).toBe('true')
+    expect(requests).toHaveLength(0)
+  })
+
+  it('입력이 무효로 끝나 기본 금액으로 돌아가면 기본값을 사용자 값으로 담지 않는다', async () => {
+    const user = userEvent.setup()
+    const { support } = makeSupport()
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+    const field = within(panel).getByRole('textbox', { name: /시작 금액/ })
+    const amount = registryFixture.analysisConditions.initialAmount
+
+    fireEvent.focus(field)
+    fireEvent.change(field, { target: { value: String(amount.default + amount.step) } })
+    fireEvent.change(field, { target: { value: String(amount.max + amount.step) } })
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.sessionStorage.getItem(STRATEGY_SETTINGS_STORAGE_KEY) ?? '{}')
+      expect(stored.analysisCondition).toBeTruthy()
+      expect(stored.analysisCondition.initialAmount).toBeUndefined()
+    })
+    expect(screen.getByLabelText('분석 조건 요약').textContent).toContain(
+      amount.default.toLocaleString('ko-KR'),
+    )
+  })
+
+  it('전략을 고르지 않았어도 최소 평가 기간을 바꿔 막힌 카드를 풀 수 있다', async () => {
+    // T102, FR-011a. 최소 평가 기간이 모든 카드를 막으면 카드를 고를 수 없으므로, 그 값을 되돌릴 입력이
+    // 선택에 묶여 있으면 빠져나갈 길이 없다.
+    const user = userEvent.setup()
+    storeCondition({ minEvaluationYears: 3 })
+    const { support } = makeSupport({
+      judgeWarmup: ({ minEvaluationYears }) =>
+        minEvaluationYears >= 3
+          ? {
+              verdict: { state: 'blocked', message: '최소 평가 기간(3년)에 못 미칩니다.' },
+              window: null,
+              reduction: null,
+            }
+          : { verdict: { state: 'ok' }, window: windowFixture, reduction: null },
+    })
+    const { container } = renderPage(support)
+
+    const card = await findCardNamed(selectableStrategy.name)
+    await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('blocked'))
+    await user.click(card)
+    expect(card.getAttribute('aria-pressed')).toBe('false')
+    // 기본 화면의 입력은 늘지 않는다(SC-005). 패널은 접힌 채다.
+    expect(container.querySelectorAll('input, select, textarea')).toHaveLength(0)
+
+    const panel = await openConditions(user)
+    // 전략을 고르기 전에는 기간을 정할 범위가 없다. 날짜를 지어 보이지 않는다.
+    expect((within(panel).getByLabelText('시작일') as HTMLInputElement).disabled).toBe(true)
+    expect(within(panel).getByText(/전략을 고르면/)).toBeTruthy()
+
+    await user.click(within(panel).getByRole('radio', { name: '완화(제한 없음)' }))
+    await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('ok'))
+    await user.click(card)
+    expect(card.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('바꾼 기간은 화면을 새로 그려도 남는다', async () => {
+    // FR-017, quickstart 8.
+    const user = userEvent.setup()
+    const first = renderPage(makeSupport().support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const panel = await openConditions(user)
+    fireEvent.change(within(panel).getByLabelText('시작일'), { target: { value: '2021-01-04' } })
+    await waitFor(() =>
+      expect(screen.getByLabelText('분석 조건 요약').textContent).toContain('2021-01-04 ~ 2024-12-30'),
+    )
+    first.unmount()
+
+    renderPage(makeSupport().support)
+    await findCardNamed(selectableStrategy.name)
+    await waitFor(() =>
+      expect(screen.getByLabelText('분석 조건 요약').textContent).toContain('2021-01-04 ~ 2024-12-30'),
+    )
+  })
+})
+
+describe('StrategySettingsPage 공통 평가 기간 연결(T042, T098)', () => {
+  /**
+   * 합성 거래일 목록. 날마다 하루씩 이어진다 — 이 검사는 달력의 모양이 아니라 N번째 날을 쓴다는 것만 본다.
+   * `commonEnd`는 워밍업 45일(기본 설정)이면 최소 평가 기간 1년을 채우고 90일이면 못 채우는 날로 두었다.
+   */
+  function syntheticWindow(): EvaluationWindow {
+    const days = Array.from({ length: 91 }, (_, index) => {
+      const date = new Date(Date.UTC(2024, 0, 1 + index))
+      return date.toISOString().slice(0, 10)
+    })
+    return {
+      commonStart: days[45],
+      commonEnd: '2025-03-01',
+      warmupTradingDays: 45,
+      bindingCandidate: 'BETA.XKRX',
+      bindingSector: 'BETA',
+      excludedRanges: [],
+      evaluable: true,
+      datasetId: 'TEST-DATASET-1',
+      warmupBaseDate: days[0],
+      tradingDaysFromBase: days,
+      maxWarmupTradingDays: 90,
+      excludedRangesFromBase: [],
+    }
+  }
+
+  it('섹터 집합으로 한 번만 조회하고, 값을 바꾸는 동안에는 받아 둔 거래일로 다시 판정한다', async () => {
+    const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')
+    try {
+      const user = userEvent.setup()
+      const fetchEvaluationWindow = vi.fn<AnalysisSupport['fetchEvaluationWindow']>(async () =>
+        syntheticWindow(),
+      )
+      const { support } = makeSupport({
+        fetchEvaluationWindow,
+        // 판정은 실제 통로의 연결을 쓴다. 조회만 흉내 낸다(T106).
+        judgeWarmup: connectedAnalysisSupport.judgeWarmup,
+      })
+      renderPage(support)
+
+      await user.click(await findCardNamed(selectableStrategy.name))
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+      expect(fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+      // 등록표에서 계산한 상한(표류 균형 맞추기의 90)과 섹터 코드를 싣는다. 전략은 싣지 않는다.
+      expect(fetchEvaluationWindow.mock.calls[0][0]).toEqual({
+        sectors: ['ALPHA', 'BETA', 'GAMMA'],
+        maxWarmupTradingDays: 90,
+      })
+
+      await user.click(screen.getByRole('button', { name: '상세 설정' }))
+      await user.click(screen.getByRole('radio', { name: '90거래일' }))
+
+      const card = await findCardNamed(selectableStrategy.name)
+      expect(card.getAttribute('data-warmup')).toBe('blocked')
+      expect(within(card).getByText(/최소 평가 기간\(1년\)에 못 미칩니다/)).toBeTruthy()
+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+
+      await user.click(screen.getByRole('radio', { name: '15거래일' }))
+      await waitFor(async () =>
+        expect((await findCardNamed(selectableStrategy.name)).getAttribute('data-warmup')).toBe('reduced'),
+      )
+
+      expect(fetchEvaluationWindow).toHaveBeenCalledTimes(1)
+      expect(xhrSpy).not.toHaveBeenCalled()
+    } finally {
+      xhrSpy.mockRestore()
+    }
+  })
+
+  it('평가 기간을 받지 못하면 카드가 그 사실을 보이고 분석하기를 막는다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({
+      judgeWarmup: connectedAnalysisSupport.judgeWarmup,
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() =>
+      expect(reasonOf(actionButton('분석하기'))).toContain('공통 평가 기간을 확인할 수 없어'),
+    )
+    const card = await findCardNamed(selectableStrategy.name)
+    expect(card.getAttribute('data-warmup')).toBe('unknown')
+
+    await user.click(actionButton('분석하기'))
+    expect(requests).toHaveLength(0)
+  })
+})
+
+describe('StrategySettingsPage 규칙 버전(T039, 004 GET /backtests/registry)', () => {
+  function withRulesFor(
+    status: string,
+    extra: AnalysisVersions['strategyRules'] = [],
+  ): AnalysisVersions {
+    return {
+      ...versionsFixture,
+      strategyRules: [
+        ...versionsFixture.strategyRules.filter(
+          (row) => row.strategyId !== selectableStrategy.strategyId,
+        ),
+        { strategyId: selectableStrategy.strategyId, rulesVersion: 'R-2', status, provisional: true },
+        ...extra,
+      ],
+    }
+  }
+
+  const withoutRow: AnalysisVersions = {
+    ...versionsFixture,
+    strategyRules: versionsFixture.strategyRules.filter(
+      (row) => row.strategyId !== selectableStrategy.strategyId,
+    ),
+  }
+
+  it.each([
+    ['계산 규칙이 확정되지 않은 전략', withRulesFor('PENDING_DECISION'), '계산 규칙이 아직 확정되지 않아'],
+    ['등록표에 행이 없는 전략', withoutRow, '계산 규칙 버전을 확인할 수 없어'],
+    [
+      '등록된 행이 둘인 전략',
+      withRulesFor('REGISTERED', [
+        {
+          strategyId: selectableStrategy.strategyId,
+          rulesVersion: 'R-3',
+          status: 'REGISTERED',
+          provisional: true,
+        },
+      ]),
+      '계산 규칙 버전을 확인할 수 없어',
+    ],
+  ])('%s은 버전을 고르지 않고 분석하기를 막는다', async (_, versions, reason) => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({ fetchAnalysisVersions: async () => versions })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(reasonOf(actionButton('분석하기'))).toContain(reason))
+
+    await user.click(actionButton('분석하기'))
+    expect(requests).toHaveLength(0)
+  })
+
+  it('고른 전략의 등록된 버전을 싣는다', async () => {
+    const user = userEvent.setup()
+    const { support, requests } = makeSupport({
+      fetchAnalysisVersions: async () => withRulesFor('REGISTERED'),
+    })
+    renderPage(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].strategy.rulesVersion).toBe('R-2')
   })
 })

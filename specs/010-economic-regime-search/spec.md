@@ -244,6 +244,7 @@
 
 ## Success Criteria *(mandatory)*
 
+
 ### Measurable Outcomes
 
 - **SC-001**: 같은 기준월·분야·자료/모델 버전·가용 후보 집합에서 비교 전략을 바꿔도 경제환경 후보 순위가 100% 같다.

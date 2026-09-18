@@ -361,6 +361,59 @@ class TestRawArchiving:
         assert [row["ISU_CD"] for row in kept] == ["475270", "069500", "091160"]
 
 
+class CountingSource:
+    """원천을 몇 번 불렀는지 센다. 이어받기가 호출을 아끼는지 보려면 세야 한다."""
+
+    def __init__(self) -> None:
+        self.inner = FixtureSource()
+        self.calls = 0
+
+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:
+        self.calls += 1
+        return self.inner.rows(group, endpoint, bas_dd)
+
+
+class TestResumableArchiving:
+    """끊긴 수집을 이어받는 덮개.
+
+    2010-01-04부터 모으면 호출이 만 번에 가깝고 두세 시간이 걸린다. 한 번 끊길 때마다 처음부터
+    다시 받으면 그 시간과 이용 한도를 다시 쓴다. 그래서 **이미 받은 날은 다시 부르지 않는다.**
+    """
+
+    def test_받지_않은_날은_원천을_부르고_보관한다(self, tmp_path: Path) -> None:
+        counting = CountingSource()
+        source = krx.ResumableArchivingSource(inner=counting, root=tmp_path)
+
+        collect(days=(date(2026, 9, 10),), source=source)
+
+        assert counting.calls == 1
+        assert (tmp_path / "etp" / "etf_bydd_trd" / "20260910.json").exists()
+
+    def test_이미_받은_날은_원천을_부르지_않는다(self, tmp_path: Path) -> None:
+        """이것이 이어받기의 요점이다. 호출을 세지 않으면 아낀 것을 확인할 수 없다."""
+        counting = CountingSource()
+        source = krx.ResumableArchivingSource(inner=counting, root=tmp_path)
+        collect(days=(date(2026, 9, 10),), source=source)
+        assert counting.calls == 1
+
+        second = collect(days=(date(2026, 9, 10),), source=source)
+
+        assert counting.calls == 1, "보관본이 있는데 원천을 다시 불렀다"
+        # 보관본에서 읽어도 원천을 부른 것과 같은 값이 나와야 한다. 호출만 아끼고 결과가
+        # 달라지면 이어받은 수집과 한 번에 받은 수집이 서로 다른 자료가 된다.
+        assert [quote.instrument_id for quote in second.quotes] == ["069500.XKRX"]
+
+    def test_보관본이_망가졌으면_조용히_넘기지_않는다(self, tmp_path: Path) -> None:
+        """망가진 파일을 빈 응답으로 읽으면 그날이 휴장일로 둔갑한다."""
+        target = tmp_path / "etp" / "etf_bydd_trd" / "20260910.json"
+        target.parent.mkdir(parents=True)
+        target.write_text("{}", encoding="utf-8")
+        source = krx.ResumableArchivingSource(inner=CountingSource(), root=tmp_path)
+
+        with pytest.raises(krx.RawArchiveError):
+            collect(days=(date(2026, 9, 10),), source=source)
+
+
 class TestApiKey:
     """인증키는 ``.env``의 ``KRX_API_KEY``에서만 읽는다 (FR-012)."""
 

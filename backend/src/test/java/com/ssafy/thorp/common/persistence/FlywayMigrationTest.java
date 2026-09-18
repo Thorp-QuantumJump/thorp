@@ -1,6 +1,7 @@
 package com.ssafy.thorp.common.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -8,24 +9,17 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.support.MigrationFiles;
 import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -41,20 +35,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>파일명 규칙과 버전 중복은 {@code MigrationFileConventionTest}가 Docker 없이 따로 검사한다. 이 테스트는 Docker가 없으면 통째로
  * 스킵되기 때문이다.
  */
-@DataJpaTest
-@Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
-class FlywayMigrationTest extends PostgresTestSupport {
+class FlywayMigrationTest extends RepositoryTestSupport {
 
     private static final BacktestPeriod PERIOD =
             new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
 
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private BacktestRunRepositoryImpl repository;
@@ -264,6 +248,25 @@ class FlywayMigrationTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("backtest_reuse_event 의 요청 참조는 끊을 수 있고 살아 있는 요청의 중복 기록은 여전히 막는다 (spec 005 T022)")
+    void backtestReuseEventRequestIsDetachable() {
+        // 만료된 비로그인 요청을 지워도 기록은 reuse_count 근거로 남기고 request_id 만 NULL 로 끊는다.
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT is_nullable FROM information_schema.columns"
+                                        + " WHERE table_name = 'backtest_reuse_event'"
+                                        + " AND column_name = 'request_id'",
+                                String.class))
+                .isEqualTo("YES");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT indexname FROM pg_indexes"
+                                        + " WHERE tablename = 'backtest_reuse_event'",
+                                String.class))
+                .contains("uk_backtest_reuse_event_request");
+    }
+
+    @Test
     @DisplayName("backtest_run_dlq_attempt 가 DLQ 멱등 판정에 필요한 컬럼만 갖는다 (R-18 ③)")
     void backtestRunDlqAttemptHasAllColumns() {
         assertThat(columnsOf("backtest_run_dlq_attempt"))
@@ -371,13 +374,13 @@ class FlywayMigrationTest extends PostgresTestSupport {
                 .isTrue();
 
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
-        // (constitution "실행 전 결정 임의 확정 금지").
+        // (constitution "실행 전 결정 임의 확정 금지"). PD-04가 확정돼 최소분산은 빠졌다(T022).
         assertThat(
                         jdbcTemplate.queryForList(
                                 "SELECT strategy_id FROM strategy_rules"
                                         + " WHERE status = 'PENDING_DECISION' AND spec IS NULL",
                                 String.class))
-                .containsExactlyInAnyOrder("SECTOR_MOMENTUM", "MINIMUM_VARIANCE");
+                .containsExactly("SECTOR_MOMENTUM");
 
         // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
         assertThat(
@@ -386,6 +389,62 @@ class FlywayMigrationTest extends PostgresTestSupport {
                                         + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
                                 Boolean.class))
                 .isTrue();
+    }
+
+    @Test
+    @DisplayName("공통 출력 규칙 두 키가 상한을 쓰는 전략 모두에 있다 — 한 전략만 빠지면 그 전략이 다른 규칙으로 돈다")
+    void commonOutputKeysAreOnEveryStrategyThatUsesACap() {
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT strategy_id FROM strategy_rules"
+                                        + " WHERE spec -> 'weightCap' IS NOT NULL"
+                                        + " AND (spec -> 'capOverflow' IS NULL"
+                                        + "      OR spec -> 'weightUnit' IS NULL)",
+                                String.class))
+                .as("상한이 있는데 잔여 정책·출력 단위가 없는 규칙 행")
+                .isEmpty();
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT spec ->> 'estimationMethod' FROM strategy_rules"
+                                        + " WHERE strategy_id = 'MINIMUM_VARIANCE'"
+                                        + " AND status = 'REGISTERED' AND provisional = false",
+                                String.class))
+                .isEqualTo("SAMPLE_COV");
+    }
+
+    @Test
+    @DisplayName("가드: 옛 의미로 계산한 INVERSE_VOLATILITY/1 결과가 남아 있으면 마이그레이션이 기동을 막는다")
+    void theGuardRefusesToRunWhenOldResultsWouldBeReinterpreted() {
+        // 재현 키에 rulesVersion이 들어가므로 옛 결과가 한 건이라도 남으면 새 의미의 요청이
+        // 옛 의미의 결과를 REUSED로 받는다 — 오류도 표시도 없이. 그래서 기동을 막는다.
+        repository.save(
+                BacktestRun.create(
+                        "INVERSE_VOLATILITY",
+                        "1",
+                        Map.of("rebalance", "MONTH_END"),
+                        List.of(new InstrumentId("069500.XKRX")),
+                        PERIOD,
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42));
+        entityManager.flush();
+        jdbcTemplate.update(
+                "UPDATE backtest_run SET rules_version = '1'"
+                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'");
+
+        assertThatThrownBy(() -> jdbcTemplate.execute(guardStatement()))
+                .hasMessageContaining("INVERSE_VOLATILITY/1 결과가 남아 있다");
+    }
+
+    /** 마이그레이션 파일의 가드 블록 그대로. 문장을 여기 옮겨 적으면 파일이 바뀌어도 테스트만 통과한다. */
+    private static String guardStatement() {
+        String sql = MigrationFiles.read("V20260917190000__minimum_variance_rules.sql");
+        int begin = sql.indexOf("DO $$");
+        int end = sql.indexOf("$$;", begin) + "$$;".length();
+        return sql.substring(begin, end);
     }
 
     @Test

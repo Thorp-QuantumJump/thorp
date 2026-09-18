@@ -41,6 +41,7 @@ describe('fetchGlossaryEntry', () => {
     const get = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(entry))
 
     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'ready', entry })
+    expect(get).toHaveBeenCalledTimes(1)
     expect(get).toHaveBeenCalledWith('/learning/terms/synthetic-term', { signal: undefined })
   })
 
@@ -49,6 +50,13 @@ describe('fetchGlossaryEntry', () => {
       axiosResponse({ success: true, data: entry, error: null }),
     )
     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'ready', entry })
+  })
+
+  it('봉투에 싸인 404 LEARNING_TERM_NOT_READY도 설명 준비 중이다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(404, { success: false, data: null, error: { code: 'LEARNING_TERM_NOT_READY' } }),
+    )
+    await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'notReady' })
   })
 
   it('404 LEARNING_TERM_NOT_READY만 설명 준비 중이다', async () => {
@@ -60,12 +68,15 @@ describe('fetchGlossaryEntry', () => {
 
   it.each([
     ['코드 없는 404', axiosFailure(404, {})],
+    ['다른 코드의 404', axiosFailure(404, { error: { code: 'LEARNING_ARTICLE_UNAVAILABLE' } })],
     ['서버 오류', axiosFailure(500, { code: 'LEARNING_TERM_NOT_READY' })],
     ['연결 실패', new AxiosError('network')],
+    ['시간 초과', new AxiosError('timeout of 10000ms exceeded', AxiosError.ECONNABORTED)],
     ['취소', new CanceledError()],
-  ])('%s는 불러오지 못함이다', async (_, error) => {
-    vi.spyOn(apiClient, 'get').mockRejectedValue(error)
+  ])('%s는 불러오지 못함이고 다시 부르지 않는다', async (_, error) => {
+    const get = vi.spyOn(apiClient, 'get').mockRejectedValue(error)
     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'failed' })
+    expect(get).toHaveBeenCalledTimes(1)
   })
 
   it('모양이 계약과 다른 응답을 빈 글로 채우지 않는다', async () => {

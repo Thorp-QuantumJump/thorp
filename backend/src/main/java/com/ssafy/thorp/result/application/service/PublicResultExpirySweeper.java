@@ -31,7 +31,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p><b>실행이 끝나지 않은 요청은 지우지 않는다</b>(T093). 대기·실행 중인 실행의 요청을 지우면 비로그인 대기 몫에서 빠져 한도가 샌다. 조회는 만료 시각이
  * 지났으면 그대로 410이고, 실행이 끝난 뒤 다음 주기에 지운다.
  *
- * <p>한 건을 지우는 순서는 외래 키가 정한다: 재사용 기록 → 재시도 요청의 원본 참조 → 요청 행. <b>건마다 트랜잭션을 연다</b>({@code
+ * <p><b>재사용·합류 기록도 지우지 않는다.</b> 그 기록은 {@code v_run_metric_summary}의 {@code reuse_count}가 세는 동일 결과
+ * 재조회의 측정 근거다(constitution 원칙 IX, FR-021). 지우면 정리할 때마다 집계가 줄어드므로 요청과의 연결만 NULL로 끊는다.
+ *
+ * <p>한 건을 지우는 순서는 외래 키가 정한다: 재사용 기록의 요청 참조 → 재시도 요청의 원본 참조 → 요청 행. <b>건마다 트랜잭션을 연다</b>({@code
  * RunLivenessSweeper}와 같은 방식) — 한 건이 실패해도(그 사이 누가 재시도해 참조가 새로 생긴 경우 등) 나머지는 지워지고, 실패한 건은 다음 주기에 다시
  * 대상이 된다.
  *
@@ -106,7 +109,7 @@ public class PublicResultExpirySweeper {
                 request.getPublicTokenExpiresAt(),
                 now);
         long requestId = request.getId();
-        reuseEventRepository.deleteByRequestId(requestId);
+        reuseEventRepository.clearRequestId(requestId);
         requestRepository.clearRetryOf(requestId);
         requestRepository.deleteById(requestId);
     }

@@ -13,13 +13,16 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.support.RabbitTestSupport;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -27,10 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 실제 브로커에 발행해 계약 §3의 메시지 속성과 본문을 확인한다.
@@ -39,11 +38,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @SpringBootTest(classes = {BacktestRabbitConfig.class, RabbitBacktestJobPublisher.class})
 @ImportAutoConfiguration(RabbitAutoConfiguration.class)
-@Testcontainers(disabledWithoutDocker = true)
-class RabbitBacktestJobPublisherIT {
-
-    @Container @ServiceConnection
-    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+class RabbitBacktestJobPublisherIT extends RabbitTestSupport {
 
     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();
     private final EngineInputAssembler assembler =
@@ -56,6 +51,15 @@ class RabbitBacktestJobPublisherIT {
 
     @Autowired private BacktestJobPublisher publisher;
     @Autowired private RabbitTemplate rabbitTemplate;
+    @Autowired private AmqpAdmin amqpAdmin;
+
+    /** 브로커를 다른 클래스와 함께 쓴다. 앞 클래스가 남긴 작업 메시지를 이 테스트의 발행으로 읽지 않게 비운다. */
+    @BeforeEach
+    void purgeQueues() {
+        amqpAdmin.initialize(); // 토폴로지가 아직 선언되지 않았어도 purge가 실패하지 않게 한 번 선언한다
+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_QUEUE, false);
+        amqpAdmin.purgeQueue(BacktestRabbitConfig.BULK_JOBS_QUEUE, false);
+    }
 
     private EngineInput sampleInput() {
         return assembler.assemble(

@@ -1,8 +1,11 @@
 package com.ssafy.thorp.support;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -39,7 +42,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
             // PostgreSQL 기본 max_connections(100)를 넘겨 "too many clients already"가 난다.
             // 테스트는 단일 스레드라 컨텍스트당 2개로 충분하다.
             "spring.datasource.hikari.maximum-pool-size=2",
-            "spring.datasource.hikari.minimum-idle=0"
+            "spring.datasource.hikari.minimum-idle=0",
+            // 배우기 관리 IT(spec 013 B02)의 관리 계정. 클래스마다 속성을 따로 주면 컨텍스트가 갈라져 공용 컨테이너의
+            // 연결이 모자라므로 여기 한 곳에 둔다. 다른 도메인은 이 값을 읽지 않는다.
+            "thorp.learning.admin-user-ids=7"
         })
 public abstract class PostgresTestSupport {
 
@@ -51,5 +57,22 @@ public abstract class PostgresTestSupport {
         if (!POSTGRES.isRunning()) {
             POSTGRES.start();
         }
+    }
+
+    @Autowired private JdbcTemplate seedJdbcTemplate;
+
+    /**
+     * 검사마다 시장 자료를 다시 심는다.
+     *
+     * <p>{@code MarketMetadataPort} 의 운영 구현이 DB 를 읽으므로, 심어 두지 않으면 접수 경로를 타는 검사가 전부 "대응표가 없다"로 막힌다.
+     * 마이그레이션으로 한 번만 심지 않는 까닭은 {@link MarketCatalogSeed} 의 설명에 있다 — 요약하면 자기 자료를 직접 넣고 지우는 검사와 부딪히기
+     * 때문이다.
+     *
+     * <p>JUnit 이 상위 클래스의 {@code @BeforeEach} 를 먼저 돌리므로, 자기 자료를 따로 준비하는 검사는 그 위에서 마음대로 치우고 넣어도 된다.
+     * 다음 검사 전에 여기서 다시 심긴다.
+     */
+    @BeforeEach
+    void seedMarketCatalog() {
+        MarketCatalogSeed.seed(seedJdbcTemplate);
     }
 }

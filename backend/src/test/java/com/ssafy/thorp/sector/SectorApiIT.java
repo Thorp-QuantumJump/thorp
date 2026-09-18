@@ -7,15 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,29 +23,14 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>확인하는 것은 세 가지다 — 응답이 계약 예시와 항목까지 같은지, 대표 ETF가 빠진 항목이 없는지(SC-001), 그리고 <b>대응표가 없을 때 빈 배열이 아니라
  * 409가 나오는지</b>(원칙 VI).
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를
- * {@code BacktestResultApiIT}와 글자 그대로 같게 맞춰 두었다. Spring은 설정이 같으면 컨텍스트를 캐시에서 재사용하므로 Hikari 풀이 늘지
- * 않는다. 이 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의 {@code max_connections}(기본 100)를 거의 다 쓰고 있어서, 컨텍스트를 하나 더 만들면 이
- * 클래스가 아니라 나중에 뜨는 다른 DB 테스트가 {@code FATAL: sorry, too many clients already}로 죽는다({@code
- * EtfMarketDataSchemaIT}의 주석과 같은 사정). <b>속성 하나라도 바꾸면 컨텍스트가 갈라지므로 이 애노테이션 묶음은 건드리지 않는다.</b>
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  *
  * <p>대응표를 넣는 경로가 JDBC인 이유: 대응표의 원본은 파이썬 파이프라인이고 백엔드에는 쓰기 경로가 아예 없다(research.md 결정 7). 저장소 인터페이스로는
  * 픽스처를 만들 수 없는 것이 정상이다.
  *
  * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class SectorApiIT extends PostgresTestSupport {
+class SectorApiIT extends IntegrationTestSupport {
 
     private static final String MAP_VERSION = "SEM-2026-09-10-001";
     private static final String SEMICONDUCTOR = "SEMICONDUCTOR";
@@ -97,6 +80,22 @@ class SectorApiIT extends PostgresTestSupport {
                         + " (SELECT id FROM sector_etf_map_version WHERE version = ?)",
                 MAP_VERSION);
         jdbcTemplate.update("DELETE FROM sector_etf_map_version WHERE version = ?", MAP_VERSION);
+        // 공통 준비 단계(PostgresTestSupport)가 심는 씨앗을 함께 치운다. 씨앗은 같은 섹터·종목을
+        // 참조하고 대응표 하나를 열어 두므로, 남겨 두면 이 검사가 섹터를 지우지도 자기 대응표를
+        // 열지도 못한다. 씨앗은 다음 검사 전에 다시 심긴다.
+        jdbcTemplate.update(
+                "UPDATE sector_etf_map_version"
+                        + " SET effective_to = effective_from + INTERVAL '1 second'"
+                        + " WHERE effective_to IS NULL");
+        jdbcTemplate.update(
+                "DELETE FROM sector_etf_map_entry WHERE sector_id IN"
+                        + " (SELECT id FROM sector WHERE code IN (?, ?))"
+                        + " OR etf_id IN"
+                        + " (SELECT id FROM representative_etf WHERE instrument_id IN (?, ?))",
+                SEMICONDUCTOR,
+                BATTERY,
+                SEMICONDUCTOR_ETF,
+                BATTERY_ETF);
         jdbcTemplate.update("DELETE FROM sector WHERE code IN (?, ?)", SEMICONDUCTOR, BATTERY);
         jdbcTemplate.update(
                 "DELETE FROM representative_etf WHERE instrument_id IN (?, ?)",

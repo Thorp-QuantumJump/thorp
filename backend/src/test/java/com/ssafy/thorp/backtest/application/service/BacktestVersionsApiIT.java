@@ -10,7 +10,7 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,8 +18,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,26 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>목으로는 잡히지 않는 것을 본다 — 등록표의 {@code provisional} 열 값이 실제로 무엇인지(역변동성 true, 고정 비중 false)와 그 값이 JSON
  * 으로 어떻게 나가는지다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.backtest.liveness.interval=PT1H",
-            "thorp.backtest.limits.max-queued-per-user=1000",
-            "thorp.backtest.limits.max-queued-total=1000",
-            "thorp.backtest.limits.max-run-seconds=1800",
-            "thorp.backtest.limits.stale-run-seconds=300",
-            "thorp.backtest.limits.cancel-grace-seconds=1",
-            "thorp.backtest.limits.provisional=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestVersionsApiIT extends PostgresTestSupport {
+class BacktestVersionsApiIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private BacktestService backtestService;

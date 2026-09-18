@@ -177,6 +177,35 @@ export function SectorSelectionProvider({
     }))
   }, [mapVersion])
 
+  /**
+   * 선택과 비중을 한 번의 상태 전이로 바꾼다. 배우기 예시 진입이 쓴다(FR-012).
+   *
+   * 목록에 없는 코드는 버리고, 비중으로 쓸 수 없는 값은 0으로 두지 않고 **그 섹터 자체를**
+   * 받지 않는다. 부르는 쪽이 이미 같은 검사를 하므로 여기까지 오는 값은 없지만, 값이 상태로
+   * 들어오는 길목이라 불변식을 한 번 더 지킨다.
+   *
+   * `weightsTouched`를 true로 둔다. 예시가 비중을 명시해서 왔으므로 그 뒤 섹터를 더하고 뺄 때
+   * 예시 값이 동일 비중으로 덮여 사라지면 안 된다.
+   */
+  const applySelection = useCallback(
+    (codes: readonly string[], weightTenths: Readonly<Record<string, number>>) => {
+      const accepted = sortCodes(
+        codes.filter((code) => displayRank.has(code) && isValidWeightTenths(weightTenths[code])),
+      )
+
+      const nextWeights: Record<string, number> = {}
+      for (const code of accepted) nextWeights[code] = weightTenths[code]
+
+      setState({
+        mapVersion,
+        selectedCodes: accepted,
+        weightTenths: nextWeights,
+        weightsTouched: true,
+      })
+    },
+    [displayRank, mapVersion, sortCodes],
+  )
+
   const isSelected = useCallback(
     (code: string) => state.selectedCodes.includes(code),
     [state.selectedCodes],
@@ -197,8 +226,9 @@ export function SectorSelectionProvider({
       toggleSector,
       setWeight,
       distributeEvenly,
+      applySelection,
     }
-  }, [state, restored, isSelected, toggleSector, setWeight, distributeEvenly])
+  }, [state, restored, isSelected, toggleSector, setWeight, distributeEvenly, applySelection])
 
   return (
     <SectorSelectionContext.Provider value={value}>{children}</SectorSelectionContext.Provider>

@@ -45,20 +45,24 @@ class TestEntryPoint:
         assert exit_code != 0
         assert "거부" in capsys.readouterr().err
 
-    def test_거부는_미구현과_다른_코드로_끝난다(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """둘이 같은 코드면 가드가 막은 것인지 본체가 없는 것인지 실행 결과로 구분할 수 없다."""
-        monkeypatch.setenv(ENV_VARIABLE, PROD_ENV)
-        rejected = main(["--source", "fixture", "--all"])
-        monkeypatch.delenv(ENV_VARIABLE)
-        not_implemented = main(["--source", "fixture", "--all"])
-        assert rejected != not_implemented
-
-    def test_아무것도_안_한_실행이_성공으로_끝나지_않는다(
+    def test_거부는_계산한_것이_없는_실행과_다른_코드로_끝난다(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """M5 전까지 본체가 없다. 0으로 끝나면 배치가 돈 줄 알고 넘어간다."""
+        """둘이 같은 코드면 가드가 막은 것인지 대상이 없던 것인지 실행 결과로 구분할 수 없다."""
+        monkeypatch.setenv(ENV_VARIABLE, PROD_ENV)
+        rejected = main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"])
+        monkeypatch.delenv(ENV_VARIABLE)
+        nothing_done = main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"])
+        assert rejected != nothing_done
+        assert rejected != 0
+        assert nothing_done != 0
+
+    def test_아무것도_계산하지_않은_실행이_성공으로_끝나지_않는다(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """대상이 0개인 실행이 0으로 끝나면 배치가 돈 줄 알고 넘어간다 (spec FR-033)."""
         monkeypatch.delenv(ENV_VARIABLE, raising=False)
-        assert main(["--source", "fixture", "--all"]) != 0
+        assert main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"]) != 0
 
     def test_잘못된_월_표기는_거부한다(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(ENV_VARIABLE, raising=False)

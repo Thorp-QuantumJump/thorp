@@ -34,7 +34,7 @@
           ]
         },
         "marketData": {
-          "datasetId": "KRX_DAILY_V1",
+          "datasetId": "FIXTURE-three_etf_24m",
           "dataVersion": "FIXTURE-three_etf_24m",
           "interval": "1D",
           "adjustment": "SPLIT_ADJUSTED",
@@ -160,7 +160,7 @@
           ]
         },
         "marketData": {
-          "datasetId": "KRX_DAILY_V1",
+          "datasetId": "FIXTURE-three_etf_24m",
           "dataVersion": "FIXTURE-three_etf_24m",
           "interval": "1D",
           "adjustment": "SPLIT_ADJUSTED",
@@ -284,7 +284,7 @@
             ]
           },
           "marketData": {
-            "datasetId": "KRX_DAILY_V1",
+            "datasetId": "FIXTURE-three_etf_24m",
             "dataVersion": "FIXTURE-three_etf_24m",
             "interval": "1D",
             "adjustment": "SPLIT_ADJUSTED",
@@ -382,7 +382,7 @@
           ]
         },
         "marketData": {
-          "datasetId": "KRX_DAILY_V1",
+          "datasetId": "FIXTURE-three_etf_24m",
           "dataVersion": "FIXTURE-three_etf_24m",
           "interval": "1D",
           "adjustment": "SPLIT_ADJUSTED",

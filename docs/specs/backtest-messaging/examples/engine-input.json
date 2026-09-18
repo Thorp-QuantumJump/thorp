@@ -17,7 +17,8 @@
     ]
   },
   "marketData": {
-    "datasetId": "KRX_DAILY_V1",
+    "datasetId": "KRX_DAILY_20260907",
+    "dataVersion": "KRX_DAILY_20260907",
     "interval": "1D",
     "adjustment": "SPLIT_ADJUSTED",
     "priceType": "LAST",
