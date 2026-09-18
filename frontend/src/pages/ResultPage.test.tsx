@@ -122,7 +122,10 @@ describe('ResultPage', () => {
 
   it('만료되면 다시 분석할 진입점을 보이고 숫자를 그리지 않는다', async () => {
     apiMocks.fetchResult.mockRejectedValue(
-      new ResultError('결과가 더 이상 남아 있지 않습니다.', { code: 'RESULT_EXPIRED', status: 410 }),
+      new ResultError('결과가 더 이상 남아 있지 않습니다.', {
+        code: 'RESULT_EXPIRED',
+        status: 410,
+      }),
     )
 
     const { container } = renderResult()
@@ -255,7 +258,10 @@ describe('ResultPage', () => {
 
   it.each([
     ['점이 하나도 없으면', []],
-    ['모든 날의 자산가치가 비어 있으면', resultTimeseries.points.map((point) => ({ ...point, equity: '' }))],
+    [
+      '모든 날의 자산가치가 비어 있으면',
+      resultTimeseries.points.map((point) => ({ ...point, equity: '' })),
+    ],
   ])('시계열을 받았어도 %s 그래프 대신 그 사실을 알린다', async (_case, points) => {
     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
     apiMocks.fetchResultTimeseries.mockResolvedValue({ partial: true, points })
@@ -305,8 +311,14 @@ describe('ResultPage', () => {
       apiMocks.fetchResultExceptions.mockResolvedValue(resultExceptions)
       apiMocks.fetchResultTrades.mockResolvedValue(resultTradePage)
       apiMocks.fetchResultPositions.mockResolvedValue(resultPositions)
-      otherMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
-      otherMocks.fetchInstrumentProfile.mockResolvedValue({ status: 'notReady', message: '준비 중' })
+      otherMocks.fetchSectorCatalog.mockResolvedValue({
+        status: 'loaded',
+        catalog: resultSectorCatalog,
+      })
+      otherMocks.fetchInstrumentProfile.mockResolvedValue({
+        status: 'notReady',
+        message: '준비 중',
+      })
       otherMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture)
       window.sessionStorage.clear()
     })
@@ -341,7 +353,9 @@ describe('ResultPage', () => {
       await user.click(await screen.findByRole('button', { name: '손실이 커진 때 보기' }))
 
       const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })
-      expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(troughPoint.date)
+      expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(
+        troughPoint.date,
+      )
       await within(view).findByRole('table', { name: '구간 거래' })
       // 계약 예시 계열에서 저점 직전 `drawdown`이 0인 마지막 날이다(`resultFixtures.ts`).
       expect(apiMocks.fetchResultTrades.mock.calls[0][1]).toMatchObject({
@@ -449,7 +463,12 @@ describe('ResultPage', () => {
           'outline',
         )
       }
-      expect(document.querySelector('[data-slot="button"][data-variant="default"]')).toBeNull()
+      expect(
+        document.querySelectorAll('[data-slot="button"][data-variant="default"]'),
+      ).toHaveLength(1)
+      expect(
+        document.querySelector('[data-slot="button"][data-variant="default"]')?.textContent,
+      ).toContain('비교 대상 고르기')
     })
 
     it('볼 결과가 없으면 자세히 보기와 손실 구간 보기를 두지 않는다', async () => {
