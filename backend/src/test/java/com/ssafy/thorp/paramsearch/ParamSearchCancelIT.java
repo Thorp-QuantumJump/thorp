@@ -22,7 +22,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,10 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -45,18 +44,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 후보가 '미실행'으로 확정되는가, 취소 뒤에 <b>새 후보가 한 건도 나가지 않는가</b>, 남은 후보가 끝났을 때 {@code PARTIAL}로 닫히며 부분 결과와 선정이
  * 남는가.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            // 창을 1로 좁혀 '발행된 1건 + 대기 3건'을 만든다. 취소가 무엇을 남기고 무엇을 막는지 갈라 보려면
-            // 두 무리가 동시에 있어야 한다.
-            "thorp.param-search.dispatch-window=1",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchCancelIT extends PostgresTestSupport {
+// 창을 1로 좁혀 '발행된 1건 + 대기 3건'을 만든다. 취소가 무엇을 남기고 무엇을 막는지 갈라 보려면 두 무리가 동시에 있어야 한다.
+// 이 속성 때문에 기반 컨텍스트와 따로 뜨고, 같은 상수를 쓰는 검사끼리 그 컨텍스트를 함께 쓴다.
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW)
+class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
     private static final long OWNER = 7L;
@@ -73,7 +64,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(940_000L);
 

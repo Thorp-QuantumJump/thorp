@@ -6,24 +6,33 @@
 
 ## 1. 저장 항목 변경
 
-새 테이블은 만들지 않는다. 004의 `backtest_request` 하나만 손댄다.
+004의 `backtest_request`에 컬럼을 더하고, 만료로 지운 토큰의 묘비 표 `expired_public_token` 하나를 새로 만든다.
 
 | 컬럼 | 형 | 설명 |
 |---|---|---|
 | requester_id | BIGINT FK → users, **NOT NULL → NULL 허용** | 로그인 사용자의 요청에만 채운다. 비로그인 요청은 비어 있다 ([research.md](research.md) R-02) |
-| public_token | CHAR(32) UNIQUE NOT NULL | 결과 화면 주소에 쓰는 무작위 128비트 값의 16진 표기. 접수 시점에 발급한다 (R-01) |
+| public_token | VARCHAR(32) UNIQUE NOT NULL, CHECK `^[0-9a-f]{32}$` | 결과 화면 주소에 쓰는 무작위 128비트 값의 소문자 16진 표기. 접수 시점에 발급한다 (R-01). CHAR가 아닌 이유: Hibernate 스키마 검증(`ddl-auto: validate`)이 CHAR를 String 매핑과 다른 형으로 보아 기동이 실패한다. 길이와 문자 집합은 CHECK가 지킨다 |
 | public_token_expires_at | TIMESTAMP NULL | `requester_id`가 없는 요청에만 채운다. 로그인 사용자의 결과는 만료하지 않는다 (R-03) |
 
 **인덱스**: `public_token`에 유니크 인덱스, `(public_token_expires_at)`에 정리 작업용 인덱스.
 
+**`expired_public_token`** (2026-09-17 T087)
+
+| 컬럼 | 형 | 설명 |
+|---|---|---|
+| token_hash | VARCHAR(64) PK | 공개 토큰 원문의 SHA-256 소문자 16진. 원문은 저장하지 않는다 |
+| expired_at | TIMESTAMPTZ NOT NULL | 원래 요청의 `public_token_expires_at`. 보관 기한은 이 시각부터 센다 |
+| created_at | TIMESTAMPTZ NOT NULL | 정리 작업이 묘비를 남긴 시각 |
+
+정리 작업이 만료된 비로그인 요청 행을 지우는 트랜잭션에서 남긴다. 조회는 토큰으로 요청을 찾지 못하면 이 표에서 해시를 찾아, 있으면 410·없으면 404로 답한다. 보관 기한(`thorp.result.tombstone-retention`, PD-23 확정 전 임시값)이 지난 묘비는 같은 정리 작업이 지운다. **왜 필요한가**: FR-021은 요청과 토큰을 지우라고 하고 Edge Case는 만료된 주소에 "결과가 더 이상 남아 있지 않다"를 요구한다. 행을 지우기만 하면 다음 정리 주기부터 "잘못된 주소"(404)와 구분할 수 없다. 해시는 128비트 난수의 해시라 결과를 열 수도 원문을 되찾을 수도 없다.
+
 **마이그레이션 주의**: `requester_id`를 NOT NULL에서 NULL 허용으로 바꾸는 것은 제약 완화라 기존 행에 영향이 없다. `public_token`은 NOT NULL이므로 기존 행에 값을 채우는 단계가 먼저 와야 한다. 004 data-model이 기존 데모 데이터 삭제를 권장해 두었으므로 그 방침을 따르면 채울 행이 없다. 파일 이름은 저장소의 현재 관례인 `V{yyyyMMddHHmmss}__{설명}.sql`을 따른다(최신은 `V20260916104500__news_grouping_v2.sql`). 서로 다른 작업이 같은 번호를 쓰지 않게 하려는 규칙이므로 constitution "스키마 변경 규칙" 절과 함께 지킨다.
 
-**권한 판정**: 취소·재시도는 다음 둘 중 하나를 만족해야 한다.
+**권한 판정**: 두 경로가 따로 판정한다.
 
-- 로그인 사용자: `requester_id`가 현재 사용자와 같다.
-- 비로그인: 요청에 담긴 `public_token`이 그 행의 값과 같다.
-
-어느 쪽도 아니면 404로 숨긴다(004 R-12의 기존 방침 유지).
+- 소유자 경로(`/backtests/{backtestId}/**`, 004): 조회·취소·재시도 모두 `requester_id`가 현재 사용자와 같아야 한다. 아니면 404로 숨긴다(004 R-12).
+- 공개 경로(`/results/{publicToken}/**`, 005): 토큰을 가진 사람이면 조회하고 **재시도만** 한다. 공개 취소 경로는 두지 않는다 — spec Clarification이 "비교 대상을 바꿔도 앞서 요청한 실행을 취소하지 않는다"로 정했고, 토큰은 남에게 건네질 수 있다([contracts/result-api.md](contracts/result-api.md)).
+- 공개 재시도로 생기는 새 요청의 요청자는 원 요청자가 아니라 **지금 호출한 사람**이다(비로그인이면 없음, 만료 시각이 붙는다). 비로그인 재시도는 원 요청이 단건(`SINGLE`)일 때만 받는다 — 실행 한도가 단건 큐에만 있어서다(T089, 원칙 IX).
 
 ## 2. 결과 주소
 
@@ -36,12 +45,13 @@
 **상태 전이**
 
 ```text
-발급 ──> 열람 가능 ──> (비로그인·유효 시간 경과) ──> 만료 ──> 삭제
+발급 ──> 열람 가능 ──> (비로그인·유효 시간 경과) ──> 만료(410) ──> 요청 삭제·묘비(410) ──> 묘비 삭제(404)
                    └─> (로그인 사용자) ──────────> 만료 없음
 ```
 
 - 만료된 토큰 조회는 `410 RESULT_EXPIRED`다. 존재한 적 없는 토큰은 `404 RESOURCE_NOT_FOUND`다. 화면이 둘을 다르게 보여야 하므로 코드를 나눈다.
-- 삭제는 정리 작업이 수행하며 만료 시각이 지난 비로그인 요청과 그 결과를 함께 지운다.
+- 삭제는 정리 작업이 수행하며 만료 시각이 지난 비로그인 요청 행과 공개 토큰을 지운다. 그 요청이 가리키던 계산(`backtest_run`)과 결과는 참조하는 요청이 하나도 남지 않았을 때만 지우고, 그 판정과 삭제는 004 소유다(R-03, [contracts/result-api.md](contracts/result-api.md) "004에 요청하는 변경").
+- 정리 작업은 004의 재사용·합류 기록(`backtest_reuse_event`)을 지우지 않고 그 기록의 `request_id`만 NULL로 끊는다. 이 기록은 `reuse_count`가 세는 동일 결과 재조회의 측정 근거다(FR-021, 원칙 IX).
 
 ## 3. 화면 표시 모델
 

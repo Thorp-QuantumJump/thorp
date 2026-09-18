@@ -115,8 +115,8 @@ tasks.named('test') {
     // 픽스처만 바뀌었을 때 :test가 UP-TO-DATE로 건너뛴다. 실제로 픽스처를 일부러 틀리게
     // 고쳐도 BUILD SUCCESSFUL이 나왔다(2026-09-11 확인).
     //
-    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 새로 클론해 받아 늘
-    // 돌지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.
+    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 BE Test에서 cleanTest로
+    // 늘 다시 돌리지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.
     inputs.dir(file('../specs/001-etf-market-data/contracts/fixtures'))
             .withPropertyName('evaluationWindowFixtures')
             .withPathSensitivity(PathSensitivity.RELATIVE)

@@ -5,12 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.RulesStatus;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 
 /**
  * 마이그레이션이 넣은 등록표 시드가 도메인 모델로 그대로 올라오는지 본다(R-07·R-08).
@@ -18,9 +16,7 @@ import org.springframework.context.annotation.Import;
  * <p>{@code FlywayMigrationTest}는 같은 행을 SQL로 확인한다. 여기서 한 번 더 보는 것은 <b>매핑</b>이다 — enum 문자열과 jsonb
  * 명세가 도메인 타입으로 변환되는 경로는 SQL 단언이 지나간다. 시드 값이 바뀌면 두 곳이 함께 깨져야 한다.
  */
-@DataJpaTest
-@Import({CostProfileRepositoryImpl.class, StrategyRulesRepositoryImpl.class})
-class RegistryRepositoryTest extends PostgresTestSupport {
+class RegistryRepositoryTest extends RepositoryTestSupport {
 
     @Autowired private CostProfileRepositoryImpl costProfiles;
     @Autowired private StrategyRulesRepositoryImpl strategyRules;

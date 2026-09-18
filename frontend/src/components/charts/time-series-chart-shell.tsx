@@ -153,6 +153,19 @@ export interface TimeSeriesChartInnerProps {
   composedStackGap?: number;
   /** When set, drives the y-axis max instead of scanning `lines` (e.g. stacked bar totals). */
   yScaleDomainMax?: number;
+  /**
+   * Fixed primary y-domain `[min, max]`, used as-is instead of deriving one
+   * from the data. Lets a caller anchor the axis to a meaningful level (e.g.
+   * the amount the user started with) rather than to zero. Ignored when the
+   * chart has more than the default y-axis.
+   */
+  yDomain?: [number, number];
+  /**
+   * Thin the series down to what the pixel width can show. Set `false` to draw
+   * every row — charts whose extremes carry meaning (an equity curve read
+   * against its deepest day) must not drop points. Default: true.
+   */
+  decimate?: boolean;
   /** Loading vs ready — drives chart phase until transition orchestration lands. */
   chartStatus?: ChartStatus;
   loadingLabel?: string;
@@ -198,6 +211,8 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   composedStackOffsets,
   composedStackGap,
   yScaleDomainMax,
+  yDomain,
+  decimate = true,
   chartStatus = DEFAULT_CHART_STATUS,
   loadingLabel,
   yDomainTween = true,
@@ -216,13 +231,16 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
       const axisGroups = groupLinesByYAxisId(lines);
       const usesDefaultOnly =
         axisGroups.size === 1 && axisGroups.has(DEFAULT_Y_AXIS_ID);
+      if (usesDefaultOnly && yDomain != null) {
+        return yDomain;
+      }
       const domainMax =
         usesDefaultOnly && yScaleDomainMax != null
           ? yScaleDomainMax
           : undefined;
       return resolveTimeSeriesYDomain(sourceData, dataKeys, domainMax);
     },
-    [lines, yScaleDomainMax]
+    [lines, yScaleDomainMax, yDomain]
   );
 
   const skeletonData = useMemo(() => {
@@ -306,13 +324,16 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   const seriesSourceData = xDomain ? plotData : visiblePlotData;
 
   const renderData = useMemo(() => {
+    if (!decimate) {
+      return seriesSourceData;
+    }
     const valueKeys = lines.map((line) => line.dataKey);
     return decimateTimeSeries(
       seriesSourceData,
       maxRenderPointsForWidth(innerWidth),
       valueKeys
     );
-  }, [seriesSourceData, innerWidth, lines]);
+  }, [seriesSourceData, innerWidth, lines, decimate]);
 
   const columnWidth = useMemo(() => {
     const slotCount =
