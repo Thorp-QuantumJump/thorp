@@ -22,7 +22,7 @@
 
 ## Constitution Check
 
-*GATE: Phase 0 이전 판정, Phase 1 산출물 작성 후 재판정. 기준: `.specify/memory/constitution.md`의 현재 본문. 상단 Sync Impact Report는 3.4.0 승인 완료라고 하나 footer는 초안으로 표기되어 메타데이터가 불일치한다. 이 plan은 현재 본문의 더 엄격한 기준으로 검증하며, 헌장 표기 정합화는 별도 문서 작업으로 남긴다.*
+*GATE: Phase 0 이전 판정, Phase 1 산출물 작성 후 재판정. 기준: `.specify/memory/constitution.md`의 현재 본문. 2026-09-17 기준 상단 Sync Impact Report와 footer가 3.5.0 초안(마지막 승인판 3.4.0)으로 일치하며, 이전에 적어 둔 메타데이터 불일치는 해소되었다. 이 plan은 승인판 3.4.0을 기준으로 판정하고 3.5.0 초안 규칙은 승인 전까지 강제하지 않는다.*
 
 | 원칙/규칙 | 계획상 대응 | 판정 |
 |---|---|---|
@@ -37,7 +37,7 @@
 | IX 실측 실행 한도 | 배치·조회 성능 수치 사전 고정 없음; 원천 한도와 실측 근거 기록 | 통과 |
 | X 이용 조건 | 17개 작성기관·출처·조건을 실조회로 확인 완료(PD-11). 권리 미확인 계열은 공개 버전 제외·발행 보류(R10). 두바이유는 '권리 확인 대기'로 표시해 쓴다 | 조건부 통과 — Complexity Tracking의 감수 위험 |
 | 스키마 협업 | 구현 시 각 작업 묶음 1 Ticket·Branch·MR, Flyway 변경과 코드·검증 동일 MR | 통과 |
-| 현재 Git 브랜치 형식 | 사용자가 지정한 `docs/275-spec008-plan-task`는 헌장의 `{type}({position})/{JIRA_NUMBER}-{description}`과 불일치. 이 plan에서 임의 변경하지 않으며 MR 전 팀 확인 필요 | 보류 |
+| 현재 Git 브랜치 형식 | 문서 작업 브랜치 `docs/275-spec008-plan-task`는 헌장 형식과 어긋났으나 이미 병합되었고, 구현은 `feat(de)/336-macro-registry-schema`로 형식을 지켜 진행한다 | 통과 |
 
 **Phase 1 재판정 (2026-09-17 갱신)**: [data-model.md](data-model.md)의 완결성 검증·원자적 포인터·대체 원천 표시, [contracts/openapi.yaml](contracts/openapi.yaml)의 무자료·출처·결측 사유·버전, [contracts/macro-indicator-source.md](contracts/macro-indicator-source.md)의 010 경계를 대조했다. PD-11은 17개 실조회로 완료했고, PD-10은 [010](../010-economic-regime-search/spec.md) 소유로 넘겼다. 새로 생긴 유일한 긴장은 두바이유 한 계열의 개정 이력 미보장이며 Complexity Tracking에 근거와 좁히는 방법을 적었다. 브랜치 명명 게이트는 여전히 보류다.
 
