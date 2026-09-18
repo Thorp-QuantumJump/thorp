@@ -1,0 +1,10 @@
+.disclosure { display: grid; grid-template-columns: minmax(92px, auto) minmax(0, 1fr); align-items: baseline; gap: 8px 16px; border-left: 2px solid var(--thorp-line-strong); padding: 10px 14px; color: var(--thorp-copy); background: var(--thorp-surface); font-size: .82rem; line-height: 1.6; overflow-wrap: anywhere; }
+.disclosure strong { color: var(--thorp-foreground); font-weight: 600; }
+.disclosure p { margin: 0; }
+.disclosure p + p { margin-top: 5px; }
+.disclosure:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
+.warning { border-left-color: var(--thorp-warning); }
+.warning strong { color: var(--thorp-warning); }
+.error { border-left-color: var(--thorp-negative); }
+.error strong { color: var(--thorp-negative); }
+@media (max-width: 520px) { .disclosure { grid-template-columns: 1fr; } }

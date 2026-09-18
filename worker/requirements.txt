@@ -6,3 +6,4 @@ pydantic>=2.8
 pydantic-settings>=2.4
 python-dotenv>=1.0
 nautilus_trader==1.219.0
+scipy==1.17.1

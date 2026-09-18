@@ -17,7 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,10 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -41,15 +39,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>발행기는 목이다 — 여기서 볼 것은 큐가 아니라 <b>마지막 후보가 끝나는 순간에만</b> 선정이 도는가다. 성과 행은 테스트가 직접 넣는다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchSelectionOnceTest extends PostgresTestSupport {
+class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -63,7 +53,7 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(920_000L);
 
@@ -84,11 +74,19 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
     @DisplayName("마지막 후보가 끝나기 전에는 선정이 없고, 끝나면 한 번 생긴다")
     void selectionHappensOnlyWhenTheBatchDrains() {
         ParamSearch search = accept();
-        int total = candidateRepository.findByParamSearchId(search.getId()).size();
-        assertThat(total).as("중간 상태를 보려면 후보가 둘 이상이어야 한다").isGreaterThan(1);
+        // 계산 전에 제외된 후보(EXCLUDED)는 끝낼 수 없다 — 세면 마지막 하나를 남기지 못하고 다 비운다.
+        // 유효성 규칙이 늘면 제외가 늘어나므로 상태로 거른다(2026-09-17 등록표 1.3.0).
+        int runnable =
+                (int)
+                        candidateRepository.findByParamSearchId(search.getId()).stream()
+                                .filter(
+                                        candidate ->
+                                                candidate.getStatus() != CandidateStatus.EXCLUDED)
+                                .count();
+        assertThat(runnable).as("중간 상태를 보려면 끝낼 수 있는 후보가 둘 이상이어야 한다").isGreaterThan(1);
 
         // 마지막 하나를 남기고 끝낸다. 발행 창이 좁아 한 번에 다 나와 있지 않으므로 끝낼 때마다 다시 본다.
-        for (int done = 0; done < total - 1; done++) {
+        for (int done = 0; done < runnable - 1; done++) {
             finish(nextDispatched(search), "0.1000");
             assertThat(reload(search).getSelection()).as("아직 남은 후보가 있으면 분위가 확정되지 않는다").isNull();
         }

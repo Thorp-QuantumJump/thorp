@@ -128,7 +128,8 @@ def run(args: argparse.Namespace) -> int:
     candidates = index.calendar_day_range(args.start, args.until)
 
     client = krx.KrxOpenApiClient.from_env(args.env_file)
-    source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)
+    # 보관본이 있으면 원천을 부르지 않는다. 여러 해를 모으는 수집이 중간에 끊겨도 이어받는다.
+    source: krx.DailyRowSource = krx.ResumableArchivingSource(inner=client, root=_RAW_ROOT)
     if args.simulate_quota_exhausted:
         # 한도 재현 덮개는 보관 덮개 **바깥**이다. 한도에 걸린 호출은 응답이 오지 않은
         # 호출이라 raw/에도 남지 않아야 한다.

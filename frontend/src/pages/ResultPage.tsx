@@ -4,6 +4,8 @@ import { AppHeader } from '@/components/navigation/AppHeader'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
+import { EquityChart } from '@/components/result/EquityChart'
+import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { isZeroValue } from '@/components/result/formatResult'
 import {
   LOSS_WINDOW_NONE,
@@ -31,7 +33,7 @@ import styles from './ResultPage.module.css'
  * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면
  * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).
  *
- * <p>그래프(B04 T044)·상태 한 문장(B06 T075)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.
+ * <p>상태 한 문장(B06 T075)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.
  */
 export function ResultPage() {
   const { token = '' } = useParams()
@@ -119,10 +121,7 @@ function ResultView({
 
       <ResultSummaryCard detail={detail} completedThrough={completedThrough} />
 
-      {/*
-        B04 T044: 자산가치 곡선과 최대 하락 구간 음영이 이 자리에 온다. '손실이 커진 때 보기'가 열려 있으면
-        (`lossView.open`) 같은 `lossWindow`를 그래프에서 강조한다(FR-010).
-      */}
+      <ResultChartSlot detail={detail} timeseries={timeseries} />
 
       {summary ? (
         <p className={styles.sentence}>
@@ -181,6 +180,56 @@ function ResultView({
 
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>
+  )
+}
+
+/**
+ * 그래프 자리(FR-001).
+ *
+ * <p>시계열을 받았을 때만 그린다. 받지 못했으면 빈 곡선 대신 받지 못한 사유를 한 문장으로 둔다 —
+ * 빈 그래프는 "돌았고 비어 있었다"는 거짓이 된다. 받았더라도 자산가치 기록이 하나도 없으면(거래일을
+ * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다. 아직 계산 중이면
+ * 그릴 것이 없으므로 자리를 비운다.
+ *
+ * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.
+ */
+function ResultChartSlot({
+  detail,
+  timeseries,
+}: {
+  detail: PublicResultDetail
+  timeseries: TimeseriesState
+}) {
+  if (timeseries.status === 'unavailable') {
+    return (
+      <p className={styles.status}>그래프를 그릴 시계열을 받지 못했습니다. {timeseries.message}</p>
+    )
+  }
+  if (timeseries.status !== 'loaded') return null
+  if (!hasDrawableEquity(timeseries.data.points)) {
+    return <p className={styles.status}>받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.</p>
+  }
+
+  const { summary } = detail
+
+  return (
+    <EquityChart
+      altNumbers={
+        summary
+          ? {
+              netTotalReturn: summary.netTotalReturn,
+              maxDrawdown: summary.maxDrawdown,
+              totalTradingCost: summary.totalTradingCost,
+            }
+          : null
+      }
+      base={{
+        name: strategyLabel(detail),
+        points: timeseries.data.points,
+        maxDrawdown: summary?.maxDrawdown ?? null,
+      }}
+      initialCash={detail.config.initialCash}
+    />
   )
 }
 

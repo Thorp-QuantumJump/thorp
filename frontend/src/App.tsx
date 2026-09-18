@@ -25,6 +25,11 @@ const MarketFlowPage = lazy(() =>
     default: module.MarketFlowPage,
   })),
 )
+const RegimeSearchPage = lazy(() =>
+  import('@/pages/RegimeSearchPage').then((module) => ({
+    default: module.RegimeSearchPage,
+  })),
+)
 
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
@@ -60,6 +65,19 @@ const LearningListPage = lazy(() =>
 const LearningArticlePage = lazy(() =>
   import('@/pages/LearningArticlePage').then((module) => ({
     default: module.LearningArticlePage,
+  })),
+)
+
+// 013 배우기 관리. 운영자는 주소로 들어오며 `AppHeader`에 메뉴를 두지 않는다(US5 시나리오 1).
+const AdminLearningListPage = lazy(() =>
+  import('@/pages/AdminLearningListPage').then((module) => ({
+    default: module.AdminLearningListPage,
+  })),
+)
+
+const AdminLearningEditPage = lazy(() =>
+  import('@/pages/AdminLearningEditPage').then((module) => ({
+    default: module.AdminLearningEditPage,
   })),
 )
 
@@ -108,6 +126,7 @@ function AnimatedRoutes() {
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
+            <Route path="/regime-search" element={<RegimeSearchPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />
@@ -126,6 +145,23 @@ function AnimatedRoutes() {
               element={
                 <ProtectedRoute>
                   <MyRecordsEntryPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* 관리 화면은 로그인이 전제다. 권한 판정은 서버가 하고 화면은 200일 때만 그린다. */}
+            <Route
+              path="/admin/learning"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/learning/:articleId"
+              element={
+                <ProtectedRoute>
+                  <AdminLearningEditPage />
                 </ProtectedRoute>
               }
             />

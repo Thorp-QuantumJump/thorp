@@ -389,9 +389,14 @@ pipeline {
                         script { openCheck('Backend', 'running') }
 
                         dir('backend') {
-                            // clean 은 백엔드 단계 전체에서 여기 한 번만 수행한다.
-                            // 뒤따르는 스테이지가 같은 build 디렉토리를 이어서 쓴다.
-                            sh './gradlew clean spotlessCheck'
+                            // clean 을 하지 않는다. 워크스페이스는 빌드마다 새로 받지 않아 앞선 빌드의
+                            // backend/build 와 backend/.gradle 이 남아 있고, Gradle 은 그것을 이어받아
+                            // 입력 내용이 바뀐 태스크만 다시 돌린다. clean 은 이 기록을 지워 BE Test 가
+                            // 매번 main·test 를 처음부터 컴파일하게 만들었다.
+                            //
+                            // 다른 MR 의 빌드가 남긴 산출물은 섞이지 않는다. Gradle 은 소스·리소스가
+                            // 사라지면 그 클래스 파일과 복사본(마이그레이션 SQL 포함)도 지운다.
+                            sh './gradlew spotlessCheck'
                         }
                     }
                 }
@@ -399,7 +404,13 @@ pipeline {
                 stage('BE Test') {
                     steps {
                         dir('backend') {
-                            sh './gradlew test'
+                            // cleanTest 로 테스트 결과만 지워 테스트를 반드시 다시 돌린다. 컴파일은
+                            // 앞 빌드의 결과를 이어 쓴다.
+                            //
+                            // 빼면 입력이 앞 빌드와 같을 때 test 가 UP-TO-DATE 로 건너뛰어지고, 아래
+                            // junit 은 앞 빌드가 남긴 XML 을 이번 결과로 모은다. Docker 이미지나 날짜처럼
+                            // Gradle 이 입력으로 보지 않는 것이 달라져도 테스트가 돌지 않은 채 통과한다.
+                            sh './gradlew cleanTest test'
                         }
                     }
                     post {

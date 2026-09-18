@@ -13,24 +13,15 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 /**
  * 계약 픽스처를 그대로 저장하고 읽는다. 저장 구조가 계약과 어긋나면 여기서 깨진다.
@@ -38,22 +29,7 @@ import org.springframework.context.annotation.Import;
  * <p>JSON 컬럼의 단언은 record {@code equals}로 한다. record 안의 {@code BigDecimal.equals}는 scale까지 비교하므로 소수
  * 자릿수가 하나라도 바뀌면 실패한다. Flyway가 만든 스키마 위에서 {@code validate}로 돌기 때문에 마이그레이션과 엔티티가 어긋나도 여기서 깨진다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    MessageJsonPersistenceConfig.class,
-    BacktestRunRepositoryImpl.class,
-    BacktestResultRepositoryImpl.class
-})
-class BacktestResultRepositoryImplTest extends PostgresTestSupport {
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
+class BacktestResultRepositoryImplTest extends RepositoryTestSupport {
 
     @Autowired private BacktestRunRepositoryImpl jobRepository;
     @Autowired private BacktestResultRepositoryImpl resultRepository;

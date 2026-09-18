@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.jsonpath.JsonPath;
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
@@ -29,7 +28,7 @@ import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,11 +42,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -65,16 +61,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>만료 정리 작업은 끈다. 만료 시각을 과거로 돌린 행을 스케줄러가 먼저 지우면 410 대신 404가 나와 시험이 우연에 기댄다. 정리는 {@code
  * PublicResultExpirySweeperIT}가 따로 본다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.result.expiry-sweep.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class ResultApiIT extends PostgresTestSupport {
+class ResultApiIT extends PortMockedIntegrationTestSupport {
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path EXAMPLES = Path.of("..", "docs", "specs", "result-api", "examples");
@@ -97,9 +84,6 @@ class ResultApiIT extends PostgresTestSupport {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
-
-    /** 브로커는 띄우지 않는다. 발행은 커밋 뒤라 접수 응답에 영향을 주지 않는다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     private long requesterId;
 

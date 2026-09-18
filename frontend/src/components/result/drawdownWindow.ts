@@ -23,8 +23,8 @@ export type DrawdownWindow = {
 }
 
 /** 읽을 수 없는 문자열은 `null`이다. 0으로 바꾸면 없는 하락이나 고점을 만든다. */
-function readNumber(value: string | undefined): number | null {
-  if (value === undefined || value.trim() === '') return null
+function readNumber(value: string | null | undefined): number | null {
+  if (value == null || value.trim() === '') return null
   const number = Number(value)
   return Number.isFinite(number) ? number : null
 }
@@ -37,7 +37,7 @@ function readNumber(value: string | undefined): number | null {
  */
 export function findDrawdownWindow(
   points: readonly ResultTimeseriesPoint[],
-  summaryMaxDrawdown: string,
+  summaryMaxDrawdown: string | null | undefined,
 ): DrawdownWindow | null {
   const expected = readNumber(summaryMaxDrawdown)
   if (expected === null) return null

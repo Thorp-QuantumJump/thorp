@@ -169,15 +169,18 @@ class DatasetVersion:
     def __post_init__(self) -> None:
         validate_dataset_id(self.dataset_id)
         _require_aware(self.data_deadline, "data_deadline")
-        # research.md 결정 4가 값 규칙을 `KRX_DAILY_{자료마감일}`로 정했으므로 둘은 같은 날을
-        # 가리켜야 한다. 어긋나면 식별자가 말하는 날과 data_deadline 열이 말하는 날이 달라지고,
-        # 발행된 행은 고칠 수 없어 아무도 바로잡지 못한다.
-        derived = build_dataset_id(self.data_deadline)
+        # research.md 결정 4가 값 규칙을 `KRX_DAILY_{자료마감일}[_R{판}]`로 정했으므로 둘은 같은
+        # 날을 가리켜야 한다. 어긋나면 식별자가 말하는 날과 data_deadline 열이 말하는 날이
+        # 달라지고, 발행된 행은 고칠 수 없어 아무도 바로잡지 못한다.
+        #
+        # **판 번호는 날짜를 바꾸지 않으므로 견줄 때 뺀다.** 같은 마감일을 내용만 바꿔 다시
+        # 발행하는 것이 판 번호의 목적이라, 판이 붙었다고 어긋난 것으로 보면 그 목적이 막힌다.
+        derived = build_dataset_id(self.data_deadline, dataset_revision(self.dataset_id))
         if derived != self.dataset_id:
             raise DatasetVersionError(
                 f"dataset_id와 data_deadline이 어긋난다: {self.dataset_id} ≠ {derived}"
                 f" (data_deadline={self.data_deadline.isoformat()}). 값 규칙은"
-                " KRX_DAILY_{자료마감일}이다 (research.md 결정 4)"
+                " KRX_DAILY_{자료마감일}[_R{판}]이다 (research.md 결정 4)"
             )
         _require_aware(self.collected_at, "collected_at")
         _require_aware(self.last_success_at, "last_success_at")

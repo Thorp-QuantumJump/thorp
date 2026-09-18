@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { findDrawdownWindow } from '@/components/result/drawdownWindow'
 import {
   makeEquitySeries,
   resultDetailCancelledNoSummary,
@@ -21,8 +22,9 @@ import {
  * <p>프론트엔드가 `docs/specs`의 계약 예시를 테스트에서 직접 읽는 첫 사례다. 지금까지는 주석으로만
  * 가리켰다. 계약 예시가 바뀌었는데 픽스처가 그대로면 화면 테스트는 옛 모양으로 통과한다.
  *
- * <p>값이 아니라 <b>키 집합</b>과 분기에 쓰는 값(`status`·`validationTier`)만 본다. 전략 이름·종목 같은
- * 값은 픽스처가 일부러 지어낸 것이다(`resultFixtures.ts` 머리 주석).
+ * <p>상세는 값이 아니라 <b>키 집합</b>과 분기에 쓰는 값(`status`·`validationTier`)만 본다. 전략 이름·종목
+ * 같은 값은 픽스처가 일부러 지어낸 것이다(`resultFixtures.ts` 머리 주석). 시계열은 지어낼 이유가 없어
+ * 값까지 같게 둔다 — 상세의 최대 하락 폭과 저점이 맞아야 그래프가 음영을 그린다.
  */
 
 const examplesDir = resolve(
@@ -89,6 +91,21 @@ describe('결과 픽스처와 계약 예시', () => {
 
     expect(keyPaths(envelope(resultTimeseries))).toEqual(keyPaths(example))
     expect(resultTimeseries.points).toHaveLength(points.length)
+  })
+
+  it('시계열의 값이 계약 예시와 같다', () => {
+    expect(resultTimeseries).toEqual(readExample('result-timeseries.json').data)
+  })
+
+  it('완료 상세의 최대 하락 폭이 시계열의 저점과 같아 음영 구간이 잡힌다', () => {
+    const lowest = resultTimeseries.points.reduce((low, point) =>
+      Number(point.drawdown) < Number(low.drawdown) ? point : low,
+    )
+
+    expect(lowest.drawdown).toBe(resultDetailCompleted.summary?.maxDrawdown)
+    expect(
+      findDrawdownWindow(resultTimeseries.points, resultDetailCompleted.summary?.maxDrawdown),
+    ).not.toBeNull()
   })
 
   it('어느 예시에도 004의 내부 실행 식별자가 없다', () => {
