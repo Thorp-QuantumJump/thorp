@@ -17,7 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,10 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -41,15 +39,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>발행기는 목이다 — 여기서 볼 것은 큐가 아니라 <b>마지막 후보가 끝나는 순간에만</b> 선정이 도는가다. 성과 행은 테스트가 직접 넣는다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchSelectionOnceTest extends PostgresTestSupport {
+class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -63,7 +53,7 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(920_000L);
 

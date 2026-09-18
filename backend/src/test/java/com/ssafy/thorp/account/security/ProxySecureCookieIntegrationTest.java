@@ -8,17 +8,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.account.domain.model.UserStatus;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -32,21 +31,13 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>이 테스트가 운영과 같은 두 설정을 켜고 {@code X-Forwarded-Proto}를 직접 보내는 이유가 그것이다 — 배포해 봐야 드러나는 종류의 사고라서 여기서
  * 잡는다. 실제 값이 프로필에 들어 있는지는 {@code ApplicationProfileConfigTest}가 따로 지킨다.
  */
-@SpringBootTest(
+// 운영(application-prod.yml)과 같은 구성. 모든 테스트의 쿠키 설정을 바꾸지 않도록 기반에 넣지 않고, 이 테스트만 컨텍스트를 따로 만든다.
+@TestPropertySource(
         properties = {
-            // 운영(application-prod.yml)과 같은 구성.
             "server.forward-headers-strategy=framework",
-            "server.servlet.session.cookie.secure=true",
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
+            "server.servlet.session.cookie.secure=true"
         })
-@AutoConfigureMockMvc
-class ProxySecureCookieIntegrationTest extends PostgresTestSupport {
+class ProxySecureCookieIntegrationTest extends IntegrationTestSupport {
 
     private static final String FORWARDED_PROTO = "X-Forwarded-Proto";
 

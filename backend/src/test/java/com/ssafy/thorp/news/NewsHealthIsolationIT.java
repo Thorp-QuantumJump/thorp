@@ -6,14 +6,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.news.infrastructure.config.NewsHealthIndicator;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,24 +31,11 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>세 번째가 이 시험에만 있는 이유는 계약 시험이 Spring 컨텍스트 없이 도는 대신 ObjectMapper 설정을 손으로 맞춰 두기 때문이다. 그 손맞춤이 실제 자동
  * 설정과 어긋나면 계약 시험은 통과하는데 진짜 응답만 달라진다. 그 틈을 여기서 막는다.
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를
- * {@code SectorApiIT}·{@code BacktestResultApiIT}와 글자 그대로 같게 맞춰 두었다. 설정이 같으면 컨텍스트가 캐시에서 재사용되어
- * Hikari 풀이 늘지 않는다. 이 저장소의 DB 시험은 이미 공용 컨테이너의 커넥션을 거의 다 쓰고 있다. <b>속성 하나라도 바꾸면 컨텍스트가 갈라진다.</b>
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  *
  * <p>Docker가 없으면 통째로 skip된다({@link PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class NewsHealthIsolationIT extends PostgresTestSupport {
+class NewsHealthIsolationIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ApplicationContext context;

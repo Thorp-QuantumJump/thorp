@@ -7,7 +7,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -16,7 +16,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -25,17 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>이 셈이 많이 틀리면 살아 있는 작업이 남았는데도 실행을 {@code FAILED} 로 끊는다. DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면
  * 같은 메시지가 다시 오므로, 저장소가 스스로 막아야 한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class BacktestRunDeadLetterRecordIT extends PostgresTestSupport {
+class BacktestRunDeadLetterRecordIT extends IntegrationTestSupport {
 
     @Autowired private BacktestRunRepository repository;
     @Autowired private TransactionTemplate transactionTemplate;

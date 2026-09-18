@@ -13,7 +13,7 @@ import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,9 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * 선정 규칙과 탐색 범위의 불변성(T110·T113, FR-013c, 원칙 VII).
@@ -44,15 +42,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * <p>뒤엣것을 코드에서 직접 확인하는 이유: "지금은 그런 경로가 없다"는 것만으로는 다음 사람이 무심코 추가하는 것을 막지 못한다. 저장 경로에 그 자리가 없다는 사실
  * 자체를 테스트로 고정한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class SelectionRuleImmutabilityTest extends PostgresTestSupport {
+class SelectionRuleImmutabilityTest extends LauncherMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -66,7 +56,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {
     @Autowired private ParameterRegistryPort registry;
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(980_000L);
 
