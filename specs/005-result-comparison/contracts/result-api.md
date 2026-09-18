@@ -14,6 +14,7 @@
 | `GET /results/{publicToken}/positions` | `GET /backtests/{backtestId}/positions` | `date` 필수 |
 | `GET /results/{publicToken}/weights` | `GET /backtests/{backtestId}/weights` | |
 | `GET /results/{publicToken}/exceptions` | `GET /backtests/{backtestId}/exceptions` | 결과 옆 한 문장의 원천 |
+| `GET /results/{publicToken}/index-comparison` | 001 기간 KOSPI 조회 포트 | 같은 기간·시작 금액으로 환산한 보조 계열. 포트가 없으면 비활성 |
 | `POST /results/{publicToken}/retry` | `POST /backtests/{backtestId}/retry` | 실패한 비교 대상의 다시 시도 |
 
 `publicToken`은 32자 소문자 16진 문자열이다. 형식이 맞지 않으면 조회하지 않고 `400 INVALID_INPUT`이다. 로그인하지 않아도 모든 경로를 쓸 수 있고, `POST`에는 저장소의 CSRF 규약이 그대로 적용된다.
@@ -82,6 +83,17 @@
 - 새 요청의 요청자는 **지금 다시 시도한 사람**이다. 비로그인이면 요청자가 없고 만료 시각이 붙는다. 공개 주소는 남에게 건네질 수 있으므로 원 요청의 요청자를 물려받지 않는다.
 - 실패·취소가 아니면 `409 NOT_RETRYABLE`이다.
 
+## GET /results/{publicToken}/index-comparison
+
+`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 기간 KOSPI 조회 포트가 있으면 결과의
+`effectiveStart`~`effectiveEnd` 범위에서 첫 지수 종가를 `config.initialCash`와 맞춘 환산 계열을 서버가
+만들어 `{available: true, reason: null, series: [{date, value}]}`로 돌려준다. `value`는 다른 금액처럼 decimal
+문자열이고, 화면은 다시 계산하지 않는다.
+
+현재 001에는 기간 KOSPI 계열 조회 포트가 없으므로 `{available: false,
+reason: "INDEX_SERIES_UNAVAILABLE", series: []}`를 돌려준다. 최신 관측치 한 점이나 다른 계열로 값을
+만들지 않는다. 어느 응답에도 `backtestId`는 없다.
+
 ## 오류
 
 | code | HTTP | 뜻 | 화면 처리 |
@@ -115,7 +127,7 @@
 | `versions.worker` | 결과를 낸 워커의 자기 보고. 위 `worker`와 같은 이유다 |
 | 오류 문구 속 식별자 | 004 예외 문구에 `backtestId`가 들어 있다. 공개 경로는 코드의 기본 문구로 바꾼다 |
 
-하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다.
+하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다. `/index-comparison`도 내부 식별자를 담지 않는다.
 
 ## 비교 요청
 

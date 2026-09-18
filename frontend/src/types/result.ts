@@ -163,6 +163,13 @@ export type ResultTimeseries = {
   points: ResultTimeseriesPoint[]
 }
 
+/** `GET /results/{token}/index-comparison`. 값은 서버가 시작 금액으로 환산한 문자열이다. */
+export type ResultIndexComparison = {
+  available: boolean
+  reason: string | null
+  series: { date: string; value: string }[]
+}
+
 export type ResultTrade = {
   tradeId: string
   instrumentId: string
