@@ -22,6 +22,21 @@
   line-height: 1.7;
 }
 
+/* 복원 여부를 묻는 동안 편집을 막는 묶음이다. 모양은 바꾸지 않고 main과 같은 간격만 잇는다. */
+.editorArea {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.editorArea:disabled {
+  opacity: 0.55;
+}
+
 .fields,
 .sources {
   display: flex;

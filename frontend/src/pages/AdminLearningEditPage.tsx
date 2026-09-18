@@ -72,9 +72,19 @@ export function AdminLearningEditPage() {
   const [attempt, setAttempt] = useState(0)
 
   const [status, setStatus] = useState<AdminLearningArticle['status']>('DRAFT')
+  /** 서버가 마지막으로 알려 준 초안 번호다. 화면에 보인다 */
   const [draftVersion, setDraftVersion] = useState(0)
+  /**
+   * 화면의 초안이 기반한 번호다. 저장·게시가 이 값을 싣는다(R12).
+   *
+   * <p><b>`draftVersion`과 따로 둔다.</b> 보관본을 복원하면 화면의 초안은 보관할 때의 번호에 기반한다.
+   * 서버의 지금 번호로 저장하면 그 사이 다른 곳에서 저장한 초안을 409 없이 덮는다.
+   */
+  const [baseVersion, setBaseVersion] = useState(0)
   const [publishedRevisionNo, setPublishedRevisionNo] = useState<number | null>(null)
   const [draft, setDraft] = useState<AdminLearningDraft | null>(null)
+  /** 마지막으로 불러오거나 저장한 초안이다. 화면의 초안과 다르면 저장하지 않은 변경이 있다 */
+  const [savedDraft, setSavedDraft] = useState<AdminLearningDraft | null>(null)
   /** 서버에 이미 저장된 용어 식별자. 이 값의 `termId`는 편집기가 잠근다(R4) */
   const [savedTermIds, setSavedTermIds] = useState<readonly string[]>([])
 
@@ -130,8 +140,10 @@ export function AdminLearningEditPage() {
   function applyArticle(article: AdminLearningArticle) {
     setStatus(article.status)
     setDraftVersion(article.draftVersion)
+    setBaseVersion(article.draftVersion)
     setPublishedRevisionNo(article.publishedRevisionNo)
     setDraft(article.draft)
+    setSavedDraft(article.draft)
     setSavedTermIds(article.draft.terms.map((term) => term.termId))
   }
 
@@ -140,17 +152,34 @@ export function AdminLearningEditPage() {
     setAttempt((count) => count + 1)
   }, [])
 
+  /**
+   * 저장하지 않은 변경이 있는가.
+   *
+   * <p>게시는 서버에 저장된 초안을 게시한다. 화면에서 고친 내용이 있는데 게시를 누르면 화면과 다른
+   * 초안이 공개되거나, 고친 줄 알았던 항목으로 같은 422를 다시 받는다(계약 §6 "운영자가 보지 않은 초안을
+   * 게시하지 않는다").
+   */
+  const hasUnsavedChanges =
+    draft !== null && savedDraft !== null && JSON.stringify(draft) !== JSON.stringify(savedDraft)
+
   /** 편집기가 바꾼 초안을 상태와 보관본에 함께 넣는다. */
   const updateDraft = (next: AdminLearningDraft) => {
     setDraft(next)
-    saveUnsentDraft(articleId, next, draftVersion)
+    saveUnsentDraft(articleId, next, baseVersion)
+  }
+
+  const restoreUnsentDraft = (unsent: UnsentDraft) => {
+    setDraft(unsent.draft)
+    // 보관본이 기반한 번호로 저장한다. 그 사이 서버가 바뀌었으면 409가 알려 준다(R12).
+    setBaseVersion(unsent.draftVersion)
+    setPendingRestore(null)
   }
 
   const onSave = async () => {
     if (!draft || busy) return
     setBusy(true)
     setAction({ kind: 'idle' })
-    const result = await saveDraft(articleId, { ...draft, expectedDraftVersion: draftVersion })
+    const result = await saveDraft(articleId, { ...draft, expectedDraftVersion: baseVersion })
     setBusy(false)
 
     switch (result.status) {
@@ -191,10 +220,12 @@ export function AdminLearningEditPage() {
   }
 
   const onPublish = async () => {
-    if (busy) return
+    // 저장하지 않은 변경이 있으면 게시하지 않는다. 자동으로 저장한 뒤 게시하지도 않는다. 운영자가
+    // 저장 결과를 보고 게시를 정한다.
+    if (busy || hasUnsavedChanges) return
     setBusy(true)
     setAction({ kind: 'idle' })
-    const result = await publishArticle(articleId, draftVersion)
+    const result = await publishArticle(articleId, baseVersion)
     setBusy(false)
 
     switch (result.status) {
@@ -346,14 +377,16 @@ export function AdminLearningEditPage() {
         <section className={styles.restore} aria-labelledby="admin-edit-restore-title">
           <h2 id="admin-edit-restore-title">저장하지 못한 편집 내용이 있습니다</h2>
           <p>{new Date(pendingRestore.savedAt).toLocaleString('ko-KR')}에 보관한 내용입니다.</p>
+          {pendingRestore.draftVersion === draftVersion ? null : (
+            <p role="alert">
+              보관한 뒤 다른 곳에서 초안이 바뀌었습니다(보관본 {pendingRestore.draftVersion}번, 지금{' '}
+              {draftVersion}번). 복원해 저장하면 초안이 바뀌었다는 안내를 받습니다. 새 초안에 옮길
+              내용을 확인하는 데 쓰세요.
+            </p>
+          )}
+          <p>복원할지 정하기 전에는 편집할 수 없습니다.</p>
           <div className={styles.actions}>
-            <button
-              type="button"
-              onClick={() => {
-                setDraft(pendingRestore.draft)
-                setPendingRestore(null)
-              }}
-            >
+            <button type="button" onClick={() => restoreUnsentDraft(pendingRestore)}>
               복원하기
             </button>
             <button
@@ -369,126 +402,142 @@ export function AdminLearningEditPage() {
         </section>
       )}
 
-      <div className={styles.fields}>
-        <label className={styles.field}>
-          <span>제목</span>
-          <input
-            type="text"
-            value={draft.title}
-            onChange={(event) => updateDraft({ ...draft, title: event.target.value })}
-          />
-        </label>
-        <label className={styles.field}>
-          <span>질문</span>
-          <textarea
-            rows={2}
-            value={draft.question}
-            onChange={(event) => updateDraft({ ...draft, question: event.target.value })}
-          />
-        </label>
-        <label className={styles.field}>
-          <span>읽는 순서</span>
-          <input
-            type="number"
-            value={draft.readingOrder}
-            onChange={(event) =>
-              updateDraft({ ...draft, readingOrder: Number(event.target.value) || 0 })
-            }
-          />
-        </label>
-      </div>
+      {/*
+        복원 여부에 답하기 전에는 편집기와 저장·게시를 막는다. 먼저 고치면 새 입력이 보관본을 덮어
+        복원할 것이 사라진다(R12). fieldset의 disabled가 안의 입력과 버튼을 한 번에 막는다.
+      */}
+      <fieldset className={styles.editorArea} disabled={pendingRestore !== null}>
+        <div className={styles.fields}>
+          <label className={styles.field}>
+            <span>제목</span>
+            <input
+              type="text"
+              value={draft.title}
+              onChange={(event) => updateDraft({ ...draft, title: event.target.value })}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>질문</span>
+            <textarea
+              rows={2}
+              value={draft.question}
+              onChange={(event) => updateDraft({ ...draft, question: event.target.value })}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>읽는 순서</span>
+            <input
+              type="number"
+              value={draft.readingOrder}
+              onChange={(event) =>
+                updateDraft({ ...draft, readingOrder: Number(event.target.value) || 0 })
+              }
+            />
+          </label>
+        </div>
 
-      <BlockEditor
-        blocks={draft.blocks}
-        terms={draft.terms}
-        onChange={(blocks) => updateDraft({ ...draft, blocks })}
-      />
+        <BlockEditor
+          blocks={draft.blocks}
+          terms={draft.terms}
+          onChange={(blocks) => updateDraft({ ...draft, blocks })}
+        />
 
-      <ExampleEditor
-        example={draft.example}
-        onChange={(example) => updateDraft({ ...draft, example })}
-      />
+        <ExampleEditor
+          example={draft.example}
+          onChange={(example) => updateDraft({ ...draft, example })}
+        />
 
-      <TermListEditor
-        terms={draft.terms}
-        savedTermIds={savedTermIds}
-        onChange={(terms) => updateDraft({ ...draft, terms })}
-      />
+        <TermListEditor
+          terms={draft.terms}
+          savedTermIds={savedTermIds}
+          onChange={(terms) => updateDraft({ ...draft, terms })}
+        />
 
-      <section className={styles.sources} aria-labelledby="admin-edit-sources-title">
-        <h3 id="admin-edit-sources-title">출처</h3>
-        <ul className={styles.sourceList}>
-          {draft.sources.map((source, index) => (
-            // 출처는 라벨이 겹칠 수 있어 순번으로 자리를 잡는다.
-            <li key={index} className={styles.sourceRow}>
-              <label className={styles.field}>
-                <span>이름</span>
-                <input
-                  type="text"
-                  value={source.label}
-                  onChange={(event) =>
+        <section className={styles.sources} aria-labelledby="admin-edit-sources-title">
+          <h3 id="admin-edit-sources-title">출처</h3>
+          <ul className={styles.sourceList}>
+            {draft.sources.map((source, index) => (
+              // 출처는 라벨이 겹칠 수 있어 순번으로 자리를 잡는다.
+              <li key={index} className={styles.sourceRow}>
+                <label className={styles.field}>
+                  <span>이름</span>
+                  <input
+                    type="text"
+                    value={source.label}
+                    onChange={(event) =>
+                      updateDraft({
+                        ...draft,
+                        sources: draft.sources.map((item, position) =>
+                          position === index ? { ...item, label: event.target.value } : item,
+                        ),
+                      })
+                    }
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span>주소</span>
+                  <input
+                    type="url"
+                    value={source.url ?? ''}
+                    onChange={(event) =>
+                      updateDraft({
+                        ...draft,
+                        sources: draft.sources.map((item, position) =>
+                          position === index
+                            ? { ...item, url: event.target.value === '' ? null : event.target.value }
+                            : item,
+                        ),
+                      })
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
                     updateDraft({
                       ...draft,
-                      sources: draft.sources.map((item, position) =>
-                        position === index ? { ...item, label: event.target.value } : item,
-                      ),
+                      sources: draft.sources.filter((_, position) => position !== index),
                     })
                   }
-                />
-              </label>
-              <label className={styles.field}>
-                <span>주소</span>
-                <input
-                  type="url"
-                  value={source.url ?? ''}
-                  onChange={(event) =>
-                    updateDraft({
-                      ...draft,
-                      sources: draft.sources.map((item, position) =>
-                        position === index
-                          ? { ...item, url: event.target.value === '' ? null : event.target.value }
-                          : item,
-                      ),
-                    })
-                  }
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  updateDraft({
-                    ...draft,
-                    sources: draft.sources.filter((_, position) => position !== index),
-                  })
-                }
-                aria-label={`${index + 1}번째 출처 삭제`}
-              >
-                삭제
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button
-          type="button"
-          onClick={() => updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })}
-        >
-          출처 추가
-        </button>
-      </section>
-
-      <div className={styles.actions}>
-        <button type="button" onClick={() => void onSave()} disabled={busy}>
-          저장
-        </button>
-        <button type="button" onClick={() => void onPublish()} disabled={busy}>
-          게시
-        </button>
-        {status === 'PUBLISHED' ? (
-          <button type="button" onClick={() => void onUnpublish()} disabled={busy}>
-            게시 취소
+                  aria-label={`${index + 1}번째 출처 삭제`}
+                >
+                  삭제
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })}
+          >
+            출처 추가
           </button>
+        </section>
+
+        <div className={styles.actions}>
+          <button type="button" onClick={() => void onSave()} disabled={busy}>
+            저장
+          </button>
+          <button
+            type="button"
+            onClick={() => void onPublish()}
+            disabled={busy || hasUnsavedChanges}
+            aria-describedby={hasUnsavedChanges ? 'admin-edit-unsaved' : undefined}
+          >
+            게시
+          </button>
+          {status === 'PUBLISHED' ? (
+            <button type="button" onClick={() => void onUnpublish()} disabled={busy}>
+              게시 취소
+            </button>
+          ) : null}
+        </div>
+        {hasUnsavedChanges ? (
+          <p id="admin-edit-unsaved" className={styles.detail}>
+            저장한 뒤 게시할 수 있습니다.
+          </p>
         ) : null}
-      </div>
+      </fieldset>
 
       {action.kind === 'saved' ? <p role="status">초안을 저장했습니다.</p> : null}
 

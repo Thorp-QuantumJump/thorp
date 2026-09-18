@@ -134,6 +134,101 @@ describe('AdminLearningEditPage', () => {
     expect(screen.getByLabelText('제목')).toHaveProperty('value', '보관한 제목')
   })
 
+  it('복원 여부에 답하기 전에는 편집기와 저장·게시가 막힌다', async () => {
+    window.sessionStorage.setItem(
+      adminDraftKey('tide-reading'),
+      JSON.stringify({
+        version: 1,
+        savedAt: '2026-09-21T02:00:00Z',
+        draftVersion: 5,
+        draft: { ...adminTideArticle.draft, title: '보관한 제목' },
+      }),
+    )
+    const user = userEvent.setup()
+    renderEdit()
+
+    await screen.findByRole('heading', { name: '저장하지 못한 편집 내용이 있습니다' })
+
+    // 입력 요소 하나하나가 아니라 감싼 fieldset이 막는다. 그래서 막혔는지는 동작으로 본다.
+    const title = screen.getByLabelText('제목')
+    expect(title.closest('fieldset')?.disabled).toBe(true)
+    await user.type(title, ' 새 입력')
+    expect(title).toHaveProperty('value', adminTideArticle.draft.title)
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    expect(apiMocks.saveDraft).not.toHaveBeenCalled()
+    // 먼저 친 글자가 보관본을 덮지 않았다.
+    expect(window.sessionStorage.getItem(adminDraftKey('tide-reading'))).toContain('보관한 제목')
+
+    // 버리면 서버 값으로 편집을 시작한다. 보관본도 함께 지운다.
+    await user.click(screen.getByRole('button', { name: '버리기' }))
+    expect(title.closest('fieldset')?.disabled).toBe(false)
+    expect(window.sessionStorage.getItem(adminDraftKey('tide-reading'))).toBeNull()
+  })
+
+  it('보관 뒤 서버 초안이 바뀌었으면 알리고, 복원해 저장하면 보관본의 번호를 싣는다', async () => {
+    // 보관본은 5번에 기반하고, 그 사이 다른 곳에서 저장해 서버는 6번이다.
+    apiMocks.fetchAdminArticle.mockResolvedValue({
+      status: 'loaded',
+      article: { ...adminTideArticle, draftVersion: 6 },
+    })
+    window.sessionStorage.setItem(
+      adminDraftKey('tide-reading'),
+      JSON.stringify({
+        version: 1,
+        savedAt: '2026-09-21T02:00:00Z',
+        draftVersion: 5,
+        draft: { ...adminTideArticle.draft, title: '보관한 제목' },
+      }),
+    )
+    apiMocks.saveDraft.mockResolvedValue({
+      status: 'draftChanged',
+      message: '초안이 바뀌었습니다.',
+      currentDraftVersion: 6,
+    })
+    const user = userEvent.setup()
+    renderEdit()
+
+    expect(await screen.findByText(/보관한 뒤 다른 곳에서 초안이 바뀌었습니다/)).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '복원하기' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    // 서버의 지금 번호(6)로 보내면 다른 곳의 저장을 409 없이 덮는다(R12).
+    expect(apiMocks.saveDraft).toHaveBeenCalledTimes(1)
+    expect(apiMocks.saveDraft.mock.calls[0][1]).toMatchObject({
+      expectedDraftVersion: 5,
+      title: '보관한 제목',
+    })
+    expect(
+      await screen.findByText('다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요.'),
+    ).not.toBeNull()
+  })
+
+  it('저장하지 않은 변경이 있으면 게시가 막히고 저장 성공 뒤 다시 열린다', async () => {
+    apiMocks.saveDraft.mockImplementation(async (_articleId: string, request: object) => ({
+      status: 'saved',
+      article: {
+        ...adminTideArticle,
+        draftVersion: 6,
+        draft: { ...adminTideArticle.draft, ...request },
+      },
+    }))
+    const user = userEvent.setup()
+    renderEdit()
+
+    const publish = await screen.findByRole('button', { name: '게시' })
+    expect(publish).toHaveProperty('disabled', false)
+
+    await user.type(screen.getByLabelText('제목'), ' 고침')
+    expect(screen.getByRole('button', { name: '게시' })).toHaveProperty('disabled', true)
+    expect(screen.getByText('저장한 뒤 게시할 수 있습니다.')).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await screen.findByText('초안을 저장했습니다.')
+    expect(screen.getByRole('button', { name: '게시' })).toHaveProperty('disabled', false)
+    expect(apiMocks.publishArticle).not.toHaveBeenCalled()
+  })
+
   it('저장에 성공하면 보관본을 지운다', async () => {
     apiMocks.saveDraft.mockResolvedValue({
       status: 'saved',

@@ -24,7 +24,11 @@ export type UnsentDraft = {
   /** ISO 8601 시각. 복원할지 묻는 자리에 보인다 */
   savedAt: string
   draft: AdminLearningDraft
-  /** 보관할 때 화면이 마지막으로 읽은 초안 번호다. 복원해도 이 값으로 저장을 다시 보내지 않는다 */
+  /**
+   * 보관한 초안이 기반한 번호다. 복원하면 저장·게시가 이 번호를 싣는다(R12).
+   *
+   * 서버의 지금 번호로 바꿔 싣지 않는다. 그러면 보관한 뒤 다른 곳에서 저장한 초안을 409 없이 덮는다.
+   */
   draftVersion: number
 }
 
