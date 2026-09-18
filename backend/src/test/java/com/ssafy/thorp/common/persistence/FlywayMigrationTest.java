@@ -220,6 +220,25 @@ class FlywayMigrationTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("expired_public_token 이 토큰 해시와 만료 시각만 갖고 해시 형식을 DB 에서도 막는다 (spec 005 T087)")
+    void expiredPublicTokenHoldsOnlyHashAndExpiry() {
+        assertThat(columnsOf("expired_public_token"))
+                .containsExactlyInAnyOrder("token_hash", "expired_at", "created_at");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT conname FROM pg_constraint"
+                                        + " WHERE conrelid = 'expired_public_token'::regclass",
+                                String.class))
+                .contains("ck_expired_public_token_hash_format");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT indexname FROM pg_indexes"
+                                        + " WHERE tablename = 'expired_public_token'",
+                                String.class))
+                .contains("idx_expired_public_token_expired_at");
+    }
+
+    @Test
     @DisplayName("backtest_reuse_event 가 재사용·합류 기록에 필요한 컬럼만 갖는다 (FR-008)")
     void backtestReuseEventHasAllColumns() {
         // append-only 라 updated_at 이 없다. 발생 시각은 at 하나다.

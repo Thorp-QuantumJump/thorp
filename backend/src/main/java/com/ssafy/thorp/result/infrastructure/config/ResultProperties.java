@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 /**
  * 결과 공개 열람 설정(spec 005 T004). {@code thorp.result.*}
  *
- * <p><b>네 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래
+ * <p><b>다섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래
  * 내역 페이지 크기가 없으면 공개 경로에 상한 없는 조회가 열린다(원칙 IX). 운영은 {@code application-prod.yml}이 환경변수를 기본값 없이
  * 참조한다({@code BacktestLimitProperties}와 같은 방식).
  *
@@ -34,6 +34,12 @@ public class ResultProperties {
     @NotNull
     @Min(1)
     private Integer expirySweepBatchSize;
+
+    /**
+     * 만료로 지운 공개 토큰의 묘비를 남겨 두는 기간(T087). 만료 시각부터 센다. 이 기간 안에는 지운 주소도 410으로 안내되고, 지나면 404다. PD-23 확정
+     * 전 임시값이다.
+     */
+    @NotNull private Duration tombstoneRetention;
 
     /** 공개 경로 거래 내역의 페이지 크기이자 상한(R-11 임시 상한). */
     @NotNull
@@ -62,6 +68,14 @@ public class ResultProperties {
 
     public void setExpirySweepBatchSize(Integer expirySweepBatchSize) {
         this.expirySweepBatchSize = expirySweepBatchSize;
+    }
+
+    public Duration getTombstoneRetention() {
+        return tombstoneRetention;
+    }
+
+    public void setTombstoneRetention(Duration tombstoneRetention) {
+        this.tombstoneRetention = tombstoneRetention;
     }
 
     public Integer getTradesPageSize() {

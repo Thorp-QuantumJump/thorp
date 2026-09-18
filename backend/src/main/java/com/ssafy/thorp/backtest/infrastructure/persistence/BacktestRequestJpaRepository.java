@@ -29,12 +29,24 @@ interface BacktestRequestJpaRepository extends JpaRepository<BacktestRequestJpaE
     /**
      * 부분 인덱스 {@code idx_backtest_request_public_expiry}를 탄다 — 조건에 {@code publicTokenExpiresAt IS
      * NOT NULL}이 함축되고 로그인 요청은 인덱스에 없다. 개수는 {@code Pageable}로 자른다.
+     *
+     * <p><b>가리키는 실행이 아직 끝나지 않은 요청은 고르지 않는다</b>(spec 005 T093). 만료는 생성 시각부터 세므로 대기열이 유효 시간보다 밀리면 대기
+     * 중인 요청도 만료된다. 그 행을 지우면 비로그인 대기 몫({@code countQueuedSingleAnonymous}, 요청 행과 조인해 센다)에서 빠져 한도가
+     * 새고, 볼 사람이 없는 실행이 워커를 끝까지 차지한다. 실행이 끝난 뒤 다음 주기에 지운다. 조건을 질의에 두는 이유: 배치를 뽑은 뒤 거르면 끝나지 않은 행이 배치를
+     * 채워 뒤의 만료 행을 영영 못 지운다.
      */
     @Query(
             """
             SELECT r FROM BacktestRequestJpaEntity r
              WHERE r.requesterId IS NULL
                AND r.publicTokenExpiresAt <= :now
+               AND EXISTS (
+                   SELECT 1 FROM BacktestRunJpaEntity run
+                    WHERE run.id = r.runId
+                      AND run.status IN (
+                          com.ssafy.thorp.backtest.domain.model.RunStatus.COMPLETED,
+                          com.ssafy.thorp.backtest.domain.model.RunStatus.FAILED,
+                          com.ssafy.thorp.backtest.domain.model.RunStatus.CANCELLED))
              ORDER BY r.publicTokenExpiresAt ASC, r.id ASC
             """)
     List<BacktestRequestJpaEntity> findExpiredAnonymous(
