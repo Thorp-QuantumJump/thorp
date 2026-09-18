@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   checkAdminAccess,
   createArticle,
@@ -41,12 +41,12 @@ function formatOccurredAt(value: string): string {
 }
 
 export function AdminLearningListPage() {
+  const navigate = useNavigate()
   const [access, setAccess] = useState<AccessState>({ status: 'checking' })
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [form, setForm] = useState<CreateFormState>(EMPTY_FORM)
   const [createNotice, setCreateNotice] = useState<string | null>(null)
-  const [createdArticleId, setCreatedArticleId] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -67,7 +67,13 @@ export function AdminLearningListPage() {
     let active = true
     setList({ status: 'loading' })
     void fetchAdminArticles(controller.signal).then((result) => {
-      if (active) setList(result)
+      if (!active) return
+      // 로그인이 풀린 것은 권한 없음과 다른 사실이다. 재로그인 안내로 보낸다(014 FR-012).
+      if (result.status === 'unauthenticated') {
+        setAccess({ status: 'unauthenticated' })
+        return
+      }
+      setList(result)
     })
     return () => {
       active = false
@@ -93,9 +99,8 @@ export function AdminLearningListPage() {
     })
 
     if (result.status === 'created') {
-      setForm(EMPTY_FORM)
-      // 편집 화면으로 넘어간다. `Navigate` 대신 상태를 두어 폼의 안내와 한 곳에서 갈린다.
-      setCreatedArticleId(result.article.articleId)
+      // 새 글은 빈 초안이다. 목록에 남을 이유가 없으니 바로 편집 화면으로 간다.
+      navigate(`/admin/learning/${encodeURIComponent(result.article.articleId)}`)
       return
     }
     if (result.status === 'idTaken' || result.status === 'invalid') {
@@ -107,19 +112,6 @@ export function AdminLearningListPage() {
       return
     }
     setCreateNotice(result.message)
-  }
-
-  if (createdArticleId !== null) {
-    return (
-      <main className={styles.main} aria-labelledby="admin-learning-created-title">
-        <h1 id="admin-learning-created-title">글을 만들었습니다</h1>
-        <p>
-          <Link to={`/admin/learning/${encodeURIComponent(createdArticleId)}`}>
-            {createdArticleId} 편집하기
-          </Link>
-        </p>
-      </main>
-    )
   }
 
   if (access.status === 'checking') {
@@ -223,10 +215,6 @@ export function AdminLearningListPage() {
           message={list.kind === 'api' ? list.message : undefined}
           onRetry={retry}
         />
-      ) : null}
-
-      {list.status === 'denied' || list.status === 'unauthenticated' ? (
-        <p role="alert">목록을 볼 권한이 없습니다.</p>
       ) : null}
 
       <form className={styles.createForm} onSubmit={submitCreate}>

@@ -58,9 +58,13 @@ export type AdminAccessResult =
   | Unauthenticated
   | { status: 'failed'; message: string }
 
+/**
+ * 목록 결과. <b>`denied`를 두지 않는다.</b> 권한 판정은 `checkAdminAccess` 한 곳이며(계약 §1), 화면은 그
+ * 결과가 `admin`일 때만 목록을 부른다. 그 뒤에 오는 404는 다시 시도할 수 있는 실패로 다룬다. 다시
+ * 시도하면 권한 확인부터 다시 하므로 권한이 사라진 경우도 거기서 가려진다.
+ */
 export type AdminArticleListResult =
   | { status: 'loaded'; articles: AdminLearningArticleSummary[] }
-  | { status: 'denied' }
   | Unauthenticated
   | LoadFailure
 
@@ -467,9 +471,7 @@ export async function fetchAdminArticles(signal?: AbortSignal): Promise<AdminArt
     }
     return { status: 'loaded', articles }
   } catch (error) {
-    const status = statusOf(error)
-    if (status === 401) return { status: 'unauthenticated' }
-    if (status === 404) return { status: 'denied' }
+    if (statusOf(error) === 401) return { status: 'unauthenticated' }
     return toFailure(normalizeApiError(error))
   }
 }

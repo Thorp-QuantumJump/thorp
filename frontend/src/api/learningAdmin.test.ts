@@ -72,13 +72,16 @@ describe('checkAdminAccess', () => {
 })
 
 describe('fetchAdminArticles', () => {
-  it('404는 권한 없음이고 그 밖의 실패는 failed다', async () => {
+  it('404와 그 밖의 실패는 failed다. 권한 판정은 checkAdminAccess 한 곳이다', async () => {
     const get = vi.spyOn(apiClient, 'get')
 
     get.mockRejectedValueOnce(
       axiosFailure(404, envelopeError('RESOURCE_NOT_FOUND', '찾을 수 없습니다.')),
     )
-    await expect(fetchAdminArticles()).resolves.toEqual({ status: 'denied' })
+    await expect(fetchAdminArticles()).resolves.toMatchObject({
+      status: 'failed',
+      code: 'RESOURCE_NOT_FOUND',
+    })
 
     get.mockRejectedValueOnce(
       axiosFailure(500, envelopeError('INTERNAL_ERROR', '서버 오류입니다.')),
@@ -187,19 +190,51 @@ describe('saveDraft', () => {
       status: 'unauthenticated',
     })
   })
+})
 
-  it('상태 변경 요청에 X-XSRF-TOKEN이 실린다', async () => {
+/**
+ * 상태 변경 요청에 쿠키의 CSRF 토큰이 헤더로 실리는가(013 T069·T092, 계약 §0).
+ *
+ * <p><b>`apiClient.put`이나 adapter를 대역으로 바꾸지 않는다.</b> axios는 헤더를 adapter 안의
+ * `resolveConfig`에서 쿠키를 읽어 붙인다. 그 앞을 가로채면 헤더가 붙는 단계를 거치지 않아 이 검사가
+ * 아무것도 확인하지 못한다. 그래서 실제 xhr adapter를 지나게 두고 `XMLHttpRequest`에서 헤더만
+ * 받아 적은 뒤 보내기 직전에 멈춘다.
+ */
+describe('상태 변경 요청의 CSRF 헤더', () => {
+  function captureRequestHeaders() {
+    const setRequestHeader = vi.spyOn(XMLHttpRequest.prototype, 'setRequestHeader')
+    vi.spyOn(XMLHttpRequest.prototype, 'send').mockImplementation(() => {
+      throw new Error('테스트는 요청을 내보내지 않는다')
+    })
+    return () =>
+      Object.fromEntries(setRequestHeader.mock.calls.map(([name, value]) => [name, value]))
+  }
+
+  it('초안 저장에 X-XSRF-TOKEN이 실린다', async () => {
     stubCsrfPreparation()
-    const put = vi
-      .spyOn(apiClient, 'put')
-      .mockResolvedValue(axiosResponse({ success: true, data: adminTideArticle, error: null }))
+    const headers = captureRequestHeaders()
 
-    await saveDraft('tide-reading', request)
+    await saveDraft('tide-reading', { ...adminTideArticle.draft, expectedDraftVersion: 5 })
 
-    expect(put).toHaveBeenCalledTimes(1)
-    // 헤더는 axios 인스턴스 설정(`xsrfCookieName`·`xsrfHeaderName`)이 쿠키에서 붙인다.
-    expect(apiClient.defaults.xsrfHeaderName).toBe('X-XSRF-TOKEN')
-    expect(document.cookie).toContain('XSRF-TOKEN=synthetic-csrf-token')
+    expect(headers()['X-XSRF-TOKEN']).toBe('synthetic-csrf-token')
+  })
+
+  it('게시에 X-XSRF-TOKEN이 실린다', async () => {
+    stubCsrfPreparation()
+    const headers = captureRequestHeaders()
+
+    await publishArticle('tide-reading', 5)
+
+    expect(headers()['X-XSRF-TOKEN']).toBe('synthetic-csrf-token')
+  })
+
+  it('게시 취소에 X-XSRF-TOKEN이 실린다', async () => {
+    stubCsrfPreparation()
+    const headers = captureRequestHeaders()
+
+    await unpublishArticle('tide-reading')
+
+    expect(headers()['X-XSRF-TOKEN']).toBe('synthetic-csrf-token')
   })
 })
 

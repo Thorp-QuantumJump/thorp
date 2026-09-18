@@ -83,6 +83,38 @@ describe('AdminLearningListPage', () => {
     expect(await screen.findByText('대응표를 확인할 수 없음')).not.toBeNull()
   })
 
+  it('만들기가 201이면 그 글의 편집 화면으로 바로 간다', async () => {
+    apiMocks.checkAdminAccess.mockResolvedValue({ status: 'admin' })
+    apiMocks.fetchAdminArticles.mockResolvedValue({ status: 'loaded', articles: [] })
+    apiMocks.createArticle.mockResolvedValue({
+      status: 'created',
+      article: { articleId: 'moor-lines' },
+    })
+    const user = userEvent.setup()
+    renderList()
+
+    await user.type(await screen.findByLabelText('식별자'), 'moor-lines')
+    await user.type(screen.getByLabelText('제목'), '계류줄 묶기')
+    await user.type(screen.getByLabelText('읽는 순서'), '9')
+    await user.click(screen.getByRole('button', { name: '만들기' }))
+
+    expect(await screen.findByText('편집 화면')).not.toBeNull()
+    expect(apiMocks.createArticle).toHaveBeenCalledWith({
+      articleId: 'moor-lines',
+      title: '계류줄 묶기',
+      readingOrder: 9,
+    })
+  })
+
+  it('목록을 받는 중 로그인이 풀리면 권한 없음이 아니라 재로그인을 안내한다', async () => {
+    apiMocks.checkAdminAccess.mockResolvedValue({ status: 'admin' })
+    apiMocks.fetchAdminArticles.mockResolvedValue({ status: 'unauthenticated' })
+    renderList()
+
+    expect(await screen.findByRole('heading', { name: '다시 로그인해 주세요' })).not.toBeNull()
+    expect(screen.queryByText(/권한이 없습니다/)).toBeNull()
+  })
+
   it('만들기가 409면 그 자리에 안내가 보인다', async () => {
     apiMocks.checkAdminAccess.mockResolvedValue({ status: 'admin' })
     apiMocks.fetchAdminArticles.mockResolvedValue({ status: 'loaded', articles: [] })
