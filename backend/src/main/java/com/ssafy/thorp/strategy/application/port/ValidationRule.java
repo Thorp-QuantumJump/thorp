@@ -38,8 +38,17 @@ public record ValidationRule(
      * @param context 맥락 키. 현재 {@code UNIVERSE_SIZE} 하나다
      * @param value 상수
      * @param multiplyByContext 축 값에 곱할 맥락 키. {@code axis}와 함께만 쓴다
+     * @param multiplyByAxis 축 값에 곱할 <b>다른 축</b>의 이름. {@code axis}와 함께만 쓰고 {@code
+     *     multiplyByContext}와 같이 쓰지 않는다. 섹터 모멘텀처럼 <b>후보 전체가 아니라 그중 몇 개에만</b> 비중이 가는 전략을 판정하려면 필요하다
+     *     — {@code maxWeight × topN}이 그 예다(PD-03, T023). 곱할 축이 그 설정에 없으면(다른 선정 방식을 골랐다) 이 규칙은 위반이
+     *     아니다
      */
-    public record Operand(String axis, String context, Object value, String multiplyByContext) {
+    public record Operand(
+            String axis,
+            String context,
+            Object value,
+            String multiplyByContext,
+            String multiplyByAxis) {
 
         public Operand {
             long filled = Stream.of(axis, context, value).filter(Objects::nonNull).count();
@@ -47,21 +56,30 @@ public record ValidationRule(
                 throw new IllegalArgumentException(
                         "operand must set exactly one of axis, context, value");
             }
-            if (multiplyByContext != null && axis == null) {
-                throw new IllegalArgumentException("multiplyByContext is only valid with an axis");
+            if ((multiplyByContext != null || multiplyByAxis != null) && axis == null) {
+                throw new IllegalArgumentException(
+                        "multiplyByContext/multiplyByAxis is only valid with an axis");
+            }
+            if (multiplyByContext != null && multiplyByAxis != null) {
+                throw new IllegalArgumentException(
+                        "operand cannot multiply by both a context and an axis");
             }
         }
 
         public static Operand ofAxis(String axis, String multiplyByContext) {
-            return new Operand(axis, null, null, multiplyByContext);
+            return new Operand(axis, null, null, multiplyByContext, null);
+        }
+
+        public static Operand ofAxisTimesAxis(String axis, String multiplyByAxis) {
+            return new Operand(axis, null, null, null, multiplyByAxis);
         }
 
         public static Operand ofContext(String context) {
-            return new Operand(null, context, null, null);
+            return new Operand(null, context, null, null, null);
         }
 
         public static Operand ofValue(Object value) {
-            return new Operand(null, null, value, null);
+            return new Operand(null, null, value, null, null);
         }
     }
 

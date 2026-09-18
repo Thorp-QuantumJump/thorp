@@ -776,6 +776,43 @@ def test_required_warmup_is_the_request_value_then_the_rule_lookback() -> None:
     assert required_warmup_trading_days(overlay) == 63
 
 
+def test_required_warmup_adds_the_skipped_recent_window() -> None:
+    """섹터 모멘텀의 요구 워밍업은 ``L + S`` 다 — 점수가 ``P(t-S)/P(t-S-L)`` 이기 때문이다.
+
+    ``L`` 만 확보하면 ``S`` 거래일이 모자라고, 그만큼 초기 구간이 이력 부족으로 빠져 결과 기간과
+    수익률이 조용히 달라진다(PD-03 ⑤). 백엔드 ``EffectivePeriodCalculator`` 와 같은 셈이어야
+    한다 — 다르면 접수가 통과시킨 요청을 엔진이 다른 구간으로 계산한다.
+    """
+    base = engine_input_body(run={"start": "2024-01-02", "end": "2024-01-11"})
+    from_rules = EngineInput.model_validate(
+        {
+            **base,
+            "allocation": {
+                **base["allocation"],
+                "strategyId": "SECTOR_MOMENTUM",
+                "rules": {"lookbackDays": 60, "skipRecentDays": 21},
+            },
+            "evaluation": {"warmupTradingDays": None, "liquidationAtEnd": False},
+        }
+    )
+    assert required_warmup_trading_days(from_rules) == 81
+
+    # 003 축이 오면 그것이 사용자가 고른 값이다 — 규칙표 기본값(0)으로 재면 21거래일이 빈다.
+    chosen = EngineInput.model_validate(
+        {
+            **base,
+            "allocation": {
+                **base["allocation"],
+                "strategyId": "SECTOR_MOMENTUM",
+                "rules": {"lookbackDays": 60, "skipRecentDays": 0},
+                "parameters": {"rebalance": "MONTH_END", "skipRecentDays": 21},
+            },
+            "evaluation": {"warmupTradingDays": None, "liquidationAtEnd": False},
+        }
+    )
+    assert required_warmup_trading_days(chosen) == 81
+
+
 # --- 실패는 계약 오류로 -------------------------------------------------------------------
 
 

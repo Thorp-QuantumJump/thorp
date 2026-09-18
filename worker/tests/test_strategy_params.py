@@ -14,6 +14,7 @@ from worker.contracts.strategy_params import (
     CappedRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
+    SectorMomentumParameters,
 )
 
 
@@ -35,14 +36,18 @@ def test_parameter_model_keeps_camel_alias_and_forbids_extra() -> None:
 
 
 def test_registry_covers_the_registered_allocation_strategies() -> None:
-    """미확정 전략(PD-03)은 파라미터 모양도 미정이라 등록하지 않는다."""
+    """엔진이 계산하는 전략은 파라미터 모양도 선언돼 있다.
+
+    다섯이 다 등록된 것은 2026-09-17 PD-03·PD-04 확정 뒤다. 규칙이 아직 없는 전략을 나중에 더하면
+    파라미터 모양도 미정이라 등록하지 않는다 — 그때는 엔진이 ``rules_registry`` 로 거절한다.
+    """
     assert STRATEGY_PARAMETERS == {
         "FIXED_WEIGHT": CappedRebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
         "INVERSE_VOLATILITY": CappedRebalanceParameters,
         "MINIMUM_VARIANCE": MinimumVarianceParameters,
+        "SECTOR_MOMENTUM": SectorMomentumParameters,
     }
-    assert "SECTOR_MOMENTUM" not in STRATEGY_PARAMETERS
 
 
 def test_max_weight_is_an_integer_percent_and_optional() -> None:

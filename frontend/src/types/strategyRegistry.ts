@@ -72,10 +72,12 @@ export type RuleContextKey = 'UNIVERSE_SIZE'
 /**
  * 유효성 규칙의 피연산자. 축 참조·맥락 참조·상수 셋 중 하나다.
  *
- * 축 참조에는 `multiplyByContext`를 덧붙여 곱할 수 있다(비중 상한 × 섹터 수).
+ * 축 참조에는 곱할 것을 덧붙일 수 있다. `multiplyByContext`는 맥락(비중 상한 × 섹터 수),
+ * `multiplyByAxis`는 **다른 축**(비중 상한 × 선정 섹터 수)이다. 둘을 같이 쓰지 않는다.
+ * 곱할 축이 그 설정에 없으면(다른 선정 방식을 골랐다) 그 규칙은 판정하지 않는다.
  */
 export type Operand =
-  | { axis: string; multiplyByContext?: RuleContextKey }
+  | { axis: string; multiplyByContext?: RuleContextKey; multiplyByAxis?: string }
   | { context: RuleContextKey }
   | { value: ScalarValue }
 

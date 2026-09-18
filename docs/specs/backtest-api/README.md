@@ -29,7 +29,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `sectorAllocation.items[].sectorId` | `string` | 필수 | 대응표의 섹터 식별자 |
 | `sectorAllocation.items[].instrumentId` | `string` | 필수 | `{6자리 종목코드}.XKRX`. 중복 금지, 1~50개 |
 | `sectorAllocation.items[].targetWeight` | `string` (decimal) | 조건부 | **`FIXED_WEIGHT`에서만 필수이고 다른 전략에서는 금지**(400). 합이 1이어야 한다 |
-| `strategy.strategyId` | `string` | 필수 | 등록표에 `REGISTERED`인 전략만. 팀 미확정 전략은 422 `RULES_NOT_REGISTERED` |
+| `strategy.strategyId` | `string` | 필수 | 등록표에 `REGISTERED`인 전략만. 팀 미확정 전략은 422 `RULES_NOT_REGISTERED`(2026-09-17 기준 다섯 전략이 모두 등록됐다) |
 | `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다 |
 | `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 "등록표 검증의 과도기 상태") |
 | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |
@@ -229,7 +229,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 { "success": true,
   "data": { "strategyRules": [ { "strategyId": "FIXED_WEIGHT",       "rulesVersion": "1", "status": "REGISTERED",       "provisional": false },
                               { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED",       "provisional": true  },
-                              { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "PENDING_DECISION", "provisional": false } ],
+                              { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "REGISTERED",       "provisional": false } ],
             "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
                                     "commissionBps": "0.0000", "spreadBps": "0.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } },
   "error": null }
