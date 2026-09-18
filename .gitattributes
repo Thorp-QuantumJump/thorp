@@ -14,3 +14,4 @@ gradlew text eol=lf
 *.jpg binary
 *.ico binary
 *.parquet binary
+graphify-out/graph.json merge=graphify
