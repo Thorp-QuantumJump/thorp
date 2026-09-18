@@ -374,6 +374,13 @@ describe('보유 종목 불변식', () => {
   })
 })
 
+/** 응답에서 키를 빼 "그 필드가 오지 않은" 본문을 만든다. 빈 값으로 두는 것과 키가 없는 것은 계약상 다르다. */
+function omitKeys<T extends object>(body: T, ...keys: (keyof T)[]): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(body).filter(([key]) => !keys.includes(key as keyof T)),
+  ) as Partial<T>
+}
+
 describe('공통 평가 기간 조회(T042)', () => {
   const windowBody = {
     commonStart: '2024-01-04',
@@ -429,12 +436,13 @@ describe('공통 평가 기간 조회(T042)', () => {
   })
 
   it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {
-    const { warmupBaseDate, tradingDaysFromBase, maxWarmupTradingDays, excludedRangesFromBase, ...legacy } =
-      windowBody
-    void warmupBaseDate
-    void tradingDaysFromBase
-    void maxWarmupTradingDays
-    void excludedRangesFromBase
+    const legacy = omitKeys(
+      windowBody,
+      'warmupBaseDate',
+      'tradingDaysFromBase',
+      'maxWarmupTradingDays',
+      'excludedRangesFromBase',
+    )
     vi.spyOn(apiClient, 'get').mockResolvedValue(
       axiosResponse({ success: true, data: legacy, error: null }),
     )
@@ -465,10 +473,8 @@ describe('공통 평가 기간 조회(T042)', () => {
   })
 
   it('기준일이 commonEnd를 넘어 목록이 비고 상한 키가 없는 응답을 읽는다', () => {
-    const { maxWarmupTradingDays, ...rest } = windowBody
-    void maxWarmupTradingDays
     const window = readEvaluationWindow({
-      ...rest,
+      ...omitKeys(windowBody, 'maxWarmupTradingDays'),
       commonStart: null,
       commonEnd: '2023-12-29',
       evaluable: false,
