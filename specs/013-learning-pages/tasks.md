@@ -463,3 +463,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 ## Phase 16: Convergence
 
 - [X] T096 (FE) `frontend/src/components/learning/admin/ExampleEditor.tsx`에서 대응표가 `emptyCatalog`(발행됐지만 섹터가 0개)일 때도 새 섹터를 고를 수 없다는 한 문장을 보인다. 지금은 `canPickSector`가 거짓이라 '섹터 추가'와 기존 행의 `select`가 막히는데, 안내 문장은 `mapNotReady`·`failed`일 때만 나와 이유 없이 막힌다. `emptyCatalog`는 대응표가 없는 것과 다른 사실이므로 "열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다"처럼 구분해 적는다. `ExampleEditor.test.tsx`에 `emptyCatalog` 응답에서 이 문장이 보이고 '섹터 추가'가 막히는지 더한다 per T063 (partial)
+
+## Phase 17: Convergence
+
+- [ ] T097 (DOCS) [validation.md](validation.md)에 남은 quickstart 0~5 수동 확인을 실제 화면에서 마친다 — 빈 목록·게시 취소 글 화면, 일반 계정의 관리 화면 차단, 관리 목록의 미게시 변경·갱신 필요 표시, 게시 취소 뒤 공개 목록·글·기록, 공개 화면의 브라우저 저장소 미사용, 실패 화면의 자동 재요청 없음, 대응표에서 사라진 예시의 대체 안내, 키보드 Tab 경로와 NVDA 또는 VoiceOver 읽기, 실제 003 도움말의 실패·재시도와 제목 변경 뒤 연결을 확인한다. 각 결과를 `validation.md`와 MR 본문 "테스트" 절에 성공·실패·미수행으로 구분해 기록하고 모두 확인된 뒤 T075와 이 태스크를 완료한다. SC-002 패턴 검사의 한계와 SC-005 사용성 확인 미수행 표시는 유지한다 per T075, FR-019, SC-008 (partial)
