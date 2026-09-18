@@ -50,6 +50,7 @@ describe('결과 화면의 비교 연결 (T061)', () => {
     )
     expect(screen.getByLabelText('분석 조건').textContent).toContain('비교 대상 비교용 전략')
     expect(screen.getByText(/비교 대상의 비중도/)).toBeTruthy()
+    expect(screen.getAllByText(/판정 기준이 아직 정해지지 않았습니다/)).toHaveLength(2)
     expect(container.querySelectorAll('[data-slot="button"][data-variant="default"]')).toHaveLength(
       1,
     )
