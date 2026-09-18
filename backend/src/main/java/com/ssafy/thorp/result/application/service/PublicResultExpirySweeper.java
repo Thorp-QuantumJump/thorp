@@ -23,7 +23,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 요청이 없는 실행의 판정과 삭제는 004 소유다(contracts/result-api.md "004에 요청하는 변경"). 행을 지우면 그 토큰은 404가 된다. 만료 직후
  * 정리 전까지는 {@link PublicResultService#resolve}가 410으로 막는다.
  *
- * <p>한 건을 지우는 순서는 외래 키가 정한다: 재사용 기록 → 재시도 요청의 원본 참조 → 요청 행. <b>건마다 트랜잭션을 연다</b>({@code
+ * <p><b>재사용·합류 기록도 지우지 않는다.</b> 그 기록은 {@code v_run_metric_summary}의 {@code reuse_count}가 세는 동일 결과
+ * 재조회의 측정 근거다(constitution 원칙 IX, FR-021). 지우면 정리할 때마다 집계가 줄어드므로 요청과의 연결만 NULL로 끊는다.
+ *
+ * <p>한 건을 지우는 순서는 외래 키가 정한다: 재사용 기록의 요청 참조 → 재시도 요청의 원본 참조 → 요청 행. <b>건마다 트랜잭션을 연다</b>({@code
  * RunLivenessSweeper}와 같은 방식) — 한 건이 실패해도(그 사이 누가 재시도해 참조가 새로 생긴 경우 등) 나머지는 지워지고, 실패한 건은 다음 주기에 다시
  * 대상이 된다.
  *
@@ -85,7 +88,7 @@ public class PublicResultExpirySweeper {
     }
 
     private void deleteOne(long requestId) {
-        reuseEventRepository.deleteByRequestId(requestId);
+        reuseEventRepository.clearRequestId(requestId);
         requestRepository.clearRetryOf(requestId);
         requestRepository.deleteById(requestId);
     }
