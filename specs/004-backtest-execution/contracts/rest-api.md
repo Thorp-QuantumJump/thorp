@@ -111,6 +111,8 @@
 | NOT_CANCELLABLE / NOT_RETRYABLE | 409 | 상태 전이 불가 |
 | NO_PARTIAL_RESULT | 409 | 취소 요청에 완료한 거래일이 없음(첫 PROGRESS 전 취소). 재시도 무의미 |
 
+준비 기간 요청값이 요구값보다 작은 오류는 `details.requiredWarmupTradingDays`와 `requestedWarmupTradingDays`를 담는다. 준비 기간을 채운 첫날이 요청 종료일 뒤인 오류는 `requiredWarmupTradingDays`와 `requiredStartDate`를 담는다. 005는 이 값으로 확인창을 채우며, 오류 문장에서 숫자를 추출하거나 자동으로 조건을 바꿔 다시 요청하지 않는다.
+
 기존 `INVALID_INPUT` `RESOURCE_NOT_FOUND` `RESULT_NOT_READY` `BACKTEST_FAILED` `BROKER_UNAVAILABLE` `INTERNAL_ERROR` 유지.
 
 ## 예시 파일

@@ -117,6 +117,9 @@ public class PublicResultService {
     public PublicResultDetail getDetail(String token) {
         BacktestRequest request = resolve(token);
         BacktestDetailResult detail = publicly(() -> queryService.getDetail(request));
+        Map<String, Object> publicConfig = new LinkedHashMap<>(detail.config());
+        // 실행 사본에는 요청 종류가 없다. 비교 주소의 search 인자가 없어도 탐색 후보를 구분한다.
+        publicConfig.put("executionType", request.getExecutionType().name());
         boolean inFlight =
                 detail.status() == RunStatus.QUEUED || detail.status() == RunStatus.RUNNING;
         boolean resultVisible =
@@ -133,7 +136,7 @@ public class PublicResultService {
                 detail.startedAt(),
                 detail.finishedAt(),
                 inFlight ? detail.queueWaitSeconds() : null,
-                detail.config(),
+                publicConfig,
                 withoutWorker(detail.versions()),
                 detail.summary(),
                 detail.summaryUnavailable(),

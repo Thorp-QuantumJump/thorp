@@ -49,7 +49,7 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 | `weightsSource` | 추가. `USER`·`COMPUTED`. 볼 결과가 없으면 `null` |
 | `exceptionKinds` | 추가. 예외 `kind`의 중복 없는 목록(처음 나온 순서). 볼 결과가 없으면 `null`, 빈 목록은 "예외 없음" |
 
-`resultSource`·`partial`·`cancelRequested`·`queuedAt`·`startedAt`·`finishedAt`·`config`·`summaryUnavailable`·`failure`는 004 값을 그대로 통과시킨다.
+`resultSource`·`partial`·`cancelRequested`·`queuedAt`·`startedAt`·`finishedAt`·`summaryUnavailable`·`failure`는 004 값을 그대로 통과시킨다. `config`에는 원 요청의 `executionType`을 더해 탐색 질의가 없는 주소에서도 자동 탐색 후보를 구분한다. 비교 요청의 비용 기준은 `versions.costProfile.version`에서 읽는다.
 
 ## 4. 거래 내역 상한
 

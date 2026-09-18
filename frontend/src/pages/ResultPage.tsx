@@ -1,10 +1,15 @@
 import { useId, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
+import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
+import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
+import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
+import { useCompareTarget } from '@/hooks/useCompareTarget'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
-import { EquityChart } from '@/components/result/EquityChart'
+import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { isZeroValue } from '@/components/result/formatResult'
 import {
@@ -85,6 +90,11 @@ function ResultView({
   timeseries: TimeseriesState
 }) {
   const completedThrough = completedRange(detail, timeseries)
+  const compare = useCompareTarget(detail)
+  const target = compare.compatibleTarget
+  const pickerId = useId()
+  const picker = useDisclosure(pickerId)
+  const pickerButtonId = pickerId + '-trigger'
   const { summary } = detail
 
   const viewable = hasViewableResult(detail)
@@ -108,6 +118,7 @@ function ResultView({
       <h1 id="result-title" className={styles.title}>
         분석 결과
       </h1>
+      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
 
       {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
         <p className={styles.status} role="status">
@@ -119,9 +130,21 @@ function ResultView({
         <p className={styles.status}>분석이 끝나지 못해 결과 숫자가 없습니다.</p>
       ) : null}
 
-      <ResultSummaryCard detail={detail} completedThrough={completedThrough} />
+      <ResultSummaryCard detail={detail} completedThrough={completedThrough} target={target} />
 
-      <ResultChartSlot detail={detail} timeseries={timeseries} />
+      <ResultChartSlot
+        detail={detail}
+        timeseries={timeseries}
+        target={
+          target && compare.timeseries.status === 'loaded'
+            ? {
+                name: strategyLabel(target),
+                points: compare.timeseries.data.points,
+                maxDrawdown: target.summary?.maxDrawdown ?? null,
+              }
+            : null
+        }
+      />
 
       {summary ? (
         <p className={styles.sentence}>
@@ -132,6 +155,14 @@ function ResultView({
               maxDrawdown: summary.maxDrawdown,
               totalTradingCost: summary.totalTradingCost,
             },
+            target: target?.summary
+              ? {
+                  name: strategyLabel(target),
+                  netTotalReturn: target.summary.netTotalReturn,
+                  maxDrawdown: target.summary.maxDrawdown,
+                  totalTradingCost: target.summary.totalTradingCost,
+                }
+              : null,
             partial: detail.partial ? { completedThrough } : null,
           })}
         </p>
@@ -141,6 +172,14 @@ function ResultView({
 
       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
       <div className={styles.actions}>
+        <Button
+          id={pickerButtonId}
+          type="button"
+          disabled={!viewable || compare.targetState === 'REQUESTED'}
+          {...picker.toggleProps}
+        >
+          비교 대상 고르기
+        </Button>
         {viewable ? (
           <Button type="button" variant="outline" {...detailView.toggleProps}>
             자세히 보기
@@ -159,6 +198,54 @@ function ResultView({
         ) : null}
         <OtherConditionsButton config={detail.config} />
       </div>
+      {picker.open ? (
+        <div id={pickerId}>
+          <CompareTargetPicker
+            base={detail}
+            onClose={picker.close}
+            onSelect={(choice) => {
+              picker.close()
+              compare.select(choice)
+            }}
+          />
+        </div>
+      ) : null}
+      <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
+      <CompareTargetSlot
+        state={compare}
+        onRetry={compare.retry}
+        onClear={compare.clear}
+        onPick={() => {
+          if (!picker.open) picker.toggleProps.onClick()
+        }}
+      />
+      {compare.mismatch === 'conditions' ? (
+        <p role="status">
+          섹터·금액·비용·자료 기준 또는 분석 시나리오가 달라 두 결과를 겹쳐 그리지 않았습니다. 기준
+          결과에서 비교 대상을 다시 골라 주세요.
+        </p>
+      ) : null}
+      {compare.mismatch === 'period' && !compare.period ? (
+        <p role="status">
+          평가 기간 또는 준비 기간이 달라 기준 결과만 표시합니다. 비교 대상을 다시 골라 주세요.
+        </p>
+      ) : null}
+      {compare.mismatch === 'versions' && !compare.period ? (
+        <p role="status">
+          자료 또는 계산 엔진 기준이 달라 기준 결과만 표시합니다. 같은 현재 기준으로 다시 계산해
+          비교할 수 있습니다.
+        </p>
+      ) : null}
+      {compare.period ? (
+        <PeriodMismatchDialog
+          period={compare.period}
+          busy={compare.recalculating}
+          error={compare.dialogError}
+          returnFocusId={pickerButtonId}
+          onConfirm={() => void compare.confirmPeriod()}
+          onCancel={compare.cancelPeriod}
+        />
+      ) : null}
       {viewable && lossWindow === null ? (
         <p id={lossReasonId} className={styles.hint}>
           {summary && isZeroValue(summary.maxDrawdown) ? LOSS_WINDOW_NONE : LOSS_WINDOW_UNAVAILABLE}
@@ -166,7 +253,21 @@ function ResultView({
       ) : null}
 
       {detailView.open ? (
-        <DetailPanel id={detailPanelId} token={token} detail={detail} onClose={detailView.close} />
+        <DetailPanel
+          id={detailPanelId}
+          token={token}
+          detail={detail}
+          onClose={detailView.close}
+          compare={
+            target
+              ? {
+                  token: target.publicToken,
+                  name: strategyLabel(target),
+                  items: target.config.items,
+                }
+              : null
+          }
+        />
       ) : null}
       {lossView.open && lossWindow ? (
         <LossWindowView
@@ -196,9 +297,11 @@ function ResultView({
 function ResultChartSlot({
   detail,
   timeseries,
+  target,
 }: {
   detail: PublicResultDetail
   timeseries: TimeseriesState
+  target?: EquityChartSeries | null
 }) {
   if (timeseries.status === 'unavailable') {
     return (
@@ -207,13 +310,18 @@ function ResultChartSlot({
   }
   if (timeseries.status !== 'loaded') return null
   if (!hasDrawableEquity(timeseries.data.points)) {
-    return <p className={styles.status}>받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.</p>
+    return (
+      <p className={styles.status}>
+        받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.
+      </p>
+    )
   }
 
   const { summary } = detail
 
   return (
     <EquityChart
+      target={target}
       altNumbers={
         summary
           ? {

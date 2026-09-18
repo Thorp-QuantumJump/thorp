@@ -125,7 +125,10 @@ public class EffectivePeriodCalculator {
                         ErrorCode.INSUFFICIENT_HISTORY,
                         "요청한 공통 워밍업 %d거래일이 %s 전략이 필요로 하는 %d거래일보다 짧습니다. 비교 묶음의 최대 관측 길이를 다시 계산해 주세요."
                                 .formatted(
-                                        requestedWarmupTradingDays, rules.strategyId(), required));
+                                        requestedWarmupTradingDays, rules.strategyId(), required),
+                        Map.of(
+                                "requiredWarmupTradingDays", required,
+                                "requestedWarmupTradingDays", requestedWarmupTradingDays));
             }
             warmup = requestedWarmupTradingDays;
         }
@@ -160,7 +163,12 @@ public class EffectivePeriodCalculator {
             throw new BusinessException(
                     ErrorCode.INSUFFICIENT_HISTORY,
                     "가장 늦은 상장일 %s 이후 워밍업 %d거래일을 채우고 나면 평가할 수 있는 첫날이 %s라 요청 종료일 %s를 넘습니다. 종료일을 늦추거나 상장이 늦은 종목을 빼 주세요."
-                            .formatted(latestListed, effectiveWarmup, commonStart, requestedEnd));
+                            .formatted(latestListed, effectiveWarmup, commonStart, requestedEnd),
+                    Map.of(
+                            "requiredWarmupTradingDays",
+                            effectiveWarmup,
+                            "requiredStartDate",
+                            commonStart.toString()));
         }
         // 요청 구간에 거래일이 아예 없는 경우다. 워밍업이 0이어도 걸리므로 "상장이 늦은 종목을
         // 빼라"는 조언을 여기 쓰면 틀린다.
