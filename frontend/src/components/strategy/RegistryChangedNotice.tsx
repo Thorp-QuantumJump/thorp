@@ -11,7 +11,7 @@ interface RegistryChangedNoticeProps {
   removedMessages: readonly string[]
 }
 
-const TITLE = '확인하신 사이에 등록표가 바뀌었습니다. 분석 요청은 보내지 않았습니다.'
+const TITLE = '확인하신 사이에 등록표나 분석 규칙이 바뀌었습니다. 분석 요청은 보내지 않았습니다.'
 
 function detailOf(phase: RegistryReloadPhase, pendingRestoreCount: number): string {
   if (phase === 'reloading') return '바뀐 등록표를 불러오는 중입니다.'
@@ -26,7 +26,7 @@ function detailOf(phase: RegistryReloadPhase, pendingRestoreCount: number): stri
 
 /**
  * 분석 요청이 등록표 버전 변경(409 `REGISTRY_VERSION_CHANGED`)으로 거절되었음을 알린다(research R9,
- * quickstart 10).
+ * quickstart 10). 같은 409가 004가 대체한 옛 규칙 버전에도 오므로 화면은 둘을 가르지 않고 함께 알린다.
  *
  * <p><b>다시 보내지 않는다.</b> 사용자가 본 적 없는 등록표로 요청이 나가면 거절이든 통과든 사용자가
  * 확인하지 않은 규칙의 결과다. 바뀐 등록표로 설정을 다시 판정한 결과를 보이고, 보낼지는 사용자가 다시

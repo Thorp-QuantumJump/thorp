@@ -18,8 +18,8 @@
 
 - ~~FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌~~ — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 해제됐다. B05·B11 착수를 막지 않는다
 - ~~PD-02 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 2026-09-15 확정([data-model](data-model.md) §4-2). T017·B02 착수를 막지 않는다. 최소분산 `estimationMethod`만 004 PD-04 대기로 후보 하나로 시작한다(003 쪽 구조는 막히지 않는다)
-- ~~001 평가 기간 입력 계약과 최소 평가 길이 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 정정. 001이 이미 만든 `EvaluationWindowService`에 호출부만 붙이면 되고, 최소 평가 길이는 사용자가 고르는 항목(FR-011a)으로 확정했다. T042는 001이 호출부를 붙이는 대로 연결한다(001 작업 완료가 남은 선행 조건, 팀 결정 대기가 아니다)
-- ~~004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단~~ — [S15P21E205-326](https://ssafy.atlassian.net/browse/S15P21E205-326)(004 T025)이 `GET /backtests/registry`를 열어 해소. 응답은 `{strategyRules[{strategyId, rulesVersion, status, provisional}], defaultCostProfile{version, provisional, commissionBps, spreadBps, slippageBps, taxBps}}`로 **버전과 수치가 한 덩이**라 `AnalysisVersions.costRates`가 기대한 모양 그대로다. 계약은 `docs/specs/backtest-api/README.md` §1.11. 남은 003 작업 둘: ① T039·T059가 이 응답을 소비하고 `costProfileVersion`을 **비우지 말고 받은 버전을 명시해** 보낸다(004 T021이 기본 비용을 바꾸면 화면이 본 조건과 갈린다) ② 등록표 `allocationMethod`를 `EQUAL`/`INVERSE_VOLATILITY`로 교체(004 PD-03 ⓪ 확정). PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음
+- ~~001 평가 기간 입력 계약과 최소 평가 길이 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 정정. 001이 이미 만든 `EvaluationWindowService`에 호출부만 붙이면 되고, 최소 평가 길이는 사용자가 고르는 항목(FR-011a)으로 확정했다. T042는 001이 호출부를 붙이는 대로 연결한다(001 작업 완료가 남은 선행 조건, 팀 결정 대기가 아니다). **2026-09-17 001이 dev에 머지되었고(`12fc23c`) B06이 T042를 닫았다**
+- ~~004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단~~ — [S15P21E205-326](https://ssafy.atlassian.net/browse/S15P21E205-326)(004 T025)이 `GET /backtests/registry`를 열어 해소. 응답은 `{strategyRules[{strategyId, rulesVersion, status, provisional}], defaultCostProfile{version, provisional, commissionBps, spreadBps, slippageBps, taxBps}}`로 **버전과 수치가 한 덩이**라 `AnalysisVersions.costRates`가 기대한 모양 그대로다. 계약은 `docs/specs/backtest-api/README.md` §1.11. 남은 003 작업 둘: ① ~~T039·T059가 이 응답을 소비하고 `costProfileVersion`을 **비우지 말고 받은 버전을 명시해** 보낸다(004 T021이 기본 비용을 바꾸면 화면이 본 조건과 갈린다)~~ — B06에서 끝났다(T104·T105·T110) ② 등록표 `allocationMethod`를 `EQUAL`/`INVERSE_VOLATILITY`로 교체(004 PD-03 ⓪ 확정) — T109(S15P21E205-337)가 맡는다. PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음
 - 004 상한 재배분 규칙과 워커 메시지 계약 미확정: FR-006·FR-019의 종단 완료 판정 보류
 
 ## Format: `[ID] [P?] [Story] (파트) Description`
@@ -150,10 +150,79 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T036 [P] [US1] (FE) `frontend/src/components/strategy/SettingsStatusBadge.tsx` — `isDefault ? '기본 설정' : '설정을 바꿈'`. 누를 수 없는 상태 표시이며 토글이 아니다(FR-002). 옆에 "기본값은 편의용 출발점이며 최적값이 아닙니다"(FR-004, 원칙 III)
 - [X] T037 [P] [US1] (FE) `frontend/src/components/strategy/ConditionSummaryLine.tsx` — 분석 기간·비교 대상(섹터 수)·비용 적용 여부 한 줄(FR-002). 값은 props로만 받는다
 - [X] T038 [P] [US1] (FE) `frontend/src/components/strategy/ActionButtons.tsx` — constitution 3.4.0 승인([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253), 2026-09-15)으로 spec의 두 버튼 안이 확정됐다. '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001)
-- [ ] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. `minEvaluationYears`는 004 계약에 아직 자리가 없어 이 요청에 싣지 않는다("착수 전에 알아둘 것" ⑧) — 그 값은 T042의 화면 판정에서만 쓰고 조용히 버린다. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**("착수 전에 알아둘 것" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 "분석 조건 버전을 확인할 수 없습니다"로 막는다. 값을 지어내 보내지 않는다
+- [X] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. `minEvaluationYears`는 004 계약에 아직 자리가 없어 이 요청에 싣지 않는다("착수 전에 알아둘 것" ⑧) — 그 값은 T042의 화면 판정에서만 쓰고 조용히 버린다. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**("착수 전에 알아둘 것" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 "분석 조건 버전을 확인할 수 없습니다"로 막는다. 값을 지어내 보내지 않는다
+  - **004 결정 (2026-09-17, 004 담당자 신재은 답변)**: ① **004가 조회 API를 연다.** `GET /backtests/registry`가 `strategy_rules`
+    전체 행(`strategyId`·`rulesVersion`·`status`·`provisional`)과 `defaultCostProfile { version, provisional, commissionBps,
+    spreadBps, slippageBps, taxBps }`를 내린다. `rulesVersion`은 재현 기준이라 필수로 남는다. ②(003 등록표에 싣기)는 backend
+    `strategy`가 `backtest`를 참조하지 않는다는 규칙과 충돌하고, ③(선택 필드화)은 FR-010의 비용 수치·임시 여부를 채우지 못해
+    어차피 조회 API가 필요하다는 이유로 버렸다. **화면 규약**: 고른 `strategyId`로 행을 찾아 `status === 'REGISTERED'`인 행의
+    `rulesVersion`을 싣고, `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행은 시나리오 규칙이라 쓰지 않는다.
+    `costProfileVersion`은 비워(`null`) 서버 기본값을 쓰고, "임시값" 문구는 `defaultCostProfile.provisional`로 판단한다.
+  - **B06 진행 메모 (2026-09-17, `feat(fe)/238-analysis-request-connect`, 대역 뒤에서 멈춤)**: 결정은 났으나 `GET /backtests/registry`가
+    dev에 없어 **체크하지 않는다.** `api/backtest.ts`의 `createBacktest`는 CSRF 토큰을 준비한 뒤 조립된 요청을 고치지 않고
+    보내며, 거절과 전송 실패를 모두 `BacktestRequestError`(`kind`·`code`·`status`·`details`)로 던진다. T099가 요구한 대로
+    서버 오류 이름과 `details`를 싣는다. `runCsrfProtectedMutation`을 쓰지 않은 까닭은 그 함수가 오류를 `ApiClientError`로
+    바꾸며 `details`를 버리기 때문이고, 토큰 무효면 토큰만 비우는 규약은 같다. 202인데 접수 결과를 읽지 못하면 성공으로
+    넘기지 않는다. `api/analysisVersions.ts`는 위 응답을 읽어 일부만 어긋나도 전체를 거부한다. 규칙 행 목록의 최상위 필드
+    이름은 답변에 없어 `strategyRules`로 가정했다. 통로의 `AnalysisVersions`는 이제 전략 하나의 버전이 아니라 **등록표 전체**다 —
+    화면이 열릴 때 한 번 받고, 고른 전략의 버전은 `resolveRulesVersion`이 찾는다(전략을 바꿀 때 서버에 묻지 않는다). 행이 없거나
+    등록된 행이 둘 이상이면 순서로 고르지 않고 막는다. 실제 모듈 한 벌은 `components/strategy/connectedAnalysisSupport.ts`에
+    모았으나 **페이지 기본 통로는 아직 `notConnectedSupport`다** — 지금 바꾸면 화면은 똑같이 막히면서 없는 주소로 요청만 나간다.
+    001(T042)과 004(`GET /backtests/registry`)가 모두 머지되면 실제 응답으로 두 읽기 함수를 확인하고, 기본값을 이 통로로 바꾼 뒤
+    quickstart 7·7-1·7-2와 US1 종단 데모를 돈다.
+  - **004 답변 반영 (2026-09-17 추가 답변)**: (1) 필드 이름은 `strategyRules[]`·`defaultCostProfile` 그대로다. (2) registry는 전략마다
+    **현재 버전 한 행만** 내린다. 버전이 바뀌면 옛 행은 `SUPERSEDED`로 뺀다. (정정: 처음에는 "옛 버전 명시 요청은 재현용으로 받는다"고 답했으나
+    004가 바로잡았다 — **새 요청은 현재 버전만 받고, 대체된 버전이면 409 `REGISTRY_VERSION_CHANGED`로 거절한다.** 재현은 저장된 결과가
+    버전을 기록하는 것으로 보장된다.)
+    `PENDING_DECISION` 행은 상태 그대로 나간다. 화면의 "등록된 행이 둘 이상이면 막는다"는 방어로 남긴다(곧 `INVERSE_VOLATILITY/2`가
+    들어올 예정이다). (3) **`costProfileVersion`은 받은 `defaultCostProfile.version`을 명시해 싣는다.** 기본값은 배포 때만 바뀌지만 확정
+    비용 버전(`KR-ETF-2026-09`) 배포가 예정되어 조회와 접수 사이의 창이 실제로 생기고, 명시하면 사용자가 본 조건이 그대로 적용되며
+    재현 기준이 요청에 남는다. 이것으로 T105를 닫았다.
 - [X] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)
 - [X] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 "002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교" 흐름을 적는다 (T040 의존)
-- [ ] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + "최소 평가 기간(N년)에 못 미칩니다" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 한다"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다("착수 전에 알아둘 것" ①). 404·미구현·실패면 카드에 "공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)
+- [X] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + "최소 평가 기간(N년)에 못 미칩니다" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 한다"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다("착수 전에 알아둘 것" ①). 404·미구현·실패면 카드에 "공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)
+  - **구현 방향 (T098 결정, 2026-09-17 001 담당자와 합의)**: 위 원문의 "선택 전략은 현재 설정으로 조회"는 **쓰지 않는다.**
+    값이 바뀔 때마다 서버를 부르면 T058·티켓 241의 "값을 만지는 동안 요청 0건"이 깨진다. 대신 001 응답이 워밍업 0일 때의
+    기준일과 그 뒤 거래일 목록을 함께 내리고 화면이 계산한다(research R7-1).
+    - **요청**: `GET /sectors/evaluation-window?sectors=…&strategy=…&maxWarmupTradingDays=N`. `maxWarmupTradingDays`는
+      화면이 훑을 워밍업의 상한이며 **화면이 등록표에서 계산해 항상 보낸다** — 전략마다 `warmupRule.sum`에 축별 최대값(입력형은
+      `range.max`, 목록형은 후보 가운데 최대값)을 넣은 값의 최대다. 001이 003의 파라미터 조합을 몰라도 된다.
+    - **응답에 더해지는 필드 셋**: `warmupBaseDate`(워밍업 0일 때의 `commonStart`), `tradingDaysFromBase`(그날부터의 거래일
+      오름차순 목록), `maxWarmupTradingDays`(= 목록 길이 − 1). 기존 여섯 필드와 `datasetId`는 그대로다.
+    - **화면 계산**: `commonStart(N) = tradingDaysFromBase[N]`(0-기준, 001 `firstEvaluable`·픽스처 `$firstEvaluable`과 같다).
+      `commonStart(N) > commonEnd`면 분석할 수 없다. `bindingCandidate`는 모든 후보가 같은 달력을 쓰므로 워밍업과 무관해 다시
+      계산하지 않는다. 남는 기간을 `minEvaluationYears`와 견주어 `blocked`·`reduced`로 가르는 것은 원문과 같다.
+      `N > maxWarmupTradingDays`면 계산할 수 없으므로 값을 지어내지 않고 판정하지 못한 상태로 막는다.
+    - **조회 시점**: 섹터 집합(과 등록표에서 계산한 상한)이 바뀔 때만 조회한다. 값을 바꾸는 동안에는 받아 둔 응답으로만 판정한다.
+    - **기각한 갈래**: ② 전략별 워밍업 후보를 한 번에 조회 — 001이 003의 파라미터 조합을 알아야 하고, 입력형 축은 후보가
+      유한하지 않다. ③ 매번 조회하고 늦게 온 응답은 버림 — research R7-1이 기각한 방식이며, 입력 도중 요청이 계속 나간다.
+    - **001에 보낸 보완 질문 넷 (2026-09-17 기준 미결)**: (1) 달력이 워밍업 상한보다 짧을 때 `CALENDAR_TOO_SHORT` 대신 있는
+      만큼만 주고 `maxWarmupTradingDays`를 줄이며 목록 끝이 `commonEnd`를 넘지 않게 할 것 — 답이 오기 전까지 화면은 상한 초과를
+      판정하지 못한 상태로 막는다. (2) `excludedRanges`를 `warmupBaseDate`부터 자를 것(또는 별도 필드). (3) 상한을 줄 때
+      `strategy`를 생략할 수 있게 해 카드 다섯 장을 요청 한 번으로 판정할 것. (4) `maxWarmupTradingDays`가 없으면 400으로 둘 것.
+  - **B06 진행 메모 (2026-09-17, `feat(fe)/238-analysis-request-connect`, 대역 뒤에서 멈춤)**: 001 엔드포인트와 합의한 필드
+    셋이 dev에 없어 **체크하지 않는다.** 만든 것은 조회·판정·상태 셋이다. `api/sectors.ts`의 `fetchEvaluationWindow`는
+    거래일 목록의 불변식(첫 날 = 기준일, 엄격한 오름차순, 상한 = 길이 − 1)이 어긋나면 응답 전체를 읽지 않는다.
+    `utils/evaluationWindow.ts`가 위 계산 규칙과 등록표의 상한 계산을 맡고, `hooks/useEvaluationWindow.ts`는 섹터 목록과
+    상한을 이은 글을 열쇠로 조회해 늦게 온 응답이 새 집합을 판정하지 않게 한다. 통로에는 `fetchEvaluationWindow`를 더하고
+    판정 입력에 받아 둔 상태(`evaluationWindow`)를 실었다 — `judgeWarmup`이 동기 함수라 섹터를 모르므로 조회는 화면이,
+    판정은 통로가 한다. 보완 질문 3이 미결이라 조회에 `strategy`를 싣지 않는다. 001이 필수로 두면 등록표의 아무 전략 하나를
+    실으면 된다(새 필드는 전략과 무관하다). **남은 일**: 001이 머지되면 실제 응답으로 `readEvaluationWindow`를 확인하고,
+    답에 따라 상한 초과(질문 1)와 `excludedRanges` 기준(질문 2)을 반영한 뒤 페이지 기본 통로를 바꾼다(T039 메모).
+  - **001 답변 반영 (2026-09-17, 001 MR !183 `feat(be)/325-evaluation-window-api`, 계약은 001 `contracts/sector-api.md`의
+    「GET /sectors/evaluation-window」 절)**: 보완 질문 넷이 모두 풀렸다. (1) 달력이 상한보다 짧으면 있는 만큼만 주고
+    `maxWarmupTradingDays`를 줄이며 목록은 `commonEnd`까지다. 워밍업으로 시작일을 잡지 못하면 `evaluable: false`·`commonStart: null`이고,
+    기준일이 이미 `commonEnd`를 넘으면 목록이 비고 상한 키가 없다. **그래서 화면은 요청한 상한 안에서 목록을 넘는 워밍업을 "분석할
+    수 없음"(`blocked`)으로 바꿨다** — 요청한 상한 자체를 넘을 때만 "판정할 수 없음"으로 남긴다. 상한을 가르려고 훅이 받은 상태에
+    보낸 상한(`requestedMaxWarmup`)을 함께 담는다. (2) 기존 `excludedRanges`는 워커와 공유하는 픽스처가 뜻을 고정해 바꾸지 않고
+    `excludedRangesFromBase`([`warmupBaseDate`, `commonEnd`])를 따로 낸다. 화면의 판정은 자료 부족 구간을 쓰지 않으므로 읽어 두기만
+    한다. (3) `strategy`는 생략할 수 있고 생략하면 워밍업 0으로 판정한다. 지금처럼 싣지 않는다. (4) 상한이 없을 때 400이 아니라
+    재료 세 칸의 키를 빼는 것으로 정했다. 화면은 늘 보내므로 차이가 없고, 읽는 층은 목록이 있는데 상한이 없으면 계약 위반으로 본다.
+    상한은 0~6000이다. **덧붙은 것**: 응답에 `bindingSector`가 더해져 줄어든 기간 안내가 종목 코드를 되짚지 않고 섹터 이름을 찾으며,
+    오류 409 `EVALUATION_WINDOW_NOT_READY`와 422 `STRATEGY_NOT_REGISTERED`(전략을 실을 때만)가 늘었다. 어느 쪽이든 화면은 확인할 수
+    없음으로 막는다. **계약을 읽다 고친 것**: 001은 섹터 순서를 보존하고 `bindingCandidate` 동점 규칙이 입력 순서를 쓴다. 앞서 화면이
+    섹터를 정렬해 보내 접수 경로와 원인 섹터가 갈릴 수 있었으므로 002 선택 순서 그대로 보낸다. 픽스처(`evaluation-window-cases.json`)는
+    산식의 입출력만 고정하는 파일이라 새 필드를 넣지 않았다는 001 판단을 따른다.
 
 ### Frontend 테스트
 
@@ -484,9 +553,9 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 
 구현을 막거나 방향을 바꿀 수 있는 사실이다. 티켓으로 만들지 않고 여기와 MR 본문에 적는다(AGENTS.md "곁가지는 티켓으로 만들지 않는다").
 
-① **001의 `GET /sectors/evaluation-window`가 아직 없다.** 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다"며 보류했었다. **003이 등록표를 열고([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)) `warmupTradingDays` 산출 방식을 확정했으므로 이 보류 사유는 해소됐다** — 001은 자신의 T017에서 계산 로직(`EvaluationWindowService`)에 호출부만 붙이면 된다. 남은 것은 **001의 구현 작업**이지 팀 결정 대기가 아니다. 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.
+① ~~**001의 `GET /sectors/evaluation-window`가 아직 없다.**~~ **해제(2026-09-17 dev 머지 `12fc23c`, B06이 연결).** 아래는 해제 전의 기록이다. 001 `tasks.md` T017이 "워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다"며 보류했었다. **003이 등록표를 열고([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)) `warmupTradingDays` 산출 방식을 확정했으므로 이 보류 사유는 해소됐다** — 001은 자신의 T017에서 계산 로직(`EvaluationWindowService`)에 호출부만 붙이면 된다. 남은 것은 **001의 구현 작업**이지 팀 결정 대기가 아니다. 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.
 
-② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 "확인된 빈 구멍"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다.
+② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 "확인된 빈 구멍"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다. **2026-09-17 결정: 004가 `GET /backtests/registry`를 연다**(T039 메모). **해제: 같은 날 dev에 머지되었고(`fbec7b4`) B06이 연결해 202 접수까지 확인했다**("로컬 종단 확인"). 남은 교차 작업은 워커 메시지 정합(③)과 배분 방식 교체(T109)다.
 
 ③ **등록표 축 이름이 워커에 닿지 않는다.** 워커는 `parameters.rebalance == "MONTH_END"` 문자열과 `rules.lookbackDays`만 읽는다. 003의 `rebalancePeriod` 객체값, `maxWeight`·`topN`·`skipRecentDays`·`allocationMethod`·`estimationMethod`는 004 메시지 계약(`docs/specs/backtest-messaging/`)과 워커 어느 쪽에도 자리가 없다. **004 소유다.** 그래서 T049의 접수 관문은 `registryVersion`이 있는 요청에만 걸고, 전부에 걸어 FR-006을 완전히 닫는 시점은 워커 정합 뒤로 남긴다. T017이 어긋난 곳을 표로 남긴다.
 
@@ -657,7 +726,7 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
 알리되 자동으로 다시 보내지 않는다. 이것으로 FR-008·FR-011·FR-017과 quickstart 5-1·7·10을 만족한다. 남은
 간극은 셋이다. B06·B10·B12는 위 단계가 이미 추적하므로 간극으로 세지 않았다.
 
-- [ ] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 "선택 전략은 현재 설정으로 조회"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 "값을 만지는 동안 서버로 요청이 나가지 않는다"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다
+- [X] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 "선택 전략은 현재 설정으로 조회"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 "값을 만지는 동안 서버로 요청이 나가지 않는다"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다
 - [X] T099 (FE) 분석 요청의 거절 코드마다 계약이 정한 화면 처리를 붙인다 per 계약 §2 거절 응답 · FR-018 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`의 `handleAnalyze`는 409 `REGISTRY_VERSION_CHANGED`(T059) 말고는 모든 거절을 `error.message` 한 줄로 보인다. 계약 §2가 정한 처리 가운데 422 `STRATEGY_NOT_REGISTERED`의 "전략 선택으로 되돌린다"와 503 `REGISTRY_UNAVAILABLE`의 "다시 시도를 제안한다"가 없다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙의 `detail`을 메시지로 싣고(`StrategySettingsRejectedException.ruleViolated`) 화면이 그대로 보이므로 이미 만족한다. 400 `UNREGISTERED_PARAMETER_VALUE`는 서버 메시지가 `허용 범위를 벗어난 값입니다: strategyId=…, 항목=…` 같은 개발용 문장이라 그대로 보이면 사용자가 읽을 수 없다 — 응답 `details`의 `axis`·`allowedRange`로 등록표 라벨과 범위를 찾아 안내하거나, 그럴 수 없으면 일반 문장과 등록표 다시 조회를 제안한다. 판별은 T059와 같이 `analysisSupport.ts`에서 오류의 `code` 하나로 하고(`isRegistryVersionChanged`와 나란히), T039의 `BacktestRequestError`가 `code`와 `details`를 싣도록 그 태스크의 구현 메모에 적는다. 검사는 `StrategySettingsPage.test.tsx`에 코드마다 하나씩 두고, 어느 경우에도 자동으로 다시 보내지 않는지 함께 본다
 - [X] T100 [P] (FE) 고른 카드의 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않고 판정하지 못한 사실을 보인다 per FR-011 · Constitution VI (contradicts) — `frontend/src/pages/StrategySettingsPage.tsx`의 `judgeWarmup`은 주석에 "지금 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않는다"고 적었는데, 코드는 `currentWarmup === null`일 때 `strategy.warmupTradingDays`로 판정한다. 재검증이 축을 비워 복원을 기다리는 동안 고른 카드가 기본값 기준의 `ok`나 `reduced`를 보여, 화면이 하지 않은 판정의 결과를 말한다. '분석하기'는 `INVALID_STORED_VALUES`로 막히므로 요청은 나가지 않는다. 고른 전략이고 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 `{ state: 'unknown', message: '현재 설정으로 워밍업을 계산할 수 없습니다.' }`를 넘긴다(`unknown`은 고를 수 없다는 뜻이 아니라 카드는 눌린 채 남는다). 검사: 보관값의 축 하나가 새 등록표 범위 밖이라 비워진 상태로 전략을 고르면 카드의 `data-warmup`이 `unknown`이고, 복원하면 지금 설정의 판정으로 돌아온다
 
@@ -719,3 +788,129 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등�
 막고 "전략을 고르면 평가할 수 있는 범위가 정해진다"는 까닭을 적는다(`rangeUnavailableMessage`). 금액·최소 평가 기간·
 비용 표시는 선택 전에도 쓸 수 있다. 검사는 엄격(3년) 보관값과 미선택 상태에서 카드가 막히고 눌러도 선택되지 않다가,
 패널에서 완화로 바꾸면 카드를 고를 수 있게 되는지 본다. 옮기기 전 코드에서 패널을 찾지 못해 실패하는 것을 확인했다.
+
+---
+
+## Phase 18: Convergence
+
+**Purpose**: B06(분석 요청과 평가 기간을 연결한다)을 spec·plan·계약과 대조한다. 조회·판정·전송은 대역 뒤에서 FR-011·FR-011a·
+SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI 위반은 없다. T039·T042의 체크와 기본 통로 전환, 001 보완
+질문 1은 위 두 태스크의 메모가 추적하므로 세지 않았다. 남은 간극은 넷이다.
+
+- [X] T103 (DOCS) spec의 선행 조건 표와 plan의 B06 선행 설명을 T098·004 결정에 맞춘다 per spec 선행 조건 표 · plan "묶음에 넣지 않은 것" (contradicts) — `specs/003-strategy-settings/spec.md` 선행 조건 표의 "001 평가 기간 계약" 행은 "003은 `warmupTradingDays`·`minEvaluationYears`를 질의 값으로 넘기기만 한다"고 적었으나, T098 결정은 **화면이 등록표에서 계산한 `maxWarmupTradingDays`만 보내고 받은 거래일 목록으로 판정한다**(research R7-1, T042 구현 메모). 같은 표의 "004 규칙·비용 버전 조회" 행은 "조회 계약 없음"이고 `plan.md`의 "묶음에 넣지 않은 것"은 004 조회 수단을 "여전히 팀 결정 대기"로 적었으나, 2026-09-17 004가 `GET /backtests/registry`를 열기로 정했다(T039 메모). **intent 문서가 구현과 다른 방식을 말하면 다음 대조에서 맞는 구현이 모순으로 잡힌다.** 두 행을 결정과 남은 선행(각 엔드포인트의 구현)으로 고치고, plan의 문장도 같게 고친다. 001 계약 문서(`specs/001-etf-market-data/contracts/sector-api.md`)는 001 소유라 고치지 않는다
+- [X] T104 (FE) 규칙 버전이 바뀌어 거절되면 004 등록표를 다시 받고 알린다 per T039 004 결정 · 계약 §2 거절 응답(research R9와 같은 성격) (partial) — `frontend/src/pages/StrategySettingsPage.tsx`는 004 규칙 등록표(`fetchAnalysisVersions`)를 화면이 열릴 때 한 번 받는다. 004가 규칙 버전을 올리면 접수가 422 `RULES_NOT_REGISTERED`로 거절되는데, `handleAnalyze`는 이 코드를 `default` 분기에서 서버 문장으로만 보이고 등록표를 다시 받지 않는다. **새로 고치기 전까지 같은 옛 버전으로 같은 거절이 되풀이된다** — 409 `REGISTRY_VERSION_CHANGED`에 R9가 정한 처리가 규칙 버전에는 없는 셈이다. `analysisSupport.ts`의 `BacktestRejectionCode`에 `RULES_NOT_REGISTERED`를 더하고, 받으면 버전 조회를 다시 하고(다시 조회하는 동안 받은 값을 거두지 않는 기존 규약 유지) "분석 규칙이 바뀌어 다시 확인했습니다" 식으로 알리되 **자동으로 다시 보내지 않는다.** 다시 받은 등록표에서 그 전략이 `PENDING_DECISION`이면 기존 차단 문장이 이어받는다. 검사로 고정한다: 422 `RULES_NOT_REGISTERED` 뒤 버전 조회가 한 번 더 나가고 요청은 한 건에 머무르며, 새 버전을 받은 뒤 '분석하기'를 누르면 새 `rulesVersion`이 실린다
+- [X] T105 (FE) 화면에 보인 비용 조건과 실제 접수된 비용 조건이 갈라지지 않게 한다 per FR-010 · FR-014 (partial) — 004 결정대로 요청의 `costProfileVersion`을 `null`로 보내고 화면은 `GET /backtests/registry`의 `defaultCostProfile`을 보인다. 그런데 **조회와 접수 사이에 서버 기본값이 바뀌면 사용자가 본 적 없는 비용 조건으로 분석이 접수되고**, `api/backtest.ts`는 202 응답의 `versions.costProfile { version, provisional }`을 읽지 않아 그 사실을 알 수 없다(FR-014는 비용 가정이 요청과 함께 보존되기를 요구한다). 004 담당자에게 드린 질문 3의 답에 따라 둘 중 하나로 닫는다: (a) 기본값이 바뀔 수 있으면 받은 `defaultCostProfile.version`을 요청에 명시해 싣는다, (b) 배포 때만 바뀐다면 `null`을 유지하되 202의 `versions.costProfile.version`을 `BacktestAccepted`에 읽어 화면에 보인 버전과 다르면 접수 결과와 함께 알린다. 답이 오기 전에는 착수하지 않고, 고른 쪽과 근거를 T039 메모에 적는다
+  - **T105 구현 메모**: 004 답변 (3)에 따라 (a)를 골랐다. 화면이 받은 `defaultCostProfile.version`을 요청의 `costProfileVersion`에
+    그대로 싣는다. 페이지 검사가 요청의 비용 버전이 통로가 준 버전과 같은지 본다.
+  - **T104 구현 메모 (004 재답변, 2026-09-17)**: 태스크는 422 `RULES_NOT_REGISTERED`를 전제했으나 004가 **대체된 옛 규칙 버전을 409
+    `REGISTRY_VERSION_CHANGED`로 거절한다**고 정했다. 옛 규칙으로 조용히 접수하거나 "옛 규칙으로 접수됨"만 표시하는 안은 버렸다 —
+    사용자가 고른 것은 전략이지 버전이 아니므로, 새 규칙이 있는데 옛 규칙으로 계산한 결과는 다른 전략과 견줄 때 다른 규칙의 숫자가
+    된다. 화면은 같은 409를 003 등록표 불일치와 가를 수 없으므로 **409를 받으면 003 등록표와 004 규칙 등록표를 둘 다 다시 받는다.**
+    규칙 등록표는 받아 둔 값을 거두고 '확인하는 중'으로 돌린다(두면 누르는 순간 같은 409가 되풀이된다). 알림은 두 조회가 모두 끝나야
+    '다시 받음'이 되고 제목을 "등록표나 분석 규칙이 바뀌었습니다"로 넓혔다. 자동으로 다시 보내지 않는다. 검사는 409 뒤 규칙 조회가 한 번
+    더 나가고, 새 버전을 받기 전에는 '분석하기'가 막혀 요청이 한 건에 머무르며, 받은 뒤 다시 누르면 새 `rulesVersion`이 실리는지 본다.
+    다시 조회하는 코드를 빼면 이 검사가 실패하는 것을 확인했다.
+- [X] T106 [P] (FE 테스트) 페이지 검사가 실제 통로의 판정 연결을 쓰게 한다 per T039·T042 "B06과의 경계" (partial) — `frontend/src/pages/StrategySettingsPage.test.tsx`의 "공통 평가 기간 연결(T042, T098)" 두 검사는 `judgeWarmup`을 `({ evaluationWindow, warmupTradingDays, minEvaluationYears }) => judgeWarmupFromWindow(...)` 람다로 **따로 적어** 쓴다. `frontend/src/components/strategy/connectedAnalysisSupport.ts`의 같은 연결이 인자를 빠뜨리거나 뒤바꿔도 모든 검사가 통과하고, 그 통로는 기본값으로 바뀌는 순간에야 처음 쓰인다. 두 검사가 `{ ...base, fetchEvaluationWindow: 흉내, judgeWarmup: connectedAnalysisSupport.judgeWarmup }`처럼 실제 판정 연결을 가져다 쓰게 한다(조회·전송은 계속 흉내). 연결을 일부러 어긋나게 바꿔 검사가 실패하는지 한 번 확인한 뒤 되돌린다
+
+**T103·T106 구현 메모**:
+
+- **T103**: spec 선행 조건 표의 두 행을 결정에 맞췄다. 001 행은 "질의 값으로 넘긴다"를 T098의 방식(상한과 섹터만 보내고 화면이
+  계산)으로, 004 행은 "조회 계약 없음"을 "계약 결정, 구현 대기"로 고쳤다. plan은 "묶음에 넣지 않은 것"에 더해 같은 사실을 적은
+  두 곳(Constitution Check 앞뒤의 "남는 항목"·"004 교차 계약")도 고쳤다 — 한 곳만 고치면 같은 문서가 두 말을 한다. 비용·규칙
+  조회를 빼고 나도 004 교차 계약(상한 재배분·워커 메시지)은 열려 있어 게이트 판정은 그대로다.
+- **T106**: "공통 평가 기간 연결" 두 검사가 `connectedAnalysisSupport.judgeWarmup`을 그대로 쓴다. 연결을 일부러 어긋나게 바꿔
+  두 가지를 확인했다. 워밍업과 최소 평가 기간을 서로 바꿔 넘기면 첫 검사(값을 바꾸며 다시 판정)가 실패하고, 받아 둔 평가 기간
+  상태 대신 '조회 중'을 넘기면 두 검사가 모두 실패한다. 둘째 검사는 조회 실패 상태만 보므로 앞의 뒤바뀜은 잡지 않는다. 확인한 뒤
+  연결을 되돌렸다.
+
+---
+
+## Phase 19: Convergence
+
+**Purpose**: Phase 18을 닫은 뒤 B06을 다시 대조한다. 그사이 001의 `GET /sectors/evaluation-window`가 dev에 머지되었고
+(`12fc23c`, MR !183), 머지된 `EvaluationWindowResponse`는 화면의 `readEvaluationWindow`와 모양이 맞는다 — `commonStart`는 null이어도
+키가 남고, 상한을 주면 `tradingDaysFromBase`·`excludedRangesFromBase`가 늘 오며, 목록이 비면 `maxWarmupTradingDays` 키가 빠지고,
+`bindingSector`는 늘 채워진다. 004 `GET /backtests/registry`는 아직 dev에 없어 T039의 실제 연결은 기존 메모가 추적한다. 남은 간극은 둘이다.
+
+- [X] T107 (FE) 001 머지를 받아 평가 기간 조회와 워밍업 판정만 실제 통로로 연결한다 per FR-011 · FR-011a · US1 · T042 (partial) — B06 브랜치는 001 머지 이전의 dev 위에 있고, `frontend/src/pages/StrategySettingsPage.tsx`의 기본 `support`는 여전히 `notConnectedSupport`라 **실제 화면에서는 모든 카드가 "공통 평가 기간을 확인할 수 없습니다"로 판정되지 못한다.** T042·T039 메모는 "둘 다 머지되면 기본값을 바꾼다"고 적었지만, 이 묶음의 인계 순서는 001만 풀리면 T042를 실제 API로 연결하고 버전은 막힌 채 두기로 했다. 할 일: (1) origin/dev를 이 브랜치에 병합한다. (2) 라우트가 쓰는 기본 통로를 **평가 기간 조회(`fetchEvaluationWindow`)와 판정(`judgeWarmup`)만 실제 모듈로, 버전 조회와 전송은 연결 전 상태로** 둔 한 벌로 바꾼다 — `notConnectedSupport`와 `connectedAnalysisSupport`를 섞은 모듈 상수로 두어 안정 참조 계약을 지키고, 004가 머지되면 이 한 벌을 `connectedAnalysisSupport`로 바꾸면 되게 한다. 004가 없는 지금 `fetchAnalysisVersions`를 실제로 부르면 없는 주소로 요청만 나가므로 부르지 않는다. (3) 로컬 백엔드로 quickstart 7·7-1·7-2를 돌려 카드가 실제 응답으로 `reduced`·`blocked`를 가르는지, 최소 평가 기간을 바꾸면 요청 없이 다시 판정되는지 확인하고 결과를 이 태스크 메모에 적는다. (4) T042를 체크한다 — 원문의 "선택 전략은 현재 설정으로 조회"는 T098 결정으로 대체되었다는 점을 체크 근거에 밝힌다. 검사로 고정한다: 라우트가 그리는 페이지(`App.tsx` 경로)가 평가 기간 조회를 한 번 부르고, 버전은 "분석 조건 버전을 확인할 수 없습니다"로 막히며, 요청이 나가지 않는다
+- [X] T108 [P] (DOCS) 계약 §2와 data-model §10이 실제로 싣는 필드와 출처를 적게 한다 per FR-014 · 계약 §2 · T039 004 결정 (partial) — `specs/003-strategy-settings/contracts/strategy-registry-api.md` §2 "003이 채워 보내는 필드" 표에 `rulesVersion`·`costProfileVersion`이 없다. 2026-09-17 결정으로 003 화면이 둘 다 `GET /backtests/registry`에서 읽어 **명시해 싣는데**, 표만 보면 003이 버전을 채우지 않는 것처럼 읽힌다. 같은 표의 `initialAmount`·`periodStart`/`periodEnd`는 실제 004 요청 이름(`conditions.initialCash`(decimal 문자열)·`conditions.start`/`end`, `docs/specs/backtest-api/README.md` §1)과 다르고, 코드(`utils/analysisRequest.ts`)는 004 이름으로 보낸다. `specs/003-strategy-settings/data-model.md` §10에도 `rulesVersion`의 출처 행이 없다(§9의 `costProfileVersion` 행은 있다). 두 문서에 `strategy.rulesVersion`(004 registry의 고른 전략 `REGISTERED` 행, `PENDING_DECISION`이면 보내지 않음, 대체되면 409)과 `conditions.costProfileVersion`(받은 `defaultCostProfile.version` 명시)을 더하고, 표의 필드 이름을 004 요청 경로로 맞춘다. 004 계약 문서는 004 소유라 고치지 않는다
+
+**T107·T108 구현 메모 (2026-09-17)**:
+
+- **T107 — 코드와 검사는 끝났고 실측이 남아 체크하지 않는다.** (1) origin/dev를 병합했다. dev가 같은 `api/sectors.ts`에 대표 상품 정보
+  조회를 더해 충돌했고 두 함수를 모두 살렸다. (2) `components/strategy/connectedAnalysisSupport.ts`에 `defaultAnalysisSupport`를 두고
+  페이지 기본값으로 삼았다 — `notConnectedSupport`에서 평가 기간 조회·판정만 실제 모듈로 바꾼 모듈 상수다. 004가 머지되면 이 상수
+  하나를 `connectedAnalysisSupport`로 바꾼다. 검사는 `support` 없이 그린 페이지가 평가 기간을 한 번 조회해 카드를 실제 판정하고,
+  버전은 "분석 조건 버전을 확인할 수 없습니다"로 막히며 서버로 다른 요청이 나가지 않는지, 조회가 실패하면 카드가 확인할 수 없음을
+  보이는지 본다. 기본 통로의 조회를 실패하게 바꾸면 첫 검사가 실패하는 것을 확인했다. (3) **quickstart 7·7-1·7-2 실측은 하지
+  못했다** — 이 기계에 적재된 KRX 자료로 뜬 백엔드가 없다. 자료가 있는 환경에서 확인한 뒤 T107과 T042를 체크한다.
+- **T108**: 계약 §2 표를 004 요청 경로 이름(`strategy.*`·`conditions.*`)으로 다시 적고 `rulesVersion`·`costProfileVersion`의 출처를
+  더했다. data-model §10에도 두 행을 더했다.
+
+---
+
+## Phase 20: 004에서 넘겨받은 작업
+
+**Purpose**: spec 004 tasks.md의 T024·T026은 처음부터 "교차 spec: 003 소유"로 적혀 있었고, 2026-09-17 두 담당자가 **003에서
+하기로 합의했다.** 004 tasks.md에는 004의 순서(T025 → T026 → … → T024 → T021)가 남고, 작업과 체크는 여기서 한다. 004 T021(기본
+비용 버전 교체)은 T110이 dev에 들어간 뒤에만 머지할 수 있다 — 화면이 비용 버전을 명시해 보내고 있어야 기본값을 바꿔도 사용자가 본
+조건과 적용 조건이 갈리지 않는다.
+
+- [ ] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 "변동성이 낮은 섹터에 더 나누기")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다
+- [X] T110 (FE) [004 T026] 003 화면이 `GET /backtests/registry`를 소비해 규칙·비용 버전을 실어 202를 받는다 per 003 FR-010 · T039 · T059 · 004 FR-028 — 004 T026의 네 가지는 B06에서 이미 구현했다: ① 고른 전략의 `REGISTERED` 행 `rulesVersion`을 싣고 `PENDING_DECISION`이면 막는다(T039 004 결정) ② `costProfileVersion`을 받은 `defaultCostProfile.version`으로 명시한다(T105) ③ 409를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다(T104) ④ 임시 비용 문구는 `defaultCostProfile.provisional`로 켠다(T065 통로). 남은 일: (a) 004 T025(`feat(be)/326-backtest-registry`, `S15P21E205-326`)가 머지되면 origin/dev를 받고 `defaultAnalysisSupport`를 `connectedAnalysisSupport`로 바꾼다(T107 메모) (b) 로컬 백엔드에서 '분석하기'가 registry의 버전을 실어 202를 받고 임시 비용 문구가 registry 값으로 켜지는지 확인한다 — 이것이 004 T026의 완료 기준이다. 머지 뒤 004 담당자에게 T021을 진행해도 된다고 알린다
+  - **구현 메모 (2026-09-17, B06 브랜치)**: T025 브랜치의 `BacktestRegistryResponse`를 읽다가 **비용 수치 네 칸이 문자열 decimal(`"0.0000"`, `NUMERIC(8,4)`)**인 것을 확인했다. 화면의 `readBacktestRegistry`는 숫자만 받아, 그대로 머지되면 응답 전체를 읽지 못해 '분석하기'가 막혔을 것이다. 문자열 decimal을 수로 읽고(음수·지수 표기·단위가 붙은 글은 거부), 숫자로 와도 받게 고쳤다. 규칙 행의 `status`는 서버 enum 이름 그대로 문자열이라 기존 비교(`'REGISTERED'`·`'PENDING_DECISION'`)가 맞는다
+
+---
+
+## 로컬 종단 확인 (2026-09-18)
+
+**적재한 자료**: 로컬 PostgreSQL에 `KRX_DAILY_20260916`(2010-01-04~2026-09-16, 거래일 4,113일, 대표 ETF 8종 일봉 29,014행,
+기업행위 44행, 대응표 `SEM-2026-09-LOCAL-001`). 기업행위 파일이 2024-09-19부터라 그 앞은 자료 부족 구간으로 남는다.
+스택은 `docker-compose.dev.yml` + 저장소 밖 로컬 override로 띄웠다 — dev compose가 `MAIL_USERNAME`·`MAIL_PASSWORD`를 넘기지 않아
+백엔드가 기동하지 못하고, `local` 프로필이 Flyway를 꺼 Hibernate가 만든 스키마에는 적재가 요구하는 열·트리거가 없다.
+
+**T042·T107 (quickstart 7·7-1·7-2)**: 섹터 셋(반도체·2차전지·은행)으로 확인했다.
+
+- 카드 다섯 장이 실제 응답으로 판정된다. 기준 후보는 상장이 늦은 2차전지이고 공통 시작일은 2018-09-12다.
+- 관측 기간을 252거래일로 바꾸면 그 자리에서 2019-09-25로 다시 판정하고, **서버 요청은 한 건도 늘지 않았다**(47건 그대로).
+- 7-1: 관측 60 + 최근 제외 21이 워밍업 81로 합산되어 안내 문장과 판정에 반영된다.
+- 7-2: 최소 평가 기간을 엄격(3년)으로 바꿔도 요청이 나가지 않는다. **자료가 8년이라 이 조합에서는 막히는 경계를 재현하지
+  못했다** — 상장이 더 늦은 섹터가 대응표에 들어오면 다시 확인한다.
+- 줄어든 기간 안내가 `bindingSector`로 찾은 섹터 이름("2차전지")을 쓴다.
+
+**T039·T110 (004 registry 연결과 접수)**: `GET /backtests/registry`의 실제 응답으로 확인했다.
+
+- 비용 수치가 문자열 decimal로 와서 패널에 수수료 0bp·슬리피지 5bp·버전 `PROVISIONAL-DEMO-1`·임시값으로 보인다.
+- 규칙이 `PENDING_DECISION`인 섹터 모멘텀은 카드를 골라도 '분석하기'가 "계산 규칙이 아직 확정되지 않아"로 막힌다.
+- 역변동성으로 '분석하기'를 누르면 `POST /backtests`가 **202**를 받고(`BT-20260918-000001`) 접수 안내가 보인다. 저장된 실행은
+  `rules_version=1`·`cost_profile_version=PROVISIONAL-DEMO-1`로, 화면이 본 버전을 그대로 싣는다.
+
+**남은 것(이 묶음 밖)**: 접수된 실행은 워커가 작업 메시지를 거부해 실패했다 — `allocation.lookbackDays`가 EngineInput 계약에
+없다. "착수 전에 알아둘 것" ③(004 워커 메시지 정합)이 추적하는 간극이며 003 화면이 고칠 수 있는 것이 아니다.
+
+**B06 코드리뷰 후속 (MR 전 AI 코드리뷰, 같은 브랜치)**: 결함 둘과 낡은 주석 하나를 고쳤다. 결함 둘은 고치기 전 동작으로 되돌리면
+실패하는 검사를 두었다(되돌려 돌려 보고 실패를 확인한 뒤 복구했다).
+
+- **409 뒤 버전을 다시 받는 동안 비용 조건을 "확인할 수 없음"으로 보였다(T104).** 화면은 규칙 버전을 거두고 '확인하는 중'으로
+  돌리는데, 비용 표시는 조회 중과 조회 실패를 같은 `null`로 받아 요약 줄과 패널이 실패처럼 말했다 — 같은 화면의 '분석하기' 사유는
+  "확인하는 중"이라 두 말을 했다. 두 컴포넌트가 `'loading'`을 따로 받아 "확인하는 중"을 보인다. 화면이 처음 열릴 때 잠깐 실패처럼
+  보이던 것도 함께 없어졌다.
+- **평가 기간 조회가 실패하면 다시 시도할 길이 없었다(T042).** 409 `EVALUATION_WINDOW_NOT_READY`나 잠깐의 연결 오류처럼 다시 불러
+  달라질 수 있는 실패에도 새로 고치기 전까지 카드가 모두 막혔다. 훅이 `retry`·`retrying`을 내주고, 받지 못했을 때 카드 목록 위에
+  "평가 기간 다시 불러오기"를 둔다. 등록표 조회(FR-018)와 같이 다시 받는 동안 안내를 거두지 않는다.
+- 페이지 `support` 기본값 주석이 004 머지 전 상태를 말하고 있어 지금 연결 상태로 고쳤다.
+
+
+---
+
+## Phase 21: Convergence
+
+**Purpose**: B06 코드리뷰 후속까지 마친 뒤 B06을 다시 대조한다. B06 태스크(T039·T042·T098·T103~T108·T110)는 모두 닫혔고,
+로컬 실자료로 quickstart 7·7-1·7-2와 202 접수를 확인했다. 코드 간극은 없고, 문서 네 곳이 이미 끝난 머지를 기다린다고 적은 간극이
+하나 남았다. T072~T078(B12)과 T109(S15P21E205-337)는 B06 밖이라 세지 않았다.
+
+- [X] T111 [P] (DOCS) 001·004 머지로 풀린 선행 조건을 문서에서 해제로 적는다 per spec 선행 조건 표 · plan "묶음에 넣지 않은 것" · tasks "착수 전에 알아둘 것" ①② (contradicts) — 001 `GET /sectors/evaluation-window`(dev `12fc23c`, MR !183)와 004 `GET /backtests/registry`(dev `fbec7b4`, S15P21E205-326)가 모두 dev에 머지되었는데 네 곳이 아직 대기로 적혀 있다: ① `specs/003-strategy-settings/spec.md` 선행 조건 표의 "001 평가 기간 계약" 행("남은 선행은 001의 구현 머지")과 "004 규칙·비용 버전 조회" 행("계약 결정, 구현 대기 … 그때까지 B06·B10의 실제 연결이 막힌다") ② `plan.md` "묶음에 넣지 않은 것"의 "둘 다 결정은 끝났고 머지만 남았다"와, T103이 고친 "남는 항목"·"004 교차 계약" 두 문장의 "구현 머지를 기다린다" ③ tasks.md "착수 전에 알아둘 것" ①("`GET /sectors/evaluation-window`가 아직 없다")과 ②(결정만 적고 머지는 적지 않았다) ④ tasks.md 맨 위 Quality Gate의 004 행이 적은 "남은 003 작업 둘" 가운데 ①(T039·T059 소비와 비용 버전 명시)은 B06에서 끝났다. 각 자리를 **해제**로 바꾸고 머지 커밋과 "로컬 종단 확인 (2026-09-18)" 절을 가리키게 한다. ②의 남은 작업(`allocationMethod` 교체)은 T109로, 워커 메시지 정합은 "착수 전에 알아둘 것" ③으로 넘긴다고 적는다. **intent 문서가 끝난 일을 대기로 말하면 다음 대조에서 맞는 구현이 모순으로 잡힌다**(T103과 같은 까닭)
+
+**T111 구현 메모**: 네 곳을 해제로 고쳤다 — spec 선행 조건 표의 001·004 행(머지 커밋과 B06 확인을 가리킨다), plan의 "남는 항목"·"004
+교차 계약"·"묶음에 넣지 않은 것", tasks의 Quality Gate 두 행과 "착수 전에 알아둘 것" ①·②. ①은 해제 전 기록을 지우지 않고 앞에 해제를
+적었다 — 왜 B06이 따로 서 있었는지는 남겨 둘 값이 있다. 남은 교차 작업은 워커 메시지 정합(③)과 T109로 넘긴다고 적었다.

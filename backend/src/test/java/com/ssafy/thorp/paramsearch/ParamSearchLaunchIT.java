@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
@@ -15,17 +14,15 @@ import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -50,15 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 전략을 거르는 이유는 자동 탐색의 대상이 축을 가진 전략이기 때문이고, 기준을 빼는 이유는 <b>그것이 깨져 있던 조건</b>이기 때문이다 — 요청 전략에 기준이 우연히
  * 섞이면 결함이 가려진다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchLaunchIT extends PostgresTestSupport {
+class ParamSearchLaunchIT extends PortMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -69,9 +58,6 @@ class ParamSearchLaunchIT extends PostgresTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
-
-    /** 브로커는 이 테스트의 관심사가 아니다. 발행 자체는 004의 테스트가 본다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     private long requesterId;
 

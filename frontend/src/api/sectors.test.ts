@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
 import type { InstrumentProfile, SectorCatalog } from '@/types/sector'
 import { apiClient } from './client'
-import { fetchInstrumentProfile, fetchSectorCatalog } from './sectors'
+import { fetchEvaluationWindow, fetchInstrumentProfile, fetchSectorCatalog, readEvaluationWindow } from './sectors'
 
 function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {
   return {
@@ -371,5 +371,131 @@ describe('보유 종목 불변식', () => {
       code: 'SECTOR_MAP_UNUSABLE',
       retryable: false,
     })
+  })
+})
+
+describe('공통 평가 기간 조회(T042)', () => {
+  const windowBody = {
+    commonStart: '2024-01-04',
+    commonEnd: '2026-01-05',
+    warmupTradingDays: 2,
+    bindingCandidate: '000001.XKRX',
+    bindingSector: 'SEC-A',
+    excludedRanges: [{ start: '2024-03-04', end: '2024-03-08', reason: 'SUSPENDED_TOO_LONG' }],
+    evaluable: true,
+    datasetId: 'TEST-DATASET-1',
+    warmupBaseDate: '2024-01-02',
+    tradingDaysFromBase: ['2024-01-02', '2024-01-03', '2024-01-04'],
+    maxWarmupTradingDays: 2,
+    excludedRangesFromBase: [{ start: '2024-03-04', end: '2024-03-08', reason: 'SUSPENDED_TOO_LONG' }],
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('섹터를 쉼표로 잇고 상한을 실어 GET /sectors/evaluation-window를 부른다', async () => {
+    const getSpy = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue(axiosResponse({ success: true, data: windowBody, error: null }))
+
+    const window = await fetchEvaluationWindow({ sectors: ['SEC-A', 'SEC-B'], maxWarmupTradingDays: 2 })
+
+    expect(window).toEqual(windowBody)
+    expect(getSpy).toHaveBeenCalledTimes(1)
+    const [url, config] = getSpy.mock.calls[0]
+    expect(url).toBe('/sectors/evaluation-window')
+    expect(config?.params).toEqual({ sectors: 'SEC-A,SEC-B', maxWarmupTradingDays: 2 })
+  })
+
+  it('전략을 주면 함께 싣는다', async () => {
+    const getSpy = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue(axiosResponse({ success: true, data: windowBody, error: null }))
+
+    await fetchEvaluationWindow({ sectors: ['SEC-A'], strategy: 'DRIFT_BALANCE', maxWarmupTradingDays: 2 })
+
+    expect(getSpy.mock.calls[0][1]?.params).toMatchObject({ strategy: 'DRIFT_BALANCE' })
+  })
+
+  it('엔드포인트가 없으면(404) 거부한다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(404, errorEnvelope('RESOURCE_NOT_FOUND', '없는 주소입니다.')),
+    )
+
+    await expect(
+      fetchEvaluationWindow({ sectors: ['SEC-A'], maxWarmupTradingDays: 2 }),
+    ).rejects.toMatchObject({ kind: 'api', code: 'RESOURCE_NOT_FOUND' })
+  })
+
+  it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {
+    const { warmupBaseDate, tradingDaysFromBase, maxWarmupTradingDays, excludedRangesFromBase, ...legacy } =
+      windowBody
+    void warmupBaseDate
+    void tradingDaysFromBase
+    void maxWarmupTradingDays
+    void excludedRangesFromBase
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: legacy, error: null }),
+    )
+
+    await expect(
+      fetchEvaluationWindow({ sectors: ['SEC-A'], maxWarmupTradingDays: 2 }),
+    ).rejects.toMatchObject({ kind: 'unexpected' })
+  })
+
+  it.each([
+    ['첫 거래일이 기준일이 아니다', { tradingDaysFromBase: ['2024-01-03', '2024-01-04', '2024-01-05'] }],
+    ['거래일이 오름차순이 아니다', { tradingDaysFromBase: ['2024-01-02', '2024-01-04', '2024-01-03'] }],
+    ['같은 거래일이 두 번 있다', { tradingDaysFromBase: ['2024-01-02', '2024-01-02', '2024-01-03'] }],
+    ['상한이 목록 길이 - 1과 다르다', { maxWarmupTradingDays: 3 }],
+    ['목록이 비었는데 상한이 왔다', { tradingDaysFromBase: [], maxWarmupTradingDays: 0 }],
+    ['목록이 있는데 상한이 없다', { maxWarmupTradingDays: undefined }],
+    ['마지막 거래일이 commonEnd를 넘는다', { commonEnd: '2024-01-03' }],
+    ['시작일이 없는데 평가할 수 있다고 한다', { commonStart: null }],
+    ['자료 부족 구간(기준일부터)이 없다', { excludedRangesFromBase: undefined }],
+    ['기준 섹터가 없다', { bindingSector: undefined }],
+  ])('%s면 계산이 조용히 틀리므로 응답 전체를 읽지 않는다', (_, patch) => {
+    expect(readEvaluationWindow({ ...windowBody, ...patch })).toBeNull()
+  })
+
+  it('워밍업을 채울 거래일이 모자라면 시작일 없이 분석할 수 없다는 응답도 읽는다', () => {
+    const window = readEvaluationWindow({ ...windowBody, commonStart: null, evaluable: false })
+    expect(window).toMatchObject({ commonStart: null, evaluable: false, maxWarmupTradingDays: 2 })
+  })
+
+  it('기준일이 commonEnd를 넘어 목록이 비고 상한 키가 없는 응답을 읽는다', () => {
+    const { maxWarmupTradingDays, ...rest } = windowBody
+    void maxWarmupTradingDays
+    const window = readEvaluationWindow({
+      ...rest,
+      commonStart: null,
+      commonEnd: '2023-12-29',
+      evaluable: false,
+      tradingDaysFromBase: [],
+      excludedRanges: [],
+      excludedRangesFromBase: [],
+    })
+    expect(window).toMatchObject({ tradingDaysFromBase: [], maxWarmupTradingDays: null })
+  })
+
+  it('요청한 상한보다 긴 목록이 오면 다른 요청의 응답으로 보고 거부한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: windowBody, error: null }),
+    )
+
+    await expect(
+      fetchEvaluationWindow({ sectors: ['SEC-A'], maxWarmupTradingDays: 1 }),
+    ).rejects.toMatchObject({ kind: 'unexpected' })
+  })
+
+  it('자료가 아직 없으면(409) 거부한다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(409, errorEnvelope('EVALUATION_WINDOW_NOT_READY', '자료를 준비하고 있습니다.')),
+    )
+
+    await expect(
+      fetchEvaluationWindow({ sectors: ['SEC-A'], maxWarmupTradingDays: 2 }),
+    ).rejects.toMatchObject({ kind: 'api', code: 'EVALUATION_WINDOW_NOT_READY' })
   })
 })

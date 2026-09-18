@@ -214,6 +214,21 @@ describe('ResultPage', () => {
     expect(container.textContent).not.toMatch(/\d%|\d원/)
   })
 
+  it.each([
+    ['점이 하나도 없으면', []],
+    ['모든 날의 자산가치가 비어 있으면', resultTimeseries.points.map((point) => ({ ...point, equity: '' }))],
+  ])('시계열을 받았어도 %s 그래프 대신 그 사실을 알린다', async (_case, points) => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue({ partial: true, points })
+
+    const { container } = renderResult()
+
+    expect(
+      await screen.findByText('받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.'),
+    ).not.toBeNull()
+    expect(container.querySelector('[role="img"]')).toBeNull()
+  })
+
   it('연결에 실패하면 다시 불러오기를 두고 누르면 다시 부른다', async () => {
     apiMocks.fetchResult
       .mockRejectedValueOnce(new ResultError('서버에 연결할 수 없습니다.'))

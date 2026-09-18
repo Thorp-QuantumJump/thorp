@@ -17,7 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.ValidationLabel;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,9 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * 검증 상태 라벨(T108·T111·T112, FR-014·FR-015, research R5).
@@ -40,15 +38,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * <p>"아직 나누지 않았다"를 "나눠서 통과했다"로 읽히게 두면 사용자는 탐색 성과를 검증된 성과로 믿는다(원칙 VII). 그래서 실행 전·실행 중·결과 세 자리 모두에서
  * 같은 라벨과 같은 문장이 나오는지 본다 — 한 자리만 빠져도 사용자는 그 화면에서 미검증임을 모른다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchValidationLabelTest extends PostgresTestSupport {
+class ParamSearchValidationLabelTest extends LauncherMockedIntegrationTestSupport {
 
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
 
@@ -59,7 +49,7 @@ class ParamSearchValidationLabelTest extends PostgresTestSupport {
     @Autowired private ParameterRegistryPort registry;
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(970_000L);
 

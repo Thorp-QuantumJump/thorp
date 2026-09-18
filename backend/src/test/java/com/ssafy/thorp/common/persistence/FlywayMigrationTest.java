@@ -9,24 +9,17 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.support.MigrationFiles;
 import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -42,20 +35,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>파일명 규칙과 버전 중복은 {@code MigrationFileConventionTest}가 Docker 없이 따로 검사한다. 이 테스트는 Docker가 없으면 통째로
  * 스킵되기 때문이다.
  */
-@DataJpaTest
-@Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})
-class FlywayMigrationTest extends PostgresTestSupport {
+class FlywayMigrationTest extends RepositoryTestSupport {
 
     private static final BacktestPeriod PERIOD =
             new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
 
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private BacktestRunRepositoryImpl repository;

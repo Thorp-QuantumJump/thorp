@@ -2,7 +2,6 @@ package com.ssafy.thorp.result.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
@@ -15,7 +14,7 @@ import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -26,9 +25,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -42,15 +39,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>스케줄러는 끄고 시각을 고정한 인스턴스를 직접 만든다. 만료 시각을 2000년대 초로 두어 같은 컨테이너를 쓰는 다른 IT가 남긴 만료 행보다 앞에 오게 한다 — 정리는
  * 만료가 이른 순서로 배치 크기만큼 지운다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.result.expiry-sweep.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class PublicResultExpirySweeperIT extends PostgresTestSupport {
+class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {
 
     @Autowired private BacktestRunRepository runRepository;
     @Autowired private BacktestRequestRepository requestRepository;
@@ -58,9 +47,6 @@ class PublicResultExpirySweeperIT extends PostgresTestSupport {
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
-
-    /** 브로커는 띄우지 않는다. 이 IT는 접수를 부르지 않지만 발행기 빈이 브로커에 붙지 않게 목으로 둔다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     private PublicResultExpirySweeper sweeperAt(Instant now, int batchSize) {
         return new PublicResultExpirySweeper(
