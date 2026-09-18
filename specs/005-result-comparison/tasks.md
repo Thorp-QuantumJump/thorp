@@ -424,3 +424,9 @@ B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조�
 - [X] T089 (FE) 그릴 점이 없을 때 그래프 자리에 그 사실을 한 문장으로 알린다 — `frontend/src/pages/ResultPage.tsx`의 `ResultChartSlot`이 `timeseries.status === 'loaded'`인데 `points`가 비어 있는 경우를 따로 가른다. 지금은 `frontend/src/components/result/EquityChart.tsx`가 `null`을 돌려주고 화면에는 빈 칸만 남는다. 취소된 부분 결과처럼 거래일이 하나도 저장되지 않은 결과에서 일어난다 per 원칙 VI · FR-001 (partial)
 - [X] T090 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)
 - [X] T091 (FE 테스트) `frontend/src/test/resultFixtures.ts`의 `resultTimeseries`와 `resultDetailCompleted.summary.maxDrawdown`을 서로 맞춘다 — 지금은 계열의 최저 하락 폭이 -0.050000인데 상세는 -0.041757이라 R-05 규칙에 걸려 픽스처로 그린 화면에 음영이 한 번도 나오지 않는다. 계약 예시(`docs/specs/result-api/examples/`)는 둘이 맞으므로 픽스처를 그쪽에 맞춘다. `resultFixtures.test.ts`·`ResultSummaryCard.test.tsx`가 계속 통과하는지 확인한다 per T002 · T006 (contradicts)
+
+## Phase 10: Convergence
+
+Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
+
+- [ ] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 "변동성에 …"처럼 잘린다. 같은 파일 주석의 "등록된 다섯 전략 이름이 모두 여기 들어간다"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)
