@@ -67,7 +67,14 @@ function toFailureState(error: unknown): ResultState {
  * <p>만료·없음은 다시 물어도 바뀌지 않으므로 멈춘다. 연결 실패도 폴링을 멈추고 사용자가 `retry`를
  * 누를 때 다시 부른다 — 조용히 계속 두드리지 않는다.
  */
-export function useResult(token: string | null): ResultState & { retry: () => void } {
+type UseResultOptions = {
+  loadTimeseries?: boolean
+}
+
+export function useResult(
+  token: string | null,
+  { loadTimeseries = true }: UseResultOptions = {},
+): ResultState & { retry: () => void } {
   const [state, setState] = useState<ResultState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [loadedToken, setLoadedToken] = useState(token)
@@ -97,7 +104,7 @@ export function useResult(token: string | null): ResultState & { retry: () => vo
         return
       }
 
-      if (!hasViewableResult(detail)) {
+      if (!hasViewableResult(detail) || !loadTimeseries) {
         setState({ status: 'ready', detail, timeseries: { status: 'none' } })
         return
       }
@@ -131,7 +138,7 @@ export function useResult(token: string | null): ResultState & { retry: () => vo
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [token, attempt])
+  }, [token, attempt, loadTimeseries])
 
   return { ...(loadedToken === token ? state : { status: 'loading' as const }), retry }
 }
