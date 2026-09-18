@@ -13,7 +13,8 @@
 `param_search`·`regime_search_snapshot`에 있고, 결과 화면(`/results/{publicToken}`)과 설정 화면
 인계 계약(`thorp.diagnosis.sectorSelection`·`thorp.strategySettings`)과 사용자 식별
 (`CurrentRequester`)도 이미 동작한다. 006이 더하는 것은 **소유·이름·목록 자리를 담는 개인 항목
-테이블 하나**(`my_record`)와 그것을 읽는 목록·내보내기 API, 그리고 `/records` 화면이다.
+테이블 하나**(`my_record`)와 그것을 읽는 목록·내보내기 API, 그리고 `/records` 화면이다. 경제환경 개인
+기록은 010이 미리 만들어 둔 `regime_search_log`에 006이 행을 쓴다.
 
 2026-09-18 명료화가 정한 세 가지가 이 구조를 결정했다. ① 삭제 단위는 개인 항목이고 공용 계산 결과는
 남는다 → 개인 항목과 계산 결과가 애초에 다른 테이블이어야 한다. ② 시간 기반 자동 삭제를 만들지
@@ -73,9 +74,9 @@ Jackson / React 19 + Vite, react-router-dom. **새 라이브러리를 추가하�
 
 한 가지 미완 의존을 위반이 아니라 **범위 축소**로 처리한다. [011 경제환경-전략 연결](../011-regime-strategy-link/spec.md)은
 spec만 있고 plan·tasks·테이블이 없다. 그래서 FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간"의
-**생산자가 아직 없다.** 006은 그 값을 담을 자리(`my_record_regime_link`)를 만들고 지금 존재하는
-값(진입 경로·스냅샷 참조)만 채운다. 없는 값을 만들어 채우지 않는다(원칙 VI). 자세한 경계는
-[research.md](research.md) R9에 있다.
+**생산자가 아직 없다.** 006은 그 자리를 만들지 않는다 — 011이 자기 표를 더한다. 지금 존재하는
+값(진입 경로·스냅샷 참조)은 010이 만들어 둔 `regime_search_log`에 006이 쓴다. 없는 값을 만들어 채우지
+않는다(원칙 VI). 자세한 경계는 [research.md](research.md) R9·R15에 있다.
 
 ## Project Structure
 
@@ -104,7 +105,8 @@ backend/src/main/java/com/ssafy/thorp/myrecord/
 ├── application/
 │   ├── service/MyRecordQueryService.java           # 목록·상세 조회, 정렬·필터
 │   ├── service/MyRecordCommandService.java         # 이름 변경·삭제
-│   ├── service/MyRecordRegistrar.java              # 저장 시 항목 생성·기존 항목 연결(FR-009)
+│   ├── service/MyRecordRegistrar.java              # 004·007 접수 이벤트를 듣고 항목 생성·기존 항목 연결(FR-009), 경제환경 기록 POST
+│   ├── service/MyRecordLimitPolicy.java            # 탐색 묶음 상한 판정(007 접수가 부른다)
 │   ├── service/MyRecordExportService.java          # CSV/JSON 조립, exclusions
 │   ├── service/MyRecordMappingDriftChecker.java    # UI-01 판정
 │   ├── command/ result/ repository/
@@ -112,7 +114,7 @@ backend/src/main/java/com/ssafy/thorp/myrecord/
 └── infrastructure/persistence/                     # MyRecordJpaEntity, Mapper, RepositoryImpl
 
 backend/src/main/resources/db/migration/
-└── V2026{...}__my_record.sql                       # my_record, my_record_regime_link
+└── V2026{...}__my_record.sql                       # my_record 한 표
 
 frontend/src/
 ├── pages/MyRecordsPage.tsx                         # MyRecordsEntryPage.tsx를 대체한다
@@ -138,14 +140,14 @@ frontend/src/
 
 | 선택 | 비용 | 그래도 택한 이유 |
 |---|---|---|
-| 개인 항목 테이블 `my_record` 신설 | 저장 시점에 항목을 만드는 자리가 세 도메인(backtest·paramsearch·regime)에 하나씩 생긴다 | 세 원본을 `UNION ALL`로 묶어 정렬·필터·쪽 나누기를 하는 대안은 컬럼 구성이 서로 달라 질의가 더 길고, 무엇보다 "개인 항목만 삭제"를 원본 테이블에 `deleted_at`을 세 번 붙여 표현해야 한다. `regime_search_snapshot`은 공용 스냅샷이라 소유자 자리가 아예 없어 새 테이블이 어차피 필요하다([research.md](research.md) R1) |
+| 개인 항목 테이블 `my_record` 신설 | 004·007 접수 서비스에 이벤트 발행 한 줄씩, 006에 경제환경 기록 POST 하나가 생긴다 | 세 원본을 `UNION ALL`로 묶어 정렬·필터·쪽 나누기를 하는 대안은 컬럼 구성이 서로 달라 질의가 더 길고, 무엇보다 "개인 항목만 삭제"를 원본 테이블에 `deleted_at`을 세 번 붙여 표현해야 한다. `regime_search_snapshot`은 공용 스냅샷이라 소유자 자리가 아예 없어 새 테이블이 어차피 필요하다([research.md](research.md) R1) |
 
 ## Phase 0·1 산출물
 
 | 파일 | 내용 |
 |---|---|
 | [research.md](research.md) | 결정 R1~R14. Technical Context에 NEEDS CLARIFICATION이 남지 않았다 |
-| [data-model.md](data-model.md) | `my_record`·`my_record_regime_link` 두 표, 제약·인덱스, 만들지 않는 것 |
+| [data-model.md](data-model.md) | `my_record` 한 표, 제약·인덱스, 만들지 않는 것(`regime_search_log` 재사용) |
 | [contracts/my-records-api.md](contracts/my-records-api.md) | 목록·상세·이름 변경·삭제·내보내기, 007 접수 경로에 요청하는 변경 |
 | [contracts/record-handoff.md](contracts/record-handoff.md) | '설정 바꿔 비교'의 화면 사이 인계(기존 두 계약에 쓰는 쪽) |
 | [quickstart.md](quickstart.md) | 검증 시나리오 S1~S14와 확인하지 않는 것 |
@@ -163,10 +165,14 @@ frontend/src/
 | 원칙 II — 버튼 하나 | 통과 | quickstart S1-4를 판정 단계로 넣어 같은 크기 버튼 둘이 들어오는 것을 검증에서 막았다. 006에서 버튼 둘을 같은 크기로 두려면 plan이 아니라 constitution 개정이 필요하다(R7) |
 | 원칙 X — 이용 조건 | 통과 | 금지 항목을 값이 아니라 **스키마 자리로** 막았고(R10), `exclusions`를 빈 배열이어도 반드시 담게 해 "무엇을 뺐는지"를 판정 가능하게 했다. quickstart S8-4가 키 존재까지 확인한다 |
 | 기록·개인정보·보관 | 통과 | 자동 삭제가 없다는 것을 quickstart S11이 `grep`으로 확인한다. 규칙을 문장으로만 두지 않았다 |
-| 스키마 변경 규칙 | 통과 | 표 두 개 생성 + 기존 nullable 컬럼 값 채우기뿐이다. 컬럼·표 삭제, 타입 변경, 기존 행이 위반하게 되는 제약 추가가 없으므로 되돌릴 수 없는 변경이 아니다 |
+| 스키마 변경 규칙 | 통과 | 표 하나 생성뿐이다. `regime_search_log`는 행을 더할 뿐 스키마를 바꾸지 않는다. 컬럼·표 삭제, 타입 변경, 기존 행이 위반하게 되는 제약 추가가 없으므로 되돌릴 수 없는 변경이 아니다 |
 | 완료의 정의 | 통과 | quickstart "확인하지 않는 것"에 발생 조건이 없는 규칙(참조 삭제 표시)을 적고 "구현했다는 사실을 검증됐다는 뜻으로 쓰지 않는다"를 명시했다. SC-006 사용성 관찰도 별도 항목으로 뺐다 |
 
 **미해결 위반: 없음.** Complexity Tracking에 정당화가 필요한 항목이 없다.
+
+**접점 조사(/speckit-tasks)에서 고친 것**: `regime_search_log`가 이미 있어 `my_record_regime_link`를 만들지
+않기로 했고(R9·R15), `param_search.owner_user_id`는 접수가 이미 채우고 있어 007에 요청할 변경에서 뺐다.
+항목 생성은 순환 참조를 피해 접수 이벤트로 받는다(R16).
 
 새로 생기는 공통 자원 두 개를 적어 둔다. 둘 다 기존 규칙 안이다.
 

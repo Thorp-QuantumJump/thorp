@@ -82,7 +82,7 @@
         "savedAt": "2026-09-16T22:05:11Z",
         "status": "THRESHOLD_APPLIED",
         "statusReason": null,
-        "regime": { "mode": "FIELD", "fieldId": "EMPLOYMENT", "baselineMonth": "2026-08-01", "entryPath": "MARKET_FLOW" },
+        "regime": { "searchId": "FIELD:EMPLOYMENT:2026-08:3", "mode": "FIELD", "fieldId": "EMPLOYMENT", "baselineMonth": "2026-08-01", "baselineOrigin": "T_G", "entryPath": "MARKET_FLOW", "withdrawn": false },
         "isCopy": false
       }
     ],
@@ -98,7 +98,7 @@
 | `statusReason` | 실패·취소·부분 완료·계산 불가의 사유 코드. **낮은 수익과 섞지 않는다**(FR-014) |
 | `resultToken` | `ANALYSIS`에만 있다. '다시 보기' 링크(`/results/{token}`)의 열쇠(R3) |
 | `searchId` | `SEARCH_BUNDLE`에만 있다. 007 상세 경로의 열쇠 |
-| `regime` | `REGIME_SEARCH`에만 있다. 같은 스냅샷이라도 `entryPath`가 다르면 별도 항목이다 |
+| `regime` | `REGIME_SEARCH`에만 있다. `regime_search_log` 행에서 읽는다. 같은 스냅샷이라도 `entryPath`가 다르면 별도 항목이다. `withdrawn: true`는 010 FR-035 철회로 스냅샷 참조가 끊긴 것이며 '다시 보기'가 열리지 않는다 |
 | `nextCursor` | 다음 쪽이 없으면 `null`. **전체 개수는 돌려주지 않는다**(R14) |
 
 수익률·하락 폭·비용은 목록 응답에 **없다.** 목록에서 성과를 나란히 보이면 정렬을 제공하지 않아도
@@ -148,6 +148,29 @@
 
 `mappingDrift`·`registryDrift`는 **서버가 판정한다.** 화면이 버전 문자열을 비교하지 않는다
 (원칙 II: 복잡한 계산은 시스템이 맡는다).
+
+## POST /my-records/regime-searches
+
+경제환경 검색 결과를 개인 기록으로 남긴다(010 FR-032, R15). 로그인 사용자가 검색 결과 화면을 열 때
+화면이 부른다. 010의 `GET /regime-searches`는 바뀌지 않는다.
+
+```json
+{ "searchId": "FIELD:EMPLOYMENT:2026-08:3", "entryPath": "MARKET_FLOW" }
+```
+
+| 필드 | 규칙 |
+|---|---|
+| `searchId` | 010이 응답한 스냅샷 식별 키. 없는 키는 `404 RESOURCE_NOT_FOUND` |
+| `entryPath` | `MARKET_FLOW` 또는 `STRATEGY_RESULT`. 그 밖의 값은 `400 INVALID_INPUT` |
+
+| 동작 | 값 |
+|---|---|
+| 같은 소유자·같은 `searchId`·같은 `entryPath`의 살아 있는 항목이 있으면 | 새로 만들지 않고 그 항목을 돌려준다(`200`). `regime_search_log.viewed_at`만 갱신 |
+| 없으면 | `regime_search_log` 행과 `my_record` 행을 한 트랜잭션에 만들고 `201` |
+| 응답 | 목록 항목과 같은 본문 |
+
+`baselineOrigin`(T_G/T_ALL/USER_SPECIFIED)은 서버가 `searchId`와 010 응답 규칙으로 정하며 화면이 보내지
+않는다.
 
 ## PATCH /my-records/{recordId}
 
@@ -244,10 +267,16 @@
 
 ## 007 접수 경로에 요청하는 변경
 
-006이 소유하는 규칙이지만 구현 자리가 007의 접수 경로에 있다.
+006이 소유하는 규칙이지만 구현 자리가 007의 접수 경로에 있다. `param_search.owner_user_id`는 접수가
+**이미 채우고 있다**(`ParamSearchService` → `command.requesterId()`) — 요청할 것은 아래 둘이다.
 
 | 변경 | 이유 |
 |---|---|
-| `POST /param-searches`가 `param_search.owner_user_id`를 채운다 | 컬럼 주석이 "소유자 필터는 006이 붙인다"로 예약해 둔 일이다 |
-| 접수 **전에** 소유자의 탐색 묶음 항목 수를 세어 상한을 판정한다 | FR-018·Edge Cases. 걸리면 `429`가 아니라 **`409 RECORD_LIMIT_REACHED`**로 거절하고 본문에 `{ current, limit }`을 담는다. 한도(429)는 실행 자원 이야기이고 이것은 저장 자리 이야기라 코드를 나눈다 |
-| 상한에 걸려도 기존 항목을 지우지 않는다 | FR-018 |
+| 접수 **전에** 소유자의 살아 있는 탐색 묶음 항목 수를 `MyRecordLimitPolicy`로 세어 상한을 판정한다 | FR-018·Edge Cases. 걸리면 `429`가 아니라 **`409 RECORD_LIMIT_REACHED`**로 거절하고 본문에 `{ current, limit }`을 담는다. 한도(429)는 실행 자원 이야기이고 이것은 저장 자리 이야기라 코드를 나눈다(spec FR-018). 기존 항목은 지우지 않는다 |
+| 접수 성공 시 애플리케이션 이벤트를 발행한다 | `MyRecordRegistrar`가 듣고 `SEARCH_BUNDLE` 항목을 만든다(R16) |
+
+## 004 접수 경로에 요청하는 변경
+
+| 변경 | 이유 |
+|---|---|
+| `BacktestService`가 요청을 저장하는 두 자리(새 실행·합류/재사용) 뒤에 요청 접수 이벤트를 발행한다 | `MyRecordRegistrar`가 듣고 `executionType`이 단건일 때만 `ANALYSIS` 항목을 만든다(R16). 직접 호출은 순환 참조가 된다 |
