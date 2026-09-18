@@ -119,7 +119,7 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {
     }
 
     /** 시작일이 다르면 동일 버전 키가 달라 합류하지 않는다 — 매번 새 실행이 큐에 쌓인다. */
-    private static CreateBacktestCommand request(long requesterId, int day, ExecutionType type) {
+    private static CreateBacktestCommand request(Long requesterId, int day, ExecutionType type) {
         return new CreateBacktestCommand(
                 requesterId,
                 type,
@@ -456,5 +456,56 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {
                         .getContentAsString();
         assertThat(body).doesNotContain("BT-");
         assertThat(jdbcTemplate.queryForObject(hits, Integer.class, user)).isEqualTo(before + 2);
+    }
+
+    @Test
+    @DisplayName(
+            "비로그인 요청은 단건이 아니면 접수 전에 400 이다 — 비단건은 한도 밖이라 그대로 받으면 대기열을 무제한으로 채운다 (spec 005 T089, 원칙 IX)")
+    void anonymousNonSingleIntakeIsRejectedBeforeQueueing() throws Exception {
+        String body =
+                java.nio.file.Files.readString(
+                                java.nio.file.Path.of(
+                                        "..",
+                                        "docs",
+                                        "specs",
+                                        "backtest-api",
+                                        "examples",
+                                        "backtest-request.json"))
+                        .replace("\"SINGLE\"", "\"SEARCH_BUNDLE\"");
+        String runs = "SELECT count(*) FROM backtest_run";
+        long before = jdbcTemplate.queryForObject(runs, Long.class);
+
+        mockMvc.perform(
+                        post("/backtests")
+                                .with(csrf())
+                                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                                .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        assertThat(jdbcTemplate.queryForObject(runs, Long.class)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자가 묶음 요청의 공개 주소로 다시 시도하면 400 이고 새 요청이 생기지 않는다 (spec 005 T089)")
+    void anonymousPublicRetryOfNonSingleIsRejected() throws Exception {
+        long owner = newUser("b");
+        BacktestJobResult bundle =
+                backtestService.create(request(owner, 26, ExecutionType.SEARCH_BUNDLE));
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    BacktestRequest found =
+                            requestRepository.findByBacktestId(bundle.backtestId()).orElseThrow();
+                    BacktestRun run = runRepository.findById(found.getRunId()).orElseThrow();
+                    runRepository.update(run.markFailed("DATA_INSUFFICIENT", "no data"));
+                });
+        String requests = "SELECT count(*) FROM backtest_request";
+        long before = jdbcTemplate.queryForObject(requests, Long.class);
+
+        mockMvc.perform(post("/results/" + bundle.publicToken() + "/retry").with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        assertThat(jdbcTemplate.queryForObject(requests, Long.class)).isEqualTo(before);
     }
 }

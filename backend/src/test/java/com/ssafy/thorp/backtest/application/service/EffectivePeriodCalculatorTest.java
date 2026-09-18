@@ -36,8 +36,71 @@ class EffectivePeriodCalculatorTest {
         return new StrategyRules(strategyId, "1", RulesStatus.REGISTERED, false, spec, null);
     }
 
+    /** 섹터 모멘텀 규칙표 행. 최근 제외 기본값은 0이고 003 축이 오면 그것이 이긴다(PD-03). */
+    private static StrategyRules momentum(int lookbackDays, int skipRecentDays) {
+        return new StrategyRules(
+                "SECTOR_MOMENTUM",
+                "1",
+                RulesStatus.REGISTERED,
+                false,
+                Map.of("lookbackDays", lookbackDays, "skipRecentDays", skipRecentDays),
+                null);
+    }
+
     private static final StrategyRules FIXED_WEIGHT = rules("FIXED_WEIGHT", null);
     private static final StrategyRules INVERSE_VOLATILITY = rules("INVERSE_VOLATILITY", 63);
+
+    @Test
+    @DisplayName("화면이 고른 최근 제외 구간도 요구 워밍업에 들어간다 — 모멘텀은 L+S 다")
+    void chosenSkipRecentDaysCountsTowardTheWarmup() {
+        // 모멘텀 점수는 P(t-S)/P(t-S-L) 이라 L 만 확보하면 S 거래일이 모자라다. 규칙표 기본값(0)만
+        // 보면 최근 제외 21일을 고른 요청의 요구값이 60으로 계산되고, 공통 워밍업 60이 통과한다 —
+        // 그러면 초기 21거래일이 이력 부족으로 빠져 결과 구간과 수익률이 조용히 달라진다(PD-03 ⑤).
+        StrategyRules rules = momentum(60, 0);
+        Map<String, Object> chose21 = Map.of("rebalance", "MONTH_END", "skipRecentDays", 21);
+
+        assertThatThrownBy(
+                        () ->
+                                calculator.resolve(
+                                        rules,
+                                        null,
+                                        chose21,
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        60))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_HISTORY)
+                .hasMessageContaining("81");
+
+        // 워밍업을 싣지 않은 요청은 실효 워밍업이 L+S 다 — 이 값이 그대로 워커에 실려 나간다.
+        assertThat(
+                        calculator
+                                .resolve(
+                                        rules,
+                                        null,
+                                        chose21,
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        null)
+                                .warmupTradingDays())
+                .isEqualTo(81);
+
+        // 축을 고르지 않으면 규칙표 값이 기본값이다.
+        assertThat(
+                        calculator
+                                .resolve(
+                                        momentum(60, 21),
+                                        null,
+                                        Map.of("rebalance", "MONTH_END"),
+                                        List.of(SEMICONDUCTOR),
+                                        LocalDate.of(2024, 1, 2),
+                                        LocalDate.of(2024, 12, 31),
+                                        null)
+                                .warmupTradingDays())
+                .isEqualTo(81);
+    }
 
     @Test
     @DisplayName("워밍업이 없는 전략은 요청 시작일부터 바로 평가한다")
@@ -98,7 +161,14 @@ class EffectivePeriodCalculatorTest {
                                         120))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_HISTORY)
-                .hasMessageContaining("250");
+                .hasMessageContaining("250")
+                .hasFieldOrPropertyWithValue(
+                        "details",
+                        Map.of(
+                                "requiredWarmupTradingDays",
+                                250,
+                                "requestedWarmupTradingDays",
+                                120));
 
         // 워밍업을 싣지 않은 요청(003 화면의 보통 경로)은 실효 워밍업이 고른 축 값이다.
         // 여기서 규칙표 값을 쓰면 그 120이 그대로 워커에 실려 나가, 워커는 120거래일만 읽고

@@ -116,6 +116,8 @@ public class BacktestService {
     /** 목표 비중을 지정하는 유일한 전략. 나머지 전략에서 비중을 보내면 무시하지 않고 거절한다. */
     private static final String FIXED_WEIGHT = "FIXED_WEIGHT";
 
+    private static final String SECTOR_MOMENTUM = "SECTOR_MOMENTUM";
+
     /** 목표 변동성 허용 범위와 간격(PD-18). */
     private static final BigDecimal MIN_TARGET_VOLATILITY = new BigDecimal("0.0500");
 
@@ -474,16 +476,19 @@ public class BacktestService {
             BigDecimal invested =
                     Optional.ofNullable(decimal(rules.spec(), "investedFraction"))
                             .orElse(BigDecimal.ONE);
-            BigDecimal reachable = cap.multiply(BigDecimal.valueOf(items.size()));
-            if (reachable.compareTo(invested) < 0) {
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_RULE_VIOLATED,
-                        "종목별 상한 %s × %d종목 = %s 로는 투자 비중 %s 를 채울 수 없습니다. 종목을 늘리거나 상한을 높이세요."
-                                .formatted(
-                                        cap.toPlainString(),
-                                        items.size(),
-                                        reachable.toPlainString(),
-                                        invested.toPlainString()));
+            Integer weighted = weightedCount(command, items.size());
+            if (weighted != null) {
+                BigDecimal reachable = cap.multiply(BigDecimal.valueOf(weighted));
+                if (reachable.compareTo(invested) < 0) {
+                    throw new BusinessException(
+                            ErrorCode.VALIDATION_RULE_VIOLATED,
+                            "종목별 상한 %s × %d종목 = %s 로는 투자 비중 %s 를 채울 수 없습니다. 종목을 늘리거나 상한을 높이세요."
+                                    .formatted(
+                                            cap.toPlainString(),
+                                            weighted,
+                                            reachable.toPlainString(),
+                                            invested.toPlainString()));
+                }
             }
             // 고정 비중은 사용자가 비중을 직접 준다 — 재분배할 것이 없으므로 상한은 "넘지 않았는지"의
             // 뜻뿐이다. 접수에서 보지 않으면 상한 40%를 고르고 60%를 준 요청이 그대로 실행되고,
@@ -504,6 +509,60 @@ public class BacktestService {
                                 });
             }
         }
+    }
+
+    /**
+     * 상한 검사가 세어야 할 종목 수 — <b>비중을 받는 종목의 수</b>다(PD-03, T023).
+     *
+     * <p>대부분의 전략은 고른 섹터 전부에 비중을 주므로 {@code universeSize}가 그대로다. 섹터 모멘텀만 그중 일부를 골라 배분하므로 선정 방식이 정하는
+     * 수를 센다 — 전체 섹터 수로 재면 {@code topN=2}에 상한 40%인 설정이 접수를 통과하고 실행에서야 채우지 못한다.
+     *
+     * <p>세는 값은 요청의 투자 대상 섹터 수 {@code universeSize}이지 PD-01의 여덟이 아니다. 사용자는 섹터 일부만 고를 수 있다.
+     *
+     * @return 셀 수 있으면 그 수, 접수 시점에 알 수 없으면 {@code null}(검사를 건너뛴다). {@code THRESHOLD}는 몇 개가 기준을 넘을지
+     *     가격을 봐야 알 수 있어 여기 해당한다 — 실행 중에 모자라면 남는 몫을 현금으로 둔다(PD-03 ⑥)
+     */
+    private static Integer weightedCount(CreateBacktestCommand command, int universeSize) {
+        if (!SECTOR_MOMENTUM.equals(command.strategyId())) {
+            return universeSize;
+        }
+        Map<String, Object> parameters = command.parameters();
+        Object mode = parameters == null ? null : parameters.get("selectionMode");
+        if (mode == null) {
+            // 축을 고르지 않았으면 규칙표 기본값으로 도는데 그 값은 여기서 읽지 않는다.
+            // 검사를 건너뛰어도 실행이 현금 잔여로 안전하게 끝난다(PD-03 ⑥).
+            return null;
+        }
+        return switch (String.valueOf(mode)) {
+            case "TOP_N" -> positiveInt(parameters.get("topN"), "topN");
+            case "TOP_PERCENT" -> {
+                Integer percent = positiveInt(parameters.get("topPercent"), "topPercent");
+                yield percent == null
+                        ? null
+                        // 올림은 PD-03 ④가 정한 규칙이고 워커 momentum.py 와 같아야 한다.
+                        : Math.max(1, (int) Math.ceil(universeSize * percent / 100.0));
+            }
+            case "ALL" -> universeSize;
+            // THRESHOLD 는 접수 시점에 셀 수 없다.
+            default -> null;
+        };
+    }
+
+    private static Integer positiveInt(Object raw, String field) {
+        if (raw == null) {
+            return null;
+        }
+        BigDecimal value;
+        try {
+            value = new BigDecimal(String.valueOf(raw));
+        } catch (NumberFormatException exc) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, field + " 는 정수여야 합니다: " + raw);
+        }
+        if (value.stripTrailingZeros().scale() > 0 || value.signum() <= 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, field + " 는 1 이상의 정수여야 합니다: " + value.toPlainString());
+        }
+        return value.intValueExact();
     }
 
     /**

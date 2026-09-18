@@ -41,6 +41,9 @@ export type ResultConfigItem = {
 
 /** 접수가 저장한 요청 사본에 `currency`·`effectiveStart`·`effectiveEnd`를 얹은 것이다 */
 export type ResultConfig = {
+  executionType?: string
+  registryVersion?: string
+  scenarioParams?: Record<string, unknown>
   strategyId: string
   rulesVersion: string
   parameters: Record<string, unknown>

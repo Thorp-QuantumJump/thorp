@@ -61,6 +61,8 @@
 
 ## 비교 주소
 
+`config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.
+
 `/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
 
 ## POST /results/{publicToken}/retry
@@ -84,8 +86,8 @@
 
 | code | HTTP | 뜻 | 화면 처리 |
 |---|---|---|---|
-| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지났다. 정리 작업이 요청 행을 지운 뒤에는 아래 404가 된다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |
-| RESOURCE_NOT_FOUND | 404 | 그런 토큰이 없다 | 잘못된 주소 안내. 만료와 다르게 보인다 |
+| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지났다. 정리 작업이 요청 행을 지운 뒤에도 묘비 보관 기한 동안은 410이다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |
+| RESOURCE_NOT_FOUND | 404 | 그런 토큰이 없다(발급된 적 없거나 묘비 보관 기한이 지났다) | 잘못된 주소 안내. 만료와 다르게 보인다 |
 | INVALID_INPUT | 400 | 토큰 형식 오류 | 위와 같다 |
 | RESULT_NOT_READY | 409 | 아직 계산 중이라 하위 자원이 없다 | 진행 상태를 보인다 |
 | BACKTEST_FAILED | 409 | 실패해 부분 결과도 없다 | 사유와 다시 시도 선택 |
@@ -94,6 +96,8 @@
 004의 코드를 그대로 통과시키고 `RESULT_EXPIRED`만 새로 더한다. 그밖에 `/trades`의 뒤집힌 기간·잘못된 종목 형식, `/positions`의 `date` 누락은 `400 INVALID_INPUT`, 재시도의 `409 NOT_RETRYABLE`·`429 EXECUTION_LIMIT`도 004와 같다.
 
 **004에서 온 오류의 문구는 코드의 기본 문구다.** 입력 검증의 400(거래 질의·`date` 누락)은 원인 문구를 그대로 싣는다. 004 예외의 문구에는 `backtestId`가 들어 있어 공개 경로는 문구를 바꿔 내보낸다. 코드·HTTP 상태·`details`(예: `retryAfterSeconds`)는 그대로다. 만료 응답 예시는 `docs/specs/result-api/examples/result-expired.json`이다.
+
+**정리 뒤에도 410을 유지하는 방법**: 정리 작업은 요청 행과 토큰을 지우면서(FR-021) 토큰의 SHA-256 해시와 만료 시각만 묘비(`expired_public_token`)로 남긴다. 조회는 토큰이 없을 때 묘비를 찾아 있으면 410이다. 묘비는 보관 기한(`thorp.result.tombstone-retention`, PD-23 확정 전 임시값)이 지나면 지운다. 해시로는 결과를 열 수 없고 128비트 난수라 원문을 되찾을 수도 없다.
 
 **410과 404를 나누는 근거**: 만료(410)와 없음(404)을 다르게 답하면 "이 토큰이 한 번 존재했다"는 사실이 밖으로 드러난다. 그러나 토큰이 안전한 난수 최소 128비트라 이웃 값을 맞출 가능성이 사실상 0이어서 존재 여부를 훑어 알아내는 것 자체가 불가능하고, 알아낸다 해도 내용은 얻을 수 없다. 반면 사용자에게는 "사라졌다"와 "잘못된 주소"가 다른 안내여야 한다(SC-008, Edge Cases). 그래서 구분을 유지한다.
 
@@ -114,6 +118,10 @@
 하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다.
 
 ## 비교 요청
+
+실제 비용 기준은 요청 사본 `config`가 아니라 `versions.costProfile.version`에서 가져온다. 새 전략은 003 등록표의 기본 설정과 004 규칙 등록표의 해당 전략 버전을 쓴다. 원본 두 건을 다시 계산할 때는 각 원본의 설정·비중·평가 분할·시나리오를 보존한다.
+
+준비 기간 부족의 구조화된 필요 값은 `error.details.requiredWarmupTradingDays`다. 요청값이 요구값보다 작은 경우 `requestedWarmupTradingDays`도 담고, 준비 기간을 채운 첫날이 요청 종료일 뒤인 경우 `requiredStartDate`를 담는다. 필요 값이나 공통 기간을 확인할 수 없으면 확인창에 사유만 보이고 재계산을 막는다.
 
 비교 대상 결과가 없을 때 화면이 새 실행을 요청하는 경로는 004의 `POST /backtests`를 그대로 쓴다. 005가 새 접수 경로를 만들지 않는다. 요청 본문은 기준 결과의 `config`에서 전략만 바꾸고 나머지(섹터 후보·기간·금액·비용·`warmupTradingDays`)를 그대로 옮긴다.
 

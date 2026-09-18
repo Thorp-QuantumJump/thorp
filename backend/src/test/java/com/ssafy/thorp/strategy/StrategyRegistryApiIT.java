@@ -87,6 +87,33 @@ class StrategyRegistryApiIT extends IntegrationTestSupport {
         assertThat(version).doesNotStartWith("PROVISIONAL-");
     }
 
+    @Test
+    @DisplayName("규칙의 곱셈 인자가 응답까지 실린다 — 빠지면 화면이 상한을 전부 막는다")
+    void ruleOperandsKeepTheirMultiplier() throws Exception {
+        JsonNode selectionRule = null;
+        for (JsonNode strategy : data(null).get("strategies")) {
+            if (!"SECTOR_MOMENTUM".equals(strategy.get("strategyId").asText())) {
+                continue;
+            }
+            for (JsonNode rule : strategy.get("validationRules")) {
+                if ("MAX_WEIGHT_TOO_LOW_FOR_SELECTION".equals(rule.get("code").asText())) {
+                    selectionRule = rule;
+                }
+            }
+        }
+
+        assertThat(selectionRule).as("모멘텀에 선정 수 기준 상한 규칙이 있어야 한다").isNotNull();
+        assertThat(selectionRule.get("left").get("axis").asText()).isEqualTo("maxWeight");
+        // 이 한 줄이 이번 회귀를 막는다. presentation 응답이 multiplyByAxis 를 빠뜨리면 화면은
+        // `maxWeight × topN < 100` 을 `maxWeight < 100` 으로 읽어 상한 30·40·50 을 전부 위반으로
+        // 막는다 — 곱셈 인자가 사라진 규칙은 더 엄격해진다. 내부 모델만 보는 테스트로는 안 잡힌다.
+        assertThat(selectionRule.get("left").has("multiplyByAxis"))
+                .as("응답에 multiplyByAxis 가 실려야 한다")
+                .isTrue();
+        assertThat(selectionRule.get("left").get("multiplyByAxis").asText()).isEqualTo("topN");
+        assertThat(selectionRule.get("right").get("value").asInt()).isEqualTo(100);
+    }
+
     /** 조회 응답의 {@code data}. {@code universeSize}가 null이면 붙이지 않는다. */
     private JsonNode data(Integer universeSize) throws Exception {
         MockHttpServletRequestBuilder request = get("/strategies/registry");

@@ -4,6 +4,7 @@
 
 > 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.
 > 이 plan 문서 작업은 [S15P21E205-273](https://ssafy.atlassian.net/browse/S15P21E205-273) · branch `docs(fe)/273-spec-013-plan`이다.
+> B06 동기화·검증: [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302) · branch `docs(fe)/302-spec-013-wrapup`. 실행 결과와 남은 확인은 [validation.md](validation.md)에 둔다.
 
 **Input**: `specs/013-learning-pages/spec.md` (Clarifications 10건 + 002 대조 정정 1건, FR-001~FR-019, SC-001~SC-008)
 
@@ -78,7 +79,8 @@
 | 대상 | 필요한 일 | 담당 | 막는 범위 |
 |---|---|---|---|
 | [014 사용자 인증](../014-user-auth/spec.md) | Out of Scope의 '사용자 역할별 권한 관리와 관리자 계정'을 범위 안으로 옮겨 관리 권한 소유를 받아들인다 | 014 담당 | 막지 않는다. 그전까지 설정 허용 목록으로 동작한다([research](research.md) R5) |
-| [003 전략 선택](../003-strategy-settings/tasks.md) | T057a가 `components/strategy/TermHelp.tsx` 대신 013 공용 `components/learning/TermHelp.tsx`를 쓰도록 고친다. 함께 맞출 규칙 둘: ① T057a·T063은 조회 실패도 '설명 준비 중'으로 보이게 적었지만 013 FR-010은 실패를 '설명 준비 중'과 구분해 다시 시도 수단을 보인다([term-help-ui](contracts/term-help-ui.md) §1·§2). ② T057a는 축 `description` 옆에 013 원본을 붙이게 적었지만, 축의 의미·허용 범위 안내는 003 등록표가 소유하고 013 도움말은 그 안의 개념 용어에만 붙인다(013 FR-008, US3 시나리오 5). `fetchGlossaryEntry`의 인자는 표시 이름이 아니라 `termId`다 | 003 담당 | 003 T057a·T063의 자리만. 013 B04가 먼저 서면 된다 |
+| [003 전략 선택](../003-strategy-settings/tasks.md) | T097에서 등록표 `axes[].termId`와 `DetailSettingsPanel`의 공용 `components/learning/TermHelp.tsx` 연결을 구현했다. 실제 API는 `termId`로 조회하며 설명 없음·조회 실패를 구분한다. 축 설명은 003 등록표가 계속 소유한다. T057a·T063에 남은 옛 경로·실패 처리 문구의 정리는 003 담당이 한다 | 003 담당 | 공용 부품 연결은 완료. 화면 왕복·입력 유지의 실행 결과는 [검증 기록](validation.md)에 적는다 |
+| [002 예시 진입](../002-sector-weight-selection/tasks.md) | T020의 예시 수신·덮어쓰기 확인이 구현됐다(`diagnosis/learningExample.ts`, `SectorSelectionLearningEntry.test.tsx`) | 002 담당 | 미구현 대기가 아니다. quickstart 4-3에서 013 인계와 002 수신을 함께 확인한다 |
 | [002 섹터·비중](../002-sector-weight-selection/spec.md) | 도움말을 붙일 용어와 자리를 정한다. spec에 013 참조가 없다 | 002 담당 | 002의 도움말만. 013 구현은 막지 않는다 |
 | [005 결과 이해·비교](../005-result-comparison/spec.md) | 도움말을 붙일 용어와 자리를 정한다. 013 US3 시나리오 4가 '가장 크게 줄었던 폭' 도움말을 전제한다 | 005 담당 | 005의 도움말만 |
 | [001 대표 ETF 자료](../001-etf-market-data/contracts/sector-api.md) | 열린 대응표 조회. `SectorService.getSectors()`가 이미 있다 | — | 없음 |
@@ -108,6 +110,7 @@ specs/013-learning-pages/
 ├── research.md          # Phase 0 산출물
 ├── data-model.md        # Phase 1 산출물
 ├── quickstart.md        # Phase 1 산출물
+├── validation.md        # B06 실행 결과와 미실행 범위
 ├── contracts/           # Phase 1 산출물
 │   ├── README.md                  # 소유·비소유 계약, 새 오류 코드
 │   ├── learning-public-api.md     # 글 목록·글·용어 설명 공개 조회
@@ -121,32 +124,37 @@ specs/013-learning-pages/
 ### Source Code (repository root)
 
 ```text
-backend/src/main/java/com/ssafy/thorp/learning/          # 새 013 소유 도메인
+backend/src/main/java/com/ssafy/thorp/learning/          # 013 소유 도메인
 ├── presentation/
 │   ├── controller/      # LearningController(공개), LearningAdminController(관리)
 │   ├── request/         # 글 만들기·초안 저장·게시 요청
-│   └── response/
+│   ├── response/
+│   └── support/         # LearningAdminAccess, LearningAdminWebConfig, UniqueConstraintViolations
 ├── application/
-│   ├── service/         # 공개 조회, 초안 저장, 게시·게시 취소 유스케이스
+│   ├── service/         # LearningQueryService, LearningAdminService
 │   ├── command/ result/
+│   ├── exception/       # 공개 조회·관리 유스케이스 예외
 │   ├── repository/      # 글·용어·판·기록·게시 용어 색인 저장소 인터페이스
 │   └── port/            # SectorMapPort, LearningAdminPolicy, PublishCheckRulesPort
 ├── domain/
 │   ├── model/           # LearningArticle, LearningTerm, ArticleBlock(sealed), ArticleRevision,
-│   │                    # PublishCheck, PublishCheckRules, PublishCheckResult
+│   │                    # ArticleSnapshot, PublicationEvent, PublishCheck,
+│   │                    # PublishCheckRules, PublishCheckResult
+│   ├── exception/       # DraftChangedException, PublishCheckFailedException
 │   └── vo/              # ArticleId, TermId, ExampleAllocation
 └── infrastructure/
-    ├── persistence/     # *JpaEntity, *Mapper, *RepositoryImpl
+    ├── persistence/     # *JpaEntity, *Mapper, *RepositoryImpl, LearningContentJson
     ├── sector/          # SectorMapPort 구현 — SectorService를 부른다
     ├── admin/           # ConfiguredLearningAdminPolicy — thorp.learning.admin-user-ids
-    └── rules/           # publish-checks YAML 로더
+    └── rules/           # YamlPublishCheckRulesLoader
 
 backend/src/main/java/com/ssafy/thorp/common/
 ├── config/SecurityConfig.java      # /admin/learning/** 를 authenticated() 로 묶는 한 줄
-└── exception/ErrorCode.java        # spec 013 블록
+├── exception/ErrorCode.java        # spec 013 블록
+└── web/advice/GlobalExceptionHandler.java  # 검증 오류의 details.fields
 
 backend/src/main/resources/
-├── db/migration/V{타임스탬프}__learning_content.sql   # 다섯 테이블 + 아홉 글·열네 용어 자리
+├── db/migration/V20260917101000__learning_content.sql  # 다섯 테이블 + 아홉 글·열네 용어 자리
 └── learning/publish-checks-v1.yml
 
 docs/specs/learning-api/examples/   # 계약 픽스처
@@ -154,9 +162,9 @@ docs/specs/learning-api/examples/   # 계약 픽스처
 frontend/src/
 ├── types/learning.ts, types/learningAdmin.ts
 ├── api/learning.ts                 # 공개 조회
-├── api/learningGlossary.ts         # fetchGlossaryEntry — 003 T057a가 격리해 둔 자리
+├── api/learningGlossary.ts         # fetchGlossaryEntry — 공개 용어 API, 세 상태 구분
 ├── api/learningAdmin.ts            # 관리
-├── pages/LearningListPage.tsx      # /learn (지금 NotReadyPage 자리)
+├── pages/LearningListPage.tsx      # /learn
 ├── pages/LearningArticlePage.tsx   # /learn/:articleId
 ├── pages/AdminLearningListPage.tsx # /admin/learning
 ├── pages/AdminLearningEditPage.tsx # /admin/learning/:articleId
@@ -164,8 +172,14 @@ frontend/src/
     ├── ArticleBlocks.tsx           # 블록을 텍스트 노드로 그린다
     ├── ExampleEntry.tsx            # '이 예시로 비중 비교하기'와 연결 불가 안내
     ├── ReturnToDiagnosisLink.tsx   # '하던 진단으로 돌아가기'
+    ├── LearningLoadFailure.tsx     # 조회 실패와 명시적 다시 시도
     ├── TermHelp.tsx                # 002·003·005 공용 도움말
-    └── admin/                      # 블록 편집기, 예시 섹터 선택, 용어 목록, 게시 검사 결과
+    └── admin/
+        ├── BlockEditor.tsx
+        ├── ExampleEditor.tsx
+        ├── TermListEditor.tsx
+        ├── PublishCheckResultList.tsx
+        └── adminDraftStorage.ts    # 미저장 편집과 기반 draftVersion 보관
 ```
 
 **구조 선택 근거**: 이 저장소는 `backend/`와 `frontend/`가 나뉜 웹 애플리케이션이다. 백엔드는 도메인별 패키지 안에서 `presentation → application → domain/infrastructure` 계층을 ArchUnit으로 강제한다([ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)). 글·용어 설명의 소유자는 013이므로 새 `learning` 도메인에 둔다. 도움말 컴포넌트는 세 화면이 함께 쓰므로 특정 화면 폴더(`components/strategy`)가 아니라 `components/learning`에 둔다.
@@ -185,7 +199,7 @@ constitution "Jira 연계"가 **작업 묶음 = 1 Branch = 1 MR**이고 **묶음
 | B03 | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | `feat(fe)/{번호}-learning-pages` | 공개 타입·API, `/learn`·`/learn/:articleId`, 블록 그리기, 예시 002 진입과 연결 불가 안내, 빈 목록·볼 수 없는 글·불러오지 못함, 접근성 | US1·US2·US4 | B01 계약 |
 | B04 | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | `feat(fe)/{번호}-term-help` | `learningGlossary.ts`, 공용 `TermHelp`, 글 화면의 돌아가기 연결 | US3 | B03 |
 | B05 | `[FE] 관리 화면에서 글을 고치고 게시한다` | `feat(fe)/{번호}-learning-admin` | 권한 확인, 관리 목록, 편집기(블록·예시 섹터·용어), 게시 검사 결과 표시, 게시 취소, 편집 중 만료 보관, 409 처리 | US5 화면 | B02, B03 |
-| B06 | `[DOCS] spec 013 문서 동기화와 최종 검증` | `docs(fe)/{번호}-spec-013-wrapup` | [quickstart](quickstart.md) 실행 기록, spec·plan과 구현 차이 반영, README 색인 확인 | — | 전부 |
+| B06 · [302](https://ssafy.atlassian.net/browse/S15P21E205-302) | `[DOCS] spec 013 문서 동기화와 최종 검증` | `docs(fe)/302-spec-013-wrapup` | [quickstart](quickstart.md) 실행 기록, spec·plan과 구현 차이 반영, README 색인 확인 | — | 전부 |
 
 ```text
 B01 ─┬─▶ B02 ─────────────┐
