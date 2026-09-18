@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import type { CompareTargetState } from '@/hooks/useCompareTarget'
 import { strategyLabel } from './conditionLine'
+import { ResultStatusLine } from './ResultStatusLine'
 import styles from './comparison.module.css'
 
 export function CompareTargetSlot({
@@ -17,6 +18,11 @@ export function CompareTargetSlot({
   if (state.targetState === 'NONE') return null
   const detail = state.detail
   const progress = detail?.progress
+  const completedThrough =
+    progress?.lastTradingDate ??
+    (state.timeseries.status === 'loaded'
+      ? (state.timeseries.data.points[state.timeseries.data.points.length - 1]?.date ?? null)
+      : null)
   const stages: Record<string, string> = {
     PREPARING_DATA: '자료 준비',
     COMPUTING: '분석 계산',
@@ -61,6 +67,9 @@ export function CompareTargetSlot({
         ) : null}
         {state.targetState === 'READY' && detail ? <p>비교 대상: {strategyLabel(detail)}</p> : null}
       </div>
+      {state.targetState === 'READY' && detail ? (
+        <ResultStatusLine detail={detail} completedThrough={completedThrough} />
+      ) : null}
       <div className={styles.actions}>
         {state.retryable &&
         (state.targetState === 'FAILED' || state.targetState === 'EXECUTION_LIMIT') ? (
