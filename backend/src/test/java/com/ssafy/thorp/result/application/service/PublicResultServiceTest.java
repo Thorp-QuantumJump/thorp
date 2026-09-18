@@ -74,12 +74,17 @@ class PublicResultServiceTest {
                     Clock.fixed(NOW, ZoneOffset.UTC));
 
     private static BacktestRequest request(Long requesterId, Instant expiresAt) {
+        return request(requesterId, expiresAt, ExecutionType.SINGLE);
+    }
+
+    private static BacktestRequest request(
+            Long requesterId, Instant expiresAt, ExecutionType type) {
         return BacktestRequest.restore(
                 1L,
                 new BacktestId(BACKTEST_ID),
                 11L,
                 requesterId,
-                ExecutionType.SINGLE,
+                type,
                 ResultSource.NEW,
                 null,
                 null,
@@ -190,6 +195,7 @@ class PublicResultServiceTest {
         PublicResultDetail result = service.getDetail(TOKEN);
 
         assertThat(result.publicToken()).isEqualTo(TOKEN);
+        assertThat(result.config()).containsEntry("executionType", "SINGLE");
         assertThat(result.expiresAt()).isEqualTo(expiresAt);
         assertThat(result.validationTier()).isEqualTo(ValidationTier.UNVALIDATED);
         assertThat(result.strategyName()).isEqualTo("똑같이 나누기");
@@ -227,6 +233,17 @@ class PublicResultServiceTest {
         assertThat(result.queueWaitSeconds()).isNull();
         assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);
         assertThat(result.exceptionKinds()).containsExactly("HALT_DEFERRED", "DELISTED");
+    }
+
+    @Test
+    @DisplayName("공개 결과는 원 요청의 자동 탐색 종류를 유지한다")
+    void searchBundleKindIsVisibleWithoutSearchQuery() {
+        stored(request(7L, null, ExecutionType.SEARCH_BUNDLE));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(detail(RunStatus.QUEUED));
+
+        assertThat(service.getDetail(TOKEN).config())
+                .containsEntry("executionType", "SEARCH_BUNDLE");
     }
 
     @Test
