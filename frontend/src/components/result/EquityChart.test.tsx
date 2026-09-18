@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
+import { formatAxisAmount } from '@/components/result/formatResult'
 import { makeEquitySeries } from '@/test/resultFixtures'
 import type { ResultTimeseriesPoint } from '@/types/result'
 
@@ -149,6 +150,19 @@ describe('EquityChart', () => {
     expect(pointCount(seriesPath(container, 'base'))).toBe(points.length - 1)
   })
 
+  it('그릴 자산가치가 하나도 없으면 빈 축을 그리지 않는다', () => {
+    const empty = BASE_POINTS.map((point) => ({ ...point, equity: '' }))
+    const { container } = render(
+      <EquityChart
+        altNumbers={altNumbers}
+        base={{ name: '물결 고르기', points: empty, maxDrawdown: null }}
+        initialCash="10000000.00"
+      />,
+    )
+
+    expect(container.innerHTML).toBe('')
+  })
+
   it('대안 텍스트에 핵심 숫자 3개와 비교 대상 유무를 담는다', () => {
     const { rerender } = render(
       <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />,
@@ -166,6 +180,25 @@ describe('EquityChart', () => {
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('모래 고르기')
   })
 
+  it('세로축에 원화 금액 눈금을 넷 이하로 적고 격자선과 같은 높이에 둔다', () => {
+    const { container } = render(
+      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />,
+    )
+
+    const labels = [...container.querySelectorAll('[data-testid="amount-axis"] text')]
+    const rowHeights = [...container.querySelectorAll('.visx-rows line')].map((line) =>
+      Number(line.getAttribute('y1')),
+    )
+
+    expect(labels.length).toBeGreaterThanOrEqual(2)
+    expect(labels.length).toBeLessThanOrEqual(4)
+    for (const label of labels) {
+      expect(label.textContent).toMatch(/^[\d,.]+(만|억)?원$/)
+      const height = Number(label.getAttribute('y'))
+      expect(rowHeights.some((row) => Math.abs(row - height) < 0.01)).toBe(true)
+    }
+  })
+
   it('시작 금액 기준선을 그리고 그 값을 글로도 알린다', () => {
     const { container } = render(
       <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />,
@@ -173,5 +206,16 @@ describe('EquityChart', () => {
 
     expect(container.querySelector('.chart-grid-highlight-rows line')).not.toBeNull()
     expect(screen.getByText(/시작 금액 10,000,000원/)).toBeTruthy()
+  })
+})
+
+describe('formatAxisAmount', () => {
+  it.each([
+    [10_500_000, '1,050만원'],
+    [125_000_000, '1.25억원'],
+    [9_500, '9,500원'],
+    [Number.NaN, ''],
+  ])('%d → "%s"', (value, text) => {
+    expect(formatAxisAmount(value)).toBe(text)
   })
 })

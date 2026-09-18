@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { EquityChart } from '@/components/result/EquityChart'
+import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
@@ -115,7 +116,9 @@ function ResultView({
  * 그래프 자리(FR-001).
  *
  * <p>시계열을 받았을 때만 그린다. 받지 못했으면 빈 곡선 대신 받지 못한 사유를 한 문장으로 둔다 —
- * 빈 그래프는 "돌았고 비어 있었다"는 거짓이 된다. 아직 계산 중이면 그릴 것이 없으므로 자리를 비운다.
+ * 빈 그래프는 "돌았고 비어 있었다"는 거짓이 된다. 받았더라도 자산가치 기록이 하나도 없으면(거래일을
+ * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다. 아직 계산 중이면
+ * 그릴 것이 없으므로 자리를 비운다.
  *
  * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.
  */
@@ -132,6 +135,9 @@ function ResultChartSlot({
     )
   }
   if (timeseries.status !== 'loaded') return null
+  if (!hasDrawableEquity(timeseries.data.points)) {
+    return <p className={styles.status}>받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.</p>
+  }
 
   const { summary } = detail
 

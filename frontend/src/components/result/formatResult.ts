@@ -24,6 +24,22 @@ export function formatMoney(value: string): string {
   return `${moneyFormat.format(amount)}원`
 }
 
+const axisAmountFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 })
+
+/**
+ * 그래프 세로축 눈금의 금액. `10500000` → `"1,050만원"`, `125000000` → `"1.25억원"`.
+ *
+ * <p>응답의 값이 아니라 축이 고른 둥근 눈금 값을 옮긴다. 좁은 여백에 들어가도록 만·억 단위로 줄여
+ * 쓴다. 결과의 금액은 이 함수가 아니라 `formatMoney`로 원 단위까지 보인다.
+ */
+export function formatAxisAmount(value: number): string {
+  if (!Number.isFinite(value)) return ''
+  const size = Math.abs(value)
+  if (size >= 100_000_000) return `${axisAmountFormat.format(value / 100_000_000)}억원`
+  if (size >= 10_000) return `${axisAmountFormat.format(value / 10_000)}만원`
+  return `${axisAmountFormat.format(value)}원`
+}
+
 /** 값이 수로 읽히고 0인가. 읽을 수 없으면 `false`다 */
 export function isZeroValue(value: string): boolean {
   return value.trim() !== '' && Number(value) === 0

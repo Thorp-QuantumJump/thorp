@@ -1,10 +1,13 @@
 import { curveLinear } from '@visx/curve'
+import { ticks } from 'd3-array'
 import { useMemo } from 'react'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
 import { XAxis } from '@/components/charts/x-axis'
+import { AmountAxis } from '@/components/result/AmountAxis'
 import { DrawdownShade } from '@/components/result/DrawdownShade'
 import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/drawdownWindow'
+import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'
 import { formatMoney, formatRatio } from '@/components/result/formatResult'
 import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'
 import type { ResultTimeseriesPoint } from '@/types/result'
@@ -21,7 +24,7 @@ import styles from './EquityChart.module.css'
  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.
  *
  * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을
- * 알아볼 수 없다.
+ * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다.
  */
 
 export type EquityChartSeries = {
@@ -56,6 +59,8 @@ const BASE_STROKE = 'var(--chart-line-primary)'
 const TARGET_STROKE = 'var(--chart-line-secondary)'
 /** 비교 대상 곡선의 파선 간격. 색을 못 봐도 선 모양으로 갈린다 */
 const TARGET_DASH = '7,5'
+/** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */
+const MAX_AMOUNT_TICKS = 4
 
 function toNumber(value: string | null | undefined): number | null {
   if (value == null || value.trim() === '') return null
@@ -79,7 +84,7 @@ function buildRows(base: ResultTimeseriesPoint[], target?: ResultTimeseriesPoint
   const collect = (points: ResultTimeseriesPoint[], key: 'base' | 'target') => {
     for (const point of points) {
       const row = byDate.get(point.date) ?? { date: toChartDate(point.date) }
-      const equity = toNumber(point.equity)
+      const equity = readEquity(point)
       if (equity != null) row[key] = equity
       byDate.set(point.date, row)
     }
@@ -114,6 +119,19 @@ function resolveYDomain(rows: ChartRow[], initialCash: number | null): [number, 
   return [lowest - padding, highest + padding]
 }
 
+/**
+ * 세로축 범위에서 둥근 눈금 값을 고른다. d3의 개수 인자는 힌트라 넷보다 많이 돌려줄 수 있으므로, 넷
+ * 이하가 될 때까지 힌트를 줄인다. 같은 값을 격자선과 눈금 글자에 함께 넘겨 둘이 같은 높이에 놓이게 한다.
+ */
+function pickAmountTicks([low, high]: [number, number]): number[] {
+  if (!Number.isFinite(low) || !Number.isFinite(high) || !(high > low)) return []
+  for (let count = MAX_AMOUNT_TICKS; count >= 1; count -= 1) {
+    const values = ticks(low, high, count)
+    if (values.length <= MAX_AMOUNT_TICKS) return values
+  }
+  return []
+}
+
 /** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */
 function buildAltText({ base, target, altNumbers }: EquityChartProps): string {
   const numbers = altNumbers
@@ -141,6 +159,7 @@ export function EquityChart(props: EquityChartProps) {
   const rows = useMemo(() => buildRows(base.points, target?.points), [base.points, target?.points])
   const initial = toNumber(initialCash)
   const yDomain = useMemo(() => resolveYDomain(rows, initial), [rows, initial])
+  const amountTicks = useMemo(() => pickAmountTicks(yDomain), [yDomain])
 
   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
   const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null
@@ -152,8 +171,8 @@ export function EquityChart(props: EquityChartProps) {
   ].filter((note): note is string => note != null)
 
   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 "돌았고 비어 있었다"는 거짓이므로 그리지
-  // 않고 자리만 비운다.
-  if (rows.length === 0) return null
+  // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.
+  if (!hasDrawableEquity(base.points) && !(target && hasDrawableEquity(target.points))) return null
 
   const endLabels = target
     ? [
@@ -171,7 +190,7 @@ export function EquityChart(props: EquityChartProps) {
           className={styles.canvas}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 18, right: 88, bottom: 30, left: 16 }}
+          margin={{ top: 18, right: 88, bottom: 30, left: 58 }}
           xDataKey="date"
           yDomain={yDomain}
           yDomainTween={false}
@@ -182,9 +201,11 @@ export function EquityChart(props: EquityChartProps) {
             highlightRowStrokeWidth={1.2}
             highlightRowValues={initial == null ? undefined : [initial]}
             horizontal
-            numTicksRows={4}
+            rowTickValues={amountTicks}
             strokeDasharray="2,5"
           />
+
+          <AmountAxis values={amountTicks} />
 
           {baseWindow ? (
             <DrawdownShade
