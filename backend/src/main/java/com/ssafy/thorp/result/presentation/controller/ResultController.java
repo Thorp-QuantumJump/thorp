@@ -8,6 +8,7 @@ import com.ssafy.thorp.result.application.service.PublicResultService;
 import com.ssafy.thorp.result.presentation.request.PublicTradePageQuery;
 import com.ssafy.thorp.result.presentation.response.PublicResultDetailResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultExceptionsResponse;
+import com.ssafy.thorp.result.presentation.response.PublicResultIndexComparisonResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultPositionsResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultRetryResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultTimeseriesResponse;
@@ -107,6 +108,16 @@ public class ResultController {
             @PathVariable String token) {
         return ResponseEntity.ok(
                 ApiResponse.ok(PublicResultExceptionsResponse.from(service.getExceptions(token))));
+    }
+
+    /** KOSPI를 같은 시작 금액으로 환산한 보조 비교 계열. 기간 계열 포트가 없으면 이유와 함께 비활성이다. */
+    @GetMapping("/{token}/index-comparison")
+    public ResponseEntity<ApiResponse<PublicResultIndexComparisonResponse>> getIndexComparison(
+            @PathVariable String token) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        PublicResultIndexComparisonResponse.from(
+                                service.getIndexComparison(token))));
     }
 
     /** 실패·취소한 결과를 같은 조건으로 다시 요청한다. 새 요청의 요청자는 지금 호출한 사람이다(비로그인이면 없음). */
