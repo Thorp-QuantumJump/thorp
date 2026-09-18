@@ -1,98 +1,137 @@
 import { describe, expect, it } from 'vitest'
-import { findDrawdownWindow } from '@/components/result/drawdownWindow'
+import { findDrawdownWindow } from './drawdownWindow'
 import { makeEquitySeries } from '@/test/resultFixtures'
 import type { ResultTimeseriesPoint } from '@/types/result'
 
-/** 날짜·자산가치·하락 폭만 정해 손으로 만든 계열 */
-function series(rows: [string, number, number][]): ResultTimeseriesPoint[] {
-  return rows.map(([date, equity, drawdown]) => ({
-    date,
-    equity: equity.toFixed(2),
-    cumulativeReturn: '0.000000',
-    drawdown: drawdown.toFixed(6),
-  }))
+/** 계열의 저점 값을 그대로 요약 값으로 쓴다. 004가 같은 계열에서 요약을 냈다는 가정이다. */
+function troughOf(points: readonly ResultTimeseriesPoint[]): string {
+  return points.reduce((lowest, point) =>
+    Number(point.drawdown) < Number(lowest.drawdown) ? point : lowest,
+  ).drawdown
 }
 
-describe('findDrawdownWindow', () => {
-  it('고점과 저점의 날짜를 돌려준다', () => {
-    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
+function point(date: string, equity: string, drawdown: string): ResultTimeseriesPoint {
+  return { date, equity, cumulativeReturn: '0', drawdown }
+}
 
-    const window = findDrawdownWindow(points, points[55].drawdown)
+describe('findDrawdownWindow (T055, R-05)', () => {
+  it('합성 계열에서 고점과 저점의 날짜를 고른다', () => {
+    const points = makeEquitySeries({ points: 60, peakIndex: 20, troughIndex: 35 })
 
-    expect(window).toEqual({ peakDate: points[40].date, troughDate: points[55].date })
-  })
-
-  it('보고된 최대 하락 폭과 저점이 어긋나면 음영을 포기한다', () => {
-    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
-
-    expect(findDrawdownWindow(points, '-0.030000')).toBeNull()
-  })
-
-  it('가장 낮은 하락 폭이 여러 날이면 처음 날을 저점으로 본다', () => {
-    const points = series([
-      ['2025-01-02', 10_000, 0],
-      ['2025-01-03', 10_500, 0],
-      ['2025-01-06', 9_975, -0.05],
-      ['2025-01-07', 9_975, -0.05],
-      ['2025-01-08', 10_200, -0.028571],
-    ])
-
-    expect(findDrawdownWindow(points, '-0.050000')).toEqual({
-      peakDate: '2025-01-03',
-      troughDate: '2025-01-06',
+    expect(findDrawdownWindow(points, troughOf(points))).toEqual({
+      peakDate: points[20].date,
+      troughDate: points[35].date,
     })
   })
 
-  it('고점 값이 여러 날이면 마지막 날부터 구간이 시작한다', () => {
-    const points = series([
-      ['2025-01-02', 10_500, 0],
-      ['2025-01-03', 10_500, 0],
-      ['2025-01-06', 9_975, -0.05],
-    ])
+  it('저점 값이 summary.maxDrawdown과 다르면 구간을 내지 않는다', () => {
+    const points = makeEquitySeries({ points: 60, peakIndex: 20, troughIndex: 35 })
 
-    expect(findDrawdownWindow(points, '-0.050000')).toEqual({
-      peakDate: '2025-01-03',
-      troughDate: '2025-01-06',
+    expect(findDrawdownWindow(points, '-0.041757')).toBeNull()
+  })
+
+  it('표기 자릿수만 다른 같은 값은 같은 값으로 본다', () => {
+    const points = [
+      point('2025-01-01', '100.00', '0.000000'),
+      point('2025-01-02', '90.00', '-0.100000'),
+    ]
+
+    expect(findDrawdownWindow(points, '-0.1')).toEqual({
+      peakDate: '2025-01-01',
+      troughDate: '2025-01-02',
     })
   })
 
-  it('점이 1,900개여도 같은 구간을 찾는다', () => {
-    const points = makeEquitySeries({ points: 1900, peakIndex: 600, troughIndex: 900 })
+  it('저점이 여러 날이면 처음 날을 쓴다', () => {
+    const points = [
+      point('2025-01-01', '100.00', '0.000000'),
+      point('2025-01-02', '90.00', '-0.100000'),
+      point('2025-01-03', '95.00', '-0.050000'),
+      point('2025-01-06', '90.00', '-0.100000'),
+    ]
 
-    const window = findDrawdownWindow(points, points[900].drawdown)
-
-    expect(window).toEqual({ peakDate: points[600].date, troughDate: points[900].date })
-    expect(points).toHaveLength(1900)
+    expect(findDrawdownWindow(points, '-0.100000')?.troughDate).toBe('2025-01-02')
   })
 
-  it('저점 뒤 회복한 날은 구간에 들어가지 않는다', () => {
-    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
+  it('1,900점 계열에서도 같은 구간을 고른다', () => {
+    const points = makeEquitySeries({ points: 1_900, peakIndex: 700, troughIndex: 1_300 })
 
-    const window = findDrawdownWindow(points, points[55].drawdown)
-
-    // 마지막 날은 저점보다 자산가치가 높다. 그런데도 구간의 끝은 저점이다.
-    expect(Number(points[128].equity)).toBeGreaterThan(Number(points[55].equity))
-    expect(window?.troughDate).toBe(points[55].date)
+    expect(findDrawdownWindow(points, troughOf(points))).toEqual({
+      peakDate: points[700].date,
+      troughDate: points[1_300].date,
+    })
   })
 
-  it('하락이 없었다고 보고된 결과에는 구간이 없다', () => {
-    const points = series([
-      ['2025-01-02', 10_000, 0],
-      ['2025-01-03', 10_500, 0],
-    ])
+  it('회복한 날은 구간에 넣지 않는다', () => {
+    const points = [
+      point('2025-01-01', '100.00', '0.000000'),
+      point('2025-01-02', '80.00', '-0.200000'),
+      point('2025-01-03', '100.00', '0.000000'),
+      point('2025-01-06', '110.00', '0.000000'),
+    ]
+
+    const window = findDrawdownWindow(points, '-0.200000')
+
+    expect(window).toEqual({ peakDate: '2025-01-01', troughDate: '2025-01-02' })
+    expect(Object.values(window ?? {})).not.toContain('2025-01-03')
+  })
+
+  it('저점 앞의 가장 높은 자산가치가 아니라 마지막으로 고점에 있던 날부터 잡는다', () => {
+    // 워커는 고점을 시작 금액에서 시작한다. 계열 안에서 한 번도 시작 금액을 넘지 못하면 첫날부터가 구간이다.
+    const points = [
+      point('2025-01-02', '9800000.00', '-0.020000'),
+      point('2025-01-03', '9500000.00', '-0.050000'),
+      point('2025-01-06', '9950000.00', '-0.005000'),
+      point('2025-01-07', '9000000.00', '-0.100000'),
+    ]
+
+    expect(findDrawdownWindow(points, '-0.100000')).toEqual({
+      peakDate: '2025-01-02',
+      troughDate: '2025-01-07',
+    })
+  })
+
+  it('고점을 넘은 뒤의 하락이면 그 고점일부터 잡는다', () => {
+    const points = [
+      point('2025-01-02', '9800000.00', '-0.020000'),
+      point('2025-01-03', '10500000.00', '0.000000'),
+      point('2025-01-06', '10600000.00', '0.000000'),
+      point('2025-01-07', '10070000.00', '-0.050000'),
+    ]
+
+    expect(findDrawdownWindow(points, '-0.050000')).toEqual({
+      peakDate: '2025-01-06',
+      troughDate: '2025-01-07',
+    })
+  })
+
+  it('첫 거래일이 저점이어도 구간을 낸다', () => {
+    const points = [
+      point('2025-01-02', '9990000.00', '-0.001000'),
+      point('2025-01-03', '10100000.00', '0.000000'),
+    ]
+
+    expect(findDrawdownWindow(points, '-0.001000')).toEqual({
+      peakDate: '2025-01-02',
+      troughDate: '2025-01-02',
+    })
+  })
+
+  it('하락이 없으면 칠할 구간이 없다', () => {
+    const points = [
+      point('2025-01-01', '100.00', '0.000000'),
+      point('2025-01-02', '101.00', '0.000000'),
+    ]
 
     expect(findDrawdownWindow(points, '0.000000')).toBeNull()
   })
 
-  it('최대 하락 폭을 읽을 수 없으면 구간이 없다', () => {
-    const points = makeEquitySeries({ points: 40, peakIndex: 10, troughIndex: 20 })
+  it('읽을 수 없는 요약 값이나 빈 계열이면 구간을 지어내지 않는다', () => {
+    const points = makeEquitySeries({ points: 30, peakIndex: 5, troughIndex: 10 })
 
     expect(findDrawdownWindow(points, null)).toBeNull()
     expect(findDrawdownWindow(points, '')).toBeNull()
     expect(findDrawdownWindow(points, '계산되지 않음')).toBeNull()
-  })
-
-  it('시계열이 비어 있으면 구간이 없다', () => {
-    expect(findDrawdownWindow([], '-0.050000')).toBeNull()
+    expect(findDrawdownWindow([], '-0.1')).toBeNull()
   })
 })

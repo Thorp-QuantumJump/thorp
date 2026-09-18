@@ -8,8 +8,12 @@ import {
   resultDetailCancelledNoSummary,
   resultDetailCompleted,
   resultDetailRunning,
+  resultExceptions,
   resultExpiredEnvelope,
+  resultPositions,
   resultTimeseries,
+  resultTradePage,
+  resultWeights,
 } from './resultFixtures'
 
 /**
@@ -44,12 +48,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * 중첩된 키를 점 경로로 모은다. 배열은 첫 원소의 모양만 본다. 자유 형식 사전(`parameters`)은 값이
- * 합성이라 키 이름을 대조하지 않는다.
+ * 합성이라 키 이름을 대조하지 않는다. 비중 기록의 `target`·`actual`도 종목 식별자를 키로 쓰는 사전이라 같다.
  */
 function keyPaths(value: unknown, prefix = ''): string[] {
   if (Array.isArray(value)) return value.length > 0 ? keyPaths(value[0], `${prefix}[]`) : []
   if (!isRecord(value)) return []
-  if (prefix.endsWith('parameters')) return []
+  if (/(parameters|\.target|\.actual)$/.test(prefix)) return []
 
   return Object.keys(value)
     .sort()
@@ -114,6 +118,27 @@ describe('결과 픽스처와 계약 예시', () => {
     ]) {
       expect(JSON.stringify(readExample(file)), file).not.toMatch(/BT-|backtestId/)
     }
+  })
+})
+
+const backtestExamplesDir = resolve(examplesDir, '..', '..', 'backtest-api', 'examples')
+
+describe('상세 패널 픽스처와 004 하위 자원 예시', () => {
+  it.each([
+    ['backtest-weights.json', resultWeights],
+    ['backtest-exceptions.json', resultExceptions],
+    ['backtest-trades.json', resultTradePage],
+    ['backtest-positions.json', resultPositions],
+  ])('%s 에서 backtestId만 뺀 키 집합과 같다', (file, fixture) => {
+    const example = JSON.parse(
+      readFileSync(resolve(backtestExamplesDir, file), 'utf8'),
+    ) as { data: Record<string, unknown> }
+    // 공개 경로는 004 응답에서 `backtestId`만 버린다(contracts "공개 응답에서 버리는 필드").
+    const { backtestId: _dropped, ...publicData } = example.data
+
+    // 선택 키(`plannedDate`·`riskScale` 등)는 예시에도 픽스처에도 없는 채로 대조한다.
+    expect(keyPaths(envelope(fixture))).toEqual(keyPaths({ ...example, data: publicData }))
+    expect(_dropped).toMatch(/^BT-/)
   })
 })
 
