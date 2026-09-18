@@ -1,0 +1,2 @@
+# Exclude generated Graphify snapshots from default code searches.
+graphify-out/

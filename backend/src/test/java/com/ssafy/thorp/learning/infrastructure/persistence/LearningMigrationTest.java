@@ -3,16 +3,13 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -22,22 +19,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>매핑과 스키마가 어긋나면 {@link PostgresTestSupport}의 {@code ddl-auto=validate}로 컨텍스트 로딩부터 실패한다. 여기서는 초기
  * 자리와 CHECK·UNIQUE 제약을 본다. <b>버전 번호를 적지 않는다</b>(backend/CLAUDE.md).
  *
- * <p>{@code @Import} 묶음은 {@link LearningRepositoryTest}와 같게 둔다. 컨텍스트 캐시를 공유해 DB 연결을 더 쓰지 않는다.
- *
  * <p>제약 위반 단언은 테스트마다 하나다. PostgreSQL은 실패한 문장 뒤 같은 트랜잭션의 다음 문장을 모두 거절하고, {@code @DataJpaTest}는 테스트
  * 하나를 한 트랜잭션으로 묶어 되돌린다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    MessageJsonPersistenceConfig.class,
-    LearningArticleRepositoryImpl.class,
-    LearningTermRepositoryImpl.class,
-    ArticleRevisionRepositoryImpl.class,
-    PublicationEventRepositoryImpl.class,
-    PublishedTermRepositoryImpl.class
-})
-class LearningMigrationTest extends PostgresTestSupport {
+class LearningMigrationTest extends RepositoryTestSupport {
 
     /** data-model §8의 열네 용어. */
     private static final List<String> SEED_TERM_KEYS =

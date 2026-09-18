@@ -85,4 +85,5 @@ thorp:
     public-token-ttl: ${THORP_RESULT_PUBLIC_TOKEN_TTL}
     expiry-sweep-interval: ${THORP_RESULT_EXPIRY_SWEEP_INTERVAL}
     expiry-sweep-batch-size: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}
+    tombstone-retention: ${THORP_RESULT_TOMBSTONE_RETENTION}
     trades-page-size: ${THORP_RESULT_TRADES_PAGE_SIZE}

@@ -8,7 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -16,8 +16,8 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * 단건 큐 전체가 찼을 때 무엇을 막고 무엇을 흘려보내는가(spec 004 T014·T015, R-19·R-20).
@@ -29,24 +29,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>여기서 고정하는 것은 값이 아니라 <b>가르는 기준</b>이다 — 한도는 단건 큐의 것이고, 다른 큐로 가는 탐색·경제환경 파생 실행은 단건 큐가 아무리 차 있어도
  * 접수된다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.backtest.liveness.interval=PT1H",
-            "thorp.backtest.limits.max-queued-per-user=100",
-            "thorp.backtest.limits.max-queued-total=1",
-            "thorp.backtest.limits.max-run-seconds=1800",
-            "thorp.backtest.limits.stale-run-seconds=300",
-            "thorp.backtest.limits.cancel-grace-seconds=120",
-            "thorp.backtest.limits.provisional=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ExecutionLimitFullQueueIT extends PostgresTestSupport {
+// 전체 한도를 1로 좁히므로 기반 컨텍스트와 따로 뜬다.
+@TestPropertySource(properties = "thorp.backtest.limits.max-queued-total=1")
+class ExecutionLimitFullQueueIT extends IntegrationTestSupport {
 
     @Autowired private BacktestService backtestService;
     @Autowired private JdbcTemplate jdbcTemplate;

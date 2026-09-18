@@ -3,15 +3,11 @@ package com.ssafy.thorp.macro;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,10 +26,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *   <li>사유 없는 권리 중단 — 지표가 왜 빠졌는지 되돌릴 근거가 사라진다
  * </ul>
  */
-@DataJpaTest
-@Import({JpaAuditingConfig.class, MessageJsonPersistenceConfig.class})
 @DisplayName("거시지표 등록·수집 마이그레이션")
-class MacroSchemaIntegrationTest extends PostgresTestSupport {
+class MacroSchemaIntegrationTest extends RepositoryTestSupport {
 
     @Autowired private JdbcTemplate jdbc;
 

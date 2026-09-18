@@ -1,83 +1,74 @@
 import type { ResultTimeseriesPoint } from '@/types/result'
 
 /**
- * 최대 하락 구간(FR-002). 그래프에 음영으로 겹쳐 그릴 고점~저점 두 날짜다.
+ * 최대 하락 구간 찾기(spec 005 R-05, FR-001·FR-010).
  *
- * <p><b>004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다</b>
- * (spec Assumptions가 허용한 유일한 계산 예외, R-05). 그때까지는 받은 시계열에서 구간을 찾되,
- * 찾은 저점이 `summary.maxDrawdown`과 다른 말을 하면 음영을 포기한다 — 숫자와 그림이 어긋나 보이는
- * 것보다 음영이 없는 편이 낫다(원칙 VI).
+ * <p><b>004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다.</b> 이 spec은 값을 계산하지
+ * 않는데(spec Assumptions), 이 함수가 그 유일한 예외다. 004의 `summary`는 최대 하락 폭 숫자만 주고 구간은
+ * 주지 않는다.
+ *
+ * <p>새 값을 만들지 않고 이미 계산된 `drawdown` 계열에서 **날짜만 고른다.** 그리고 고른 저점의 값이
+ * `summary.maxDrawdown`과 같을 때만 구간을 돌려준다. 다르면 이 계열로 요약 숫자를 설명할 수 없다는 뜻이라
+ * `null`이고, 화면은 음영과 구간 보기를 생략한다(원칙 VI).
+ *
+ * <p>B04(그래프 음영)와 B07('손실이 커진 때 보기')이 같은 구간을 쓴다. 두 화면이 구간을 따로 찾으면 그래프에
+ * 칠한 곳과 거래를 보여 주는 곳이 갈라진다.
  */
 
-/** 음영을 칠할 구간. 시작은 운용 중 가장 높았던 날, 끝은 그 뒤 가장 낮았던 날이다 */
 export type DrawdownWindow = {
+  /** 저점 직전에 자산가치가 고점에 있던 마지막 날. 시작 금액이 고점이었으면 계열의 첫날이다 */
   peakDate: string
+  /** `drawdown`이 가장 낮은 날. 같은 값이 여러 날이면 처음 날이다 */
   troughDate: string
 }
 
-/**
- * 저점의 하락 폭과 `summary.maxDrawdown`이 같다고 볼 수 있는 차이의 한계.
- *
- * 계약이 비율을 소수점 여섯 자리 문자열로 주므로, 두 값이 같은 계산에서 나왔어도 마지막 자리에서
- * 갈릴 수 있다. 이보다 큰 차이는 두 값이 다른 계산에서 나왔다는 뜻으로 읽는다.
- */
-const MATCH_TOLERANCE = 1e-6
-
-/** 수로 읽히면 그 수, 아니면 `null`. 읽을 수 없는 값을 0으로 바꾸지 않는다 */
-function toNumber(value: string | undefined | null): number | null {
+/** 읽을 수 없는 문자열은 `null`이다. 0으로 바꾸면 없는 하락이나 고점을 만든다. */
+function readNumber(value: string | null | undefined): number | null {
   if (value == null || value.trim() === '') return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
 }
 
 /**
- * 시계열에서 최대 하락 구간을 찾는다.
- *
- * <p>저점은 `drawdown`이 가장 낮은 날이며, 같은 값이 여러 날이면 처음 날을 쓴다 — 하락이 처음
- * 바닥에 닿은 날이 구간의 끝이다. 고점은 저점까지의 `equity`가 가장 높았던 날이고, 같은 값이 여러
- * 날이면 마지막 날을 쓴다 — 고점에 머무른 날들은 아직 하락이 아니므로 구간에 넣지 않는다.
- *
- * <p>회복 시점은 구간에 넣지 않는다(FR-002). 회복까지 걸린 기간은 상세의 숫자로 본다.
- *
- * @param points 받은 시계열. 점을 줄이지 않은 원본이어야 저점이 남는다(R-08)
- * @param summaryMaxDrawdown `summary.maxDrawdown`. 없거나 저점과 어긋나면 `null`을 돌려준다
+ * @param points `/timeseries`의 계열. 날짜 오름차순이다
+ * @param summaryMaxDrawdown `summary.maxDrawdown`. 0 이하의 비율 문자열이다
+ * @returns 고점~저점. 회복 시점은 넣지 않는다(FR-002: 하락 폭은 고점에서 저점까지다). 하락이 없거나 요약과
+ *   어긋나면 `null`
  */
 export function findDrawdownWindow(
-  points: ResultTimeseriesPoint[],
+  points: readonly ResultTimeseriesPoint[],
   summaryMaxDrawdown: string | null | undefined,
 ): DrawdownWindow | null {
-  const reported = toNumber(summaryMaxDrawdown)
-  // 하락이 없었다고 보고된 결과에는 칠할 구간이 없다.
-  if (reported == null || reported >= 0) return null
+  const expected = readNumber(summaryMaxDrawdown)
+  if (expected === null) return null
 
   let troughIndex = -1
-  let troughDrawdown = Number.POSITIVE_INFINITY
-  for (let index = 0; index < points.length; index += 1) {
-    const drawdown = toNumber(points[index].drawdown)
-    if (drawdown == null) continue
-    if (drawdown < troughDrawdown) {
-      troughDrawdown = drawdown
+  let troughValue = Number.POSITIVE_INFINITY
+  points.forEach((point, index) => {
+    const drawdown = readNumber(point.drawdown)
+    // 같은 값이면 앞선 날을 둔다 — `<`라서 뒤의 같은 값이 덮어쓰지 않는다.
+    if (drawdown !== null && drawdown < troughValue) {
+      troughValue = drawdown
       troughIndex = index
     }
-  }
-  if (troughIndex < 0 || troughDrawdown >= 0) return null
-  if (Math.abs(troughDrawdown - reported) > MATCH_TOLERANCE) return null
+  })
 
-  let peakIndex = -1
-  let peakEquity = Number.NEGATIVE_INFINITY
-  for (let index = 0; index <= troughIndex; index += 1) {
-    const equity = toNumber(points[index].equity)
-    if (equity == null) continue
-    if (equity >= peakEquity) {
-      peakEquity = equity
+  // 하락이 없으면 칠할 구간이 없다.
+  if (troughIndex < 0 || troughValue >= 0) return null
+  if (troughValue !== expected) return null
+
+  // 고점도 `drawdown` 계열에서 고른다. 워커는 고점을 **시작 금액**에서 시작해 자산가치가 그 위로 오를 때만
+  // 올린다(`portfolio_execution.py`의 `self.peak`). 그래서 고점인 날은 `drawdown`이 0이고, 저점 앞에 그런 날이
+  // 없으면 시작 금액이 고점이었다는 뜻이라 계열의 첫날부터가 구간이다. 계열 안의 자산가치 최댓값으로 찾으면
+  // 시작 금액 아래에서 출발한 결과의 구간을 늦게 잡는다.
+  let peakIndex = 0
+  for (let index = troughIndex - 1; index >= 0; index -= 1) {
+    const drawdown = readNumber(points[index].drawdown)
+    if (drawdown !== null && drawdown >= 0) {
       peakIndex = index
+      break
     }
   }
-  // 고점을 찾지 못했거나 고점과 저점이 같은 날이면 그릴 구간이 없다.
-  if (peakIndex < 0 || peakIndex >= troughIndex) return null
 
-  return {
-    peakDate: points[peakIndex].date,
-    troughDate: points[troughIndex].date,
-  }
+  return { peakDate: points[peakIndex].date, troughDate: points[troughIndex].date }
 }

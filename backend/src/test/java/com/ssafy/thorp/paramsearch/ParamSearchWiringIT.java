@@ -15,13 +15,12 @@ import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import com.ssafy.thorp.strategy.infrastructure.registry.FileParameterRegistry;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -34,14 +33,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>전략 이름을 단언에 쓰지 않는다. 마이그레이션이 전략을 더하거나 규칙 상태를 바꿔도 이 테스트는 그대로 성립해야 한다 — 확인하는 것은 특정 전략이 아니라 <b>두
  * 집합의 관계</b>다(FR-026).
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchWiringIT extends PostgresTestSupport {
+class ParamSearchWiringIT extends IntegrationTestSupport {
 
     @Autowired private ParameterRegistryPort registry;
     @Autowired private StrategyExecutionSupportPort executionSupport;

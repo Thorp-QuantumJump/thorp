@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock;
@@ -24,15 +23,13 @@ import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
 import com.ssafy.thorp.learning.domain.vo.TermId;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -42,22 +39,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>JSON 컬럼은 운영과 같이 메시지 ObjectMapper로 직렬화되도록 {@link MessageJsonPersistenceConfig}를 함께 올린다. 빠지면
  * Hibernate 기본 매퍼로 저장돼 null 키 생략 규칙이 운영과 달라진다.
  *
- * <p><b>애노테이션 묶음을 {@link LearningMigrationTest}와 글자 그대로 같게 둔다.</b> 컨텍스트 캐시를 공유해 DB 연결을 더 쓰지 않는다.
- *
  * <p>{@code @DataJpaTest}가 테스트마다 트랜잭션을 되돌리므로 초기 자리는 그대로 남는다. 읽기 전에 {@code flush}·{@code clear}로 1차
  * 캐시를 비워, 매핑을 거친 값을 DB에서 다시 읽는지 본다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    MessageJsonPersistenceConfig.class,
-    LearningArticleRepositoryImpl.class,
-    LearningTermRepositoryImpl.class,
-    ArticleRevisionRepositoryImpl.class,
-    PublicationEventRepositoryImpl.class,
-    PublishedTermRepositoryImpl.class
-})
-class LearningRepositoryTest extends PostgresTestSupport {
+class LearningRepositoryTest extends RepositoryTestSupport {
 
     private static final ArticleId ARTICLE = new ArticleId("returns-and-losses");
     private static final TermId MAX_DRAWDOWN = new TermId("max-drawdown");

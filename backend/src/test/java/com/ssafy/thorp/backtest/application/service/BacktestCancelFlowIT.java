@@ -30,7 +30,7 @@ import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,10 +39,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -54,19 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>브로커는 띄우지 않는다. CANCEL 발행은 목으로 받아 "보냈는지"만 본다 — 워커가 멈춘 뒤 보내는 FINISHED(CANCELLED)는 계약 픽스처 ({@code
  * lastTradingDate=2025-03-25})로 넣는다. PROGRESS 픽스처의 마지막 거래일은 2025-01-28 이다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestCancelFlowIT extends PostgresTestSupport {
+class BacktestCancelFlowIT extends PortMockedIntegrationTestSupport {
 
     private static final LocalDate PROGRESS_DATE = LocalDate.parse("2025-01-28");
     private static final LocalDate STOPPED_DATE = LocalDate.parse("2025-03-25");
@@ -84,7 +69,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {
     @Autowired private BacktestRequestRepository requestRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private TransactionTemplate transactionTemplate;
-    @MockitoBean private BacktestControlPublisher controlPublisher;
+    @Autowired private BacktestControlPublisher controlPublisher;
 
     // ---------------------------------------------------------------- fixtures
 
