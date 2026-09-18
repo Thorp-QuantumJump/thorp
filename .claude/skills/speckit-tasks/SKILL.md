@@ -71,6 +71,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - If data-model.md exists: Extract entities and map to user stories
    - If contracts/ exists: Map interface contracts to user stories
    - If research.md exists: Extract decisions for setup tasks
+   - **Scan the repository for existing seams this feature must fill** (see Existing Seams below) - REQUIRED, not optional
    - Generate tasks organized by user story (see Task Generation Rules below)
    - Generate dependency graph showing user story completion order
    - Create parallel execution examples per user story
@@ -132,6 +133,7 @@ Output path to generated tasks.md and summary:
 - Parallel opportunities identified
 - Independent test criteria for each story
 - Suggested MVP scope (typically just User Story 1)
+- Existing seams found, and which task replaces each (or "None")
 - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
 
 Context for task generation: $ARGUMENTS
@@ -196,7 +198,22 @@ Every task MUST strictly follow this format:
    - If entity serves multiple stories: Put in earliest story or Setup phase
    - Relationships → service layer tasks in appropriate story phase
 
-4. **From Setup/Infrastructure**:
+4. **From the Existing Codebase (Existing Seams)** - REQUIRED:
+   - Search the repository for code that is already waiting on this feature. Look for:
+     - Placeholder adapters and stand-ins: `Pending*`, `Fixture*`, `Example*`, `Provisional*`, `Stub*`
+     - Ports/interfaces this feature is expected to implement, with no real implementation yet
+     - `NotImplementedError` / `UnsupportedOperationException` / `TODO` comments naming this spec
+     - Import paths or module lookups pointing at a module this feature is supposed to create
+     - Existing consumers reading data this feature will own
+   - Search terms: the feature name, its spec number, its port/interface names, its table prefix
+   - **Every seam found MUST get a task that replaces, implements, or removes it.** A downstream spec
+     that already shipped a stand-in will keep serving fake data until such a task lands.
+   - **Verify the paths agree.** If the seam expects module `a.b.c` and the plan says to write `x/y.py`,
+     that mismatch is a defect - resolve it now, not at integration time.
+   - Record the result in the tasks.md "Existing Seams" section. If there are none, write "None" there;
+     never leave it blank, or the next reader cannot tell "checked, none" from "never checked".
+
+5. **From Setup/Infrastructure**:
    - Shared infrastructure → Setup phase (Phase 1)
    - Foundational/blocking tasks → Foundational phase (Phase 2)
    - Story-specific setup → within that story's phase
@@ -213,5 +230,6 @@ Every task MUST strictly follow this format:
 ## Done When
 
 - [ ] tasks.md generated with all phases, task IDs, and file paths
+- [ ] Existing Seams section filled in (a seam list with owning tasks, or an explicit "None")
 - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above
 - [ ] Completion reported to user with task count, story breakdown, and MVP scope

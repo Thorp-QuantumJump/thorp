@@ -129,7 +129,9 @@ describe('findDrawdownWindow (T055, R-05)', () => {
   it('읽을 수 없는 요약 값이나 빈 계열이면 구간을 지어내지 않는다', () => {
     const points = makeEquitySeries({ points: 30, peakIndex: 5, troughIndex: 10 })
 
+    expect(findDrawdownWindow(points, null)).toBeNull()
     expect(findDrawdownWindow(points, '')).toBeNull()
+    expect(findDrawdownWindow(points, '계산되지 않음')).toBeNull()
     expect(findDrawdownWindow([], '-0.1')).toBeNull()
   })
 })

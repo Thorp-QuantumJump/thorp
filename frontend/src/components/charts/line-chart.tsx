@@ -57,6 +57,18 @@ export interface LineChartProps {
   xDomainSlotCount?: number;
   /** Tween y-domain when brush changes the visible x-range. Default: false */
   tweenYDomainOnXDomainChange?: boolean;
+  /**
+   * Fixed primary y-domain `[min, max]`, used as-is instead of deriving one
+   * from the data — anchors the axis to a meaningful level (e.g. the amount
+   * the user started with) rather than to zero.
+   */
+  yDomain?: [number, number];
+  /**
+   * Thin the series down to what the pixel width can show. Set `false` to draw
+   * every row — charts whose extremes carry meaning must not drop points.
+   * Default: true.
+   */
+  decimate?: boolean;
   /** Inline container styles (e.g. fixed height for brush strip). */
   style?: CSSProperties;
   /** Fires when the internal chart phase changes (e.g. OG capture readiness). */
@@ -154,6 +166,8 @@ interface ChartInnerProps {
   xDomain?: [Date, Date];
   xDomainSlotCount?: number;
   tweenYDomainOnXDomainChange?: boolean;
+  yDomain?: [number, number];
+  decimate?: boolean;
   children: ReactNode;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onPhaseChange: (phase: ChartPhase) => void;
@@ -176,6 +190,8 @@ function ChartInner({
   xDomain,
   xDomainSlotCount,
   tweenYDomainOnXDomainChange,
+  yDomain,
+  decimate,
   children,
   containerRef,
   onPhaseChange,
@@ -190,6 +206,7 @@ function ChartInner({
       clipPathId="chart-grow-clip"
       containerRef={containerRef}
       data={data}
+      decimate={decimate}
       enterTransition={enterTransition}
       height={height}
       lines={lines}
@@ -202,6 +219,7 @@ function ChartInner({
       xDataKey={xDataKey}
       xDomain={xDomain}
       xDomainSlotCount={xDomainSlotCount}
+      yDomain={yDomain}
       yDomainTween={yDomainTween}
       yDomainTweenDuration={yDomainTweenDuration}
     >
@@ -227,6 +245,8 @@ export function LineChart({
   xDomain,
   xDomainSlotCount,
   tweenYDomainOnXDomainChange = false,
+  yDomain,
+  decimate,
   style,
   onPhaseChange,
   children,
@@ -270,6 +290,7 @@ export function LineChart({
             chartStatus={status}
             containerRef={containerRef}
             data={data}
+            decimate={decimate}
             enterTransition={enterTransition}
             height={height}
             loadingLabel={loadingLabel}
@@ -281,6 +302,7 @@ export function LineChart({
             xDataKey={xDataKey}
             xDomain={xDomain}
             xDomainSlotCount={xDomainSlotCount}
+            yDomain={yDomain}
             yDomainTween={yDomainTween}
             yDomainTweenDuration={yDomainTweenDuration}
           >

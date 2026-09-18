@@ -92,7 +92,32 @@ public class EffectivePeriodCalculator {
             LocalDate requestedStart,
             LocalDate requestedEnd,
             Integer requestedWarmupTradingDays) {
-        int required = requiredWarmupTradingDays(rules, scenarioOverlay);
+        return resolve(
+                rules,
+                scenarioOverlay,
+                null,
+                instrumentIds,
+                requestedStart,
+                requestedEnd,
+                requestedWarmupTradingDays);
+    }
+
+    /**
+     * 화면이 고른 관측 기간({@code parameters.lookbackDays})까지 보고 판정하는 갈래.
+     *
+     * <p>규칙표 값만 보면 축을 고른 요청이 새어 나간다 — 최소분산 규칙표 기본값은 120인데 003 축은 250까지 있어서, 250을 고른 요청에 워밍업 120이 실려
+     * 오면 접수는 통과하고 워커는 120거래일만 읽은 채 250거래일로 계산한다. 초반 종목이 {@code INSUFFICIENT_HISTORY}로 빠진 현금 포트폴리오가
+     * 정상 완료로 저장된다. 우선순위는 {@code BacktestService.effectiveWeightCap}과 같다 — 축이 오면 축이 이기고, 없으면 규칙표다.
+     */
+    public EffectivePeriod resolve(
+            StrategyRules rules,
+            StrategyRules scenarioOverlay,
+            Map<String, Object> parameters,
+            List<String> instrumentIds,
+            LocalDate requestedStart,
+            LocalDate requestedEnd,
+            Integer requestedWarmupTradingDays) {
+        int required = requiredWarmupTradingDays(rules, scenarioOverlay, parameters);
         int warmup = required;
         if (requestedWarmupTradingDays != null) {
             if (requestedWarmupTradingDays < required) {
@@ -160,13 +185,44 @@ public class EffectivePeriodCalculator {
     /** 전략 관측 길이와 시나리오 오버레이 관측 길이 중 긴 쪽. 둘은 같은 자료를 보므로 더하지 않는다. */
     public static int requiredWarmupTradingDays(
             StrategyRules rules, StrategyRules scenarioOverlay) {
-        int strategy = lookback(rules) + skipRecent(rules);
-        int overlay = scenarioOverlay == null ? 0 : lookback(scenarioOverlay);
+        return requiredWarmupTradingDays(rules, scenarioOverlay, null);
+    }
+
+    /** 요청이 003 축 {@code lookbackDays}를 실어 보냈으면 그것이 계산에 쓰이는 값이므로 요구값도 그것으로 잰다. */
+    public static int requiredWarmupTradingDays(
+            StrategyRules rules, StrategyRules scenarioOverlay, Map<String, Object> parameters) {
+        int strategy = lookback(rules, parameters) + skipRecent(rules);
+        // 오버레이는 003 축이 아니라 서버가 채우는 규칙이라 요청 파라미터를 보지 않는다.
+        int overlay = scenarioOverlay == null ? 0 : lookback(scenarioOverlay, null);
         return Math.max(strategy, overlay);
     }
 
-    private static int lookback(StrategyRules rules) {
+    private static int lookback(StrategyRules rules, Map<String, Object> parameters) {
+        Integer chosen = chosenLookback(parameters);
+        if (chosen != null) {
+            return chosen;
+        }
         return rules.spec() == null ? 0 : intValue(rules.spec(), "lookbackDays");
+    }
+
+    /**
+     * 요청 {@code allocation.parameters.lookbackDays}. 숫자가 아니거나 없으면 {@code null}이다.
+     *
+     * <p>값의 유효성은 등록표 관문({@code StrategySettingsValidator})이 본다. 여기서 되받아 거절하면 같은 판정이 두 곳에 생긴다.
+     */
+    private static Integer chosenLookback(Map<String, Object> parameters) {
+        Object raw = parameters == null ? null : parameters.get("lookbackDays");
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        if (raw instanceof String text) {
+            try {
+                return Integer.valueOf(text.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static int skipRecent(StrategyRules rules) {

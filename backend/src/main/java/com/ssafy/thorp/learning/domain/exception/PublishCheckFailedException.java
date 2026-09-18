@@ -1,0 +1,53 @@
+package com.ssafy.thorp.learning.domain.exception;
+
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.learning.domain.model.CheckLocation;
+import com.ssafy.thorp.learning.domain.model.PublishCheckFailure;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * 게시 전 검사에 걸렸다(422 {@code LEARNING_PUBLISH_CHECK_FAILED}, learning-admin-api §6). 걸린 항목을 모두 싣는다.
+ *
+ * <p>{@code details}는 응답 JSON 모양 그대로의 맵이다. 도메인이 Jackson에 의존하지 않으므로 키 생략(값이 없는 {@code
+ * matched}·{@code index}·{@code termId})과 소문자 {@code part}를 여기서 맞춘다.
+ */
+public class PublishCheckFailedException extends BusinessException {
+
+    public PublishCheckFailedException(String checkVersion, List<PublishCheckFailure> failures) {
+        super(
+                ErrorCode.LEARNING_PUBLISH_CHECK_FAILED,
+                ErrorCode.LEARNING_PUBLISH_CHECK_FAILED.getMessage(),
+                Map.of(
+                        "checkVersion",
+                        checkVersion,
+                        "failures",
+                        failures.stream().map(PublishCheckFailedException::toDetail).toList()));
+    }
+
+    private static Map<String, Object> toDetail(PublishCheckFailure failure) {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("check", failure.check().name());
+        detail.put("location", toDetail(failure.location()));
+        if (failure.matched() != null) {
+            detail.put("matched", failure.matched());
+        }
+        detail.put("message", failure.message());
+        return detail;
+    }
+
+    private static Map<String, Object> toDetail(CheckLocation location) {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("part", location.part().name().toLowerCase(Locale.ROOT));
+        if (location.index() != null) {
+            detail.put("index", location.index());
+        }
+        if (location.termId() != null) {
+            detail.put("termId", location.termId().value());
+        }
+        return detail;
+    }
+}

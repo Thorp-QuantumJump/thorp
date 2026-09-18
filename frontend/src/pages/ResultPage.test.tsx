@@ -253,6 +253,21 @@ describe('ResultPage', () => {
     expect(container.textContent).not.toMatch(/\d%|\d원/)
   })
 
+  it.each([
+    ['점이 하나도 없으면', []],
+    ['모든 날의 자산가치가 비어 있으면', resultTimeseries.points.map((point) => ({ ...point, equity: '' }))],
+  ])('시계열을 받았어도 %s 그래프 대신 그 사실을 알린다', async (_case, points) => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue({ partial: true, points })
+
+    const { container } = renderResult()
+
+    expect(
+      await screen.findByText('받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.'),
+    ).not.toBeNull()
+    expect(container.querySelector('[role="img"]')).toBeNull()
+  })
+
   it('연결에 실패하면 다시 불러오기를 두고 누르면 다시 부른다', async () => {
     apiMocks.fetchResult
       .mockRejectedValueOnce(new ResultError('서버에 연결할 수 없습니다.'))
@@ -328,9 +343,9 @@ describe('ResultPage', () => {
       const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })
       expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(troughPoint.date)
       await within(view).findByRole('table', { name: '구간 거래' })
-      // 합성 계열은 40번째 점이 마지막 고점이다(`resultFixtures.ts`).
+      // 계약 예시 계열에서 저점 직전 `drawdown`이 0인 마지막 날이다(`resultFixtures.ts`).
       expect(apiMocks.fetchResultTrades.mock.calls[0][1]).toMatchObject({
-        from: resultTimeseries.points[40].date,
+        from: '2025-03-10',
         to: troughPoint.date,
       })
       expect(apiMocks.fetchResultPositions.mock.calls[0][1]).toBe(troughPoint.date)
@@ -352,8 +367,14 @@ describe('ResultPage', () => {
     })
 
     it('최대 하락 구간을 확인할 수 없으면 손실이 커진 때 보기를 비활성하고 이유를 적는다', async () => {
-      // 픽스처의 요약 값은 시계열 저점과 다르다. 이 계열로 요약 숫자를 설명할 수 없다(R-05).
-      apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+      // 요약 값을 시계열 저점과 다르게 만들어 이 계열로 숫자를 설명할 수 없는 경우를 만든다(R-05).
+      apiMocks.fetchResult.mockResolvedValue({
+        ...resultDetailCompleted,
+        summary: resultDetailCompleted.summary && {
+          ...resultDetailCompleted.summary,
+          maxDrawdown: '-0.030000',
+        },
+      })
       renderResult()
 
       const button = (await screen.findByRole('button', {

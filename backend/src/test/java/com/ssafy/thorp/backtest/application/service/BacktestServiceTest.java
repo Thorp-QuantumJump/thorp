@@ -208,6 +208,136 @@ class BacktestServiceTest {
         return command("FIXED_WEIGHT", new BigDecimal("0.4000"), null, Scenario.FULL_PERIOD, null);
     }
 
+    private static CreateBacktestCommand withParameters(
+            String strategyId, Map<String, Object> parameters) {
+        return withParameters(
+                command(strategyId, null, null, Scenario.FULL_PERIOD, null), parameters);
+    }
+
+    private static CreateBacktestCommand withItems(
+            CreateBacktestCommand base, List<CreateBacktestCommand.AllocationItem> items) {
+        return new CreateBacktestCommand(
+                base.requesterId(),
+                base.executionType(),
+                base.mappingVersion(),
+                items,
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
+    }
+
+    private static CreateBacktestCommand withParameters(
+            CreateBacktestCommand base, Map<String, Object> parameters) {
+        return new CreateBacktestCommand(
+                base.requesterId(),
+                base.executionType(),
+                base.mappingVersion(),
+                base.items(),
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                parameters,
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
+    }
+
+    /** 최소분산 규칙표 행(T022 마이그레이션과 같은 값). 상한은 1.0000이고 사용자 {@code maxWeight}가 우선한다. */
+    private void stubMinimumVariance(String weightCap) {
+        when(strategyRulesService.requireRegistered("MINIMUM_VARIANCE", "1"))
+                .thenReturn(
+                        rules(
+                                "MINIMUM_VARIANCE",
+                                Map.of(
+                                        "weightCap",
+                                        weightCap,
+                                        "investedFraction",
+                                        "1.0000",
+                                        "capOverflow",
+                                        "CASH",
+                                        "weightUnit",
+                                        "0.000001")));
+    }
+
+    @Test
+    @DisplayName("화면에서 고른 상한 × 종목 수가 투자 비중에 못 미치면 422 VALIDATION_RULE_VIOLATED 다")
+    void userChosenCapThatCannotBeFilledIsRejected() {
+        // 규칙표 weightCap 은 1.0000 이라 규칙표만 보면 통과한다. 사용자가 고른 40%가 유효 상한이다.
+        stubMinimumVariance("1.0000");
+
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                "MINIMUM_VARIANCE",
+                                                Map.of("rebalance", "MONTH_END", "maxWeight", 40))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
+                .hasMessageContaining("상한 0.4 × 2종목");
+    }
+
+    @Test
+    @DisplayName("고정 비중은 목표 비중 하나가 상한을 넘어도 422 다 — 재분배할 것이 없어 그대로 실행된다")
+    void fixedWeightAboveTheCapIsRejected() {
+        // 0.6 + 0.2 + 0.2 = 1 이라 합 검사는 통과하고, 0.4 x 3종목 >= 1 이라 도달 가능 검사도 통과한다.
+        // 그래도 0.6 은 사용자가 고른 상한 40%를 넘는다 — 재분배할 것이 없으니 그대로 실행됐을 값이다.
+        CreateBacktestCommand base =
+                withItems(
+                        command("FIXED_WEIGHT", null, null, Scenario.FULL_PERIOD, null),
+                        List.of(
+                                new CreateBacktestCommand.AllocationItem(
+                                        "SEMICONDUCTOR", "091160.XKRX", new BigDecimal("0.6000")),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BATTERY", "305720.XKRX", new BigDecimal("0.2000")),
+                                new CreateBacktestCommand.AllocationItem(
+                                        "BIO", "244580.XKRX", new BigDecimal("0.2000"))));
+
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                base,
+                                                Map.of("rebalance", "MONTH_END", "maxWeight", 40))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED)
+                .hasMessageContaining("0.6000");
+    }
+
+    @Test
+    @DisplayName("maxWeight 가 없으면 규칙표 weightCap 으로 판정한다")
+    void withoutMaxWeightTheRegistryCapDecides() {
+        stubMinimumVariance("1.0000");
+        assertThat(
+                        service.create(
+                                withParameters(
+                                        "MINIMUM_VARIANCE", Map.of("rebalance", "MONTH_END"))))
+                .isNotNull();
+
+        stubMinimumVariance("0.3000");
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        withParameters(
+                                                "MINIMUM_VARIANCE",
+                                                Map.of("rebalance", "MONTH_END"))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.VALIDATION_RULE_VIOLATED);
+    }
+
     @Test
     @DisplayName("접수하면 실행과 요청이 생기고 202 본문에 실효 기간·버전이 담긴다")
     void createsRunAndRequest() {

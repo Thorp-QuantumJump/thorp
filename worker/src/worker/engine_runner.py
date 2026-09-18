@@ -49,7 +49,9 @@ ZERO = Decimal("0")
 def required_warmup_trading_days(request: EngineInput) -> int:
     """요청 구간보다 **앞에서** 더 읽을 워밍업 거래일 수.
 
-    ``evaluation.warmupTradingDays`` 가 있으면 그 값, 없으면 규칙의 ``lookbackDays`` 다.
+    ``evaluation.warmupTradingDays`` 가 있으면 그 값, 없으면 관측 길이 ``lookbackDays`` 다 —
+    **배분 모듈이 계산에 쓰는 것과 같은 출처**로 읽는다(요청 ``parameters`` 가 있으면 그 값, 없으면
+    규칙 사본). 두 곳이 갈리면 250거래일로 계산하면서 120거래일만 읽어 와 종목이 조용히 빠진다.
     ``TARGET_RISK`` 면 첫 판단일에 추정할 수익률이 있어야 하므로 오버레이 관측 길이와 큰 쪽을
     쓴다(백엔드도 같은 규칙으로 워밍업을 확정한다).
 
@@ -60,7 +62,10 @@ def required_warmup_trading_days(request: EngineInput) -> int:
     """
     warmup = request.evaluation.warmup_trading_days
     if warmup is None:
-        warmup = int((request.allocation.rules or {}).get("lookbackDays", 0))
+        chosen = request.allocation.parameters.get("lookbackDays")
+        if chosen is None:
+            chosen = (request.allocation.rules or {}).get("lookbackDays", 0)
+        warmup = int(chosen)
         if request.run.scenario is Scenario.TARGET_RISK:
             warmup = max(warmup, target_risk_rules(request.run).lookback_days)
     return warmup

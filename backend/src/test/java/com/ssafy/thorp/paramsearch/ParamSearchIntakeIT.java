@@ -25,7 +25,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,10 +38,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -53,15 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>실제 등록표(임시 파일)와 실제 004 지원 목록을 쓴다. 전략 이름을 단언에 적지 않는 이유는 M2의 검증과 같다 — 마이그레이션이 전략을 더해도 이 테스트는 그대로
  * 성립해야 한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchIntakeIT extends PostgresTestSupport {
+class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
 
     /** 픽스처 대응표에 있는 종목. 상장일이 가장 이른 둘을 골라 공통 구간이 충분히 남게 한다. */
     private static final List<String> UNIVERSE = List.of("091160.XKRX", "305720.XKRX");
@@ -76,7 +66,7 @@ class ParamSearchIntakeIT extends PostgresTestSupport {
     @Autowired private TransactionTemplate transactionTemplate;
 
     /** 실제 발행 대신 실행 행 id만 돌려준다. 이 테스트의 관심사는 큐가 아니라 묶음 상태다. */
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(1);
 

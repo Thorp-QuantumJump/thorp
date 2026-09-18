@@ -1,5 +1,6 @@
 import { ApiClientError, apiClient, normalizeApiError } from './client'
 import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
+import type { EvaluationWindow, EvaluationWindowQuery, ExcludedRange } from '@/types/evaluationWindow'
 import type {
   HoldingsOverlap,
   InstrumentHolding,
@@ -135,7 +136,8 @@ function toFailureResult(error: ApiClientError): SectorCatalogResult {
  * 섹터 목록을 한 번 받아 온다.
  *
  * 화면 진입마다 이 호출 **한 번**이다. `GET /sectors/evaluation-window`는 부르지 않는다 —
- * 그 산식은 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받는다(research.md 결정 4).
+ * 그 산식은 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받는다(research.md 결정 4). 그 조회는
+ * 003 화면이 `fetchEvaluationWindow`로 따로 한다.
  */
 export async function fetchSectorCatalog(signal?: AbortSignal): Promise<SectorCatalogResult> {
   try {
@@ -332,4 +334,161 @@ export async function fetchInstrumentProfile(
   } catch (error) {
     return toProfileFailure(normalizeApiError(error))
   }
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function isDate(value: unknown): value is string {
+  return typeof value === 'string' && ISO_DATE.test(value)
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function readExcludedRange(value: unknown): ExcludedRange | null {
+  if (!isRecord(value)) return null
+  if (!isDate(value.start) || !isDate(value.end) || typeof value.reason !== 'string') return null
+  return { start: value.start, end: value.end, reason: value.reason }
+}
+
+function readExcludedRanges(value: unknown): ExcludedRange[] | null {
+  if (!Array.isArray(value)) return null
+  const ranges: ExcludedRange[] = []
+  for (const item of value) {
+    const range = readExcludedRange(item)
+    if (!range) return null
+    ranges.push(range)
+  }
+  return ranges
+}
+
+/**
+ * 평가 기간 응답을 읽는다. 계약과 어긋나면 `null`이다.
+ *
+ * <p><b>거래일 목록의 불변식까지 본다.</b> 화면은 `tradingDaysFromBase[N]`을 워밍업 N일의 공통 시작일로
+ * 믿고 쓴다. 첫 원소가 기준일이 아니거나, 오름차순이 아니거나, 마지막 날이 `commonEnd`를 넘거나, 상한이
+ * 목록 길이와 어긋나면 그 계산이 조용히 틀린 날짜를 내므로, 일부만 살리지 않고 응답 전체를 읽지 못한 것으로
+ * 다룬다(원칙 VI).
+ *
+ * <p><b>빈 목록은 정상이다.</b> 기준일이 이미 `commonEnd`를 넘은 경우이며, 그때 001은 상한 키를 싣지 않는다.
+ * 목록이 비었는데 상한이 오거나, 목록이 있는데 상한이 없으면 계약 위반이다.
+ */
+export function readEvaluationWindow(value: unknown): EvaluationWindow | null {
+  if (!isRecord(value)) return null
+  const {
+    commonStart,
+    commonEnd,
+    warmupTradingDays,
+    bindingCandidate,
+    bindingSector,
+    evaluable,
+    datasetId,
+    warmupBaseDate,
+    tradingDaysFromBase,
+    maxWarmupTradingDays,
+  } = value
+
+  if (
+    (commonStart !== null && !isDate(commonStart)) ||
+    !isDate(commonEnd) ||
+    !isNonNegativeInteger(warmupTradingDays) ||
+    typeof bindingCandidate !== 'string' ||
+    typeof bindingSector !== 'string' ||
+    typeof evaluable !== 'boolean' ||
+    typeof datasetId !== 'string' ||
+    !isDate(warmupBaseDate) ||
+    !Array.isArray(tradingDaysFromBase)
+  ) {
+    return null
+  }
+  // 시작일을 잡지 못했는데 평가할 수 있다고 하면 두 칸이 서로 어긋난다.
+  if (commonStart === null && evaluable) return null
+
+  const excludedRanges = readExcludedRanges(value.excludedRanges)
+  const excludedRangesFromBase = readExcludedRanges(value.excludedRangesFromBase)
+  if (!excludedRanges || !excludedRangesFromBase) return null
+
+  const days: string[] = []
+  for (const day of tradingDaysFromBase) {
+    // 같은 날이 두 번 오거나 순서가 뒤집히면 N번째 거래일이 하루씩 밀린다.
+    if (!isDate(day) || (days.length > 0 && day <= days[days.length - 1])) return null
+    days.push(day)
+  }
+
+  let limit: number | null
+  if (days.length === 0) {
+    if (maxWarmupTradingDays !== undefined) return null
+    limit = null
+  } else {
+    if (days[0] !== warmupBaseDate || days[days.length - 1] > commonEnd) return null
+    if (!isNonNegativeInteger(maxWarmupTradingDays) || maxWarmupTradingDays !== days.length - 1) {
+      return null
+    }
+    limit = maxWarmupTradingDays
+  }
+
+  return {
+    commonStart,
+    commonEnd,
+    warmupTradingDays,
+    bindingCandidate,
+    bindingSector,
+    excludedRanges,
+    evaluable,
+    datasetId,
+    warmupBaseDate,
+    tradingDaysFromBase: days,
+    maxWarmupTradingDays: limit,
+    excludedRangesFromBase,
+  }
+}
+
+const UNREADABLE_WINDOW_MESSAGE = '공통 평가 기간을 확인하지 못했습니다.'
+
+/**
+ * 후보 섹터 집합의 공통 평가 기간과 워밍업 계산 재료를 받아 온다(003 T042).
+ *
+ * <p>계약은 001 `contracts/sector-api.md`의 「GET /sectors/evaluation-window」 절이다. 자료가 아직 없으면
+ * 409 `EVALUATION_WINDOW_NOT_READY`, 인자가 잘못되면 400이다.
+ *
+ * <p><b>섹터 집합이 바뀔 때만 부른다.</b> 워밍업은 `maxWarmupTradingDays`까지 이 응답 하나로 계산하므로
+ * 설정값을 바꾸는 동안 다시 부르지 않는다(research R7-1).
+ *
+ * <p>실패와 계약 위반은 모두 `ApiClientError`로 거부한다. 화면은 어느 경우든 "공통 평가 기간을 확인할
+ * 수 없다"로 막으므로 이유를 가르지 않는다. 404(엔드포인트가 아직 없음)도 여기에 포함된다.
+ */
+export async function fetchEvaluationWindow(
+  query: EvaluationWindowQuery,
+  signal?: AbortSignal,
+): Promise<EvaluationWindow> {
+  const params: Record<string, string | number> = {
+    sectors: query.sectors.join(','),
+    maxWarmupTradingDays: query.maxWarmupTradingDays,
+  }
+  if (query.strategy !== undefined) params.strategy = query.strategy
+
+  let body: ApiEnvelope<unknown>
+  try {
+    const response = await apiClient.get<ApiEnvelope<unknown>>('/sectors/evaluation-window', {
+      params,
+      signal,
+    })
+    body = response.data
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+
+  if (!body.success) {
+    throw new ApiClientError('api', body.error.message, { code: body.error.code })
+  }
+  const window = readEvaluationWindow(body.data)
+  // 계약상 목록 길이는 요청한 상한 + 1을 넘지 않는다. 넘으면 다른 요청의 응답을 읽고 있는 것이다.
+  if (
+    !window ||
+    (window.maxWarmupTradingDays !== null && window.maxWarmupTradingDays > query.maxWarmupTradingDays)
+  ) {
+    throw new ApiClientError('unexpected', UNREADABLE_WINDOW_MESSAGE)
+  }
+  return window
 }

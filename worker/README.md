@@ -62,7 +62,7 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략
   메시지에 전부 담는다.
 - 자료·배분 오류는 `run.status=FAILED` 와 `run.error` 로 돌아온다: 거래일 행 부재·워밍업 부족
   `DATA_INSUFFICIENT`, 규칙 값 누락 `INVALID_REQUEST`, 조건을 만족하는 배분이 없음
-  `CONSTRAINT_VIOLATION`, 목표 위험 추정에 수익률 부족 `ESTIMATION_FAILED`, 엔진 자체 불변식 위반
+  `CONSTRAINT_VIOLATION`, 목표 위험 추정에 수익률 부족·최소분산 공분산 검사와 솔버 실패 `ESTIMATION_FAILED`, 엔진 자체 불변식 위반
   `ENGINE_ERROR`. `performance`·`execution` 은 채우지 않는다(키가 빠진다).
 - **일시 장애는 결과가 아니다.** 자료 적재(`MarketDataProvider.load`)에서 나는 접속 실패 같은 예외는
   `FAILED` 로 바꾸지 않고 전파한다 — 소비자가 ACK 하지 않고 재전달 경로로 넘긴다(계약 §7 ③). 결과로
