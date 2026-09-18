@@ -254,7 +254,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 |---|---|---|
 | `executionType` | string | 이 화면은 늘 `SINGLE` |
 | `strategy.strategyId` | string | 003 등록표의 활성 전략 |
-| `strategy.rulesVersion` | string | 004 `GET /backtests/registry`의 `strategyRules`에서 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`이거나 행이 없거나 등록된 행이 둘 이상이면 요청을 보내지 않는다. 대체된 옛 버전이면 409 (2026-09-17 004 결정) |
+| `strategy.rulesVersion` | string | 004 `GET /backtests/registry`의 `strategyRules`에서 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`이거나 행이 없거나 등록된 행이 둘 이상이면 요청을 보내지 않는다. 대체된 옛 버전이면 409가 목표 계약이나 서버의 버전 수명주기는 004 Phase 10 T029 미구현이다. 현재는 REGISTERED 행을 허용한다 |
 | `strategy.registryVersion` | string | 조회한 003 등록표 버전. 접수 시점과 다르면 409 |
 | `strategy.parameters` | object | 축 이름 → 값. 등록표의 허용 범위 안이어야 한다. **`appliesWhen`이 거짓인 축은 싣지 않는다** — 서버는 이 설정에서 뜻을 갖는 축의 집합과 정확히 같아야 받는다(FR-003) |
 | `conditions.start` / `conditions.end` | date | 001이 산출한 공통 평가 가능 범위 안. 사용자가 고르지 않았으면 범위 전체 |
@@ -271,7 +271,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 상태 | 코드 | 언제 | 화면 처리 |
 |---|---|---|---|
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | 축 값이 허용 범위 밖 | 허용 범위를 안내하고 값을 저장하지 않는다 |
-| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 등록표 버전이 현재와 다르거나, 실은 규칙 버전(004)이 대체됨 | 등록표와 004 규칙 등록표를 모두 다시 조회하고 바뀐 사실을 알린다. 자동으로 다시 보내지 않는다 (research R9, 2026-09-17 004 결정) |
+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 등록표 버전이 현재와 다름. 규칙 버전(004)의 대체 거절은 Phase 10 T029 구현 후 적용 | 등록표와 004 규칙 등록표를 모두 다시 조회하고 바뀐 사실을 알린다. 자동으로 다시 보내지 않는다 (research R9, 2026-09-17 004 결정) |
 | 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없음 | 전략 선택으로 되돌린다 |
 | 422 | `VALIDATION_RULE_VIOLATED` | 유효성 제약 위반 | 위반한 규칙의 `detail`을 보인다 |
 | 503 | `REGISTRY_UNAVAILABLE` | 등록표를 읽지 못함 | 다시 시도를 제안한다 |

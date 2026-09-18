@@ -14,11 +14,11 @@ cd backend && ./gradlew spotlessApply build
 cd frontend && npm run lint && npm run build
 ```
 
-등록표는 자원 파일에서 읽으므로 이 확인에 데이터베이스가 필요하지 않다. 분석 요청까지 이어 보려면 [004](../004-backtest-execution/spec.md)의 준비가 함께 필요하다.
+등록표 로더의 단위 검증은 자원 파일만 사용한다. 아래 HTTP·화면 확인에는 기동한 백엔드와 DB·브로커, 001의 섹터 대응표·평가 기간 자료가 필요하다. 분석 접수 환경은 [004](../004-backtest-execution/spec.md)의 준비를 따른다.
 
 ## 1. 등록표가 옮겨진 뒤에도 007이 그대로 도는가
 
-**가장 먼저 확인한다.** 등록표는 지금 007이 실제로 쓰고 있어, 옮기다 깨지면 자동 탐색이 먼저 멈춘다.
+**가장 먼저 확인한다.** 정식 로더 `strategy/infrastructure/registry/FileParameterRegistry`가 `registry/parameter-registry.yml`을 읽고 007도 `ParameterRegistryPort`를 통해 같은 등록표를 사용한다.
 
 ```bash
 cd backend && ./gradlew test --tests '*ParamSearch*'
@@ -32,11 +32,11 @@ cd backend && ./gradlew test --tests '*ArchitectureTest*'
 
 기대: 통과.
 
-**규칙을 더하는 것만으로는 확인이 되지 않는다.** 지금 규칙은 계층 사이만 검사하고 도메인 사이의 방향을 보지 않으므로 `strategy → paramsearch` 역방향을 막는 규칙을 이 작업에서 더하는데, 통과만 보면 그 규칙이 아무것도 잡지 않아도 통과한다.
+**규칙의 통과만으로는 확인이 되지 않는다.** `ArchitectureTest` 규칙 8은 `strategy → paramsearch` 역방향 의존을 금지한다. 위반하는 코드가 없을 때 통과하는 것과 실제 위반을 잡는 것을 각각 확인한다.
 
-규칙을 더한 뒤 **일부러 어겨 본다**. `strategy` 안의 아무 클래스에 `paramsearch`의 타입을 import하는 한 줄을 넣고 다시 돌린다.
+**일부러 어겨 본다**. `strategy` 패키지에 `paramsearch` 타입을 필드로 참조하는 임시 클래스를 두고 다시 돌린다. 사용하지 않는 import만으로는 바이트코드 의존이 생기지 않아 검증할 수 없다.
 
-기대: **실패한다.** 통과하면 규칙이 동작하지 않는 것이다. 확인한 뒤 그 한 줄을 지운다.
+기대: **실패한다.** 통과하면 규칙이 동작하지 않는 것이다. 확인한 뒤 임시 클래스를 지우고 다시 통과하는지 확인한다.
 
 ## 2. 등록표를 조회할 수 있는가
 
@@ -119,7 +119,7 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.data.strategies[].st
 - 경고가 **입력 즉시** 보인다. '분석하기'를 누른 뒤가 아니다
 - 문구는 등록표의 `detail`을 그대로 쓴다. 화면이 문장을 지어내지 않는다
 - '분석하기'를 누를 수 없다
-- **34로 고치면** 경고가 사라지고 '분석하기'가 살아난다(34 × 3 = 102)
+- **35로 고치면** 경고가 사라지고 '분석하기'가 살아난다(35 × 3 = 105). 등록표의 간격은 5이므로 34는 간격 위반이다.
 
 서버에 요청이 나가지 않는지도 함께 본다. 값을 만질 때마다 왕복하면 [research](research.md) R7-1에서 기각한 방식이 된 것이다.
 
@@ -192,6 +192,8 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.data.strategies[].st
 
 기대: 409 `REGISTRY_VERSION_CHANGED`로 거절되고, 화면이 등록표를 다시 조회해 바뀐 사실을 알린다. 조용히 새 버전으로 실행하지 않는다.
 
+**004 규칙 버전 교체는 미완료 확인 항목이다(2026-09-18).** 현재 서버는 전략당 한 REGISTERED 행을 전제하며 옛 버전 거절은 [004 tasks](../004-backtest-execution/tasks.md) Phase 10 T029에 남아 있다. 아래는 그 구현 뒤 만족해야 할 기대이며, 현재 통과한 것으로 보고하지 않는다.
+
 004가 규칙 버전을 올린 경우(예: `INVERSE_VOLATILITY/1` → `/2`)도 같다. 화면을 연 채 004 규칙을 대체한 뒤 '분석하기'를 누르면 같은 409로 거절되고, 화면이 004 규칙 등록표까지 다시 받아 새 버전을 확인하기 전에는 다시 보낼 수 없다. 다시 누르면 새 `rulesVersion`이 실린다.
 
 ## 11. 자동 비교로 전략 하나만 넘어가는가
@@ -214,3 +216,5 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.data.strategies[].st
 3과 3-1은 성공 기준이 아니라 계약과 등록표 필드가 동작하는지 보는 확인이다. 1은 옮기는 작업이 007을 깨뜨리지 않았는지 보는 확인이다.
 
 SC-006(사용성 관찰)은 사람을 대상으로 하는 확인이라 이 절차에 넣지 않는다.
+
+최근 B12 결과: [2026-09-18 검증 기록](verification/b12.md). 004 규칙 버전 교체 미구현과 사용성 관찰 미수행을 구분해 적었다.

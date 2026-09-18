@@ -383,22 +383,28 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### 문서
 
-- [ ] T072 [P] (DOCS) `specs/003-strategy-settings/data-model.md`·`quickstart.md`·`plan.md`의 클래스 이름·경로(`ProvisionalFileParameterRegistry` → `FileParameterRegistry`, 로더 위치)를 구현과 맞춘다. `research.md` "남은 의존과 미확정" 표에 이 tasks.md "착수 전에 알아둘 것"의 ①~③ 상태를 반영한다
-- [ ] T073 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 추가 — "전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005)"와 "`sessionStorage` 키: `thorp.strategySettings`(003 설정값, 탭 수명), `thorp.sectorSelection`(002 경계 어댑터)". `backend/CLAUDE.md` "규칙"에 접수 관문 한 줄 — "`POST /backtests`는 `registryVersion`이 있는 요청만 003 등록표로 검증한다(400/409/422). 관문을 모든 요청에 걸려면 워커가 등록표 축 이름을 받는 것이 먼저다"
-- [ ] T074 (DOCS) [quickstart.md](quickstart.md) 1~11 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 001 `GET /sectors/evaluation-window`가 아직 없으면 7·7-1은 훅·유틸 테스트(T045·T064)로 대신하고 그 사실을 적는다. ②가 미결이면 4의 '분석하기'는 "분석 조건 버전을 확인할 수 없습니다"로 막히는 것이 기대 동작이다
+- [X] T072 [P] (DOCS) `specs/003-strategy-settings/data-model.md`·`quickstart.md`·`plan.md`의 클래스 이름·경로(`ProvisionalFileParameterRegistry` → `FileParameterRegistry`, 로더 위치)를 구현과 맞춘다. `research.md` "남은 의존과 미확정" 표에 이 tasks.md "착수 전에 알아둘 것"의 ①~③ 상태를 반영한다
+- [X] T073 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 추가 — "전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005)"와 "`sessionStorage` 키: `thorp.strategySettings`(003 설정값, 탭 수명), `thorp.diagnosis.sectorSelection`(002 인계 계약)". `backend/CLAUDE.md` "규칙"에 접수 관문 한 줄 — "`POST /backtests`는 `registryVersion`이 있는 요청만 003 등록표로 검증한다(400/409/422). 관문을 모든 요청에 걸려면 워커가 등록표 축 이름을 받는 것이 먼저다"
+- [X] T074 (DOCS) [quickstart.md](quickstart.md) 1~11 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 001 `GET /sectors/evaluation-window`가 아직 없으면 7·7-1은 훅·유틸 테스트(T045·T064)로 대신하고 그 사실을 적는다. ②가 미결이면 4의 '분석하기'는 "분석 조건 버전을 확인할 수 없습니다"로 막히는 것이 기대 동작이다
 - [ ] T074a (DOCS) SC-006 사용성 관찰 — 002 SC-004와 같은 회차에서 전략을 검증하려는 개인 6~8명에게 진행자의 화면 설명 없이 전략 카드 하나를 고르고 분석 요청을 접수하게 한 뒤 단계별로 막힌 인원을 기록한다. 같은 단계에서 두 명 이상이 다음 행동을 찾지 못해 설명을 요청하면 화면을 고치고 같은 시나리오를 다시 관찰해 두 명 미만일 때 끝낸다. 관찰 기록과 조치 내역을 `specs/003-strategy-settings/` 아래 결과 문서로 남기고 MR 본문에 요약한다. **이것은 코드 구현이 아니라 관찰 절차이므로 B12 병합을 막지 않으며, 회차 일정은 002와 함께 잡는다**
 
 ### 코드 정리
 
-- [ ] T075 [P] (BE) 잔재 정리 — `grep -rn "Provisional\|parameter-registry-provisional" backend/src`가 클래스·파일 이름 잔재 0건(`PROVISIONAL-` 버전 접두 문자열과 `provisional()` 메서드는 제외); `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/` 디렉터리가 없다; `strategy/package-info.java`와 각 클래스 Javadoc이 "003 대역"이 아니라 "003 정식 구현"으로 읽힌다
-- [ ] T076 [P] (FE) `frontend/src/components/strategy/*.tsx`에 전략 ID·축 이름 문자열 리터럴이 없는지 `grep -rn "FIXED_WEIGHT\|EQUAL_WEIGHT\|INVERSE_VOLATILITY\|SECTOR_MOMENTUM\|MINIMUM_VARIANCE\|lookbackDays\|maxWeight\|topN" frontend/src/components/strategy frontend/src/pages/StrategySettingsPage.tsx frontend/src/hooks/useStrategySettings.ts`로 확인 — 0건이어야 한다(FR-005·FR-015). 테스트·픽스처는 제외
+- [X] T075 [P] (BE) 잔재 정리 — `grep -rn "Provisional\|parameter-registry-provisional" backend/src`가 클래스·파일 이름 잔재 0건(`PROVISIONAL-` 버전 접두 문자열과 `provisional()` 메서드는 제외); `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/` 디렉터리가 없다; `strategy/package-info.java`와 각 클래스 Javadoc이 "003 대역"이 아니라 "003 정식 구현"으로 읽힌다
+- [X] T076 [P] (FE) `frontend/src/components/strategy/*.tsx`에 전략 ID·축 이름 문자열 리터럴이 없는지 `grep -rn "FIXED_WEIGHT\|EQUAL_WEIGHT\|INVERSE_VOLATILITY\|SECTOR_MOMENTUM\|MINIMUM_VARIANCE\|lookbackDays\|maxWeight\|topN" frontend/src/components/strategy frontend/src/pages/StrategySettingsPage.tsx frontend/src/hooks/useStrategySettings.ts`로 확인 — 0건이어야 한다(FR-005·FR-015). 테스트·픽스처는 제외
 
 ### 전체 검증
 
-- [ ] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 8 포함)·007·003 전부. `skipped`가 Docker 부재 때문인지 확인한다(backend/CLAUDE.md)
-- [ ] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm run test` — Vitest include에 새 `.test.ts` 둘이 들어갔는지 결과 목록에서 확인한다
+- [X] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 8 포함)·007·003 전부. `skipped`가 Docker 부재 때문인지 확인한다(backend/CLAUDE.md)
+- [X] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm run test` — Vitest include에 새 `.test.ts` 둘이 들어갔는지 결과 목록에서 확인한다
 
 ---
+
+**B12 검증 기록 (2026-09-18, S15P21E205-244)**: [항목별 결과](verification/b12.md).
+T072·T073·T075·T076 문서/잔재 확인, T077 BE 전체 빌드(1,736 통과·선택 실측 3 skip),
+T078 FE 전체 검사(Vitest 1,097 + legacy 13 통과)를 완료했다. T074의 quickstart 1~11을 실제
+로컬 서버에서 확인하고 MR 테스트 절 초안을 준비했다. 10의 004 규칙 버전 교체는 미구현으로 기록했으며
+003 등록표 409 통과와 구분한다. T074a 사용성 관찰은 수행하지 않아 체크하지 않았다.
 
 ## Dependencies & Execution Order
 
@@ -557,11 +563,11 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 
 ② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 "확인된 빈 구멍"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다. **2026-09-17 결정: 004가 `GET /backtests/registry`를 연다**(T039 메모). **해제: 같은 날 dev에 머지되었고(`fbec7b4`) B06이 연결해 202 접수까지 확인했다**("로컬 종단 확인"). 남은 교차 작업은 워커 메시지 정합(③)과 배분 방식 교체(T109)다.
 
-③ **등록표 축 이름이 워커에 닿지 않는다.** 워커는 `parameters.rebalance == "MONTH_END"` 문자열과 `rules.lookbackDays`만 읽는다. 003의 `rebalancePeriod` 객체값, `maxWeight`·`topN`·`skipRecentDays`·`allocationMethod`·`estimationMethod`는 004 메시지 계약(`docs/specs/backtest-messaging/`)과 워커 어느 쪽에도 자리가 없다. **004 소유다.** 그래서 T049의 접수 관문은 `registryVersion`이 있는 요청에만 걸고, 전부에 걸어 FR-006을 완전히 닫는 시점은 워커 정합 뒤로 남긴다. T017이 어긋난 곳을 표로 남긴다.
+③ **등록표 축과 워커의 정합은 부분 구현이다(2026-09-18 코드 대조).** 모멘텀은 `lookbackDays`·`skipRecentDays`·선정 방식별 축·`allocationMethod`·`maxWeight`를, 최소분산은 `lookbackDays`·`estimationMethod`·`maxWeight`를 소비한다. 다만 워커 실행 조건은 여전히 `parameters.rebalance == "MONTH_END"`를 요구하고 역변동성의 관측 길이는 `rules.lookbackDays`에서 읽는다. 003의 `rebalancePeriod` 객체와 역변동성 `lookbackDays` 변경이 그대로 적용된다고 볼 수 없다. `registryVersion` 없는 요청도 검증을 우회하므로 FR-006·SC-003 완료 판정은 보류한다. 이 연결은 004 소유다.
 
 ④ **포트 시그니처가 한 곳 바뀐다.** `validate()`의 `ParameterCombination`(007 도메인 VO)을 그대로 두면 `strategy → paramsearch` 역방향 의존이 생겨 T012의 ArchUnit 규칙에 걸린다. T008이 `Map<String, Object>`로 바꾸고 `CandidateValidator` 한 줄이 따라 바뀌며, plan.md Summary도 이 범위를 명시한다.
 
-⑤ **002 화면이 없다.** 002는 spec만 있고 plan·tasks·코드가 없다. T030이 `useSectorSelection` 어댑터로 경계를 만들어 002가 들어올 때 그 파일만 바꾸게 했다. 지금은 질의 문자열·`sessionStorage`로 섹터 집합을 넣어 확인한다.
+⑤ **002 인계 연결 완료.** `useSectorSelection`이 002의 `diagnosis/selectionStorage`를 재사용하고 `GET /sectors`의 현재 대응표와 대조한다. 저장 키는 `thorp.diagnosis.sectorSelection`이며 이전 대역 키·질의 문자열로 선택을 만들지 않는다. payload와 복원 규칙은 `specs/002-sector-weight-selection/contracts/selection-handoff.md`가 소유한다.
 
 ⑥ **007 spec은 "하나 또는 여러 전략"을 넘긴다고 적었고 003은 하나만 넘기기로 정했다**([research](research.md) "남은 의존과 미확정"). T070은 003 결정대로 하나만 싣는다. 문서 차이는 팀이 정한다.
 
