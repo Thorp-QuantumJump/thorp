@@ -716,6 +716,60 @@ class FileParameterRegistryTest {
             assertThat(rule.left().axis()).isEqualTo("pick");
             assertThat(rule.right().context()).isEqualTo("UNIVERSE_SIZE");
         }
+
+        @Test
+        @DisplayName("섹터 모멘텀은 상한 × 선정 섹터 수로 판정한다 — 후보 전체가 아니다")
+        void momentumWeighsTheSelectedCountNotTheUniverse() {
+            // 후보가 여덟이어도 둘만 고르면 상한 40%로는 80%밖에 못 채운다. UNIVERSE_SIZE 로 재는
+            // 규칙이면 8 × 40% = 320% 이라 통과하고, 004 접수가 422 로 거절해 007 묶음이 죽는다.
+            assertThat(
+                            registry.validate(
+                                            "SECTOR_MOMENTUM",
+                                            Map.of(
+                                                    "selectionMode",
+                                                    "TOP_N",
+                                                    "topN",
+                                                    2,
+                                                    "maxWeight",
+                                                    40),
+                                            new SearchContext(8))
+                                    .valid())
+                    .isFalse();
+
+            assertThat(
+                            registry.validate(
+                                            "SECTOR_MOMENTUM",
+                                            Map.of(
+                                                    "selectionMode",
+                                                    "TOP_N",
+                                                    "topN",
+                                                    3,
+                                                    "maxWeight",
+                                                    40),
+                                            new SearchContext(8))
+                                    .valid())
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("곱할 축이 없는 설정에서는 판정하지 않는다 — 다른 선정 방식은 무관하다")
+        void skipsTheRuleWhenTheMultiplierAxisIsAbsent() {
+            // 003 은 고른 selectionMode 에 딸린 축 하나만 저장한다(FR-003). THRESHOLD 설정에는
+            // topN 이 없고, 그때 "maxWeight × topN" 은 위반이 아니라 무관이다.
+            assertThat(
+                            registry.validate(
+                                            "SECTOR_MOMENTUM",
+                                            Map.of(
+                                                    "selectionMode",
+                                                    "THRESHOLD",
+                                                    "threshold",
+                                                    0,
+                                                    "maxWeight",
+                                                    10),
+                                            new SearchContext(8))
+                                    .valid())
+                    .isTrue();
+        }
     }
 
     private static FileParameterRegistry newRegistry() {

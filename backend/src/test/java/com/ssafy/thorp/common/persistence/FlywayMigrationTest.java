@@ -374,13 +374,21 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                 .isTrue();
 
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
-        // (constitution "실행 전 결정 임의 확정 금지"). PD-04가 확정돼 최소분산은 빠졌다(T022).
+        // (constitution "실행 전 결정 임의 확정 금지"). 2026-09-17 PD-03·PD-04가 확정돼
+        // 최소분산(T022)과 섹터 모멘텀(T023)이 차례로 채워졌고, 지금 대기 중인 전략은 없다.
+        // 반대 방향도 함께 본다 — 명세 없이 REGISTERED인 행이 있으면 엔진이 기본값을 지어내게 된다.
         assertThat(
                         jdbcTemplate.queryForList(
                                 "SELECT strategy_id FROM strategy_rules"
                                         + " WHERE status = 'PENDING_DECISION' AND spec IS NULL",
                                 String.class))
-                .containsExactly("SECTOR_MOMENTUM");
+                .isEmpty();
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT strategy_id FROM strategy_rules"
+                                        + " WHERE status = 'REGISTERED' AND spec IS NULL",
+                                String.class))
+                .isEmpty();
 
         // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
         assertThat(

@@ -3,10 +3,10 @@
 전략을 추가할 때 손댈 곳은 이 파일의 한 줄과 모듈 하나다. 엔진(T006)은 ``compute_weights`` 만
 부르고 어떤 전략이 있는지 모른다.
 
-**여기 없는 전략은 임의로 계산하지 않는다.** 팀이 규칙을 확정하지 않은 전략
-(``SECTOR_MOMENTUM``, PD-03)을 그럴듯한 기본값으로 돌리면, 나중에
-규칙이 정해졌을 때 같은 요청이 다른 숫자를 내고 그 차이를 아무도 설명할 수 없다. 실행을 멈추고
-왜 멈췄는지 말한다(FR-010).
+**여기 없는 전략은 임의로 계산하지 않는다.** 팀이 규칙을 확정하지 않은 전략을 그럴듯한
+기본값으로 돌리면, 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 내고 그 차이를 아무도
+설명할 수 없다. 실행을 멈추고 왜 멈췄는지 말한다(FR-010). 다섯 전략은 2026-09-17 PD-03·PD-04
+확정으로 모두 등록됐다.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Any
 
 import pandas as pd
 
-from worker.allocation import equal, fixed, inverse_vol, min_variance
+from worker.allocation import equal, fixed, inverse_vol, min_variance, momentum
 from worker.allocation.base import (
     AllocationError,
     AllocationResult,
@@ -32,6 +32,7 @@ ALLOCATION_RULES: dict[str, AllocationRule] = {
     equal.STRATEGY_ID: equal.compute,
     inverse_vol.STRATEGY_ID: inverse_vol.compute,
     min_variance.STRATEGY_ID: min_variance.compute,
+    momentum.STRATEGY_ID: momentum.compute,
 }
 
 

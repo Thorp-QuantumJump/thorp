@@ -11,9 +11,11 @@
 from __future__ import annotations
 
 #: 팀 결정을 기다리는 전략 → 결정 항목. 값이 정해지면 등록표 행을 채우고 여기서 뺀다.
-PENDING_DECISION: dict[str, str] = {
-    "SECTOR_MOMENTUM": "PD-03",
-}
+#:
+#: **지금은 비어 있다** — 다섯 전략이 2026-09-17 PD-03·PD-04 확정으로 모두 등록됐다. 표를 지우지
+#: 않는 이유는 규칙이 아직 없는 전략을 나중에 더할 때 같은 구분이 다시 필요하기 때문이다. 비어
+#: 있으면 모르는 전략은 전부 "이 엔진이 구현하지 않았다"로 거절된다.
+PENDING_DECISION: dict[str, str] = {}
 
 
 def pending_decision_ref(strategy_id: str) -> str | None:

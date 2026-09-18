@@ -9,8 +9,8 @@
 ``AllocationSpec`` 이나 백엔드 record, 픽스처는 건드리지 않는다.
 계약 픽스처의 ``MA_CROSSOVER`` 는 미등록 전략으로 통과한다.
 
-미확정 전략(``SECTOR_MOMENTUM``, PD-03)은 파라미터 모양도 미정이라 등록하지 않는다 — 엔진이
-``rules_registry`` 로 거절한다.
+다섯 전략은 2026-09-17 PD-03·PD-04 확정으로 모두 등록됐다. 규칙이 아직 없는 전략을 나중에 더하면
+그때는 파라미터 모양도 미정이므로 등록하지 않고 엔진이 ``rules_registry`` 로 거절한다.
 """
 
 from worker.contracts.base import ContractModel
@@ -18,6 +18,7 @@ from worker.contracts.strategy_params.rebalance import (
     CappedRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
+    SectorMomentumParameters,
 )
 
 #: ``allocation.strategyId`` → 파라미터 모델. 미등록 전략은 여기서 거부하지 않는다
@@ -27,6 +28,7 @@ STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {
     "EQUAL_WEIGHT": RebalanceParameters,
     "INVERSE_VOLATILITY": CappedRebalanceParameters,
     "MINIMUM_VARIANCE": MinimumVarianceParameters,
+    "SECTOR_MOMENTUM": SectorMomentumParameters,
 }
 
 __all__ = [
@@ -34,4 +36,5 @@ __all__ = [
     "CappedRebalanceParameters",
     "MinimumVarianceParameters",
     "RebalanceParameters",
+    "SectorMomentumParameters",
 ]

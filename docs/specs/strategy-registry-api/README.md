@@ -63,7 +63,7 @@ GET /strategies/registry?universeSize={n}
 |---|---|
 | `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |
 | `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |
-| `left` / `right` | `{ axis }`·`{ context }`·`{ value }` 중 하나. `axis`에 `multiplyByContext`를 덧붙여 곱할 수 있다 |
+| `left` / `right` | `{ axis }`·`{ context }`·`{ value }` 중 하나. `axis`에 `multiplyByAxis`(다른 축 이름)를 덧붙이면 두 축의 곱이고 곱할 축이 없는 설정에서는 판정하지 않는다(`1.4.0`). `multiplyByContext`를 덧붙여 곱할 수 있다 |
 | `operator` | `GREATER_THAN` \| `GREATER_OR_EQUAL` \| `LESS_THAN` \| `LESS_OR_EQUAL` \| `EQUAL` \| `NOT_EQUAL` |
 
 **조건이 참이면 위반이다.** 맥락 키는 현재 `UNIVERSE_SIZE` 하나다.

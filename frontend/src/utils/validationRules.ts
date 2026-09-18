@@ -85,10 +85,18 @@ function resolve(
 
   const value = values[operand.axis]
   if (value === undefined || value === null) return undefined
-  if (operand.multiplyByContext === undefined) return value
+  if (operand.multiplyByContext === undefined && operand.multiplyByAxis === undefined) return value
+
+  // 곱할 축이 이 설정에 없으면 판정하지 않는다 — 003은 고른 선정 방식에 딸린 축 하나만 저장한다.
+  // 여기서 값 그대로 돌려주면 `maxWeight × topN < 100`이 `maxWeight < 100`이 되어 상한을 전부 막는다.
+  const raw =
+    operand.multiplyByAxis === undefined
+      ? context[operand.multiplyByContext as RuleContextKey]
+      : values[operand.multiplyByAxis]
+  if (raw === undefined || raw === null) return undefined
 
   const numeric = toNumber(value)
-  const factor = toNumber(context[operand.multiplyByContext])
+  const factor = toNumber(raw)
   if (numeric === null || factor === null) {
     throw new RuleEvaluationError(
       `규칙 '${code}'의 곱셈에 숫자가 아닌 값이 왔습니다: ${String(value)}`,
