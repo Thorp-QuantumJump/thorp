@@ -150,7 +150,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "inputType": "CHOICE",
           "choices": [
             { "value": "TOP_N", "label": "상위 몇 개", "selectable": true },
-            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true }
+            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true },
+            { "value": "TOP_PERCENT", "label": "상위 몇 퍼센트", "selectable": true }
           ],
           "defaultValue": "TOP_N"
         },
@@ -160,12 +161,42 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "description": "선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.",
           "inputType": "CHOICE",
           "choices": [
-            { "value": 2, "label": "2", "selectable": true },
+            { "value": 2, "label": "2", "selectable": false },
             { "value": 3, "label": "3", "selectable": true },
             { "value": 4, "label": "4", "selectable": false }
           ],
           "defaultValue": 4,
           "appliesWhen": { "axis": "selectionMode", "value": "TOP_N" }
+        },
+        {
+          "name": "topPercent",
+          "label": "상위 비율",
+          "description": "선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.",
+          "unit": "퍼센트",
+          "inputType": "NUMBER",
+          "range": { "min": 10, "max": 100, "step": 10 },
+          "defaultValue": 50,
+          "appliesWhen": { "axis": "selectionMode", "value": "TOP_PERCENT" }
+        },
+        {
+          "name": "allocationMethod",
+          "label": "배분 방식",
+          "description": "고른 섹터에 금액을 나누는 방식이다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": "EQUAL", "label": "똑같이 나누기", "selectable": true },
+            { "value": "INVERSE_VOLATILITY", "label": "변동성이 낮은 섹터에 더 나누기", "selectable": true }
+          ],
+          "defaultValue": "EQUAL"
+        },
+        {
+          "name": "maxWeight",
+          "label": "섹터당 최대 비중",
+          "description": "한 섹터에 넣을 수 있는 최대 비중이다.",
+          "unit": "퍼센트",
+          "inputType": "NUMBER",
+          "range": { "min": 10, "max": 100, "step": 5 },
+          "defaultValue": 40
         }
       ],
       "validationRules": [
@@ -175,6 +206,27 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "left": { "axis": "topN" },
           "operator": "GREATER_THAN",
           "right": { "context": "UNIVERSE_SIZE" }
+        },
+        {
+          "code": "MAX_WEIGHT_TOO_LOW_FOR_SELECTION",
+          "detail": "섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.",
+          "left": { "axis": "maxWeight", "multiplyByAxis": "topN" },
+          "operator": "LESS_THAN",
+          "right": { "value": 100 }
+        },
+        {
+          "code": "MAX_WEIGHT_TOO_LOW_FOR_SELECTION",
+          "detail": "섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.",
+          "left": {
+            "axis": "maxWeight",
+            "multiplyByCeil": {
+              "context": "UNIVERSE_SIZE",
+              "axis": "topPercent",
+              "divisor": 100
+            }
+          },
+          "operator": "LESS_THAN",
+          "right": { "value": 100 }
         }
       ],
       "warmupRule": { "sum": ["lookbackDays", "skipRecentDays"] }
@@ -227,7 +279,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 |---|---|
 | `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |
 | `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |
-| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |
+| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). `multiplyByCeil: { context, axis, divisor }`를 덧붙이면 `축 값 × ceil(맥락 값 × 다른 축 값 ÷ divisor)`다(예: `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`, 등록표 `1.5.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다. 세 곱셈 형식은 함께 쓰지 않는다 |
 | `operator` | `GREATER_THAN` \| `GREATER_OR_EQUAL` \| `LESS_THAN` \| `LESS_OR_EQUAL` \| `EQUAL` \| `NOT_EQUAL` |
 
 **조건이 참이면 위반이다**(그 설정으로 분석을 시작하지 않는다). 맥락 키는 현재 `UNIVERSE_SIZE`(섹터 후보 집합의 크기) 하나다.

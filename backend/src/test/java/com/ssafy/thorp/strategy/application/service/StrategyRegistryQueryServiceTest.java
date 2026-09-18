@@ -33,14 +33,14 @@ class StrategyRegistryQueryServiceTest {
             List<StrategyRegistryResult.ChoiceView> choices =
                     choices(service.query(2), "SECTOR_MOMENTUM", "topN");
 
-            // 섹터가 둘이므로 3·4는 고를 수 없다. 그래도 목록에서 빠지지 않는다 —
-            // 사라지면 사용자가 왜 고를 수 없는지 알 방법이 없다.
+            // 섹터가 둘이면 3·4는 후보 수를 넘고, 2도 기본 상한 40%로는 전액을 배분하지 못한다.
+            // 그래도 목록에서 빠지지 않는다 — 사라지면 사용자가 왜 고를 수 없는지 알 방법이 없다.
             assertThat(choices)
                     .extracting(StrategyRegistryResult.ChoiceView::value)
                     .containsExactly(2, 3, 4);
             assertThat(choices)
                     .extracting(StrategyRegistryResult.ChoiceView::selectable)
-                    .containsExactly(true, false, false);
+                    .containsExactly(false, false, false);
         }
 
         @Test
@@ -174,18 +174,21 @@ class StrategyRegistryQueryServiceTest {
                     strategy(service.query(3), "SECTOR_MOMENTUM").validationRules();
 
             assertThat(withoutSize).isEqualTo(withSize);
-            assertThat(withoutSize)
-                    .singleElement()
-                    .satisfies(
-                            rule -> {
-                                assertThat(rule.code()).isEqualTo("TOP_N_EXCEEDS_UNIVERSE");
-                                assertThat(rule.left().axis()).isEqualTo("topN");
-                                assertThat(rule.operator())
-                                        .isEqualTo(
-                                                com.ssafy.thorp.strategy.application.port
-                                                        .ValidationRule.Operator.GREATER_THAN);
-                                assertThat(rule.right().context()).isEqualTo("UNIVERSE_SIZE");
-                            });
+            assertThat(withoutSize).hasSize(3);
+            StrategyRegistryResult.RuleView universeRule = withoutSize.get(0);
+            assertThat(universeRule.code()).isEqualTo("TOP_N_EXCEEDS_UNIVERSE");
+            assertThat(universeRule.left().axis()).isEqualTo("topN");
+            assertThat(universeRule.operator())
+                    .isEqualTo(
+                            com.ssafy.thorp.strategy.application.port.ValidationRule.Operator
+                                    .GREATER_THAN);
+            assertThat(universeRule.right().context()).isEqualTo("UNIVERSE_SIZE");
+
+            StrategyRegistryResult.CeilingFactorView percentFactor =
+                    withoutSize.get(2).left().multiplyByCeil();
+            assertThat(percentFactor.context()).isEqualTo("UNIVERSE_SIZE");
+            assertThat(percentFactor.axis()).isEqualTo("topPercent");
+            assertThat(percentFactor.divisor()).isEqualTo(100);
         }
     }
 
@@ -239,7 +242,7 @@ class StrategyRegistryQueryServiceTest {
 
             assertThat(modes)
                     .extracting(StrategyRegistryResult.ChoiceView::label)
-                    .containsExactly("상위 몇 개", "기준 수익률 이상");
+                    .containsExactly("상위 몇 개", "기준 수익률 이상", "상위 몇 퍼센트");
         }
 
         @Test

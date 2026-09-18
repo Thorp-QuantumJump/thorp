@@ -401,8 +401,24 @@ public class FileParameterRegistry implements ParameterRegistryPort {
         if (operand.get("axis") != null) {
             String axis = String.valueOf(operand.get("axis"));
             String byAxis = string(operand, "multiplyByAxis");
+            String byContext = string(operand, "multiplyByContext");
+            Map<String, Object> byCeil = map(operand, "multiplyByCeil");
+            int multiplierCount =
+                    (byAxis == null ? 0 : 1)
+                            + (byContext == null ? 0 : 1)
+                            + (byCeil == null ? 0 : 1);
+            if (multiplierCount > 1) {
+                throw new IllegalStateException("operand cannot set more than one multiplier");
+            }
+            if (byCeil != null) {
+                return ValidationRule.Operand.ofAxisTimesCeilingFactor(
+                        axis,
+                        string(byCeil, "context"),
+                        string(byCeil, "axis"),
+                        byCeil.get("divisor"));
+            }
             return byAxis == null
-                    ? ValidationRule.Operand.ofAxis(axis, string(operand, "multiplyByContext"))
+                    ? ValidationRule.Operand.ofAxis(axis, byContext)
                     : ValidationRule.Operand.ofAxisTimesAxis(axis, byAxis);
         }
         if (operand.get("context") != null) {
