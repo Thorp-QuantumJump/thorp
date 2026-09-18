@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { InstrumentProfilePanel } from './InstrumentProfilePanel'
 import { WeightInput } from './WeightInput'
 import type { SectorClassification, SectorSummary } from '@/types/sector'
@@ -132,7 +133,8 @@ export function SectorListItem({
           aria-label={`${sector.name}에 담긴 종목 보기`}
           onClick={() => setProfileOpen((open) => !open)}
         >
-          담긴 종목 보기
+          <span>담긴 종목 보기</span>
+          <ChevronDown data-slot="profile-chevron" size={15} strokeWidth={1.8} aria-hidden="true" />
         </button>
 
         {profileOpen ? (
