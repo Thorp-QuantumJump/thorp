@@ -97,6 +97,17 @@ class TestRevision:
         """판이 달라도 담은 구간의 끝은 같다. 다른 것은 내용이다."""
         assert dataset_deadline_date("KRX_DAILY_20260911_R2") == date(2026, 9, 11)
 
+    def test_판이_붙어도_마감일_일치_검사를_통과한다(self) -> None:
+        """판 번호는 날짜를 바꾸지 않는다. 어긋난 것으로 보면 판 번호의 목적이 막힌다."""
+        version = make_version(dataset_id="KRX_DAILY_20260911_R2")
+
+        assert version.dataset_id == "KRX_DAILY_20260911_R2"
+
+    def test_판이_붙어도_다른_마감일은_거부한다(self) -> None:
+        """판 번호를 뺀 나머지는 여전히 마감일과 같아야 한다."""
+        with pytest.raises(DatasetVersionError):
+            make_version(dataset_id="KRX_DAILY_20260912_R2")
+
     def test_나중_판이_이름_정렬에서_뒤에_온다(self) -> None:
         """현재 판을 고르는 규칙이 '마감 시각이 같으면 식별자 내림차순'이라 이 성질에 기댄다."""
         assert "KRX_DAILY_20260911" < "KRX_DAILY_20260911_R2" < "KRX_DAILY_20260911_R3"
