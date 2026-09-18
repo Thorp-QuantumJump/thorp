@@ -3,15 +3,12 @@ package com.ssafy.thorp.regime.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -24,10 +21,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>이 표들의 값을 넣는 것은 {@code data/} 배치다. 그래서 여기서는 <b>제약이 실제로 막는지</b>를 확인한다 — 배치가 SQLAlchemy로 들고 있는
  * 정의와 이 스키마가 갈리면, 적재는 운영에서만 깨지고 그때 원인은 이 MR이 아니라 배치 쪽으로 보인다.
  */
-@DataJpaTest
-@Import({JpaAuditingConfig.class, MessageJsonPersistenceConfig.class})
 @DisplayName("경제환경 검색 마이그레이션")
-class RegimeMigrationTest extends PostgresTestSupport {
+class RegimeMigrationTest extends RepositoryTestSupport {
 
     @Autowired private JdbcTemplate jdbc;
 

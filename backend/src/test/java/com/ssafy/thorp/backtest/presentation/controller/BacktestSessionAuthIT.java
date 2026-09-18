@@ -7,20 +7,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
-import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;
 import jakarta.servlet.http.Cookie;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -38,15 +34,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * <p>같이 확인하는 것: <b>폐기한 {@code X-User-Id} 헤더가 정말 아무 힘이 없는지</b>. 세션 사용자와 다른 값을 실어 보내도 저장되는 요청자는 세션
  * 사용자여야 한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestSessionAuthIT extends PostgresTestSupport {
+class BacktestSessionAuthIT extends PortMockedIntegrationTestSupport {
 
     private static final Path REQUEST_FIXTURE =
             Path.of("..", "docs", "specs", "backtest-api", "examples", "backtest-request.json");
@@ -55,9 +43,6 @@ class BacktestSessionAuthIT extends PostgresTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PasswordEncoder passwordEncoder;
-
-    /** 브로커는 띄우지 않는다. 발행은 커밋 뒤라 접수 응답에 영향을 주지 않는다. */
-    @MockitoBean private BacktestJobPublisher publisher;
 
     private long newUser(String email) {
         jdbcTemplate.update(

@@ -13,7 +13,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.account.domain.model.UserStatus;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import jakarta.servlet.http.Cookie;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,8 +32,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,18 +49,7 @@ import org.springframework.test.web.servlet.RequestBuilder;
  * <p>만료는 30분을 기다려 확인할 수 없으므로 세션 행의 마지막 접근 시각을 과거로 밀어 재현한다. Spring Session은 세션을 읽을 때마다 그 값으로 만료를
  * 판정하므로, 시간을 앞당기는 것과 같은 경로를 지난다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class AuthSessionLifecycleIntegrationTest extends PostgresTestSupport {
+class AuthSessionLifecycleIntegrationTest extends IntegrationTestSupport {
 
     /** Spring Session JDBC가 직접 들고 다니는 공식 PostgreSQL 스키마. 마이그레이션은 이것과 같은 모양이어야 한다. */
     private static final String OFFICIAL_SCHEMA_SCRIPT =

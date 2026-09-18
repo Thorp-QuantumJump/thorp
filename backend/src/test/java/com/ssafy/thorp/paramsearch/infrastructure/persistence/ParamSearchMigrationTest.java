@@ -2,8 +2,6 @@ package com.ssafy.thorp.paramsearch.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
-import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;
 import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
@@ -17,19 +15,14 @@ import com.ssafy.thorp.paramsearch.domain.vo.GridCoordinates;
 import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.time.Clock;
+import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -45,26 +38,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>마이그레이션이 실제로 적용됐는지는 {@code FlywayMigrationTest}가 클래스패스의 파일 목록과 대조해 한곳에서 확인한다. 여기서는 버전 번호를 적지 않고
  * 이 도메인의 스키마 구조만 본다.
  */
-@DataJpaTest
-@Import({
-    JpaAuditingConfig.class,
-    // JSON 컬럼 직렬화를 운영과 같은 ObjectMapper에 맡긴다. @DataJpaTest는 @Configuration을 스캔하지
-    // 않아 이것이 없으면 Hibernate 기본 매퍼(findAndRegisterModules)가 쓰이는데, 그러면 테스트
-    // 클래스패스에만 있는 jackson-module-scala가 untyped JSON 배열을 Scala List로 만들고 decimal도
-    // 문자열이 아니라 숫자로 저장된다 — 운영과 다른 조건에서 통과하는 테스트가 된다.
-    MessageJsonPersistenceConfig.class,
-    ParamSearchRepositoryImpl.class,
-    SearchCandidateRepositoryImpl.class
-})
-class ParamSearchMigrationTest extends PostgresTestSupport {
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        @Bean
-        Clock clock() {
-            return Clock.fixed(Instant.parse("2026-09-10T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        }
-    }
+class ParamSearchMigrationTest extends RepositoryTestSupport {
 
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private ParamSearchRepositoryImpl paramSearchRepository;
@@ -185,7 +159,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {
 
         assertThat(saved.getId()).isNotNull();
         // searchId는 저장 시점에 PK와 고정 Clock 날짜로 조립된다.
-        assertThat(saved.getSearchId().value()).isEqualTo("PS-20260910-" + pad(saved.getId()));
+        assertThat(saved.getSearchId().value())
+                .isEqualTo("PS-" + idDate() + "-" + pad(saved.getId()));
 
         List<SearchCandidate> savedCandidates =
                 candidateRepository.saveAll(
