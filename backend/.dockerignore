@@ -1,0 +1,9 @@
+.git/
+.gradle/
+build/
+out/
+.env*
+*.log*
+coverage/
+Dockerfile*
+.dockerignore
