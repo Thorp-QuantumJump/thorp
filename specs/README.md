@@ -91,7 +91,7 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp
 
 | 번호 | 결정 항목 | 소유 spec | 함께 정할 화면 | 근거 |
 |---|---|---|---|---|
-| UI-01 | 참조하던 섹터-ETF 대응표가 새 버전으로 바뀌었을 때, 기존 분석을 다시 여는 사용자에게 그 사실을 알릴지 | [001](001-etf-market-data/spec.md) FR-003 | [002](002-sector-weight-selection/spec.md), [005](005-result-comparison/spec.md), [006](006-my-records/spec.md) | §5, D14 |
+| UI-01 | 참조하던 섹터-ETF 대응표가 새 버전으로 바뀌었을 때, 기존 분석을 다시 여는 사용자에게 그 사실을 알릴지 — **확정 (2026-09-18, 006 명료화)**: 참조한 섹터의 대응 내용이 실제로 달라진 경우(대표 ETF 교체·섹터 삭제)에만 한 문장으로 알리고, 대응 내용이 같고 버전 번호만 올랐으면 알리지 않는다. 버전은 상세에서 본다 | [001](001-etf-market-data/spec.md) FR-003 (표시 문구·제안 동작은 [006](006-my-records/spec.md) FR-008) | [002](002-sector-weight-selection/spec.md), [005](005-result-comparison/spec.md), [006](006-my-records/spec.md) | §5, D14 |
 | UI-02 | 광범위 지수 자료가 대표 ETF의 상장 이후 기간을 다 채우지 못하는 구간을 '자료 부족'으로 기록할지, 지수 보조 보기를 아예 제공하지 않을지 | [001](001-etf-market-data/spec.md) Edge Cases | [005](005-result-comparison/spec.md) | §6.2, §4.2.3 |
 
 ## 미확인 검증 항목 (U01~U06)

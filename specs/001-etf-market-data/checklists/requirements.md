@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain (clarify 세션에서 5건을 해소했고 2건은 `specs/README.md`의 UI-01·UI-02로 등록해 UI 구성 후 결정한다)
+- [ ] No [NEEDS CLARIFICATION] markers remain (clarify 세션에서 5건을 해소하고 2건을 `specs/README.md`의 UI-01·UI-02로 등록했다. UI-01은 2026-09-18 006 명료화에서 확정해 FR-003의 표시를 지웠고, UI-02 1건이 남아 있다)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
