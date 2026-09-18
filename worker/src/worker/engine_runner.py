@@ -62,13 +62,21 @@ def required_warmup_trading_days(request: EngineInput) -> int:
     """
     warmup = request.evaluation.warmup_trading_days
     if warmup is None:
-        chosen = request.allocation.parameters.get("lookbackDays")
-        if chosen is None:
-            chosen = (request.allocation.rules or {}).get("lookbackDays", 0)
-        warmup = int(chosen)
+        # 003 축이 오면 그것이 사용자가 고른 값이고 없으면 규칙표 값이 기본값이다
+        # (백엔드와 같은 규칙).
+        # **최근 제외 구간을 더한다** — 섹터 모멘텀의 점수는 P(t-S)/P(t-S-L) 이라 L 만으로는
+        # S 거래일이 모자라고, 그만큼 초기 구간이 이력 부족으로 빠져 결과 기간과 수익률이 달라진다.
+        warmup = _axis_days(request, "lookbackDays") + _axis_days(request, "skipRecentDays")
         if request.run.scenario is Scenario.TARGET_RISK:
             warmup = max(warmup, target_risk_rules(request.run).lookback_days)
     return warmup
+
+
+def _axis_days(request: EngineInput, key: str) -> int:
+    chosen = request.allocation.parameters.get(key)
+    if chosen is None:
+        chosen = (request.allocation.rules or {}).get(key, 0)
+    return int(chosen)
 
 
 def warmup_anchor(request: EngineInput) -> date:

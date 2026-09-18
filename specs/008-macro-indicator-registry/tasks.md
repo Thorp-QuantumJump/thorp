@@ -92,21 +92,21 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 ### Tests for User Story 1
 
-- [ ] T018 [P] [US1] `data/tests/test_macro_sources_ecos.py`에 한국은행 어댑터 계약 테스트를 둔다. 저장된 응답 표본으로 국고채·환율·두바이유 세 계열의 파싱을 확인한다
-- [ ] T019 [P] [US1] `data/tests/test_macro_sources_kosis.py`에 국가통계포털 어댑터 계약 테스트를 둔다. 10개 표의 항목·분류 코드 파싱을 확인한다
-- [ ] T020 [P] [US1] `data/tests/test_macro_sources_customs.py`에 관세청 어댑터 테스트를 둔다. 연 단위 분할과 총계 행 제외를 확인한다 (FR-017a)
-- [ ] T021 [P] [US1] `data/tests/test_macro_transform.py`에 변환 테스트를 둔다. 전년동월 대비·월 기말·월 평균·공식 금액 네 유형과 분모 결측·0, 계열 시작 구간, 휴장일, 부분 표본 경계를 다룬다 (FR-006, FR-006a, FR-006b)
+- [X] T018 [P] [US1] `data/tests/test_macro_sources_ecos.py`에 한국은행 어댑터 계약 테스트를 둔다. 저장된 응답 표본으로 국고채·환율·두바이유 세 계열의 파싱을 확인한다
+- [X] T019 [P] [US1] `data/tests/test_macro_sources_kosis.py`에 국가통계포털 어댑터 계약 테스트를 둔다. 10개 표의 항목·분류 코드 파싱을 확인한다
+- [X] T020 [P] [US1] `data/tests/test_macro_sources_customs.py`에 관세청 어댑터 테스트를 둔다. 연 단위 분할과 총계 행 제외를 확인한다 (FR-017a)
+- [X] T021 [P] [US1] `data/tests/test_macro_transform.py`에 변환 테스트를 둔다. 전년동월 대비·월 기말·월 평균·공식 금액 네 유형과 분모 결측·0, 계열 시작 구간, 휴장일, 부분 표본 경계를 다룬다 (FR-006, FR-006a, FR-006b)
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] `data/src/data_pipeline/macro/sources/ecos.py`에 한국은행 어댑터를 만든다. 국고채는 통계표 817Y002 항목 010200000 일별, 환율은 731Y004 항목 0000001에 항목2 0000200 말일자료, 두바이유는 902Y003 항목 010102 월별이다
-- [ ] T023 [P] [US1] `data/src/data_pipeline/macro/sources/kosis.py`에 국가통계포털 어댑터를 만든다. 10개 표의 기관·통계표·항목·분류는 pd11-source-verification.md 2절 표를 따른다
-- [ ] T024 [P] [US1] `data/src/data_pipeline/macro/sources/customs.py`에 관세청 어댑터를 만든다. 기준 주소는 1220000/Newtrade이고 무역수지는 `balPayments`를 그대로 쓰며 수출에서 수입을 빼지 않는다
-- [ ] T025 [P] [US1] `data/src/data_pipeline/macro/sources/oecd.py`에 경제협력개발기구 어댑터를 만든다. DSD_STES@DF_CLI의 G20.M.LI 중 AA/IX 지수를 받고 증가율은 직접 계산한다 (FR-019)
-- [ ] T026 [US1] `data/src/data_pipeline/macro/sources/housing.py`에 주택가격 연결기를 만든다. 기준월별 표 5개를 받아 겹치는 구간의 비율로 이어 2000년 1월까지 만들고 연결 지점과 계수를 남긴다 (FR-010)
-- [ ] T027 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 변환기를 만든다. 전년동월 대비는 비교월을 t-12로 고정하고, 분모가 결측이거나 0이면 결측으로 두고 사유를 변환 불가로 남긴다
-- [ ] T028 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 월 기말과 월 평균을 넣는다. 월 기말은 그 달 마지막 거래일, 월 평균은 그 달 거래일이 모두 모였을 때만 산출한다. 원천이 월값을 직접 주면 그 값을 쓰고 등록표에 그 사실을 적는다
-- [ ] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다
+- [X] T022 [P] [US1] `data/src/data_pipeline/macro/sources/ecos.py`에 한국은행 어댑터를 만든다. 국고채는 통계표 817Y002 항목 010200000 일별, 환율은 731Y004 항목 0000001에 항목2 0000200 말일자료, 두바이유는 902Y003 항목 010102 월별이다
+- [X] T023 [P] [US1] `data/src/data_pipeline/macro/sources/kosis.py`에 국가통계포털 어댑터를 만든다. 10개 표의 기관·통계표·항목·분류는 pd11-source-verification.md 2절 표를 따른다
+- [X] T024 [P] [US1] `data/src/data_pipeline/macro/sources/customs.py`에 관세청 어댑터를 만든다. 기준 주소는 1220000/Newtrade이고 무역수지는 `balPayments`를 그대로 쓰며 수출에서 수입을 빼지 않는다
+- [X] T025 [P] [US1] `data/src/data_pipeline/macro/sources/oecd.py`에 경제협력개발기구 어댑터를 만든다. DSD_STES@DF_CLI의 G20.M.LI 중 AA/IX 지수를 받고 증가율은 직접 계산한다 (FR-019)
+- [X] T026 [US1] `data/src/data_pipeline/macro/sources/housing.py`에 주택가격 연결기를 만든다. 기준월별 표 5개를 받아 겹치는 구간의 비율로 이어 2000년 1월까지 만들고 연결 지점과 계수를 남긴다 (FR-010)
+- [X] T027 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 변환기를 만든다. 전년동월 대비는 비교월을 t-12로 고정하고, 분모가 결측이거나 0이면 결측으로 두고 사유를 변환 불가로 남긴다
+- [X] T028 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 월 기말과 월 평균을 넣는다. 월 기말은 그 달 마지막 거래일, 월 평균은 그 달 거래일이 모두 모였을 때만 산출한다. 원천이 월값을 직접 주면 그 값을 쓰고 등록표에 그 사실을 적는다
+- [X] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다
 - [ ] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)
 - [ ] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)
 - [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)
@@ -279,3 +279,16 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T073), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
 - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: 묶음 A·B를 구현하고 나서 spec·plan과 코드 사이에 남은 것을 메운다
+
+- [X] T074 `data/src/data_pipeline/macro/registry.py`의 `housing_sale_price`에 T026이 산출한 연결 결과를 반영한다. 연결 지점·계수·겹침 비율 편차를 `break_link_rule`에 적고 `series_start`를 2000-01로 옮긴다. 지금은 "연결 규칙을 정하기 전까지 2021-06 이전 제외"로 남아 있어 발행이 5년치만 쓴다 per FR-010, plan "등록표 확정" (partial)
+- [ ] T075 `data/src/data_pipeline/macro/sources/customs.py`에서 걸러낸 `<year>총계</year>` 행 수를 반환값에 싣고 수집 기록에 남긴다. 지금은 건너뛰기만 해 몇 행을 뺐는지 남지 않는다 per FR-017a (partial)
+- [ ] T076 `data/src/data_pipeline/macro/transform/monthly.py`의 증가율에 개편 연결 확인을 넣는다. 등록표의 연결 규칙으로 이은 구간이 아니면 단절을 넘는 비교를 결측으로 둔다 per FR-006 (missing)
+- [ ] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)
+- [ ] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)
+- [ ] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)

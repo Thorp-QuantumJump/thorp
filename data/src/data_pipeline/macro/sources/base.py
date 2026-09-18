@@ -20,6 +20,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from typing import Any, Final, TypeVar
 
 from data_pipeline.macro.config import SourceConfig
@@ -73,6 +74,28 @@ def fetch_with_retry(
 
 
 @dataclass(frozen=True)
+class SourceObservation:
+    """원천이 준 관측값 하나. **변환 전이다.**
+
+    ``period`` 는 원천의 주기를 그대로 쓴다 — 일별 계열은 ``YYYY-MM-DD``, 월별 계열은
+    ``YYYY-MM`` 이다. 일별을 여기서 월로 접지 않는 이유는 월 기말·월 평균이 어느 날을 골랐는지
+    되짚을 수 있어야 하기 때문이다(FR-006a, T029 계보).
+
+    ``value`` 가 ``None`` 이면 원천이 그 시점을 비워 보냈다는 뜻이다. 0 으로 채우지 않는다 —
+    없는 값과 0 은 다르고, 섞이면 증가율이 조용히 틀린다.
+
+    ``source_updated_at`` 은 원천이 밝힌 **통계표 갱신일**이지 관측치별 발표일이 아니다
+    (FR-007). 이 자리를 수신 시각으로 채우지 않는다.
+    """
+
+    indicator_id: str
+    period: str
+    value: Decimal | None
+    unit: str | None = None
+    source_updated_at: str | None = None
+
+
+@dataclass(frozen=True)
 class MonthWindow:
     """요청 하나가 담는 기간. ``start`` 와 ``end`` 는 그 달 1일이다."""
 
@@ -110,6 +133,46 @@ def split_months(start: date, end: date, max_months: int) -> list[MonthWindow]:
             1,
         )
     return windows
+
+
+#: 원천이 "값 없음"을 적는 방식. 네 곳이 제각각이라 한자리에 모은다.
+_BLANK_VALUES: Final[frozenset[str]] = frozenset({"", "-", "...", "..", "X", "NA", "N/A", "null"})
+
+
+def parse_decimal(raw: object, context: str) -> Decimal | None:
+    """원천의 값 문자열을 :class:`~decimal.Decimal` 로 바꾼다. 빈 값은 ``None`` 이다.
+
+    **float 을 거치지 않는다.** 주택가격 지수는 소수 열째 자리까지 오는데(``100.3539736``)
+    float 으로 받으면 연결 계수를 곱하는 과정에서 끝자리가 흔들리고, 같은 자료로 다시 돌려도
+    값이 미세하게 달라진다. 재현성(SC-004)은 그런 데서 깨진다.
+
+    숫자로 읽히지 않는 값은 ``None`` 으로 넘기지 않고 멈춘다 — 원천이 형식을 바꾼 것이라
+    결측으로 조용히 묻으면 계열이 줄어든 이유를 나중에 되짚지 못한다.
+
+    **``NaN`` 과 ``Infinity`` 도 멈춘다.** :class:`~decimal.Decimal` 은 이 둘을 정상적으로
+    받아들이므로 그냥 두면 "값이 있는 관측"으로 통과해 버린다. 그러면 결측도 계약 위반도
+    아닌 세 번째 상태가 생기는데, 그것이 가장 나쁘다 — 증가율 계산에 들어가면 결과도 ``NaN``
+    이 되고 결측 사유는 비어 있으므로, 값이 있다고 적힌 관측이 실제로는 비교할 수 없는 값이
+    된다. ``NaN`` 과의 비교는 모두 거짓이라 010 의 거리·순위가 조용히 어긋난다(원칙 VI).
+    ``sNaN`` 은 더 나쁘다 — 산술에 닿는 순간 예외가 터져 파싱과 무관한 자리에서 실패한다.
+    """
+    if raw is None:
+        return None
+    text = str(raw).strip().replace(",", "")
+    if text in _BLANK_VALUES:
+        return None
+    try:
+        value = Decimal(text)
+    except InvalidOperation:
+        raise SourceContractError(
+            f"{context}: 값을 숫자로 읽지 못했다({raw!r}). 원천이 형식을 바꿨는지 본다"
+        ) from None
+    if not value.is_finite():
+        raise SourceContractError(
+            f"{context}: 값이 유한한 수가 아니다({raw!r})."
+            " 결측으로 두지 않는다 — 원천이 이 자리에 무엇을 뜻하려 했는지 확인해야 한다"
+        )
+    return value
 
 
 def require_mapping(payload: Any, context: str) -> Mapping[str, Any]:

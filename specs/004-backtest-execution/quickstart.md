@@ -87,9 +87,21 @@ pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 
 
 `worker/examples/three_etf_24m/`(3개 ETF, 24개월, 분배금 2건, 거래 정지 1일 포함) 픽스처로 `FIXED_WEIGHT`·`EQUAL_WEIGHT`·`INVERSE_VOLATILITY`를 실행한다. pytest `test_manual_reconciliation.py`가 `fixtures/manual_reconciliation.json`(스프레드시트로 계산한 대표 거래일 3개의 체결일·수량·현금·비용·분배금)과 정확히 일치하는지 확인한다. 확인 항목: 모든 체결일 = 판단일 다음 거래일, 정수 수량, 거래 정지일 체결이 다음 거래 가능일로 이월되고 `reason=HALT_DEFERRED`, 분배금이 `cashFlows`에 한 번만, 결과 시작일 = 워밍업 이후.
 
-## S9. 미확정 규칙 거부와 최소분산 실행 (FR-010·FR-025, PD-03·04)
+## S9. 다섯 전략 실행 (FR-024·FR-025, PD-03·04)
 
-`strategyId=SECTOR_MOMENTUM`으로 요청. 기대: `422 RULES_NOT_REGISTERED`, 실행 생성 없음. T023이 규칙을 등록하면 이 갈래도 실행 시나리오가 된다.
+`SECTOR_MOMENTUM`도 PD-03 확정으로 **실행 시나리오다**(T023). 네 선정 방식(`TOP_N`·`TOP_PERCENT`·`THRESHOLD`·`ALL`)과
+두 배분(`EQUAL`·`INVERSE_VOLATILITY`)의 조합이 모두 `COMPLETED`이고 `weightsSource=COMPUTED`다. 확인할 갈래 넷:
+기준을 넘는 섹터가 없으면 전액 현금이고 `exceptions`에 `NO_SELECTION`이 남는다(PD-03 ③) · 관측이 `L+S+1` 거래일에
+못 미치는 섹터는 그 시점만 빠지고 이력이 쌓이면 다음 리밸런싱부터 돌아온다(`INSUFFICIENT_HISTORY`, PD-03 ⑤) ·
+동점은 대표 ETF 종목코드 오름차순으로 잘라 선정 수를 지킨다(PD-03 ④) · 상한을 다 못 채우면 남는 몫이 현금이고
+`CAP_OVERFLOW_CASH`가 남는다(PD-03 ⑥).
+
+**`strategy.parameters.maxWeight`와 `topN`의 짝은 접수가 본다.** 선정 수가 `topN`이므로 `topN=2`·상한 40%는 후보가
+여덟이어도 80%밖에 못 채워 `422 VALIDATION_RULE_VIOLATED`다. `THRESHOLD`는 몇 개가 기준을 넘을지 가격을 봐야 알아
+접수에서 세지 않고, 실행 중에 모자라면 현금으로 둔다.
+
+미확정 규칙 거부 자체는 전략이 아니라 **구조**로 남는다 — 등록표에 `PENDING_DECISION` 행이 있는 전략은 접수가
+`422 RULES_NOT_REGISTERED`로 거절한다. 2026-09-17 기준 그런 전략은 없다.
 
 `MINIMUM_VARIANCE`는 PD-04가 확정돼 **실행 시나리오다**(T022). S1과 같은 본문에 전략만 바꿔 요청하면 `COMPLETED`이고
 `/weights`의 `weightsSource=COMPUTED`, 각 항목의 비중이 비음수·상한 이하이며 합이 투자 목표와 같다(AC5).

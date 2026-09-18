@@ -220,6 +220,25 @@ class FlywayMigrationTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("expired_public_token 이 토큰 해시와 만료 시각만 갖고 해시 형식을 DB 에서도 막는다 (spec 005 T087)")
+    void expiredPublicTokenHoldsOnlyHashAndExpiry() {
+        assertThat(columnsOf("expired_public_token"))
+                .containsExactlyInAnyOrder("token_hash", "expired_at", "created_at");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT conname FROM pg_constraint"
+                                        + " WHERE conrelid = 'expired_public_token'::regclass",
+                                String.class))
+                .contains("ck_expired_public_token_hash_format");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT indexname FROM pg_indexes"
+                                        + " WHERE tablename = 'expired_public_token'",
+                                String.class))
+                .contains("idx_expired_public_token_expired_at");
+    }
+
+    @Test
     @DisplayName("backtest_reuse_event 가 재사용·합류 기록에 필요한 컬럼만 갖는다 (FR-008)")
     void backtestReuseEventHasAllColumns() {
         // append-only 라 updated_at 이 없다. 발생 시각은 at 하나다.
@@ -355,13 +374,21 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                 .isTrue();
 
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
-        // (constitution "실행 전 결정 임의 확정 금지"). PD-04가 확정돼 최소분산은 빠졌다(T022).
+        // (constitution "실행 전 결정 임의 확정 금지"). 2026-09-17 PD-03·PD-04가 확정돼
+        // 최소분산(T022)과 섹터 모멘텀(T023)이 차례로 채워졌고, 지금 대기 중인 전략은 없다.
+        // 반대 방향도 함께 본다 — 명세 없이 REGISTERED인 행이 있으면 엔진이 기본값을 지어내게 된다.
         assertThat(
                         jdbcTemplate.queryForList(
                                 "SELECT strategy_id FROM strategy_rules"
                                         + " WHERE status = 'PENDING_DECISION' AND spec IS NULL",
                                 String.class))
-                .containsExactly("SECTOR_MOMENTUM");
+                .isEmpty();
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT strategy_id FROM strategy_rules"
+                                        + " WHERE status = 'REGISTERED' AND spec IS NULL",
+                                String.class))
+                .isEmpty();
 
         // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
         assertThat(

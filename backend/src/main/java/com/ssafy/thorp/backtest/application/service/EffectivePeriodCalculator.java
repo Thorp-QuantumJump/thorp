@@ -191,14 +191,14 @@ public class EffectivePeriodCalculator {
     /** 요청이 003 축 {@code lookbackDays}를 실어 보냈으면 그것이 계산에 쓰이는 값이므로 요구값도 그것으로 잰다. */
     public static int requiredWarmupTradingDays(
             StrategyRules rules, StrategyRules scenarioOverlay, Map<String, Object> parameters) {
-        int strategy = lookback(rules, parameters) + skipRecent(rules);
+        int strategy = lookback(rules, parameters) + skipRecent(rules, parameters);
         // 오버레이는 003 축이 아니라 서버가 채우는 규칙이라 요청 파라미터를 보지 않는다.
         int overlay = scenarioOverlay == null ? 0 : lookback(scenarioOverlay, null);
         return Math.max(strategy, overlay);
     }
 
     private static int lookback(StrategyRules rules, Map<String, Object> parameters) {
-        Integer chosen = chosenLookback(parameters);
+        Integer chosen = chosenAxis(parameters, "lookbackDays");
         if (chosen != null) {
             return chosen;
         }
@@ -206,12 +206,12 @@ public class EffectivePeriodCalculator {
     }
 
     /**
-     * 요청 {@code allocation.parameters.lookbackDays}. 숫자가 아니거나 없으면 {@code null}이다.
+     * 요청 {@code allocation.parameters}의 정수 축. 숫자가 아니거나 없으면 {@code null}이다.
      *
      * <p>값의 유효성은 등록표 관문({@code StrategySettingsValidator})이 본다. 여기서 되받아 거절하면 같은 판정이 두 곳에 생긴다.
      */
-    private static Integer chosenLookback(Map<String, Object> parameters) {
-        Object raw = parameters == null ? null : parameters.get("lookbackDays");
+    private static Integer chosenAxis(Map<String, Object> parameters, String axis) {
+        Object raw = parameters == null ? null : parameters.get(axis);
         if (raw instanceof Number number) {
             return number.intValue();
         }
@@ -225,7 +225,17 @@ public class EffectivePeriodCalculator {
         return null;
     }
 
-    private static int skipRecent(StrategyRules rules) {
+    /**
+     * 최근 제외 구간. <b>관측 기간과 같은 규칙으로 읽는다</b> — 003 축이 오면 그것이 사용자가 고른 값이고 없으면 규칙표 값이 기본값이다.
+     *
+     * <p>규칙표만 보면 기본값 0이라, 최근 제외 21일을 고른 요청의 요구 워밍업이 {@code L}로 계산되고 {@code L+S}가 필요한 실행이 통과한다. 그러면
+     * 초기 21거래일이 이력 부족으로 빠져 결과 구간과 수익률이 조용히 달라진다(PD-03 ⑤).
+     */
+    private static int skipRecent(StrategyRules rules, Map<String, Object> parameters) {
+        Integer chosen = chosenAxis(parameters, "skipRecentDays");
+        if (chosen != null) {
+            return chosen;
+        }
         return rules.spec() == null ? 0 : intValue(rules.spec(), "skipRecentDays");
     }
 

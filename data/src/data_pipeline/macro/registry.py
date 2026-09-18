@@ -81,6 +81,16 @@ class IndicatorDefinition:
     primary_source: str
     table_code: str | None
     item_code: str | None
+    #: 국가통계포털의 기관 코드. 통계표 id 만으로는 표가 특정되지 않는다 — 생산·물가는 통계청
+    #: (101), 주택가격은 한국부동산원(408)이고 기관이 틀리면 없는 표로 거절된다(pd11 §2).
+    org_id: str | None
+    #: 통계표 안에서 계열 하나를 고르는 분류. ``(차원 이름, 코드)`` 를 순서대로 담는다.
+    #:
+    #: **항목 코드만으로는 계열이 하나로 좁혀지지 않는다.** 광공업생산의 ``T10`` 은 시도별·
+    #: 산업별로 갈라져 있어 ``objL1=00`` 전국과 ``objL2=0`` 총지수를 함께 줘야 비로소 우리가
+    #: 아는 그 계열이 된다. 이 값이 비면 어댑터는 어느 계열을 받을지 스스로 정하게 되는데,
+    #: 그것은 등록표가 할 일이다(FR-005).
+    classification: tuple[tuple[str, str], ...]
     raw_unit: str
     transformed_unit: str
     transform_rule: str
@@ -94,6 +104,13 @@ class IndicatorDefinition:
     break_link_rule: str | None = None
     missing_rule: str | None = None
     refresh_months_n: int = DEFAULT_REFRESH_MONTHS_N
+    #: 개편으로 나뉜 계열을 잇는 통계표 사슬. 비어 있으면 표 하나로 받는 보통 지표다.
+    #:
+    #: **비어 있지 않으면 보통 경로로 받으면 안 된다.** 위의 ``table_code`` 는 사슬의 첫
+    #: 표이자 현행 표일 뿐이라, 그것만 받으면 ``series_start`` 가 말하는 구간의 일부만
+    #: 온다 — 주택가격은 2000-01 이 아니라 2021-06 부터만 온다. 그런데 응답은 정상이고
+    #: 값도 멀쩡해서 짧아진 줄 모른다. 그래서 어댑터가 이 값을 보고 거절한다(FR-010).
+    link_chain: tuple[LinkedTable, ...] = ()
     # 아래 셋은 이 작업의 범위가 아니다. 모듈 docstring 참고.
     published_precision: int | None = None
     minimum_effective_scale: str | None = None
@@ -110,16 +127,111 @@ _NO_RELEASE_DATE: Final[str] = (
 _TABLE_UPDATED_AT: Final[str] = "LST_CHN_DE 는 통계표 갱신일이며 관측치별 발표일이 아니다"
 
 
+#: 국가통계포털 기관 코드 (pd11 §2).
+ORG_STATISTICS_KOREA: Final[str] = "101"
+ORG_REAL_ESTATE_BOARD: Final[str] = "408"
+
+@dataclass(frozen=True)
+class LinkedTable:
+    """개편으로 나뉜 계열의 통계표 하나. 연결 사슬의 한 마디다 (FR-010)."""
+
+    #: 이 표가 쓰는 기준월. 연결 기록이 이 값으로 두 표를 가리킨다.
+    base_month: str
+    org_id: str
+    table_code: str
+    item_code: str
+    classification: tuple[tuple[str, str], ...]
+    #: 2026-09-18 에 실제로 받아 확인한 구간. **확인 기록이지 판정 기준이 아니다** —
+    #: ``coverage_end`` 는 원천이 새 달을 낼 때마다 밀리므로 적재 완료 판정에 쓰면 매달
+    #: 미완료가 된다. 판정 기준이 될 기대 대상월 수는 T077 이 따로 넣는다(FR-011b).
+    coverage_start: str
+    coverage_end: str
+
+
+#: 주택가격 연결 사슬. **새 기준월부터 늘어놓는다** — 앞의 표가 기준이 되고 뒤로 갈수록
+#: 계수가 누적된다.
+#:
+#: 이 목록이 등록표에 있어야 하는 이유는, 어느 표를 어떤 순서로 잇느냐가 곧 2000-01 부터의
+#: 값을 정하기 때문이다. 목록이 코드나 테스트에만 있으면 연결 규칙이 등록표 버전에 매이지
+#: 않고, 표를 하나 갈아끼웠을 때 자료 버전이 왜 달라졌는지 되짚을 곳이 없다(FR-003).
+#:
+#: 2011.6 표는 분류 체계가 다르다 — 앞의 표들이 ``objL1`` 에 유형, ``objL2`` 에 지역을 두는
+#: 반면 이 표는 ``objL1`` 이 지역(전국), ``objL2`` 가 주택유형(종합)이다. 같은 코드를 넣으면
+#: 없는 분류로 거절된다.
+HOUSING_LINK_CHAIN: Final[tuple[LinkedTable, ...]] = (
+    LinkedTable(
+        base_month="2026-06", org_id=ORG_REAL_ESTATE_BOARD, table_code="DT_30404_C012",
+        item_code="sales", classification=(("objL1", "00"), ("objL2", "a0")),
+        coverage_start="2021-06", coverage_end="2026-07",
+    ),
+    LinkedTable(
+        base_month="2021-06", org_id=ORG_REAL_ESTATE_BOARD, table_code="DT_40803_N0001",
+        item_code="sales", classification=(("objL1", "00"), ("objL2", "a0")),
+        coverage_start="2003-11", coverage_end="2025-03",
+    ),
+    LinkedTable(
+        base_month="2011-06", org_id=ORG_REAL_ESTATE_BOARD, table_code="DT_304N_04_00001",
+        item_code="16304304_01",
+        classification=(("objL1", "1530430404A"), ("objL2", "15304A304_04_021")),
+        coverage_start="2000-01", coverage_end="2012-12",
+    ),
+)
+
+#: 연결에 쓰이지 않는 판본. 구간이 현행 표와 겹치기만 해 전 구간을 넓히지 못하지만, 같은
+#: 구간을 다른 기준월로 적은 자료라 개정 대조에 쓴다(T052).
+HOUSING_REVISION_VINTAGES: Final[tuple[LinkedTable, ...]] = (
+    LinkedTable(
+        base_month="2026-01", org_id=ORG_REAL_ESTATE_BOARD, table_code="DT_30404_B012",
+        item_code="sales", classification=(("objL1", "00"), ("objL2", "a0")),
+        coverage_start="2021-06", coverage_end="2026-06",
+    ),
+    LinkedTable(
+        base_month="2025-03", org_id=ORG_REAL_ESTATE_BOARD, table_code="DT_30404_A012",
+        item_code="sales", classification=(("objL1", "00"), ("objL2", "a0")),
+        coverage_start="2021-06", coverage_end="2026-01",
+    ),
+)
+
+#: 주택가격의 개편 연결 규칙 (FR-010).
+#:
+#: 괄호 안의 수치는 2026-09-18 표본으로 실제 이어 본 결과다. 계수는 자료를 받을 때마다 다시
+#: 재므로 여기 적힌 값은 **확인 기록이지 계산에 쓰는 상수가 아니다** — 원천이 개정하면 계수도
+#: 달라져야 하고, 상수로 박아 두면 그 변화가 묻힌다. 계산에 쓰는 값은 발행 때 산출해 자료에
+#: 남긴다.
+_HOUSING_BREAK_LINK_RULE: Final[str] = (
+    "기준월별 표 셋을 연쇄 연결한다 (HOUSING_LINK_CHAIN)."
+    " 겹침 구간 전체의 평균 비율이 아니라 겹침에서 가장 최근 달 한 곳의 비율로 잇는다 —"
+    " 그래야 각 표 안의 전월 대비 변화가 보존된다."
+    " 2026-09-18 실측: 2021.6→현행은 2025-03 에서 계수 1.014008342, 겹침 46개월, 비율 편차"
+    " 0.0000%(순수 재기준화). 2011.6→현행은 2012-12 에서 계수 0.822651718, 겹침 110개월,"
+    " 비율 편차 5.6788%. 뒤엣것은 두 표가 같은 달에 대해 다른 변화를 말한다는 뜻이라"
+    " 2012년 이전 수준은 연결 지점에 따라 최대 5.7% 달라진다. 편차를 자료에 함께 남긴다."
+)
+
+#: 경제협력개발기구 경기선행지수의 계열 키. **차원을 다 적어야 한다.**
+#:
+#: DSD_STES 의 차원은 아홉이고 순서는 ``REF_AREA.FREQ.MEASURE.UNIT_MEASURE.ACTIVITY.
+#: ADJUSTMENT.TRANSFORMATION.TIME_HORIZ.METHODOLOGY`` 다. 값을 지정하지 않는 차원도 자리는
+#: 비워 둔 채 점으로 남겨야 하며, 자리 수가 모자라면 자료가 오지 않고
+#: ``403 Not enough key values in query, expecting 9 got 5`` 가 돌아온다.
+#:
+#: 고른 값은 진폭조정 지수(``ADJUSTMENT=AA``, ``TRANSFORMATION=IX``)다. 원천이 주는 증가율
+#: 계열(``TR``/``GY``)은 지수보다 여섯 달 늦어 쓰지 않는다(pd11 §3, FR-019).
+_G20_CLI_KEY: Final[str] = "G20.M.LI...AA.IX..H"
+
+
 def _kosis(
     indicator_id: str,
     field_id: str,
     table_code: str,
     item_code: str,
+    classification: tuple[tuple[str, str], ...],
     raw_unit: str,
     transform_rule: str,
     series_start: str,
     *,
     agency: str = _STATISTICS_KOREA,
+    org_id: str = ORG_STATISTICS_KOREA,
     transformed_unit: str = "%",
 ) -> IndicatorDefinition:
     return IndicatorDefinition(
@@ -128,6 +240,8 @@ def _kosis(
         primary_source=SOURCE_KOSIS,
         table_code=table_code,
         item_code=item_code,
+        org_id=org_id,
+        classification=classification,
         raw_unit=raw_unit,
         transformed_unit=transformed_unit,
         transform_rule=transform_rule,
@@ -144,23 +258,25 @@ def _kosis(
 #: 17개 지표. 순서는 FR-001 표를 따른다.
 INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     # --- 생산 (pd11 §2) ---
-    _kosis("all_industry_production", FIELD_PRODUCTION, "DT_1JH20201", "T1", "2020=100",
-           TRANSFORM_YOY, "2000-01"),
-    _kosis("mining_manufacturing_production", FIELD_PRODUCTION, "DT_1F02001", "T10", "2020=100",
-           TRANSFORM_YOY, "1980-01"),
-    _kosis("service_production", FIELD_PRODUCTION, "DT_1KC2020", "T1", "2020=100",
-           TRANSFORM_YOY, "2000-01"),
+    _kosis("all_industry_production", FIELD_PRODUCTION, "DT_1JH20201", "T1",
+           (("objL1", "0"),), "2020=100", TRANSFORM_YOY, "2000-01"),
+    _kosis("mining_manufacturing_production", FIELD_PRODUCTION, "DT_1F02001", "T10",
+           (("objL1", "00"), ("objL2", "0")), "2020=100", TRANSFORM_YOY, "1980-01"),
+    _kosis("service_production", FIELD_PRODUCTION, "DT_1KC2020", "T1",
+           (("objL1", "T"),), "2020=100", TRANSFORM_YOY, "2000-01"),
     # --- 소비·투자 (pd11 §2) ---
-    _kosis("retail_sales_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1K41012", "T1", "2020=100",
-           TRANSFORM_YOY, "1995-01"),
+    _kosis("retail_sales_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1K41012", "T1",
+           (("objL1", "G0"),), "2020=100", TRANSFORM_YOY, "1995-01"),
+    # 설비투자지수는 분류가 objL2 하나뿐이다. objL1 을 지어내 채우지 않는다.
     _kosis("facility_investment_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1F70011", "T3",
-           "2020=100", TRANSFORM_YOY, "1995-02"),
+           (("objL2", "C"),), "2020=100", TRANSFORM_YOY, "1995-02"),
     _kosis("construction_completed_constant", FIELD_CONSUMPTION_INVESTMENT, "DT_1G18011", "T10",
-           "백만원", TRANSFORM_YOY, "1997-07"),
+           (("objL1", "0"),), "백만원", TRANSFORM_YOY, "1997-07"),
     # --- 대외거래 (pd11 §4). 무역수지는 원천이 주는 공식 값이며 수출-수입 파생식이 아니다 ---
     IndicatorDefinition(
         indicator_id="exports", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,
-        table_code=None, item_code="expDlr", raw_unit="미국 달러", transformed_unit="%",
+        table_code=None, item_code="expDlr", org_id=None, classification=(),
+        raw_unit="미국 달러", transformed_unit="%",
         transform_rule=TRANSFORM_YOY, agency="관세청", attribution="관세청 수출입총괄",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1989-01",
         revision_history_available=False, release_rule=_NO_RELEASE_DATE,
@@ -168,7 +284,8 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     ),
     IndicatorDefinition(
         indicator_id="imports", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,
-        table_code=None, item_code="impDlr", raw_unit="미국 달러", transformed_unit="%",
+        table_code=None, item_code="impDlr", org_id=None, classification=(),
+        raw_unit="미국 달러", transformed_unit="%",
         transform_rule=TRANSFORM_YOY, agency="관세청", attribution="관세청 수출입총괄",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1989-01",
         revision_history_available=False, release_rule=_NO_RELEASE_DATE,
@@ -176,7 +293,8 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     ),
     IndicatorDefinition(
         indicator_id="trade_balance", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,
-        table_code=None, item_code="balPayments", raw_unit="미국 달러",
+        table_code=None, item_code="balPayments", org_id=None, classification=(),
+        raw_unit="미국 달러",
         transformed_unit="미국 달러", transform_rule=TRANSFORM_OFFICIAL_AMOUNT, agency="관세청",
         attribution="관세청 수출입총괄", license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1989-01",
@@ -184,11 +302,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         missing_rule="원천 제공값이다. 수출에서 수입을 빼 만들지 않는다",
     ),
     # --- 노동 (pd11 §2). 실업률은 원천이 계절조정한 값이라 우리가 다시 조정하지 않는다 ---
-    _kosis("employed_persons", FIELD_LABOR, "DT_1DA7001S", "T30", "천명",
-           TRANSFORM_YOY, "1999-06"),
+    _kosis("employed_persons", FIELD_LABOR, "DT_1DA7001S", "T30",
+           (("objL1", "0"),), "천명", TRANSFORM_YOY, "1999-06"),
     IndicatorDefinition(
         indicator_id="unemployment_rate", field_id=FIELD_LABOR, primary_source=SOURCE_KOSIS,
-        table_code="DT_1DA9001S", item_code="T80", raw_unit="%", transformed_unit="%",
+        table_code="DT_1DA9001S", item_code="T80", org_id=ORG_STATISTICS_KOREA,
+        classification=(("objL1", "00"),), raw_unit="%", transformed_unit="%",
         transform_rule=TRANSFORM_SEASONAL_RATE, agency=_STATISTICS_KOREA,
         attribution=_KOSIS_ATTRIBUTION, license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1999-06",
@@ -196,11 +315,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         missing_rule="원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다",
     ),
     # --- 물가·원자재 ---
-    _kosis("consumer_price_index", FIELD_PRICES_COMMODITIES, "DT_1J22003", "T", "2020=100",
-           TRANSFORM_YOY, "1980-01"),
+    _kosis("consumer_price_index", FIELD_PRICES_COMMODITIES, "DT_1J22003", "T",
+           (("objL1", "T10"),), "2020=100", TRANSFORM_YOY, "1980-01"),
     IndicatorDefinition(
         indicator_id="dubai_crude", field_id=FIELD_PRICES_COMMODITIES, primary_source=SOURCE_ECOS,
-        table_code="902Y003", item_code="010102", raw_unit="달러/배럴",
+        table_code="902Y003", item_code="010102", org_id=None, classification=(),
+        raw_unit="달러/배럴",
         transformed_unit="달러/배럴", transform_rule=TRANSFORM_MONTH_AVERAGE,
         agency="국제통화기금(IMF)", attribution=_ECOS_ATTRIBUTION, license_status="ALLOWED",
         # 한국은행 약관은 상업 이용 제한 계열에 작성기관 승인을 요구하는데, 이 계열이 제한
@@ -212,7 +332,8 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     # --- 금융·주택 ---
     IndicatorDefinition(
         indicator_id="treasury_bond_3y", field_id=FIELD_FINANCE_HOUSING,
-        primary_source=SOURCE_ECOS, table_code="817Y002", item_code="010200000", raw_unit="연%",
+        primary_source=SOURCE_ECOS, table_code="817Y002", item_code="010200000", org_id=None,
+        classification=(), raw_unit="연%",
         transformed_unit="연%", transform_rule=TRANSFORM_MONTH_END, agency="한국은행",
         attribution=_ECOS_ATTRIBUTION, license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1998-11",
@@ -223,7 +344,8 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         # 일별 표(731Y001)는 서울외국환중개 작성이라 쓰지 않는다. 월별 표의 말일자료가
         # 한국은행 작성이면서 월 기말 규칙을 그대로 충족한다(pd11 §1).
         indicator_id="usd_krw_rate", field_id=FIELD_FINANCE_HOUSING, primary_source=SOURCE_ECOS,
-        table_code="731Y004", item_code="0000001/0000200", raw_unit="원", transformed_unit="원",
+        table_code="731Y004", item_code="0000001/0000200", org_id=None, classification=(),
+        raw_unit="원", transformed_unit="원",
         transform_rule=TRANSFORM_MONTH_END, agency="한국은행", attribution=_ECOS_ATTRIBUTION,
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1964-05",
         revision_history_available=False, release_rule=_NO_RELEASE_DATE,
@@ -232,20 +354,21 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     IndicatorDefinition(
         indicator_id="housing_sale_price", field_id=FIELD_FINANCE_HOUSING,
         primary_source=SOURCE_KOSIS, table_code="DT_30404_C012", item_code="sales",
+        org_id=ORG_REAL_ESTATE_BOARD, classification=(("objL1", "00"), ("objL2", "a0")),
         raw_unit="2026.6=100", transformed_unit="%", transform_rule=TRANSFORM_MOM,
         agency="한국부동산원", attribution=_KOSIS_ATTRIBUTION, license_status="ALLOWED",
-        license_review_status=REVIEW_VERIFIED, series_start="2021-06",
+        license_review_status=REVIEW_VERIFIED,
+        # 현행 표 하나는 2021-06 부터지만 연결 사슬을 거치면 2000-01 까지 닿는다.
+        series_start="2000-01",
         revision_history_available=True, release_rule=_TABLE_UPDATED_AT,
-        # 기준월이 바뀔 때마다 표가 새로 만들어지고 지수가 재기준화된다. 겹치는 구간의
-        # 비율로 이으면 2000-01 까지 닿는다(pd11 §2). 연결 계수는 T026 이 산출한다.
-        break_link_rule="기준월별 표 5개를 겹침 구간 비율로 연결한다 (T026)."
-        " 연결 규칙을 정하기 전까지 2021-06 이전은 사용 가능 범위에서 제외한다",
+        break_link_rule=_HOUSING_BREAK_LINK_RULE,
+        link_chain=HOUSING_LINK_CHAIN,
     ),
     # --- 해외 경기 (pd11 §3). 원천이 주는 증가율(TR/GY)은 지수보다 여섯 달 늦어 쓰지 않는다 ---
     IndicatorDefinition(
         indicator_id="g20_cli", field_id=FIELD_OVERSEAS, primary_source=SOURCE_OECD,
-        table_code="OECD.SDD.STES,DSD_STES@DF_CLI", item_code="G20.M.LI.AA.IX",
-        raw_unit="지수", transformed_unit="%", transform_rule=TRANSFORM_YOY,
+        table_code="OECD.SDD.STES,DSD_STES@DF_CLI", item_code=_G20_CLI_KEY, org_id=None,
+        classification=(), raw_unit="지수", transformed_unit="%", transform_rule=TRANSFORM_YOY,
         agency="경제협력개발기구(OECD)", attribution="OECD Composite Leading Indicators",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1961-01",
         revision_history_available=True,

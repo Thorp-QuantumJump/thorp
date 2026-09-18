@@ -40,7 +40,7 @@ public interface BacktestRequestRepository {
      * 만료된 <b>비로그인</b> 요청을 만료 시각이 이른 순서로 {@code limit}건 찾는다(spec 005 정리 작업). 로그인 요청은 만료가 없어 나오지 않는다.
      *
      * <p>만료는 {@code public_token_expires_at <= now}다 — {@link BacktestRequest#isPublicExpired}와 같은
-     * 경계다.
+     * 경계다. <b>가리키는 실행이 아직 끝나지 않은 요청은 나오지 않는다</b> — 지우면 비로그인 대기 몫에서 빠져 한도가 샌다(T093).
      */
     List<BacktestRequest> findExpiredAnonymous(Instant now, int limit);
 
