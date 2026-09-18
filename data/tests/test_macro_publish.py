@@ -81,8 +81,7 @@ class TestGate:
 
         assert not decision.can_publish
         assert (
-            publish.PublicationBlocker(starved, publish.BLOCK_NO_VALID_VALUE)
-            in decision.blockers
+            publish.PublicationBlocker(starved, publish.BLOCK_NO_VALID_VALUE) in decision.blockers
         )
 
     def test_보류되면_기준월을_달지_않는다(self) -> None:
@@ -135,6 +134,12 @@ class TestGate:
         with pytest.raises(publish.PublishError, match="17개 전부를 받아야"):
             publish.gate(INDICATORS[:5], all_filled("2026-07"))
 
+    def test_17행이어도_지표_id가_중복되면_판정하지_않는다(self) -> None:
+        indicators = (INDICATORS[0], INDICATORS[0], *INDICATORS[2:])
+
+        with pytest.raises(publish.PublishError, match="지표 id 가 겹친다"):
+            publish.plan_publication(indicators, all_filled("2026-07"))
+
 
 class TestLicenseGate:
     """이용 조건 — 미확인만 막는다 (FR-016a)."""
@@ -162,6 +167,24 @@ class TestLicenseGate:
         decision = publish.plan_publication(INDICATORS, all_filled("2026-07"))
 
         assert decision.can_publish
+
+    @pytest.mark.parametrize("invalid_status", ["UNVERIFED", "", "SUSPENDED"])
+    def test_모르는_권리_상태는_발행을_보류한다(self, invalid_status: str) -> None:
+        indicators = tuple(
+            replace(i, license_review_status=invalid_status)
+            if i.indicator_id == "dubai_crude"
+            else i
+            for i in INDICATORS
+        )
+
+        decision = publish.plan_publication(indicators, all_filled("2026-07"))
+
+        assert not decision.can_publish
+        assert decision.baselines == ()
+        assert (
+            publish.PublicationBlocker("dubai_crude", publish.BLOCK_LICENSE_UNVERIFIED)
+            in decision.blockers
+        )
 
     def test_등록표의_17개가_미확인이_아니다(self) -> None:
         statuses = {i.license_review_status for i in INDICATORS}
