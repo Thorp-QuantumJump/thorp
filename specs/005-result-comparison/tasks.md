@@ -429,4 +429,4 @@ B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조�
 
 Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
 
-- [ ] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 "변동성에 …"처럼 잘린다. 같은 파일 주석의 "등록된 다섯 전략 이름이 모두 여기 들어간다"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)
+- [X] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 "변동성에 …"처럼 잘린다. 같은 파일 주석의 "등록된 다섯 전략 이름이 모두 여기 들어간다"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)

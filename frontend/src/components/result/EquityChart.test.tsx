@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { formatAxisAmount } from '@/components/result/formatResult'
 import { makeEquitySeries } from '@/test/resultFixtures'
@@ -8,15 +8,23 @@ import type { ResultTimeseriesPoint } from '@/types/result'
 
 /**
  * jsdom은 요소의 크기를 재지 않아 `ParentSize`가 언제나 0을 보고하고, 폭이 0이면 차트는 아무것도
- * 그리지 않는다. 그려진 것을 확인해야 하므로 여기서만 크기를 정해 준다.
+ * 그리지 않는다. 그려진 것을 확인해야 하므로 여기서만 크기를 정해 준다. 좁은 화면을 볼 때는 테스트
+ * 안에서 값을 바꾸고 `afterEach`가 되돌린다.
  */
+const WIDE = { width: 840, height: 380 }
+const chartSize = vi.hoisted(() => ({ width: 840, height: 380 }))
+
 vi.mock('@visx/responsive', () => ({
   ParentSize: ({
     children,
   }: {
     children: (size: { width: number; height: number }) => ReactNode
-  }) => children({ width: 840, height: 380 }),
+  }) => children({ width: chartSize.width, height: chartSize.height }),
 }))
+
+afterEach(() => {
+  Object.assign(chartSize, WIDE)
+})
 
 const BASE_POINTS = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
 const TARGET_POINTS = makeEquitySeries({ points: 129, peakIndex: 30, troughIndex: 70 })
@@ -47,6 +55,33 @@ function seriesPath(container: HTMLElement, which: 'base' | 'target'): SVGPathEl
   return path
 }
 
+/**
+ * 등록표 이름과 같은 길이(17자, 띄어쓰기 포함)의 합성 이름. 실제 이름을 쓰지 않는 이유는
+ * `resultFixtures.ts` 머리 주석과 같다.
+ */
+const LONG_BASE_NAME = '가나다 라마바사 아자차카 타파하'
+const LONG_TARGET_NAME = '거너더 러머버서 어저처커 터퍼허'
+
+/** 이름표 하나의 줄들과 세로 범위. 줄마다 `y`가 그 줄의 가운데다 */
+function labelBlock(container: HTMLElement, dataKey: 'base' | 'target') {
+  const lines = [
+    ...container.querySelectorAll(`[data-testid="series-end-label-${dataKey}"] tspan`),
+  ]
+  const centers = lines.map((line) => Number(line.getAttribute('y')))
+  const lineHeight = centers.length > 1 ? centers[1] - centers[0] : 13
+  return {
+    texts: lines.map((line) => line.textContent ?? ''),
+    top: Math.min(...centers) - lineHeight / 2,
+    bottom: Math.max(...centers) + lineHeight / 2,
+  }
+}
+
+/** 그림 영역의 바탕 사각형. 축 여백을 뺀 실제 그리기 크기다 */
+function plotArea(container: HTMLElement) {
+  const plot = container.querySelectorAll('rect[fill="transparent"]')[1]
+  return { width: Number(plot.getAttribute('width')), height: Number(plot.getAttribute('height')) }
+}
+
 /** 경로에 찍힌 점의 수. `M`과 `L` 하나가 점 하나다 */
 function pointCount(path: SVGPathElement): number {
   return (path.getAttribute('d') ?? '').match(/[ML]/g)?.length ?? 0
@@ -62,6 +97,41 @@ describe('EquityChart', () => {
     expect(seriesPath(container, 'target').getAttribute('stroke-dasharray')).toBe('7,5')
     expect(screen.getByText('물결 고르기')).toBeTruthy()
     expect(screen.getByText('모래 고르기')).toBeTruthy()
+  })
+
+  it.each([
+    ['넓은 화면', WIDE],
+    ['폭 360px 화면', { width: 326, height: 245 }],
+  ])('%s에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', (_case, size) => {
+    Object.assign(chartSize, size)
+    const { container } = render(
+      <EquityChart
+        altNumbers={altNumbers}
+        base={{ ...base, name: LONG_BASE_NAME }}
+        initialCash="10000000.00"
+        target={{ ...target, name: LONG_TARGET_NAME }}
+      />,
+    )
+
+    const baseLabel = labelBlock(container, 'base')
+    const targetLabel = labelBlock(container, 'target')
+    const { height } = plotArea(container)
+
+    for (const [label, name] of [
+      [baseLabel, LONG_BASE_NAME],
+      [targetLabel, LONG_TARGET_NAME],
+    ] as const) {
+      expect(label.texts.length).toBeGreaterThan(1)
+      expect(label.texts.join(' ')).toBe(name)
+      // 오른쪽 여백(88px)에 11px 한글이 일곱 자까지 들어간다.
+      for (const text of label.texts) expect(text.replace(/\s/g, '').length).toBeLessThanOrEqual(7)
+      expect(label.top).toBeGreaterThanOrEqual(0)
+      expect(label.bottom).toBeLessThanOrEqual(height)
+    }
+    // 두 곡선의 끝 값이 같아 이름표가 같은 자리를 원한다. 밀어낸 뒤에는 겹치지 않아야 한다.
+    const [upper, lower] = [baseLabel, targetLabel].sort((left, right) => left.top - right.top)
+    expect(upper.bottom).toBeLessThanOrEqual(lower.top)
+    expect(container.textContent).not.toContain('…')
   })
 
   it('기준만 있으면 파선 곡선이 없다', () => {
@@ -92,9 +162,7 @@ describe('EquityChart', () => {
       <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />,
     )
 
-    // 그림 영역의 바탕 사각형. 축 여백을 뺀 실제 그리기 폭이다.
-    const plot = container.querySelectorAll('rect[fill="transparent"]')[1]
-    const innerWidth = Number(plot.getAttribute('width'))
+    const innerWidth = plotArea(container).width
     const first = Date.parse(BASE_POINTS[0].date + 'T00:00:00Z')
     const last = Date.parse(BASE_POINTS[BASE_POINTS.length - 1].date + 'T00:00:00Z')
     const at = (date: string) =>
