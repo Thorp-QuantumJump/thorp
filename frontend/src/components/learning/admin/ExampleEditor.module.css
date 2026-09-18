@@ -1,0 +1,108 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+}
+
+.editor h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.guide,
+.empty,
+.total {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.total {
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.mapUnavailable {
+  margin: 0;
+  color: var(--thorp-negative);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+
+.field input,
+.field select {
+  padding: 9px 12px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.weightError {
+  max-width: 220px;
+  color: var(--thorp-negative);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor button {
+  padding: 7px 13px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.83rem;
+  cursor: pointer;
+}
+
+.editor button:hover:not(:disabled) {
+  border-color: currentColor;
+}
+
+.editor button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
