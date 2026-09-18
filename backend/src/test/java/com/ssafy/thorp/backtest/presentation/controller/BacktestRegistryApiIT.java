@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -24,19 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
  *
  * <p>003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 시드 등록표에서 그대로 읽는지 본다. 마이그레이션이 채운 행을 그대로 단언하므로 별도 준비가 없다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.backtest.liveness.interval=PT1H",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestRegistryApiIT extends PostgresTestSupport {
+class BacktestRegistryApiIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;

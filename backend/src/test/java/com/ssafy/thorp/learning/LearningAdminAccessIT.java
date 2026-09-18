@@ -9,15 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.Requesters;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -28,21 +26,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * <p>관리 계정은 {@code PostgresTestSupport}가 모든 DB 테스트에 주는 {@code thorp.learning.admin-user-ids=7}이다.
  * 8은 허용 목록에 없는 로그인 계정이다.
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성을 {@code LearningPublicApiIT}와 글자
- * 그대로 같게 둔다.
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class LearningAdminAccessIT extends PostgresTestSupport {
+class LearningAdminAccessIT extends IntegrationTestSupport {
 
     private static final long ADMIN = 7;
     private static final long NOT_ADMIN = 8;

@@ -11,6 +11,7 @@ import com.ssafy.thorp.regime.application.exception.RegimeLookupFailedException;
 import com.ssafy.thorp.regime.application.repository.RegimeBaselineMonthRepository;
 import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;
 import com.ssafy.thorp.regime.domain.model.RegimeBaselineMonth;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.PostgresTestSupport;
 import java.time.YearMonth;
 import java.util.Optional;
@@ -18,8 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,22 +31,13 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>저장소 실패는 실제로 일으키기 어려워 저장소를 대역으로 바꾼다. 대역이 컨텍스트 전체를 바꾸므로 {@link RegimeSearchApiIT}와 파일을 나눴다 — 한
  * 클래스에 두면 나머지 시험까지 대역 위에서 돌아 무엇을 확인한 것인지 흐려진다.
  *
+ * <p>필드 {@code @MockitoBean}이 있어 이 클래스는 {@link IntegrationTestSupport}를 상속해도 컨텍스트를 따로 만든다.
+ *
  * <p>저장소를 대역으로 바꿔도 {@link PostgresTestSupport}를 상속한다. JPA는 기동에 실제 연결을 요구하므로, 상속하지 않으면 개발자 기기에 마침 떠
  * 있던 DB에 붙어 통과하고 CI에서만 깨진다.
  */
-@SpringBootTest(
-        properties = {
-            // 다른 IT 다수가 쓰는 값과 같게 둔다. 컨텍스트 캐시 키는 프로퍼티 조합이라 값이
-            // 다르면 Spring 이 컨텍스트를 따로 하나 더 만들어 캐시에 얹는다.
-            //
-            // thorp.regime.macro.source 는 적지 않는다 — application.yml 의 기본값이 이미
-            // fixture 라 적을 필요가 없고, 적으면 이 클래스만 다른 버킷으로 빠진다.
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
 @DisplayName("조회 실패 구분")
-class RegimeLookupFailureIT extends PostgresTestSupport {
+class RegimeLookupFailureIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
 

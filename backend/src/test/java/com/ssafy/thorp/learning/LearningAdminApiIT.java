@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.thorp.learning.support.LearningSeeds;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.Requesters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
@@ -37,8 +37,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -54,21 +52,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * <p>공개 조회({@code LearningPublicApiIT})와 달리 판을 SQL로 심지 않는다. 게시 유스케이스를 거쳐 만든 판을 공개 조회가 보는지 확인하는 것이
  * 목적이다(SC-003·SC-006).
  *
- * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성을 {@code LearningPublicApiIT}와 글자
- * 그대로 같게 둔다. 관리 계정 7은 {@code PostgresTestSupport}가 준다.
+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받아 캐시된 컨텍스트를 재사용한다.
+ * 관리 계정 7은 {@code PostgresTestSupport}가 준다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class LearningAdminApiIT extends PostgresTestSupport {
+class LearningAdminApiIT extends IntegrationTestSupport {
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path EXAMPLES = Path.of("..", "docs", "specs", "learning-api", "examples");
