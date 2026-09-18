@@ -251,12 +251,14 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 **Independent Test**: 결과에서 지수 비교 보조 보기를 열어 참고 정보로 표시되고 기본 비교 기준(`?compare=`)이 바뀌지 않는지, 목표 위험 맞춤이 별도 시나리오로 표시되는지, 011·006 진입점이 조건을 유지한 채 열리거나(구현되면) 이유와 함께 닫혀 있는지 확인한다.
 
-- [ ] T087 [US5] (BE) 지수 비교 자원 `GET /results/{token}/index-comparison` — `PublicResultService.getIndexComparison(token)`과 `ResultController`에 경로를 더한다. 결과의 `effectiveStart`~`effectiveEnd`와 시작 금액으로 KOSPI 종가를 환산한 계열(`date`·`value`, 문자열)을 서버가 만든다(FR-017, spec Assumptions: 화면은 계산하지 않는다). 지수 자료는 001이 소유한 조회 경로에서 읽는다. 지금 `GET /markets/kospi`(`market/presentation/controller/MarketController.java`)는 기간 질의가 없으므로, 기간 조회가 가능한 포트가 없으면 `available: false`와 사유(`INDEX_SERIES_UNAVAILABLE`)를 돌려주고 값을 지어내지 않는다. 결과 기간 안에 지수가 빠진 날은 빈 채로 둔다. 001 소유 조회를 쓰므로 리뷰어에 001 담당을 지정한다
-- [ ] T088 [US5] (BE 테스트) `result/application/service/PublicResultServiceTest.java`·`result/presentation/controller/ResultControllerTest.java` 확장 — 환산 계열의 첫 값이 시작 금액과 같고 결과 기간 밖 날짜가 없다; 기간 자료가 없으면 `available: false`와 사유이며 계열이 비어 있다; 만료 토큰은 410; 응답에 `backtestId`가 없다
-- [ ] T077 [US5] (FE) `frontend/src/components/result/IndexComparisonView.tsx` — 요청해야 열리는 보조 보기. `frontend/src/api/result.ts`에 `fetchResultIndexComparison(token)`을 더해 T087의 환산 계열을 **받은 그대로** 별도 패널에 그리고 "참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다"를 적는다(FR-017). 화면은 환산하지 않는다(spec Assumptions의 계산 예외는 최대 하락 구간 하나뿐이다). `available: false`면 이유와 함께 비활성이다. 첫 화면 그래프에 겹치지 않는다(원칙 II: 그래프 1개)
-- [ ] T078 [US5] (FE) `frontend/src/components/result/TargetRiskView.tsx` — '목표 위험 맞춤' 보조 보기: 기준 `config`에 `conditions.scenario: 'TARGET_RISK'`와 `scenarioParams.targetVolatility`(등록표 `analysisConditions.targetVolatility`의 `default`)를 넣어 `createBacktest`(T047) → 별도 시나리오 표지와 함께 세 숫자만 보인다(FR-017). `failure.code`가 `ESTIMATION_FAILED`·`DATA_INSUFFICIENT`면 계산 제한 표시. 429·422 처리는 T050·T052의 흐름을 재사용한다. 요청하기 전에는 API를 부르지 않는다
-- [ ] T079 [US5] (FE) `frontend/src/components/result/NextStepLinks.tsx` — '경제환경이 비슷했던 과거 보기'(FR-018): 넘길 값(섹터 후보 집합·전략·설정값·분석 기간·금액)을 `config`에서 준비하되, 011의 진입 계약과 라우트가 없으면 버튼을 누를 수 없게 두고 이유를 적는다(007 `CompareHandoff`가 005 없이 한 방식). '설정 바꿔 비교'는 T068을 재사용하고, '내보내기'는 006 소유라 006 화면이 없으면 같은 방식으로 닫아 둔다(FR-019). 돌아오는 길은 브라우저 뒤로 가기다. 로그인 여부와 무관하게 결과 화면은 열린다
-- [ ] T080 [US5] (FE 테스트) `frontend/src/components/result/IndexComparisonView.test.tsx`·`TargetRiskView.test.tsx`·`NextStepLinks.test.tsx` — 보조 보기는 열기 전 API 호출 0회(SC-001); 지수 보기는 `fetchResultIndexComparison`의 값을 그대로 그리고 화면에서 환산하지 않는다(응답 값과 렌더 값이 같다), `available: false`면 이유와 함께 비활성; 지수 보기를 열어도 `?compare=`가 바뀌지 않는다; 목표 위험 요청 본문에 `scenario`와 `targetVolatility`가 있고 별도 시나리오 표지가 보인다; 추정 실패면 계산 제한 표시; 011·006이 없으면 비활성 문구가 있고 다른 버튼 동작에 영향이 없다
+- [X] T087 [US5] (BE) 지수 비교 자원 `GET /results/{token}/index-comparison` — `PublicResultService.getIndexComparison(token)`과 `ResultController`에 경로를 더한다. 결과의 `effectiveStart`~`effectiveEnd`와 시작 금액으로 KOSPI 종가를 환산한 계열(`date`·`value`, 문자열)을 서버가 만든다(FR-017, spec Assumptions: 화면은 계산하지 않는다). 지수 자료는 001이 소유한 조회 경로에서 읽는다. 지금 `GET /markets/kospi`(`market/presentation/controller/MarketController.java`)는 기간 질의가 없으므로, 기간 조회가 가능한 포트가 없으면 `available: false`와 사유(`INDEX_SERIES_UNAVAILABLE`)를 돌려주고 값을 지어내지 않는다. 결과 기간 안에 지수가 빠진 날은 빈 채로 둔다. 001 소유 조회를 쓰므로 리뷰어에 001 담당을 지정한다
+- [X] T088 [US5] (BE 테스트) `result/application/service/PublicResultServiceTest.java`·`result/presentation/controller/ResultControllerTest.java` 확장 — 환산 계열의 첫 값이 시작 금액과 같고 결과 기간 밖 날짜가 없다; 기간 자료가 없으면 `available: false`와 사유이며 계열이 비어 있다; 만료 토큰은 410; 응답에 `backtestId`가 없다
+- [X] T077 [US5] (FE) `frontend/src/components/result/IndexComparisonView.tsx` — 요청해야 열리는 보조 보기. `frontend/src/api/result.ts`에 `fetchResultIndexComparison(token)`을 더해 T087의 환산 계열을 **받은 그대로** 별도 패널에 그리고 "참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다"를 적는다(FR-017). 화면은 환산하지 않는다(spec Assumptions의 계산 예외는 최대 하락 구간 하나뿐이다). `available: false`면 이유와 함께 비활성이다. 첫 화면 그래프에 겹치지 않는다(원칙 II: 그래프 1개)
+- [X] T078 [US5] (FE) `frontend/src/components/result/TargetRiskView.tsx` — '목표 위험 맞춤' 보조 보기: 기준 `config`에 `conditions.scenario: 'TARGET_RISK'`와 `scenarioParams.targetVolatility`(등록표 `analysisConditions.targetVolatility`의 `default`)를 넣어 `createBacktest`(T047) → 별도 시나리오 표지와 함께 세 숫자만 보인다(FR-017). `failure.code`가 `ESTIMATION_FAILED`·`DATA_INSUFFICIENT`면 계산 제한 표시. 429·422 처리는 T050·T052의 흐름을 재사용한다. 요청하기 전에는 API를 부르지 않는다
+- [X] T079 [US5] (FE) `frontend/src/components/result/NextStepLinks.tsx` — '경제환경이 비슷했던 과거 보기'(FR-018): 넘길 값(섹터 후보 집합·전략·설정값·분석 기간·금액)을 `config`에서 준비하되, 011의 진입 계약과 라우트가 없으면 버튼을 누를 수 없게 두고 이유를 적는다(007 `CompareHandoff`가 005 없이 한 방식). '설정 바꿔 비교'는 T068을 재사용하고, '내보내기'는 006 소유라 006 화면이 없으면 같은 방식으로 닫아 둔다(FR-019). 돌아오는 길은 브라우저 뒤로 가기다. 로그인 여부와 무관하게 결과 화면은 열린다
+- [X] T080 [US5] (FE 테스트) `frontend/src/pages/ResultPage.auxiliary.test.tsx` — 보조 보기는 열기 전 API 호출 0회(SC-001); 지수 보기는 `fetchResultIndexComparison`의 값을 그대로 그리고 화면에서 환산하지 않는다(응답 값과 렌더 값이 같다), `available: false`면 이유와 함께 비활성; 지수 보기를 열어도 `?compare=`가 바뀌지 않는다; 목표 위험 요청 본문에 `scenario`와 `targetVolatility`가 있고 별도 시나리오 표지가 보인다; 추정 실패면 계산 제한 표시; 011·006이 없으면 비활성 문구가 있고 다른 버튼 동작에 영향이 없다
+
+**B08 구현 메모**: 현재 001에는 기간 KOSPI 조회 포트가 없어 T087·T088은 계약이 정한 비활성 갈래(`INDEX_SERIES_UNAVAILABLE`)를 구현·검증했다. 첫 값 환산과 기간 경계 검증은 001이 기간 계열 포트를 제공할 때 그 포트 연결과 함께 활성화한다. 최신 관측치 한 점으로 성공 계열을 만들지는 않는다.
 
 **Checkpoint**: 다섯 스토리가 모두 독립적으로 동작한다.
 
@@ -318,7 +320,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 | B05 · [S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309) · `feat(fe)/309-result-comparison` | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |
 | B06 · [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346) `feat(fe)/346-result-status-line` | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |
 | B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |
-| B08 · 미발급 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |
+| B08 · S15P21E205-312 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat(fe)/312-result-auxiliary-views` | B05, B07 (+ 001 소유 조회 리뷰) |
 | B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |
 
 ```text
@@ -465,3 +467,17 @@ Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. �
 B06(T073~T076)을 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
 
 - [X] T093 (FE) 계산을 시작하기 전에 취소된 결과에는 계산된 부분 결과라는 문장을 표시하지 않는다 — `frontend/src/components/result/statusSentences.ts`에서 `summaryUnavailable === 'CANCELLED_BEFORE_START'`이면 `partial: true`여도 부분 완료 문장을 생략하고 완료 거래일이 없다는 사유와 검증 구분만 이어 쓴다. `frontend/src/components/result/statusSentences.test.ts`와 `frontend/src/components/result/ResultStatusLine.test.tsx`에 실제 조합(`partial: true`, 완료 범위 없음)을 넣어 "부분 결과"가 없고 숫자 대체값도 없는지 검증한다 per 원칙 VI · FR-013 (contradicts)
+
+## Phase 13: Convergence
+
+B08(T077~T080, T087~T088)을 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
+
+- [X] T094 (FE) HIGH — React `StrictMode`에서도 목표 위험도 요청의 완료 응답을 정상 반영한다 — `frontend/src/components/result/TargetRiskView.tsx`의 `active` ref는 effect cleanup에서 `false`가 된 뒤 setup에서 다시 `true`가 되지 않아, 실제 앱의 개발용 `StrictMode` 재실행 후 registry 조회·생성·결과 응답을 모두 버리고 "준비 중"에 머문다. effect setup에서 생존 상태를 복구하거나 요청 단위 취소/세대 식별자로 바꾸고, `StrictMode`로 감싼 테스트에서 요청 접수 뒤 완료 또는 한계 안내까지 진행되는지 단언한다 per US5 인수 기준 2 · T078 · T080 (partial)
+- [X] T095 (FE) MEDIUM — 시장 지수 API가 `available:false`를 반환하면 보조 보기를 사유와 함께 닫힌 비활성 상태로 전환한다 — `frontend/src/components/result/IndexComparisonView.tsx`는 현재 사유를 열린 패널에 보이지만 실행 버튼을 계속 활성화해 같은 요청을 반복할 수 있다. 응답 뒤 비교 콘텐츠를 닫고 비활성 버튼과 사유를 유지하며, `ResultPage` 보조 기능 테스트에서 버튼 비활성·사유 표시·추가 호출 없음·기준 URL 불변을 단언한다 per FR-017 · T077 · T080 (partial)
+
+## Phase 14: Convergence
+
+B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
+
+- [X] T096 (FE) LOW — 011 진입점의 보이는 이름을 spec의 `경제환경이 비슷했던 과거 보기`로 통일하고 `frontend/src/pages/ResultPage.auxiliary.test.tsx`가 그 이름과 비활성 사유를 함께 고정하게 한다. 011의 진입 계약과 라우트가 생기기 전까지는 지금처럼 누를 수 없게 둔다 per FR-018 · US5 인수 기준 3 · T079 (partial)
+- [X] T097 (FE) MEDIUM — `frontend/src/components/result/NextStepLinks.tsx`에서 spec·tasks에 없는 `이전 화면으로` 버튼과 `navigate(-1)` 행동을 제거한다. 결과에서 011로 이동한 뒤 돌아오는 수단은 FR-018이 정한 브라우저 뒤로 가기이며, 별도 이전 화면 행동은 근거 없이 결과 화면의 보조 행동을 늘린다 per FR-018 · FR-019 · Constitution II · T079 (unrequested)

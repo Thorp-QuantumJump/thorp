@@ -26,6 +26,7 @@ import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
+import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
 import com.ssafy.thorp.result.application.service.PublicResultService;
@@ -83,7 +84,7 @@ class ResultControllerTest {
     }
 
     @Test
-    @DisplayName("로그인하지 않아도 여섯 GET 경로가 200 이고 backtestId 키가 없다")
+    @DisplayName("로그인하지 않아도 일곱 GET 경로가 200 이고 backtestId 키가 없다")
     void anonymousGetsPass() throws Exception {
         when(service.getDetail(TOKEN)).thenReturn(detail());
         when(service.getTimeseries(TOKEN))
@@ -104,6 +105,8 @@ class ResultControllerTest {
                         new BacktestWeightsResult("BT-1", false, WeightsSource.USER, List.of()));
         when(service.getExceptions(TOKEN))
                 .thenReturn(new BacktestExceptionsResult("BT-1", false, List.of()));
+        when(service.getIndexComparison(TOKEN))
+                .thenReturn(PublicResultIndexComparison.unavailable("INDEX_SERIES_UNAVAILABLE"));
 
         mockMvc.perform(get("/results/" + TOKEN))
                 .andExpect(status().isOk())
@@ -123,6 +126,12 @@ class ResultControllerTest {
                     .andExpect(jsonPath("$.data.backtestId").doesNotExist())
                     .andExpect(jsonPath("$.data.partial").value(false));
         }
+        mockMvc.perform(get("/results/" + TOKEN + "/index-comparison"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.backtestId").doesNotExist())
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("INDEX_SERIES_UNAVAILABLE"))
+                .andExpect(jsonPath("$.data.series").isEmpty());
     }
 
     @Test

@@ -172,6 +172,28 @@ class PublicResultServiceTest {
     }
 
     @Test
+    @DisplayName("기간 KOSPI 조회 포트가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다")
+    void indexComparisonIsExplicitlyUnavailableWithoutSeriesPort() {
+        stored(request(null, NOW.plusSeconds(3600)));
+
+        var result = service.getIndexComparison(TOKEN);
+
+        assertThat(result.available()).isFalse();
+        assertThat(result.reason()).isEqualTo("INDEX_SERIES_UNAVAILABLE");
+        assertThat(result.series()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("지수 비교도 만료한 공개 토큰이면 410 이다")
+    void expiredIndexComparisonIsGone() {
+        stored(request(null, NOW));
+
+        assertThatThrownBy(() -> service.getIndexComparison(TOKEN))
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.RESULT_EXPIRED);
+    }
+
+    @Test
     @DisplayName("로그인 결과는 만료가 없고 expiresAt 이 null 이다")
     void loggedInResultNeverExpires() {
         stored(request(7L, null));
