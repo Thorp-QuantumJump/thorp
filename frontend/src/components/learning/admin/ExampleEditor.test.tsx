@@ -103,6 +103,24 @@ describe('ExampleEditor 비중 칸', () => {
     expect(latest?.sectors[0].weightTenths).toBe(123)
   })
 
+  it('열린 대응표에 섹터가 없으면 새로 고를 수 없는 이유를 알리고 기존 행은 둔다', async () => {
+    sectorMocks.fetchSectorCatalog.mockResolvedValue({
+      status: 'emptyCatalog',
+      catalog: { mapVersion: 'SYN-EMPTY', isSample: true, sectors: [] },
+    })
+    render(<Harness initial={{ sectors: [{ code: 'ALPHA_DOCK', weightTenths: 500 }] }} />)
+
+    expect(
+      await screen.findByText('열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다.'),
+    ).not.toBeNull()
+    expect(screen.getByRole('button', { name: '섹터 추가' })).toHaveProperty('disabled', true)
+    // 대응표를 확인하지 못한 것과 같은 문장으로 묶지 않는다.
+    expect(screen.queryByText(/대응표를 확인할 수 없어/)).toBeNull()
+    // 기존 행은 지우지 않는다.
+    expect(screen.getByLabelText('비중 (%)')).toHaveProperty('value', '50.0')
+    expect(latest).toBeNull()
+  })
+
   it('빈 칸은 0으로 올리지 않는다', async () => {
     const user = userEvent.setup()
     render(<Harness initial={{ sectors: [{ code: 'ALPHA_DOCK', weightTenths: 400 }] }} />)

@@ -457,3 +457,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 - [X] T093 (FE) `frontend/src/api/learningAdmin.ts`의 `fetchAdminArticles`가 404를 T069대로 `failed`로 돌려주게 하고(권한 판정은 `checkAdminAccess` 한 곳이다) 결과 타입에서 `denied`를 뺀다. `frontend/src/pages/AdminLearningListPage.tsx`에서 목록의 `unauthenticated`를 "목록을 볼 권한이 없습니다"로 보이지 않고 `setAccess({ status: 'unauthenticated' })`로 재로그인 상태에 보낸다. `learningAdmin.test.ts`의 목록 404 기대값을 `failed`로 고친다 per T069, T066 (contradicts)
 - [X] T094 (FE) `frontend/src/pages/AdminLearningListPage.tsx`에서 글 만들기가 201이면 `useNavigate`로 `/admin/learning/{articleId}`에 바로 보낸다. 지금은 "글을 만들었습니다" 중간 화면과 링크를 보인다(`createdArticleId` 상태를 지운다). `AdminLearningListPage.test.tsx`에 "만들기 201 뒤 편집 화면 경로로 간다"를 더한다 per T066 (partial)
 - [X] T095 (FE) `frontend/src/components/learning/admin/TermListEditor.tsx`의 행 `key`를 편집 중에 바뀌지 않는 값으로 바꾼다. 지금은 `key={term.termId || index}`라 새 행의 식별자를 고칠 때마다 행이 다시 만들어져 초점을 잃고, 같은 식별자 두 행이 키를 다툰다. 행을 추가할 때 붙인 화면 전용 키를 쓰거나 순번을 쓴다(이 키는 저장 요청에 싣지 않는다) per T064 (partial)
+
+## Phase 16: Convergence
+
+- [X] T096 (FE) `frontend/src/components/learning/admin/ExampleEditor.tsx`에서 대응표가 `emptyCatalog`(발행됐지만 섹터가 0개)일 때도 새 섹터를 고를 수 없다는 한 문장을 보인다. 지금은 `canPickSector`가 거짓이라 '섹터 추가'와 기존 행의 `select`가 막히는데, 안내 문장은 `mapNotReady`·`failed`일 때만 나와 이유 없이 막힌다. `emptyCatalog`는 대응표가 없는 것과 다른 사실이므로 "열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다"처럼 구분해 적는다. `ExampleEditor.test.tsx`에 `emptyCatalog` 응답에서 이 문장이 보이고 '섹터 추가'가 막히는지 더한다 per T063 (partial)

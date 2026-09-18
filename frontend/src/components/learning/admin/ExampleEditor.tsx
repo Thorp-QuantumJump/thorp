@@ -146,6 +146,16 @@ export function ExampleEditor({ example, onChange }: ExampleEditorProps) {
             </p>
           ) : null}
 
+          {/*
+            대응표는 열렸는데 섹터가 없는 것은 대응표를 확인하지 못한 것과 다른 사실이다. 같은 문장으로
+            묶지 않되, 고를 수 없는 이유는 반드시 알린다. 이유 없이 막힌 버튼을 두지 않는다.
+          */}
+          {catalog.status === 'emptyCatalog' ? (
+            <p className={styles.mapUnavailable}>
+              열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다.
+            </p>
+          ) : null}
+
           <ul className={styles.list}>
             {sectors.map((sector, index) => (
               // 같은 코드를 잠시 두 번 고를 수 있으므로 코드로 키를 만들지 않는다.
