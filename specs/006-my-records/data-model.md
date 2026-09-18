@@ -2,7 +2,7 @@
 
 **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md) | **Research**: [research.md](research.md)
 
-Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 두 개를 만들고, 기존 표에는 값을 채우는 일만 한다.
+Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고, 기존 표에는 행을 더하는 일만 한다.
 **기존 컬럼을 지우거나 타입을 바꾸지 않는다** — 되돌릴 수 없는 변경이 없다(constitution 스키마 변경 규칙).
 
 ## 0. 무엇을 만들지 않는가
@@ -14,8 +14,9 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 두 개를 만들고, 기
 | 공용 계산 결과·거래 내역·예외 처리 기록 | `backtest_run`, `backtest_result`, `backtest_trade` | 가리켜 읽는다. 복제하지 않고 삭제하지도 않는다 |
 | 재현 기록(FR-010) | `backtest_result.versions`, `backtest_request`, `cost_profile`, `strategy_rules`, `dataset_version` | 004 FR-028이 남긴 것을 그대로 보존한다. 새 재현 항목을 만들지 않는다(원칙 VIII) |
 | 결과 열람 열쇠 | `backtest_request.public_token` (로그인 요청은 만료 없음) | '다시 보기' 링크로 쓴다(R3) |
-| 탐색 묶음과 후보 | `param_search`, `search_candidate` | 가리켜 읽는다. `owner_user_id`를 채우는 일만 새로 한다 |
+| 탐색 묶음과 후보 | `param_search`, `search_candidate` | 가리켜 읽는다. `owner_user_id`는 접수가 이미 채운다(`ParamSearchService`가 `command.requesterId()`를 넣는다) — 006이 할 일이 없다 |
 | 경제환경 스냅샷 | `regime_search_snapshot`, `regime_search_case` | 가리켜 읽는다. 공용 스냅샷이라 소유자 자리가 없다 |
+| 경제환경 개인 검색 기록 | `regime_search_log` (owner_user_id·snapshot_id·snapshot_key·entry_path·baseline_origin·viewed_at) | **010이 표를 만들고 "행은 006이 만든다"고 예약해 두었다**(`RegimeSearchLogJpaEntity` 주석, 010 FR-032). 006이 행을 쓴다. 표를 새로 만들지 않는다 |
 | 섹터-ETF 대응표 버전·항목 | `sector_etf_map_version`, `sector_etf_map_entry` | UI-01 판정에 읽는다(R8) |
 | 세션·사용자 | `spring_session`, `users` | 소유자 식별에만 쓴다. 식별정보를 복제하지 않는다 |
 
@@ -36,8 +37,7 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 두 개를 만들고, 기
 | `analysis_request_id` | BIGINT | → `backtest_request(id)`, nullable | 단일 분석이 가리키는 요청. `public_token`을 여기서 읽는다 |
 | `analysis_run_id` | BIGINT | → `backtest_run(id)`, nullable | 같은 조건 재분석 판정용(FR-009). 요청은 새로 생겨도 실행은 같다 |
 | `param_search_id` | BIGINT | → `param_search(id)`, nullable | 탐색 묶음 |
-| `regime_snapshot_id` | BIGINT | → `regime_search_snapshot(id)`, nullable | 경제환경 탐색 |
-| `regime_entry_path` | VARCHAR(20) | nullable, `MARKET_FLOW`·`STRATEGY_RESULT` | 검색 경로. 경로가 다르면 별도 항목이다(FR-012 후단) |
+| `regime_log_id` | BIGINT | → `regime_search_log(id)`, nullable | 경제환경 탐색. 검색 경로·기준월 근거·스냅샷 참조는 그 행에 있다. 경로가 다르면 로그 행이 다르므로 별도 항목이 된다(FR-012 후단) |
 | `name` | VARCHAR(120) | NOT NULL | 자동 부여 후 사용자가 바꿀 수 있다. 유일성을 강제하지 않는다(R12) |
 | `sector_codes` | TEXT[] | NOT NULL | 목록 필터용 복제. 저장 뒤 바뀌지 않는다(R2) |
 | `strategy_ids` | TEXT[] | NOT NULL | 같음. 탐색 묶음은 여러 개일 수 있다 |
@@ -55,12 +55,11 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 두 개를 만들고, 기
 -- 종류와 참조가 짝이 맞는다. 어긋나면 목록이 읽을 원본을 고를 수 없다.
 CONSTRAINT ck_my_record_ref_matches_kind CHECK (
     (kind = 'ANALYSIS'       AND analysis_request_id IS NOT NULL AND analysis_run_id IS NOT NULL
-                             AND param_search_id IS NULL AND regime_snapshot_id IS NULL
-                             AND regime_entry_path IS NULL)
+                             AND param_search_id IS NULL AND regime_log_id IS NULL)
  OR (kind = 'SEARCH_BUNDLE'  AND param_search_id IS NOT NULL
                              AND analysis_request_id IS NULL AND analysis_run_id IS NULL
-                             AND regime_snapshot_id IS NULL AND regime_entry_path IS NULL)
- OR (kind = 'REGIME_SEARCH'  AND regime_snapshot_id IS NOT NULL AND regime_entry_path IS NOT NULL
+                             AND regime_log_id IS NULL)
+ OR (kind = 'REGIME_SEARCH'  AND regime_log_id IS NOT NULL
                              AND analysis_request_id IS NULL AND analysis_run_id IS NULL
                              AND param_search_id IS NULL))
 
@@ -88,10 +87,9 @@ CREATE UNIQUE INDEX uk_my_record_analysis ON my_record (owner_id, analysis_run_i
     WHERE deleted_at IS NULL AND is_copy = false AND analysis_run_id IS NOT NULL;
 CREATE UNIQUE INDEX uk_my_record_search ON my_record (owner_id, param_search_id)
     WHERE deleted_at IS NULL AND is_copy = false AND param_search_id IS NOT NULL;
--- 진입 경로가 다르면 같은 스냅샷도 별도 항목이다(Story 3 시나리오 4).
-CREATE UNIQUE INDEX uk_my_record_regime
-    ON my_record (owner_id, regime_snapshot_id, regime_entry_path)
-    WHERE deleted_at IS NULL AND is_copy = false AND regime_snapshot_id IS NOT NULL;
+-- 로그 행 하나에 항목 하나. 진입 경로가 다르면 로그 행이 다르므로 별도 항목이다(Story 3 시나리오 4).
+CREATE UNIQUE INDEX uk_my_record_regime ON my_record (owner_id, regime_log_id)
+    WHERE deleted_at IS NULL AND is_copy = false AND regime_log_id IS NOT NULL;
 
 -- 탐색 묶음 상한 판정(R11)이 세는 경로.
 CREATE INDEX idx_my_record_kind_count ON my_record (owner_id, kind)
@@ -106,38 +104,28 @@ CREATE INDEX idx_my_record_kind_count ON my_record (owner_id, kind)
 |---|---|
 | `ANALYSIS` | `backtest_run.status` + `backtest_request.cancelled_at`(이 요청만 취소했는지) |
 | `SEARCH_BUNDLE` | `param_search.status` + `stop_reason` + `counts`(부분 완료 범위) |
-| `REGIME_SEARCH` | `regime_search_snapshot.status` + `status_reason` |
+| `REGIME_SEARCH` | `regime_search_log.snapshot_id` → `regime_search_snapshot.status` + `status_reason`. `snapshot_id`가 NULL이면 010 FR-035의 **철회**라 '더 볼 수 없음'으로 보인다 |
 
-## 2. `my_record_regime_link` — 경제환경 기록의 연결 정보
+## 2. 경제환경 연결 정보는 006이 만들지 않는다
 
-FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간"은 [011](../011-regime-strategy-link/spec.md)이
-만들 값이고 011은 아직 spec만 있다. **자리를 만들고 값은 비운다**(R9).
+FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간·ETF 가용성 필터"는 [011](../011-regime-strategy-link/spec.md)이
+만들 값이고, 010 FR-032도 "그 두 항목은 011 FR-004·FR-023이 채운다"고 명시했다. 011은 아직 spec만 있다.
 
-| 컬럼 | 타입 | 제약 | 뜻 | 지금 채우나 |
-|---|---|---|---|---|
-| `record_id` | BIGINT | PK → `my_record(id)` | 경제환경 종류 항목 하나당 한 행 | 예 |
-| `linked_record_id` | BIGINT | nullable → `my_record(id)` | 전략 결과에서 진입했다면 출발한 분석 기록 | 011 이후 |
-| `linked_sector_codes` | TEXT[] | nullable | 연결한 섹터 | 011 이후 |
-| `linked_instrument_ids` | TEXT[] | nullable | 연결한 대표 ETF | 011 이후 |
-| `linked_strategy_ids` | TEXT[] | nullable | 연결해 비교한 전략 | 011 이후 |
-| `evaluation_window` | JSONB | nullable | 사후 평가 구간 | 011 이후 |
-| `etf_availability_filter` | JSONB | nullable | ETF 가용성 필터 적용 내용 | 011 이후 |
-| `created_at` `updated_at` | TIMESTAMPTZ | NOT NULL | | 예 |
+**006은 그 자리를 미리 만들지 않는다.** 처음 안은 nullable 컬럼을 가진 표를 하나 더 두는 것이었으나,
+011이 자기 표를 새 Flyway 변경으로 더하면 006의 스키마를 고칠 일이 없으므로 미리 만들 이유가 없다.
+화면은 연결 정보가 없을 때 "아직 연결 정보가 없다"를 보이고, 기본값이나 추정값으로 채우지 않는다(원칙 VI,
+spec FR-012).
 
-**nullable로 두는 것이 이 표의 요점이다.** 값이 없으면 화면은 "아직 연결 정보가 없다"를 보이고,
-기본값이나 추정값으로 채우지 않는다(원칙 VI).
-
-`linked_record_id`가 FR-017의 "참조 삭제 표시"가 걸리는 **유일한 자리**다. 그 기록이 삭제되면
-(`deleted_at IS NOT NULL`) 이 행은 그대로 두고 읽을 때 삭제됨을 표시한다. 006은 기록 간 참조를
-일반적으로 추적하는 장치를 만들지 않는다 — 005가 비교를 서버 자원으로 만들지 않기로 했으므로
-(005 R-04) 분석 기록에 들어오는 참조는 현재 이 컬럼 말고 없다. 따라서 이 규칙은 구현하되 **011이
-오기 전에는 발생 조건이 없다.** 구현했다는 사실을 검증됐다는 뜻으로 쓰지 않는다(constitution 완료의 정의).
+FR-017의 "참조 삭제 표시"가 걸릴 자리도 따라서 **현재 006 안에는 없다.** 005가 비교를 서버 자원으로
+만들지 않으므로(005 R-04) 분석 기록에 들어오는 참조는 011이 만들기 전까지 존재하지 않는다. 표시 규칙은
+읽기 경로에 두되 발생 조건이 아직 없다는 사실을 quickstart에 적는다.
 
 ## 3. 기존 표에 하는 일
 
 | 표 | 변경 | 근거 |
 |---|---|---|
-| `param_search.owner_user_id` | 스키마 변경 없음. **접수 시 값을 채운다**(지금은 항상 NULL) | 컬럼 주석이 "소유자 필터는 006이 붙인다"로 이 일을 이미 예약해 두었다 |
+| `param_search.owner_user_id` | 변경 없음 | 접수가 이미 채운다. 컬럼 주석("소유자 필터는 006이 붙인다")은 007 구현 뒤 남은 옛 문장이라 이번에 고친다 |
+| `regime_search_log` | 스키마 변경 없음. **행을 쓴다** | 010이 표와 읽기 리포지토리(`isWithdrawn`)만 만들고 쓰는 쪽은 006에 맡겼다 |
 | `backtest_request` | 변경 없음 | `requester_id`·`public_token`을 읽기만 한다 |
 | `regime_search_snapshot` | 변경 없음 | 공용 스냅샷이다. 소유자 컬럼을 붙이지 않는다 |
 
@@ -145,9 +133,9 @@ FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간"은 
 
 | 언제 | 누가 | 무엇을 |
 |---|---|---|
-| 백테스트 접수(`POST /backtests`)가 로그인 요청일 때 | `MyRecordRegistrar` | 같은 `owner_id`+`run_id`의 살아 있는 항목을 먼저 찾는다. 있으면 그것을 돌려주고 새로 만들지 않는다(FR-009). 없으면 `ANALYSIS` 항목을 만든다 |
-| 탐색 접수(`POST /param-searches`)가 로그인 요청일 때 | `MyRecordRegistrar` | 상한을 먼저 판정하고(R11) `SEARCH_BUNDLE` 항목을 만들며 `param_search.owner_user_id`를 채운다 |
-| 경제환경 검색을 기록으로 남길 때 | `MyRecordRegistrar` | `REGIME_SEARCH` 항목을 `regime_entry_path`와 함께 만든다. 같은 스냅샷이라도 경로가 다르면 별도 행이다 |
+| 백테스트 접수(`POST /backtests`)가 로그인 요청이고 `executionType`이 단건(SINGLE)일 때 | `MyRecordRegistrar` (004가 발행하는 접수 이벤트를 `BEFORE_COMMIT`에 듣는다) | 같은 `owner_id`+`run_id`의 살아 있는 항목을 먼저 찾는다. 있으면 그것을 돌려주고 새로 만들지 않는다(FR-009). 없으면 `ANALYSIS` 항목을 만든다 |
+| 탐색 접수(`POST /param-searches`) | `MyRecordRegistrar` (007의 접수 이벤트를 듣는다) | `SEARCH_BUNDLE` 항목을 만든다. 탐색 후보가 만드는 백테스트 요청(`executionType = SEARCH_BUNDLE`)은 `ANALYSIS` 항목을 만들지 않는다 — 묶음 항목이 그것을 대표한다. 상한 판정(R11)은 이벤트가 아니라 접수 **전**에 007 서비스가 `MyRecordLimitPolicy`를 불러 한다 |
+| 로그인 사용자가 경제환경 검색 결과를 열었을 때(`POST /my-records/regime-searches`) | `MyRecordRegistrar` | `regime_search_log` 행(소유자·스냅샷·진입 경로·기준월 근거)과 `REGIME_SEARCH` 항목을 **같은 트랜잭션**에 만든다. 010의 `GET /regime-searches`는 손대지 않는다 — 진입 경로는 조회한 화면만 알고, 조회(GET)에 쓰기 부작용을 붙이지 않는다 |
 
 비로그인 요청은 항목을 만들지 않는다. 진단 자체는 그대로 되고 저장이 필요한 지점에서 014의 로그인
 안내를 부른다(FR-020).
