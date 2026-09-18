@@ -252,9 +252,13 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
   const registry = registryState.status === 'loaded' ? registryState.registry : null
   const settings = useStrategySettings(registry, universeSize)
 
-  // --- 규칙·비용 버전(②). 결정 전에는 null이고 '분석하기'가 막힌다 ---------------------------
+  // --- 규칙·비용 버전(②). 조회 실패 시 분석을 막고 사용자가 다시 조회한다 -------------------
   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')
   const [versionsReload, setVersionsReload] = useState(0)
+  const [versionsRetrying, setVersionsRetrying] = useState(false)
+  const versionsRetryRequested = useRef(false)
+  const versionsRetryButtonRef = useRef<HTMLButtonElement>(null)
+  const strategyCardsRef = useRef<HTMLElement>(null)
 
   /**
    * 버전 조회는 **지금 넘겨받은 조회 함수**를 따른다.
@@ -276,9 +280,9 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
    * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않지만 요청은 헛돈다. 통로를 안정된 참조로 넘기라는
    * 계약(`AnalysisSupport`)이 그 몫을 맡는다.
    *
-   * <p><b>409 뒤에는 일부러 다시 조회한다(`versionsReload`).</b> 004는 대체된 옛 규칙 버전을 실은 새 요청을
-   * 409 `REGISTRY_VERSION_CHANGED`로 거절한다(2026-09-17 004 결정). 그때는 받아 둔 버전이 이미 틀린 값이라
-   * 거두고 '확인하는 중'으로 되돌린다 — 두면 다시 누르는 순간 같은 409가 되풀이된다.
+   * <p><b>409 뒤에는 일부러 두 등록표를 다시 조회한다(`versionsReload`).</b> 003 등록표 버전이
+   * 바뀌면 409 `REGISTRY_VERSION_CHANGED`로 거절된다. 004의 옛 계산 규칙 버전 거절은 Phase 10 T029
+   * 구현 뒤 같은 복구 경로를 쓴다. 조회 실패 후 사용자 재시도에서도 '확인하는 중'으로 분석을 막는다.
    */
   const fetchAnalysisVersions = support.fetchAnalysisVersions
 
@@ -292,11 +296,22 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
       .catch(() => {
         if (active) setVersions(null)
       })
+      .finally(() => {
+        if (active) setVersionsRetrying(false)
+      })
     return () => {
       active = false
       controller.abort()
     }
   }, [fetchAnalysisVersions, versionsReload])
+
+  useEffect(() => {
+    if (!versionsRetryRequested.current || versionsRetrying || versions === 'loading') return
+    versionsRetryRequested.current = false
+    // 재시도로 사라지는 버튼에 초점을 남기지 않는다(NFR-001). 최초 조회에는 이동하지 않는다.
+    if (versions === null) versionsRetryButtonRef.current?.focus()
+    else strategyCardsRef.current?.focus()
+  }, [versions, versionsRetrying])
 
   // --- 공통 평가 기간(①). 섹터 집합과 등록표의 워밍업 상한이 바뀔 때만 조회한다 ---------------
   //
@@ -911,7 +926,12 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
               />
             ) : null}
 
-            <section className={styles.section} aria-labelledby="strategy-cards-title">
+            <section
+              ref={strategyCardsRef}
+              className={styles.section}
+              aria-labelledby="strategy-cards-title"
+              tabIndex={-1}
+            >
               <h2 id="strategy-cards-title" className={styles.sectionTitle}>
                 전략 카드
               </h2>
@@ -1074,6 +1094,29 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
                     : undefined
                 }
               />
+            ) : null}
+
+            {versions === null || versionsRetrying ? (
+              <div className={styles.notice} role="status" aria-label="분석 조건 조회 상태">
+                <p>
+                  {versionsRetrying
+                    ? '분석 조건을 다시 불러오는 중입니다.'
+                    : '분석 조건을 불러오지 못했습니다. 다시 불러온 뒤 분석할 수 있습니다.'}
+                </p>
+                <button
+                  ref={versionsRetryButtonRef}
+                  type="button"
+                  disabled={versionsRetrying}
+                  onClick={() => {
+                    versionsRetryRequested.current = true
+                    setVersionsRetrying(true)
+                    setVersions('loading')
+                    setVersionsReload((count) => count + 1)
+                  }}
+                >
+                  분석 조건 다시 불러오기
+                </button>
+              </div>
             ) : null}
 
             <ActionButtons
