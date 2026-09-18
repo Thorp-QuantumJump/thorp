@@ -67,7 +67,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ## Path Conventions
 
-- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`·`application/repository`는 두지 않는다(값 타입과 저장은 `backtest`가 소유한다). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`
+- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T090). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`
 - 백엔드 004 소유 접점(최소로 손댄다): `backtest/domain/model/{BacktestRequest,PublicResultToken}.java`, `backtest/infrastructure/persistence/{BacktestRequestJpaEntity,BacktestRequestMapper,BacktestRequestRepositoryImpl}.java`, `backtest/application/service/{BacktestService,BacktestRetryService,BacktestResultQueryService,ExecutionLimitPolicy,ExecutionMetricRecorder}.java`, `backtest/application/repository/BacktestRequestRepository.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/request/TradePageQuery.java`, `backtest/presentation/response/{BacktestJobResponse,BacktestRetryResponse}.java` (모두 `backend/src/main/java/com/ssafy/thorp/` 아래)
 - 마이그레이션: `backend/src/main/resources/db/migration/V{yyyyMMddHHmmss}__public_result_token.sql` (작성 시각 타임스탬프. 현재 마지막은 `V20260916163000__widen_instrument_id_format.sql`)
 - 계약 문서·픽스처: `docs/specs/result-api/{README.md,examples/*.json}`(신규), `docs/specs/backtest-api/{README.md,examples/backtest-accepted.json}`(004 접수 응답 갱신)
@@ -424,6 +424,25 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 - 문장은 `summarySentences.ts`·`statusSentences.ts` 두 파일에서만 나온다. 컴포넌트가 문장을 만들면 SC-004의 검수 대상이 흩어진다
 - `backtestId`(`BT-…`)는 백엔드 `result` 패키지의 응답과 프론트엔드 결과 화면 어디에도 없어야 한다(SC-009). T084·T085가 검사한다
 - 각 묶음의 MR 본문 "주요 변경 사항"에 포함한 T### 번호를 나열해 추적한다(constitution "Jira 연계")
+
+## Phase 9: Convergence
+
+- [X] T087 (BE) 만료 정리 뒤에도 만료 주소가 404(잘못된 주소)가 아니라 410 `RESULT_EXPIRED` 안내를 받게 한다 — 지금은 `PublicResultExpirySweeper`가 요청 행을 지우면 `PublicResultService.resolve`가 404를 내서, 만료 뒤 다음 정리 주기 이후로는 안내가 사라진다. FR-021의 "요청과 공개 토큰을 지운다"와 함께 지킬 방식(예: 토큰 원문이 아니라 해시와 만료 시각만 남기는 묘비 행)을 정해 구현하고, `PublicResultExpirySweeperIT`·`ResultApiIT`에 "정리 뒤에도 410" 단언을 더한다. 방식이 스키마를 바꾸면 constitution "스키마 변경 규칙"대로 같은 MR에 담는다 per spec Edge Case(만료된 결과 주소 안내), US1 (contradicts)
+- [X] T088 (BE 테스트) `PublicResultExpirySweeperIT`의 공유 실행 시나리오에 결과 행(`backtest_result`)을 붙이고, 만료 요청을 지운 뒤 실행과 결과가 모두 남는지 단언한다 per T026 (partial)
+
+## Phase 10: Convergence
+
+- [X] T089 (BE) CRITICAL — 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다. 지금은 `POST /backtests`가 클라이언트가 보낸 `executionType`을 그대로 받아, 비로그인 요청이 `SEARCH_BUNDLE`·`REGIME_*`로 보내면 `backtest/application/service/ExecutionLimitPolicy.requireAdmission`이 한도 검사 없이 통과시키고, `POST /results/{token}/retry`도 원 요청의 `executionType`을 물려받아 같은 우회를 이어 간다. 비로그인 요청(요청자 없음)의 `executionType`이 `SINGLE`이 아니면 접수 단계에서 거절(400)하고, `ExecutionLimitApiIT`에 "비로그인 비단건 접수는 거절되고 대기 실행이 늘지 않는다"·"공개 재시도도 같다" 단언을 더한다. 004 소유 파일이라 리뷰어에 004 담당을 지정한다 per Constitution IX, T012 (contradicts)
+- [X] T090 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage("새 테이블을 만들지 않는다")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)
+- [X] T091 (INFRA) 루트 `.env.example`에 `THORP_RESULT_PUBLIC_TOKEN_TTL`·`THORP_RESULT_EXPIRY_SWEEP_INTERVAL`·`THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE`·`THORP_RESULT_TOMBSTONE_RETENTION`·`THORP_RESULT_TRADES_PAGE_SIZE`를 `infra/.env.prod.example`과 같은 설명으로 더한다 per T004 (partial)
+
+## Phase 11: Convergence
+
+- [X] T092 (DOCS) `data-model.md` §1을 코드·계약에 맞춘다 — ① "권한 판정"에서 비로그인 취소를 빼고 "비로그인은 공개 토큰으로 재시도만 한다. 공개 취소 경로는 두지 않는다(spec Clarification: 비교 대상을 바꿔도 앞선 실행을 취소하지 않는다, contracts/result-api.md)"로 고친다. 재시도의 새 요청자는 호출한 사람이고 비로그인 재시도는 단건만 받는다(T089)는 점도 적는다 ② `public_token` 형을 마이그레이션과 같게 `VARCHAR(32)` + 형식 CHECK(`^[0-9a-f]{32}$`)로 고치고, CHAR가 아닌 이유(Hibernate 스키마 검증이 String 매핑과 다른 형으로 본다)를 적는다 per plan: data-model §1 (contradicts)
+
+## Phase 12: Code Review
+
+- [X] T093 (BE) 정리 작업이 실행이 끝나지 않은 비로그인 요청을 지우지 않게 한다 — 만료는 생성 시각부터 세므로 대기열이 유효 시간보다 밀리면 대기 중인 요청도 만료되는데, 그 행을 지우면 비로그인 대기 몫(`countQueuedSingleAnonymous`가 요청 행과 조인해 센다)에서 빠져 `max-queued-anonymous`가 새고 볼 사람이 없는 실행이 워커를 차지한다. `BacktestRequestJpaRepository.findExpiredAnonymous`가 종결(COMPLETED·FAILED·CANCELLED) 실행을 가리키는 요청만 고르게 하고(배치를 뽑은 뒤 거르면 끝나지 않은 행이 배치를 채워 정리가 멈춘다), `PublicResultExpirySweeperIT`에 "QUEUED 실행의 만료 요청은 남고, 실행이 끝난 뒤 지워진다"를 더한다 per /code-review 발견 (contradicts)
 
 ---
 

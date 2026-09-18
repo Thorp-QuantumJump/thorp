@@ -14,10 +14,12 @@ import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
 import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;
 import com.ssafy.thorp.backtest.application.service.BacktestRetryService;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
@@ -56,6 +58,7 @@ public class PublicResultService {
     private final BacktestResultQueryService queryService;
     private final BacktestRetryService retryService;
     private final ParameterRegistryPort registry;
+    private final ExpiredPublicTokenRepository expiredTokens;
     private final Clock clock;
 
     public PublicResultService(
@@ -63,11 +66,13 @@ public class PublicResultService {
             BacktestResultQueryService queryService,
             BacktestRetryService retryService,
             ParameterRegistryPort registry,
+            ExpiredPublicTokenRepository expiredTokens,
             Clock clock) {
         this.requestRepository = requestRepository;
         this.queryService = queryService;
         this.retryService = retryService;
         this.registry = registry;
+        this.expiredTokens = expiredTokens;
         this.clock = clock;
     }
 
@@ -75,6 +80,9 @@ public class PublicResultService {
      * 토큰을 요청으로 바꾼다. 순서가 곧 응답 코드의 우선순위다: 형식 → 존재 → 만료.
      *
      * <p>형식이 틀리면 조회하지 않는다. 로그인 사용자의 결과는 만료가 없다({@link BacktestRequest#isPublicExpired}가 false).
+     *
+     * <p><b>요청이 없어도 묘비가 있으면 410이다</b>(T087). 정리 작업이 만료된 요청 행을 지우면서 토큰 해시를 남기므로, 지운 뒤에 들어온 주소도 "잘못된
+     * 주소"가 아니라 "결과가 남아 있지 않다"로 안내된다. 묘비의 보관 기한이 지나면 404다.
      */
     public BacktestRequest resolve(String token) {
         PublicResultToken parsed;
@@ -84,10 +92,16 @@ public class PublicResultService {
             // 값 타입의 메시지에는 입력이 그대로 들어 있다. 받은 문자열을 되돌려 줄 이유가 없다.
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
+        PublicResultToken found = parsed;
         BacktestRequest request =
                 requestRepository
-                        .findByPublicToken(parsed)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+                        .findByPublicToken(found)
+                        .orElseThrow(
+                                () ->
+                                        new BusinessException(
+                                                expiredTokens.exists(PublicTokenDigest.of(found))
+                                                        ? ErrorCode.RESULT_EXPIRED
+                                                        : ErrorCode.RESOURCE_NOT_FOUND));
         if (request.isPublicExpired(clock.instant())) {
             throw new BusinessException(ErrorCode.RESULT_EXPIRED);
         }
@@ -158,10 +172,18 @@ public class PublicResultService {
     /**
      * 실패·취소한 결과를 같은 조건으로 다시 요청한다. 004 재시도를 그대로 타므로 동일 버전 합류·재사용·실행 한도(429)도 똑같이 받는다.
      *
+     * <p><b>비로그인 재시도는 단건 요청만 받는다</b>(T089, 원칙 IX). 재시도는 원 요청의 {@code executionType}을 물려받는데 실행 한도는
+     * 단건 큐에만 있어, 묶음 요청의 공개 주소로 비로그인 사용자가 한도 없이 다시 접수할 수 있게 된다. 비로그인 {@code POST /backtests}와 같은
+     * 규칙이다.
+     *
      * @param requesterId 지금 다시 시도하는 사람. null = 비로그인. 원 요청의 요청자를 물려받지 않는다 — 공개 주소는 남에게 건네질 수 있다
      */
     public PublicResultRetry retry(String token, Long requesterId) {
         BacktestRequest original = resolve(token);
+        if (requesterId == null && original.getExecutionType() != ExecutionType.SINGLE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "로그인하지 않은 요청은 단건 분석(SINGLE)만 다시 시도할 수 있습니다.");
+        }
         BacktestJobResult retried = publicly(() -> retryService.retry(original, requesterId));
         return new PublicResultRetry(
                 retried.publicToken(),

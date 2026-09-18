@@ -196,13 +196,15 @@ thorp:
   result:
     # 결과 공개 열람(spec 005 T004). **네 값 모두 임시값이다** — 유효 시간은 PD-23, 거래 내역 페이지 크기는
     # R-11 이 정한다. 확정 전까지 수치는 이 파일에만 두고 spec 문서에 적지 않는다.
-    # 네 값이 모두 @NotNull 이라 하나라도 비면 기동에 실패한다(ResultProperties).
+    # 다섯 값이 모두 @NotNull 이라 하나라도 비면 기동에 실패한다(ResultProperties).
     #
     # 비로그인 요청의 공개 토큰 유효 시간. 기준은 요청 생성 시각이다(R-03). 로그인 요청은 만료가 없다.
     public-token-ttl: P7D
     # 만료된 비로그인 요청을 훑는 주기와 한 번에 지우는 수(B02 정리 작업).
     expiry-sweep-interval: PT10M
     expiry-sweep-batch-size: 100
+    # 만료로 지운 토큰의 묘비를 남겨 두는 기간(T087). 만료 시각부터 센다. 이 기간 안에는 지운 주소도 410 안내를 받는다.
+    tombstone-retention: P30D
     # 공개 경로 /results/{token}/trades 의 페이지 크기이자 상한. 004 거래 내역 기본값과 같게 둔다.
     trades-page-size: 100
 

@@ -162,26 +162,51 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
 
         assertThat(combinationsFromSpace).isEqualTo(saved.getCounts().expected());
         // 후보의 좌표가 저장된 축 값 목록의 인덱스를 가리킨다(FR-029).
+        //
+        // **조건 밖 축은 좌표만 남고 실행 값이 없다**(003 FR-003, ParamSearchService
+        // withoutInapplicableAxes). 그리드는 축을 모두 펼치므로 선정 방식이 '상위 몇 개'인 점에도
+        // 임계값·상위 비율 좌표가 딸려 오는데, 그 값은 실행에 싣지 않는다. 좌표를 빼면 같은 등록표
+        // 버전 안에서 인접 판정이 흔들린다(FR-013a). 그래서 값이 빠진 자리는 대조하지 않고,
+        // 대신 **정말 조건 밖 축인지**를 확인한다 — 그냥 넘기면 값이 사라진 결함을 못 잡는다.
         candidateRepository
                 .findByParamSearchId(saved.getId())
                 .forEach(
-                        candidate ->
-                                candidate
-                                        .getGridCoordinates()
-                                        .indices()
-                                        .forEach(
-                                                (axis, index) ->
-                                                        assertThat(
-                                                                        saved.getSearchSpace()
-                                                                                .valuesOf(
-                                                                                        candidate
-                                                                                                .getStrategyId(),
-                                                                                        axis)
-                                                                                .get(index))
-                                                                .isEqualTo(
-                                                                        candidate
-                                                                                .getParameters()
-                                                                                .valueOf(axis))));
+                        candidate -> {
+                            var registration =
+                                    registry.find(candidate.getStrategyId()).orElseThrow();
+                            var executed = candidate.getParameters().values();
+                            candidate
+                                    .getGridCoordinates()
+                                    .indices()
+                                    .forEach(
+                                            (axis, index) -> {
+                                                Object value =
+                                                        candidate.getParameters().valueOf(axis);
+                                                if (value == null) {
+                                                    assertThat(
+                                                                    registration
+                                                                            .applicableAxes(
+                                                                                    executed)
+                                                                            .stream()
+                                                                            .anyMatch(
+                                                                                    a ->
+                                                                                            a.name()
+                                                                                                    .equals(
+                                                                                                            axis)))
+                                                            .as("조건 밖 축만 실행 값이 빠진다: %s", axis)
+                                                            .isFalse();
+                                                    return;
+                                                }
+                                                assertThat(
+                                                                saved.getSearchSpace()
+                                                                        .valuesOf(
+                                                                                candidate
+                                                                                        .getStrategyId(),
+                                                                                axis)
+                                                                        .get(index))
+                                                        .isEqualTo(value);
+                                            });
+                        });
     }
 
     @Test
@@ -212,24 +237,24 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
     @Test
     @DisplayName("실행 미지원 전략은 거부를 REJECTED로 저장하고 사유를 남긴다")
     void unsupportedStrategyIsStoredAsRejected() {
-        List<String> unsupported = unsupportedStrategyIds();
-        assertThat(unsupported).as("픽스처 등록표에 실행 미지원 전략이 있어야 한다").isNotEmpty();
+        withUnexecutableStrategy(
+                strategyId -> {
+                    CreateParamSearchCommand command =
+                            new CreateParamSearchCommand(
+                                    null,
+                                    UNIVERSE,
+                                    List.of(strategyId),
+                                    null,
+                                    null,
+                                    null,
+                                    Map.of(),
+                                    registry.version());
 
-        CreateParamSearchCommand command =
-                new CreateParamSearchCommand(
-                        null,
-                        UNIVERSE,
-                        List.of(unsupported.get(0)),
-                        null,
-                        null,
-                        null,
-                        Map.of(),
-                        registry.version());
-
-        assertThatThrownBy(() -> paramSearchService.create(command))
-                .isInstanceOf(ParamSearchRejectedException.class)
-                .extracting(e -> ((ParamSearchRejectedException) e).getErrorCode())
-                .isEqualTo(ErrorCode.STRATEGY_NOT_EXECUTABLE);
+                    assertThatThrownBy(() -> paramSearchService.create(command))
+                            .isInstanceOf(ParamSearchRejectedException.class)
+                            .extracting(e -> ((ParamSearchRejectedException) e).getErrorCode())
+                            .isEqualTo(ErrorCode.STRATEGY_NOT_EXECUTABLE);
+                });
     }
 
     @Test
@@ -326,16 +351,40 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
     }
 
     /** 등록표에는 있으나 004가 실행을 지원하지 않는 전략. 이름을 적지 않고 조회로 찾는다. */
-    private List<String> unsupportedStrategyIds() {
-        List<String> registered =
-                jdbcTemplate.queryForList(
-                        "SELECT DISTINCT strategy_id FROM strategy_rules WHERE status ="
-                                + " 'REGISTERED'",
-                        String.class);
-        return registry.activeStrategies().stream()
-                .map(StrategyRegistration::strategyId)
-                .filter(strategyId -> !registered.contains(strategyId))
-                .toList();
+    /**
+     * 004가 실행할 수 없는 전략을 한시적으로 만들어 넘긴다.
+     *
+     * <p>2026-09-17 PD-03·PD-04 확정으로 다섯 전략이 모두 등록돼 <b>"등록표에는 있는데 실행할 수 없는 전략"이 실제로는
+     * 없어졌다</b>(T022·T023). 그래도 거부 경로는 살아 있어야 하므로 규칙표 행 하나를 잠시 {@code PENDING_DECISION}으로 돌려 확인하고
+     * 되돌린다 — 규칙 없는 전략을 나중에 더하면 이 경로가 다시 쓰인다.
+     *
+     * <p>조건이 사라졌다고 조용히 건너뛰지 않는 이유: 그러면 FR-028의 거부 기록이 깨져도 초록으로 보인다.
+     */
+    private void withUnexecutableStrategy(java.util.function.Consumer<String> body) {
+        String strategyId =
+                registry.activeStrategies().stream()
+                        .map(StrategyRegistration::strategyId)
+                        .reduce((first, second) -> second)
+                        .orElseThrow();
+        String spec =
+                jdbcTemplate.queryForObject(
+                        "SELECT spec::text FROM strategy_rules"
+                                + " WHERE strategy_id = ? AND status = 'REGISTERED'",
+                        String.class,
+                        strategyId);
+        jdbcTemplate.update(
+                "UPDATE strategy_rules SET status = 'PENDING_DECISION', spec = NULL"
+                        + " WHERE strategy_id = ? AND status = 'REGISTERED'",
+                strategyId);
+        try {
+            body.accept(strategyId);
+        } finally {
+            jdbcTemplate.update(
+                    "UPDATE strategy_rules SET status = 'REGISTERED', spec = ?::jsonb"
+                            + " WHERE strategy_id = ? AND status = 'PENDING_DECISION'",
+                    spec,
+                    strategyId);
+        }
     }
 
     private PreviewParamSearchCommand previewCommand() {
@@ -392,27 +441,27 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
     @Test
     @DisplayName("거부된 묶음도 stop_reason과 함께 남는다")
     void rejectedSearchKeepsItsReason() {
-        List<String> unsupported = unsupportedStrategyIds();
-        if (unsupported.isEmpty()) {
-            return;
-        }
-        CreateParamSearchCommand command =
-                new CreateParamSearchCommand(
-                        null,
-                        UNIVERSE,
-                        List.of(unsupported.get(0)),
-                        null,
-                        null,
-                        null,
-                        Map.of(),
-                        registry.version());
-        assertThatThrownBy(() -> paramSearchService.create(command))
-                .isInstanceOf(ParamSearchRejectedException.class);
+        withUnexecutableStrategy(
+                strategyId -> {
+                    CreateParamSearchCommand command =
+                            new CreateParamSearchCommand(
+                                    null,
+                                    UNIVERSE,
+                                    List.of(strategyId),
+                                    null,
+                                    null,
+                                    null,
+                                    Map.of(),
+                                    registry.version());
+                    assertThatThrownBy(() -> paramSearchService.create(command))
+                            .isInstanceOf(ParamSearchRejectedException.class);
 
-        assertThat(
-                        jdbcTemplate.queryForList(
-                                "SELECT stop_reason FROM param_search WHERE status = 'REJECTED'",
-                                String.class))
-                .containsExactly(StopReason.STRATEGY_NOT_EXECUTABLE.name());
+                    assertThat(
+                                    jdbcTemplate.queryForList(
+                                            "SELECT stop_reason FROM param_search"
+                                                    + " WHERE status = 'REJECTED'",
+                                            String.class))
+                            .containsExactly(StopReason.STRATEGY_NOT_EXECUTABLE.name());
+                });
     }
 }

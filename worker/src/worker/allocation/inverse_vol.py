@@ -16,6 +16,7 @@ from typing import Any
 import pandas as pd
 
 from worker.allocation.base import (
+    INSUFFICIENT_HISTORY,
     ZERO,
     ZERO_VOLATILITY,
     AllocationError,
@@ -27,6 +28,7 @@ from worker.allocation.base import (
     normalise,
     quantise,
     require_rule_value,
+    volatility_of,
 )
 from worker.contracts.engine_input import UniverseItem
 from worker.contracts.engine_output import ExceptionRecord, WeightsSource
@@ -94,21 +96,18 @@ def _volatilities(
         instrument = item.instrument_id
         if instrument not in history.columns:
             continue
-        closes = history[instrument].dropna()
-        if len(closes) < lookback + 1:
+        value = volatility_of(history[instrument], lookback)
+        if value is None:
             exceptions.append(
                 ExceptionRecord(
                     date=as_of,
                     instrumentId=instrument,
-                    kind="INSUFFICIENT_HISTORY",
+                    kind=INSUFFICIENT_HISTORY,
                     rule=f"lookbackDays={lookback}",
                     action="제외 후 나머지에 배분",
                 )
             )
             continue
-        returns = closes.iloc[-(lookback + 1) :].pct_change().dropna()
-        deviation = returns.std(ddof=1)
-        value = ZERO if pd.isna(deviation) else Decimal(str(deviation))
         if value <= ZERO:
             exceptions.append(
                 ExceptionRecord(

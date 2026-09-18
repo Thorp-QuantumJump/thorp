@@ -67,14 +67,13 @@ class BacktestRegistryApiIT extends IntegrationTestSupport {
                         "MINIMUM_VARIANCE",
                         "TARGET_RISK_OVERLAY");
 
-        // 시드의 REGISTERED 는 다섯(고정 비중·동일 비중·역변동성·목표 위험 오버레이·최소분산)이고
-        // 나머지 하나(섹터 모멘텀)만 PD-03 구현 전이라 PENDING_DECISION 이다.
-        // 최소분산은 티켓 #330 이 MINIMUM_VARIANCE/1 을 REGISTERED 로 채우면서 넘어왔다.
+        // 여섯 행이 모두 REGISTERED 다 — 다섯 전략과 목표 위험 오버레이.
+        // 섹터 모멘텀이 #342(PD-03)로 넘어오면서 팀 결정 대기가 없어졌다.
         assertThat(
                         nodes(objectMapper.readTree(body).at("/data/strategyRules"))
                                 .filter(row -> "REGISTERED".equals(row.get("status").asText()))
                                 .count())
-                .isEqualTo(5);
+                .isEqualTo(6);
 
         // 전략당 한 행 — 화면이 어느 버전을 실을지 고를 필요가 없다는 것이 이 API 의 계약이다.
         // 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다(버전 교체는 Phase 10).
@@ -86,10 +85,14 @@ class BacktestRegistryApiIT extends IntegrationTestSupport {
         // PD-02 미확정이라 임시 규칙이다. 화면은 이 값으로 "임시" 표시를 켠다.
         assertThat(inverseVolatility.get("provisional").asBoolean()).isTrue();
 
-        // PENDING_DECISION 을 걸러내지 않는다 — 화면이 '분석하기'를 막을 근거가 이 상태다.
         JsonNode momentum = byStrategy.get("SECTOR_MOMENTUM").get(0);
-        assertThat(momentum.get("status").asText()).isEqualTo("PENDING_DECISION");
+        assertThat(momentum.get("status").asText()).isEqualTo("REGISTERED");
         assertThat(momentum.get("provisional").asBoolean()).isFalse();
+
+        // 지금은 대기 중인 전략이 없지만 상태를 걸러내지 않는 것이 이 API 의 계약이다 —
+        // 규칙 없는 전략을 나중에 더하면 화면이 이 값으로 '분석하기'를 막는다.
+        assertThat(nodes(objectMapper.readTree(body).at("/data/strategyRules")))
+                .allMatch(row -> row.has("status") && row.has("provisional"));
     }
 
     private static java.util.stream.Stream<JsonNode> nodes(JsonNode array) {
