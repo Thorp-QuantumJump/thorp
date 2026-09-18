@@ -124,14 +124,14 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Independent Test**: 화면 분야 이름을 바꾼 뒤 계산 등록표와 자료 버전이 그대로인지, 변환 규칙을 바꾸면 새 자료 버전이 생기고 이전 검색 결과의 참조 버전은 유지되는지 확인한다
 
-- [ ] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)
-- [ ] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)
-- [ ] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)
-- [ ] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)
-- [ ] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)
-- [ ] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)
-- [ ] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다
-- [ ] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)
+- [X] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)
+- [X] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)
+- [X] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)
+- [X] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)
+- [X] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)
+- [X] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)
+- [X] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다
+- [X] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)
 
 **Checkpoint**: 버전이 독립적으로 움직이고 같은 조합이면 같은 결과가 나온다
 
