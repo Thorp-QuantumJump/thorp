@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
@@ -19,6 +20,7 @@ import {
 } from '@/components/result/LossWindowView'
 import { OtherConditionsButton } from '@/components/result/OtherConditionsButton'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
+import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
@@ -38,7 +40,7 @@ import styles from './ResultPage.module.css'
  * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면
  * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).
  *
- * <p>상태 한 문장(B06 T075)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.
+ * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.
  */
 export function ResultPage() {
   const { token = '' } = useParams()
@@ -89,6 +91,7 @@ function ResultView({
   detail: PublicResultDetail
   timeseries: TimeseriesState
 }) {
+  const navigate = useNavigate()
   const completedThrough = completedRange(detail, timeseries)
   const compare = useCompareTarget(detail)
   const target = compare.compatibleTarget
@@ -126,11 +129,20 @@ function ResultView({
         </p>
       ) : null}
 
-      {detail.status === 'FAILED' ? (
-        <p className={styles.status}>분석이 끝나지 못해 결과 숫자가 없습니다.</p>
-      ) : null}
+      <ResultSummaryCard detail={detail} target={target} />
 
-      <ResultSummaryCard detail={detail} completedThrough={completedThrough} target={target} />
+      <ResultStatusLine
+        detail={detail}
+        completedThrough={completedThrough}
+        onRetry={
+          detail.status === 'FAILED'
+            ? async () => {
+                const accepted = await retryResult(token)
+                await navigate(`/results/${accepted.publicToken}`)
+              }
+            : undefined
+        }
+      />
 
       <ResultChartSlot
         detail={detail}
@@ -167,8 +179,6 @@ function ResultView({
           })}
         </p>
       ) : null}
-
-      {/* B06 T075: 결과 의미를 바꾸는 상태의 한 문장이 이 자리에 온다. */}
 
       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
       <div className={styles.actions}>

@@ -236,10 +236,10 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 **Independent Test**: quickstart 5. 실행 도중 취소한 요청을 열어 숫자 자리가 0으로 채워지지 않고 "계산되지 않았습니다"와 완료 범위가 보이는지, 자료가 부족한 결과에 한 문장이 있는지, 내부 검증 미완료가 경고로 나열되지 않는지 확인한다.
 
-- [ ] T073 [US4] (FE) `frontend/src/components/result/statusSentences.ts` — 네 갈래(FR-013, R-12)의 고정 문장 틀: 부분 완료(`partial` + `progress.lastTradingDate`로 완료 범위를 날짜로), 지표 없음(`summaryUnavailable`의 `CANCELLED_WHILE_RUN_CONTINUED`·`CANCEL_UNANSWERED`), 자료 부족·계산 제한(`exceptionKinds`와 `summary.exceptionCount`로 종류·건수), 실행 실패(`failure.code`·`message`. 낮은 수익으로 표현하지 않는다). 검증 구분(`validationTier`)은 "검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다"(FR-012, PD-12 확정 전). 값 자리만 비운 틀이며 T035와 같은 금지 어휘 검사를 받는다
-- [ ] T074 [US4] (FE) `frontend/src/components/result/ResultStatusLine.tsx` — 결과 옆(요약 카드 바로 아래) 한 문장 자리. 해당하는 갈래만 보이고, 여럿이면 문장을 이어 쓰되 목록으로 늘리지 않는다. 결과 의미를 바꾸지 않는 항목(내부 검증 미완료 등)은 여기 두지 않는다(FR-013 후단). 검증 구분은 항상 보인다. 비교 대상 자리에도 대상의 상태 문장을 같은 틀로 보인다
-- [ ] T075 [US4] (FE) `frontend/src/pages/ResultPage.tsx`에 `ResultStatusLine`을 끼우고 취소 결과·실패 결과·부분 결과의 화면 흐름을 맞춘다 — 취소(`CANCELLED`)는 카드가 완료 범위까지의 값을 보이고, `summaryUnavailable`이면 숫자 없이 문장만(T031), 실패(`FAILED`)는 사유와 '다시 시도'(`retryResult`)가 결과 자리에 있다. 종료 시 평가 구분(FR-015)·비중 출처(FR-014)·'미검증' 표시가 카드와 상태 줄에서 한 번씩만 보인다
-- [ ] T076 [US4] (FE 테스트) `frontend/src/components/result/statusSentences.test.ts`(네 갈래 문장, 금지 어휘 0건, '미검증' 문구에 이유가 함께 있다, FR-012)와 `frontend/src/components/result/ResultStatusLine.test.tsx`(취소 결과에 완료 범위 날짜와 "계산되지 않았습니다"가 있고 숫자 '0'이 없다 — quickstart 5, SC-005; 예외가 있으면 한 문장; 예외가 없으면 자료 부족 문장이 없다; 실패면 사유와 '다시 시도'; `<ul>` 형태의 경고 목록이 없다)
+- [X] T073 [US4] (FE) `frontend/src/components/result/statusSentences.ts` — 네 갈래(FR-013, R-12)의 고정 문장 틀: 부분 완료(`partial` + `progress.lastTradingDate`로 완료 범위를 날짜로), 지표 없음(`summaryUnavailable`의 `CANCELLED_WHILE_RUN_CONTINUED`·`CANCEL_UNANSWERED`), 자료 부족·계산 제한(`exceptionKinds`와 `summary.exceptionCount`로 종류·건수), 실행 실패(`failure.code`·`message`. 낮은 수익으로 표현하지 않는다). 검증 구분(`validationTier`)은 "검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다"(FR-012, PD-12 확정 전). 값 자리만 비운 틀이며 T035와 같은 금지 어휘 검사를 받는다
+- [X] T074 [US4] (FE) `frontend/src/components/result/ResultStatusLine.tsx` — 결과 옆(요약 카드 바로 아래) 한 문장 자리. 해당하는 갈래만 보이고, 여럿이면 문장을 이어 쓰되 목록으로 늘리지 않는다. 결과 의미를 바꾸지 않는 항목(내부 검증 미완료 등)은 여기 두지 않는다(FR-013 후단). 검증 구분은 항상 보인다. 비교 대상 자리에도 대상의 상태 문장을 같은 틀로 보인다
+- [X] T075 [US4] (FE) `frontend/src/pages/ResultPage.tsx`에 `ResultStatusLine`을 끼우고 취소 결과·실패 결과·부분 결과의 화면 흐름을 맞춘다 — 취소(`CANCELLED`)는 카드가 완료 범위까지의 값을 보이고, `summaryUnavailable`이면 숫자 없이 문장만(T031), 실패(`FAILED`)는 사유와 '다시 시도'(`retryResult`)가 결과 자리에 있다. 종료 시 평가 구분(FR-015)·비중 출처(FR-014)·'미검증' 표시가 카드와 상태 줄에서 한 번씩만 보인다
+- [X] T076 [US4] (FE 테스트) `frontend/src/components/result/statusSentences.test.ts`(네 갈래 문장, 금지 어휘 0건, '미검증' 문구에 이유가 함께 있다, FR-012)와 `frontend/src/components/result/ResultStatusLine.test.tsx`(취소 결과에 완료 범위 날짜와 "계산되지 않았습니다"가 있고 숫자 '0'이 없다 — quickstart 5, SC-005; 예외가 있으면 한 문장; 예외가 없으면 자료 부족 문장이 없다; 실패면 사유와 '다시 시도'; `<ul>` 형태의 경고 목록이 없다)
 
 **Checkpoint**: 결과 의미를 바꾸는 상태가 결과 옆에 한 문장으로 보이고 상세에만 숨지 않는다.
 
@@ -316,7 +316,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 | B03 · 미발급 | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |
 | B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |
 | B05 · [S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309) · `feat(fe)/309-result-comparison` | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |
-| B06 · 미발급 | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |
+| B06 · [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346) `feat(fe)/346-result-status-line` | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |
 | B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |
 | B08 · 미발급 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |
 | B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |
@@ -459,3 +459,9 @@ B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조�
 Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
 
 - [X] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 "변동성에 …"처럼 잘린다. 같은 파일 주석의 "등록된 다섯 전략 이름이 모두 여기 들어간다"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)
+
+## Phase 11: Convergence
+
+B06(T073~T076)을 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.
+
+- [X] T093 (FE) 계산을 시작하기 전에 취소된 결과에는 계산된 부분 결과라는 문장을 표시하지 않는다 — `frontend/src/components/result/statusSentences.ts`에서 `summaryUnavailable === 'CANCELLED_BEFORE_START'`이면 `partial: true`여도 부분 완료 문장을 생략하고 완료 거래일이 없다는 사유와 검증 구분만 이어 쓴다. `frontend/src/components/result/statusSentences.test.ts`와 `frontend/src/components/result/ResultStatusLine.test.tsx`에 실제 조합(`partial: true`, 완료 범위 없음)을 넣어 "부분 결과"가 없고 숫자 대체값도 없는지 검증한다 per 원칙 VI · FR-013 (contradicts)
