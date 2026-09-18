@@ -62,7 +62,9 @@
 #        ② MAX_WEIGHT_TOO_LOW_FOR_SELECTION 을 더했다. 모멘텀은 후보 전체가 아니라 topN 개에만
 #           비중이 가므로 UNIVERSE_SIZE 로 재면 topN=2·상한 40% 같은 조합을 놓친다.
 #           `maxWeight × topN` 을 재려고 operand 에 multiplyByAxis 를 더했다(계약 §1).
-version: "1.4.0"
+# 1.5.0: TOP_PERCENT 선정 수도 같은 상한 규칙으로 판정한다(spec 003 T109).
+#        `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`을 표현하려고 multiplyByCeil을 더했다.
+version: "1.5.0"
 
 # 손실 제약의 기준으로 쓸 전략(007 FR-013d). 007 코드에 기준 전략 ID를 두지 않기 위해 여기서 지정한다.
 # 비우면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다.
@@ -361,6 +363,17 @@ strategies:
         left:
           axis: maxWeight
           multiplyByAxis: topN
+        operator: LESS_THAN
+        right:
+          value: 100
+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION
+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByCeil:
+            context: UNIVERSE_SIZE
+            axis: topPercent
+            divisor: 100
         operator: LESS_THAN
         right:
           value: 100

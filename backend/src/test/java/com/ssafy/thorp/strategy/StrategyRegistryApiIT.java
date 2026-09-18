@@ -91,13 +91,20 @@ class StrategyRegistryApiIT extends IntegrationTestSupport {
     @DisplayName("규칙의 곱셈 인자가 응답까지 실린다 — 빠지면 화면이 상한을 전부 막는다")
     void ruleOperandsKeepTheirMultiplier() throws Exception {
         JsonNode selectionRule = null;
+        JsonNode percentSelectionRule = null;
         for (JsonNode strategy : data(null).get("strategies")) {
             if (!"SECTOR_MOMENTUM".equals(strategy.get("strategyId").asText())) {
                 continue;
             }
             for (JsonNode rule : strategy.get("validationRules")) {
-                if ("MAX_WEIGHT_TOO_LOW_FOR_SELECTION".equals(rule.get("code").asText())) {
+                if (!"MAX_WEIGHT_TOO_LOW_FOR_SELECTION".equals(rule.get("code").asText())) {
+                    continue;
+                }
+                if (rule.get("left").has("multiplyByAxis")) {
                     selectionRule = rule;
+                }
+                if (rule.get("left").has("multiplyByCeil")) {
+                    percentSelectionRule = rule;
                 }
             }
         }
@@ -112,6 +119,12 @@ class StrategyRegistryApiIT extends IntegrationTestSupport {
                 .isTrue();
         assertThat(selectionRule.get("left").get("multiplyByAxis").asText()).isEqualTo("topN");
         assertThat(selectionRule.get("right").get("value").asInt()).isEqualTo(100);
+
+        assertThat(percentSelectionRule).as("모멘텀에 상위 비율 기준 상한 규칙이 있어야 한다").isNotNull();
+        JsonNode factor = percentSelectionRule.get("left").get("multiplyByCeil");
+        assertThat(factor.get("context").asText()).isEqualTo("UNIVERSE_SIZE");
+        assertThat(factor.get("axis").asText()).isEqualTo("topPercent");
+        assertThat(factor.get("divisor").asInt()).isEqualTo(100);
     }
 
     /** 조회 응답의 {@code data}. {@code universeSize}가 null이면 붙이지 않는다. */

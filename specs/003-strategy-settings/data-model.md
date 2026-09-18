@@ -113,7 +113,7 @@ spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타
 | 섹터 모멘텀 | 임계값 (`threshold`, `selectionMode=THRESHOLD`일 때만) | 입력형 |
 | 섹터 모멘텀 | 상위 비율 (`topPercent`, `selectionMode=TOP_PERCENT`일 때만) | 입력형 |
 | 섹터 모멘텀 | 배분 방식 (`allocationMethod`) | 목록형 |
-| 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다 |
+| 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다. `TOP_N`은 `maxWeight × topN`, `TOP_PERCENT`는 `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`이 100 미만이면 실행 전에 막는다(등록표 `1.5.0`) |
 | 섹터 모멘텀 | 리밸런싱 주기 | 목록형 |
 | 최소분산 | 공분산 관측 기간 | 목록형 |
 | 최소분산 | 추정 방법 (`estimationMethod`) | 목록형 — 현재 후보 하나(표본공분산). 004 PD-04 확정값이며 추가 방법은 별도 결정한다 |
@@ -164,7 +164,7 @@ spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타
 
 **시작 금액** (`analysisConditions.initialAmount`): 입력형, 최소 1,000,000원, 최대 1,000,000,000원, 간격 1,000,000원, 기본 10,000,000원, 단위 원.
 
-**"007 이관"** 값은 007이 먼저 사용하던 수치를 정식 등록표 `backend/src/main/resources/registry/parameter-registry.yml`로 승격한 것이다. **"신규"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.
+**"007 이관"** 값은 007이 먼저 사용하던 수치를 현재 정식 등록표 `backend/src/main/resources/registry/parameter-registry.yml`로 승격한 것이다. 이 파일은 `strategy/infrastructure/registry/FileParameterRegistry`가 읽는다. **"신규"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.
 
 **임시 등록표가 목록형과 입력형을 함께 갖던 축은 목록형으로 정리했다**(§4). `lookbackDays`의 "10~504 간격 1" 같은 폭은 그 시절의 흔적이며 정식 등록표에는 없다 — 관측 기간처럼 후보가 정해진 축에 입력칸을 열면 등록되지 않은 값을 고를 경로가 생긴다(FR-006).
 
