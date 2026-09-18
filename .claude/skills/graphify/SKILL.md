@@ -1,11 +1,14 @@
 ---
 name: graphify
-description: "Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools."
+description: "Use only when explicitly invoked to build, update, or explore a Graphify knowledge graph. Graphify output is a snapshot and is not a source for current code architecture or implementation state."
+disable-model-invocation: true
 ---
 
 # /graphify
 
 Turn any folder of files into a navigable knowledge graph with community detection, an honest audit trail, and three outputs: interactive HTML, GraphRAG-ready JSON, and a plain-language GRAPH_REPORT.md.
+
+This project uses Graphify only on explicit invocation. For ordinary codebase questions, inspect the current source and configuration directly. Do not read `graphify-out/` or use graph queries to infer current architecture or implementation state, even when a graph exists.
 
 ## Usage
 
@@ -50,7 +53,7 @@ Drop any folder of code, docs, papers, images, or video into graphify and get a 
 
 If the user invoked `/graphify --help` or `/graphify -h` (with no other arguments), print the contents of the `## Usage` section above verbatim and stop. Do not run any commands, do not detect files, do not default the path to `.`. Just print the Usage block and return.
 
-**Fast path — existing graph:** Before doing anything else, check whether `graphify-out/graph.json` exists. The expected location is `graphify-out/graph.json` relative to the **current working directory** (i.e. the project root where you are running commands). If it exists AND the user's request is a natural-language question about the codebase (e.g. "How does X work?", "What calls Y?", "Trace the data flow through Z") and NOT an explicit rebuild command (`--update`, `--cluster-only`, or a bare path/URL that implies fresh extraction): **skip Steps 1–5 entirely and jump straight to `## For /graphify query`.** Run `graphify query "<question>"` immediately. Do not run detect. Do not check corpus size. Do not ask the user to narrow. The graph is already built — use it.
+**Fast path — explicit graph query:** Only when the user explicitly invokes `/graphify query` (or the equivalent named skill query), check whether `graphify-out/graph.json` exists and jump to `## For /graphify query`. Do not infer an invitation to query the graph from an ordinary codebase question or the presence of an existing graph. A graph query describes the generated snapshot, not the current code architecture.
 
 If no path was given, use `.` (current directory). Do not ask the user for a path.
 
@@ -682,7 +685,7 @@ Both are non-default subcommands. `--update` re-extracts only new or changed fil
 
 ## For /graphify query
 
-When `graphify-out/graph.json` already exists and the user asks a question about the corpus, answer from the graph rather than rebuilding it:
+When the user explicitly invokes `/graphify query` and `graphify-out/graph.json` already exists, answer the requested graph question from the snapshot rather than rebuilding it:
 
 ```bash
 graphify query "<question>"
