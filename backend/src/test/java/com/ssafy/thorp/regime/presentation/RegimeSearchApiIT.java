@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
@@ -16,8 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,19 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>행을 넣는 것은 {@code data/} 배치이므로 여기서는 배치가 쓰는 것과 <b>같은 모양의 JSONB</b>를 직접 심는다. 모양이 어긋나면 이 시험이 먼저
  * 깨지고, 그것이 배치와 조회가 갈렸다는 신호다.
  */
-@SpringBootTest(
-        properties = {
-            // 다른 IT 다수가 쓰는 값과 같게 둔다. 컨텍스트 캐시 키는 프로퍼티 조합이라 값이
-            // 다르면 Spring 이 컨텍스트를 따로 하나 더 만들어 캐시에 얹는다.
-            //
-            // thorp.regime.macro.source 는 적지 않는다 — application.yml 의 기본값이 이미
-            // fixture 라 적을 필요가 없고, 적으면 이 클래스만 다른 버킷으로 빠진다.
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
 @DisplayName("경제환경 검색 조회 API")
-class RegimeSearchApiIT extends PostgresTestSupport {
+class RegimeSearchApiIT extends IntegrationTestSupport {
 
     private static final String LABOR_KEY =
             "FIELD:LABOR:2026-07-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1";

@@ -6,10 +6,13 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.ssafy.thorp.backtest.application.service.BacktestEventService;
+import com.ssafy.thorp.support.RabbitTestSupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -17,11 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 작업 메시지가 재전달 상한을 다 쓰면 DLQ 로 가고, 그것을 이 리스너가 runId 와 함께 집어 온다(spec 004 R-18, T010).
@@ -34,18 +33,23 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @SpringBootTest(classes = {BacktestRabbitConfig.class, BacktestDeadLetterListener.class})
 @ImportAutoConfiguration(RabbitAutoConfiguration.class)
-@Testcontainers(disabledWithoutDocker = true)
-class BacktestDeadLetterListenerIT {
+class BacktestDeadLetterListenerIT extends RabbitTestSupport {
 
     private static final String RUN_ID = "BT-20260914-000077";
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final Duration POLL = Duration.ofMillis(100);
 
-    @Container @ServiceConnection
-    static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
-
     @Autowired private RabbitTemplate rabbitTemplate;
+    @Autowired private AmqpAdmin amqpAdmin;
     @MockitoBean private BacktestEventService eventService;
+
+    /** 브로커를 다른 클래스와 함께 쓴다. 작업 큐에 남은 메시지가 있으면 아래 거절이 엉뚱한 메시지를 집는다. */
+    @BeforeEach
+    void purgeQueues() {
+        amqpAdmin.initialize(); // 토폴로지가 아직 선언되지 않았어도 purge가 실패하지 않게 한 번 선언한다
+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_QUEUE, false);
+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_DEAD_LETTER_QUEUE, false);
+    }
 
     /** 지금 작업 큐에 있는 메시지 하나를 받아 requeue 로 거절한다. 없으면 false. */
     private boolean nackNow() {

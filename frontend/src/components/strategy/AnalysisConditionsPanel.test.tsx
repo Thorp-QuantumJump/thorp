@@ -8,6 +8,7 @@ import {
 import { registryFixture } from '@/test/strategyRegistryFixtures'
 import {
   AnalysisConditionsPanel,
+  COST_LOADING,
   COST_UNAVAILABLE,
   type AnalysisConditionPatch,
   type CostAssumptionView,
@@ -34,7 +35,7 @@ function Harness({
   costView = cost,
 }: {
   onChange: (patch: AnalysisConditionPatch) => void
-  costView?: CostAssumptionView | null
+  costView?: CostAssumptionView | 'loading' | null
 }) {
   const settings = useStrategySettings(registryFixture, 3)
   if (!settings.ready) return <p>준비 중</p>
@@ -73,7 +74,7 @@ function stateCondition(): Record<string, unknown> {
   return JSON.parse(screen.getByTestId('condition').textContent ?? '{}') as Record<string, unknown>
 }
 
-async function renderOpen(costView?: CostAssumptionView | null) {
+async function renderOpen(costView?: CostAssumptionView | 'loading' | null) {
   const onChange = vi.fn<(patch: AnalysisConditionPatch) => void>()
   const user = userEvent.setup()
   render(<Harness onChange={onChange} costView={costView} />)
@@ -254,6 +255,14 @@ describe('AnalysisConditionsPanel', () => {
     const group = within(panel).getByRole('group', { name: '비용 가정' })
     expect(within(group).getByRole('status').textContent).toBe(COST_UNAVAILABLE)
     expect(group.textContent).not.toMatch(/수수료|적용됨/)
+  })
+
+  it('비용 조건을 조회하는 중이면 확인할 수 없다고 말하지 않고 조회 중임을 알린다', async () => {
+    const { panel } = await renderOpen('loading')
+
+    const group = within(panel).getByRole('group', { name: '비용 가정' })
+    expect(within(group).getByRole('status').textContent).toBe(COST_LOADING)
+    expect(group.textContent).not.toContain(COST_UNAVAILABLE)
   })
 
   it('수수료·세금 편집, 최적화 선택지, 목표 변동성이 어디에도 없다', async () => {

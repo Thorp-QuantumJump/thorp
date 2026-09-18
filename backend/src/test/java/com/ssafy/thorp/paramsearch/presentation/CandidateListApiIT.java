@@ -13,7 +13,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SelectionRule;
 import com.ssafy.thorp.paramsearch.domain.vo.GridCoordinates;
 import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import org.hamcrest.Matchers;
@@ -21,8 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,16 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  *
  * <p>후보는 저장소로 직접 만든다 — 여기서 볼 것은 접수 흐름이 아니라 <b>응답의 모양</b>이다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class CandidateListApiIT extends PostgresTestSupport {
+class CandidateListApiIT extends IntegrationTestSupport {
 
     private static final String STRATEGY = "TEST_STRATEGY";
 

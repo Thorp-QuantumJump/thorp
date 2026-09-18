@@ -109,6 +109,16 @@ Load only the minimal necessary context from each artifact:
 
 - Load `.specify/memory/constitution.md` for principle validation
 
+**From the repository (REQUIRED - documents alone are not enough):**
+
+- The seams this feature is expected to fill: placeholder adapters (`Pending*`, `Fixture*`, `Example*`,
+  `Provisional*`, `Stub*`), ports with no real implementation, `TODO`/`NotImplemented` naming this spec
+- The concrete files and module paths that tasks.md names - do they exist, or is the parent a real place
+  to create them?
+- Existing consumers of the data or API this feature will own
+- Search by feature name, spec number, port/interface names, and table prefix. Reading a handful of
+  targeted files is enough; do not load the whole tree.
+
 ### 3. Build Semantic Models
 
 Create internal representations (do not include raw artifacts in output):
@@ -156,6 +166,23 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Task ordering contradictions (e.g., integration tasks before foundational setup tasks without dependency note)
 - Conflicting requirements (e.g., one requires Next.js while other specifies Vue)
 
+#### G. Code Reality Check
+
+Documents agreeing with each other is not the same as documents agreeing with the repository. This pass
+is what catches an upstream feature whose downstream consumers already shipped a stand-in.
+
+- **Path truth**: every file or module path named in tasks.md/plan.md - does it exist, or does the code
+  expect it somewhere else? A seam importing `a.b.c` while tasks say to write `x/y.py` is a defect that
+  only surfaces at integration.
+- **Unclaimed seams**: placeholder adapters, empty implementations and spec-referencing TODOs that this
+  feature is supposed to replace, with no task claiming them
+- **Contract drift**: interface names, method signatures, identifiers and response envelopes that differ
+  between this feature's contracts and the already-merged code on either side of the boundary
+- **Stale plan claims**: "we reuse X" / "we do not reuse Y" statements in plan.md that the code contradicts
+
+Document-vs-code mismatches default to **HIGH**: they always fail at implementation time, and no amount of
+document review will surface them.
+
 ### 5. Severity Assignment
 
 Use this heuristic to prioritize findings:
@@ -194,6 +221,12 @@ Output a Markdown report (no file writes) with the following structure:
 - Ambiguity Count
 - Duplication Count
 - Critical Issues Count
+
+**Not Checked:**
+
+State plainly what this run did not examine - source files not opened, sibling specs not compared, live
+schema not inspected, anything the available documents could not settle. Never report a clean result as
+"nothing left to find"; report it as "nothing found within what was checked", and name the rest here.
 
 ### 7. Provide Next Actions
 

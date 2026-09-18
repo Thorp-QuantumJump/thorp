@@ -7,20 +7,21 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionalApplicationListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -31,55 +32,39 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>그래서 {@code AFTER_COMMIT} 리스너를 하나 붙이고, 트랜잭션 <b>안</b>에서 아직 비어 있는지와 커밋 뒤에 채워지는지를 함께 단언한다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class BacktestEventServiceEventTest extends PostgresTestSupport {
+class BacktestEventServiceEventTest extends IntegrationTestSupport {
 
     private static final String BACKTEST_ID = "BT-20260907-000001";
 
     /** 시퀀스가 닿지 않는 id를 쓴다. 다른 테스트가 만드는 실행과 PK가 겹치지 않아야 한다. */
     private static final long RUN_ID = 900_001L;
 
-    @TestConfiguration
-    static class RecorderConfig {
-        @Bean
-        FinishedRecorder finishedRecorder() {
-            return new FinishedRecorder();
-        }
-    }
+    /**
+     * 커밋 뒤에만 받는 수신자. 007의 {@code BacktestFinishedListener}가 쓰는
+     * {@code @TransactionalEventListener(phase = AFTER_COMMIT)}와 같은 규약이다.
+     *
+     * <p>빈으로 등록하지 않고 테스트마다 컨텍스트에 붙였다 뗀다. 설정 클래스로 올리면 이 테스트만 Spring 컨텍스트를 따로 만든다.
+     */
+    private final List<BacktestFinished> received = new ArrayList<>();
 
-    /** 커밋 뒤에만 받는 수신자. 007의 {@code BacktestFinishedListener}와 같은 규약이다. */
-    static class FinishedRecorder {
-
-        private final List<BacktestFinished> received = new ArrayList<>();
-
-        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-        void onFinished(BacktestFinished event) {
-            received.add(event);
-        }
-
-        List<BacktestFinished> received() {
-            return received;
-        }
-
-        void clear() {
-            received.clear();
-        }
-    }
+    /** 람다로 만든 수신자는 이벤트 타입을 알 수 없어 트랜잭션 안에서 발행된 이벤트를 모두 받는다. 그래서 여기서 거른다. */
+    private final ApplicationListener<PayloadApplicationEvent<Object>> recorder =
+            TransactionalApplicationListener.forPayload(
+                    TransactionPhase.AFTER_COMMIT,
+                    payload -> {
+                        if (payload instanceof BacktestFinished finished) {
+                            received.add(finished);
+                        }
+                    });
 
     @Autowired private BacktestEventService eventService;
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private FinishedRecorder recorder;
+    @Autowired private ConfigurableApplicationContext context;
 
     @BeforeEach
     void prepareRun() {
-        recorder.clear();
+        context.addApplicationListener(recorder);
         // 이 테스트가 쓰는 실행 행만 지우고 다시 만든다. 테이블을 통째로 비우거나 PK를 1로 박으면
         // 시퀀스로 id를 받는 다른 테스트와 충돌한다 — 컨테이너를 공유하기 때문이다.
         jdbcTemplate.update(
@@ -108,6 +93,11 @@ class BacktestEventServiceEventTest extends PostgresTestSupport {
                 LocalDate.of(2025, 6, 30));
     }
 
+    @AfterEach
+    void detachRecorder() {
+        context.removeApplicationListener(recorder);
+    }
+
     @Test
     @DisplayName("결과 저장 트랜잭션이 커밋되기 전에는 이벤트가 전달되지 않는다")
     void eventIsNotDeliveredBeforeCommit() {
@@ -117,13 +107,13 @@ class BacktestEventServiceEventTest extends PostgresTestSupport {
                 status -> {
                     eventService.handleFinished(finished);
                     // 아직 커밋 전이다. 여기서 받으면 007이 없는 결과를 읽는다.
-                    assertThat(recorder.received()).isEmpty();
+                    assertThat(received).isEmpty();
                 });
 
-        assertThat(recorder.received()).hasSize(1);
-        assertThat(recorder.received().get(0).backtestJobId()).isEqualTo(RUN_ID);
-        assertThat(recorder.received().get(0).backtestId()).isEqualTo(BACKTEST_ID);
-        assertThat(recorder.received().get(0).status()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(received).hasSize(1);
+        assertThat(received.get(0).backtestJobId()).isEqualTo(RUN_ID);
+        assertThat(received.get(0).backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(received.get(0).status()).isEqualTo(RunStatus.COMPLETED);
         // 결과 행이 실제로 커밋된 뒤여야 한다 — 이벤트가 가리키는 결과를 수신자가 읽을 수 있다.
         assertThat(
                         jdbcTemplate.queryForObject(
@@ -144,6 +134,6 @@ class BacktestEventServiceEventTest extends PostgresTestSupport {
                     status.setRollbackOnly();
                 });
 
-        assertThat(recorder.received()).isEmpty();
+        assertThat(received).isEmpty();
     }
 }

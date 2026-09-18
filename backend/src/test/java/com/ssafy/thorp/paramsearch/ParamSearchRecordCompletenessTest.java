@@ -17,7 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,10 +27,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -44,16 +43,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>완료와 부분 완료 둘 다 본다. 취소된 묶음이라고 기록이 덜 남으면, 사용자가 "여기까지 계산했다"를 되짚을 수 없다.
  */
-@SpringBootTest(
-        properties = {
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "thorp.param-search.enabled=true",
-            "thorp.param-search.dispatch-window=1",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
+// 창을 1로 좁힌다. 같은 상수를 쓰는 검사끼리 컨텍스트를 함께 쓴다.
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.NARROW_DISPATCH_WINDOW)
+class ParamSearchRecordCompletenessTest extends LauncherMockedIntegrationTestSupport {
 
     /** 접수는 로그인 세션의 요청자를 요구한다(004 T017). 취소·재시도는 그 소유자만 할 수 있다. */
     private static final long OWNER = 7L;
@@ -69,7 +61,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transactionTemplate;
 
-    @MockitoBean private CandidateJobLauncher launcher;
+    @Autowired private CandidateJobLauncher launcher;
 
     private final AtomicLong nextJobId = new AtomicLong(990_000L);
 

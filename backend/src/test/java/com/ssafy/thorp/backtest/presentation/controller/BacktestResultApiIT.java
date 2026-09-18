@@ -24,7 +24,7 @@ import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
-import com.ssafy.thorp.support.PostgresTestSupport;
+import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,8 +36,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -55,19 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>브로커 컨테이너는 띄우지 않는다({@code BacktestEventFlowIT}와 같은 방식). DB는 PostgreSQL 컨테이너다.
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-            "spring.rabbitmq.host=localhost",
-            "spring.rabbitmq.port=1",
-            "spring.rabbitmq.connection-timeout=1s",
-            "spring.rabbitmq.listener.simple.auto-startup=false",
-            "thorp.backtest.republish.enabled=false",
-            "spring.mail.username=test@example.com",
-            "spring.mail.password=test"
-        })
-@AutoConfigureMockMvc
-class BacktestResultApiIT extends PostgresTestSupport {
+class BacktestResultApiIT extends IntegrationTestSupport {
 
     /** gradle test의 작업 디렉터리는 backend/다. */
     private static final Path EXAMPLES = Path.of("..", "docs", "specs", "backtest-api", "examples");
