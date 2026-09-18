@@ -116,6 +116,7 @@ learning_published_term (게시 용어 색인)
   "title": "수익과 손실",
   "question": "가장 크게 줄었던 폭은 왜 시작 금액 대비 손실과 다른가?",
   "readingOrder": 8,
+  "draftVersion": 5,
   "bodyBlocks": [
     { "type": "paragraph", "text": "..." },
     { "type": "term", "termId": "max-drawdown" },
@@ -136,6 +137,12 @@ learning_published_term (게시 용어 색인)
 ```
 
 위 문장과 섹터는 모양을 보이는 자리표시이며 원고나 추천 예시가 아니다.
+
+`draftVersion`은 이 판을 게시할 때의 초안 번호다. `LearningAdminService`는 공개 중인 판의
+`snapshot.draftVersion`과 현재 초안의 `draftVersion`이 다르면 관리 목록에
+`hasUnpublishedChanges: true`를 보낸다. 공개 판이 없는 초안 글은 `false`다. 이 값은
+게시 횟수인 `revisionNo`와 다르며, 다시 게시할 때 새 판에 당시 초안 번호를 기록한다.
+필수 저장 필드이므로 키가 빠진 판을 0으로 대신하지 않고 읽기 실패로 처리한다.
 
 ## 4. 본문 블록
 
