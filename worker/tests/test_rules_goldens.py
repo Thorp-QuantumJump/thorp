@@ -24,157 +24,34 @@
 **해시는 수를 유효숫자 12자리로 맞춘 뒤에 잰다.** 샤프 비율·변동성 같은 지표는 float 표기 그대로
 결과에 실리고, 같은 라이브러리 버전이라도 OS·CPU가 다르면 마지막 자리가 흔들릴 수 있다. 의존성
 버전은 ``uv.lock`` 이 고정하지만(004 T027) 그것만으로 환경 간 끝자리 차이까지 막지는 못한다. 규칙이
-바뀌어서 생기는 차이는 그보다 훨씬 크므로 12자리에서 잘라도 놓치지 않는다. 환경 간 재현의 허용
-기준은 004 T030이 정한다.
+바뀌어서 생기는 차이는 그보다 훨씬 크므로 12자리에서 잘라도 놓치지 않는다. 환경 간 재현도 이
+해시로 판정한다(004 T030, research R-21). 해시 정의는 ``worker.reproducibility``, 기준 입력과 실행은
+``golden_inputs`` 에 있고 환경 간 비교 스크립트(``scripts/reproducibility_report.py``)도 같은
+것을 쓴다.
 """
 
 from __future__ import annotations
 
-import functools
-import hashlib
 import json
 import os
-import re
-from decimal import Context, Decimal
 from pathlib import Path
-from typing import Any
 
 import pytest
-from conftest import FIXTURE_DIR, THREE_ETF_DIR
+from golden_inputs import (
+    BASE_INPUTS,
+    GOLDEN_DIR,
+    RULES_DIR,
+    engine_input_for,
+    golden_path,
+    load_json,
+    rule_snapshots,
+    run,
+    summary,
+)
 
-from worker.contracts.engine_output import EngineOutput, RunStatus
-from worker.engine_runner import PortfolioBacktestEngine
-from worker.market_data import CsvMarketDataProvider
+from worker.reproducibility import computed, digest, input_digest, rounded
 
-RULES_DIR = FIXTURE_DIR / "rules"
-GOLDEN_DIR = Path(__file__).resolve().parent / "goldens"
-INPUT_DIR = Path(__file__).resolve().parent / "fixtures"
 WRITE_ENV = "THORP_WRITE_RULES_GOLDENS"
-
-#: 전략 → 골든을 돌릴 기준 입력. 규칙 사본만 스냅샷의 것으로 바꿔 끼운다.
-BASE_INPUTS: dict[str, str] = {
-    "FIXED_WEIGHT": "engine-input-three-etf-fixed.json",
-    "EQUAL_WEIGHT": "engine-input-three-etf-equal.json",
-    "INVERSE_VOLATILITY": "engine-input-three-etf-inverse_vol.json",
-    "SECTOR_MOMENTUM": "engine-input-three-etf-momentum.json",
-    "MINIMUM_VARIANCE": "engine-input-three-etf-min_variance.json",
-    # 전략이 아니라 시나리오 오버레이라 run.scenarioRules 로 실린다.
-    "TARGET_RISK_OVERLAY": "engine-input-three-etf-target-risk.json",
-}
-OVERLAY = "TARGET_RISK_OVERLAY"
-
-#: 해시에 넣기 전에 수를 맞추는 유효숫자 자리수(모듈 주석).
-SIGNIFICANT_DIGITS = 12
-_NUMBER = re.compile(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$")
-_ROUNDING = Context(prec=SIGNIFICANT_DIGITS)
-
-
-def rule_snapshots() -> list[Path]:
-    return sorted(RULES_DIR.glob("*.json"))
-
-
-def load_json(path: Path) -> dict[str, Any]:
-    loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return loaded
-
-
-def engine_input_for(snapshot: dict[str, Any], rules_version: str | None = None) -> dict[str, Any]:
-    """기준 입력에 스냅샷의 명세를 규칙 사본으로 끼운다.
-
-    모양은 백엔드 ``EngineInputAssembler`` 가 싣는 것과 같다 — 명세에 ``provisional`` 을
-    더한 사본이다.
-    """
-    strategy_id = snapshot["strategyId"]
-    assert strategy_id in BASE_INPUTS, f"{strategy_id} 의 골든 기준 입력을 BASE_INPUTS 에 더한다"
-    body = load_json(INPUT_DIR / BASE_INPUTS[strategy_id])
-    version = rules_version or snapshot["rulesVersion"]
-    if strategy_id == OVERLAY:
-        body["run"]["scenarioRules"] = {**snapshot["spec"], "version": f"{OVERLAY}/{version}"}
-    else:
-        body["allocation"]["rulesVersion"] = version
-        body["allocation"]["rules"] = {**snapshot["spec"], "provisional": snapshot["provisional"]}
-    return body
-
-
-def canonical_json(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
-def run(body: dict[str, Any]) -> EngineOutput:
-    """같은 입력은 한 번만 돌린다 — 골든과 분기 테스트가 같은 기준 입력을 쓴다."""
-    return _run_cached(canonical_json(body))
-
-
-@functools.cache
-def _run_cached(body_json: str) -> EngineOutput:
-    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(
-        json.loads(body_json)
-    )
-    assert output.run.status is RunStatus.COMPLETED, output.run.error
-    return output
-
-
-def computed(output: EngineOutput) -> dict[str, Any]:
-    """계산 결과만 남긴다. 실행 시각과 이름표(``versions``: 규칙·엔진·워커 버전 문자열)는 뺀다.
-
-    이름표를 빼는 이유: 골든이 지키는 것은 "이 명세로 계산하면 이 숫자"이고, 워커 버전을 올릴 때마다
-    모든 골든이 바뀌면 정말 숫자가 바뀐 경우를 가려낼 수 없다.
-    """
-    payload: dict[str, Any] = json.loads(output.to_json())
-    payload["run"].pop("startedAt", None)
-    payload["run"].pop("finishedAt", None)
-    payload.pop("versions", None)
-    return payload
-
-
-def rounded(value: Any) -> Any:
-    """수(숫자 문자열 포함)를 유효숫자 12자리로 맞춘다.
-
-    식별자·날짜 같은 나머지 문자열은 그대로 둔다.
-    """
-    if isinstance(value, dict):
-        return {key: rounded(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [rounded(item) for item in value]
-    if isinstance(value, float):
-        return _significant(Decimal(repr(value)))
-    if isinstance(value, str) and _NUMBER.match(value):
-        return _significant(Decimal(value))
-    return value
-
-
-def _significant(number: Decimal) -> str:
-    """유효숫자로 반올림한 뒤 뒷자리 0을 떼어 같은 값이 언제나 같은 표기가 되게 한다."""
-    return format(_ROUNDING.create_decimal(number).normalize(), "f")
-
-
-def digest(payload: dict[str, Any]) -> str:
-    return hashlib.sha256(canonical_json(rounded(payload)).encode("utf-8")).hexdigest()
-
-
-def input_digest(body: dict[str, Any]) -> str:
-    """골든을 만든 기준 입력의 지문.
-
-    결과가 어긋났을 때 입력이 바뀐 것인지 엔진이 바뀐 것인지 가른다.
-    """
-    return hashlib.sha256(canonical_json(body).encode("utf-8")).hexdigest()
-
-
-def summary(output: EngineOutput) -> dict[str, Any]:
-    """골든이 어긋났을 때 어디가 달라졌는지 가늠할 숫자 몇 개. 판정에는 쓰지 않는다."""
-    payload = computed(output)
-    series = payload.get("weightsSeries") or []
-    return {
-        "performance": payload.get("performance"),
-        "tradeCount": len(payload.get("trades") or []),
-        "exceptionCount": len(payload.get("exceptions") or []),
-        "firstTarget": series[0]["target"] if series else None,
-        "lastTarget": series[-1]["target"] if series else None,
-    }
-
-
-def golden_path(snapshot_path: Path) -> Path:
-    return GOLDEN_DIR / snapshot_path.name
 
 
 @pytest.mark.parametrize("snapshot_path", rule_snapshots(), ids=lambda path: path.stem)
