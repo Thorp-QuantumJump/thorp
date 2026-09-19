@@ -1,7 +1,10 @@
 # 이미지는 pyproject.toml·uv.lock·src 만 복사한다(infra/docker/worker.Dockerfile).
-# 로컬 가상환경과 캐시가 빌드 컨텍스트로 넘어가지 않게 한다.
+# 로컬 가상환경과 캐시, 로컬 설치가 만든 메타데이터가 빌드 컨텍스트로 넘어가지 않게 한다.
+# egg-info 는 uv sync 가 워커를 편집 모드로 설치할 때 src 안에 생긴다. 이미지에 들어가면 로컬에서
+# 빌드한 이미지만 importlib.metadata 로 thorp-worker 를 찾아 운영 이미지와 달라진다.
 .venv/
 **/__pycache__/
+**/*.egg-info/
 .pytest_cache/
 .ruff_cache/
 build/
