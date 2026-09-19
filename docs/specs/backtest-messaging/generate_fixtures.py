@@ -3,12 +3,12 @@
 `examples/` 아래 JSON 8개를 만든다. 수치는 시드 고정 랜덤워크 + 단순 현금 회계로 만들어
 `equity = cash + positionValue`, 지표 계산 규약, 손익 항등식이 실제로 성립한다.
 
-- `engine-input.json`: 백엔드 `EngineInputAssembler`가 API 예시(`backtest-request.json`)에서 조립하는
-  결과와 **정확히 같아야 한다** (`EngineInputFixtureTest`). 그래서 003 연동 전에는 생략되는
-  필드(`universe.mappingVersion`·`items[].sectorId`, `allocation.rules`, `marketData.dataVersion`,
-  `evaluation.splitVersion`)를 여기서도 비운다.
+- `engine-input.json`: 백엔드 `EngineInputAssembler`가 조립하는 결과와 **정확히 같아야 한다**
+  (`EngineInputFixtureTest`). 그 테스트가 조립하는 실행은 접수 경로를 거치지 않은 행이라, 그 경로에서
+  생략되는 필드(`universe.mappingVersion`·`items[].sectorId`, `allocation.rules`,
+  `evaluation.splitVersion`)를 여기서도 비우고 비용은 고정값(데모)을 싣는다.
 - `engine-input-target-risk.json`: 계약 구조 예시. PD-18 목표 위험 맞춤 시나리오와 003 연동 뒤의
-  전체 필드를 보여준다. 조립기 검증 대상은 아니다.
+  전체 필드를 보여준다. 비용은 기본 비용(PD-07 확정값)이다. 조립기 검증 대상은 아니다.
 - `event-*.json`: STARTED / PROGRESS / FINISHED(COMPLETED · FAILED · CANCELLED).
 - `control-cancel.json`: 백엔드 → 워커 제어 메시지.
 """
@@ -40,6 +40,7 @@ CENT = Decimal("0.01")
 RATIO = Decimal("0.000001")
 ENGINE_VERSION = "nautilus_trader 1.219.0"
 WORKER_VERSION = "2.0.0"
+# engine-input.json 은 비용 버전이 기록되지 않은 실행의 조립 결과라 ExecutionPolicy 고정값(데모)을 싣는다.
 COST_PROFILE = {
     "version": "PROVISIONAL-DEMO-1",
     "commissionBps": "0",
@@ -47,6 +48,15 @@ COST_PROFILE = {
     "slippageBps": "5",
     "taxBps": "0",
     "provisional": True,
+}
+# 접수 경로를 거친 요청의 기본 비용(PD-07 확정, T021). 등록표 행을 그대로 실으므로 NUMERIC(8,4) 네 자리다.
+CONFIRMED_COST_PROFILE = {
+    "version": "KR-ETF-2026-09",
+    "commissionBps": "1.5000",
+    "spreadBps": "3.0000",
+    "slippageBps": "5.0000",
+    "taxBps": "0.0000",
+    "provisional": False,
 }
 # queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.
 SERVED = {"queue": "backtest.jobs", "role": "single"}
@@ -447,8 +457,10 @@ engine_input = {
         "scenario": "FULL_PERIOD",
     },
     "universe": {"items": [{"instrumentId": inst} for inst in INSTRUMENTS]},
+    # 자료 버전은 접수가 정해 두 필드에 같은 값으로 싣는다(spec 001 research 결정 4, EngineInputFixtureTest).
     "marketData": {
-        "datasetId": "FIXTURE-three_etf_24m",
+        "datasetId": "KRX_DAILY_20260907",
+        "dataVersion": "KRX_DAILY_20260907",
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",
         "priceType": "LAST",
@@ -540,7 +552,7 @@ engine_input_target_risk = {
         "leverage": "1.0",
         "integerLots": True,
     },
-    "execution": engine_input["execution"],
+    "execution": {**engine_input["execution"], "costProfile": CONFIRMED_COST_PROFILE},
     "evaluation": {"splitVersion": "SPLIT-1", "warmupTradingDays": 63, "liquidationAtEnd": True},
     "progress": {"batchTradingDays": PROGRESS_CHUNK},
 }

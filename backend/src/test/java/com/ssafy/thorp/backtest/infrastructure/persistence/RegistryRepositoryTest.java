@@ -36,6 +36,20 @@ class RegistryRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("확정 비용 조건(PD-07)이 확정 표시와 함께 읽힌다")
+    void confirmedCostProfileIsNotProvisional() {
+        CostProfile profile = costProfiles.find("KR-ETF-2026-09").orElseThrow();
+
+        assertThat(profile.provisional()).isFalse();
+        assertThat(profile.commissionBps()).isEqualByComparingTo("1.5");
+        assertThat(profile.spreadBps()).isEqualByComparingTo("3");
+        assertThat(profile.slippageBps()).isEqualByComparingTo("5");
+        assertThat(profile.taxBps()).isEqualByComparingTo("0");
+        assertThat(profile.escalation()).as("비용 상승 시나리오는 아직 정하지 않았다").isNull();
+        assertThat(profile.note()).contains("PD-07");
+    }
+
+    @Test
     @DisplayName("모르는 비용 버전은 빈 Optional이다")
     void unknownCostProfileIsEmpty() {
         assertThat(costProfiles.find("NOPE")).isEmpty();
