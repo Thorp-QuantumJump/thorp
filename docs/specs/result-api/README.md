@@ -86,4 +86,4 @@ series: []}`다. 최신 관측치 한 점으로 기간 계열을 꾸미지 않�
 
 ## 8. 공개 응답에서 버리는 필드
 
-요청자 식별자, `backtestId`, 실행 식별자(`runId`), 워커 자기 보고(`worker`·`versions.worker`), 재시도 원본의 `backtestId`(`retryOf` → `retryOfToken`), 오류 문구 속 식별자. 이유와 목록의 원본은 계약 "공개 응답에서 버리는 필드"다. 004가 필드를 더하면 버릴 것만 원본 목록에 추가한다.
+요청자 식별자, `backtestId`, 실행 식별자(`runId`), 워커 자기 보고(`worker`·`versions.worker`·`versions.dependencies`), 재시도 원본의 `backtestId`(`retryOf` → `retryOfToken`), 오류 문구 속 식별자. 이유와 목록의 원본은 계약 "공개 응답에서 버리는 필드"다. 004가 필드를 더하면 버릴 것만 원본 목록에 추가한다.

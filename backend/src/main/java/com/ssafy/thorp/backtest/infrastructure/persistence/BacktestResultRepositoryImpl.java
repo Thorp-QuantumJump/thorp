@@ -103,7 +103,10 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                                         read(row.getLiquidation(), EngineOutput.Liquidation.class),
                                         read(row.getAnalytics(), EngineOutput.Analytics.class),
                                         row.getExceptionCount(),
-                                        row.getWorkerVersion()));
+                                        row.getWorkerVersion(),
+                                        read(
+                                                row.getDependencies(),
+                                                EngineOutput.Dependencies.class)));
     }
 
     @Override

@@ -103,6 +103,7 @@ class PublicResultServiceTest {
         Map<String, Object> versions = new LinkedHashMap<>();
         versions.put("rules", "1");
         versions.put("worker", "2.0.0");
+        versions.put("dependencies", Map.of("numpy", "2.4.6", "scipy", "1.17.1"));
         return new BacktestDetailResult(
                 BACKTEST_ID,
                 status,

@@ -40,7 +40,7 @@ class DedupKeyCalculatorTest {
                 "FIXTURE-three_etf_24m",
                 "SPLIT-1",
                 "PROVISIONAL-DEMO-1",
-                "nautilus_trader 1.219.0 / worker 2.2.0",
+                "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8",
                 "FULL_PERIOD",
                 null,
                 null);
@@ -132,6 +132,19 @@ class DedupKeyCalculatorTest {
         @DisplayName("자료 버전이 다르면 다른 실행이다 — 픽스처 결과를 실제 자료 결과로 재사용하지 않는다")
         void dataVersionIsPartOfTheKey() {
             assertThat(keyOf(input -> withDataVersion(input, "KRX_DAILY_20260911")))
+                    .isNotEqualTo(calculator.calculate(base()));
+        }
+
+        @Test
+        @DisplayName("워커 실행환경 지문(uv.lock)만 달라도 다른 실행이다 — 의존성이 바뀐 환경의 결과를 재사용하지 않는다")
+        void workerEnvironmentFingerprintIsPartOfTheKey() {
+            assertThat(
+                            keyOf(
+                                    input ->
+                                            withEngineVersion(
+                                                    input,
+                                                    "nautilus_trader 1.219.0 / worker 2.2.0"
+                                                            + " / uv.lock 000000000000")))
                     .isNotEqualTo(calculator.calculate(base()));
         }
 
@@ -268,6 +281,27 @@ class DedupKeyCalculatorTest {
                 input.evaluationSplitVersion(),
                 input.costProfileVersion(),
                 input.engineVersion(),
+                input.scenario(),
+                input.scenarioParams(),
+                input.scenarioRulesVersion());
+    }
+
+    private static DedupKeyCalculator.Input withEngineVersion(
+            DedupKeyCalculator.Input input, String engineVersion) {
+        return new DedupKeyCalculator.Input(
+                input.strategyId(),
+                input.rulesVersion(),
+                input.parameters(),
+                input.mappingVersion(),
+                input.universe(),
+                input.start(),
+                input.end(),
+                input.warmupTradingDays(),
+                input.initialCash(),
+                input.dataVersion(),
+                input.evaluationSplitVersion(),
+                input.costProfileVersion(),
+                engineVersion,
                 input.scenario(),
                 input.scenarioParams(),
                 input.scenarioRulesVersion());

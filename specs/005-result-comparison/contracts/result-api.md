@@ -125,6 +125,7 @@ reason: "INDEX_SERIES_UNAVAILABLE", series: []}`를 돌려준다. 최신 관측�
 | `worker`(워커 자기 보고) | 운영 정보. 사용자 화면에 노출하지 않는다 |
 | `retryOf`의 내부 식별자 | 원 요청의 `backtestId`. 재시도 응답은 원 요청의 공개 토큰(`retryOfToken`)으로 바꿔 담는다 |
 | `versions.worker` | 결과를 낸 워커의 자기 보고. 위 `worker`와 같은 이유다 |
+| `versions.dependencies` | 결과를 계산한 워커 환경의 라이브러리 버전(004 T028). 위 `worker`와 같은 이유다 |
 | 오류 문구 속 식별자 | 004 예외 문구에 `backtestId`가 들어 있다. 공개 경로는 코드의 기본 문구로 바꾼다 |
 
 하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다. `/index-comparison`도 내부 식별자를 담지 않는다.

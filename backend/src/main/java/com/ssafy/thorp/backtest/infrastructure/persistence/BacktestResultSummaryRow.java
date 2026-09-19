@@ -48,4 +48,7 @@ interface BacktestResultSummaryRow {
 
     /** {@code versions ->> 'worker'}. 결과를 낸 워커가 보고한 자기 버전. v2 이전 결과·실패 결과는 null */
     String getWorkerVersion();
+
+    /** {@code versions -> 'dependencies'}. 결과를 계산한 워커 환경의 numpy·scipy 버전. T028 이전 결과·실패 결과는 null */
+    String getDependencies();
 }
