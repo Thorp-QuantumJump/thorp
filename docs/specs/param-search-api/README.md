@@ -192,7 +192,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
         "provisional": ["displayCount"]
       },
       "limits": { "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5, "provisional": ["..."] },
-      "referenceVersions": { "marketData": "FIXTURE-three_etf_24m", "registry": "PROVISIONAL-20260911", "cost": "PROVISIONAL-DEMO-1", "engine": "nautilus_trader 1.219.0 / worker 2.0.0" },
+      "referenceVersions": { "marketData": "FIXTURE-three_etf_24m", "registry": "PROVISIONAL-20260911", "cost": "KR-ETF-2026-09", "engine": "nautilus_trader 1.219.0 / worker 2.0.0" },
       "dataVersionChanged": false
     },
     "baseline": {
