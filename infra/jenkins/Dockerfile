@@ -16,10 +16,11 @@ USER root
 #   2) 팀의 로컬 개발 환경이 24.x 이므로 같은 메이저를 맞춰야 CI에서만 나타나는 차이를 줄일 수 있다.
 ARG NODE_MAJOR=24
 
-# Worker·Data CI 는 파트별로 venv 를 만들어 pip install 을 돌린다. 베이스 이미지에 python3 는
-# 있지만 venv 모듈이 빠져 있어, 없으면 Worker Setup 이 첫 명령에서
-# "ensurepip is not available" 로 끝난다. python3-venv 는 이미지의 기본 python3 버전에 맞는
-# 것을 가져온다.
+# Worker·Data CI 는 첫 명령에서 python3 -m venv 로 가상환경을 만든다. Data 는 그 안에서
+# pip install 을 돌리고, Worker 는 uv 를 설치할 부트스트랩 가상환경을 만든 뒤 uv sync 로 설치한다
+# (Jenkinsfile Worker Setup). 베이스 이미지에 python3 는 있지만 venv 모듈이 빠져 있어, 없으면 두
+# Setup 모두 첫 명령에서 "ensurepip is not available" 로 끝난다. python3-venv 는 이미지의 기본
+# python3 버전에 맞는 것을 가져온다.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg python3-venv \
  && install -m 0755 -d /etc/apt/keyrings \

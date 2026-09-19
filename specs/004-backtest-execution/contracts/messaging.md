@@ -23,7 +23,7 @@
   "marketData": {"datasetId": "KRX_DAILY_20260915", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
   "allocation": {"strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "rules": {"lookbackDays": 63, "zeroVolatility": "EXCLUDE_THEN_ALLOCATE", "weightCap": "1.0000", "investedFraction": "1.0000"}, "parameters": {"rebalance": "MONTH_END"}},
   "portfolio": {"initialCash": "10000000.00", "currency": "KRW", "integerLots": true, "shortSelling": false, "leverage": "1.0"},
-  "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "PROVISIONAL-DEMO-1", "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0", "provisional": true}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},
+  "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "KR-ETF-2026-09", "commissionBps": "1.5000", "spreadBps": "3.0000", "slippageBps": "5.0000", "taxBps": "0.0000", "provisional": false}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},
   "evaluation": {"splitVersion": "SPLIT-1", "warmupTradingDays": 63, "liquidationAtEnd": true},
   "progress": {"batchTradingDays": 20}
 }

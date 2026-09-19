@@ -111,7 +111,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 | `portfolio.currency` / `shortSelling` / `leverage` / `integerLots` | `KRW` / `false` / `"1.0"` / `true` |
 | `execution.signalTiming` / `executionTiming` | `BAR_CLOSE` / `NEXT_BAR_OPEN` (t 종가 신호 → t+1 시가 체결) |
 | `execution.orderTypes` | `["MARKET"]` |
-| `execution.costProfile` | `version=PROVISIONAL-DEMO-1`, 수수료·스프레드·세금 `"0"`, `slippageBps="5"`, `provisional=true` — 팀 결정(PD-07) 전 임시값. 결과 `versions.costProfile`에 그대로 남는다 |
+| `execution.costProfile` | **고정값이 아니다.** 실행이 고른 비용 버전의 등록표(`cost_profile`) 행을 그대로 싣는다. 요청이 버전을 비우면 서버 기본 `KR-ETF-2026-09`(수수료 `"1.5000"`·스프레드 `"3.0000"`·슬리피지 `"5.0000"`·세금 `"0.0000"`, `provisional=false`, PD-07 확정, T021)이다. 비용 버전이 기록되지 않은 옛 실행만 고정값 `PROVISIONAL-DEMO-1`(수수료·스프레드·세금 `"0"`, `slippageBps="5"`, `provisional=true`)을 싣는데, `engine-input.json`이 그 경로의 조립 결과라 이 값을 보인다. 결과 `versions.costProfile`에 그대로 남는다 |
 | `execution.partialFill` / `liquidity.model` | `false` / `UNLIMITED` |
 | `execution.tradingHalt` / `delisting` | `DEFER_TO_NEXT_TRADABLE` / `CAUSE_BASED` |
 | `evaluation` | `liquidationAtEnd=false`, `splitVersion`·`warmupTradingDays` 없음(엔진이 전략 관측 기간으로 정한다) |
