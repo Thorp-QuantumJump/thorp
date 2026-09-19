@@ -126,6 +126,11 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
 ## 규칙
 
 - 타입 힌트 필수, 라인 100자 (ruff가 강제)
+- **의존성 버전은 `uv.lock` 하나가 정한다**(spec 004 T027). 운영 이미지는 `uv sync --frozen`, CI는
+  `uv sync --locked --python 3.11`로 같은 lock에서 설치한다. `requirements.txt`를 다시 만들지 말 것 — 두 곳에서
+  관리하면 운영만 다른 numpy·scipy로 돌아 결과가 마지막 자리에서 갈리는데 테스트는 통과한다. `pyproject.toml`을
+  고치면 `uv lock`으로 lock을 함께 갱신한다 — 고정 버전(`==`)과 lock이 어긋나면
+  `tests/test_dependency_pins.py`가 실패한다. 기반 이미지·uv digest 갱신 절차는 `worker/README.md` "실행환경 잠금"
 - 수치 계산은 pandas/numpy 벡터 연산 우선, Python 루프 지양
 - 브로커 ACK는 처리와 필수 발행이 완료된 뒤 수행한다(at-least-once). 구체적으로 **FINISHED
   발행이 브로커에서 확인된 뒤에만 작업 메시지를 ACK한다**(계약 §7). 이 순서를 뒤집으면 결과를
