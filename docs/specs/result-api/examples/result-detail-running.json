@@ -61,8 +61,8 @@
       "data": "FIXTURE-three_etf_24m",
       "evaluationSplit": "SPLIT-1",
       "costProfile": {
-        "version": "PROVISIONAL-DEMO-1",
-        "provisional": true
+        "version": "KR-ETF-2026-09",
+        "provisional": false
       },
       "mapping": "SECTOR-ETF-2026-09"
     },
