@@ -51,8 +51,11 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 - `inputs.portfolioSeries`·`weightsSeries`(축약 예시의 옛 필드다. 확정 모양은 아래 "구간 입력 확장"의
   `openingPositions`·`dailyPositions`)는 `baselineDate`부터 `lastAvailable`까지, `trades`는
   `d0`~`lastAvailable` 안에 체결된 것만. **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,
-  범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `DATA_INSUFFICIENT`로 답한다 — 채우지 않는다.
-- `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`.
+  범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `INPUT_INCOMPLETE`로 실패한다 — 채우지 않는다. 자료 부족 판정은 발행 전 백엔드 몫이다(research R13).
+- `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`. 백엔드는 폐지
+  전날까지의 거래일 수가 21 이상일 때만 작업을 발행하고, `window.lastAvailable`·`completedTradingDays`는 이미
+  폐지 전날 기준으로 줄인 값이다 — 그래서 `window21`은 언제나 완성이다. 004의 저장 시계열은 폐지 뒤에도
+  이어지지만(폐지 종목을 마지막 종가로 평가) 백엔드는 그 구간을 담지 않는다(research R4).
 - `inputDigest` = 백엔드가 `inputs·window·job.scenario·marketData` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로
   돌려준다(재현 대조는 백엔드 몫).
 - 크기 상한: `dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
@@ -93,8 +96,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 
 ### `FINISHED.error` (FAILED)
 
-`{code, message}`, code ∈ `DATA_INSUFFICIENT`(시장 자료·입력 범위 부족) `INVALID_REQUEST`(계약은 맞지만
-계산할 수 없는 조합) `ENGINE_ERROR`(그 밖의 결정적 오류). 계약 위반(JSON·스키마)은 이벤트가 아니라
+`{code, message}`, code ∈ `INPUT_INCOMPLETE`(메시지의 입력 행·필드 누락) `MARKET_DATA_MISSING`(시장 자료 정합
+실패) `INVALID_REQUEST`(계약은 맞지만 계산할 수 없는 조합) `ENGINE_ERROR`(그 밖의 결정적 오류). 워커는
+`DATA_INSUFFICIENT`를 내지 않는다 — 자료 부족은 발행 전 백엔드 판정이다(research R13). 계약 위반(JSON·스키마)은 이벤트가 아니라
 reject → DLQ다.
 
 ## 검증 책임
@@ -102,9 +106,10 @@ reject → DLQ다.
 | 항목 | 백엔드(발행 전) | 워커(수신 후) |
 |---|---|---|
 | 입력 실행이 `COMPLETED` | 아니면 발행하지 않음(`PENDING_RUN`) | — |
-| 잘라낸 범위가 `baselineDate`~`lastAvailable`를 덮음 | 확인 후 발행 | 행이 빠졌으면 `DATA_INSUFFICIENT` |
+| 잘라낸 범위가 `baselineDate`~`lastAvailable`를 덮음 | 확인 후 발행 | 행이 빠졌으면 `INPUT_INCOMPLETE` 실패 |
 | 종목 수·행 수 상한 | 초과면 `FAILED(INPUT_TOO_LARGE)`, 발행 안 함 | 계약 상한은 pydantic으로 |
-| 시장 자료 정합 | — | `validate_prices` fail-closed(백테스트와 같다) |
+| 시장 자료 정합 | — | `validate_prices` fail-closed(백테스트와 같다) → `MARKET_DATA_MISSING` 실패 |
+| 구간 안 상장폐지 | 폐지 전날까지 21거래일 미만이면 `POST_INCOMPLETE(DELISTED)`, 발행 안 함. 이상이면 폐지 전날까지만 담아 발행 | `delistedOn` 전날까지만 계산, `partial=true` |
 | 원천 워밍업 부족 | 링크 `DATA_INSUFFICIENT(WARMUP_SHORT)`, 발행 안 함 | — |
 | 원천은 충분하나 기존 실행 effectiveStart > d0 또는 기준·종료 행 부족 | `OUT_OF_PERIOD`, 확인 후 전체 기간 실행. 필터에서 제외하지 않음 | — |
 
