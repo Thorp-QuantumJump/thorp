@@ -7,19 +7,22 @@
 
 | 항목 | 값 |
 |---|---|
-| 주소 | `/regime-link?base={publicToken}[&compare={publicToken}]` |
+| 주소 | `/regime-link?base={publicToken}[&compare={publicToken}][&snapshot={snapshotKey}][&case={caseId}][&full=1]` — 005가 여는 주소는 `base`·`compare`뿐이고 나머지는 011 화면이 붙인다 |
 | `base` | 005 결과 화면의 기준 결과 공개 토큰(필수) |
 | `compare` | 005 비교 주소(`?compare=`)에 있던 비교 대상 토큰(있으면). **최대 하나** — 비교 묶음은 005 기준·비교 대상 2개다(Clarifications 09-17 Q1) |
 | 넘어오지 **않는** 것 | 분야·기준월(011이 분야 선택 화면을 먼저 연다, Clarifications 09-18 Q3), 섹터·전략·설정·기간·금액(토큰이 가리키는 실행의 `config`에서 서버가 읽는다) |
 | 돌아가는 길 | 브라우저 뒤로 가기 → 원래 결과 주소(005 FR-018) |
+| 005의 진입 버튼 | `components/result/NextStepLinks`의 '경제환경이 비슷했던 과거 보기'. `compare`는 비교 대상이 열람 가능(`READY`)일 때만 싣는다 |
+| 첫 진입 | 탭 세션에 이 `base`의 탐색 상태가 없을 때. 분야·기준월 선택부터 시작한다 |
+| 복귀 | 같은 탭에서 005로 가 비교 대상을 바꾸고 다시 들어올 때. 탭 `sessionStorage`의 탐색 상태(`snapshotKey`·`entryPath`·전체 탐색 여부·직전 `linkSearchId` 또는 익명의 직전 목록)로 같은 검색을 다시 확정하고 변경 알림을 보인다. 새 탭·새 세션은 첫 진입이다(research R15) |
 
 005 FR-018은 넘기는 값을 "섹터 후보 집합·전략·설정값·분석 기간·금액"이라 적었지만 이 값들은 전부
 공개 토큰으로 서버가 풀 수 있으므로 **주소에는 토큰만 싣는다.** 값을 주소에 다시 실으면 두 벌이 되어
 어긋날 수 있다(원칙 IV). 005 문구 갱신은 005 소유자 판단이다(plan "교차 spec 후속").
 
-화면 흐름: 분야 선택(7개 + 선택형 종합) → `GET /regime-links/availability`(`entryPath=STRATEGY_RESULT`)
+화면 흐름(첫 진입): 분야·기준월 선택(7개 + 선택형 종합, 기준월 기본은 그 분야의 최신 기준월) → 주소에 `snapshot` 기록 → `GET /regime-links/availability`(`entryPath=STRATEGY_RESULT`)
 → 기본 목록(`shownInFiltered=true`) + "선택 ETF로 비교 가능한 기간" + 제외 수 + '전체 경제환경 탐색으로
-전환' → 사례 선택 → `POST /regime-links`(로그인 필요) → 사례 옆 전략 결과 영역.
+전환' → 로그인 사용자는 `POST /regime-link-searches`로 목록·변경 기록 확정(익명은 GET과 탐색 흐름 내 변경 표시) → 사례 선택 → `POST /regime-links`(로그인 및 linkSearchId 필요) → 사례 옆 전략 결과 영역.
 
 ## 2. 시장 흐름 → 011 (`MARKET_FLOW` 경로)
 
@@ -27,23 +30,27 @@
 |---|---|
 | 주소 | `/regime-link/start?case={caseId}[&sector={sectorCode}]` |
 | `case` | `{snapshotKey}~{endMonth}` (research R6). 009 `StrategyComparisonHandoff.caseId`가 이 값이다 |
-| `sector` | 009에서 고른 섹터(있으면). 002 화면의 **초기 선택**으로만 쓰고 사례 순위와 무관(FR-005) |
-| 로그인 | 이 주소를 열 때 익명이면 로그인 안내 → 로그인 후 같은 주소로 복귀(FR-025, 014 FR-011 방식) |
+| 진입 버튼의 위치 | 사례를 고르는 곳인 010 `RegimeSearchPage`의 사례 상세(사후 구간 자리). 009 기본 화면의 카드는 사례 없이 011을 열지 않고 `/regime-search`로 안내한다 |
+| `sector` | 009에서 고른 섹터(있으면). 002 화면의 **초기 선택**으로만 쓰고 사례 순위와 무관(FR-005). 010 사례 상세에서 들어오는 길은 섹터를 알 수 없어 싣지 않는다(009 → 010 인계에 섹터가 없다) |
+| 로그인 | 이 주소를 열 때 익명이면 로그인 안내 → 로그인 후 같은 주소로 복귀(FR-025, 014 FR-011 방식). 014 `ProtectedRoute`와 같은 복귀 위치 저장(`auth/returnTarget`)을 재사용한다 |
 
 화면 흐름: `/regime-link/start` → 002(섹터·비중, `sector` 초기 선택) → 003(전략·설정, **§3 제약**)
 → '분석하기' → 004 접수(요청에 `case`를 싣지 않는다 — 004 계약을 바꾸지 않고 화면이 주소로 들고
-다닌다) → 완료되면 `/regime-link?base={publicToken}&case={caseId}`로 이동해 그 사례가 열린 상태로
-시작한다(`entryPath=MARKET_FLOW`, 필터 없음).
+다닌다) → **접수되면 곧바로**(접수 응답의 `publicToken`) `/regime-link?base={publicToken}&case={caseId}`로 이동하고,
+011 화면이 기준 실행의 진행 상태를 005와 같은 방식으로 보이다가 완료되면 그 사례가 열린 상태로 이어진다(`entryPath=MARKET_FLOW`, 필터 없음). 가용성 GET은 case의 snapshotKey를 전달하여 원래 revision을 유지한다.
 
 `case`는 002·003 주소의 질의 인자로 유지한다(`/diagnosis/sectors?case=…`, `/strategy?case=…`).
-새로고침에도 남아야 하므로 상태가 아니라 주소다.
+새로고침에도 남아야 하므로 상태가 아니라 주소다. 현재 002·003은 질의 인자를 읽지 않고 선택 인계를
+sessionStorage 한 항목으로 한다 — 그 방식은 바꾸지 않고 `case`만 주소로 다닌다. 새 진단을 시작할 때 이전
+사례의 기간 제약이 남지 않게 하기 위해서다. 003은 지금 접수 뒤 결과 화면으로 이동하지 않으므로 완료를
+003에서 기다리지 않는다(research R15).
 
 ## 3. 003 화면 제약 (시장 흐름 경로에서만)
 
 주소에 `case`가 있으면 003 '기간·금액·조건'은 아래를 추가로 지킨다(Clarifications 09-18 Q1).
 
 - 분석 기간의 **시작일 상한** = `d0 − 선택 전략의 워밍업 거래일`, **종료일 하한** = `d63`(미완성이면
-  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/availability`
+  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/case-window?caseId=`
   응답의 `postWindow`에서 읽는다(003이 스스로 계산하지 않는다).
 - 한 문장 안내: "이 사례(YYYY년 M월) 직후 구간을 포함해야 하므로 기간을 여기까지만 줄일 수
   있습니다." 고정 문구다.
@@ -60,9 +67,9 @@
 | 목적지 | 조건 | 값 |
 |---|---|---|
 | 005 결과 화면 | 사례 결과 영역의 '전체 기간 결과 보기' | `/results/{publicToken}` — 전체 기간 결과는 항상 같은 화면에서도 요약으로 보이고(FR-012), 상세는 005로 |
-| 010 사례 상세 | 거리·기여·z 값 | 010 화면 컴포넌트를 011 화면 안에 재사용(주소 이동 없음) |
-| 012 뉴스 | 당시 뉴스 | 012 계약을 따른다. 없으면 영역을 비운다(Edge Cases) |
-| 로그인 | 익명이 쓰기 동작을 누름 | `/login?returnTo={현재 주소}` (014 FR-011 방식) |
+| 010 사례 상세 | 거리·기여·z 값 | 010 화면 컴포넌트(`components/regime/CaseList`·`CaseDetail`)를 011 화면 안에 재사용(주소 이동 없음). 사후 구간 자리는 prop으로 끼워 넣는다 — 010 검색 화면에서는 '이 기간으로 전략 비교' 링크, 011 화면에서는 전략 결과 영역 |
+| 012 뉴스 | 당시 뉴스 | 012 과거 구간 조회(`GET /market-news/digests?from&to`, 최대 93일)에 사례의 관측 구간 3개월을 넘긴다. `context=HISTORICAL`, 없으면 `state=EMPTY`와 012의 문구를 정상 화면으로 보인다(Edge Cases) |
+| 로그인 | 익명이 쓰기 동작을 누름 | 014 `auth/returnTarget`에 현재 주소(path+query)를 저장한 뒤 `/login`으로 이동한다. 주소 인자는 쓰지 않는다(014 FR-011 방식) |
 
 ## 5. 주소가 틀렸을 때
 
