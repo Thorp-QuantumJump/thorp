@@ -168,7 +168,11 @@ public record StrategyRegistryResult(
             String context,
             Object value,
             String multiplyByContext,
-            String multiplyByAxis) {}
+            String multiplyByAxis,
+            CeilingFactorView multiplyByCeil) {}
+
+    /** {@code ceil(context × axis ÷ divisor)}로 계산해 바깥 축 값에 곱하는 인자. */
+    public record CeilingFactorView(String context, String axis, Object divisor) {}
 
     /** 워밍업 산출 규칙. {@code sum}의 축 이름을 현재 값으로 바꿔 모두 더한다(data-model §6). */
     public record WarmupRuleView(List<Object> sum) {

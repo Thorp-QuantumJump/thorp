@@ -23,6 +23,7 @@ export type ConditionLineInput = Pick<
 > & {
   /** 비교 대상의 이름. 없으면 `null` */
   targetName?: string | null
+  targetWeightsSource?: PublicResultDetail['weightsSource']
 }
 
 export const COMPUTED_WEIGHTS_NOTE = '비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.'
@@ -46,6 +47,14 @@ export function buildConditionLine(input: ConditionLineInput): ConditionLine {
     cost: costProfile
       ? `비용 반영 (${costProfile.version}${costProfile.provisional ? ', 임시 비용 기준' : ''})`
       : '비용 반영 여부를 확인할 수 없음',
-    weightsNote: input.weightsSource === 'COMPUTED' ? COMPUTED_WEIGHTS_NOTE : null,
+    weightsNote:
+      [
+        input.weightsSource === 'COMPUTED' ? COMPUTED_WEIGHTS_NOTE : null,
+        input.targetWeightsSource === 'COMPUTED'
+          ? '비교 대상의 비중도 선택한 규칙의 계산 결과입니다.'
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ') || null,
   }
 }

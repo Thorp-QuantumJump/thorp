@@ -8,7 +8,8 @@ import java.util.Optional;
  * 003이 소유한 전략·파라미터 등록표를 007이 읽는 <b>유일한</b> 통로(contracts/param-search-internal.md §1).
  *
  * <p>007은 이 포트가 돌려주는 값 외에 전략에 대해 아무것도 알지 못한다 — 전략 목록 상수·전략별 파라미터값·{@code strategyId} 분기를 어디에도 두지
- * 않는다(FR-025). 003이 완성되면 구현체만 교체한다.
+ * 않는다(FR-025). 정식 구현인 {@code strategy.infrastructure.registry.FileParameterRegistry}가 화면 조회와 007에
+ * 같은 등록표를 제공한다.
  *
  * <p><b>조회 실패는 대체하지 않는다.</b> 구현체가 예외를 던지면 호출자는 접수를 거부한다(503 {@code REGISTRY_UNAVAILABLE}). 캐시된 등록
  * 정보나 007 내부 기본값으로 채워 실행하면 그 묶음의 참조 버전이 뜻을 잃는다(FR-028, research R9).

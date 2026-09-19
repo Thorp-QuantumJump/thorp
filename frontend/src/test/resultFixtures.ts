@@ -40,6 +40,7 @@ export const resultDetailCompleted: PublicResultDetail = {
   finishedAt: '2026-09-16T04:12:41Z',
   queueWaitSeconds: null,
   config: {
+    executionType: 'SINGLE',
     end: '2024-12-31',
     items: [
       { sectorId: 'HARBOR', instrumentId: '900001.XKRX', targetWeight: '0.4000' },
@@ -188,11 +189,13 @@ export function makeEquitySeries({
     if (index <= peakIndex) {
       equity = initialEquity + ((peakEquity - initialEquity) * index) / Math.max(peakIndex, 1)
     } else if (index <= troughIndex) {
-      equity = peakEquity - ((peakEquity - troughEquity) * (index - peakIndex)) / (troughIndex - peakIndex)
+      equity =
+        peakEquity - ((peakEquity - troughEquity) * (index - peakIndex)) / (troughIndex - peakIndex)
     } else {
       // 고점을 넘지 않게 회복시켜 최저점이 하나로 남게 한다.
       const remaining = points - 1 - troughIndex
-      equity = troughEquity + ((peakEquity - troughEquity) * 0.5 * (index - troughIndex)) / remaining
+      equity =
+        troughEquity + ((peakEquity - troughEquity) * 0.5 * (index - troughIndex)) / remaining
     }
 
     runningMax = Math.max(runningMax, equity)
@@ -212,7 +215,12 @@ export function makeEquitySeries({
  * 어긋나면 그래프가 R-05 규칙에 따라 음영을 포기하므로, 픽스처로 그린 화면에서 음영을 한 번도 볼 수
  * 없다. `resultFixtures.test.ts`가 값이 계약 예시와 같은지, 저점이 상세와 같은지 확인한다.
  */
-const TIMESERIES_ROWS: [date: string, equity: string, cumulativeReturn: string, drawdown: string][] = [
+const TIMESERIES_ROWS: [
+  date: string,
+  equity: string,
+  cumulativeReturn: string,
+  drawdown: string,
+][] = [
   ['2025-01-01', '10000000.00', '0.000000', '0.000000'],
   ['2025-01-02', '10000000.00', '0.000000', '0.000000'],
   ['2025-01-03', '10000000.00', '0.000000', '0.000000'],

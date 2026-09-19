@@ -30,7 +30,8 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 | `GET /results/{token}/positions?date=` | `GET /backtests/{backtestId}/positions` | 위와 같다. `date` 필수 |
 | `GET /results/{token}/weights` | `GET /backtests/{backtestId}/weights` | 위와 같다 |
 | `GET /results/{token}/exceptions` | `GET /backtests/{backtestId}/exceptions` | 위와 같다 |
-| `POST /results/{token}/retry` | `POST /backtests/{backtestId}/retry` | 아래 §5 |
+| `GET /results/{token}/index-comparison` | 001 기간 KOSPI 조회 포트 | 아래 §5. 같은 시작 금액으로 환산한 보조 계열 |
+| `POST /results/{token}/retry` | `POST /backtests/{backtestId}/retry` | 아래 §6 |
 
 하위 자원의 상태별 규칙(결과 전 `409 RESULT_NOT_READY`, 실패 `409 BACKTEST_FAILED`, 빈 배열을 만들어 내지 않음)은 004 §2.5와 같다.
 
@@ -49,17 +50,26 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 | `weightsSource` | 추가. `USER`·`COMPUTED`. 볼 결과가 없으면 `null` |
 | `exceptionKinds` | 추가. 예외 `kind`의 중복 없는 목록(처음 나온 순서). 볼 결과가 없으면 `null`, 빈 목록은 "예외 없음" |
 
-`resultSource`·`partial`·`cancelRequested`·`queuedAt`·`startedAt`·`finishedAt`·`config`·`summaryUnavailable`·`failure`는 004 값을 그대로 통과시킨다.
+`resultSource`·`partial`·`cancelRequested`·`queuedAt`·`startedAt`·`finishedAt`·`summaryUnavailable`·`failure`는 004 값을 그대로 통과시킨다. `config`에는 원 요청의 `executionType`을 더해 탐색 질의가 없는 주소에서도 자동 탐색 후보를 구분한다. 비교 요청의 비용 기준은 `versions.costProfile.version`에서 읽는다.
 
 ## 4. 거래 내역 상한
 
 `size`를 생략하면 공개 상한(`thorp.result.trades-page-size`)이고, 상한보다 크면 상한으로 잘린다. 400으로 거절하지 않는 이유는 상한이 설정값이라 화면이 그 수를 모르기 때문이다. 실제 크기는 응답 `size`로 확인한다. 나머지 질의(`page`·`instrumentId`·`status`·`from`·`to`)와 검증(뒤집힌 기간·종목 형식 오류는 400)은 004 §2.3과 같다.
 
-## 5. 재시도 — `POST /results/{token}/retry`
+## 5. 지수 보조 비교 — `GET /results/{token}/index-comparison`
+
+토큰 판정을 먼저 거친 뒤, 기간 KOSPI 조회 포트가 있으면 결과의 `effectiveStart`~`effectiveEnd` 범위와
+`initialCash`로 서버가 환산한 `{available: true, reason: null, series: [{date, value}]}`를 돌려준다.
+금액은 문자열이고 화면은 다시 계산하지 않는다.
+
+현재 001에는 기간 계열 포트가 없으므로 `{available: false, reason: "INDEX_SERIES_UNAVAILABLE",
+series: []}`다. 최신 관측치 한 점으로 기간 계열을 꾸미지 않는다.
+
+## 6. 재시도 — `POST /results/{token}/retry`
 
 `202` `{publicToken, status, resultSource, retryOfToken}`. `publicToken`은 새 요청의 토큰, `retryOfToken`은 원 요청의 토큰이다. 새 요청의 요청자는 지금 호출한 사람이고(비로그인이면 없음), 원 요청의 요청자를 물려받지 않는다. 실패·취소가 아니면 `409 NOT_RETRYABLE`, 한도에 걸리면 `429 EXECUTION_LIMIT`(`details.retryAfterSeconds`)이다.
 
-## 6. 오류
+## 7. 오류
 
 | code | HTTP | 뜻 |
 |---|---|---|
@@ -74,6 +84,6 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 
 **004에서 온 오류의 `message`는 코드의 기본 문구다.** 004 예외 문구에는 `backtestId`가 들어 있어 공개 경로는 문구를 바꿔 내보낸다. 입력 검증의 400은 원인 문구를 그대로 싣는다. 화면은 문구가 아니라 `code`로 분기한다.
 
-## 7. 공개 응답에서 버리는 필드
+## 8. 공개 응답에서 버리는 필드
 
 요청자 식별자, `backtestId`, 실행 식별자(`runId`), 워커 자기 보고(`worker`·`versions.worker`), 재시도 원본의 `backtestId`(`retryOf` → `retryOfToken`), 오류 문구 속 식별자. 이유와 목록의 원본은 계약 "공개 응답에서 버리는 필드"다. 004가 필드를 더하면 버릴 것만 원본 목록에 추가한다.

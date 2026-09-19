@@ -85,7 +85,29 @@ function resolve(
 
   const value = values[operand.axis]
   if (value === undefined || value === null) return undefined
-  if (operand.multiplyByContext === undefined && operand.multiplyByAxis === undefined) return value
+  if (
+    operand.multiplyByContext === undefined &&
+    operand.multiplyByAxis === undefined &&
+    operand.multiplyByCeil === undefined
+  )
+    return value
+
+  if (operand.multiplyByCeil !== undefined) {
+    const factorAxis = values[operand.multiplyByCeil.axis]
+    if (factorAxis === undefined || factorAxis === null) return undefined
+    const contextValue = context[operand.multiplyByCeil.context]
+    const percent = toNumber(factorAxis)
+    const divisor = toNumber(operand.multiplyByCeil.divisor)
+    const numeric = toNumber(value)
+    if (numeric === null || percent === null || divisor === null || divisor <= 0) {
+      throw new RuleEvaluationError(
+        `규칙 '${code}'의 올림 곱셈에 숫자가 아닌 값이 왔습니다: ${String(value)}`,
+        code,
+      )
+    }
+    const selectedCount = Math.ceil(multiply(contextValue, percent) / divisor)
+    return multiply(numeric, selectedCount)
+  }
 
   // 곱할 축이 이 설정에 없으면 판정하지 않는다 — 003은 고른 선정 방식에 딸린 축 하나만 저장한다.
   // 여기서 값 그대로 돌려주면 `maxWeight × topN < 100`이 `maxWeight < 100`이 되어 상한을 전부 막는다.

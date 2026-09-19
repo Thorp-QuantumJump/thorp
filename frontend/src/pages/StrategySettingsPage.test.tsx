@@ -553,6 +553,46 @@ describe('StrategySettingsPage', () => {
     expect(requests).toHaveLength(0)
   })
 
+  it('분석 조건 조회 실패를 재시도하고 성공해도 사용자가 누르기 전에는 분석하지 않는다', async () => {
+    let finishRetry!: (value: AnalysisVersions | null) => void
+    const fetchAnalysisVersions = vi
+      .fn<AnalysisSupport['fetchAnalysisVersions']>()
+      .mockRejectedValueOnce(new Error('일시적인 조회 실패'))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishRetry = resolve
+          }),
+      )
+      .mockResolvedValueOnce(versionsFixture)
+    const { support, requests } = makeSupport({ fetchAnalysisVersions })
+    const user = userEvent.setup()
+    renderPage(support)
+    await user.click(await findCardNamed(selectableStrategy.name))
+    const retry = await screen.findByRole('button', { name: '분석 조건 다시 불러오기' })
+    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
+    expect(actionButton('설정 조합 자동 비교').getAttribute('aria-disabled')).toBe('false')
+    await user.click(retry)
+    expect((retry as HTMLButtonElement).disabled).toBe(true)
+    expect(reasonOf(actionButton('분석하기'))).toContain('확인하는 중')
+    await user.click(retry)
+    expect(fetchAnalysisVersions).toHaveBeenCalledTimes(2)
+    await act(async () => {
+      finishRetry(null)
+    })
+    await waitFor(() => expect((retry as HTMLButtonElement).disabled).toBe(false))
+    expect(document.activeElement).toBe(retry)
+    expect(requests).toHaveLength(0)
+    await user.click(retry)
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    expect(screen.queryByRole('button', { name: '분석 조건 다시 불러오기' })).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('region', { name: '전략 카드' }))
+    expect(requests).toHaveLength(0)
+    await user.click(actionButton('분석하기'))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].conditions.costProfileVersion).toBe(versionsFixture.costProfileVersion)
+  })
+
   it('분석 조건 버전을 확인할 수 없으면 분석하기가 막힌다', async () => {
     // "착수 전에 알아둘 것" ②. 값을 지어내 보내지 않는다.
     const user = userEvent.setup()

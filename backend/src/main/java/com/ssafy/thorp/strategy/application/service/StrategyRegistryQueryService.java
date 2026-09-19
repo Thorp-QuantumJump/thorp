@@ -203,7 +203,14 @@ public class StrategyRegistryQueryService {
     }
 
     private static boolean references(ValidationRule rule, String axisName) {
-        return axisName.equals(rule.left().axis()) || axisName.equals(rule.right().axis());
+        return references(rule.left(), axisName) || references(rule.right(), axisName);
+    }
+
+    private static boolean references(ValidationRule.Operand operand, String axisName) {
+        return axisName.equals(operand.axis())
+                || axisName.equals(operand.multiplyByAxis())
+                || (operand.multiplyByCeil() != null
+                        && axisName.equals(operand.multiplyByCeil().axis()));
     }
 
     /**
@@ -235,7 +242,13 @@ public class StrategyRegistryQueryService {
                 operand.context(),
                 operand.value(),
                 operand.multiplyByContext(),
-                operand.multiplyByAxis());
+                operand.multiplyByAxis(),
+                operand.multiplyByCeil() == null
+                        ? null
+                        : new StrategyRegistryResult.CeilingFactorView(
+                                operand.multiplyByCeil().context(),
+                                operand.multiplyByCeil().axis(),
+                                operand.multiplyByCeil().divisor()));
     }
 
     private static StrategyRegistryResult.WarmupRuleView toWarmupRuleView(WarmupRule warmup) {

@@ -117,6 +117,8 @@ strategies:
               label: 상위 몇 개
             - value: THRESHOLD
               label: 기준 수익률 이상
+            - value: TOP_PERCENT
+              label: 상위 몇 퍼센트
       - name: topN
         appliesWhen: { axis: selectionMode, value: TOP_N }
         label: 선정 섹터 수
@@ -125,6 +127,38 @@ strategies:
         defaultValue: 4
         allowedRange:
           values: [2, 3, 4]
+      - name: topPercent
+        appliesWhen: { axis: selectionMode, value: TOP_PERCENT }
+        label: 상위 비율
+        description: 선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.
+        unit: 퍼센트
+        searchValues: [50]
+        defaultValue: 50
+        allowedRange:
+          min: 10
+          max: 100
+          step: 10
+      - name: allocationMethod
+        label: 배분 방식
+        description: 고른 섹터에 금액을 나누는 방식이다.
+        searchValues: [EQUAL]
+        defaultValue: EQUAL
+        allowedRange:
+          choices:
+            - value: EQUAL
+              label: 똑같이 나누기
+            - value: INVERSE_VOLATILITY
+              label: 변동성이 낮은 섹터에 더 나누기
+      - name: maxWeight
+        label: 섹터당 최대 비중
+        description: 한 섹터에 넣을 수 있는 최대 비중이다.
+        unit: 퍼센트
+        searchValues: [40]
+        defaultValue: 40
+        allowedRange:
+          min: 10
+          max: 100
+          step: 5
     validationRules:
       - code: TOP_N_EXCEEDS_UNIVERSE
         detail: 선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.
@@ -133,3 +167,22 @@ strategies:
         operator: GREATER_THAN
         right:
           context: UNIVERSE_SIZE
+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION
+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByAxis: topN
+        operator: LESS_THAN
+        right:
+          value: 100
+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION
+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.
+        left:
+          axis: maxWeight
+          multiplyByCeil:
+            context: UNIVERSE_SIZE
+            axis: topPercent
+            divisor: 100
+        operator: LESS_THAN
+        right:
+          value: 100

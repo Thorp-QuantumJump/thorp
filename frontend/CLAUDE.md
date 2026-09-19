@@ -19,8 +19,14 @@ npm run lint && npm run build && npm test
 
 ## 규칙
 
+- 결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009).
+- 해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(spec 005 SC-004). 문장을 컴포넌트에서 짓지 않는다.
+- 용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).
+- `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반 `draftVersion`을 보관한다. 저장 성공 시 지우며, 복원할 때는 보관한 판 번호를 유지한다. 일반 사용자 배우기 화면은 저장소에 쓰지 않는다.
 - 컴포넌트는 함수형, 파일명 PascalCase(`BacktestForm.tsx`), 훅은 `use` 접두사
 - API 필드는 camelCase (백엔드와 동일)
 - 백엔드 호출은 `/api` 프록시 경유 (vite.config.ts에 설정됨) — URL 하드코딩 금지
 - 환경변수는 `VITE_` 접두사만 클라이언트에 노출됨
 - 백테스트는 비동기: 생성 후 `QUEUED → RUNNING → COMPLETED` 폴링 UI를 전제로 설계
+- 전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005).
+- `sessionStorage` 키: `thorp.strategySettings`(003 설정값), `thorp.diagnosis.sectorSelection`(002 인계 계약). 둘 다 탭 수명이며, 003은 002의 `diagnosis/selectionStorage`를 통해 섹터 선택을 읽는다. 이전 대역 키 `thorp.sectorSelection`은 사용하지 않는다.
