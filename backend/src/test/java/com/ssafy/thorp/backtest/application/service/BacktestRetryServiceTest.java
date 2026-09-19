@@ -136,7 +136,7 @@ class BacktestRetryServiceTest {
     }
 
     private void givenCreateReturnsNew() {
-        when(backtestService.create(any(), any()))
+        when(backtestService.replay(any(), any()))
                 .thenReturn(
                         new BacktestJobResult(
                                 "BT-20260914-000031",
@@ -159,7 +159,8 @@ class BacktestRetryServiceTest {
 
         ArgumentCaptor<CreateBacktestCommand> captor =
                 ArgumentCaptor.forClass(CreateBacktestCommand.class);
-        verify(backtestService).create(captor.capture(), eq(REQUEST_ID));
+        verify(backtestService)
+                .replay(captor.capture(), eq(new BacktestService.Replay(REQUEST_ID, null)));
         assertThat(captor.getValue()).isEqualTo(original());
         assertThat(result.retryOf()).isEqualTo(BACKTEST_ID);
         assertThat(result.backtestId()).isEqualTo("BT-20260914-000031");
@@ -174,6 +175,34 @@ class BacktestRetryServiceTest {
         assertThat(service.retry(BACKTEST_ID, REQUESTER).retryOf()).isEqualTo(BACKTEST_ID);
     }
 
+    @Test
+    @DisplayName("목표 위험 실행의 재시도는 원본 실행에 기록된 오버레이 규칙 버전을 넘긴다(T029)")
+    void passesTheRecordedOverlayVersion() {
+        BacktestRun targetRisk =
+                runIn(RunStatus.FAILED)
+                        .withPlan(
+                                new RunPlan(
+                                        "dedup",
+                                        "1",
+                                        COST_PROFILE,
+                                        "DATA-1",
+                                        LocalDate.of(2024, 4, 1),
+                                        LocalDate.of(2024, 12, 31),
+                                        63,
+                                        RequestSpecCodec.write(
+                                                original(), Scenario.FULL_PERIOD, 63),
+                                        Map.of("scenarioRules", "TARGET_RISK_OVERLAY/3"),
+                                        null));
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestOf(REQUESTER, null)));
+        when(runRepository.findById(RUN_ID)).thenReturn(Optional.of(targetRisk));
+        givenCreateReturnsNew();
+
+        service.retry(BACKTEST_ID, REQUESTER);
+
+        verify(backtestService).replay(any(), eq(new BacktestService.Replay(REQUEST_ID, "3")));
+    }
+
     @ParameterizedTest
     @EnumSource(
             value = RunStatus.class,
@@ -186,7 +215,7 @@ class BacktestRetryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exc -> ((BusinessException) exc).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_RETRYABLE);
-        verify(backtestService, never()).create(any(), any());
+        verify(backtestService, never()).replay(any(), any());
     }
 
     @Test
@@ -196,6 +225,6 @@ class BacktestRetryServiceTest {
 
         assertThatThrownBy(() -> service.retry(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
-        verify(backtestService, never()).create(any(), any());
+        verify(backtestService, never()).replay(any(), any());
     }
 }

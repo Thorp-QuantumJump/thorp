@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -99,10 +101,10 @@ class BacktestServiceTest {
 
     @BeforeEach
     void stubRegistries() {
-        when(strategyRulesService.requireRegistered("FIXED_WEIGHT", "1"))
+        when(strategyRulesService.requireCurrent("FIXED_WEIGHT", "1"))
                 .thenReturn(rules("FIXED_WEIGHT", Map.of()));
         // 등록표 초기 행과 같다 — 역변동성 규칙은 PD-02 확정 전 임시(provisional=true)다.
-        when(strategyRulesService.requireRegistered("INVERSE_VOLATILITY", "1"))
+        when(strategyRulesService.requireCurrent("INVERSE_VOLATILITY", "1"))
                 .thenReturn(
                         new StrategyRules(
                                 "INVERSE_VOLATILITY",
@@ -111,7 +113,7 @@ class BacktestServiceTest {
                                 true,
                                 Map.of("lookbackDays", 63),
                                 "PD-02"));
-        when(strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1"))
+        when(strategyRulesService.requireCurrent("TARGET_RISK_OVERLAY"))
                 .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
         when(costProfileService.resolve(any()))
                 .thenReturn(
@@ -259,7 +261,7 @@ class BacktestServiceTest {
 
     /** 최소분산 규칙표 행(T022 마이그레이션과 같은 값). 상한은 1.0000이고 사용자 {@code maxWeight}가 우선한다. */
     private void stubMinimumVariance(String weightCap) {
-        when(strategyRulesService.requireRegistered("MINIMUM_VARIANCE", "1"))
+        when(strategyRulesService.requireCurrent("MINIMUM_VARIANCE", "1"))
                 .thenReturn(
                         rules(
                                 "MINIMUM_VARIANCE",
@@ -293,7 +295,7 @@ class BacktestServiceTest {
 
     /** 섹터 모멘텀 규칙표 행(T023 마이그레이션과 같은 값 가운데 접수가 읽는 것만). */
     private void stubSectorMomentum() {
-        when(strategyRulesService.requireRegistered("SECTOR_MOMENTUM", "1"))
+        when(strategyRulesService.requireCurrent("SECTOR_MOMENTUM", "1"))
                 .thenReturn(
                         rules(
                                 "SECTOR_MOMENTUM",
@@ -678,13 +680,182 @@ class BacktestServiceTest {
     @Test
     @DisplayName("재시도로 만든 요청은 원본과 다른 새 토큰을 받는다")
     void retriedRequestGetsANewToken() {
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+
         BacktestJobResult original = service.create(fixedWeight());
-        BacktestJobResult retried = service.create(fixedWeight(), 21L);
+        BacktestJobResult retried =
+                service.replay(fixedWeight(), new BacktestService.Replay(21L, null));
 
         assertThat(retried.publicToken())
                 .matches("^[0-9a-f]{32}$")
                 .isNotEqualTo(original.publicToken());
         assertThat(savedRequests(2).get(1).getRetryOfRequestId()).isEqualTo(21L);
+    }
+
+    // --- 규칙 버전 수명주기(T029) -------------------------------------------------
+
+    private static BusinessException rulesVersionChanged() {
+        return new BusinessException(
+                ErrorCode.REGISTRY_VERSION_CHANGED,
+                ErrorCode.REGISTRY_VERSION_CHANGED.getMessage(),
+                Map.of("requestedRulesVersion", "1", "currentRulesVersion", "2"));
+    }
+
+    @Test
+    @DisplayName("새 요청이 대체된 옛 규칙 버전을 고르면 409 이고 실행·요청을 만들지 않는다")
+    void newRequestWithSupersededRulesIsRejectedBeforeWrites() {
+        when(strategyRulesService.requireCurrent("FIXED_WEIGHT", "1"))
+                .thenThrow(rulesVersionChanged());
+
+        assertThatThrownBy(() -> service.create(fixedWeight()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.REGISTRY_VERSION_CHANGED);
+        verify(runRepository, never()).save(any());
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("재시도는 대체된 옛 규칙 버전으로도 접수된다 — 새 요청용 검사를 부르지 않는다")
+    void replayAcceptsASupersededRulesVersion() {
+        when(strategyRulesService.requireCurrent("FIXED_WEIGHT", "1"))
+                .thenThrow(rulesVersionChanged());
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(
+                        new StrategyRules(
+                                "FIXED_WEIGHT",
+                                "1",
+                                RulesStatus.SUPERSEDED,
+                                false,
+                                Map.of(),
+                                "spec 004 FR-021"));
+
+        BacktestJobResult retried =
+                service.replay(fixedWeight(), new BacktestService.Replay(21L, null));
+
+        assertThat(retried.resultSource()).isEqualTo(ResultSource.NEW);
+        assertThat(retried.versions())
+                .extractingByKey("rules")
+                .isEqualTo(Map.of("version", "1", "provisional", false));
+        verify(strategyRulesService, never()).requireCurrent("FIXED_WEIGHT", "1");
+    }
+
+    @Test
+    @DisplayName("목표 위험 재시도는 원본 실행이 쓴 오버레이 버전을 쓴다 — 지금 버전을 고르지 않는다")
+    void targetRiskReplayUsesTheOriginalOverlayVersion() {
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        when(strategyRulesService.requireExecutable("TARGET_RISK_OVERLAY", "1"))
+                .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
+
+        BacktestJobResult retried =
+                service.replay(
+                        command(
+                                "FIXED_WEIGHT",
+                                new BigDecimal("0.4000"),
+                                63,
+                                Scenario.TARGET_RISK,
+                                Map.of("targetVolatility", "0.1000")),
+                        new BacktestService.Replay(21L, "1"));
+
+        assertThat(retried.versions()).containsEntry("scenarioRules", "TARGET_RISK_OVERLAY/1");
+        verify(strategyRulesService, never()).requireCurrent("TARGET_RISK_OVERLAY");
+    }
+
+    @Test
+    @DisplayName("원본 실행에 오버레이 버전이 없는 목표 위험 재시도는 지어내지 않고 멈춘다")
+    void targetRiskReplayWithoutRecordedOverlayFails() {
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+
+        assertThatThrownBy(
+                        () ->
+                                service.replay(
+                                        command(
+                                                "FIXED_WEIGHT",
+                                                new BigDecimal("0.4000"),
+                                                63,
+                                                Scenario.TARGET_RISK,
+                                                Map.of("targetVolatility", "0.1000")),
+                                        new BacktestService.Replay(21L, null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("scenarioRules");
+        verify(runRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("재시도는 003 등록표를 verifySaved 로 판정한다 — 과거 등록표 버전이면 판정하지 않고 저장된 워밍업을 쓴다")
+    void replayChecksTheRegistryAsSaved() {
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        when(strategySettingsValidator.verifySaved(any(), any(), any(), anyInt(), any()))
+                .thenReturn(Optional.empty());
+        CreateBacktestCommand saved = withRegistryVersion(withWarmup(fixedWeight(), 5), "1.0.0");
+
+        service.replay(saved, new BacktestService.Replay(21L, null));
+
+        verify(strategySettingsValidator)
+                .verifySaved(eq("FIXED_WEIGHT"), any(), eq("1.0.0"), eq(2), any());
+        verify(strategySettingsValidator, never()).verify(any(), any(), any(), anyInt(), any());
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(runRepository).save(captor.capture());
+        assertThat(captor.getValue().getPlan().warmupTradingDays()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("새 요청은 003 등록표를 verify 로 판정한다 — 지금 버전만 받는다")
+    void newRequestChecksTheRegistryStrictly() {
+        when(strategySettingsValidator.verify(any(), any(), any(), anyInt(), any()))
+                .thenReturn(new StrategySettingsValidator.Verified(0, "1.0.0"));
+
+        service.create(withRegistryVersion(fixedWeight(), "1.0.0"));
+
+        verify(strategySettingsValidator)
+                .verify(eq("FIXED_WEIGHT"), any(), eq("1.0.0"), eq(2), any());
+        verify(strategySettingsValidator, never())
+                .verifySaved(any(), any(), any(), anyInt(), any());
+    }
+
+    private static CreateBacktestCommand withRegistryVersion(
+            CreateBacktestCommand base, String registryVersion) {
+        return new CreateBacktestCommand(
+                base.requesterId(),
+                base.executionType(),
+                base.mappingVersion(),
+                base.items(),
+                base.strategyId(),
+                base.rulesVersion(),
+                registryVersion,
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                base.warmupTradingDays(),
+                base.scenario(),
+                base.scenarioParams());
+    }
+
+    private static CreateBacktestCommand withWarmup(CreateBacktestCommand base, int warmup) {
+        return new CreateBacktestCommand(
+                base.requesterId(),
+                base.executionType(),
+                base.mappingVersion(),
+                base.items(),
+                base.strategyId(),
+                base.rulesVersion(),
+                base.registryVersion(),
+                base.parameters(),
+                base.start(),
+                base.end(),
+                base.initialCash(),
+                base.costProfileVersion(),
+                base.evaluationSplitVersion(),
+                warmup,
+                base.scenario(),
+                base.scenarioParams());
     }
 
     private BacktestReuseEvent recordedReuse() {

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.port.message.EngineInput;
@@ -99,12 +101,14 @@ class EngineInputAssemblerTest {
                 LocalDate.of(2024, 12, 31),
                 63,
                 spec,
-                Map.of("rules", "1"),
+                "TARGET_RISK".equals(scenario)
+                        ? Map.of("rules", "1", "scenarioRules", "TARGET_RISK_OVERLAY/1")
+                        : Map.of("rules", "1"),
                 null);
     }
 
     private void registryAnswers() {
-        when(strategyRulesService.requireRegistered("INVERSE_VOLATILITY", "1"))
+        when(strategyRulesService.requireExecutable("INVERSE_VOLATILITY", "1"))
                 .thenReturn(
                         new StrategyRules(
                                 "INVERSE_VOLATILITY",
@@ -113,7 +117,7 @@ class EngineInputAssemblerTest {
                                 true,
                                 Map.of("lookbackDays", 63),
                                 "PD-02"));
-        when(strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1"))
+        when(strategyRulesService.requireExecutable("TARGET_RISK_OVERLAY", "1"))
                 .thenReturn(
                         new StrategyRules(
                                 "TARGET_RISK_OVERLAY",
@@ -221,6 +225,64 @@ class EngineInputAssemblerTest {
         assertThat(input.run().scenario()).isEqualTo(Scenario.TARGET_RISK);
         assertThat(input.run().scenarioParams()).containsEntry("targetVolatility", "0.1000");
         assertThat(input.run().scenarioRules()).containsEntry("scaleDownOnly", true);
+    }
+
+    @Test
+    @DisplayName("접수 뒤 규칙이 새 버전으로 대체돼도 실행은 접수 때 버전의 명세로 나간다(T029)")
+    void supersededRulesStillAssemble() {
+        registryAnswers();
+        when(strategyRulesService.requireExecutable("INVERSE_VOLATILITY", "1"))
+                .thenReturn(
+                        new StrategyRules(
+                                "INVERSE_VOLATILITY",
+                                "1",
+                                RulesStatus.SUPERSEDED,
+                                true,
+                                Map.of("lookbackDays", 63),
+                                "PD-02"));
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null)));
+
+        assertThat(input.allocation().rulesVersion()).isEqualTo("1");
+        assertThat(input.allocation().rules()).containsEntry("lookbackDays", 63);
+        verify(strategyRulesService, never()).requireCurrent(any(), any());
+    }
+
+    @Test
+    @DisplayName("오버레이 규칙은 실행에 기록된 버전으로 읽는다 — 지금 버전을 고르지 않는다(T029)")
+    void overlayVersionComesFromTheRun() {
+        registryAnswers();
+
+        EngineInput input =
+                assembler.assemble(
+                        run(acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"))));
+
+        assertThat(input.run().scenarioRules()).containsEntry("version", "TARGET_RISK_OVERLAY/1");
+        verify(strategyRulesService).requireExecutable("TARGET_RISK_OVERLAY", "1");
+        verify(strategyRulesService, never()).requireCurrent(any());
+    }
+
+    @Test
+    @DisplayName("오버레이 버전 기록이 없는 목표 위험 실행은 지어내지 않고 영구 실패로 던진다")
+    void overlayWithoutRecordedVersionIsRejected() {
+        registryAnswers();
+        RunPlan accepted = acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"));
+        RunPlan withoutOverlay =
+                new RunPlan(
+                        accepted.dedupKey(),
+                        accepted.rulesVersion(),
+                        accepted.costProfileVersion(),
+                        accepted.dataVersion(),
+                        accepted.effectiveStart(),
+                        accepted.effectiveEnd(),
+                        accepted.warmupTradingDays(),
+                        accepted.requestSpec(),
+                        Map.of("rules", "1"),
+                        accepted.executionType());
+
+        assertThatThrownBy(() -> assembler.assemble(run(withoutOverlay)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("scenarioRules");
     }
 
     @Test

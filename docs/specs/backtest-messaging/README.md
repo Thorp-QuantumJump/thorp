@@ -122,6 +122,11 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터). 사본에는 등록표의 `provisional`(팀 결정 전 임시 규칙, PD-02)이 함께 실리고 워커는 그 값을
 결과 `versions.rules.provisional`로 되돌려 준다(T018) — 배분 모듈은 자기가 아는 키만 읽으므로 이 키는 계산을 바꾸지 않는다.
 
+**규칙 버전마다 명세 스냅샷이 있다**(spec 004 T029): [`examples/rules/{전략}-{버전}.json`](examples/rules/). 계산할 수 있는 등록표 행(`REGISTERED`·`SUPERSEDED`)과
+일대일이고 `spec`·`provisional`이 행과 같다(백엔드 `StrategyRulesSnapshotTest`). 워커는 이 파일을 `allocation.rules`(오버레이는 `run.scenarioRules`)로 실어
+버전별 골든(`worker/tests/goldens/`)과 대조한다. 버전이 새로 대체돼도 이미 접수된 실행의 발행·재시도는 그 실행의 버전 사본을 싣는다 — 워커는
+`rulesVersion` 문자열이 아니라 사본의 키로 계산이 갈린다.
+
 ### 4.2 이벤트 envelope — `event-*.json` 공통
 
 | 필드 | 타입 | 의미 |
@@ -198,7 +203,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 ## 6. 픽스처 불변식
 
-`examples/` 여덟 파일은 [`generate_fixtures.py`](generate_fixtures.py)로 만들었다(시드 42, KRX 휴장일 미반영 평일 129일).
+`examples/` 여덟 파일(`rules/`·`reconciliation/` 하위 폴더 제외)은 [`generate_fixtures.py`](generate_fixtures.py)로 만들었다(시드 42, KRX 휴장일 미반영 평일 129일).
 아래 관계가 실제로 성립하며, 백엔드 결과 Consumer 검증과 통합 테스트의 단언으로 그대로 쓴다.
 
 - 이벤트의 `runId` == `engine-input.json`의 `run.runId` (`BT-20260907-000001`), `executionId` == `EXEC-000001`

@@ -1,0 +1,33 @@
+{
+  "rules": "EQUAL_WEIGHT-1.json",
+  "engineInput": "engine-input-three-etf-equal.json",
+  "sha256": "57003f49257f15b367d0feb44db5fea3859d6c9d3b7b234c8a377ba156a57d66",
+  "summary": {
+    "performance": {
+      "initialEquity": "10000000",
+      "finalEquity": "10697700.475100",
+      "currency": "KRW",
+      "totalReturn": "0.06977004751",
+      "netTotalReturn": "0.06977004751",
+      "cagr": "0.076965602504943879720207071",
+      "maxDrawdown": "-0.1058448549389504889449572225",
+      "sharpeRatio": "0.6987527731030194",
+      "volatility": "0.11046637247399689",
+      "tradeCount": 13,
+      "winRate": "0.8461538461538461538461538462",
+      "totalTradingCost": "17945.52490"
+    },
+    "tradeCount": 32,
+    "exceptionCount": 0,
+    "firstTarget": {
+      "091160.XKRX": "0.3333333333333333333333333333",
+      "244580.XKRX": "0.3333333333333333333333333333",
+      "305720.XKRX": "0.3333333333333333333333333333"
+    },
+    "lastTarget": {
+      "091160.XKRX": "0.3333333333333333333333333333",
+      "244580.XKRX": "0.3333333333333333333333333333",
+      "305720.XKRX": "0.3333333333333333333333333333"
+    }
+  }
+}

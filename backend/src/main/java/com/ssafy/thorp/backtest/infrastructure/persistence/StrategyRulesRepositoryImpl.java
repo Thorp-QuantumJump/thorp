@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import com.ssafy.thorp.backtest.application.repository.StrategyRulesRepository;
+import com.ssafy.thorp.backtest.domain.model.RulesStatus;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,25 @@ public class StrategyRulesRepositoryImpl implements StrategyRulesRepository {
     @Override
     public List<StrategyRules> findAll() {
         return jpaRepository.findAll().stream().map(StrategyRulesRepositoryImpl::toDomain).toList();
+    }
+
+    @Override
+    public List<StrategyRules> findCurrent() {
+        return jpaRepository.findByStatusNot(RulesStatus.SUPERSEDED).stream()
+                .map(StrategyRulesRepositoryImpl::toDomain)
+                .toList();
+    }
+
+    @Override
+    public Optional<StrategyRules> findCurrent(String strategyId) {
+        // 부분 유니크 인덱스가 전략당 한 행을 보장한다. 둘이 나오면 스키마가 깨진 것이라 조용히 하나를 고르지 않는다.
+        List<StrategyRulesJpaEntity> rows =
+                jpaRepository.findByStrategyIdAndStatusNot(strategyId, RulesStatus.SUPERSEDED);
+        if (rows.size() > 1) {
+            throw new IllegalStateException(
+                    "strategy_rules has more than one current row: " + strategyId);
+        }
+        return rows.stream().findFirst().map(StrategyRulesRepositoryImpl::toDomain);
     }
 
     private static StrategyRules toDomain(StrategyRulesJpaEntity entity) {

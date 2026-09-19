@@ -346,7 +346,7 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {
     @DisplayName("팀 결정 대기 전략의 거절은 422 다 — 안쪽 프록시가 트랜잭션을 rollback-only 로 표시해 500 이 되면 안 된다")
     void pendingRulesRejectionIsA422NotASilentRollback() {
         // quickstart S9(T013)에서 발견: create 는 noRollbackFor 인데
-        // StrategyRulesService.requireRegistered 의
+        // StrategyRulesService.requireCurrent 의
         // 프록시가 기본 규칙으로 바깥 트랜잭션을 rollback-only 로 표시해 커밋 시점에 UnexpectedRollbackException.
         long user = newUser("p");
         CreateBacktestCommand pending =

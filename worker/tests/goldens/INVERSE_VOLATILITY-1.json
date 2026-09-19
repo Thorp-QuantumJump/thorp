@@ -1,0 +1,33 @@
+{
+  "rules": "INVERSE_VOLATILITY-1.json",
+  "engineInput": "engine-input-three-etf-inverse_vol.json",
+  "sha256": "3a0e9d03dca863dd8f29e7c6388dd88feb9158db205ddbcfcd295a3136109be4",
+  "summary": {
+    "performance": {
+      "initialEquity": "10000000",
+      "finalEquity": "11004326.806750",
+      "currency": "KRW",
+      "totalReturn": "0.100432680675",
+      "netTotalReturn": "0.100432680675",
+      "cagr": "0.110950706077046054685063460",
+      "maxDrawdown": "-0.1089801761829959946309018645",
+      "sharpeRatio": "0.9142059097513202",
+      "volatility": "0.11796250225213868",
+      "tradeCount": 15,
+      "winRate": "0.8",
+      "totalTradingCost": "37583.19325"
+    },
+    "tradeCount": 30,
+    "exceptionCount": 2,
+    "firstTarget": {
+      "091160.XKRX": "0.538539",
+      "244580.XKRX": "0",
+      "305720.XKRX": "0.461461"
+    },
+    "lastTarget": {
+      "091160.XKRX": "0.320902",
+      "244580.XKRX": "0.332386",
+      "305720.XKRX": "0.346712"
+    }
+  }
+}
