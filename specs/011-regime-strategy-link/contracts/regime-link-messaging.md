@@ -134,10 +134,13 @@ reject → DLQ다.
 위 JSON은 기존 봉투를 설명하는 축약 예시이며 실행 가능한 확정 fixture가 아니다. M1 동결 전에
 아래 항목을 포함한 완전한 fixture로 교체한다. 004 저장 결과와의 필드 대응·독립 대조를 먼저 통과해야 한다.
 
-- `inputs.openingPositions`: baselineDate의 종목별 수량·평가액. FRESH_CASH는 빈 목록.
-- `inputs.dailyPositions`: d0~lastAvailable의 날짜별 종목 수량·평가액. 빈 보유일도 날짜를 남긴다.
-- `inputs.trades`: round-trip 대신 개별 체결 목록. dateTime·instrumentId·side·quantity·price·
-  costs(commission/spread/slippage/tax)·directCashCost. 체결가에 반영된 비용은 directCashCost에서 제외.
+- `inputs.openingPositions`: baselineDate **이전 마지막** 보유 스냅샷의 종목별 수량(004는 수량이 바뀌는 날마다
+  스냅샷을 남기므로 그 수량이 baselineDate의 수량이다). FRESH_CASH는 빈 목록.
+- `inputs.dailyPositions`: d0~lastAvailable 안에서 004가 남긴 보유 스냅샷(수량이 바뀐 날)만 그대로 담는다.
+  워커가 수량을 이월하고 그날 원시 종가를 곱해 일별 평가액을 만든다(004 엔진과 같은 식). 백엔드는 채우지 않는다.
+- `inputs.trades`: round-trip 대신 004 `fills[]`(개별 체결) 그대로 — fillId·time·instrumentId·side·quantity·
+  price·referencePrice·costs(commission/spread/slippage/tax)·cashCost. `cashCost`가 직접 차감 비용이며 체결가에
+  반영된 호가차·슬리피지는 들어 있지 않다. 체결 기록이 없는 실행(`fills_recorded=false`)이면 발행하지 않는다.
 - `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다.
 - corporate action에 따른 수량·현금 변화와 가격 자료는 같은 버전으로 정합 검증한다. 확보되지 않은
   항목을 0이나 비례배분 비용으로 만들어내지 않는다.

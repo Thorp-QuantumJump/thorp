@@ -70,6 +70,7 @@ class StrategyRulesLifecycleIT extends IntegrationTestSupport {
     void removeEverythingThisStrategyMade() {
         // 재시도 요청은 원본 요청을 가리키지만 한 문장 안에서 함께 지우므로 걸리지 않는다.
         String runs = "SELECT id FROM backtest_run WHERE strategy_id = '" + STRATEGY + "'";
+        jdbcTemplate.update("DELETE FROM backtest_fill WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_trade WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_reuse_event WHERE run_id IN (" + runs + ")");

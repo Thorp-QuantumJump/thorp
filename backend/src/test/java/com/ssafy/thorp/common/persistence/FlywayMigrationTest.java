@@ -652,8 +652,41 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                         "analytics",
                         "exceptions",
                         "versions",
+                        // 개별 체결을 기록한 결과인지(spec 011 DEP-004-011)
+                        "fills_recorded",
                         "created_at",
                         "updated_at");
+    }
+
+    @Test
+    @DisplayName("backtest_fill이 Entity 매핑과 같은 컬럼·시퀀스·제약으로 만들어지고 기존 결과는 체결 미기록으로 남는다")
+    void createsBacktestFillTable() {
+        assertThat(columnsOf("backtest_fill"))
+                .containsExactlyInAnyOrder(
+                        "id", "run_id", "fill_id", "instrument_id", "side", "fill_time", "detail");
+
+        Integer sequences =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.sequences"
+                                + " WHERE LOWER(sequence_name) = 'backtest_fill_seq'",
+                        Integer.class);
+        assertThat(sequences).isEqualTo(1);
+
+        List<String> constraints =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(constraint_name) FROM information_schema.table_constraints"
+                                + " WHERE LOWER(table_name) = 'backtest_fill'"
+                                + " AND constraint_type IN ('UNIQUE', 'FOREIGN KEY')",
+                        String.class);
+        assertThat(constraints).contains("uk_backtest_fill_run_fill").hasSize(2);
+
+        String columnDefault =
+                jdbcTemplate.queryForObject(
+                        "SELECT column_default FROM information_schema.columns"
+                                + " WHERE LOWER(table_name) = 'backtest_result'"
+                                + " AND LOWER(column_name) = 'fills_recorded'",
+                        String.class);
+        assertThat(columnDefault).isEqualTo("false");
     }
 
     @Test

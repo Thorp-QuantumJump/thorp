@@ -65,6 +65,7 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
   prefetch 1이면 처리하지 않은 두 번째 메시지가 unacked로 잡혀 크래시 때 `x-delivery-limit=1`의 유일한 재시도를 실행 없이 태운다. 큐 이름 상수는
   백엔드 `BacktestRabbitConfig`의 `public static final String` 전부와 같은 값이어야 한다(`test_topology_constants_match_the_backend`)
   엔진·소비자·리스너가 같은 레지스트리를 봐야 하므로 `main.py`가 하나를 만들어 셋에 넘긴다
+- **개별 체결 기록(`EngineOutput.fills`)은 회계에 쓰지 않는 사본이다**(spec 011 DEP-004-011). `_on_order_filled`가 이미 계산한 체결가·수량·비용 네 갈래를 남길 뿐이고 현금·보유·비용 합계는 여기서 읽지 않는다. 재현성 해시(`reproducibility.computed`)에서 뺀다 — 이미 해시에 든 값의 다른 표기라 넣으면 숫자가 같은데도 골든이 전부 바뀐다. 대신 `tests/test_fill_records.py`가 독립 계산·비용 합계·일별 현금과 대조한다. `fills=None`(기록하지 않는 워커)과 `[]`(체결 없음)를 섞지 말 것
 - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.
   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다
 - **시장 자료는 `market_data.py` 한 곳에서만 읽고, 공급자는 주입한다.**

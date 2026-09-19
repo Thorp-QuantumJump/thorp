@@ -155,7 +155,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `run { runId, status, startedAt, finishedAt, partial?, lastTradingDate?, effectiveStart?, effectiveEnd?, error? }`. `status`는 `COMPLETED` / `FAILED` / `CANCELLED`.
 - `run.error { code, message }` — 실패 시 채우고 성공 시 없음. 코드는 `INVALID_REQUEST`, `DATA_INSUFFICIENT`, `CONSTRAINT_VIOLATION`, `ESTIMATION_FAILED`,
   `ENGINE_ERROR`, `INTERNAL_ERROR`. (`INSUFFICIENT_CASH`는 오류가 아니라 `diagnostics.warnings[].code`)
-- FAILED일 때 `performance`와 `execution`은 없음(null), `portfolioSeries`·`trades`는 `[]`. 존재하지 않는 성과를 0으로 채우지 않는다.
+- FAILED일 때 `performance`와 `execution`은 없음(null), `portfolioSeries`·`trades`는 `[]`, `fills`는 없거나 `[]`. 존재하지 않는 성과를 0으로 채우지 않는다.
 - **CANCELLED**는 `partial=true`이고 `lastTradingDate`까지의 **부분 결과**를 COMPLETED와 같은 형태로 담는다(`performance`·`execution` 필수). 취소는 다음 거래일
   처리 시점에 반영되므로 `portfolioSeries`의 마지막 날짜가 `lastTradingDate`다.
 - `portfolioSeries[].positions`는 보유 구성이 바뀐 거래일 + 시작일 + 종료일에만 존재한다. `portfolioSeries[].cashFlows[] { type, instrumentId?, amount }`는
@@ -164,6 +164,13 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
   `riskScale`·`estimatedVolatility` 는 `scenario=TARGET_RISK` 에서만 존재하고 그때 `target` 은 조절 뒤 비중이다(PD-18).
 - `trades[]`: OPEN 거래는 `exitTime`, `exitPrice`, `grossPnl`, `realizedPnl`, `returnRate`가 없음이고 `commission`·`slippageCost`는 진입 측만 합산한다.
   `reason` (`SIGNAL` / `REBALANCE` / `HALT_DEFERRED` / `LIQUIDATION`)과 이월 주문의 `plannedDate`는 선택.
+- `fills[] { fillId, instrumentId, side, time, price, referencePrice, quantity, costs { commission, spread, slippage, tax }, cashCost, reason?, plannedDate? }`:
+  **개별 체결 목록**(spec 011 DEP-004-011). `trades[]`는 진입·청산을 묶은 단위라 묶음이 닫히면 양쪽 비용이 합쳐지고 세금은 `realizedPnl`에만 들어간다 —
+  임의 구간의 거래·비용·현금 흐름을 다시 세려면 체결 단위가 있어야 한다. `side`는 `BUY` / `SELL`(포지션 방향인 `trades[].side`와 다른 개념),
+  `price`는 실제 체결가(호가차·슬리피지 반영), `referencePrice`는 충격 전 기준가, `cashCost`는 체결 대금과 별도로 현금에서 빠진 비용(엔진에서는 수수료 + 세금)이다.
+  체결 순서대로 담고 `fillId`는 실행 안에서 고유하다. **생략(null)과 `[]`는 다른 뜻이다** — 생략은 체결을 기록하지 않는 워커가 낸 결과, `[]`는 체결이 없었다는 뜻이다.
+  백엔드는 생략을 `[]`로 보정하지 않고 `backtest_result.fills_recorded=false`로 남긴다(기록이 없는 결과를 체결 0건으로 읽으면 구간 비용이 0이 된다).
+  재현성 해시(`worker/reproducibility.py`)에는 넣지 않는다 — 이미 해시에 든 값의 다른 표기라 넣으면 숫자가 같은데도 골든이 전부 바뀐다.
 - `costs { commission, spread, slippage, tax, total }` 비용 합계(FR-027). `performance.netTotalReturn`·`totalTradingCost`와 짝.
 - `liquidation { markToMarket { finalEquity, totalReturn }, liquidated { finalEquity, totalReturn, liquidationCost } }` — `evaluation.liquidationAtEnd=true`일 때(FR-017).
 - `analytics { recoveryDays?, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method }` 파생 지표(FR-027).
@@ -212,6 +219,9 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `positions`가 있는 날 `Σ marketValue == positionValue`; `cashFlows`가 있는 날 현금이 그만큼 늘어난다(취소 픽스처에만 있다)
 - CLOSED 거래마다 `realizedPnl == grossPnl - commission - slippageCost`; `performance.tradeCount == CLOSED 거래 수`(2), `winRate = 0.5`
 - `costs.total == commission + spread + slippage + tax == performance.totalTradingCost`
+- `len(fills) == execution.fillCount`; `Σ fills[].costs`의 갈래별 합이 `costs`의 같은 갈래와 같다; 초기 현금에서 체결마다
+  `BUY: −(price×quantity + cashCost)`, `SELL: +(price×quantity − cashCost)`를 더하고 `cashFlows`를 더하면 그날 스냅샷의 `cash`다.
+  이 목 회계는 슬리피지를 체결가가 아니라 현금에서 빼므로 픽스처의 `price == referencePrice`이고 `cashCost`에 슬리피지가 들어 있다(§4.3 "체결가 의미"와 같은 한계)
 - `event-progress.json`: `sequence=1`, 포인트 20개 == `completedTradingDays`, `totalTradingDays=129` == 완료 픽스처 `portfolioSeries` 길이, `lastTradingDate` == 마지막 포인트 날짜
 - `event-finished-completed.json`: `sequence=8` (= PROGRESS 7회 + 1), `status=COMPLETED`, `partial=false`, `execution.totalCommission > 0`
 - `event-finished-failed.json`: `status=FAILED`, `run.error.code=DATA_INSUFFICIENT`, `performance`·`execution` 키 없음, `partial=false`
@@ -255,9 +265,9 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | 식별자 길이 255자 초과 (§5) | 명시 검증 | — |
 | `instrumentId` 형식 (§5, trade·position) | 명시 검증 (`InstrumentId.REGEX`) | universe 항목은 명시 검증, 결과는 엔진 입력의 종목이 그대로 나감 |
 | `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |
-| 상태별 nullable 규칙 (COMPLETED·CANCELLED: `performance`·`execution` 필수, `error` 없음. CANCELLED: `partial=true`·`lastTradingDate` 필수. FAILED: `error` 필수, `performance`·`execution` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
+| 상태별 nullable 규칙 (COMPLETED·CANCELLED: `performance`·`execution` 필수, `error` 없음. CANCELLED: `partial=true`·`lastTradingDate` 필수. FAILED: `error` 필수, `performance`·`execution` 없음, `portfolioSeries`·`trades` 비어야 함, `fills`는 없거나 비어야 함. `fills`가 있으면 항목마다 필수 필드 검증) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
 | CANCELLED 완료 범위 일치 (`payload.lastTradingDate` == `engineOutput.run.lastTradingDate` == `portfolioSeries` 마지막 날짜) | 명시 검증 — 실행에는 payload 값을, 결과에는 `engineOutput` 전체를 저장하므로 어긋나면 화면의 완료 날짜와 요약·시계열 범위가 달라진다 | 엔진이 `assemble_output` 한 곳에서 세 값을 함께 채운다 |
-| 계약이 nullable로 정한 생략 (성과 지표 개별 null, snapshot의 `positions`·`cashFlows`, OPEN 거래의 청산 필드, v2 추가 블록 전부) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
+| 계약이 nullable로 정한 생략 (성과 지표 개별 null, snapshot의 `positions`·`cashFlows`, OPEN 거래의 청산 필드, `fills` 전체, v2 추가 블록 전부) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
 | 알 수 없는 필드 | 무시(`FAIL_ON_UNKNOWN_PROPERTIES=false`) — 상대가 필드를 먼저 추가해도 깨지지 않게 | 무시(`extra="ignore"`) |
 
 검증 실패는 계약 오류로 보고 requeue 없이 reject → DLQ(§7). 픽스처 round-trip 테스트는 DTO 구조가 계약과 맞는지 확인하는 것이며 실제 수신 메시지 검증을 대신하지 않는다.
