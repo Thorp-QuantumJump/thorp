@@ -63,6 +63,29 @@ Python 3.11이고 lock은 3.11과 3.12 이상에 서로 다른 numpy를 고르�
      "import sys, numpy, scipy, nautilus_trader; print(sys.version, numpy.__version__, scipy.__version__, nautilus_trader.__version__)"
    ```
 
+4. 새 이미지 안에서 아래 "환경 간 재현 확인"을 돌려 골든과 같은지 본다.
+
+### 환경 간 재현 확인
+
+`scripts/reproducibility_report.py`는 규칙 버전 골든과 같은 입력으로 엔진을 돌려 전략마다 반올림 전
+해시(`exactSha256`)와 골든 해시(`roundedSha256`, 유효숫자 12자리), 골든 일치 여부를 환경 정보(OS·CPU·
+패키지·BLAS 커널)와 함께 JSON으로 낸다. 판정은 `goldenMatch`로 하고, 반올림 전 해시는 두 환경이 어디서
+갈렸는지 좁히는 데 쓴다(spec 004 research R-21). 기준 입력이 `docs/specs/backtest-messaging/examples`에도
+있으므로 저장소 전체가 보이는 곳에서 `worker/`를 작업 디렉터리로 두고 돌린다.
+
+```bash
+# 개발기
+uv run --no-sync python scripts/reproducibility_report.py --out report.json --dump-dir dump
+
+# 워커 이미지(저장소 루트에서). 운영 이미지에는 pytest가 없어도 된다
+docker run --rm -v "$PWD:/repo" -w /repo/worker -e PYTHONPATH=/repo/worker/src \
+  -e PYTHONDONTWRITEBYTECODE=1 -e THORP_ENV_LABEL=<환경 이름> <워커 이미지> \
+  python scripts/reproducibility_report.py --out /repo/worker/report.json --dump-dir /repo/worker/dump
+```
+
+두 환경의 `exactSha256`이 다르면 `--dump-dir`로 남긴 전략별 결과 전문을 diff해 갈린 필드와 자리수를 본다.
+보고서와 덤프는 커밋하지 않는다.
+
 ### 엔진을 직접 호출하기
 
 ```python
