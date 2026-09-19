@@ -13,11 +13,15 @@
 - **검색 식별자 두 가지**: 010 API의 `searchId`는 snapshot 키(= 위 `snapshotKey`)이고, 011의
   `linkSearchId`(`RLS-…`)는 §1b가 만드는 연결 기록이다. 서로 다른 값이다.
 - **비교 묶음**은 `base`(필수)·`compare`(선택) 두 공개 토큰(005 `publicToken`, 32자 소문자 16진)
-  이다. 서버가 실행으로 푼다. 만료된 토큰은 `410 RESULT_EXPIRED`(005 코드 재사용).
+  이다. 서버가 005 `PublicResultService.resolve`와 같은 규칙(형식 → 존재 → 만료)으로 **분석 요청**과 그 실행으로
+  푼다. 만료된 토큰은 `410 RESULT_EXPIRED`, 없는 토큰은 `404`(005 코드 재사용).
 - 모든 응답에 `basis: {kind: "HISTORICAL_REVISION"}`가 있다(FR-015). 화면은 이 값을 읽어 "최신
   개정자료를 이용한 역사 탐색"을 표시한다.
 - **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 기존 `401 AUTHENTICATION_REQUIRED`(014 코드 재사용, FR-025). 계산은
   시작되지 않는다.
+- **공개 조회의 접근 근거**: 링크를 돌려주는 `GET`(§3·§4)은 그 링크가 붙은 분석의 공개 토큰을 함께 받는다.
+  토큰이 없으면 `400`, 만료면 `410`, 토큰의 요청과 링크가 맞지 않으면 `404`다. 응답에는 제시된 토큰 외의
+  토큰을 싣지 않는다. 011 화면 주소에 이미 `base`·`compare`가 있어 사용자가 따로 입력하지 않는다(research R14).
 
 ## 1. `GET /regime-links/availability` — 표시 후보에 가용성 판정을 붙인다
 
@@ -83,7 +87,12 @@
   `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`. `OUT_OF_PERIOD`는 **필터
   조건이 아니다** — `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다(§2).
 - `postWindow.d63`은 미완성이면 `null`이고 `completedTradingDays`가 진짜 길이다. 21거래일 미만이면
-  `state=POST_INCOMPLETE`이고 기본 목록에서 빠진다(Clarifications 09-18 Q2).
+  `state=POST_INCOMPLETE`이고 기본 목록에서 빠진다(Clarifications 09-18 Q2). `postWindow`는 시장 달력 기준이고,
+  실행별 실제 확보 거래일 수는 `perRun[].completedTradingDays`다 — 구간 안 상장폐지면 폐지 전날까지로 줄고
+  `reason`이 `DELISTED`(최근 사례는 `RECENT`)다. 21 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·
+  `delistedOn`이다. 기준월이 자료 마감월보다 과거면 완성 판정 기준일은 그 기준월의 마지막 거래일이다(research R4).
+- 사유 값: `DATA_INSUFFICIENT` → `UNLISTED`\|`WARMUP_SHORT`\|`SECTOR_UNMAPPED`, `POST_INCOMPLETE` →
+  `RECENT`\|`DELISTED`. 이 둘은 계산 작업을 만들지 않는 판정이며 '다시 시도'가 없다(research R13).
 - `entryPath=MARKET_FLOW`면 `filter.applied=false`, `filterKey`·`excludedCount` 없음, 모든 사례가
   `shownInFiltered=true`. 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
@@ -121,7 +130,8 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 
 - `scenario`: `CONTINUOUS`(기본 화면) \| `FRESH_CASH`(그날 현금 시작, 사용자가 켤 때만).
 - 서버는 요청자의 linkSearchId를 조회해 비교 묶음·snapshot·경로를 확정한다. 다른 사용자 기록은 404, 해당 snapshot 표시 후보 밖 사례도 404다. 검색 기록이나 변경 알림을 이 요청에서 생성하지 않는다.
-- 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만든다(`UNIQUE(run, case, scenario)`).
+- 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만들고(`UNIQUE(run, case, scenario)`), 이 검색이
+  그 계산을 열었다는 `regime_link_use`(원래 요청·역할)를 남긴다. 링크 행은 여러 사용자가 공유한다.
   이미 `COMPLETED`면 작업을 만들지 않고 즉시 결과를 돌려준다(FR-010 재사용).
 
 ### 응답 202 — 접수
@@ -150,7 +160,8 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 ```
 
 `confirmFullPeriod=true`면 서버가 004 접수 서비스로 `FULL_PERIOD` 실행(공통 가용 범위 전체, 나머지
-조건은 기준 실행 사본)을 요청하고 링크는 `PENDING_RUN`이다. 004의 동일 버전 재사용이 작동해 이미
+조건은 기준 실행 사본)을 **요청한 사용자 본인의 분석 요청으로** 접수하고 링크는 `PENDING_RUN`이다. 실행이
+재사용돼도 004는 호출자마다 새 요청과 새 공개 토큰을 만든다. 004의 동일 버전 재사용이 작동해 이미
 있으면 즉시 `QUEUED`로 넘어간다.
 
 ### `scenario=FRESH_CASH`
@@ -170,12 +181,12 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 | `RESULT_NOT_READY` | 409 | 기준·비교 실행이 아직 `COMPLETED`가 아님 |
 | `EXECUTION_LIMIT` | 429 | 004 대기열 상한(현금 시작·전체 기간 재계산). 본문 `retryAfterSeconds` 그대로 |
 
-## 3. `GET /regime-links/{linkId}` — 링크 상태와 결과
+## 3. `GET /regime-links/{linkId}?token=` — 링크 상태와 결과
 
 ```json
 {
   "basis": {"kind": "HISTORICAL_REVISION", "dataVersion": "KRX-2026-09-09"},
-  "linkId": "RL-20260918-000101", "publicToken": "9f2c…", "originPublicToken": "9f2c…",
+  "linkId": "RL-20260918-000101", "publicToken": "9f2c…",
   "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03", "scenario": "CONTINUOUS",
   "status": "COMPLETED",
   "postWindow": {"d0": "2012-04-02", "d21": "2012-05-02", "d63": "2012-07-03", "completedTradingDays": 63, "complete21": true, "complete63": true},
@@ -195,25 +206,32 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 }
 ```
 
+- `token`(필수)은 이 링크를 연 분석의 공개 토큰이다. 응답의 `publicToken`은 제시된 값 그대로이고 다른 토큰은
+  싣지 않는다. '전체 기간 결과 보기'는 이 토큰의 `/results/{token}`이다(현금 시작·전체 기간 재계산 링크도 같다).
 - `status=PENDING_RUN`이면 `runProgress`에 004 `GET /backtests/{id}`의 `status`·`progress`·
   `queueWaitSeconds`를 그대로 싣는다(화면은 005 비교 대상과 같은 진행 표시).
 - `status=QUEUED|RUNNING`이면 `result=null`, `queuedAt`·`startedAt`.
-- `status=FAILED`면 `failure: {code, message}`. 화면은 그 자리에 한 문장과 '다시 시도'.
+- `status=FAILED`면 `failure: {code, message, retryable}`. 화면은 그 자리에 한 문장을 보이고 `retryable=true`일
+  때만 '다시 시도'를 둔다. `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이 `attempt ≥ 2`에서 다시 나오면
+  `retryable=false`다. 실패 문구는 사용자의 조건을 원인으로 말하지 않는다(research R13).
 - `availability.state=DATA_INSUFFICIENT`면 `status=COMPLETED`, `result=null`, 화면은 사유
-  (`UNLISTED`/`WARMUP_SHORT`)를 '자료 부족'으로. **실패와 구분한다.**
-- `availability.partial=true`(구간 안 상장폐지)면 `result`는 `delistedOn` 전날까지고 화면이 부분
-  구간임을 표시한다.
+  (`UNLISTED`/`WARMUP_SHORT`/`SECTOR_UNMAPPED`)를 '자료 부족'으로. **실패와 구분한다.**
+- `availability.partial=true`(구간 안 상장폐지, 확보 21거래일 이상)면 `result`는 `delistedOn` 전날까지고
+  `window63.tradingDays`가 그 길이다. `window21`은 완성이다. 화면이 부분 구간임을 표시한다.
+- `availability.state=POST_INCOMPLETE`(확보 21거래일 미만)면 `status=COMPLETED`, `result=null`이고
+  `completedTradingDays`와 사유(`RECENT`/`DELISTED`)만 있다.
 - `scenario=FRESH_CASH`의 `result.window63.return`은 `initialCash` 기준이다. 화면은 연속 운용과 다른
   이유 한 문장을 고정 문구로 붙인다(FR-010).
 
 ## 4. `GET /regime-links?base=&compare=&caseId=` — 사례 하나의 링크 묶음
 
 `[ {§3 응답} ]`을 비교 묶음 순서(기준 → 비교 대상)로, 시나리오별로 담는다. 화면이 사례를 열 때 한
-번 부른다. 없는 조합은 요소가 없다(빈 값을 만들지 않는다).
+번 부른다. 없는 조합은 요소가 없다(빈 값을 만들지 않는다). `base`·`compare` 토큰은 §0의 규칙으로 검증하고, 각
+요소의 `publicToken`은 그 요소가 속한 쪽의 제시된 토큰이다.
 
 ## 5. `POST /regime-links/{linkId}/retry` — 실패한 링크 다시 시도 (로그인 필요)
 
-`202 {linkId, status}`. `FAILED`에서만, 아니면 `409 NOT_RETRYABLE`. `RUN_FAILED`면 004 `retry`를
+`202 {linkId, status}`. `FAILED`이고 `retryable=true`일 때만, 아니면 `409 NOT_RETRYABLE`. `RUN_FAILED`면 004 `retry`를
 호출해 새 실행을 만들고 `PENDING_RUN`. 자동으로 다시 실행하지 않는다(Edge Cases).
 
 ## 6. 내보내지 않는 것

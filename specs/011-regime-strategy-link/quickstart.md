@@ -73,7 +73,7 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 1. 익명으로 `POST /api/regime-links` → `401 AUTHENTICATION_REQUIRED`, `regime_link` 행 0, 큐 메시지 0.
 2. 로그인 후 POST /api/regime-link-searches로 목록과 linkSearchId를 만들고, 그 linkSearchId로 링크 요청(`CONTINUOUS`, 사례 NORMAL) → `202`, 링크 2개(`QUEUED`), 큐에 메시지 2개.
-   워커가 처리하면 `GET /api/regime-links/{linkId}`가 `COMPLETED`와 `result`를 돌려준다.
+   워커가 처리하면 `GET /api/regime-links/{linkId}?token={base 토큰}`이 `COMPLETED`와 `result`를 돌려준다. 토큰 없이 부르면 400, 다른 실행의 토큰이면 404, 만료된 비로그인 토큰이면 410.
 3. 같은 요청을 다시 → `202`, 두 링크 모두 `COMPLETED`, **큐 메시지 0**(재사용).
 4. 분석 기간 밖 사례에 `confirmFullPeriod=false` → `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`, 계산 0.
    `true`로 다시 → 004 `FULL_PERIOD` 실행이 접수되고 링크는 `PENDING_RUN`; 004 완료 후 자동으로
@@ -86,22 +86,25 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 ### S6. 시장 흐름 경로 (M6)
 
-- 실행: `/regime-link/start?case={caseId}&sector=SEMICONDUCTOR`를 익명으로 → 로그인 안내 → 로그인
+- 실행: 010 경제환경 검색의 사례 상세에서 '이 기간으로 전략 비교'(T087)를 누르거나
+  `/regime-link/start?case={caseId}&sector=SEMICONDUCTOR`를 직접 연다. 익명으로 → 로그인 안내 → 로그인
   → 같은 주소 복귀 → 002(반도체 초기 선택) → 003.
 - 기대: 003 '기간·금액·조건'에서 사례 사후 구간을 덮지 않는 시작일·종료일을 고를 수 없고 한 문장
-  안내가 보인다. '분석하기' 뒤 완료되면 `/regime-link?base=…&case=…`로 이동해 그 사례의 전략 결과
-  영역에 진행 상태 → 결과가 채워진다. 검색 대상은 전체 사례(필터 없음).
+  안내가 보인다. '분석하기'가 **접수되면 곧바로** `/regime-link?base=…&case=…`로 이동하고 기준 실행의 진행
+  상태 → 사후 구간 계산의 진행 상태 → 결과 순으로 채워진다. 검색 대상은 전체 사례(필터 없음).
 
 ### S7. 진단 결과 경로 화면 (M7)
 
-- 실행: `/regime-link?base=…&compare=…` (005 FE가 없으면 주소를 직접 연다).
-- 기대: 분야 선택 화면이 먼저(종합은 선택형). 분야를 고르면 기본 목록에 `shownInFiltered=true`만,
+- 실행: 005 결과 화면의 '경제환경이 비슷했던 과거 보기'(T086)로 `/regime-link?base=…&compare=…`에 들어온다.
+- 기대: 분야·기준월 선택 화면이 먼저(종합은 선택형, 기준월 기본은 최신). 고르면 주소에 `snapshot`이 붙고 기본 목록에 `shownInFiltered=true`만,
   "선택 ETF로 비교 가능한 기간"과 제외 수, '전체 경제환경 탐색으로 전환'. 전환하면 10개 전부 보이고
   자료 부족 사례는 전략 결과 자리만 '자료 부족'. 사례를 열면 63거래일 결과가 기본, 21거래일·손실
   기여는 상세, 전체 기간 결과 요약이 같은 화면에, KOSPI 두 값만, "최신 개정자료를 이용한 역사 탐색"
   과 "역사 설명용 기준" 표시. 미완성 사례는 "○○거래일 완성(미완성)". 현금 시작 토글을 켜면 그때
   진행 상태가 보이고 연속 운용과 다른 이유 한 문장이 붙는다. 비교 대상을 바꿔 다시 들어오면 한 문장
-  알림과 제외·추가 사례가 보이고 **유지율 숫자는 화면에 없다**(DB `retention`에는 있다).
+  알림과 제외·추가 사례가 보이고 **유지율 숫자는 화면에 없다**(DB `retention`에는 있다). 이때 분야 선택을 다시
+  묻지 않고 기준월이 그대로다. 새 탭에서 같은 `base`로 들어오면 분야 선택부터이고 알림이 없다. 당시 뉴스
+  영역은 발행 시각이 관측 구간 안인 뉴스만 보이고 없으면 012의 빈 상태 문구가 보인다.
 - 정적 검사: `npm test`의 `forbiddenPhrases.test.ts`가 `components/regimelink/` 전 파일에서 금지
   표현 0건.
 
@@ -116,6 +119,14 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 - 기대: 검색 경로별 별도 행, `snapshot_key` 사본, `filter_id`, `shown_cases`에 순위·판정,
   `excluded_count`, 비교 묶음 변경 시 `previous_search_id`와 `retention`, `basis=HISTORICAL_REVISION`,
   링크에 `post_window`·`scenario`·`availability`. 결과 표에 사용자 id가 없다.
+
+### S10. 측정 기록 (M8, T089)
+
+- 실행: 표시 후보 10개 × 실행 2개 × 연속 운용. `GET /api/regime-links/availability` 30회 순차 호출의 응답 시간과,
+  링크 20개의 `regime_link.queued_at → finished_at`(워커 1개)을 잰다.
+  `SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY extract(epoch FROM finished_at - queued_at)) FROM regime_link WHERE finished_at IS NOT NULL;`
+- 기록: 날짜·장비·자료 규모·p50/p95. 목표(300ms·3초)는 측정 목표이며 통과 조건이 아니다. 넘으면 수치와 병목
+  추정만 남긴다.
 
 ## 실행 기록
 
@@ -133,5 +144,11 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
   다른 탭의 검색은 previousLinkSearchId 없이 섞지 않음. 같은 clientRequestId 재시도는 행 1개.
 - 익명 검색·기존 공개 결과 조회는 가능, 계산·검색 기록 POST는 401. 로그인 후 같은 사례·조건 복귀.
   익명 목록 변경은 현재 탐색 흐름에서 표시하며 서버 개인 기록은 만들지 않음.
+- 구간 10거래일째 상장폐지: 기본 목록 제외·제외 수 포함, 전체 탐색에서 그 전략 자리에 확보 거래일 수와 사유만,
+  큐 메시지 0건. 40거래일째: `window63.tradingDays=40`·`partial`, `window21` 완성, 다른 전략의 63거래일 값 불변.
+- 조립 결함(기준일 행 누락) 메시지: `FAILED(INPUT_INCOMPLETE)`, 화면에 '자료 부족' 없음, 재시도가 같은 코드로
+  실패하면 '다시 시도'가 사라짐. 상장 전 사례 자리에는 처음부터 '다시 시도' 없음.
+- 같은 조건의 2022년 시작·2015년 시작 요청이 같은 전체 기간 재계산을 공유: 실행·링크 행 1개, `regime_link_use`는
+  각자, '전체 기간 결과 보기'는 각자의 결과 주소. 만료된 비로그인 요청 행이 지워져도 011 표의 FK가 막지 않음.
 - 사례 계산 요청은 위 검색 생성으로 얻은 linkSearchId를 사용한다. 구형 base/compare 직접 POST 예시는
   linkSearchId로 치환하여 검증한다. 회전율의 ANNUALIZED_252 단위가 표시된다.
