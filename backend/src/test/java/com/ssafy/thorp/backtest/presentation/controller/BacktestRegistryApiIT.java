@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * {@code GET /backtests/registry}(spec 004 T025, README §1.11).
  *
- * <p>003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 시드 등록표에서 그대로 읽는지 본다. 마이그레이션이 채운 행을 그대로 단언하므로 별도 준비가 없다.
+ * <p>003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 등록표에서 그대로 읽는지 본다. 마이그레이션이 채운 행을 그대로 단언하므로 별도 준비가 없다.
  */
 class BacktestRegistryApiIT extends IntegrationTestSupport {
 
@@ -34,17 +34,18 @@ class BacktestRegistryApiIT extends IntegrationTestSupport {
                 mockMvc.perform(get("/backtests/registry"))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.success").value(true))
+                        // 기본 비용은 PD-07 확정값이다(T021). 확정이라 화면의 "임시 비용" 표시가 꺼진다.
                         .andExpect(
                                 jsonPath("$.data.defaultCostProfile.version")
-                                        .value("PROVISIONAL-DEMO-1"))
-                        .andExpect(jsonPath("$.data.defaultCostProfile.provisional").value(true))
-                        // 비용 수치는 다른 응답과 같이 문자열 decimal 이고, 값은 시드 행 그대로다.
+                                        .value("KR-ETF-2026-09"))
+                        .andExpect(jsonPath("$.data.defaultCostProfile.provisional").value(false))
+                        // 비용 수치는 다른 응답과 같이 문자열 decimal 이고, 값은 등록표 행 그대로다.
                         // 003 이 "비용 조건을 읽기 전용으로 확인"(FR-010)하는 값이라 정확히 고정한다.
                         // 소수 네 자리는 컬럼이 NUMERIC(8,4) 라서다 — 화면은 문자열을 그대로 믿지 말고
                         // 수치로 파싱해 표시한다.
                         .andExpect(
-                                jsonPath("$.data.defaultCostProfile.commissionBps").value("0.0000"))
-                        .andExpect(jsonPath("$.data.defaultCostProfile.spreadBps").value("0.0000"))
+                                jsonPath("$.data.defaultCostProfile.commissionBps").value("1.5000"))
+                        .andExpect(jsonPath("$.data.defaultCostProfile.spreadBps").value("3.0000"))
                         .andExpect(
                                 jsonPath("$.data.defaultCostProfile.slippageBps").value("5.0000"))
                         .andExpect(jsonPath("$.data.defaultCostProfile.taxBps").value("0.0000"))

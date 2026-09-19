@@ -40,6 +40,37 @@ def test_demo_profile_charges_slippage_only():
     assert cost.total == Decimal("50")
 
 
+def test_confirmed_profile_charges_nine_and_a_half_bps_each_side():
+    """PD-07 확정값(spec 004 T021). 기본 요청은 이 프로필로 계산된다.
+
+    수수료 1.5 + 호가차 3 + 슬리피지 5 = 한쪽 9.5bps. 세금이 0이라 매도도 같다.
+    """
+    model = CostModel(
+        CostProfile(
+            version="KR-ETF-2026-09",
+            commissionBps=Decimal("1.5000"),
+            spreadBps=Decimal("3.0000"),
+            slippageBps=Decimal("5.0000"),
+            taxBps=Decimal("0.0000"),
+            provisional=False,
+        )
+    )
+    notional = Decimal("100000")  # 10,000 x 10
+
+    buy = model.for_fill(Side.BUY, Decimal("10000"), Decimal("10"))
+    sell = model.for_fill(Side.SELL, Decimal("10000"), Decimal("10"))
+
+    assert buy.total / notional == sell.total / notional == Decimal("0.00095")
+    assert (buy.commission, buy.spread, buy.slippage, buy.tax) == (
+        Decimal("15"),
+        Decimal("30"),
+        Decimal("50"),
+        Decimal("0"),
+    )
+    assert sell.tax == 0
+    assert not model.provisional
+
+
 def test_price_impact_is_always_unfavourable():
     model = CostModel(profile(spread="10", slippage="5"))
 
