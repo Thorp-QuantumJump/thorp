@@ -38,7 +38,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `strategy.parameters.rebalancePeriod` | `object` | 선택 | 003 축(`{mode, unit}`). `mode=CALENDAR`면 서버가 엔진이 읽는 `rebalance` 문자열로 옮겨 보낸다. 저장된 요청에는 003 이름 그대로 남는다 |
 | `conditions.start` / `end` | `date` | 필수 | `start`가 `end`보다 늦을 수 없다 |
 | `conditions.initialCash` | `string` (decimal) | 필수 | 0보다 큼. 소수점 2자리까지 |
-| `conditions.costProfileVersion` | `string` | 선택 | `null` = 서버 기본(현재 `PROVISIONAL-DEMO-1`) |
+| `conditions.costProfileVersion` | `string` | 선택 | `null` = 서버 기본(현재 `KR-ETF-2026-09`, PD-07 확정값). 화면은 비우지 않고 §1.11에서 받은 버전을 명시한다. 등록표에 없는 버전은 400 `INVALID_INPUT` |
 | `conditions.evaluationSplitVersion` | `string` | 선택 | 평가 분할 버전 |
 | `conditions.warmupTradingDays` | `int` | 선택 | 비교 묶음의 공통 워밍업. `null` = 선택 전략의 관측 길이. **선택 전략의 요구값보다 작으면 올리지 않고 422 `INSUFFICIENT_HISTORY`** |
 | `conditions.scenario` | `enum` | 선택 | `FULL_PERIOD`(기본) `FRESH_CASH_FROM` `COST_ESCALATION` `TARGET_RISK` |
@@ -233,8 +233,8 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   "data": { "strategyRules": [ { "strategyId": "FIXED_WEIGHT",       "rulesVersion": "1", "status": "REGISTERED",       "provisional": false },
                               { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "status": "REGISTERED",       "provisional": true  },
                               { "strategyId": "SECTOR_MOMENTUM",    "rulesVersion": "1", "status": "REGISTERED",       "provisional": false } ],
-            "defaultCostProfile": { "version": "PROVISIONAL-DEMO-1", "provisional": true,
-                                    "commissionBps": "0.0000", "spreadBps": "0.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } },
+            "defaultCostProfile": { "version": "KR-ETF-2026-09", "provisional": false,
+                                    "commissionBps": "1.5000", "spreadBps": "3.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } },
   "error": null }
 ```
 

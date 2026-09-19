@@ -2,6 +2,7 @@ package com.ssafy.thorp.common.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -372,6 +373,23 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                                         + " WHERE version = 'PROVISIONAL-DEMO-1'",
                                 Boolean.class))
                 .isTrue();
+
+        // PD-07 확정값은 데모 행을 고치지 않고 새 행으로 들어간다(T021). 데모 행은 그 버전을 가리키는 실행이
+        // 옛 값으로 해석되도록 수치까지 그대로여야 한다.
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT version, commission_bps, spread_bps, slippage_bps, tax_bps,"
+                                        + " provisional FROM cost_profile ORDER BY version"))
+                .extracting(
+                        row -> row.get("version"),
+                        row -> ((BigDecimal) row.get("commission_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("spread_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("slippage_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("tax_bps")).toPlainString(),
+                        row -> row.get("provisional"))
+                .containsExactly(
+                        tuple("KR-ETF-2026-09", "1.5000", "3.0000", "5.0000", "0.0000", false),
+                        tuple("PROVISIONAL-DEMO-1", "0.0000", "0.0000", "5.0000", "0.0000", true));
 
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
         // (constitution "실행 전 결정 임의 확정 금지"). 2026-09-17 PD-03·PD-04가 확정돼

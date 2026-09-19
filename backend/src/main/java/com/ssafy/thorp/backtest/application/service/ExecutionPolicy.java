@@ -64,7 +64,12 @@ public final class ExecutionPolicy {
     public static final BigDecimal LEVERAGE = new BigDecimal("1.0");
     public static final boolean INTEGER_LOTS = true;
 
-    /** 비용 조건 임시 버전(PD-07 확정 전). 값은 ADR-0004 데모 값 그대로. */
+    /**
+     * 비용 버전이 기록되지 않은 실행(접수 경로가 생기기 전 행)에 싣는 비용. 값은 ADR-0004 데모 값 그대로다.
+     *
+     * <p>접수가 채우는 실행은 언제나 등록표 버전을 갖고 {@link EngineInputAssembler}가 그 행을 읽으므로, 기본 비용이 PD-07 확정값으로
+     * 바뀌어도(T021) 여기는 바꾸지 않는다 — 그 행들은 데모 값으로 계산됐고 다른 값으로 재해석되면 안 된다.
+     */
     public static final EngineInput.CostProfile COST_PROFILE =
             new EngineInput.CostProfile(
                     "PROVISIONAL-DEMO-1",
