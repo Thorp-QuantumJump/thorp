@@ -42,6 +42,25 @@ def _docker(*arguments: str) -> str:
     return result.stdout.strip()
 
 
+def _current_container_network() -> str | None:
+    """Docker 소켓을 공유하는 컨테이너 안이면 현재 컨테이너의 네트워크를 돌려준다."""
+    if not Path("/.dockerenv").exists():
+        return None
+    hostname = os.getenv("HOSTNAME")
+    if not hostname:
+        return None
+    try:
+        networks = _docker(
+            "inspect",
+            "--format",
+            "{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}",
+            hostname,
+        ).splitlines()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return networks[0] if networks else None
+
+
 @pytest.fixture
 def postgres_engine():
     required = os.getenv("THORP_REQUIRE_DOCKER", "").lower() == "true"
@@ -54,16 +73,31 @@ def postgres_engine():
 
     name = f"macro-publish-test-{secrets.token_hex(5)}"
     password = secrets.token_urlsafe(24)
+    network = _current_container_network()
     try:
-        _docker(
-            "run", "-d", "--rm", "--name", name,
-            "-e", f"POSTGRES_PASSWORD={password}",
-            "-e", "POSTGRES_DB=macro_test", "-p", "127.0.0.1::5432", "postgres:16-alpine",
+        run_arguments = ["run", "-d", "--rm", "--name", name]
+        if network:
+            run_arguments.extend(("--network", network))
+            host = name
+            port = 5432
+        else:
+            run_arguments.extend(("-p", "127.0.0.1::5432"))
+            host = "127.0.0.1"
+        run_arguments.extend(
+            (
+                "-e",
+                f"POSTGRES_PASSWORD={password}",
+                "-e",
+                "POSTGRES_DB=macro_test",
+                "postgres:16-alpine",
+            )
         )
-        port = _docker("port", name, "5432/tcp").rsplit(":", 1)[1]
+        _docker(*run_arguments)
+        if not network:
+            port = int(_docker("port", name, "5432/tcp").rsplit(":", 1)[1])
         url = URL.create(
             "postgresql+psycopg", username="postgres", password=password,
-            host="127.0.0.1", port=int(port), database="macro_test",
+            host=host, port=port, database="macro_test",
         )
         engine = create_engine(url)
         deadline = time.monotonic() + 45
@@ -78,7 +112,7 @@ def postgres_engine():
         migration_dir = Path(__file__).resolve().parents[2] / "backend" / "src" / "main" \
             / "resources" / "db" / "migration"
         with psycopg.connect(
-            host="127.0.0.1", port=int(port), dbname="macro_test",
+            host=host, port=port, dbname="macro_test",
             user="postgres", password=password,
         ) as connection:
             for migration in MIGRATIONS:
