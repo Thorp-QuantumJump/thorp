@@ -120,7 +120,12 @@ thorp:
     # 이 값을 올리지 않으면 옛 규칙으로 계산된 결과가 REUSED 로 돌아간다.
     engine-version: "nautilus_trader 1.219.0 / worker 2.2.0"
     # 비용 조건 기본 버전. 요청이 costProfileVersion 을 비우면 이 값을 쓴다.
-    default-cost-profile: PROVISIONAL-DEMO-1
+    #
+    # KR-ETF-2026-09 는 PD-07 확정값이다(spec 004 T021 마이그레이션). 바꿀 때는 행을 고치지 말고 새 버전
+    # 행을 넣은 뒤 이 값만 바꾼다 — 옛 버전을 가리키는 실행은 옛 값으로 계속 해석된다. 화면은
+    # GET /backtests/registry 에서 받은 버전을 요청에 명시해 보내므로, 이 값이 바뀌어도 이미 본
+    # 조건과 적용 조건이 갈리지 않는다.
+    default-cost-profile: KR-ETF-2026-09
     limits:
       # 실행 한도(FR-006, R-19). **값은 PD-06 이 실측 뒤 정한다 — 아래 수는 임시값이다.**
       # T014 는 장치만 만들었고, T012 집계 뷰(단건 대기시간 p95/p99, 사용자별 동시 탐색 수)가

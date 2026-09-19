@@ -75,12 +75,12 @@
       "MARKET"
     ],
     "costProfile": {
-      "version": "PROVISIONAL-DEMO-1",
-      "commissionBps": "0",
-      "spreadBps": "0",
-      "slippageBps": "5",
-      "taxBps": "0",
-      "provisional": true
+      "version": "KR-ETF-2026-09",
+      "commissionBps": "1.5000",
+      "spreadBps": "3.0000",
+      "slippageBps": "5.0000",
+      "taxBps": "0.0000",
+      "provisional": false
     },
     "partialFill": false,
     "liquidity": {
