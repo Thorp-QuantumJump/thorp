@@ -18,7 +18,7 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 
 ## R-03 동일 버전 키
 
-- **Decision**: FR-003 항목을 canonical JSON(키 사전순 정렬, 소수는 plain string, null 키 제거)으로 직렬화해 SHA-256 hex 64자를 `dedup_key`로 저장한다. 포함 항목: strategyId, rulesVersion, parameters, sector→ETF 대응(대응표 버전 + 정렬된 (sectorId, instrumentId, targetWeight) 목록), **warmupTradingDays(서버가 확정한 실효 워밍업 거래일 수, R-15)**, dataVersion, evaluationSplitVersion, costProfileVersion, engineVersion(`nautilus_trader` 버전 + 워커 엔진 버전 문자열. 워커 이미지 digest·의존성 fingerprint를 여기에 넣는 것은 발표 후 Phase 10 T028), scenario·scenarioParams·시나리오 규칙 버전, 분석 기간·시작 금액. 요청자·executionType은 제외한다. 워밍업이 키에 없으면 같은 전략을 다른 공통 워밍업으로 돌린 두 실행이 같은 키로 묶여 잘못된 결과를 재사용한다(plan 리뷰 6번).
+- **Decision**: FR-003 항목을 canonical JSON(키 사전순 정렬, 소수는 plain string, null 키 제거)으로 직렬화해 SHA-256 hex 64자를 `dedup_key`로 저장한다. 포함 항목: strategyId, rulesVersion, parameters, sector→ETF 대응(대응표 버전 + 정렬된 (sectorId, instrumentId, targetWeight) 목록), **warmupTradingDays(서버가 확정한 실효 워밍업 거래일 수, R-15)**, dataVersion, evaluationSplitVersion, costProfileVersion, engineVersion(`nautilus_trader` 버전 + 워커 엔진 버전 + `worker/uv.lock` sha256 앞 12자 지문. 지문은 T028에서 넣었다), scenario·scenarioParams·시나리오 규칙 버전, 분석 기간·시작 금액. 요청자·executionType은 제외한다. 워밍업이 키에 없으면 같은 전략을 다른 공통 워밍업으로 돌린 두 실행이 같은 키로 묶여 잘못된 결과를 재사용한다(plan 리뷰 6번).
 - **Rationale**: constitution "실행·캐시" 캐시 키 항목과 일치. Jackson `ORDER_MAP_ENTRIES_BY_KEYS` + 기존 `messageObjectMapper`(BigDecimal plain string)로 구현 가능해 새 라이브러리가 필요 없다.
 - **Alternatives**: DB에서 컬럼 조합 유니크(JSONB 파라미터 비교 불안정) / UUIDv5(결국 canonical 문자열이 필요).
 

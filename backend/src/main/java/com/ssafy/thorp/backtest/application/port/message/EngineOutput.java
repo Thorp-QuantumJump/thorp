@@ -208,6 +208,8 @@ public record EngineOutput(
      * @param evaluationSplit 요청의 {@code evaluation.splitVersion} 사본. null = 미지정. 결과 행이 실행 행 없이도 재현
      *     기준을 다 갖도록 워커가 되돌려 준다(data-model {@code backtest_result.versions} = {@code run.versions}
      *     사본, T018)
+     * @param dependencies 결과를 계산한 워커 환경의 수치 라이브러리 실제 버전. null = 미보고(T028 이전 워커). 실행 계획({@code
+     *     backtest_run.versions})에는 없다 — 접수 시점에는 어느 워커가 계산할지 모른다
      */
     public record Versions(
             String mapping,
@@ -217,7 +219,11 @@ public record EngineOutput(
             String data,
             String engine,
             String evaluationSplit,
-            String worker) {}
+            String worker,
+            Dependencies dependencies) {}
+
+    /** 계산에 쓴 수치 라이브러리의 실제 설치 버전(spec 004 T028). */
+    public record Dependencies(String numpy, String scipy) {}
 
     /**
      * @param provisional true = 팀 결정 전 임시값

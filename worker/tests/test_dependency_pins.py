@@ -6,11 +6,14 @@
 잡는다.
 """
 
+import hashlib
 import re
 import tomllib
 from pathlib import Path
 
 WORKER = Path(__file__).resolve().parents[1]
+BACKEND_CONFIG = WORKER.parent / "backend" / "src" / "main" / "resources" / "application.yml"
+ENGINE_VERSION = re.compile(r'^\s*engine-version:\s*"(?P<value>[^"]*)"', re.MULTILINE)
 PIN = re.compile(r"^(?P<name>[A-Za-z0-9_.\-]+)(?P<extras>\[[^\]]*\])?==(?P<version>[^\s;]+)$")
 
 
@@ -47,3 +50,20 @@ def test_pinned_versions_match_between_pyproject_and_lock() -> None:
     assert {name: locked.get(name) for name in declared} == {
         name: {version} for name, version in declared.items()
     }
+
+
+def test_backend_engine_version_carries_the_uv_lock_fingerprint() -> None:
+    """재현 키의 실행환경 지문이 지금 lock 과 같은지(spec 004 T028).
+
+    재현 키는 워커 실행 전에 백엔드가 만들므로 워커 결과를 쓸 수 없다. 대신 백엔드
+    ``thorp.backtest.engine-version`` 에 lock 지문을 넣어 두고, lock 이 바뀌었는데 설정을 잊으면
+    옛 환경의 결과가 REUSED 로 돌아가는 것을 여기서 막는다.
+    """
+    lock = (WORKER / "uv.lock").read_bytes().replace(b"\r\n", b"\n")
+    expected = f"uv.lock {hashlib.sha256(lock).hexdigest()[:12]}"
+    match = ENGINE_VERSION.search(BACKEND_CONFIG.read_text(encoding="utf-8"))
+
+    assert match, f"{BACKEND_CONFIG} 에서 engine-version 을 찾지 못했다"
+    assert match["value"].endswith(f" / {expected}"), (
+        f"engine-version 의 지문이 uv.lock 과 다르다. 끝을 '{expected}' 로 바꾼다: {match['value']}"
+    )

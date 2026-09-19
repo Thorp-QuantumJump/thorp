@@ -779,7 +779,11 @@
         "data": "FIXTURE-2026-09-07",
         "engine": "nautilus_trader 1.219.0",
         "evaluationSplit": "SPLIT-1",
-        "worker": "2.0.0"
+        "worker": "2.0.0",
+        "dependencies": {
+          "numpy": "2.4.6",
+          "scipy": "1.17.1"
+        }
       },
       "diagnostics": {
         "warnings": [

@@ -31,7 +31,8 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                            liquidation::text AS "liquidation",
                            analytics::text   AS "analytics",
                            COALESCE(jsonb_array_length(exceptions), 0) AS "exceptionCount",
-                           versions ->> 'worker' AS "workerVersion"
+                           versions ->> 'worker' AS "workerVersion",
+                           (versions -> 'dependencies')::text AS "dependencies"
                       FROM backtest_result
                      WHERE run_id = :jobId
                     """,

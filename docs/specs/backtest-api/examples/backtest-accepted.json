@@ -17,7 +17,7 @@
         "provisional": false
       },
       "data": "FIXTURE-three_etf_24m",
-      "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
+      "engine": "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8",
       "evaluationSplit": "SPLIT-1"
     },
     "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e"
