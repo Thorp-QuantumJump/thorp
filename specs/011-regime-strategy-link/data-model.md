@@ -43,7 +43,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 |---|---|---|
 | `id` | BIGINT PK | SEQUENCE. 외부 식별자는 `search_id` |
 | `search_id` | VARCHAR(32) NOT NULL UNIQUE | `RLS-YYYYMMDD-NNNNNN`. 내부 PK를 노출하지 않는다(ADR-0002 D2) |
-| `owner_user_id` | BIGINT NOT NULL | 연결은 로그인 사용자만 만든다(FR-025). 익명 검색은 행을 만들지 않는다 |
+| `owner_user_id` | BIGINT NOT NULL | 목록 확정 시 로그인 사용자 기록을 만든다(FR-021·025). 익명은 행을 만들지 않는다 |
 | `entry_path` | VARCHAR(24) NOT NULL | `MARKET_FLOW` \| `STRATEGY_RESULT` — 두 경로의 결과를 따로 보존(FR-004) |
 | `snapshot_id` | BIGINT → `regime_search_snapshot(id)` ON DELETE SET NULL | 010 revision 고정 |
 | `snapshot_key` | VARCHAR(200) NOT NULL | 010 키의 **사본**. 철회로 `snapshot_id`가 NULL이 돼도 무엇을 봤는지 남는다 |
@@ -51,13 +51,16 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 | `base_run_id` | BIGINT NOT NULL → `backtest_run(id)` | 비교 기준 실행 |
 | `compare_run_id` | BIGINT → `backtest_run(id)` | 비교 대상 실행. 없으면 NULL. **최대 2개**(Clarifications 09-17 Q1) |
 | `filter_id` | BIGINT → `regime_link_filter(id)` | `STRATEGY_RESULT` 경로면 NOT NULL. `MARKET_FLOW`는 필터가 없어 NULL |
-| `shown_cases` | JSONB NOT NULL | `[{endMonth, rank, availability: {state, reason?}}]` — 010 표시 후보 ≤10에 판정을 붙인 그대로. 순위는 010 원래 값 |
+| `shown_cases` | JSONB NOT NULL | `[{endMonth, rank, availability: {state, reason?}, linkIds?: [...]}]` — 010 표시 후보 ≤10에 판정을 붙인 그대로. 순위는 010 원래 값 |
 | `excluded_count` | SMALLINT NOT NULL | 표시 후보 중 공통 가용 범위 필터로 빠진 수(FR-003) |
 | `full_search_shown` | BOOLEAN NOT NULL DEFAULT false | 사용자가 '전체 경제환경 탐색으로 전환'을 눌렀는지 |
 | `previous_search_id` | BIGINT → `regime_link_search(id)` | 비교 묶음 변경으로 새 검색이 됐을 때 이전 행(FR-021) |
 | `retention` | JSONB | `{ratio, kept: [endMonth], added: [...], removed: [...]}` — **기록 전용, 화면 비표시**(FR-021). 첫 검색이면 NULL |
 | `basis` | VARCHAR(24) NOT NULL | `HISTORICAL_REVISION` 고정(FR-015). 당시 재현은 범위 밖 |
+| `client_request_id` | VARCHAR(64) NOT NULL | 요청자별 검색 생성 멱등 키. UNIQUE(owner_user_id, client_request_id) |
 | `created_at` | TIMESTAMPTZ NOT NULL | |
+
+목록 확정 시 생성하고 결과가 0건이어도 저장한다. previous_search_id는 클라이언트가 같은 탐색 흐름에서 전달한 값만 사용하며 소유자·snapshot·경로를 검증한다. 링크 생성은 기존 search_id를 참조한다(REST §1b).
 
 인덱스: `(owner_user_id, created_at DESC)`, `(base_run_id)`, `(snapshot_key)`.
 
@@ -96,7 +99,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 | 컬럼 | 타입 | 규칙 |
 |---|---|---|
 | `link_id` | BIGINT PK → `regime_link(id)` | 1:1 |
-| `window63` | JSONB NOT NULL | `{tradingDays, return, maxDrawdown, tradeCount, tradesPerMonth, turnover, costs: {commission, spread, slippage, tax, total}, lossContribution: {sectorId: value}, complete}` — 미완성이면 `tradingDays < 63`, `complete=false` |
+| `window63` | JSONB NOT NULL | `{tradingDays, return, maxDrawdown, tradeCount, tradesPerMonth, turnover, turnoverBasis: ANNUALIZED_252, costs: {commission, spread, slippage, tax, total}, lossContribution: {sectorId: value}, complete}` — 미완성이면 `tradingDays < 63`, `complete=false` |
 | `window21` | JSONB NOT NULL | 같은 모양. 항상 완성(가용 조건이 ≥21) |
 | `holdings` | JSONB NOT NULL | `[{date, actual: {instrumentId: w}}]` d0~마지막 완성일 |
 | `trades` | JSONB NOT NULL | `[{date, instrumentId, side, quantity, price, cost, reason}]` 구간 안 |
@@ -105,7 +108,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 | `input_digest` | CHAR(64) NOT NULL | 메시지에 담긴 입력 사본의 해시. 재실행 결과가 같은 입력에서 나왔음을 확인 |
 | `computed_at` | TIMESTAMPTZ NOT NULL | |
 
-수치는 전부 문자열 decimal이다. `lossContribution`은 구간 손실이 0이면 **키를 생략**한다(0으로
+수치는 전부 문자열 decimal이다. `lossContribution`은 전체 구간 손익이 0이면 **키를 생략**한다(0으로
 채우지 않음, 010 `contribution` 규칙과 같다).
 
 ## 6. 값의 소유 경계

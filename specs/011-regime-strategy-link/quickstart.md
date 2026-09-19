@@ -42,15 +42,14 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 - 실행: `pytest worker/tests/regime_link/test_contracts.py` · `./gradlew test --tests '*RegimeLinkMessageContractTest*'`
 - 기대: `docs/specs/regime-link-messaging/examples/*.json` 7개가 양쪽에서 round-trip. 토폴로지 상수 대조
-  테스트(`test_topology_constants_match_the_backend` 상당)가 `RegimeLinkRabbitConfig`를 읽어 통과.
+  테스트는 M1에서 계약 문서와 대조하고 M5 T030 이후 RegimeLinkRabbitConfig 파일과 대조한다.
 
 ### S2. 잘라내기 정의가 수기 대조와 일치한다 (M2)
 
 - 실행: `pytest worker/tests/regime_link/test_slicer.py`
 - 기대: `reconciliation/manual_reconciliation.json`의 `window63`·`window21`·`kospi`와 일치. 미완성
   구간(`completedTradingDays=34`) 입력에서 `window63.tradingDays=34`, `complete=false`, `window21`은
-  완성. `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`. 연율화 값이 어디에도 없다. 손실이 없는
-  섹터는 `lossContribution`에 키가 없다. `FRESH_CASH`는 `initialCash` 기준 수익률.
+  완성. `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`. 수익률·낙폭은 연환산하지 않고 회전율에는 ANNUALIZED_252 단위가 있다. 전체 구간 손익이 0이면 lossContribution을 생략하고 이익 종목도 포함한다. `FRESH_CASH`는 `initialCash` 기준 수익률.
 
 ### S3. 소비자가 오류를 세 갈래로 나눈다 (M3)
 
@@ -72,7 +71,7 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 ### S5. 링크 생성·재사용·확인·로그인 (M5)
 
 1. 익명으로 `POST /api/regime-links` → `401 LOGIN_REQUIRED`, `regime_link` 행 0, 큐 메시지 0.
-2. 로그인 후 같은 요청(`CONTINUOUS`, 사례 NORMAL) → `202`, 링크 2개(`QUEUED`), 큐에 메시지 2개.
+2. 로그인 후 POST /api/regime-link-searches로 목록과 searchId를 만들고, 그 searchId로 링크 요청(`CONTINUOUS`, 사례 NORMAL) → `202`, 링크 2개(`QUEUED`), 큐에 메시지 2개.
    워커가 처리하면 `GET /api/regime-links/{linkId}`가 `COMPLETED`와 `result`를 돌려준다.
 3. 같은 요청을 다시 → `202`, 두 링크 모두 `COMPLETED`, **큐 메시지 0**(재사용).
 4. 분석 기간 밖 사례에 `confirmFullPeriod=false` → `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`, 계산 0.
@@ -121,3 +120,18 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 ## 실행 기록
 
 *(M8에서 채운다. 날짜·명령·결과·skipped 수·확인하지 못한 항목을 남긴다.)*
+
+## 2026-09-20 추가 인수 시나리오 (아직 미실행)
+
+- 입력 게이트: DEP-004-011에서 개별 체결·청산 비용·구간 경계 보유·분배금을 저장 필드와 대조한다.
+  입력 대응이 미완료면 M1 계산 fixture 동결·M2 착수를 통과로 기록하지 않는다.
+- 2010년부터 원천이 있고 2022년부터 실행한 전략으로 2018년 사례 조회: 기본 목록 유지,
+  OUT_OF_PERIOD, 확인 전 계산 0건, 확인 후 전체 기간 실행 재사용.
+- 구간 전 매수→구간 내 일부 매도·분배금·종료 보유·청산 비용: R3 독립 계산과 손익 합·회전율 일치.
+  전체 손익 0은 기여도 생략, 이익/손실 종목 혼합은 모두 포함. FRESH_CASH는 baseline 자산 행 불필요.
+- 검색 생성 POST 뒤 사례 열기 없이 종료: 변경 기록·알림 존재. 새 목록 0건도 동일하고 큐 메시지 0건.
+  다른 탭의 검색은 previousSearchId 없이 섞지 않음. 같은 clientRequestId 재시도는 행 1개.
+- 익명 검색·기존 공개 결과 조회는 가능, 계산·검색 기록 POST는 401. 로그인 후 같은 사례·조건 복귀.
+  익명 목록 변경은 현재 탐색 흐름에서 표시하며 서버 개인 기록은 만들지 않음.
+- 사례 계산 요청은 위 검색 생성으로 얻은 searchId를 사용한다. 구형 base/compare 직접 POST 예시는
+  searchId로 치환하여 검증한다. 회전율의 ANNUALIZED_252 단위가 표시된다.

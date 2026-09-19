@@ -12,7 +12,7 @@
   이다. 서버가 실행으로 푼다. 만료된 토큰은 `410 RESULT_EXPIRED`(005 코드 재사용).
 - 모든 응답에 `basis: {kind: "HISTORICAL_REVISION"}`가 있다(FR-015). 화면은 이 값을 읽어 "최신
   개정자료를 이용한 역사 탐색"을 표시한다.
-- **로그인**: `GET`은 익명 허용. `POST`는 요청자가 없으면 `401 LOGIN_REQUIRED`(FR-025). 계산은
+- **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 `401 LOGIN_REQUIRED`(FR-025). 계산은
   시작되지 않는다.
 
 ## 1. `GET /regime-links/availability` — 표시 후보에 가용성 판정을 붙인다
@@ -23,8 +23,9 @@
 |---|---|---|
 | `base` | ✓ | 비교 기준 공개 토큰 |
 | `compare` | | 비교 대상 공개 토큰 |
-| `mode` | ✓ | `field` \| `composite` (010 §1과 같다) |
-| `field` | mode=field | 분야 id |
+| `snapshotKey` | | 이전 검색 revision 고정. 있으면 mode·field·baselineMonth 대신 해당 snapshot을 조회 |
+| `mode` | snapshotKey 없을 때 | `field` \| `composite` (010 §1과 같다) |
+| `field` | snapshotKey 없이 mode=field | 분야 id |
 | `baselineMonth` | | `YYYY-MM`. 없으면 010 규칙(T_g/T_all) |
 | `entryPath` | ✓ | `MARKET_FLOW` \| `STRATEGY_RESULT`. `MARKET_FLOW`면 필터를 걸지 않고 판정만 붙인다(FR-002) |
 
@@ -38,9 +39,9 @@
   "bundle": {
     "runs": [
       {"publicToken": "9f2c…", "role": "BASE", "strategyId": "FIXED_WEIGHT", "strategyName": "내가 정한 비중",
-       "period": {"start": "2018-01-02", "end": "2025-12-30", "effectiveStart": "2018-04-02"}, "warmupTradingDays": 63},
+       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63},
       {"publicToken": "b41e…", "role": "COMPARE", "strategyId": "INVERSE_VOLATILITY", "strategyName": "흐름을 따라 배분하기",
-       "period": {"start": "2018-01-02", "end": "2025-12-30", "effectiveStart": "2018-04-02"}, "warmupTradingDays": 63}
+       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63}
     ],
     "instruments": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "listedOn": "2006-06-27"}]
   },
@@ -64,7 +65,7 @@
      "shownInFiltered": false},
     {"caseId": "FIELD:LABOR:2026-04:r2~2026-05", "endMonth": "2026-05", "rank": 3, "distance": "0.47…",
      "postWindow": {"d0": "2026-06-01", "d21": "2026-06-30", "d63": null, "completedTradingDays": 34, "complete21": true, "complete63": false},
-     "availability": {"state": "NORMAL"},
+     "availability": {"state": "OUT_OF_PERIOD"},
      "perRun": [{"publicToken": "9f2c…", "state": "OUT_OF_PERIOD"}, {"publicToken": "b41e…", "state": "OUT_OF_PERIOD"}],
      "shownInFiltered": true}
   ]
@@ -84,19 +85,38 @@
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
   범위도 200이다(FR-019).
 
+## 1a. `GET /regime-links/cases/{caseId}/window`
+
+실행 토큰 없이 사례의 postWindow(d0·d21·d63·lastAvailable·completedTradingDays)를 조회한다.
+003이 실행 생성 전 기간 제약에 사용한다. 010 snapshotKey를 고정하며 404는 없는 사례,
+미완성 d21/d63은 null이다. 공개 조회이며 basis를 포함한다.
+
+## 1b. `POST /regime-link-searches` — 목록 확정·변경 기록 (로그인 필요)
+
+요청: `{clientRequestId, snapshotKey, base, compare?, entryPath, fullSearchShown, previousSearchId?}`.
+snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 조용히 바꾸지 않는다.
+서버가 §1과 같은 가용성 판정을 수행하고 목록이 비어도 기록한다. 응답 201은 §1 응답에
+`searchId`와 변경 시 `bundleChanged: {added, removed, excludedCount}`를 더한다. 유지율은 DB 전용이다.
+이전 검색은 같은 요청자·snapshotKey·경로인지 검증하고 다르면 404로 거절한다. 다른 탭의 직전
+기록을 임의 선택하지 않는다. 필터 키가 같으면 비교 묶음 변경 알림이 없다.
+같은 요청자·clientRequestId의 같은 본문 재시도는 200으로 기존 결과를 반환하며 기록을 중복 생성하지
+않는다. 같은 키에 다른 본문이면 409 INVALID_INPUT. 전체 탐색 전환은 새 clientRequestId로 기록한다.
+익명은 §1 GET 응답과 현재 탐색 흐름의 이전 목록으로 변경을 표시하고, 로그인 후 동일 조건으로
+이 POST를 호출한다. POST를 못 했다는 이유로 검색을 막지 않는다.
+
 ## 2. `POST /regime-links` — 사례의 전략 결과를 연다 (로그인 필요)
 
 ```json
 {
-  "base": "9f2c…", "compare": "b41e…",
+  "searchId": "RLS-20260918-000031",
   "caseId": "FIELD:LABOR:2026-04:r2~2012-03",
-  "entryPath": "STRATEGY_RESULT",
   "scenario": "CONTINUOUS",
   "confirmFullPeriod": false
 }
 ```
 
 - `scenario`: `CONTINUOUS`(기본 화면) \| `FRESH_CASH`(그날 현금 시작, 사용자가 켤 때만).
+- 서버는 요청자의 searchId를 조회해 비교 묶음·snapshot·경로를 확정한다. 다른 사용자 기록은 404, 해당 snapshot 표시 후보 밖 사례도 404다. 검색 기록이나 변경 알림을 이 요청에서 생성하지 않는다.
 - 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만든다(`UNIQUE(run, case, scenario)`).
   이미 `COMPLETED`면 작업을 만들지 않고 즉시 결과를 돌려준다(FR-010 재사용).
 
@@ -160,10 +180,10 @@
   "failure": null,
   "result": {
     "window63": {"tradingDays": 63, "return": "0.0421", "maxDrawdown": "-0.0587", "tradeCount": 6, "tradesPerMonth": "2.00",
-                 "turnover": "0.3125", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
-                 "lossContribution": {"SEMICONDUCTOR": "-0.0312", "BIO": "-0.0044"}, "complete": true},
+                 "turnover": "0.3125", "turnoverBasis": "ANNUALIZED_252", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
+                 "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BIO": "-0.20000000"}, "complete": true},
     "window21": {"tradingDays": 21, "return": "0.0110", "maxDrawdown": "-0.0210", "tradeCount": 2, "tradesPerMonth": "2.00",
-                 "turnover": "0.1040", "costs": {"…": "…"}, "lossContribution": {"SEMICONDUCTOR": "-0.0090"}, "complete": true},
+                 "turnover": "0.1040", "turnoverBasis": "ANNUALIZED_252", "costs": {"…": "…"}, "lossContribution": {"SEMICONDUCTOR": "1.00000000"}, "complete": true},
     "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980", "305720.XKRX": "0.3010", "244580.XKRX": "0.3010"}}],
     "trades": [{"date": "2012-05-02", "instrumentId": "091160.XKRX", "side": "SELL", "quantity": 12, "price": "23150", "cost": "254.00", "reason": "REBALANCE"}],
     "kospi": {"window63": {"return": "0.0180", "maxDrawdown": "-0.0420"}, "window21": {"return": "0.0050", "maxDrawdown": "-0.0150"}}

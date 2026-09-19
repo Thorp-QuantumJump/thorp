@@ -19,7 +19,7 @@
 
 화면 흐름: 분야 선택(7개 + 선택형 종합) → `GET /regime-links/availability`(`entryPath=STRATEGY_RESULT`)
 → 기본 목록(`shownInFiltered=true`) + "선택 ETF로 비교 가능한 기간" + 제외 수 + '전체 경제환경 탐색으로
-전환' → 사례 선택 → `POST /regime-links`(로그인 필요) → 사례 옆 전략 결과 영역.
+전환' → 로그인 사용자는 `POST /regime-link-searches`로 목록·변경 기록 확정(익명은 GET과 탐색 흐름 내 변경 표시) → 사례 선택 → `POST /regime-links`(로그인 및 searchId 필요) → 사례 옆 전략 결과 영역.
 
 ## 2. 시장 흐름 → 011 (`MARKET_FLOW` 경로)
 
@@ -33,7 +33,7 @@
 화면 흐름: `/regime-link/start` → 002(섹터·비중, `sector` 초기 선택) → 003(전략·설정, **§3 제약**)
 → '분석하기' → 004 접수(요청에 `case`를 싣지 않는다 — 004 계약을 바꾸지 않고 화면이 주소로 들고
 다닌다) → 완료되면 `/regime-link?base={publicToken}&case={caseId}`로 이동해 그 사례가 열린 상태로
-시작한다(`entryPath=MARKET_FLOW`, 필터 없음).
+시작한다(`entryPath=MARKET_FLOW`, 필터 없음). 가용성 GET은 case의 snapshotKey를 전달하여 원래 revision을 유지한다.
 
 `case`는 002·003 주소의 질의 인자로 유지한다(`/diagnosis/sectors?case=…`, `/strategy?case=…`).
 새로고침에도 남아야 하므로 상태가 아니라 주소다.
@@ -43,7 +43,7 @@
 주소에 `case`가 있으면 003 '기간·금액·조건'은 아래를 추가로 지킨다(Clarifications 09-18 Q1).
 
 - 분석 기간의 **시작일 상한** = `d0 − 선택 전략의 워밍업 거래일`, **종료일 하한** = `d63`(미완성이면
-  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/availability`
+  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/cases/{caseId}/window`
   응답의 `postWindow`에서 읽는다(003이 스스로 계산하지 않는다).
 - 한 문장 안내: "이 사례(YYYY년 M월) 직후 구간을 포함해야 하므로 기간을 여기까지만 줄일 수
   있습니다." 고정 문구다.
