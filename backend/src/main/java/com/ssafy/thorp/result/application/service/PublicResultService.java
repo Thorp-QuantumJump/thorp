@@ -139,7 +139,7 @@ public class PublicResultService {
                 detail.finishedAt(),
                 inFlight ? detail.queueWaitSeconds() : null,
                 publicConfig,
-                withoutWorker(detail.versions()),
+                withoutWorkerReport(detail.versions()),
                 detail.summary(),
                 detail.summaryUnavailable(),
                 detail.failure(),
@@ -224,13 +224,18 @@ public class PublicResultService {
         }
     }
 
-    /** 워커 자기 보고는 운영 정보라 공개하지 않는다(계약 "버리는 필드"). 원본 맵은 004의 것이라 고치지 않고 복사한다. */
-    private static Map<String, Object> withoutWorker(Map<String, Object> versions) {
-        if (versions == null || !versions.containsKey("worker")) {
+    /**
+     * 워커 자기 보고({@code worker})와 그 환경의 라이브러리 버전({@code dependencies}, 004 T028)은 운영 정보라 공개하지 않는다(계약
+     * "버리는 필드"). 원본 맵은 004의 것이라 고치지 않고 복사한다.
+     */
+    private static Map<String, Object> withoutWorkerReport(Map<String, Object> versions) {
+        if (versions == null
+                || (!versions.containsKey("worker") && !versions.containsKey("dependencies"))) {
             return versions;
         }
         Map<String, Object> copy = new LinkedHashMap<>(versions);
         copy.remove("worker");
+        copy.remove("dependencies");
         return copy;
     }
 

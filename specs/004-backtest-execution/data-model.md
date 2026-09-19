@@ -53,7 +53,7 @@
 | cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |
 | data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |
 | request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |
-| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. `dependencies{numpy, scipy}` 선택 필드는 발표 후(Phase 10 T028) |
+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. 실행 전 계획이라 워커 환경 값(`worker`·`dependencies`)은 여기 없고 결과 행에만 있다(T018·T028) |
 | effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |
 | progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |
 | progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |
@@ -101,7 +101,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | liquidation | `{markToMarket:{finalEquity,totalReturn}, liquidated:{finalEquity,totalReturn,liquidationCost}}` |
 | analytics | `{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` |
 | exceptions | `[{date, instrumentId?, kind: ZERO_VOLATILITY|NO_SELECTION|ESTIMATION_FAILED|CONSTRAINT_VIOLATION|HALT_DEFERRED|WEIGHT_ROUNDING, rule, action}]` |
-| versions | run.versions 사본(결과 단독 조회용) |
+| versions | run.versions 사본(결과 단독 조회용) + 워커 보고 `worker`, 계산한 환경의 실제 설치 버전 `dependencies{numpy, scipy}`(T028. 없으면 T028 이전 결과) |
 
 부분 결과(CANCELLED)는 `portfolio_series`·`weights_series`·거래가 `progress_last_trading_date`까지만 채워지고 `performance`는 그 구간 기준으로 계산된 값이 들어간다. 005는 `partial=true`와 함께 표시한다.
 

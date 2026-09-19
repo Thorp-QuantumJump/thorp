@@ -20,6 +20,8 @@ import java.time.Instant;
  * @param analytics 파생 지표(FR-027). null = 실패 또는 v2 이전 결과
  * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}가 따로 읽는다
  * @param workerVersion 결과를 낸 워커가 보고한 자기 버전({@code versions.worker}). null = 미보고(v2 이전·결과 없는 실패)
+ * @param dependencies 결과를 계산한 워커 환경의 수치 라이브러리 버전({@code versions.dependencies}). null = 미보고(T028
+ *     이전·결과 없는 실패)
  */
 public record BacktestResultSummary(
         String errorCode,
@@ -34,7 +36,8 @@ public record BacktestResultSummary(
         EngineOutput.Liquidation liquidation,
         EngineOutput.Analytics analytics,
         int exceptionCount,
-        String workerVersion) {
+        String workerVersion,
+        EngineOutput.Dependencies dependencies) {
 
     /** 벤치마크 스칼라 둘이 모두 있을 때만 벤치마크가 산출된 것으로 본다. */
     public boolean hasBenchmark() {

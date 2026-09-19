@@ -416,6 +416,8 @@ VERSIONS = {
     # 요청 evaluation.splitVersion 의 사본. 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
     "evaluationSplit": "SPLIT-1",
     "worker": WORKER_VERSION,
+    # 결과를 계산한 워커 환경의 실제 설치 버전(T028). 실행 계획(backtest_run.versions)에는 없다.
+    "dependencies": {"numpy": "2.4.6", "scipy": "1.17.1"},
 }
 
 

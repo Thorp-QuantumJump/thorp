@@ -148,19 +148,30 @@ public record BacktestDetailResult(
                 summary,
                 null,
                 failure,
-                withWorker(run.getPlan().versions(), result.workerVersion()));
+                withReported(
+                        run.getPlan().versions(), result.workerVersion(), result.dependencies()));
     }
 
     /**
-     * 접수가 확정한 참조 버전에 결과를 낸 워커의 자기 보고({@code versions.worker})를 얹는다. 접수 시점에는 어느 워커가 계산할지 모르므로 이 값만
-     * 결과 행에서 온다. 보고가 없으면 키를 만들지 않는다 — 모르는 값을 채우지 않는다.
+     * 접수가 확정한 참조 버전에 결과를 낸 워커의 자기 보고({@code versions.worker})와 그 환경의 수치 라이브러리 버전({@code
+     * versions.dependencies}, T028)을 얹는다. 접수 시점에는 어느 워커가 계산할지 모르므로 이 두 값만 결과 행에서 온다. 보고가 없으면 키를 만들지
+     * 않는다 — 모르는 값을 채우지 않는다.
      */
-    private static Map<String, Object> withWorker(Map<String, Object> versions, String worker) {
-        if (worker == null || versions == null) {
+    private static Map<String, Object> withReported(
+            Map<String, Object> versions, String worker, EngineOutput.Dependencies dependencies) {
+        if (versions == null || (worker == null && dependencies == null)) {
             return versions;
         }
         Map<String, Object> merged = new LinkedHashMap<>(versions);
-        merged.put("worker", worker);
+        if (worker != null) {
+            merged.put("worker", worker);
+        }
+        if (dependencies != null) {
+            Map<String, Object> libraries = new LinkedHashMap<>();
+            libraries.put("numpy", dependencies.numpy());
+            libraries.put("scipy", dependencies.scipy());
+            merged.put("dependencies", libraries);
+        }
         return merged;
     }
 

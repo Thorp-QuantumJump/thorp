@@ -154,7 +154,8 @@ class BacktestResultQueryServiceTest {
                 errorCode == null ? liquidation() : null,
                 errorCode == null ? analytics() : null,
                 errorCode == null ? 1 : 0,
-                errorCode == null ? "thorp-worker 0.2.0" : null);
+                errorCode == null ? "thorp-worker 0.2.0" : null,
+                errorCode == null ? new EngineOutput.Dependencies("2.4.6", "1.17.1") : null);
     }
 
     private static EngineOutput.Costs costs() {
@@ -262,7 +263,8 @@ class BacktestResultQueryServiceTest {
     }
 
     @Test
-    @DisplayName("완료 상세의 versions 는 접수가 확정한 값에 결과를 낸 워커의 자기 보고(worker)를 얹은 것이다")
+    @DisplayName(
+            "완료 상세의 versions 는 접수가 확정한 값에 결과를 낸 워커의 자기 보고(worker)와 라이브러리 버전(dependencies)을 얹은 것이다")
     void detailVersionsCarryTheReportingWorker() {
         when(requestRepository.findByBacktestId(BACKTEST_ID))
                 .thenReturn(Optional.of(requestFor(REQUESTER)));
@@ -274,11 +276,12 @@ class BacktestResultQueryServiceTest {
 
         assertThat(versions)
                 .containsEntry("rules", Map.of("version", "1", "provisional", true))
-                .containsEntry("worker", "thorp-worker 0.2.0");
+                .containsEntry("worker", "thorp-worker 0.2.0")
+                .containsEntry("dependencies", Map.of("numpy", "2.4.6", "scipy", "1.17.1"));
     }
 
     @Test
-    @DisplayName("결과 전에는 worker 를 채우지 않는다 — 어느 워커가 계산할지 아직 모른다")
+    @DisplayName("결과 전에는 worker·dependencies 를 채우지 않는다 — 어느 워커가 계산할지 아직 모른다")
     void detailBeforeResultHasNoWorkerVersion() {
         when(requestRepository.findByBacktestId(BACKTEST_ID))
                 .thenReturn(Optional.of(requestFor(REQUESTER)));
@@ -287,7 +290,8 @@ class BacktestResultQueryServiceTest {
 
         assertThat(service.getDetail(BACKTEST_ID, REQUESTER).versions())
                 .containsKey("rules")
-                .doesNotContainKey("worker");
+                .doesNotContainKey("worker")
+                .doesNotContainKey("dependencies");
     }
 
     private static RunPlan plannedVersions() {
