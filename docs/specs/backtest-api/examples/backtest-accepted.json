@@ -13,8 +13,8 @@
         "provisional": false
       },
       "costProfile": {
-        "version": "PROVISIONAL-DEMO-1",
-        "provisional": true
+        "version": "KR-ETF-2026-09",
+        "provisional": false
       },
       "data": "FIXTURE-three_etf_24m",
       "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
