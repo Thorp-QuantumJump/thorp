@@ -286,6 +286,30 @@ class EngineInputAssemblerTest {
     }
 
     @Test
+    @DisplayName("오버레이 기록이 다른 규칙을 가리키면 그 규칙을 읽지 않고 영구 실패로 던진다")
+    void overlayRecordNamingAnotherRuleIsRejected() {
+        registryAnswers();
+        RunPlan accepted = acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"));
+        RunPlan pointingElsewhere =
+                new RunPlan(
+                        accepted.dedupKey(),
+                        accepted.rulesVersion(),
+                        accepted.costProfileVersion(),
+                        accepted.dataVersion(),
+                        accepted.effectiveStart(),
+                        accepted.effectiveEnd(),
+                        accepted.warmupTradingDays(),
+                        accepted.requestSpec(),
+                        Map.of("rules", "1", "scenarioRules", "INVERSE_VOLATILITY/1"),
+                        accepted.executionType());
+
+        assertThatThrownBy(() -> assembler.assemble(run(pointingElsewhere)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("INVERSE_VOLATILITY/1");
+        verify(strategyRulesService, never()).requireExecutable("TARGET_RISK_OVERLAY", "1");
+    }
+
+    @Test
     @DisplayName("주 분석에는 오버레이 규칙이 붙지 않는다")
     void fullPeriodHasNoOverlay() {
         registryAnswers();

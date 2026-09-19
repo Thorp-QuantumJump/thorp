@@ -20,13 +20,22 @@
 
 이미 있는 골든을 다시 만들어야 한다면(의존성·엔진 변경으로 결과가 바뀐 경우) 그 파일을 지우고 위
 명령을 돌린다. 그것은 "같은 버전이 다른 숫자를 낸다"는 뜻이므로 MR 본문에 이유와 차이를 적는다.
+
+**해시는 수를 유효숫자 12자리로 맞춘 뒤에 잰다.** 샤프 비율·변동성 같은 지표는 float 표기 그대로
+결과에 실리고, 수치 라이브러리 버전이나 CPU가 바뀌면 마지막 자리가 흔들릴 수 있다(워커
+``requirements.txt`` 는 numpy·pandas 버전을 고정하지 않는다 — 실행환경 잠금은 004 T027).
+규칙이 바뀌어서 생기는 차이는 그보다 훨씬 크므로 12자리에서 잘라도 놓치지 않는다. 환경 간 재현의
+허용 기준은 004 T030이 정한다.
 """
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
+import re
+from decimal import Context, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +62,11 @@ BASE_INPUTS: dict[str, str] = {
     "TARGET_RISK_OVERLAY": "engine-input-three-etf-target-risk.json",
 }
 OVERLAY = "TARGET_RISK_OVERLAY"
+
+#: 해시에 넣기 전에 수를 맞추는 유효숫자 자리수(모듈 주석).
+SIGNIFICANT_DIGITS = 12
+_NUMBER = re.compile(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$")
+_ROUNDING = Context(prec=SIGNIFICANT_DIGITS)
 
 
 def rule_snapshots() -> list[Path]:
@@ -82,8 +96,20 @@ def engine_input_for(snapshot: dict[str, Any], rules_version: str | None = None)
     return body
 
 
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 def run(body: dict[str, Any]) -> EngineOutput:
-    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(body)
+    """같은 입력은 한 번만 돌린다 — 골든과 분기 테스트가 같은 기준 입력을 쓴다."""
+    return _run_cached(canonical_json(body))
+
+
+@functools.cache
+def _run_cached(body_json: str) -> EngineOutput:
+    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(
+        json.loads(body_json)
+    )
     assert output.run.status is RunStatus.COMPLETED, output.run.error
     return output
 
@@ -101,9 +127,37 @@ def computed(output: EngineOutput) -> dict[str, Any]:
     return payload
 
 
+def rounded(value: Any) -> Any:
+    """수(숫자 문자열 포함)를 유효숫자 12자리로 맞춘다.
+
+    식별자·날짜 같은 나머지 문자열은 그대로 둔다.
+    """
+    if isinstance(value, dict):
+        return {key: rounded(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rounded(item) for item in value]
+    if isinstance(value, float):
+        return _significant(Decimal(repr(value)))
+    if isinstance(value, str) and _NUMBER.match(value):
+        return _significant(Decimal(value))
+    return value
+
+
+def _significant(number: Decimal) -> str:
+    """유효숫자로 반올림한 뒤 뒷자리 0을 떼어 같은 값이 언제나 같은 표기가 되게 한다."""
+    return format(_ROUNDING.create_decimal(number).normalize(), "f")
+
+
 def digest(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return hashlib.sha256(canonical_json(rounded(payload)).encode("utf-8")).hexdigest()
+
+
+def input_digest(body: dict[str, Any]) -> str:
+    """골든을 만든 기준 입력의 지문.
+
+    결과가 어긋났을 때 입력이 바뀐 것인지 엔진이 바뀐 것인지 가른다.
+    """
+    return hashlib.sha256(canonical_json(body).encode("utf-8")).hexdigest()
 
 
 def summary(output: EngineOutput) -> dict[str, Any]:
@@ -126,7 +180,8 @@ def golden_path(snapshot_path: Path) -> Path:
 @pytest.mark.parametrize("snapshot_path", rule_snapshots(), ids=lambda path: path.stem)
 def test_each_rules_version_reproduces_its_golden(snapshot_path: Path) -> None:
     snapshot = load_json(snapshot_path)
-    output = run(engine_input_for(snapshot))
+    body = engine_input_for(snapshot)
+    output = run(body)
     actual = digest(computed(output))
     target = golden_path(snapshot_path)
 
@@ -140,15 +195,24 @@ def test_each_rules_version_reproduces_its_golden(snapshot_path: Path) -> None:
         golden = {
             "rules": snapshot_path.name,
             "engineInput": BASE_INPUTS[snapshot["strategyId"]],
+            "inputSha256": input_digest(body),
             "sha256": actual,
             "summary": summary(output),
         }
-        target.write_text(json.dumps(golden, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        text = json.dumps(golden, ensure_ascii=False, indent=2) + "\n"
+        target.write_text(text, encoding="utf-8", newline="\n")
         return
 
     golden = load_json(target)
     assert golden["rules"] == snapshot_path.name
     assert golden["engineInput"] == BASE_INPUTS[snapshot["strategyId"]]
+    # 입력부터 본다. 기준 입력 파일(결정성 테스트와 함께 쓴다)을 고쳐서 결과가 달라진 것을
+    # 엔진 회귀로 읽으면 엉뚱한 곳을 찾게 된다.
+    assert input_digest(body) == golden["inputSha256"], (
+        f"{snapshot_path.stem} 골든을 만든 기준 입력({golden['engineInput']})이나"
+        " 규칙 스냅샷이 바뀌었다. 규칙이 아니라 입력을 바꾼 것이면 이 골든 파일을 지우고"
+        " 다시 만든다(모듈 주석)"
+    )
     assert actual == golden["sha256"], (
         f"{snapshot_path.stem} 이 골든과 다른 결과를 냈다 — 같은 규칙 버전이 다른 숫자를 낸다.\n"
         f"  골든 요약: {json.dumps(golden['summary'], ensure_ascii=False)}\n"
@@ -191,3 +255,18 @@ def test_a_rule_key_is_what_changes_the_computation() -> None:
         for point in coarse.weights_series
         for weight in point.target.values()
     )
+
+
+def test_rounding_absorbs_last_digit_noise_but_keeps_identifiers() -> None:
+    """해시 전 정규화는 float 마지막 자리 차이만 흡수한다.
+
+    식별자·날짜와 의미 있는 차이는 그대로 남는다.
+    """
+    assert rounded("0.6603170681642053") == rounded("0.6603170681642054")
+    assert rounded(0.1 + 0.2) == rounded("0.3")
+    assert rounded("0.660317") != rounded("0.660318")
+    assert rounded({"id": "091160.XKRX", "date": "2024-06-28", "n": 16}) == {
+        "id": "091160.XKRX",
+        "date": "2024-06-28",
+        "n": 16,
+    }

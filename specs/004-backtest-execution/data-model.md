@@ -143,8 +143,8 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 규칙을 바꿀 때 행을 고치지 않는다. 마이그레이션 하나에서 **옛 행의 status만 `SUPERSEDED`로 바꾼 뒤 새 버전 행을 INSERT**하고, 스냅샷 파일과 워커 골든(`worker/tests/goldens/{전략}-{버전}.json`)을 새로 더한다. 옛 파일·옛 골든은 지우지 않는다.
 
 - 전략마다 대체되지 않은 행은 하나다(부분 유니크 인덱스 `uk_strategy_rules_current ON (strategy_id) WHERE status <> 'SUPERSEDED'`). 화면 조회(`GET /backtests/registry`)와 007 지원 목록이 이 행 하나를 본다.
-- 검사는 둘이다. **새 요청**은 `requireCurrent`(REGISTERED만, PENDING·없음 422, SUPERSEDED 409). **이미 접수된 실행**은 `requireExecutable`(SUPERSEDED도 통과) — 작업 조립(첫 발행·재발행)과 실패·취소한 요청의 재시도가 쓴다. 재시도는 003 등록표도 원본이 판정받은 과거 `registryVersion`을 받는다(`StrategySettingsValidator.verifySaved`).
-- 목표 위험 오버레이처럼 요청이 버전을 싣지 않는 규칙은 새 요청이 지금 행을 고르고, 조립·재시도는 실행에 기록된 `versions.scenarioRules`의 버전을 읽는다.
+- 검사는 둘이다. **새 요청**은 `requireCurrent`(REGISTERED만, PENDING·없음 422, SUPERSEDED 409). **버전이 이미 고정된 요청·실행**은 `requireExecutable`(SUPERSEDED도 통과) — 작업 조립(첫 발행·재발행), 실패·취소한 요청의 재시도, 007 묶음 후보가 쓴다. 재시도와 묶음 후보는 003 등록표도 그 요청이 판정받은 과거 `registryVersion`을 받는다(`StrategySettingsValidator.verifySaved`).
+- 목표 위험 오버레이처럼 요청이 버전을 싣지 않는 규칙은 새 요청이 지금 행을 고르고, 조립·재시도는 실행에 기록된 `versions.scenarioRules`의 버전을 읽는다. 이 기록이 없던 2026-09-11~09-15 목표 위험 실행은 수명주기 마이그레이션이 `TARGET_RISK_OVERLAY/1`(그 기간 코드가 고정해 쓴 값)로 채웠다.
 
 ## backtest_run_metric (실행 측정 기록)
 

@@ -5,6 +5,7 @@ import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import java.math.BigDecimal;
@@ -191,16 +192,19 @@ public class EngineInputAssembler {
      * 기록이 없으면 지어내지 않는다 — {@code IllegalArgumentException}은 발행기가 영구 실패로 닫는다.
      */
     private Map<String, Object> targetRiskRules(RunPlan plan) {
-        String version = plan.scenarioRulesVersion();
-        if (version == null) {
+        RulesRef recorded = plan.scenarioRules();
+        if (recorded == null
+                || !BacktestService.TARGET_RISK_OVERLAY.equals(recorded.strategyId())) {
+            // 2026-09-15 전 실행은 T029 마이그레이션이 TARGET_RISK_OVERLAY/1 로 채웠다. 그래도 없으면 기록이 깨진 것이다.
             throw new IllegalArgumentException(
-                    "TARGET_RISK run has no versions.scenarioRules to assemble the overlay from");
+                    "TARGET_RISK run has no overlay rules recorded in versions.scenarioRules: "
+                            + recorded);
         }
         StrategyRules overlay =
                 strategyRulesService.requireExecutable(
-                        BacktestService.TARGET_RISK_OVERLAY, version);
+                        recorded.strategyId(), recorded.rulesVersion());
         Map<String, Object> rules = new LinkedHashMap<>(overlay.spec());
-        rules.put("version", overlay.strategyId() + "/" + overlay.rulesVersion());
+        rules.put("version", overlay.ref().value());
         return rules;
     }
 
