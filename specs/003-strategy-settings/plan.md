@@ -21,7 +21,7 @@ branch `docs(fe)/254-spec-003-pd-decisions`. 245가 남긴 미결 항목 중 팀
 
 사용자가 다섯 전략 카드에서 하나를 고르고, 그 전략에 해당하는 상세 설정만 허용 범위 안에서 조정한 뒤 분석을 시작하는 화면이다. 설정의 후보 값·허용 범위·기본값·유효성 제약은 서버가 보관하는 **파라미터 등록표**가 소유하며, 화면은 조회해 쓰기만 하고 서버가 실행 직전에 같은 검증을 다시 수행한다.
 
-이 등록표는 새로 만드는 것이 아니다. spec 007이 자기 작업을 진행하려고 `ParameterRegistryPort`와 임시 구현 `ProvisionalFileParameterRegistry`를 세워 두었고, 그 클래스 주석이 "003이 완성되면 이 클래스를 003 구현체로 교체한다"고 적어 두었다. **이 spec의 구현은 그 교체를 수행하고 등록표를 화면이 읽을 수 있도록 여는 일이다.** 007은 포트를 통해 계속 같은 값을 읽는다. 007 운영 코드는 import 경로와 `CandidateValidator`의 포트 호출 인자 형이 바뀐다(T008). `ParamSearchService`·`CandidateValidator`·`SearchTargetResolver`는 구현체를 직접 부르지 않는다.
+등록표는 spec 007에서 이관한 정식 구현이다. `strategy/application/port/ParameterRegistryPort`를 `strategy/infrastructure/registry/FileParameterRegistry`가 구현하고 `registry/parameter-registry.yml`을 읽는다. 화면과 007은 같은 등록표를 읽으며, `paramsearch`는 구현체를 직접 참조하지 않는다. `validate`는 007 도메인 값 타입 대신 `Map<String, Object>`를 받아 역방향 의존을 만들지 않는다.
 
 ## Technical Context
 
@@ -35,7 +35,7 @@ branch `docs(fe)/254-spec-003-pd-decisions`. 245가 남긴 미결 항목 중 팀
 
 등록표 검증은 둘이다. **라운드트립 테스트는 쓰지 않는다** — 그 방식은 자바와 파이썬이 같은 브로커 계약을 각자 구현하는 상황용이고(`BacktestMessageRoundTripTest`), 등록표는 YAML → 자바 → JSON → 화면 한 방향으로만 흘러 되돌아오는 경로가 없다.
 
-1. **로더가 기동 시 파일 구조를 검증한다.** 지금 `ProvisionalFileParameterRegistryTest`가 하는 일이며, 여기에 새 제약(`searchValues ⊆ allowedRange.values`, 목록형과 입력형을 동시에 채우지 않음)을 더한다.
+1. **로더가 기동 시 파일 구조를 검증한다.** `FileParameterRegistryTest`가 후보 포함 관계, 기본값 범위, 목록형·입력형 배타, 활성·워밍업·표시 문구 등 로더의 검사를 검증한다.
 2. **계약 문서의 응답 예시를 픽스처로 두고 실제 응답과 대조한다.** `docs/specs/backtest-api/examples/`가 이미 쓰는 방식이다. 계약과 코드가 어긋나면 빌드가 실패한다.
 
 **Target Platform**: 웹 브라우저(데스크톱 우선) + Spring Boot 서버
@@ -44,7 +44,7 @@ branch `docs(fe)/254-spec-003-pd-decisions`. 245가 남긴 미결 항목 중 팀
 
 **Performance Goals**: 정하지 않는다. 이 화면은 계산을 실행하지 않고 등록표를 한 번 조회할 뿐이라 지금 목표를 세울 근거가 없다. 필요해지면 그때 실측해 정한다.
 
-**Constraints**: PD-02는 2026-09-15 확정됐다([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254), [data-model](data-model.md) §4-2). 007 기존 값과 겹치는 축은 같은 수치를 승격했고, 없던 축(리밸런싱 주기·비중 상한·선정 방식 등)은 새로 정했다. 최소분산 `estimationMethod`만 004 PD-04 확정 전까지 후보 하나로 남긴다. PD-07은 004가 `PROVISIONAL-DEMO-1` 사용을 이미 명시했으므로 단독 차단 사유가 아니며, 현재 비용·규칙 버전을 화면이 조회할 계약이 없는 점이 분석 연결을 막는다. 등록표 값이 바뀌면 기존 버전을 덮어쓰지 않고 버전을 올린다.
+**Constraints**: PD-02는 2026-09-15 확정됐다(S15P21E205-254, data-model §4-2). 004 PD-04도 2026-09-17 표본공분산 하나로 확정되어 `estimationMethod` 후보는 `SAMPLE_COV`를 유지한다. 규칙·비용 버전은 `GET /backtests/registry`로 조회하며 미확정 비용 `PROVISIONAL-DEMO-1`은 임시값으로 표시한다. 워커 설정 전달·등록표 버전 없는 호환 접수·옛 규칙 버전 거절은 아래 게이트의 남은 범위다. 등록표 값이 바뀌면 버전을 올린다.
 
 **Scale/Scope**: 전략 5개, 전략별 설정 항목 1~5개, 화면 1개(전략 선택·상세 설정·기간·금액·조건)
 
@@ -77,7 +77,7 @@ constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버�
 
 ### 게이트 결과 (Phase 0 전)
 
-FR-002·PD-02·001 평가 기간·최소 평가 길이는 모두 해제됐다([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)·[254](https://ssafy.atlassian.net/browse/S15P21E205-254)). 남는 항목은 하나다 — 004가 상한 재배분·워커 메시지 계약을 제공해야 한다. 규칙·비용 버전 조회는 2026-09-17 `GET /backtests/registry`로 결정되어 같은 날 dev에 머지되었다. PD-07 미확정 자체는 차단하지 않고 004의 명시된 임시 비용 프로필을 표시한다.
+FR-002·PD-02·001 평가 기간·최소 평가 길이는 모두 해제됐다([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)·[254](https://ssafy.atlassian.net/browse/S15P21E205-254)). 남은 항목은 004의 워커 설정 전달 정합·등록표 검증 필수화와 규칙 버전 수명주기(004 Phase 10 T029)다. 상한 재배분 규칙은 004 PD-03 ⑥에서 확정됐다. 규칙·비용 버전 조회는 2026-09-17 `GET /backtests/registry`로 결정되어 같은 날 dev에 머지되었다. PD-07 미확정 자체는 차단하지 않고 004의 명시된 임시 비용 프로필을 표시한다.
 
 ### 004와 대조한 결과 spec을 고쳤다
 
@@ -89,11 +89,11 @@ FR-002·PD-02·001 평가 기간·최소 평가 길이는 모두 해제됐다([S
 | FR-019에서 최소분산을 뺐다 | 004 FR-025가 상한을 최적화 제약으로 넣어 풀기 때문에 잘리는 몫이 생기지 않는다. 역변동성·섹터 모멘텀에만 해당한다 |
 | FR-010에 목표 변동성을 더했다 | 004의 PD-18(2026-09-10 확정)이 목표 변동성을 "003 파라미터 등록표 항목"으로 지정했는데 003이 받지 않고 있었다 |
 
-**남은 빈자리**: 상한에 잘린 몫을 재배분하는 계산은 004가 해야 하나 004에 규칙이 없다. 004 FR-020이 "처리 규칙을 적용한다"고만 두고 004 자신의 미확정 결정 항목으로 남겼다(003 PD-02와는 다른 항목). 004가 규칙을 등록하기 전까지 003은 상한 값 전달까지만 맡는다.
+**남은 빈자리**: 상한 초과분의 반복 재배분과 현금 잔여·사유 기록은 004 PD-03 ⑥·FR-020에서 확정됐다. 현재 워커가 소비하지 않는 `rebalancePeriod`와 역변동성 `lookbackDays`, 등록표 버전 없이 검증을 우회하는 접수 경로는 남아 있다. 계산 규칙의 옛 버전 거절도 004 T029 구현 전이며, 현재 REGISTERED 행은 새 버전 추가 후에도 접수된다. 따라서 FR-006·SC-003과 모든 상세 설정의 종단 적용을 완료로 보지 않는다.
 
 ### 게이트 재확인 (Phase 1 설계 후)
 
-설계를 마친 뒤 다시 확인했으며 새로 생긴 constitution 위반은 없다. Phase 0에서 확인한 원칙 II 충돌·PD-02·001 평가 기간 게이트는 해제됐고, 004 교차 계약(상한 재배분, 워커 메시지) 하나만 열려 있다. 비용·규칙 버전 조회는 dev에 머지되어 닫혔다. 아래 표는 그 게이트가 해결된 뒤 설계가 원칙을 지키는 방식이다.
+설계를 마친 뒤 다시 확인했으며 새로 생긴 constitution 위반은 없다. Phase 0에서 확인한 원칙 II 충돌·PD-02·001 평가 기간 게이트는 해제됐고, 004의 워커 설정 전달 정합·등록표 검증 필수화·규칙 버전 수명주기가 열려 있다. 상한 재배분 규칙은 확정됐다. 비용·규칙 버전 조회는 dev에 머지되어 닫혔다. 아래 표는 그 게이트가 해결된 뒤 설계가 원칙을 지키는 방식이다.
 
 | 원칙 | 설계에서 지키는 방식 |
 |---|---|
@@ -103,7 +103,7 @@ FR-002·PD-02·001 평가 기간·최소 평가 길이는 모두 해제됐다([S
 | VI | 허용 범위 밖 값은 400으로 거절하고 잘라 넣지 않는다. 화면 검증과 서버 검증이 같은 등록표를 본다 |
 | VIII | `registryVersion`·`warmupTradingDays`를 분석 요청에 실어 004·006으로 넘긴다 |
 
-**의존 방향은 사람이 지켜야 한다**: 등록표를 `strategy` 패키지로 옮기면 `paramsearch → strategy` 한 방향 의존이 된다. 다만 `ArchitectureTest`의 규칙은 계층 사이(presentation → application → domain)만 검사하고 **도메인 패키지 사이의 방향은 검사하지 않는다**(규칙 4는 `common`만 다룬다). 따라서 `strategy`가 `paramsearch`를 참조해도 빌드가 통과한다. 이 방향을 강제하려면 ArchUnit 규칙을 하나 더해야 하며, 그 작업을 구현 Task에 포함한다.
+**의존 방향은 빌드가 검사한다**: `ArchitectureTest` 규칙 8이 `strategy → paramsearch` 참조를 금지한다. 007은 `ParameterRegistryPort`를 통해 등록표를 읽으므로 방향은 `paramsearch → strategy` 하나다. quickstart 1은 위반 코드를 넣었을 때 실제로 실패하는지도 확인한다.
 
 ## Project Structure
 
@@ -126,23 +126,23 @@ specs/003-strategy-settings/
 ### Source Code (repository root)
 
 ```text
-backend/src/main/java/com/ssafy/thorp/strategy/        # 새로 만드는 003 소유 영역
+backend/src/main/java/com/ssafy/thorp/strategy/        # 003 소유 영역
 ├── application/
-│   ├── port/            # ParameterRegistryPort 와 값 타입 — 007이 옮겨 오는 그대로
-│   ├── exception/       # RegistryUnavailableException — 007에서 옮겨 온다
+│   ├── port/            # ParameterRegistryPort와 등록표 값 타입
+│   ├── exception/       # RegistryUnavailableException
 │   ├── result/          # 조회 결과 DTO
 │   └── service/         # 등록표 조회·검증 서비스
 ├── infrastructure/
-│   └── registry/        # YAML 로더 (007의 Provisional 로더를 옮겨 온다)
+│   └── registry/        # FileParameterRegistry와 RegistryRule
 └── presentation/
     ├── controller/      # GET /strategies/registry
     └── response/
 
 backend/src/main/resources/registry/
-└── parameter-registry.yml       # 007의 provisional 파일을 승격해 옮긴다
+└── parameter-registry.yml       # 정식 등록표, FileParameterRegistry가 읽는다
 
 backend/src/main/java/com/ssafy/thorp/paramsearch/
-└── infrastructure/registry/     # 비운다 — ProvisionalFileParameterRegistry 를 위로 옮기고 위임 계층을 남기지 않는다
+└── infrastructure/registry/     # 없음 — 위임 계층 없이 strategy 포트를 직접 사용한다
 
 frontend/src/
 ├── api/strategyRegistry.ts      # 등록표 조회
@@ -153,7 +153,7 @@ frontend/src/
 
 **구조 선택 근거**: 이 저장소는 `backend/`와 `frontend/`가 나뉜 웹 애플리케이션이고, 백엔드는 도메인별 패키지 안에서 `presentation → application → domain/infrastructure` 계층을 두는 구조를 ArchUnit으로 강제한다([ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)). 등록표는 `paramsearch`가 아니라 새 `strategy` 도메인에 둔다 — 등록표의 소유자는 003이고 007은 읽는 쪽이기 때문이다.
 
-**`domain/model`을 두지 않는다**: 등록표의 값 타입(`StrategyRegistration`·`ParameterAxis`·`AllowedRange`)은 지금 `paramsearch/application/port`에 있고, 옮길 때도 같은 자리에 둔다. 도메인 모델 층을 따로 만들면 같은 것이 두 곳에 생기고, 007이 참조하는 타입이 무엇인지 흐려진다.
+**`domain/model`을 두지 않는다**: 등록표의 값 타입(`StrategyRegistration`·`ParameterAxis`·`AllowedRange`)은 `strategy/application/port`에 있다. 007도 그 타입을 사용하므로 같은 모델을 별도 계층에 복제하지 않는다.
 
 ## 작업 묶음 구성 (티켓·Branch·MR 단위)
 
@@ -218,6 +218,6 @@ B02와 B08이 열하나·열이라 가장 크다. 둘 다 더 쪼개면 목적�
 
 | 항목 | 왜 단순한 방법으로 끝내지 않았나 | 기각한 더 단순한 방법 |
 |---|---|---|
-| 등록표를 새 `strategy` 도메인으로 옮긴다 | 지금 등록표가 `paramsearch` 안에 있어 소유 관계가 뒤집혀 있다. 007이 제 것을 003에 빌려준 상태이고, 그대로 두면 003 화면이 007 패키지를 참조하게 된다 | 현재 위치에 그대로 두고 조회 API만 얹기 — 의존 방향이 003 → 007이 되어 007이 003을 읽는다는 계약과 어긋난다 |
+| 등록표를 새 `strategy` 도메인으로 옮긴다 | 이관 전에는 등록표가 `paramsearch` 안에 있어 소유 관계가 뒤집혀 있었다. 그대로 두면 003 화면이 007 패키지를 참조하므로 정식 소유 영역으로 옮겼다 | 현재 위치에 그대로 두고 조회 API만 얹기 — 의존 방향이 003 → 007이 되어 007이 003을 읽는다는 계약과 어긋난다 |
 | 워밍업 산출 규칙을 등록표에 담는다 | 설정값에 따라 워밍업이 달라지므로 고정값으로는 카드 판정을 할 수 없다(FR-011) | 전략별 고정 워밍업 상수 — 관측 기간을 늘리면 판정이 틀린다 |
 | 목록형·입력형 구분을 등록표가 담는다 | 항목마다 다르기로 정했고(Clarifications), 화면이 항목 이름으로 분기하면 그것이 전략 지식의 중복이다 | 화면이 항목 이름으로 판단 — 등록표에 항목이 추가될 때마다 화면을 고쳐야 한다 |

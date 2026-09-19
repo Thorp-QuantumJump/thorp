@@ -57,12 +57,53 @@ describe('분석 요청 전송(T039)', () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse({}))
   })
 
+  it('공개 토큰을 접수 응답에서 보존한다', async () => {
+    const publicToken = 'a'.repeat(32)
+    vi.spyOn(apiClient, 'post').mockResolvedValue(
+      axiosResponse(
+        {
+          success: true,
+          data: { backtestId: 'BT-test', status: 'COMPLETED', resultSource: 'REUSED', publicToken },
+          error: null,
+        },
+        202,
+      ),
+    )
+    await expect(createBacktest(request)).resolves.toMatchObject({
+      publicToken,
+      resultSource: 'REUSED',
+    })
+  })
+
+  it.each([
+    [429, 'EXECUTION_LIMIT', { retryAfterSeconds: 30 }],
+    [
+      422,
+      'INSUFFICIENT_HISTORY',
+      { requiredWarmupTradingDays: 90, requiredStartDate: '2024-01-02' },
+    ],
+  ])('공용 CSRF 오류로 감싸진 %s %s의 details도 유지한다', async (status, code, details) => {
+    vi.spyOn(apiClient, 'post').mockRejectedValue(
+      axiosFailure(
+        Number(status),
+        errorBody(String(code), '서버 안내', details as Record<string, unknown>),
+      ),
+    )
+    await expect(createBacktest(request)).rejects.toMatchObject({ status, code, details })
+    expect(apiClient.post).toHaveBeenCalledTimes(1)
+  })
+
   it('CSRF 토큰을 준비한 뒤 조립한 요청을 그대로 POST /backtests로 보내고 접수 결과를 읽는다', async () => {
     const postSpy = vi.spyOn(apiClient, 'post').mockResolvedValue(
       axiosResponse(
         {
           success: true,
-          data: { backtestId: 'BT-20260917-000001', status: 'QUEUED', resultSource: 'NEW', publicToken: 'x' },
+          data: {
+            backtestId: 'BT-20260917-000001',
+            status: 'QUEUED',
+            resultSource: 'NEW',
+            publicToken: 'x',
+          },
           error: null,
         },
         202,
@@ -73,7 +114,11 @@ describe('분석 요청 전송(T039)', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith('/auth/csrf')
     expect(postSpy).toHaveBeenCalledWith('/backtests', request)
-    expect(accepted).toEqual({ backtestId: 'BT-20260917-000001', status: 'QUEUED', resultSource: 'NEW' })
+    expect(accepted).toEqual({
+      backtestId: 'BT-20260917-000001',
+      status: 'QUEUED',
+      resultSource: 'NEW',
+    })
   })
 
   it('거절되면 서버의 오류 이름과 details를 실어 던지고, 화면의 판별기가 그 둘을 읽는다', async () => {
@@ -81,7 +126,11 @@ describe('분석 요청 전송(T039)', () => {
     vi.spyOn(apiClient, 'post').mockRejectedValue(
       axiosFailure(
         400,
-        errorBody('UNREGISTERED_PARAMETER_VALUE', '허용 범위를 벗어난 값입니다: 항목=driftWindow', details),
+        errorBody(
+          'UNREGISTERED_PARAMETER_VALUE',
+          '허용 범위를 벗어난 값입니다: 항목=driftWindow',
+          details,
+        ),
       ),
     )
 
@@ -100,13 +149,18 @@ describe('분석 요청 전송(T039)', () => {
     [422, 'STRATEGY_NOT_REGISTERED'],
     [422, 'RULES_NOT_REGISTERED'],
     [503, 'REGISTRY_UNAVAILABLE'],
-  ])('%i %s는 전송 계층 이름이 아니라 서버 이름을 code에 싣고 details가 없으면 null이다', async (status, code) => {
-    vi.spyOn(apiClient, 'post').mockRejectedValue(axiosFailure(status, errorBody(code, '서버 문장')))
+  ])(
+    '%i %s는 전송 계층 이름이 아니라 서버 이름을 code에 싣고 details가 없으면 null이다',
+    async (status, code) => {
+      vi.spyOn(apiClient, 'post').mockRejectedValue(
+        axiosFailure(status, errorBody(code, '서버 문장')),
+      )
 
-    const error = await createBacktest(request).catch((caught: unknown) => caught)
+      const error = await createBacktest(request).catch((caught: unknown) => caught)
 
-    expect(error).toMatchObject({ code, status, message: '서버 문장', details: null })
-  })
+      expect(error).toMatchObject({ code, status, message: '서버 문장', details: null })
+    },
+  )
 
   it('다시 보내지 않는다', async () => {
     const postSpy = vi
@@ -139,6 +193,7 @@ describe('분석 요청 전송(T039)', () => {
     await expect(createBacktest(request)).rejects.toMatchObject({ code: 'CSRF_TOKEN_INVALID' })
     await expect(createBacktest(request)).rejects.toMatchObject({ code: 'CSRF_TOKEN_INVALID' })
 
-    expect(apiClient.get).toHaveBeenCalledTimes(2)
+    expect(apiClient.get).toHaveBeenCalledTimes(3)
+    expect(apiClient.post).toHaveBeenCalledTimes(2)
   })
 })

@@ -89,6 +89,8 @@
 | `analytics`의 상관관계·위험 기여·손실 기여 노출 | FR-007이 상세 패널에 요구하는데 계산·저장만 되고 API 밖으로 나오지 않는다. 그때까지 해당 항목은 제공되지 않음으로 둔다 |
 | 참조하는 요청이 없는 계산·결과의 정리 | FR-021 만료 삭제가 004 FR-003의 결과 공유와 부딪히지 않으려면, 만료된 요청이 가리키던 계산은 다른 요청이 참조하지 않을 때만 지워야 한다. 그 판정은 계산 기록을 소유한 004의 일이다. 없으면 005는 요청 행과 토큰만 지우고 계산은 남긴다 |
 | `backtest_reuse_event.request_id` nullable 완화 | 만료 정리가 요청 행을 지울 때 재사용·합류 기록까지 지워야 한다. 그러면 `backtest_run_metric`의 `reuse_count`가 줄어 원칙 IX의 동일 결과 재조회 기록이 사라진다. 기록은 남기고 요청과의 연결만 끊는다(spec FR-021) |
+| 거래 내역 질의에 `from`·`to` 추가 | 상세 패널이 선택한 손실 구간의 거래만 서버에서 조회해야 한다. 화면에서 전체 페이지를 받아 거르는 방식은 페이지 경계에서 누락을 만든다. 004 공개 래퍼가 기간 질의를 그대로 전달한다 |
+| 비로그인 실행 상한 적용 | 익명 요청도 서버 전체 대기·실행 상한에 포함하고 `429 EXECUTION_LIMIT`을 그대로 돌려야 한다. 사용자별 상한은 요청자가 없으므로 적용하지 않고, 화면은 `retryAfterSeconds`와 명시적 재시도를 보인다 |
 
 ## 미해결 위반
 
@@ -136,10 +138,11 @@ backend/src/main/resources/db/migration/   # public_token·만료·requester_id 
 frontend/src/
 ├── pages/
 │   └── ResultPage.tsx                 # /results/:token
-├── features/result/                   # 신규
+├── components/result/                 # 결과 화면 구성 요소
 │   ├── summarySentences.ts            #   해석 요약 문장 틀 (검수 대상)
+│   ├── statusSentences.ts             #   상태 문장 틀 (검수 대상)
 │   ├── ResultSummaryCard.tsx          #   핵심 숫자 3개 + 조건 한 줄
-│   ├── ComparisonChart.tsx            #   곡선 2개 + 하락 구간 음영
+│   ├── EquityChart.tsx                #   곡선 2개 + 하락 구간 음영
 │   ├── ResultStatusLine.tsx           #   결과 옆 한 문장
 │   ├── DetailPanel.tsx                #   '자세히 보기'
 │   └── CompareTargetPicker.tsx        #   비교 대상 선택·실행 요청
@@ -147,21 +150,35 @@ frontend/src/
 └── components/charts/                 # 기존 차트 시스템 재사용
 ```
 
-**Structure Decision**: 백엔드는 004의 `backtest` 패키지를 그대로 두고 공개 열람을 담당하는 `result` 패키지를 새로 둔다. 004는 인증된 소유자 경로를, `result`는 토큰 기반 공개 경로를 맡는다. 두 경계를 나누는 이유는 004가 이미 구현·검증을 마쳤고 그 계약을 쓰는 곳이 여럿이라, 공개 열람 규칙을 그 안에 섞으면 004의 권한 판정이 복잡해지기 때문이다. 프런트는 화면 하나가 여러 구성 요소로 갈리므로 `features/result/`에 모은다.
+**Structure Decision**: 백엔드는 004의 `backtest` 패키지를 그대로 두고 공개 열람을 담당하는 `result` 패키지를 새로 둔다. 004는 인증된 소유자 경로를, `result`는 토큰 기반 공개 경로를 맡는다. 두 경계를 나누는 이유는 004가 이미 구현·검증을 마쳤고 그 계약을 쓰는 곳이 여럿이라, 공개 열람 규칙을 그 안에 섞으면 004의 권한 판정이 복잡해지기 때문이다. `PublicResultToken`은 요청을 소유한 `backtest/domain/model`에 두어 `backtest → result` 역참조를 만들지 않는다. 프런트는 기존 구조 규칙에 맞춰 화면 구성 요소를 `components/result/`에 모은다.
 
 ## 작업 묶음 구성
 
-constitution이 작업 묶음을 plan에 두라고 요구한다. 아래는 제안이며 티켓 번호는 tasks 단계에서 채운다. 묶음마다 브랜치 하나, MR 하나다.
+constitution이 작업 묶음을 plan에 두라고 요구한다. 묶음마다 Jira Task 하나, 브랜치 하나, MR 하나다.
 
-| 묶음 | 내용 | 파트 | 선행 |
+| 묶음 · 티켓 | 내용 | 파트 | 선행 |
 |---|---|---|---|
-| A. 공개 열람 경계 | `requester_id` 완화, `public_token`·만료 컬럼과 마이그레이션, `GET /results/{token}` 및 하위 자원, 410 만료 응답 | BE | 없음 |
-| B. 결과 첫 화면 | `/results/:token` 라우트, 핵심 숫자 3개·조건 한 줄·해석 요약 문장 틀, 상태 한 문장 | FE | A |
-| C. 비교 그래프 | 곡선 2개·하락 구간 음영·색 비의존 구분·좁은 화면 배치 | FE | B |
-| D. 비교 대상 선택과 실행 요청 | 대상 선택, 결과 없으면 실행 요청, 기간 불일치 확인, 실패·한도(429) 표시, 비교 주소 | FE | C |
-| E. 상세 패널 | '자세히 보기', 거래 내역 페이지 조회, 001 대표 상품 정보 펼치기, 계산 제한 표시 | FE | B |
+| B01 · [291](https://ssafy.atlassian.net/browse/S15P21E205-291) | 비로그인 접수·공개 토큰 발급 | BE | 없음 |
+| B02 · [318](https://ssafy.atlassian.net/browse/S15P21E205-318) | 공개 열람·만료·정리 | BE | B01 |
+| B03 · [307](https://ssafy.atlassian.net/browse/S15P21E205-307) | 핵심 숫자·조건·해석 요약이 있는 첫 화면 | FE | B02 계약 |
+| B04 · [308](https://ssafy.atlassian.net/browse/S15P21E205-308) | 비교 곡선·하락 구간·색 비의존 구분 | FE | B03 |
+| B05 · [309](https://ssafy.atlassian.net/browse/S15P21E205-309) | 비교 대상 선택·같은 조건의 실행 요청 | FE | B04 |
+| B06 · [346](https://ssafy.atlassian.net/browse/S15P21E205-346) | 결과 의미를 바꾸는 상태 한 문장 | FE | B03 |
+| B07 · [311](https://ssafy.atlassian.net/browse/S15P21E205-311) | 화면 안 상세 패널과 근거 조회 | FE | B03 |
+| B08 · [312](https://ssafy.atlassian.net/browse/S15P21E205-312) | 지수·목표 위험 보조 보기와 다음 탐색 | FE | B05, B07 |
+| B09 · [313](https://ssafy.atlassian.net/browse/S15P21E205-313) | 문서 동기화·금지 검사·전체 검증 | DOCS | B01~B08 |
 
-A가 없으면 나머지가 화면을 띄울 수 없다. B~E는 A 뒤에서 병렬로 갈 수 있으나 C는 B의 화면 골격을 쓴다.
+B01이 공개 토큰을 만들고 B02가 열람 경계를 완성해야 프런트가 실제 서버와 붙는다. B06·B07은 B03 뒤에서 B04·B05와 병렬로 갈 수 있고, B08은 비교 요청과 상세 패널을 재사용한다. B09는 모든 구현 묶음이 병합된 뒤 최종 상태를 검증한다.
+
+## B05 구현 경계 보정 (2026-09-18, S15P21E205-309)
+
+- 브랜치는 `feat(fe)/309-result-comparison`이고 T045~T054·T057~T061을 한 묶음으로 구현한다.
+- 비교 요청 조립 함수는 `PublicResultDetail`과 선택한 전략의 등록 정보를 받는다. 실제 공개 `config`에는 비용 버전이 없으므로 `versions.costProfile.version`을 쓰며, 새 전략의 기본 설정은 003 등록표, 규칙 버전은 004 `GET /backtests/registry`에서 읽는다. 등록표 조회는 비교 목록을 열 때만 한다.
+- 원본 재계산은 원본 설정·비중·평가 분할·시나리오를 보존한다. 새 전략이 사용자 비중을 요구하는데 원본에 그 비중이 없으면 임의로 균등 배분하지 않고 선택을 막는다.
+- 워밍업이 길어도 요청 구간 앞에 자료가 충분하면 평가 기간이 줄지 않는다(004 R-15). 목록을 열 때 001의 평가 가능 기간·거래일 달력을 받아 실제로 줄어드는 거래일 수만 안내한다. 공통 기간을 확인하지 못하면 해당 후보를 막는다. 더 긴 워밍업은 두 결과 재계산에 동의한 뒤 적용한다.
+- 구현 중 확인한 계약 누락 두 곳을 같은 흐름에서 보강한다: 공개 `config.executionType`은 원 요청에서 읽어 `SEARCH_BUNDLE`을 구분하고, 004의 준비 기간 부족 오류는 `details.requiredWarmupTradingDays`·`requestedWarmupTradingDays`를 보낸다. 준비 기간을 채운 첫날이 종료일 뒤인 오류는 `requiredStartDate`도 보낸다. 저장 스키마·계산 방식은 바꾸지 않는다.
+- 두 번째 재계산 요청만 실패하면 먼저 접수한 토큰을 보존해 명시적 재시도에서 두 번째만 보낸다. 금액·비용·자료/엔진 기준·섹터·시나리오가 다르면 기간만 맞춰 겹치지 않는다.
+- T059·T060의 상태 표시와 확인창 흐름은 `useCompareTarget.test.tsx`에서 함께 검증하고, T061의 화면 연결은 `ResultPage.comparison.test.tsx`에서 검증한다.
 
 ## Complexity Tracking
 
