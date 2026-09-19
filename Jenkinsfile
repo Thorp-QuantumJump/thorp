@@ -454,9 +454,23 @@ pipeline {
                     steps {
                         script { openCheck('Worker', 'running') }
 
+                        // worker/uv.lock 에 고정된 버전으로 설치한다(spec 004 T027). 버전 범위만 적힌
+                        // requirements 파일로 설치하면 lock 과 다른 numpy·scipy 에서 테스트가 통과할 수 있다.
+                        //
+                        // Jenkins 이미지에는 uv 가 없어 체크아웃 밖(WORKSPACE_TMP)의 별도 가상환경에 받는다.
+                        // 워커의 .venv 에 넣으면 uv sync 가 lock 에 없는 패키지로 보고 지운다.
+                        //
+                        //   --locked             uv.lock 이 pyproject.toml 과 어긋나면 실패한다.
+                        //   --python 3.11        운영 이미지와 같은 버전. 이 이미지의 python3 는 3.13 이고,
+                        //                        lock 은 3.11 과 3.12 이상에 서로 다른 numpy 를 고른다. 3.11 은
+                        //                        uv 가 처음 한 번 내려받아 Jenkins 홈에 둔다.
+                        //   --no-install-project 워커 코드는 설치하지 않는다. 운영 이미지도 설치하지 않고
+                        //                        PYTHONPATH 로 읽으며, pytest 는 src 를 읽는다.
+                        // dev 그룹(pytest·ruff)도 기본으로 설치되어 lint·test 도구 버전도 lock 을 따른다.
+                        // 3.13 으로 만든 옛 .venv 가 남아 있으면 uv 가 지우고 3.11 로 다시 만든다.
                         dir('worker') {
-                            sh 'python3 -m venv .venv'
-                            sh '. .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt'
+                            sh 'python3 -m venv "$WORKSPACE_TMP/uv" && "$WORKSPACE_TMP/uv/bin/pip" install --quiet uv==0.12.0'
+                            sh '"$WORKSPACE_TMP/uv/bin/uv" sync --locked --python 3.11 --no-install-project'
                         }
                     }
                 }
