@@ -1,7 +1,8 @@
 {
   "rules": "MINIMUM_VARIANCE-1.json",
   "engineInput": "engine-input-three-etf-min_variance.json",
-  "sha256": "6ca6504059c21f3cea791a6e6dfe6e8590e8078f4f2683deaa907f9b129a0cb3",
+  "inputSha256": "629ed5805e289be3876d4d861303b443d0fec8a17f6a03c474e105ce2071b434",
+  "sha256": "df7898ce28c3abba1c3cba06d8da9abd58dd953bff20135eb6a85c2bb87a5cdf",
   "summary": {
     "performance": {
       "initialEquity": "10000000",

@@ -89,13 +89,7 @@ public class StrategyRulesService {
         return rules;
     }
 
-    /** 등록표 전체(대체된 옛 버전 포함). */
-    @Transactional(readOnly = true)
-    public List<StrategyRules> findAll() {
-        return repository.findAll();
-    }
-
-    /** 대체되지 않은 행만, 전략당 하나. 화면이 "지금 무엇을 고를 수 있는가"를 보여줄 때 쓴다. */
+    /** 대체되지 않은 행만, 전략당 하나. 화면과 007 지원 목록이 "지금 무엇을 고를 수 있는가"를 볼 때 쓴다. */
     @Transactional(readOnly = true)
     public List<StrategyRules> findCurrent() {
         return repository.findCurrent();

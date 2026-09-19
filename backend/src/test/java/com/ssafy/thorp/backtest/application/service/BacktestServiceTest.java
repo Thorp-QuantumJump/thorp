@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.PinnedVersions;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
@@ -25,6 +26,7 @@ import com.ssafy.thorp.backtest.domain.model.CancelReason;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RulesStatus;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
@@ -685,7 +687,7 @@ class BacktestServiceTest {
 
         BacktestJobResult original = service.create(fixedWeight());
         BacktestJobResult retried =
-                service.replay(fixedWeight(), new BacktestService.Replay(21L, null));
+                service.createPinned(fixedWeight(), PinnedVersions.retryOf(21L, null));
 
         assertThat(retried.publicToken())
                 .matches("^[0-9a-f]{32}$")
@@ -732,13 +734,55 @@ class BacktestServiceTest {
                                 "spec 004 FR-021"));
 
         BacktestJobResult retried =
-                service.replay(fixedWeight(), new BacktestService.Replay(21L, null));
+                service.createPinned(fixedWeight(), PinnedVersions.retryOf(21L, null));
 
         assertThat(retried.resultSource()).isEqualTo(ResultSource.NEW);
         assertThat(retried.versions())
                 .extractingByKey("rules")
                 .isEqualTo(Map.of("version", "1", "provisional", false));
         verify(strategyRulesService, never()).requireCurrent("FIXED_WEIGHT", "1");
+    }
+
+    @Test
+    @DisplayName("007 묶음 후보도 버전이 고정된 요청이다 — 대체된 규칙·과거 등록표 버전으로 접수되고 재시도 id 는 없다")
+    void searchBundleCandidatesArePinned() {
+        when(strategyRulesService.requireCurrent("FIXED_WEIGHT", "1"))
+                .thenThrow(rulesVersionChanged());
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+        when(strategySettingsValidator.verifySaved(any(), any(), any(), anyInt(), any()))
+                .thenReturn(Optional.empty());
+
+        BacktestJobResult accepted =
+                service.createPinned(
+                        withRegistryVersion(withWarmup(fixedWeight(), 5), "1.0.0"),
+                        PinnedVersions.searchBundle());
+
+        assertThat(accepted.resultSource()).isEqualTo(ResultSource.NEW);
+        assertThat(savedRequests(1).get(0).getRetryOfRequestId()).isNull();
+        verify(strategySettingsValidator, never()).verify(any(), any(), any(), anyInt(), any());
+    }
+
+    @Test
+    @DisplayName("다른 규칙을 가리키는 오버레이 기록은 받지 않는다 — 전략 이름까지 확인한다")
+    void pinnedOverlayMustNameTheOverlayRules() {
+        when(strategyRulesService.requireExecutable("FIXED_WEIGHT", "1"))
+                .thenReturn(rules("FIXED_WEIGHT", Map.of()));
+
+        assertThatThrownBy(
+                        () ->
+                                service.createPinned(
+                                        command(
+                                                "FIXED_WEIGHT",
+                                                new BigDecimal("0.4000"),
+                                                63,
+                                                Scenario.TARGET_RISK,
+                                                Map.of("targetVolatility", "0.1000")),
+                                        PinnedVersions.retryOf(
+                                                21L, new RulesRef("INVERSE_VOLATILITY", "1"))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("overlay rules");
+        verify(strategyRulesService, never()).requireExecutable(eq("INVERSE_VOLATILITY"), any());
     }
 
     @Test
@@ -750,14 +794,14 @@ class BacktestServiceTest {
                 .thenReturn(rules("TARGET_RISK_OVERLAY", Map.of("lookbackDays", 63)));
 
         BacktestJobResult retried =
-                service.replay(
+                service.createPinned(
                         command(
                                 "FIXED_WEIGHT",
                                 new BigDecimal("0.4000"),
                                 63,
                                 Scenario.TARGET_RISK,
                                 Map.of("targetVolatility", "0.1000")),
-                        new BacktestService.Replay(21L, "1"));
+                        PinnedVersions.retryOf(21L, new RulesRef("TARGET_RISK_OVERLAY", "1")));
 
         assertThat(retried.versions()).containsEntry("scenarioRules", "TARGET_RISK_OVERLAY/1");
         verify(strategyRulesService, never()).requireCurrent("TARGET_RISK_OVERLAY");
@@ -771,16 +815,16 @@ class BacktestServiceTest {
 
         assertThatThrownBy(
                         () ->
-                                service.replay(
+                                service.createPinned(
                                         command(
                                                 "FIXED_WEIGHT",
                                                 new BigDecimal("0.4000"),
                                                 63,
                                                 Scenario.TARGET_RISK,
                                                 Map.of("targetVolatility", "0.1000")),
-                                        new BacktestService.Replay(21L, null)))
+                                        PinnedVersions.retryOf(21L, null)))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("scenarioRules");
+                .hasMessageContaining("overlay rules");
         verify(runRepository, never()).save(any());
     }
 
@@ -793,7 +837,7 @@ class BacktestServiceTest {
                 .thenReturn(Optional.empty());
         CreateBacktestCommand saved = withRegistryVersion(withWarmup(fixedWeight(), 5), "1.0.0");
 
-        service.replay(saved, new BacktestService.Replay(21L, null));
+        service.createPinned(saved, PinnedVersions.retryOf(21L, null));
 
         verify(strategySettingsValidator)
                 .verifySaved(eq("FIXED_WEIGHT"), any(), eq("1.0.0"), eq(2), any());

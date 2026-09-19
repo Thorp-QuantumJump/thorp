@@ -1,7 +1,8 @@
 {
   "rules": "INVERSE_VOLATILITY-1.json",
   "engineInput": "engine-input-three-etf-inverse_vol.json",
-  "sha256": "3a0e9d03dca863dd8f29e7c6388dd88feb9158db205ddbcfcd295a3136109be4",
+  "inputSha256": "89eca02d0faf77e069569acaefeda247140d220530ced12f68fd285272b393da",
+  "sha256": "cdd38b5f1857e9ad669d4306428c5803b7370d41452a80247ff236c457ea3dd3",
   "summary": {
     "performance": {
       "initialEquity": "10000000",

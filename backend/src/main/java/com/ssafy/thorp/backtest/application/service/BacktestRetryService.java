@@ -1,12 +1,14 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.PinnedVersions;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -19,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 실패·취소한 요청을 같은 조건으로 다시 시도한다(spec 004 T010).
  *
  * <p><b>접수를 다시 탄다.</b> 실행 행을 복제하지 않고 저장해 둔 요청 사본({@code request_spec})을 접수 명령으로 되돌려 {@link
- * BacktestService#replay}에 넘긴다. 그래야 그 사이 규칙 행이 사라졌거나(422) 자료 버전이 움직인 것을 <b>지금 기준</b>으로 다시 판정하고, 동일
- * 버전 재사용·합류도 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 새로 계산하지 않고 거기에 합류한다.
+ * BacktestService#createPinned}에 넘긴다. 그래야 그 사이 규칙 행이 사라졌거나(422) 자료 버전이 움직인 것을 <b>지금 기준</b>으로 다시
+ * 판정하고, 동일 버전 재사용·합류도 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 새로 계산하지 않고 거기에 합류한다.
  *
  * <p>규칙·비용·등록표 버전은 원본의 것을 그대로 쓴다. 재시도는 "같은 조건을 다시"이지 "지금 기본값으로 새로"가 아니다 — 기본 프로필이 그 사이 바뀌었는데 조용히
  * 따라가면 사용자가 비교하려던 두 결과의 비용 전제가 달라진다. 규칙이 새 버전으로 대체됐어도 옛 버전으로 계산한다(T029). 새 요청이었다면 409로 막혔을 옛 버전이
@@ -90,15 +92,29 @@ public class BacktestRetryService {
                         request.getExecutionType(),
                         run.getPlan().costProfileVersion());
         BacktestJobResult retried =
-                backtestService.replay(
-                        command,
-                        new BacktestService.Replay(
-                                request.getId(), run.getPlan().scenarioRulesVersion()));
+                backtestService.createPinned(
+                        command, PinnedVersions.retryOf(request.getId(), recordedOverlay(run)));
         log.info(
                 "retry accepted: original={} retried={} resultSource={}",
                 backtestId,
                 retried.backtestId(),
                 retried.resultSource());
         return retried.withRetryOf(backtestId);
+    }
+
+    /**
+     * 원본 실행이 쓴 오버레이 규칙 기록. 읽을 수 없는 기록은 서버 데이터가 깨진 것이라 {@link IllegalStateException}(500)으로 올린다.
+     *
+     * <p>{@code IllegalArgumentException} 그대로 두면 전역 처리기가 400 {@code INVALID_INPUT}으로 바꿔, 사용자가 고칠 수
+     * 없는 서버 기록 문제를 사용자 입력 잘못으로 보이게 한다.
+     */
+    private static RulesRef recordedOverlay(BacktestRun run) {
+        try {
+            return run.getPlan().scenarioRules();
+        } catch (IllegalArgumentException exc) {
+            throw new IllegalStateException(
+                    "saved run has an unreadable versions.scenarioRules: runId=" + run.getId(),
+                    exc);
+        }
     }
 }

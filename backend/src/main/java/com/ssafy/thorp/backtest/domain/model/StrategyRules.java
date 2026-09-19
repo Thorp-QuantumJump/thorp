@@ -58,6 +58,11 @@ public record StrategyRules(
         return status == RulesStatus.REGISTERED || status == RulesStatus.SUPERSEDED;
     }
 
+    /** 이 행을 가리키는 이름표({@code 전략/버전}). 실행 기록과 작업 메시지에 이 표기로 남긴다. */
+    public RulesRef ref() {
+        return new RulesRef(strategyId, rulesVersion);
+    }
+
     /** 대체되지 않은 행인가. 전략마다 이런 행은 하나뿐이다(마이그레이션의 부분 유니크 인덱스). */
     public boolean isCurrent() {
         return status != RulesStatus.SUPERSEDED;

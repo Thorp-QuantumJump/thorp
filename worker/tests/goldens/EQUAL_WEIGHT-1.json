@@ -1,7 +1,8 @@
 {
   "rules": "EQUAL_WEIGHT-1.json",
   "engineInput": "engine-input-three-etf-equal.json",
-  "sha256": "57003f49257f15b367d0feb44db5fea3859d6c9d3b7b234c8a377ba156a57d66",
+  "inputSha256": "03692b671100a1da52725ffa4101cb7f7dd0d88c8904a839f6ba15e4c315cae5",
+  "sha256": "4e57527bef912329d5042d945893c7e2025d8288af8a00674f8d0aee3566b890",
   "summary": {
     "performance": {
       "initialEquity": "10000000",

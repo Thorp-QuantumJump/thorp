@@ -51,6 +51,8 @@ class StrategyRulesLifecycleIT extends IntegrationTestSupport {
 
     @BeforeEach
     void registerVersion1() {
+        // 앞선 실행이 정리 도중 멈춰 남긴 행이 있으면 먼저 지운다. 그대로 INSERT 하면 키 충돌로 이 테스트가 원인과 무관하게 깨진다.
+        removeEverythingThisStrategyMade();
         jdbcTemplate.update(
                 "INSERT INTO strategy_rules"
                         + " (strategy_id, rules_version, status, provisional, spec, decision_ref)"
@@ -59,10 +61,17 @@ class StrategyRulesLifecycleIT extends IntegrationTestSupport {
                 STRATEGY);
     }
 
+    /**
+     * 실행을 가리키는 표를 참조 순서대로 지운다. 측정·한도 도달·DLQ 기록은 {@code ON DELETE CASCADE}라 실행과 함께 지워지고,
+     * 나머지(결과·거래·재사용 기록·요청)는 여기서 먼저 지운다. 하나라도 남으면 실행 삭제가 막히고, 합성 전략 행이 공용 DB에 남아 {@code GET
+     * /backtests/registry}와 스냅샷 대조를 단언하는 다른 IT가 이 테스트와 무관한 이유로 깨진다.
+     */
     @AfterEach
     void removeEverythingThisStrategyMade() {
-        // 참조 순서대로 지운다. 재시도 요청은 원본 요청을 가리키지만 한 문장 안에서 함께 지우므로 걸리지 않는다.
+        // 재시도 요청은 원본 요청을 가리키지만 한 문장 안에서 함께 지우므로 걸리지 않는다.
         String runs = "SELECT id FROM backtest_run WHERE strategy_id = '" + STRATEGY + "'";
+        jdbcTemplate.update("DELETE FROM backtest_trade WHERE run_id IN (" + runs + ")");
+        jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_reuse_event WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_request WHERE run_id IN (" + runs + ")");
         jdbcTemplate.update("DELETE FROM backtest_run WHERE strategy_id = ?", STRATEGY);

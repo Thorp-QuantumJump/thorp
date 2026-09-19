@@ -8,8 +8,8 @@
 -- 옛 행의 spec 은 그대로 남아 그 버전으로 접수된 실행의 발행·재시도가 계속 읽는다. 새 요청은 옛 버전을
 -- 고를 수 없다(409 REGISTRY_VERSION_CHANGED).
 --
--- 이 파일은 구조만 바꾸고 기존 행은 건드리지 않는다. 지금 모든 전략은 행이 하나라 아래 부분 유니크
--- 인덱스를 그대로 만족한다.
+-- 규칙 행은 건드리지 않는다. 지금 모든 전략은 행이 하나라 아래 부분 유니크 인덱스를 그대로 만족한다.
+-- 바꾸는 데이터는 맨 아래 목표 위험 실행의 오버레이 버전 기록 하나다.
 
 ALTER TABLE strategy_rules
     DROP CONSTRAINT ck_strategy_rules_status,
@@ -29,3 +29,17 @@ ALTER TABLE strategy_rules
 CREATE UNIQUE INDEX uk_strategy_rules_current
     ON strategy_rules (strategy_id)
     WHERE status <> 'SUPERSEDED';
+
+-- 목표 위험 실행에 오버레이 규칙 버전 기록을 채운다.
+--
+-- 목표 위험 시나리오는 2026-09-11 부터 접수했지만, 실행의 versions 에 오버레이 버전(scenarioRules)을
+-- 남기기 시작한 것은 2026-09-15 부터다. 그 사이에 접수된 실행에는 기록이 없다. 이제 발행·재시도는 지금
+-- 버전을 고르지 않고 이 기록으로 오버레이 명세를 읽으므로, 기록이 없으면 그 실행을 다시 계산할 수 없다
+-- (재시도는 500, 대기 중 실행은 재발행에서 조립 실패로 닫힌다). 그 기간의 코드는 오버레이를
+-- TARGET_RISK_OVERLAY/1 로 고정해 읽었으므로 추정이 아니라 그때 쓴 값이다.
+-- backfill:begin
+UPDATE backtest_run
+SET versions = COALESCE(versions, '{}'::jsonb) || '{"scenarioRules": "TARGET_RISK_OVERLAY/1"}'::jsonb
+WHERE request_spec ->> 'scenario' = 'TARGET_RISK'
+  AND (versions IS NULL OR versions -> 'scenarioRules' IS NULL);
+-- backfill:end

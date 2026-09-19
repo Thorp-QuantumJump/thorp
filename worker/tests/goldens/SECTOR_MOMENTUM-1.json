@@ -1,7 +1,8 @@
 {
   "rules": "SECTOR_MOMENTUM-1.json",
   "engineInput": "engine-input-three-etf-momentum.json",
-  "sha256": "a9722dcfa877876f21e7e7b15bf4679db7d4df4e54fbd2a7ec47bb7c756897a8",
+  "inputSha256": "f89d2032092284623cf390c62c75fe5fd325743446692ede80e62290b786a460",
+  "sha256": "4f4f6db10d0fd8a5d93ea38c935fd356d665b7a340a9e049bf6a74899f32f43c",
   "summary": {
     "performance": {
       "initialEquity": "10000000",

@@ -1,7 +1,8 @@
 {
   "rules": "TARGET_RISK_OVERLAY-1.json",
   "engineInput": "engine-input-three-etf-target-risk.json",
-  "sha256": "ae44175631eb3f123e837c6bd18b68baed0d49e65e30a8889cf9ad0fa30455f7",
+  "inputSha256": "c80ee35da81861cc2740c28be691340c5deac26a6910ca79df4ffc06622aa1f3",
+  "sha256": "e6926b73b3e56c2c88af3ad53a03e288d543391a1401cc3e86b90840abf86905",
   "summary": {
     "performance": {
       "initialEquity": "10000000",
