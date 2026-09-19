@@ -408,11 +408,13 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                                 String.class))
                 .isEmpty();
 
-        // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 역변동성 /1 은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 버전을 적는 이유: PD-02 가 확정되면 /2 가 더해지고(T029) 그 행은 임시가 아니다. /1 의 표시는 그 뒤에도 그대로다.
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT provisional FROM strategy_rules"
-                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
+                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'"
+                                        + " AND rules_version = '1'",
                                 Boolean.class))
                 .isTrue();
     }
@@ -463,6 +465,77 @@ class FlywayMigrationTest extends RepositoryTestSupport {
 
         assertThatThrownBy(() -> jdbcTemplate.execute(guardStatement()))
                 .hasMessageContaining("INVERSE_VOLATILITY/1 결과가 남아 있다");
+    }
+
+    @Test
+    @DisplayName("백필: 오버레이 버전 기록이 없는 목표 위험 실행만 TARGET_RISK_OVERLAY/1 로 채운다(T029)")
+    void backfillsTheOverlayVersionOnlyWhereItIsMissing() {
+        // 2026-09-11~09-15 에 접수된 목표 위험 실행은 versions.scenarioRules 가 없다. 발행·재시도가
+        // 이 기록으로 오버레이 명세를 읽으므로(T029) 비어 있으면 다시 계산할 수 없다.
+        Long missing = savedRun("{\"scenario\": \"TARGET_RISK\"}", "{\"rules\": \"1\"}");
+        Long recorded =
+                savedRun(
+                        "{\"scenario\": \"TARGET_RISK\"}",
+                        "{\"rules\": \"1\", \"scenarioRules\": \"TARGET_RISK_OVERLAY/9\"}");
+        Long fullPeriod = savedRun("{\"scenario\": \"FULL_PERIOD\"}", "{\"rules\": \"1\"}");
+
+        jdbcTemplate.execute(backfillStatement());
+
+        assertThat(scenarioRulesOf(missing)).isEqualTo("TARGET_RISK_OVERLAY/1");
+        assertThat(scenarioRulesOf(recorded))
+                .as("이미 있는 기록은 덮어쓰지 않는다")
+                .isEqualTo("TARGET_RISK_OVERLAY/9");
+        assertThat(scenarioRulesOf(fullPeriod)).as("오버레이가 없는 실행에는 붙이지 않는다").isNull();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT versions ->> 'rules' FROM backtest_run WHERE id = ?",
+                                String.class,
+                                missing))
+                .as("다른 버전 기록은 그대로다")
+                .isEqualTo("1");
+    }
+
+    private Long savedRun(String requestSpec, String versions) {
+        BacktestRun saved =
+                repository.save(
+                        BacktestRun.create(
+                                "FIXED_WEIGHT",
+                                "1",
+                                Map.of("rebalance", "MONTH_END"),
+                                List.of(new InstrumentId("069500.XKRX")),
+                                PERIOD,
+                                new BigDecimal("10000000.00"),
+                                PositionSizingMode.STRATEGY_DEFINED,
+                                null,
+                                null,
+                                42));
+        entityManager.flush();
+        jdbcTemplate.update(
+                "UPDATE backtest_run SET request_spec = ?::jsonb, versions = ?::jsonb WHERE id = ?",
+                requestSpec,
+                versions,
+                saved.getId());
+        return saved.getId();
+    }
+
+    private String scenarioRulesOf(Long runId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT versions ->> 'scenarioRules' FROM backtest_run WHERE id = ?",
+                String.class,
+                runId);
+    }
+
+    /** 수명주기 마이그레이션의 백필 블록 그대로. 버전 번호를 적지 않으려고 설명 부분으로 파일을 찾는다. */
+    private static String backfillStatement() {
+        String file =
+                MigrationFiles.rawFileNames().stream()
+                        .filter(name -> name.endsWith("__strategy_rules_lifecycle.sql"))
+                        .findFirst()
+                        .orElseThrow();
+        String sql = MigrationFiles.read(file);
+        int begin = sql.indexOf("-- backfill:begin");
+        int end = sql.indexOf("-- backfill:end");
+        return sql.substring(begin, end);
     }
 
     /** 마이그레이션 파일의 가드 블록 그대로. 문장을 여기 옮겨 적으면 파일이 바뀌어도 테스트만 통과한다. */

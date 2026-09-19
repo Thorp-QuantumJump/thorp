@@ -151,6 +151,11 @@ public interface StrategyExecutionSupportPort {
 후보 1건과 동일 비중 기준을 기존 백테스트 실행 경로로 보낸다. 007은 `EngineInput`을 직접 만들지
 않고 `backtest` 모듈의 접수 유스케이스를 호출한다.
 
+후보는 **버전이 고정된 요청**으로 접수한다(`BacktestService.createPinned` + `PinnedVersions.searchBundle()`, 004 T029).
+묶음은 접수 때 전략 규칙·등록표 버전을 스냅샷에 고정하므로(FR-012), 그 뒤 004 규칙이 새 버전으로 대체되거나 003 등록표
+버전이 올라도 남은 후보는 스냅샷의 버전으로 계산된다. 새 요청으로 접수하면 그 순간부터 후보 발행이 409로 막히고, 그 예외가
+결과 반영 트랜잭션을 되돌려 묶음이 RUNNING으로 멈춘다.
+
 ```java
 public interface CandidateJobLauncher {
 

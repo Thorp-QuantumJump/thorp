@@ -3,9 +3,7 @@ package com.ssafy.thorp.paramsearch.infrastructure.support;
 import com.ssafy.thorp.backtest.application.service.StrategyRulesService;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
-import java.util.Comparator;
 import java.util.Map;
-import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -33,14 +31,13 @@ public class StrategyExecutionSupportAdapter implements StrategyExecutionSupport
 
     @Override
     public Map<String, String> supportedStrategies() {
-        // 한 전략에 등록된 규칙 버전이 여럿이면 가장 큰 버전을 쓴다. 접수 시점에 하나를 골라 묶음에
-        // 고정해야 후보들이 같은 규칙으로 계산된다(FR-012) — 후보마다 다른 버전을 고르면 비교가 깨진다.
-        return strategyRulesService.findAll().stream()
+        // 전략마다 지금 고를 수 있는 규칙 행은 하나다(004 T029, 부분 유니크 인덱스). 접수 시점의 그 버전을 묶음에
+        // 고정해야 후보들이 같은 규칙으로 계산된다(FR-012). 새 버전으로 대체된 옛 행은 여기 오지 않는다 — 버전 문자열의
+        // 크기로 고르면 "10" < "9" 처럼 문자열 순서가 버전 순서와 어긋난다.
+        return strategyRulesService.findCurrent().stream()
                 .filter(StrategyRules::isRegistered)
                 .collect(
                         Collectors.toUnmodifiableMap(
-                                StrategyRules::strategyId,
-                                StrategyRules::rulesVersion,
-                                BinaryOperator.maxBy(Comparator.naturalOrder())));
+                                StrategyRules::strategyId, StrategyRules::rulesVersion));
     }
 }

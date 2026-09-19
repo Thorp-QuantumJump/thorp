@@ -73,6 +73,45 @@ class StrategySettingsValidatorTest {
     }
 
     @Test
+    @DisplayName("재시도(verifySaved)는 과거 등록표 버전으로 판정받은 사본을 판정하지 않고 통과시킨다(spec 004 T029)")
+    void 재시도는_과거_버전을_판정하지_않는다() {
+        // 지금 등록표에는 없는 값(999)이라도 과거 버전에서 판정을 통과한 사본이면 그대로 둔다 —
+        // 지금 규칙으로 판정하면 과거 요청을 그 뒤에 생긴 규칙으로 거절하게 된다.
+        assertThat(
+                        validatorOf(simpleRegistry())
+                                .verifySaved(
+                                        STRATEGY,
+                                        settings("lookbackDays", 999),
+                                        "FIXTURE-0",
+                                        3,
+                                        VALID_AMOUNT))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("재시도(verifySaved)라도 등록표 버전이 지금과 같으면 새 요청과 똑같이 판정한다")
+    void 재시도라도_같은_버전이면_판정한다() {
+        StrategySettingsValidator validator = validatorOf(simpleRegistry());
+
+        assertThat(
+                        validator.verifySaved(
+                                STRATEGY, settings("lookbackDays", 63), VERSION, 3, VALID_AMOUNT))
+                .hasValueSatisfying(
+                        verified -> assertThat(verified.registryVersion()).isEqualTo(VERSION));
+        assertThatThrownBy(
+                        () ->
+                                validator.verifySaved(
+                                        STRATEGY,
+                                        settings("lookbackDays", 999),
+                                        VERSION,
+                                        3,
+                                        VALID_AMOUNT))
+                .isInstanceOf(StrategySettingsRejectedException.class)
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);
+    }
+
+    @Test
     @DisplayName("find로는 찾히지만 비활성인 전략은 422 STRATEGY_NOT_REGISTERED다")
     void 비활성_전략은_422() {
         ParameterRegistryPort registry =

@@ -15,9 +15,10 @@ import java.util.List;
  * <p>003 화면이 요청에 실을 {@code strategy.rulesVersion}(필수)과, 비워 보내지 않고 명시할 기본 비용 버전을 여기서 읽는다(003
  * FR-010). 등록표 행을 그대로 내보낼 뿐 새 값을 만들지 않는다 — 워커가 신뢰하는 것은 접수 때 복사된 규칙 명세이고 이 응답은 그 명세의 이름표다.
  *
- * @param strategyRules 전략 규칙 행. 발표 전에는 규칙을 제자리에서 갱신하므로 전략당 한 행이다(버전 교체와 옛 버전 요청 처리는 Phase 10). 화면은
- *     {@link RulesStatus#REGISTERED} 행의 {@code rulesVersion}을 싣고 {@link
- *     RulesStatus#PENDING_DECISION}이면 '분석하기'를 막는다 — 그래서 상태를 걸러내지 않고 그대로 내보낸다
+ * @param strategyRules 전략 규칙 행. <b>대체되지 않은 행만, 전략당 하나</b>다(T029). 새 버전으로 대체된 옛 행({@link
+ *     RulesStatus#SUPERSEDED})은 새 요청이 고를 수 없어 내보내지 않는다. 화면은 {@link RulesStatus#REGISTERED} 행의
+ *     {@code rulesVersion}을 싣고 {@link RulesStatus#PENDING_DECISION}이면 '분석하기'를 막는다 — 그래서 그 둘은 걸러내지
+ *     않고 그대로 내보낸다
  * @param defaultCostProfile 요청이 {@code costProfileVersion}을 비웠을 때 서버가 쓰는 비용 조건. 화면은 이 {@code
  *     version}을 그대로 명시해 보낸다 — 기본값이 배포로 바뀌어도(T021) 사용자가 본 조건이 그대로 적용되게 한다
  */

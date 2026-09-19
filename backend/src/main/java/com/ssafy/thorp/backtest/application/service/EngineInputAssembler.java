@@ -5,6 +5,7 @@ import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.StrategyRules;
 import java.math.BigDecimal;
@@ -22,6 +23,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>등록표 <b>사본</b>(규칙 명세·비용 값)을 메시지에 실어 보낸다. 워커가 자체 기본값을 두지 않게 하려는 것이고(계약), 나중에 등록표 행을 고쳐도 이미 나간
  * 실행의 해석이 바뀌지 않게 하려는 것이다.
+ *
+ * <p>규칙은 {@link StrategyRulesService#requireExecutable}로 읽는다(T029). 접수와 발행 사이에 규칙이 새 버전으로 대체돼도 이
+ * 실행은 접수 때 고정한 버전의 명세로 나가야 한다 — 지금 버전만 받으면 대기 중이던 실행이 규칙이 바뀐 날 전부 조립 실패로 닫힌다.
  */
 @Component
 public class EngineInputAssembler {
@@ -52,7 +56,7 @@ public class EngineInputAssembler {
                         run.getRandomSeed(),
                         scenario,
                         asMap(spec.get("scenarioParams")),
-                        scenario == Scenario.TARGET_RISK ? targetRiskRules() : null),
+                        scenario == Scenario.TARGET_RISK ? targetRiskRules(plan) : null),
                 new EngineInput.UniverseSpec(
                         (String) spec.get("mappingVersion"), universeItems(run, spec)),
                 marketData(plan),
@@ -106,7 +110,7 @@ public class EngineInputAssembler {
                 plan.rulesVersion() == null
                         ? null
                         : rulesCopy(
-                                strategyRulesService.requireRegistered(
+                                strategyRulesService.requireExecutable(
                                         run.getStrategyId(), plan.rulesVersion()));
         return new EngineInput.AllocationSpec(
                 run.getStrategyId(), rulesVersion, rules, engineParameters(run.getParameters()));
@@ -183,11 +187,24 @@ public class EngineInputAssembler {
      *
      * <p>{@code version} 을 함께 싣는다 — 워커가 결과 {@code versions.scenarioRules} 에 그대로 적어 어느 오버레이 규칙으로
      * 계산했는지 남긴다(FR-028).
+     *
+     * <p>버전은 접수가 실행에 기록한 것을 읽는다(T029). 여기서 지금 버전을 고르면 오버레이 규칙이 바뀐 날 대기 중이던 실행이 접수 때와 다른 규칙으로 계산된다.
+     * 기록이 없으면 지어내지 않는다 — {@code IllegalArgumentException}은 발행기가 영구 실패로 닫는다.
      */
-    private Map<String, Object> targetRiskRules() {
-        StrategyRules overlay = strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1");
+    private Map<String, Object> targetRiskRules(RunPlan plan) {
+        RulesRef recorded = plan.scenarioRules();
+        if (recorded == null
+                || !BacktestService.TARGET_RISK_OVERLAY.equals(recorded.strategyId())) {
+            // 2026-09-15 전 실행은 T029 마이그레이션이 TARGET_RISK_OVERLAY/1 로 채웠다. 그래도 없으면 기록이 깨진 것이다.
+            throw new IllegalArgumentException(
+                    "TARGET_RISK run has no overlay rules recorded in versions.scenarioRules: "
+                            + recorded);
+        }
+        StrategyRules overlay =
+                strategyRulesService.requireExecutable(
+                        recorded.strategyId(), recorded.rulesVersion());
         Map<String, Object> rules = new LinkedHashMap<>(overlay.spec());
-        rules.put("version", overlay.strategyId() + "/" + overlay.rulesVersion());
+        rules.put("version", overlay.ref().value());
         return rules;
     }
 

@@ -30,7 +30,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 | `sectorAllocation.items[].instrumentId` | `string` | 필수 | `{6자리 종목코드}.XKRX`. 중복 금지, 1~50개 |
 | `sectorAllocation.items[].targetWeight` | `string` (decimal) | 조건부 | **`FIXED_WEIGHT`에서만 필수이고 다른 전략에서는 금지**(400). 합이 1이어야 한다 |
 | `strategy.strategyId` | `string` | 필수 | 등록표에 `REGISTERED`인 전략만. 팀 미확정 전략은 422 `RULES_NOT_REGISTERED`(2026-09-17 기준 다섯 전략이 모두 등록됐다) |
-| `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다 |
+| `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다. **지금 등록된 버전만 받는다** — 새 버전으로 대체된 옛 버전(`SUPERSEDED`)이면 409 `REGISTRY_VERSION_CHANGED`이고 `details`에 `strategyId`·`requestedRulesVersion`·`currentRulesVersion`이 실린다(spec 004 T029). 화면은 003 등록표와 §1.11 `GET /backtests/registry`를 함께 다시 받는다 |
 | `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 "등록표 검증의 과도기 상태") |
 | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |
 | `strategy.parameters.maxWeight` | `int` | 선택 | 종목별 비중 상한, **정수 %**(003 축과 같은 단위. 1~100). 배분 세 전략(역변동성·섹터 모멘텀·최소분산) 공통이다. 생략하면 규칙표의 `weightCap`을 쓴다. 접수와 워커가 **같은 값**을 유효 상한으로 읽으므로, 상한 × 종목 수가 투자 비중에 못 미치면 접수에서 422 `VALIDATION_RULE_VIOLATED`다(PD-03 ⑥) |
@@ -126,8 +126,11 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전
 `backtestId`는 새로 만들어진 요청의 것이고 `retryOf`가 원본이다. `publicToken`도 새 요청의 것이라 원본의 토큰과 다르다(spec 005).
 
 - **재시도도 접수를 다시 탄다.** 실행을 복제하지 않고 저장해 둔 요청 사본(`backtest_run.request_spec`)을 접수 명령으로 되돌려 `POST /backtests`와
-  같은 경로를 태운다. 그래서 그 사이 전략 등록표가 내려갔으면 `422 RULES_NOT_REGISTERED`이고, 같은 조건을 이미 누가 돌리고 있으면 새로 계산하지
+  같은 경로를 태운다. 그래서 그 사이 규칙 행이 사라졌으면 `422 RULES_NOT_REGISTERED`이고, 같은 조건을 이미 누가 돌리고 있으면 새로 계산하지
   않고 `resultSource: "JOINED"`(완료돼 있으면 `REUSED`)다 — 동일 버전 판정은 재시도에도 그대로 적용된다(FR-003).
+- **버전 판정만은 새 요청과 다르다**(spec 004 T029). 규칙이 새 버전으로 대체됐어도(`SUPERSEDED`) 원본 버전으로 다시 접수되고, 003 등록표도
+  원본이 판정받은 과거 `registryVersion`을 그대로 받는다. 새 요청이었다면 409였을 옛 버전이 재시도에서는 통과한다 — 규칙이 바뀐 날부터 옛
+  요청을 같은 조건으로 다시 돌릴 방법이 사라지면 안 되기 때문이다. 목표 위험 오버레이 규칙도 원본 실행이 쓴 버전을 쓴다.
 - 비용 조건 버전은 원본 실행의 것을 그대로 쓴다. "같은 조건을 다시"이지 "지금 기본값으로 새로"가 아니다 — 기본 프로필이 바뀐 것을 조용히 따라가면
   비교하려던 두 결과의 비용 전제가 달라진다. 자료 버전은 반대로 지금 값을 쓴다(자료가 늘었으면 그것은 다른 계산이다).
 - 요청자 본인만(남의 요청은 404). 끝나지 않았거나(`QUEUED`·`RUNNING`) 성공한(`COMPLETED`) 분석은 `409 NOT_RETRYABLE`.
@@ -244,8 +247,9 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   기본값을 쓰는데, 그 기본값이 배포로 바뀌면 화면이 보여 준 비용 조건과 실제 적용된 조건이 갈린다. 재현 기준을 요청에
   다 싣는 `rulesVersion` 원칙과 같다. 화면의 "임시 비용 조건" 표시는 `defaultCostProfile.provisional`로 판단한다.
 - 비용 수치는 다른 응답과 같이 **문자열 decimal**이고 단위는 bps다. 컬럼이 `NUMERIC(8,4)`라 소수 네 자리로 나간다(`"5.0000"`). 화면은 문자열을 그대로 보여 주지 말고 수치로 파싱해 표시한다.
-- 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는
-  004 tasks Phase 10이다.
+- **대체된 옛 버전(`SUPERSEDED`)은 나가지 않는다**(spec 004 T029). 규칙이 바뀌면 새 버전 행이 생기고 옛 행은 `SUPERSEDED`가 되는데,
+  옛 행은 이미 접수된 실행의 발행·재시도만 쓰고 새 요청은 고를 수 없다. 그래서 전략당 한 행이라는 계약은 버전이 늘어도 그대로다
+  (DB 부분 유니크 인덱스 `uk_strategy_rules_current`가 보장한다).
 
 ## 2. 결과 조회
 
@@ -422,6 +426,7 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
 | 409 | `NO_PARTIAL_RESULT` | 취소 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소, 대기 중 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |
 | 409 | `NOT_CANCELLABLE` | 완료·실패·이미 취소한 분석의 취소 |
 | 409 | `CANCEL_PENDING` | 같은 조건의 실행이 취소 처리 중(CANCEL 발행 뒤 FINISHED 전)이라 합류할 수 없다. **잠시 뒤 재시도** |
+| 409 | `REGISTRY_VERSION_CHANGED` | 화면이 읽은 뒤 등록표가 바뀌었다. 003 등록표 버전이 달라졌거나(§1 `registryVersion`), 요청한 `rulesVersion`이 새 버전으로 대체됐다(`details.currentRulesVersion`, spec 004 T029). **두 등록표를 다시 받아** 바뀐 내용을 보여 준 뒤 새로 요청한다. 재시도(§1.6)에는 나지 않는다 |
 | 503 | `BROKER_UNAVAILABLE` | 작업 큐에 연결 실패. Job은 저장되지 않으므로 **그대로 재시도해도 안전하다** |
 | 500 | `INTERNAL_ERROR` | 그 외. **`COMPLETED`인데 결과가 없는 데이터 손상**도 여기다 — 재시도하지 말고 백엔드 로그를 본다 |
 
