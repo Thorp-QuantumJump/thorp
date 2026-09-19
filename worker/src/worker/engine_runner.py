@@ -255,6 +255,7 @@ def assemble_output(
         weights_series=execution.weights_series,
         weights_source=execution.weights_source,
         trades=execution.trades,
+        fills=execution.fill_records,
         execution=ExecutionResult(
             order_count=len(orders),
             fill_count=sum(order.status == "FILLED" for order in orders),

@@ -132,12 +132,40 @@ def ts(day: date) -> str:
     return f"{day.isoformat()}T00:00:00Z"
 
 
+def fill_record(
+    seq: int, inst: str, side: str, day: date, px: Decimal, q: int, comm: Decimal, slip: Decimal
+) -> dict:
+    """체결 한 건(spec 004·011 DEP-004-011). 이 목 회계는 슬리피지를 체결가가 아니라 현금에서 뺀다.
+
+    그래서 `price == referencePrice`이고 `cashCost`에 슬리피지가 들어간다. 실제 엔진은 가격 충격을
+    체결가에 싣고 `cashCost`는 수수료 + 세금이다(README §4.3).
+    """
+    return {
+        "fillId": f"FIL-{seq:06d}",
+        "instrumentId": inst,
+        "side": side,
+        "time": ts(day),
+        "price": money(px),
+        "referencePrice": money(px),
+        "quantity": qty(q),
+        "costs": {
+            "commission": money(comm),
+            "spread": "0.00",
+            "slippage": money(slip),
+            "tax": "0.00",
+        },
+        "cashCost": money(comm + slip),
+        "reason": "SIGNAL",
+    }
+
+
 def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
     """`days[:until]` 구간을 회계 처리한 결과. 완료 픽스처는 until=N, 취소 픽스처는 부분 구간."""
     cash = INITIAL_CASH
     holdings: dict[str, int] = {}
     avg_entry: dict[str, Decimal] = {}
     open_trades: dict[int, dict] = {}
+    fills: list[dict] = []
     series: list[dict] = []
     weights: list[dict] = []
     order_count = fill_count = 0
@@ -158,6 +186,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
                 cash -= notional + comm + slip
                 holdings[inst] = holdings.get(inst, 0) + q
                 avg_entry[inst] = px
+                fills.append(fill_record(len(fills) + 1, inst, "BUY", day, px, q, comm, slip))
                 order_count += 1
                 fill_count += 1
                 total_commission += comm
@@ -189,6 +218,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
                 slip = (notional * SLIPPAGE_RATE).quantize(CENT, ROUND_HALF_UP)
                 cash += notional - comm - slip
                 holdings[inst] -= q
+                fills.append(fill_record(len(fills) + 1, inst, "SELL", day, px, q, comm, slip))
                 if holdings[inst] == 0:
                     del holdings[inst]
                     del avg_entry[inst]
@@ -385,6 +415,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
         "series": series,
         "weights": weights,
         "trades": trades,
+        "fills": fills,
         "performance": performance,
         "execution": {
             "orderCount": order_count,
@@ -439,6 +470,7 @@ def engine_output(result: dict, status: str, partial: bool, finished_at: str) ->
         "weightsSeries": result["weights"],
         "weightsSource": "COMPUTED",
         "trades": result["trades"],
+        "fills": result["fills"],
         "execution": result["execution"],
         "costs": result["costs"],
         "liquidation": result["liquidation"],

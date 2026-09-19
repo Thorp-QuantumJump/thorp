@@ -119,12 +119,16 @@ thorp:
     # 길어지고 모든 지표가 움직인다. 키에 들어가는 날짜는 사용자가 요청한 값이라 그대로이므로,
     # 이 값을 올리지 않으면 옛 규칙으로 계산된 결과가 REUSED 로 돌아간다.
     #
+    # 2.3.0(S15P21E205-359): 계산 규칙은 그대로이고 결과에 개별 체결(fills)이 실린다. 숫자가 같은데도
+    # 올리는 이유는 재사용이다 — 올리지 않으면 같은 조건의 새 요청이 체결 기록이 없는 옛 실행으로
+    # REUSED 되어, spec 011 이 "다시 계산"을 요청해도 체결 없는 결과만 돌아온다.
+    #
     # uv.lock(spec 004 T028): 워커 실행환경 지문이다. worker/uv.lock(LF)의 sha256 앞 12자이고,
     # 워커 이미지는 이 lock 만 보고 설치한다(T027). numpy·scipy 가 바뀌면 같은 조건이라도 숫자가
     # 달라질 수 있으므로 lock 이 바뀌면 이 값도 바뀌어 새 실행이 된다. 어긋나면
     # 백엔드 EngineVersionFingerprintTest 와 worker/tests/test_dependency_pins.py 가 올바른 값을
     # 알려 주며 실패한다(CI 는 바뀐 파트만 검사하므로 양쪽에 둔다).
-    engine-version: "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8"
+    engine-version: "nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8"
     # 비용 조건 기본 버전. 요청이 costProfileVersion 을 비우면 이 값을 쓴다.
     #
     # KR-ETF-2026-09 는 PD-07 확정값이다(spec 004 T021 마이그레이션). 바꿀 때는 행을 고치지 말고 새 버전

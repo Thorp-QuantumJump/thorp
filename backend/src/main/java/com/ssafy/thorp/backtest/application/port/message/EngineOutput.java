@@ -18,6 +18,8 @@ import java.util.Map;
  * exceptions}·{@code versions} 등)은 모두 nullable이다. 단일 종목 데모 엔진은 채우지 않고, 다종목 리밸런싱 엔진(spec 004
  * T006·T008)이 채운다.
  *
+ * @param fills 개별 체결 목록(spec 011 DEP-004-011). null = 체결을 기록하지 않는 워커가 낸 결과, 빈 리스트 = 체결이 없었다. 둘을 섞지
+ *     않는다 — 기록이 없는 결과를 "체결 0건"으로 읽으면 구간 비용이 0으로 계산된다
  * @param performance null = 실패로 계산 불가
  * @param execution null = 실패로 계산 불가
  */
@@ -28,6 +30,7 @@ public record EngineOutput(
         List<WeightsPoint> weightsSeries,
         WeightsSource weightsSource,
         List<TradeResult> trades,
+        List<FillResult> fills,
         ExecutionResult execution,
         Costs costs,
         Liquidation liquidation,
@@ -152,6 +155,32 @@ public record EngineOutput(
             BigDecimal returnRate,
             TradeReason reason,
             LocalDate plannedDate) {}
+
+    /**
+     * 개별 체결 한 건. {@link TradeResult}는 진입·청산을 묶은 단위라 묶음이 닫히면 양쪽 비용이 합쳐지고 세금은 실현 손익에만 들어간다. 임의 구간의
+     * 거래·비용·현금 흐름을 다시 세려면 체결 단위가 있어야 한다.
+     *
+     * @param price 실제 체결가(호가차·슬리피지 반영)
+     * @param referencePrice 가격 충격 전 기준가
+     * @param cashCost 체결 대금과 별도로 현금에서 빠진 비용. 실제 엔진에서는 수수료 + 세금이다
+     * @param plannedDate 거래 불가로 미룬 경우 원래 체결 예정일. null = 미룸 없음
+     */
+    public record FillResult(
+            String fillId,
+            String instrumentId,
+            FillSide side,
+            Instant time,
+            BigDecimal price,
+            BigDecimal referencePrice,
+            BigDecimal quantity,
+            FillCosts costs,
+            BigDecimal cashCost,
+            TradeReason reason,
+            LocalDate plannedDate) {}
+
+    /** 체결 한 건의 비용 네 갈래. 합계 블록 {@link Costs}와 같은 갈래다. */
+    public record FillCosts(
+            BigDecimal commission, BigDecimal spread, BigDecimal slippage, BigDecimal tax) {}
 
     public record ExecutionResult(
             int orderCount,

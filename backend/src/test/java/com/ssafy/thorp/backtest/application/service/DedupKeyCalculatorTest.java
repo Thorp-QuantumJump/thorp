@@ -40,7 +40,7 @@ class DedupKeyCalculatorTest {
                 "FIXTURE-three_etf_24m",
                 "SPLIT-1",
                 "PROVISIONAL-DEMO-1",
-                "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8",
+                "nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8",
                 "FULL_PERIOD",
                 null,
                 null);
@@ -143,7 +143,7 @@ class DedupKeyCalculatorTest {
                                     input ->
                                             withEngineVersion(
                                                     input,
-                                                    "nautilus_trader 1.219.0 / worker 2.2.0"
+                                                    "nautilus_trader 1.219.0 / worker 2.3.0"
                                                             + " / uv.lock 000000000000")))
                     .isNotEqualTo(calculator.calculate(base()));
         }

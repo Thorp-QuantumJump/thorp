@@ -100,6 +100,13 @@ public class BacktestResultJpaEntity extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private EngineOutput.Versions versions;
 
+    /**
+     * 개별 체결({@code backtest_fill})을 기록한 결과인지. 체결 행이 없는 것만으로는 "체결이 없었다"와 "기록하지 않았다"를 가를 수 없어 따로
+     * 둔다(spec 011 DEP-004-011).
+     */
+    @Column(nullable = false)
+    private boolean fillsRecorded;
+
     protected BacktestResultJpaEntity() {}
 
     private BacktestResultJpaEntity(BacktestRunJpaEntity job, SaveBacktestResultCommand command) {
@@ -124,6 +131,7 @@ public class BacktestResultJpaEntity extends BaseEntity {
         this.analytics = output.analytics();
         this.exceptions = output.exceptions();
         this.versions = output.versions();
+        this.fillsRecorded = output.fills() != null;
     }
 
     /** 계약 DTO → 엔티티. 결과 도메인 모델이 없으므로 별도 Mapper 없이 여기서 매핑한다. */

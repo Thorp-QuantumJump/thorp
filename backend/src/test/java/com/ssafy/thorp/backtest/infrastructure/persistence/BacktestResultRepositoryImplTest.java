@@ -15,6 +15,7 @@ import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
 import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -141,6 +142,57 @@ class BacktestResultRepositoryImplTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("개별 체결은 행으로 저장되고 구간 조회가 체결 순서대로 계약 값 그대로 돌려준다")
+    void savesFillsAsRowsAndReadsThemByPeriod() {
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+        List<EngineOutput.FillResult> fills = event.payload().engineOutput().fills();
+        assertThat(fills).hasSizeGreaterThan(2);
+        Long jobId = newJobId();
+
+        saveAndClear(command(jobId, event));
+
+        assertThat(resultRepository.findFills(jobId, null, null)).contains(fills);
+        // from 은 포함, to 는 포함하지 않는다 — 두 번째 체결 시각부터 마지막 체결 시각 앞까지
+        Instant from = fills.get(1).time();
+        Instant to = fills.get(fills.size() - 1).time();
+        assertThat(resultRepository.findFills(jobId, from, to))
+                .contains(fills.subList(1, fills.size() - 1));
+        // 기록은 했는데 그 구간에 체결이 없으면 빈 리스트다 — "기록하지 않았다"(빈 Optional)와 다르다
+        assertThat(resultRepository.findFills(jobId, to.plusSeconds(1), null)).contains(List.of());
+    }
+
+    @Test
+    @DisplayName("체결을 기록하지 않은 결과와 결과가 없는 실행의 체결 조회는 빈 Optional이다")
+    void distinguishesUnrecordedFillsFromNoFills() {
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+        EngineOutput output = event.payload().engineOutput();
+        EngineOutput withoutFills =
+                new EngineOutput(
+                        output.run(),
+                        output.performance(),
+                        output.portfolioSeries(),
+                        output.weightsSeries(),
+                        output.weightsSource(),
+                        output.trades(),
+                        null,
+                        output.execution(),
+                        output.costs(),
+                        output.liquidation(),
+                        output.analytics(),
+                        output.exceptions(),
+                        output.versions(),
+                        output.diagnostics());
+        Long jobId = newJobId();
+
+        saveAndClear(
+                new SaveBacktestResultCommand(
+                        jobId, event.executionId(), event.eventId(), withoutFills, null));
+
+        assertThat(resultRepository.findFills(jobId, null, null)).isEmpty();
+        assertThat(resultRepository.findFills(newJobId(), null, null)).isEmpty();
+    }
+
+    @Test
     @DisplayName("FAILED 픽스처는 오류 정보만 채우고 성과·집계·벤치마크는 null, 거래는 0건이다")
     void savesFailedFixture() {
         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedFailed();
@@ -173,6 +225,7 @@ class BacktestResultRepositoryImplTest extends RepositoryTestSupport {
                         output.weightsSeries(),
                         output.weightsSource(),
                         List.of(first, first),
+                        output.fills(),
                         output.execution(),
                         output.costs(),
                         output.liquidation(),

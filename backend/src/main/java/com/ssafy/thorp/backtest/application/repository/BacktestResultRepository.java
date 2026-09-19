@@ -95,4 +95,16 @@ public interface BacktestResultRepository {
      */
     Page<EngineOutput.TradeResult> findTrades(
             Long runId, FindBacktestTradesQuery query, Instant visibleBefore);
+
+    /**
+     * 구간 안의 개별 체결을 체결 순서대로 돌려준다(spec 011 DEP-004-011).
+     *
+     * <p><b>빈 Optional 과 빈 리스트는 다른 뜻이다.</b> 빈 Optional 은 결과가 없거나 체결을 기록하지 않은 결과(이 기능 전의 실행, 옛
+     * 워커)이고, 빈 리스트는 기록했는데 그 구간에 체결이 없었다는 뜻이다. 앞의 것을 뒤의 것으로 읽으면 구간 비용이 0 으로 계산된다 — 호출자는 빈 Optional 을
+     * "다시 계산해야 하는 실행"으로 다룬다.
+     *
+     * @param from 포함. null = 제한 없음
+     * @param to 포함하지 않음. null = 제한 없음
+     */
+    Optional<List<EngineOutput.FillResult>> findFills(Long runId, Instant from, Instant to);
 }
