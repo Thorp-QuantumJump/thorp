@@ -122,7 +122,8 @@ thorp:
     # uv.lock(spec 004 T028): 워커 실행환경 지문이다. worker/uv.lock(LF)의 sha256 앞 12자이고,
     # 워커 이미지는 이 lock 만 보고 설치한다(T027). numpy·scipy 가 바뀌면 같은 조건이라도 숫자가
     # 달라질 수 있으므로 lock 이 바뀌면 이 값도 바뀌어 새 실행이 된다. 어긋나면
-    # worker/tests/test_dependency_pins.py 가 올바른 값을 알려 주며 실패한다.
+    # 백엔드 EngineVersionFingerprintTest 와 worker/tests/test_dependency_pins.py 가 올바른 값을
+    # 알려 주며 실패한다(CI 는 바뀐 파트만 검사하므로 양쪽에 둔다).
     engine-version: "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8"
     # 비용 조건 기본 버전. 요청이 costProfileVersion 을 비우면 이 값을 쓴다.
     #
