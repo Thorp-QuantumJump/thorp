@@ -6,13 +6,17 @@
 
 ## 0. 공통
 
-- **사례 식별자** `caseId` = `{snapshotKey}~{endMonth}` (research R6). 서버는 `~`로 나눠 010 표를
-  조회한다. 형식이 틀리면 `400 INVALID_INPUT`.
+- **사례 식별자** `caseId` = `{snapshotKey}~{endMonth}` (research R6). `snapshotKey`는 010의 6조각 키
+  (`{mode}:{scope}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}`)이며 011은 분해하지 않고
+  문자열로만 다룬다. `endMonth`는 `YYYY-MM`이다. 서버는 **마지막** `~`로 나눠 010을 조회한다. 형식이
+  틀리면 `400 INVALID_INPUT`. `caseId`는 경로 변수로 쓰지 않고 항상 질의 인자나 본문으로 보낸다.
+- **검색 식별자 두 가지**: 010 API의 `searchId`는 snapshot 키(= 위 `snapshotKey`)이고, 011의
+  `linkSearchId`(`RLS-…`)는 §1b가 만드는 연결 기록이다. 서로 다른 값이다.
 - **비교 묶음**은 `base`(필수)·`compare`(선택) 두 공개 토큰(005 `publicToken`, 32자 소문자 16진)
   이다. 서버가 실행으로 푼다. 만료된 토큰은 `410 RESULT_EXPIRED`(005 코드 재사용).
 - 모든 응답에 `basis: {kind: "HISTORICAL_REVISION"}`가 있다(FR-015). 화면은 이 값을 읽어 "최신
   개정자료를 이용한 역사 탐색"을 표시한다.
-- **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 `401 LOGIN_REQUIRED`(FR-025). 계산은
+- **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 기존 `401 AUTHENTICATION_REQUIRED`(014 코드 재사용, FR-025). 계산은
   시작되지 않는다.
 
 ## 1. `GET /regime-links/availability` — 표시 후보에 가용성 판정을 붙인다
@@ -34,8 +38,8 @@
 ```json
 {
   "basis": {"kind": "HISTORICAL_REVISION"},
-  "search": {"snapshotKey": "FIELD:LABOR:2026-04:r2", "mode": "field", "field": "LABOR",
-             "baselineMonth": "2026-04", "status": "NEAREST_ONLY"},
+  "search": {"snapshotKey": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1", "mode": "field", "field": "LABOR",
+             "baselineMonth": "2026-07", "status": "NEAREST_ONLY"},
   "bundle": {
     "runs": [
       {"publicToken": "9f2c…", "role": "BASE", "strategyId": "FIXED_WEIGHT", "strategyName": "내가 정한 비중",
@@ -53,17 +57,17 @@
     "minPostTradingDays": 21
   },
   "cases": [
-    {"caseId": "FIELD:LABOR:2026-04:r2~2012-03", "endMonth": "2012-03", "rank": 1, "distance": "0.412938571034",
+    {"caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03", "endMonth": "2012-03", "rank": 1, "distance": "0.412938571034",
      "postWindow": {"d0": "2012-04-02", "d21": "2012-05-02", "d63": "2012-07-03", "completedTradingDays": 63, "complete21": true, "complete63": true},
      "availability": {"state": "NORMAL"},
      "perRun": [{"publicToken": "9f2c…", "state": "NORMAL"}, {"publicToken": "b41e…", "state": "NORMAL"}],
      "shownInFiltered": true},
-    {"caseId": "FIELD:LABOR:2026-04:r2~2005-11", "endMonth": "2005-11", "rank": 2, "distance": "0.455…",
+    {"caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11", "endMonth": "2005-11", "rank": 2, "distance": "0.455…",
      "postWindow": {"d0": "2005-12-01", "d21": "2005-12-30", "d63": "2006-03-06", "completedTradingDays": 63, "complete21": true, "complete63": true},
      "availability": {"state": "DATA_INSUFFICIENT", "reason": "UNLISTED"},
      "perRun": [{"publicToken": "9f2c…", "state": "DATA_INSUFFICIENT", "reason": "UNLISTED"}, {"publicToken": "b41e…", "state": "DATA_INSUFFICIENT", "reason": "UNLISTED"}],
      "shownInFiltered": false},
-    {"caseId": "FIELD:LABOR:2026-04:r2~2026-05", "endMonth": "2026-05", "rank": 3, "distance": "0.47…",
+    {"caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-05", "endMonth": "2026-05", "rank": 3, "distance": "0.47…",
      "postWindow": {"d0": "2026-06-01", "d21": "2026-06-30", "d63": null, "completedTradingDays": 34, "complete21": true, "complete63": false},
      "availability": {"state": "OUT_OF_PERIOD"},
      "perRun": [{"publicToken": "9f2c…", "state": "OUT_OF_PERIOD"}, {"publicToken": "b41e…", "state": "OUT_OF_PERIOD"}],
@@ -85,7 +89,7 @@
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
   범위도 200이다(FR-019).
 
-## 1a. `GET /regime-links/cases/{caseId}/window`
+## 1a. `GET /regime-links/case-window?caseId=`
 
 실행 토큰 없이 사례의 postWindow(d0·d21·d63·lastAvailable·completedTradingDays)를 조회한다.
 003이 실행 생성 전 기간 제약에 사용한다. 010 snapshotKey를 고정하며 404는 없는 사례,
@@ -93,14 +97,14 @@
 
 ## 1b. `POST /regime-link-searches` — 목록 확정·변경 기록 (로그인 필요)
 
-요청: `{clientRequestId, snapshotKey, base, compare?, entryPath, fullSearchShown, previousSearchId?}`.
+요청: `{clientRequestId, snapshotKey, base, compare?, entryPath, fullSearchShown, previousLinkSearchId?}`.
 snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 조용히 바꾸지 않는다.
 서버가 §1과 같은 가용성 판정을 수행하고 목록이 비어도 기록한다. 응답 201은 §1 응답에
-`searchId`와 변경 시 `bundleChanged: {added, removed, excludedCount}`를 더한다. 유지율은 DB 전용이다.
+`linkSearchId`와 변경 시 `bundleChanged: {added, removed, excludedCount}`를 더한다. 유지율은 DB 전용이다.
 이전 검색은 같은 요청자·snapshotKey·경로인지 검증하고 다르면 404로 거절한다. 다른 탭의 직전
 기록을 임의 선택하지 않는다. 필터 키가 같으면 비교 묶음 변경 알림이 없다.
 같은 요청자·clientRequestId의 같은 본문 재시도는 200으로 기존 결과를 반환하며 기록을 중복 생성하지
-않는다. 같은 키에 다른 본문이면 409 INVALID_INPUT. 전체 탐색 전환은 새 clientRequestId로 기록한다.
+않는다. 같은 키에 다른 본문이면 `400 INVALID_INPUT`(멱등 키 재사용 불일치). 전체 탐색 전환은 새 clientRequestId로 기록한다.
 익명은 §1 GET 응답과 현재 탐색 흐름의 이전 목록으로 변경을 표시하고, 로그인 후 동일 조건으로
 이 POST를 호출한다. POST를 못 했다는 이유로 검색을 막지 않는다.
 
@@ -108,15 +112,15 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 
 ```json
 {
-  "searchId": "RLS-20260918-000031",
-  "caseId": "FIELD:LABOR:2026-04:r2~2012-03",
+  "linkSearchId": "RLS-20260918-000031",
+  "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03",
   "scenario": "CONTINUOUS",
   "confirmFullPeriod": false
 }
 ```
 
 - `scenario`: `CONTINUOUS`(기본 화면) \| `FRESH_CASH`(그날 현금 시작, 사용자가 켤 때만).
-- 서버는 요청자의 searchId를 조회해 비교 묶음·snapshot·경로를 확정한다. 다른 사용자 기록은 404, 해당 snapshot 표시 후보 밖 사례도 404다. 검색 기록이나 변경 알림을 이 요청에서 생성하지 않는다.
+- 서버는 요청자의 linkSearchId를 조회해 비교 묶음·snapshot·경로를 확정한다. 다른 사용자 기록은 404, 해당 snapshot 표시 후보 밖 사례도 404다. 검색 기록이나 변경 알림을 이 요청에서 생성하지 않는다.
 - 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만든다(`UNIQUE(run, case, scenario)`).
   이미 `COMPLETED`면 작업을 만들지 않고 즉시 결과를 돌려준다(FR-010 재사용).
 
@@ -125,7 +129,7 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 ```json
 {
   "basis": {"kind": "HISTORICAL_REVISION"},
-  "searchId": "RLS-20260918-000031",
+  "linkSearchId": "RLS-20260918-000031",
   "links": [
     {"linkId": "RL-20260918-000101", "publicToken": "9f2c…", "scenario": "CONTINUOUS", "status": "QUEUED"},
     {"linkId": "RL-20260918-000102", "publicToken": "b41e…", "scenario": "CONTINUOUS", "status": "COMPLETED"}
@@ -152,14 +156,14 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 ### `scenario=FRESH_CASH`
 
 서버가 004 접수 서비스로 `scenario=FRESH_CASH_FROM`, `scenarioParams.startDate=d0`, `end=d63`
-(미완성이면 `dataAsOf`), `start=d0−워밍업`, 나머지는 기준 실행 사본으로 요청한다. 링크는
+(미완성이면 `lastAvailable`), `start=d0−워밍업`, 나머지는 기준 실행 사본으로 요청한다. 링크는
 `PENDING_RUN` → 실행 완료 후 `QUEUED`. 응답에 004 진행 상태를 그대로 싣는다(§3).
 
 ### 오류
 
 | code | HTTP | 뜻 |
 |---|---|---|
-| `LOGIN_REQUIRED` | 401 | 익명 요청. 계산 없음 |
+| `AUTHENTICATION_REQUIRED` | 401 | 익명 요청. 계산 없음(014 코드 재사용) |
 | `INVALID_INPUT` | 400 | 토큰 형식·`caseId` 형식·알 수 없는 `scenario` |
 | `RESOURCE_NOT_FOUND` | 404 | 사례가 010 표시 후보에 없음(표시 후보 밖 사례는 열 수 없다) |
 | `RESULT_EXPIRED` | 410 | 비로그인 결과 토큰 만료(005) |
@@ -172,7 +176,7 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 {
   "basis": {"kind": "HISTORICAL_REVISION", "dataVersion": "KRX-2026-09-09"},
   "linkId": "RL-20260918-000101", "publicToken": "9f2c…", "originPublicToken": "9f2c…",
-  "caseId": "FIELD:LABOR:2026-04:r2~2012-03", "scenario": "CONTINUOUS",
+  "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03", "scenario": "CONTINUOUS",
   "status": "COMPLETED",
   "postWindow": {"d0": "2012-04-02", "d21": "2012-05-02", "d63": "2012-07-03", "completedTradingDays": 63, "complete21": true, "complete63": true},
   "availability": {"state": "NORMAL"},

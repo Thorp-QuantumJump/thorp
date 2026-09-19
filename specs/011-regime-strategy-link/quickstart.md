@@ -23,8 +23,9 @@ cd worker && MARKET_DATA_URL=… RABBITMQ_URL=… python -m worker.regime_link_m
 cd frontend && npm run dev
 ```
 
-- 010 M6·M7이 dev에 없으면 Backend는 `thorp.regimelink.regime-source=fixture`로 010 읽기 대역을
-  쓴다(plan R8). **prod 프로파일에서 `fixture`면 기동 실패**여야 한다(S8).
+- 010 M6·M7은 dev에 병합되어 있고 011은 대역을 두지 않는다(research R8). 010 표는 사전 계산 배치가
+  채우므로 수동 확인(S5~S7)은 010 검색 결과가 있는 환경을 전제로 한다. 자동 테스트는 Testcontainers에
+  010 표 시드 행을 넣는다.
 - 001 적재 표에 대표 ETF 일별 자료와 KOSPI 일별 자료가 있어야 한다. 없으면 워커 픽스처
   (`worker/examples/three_etf_24m/`)로 S1~S3만 돈다.
 
@@ -60,7 +61,7 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 ### S4. 가용성 판정이 표시 후보 안에서만 걸린다 (M4)
 
-- 실행: 010 대역(또는 실제 표)에 표시 후보 10개를 두고
+- 실행: 010 표(`regime_search_snapshot`·`regime_search_case`)에 표시 후보 10개 시드 행을 두고
   `GET /api/regime-links/availability?base=…&compare=…&mode=field&field=LABOR&entryPath=STRATEGY_RESULT`
 - 기대: `cases[]`가 정확히 10개이고 `rank`가 010 값 그대로. 상장 전 사례는 `DATA_INSUFFICIENT/UNLISTED`
   · `shownInFiltered=false` · `excludedCount`에 포함. 완성 21 미만 사례는 `POST_INCOMPLETE`로 제외.
@@ -70,8 +71,8 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 ### S5. 링크 생성·재사용·확인·로그인 (M5)
 
-1. 익명으로 `POST /api/regime-links` → `401 LOGIN_REQUIRED`, `regime_link` 행 0, 큐 메시지 0.
-2. 로그인 후 POST /api/regime-link-searches로 목록과 searchId를 만들고, 그 searchId로 링크 요청(`CONTINUOUS`, 사례 NORMAL) → `202`, 링크 2개(`QUEUED`), 큐에 메시지 2개.
+1. 익명으로 `POST /api/regime-links` → `401 AUTHENTICATION_REQUIRED`, `regime_link` 행 0, 큐 메시지 0.
+2. 로그인 후 POST /api/regime-link-searches로 목록과 linkSearchId를 만들고, 그 linkSearchId로 링크 요청(`CONTINUOUS`, 사례 NORMAL) → `202`, 링크 2개(`QUEUED`), 큐에 메시지 2개.
    워커가 처리하면 `GET /api/regime-links/{linkId}`가 `COMPLETED`와 `result`를 돌려준다.
 3. 같은 요청을 다시 → `202`, 두 링크 모두 `COMPLETED`, **큐 메시지 0**(재사용).
 4. 분석 기간 밖 사례에 `confirmFullPeriod=false` → `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`, 계산 0.
@@ -104,11 +105,10 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 - 정적 검사: `npm test`의 `forbiddenPhrases.test.ts`가 `components/regimelink/` 전 파일에서 금지
   표현 0건.
 
-### S8. 대역 격리 (M4·M8)
+### S8. (결번)
 
-- 실행: `THORP_ENV=prod` + `thorp.regimelink.regime-source=fixture`로 기동.
-- 기대: 기동 실패. `regimelink/infrastructure/fixture/` 디렉터리를 지우고 `regime-source=regime`
-  으로 빌드하면 운영 코드가 컴파일된다(010 M6 머지 후 폐기 예행연습).
+- 010 읽기 대역을 두지 않게 되어 대역 격리 시나리오를 삭제했다(research R8, 2026-09-20). 번호는
+  재사용하지 않는다.
 
 ### S9. 기록 항목 (FR-023, SC-006)
 
@@ -130,8 +130,8 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 - 구간 전 매수→구간 내 일부 매도·분배금·종료 보유·청산 비용: R3 독립 계산과 손익 합·회전율 일치.
   전체 손익 0은 기여도 생략, 이익/손실 종목 혼합은 모두 포함. FRESH_CASH는 baseline 자산 행 불필요.
 - 검색 생성 POST 뒤 사례 열기 없이 종료: 변경 기록·알림 존재. 새 목록 0건도 동일하고 큐 메시지 0건.
-  다른 탭의 검색은 previousSearchId 없이 섞지 않음. 같은 clientRequestId 재시도는 행 1개.
+  다른 탭의 검색은 previousLinkSearchId 없이 섞지 않음. 같은 clientRequestId 재시도는 행 1개.
 - 익명 검색·기존 공개 결과 조회는 가능, 계산·검색 기록 POST는 401. 로그인 후 같은 사례·조건 복귀.
   익명 목록 변경은 현재 탐색 흐름에서 표시하며 서버 개인 기록은 만들지 않음.
-- 사례 계산 요청은 위 검색 생성으로 얻은 searchId를 사용한다. 구형 base/compare 직접 POST 예시는
-  searchId로 치환하여 검증한다. 회전율의 ANNUALIZED_252 단위가 표시된다.
+- 사례 계산 요청은 위 검색 생성으로 얻은 linkSearchId를 사용한다. 구형 base/compare 직접 POST 예시는
+  linkSearchId로 치환하여 검증한다. 회전율의 ANNUALIZED_252 단위가 표시된다.

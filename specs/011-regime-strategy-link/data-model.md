@@ -42,7 +42,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 | 컬럼 | 타입 | 규칙 |
 |---|---|---|
 | `id` | BIGINT PK | SEQUENCE. 외부 식별자는 `search_id` |
-| `search_id` | VARCHAR(32) NOT NULL UNIQUE | `RLS-YYYYMMDD-NNNNNN`. 내부 PK를 노출하지 않는다(ADR-0002 D2) |
+| `search_id` | VARCHAR(32) NOT NULL UNIQUE | `RLS-YYYYMMDD-NNNNNN`. 내부 PK를 노출하지 않는다(ADR-0002 D2). API의 이름은 `linkSearchId`다 — 010 API의 `searchId`(snapshot 키)와 구분한다 |
 | `owner_user_id` | BIGINT NOT NULL | 목록 확정 시 로그인 사용자 기록을 만든다(FR-021·025). 익명은 행을 만들지 않는다 |
 | `entry_path` | VARCHAR(24) NOT NULL | `MARKET_FLOW` \| `STRATEGY_RESULT` — 두 경로의 결과를 따로 보존(FR-004) |
 | `snapshot_id` | BIGINT → `regime_search_snapshot(id)` ON DELETE SET NULL | 010 revision 고정 |
@@ -76,7 +76,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 | `snapshot_key` | VARCHAR(200) NOT NULL | 사례 식별자 앞부분(사본) |
 | `end_month` | DATE NOT NULL | 사례 식별자 뒷부분. 010 `regime_search_case.end_month`와 같은 뜻 |
 | `scenario` | VARCHAR(16) NOT NULL | `CONTINUOUS`(전체 기간 연속 운용의 구간) \| `FRESH_CASH`(그날 현금 시작) |
-| `post_window` | JSONB NOT NULL | `{d0, d21, d63, dataAsOf, completedTradingDays, complete21, complete63}` — d0 = 관측 종료 후 첫 거래일. research R4 달력으로 산정 |
+| `post_window` | JSONB NOT NULL | `{d0, d21, d63, lastAvailable, completedTradingDays, complete21, complete63}` — d0 = 관측 종료 후 첫 거래일. research R4 달력으로 산정. `lastAvailable`은 이 사례 구간 안에서 자료가 있는 마지막 거래일이며, 필터 `definition.dataAsOf`(자료 전체의 마감일)와 다른 값이다 |
 | `availability` | JSONB NOT NULL | `{state: NORMAL\|DATA_INSUFFICIENT\|POST_INCOMPLETE\|OUT_OF_PERIOD, reason?: UNLISTED\|WARMUP_SHORT\|DELISTED, partial?: true, delistedOn?}` — 판정 시점의 저장 값. 재판정하지 않는다 |
 | `status` | VARCHAR(16) NOT NULL | `PENDING_RUN` \| `QUEUED` \| `RUNNING` \| `COMPLETED` \| `FAILED`. §7 |
 | `failure` | JSONB | `{code, message}`. code ∈ `INPUT_TOO_LARGE` `DATA_INSUFFICIENT` `ENGINE_ERROR` `SYSTEM_FAILURE` `RUN_FAILED`(입력 실행이 실패) |
@@ -152,7 +152,7 @@ regime_link_filter ──< regime_link_search ──< regime_link ──1:1─�
 
 ## 9. 마이그레이션 메모
 
-파일 하나(`V{YYYYMMDDHHMMSS}__regime_link.sql`). 표 넷과 인덱스·제약을 만든다. 010 표에 FK를
-걸려면 010 M6 마이그레이션이 먼저 적용돼야 한다 — **010 M6 머지 전이면 `snapshot_id` FK를 이
-마이그레이션에서 만들지 않고 컬럼만 두며, FK는 010 M6 뒤 별도 마이그레이션으로 덧붙인다**(운영에
-적용된 변경은 수정하지 않는다, constitution 스키마 규칙). 되돌릴 수 없는 변경은 없다.
+파일 하나(`V{YYYYMMDDHHMMSS}__regime_link.sql`). 표 넷과 인덱스·제약을 만든다. 010 M6 마이그레이션
+(`V20260917143000__regime_search.sql`)이 dev에 적용되어 있으므로 `snapshot_id` →
+`regime_search_snapshot(id)` FK를 이 마이그레이션에서 `ON DELETE SET NULL`로 건다. 파일 버전은 그
+마이그레이션보다 뒤여야 한다. 되돌릴 수 없는 변경은 없다.

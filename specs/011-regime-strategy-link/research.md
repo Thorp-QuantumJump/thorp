@@ -163,8 +163,9 @@ id가 되어 기록과 주소가 끊긴다. 내부 PK를 주소에 노출하지 
 ## R7. 로그인 요구를 어디서 거나
 
 **결정**: `SecurityConfig`는 `/auth/me` 밖을 전부 `permitAll`로 두는 현행을 유지하고, **쓰기
-엔드포인트의 컨트롤러가 `CurrentRequester`로 요청자를 확인**한다. 익명이면 `401 LOGIN_REQUIRED`
-(`ErrorCode`에 spec 011 블록으로 추가). 대상은 `POST /regime-links`(현금 시작 시나리오도 이 요청의
+엔드포인트의 컨트롤러가 `CurrentRequester.requireRequesterId()`로 요청자를 확인**한다. 익명이면 기존
+`401 AUTHENTICATION_REQUIRED`가 그대로 나간다(014 코드 재사용. 011은 `ErrorCode`를 추가하지 않는다.
+프론트 공용 클라이언트가 이 코드로 로그인 만료를 처리한다). 대상은 `POST /regime-links`(현금 시작 시나리오도 이 요청의
 `scenario` 필드로 켠다)와 `POST /regime-links/{id}/retry` 및 로그인 사용자의 `POST /regime-link-searches`다. 익명 검색은 GET으로 계속 제공한다. 조회(`GET`)는 익명 허용이다(FR-025).
 
 **근거**: `backtest`·`result`·`learning` 컨트롤러가 모두 같은 방식으로 요청자를 읽고 있어 규칙이
@@ -174,18 +175,24 @@ id가 되어 기록과 주소가 끊긴다. 내부 PK를 주소에 노출하지 
 **버린 선택지**: 프론트에서만 막기 — 직접 호출하면 계산이 시작되므로 FR-025의 "계산을 시작하지
 않는다"를 보장하지 못한다.
 
-## R8. 010·005가 미완인 상태에서 011을 어떻게 진행하나
+## R8. 010·005 위에 011을 어떻게 얹나
 
-**결정**: 011은 **010의 M6(마이그레이션 + 조회 API)과 005의 공개 토큰(머지됨)에 의존한다.** 010
-M6이 dev에 들어오기 전에는 Backend `regimelink`가 010 표를 읽는 리포지토리를 **인터페이스 +
-픽스처 구현**으로 두고, 마이그레이션은 011 표만 만든다(010 표를 011이 만들지 않는다). Frontend는
-010의 결과 목록 컴포넌트가 없으면 011 화면이 목록을 그릴 수 없으므로 **FE 묶음은 010 M7 이후**로
-순서를 둔다(plan 구현 순서). 계산 규칙(워커 잘라내기)과 Backend 판정·계약은 010 없이 검증할 수
-있어 먼저 간다.
+**결정(2026-09-20 수정)**: 010의 M6(마이그레이션 + 조회 API)·M7(검색 화면)과 005의 공개 토큰은 **dev에
+병합되어 있다.** Backend `regimelink`는 010 표를 직접 매핑하지 않고 010의
+`regime.application.repository.RegimeSnapshotRepository`(`findLatest`·`findByKey`)를 읽기 전용으로
+호출해 표시 후보(≤10)의 순위·거리·종료월과 검색 상태를 011 모델로 옮긴다. 픽스처 대역과 출처 전환
+프로퍼티를 두지 않는다. 011 마이그레이션은 011 표만 만들고 `snapshot_id` FK를 바로 건다. Frontend는
+010의 `components/regime/` 목록·상세 컴포넌트를 재사용한다. 순서는 계산 → 판정 → 화면을 유지한다.
 
-**근거**: `dev`에 `regime` 패키지가 없고 `feat(be)/282-regime-search-api`가 진행 중이다. 010이
-`postPeriod.available=false`를 011 자리로 비워 두었으므로 계약 충돌은 없다. 007이 화면부터 만들어
-숫자를 주입하게 된 전철(010 plan)을 피하기 위해 계산 → 판정 → 화면 순서를 지킨다.
+**근거**: 현재 dev에 `backend/.../regime/` 패키지, `V20260917143000__regime_search.sql`
+(`regime_search_snapshot`·`regime_search_case`), `frontend/src/pages/RegimeSearchPage.tsx`와
+`components/regime/CaseList.tsx`가 있다. 010이 `postPeriod.available=false`를 011 자리로 비워
+두었으므로 계약 충돌은 없다. 007이 화면부터 만들어 숫자를 주입하게 된 전철(010 plan)을 피하기 위해
+계산 → 판정 → 화면 순서를 지킨다. 010 표는 사전 계산 배치가 채우므로 자동 테스트는 Testcontainers에
+시드 행을 넣어 검증한다.
+
+**버린 선택지**: 010 표를 읽는 픽스처 대역(`infrastructure/fixture/`)과 `regime-source` 전환 — 010이
+병합되기 전의 계획이었다. 실제 표가 있는데 대역을 두면 운영 차단 가드와 폐기 절차만 늘어난다.
 
 ## R9. 성능 목표
 
@@ -228,8 +235,8 @@ M6이 dev에 들어오기 전에는 Backend `regimelink`가 010 표를 읽는 �
 | 가용성 판정·필터 키 | Backend 메타데이터 조회, sha256 키, KOSPI 달력 (R4) |
 | 현금 시작·전체 기간 재계산 | 004 접수 서비스 호출, 완료 후 잘라내기 작업 연쇄 (R5) |
 | 진입 계약·사례 식별자 | `(snapshotKey, endMonth)`, 주소 둘 (R6) |
-| 로그인 | 컨트롤러 요청자 확인, `401 LOGIN_REQUIRED` (R7) |
-| 010·005 의존 | 010 M6·M7 뒤에 BE 조회·FE, 판정은 먼저, 계산은 DEP-004-011 검증 뒤 (R8) |
+| 로그인 | 컨트롤러 요청자 확인, 기존 `401 AUTHENTICATION_REQUIRED` 재사용 (R7) |
+| 010·005 의존 | 010 M6·M7과 005 공개 토큰은 dev에 병합됨. 010 리포지토리를 읽고 대역을 두지 않음. 계산은 DEP-004-011 검증 뒤 (R8) |
 | 성능 | 측정 목표만, 004 측정 체계 재사용 (R9) |
 | 006 경계 | 011 표에 기록, 006이 읽음 (R10) |
 | 문구 통제 | 금지 표현 정적 검사 + 타입으로 차이 값 배제 (R11) |
@@ -237,11 +244,12 @@ M6이 dev에 들어오기 전에는 Backend `regimelink`가 010 표를 읽는 �
 ## R12. 검색 변경 기록은 목록이 확정될 때 남긴다
 
 로그인 사용자는 `POST /regime-link-searches`로 010 snapshotKey·비교 토큰·경로·전체 탐색 여부를
-보내고, 서버는 가용성 판정과 기록을 한 번 처리해 `searchId`·목록·`bundleChanged`를 반환한다.
-읽기 GET에는 부작용을 넣지 않는다. 사례 계산 POST는 searchId만 참조하며 검색을 새로 만들지 않는다.
-빈 목록도 기록한다. 이전 검색은 같은 탐색 흐름의 `previousSearchId`로 지정하며 서버는 요청자·
+보내고, 서버는 가용성 판정과 기록을 한 번 처리해 `linkSearchId`·목록·`bundleChanged`를 반환한다.
+읽기 GET에는 부작용을 넣지 않는다. 사례 계산 POST는 linkSearchId만 참조하며 검색을 새로 만들지 않는다.
+빈 목록도 기록한다. 이전 검색은 같은 탐색 흐름의 `previousLinkSearchId`로 지정하며 서버는 요청자·
 snapshotKey·경로 일치를 검증한다. 다른 탭의 가장 최근 검색을 임의로 고르지 않는다.
 `clientRequestId`를 요청자별 멱등 키로 써 네트워크 재시도가 중복 기록을 만들지 않게 한다.
 전체 탐색 전환도 새로운 기록을 만들되 비교 묶음 변경 알림은 필터 키가 바뀐 경우에만 낸다.
 익명은 GET 응답을 현재 탐색 흐름의 이전 목록과 비교해 알림만 표시한다. 로그인하면 같은 snapshot과
-비교 묶음으로 기록한 뒤 계산을 요청한다. 소유권 없는 previousSearchId/searchId는 404이며 계산은 없다.
+비교 묶음으로 기록한 뒤 계산을 요청한다. 소유권 없는 previousLinkSearchId/linkSearchId는 404이며 계산은 없다.
+010 API의 `searchId`는 snapshot 키를 뜻하므로 011의 연결 기록 식별자는 `linkSearchId`로 구분한다.
