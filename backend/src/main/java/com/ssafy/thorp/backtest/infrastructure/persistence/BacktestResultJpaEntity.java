@@ -17,6 +17,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.List;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -103,8 +104,12 @@ public class BacktestResultJpaEntity extends BaseEntity {
     /**
      * 개별 체결({@code backtest_fill})을 기록한 결과인지. 체결 행이 없는 것만으로는 "체결이 없었다"와 "기록하지 않았다"를 가를 수 없어 따로
      * 둔다(spec 011 DEP-004-011).
+     *
+     * <p>{@code @ColumnDefault}는 로컬({@code ddl-auto=update}, Flyway 꺼짐)을 위한 것이다. 기본값 없이 NOT NULL 열을
+     * 더하면 결과 행이 이미 있는 로컬 DB에서 {@code ALTER TABLE}이 실패해 기동하지 못한다. 운영은 마이그레이션이 같은 기본값으로 만든다.
      */
     @Column(nullable = false)
+    @ColumnDefault("false")
     private boolean fillsRecorded;
 
     protected BacktestResultJpaEntity() {}
