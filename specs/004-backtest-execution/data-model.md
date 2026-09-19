@@ -130,13 +130,21 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 |---|---|---|
 | strategy_id | VARCHAR(32) | PK 일부 |
 | rules_version | VARCHAR(32) | PK 일부 |
-| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION`. 새 버전으로 대체된 옛 행을 뜻하는 `SUPERSEDED`는 발표 후(Phase 10 T029)에 CHECK 제약과 함께 추가한다 |
+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` · `SUPERSEDED`(새 버전으로 대체된 옛 행, T029). `SUPERSEDED`도 spec을 잃지 않는다(CHECK) |
 | provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |
-| spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |
+| spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null. 계산할 수 있는 행(REGISTERED·SUPERSEDED)은 `docs/specs/backtest-messaging/examples/rules/{전략}-{버전}.json` 스냅샷과 같아야 한다(T029) |
 | decision_ref | TEXT | PD 번호·회의 기록 |
 | created_at | TIMESTAMPTZ | |
 
 초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/1`, `MINIMUM_VARIANCE/1` PENDING_DECISION(decision_ref PD-03·PD-04 — 2026-09-17 확정. 실제 SQL의 rules_version은 `1`이다. T022(최소분산)·T023(모멘텀)이 **이 행을** REGISTERED provisional=false로 바꿔 spec을 채웠다 — 가리키는 실행이 없어 재현이 깨지지 않는다. 그래서 지금 `PENDING_DECISION` 행은 없다. `INVERSE_VOLATILITY/1`도 T022가 제자리에서 갱신한다(`capOverflow`·`weightUnit` 추가, provisional=true 유지) — R-08이 임시 행은 확정 시 갱신한다고 계획했고 보존할 결과가 없다. 규칙 명세는 spec PD 표를 따른다); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
+
+### 규칙 버전 수명주기 (T029)
+
+규칙을 바꿀 때 행을 고치지 않는다. 마이그레이션 하나에서 **옛 행의 status만 `SUPERSEDED`로 바꾼 뒤 새 버전 행을 INSERT**하고, 스냅샷 파일과 워커 골든(`worker/tests/goldens/{전략}-{버전}.json`)을 새로 더한다. 옛 파일·옛 골든은 지우지 않는다.
+
+- 전략마다 대체되지 않은 행은 하나다(부분 유니크 인덱스 `uk_strategy_rules_current ON (strategy_id) WHERE status <> 'SUPERSEDED'`). 화면 조회(`GET /backtests/registry`)와 007 지원 목록이 이 행 하나를 본다.
+- 검사는 둘이다. **새 요청**은 `requireCurrent`(REGISTERED만, PENDING·없음 422, SUPERSEDED 409). **버전이 이미 고정된 요청·실행**은 `requireExecutable`(SUPERSEDED도 통과) — 작업 조립(첫 발행·재발행), 실패·취소한 요청의 재시도, 007 묶음 후보가 쓴다. 재시도와 묶음 후보는 003 등록표도 그 요청이 판정받은 과거 `registryVersion`을 받는다(`StrategySettingsValidator.verifySaved`).
+- 목표 위험 오버레이처럼 요청이 버전을 싣지 않는 규칙은 새 요청이 지금 행을 고르고, 조립·재시도는 실행에 기록된 `versions.scenarioRules`의 버전을 읽는다. 이 기록이 없던 2026-09-11~09-15 목표 위험 실행은 수명주기 마이그레이션이 `TARGET_RISK_OVERLAY/1`(그 기간 코드가 고정해 쓴 값)로 채웠다.
 
 ## backtest_run_metric (실행 측정 기록)
 
@@ -197,7 +205,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
 - 유효 상한 × 종목 수 ≥ `investedFraction` — **유효 상한 = 요청 `allocation.parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표 `weightCap`**(analyze U1, T022). 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
-- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`). 대체된 옛 버전의 409 처리는 발표 후(Phase 10 T029).
+- `strategy_rules.status = REGISTERED`(PENDING·없음은 422 `RULES_NOT_REGISTERED`, `SUPERSEDED`는 409 `REGISTRY_VERSION_CHANGED`, T029). **재시도는 이 검사 대신 `SUPERSEDED`도 받는 검사를 탄다** — 아래 「규칙 버전 수명주기」.
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
 - `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.

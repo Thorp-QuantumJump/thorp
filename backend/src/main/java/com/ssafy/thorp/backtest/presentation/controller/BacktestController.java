@@ -87,7 +87,7 @@ public class BacktestController {
     }
 
     /**
-     * 화면이 요청에 실을 규칙 버전과 기본 비용 조건(T025, README §1.11). 등록표 행을 그대로 내보낸다.
+     * 화면이 요청에 실을 규칙 버전과 기본 비용 조건(T025, README §1.11). 대체되지 않은 등록표 행을 그대로 내보낸다(T029).
      *
      * <p>로그인을 요구하지 않는다 — 사용자 데이터가 아니라 등록표이고, 003 등록표 조회와 같은 성격이다.
      *
@@ -98,7 +98,8 @@ public class BacktestController {
         return ResponseEntity.ok(
                 ApiResponse.ok(
                         BacktestRegistryResponse.of(
-                                strategyRulesService.findAll(), costProfileService.resolve(null))));
+                                strategyRulesService.findCurrent(),
+                                costProfileService.resolve(null))));
     }
 
     /**

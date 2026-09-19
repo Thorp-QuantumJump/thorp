@@ -43,7 +43,7 @@
 
 - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).
 - `versions`(FR-028, data-model `backtest_run.versions`): `rules`·`costProfile`은 `{version, provisional}`이고 `provisional=true`는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 표시다. `scenarioRules`는 `TARGET_RISK`일 때만(`TARGET_RISK_OVERLAY/1`). 결과를 낸 워커의 자기 보고 `worker`는 결과가 저장된 뒤 상세에만 붙는다(T018).
-- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·비로그인 합계·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).
+- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 409 `REGISTRY_VERSION_CHANGED`(새 버전으로 대체된 `rulesVersion`, `details.currentRulesVersion`, T029), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·비로그인 합계·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).
 
 ## GET /backtests/{backtestId} — 상태·요약
 
@@ -72,7 +72,7 @@
 
 ## POST /backtests/{backtestId}/retry
 
-`202` 새 `{backtestId, status: QUEUED, resultSource, retryOf, publicToken}`(`publicToken`은 새 요청의 것, spec 005). 원 요청이 `FAILED` 또는 `CANCELLED`일 때만. 아니면 `409 NOT_RETRYABLE`. 같은 조건이므로 동일 버전 규칙이 그대로 적용된다(다른 사용자가 이미 완료했으면 `REUSED`).
+`202` 새 `{backtestId, status: QUEUED, resultSource, retryOf, publicToken}`(`publicToken`은 새 요청의 것, spec 005). 원 요청이 `FAILED` 또는 `CANCELLED`일 때만. 아니면 `409 NOT_RETRYABLE`. 같은 조건이므로 동일 버전 규칙이 그대로 적용된다(다른 사용자가 이미 완료했으면 `REUSED`). 규칙이 새 버전으로 대체됐어도 원본 `rulesVersion`·오버레이 버전·003 `registryVersion`으로 다시 접수한다 — 새 요청의 409가 재시도에는 나지 않는다(T029).
 
 ## GET /backtests/{backtestId}/timeseries · /trades · /positions · /weights
 
@@ -96,14 +96,15 @@
                           "commissionBps": "1.5000", "spreadBps": "3.0000", "slippageBps": "5.0000", "taxBps": "0.0000" } }
 ```
 
-- `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.
+- `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 대체된 옛 버전(`SUPERSEDED`)은 내보내지 않는다(T029). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.
 - 화면은 `defaultCostProfile.version`을 요청에 **명시해** 보낸다(기본 버전이 배포로 바뀌어도 사용자가 본 조건이 적용되도록). 비용 수치는 문자열 decimal.
 
 ## 오류 코드 추가분
 
 | code | HTTP | 뜻 |
 |---|---|---|
-| RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(`PENDING_DECISION`) |
+| RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(`PENDING_DECISION`) 또는 등록표에 없음 |
+| REGISTRY_VERSION_CHANGED | 409 | 새 요청의 `rulesVersion`이 새 버전으로 대체됨(`SUPERSEDED`, T029). 003 등록표 버전 불일치와 같은 코드라 화면은 두 등록표를 함께 다시 받는다. 재시도에는 나지 않는다 |
 | VALIDATION_RULE_VIOLATED | 422 | 접수 때 알 수 있는 설정 모순: `상한 × 투자 대상 종목 수 < 투자 비중`(PD-04 ④, 기존 400 `INVALID_INPUT`에서 옮김) |
 | INSUFFICIENT_HISTORY | 422 | 가용 기간이 워밍업보다 짧음 |
 | ESTIMATION_FAILED | `failure.code` | 최소분산 공분산 검사·SLSQP 수렴·사후 검증 실패 → 실행 전체 실패(PD-04 ③, T022) |

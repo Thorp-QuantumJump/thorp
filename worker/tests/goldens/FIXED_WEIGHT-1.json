@@ -1,0 +1,34 @@
+{
+  "rules": "FIXED_WEIGHT-1.json",
+  "engineInput": "engine-input-three-etf-fixed.json",
+  "inputSha256": "f99d3780c39f24e4d990b0aa9127b5eb36cd5d1649f4570dd4de33f4121e9a83",
+  "sha256": "365ef7a2cda9e773adbb62a675e1620357c382d90cb5a64fd5c792d920254c69",
+  "summary": {
+    "performance": {
+      "initialEquity": "10000000",
+      "finalEquity": "10693579.801150",
+      "currency": "KRW",
+      "totalReturn": "0.069357980115",
+      "netTotalReturn": "0.069357980115",
+      "cagr": "0.076509538164219634370369005",
+      "maxDrawdown": "-0.1016083710673727365040347841",
+      "sharpeRatio": "0.6896821105759644",
+      "volatility": "0.11149407284830734",
+      "tradeCount": 14,
+      "winRate": "0.7857142857142857142857142857",
+      "totalTradingCost": "17998.19885"
+    },
+    "tradeCount": 33,
+    "exceptionCount": 0,
+    "firstTarget": {
+      "091160.XKRX": "0.4",
+      "244580.XKRX": "0.3",
+      "305720.XKRX": "0.3"
+    },
+    "lastTarget": {
+      "091160.XKRX": "0.4",
+      "244580.XKRX": "0.3",
+      "305720.XKRX": "0.3"
+    }
+  }
+}

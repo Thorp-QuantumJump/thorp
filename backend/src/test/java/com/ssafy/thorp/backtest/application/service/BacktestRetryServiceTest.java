@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.PinnedVersions;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
@@ -21,6 +22,7 @@ import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestId;
@@ -136,7 +138,7 @@ class BacktestRetryServiceTest {
     }
 
     private void givenCreateReturnsNew() {
-        when(backtestService.create(any(), any()))
+        when(backtestService.createPinned(any(), any()))
                 .thenReturn(
                         new BacktestJobResult(
                                 "BT-20260914-000031",
@@ -159,7 +161,8 @@ class BacktestRetryServiceTest {
 
         ArgumentCaptor<CreateBacktestCommand> captor =
                 ArgumentCaptor.forClass(CreateBacktestCommand.class);
-        verify(backtestService).create(captor.capture(), eq(REQUEST_ID));
+        verify(backtestService)
+                .createPinned(captor.capture(), eq(PinnedVersions.retryOf(REQUEST_ID, null)));
         assertThat(captor.getValue()).isEqualTo(original());
         assertThat(result.retryOf()).isEqualTo(BACKTEST_ID);
         assertThat(result.backtestId()).isEqualTo("BT-20260914-000031");
@@ -174,6 +177,67 @@ class BacktestRetryServiceTest {
         assertThat(service.retry(BACKTEST_ID, REQUESTER).retryOf()).isEqualTo(BACKTEST_ID);
     }
 
+    @Test
+    @DisplayName("목표 위험 실행의 재시도는 원본 실행에 기록된 오버레이 규칙 버전을 넘긴다(T029)")
+    void passesTheRecordedOverlayVersion() {
+        BacktestRun targetRisk =
+                runIn(RunStatus.FAILED)
+                        .withPlan(
+                                new RunPlan(
+                                        "dedup",
+                                        "1",
+                                        COST_PROFILE,
+                                        "DATA-1",
+                                        LocalDate.of(2024, 4, 1),
+                                        LocalDate.of(2024, 12, 31),
+                                        63,
+                                        RequestSpecCodec.write(
+                                                original(), Scenario.FULL_PERIOD, 63),
+                                        Map.of("scenarioRules", "TARGET_RISK_OVERLAY/3"),
+                                        null));
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestOf(REQUESTER, null)));
+        when(runRepository.findById(RUN_ID)).thenReturn(Optional.of(targetRisk));
+        givenCreateReturnsNew();
+
+        service.retry(BACKTEST_ID, REQUESTER);
+
+        verify(backtestService)
+                .createPinned(
+                        any(),
+                        eq(
+                                PinnedVersions.retryOf(
+                                        REQUEST_ID, new RulesRef("TARGET_RISK_OVERLAY", "3"))));
+    }
+
+    @Test
+    @DisplayName("원본 실행의 오버레이 기록을 읽을 수 없으면 서버 오류다 — 사용자 입력 잘못(400)으로 보이지 않는다")
+    void unreadableOverlayRecordIsAServerError() {
+        BacktestRun corrupted =
+                runIn(RunStatus.FAILED)
+                        .withPlan(
+                                new RunPlan(
+                                        "dedup",
+                                        "1",
+                                        COST_PROFILE,
+                                        "DATA-1",
+                                        LocalDate.of(2024, 4, 1),
+                                        LocalDate.of(2024, 12, 31),
+                                        63,
+                                        RequestSpecCodec.write(
+                                                original(), Scenario.FULL_PERIOD, 63),
+                                        Map.of("scenarioRules", "TARGET_RISK_OVERLAY"),
+                                        null));
+        when(requestRepository.findByBacktestId(BACKTEST_ID))
+                .thenReturn(Optional.of(requestOf(REQUESTER, null)));
+        when(runRepository.findById(RUN_ID)).thenReturn(Optional.of(corrupted));
+
+        assertThatThrownBy(() -> service.retry(BACKTEST_ID, REQUESTER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("scenarioRules");
+        verify(backtestService, never()).createPinned(any(), any());
+    }
+
     @ParameterizedTest
     @EnumSource(
             value = RunStatus.class,
@@ -186,7 +250,7 @@ class BacktestRetryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exc -> ((BusinessException) exc).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_RETRYABLE);
-        verify(backtestService, never()).create(any(), any());
+        verify(backtestService, never()).createPinned(any(), any());
     }
 
     @Test
@@ -196,6 +260,6 @@ class BacktestRetryServiceTest {
 
         assertThatThrownBy(() -> service.retry(BACKTEST_ID, REQUESTER))
                 .isInstanceOf(BacktestNotFoundException.class);
-        verify(backtestService, never()).create(any(), any());
+        verify(backtestService, never()).createPinned(any(), any());
     }
 }
