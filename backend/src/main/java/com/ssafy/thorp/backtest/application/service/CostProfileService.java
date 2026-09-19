@@ -11,8 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 비용 조건 등록표 조회(spec 004 research R-07).
  *
- * <p>요청이 버전을 지정하지 않으면 서버 기본값을 쓴다. 기본값 자체는 팀 결정(PD-07) 전까지 임시라 {@link CostProfile#provisional()}가
- * true이고, 결과에 그대로 표시된다.
+ * <p>요청이 버전을 지정하지 않으면 서버 기본값을 쓴다. 기본값은 PD-07 확정값({@code KR-ETF-2026-09}, T021)이고 {@link
+ * CostProfile#provisional()}가 false다. 임시 데모 값({@code PROVISIONAL-DEMO-1})은 등록표에 그대로 남아 그 버전을 명시한
+ * 요청과 옛 실행이 계속 쓴다.
  */
 @Service
 public class CostProfileService {
@@ -22,8 +23,7 @@ public class CostProfileService {
 
     public CostProfileService(
             CostProfileRepository repository,
-            @Value("${thorp.backtest.default-cost-profile:PROVISIONAL-DEMO-1}")
-                    String defaultVersion) {
+            @Value("${thorp.backtest.default-cost-profile:KR-ETF-2026-09}") String defaultVersion) {
         this.repository = repository;
         this.defaultVersion = defaultVersion;
     }
