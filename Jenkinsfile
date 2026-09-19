@@ -460,17 +460,31 @@ pipeline {
                         // Jenkins 이미지에는 uv 가 없어 체크아웃 밖(WORKSPACE_TMP)의 별도 가상환경에 받는다.
                         // 워커의 .venv 에 넣으면 uv sync 가 lock 에 없는 패키지로 보고 지운다.
                         //
+                        // uv 는 CI 의 모든 의존성을 설치하고 lock 의 해시를 검사하는 도구라, uv 자신도 해시로
+                        // 확인한 wheel 만 쓴다(--require-hashes). 해시는 PyPI 의 uv 0.12.0 linux wheel
+                        // 셋(x86_64 하나, aarch64 둘)이다. 매번 --clear 로 새로 만들어 검증하지 않은 uv 가 남지
+                        // 않게 한다. 버전을 올리면 해시를 함께 바꾸고, infra/docker/worker.Dockerfile 의 uv
+                        // 이미지도 같은 버전으로 맞춘다.
+                        //
                         //   --locked             uv.lock 이 pyproject.toml 과 어긋나면 실패한다.
-                        //   --python 3.11        운영 이미지와 같은 버전. 이 이미지의 python3 는 3.13 이고,
+                        //   --python 3.11        운영 이미지와 같은 마이너 버전. 이 이미지의 python3 는 3.13 이고,
                         //                        lock 은 3.11 과 3.12 이상에 서로 다른 numpy 를 고른다. 3.11 은
-                        //                        uv 가 처음 한 번 내려받아 Jenkins 홈에 둔다.
+                        //                        uv 가 처음 한 번 내려받아 Jenkins 홈에 둔다. 패치 버전은 uv 가
+                        //                        아는 최신 3.11 이라 운영 이미지와 다를 수 있어(uv 0.12.0 은
+                        //                        3.11.15), 실제로 쓴 버전을 로그에 남긴다.
                         //   --no-install-project 워커 코드는 설치하지 않는다. 운영 이미지도 설치하지 않고
                         //                        PYTHONPATH 로 읽으며, pytest 는 src 를 읽는다.
                         // dev 그룹(pytest·ruff)도 기본으로 설치되어 lint·test 도구 버전도 lock 을 따른다.
                         // 3.13 으로 만든 옛 .venv 가 남아 있으면 uv 가 지우고 3.11 로 다시 만든다.
                         dir('worker') {
-                            sh 'python3 -m venv "$WORKSPACE_TMP/uv" && "$WORKSPACE_TMP/uv/bin/pip" install --quiet uv==0.12.0'
+                            sh '''
+                                python3 -m venv --clear "$WORKSPACE_TMP/uv"
+                                echo "uv==0.12.0 --hash=sha256:cbff74f884846d794713670faf8abe10db3bd70c43b01e63223f74eb7d958689 --hash=sha256:c818bb6aead39652e2ad644583fa418ac8d92baf50b4c6f685738bb2598e33bd --hash=sha256:effc2de9f044e880306f3c52b048bf24ee4fe63429c82dd6509c9a0f3d1b8f0b" \\
+                                    > "$WORKSPACE_TMP/uv-requirements.txt"
+                                "$WORKSPACE_TMP/uv/bin/pip" install --quiet --require-hashes -r "$WORKSPACE_TMP/uv-requirements.txt"
+                            '''
                             sh '"$WORKSPACE_TMP/uv/bin/uv" sync --locked --python 3.11 --no-install-project'
+                            sh '.venv/bin/python -VV'
                         }
                     }
                 }
