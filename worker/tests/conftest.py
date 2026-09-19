@@ -1,14 +1,10 @@
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 
-# 백엔드 테스트와 같은 파일을 읽는다 (테스트 리소스로 복사하지 않는다 — 복사하면 어긋난다).
-FIXTURE_DIR = (
-    Path(__file__).resolve().parents[2] / "docs" / "specs" / "backtest-messaging" / "examples"
-)
+from fixture_paths import FIXTURE_DIR, THREE_ETF_DIR
 
-#: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.
-THREE_ETF_DIR = Path(__file__).resolve().parents[1] / "examples" / "three_etf_24m"
+__all__ = ["FIXTURE_DIR", "THREE_ETF_DIR"]
+
 THREE_ETF_DATASET = "FIXTURE-three_etf_24m"
 
 SEMICONDUCTOR = "091160.XKRX"  # 2015-01-02 상장
