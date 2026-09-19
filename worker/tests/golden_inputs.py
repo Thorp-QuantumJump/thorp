@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from conftest import FIXTURE_DIR, THREE_ETF_DIR
+from fixture_paths import FIXTURE_DIR, THREE_ETF_DIR
 
 from worker.contracts.engine_output import EngineOutput, RunStatus
 from worker.engine_runner import PortfolioBacktestEngine
