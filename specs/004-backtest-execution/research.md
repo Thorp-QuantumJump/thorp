@@ -128,3 +128,29 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한
 - **Rationale**: T014에서 세 갈래가 모두 막혔다 — 탐색을 사용자별 한도에 세면 `dispatch-window`와 충돌하고, 전체 한도에서 거절하면 007 `advance()`가 `BacktestFinished`로만 불려 마지막 진행 후보 뒤의 거절이 묶음을 영구 정지시키고, 한도에서 빼면 탐색이 도는 동안 **단건만 계속 429**를 받는다(묶음 수 × 창 = 80 > 50). 값이 아니라 **대화형과 배치가 한 큐·한 정책을 공유하는 구조**의 문제라 R-19의 "재검토 조건(T012 실측 뒤)"을 기다리지 않고 도입한다 — 실측 없이도 정책이 성립하지 않음이 리뷰에서 확인됐기 때문이다. 큐 이름을 바꾸지 않는 이유: `backtest.jobs`→`backtest.jobs.single` 개명은 quorum 큐 교체 절차(접수 중단 → ready·unacked 0 → 삭제 → 재선언, T002 `migrate-jobs-queue.sh`)를 다시 요구하는데 `bulk`만 추가하면 전환 절차가 없고 single 워커는 코드 변경이 없다. flex가 pull인 이유: quorum 큐는 **global QoS prefetch를 지원하지 않아**(RabbitMQ 3.13 기능 비교표) 한 채널에서 두 큐를 `basic_consume`하며 "합쳐서 1건"을 표현할 수 없고, 컨슈머별 prefetch 1로 두 큐를 구독하면 워커가 2건을 unacked로 쥔다 — 처리도 안 한 두 번째 메시지가 크래시로 재전달되면 유일한 재시도 기회(`x-delivery-limit=1`)가 실행 한 번 없이 소진된다. flex가 bulk 우선인 이유: 단건 최소 처리량은 single N이 이미 보장하고, single 우선이면 단건이 계속 들어오는 동안 벌크가 굶어 묶음이 `time-limit`에 걸려 PARTIAL로 끝난다. 수용한 한계: flex 워커의 단건 응답은 최대 폴링 간격(1초)만큼 늦다(single 워커는 push라 즉시). 배포는 T014와 같은 릴리즈로 묶는다(데모 규모에서 T014 단독 배포 위험은 낮지만 함께 내보내면 그 논의가 필요 없다).
 - **Alternatives**: 완전 분리(single 전용 N + bulk 전용 M — 벌크가 없으면 M이 놀고 단건이 몰려도 못 쓴다, 4 vCPU에 워커 2개라 절반을 놀릴 수 없다) / 두 큐 `basic_consume` + global prefetch 1(quorum 미지원) / flex 단건 우선(벌크 굶음) / 두 큐의 도착 시각을 비교한 전역 FIFO(RabbitMQ는 큐 내부 FIFO만 보장하고 peek이 없어 꺼내 비교하고 requeue해야 하는데 순서와 `x-delivery-limit`이 꼬인다) / 우선순위 큐 하나(`x-max-priority` — quorum 미지원) / 007에 PENDING 재시도 스케줄러를 두고 묶음도 거절(007 담당자 몫이며, 있어도 배치가 대화형 한도를 소비하는 문제는 남는다).
 - **T012에 넣는 지표**: 단건 큐 대기시간 p95/p99, 벌크 큐 대기시간·후보 처리량, single 워커 사용률, flex 워커가 단건을 지원한 비율, 동시 탐색 묶음 수, 큐별 대기 작업 수, 단건 429 횟수. N/M 비율과 `dispatch-window`를 이것으로 조정한다. 폴링 지연이 실제 문제로 측정되면 flex가 single만 `basic_consume`하고 벌크는 처리 사이에 `basic_get`하는 하이브리드가 다음 단계다.
+
+## R-21 환경 간 재현 검증과 골든 재생성 정책 (T030, 2026-09-19)
+
+- **Decision**: 환경 간 재현의 판정은 규칙 버전 골든과 같은 **유효숫자 12자리 반올림 해시**로 한다. 반올림하지 않은 해시(`exactSha256`)는 판정에 쓰지 않고, 갈렸을 때 원인을 좁히는 진단 값으로만 남긴다. 해시 정의는 `worker/src/worker/reproducibility.py` 한 곳에 두고 골든 테스트(`tests/test_rules_goldens.py`)와 비교 스크립트(`scripts/reproducibility_report.py`)가 함께 쓴다. 기준 입력과 실행은 pytest 없이도 import되는 `tests/golden_inputs.py`에 두어, pytest가 없는 운영 이미지 안에서도 같은 입력으로 돈다.
+- **측정(2026-09-19)**: 규칙 스냅샷 6개(다섯 전략 + 목표 위험 오버레이)를 골든과 같은 기준 입력(`examples/three_etf_24m`, 3종목·24개월 합성 자료)으로 세 환경에서 돌렸다. numpy 2.4.6·scipy 1.17.1·pandas 2.3.3·nautilus_trader 1.219.0은 세 환경 모두 `uv.lock` 그대로다.
+
+  | 환경 | OS | CPU·아키텍처 | Python | OpenBLAS 커널 |
+  |---|---|---|---|---|
+  | A 개발기 | Windows 11 | Intel i7-13700H, x86_64 | 3.11.15 | SkylakeX |
+  | B 워커 이미지 | Debian trixie(glibc 2.41, WSL2 VM) | 같은 CPU, x86_64 | 3.11.16 | Haswell |
+  | C 워커 이미지 arm64 | Debian trixie(qemu 에뮬레이션) | aarch64 | 3.11.16 | neoversev2 |
+
+  | 규칙 스냅샷 | exactSha256 | roundedSha256(= 골든) |
+  |---|---|---|
+  | EQUAL_WEIGHT-1 | `57003f49257f15b367d0feb44db5fea3859d6c9d3b7b234c8a377ba156a57d66` | `4e57527bef912329d5042d945893c7e2025d8288af8a00674f8d0aee3566b890` |
+  | FIXED_WEIGHT-1 | `11a4f9fad0a4e53bf43886a4ac28e7f3ce9e9d6c9283612a842795ec3d6e5807` | `365ef7a2cda9e773adbb62a675e1620357c382d90cb5a64fd5c792d920254c69` |
+  | INVERSE_VOLATILITY-1 | `3a0e9d03dca863dd8f29e7c6388dd88feb9158db205ddbcfcd295a3136109be4` | `cdd38b5f1857e9ad669d4306428c5803b7370d41452a80247ff236c457ea3dd3` |
+  | MINIMUM_VARIANCE-1 | `6ca6504059c21f3cea791a6e6dfe6e8590e8078f4f2683deaa907f9b129a0cb3` | `df7898ce28c3abba1c3cba06d8da9abd58dd953bff20135eb6a85c2bb87a5cdf` |
+  | SECTOR_MOMENTUM-1 | `a9722dcfa877876f21e7e7b15bf4679db7d4df4e54fbd2a7ec47bb7c756897a8` | `4f4f6db10d0fd8a5d93ea38c935fd356d665b7a340a9e049bf6a74899f32f43c` |
+  | TARGET_RISK_OVERLAY-1 | `ae44175631eb3f123e837c6bd18b68baed0d49e65e30a8889cf9ad0fa30455f7` | `e6926b73b3e56c2c88af3ad53a03e288d543391a1401cc3e86b90840abf86905` |
+
+  세 환경의 두 해시가 모두 같았고, 계산 결과 전문도 바이트 단위로 같았다. 즉 이 입력 규모에서는 OS·libm·BLAS 커널·아키텍처·Python 패치 버전 차이가 결과에 나타나지 않았다. 12자리 반올림은 지금 흡수하는 차이가 없는 방어선이다.
+- **Rationale**: 반올림 전 해시로 판정하면 이번에는 통과하지만, 다른 CPU나 BLAS 빌드에서 float 지표(샤프 비율·변동성 등)의 마지막 자리가 흔들리는 순간 "같은 버전이 다른 숫자를 낸다"로 오판한다. 규칙 변경으로 생기는 차이는 비중·거래·수익률을 크게 움직이므로 12자리 반올림에 가려지지 않는다(T029 ⓒ). **다만 가려지는 차이가 있다.** 반올림은 유효숫자 기준이라 정수부가 긴 금액일수록 소수 자리가 먼저 잘린다. 예를 들어 기준 입력의 `finalEquity "10651221.245050"`은 14자리라서 12자리 해시에는 소수 넷째 자리까지만 들어간다. 그래서 비용이나 체결 금액이 0.0001원보다 작게 달라지는 엔진 변경(예: 반올림 방식 변경)은 골든을 통과한다. 초기 자본이 클수록 가려지는 폭도 커진다. 이 차이는 반올림 전 해시(`exactSha256`)가 드러내므로, 엔진의 금액 계산을 고치는 MR은 비교 스크립트로 고치기 전과 후의 반올림 전 해시를 함께 확인한다. 금액·비중(`Decimal`)은 반올림하지 않고 float 지표만 반올림하는 방법도 검토했지만, JSON에서는 둘 다 문자열이라 계약 모델에서 필드 목록을 뽑아야 하고 골든 6개를 모두 다시 만들어야 해서 이번에는 넣지 않았다(2026-09-19 결정).
+- **한계**: C는 실제 ARM 하드웨어가 아니라 에뮬레이션이다. 운영 서버에서는 아직 돌리지 않았다. 자료가 3종목·24개월이라 행렬이 작아 BLAS가 커널별로 다른 경로를 타지 않았을 수 있다. 실제 자료(001 적재 표)는 비교하지 않았다. 운영 서버에서는 저장소를 받은 뒤 `worker/README.md` "환경 간 재현 확인"의 명령을 돌려 이 표와 대조한다.
+- **골든 재생성 정책**: 의존성(`uv.lock`)이나 기반 이미지 digest를 바꾸는 MR은 새 이미지 안에서 비교 스크립트를 돌린다. 12자리 해시가 그대로면 골든을 건드리지 않는다. 깨지면 먼저 `inputSha256`으로 입력 변경인지 가르고, 의존성·이미지·엔진 변경이 원인일 때만 그 골든을 지우고 다시 만든다. MR 본문에는 원인, 바뀐 필드와 자리수, 이전과 이후 `summary`를 적는다. 세부 절차는 `worker/CLAUDE.md`.
+- **Alternatives**: 반올림 없는 해시로 판정(환경마다 골든이 필요해진다) / 필드별 상대 오차 허용(필드마다 기준을 따로 정해야 하고, 해시 하나로 버전과 결과를 묶는 T029 구조와 맞지 않는다) / 비교 스크립트를 CI에 넣기(CI 에이전트는 환경 하나라 비교가 되지 않는다. 골든 테스트가 그 환경의 대조를 이미 한다)
