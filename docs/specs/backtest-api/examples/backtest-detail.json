@@ -39,9 +39,13 @@
         "provisional": true
       },
       "data": "FIXTURE-three_etf_24m",
-      "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
+      "engine": "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8",
       "evaluationSplit": "SPLIT-1",
-      "worker": "2.0.0"
+      "worker": "2.0.0",
+      "dependencies": {
+        "numpy": "2.4.6",
+        "scipy": "1.17.1"
+      }
     },
     "summary": {
       "initialEquity": "10000000.00",

@@ -4,6 +4,7 @@ import hashlib
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from importlib.metadata import version as installed_version
 
 import nautilus_trader
 import pandas as pd
@@ -14,6 +15,7 @@ from worker.artifacts import OrderRecord, RunArtifacts
 from worker.contracts.engine import ProgressCallback
 from worker.contracts.engine_input import DelistingPolicy, EngineInput, Scenario
 from worker.contracts.engine_output import (
+    Dependencies,
     Diagnostics,
     EngineError,
     EngineOutput,
@@ -300,7 +302,17 @@ def reference_versions(request: EngineInput, market: MarketData | None) -> Versi
         engine=f"nautilus_trader {nautilus_trader.__version__}",
         evaluation_split=request.evaluation.split_version,
         worker=f"thorp-worker {worker_version}",
+        dependencies=_dependencies(),
     )
+
+
+def _dependencies() -> Dependencies:
+    """계산에 쓴 numpy·scipy의 실제 설치 버전(spec 004 T028).
+
+    재현 키는 실행 전에 만들어져 이 값을 쓸 수 없다 — 키 쪽은 백엔드 ``engine-version`` 의
+    ``uv.lock`` 지문이 맡고, 여기는 결과가 실제로 어떤 환경에서 계산됐는지를 남긴다.
+    """
+    return Dependencies(numpy=installed_version("numpy"), scipy=installed_version("scipy"))
 
 
 class PortfolioBacktestEngine:

@@ -207,6 +207,13 @@ class RuleVersion(ContractModel):
     provisional: bool | None = None  # True = 팀 결정 전 임시값
 
 
+class Dependencies(ContractModel):
+    """계산에 쓴 수치 라이브러리의 실제 설치 버전(spec 004 T028). 워커가 자기 환경에서 읽는다."""
+
+    numpy: str
+    scipy: str
+
+
 class Versions(ContractModel):
     """참조 버전(FR-028)."""
 
@@ -218,6 +225,7 @@ class Versions(ContractModel):
     engine: str | None = None
     evaluation_split: str | None = None  # 요청의 evaluation.splitVersion 사본. None = 미지정
     worker: str | None = None
+    dependencies: Dependencies | None = None  # None = 미보고(T028 이전 워커)
 
 
 class Warning(ContractModel):
