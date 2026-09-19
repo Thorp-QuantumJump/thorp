@@ -32,7 +32,10 @@ uv run python -m worker.demo --input <EngineInput.json> --output engine-output.j
 분할, 2024-06-11 거래 정지 1일). 손으로 고치지 말고 `scripts/make_three_etf_fixture.py` 를 고쳐 다시
 만든다. 결과의 `versions.data = "FIXTURE-three_etf_24m"` 가 픽스처임을 표시한다.
 
-uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`를 사용할 수 있다.
+의존성 버전은 `uv.lock` 하나가 정한다. 운영 이미지(`infra/docker/worker.Dockerfile`)와 CI도 같은 lock에서
+`uv sync`로 설치하므로 `requirements.txt`는 두지 않는다. `pyproject.toml`의 의존성을 고치면 `uv lock`으로
+lock을 갱신해 함께 커밋한다 — CI의 `uv sync --locked`가 둘이 어긋나면 실패한다. 운영 이미지는 Python 3.11이고
+lock은 3.11과 3.12 이상에 서로 다른 numpy를 고르므로, 운영과 같은 버전으로 확인하려면 `--python 3.11`로 만든다.
 
 ### 엔진을 직접 호출하기
 

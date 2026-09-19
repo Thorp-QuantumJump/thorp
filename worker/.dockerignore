@@ -1,0 +1,7 @@
+# 이미지는 pyproject.toml·uv.lock·src 만 복사한다(infra/docker/worker.Dockerfile).
+# 로컬 가상환경과 캐시가 빌드 컨텍스트로 넘어가지 않게 한다.
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+build/
