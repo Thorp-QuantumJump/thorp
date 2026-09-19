@@ -21,7 +21,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 `RegimeLinkRabbitConfig`의 `public static final String`과 워커 `regime_link/messaging.py`가 같은 값을
 가져야 하며 워커 테스트가 Java 파일을 읽어 대조한다(백테스트와 같은 방식).
 
-## 작업 메시지: `RegimeLinkJob` v1
+## 작업 메시지: `RegimeLinkJob` v1 — 목표 계약, DEP-004-011 검증 전 동결 금지
 
 ```json
 {
@@ -29,7 +29,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
   "window": {"d0": "2012-04-02", "d21": "2012-05-02", "d63": "2012-07-03",
              "lastAvailable": "2012-07-03", "completedTradingDays": 63,
              "baselineDate": "2012-03-30"},
-  "run": {"runId": "RUN-000123", "effectiveStart": "2018-04-02", "initialCash": "10000000.00",
+  "run": {"runId": "RUN-000123", "effectiveStart": "2010-04-02", "initialCash": "10000000.00",
           "analyticsMethod": "ANALYTICS-1"},
   "universe": {"mappingVersion": "SECTOR-ETF-2026-09",
                "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "delistedOn": null}]},
@@ -50,9 +50,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
   `baselineDate`는 참고용이다(research R3).
 - `inputs.portfolioSeries`·`weightsSeries`는 `baselineDate`부터 `lastAvailable`까지, `trades`는
   `d0`~`lastAvailable` 안에 체결된 것만. **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,
-  범위가 모자라면(예: `baselineDate` 행 없음) `DATA_INSUFFICIENT`로 답한다 — 채우지 않는다.
+  범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `DATA_INSUFFICIENT`로 답한다 — 채우지 않는다.
 - `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`.
-- `inputDigest` = 백엔드가 `inputs` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로
+- `inputDigest` = 백엔드가 `inputs·window·job.scenario·marketData` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로
   돌려준다(재현 대조는 백엔드 몫).
 - 크기 상한: `weightsSeries`의 종목 수 ≤ 대응표 섹터 수, 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
   `FAILED(INPUT_TOO_LARGE)`.
@@ -72,8 +72,8 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 ```json
 {
   "window63": {"tradingDays": 63, "return": "0.0421", "maxDrawdown": "-0.0587", "tradeCount": 6, "tradesPerMonth": "2.00",
-               "turnover": "0.3125", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
-               "lossContribution": {"SEMICONDUCTOR": "-0.0312", "BIO": "-0.0044"}, "complete": true},
+               "turnover": "0.3125", "turnoverBasis": "ANNUALIZED_252", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
+               "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BIO": "-0.20000000"}, "complete": true},
   "window21": {"…같은 모양…": "…", "complete": true},
   "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980"}}],
   "trades": [{"date": "2012-05-02", "instrumentId": "091160.XKRX", "side": "SELL", "quantity": 12, "price": "23150", "cost": "254.00", "reason": "REBALANCE"}],
@@ -84,11 +84,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 ```
 
 - `window21`은 `d0`~`d21`, `window63`은 `d0`~`min(d63, lastAvailable)`. `tradingDays`가 실제 길이고
-  `complete`가 63(또는 21)을 다 채웠는지다. 연율화하지 않는다.
+  `complete`가 63(또는 21)을 다 채웠는지다. 수익률·낙폭은 연환산하지 않으며 회전율은 ANNUALIZED_252다.
 - `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`, 소수 둘째 자리.
-- `turnover`·`lossContribution`은 `worker.performance.calculate_analytics`의 정의를 구간 자료에
-  적용한 값이다(research R3). 워커는 종목 조정 종가를 `market_data.py`로 읽어 일별 수익률을 만든다.
-  `lossContribution`은 구간 손실이 없으면 **키를 생략**한다.
+- `turnover`·`lossContribution`은 research R3의 구간 전용 산식이다. 누적 손익 함수에 조각을 그대로 넣지 않는다. 회전율은 `turnoverBasis=ANNUALIZED_252`이며 수익률·최대 낙폭은 연환산하지 않는다. 전체 구간 손익이 0일 때만 `lossContribution`을 생략하고 이익 종목도 포함한다.
 - `kospi`는 `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 두 값만. 전략과의 차이는 계산하지
   않는다.
 
@@ -106,7 +104,8 @@ reject → DLQ다.
 | 잘라낸 범위가 `baselineDate`~`lastAvailable`를 덮음 | 확인 후 발행 | 행이 빠졌으면 `DATA_INSUFFICIENT` |
 | 종목 수·행 수 상한 | 초과면 `FAILED(INPUT_TOO_LARGE)`, 발행 안 함 | 계약 상한은 pydantic으로 |
 | 시장 자료 정합 | — | `validate_prices` fail-closed(백테스트와 같다) |
-| 워밍업 부족(`effectiveStart > d0`) | 링크 `DATA_INSUFFICIENT(WARMUP_SHORT)`, 발행 안 함 | — |
+| 원천 워밍업 부족 | 링크 `DATA_INSUFFICIENT(WARMUP_SHORT)`, 발행 안 함 | — |
+| 원천은 충분하나 기존 실행 effectiveStart > d0 또는 기준·종료 행 부족 | `OUT_OF_PERIOD`, 확인 후 전체 기간 실행. 필터에서 제외하지 않음 | — |
 
 ## 처리 규칙 (워커)
 
@@ -123,3 +122,18 @@ reject → DLQ다.
 `reconciliation/`에 워커를 import하지 않는 독립 계산 스크립트와 기대값(`manual_reconciliation.json`)을
 두어 `window63`·`window21`·`kospi`를 대조한다(백테스트 픽스처와 같은 이유 — 기대값을 엔진 출력으로
 채우면 대조가 아니다).
+
+## 구간 입력 확장 — DEP-004-011
+
+위 JSON은 기존 봉투를 설명하는 축약 예시이며 실행 가능한 확정 fixture가 아니다. M1 동결 전에
+아래 항목을 포함한 완전한 fixture로 교체한다. 004 저장 결과와의 필드 대응·독립 대조를 먼저 통과해야 한다.
+
+- `inputs.openingPositions`: baselineDate의 종목별 수량·평가액. FRESH_CASH는 빈 목록.
+- `inputs.dailyPositions`: d0~lastAvailable의 날짜별 종목 수량·평가액. 빈 보유일도 날짜를 남긴다.
+- `inputs.trades`: round-trip 대신 개별 체결 목록. dateTime·instrumentId·side·quantity·price·
+  costs(commission/spread/slippage/tax)·directCashCost. 체결가에 반영된 비용은 directCashCost에서 제외.
+- `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다.
+- corporate action에 따른 수량·현금 변화와 가격 자료는 같은 버전으로 정합 검증한다. 확보되지 않은
+  항목을 0이나 비례배분 비용으로 만들어내지 않는다.
+- holdings는 dailyPositions와 portfolioSeries에서 산출하며 weightsSeries가 일별이라고 가정하지 않는다.
+  입력 해시 대상에는 위 필드와 window·scenario·marketData 버전 전체가 포함된다.
