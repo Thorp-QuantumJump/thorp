@@ -78,4 +78,27 @@ public record RunPlan(
     public Map<String, Object> requestSpecOrEmpty() {
         return Objects.requireNonNullElseGet(requestSpec, Map::of);
     }
+
+    /**
+     * 이 실행이 쓴 시나리오 오버레이 규칙의 버전. {@code versions.scenarioRules}({@code "TARGET_RISK_OVERLAY/1"})에서
+     * 읽는다.
+     *
+     * <p>요청은 오버레이 버전을 싣지 않고 접수가 고른다. 그래서 고른 값은 여기에만 남고, 발행·재시도가 이 값을 읽어야 규칙이 바뀐 뒤에도 같은 규칙으로
+     * 계산한다(T029).
+     *
+     * @return 오버레이가 없는 실행이면 null
+     */
+    public String scenarioRulesVersion() {
+        Object recorded = versions == null ? null : versions.get("scenarioRules");
+        if (recorded == null) {
+            return null;
+        }
+        String value = recorded.toString();
+        int slash = value.indexOf('/');
+        if (slash < 1 || slash == value.length() - 1) {
+            throw new IllegalArgumentException(
+                    "versions.scenarioRules must be STRATEGY/VERSION: " + value);
+        }
+        return value.substring(slash + 1);
+    }
 }

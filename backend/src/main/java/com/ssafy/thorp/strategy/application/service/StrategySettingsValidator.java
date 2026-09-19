@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
@@ -80,6 +81,32 @@ public class StrategySettingsValidator {
         requireInitialAmountInRange(initialAmount);
 
         return new Verified(warmupOf(registration, settings), currentVersion);
+    }
+
+    /**
+     * 이미 접수된 요청을 같은 조건으로 다시 접수할 때(재시도, spec 004 T029).
+     *
+     * <p>{@link #verify}는 새 요청이 <b>지금 등록표</b>로 판정받게 한다. 재시도에 그대로 걸면 등록표 버전이 오른 날부터 그 전에 접수된 요청은 전부
+     * 409로 막힌다 — 사용자가 고친 것은 없는데 같은 조건으로 다시 돌릴 방법이 사라진다.
+     *
+     * <p>그래서 저장된 요청의 버전이 <b>지금 버전과 같으면</b> {@link #verify}와 똑같이 판정하고, <b>과거 버전이면 판정하지 않는다</b>. 저장된
+     * 사본은 접수 때 그 버전으로 판정을 통과한 기록이고, 등록표는 값이 바뀌면 행을 고치지 않고 버전을 올리므로 같은 버전으로 다시 판정해도 답이 같다. 지금 버전의
+     * 규칙으로 판정하면 과거 요청을 그 뒤에 생긴 규칙으로 거절하게 된다.
+     *
+     * @param registryVersion 저장된 요청이 접수 때 판정받은 등록표 버전
+     * @return 판정했으면 그 결과, 과거 버전이라 판정하지 않았으면 empty
+     */
+    public Optional<Verified> verifySaved(
+            String strategyId,
+            Map<String, Object> parameters,
+            String registryVersion,
+            int universeSize,
+            BigDecimal initialAmount) {
+        if (!Objects.equals(registryVersion, registry.version())) {
+            return Optional.empty();
+        }
+        return Optional.of(
+                verify(strategyId, parameters, registryVersion, universeSize, initialAmount));
     }
 
     /**

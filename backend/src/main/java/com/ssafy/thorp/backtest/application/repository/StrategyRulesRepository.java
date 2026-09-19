@@ -14,6 +14,16 @@ public interface StrategyRulesRepository {
 
     Optional<StrategyRules> find(String strategyId, String rulesVersion);
 
-    /** 화면·운영이 "무엇을 실행할 수 있는가"를 보여줄 때 쓴다. */
+    /** 대체된 옛 버전까지 전부. 전략 하나에 여러 행이 있을 수 있다. */
     List<StrategyRules> findAll();
+
+    /**
+     * 대체되지 않은 행만. 전략마다 하나다(T029, 부분 유니크 인덱스 {@code uk_strategy_rules_current}).
+     *
+     * <p>화면·운영이 "지금 무엇을 고를 수 있는가"를 보여줄 때 쓴다.
+     */
+    List<StrategyRules> findCurrent();
+
+    /** 그 전략의 대체되지 않은 행. 없으면 empty. */
+    Optional<StrategyRules> findCurrent(String strategyId);
 }

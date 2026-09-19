@@ -390,11 +390,13 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                                 String.class))
                 .isEmpty();
 
-        // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 역변동성 /1 은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 버전을 적는 이유: PD-02 가 확정되면 /2 가 더해지고(T029) 그 행은 임시가 아니다. /1 의 표시는 그 뒤에도 그대로다.
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT provisional FROM strategy_rules"
-                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
+                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'"
+                                        + " AND rules_version = '1'",
                                 Boolean.class))
                 .isTrue();
     }

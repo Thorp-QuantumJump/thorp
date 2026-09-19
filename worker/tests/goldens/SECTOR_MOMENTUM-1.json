@@ -1,0 +1,33 @@
+{
+  "rules": "SECTOR_MOMENTUM-1.json",
+  "engineInput": "engine-input-three-etf-momentum.json",
+  "sha256": "a9722dcfa877876f21e7e7b15bf4679db7d4df4e54fbd2a7ec47bb7c756897a8",
+  "summary": {
+    "performance": {
+      "initialEquity": "10000000",
+      "finalEquity": "10782565.652600",
+      "currency": "KRW",
+      "totalReturn": "0.07825656526",
+      "netTotalReturn": "0.07825656526",
+      "cagr": "0.086362110534384015594440113",
+      "maxDrawdown": "-0.1116299950086637590878004670",
+      "sharpeRatio": "0.6603170681642053",
+      "volatility": "0.1338159891536343",
+      "tradeCount": 16,
+      "winRate": "0.625",
+      "totalTradingCost": "106210.34740"
+    },
+    "tradeCount": 22,
+    "exceptionCount": 2,
+    "firstTarget": {
+      "091160.XKRX": "0.539584",
+      "244580.XKRX": "0",
+      "305720.XKRX": "0.460416"
+    },
+    "lastTarget": {
+      "091160.XKRX": "0",
+      "244580.XKRX": "0.489950",
+      "305720.XKRX": "0.510050"
+    }
+  }
+}
