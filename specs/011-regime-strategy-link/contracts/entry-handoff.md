@@ -19,7 +19,7 @@
 
 화면 흐름: 분야 선택(7개 + 선택형 종합) → `GET /regime-links/availability`(`entryPath=STRATEGY_RESULT`)
 → 기본 목록(`shownInFiltered=true`) + "선택 ETF로 비교 가능한 기간" + 제외 수 + '전체 경제환경 탐색으로
-전환' → 로그인 사용자는 `POST /regime-link-searches`로 목록·변경 기록 확정(익명은 GET과 탐색 흐름 내 변경 표시) → 사례 선택 → `POST /regime-links`(로그인 및 searchId 필요) → 사례 옆 전략 결과 영역.
+전환' → 로그인 사용자는 `POST /regime-link-searches`로 목록·변경 기록 확정(익명은 GET과 탐색 흐름 내 변경 표시) → 사례 선택 → `POST /regime-links`(로그인 및 linkSearchId 필요) → 사례 옆 전략 결과 영역.
 
 ## 2. 시장 흐름 → 011 (`MARKET_FLOW` 경로)
 
@@ -28,7 +28,7 @@
 | 주소 | `/regime-link/start?case={caseId}[&sector={sectorCode}]` |
 | `case` | `{snapshotKey}~{endMonth}` (research R6). 009 `StrategyComparisonHandoff.caseId`가 이 값이다 |
 | `sector` | 009에서 고른 섹터(있으면). 002 화면의 **초기 선택**으로만 쓰고 사례 순위와 무관(FR-005) |
-| 로그인 | 이 주소를 열 때 익명이면 로그인 안내 → 로그인 후 같은 주소로 복귀(FR-025, 014 FR-011 방식) |
+| 로그인 | 이 주소를 열 때 익명이면 로그인 안내 → 로그인 후 같은 주소로 복귀(FR-025, 014 FR-011 방식). 014 `ProtectedRoute`와 같은 복귀 위치 저장(`auth/returnTarget`)을 재사용한다 |
 
 화면 흐름: `/regime-link/start` → 002(섹터·비중, `sector` 초기 선택) → 003(전략·설정, **§3 제약**)
 → '분석하기' → 004 접수(요청에 `case`를 싣지 않는다 — 004 계약을 바꾸지 않고 화면이 주소로 들고
@@ -43,7 +43,7 @@
 주소에 `case`가 있으면 003 '기간·금액·조건'은 아래를 추가로 지킨다(Clarifications 09-18 Q1).
 
 - 분석 기간의 **시작일 상한** = `d0 − 선택 전략의 워밍업 거래일`, **종료일 하한** = `d63`(미완성이면
-  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/cases/{caseId}/window`
+  자료 마감일). 이 범위를 벗어나는 값은 선택할 수 없다. `d0`·`d63`은 `GET /regime-links/case-window?caseId=`
   응답의 `postWindow`에서 읽는다(003이 스스로 계산하지 않는다).
 - 한 문장 안내: "이 사례(YYYY년 M월) 직후 구간을 포함해야 하므로 기간을 여기까지만 줄일 수
   있습니다." 고정 문구다.
@@ -62,7 +62,7 @@
 | 005 결과 화면 | 사례 결과 영역의 '전체 기간 결과 보기' | `/results/{publicToken}` — 전체 기간 결과는 항상 같은 화면에서도 요약으로 보이고(FR-012), 상세는 005로 |
 | 010 사례 상세 | 거리·기여·z 값 | 010 화면 컴포넌트를 011 화면 안에 재사용(주소 이동 없음) |
 | 012 뉴스 | 당시 뉴스 | 012 계약을 따른다. 없으면 영역을 비운다(Edge Cases) |
-| 로그인 | 익명이 쓰기 동작을 누름 | `/login?returnTo={현재 주소}` (014 FR-011 방식) |
+| 로그인 | 익명이 쓰기 동작을 누름 | 014 `auth/returnTarget`에 현재 주소(path+query)를 저장한 뒤 `/login`으로 이동한다. 주소 인자는 쓰지 않는다(014 FR-011 방식) |
 
 ## 5. 주소가 틀렸을 때
 

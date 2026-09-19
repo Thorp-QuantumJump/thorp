@@ -41,16 +41,17 @@
 | **M1** | `feat(be)/{티켓}-regime-link-contract` | DOCS·BE·WK | `[BE] 사례 연결 메시지 계약 v1과 양쪽 골격` | T000~T007 | `cd backend && ./gradlew spotlessApply build` · `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` |
 | **M2** | `feat(be)/{티켓}-regime-link-slicer` | WK | `[BE] 사후 구간 잘라내기·요약 계산` | T008~T015 | `cd worker && ruff check … && pytest` |
 | **M3** | `feat(be)/{티켓}-regime-link-consumer` | WK | `[BE] 사례 연결 워커 소비자와 엔트리포인트` | T016~T021 | 〃 |
-| **M4** | `feat(be)/{티켓}-regime-link-availability` | DB·BE | `[BE] 사례 연결 표와 가용성 판정 조회` | T022~T029, T034, T037, T045, T050, T052 | `cd backend && ./gradlew spotlessApply build` |
+| **M4** | `feat(be)/{티켓}-regime-link-availability` | DB·BE | `[BE] 사례 연결 표와 가용성 판정 조회` | T022~T029, T034, T045, T050, T052 | `cd backend && ./gradlew spotlessApply build` |
 | **M5** | `feat(be)/{티켓}-regime-link-api` | BE | `[BE] 사례 연결 생성·시나리오·재계산 API` | T030~T033, T035~T036, T038~T040, T051, T058~T060, T067~T070, T075~T076, T080 | 〃 |
 | **M6** | `feat(fe)/{티켓}-regime-link-start` | FE | `[FE] 시장 흐름 진입과 003 분석 기간 제약` | T041~T044, T046~T049 | `cd frontend && npm run lint && npm run build && npm test` |
-| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079 | 〃 |
-| **M8** | `docs(be)/{티켓}-regime-link-verification` | DOCS | `[DOCS] quickstart 실행 기록과 교차 spec 후속` | T081~T085 | 수동 — quickstart.md S1~S9 |
+| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079, T081 | 〃 |
+| **M8** | `docs(be)/{티켓}-regime-link-verification` | DOCS | `[DOCS] quickstart 실행 기록과 교차 spec 후속` | T082~T084 | 수동 — quickstart.md S1~S9 |
 
 **묶음 순서**: M1 → (M2 → M3) ∥ (M4 → M5) → M6 → M7 → M8. **M2·M3(워커)와 M4·M5(백엔드)는 M1의
-계약 픽스처만 공유하므로 병렬로 딸 수 있다.** M6·M7은 M5의 응답을 읽고, M7은 010 M7(결과 목록
-컴포넌트)이 dev에 있어야 한다(plan R8). M4는 010 M6 없이 픽스처 대역으로 시작하되 **머지는 010 M6
-뒤**가 안전하다 — FK를 나중에 덧붙이는 마이그레이션(data-model §9)을 피할 수 있다.
+계약 픽스처만 공유하므로 병렬로 딸 수 있다.** M6·M7은 M5의 응답을 읽고, M7은 dev에 있는 010 결과 목록
+컴포넌트(`components/regime/`)를 재사용한다(research R8). M4는 dev의 010 표에 FK를 바로 걸고 010
+리포지토리를 읽는다 — 대역을 두지 않는다. 조회 API(T045·T050·T052)는 판정과 같은 컨트롤러·같은 MR이라
+스토리 태스크이지만 M4에 둔다.
 
 ### 묶음별 MR 체크포인트
 
@@ -59,11 +60,11 @@
 | M1 | 픽스처 7개가 백엔드·워커 양쪽 계약 테스트를 round-trip으로 통과. 토폴로지 상수는 계약 문서와 대조하고 Java 파일 대조는 T030이 있는 M5에서 통과. `regimelink` 패키지가 `ArchitectureTest`를 통과 |
 | M2 | 수기 대조(`manual_reconciliation.json`)와 `window63`·`window21`·`kospi`가 일치. 미완성 입력(34거래일)에서 `tradingDays=34`·`complete=false`. 수익률·낙폭 연환산 없음. 회전율 단위 명시. 전체 손익 0이면 손실 기여 생략. `FRESH_CASH`는 `initialCash` 기준 |
 | M3 | 계약 오류 → DLQ, 계산 실패 → `FINISHED(FAILED)` + ACK, 발행 실패 → requeue. `FINISHED` 확인 전 ACK 경로 없음. **백테스트 소비자 테스트 수·통과·skipped가 변경 전과 같다** |
-| M4 | 계약 §1 예시와 응답 일치. `cases[]`가 010 표시 후보 전부이고 순위 그대로. 21 미만이 `POST_INCOMPLETE`로 제외 수에 듦. `OUT_OF_PERIOD`는 `shownInFiltered`에 영향 없음. 같은 묶음 재호출에 같은 `filterKey`. `THORP_ENV=prod` + `regime-source=fixture`면 기동 실패 |
+| M4 | 계약 §1 예시와 응답 일치. `cases[]`가 010 표시 후보 전부이고 순위 그대로. 21 미만이 `POST_INCOMPLETE`로 제외 수에 듦. `OUT_OF_PERIOD`는 `shownInFiltered`에 영향 없음. 같은 묶음 재호출에 같은 `filterKey`. `snapshot_id` FK가 010 표에 걸려 있다 |
 | M5 | 익명 `POST`가 401이고 행·메시지 0. 같은 (실행×사례×시나리오) 재요청에 메시지 0. T007 Java 토폴로지 대조 통과. `confirmFullPeriod=false`로 기간 밖이면 계산 0. `FRESH_CASH` 접수 본문이 계약 §2와 같다. DLQ → `FAILED(SYSTEM_FAILURE)`. 유지율이 응답에 0건 |
 | M6 | `/regime-link/start`가 익명이면 로그인 안내 뒤 같은 주소 복귀. `case`가 002·003 주소에 유지. 003에서 하한 밖 기간 선택 불가와 한 문장. 분석 완료 후 `/regime-link?base&case`로 이동 |
-| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만 |
-| M8 | quickstart S1~S9 실행 기록과 skipped 수가 남고, 교차 spec의 합의 완료·미해결 상태가 구분되어 있다 |
+| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사(T081) 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만 |
+| M8 | quickstart S1~S9 실행 기록과 skipped 수가 남고, 교차 spec의 결정 완료·미해결 상태가 구분되어 있다 |
 
 ## Path Conventions
 
@@ -72,7 +73,6 @@
 - 워커: `worker/src/worker/regime_link/…`, 엔트리 `worker/src/worker/regime_link_main.py`, 테스트 `worker/tests/regime_link/…`
 - 프론트: `frontend/src/…` (`pages/RegimeLink*.tsx`, `components/regimelink/`, `api/regimeLink.ts`, `types/regimeLink.ts`, `hooks/useRegimeLink.ts`)
 - 계약 픽스처: `docs/specs/regime-link-messaging/{README.md,examples/}`, `docs/specs/regime-link-api/{README.md,examples/}`
-- ⚠ 임시 대역(010 M6 머지 시 통째 삭제): `backend/src/main/java/com/ssafy/thorp/regimelink/infrastructure/fixture/`
 - 커밋 전 `cd backend && ./gradlew spotlessApply` 필수. 워커는 `ruff format`
 
 ---
@@ -82,7 +82,7 @@
 **Purpose**: 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있게 메시지 계약을 먼저 고정한다.
 
 - [ ] T000 (BE·WK 검증) research R3 DEP-004-011의 저장 필드→구간 입력 대응과 독립 계산을 작성한다. 개별 체결·청산 비용·기준 보유·현금흐름이 검증되기 전 T001·T005·T006·M2는 차단한다. 충족하지 못하면 004 계약 확장을 선행 작업으로 합의하며, 값을 임의 복원하지 않는다. 검증 근거를 research R3에 기록
-- [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다
+- [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 T000 통과 뒤 계약 "구간 입력 확장" 절의 모양(`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만들고, 본문 축약 예시의 모양으로 만들지 않는다
 - [ ] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·"내보내지 않는 것")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다
 - [ ] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)
 - [ ] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다
@@ -122,27 +122,27 @@
 
 ## 백엔드 — 표·도메인·판정 (M4)
 
-- [ ] T022 (DB) `V{YYYYMMDDHHMMSS}__regime_link.sql`: `regime_link_filter`·`regime_link_search`·`regime_link`·`regime_link_result` 표, 인덱스, `UNIQUE(run_id, snapshot_key, end_month, scenario)`와 검색의 `UNIQUE(owner_user_id, client_request_id)`, CASCADE(`regime_link_result`). `snapshot_id` FK는 **010 M6이 dev에 있으면 걸고 없으면 컬럼만**(data-model §9) — 어느 쪽인지 MR 본문에 적는다. 되돌릴 수 없는 변경 없음
-- [ ] T023 (BE) `domain/model|vo`: `LinkId`(`RL-…`)·`SearchId`(`RLS-…`)·`CaseRef(snapshotKey, endMonth)`(`~` 직렬화·역직렬화, 형식 검증)·`PostWindow`·`Availability(state, reason, partial, delistedOn)`·`Scenario`·`LinkStatus`·`EntryPath`·`FilterKey`. Spring·JPA import 금지
+- [ ] T022 (DB) `V{YYYYMMDDHHMMSS}__regime_link.sql`: `regime_link_filter`·`regime_link_search`·`regime_link`·`regime_link_result` 표, 인덱스, `UNIQUE(run_id, snapshot_key, end_month, scenario)`와 검색의 `UNIQUE(owner_user_id, client_request_id)`, CASCADE(`regime_link_result`). `snapshot_id` → `regime_search_snapshot(id)` FK는 `ON DELETE SET NULL`로 이 마이그레이션에서 건다(010 표는 dev에 있다, data-model §9). 되돌릴 수 없는 변경 없음
+- [ ] T023 (BE) `domain/model|vo`: `LinkId`(`RL-…`)·`LinkSearchId`(`RLS-…`, 외부 이름 `linkSearchId`)·`CaseRef(snapshotKey, endMonth)`(`~` 직렬화·역직렬화, 형식 검증)·`PostWindow`·`Availability(state, reason, partial, delistedOn)`·`Scenario`·`LinkStatus`·`EntryPath`·`FilterKey`. Spring·JPA import 금지
 - [ ] T024 [P] (BE) `infrastructure/persistence/`에 표 넷의 `*JpaEntity`·`*Mapper`·Spring Data 리포지토리, `application/repository/`에 인터페이스(`RegimeLinkRepository`·`RegimeLinkSearchRepository`·`RegimeLinkFilterRepository`·`RegimeLinkResultRepository`). `ddl-auto=validate`에 맞춰 마이그레이션 컬럼과 1:1
-- [ ] T025 (BE) `application/repository/RegimeSearchReadRepository` 인터페이스(snapshot 조회 by `mode·field·baselineMonth` 또는 `snapshotKey`, 표시 후보 ≤10 with `rank·distance·endMonth`, 검색 상태) + ⚠ `infrastructure/fixture/FixtureRegimeSearchReadRepository`(010 계약 §1·§3 예시 값) + `infrastructure/config/RegimeLinkProperties`(`thorp.regimelink.regime-source` = `fixture|regime`, **코드 기본값 없음**, `THORP_ENV=prod`+`fixture`면 기동 실패). 010 M6이 있으면 JPA 구현을 같은 인터페이스로
+- [ ] T025 (BE) `application/repository/RegimeSearchReadRepository` 인터페이스(snapshot 조회 by `mode·field·baselineMonth` 또는 `snapshotKey`, 표시 후보 ≤10 with `rank·distance·endMonth`, 검색 상태)와, 010 `regime.application.repository.RegimeSnapshotRepository`(`findLatest`·`findByKey`)에 위임해 011 모델로 옮기는 구현. 010 `regime` 도메인 코드는 수정하지 않고 픽스처 대역·출처 전환 프로퍼티를 두지 않는다(research R8). 테스트는 Testcontainers에 010 표 시드 행을 넣는다
 - [ ] T026 (BE) `BacktestRunReadPort`·`BacktestRunReadAdapter`: 공개 토큰 해석과 실행 config·기간·상태 조회, DEP-004-011 대응표에 따라 시작 직전 보유와 구간별 자산·보유 평가·개별 체결·직접 비용·현금흐름을 읽는다. 저장 결과에서 증명되지 않은 필드는 추정하지 않는다. 입력 확보 게이트를 통과하지 못하면 작업을 발행하지 않으며 004 계약 확장을 선행 의존성으로 남긴다
 - [ ] T027 (BE) `application/port/TradingCalendarPort` + 어댑터: 001 KOSPI 일별 행을 기준 달력으로 `firstTradingDayAfter(월말)`·`nthTradingDayFrom(d0, n)`·`lastAvailableTradingDay()`·`listedOn`·`delistedOn`(기존 `MarketMetadataPort` 재사용, 새 산식 금지). research R4
 - [ ] T028 (BE) `AvailabilityService`: 원천 ETF 이력 → 원천 워밍업 → 사후 자료 ≥21 → 기존 실행 구간 포함 여부 → 상장폐지 부분 판정. 원천은 충분하지만 기존 effectiveStart가 늦거나 기준·종료 행이 없으면 OUT_OF_PERIOD이며 필터에서 제외하지 않는다. 기존 실행 기간을 filterKey에 넣지 않는다. 묶음 우선순위 DATA_INSUFFICIENT > POST_INCOMPLETE > OUT_OF_PERIOD > NORMAL, 필터 키와 원천 공통 가용 범위 저장
-- [ ] T029 (BE) `common/exception/ErrorCode.java`에 spec 011 블록: `LOGIN_REQUIRED(401)`. 나머지(`INVALID_INPUT`·`RESOURCE_NOT_FOUND`·`RESULT_NOT_READY`·`RESULT_EXPIRED`·`EXECUTION_LIMIT`·`NOT_RETRYABLE`)는 004·005 블록 재사용. 주석에 계약 위치
+- [ ] T029 (BE) 오류 코드 재사용 확인: 011은 `common/exception/ErrorCode.java`에 코드를 추가하지 않는다. 익명 쓰기 요청은 `CurrentRequester.requireRequesterId()`의 기존 `AUTHENTICATION_REQUIRED(401)`, 나머지는 `INVALID_INPUT`·`RESOURCE_NOT_FOUND`·`RESULT_NOT_READY`·`RESULT_EXPIRED`·`EXECUTION_LIMIT`·`NOT_RETRYABLE`을 재사용한다. 분석 기간 밖 확인은 오류가 아니라 200 `outcome`이다(계약 §2). 컨트롤러 주석에 계약 절 번호를 적는다
 
 ## 백엔드 — 메시징·작업 조립·이벤트 (M5)
 
 - [ ] T030 (BE) `infrastructure/messaging/RegimeLinkRabbitConfig`: exchange `regime-link`, 큐 `regime-link.jobs`(quorum, `x-delivery-limit=1`, DLX)·`regime-link.jobs.dlq`·`regime-link.events` `Declarables`, 상수는 `public static final String`(워커 T007이 읽는다). `RegimeLinkJobPublisherImpl`(발행 confirm, `message_id="RLJ-"+linkId+"-"+attempt`, header `schemaVersion: 1`)
-- [ ] T031 (BE) `application/service/RegimeLinkJobAssembler`: 입력 실행이 `COMPLETED`인지 확인 → `PostWindow`로 `baselineDate~lastAvailable` 조각을 `BacktestRunReadPort`로 읽어 `RegimeLinkJob` 조립 → `inputDigest`(canonical JSON sha256) → 크기 상한(종목 ≤ 대응표 섹터 수, 행 ≤ 65) 초과면 발행하지 않고 `FAILED(INPUT_TOO_LARGE)`. 시계열 산술은 하지 않는다(범위만 정한다)
+- [ ] T031 (BE) `application/service/RegimeLinkJobAssembler`: 입력 실행이 `COMPLETED`인지 확인 → `PostWindow`로 `baselineDate~lastAvailable` 조각을 `BacktestRunReadPort`로 읽어 `RegimeLinkJob` 조립 → `inputDigest`(canonical JSON sha256) → 크기 상한(`dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 ≤ 65) 초과면 발행하지 않고 `FAILED(INPUT_TOO_LARGE)`. 시계열 산술은 하지 않는다(범위만 정한다)
 - [ ] T032 (BE) `infrastructure/messaging/RegimeLinkEventListener` + `application/service/RegimeLinkEventHandler`: `STARTED`→`RUNNING`(`started_at`), `FINISHED(COMPLETED)`→결과 저장·`COMPLETED`(`finished_at`), `FINISHED(FAILED)`→`FAILED{code,message}`. 종결 뒤 늦은 이벤트는 기록만. `eventId` 중복은 ACK만. DLQ 소비자 → `FAILED(SYSTEM_FAILURE)`
 - [ ] T033 (BE) `application/service/PendingRunSweeper`(`@Scheduled`, 간격 `thorp.regimelink.pending-run-sweep-interval` **기본값 없음**): `PENDING_RUN` 링크의 입력 실행 상태를 `BacktestRunReadPort`로 확인 → `COMPLETED`면 T031로 조립·발행(`QUEUED`), `FAILED|CANCELLED`면 `FAILED(RUN_FAILED)`. 004 코드에 이벤트를 추가하지 않는다(plan 위험 표)
+- [ ] T051 (BE) `POST /regime-link-searches`(REST §1b): CurrentRequester 확인, snapshot·base·compare·entryPath로 가용성 조회 후 0건도 regime_link_search 저장. fullSearchShown·shown_cases·basis 기록. owner+clientRequestId 멱등 처리, 같은 키에 다른 본문이면 `400 INVALID_INPUT`. previousLinkSearchId 소유·snapshot·경로 검증 404. 사례 계산·큐 발행 없음. 로그인 GET/익명 GET은 기록 부작용 없음
 - [ ] T034 (BE 테스트) `AvailabilityServiceTest`: 원천 자료는 2010년부터, 기존 실행은 2022년부터일 때 2018년 사례가 shownInFiltered=true·OUT_OF_PERIOD. 원천 워밍업 부족과 구분. 21 미만 제외, 필터 키에서 실행 기간·성과 배제, 010 표시 후보 밖 채움 없음
 - [ ] T035 (BE 테스트) `RegimeLinkJobAssemblerTest`: 조각 범위(`baselineDate` 포함·`lastAvailable`까지), 상장폐지 `delistedOn` 전달, `inputDigest` 결정성, 상한 초과 → 발행 0·`INPUT_TOO_LARGE`, 입력 실행 미완료 → 발행 0
 - [ ] T036 (BE 테스트) `RegimeLinkMessagingIT`(Testcontainers RabbitMQ·PostgreSQL): T001 작업 픽스처 발행 → 큐 도착·헤더, 이벤트 픽스처 주입 → 상태 전이(`QUEUED→RUNNING→COMPLETED/FAILED`), 늦은 이벤트 무시, DLQ 메시지 → `FAILED(SYSTEM_FAILURE)`
-- [ ] T037 (BE 테스트) `RegimeLinkPropertiesTest`: `regime-source` 미설정 시 기동 실패, `THORP_ENV=prod`+`fixture` 기동 실패, `fixture/` 디렉터리 밖에서 픽스처 클래스를 이름으로 참조하는 코드 0건(ArchUnit 규칙)
+- T037 **(삭제, 2026-09-20)** 010 읽기 대역을 두지 않게 되어(research R8) 대역 격리 검사가 필요 없다. 프로퍼티 미설정 시 기동 실패 검사는 T080으로 옮겼다. 번호는 재사용하지 않는다
 
-- [ ] T051 (BE) `POST /regime-link-searches`(REST §1b): CurrentRequester 확인, snapshot·base·compare·entryPath로 가용성 조회 후 0건도 regime_link_search 저장. fullSearchShown·shown_cases·basis 기록. owner+clientRequestId 멱등 처리, 다른 본문 재사용 409. previousSearchId 소유·snapshot·경로 검증 404. 사례 계산·큐 발행 없음. 로그인 GET/익명 GET은 기록 부작용 없음
 
 **Checkpoint**: 계약대로 작업이 오가고 판정·표가 준비됐다. 스토리 구현을 시작할 수 있다.
 
@@ -155,16 +155,16 @@
 **Independent Test**: 시장 흐름에서 사례 하나 → '이 기간으로 전략 비교' → 섹터 2개·전략 하나 → 분석 → `/regime-link?base&case`에 사후 63거래일 결과와 전체 기간 결과가 함께 보인다. 두 번째 전략은 005 비교 대상으로 고른 뒤 함께 붙는다(quickstart S6).
 
 - [ ] T038 [US1] (BE) `presentation/controller/RegimeLinkController` + `GET /regime-links/availability`(`entryPath=MARKET_FLOW`): 필터 없음(`filter.applied=false`), 모든 `shownInFiltered=true`, 사례별 `availability`·`perRun`은 붙인다. 응답은 계약 §1·`docs/specs/regime-link-api/examples/availability-market-flow.json`과 일치
-- [ ] T039 [US1] (BE) `POST /regime-links`: 요청자 확인 후 소유한 searchId에서 비교 실행·snapshot·경로 해석. 검색 기록을 새로 만들지 않는다. caseId가 snapshot 표시 후보 밖이거나 다른 사용자 searchId면 404. 실행×사례×시나리오 재사용, DATA_INSUFFICIENT는 결과 없는 COMPLETED, 계산 가능 시 T031 발행. 익명은 401이며 행·메시지 0
+- [ ] T039 [US1] (BE) `POST /regime-links`: 요청자 확인 후 소유한 linkSearchId에서 비교 실행·snapshot·경로 해석. 검색 기록을 새로 만들지 않는다. caseId가 snapshot 표시 후보 밖이거나 다른 사용자 linkSearchId면 404. 실행×사례×시나리오 재사용, DATA_INSUFFICIENT는 결과 없는 COMPLETED, 계산 가능 시 T031 발행. 익명은 401이며 행·메시지 0
 - [ ] T040 [US1] (BE) `GET /regime-links/{linkId}`(계약 §3: `runProgress`는 `PENDING_RUN`일 때 004 상태 그대로, `result`는 `COMPLETED`일 때만, `DATA_INSUFFICIENT`는 `result=null`+사유)와 `GET /regime-links?base&compare&caseId`(계약 §4, 기준→비교 대상 순서, 없는 조합은 요소 없음)
-- [ ] T041 [P] [US1] (FE) `types/regimeLink.ts`: REST §1·1a·1b·2~4 타입과 검색 생성 요청(clientRequestId·previousSearchId)·응답(searchId·bundleChanged) 정의. 유지율 필드 없음. vite test.include에 regimelink .test.ts 및 API·hook 테스트 추가
-- [ ] T042 [P] [US1] (FE) `api/regimeLink.ts`: fetchAvailability·fetchCaseWindow·createRegimeLinkSearch·createRegimeLinks(searchId)·fetchRegimeLink·listRegimeLinks·retryRegimeLink. apiClient 및 CSRF·로그인 복귀 계약 재사용. API 테스트
+- [ ] T041 [P] [US1] (FE) `types/regimeLink.ts`: REST §1·1a·1b·2~4 타입과 검색 생성 요청(clientRequestId·previousLinkSearchId)·응답(linkSearchId·bundleChanged) 정의. 유지율 필드 없음. vite test.include에 regimelink .test.ts 및 API·hook 테스트 추가
+- [ ] T042 [P] [US1] (FE) `api/regimeLink.ts`: fetchAvailability·fetchCaseWindow·createRegimeLinkSearch·createRegimeLinks(linkSearchId)·fetchRegimeLink·listRegimeLinks·retryRegimeLink. apiClient 및 CSRF·로그인 복귀 계약 재사용. API 테스트
 - [ ] T043 [P] [US1] (FE) `frontend/src/marketflow/handoff.ts`: `StrategyComparisonHandoff` → 목적지 `/regime-link/start?case={caseId}&sector={sectorCode}` 생성 함수 추가(009 화면의 '이 기간으로 전략 비교' 버튼이 이것을 쓴다). `handoff.test.ts` 갱신. 009 컴포넌트 자체는 최소 변경(버튼 목적지만)
-- [ ] T044 [US1] (FE) `frontend/src/pages/RegimeLinkStartPage.tsx` + 라우트 `/regime-link/start`: `case`·`sector` 파싱, 익명이면 `/login?returnTo=` 뒤 같은 주소 복귀(014 방식), `case` 형식 오류·404면 `/market-flow`로 안내와 한 문장, 정상이면 `/diagnosis/sectors?case=…&sector=…`로 이동(`sector`는 002 초기 선택)
-- [ ] T045 [US1] (BE) REST §1a `GET /regime-links/cases/{caseId}/window`: 실행 토큰 없이 snapshot 고정 postWindow 반환. 003 사전 기간 제약용이며 공개 조회. 계약 예시 파일 작성
+- [ ] T044 [US1] (FE) `frontend/src/pages/RegimeLinkStartPage.tsx` + 라우트 `/regime-link/start`: `case`·`sector` 파싱, 익명이면 014 `auth/returnTarget`에 현재 주소(`case`·`sector` 포함)를 저장하고 `/login`으로 이동, 로그인 뒤 같은 주소로 복귀(014 방식, 주소 인자를 쓰지 않는다), `case` 형식 오류·404면 `/market-flow`로 안내와 한 문장, 정상이면 `/diagnosis/sectors?case=…&sector=…`로 이동(`sector`는 002 초기 선택)
+- [ ] T045 [US1] (BE) REST §1a `GET /regime-links/case-window?caseId=`: 실행 토큰 없이 snapshot 고정 postWindow 반환. 003 사전 기간 제약용이며 공개 조회. 계약 예시 파일 작성
 - [ ] T046 [US1] (FE) `frontend/src/pages/SectorSelectionPage.tsx`·`StrategySettingsPage.tsx`: `case` 질의 인자를 다음 화면 주소로 그대로 넘긴다(새로고침 유지). 003 '기간·금액·조건'에서 `case`가 있으면 T045로 `postWindow`를 읽어 시작일 상한 `d0 − 워밍업`·종료일 하한 `d63(또는 lastAvailable)` 밖을 선택 불가로 하고 고정 문구를 보인다(entry-handoff §3). 공통 평가 가능 범위가 제약을 못 채우면 003 기존 규칙대로 카드 비활성 + 이유
 - [ ] T047 [US1] (FE) 003 '분석하기' 완료(`COMPLETED`) 시 `case`가 있으면 `/regime-link?base={publicToken}&case={caseId}`로 이동. 004 요청 본문에는 `case`를 싣지 않는다(entry-handoff §2)
-- [ ] T048 [US1] (FE) `RegimeLinkPage` MARKET_FLOW: base·case의 snapshot 유지, 로그인 사용자는 createRegimeLinkSearch로 목록을 확정한 뒤 searchId로 계산 생성. 익명은 GET 및 기존 공개 결과 조회만, 새 계산이 필요하면 로그인 안내. 63 기본 결과·진행 상태·전체 기간 핵심 숫자를 같은 화면에 표시. useRegimeLink 폴링
+- [ ] T048 [US1] (FE) `RegimeLinkPage` MARKET_FLOW: base·case의 snapshot 유지, 로그인 사용자는 createRegimeLinkSearch로 목록을 확정한 뒤 linkSearchId로 계산 생성. 익명은 GET 및 기존 공개 결과 조회만, 새 계산이 필요하면 로그인 안내. 63 기본 결과·진행 상태·전체 기간 핵심 숫자를 같은 화면에 표시. useRegimeLink 폴링
 - [ ] T049 [US1] (FE 테스트) `RegimeLinkStartPage.test.tsx`(익명 복귀·형식 오류 안내·정상 이동)·`RegimeLinkPage.marketflow.test.tsx`(사례 유지, 결과 영역, 전체 기간 요약 동반, 진행 상태)·`StrategySettingsPage` 제약 테스트(하한 밖 선택 불가·문구)
 
 **Checkpoint**: MVP — 시장 흐름에서 들어와 한 전략의 사후 구간 결과를 본다.
@@ -234,8 +234,8 @@
 
 **Independent Test**: 워밍업이 더 긴 전략을 비교 대상으로 골라 다시 들어오면 알림·제외 사례가 보이고 유지율은 화면에 없으며 `regime_link_search.retention`에 남는다(quickstart S7·S9).
 
-- [ ] T075 [US5] (BE) T051 검색 생성 시 같은 흐름의 previousSearchId와 필터 키 비교. 다르면 previous_search_id·retention{ratio,kept,added,removed} 저장, 응답 bundleChanged{added,removed,excludedCount}. 같으면 알림 없음. 사례 열기 POST로 지연하지 않으며 빈 목록도 처리. 비율은 응답에 포함하지 않는다
-- [ ] T076 [US5] (BE 테스트) `BundleChangeTest`: 사례를 열지 않아도 변경 기록·알림, 변경 후 0건에도 제외 목록, 필터 동일 시 알림 없음, 두 경로 분리, 소유권 없는 previousSearchId 거절, 다른 탭 기록 혼입 없음, 네트워크 재시도 멱등, 검색 생성 시 계산 메시지 0
+- [ ] T075 [US5] (BE) T051 검색 생성 시 같은 흐름의 previousLinkSearchId와 필터 키 비교. 다르면 previous_search_id·retention{ratio,kept,added,removed} 저장, 응답 bundleChanged{added,removed,excludedCount}. 같으면 알림 없음. 사례 열기 POST로 지연하지 않으며 빈 목록도 처리. 비율은 응답에 포함하지 않는다
+- [ ] T076 [US5] (BE 테스트) `BundleChangeTest`: 사례를 열지 않아도 변경 기록·알림, 변경 후 0건에도 제외 목록, 필터 동일 시 알림 없음, 두 경로 분리, 소유권 없는 previousLinkSearchId 거절, 다른 탭 기록 혼입 없음, 네트워크 재시도 멱등, 같은 `clientRequestId`에 다른 본문이면 400이고 기록 행 수 불변, 검색 생성 시 계산 메시지 0
 - [ ] T077 [US5] (FE) `components/regimelink/BundleChangeNotice.tsx`: 한 문장 알림 + 제외·추가된 사례 목록 + 제외 수. 유지율을 그릴 필드가 타입에 없다
 - [ ] T078 [US5] (FE 테스트) `BundleChangeNotice.test.tsx`: 알림·목록 렌더, `%`·"유지율" 문자열 0건
 - [ ] T079 [US5] (FE 테스트) `RegimeLinkPage.bundlechange.test.tsx`: 비교 변경 후 사례를 열지 않아도 알림, 변경 후 0건, 같은 묶음 무알림, 전체 탐색 전환 기록, 익명 변경 표시·로그인 후 같은 목록 복귀, 기록 실패가 익명 검색을 막지 않음
@@ -244,14 +244,14 @@
 
 ---
 
-# Phase 8: Polish & Cross-Cutting · **묶음 M5(T080) · M8(T081~T085)**
+# Phase 8: Polish & Cross-Cutting · **묶음 M5(T080) · M7(T081) · M8(T082~T084)**
 
-- [ ] T080 (BE) 운영 설정 마무리: `application.yml`에 `thorp.regimelink.{regime-source, pending-run-sweep-interval, job-max-rows, job-max-instruments}` 자리(`application-local.yml` 로컬 값, `application-prod.yml`은 **기본값 없는** 환경변수 참조), `infra/.env.prod.example`·루트 `.env.example` 항목, `RegimeLinkProperties` `@NotNull`. 문서에 수치를 적지 않는다
-- [ ] T081 (FE 테스트) `frontend/src/components/regimelink/forbiddenPhrases.test.ts`: `components/regimelink/`·`pages/RegimeLink*.tsx`를 디렉터리 훑기로 모아 금지 표현(SC-007 네 종류 + 010 목록 13개: "추천"·"지금도"·"더 벌"·"이겼"·"승자"·"확률"·"유사도"·"%" 유사 표현 등) 0건 고정. 대상 파일 손 목록 금지(research R11)
-- [ ] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·searchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다
+- [ ] T080 (BE) 운영 설정 마무리: `application.yml`에 `thorp.regimelink.{pending-run-sweep-interval, job-max-rows, job-max-instruments}` 자리(`application-local.yml` 로컬 값, `application-prod.yml`은 **기본값 없는** 환경변수 참조), `infra/.env.prod.example`·루트 `.env.example` 항목, `RegimeLinkProperties` `@NotNull`과 미설정 시 기동 실패를 확인하는 `RegimeLinkPropertiesTest`(T037에서 옮김). 문서에 수치를 적지 않는다
+- [ ] T081 (FE 테스트) **M7 머지 전에 통과해야 한다(묶음 M7).** `frontend/src/components/regimelink/forbiddenPhrases.test.ts`: `components/regimelink/`·`pages/RegimeLink*.tsx`를 디렉터리 훑기로 모아 금지 표현(SC-007 네 종류 + 010 목록 13개: "추천"·"지금도"·"더 벌"·"이겼"·"승자"·"확률"·"유사도"·"%" 유사 표현 등) 0건 고정. 대상 파일 손 목록 금지(research R11)
+- [ ] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·linkSearchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다
 - [ ] T083 (DOCS) quickstart S1~S9 실행 기록을 `quickstart.md` "실행 기록"에 날짜·명령·결과·**skipped 수**와 함께 남긴다. 확인하지 못한 항목은 "확인 필요"로
-- [ ] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 2026-09-20 소유자 합의 완료로 구분하며 재승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다
-- [ ] T085 (DOCS) 010 M6 머지 후 폐기 절차 확인: `regimelink/infrastructure/fixture/` 삭제 + `regime-source` 프로퍼티 `regime` 고정 + (T022가 FK를 걸지 못했으면) FK 추가 마이그레이션 — 예행연습 결과를 quickstart S8에 기록
+- [ ] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 소유자의 결정 권한 위임(2026-09-20 사용자 확인)에 따라 이 작업에서 정한 항목으로 구분하며 추가 승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다
+- T085 **(삭제, 2026-09-20)** 010 읽기 대역을 두지 않게 되어(research R8) 폐기 예행연습이 필요 없다. 번호는 재사용하지 않는다
 
 ---
 
@@ -260,9 +260,9 @@
 ### Phase Dependencies
 
 - **Setup (Phase 1, M1)**: T000 입력 대응·독립 대조 선행. 미충족이면 004 계약 확장 합의·구현 뒤 계산 계약을 동결한다
-- **Foundational (Phase 2)**: M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 **병렬**. M4는 010 M6 없이 픽스처 대역으로 시작 가능
+- **Foundational (Phase 2)**: M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 **병렬**. M4는 dev의 010 표·리포지토리를 읽는다(대역 없음)
 - **US1 (Phase 3)**: Phase 2 전체 필요(잘라내기 결과가 붙어야 시험이 성립). FE는 M5 응답이 있어야 함
-- **US2 (Phase 4)**: Phase 2 + T038~T040. FE(T054)는 **010 M7 결과 목록 컴포넌트**에 의존
+- **US2 (Phase 4)**: Phase 2 + T038~T040. FE(T054)는 dev의 010 결과 목록 컴포넌트(`components/regime/`)를 재사용
 - **US3 (Phase 5)**: US1의 결과 영역(T048) 위에 얹는다
 - **US4 (Phase 6)**: US1·US3의 결과 자리(T048·T061)에 상태 표시를 더한다. T067은 T039 위에
 - **US5 (Phase 7)**: US2의 검색 기록(T051) 위에
@@ -271,7 +271,7 @@
 ### User Story Dependencies
 
 - **US1 (P1)**: Foundational 뒤 독립. MVP
-- **US2 (P1)**: Foundational 뒤 독립(백엔드). FE는 010 M7 뒤
+- **US2 (P1)**: Foundational 뒤 독립. FE는 010 컴포넌트를 재사용
 - **US3 (P2)**: US1 뒤(결과 영역 재사용)
 - **US4 (P2)**: US1·US3 뒤(자리 위에 상태)
 - **US5 (P3)**: US2 뒤(검색 기록)
@@ -279,7 +279,7 @@
 ### Parallel Opportunities
 
 - Phase 1: T002·T003·T004 병렬, 그 뒤 T005∥T006
-- Phase 2: 워커 줄(T008→…→T021)과 백엔드 줄(T022→…→T037)이 **다른 사람이 동시에**. 백엔드 안에서 T024∥T025∥T026∥T027(T023 뒤)
+- Phase 2: 워커 줄(T008→…→T021)과 백엔드 줄(T022→…→T036, T051 포함)이 **다른 사람이 동시에**. 백엔드 안에서 T024∥T025∥T026∥T027(T023 뒤)
 - Phase 3: T041·T042·T043 병렬(FE), T038~T040(BE)과 동시
 - Phase 4: T053(FE)은 T050(BE)과 동시
 - 각 스토리의 `(BE 테스트)`·`(FE 테스트)`는 구현 태스크와 같은 묶음 안에서 파일이 다르면 병렬
@@ -288,7 +288,7 @@
 
 ```text
 워커 담당:   T008 → T009 → T010 → T011 → T012 → T013 → (T014 ∥) → T015 → T016 → T017 → T018 → T019 → T020 → T021
-백엔드 담당: T022 → T023 → (T024 ∥ T025 ∥ T026 ∥ T027) → T028 → T029 → T030 → T031 → T032 → T033 → (T034 ∥ T035 ∥ T036 ∥ T037)
+백엔드 담당: T022 → T023 → (T024 ∥ T025 ∥ T026 ∥ T027) → T028 → T029 → T030 → T031 → T032 → T033 → T051 → (T034 ∥ T035 ∥ T036)
 공유:        T001 픽스처만. 서로의 코드를 import하지 않는다
 ```
 
@@ -299,12 +299,12 @@
 **MVP = Phase 1 + Phase 2 + Phase 3(US1)**. 시장 흐름에서 사례를 골라 전략 하나의 사후 63거래일 결과를
 보는 것까지가 첫 증분이다. 이 시점에 이미 잘라내기 정의(S2)·판정(S4)·연결(S5-1~3)이 검증된다.
 
-**두 번째 증분 = US2**. 진단 결과 경로와 가용성 필터. 백엔드는 MVP와 함께 갈 수 있고 FE만 010 M7을
-기다린다.
+**두 번째 증분 = US2**. 진단 결과 경로와 가용성 필터. 010이 dev에 있으므로 백엔드와 FE 모두 MVP와
+함께 갈 수 있다.
 
 **세 번째 증분 = US3 + US4**. 현금 시작·상태 표시·전체 기간 재계산. 화면의 완성도를 결정한다.
 
-**마지막 = US5 + Polish**. 알림·기록·문서·폐기 예행연습.
+**마지막 = US5 + Polish**. 알림·기록·문서.
 
 **하지 않는 것**: 사후 구간 미리 계산, 011 자체 묶음 편집(전략 추가 UI), 유지율 표시, 수익률·낙폭 연환산, 초과 수익·
 승패, 010 순위 재계산, 004·010·005 코드 수정, 사용성 관찰(SC-008은 010 M10과 같은 방식의 별도 티켓으로

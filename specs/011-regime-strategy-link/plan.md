@@ -61,7 +61,7 @@ pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP
 
 ### 해소된 NEEDS CLARIFICATION
 
-Phase 0 결정 11건에 2026-09-20 수정과 R12를 반영했다. DEP-004-011 입력 확보는 미완료다. 근거는 [research.md](research.md).
+Phase 0 결정 12건(R1~R12)에 2026-09-20 수정을 반영했다. DEP-004-011 입력 확보는 미완료다. 근거는 [research.md](research.md).
 
 | 항목 | 결론 |
 |---|---|
@@ -71,11 +71,12 @@ Phase 0 결정 11건에 2026-09-20 수정과 R12를 반영했다. DEP-004-011 �
 | 가용성 판정·필터 키 | Backend 메타데이터 조회 5단계, sha256 키, KOSPI 거래일 달력 (R4) |
 | 현금 시작·전체 기간 재계산 | 004 접수 서비스 호출 → 완료 후 잘라내기 작업 연쇄 (R5) |
 | 진입 계약·사례 식별자 | `(snapshotKey, endMonth)`를 `~`로 이어 한 값, 주소 둘 (R6) |
-| 로그인 요구 | 쓰기 컨트롤러가 요청자 확인, `401 LOGIN_REQUIRED` (R7) |
-| 010·005 미완 상태 | 계산·판정·계약 먼저, BE 조회·FE는 010 M6·M7 뒤 (R8) |
+| 로그인 요구 | 쓰기 컨트롤러가 요청자 확인, 기존 `401 AUTHENTICATION_REQUIRED` 재사용 (R7) |
+| 010·005 의존 | 010 M6·M7은 dev에 병합됨. 010 리포지토리를 읽고 대역을 두지 않는다 (R8) |
 | 성능 | 측정 목표만 (R9) |
 | 006 경계 | 011 표에 FR-023 항목 기록, 006이 읽음 (R10) |
 | 문구 통제 | 금지 표현 정적 검사 + 타입으로 차이 값 배제 (R11) |
+| 검색 변경 기록 | 목록 확정 시 `POST /regime-link-searches`, 식별자는 `linkSearchId` (R12) |
 
 ## Constitution Check
 
@@ -117,7 +118,7 @@ spec FR-007·FR-015가 표시를 요구하고, 이 spec은 010 SC-009와 같은 
 ```text
 specs/011-regime-strategy-link/
 ├── plan.md                              # 이 파일
-├── research.md                          # Phase 0 (R1~R11)
+├── research.md                          # Phase 0 (R1~R12)
 ├── data-model.md                        # Phase 1 — 표 4개, 상태 전이, 보관, 소유 경계
 ├── quickstart.md                        # Phase 1 — 검증 시나리오 S1~S9
 ├── contracts/
@@ -151,12 +152,11 @@ backend/src/main/java/com/ssafy/thorp/regimelink/      # 신규 도메인. 계�
 ├── domain/model|vo/                                   # LinkId, CaseRef(snapshotKey,endMonth), PostWindow,
 │                                                      #   Availability, Scenario, FilterKey
 └── infrastructure/
-    ├── persistence/                                   # *JpaEntity, *Mapper, Spring Data
-    ├── messaging/                                     # RegimeLinkRabbitConfig(토폴로지 선언), 발행·이벤트 소비
-    └── fixture/                                       # ⚠ [임시] 010 표가 없을 때의 읽기 대역 (R8) — 010 M6 머지 시 삭제
+    ├── persistence/                                   # *JpaEntity, *Mapper, Spring Data, 010 RegimeSnapshotRepository에 위임하는 읽기 어댑터 (R8)
+    └── messaging/                                     # RegimeLinkRabbitConfig(토폴로지 선언), 발행·이벤트 소비
 
 backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__regime_link.sql
-backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java   # spec 011 블록: LOGIN_REQUIRED, LINK_NOT_READY, OUT_OF_PERIOD_CONFIRM_REQUIRED
+backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java   # 추가 없음 — 기존 코드 재사용(R7·T029). 분석 기간 밖 확인은 오류가 아니라 200 outcome(계약 §2)
 
 worker/src/worker/regime_link/                         # 신규. 백테스트 소비자와 분리
 ├── __init__.py
@@ -191,7 +191,7 @@ docs/specs/regime-link-api/README.md · docs/specs/regime-link-messaging/{README
 ## 문서 정리 묶음 (S15P21E205-358)
 
 - Jira Task: S15P21E205-358, Story: S15P21E205-85, Epic: S15P21E205-1. 담당: 우동균_E205, 추정 3 SP.
-- 브랜치: `docs(be)/358-regime-link-decisions`. 011 판정·계산·검색 기록 계약과 합의된 014 예외를 한 문서 MR로 정리한다. 구현 M1~M8과 별개다.
+- 브랜치: `docs(be)/358-regime-link-decisions`. 011 판정·계산·검색 기록 계약과, 014 소유자의 결정 권한 위임에 따라 정한 014 예외를 한 문서 MR로 정리한다. 구현 M1~M8과 별개다.
 - 검증: 문서 간 용어·필드·작업 추적과 링크 검사, 현재 004 입력 계약 대조. 코드 구현이나 수치 정확성 검증 완료로 보고하지 않는다.
 
 ## 구현 순서
@@ -206,45 +206,44 @@ docs/specs/regime-link-api/README.md · docs/specs/regime-link-messaging/{README
 | **M1** | DOCS·BE·WK | 메시지 계약 v1 픽스처(`docs/specs/regime-link-messaging/examples/`) + 백엔드 `port/message` record + 워커 `regime_link/contracts.py`. 같은 MR | 양쪽 계약 테스트가 같은 픽스처를 round-trip. M1은 문서 상수 대조, M5에서 Java 상수 대조 통과 |
 | **M2** | WK | `slicer.py` — d0~d63 잘라내기·63/21 요약·손익 기여·KOSPI 참고. R3 구간 산식·실제 체결 입력 사용 | 합성 픽스처 수기 대조 일치. 미완성 구간에서 `completedTradingDays`만큼만. 수익률·하락 폭 연환산 없음, 회전율 연환산 단위 명시. 워밍업 부족이면 계산하지 않음 |
 | **M3** | WK | `consumer.py`·`rabbitmq.py`·`regime_link_main.py` — 수신·검증·FINISHED·ACK 순서 | 계약 오류 → DLQ, 계산 실패 → FINISHED(FAILED)+ACK, 발행 실패 → requeue. 백테스트 소비자 테스트 무변경 |
-| **M4** | DB·BE | 마이그레이션 + `regimelink` 도메인: `AvailabilityService`(5단계·필터 키), 010 읽기 리포지토리 + ⚠ 픽스처 대역, `GET /regime-links/availability` | 계약 예시와 응답 일치. 표시 후보 밖에서 채우지 않음. 21 미만 사례가 제외 수에 듦. `ArchitectureTest` 통과 |
+| **M4** | DB·BE | 마이그레이션 + `regimelink` 도메인: `AvailabilityService`(5단계·필터 키), 010 `RegimeSnapshotRepository`에 위임하는 읽기 리포지토리, `GET /regime-links/availability` | 계약 예시와 응답 일치. 표시 후보 밖에서 채우지 않음. 21 미만 사례가 제외 수에 듦. `ArchitectureTest` 통과 |
 | **M5** | BE | `POST /regime-link-searches`(목록 확정·변경 기록)와 `POST /regime-links`(로그인 확인, 분석 기간 밖 확인 요구, 004 접수 호출), 잘라내기 작업 조립·발행, 이벤트 반영, `GET /regime-links/{id}`, `retry`, 004 COMPLETED 후처리 연쇄 | 익명 POST가 401. `confirmFullPeriod` 없이 기간 밖이면 계산 0건. 같은 (실행×사례×시나리오) 재요청이 새 작업을 만들지 않음. FRESH_CASH 실행 완료 뒤 링크가 COMPLETED |
 | **M6** | FE | `/regime-link/start`(009 진입) + 003 분석 기간 하한 제약 + 분석 완료 후 복귀 | case를 들고 002→003→분석→`/regime-link?base&case`로 돌아옴. 하한 밖 기간 선택 불가와 한 문장 이유 |
-| **M7** | FE | `/regime-link` — 분야 선택, 검색 결과에 가용성 표시(제외 수·비교 가능 기간·전체 탐색 전환), 사례의 전략 결과 영역(63 기본·21 상세·진행 상태·실패 자리·현금 시작 토글·전체 기간 재계산 확인·KOSPI 두 값·역사 탐색 표시) | 금지 표현 정적 검사 0건. 유지율 화면 0건. 로그인 안내 후 같은 사례 복귀. **010 M7 이후** |
-| **M8** | DOCS | quickstart S1~S9 실행 기록, `docs/specs/regime-link-*` README, 003·005 후속과 014 합의 반영 확인 | 기록이 남고, 미해결 의존성과 합의 완료 항목이 구분됨 |
+| **M7** | FE | `/regime-link` — 분야 선택, 검색 결과에 가용성 표시(제외 수·비교 가능 기간·전체 탐색 전환), 사례의 전략 결과 영역(63 기본·21 상세·진행 상태·실패 자리·현금 시작 토글·전체 기간 재계산 확인·KOSPI 두 값·역사 탐색 표시) | 금지 표현 정적 검사 0건. 유지율 화면 0건. 로그인 안내 후 같은 사례 복귀. 금지 표현 검사(T081)는 이 묶음에서 만든다 |
+| **M8** | DOCS | quickstart S1~S9 실행 기록, `docs/specs/regime-link-*` README, 003·005 후속과 014 결정 반영 확인 | 기록이 남고, 미해결 의존성과 결정 완료 항목이 구분됨 |
 
 **M1·M2를 먼저 두는 이유**: 011의 숫자는 전부 `slicer.py`에서 나온다. 화면과 API는 그것을 옮기는
 일이다. 계약(M1)이 먼저 있어야 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있다.
 
-**M4·M5가 010 M6에 의존하는 방식**: 010 표를 읽는 리포지토리는 인터페이스이고, 010 표가 dev에
-없는 동안은 `infrastructure/fixture/`의 대역이 010 계약 예시(`regime-search-api.md` §1·§3)의 값을
-돌려준다. 010 M6이 머지되면 대역 디렉터리를 지우고 JPA 구현으로 바꾼다(R8). **011 마이그레이션은
-010 표를 만들지 않는다.**
+**M4·M5가 010을 읽는 방식**: 010 M6은 dev에 병합되어 있다. 011의 읽기 리포지토리는 인터페이스이고
+구현은 010 `RegimeSnapshotRepository`(`findLatest`·`findByKey`)에 위임한다. 대역을 두지 않으며 테스트는
+Testcontainers에 010 표 시드 행을 넣어 검증한다(R8). **011 마이그레이션은 010 표를 만들지 않는다.**
 
 ## 위험과 그에 대한 대비
 
 | 위험 | 대비 |
 |---|---|
-| 010 M6·M7이 늦어 011 화면을 실제 검색 위에서 못 본다 | 판정은 010 없이 픽스처로 검증되며 계산 계약은 DEP-004-011 입력 검증을 먼저 통과해야 한다. FE 묶음만 010 뒤로 순서를 둔다(R8) |
+| 개발 환경의 010 표가 비어 있어 수동 확인을 못 한다 | 010 표는 사전 계산 배치가 채운다. 자동 테스트는 시드 행으로 검증하고, quickstart S5~S7은 010 검색 결과가 있는 환경을 전제로 적는다(R8). 계산 계약은 DEP-004-011 입력 검증을 먼저 통과해야 한다 |
 | 004 저장 결과만으로 개별 체결·청산 비용을 얻을 수 없다 | DEP-004-011 입력 대응·독립 대조를 M1·M2 선행으로 둔다. 누락 입력을 추정하지 않으며 필요하면 004 계약 확장을 먼저 합의한다 |
 | 워밍업·상장일 판정이 004 접수 검증과 어긋난다 | `MarketMetadataPort`의 원천 메타데이터를 사용하며 기존 실행 effectiveStart를 원천 워밍업으로 쓰지 않는다. 다른 산식을 만들지 않는다 |
 | 메시지에 담은 시계열 사본이 커진다 | 사후 구간 ±1거래일만 담는다(≤65행). 종목은 대응표 상한(섹터 수)으로 묶인다. 상한 초과 시 작업을 거절하고 `FAILED(INPUT_TOO_LARGE)`로 표시 — 조용히 자르지 않는다 |
 | 사용자가 현금 시작을 사례 10개에서 모두 켜 004 대기열이 찬다 | 004의 `EXECUTION_LIMIT`(429)을 그대로 화면에 보이고 011이 자체 상한을 만들지 않는다(원칙 IX). 동일 버전 재사용으로 중복은 없다 |
-| 014 로그인 경계 | 2026-09-20 사용자 확인으로 소유자 합의 완료. 기본 진단·검색·공개 결과 조회와 계산 요청·개인 기록 저장·보호 진입을 나눠 양쪽 spec에 반영했다 |
+| 014 로그인 경계 | 014 소유자가 결정 권한을 위임했고(2026-09-20 사용자 확인) 그에 따라 이 작업에서 정했다. 소유자가 개별 정책을 승인한 것은 아니다. 기본 진단·검색·공개 결과 조회와 계산 요청·개인 기록 저장·보호 진입을 나눠 양쪽 spec에 반영했다 |
 | 003이 `case` 제약을 모른다 | entry-handoff §3이 003 화면의 변경 1건을 정의한다. 003 spec FR-009 문구 갱신은 사람 판단(spec 소유자) |
 | 결과 화면(005 FE) 없이 `/regime-link?base=`로 들어올 길이 없다 | 005 FE 진입 버튼이 생기기 전에는 quickstart S5가 주소를 직접 열어 검증한다 |
 | 금지 표현이 컴포넌트에 스며든다 | 010과 같은 정적 검사(R11). 대상 파일은 디렉터리를 훑어 모은다 |
 
-## 교차 spec 후속 (합의 완료와 미해결 의존성 구분)
+## 교차 spec 후속 (결정 완료와 미해결 의존성 구분)
 
 | spec | 어긋남 | 011의 처리 |
 |---|---|---|
 | 003 FR-009 | 시장 흐름 경로의 분석 기간 하한(사례 사후 구간 포함) 규칙 없음 | entry-handoff §3으로 화면 동작만 정의. spec 문구는 003 소유자 |
 | 005 FR-018 | 넘기는 값이 "전략" 단수, 비교 대상 토큰 언급 없음 | entry-handoff §1이 `compare`를 정의. 005 문구 갱신은 005 소유자 |
-| 014 FR-010·011 | 011 보호 동작의 예외 | 소유자 합의 완료(2026-09-20 사용자 확인), 문구 반영. 구현·테스트는 011 묶음에서 수행 |
+| 014 FR-010·011 | 011 보호 동작의 예외 | 소유자의 결정 권한 위임에 따라 결정(2026-09-20 사용자 확인), 문구 반영. 추가 승인 절차 없음. 구현·테스트는 011 묶음에서 수행 |
 | 010 계약 §3 | `postPeriod.available=false` 고정 | 011은 010 응답을 바꾸지 않고 자기 엔드포인트로 붙인다. 010이 `postPeriod`에 링크 주소를 넣을지는 010 소유자 |
 
 ## Complexity Tracking
 
 > Constitution Check에 정당화가 필요한 위반이 없다. 이 절은 비운다.
 
-검색 변경 처리는 research R12·REST §1b를 따른다. M5는 검색 기록 POST, M7은 목록 확정 시 호출을 구현한다. 사례 계산 POST에서는 기존 searchId만 참조한다. 익명 검색은 GET과 현재 탐색 흐름 내 변경 표시를 사용한다.
+검색 변경 처리는 research R12·REST §1b를 따른다. M5는 검색 기록 POST, M7은 목록 확정 시 호출을 구현한다. 사례 계산 POST에서는 기존 linkSearchId만 참조한다. 익명 검색은 GET과 현재 탐색 흐름 내 변경 표시를 사용한다.

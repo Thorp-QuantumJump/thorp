@@ -48,13 +48,14 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 - `window.baselineDate`는 d0 **직전 거래일**이다. 연속 운용의 구간 수익률 기준값
   `equity[baselineDate]`가 여기서 나온다. `scenario=FRESH_CASH`면 기준은 `run.initialCash`이고
   `baselineDate`는 참고용이다(research R3).
-- `inputs.portfolioSeries`·`weightsSeries`는 `baselineDate`부터 `lastAvailable`까지, `trades`는
+- `inputs.portfolioSeries`·`weightsSeries`(축약 예시의 옛 필드다. 확정 모양은 아래 "구간 입력 확장"의
+  `openingPositions`·`dailyPositions`)는 `baselineDate`부터 `lastAvailable`까지, `trades`는
   `d0`~`lastAvailable` 안에 체결된 것만. **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,
   범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `DATA_INSUFFICIENT`로 답한다 — 채우지 않는다.
 - `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`.
 - `inputDigest` = 백엔드가 `inputs·window·job.scenario·marketData` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로
   돌려준다(재현 대조는 백엔드 몫).
-- 크기 상한: `weightsSeries`의 종목 수 ≤ 대응표 섹터 수, 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
+- 크기 상한: `dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
   `FAILED(INPUT_TOO_LARGE)`.
 
 ## 이벤트 봉투
