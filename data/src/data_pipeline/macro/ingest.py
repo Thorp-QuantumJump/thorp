@@ -32,7 +32,7 @@ from sqlalchemy.engine import Engine
 
 from data_pipeline.macro import fetch as transport
 from data_pipeline.macro import normalize as normalizer
-from data_pipeline.macro import registry, storage
+from data_pipeline.macro import publish, registry, storage
 from data_pipeline.macro.config import (
     SOURCE_CUSTOMS,
     SOURCE_ECOS,
@@ -496,3 +496,116 @@ def rights_status(indicator: IndicatorDefinition) -> str | None:
     if indicator.license_review_status == registry.REVIEW_PENDING_RIGHTS:
         return STATUS_RIGHTS_PENDING
     return None
+
+
+@dataclass(frozen=True)
+class IngestReport:
+    """한 번의 수집 실행이 남긴 것. 사람이 읽고 다음 행동을 정하는 데 쓴다."""
+
+    attempt_key: str
+    outcomes: tuple[IndicatorOutcome, ...]
+    received_observations: int
+    raw_revisions_written: int
+    dataset_version_id: int | None
+    publication_held: str | None
+
+    @property
+    def failed(self) -> tuple[IndicatorOutcome, ...]:
+        return tuple(outcome for outcome in self.outcomes if not outcome.succeeded)
+
+    @property
+    def published(self) -> bool:
+        return self.dataset_version_id is not None
+
+
+def run(
+    engine: Engine,
+    indicators: Sequence[IndicatorDefinition],
+    *,
+    fetcher: transport.Fetcher,
+    data_root: Path,
+    mode: str = "initial",
+    version_key: str | None = None,
+    today: date | None = None,
+    configs: Mapping[str, SourceConfig] | None = None,
+    trading_days: Mapping[str, Sequence[str]] | None = None,
+) -> IngestReport:
+    """수집부터 발행까지 한 번에 돈다 (T080·T081·T082).
+
+    **발행이 보류돼도 기록은 남긴다.** 17개가 다 차지 않으면 스냅샷을 내보내지 않지만, 무엇을
+    받았고 무엇이 실패했는지는 남아야 한다 — 그래야 다음 실행에서 무엇을 고칠지 알 수 있다.
+    그래서 원본 이력과 지표별 상태를 발행 성공 여부와 무관하게 쓴다(FR-011).
+
+    순서가 중요하다. `publish_atomically` 가 수집 시도 행을 만들기 때문에 지표별 상태는 그
+    뒤에 쓴다. 발행이 보류로 끝나도 시도 행은 남으므로 상태를 붙일 자리는 있다.
+    """
+    today = today or datetime.now(UTC).date()
+    received_at = datetime.now(UTC)
+    attempt_key = f"{mode}-{received_at:%Y%m%dT%H%M%S%f}"
+    resolved_version = version_key or f"macro-{received_at:%Y%m%dT%H%M%S}"
+
+    outcomes = collect(
+        indicators,
+        fetcher=fetcher,
+        data_root=data_root,
+        mode=mode,
+        today=today,
+        configs=configs,
+    )
+    observations = normalize_outcomes(
+        indicators, outcomes, as_of=today, trading_days=trading_days, received_at=received_at
+    )
+    raw_written = record_raw_revisions(engine, outcomes)
+
+    pointer = _current_pointer(engine)
+    raw_files = tuple(
+        document.path for outcome in outcomes for document in outcome.raw_documents
+    )
+    request = publish.AtomicPublicationRequest(
+        version_key=resolved_version,
+        attempt_key=attempt_key,
+        pointer=pointer,
+        indicators=tuple(indicators),
+        observations=observations,
+        raw_files=raw_files,
+        processed_files=(),
+        data_root=data_root,
+    )
+
+    dataset_id: int | None = None
+    held: str | None = None
+    try:
+        dataset_id = publish.publish_atomically(engine, request)
+    except publish.PublishError as error:
+        held = str(error)
+        logger.warning("발행 보류: %s", error)
+
+    record_item_status(engine, attempt_key, outcomes)
+
+    return IngestReport(
+        attempt_key=attempt_key,
+        outcomes=tuple(outcomes),
+        received_observations=sum(len(o.observations) for o in outcomes),
+        raw_revisions_written=raw_written,
+        dataset_version_id=dataset_id,
+        publication_held=held,
+    )
+
+
+def _current_pointer(engine: Engine) -> publish.PublicationPointer:
+    """지금 공개 중인 세 버전. 없으면 등록표부터 세우라고 말한다."""
+    with engine.begin() as connection:
+        row = connection.execute(
+            text(
+                "SELECT dataset_version_id, registry_version_id, display_version_id"
+                " FROM macro_current_publication WHERE singleton_key = 'X'"
+            )
+        ).first()
+    if row is None:
+        raise ValueError(
+            "현재 포인터가 없다. versioning.register_calculation_version 과"
+            " initialize_current_publication 으로 등록표·표시 버전을 먼저 세운다"
+        )
+    return publish.PublicationPointer(
+        dataset_id=row[0], registry_id=row[1], display_id=row[2]
+    )

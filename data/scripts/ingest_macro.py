@@ -37,9 +37,12 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우
     sys.path.insert(0, str(_SRC))
 
+from sqlalchemy import create_engine  # noqa: E402
+
 from data_pipeline.macro import fetch as transport  # noqa: E402
 from data_pipeline.macro import ingest, registry  # noqa: E402
 from data_pipeline.macro.config import load_source_config  # noqa: E402
+from data_pipeline.repository import database_url_from_env  # noqa: E402
 
 MODE_INITIAL = "initial"
 MODE_REGULAR = "regular"
@@ -127,30 +130,34 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     timeout = max(load_source_config(source).timeout_seconds for source in registry.used_sources())
-    outcomes = ingest.collect(
+    report = ingest.run(
+        create_engine(database_url_from_env()),
         indicators,
         fetcher=transport.RequestsFetcher(timeout),
         data_root=Path(args.data_root),
         mode=args.mode,
     )
 
-    failed = [outcome for outcome in outcomes if not outcome.succeeded]
-    for outcome in outcomes:
+    for outcome in report.outcomes:
         mark = "ok  " if outcome.succeeded else "실패"
         detail = f" ({outcome.error_class})" if outcome.error_class else ""
         print(f"  {mark} {outcome.indicator_id:32} {outcome.status}{detail}")
 
-    received = sum(len(outcome.observations) for outcome in outcomes)
-    print(f"받은 관측 {received}건 / 실패 지표 {len(failed)}개")
+    print(
+        f"받은 관측 {report.received_observations}건"
+        f" / 실패 지표 {len(report.failed)}개"
+        f" / 새 원본 이력 {report.raw_revisions_written}건"
+    )
 
     # 아무것도 받지 못한 실행을 성공으로 말하지 않는다. 0 으로 끝나면 배치가 돈 줄 알고 넘어간다.
-    if received == 0:
+    if report.received_observations == 0:
         print("받은 관측이 0건이다. 원천·인증키·구간을 확인한다")
         return 1
-    if failed:
-        print("일부 지표를 받지 못했다. 발행은 17개가 모두 찬 뒤에만 한다(FR-011)")
+    if not report.published:
+        print(f"발행 보류: {report.publication_held}")
+        print("17개가 모두 찬 뒤에만 공개한다(FR-011). 수집 기록은 남았다")
         return 1
-    print("수집을 마쳤다. 발행은 적재 단계에서 이어진다")
+    print(f"자료 버전 {report.dataset_version_id} 를 발행했다")
     return 0
 
 
