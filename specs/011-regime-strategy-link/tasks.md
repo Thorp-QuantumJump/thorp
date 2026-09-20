@@ -405,3 +405,9 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 
 
 - [ ] T103 백엔드가 구간 안 보유 스냅샷을 빠짐없이 담는 것을 조립의 의무로 고정한다 — `BacktestRunReadPort`·`RegimeLinkJobAssembler`(T026·T031)가 004의 `portfolioSeries[].positions` 중 d0~lastAvailable 안에 있는 것을 **한 줄도 빼지 않고** `dailyPositions`에 담고(기업행위로만 수량이 바뀐 날 포함, 리밸런싱일로 걸러내지 않는다), `RegimeLinkJobAssemblerTest`(T035)와 M4·M5 체크포인트에 "구간 안 004 스냅샷 수 = `dailyPositions` 행 수"를 더한다. 스냅샷이 빠지면 워커는 체결 누적값을 그대로 쓰고 종목 손익 항등식도 0이라 어긋남이 드러나지 않는다 per contracts/regime-link-messaging §구간 입력의 출처와 제약·T026·T031·T035 (missing)
 - [ ] T104 T031의 크기 상한 기준을 계약과 맞춘다 — "`dailyPositions`의 날짜 행 ≤ 65"를 "`portfolioSeries`의 날짜 행 ≤ 65, `openingPositions`·`dailyPositions`의 종목 수 ≤ 대응표 섹터 수"로 고친다. `dailyPositions`는 수량이 바뀐 날만 담아 65를 넘을 일이 거의 없어 그대로 두면 `INPUT_TOO_LARGE` 보호가 작동하지 않는다 per contracts/regime-link-messaging §작업 메시지 크기 상한·T031 (contradicts)
+
+## Phase 15: Convergence
+
+- [ ] T105 대응표 이력이 사례 관측 종료월까지 닿지 않을 때의 판정 규칙을 정한다 — `AvailabilityService`는 그 시점에 유효한 대응표 버전이 없으면 판정을 건너뛰고, 001 대응표가 2026-09부터만 있어 운영 자료에서 `SECTOR_UNMAPPED`가 한 번도 나오지 않는다. 지금 버전으로 과거를 판정하면 대응표가 바뀐 날 옛 사례가 통째로 사라지므로 건너뛰기를 골랐으나 그 선택이 어느 문서에도 없다. 셋 중 하나(건너뛰기 유지 · 가장 이른 버전 적용 · 001에 과거 이력 요구)를 정해 research R4와 계약에 한 줄로 남기고 `AvailabilityServiceTest`에 그 경우를 더한다 per FR-003·Edge Cases(대응표) (partial)
+- [ ] T106 가용성 조회의 반복 질의를 줄이고 응답 시간을 실측한다 — `DatabaseTradingCalendarAdapter.calendarQuery`가 호출마다 `MarketMetadataPort.currentDataVersion()`을 다시 읽어 달력 질의가 두 배가 되고, 사례 10 × 실행 2 × 종목 N이면 달력·대응표·상장일 조회가 수백 개로 늘어난다. 자료 버전과 종목 이력·섹터 대응을 요청 안에서 한 번만 읽도록 모으고, `AvailabilityControllerIT` 조건에서 질의 수나 응답 시간을 재어 plan R9의 p95 300ms와 대조한 값을 남긴다 per plan R9·T027·T028 (partial)
+- [ ] T107 `regime_link.availability` 저장 모양을 data-model과 맞춘다 — 구현은 그 JSONB에 `completedTradingDays`를 함께 담는데(실행별 확보 거래일 수를 다시 판정하지 않고 읽기 위해서다) data-model §4는 그 컬럼을 `{state, reason?, partial?, delistedOn?}`로 적는다. 저장하는 쪽이 맞으면 §4에 그 필드를 더하고, 아니면 매퍼에서 빼고 링크 조회가 그 값을 어디서 읽을지 정한다 per data-model §4 (contradicts)
