@@ -91,6 +91,15 @@ CREATE UNIQUE INDEX uk_my_record_regime ON my_record (owner_id, regime_log_id)
 CREATE INDEX idx_my_record_kind_count ON my_record (owner_id, kind)
     WHERE deleted_at IS NULL;
 
+-- 010 의 표에 제약 하나를 더한다. 표는 010 이 만들었지만 "행은 006 이 만든다"고 예약해 두었고(FR-032),
+-- 그 규칙이 "같은 사용자·같은 검색·같은 진입 경로면 한 행"이다(spec 006 research R15). 조회한 뒤 없으면
+-- 넣는 방식은 같은 검색을 동시에 두 번 열면 기록이 둘이 되고, 그러면 목록에 같은 항목이 두 줄로 남는다 —
+-- uk_my_record_regime 은 서로 다른 로그 행을 가리키는 두 항목을 막지 못한다.
+--
+-- 지금 이 표는 비어 있다(행을 쓰는 코드가 없었다). 기존 행이 위반하게 되는 변경이 아니다.
+CREATE UNIQUE INDEX uk_regime_log_owner_key_path
+    ON regime_search_log (owner_user_id, snapshot_key, entry_path);
+
 COMMENT ON TABLE my_record IS
     '내 기록의 개인 항목(spec 006). 계산 결과를 가리킬 뿐 복제하지 않고, 삭제는 deleted_at 만 채운다';
 COMMENT ON COLUMN my_record.deleted_at IS
