@@ -90,6 +90,23 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("같은 실행에 탐색 후보 요청이 섞여도 단건 요청을 본다")
+    void 단건_기록은_탐색_후보_요청을_보지_않는다() {
+        long owner = newUser("mixed");
+        BacktestJobResult single = backtestService.create(request(owner, PERIOD_E));
+        long runId = runIdOf(single);
+
+        // 동일 버전 키에 실행 유형이 들어가지 않아(004 DedupKeyCalculator) 같은 조건의 탐색 후보가 이
+        // 실행에 합류한다. 그것이 더 최신이다.
+        long candidateRequestId = joinAsSearchCandidate(owner, runId);
+
+        assertThat(candidateRequestId).as("후보 요청이 더 나중에 생겼다").isGreaterThan(requestIdOf(single));
+        assertThat(records.findViewableRequestId(owner, runId))
+                .as("단건 기록이 탐색 후보 요청의 상태·토큰을 따라가지 않는다")
+                .hasValue(requestIdOf(single));
+    }
+
+    @Test
     @DisplayName("비로그인 접수는 기록을 남기지 않는다 — 기록은 식별된 사용자 단위로만 있다(FR-020)")
     void 비로그인_접수는_기록을_남기지_않는다() {
         long before = totalRecordCount();
@@ -111,6 +128,9 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
     private static final LocalDate[] PERIOD_D = {
         LocalDate.of(2024, 2, 8), LocalDate.of(2024, 11, 26)
     };
+    private static final LocalDate[] PERIOD_E = {
+        LocalDate.of(2024, 2, 9), LocalDate.of(2024, 11, 25)
+    };
 
     private int recordCount(long owner) {
         return jdbcTemplate.queryForObject(
@@ -124,6 +144,29 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
     private long analysisRunIdOf(long owner) {
         return jdbcTemplate.queryForObject(
                 "SELECT analysis_run_id FROM my_record WHERE owner_id = ?", Long.class, owner);
+    }
+
+    /**
+     * 같은 실행에 탐색 후보 요청을 하나 더 붙인다. 007 접수 경로를 끌어오지 않으려고 직접 넣는다.
+     *
+     * <p>생성 시각을 한 시간 뒤로 둔다 — JPA 가 쓰는 {@code created_at} 은 flush 시점에 찍혀서, 테스트에서 먼저 접수한 요청이 오히려 더 늦게
+     * 기록될 수 있다. 후보가 확실히 "더 최신"이어야 이 검사가 유형 조건을 보는 것이 된다.
+     */
+    private long joinAsSearchCandidate(long owner, long runId) {
+        jdbcTemplate.update(
+                "INSERT INTO backtest_request (id, backtest_id, run_id, requester_id,"
+                        + " execution_type, result_source, public_token, created_at, updated_at)"
+                        + " VALUES (nextval('backtest_request_seq'), 'BT-CANDIDATE-' ||"
+                        + " currval('backtest_request_seq'), ?, ?, 'SEARCH_BUNDLE', 'JOINED',"
+                        + " lpad(to_hex(nextval('backtest_request_seq')), 32, '0'),"
+                        + " NOW() + INTERVAL '1 hour', NOW())",
+                runId,
+                owner);
+        return jdbcTemplate.queryForObject(
+                "SELECT max(id) FROM backtest_request WHERE run_id = ? AND execution_type ="
+                        + " 'SEARCH_BUNDLE'",
+                Long.class,
+                runId);
     }
 
     private long runIdOf(BacktestJobResult result) {
