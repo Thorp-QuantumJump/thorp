@@ -96,7 +96,7 @@
 |---|---|
 | `status` | 종류별 원본에서 조인해 읽은 값이다(data-model §1). `my_record`에 저장된 값이 아니다 |
 | `statusReason` | 실패·취소·부분 완료·계산 불가의 사유 코드. **낮은 수익과 섞지 않는다**(FR-014) |
-| `resultToken` | `ANALYSIS`에만 있다. '다시 보기' 링크(`/results/{token}`)의 열쇠(R3) |
+| `resultToken` | `ANALYSIS`에만 있다. '다시 보기' 링크(`/results/{token}`)의 열쇠(R3). 기록은 요청을 저장하지 않으므로 `(소유자, 실행)`으로 **취소하지 않은 최신 요청**을 골라 그 토큰을 싣는다 — 요청 하나를 저장해 두면 그것만 취소된 순간 취소·부분 결과가 보인다 |
 | `searchId` | `SEARCH_BUNDLE`에만 있다. 007 상세 경로의 열쇠 |
 | `regime` | `REGIME_SEARCH`에만 있다. `regime_search_log` 행에서 읽는다. `snapshotKey`는 010 스냅샷 식별 키(`regime_search_log.snapshot_key` 사본)이며 007의 `searchId`와 이름을 나눈다. '다시 보기'는 `/regime-search?searchId={snapshotKey}`로 고정 조회한다(R17). 같은 스냅샷이라도 `entryPath`가 다르면 별도 항목이다. `withdrawn: true`는 010 FR-035 철회로 스냅샷 참조가 끊긴 것이며 '다시 보기'가 열리지 않는다 |
 | `nextCursor` | 다음 쪽이 없으면 `null`. **전체 개수는 돌려주지 않는다**(R14) |

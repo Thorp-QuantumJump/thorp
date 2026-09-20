@@ -79,6 +79,8 @@ class BacktestEventServiceEventTest extends IntegrationTestSupport {
                 "DELETE FROM backtest_result WHERE run_id IN"
                         + " (SELECT id FROM backtest_run WHERE backtest_id = ?)",
                 BACKTEST_ID);
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbcTemplate.update("DELETE FROM my_record");
         jdbcTemplate.update(
                 "DELETE FROM backtest_request WHERE run_id IN"
                         + " (SELECT id FROM backtest_run WHERE backtest_id = ?)",

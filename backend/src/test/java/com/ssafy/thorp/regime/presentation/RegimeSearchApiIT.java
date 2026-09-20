@@ -98,6 +98,8 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
 
     @AfterEach
     void clean() {
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbc.update("DELETE FROM my_record");
         jdbc.update("DELETE FROM regime_search_log");
         jdbc.update("DELETE FROM regime_search_case");
         jdbc.update("DELETE FROM regime_search_snapshot");
