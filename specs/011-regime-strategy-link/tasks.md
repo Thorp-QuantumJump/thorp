@@ -390,3 +390,7 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 
 ## Phase 11: Convergence
 
 - [X] T098 `docs/specs/regime-link-api/examples/`가 계약에 없는 결정 셋을 응답 기준으로 못 박았다 — ① `bundle.instruments[].delistedOn`(계약 §1 예시에 없고 사례별 `availability.delistedOn`과 겹친다) ② `entryPath=MARKET_FLOW`의 `filter`에서 `availableRange` 생략(계약은 `filterKey`·`excludedCount`만 없다고 적는다) ③ 자료 부족 링크에 `queuedAt`·`startedAt`이 없고 `finishedAt`만 있는 규칙(계약 §3이 정하지 않는다). T038·T040·T050·T052가 이 파일과 응답을 대조하므로 M4 착수 전에 셋을 `contracts/regime-link-api.md` §1·§3에 적거나 예시에서 뺀다. 예시가 계약을 조용히 넓히게 두지 않는다 per contracts/regime-link-api.md §1·§3 (unrequested)
+
+## Phase 12: Convergence
+
+- [X] T099 `contracts/regime-link-api.md` §3 예시의 `window63.lossContribution`이 보유 섹터 셋 중 둘(`SEMICONDUCTOR`·`BIO`)만 담아 바로 아래에 적은 규칙("이익 종목도 뺀 것 없이 들어가고 전체 구간 손익이 0일 때만 생략")과 어긋난다 — 같은 `result`의 `holdings`는 종목 셋을 보이고 `window21.lossContribution`도 섹터 셋을 담는다. `BATTERY`를 더해 두 구간이 같은 섹터 셋을 쓰고 합이 1이 되게 고친다. 값은 `docs/specs/regime-link-api/examples/link-completed.json`과 맞춘다 per contracts/regime-link-api.md §3·research R3 (contradicts)
