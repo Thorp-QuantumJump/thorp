@@ -262,3 +262,61 @@ def test_run_without_pointer_says_what_to_do(
             mode="initial",
             today=date(2026, 7, 15),
         )
+
+
+def test_registry_bootstrap_lets_ingest_run(postgres_engine, tmp_path: Path, monkeypatch) -> None:
+    """등록표 진입점이 세운 상태에서 수집이 돈다 — 둘이 실제로 이어지는지 본다.
+
+    진입점을 만들기 전에는 `ingest.run` 이 "현재 포인터가 없다"로 멈췄다. 등록표를 세우는 자리가
+    저장소 어디에도 없었기 때문이다.
+    """
+    import register_macro_registry as bootstrap
+
+    # str(url) 은 비밀번호를 *** 로 가린다. 그대로 쓰면 인증에 실패한다.
+    monkeypatch.setattr(
+        bootstrap,
+        "database_url_from_env",
+        lambda: postgres_engine.url.render_as_string(hide_password=False),
+    )
+
+    assert bootstrap.main(["--calculation-key", "calc-boot", "--display-key", "disp-boot"]) == 0
+
+    with postgres_engine.begin() as connection:
+        fields = connection.execute(text("SELECT count(*) FROM macro_display_field")).scalar_one()
+        names = connection.execute(
+            text("SELECT count(*) FROM macro_display_indicator")
+        ).scalar_one()
+        pointer = connection.execute(
+            text("SELECT count(*) FROM macro_current_publication")
+        ).scalar_one()
+
+    assert (fields, names, pointer) == (7, 17, 1)
+
+    # 이제 수집이 포인터를 읽고 돈다.
+    report = ingest.run(
+        postgres_engine,
+        tuple(replace(i, series_start="2026-05") for i in INDICATORS),
+        fetcher=StubFetcher(),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 7, 15),
+    )
+    assert report.attempt_key
+
+
+def test_registry_bootstrap_refuses_to_overwrite(postgres_engine, monkeypatch) -> None:
+    """이미 포인터가 있으면 덮지 않는다.
+
+    다른 작업이 세운 버전을 지우면 그 버전을 참조하던 자료가 뜬다.
+    """
+    import register_macro_registry as bootstrap
+
+    # str(url) 은 비밀번호를 *** 로 가린다. 그대로 쓰면 인증에 실패한다.
+    monkeypatch.setattr(
+        bootstrap,
+        "database_url_from_env",
+        lambda: postgres_engine.url.render_as_string(hide_password=False),
+    )
+    assert bootstrap.main(["--calculation-key", "calc-1", "--display-key", "disp-1"]) == 0
+
+    assert bootstrap.main(["--calculation-key", "calc-2", "--display-key", "disp-2"]) == 1
