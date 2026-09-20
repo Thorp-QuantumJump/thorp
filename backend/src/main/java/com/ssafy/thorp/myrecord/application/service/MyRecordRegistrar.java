@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +72,11 @@ public class MyRecordRegistrar {
             return;
         }
         long ownerId = event.requesterId();
-        if (records.findActiveByOwnerAndRun(ownerId, event.runId()).isPresent()) {
+        Optional<MyRecord> existing = records.findActiveByOwnerAndRun(ownerId, event.runId());
+        if (existing.isPresent()) {
+            // 새 기록을 만들지 않되(FR-009) 가리키는 요청은 방금 접수한 것으로 바꾼다. 처음 요청에 묶인 채로
+            // 두면 그 요청만 취소했을 때 실행이 계속 도는데도 목록이 '취소'를 보인다.
+            records.relinkAnalysisRequest(existing.get().relinkAnalysisRequest(event.requestId()));
             return;
         }
         List<String> sectorCodes =

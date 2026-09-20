@@ -40,6 +40,13 @@ public interface MyRecordRepository {
     /** 같은 사용자가 같은 경제환경 로그 행을 가리키는 살아 있는 항목. 진입 경로가 다르면 로그 행이 달라 별도 항목이 된다. */
     Optional<MyRecord> findActiveByOwnerAndRegimeLog(long ownerId, long regimeLogId);
 
+    /**
+     * 단일 분석 항목이 가리키는 요청을 바꾼다(FR-009).
+     *
+     * <p>바뀌는 것은 {@code analysis_request_id} 하나다. 실행·이름·저장일은 그대로다 — 같은 조건 재분석은 새 기록이 아니라 같은 기록이다.
+     */
+    MyRecord relinkAnalysisRequest(MyRecord record);
+
     /** 탐색 묶음 저장 상한 판정이 세는 경로(FR-018, research R11). 지운 항목은 세지 않는다. */
     long countActiveByOwnerAndKind(long ownerId, RecordKind kind);
 }
