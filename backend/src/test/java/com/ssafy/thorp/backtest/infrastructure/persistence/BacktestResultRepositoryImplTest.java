@@ -157,6 +157,11 @@ class BacktestResultRepositoryImplTest extends RepositoryTestSupport {
         Instant to = fills.get(fills.size() - 1).time();
         assertThat(resultRepository.findFills(jobId, from, to))
                 .contains(fills.subList(1, fills.size() - 1));
+        // 한쪽만 null 이어도 그쪽 제한만 풀린다
+        assertThat(resultRepository.findFills(jobId, null, to))
+                .contains(fills.subList(0, fills.size() - 1));
+        assertThat(resultRepository.findFills(jobId, from, null))
+                .contains(fills.subList(1, fills.size()));
         // 기록은 했는데 그 구간에 체결이 없으면 빈 리스트다 — "기록하지 않았다"(빈 Optional)와 다르다
         assertThat(resultRepository.findFills(jobId, to.plusSeconds(1), null)).contains(List.of());
     }
