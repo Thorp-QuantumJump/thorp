@@ -35,7 +35,12 @@ class StubFetcher:
     def __init__(self, body: str = '{"ok": true}') -> None:
         self._body = body
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str:
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
         return self._body
 
 
@@ -186,7 +191,7 @@ def test_failed_indicator_keeps_its_error_class(
     _prepare_registry(postgres_engine, seeded_indicators)
 
     class AlwaysFails:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise TransientSourceError("끊김")
 
     report = ingest.run(
@@ -222,7 +227,7 @@ def test_publication_is_held_but_records_still_land(
     _prepare_registry(postgres_engine, seeded_indicators)
 
     class AlwaysFails:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise TransientSourceError("끊김")
 
     report = ingest.run(
@@ -412,7 +417,7 @@ def test_quota_stops_collection_and_keeps_what_arrived(
         def __init__(self) -> None:
             self.calls = 0
 
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             self.calls += 1
             if self.calls > allowed:
                 raise QuotaExhaustedError("한도 도달")
@@ -449,7 +454,7 @@ def test_quota_is_recorded_and_publication_is_held(
     _prepare_registry(postgres_engine, indicators)
 
     class AlwaysQuota:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise QuotaExhaustedError("한도 도달")
 
     report = ingest.run(

@@ -26,6 +26,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Final
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -63,6 +64,11 @@ STATUS_QUOTA = "QUOTA_EXHAUSTED"
 STATUS_KEY_NOT_ISSUED = "KEY_NOT_ISSUED"
 STATUS_RIGHTS_PENDING = "RIGHTS_PENDING"
 STATUS_RIGHTS_UNVERIFIED = "RIGHTS_UNVERIFIED"
+
+#: 경제협력개발기구 SDMX 에 JSON 을 요청하는 헤더.
+_SDMX_JSON_HEADERS: Final[dict[str, str]] = {
+    "Accept": "application/vnd.sdmx.data+json;version=1.0.0-wd, application/json"
+}
 
 
 @dataclass(frozen=True)
@@ -115,6 +121,33 @@ def _window(indicator: IndicatorDefinition, mode: str, today: date) -> tuple[str
 def _compact(period: str) -> str:
     """``YYYY-MM`` 을 원천이 받는 ``YYYYMM`` 으로."""
     return period.replace("-", "")
+
+
+#: 한 달의 마지막 날. 일별 조회의 끝을 그 달 말일로 잡는다.
+_MONTH_END_DAY: Final[dict[int, int]] = {1: 31, 3: 31, 5: 31, 7: 31, 8: 31, 10: 31, 12: 31}
+
+
+def _ecos_period(period: str, cycle: str, *, end: bool) -> str:
+    """한국은행이 받는 조회 구간 표기. **주기마다 자릿수가 다르다**.
+
+    일별 계열에 ``YYYYMM`` 을 주면 ``[ERROR-101] 주기와 다른 형식의 날짜 형식입니다`` 가
+    돌아온다. 국고채가 유일한 일별 계열인데, 그 사실은 등록표의 ``source_cycle`` 이 들고
+    있으므로 여기서 통계표 코드로 추측하지 않는다(FR-005).
+
+    끝 달은 말일까지 연다. 그 달의 며칠까지 자료가 있는지는 원천이 알고, 우리가 좁히면
+    그달 마지막 거래일을 놓쳐 월 기말이 한 달 밀린다(FR-006a).
+    """
+    compact = _compact(period)
+    if cycle != "D":
+        return compact
+    year, month = int(period[:4]), int(period[5:7])
+    if not end:
+        return f"{compact}01"
+    if month == 2:
+        last = 29 if (year % 4 == 0 and year % 100 != 0) or year % 400 == 0 else 28
+    else:
+        last = _MONTH_END_DAY.get(month, 30)
+    return f"{compact}{last:02d}"
 
 
 def _save_raw(
@@ -232,7 +265,12 @@ def _collect_one(
                 indicator, fetcher, config, data_root, start, end, received_at, outcome
             )
         elif indicator.primary_source == SOURCE_ECOS:
-            path = ecos.build_path(indicator, _compact(start), _compact(end))
+            cycle = ecos.cycle_for(indicator)
+            path = ecos.build_path(
+                indicator,
+                _ecos_period(start, cycle, end=False),
+                _ecos_period(end, cycle, end=True),
+            )
             body = transport.fetch_text(fetcher, config, path)
             _save_raw(
                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at
@@ -247,7 +285,12 @@ def _collect_one(
             outcome.observations = kosis.parse(indicator, _as_json(body, config))
         elif indicator.primary_source == SOURCE_OECD:
             path = oecd.build_path(indicator)
-            body = transport.fetch_text(fetcher, config, path, needs_key=False)
+            # SDMX 는 **기본이 XML 이다.** 달라고 하지 않으면 JSON 을 주지 않는다 — 그대로
+            # 파서에 넣으면 "응답이 JSON 이 아니다"로 끝난다. 형식을 질의 인자가 아니라
+            # 헤더로 고르는 이유는 그것이 SDMX 규약이고, 인자는 판마다 이름이 달라서다.
+            body = transport.fetch_text(
+                fetcher, config, path, needs_key=False, headers=_SDMX_JSON_HEADERS
+            )
             _save_raw(
                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at
             )
