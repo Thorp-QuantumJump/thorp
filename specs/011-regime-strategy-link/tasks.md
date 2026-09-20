@@ -34,23 +34,25 @@
 ## 브랜치 묶음 — 이 표가 티켓·브랜치·MR 단위다
 
 **`T###`는 브랜치 단위가 아니다.** constitution "Jira 연계"가 `작업 묶음 = 1 Branch = 1 MR`로 정하므로
-브랜치·MR·Jira Task 단위는 아래 **8개 묶음**이다.
+브랜치·MR·Jira Task 단위는 아래 **9개 묶음**이다. M1은 골격(M1a)과 메시지 계약(M1b)으로 나눈다 —
+가용성 판정 줄(M4)이 구간 입력 대조(T000)를 기다리지 않고 먼저 갈 수 있게 하려는 것이다.
 
 | 묶음 | 브랜치 | 파트 | Jira 제목(안) | 태스크 | 검증 명령 |
 |---|---|---|---|---|---|
-| **M1** | `feat(be)/{티켓}-regime-link-contract` | DOCS·BE·WK | `[BE] 사례 연결 메시지 계약 v1과 양쪽 골격` | T000~T007 | `cd backend && ./gradlew spotlessApply build` · `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` |
+| **M1a** | `feat(be)/{티켓}-regime-link-skeleton` | DOCS·BE·WK | `[BE] 사례 연결 백엔드·워커 골격과 REST 계약 예시` | T002~T004 | `cd backend && ./gradlew spotlessApply build` · `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` |
+| **M1b** | `feat(be)/{티켓}-regime-link-contract` | DOCS·BE·WK | `[BE] 사례 연결 메시지 계약 v1과 구간 입력 대조` | T000~T001, T005~T007 | 〃 |
 | **M2** | `feat(be)/{티켓}-regime-link-slicer` | WK | `[BE] 사후 구간 잘라내기·요약 계산` | T008~T015 | `cd worker && ruff check … && pytest` |
 | **M3** | `feat(be)/{티켓}-regime-link-consumer` | WK | `[BE] 사례 연결 워커 소비자와 엔트리포인트` | T016~T021 | 〃 |
 | **M4** | `feat(be)/{티켓}-regime-link-availability` | DB·BE | `[BE] 사례 연결 표와 가용성 판정 조회` | T022~T029, T034, T045, T050, T052, T090 | `cd backend && ./gradlew spotlessApply build` |
-| **M5** | `feat(be)/{티켓}-regime-link-api` | BE | `[BE] 사례 연결 생성·시나리오·재계산 API` | T030~T033, T035~T036, T038~T040, T051, T058~T060, T067~T070, T075~T076, T080 | 〃 |
+| **M5** | `feat(be)/{티켓}-regime-link-api` | BE | `[BE] 사례 연결 생성·시나리오·재계산 API` | T030~T033, T035~T036, T038~T040, T051, T058~T060, T067~T070, T075~T076, T080, T092(백엔드 몫), T093 | 〃 |
 | **M6** | `feat(fe)/{티켓}-regime-link-start` | FE | `[FE] 시장 흐름 진입과 003 분석 기간 제약` | T041~T044, T046~T049, T087 | `cd frontend && npm run lint && npm run build && npm test` |
-| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079, T081, T086, T088, T091 | 〃 |
+| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079, T081, T086, T088, T091, T092(화면 몫), T094 | 〃 |
 | **M8** | `docs(be)/{티켓}-regime-link-verification` | DOCS | `[DOCS] quickstart 실행 기록과 교차 spec 후속` | T082~T084, T089 | 수동 — quickstart.md S1~S10 |
 
-**묶음 순서**: M1 → (M2 → M3) ∥ (M4 → M5) → M6 → M7 → M8. **M2·M3(워커)와 M4·M5(백엔드)는 M1의
-계약 픽스처만 공유하므로 병렬로 딸 수 있다.** M6·M7은 M5의 응답을 읽고, M7은 dev에 있는 010 결과 목록
-컴포넌트(`components/regime/`)를 재사용한다(research R8). M4는 dev의 010 표에 FK를 바로 걸고 010
-리포지토리를 읽는다 — 대역을 두지 않는다. 조회 API(T045·T050·T052)는 판정과 같은 컨트롤러·같은 MR이라
+**묶음 순서**: M1a → M1b → (M2 → M3) ∥ (M4 → M5) → M6 → M7 → M8. **M4·M5(백엔드)는 M1a 뒤 바로
+갈 수 있고 M2·M3(워커)는 M1b의 계약 픽스처만 공유하므로, 두 줄은 병렬로 딸 수 있다.** M6·M7은 M5의
+응답을 읽고, M7은 dev에 있는 010 결과 목록 컴포넌트(`components/regime/`)를 재사용한다(research R8).
+M4는 dev의 010 표에 FK를 바로 걸고 010 리포지토리를 읽는다 — 대역을 두지 않는다. 조회 API(T045·T050·T052)는 판정과 같은 컨트롤러·같은 MR이라
 스토리 태스크이지만 M4에 둔다.
 
 ### 묶음 의존 그래프 (2026-09-20)
@@ -62,13 +64,13 @@
 flowchart LR
   G0["G0 입력 확보 관문<br/>T000 · 미충족이면 004 저장 항목 확장(004 소유)"]
   M1a["M1a 골격·REST 예시<br/>T002~T004"]
-  M1b["M1b 메시지 계약 v1<br/>T001 · T005~T007"]
+  M1b["M1b 메시지 계약 v1<br/>T000 · T001 · T005~T007"]
   M2["M2 워커 구간 계산<br/>T008~T015"]
   M3["M3 워커 소비자<br/>T016~T021"]
   M4["M4 표·판정·조회<br/>T022~T029 · T034 · T045 · T050 · T052 · T090"]
-  M5["M5 연결 API·메시징<br/>T030~T033 · T035~T036 · T038~T040 · T051 · T058~T060 · T067~T070 · T075~T076 · T080"]
+  M5["M5 연결 API·메시징<br/>T030~T033 · T035~T036 · T038~T040 · T051 · T058~T060 · T067~T070 · T075~T076 · T080 · T092(백엔드 몫) · T093"]
   M6["M6 시장 흐름 진입<br/>T041~T044 · T046~T049 · T087"]
-  M7["M7 결과 화면<br/>T053~T057 · T061~T066 · T071~T074 · T077~T079 · T081 · T086 · T088 · T091"]
+  M7["M7 결과 화면<br/>T053~T057 · T061~T066 · T071~T074 · T077~T079 · T081 · T086 · T088 · T091 · T092(화면 몫) · T094"]
   M8["M8 검증 기록<br/>T082~T084 · T089"]
   G0 --> M1b --> M2 --> M3
   M1a --> M1b
@@ -99,13 +101,14 @@ flowchart LR
 
 | 묶음 | 머지 전에 이것이 참이어야 한다 |
 |---|---|
-| M1 | 픽스처 7개가 백엔드·워커 양쪽 계약 테스트를 round-trip으로 통과. 토폴로지 상수는 계약 문서와 대조하고 Java 파일 대조는 T030이 있는 M5에서 통과. `regimelink` 패키지가 `ArchitectureTest`를 통과 |
+| M1a | `regimelink` 4계층 패키지가 `ArchitectureTest`를 통과. REST 예시 파일 여섯이 계약 §1~§3과 같고 어디에도 내부 PK가 없다. 워커 `regime_link` 모듈 자리가 있고 백테스트 소비자(`worker/consumer.py`·`worker/rabbitmq.py`·`worker/main.py`)는 바뀌지 않았다 |
+| M1b | 구간 입력 독립 대조(T000) 근거가 research R3에 남았다. 픽스처 7개가 백엔드·워커 양쪽 계약 테스트를 round-trip으로 통과. 토폴로지 상수는 계약 문서와 대조하고 Java 파일 대조는 T030이 있는 M5에서 통과 |
 | M2 | 수기 대조(`manual_reconciliation.json`)와 `window63`·`window21`·`kospi`가 일치. 미완성 입력(34거래일)에서 `tradingDays=34`·`complete=false`. 수익률·낙폭 연환산 없음. 회전율 단위 명시. 전체 손익 0이면 손실 기여 생략. `FRESH_CASH`는 `initialCash` 기준 |
 | M3 | 계약 오류 → DLQ, 계산 실패 → `FINISHED(FAILED)` + ACK, 발행 실패 → requeue. `FINISHED` 확인 전 ACK 경로 없음. **백테스트 소비자 테스트 수·통과·skipped가 변경 전과 같다** |
 | M4 | 계약 §1 예시와 응답 일치. `cases[]`가 010 표시 후보 전부이고 순위 그대로. 21 미만이 `POST_INCOMPLETE`로 제외 수에 듦. `OUT_OF_PERIOD`는 `shownInFiltered`에 영향 없음. 같은 묶음 재호출에 같은 `filterKey`. `snapshot_id` FK가 010 표에 걸려 있다. 구간 안 상장폐지로 21 미만이면 `POST_INCOMPLETE(DELISTED)`로 제외 수에 듦. 과거 기준월에서 판정 기준일이 그 달의 마지막 거래일 |
-| M5 | 익명 `POST`가 401이고 행·메시지 0. 같은 (실행×사례×시나리오) 재요청에 메시지 0. T007 Java 토폴로지 대조 통과. `confirmFullPeriod=false`로 기간 밖이면 계산 0. 토큰 없는 링크 조회 400·다른 실행의 토큰 404·만료 410. 두 사용자가 같은 계산을 공유해도 링크 행 1개·`regime_link_use` 2개. `FRESH_CASH` 접수 본문이 계약 §2와 같다. DLQ → `FAILED(SYSTEM_FAILURE)`. 유지율이 응답에 0건 |
+| M5 | 익명 `POST`가 401이고 행·메시지 0. 같은 (실행×사례×시나리오) 재요청에 메시지 0. T007 Java 토폴로지 대조 통과. `confirmFullPeriod=false`로 기간 밖이면 계산 0. 토큰 없는 링크 조회 400·다른 실행의 토큰 404·만료 410. 두 사용자가 같은 계산을 공유해도 링크 행 1개·`regime_link_use` 2개. `FRESH_CASH` 접수 본문이 계약 §2와 같다. DLQ → `FAILED(SYSTEM_FAILURE)`. 유지율이 응답에 0건. 체결 기록이 없는 실행은 확인 전 계산 0건(T092). 조건이 어긋난 비교 묶음은 기록 없이 400(T093) |
 | M6 | 010 사례 상세에서 011 시작 주소로 이동. `/regime-link/start`가 익명이면 로그인 안내 뒤 같은 주소 복귀. `case`가 002·003 주소에 유지. 003에서 하한 밖 기간 선택 불가와 한 문장. 분석 **접수 즉시** `/regime-link?base&case`로 이동해 기준 실행 진행 상태가 보인다 |
-| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사(T081) 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만. 005 진입 버튼으로 들어온다. 비교 대상을 바꾸고 돌아오면 분야를 다시 묻지 않는다. 당시 뉴스 영역의 빈 상태·실패 격리. 결정적 실패의 두 번째 실패에서 '다시 시도'가 사라진다 |
+| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사(T081) 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만. 005 진입 버튼으로 들어온다. 비교 대상을 바꾸고 돌아오면 분야를 다시 묻지 않는다. 당시 뉴스 영역의 빈 상태·실패 격리. 결정적 실패의 두 번째 실패에서 '다시 시도'가 사라진다. 체결 기록이 없는 실행의 재계산 확인 문구가 보인다(T092). `base` 누락·만료·없는 사례의 세 안내가 있다(T094) |
 | M8 | quickstart S1~S10 실행·측정 기록과 skipped 수가 남고, 교차 spec의 결정 완료·미해결 상태가 구분되어 있다 |
 
 ## Path Conventions
@@ -119,15 +122,18 @@ flowchart LR
 
 ---
 
-# Phase 1: Setup (계약과 골격) · **묶음 M1**
+# Phase 1: Setup (계약과 골격) · **묶음 M1a · M1b**
 
-**Purpose**: 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있게 메시지 계약을 먼저 고정한다.
+**Purpose**: 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있게 골격을 세우고 메시지 계약을 고정한다.
+
+**묶음 경계**: 골격과 REST 예시(T002~T004)가 **M1a**, 구간 입력 대조와 메시지 계약(T000·T001·T005~T007)이
+**M1b**다. M4는 M1a만 있으면 시작한다 — 판정은 메시지 계약을 읽지 않는다.
 
 - [ ] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록
 - [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 T000 통과 뒤 계약 "구간 입력 확장" 절의 모양(`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만들고, 본문 축약 예시의 모양으로 만들지 않는다
-- [ ] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·"내보내지 않는 것")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다
-- [ ] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)
-- [ ] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다
+- [X] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·"내보내지 않는 것")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다
+- [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)
+- [X] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다
 - [ ] T005 (BE) `regimelink/application/port/message/`에 `RegimeLinkJob`·`RegimeLinkEvent`·`RegimeLinkFinishedPayload`·`RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함) record(Jackson, camelCase)와 `RegimeLinkJobPublisher` 포트 인터페이스를 작성. `backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java`가 T001 픽스처 7개를 읽어 역직렬화→직렬화 round-trip을 검증
 - [ ] T006 (WK) `worker/src/worker/regime_link/contracts.py`에 `ContractModel` 기반 pydantic 모델(`RegimeLinkJob`·`RegimeLinkEvent`·payload, `extra="forbid"`, 기본값 금지)을 작성. `worker/tests/regime_link/test_contracts.py`가 같은 픽스처 7개로 round-trip. `worker/contracts/`(백테스트 계약)에 넣지 않는다
 - [ ] T007 (WK) `worker/src/worker/regime_link/messaging.py`에 exchange·queue·routing key·`SCHEMA_VERSION`·prefetch 상수와 `EventPublisher`·`JobAcknowledger` Protocol을 작성(pika import 금지). `worker/tests/regime_link/test_messaging.py`가 백엔드 `RegimeLinkRabbitConfig.java`(T030)를 읽어 상수 일치를 대조 — T030 전까지는 계약 문서의 값과 대조한다
@@ -366,7 +372,10 @@ flowchart LR
 - 태스크 설명에 적힌 값(21·63·65행·상한)은 spec·contracts가 정한 값이다. 코드에 다른 값을 두면 문서를
   먼저 고친다
 
-## Phase 9: Convergence
+## Phase 9: Convergence · **묶음 M5(T092 백엔드 몫·T093) · M7(T092 화면 몫·T094)**
+
+T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 묶음에 걸친다. 백엔드 몫이 먼저 머지되고
+화면 몫이 M7에서 이어진다.
 
 - [ ] T092 체결 기록이 없는 실행(`backtest_result.fills_recorded=false`, S15P21E205-359 이전에 끝난 실행·옛 워커의 결과)을 '분석 기간 밖'과 같은 확인 흐름으로 다룬다 — 계약 §2에 확인 요구 `outcome`(재계산 사유 구분)을 더하고, `POST /regime-links`가 확인 전에는 링크·메시지를 만들지 않고 확인 뒤 같은 조건의 새 실행을 004에 요청하며, `FullPeriodConfirm`·`ResultSlotState`가 "이 결과는 사후 구간을 보려면 다시 계산합니다"를 보인다. 값을 추정해 채우지 않는다. `OutOfPeriodFlowTest`·`FullPeriodConfirm.test.tsx`에 이 경우를 더한다 per FR-010·research R3 DEP-004-011·plan 위험 표 (missing)
 - [ ] T093 비교 묶음의 두 실행이 같은 조건인지 서버가 검증한다 — `base`·`compare` 토큰은 주소로 직접 들어올 수 있으므로 `AvailabilityService`·`POST /regime-link-searches`가 섹터 후보 집합·대응표 버전·시작 금액·비용 버전·자료 버전이 같은지 확인하고, 다르면 계산·기록 없이 `400 INVALID_INPUT`과 어긋난 항목을 돌려준다(005는 이 판정을 화면에서만 한다). `AvailabilityControllerIT`·`BundleChangeTest`에 어긋난 묶음 거절을 더한다 per SC-003·FR-011·Constitution IV (missing)
