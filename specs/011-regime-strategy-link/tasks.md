@@ -386,3 +386,7 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 
 - [X] T095 `docs/specs/regime-link-api/README.md` §4의 `lossContribution` 설명을 산식 정의와 맞춘다 — "손실이 없는 섹터는 키가 없다"를 지우고, 종목 구간 손익 ÷ 전체 구간 손익이라 이익 종목도 들어가고 섹터별 몫의 합이 1이며 전체 구간 손익이 0일 때만 생략한다고 적는다. 이름이 '손실'이지만 이익 종목을 빼지 않는다는 점을 함께 밝힌다 per research R3·contracts/regime-link-messaging.md `FINISHED.result`·T011 (contradicts)
 - [X] T096 `docs/specs/regime-link-api/examples/link-completed.json`의 `lossContribution`을 규칙이 드러나는 값으로 바꾼다 — 비교 묶음의 종목이 모두 들어가고 몫의 합이 1이며, 전체 손익과 반대로 움직인 종목이 음수 몫으로 들어가는 모양을 `window63`에 둔다. `window21`도 종목 하나만 남기지 않는다. 이 파일은 T034·T052가 응답과 대조하는 기준이다 per research R3·T011 (partial)
 - [X] T097 `tasks.md`에서 묶음을 옛 이름으로 부르는 세 곳을 M1a·M1b 분할에 맞춘다 — Organization 머리말의 `묶음 표(M1~M8)`, "Dependencies & Execution Order"의 `Setup (Phase 1, M1)`과 `M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 병렬`이다. 묶음 표·MR 체크포인트·의존 그래프는 이미 분할을 반영했다 per tasks 묶음 표 M1a·M1b 분할(M1a 완료 기준) (partial)
+
+## Phase 11: Convergence
+
+- [X] T098 `docs/specs/regime-link-api/examples/`가 계약에 없는 결정 셋을 응답 기준으로 못 박았다 — ① `bundle.instruments[].delistedOn`(계약 §1 예시에 없고 사례별 `availability.delistedOn`과 겹친다) ② `entryPath=MARKET_FLOW`의 `filter`에서 `availableRange` 생략(계약은 `filterKey`·`excludedCount`만 없다고 적는다) ③ 자료 부족 링크에 `queuedAt`·`startedAt`이 없고 `finishedAt`만 있는 규칙(계약 §3이 정하지 않는다). T038·T040·T050·T052가 이 파일과 응답을 대조하므로 M4 착수 전에 셋을 `contracts/regime-link-api.md` §1·§3에 적거나 예시에서 뺀다. 예시가 계약을 조용히 넓히게 두지 않는다 per contracts/regime-link-api.md §1·§3 (unrequested)

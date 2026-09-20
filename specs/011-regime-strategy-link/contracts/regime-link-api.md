@@ -51,7 +51,8 @@
       {"publicToken": "b41e…", "role": "COMPARE", "strategyId": "INVERSE_VOLATILITY", "strategyName": "흐름을 따라 배분하기",
        "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63}
     ],
-    "instruments": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "listedOn": "2006-06-27"}]
+    "instruments": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "listedOn": "2006-06-27"},
+                    {"sectorId": "BIO", "instrumentId": "244580.XKRX", "listedOn": "2006-06-27", "delistedOn": "2018-11-15"}]
   },
   "filter": {
     "applied": true,
@@ -91,10 +92,14 @@
   실행별 실제 확보 거래일 수는 `perRun[].completedTradingDays`다 — 구간 안 상장폐지면 폐지 전날까지로 줄고
   `reason`이 `DELISTED`(최근 사례는 `RECENT`)다. 21 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·
   `delistedOn`이다. 기준월이 자료 마감월보다 과거면 완성 판정 기준일은 그 기준월의 마지막 거래일이다(research R4).
+- `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이자 화면이 사유를 설명할 근거다.
+  `delistedOn`은 폐지된 종목에만 있다(키 생략 = 상장 유지). 사례별 `availability.delistedOn`은 그 사례의
+  사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.
 - 사유 값: `DATA_INSUFFICIENT` → `UNLISTED`\|`WARMUP_SHORT`\|`SECTOR_UNMAPPED`, `POST_INCOMPLETE` →
   `RECENT`\|`DELISTED`. 이 둘은 계산 작업을 만들지 않는 판정이며 '다시 시도'가 없다(research R13).
-- `entryPath=MARKET_FLOW`면 `filter.applied=false`, `filterKey`·`excludedCount` 없음, 모든 사례가
-  `shownInFiltered=true`. 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.
+- `entryPath=MARKET_FLOW`면 필터를 계산하지 않으므로 `filter.applied=false`이고 `filterKey`·
+  `availableRange`·`excludedCount`가 **없다**(`minPostTradingDays`만 남는다). 모든 사례가
+  `shownInFiltered=true`이며, 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
   범위도 200이다(FR-019).
 
@@ -198,7 +203,7 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
                  "turnover": "0.3125", "turnoverBasis": "ANNUALIZED_252", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
                  "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BIO": "-0.20000000"}, "complete": true},
     "window21": {"tradingDays": 21, "return": "0.0110", "maxDrawdown": "-0.0210", "tradeCount": 2, "tradesPerMonth": "2.00",
-                 "turnover": "0.1040", "turnoverBasis": "ANNUALIZED_252", "costs": {"…": "…"}, "lossContribution": {"SEMICONDUCTOR": "1.00000000"}, "complete": true},
+                 "turnover": "0.4211", "turnoverBasis": "ANNUALIZED_252", "costs": {"…": "…"}, "lossContribution": {"SEMICONDUCTOR": "0.84000000", "BATTERY": "0.38000000", "BIO": "-0.22000000"}, "complete": true},
     "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980", "305720.XKRX": "0.3010", "244580.XKRX": "0.3010"}}],
     "trades": [{"date": "2012-05-02", "instrumentId": "091160.XKRX", "side": "SELL", "quantity": 12, "price": "23150", "cost": "254.00", "reason": "REBALANCE"}],
     "kospi": {"window63": {"return": "0.0180", "maxDrawdown": "-0.0420"}, "window21": {"return": "0.0050", "maxDrawdown": "-0.0150"}}
@@ -211,6 +216,13 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 - `status=PENDING_RUN`이면 `runProgress`에 004 `GET /backtests/{id}`의 `status`·`progress`·
   `queueWaitSeconds`를 그대로 싣는다(화면은 005 비교 대상과 같은 진행 표시).
 - `status=QUEUED|RUNNING`이면 `result=null`, `queuedAt`·`startedAt`.
+- 계산 작업을 만들지 않은 판정(`DATA_INSUFFICIENT`·`POST_INCOMPLETE`)은 `status=COMPLETED`이지만 큐에
+  들어간 적이 없으므로 `queuedAt`·`startedAt`이 `null`이고 판정 시각만 `finishedAt`에 있다.
+- `turnover`는 두 구간 모두 `ANNUALIZED_252`로 환산한 값이다. 구간이 짧다고 값이 작아지지 않으므로
+  `window21`과 `window63`을 같은 단위로 나란히 놓을 수 있다.
+- `holdings`는 구간의 **모든 거래일**을, `trades`는 구간의 **모든 거래**를 담는다 — `trades`의 개수는
+  `window63.tradeCount`와 같다. **위 예시는 지면 때문에 둘 다 한 행만 싣는다.** 전체 모양은
+  `docs/specs/regime-link-api/examples/link-completed.json`을 본다(그 파일은 `trades`를 줄이지 않는다).
 - `status=FAILED`면 `failure: {code, message, retryable}`. 화면은 그 자리에 한 문장을 보이고 `retryable=true`일
   때만 '다시 시도'를 둔다. `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이 `attempt ≥ 2`에서 다시 나오면
   `retryable=false`다. 실패 문구는 사용자의 조건을 원인으로 말하지 않는다(research R13).
