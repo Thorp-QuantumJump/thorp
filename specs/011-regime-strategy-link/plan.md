@@ -30,7 +30,7 @@
 `regime_link` 소비자 — 잘라내기·요약 계산), TypeScript 5 / React 19 (Frontend 화면 3개)
 
 **Primary Dependencies**: Spring Boot 3.5 (Web·Data JPA·Validation·AMQP), Flyway, PostgreSQL 드라이버 /
-pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP-004-011 검증 선행) / 프론트는 기존 의존만
+pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP-004-011 대조 통과) / 프론트는 기존 의존만
 (`@visx`·d3 차트 시스템 재사용 여부는 FE 묶음에서 결정, 표 위주 화면이라 필수는 아니다)
 
 **Storage**: PostgreSQL. Flyway 마이그레이션 신규 1개(`regime_link_filter`·`regime_link_search`·
@@ -61,13 +61,13 @@ pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP
 
 ### 해소된 NEEDS CLARIFICATION
 
-Phase 0 결정 15건(R1~R15)에 2026-09-20 수정을 반영했다. DEP-004-011은 필드 대응이 확정됐고(부족했던 개별 체결을 004에 추가, S15P21E205-359) 독립 대조가 남았다. 근거는 [research.md](research.md).
+Phase 0 결정 15건(R1~R15)에 2026-09-20 수정을 반영했다. DEP-004-011은 필드 대응이 확정됐고(부족했던 개별 체결을 004에 추가, S15P21E205-359) 독립 대조도 통과했다(2026-09-20). 근거는 [research.md](research.md).
 
 | 항목 | 결론 |
 |---|---|
 | 계산 작업 전달 경로 | 별도 exchange/큐 `regime-link`, 워커 별도 엔트리포인트 (R1) |
 | 워커 입력 | Backend가 시계열·거래 사본을 메시지에 담고, 워커는 시장 자료만 추가 (R2) |
-| 구간 요약 정의 | 구간 경계 손익·실제 체결대금으로 계산. 회전율만 연환산 단위 명시; DEP-004-011 선행 (R3) |
+| 구간 요약 정의 | 구간 경계 손익·실제 체결대금으로 계산. 회전율만 연환산 단위 명시; DEP-004-011 대조 통과 (R3) |
 | 가용성 판정·필터 키 | Backend 메타데이터 조회 6단계, sha256 키, KOSPI 거래일 달력·`TradingCalendarPort` (R4) |
 | 현금 시작·전체 기간 재계산 | 004 접수 서비스 호출 → 완료 후 잘라내기 작업 연쇄 (R5) |
 | 진입 계약·사례 식별자 | `(snapshotKey, endMonth)`를 `~`로 이어 한 값, 주소 둘 (R6) |
@@ -165,7 +165,7 @@ worker/src/worker/regime_link/                         # 신규. 백테스트 �
 ├── __init__.py
 ├── contracts.py                                       # RegimeLinkJob·RegimeLinkEvent (pydantic, ContractModel)
 ├── messaging.py                                       # 계약 상수(exchange·queue·routing key) — 백엔드 상수와 대조 테스트
-├── slicer.py                                          # 구간 잘라내기·요약 — R3 구간 산식, DEP-004-011 입력 검증 선행
+├── slicer.py                                          # 구간 잘라내기·요약 — R3 구간 산식, 수량은 체결+스냅샷으로 이월
 ├── consumer.py                                        # 수신·검증·계산·FINISHED 발행·ACK
 └── rabbitmq.py                                        # pika 구현
 worker/src/worker/regime_link_main.py                  # 엔트리포인트 python -m worker.regime_link_main
@@ -199,7 +199,7 @@ docs/specs/regime-link-api/README.md · docs/specs/regime-link-messaging/{README
 
 ## 구현 순서
 
-**선행 게이트**: M1의 계산 픽스처 동결 및 M2 착수 전에 DEP-004-011의 입력 대응과 독립 대조를 완료한다. 현재는 미완료이며, 필요한 004 계약 확장은 별도 구현 범위로 합의한다.
+**선행 게이트**: M1의 계산 픽스처 동결 및 M2 착수 전에 DEP-004-011의 입력 대응과 독립 대조를 완료한다. 2026-09-20에 통과했으므로(research R3, 004 체결 기록 추가는 S15P21E205-359) 계산 픽스처를 동결하고 M2에 착수할 수 있다.
 
 
 묶음마다 끝에 검증 명령이 통과해야 다음으로 간다. 파트가 갈리므로 Jira 티켓도 묶음 단위다.
