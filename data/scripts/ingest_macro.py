@@ -155,7 +155,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if not report.published:
         print(f"발행 보류: {report.publication_held}")
-        print("17개가 모두 찬 뒤에만 공개한다(FR-011). 수집 기록은 남았다")
+        # 보류 이유는 둘이다. 지표가 덜 찬 것(FR-011)과 전 구간이 짧은 것(FR-011b(3))인데,
+        # 대응이 다르다 — 앞엣것은 실패한 지표를 고치고 뒤엣것은 공표 지연이나 원천 구간을 본다.
+        print("17개가 다 차고 전 구간이 기대 대상월 수를 채운 뒤에만 공개한다. 수집 기록은 남았다")
         return 1
     print(f"자료 버전 {report.dataset_version_id} 를 발행했다")
     return 0

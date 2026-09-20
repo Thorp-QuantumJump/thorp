@@ -97,7 +97,12 @@ class IndicatorOutcome:
     observations: list[SourceObservation] = field(default_factory=list)
     raw_documents: list[RawDocument] = field(default_factory=list)
     error_class: str | None = None
+    #: 응답에서 관측값이 아니어서 뺀 행의 수 (FR-017a). 관세청의 ``<year>총계</year>`` 가 여기다.
     excluded_rows: int = 0
+    #: 달마다 그 값을 준 구간. 개편으로 나뉜 계열만 채워진다 (FR-010).
+    break_segments: dict[str, str] = field(default_factory=dict)
+    #: 그중 등록표의 연결 규칙으로 이어진 구간들. 이어지지 않은 구간을 넘는 비교는 결측이다.
+    linked_segments: frozenset[str] = frozenset()
 
     @property
     def succeeded(self) -> bool:
@@ -342,6 +347,14 @@ def _collect_linked(
 
     segments = housing.segments_from(values_by_base_month, indicator.link_chain)
     linked = housing.link(segments)
+    # 어느 표가 어느 달을 줬는지 변환까지 들고 간다. 증가율이 이음매를 넘을 때 그 둘이
+    # 실제로 이어진 구간인지 확인해야 하기 때문이다(FR-006).
+    outcome.break_segments = {
+        point.period: point.source_base_month for point in linked.points
+    }
+    outcome.linked_segments = frozenset(
+        {segments[0].base_month} | {link.from_base_month for link in linked.links}
+    )
     return [
         SourceObservation(
             indicator_id=indicator.indicator_id,
@@ -447,6 +460,8 @@ def normalize_outcomes(
             as_of=as_of,
             trading_days=trading_days,
             received_at=received_at,
+            break_segments=outcome.break_segments or None,
+            linked_segments=outcome.linked_segments,
         )
     return result
 
@@ -594,15 +609,17 @@ def record_item_status(
                 text(
                     "INSERT INTO macro_collection_item_status"
                     " (attempt_id, indicator_id, source, status, last_success_at,"
-                    "  last_error_at, error_class, quota_exhausted, raw_location)"
+                    "  last_error_at, error_class, quota_exhausted, raw_location,"
+                    "  excluded_row_count)"
                     " VALUES (:attempt, :indicator, :source, :status, :success,"
-                    "  :error_at, :error_class, :quota, :raw)"
+                    "  :error_at, :error_class, :quota, :raw, :excluded)"
                     " ON CONFLICT (attempt_id, indicator_id) DO UPDATE SET"
                     "  status = EXCLUDED.status, last_success_at = EXCLUDED.last_success_at,"
                     "  last_error_at = EXCLUDED.last_error_at,"
                     "  error_class = EXCLUDED.error_class,"
                     "  quota_exhausted = EXCLUDED.quota_exhausted,"
-                    "  raw_location = EXCLUDED.raw_location"
+                    "  raw_location = EXCLUDED.raw_location,"
+                    "  excluded_row_count = EXCLUDED.excluded_row_count"
                 ),
                 {
                     "attempt": attempt_id,
@@ -616,6 +633,7 @@ def record_item_status(
                     "raw": str(outcome.raw_documents[-1].path)
                     if outcome.raw_documents
                     else None,
+                    "excluded": outcome.excluded_rows,
                 },
             )
 
@@ -647,6 +665,67 @@ class IngestReport:
     @property
     def published(self) -> bool:
         return self.dataset_version_id is not None
+
+
+@dataclass(frozen=True)
+class Shortfall:
+    """전 구간 적재가 기대에 못 미친 지표 하나 (FR-011b(3))."""
+
+    indicator_id: str
+    expected_months: int
+    received_months: int
+    expected_end_month: str
+
+    def __str__(self) -> str:
+        return (
+            f"{self.indicator_id} {self.received_months}/{self.expected_months}개월"
+            f" (~{self.expected_end_month})"
+        )
+
+
+#: 꼬리 쪽 한 달은 미달로 보지 않는다 (FR-011b(3)).
+#:
+#: 등록표의 공표 지연은 **2026-09-20 하루치 관측**으로 정한 값이다. 그날 관세청은 이번 달치를
+#: 이미 내고 있었지만 달 초에는 아직 없고, 통계청 산업활동동향도 발표가 하루 이틀 밀리는 달이
+#: 있다. 여유 없이 걸면 그런 날의 실행이 17개 전부를 발행하지 못한다.
+#:
+#: 여유를 두어 잃는 것은 작다. 이 판정이 막으려는 것은 **전 구간이 통째로 짧은 것**이다 —
+#: 주택가격이 2000-01 대신 2021-06 부터만 오면 260개월이 빈다. 한 달의 여유로는 그런 구멍이
+#: 가려지지 않는다. 반대로 여유가 없으면 발표 하루 차이가 발행 전체를 멈춘다.
+TAIL_SLACK_MONTHS: Final[int] = 1
+
+
+def shortfalls(
+    indicators: Sequence[IndicatorDefinition],
+    observations: Mapping[str, Sequence[NormalizedObservation]],
+    as_of: str,
+    *,
+    slack_months: int = TAIL_SLACK_MONTHS,
+) -> list[Shortfall]:
+    """기대 대상월 수에 못 미친 지표들 (FR-011b(3)).
+
+    **받은 대상월을 센다. 값이 있는 달이 아니다.** 전년동월 대비의 첫 열두 달은 비교월이 없어
+    결측이지만 그 달들도 받은 대상월이고, 값만 세면 증가율 지표가 영영 미달로 남는다.
+
+    기대보다 **많은** 것은 미달이 아니다 — 원천이 이번 달치를 먼저 낸 경우가 그렇고, 그것은
+    문제가 아니라 공표 지연이 우리가 적어 둔 것보다 짧았다는 뜻이다.
+
+    ``slack_months`` 만큼은 모자라도 넘어간다. 이유는 :data:`TAIL_SLACK_MONTHS` 에 있다.
+    """
+    result: list[Shortfall] = []
+    for indicator in indicators:
+        expected = registry.expected_month_count(indicator, as_of)
+        received = len(observations.get(indicator.indicator_id, ()))
+        if received < expected - slack_months:
+            result.append(
+                Shortfall(
+                    indicator_id=indicator.indicator_id,
+                    expected_months=expected,
+                    received_months=received,
+                    expected_end_month=registry.expected_end_month(indicator, as_of),
+                )
+            )
+    return result
 
 
 def run(
@@ -706,6 +785,14 @@ def run(
 
     dataset_id: int | None = None
     held: str | None = None
+    # **전 구간 적재는 기대 대상월 수를 채워야 완료다**(FR-011b(3)). 한 지표라도 모자라면
+    # 발행하지 않는다 — 짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡해서, 과거가 잘려 있다는
+    # 사실이 화면 어디에도 드러나지 않는다. 정기 수집은 최근 N개월만 받으므로 해당 없다.
+    missing_months = (
+        shortfalls(indicators, observations, f"{today.year:04d}-{today.month:02d}")
+        if mode == "initial"
+        else []
+    )
     if len(indicators) != registry.EXPECTED_INDICATOR_COUNT:
         # **일부만 받은 실행은 발행을 시도하지 않는다.** 발행은 17개가 함께여야 성립하므로
         # (FR-011) 부분 집합으로 부르면 판정기가 그 자리에서 거절한다. 그것을 실패로 적으면
@@ -715,6 +802,11 @@ def run(
             f" (발행은 {registry.EXPECTED_INDICATOR_COUNT}개가 함께여야 한다)"
         )
         logger.info("%s", held)
+    elif missing_months:
+        held = "전 구간 적재가 기대에 못 미쳐 발행하지 않는다: " + ", ".join(
+            str(shortfall) for shortfall in missing_months
+        )
+        logger.warning("%s", held)
     else:
         try:
             dataset_id = publish.publish_atomically(engine, request)

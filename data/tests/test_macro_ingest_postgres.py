@@ -538,3 +538,112 @@ def test_item_status_creates_the_attempt_when_publication_never_started(
 
     assert attempt == ("INITIAL", "PARTIAL")
     assert items == [("all_industry_production", ingest.STATUS_FAILED)]
+
+
+# ---------------------------------------------------------------------------
+# 걸러낸 행 수 (T075, FR-017a)
+# ---------------------------------------------------------------------------
+def test_excluded_total_rows_land_in_the_collection_record(postgres_engine) -> None:
+    """관세청 합계 행을 몇 개 뺐는지가 수집 기록에 남는다.
+
+    남지 않으면 "9개월치를 받았다"와 "10행을 받아 1행을 뺐다"가 같은 모양이 된다 — 원천이
+    합계 행의 모양을 바꿔 걸러지지 않게 됐을 때 그 사실이 드러나지 않는다.
+    """
+    exports = _outcome("exports")
+    exports.source = "customs"
+    exports.excluded_rows = 37
+    imports = _outcome("imports")
+    imports.source = "customs"
+
+    ingest.record_item_status(postgres_engine, "attempt-excluded", [exports, imports])
+
+    with postgres_engine.begin() as connection:
+        rows = dict(
+            connection.execute(
+                text(
+                    "SELECT indicator_id, excluded_row_count"
+                    " FROM macro_collection_item_status"
+                    " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                    "                     WHERE attempt_key = 'attempt-excluded')"
+                )
+            ).all()
+        )
+    assert rows["exports"] == 37
+    # 아무것도 걸러내지 않은 지표는 0 이다. NULL 로 두면 "세지 않았다"와 구분되지 않는다.
+    assert rows["imports"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 전 구간 적재 완료 판정 (T077, FR-011b(3))
+# ---------------------------------------------------------------------------
+def test_initial_load_short_of_the_expected_months_is_not_published(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """기대 대상월 수를 못 채우면 발행하지 않는다.
+
+    짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡하다 — 과거가 잘려 있다는 사실이 화면 어디에도
+    드러나지 않으므로, 발행 전에 막지 않으면 아무도 알아채지 못한다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    # 표본은 2024-01 부터인데 등록표는 2000-01 부터라고 말한다. 스무 해가 비는 상황이다.
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.publication_held is not None
+    assert "기대에 못 미쳐" in report.publication_held
+    assert not report.published
+    # 발행은 막았지만 무엇을 받았는지는 남는다 (FR-011).
+    with postgres_engine.begin() as connection:
+        recorded = connection.execute(
+            text(
+                "SELECT count(*) FROM macro_collection_item_status"
+                " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                "                     WHERE attempt_key = :key)"
+            ),
+            {"key": report.attempt_key},
+        ).scalar_one()
+    assert recorded == len(indicators)
+
+
+def test_regular_mode_is_not_judged_by_the_full_range(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """정기 수집은 최근 N개월만 받으므로 전 구간 판정을 걸지 않는다.
+
+    걸면 정기 수집이 매번 미달로 보류되고, 그 보류가 쌓이면 진짜 미달을 구분하지 못한다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="regular",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.publication_held is None or "기대에 못 미쳐" not in report.publication_held

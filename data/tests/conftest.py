@@ -21,10 +21,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError
 
-MIGRATIONS = (
-    "V20260918120000__macro_registry.sql",
-    "V20260918153100__macro_normalized_missing_reasons.sql",
+#: macro 스키마 마이그레이션을 담은 곳. 목록을 손으로 적지 않고 **파일 이름으로 찾는다** —
+#: 적어 두면 새 마이그레이션을 더할 때마다 여기를 같이 고쳐야 하고, 잊으면 테스트만 옛 스키마로
+#: 돌아 통과한다. 그 통과는 운영이 새 컬럼으로 도는 사실을 감춘다.
+MIGRATION_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "backend" / "src" / "main" / "resources" / "db" / "migration"
 )
+
+#: 이름순이 곧 판 번호순이다(``V<타임스탬프>__``).
+def macro_migrations() -> list[Path]:
+    return sorted(MIGRATION_DIR.glob("V*__macro_*.sql"))
 
 
 def _docker(*arguments: str) -> str:
@@ -101,14 +108,12 @@ def postgres_engine():
                 if time.monotonic() >= deadline:
                     raise
                 time.sleep(0.25)
-        migration_dir = Path(__file__).resolve().parents[2] / "backend" / "src" / "main" \
-            / "resources" / "db" / "migration"
         with psycopg.connect(
             host=host, port=port, dbname="macro_test",
             user="postgres", password=password,
         ) as connection:
-            for migration in MIGRATIONS:
-                connection.execute((migration_dir / migration).read_text(encoding="utf-8"))
+            for migration in macro_migrations():
+                connection.execute(migration.read_text(encoding="utf-8"))
         yield engine
     finally:
         if "engine" in locals():
