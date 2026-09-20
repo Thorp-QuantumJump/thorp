@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -393,3 +394,92 @@ def test_oecd_fixture_is_sdmx_json_2(tmp_path):
 
     assert "2.0.0" in payload["meta"]["schema"]
     assert "structures" in payload["data"]
+
+
+# ---------------------------------------------------------------------------
+# 전 구간 적재 완료 판정 (T077, FR-011b(3))
+# ---------------------------------------------------------------------------
+def _observations(indicator_id: str, count: int) -> list[object]:
+    """대상월 ``count`` 개를 흉내 낸다. 개수만 세므로 내용은 보지 않는다."""
+    return [object()] * count
+
+
+def test_shortfall_is_reported_when_a_series_arrives_short():
+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == "consumer_price_index")
+    expected = registry.expected_month_count(cpi, "2026-09")
+    missing = ingest.shortfalls(
+        [cpi], {"consumer_price_index": _observations("consumer_price_index", expected - 5)},
+        "2026-09",
+    )
+    assert len(missing) == 1
+    assert missing[0].indicator_id == "consumer_price_index"
+    assert missing[0].expected_months == expected
+    assert missing[0].received_months == expected - 5
+    assert missing[0].expected_end_month == "2026-08"
+
+
+def test_a_full_series_is_not_a_shortfall():
+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == "consumer_price_index")
+    expected = registry.expected_month_count(cpi, "2026-09")
+    assert ingest.shortfalls(
+        [cpi], {"consumer_price_index": _observations("consumer_price_index", expected)},
+        "2026-09",
+    ) == []
+
+
+def test_extra_months_are_not_a_shortfall():
+    """원천이 이번 달치를 먼저 내면 기대보다 많다. 그것은 문제가 아니다."""
+    bond = next(i for i in registry.INDICATORS if i.indicator_id == "treasury_bond_3y")
+    expected = registry.expected_month_count(bond, "2026-09")
+    assert ingest.shortfalls(
+        [bond], {"treasury_bond_3y": _observations("treasury_bond_3y", expected + 1)}, "2026-09"
+    ) == []
+
+
+def test_an_indicator_that_got_nothing_is_a_shortfall():
+    """수집이 통째로 실패한 지표도 미달이다 — 빈 목록을 완료로 보면 안 된다."""
+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == "consumer_price_index")
+    missing = ingest.shortfalls([cpi], {}, "2026-09")
+    assert len(missing) == 1
+    assert missing[0].received_months == 0
+
+
+def test_one_missing_tail_month_is_tolerated():
+    """발표가 하루 이틀 밀린 날의 실행이 17개 전부를 막지 않는다.
+
+    등록표의 공표 지연은 하루치 관측으로 정한 값이라 달마다 정확히 맞지 않는다. 여유 없이
+    걸면 그 차이가 곧 발행 중단이 된다.
+    """
+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == "consumer_price_index")
+    expected = registry.expected_month_count(cpi, "2026-09")
+    assert ingest.shortfalls(
+        [cpi], {"consumer_price_index": _observations("consumer_price_index", expected - 1)},
+        "2026-09",
+    ) == []
+
+
+def test_two_missing_tail_months_are_not_tolerated():
+    """여유는 한 달이다. 두 달이 비면 발표 지연이 아니라 다른 문제다."""
+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == "consumer_price_index")
+    expected = registry.expected_month_count(cpi, "2026-09")
+    missing = ingest.shortfalls(
+        [cpi], {"consumer_price_index": _observations("consumer_price_index", expected - 2)},
+        "2026-09",
+    )
+    assert len(missing) == 1
+
+
+def test_slack_does_not_hide_a_truncated_history():
+    """이 판정이 정말로 막으려는 것 — 전 구간이 통째로 짧은 경우는 여유로 가려지지 않는다."""
+    housing = next(i for i in registry.INDICATORS if i.indicator_id == "housing_sale_price")
+    # 연결 사슬 없이 현행 표만 받으면 2021-06 부터다. 2000-01 부터여야 하는데 260개월이 빈다.
+    only_current_table = registry.expected_month_count(
+        replace(housing, series_start="2021-06"), "2026-09"
+    )
+    missing = ingest.shortfalls(
+        [housing],
+        {"housing_sale_price": _observations("housing_sale_price", only_current_table)},
+        "2026-09",
+    )
+    assert len(missing) == 1
+    assert missing[0].expected_months - missing[0].received_months > 200
