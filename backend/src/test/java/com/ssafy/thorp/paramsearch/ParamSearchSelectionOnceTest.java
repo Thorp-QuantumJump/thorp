@@ -60,6 +60,8 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport 
     @BeforeEach
     void prepare() {
         jdbcTemplate.update("DELETE FROM search_candidate");
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbcTemplate.update("DELETE FROM my_record");
         jdbcTemplate.update("DELETE FROM param_search");
         jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id >= 900000");
         jdbcTemplate.update("DELETE FROM backtest_run WHERE id >= 900000");

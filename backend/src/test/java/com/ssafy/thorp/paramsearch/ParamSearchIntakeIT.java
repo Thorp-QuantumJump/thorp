@@ -73,6 +73,8 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
     @BeforeEach
     void stubLauncher() {
         jdbcTemplate.update("DELETE FROM search_candidate");
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbcTemplate.update("DELETE FROM my_record");
         jdbcTemplate.update("DELETE FROM param_search");
         // 결과 행이 실행 행을 FK로 참조한다. 자식을 먼저 지우지 않으면 다른 테스트가
         // 남긴 결과 때문에 이 정리가 통째로 실패한다.
