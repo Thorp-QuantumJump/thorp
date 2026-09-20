@@ -23,6 +23,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
+import com.ssafy.thorp.support.TestUsers;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,6 +72,10 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
     @BeforeEach
     void prepare() {
         jdbcTemplate.update("DELETE FROM search_candidate");
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbcTemplate.update("DELETE FROM my_record");
+        // 접수가 내 기록을 만들려면 그 요청자가 users 에 있어야 한다(my_record.owner_id FK).
+        TestUsers.ensure(jdbcTemplate, OWNER);
         jdbcTemplate.update("DELETE FROM param_search");
         jdbcTemplate.update("DELETE FROM backtest_result WHERE run_id >= 900000");
         jdbcTemplate.update("DELETE FROM backtest_run WHERE id >= 900000");
