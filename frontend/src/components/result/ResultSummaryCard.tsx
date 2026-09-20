@@ -4,22 +4,16 @@ import { formatMoney, formatRatio, isZeroValue } from './formatResult'
 import styles from './ResultSummaryCard.module.css'
 
 export const METRIC_DEFINITIONS = {
-  netTotalReturn: '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',
+  netTotalReturn:
+    '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',
   maxDrawdown:
     '운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',
   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',
 } as const
 
-export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'
-
 type ResultSummaryCardProps = {
   detail: PublicResultDetail
-  /**
-   * 부분 결과·취소 결과의 완료 범위(마지막으로 계산한 거래일). 모르면 `null`이다.
-   *
-   * 공개 상세는 계산 중일 때만 `progress`를 담으므로, 화면이 시계열의 마지막 날짜로 채운다.
-   */
-  completedThrough: string | null
+  target?: PublicResultDetail | null
 }
 
 /**
@@ -30,8 +24,12 @@ type ResultSummaryCardProps = {
  *
  * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).
  */
-export function ResultSummaryCard({ detail, completedThrough }: ResultSummaryCardProps) {
-  const condition = buildConditionLine(detail)
+export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
+  const condition = buildConditionLine({
+    ...detail,
+    targetName: target?.strategyName ?? target?.config.strategyId,
+    targetWeightsSource: target?.weightsSource,
+  })
   const { summary } = detail
 
   return (
@@ -81,21 +79,20 @@ export function ResultSummaryCard({ detail, completedThrough }: ResultSummaryCar
               : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}
           </p>
         </>
-      ) : detail.summaryUnavailable ? (
-        <p className={styles.unavailable}>
-          {SUMMARY_NOT_CALCULATED}{' '}
-          {detail.summaryUnavailable === 'CANCELLED_BEFORE_START'
-            ? '계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.'
-            : completedThrough
-              ? `${completedThrough}까지 계산이 진행되었습니다.`
-              : '완료 범위는 확인할 수 없습니다.'}
-        </p>
       ) : null}
     </section>
   )
 }
 
-function Metric({ label, value, definition }: { label: string; value: string; definition: string }) {
+function Metric({
+  label,
+  value,
+  definition,
+}: {
+  label: string
+  value: string
+  definition: string
+}) {
   return (
     <div className={styles.metric}>
       <dt className={styles.metricLabel}>{label}</dt>

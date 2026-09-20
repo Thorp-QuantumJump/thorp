@@ -9,7 +9,7 @@
 - 백엔드·워커·PostgreSQL·RabbitMQ가 떠 있어야 한다(저장소 루트 README의 개발 환경 구성).
 - 001의 KRX 자료가 적재되어 있어야 결과가 나온다.
 - 004의 백테스트 실행 경로가 동작해야 한다. `POST /backtests`가 `202`를 돌려주고 잠시 뒤 `COMPLETED`가 되는지 먼저 확인한다.
-- **공개 열람 경계(plan의 묶음 A)가 병합되기 전에는 결과 화면이 뜨지 않는다.** 현재 `CurrentRequester.requireRequesterId`가 인증 없이는 예외를 던지기 때문이다.
+- 공개 열람 경계(B01·B02)가 병합되어 있어야 한다. 비로그인 요청은 `requester_id` 없이 공개 토큰과 만료 시각을 받고, 결과 화면은 토큰만으로 조회한다.
 
 ## 실행
 
@@ -43,7 +43,7 @@ cd frontend && npm run dev
 
 ### 4. 추천으로 읽힐 표현이 없다 (SC-004)
 
-`frontend/src/features/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.
+`frontend/src/components/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.
 
 ```bash
 cd frontend && npm run test
@@ -82,6 +82,16 @@ cd frontend && npm run test
 ```bash
 cd frontend && npm run lint && npm run build && npm run test
 ```
+
+## B05 구현 검증 (2026-09-18)
+
+[S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309), 브랜치 `feat(fe)/309-result-comparison`. T045~T054·T057~T061의 구현과 자동 검증을 마쳤다. Jira 작업은 MR 병합 전이므로 진행 중이다. 실제 KRX 데이터로 사용한 화면과 사용성 관찰은 이번 검증에 포함하지 않았다.
+
+- 프런트엔드: `npm run lint` 오류 0건(기존 경고 20건), `npm run build` 성공. `VITEST_MAX_WORKERS=2 npm test`는 Vitest 1,134개와 기존 Node 테스트 13개 통과, 실패·건너뜀 0건이다.
+- 백엔드: Java 21에서 `./gradlew spotlessApply build --no-daemon --console=plain` 성공. 1,736개 통과, 실패 0건, 환경을 명시적으로 켜야 하는 4개만 건너뛰었다: `MARKET_LIVE_TEST=true`의 실시간 API 1개, `THORP_RUN_NEWS_PERFORMANCE=true`의 성능 2개, `THORP_REQUIRE_DOCKER=true`의 필수 Docker 확인 1개. 공개 결과 API·서비스와 평가 기간 계산 관련 39개는 모두 실행해 통과했고 PostgreSQL 통합 테스트도 실행했다.
+- 비교 선택 전 추가 조회 없음, 조건 보존 요청, 대기·진행·실패·만료·429의 명시적 재시도, 422의 필요값 표시, 공통 기간 확인 후 두 건 재계산과 원래 주소 보존을 자동 테스트로 확인했다. 두 번째 요청 실패 시 첫 접수 중복 방지와 비교 해제 뒤 늦은 응답 무시도 검증했다.
+- 같은 조건에서만 비교 곡선·요약·상세를 연결하며, 자동 탐색 후보 표시와 유일한 주 행동 버튼을 화면 테스트로 확인했다. T059·T060의 상태 컴포넌트와 확인창 테스트는 실제 흐름을 함께 검증하는 `useCompareTarget.test.tsx`에 통합했다. 구현 시 확인한 계약 보정은 [plan.md](plan.md)의 B05 절에 기록했다.
+- 코드리뷰에서 확인한 두 경로를 보강했다. 기존 결과와 새 대상의 자료·엔진 버전이 다르면 두 결과를 현재 기준으로 다시 요청하며, 기간·버전 확인창을 닫으면 키보드 초점이 '비교 대상 고르기'로 돌아간다.
 
 ## 알려진 제약
 

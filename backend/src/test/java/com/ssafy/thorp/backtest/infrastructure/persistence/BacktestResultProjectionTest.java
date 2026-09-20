@@ -116,6 +116,10 @@ class BacktestResultProjectionTest extends RepositoryTestSupport {
         assertThat(summary.liquidation()).isEqualTo(output.liquidation());
         assertThat(summary.analytics()).isEqualTo(output.analytics());
         assertThat(summary.exceptionCount()).isEqualTo(output.exceptions().size());
+        // 결과를 계산한 워커 환경의 라이브러리 버전(T028)
+        assertThat(summary.dependencies())
+                .isEqualTo(new EngineOutput.Dependencies("2.4.6", "1.17.1"))
+                .isEqualTo(output.versions().dependencies());
     }
 
     @Test

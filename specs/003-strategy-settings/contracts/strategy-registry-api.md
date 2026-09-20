@@ -150,7 +150,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "inputType": "CHOICE",
           "choices": [
             { "value": "TOP_N", "label": "상위 몇 개", "selectable": true },
-            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true }
+            { "value": "THRESHOLD", "label": "기준 수익률 이상", "selectable": true },
+            { "value": "TOP_PERCENT", "label": "상위 몇 퍼센트", "selectable": true }
           ],
           "defaultValue": "TOP_N"
         },
@@ -160,12 +161,42 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "description": "선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.",
           "inputType": "CHOICE",
           "choices": [
-            { "value": 2, "label": "2", "selectable": true },
+            { "value": 2, "label": "2", "selectable": false },
             { "value": 3, "label": "3", "selectable": true },
             { "value": 4, "label": "4", "selectable": false }
           ],
           "defaultValue": 4,
           "appliesWhen": { "axis": "selectionMode", "value": "TOP_N" }
+        },
+        {
+          "name": "topPercent",
+          "label": "상위 비율",
+          "description": "선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.",
+          "unit": "퍼센트",
+          "inputType": "NUMBER",
+          "range": { "min": 10, "max": 100, "step": 10 },
+          "defaultValue": 50,
+          "appliesWhen": { "axis": "selectionMode", "value": "TOP_PERCENT" }
+        },
+        {
+          "name": "allocationMethod",
+          "label": "배분 방식",
+          "description": "고른 섹터에 금액을 나누는 방식이다.",
+          "inputType": "CHOICE",
+          "choices": [
+            { "value": "EQUAL", "label": "똑같이 나누기", "selectable": true },
+            { "value": "INVERSE_VOLATILITY", "label": "변동성이 낮은 섹터에 더 나누기", "selectable": true }
+          ],
+          "defaultValue": "EQUAL"
+        },
+        {
+          "name": "maxWeight",
+          "label": "섹터당 최대 비중",
+          "description": "한 섹터에 넣을 수 있는 최대 비중이다.",
+          "unit": "퍼센트",
+          "inputType": "NUMBER",
+          "range": { "min": 10, "max": 100, "step": 5 },
+          "defaultValue": 40
         }
       ],
       "validationRules": [
@@ -175,6 +206,27 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
           "left": { "axis": "topN" },
           "operator": "GREATER_THAN",
           "right": { "context": "UNIVERSE_SIZE" }
+        },
+        {
+          "code": "MAX_WEIGHT_TOO_LOW_FOR_SELECTION",
+          "detail": "섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.",
+          "left": { "axis": "maxWeight", "multiplyByAxis": "topN" },
+          "operator": "LESS_THAN",
+          "right": { "value": 100 }
+        },
+        {
+          "code": "MAX_WEIGHT_TOO_LOW_FOR_SELECTION",
+          "detail": "섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.",
+          "left": {
+            "axis": "maxWeight",
+            "multiplyByCeil": {
+              "context": "UNIVERSE_SIZE",
+              "axis": "topPercent",
+              "divisor": 100
+            }
+          },
+          "operator": "LESS_THAN",
+          "right": { "value": 100 }
         }
       ],
       "warmupRule": { "sum": ["lookbackDays", "skipRecentDays"] }
@@ -192,7 +244,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 필드 | 형 | 설명 |
 |---|---|---|
 | `registryVersion` | string | 분석 요청에 그대로 실어 보낸다 |
-| `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다 |
+| `provisional` | boolean | true면 출처가 있는 기존 임시값 또는 합성 픽스처다. 화면과 분석 결과가 그 사실을 계속 표시하며 확정값으로 표현하지 않는다. 임시 여부만으로 차단하지 않고 다른 실행 조건을 모두 검증한다(FR-005a) |
 | `strategies[].targetWeightSource` | `USER` \| `EQUAL` \| `COMPUTED` | 목표 비중이 어디에서 오는가. `USER`면 화면이 [002](../../002-sector-weight-selection/spec.md)가 확정한 비중을 읽기 전용으로 보이고, `COMPUTED`면 FR-012의 자동 배분 설명을 보인다. **화면이 전략 ID로 분기하지 않게 하는 값이다** |
 | `strategies[].selectable` | boolean | 카드를 고를 수 있는가. `universeSize`를 주면 유효성 제약과 활성 여부를 반영한다 |
 | `strategies[].unselectableReason` | string? | `selectable`이 false일 때만. 화면이 그대로 한 문장으로 보인다 |
@@ -227,7 +279,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 |---|---|
 | `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |
 | `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |
-| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |
+| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). `multiplyByCeil: { context, axis, divisor }`를 덧붙이면 `축 값 × ceil(맥락 값 × 다른 축 값 ÷ divisor)`다(예: `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`, 등록표 `1.5.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다. 세 곱셈 형식은 함께 쓰지 않는다 |
 | `operator` | `GREATER_THAN` \| `GREATER_OR_EQUAL` \| `LESS_THAN` \| `LESS_OR_EQUAL` \| `EQUAL` \| `NOT_EQUAL` |
 
 **조건이 참이면 위반이다**(그 설정으로 분석을 시작하지 않는다). 맥락 키는 현재 `UNIVERSE_SIZE`(섹터 후보 집합의 크기) 하나다.
@@ -254,7 +306,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 |---|---|---|
 | `executionType` | string | 이 화면은 늘 `SINGLE` |
 | `strategy.strategyId` | string | 003 등록표의 활성 전략 |
-| `strategy.rulesVersion` | string | 004 `GET /backtests/registry`의 `strategyRules`에서 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`이거나 행이 없거나 등록된 행이 둘 이상이면 요청을 보내지 않는다. 대체된 옛 버전이면 409 (2026-09-17 004 결정) |
+| `strategy.rulesVersion` | string | 004 `GET /backtests/registry`의 `strategyRules`에서 고른 전략의 `REGISTERED` 행 버전. `PENDING_DECISION`이거나 행이 없거나 등록된 행이 둘 이상이면 요청을 보내지 않는다. 대체된 옛 버전이면 409가 목표 계약이나 서버의 버전 수명주기는 004 Phase 10 T029 미구현이다. 현재는 REGISTERED 행을 허용한다 |
 | `strategy.registryVersion` | string | 조회한 003 등록표 버전. 접수 시점과 다르면 409 |
 | `strategy.parameters` | object | 축 이름 → 값. 등록표의 허용 범위 안이어야 한다. **`appliesWhen`이 거짓인 축은 싣지 않는다** — 서버는 이 설정에서 뜻을 갖는 축의 집합과 정확히 같아야 받는다(FR-003) |
 | `conditions.start` / `conditions.end` | date | 001이 산출한 공통 평가 가능 범위 안. 사용자가 고르지 않았으면 범위 전체 |
@@ -271,7 +323,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | 상태 | 코드 | 언제 | 화면 처리 |
 |---|---|---|---|
 | 400 | `UNREGISTERED_PARAMETER_VALUE` | 축 값이 허용 범위 밖 | 허용 범위를 안내하고 값을 저장하지 않는다 |
-| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 등록표 버전이 현재와 다르거나, 실은 규칙 버전(004)이 대체됨 | 등록표와 004 규칙 등록표를 모두 다시 조회하고 바뀐 사실을 알린다. 자동으로 다시 보내지 않는다 (research R9, 2026-09-17 004 결정) |
+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 등록표 버전이 현재와 다름. 규칙 버전(004)의 대체 거절은 Phase 10 T029 구현 후 적용 | 등록표와 004 규칙 등록표를 모두 다시 조회하고 바뀐 사실을 알린다. 자동으로 다시 보내지 않는다 (research R9, 2026-09-17 004 결정) |
 | 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없음 | 전략 선택으로 되돌린다 |
 | 422 | `VALIDATION_RULE_VIOLATED` | 유효성 제약 위반 | 위반한 규칙의 `detail`을 보인다 |
 | 503 | `REGISTRY_UNAVAILABLE` | 등록표를 읽지 못함 | 다시 시도를 제안한다 |
@@ -288,3 +340,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이
 | FR-018 조회 실패 시 막는다 | 503과 그 처리 |
 | FR-008 유효성 위반을 실행 전에 안내 | `validationRules`의 조건을 화면이 평가하고, 서버가 접수 시점에 다시 본다 |
 | FR-014 등록표 버전을 요청에 싣는다 | `registryVersion`과 409 |
+
+### 조회 실패 복구 (FR-018a·FR-018b)
+
+003 등록표 조회·재시도 중에는 두 행동 버튼을 막고, 성공 후 보관값을 재검증한다. 004 규칙·비용 조회 실패는 분석만 막으며 '분석 조건 다시 불러오기'를 제공한다. 재시도 중 중복 조회를 막고 성공해도 분석 요청은 자동 전송하지 않는다. 자동 비교 진입은 FR-013의 별도 조건을 따른다.

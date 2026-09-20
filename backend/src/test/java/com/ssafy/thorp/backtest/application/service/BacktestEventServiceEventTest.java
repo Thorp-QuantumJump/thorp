@@ -68,6 +68,10 @@ class BacktestEventServiceEventTest extends IntegrationTestSupport {
         // 이 테스트가 쓰는 실행 행만 지우고 다시 만든다. 테이블을 통째로 비우거나 PK를 1로 박으면
         // 시퀀스로 id를 받는 다른 테스트와 충돌한다 — 컨테이너를 공유하기 때문이다.
         jdbcTemplate.update(
+                "DELETE FROM backtest_fill WHERE run_id IN"
+                        + " (SELECT id FROM backtest_run WHERE backtest_id = ?)",
+                BACKTEST_ID);
+        jdbcTemplate.update(
                 "DELETE FROM backtest_trade WHERE run_id IN"
                         + " (SELECT id FROM backtest_run WHERE backtest_id = ?)",
                 BACKTEST_ID);

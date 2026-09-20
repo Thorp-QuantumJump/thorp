@@ -383,22 +383,28 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ### 문서
 
-- [ ] T072 [P] (DOCS) `specs/003-strategy-settings/data-model.md`·`quickstart.md`·`plan.md`의 클래스 이름·경로(`ProvisionalFileParameterRegistry` → `FileParameterRegistry`, 로더 위치)를 구현과 맞춘다. `research.md` "남은 의존과 미확정" 표에 이 tasks.md "착수 전에 알아둘 것"의 ①~③ 상태를 반영한다
-- [ ] T073 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 추가 — "전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005)"와 "`sessionStorage` 키: `thorp.strategySettings`(003 설정값, 탭 수명), `thorp.sectorSelection`(002 경계 어댑터)". `backend/CLAUDE.md` "규칙"에 접수 관문 한 줄 — "`POST /backtests`는 `registryVersion`이 있는 요청만 003 등록표로 검증한다(400/409/422). 관문을 모든 요청에 걸려면 워커가 등록표 축 이름을 받는 것이 먼저다"
-- [ ] T074 (DOCS) [quickstart.md](quickstart.md) 1~11 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 001 `GET /sectors/evaluation-window`가 아직 없으면 7·7-1은 훅·유틸 테스트(T045·T064)로 대신하고 그 사실을 적는다. ②가 미결이면 4의 '분석하기'는 "분석 조건 버전을 확인할 수 없습니다"로 막히는 것이 기대 동작이다
+- [X] T072 [P] (DOCS) `specs/003-strategy-settings/data-model.md`·`quickstart.md`·`plan.md`의 클래스 이름·경로(`ProvisionalFileParameterRegistry` → `FileParameterRegistry`, 로더 위치)를 구현과 맞춘다. `research.md` "남은 의존과 미확정" 표에 이 tasks.md "착수 전에 알아둘 것"의 ①~③ 상태를 반영한다
+- [X] T073 [P] (DOCS) `frontend/CLAUDE.md` "규칙"에 두 줄 추가 — "전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005)"와 "`sessionStorage` 키: `thorp.strategySettings`(003 설정값, 탭 수명), `thorp.diagnosis.sectorSelection`(002 인계 계약)". `backend/CLAUDE.md` "규칙"에 접수 관문 한 줄 — "`POST /backtests`는 `registryVersion`이 있는 요청만 003 등록표로 검증한다(400/409/422). 관문을 모든 요청에 걸려면 워커가 등록표 축 이름을 받는 것이 먼저다"
+- [X] T074 (DOCS) [quickstart.md](quickstart.md) 1~11 수동 확인을 돌리고 결과를 MR 본문 "테스트" 절에 항목별로 적는다. 001 `GET /sectors/evaluation-window`가 아직 없으면 7·7-1은 훅·유틸 테스트(T045·T064)로 대신하고 그 사실을 적는다. ②가 미결이면 4의 '분석하기'는 "분석 조건 버전을 확인할 수 없습니다"로 막히는 것이 기대 동작이다
 - [ ] T074a (DOCS) SC-006 사용성 관찰 — 002 SC-004와 같은 회차에서 전략을 검증하려는 개인 6~8명에게 진행자의 화면 설명 없이 전략 카드 하나를 고르고 분석 요청을 접수하게 한 뒤 단계별로 막힌 인원을 기록한다. 같은 단계에서 두 명 이상이 다음 행동을 찾지 못해 설명을 요청하면 화면을 고치고 같은 시나리오를 다시 관찰해 두 명 미만일 때 끝낸다. 관찰 기록과 조치 내역을 `specs/003-strategy-settings/` 아래 결과 문서로 남기고 MR 본문에 요약한다. **이것은 코드 구현이 아니라 관찰 절차이므로 B12 병합을 막지 않으며, 회차 일정은 002와 함께 잡는다**
 
 ### 코드 정리
 
-- [ ] T075 [P] (BE) 잔재 정리 — `grep -rn "Provisional\|parameter-registry-provisional" backend/src`가 클래스·파일 이름 잔재 0건(`PROVISIONAL-` 버전 접두 문자열과 `provisional()` 메서드는 제외); `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/` 디렉터리가 없다; `strategy/package-info.java`와 각 클래스 Javadoc이 "003 대역"이 아니라 "003 정식 구현"으로 읽힌다
-- [ ] T076 [P] (FE) `frontend/src/components/strategy/*.tsx`에 전략 ID·축 이름 문자열 리터럴이 없는지 `grep -rn "FIXED_WEIGHT\|EQUAL_WEIGHT\|INVERSE_VOLATILITY\|SECTOR_MOMENTUM\|MINIMUM_VARIANCE\|lookbackDays\|maxWeight\|topN" frontend/src/components/strategy frontend/src/pages/StrategySettingsPage.tsx frontend/src/hooks/useStrategySettings.ts`로 확인 — 0건이어야 한다(FR-005·FR-015). 테스트·픽스처는 제외
+- [X] T075 [P] (BE) 잔재 정리 — `grep -rn "Provisional\|parameter-registry-provisional" backend/src`가 클래스·파일 이름 잔재 0건(`PROVISIONAL-` 버전 접두 문자열과 `provisional()` 메서드는 제외); `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/` 디렉터리가 없다; `strategy/package-info.java`와 각 클래스 Javadoc이 "003 대역"이 아니라 "003 정식 구현"으로 읽힌다
+- [X] T076 [P] (FE) `frontend/src/components/strategy/*.tsx`에 전략 ID·축 이름 문자열 리터럴이 없는지 `grep -rn "FIXED_WEIGHT\|EQUAL_WEIGHT\|INVERSE_VOLATILITY\|SECTOR_MOMENTUM\|MINIMUM_VARIANCE\|lookbackDays\|maxWeight\|topN" frontend/src/components/strategy frontend/src/pages/StrategySettingsPage.tsx frontend/src/hooks/useStrategySettings.ts`로 확인 — 0건이어야 한다(FR-005·FR-015). 테스트·픽스처는 제외
 
 ### 전체 검증
 
-- [ ] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 8 포함)·007·003 전부. `skipped`가 Docker 부재 때문인지 확인한다(backend/CLAUDE.md)
-- [ ] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm run test` — Vitest include에 새 `.test.ts` 둘이 들어갔는지 결과 목록에서 확인한다
+- [X] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 8 포함)·007·003 전부. `skipped`가 Docker 부재 때문인지 확인한다(backend/CLAUDE.md)
+- [X] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm run test` — Vitest include에 새 `.test.ts` 둘이 들어갔는지 결과 목록에서 확인한다
 
 ---
+
+**B12 검증 기록 (2026-09-18, S15P21E205-244)**: [항목별 결과](verification/b12.md).
+T072·T073·T075·T076 문서/잔재 확인, T077 BE 전체 빌드(1,736 통과·선택 실측 3 skip),
+T078 FE 전체 검사(Vitest 1,097 + legacy 13 통과)를 완료했다. T074의 quickstart 1~11을 실제
+로컬 서버에서 확인하고 MR 테스트 절 초안을 준비했다. 10의 004 규칙 버전 교체는 미구현으로 기록했으며
+003 등록표 409 통과와 구분한다. T074a 사용성 관찰은 수행하지 않아 체크하지 않았다.
 
 ## Dependencies & Execution Order
 
@@ -557,13 +563,13 @@ Task: "T043" / "T044" / "T045" / "T046"               # 테스트 병렬
 
 ② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 "확인된 빈 구멍"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다. **2026-09-17 결정: 004가 `GET /backtests/registry`를 연다**(T039 메모). **해제: 같은 날 dev에 머지되었고(`fbec7b4`) B06이 연결해 202 접수까지 확인했다**("로컬 종단 확인"). 남은 교차 작업은 워커 메시지 정합(③)과 배분 방식 교체(T109)다.
 
-③ **등록표 축 이름이 워커에 닿지 않는다.** 워커는 `parameters.rebalance == "MONTH_END"` 문자열과 `rules.lookbackDays`만 읽는다. 003의 `rebalancePeriod` 객체값, `maxWeight`·`topN`·`skipRecentDays`·`allocationMethod`·`estimationMethod`는 004 메시지 계약(`docs/specs/backtest-messaging/`)과 워커 어느 쪽에도 자리가 없다. **004 소유다.** 그래서 T049의 접수 관문은 `registryVersion`이 있는 요청에만 걸고, 전부에 걸어 FR-006을 완전히 닫는 시점은 워커 정합 뒤로 남긴다. T017이 어긋난 곳을 표로 남긴다.
+③ **등록표 축과 워커의 정합은 부분 구현이다(2026-09-18 코드 대조).** 모멘텀은 `lookbackDays`·`skipRecentDays`·선정 방식별 축·`allocationMethod`·`maxWeight`를, 최소분산은 `lookbackDays`·`estimationMethod`·`maxWeight`를 소비한다. 다만 워커 실행 조건은 여전히 `parameters.rebalance == "MONTH_END"`를 요구하고 역변동성의 관측 길이는 `rules.lookbackDays`에서 읽는다. 003의 `rebalancePeriod` 객체와 역변동성 `lookbackDays` 변경이 그대로 적용된다고 볼 수 없다. `registryVersion` 없는 요청도 검증을 우회하므로 FR-006·SC-003 완료 판정은 보류한다. 이 연결은 004 소유다.
 
 ④ **포트 시그니처가 한 곳 바뀐다.** `validate()`의 `ParameterCombination`(007 도메인 VO)을 그대로 두면 `strategy → paramsearch` 역방향 의존이 생겨 T012의 ArchUnit 규칙에 걸린다. T008이 `Map<String, Object>`로 바꾸고 `CandidateValidator` 한 줄이 따라 바뀌며, plan.md Summary도 이 범위를 명시한다.
 
-⑤ **002 화면이 없다.** 002는 spec만 있고 plan·tasks·코드가 없다. T030이 `useSectorSelection` 어댑터로 경계를 만들어 002가 들어올 때 그 파일만 바꾸게 했다. 지금은 질의 문자열·`sessionStorage`로 섹터 집합을 넣어 확인한다.
+⑤ **002 인계 연결 완료.** `useSectorSelection`이 002의 `diagnosis/selectionStorage`를 재사용하고 `GET /sectors`의 현재 대응표와 대조한다. 저장 키는 `thorp.diagnosis.sectorSelection`이며 이전 대역 키·질의 문자열로 선택을 만들지 않는다. payload와 복원 규칙은 `specs/002-sector-weight-selection/contracts/selection-handoff.md`가 소유한다.
 
-⑥ **007 spec은 "하나 또는 여러 전략"을 넘긴다고 적었고 003은 하나만 넘기기로 정했다**([research](research.md) "남은 의존과 미확정"). T070은 003 결정대로 하나만 싣는다. 문서 차이는 팀이 정한다.
+⑥ **007 진입 범위 정합 완료**. 007은 전략 하나 이상을 받지만 003 화면에서 진입하면 선택 전략 하나만 넘긴다. 003 FR-013과 007 Assumptions를 인계 통합에서 맞췄다(T113).
 
 ⑦ **계약에 필드 둘을 더했다**(T003): `axes[].description`과 `strategies[].targetWeightSource`. 화면이 전략 ID·축 이름으로 분기하지 않으려면(FR-005·research R7-1) FR-003의 '의미'·FR-012의 자동 배분 설명·FR-019의 재배분 안내가 등록표에서 와야 하기 때문이다. 리뷰에서 다른 방법이 나오면 T003·T005·T017·T055·T056이 함께 바뀐다.
 
@@ -856,9 +862,9 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
 비용 버전 교체)은 T110이 dev에 들어간 뒤에만 머지할 수 있다 — 화면이 비용 버전을 명시해 보내고 있어야 기본값을 바꿔도 사용자가 본
 조건과 적용 조건이 갈리지 않는다.
 
-- [ ] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 "변동성이 낮은 섹터에 더 나누기")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다
+- [X] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 "변동성이 낮은 섹터에 더 나누기")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다
   - **004 T023(`S15P21E205-342`)이 먼저 처리한 것 (2026-09-18)**: 등록표 `1.3.0` → `1.4.0` 에서 `allocationMethod` 후보를 `EQUAL`/`INVERSE_VOLATILITY`(라벨 "변동성이 낮은 섹터에 더 나누기")로 교체하고 `searchValues: [EQUAL]` 을 유지했다. 규칙 `MAX_WEIGHT_TOO_LOW_FOR_SELECTION`(`maxWeight × topN < 100`)을 더했고, 그것을 표현하려고 operand 에 `multiplyByAxis` 를 신설했다(계약 §1·응답 DTO·프론트 `validationRules.ts` 까지). 003 data-model §4-2 축 표 문구도 고쳤다. **이 티켓을 다시 착수하면 등록표 버전이 충돌한다 — 남은 것만 하거나 티켓을 닫는다.**
-  - **남은 것 셋.** ① `TOP_PERCENT` 규칙(`maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`)은 **넣지 않았다** — 규칙 문법이 `ceil` 을 표현하지 못한다(이 태스크가 "안 되면 메모에 적는다"고 한 갈래다). 007 이 `selectionMode` 를 `[TOP_N]` 만 탐색하므로 묶음은 안전하고, 사용자가 직접 고른 경우는 접수 422 하나로 끝난다. 문법에 `ceil` 을 더하는 것이 값어치가 있는지는 003 이 판단한다 ② 계약 §1 픽스처(`registry-response.json`·`contract-registry.yml`)에 새 규칙 예시를 넣지 않았다 — 픽스처의 섹터 모멘텀에 `maxWeight` 축이 없어 축까지 더해야 하고, 두 파일이 완전 일치로 비교돼 다른 단언까지 흔든다. `multiplyByAxis` 직렬화는 `StrategyRegistryApiIT` 가 제품 등록표로 붙박아 두었다 ③ 보관된 설정에 `SCORE_WEIGHTED` 가 있을 때 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인하지 않았다 — 003 의 설정 이력 규칙을 아는 쪽이 봐야 한다
+  - **남은 것 셋 완료 (2026-09-18).** ① 규칙 피연산자에 `multiplyByCeil: { context, axis, divisor }`를 더해 `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`을 서버와 화면이 같은 방식으로 판정하고 등록표를 `1.5.0`으로 올렸다. 참조 축이 없는 다른 선정 방식에서는 판정하지 않는다 ② 계약 YAML·JSON과 계약 본문의 완전 응답 예시에 `TOP_PERCENT`·`allocationMethod`·`maxWeight` 축 및 두 상한 규칙을 넣고 계약 테스트로 JSON 동치를 확인했다 ③ 옛 `SCORE_WEIGHTED` 보관값은 `NOT_IN_CHOICES`로 비우고 사용자가 기본값 복원을 눌러야 `EQUAL`이 들어가는 회귀 테스트를 더했다. 백엔드 전체 build는 1,741개 중 1,737개 통과·4개 skip, Spotless 통과, 프론트 전체는 lint 오류 0·기존 경고 20, build 통과, Vitest 1,153개와 legacy 13개 모두 통과·skip 0이다
 - [X] T110 (FE) [004 T026] 003 화면이 `GET /backtests/registry`를 소비해 규칙·비용 버전을 실어 202를 받는다 per 003 FR-010 · T039 · T059 · 004 FR-028 — 004 T026의 네 가지는 B06에서 이미 구현했다: ① 고른 전략의 `REGISTERED` 행 `rulesVersion`을 싣고 `PENDING_DECISION`이면 막는다(T039 004 결정) ② `costProfileVersion`을 받은 `defaultCostProfile.version`으로 명시한다(T105) ③ 409를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다(T104) ④ 임시 비용 문구는 `defaultCostProfile.provisional`로 켠다(T065 통로). 남은 일: (a) 004 T025(`feat(be)/326-backtest-registry`, `S15P21E205-326`)가 머지되면 origin/dev를 받고 `defaultAnalysisSupport`를 `connectedAnalysisSupport`로 바꾼다(T107 메모) (b) 로컬 백엔드에서 '분석하기'가 registry의 버전을 실어 202를 받고 임시 비용 문구가 registry 값으로 켜지는지 확인한다 — 이것이 004 T026의 완료 기준이다. 머지 뒤 004 담당자에게 T021을 진행해도 된다고 알린다
   - **구현 메모 (2026-09-17, B06 브랜치)**: T025 브랜치의 `BacktestRegistryResponse`를 읽다가 **비용 수치 네 칸이 문자열 decimal(`"0.0000"`, `NUMERIC(8,4)`)**인 것을 확인했다. 화면의 `readBacktestRegistry`는 숫자만 받아, 그대로 머지되면 응답 전체를 읽지 못해 '분석하기'가 막혔을 것이다. 문자열 decimal을 수로 읽고(음수·지수 표기·단위가 붙은 글은 거부), 숫자로 와도 받게 고쳤다. 규칙 행의 `status`는 서버 enum 이름 그대로 문자열이라 기존 비교(`'REGISTERED'`·`'PENDING_DECISION'`)가 맞는다
 
@@ -916,3 +922,19 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI
 **T111 구현 메모**: 네 곳을 해제로 고쳤다 — spec 선행 조건 표의 001·004 행(머지 커밋과 B06 확인을 가리킨다), plan의 "남는 항목"·"004
 교차 계약"·"묶음에 넣지 않은 것", tasks의 Quality Gate 두 행과 "착수 전에 알아둘 것" ①·②. ①은 해제 전 기록을 지우지 않고 앞에 해제를
 적었다 — 왜 B06이 따로 서 있었는지는 남겨 둘 값이 있다. 남은 교차 작업은 워커 메시지 정합(③)과 T109로 넘긴다고 적었다.
+
+---
+
+## Phase 22: Convergence
+
+**Purpose**: T072·T073·T075·T076 완료 뒤 설계 문서·파트 규칙·잔재 검사를 현재 구현과 다시 대조한다.
+
+- [X] T112 [P] (FE) `frontend/src/components/strategy/analysisSupport.ts`의 통로 설명을 현재 연결 상태에 맞춘다 per plan B06 연결 상태 · T072 · T111 (contradicts) — 파일 머리 Javadoc은 아직 “B05는 자리만 만들고 B06이 채운다”, “셋 다 아직 화면이 알 길이 없다”, “001의 `GET /sectors/evaluation-window`가 아직 없다”고 적지만, `connectedAnalysisSupport.ts`와 `defaultAnalysisSupport`는 001 평가 기간·004 규칙/비용 등록표·분석 접수를 모두 실제 모듈로 연결한다. 세 통로의 현재 소유와 실패 시 차단 원칙을 설명하고, `notConnectedSupport`는 미구현 기본값이 아니라 연결 실패·격리 검사용 대역이라는 현재 역할로 고친다. 동작 변경은 없다
+
+## Phase 23: 요구사항 품질 재검토 후속
+
+- [X] T113 (DOCS) 사용자 승인(2026-09-18)에 따라 CHK005·CHK012·CHK013·CHK015·CHK020·CHK021·CHK035를 현재 요구사항과 대조한다. 임시 등록표 허용 조건, 조회 상태별 행동, 003→007 진입 범위, 004 재배분 계산·005 결과 표시 책임, 006 재진입의 버전·공통 워밍업 규칙을 명시한다. T109와 겹치는 계산 설명을 마지막에 통합했으며 배분 방식·규칙 구현과 워커 메시지 종단 완료는 별도로 남긴다.
+- [X] T114 (FE) FR-018b에 따라 분석 조건 조회 실패 시 사용자 재조회, 중복 클릭 차단, 재실패 복구, 자동 접수 금지를 구현하고 페이지 테스트와 FE 필수 검증으로 확인한다.
+
+
+**통합 검증**: 최종 브랜치에서 검증한 결과는 [B12 기록](verification/b12.md)의 인계 통합 절을 따른다. 전달 패치의 별도 세션 검증 결과를 최종 통과로 세지 않는다.

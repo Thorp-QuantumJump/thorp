@@ -32,7 +32,59 @@ uv run python -m worker.demo --input <EngineInput.json> --output engine-output.j
 분할, 2024-06-11 거래 정지 1일). 손으로 고치지 말고 `scripts/make_three_etf_fixture.py` 를 고쳐 다시
 만든다. 결과의 `versions.data = "FIXTURE-three_etf_24m"` 가 픽스처임을 표시한다.
 
-uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`를 사용할 수 있다.
+### 실행환경 잠금
+
+의존성 버전은 `uv.lock` 하나가 정한다(spec 004 T027). 운영 이미지(`infra/docker/worker.Dockerfile`)와 CI도
+같은 lock에서 `uv sync`로 설치하므로 `requirements.txt`는 두지 않는다. `pyproject.toml`의 의존성을 고치면
+`uv lock`으로 lock을 갱신해 함께 커밋한다. 고정 버전(`==`)과 lock이 어긋나면
+`tests/test_dependency_pins.py`가 실패하고, CI의 `uv sync --locked`는 그 밖의 어긋남도 잡는다. 운영 이미지는
+Python 3.11이고 lock은 3.11과 3.12 이상에 서로 다른 numpy를 고르므로, 운영과 같은 버전으로 확인하려면
+`--python 3.11`로 만든다.
+
+기반 이미지와 uv는 digest로 고정되어 있어 저절로 갱신되지 않는다. 보안 패치를 받으려면 아래 순서로 올린다.
+
+1. 새 digest와 그 digest의 정확한 태그를 확인한다.
+
+   ```bash
+   docker buildx imagetools inspect python:3.11-slim        # Digest: 줄
+   docker buildx imagetools inspect python:3.11-slim --raw \
+     | grep -o '"org.opencontainers.image.version":"[^"]*"' | head -1
+   docker buildx imagetools inspect ghcr.io/astral-sh/uv:<버전>
+   ```
+
+2. Dockerfile의 `PYTHON_IMAGE`는 태그(`3.11.x-slim-<debian>`)와 digest를 함께 바꾼다. 태그만 두고 digest를
+   바꾸면 태그가 실제 이미지와 달라진다.
+3. 저장소 루트에서 이미지를 빌드하고 컨테이너 안의 버전이 lock과 같은지 본다. 기반 이미지의 Python이
+   3.12 이상으로 바뀌면 lock이 다른 numpy를 고르므로 결과 재현 여부부터 따진다.
+
+   ```bash
+   docker build -f infra/docker/worker.Dockerfile -t thorp-worker:check worker
+   docker run --rm thorp-worker:check python -c \
+     "import sys, numpy, scipy, nautilus_trader; print(sys.version, numpy.__version__, scipy.__version__, nautilus_trader.__version__)"
+   ```
+
+4. 새 이미지 안에서 아래 "환경 간 재현 확인"을 돌려 골든과 같은지 본다.
+
+### 환경 간 재현 확인
+
+`scripts/reproducibility_report.py`는 규칙 버전 골든과 같은 입력으로 엔진을 돌려 전략마다 반올림 전
+해시(`exactSha256`)와 골든 해시(`roundedSha256`, 유효숫자 12자리), 골든 일치 여부를 환경 정보(OS·CPU·
+패키지·BLAS 커널)와 함께 JSON으로 낸다. 판정은 `goldenMatch`로 하고, 반올림 전 해시는 두 환경이 어디서
+갈렸는지 좁히는 데 쓴다(spec 004 research R-21). 기준 입력이 `docs/specs/backtest-messaging/examples`에도
+있으므로 저장소 전체가 보이는 곳에서 `worker/`를 작업 디렉터리로 두고 돌린다.
+
+```bash
+# 개발기
+uv run --no-sync python scripts/reproducibility_report.py --out report.json --dump-dir dump
+
+# 워커 이미지(저장소 루트에서). 운영 이미지에는 pytest가 없어도 된다
+docker run --rm -v "$PWD:/repo" -w /repo/worker -e PYTHONPATH=/repo/worker/src \
+  -e PYTHONDONTWRITEBYTECODE=1 -e THORP_ENV_LABEL=<환경 이름> <워커 이미지> \
+  python scripts/reproducibility_report.py --out /repo/worker/report.json --dump-dir /repo/worker/dump
+```
+
+두 환경의 `exactSha256`이 다르면 `--dump-dir`로 남긴 전략별 결과 전문을 diff해 갈린 필드와 자리수를 본다.
+보고서와 덤프는 커밋하지 않는다.
 
 ### 엔진을 직접 호출하기
 

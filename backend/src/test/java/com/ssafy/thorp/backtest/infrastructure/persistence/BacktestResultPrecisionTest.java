@@ -145,6 +145,7 @@ class BacktestResultPrecisionTest extends RepositoryTestSupport {
                 null,
                 null,
                 List.of(trade),
+                null,
                 execution,
                 null,
                 null,

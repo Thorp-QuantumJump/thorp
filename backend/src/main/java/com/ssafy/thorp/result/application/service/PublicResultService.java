@@ -21,6 +21,7 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
+import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
@@ -53,6 +54,7 @@ import org.springframework.stereotype.Service;
 public class PublicResultService {
 
     private static final Logger log = LoggerFactory.getLogger(PublicResultService.class);
+    private static final String INDEX_SERIES_UNAVAILABLE = "INDEX_SERIES_UNAVAILABLE";
 
     private final BacktestRequestRepository requestRepository;
     private final BacktestResultQueryService queryService;
@@ -117,6 +119,9 @@ public class PublicResultService {
     public PublicResultDetail getDetail(String token) {
         BacktestRequest request = resolve(token);
         BacktestDetailResult detail = publicly(() -> queryService.getDetail(request));
+        Map<String, Object> publicConfig = new LinkedHashMap<>(detail.config());
+        // 실행 사본에는 요청 종류가 없다. 비교 주소의 search 인자가 없어도 탐색 후보를 구분한다.
+        publicConfig.put("executionType", request.getExecutionType().name());
         boolean inFlight =
                 detail.status() == RunStatus.QUEUED || detail.status() == RunStatus.RUNNING;
         boolean resultVisible =
@@ -133,8 +138,8 @@ public class PublicResultService {
                 detail.startedAt(),
                 detail.finishedAt(),
                 inFlight ? detail.queueWaitSeconds() : null,
-                detail.config(),
-                withoutWorker(detail.versions()),
+                publicConfig,
+                withoutWorkerReport(detail.versions()),
                 detail.summary(),
                 detail.summaryUnavailable(),
                 detail.failure(),
@@ -167,6 +172,18 @@ public class PublicResultService {
     public BacktestExceptionsResult getExceptions(String token) {
         BacktestRequest request = resolve(token);
         return publicly(() -> queryService.getExceptions(request));
+    }
+
+    /**
+     * KOSPI 보조 비교 계열.
+     *
+     * <p>토큰의 형식·존재·만료는 다른 공개 자원과 똑같이 먼저 판정한다. 현재 001은 최신 KOSPI 관측치만 제공하고 기간 계열 조회 포트는 제공하지 않는다. 한
+     * 점이나 다른 계열을 KOSPI처럼 꾸미지 않고, 화면이 이유와 함께 비활성 상태를 보이도록 명시적으로 unavailable을 반환한다. 포트가 생기면 {@code
+     * config.effectiveStart~effectiveEnd}를 조회해 {@code config.initialCash}로 서버에서 환산한다(T087).
+     */
+    public PublicResultIndexComparison getIndexComparison(String token) {
+        resolve(token);
+        return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);
     }
 
     /**
@@ -207,13 +224,18 @@ public class PublicResultService {
         }
     }
 
-    /** 워커 자기 보고는 운영 정보라 공개하지 않는다(계약 "버리는 필드"). 원본 맵은 004의 것이라 고치지 않고 복사한다. */
-    private static Map<String, Object> withoutWorker(Map<String, Object> versions) {
-        if (versions == null || !versions.containsKey("worker")) {
+    /**
+     * 워커 자기 보고({@code worker})와 그 환경의 라이브러리 버전({@code dependencies}, 004 T028)은 운영 정보라 공개하지 않는다(계약
+     * "버리는 필드"). 원본 맵은 004의 것이라 고치지 않고 복사한다.
+     */
+    private static Map<String, Object> withoutWorkerReport(Map<String, Object> versions) {
+        if (versions == null
+                || (!versions.containsKey("worker") && !versions.containsKey("dependencies"))) {
             return versions;
         }
         Map<String, Object> copy = new LinkedHashMap<>(versions);
         copy.remove("worker");
+        copy.remove("dependencies");
         return copy;
     }
 

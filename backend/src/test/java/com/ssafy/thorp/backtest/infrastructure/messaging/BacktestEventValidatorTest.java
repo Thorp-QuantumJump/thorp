@@ -204,7 +204,19 @@ class BacktestEventValidatorTest {
                 violation(
                         "payload.engineOutput.performance.initialEquity",
                         n -> at(n, EO + "/performance").remove("initialEquity")),
-                violation("payload.engineOutput.execution", n -> at(n, EO).remove("execution")));
+                violation("payload.engineOutput.execution", n -> at(n, EO).remove("execution")),
+                violation(
+                        "payload.engineOutput.fills[0].fillId",
+                        n -> at(n, EO + "/fills/0").remove("fillId")),
+                violation(
+                        "payload.engineOutput.fills[0].side",
+                        n -> at(n, EO + "/fills/0").remove("side")),
+                violation(
+                        "payload.engineOutput.fills[1].costs.tax",
+                        n -> at(n, EO + "/fills/1/costs").remove("tax")),
+                violation(
+                        "payload.engineOutput.fills[0].cashCost",
+                        n -> at(n, EO + "/fills/0").remove("cashCost")));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -248,6 +260,9 @@ class BacktestEventValidatorTest {
                 violation(
                         "payload.engineOutput.trades",
                         n -> at(n, EO).set("trades", completed.at(EO + "/trades"))),
+                violation(
+                        "payload.engineOutput.fills",
+                        n -> at(n, EO).set("fills", completed.at(EO + "/fills"))),
                 violation(
                         "payload.engineOutput.portfolioSeries",
                         n ->
@@ -394,7 +409,9 @@ class BacktestEventValidatorTest {
                                                 "liquidation",
                                                 "analytics",
                                                 "exceptions",
-                                                "versions"
+                                                "versions",
+                                                // 체결을 기록하지 않는 워커가 낸 결과
+                                                "fills"
                                             }) {
                                         output.remove(key);
                                     }

@@ -12,7 +12,7 @@
 | 실행 상태 | `backtest_run.status/progress_*` + `backtest_request.cancelled_at` |
 | 동일 결과 식별 키 | `backtest_run.dedup_key` |
 | 백테스트 결과 | `backtest_result` |
-| 거래 내역 | `backtest_trade` |
+| 거래 내역 | `backtest_trade`(진입·청산 묶음), `backtest_fill`(개별 체결) |
 | 비용 조건(버전) | `cost_profile` |
 | 전략 규칙(버전) | `strategy_rules` |
 | 예외 처리 기록 | `backtest_result.exceptions` |
@@ -53,7 +53,7 @@
 | cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |
 | data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |
 | request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |
-| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. `dependencies{numpy, scipy}` 선택 필드는 발표 후(Phase 10 T028) |
+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그. 실행 전 계획이라 워커 환경 값(`worker`·`dependencies`)은 여기 없고 결과 행에만 있다(T018·T028) |
 | effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |
 | progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |
 | progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |
@@ -101,13 +101,28 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | liquidation | `{markToMarket:{finalEquity,totalReturn}, liquidated:{finalEquity,totalReturn,liquidationCost}}` |
 | analytics | `{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` |
 | exceptions | `[{date, instrumentId?, kind: ZERO_VOLATILITY|NO_SELECTION|ESTIMATION_FAILED|CONSTRAINT_VIOLATION|HALT_DEFERRED|WEIGHT_ROUNDING, rule, action}]` |
-| versions | run.versions 사본(결과 단독 조회용) |
+| fills_recorded | BOOLEAN NOT NULL DEFAULT false. 개별 체결(`backtest_fill`)을 기록한 결과인지. 이 열이 생기기 전의 결과와 체결을 기록하지 않는 워커가 낸 결과는 false다 — 체결 행이 없는 것만으로는 "체결이 없었다"와 "기록하지 않았다"를 가를 수 없다(원칙 VI) |
+| versions | run.versions 사본(결과 단독 조회용) + 워커 보고 `worker`, 계산한 환경의 실제 설치 버전 `dependencies{numpy, scipy}`(T028. 없으면 T028 이전 결과) |
 
 부분 결과(CANCELLED)는 `portfolio_series`·`weights_series`·거래가 `progress_last_trading_date`까지만 채워지고 `performance`는 그 구간 기준으로 계산된 값이 들어간다. 005는 `partial=true`와 함께 표시한다.
 
 ## backtest_trade (거래 내역)
 
 기존 열 유지, FK를 `run_id`로. `detail` JSONB에 `reason: REBALANCE | HALT_DEFERRED | LIQUIDATION`과 `plannedDate`(거래 불가로 미룬 경우 원래 체결 예정일)를 추가한다. 분배금은 거래가 아니라 `portfolio_series[].cashFlows`에 `DISTRIBUTION`으로 기록한다(FR-013, 한 번만 반영).
+
+## backtest_fill (개별 체결, 2026-09-20)
+
+[011](../011-regime-strategy-link/spec.md)이 사례의 사후 구간에서 거래·비용·손익을 다시 세려면 체결 단위가 필요하다(011 research R3 DEP-004-011). `backtest_trade`는 묶음이 닫힐 때 진입·청산 비용이 합쳐지고 세금이 실현 손익에만 들어가 구간 안 청산 비용을 분리할 수 없다. 004 저장 항목의 결정 권한을 위임받아 추가했다(S15P21E205-359).
+
+| 컬럼 | 내용 |
+|---|---|
+| id | BIGINT PK, `backtest_fill_seq`(증분 50). 저장 순서가 워커의 체결 순서라 같은 시각의 체결도 순서가 남는다 |
+| run_id | → `backtest_run(id)` |
+| fill_id | 실행 안에서 고유(`UNIQUE(run_id, fill_id)`) |
+| instrument_id / side / fill_time | 구간 조회용 컬럼. `side`는 `BUY`\|`SELL` |
+| detail | JSONB. 계약 `fills[]` 항목 그대로(`price`, `referencePrice`, `quantity`, `costs{commission, spread, slippage, tax}`, `cashCost`, `reason`, `plannedDate`). decimal은 문자열 |
+
+인덱스 `(run_id, fill_time, id)`. 조회는 `BacktestResultRepository.findFills(runId, from, to)` 하나이고 **빈 Optional(기록하지 않은 결과)과 빈 리스트(그 구간에 체결 없음)를 구분한다.** 일별 보유는 따로 저장하지 않는다 — 보유 스냅샷(`portfolio_series[].positions`)은 수량이 바뀌는 날(체결·분할)마다 남으므로 기준일의 수량은 그 이전 마지막 스냅샷과 같고, 일별 평가액은 수량 × 그날 종가로 정확히 구해진다. 조회 API와 화면에는 노출하지 않는다.
 
 ## cost_profile (비용 조건 버전)
 
@@ -130,13 +145,21 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 |---|---|---|
 | strategy_id | VARCHAR(32) | PK 일부 |
 | rules_version | VARCHAR(32) | PK 일부 |
-| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION`. 새 버전으로 대체된 옛 행을 뜻하는 `SUPERSEDED`는 발표 후(Phase 10 T029)에 CHECK 제약과 함께 추가한다 |
+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` · `SUPERSEDED`(새 버전으로 대체된 옛 행, T029). `SUPERSEDED`도 spec을 잃지 않는다(CHECK) |
 | provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |
-| spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |
+| spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null. 계산할 수 있는 행(REGISTERED·SUPERSEDED)은 `docs/specs/backtest-messaging/examples/rules/{전략}-{버전}.json` 스냅샷과 같아야 한다(T029) |
 | decision_ref | TEXT | PD 번호·회의 기록 |
 | created_at | TIMESTAMPTZ | |
 
 초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:"EXCLUDE_THEN_ALLOCATE", weightCap:"1.0000", investedFraction:"1.0000"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/1`, `MINIMUM_VARIANCE/1` PENDING_DECISION(decision_ref PD-03·PD-04 — 2026-09-17 확정. 실제 SQL의 rules_version은 `1`이다. T022(최소분산)·T023(모멘텀)이 **이 행을** REGISTERED provisional=false로 바꿔 spec을 채웠다 — 가리키는 실행이 없어 재현이 깨지지 않는다. 그래서 지금 `PENDING_DECISION` 행은 없다. `INVERSE_VOLATILITY/1`도 T022가 제자리에서 갱신한다(`capOverflow`·`weightUnit` 추가, provisional=true 유지) — R-08이 임시 행은 확정 시 갱신한다고 계획했고 보존할 결과가 없다. 규칙 명세는 spec PD 표를 따른다); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:"REBALANCE", scaleDownOnly:true, targetVolatility:{default:"0.1000", min:"0.0500", max:"0.2000", step:"0.0100"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.
+
+### 규칙 버전 수명주기 (T029)
+
+규칙을 바꿀 때 행을 고치지 않는다. 마이그레이션 하나에서 **옛 행의 status만 `SUPERSEDED`로 바꾼 뒤 새 버전 행을 INSERT**하고, 스냅샷 파일과 워커 골든(`worker/tests/goldens/{전략}-{버전}.json`)을 새로 더한다. 옛 파일·옛 골든은 지우지 않는다.
+
+- 전략마다 대체되지 않은 행은 하나다(부분 유니크 인덱스 `uk_strategy_rules_current ON (strategy_id) WHERE status <> 'SUPERSEDED'`). 화면 조회(`GET /backtests/registry`)와 007 지원 목록이 이 행 하나를 본다.
+- 검사는 둘이다. **새 요청**은 `requireCurrent`(REGISTERED만, PENDING·없음 422, SUPERSEDED 409). **버전이 이미 고정된 요청·실행**은 `requireExecutable`(SUPERSEDED도 통과) — 작업 조립(첫 발행·재발행), 실패·취소한 요청의 재시도, 007 묶음 후보가 쓴다. 재시도와 묶음 후보는 003 등록표도 그 요청이 판정받은 과거 `registryVersion`을 받는다(`StrategySettingsValidator.verifySaved`).
+- 목표 위험 오버레이처럼 요청이 버전을 싣지 않는 규칙은 새 요청이 지금 행을 고르고, 조립·재시도는 실행에 기록된 `versions.scenarioRules`의 버전을 읽는다. 이 기록이 없던 2026-09-11~09-15 목표 위험 실행은 수명주기 마이그레이션이 `TARGET_RISK_OVERLAY/1`(그 기간 코드가 고정해 쓴 값)로 채웠다.
 
 ## backtest_run_metric (실행 측정 기록)
 
@@ -197,7 +220,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 
 - 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.
 - 유효 상한 × 종목 수 ≥ `investedFraction` — **유효 상한 = 요청 `allocation.parameters.maxWeight`/100이 있으면 그 값, 없으면 규칙표 `weightCap`**(analyze U1, T022). 종목 수는 요청의 투자 대상 섹터 수이고 모멘텀은 `TOP_N`=topN·`TOP_PERCENT`=ceil(N×p/100)·`ALL`=N(아니면 422 `VALIDATION_RULE_VIOLATED`, Edge Case. 2026-09-17 PD-04 ④로 400 `INVALID_INPUT`에서 옮김, T022).
-- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`). 대체된 옛 버전의 409 처리는 발표 후(Phase 10 T029).
+- `strategy_rules.status = REGISTERED`(PENDING·없음은 422 `RULES_NOT_REGISTERED`, `SUPERSEDED`는 409 `REGISTRY_VERSION_CHANGED`, T029). **재시도는 이 검사 대신 `SUPERSEDED`도 받는 검사를 탄다** — 아래 「규칙 버전 수명주기」.
 - 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).
 - 시작 금액 > 0, NUMERIC(19,2) 범위(현행).
 - `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.

@@ -316,7 +316,7 @@ class BacktestJobDispatcherTest {
     /** 조립이 스스로 판단해 거부한 실패들. 저장된 실행의 값은 바뀌지 않으므로 다시 읽어도 같은 결과다. */
     static Stream<RuntimeException> permanentAssemblyFailures() {
         return Stream.of(
-                // 등록표에 규칙이 없다(422). StrategyRulesService.requireRegistered 가 던진다.
+                // 등록표에 규칙이 없다(422). StrategyRulesService.requireExecutable 이 던진다.
                 rulesNotRegistered(),
                 // 비용 버전이 등록표에 없다(400). CostProfileService.resolve 가 던진다.
                 new BusinessException(ErrorCode.INVALID_INPUT, "unknown cost profile version: X"),

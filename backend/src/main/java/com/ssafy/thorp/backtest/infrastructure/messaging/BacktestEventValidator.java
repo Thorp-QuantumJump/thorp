@@ -109,6 +109,10 @@ final class BacktestEventValidator {
                 require(diagnostics.warnings(), base + ".diagnostics.warnings");
         snapshots(series, base + ".portfolioSeries");
         trades(trades, base + ".trades");
+        // fills 는 nullable 이다 — 없으면 체결을 기록하지 않는 워커가 낸 결과다. 있으면 한 건씩 본다.
+        if (output.fills() != null) {
+            fills(output.fills(), base + ".fills");
+        }
         warnings(warnings, base + ".diagnostics.warnings");
 
         switch (status) {
@@ -234,6 +238,9 @@ final class BacktestEventValidator {
         if (!output.trades().isEmpty()) {
             fail(base + ".trades", "must be empty when status is FAILED");
         }
+        if (output.fills() != null && !output.fills().isEmpty()) {
+            fail(base + ".fills", "must be absent or empty when status is FAILED");
+        }
     }
 
     private static void snapshots(List<EngineOutput.PortfolioSnapshot> series, String base) {
@@ -287,6 +294,26 @@ final class BacktestEventValidator {
                 require(trade.realizedPnl(), path + ".realizedPnl");
                 require(trade.returnRate(), path + ".returnRate");
             }
+        }
+    }
+
+    private static void fills(List<EngineOutput.FillResult> fills, String base) {
+        for (int i = 0; i < fills.size(); i++) {
+            String path = base + "[" + i + "]";
+            EngineOutput.FillResult fill = require(fills.get(i), path);
+            requireId(fill.fillId(), path + ".fillId");
+            requireInstrumentId(fill.instrumentId(), path + ".instrumentId");
+            require(fill.side(), path + ".side");
+            require(fill.time(), path + ".time");
+            require(fill.price(), path + ".price");
+            require(fill.referencePrice(), path + ".referencePrice");
+            require(fill.quantity(), path + ".quantity");
+            require(fill.cashCost(), path + ".cashCost");
+            EngineOutput.FillCosts costs = require(fill.costs(), path + ".costs");
+            require(costs.commission(), path + ".costs.commission");
+            require(costs.spread(), path + ".costs.spread");
+            require(costs.slippage(), path + ".costs.slippage");
+            require(costs.tax(), path + ".costs.tax");
         }
     }
 

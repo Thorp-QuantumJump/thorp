@@ -1,0 +1,9 @@
+{
+  "strategyId": "FIXED_WEIGHT",
+  "rulesVersion": "1",
+  "provisional": false,
+  "spec": {
+    "targetWeights": "USER_SPECIFIED",
+    "weightsSource": "USER"
+  }
+}

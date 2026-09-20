@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ApiClientError, apiClient, prepareCsrfToken, resetCsrfToken } from './client'
+import { ApiClientError, apiClient, runCsrfProtectedMutation } from './client'
 import type { ApiEnvelope } from '@/types/api'
 import type {
   BacktestAccepted,
@@ -84,16 +84,19 @@ function readErrorBody(
 /** 202 응답의 `data`에서 화면이 쓰는 부분만 읽는다. 모르는 상태 이름이면 읽지 못한 것이다. */
 function readAccepted(value: unknown): BacktestAccepted | null {
   if (!isRecord(value)) return null
-  const { backtestId, status, resultSource } = value
+  const { backtestId, status, resultSource, publicToken } = value
+  const publicAddress =
+    typeof publicToken === 'string' && /^[0-9a-f]{32}$/.test(publicToken) ? { publicToken } : {}
   if (typeof backtestId !== 'string' || backtestId === '') return null
   if (!requestStatuses.includes(status as BacktestRequestStatus)) return null
   if (resultSource === undefined || resultSource === null) {
-    return { backtestId, status: status as BacktestRequestStatus }
+    return { backtestId, status: status as BacktestRequestStatus, ...publicAddress }
   }
   if (!resultSources.includes(resultSource as NonNullable<BacktestAccepted['resultSource']>)) {
     return null
   }
   return {
+    ...publicAddress,
     backtestId,
     status: status as BacktestRequestStatus,
     resultSource: resultSource as BacktestAccepted['resultSource'],
@@ -106,11 +109,13 @@ export function normalizeBacktestRequestError(error: unknown): BacktestRequestEr
 
   // CSRF 준비가 실패한 경우. 공용 층이 이미 서버 문장과 이름을 읽어 두었다.
   if (error instanceof ApiClientError) {
+    if (error.cause) return normalizeBacktestRequestError(error.cause)
     return new BacktestRequestError(error.kind, error.message, { code: error.code, cause: error })
   }
 
   if (axios.isAxiosError(error)) {
-    if (!error.response) return new BacktestRequestError('network', NETWORK_MESSAGE, { cause: error })
+    if (!error.response)
+      return new BacktestRequestError('network', NETWORK_MESSAGE, { cause: error })
     const body = readErrorBody(error.response.data)
     if (!body) {
       return new BacktestRequestError('unexpected', UNEXPECTED_MESSAGE, {
@@ -136,18 +141,19 @@ export function normalizeBacktestRequestError(error: unknown): BacktestRequestEr
  * 않는다** — 409 뒤 등록표를 다시 받을지, 503 뒤 다시 시도를 제안할지는 화면이 정한다(T059·T099).
  *
  * <p>상태를 바꾸는 요청이라 CSRF 토큰을 먼저 준비한다(계약 §1 인증). 토큰이 무효라는 거절이면 다음
- * 시도에서 새로 받도록 토큰만 비워 두고, 이 요청은 그대로 실패시킨다(`runCsrfProtectedMutation`과 같은
- * 규약). 그 함수를 쓰지 않는 까닭은 오류를 `ApiClientError`로 바꾸며 `details`를 버리기 때문이다.
+ * 토큰만 새로 준비하고 요청은 반복하지 않는다. 공용 오류의 cause에서 details를 복원한다.
  */
 export async function createBacktest(request: BacktestCreateRequest): Promise<BacktestAccepted> {
   try {
-    await prepareCsrfToken()
-    const response = await apiClient.post<ApiEnvelope<unknown>>('/backtests', request)
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ApiEnvelope<unknown>>('/backtests', request),
+    )
     const body = response.data
     if (!body.success) {
       throw new BacktestRequestError('api', body.error.message, {
         code: body.error.code,
         status: response.status,
+        details: readErrorBody(body)?.details ?? null,
       })
     }
     const accepted = readAccepted(body.data)
@@ -159,7 +165,6 @@ export async function createBacktest(request: BacktestCreateRequest): Promise<Ba
     return accepted
   } catch (error) {
     const normalized = normalizeBacktestRequestError(error)
-    if (normalized.code === 'CSRF_TOKEN_INVALID') resetCsrfToken()
     throw normalized
   }
 }

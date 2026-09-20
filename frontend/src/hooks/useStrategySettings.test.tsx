@@ -240,6 +240,60 @@ describe('useStrategySettings', () => {
     expect(invalid?.message).toContain(numberAxis.label)
   })
 
+  it('옛 SCORE_WEIGHTED 보관값은 새 배분 후보로 몰래 바꾸지 않고 복원을 기다린다', () => {
+    const allocationAxis = {
+      ...choiceAxis,
+      name: 'allocationMethod',
+      label: '배분 방식',
+      choices: [
+        { value: 'EQUAL', label: '똑같이 나누기', selectable: true },
+        {
+          value: 'INVERSE_VOLATILITY',
+          label: '변동성이 낮은 섹터에 더 나누기',
+          selectable: true,
+        },
+      ],
+      defaultValue: 'EQUAL',
+    }
+    const strategy = {
+      ...selectableStrategy,
+      axes: [allocationAxis],
+      warmupTradingDays: 0,
+      warmupRule: undefined,
+    }
+    const registry: RegistryResponse = {
+      ...registryFixture,
+      registryVersion: '1.5.0',
+      strategies: [strategy],
+    }
+    store({
+      registryVersion: '1.4.0',
+      universeSize: UNIVERSE_SIZE,
+      selectedStrategyId: strategy.strategyId,
+      valuesByStrategy: { [strategy.strategyId]: { allocationMethod: 'SCORE_WEIGHTED' } },
+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },
+      invalidValues: [],
+    })
+
+    const { result } = renderSettings(registry)
+
+    expect(result.current.values).not.toHaveProperty('allocationMethod')
+    expect(result.current.isComplete(strategy.strategyId)).toBe(false)
+    expect(result.current.invalidValues).toEqual([
+      expect.objectContaining({
+        strategyId: strategy.strategyId,
+        axisName: 'allocationMethod',
+        storedValue: 'SCORE_WEIGHTED',
+        reason: 'NOT_IN_CHOICES',
+        restorable: true,
+      }),
+    ])
+
+    act(() => result.current.resetAxis(strategy.strategyId, 'allocationMethod'))
+    expect(result.current.values?.allocationMethod).toBe('EQUAL')
+    expect(result.current.invalidValues).toHaveLength(0)
+  })
+
   it('비워 둔 값을 복원하면 안내가 사라지고 설정이 완성된다', () => {
     store({
       registryVersion: 'OLD-REGISTRY',

@@ -33,7 +33,8 @@ class EmptyRunIdLookupTest {
                 new BacktestResultRepositoryImpl(
                         mock(BacktestRunJpaRepository.class),
                         resultRepository,
-                        mock(BacktestTradeJpaRepository.class));
+                        mock(BacktestTradeJpaRepository.class),
+                        mock(BacktestFillJpaRepository.class));
 
         assertThat(repository.findPerformanceByRunIds(List.of())).isEmpty();
         assertThat(repository.findPerformanceByRunIds(Set.of())).isEmpty();

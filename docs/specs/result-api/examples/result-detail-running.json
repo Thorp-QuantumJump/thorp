@@ -18,6 +18,7 @@
     "finishedAt": null,
     "queueWaitSeconds": 3,
     "config": {
+      "executionType": "SINGLE",
       "end": "2024-12-31",
       "items": [
         {
@@ -52,7 +53,7 @@
       "effectiveEnd": "2024-12-31"
     },
     "versions": {
-      "engine": "nautilus_trader 1.219.0 / worker 2.2.0",
+      "engine": "nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8",
       "rules": {
         "version": "1",
         "provisional": false
@@ -60,8 +61,8 @@
       "data": "FIXTURE-three_etf_24m",
       "evaluationSplit": "SPLIT-1",
       "costProfile": {
-        "version": "PROVISIONAL-DEMO-1",
-        "provisional": true
+        "version": "KR-ETF-2026-09",
+        "provisional": false
       },
       "mapping": "SECTOR-ETF-2026-09"
     },

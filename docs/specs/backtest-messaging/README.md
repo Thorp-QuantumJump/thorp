@@ -111,7 +111,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 | `portfolio.currency` / `shortSelling` / `leverage` / `integerLots` | `KRW` / `false` / `"1.0"` / `true` |
 | `execution.signalTiming` / `executionTiming` | `BAR_CLOSE` / `NEXT_BAR_OPEN` (t 종가 신호 → t+1 시가 체결) |
 | `execution.orderTypes` | `["MARKET"]` |
-| `execution.costProfile` | `version=PROVISIONAL-DEMO-1`, 수수료·스프레드·세금 `"0"`, `slippageBps="5"`, `provisional=true` — 팀 결정(PD-07) 전 임시값. 결과 `versions.costProfile`에 그대로 남는다 |
+| `execution.costProfile` | **고정값이 아니다.** 실행이 고른 비용 버전의 등록표(`cost_profile`) 행을 그대로 싣는다. 요청이 버전을 비우면 서버 기본 `KR-ETF-2026-09`(수수료 `"1.5000"`·스프레드 `"3.0000"`·슬리피지 `"5.0000"`·세금 `"0.0000"`, `provisional=false`, PD-07 확정, T021)이다. 비용 버전이 기록되지 않은 옛 실행만 고정값 `PROVISIONAL-DEMO-1`(수수료·스프레드·세금 `"0"`, `slippageBps="5"`, `provisional=true`)을 싣는데, `engine-input.json`이 그 경로의 조립 결과라 이 값을 보인다. 결과 `versions.costProfile`에 그대로 남는다 |
 | `execution.partialFill` / `liquidity.model` | `false` / `UNLIMITED` |
 | `execution.tradingHalt` / `delisting` | `DEFER_TO_NEXT_TRADABLE` / `CAUSE_BASED` |
 | `evaluation` | `liquidationAtEnd=false`, `splitVersion`·`warmupTradingDays` 없음(엔진이 전략 관측 기간으로 정한다) |
@@ -121,6 +121,11 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 선언된 decimal 필드에만 적용). 픽스처의 `threshold: 0.05`가 이 규칙의 round-trip 검사용이다. `allocation.rules`는 전략 규칙 등록표의 사본이며
 없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터). 사본에는 등록표의 `provisional`(팀 결정 전 임시 규칙, PD-02)이 함께 실리고 워커는 그 값을
 결과 `versions.rules.provisional`로 되돌려 준다(T018) — 배분 모듈은 자기가 아는 키만 읽으므로 이 키는 계산을 바꾸지 않는다.
+
+**규칙 버전마다 명세 스냅샷이 있다**(spec 004 T029): [`examples/rules/{전략}-{버전}.json`](examples/rules/). 계산할 수 있는 등록표 행(`REGISTERED`·`SUPERSEDED`)과
+일대일이고 `spec`·`provisional`이 행과 같다(백엔드 `StrategyRulesSnapshotTest`). 워커는 이 파일을 `allocation.rules`(오버레이는 `run.scenarioRules`)로 실어
+버전별 골든(`worker/tests/goldens/`)과 대조한다. 버전이 새로 대체돼도 이미 접수된 실행의 발행·재시도는 그 실행의 버전 사본을 싣는다 — 워커는
+`rulesVersion` 문자열이 아니라 사본의 키로 계산이 갈린다.
 
 ### 4.2 이벤트 envelope — `event-*.json` 공통
 
@@ -150,7 +155,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `run { runId, status, startedAt, finishedAt, partial?, lastTradingDate?, effectiveStart?, effectiveEnd?, error? }`. `status`는 `COMPLETED` / `FAILED` / `CANCELLED`.
 - `run.error { code, message }` — 실패 시 채우고 성공 시 없음. 코드는 `INVALID_REQUEST`, `DATA_INSUFFICIENT`, `CONSTRAINT_VIOLATION`, `ESTIMATION_FAILED`,
   `ENGINE_ERROR`, `INTERNAL_ERROR`. (`INSUFFICIENT_CASH`는 오류가 아니라 `diagnostics.warnings[].code`)
-- FAILED일 때 `performance`와 `execution`은 없음(null), `portfolioSeries`·`trades`는 `[]`. 존재하지 않는 성과를 0으로 채우지 않는다.
+- FAILED일 때 `performance`와 `execution`은 없음(null), `portfolioSeries`·`trades`는 `[]`, `fills`는 없거나 `[]`. 존재하지 않는 성과를 0으로 채우지 않는다.
 - **CANCELLED**는 `partial=true`이고 `lastTradingDate`까지의 **부분 결과**를 COMPLETED와 같은 형태로 담는다(`performance`·`execution` 필수). 취소는 다음 거래일
   처리 시점에 반영되므로 `portfolioSeries`의 마지막 날짜가 `lastTradingDate`다.
 - `portfolioSeries[].positions`는 보유 구성이 바뀐 거래일 + 시작일 + 종료일에만 존재한다. `portfolioSeries[].cashFlows[] { type, instrumentId?, amount }`는
@@ -159,13 +164,20 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
   `riskScale`·`estimatedVolatility` 는 `scenario=TARGET_RISK` 에서만 존재하고 그때 `target` 은 조절 뒤 비중이다(PD-18).
 - `trades[]`: OPEN 거래는 `exitTime`, `exitPrice`, `grossPnl`, `realizedPnl`, `returnRate`가 없음이고 `commission`·`slippageCost`는 진입 측만 합산한다.
   `reason` (`SIGNAL` / `REBALANCE` / `HALT_DEFERRED` / `LIQUIDATION`)과 이월 주문의 `plannedDate`는 선택.
+- `fills[] { fillId, instrumentId, side, time, price, referencePrice, quantity, costs { commission, spread, slippage, tax }, cashCost, reason?, plannedDate? }`:
+  **개별 체결 목록**(spec 011 DEP-004-011). `trades[]`는 진입·청산을 묶은 단위라 묶음이 닫히면 양쪽 비용이 합쳐지고 세금은 `realizedPnl`에만 들어간다 —
+  임의 구간의 거래·비용·현금 흐름을 다시 세려면 체결 단위가 있어야 한다. `side`는 `BUY` / `SELL`(포지션 방향인 `trades[].side`와 다른 개념),
+  `price`는 실제 체결가(호가차·슬리피지 반영), `referencePrice`는 충격 전 기준가, `cashCost`는 체결 대금과 별도로 현금에서 빠진 비용(엔진에서는 수수료 + 세금)이다.
+  체결 순서대로 담고 `fillId`는 실행 안에서 고유하다. **생략(null)과 `[]`는 다른 뜻이다** — 생략은 체결을 기록하지 않는 워커가 낸 결과, `[]`는 체결이 없었다는 뜻이다.
+  백엔드는 생략을 `[]`로 보정하지 않고 `backtest_result.fills_recorded=false`로 남긴다(기록이 없는 결과를 체결 0건으로 읽으면 구간 비용이 0이 된다).
+  재현성 해시(`worker/reproducibility.py`)에는 넣지 않는다 — 이미 해시에 든 값의 다른 표기라 넣으면 숫자가 같은데도 골든이 전부 바뀐다.
 - `costs { commission, spread, slippage, tax, total }` 비용 합계(FR-027). `performance.netTotalReturn`·`totalTradingCost`와 짝.
 - `liquidation { markToMarket { finalEquity, totalReturn }, liquidated { finalEquity, totalReturn, liquidationCost } }` — `evaluation.liquidationAtEnd=true`일 때(FR-017).
 - `analytics { recoveryDays?, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method }` 파생 지표(FR-027).
   정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method="sample-covariance-daily"`. 계산 불가 항목은 키 생략.
 - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,
   `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING`, `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`(상한 잔여를 현금으로), `EFFECTIVE_TARGET_REDUCED`(계산 가능 종목 부족으로 투자 목표 축소), `SINGLE_ASSET_FALLBACK`(계산 가능 1종목) 등 개방 집합.
-- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit?, worker }` 참조 버전(FR-028). `evaluationSplit`은 요청 `evaluation.splitVersion`의 사본이다 — 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
+- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit?, worker, dependencies? { numpy, scipy } }` 참조 버전(FR-028). `evaluationSplit`은 요청 `evaluation.splitVersion`의 사본이다 — 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018). `dependencies`는 워커가 자기 환경에서 읽은 실제 설치 버전이다(T028). 재현 키에는 들어가지 않는다 — 키는 실행 전에 만들어지므로 백엔드 `engine-version`의 `uv.lock` 지문이 대신한다.
 - 계산 불가 성과 지표(설계 OUTPUT Spec 규칙): 변동성 0 → `sharpeRatio`만 null. 관측치 2개 미만 → `volatility`·`sharpeRatio` null.
   CLOSED 거래 0건 → `winRate` null. `initialEquity ≤ 0` → `totalReturn`·`cagr` null. 기간이 1년 미만이라는 이유로 `cagr`을 null로 만들지 않는다.
 - **체결가 의미**: 계약상 `trades[].entryPrice`/`exitPrice`는 슬리피지가 반영된 실제 평균 체결가다. **현재 픽스처는 기준가를 그대로 넣고 슬리피지를
@@ -198,7 +210,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 
 ## 6. 픽스처 불변식
 
-`examples/` 여덟 파일은 [`generate_fixtures.py`](generate_fixtures.py)로 만들었다(시드 42, KRX 휴장일 미반영 평일 129일).
+`examples/` 여덟 파일(`rules/`·`reconciliation/` 하위 폴더 제외)은 [`generate_fixtures.py`](generate_fixtures.py)로 만들었다(시드 42, KRX 휴장일 미반영 평일 129일).
 아래 관계가 실제로 성립하며, 백엔드 결과 Consumer 검증과 통합 테스트의 단언으로 그대로 쓴다.
 
 - 이벤트의 `runId` == `engine-input.json`의 `run.runId` (`BT-20260907-000001`), `executionId` == `EXEC-000001`
@@ -207,6 +219,9 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 �
 - `positions`가 있는 날 `Σ marketValue == positionValue`; `cashFlows`가 있는 날 현금이 그만큼 늘어난다(취소 픽스처에만 있다)
 - CLOSED 거래마다 `realizedPnl == grossPnl - commission - slippageCost`; `performance.tradeCount == CLOSED 거래 수`(2), `winRate = 0.5`
 - `costs.total == commission + spread + slippage + tax == performance.totalTradingCost`
+- `len(fills) == execution.fillCount`; `Σ fills[].costs`의 갈래별 합이 `costs`의 같은 갈래와 같다; 초기 현금에서 체결마다
+  `BUY: −(price×quantity + cashCost)`, `SELL: +(price×quantity − cashCost)`를 더하고 `cashFlows`를 더하면 그날 스냅샷의 `cash`다.
+  이 목 회계는 슬리피지를 체결가가 아니라 현금에서 빼므로 픽스처의 `price == referencePrice`이고 `cashCost`에 슬리피지가 들어 있다(§4.3 "체결가 의미"와 같은 한계)
 - `event-progress.json`: `sequence=1`, 포인트 20개 == `completedTradingDays`, `totalTradingDays=129` == 완료 픽스처 `portfolioSeries` 길이, `lastTradingDate` == 마지막 포인트 날짜
 - `event-finished-completed.json`: `sequence=8` (= PROGRESS 7회 + 1), `status=COMPLETED`, `partial=false`, `execution.totalCommission > 0`
 - `event-finished-failed.json`: `status=FAILED`, `run.error.code=DATA_INSUFFICIENT`, `performance`·`execution` 키 없음, `partial=false`
@@ -250,9 +265,9 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검�
 | 식별자 길이 255자 초과 (§5) | 명시 검증 | — |
 | `instrumentId` 형식 (§5, trade·position) | 명시 검증 (`InstrumentId.REGEX`) | universe 항목은 명시 검증, 결과는 엔진 입력의 종목이 그대로 나감 |
 | `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |
-| 상태별 nullable 규칙 (COMPLETED·CANCELLED: `performance`·`execution` 필수, `error` 없음. CANCELLED: `partial=true`·`lastTradingDate` 필수. FAILED: `error` 필수, `performance`·`execution` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
+| 상태별 nullable 규칙 (COMPLETED·CANCELLED: `performance`·`execution` 필수, `error` 없음. CANCELLED: `partial=true`·`lastTradingDate` 필수. FAILED: `error` 필수, `performance`·`execution` 없음, `portfolioSeries`·`trades` 비어야 함, `fills`는 없거나 비어야 함. `fills`가 있으면 항목마다 필수 필드 검증) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |
 | CANCELLED 완료 범위 일치 (`payload.lastTradingDate` == `engineOutput.run.lastTradingDate` == `portfolioSeries` 마지막 날짜) | 명시 검증 — 실행에는 payload 값을, 결과에는 `engineOutput` 전체를 저장하므로 어긋나면 화면의 완료 날짜와 요약·시계열 범위가 달라진다 | 엔진이 `assemble_output` 한 곳에서 세 값을 함께 채운다 |
-| 계약이 nullable로 정한 생략 (성과 지표 개별 null, snapshot의 `positions`·`cashFlows`, OPEN 거래의 청산 필드, v2 추가 블록 전부) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
+| 계약이 nullable로 정한 생략 (성과 지표 개별 null, snapshot의 `positions`·`cashFlows`, OPEN 거래의 청산 필드, `fills` 전체, v2 추가 블록 전부) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |
 | 알 수 없는 필드 | 무시(`FAIL_ON_UNKNOWN_PROPERTIES=false`) — 상대가 필드를 먼저 추가해도 깨지지 않게 | 무시(`extra="ignore"`) |
 
 검증 실패는 계약 오류로 보고 requeue 없이 reject → DLQ(§7). 픽스처 round-trip 테스트는 DTO 구조가 계약과 맞는지 확인하는 것이며 실제 수신 메시지 검증을 대신하지 않는다.

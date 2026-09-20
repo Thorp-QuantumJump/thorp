@@ -74,12 +74,17 @@ class PublicResultServiceTest {
                     Clock.fixed(NOW, ZoneOffset.UTC));
 
     private static BacktestRequest request(Long requesterId, Instant expiresAt) {
+        return request(requesterId, expiresAt, ExecutionType.SINGLE);
+    }
+
+    private static BacktestRequest request(
+            Long requesterId, Instant expiresAt, ExecutionType type) {
         return BacktestRequest.restore(
                 1L,
                 new BacktestId(BACKTEST_ID),
                 11L,
                 requesterId,
-                ExecutionType.SINGLE,
+                type,
                 ResultSource.NEW,
                 null,
                 null,
@@ -98,6 +103,7 @@ class PublicResultServiceTest {
         Map<String, Object> versions = new LinkedHashMap<>();
         versions.put("rules", "1");
         versions.put("worker", "2.0.0");
+        versions.put("dependencies", Map.of("numpy", "2.4.6", "scipy", "1.17.1"));
         return new BacktestDetailResult(
                 BACKTEST_ID,
                 status,
@@ -167,6 +173,28 @@ class PublicResultServiceTest {
     }
 
     @Test
+    @DisplayName("기간 KOSPI 조회 포트가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다")
+    void indexComparisonIsExplicitlyUnavailableWithoutSeriesPort() {
+        stored(request(null, NOW.plusSeconds(3600)));
+
+        var result = service.getIndexComparison(TOKEN);
+
+        assertThat(result.available()).isFalse();
+        assertThat(result.reason()).isEqualTo("INDEX_SERIES_UNAVAILABLE");
+        assertThat(result.series()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("지수 비교도 만료한 공개 토큰이면 410 이다")
+    void expiredIndexComparisonIsGone() {
+        stored(request(null, NOW));
+
+        assertThatThrownBy(() -> service.getIndexComparison(TOKEN))
+                .extracting(exc -> ((BusinessException) exc).getErrorCode())
+                .isEqualTo(ErrorCode.RESULT_EXPIRED);
+    }
+
+    @Test
     @DisplayName("로그인 결과는 만료가 없고 expiresAt 이 null 이다")
     void loggedInResultNeverExpires() {
         stored(request(7L, null));
@@ -190,6 +218,7 @@ class PublicResultServiceTest {
         PublicResultDetail result = service.getDetail(TOKEN);
 
         assertThat(result.publicToken()).isEqualTo(TOKEN);
+        assertThat(result.config()).containsEntry("executionType", "SINGLE");
         assertThat(result.expiresAt()).isEqualTo(expiresAt);
         assertThat(result.validationTier()).isEqualTo(ValidationTier.UNVALIDATED);
         assertThat(result.strategyName()).isEqualTo("똑같이 나누기");
@@ -227,6 +256,17 @@ class PublicResultServiceTest {
         assertThat(result.queueWaitSeconds()).isNull();
         assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);
         assertThat(result.exceptionKinds()).containsExactly("HALT_DEFERRED", "DELISTED");
+    }
+
+    @Test
+    @DisplayName("공개 결과는 원 요청의 자동 탐색 종류를 유지한다")
+    void searchBundleKindIsVisibleWithoutSearchQuery() {
+        stored(request(7L, null, ExecutionType.SEARCH_BUNDLE));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(detail(RunStatus.QUEUED));
+
+        assertThat(service.getDetail(TOKEN).config())
+                .containsEntry("executionType", "SEARCH_BUNDLE");
     }
 
     @Test
