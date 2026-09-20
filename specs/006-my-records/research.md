@@ -103,7 +103,7 @@ FR-006의 "재계산 없이 저장된 동일 버전"은 이 경로가 이미 만
 ## R6. 삭제는 `my_record`의 `deleted_at`이고, 사본을 위해 `is_copy`를 둔다
 
 **Decision**: 삭제는 `my_record.deleted_at`을 채우는 것이다. 결과·거래 내역·재현 기록은 손대지
-않는다. 목록·비교 대상·경제환경 연결 조회는 모두 `deleted_at IS NULL`을 건다. 복구 기능은 만들지
+않는다. 006의 모든 조회(목록·상세·내보내기·상한 계수)는 `deleted_at IS NULL`을 건다. 복구 기능은 만들지
 않는다. FR-009의 "같은 조건 재분석은 새 기록을 만들지 않는다"는 부분 유니크 인덱스
 `(owner_id, kind, ref_id) WHERE deleted_at IS NULL AND is_copy = false`로 스키마가 지킨다.
 
