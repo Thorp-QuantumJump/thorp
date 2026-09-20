@@ -149,6 +149,31 @@
 `mappingDrift`·`registryDrift`는 **서버가 판정한다.** 화면이 버전 문자열을 비교하지 않는다
 (원칙 II: 복잡한 계산은 시스템이 맡는다).
 
+### `referenceVersions`의 출처
+
+004가 남긴 `backtest_run.versions`(JSONB)와 요청 사본 `request_spec`에서 읽는다. 006은 이름만 바꿔
+담고 값을 만들지 않는다.
+
+| 006 응답 필드 | 출처 | 규칙 |
+|---|---|---|
+| `datasetVersion` | `versions.data` | |
+| `sectorEtfMapVersion` | `versions.mapping` | 접수 경로를 거치지 않은 실행에는 없다. 없으면 키를 만들지 않는다 |
+| `costProfileVersion` | `versions.costProfile.version` | `{version, provisional}` 꼴이라 **잠정 여부도 함께 보인다** |
+| `rulesVersion` | `versions.rules.version` | 같음 |
+| `engineVersion` | `versions.engine` | `"nautilus_trader … / worker … / uv.lock …"` **한 문자열**이다(`thorp.backtest.engine-version`). 006이 쪼개지 않는다 |
+| `registryVersion` | `request_spec.registryVersion` | **`versions`에 없다.** 접수가 선택 항목으로 받아 사본에만 남긴다. 없으면 키를 만들지 않고 화면은 '기록되지 않음'을 보인다(원칙 VI) |
+
+`versions.worker`·`versions.dependencies`(워커 자기 보고와 numpy·scipy 버전)는 **담지 않는다.**
+운영 정보라 공개하지 않는다는 004·005의 판단(`PublicResultService.withoutWorkerReport`)을 006도
+따른다 — 내보내기 파일에도 자리를 두지 않는다.
+
+### 저장 당시 실행 조건 (FR-007a)
+
+상세는 `reopenPayload`로 저장된 요청 사본(`backtest_run.request_spec`)을 그대로 돌려준다. 여기에
+`warmupTradingDays`(접수가 확정한 **실효값**)와 `start`·`end`가 들어 있다. 006은 이 값을 다시 산정하지
+않는다 — 새 분석의 워밍업 재산정은 003이, 비교할 때 긴 쪽 공통 워밍업 판정은 005가 한다(FR-007a,
+[record-handoff.md](record-handoff.md)).
+
 ## POST /my-records/regime-searches
 
 경제환경 검색 결과를 개인 기록으로 남긴다(010 FR-032, R15). 로그인 사용자가 검색 결과 화면을 열 때
@@ -229,10 +254,12 @@
 | `referenceVersions` | 자료·대응표·등록표·비용·엔진 버전 | FR-010 |
 | `summary` | 핵심 결과 | FR-015 |
 | `timeseries` | 계산된 평가 시계열 | FR-015 |
-| `trades` | 가상 거래 내역 | FR-015 |
+| `trades` | 가상 거래 내역(진입·청산 묶음, `backtest_trade`) | FR-015 |
+| `fills` | 개별 체결(`backtest_fill`). **`backtest_result.fills_recorded`가 `true`인 결과에만 담고 `false`면 키를 만들지 않는다** — 기록하지 않은 것이 체결 0건으로 읽히면 안 된다(원칙 VI, `V20260920080000__backtest_fill.sql` 주석) | FR-015 |
 | `exceptions` | 예외 처리 기록 | FR-015 |
 | `searchSpace` `candidates` | 탐색 공간·후보별 결과·상태·제외 사유·선정 규칙 (`SEARCH_BUNDLE`만) | FR-015, Story 4 시나리오 3 |
 | `regime` | 모드·분야·기준월·전체/표시 후보·제외 이유·지표 원값과 표준화 값·분야별 거리·자료 개정 기준·모델 버전 (`REGIME_SEARCH`만) | FR-012 |
+| `regime.link` | 연결한 섹터·ETF·전략·사후 평가 구간·가용성 필터. 011의 `regime_link_search`·`regime_link_filter`에서 읽는다. **그 표가 아직 없으면 키를 만들지 않는다**(원칙 VI) | FR-012 |
 | `exclusions` | **빠진 항목과 그 이유.** 빠진 것이 없으면 빈 배열이지만 키는 반드시 있다 | FR-016 |
 
 ### 담지 않는 것

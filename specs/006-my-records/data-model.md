@@ -11,11 +11,12 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고, 
 
 | 이미 있는 것 | 어디에 | 006이 하는 일 |
 |---|---|---|
-| 공용 계산 결과·거래 내역·예외 처리 기록 | `backtest_run`, `backtest_result`, `backtest_trade` | 가리켜 읽는다. 복제하지 않고 삭제하지도 않는다 |
-| 재현 기록(FR-010) | `backtest_result.versions`, `backtest_request`, `cost_profile`, `strategy_rules`, `dataset_version` | 004 FR-028이 남긴 것을 그대로 보존한다. 새 재현 항목을 만들지 않는다(원칙 VIII) |
+| 공용 계산 결과·거래 내역·예외 처리 기록 | `backtest_run`, `backtest_result`, `backtest_trade`, `backtest_fill` | 가리켜 읽는다. 복제하지 않고 삭제하지도 않는다. 개별 체결은 `backtest_result.fills_recorded`가 `true`인 결과에만 있다 — 기록하지 않은 결과를 체결 0건으로 읽지 않는다(원칙 VI) |
+| 재현 기록(FR-010) | `backtest_run.versions`(`mapping`·`rules`·`costProfile`·`data`·`engine`·`evaluationSplit`), `backtest_run.request_spec`(`registryVersion`·`warmupTradingDays` 실효값), `backtest_request`, `cost_profile`, `strategy_rules`, `dataset_version` | 004 FR-028이 남긴 것을 그대로 보존한다. 새 재현 항목을 만들지 않는다(원칙 VIII). `versions.worker`·`versions.dependencies`는 운영 정보라 006도 내보내지 않는다(005 `PublicResultService.withoutWorkerReport`) |
 | 결과 열람 열쇠 | `backtest_request.public_token` (로그인 요청은 만료 없음) | '다시 보기' 링크로 쓴다(R3) |
 | 탐색 묶음과 후보 | `param_search`, `search_candidate` | 가리켜 읽는다. `owner_user_id`는 접수가 이미 채운다(`ParamSearchService`가 `command.requesterId()`를 넣는다) — 006이 할 일이 없다 |
 | 경제환경 스냅샷 | `regime_search_snapshot`, `regime_search_case` | 가리켜 읽는다. 공용 스냅샷이라 소유자 자리가 없다 |
+| 경제환경 연결 기록(FR-012의 연결 항목) | `regime_link_filter`, `regime_link_search`, `regime_link`, `regime_link_use`, `regime_link_result` | **011이 소유하고 만든다.** 011 data-model이 "`regime_link_search`는 006이 읽는 경제환경 탐색 기록의 011 몫"이라고 정했다. 006은 표를 만들지 않고 생기면 조인해 읽는다. 아직 마이그레이션이 없어 현재는 비어 있음으로 보인다(R9) |
 | 경제환경 개인 검색 기록 | `regime_search_log` (owner_user_id·snapshot_id·snapshot_key·entry_path·baseline_origin·viewed_at) | **010이 표를 만들고 "행은 006이 만든다"고 예약해 두었다**(`RegimeSearchLogJpaEntity` 주석, 010 FR-032). 006이 행을 쓴다. 표를 새로 만들지 않는다 |
 | 섹터-ETF 대응표 버전·항목 | `sector_etf_map_version`, `sector_etf_map_entry` | UI-01 판정에 읽는다(R8) |
 | 세션·사용자 | `spring_session`, `users` | 소유자 식별에만 쓴다. 식별정보를 복제하지 않는다 |

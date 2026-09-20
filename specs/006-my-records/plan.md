@@ -73,10 +73,11 @@ Jackson / React 19 + Vite, react-router-dom. **새 라이브러리를 추가하�
 **미해결 위반: 없음.**
 
 한 가지 미완 의존을 위반이 아니라 **범위 축소**로 처리한다. [011 경제환경-전략 연결](../011-regime-strategy-link/spec.md)은
-spec만 있고 plan·tasks·테이블이 없다. 그래서 FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간"의
-**생산자가 아직 없다.** 006은 그 자리를 만들지 않는다 — 011이 자기 표를 더한다. 지금 존재하는
-값(진입 경로·스냅샷 참조)은 010이 만들어 둔 `regime_search_log`에 006이 쓴다. 없는 값을 만들어 채우지
-않는다(원칙 VI). 자세한 경계는 [research.md](research.md) R9·R15에 있다.
+plan·data-model·tasks까지 나왔지만 **표가 아직 만들어지지 않았다.** 그래서 FR-012가 요구하는 "연결한
+섹터·ETF·전략·사후 평가 구간"의 값이 지금은 없다. 011 data-model이 `regime_link_search`를 "006이 읽는
+경제환경 탐색 기록의 011 몫"으로 정했으므로 006은 그 자리를 만들지 않고 **표가 생기면 조인해 읽는다.**
+지금 존재하는 값(진입 경로·스냅샷 참조)은 010이 만들어 둔 `regime_search_log`에 006이 쓴다. 없는 값을
+만들어 채우지 않는다(원칙 VI). 자세한 경계는 [research.md](research.md) R9·R15에 있다.
 
 ## Project Structure
 
@@ -146,7 +147,7 @@ frontend/src/
 
 | 파일 | 내용 |
 |---|---|
-| [research.md](research.md) | 결정 R1~R14. Technical Context에 NEEDS CLARIFICATION이 남지 않았다 |
+| [research.md](research.md) | 결정 R1~R16. Technical Context에 NEEDS CLARIFICATION이 남지 않았다 |
 | [data-model.md](data-model.md) | `my_record` 한 표, 제약·인덱스, 만들지 않는 것(`regime_search_log` 재사용) |
 | [contracts/my-records-api.md](contracts/my-records-api.md) | 목록·상세·이름 변경·삭제·내보내기, 007 접수 경로에 요청하는 변경 |
 | [contracts/record-handoff.md](contracts/record-handoff.md) | '설정 바꿔 비교'의 화면 사이 인계(기존 두 계약에 쓰는 쪽) |
@@ -160,7 +161,7 @@ frontend/src/
 |---|---|---|
 | 원칙 VIII — 재현 기록은 한 곳 | 통과 | `my_record`가 섹터·전략·분석 기간을 복제하는 것이 두 번째 재현 기록이 아닌지 다시 봤다. 복제하는 값은 **접수 시점에 정해져 이후 바뀌지 않는 조건**뿐이고 목록의 정렬·필터에만 쓴다. 변하는 상태는 복제하지 않고 원본을 조인한다(R2). 결과·거래·참조 버전은 복제하지 않는다 |
 | 원칙 VI — 조용한 대체 금지 | 통과 | 목록 질의의 허용하지 않는 `sort`·`kind`·`status` 값을 기본값으로 바꾸지 않고 `400`으로 돌려주기로 했다(contracts). '설정 바꿔 비교'가 채운 값도 003의 기존 판정을 타 범위 밖이면 비워진다(record-handoff) |
-| 원칙 VI — 없는 값을 만들지 않는다 | 통과 | 011이 없어 비어 있는 경제환경 연결 항목을 기본값으로 채우지 않기로 했다(R9). quickstart S7-6이 그 비어 있음을 **기대 상태로** 확인한다 |
+| 원칙 VI — 없는 값을 만들지 않는다 | 통과 | 011 표가 아직 없어 비어 있는 경제환경 연결 항목을 기본값으로 채우지 않기로 했다(R9). quickstart S7-6이 그 비어 있음을 **기대 상태로** 확인한다. 개별 체결도 `fills_recorded=false`면 키를 만들지 않는다(contracts) |
 | 원칙 III — 순위 화면이 되지 않는다 | 통과 | 정렬에서 성과를 뺀 것만으로는 부족하다고 보아 **목록 응답 본문에서 수익률·하락 폭·비용을 아예 뺐다**(contracts). 값이 있으면 정렬 없이도 나란히 보이는 순위 화면이 된다. quickstart S13-5가 이것을 확인한다 |
 | 원칙 II — 버튼 하나 | 통과 | quickstart S1-4를 판정 단계로 넣어 같은 크기 버튼 둘이 들어오는 것을 검증에서 막았다. 006에서 버튼 둘을 같은 크기로 두려면 plan이 아니라 constitution 개정이 필요하다(R7) |
 | 원칙 X — 이용 조건 | 통과 | 금지 항목을 값이 아니라 **스키마 자리로** 막았고(R10), `exclusions`를 빈 배열이어도 반드시 담게 해 "무엇을 뺐는지"를 판정 가능하게 했다. quickstart S8-4가 키 존재까지 확인한다 |
@@ -173,6 +174,13 @@ frontend/src/
 **접점 조사(/speckit-tasks)에서 고친 것**: `regime_search_log`가 이미 있어 `my_record_regime_link`를 만들지
 않기로 했고(R9·R15), `param_search.owner_user_id`는 접수가 이미 채우고 있어 007에 요청할 변경에서 뺐다.
 항목 생성은 순환 참조를 피해 접수 이벤트로 받는다(R16).
+
+**dev 대조(2026-09-20)에서 고친 것**: 011이 plan·data-model까지 확정해 연결 항목의 출처가
+`regime_link_search`로 정해졌고(R9), 004가 `backtest_fill`과 `backtest_result.fills_recorded`를 더해
+내보내기에 개별 체결 구획이 생겼으며(contracts), 참조 버전은 `backtest_run.versions`와 `request_spec`의
+실제 키에서 읽도록 대응을 적었다. `versions.worker`·`versions.dependencies`는 005가 운영 정보로 보고
+공개 응답에서 빼기로 한 판단을 006도 따른다. 저장 당시 워밍업·평가 기간은 보존만 하고 재산정은
+003·005가 한다(FR-007a).
 
 새로 생기는 공통 자원 두 개를 적어 둔다. 둘 다 기존 규칙 안이다.
 
