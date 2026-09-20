@@ -137,6 +137,7 @@ def simulate(days: list[date], prices: dict[str, dict[date, Decimal]],
     held = {} if fresh_cash else dict(OPENING)
     cash = Decimal(1_200_000) if not fresh_cash else Decimal(0)
     series: list[dict[str, str]] = []
+    holdings: list[dict[str, Any]] = []
     daily_positions: list[dict[str, Any]] = []
     fills: list[dict[str, Any]] = []
     cash_flows: list[dict[str, Any]] = []
@@ -178,17 +179,25 @@ def simulate(days: list[date], prices: dict[str, dict[date, Decimal]],
                 "positions": [{"instrumentId": iid, "quantity": quantity}
                               for iid, quantity in sorted(held.items()) if quantity],
             })
-        series.append({"date": day.isoformat(),
-                       "equity": money(position_value(day) + cash), "cash": money(cash)})
+        equity = position_value(day) + cash
+        series.append({"date": day.isoformat(), "equity": money(equity), "cash": money(cash)})
+        holdings.append({
+            "date": day.isoformat(),
+            "actual": {iid: ratio(Decimal(quantity) * prices[iid][day] / equity)
+                       for iid, quantity in sorted(held.items()) if quantity},
+        })
 
     opening = [] if fresh_cash else [{"instrumentId": iid, "quantity": quantity}
                                      for iid, quantity in sorted(OPENING.items())]
     return {
-        "portfolioSeries": series,
-        "openingPositions": opening,
-        "dailyPositions": daily_positions,
-        "trades": fills,
-        "cashFlows": cash_flows,
+        "inputs": {
+            "portfolioSeries": series,
+            "openingPositions": opening,
+            "dailyPositions": daily_positions,
+            "trades": fills,
+            "cashFlows": cash_flows,
+        },
+        "holdings": holdings,
     }
 
 
@@ -204,9 +213,10 @@ def input_digest(job: dict[str, Any]) -> str:
 
 def build_job(link_id: str, scenario: str, days: list[date],
               prices: dict[str, dict[date, Decimal]], *, last_index: int,
-              delisted: bool = False) -> dict[str, Any]:
+              delisted: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     window_days = days[1:]
-    inputs = simulate(days, prices, fresh_cash=scenario == "FRESH_CASH", last_index=last_index)
+    simulated = simulate(days, prices, fresh_cash=scenario == "FRESH_CASH", last_index=last_index)
+    inputs = simulated["inputs"]
     items: list[dict[str, Any]] = []
     for sector_id, iid in UNIVERSE:
         item: dict[str, Any] = {"sectorId": sector_id, "instrumentId": iid}
@@ -231,7 +241,7 @@ def build_job(link_id: str, scenario: str, days: list[date],
         "inputs": inputs,
     }
     job["inputDigest"] = input_digest(job)
-    return job
+    return job, simulated["holdings"]
 
 
 def window_summary(job: dict[str, Any], length: int, *, complete: bool) -> dict[str, Any]:
@@ -276,11 +286,9 @@ def window_summary(job: dict[str, Any], length: int, *, complete: bool) -> dict[
     }
 
 
-def build_result(job: dict[str, Any], *, complete63: bool) -> dict[str, Any]:
+def build_result(job: dict[str, Any], holdings: list[dict[str, Any]], *,
+                 complete63: bool) -> dict[str, Any]:
     length = WINDOW_LENGTH if complete63 else job["window"]["completedTradingDays"]
-    holdings = [{"date": row["date"],
-                 "actual": {SEMICONDUCTOR: "0.3980", BATTERY: "0.3010", BIO: "0.3010"}}
-                for row in job["inputs"]["portfolioSeries"][1:2]]
     trades = [{"date": f["time"][:10], "instrumentId": f["instrumentId"], "side": f["side"],
                "quantity": f["quantity"], "price": f["price"],
                "cost": money(sum((Decimal(v) for v in f["costs"].values()), ZERO)),
@@ -289,7 +297,7 @@ def build_result(job: dict[str, Any], *, complete63: bool) -> dict[str, Any]:
     return {
         "window63": window_summary(job, length, complete=complete63),
         "window21": window_summary(job, 21, complete=True),
-        "holdings": holdings,
+        "holdings": holdings[:length],
         "trades": trades,
         "kospi": {"window63": {"return": "0.0180", "maxDrawdown": "-0.0420"},
                   "window21": {"return": "0.0050", "maxDrawdown": "-0.0150"}},
@@ -318,10 +326,13 @@ def main() -> None:
     prices = build_prices(days)
     last = WINDOW_LENGTH - 1
 
-    continuous = build_job("RL-20260918-000101", "CONTINUOUS", days, prices, last_index=last)
-    fresh_cash = build_job("RL-20260918-000102", "FRESH_CASH", days, prices, last_index=last)
-    partial = build_job("RL-20260918-000103", "CONTINUOUS", days, prices,
-                        last_index=DELISTED_AT - 1, delisted=True)
+    continuous, continuous_holdings = build_job(
+        "RL-20260918-000101", "CONTINUOUS", days, prices, last_index=last)
+    fresh_cash, _ = build_job(
+        "RL-20260918-000102", "FRESH_CASH", days, prices, last_index=last)
+    partial, partial_holdings = build_job(
+        "RL-20260918-000103", "CONTINUOUS", days, prices,
+        last_index=DELISTED_AT - 1, delisted=True)
 
     print("작업 메시지")
     write("job-continuous.json", continuous)
@@ -336,14 +347,14 @@ def main() -> None:
     write("event-finished-completed.json", envelope(
         "EVT-RL-000002", continuous["job"]["linkId"], "FINISHED", "2026-09-18T02:00:03Z",
         {"status": "COMPLETED", "partial": False,
-         "result": build_result(continuous, complete63=True),
+         "result": build_result(continuous, continuous_holdings, complete63=True),
          "resource": {"wallSeconds": "3.41"}},
     ))
     write("event-finished-incomplete63.json", envelope(
         "EVT-RL-000003", partial["job"]["linkId"], "FINISHED", "2026-09-18T02:01:07Z",
         {"status": "COMPLETED", "partial": True,
          "delistedOn": partial["universe"]["items"][2]["delistedOn"],
-         "result": build_result(partial, complete63=False),
+         "result": build_result(partial, partial_holdings, complete63=False),
          "resource": {"wallSeconds": "2.86"}},
     ))
     write("event-finished-failed.json", envelope(
