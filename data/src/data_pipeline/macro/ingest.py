@@ -191,10 +191,23 @@ def collect(
                 _collect_customs(members, fetcher, config, data_root, mode, today)
             )
             continue
+        quota_reached = False
         for indicator in members:
-            outcomes.append(
-                _collect_one(indicator, fetcher, config, data_root, mode, today)
-            )
+            if quota_reached:
+                # 한도는 원천 단위다. 앞 지표가 거절당했으면 뒤 지표도 같은 답을 받는다 —
+                # 부르지 않고 그 사실을 상태로 남긴다. 무엇을 못 받았는지는 기록에 남아야 한다.
+                outcomes.append(
+                    IndicatorOutcome(
+                        indicator_id=indicator.indicator_id,
+                        source=source_id,
+                        status=STATUS_QUOTA,
+                        error_class="QuotaExhaustedError",
+                    )
+                )
+                continue
+            outcome = _collect_one(indicator, fetcher, config, data_root, mode, today)
+            outcomes.append(outcome)
+            quota_reached = outcome.status == STATUS_QUOTA
     return outcomes
 
 
@@ -340,6 +353,12 @@ def _collect_customs(
                 outcomes[indicator.indicator_id].status = status
                 outcomes[indicator.indicator_id].error_class = error_class
             logger.warning("관세청 %s~%s 수집 실패: %s", window.start, window.end, error)
+            if status == STATUS_QUOTA:
+                # **한도에 닿으면 그 자리에서 멈춘다**(FR-011). 전 구간이 서른일곱 조각이라
+                # 계속 부르면 남은 서른여섯 번이 전부 같은 거절을 받으며 한도를 더 깎고,
+                # 원천이 접근을 끊는 쪽으로 간다. 받은 구간은 그대로 두어 다음 실행이
+                # 그만큼 덜 부르게 한다.
+                break
     return list(outcomes.values())
 
 
@@ -383,6 +402,51 @@ def normalize_outcomes(
             received_at=received_at,
         )
     return result
+
+
+def write_processed(
+    observations: Mapping[str, Sequence[NormalizedObservation]], data_root: Path
+) -> list[Path]:
+    """정규화한 값을 지표/연도 파티션 Parquet 로 쓴다 (data/CLAUDE.md 구조 규칙).
+
+    적재는 ``raw/ → processed/ → PostgreSQL`` 한 방향이고, 발행기는 이 파일 목록을 봉인해
+    매니페스트를 만든다. 파일이 없으면 발행이 거절된다 — 스냅샷이 참조할 실체가 없기 때문이다.
+
+    **decimal 은 문자열로 적는다.** 부동소수로 쓰면 주택가격 지수의 끝자리가 흔들리고, 같은
+    자료로 다시 돌려도 파일 해시가 달라져 재현성 판정이 무너진다(SC-004).
+
+    빠진 달도 행으로 남긴다. 값 자리는 비우고 사유를 함께 적는다 — 파일에서 지우면 왜 없는지
+    되짚을 곳이 사라진다(원칙 VI).
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    written: list[Path] = []
+    for indicator_id, values in sorted(observations.items()):
+        by_year: dict[int, list[NormalizedObservation]] = {}
+        for value in values:
+            by_year.setdefault(int(value.period[:4]), []).append(value)
+        for year, rows in sorted(by_year.items()):
+            table = pa.table(
+                {
+                    "indicator_id": [row.indicator_id for row in rows],
+                    "target_month": [row.period for row in rows],
+                    "transformed_value": [
+                        None if row.transformed_value is None else str(row.transformed_value)
+                        for row in rows
+                    ],
+                    "missing_reason": [row.missing_reason for row in rows],
+                    "transform_rule": [row.transform_rule for row in rows],
+                    "raw_unit": [row.raw_unit for row in rows],
+                    "transformed_unit": [row.transformed_unit for row in rows],
+                    "source_updated_at": [row.source_updated_at for row in rows],
+                }
+            )
+            path = storage.processed_path(data_root, indicator_id, year)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            pq.write_table(table, path)
+            written.append(path)
+    return written
 
 
 def record_raw_revisions(engine: Engine, outcomes: Sequence[IndicatorOutcome]) -> int:
@@ -556,6 +620,7 @@ def run(
         indicators, outcomes, as_of=today, trading_days=trading_days, received_at=received_at
     )
     raw_written = record_raw_revisions(engine, outcomes)
+    processed_files = tuple(write_processed(observations, data_root))
 
     pointer = _current_pointer(engine)
     raw_files = tuple(
@@ -568,7 +633,7 @@ def run(
         indicators=tuple(indicators),
         observations=observations,
         raw_files=raw_files,
-        processed_files=(),
+        processed_files=processed_files,
         data_root=data_root,
     )
 
