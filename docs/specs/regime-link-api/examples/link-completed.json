@@ -43,8 +43,9 @@
           "total": "8913.00"
         },
         "lossContribution": {
-          "SEMICONDUCTOR": "0.72000000",
-          "BATTERY": "0.28000000"
+          "SEMICONDUCTOR": "1.20000000",
+          "BATTERY": "0.32000000",
+          "BIO": "-0.52000000"
         },
         "complete": true
       },
@@ -64,7 +65,9 @@
           "total": "2970.00"
         },
         "lossContribution": {
-          "SEMICONDUCTOR": "1.00000000"
+          "SEMICONDUCTOR": "0.84000000",
+          "BATTERY": "0.38000000",
+          "BIO": "-0.22000000"
         },
         "complete": true
       },

@@ -87,7 +87,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
   만들지 않았으므로 `queuedAt`·`startedAt`이 없고 판정 시각만 `finishedAt`에 남는다.
 - `retryable=false`면 '다시 시도'를 두지 않는다. `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이
   `attempt ≥ 2`에서 다시 나오면 `retryable=false`다.
-- `lossContribution`은 구간 손실에 대한 섹터별 몫이고 합이 1이다. **손실이 없는 섹터는 키가 없다.**
+- `lossContribution`은 **종목 구간 손익 ÷ 전체 구간 손익**을 섹터별로 합산한 몫이고 합이 1이다.
+  이름이 '손실'이지만 **이익 종목도 뺀 것 없이 들어간다** — 전체 손익과 반대로 움직인 섹터가 음수
+  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략한다.
 - `turnover`는 값만으로 뜻이 정해지지 않으므로 `turnoverBasis`(`ANNUALIZED_252`)를 함께 싣는다.
   수익률과 최대 하락 폭은 연환산하지 않는다.
 - `tradesPerMonth`는 `tradeCount ÷ (tradingDays ÷ 21)`을 소수 둘째 자리로 맞춘 값이다.

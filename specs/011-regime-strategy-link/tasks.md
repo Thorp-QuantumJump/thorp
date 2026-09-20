@@ -9,7 +9,7 @@
 워커 수기 대조(S2)와 백엔드 판정(S4·S5)에 있다.
 
 **Organization**: Phase는 spec의 사용자 스토리(US1~US5) 순서다. 브랜치·MR·Jira Task 단위는 아래
-**묶음 표(M1~M8)** 이며 스토리와 1:1이 아니다 — 011은 파트가 셋(BE·WK·FE)이라 같은 스토리 안에서도
+**묶음 표(M1a~M8)** 이며 스토리와 1:1이 아니다 — 011은 파트가 셋(BE·WK·FE)이라 같은 스토리 안에서도
 브랜치가 갈린다. 묶음마다 태스크 번호를 명시한다.
 
 ## Format: `[ID] [P?] [Story] (파트) Description`
@@ -313,8 +313,8 @@ flowchart LR
 
 ### Phase Dependencies
 
-- **Setup (Phase 1, M1)**: T000 입력 대응·독립 대조 선행(계산 픽스처 T001·T005·T006만 막는다. 골격 T002~T004와 M4는 T000과 무관하게 시작한다). 미충족이면 004 계약 확장 합의·구현 뒤 계산 계약을 동결한다
-- **Foundational (Phase 2)**: M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 **병렬**. M4는 dev의 010 표·리포지토리를 읽는다(대역 없음)
+- **Setup (Phase 1, M1a·M1b)**: T000 입력 대응·독립 대조 선행(계산 픽스처 T001·T005·T006만 막는다. 골격 T002~T004와 M4는 T000과 무관하게 시작한다). 미충족이면 004 계약 확장 합의·구현 뒤 계산 계약을 동결한다
+- **Foundational (Phase 2)**: M2·M3(워커)는 M1b 뒤, M4·M5(백엔드)는 M1a 뒤라 두 줄이 **병렬**이다. M4는 dev의 010 표·리포지토리를 읽는다(대역 없음)
 - **US1 (Phase 3)**: Phase 2 전체 필요(잘라내기 결과가 붙어야 시험이 성립). FE는 M5 응답이 있어야 함
 - **US2 (Phase 4)**: Phase 2 + T038~T040. FE(T054)는 dev의 010 결과 목록 컴포넌트(`components/regime/`)를 재사용
 - **US3 (Phase 5)**: US1의 결과 영역(T048) 위에 얹는다
@@ -380,3 +380,9 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 
 - [ ] T092 체결 기록이 없는 실행(`backtest_result.fills_recorded=false`, S15P21E205-359 이전에 끝난 실행·옛 워커의 결과)을 '분석 기간 밖'과 같은 확인 흐름으로 다룬다 — 계약 §2에 확인 요구 `outcome`(재계산 사유 구분)을 더하고, `POST /regime-links`가 확인 전에는 링크·메시지를 만들지 않고 확인 뒤 같은 조건의 새 실행을 004에 요청하며, `FullPeriodConfirm`·`ResultSlotState`가 "이 결과는 사후 구간을 보려면 다시 계산합니다"를 보인다. 값을 추정해 채우지 않는다. `OutOfPeriodFlowTest`·`FullPeriodConfirm.test.tsx`에 이 경우를 더한다 per FR-010·research R3 DEP-004-011·plan 위험 표 (missing)
 - [ ] T093 비교 묶음의 두 실행이 같은 조건인지 서버가 검증한다 — `base`·`compare` 토큰은 주소로 직접 들어올 수 있으므로 `AvailabilityService`·`POST /regime-link-searches`가 섹터 후보 집합·대응표 버전·시작 금액·비용 버전·자료 버전이 같은지 확인하고, 다르면 계산·기록 없이 `400 INVALID_INPUT`과 어긋난 항목을 돌려준다(005는 이 판정을 화면에서만 한다). `AvailabilityControllerIT`·`BundleChangeTest`에 어긋난 묶음 거절을 더한다 per SC-003·FR-011·Constitution IV (missing)
 - [ ] T094 `/regime-link` 주소 오류 처리 — `base`가 없거나 형식이 틀리면 빈 화면 대신 진단 시작(`/diagnosis/sectors`)으로 안내하고, 만료된 토큰(`410 RESULT_EXPIRED`)은 005의 만료 안내를 그대로 보이며, `snapshot`·`case`가 그 검색에 없으면(`404`) 분야 선택으로 되돌리고 이유 한 문장을 보인다. `RegimeLinkPage` 테스트에 세 경우를 더한다 per contracts/entry-handoff §5·FR-025 (missing)
+
+## Phase 10: Convergence
+
+- [X] T095 `docs/specs/regime-link-api/README.md` §4의 `lossContribution` 설명을 산식 정의와 맞춘다 — "손실이 없는 섹터는 키가 없다"를 지우고, 종목 구간 손익 ÷ 전체 구간 손익이라 이익 종목도 들어가고 섹터별 몫의 합이 1이며 전체 구간 손익이 0일 때만 생략한다고 적는다. 이름이 '손실'이지만 이익 종목을 빼지 않는다는 점을 함께 밝힌다 per research R3·contracts/regime-link-messaging.md `FINISHED.result`·T011 (contradicts)
+- [X] T096 `docs/specs/regime-link-api/examples/link-completed.json`의 `lossContribution`을 규칙이 드러나는 값으로 바꾼다 — 비교 묶음의 종목이 모두 들어가고 몫의 합이 1이며, 전체 손익과 반대로 움직인 종목이 음수 몫으로 들어가는 모양을 `window63`에 둔다. `window21`도 종목 하나만 남기지 않는다. 이 파일은 T034·T052가 응답과 대조하는 기준이다 per research R3·T011 (partial)
+- [X] T097 `tasks.md`에서 묶음을 옛 이름으로 부르는 세 곳을 M1a·M1b 분할에 맞춘다 — Organization 머리말의 `묶음 표(M1~M8)`, "Dependencies & Execution Order"의 `Setup (Phase 1, M1)`과 `M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 병렬`이다. 묶음 표·MR 체크포인트·의존 그래프는 이미 분할을 반영했다 per tasks 묶음 표 M1a·M1b 분할(M1a 완료 기준) (partial)
