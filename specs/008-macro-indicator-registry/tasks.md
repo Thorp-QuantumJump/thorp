@@ -278,7 +278,7 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 
 - 남은 미확정은 셋이고 모두 **닫아 두었다**(constitution 미확인 항목 처리) — 비운 것이 아니라 왜 비었는지와 무엇을 봐야 채워지는지를 코드에 적었다
   - 지표별 재조회 구간 N: 잠정 3개월. 개정을 한 건도 관측하지 못해 확정하지 않는다. 정기 수집을 N+3개월 돌린 뒤 `macro_raw_revision`에서 N 밖 개정을 세어 정한다. 근거는 `registry.REFRESH_MONTHS_BASIS`이고 발행 때 `macro_calculation_registry_version.refresh_months_basis`에 함께 남는다 (T073)
-  - 채권·외환 휴장일이 KRX 주식 달력과 같은가: 확인하지 못했다. **지금은 답이 필요 없다** — 거래일 달력을 읽는 곳은 월 평균을 일별 원천에서 접을 때뿐이고 17개 중 그 경로에 닿는 지표가 없다. 닿는 지표가 생기면 `registry.validate`가 등록을 거부한다 (T078)
+  - 채권·외환 휴장일이 KRX 주식 달력과 같은가: 확인하지 못했다. **지금은 답이 필요 없다** — FR-006b 를 "판정이 필요한 지표에 한해"로 좁혔다(T085) — 거래일 달력을 읽는 곳은 월 평균을 일별 원천에서 접을 때뿐이고 17개 중 그 경로에 닿는 지표가 없다. 닿는 지표가 생기면 `registry.validate`가 등록을 거부한다 (T078)
   - 주택가격 연결 계수: 겹침 구간에서 산출해야 한다 (T026)
 - **T078의 원래 전제는 실제와 달랐다.** "17개 모두 `trading_calendar`가 비어 있어 월 평균 경로가 항상 결측"이라고 적었지만, 두바이유는 한국은행이 월 평균을 이미 내 줘 주기가 월별이고 그대로 통과한다. 2026-09-20 전 구간 수집에서 두바이유·국고채 모두 결측 0건이었다
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
@@ -306,3 +306,9 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - [X] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)
 - [X] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)
 - [X] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)
+
+## Phase 10: Convergence
+
+- [X] T083 `data/src/data_pipeline/macro/ingest.py` 의 `record_item_status` 가 발행 보류 사실을 수집 기록에 남기게 한다. 지금은 17개가 다 성공하면 적재가 기대 대상월 수에 못 미쳐 발행을 막은 실행도 시도 행이 `SUCCEEDED` 로 남아, DB 만 보면 완전히 성공한 실행과 구분되지 않는다. 보류 사유는 stdout 과 로그에만 있고 로그는 지나간다 per FR-011, FR-011b(3) (partial)
+- [X] T084 `data/src/data_pipeline/macro/ingest.py` 의 `TAIL_SLACK_MONTHS` 를 스펙과 맞춘다. FR-011b(3) 은 받은 대상월 수가 기대에 미치지 못하면 완료로 보지 않는다고 하는데 코드는 한 달 미달을 통과시킨다. 여유를 걷고 지표별 공표 지연을 보수적으로 늘리든, 스펙에 허용 여유를 명시하든 한쪽으로 정하고 근거를 남긴다 per FR-011b(3) (contradicts)
+- [X] T085 `data/src/data_pipeline/macro/registry.py` 의 `trading_calendar` 를 FR-006b 와 맞춘다. 스펙은 판정 기준을 지표별로 기록하라고 하는데 17개 모두 비어 있다. 지금은 월 평균을 일별 원천에서 접는 지표가 없어 실질 영향이 없고 `validate` 가 그런 지표의 등록을 거부하므로, 스펙 문구를 실제 필요 범위로 좁히든 채권·외환 휴장일을 확인해 채우든 정한다 per FR-006b (partial)
