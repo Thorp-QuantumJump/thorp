@@ -31,7 +31,7 @@
 | `size` | 1~50 | 20 | 쪽 크기 |
 | `sort` | `SAVED_AT_DESC` `SAVED_AT_ASC` `NAME_ASC` | `SAVED_AT_DESC` | **성과 정렬은 없다**(R7, 원칙 III) |
 | `kind` | `ANALYSIS` `SEARCH_BUNDLE` `REGIME_SEARCH` | 전부 | 여러 번 줄 수 있다 |
-| `status` | `COMPLETED` `RUNNING` `FAILED` `CANCELLED` `PARTIAL` | `COMPLETED` | 여러 번 줄 수 있다. 명시하면 기본 보기를 대체한다 |
+| `status` | `COMPLETED` `RUNNING` `FAILED` `CANCELLED` `PARTIAL` · 경제환경 항목용 `NOT_COMPUTABLE` `NEAREST_ONLY` `THRESHOLD_APPLIED` `WITHDRAWN` | `COMPLETED` + `THRESHOLD_APPLIED` | 여러 번 줄 수 있다. 명시하면 기본 보기를 대체한다. 경제환경 상태는 010 값을 그대로 쓰고 완료/실패로 바꿔 부르지 않는다(FR-004). 기본 보기는 단일 분석·묶음의 완료와 경제환경의 문턱 적용(정상 완료에 해당)이다 |
 | `sector` | 섹터 코드 | 전부 | 여러 번 줄 수 있다. 하나라도 겹치면 포함 |
 | `strategy` | 전략 코드 | 전부 | 같음 |
 | `periodFrom` `periodTo` | `YYYY-MM-DD` | 없음 | 분석 기간이 이 구간과 겹치는 항목 |
@@ -82,7 +82,7 @@
         "savedAt": "2026-09-16T22:05:11Z",
         "status": "THRESHOLD_APPLIED",
         "statusReason": null,
-        "regime": { "searchId": "FIELD:EMPLOYMENT:2026-08:3", "mode": "FIELD", "fieldId": "EMPLOYMENT", "baselineMonth": "2026-08-01", "baselineOrigin": "T_G", "entryPath": "MARKET_FLOW", "withdrawn": false },
+        "regime": { "snapshotKey": "FIELD:EMPLOYMENT:2026-08-01:MACRO-20260915:REG-3:REGIME-V1", "mode": "FIELD", "fieldId": "EMPLOYMENT", "baselineMonth": "2026-08-01", "baselineOrigin": "T_G", "entryPath": "MARKET_FLOW", "withdrawn": false },
         "isCopy": false
       }
     ],
@@ -98,7 +98,7 @@
 | `statusReason` | 실패·취소·부분 완료·계산 불가의 사유 코드. **낮은 수익과 섞지 않는다**(FR-014) |
 | `resultToken` | `ANALYSIS`에만 있다. '다시 보기' 링크(`/results/{token}`)의 열쇠(R3) |
 | `searchId` | `SEARCH_BUNDLE`에만 있다. 007 상세 경로의 열쇠 |
-| `regime` | `REGIME_SEARCH`에만 있다. `regime_search_log` 행에서 읽는다. 같은 스냅샷이라도 `entryPath`가 다르면 별도 항목이다. `withdrawn: true`는 010 FR-035 철회로 스냅샷 참조가 끊긴 것이며 '다시 보기'가 열리지 않는다 |
+| `regime` | `REGIME_SEARCH`에만 있다. `regime_search_log` 행에서 읽는다. `snapshotKey`는 010 스냅샷 식별 키(`regime_search_log.snapshot_key` 사본)이며 007의 `searchId`와 이름을 나눈다. '다시 보기'는 `/regime-search?searchId={snapshotKey}`로 고정 조회한다(R17). 같은 스냅샷이라도 `entryPath`가 다르면 별도 항목이다. `withdrawn: true`는 010 FR-035 철회로 스냅샷 참조가 끊긴 것이며 '다시 보기'가 열리지 않는다 |
 | `nextCursor` | 다음 쪽이 없으면 `null`. **전체 개수는 돌려주지 않는다**(R14) |
 
 수익률·하락 폭·비용은 목록 응답에 **없다.** 목록에서 성과를 나란히 보이면 정렬을 제공하지 않아도
@@ -144,7 +144,7 @@
 | `referenceVersions` | 저장 당시 참조 버전. 사용자에게 입력을 요구하지 않고 **상세에서만 보인다**(FR-005) |
 | `mappingDrift` | UI-01 판정 결과(R8). **버전 문자열이 달라도 대응 내용이 같으면 `changed: false`다.** `kind`는 `INSTRUMENT_REPLACED` 또는 `SECTOR_REMOVED` |
 | `registryDrift` | 저장된 설정값이 현재 등록표 허용 범위 밖인지(FR-008). `fields`에 항목 이름과 저장값·현재 범위 |
-| `reopenSettings.available` | '설정 바꿔 비교'를 열 수 있는지. 경제환경 기록은 `false` |
+| `reopenSettings.available` | '설정 바꿔 비교'를 열 수 있는지. 경제환경 기록은 `false`. 분석 시나리오가 `FULL_PERIOD`가 아닌 결과(목표 위험 맞춤 등)도 `false` — 003 화면이 그 시나리오를 다루지 않아 005의 `prefillStrategySettings`가 거절한다(R4) |
 
 `mappingDrift`·`registryDrift`는 **서버가 판정한다.** 화면이 버전 문자열을 비교하지 않는다
 (원칙 II: 복잡한 계산은 시스템이 맡는다).
@@ -169,7 +169,9 @@
 
 ### 저장 당시 실행 조건 (FR-007a)
 
-상세는 `reopenPayload`로 저장된 요청 사본(`backtest_run.request_spec`)을 그대로 돌려준다. 여기에
+상세는 `reopenPayload`로 저장된 요청 사본(`backtest_run.request_spec`)을 **005 `GET /results/{token}`의
+`config`와 같은 모양**(`ResultConfig`: 사본 + `currency`·`effectiveStart`·`effectiveEnd`)으로 돌려준다.
+같은 모양이어야 005의 `prefillStrategySettings(config, …)`에 그대로 넘길 수 있다(R4). 여기에
 `warmupTradingDays`(접수가 확정한 **실효값**)와 `start`·`end`가 들어 있다. 006은 이 값을 다시 산정하지
 않는다 — 새 분석의 워밍업 재산정은 003이, 비교할 때 긴 쪽 공통 워밍업 판정은 005가 한다(FR-007a,
 [record-handoff.md](record-handoff.md)).
@@ -180,13 +182,14 @@
 화면이 부른다. 010의 `GET /regime-searches`는 바뀌지 않는다.
 
 ```json
-{ "searchId": "FIELD:EMPLOYMENT:2026-08:3", "entryPath": "MARKET_FLOW" }
+{ "searchId": "FIELD:EMPLOYMENT:2026-08-01:MACRO-20260915:REG-3:REGIME-V1", "entryPath": "MARKET_FLOW", "baselineOrigin": "T_G" }
 ```
 
 | 필드 | 규칙 |
 |---|---|
-| `searchId` | 010이 응답한 스냅샷 식별 키. 없는 키는 `404 RESOURCE_NOT_FOUND` |
+| `searchId` | 010이 응답한 스냅샷 식별 키(`RegimeSearchResult.searchId`). 없는 키는 `404 RESOURCE_NOT_FOUND` |
 | `entryPath` | `MARKET_FLOW` 또는 `STRATEGY_RESULT`. 그 밖의 값은 `400 INVALID_INPUT` |
+| `baselineOrigin` | `T_G` `T_ALL` `USER_SPECIFIED`. 010 응답의 `baselineOrigin`을 그대로 보낸다. 빠지거나 다른 값이면 `400 INVALID_INPUT` |
 
 | 동작 | 값 |
 |---|---|
@@ -194,8 +197,9 @@
 | 없으면 | `regime_search_log` 행과 `my_record` 행을 한 트랜잭션에 만들고 `201` |
 | 응답 | 목록 항목과 같은 본문 |
 
-`baselineOrigin`(T_G/T_ALL/USER_SPECIFIED)은 서버가 `searchId`와 010 응답 규칙으로 정하며 화면이 보내지
-않는다.
+`baselineOrigin`은 **화면이 보낸다.** 010의 `SnapshotKey`는 기준월 근거를 키에 넣지 않고(같은 월을 T_g로
+얻었든 지정했든 같은 계산이라), 서버는 그 검색 **요청**의 기준월 지정 여부로 판정한다. 006 서버는 `searchId`만
+받으므로 알 수 없고, 추정하면 원칙 VI 위반이다(R15).
 
 ## PATCH /my-records/{recordId}
 

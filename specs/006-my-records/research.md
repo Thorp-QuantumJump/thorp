@@ -59,19 +59,28 @@ FR-006의 "재계산 없이 저장된 동일 버전"은 이 경로가 이미 만
 **남는 사실 하나**: 이 방식은 링크를 가진 사람이 결과를 볼 수 있다는 005의 기존 성질을 그대로
 물려받는다. 그 성질을 바꾸는 판단은 005(FR-019·PD-23) 소유이며 006이 뒤집지 않는다.
 
-## R4. '설정 바꿔 비교'는 기존 화면 사이 계약 두 개를 채워 넣고 이동한다
+## R4. '설정 바꿔 비교'는 005의 `prefillStrategySettings`를 그대로 부른다
 
-**Decision**: 저장된 조건에서 `sessionStorage`의 `thorp.diagnosis.sectorSelection`(002 소유 계약)과
-`thorp.strategySettings`를 채운 뒤 `/strategy`로 이동한다. 새 인계 계약을 만들지 않는다.
+**Decision**: 006은 인계 코드를 만들지 않는다. 기록 상세가 돌려주는 `reopenPayload`(005 `ResultConfig`와
+같은 모양)를 005의 `frontend/src/components/result/prefillStrategySettings.ts`
+`prefillStrategySettings(config, navigate, signal)`에 넘긴다. 그 함수가 `thorp.diagnosis.sectorSelection`
+(002 계약)과 `thorp.strategySettings`(003)를 채우고 `/strategy`로 이동한다. 새 인계 계약도, 새 빌더도
+만들지 않는다.
 
-**Rationale**: 002의 [selection-handoff 계약](../002-sector-weight-selection/contracts/selection-handoff.md)이
-이미 탭 세션 보관 형식과 불변식, 그리고 "읽는 쪽은 페이로드를 신뢰하지 않는다"까지 정해 두었다.
-비중이 0.1%p 단위 정수라는 규칙도 그 계약에 있다. 006이 쓰는 쪽에 서면 FR-007의 "기존 조건이 채워진
-003 화면"이 추가 구현 없이 성립한다. 006이 만드는 페이로드의 형태와 검증 의무는
-[contracts/record-handoff.md](contracts/record-handoff.md)에 적는다.
+**Rationale**: 005 T068이 만든 이 함수는 docstring에 **"006의 '설정 바꿔 비교'도 이 함수를 쓴다"**고 적어
+두었다. 이미 등록표·섹터 목록을 읽어 `buildStrategySettings`·`buildSelectionSnapshot`으로 두 계약을 채우고,
+값을 고치지 않으며(원칙 VI), 저장소 실패를 `PrefillOutcome`으로 돌려준다. 같은 것을 006이 다시 쓰면
+두 구현이 어긋날 때 "결과에서 열면 되는데 기록에서 열면 안 되는" 모습으로 드러난다.
 
-**Alternatives considered**: 서버에 "설정 초안" 자원을 만들고 식별자로 넘긴다 — 비교를 위해 서버에
-자원을 만들지 않는다는 005 R-04의 판단과 어긋나고, 초안의 보관 기간이라는 새 결정 항목을 만든다.
+이 함수의 **대응표 정책을 006이 그대로 따른다**: 저장 당시 대응표 버전이 현재와 다르면 섹터·비중은
+넘기지 않고 전략·설정·분석 조건만 보관한 뒤 `reselectSectors`로 섹터·비중 단계를 안내한다. 003의
+`useSectorSelection`이 대응표 버전이 다른 선택을 애초에 이어받지 않으므로, 저장 당시 `mapVersion`을 넣어
+넘기는 처음 안은 003에서 되돌려질 뿐이었다. 이 동작은 spec FR-007에 적었다. 함수가 `FULL_PERIOD`가 아닌
+시나리오를 거절하므로 그런 기록은 `reopenSettings.available = false`다.
+
+**Alternatives considered**: 006 전용 빌더(`reopenSettings.ts`) — 위 이유로 중복. 저장 당시 `mapVersion`으로
+섹터를 넘긴다 — 003이 이어받지 않아 효과가 없고 002 계약을 바꿔야 한다. 서버에 "설정 초안" 자원을 만든다 —
+005 R-04와 어긋나고 보관 기간이라는 새 결정 항목을 만든다.
 
 ## R5. 사용자 식별은 `CurrentRequester`를 쓰고 인증은 정하지 않는다
 
@@ -81,7 +90,7 @@ FR-006의 "재계산 없이 저장된 동일 버전"은 이 경로가 이미 만
 
 **Rationale**: `specs/README.md` 공통 가정이 "다른 spec의 plan은 인증 방식을 다시 정하지 않고 014를
 따른다"로 정했고, 2026-09-18 명료화가 006의 선행 조건을 014 FR-008·FR-011·FR-012로 한정했다. 그
-기능은 이미 구현·계약 검증이 끝났다 — `GET /api/auth/me`, `ProtectedRoute`, `/records/*` 보호 경로,
+기능은 이미 구현·계약 검증이 끝났다 — `GET /auth/me`, `ProtectedRoute`, `/records/*` 보호 경로,
 `thorp.auth.returnTarget`(로그인 후 복귀)이 모두 동작한다. `CurrentRequester`는 세션의 `users.id`를
 읽는 기존 부품이며 `paramsearch`·`result` 컨트롤러가 이미 같은 방식으로 쓴다.
 
@@ -137,7 +146,8 @@ FR-006의 "재계산 없이 저장된 동일 버전"은 이 경로가 이미 만
 금지한 "결과가 바뀌지 않았는데 늘어나는 경고 목록"이다.
 
 `sector_etf_map_version`·`sector_etf_map_entry`는 `V20260911114500__etf_market_data.sql`에 이미 있고,
-기록의 참조 버전은 `backtest_result.versions`(JSONB)와 `param_search.reference_versions`에 남아 있다.
+기록의 참조 버전은 `backtest_run.versions`(JSONB, 접수가 확정한 값이라 **실패한 실행에도 있다**)와
+`param_search.reference_versions`에 남아 있다. `backtest_result.versions`는 워커의 자기 보고라 실패 행에는 없어 쓰지 않는다.
 판정은 `MyRecordMappingDriftChecker` 한 곳에 두고 화면이 계산하지 않는다.
 
 **Alternatives considered**: 버전 문자열이 다르면 알린다 — 구현은 한 줄로 끝나지만 위 이유로 결정과
@@ -247,7 +257,9 @@ FR-012의 나머지 항목(모드·분야·기준월·전체/표시 후보·제�
 **Decision**: `regime_search_log`에 행을 쓰는 것은 006이다(`RegimeSearchLogRepository` 주석: "기록을 만드는
 것은 006·014의 몫"). 기록은 화면이 `POST /my-records/regime-searches { searchId, entryPath }`를 불러
 남기고, 그 한 트랜잭션에서 로그 행과 `my_record` 행이 함께 생긴다. 010의 `GET /regime-searches`는
-바꾸지 않는다.
+바꾸지 않는다. `baselineOrigin`(T_G/T_ALL/USER_SPECIFIED)도 **화면이 보낸다** — 010의 `SnapshotKey`는
+기준월 근거를 키에 넣지 않고 서버는 `BaselineOrigin.of(mode, 기준월 지정 여부)`로 **요청**에서 판정하므로
+`searchId`만으로는 알 수 없다. 010 응답 `baselineOrigin`을 그대로 넘기면 006이 추정하지 않는다(원칙 VI).
 
 **Rationale**: 진입 경로(시장 흐름/전략 결과)는 스냅샷의 성질이 아니라 **요청의 성질**이고(010 FR-029)
 그것을 아는 것은 조회한 화면뿐이다. 서버가 자동으로 남기려면 010의 GET에 `entryPath` 인자와 쓰기
@@ -260,6 +272,21 @@ FR-012의 나머지 항목(모드·분야·기준월·전체/표시 후보·제�
 011의 `regime_link_search`도 `owner_user_id`·`entry_path`를 갖지만 **검색 자체가 아니라 연결(비교 묶음을
 붙인 것)의 기록**이고 익명이면 행을 만들지 않는다. 둘은 겹치지 않는다 — 006 항목은 `regime_search_log`
 행을 가리키고, 연결이 있으면 `regime_link_search`를 조인해 보인다(R9).
+
+## R17. 경제환경 기록의 '다시 보기'는 `/regime-search?searchId=`로 고정 조회한다
+
+**Decision**: 경제환경 항목의 '다시 보기'는 `/regime-search?searchId={snapshotKey}`로 이동하고, 010 화면
+`RegimeSearchPage`가 그 파라미터를 읽어 기존 API `getRegimeSearchById`(`GET /regime-searches/{searchId}`)로
+저장된 revision을 연다. 이 수신 코드는 010 소유 파일에 들어가므로 006 태스크로 두되 010 담당에게 알린다.
+
+**Rationale**: 010은 `searchById`·`RegimeSnapshotRepository`에 "006 기록이 고정한 항목을 그대로 연다"고
+서버와 API 클라이언트를 이미 만들어 두었지만, 화면(`RegimeSearchPage`)은 폼 상태로만 검색하고 URL
+파라미터를 읽지 않는다. 수신 자리가 없으면 FR-006의 "저장된 동일 버전"이 경제환경 항목에서 성립하지
+않는다 — 최신 revision이 열려 순위가 달라질 수 있다. 007 화면(`ParamSearchPage`)이 `?searchId=`로 재열기를
+지원하는 것과 같은 모양으로 맞춘다.
+
+**Alternatives considered**: 006이 별도 경제환경 결과 화면을 만든다 — 010 화면을 한 벌 더 만드는 일이다.
+'다시 보기'를 최신 검색으로 연다 — FR-006 위반이고 "동일 버전 조회" 표시가 거짓이 된다.
 
 ## R16. 단일 분석·탐색 묶음 항목은 접수 이벤트를 듣고 만든다
 
