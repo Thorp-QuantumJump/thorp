@@ -21,7 +21,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 `RegimeLinkRabbitConfig`의 `public static final String`과 워커 `regime_link/messaging.py`가 같은 값을
 가져야 하며 워커 테스트가 Java 파일을 읽어 대조한다(백테스트와 같은 방식).
 
-## 작업 메시지: `RegimeLinkJob` v1 — 목표 계약, DEP-004-011 검증 전 동결 금지
+## 작업 메시지: `RegimeLinkJob` v1
 
 ```json
 {
@@ -37,9 +37,13 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
                  "benchmarkInstrumentId": "KOSPI"},
   "inputs": {
     "portfolioSeries": [{"date": "2012-03-30", "equity": "10412000.00", "cash": "120000.00"}],
-    "weightsSeries": [{"date": "2012-03-30", "actual": {"091160.XKRX": "0.3980", "305720.XKRX": "0.3010", "244580.XKRX": "0.3010"}}],
-    "trades": [{"date": "2012-05-02", "instrumentId": "091160.XKRX", "side": "SELL", "quantity": 12, "price": "23150",
-                "costs": {"commission": "0", "spread": "0", "slippage": "254.00", "tax": "0"}, "reason": "REBALANCE"}]
+    "openingPositions": [{"instrumentId": "091160.XKRX", "quantity": 179}],
+    "dailyPositions": [{"date": "2012-05-02", "positions": [{"instrumentId": "091160.XKRX", "quantity": 167}]}],
+    "trades": [{"fillId": "FL-000022", "time": "2012-05-02T00:00:00Z", "instrumentId": "091160.XKRX",
+                "side": "SELL", "quantity": 12, "price": "23150.00", "referencePrice": "23200",
+                "costs": {"commission": "34.72", "spread": "46.40", "slippage": "116.00", "tax": "639.30"},
+                "cashCost": "674.02", "reason": "REBALANCE"}],
+    "cashFlows": [{"date": "2012-06-01", "instrumentId": "091160.XKRX", "type": "DISTRIBUTION", "amount": "16700"}]
   },
   "inputDigest": "e3b0…(64자)"
 }
@@ -48,9 +52,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 - `window.baselineDate`는 d0 **직전 거래일**이다. 연속 운용의 구간 수익률 기준값
   `equity[baselineDate]`가 여기서 나온다. `scenario=FRESH_CASH`면 기준은 `run.initialCash`이고
   `baselineDate`는 참고용이다(research R3).
-- `inputs.portfolioSeries`·`weightsSeries`(축약 예시의 옛 필드다. 확정 모양은 아래 "구간 입력 확장"의
-  `openingPositions`·`dailyPositions`)는 `baselineDate`부터 `lastAvailable`까지, `trades`는
-  `d0`~`lastAvailable` 안에 체결된 것만. **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,
+- `inputs.portfolioSeries`는 `baselineDate`~`lastAvailable`의 매일, `dailyPositions`·`trades`·`cashFlows`는
+  `d0`~`lastAvailable` 안의 것만, `openingPositions`는 `baselineDate` 이전 마지막 스냅샷 하나다.
+  **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,
   범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `INPUT_INCOMPLETE`로 실패한다 — 채우지 않는다. 자료 부족 판정은 발행 전 백엔드 몫이다(research R13).
 - `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`. 백엔드는 폐지
   전날까지의 거래일 수가 21 이상일 때만 작업을 발행하고, `window.lastAvailable`·`completedTradingDays`는 이미
@@ -58,7 +62,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
   이어지지만(폐지 종목을 마지막 종가로 평가) 백엔드는 그 구간을 담지 않는다(research R4).
 - `inputDigest` = 백엔드가 `inputs·window·job.scenario·marketData` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로
   돌려준다(재현 대조는 백엔드 몫).
-- 크기 상한: `dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
+- 크기 상한: `openingPositions`·`dailyPositions`의 종목 수 ≤ 대응표 섹터 수, `portfolioSeries`의 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고
   `FAILED(INPUT_TOO_LARGE)`.
 
 ## 이벤트 봉투
@@ -129,20 +133,28 @@ reject → DLQ다.
 두어 `window63`·`window21`·`kospi`를 대조한다(백테스트 픽스처와 같은 이유 — 기대값을 엔진 출력으로
 채우면 대조가 아니다).
 
-## 구간 입력 확장 — DEP-004-011
+## 구간 입력의 출처와 제약 — DEP-004-011 (대조 통과 2026-09-20)
 
-위 JSON은 기존 봉투를 설명하는 축약 예시이며 실행 가능한 확정 fixture가 아니다. M1 동결 전에
-아래 항목을 포함한 완전한 fixture로 교체한다. 004 저장 결과와의 필드 대응·독립 대조를 먼저 통과해야 한다.
+004 저장 결과로 위 `inputs`를 정확히 만들 수 있음을 독립 계산으로 확인했다(research R3 "독립 계산 대조
+결과": 전략 여섯 × 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간 손익 합이 모두 차 0).
+위 JSON이 확정 모양이고, 아래가 필드마다의 출처와 제약이다.
 
+- `inputs.portfolioSeries`: baselineDate~lastAvailable의 일별 `equity`·`cash`. 연속 운용의 구간 기준값이
+  `equity[baselineDate]`다. 004의 `portfolioSeries`에서 보유 수량은 아래 두 필드로 따로 뺀다.
 - `inputs.openingPositions`: baselineDate **이전 마지막** 보유 스냅샷의 종목별 수량(004는 수량이 바뀌는 날마다
   스냅샷을 남기므로 그 수량이 baselineDate의 수량이다). FRESH_CASH는 빈 목록.
 - `inputs.dailyPositions`: d0~lastAvailable 안에서 004가 남긴 보유 스냅샷(수량이 바뀐 날)만 그대로 담는다.
-  워커가 수량을 이월하고 그날 원시 종가를 곱해 일별 평가액을 만든다(004 엔진과 같은 식). 백엔드는 채우지 않는다.
+  백엔드는 채우지 않는다. **워커의 이월은 "체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다"이다** —
+  분할 같은 기업행위는 체결 밖에서 수량을 바꾸므로, 체결만 누적하면 그날부터 수량이 틀린다(대조에서 22개
+  구간 중 9개의 평가액·자산이 어긋났고 한 구간에서 최대 59개 행이었다. 종목 손익 항등식은 그때도 0이라
+  항등식만으로는 잡히지 않는다). 일별 평가액은 이월한 수량 × 그날 원시 종가다(004 엔진과 같은 식).
 - `inputs.trades`: round-trip 대신 004 `fills[]`(개별 체결) 그대로 — fillId·time·instrumentId·side·quantity·
   price·referencePrice·costs(commission/spread/slippage/tax)·cashCost. `cashCost`가 직접 차감 비용이며 체결가에
   반영된 호가차·슬리피지는 들어 있지 않다. 체결 기록이 없는 실행(`fills_recorded=false`)이면 발행하지 않는다.
-- `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다.
+- `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다. 체결과 이 현금흐름만으로
+  구간 현금이 되살아난다(대조에서 확인).
 - corporate action에 따른 수량·현금 변화와 가격 자료는 같은 버전으로 정합 검증한다. 확보되지 않은
   항목을 0이나 비례배분 비용으로 만들어내지 않는다.
-- holdings는 dailyPositions와 portfolioSeries에서 산출하며 weightsSeries가 일별이라고 가정하지 않는다.
-  입력 해시 대상에는 위 필드와 window·scenario·marketData 버전 전체가 포함된다.
+- holdings는 dailyPositions와 portfolioSeries에서 산출한다. 004의 `weightsSeries`는 리밸런싱 시점 비중이므로
+  일별 비중으로 쓰지 않으며 이 메시지에 담지 않는다. 입력 해시 대상에는 위 필드와 window·scenario·
+  marketData 버전 전체가 포함된다.
