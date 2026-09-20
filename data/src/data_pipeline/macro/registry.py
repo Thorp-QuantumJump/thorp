@@ -454,6 +454,21 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:
         raise RegistryError(f"지표가 하나도 없는 분야가 있다: {sorted(missing)}")
 
 
+def used_sources(
+    indicators: tuple[IndicatorDefinition, ...] = INDICATORS,
+) -> tuple[str, ...]:
+    """등록표가 실제로 쓰는 원천. 설정에 있는 넷 전부가 아니라 **쓰이는 것만** 돌려준다.
+
+    수집 진입점이 이 목록으로 설정을 읽는다. `config.SOURCE_IDS` 를 그대로 쓰면 등록표에서
+    빠진 원천의 접속 설정까지 요구하게 되고, 그 원천을 안 쓰기로 한 결정이 코드에서 지워진다.
+    """
+    seen: list[str] = []
+    for indicator in indicators:
+        if indicator.primary_source not in seen:
+            seen.append(indicator.primary_source)
+    return tuple(seen)
+
+
 def by_field() -> dict[str, tuple[IndicatorDefinition, ...]]:
     """분야별 지표. 표시 순서는 `INDICATORS` 의 순서를 따른다."""
     grouped: dict[str, list[IndicatorDefinition]] = {field_id: [] for field_id in FIELD_IDS}
