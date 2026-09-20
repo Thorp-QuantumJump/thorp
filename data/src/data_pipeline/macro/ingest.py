@@ -575,10 +575,16 @@ def record_item_status(
     outcomes: Sequence[IndicatorOutcome],
     *,
     mode: str = "REGULAR",
+    held: str | None = None,
 ) -> None:
-    """지표별 수집 결과를 남긴다 (T082, FR-011).
+    """지표별 수집 결과와 **발행 보류 여부**를 남긴다 (T082·T083, FR-011).
 
     008 조회가 이 표에서 실패 지표 목록을 읽는다. 쓰지 않으면 화면은 늘 "실패 없음"으로 보인다.
+
+    ``held`` 가 있으면 시도 행을 ``HELD`` 와 그 사유로 남긴다. **지표가 다 성공해도 그렇다** —
+    전 구간이 기대 대상월 수에 못 미쳐 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이지만
+    아무것도 발행되지 않았고, 그 둘을 같은 ``SUCCEEDED`` 로 적으면 DB 만 보는 사람은 구분하지
+    못한다. 보류 사유가 로그에만 있으면 로그가 지나간 뒤에는 아무 데도 없다.
     """
     now = datetime.now(UTC)
     with engine.begin() as connection:
@@ -594,16 +600,28 @@ def record_item_status(
             attempt_id = connection.execute(
                 text(
                     "INSERT INTO macro_collection_attempt"
-                    " (attempt_key, mode, started_at, finished_at, status)"
-                    " VALUES (:key, :mode, :now, :now, :status) RETURNING id"
+                    " (attempt_key, mode, started_at, finished_at, status, hold_reason)"
+                    " VALUES (:key, :mode, :now, :now, :status, :hold) RETURNING id"
                 ),
                 {
                     "key": attempt_key,
                     "mode": mode,
                     "now": now,
-                    "status": "PARTIAL" if failed else "SUCCEEDED",
+                    "status": "HELD" if held else ("PARTIAL" if failed else "SUCCEEDED"),
+                    "hold": held,
                 },
             ).scalar_one()
+        elif held is not None:
+            # 발행기가 시도 행을 만든 뒤 보류로 끝난 경우다. 발행기는 상태만 적고 사유는
+            # 예외로 올리므로, 그 사유가 여기서 행에 붙지 않으면 어디에도 남지 않는다.
+            connection.execute(
+                text(
+                    "UPDATE macro_collection_attempt"
+                    " SET status = 'HELD', hold_reason = :hold, finished_at = :now"
+                    " WHERE id = :id"
+                ),
+                {"hold": held, "now": now, "id": attempt_id},
+            )
         for outcome in outcomes:
             connection.execute(
                 text(
@@ -814,7 +832,7 @@ def run(
             held = str(error)
             logger.warning("발행 보류: %s", error)
 
-    record_item_status(engine, attempt_key, outcomes, mode=mode.upper())
+    record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), held=held)
 
     return IngestReport(
         attempt_key=attempt_key,

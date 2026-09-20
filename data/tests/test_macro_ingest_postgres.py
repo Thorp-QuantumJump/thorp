@@ -243,14 +243,19 @@ def test_publication_is_held_but_records_still_land(
     assert report.publication_held is not None
     with postgres_engine.begin() as connection:
         attempts = connection.execute(
-            text("SELECT status FROM macro_collection_attempt WHERE attempt_key = :key"),
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
             {"key": report.attempt_key},
-        ).scalars().all()
+        ).all()
         items = connection.execute(
             text("SELECT count(*) FROM macro_collection_item_status")
         ).scalar_one()
 
-    assert attempts == ["PARTIAL"]
+    # 아무것도 발행되지 않았으므로 성공이 아니고, 왜 막혔는지가 행에 함께 남는다 (T083).
+    assert len(attempts) == 1
+    status, hold_reason = attempts[0]
+    assert status == "HELD"
+    assert hold_reason, "보류했는데 사유가 DB 에 없다. 로그는 지나간다"
     assert items == len(seeded_indicators)
 
 
@@ -647,3 +652,110 @@ def test_regular_mode_is_not_judged_by_the_full_range(
     )
 
     assert report.publication_held is None or "기대에 못 미쳐" not in report.publication_held
+
+
+def test_a_held_load_does_not_look_like_a_successful_one(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """지표가 다 성공해도 발행을 막았으면 시도 행이 성공으로 남지 않는다 (T083).
+
+    적재 미달로 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이다. 그 사실만 적으면 DB 를
+    읽는 사람은 아무것도 발행되지 않았다는 것을 알 수 없고, 사유는 로그와 함께 지나간다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+        item_statuses = set(
+            connection.execute(
+                text("SELECT status FROM macro_collection_item_status"
+                     " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                     "                     WHERE attempt_key = :key)"),
+                {"key": report.attempt_key},
+            ).scalars().all()
+        )
+
+    assert status == "HELD"
+    assert "기대에 못 미쳐" in hold_reason
+    # 지표별로는 성공이 맞다. 둘을 함께 읽어야 무슨 일이 있었는지가 드러난다.
+    assert item_statuses == {ingest.STATUS_SUCCEEDED}
+
+
+def test_a_diagnostic_partial_run_is_held_with_its_reason(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """`--indicator` 진단 실행도 보류로 남는다. 발행하지 않았다는 사실은 같다."""
+    indicators = tuple(replace(i, series_start="2026-05") for i in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        (indicators[0],),
+        fetcher=StubFetcher(),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 7, 15),
+    )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+
+    assert status == "HELD"
+    assert "부분 수집" in hold_reason
+
+
+def test_a_published_run_keeps_its_successful_attempt(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """발행에 성공한 실행은 건드리지 않는다 — 보류 기록이 성공까지 덮으면 안 된다."""
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.published, report.publication_held
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+    assert status == "SUCCEEDED"
+    assert hold_reason is None
