@@ -473,3 +473,63 @@ def test_quota_is_recorded_and_publication_is_held(
         ).all()
 
     assert rows == [(ingest.STATUS_QUOTA, True)]
+
+
+def test_partial_run_records_without_attempting_publication(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """지표 하나만 받는 진단 실행이 기록을 남기고 끝난다.
+
+    운영에서 `--indicator` 로 경로를 확인하다 터진 자리다. 발행 판정기는 17개가 함께여야
+    한다며 **수집 시도 행을 만들기 전에** 던지고, 그러면 상태를 붙일 자리가 없어 실행 전체가
+    죽으면서 받은 것까지 사라졌다.
+    """
+    indicators = tuple(replace(i, series_start="2026-05") for i in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+    one = (indicators[0],)
+
+    report = ingest.run(
+        postgres_engine,
+        one,
+        fetcher=StubFetcher(),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 7, 15),
+    )
+
+    assert not report.published
+    assert "부분 수집" in (report.publication_held or "")
+    with postgres_engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT indicator_id FROM macro_collection_item_status"
+                " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                "                     WHERE attempt_key = :key)"
+            ),
+            {"key": report.attempt_key},
+        ).scalars().all()
+
+    assert rows == [one[0].indicator_id], "부분 실행인데 수집 기록이 남지 않았다"
+
+
+def test_item_status_creates_the_attempt_when_publication_never_started(
+    postgres_engine, tmp_path: Path
+) -> None:
+    """발행이 시도 행을 만들기 전에 끝나도 기록은 남는다."""
+    outcome = _outcome("all_industry_production", values=False)
+
+    ingest.record_item_status(postgres_engine, "orphan-attempt", [outcome], mode="INITIAL")
+
+    with postgres_engine.begin() as connection:
+        attempt = connection.execute(
+            text(
+                "SELECT mode, status FROM macro_collection_attempt"
+                " WHERE attempt_key = 'orphan-attempt'"
+            )
+        ).one()
+        items = connection.execute(
+            text("SELECT indicator_id, status FROM macro_collection_item_status")
+        ).all()
+
+    assert attempt == ("INITIAL", "PARTIAL")
+    assert items == [("all_industry_production", ingest.STATUS_FAILED)]
