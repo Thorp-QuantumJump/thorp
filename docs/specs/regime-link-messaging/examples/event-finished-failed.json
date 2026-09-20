@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "eventId": "EVT-RL-000004",
+  "linkId": "RL-20260918-000102",
+  "attempt": 1,
+  "type": "FINISHED",
+  "occurredAt": "2026-09-18T02:02:11Z",
+  "payload": {
+    "status": "FAILED",
+    "partial": false,
+    "error": {
+      "code": "INPUT_INCOMPLETE",
+      "message": "portfolioSeries 에 baselineDate 행이 없다"
+    },
+    "resource": {
+      "wallSeconds": "0.12"
+    }
+  }
+}

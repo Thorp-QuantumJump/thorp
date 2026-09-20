@@ -129,8 +129,8 @@ flowchart LR
 **묶음 경계**: 골격과 REST 예시(T002~T004)가 **M1a**, 구간 입력 대조와 메시지 계약(T000·T001·T005~T007)이
 **M1b**다. M4는 M1a만 있으면 시작한다 — 판정은 메시지 계약을 읽지 않는다.
 
-- [ ] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록
-- [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 T000 통과 뒤 계약 "구간 입력 확장" 절의 모양(`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만들고, 본문 축약 예시의 모양으로 만들지 않는다
+- [X] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록
+- [X] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 계약의 확정 모양(`portfolioSeries`·`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만든다 — T000 대조를 통과해 동결할 수 있고, 필드마다의 출처와 제약은 계약 "구간 입력의 출처와 제약" 절에 있다
 - [X] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·"내보내지 않는 것")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다
 - [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)
 - [X] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다
@@ -150,14 +150,14 @@ flowchart LR
 
 ## 워커 — 잘라내기·요약 (M2)
 
-- [ ] T008 (WK) `slicer.py`에 구간 판정: `window`(백엔드가 상장폐지 전날까지로 이미 줄여 보낸 `lastAvailable`·`completedTradingDays`)로 계산 구간을 정하고 `universe.items[].delistedOn`이 구간 안이면 `partial=true`. 연속 운용은 baselineDate의 자산·시작 보유 필수, FRESH_CASH는 initialCash·빈 시작 보유를 사용한다. 누락 필드는 0으로 만들지 않고 `INPUT_INCOMPLETE` 실패, 시장 자료 정합 실패는 `MARKET_DATA_MISSING` 실패다 — 워커는 `DATA_INSUFFICIENT`를 내지 않는다(research R13). research R3·DEP-004-011 선행
+- [ ] T008 (WK) `slicer.py`에 구간 판정: `window`(백엔드가 상장폐지 전날까지로 이미 줄여 보낸 `lastAvailable`·`completedTradingDays`)로 계산 구간을 정하고 `universe.items[].delistedOn`이 구간 안이면 `partial=true`. 연속 운용은 baselineDate의 자산·시작 보유 필수, FRESH_CASH는 initialCash·빈 시작 보유를 사용한다. 누락 필드는 0으로 만들지 않고 `INPUT_INCOMPLETE` 실패, 시장 자료 정합 실패는 `MARKET_DATA_MISSING` 실패다 — 워커는 `DATA_INSUFFICIENT`를 내지 않는다(research R13). research R3의 구간 정의를 따른다(DEP-004-011 대조 통과, T000)
 - [ ] T009 (WK) `slicer.py`에 구간 수익률·최대 하락 폭: 연속 운용은 `equity[baselineDate]` 기준, `FRESH_CASH`는 `run.initialCash` 기준(research R3). 63·21 두 구간을 같은 함수로. **연율화 없음**
 - [ ] T010 (WK) `slicer.py`에 구간 안 개별 체결 건수·비용 4종 합계·월당 거래횟수를 구현한다. round-trip의 진입과 청산을 구간 안 체결로 검증 없이 바꾸지 않는다. 거래 건수 / (구간 거래일 수 / 21), 소수 둘째 자리. 가격 반영 비용과 직접 차감 비용의 이중 차감 금지(R3)
-- [ ] T011 (WK) `slicer.py`에 R3의 구간 회전율·손실 기여 계산: 실제 체결대금 기반 연환산 회전율(`turnoverBasis=ANNUALIZED_252`), 시작·종료 보유 평가액과 구간 매수·매도·분배금·직접 비용 기반 종목 손익. 이익 종목도 포함하고 전체 손익 0일 때만 lossContribution 생략. 종목 손익 합을 구간 자산 증감과 대조. 누적 `calculate_analytics`를 그대로 호출하지 않고 `performance.py`도 수정하지 않는다. DEP-004-011 검증 선행
+- [ ] T011 (WK) `slicer.py`에 R3의 구간 회전율·손실 기여 계산: 실제 체결대금 기반 연환산 회전율(`turnoverBasis=ANNUALIZED_252`), 시작·종료 보유 평가액과 구간 매수·매도·분배금·직접 비용 기반 종목 손익. 이익 종목도 포함하고 전체 손익 0일 때만 lossContribution 생략. 종목 손익 합을 구간 자산 증감과 대조. 누적 `calculate_analytics`를 그대로 호출하지 않고 `performance.py`도 수정하지 않는다. DEP-004-011 대조 통과(T000)
 - [ ] T012 (WK) `slicer.py`에 KOSPI 참고: `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 63·21 구간 수익률·최대 하락 폭 **두 값만**. 전략과의 차이를 계산하지 않는다
 - [ ] T013 (WK) `slicer.py`에 결과 조립: `window63`·`window21`(`tradingDays`·`complete`)·`holdings`·`trades`·`kospi`·`basis{kind: HISTORICAL_REVISION, dataVersion, datasetId, analyticsMethod}`·`inputDigest` 통과 → `RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함)
-- [ ] T014 [P] (WK 테스트) `worker/tests/regime_link/fixtures/`와 워커를 import하지 않는 독립 계산 `docs/specs/regime-link-messaging/examples/reconciliation/reconcile.py`·`manual_reconciliation.json`: 63 완성·34 미완성·현금 시작·상장폐지·구간 이전 매수 후 일부 매도·분배금·종료 보유·직접 청산 비용·전체 손익 0·이익/손실 종목 혼합 사례. 입력 값은 DEP-004-011 대응표와 대조
-- [ ] T015 (WK 테스트) `test_slicer.py`: T014 독립 계산과 일치, 34거래일 미완성 표시, 현금 시작 baseline 행 없이 계산, 연속 운용 기준 행 누락 제한, 회전율 연환산 단위, 손익 합 대조, 손실 기여 합 1 또는 전체 손익 0일 때 생략, 구간 밖 손익·체결 제외, 가격 반영 비용 이중 차감 없음
+- [ ] T014 [P] (WK 테스트) `worker/tests/regime_link/fixtures/`와 워커를 import하지 않는 독립 계산 `docs/specs/regime-link-messaging/examples/reconciliation/reconcile.py`·`manual_reconciliation.json`: 63 완성·34 미완성·현금 시작·상장폐지·구간 이전 매수 후 일부 매도·분배금·**구간 안 분할(수량이 체결 밖에서 바뀌는 날)**·종료 보유·직접 청산 비용·전체 손익 0·이익/손실 종목 혼합 사례. 입력 값은 DEP-004-011 대응표와 대조
+- [ ] T015 (WK 테스트) `test_slicer.py`: T014 독립 계산과 일치, 34거래일 미완성 표시, 현금 시작 baseline 행 없이 계산, 연속 운용 기준 행 누락 제한, 회전율 연환산 단위, 손익 합 대조, 손실 기여 합 1 또는 전체 손익 0일 때 생략, 구간 밖 손익·체결 제외, 가격 반영 비용 이중 차감 없음, 구간 안 분할일에 `dailyPositions` 수량으로 맞춘 평가액(체결만 누적하면 그날부터 어긋난다), 스냅샷에 없는 종목은 그날 보유 0(부분 갱신이 아니라 덮어쓰기)
 
 ## 워커 — 소비자·엔트리포인트 (M3)
 
@@ -394,3 +394,14 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 
 ## Phase 12: Convergence
 
 - [X] T099 `contracts/regime-link-api.md` §3 예시의 `window63.lossContribution`이 보유 섹터 셋 중 둘(`SEMICONDUCTOR`·`BIO`)만 담아 바로 아래에 적은 규칙("이익 종목도 뺀 것 없이 들어가고 전체 구간 손익이 0일 때만 생략")과 어긋난다 — 같은 `result`의 `holdings`는 종목 셋을 보이고 `window21.lossContribution`도 섹터 셋을 담는다. `BATTERY`를 더해 두 구간이 같은 섹터 셋을 쓰고 합이 1이 되게 고친다. 값은 `docs/specs/regime-link-api/examples/link-completed.json`과 맞춘다 per contracts/regime-link-api.md §3·research R3 (contradicts)
+
+## Phase 13: Convergence
+
+- [X] T100 기업행위로 바뀐 수량의 이월 규칙을 고정한다 — 계약 "구간 입력 확장"의 `dailyPositions` 설명에 "체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다"를 명시하고, T014 독립 계산 사례와 T015 검증에 분할이 든 구간(`three_etf_24m`의 2024-03-04 244580 2:1)을 더한다. T000 대조에서 체결만 누적하면 22개 구간 중 9개의 평가액·자산이 어긋났고(한 구간 최대 59개 행), 종목 손익 항등식은 그때도 0이라 항등식만으로는 잡히지 않는다 per research R3 대조 결과·contracts/regime-link-messaging §구간 입력 확장·T008·T013~T015 (missing)
+- [X] T101 DEP-004-011 게이트가 통과된 상태를 계약과 plan에 반영한다 — `contracts/regime-link-messaging.md`의 "목표 계약, DEP-004-011 검증 전 동결 금지" 제목과 `inputs` 축약 예시(`portfolioSeries`·`weightsSeries`)를 "구간 입력 확장"의 확정 모양 하나로 합치고, plan "선행 게이트"의 "현재는 미완료" 문장을 통과 상태로 고친다. 계산 픽스처를 만드는 T001보다 먼저 끝낸다 per plan 선행 게이트·contracts/regime-link-messaging §작업 메시지·T001 (partial)
+- [ ] T102 `worker/scripts/regime_link_input_check.py`의 거처를 정한다 — T000 근거를 다시 돌리려고 두었고 어느 태스크도 소유하지 않는다. T014의 독립 계산이 들어온 뒤 회귀 테스트로 옮길지, 근거 재현 수단으로 스크립트에 남길지, 지울지를 정하고 결정을 research R3에 한 줄로 남긴다 per tasks T000 (unrequested)
+
+## Phase 14: Convergence
+
+- [ ] T103 백엔드가 구간 안 보유 스냅샷을 빠짐없이 담는 것을 조립의 의무로 고정한다 — `BacktestRunReadPort`·`RegimeLinkJobAssembler`(T026·T031)가 004의 `portfolioSeries[].positions` 중 d0~lastAvailable 안에 있는 것을 **한 줄도 빼지 않고** `dailyPositions`에 담고(기업행위로만 수량이 바뀐 날 포함, 리밸런싱일로 걸러내지 않는다), `RegimeLinkJobAssemblerTest`(T035)와 M4·M5 체크포인트에 "구간 안 004 스냅샷 수 = `dailyPositions` 행 수"를 더한다. 스냅샷이 빠지면 워커는 체결 누적값을 그대로 쓰고 종목 손익 항등식도 0이라 어긋남이 드러나지 않는다 per contracts/regime-link-messaging §구간 입력의 출처와 제약·T026·T031·T035 (missing)
+- [ ] T104 T031의 크기 상한 기준을 계약과 맞춘다 — "`dailyPositions`의 날짜 행 ≤ 65"를 "`portfolioSeries`의 날짜 행 ≤ 65, `openingPositions`·`dailyPositions`의 종목 수 ≤ 대응표 섹터 수"로 고친다. `dailyPositions`는 수량이 바뀐 날만 담아 65를 넘을 일이 거의 없어 그대로 두면 `INPUT_TOO_LARGE` 보호가 작동하지 않는다 per contracts/regime-link-messaging §작업 메시지 크기 상한·T031 (contradicts)
