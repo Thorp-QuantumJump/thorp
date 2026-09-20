@@ -51,9 +51,6 @@ public class MyRecordJpaEntity extends BaseEntity {
     @Column(nullable = false, length = 20, updatable = false)
     private RecordKind kind;
 
-    /** 같은 실행의 새 요청으로 다시 이을 수 있다(FR-009). 나머지 참조는 만든 뒤 바뀌지 않는다. */
-    private Long analysisRequestId;
-
     @Column(updatable = false)
     private Long analysisRunId;
 
@@ -98,7 +95,6 @@ public class MyRecordJpaEntity extends BaseEntity {
     MyRecordJpaEntity(
             Long ownerId,
             RecordKind kind,
-            Long analysisRequestId,
             Long analysisRunId,
             Long paramSearchId,
             Long regimeLogId,
@@ -113,7 +109,6 @@ public class MyRecordJpaEntity extends BaseEntity {
             boolean isCopy) {
         this.ownerId = ownerId;
         this.kind = kind;
-        this.analysisRequestId = analysisRequestId;
         this.analysisRunId = analysisRunId;
         this.paramSearchId = paramSearchId;
         this.regimeLogId = regimeLogId;
@@ -126,10 +121,6 @@ public class MyRecordJpaEntity extends BaseEntity {
         this.lastViewedAt = lastViewedAt;
         this.deletedAt = deletedAt;
         this.isCopy = isCopy;
-    }
-
-    void relinkAnalysisRequest(Long requestId) {
-        this.analysisRequestId = requestId;
     }
 
     void assignRecordIdOn(LocalDate date) {
@@ -160,10 +151,6 @@ public class MyRecordJpaEntity extends BaseEntity {
 
     RecordKind getKind() {
         return kind;
-    }
-
-    Long getAnalysisRequestId() {
-        return analysisRequestId;
     }
 
     Long getAnalysisRunId() {

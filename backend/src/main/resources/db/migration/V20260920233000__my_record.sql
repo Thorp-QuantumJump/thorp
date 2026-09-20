@@ -26,7 +26,11 @@ CREATE TABLE my_record (
     kind                VARCHAR(20)  NOT NULL,
     -- 종류별 원본 참조. 세 개를 nullable FK로 두고 kind로 짝을 맞춘다 — ref_id 한 컬럼으로 종류별
     -- 대상을 가리키면 어느 표도 그 값을 보증하지 않는다.
-    analysis_request_id BIGINT       REFERENCES backtest_request (id),
+    --
+    -- **요청(backtest_request)은 가리키지 않는다.** 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고
+    -- (동일 결과 재사용) 취소는 실행이 아니라 요청에 붙는다. 그중 하나를 골라 두면 그 요청만 취소된
+    -- 순간 기록이 틀린다 — 어느 요청을 골라도 뒤에 오는 취소가 그것을 틀리게 만들 수 있다. 공개
+    -- 토큰과 상태는 읽을 때 (소유자·실행)로 요청을 골라 읽는다(MyRecordRepository.findViewableRequestId).
     analysis_run_id     BIGINT       REFERENCES backtest_run (id),
     param_search_id     BIGINT       REFERENCES param_search (id),
     regime_log_id       BIGINT       REFERENCES regime_search_log (id),
@@ -56,14 +60,12 @@ CREATE TABLE my_record (
 
     -- 종류와 참조가 짝이 맞는다. 어긋나면 목록이 읽을 원본을 고를 수 없다.
     CONSTRAINT ck_my_record_ref_matches_kind CHECK (
-        (kind = 'ANALYSIS'      AND analysis_request_id IS NOT NULL AND analysis_run_id IS NOT NULL
+        (kind = 'ANALYSIS'      AND analysis_run_id IS NOT NULL
                                 AND param_search_id IS NULL AND regime_log_id IS NULL)
      OR (kind = 'SEARCH_BUNDLE' AND param_search_id IS NOT NULL
-                                AND analysis_request_id IS NULL AND analysis_run_id IS NULL
-                                AND regime_log_id IS NULL)
+                                AND analysis_run_id IS NULL AND regime_log_id IS NULL)
      OR (kind = 'REGIME_SEARCH' AND regime_log_id IS NOT NULL
-                                AND analysis_request_id IS NULL AND analysis_run_id IS NULL
-                                AND param_search_id IS NULL)),
+                                AND analysis_run_id IS NULL AND param_search_id IS NULL)),
 
     -- 기간은 둘이 함께 있거나 함께 없다.
     CONSTRAINT ck_my_record_period CHECK (

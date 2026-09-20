@@ -3,10 +3,10 @@ package com.ssafy.thorp.myrecord.infrastructure.persistence;
 import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;
 import com.ssafy.thorp.myrecord.domain.model.MyRecord;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
-import com.ssafy.thorp.myrecord.domain.model.RecordRef;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -20,10 +20,13 @@ import org.springframework.stereotype.Repository;
 public class MyRecordRepositoryImpl implements MyRecordRepository {
 
     private final MyRecordJpaRepository jpaRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final Clock clock;
 
-    public MyRecordRepositoryImpl(MyRecordJpaRepository jpaRepository, Clock clock) {
+    public MyRecordRepositoryImpl(
+            MyRecordJpaRepository jpaRepository, JdbcTemplate jdbcTemplate, Clock clock) {
         this.jpaRepository = jpaRepository;
+        this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
 
@@ -34,28 +37,6 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {
         }
         MyRecordJpaEntity entity = MyRecordMapper.toEntity(record);
         entity.assignRecordIdOn(LocalDate.now(clock));
-        return MyRecordMapper.toDomain(jpaRepository.save(entity));
-    }
-
-    /**
-     * 관리 엔티티를 읽어 요청 참조만 바꾼다.
-     *
-     * <p>도메인 객체를 새 엔티티로 merge 하면 {@code createdAt}(updatable=false)이 null 인 사본이 관리 상태를 덮어 쓴다.
-     * {@code ParamSearchRepositoryImpl.update}와 같은 규약이다.
-     */
-    @Override
-    public MyRecord relinkAnalysisRequest(MyRecord record) {
-        if (record.id() == null) {
-            throw new IllegalArgumentException("relink is for persisted records only: id is null");
-        }
-        MyRecordJpaEntity entity =
-                jpaRepository
-                        .findById(record.id())
-                        .orElseThrow(
-                                () ->
-                                        new IllegalArgumentException(
-                                                "my record not found: id=" + record.id()));
-        entity.relinkAnalysisRequest(((RecordRef.Analysis) record.ref()).requestId());
         return MyRecordMapper.toDomain(jpaRepository.save(entity));
     }
 
@@ -86,5 +67,27 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {
     @Override
     public long countActiveByOwnerAndKind(long ownerId, RecordKind kind) {
         return jpaRepository.countActiveByOwnerAndKind(ownerId, kind);
+    }
+
+    /**
+     * 취소하지 않은 것 중 최신, 없으면 취소한 것 중 최신.
+     *
+     * <p>{@code backtest_request} 는 004 소유라 엔티티를 매핑하지 않고 SQL 로 읽는다. 006 이 필요한 것은 식별자 하나다.
+     */
+    @Override
+    public Optional<Long> findViewableRequestId(long ownerId, long runId) {
+        return jdbcTemplate
+                .query(
+                        """
+                        SELECT id FROM backtest_request
+                        WHERE requester_id = ? AND run_id = ?
+                        ORDER BY (cancelled_at IS NOT NULL), created_at DESC, id DESC
+                        LIMIT 1
+                        """,
+                        (rs, rowNum) -> rs.getLong("id"),
+                        ownerId,
+                        runId)
+                .stream()
+                .findFirst();
     }
 }

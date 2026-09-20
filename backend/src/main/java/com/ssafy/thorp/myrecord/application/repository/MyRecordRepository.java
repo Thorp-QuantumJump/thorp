@@ -41,11 +41,15 @@ public interface MyRecordRepository {
     Optional<MyRecord> findActiveByOwnerAndRegimeLog(long ownerId, long regimeLogId);
 
     /**
-     * 단일 분석 항목이 가리키는 요청을 바꾼다(FR-009).
+     * 그 사용자가 이 실행에 대해 <b>지금 보는 요청</b>. 공개 토큰과 상태를 여기서 읽는다.
      *
-     * <p>바뀌는 것은 {@code analysis_request_id} 하나다. 실행·이름·저장일은 그대로다 — 같은 조건 재분석은 새 기록이 아니라 같은 기록이다.
+     * <p>기록은 요청을 저장하지 않는다. 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과 재사용) 취소는 실행이 아니라 요청에 붙기 때문이다 — 하나를 골라
+     * 저장해 두면 그 요청만 취소된 순간 목록이 '취소'를 보인다. 고르는 규칙은 <b>취소하지 않은 것 중 최신</b>이고, 전부 취소했으면 그중 최신이다(그때는
+     * 사용자에게 취소가 맞다).
+     *
+     * @return 그 사용자의 요청이 하나도 없으면 빈 값. 접수가 항목을 만들므로 정상 경로에서는 비지 않는다
      */
-    MyRecord relinkAnalysisRequest(MyRecord record);
+    Optional<Long> findViewableRequestId(long ownerId, long runId);
 
     /** 탐색 묶음 저장 상한 판정이 세는 경로(FR-018, research R11). 지운 항목은 세지 않는다. */
     long countActiveByOwnerAndKind(long ownerId, RecordKind kind);

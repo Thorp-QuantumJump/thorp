@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
+import com.ssafy.thorp.backtest.application.service.BacktestCancelService;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +31,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MyRecordIntakeIT extends IntegrationTestSupport {
 
     @Autowired private BacktestService backtestService;
+    @Autowired private BacktestCancelService cancelService;
+    @Autowired private MyRecordRepository records;
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
@@ -45,23 +49,44 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
                                 String.class,
                                 owner))
                 .isEqualTo("ANALYSIS");
-        assertThat(analysisRequestIdOf(owner)).isEqualTo(requestIdOf(accepted));
+        // 기록은 요청이 아니라 실행을 가리킨다. 공개 토큰과 상태는 읽을 때 요청을 골라 읽는다.
+        assertThat(analysisRunIdOf(owner)).isEqualTo(runIdOf(accepted));
+        assertThat(records.findViewableRequestId(owner, runIdOf(accepted)))
+                .hasValue(requestIdOf(accepted));
     }
 
     @Test
-    @DisplayName("같은 조건을 다시 접수하면 항목은 그대로이고 가리키는 요청만 최신으로 바뀐다(FR-009)")
-    void 같은_조건_재접수는_최신_요청으로_다시_잇는다() {
-        long owner = newUser("relink");
+    @DisplayName("같은 조건을 다시 접수해도 기록은 하나다(FR-009)")
+    void 같은_조건_재접수는_기록을_늘리지_않는다() {
+        long owner = newUser("reuse");
 
         BacktestJobResult first = backtestService.create(request(owner, PERIOD_B));
         BacktestJobResult second = backtestService.create(request(owner, PERIOD_B));
 
         // 같은 실행을 공유하고 요청만 새로 생긴다 — 004의 동일 결과 재사용이다.
         assertThat(requestIdOf(second)).isNotEqualTo(requestIdOf(first));
-        assertThat(recordCount(owner)).as("새 기록을 만들지 않는다").isEqualTo(1);
-        // 처음 요청에 묶인 채로 두면, 그 요청만 취소했을 때 실행이 계속 도는데도 목록이 '취소'를 보인다
-        // (BacktestDetailResult 는 요청의 취소 여부로 상태를 정한다).
-        assertThat(analysisRequestIdOf(owner)).as("가장 최근 요청을 가리킨다").isEqualTo(requestIdOf(second));
+        assertThat(runIdOf(second)).isEqualTo(runIdOf(first));
+        assertThat(recordCount(owner)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("요청 하나를 취소해도 살아 있는 요청이 있으면 그것을 본다 — 취소 순서와 무관하다")
+    void 취소한_요청이_아니라_살아있는_요청을_본다() {
+        long owner = newUser("cancel");
+        BacktestJobResult first = backtestService.create(request(owner, PERIOD_D));
+        BacktestJobResult second = backtestService.create(request(owner, PERIOD_D));
+        long runId = runIdOf(first);
+
+        // 나중 요청을 취소한다. 먼저 접수한 요청이 살아 있어 실행은 계속 돈다.
+        cancelService.cancel(second.backtestId(), owner);
+
+        // 취소는 실행이 아니라 요청에 붙는다(BacktestDetailResult). 취소한 요청을 보면 목록이
+        // '취소'와 부분 결과를 보이지만 이 사용자의 분석은 아직 돌고 있다.
+        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(first));
+
+        // 남은 요청까지 취소하면 그때는 취소가 맞다. 가장 최근 것을 본다.
+        cancelService.cancel(first.backtestId(), owner);
+        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(second));
     }
 
     @Test
@@ -83,6 +108,9 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
     private static final LocalDate[] PERIOD_C = {
         LocalDate.of(2024, 2, 7), LocalDate.of(2024, 11, 27)
     };
+    private static final LocalDate[] PERIOD_D = {
+        LocalDate.of(2024, 2, 8), LocalDate.of(2024, 11, 26)
+    };
 
     private int recordCount(long owner) {
         return jdbcTemplate.queryForObject(
@@ -93,9 +121,16 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
         return jdbcTemplate.queryForObject("SELECT count(*) FROM my_record", Integer.class);
     }
 
-    private long analysisRequestIdOf(long owner) {
+    private long analysisRunIdOf(long owner) {
         return jdbcTemplate.queryForObject(
-                "SELECT analysis_request_id FROM my_record WHERE owner_id = ?", Long.class, owner);
+                "SELECT analysis_run_id FROM my_record WHERE owner_id = ?", Long.class, owner);
+    }
+
+    private long runIdOf(BacktestJobResult result) {
+        return jdbcTemplate.queryForObject(
+                "SELECT run_id FROM backtest_request WHERE backtest_id = ?",
+                Long.class,
+                result.backtestId());
     }
 
     private long requestIdOf(BacktestJobResult result) {
