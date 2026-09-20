@@ -35,7 +35,12 @@ class FixtureFetcher:
         self._default = default
         self.calls: list[tuple[str, dict[str, str] | None]] = []
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str:
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
         self.calls.append((url, params))
         for marker, body in self._bodies.items():
             if marker in url or (params and marker in str(params)):
@@ -49,7 +54,12 @@ class FailingFetcher:
     def __init__(self, error: Exception) -> None:
         self._error = error
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str:
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
         raise self._error
 
 
@@ -122,7 +132,7 @@ def test_failure_does_not_stop_other_indicators(tmp_path):
     bad = _indicator("treasury_bond_3y")
 
     class Selective:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             if "817Y002" in url:
                 raise TransientSourceError("끊김")
             return _ecos_body()
@@ -290,3 +300,83 @@ def test_json_body_that_is_not_json_stops_instead_of_emptying(tmp_path):
 def test_fixture_bodies_are_valid_json():
     """표본이 깨지면 이 파일의 다른 시험이 엉뚱한 이유로 실패한다. 먼저 확인한다."""
     json.loads(_ecos_body())
+
+
+def test_daily_series_is_asked_with_eight_digit_dates(tmp_path):
+    """일별 계열은 ``YYYYMMDD`` 로 묻는다 (FR-005).
+
+    운영에서 국고채가 `[ERROR-101] 주기와 다른 형식의 날짜 형식입니다` 로 거절당한 자리다.
+    어댑터는 주기별 자릿수를 알고 있었고 부르는 쪽이 여섯 자리를 넘기고 있었다.
+    """
+    indicator = _indicator("treasury_bond_3y")
+    assert indicator.source_cycle == "D", "표본 전제가 바뀌었다"
+    fetcher = FixtureFetcher(
+        {}, default=(FIXTURES / "ecos" / "treasury_bond_3y_daily.json").read_text(encoding="utf-8")
+    )
+
+    ingest.collect(
+        [indicator],
+        fetcher=fetcher,
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 9, 20),
+        configs={"ecos": _config("ecos")},
+    )
+
+    url = fetcher.calls[0][0]
+    assert "/19981101/20260930/" in url, url
+
+
+def test_monthly_series_keeps_six_digit_dates(tmp_path):
+    """월별 계열은 여섯 자리 그대로다. 일별 고치면서 같이 늘어나면 안 된다."""
+    fetcher = FixtureFetcher({}, default=_ecos_body())
+
+    ingest.collect(
+        [_indicator("dubai_crude")],
+        fetcher=fetcher,
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 9, 20),
+        configs={"ecos": _config("ecos")},
+    )
+
+    url = fetcher.calls[0][0]
+    assert "/199201/202609/" in url, url
+
+
+def test_month_end_day_is_correct_for_february():
+    """일별 조회의 끝은 그 달 말일이다. 좁히면 마지막 거래일을 놓친다 (FR-006a)."""
+    from data_pipeline.macro.ingest import _ecos_period
+
+    assert _ecos_period("2024-02", "D", end=True) == "20240229"  # 윤년
+    assert _ecos_period("2026-02", "D", end=True) == "20260228"
+    assert _ecos_period("2000-02", "D", end=True) == "20000229"  # 400 으로 나뉘는 해
+    assert _ecos_period("1900-02", "D", end=True) == "19000228"  # 100 으로만 나뉘는 해
+    assert _ecos_period("2026-04", "D", end=True) == "20260430"
+
+
+def test_sdmx_is_asked_for_json(tmp_path):
+    """경제협력개발기구는 달라고 해야 JSON 을 준다.
+
+    기본 응답이 XML 이라 헤더 없이 부르면 "응답이 JSON 이 아니다"로 끝난다. 운영에서
+    g20_cli 가 그렇게 실패했다.
+    """
+    captured: list[dict[str, str] | None] = []
+
+    class HeaderSpy:
+        def get(self, url, params=None, headers=None):
+            captured.append(headers)
+            return "{}"
+
+    ingest.collect(
+        [_indicator("g20_cli")],
+        fetcher=HeaderSpy(),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 9, 20),
+        configs={"oecd": _config("oecd")},
+    )
+
+    assert captured, "요청이 나가지 않았다"
+    accept = (captured[0] or {}).get("Accept", "")
+    assert "json" in accept.lower(), f"JSON 을 요청하지 않았다: {accept!r}"
