@@ -46,7 +46,7 @@ public class RegimeLinkRepositoryImpl implements RegimeLinkRepository {
     }
 
     @Override
-    public RegimeLink save(RegimeLink link) {
+    public RegimeLink create(RegimeLink link) {
         return RegimeLinkMapper.toDomain(
                 jpaRepository.saveAndFlush(RegimeLinkMapper.toEntity(link, LocalDate.now(clock))));
     }

@@ -28,9 +28,4 @@ public enum AvailabilityState {
     public boolean excludedByFilter() {
         return this == DATA_INSUFFICIENT || this == POST_INCOMPLETE;
     }
-
-    /** 둘 중 나쁜 쪽. 비교 묶음 전체의 판정을 실행별 판정에서 모을 때 쓴다. */
-    public AvailabilityState worseOf(AvailabilityState other) {
-        return other == null || compareTo(other) <= 0 ? this : other;
-    }
 }

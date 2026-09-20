@@ -220,6 +220,8 @@ public class AvailabilityService {
 
         for (BundleRunView.UniverseEntry entry : run.universe()) {
             // ① 대응표 — 사례 관측 종료월의 버전에 그 섹터가 없으면 이 실행만 걸린다.
+            // 그 시점에 유효한 버전이 없으면(대응표 이력이 그 앞까지 닿지 않으면) 판정을 건너뛴다.
+            // 지금 버전으로 과거를 판정하면 대응표가 바뀐 날 옛 사례가 통째로 사라진다.
             if (mappingVersion != null
                     && entry.sectorId() != null
                     && !calendar.sectorMapped(mappingVersion, entry.sectorId())) {
@@ -269,6 +271,11 @@ public class AvailabilityService {
     /** 이 실행의 종목 가운데 사후 구간 <b>안에서</b> 폐지된 것 중 가장 이른 폐지일. */
     private LocalDate earliestDelisting(BundleRunView run, PostWindow window, Universe universe) {
         LocalDate windowEnd = window.lastAvailable();
+        if (windowEnd == null) {
+            // 판정 기준일까지 거래일이 하나도 없는 사례다. 구간이 없으므로 그 안의 폐지도 없다 —
+            // 여기서 미래의 폐지일을 잡으면 자료가 아직 없는 최근 사례를 DELISTED 로 설명하게 된다.
+            return null;
+        }
         LocalDate earliest = null;
         for (BundleRunView.UniverseEntry entry : run.universe()) {
             InstrumentHistory history = universe.history(entry.instrumentId());
@@ -277,7 +284,7 @@ public class AvailabilityService {
             }
             LocalDate delisted = history.delistedOn();
             if (delisted.isAfter(window.d0())
-                    && (windowEnd == null || !delisted.isAfter(windowEnd))
+                    && !delisted.isAfter(windowEnd)
                     && (earliest == null || delisted.isBefore(earliest))) {
                 earliest = delisted;
             }
