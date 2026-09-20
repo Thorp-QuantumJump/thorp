@@ -349,3 +349,84 @@ class TestShiftMonths:
     )
     def test_달을_옮긴다(self, period: str, months_: int, expected: str) -> None:
         assert monthly.shift_months(period, months_) == expected
+
+
+# ---------------------------------------------------------------------------
+# 개편 단절을 넘는 비교 (T076, FR-006)
+# ---------------------------------------------------------------------------
+def test_growth_within_one_segment_is_allowed():
+    values = months("housing_sale_price", "2026-01", ["100", "101"])
+    segments = {"2026-01": "A", "2026-02": "A"}
+    result = monthly.month_over_month(
+        values,
+        series_start="2026-01",
+        break_segments=segments,
+        linked_segments=frozenset({"A"}),
+    )
+    assert result[-1].value == Decimal("1")
+    assert result[-1].missing_reason is None
+
+
+def test_growth_across_linked_segments_is_allowed():
+    """등록표가 이은 구간끼리는 견줄 수 있다 — 주택가격이 실제로 이 경로다."""
+    values = months("housing_sale_price", "2026-01", ["100", "101"])
+    result = monthly.month_over_month(
+        values,
+        series_start="2026-01",
+        break_segments={"2026-01": "옛표", "2026-02": "현행"},
+        linked_segments=frozenset({"옛표", "현행"}),
+    )
+    assert result[-1].value == Decimal("1")
+
+
+def test_growth_across_an_unlinked_break_is_missing():
+    """연결 규칙이 없는 단절을 넘으면 값을 만들지 않는다.
+
+    이 값이 나오면 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준 것이다.
+    모양은 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다.
+    """
+    values = months("housing_sale_price", "2026-01", ["100", "101"])
+    result = monthly.month_over_month(
+        values,
+        series_start="2026-01",
+        break_segments={"2026-01": "옛표", "2026-02": "현행"},
+        linked_segments=frozenset({"현행"}),  # 옛 표는 잇지 못했다
+    )
+    assert result[-1].value is None
+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED
+    # 어느 두 달을 견주려다 막혔는지 남는다.
+    assert result[-1].lineage == ("2026-01", "2026-02")
+
+
+def test_unknown_segment_is_not_treated_as_linked():
+    """구간을 모르는 달은 이어졌다고 보지 않는다.
+
+    모르는 것과 이어진 것을 같이 두면, 구간 정보가 빠지는 순간 모든 비교가 조용히 허용된다.
+    """
+    values = months("housing_sale_price", "2026-01", ["100", "101"])
+    result = monthly.month_over_month(
+        values,
+        series_start="2026-01",
+        break_segments={"2026-02": "현행"},  # 2026-01 은 어느 표에서 왔는지 모른다
+        linked_segments=frozenset({"현행"}),
+    )
+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED
+
+
+def test_indicators_without_segments_compare_as_before():
+    """단절이 없는 지표는 구간을 주지 않는다. 그때는 모든 비교가 허용된다."""
+    values = months("consumer_price_index", "2026-01", ["100", "101"])
+    result = monthly.month_over_month(values, series_start="2026-01")
+    assert result[-1].value == Decimal("1")
+
+
+def test_year_over_year_also_checks_the_break():
+    values = months("g20_cli", "2025-01", ["100"] + [None] * 11 + ["110"])
+    values = [v for v in values if v.value is not None]
+    result = monthly.year_over_year(
+        values,
+        series_start="2025-01",
+        break_segments={"2025-01": "옛표", "2026-01": "현행"},
+        linked_segments=frozenset({"현행"}),
+    )
+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED

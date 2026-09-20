@@ -54,6 +54,12 @@ class NormalizedObservation:
     source_updated_at: str | None
     #: 우리가 받은 때. 발표일 자리에 넣지 않는다.
     received_at: datetime | None = None
+    #: 이 달의 값을 준 구간. 개편으로 나뉜 계열만 채워지고 나머지는 ``None`` 이다 (FR-010).
+    #:
+    #: 이 칸이 자료에 남아야 "2012년 값은 어느 표에서 왔나"를 되짚을 수 있다. 이어 붙인 값은
+    #: 계수를 곱한 것이라 원천이 그 달에 대해 직접 말한 값과 다르고, 둘을 구분하지 못하면
+    #: 개정 대조에서 우리가 곱한 계수를 원천의 개정으로 읽는다.
+    break_segment: str | None = None
 
     @property
     def is_missing(self) -> bool:
@@ -71,6 +77,8 @@ def normalize(
     as_of: date | None = None,
     trading_days: Mapping[str, Sequence[str]] | None = None,
     received_at: datetime | None = None,
+    break_segments: Mapping[str, str] | None = None,
+    linked_segments: frozenset[str] = frozenset(),
 ) -> list[NormalizedObservation]:
     """원천 관측을 변환하고, 그 결과를 원값·계보와 한 줄로 묶는다.
 
@@ -79,7 +87,12 @@ def normalize(
     """
     raw_by_period = {observation.period: observation for observation in observations}
     values = monthly.apply(
-        indicator, observations, as_of=as_of, trading_days=trading_days
+        indicator,
+        observations,
+        as_of=as_of,
+        trading_days=trading_days,
+        break_segments=break_segments,
+        linked_segments=linked_segments,
     )
 
     result: list[NormalizedObservation] = []
@@ -96,6 +109,9 @@ def normalize(
                 transformed_unit=indicator.transformed_unit,
                 source_updated_at=_updated_at(value, raw_by_period),
                 received_at=received_at,
+                break_segment=(
+                    None if break_segments is None else break_segments.get(value.period)
+                ),
             )
         )
     return result
