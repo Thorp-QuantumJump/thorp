@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.PinnedVersions;
+import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;
 import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
@@ -267,6 +268,7 @@ public class BacktestService {
         BacktestRequest request =
                 requestRepository.save(
                         newRequest(command, saved.getId(), ResultSource.NEW, retryOfRequestId));
+        publishRequestAccepted(command, request.getId(), saved.getId());
         events.publishEvent(
                 new BacktestJobDispatcher.RunAccepted(
                         saved.getId(), saved.getLifecycle().publishCount()));
@@ -300,6 +302,7 @@ public class BacktestService {
                 run.getStatus() == RunStatus.COMPLETED ? ResultSource.REUSED : ResultSource.JOINED;
         BacktestRequest request =
                 requestRepository.save(newRequest(command, run.getId(), source, retryOfRequestId));
+        publishRequestAccepted(command, request.getId(), run.getId());
         // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.
         reuseEventRepository.save(
                 BacktestReuseEvent.of(
@@ -309,6 +312,31 @@ public class BacktestService {
                         command.executionType(),
                         clock.instant()));
         return Optional.of(BacktestJobResult.of(request, run));
+    }
+
+    /**
+     * 접수한 요청 하나를 알린다. 새 실행도 합류·재사용도 같은 이벤트다 — 어느 쪽이든 요청은 새로 생긴다.
+     *
+     * <p>004 는 받는 쪽을 알지 못한다. 지금 듣는 것은 006 내 기록이고, 새 항목을 만들지 기존 항목을 돌려줄지는 그쪽이 판단한다(spec 006 research
+     * R16).
+     */
+    private void publishRequestAccepted(CreateBacktestCommand command, long requestId, long runId) {
+        events.publishEvent(
+                new BacktestRequestAccepted(
+                        requestId,
+                        runId,
+                        command.requesterId(),
+                        command.executionType(),
+                        command.items().stream()
+                                .map(
+                                        item ->
+                                                new BacktestRequestAccepted.AcceptedSector(
+                                                        item.sectorId(), item.targetWeight()))
+                                .toList(),
+                        command.strategyId(),
+                        command.start(),
+                        command.end(),
+                        clock.instant()));
     }
 
     /**
