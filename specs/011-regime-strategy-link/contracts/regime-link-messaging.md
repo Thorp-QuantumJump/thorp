@@ -32,7 +32,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
   "run": {"runId": "RUN-000123", "effectiveStart": "2010-04-02", "initialCash": "10000000.00",
           "analyticsMethod": "ANALYTICS-1"},
   "universe": {"mappingVersion": "SECTOR-ETF-2026-09",
-               "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "delistedOn": null}]},
+               "items": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX"},
+                         {"sectorId": "BATTERY", "instrumentId": "305720.XKRX"},
+                         {"sectorId": "BIO", "instrumentId": "244580.XKRX"}]},
   "marketData": {"datasetId": "KRX_DAILY_20260915", "dataVersion": "KRX-2026-09-09",
                  "benchmarkInstrumentId": "KOSPI"},
   "inputs": {
@@ -77,9 +79,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 {
   "window63": {"tradingDays": 63, "return": "0.0421", "maxDrawdown": "-0.0587", "tradeCount": 6, "tradesPerMonth": "2.00",
                "turnover": "0.3125", "turnoverBasis": "ANNUALIZED_252", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
-               "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BIO": "-0.20000000"}, "complete": true},
+               "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BATTERY": "0.32000000", "BIO": "-0.52000000"}, "complete": true},
   "window21": {"…같은 모양…": "…", "complete": true},
-  "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980"}}],
+  "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980", "305720.XKRX": "0.3010", "244580.XKRX": "0.3010"}}],
   "trades": [{"date": "2012-05-02", "instrumentId": "091160.XKRX", "side": "SELL", "quantity": 12, "price": "23150", "cost": "254.00", "reason": "REBALANCE"}],
   "kospi": {"window63": {"return": "0.0180", "maxDrawdown": "-0.0420"}, "window21": {"return": "0.0050", "maxDrawdown": "-0.0150"}},
   "basis": {"kind": "HISTORICAL_REVISION", "dataVersion": "KRX-2026-09-09", "datasetId": "KRX_DAILY_20260915", "analyticsMethod": "ANALYTICS-1"},
@@ -90,6 +92,10 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 - `window21`은 `d0`~`d21`, `window63`은 `d0`~`min(d63, lastAvailable)`. `tradingDays`가 실제 길이고
   `complete`가 63(또는 21)을 다 채웠는지다. 수익률·낙폭은 연환산하지 않으며 회전율은 ANNUALIZED_252다.
 - `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`, 소수 둘째 자리.
+- 시계열과 목록은 **구간 전체**를 담는다 — 작업의 `inputs.portfolioSeries`·`weightsSeries`는 `baselineDate`
+  부터 `lastAvailable`까지 모든 거래일을, 결과의 `holdings`는 구간의 모든 거래일을, 양쪽 `trades`는 구간의
+  모든 거래를 담는다(결과 `trades`의 개수 = `window63.tradeCount`). **위 예시는 지면 때문에 한 행씩만
+  싣는다** — 픽스처를 만들 때 예시의 길이를 그대로 옮기지 않는다.
 - `turnover`·`lossContribution`은 research R3의 구간 전용 산식이다. 누적 손익 함수에 조각을 그대로 넣지 않는다. 회전율은 `turnoverBasis=ANNUALIZED_252`이며 수익률·최대 낙폭은 연환산하지 않는다. 전체 구간 손익이 0일 때만 `lossContribution`을 생략하고 이익 종목도 포함한다.
 - `kospi`는 `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 두 값만. 전략과의 차이는 계산하지
   않는다.

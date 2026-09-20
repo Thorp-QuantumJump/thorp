@@ -1,0 +1,235 @@
+{
+  "success": true,
+  "data": {
+    "basis": {
+      "kind": "HISTORICAL_REVISION"
+    },
+    "search": {
+      "snapshotKey": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1",
+      "mode": "field",
+      "field": "LABOR",
+      "baselineMonth": "2026-07",
+      "status": "NEAREST_ONLY"
+    },
+    "bundle": {
+      "runs": [
+        {
+          "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+          "role": "BASE",
+          "strategyId": "FIXED_WEIGHT",
+          "strategyName": "내가 정한 비중",
+          "period": {
+            "start": "2010-01-04",
+            "end": "2025-12-30",
+            "effectiveStart": "2010-04-02"
+          },
+          "warmupTradingDays": 63
+        },
+        {
+          "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+          "role": "COMPARE",
+          "strategyId": "INVERSE_VOLATILITY",
+          "strategyName": "흐름을 따라 배분하기",
+          "period": {
+            "start": "2010-01-04",
+            "end": "2025-12-30",
+            "effectiveStart": "2010-04-02"
+          },
+          "warmupTradingDays": 63
+        }
+      ],
+      "instruments": [
+        {
+          "sectorId": "SEMICONDUCTOR",
+          "instrumentId": "091160.XKRX",
+          "listedOn": "2006-06-27"
+        },
+        {
+          "sectorId": "BATTERY",
+          "instrumentId": "305720.XKRX",
+          "listedOn": "2006-06-27"
+        },
+        {
+          "sectorId": "BIO",
+          "instrumentId": "244580.XKRX",
+          "listedOn": "2006-06-27",
+          "delistedOn": "2018-11-15"
+        }
+      ]
+    },
+    "filter": {
+      "applied": true,
+      "filterKey": "3a9f18c2d0e64b7f5a83c1904e27db6035f8ac1e92b40d7368ca5f1e0b9d4277",
+      "availableRange": {
+        "firstCaseEndMonth": "2006-09",
+        "lastCaseEndMonth": "2026-05"
+      },
+      "excludedCount": 2,
+      "minPostTradingDays": 21
+    },
+    "cases": [
+      {
+        "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03",
+        "endMonth": "2012-03",
+        "rank": 1,
+        "distance": "0.412938571034",
+        "postWindow": {
+          "d0": "2012-04-02",
+          "d21": "2012-05-02",
+          "d63": "2012-07-03",
+          "completedTradingDays": 63,
+          "complete21": true,
+          "complete63": true
+        },
+        "availability": {
+          "state": "NORMAL"
+        },
+        "perRun": [
+          {
+            "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+            "state": "NORMAL",
+            "completedTradingDays": 63
+          },
+          {
+            "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+            "state": "NORMAL",
+            "completedTradingDays": 63
+          }
+        ],
+        "shownInFiltered": true
+      },
+      {
+        "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11",
+        "endMonth": "2005-11",
+        "rank": 2,
+        "distance": "0.455192083761",
+        "postWindow": {
+          "d0": "2005-12-01",
+          "d21": "2005-12-29",
+          "d63": "2006-03-06",
+          "completedTradingDays": 63,
+          "complete21": true,
+          "complete63": true
+        },
+        "availability": {
+          "state": "DATA_INSUFFICIENT",
+          "reason": "UNLISTED"
+        },
+        "perRun": [
+          {
+            "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+            "state": "DATA_INSUFFICIENT",
+            "reason": "UNLISTED",
+            "completedTradingDays": 0
+          },
+          {
+            "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+            "state": "DATA_INSUFFICIENT",
+            "reason": "UNLISTED",
+            "completedTradingDays": 0
+          }
+        ],
+        "shownInFiltered": false
+      },
+      {
+        "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-05",
+        "endMonth": "2026-05",
+        "rank": 3,
+        "distance": "0.470336118942",
+        "postWindow": {
+          "d0": "2026-06-01",
+          "d21": "2026-06-30",
+          "d63": null,
+          "completedTradingDays": 34,
+          "complete21": true,
+          "complete63": false
+        },
+        "availability": {
+          "state": "OUT_OF_PERIOD"
+        },
+        "perRun": [
+          {
+            "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+            "state": "OUT_OF_PERIOD",
+            "completedTradingDays": 34
+          },
+          {
+            "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+            "state": "OUT_OF_PERIOD",
+            "completedTradingDays": 34
+          }
+        ],
+        "shownInFiltered": true
+      },
+      {
+        "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2018-08",
+        "endMonth": "2018-08",
+        "rank": 4,
+        "distance": "0.488204517630",
+        "postWindow": {
+          "d0": "2018-09-03",
+          "d21": "2018-10-02",
+          "d63": "2018-12-03",
+          "completedTradingDays": 63,
+          "complete21": true,
+          "complete63": true
+        },
+        "availability": {
+          "state": "NORMAL",
+          "partial": true,
+          "delistedOn": "2018-11-15"
+        },
+        "perRun": [
+          {
+            "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+            "state": "NORMAL",
+            "partial": true,
+            "delistedOn": "2018-11-15",
+            "completedTradingDays": 49
+          },
+          {
+            "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+            "state": "NORMAL",
+            "partial": true,
+            "delistedOn": "2018-11-15",
+            "completedTradingDays": 49
+          }
+        ],
+        "shownInFiltered": true
+      },
+      {
+        "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-06",
+        "endMonth": "2026-06",
+        "rank": 5,
+        "distance": "0.501847226094",
+        "postWindow": {
+          "d0": "2026-07-01",
+          "d21": null,
+          "d63": null,
+          "completedTradingDays": 14,
+          "complete21": false,
+          "complete63": false
+        },
+        "availability": {
+          "state": "POST_INCOMPLETE",
+          "reason": "RECENT"
+        },
+        "perRun": [
+          {
+            "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+            "state": "POST_INCOMPLETE",
+            "reason": "RECENT",
+            "completedTradingDays": 14
+          },
+          {
+            "publicToken": "b41e7d0925c6438af10e5b2c96d47831",
+            "state": "POST_INCOMPLETE",
+            "reason": "RECENT",
+            "completedTradingDays": 14
+          }
+        ],
+        "shownInFiltered": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "data": {
+    "basis": {
+      "kind": "HISTORICAL_REVISION",
+      "dataVersion": "KRX-2026-07-20"
+    },
+    "linkId": "RL-20260918-000107",
+    "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+    "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11",
+    "scenario": "CONTINUOUS",
+    "status": "COMPLETED",
+    "postWindow": {
+      "d0": "2005-12-01",
+      "d21": "2005-12-29",
+      "d63": "2006-03-06",
+      "completedTradingDays": 63,
+      "complete21": true,
+      "complete63": true
+    },
+    "availability": {
+      "state": "DATA_INSUFFICIENT",
+      "reason": "UNLISTED"
+    },
+    "runProgress": null,
+    "failure": null,
+    "queuedAt": null,
+    "startedAt": null,
+    "finishedAt": "2026-09-18T02:14:07Z",
+    "result": null
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "success": true,
+  "data": {
+    "basis": {
+      "kind": "HISTORICAL_REVISION",
+      "dataVersion": "KRX-2026-07-20"
+    },
+    "linkId": "RL-20260918-000101",
+    "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
+    "caseId": "FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03",
+    "scenario": "CONTINUOUS",
+    "status": "COMPLETED",
+    "postWindow": {
+      "d0": "2012-04-02",
+      "d21": "2012-05-02",
+      "d63": "2012-07-03",
+      "completedTradingDays": 63,
+      "complete21": true,
+      "complete63": true
+    },
+    "availability": {
+      "state": "NORMAL"
+    },
+    "runProgress": null,
+    "failure": null,
+    "queuedAt": "2026-09-18T02:14:07Z",
+    "startedAt": "2026-09-18T02:14:09Z",
+    "finishedAt": "2026-09-18T02:14:11Z",
+    "result": {
+      "window63": {
+        "tradingDays": 63,
+        "return": "0.0421",
+        "maxDrawdown": "-0.0587",
+        "tradeCount": 6,
+        "tradesPerMonth": "2.00",
+        "turnover": "0.3125",
+        "turnoverBasis": "ANNUALIZED_252",
+        "costs": {
+          "commission": "1830.00",
+          "spread": "2440.00",
+          "slippage": "1523.00",
+          "tax": "3120.00",
+          "total": "8913.00"
+        },
+        "lossContribution": {
+          "SEMICONDUCTOR": "1.20000000",
+          "BATTERY": "0.32000000",
+          "BIO": "-0.52000000"
+        },
+        "complete": true
+      },
+      "window21": {
+        "tradingDays": 21,
+        "return": "0.0110",
+        "maxDrawdown": "-0.0210",
+        "tradeCount": 2,
+        "tradesPerMonth": "2.00",
+        "turnover": "0.4211",
+        "turnoverBasis": "ANNUALIZED_252",
+        "costs": {
+          "commission": "610.00",
+          "spread": "813.00",
+          "slippage": "507.00",
+          "tax": "1040.00",
+          "total": "2970.00"
+        },
+        "lossContribution": {
+          "SEMICONDUCTOR": "0.84000000",
+          "BATTERY": "0.38000000",
+          "BIO": "-0.22000000"
+        },
+        "complete": true
+      },
+      "holdings": [
+        {
+          "date": "2012-04-02",
+          "actual": {
+            "091160.XKRX": "0.3980",
+            "305720.XKRX": "0.3010",
+            "244580.XKRX": "0.3010"
+          }
+        },
+        {
+          "date": "2012-05-02",
+          "actual": {
+            "091160.XKRX": "0.4012",
+            "305720.XKRX": "0.2994",
+            "244580.XKRX": "0.2994"
+          }
+        },
+        {
+          "date": "2012-07-03",
+          "actual": {
+            "091160.XKRX": "0.4034",
+            "305720.XKRX": "0.2981",
+            "244580.XKRX": "0.2985"
+          }
+        }
+      ],
+      "trades": [
+        {
+          "date": "2012-05-02",
+          "instrumentId": "091160.XKRX",
+          "side": "SELL",
+          "quantity": 120,
+          "price": "23150",
+          "cost": "1720.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-05-02",
+          "instrumentId": "305720.XKRX",
+          "side": "BUY",
+          "quantity": 90,
+          "price": "30480",
+          "cost": "1250.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-06-01",
+          "instrumentId": "091160.XKRX",
+          "side": "SELL",
+          "quantity": 80,
+          "price": "22980",
+          "cost": "1580.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-06-01",
+          "instrumentId": "244580.XKRX",
+          "side": "BUY",
+          "quantity": 60,
+          "price": "30210",
+          "cost": "1490.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-07-02",
+          "instrumentId": "305720.XKRX",
+          "side": "SELL",
+          "quantity": 50,
+          "price": "31040",
+          "cost": "1503.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-07-02",
+          "instrumentId": "091160.XKRX",
+          "side": "BUY",
+          "quantity": 70,
+          "price": "22410",
+          "cost": "1370.00",
+          "reason": "REBALANCE"
+        }
+      ],
+      "kospi": {
+        "window63": {
+          "return": "0.0180",
+          "maxDrawdown": "-0.0420"
+        },
+        "window21": {
+          "return": "0.0050",
+          "maxDrawdown": "-0.0150"
+        }
+      }
+    }
+  }
+}
