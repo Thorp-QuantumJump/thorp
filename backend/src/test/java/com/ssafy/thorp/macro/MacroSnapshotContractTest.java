@@ -138,6 +138,46 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("수집이 실패한 지표는 값이 남아 있어도 실패 상태로 나간다")
+    void marksIndicatorsWhoseCollectionFailed() {
+        seedRegistry();
+        seedPublishedDataset();
+        seedFailedCollection("production_2");
+
+        MacroSnapshotResult snapshot = service.getSnapshot();
+
+        assertThat(snapshot.collection().failedIndicatorIds()).containsExactly("production_2");
+        assertThat(statusOf(snapshot, "production_2")).isEqualTo("COLLECTION_FAILED");
+        // 어제 발행한 자료는 그대로 있다. 실패는 자료를 지우지 않는다(FR-011).
+        assertThat(valueOf(snapshot, "production_2")).isNotNull();
+        assertThat(statusOf(snapshot, "production_1")).isEqualTo("READY");
+    }
+
+    @Test
+    @DisplayName("예시 자료는 값이 멀쩡해도 모든 지표가 예시로 나간다")
+    void marksEveryIndicatorAsExampleData() {
+        seedRegistry();
+        seedPublishedDataset();
+        jdbc.update("UPDATE macro_dataset_version SET is_sample_data = TRUE");
+
+        MacroSnapshotResult snapshot = service.getSnapshot();
+
+        assertThat(snapshot.exampleData()).isTrue();
+        assertThat(snapshot.indicators()).allMatch(i -> "EXAMPLE".equals(i.status()));
+    }
+
+    @Test
+    @DisplayName("예시 표시가 수집 실패보다 앞선다 — 개발 대역이 운영처럼 보이지 않는다")
+    void exampleDataWinsOverCollectionFailure() {
+        seedRegistry();
+        seedPublishedDataset();
+        seedFailedCollection("production_2");
+        jdbc.update("UPDATE macro_dataset_version SET is_sample_data = TRUE");
+
+        assertThat(statusOf(service.getSnapshot(), "production_2")).isEqualTo("EXAMPLE");
+    }
+
+    @Test
     @DisplayName("완결 자료 버전이 없어도 17개 등록 정보와 자료 없음 상태를 내보낸다")
     void servesRegistrationsWithoutDataset() {
         seedRegistry();
@@ -288,6 +328,50 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                 datasetId,
                 registryId);
         jdbc.update("UPDATE macro_current_publication SET dataset_version_id = ?", datasetId);
+    }
+
+    private void seedFailedCollection(String failedIndicatorId) {
+        jdbc.update(
+                """
+                INSERT INTO macro_collection_attempt (attempt_key, mode, started_at, status)
+                VALUES ('ATT-1', 'REGULAR', now(), 'PARTIAL')
+                """);
+        Long attemptId =
+                jdbc.queryForObject(
+                        "SELECT id FROM macro_collection_attempt WHERE attempt_key = 'ATT-1'",
+                        Long.class);
+        jdbc.update(
+                """
+                INSERT INTO macro_collection_item_status (
+                    attempt_id, indicator_id, source, status, last_error_at, error_class)
+                VALUES (?, ?, 'kosis', 'FAILED', now(), 'ReadTimeout')
+                """,
+                attemptId,
+                failedIndicatorId);
+        jdbc.update(
+                """
+                INSERT INTO macro_collection_item_status (
+                    attempt_id, indicator_id, source, status, last_success_at)
+                VALUES (?, 'production_1', 'kosis', 'SUCCEEDED', now())
+                """,
+                attemptId);
+    }
+
+    private String statusOf(MacroSnapshotResult snapshot, String indicatorId) {
+        return snapshot.indicators().stream()
+                .filter(i -> i.indicatorId().equals(indicatorId))
+                .findFirst()
+                .orElseThrow()
+                .status();
+    }
+
+    private MacroSnapshotResult.ObservationValue valueOf(
+            MacroSnapshotResult snapshot, String indicatorId) {
+        return snapshot.indicators().stream()
+                .filter(i -> i.indicatorId().equals(indicatorId))
+                .findFirst()
+                .orElseThrow()
+                .latest();
     }
 
     private long idOf(String table, String versionKey) {
