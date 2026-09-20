@@ -201,7 +201,7 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
   "result": {
     "window63": {"tradingDays": 63, "return": "0.0421", "maxDrawdown": "-0.0587", "tradeCount": 6, "tradesPerMonth": "2.00",
                  "turnover": "0.3125", "turnoverBasis": "ANNUALIZED_252", "costs": {"commission": "0", "spread": "0", "slippage": "1523.00", "tax": "0", "total": "1523.00"},
-                 "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BIO": "-0.20000000"}, "complete": true},
+                 "lossContribution": {"SEMICONDUCTOR": "1.20000000", "BATTERY": "0.32000000", "BIO": "-0.52000000"}, "complete": true},
     "window21": {"tradingDays": 21, "return": "0.0110", "maxDrawdown": "-0.0210", "tradeCount": 2, "tradesPerMonth": "2.00",
                  "turnover": "0.4211", "turnoverBasis": "ANNUALIZED_252", "costs": {"…": "…"}, "lossContribution": {"SEMICONDUCTOR": "0.84000000", "BATTERY": "0.38000000", "BIO": "-0.22000000"}, "complete": true},
     "holdings": [{"date": "2012-04-02", "actual": {"091160.XKRX": "0.3980", "305720.XKRX": "0.3010", "244580.XKRX": "0.3010"}}],
