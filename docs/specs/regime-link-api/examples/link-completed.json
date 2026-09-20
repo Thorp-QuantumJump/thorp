@@ -55,7 +55,7 @@
         "maxDrawdown": "-0.0210",
         "tradeCount": 2,
         "tradesPerMonth": "2.00",
-        "turnover": "0.1040",
+        "turnover": "0.4211",
         "turnoverBasis": "ANNUALIZED_252",
         "costs": {
           "commission": "610.00",
@@ -102,18 +102,54 @@
           "date": "2012-05-02",
           "instrumentId": "091160.XKRX",
           "side": "SELL",
-          "quantity": 12,
+          "quantity": 120,
           "price": "23150",
-          "cost": "254.00",
+          "cost": "1720.00",
           "reason": "REBALANCE"
         },
         {
           "date": "2012-05-02",
           "instrumentId": "305720.XKRX",
           "side": "BUY",
-          "quantity": 9,
+          "quantity": 90,
           "price": "30480",
-          "cost": "188.00",
+          "cost": "1250.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-06-01",
+          "instrumentId": "091160.XKRX",
+          "side": "SELL",
+          "quantity": 80,
+          "price": "22980",
+          "cost": "1580.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-06-01",
+          "instrumentId": "244580.XKRX",
+          "side": "BUY",
+          "quantity": 60,
+          "price": "30210",
+          "cost": "1490.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-07-02",
+          "instrumentId": "305720.XKRX",
+          "side": "SELL",
+          "quantity": 50,
+          "price": "31040",
+          "cost": "1503.00",
+          "reason": "REBALANCE"
+        },
+        {
+          "date": "2012-07-02",
+          "instrumentId": "091160.XKRX",
+          "side": "BUY",
+          "quantity": 70,
+          "price": "22410",
+          "cost": "1370.00",
           "reason": "REBALANCE"
         }
       ],

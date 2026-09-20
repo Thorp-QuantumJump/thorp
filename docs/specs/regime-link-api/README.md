@@ -7,7 +7,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 백엔드와 워커가 주고받는 메시지 계약은 `../regime-link-messaging/`에 따로 둔다(spec 011 묶음 M1b에서 추가한다).
 
 예시 파일이 계약의 기준이다. 백엔드 통합 테스트가 실제 응답과 필드 단위로 대조하고, 프론트엔드 사례
-연결 화면 테스트가 같은 파일을 픽스처로 읽는다.
+연결 화면 테스트가 같은 파일을 픽스처로 읽는다. 한 곳만 예외인데, `link-completed.json`의 `holdings`는
+63거래일 전부가 아니라 앞·중간·끝 세 행으로 줄여 실었다. `trades`는 줄이지 않았고 개수가
+`window63.tradeCount`와 같다.
 
 | 파일 | 내용 |
 |---|---|
@@ -65,6 +67,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 - `availability`는 비교 묶음 전체의 판정(가장 나쁜 실행)이고 `perRun[]`이 실행별이다. 우선순위는
   `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`이다.
 - `OUT_OF_PERIOD`는 **필터 조건이 아니다.** `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다.
+- `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이고, 화면이 `UNLISTED`·
+  `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은
+  그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.
 - `postWindow`는 시장 달력 기준이라 미완성이면 `d21`·`d63`이 `null`이고 `completedTradingDays`가 진짜
   길이다. 실행별로 실제 확보한 거래일 수는 `perRun[].completedTradingDays`이며, 구간 안 상장폐지면
   폐지 전날까지로 줄어든다. 21거래일 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·`delistedOn`이다.
@@ -91,7 +96,10 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
   이름이 '손실'이지만 **이익 종목도 뺀 것 없이 들어간다** — 전체 손익과 반대로 움직인 섹터가 음수
   몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략한다.
 - `turnover`는 값만으로 뜻이 정해지지 않으므로 `turnoverBasis`(`ANNUALIZED_252`)를 함께 싣는다.
-  수익률과 최대 하락 폭은 연환산하지 않는다.
+  **두 구간 모두 연환산한 값이라** 구간이 짧다고 작아지지 않고, `window21`과 `window63`을 같은 단위로
+  나란히 놓을 수 있다. 수익률과 최대 하락 폭은 연환산하지 않는다.
+- `holdings`는 구간의 모든 거래일을, `trades`는 구간의 모든 거래를 담는다. 화면이 보유 비중 시계열과
+  거래 목록을 그리려면 둘 다 빠짐없이 있어야 한다.
 - `tradesPerMonth`는 `tradeCount ÷ (tradingDays ÷ 21)`을 소수 둘째 자리로 맞춘 값이다.
 - `scenario=FRESH_CASH`의 결과는 시작 금액 기준이고 `originPublicToken`으로 기준 실행을 가리킨다.
 
