@@ -117,34 +117,6 @@ public record MyRecord(
                 isCopy);
     }
 
-    /**
-     * 같은 실행을 가리키는 <b>다른 요청</b>으로 다시 잇는다(FR-009).
-     *
-     * <p>004의 동일 결과 재사용은 요청을 새로 만들고 실행을 공유한다. 항목이 처음 요청에 묶인 채로 있으면, 그 요청만 취소하고 다른 요청으로 실행이 계속될 때
-     * 목록이 계속 '취소'를 보인다 — 취소 여부는 실행이 아니라 <b>요청</b>에 붙기 때문이다({@code BacktestDetailResult}). 그래서 항목은 그
-     * 사용자의 <b>가장 최근 요청</b>을 가리킨다.
-     *
-     * @throws IllegalStateException 단일 분석 항목이 아니면. 묶음·경제환경 항목에는 요청이 없다
-     */
-    public MyRecord relinkAnalysisRequest(long requestId) {
-        if (!(ref instanceof RecordRef.Analysis analysis)) {
-            throw new IllegalStateException("only an analysis record has a request: " + recordId);
-        }
-        return new MyRecord(
-                id,
-                recordId,
-                ownerId,
-                new RecordRef.Analysis(requestId, analysis.runId()),
-                name,
-                sectorCodes,
-                strategyIds,
-                period,
-                savedAt,
-                lastViewedAt,
-                deletedAt,
-                isCopy);
-    }
-
     /** '다시 보기'로 열었다. 보관 기간을 나중에 도입할 수 있게 시각만 남긴다. */
     public MyRecord markViewed(Instant at) {
         return new MyRecord(

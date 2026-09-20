@@ -13,15 +13,11 @@ final class MyRecordMapper {
     private MyRecordMapper() {}
 
     static MyRecordJpaEntity toEntity(MyRecord record) {
-        Long requestId = null;
         Long runId = null;
         Long paramSearchId = null;
         Long regimeLogId = null;
         switch (record.ref()) {
-            case RecordRef.Analysis analysis -> {
-                requestId = analysis.requestId();
-                runId = analysis.runId();
-            }
+            case RecordRef.Analysis analysis -> runId = analysis.runId();
             case RecordRef.SearchBundle bundle -> paramSearchId = bundle.paramSearchId();
             case RecordRef.RegimeSearch regime -> regimeLogId = regime.logId();
         }
@@ -29,7 +25,6 @@ final class MyRecordMapper {
         return new MyRecordJpaEntity(
                 record.ownerId(),
                 record.kind(),
-                requestId,
                 runId,
                 paramSearchId,
                 regimeLogId,
@@ -63,9 +58,7 @@ final class MyRecordMapper {
     /** 종류가 곧 어느 컬럼이 찼는지다. 스키마 제약이 그 짝을 강제하므로 여기서는 종류만 보면 된다. */
     private static RecordRef refOf(MyRecordJpaEntity entity) {
         return switch (entity.getKind()) {
-            case ANALYSIS ->
-                    new RecordRef.Analysis(
-                            entity.getAnalysisRequestId(), entity.getAnalysisRunId());
+            case ANALYSIS -> new RecordRef.Analysis(entity.getAnalysisRunId());
             case SEARCH_BUNDLE -> new RecordRef.SearchBundle(entity.getParamSearchId());
             case REGIME_SEARCH -> new RecordRef.RegimeSearch(entity.getRegimeLogId());
         };

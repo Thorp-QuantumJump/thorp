@@ -63,13 +63,13 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
     void 세_종류가_왕복한다() {
         long owner = newUser();
         long runId = newRun();
-        long requestId = newRequest(owner, runId);
+        newRequest(owner, runId);
 
         MyRecord analysis =
                 records.save(
                         MyRecord.create(
                                 owner,
-                                new RecordRef.Analysis(requestId, runId),
+                                new RecordRef.Analysis(runId),
                                 RecordName.of("반도체 외 1 동일 비중 2026-09-20"),
                                 List.of("SEMICONDUCTOR", "BANK"),
                                 List.of("EQUAL_WEIGHT"),
@@ -105,8 +105,7 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                 .hasValueSatisfying(
                         found -> {
                             assertThat(found.kind()).isEqualTo(RecordKind.ANALYSIS);
-                            assertThat(found.ref())
-                                    .isEqualTo(new RecordRef.Analysis(requestId, runId));
+                            assertThat(found.ref()).isEqualTo(new RecordRef.Analysis(runId));
                             assertThat(found.sectorCodes())
                                     .containsExactly("SEMICONDUCTOR", "BANK");
                             assertThat(found.period().start()).isEqualTo(LocalDate.of(2019, 1, 2));
@@ -136,7 +135,6 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
     void 참조가_둘이면_거절한다() {
         long owner = newUser();
         long runId = newRun();
-        long requestId = newRequest(owner, runId);
         long paramSearchId = newParamSearch(owner);
         entityManager.flush();
 
@@ -145,15 +143,14 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                                 jdbcTemplate.update(
                                         """
                                         INSERT INTO my_record (id, record_id, owner_id, kind,
-                                            analysis_request_id, analysis_run_id, param_search_id,
+                                            analysis_run_id, param_search_id,
                                             name, sector_codes, strategy_ids, saved_at,
                                             created_at, updated_at)
                                         VALUES (nextval('my_record_seq'), 'MR-20260920-999001', ?,
-                                            'ANALYSIS', ?, ?, ?, '섞인 참조', '{}', '{}', NOW(),
+                                            'ANALYSIS', ?, ?, '섞인 참조', '{}', '{}', NOW(),
                                             NOW(), NOW())
                                         """,
                                         owner,
-                                        requestId,
                                         runId,
                                         paramSearchId))
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -164,16 +161,14 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
     void 같은_실행에_살아있는_항목은_하나다() {
         long owner = newUser();
         long runId = newRun();
-        records.save(analysisOf(owner, newRequest(owner, runId), runId, false));
+        records.save(analysisOf(owner, runId, false));
         entityManager.flush();
-
-        long secondRequestId = newRequest(owner, runId);
 
         // TestEntityManager 의 flush 는 Spring 변환을 거치지 않아 Hibernate 예외가 그대로 나온다.
         // 제약 이름까지 단언한다 — "무언가 걸렸다"가 아니라 어느 규칙이 막았는지가 이 검사의 내용이다.
         assertThatThrownBy(
                         () -> {
-                            records.save(analysisOf(owner, secondRequestId, runId, false));
+                            records.save(analysisOf(owner, runId, false));
                             entityManager.flush();
                         })
                 .isInstanceOf(ConstraintViolationException.class)
@@ -187,9 +182,9 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
     void 사본은_같은_실행을_가리킬_수_있다() {
         long owner = newUser();
         long runId = newRun();
-        records.save(analysisOf(owner, newRequest(owner, runId), runId, false));
+        records.save(analysisOf(owner, runId, false));
 
-        MyRecord copy = records.save(analysisOf(owner, newRequest(owner, runId), runId, true));
+        MyRecord copy = records.save(analysisOf(owner, runId, true));
         entityManager.flush();
 
         assertThat(copy.isCopy()).isTrue();
@@ -203,7 +198,7 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
     void 지운_항목_뒤에는_같은_실행으로_다시_만든다() {
         long owner = newUser();
         long runId = newRun();
-        MyRecord first = records.save(analysisOf(owner, newRequest(owner, runId), runId, false));
+        MyRecord first = records.save(analysisOf(owner, runId, false));
         entityManager.flush();
 
         jdbcTemplate.update(
@@ -214,7 +209,7 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
         assertThat(records.findActiveByOwnerAndRun(owner, runId)).isEmpty();
         assertThat(records.countActiveByOwnerAndKind(owner, RecordKind.ANALYSIS)).isZero();
 
-        records.save(analysisOf(owner, newRequest(owner, runId), runId, false));
+        records.save(analysisOf(owner, runId, false));
         entityManager.flush();
 
         assertThat(records.findActiveByOwnerAndRun(owner, runId)).isPresent();
@@ -271,12 +266,12 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                 .isEqualTo(later);
     }
 
-    private static MyRecord analysisOf(long owner, long requestId, long runId, boolean isCopy) {
+    private static MyRecord analysisOf(long owner, long runId, boolean isCopy) {
         return new MyRecord(
                 null,
                 null,
                 owner,
-                new RecordRef.Analysis(requestId, runId),
+                new RecordRef.Analysis(runId),
                 RecordName.of(isCopy ? "사본" : "같은 실행"),
                 List.of("BANK"),
                 List.of("EQUAL_WEIGHT"),

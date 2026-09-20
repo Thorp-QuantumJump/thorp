@@ -74,19 +74,15 @@ class MyRecordRegistrarTest {
     }
 
     @Test
-    @DisplayName("같은 실행에 살아 있는 항목이 있으면 새로 만들지 않고 최신 요청으로 다시 잇는다(FR-009)")
-    void 같은_실행의_두_번째_요청은_다시_잇는다() {
+    @DisplayName("같은 실행에 살아 있는 항목이 있으면 새로 만들지 않는다 — 동일 결과 재사용(FR-009)")
+    void 같은_실행의_두_번째_요청은_항목을_만들지_않는다() {
         when(records.findActiveByOwnerAndRun(OWNER, RUN_ID))
                 .thenReturn(Optional.of(existingRecord()));
 
         registrar.on(accepted(OWNER, ExecutionType.SINGLE));
 
+        // 기록은 요청이 아니라 실행을 가리키므로 새 요청이 생겨도 고칠 것이 없다.
         verify(records, never()).save(any());
-        // 처음 요청에 묶인 채로 두면 그 요청만 취소했을 때 실행이 계속 도는데도 목록이 '취소'를 보인다.
-        ArgumentCaptor<MyRecord> relinked = ArgumentCaptor.forClass(MyRecord.class);
-        verify(records).relinkAnalysisRequest(relinked.capture());
-        Assertions.assertThat(relinked.getValue().ref())
-                .isEqualTo(new RecordRef.Analysis(11L, RUN_ID));
     }
 
     @Test
@@ -99,8 +95,7 @@ class MyRecordRegistrarTest {
 
         ArgumentCaptor<MyRecord> saved = ArgumentCaptor.forClass(MyRecord.class);
         verify(records).save(saved.capture());
-        Assertions.assertThat(saved.getValue().ref())
-                .isEqualTo(new RecordRef.Analysis(11L, RUN_ID));
+        Assertions.assertThat(saved.getValue().ref()).isEqualTo(new RecordRef.Analysis(RUN_ID));
     }
 
     @Test
@@ -162,7 +157,7 @@ class MyRecordRegistrarTest {
     private static MyRecord existingRecord() {
         return MyRecord.create(
                 OWNER,
-                new RecordRef.Analysis(10L, RUN_ID),
+                new RecordRef.Analysis(RUN_ID),
                 RecordName.of("기존"),
                 List.of("BANK"),
                 List.of("EQUAL_WEIGHT"),

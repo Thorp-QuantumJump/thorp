@@ -13,12 +13,15 @@ public sealed interface RecordRef {
     RecordKind kind();
 
     /**
-     * 단일 분석.
+     * 단일 분석. <b>실행만 가리킨다.</b>
      *
-     * @param requestId 이 사용자의 요청. 공개 토큰을 여기서 읽어 '다시 보기' 링크로 쓴다(research R3)
-     * @param runId 공용 계산. 같은 조건 재분석 판정(FR-009)이 이 값으로 기존 항목을 찾는다 — 요청은 새로 생겨도 실행은 같다
+     * <p>요청({@code backtest_request})을 가리키지 않는 이유: 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과 재사용) 취소는 실행이
+     * 아니라 요청에 붙는다. 그중 하나를 골라 두면 그 요청만 취소된 순간 기록이 틀린 상태(취소·부분 결과)를 보이고, 어느 요청을 골라도 뒤에 오는 취소가 그것을 틀리게
+     * 만들 수 있다. 공개 토큰과 상태는 읽을 때 (소유자·실행)로 요청을 골라 읽는다.
+     *
+     * @param runId 공용 계산. 같은 조건 재분석 판정(FR-009)도 이 값으로 기존 항목을 찾는다
      */
-    record Analysis(long requestId, long runId) implements RecordRef {
+    record Analysis(long runId) implements RecordRef {
         @Override
         public RecordKind kind() {
             return RecordKind.ANALYSIS;

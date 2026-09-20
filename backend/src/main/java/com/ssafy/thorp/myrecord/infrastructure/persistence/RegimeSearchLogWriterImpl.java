@@ -47,6 +47,8 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {
      *
      * <p>{@code snapshotId}는 덮어쓰지 않는다 — 처음 본 revision 을 고정하는 값이라 나중 조회가 그것을 바꾸면 "무엇을 봤는지"가 흔들린다.
      * 철회로 NULL 이 된 것도 그대로 둔다.
+     *
+     * <p>열람 시각은 <b>뒤로 가지 않는다</b>. 동시에 두 번 열면 늦은 시각이 먼저 들어가고 이른 시각이 뒤에 덮을 수 있다.
      */
     @Override
     public long append(
@@ -64,7 +66,8 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {
                              baseline_origin, viewed_at)
                         VALUES (?, ?, ?, ?, ?, ?)
                         ON CONFLICT (owner_user_id, snapshot_key, entry_path)
-                        DO UPDATE SET viewed_at = EXCLUDED.viewed_at
+                        DO UPDATE SET viewed_at =
+                            GREATEST(regime_search_log.viewed_at, EXCLUDED.viewed_at)
                         RETURNING id
                         """,
                         Long.class,
@@ -77,10 +80,11 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {
         return id;
     }
 
+    /** 뒤로 가지 않는다. 늦게 도착한 옛 요청이 최신 열람 시각을 과거로 되돌리면 보관 기간 판단이 흔들린다. */
     @Override
     public void touch(long logId, Instant viewedAt) {
         jdbcTemplate.update(
-                "UPDATE regime_search_log SET viewed_at = ? WHERE id = ?",
+                "UPDATE regime_search_log SET viewed_at = GREATEST(viewed_at, ?) WHERE id = ?",
                 java.sql.Timestamp.from(viewedAt),
                 logId);
     }
