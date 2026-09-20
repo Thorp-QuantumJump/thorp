@@ -380,3 +380,16 @@ def test_sdmx_is_asked_for_json(tmp_path):
     assert captured, "요청이 나가지 않았다"
     accept = (captured[0] or {}).get("Accept", "")
     assert "json" in accept.lower(), f"JSON 을 요청하지 않았다: {accept!r}"
+    # 판본까지 못 박는다. 1.0 은 structure 하나를, 2.0 은 structures 배열을 준다 —
+    # 어댑터는 2.0 을 읽으므로 판본을 비우면 원천이 1.0 을 주고 파싱이 실패한다.
+    assert "2.0.0" in accept, f"SDMX 판본을 고정하지 않았다: {accept!r}"
+
+
+def test_oecd_fixture_is_sdmx_json_2(tmp_path):
+    """표본이 2.0 판본인지 확인한다. 이 전제가 깨지면 위 헤더 고정이 틀린 것이 된다."""
+    import json
+
+    payload = json.loads((FIXTURES / "oecd" / "g20_cli_aa_ix.json").read_text(encoding="utf-8"))
+
+    assert "2.0.0" in payload["meta"]["schema"]
+    assert "structures" in payload["data"]

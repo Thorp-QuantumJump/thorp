@@ -66,8 +66,12 @@ STATUS_RIGHTS_PENDING = "RIGHTS_PENDING"
 STATUS_RIGHTS_UNVERIFIED = "RIGHTS_UNVERIFIED"
 
 #: 경제협력개발기구 SDMX 에 JSON 을 요청하는 헤더.
+#:
+#: **판본을 2.0 으로 못 박는다.** 1.0 은 최상위에 ``structure`` 하나를 두고 2.0 은
+#: ``structures`` 배열을 둔다. 어댑터는 2.0 모양을 읽으므로 판본을 비워 두거나 1.0 을 먼저
+#: 적으면 원천이 1.0 을 주고 "응답에 structures 가 없다"로 끝난다 — 리허설에서 그렇게 걸렸다.
 _SDMX_JSON_HEADERS: Final[dict[str, str]] = {
-    "Accept": "application/vnd.sdmx.data+json;version=1.0.0-wd, application/json"
+    "Accept": "application/vnd.sdmx.data+json;version=2.0.0"
 }
 
 
