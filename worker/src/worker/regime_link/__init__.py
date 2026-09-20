@@ -13,5 +13,6 @@
 * ``consumer`` 수신·검증·계산 호출·발행 순서·ACK 판단
 * ``rabbitmq`` pika 구현체
 
-이 묶음(M1a)은 자리만 만든다. 각 모듈의 내용은 M1b~M3에서 채운다.
+``contracts``·``messaging``은 M1b에서 채웠다. 계산(``slicer``)과 소비·발행
+(``consumer``·``rabbitmq``)은 M2·M3에서 채운다.
 """
