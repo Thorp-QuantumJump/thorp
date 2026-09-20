@@ -21,9 +21,15 @@ public record AnalysisPeriod(LocalDate start, LocalDate end) {
         }
     }
 
-    /** 둘 다 있으면 기간, 둘 다 없으면 {@code null}. 한쪽만 오면 스키마 제약과 어긋나므로 거절한다. */
+    /**
+     * 둘 다 있을 때만 기간이다. 한쪽만 온 접수는 기간 없이 기록한다.
+     *
+     * <p>여기서 거절하지 않는 이유: 이 값은 목록의 필터·표시에 쓰는 복제본이고, 006의 기록 생성은 접수 트랜잭션 안에서 돈다. 반쪽짜리 기간에 예외를 던지면
+     * <b>006이 004·007의 접수를 되돌린다</b> — 기록하려다 분석을 못 하게 만드는 것이 가장 나쁜 실패다. 스키마의 {@code
+     * ck_my_record_period}도 둘을 함께 두거나 함께 비우도록 강제하므로 이 변환이 곧 그 제약이다.
+     */
     public static AnalysisPeriod ofNullable(LocalDate start, LocalDate end) {
-        if (start == null && end == null) {
+        if (start == null || end == null) {
             return null;
         }
         return new AnalysisPeriod(start, end);
