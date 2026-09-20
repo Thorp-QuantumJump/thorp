@@ -241,6 +241,24 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
         // 진입 경로가 다르면 다른 기록이다 — 한쪽이 다른 쪽을 대체하지 않는다(Story 3 시나리오 4).
         assertThat(regimeLogs.findActive(owner, snapshotKey, EntryPath.STRATEGY_RESULT)).isEmpty();
 
+        // 같은 검색을 다시 열어도 행이 늘지 않는다. 조회한 뒤 없으면 넣는 방식이면 동시에 두 번 열 때
+        // 둘 다 "없음"을 읽어 기록이 둘이 되고, 목록에 같은 항목이 두 줄로 남는다.
+        long again =
+                regimeLogs.append(
+                        owner,
+                        snapshotKey,
+                        null,
+                        EntryPath.MARKET_FLOW,
+                        BaselineOrigin.T_G,
+                        SAVED_AT.plusSeconds(60));
+        assertThat(again).isEqualTo(logId);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM regime_search_log WHERE owner_user_id = ?",
+                                Integer.class,
+                                owner))
+                .isEqualTo(1);
+
         Instant later = SAVED_AT.plusSeconds(3600);
         regimeLogs.touch(logId, later);
         entityManager.flush();

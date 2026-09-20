@@ -44,37 +44,6 @@ public class RegimeSearchLogJpaEntity {
 
     protected RegimeSearchLogJpaEntity() {}
 
-    /**
-     * 행 하나를 만든다. <b>부르는 쪽은 006이다</b> — 010은 이 표를 읽기만 한다(FR-032).
-     *
-     * <p>{@code entryPath}·{@code baselineOrigin}을 문자열로 받는 이유: 값의 계약은 스키마의 {@code
-     * ck_regime_log_entry_path}·{@code ck_regime_log_baseline_origin}이고, 010은 그 enum을 두지 않았다. 행을 쓰는
-     * 쪽이 자기 타입으로 갖고 여기에 이름만 넘긴다.
-     *
-     * @param snapshotId 고정할 revision. 철회(FR-035)로 사라지면 NULL이 되고 {@code snapshotKey} 사본으로 무엇을 봤는지는
-     *     남는다
-     */
-    public static RegimeSearchLogJpaEntity create(
-            long ownerUserId,
-            Long snapshotId,
-            String snapshotKey,
-            String entryPath,
-            String baselineOrigin,
-            Instant viewedAt) {
-        RegimeSearchLogJpaEntity entity = new RegimeSearchLogJpaEntity();
-        entity.ownerUserId = ownerUserId;
-        entity.snapshotId = snapshotId;
-        entity.snapshotKey = snapshotKey;
-        entity.entryPath = entryPath;
-        entity.baselineOrigin = baselineOrigin;
-        entity.viewedAt = viewedAt;
-        return entity;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
     Long getSnapshotId() {
         return snapshotId;
     }
