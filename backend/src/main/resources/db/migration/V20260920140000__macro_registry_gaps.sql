@@ -60,3 +60,28 @@ ALTER TABLE macro_calculation_registry_version
 -- 있는 이유까지 적어 둔다(constitution 미확인 항목 처리).
 ALTER TABLE macro_calculation_registry_version
     ADD COLUMN refresh_months_basis TEXT;
+
+-- ---------------------------------------------------------------------------
+-- 5. 발행 보류를 수집 기록에 남긴다 (T083, FR-011·FR-011b(3))
+-- ---------------------------------------------------------------------------
+-- 17개를 다 받았는데 전 구간이 기대 대상월 수에 못 미쳐 발행을 막은 실행은, 지금까지 시도 행이
+-- `SUCCEEDED` 로 남았다. 지표는 정말 다 성공했으니 거짓은 아니지만, **아무것도 발행되지 않았는데
+-- DB 만 보면 완전히 성공한 실행과 구분되지 않는다.** 보류 사유는 로그에만 있고 로그는 지나간다.
+--
+-- `PARTIAL` 로 대신할 수 없다. 그것은 "일부 지표만 성공"이라 지표가 다 성공한 이 경우를 말하지
+-- 못하고, 어차피 어느 지표가 실패했는지는 item_status 가 이미 들고 있다. 여기 status 가 답해야
+-- 하는 물음은 "이 실행의 결과가 밖으로 나갔는가"다.
+--
+-- 사유를 status 와 함께 두는 이유는, 보류를 본 사람이 곧바로 다음에 무엇을 볼지 알아야 하기
+-- 때문이다 — 지표가 덜 찬 것과 전 구간이 짧은 것은 고칠 자리가 다르다.
+ALTER TABLE macro_collection_attempt DROP CONSTRAINT ck_macro_collection_attempt_status;
+ALTER TABLE macro_collection_attempt
+    ADD CONSTRAINT ck_macro_collection_attempt_status CHECK (
+        status IN ('RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'HELD'));
+
+ALTER TABLE macro_collection_attempt ADD COLUMN hold_reason TEXT;
+
+-- 사유 없는 보류는 로그로 돌아가라는 말과 같다.
+ALTER TABLE macro_collection_attempt
+    ADD CONSTRAINT ck_macro_collection_attempt_hold_reason
+    CHECK (status <> 'HELD' OR hold_reason IS NOT NULL);
