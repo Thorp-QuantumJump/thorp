@@ -320,3 +320,156 @@ def test_registry_bootstrap_refuses_to_overwrite(postgres_engine, monkeypatch) -
     assert bootstrap.main(["--calculation-key", "calc-1", "--display-key", "disp-1"]) == 0
 
     assert bootstrap.main(["--calculation-key", "calc-2", "--display-key", "disp-2"]) == 1
+
+
+def _ecos_shaped(indicator):
+    """모든 지표를 같은 표본으로 받을 수 있게 원천 정의만 바꾼다.
+
+    발행 성공 경로를 보려면 17개가 **모두** 유효 변환값을 가져야 하는데, 주택가격 연결 사슬처럼
+    표본이 갖춰지지 않은 계열이 있다. 여기서 보려는 것은 값의 정확성이 아니라
+    **발행까지 이어지는가** 이므로, 원천 정의를 하나로 맞춰 17개가 다 차는 상황을 만든다.
+    값 검증은 어댑터·변환 테스트가 한다.
+    """
+    return replace(
+        indicator,
+        primary_source="ecos",
+        table_code="902Y003",
+        item_code="010102",
+        classification=(),
+        org_id=None,
+        source_cycle="M",
+        link_chain=(),
+        transform_rule="MONTH_AVERAGE",
+        raw_unit="달러/배럴",
+        transformed_unit="달러/배럴",
+        series_start="2024-01",
+    )
+
+
+def test_run_publishes_when_all_seventeen_are_filled(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """17개가 다 차면 자료 버전이 실제로 발행된다.
+
+    지금까지 통합 테스트는 늘 보류로 끝났다. 보류만 검증하면 발행 경로는 한 번도 지나지 않는다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),  # 표본 마지막 달
+    )
+
+    assert report.publication_held is None, report.publication_held
+    assert report.published, "17개가 다 찼는데 발행되지 않았다"
+    assert report.raw_revisions_written > 0
+
+    with postgres_engine.begin() as connection:
+        published = connection.execute(
+            text(
+                "SELECT status, complete_indicator_count FROM macro_dataset_version"
+                " WHERE id = :id"
+            ),
+            {"id": report.dataset_version_id},
+        ).one()
+        pointer = connection.execute(
+            text("SELECT dataset_version_id FROM macro_current_publication")
+        ).scalar_one()
+
+    assert published == ("PUBLISHED", 17)
+    assert pointer == report.dataset_version_id, "발행했는데 현재 포인터가 안 움직였다"
+
+
+def test_quota_stops_collection_and_keeps_what_arrived(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """한도에 닿으면 그 시점에서 멈추고, 받은 구간은 남긴다 (FR-011).
+
+    관세청은 전 구간이 37회 넘는 분할 호출이라 중간에 한도에 걸리는 일이 실제로 일어난다. 그때
+    남은 구간을 계속 부르면 한도를 더 깎고 차단으로 이어질 수 있다. 받은 만큼은 버리지 않는다 —
+    다음 실행이 그만큼 덜 불러도 되기 때문이다.
+    """
+    from pathlib import Path as _Path
+
+    from data_pipeline.macro.sources.base import QuotaExhaustedError
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "customs" / "newtrade_2026.xml"
+    ).read_text(encoding="utf-8")
+    allowed = 3
+
+    class QuotaAfter:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get(self, url, params=None):
+            self.calls += 1
+            if self.calls > allowed:
+                raise QuotaExhaustedError("한도 도달")
+            return body
+
+    fetcher = QuotaAfter()
+    members = tuple(
+        indicator for indicator in INDICATORS if indicator.primary_source == "customs"
+    )
+
+    outcomes = ingest.collect(
+        members,
+        fetcher=fetcher,
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 9, 20),
+    )
+
+    assert fetcher.calls == allowed + 1, (
+        f"한도 뒤에도 계속 불렀다: {fetcher.calls}회"
+    )
+    for outcome in outcomes:
+        assert outcome.status == ingest.STATUS_QUOTA
+        assert outcome.observations, "한도 전에 받은 구간까지 버렸다"
+
+
+def test_quota_is_recorded_and_publication_is_held(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """한도 도달이 수집 기록에 남고 발행은 보류된다."""
+    from data_pipeline.macro.sources.base import QuotaExhaustedError
+
+    indicators = tuple(replace(i, series_start="2026-05") for i in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    class AlwaysQuota:
+        def get(self, url, params=None):
+            raise QuotaExhaustedError("한도 도달")
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=AlwaysQuota(),
+        data_root=tmp_path,
+        mode="regular",
+        today=date(2026, 7, 15),
+    )
+
+    assert not report.published
+    with postgres_engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT DISTINCT status, quota_exhausted FROM macro_collection_item_status"
+                " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                "                     WHERE attempt_key = :key)"
+            ),
+            {"key": report.attempt_key},
+        ).all()
+
+    assert rows == [(ingest.STATUS_QUOTA, True)]
