@@ -13,6 +13,8 @@ import com.ssafy.thorp.learning.infrastructure.persistence.LearningTermRepositor
 import com.ssafy.thorp.learning.infrastructure.persistence.PublicationEventRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.PublishedTermRepositoryImpl;
 import com.ssafy.thorp.marketflow.infrastructure.persistence.MarketFlowFieldSummaryRepositoryImpl;
+import com.ssafy.thorp.myrecord.infrastructure.persistence.MyRecordRepositoryImpl;
+import com.ssafy.thorp.myrecord.infrastructure.persistence.RegimeSearchLogWriterImpl;
 import com.ssafy.thorp.paramsearch.infrastructure.persistence.ParamSearchRepositoryImpl;
 import com.ssafy.thorp.paramsearch.infrastructure.persistence.SearchCandidateRepositoryImpl;
 import java.time.Clock;
@@ -53,7 +55,9 @@ import org.springframework.context.annotation.Import;
     PublishedTermRepositoryImpl.class,
     MarketFlowFieldSummaryRepositoryImpl.class,
     ParamSearchRepositoryImpl.class,
-    SearchCandidateRepositoryImpl.class
+    SearchCandidateRepositoryImpl.class,
+    MyRecordRepositoryImpl.class,
+    RegimeSearchLogWriterImpl.class
 })
 public abstract class RepositoryTestSupport extends PostgresTestSupport {
 

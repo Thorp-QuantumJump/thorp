@@ -35,8 +35,15 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고, 
 | `record_id` | VARCHAR(32) | NOT NULL UNIQUE, `^MR-\d{8}-\d{6}$` | 사용자에게 보이는 식별자. `backtest_id`와 같은 방식이다(backend/CLAUDE.md: DB PK를 노출하지 않는다) |
 | `owner_id` | BIGINT | NOT NULL → `users(id)` | 소유자. 이메일·닉네임은 복제하지 않는다 |
 | `kind` | VARCHAR(20) | NOT NULL, `ANALYSIS`·`SEARCH_BUNDLE`·`REGIME_SEARCH` | 종류(FR-004 필터 축) |
-| `analysis_request_id` | BIGINT | → `backtest_request(id)`, nullable | 단일 분석이 가리키는 요청. `public_token`을 여기서 읽는다 |
-| `analysis_run_id` | BIGINT | → `backtest_run(id)`, nullable | 같은 조건 재분석 판정용(FR-009). 요청은 새로 생겨도 실행은 같다 |
+| `analysis_run_id` | BIGINT | → `backtest_run(id)`, nullable | 단일 분석이 가리키는 **실행**. 같은 조건 재분석 판정(FR-009)도 이 값으로 한다 — 요청은 새로 생겨도 실행은 같다 |
+
+**요청(`backtest_request`)은 가리키지 않는다.** 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과
+재사용) **취소는 실행이 아니라 요청에 붙는다**(`BacktestDetailResult`). 그래서 요청 하나를 골라 저장해 두면
+그 요청만 취소된 순간 기록이 틀린 상태(취소·부분 결과)를 보이고, 어느 요청을 골라도 뒤에 오는 취소가 그것을
+틀리게 만든다 — 접수 때 다시 잇는 것으로는 막지 못한다(2026-09-21 코드리뷰).
+
+공개 토큰과 상태는 읽을 때 `(소유자, 실행)`으로 요청을 골라 읽는다(`MyRecordRepository.findViewableRequestId`).
+고르는 규칙은 **취소하지 않은 것 중 최신**이고, 전부 취소했으면 그중 최신이다(그때는 사용자에게 취소가 맞다).
 | `param_search_id` | BIGINT | → `param_search(id)`, nullable | 탐색 묶음 |
 | `regime_log_id` | BIGINT | → `regime_search_log(id)`, nullable | 경제환경 탐색. 검색 경로·기준월 근거·스냅샷 참조는 그 행에 있다. 경로가 다르면 로그 행이 다르므로 별도 항목이 된다(FR-012 후단) |
 | `name` | VARCHAR(120) | NOT NULL | 자동 부여 후 사용자가 바꿀 수 있다. 유일성을 강제하지 않는다(R12) |
@@ -55,14 +62,12 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고, 
 ```sql
 -- 종류와 참조가 짝이 맞는다. 어긋나면 목록이 읽을 원본을 고를 수 없다.
 CONSTRAINT ck_my_record_ref_matches_kind CHECK (
-    (kind = 'ANALYSIS'       AND analysis_request_id IS NOT NULL AND analysis_run_id IS NOT NULL
+    (kind = 'ANALYSIS'       AND analysis_run_id IS NOT NULL
                              AND param_search_id IS NULL AND regime_log_id IS NULL)
  OR (kind = 'SEARCH_BUNDLE'  AND param_search_id IS NOT NULL
-                             AND analysis_request_id IS NULL AND analysis_run_id IS NULL
-                             AND regime_log_id IS NULL)
+                             AND analysis_run_id IS NULL AND regime_log_id IS NULL)
  OR (kind = 'REGIME_SEARCH'  AND regime_log_id IS NOT NULL
-                             AND analysis_request_id IS NULL AND analysis_run_id IS NULL
-                             AND param_search_id IS NULL))
+                             AND analysis_run_id IS NULL AND param_search_id IS NULL))
 
 -- 기간은 둘이 함께 있거나 함께 없다.
 CONSTRAINT ck_my_record_period CHECK (
@@ -128,7 +133,7 @@ FR-017의 "참조 삭제 표시"가 걸릴 자리도 따라서 **현재 006 안�
 | 표 | 변경 | 근거 |
 |---|---|---|
 | `param_search.owner_user_id` | 변경 없음 | 접수가 이미 채운다. 컬럼 주석("소유자 필터는 006이 붙인다")은 007 구현 뒤 남은 옛 문장이라 이번에 고친다 |
-| `regime_search_log` | 스키마 변경 없음. **행을 쓴다** | 010이 표와 읽기 리포지토리(`isWithdrawn`)만 만들고 쓰는 쪽은 006에 맡겼다 |
+| `regime_search_log` | **유니크 하나를 더한다**(`owner_user_id, snapshot_key, entry_path`)와 **행을 쓴다** | 010이 표와 읽기 리포지토리(`isWithdrawn`)만 만들고 쓰는 쪽은 006에 맡겼다 |
 | `backtest_request` | 변경 없음 | `requester_id`·`public_token`을 읽기만 한다 |
 | `regime_search_snapshot` | 변경 없음 | 공용 스냅샷이다. 소유자 컬럼을 붙이지 않는다 |
 
