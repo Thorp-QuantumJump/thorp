@@ -107,7 +107,11 @@
 
 실행 토큰 없이 사례의 postWindow(d0·d21·d63·lastAvailable·completedTradingDays)를 조회한다.
 003이 실행 생성 전 기간 제약에 사용한다. 010 snapshotKey를 고정하며 404는 없는 사례,
-미완성 d21/d63은 null이다. 공개 조회이며 basis를 포함한다.
+미완성 d21/d63은 null이다. 공개 조회이며 basis를 포함한다. 예시는
+`docs/specs/regime-link-api/examples/case-window.json`이다.
+
+`lastAvailable`은 **여기에만** 있다. §1의 `cases[].postWindow`에는 싣지 않는다 — 그 값을 쓰는 것은
+종료일 하한을 잡는 003뿐이고, 사례가 열 개까지 오는 목록에 화면이 읽지 않는 값을 담지 않는다.
 
 ## 1b. `POST /regime-link-searches` — 목록 확정·변경 기록 (로그인 필요)
 
