@@ -752,6 +752,40 @@ class FileParameterRegistryTest {
         }
 
         @Test
+        @DisplayName("상위 비율 선정 수는 올림한 뒤 상한과 곱한다")
+        void momentumRoundsUpThePercentSelectionCount() {
+            // 후보 3개의 50%는 1.5개가 아니라 2개를 고른다. 상한 40%면 80%만 배분할 수 있고,
+            // 상한 50%면 정확히 100%를 배분한다.
+            assertThat(
+                            registry.validate(
+                                            "SECTOR_MOMENTUM",
+                                            Map.of(
+                                                    "selectionMode",
+                                                    "TOP_PERCENT",
+                                                    "topPercent",
+                                                    50,
+                                                    "maxWeight",
+                                                    40),
+                                            new SearchContext(3))
+                                    .valid())
+                    .isFalse();
+
+            assertThat(
+                            registry.validate(
+                                            "SECTOR_MOMENTUM",
+                                            Map.of(
+                                                    "selectionMode",
+                                                    "TOP_PERCENT",
+                                                    "topPercent",
+                                                    50,
+                                                    "maxWeight",
+                                                    50),
+                                            new SearchContext(3))
+                                    .valid())
+                    .isTrue();
+        }
+
+        @Test
         @DisplayName("곱할 축이 없는 설정에서는 판정하지 않는다 — 다른 선정 방식은 무관하다")
         void skipsTheRuleWhenTheMultiplierAxisIsAbsent() {
             // 003 은 고른 selectionMode 에 딸린 축 하나만 저장한다(FR-003). THRESHOLD 설정에는

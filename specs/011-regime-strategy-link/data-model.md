@@ -1,0 +1,180 @@
+# Data Model: 경제환경 사례와 전략 비교 연결
+
+**Spec**: [spec.md](spec.md) · **Plan**: [plan.md](plan.md) · **Research**: [research.md](research.md)
+
+저장 규칙은 `backend/CLAUDE.md`를 따른다 — 조회·필터·조인에 쓰는 값만 컬럼, 소수·시계열·구조는
+JSONB, 시각은 TIMESTAMPTZ, 거래일은 DATE, 소수는 문자열 decimal. 사용자 식별자는 기록 성격의 표
+(`regime_link_search`·`regime_link`)에만 두고 계산 결과(`regime_link_result`)에는 두지 않는다
+(원칙 VIII). 011은 **표 다섯을 만들고 010·004 표는 읽기만 한다.**
+
+## 1. 전체 그림
+
+```
+regime_search_snapshot (010) ──┐
+regime_search_case     (010) ──┤ 읽기
+backtest_request / _run / _result / _trade (004) ──┤
+                                        ▼
+regime_link_filter ──< regime_link_search ──< regime_link_use >── regime_link ──1:1── regime_link_result
+   (가용성 필터 키)      (검색 경로별 연결 기록)  (누가 어느 요청으로 열었나) (실행×사례×시나리오 계산)  (워커 산출물)
+```
+
+- **`regime_link_search`**는 "어느 검색에 어느 비교 묶음을 어느 필터로 붙였나"다. 006이 읽는
+  경제환경 탐색 기록의 011 몫이며 검색 경로별 별도 행이다(006 Key Entities).
+- **`regime_link`**는 (실행 × 사례 × 시나리오) **계산 하나**다. 상태 전이의 단위이고 잘라내기 작업의
+  단위이며 여러 사용자·여러 검색이 공유한다. 사용자 식별자와 요청 문맥을 두지 않는다(research R14).
+- **`regime_link_use`**는 어느 검색에서 어느 분석 요청으로 그 계산을 열었는지다. 공개 토큰·소유자·만료가
+  요청에 속하므로(004) '전체 기간 결과 보기'와 기록 귀속은 여기서 정해진다.
+- **`regime_link_result`**는 워커가 돌려준 값이다. 링크가 COMPLETED일 때만 있다.
+
+## 2. `regime_link_filter` — 가용성 필터
+
+| 컬럼 | 타입 | 규칙 |
+|---|---|---|
+| `id` | BIGINT PK | SEQUENCE |
+| `filter_key` | CHAR(64) NOT NULL UNIQUE | `sha256(canonical JSON(definition))`의 16진. research R4 |
+| `definition` | JSONB NOT NULL | `{instruments: [{instrumentId, listedOn}] (정렬), maxWarmupTradingDays, minPostTradingDays: 21, mappingVersion, dataVersion, dataAsOf, postCutoff}` — `postCutoff`는 사후 완성 판정 기준일(기본 `dataAsOf`, 과거 기준월이면 그 달의 마지막 거래일, research R4) |
+| `available_range` | JSONB NOT NULL | `{firstCaseEndMonth, lastCaseEndMonth}` — '선택 ETF로 비교 가능한 기간'(FR-003). 계산 근거는 `definition`이다 |
+| `created_at` | TIMESTAMPTZ NOT NULL | |
+
+같은 비교 묶음·같은 자료면 같은 행을 재사용한다(키 일치). 성과와 무관한 값만 들어 있어야 한다 —
+`definition`에 실행 결과 필드를 넣지 않는다(FR-003 "성과에 의존하지 않는다").
+
+## 3. `regime_link_search` — 검색 경로별 연결 기록
+
+| 컬럼 | 타입 | 규칙 |
+|---|---|---|
+| `id` | BIGINT PK | SEQUENCE. 외부 식별자는 `search_id` |
+| `search_id` | VARCHAR(32) NOT NULL UNIQUE | `RLS-YYYYMMDD-NNNNNN`. 내부 PK를 노출하지 않는다(ADR-0002 D2). API의 이름은 `linkSearchId`다 — 010 API의 `searchId`(snapshot 키)와 구분한다 |
+| `owner_user_id` | BIGINT NOT NULL | 목록 확정 시 로그인 사용자 기록을 만든다(FR-021·025). 익명은 행을 만들지 않는다 |
+| `entry_path` | VARCHAR(24) NOT NULL | `MARKET_FLOW` \| `STRATEGY_RESULT` — 두 경로의 결과를 따로 보존(FR-004) |
+| `snapshot_id` | BIGINT → `regime_search_snapshot(id)` ON DELETE SET NULL | 010 revision 고정 |
+| `snapshot_key` | VARCHAR(200) NOT NULL | 010 키의 **사본**. 철회로 `snapshot_id`가 NULL이 돼도 무엇을 봤는지 남는다 |
+| `mode` / `field_id` / `baseline_month` | VARCHAR(16) / VARCHAR(32) / DATE | 010 검색 식별의 사본(조회용) |
+| `base_run_id` | BIGINT NOT NULL → `backtest_run(id)` | 비교 기준 실행 |
+| `compare_run_id` | BIGINT → `backtest_run(id)` | 비교 대상 실행. 없으면 NULL. **최대 2개**(Clarifications 09-17 Q1) |
+| `base_request_id` | BIGINT → `backtest_request(id)` ON DELETE SET NULL | 진입에 쓴 기준 공개 토큰의 분석 요청. 005 정리 작업이 만료된 비로그인 요청을 지우면 NULL이 되고 실행 참조는 남는다 |
+| `compare_request_id` | BIGINT → `backtest_request(id)` ON DELETE SET NULL | 비교 대상의 분석 요청. 없으면 NULL |
+| `filter_id` | BIGINT → `regime_link_filter(id)` | `STRATEGY_RESULT` 경로면 NOT NULL. `MARKET_FLOW`는 필터가 없어 NULL |
+| `shown_cases` | JSONB NOT NULL | `[{endMonth, rank, availability: {state, reason?}, linkIds?: [...]}]` — 010 표시 후보 ≤10에 판정을 붙인 그대로. 순위는 010 원래 값 |
+| `excluded_count` | SMALLINT NOT NULL | 표시 후보 중 공통 가용 범위 필터로 빠진 수(FR-003) |
+| `full_search_shown` | BOOLEAN NOT NULL DEFAULT false | 사용자가 '전체 경제환경 탐색으로 전환'을 눌렀는지 |
+| `previous_search_id` | BIGINT → `regime_link_search(id)` | 비교 묶음 변경으로 새 검색이 됐을 때 이전 행(FR-021) |
+| `retention` | JSONB | `{ratio, kept: [endMonth], added: [...], removed: [...]}` — **기록 전용, 화면 비표시**(FR-021). 첫 검색이면 NULL |
+| `basis` | VARCHAR(24) NOT NULL | `HISTORICAL_REVISION` 고정(FR-015). 당시 재현은 범위 밖 |
+| `client_request_id` | VARCHAR(64) NOT NULL | 요청자별 검색 생성 멱등 키. UNIQUE(owner_user_id, client_request_id) |
+| `created_at` | TIMESTAMPTZ NOT NULL | |
+
+목록 확정 시 생성하고 결과가 0건이어도 저장한다. previous_search_id는 클라이언트가 같은 탐색 흐름에서 전달한 값만 사용하며 소유자·snapshot·경로를 검증한다. 링크 생성은 기존 search_id를 참조한다(REST §1b).
+
+인덱스: `(owner_user_id, created_at DESC)`, `(base_run_id)`, `(snapshot_key)`.
+
+## 4. `regime_link` — (실행 × 사례 × 시나리오)
+
+| 컬럼 | 타입 | 규칙 |
+|---|---|---|
+| `id` | BIGINT PK | SEQUENCE |
+| `link_id` | VARCHAR(32) NOT NULL UNIQUE | `RL-YYYYMMDD-NNNNNN` |
+| `run_id` | BIGINT NOT NULL → `backtest_run(id)` | 잘라내기 입력 실행. 연속 운용이면 비교 묶음의 실행(또는 전체 기간 재계산 실행), 현금 시작이면 `FRESH_CASH_FROM` 실행. 원래 어느 요청에서 왔는지는 `regime_link_use`에 있다 |
+| `snapshot_key` | VARCHAR(200) NOT NULL | 사례 식별자 앞부분(사본) |
+| `end_month` | DATE NOT NULL | 사례 식별자 뒷부분. 010 `regime_search_case.end_month`와 같은 뜻 |
+| `scenario` | VARCHAR(16) NOT NULL | `CONTINUOUS`(전체 기간 연속 운용의 구간) \| `FRESH_CASH`(그날 현금 시작) |
+| `post_window` | JSONB NOT NULL | `{d0, d21, d63, lastAvailable, completedTradingDays, complete21, complete63}` — d0 = 관측 종료 후 첫 거래일. research R4 달력으로 산정. `lastAvailable`은 이 사례 구간 안에서 자료가 있는 마지막 거래일이며, 필터 `definition.dataAsOf`(자료 전체의 마감일)와 다른 값이다 |
+| `availability` | JSONB NOT NULL | `{state: NORMAL\|DATA_INSUFFICIENT\|POST_INCOMPLETE, reason?: UNLISTED\|WARMUP_SHORT\|SECTOR_UNMAPPED\|RECENT\|DELISTED, partial?: true, delistedOn?}` — 판정 시점의 저장 값. 재판정하지 않는다. `OUT_OF_PERIOD`는 원래 요청의 기간과 사례의 관계라 링크가 아니라 검색의 `shown_cases`와 가용성 응답에만 있다(확인 뒤에는 전체 기간 실행의 링크가 만들어진다) |
+| `status` | VARCHAR(16) NOT NULL | `PENDING_RUN` \| `QUEUED` \| `RUNNING` \| `COMPLETED` \| `FAILED`. §7 |
+| `failure` | JSONB | `{code, message}`. code ∈ `INPUT_TOO_LARGE` `INPUT_INCOMPLETE` `MARKET_DATA_MISSING` `INVALID_REQUEST` `ENGINE_ERROR` `SYSTEM_FAILURE` `RUN_FAILED`(입력 실행이 실패). `DATA_INSUFFICIENT`는 실패 코드가 아니다(research R13) |
+| `job_message_id` | VARCHAR(64) | 마지막으로 발행한 작업 메시지 id (`RLJ-` + link_id + `-` + attempt) |
+| `attempt` | SMALLINT NOT NULL DEFAULT 0 | 재시도 횟수 |
+| `queued_at` / `started_at` / `finished_at` | TIMESTAMPTZ | 측정 기록(R9) |
+| `created_at` / `updated_at` | TIMESTAMPTZ NOT NULL | |
+
+제약: `UNIQUE (run_id, snapshot_key, end_month, scenario)` — **같은 단위는 다시 계산하지 않는다**
+(FR-010). 링크 행은 하나이고 그것을 연 검색마다 `regime_link_use` 행이 생긴다.
+
+**`availability.state`가 `DATA_INSUFFICIENT`이면 작업을 만들지 않는다.** 행은 만들어 화면이 '자료
+부족' 사유를 보이되 `status`는 `COMPLETED`로 두고 `regime_link_result`는 없다 — 계산 실패와 자료
+부족을 섞지 않는다(FR-018, Edge Cases).
+
+## 4a. `regime_link_use` — 누가 어느 요청으로 열었나
+
+| 컬럼 | 타입 | 규칙 |
+|---|---|---|
+| `id` | BIGINT PK | SEQUENCE |
+| `link_search_id` | BIGINT NOT NULL → `regime_link_search(id)` | 이 계산을 연 검색. 소유자는 검색의 `owner_user_id` |
+| `link_id` | BIGINT NOT NULL → `regime_link(id)` | 공유되는 계산 |
+| `role` | VARCHAR(8) NOT NULL | `BASE` \| `COMPARE` — 비교 묶음에서의 자리(005 순서) |
+| `origin_run_id` | BIGINT NOT NULL → `backtest_run(id)` | 비교 묶음의 원래 실행. 전체 기간 재계산·현금 시작으로 링크의 `run_id`가 달라도 "어느 전략의 결과인가"는 여기로 |
+| `origin_request_id` | BIGINT → `backtest_request(id)` ON DELETE SET NULL | 진입에 쓴 공개 토큰의 분석 요청. '전체 기간 결과 보기'와 만료 판정의 문맥 |
+| `created_request_id` | BIGINT → `backtest_request(id)` ON DELETE SET NULL | 011이 이 사용자 이름으로 004에 접수해 만든 요청(전체 기간 재계산·현금 시작). 없으면 NULL |
+| `created_at` | TIMESTAMPTZ NOT NULL | |
+
+제약: `UNIQUE (link_search_id, link_id)`. 인덱스: `(link_id)`, `(origin_request_id)`. 계산 결과 표에는 여전히
+사용자 식별자가 없다(원칙 VIII). 조회(`GET /regime-links/{linkId}?token=`)는 제시된 토큰의 요청이
+`origin_request_id`·`created_request_id`이거나 그 요청의 실행이 링크의 `run_id` 또는 `origin_run_id`일 때만
+허용한다(계약 §3).
+
+## 5. `regime_link_result` — 워커 산출물
+
+| 컬럼 | 타입 | 규칙 |
+|---|---|---|
+| `link_id` | BIGINT PK → `regime_link(id)` | 1:1 |
+| `window63` | JSONB NOT NULL | `{tradingDays, return, maxDrawdown, tradeCount, tradesPerMonth, turnover, turnoverBasis: ANNUALIZED_252, costs: {commission, spread, slippage, tax, total}, lossContribution: {sectorId: value}, complete}` — 미완성이면 `tradingDays < 63`, `complete=false` |
+| `window21` | JSONB NOT NULL | 같은 모양. 결과 행이 있으면 항상 완성이다 — 결과 제공 조건이 실제 확보 거래일 수 ≥ 21이고 구간 안 상장폐지도 그 수에 반영된다(research R4) |
+| `holdings` | JSONB NOT NULL | `[{date, actual: {instrumentId: w}}]` d0~마지막 완성일 |
+| `trades` | JSONB NOT NULL | `[{date, instrumentId, side, quantity, price, cost, reason}]` 구간 안 |
+| `kospi` | JSONB NOT NULL | `{window63: {return, maxDrawdown}, window21: {return, maxDrawdown}}` — 두 값만(FR-013). 차이 값 없음 |
+| `basis` | JSONB NOT NULL | `{kind: "HISTORICAL_REVISION", dataVersion, datasetId, analyticsMethod}` |
+| `input_digest` | CHAR(64) NOT NULL | 메시지에 담긴 입력 사본의 해시. 재실행 결과가 같은 입력에서 나왔음을 확인 |
+| `computed_at` | TIMESTAMPTZ NOT NULL | |
+
+수치는 전부 문자열 decimal이다. `lossContribution`은 전체 구간 손익이 0이면 **키를 생략**한다(0으로
+채우지 않음, 010 `contribution` 규칙과 같다).
+
+## 6. 값의 소유 경계
+
+| 값 | 소유 | 011이 하는 일 |
+|---|---|---|
+| 사례 순위·거리·표시 후보·`snapshot_key` | 010 | 읽는다. 다시 매기지 않고 표시 후보 밖에서 뽑지 않는다 |
+| 사후 구간 정의(d0·63·21) | 010(PD-08) | 정의를 그대로 쓰고 **날짜로 환산**해 `post_window`에 기록 |
+| 백테스트 실행·결과·거래 | 004 | 읽어서 잘라낼 사본을 메시지에 담는다. 새 실행은 004 접수 서비스로 |
+| 분석 요청·공개 토큰·만료 | 004·005 | 토큰을 005 `PublicResultService.resolve`로 풀어 요청과 실행을 얻는다. 요청 행은 005 정리 작업이 지울 수 있어 011의 요청 FK는 `ON DELETE SET NULL`이다 |
+| 상장일·거래일 달력·자료 버전 | 001(`MarketMetadataPort`) | 판정에 읽는다 |
+| 비교 묶음(기준·비교 대상) | 005 | 공개 토큰으로 받아 실행으로 푼다 |
+| 가용성 판정·필터 키·연결 기록·구간 요약 | **011** | 만들고 저장한다 |
+| 경제환경 탐색 기록 화면 | 006 | `regime_link_search`·`regime_link`를 읽는다(011은 화면을 만들지 않음) |
+
+## 7. 상태 전이 (`regime_link.status`)
+
+```
+                 ┌─(availability=DATA_INSUFFICIENT)──────────────► COMPLETED (결과 없음, 사유만)
+ 생성 ──────────┤
+                 ├─(scenario=CONTINUOUS, 입력 실행 COMPLETED)──► QUEUED ─► RUNNING ─► COMPLETED
+                 │                                                  │            └─► FAILED ─(retry)─► QUEUED
+                 └─(scenario=FRESH_CASH 또는 전체 기간 재계산 필요)─► PENDING_RUN ─(004 실행 COMPLETED)─► QUEUED …
+                                                                        └─(004 실행 FAILED/CANCELLED)─► FAILED(RUN_FAILED)
+```
+
+- `PENDING_RUN`은 004 실행을 기다리는 상태다. 화면은 004 진행 상태(`progress`)를 그 자리에 보인다.
+- `RUNNING`은 워커 `STARTED` 이벤트로, `COMPLETED`·`FAILED`는 `FINISHED`로 바뀐다. 종결 뒤 늦은
+  이벤트는 기록만 하고 무시한다(004 규칙과 같다).
+- DLQ 소비: 작업 메시지가 `regime-link.jobs.dlq`에 오면 `FAILED(SYSTEM_FAILURE)`.
+- `retry`는 `FAILED`에서만이고, `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이 `attempt ≥ 2`에서 다시 나온 링크는
+  다시 시도할 수 없다(`retryable=false`, research R13). `attempt`를 올리고 새 `job_message_id`로 재발행. `RUN_FAILED`의 재시도는
+  004 `retry`를 호출해 새 실행을 만든 뒤 `PENDING_RUN`으로.
+
+## 8. 보관
+
+| 대상 | 규칙 |
+|---|---|
+| `regime_link_search`·`regime_link_use` | 006 기록 정책(PD-13)을 따른다. 011이 보관 기간을 정하지 않는다 |
+| `regime_link` | 계산 캐시다. 가리키는 `regime_link_use`가 없어도 남을 수 있고, 정리 규칙은 입력 실행의 정리 규칙(004)을 따른다 |
+| 만료된 비로그인 요청(`backtest_request`)을 005가 지우면 | 011의 요청 FK가 NULL이 된다. 실행 참조와 `snapshot_key` 사본으로 "무엇을 봤나"는 남는다 |
+| `regime_link_result` | 링크와 같이 산다. 링크가 지워지면 CASCADE |
+| 입력 실행(`backtest_run`)이 004 규칙으로 정리되면 | `regime_link.run_id`는 FK라 정리가 막힌다 — 004 정리 절차가 링크를 먼저 확인해야 한다. **확인 필요**: 004의 결과 정리 규칙이 아직 없어(005 PD-23은 비로그인 결과만) 지금은 충돌이 없다 |
+| 010 snapshot 철회 | `snapshot_id` SET NULL, `snapshot_key` 사본으로 표시(010 FR-035 방식) |
+
+## 9. 마이그레이션 메모
+
+파일 하나(`V{YYYYMMDDHHMMSS}__regime_link.sql`). 표 다섯과 인덱스·제약을 만든다. 010 M6 마이그레이션
+(`V20260917143000__regime_search.sql`)이 dev에 적용되어 있으므로 `snapshot_id` →
+`regime_search_snapshot(id)` FK를 이 마이그레이션에서 `ON DELETE SET NULL`로 건다. 파일 버전은 그
+마이그레이션보다 뒤여야 한다. 되돌릴 수 없는 변경은 없다.

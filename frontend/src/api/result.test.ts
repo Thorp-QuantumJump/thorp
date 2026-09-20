@@ -23,6 +23,7 @@ const {
   ResultError,
   fetchResult,
   fetchResultExceptions,
+  fetchResultIndexComparison,
   fetchResultPositions,
   fetchResultTimeseries,
   fetchResultTrades,
@@ -75,12 +76,14 @@ describe('api/result', () => {
     clientMocks.get.mockResolvedValue(ok({}))
 
     await fetchResultTimeseries(resultToken)
+    await fetchResultIndexComparison(resultToken)
     await fetchResultWeights(resultToken)
     await fetchResultExceptions(resultToken)
     await fetchResultPositions(resultToken, '2024-03-29')
 
     expect(clientMocks.get.mock.calls.map((call) => call[0])).toEqual([
       `/results/${resultToken}/timeseries`,
+      `/results/${resultToken}/index-comparison`,
       `/results/${resultToken}/weights`,
       `/results/${resultToken}/exceptions`,
       `/results/${resultToken}/positions?date=2024-03-29`,

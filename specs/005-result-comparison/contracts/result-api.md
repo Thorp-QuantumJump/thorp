@@ -14,6 +14,7 @@
 | `GET /results/{publicToken}/positions` | `GET /backtests/{backtestId}/positions` | `date` 필수 |
 | `GET /results/{publicToken}/weights` | `GET /backtests/{backtestId}/weights` | |
 | `GET /results/{publicToken}/exceptions` | `GET /backtests/{backtestId}/exceptions` | 결과 옆 한 문장의 원천 |
+| `GET /results/{publicToken}/index-comparison` | 001 기간 KOSPI 조회 포트 | 같은 기간·시작 금액으로 환산한 보조 계열. 포트가 없으면 비활성 |
 | `POST /results/{publicToken}/retry` | `POST /backtests/{backtestId}/retry` | 실패한 비교 대상의 다시 시도 |
 
 `publicToken`은 32자 소문자 16진 문자열이다. 형식이 맞지 않으면 조회하지 않고 `400 INVALID_INPUT`이다. 로그인하지 않아도 모든 경로를 쓸 수 있고, `POST`에는 저장소의 CSRF 규약이 그대로 적용된다.
@@ -61,6 +62,8 @@
 
 ## 비교 주소
 
+`config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.
+
 `/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
 
 ## POST /results/{publicToken}/retry
@@ -79,6 +82,17 @@
 - `publicToken`은 새 요청의 토큰이고 `retryOfToken`은 원 요청의 토큰이다. 004 응답의 `backtestId`·`retryOf`를 이 둘로 바꾼다.
 - 새 요청의 요청자는 **지금 다시 시도한 사람**이다. 비로그인이면 요청자가 없고 만료 시각이 붙는다. 공개 주소는 남에게 건네질 수 있으므로 원 요청의 요청자를 물려받지 않는다.
 - 실패·취소가 아니면 `409 NOT_RETRYABLE`이다.
+
+## GET /results/{publicToken}/index-comparison
+
+`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 기간 KOSPI 조회 포트가 있으면 결과의
+`effectiveStart`~`effectiveEnd` 범위에서 첫 지수 종가를 `config.initialCash`와 맞춘 환산 계열을 서버가
+만들어 `{available: true, reason: null, series: [{date, value}]}`로 돌려준다. `value`는 다른 금액처럼 decimal
+문자열이고, 화면은 다시 계산하지 않는다.
+
+현재 001에는 기간 KOSPI 계열 조회 포트가 없으므로 `{available: false,
+reason: "INDEX_SERIES_UNAVAILABLE", series: []}`를 돌려준다. 최신 관측치 한 점이나 다른 계열로 값을
+만들지 않는다. 어느 응답에도 `backtestId`는 없다.
 
 ## 오류
 
@@ -111,11 +125,16 @@
 | `worker`(워커 자기 보고) | 운영 정보. 사용자 화면에 노출하지 않는다 |
 | `retryOf`의 내부 식별자 | 원 요청의 `backtestId`. 재시도 응답은 원 요청의 공개 토큰(`retryOfToken`)으로 바꿔 담는다 |
 | `versions.worker` | 결과를 낸 워커의 자기 보고. 위 `worker`와 같은 이유다 |
+| `versions.dependencies` | 결과를 계산한 워커 환경의 라이브러리 버전(004 T028). 위 `worker`와 같은 이유다 |
 | 오류 문구 속 식별자 | 004 예외 문구에 `backtestId`가 들어 있다. 공개 경로는 코드의 기본 문구로 바꾼다 |
 
-하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다.
+하위 자원(`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`)은 004 응답에서 `backtestId`만 버린 모양이다. `/index-comparison`도 내부 식별자를 담지 않는다.
 
 ## 비교 요청
+
+실제 비용 기준은 요청 사본 `config`가 아니라 `versions.costProfile.version`에서 가져온다. 새 전략은 003 등록표의 기본 설정과 004 규칙 등록표의 해당 전략 버전을 쓴다. 원본 두 건을 다시 계산할 때는 각 원본의 설정·비중·평가 분할·시나리오를 보존한다.
+
+준비 기간 부족의 구조화된 필요 값은 `error.details.requiredWarmupTradingDays`다. 요청값이 요구값보다 작은 경우 `requestedWarmupTradingDays`도 담고, 준비 기간을 채운 첫날이 요청 종료일 뒤인 경우 `requiredStartDate`를 담는다. 필요 값이나 공통 기간을 확인할 수 없으면 확인창에 사유만 보이고 재계산을 막는다.
 
 비교 대상 결과가 없을 때 화면이 새 실행을 요청하는 경로는 004의 `POST /backtests`를 그대로 쓴다. 005가 새 접수 경로를 만들지 않는다. 요청 본문은 기준 결과의 `config`에서 전략만 바꾸고 나머지(섹터 후보·기간·금액·비용·`warmupTradingDays`)를 그대로 옮긴다.
 

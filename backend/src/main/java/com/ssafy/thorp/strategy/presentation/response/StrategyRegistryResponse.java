@@ -200,7 +200,8 @@ public record StrategyRegistryResponse(
             String context,
             Object value,
             String multiplyByContext,
-            String multiplyByAxis) {
+            String multiplyByAxis,
+            CeilingFactor multiplyByCeil) {
 
         public static Operand from(StrategyRegistryResult.OperandView view) {
             return new Operand(
@@ -208,7 +209,19 @@ public record StrategyRegistryResponse(
                     view.context(),
                     view.value(),
                     view.multiplyByContext(),
-                    view.multiplyByAxis());
+                    view.multiplyByAxis(),
+                    CeilingFactor.from(view.multiplyByCeil()));
+        }
+    }
+
+    /** {@code ceil(context × axis ÷ divisor)}로 계산하는 곱셈 인자. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CeilingFactor(String context, String axis, Object divisor) {
+
+        public static CeilingFactor from(StrategyRegistryResult.CeilingFactorView view) {
+            return view == null
+                    ? null
+                    : new CeilingFactor(view.context(), view.axis(), view.divisor());
         }
     }
 

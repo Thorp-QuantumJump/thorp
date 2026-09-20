@@ -50,7 +50,7 @@ login b.jar user-b@example.com 'Password!1'
 curl -s -X POST localhost:8080/backtests -b a.jar -H "X-XSRF-TOKEN: $(csrf a.jar)"   -H 'Content-Type: application/json' -d @req.json
 ```
 
-기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`는 요청 시작일(휴장일이면 그 뒤 첫 거래일). **워밍업만큼 밀리지 않는다** — 미는 판정은 워커가 한다(R-15). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. `versions.costProfile.provisional=true`가 보인다.
+기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`는 요청 시작일(휴장일이면 그 뒤 첫 거래일). **워밍업만큼 밀리지 않는다** — 미는 판정은 워커가 한다(R-15). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. 비용 버전을 비운 요청이면 `versions.costProfile`이 `{version: KR-ETF-2026-09, provisional: false}`다(PD-07 확정값, T021). `costProfileVersion: PROVISIONAL-DEMO-1`을 명시하면 `provisional=true`가 보인다.
 
 ## S2. 동일 버전 재사용 (US3-1, FR-003)
 
@@ -81,7 +81,7 @@ RUNNING 중 워커 프로세스를 `kill -9`한다. 기대: 브로커 재전달�
 pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 EngineOutput JSON이 바이트 단위로 같다.
 **발표 전에는 같은 개발 환경에서의 재현만 보장한다**(T022). scipy를 정확한 버전으로 고정하고 모든 배분 비중을
 0.000001 단위로 떨어뜨려 마지막 자리 차이를 줄였지만, 다른 OS·CPU·이미지에서의 바이트 동일은 워커 이미지 잠금과
-`versions.dependencies` 기록(Phase 10 T027·T028)이 들어간 뒤에 말할 수 있다. 통합: S1 결과와 강제 재계산(테스트용 내부 플래그 또는 다른 `data_version` 라벨로 같은 데이터) 결과의 `summary`·`/trades`·`/weights`가 완전히 같다.
+`versions.dependencies` 기록(Phase 10 T027·T028, 반영됨) 위에서 환경 간 재현 검증(T030)을 마친 뒤에 말할 수 있다. 통합: S1 결과와 강제 재계산(테스트용 내부 플래그 또는 다른 `data_version` 라벨로 같은 데이터) 결과의 `summary`·`/trades`·`/weights`가 완전히 같다.
 
 ## S8. 수기 대조 (US2, SC-003, SC-004)
 

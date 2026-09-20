@@ -2,6 +2,7 @@ package com.ssafy.thorp.common.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
@@ -373,6 +374,23 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                                 Boolean.class))
                 .isTrue();
 
+        // PD-07 확정값은 데모 행을 고치지 않고 새 행으로 들어간다(T021). 데모 행은 그 버전을 가리키는 실행이
+        // 옛 값으로 해석되도록 수치까지 그대로여야 한다.
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT version, commission_bps, spread_bps, slippage_bps, tax_bps,"
+                                        + " provisional FROM cost_profile ORDER BY version"))
+                .extracting(
+                        row -> row.get("version"),
+                        row -> ((BigDecimal) row.get("commission_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("spread_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("slippage_bps")).toPlainString(),
+                        row -> ((BigDecimal) row.get("tax_bps")).toPlainString(),
+                        row -> row.get("provisional"))
+                .containsExactly(
+                        tuple("KR-ETF-2026-09", "1.5000", "3.0000", "5.0000", "0.0000", false),
+                        tuple("PROVISIONAL-DEMO-1", "0.0000", "0.0000", "5.0000", "0.0000", true));
+
         // PD 미확정 전략은 명세 없이 PENDING_DECISION으로만 있어야 한다
         // (constitution "실행 전 결정 임의 확정 금지"). 2026-09-17 PD-03·PD-04가 확정돼
         // 최소분산(T022)과 섹터 모멘텀(T023)이 차례로 채워졌고, 지금 대기 중인 전략은 없다.
@@ -390,11 +408,13 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                                 String.class))
                 .isEmpty();
 
-        // 역변동성은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 역변동성 /1 은 등록하되 PD-02 대기라 임시 표시가 붙어야 한다(analyze C1).
+        // 버전을 적는 이유: PD-02 가 확정되면 /2 가 더해지고(T029) 그 행은 임시가 아니다. /1 의 표시는 그 뒤에도 그대로다.
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT provisional FROM strategy_rules"
-                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'",
+                                        + " WHERE strategy_id = 'INVERSE_VOLATILITY'"
+                                        + " AND rules_version = '1'",
                                 Boolean.class))
                 .isTrue();
     }
@@ -445,6 +465,77 @@ class FlywayMigrationTest extends RepositoryTestSupport {
 
         assertThatThrownBy(() -> jdbcTemplate.execute(guardStatement()))
                 .hasMessageContaining("INVERSE_VOLATILITY/1 결과가 남아 있다");
+    }
+
+    @Test
+    @DisplayName("백필: 오버레이 버전 기록이 없는 목표 위험 실행만 TARGET_RISK_OVERLAY/1 로 채운다(T029)")
+    void backfillsTheOverlayVersionOnlyWhereItIsMissing() {
+        // 2026-09-11~09-15 에 접수된 목표 위험 실행은 versions.scenarioRules 가 없다. 발행·재시도가
+        // 이 기록으로 오버레이 명세를 읽으므로(T029) 비어 있으면 다시 계산할 수 없다.
+        Long missing = savedRun("{\"scenario\": \"TARGET_RISK\"}", "{\"rules\": \"1\"}");
+        Long recorded =
+                savedRun(
+                        "{\"scenario\": \"TARGET_RISK\"}",
+                        "{\"rules\": \"1\", \"scenarioRules\": \"TARGET_RISK_OVERLAY/9\"}");
+        Long fullPeriod = savedRun("{\"scenario\": \"FULL_PERIOD\"}", "{\"rules\": \"1\"}");
+
+        jdbcTemplate.execute(backfillStatement());
+
+        assertThat(scenarioRulesOf(missing)).isEqualTo("TARGET_RISK_OVERLAY/1");
+        assertThat(scenarioRulesOf(recorded))
+                .as("이미 있는 기록은 덮어쓰지 않는다")
+                .isEqualTo("TARGET_RISK_OVERLAY/9");
+        assertThat(scenarioRulesOf(fullPeriod)).as("오버레이가 없는 실행에는 붙이지 않는다").isNull();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT versions ->> 'rules' FROM backtest_run WHERE id = ?",
+                                String.class,
+                                missing))
+                .as("다른 버전 기록은 그대로다")
+                .isEqualTo("1");
+    }
+
+    private Long savedRun(String requestSpec, String versions) {
+        BacktestRun saved =
+                repository.save(
+                        BacktestRun.create(
+                                "FIXED_WEIGHT",
+                                "1",
+                                Map.of("rebalance", "MONTH_END"),
+                                List.of(new InstrumentId("069500.XKRX")),
+                                PERIOD,
+                                new BigDecimal("10000000.00"),
+                                PositionSizingMode.STRATEGY_DEFINED,
+                                null,
+                                null,
+                                42));
+        entityManager.flush();
+        jdbcTemplate.update(
+                "UPDATE backtest_run SET request_spec = ?::jsonb, versions = ?::jsonb WHERE id = ?",
+                requestSpec,
+                versions,
+                saved.getId());
+        return saved.getId();
+    }
+
+    private String scenarioRulesOf(Long runId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT versions ->> 'scenarioRules' FROM backtest_run WHERE id = ?",
+                String.class,
+                runId);
+    }
+
+    /** 수명주기 마이그레이션의 백필 블록 그대로. 버전 번호를 적지 않으려고 설명 부분으로 파일을 찾는다. */
+    private static String backfillStatement() {
+        String file =
+                MigrationFiles.rawFileNames().stream()
+                        .filter(name -> name.endsWith("__strategy_rules_lifecycle.sql"))
+                        .findFirst()
+                        .orElseThrow();
+        String sql = MigrationFiles.read(file);
+        int begin = sql.indexOf("-- backfill:begin");
+        int end = sql.indexOf("-- backfill:end");
+        return sql.substring(begin, end);
     }
 
     /** 마이그레이션 파일의 가드 블록 그대로. 문장을 여기 옮겨 적으면 파일이 바뀌어도 테스트만 통과한다. */
@@ -561,8 +652,41 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                         "analytics",
                         "exceptions",
                         "versions",
+                        // 개별 체결을 기록한 결과인지(spec 011 DEP-004-011)
+                        "fills_recorded",
                         "created_at",
                         "updated_at");
+    }
+
+    @Test
+    @DisplayName("backtest_fill이 Entity 매핑과 같은 컬럼·시퀀스·제약으로 만들어지고 기존 결과는 체결 미기록으로 남는다")
+    void createsBacktestFillTable() {
+        assertThat(columnsOf("backtest_fill"))
+                .containsExactlyInAnyOrder(
+                        "id", "run_id", "fill_id", "instrument_id", "side", "fill_time", "detail");
+
+        Integer sequences =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.sequences"
+                                + " WHERE LOWER(sequence_name) = 'backtest_fill_seq'",
+                        Integer.class);
+        assertThat(sequences).isEqualTo(1);
+
+        List<String> constraints =
+                jdbcTemplate.queryForList(
+                        "SELECT LOWER(constraint_name) FROM information_schema.table_constraints"
+                                + " WHERE LOWER(table_name) = 'backtest_fill'"
+                                + " AND constraint_type IN ('UNIQUE', 'FOREIGN KEY')",
+                        String.class);
+        assertThat(constraints).contains("uk_backtest_fill_run_fill").hasSize(2);
+
+        String columnDefault =
+                jdbcTemplate.queryForObject(
+                        "SELECT column_default FROM information_schema.columns"
+                                + " WHERE LOWER(table_name) = 'backtest_result'"
+                                + " AND LOWER(column_name) = 'fills_recorded'",
+                        String.class);
+        assertThat(columnDefault).isEqualTo("false");
     }
 
     @Test

@@ -41,6 +41,9 @@ export type ResultConfigItem = {
 
 /** 접수가 저장한 요청 사본에 `currency`·`effectiveStart`·`effectiveEnd`를 얹은 것이다 */
 export type ResultConfig = {
+  executionType?: string
+  registryVersion?: string
+  scenarioParams?: Record<string, unknown>
   strategyId: string
   rulesVersion: string
   parameters: Record<string, unknown>
@@ -158,6 +161,13 @@ export type ResultTimeseriesPoint = {
 export type ResultTimeseries = {
   partial: boolean
   points: ResultTimeseriesPoint[]
+}
+
+/** `GET /results/{token}/index-comparison`. 값은 서버가 시작 금액으로 환산한 문자열이다. */
+export type ResultIndexComparison = {
+  available: boolean
+  reason: string | null
+  series: { date: string; value: string }[]
 }
 
 export type ResultTrade = {

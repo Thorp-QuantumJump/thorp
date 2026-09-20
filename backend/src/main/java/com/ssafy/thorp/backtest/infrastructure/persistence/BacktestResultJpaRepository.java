@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 
 interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEntity, Long> {
 
+    /** 체결을 기록한 결과인지. 결과 행이 없으면 빈 값이다. 엔티티를 읽지 않는 이유는 아래 요약 조회와 같다(수백 KB 의 시계열). */
+    @Query("SELECT r.fillsRecorded FROM BacktestResultJpaEntity r WHERE r.runId = :runId")
+    Optional<Boolean> findFillsRecorded(@Param("runId") Long runId);
+
     /**
      * 요약 조회. **select 목록에 {@code portfolio_series}와 {@code benchmark} 전체가 없는 것이 이 쿼리의 존재 이유다** —
      * 엔티티를 읽으면 5년치 수백 KB가 함께 온다. 이 값을 쓰는 엔드포인트는 프론트가 폴링한다.
@@ -31,7 +35,8 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
                            liquidation::text AS "liquidation",
                            analytics::text   AS "analytics",
                            COALESCE(jsonb_array_length(exceptions), 0) AS "exceptionCount",
-                           versions ->> 'worker' AS "workerVersion"
+                           versions ->> 'worker' AS "workerVersion",
+                           (versions -> 'dependencies')::text AS "dependencies"
                       FROM backtest_result
                      WHERE run_id = :jobId
                     """,

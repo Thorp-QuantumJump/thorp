@@ -76,6 +76,30 @@ describe('evaluateRules', () => {
     expect(evaluateRules([selectionRule], { maxWeight: 10 }, context)).toEqual([])
   })
 
+  const percentSelectionRule = rule({
+    code: 'MAX_WEIGHT_TOO_LOW_FOR_SELECTION',
+    left: {
+      axis: 'maxWeight',
+      multiplyByCeil: { context: 'UNIVERSE_SIZE', axis: 'topPercent', divisor: 100 },
+    },
+    operator: 'LESS_THAN',
+    right: { value: 100 },
+  })
+
+  it('상위 비율로 고른 섹터 수를 올림한 뒤 상한과 곱한다', () => {
+    // 후보 3개 중 50%는 1.5개가 아니라 2개를 고른다. 상한 40%로는 80%만 배분할 수 있다.
+    expect(
+      evaluateRules([percentSelectionRule], { maxWeight: 40, topPercent: 50 }, context),
+    ).toEqual([percentSelectionRule])
+    expect(
+      evaluateRules([percentSelectionRule], { maxWeight: 50, topPercent: 50 }, context),
+    ).toEqual([])
+  })
+
+  it('상위 비율 축이 설정에 없으면 판정하지 않는다 — 다른 선정 방식은 무관하다', () => {
+    expect(evaluateRules([percentSelectionRule], { maxWeight: 10 }, context)).toEqual([])
+  })
+
   it('곱한 값이 경계와 정확히 같으면 이진 부동소수 오차로 뒤집히지 않는다', () => {
     const decimalRule = rule({
       left: { axis: 'ratio', multiplyByContext: 'UNIVERSE_SIZE' },

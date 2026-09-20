@@ -23,7 +23,7 @@
   "marketData": {"datasetId": "KRX_DAILY_20260915", "dataVersion": "KRX-2026-09-09", "interval": "1D", "fillPrice": "RAW", "signalPrice": "ADJUSTED", "distributions": "CASH_ON_PAY_DATE"},
   "allocation": {"strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1", "rules": {"lookbackDays": 63, "zeroVolatility": "EXCLUDE_THEN_ALLOCATE", "weightCap": "1.0000", "investedFraction": "1.0000"}, "parameters": {"rebalance": "MONTH_END"}},
   "portfolio": {"initialCash": "10000000.00", "currency": "KRW", "integerLots": true, "shortSelling": false, "leverage": "1.0"},
-  "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "PROVISIONAL-DEMO-1", "commissionBps": "0", "spreadBps": "0", "slippageBps": "5", "taxBps": "0", "provisional": true}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},
+  "execution": {"signalTiming": "BAR_CLOSE", "executionTiming": "NEXT_BAR_OPEN", "orderTypes": ["MARKET"], "costProfile": {"version": "KR-ETF-2026-09", "commissionBps": "1.5000", "spreadBps": "3.0000", "slippageBps": "5.0000", "taxBps": "0.0000", "provisional": false}, "tradingHalt": "DEFER_TO_NEXT_TRADABLE", "delisting": "CAUSE_BASED"},
   "evaluation": {"splitVersion": "SPLIT-1", "warmupTradingDays": 63, "liquidationAtEnd": true},
   "progress": {"batchTradingDays": 20}
 }
@@ -58,7 +58,7 @@
 
 ## EngineOutput v2 추가 필드
 
-`run{runId, status, partial, lastTradingDate, effectiveStart, effectiveEnd, error}`, `performance{…현행 + netTotalReturn, maxDrawdown, totalTradingCost}`, `portfolioSeries[{date, equity, cash, positions, cashFlows[{type: DISTRIBUTION, instrumentId, amount}]}]`, `weightsSeries[…]`, `weightsSource`, `trades[{…현행 + reason, plannedDate}]`, `costs{commission, spread, slippage, tax, total}`, `liquidation{markToMarket, liquidated}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method}`, `exceptions[{date, instrumentId, kind, rule, action}]`, `versions{mapping, rules, costProfile, data, engine, evaluationSplit, worker}`, `diagnostics{…현행}`(자원 사용량은 EngineOutput이 아니라 FINISHED payload `resource`).
+`run{runId, status, partial, lastTradingDate, effectiveStart, effectiveEnd, error}`, `performance{…현행 + netTotalReturn, maxDrawdown, totalTradingCost}`, `portfolioSeries[{date, equity, cash, positions, cashFlows[{type: DISTRIBUTION, instrumentId, amount}]}]`, `weightsSeries[…]`, `weightsSource`, `trades[{…현행 + reason, plannedDate}]`, `fills[{fillId, instrumentId, side, time, price, referencePrice, quantity, costs{commission, spread, slippage, tax}, cashCost, reason, plannedDate}]`(개별 체결, 생략 = 기록하지 않는 워커, 2026-09-20), `costs{commission, spread, slippage, tax, total}`, `liquidation{markToMarket, liquidated}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method}`, `exceptions[{date, instrumentId, kind, rule, action}]`, `versions{mapping, rules, costProfile, data, engine, evaluationSplit, worker, dependencies?{numpy, scipy}}`, `diagnostics{…현행}`(자원 사용량은 EngineOutput이 아니라 FINISHED payload `resource`).
 
 ## 검증 책임 (§8 갱신)
 

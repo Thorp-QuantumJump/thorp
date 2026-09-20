@@ -41,6 +41,7 @@
 | publicToken | 32자 16진 문자열 | 주소에 노출된다. 004의 `backtestId`는 노출하지 않는다 |
 | expiresAt | 시각 또는 없음 | 비로그인 결과에만 있다 |
 | compareToken | 32자 16진 문자열 또는 없음 | 질의 문자열 `?compare=`로 싣는다 (R-04) |
+| searchId | 문자열 또는 없음 | 질의 문자열 `?search=`로 싣고 자동 탐색 후보 표시와 007 복귀에 쓴다. 서버는 읽지 않는다 (R-04) |
 
 **상태 전이**
 
@@ -67,10 +68,15 @@
 | conditionLine | `config` + `versions` | 분석 기간·비교 대상·비용 적용 여부 한 줄 |
 | interpretation | 문장 틀 선택 결과 | §3-5 |
 | liquidation | `summary.liquidation{markToMarket, liquidated}` | 종료 시 시가평가와 청산 비용 포함을 구분 (FR-015) |
+| strategyName | 003 등록표가 준 이름 또는 없음 | 첫 화면에서 등록표를 다시 조회하거나 이름을 지어내지 않는다 |
+| weightsSource | `USER`·`COMPUTED` 또는 없음 | 사용자 입력 비중과 규칙 계산 비중을 구분한다. 결과가 없으면 비어 있다 |
+| exceptionKinds | 예외 종류 목록 또는 없음 | 결과 옆 상태 문장의 원천. 빈 목록은 예외 없음, 없음은 결과를 볼 수 없는 상태다 |
 
 숫자 세 개 중 하나라도 `summaryUnavailable`로 비어 있으면 그 자리에 0이나 대체값을 넣지 않는다(FR-013, 원칙 VI).
 
 ### 3-2. 비교 뷰 (FR-004, FR-005)
+
+공개 `config.executionType`은 실행 사본이 아닌 요청 행에서 온다. 비용 기준은 `versions.costProfile.version`, 선택 전략의 기본값·준비 기간은 003 등록표, 규칙 버전은 004 규칙 등록표를 사용한다. `EXECUTION_LIMIT`은 실행 상태와 별도로 표시하는 요청 거절 상태이며, `retryAfterSeconds`를 안내하고 명시적 재시도만 허용한다.
 
 | 필드 | 설명 |
 |---|---|
@@ -109,7 +115,7 @@
 
 ### 3-5. 해석 요약 문장 틀 (FR-006, R-07)
 
-문장 틀은 `frontend/src/features/result/summarySentences.ts`가 소유한다. 선택 기준은 세 가지다.
+문장 틀은 `frontend/src/components/result/summarySentences.ts`가 소유한다. 선택 기준은 세 가지다. 상태 문장은 같은 폴더의 `statusSentences.ts`만 소유한다.
 
 | 조건 | 틀의 성격 |
 |---|---|

@@ -3,12 +3,12 @@
 `examples/` 아래 JSON 8개를 만든다. 수치는 시드 고정 랜덤워크 + 단순 현금 회계로 만들어
 `equity = cash + positionValue`, 지표 계산 규약, 손익 항등식이 실제로 성립한다.
 
-- `engine-input.json`: 백엔드 `EngineInputAssembler`가 API 예시(`backtest-request.json`)에서 조립하는
-  결과와 **정확히 같아야 한다** (`EngineInputFixtureTest`). 그래서 003 연동 전에는 생략되는
-  필드(`universe.mappingVersion`·`items[].sectorId`, `allocation.rules`, `marketData.dataVersion`,
-  `evaluation.splitVersion`)를 여기서도 비운다.
+- `engine-input.json`: 백엔드 `EngineInputAssembler`가 조립하는 결과와 **정확히 같아야 한다**
+  (`EngineInputFixtureTest`). 그 테스트가 조립하는 실행은 접수 경로를 거치지 않은 행이라, 그 경로에서
+  생략되는 필드(`universe.mappingVersion`·`items[].sectorId`, `allocation.rules`,
+  `evaluation.splitVersion`)를 여기서도 비우고 비용은 고정값(데모)을 싣는다.
 - `engine-input-target-risk.json`: 계약 구조 예시. PD-18 목표 위험 맞춤 시나리오와 003 연동 뒤의
-  전체 필드를 보여준다. 조립기 검증 대상은 아니다.
+  전체 필드를 보여준다. 비용은 기본 비용(PD-07 확정값)이다. 조립기 검증 대상은 아니다.
 - `event-*.json`: STARTED / PROGRESS / FINISHED(COMPLETED · FAILED · CANCELLED).
 - `control-cancel.json`: 백엔드 → 워커 제어 메시지.
 """
@@ -40,6 +40,7 @@ CENT = Decimal("0.01")
 RATIO = Decimal("0.000001")
 ENGINE_VERSION = "nautilus_trader 1.219.0"
 WORKER_VERSION = "2.0.0"
+# engine-input.json 은 비용 버전이 기록되지 않은 실행의 조립 결과라 ExecutionPolicy 고정값(데모)을 싣는다.
 COST_PROFILE = {
     "version": "PROVISIONAL-DEMO-1",
     "commissionBps": "0",
@@ -47,6 +48,15 @@ COST_PROFILE = {
     "slippageBps": "5",
     "taxBps": "0",
     "provisional": True,
+}
+# 접수 경로를 거친 요청의 기본 비용(PD-07 확정, T021). 등록표 행을 그대로 실으므로 NUMERIC(8,4) 네 자리다.
+CONFIRMED_COST_PROFILE = {
+    "version": "KR-ETF-2026-09",
+    "commissionBps": "1.5000",
+    "spreadBps": "3.0000",
+    "slippageBps": "5.0000",
+    "taxBps": "0.0000",
+    "provisional": False,
 }
 # queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.
 SERVED = {"queue": "backtest.jobs", "role": "single"}
@@ -122,12 +132,40 @@ def ts(day: date) -> str:
     return f"{day.isoformat()}T00:00:00Z"
 
 
+def fill_record(
+    seq: int, inst: str, side: str, day: date, px: Decimal, q: int, comm: Decimal, slip: Decimal
+) -> dict:
+    """체결 한 건(spec 004·011 DEP-004-011). 이 목 회계는 슬리피지를 체결가가 아니라 현금에서 뺀다.
+
+    그래서 `price == referencePrice`이고 `cashCost`에 슬리피지가 들어간다. 실제 엔진은 가격 충격을
+    체결가에 싣고 `cashCost`는 수수료 + 세금이다(README §4.3).
+    """
+    return {
+        "fillId": f"FIL-{seq:06d}",
+        "instrumentId": inst,
+        "side": side,
+        "time": ts(day),
+        "price": money(px),
+        "referencePrice": money(px),
+        "quantity": qty(q),
+        "costs": {
+            "commission": money(comm),
+            "spread": "0.00",
+            "slippage": money(slip),
+            "tax": "0.00",
+        },
+        "cashCost": money(comm + slip),
+        "reason": "SIGNAL",
+    }
+
+
 def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
     """`days[:until]` 구간을 회계 처리한 결과. 완료 픽스처는 until=N, 취소 픽스처는 부분 구간."""
     cash = INITIAL_CASH
     holdings: dict[str, int] = {}
     avg_entry: dict[str, Decimal] = {}
     open_trades: dict[int, dict] = {}
+    fills: list[dict] = []
     series: list[dict] = []
     weights: list[dict] = []
     order_count = fill_count = 0
@@ -148,6 +186,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
                 cash -= notional + comm + slip
                 holdings[inst] = holdings.get(inst, 0) + q
                 avg_entry[inst] = px
+                fills.append(fill_record(len(fills) + 1, inst, "BUY", day, px, q, comm, slip))
                 order_count += 1
                 fill_count += 1
                 total_commission += comm
@@ -179,6 +218,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
                 slip = (notional * SLIPPAGE_RATE).quantize(CENT, ROUND_HALF_UP)
                 cash += notional - comm - slip
                 holdings[inst] -= q
+                fills.append(fill_record(len(fills) + 1, inst, "SELL", day, px, q, comm, slip))
                 if holdings[inst] == 0:
                     del holdings[inst]
                     del avg_entry[inst]
@@ -375,6 +415,7 @@ def simulate(until: int, distributions: list[tuple[str, int, Decimal]]) -> dict:
         "series": series,
         "weights": weights,
         "trades": trades,
+        "fills": fills,
         "performance": performance,
         "execution": {
             "orderCount": order_count,
@@ -406,6 +447,8 @@ VERSIONS = {
     # 요청 evaluation.splitVersion 의 사본. 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).
     "evaluationSplit": "SPLIT-1",
     "worker": WORKER_VERSION,
+    # 결과를 계산한 워커 환경의 실제 설치 버전(T028). 실행 계획(backtest_run.versions)에는 없다.
+    "dependencies": {"numpy": "2.4.6", "scipy": "1.17.1"},
 }
 
 
@@ -427,6 +470,7 @@ def engine_output(result: dict, status: str, partial: bool, finished_at: str) ->
         "weightsSeries": result["weights"],
         "weightsSource": "COMPUTED",
         "trades": result["trades"],
+        "fills": result["fills"],
         "execution": result["execution"],
         "costs": result["costs"],
         "liquidation": result["liquidation"],
@@ -447,8 +491,10 @@ engine_input = {
         "scenario": "FULL_PERIOD",
     },
     "universe": {"items": [{"instrumentId": inst} for inst in INSTRUMENTS]},
+    # 자료 버전은 접수가 정해 두 필드에 같은 값으로 싣는다(spec 001 research 결정 4, EngineInputFixtureTest).
     "marketData": {
-        "datasetId": "FIXTURE-three_etf_24m",
+        "datasetId": "KRX_DAILY_20260907",
+        "dataVersion": "KRX_DAILY_20260907",
         "interval": "1D",
         "adjustment": "SPLIT_ADJUSTED",
         "priceType": "LAST",
@@ -540,7 +586,7 @@ engine_input_target_risk = {
         "leverage": "1.0",
         "integerLots": True,
     },
-    "execution": engine_input["execution"],
+    "execution": {**engine_input["execution"], "costProfile": CONFIRMED_COST_PROFILE},
     "evaluation": {"splitVersion": "SPLIT-1", "warmupTradingDays": 63, "liquidationAtEnd": True},
     "progress": {"batchTradingDays": PROGRESS_CHUNK},
 }

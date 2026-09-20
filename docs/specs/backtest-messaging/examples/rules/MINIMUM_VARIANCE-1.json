@@ -1,0 +1,20 @@
+{
+  "strategyId": "MINIMUM_VARIANCE",
+  "rulesVersion": "1",
+  "provisional": false,
+  "spec": {
+    "lookbackDays": 120,
+    "estimationMethod": "SAMPLE_COV",
+    "solver": "SLSQP",
+    "maxIterations": 1000,
+    "functionTolerance": 1e-09,
+    "symmetryTolerance": 1e-12,
+    "eigenvalueTolerance": -1e-10,
+    "solutionTolerance": 1e-08,
+    "weightCap": "1.0000",
+    "investedFraction": "1.0000",
+    "capOverflow": "CASH",
+    "weightUnit": "0.000001",
+    "weightsSource": "COMPUTED"
+  }
+}

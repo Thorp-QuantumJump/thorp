@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
@@ -80,6 +81,36 @@ public class StrategySettingsValidator {
         requireInitialAmountInRange(initialAmount);
 
         return new Verified(warmupOf(registration, settings), currentVersion);
+    }
+
+    /**
+     * 등록표 버전이 이미 고정된 요청을 접수할 때 — 재시도와 007 묶음 후보(spec 004 T029).
+     *
+     * <p>{@link #verify}는 새 요청이 <b>지금 등록표</b>로 판정받게 한다. 이 요청들에 그대로 걸면 등록표 버전이 오른 날부터 그 전에 접수된 요청은
+     * 전부 409로 막힌다 — 사용자가 고친 것은 없는데 같은 조건으로 다시 돌릴 방법이 사라지고, 진행 중인 묶음은 남은 후보를 넣지 못해 멈춘다.
+     *
+     * <p>그래서 요청의 버전이 <b>지금 버전과 같으면</b> {@link #verify}와 똑같이 판정하고, <b>다르면 판정하지 않는다</b>. 대개 과거 버전이다.
+     * 그 요청은 접수 때 그 버전으로 판정을 통과했고, 등록표는 값이 바뀌면 행을 고치지 않고 버전을 올리므로 같은 버전으로 다시 판정해도 답이 같다. 지금 버전의 규칙으로
+     * 판정하면 과거 요청을 그 뒤에 생긴 규칙으로 거절하게 된다.
+     *
+     * <p><b>지금보다 새 버전도 판정하지 않는다.</b> 앱을 되돌려 배포하면 생기는 경우다. 버전 문자열은 형식을 강제하지 않아 과거와 미래를 가릴 수 없다. 이때
+     * 지금 워커가 모르는 설정이면 워커가 {@code INVALID_REQUEST}로 그 실행을 실패시킨다. 접수에서 409로 막지 않는 이유는 007 묶음 후보도 이
+     * 경로를 타기 때문이다 — 후보 발행이 예외를 던지면 묶음 전체가 멈추고, 실행 실패는 그 후보 하나로 끝난다.
+     *
+     * @param registryVersion 요청이 접수 때 판정받은 등록표 버전
+     * @return 판정했으면 그 결과, 지금과 다른 버전이라 판정하지 않았으면 empty
+     */
+    public Optional<Verified> verifySaved(
+            String strategyId,
+            Map<String, Object> parameters,
+            String registryVersion,
+            int universeSize,
+            BigDecimal initialAmount) {
+        if (!Objects.equals(registryVersion, registry.version())) {
+            return Optional.empty();
+        }
+        return Optional.of(
+                verify(strategyId, parameters, registryVersion, universeSize, initialAmount));
     }
 
     /**

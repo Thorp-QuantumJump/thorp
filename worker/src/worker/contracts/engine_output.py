@@ -144,6 +144,42 @@ class TradeResult(ContractModel):
     planned_date: date | None = None  # HALT_DEFERRED: 원래 예정일
 
 
+class FillSide(StrEnum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class FillCosts(ContractModel):
+    """체결 한 건의 비용 네 갈래. 합계 블록 ``Costs`` 와 같은 갈래이고 ``total`` 은 두지 않는다."""
+
+    commission: Decimal
+    spread: Decimal
+    slippage: Decimal
+    tax: Decimal
+
+
+class FillResult(ContractModel):
+    """개별 체결 한 건(spec 011 DEP-004-011).
+
+    ``trades`` 는 진입·청산을 묶은 단위라 묶음이 닫히면 양쪽 비용이 합쳐지고 세금은 실현 손익에만
+    들어간다. 임의 구간의 거래·비용·현금 흐름을 다시 세려면 체결 단위가 있어야 한다.
+    ``price`` 는 실제 체결가(호가차·슬리피지 반영), ``reference_price`` 는 충격 전 기준가,
+    ``cash_cost`` 는 체결 대금과 별도로 현금에서 빠진 비용(수수료 + 세금)이다.
+    """
+
+    fill_id: str
+    instrument_id: str
+    side: FillSide
+    time: UtcDatetime
+    price: Decimal
+    reference_price: Decimal
+    quantity: Decimal
+    costs: FillCosts
+    cash_cost: Decimal
+    reason: TradeReason | None = None
+    planned_date: date | None = None  # HALT_DEFERRED: 원래 예정일
+
+
 class ExecutionResult(ContractModel):
     order_count: int
     fill_count: int
@@ -207,6 +243,13 @@ class RuleVersion(ContractModel):
     provisional: bool | None = None  # True = 팀 결정 전 임시값
 
 
+class Dependencies(ContractModel):
+    """계산에 쓴 수치 라이브러리의 실제 설치 버전(spec 004 T028). 워커가 자기 환경에서 읽는다."""
+
+    numpy: str
+    scipy: str
+
+
 class Versions(ContractModel):
     """참조 버전(FR-028)."""
 
@@ -218,6 +261,7 @@ class Versions(ContractModel):
     engine: str | None = None
     evaluation_split: str | None = None  # 요청의 evaluation.splitVersion 사본. None = 미지정
     worker: str | None = None
+    dependencies: Dependencies | None = None  # None = 미보고(T028 이전 워커)
 
 
 class Warning(ContractModel):
@@ -244,6 +288,8 @@ class EngineOutput(ContractModel):
     weights_series: list[WeightsPoint] | None = None
     weights_source: WeightsSource | None = None
     trades: list[TradeResult]
+    # None = 체결을 기록하지 않는 워커가 낸 결과(이 필드가 생기기 전). 빈 리스트 = 체결이 없었다
+    fills: list[FillResult] | None = None
     execution: ExecutionResult | None = None
     costs: Costs | None = None
     liquidation: Liquidation | None = None

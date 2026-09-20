@@ -931,6 +931,13 @@ def test_completed_output_carries_analytics_and_reference_versions() -> None:
     assert versions.worker == f"thorp-worker {worker.__version__}" == "thorp-worker 0.2.0"
     assert versions.rules is not None and versions.rules.provisional is True
     assert versions.engine == "nautilus_trader 1.219.0"
+    # 계산에 쓴 수치 라이브러리의 실제 설치 버전(T028). lock 이 고른 판과 같아야 한다.
+    import numpy
+    import scipy
+
+    assert versions.dependencies is not None
+    assert versions.dependencies.numpy == numpy.__version__
+    assert versions.dependencies.scipy == scipy.__version__
 
 
 def test_rules_provisional_is_omitted_when_the_rules_copy_does_not_say() -> None:

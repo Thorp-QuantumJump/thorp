@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.PinnedVersions;
 import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
@@ -15,6 +16,7 @@ import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
 import com.ssafy.thorp.backtest.domain.model.PublicResultToken;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
+import com.ssafy.thorp.backtest.domain.model.RulesRef;
 import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
@@ -32,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +46,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 분석 요청 접수(spec 004 T005). 백엔드는 계산하지 않는다 — 요청을 검증해 실행을 만들고 작업 메시지를 발행한다.
  *
- * <p>접수가 하는 일은 "실행 전에 거절할 수 있는 것을 전부 거절하는 것"이다. 규칙이 팀 미확정이면 422, 워밍업이 모자라면 422, 비중 합이 1이 아니면 400이다.
- * 여기서 통과시킨 요청은 워커가 자료를 읽다가 실패하는 것 말고는 실패할 이유가 없어야 한다.
+ * <p>접수가 하는 일은 "실행 전에 거절할 수 있는 것을 전부 거절하는 것"이다. 규칙이 팀 미확정이면 422, 새 버전으로 대체된 옛 규칙이면 409, 워밍업이 모자라면
+ * 422, 비중 합이 1이 아니면 400이다. 여기서 통과시킨 요청은 워커가 자료를 읽다가 실패하는 것 말고는 실패할 이유가 없어야 한다.
+ *
+ * <p><b>입구가 둘이다</b>(T029). 새 요청({@link #create})은 지금 등록된 규칙·등록표 버전만 받고, 버전이 고정된 요청({@link
+ * #createPinned} — 재시도와 007 묶음 후보)은 접수 때 판정받은 옛 버전도 받는다. 나머지 판정(동일 버전 재사용·합류·한도)은 둘이 같다.
  *
  * <p><b>접수 거절은 호출자의 트랜잭션을 되돌리지 않는다</b>({@code noRollbackFor = BusinessException.class}, T014).
  * 기본값이면 여기서 던진 예외가 참여 중인 트랜잭션을 rollback-only 로 표시하고, 호출자가 그것을 잡아도 커밋할 수 없다. 007 자동 탐색은 후보 정산과 다음 후보
@@ -118,6 +124,9 @@ public class BacktestService {
 
     private static final String SECTOR_MOMENTUM = "SECTOR_MOMENTUM";
 
+    /** 목표 위험 맞춤 시나리오의 규칙 행. 전략이 아니지만 같은 등록표에서 버전을 관리한다(PD-18). */
+    static final String TARGET_RISK_OVERLAY = "TARGET_RISK_OVERLAY";
+
     /** 목표 변동성 허용 범위와 간격(PD-18). */
     private static final BigDecimal MIN_TARGET_VOLATILITY = new BigDecimal("0.0500");
 
@@ -127,28 +136,45 @@ public class BacktestService {
     /** 003 축은 %, 규칙표와 워커는 소수다. 변환은 {@link #effectiveWeightCap} 한 곳에서만 한다. */
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
+    /** 새 요청. 규칙·등록표 버전은 지금 등록된 것만 받는다(T029). */
     @Transactional(noRollbackFor = BusinessException.class)
     public BacktestJobResult create(CreateBacktestCommand command) {
-        return create(command, null);
+        return admit(command, null);
     }
 
     /**
-     * @param retryOfRequestId 재시도라면 원본 요청의 id. 새 요청 행에 그대로 남는다(T010). 재시도도 접수를 <b>다시</b> 타므로 동일 버전
-     *     재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에 합류한다
+     * 버전이 이미 고정된 요청을 접수한다 — 실패·취소한 요청의 재시도(T010)와 007 묶음의 후보다({@link PinnedVersions}, T029).
+     *
+     * <p>이 요청도 접수를 <b>다시</b> 타므로 동일 버전 재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에
+     * 합류한다. 새 요청과 다른 것은 버전 판정 하나다. 전략 규칙은 대체된 옛 버전도 받고({@link
+     * StrategyRulesService#requireExecutable}), 003 등록표도 그 요청이 판정받은 과거 버전을 받는다({@link
+     * StrategySettingsValidator#verifySaved}). 규칙이 바뀐 날부터 옛 요청을 다시 돌릴 방법이 사라지거나 진행 중인 묶음이 멈추면 안 되기
+     * 때문이다.
      */
     @Transactional(noRollbackFor = BusinessException.class)
-    public BacktestJobResult create(CreateBacktestCommand command, Long retryOfRequestId) {
+    public BacktestJobResult createPinned(CreateBacktestCommand command, PinnedVersions pinned) {
+        return admit(command, Objects.requireNonNull(pinned, "pinned must not be null"));
+    }
+
+    /**
+     * @param pinned null = 새 요청, 아니면 버전이 고정된 요청
+     */
+    private BacktestJobResult admit(CreateBacktestCommand command, PinnedVersions pinned) {
         Scenario scenario = command.scenario() == null ? Scenario.FULL_PERIOD : command.scenario();
         validateScenario(scenario, command.scenarioParams());
         validateUniverse(command);
 
         StrategyRules rules =
-                strategyRulesService.requireRegistered(
-                        command.strategyId(), command.rulesVersion());
+                pinned == null
+                        ? strategyRulesService.requireCurrent(
+                                command.strategyId(), command.rulesVersion())
+                        : strategyRulesService.requireExecutable(
+                                command.strategyId(), command.rulesVersion());
         validateWeights(command, rules);
-        Integer warmupTradingDays = verifyRegistrySettings(command);
-        StrategyRules overlay = scenario == Scenario.TARGET_RISK ? targetRiskOverlay() : null;
+        Integer warmupTradingDays = verifyRegistrySettings(command, pinned != null);
+        StrategyRules overlay = scenario == Scenario.TARGET_RISK ? targetRiskOverlay(pinned) : null;
         CostProfile costProfile = costProfileService.resolve(command.costProfileVersion());
+        Long retryOfRequestId = pinned == null ? null : pinned.retryOfRequestId();
 
         EffectivePeriodCalculator.EffectivePeriod period =
                 effectivePeriodCalculator.resolve(
@@ -342,10 +368,15 @@ public class BacktestService {
      * INSUFFICIENT_HISTORY}로 거절한다. 그 자리에서 큰 쪽으로 올리지 않는 이유는 004와 같다 — 두 값이 어긋났다는 것은 등록표와 규칙 중 하나가
      * 틀렸다는 신호이고, 고쳐 통과시키면 어긋난 채로 계속 간다.
      *
+     * <p><b>버전이 고정된 요청(재시도·007 묶음 후보)은 그 요청이 판정받은 등록표 버전을 그대로 받는다</b>(T029, {@link
+     * StrategySettingsValidator#verifySaved}). 둘 다 워밍업을 싣고 오므로(재시도는 저장된 실효값, 묶음은 공통 워밍업) 판정을 건너뛰어도
+     * 워밍업은 비지 않는다.
+     *
+     * @param pinned true = 버전이 고정된 요청
      * @return 실행에 쓸 워밍업 거래일 수. 요청이 값을 보냈으면 그대로 두고(004의 기존 규칙이 판정한다), 보내지 않았고 등록표 판정을 거쳤으면 등록표가 산출한
      *     값이다
      */
-    private Integer verifyRegistrySettings(CreateBacktestCommand command) {
+    private Integer verifyRegistrySettings(CreateBacktestCommand command, boolean pinned) {
         if (command.registryVersion() == null) {
             log.warn(
                     "등록표 검증을 건너뛴 접수다(과도기 호환): strategyId={}, requesterId={}."
@@ -354,18 +385,39 @@ public class BacktestService {
                     command.requesterId());
             return command.warmupTradingDays();
         }
-        StrategySettingsValidator.Verified verified =
-                strategySettingsValidator.verify(
+        if (!pinned) {
+            StrategySettingsValidator.Verified verified =
+                    strategySettingsValidator.verify(
+                            command.strategyId(),
+                            command.parameters(),
+                            command.registryVersion(),
+                            command.items().size(),
+                            command.initialCash());
+            // 요청이 워밍업을 실어 보냈으면 그것이 비교 묶음이 계산한 공통 워밍업이다(R-15).
+            // 전략 요구값보다 작으면 EffectivePeriodCalculator 가 422 INSUFFICIENT_HISTORY 로 거절한다.
+            return command.warmupTradingDays() == null
+                    ? verified.warmupTradingDays()
+                    : command.warmupTradingDays();
+        }
+        Optional<StrategySettingsValidator.Verified> verified =
+                strategySettingsValidator.verifySaved(
                         command.strategyId(),
                         command.parameters(),
                         command.registryVersion(),
                         command.items().size(),
                         command.initialCash());
-        // 요청이 워밍업을 실어 보냈으면 그것이 비교 묶음이 계산한 공통 워밍업이다(R-15).
-        // 전략 요구값보다 작으면 EffectivePeriodCalculator 가 422 INSUFFICIENT_HISTORY 로 거절한다.
-        return command.warmupTradingDays() == null
-                ? verified.warmupTradingDays()
-                : command.warmupTradingDays();
+        if (command.warmupTradingDays() != null) {
+            return command.warmupTradingDays();
+        }
+        // 과거 등록표 버전이라 판정하지 않았는데 워밍업도 없다. 재시도의 저장 사본은 언제나 실효 워밍업을 싣고
+        // (RequestSpecCodec.write) 묶음은 공통 워밍업을 싣는다 — 비었으면 기록이 깨진 것이라 지어내지 않는다.
+        return verified.map(StrategySettingsValidator.Verified::warmupTradingDays)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "pinned request has no warmupTradingDays and its registry"
+                                                + " version is not current: strategyId="
+                                                + command.strategyId()));
     }
 
     /**
@@ -600,8 +652,26 @@ public class BacktestService {
         return percent.divide(HUNDRED);
     }
 
-    private StrategyRules targetRiskOverlay() {
-        return strategyRulesService.requireRegistered("TARGET_RISK_OVERLAY", "1");
+    /**
+     * 목표 위험 오버레이 규칙(PD-18). 요청이 버전을 싣지 않으므로 새 요청은 지금 버전을, 버전이 고정된 요청은 원본 실행이 쓴 버전을 쓴다(T029).
+     *
+     * <p>버전이 동일 버전 키에 들어가므로, 재시도가 지금 버전을 고르면 원본과 같은 조건인데도 다른 키가 되고 재사용·합류를 받지 못한다.
+     */
+    private StrategyRules targetRiskOverlay(PinnedVersions pinned) {
+        if (pinned == null) {
+            return strategyRulesService.requireCurrent(TARGET_RISK_OVERLAY);
+        }
+        RulesRef recorded = pinned.scenarioRules();
+        if (recorded == null || !TARGET_RISK_OVERLAY.equals(recorded.strategyId())) {
+            // 2026-09-15 전 실행은 T029 마이그레이션이 TARGET_RISK_OVERLAY/1 로 채웠다. 그래도 없으면 기록이 깨진 것이다.
+            throw new IllegalStateException(
+                    "pinned TARGET_RISK request has no overlay rules recorded: retryOf="
+                            + pinned.retryOfRequestId()
+                            + ", recorded="
+                            + recorded);
+        }
+        return strategyRulesService.requireExecutable(
+                recorded.strategyId(), recorded.rulesVersion());
     }
 
     private static BigDecimal decimal(Map<String, Object> spec, String key) {
@@ -640,7 +710,7 @@ public class BacktestService {
         putIfPresent(versions, "mapping", command.mappingVersion());
         versions.put("rules", versionOf(rules.rulesVersion(), rules.provisional()));
         if (overlay != null) {
-            versions.put("scenarioRules", overlay.strategyId() + "/" + overlay.rulesVersion());
+            versions.put("scenarioRules", overlay.ref().value());
         }
         versions.put("costProfile", versionOf(costProfile.version(), costProfile.provisional()));
         versions.put("data", dataVersion);

@@ -1,10 +1,21 @@
-.git
-.gradle
-build
-out
-node_modules
-coverage
+# Local artifacts are not part of the backend Docker build context.
+.gradle/
+build/
+out/
+target/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+node_modules/
+coverage/
+.git/
+.idea/
+.vscode/
 .env*
 *.log*
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
 Dockerfile*
 .dockerignore

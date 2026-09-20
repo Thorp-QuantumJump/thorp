@@ -161,7 +161,14 @@ class EffectivePeriodCalculatorTest {
                                         120))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_HISTORY)
-                .hasMessageContaining("250");
+                .hasMessageContaining("250")
+                .hasFieldOrPropertyWithValue(
+                        "details",
+                        Map.of(
+                                "requiredWarmupTradingDays",
+                                250,
+                                "requestedWarmupTradingDays",
+                                120));
 
         // 워밍업을 싣지 않은 요청(003 화면의 보통 경로)은 실효 워밍업이 고른 축 값이다.
         // 여기서 규칙표 값을 쓰면 그 120이 그대로 워커에 실려 나가, 워커는 120거래일만 읽고

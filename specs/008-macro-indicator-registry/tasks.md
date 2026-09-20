@@ -109,9 +109,9 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [X] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다
 - [X] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)
 - [X] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)
-- [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)
-- [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)
-- [ ] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)
+- [X] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)
+- [X] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)
+- [X] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)
 - [X] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다
 
 **Checkpoint**: 17개 지표를 받아 변환하고 한 응답으로 조회할 수 있다. 여기까지가 최소 완성본이다
@@ -124,14 +124,14 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Independent Test**: 화면 분야 이름을 바꾼 뒤 계산 등록표와 자료 버전이 그대로인지, 변환 규칙을 바꾸면 새 자료 버전이 생기고 이전 검색 결과의 참조 버전은 유지되는지 확인한다
 
-- [ ] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)
-- [ ] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)
-- [ ] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)
-- [ ] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)
-- [ ] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)
-- [ ] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)
-- [ ] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다
-- [ ] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)
+- [X] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)
+- [X] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)
+- [X] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)
+- [X] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)
+- [X] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)
+- [X] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)
+- [X] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다
+- [X] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)
 
 **Checkpoint**: 버전이 독립적으로 움직이고 같은 조합이면 같은 결과가 나온다
 
@@ -149,7 +149,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다
 - [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다
 - [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다
-- [ ] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)
+- [X] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)
 - [ ] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)
 - [ ] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)
 
@@ -192,7 +192,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
 - [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
 - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
-- [ ] T073 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)
+- [ ] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)
 
 ---
 
@@ -246,13 +246,13 @@ T032 → T033 → T034·T035
 | A. 스키마와 등록표 | T001~T017 | DE | 마이그레이션과 그것을 쓰는 코드·검증은 같은 병합 요청에 둔다(헌장 스키마 변경 규칙). 17개 등록값이 여기서 확정된다 |
 | B. 원천 수집과 변환 | T018~T029 | DE | 어댑터 넷과 연결기와 변환기. 저장에 붙기 전이라 표본 응답만으로 검증된다 |
 | C. 발행과 기준월 | T030·T031·T035 | DE | 불변 스냅샷과 `T_g`·`T_all`. 앞 묶음의 변환값이 있어야 의미가 있다 |
-| D. 008 조회 | T032·T033·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |
+| D. 008 조회 | T032·T033·T050·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |
 | E. 버전 독립 | T036~T043 | DE·BE | US2 전체. 세 버전 분리와 원자적 발행 |
-| F. 상태 드러내기 | T044~T052 | DE·BE | US3 전체. 지연·실패·결측·개정 |
+| F. 상태 드러내기 | T044~T049·T051·T052 | DE | US3 전체. 지연·실패·결측·개정. T050(조회 응답의 수집 상태)은 같은 컨트롤러를 건드려 묶음 D로 옮겼다 |
 | G. 이용 조건 | T053~T063 | DE·BE | US4 전체. 한도 준수와 권리 철회 대응과 예시 자료 격리 |
 | H. 009 연동 | T064~T067 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않으므로 009 담당자와 먼저 합의하고 연다 |
 | I. 010 연동과 마무리 | T068~T072 | DE·BE | 시계열 읽기와 구현체 교체와 임시 대역 폐기와 최종 검증 |
-| J. 재조회 구간 확정 | T073 | DE | 정기 수집을 몇 달 관찰해야 정해진다. 묶음 I에 두면 I가 그동안 병합되지 못한다 |
+| K. 남은 구멍 메우기 | T073·T075~T079 | DE | 묶음 B·C 뒤에 드러난 등록표·변환의 빈 칸. 모두 `registry.py`와 그것을 읽는 자리라 한 묶음이다. T074는 앞선 묶음에서 끝났다 |
 
 열 묶음이다. 단계가 일곱인데 묶음이 더 많은 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.
 
@@ -262,7 +262,7 @@ B는 어댑터별로 넷(T022·T023·T024·T025)으로 더 나눠도 각각 표�
 
 ### 순서
 
-A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다. J는 정기 수집이 몇 달 돌아간 뒤라 나머지와 같은 릴리즈에 들어가지 않는다.
+A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다. K는 앞선 묶음이 드러낸 빈 칸이라 B·C 뒤면 언제든 할 수 있고, 값이 실제로 나오려면 I보다 앞서야 한다 — 거래일 달력이 비어 있는 동안 월 평균 경로는 계속 결측이다.
 
 ---
 
@@ -292,3 +292,13 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - [ ] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)
 - [ ] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)
 - [ ] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)
+
+---
+
+## Phase 9: Convergence
+
+**Purpose**: 열려 있는 작업 어느 것도 맡지 않은 구멍을 메운다. 라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다
+
+- [X] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)
+- [X] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)
+- [X] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)

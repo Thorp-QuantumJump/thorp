@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.RulesStatus;
@@ -9,6 +10,8 @@ import com.ssafy.thorp.support.RepositoryTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * 마이그레이션이 넣은 등록표 시드가 도메인 모델로 그대로 올라오는지 본다(R-07·R-08).
@@ -20,6 +23,7 @@ class RegistryRepositoryTest extends RepositoryTestSupport {
 
     @Autowired private CostProfileRepositoryImpl costProfiles;
     @Autowired private StrategyRulesRepositoryImpl strategyRules;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("데모 비용 조건이 임시 표시와 함께 읽힌다")
@@ -33,6 +37,20 @@ class RegistryRepositoryTest extends RepositoryTestSupport {
         assertThat(profile.taxBps()).isEqualByComparingTo("0");
         assertThat(profile.escalation()).as("비용 상승 시나리오는 PD-07 미정").isNull();
         assertThat(profile.note()).contains("ADR-0004");
+    }
+
+    @Test
+    @DisplayName("확정 비용 조건(PD-07)이 확정 표시와 함께 읽힌다")
+    void confirmedCostProfileIsNotProvisional() {
+        CostProfile profile = costProfiles.find("KR-ETF-2026-09").orElseThrow();
+
+        assertThat(profile.provisional()).isFalse();
+        assertThat(profile.commissionBps()).isEqualByComparingTo("1.5");
+        assertThat(profile.spreadBps()).isEqualByComparingTo("3");
+        assertThat(profile.slippageBps()).isEqualByComparingTo("5");
+        assertThat(profile.taxBps()).isEqualByComparingTo("0");
+        assertThat(profile.escalation()).as("비용 상승 시나리오는 아직 정하지 않았다").isNull();
+        assertThat(profile.note()).contains("PD-07");
     }
 
     @Test
@@ -92,5 +110,70 @@ class RegistryRepositoryTest extends RepositoryTestSupport {
                         "SECTOR_MOMENTUM",
                         "MINIMUM_VARIANCE",
                         "TARGET_RISK_OVERLAY");
+    }
+
+    // --- 규칙 버전 수명주기(T029) ----------------------------------------------------
+
+    /** 새 규칙 버전을 넣는 마이그레이션의 순서 그대로: 옛 행을 SUPERSEDED 로 둔 뒤 새 행을 INSERT 한다. */
+    private void supersedeEqualWeightWithVersion2() {
+        jdbcTemplate.update(
+                "UPDATE strategy_rules SET status = 'SUPERSEDED'"
+                        + " WHERE strategy_id = 'EQUAL_WEIGHT' AND rules_version = '1'");
+        jdbcTemplate.update(
+                "INSERT INTO strategy_rules"
+                        + " (strategy_id, rules_version, status, provisional, spec, decision_ref)"
+                        + " VALUES ('EQUAL_WEIGHT', '2', 'REGISTERED', false,"
+                        + " '{\"targetWeights\": \"EQUAL_AMONG_INVESTABLE\"}'::jsonb, 'T029 test')");
+    }
+
+    @Test
+    @DisplayName("대체된 옛 행은 명세를 그대로 읽히고, 지금 행 조회에서는 빠진다")
+    void supersededRowKeepsItsSpecButLeavesTheCurrentList() {
+        supersedeEqualWeightWithVersion2();
+
+        StrategyRules old = strategyRules.find("EQUAL_WEIGHT", "1").orElseThrow();
+        assertThat(old.status()).isEqualTo(RulesStatus.SUPERSEDED);
+        assertThat(old.isExecutable()).isTrue();
+        assertThat(old.isRegistered()).isFalse();
+        assertThat(old.spec()).containsEntry("targetWeights", "EQUAL_AMONG_INVESTABLE");
+
+        assertThat(strategyRules.findCurrent())
+                .filteredOn(rules -> rules.strategyId().equals("EQUAL_WEIGHT"))
+                .extracting(StrategyRules::rulesVersion)
+                .containsExactly("2");
+        assertThat(strategyRules.findCurrent("EQUAL_WEIGHT"))
+                .map(StrategyRules::rulesVersion)
+                .hasValue("2");
+        assertThat(strategyRules.findAll())
+                .filteredOn(rules -> rules.strategyId().equals("EQUAL_WEIGHT"))
+                .hasSize(2);
+    }
+
+    @Test
+    @DisplayName("전략마다 지금 행은 하나다 — 옛 행을 대체하지 않고 새 버전을 넣으면 막힌다")
+    void onlyOneCurrentRowPerStrategy() {
+        assertThatThrownBy(
+                        () ->
+                                jdbcTemplate.update(
+                                        "INSERT INTO strategy_rules"
+                                                + " (strategy_id, rules_version, status,"
+                                                + " provisional, spec, decision_ref)"
+                                                + " VALUES ('EQUAL_WEIGHT', '2', 'REGISTERED',"
+                                                + " false, '{}'::jsonb, 'T029 test')"))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("uk_strategy_rules_current");
+    }
+
+    @Test
+    @DisplayName("대체된 행도 명세를 잃을 수 없다 — 그 버전으로 접수된 실행이 아직 재시도될 수 있다")
+    void supersededRowMustKeepItsSpec() {
+        assertThatThrownBy(
+                        () ->
+                                jdbcTemplate.update(
+                                        "UPDATE strategy_rules"
+                                                + " SET status = 'SUPERSEDED', spec = NULL"
+                                                + " WHERE strategy_id = 'EQUAL_WEIGHT'"))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_strategy_rules_spec");
     }
 }

@@ -78,4 +78,18 @@ public record RunPlan(
     public Map<String, Object> requestSpecOrEmpty() {
         return Objects.requireNonNullElseGet(requestSpec, Map::of);
     }
+
+    /**
+     * 이 실행이 쓴 시나리오 오버레이 규칙. {@code versions.scenarioRules}({@code "TARGET_RISK_OVERLAY/1"})에서 읽는다.
+     *
+     * <p>요청은 오버레이 버전을 싣지 않고 접수가 고른다. 그래서 고른 값은 여기에만 남고, 발행·재시도가 이 값을 읽어야 규칙이 바뀐 뒤에도 같은 규칙으로
+     * 계산한다(T029). 어느 규칙인지(전략 이름)는 호출자가 확인한다.
+     *
+     * @return 오버레이가 없는 실행이면 null
+     * @throws IllegalArgumentException 기록이 {@code 전략/버전} 표기가 아니다
+     */
+    public RulesRef scenarioRules() {
+        Object recorded = versions == null ? null : versions.get("scenarioRules");
+        return recorded == null ? null : RulesRef.parse(recorded.toString());
+    }
 }

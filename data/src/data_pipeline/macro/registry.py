@@ -394,15 +394,23 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
 
 EXPECTED_INDICATOR_COUNT: Final[int] = 17
 
+# FR-004: 경제적 중요성이 같다는 주장이 아니라 Thorp 검색 모델의 명목 설계 선택이다.
+NOMINAL_WEIGHT_POLICY: Final[str] = (
+    "Thorp의 설계 선택: 7개 분야를 각각 1/7, 분야 내부 지표를 동일가중으로 둔다. "
+    "경제적 중요성이 동일하다는 의미는 아니다."
+)
 
-def nominal_weights() -> dict[str, Decimal]:
+
+def nominal_weights(
+    indicators: tuple[IndicatorDefinition, ...] = INDICATORS,
+) -> dict[str, Decimal]:
     """분야 간 1/7, 분야 안에서 동일가중인 명목 비중 (FR-004).
 
-    **이것은 Thorp 의 설계 선택이지 경제적 중요성이 같다는 뜻이 아니다.** 근거를 등록표에
-    남기는 것과 실제 거리 기여를 비교하는 것은 T040 이 이어받는다.
+    **이것은 Thorp 의 설계 선택이지 경제적 중요성이 같다는 뜻이 아니다.**
     """
+    validate(indicators)
     per_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}
-    for indicator in INDICATORS:
+    for indicator in indicators:
         per_field[indicator.field_id].append(indicator.indicator_id)
     field_weight = Decimal(1) / Decimal(len(FIELD_IDS))
     weights: dict[str, Decimal] = {}
@@ -444,6 +452,21 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:
     missing = set(FIELD_IDS) - used_fields
     if missing:
         raise RegistryError(f"지표가 하나도 없는 분야가 있다: {sorted(missing)}")
+
+
+def used_sources(
+    indicators: tuple[IndicatorDefinition, ...] = INDICATORS,
+) -> tuple[str, ...]:
+    """등록표가 실제로 쓰는 원천. 설정에 있는 넷 전부가 아니라 **쓰이는 것만** 돌려준다.
+
+    수집 진입점이 이 목록으로 설정을 읽는다. `config.SOURCE_IDS` 를 그대로 쓰면 등록표에서
+    빠진 원천의 접속 설정까지 요구하게 되고, 그 원천을 안 쓰기로 한 결정이 코드에서 지워진다.
+    """
+    seen: list[str] = []
+    for indicator in indicators:
+        if indicator.primary_source not in seen:
+            seen.append(indicator.primary_source)
+    return tuple(seen)
 
 
 def by_field() -> dict[str, tuple[IndicatorDefinition, ...]]:

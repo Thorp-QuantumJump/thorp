@@ -40,7 +40,8 @@ export function hasViewableResult(detail: PublicResultDetail): boolean {
  * 답한 경우)에도 잘못된 주소 안내가 떠야 한다 — 다시 불러오기를 주면 같은 실패를 반복한다.
  */
 function toFailureState(error: unknown): ResultState {
-  const failure = error instanceof ResultError ? error : new ResultError('결과를 불러오지 못했습니다.')
+  const failure =
+    error instanceof ResultError ? error : new ResultError('결과를 불러오지 못했습니다.')
   if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {
     return { status: 'expired' }
   }
@@ -66,13 +67,23 @@ function toFailureState(error: unknown): ResultState {
  * <p>만료·없음은 다시 물어도 바뀌지 않으므로 멈춘다. 연결 실패도 폴링을 멈추고 사용자가 `retry`를
  * 누를 때 다시 부른다 — 조용히 계속 두드리지 않는다.
  */
-export function useResult(token: string): ResultState & { retry: () => void } {
+type UseResultOptions = {
+  loadTimeseries?: boolean
+}
+
+export function useResult(
+  token: string | null,
+  { loadTimeseries = true }: UseResultOptions = {},
+): ResultState & { retry: () => void } {
   const [state, setState] = useState<ResultState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  const [loadedToken, setLoadedToken] = useState(token)
 
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
   useEffect(() => {
+    if (token === null) return
+    setLoadedToken(token)
     const controller = new AbortController()
     let active = true
     let timer = 0
@@ -93,7 +104,7 @@ export function useResult(token: string): ResultState & { retry: () => void } {
         return
       }
 
-      if (!hasViewableResult(detail)) {
+      if (!hasViewableResult(detail) || !loadTimeseries) {
         setState({ status: 'ready', detail, timeseries: { status: 'none' } })
         return
       }
@@ -106,7 +117,9 @@ export function useResult(token: string): ResultState & { retry: () => void } {
         }
       } catch (error) {
         const failure =
-          error instanceof ResultError ? error : new ResultError('그래프 자료를 불러오지 못했습니다.')
+          error instanceof ResultError
+            ? error
+            : new ResultError('그래프 자료를 불러오지 못했습니다.')
         // 상세를 받은 뒤 만료 시각을 넘긴 경우다. 이미 받은 숫자를 남기지 않고 만료로 닫는다(SC-008).
         if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {
           if (active) setState({ status: 'expired' })
@@ -125,7 +138,7 @@ export function useResult(token: string): ResultState & { retry: () => void } {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [token, attempt])
+  }, [token, attempt, loadTimeseries])
 
-  return { ...state, retry }
+  return { ...(loadedToken === token ? state : { status: 'loading' as const }), retry }
 }

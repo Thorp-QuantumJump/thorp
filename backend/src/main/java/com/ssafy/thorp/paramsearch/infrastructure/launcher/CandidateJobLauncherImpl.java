@@ -1,6 +1,7 @@
 package com.ssafy.thorp.paramsearch.infrastructure.launcher;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
+import com.ssafy.thorp.backtest.application.command.PinnedVersions;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
@@ -48,8 +49,12 @@ public class CandidateJobLauncherImpl implements CandidateJobLauncher {
 
     private long launch(
             ParamSearchSnapshot snapshot, String strategyId, Map<String, Object> parameters) {
+        // 묶음은 접수 때 규칙·등록표 버전을 스냅샷에 고정했다(FR-012 "묶음 안 같은 규칙"). 후보는 나중에 하나씩 들어가므로
+        // 새 요청으로 판정하면 그 사이 규칙이 새 버전으로 대체된 날 남은 후보가 409 로 막히고, 그 예외가 결과 반영
+        // 트랜잭션을 되돌려 묶음이 멈춘다(004 T029). 버전이 고정된 요청으로 넣는다.
         BacktestJobResult result =
-                backtestService.create(command(snapshot, strategyId, parameters));
+                backtestService.createPinned(
+                        command(snapshot, strategyId, parameters), PinnedVersions.searchBundle());
         // 후보는 실행 행의 PK로 자기 결과를 찾는다(search_candidate.backtest_job_id). 접수 결과가
         // 돌려주는 것은 **요청** 식별자이고 실행 행은 자기 backtest_id 를 따로 갖는다 — 두 값은 다르다.
         // 그래서 요청을 읽어 run_id 를 얻는다. 실행 저장소를 요청 식별자로 조회하면 언제나 빈 결과다.
