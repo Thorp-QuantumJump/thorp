@@ -57,6 +57,9 @@ from worker.contracts.engine_input import EngineInput, RunSpec, Scenario
 from worker.contracts.engine_output import (
     CashFlow,
     ExceptionRecord,
+    FillCosts,
+    FillResult,
+    FillSide,
     PortfolioSnapshot,
     PositionSnapshot,
     TradeReason,
@@ -309,6 +312,8 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         self.orders: list[OrderRecord] = []
         self.trades: list[TradeResult] = []
         self.fills: list[FillCost] = []
+        # 체결 단위 기록(spec 011 DEP-004-011). 회계에는 쓰지 않는다 — 이미 계산한 값을 남길 뿐이다.
+        self.fill_records: list[FillResult] = []
         self.series: list[PortfolioSnapshot] = []
         self.weights_series: list[WeightsPoint] = []
         self.weights_source: WeightsSource | None = None
@@ -525,6 +530,26 @@ class PortfolioRebalanceExecution(NautilusStrategy):
         self.fills.append(fill)
         reason = TradeReason.HALT_DEFERRED if order.deferred else TradeReason.REBALANCE
         planned = order.planned_date if order.deferred else None
+        self.fill_records.append(
+            FillResult(
+                fill_id=f"FL-{len(self.fill_records) + 1:06d}",
+                instrument_id=iid,
+                side=FillSide(order.side.value),
+                time=order.record.fill_time,
+                price=price,
+                reference_price=reference,
+                quantity=quantity,
+                costs=FillCosts(
+                    commission=fill.commission,
+                    spread=fill.spread,
+                    slippage=fill.slippage,
+                    tax=fill.tax,
+                ),
+                cash_cost=fill.cash,
+                reason=reason,
+                planned_date=planned,
+            )
+        )
 
         if order.side is Side.BUY:
             self.cash -= price * quantity + fill.cash

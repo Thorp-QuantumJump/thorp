@@ -55,14 +55,17 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
     private final BacktestRunJpaRepository jobRepository;
     private final BacktestResultJpaRepository resultRepository;
     private final BacktestTradeJpaRepository tradeRepository;
+    private final BacktestFillJpaRepository fillRepository;
 
     public BacktestResultRepositoryImpl(
             BacktestRunJpaRepository jobRepository,
             BacktestResultJpaRepository resultRepository,
-            BacktestTradeJpaRepository tradeRepository) {
+            BacktestTradeJpaRepository tradeRepository,
+            BacktestFillJpaRepository fillRepository) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
         this.tradeRepository = tradeRepository;
+        this.fillRepository = fillRepository;
     }
 
     @Override
@@ -73,6 +76,25 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                 command.engineOutput().trades().stream()
                         .map(trade -> BacktestTradeJpaEntity.from(job, trade))
                         .toList());
+        // fills 가 null 이면 체결을 기록하지 않는 워커가 낸 결과다 — 행을 만들지 않고 결과 행에 fills_recorded=false 가 남는다.
+        if (command.engineOutput().fills() != null) {
+            fillRepository.saveAll(
+                    command.engineOutput().fills().stream()
+                            .map(fill -> BacktestFillJpaEntity.from(job, fill))
+                            .toList());
+        }
+    }
+
+    @Override
+    public Optional<List<EngineOutput.FillResult>> findFills(Long runId, Instant from, Instant to) {
+        return resultRepository
+                .findFillsRecorded(runId)
+                .filter(Boolean::booleanValue)
+                .map(
+                        recorded ->
+                                fillRepository.findInPeriod(runId, from, to).stream()
+                                        .map(BacktestFillJpaEntity::getDetail)
+                                        .toList());
     }
 
     @Override

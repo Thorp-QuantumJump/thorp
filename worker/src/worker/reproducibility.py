@@ -39,6 +39,10 @@ def computed(output: EngineOutput) -> dict[str, Any]:
     payload["run"].pop("startedAt", None)
     payload["run"].pop("finishedAt", None)
     payload.pop("versions", None)
+    # 체결 기록은 이미 해시에 든 값(거래·비용·현금)을 체결 단위로 다시 적은 것이다. 넣으면 숫자가
+    # 그대로인데도 모든 골든이 바뀌어 "골든이 바뀌면 과거 결과가 달라진 것"이라는 뜻이 흐려진다.
+    # 체결 기록 자체는 ``tests/test_fill_records.py`` 가 비용 합계·현금 흐름과 대조해 지킨다.
+    payload.pop("fills", None)
     return payload
 
 
