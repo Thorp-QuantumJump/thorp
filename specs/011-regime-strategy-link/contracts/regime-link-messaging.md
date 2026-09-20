@@ -40,15 +40,20 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
     "openingPositions": [{"instrumentId": "091160.XKRX", "quantity": 179}],
     "dailyPositions": [{"date": "2012-05-02", "positions": [{"instrumentId": "091160.XKRX", "quantity": 167}]}],
     "trades": [{"fillId": "FL-000022", "time": "2012-05-02T00:00:00Z", "instrumentId": "091160.XKRX",
-                "side": "SELL", "quantity": 12, "price": "23150.00", "referencePrice": "23200",
-                "costs": {"commission": "34.72", "spread": "46.40", "slippage": "116.00", "tax": "639.30"},
-                "cashCost": "674.02", "reason": "REBALANCE"}],
+                "side": "SELL", "quantity": 12, "price": "23181.44", "referencePrice": "23200",
+                "costs": {"commission": "41.76", "spread": "83.52", "slippage": "139.20", "tax": "0"},
+                "cashCost": "41.76", "reason": "REBALANCE"}],
     "cashFlows": [{"date": "2012-06-01", "instrumentId": "091160.XKRX", "type": "DISTRIBUTION", "amount": "16700"}]
   },
   "inputDigest": "e3b0…(64자)"
 }
 ```
 
+- 예시 체결의 숫자는 004 `costs.py` 규칙으로 검산된다 — 기준 금액은 `수량 × referencePrice`
+  (12 × 23200 = 278,400)이고 비용 프로필 `KR-ETF-2026-09`(수수료 1.5 · 호가차 3 · 슬리피지 5 ·
+  세금 0bps)를 적용하면 41.76 · 83.52 · 139.20 · 0이다. 호가차·슬리피지는 체결가를 불리하게
+  움직이므로((83.52 + 139.20) ÷ 12 = 18.56) 매도 체결가는 23200 − 18.56 = 23181.44이고,
+  현금으로 빠지는 `cashCost`는 수수료 + 세금이다. 픽스처도 이 관계를 만족해야 한다.
 - `window.baselineDate`는 d0 **직전 거래일**이다. 연속 운용의 구간 수익률 기준값
   `equity[baselineDate]`가 여기서 나온다. `scenario=FRESH_CASH`면 기준은 `run.initialCash`이고
   `baselineDate`는 참고용이다(research R3).
@@ -136,7 +141,8 @@ reject → DLQ다.
 ## 구간 입력의 출처와 제약 — DEP-004-011 (대조 통과 2026-09-20)
 
 004 저장 결과로 위 `inputs`를 정확히 만들 수 있음을 독립 계산으로 확인했다(research R3 "독립 계산 대조
-결과": 전략 여섯 × 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간 손익 합이 모두 차 0).
+결과": 전략 입력 여섯을 돌려 얻은 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간
+손익 합이 모두 차 0).
 위 JSON이 확정 모양이고, 아래가 필드마다의 출처와 제약이다.
 
 - `inputs.portfolioSeries`: baselineDate~lastAvailable의 일별 `equity`·`cash`. 연속 운용의 구간 기준값이
@@ -144,13 +150,18 @@ reject → DLQ다.
 - `inputs.openingPositions`: baselineDate **이전 마지막** 보유 스냅샷의 종목별 수량(004는 수량이 바뀌는 날마다
   스냅샷을 남기므로 그 수량이 baselineDate의 수량이다). FRESH_CASH는 빈 목록.
 - `inputs.dailyPositions`: d0~lastAvailable 안에서 004가 남긴 보유 스냅샷(수량이 바뀐 날)만 그대로 담는다.
-  백엔드는 채우지 않는다. **워커의 이월은 "체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다"이다** —
+  백엔드는 채우지 않는다. 스냅샷 한 건은 **그날 보유 전체**이며 수량 0인 종목은 빠져 있다(004
+  `portfolio_execution.py`가 `quantity`가 0이 아닌 종목만 담는다) — 스냅샷에 없는 종목은 그날 보유가
+  없다는 뜻이므로, 이월은 **덮어쓰기**이고 실린 종목만 고치는 부분 갱신이 아니다.
+  **워커의 이월은 "체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다"이다** —
   분할 같은 기업행위는 체결 밖에서 수량을 바꾸므로, 체결만 누적하면 그날부터 수량이 틀린다(대조에서 22개
   구간 중 9개의 평가액·자산이 어긋났고 한 구간에서 최대 59개 행이었다. 종목 손익 항등식은 그때도 0이라
   항등식만으로는 잡히지 않는다). 일별 평가액은 이월한 수량 × 그날 원시 종가다(004 엔진과 같은 식).
 - `inputs.trades`: round-trip 대신 004 `fills[]`(개별 체결) 그대로 — fillId·time·instrumentId·side·quantity·
   price·referencePrice·costs(commission/spread/slippage/tax)·cashCost. `cashCost`가 직접 차감 비용이며 체결가에
   반영된 호가차·슬리피지는 들어 있지 않다. 체결 기록이 없는 실행(`fills_recorded=false`)이면 발행하지 않는다.
+  **`FINISHED.result.trades`와 이름만 같고 모양이 다르다** — 결과 쪽은 `date`와 비용 한 값(`cost`)을
+  쓰는 표시용 목록이다. 두 곳의 모델을 하나로 합치지 않는다.
 - `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다. 체결과 이 현금흐름만으로
   구간 현금이 되살아난다(대조에서 확인).
 - corporate action에 따른 수량·현금 변화와 가격 자료는 같은 버전으로 정합 검증한다. 확보되지 않은

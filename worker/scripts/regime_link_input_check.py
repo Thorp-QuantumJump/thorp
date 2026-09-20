@@ -68,6 +68,14 @@ def raw_closes() -> dict[tuple[str, date], Decimal]:
     return closes
 
 
+def close_of(closes: dict[tuple[str, date], Decimal], iid: str, day: date) -> Decimal:
+    """그날 원시 종가. 없으면 무엇이 없는지 말하고 멈춘다 — 0으로 메우면 대조가 아니다."""
+    try:
+        return closes[(iid, day)]
+    except KeyError:
+        raise RuntimeError(f"{iid} 의 {day.isoformat()} 원시 종가가 없다") from None
+
+
 def cash_delta(fill: FillResult) -> Decimal:
     """체결 하나가 현금에 남기는 변화. 체결가에 이미 반영된 호가차·슬리피지는 다시 빼지 않는다."""
     gross = fill.price * fill.quantity
@@ -110,7 +118,8 @@ def check_window(
 
     # ① 시작 직전 평가액
     baseline_value = sum(
-        (quantity * closes[(iid, baseline.date)] for iid, quantity in opening.items()), ZERO
+        (quantity * close_of(closes, iid, baseline.date) for iid, quantity in opening.items()),
+        ZERO,
     )
 
     # ② 구간 일별 평가액·현금·자산
@@ -119,12 +128,18 @@ def check_window(
     carried_apart_from_fills: list[str] = []
     mismatches = {"positionValue": 0, "cash": 0, "equity": 0}
     equity_by_day: dict[date, Decimal] = {}
+    partial_sells: list[dict[str, str]] = []
     for row in window:
         day = row.date
+        sold_today: dict[str, Decimal] = {}
         for fill in fills_by_day[day]:
             signed = fill.quantity if fill.side is FillSide.BUY else -fill.quantity
             held[fill.instrument_id] = held.get(fill.instrument_id, ZERO) + signed
             cash += cash_delta(fill)
+            if fill.side is FillSide.SELL:
+                sold_today[fill.instrument_id] = (
+                    sold_today.get(fill.instrument_id, ZERO) + fill.quantity
+                )
         cash += flows_by_day[day]
         if day in daily_positions:
             for iid, quantity in daily_positions[day].items():
@@ -134,7 +149,19 @@ def check_window(
                     )
             if not ignore_split_snapshot:
                 held = dict(daily_positions[day])
-        position_value = sum((held[iid] * closes[(iid, day)] for iid in held), ZERO)
+        # 판 뒤에도 남았으면 일부 매도다. 매도 직전 수량이 아니라 잔량으로 보는 이유는, 기업행위가
+        # 든 날의 직전 수량을 체결만으로는 알 수 없고 그날 스냅샷이 확정 수량이기 때문이다.
+        for iid, quantity in sold_today.items():
+            if held.get(iid, ZERO) > ZERO:
+                partial_sells.append(
+                    {
+                        "date": day.isoformat(),
+                        "instrumentId": iid,
+                        "sold": str(quantity),
+                        "remaining": str(held[iid]),
+                    }
+                )
+        position_value = sum((held[iid] * close_of(closes, iid, day) for iid in held), ZERO)
         equity = position_value + cash
         equity_by_day[day] = equity
         mismatches["positionValue"] += int(position_value != row.position_value)
@@ -145,8 +172,8 @@ def check_window(
     instruments = set(opening) | set(held) | {f.instrument_id for f in window_fills}
     total_pnl = ZERO
     for iid in instruments:
-        end_value = held.get(iid, ZERO) * closes[(iid, last)]
-        start_value = opening.get(iid, ZERO) * closes[(iid, baseline.date)]
+        end_value = held.get(iid, ZERO) * close_of(closes, iid, last)
+        start_value = opening.get(iid, ZERO) * close_of(closes, iid, baseline.date)
         sold = sum(
             (
                 f.price * f.quantity
@@ -169,7 +196,6 @@ def check_window(
         direct_cost = sum((f.cash_cost for f in window_fills if f.instrument_id == iid), ZERO)
         total_pnl += end_value - start_value + sold - bought + distribution - direct_cost
 
-    partial_sells = partial_sell_records(opening, window_fills)
     return {
         "baselineDate": baseline.date.isoformat(),
         "d0": d0.isoformat(),
@@ -209,28 +235,6 @@ def check_window(
             ],
         },
     }
-
-
-def partial_sell_records(
-    opening: dict[str, Decimal], window_fills: list[FillResult]
-) -> list[dict[str, str]]:
-    """구간 안에서 보유 일부만 판 체결. '구간 내 일부 매도'가 실제로 있었음을 보인다."""
-    running = dict(opening)
-    records: list[dict[str, str]] = []
-    for fill in window_fills:
-        before = running.get(fill.instrument_id, ZERO)
-        if fill.side is FillSide.SELL and before > fill.quantity:
-            records.append(
-                {
-                    "date": kst(fill.time).isoformat(),
-                    "instrumentId": fill.instrument_id,
-                    "held": str(before),
-                    "sold": str(fill.quantity),
-                }
-            )
-        signed = fill.quantity if fill.side is FillSide.BUY else -fill.quantity
-        running[fill.instrument_id] = before + signed
-    return records
 
 
 def run_fixture(path: Path) -> EngineOutput:
