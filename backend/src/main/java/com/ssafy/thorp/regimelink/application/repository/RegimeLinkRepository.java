@@ -22,5 +22,12 @@ public interface RegimeLinkRepository {
 
     List<RegimeLink> findByRunId(Long runId);
 
-    RegimeLink save(RegimeLink link);
+    /**
+     * 새 계산을 남긴다.
+     *
+     * <p><b>갱신이 아니다.</b> 이미 저장된 링크를 넘기면 같은 단위로 다시 넣으려다 {@code UNIQUE (run_id, snapshot_key,
+     * end_month, scenario)} 에 걸린다. 상태 전이(발행·이벤트 반영)는 한 행을 여러 경로가 쓰므로 컬럼 소유를 가른 메서드로 따로 둔다 — 004
+     * {@code BacktestRunRepository} 와 같은 이유이며 그 경로를 만드는 것은 M5다.
+     */
+    RegimeLink create(RegimeLink link);
 }

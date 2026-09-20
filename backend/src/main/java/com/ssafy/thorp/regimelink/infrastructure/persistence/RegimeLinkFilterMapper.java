@@ -19,9 +19,9 @@ final class RegimeLinkFilterMapper {
 
     private RegimeLinkFilterMapper() {}
 
-    static RegimeLinkFilterJpaEntity toEntity(LinkFilter filter, Map<String, Object> definition) {
-        return new RegimeLinkFilterJpaEntity(
-                filter.key().value(), definition, range(filter.availableRange()));
+    /** 저장 컬럼에 들어가는 가용 범위. 저장소가 네이티브 INSERT 로 넣으므로 밖에서도 쓴다. */
+    static Map<String, Object> range(LinkFilter filter) {
+        return range(filter.availableRange());
     }
 
     static LinkFilter toDomain(RegimeLinkFilterJpaEntity entity) {
