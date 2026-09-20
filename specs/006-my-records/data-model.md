@@ -110,7 +110,9 @@ CREATE INDEX idx_my_record_kind_count ON my_record (owner_id, kind)
 ## 2. 경제환경 연결 정보는 006이 만들지 않는다
 
 FR-012가 요구하는 "연결한 섹터·ETF·전략·사후 평가 구간·ETF 가용성 필터"는 [011](../011-regime-strategy-link/spec.md)이
-만들 값이고, 010 FR-032도 "그 두 항목은 011 FR-004·FR-023이 채운다"고 명시했다. 011은 아직 spec만 있다.
+만들 값이고, 010 FR-032도 "그 두 항목은 011 FR-004·FR-023이 채운다"고 명시했다. 011은 plan·data-model에서
+그 자리를 `regime_link_search`·`regime_link_filter`·`regime_link`로 확정했고 "006이 읽는다"고 적었다. 표는 아직
+만들어지지 않았다.
 
 **006은 그 자리를 미리 만들지 않는다.** 처음 안은 nullable 컬럼을 가진 표를 하나 더 두는 것이었으나,
 011이 자기 표를 새 Flyway 변경으로 더하면 006의 스키마를 고칠 일이 없으므로 미리 만들 이유가 없다.
@@ -135,8 +137,8 @@ FR-017의 "참조 삭제 표시"가 걸릴 자리도 따라서 **현재 006 안�
 | 언제 | 누가 | 무엇을 |
 |---|---|---|
 | 백테스트 접수(`POST /backtests`)가 로그인 요청이고 `executionType`이 단건(SINGLE)일 때 | `MyRecordRegistrar` (004가 발행하는 접수 이벤트를 `BEFORE_COMMIT`에 듣는다) | 같은 `owner_id`+`run_id`의 살아 있는 항목을 먼저 찾는다. 있으면 그것을 돌려주고 새로 만들지 않는다(FR-009). 없으면 `ANALYSIS` 항목을 만든다 |
-| 탐색 접수(`POST /param-searches`) | `MyRecordRegistrar` (007의 접수 이벤트를 듣는다) | `SEARCH_BUNDLE` 항목을 만든다. 탐색 후보가 만드는 백테스트 요청(`executionType = SEARCH_BUNDLE`)은 `ANALYSIS` 항목을 만들지 않는다 — 묶음 항목이 그것을 대표한다. 상한 판정(R11)은 이벤트가 아니라 접수 **전**에 007 서비스가 `MyRecordLimitPolicy`를 불러 한다 |
-| 로그인 사용자가 경제환경 검색 결과를 열었을 때(`POST /my-records/regime-searches`) | `MyRecordRegistrar` | `regime_search_log` 행(소유자·스냅샷·진입 경로·기준월 근거)과 `REGIME_SEARCH` 항목을 **같은 트랜잭션**에 만든다. 010의 `GET /regime-searches`는 손대지 않는다 — 진입 경로는 조회한 화면만 알고, 조회(GET)에 쓰기 부작용을 붙이지 않는다 |
+| 탐색 접수(`POST /param-searches`) | `MyRecordRegistrar` (007의 접수 이벤트를 듣는다) | `SEARCH_BUNDLE` 항목을 만든다. 후보 상한으로 `REJECTED`된 접수(`ParamSearchService.rejected`)는 이벤트를 내지 않는다 — 계산이 시작되지 않아 다시 열 것이 없다. 탐색 후보가 만드는 백테스트 요청(`executionType = SEARCH_BUNDLE`)은 `ANALYSIS` 항목을 만들지 않는다 — 묶음 항목이 그것을 대표한다. 상한 판정(R11)은 이벤트가 아니라 접수 **전**에 007 서비스가 `MyRecordLimitPolicy`를 불러 한다 |
+| 로그인 사용자가 경제환경 검색 결과를 열었을 때(`POST /my-records/regime-searches`, 화면이 `searchId`·`entryPath`·`baselineOrigin`을 보낸다) | `MyRecordRegistrar` | `regime_search_log` 행(소유자·스냅샷·진입 경로·기준월 근거)과 `REGIME_SEARCH` 항목을 **같은 트랜잭션**에 만든다. 010의 `GET /regime-searches`는 손대지 않는다 — 진입 경로는 조회한 화면만 알고, 조회(GET)에 쓰기 부작용을 붙이지 않는다 |
 
 비로그인 요청은 항목을 만들지 않는다. 진단 자체는 그대로 되고 저장이 필요한 지점에서 014의 로그인
 안내를 부른다(FR-020).

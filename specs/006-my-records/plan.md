@@ -147,7 +147,7 @@ frontend/src/
 
 | 파일 | 내용 |
 |---|---|
-| [research.md](research.md) | 결정 R1~R16. Technical Context에 NEEDS CLARIFICATION이 남지 않았다 |
+| [research.md](research.md) | 결정 R1~R17. Technical Context에 NEEDS CLARIFICATION이 남지 않았다 |
 | [data-model.md](data-model.md) | `my_record` 한 표, 제약·인덱스, 만들지 않는 것(`regime_search_log` 재사용) |
 | [contracts/my-records-api.md](contracts/my-records-api.md) | 목록·상세·이름 변경·삭제·내보내기, 007 접수 경로에 요청하는 변경 |
 | [contracts/record-handoff.md](contracts/record-handoff.md) | '설정 바꿔 비교'의 화면 사이 인계(기존 두 계약에 쓰는 쪽) |
@@ -181,6 +181,13 @@ frontend/src/
 실제 키에서 읽도록 대응을 적었다. `versions.worker`·`versions.dependencies`는 005가 운영 정보로 보고
 공개 응답에서 빼기로 한 판단을 006도 따른다. 저장 당시 워밍업·평가 기간은 보존만 하고 재산정은
 003·005가 한다(FR-007a).
+
+**분석(/speckit-analyze, 2026-09-20)에서 고친 것**: '설정 바꿔 비교' 인계는 005가 006용으로 만들어 둔
+`prefillStrategySettings`를 재사용하고 대응표가 다르면 섹터를 넘기지 않는 005 정책을 따른다(R4, spec FR-007).
+경제환경 기록 POST는 `baselineOrigin`을 화면에서 받고(R15), '다시 보기'는 `/regime-search?searchId=`로
+고정 조회하며 그 수신을 006 태스크로 둔다(R17). REJECTED 탐색은 항목을 만들지 않고, 005 결과 화면의
+비활성 '기록으로 내보내기' 접점을 006이 채운다. FR-017의 "비교 대상·연결 대상 제외"는 005·011이 내 기록을
+읽지 않으므로 006 범위로 좁혔다.
 
 새로 생기는 공통 자원 두 개를 적어 둔다. 둘 다 기존 규칙 안이다.
 
