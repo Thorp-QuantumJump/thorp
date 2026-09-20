@@ -508,7 +508,11 @@ def _received_month(document: RawDocument) -> date:
 
 
 def record_item_status(
-    engine: Engine, attempt_key: str, outcomes: Sequence[IndicatorOutcome]
+    engine: Engine,
+    attempt_key: str,
+    outcomes: Sequence[IndicatorOutcome],
+    *,
+    mode: str = "REGULAR",
 ) -> None:
     """지표별 수집 결과를 남긴다 (T082, FR-011).
 
@@ -521,7 +525,23 @@ def record_item_status(
             {"key": attempt_key},
         ).scalar_one_or_none()
         if attempt_id is None:
-            raise ValueError(f"수집 시도 {attempt_key!r} 가 없다. 발행 전에 기록할 수 없다")
+            # **발행이 시도 행을 만들기 전에 거절해도 기록은 남겨야 한다.** 발행기는 판정을
+            # 먼저 하고 시도 행을 나중에 만드는데, 그 판정에서 던지면 붙을 자리가 없어진다.
+            # 그때 기록까지 버리면 무엇을 받았고 무엇이 실패했는지가 통째로 사라진다(FR-011).
+            failed = any(not outcome.succeeded for outcome in outcomes)
+            attempt_id = connection.execute(
+                text(
+                    "INSERT INTO macro_collection_attempt"
+                    " (attempt_key, mode, started_at, finished_at, status)"
+                    " VALUES (:key, :mode, :now, :now, :status) RETURNING id"
+                ),
+                {
+                    "key": attempt_key,
+                    "mode": mode,
+                    "now": now,
+                    "status": "PARTIAL" if failed else "SUCCEEDED",
+                },
+            ).scalar_one()
         for outcome in outcomes:
             connection.execute(
                 text(
@@ -639,13 +659,23 @@ def run(
 
     dataset_id: int | None = None
     held: str | None = None
-    try:
-        dataset_id = publish.publish_atomically(engine, request)
-    except publish.PublishError as error:
-        held = str(error)
-        logger.warning("발행 보류: %s", error)
+    if len(indicators) != registry.EXPECTED_INDICATOR_COUNT:
+        # **일부만 받은 실행은 발행을 시도하지 않는다.** 발행은 17개가 함께여야 성립하므로
+        # (FR-011) 부분 집합으로 부르면 판정기가 그 자리에서 거절한다. 그것을 실패로 적으면
+        # 지표 하나를 확인하려고 돌린 실행이 늘 실패로 보인다 — 진단 경로는 진단으로 끝낸다.
+        held = (
+            f"부분 수집이라 발행하지 않는다: {len(indicators)}개"
+            f" (발행은 {registry.EXPECTED_INDICATOR_COUNT}개가 함께여야 한다)"
+        )
+        logger.info("%s", held)
+    else:
+        try:
+            dataset_id = publish.publish_atomically(engine, request)
+        except publish.PublishError as error:
+            held = str(error)
+            logger.warning("발행 보류: %s", error)
 
-    record_item_status(engine, attempt_key, outcomes)
+    record_item_status(engine, attempt_key, outcomes, mode=mode.upper())
 
     return IngestReport(
         attempt_key=attempt_key,
