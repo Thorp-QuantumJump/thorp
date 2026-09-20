@@ -19,8 +19,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 | [`examples/link-pending-run.json`](examples/link-pending-run.json) | 현금 시작으로 새 실행을 기다리는 링크. `runProgress`가 있다 |
 | [`examples/link-data-insufficient.json`](examples/link-data-insufficient.json) | 자료가 없어 계산하지 않은 링크. 실패가 아니다 |
 | [`examples/create-confirm-required.json`](examples/create-confirm-required.json) | 분석 기간이 사례를 덮지 않아 확인을 요구하는 응답 |
+| [`examples/case-window.json`](examples/case-window.json) | 실행 없이 읽는 사례의 사후 구간(§1a). `lastAvailable`이 있다 |
 
-사례 구간 조회(§1a)와 검색 기록 생성(§1b)의 예시는 그 경로를 구현하는 묶음에서 함께 추가한다.
+검색 기록 생성(§1b)의 예시는 그 경로를 구현하는 묶음에서 함께 추가한다.
 
 ## 1. 공통 규칙
 
@@ -71,7 +72,8 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
   `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은
   그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.
 - `postWindow`는 시장 달력 기준이라 미완성이면 `d21`·`d63`이 `null`이고 `completedTradingDays`가 진짜
-  길이다. 실행별로 실제 확보한 거래일 수는 `perRun[].completedTradingDays`이며, 구간 안 상장폐지면
+  길이다. 목록의 `postWindow`에는 `lastAvailable`을 싣지 않는다 — 그 값이 필요한 것은 종료일 하한을 잡는
+  §1a뿐이라, 사례마다 열 개가 오는 자리에 쓰지 않는 값을 담지 않는다. 실행별로 실제 확보한 거래일 수는 `perRun[].completedTradingDays`이며, 구간 안 상장폐지면
   폐지 전날까지로 줄어든다. 21거래일 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·`delistedOn`이다.
 - `entryPath=MARKET_FLOW`면 필터를 계산하지 않는다. `filter.applied=false`이고 `filterKey`·
   `availableRange`·`excludedCount`가 없으며 모든 사례가 `shownInFiltered=true`다. 판정은 그대로 붙어

@@ -57,6 +57,13 @@ class RegimeMigrationTest extends RepositoryTestSupport {
                 "SELECT id FROM regime_search_snapshot WHERE snapshot_key = ?", Long.class, key);
     }
 
+    /**
+     * 010 이 만드는 표는 넷이다.
+     *
+     * <p>{@code regime%} 전부가 아니라 <b>이 spec 의 표만</b> 센다. 011 이 {@code regime_link*} 다섯을 더하면서 접두사 하나로
+     * 묶으면 다른 spec 이 표를 더할 때마다 여기가 깨졌다 — 이 검사가 지키려는 것은 "010 이 무엇을 만들었나"이지 "이 접두사로 시작하는 표가 몇 개인가"가
+     * 아니다.
+     */
     @Test
     @DisplayName("표 넷이 마이그레이션으로 만들어진다")
     void createsFourTables() {
@@ -64,7 +71,8 @@ class RegimeMigrationTest extends RepositoryTestSupport {
                 jdbc.queryForList(
                         """
                         SELECT table_name FROM information_schema.tables
-                        WHERE table_schema = 'public' AND table_name LIKE 'regime%'
+                        WHERE table_schema = 'public'
+                          AND (table_name LIKE 'regime_search%' OR table_name = 'regime_baseline_month')
                         ORDER BY table_name
                         """,
                         String.class);
