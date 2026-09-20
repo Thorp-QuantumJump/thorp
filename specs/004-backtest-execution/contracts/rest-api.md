@@ -35,7 +35,7 @@
 응답 `202 Accepted`:
 
 ```json
-{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "KR-ETF-2026-09", "provisional": false}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock 8e8a6be0a6a8", "evaluationSplit": "SPLIT-1"}, "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e"}
+{"backtestId": "BT-20260910-000123", "status": "QUEUED", "resultSource": "NEW", "effectiveStart": "2018-04-02", "effectiveEnd": "2025-12-30", "versions": {"mapping": "SECTOR-ETF-2026-09", "rules": {"version": "1", "provisional": false}, "costProfile": {"version": "KR-ETF-2026-09", "provisional": false}, "data": "KRX-2026-09-09", "engine": "nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8", "evaluationSplit": "SPLIT-1"}, "publicToken": "3f9a1c7e5b2d4a6f8e0c1b3d5f7a9c2e"}
 ```
 
 - **로그인하지 않아도 접수한다**(spec 005 B01). 요청자 없이 저장되고(`backtest_request.requester_id` NULL, R-12가 열어 둔 경로) 결과는 `publicToken`으로만 연다. 취소·재시도·조회(`/backtests/{backtestId}/**`)는 그대로 소유자 경로라 비로그인은 401이다. 비로그인 요청은 사용자별 대기 한도 대신 비로그인 요청 전부가 나눠 쓰는 몫(`max-queued-anonymous`, 전체 한도보다 작다)과 전체 한도를 받는다. 몫이 차면 429 `reason: ANONYMOUS`. 값과 비로그인끼리의 공정성(IP·세션 단위)은 PD-06 담당이 실측 뒤 정한다.

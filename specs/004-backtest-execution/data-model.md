@@ -12,7 +12,7 @@
 | 실행 상태 | `backtest_run.status/progress_*` + `backtest_request.cancelled_at` |
 | 동일 결과 식별 키 | `backtest_run.dedup_key` |
 | 백테스트 결과 | `backtest_result` |
-| 거래 내역 | `backtest_trade` |
+| 거래 내역 | `backtest_trade`(진입·청산 묶음), `backtest_fill`(개별 체결) |
 | 비용 조건(버전) | `cost_profile` |
 | 전략 규칙(버전) | `strategy_rules` |
 | 예외 처리 기록 | `backtest_result.exceptions` |
@@ -101,6 +101,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 | liquidation | `{markToMarket:{finalEquity,totalReturn}, liquidated:{finalEquity,totalReturn,liquidationCost}}` |
 | analytics | `{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` |
 | exceptions | `[{date, instrumentId?, kind: ZERO_VOLATILITY|NO_SELECTION|ESTIMATION_FAILED|CONSTRAINT_VIOLATION|HALT_DEFERRED|WEIGHT_ROUNDING, rule, action}]` |
+| fills_recorded | BOOLEAN NOT NULL DEFAULT false. 개별 체결(`backtest_fill`)을 기록한 결과인지. 이 열이 생기기 전의 결과와 체결을 기록하지 않는 워커가 낸 결과는 false다 — 체결 행이 없는 것만으로는 "체결이 없었다"와 "기록하지 않았다"를 가를 수 없다(원칙 VI) |
 | versions | run.versions 사본(결과 단독 조회용) + 워커 보고 `worker`, 계산한 환경의 실제 설치 버전 `dependencies{numpy, scipy}`(T028. 없으면 T028 이전 결과) |
 
 부분 결과(CANCELLED)는 `portfolio_series`·`weights_series`·거래가 `progress_last_trading_date`까지만 채워지고 `performance`는 그 구간 기준으로 계산된 값이 들어간다. 005는 `partial=true`와 함께 표시한다.
@@ -108,6 +109,20 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET
 ## backtest_trade (거래 내역)
 
 기존 열 유지, FK를 `run_id`로. `detail` JSONB에 `reason: REBALANCE | HALT_DEFERRED | LIQUIDATION`과 `plannedDate`(거래 불가로 미룬 경우 원래 체결 예정일)를 추가한다. 분배금은 거래가 아니라 `portfolio_series[].cashFlows`에 `DISTRIBUTION`으로 기록한다(FR-013, 한 번만 반영).
+
+## backtest_fill (개별 체결, 2026-09-20)
+
+[011](../011-regime-strategy-link/spec.md)이 사례의 사후 구간에서 거래·비용·손익을 다시 세려면 체결 단위가 필요하다(011 research R3 DEP-004-011). `backtest_trade`는 묶음이 닫힐 때 진입·청산 비용이 합쳐지고 세금이 실현 손익에만 들어가 구간 안 청산 비용을 분리할 수 없다. 004 저장 항목의 결정 권한을 위임받아 추가했다(S15P21E205-359).
+
+| 컬럼 | 내용 |
+|---|---|
+| id | BIGINT PK, `backtest_fill_seq`(증분 50). 저장 순서가 워커의 체결 순서라 같은 시각의 체결도 순서가 남는다 |
+| run_id | → `backtest_run(id)` |
+| fill_id | 실행 안에서 고유(`UNIQUE(run_id, fill_id)`) |
+| instrument_id / side / fill_time | 구간 조회용 컬럼. `side`는 `BUY`\|`SELL` |
+| detail | JSONB. 계약 `fills[]` 항목 그대로(`price`, `referencePrice`, `quantity`, `costs{commission, spread, slippage, tax}`, `cashCost`, `reason`, `plannedDate`). decimal은 문자열 |
+
+인덱스 `(run_id, fill_time, id)`. 조회는 `BacktestResultRepository.findFills(runId, from, to)` 하나이고 **빈 Optional(기록하지 않은 결과)과 빈 리스트(그 구간에 체결 없음)를 구분한다.** 일별 보유는 따로 저장하지 않는다 — 보유 스냅샷(`portfolio_series[].positions`)은 수량이 바뀌는 날(체결·분할)마다 남으므로 기준일의 수량은 그 이전 마지막 스냅샷과 같고, 일별 평가액은 수량 × 그날 종가로 정확히 구해진다. 조회 API와 화면에는 노출하지 않는다.
 
 ## cost_profile (비용 조건 버전)
 
