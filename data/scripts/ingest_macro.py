@@ -37,7 +37,9 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우
     sys.path.insert(0, str(_SRC))
 
-from data_pipeline.macro import registry  # noqa: E402
+from data_pipeline.macro import fetch as transport  # noqa: E402
+from data_pipeline.macro import ingest, registry  # noqa: E402
+from data_pipeline.macro.config import load_source_config  # noqa: E402
 
 MODE_INITIAL = "initial"
 MODE_REGULAR = "regular"
@@ -66,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="원천을 부르지 않고 대상과 계획만 보여준다",
+    )
+    parser.add_argument(
+        "--data-root",
+        default="/data",
+        metavar="PATH",
+        help="raw/processed 를 쓸 뿌리. 운영 컨테이너는 DATA_DIR 이 여기로 마운트된다",
     )
     return parser
 
@@ -118,10 +126,32 @@ def main(argv: list[str] | None = None) -> int:
         print("--dry-run 이라 원천을 부르지 않았다")
         return 0
 
-    # 수집 본체는 T018~T031 이 채운다. 여기서 조용히 0으로 끝내면 아무것도 받지 않은 실행이
-    # 성공으로 보이므로, 아직 없다는 사실을 종료 코드로도 알린다.
-    print("수집 구현이 아직 없다(T018~T031). --dry-run 으로 계획만 확인할 수 있다")
-    return 2
+    timeout = max(load_source_config(source).timeout_seconds for source in registry.used_sources())
+    outcomes = ingest.collect(
+        indicators,
+        fetcher=transport.RequestsFetcher(timeout),
+        data_root=Path(args.data_root),
+        mode=args.mode,
+    )
+
+    failed = [outcome for outcome in outcomes if not outcome.succeeded]
+    for outcome in outcomes:
+        mark = "ok  " if outcome.succeeded else "실패"
+        detail = f" ({outcome.error_class})" if outcome.error_class else ""
+        print(f"  {mark} {outcome.indicator_id:32} {outcome.status}{detail}")
+
+    received = sum(len(outcome.observations) for outcome in outcomes)
+    print(f"받은 관측 {received}건 / 실패 지표 {len(failed)}개")
+
+    # 아무것도 받지 못한 실행을 성공으로 말하지 않는다. 0 으로 끝나면 배치가 돈 줄 알고 넘어간다.
+    if received == 0:
+        print("받은 관측이 0건이다. 원천·인증키·구간을 확인한다")
+        return 1
+    if failed:
+        print("일부 지표를 받지 못했다. 발행은 17개가 모두 찬 뒤에만 한다(FR-011)")
+        return 1
+    print("수집을 마쳤다. 발행은 적재 단계에서 이어진다")
+    return 0
 
 
 if __name__ == "__main__":
