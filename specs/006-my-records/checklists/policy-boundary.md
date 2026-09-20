@@ -68,4 +68,5 @@
 - `checklists/requirements.md` has a separate built-in lifecycle maintained by `/speckit-specify` and `/speckit-clarify`
 - CHK005·CHK010·CHK012·CHK016·CHK025는 spec 문장 수정으로 닫힐 가능성이 높은 항목이다. 나머지 Gap은 "의도적 제외"를 spec에 한 줄 적는 것으로도 닫힌다.
 - 2026-09-18 반영: CHK001·002·005·006·007·009·010·012·013·016·018·024~027·030~035는 spec 문장 수정 또는 의도적 제외 표시로 닫았다. CHK014는 004 FR-028 대조 결과 '검색 설정·사례 선정' 두 항목이 004가 아니라 010 소유임이 드러나 FR-010을 고쳐 닫았다. CHK019는 014 FR-008·011·012 대조 완료. CHK020·021은 007·002 담당자에게 전달할 항목이라 열어 둔다. 나머지는 plan·contracts에 있는 것으로 충분하다고 판단했으나 리뷰어 확인을 기다린다.
+- 2026-09-20 dev 대조: 011의 plan·data-model이 들어와 FR-012 연결 항목의 저장 위치가 `regime_link_search`·`regime_link_filter`·`regime_link`로 확정됐다(CHK015·CHK016의 전제 갱신). 표는 아직 만들어지지 않아 "비어 있음"은 그대로이며, research R9·plan·contracts를 그 출처로 고쳤다. CHK015의 항목별 대응표는 여전히 열어 둔다.
 - Items are numbered sequentially for easy reference
