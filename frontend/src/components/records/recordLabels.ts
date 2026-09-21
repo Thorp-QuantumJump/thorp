@@ -46,7 +46,6 @@ export const SORT_OPTIONS = [
 ] as const
 
 export const WITHDRAWN_REASON = '검색 결과가 철회되어 더 볼 수 없습니다.'
-export const REOPEN_NOT_YET = "'설정 바꿔 비교'는 다음 묶음에서 연결됩니다."
 
 /** 서버가 준 ISO 시각을 사용자 지역 날짜·시각으로. 지어내지 않고 못 읽으면 원문을 둔다. */
 export function formatSavedAt(value: string): string {

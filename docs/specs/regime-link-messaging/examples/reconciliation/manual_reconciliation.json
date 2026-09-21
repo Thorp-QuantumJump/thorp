@@ -1,0 +1,423 @@
+{
+  "continuous_63": {
+    "partial": false,
+    "delistedOn": null,
+    "window63": {
+      "tradingDays": 63,
+      "complete": true,
+      "return": "0.0110",
+      "maxDrawdown": "-0.0110",
+      "tradeCount": 4,
+      "tradesPerMonth": "1.33",
+      "turnover": "0.0647",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "53.98",
+        "spread": "107.96",
+        "slippage": "179.94",
+        "tax": "0.00",
+        "total": "341.88"
+      },
+      "lossContribution": {
+        "BATTERY": "-0.55374313",
+        "BIO": "1.00048492",
+        "SEMICONDUCTOR": "0.55325821"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "67006.85",
+        "244580.XKRX": "121171.89",
+        "305720.XKRX": "-67065.58"
+      },
+      "pnlSum": "121113.16",
+      "equityChange": "121113.16"
+    },
+    "window21": {
+      "tradingDays": 21,
+      "complete": true,
+      "return": "-0.0007",
+      "maxDrawdown": "-0.0054",
+      "tradeCount": 2,
+      "tradesPerMonth": "2.00",
+      "turnover": "0.1150",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "31.83",
+        "spread": "63.66",
+        "slippage": "106.11",
+        "tax": "0.00",
+        "total": "201.60"
+      },
+      "lossContribution": {
+        "BATTERY": "5.06098982",
+        "BIO": "-9.78093296",
+        "SEMICONDUCTOR": "5.71994314"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "-46192.03",
+        "244580.XKRX": "78987.00",
+        "305720.XKRX": "-40870.58"
+      },
+      "pnlSum": "-8075.61",
+      "equityChange": "-8075.61"
+    },
+    "kospi": {
+      "window63": {
+        "return": "0.4175",
+        "maxDrawdown": "-0.1302"
+      },
+      "window21": {
+        "return": "0.2820",
+        "maxDrawdown": "-0.0265"
+      }
+    },
+    "holdingDays": 63,
+    "holdings": {
+      "2012-04-02": {
+        "091160.XKRX": "0.3755",
+        "244580.XKRX": "0.2621",
+        "305720.XKRX": "0.2537"
+      },
+      "2012-06-27": {
+        "091160.XKRX": "0.3700",
+        "244580.XKRX": "0.2625",
+        "305720.XKRX": "0.2521"
+      }
+    }
+  },
+  "incomplete_34": {
+    "partial": false,
+    "delistedOn": null,
+    "window63": {
+      "tradingDays": 34,
+      "complete": false,
+      "return": "0.0118",
+      "maxDrawdown": "-0.0079",
+      "tradeCount": 2,
+      "tradesPerMonth": "1.24",
+      "turnover": "0.0710",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "31.83",
+        "spread": "63.66",
+        "slippage": "106.11",
+        "tax": "0.00",
+        "total": "201.60"
+      },
+      "lossContribution": {
+        "BATTERY": "-0.57403666",
+        "BIO": "1.42240966",
+        "SEMICONDUCTOR": "0.15162700"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "19720.97",
+        "244580.XKRX": "185002.00",
+        "305720.XKRX": "-74660.58"
+      },
+      "pnlSum": "130062.39",
+      "equityChange": "130062.39"
+    },
+    "window21": {
+      "tradingDays": 21,
+      "complete": true,
+      "return": "-0.0007",
+      "maxDrawdown": "-0.0054",
+      "tradeCount": 2,
+      "tradesPerMonth": "2.00",
+      "turnover": "0.1150",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "31.83",
+        "spread": "63.66",
+        "slippage": "106.11",
+        "tax": "0.00",
+        "total": "201.60"
+      },
+      "lossContribution": {
+        "BATTERY": "5.06098982",
+        "BIO": "-9.78093296",
+        "SEMICONDUCTOR": "5.71994314"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "-46192.03",
+        "244580.XKRX": "78987.00",
+        "305720.XKRX": "-40870.58"
+      },
+      "pnlSum": "-8075.61",
+      "equityChange": "-8075.61"
+    },
+    "kospi": {
+      "window63": {
+        "return": "0.3755",
+        "maxDrawdown": "-0.0280"
+      },
+      "window21": {
+        "return": "0.2820",
+        "maxDrawdown": "-0.0265"
+      }
+    },
+    "holdingDays": 34,
+    "holdings": {
+      "2012-04-02": {
+        "091160.XKRX": "0.3755",
+        "244580.XKRX": "0.2621",
+        "305720.XKRX": "0.2537"
+      },
+      "2012-05-17": {
+        "091160.XKRX": "0.3609",
+        "244580.XKRX": "0.2750",
+        "305720.XKRX": "0.2512"
+      }
+    }
+  },
+  "fresh_cash": {
+    "partial": false,
+    "delistedOn": null,
+    "window63": {
+      "tradingDays": 63,
+      "complete": true,
+      "return": "0.0118",
+      "maxDrawdown": "-0.0122",
+      "tradeCount": 7,
+      "tradesPerMonth": "2.33",
+      "turnover": "2.0299",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "1530.70",
+        "spread": "3061.40",
+        "slippage": "5102.34",
+        "tax": "0.00",
+        "total": "9694.44"
+      },
+      "lossContribution": {
+        "BATTERY": "-0.54051560",
+        "BIO": "0.95984871",
+        "SEMICONDUCTOR": "0.58066689"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "68257.05",
+        "244580.XKRX": "112829.65",
+        "305720.XKRX": "-63537.29"
+      },
+      "pnlSum": "117549.41",
+      "equityChange": "117549.41"
+    },
+    "window21": {
+      "tradingDays": 21,
+      "complete": true,
+      "return": "-0.0012",
+      "maxDrawdown": "-0.0060",
+      "tradeCount": 5,
+      "tradesPerMonth": "5.00",
+      "turnover": "6.0314",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "1508.55",
+        "spread": "3017.10",
+        "slippage": "5028.51",
+        "tax": "0.00",
+        "total": "9554.16"
+      },
+      "lossContribution": {
+        "BATTERY": "3.20827692",
+        "BIO": "-6.06947117",
+        "SEMICONDUCTOR": "3.86119426"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "-44941.83",
+        "244580.XKRX": "70644.76",
+        "305720.XKRX": "-37342.29"
+      },
+      "pnlSum": "-11639.36",
+      "equityChange": "-11639.36"
+    },
+    "kospi": {
+      "window63": {
+        "return": "0.4175",
+        "maxDrawdown": "-0.1302"
+      },
+      "window21": {
+        "return": "0.2820",
+        "maxDrawdown": "-0.0265"
+      }
+    },
+    "holdingDays": 63,
+    "holdings": {
+      "2012-04-02": {
+        "091160.XKRX": "0.4151",
+        "244580.XKRX": "0.2898",
+        "305720.XKRX": "0.2805"
+      },
+      "2012-06-27": {
+        "091160.XKRX": "0.4086",
+        "244580.XKRX": "0.2898",
+        "305720.XKRX": "0.2783"
+      }
+    }
+  },
+  "partial_delisted": {
+    "partial": true,
+    "delistedOn": "2012-05-28",
+    "window63": {
+      "tradingDays": 40,
+      "complete": false,
+      "return": "0.0050",
+      "maxDrawdown": "-0.0079",
+      "tradeCount": 2,
+      "tradesPerMonth": "1.05",
+      "turnover": "0.0603",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "31.83",
+        "spread": "63.66",
+        "slippage": "106.11",
+        "tax": "0.00",
+        "total": "201.60"
+      },
+      "lossContribution": {
+        "BATTERY": "-1.65208782",
+        "BIO": "2.47226419",
+        "SEMICONDUCTOR": "0.17982363"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "10032.97",
+        "244580.XKRX": "137936.00",
+        "305720.XKRX": "-92175.58"
+      },
+      "pnlSum": "55793.39",
+      "equityChange": "55793.39"
+    },
+    "window21": {
+      "tradingDays": 21,
+      "complete": true,
+      "return": "-0.0007",
+      "maxDrawdown": "-0.0054",
+      "tradeCount": 2,
+      "tradesPerMonth": "2.00",
+      "turnover": "0.1150",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "31.83",
+        "spread": "63.66",
+        "slippage": "106.11",
+        "tax": "0.00",
+        "total": "201.60"
+      },
+      "lossContribution": {
+        "BATTERY": "5.06098982",
+        "BIO": "-9.78093296",
+        "SEMICONDUCTOR": "5.71994314"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "-46192.03",
+        "244580.XKRX": "78987.00",
+        "305720.XKRX": "-40870.58"
+      },
+      "pnlSum": "-8075.61",
+      "equityChange": "-8075.61"
+    },
+    "kospi": {
+      "window63": {
+        "return": "0.4670",
+        "maxDrawdown": "-0.0280"
+      },
+      "window21": {
+        "return": "0.2820",
+        "maxDrawdown": "-0.0265"
+      }
+    },
+    "holdingDays": 40,
+    "holdings": {
+      "2012-04-02": {
+        "091160.XKRX": "0.3755",
+        "244580.XKRX": "0.2621",
+        "305720.XKRX": "0.2537"
+      },
+      "2012-05-25": {
+        "091160.XKRX": "0.3624",
+        "244580.XKRX": "0.2726",
+        "305720.XKRX": "0.2513"
+      }
+    }
+  },
+  "zero_pnl": {
+    "partial": false,
+    "delistedOn": null,
+    "window63": {
+      "tradingDays": 63,
+      "complete": true,
+      "return": "0.0000",
+      "maxDrawdown": "-0.0126",
+      "tradeCount": 0,
+      "tradesPerMonth": "0.00",
+      "turnover": "0.0000",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "0.00",
+        "spread": "0.00",
+        "slippage": "0.00",
+        "tax": "0.00",
+        "total": "0.00"
+      },
+      "lossContribution": null,
+      "instrumentPnl": {
+        "091160.XKRX": "0.00",
+        "244580.XKRX": "0.00",
+        "305720.XKRX": "0.00"
+      },
+      "pnlSum": "0.00",
+      "equityChange": "0.00"
+    },
+    "window21": {
+      "tradingDays": 21,
+      "complete": true,
+      "return": "-0.0007",
+      "maxDrawdown": "-0.0053",
+      "tradeCount": 0,
+      "tradesPerMonth": "0.00",
+      "turnover": "0.0000",
+      "turnoverBasis": "ANNUALIZED_252",
+      "costs": {
+        "commission": "0.00",
+        "spread": "0.00",
+        "slippage": "0.00",
+        "tax": "0.00",
+        "total": "0.00"
+      },
+      "lossContribution": {
+        "BATTERY": "5.50759878",
+        "BIO": "-10.91282122",
+        "SEMICONDUCTOR": "6.40522244"
+      },
+      "instrumentPnl": {
+        "091160.XKRX": "-46361.00",
+        "244580.XKRX": "78987.00",
+        "305720.XKRX": "-39864.00"
+      },
+      "pnlSum": "-7238.00",
+      "equityChange": "-7238.00"
+    },
+    "kospi": {
+      "window63": {
+        "return": "0.0000",
+        "maxDrawdown": "-0.3473"
+      },
+      "window21": {
+        "return": "0.2820",
+        "maxDrawdown": "-0.0265"
+      }
+    },
+    "holdingDays": 63,
+    "holdings": {
+      "2012-04-02": {
+        "091160.XKRX": "0.3755",
+        "244580.XKRX": "0.2621",
+        "305720.XKRX": "0.2537"
+      },
+      "2012-06-27": {
+        "091160.XKRX": "0.3758",
+        "244580.XKRX": "0.2615",
+        "305720.XKRX": "0.2542"
+      }
+    }
+  }
+}

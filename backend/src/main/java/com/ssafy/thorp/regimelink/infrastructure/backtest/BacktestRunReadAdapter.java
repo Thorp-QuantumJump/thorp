@@ -1,23 +1,33 @@
 package com.ssafy.thorp.regimelink.infrastructure.backtest;
 
+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
 import com.ssafy.thorp.backtest.domain.model.RunPlan;
+import com.ssafy.thorp.backtest.domain.model.RunProgress;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.regimelink.application.port.BacktestRunReadPort;
 import com.ssafy.thorp.regimelink.application.port.BundleRunView;
+import com.ssafy.thorp.regimelink.application.port.RunProgressView;
+import com.ssafy.thorp.regimelink.application.port.RunSlice;
 import com.ssafy.thorp.regimelink.domain.vo.LinkRole;
 import com.ssafy.thorp.result.application.service.PublicResultService;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,15 +46,114 @@ public class BacktestRunReadAdapter implements BacktestRunReadPort {
 
     private final PublicResultService publicResults;
     private final BacktestRunRepository runs;
+    private final BacktestRequestRepository requests;
+    private final BacktestResultRepository results;
     private final ParameterRegistryPort registry;
+    private final Clock clock;
 
     public BacktestRunReadAdapter(
             PublicResultService publicResults,
             BacktestRunRepository runs,
-            ParameterRegistryPort registry) {
+            BacktestRequestRepository requests,
+            BacktestResultRepository results,
+            ParameterRegistryPort registry,
+            Clock clock) {
         this.publicResults = publicResults;
         this.runs = runs;
+        this.requests = requests;
+        this.results = results;
         this.registry = registry;
+        this.clock = clock;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BundleRunView> resolveBundleByRequest(
+            Long baseRunId, Long baseRequestId, Long compareRunId, Long compareRequestId) {
+        List<BundleRunView> bundle = new ArrayList<>(2);
+        bundle.add(byRequest(baseRunId, baseRequestId, LinkRole.BASE));
+        if (compareRunId != null) {
+            bundle.add(byRequest(compareRunId, compareRequestId, LinkRole.COMPARE));
+        }
+        return List.copyOf(bundle);
+    }
+
+    private BundleRunView byRequest(Long runId, Long requestId, LinkRole role) {
+        BacktestRun run =
+                runs.findById(runId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        BacktestRequest request =
+                requestId == null
+                        ? null
+                        : requests.findByRunId(runId).stream()
+                                .filter(found -> requestId.equals(found.getId()))
+                                .findFirst()
+                                .orElse(null);
+        String token =
+                request == null || request.getPublicToken() == null
+                        ? null
+                        : request.getPublicToken().value();
+        return view(token, role, requestId, run);
+    }
+
+    /**
+     * 실행 PK 로 읽는다. 링크가 들고 있는 것이 PK 라 조회·감시가 이 경로를 쓴다.
+     *
+     * <p>{@code publicToken}·{@code role}·{@code requestId} 는 <b>토큰에서 나오는 값</b>이라 여기서는 알 수 없다. 자리
+     * 표시로 채우지 않는다 — 응답에 실리는 토큰은 언제나 요청자가 제시한 것이어야 한다(research R14).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BundleRunView> findRun(Long runId) {
+        return runs.findById(runId).map(run -> view(null, LinkRole.BASE, null, run));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RunSlice> readSlice(
+            Long runId, LocalDate baselineDate, LocalDate d0, LocalDate lastAvailable) {
+        return runs.findById(runId)
+                .filter(run -> run.getStatus() == RunStatus.COMPLETED)
+                .flatMap(
+                        run ->
+                                BacktestRunSliceReader.read(
+                                        run, results, baselineDate, d0, lastAvailable));
+    }
+
+    /**
+     * 004 진행 상태를 그대로 옮긴다 (contracts §3 {@code runProgress}).
+     *
+     * <p>004 조회 서비스를 부르지 않는 것은 그 경로가 <b>요청</b> 단위이고 요청자 확인을 함께 하기 때문이다. 링크는 여러 사용자가 공유해 어느 요청으로 물을지
+     * 정할 수 없으므로 실행 행을 직접 읽는다 — 실려 나가는 값은 상태·진행률·대기 시간뿐이라 남의 결과가 새지 않는다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RunProgressView> readProgress(Long runId) {
+        return runs.findById(runId).map(this::progress);
+    }
+
+    private RunProgressView progress(BacktestRun run) {
+        RunProgress found = run.getProgress();
+        RunLifecycle lifecycle = run.getLifecycle();
+        return new RunProgressView(
+                run.getStatus() == null ? null : run.getStatus().name(),
+                found == null
+                        ? null
+                        : new RunProgressView.Progress(
+                                found.stage() == null ? null : found.stage().name(),
+                                found.lastTradingDate(),
+                                found.completedTradingDays(),
+                                found.totalTradingDays()),
+                queueWaitSeconds(lifecycle));
+    }
+
+    /** 큐에서 기다린 시간. 아직 시작되지 않았으면 지금까지다(004 조회와 같은 셈). */
+    private Long queueWaitSeconds(RunLifecycle lifecycle) {
+        if (lifecycle == null || lifecycle.queuedAt() == null) {
+            return null;
+        }
+        Instant until = lifecycle.startedAt() == null ? Instant.now(clock) : lifecycle.startedAt();
+        return Math.max(0L, Duration.between(lifecycle.queuedAt(), until).toSeconds());
     }
 
     @Override
@@ -63,16 +172,23 @@ public class BacktestRunReadAdapter implements BacktestRunReadPort {
         BacktestRun run =
                 runs.findById(request.getRunId())
                         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return view(token, role, request.getId(), run);
+    }
+
+    private BundleRunView view(String token, LinkRole role, Long requestId, BacktestRun run) {
         RunPlan plan = run.getPlan();
         Map<String, Object> spec = plan.requestSpecOrEmpty();
         return new BundleRunView(
                 token,
                 role,
-                request.getId(),
+                requestId,
                 run.getId(),
                 run.getStrategyId(),
                 strategyName(run.getStrategyId()),
                 (String) spec.get("mappingVersion"),
+                run.getInitialCash(),
+                plan.costProfileVersion(),
+                plan.dataVersion(),
                 universe(run, spec),
                 run.getPeriod() == null ? null : run.getPeriod().startDate(),
                 run.getPeriod() == null ? null : run.getPeriod().endDate(),

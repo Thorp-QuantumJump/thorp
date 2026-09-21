@@ -326,7 +326,7 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
   })
 
-  it('보관된 섹터가 지금 목록에 없으면 빠졌다는 사실을 알린다', async () => {
+  it('보관된 섹터가 지금 목록에 없으면 006 문장으로 알리고 대체 섹터를 자동으로 고르지 않는다(006 FR-008)', async () => {
     window.sessionStorage.setItem(
       SECTOR_SELECTION_STORAGE_KEY,
       JSON.stringify({
@@ -342,9 +342,14 @@ describe('섹터 선택 화면의 비중 규칙', () => {
 
     await openPage()
 
-    // 조용히 버리지 않는다. 무엇을 제안할지는 006이 소유하므로 여기서 정하지 않는다.
-    expect(screen.getByText(/목록에 없어 선택에서/)).toBeTruthy()
+    // 조용히 버리지 않는다. 문장은 006이 정했다(T031): 대체 섹터는 사용자가 아래 목록에서 직접 고른다.
+    expect(
+      screen.getByText('이전에 골랐던 섹터 1개가 지금 목록에 없어 선택에서 빠졌습니다. 아래 목록에서 대체 섹터를 직접 골라 주세요.'),
+    ).toBeTruthy()
     expect(checkbox('반도체').checked).toBe(true)
+    // 빠진 자리를 다른 섹터로 채우지 않는다 — 자동으로 바꾸면 사용자가 모르는 조건으로 분석하게 된다.
+    expect(checkbox('2차전지').checked).toBe(false)
+    expect(checkbox('자동차').checked).toBe(false)
   })
 
   it('슬라이더를 움직여도 다른 섹터의 값은 하나도 바뀌지 않는다', async () => {
