@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'
 import { NO_LINK_NOTICE } from '@/components/records/RegimeRecordPanel'
 import { WITHDRAWN_REASON } from '@/components/records/recordLabels'
+import { SECTOR_SELECTION_PATH, STRATEGY_SETTINGS_PATH } from '@/components/result/prefillStrategySettings'
 import { authenticatedUser } from '@/test/authFixtures'
 import {
   analysisDetail,
@@ -17,6 +18,8 @@ import {
   regimeDetailRecord,
   regimeRecord,
   regimeRecordFromResult,
+  reopenableDetail,
+  unavailableDetail,
   withdrawnRegimeRecord,
 } from '@/test/myRecordsFixtures'
 import {
@@ -40,6 +43,7 @@ const otherMocks = vi.hoisted(() => ({
   getParamSearchCandidates: vi.fn(),
   getRegimeBaselineMonths: vi.fn(),
 }))
+const prefillMocks = vi.hoisted(() => ({ prefillStrategySettings: vi.fn() }))
 
 vi.mock('@/api/myRecords', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/myRecords')>()
@@ -52,6 +56,10 @@ vi.mock('@/api/sectors', async (importOriginal) => {
 vi.mock('@/api/strategyRegistry', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/strategyRegistry')>()
   return { ...actual, fetchStrategyRegistry: otherMocks.fetchStrategyRegistry }
+})
+vi.mock('@/components/result/prefillStrategySettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/result/prefillStrategySettings')>()
+  return { ...actual, prefillStrategySettings: prefillMocks.prefillStrategySettings }
 })
 vi.mock('@/api/paramSearch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/paramSearch')>()
@@ -95,6 +103,7 @@ function renderPage(path = '/records', auth = authenticatedAuth) {
             }
           />
           <Route path="/login" element={<h1>로그인 화면</h1>} />
+          <Route path={STRATEGY_SETTINGS_PATH} element={<h1>전략 설정 화면</h1>} />
         </Routes>
       </AuthContext.Provider>
     </MemoryRouter>,
@@ -109,6 +118,7 @@ describe('MyRecordsPage', () => {
     apiMocks.fetchMyRecord.mockReset()
     otherMocks.fetchSectorCatalog.mockReset()
     otherMocks.fetchStrategyRegistry.mockReset()
+    prefillMocks.prefillStrategySettings.mockReset()
     otherMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))
     otherMocks.fetchStrategyRegistry.mockReturnValue(new Promise(() => {}))
     otherMocks.getParamSearch.mockReset()
@@ -157,11 +167,83 @@ describe('MyRecordsPage', () => {
       const primary = row.querySelectorAll('[data-slot="button"][data-variant="default"]')
       expect(primary).toHaveLength(1)
       expect(primary[0].textContent).toBe('다시 보기')
-      const reopen = within(row).getByRole('button', { name: '설정 바꿔 비교' })
-      expect(reopen.getAttribute('data-variant')).toBe('outline')
-      // 아직 연결되지 않은 버튼은 disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).
-      expect(reopen.getAttribute('aria-disabled')).toBe('true')
     }
+    expect(within(rows[0]).getByRole('button', { name: '설정 바꿔 비교' }).getAttribute('data-variant')).toBe(
+      'outline',
+    )
+    // 경제환경 기록에는 옮길 조건이 없어 버튼을 두지 않는다(contracts/record-handoff.md 규칙 3).
+    expect(within(rows[2]).queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()
+  })
+
+  it('설정 바꿔 비교는 상세를 받아 reopenPayload 를 005 함수에 그대로 넘기고 옮긴다(FR-007, R4)', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(reopenableDetail)
+    prefillMocks.prefillStrategySettings.mockImplementation(
+      async (_payload: unknown, navigate: (path: string) => void) => {
+        navigate(STRATEGY_SETTINGS_PATH)
+        return { status: 'moved' as const }
+      },
+    )
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
+
+    expect(await screen.findByRole('heading', { name: '전략 설정 화면' })).toBeTruthy()
+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledWith(analysisRecord.recordId, expect.any(AbortSignal))
+    expect(prefillMocks.prefillStrategySettings).toHaveBeenCalledTimes(1)
+    const [passed] = prefillMocks.prefillStrategySettings.mock.calls[0]
+    expect(passed).toBe(reopenableDetail.reopenPayload)
+    expect(passed.warmupTradingDays).toBe(77)
+  })
+
+  it('대응표가 달라 섹터를 넘기지 못하면 그 자리에 문장과 섹터·비중 단계 연결을 두고 옮기지 않는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(reopenableDetail)
+    prefillMocks.prefillStrategySettings.mockResolvedValue({
+      status: 'reselectSectors',
+      message: '이 결과의 섹터 대응표가 지금 대응표와 달라 섹터는 넘기지 않았습니다.',
+    })
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
+
+    const notice = await screen.findByRole('status')
+    expect(notice.textContent).toContain('섹터는 넘기지 않았습니다')
+    expect(within(notice).getByRole('link', { name: '섹터·비중 단계로 가기' }).getAttribute('href')).toBe(
+      SECTOR_SELECTION_PATH,
+    )
+    expect(screen.queryByRole('heading', { name: '전략 설정 화면' })).toBeNull()
+  })
+
+  it('펼치지 않고 눌러 열 수 없다는 판정을 받으면 문장을 보이고 버튼을 거둔다 — 같은 답을 다시 받지 않는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(unavailableDetail)
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain('열 수 없습니다')
+    expect(screen.queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()
+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledTimes(1)
+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()
+  })
+
+  it('상세가 열 수 없다고 판정한 기록은 자세히를 열면 버튼이 사라지고, 열려 있던 상세는 다시 받지 않는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(unavailableDetail)
+
+    renderPage()
+    expect(await screen.findByRole('button', { name: '설정 바꿔 비교' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: '자세히' }))
+
+    await screen.findByRole('heading', { name: '저장 당시 조건' })
+    expect(screen.queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()
+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledTimes(1)
+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()
   })
 
   it('기본 보기는 상태를 보내지 않고(서버 기본 = 완료), 정렬 선택지에 성과가 없다', async () => {

@@ -26,6 +26,7 @@ export default defineConfig({
       'src/components/regimelink/*.test.ts',
       'src/components/result/*.test.ts',
       'src/hooks/*.test.ts',
+      'src/components/records/*.test.ts',
       'src/test/resultFixtures.test.ts',
       'src/diagnosis/**/*.test.ts',
       'src/marketflow/**/*.test.ts',

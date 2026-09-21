@@ -41,7 +41,8 @@ import type { RegistryResponse } from '@/types/strategyRegistry'
  * <p><b>결과에 없는 값은 앞서 고른 값이나 등록표 기본값으로 둔다.</b> 요청 사본에는 최소 평가 기간이 없어, 이
  * 탭에서 고른 값이 있으면 그것을, 없으면 003이 처음 열릴 때와 같은 등록표 기본값을 넣는다.
  *
- * <p>006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019).
+ * <p>006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019) — `components/records/reopenSettings.ts`가 기록 상세의
+ * `reopenPayload`(같은 `ResultConfig` 모양)를 그대로 넘긴다. 006은 빌더를 따로 두지 않는다.
  */
 
 export const STRATEGY_SETTINGS_PATH = '/strategy'
