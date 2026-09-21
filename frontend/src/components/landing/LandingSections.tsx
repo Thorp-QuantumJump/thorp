@@ -6,6 +6,7 @@ import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'
 import type { Indicator } from '@/types/market'
 import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
+import { NextSectionButton } from './NextSectionButton'
 import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
@@ -151,8 +152,11 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
       transition={revealTransition}
       aria-labelledby="market-analysis-title"
     >
-      <div className={styles.sectionNumber} aria-hidden="true">
-        01 / MARKET PULSE
+      <div className={styles.sectionAside}>
+        <span className={styles.sectionNumber} aria-hidden="true">
+          01 / MARKET PULSE
+        </span>
+        <NextSectionButton targetId="backtest-service" label="백테스트 소개로 이동" />
       </div>
       <div className={styles.marketContent}>
         <div className={styles.sectionHeading}>
@@ -193,12 +197,7 @@ export function BacktestIntroSection() {
         <div className={styles.sectionHeading}>
           <FlaskConical aria-hidden="true" size={22} strokeWidth={1.6} />
           <p>BACKTEST STUDIO</p>
-          <h2 id="backtest-intro-title">
-            나의 전략을
-            <br />
-            과거에서 실험해보세요.
-          </h2>
-          <span>같은 시장과 기간에서 전략을 비교하고 수익과 위험을 직접 검증해보세요.</span>
+          <h2 id="backtest-intro-title">나의 전략을 실험해보세요.</h2>
         </div>
 
         <div className={styles.backtestVisual}>
@@ -258,8 +257,11 @@ export function BacktestIntroSection() {
           <ArrowUpRight aria-hidden="true" size={21} />
         </Link>
       </div>
-      <div className={styles.sectionNumber} aria-hidden="true">
-        02 / TEST THE PAST
+      <div className={styles.sectionAside}>
+        <span className={styles.sectionNumber} aria-hidden="true">
+          02 / TEST THE PAST
+        </span>
+        <NextSectionButton targetId="algorithms" label="알고리즘 소개로 이동" />
       </div>
     </motion.section>
   )

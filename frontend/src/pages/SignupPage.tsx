@@ -10,6 +10,11 @@ import {
 import { ApiClientError, normalizeApiError } from '@/api/client'
 import { AuthField } from '@/components/auth/AuthField'
 import { AuthStatus } from '@/components/auth/AuthStatus'
+import {
+  clearSignupProgress,
+  readSignupProgress,
+  saveSignupProgress,
+} from '@/auth/signupProgress'
 import formStyles from '@/components/auth/AuthForm.module.css'
 import type { AuthFieldName, RequestStatus } from '@/types/auth'
 import styles from './SignupPage.module.css'
@@ -74,16 +79,23 @@ export function SignupPage() {
   const requestIdRef = useRef<Record<ActionName, number>>({ send: 0, confirm: 0, signup: 0 })
   const controllerRef = useRef<Partial<Record<ActionName, AbortController>>>({})
 
-  const [email, setEmail] = useState('')
+  // 떠나기 전에 적어 둔 진행. 한 번만 읽어 아래 초깃값들이 나눠 쓴다.
+  const [restored] = useState(readSignupProgress)
+
+  const [email, setEmail] = useState(() => restored?.email ?? '')
   const [verificationCode, setVerificationCode] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [nickname, setNickname] = useState('')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [step, setStep] = useState<SignupStep>(1)
+  const [nickname, setNickname] = useState(() => restored?.nickname ?? '')
+  const [phoneNumber, setPhoneNumber] = useState(() => restored?.phoneNumber ?? '')
+  const [step, setStep] = useState<SignupStep>(() => restored?.step ?? 1)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
-  const [requestedEmail, setRequestedEmail] = useState<string | null>(null)
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null)
+  const [requestedEmail, setRequestedEmail] = useState<string | null>(
+    () => restored?.requestedEmail ?? null,
+  )
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(
+    () => restored?.verifiedEmail ?? null,
+  )
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [status, setStatus] = useState<StatusMessage | null>(null)
   const [sendStatus, setSendStatus] = useState<RequestStatus>('idle')
@@ -101,6 +113,18 @@ export function SignupPage() {
       Object.values(controllers).forEach((controller) => controller?.abort())
     }
   }, [])
+
+  /*
+    진행을 적어 둔다. 비밀번호와 인증번호는 넣지 않는다(`signupProgress` 참고).
+    아무것도 없으면 지운다 — 입력을 지운 사람에게 다음 방문에 옛 값을 되살려 주지 않는다.
+  */
+  useEffect(() => {
+    if (!email && !nickname && !phoneNumber && requestedEmail === null) {
+      clearSignupProgress()
+      return
+    }
+    saveSignupProgress({ email, requestedEmail, verifiedEmail, step, nickname, phoneNumber })
+  }, [email, requestedEmail, verifiedEmail, step, nickname, phoneNumber])
 
   const focusField = (field: AuthFieldName | 'passwordConfirm') => {
     const refs = {
@@ -395,6 +419,7 @@ export function SignupPage() {
       setPassword('')
       setPasswordConfirm('')
       setVerificationCode('')
+      clearSignupProgress()
       finishRequest('signup', request.id)
       navigate('/login', {
         replace: true,
@@ -419,6 +444,7 @@ export function SignupPage() {
       setPassword('')
       setPasswordConfirm('')
       setVerificationCode('')
+      clearSignupProgress()
       navigate('/login', {
         replace: true,
         state: { signupEmail: normalizeEmail(result.email) },
@@ -431,8 +457,13 @@ export function SignupPage() {
   }
 
   const canonicalEmail = normalizeEmail(email)
-  const canConfirm = requestedEmail === canonicalEmail && sendStatus === 'success'
-  const isVerified = verifiedEmail === canonicalEmail && confirmStatus === 'success'
+  /*
+    되살린 화면에는 이번 방문의 요청 상태가 없다. `requestedEmail`·`verifiedEmail`은 각각
+    발송·확인에 성공했을 때만 채워지고 이메일이 바뀌면 지워지므로, 그것만으로 충분하다.
+    여기에 `sendStatus === 'success'`를 함께 걸면 돌아온 사용자에게 입력칸이 닫힌 채로 보인다.
+  */
+  const canConfirm = requestedEmail === canonicalEmail
+  const isVerified = verifiedEmail === canonicalEmail
   const isAnyPending =
     sendStatus === 'pending' || confirmStatus === 'pending' || signupStatus === 'pending'
 
@@ -504,65 +535,65 @@ export function SignupPage() {
 
             {step === 1 ? (
               <>
-                <div className={styles.verificationSection}>
-                  <AuthField
-                    ref={emailRef}
-                    label="이메일"
-                    type="email"
-                    name="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    placeholder="name@example.com"
-                    value={email}
-                    error={fieldErrors.email}
-                    disabled={isAnyPending}
-                    onChange={(event) => handleEmailChange(event.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className={formStyles.secondaryButton}
-                    disabled={isAnyPending}
-                    onClick={handleSendVerification}
-                  >
-                    {sendStatus === 'pending'
-                      ? '발송 중…'
-                      : requestedEmail === canonicalEmail
-                        ? '다시 받기'
-                        : '인증번호 받기'}
-                  </button>
-                </div>
-
-                {canConfirm && !isVerified ? (
-                  <div className={styles.verificationSection}>
-                    <AuthField
-                      ref={verificationCodeRef}
-                      label="인증번호"
-                      type="text"
-                      name="verificationCode"
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="6자리 숫자"
-                      value={verificationCode}
-                      error={fieldErrors.verificationCode}
-                      disabled={isAnyPending}
-                      onChange={(event) => {
-                        setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))
-                        setFieldErrors((current) => ({
-                          ...current,
-                          verificationCode: undefined,
-                        }))
-                      }}
-                    />
+                <AuthField
+                  ref={emailRef}
+                  label="이메일"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  error={fieldErrors.email}
+                  disabled={isAnyPending}
+                  onChange={(event) => handleEmailChange(event.target.value)}
+                  action={
                     <button
                       type="button"
                       className={formStyles.secondaryButton}
                       disabled={isAnyPending}
-                      onClick={handleConfirmVerification}
+                      onClick={handleSendVerification}
                     >
-                      {confirmStatus === 'pending' ? '확인 중…' : '인증 확인'}
+                      {sendStatus === 'pending'
+                        ? '발송 중…'
+                        : requestedEmail === canonicalEmail
+                          ? '다시 받기'
+                          : '인증번호 받기'}
                     </button>
-                  </div>
+                  }
+                />
+
+                {canConfirm && !isVerified ? (
+                  <AuthField
+                    ref={verificationCodeRef}
+                    label="인증번호"
+                    type="text"
+                    name="verificationCode"
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="6자리 숫자"
+                    value={verificationCode}
+                    error={fieldErrors.verificationCode}
+                    disabled={isAnyPending}
+                    onChange={(event) => {
+                      setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                      setFieldErrors((current) => ({
+                        ...current,
+                        verificationCode: undefined,
+                      }))
+                    }}
+                    action={
+                      <button
+                        type="button"
+                        className={formStyles.secondaryButton}
+                        disabled={isAnyPending}
+                        onClick={handleConfirmVerification}
+                      >
+                        {confirmStatus === 'pending' ? '확인 중…' : '인증 확인'}
+                      </button>
+                    }
+                  />
                 ) : null}
 
                 {isVerified ? (

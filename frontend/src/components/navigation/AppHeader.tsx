@@ -79,7 +79,6 @@ export function AppHeader() {
   const { status: authStatus, user, logout, recheck } = useAuth()
   const rememberReturn = useLoginReturn()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)
@@ -103,24 +102,6 @@ export function AppHeader() {
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false)
     menuButtonRef.current?.focus()
-  }, [])
-
-  // 페이지 상단을 벗어나면 투명 탐색을 플로팅 바 형태로 전환한다.
-  useEffect(() => {
-    let frameId = 0
-
-    const updateHeaderState = () => {
-      window.cancelAnimationFrame(frameId)
-      frameId = window.requestAnimationFrame(() => setIsScrolled(window.scrollY > 56))
-    }
-
-    updateHeaderState()
-    window.addEventListener('scroll', updateHeaderState, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', updateHeaderState)
-      window.cancelAnimationFrame(frameId)
-    }
   }, [])
 
   // 메뉴가 열리면 배경 스크롤을 막고 첫 번째 탐색 항목으로 초점을 이동한다.
@@ -270,8 +251,8 @@ export function AppHeader() {
 
   return (
     <>
-      <header className={styles.header} data-scrolled={isScrolled}>
-        <div className={styles.inner} data-scrolled={isScrolled}>
+      <header className={styles.header}>
+        <div className={styles.inner}>
           <div className={styles.brandGroup}>
             <button
               ref={menuButtonRef}

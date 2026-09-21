@@ -106,6 +106,6 @@ describe('LandingPage', () => {
     renderWithRouter(<LandingPage />)
 
     expect(screen.getByRole('heading', { name: /시장을 분석합니다/ })).toBeDefined()
-    expect(screen.getByRole('heading', { name: /과거에서 실험해보세요/ })).toBeDefined()
+    expect(screen.getByRole('heading', { name: /전략을 실험해보세요/ })).toBeDefined()
   })
 })
