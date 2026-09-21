@@ -42,7 +42,7 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고, 
 그 요청만 취소된 순간 기록이 틀린 상태(취소·부분 결과)를 보이고, 어느 요청을 골라도 뒤에 오는 취소가 그것을
 틀리게 만든다 — 접수 때 다시 잇는 것으로는 막지 못한다(2026-09-21 코드리뷰).
 
-공개 토큰과 상태는 읽을 때 `(소유자, 실행)`으로 요청을 골라 읽는다(`MyRecordRepository.findViewableRequestId`).
+공개 토큰과 상태는 읽을 때 `(소유자, 실행)`으로 요청을 골라 읽는다(`MyRecordViewQuery`의 LATERAL 서브쿼리).
 고르는 규칙은 **취소하지 않은 것 중 최신**이고, 전부 취소했으면 그중 최신이다(그때는 사용자에게 취소가 맞다).
 | `param_search_id` | BIGINT | → `param_search(id)`, nullable | 탐색 묶음 |
 | `regime_log_id` | BIGINT | → `regime_search_log(id)`, nullable | 경제환경 탐색. 검색 경로·기준월 근거·스냅샷 참조는 그 행에 있다. 경로가 다르면 로그 행이 다르므로 별도 항목이 된다(FR-012 후단) |
