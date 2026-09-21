@@ -109,14 +109,21 @@
   gap: 16px;
 }
 
-.master {
+/*
+  두 단은 같은 모양으로 시작한다. 제목 한 줄이 먼저 오고 그 아래에서 내용이 시작하므로, 왼쪽
+  첫 항목과 오른쪽 카드의 윗변이 같은 높이에 놓인다. 제목을 한쪽 카드 안에 넣으면 그만큼
+  어긋난다.
+*/
+.master,
+.detail {
   display: grid;
   gap: 10px;
   align-content: start;
-  /* 스크롤 막대를 따로 만들지 않는다. 전략이 다섯 남짓이라 그대로 늘어서는 편이 읽기 쉽다. */
 }
 
-.detail {
+/* 스크롤 막대를 따로 만들지 않는다. 전략이 다섯 남짓이라 그대로 늘어서는 편이 읽기 쉽다. */
+
+.detailBody {
   display: grid;
   gap: 14px;
   align-content: start;
@@ -124,13 +131,6 @@
   border: 1px solid var(--thorp-line-strong);
   border-radius: 12px;
   background: var(--thorp-surface);
-}
-
-.detailHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
 }
 
 .columnTitle {
@@ -273,7 +273,7 @@
     grid-template-columns: 1fr;
   }
 
-  .detail {
+  .detailBody {
     padding: 16px;
   }
 }
