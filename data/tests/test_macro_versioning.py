@@ -101,7 +101,8 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:
             "CREATE TABLE macro_calculation_registry_version "
             "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "version_key TEXT, value_rule_fingerprint TEXT, change_reason TEXT, "
-            "nominal_weight_policy TEXT, status TEXT, created_at TEXT)"
+            "nominal_weight_policy TEXT, source_policy TEXT, refresh_months_basis TEXT, "
+            "status TEXT, created_at TEXT)"
         ))
         connection.execute(text(
             "CREATE TABLE macro_indicator_definition (registry_version_id INTEGER, "
@@ -112,7 +113,8 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:
             "release_rule TEXT, break_link_rule TEXT, missing_rule TEXT, agency TEXT, "
             "attribution TEXT, license_status TEXT, license_review_status TEXT, "
             "published_precision INTEGER, refresh_months_n INTEGER, nominal_weight TEXT, "
-            "trading_calendar TEXT, revision_history_available INTEGER)"
+            "trading_calendar TEXT, publication_lag_months INTEGER, "
+            "revision_history_available INTEGER)"
         ))
         connection.execute(text(
             "CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY AUTOINCREMENT, "

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;
 import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;
 import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.application.service.RecordNamer;
@@ -16,6 +17,8 @@ import com.ssafy.thorp.myrecord.domain.model.MyRecord;
 import com.ssafy.thorp.myrecord.domain.model.RecordRef;
 import com.ssafy.thorp.myrecord.domain.vo.RecordName;
 import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;
+import com.ssafy.thorp.regime.application.port.MacroIndicatorPort;
+import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;
 import com.ssafy.thorp.sector.application.repository.SectorRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -54,7 +57,14 @@ class MyRecordRegistrarTest {
         when(namer.forAnalysis(any(), any(), any())).thenReturn(RecordName.of("이름"));
         when(namer.forSearchBundle(any(), any(), any())).thenReturn(RecordName.of("이름"));
         registrar =
-                new MyRecordRegistrar(records, namer, sectors, Clock.fixed(NOW, ZoneOffset.UTC));
+                new MyRecordRegistrar(
+                        records,
+                        namer,
+                        sectors,
+                        mock(RegimeSearchLogWriter.class),
+                        mock(RegimeSnapshotRepository.class),
+                        mock(MacroIndicatorPort.class),
+                        Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
