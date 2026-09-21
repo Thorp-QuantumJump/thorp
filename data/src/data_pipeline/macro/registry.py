@@ -16,8 +16,7 @@
 
     published_precision      T069 — 공표 정밀도
     minimum_effective_scale  010 소유 (PD-10). 008은 채우지 않는다 (FR-015)
-    trading_calendar         거래일 달력 출처가 PD-11에서 확정되지 않았다
-    refresh_months_n         T073 — 정기 수집을 몇 달 관찰한 뒤 실제 개정 관행에 맞춘다
+    trading_calendar         월 평균 경로에 닿는 지표에만 필요하다. `TRADING_CALENDAR_*` 참고
 """
 
 from __future__ import annotations
@@ -26,7 +25,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Final
 
-from data_pipeline.macro.config import SOURCE_CUSTOMS, SOURCE_ECOS, SOURCE_KOSIS, SOURCE_OECD
+from data_pipeline.macro.config import (
+    SOURCE_CUSTOMS,
+    SOURCE_ECOS,
+    SOURCE_KOSIS,
+    SOURCE_OECD,
+    load_source_config,
+)
 
 #: 7개 분야. 009 계약과 같은 식별자다(data-model §1).
 FIELD_PRODUCTION: Final[str] = "production"
@@ -67,16 +72,130 @@ REVIEW_VERIFIED: Final[str] = "VERIFIED"
 REVIEW_PENDING_RIGHTS: Final[str] = "PENDING_RIGHTS"
 REVIEW_UNVERIFIED: Final[str] = "UNVERIFIED"
 
-#: 정기 재조회 구간의 잠정 기본값 (T012, FR-017). 관찰 뒤 T073 이 지표별로 조정한다.
-#:
-#: 관세청은 **매월 15일경 전월까지의 자료를 정정**한다고 안내한다(pd11 §4). 3개월은 그 주기보다
-#: 짧지 않으므로 세 지표 모두 기본값을 그대로 쓴다. 몇 달치가 함께 정정되는지는 갱신을 봐야
-#: 알 수 있고, 그것이 T073 의 일이다.
+#: 정기 재조회 구간 N (FR-017). **잠정값이며 미확인으로 닫는다** — 근거는 아래에 있다.
 DEFAULT_REFRESH_MONTHS_N: Final[int] = 3
+
+#: N 을 왜 3으로 두고 왜 여기서 확정하지 않는지 (T073, FR-017, constitution 미확인 항목 처리).
+#:
+#: **확정하지 못한 이유.** N 은 "원천이 과거 몇 달치를 함께 정정하는가"를 묻는 값이고, 그것은
+#: 정기 수집을 여러 달 돌려 같은 달의 값이 언제 바뀌는지 세어야 비로소 보인다. 지금 가진 것은
+#: 한 시점의 전 구간 한 벌뿐이라 개정을 한 건도 관측하지 못했다. 관측 없이 지표마다 다른 수를
+#: 적으면 그것은 확정이 아니라 추측이고, 등록표에 추측을 적으면 나중에 그 칸이 근거 있는 값처럼
+#: 읽힌다.
+#:
+#: **왜 3인가.** 관세청은 매월 15일경 전월까지의 자료를 정정한다고 안내한다(pd11 §4). 3개월은
+#: 그 주기보다 짧지 않다. 국가통계포털·한국은행·경제협력개발기구는 정정 주기를 수치로 밝히지
+#: 않아 근거로 쓸 것이 없으므로 같은 값을 쓴다.
+#:
+#: **확정에 필요한 것.** 정기 수집을 최소 N+3 개월 돌린 뒤, `macro_raw_revision` 에서 지표별로
+#: (a) N 안에서 잡힌 개정과 (b) N 밖에서 뒤늦게 발견된 개정을 센다. (b) 가 이어지는 지표는 N 을
+#: 늘린다(FR-017).
+#:
+#: **의심스러우면 늘린다.** 틀리는 방향이 대칭이 아니다 — N 이 길면 이미 확정된 달을 몇 번 더
+#: 받을 뿐이고 그 비용은 호출 몇 번이다. N 이 짧으면 정정을 통째로 놓치고, 놓친 값은 다음 전
+#: 구간 재적재까지 틀린 채로 남으며 그 사실이 어디에도 드러나지 않는다.
+REFRESH_MONTHS_BASIS: Final[str] = (
+    "잠정값 3개월. 관세청의 매월 정정 안내(pd11 §4)보다 짧지 않게 잡은 값이며, 나머지 세 원천은"
+    " 정정 주기를 수치로 밝히지 않아 같은 값을 쓴다. 실제 개정 관행은 정기 수집을 여러 달 돌려"
+    " macro_raw_revision 에서 N 밖 개정을 세어야 확정되므로 이번 범위에서는 미확인으로 닫는다."
+    " 조정 방향은 한쪽으로만 연다 — 의심스러우면 늘린다. N 이 길면 이미 확정된 달을 다시 받는"
+    " 호출 몇 번이 비용이지만, N 이 짧으면 정정을 놓치고 놓친 사실조차 드러나지 않는다."
+)
 
 
 class RegistryError(ValueError):
     """등록표가 지켜야 할 불변식을 어겼다."""
+
+
+#: 거래일 달력 식별자 (FR-006b). **월 평균 경로에 닿는 지표만 이 값이 필요하다.**
+#:
+#: `transform.monthly` 에서 달력을 읽는 곳은 `fold_month_average` 하나뿐이고, 거기에 닿으려면
+#: 변환이 월 평균이면서 원천이 일별로 줘야 한다. 월 기말은 원천이 장이 선 날만 행을 주므로
+#: 그 달의 마지막 행이 곧 마지막 거래일이고, 달력 없이 규칙이 성립한다(FR-006a).
+#:
+#: **지금 17개 중 월 평균 경로에 닿는 지표는 없다.** 두바이유는 변환이 월 평균이지만 한국은행이
+#: 월 평균을 이미 내 주므로 주기가 월별이고 그대로 통과한다. 국고채만 일별인데 변환이 월 기말이다.
+#: 그래서 이 칸이 비어 있어도 결측이 생기지 않으며, 실제로 2026-09-20 전 구간 수집에서 두 지표
+#: 모두 결측 0건이었다. 비어 있는 칸을 채우는 대신 **닿는 지표가 생기면 등록이 거부되도록**
+#: `validate` 에 불변식을 두었다.
+#:
+#: 달력 식별자는 상수로 미리 두지 않는다 — 쓰는 지표가 없는데 이름만 있으면 다음 사람이 그중
+#: 하나를 확인 없이 고른다. 값은 그 지표를 더할 때 근거와 함께 정한다.
+TRADING_CALENDAR_UNVERIFIED: Final[str] = (
+    "채권·외환 계열의 휴장일이 KRX 주식 달력과 같은지는 확인하지 못했다. 같다고 가정하고 KRX"
+    " 달력을 걸면, 두 달력이 하루라도 다른 달마다 평균이 조용히 다른 표본으로 만들어진다."
+    " 원천의 휴장일 안내를 먼저 확인한다"
+)
+
+#: 원천별 호출 한도·재시도 (FR-011b(1), FR-017a). **등록표가 들고 어댑터가 따른다.**
+#:
+#: 재시도 수치의 출처는 `config` 다 — 환경변수로 덮을 수 있어야 하고, 그 읽기는 접속 설정의
+#: 일이기 때문이다. 등록표는 그 값을 참조하면서 **원천이 공표한 한도**를 함께 든다. 한도는
+#: 환경변수로 바뀔 성질이 아니라 원천이 정하는 사실이라 여기가 제자리다.
+#:
+#: 한도를 수치로 공표하지 않는 원천은 '수치 한도 없음'으로 **확인된 것**이지 미확인이 아니다
+#: (FR-017a). 둘을 구분하지 않으면 확인된 원천까지 정기 수집에서 빠진다.
+@dataclass(frozen=True)
+class SourcePolicy:
+    """원천 하나의 호출 규칙. 재시도는 `config` 값을 참조하고 한도는 여기서 든다."""
+
+    source_id: str
+    #: 원천이 공표한 호출 한도. 수치로 밝히지 않으면 그 사실을 문장으로 적는다.
+    rate_limit: str
+    #: 요청 하나가 담을 수 있는 개월 수. `None` 이면 상한이 없다.
+    max_months_per_request: int | None
+    #: 한도의 출처. 어디서 읽었는지 없으면 나중에 이 값이 추측인지 확인값인지 갈리지 않는다.
+    basis: str
+
+    @property
+    def max_attempts(self) -> int:
+        return load_source_config(self.source_id).max_attempts
+
+    @property
+    def backoff_seconds(self) -> tuple[float, ...]:
+        """재시도 사이에 기다릴 초를 차례대로. 기본은 1·2초(3회 시도라 간격은 둘)다."""
+        loaded = load_source_config(self.source_id)
+        return tuple(loaded.backoff_for(n) for n in range(1, loaded.max_attempts))
+
+
+SOURCE_POLICIES: Final[dict[str, SourcePolicy]] = {
+    SOURCE_ECOS: SourcePolicy(
+        source_id=SOURCE_ECOS,
+        rate_limit="수치 한도 없음, 과다 호출 시 제한 가능",
+        max_months_per_request=None,
+        basis="한국은행 오픈API 이용안내에 호출 수 상한이 수치로 없다 (pd11 §1)",
+    ),
+    SOURCE_KOSIS: SourcePolicy(
+        source_id=SOURCE_KOSIS,
+        rate_limit="분당 200회, 요청당 40,000셀",
+        max_months_per_request=None,
+        basis="국가통계포털 공유서비스 이용약관의 공표 한도 (FR-017, pd11 §2)",
+    ),
+    SOURCE_CUSTOMS: SourcePolicy(
+        source_id=SOURCE_CUSTOMS,
+        rate_limit="수치 한도 없음, 과다 호출 시 제한 가능",
+        max_months_per_request=12,
+        basis="공공데이터포털이 호출 수를 수치로 밝히지 않는다. 조회 기간 12개월 상한은"
+        " 실제 응답으로 확인했다 (pd11 §4)",
+    ),
+    SOURCE_OECD: SourcePolicy(
+        source_id=SOURCE_OECD,
+        rate_limit="수치 한도 없음, 과다 호출 시 제한 가능",
+        max_months_per_request=None,
+        basis="SDMX 공개 종단점에 공표된 수치 한도가 없다 (pd11 §3)",
+    ),
+}
+
+
+def source_policy(source_id: str) -> SourcePolicy:
+    """원천 하나의 호출 규칙. 등록표에 없는 원천은 쓰지 않는다."""
+    try:
+        return SOURCE_POLICIES[source_id]
+    except KeyError:
+        raise RegistryError(
+            f"등록표에 호출 규칙이 없는 원천이다: {source_id!r}."
+            f" 쓸 수 있는 값은 {', '.join(sorted(SOURCE_POLICIES))}"
+        ) from None
 
 
 @dataclass(frozen=True)
@@ -107,6 +226,15 @@ class IndicatorDefinition:
     license_review_status: str
     series_start: str
     revision_history_available: bool
+    #: 원천이 **몇 달 뒤늦게** 값을 내는가. 오늘이 2026-09 일 때 최신 대상월이 2026-07 이면 2다.
+    #:
+    #: 전 구간 적재가 끝났는지 판정하려면 "몇 달치가 와야 하는가"를 알아야 하는데(FR-011b(3)),
+    #: 그 수는 상수가 아니라 달마다 늘어난다. 그래서 개수를 적는 대신 **지연을 적고 개수는
+    #: 계산한다** — `expected_month_count` 가 그 일을 한다. 개수를 적어 두면 다음 달에 바로
+    #: 틀리고, 틀린 기대값은 미완료를 정상으로 보이게 만든다.
+    #:
+    #: 값의 출처는 2026-09-20 전 구간 수집의 실제 최신 대상월이다(원칙 IX). 추정이 아니다.
+    publication_lag_months: int
     release_rule: str | None = None
     break_link_rule: str | None = None
     missing_rule: str | None = None
@@ -243,6 +371,7 @@ def _kosis(
     raw_unit: str,
     transform_rule: str,
     series_start: str,
+    publication_lag_months: int,
     *,
     agency: str = _STATISTICS_KOREA,
     org_id: str = ORG_STATISTICS_KOREA,
@@ -265,6 +394,7 @@ def _kosis(
         license_review_status=REVIEW_VERIFIED,
         series_start=series_start,
         revision_history_available=True,
+        publication_lag_months=publication_lag_months,
         release_rule=_TABLE_UPDATED_AT,
     )
 
@@ -273,19 +403,19 @@ def _kosis(
 INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     # --- 생산 (pd11 §2) ---
     _kosis("all_industry_production", FIELD_PRODUCTION, "DT_1JH20201", "T1",
-           (("objL1", "0"),), "2020=100", TRANSFORM_YOY, "2000-01"),
+           (("objL1", "0"),), "2020=100", TRANSFORM_YOY, "2000-01", 2),
     _kosis("mining_manufacturing_production", FIELD_PRODUCTION, "DT_1F02001", "T10",
-           (("objL1", "00"), ("objL2", "0")), "2020=100", TRANSFORM_YOY, "1980-01"),
+           (("objL1", "00"), ("objL2", "0")), "2020=100", TRANSFORM_YOY, "1980-01", 2),
     _kosis("service_production", FIELD_PRODUCTION, "DT_1KC2020", "T1",
-           (("objL1", "T"),), "2020=100", TRANSFORM_YOY, "2000-01"),
+           (("objL1", "T"),), "2020=100", TRANSFORM_YOY, "2000-01", 2),
     # --- 소비·투자 (pd11 §2) ---
     _kosis("retail_sales_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1K41012", "T1",
-           (("objL1", "G0"),), "2020=100", TRANSFORM_YOY, "1995-01"),
+           (("objL1", "G0"),), "2020=100", TRANSFORM_YOY, "1995-01", 2),
     # 설비투자지수는 분류가 objL2 하나뿐이다. objL1 을 지어내 채우지 않는다.
     _kosis("facility_investment_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1F70011", "T3",
-           (("objL2", "C"),), "2020=100", TRANSFORM_YOY, "1995-02"),
+           (("objL2", "C"),), "2020=100", TRANSFORM_YOY, "1995-02", 2),
     _kosis("construction_completed_constant", FIELD_CONSUMPTION_INVESTMENT, "DT_1G18011", "T10",
-           (("objL1", "0"),), "백만원", TRANSFORM_YOY, "1997-07"),
+           (("objL1", "0"),), "백만원", TRANSFORM_YOY, "1997-07", 2),
     # --- 대외거래 (pd11 §4). 무역수지는 원천이 주는 공식 값이며 수출-수입 파생식이 아니다 ---
     IndicatorDefinition(
         indicator_id="exports", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,
@@ -293,7 +423,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         raw_unit="미국 달러", transformed_unit="%",
         transform_rule=TRANSFORM_YOY, agency="관세청", attribution="관세청 수출입총괄",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1989-01",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
         missing_rule="응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다",
     ),
     IndicatorDefinition(
@@ -302,7 +432,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         raw_unit="미국 달러", transformed_unit="%",
         transform_rule=TRANSFORM_YOY, agency="관세청", attribution="관세청 수출입총괄",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1989-01",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
         missing_rule="응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다",
     ),
     IndicatorDefinition(
@@ -312,12 +442,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         transformed_unit="미국 달러", transform_rule=TRANSFORM_OFFICIAL_AMOUNT, agency="관세청",
         attribution="관세청 수출입총괄", license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1989-01",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
         missing_rule="원천 제공값이다. 수출에서 수입을 빼 만들지 않는다",
     ),
     # --- 노동 (pd11 §2). 실업률은 원천이 계절조정한 값이라 우리가 다시 조정하지 않는다 ---
     _kosis("employed_persons", FIELD_LABOR, "DT_1DA7001S", "T30",
-           (("objL1", "0"),), "천명", TRANSFORM_YOY, "1999-06"),
+           (("objL1", "0"),), "천명", TRANSFORM_YOY, "1999-06", 1),
     IndicatorDefinition(
         indicator_id="unemployment_rate", field_id=FIELD_LABOR, primary_source=SOURCE_KOSIS,
         table_code="DT_1DA9001S", item_code="T80", org_id=ORG_STATISTICS_KOREA,
@@ -325,12 +455,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         transform_rule=TRANSFORM_SEASONAL_RATE, agency=_STATISTICS_KOREA,
         attribution=_KOSIS_ATTRIBUTION, license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1999-06",
-        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,
+        revision_history_available=True, publication_lag_months=1, release_rule=_TABLE_UPDATED_AT,
         missing_rule="원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다",
     ),
     # --- 물가·원자재 ---
     _kosis("consumer_price_index", FIELD_PRICES_COMMODITIES, "DT_1J22003", "T",
-           (("objL1", "T10"),), "2020=100", TRANSFORM_YOY, "1980-01"),
+           (("objL1", "T10"),), "2020=100", TRANSFORM_YOY, "1980-01", 1),
     IndicatorDefinition(
         indicator_id="dubai_crude", field_id=FIELD_PRICES_COMMODITIES, primary_source=SOURCE_ECOS,
         table_code="902Y003", item_code="010102", org_id=None, classification=(),
@@ -341,7 +471,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         # 대상인지 물을 창구가 없다(pd11 §1). 조건 자체를 모르는 UNVERIFIED 와 구분해 두고
         # 쓴다 — 하나로 묶으면 발행이 보류되어 나머지 16개까지 멈춘다.
         license_review_status=REVIEW_PENDING_RIGHTS, series_start="1992-01",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
     ),
     # --- 금융·주택 ---
     IndicatorDefinition(
@@ -351,7 +481,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         transformed_unit="연%", transform_rule=TRANSFORM_MONTH_END, agency="한국은행",
         attribution=_ECOS_ATTRIBUTION, license_status="ALLOWED",
         license_review_status=REVIEW_VERIFIED, series_start="1998-11",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
         missing_rule="일별 계열이다. 그 달 마지막 거래일 값을 쓰고 휴장일 값을 만들지 않는다",
     ),
     IndicatorDefinition(
@@ -362,7 +492,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         raw_unit="원", transformed_unit="원",
         transform_rule=TRANSFORM_MONTH_END, agency="한국은행", attribution=_ECOS_ATTRIBUTION,
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1964-05",
-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
         missing_rule="항목2 0000200 말일자료다. 평균자료(0000100)와 섞지 않는다",
     ),
     IndicatorDefinition(
@@ -374,7 +504,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_review_status=REVIEW_VERIFIED,
         # 현행 표 하나는 2021-06 부터지만 연결 사슬을 거치면 2000-01 까지 닿는다.
         series_start="2000-01",
-        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,
+        revision_history_available=True, publication_lag_months=2, release_rule=_TABLE_UPDATED_AT,
         break_link_rule=_HOUSING_BREAK_LINK_RULE,
         link_chain=HOUSING_LINK_CHAIN,
     ),
@@ -385,7 +515,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         classification=(), raw_unit="지수", transformed_unit="%", transform_rule=TRANSFORM_YOY,
         agency="경제협력개발기구(OECD)", attribution="OECD Composite Leading Indicators",
         license_status="ALLOWED", license_review_status=REVIEW_VERIFIED, series_start="1961-01",
-        revision_history_available=True,
+        revision_history_available=True, publication_lag_months=1,
         release_rule="응답 헤더 Last-Modified 를 데이터셋 갱신일로 쓴다."
         " SDMX 헤더의 Prepared 는 응답 생성 시각이라 개정 식별자로 쓰지 않는다",
         missing_rule="증가율은 지수에서 직접 계산한다. 원천의 TR/GY 계열을 쓰지 않는다 (FR-019)",
@@ -423,6 +553,33 @@ def nominal_weights(
     return weights
 
 
+def _month_index(period: str) -> int:
+    return int(period[:4]) * 12 + int(period[5:7]) - 1
+
+
+def expected_end_month(indicator: IndicatorDefinition, as_of: str) -> str:
+    """``as_of`` 달 기준으로 **값이 와 있어야 할 가장 최근 대상월** (FR-011b(3)).
+
+    ``as_of`` 는 ``YYYY-MM`` 이다. 원천이 뒤늦게 내는 만큼 뒤로 물린다.
+    """
+    index = _month_index(as_of) - indicator.publication_lag_months
+    return f"{index // 12:04d}-{index % 12 + 1:02d}"
+
+
+def expected_month_count(indicator: IndicatorDefinition, as_of: str) -> int:
+    """전 구간 적재가 끝났다면 있어야 할 **대상월 수** (FR-011b(3)).
+
+    개수를 등록표에 상수로 적지 않는 이유는 그 수가 달마다 늘기 때문이다. 상수로 적으면 다음
+    달에 곧바로 틀리고, 틀린 기대값은 미완료를 정상으로 보이게 한다 — 기대가 실제보다 작으면
+    무엇이 빠졌든 판정은 늘 통과한다.
+
+    **변환값이 아니라 대상월을 센다.** 전년동월 대비의 첫 열두 달은 비교월이 없어 결측이지만
+    그 달들도 받은 대상월이다. 값이 있는 달만 세면 증가율 지표가 영영 미완료로 남는다.
+    """
+    start, end = indicator.series_start[:7], expected_end_month(indicator, as_of)
+    return max(_month_index(end) - _month_index(start) + 1, 0)
+
+
 def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:
     """등록표 단위의 불변식을 본다. 행 단위 제약으로는 표현할 수 없는 것들이다.
 
@@ -446,6 +603,29 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:
             raise RegistryError(
                 f"{indicator.indicator_id}의 주기가 {', '.join(CYCLE_IDS)} 밖이다:"
                 f" {indicator.source_cycle}"
+            )
+        if indicator.publication_lag_months < 0:
+            raise RegistryError(
+                f"{indicator.indicator_id}의 공표 지연이 음수다:"
+                f" {indicator.publication_lag_months}. 원천이 미래를 낼 수는 없다"
+            )
+        if indicator.primary_source not in SOURCE_POLICIES:
+            raise RegistryError(
+                f"{indicator.indicator_id}의 원천 {indicator.primary_source!r} 에 호출 규칙이"
+                " 없다. 한도를 모르는 원천은 정기 수집에 올리지 않는다 (FR-017a)"
+            )
+        # 월 평균은 그 달 거래일이 다 모였는지로 값을 낼지 정하는데, 달력이 없으면 그 판정을
+        # 할 수 없어 매달 결측이 된다(FR-006b). 지금 여기 걸리는 지표는 없다 — 걸리는 지표를
+        # 나중에 더할 때 조용히 빈 칸으로 들어오지 않게 막는 자리다.
+        if (
+            indicator.transform_rule == TRANSFORM_MONTH_AVERAGE
+            and indicator.source_cycle == CYCLE_DAILY
+            and not indicator.trading_calendar
+        ):
+            raise RegistryError(
+                f"{indicator.indicator_id}: 일별 계열의 월 평균은 거래일 달력이 있어야 한다"
+                " (FR-006b). 달력 없이는 그 달이 다 모였는지 판정할 수 없어 매달 결측이 된다."
+                f" {TRADING_CALENDAR_UNVERIFIED}"
             )
 
     used_fields = {indicator.field_id for indicator in indicators}

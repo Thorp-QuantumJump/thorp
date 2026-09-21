@@ -13,6 +13,8 @@ from sqlalchemy import Engine, text
 from data_pipeline.macro.registry import (
     FIELD_IDS,
     NOMINAL_WEIGHT_POLICY,
+    REFRESH_MONTHS_BASIS,
+    SOURCE_POLICIES,
     IndicatorDefinition,
     nominal_weights,
     validate,
@@ -65,6 +67,29 @@ def _value_rule(indicator: IndicatorDefinition) -> dict[str, object]:
         "link_chain": links,
         "missing_rule": indicator.missing_rule,
         "trading_calendar": indicator.trading_calendar,
+    }
+
+
+def _source_policy_payload(
+    indicators: Sequence[IndicatorDefinition],
+) -> dict[str, dict[str, object]]:
+    """등록표가 실제로 쓰는 원천의 호출 규칙 (FR-011b(1), FR-017a).
+
+    **값 지문에는 넣지 않는다.** 재시도 횟수나 호출 한도가 달라져도 같은 자료에서 같은 값이
+    나온다 — 달라지는 것은 받아 오는 방법이지 계산이 아니다. 지문에 넣으면 간격 한 번 조정한
+    것이 새 등록표 버전이 되고, 그러면 멀쩡한 자료가 옛 버전 것으로 밀린다.
+    """
+    used = {indicator.primary_source for indicator in indicators}
+    return {
+        source_id: {
+            "rate_limit": policy.rate_limit,
+            "max_months_per_request": policy.max_months_per_request,
+            "max_attempts": policy.max_attempts,
+            "backoff_seconds": list(policy.backoff_seconds),
+            "basis": policy.basis,
+        }
+        for source_id, policy in sorted(SOURCE_POLICIES.items())
+        if source_id in used
     }
 
 
@@ -137,15 +162,23 @@ def register_calculation_version(
         "CAST(:link_chain AS JSONB)"
         if engine.dialect.name == "postgresql" else ":link_chain"
     )
+    policy_expression = (
+        "CAST(:source_policy AS JSONB)"
+        if engine.dialect.name == "postgresql" else ":source_policy"
+    )
     with engine.begin() as connection:
         registry_id = connection.execute(
             text("INSERT INTO macro_calculation_registry_version "
                  "(version_key, value_rule_fingerprint, change_reason, "
-                 "nominal_weight_policy, status, created_at) "
-                 "VALUES (:key, :fingerprint, :reason, :policy, 'PUBLISHED', CURRENT_TIMESTAMP) "
+                 "nominal_weight_policy, source_policy, refresh_months_basis, "
+                 "status, created_at) "
+                 f"VALUES (:key, :fingerprint, :reason, :policy, {policy_expression}, "
+                 ":refresh_basis, 'PUBLISHED', CURRENT_TIMESTAMP) "
                  "RETURNING id"),
             {"key": version_key, "fingerprint": fingerprint, "reason": change_reason,
-             "policy": weight_policy or NOMINAL_WEIGHT_POLICY},
+             "policy": weight_policy or NOMINAL_WEIGHT_POLICY,
+             "source_policy": json.dumps(_source_policy_payload(indicators)),
+             "refresh_basis": REFRESH_MONTHS_BASIS},
         ).scalar_one()
         for indicator in indicators:
             connection.execute(
@@ -156,14 +189,14 @@ def register_calculation_version(
                      "release_rule, break_link_rule, missing_rule, agency, attribution, "
                      "license_status, license_review_status, published_precision, "
                      "refresh_months_n, nominal_weight, trading_calendar, "
-                     "revision_history_available) VALUES "
+                     "publication_lag_months, revision_history_available) VALUES "
                      "(:registry, :indicator, :field, :source, :table_code, :item_code, "
                      f":org_id, {classification_expression}, :source_cycle, :series_start, "
                      f"{links_expression}, :raw_unit, :transformed_unit, :transform_rule, "
                      ":release_rule, "
                      ":break_link_rule, :missing_rule, :agency, :attribution, :license_status, "
                      f":license_review_status, :precision, :refresh, {weight_expression}, "
-                     ":trading_calendar, :revision_history)"),
+                     ":trading_calendar, :publication_lag, :revision_history)"),
                 {"registry": registry_id, "indicator": indicator.indicator_id,
                  "field": indicator.field_id, "source": indicator.primary_source,
                  "table_code": indicator.table_code, "item_code": indicator.item_code,
@@ -185,6 +218,7 @@ def register_calculation_version(
                  "refresh": indicator.refresh_months_n,
                  "weight": json.dumps(str(chosen_weights[indicator.indicator_id])),
                  "trading_calendar": indicator.trading_calendar,
+                 "publication_lag": indicator.publication_lag_months,
                  "revision_history": indicator.revision_history_available},
             )
     return registry_id
