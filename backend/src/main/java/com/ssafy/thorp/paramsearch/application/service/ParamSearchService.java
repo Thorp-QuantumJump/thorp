@@ -4,7 +4,6 @@ import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.service.CostProfileService;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import com.ssafy.thorp.myrecord.application.service.MyRecordLimitPolicy;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.command.PreviewParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;
@@ -14,6 +13,7 @@ import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;
 import com.ssafy.thorp.paramsearch.application.port.CandidatePerformancePort;
 import com.ssafy.thorp.paramsearch.application.port.CandidateRunView;
 import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;
+import com.ssafy.thorp.paramsearch.application.port.SaveSlotGuard;
 import com.ssafy.thorp.paramsearch.application.port.SearchLimits;
 import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;
 import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;
@@ -78,7 +78,7 @@ public class ParamSearchService {
     private final CostProfileService costProfileService;
     private final CandidatePerformancePort performancePort;
     private final SearchLimits limits;
-    private final MyRecordLimitPolicy recordLimitPolicy;
+    private final SaveSlotGuard saveSlotGuard;
     private final Clock clock;
     private final String engineVersion;
     private final BigDecimal defaultInitialCash;
@@ -98,7 +98,7 @@ public class ParamSearchService {
             CostProfileService costProfileService,
             CandidatePerformancePort performancePort,
             SearchLimits limits,
-            MyRecordLimitPolicy recordLimitPolicy,
+            SaveSlotGuard saveSlotGuard,
             Clock clock,
             @Value("${thorp.backtest.engine-version}") String engineVersion,
             @Value("${thorp.param-search.default-initial-cash}") BigDecimal defaultInitialCash,
@@ -116,7 +116,7 @@ public class ParamSearchService {
         this.costProfileService = costProfileService;
         this.performancePort = performancePort;
         this.limits = limits;
-        this.recordLimitPolicy = recordLimitPolicy;
+        this.saveSlotGuard = saveSlotGuard;
         this.clock = clock;
         this.engineVersion = engineVersion;
         this.defaultInitialCash = defaultInitialCash;
@@ -158,8 +158,11 @@ public class ParamSearchService {
         // 저장 자리부터 본다(spec 006 FR-018, research R11). 어떤 행을 쓰기도, 어떤 후보를 발행하기도
         // 전이라 거절이 되돌릴 것이 없다 — 아래 rejected(...) 갈래와 달리 남길 묶음이 없어
         // noRollbackFor 대상이 아니다. 비로그인 접수는 기록을 만들지 않으므로 셀 것도 없다.
+        //
+        // 이 자리가 preflight 보다도 앞이라, 자리가 없는 사용자는 등록표 버전이 어긋나거나 후보 상한에
+        // 걸려 어차피 거절될 요청에도 409 를 받는다. 통과시켜 봐야 저장할 곳이 없으므로 그대로 둔다.
         if (command.requesterId() != null) {
-            recordLimitPolicy.assertCanSaveSearchBundle(command.requesterId());
+            saveSlotGuard.requireSaveSlot(command.requesterId());
         }
 
         Preflight preflight =

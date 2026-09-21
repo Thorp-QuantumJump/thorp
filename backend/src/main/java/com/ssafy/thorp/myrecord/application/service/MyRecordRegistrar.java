@@ -26,7 +26,6 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,8 +152,12 @@ public class MyRecordRegistrar {
      * <p><b>{@code baselineOrigin}을 추정하지 않는다.</b> 010의 {@code SnapshotKey}에는 기준월 근거가 없어 {@code
      * searchId}만으로는 알 수 없다 — 화면이 보낸 값을 그대로 쓴다. 지어내면 원칙 VI 위반이다.
      *
-     * <p>같은 (소유자·스냅샷·진입 경로)의 로그 행이 이미 있으면 새로 만들지 않고 열람 시각만 올린다. 항목이 지워졌으면 로그 행은 그대로 두고 항목만 다시 만든다 —
-     * "지웠다가 다시 보면 목록에 돌아온다"가 맞는 동작이고, 처음 본 revision 은 로그 행이 그대로 쥐고 있다.
+     * <p><b>로그 행은 {@code append} 하나로 끝난다.</b> upsert 라 있으면 열람 시각만 올리고 같은 id 를 돌려주므로 미리 찾아보고 갈래를 나눌
+     * 일이 없다 — 나누면 동시에 두 번 열었을 때 양쪽이 "없음"을 읽는 틈이 생긴다. {@code snapshot_id}·{@code baseline_origin}은
+     * 그때 덮어쓰지 않으므로 처음 본 revision 도 그대로다.
+     *
+     * <p>새로 만들었는지는 <b>항목</b>이 있는지로 가른다. 항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만든다 — "지웠다가 다시 보면 목록에 돌아온다"가
+     * 맞는 동작이다.
      *
      * <p>로그 행과 항목은 <b>한 트랜잭션</b>이다. 갈라지면 아무도 가리키지 않는 로그 행이나 없는 행을 가리키는 항목이 남는다.
      *
@@ -173,28 +176,19 @@ public class MyRecordRegistrar {
                                                 ErrorCode.RESOURCE_NOT_FOUND,
                                                 "저장할 경제환경 검색을 찾을 수 없습니다: " + searchId));
         Instant now = clock.instant();
-
-        Optional<Long> existingLog = regimeLogs.findActive(ownerId, searchId, entryPath);
-        if (existingLog.isPresent()) {
-            regimeLogs.touch(existingLog.get(), now);
-            Optional<MyRecord> kept =
-                    records.findActiveByOwnerAndRegimeLog(ownerId, existingLog.get());
-            if (kept.isPresent()) {
-                return new RegimeRecordOutcome(kept.get().recordId().value(), false);
-            }
-        }
-
-        // append 는 upsert 라 같은 검색을 동시에 두 번 열어도 로그 행이 하나다. 그 뒤 항목을 다시 찾는
-        // 것은 위 조회와 이 사이에 다른 요청이 항목을 만들었을 수 있어서다 — uk_my_record_regime 위반으로
-        // 500 이 나가는 대신 그 항목을 돌려준다.
         long logId =
                 regimeLogs.append(ownerId, searchId, snapshot.id(), entryPath, baselineOrigin, now);
-        Optional<MyRecord> raced = records.findActiveByOwnerAndRegimeLog(ownerId, logId);
-        if (raced.isPresent()) {
-            return new RegimeRecordOutcome(raced.get().recordId().value(), false);
-        }
-        MyRecord saved =
-                records.save(
+        return records.findActiveByOwnerAndRegimeLog(ownerId, logId)
+                .map(kept -> new RegimeRecordOutcome(kept.recordId().value(), false))
+                .orElseGet(
+                        () ->
+                                new RegimeRecordOutcome(
+                                        newRecord(ownerId, snapshot, logId, now), true));
+    }
+
+    /** 경제환경 항목에는 섹터·전략·분석 기간이 없다 — 기준월이 그 자리를 대신한다(data-model §1). */
+    private String newRecord(long ownerId, RegimeSnapshot snapshot, long logId, Instant now) {
+        return records.save(
                         MyRecord.create(
                                 ownerId,
                                 new RecordRef.RegimeSearch(logId),
@@ -204,8 +198,9 @@ public class MyRecordRegistrar {
                                 List.of(),
                                 List.of(),
                                 null,
-                                now));
-        return new RegimeRecordOutcome(saved.recordId().value(), true);
+                                now))
+                .recordId()
+                .value();
     }
 
     /**
