@@ -354,7 +354,7 @@ function renderHost(makeSupportFor: (generation: number) => AnalysisSupport) {
  * 때문이다(`똑같이 나누기(시험용)`).
  */
 async function findCardNamed(name: string): Promise<HTMLElement> {
-  return screen.findByRole('button', { name: (accessibleName) => accessibleName.includes(name) })
+  return screen.findByRole('radio', { name: (accessibleName) => accessibleName.includes(name) })
 }
 
 function actionButton(label: string): HTMLElement {
@@ -559,7 +559,7 @@ describe('StrategySettingsPage', () => {
   })
 
   it('기본 화면의 입력은 전략 선택 하나다', async () => {
-    // SC-005. 상세 설정과 기간·금액·조건은 접혀 있고 입력 요소를 내놓지 않는다.
+    // SC-005. 상세 설정과 조건 바꾸기는 접혀 있고 입력 요소를 내놓지 않는다.
     const user = userEvent.setup()
     const { support } = makeSupport()
     const { container } = renderPage(support)
@@ -658,7 +658,7 @@ describe('StrategySettingsPage', () => {
     await user.click(retry)
     await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
     expect(screen.queryByRole('button', { name: '분석 조건 다시 불러오기' })).toBeNull()
-    expect(document.activeElement).toBe(screen.getByRole('region', { name: '전략 카드' }))
+    expect(document.activeElement).toBe(screen.getByRole('region', { name: '전략' }))
     expect(requests).toHaveLength(0)
     await user.click(actionButton('분석하기'))
     await waitFor(() => expect(requests).toHaveLength(1))
@@ -1336,7 +1336,7 @@ describe('StrategySettingsPage', () => {
         card = await findCardNamed(selectableStrategy.name)
         expect(card.getAttribute('data-warmup')).toBe('blocked')
         expect(card.getAttribute('aria-disabled')).toBe('true')
-        expect(card.getAttribute('aria-pressed')).toBe('true')
+        expect(card.getAttribute('aria-checked')).toBe('true')
         expect(within(card).getByText(/워밍업 90거래일을 채우면/)).toBeTruthy()
         expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')
         expect(reasonOf(actionButton('분석하기'))).toContain('워밍업 90거래일을 채우면')
@@ -1656,7 +1656,7 @@ describe('StrategySettingsPage', () => {
       renderPage(support)
 
       let card = await findCardNamed(selectableStrategy.name)
-      await waitFor(() => expect(card.getAttribute('aria-pressed')).toBe('true'))
+      await waitFor(() => expect(card.getAttribute('aria-checked')).toBe('true'))
       expect(card.getAttribute('data-warmup')).toBe('unknown')
       expect(within(card).getByText(/현재 설정으로 워밍업을 계산할 수 없습니다/)).toBeTruthy()
       // 고를 수 없다는 뜻이 아니다. 기본 설정의 워밍업(45)으로 대신 판정했다면 'reduced'였다.
@@ -1710,7 +1710,7 @@ describe('StrategySettingsPage', () => {
       expect(alert.textContent).toContain('전략을 다시 골라 주세요')
       await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))
       const card = await findCardNamed(selectableStrategy.name)
-      await waitFor(() => expect(card.getAttribute('aria-pressed')).toBe('false'))
+      await waitFor(() => expect(card.getAttribute('aria-checked')).toBe('false'))
       expect(reasonOf(actionButton('분석하기'))).toContain('전략 카드를 먼저 골라 주세요')
       expect(calls).toHaveLength(1)
     })
@@ -1734,7 +1734,7 @@ describe('StrategySettingsPage', () => {
 
       await user.click(await findCardNamed(plainStrategy.name))
       await waitFor(() =>
-        expect(screen.getByRole('heading', { name: `선택한 전략: ${plainStrategy.name}` })).toBeTruthy(),
+        expect(screen.getByRole('heading', { name: plainStrategy.name })).toBeTruthy(),
       )
 
       pending.reject(rejection('STRATEGY_NOT_REGISTERED', '등록되지 않은 전략입니다.'))
@@ -1742,7 +1742,7 @@ describe('StrategySettingsPage', () => {
       // 등록표는 다시 받는다 — 보낸 전략이 목록에서 빠졌는지는 여전히 보여야 한다.
       await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))
       const plainCard = await findCardNamed(plainStrategy.name)
-      await waitFor(() => expect(plainCard.getAttribute('aria-pressed')).toBe('true'))
+      await waitFor(() => expect(plainCard.getAttribute('aria-checked')).toBe('true'))
       // 새로 고른 전략의 이야기가 아니므로 옛 전략의 거절 안내로 덮지 않는다.
       expect(screen.queryByText(/전략을 다시 골라 주세요/)).toBeNull()
       expect(calls).toHaveLength(1)
@@ -1804,7 +1804,7 @@ describe('StrategySettingsPage', () => {
   })
 })
 
-describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2·8, SC-004)', () => {
+describe('StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-004)', () => {
   /** 기간 판정 흉내. 줄어든 기간과 그 원인을 001 응답 모양 그대로 넘긴다 */
   const reducedJudgement = (): WarmupJudgement => ({
     verdict: { state: 'reduced', message: '통로가 지은 문장' },
@@ -1828,8 +1828,8 @@ describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2�
   }
 
   async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: '기간·금액·조건' }))
-    return screen.getByRole('region', { name: '기간·금액·조건' })
+    await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
+    return screen.getByRole('region', { name: '조건 바꾸기' })
   }
 
   it('패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다', async () => {
@@ -2106,7 +2106,7 @@ describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2�
     const card = await findCardNamed(selectableStrategy.name)
     await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('blocked'))
     await user.click(card)
-    expect(card.getAttribute('aria-pressed')).toBe('false')
+    expect(card.getAttribute('aria-checked')).toBe('false')
     // 기본 화면의 입력은 늘지 않는다(SC-005). 패널은 접힌 채다.
     expect(container.querySelectorAll('input, select, textarea')).toHaveLength(0)
 
@@ -2118,7 +2118,7 @@ describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2�
     await user.click(within(panel).getByRole('radio', { name: '완화(제한 없음)' }))
     await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('ok'))
     await user.click(card)
-    expect(card.getAttribute('aria-pressed')).toBe('true')
+    expect(card.getAttribute('aria-checked')).toBe('true')
   })
 
   it('바꾼 기간은 화면을 새로 그려도 남는다', async () => {

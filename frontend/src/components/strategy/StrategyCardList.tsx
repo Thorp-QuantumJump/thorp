@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useEffect, useRef } from 'react'
+import { type KeyboardEvent, useEffect, useRef } from 'react'
 import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'
 import { StrategyCard, type WarmupVerdict } from './StrategyCard'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
@@ -41,8 +41,6 @@ interface StrategyCardListProps {
    * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.
    */
   judgeWarmup: (strategy: StrategyView) => WarmupVerdict
-  /** 고른 카드 바로 다음에 붙는 요약·행동 영역이다. */
-  selectedContent?: ReactNode
 }
 
 /**
@@ -53,17 +51,33 @@ interface StrategyCardListProps {
  */
 const PLACEHOLDER_COUNT = 3
 
+/** 화살표 키가 초점을 옮기는 방향. 목록이 세로이므로 위아래와 좌우를 같게 다룬다. */
+const FOCUS_STEP: Record<string, number> = {
+  ArrowDown: 1,
+  ArrowRight: 1,
+  ArrowUp: -1,
+  ArrowLeft: -1,
+}
+
 /**
- * 전략 카드 목록(FR-001, FR-018).
+ * 전략 선택 목록(FR-001, FR-018).
+ *
+ * <p><b>라디오 그룹이다.</b> 다섯 중 하나를 고르는 일이므로 `radiogroup`·`radio`로 알리고, 탭 한
+ * 번으로 그룹에 들어와 화살표로 항목을 옮겨 다닌다(roving tabindex). 전략이 늘어도 다음 영역까지
+ * 가는 탭 횟수가 늘지 않는다.
+ *
+ * <p><b>화살표는 초점만 옮기고 고르지는 않는다.</b> 표준 라디오는 옮기면서 고르지만, 이 목록에는
+ * 고를 수 없는 항목이 섞여 있어 옮기기만 해도 선택이 바뀌면 막힌 항목 위에서 선택이 사라진 것처럼
+ * 보인다. 고르는 것은 Enter·Space가 한다(NFR-001).
  *
  * <p><b>응답의 <code>strategies</code> 순서를 그대로 쓴다.</b> 화면이 다시 정렬하지 않는다 —
- * 카드의 차례는 등록표가 소유하는 표시 규칙이고, 화면이 순서를 손대면 그것이 전략 지식의 중복이다.
+ * 항목의 차례는 등록표가 소유하는 표시 규칙이고, 화면이 순서를 손대면 그것이 전략 지식의 중복이다.
  *
- * <p>조회 중에는 카드 전부가 선택 불가인 자리 표시다. 실패하면 카드 대신
+ * <p>조회 중에는 항목 전부가 선택 불가인 자리 표시다. 실패하면 목록 대신
  * <code>RegistryUnavailableNotice</code>를 두고 <b>임시 값이나 예비 등록표로 대신 동작하지 않는다.</b>
  *
- * <p>다시 시도해 성공하면 초점이 새 카드 영역으로 옮겨 간다(NFR-001). 실패했을 때 초점을 '다시
- * 시도' 버튼으로 되돌리는 것은 안내 컴포넌트가 맡는다.
+ * <p><b>고른 전략의 상세는 이 목록이 그리지 않는다.</b> 목록 사이에 상세를 끼워 넣으면 고를 때마다
+ * 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 상세는 옆 단이 맡는다.
  */
 export function StrategyCardList({
   state,
@@ -71,7 +85,6 @@ export function StrategyCardList({
   onSelect,
   onRetry,
   judgeWarmup,
-  selectedContent,
 }: StrategyCardListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const recoveredFromFailure = useRef(false)
@@ -112,31 +125,45 @@ export function StrategyCardList({
     )
   }
 
+  const strategies = state.registry.strategies
+  const selectedIndex = strategies.findIndex(
+    (strategy) => strategy.strategyId === selectedStrategyId,
+  )
+  // 고른 것이 없으면 첫 항목이 탭 차례를 받는다. 그래야 그룹에 들어올 문이 하나는 열려 있다.
+  const tabStopIndex = selectedIndex >= 0 ? selectedIndex : 0
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const step = FOCUS_STEP[event.key]
+    if (step === undefined) return
+    const radios = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+    if (!radios || radios.length === 0) return
+    const current = [...radios].indexOf(document.activeElement as HTMLButtonElement)
+    if (current < 0) return
+    event.preventDefault()
+    // 끝에서 반대쪽으로 넘어간다. 목록이 짧아 되돌아가는 편이 끝에 멈추는 것보다 빠르다.
+    radios[(current + step + radios.length) % radios.length].focus()
+  }
+
   return (
     <div
       ref={listRef}
       className={styles.list}
       // 재시도에 성공했을 때 초점을 받을 자리다. 탭 차례에는 들어가지 않는다.
       tabIndex={-1}
-      role="group"
+      role="radiogroup"
       aria-label="전략 고르기"
+      onKeyDown={handleKeyDown}
     >
-      {state.registry.strategies.map((strategy) => {
-        const selected = selectedStrategyId === strategy.strategyId
-        return (
-          <Fragment key={strategy.strategyId}>
-            <StrategyCard
-              strategy={strategy}
-              selected={selected}
-              warmup={judgeWarmup(strategy)}
-              onSelect={() => onSelect(strategy.strategyId)}
-            />
-            {selected && selectedContent ? (
-              <div className={styles.selectedContent}>{selectedContent}</div>
-            ) : null}
-          </Fragment>
-        )
-      })}
+      {strategies.map((strategy, index) => (
+        <StrategyCard
+          key={strategy.strategyId}
+          strategy={strategy}
+          selected={selectedStrategyId === strategy.strategyId}
+          warmup={judgeWarmup(strategy)}
+          onSelect={() => onSelect(strategy.strategyId)}
+          tabIndex={index === tabStopIndex ? 0 : -1}
+        />
+      ))}
     </div>
   )
 }
