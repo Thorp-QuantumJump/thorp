@@ -118,9 +118,6 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
             <p className={styles.limited}>{NOT_PROVIDED}</p>
           </Item>
         </div>
-        <p className={styles.muted}>
-          세 항목은 아직 결과 조회로 받을 수 없어 값을 보이지 않습니다. 0이나 임의 값으로 채우지 않습니다.
-        </p>
       </div>
 
       <div className={styles.grid}>
