@@ -1,12 +1,18 @@
-import { ApiClientError, apiClient, normalizeApiError } from './client'
+import { ApiClientError, apiClient, normalizeApiError, runCsrfProtectedMutation } from './client'
 import type { ApiEnvelope } from '@/types/api'
-import type { MyRecordDetail, MyRecordListPage, MyRecordListQuery } from '@/types/myRecords'
+import type {
+  MyRecordDetail,
+  MyRecordListItem,
+  MyRecordListPage,
+  MyRecordListQuery,
+  MyRecordRegime,
+} from '@/types/myRecords'
 
 /**
  * spec 006 내 기록 API. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.
  *
- * <p>US1이 쓰는 목록·상세만 있다. 이름 변경·삭제·내보내기·경제환경 기록은 그 화면(FE-3·FE-4)이 올 때 계약을 보고
- * 더한다 — 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.
+ * <p>부르는 화면이 있는 것만 둔다 — 목록·상세(006 화면)와 경제환경 기록(010 화면). 이름 변경·삭제·내보내기는 FE-4가 올 때
+ * 계약을 보고 더한다. 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.
  *
  * <p>모든 경로가 로그인 필요다. 401은 `apiClient`의 인터셉터가 전역 인증 상태에 알리고, 화면은
  * `ProtectedRoute`가 로그인 안내로 보낸다(S12). 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다 —
@@ -65,4 +71,23 @@ export async function fetchMyRecords(
 /** 상세. 남의 것·없는 것·지운 것은 모두 404 `RESOURCE_NOT_FOUND`다. */
 export function fetchMyRecord(recordId: string, signal?: AbortSignal): Promise<MyRecordDetail> {
   return getResource<MyRecordDetail>(`${basePath}/${encodeURIComponent(recordId)}`, signal)
+}
+
+/**
+ * 경제환경 검색 결과를 개인 기록으로 남긴다(010 FR-032, research R15). 로그인 사용자가 검색 결과 화면을 열 때
+ * 010 화면이 부른다. `entryPath`·`baselineOrigin`은 화면만 아는 값이라 화면이 보내고 서버는 추정하지 않는다.
+ * 같은 검색·같은 진입 경로면 기존 항목이 돌아온다(200, `viewed_at`만 갱신).
+ */
+export function recordRegimeSearch(
+  searchId: string,
+  entryPath: MyRecordRegime['entryPath'],
+  baselineOrigin: MyRecordRegime['baselineOrigin'],
+): Promise<MyRecordListItem> {
+  return runCsrfProtectedMutation(async () => {
+    const response = await apiClient.post<ApiEnvelope<MyRecordListItem>>(
+      `${basePath}/regime-searches`,
+      { searchId, entryPath, baselineOrigin },
+    )
+    return unwrap(response.data)
+  })
 }
