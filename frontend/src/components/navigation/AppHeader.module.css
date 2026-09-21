@@ -1,10 +1,16 @@
+/*
+  화면 위에 얹힌 띠가 아니라 맨 위에 붙은 한 줄이다. 배경과 아래 경계선을 폭이 제한된
+  `.inner`가 아니라 여기에 두는 것이 핵심 — `.inner`에 두면 1440px짜리 판이 화면 가운데
+  떠 있는 모양이 되고, 넓은 화면에서 양옆이 비어 띄워진 카드처럼 읽힌다.
+*/
 .header {
   position: sticky;
   z-index: 30;
   top: 0;
   box-sizing: border-box;
   min-height: 82px;
-  background: transparent;
+  border-bottom: 1px solid var(--thorp-line);
+  background: var(--thorp-background);
 }
 
 .inner,
@@ -75,23 +81,7 @@
   min-height: 82px;
   margin: 0 auto;
   padding: 0;
-  border: 1px solid transparent;
   background: transparent;
-  transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 220ms ease,
-    border-radius 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.inner[data-scrolled='true'] {
-  border-color: var(--thorp-line-strong);
-  border-radius: 10px;
-  background: rgb(7 17 11 / 94%);
-  box-shadow: 0 14px 34px rgb(0 0 0 / 28%);
-  transform: translateY(10px);
-  backdrop-filter: blur(18px);
 }
 
 .brandGroup {
