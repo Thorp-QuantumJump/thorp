@@ -56,7 +56,11 @@ public interface MacroSnapshotRepository {
             String rawUnit,
             String transformedUnit,
             String transformRule,
-            String licenseReviewStatus) {}
+            String licenseReviewStatus,
+            /** 이용 허락 상태. {@code SUSPENDED} 면 값을 내보내지 않는다(FR-016b). */
+            String licenseStatus,
+            /** 중단 사유. 없이 지표만 사라지면 되돌릴 근거가 남지 않는다. */
+            String licenseSuspendedReason) {}
 
     record DisplayFieldRow(
             String fieldId, String displayName, int displayOrder, String description) {}

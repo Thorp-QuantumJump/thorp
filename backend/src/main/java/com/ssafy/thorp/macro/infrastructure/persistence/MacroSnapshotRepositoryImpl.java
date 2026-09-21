@@ -71,7 +71,8 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {
         return jdbc.query(
                 """
                 SELECT indicator_id, field_id, attribution, agency, raw_unit,
-                       transformed_unit, transform_rule, license_review_status
+                       transformed_unit, transform_rule, license_review_status,
+                       license_status, license_suspended_reason
                 FROM macro_indicator_definition
                 WHERE registry_version_id = ?
                 ORDER BY indicator_id
@@ -85,7 +86,9 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {
                                 rs.getString("raw_unit"),
                                 rs.getString("transformed_unit"),
                                 rs.getString("transform_rule"),
-                                rs.getString("license_review_status")),
+                                rs.getString("license_review_status"),
+                                rs.getString("license_status"),
+                                rs.getString("license_suspended_reason")),
                 registryVersionId);
     }
 

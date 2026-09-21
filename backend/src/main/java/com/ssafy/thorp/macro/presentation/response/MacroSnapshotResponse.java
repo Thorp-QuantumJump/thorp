@@ -100,7 +100,8 @@ public record MacroSnapshotResponse(
             ObservationValueResponse latest,
             List<PathPointResponse> path,
             List<PathPointResponse> latestPath,
-            String lastUpdatedAt) {
+            String lastUpdatedAt,
+            String suspendedReason) {
 
         static IndicatorResponse from(MacroSnapshotResult.IndicatorSummary indicator) {
             return new IndicatorResponse(
@@ -119,7 +120,8 @@ public record MacroSnapshotResponse(
                     ObservationValueResponse.from(indicator.latest()),
                     indicator.path().stream().map(PathPointResponse::from).toList(),
                     indicator.latestPath().stream().map(PathPointResponse::from).toList(),
-                    instant(indicator.lastUpdatedAt()));
+                    instant(indicator.lastUpdatedAt()),
+                    indicator.suspendedReason());
         }
     }
 

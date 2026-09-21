@@ -62,7 +62,9 @@ public record MacroSnapshotResult(
             ObservationValue latest,
             List<PathPoint> path,
             List<PathPoint> latestPath,
-            Instant lastUpdatedAt) {}
+            Instant lastUpdatedAt,
+            /** 이용이 중단된 지표의 사유. 중단이 아니면 {@code null} 이다(FR-016b). */
+            String suspendedReason) {}
 
     /** 값이 있는 관측. {@code transformedValue} 는 null 이 아니다 — null 이면 {@link PathPoint} 쪽이다. */
     public record ObservationValue(
