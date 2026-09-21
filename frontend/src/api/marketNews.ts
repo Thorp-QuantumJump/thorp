@@ -92,6 +92,14 @@ function parseDigestEnvelope(value: unknown): NewsDigestResult {
 }
 
 /**
+ * 과거 구간 조회의 경계(012 US3). UTC ISO-8601이며 012가 최대 93일로 제한한다.
+ *
+ * 011이 사례의 관측 구간 3개월을 넘길 때 쓴다(FR-024). **011은 값을 계산해 넓히지 않는다** —
+ * 넘긴 구간을 벗어난 응답은 012가 거절한다.
+ */
+export type NewsDigestRange = { from?: string; to?: string }
+
+/**
  * `sectorId`는 **선택**이다. 고르지 않았으면 붙이지 않는다.
  *
  * 012가 형식을 검증하지 않고 001의 대응표에 있는지만 보므로 009도 모양을 따지지 않는다.
@@ -100,10 +108,15 @@ function parseDigestEnvelope(value: unknown): NewsDigestResult {
 export async function fetchMarketNewsDigests(
   sectorId?: string | null,
   signal?: AbortSignal,
+  range?: NewsDigestRange,
 ): Promise<NewsDigestResult> {
   try {
+    const params: Record<string, string> = {}
+    if (sectorId) params.sectorId = sectorId
+    if (range?.from) params.from = range.from
+    if (range?.to) params.to = range.to
     const response = await apiClient.get<unknown>('/market-news/digests', {
-      params: sectorId ? { sectorId } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
       signal,
     })
     return parseDigestEnvelope(response.data)

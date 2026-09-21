@@ -30,15 +30,25 @@ export const previewFixture: ParamSearchPreview = {
           label: '기울기 관측 창',
           unit: '거래일',
           values: [5, 10, 20],
+          valueLabels: ['5', '10', '20'],
           defaultValue: 10,
           allowedRange: { min: 5, max: 60, step: 5, values: null },
         },
+        /**
+         * **후보값이 객체인 축.** 등록표에는 이런 축이 실제로 있고(리밸런싱 주기의 `{mode, unit}`),
+         * 값만으로는 그릴 수 없어 화면에 `[object Object]`가 나왔다. 후보값을 전부 숫자·문자열로
+         * 둔 틀로는 그 회귀를 잡지 못하므로 여기 하나를 객체로 둔다.
+         */
         {
           axis: 'rebalanceMode',
           label: '재조정 방식',
           unit: null,
-          values: ['월말', '분기말'],
-          defaultValue: '월말',
+          values: [
+            { mode: 'CALENDAR', unit: 'MONTH_END' },
+            { mode: 'CALENDAR', unit: 'QUARTER_END' },
+          ],
+          valueLabels: ['월말', '분기말'],
+          defaultValue: { mode: 'CALENDAR', unit: 'MONTH_END' },
           allowedRange: null,
         },
       ],
