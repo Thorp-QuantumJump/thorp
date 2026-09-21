@@ -576,6 +576,7 @@ def record_item_status(
     *,
     mode: str = "REGULAR",
     held: str | None = None,
+    crashed: bool = False,
 ) -> None:
     """지표별 수집 결과와 **발행 보류 여부**를 남긴다 (T082·T083, FR-011).
 
@@ -585,7 +586,15 @@ def record_item_status(
     전 구간이 기대 대상월 수에 못 미쳐 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이지만
     아무것도 발행되지 않았고, 그 둘을 같은 ``SUCCEEDED`` 로 적으면 DB 만 보는 사람은 구분하지
     못한다. 보류 사유가 로그에만 있으면 로그가 지나간 뒤에는 아무 데도 없다.
+
+    ``crashed`` 는 **보류와 다른 것**이다. 보류는 우리가 규칙대로 막은 것이고 터진 것은 우리가
+    죽은 것이라, 다음에 할 일이 다르다 — 앞은 모자란 자료를 채우면 되고 뒤는 원인을 찾아야
+    한다. 발행기가 시도 행을 이미 ``FAILED`` 로 적었으면 그대로 두고, 행을 만들기 전에 터져
+    아직 없으면 여기서 ``FAILED`` 로 만든다. 이 자리가 없으면 터진 실행이 ``SUCCEEDED`` 로
+    남는다.
     """
+    if crashed and held is not None:
+        raise ValueError("보류와 실패를 함께 적을 수 없다 — 둘은 다음에 할 일이 다르다")
     now = datetime.now(UTC)
     with engine.begin() as connection:
         attempt_id = connection.execute(
@@ -597,6 +606,12 @@ def record_item_status(
             # 먼저 하고 시도 행을 나중에 만드는데, 그 판정에서 던지면 붙을 자리가 없어진다.
             # 그때 기록까지 버리면 무엇을 받았고 무엇이 실패했는지가 통째로 사라진다(FR-011).
             failed = any(not outcome.succeeded for outcome in outcomes)
+            if crashed:
+                status = "FAILED"
+            elif held:
+                status = "HELD"
+            else:
+                status = "PARTIAL" if failed else "SUCCEEDED"
             attempt_id = connection.execute(
                 text(
                     "INSERT INTO macro_collection_attempt"
@@ -607,7 +622,7 @@ def record_item_status(
                     "key": attempt_key,
                     "mode": mode,
                     "now": now,
-                    "status": "HELD" if held else ("PARTIAL" if failed else "SUCCEEDED"),
+                    "status": status,
                     "hold": held,
                 },
             ).scalar_one()
@@ -831,6 +846,14 @@ def run(
         except publish.PublishError as error:
             held = str(error)
             logger.warning("발행 보류: %s", error)
+        except Exception:
+            # **발행이 어떻게 죽든 지표별 기록은 남긴다.** 발행기가 시도 행을 FAILED 로
+            # 적어 주므로 실행이 실패했다는 사실 자체는 사라지지 않지만, 여기서 그냥
+            # 올려보내면 아래의 기록이 건너뛰어져 **무엇을 받았고 무엇이 실패했는지가
+            # 통째로 없어진다**(FR-011). 그러면 남는 것은 "실패했다" 한 줄뿐이라 다음
+            # 실행에서 무엇을 다시 받아야 하는지 알 수 없다.
+            record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), crashed=True)
+            raise
 
     record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), held=held)
 
