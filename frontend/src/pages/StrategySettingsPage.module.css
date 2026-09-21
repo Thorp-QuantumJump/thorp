@@ -93,26 +93,81 @@
   line-height: 1.6;
 }
 
-.section {
+.intro {
   display: grid;
-  gap: 12px;
+  gap: 6px;
 }
 
-.selectionPanel {
-  position: relative;
-  z-index: 1;
-  padding: 16px;
+/*
+  왼쪽은 고르는 자리, 오른쪽은 고른 것을 확인하고 실행하는 자리다. 두 단의 폭은 전략을 바꿔도
+  변하지 않는다 — 고를 때마다 레이아웃이 움직이면 견주던 자리를 놓친다.
+*/
+.layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.master {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  /* 스크롤 막대를 따로 만들지 않는다. 전략이 다섯 남짓이라 그대로 늘어서는 편이 읽기 쉽다. */
+}
+
+.detail {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 18px;
   border: 1px solid var(--thorp-line-strong);
-  border-left: 3px solid var(--thorp-accent);
-  border-radius: 10px;
-  background: rgb(7 17 11 / 98%);
-  box-shadow: 0 14px 38px rgb(0 0 0 / 26%);
+  border-radius: 12px;
+  background: var(--thorp-surface);
 }
 
-.sectionTitle {
+.detailHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.columnTitle {
   margin: 0;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
+}
+
+.detailDescription {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+/* 아직 고르지 않았을 때 오른쪽 단이 무엇을 기다리는지 알린다. */
+.empty {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+/* 기간·금액·대상·비용이 모이는 한 자리. 요약은 늘 보이고 편집은 접힌다. */
+.conditions {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .invalidList {
@@ -210,4 +265,15 @@
 
 .weightNotice button:hover {
   border-color: currentColor;
+}
+
+/* 태블릿 아래에서는 한 단으로 내린다. 고르기 → 확인 → 실행 차례가 그대로 세로로 이어진다. */
+@media (max-width: 880px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail {
+    padding: 16px;
+  }
 }
