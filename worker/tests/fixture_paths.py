@@ -14,3 +14,45 @@ FIXTURE_DIR = (
 
 #: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.
 THREE_ETF_DIR = Path(__file__).resolve().parents[1] / "examples" / "three_etf_24m"
+
+#: spec 011 사례 연결 계약 픽스처. 백테스트와 다른 경로·다른 스키마다(011 T001).
+REGIME_LINK_FIXTURE_DIR = (
+    Path(__file__).resolve().parents[2] / "docs" / "specs" / "regime-link-messaging" / "examples"
+)
+
+#: 백엔드 011 메시지 계약 record·enum 이 있는 패키지. 양쪽 enum 값 집합을 대조한다.
+REGIME_LINK_BACKEND_MESSAGE_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "backend"
+    / "src"
+    / "main"
+    / "java"
+    / "com"
+    / "ssafy"
+    / "thorp"
+    / "regimelink"
+    / "application"
+    / "port"
+    / "message"
+)
+
+#: 백엔드 토폴로지 상수(011 T030). 아직 없으면 계약 문서와 대조한다.
+REGIME_LINK_BACKEND_CONFIG = (
+    Path(__file__).resolve().parents[2]
+    / "backend"
+    / "src"
+    / "main"
+    / "java"
+    / "com"
+    / "ssafy"
+    / "thorp"
+    / "regimelink"
+    / "infrastructure"
+    / "messaging"
+    / "RegimeLinkRabbitConfig.java"
+)
+
+#: 워커·백엔드가 함께 읽는 메시지 계약 문서(011 T001).
+REGIME_LINK_CONTRACT_README = (
+    Path(__file__).resolve().parents[2] / "docs" / "specs" / "regime-link-messaging" / "README.md"
+)
