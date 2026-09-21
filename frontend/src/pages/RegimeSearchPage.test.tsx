@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
 import { regimeDetail, regimeResult } from '@/test/regimeFixtures'
+import { renderWithRouter } from '@/test/renderWithRouter'
 import { RegimeSearchPage } from './RegimeSearchPage'
 
 vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
@@ -14,7 +15,7 @@ const baseline = {
 }
 
 async function search() {
-  render(<RegimeSearchPage />)
+  renderWithRouter(<RegimeSearchPage />)
   fireEvent.change(await screen.findByLabelText('경제 분야'), { target: { value: 'field-1' } })
   fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
 }
@@ -181,5 +182,20 @@ describe('경제환경 검색 화면', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: '상세 보기' }))
     await user.keyboard('{Enter}')
     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
+  })
+
+  /** 011 T087: 사례 상세의 사후 구간 자리에서 011 시작 주소로 간다. 섹터는 알 수 없어 싣지 않는다. */
+  it('사례 상세에서 011 시작 주소로 가는 링크를 보인다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())
+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail())
+    await search()
+
+    fireEvent.click(await screen.findByRole('button', { name: '상세 보기' }))
+    const link = await screen.findByRole('link', { name: '이 기간으로 전략 비교' })
+
+    const url = new URL(link.getAttribute('href') ?? '', 'http://localhost')
+    expect(url.pathname).toBe('/regime-link/start')
+    expect(url.searchParams.get('case')).toBe('search-1~2012-03')
+    expect(url.searchParams.has('sector')).toBe(false)
   })
 })

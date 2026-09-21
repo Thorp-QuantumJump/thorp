@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
@@ -15,6 +15,7 @@ import { useSectorSelection } from '@/diagnosis/sector-selection-context'
 import { SectorSelectionProvider } from '@/diagnosis/SectorSelectionProvider'
 import { sortSectorsForDisplay } from '@/diagnosis/sectorOrder'
 import { writeStoredSelection } from '@/diagnosis/selectionStorage'
+import { appendCaseToPath } from '@/marketflow/handoff'
 import type { SectorSummary } from '@/types/sector'
 import styles from './SectorSelectionPage.module.css'
 
@@ -41,8 +42,26 @@ type SectorCatalogBoardProps = {
  */
 function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const caseId = params.get('case')
+  const initialSector = params.get('sector')
   const selection = useSectorSelection()
   const selectedCount = selection.selectedCodes.length
+
+  /*
+    011 진입이 실어 온 섹터는 **초기 선택**일 뿐이다(011 FR-005). 사용자가 이미 고른 것이 있으면
+    건드리지 않는다 — 초기 선택이 사용자의 선택을 덮으면 사례 순위와 무관한 값이 입력을 지운다.
+    목록에 없는 코드는 상태가 받지 않으므로 여기서 먼저 거른다.
+  */
+  const appliedInitialSector = useRef(false)
+  const { toggleSector } = selection
+  useEffect(() => {
+    if (appliedInitialSector.current) return
+    if (initialSector === null || selectedCount > 0) return
+    if (!sectors.some((sector) => sector.code === initialSector)) return
+    appliedInitialSector.current = true
+    toggleSector(initialSector, true)
+  }, [initialSector, sectors, selectedCount, toggleSector])
 
   // 배우기(013)에서 예시를 밀어 넣는 경로다. 013이 아직 없어도 입구는 여기 있다.
   const learningEntry = useLearningExampleEntry(sectors)
@@ -109,8 +128,8 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
     }
 
     setHandoffBlocked(false)
-    void navigate(NEXT_STEP_PATH)
-  }, [navigate, selection])
+    void navigate(appendCaseToPath(NEXT_STEP_PATH, caseId))
+  }, [caseId, navigate, selection])
 
   return (
     <section className={styles.catalog} aria-labelledby="sector-list-title">

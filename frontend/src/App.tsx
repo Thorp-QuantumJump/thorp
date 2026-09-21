@@ -6,6 +6,13 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { LandingPage } from '@/pages/LandingPage'
 
 // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.
+// 011 시장 흐름 경로의 진입 화면이다. 사례를 확인한 뒤 002로 넘긴다(011 진입 계약 §2).
+const RegimeLinkStartPage = lazy(() =>
+  import('@/pages/RegimeLinkStartPage').then((module) => ({
+    default: module.RegimeLinkStartPage,
+  })),
+)
+
 const BacktestPage = lazy(() =>
   import('@/pages/BacktestPage').then((module) => ({
     default: module.BacktestPage,
@@ -124,6 +131,12 @@ function AnimatedRoutes() {
       >
         <Suspense fallback={<div role="status" aria-label="페이지를 불러오는 중" />}>
           <Routes location={location}>
+            {/*
+              011 진입은 로그인을 요구하지만 `ProtectedRoute`로 감싸지 않는다. 011 경로에는 익명이
+              볼 수 있는 자리가 있어 경로 전체를 막을 수 없고, 복귀 위치 저장은 `useLoginRedirect`가
+              014와 같은 방식으로 한다(FR-025).
+            */}
+            <Route path="/regime-link/start" element={<RegimeLinkStartPage />} />
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
             <Route path="/regime-search" element={<RegimeSearchPage />} />
