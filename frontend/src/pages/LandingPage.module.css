@@ -438,34 +438,105 @@
   left: 33.5%;
 }
 
+/*
+  **이 섹션은 한 칸을 넘지 않는다고 못 박는다.** `min-height`로 두면 안의 것이 커질 때 섹션이
+  따라 늘어나 스크롤이 한 번 더 생기는데, 스냅으로 넘기는 구성에서는 그 한 번이 '끝인 줄 알았는데
+  더 있는' 어긋남으로 겪힌다. 키를 고정하고, 모자랄 때 줄어들 몫은 차트에만 준다.
+*/
+.backtestSection .sectionHeading h2 {
+  font-size: clamp(2.2rem, 3.6vw, 4rem);
+}
+
 .backtestSection {
   grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);
+  height: 100svh;
+  padding-top: clamp(64px, 8vh, 104px);
+  padding-bottom: clamp(64px, 8vh, 104px);
 }
 
 .backtestSection::before {
   right: 31%;
 }
 
+/*
+  섹션 번호와 '다음으로' 화살표가 함께 서는 옆 여백. 번호는 가운데, 화살표는 맨 아래다 —
+  다음이 있다는 신호는 내려갈 방향인 아래쪽에 있어야 읽힌다.
+*/
+.sectionAside {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  align-self: stretch;
+  gap: 18px;
+}
+
+.marketSection .sectionAside {
+  justify-self: start;
+}
+
+.backtestSection .sectionAside {
+  justify-self: end;
+}
+
 .sectionNumber {
-  align-self: center;
   color: #536158;
   font-size: 0.62rem;
   letter-spacing: 0.2em;
   writing-mode: vertical-rl;
 }
 
-.marketSection .sectionNumber {
-  justify-self: start;
+.nextSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgb(3 199 90 / 55%);
+  border-radius: 50%;
+  background: rgb(3 199 90 / 12%);
+  box-shadow: 0 0 0 6px rgb(3 199 90 / 6%);
+  color: var(--landing-accent-soft);
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease,
+    box-shadow 180ms ease;
 }
 
-.backtestSection .sectionNumber {
-  justify-self: end;
+.nextSection:hover {
+  border-color: var(--landing-accent);
+  background: rgb(3 199 90 / 22%);
+  box-shadow: 0 0 0 9px rgb(3 199 90 / 10%);
+  color: var(--landing-accent);
 }
 
-.marketContent,
-.backtestContent {
+.nextSection:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: 3px;
+}
+
+.marketContent {
   align-self: center;
   min-width: 0;
+}
+
+/*
+  **차트가 남는 높이를 받아 가게 둔다.** 차트에 높이 하한을 박아 두었더니 제목·지표·버튼을 더한
+  키가 화면보다 커져서, 한 칸으로 붙어야 할 섹션이 두 번 굴러야 끝났다. 고정 높이를 정해 두면
+  화면 높이가 조금만 달라져도 다시 어긋나므로, 정해진 것들을 먼저 놓고 나머지를 차트에 준다.
+*/
+.backtestContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 글과 버튼은 줄이지 않는다 — 줄이면 글자가 서로 겹치거나 잘린다. */
+.backtestContent > .sectionHeading,
+.backtestContent > .textCta {
+  flex: 0 0 auto;
 }
 
 .marketContent {
@@ -650,7 +721,11 @@
 
 .backtestVisual {
   position: relative;
-  margin: clamp(44px, 6vh, 68px) 0 34px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: clamp(22px, 3vh, 40px) 0 clamp(18px, 2.5vh, 28px);
   border-top: 1px solid var(--landing-line);
   border-bottom: 1px solid var(--landing-line);
   background:
@@ -681,10 +756,18 @@
   font-weight: 630;
 }
 
+/*
+  **차트 키는 화면 높이가 정한다.** viewBox 비율(1000×390)대로 두면 폭의 39%가 키가 되어,
+  넓은 화면일수록 차트가 커지면서 제목·지표·버튼을 더한 섹션이 한 칸을 넘어 한 번 더 굴러야
+  했다. 가로로는 늘어나되 세로로는 화면에 맞추도록 키를 따로 정한다.
+*/
 .backtestVisual > svg {
   display: block;
+  flex: 1 1 auto;
   width: 100%;
-  min-height: 270px;
+  height: auto;
+  min-height: 120px;
+  max-height: 340px;
 }
 
 .chartGrid {
@@ -1130,7 +1213,7 @@
   }
 
   .heroFootnote::before,
-  .sectionNumber,
+  .sectionAside,
   .storySection::before {
     display: none;
   }
@@ -1144,6 +1227,21 @@
   .marketContent,
   .backtestContent {
     padding: 0;
+  }
+
+  .backtestSection {
+    height: auto;
+  }
+
+  .backtestContent,
+  .backtestVisual {
+    display: block;
+    min-height: auto;
+  }
+
+  .backtestVisual > svg {
+    height: auto;
+    min-height: 240px;
   }
 
   .sectionHeading {

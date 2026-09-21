@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { normalizeEmail } from '@/api/auth'
 import { ApiClientError } from '@/api/client'
 import { useAuth } from '@/auth/auth-context'
+import { clearLoginEmail, readLoginEmail, saveLoginEmail } from '@/auth/loginEmail'
 import { AuthField } from '@/components/auth/AuthField'
 import { AuthStatus } from '@/components/auth/AuthStatus'
 import formStyles from '@/components/auth/AuthForm.module.css'
@@ -27,11 +28,18 @@ export function LoginPage() {
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const requestRef = useRef<AbortController | null>(null)
-  const [email, setEmail] = useState(() => readSignupEmail(location.state))
+  const [email, setEmail] = useState(
+    () => readSignupEmail(location.state) || readLoginEmail(),
+  )
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<LoginErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+
+  // 쳐 둔 주소를 적어 둔다. 비밀번호는 넣지 않는다(`loginEmail` 참고).
+  useEffect(() => {
+    saveLoginEmail(email)
+  }, [email])
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -77,6 +85,7 @@ export function LoginPage() {
 
     try {
       await login({ email: normalizeEmail(email), password }, controller.signal)
+      clearLoginEmail()
     } catch (error) {
       if (controller.signal.aborted) return
 
