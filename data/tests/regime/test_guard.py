@@ -8,65 +8,30 @@
 from __future__ import annotations
 
 import pytest
+from conftest import make_registry, make_series
 
+import precompute_regime
+from data_pipeline.regime.macro.types import BaselineMonths
 from precompute_regime import (
-    ENV_VARIABLE,
-    PROD_ENV,
     build_parser,
     main,
-    reject_fixture_in_production,
 )
 
 
-class TestRejectRule:
-    def test_운영에서_임시_대역은_거부한다(self) -> None:
-        rejection = reject_fixture_in_production("fixture", PROD_ENV)
-        assert rejection is not None
-        assert "fixture" in rejection
-
-    @pytest.mark.parametrize("environment", ["PROD", " prod ", "Prod"])
-    def test_대소문자와_공백으로_피해_갈_수_없다(self, environment: str) -> None:
-        assert reject_fixture_in_production("fixture", environment) is not None
-
-    @pytest.mark.parametrize("environment", [None, "", "local", "dev", "staging"])
-    def test_운영이_아니면_통과한다(self, environment: str | None) -> None:
-        assert reject_fixture_in_production("fixture", environment) is None
-
-    def test_008_구현체는_운영에서도_통과한다(self) -> None:
-        assert reject_fixture_in_production("macro", PROD_ENV) is None
-
-
 class TestEntryPoint:
-    def test_운영_임시_대역_실행은_0이_아닌_코드로_끝난다(
-        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        monkeypatch.setenv(ENV_VARIABLE, PROD_ENV)
-        exit_code = main(["--source", "fixture", "--all"])
-        assert exit_code != 0
-        assert "거부" in capsys.readouterr().err
-
-    def test_거부는_계산한_것이_없는_실행과_다른_코드로_끝난다(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """둘이 같은 코드면 가드가 막은 것인지 대상이 없던 것인지 실행 결과로 구분할 수 없다."""
-        monkeypatch.setenv(ENV_VARIABLE, PROD_ENV)
-        rejected = main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"])
-        monkeypatch.delenv(ENV_VARIABLE)
-        nothing_done = main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"])
-        assert rejected != nothing_done
-        assert rejected != 0
-        assert nothing_done != 0
-
     def test_아무것도_계산하지_않은_실행이_성공으로_끝나지_않는다(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """대상이 0개인 실행이 0으로 끝나면 배치가 돈 줄 알고 넘어간다 (spec FR-033)."""
-        monkeypatch.delenv(ENV_VARIABLE, raising=False)
-        assert main(["--source", "fixture", "--baseline-month", "1900-01", "--dry-run"]) != 0
+        """대상이 0개인 실행이 0으로 끝나면 배치가 돈 줄 알고 넘어간다 (spec FR-033).
 
-    def test_잘못된_월_표기는_거부한다(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv(ENV_VARIABLE, raising=False)
-        assert main(["--source", "fixture", "--since", "2024/01"]) != 0
+        지표 소스를 갈아 끼우는 이유는 008 구현체가 DB 를 읽기 때문이다. 여기서 보는 것은
+        종료 코드이지 자료가 아니다.
+        """
+        monkeypatch.setattr(precompute_regime, "create_source", lambda name: _StubSource())
+        assert main(["--source", "macro", "--baseline-month", "1900-01", "--dry-run"]) != 0
+
+    def test_잘못된_월_표기는_거부한다(self) -> None:
+        assert main(["--source", "macro", "--since", "2024/01"]) != 0
 
 
 class TestFlags:
@@ -80,9 +45,40 @@ class TestFlags:
 
     def test_계약이_정한_플래그가_모두_있다(self) -> None:
         args = build_parser().parse_args(
-            ["--source", "fixture", "--all", "--baseline-month", "2018-06", "--dry-run"]
+            ["--source", "macro", "--all", "--baseline-month", "2018-06", "--dry-run"]
         )
-        assert args.source == "fixture"
+        assert args.source == "macro"
         assert args.all is True
         assert args.baseline_month == "2018-06"
         assert args.dry_run is True
+
+
+class _StubSource:
+    """종료 코드를 보는 시험이 쓰는 최소 소스. 값이 아니라 흐름만 필요하다."""
+
+    _registry = make_registry({"A": ["A1"]})
+    _series = make_series((2020, 1), [1.0] * 12)
+
+    def registry(self):
+        return self._registry
+
+    def monthly_series(self, indicator_id: str):
+        return dict(self._series)
+
+    def raw_series(self, indicator_id: str):
+        return {month: value.raw for month, value in self._series.items()}
+
+    def baseline_months(self):
+        return BaselineMonths(by_field={"A": max(self._series)}, composite=max(self._series))
+
+    def publication(self, indicator_id: str, month):
+        return None
+
+    def data_version(self) -> str:
+        return "STUB-1"
+
+    def changed_since(self, data_version: str):
+        return None
+
+    def is_sample_data(self) -> bool:
+        return False
