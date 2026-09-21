@@ -92,3 +92,23 @@ export const analysisDetailUnjudged: MyRecordDetail = {
   lastViewedAt: null,
   referenceVersions: { datasetVersion: 'DS-2026-09-17-001' },
 }
+
+/** 같은 검색을 전략 결과에서 열어 남은 항목. 진입 경로가 다르면 별도 항목이다(Story 3 시나리오 4). */
+export const regimeRecordFromResult: RegimeItem = {
+  ...regimeRecord,
+  recordId: 'MR-20260916-000008',
+  savedAt: '2026-09-16T23:00:00Z',
+  regime: { ...regimeRecord.regime, entryPath: 'STRATEGY_RESULT' },
+}
+
+export const bundleDetail: MyRecordDetail = {
+  ...bundleRecord,
+  lastViewedAt: null,
+  referenceVersions: { datasetVersion: 'FIXTURE-1', sectorEtfMapVersion: 'SECTOR-ETF-2026-09' },
+}
+
+export const regimeDetailRecord: MyRecordDetail = {
+  ...regimeRecord,
+  lastViewedAt: null,
+  referenceVersions: { datasetVersion: 'MACRO-20260915', registryVersion: 'REG-3', modelVersion: 'REGIME-V1' },
+}
