@@ -106,9 +106,7 @@ export function IndexComparisonView({
                   </tbody>
                 </table>
               </div>
-              <p className={styles.note}>
-                참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다.
-              </p>
+              <p className={styles.note}>지수를 시작 금액으로 환산했습니다.</p>
             </>
           ) : null}
         </div>
