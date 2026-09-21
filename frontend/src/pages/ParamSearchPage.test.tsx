@@ -6,6 +6,7 @@ import { AuthProvider } from '@/auth/AuthProvider'
 import { authenticatedUser } from '@/test/authFixtures'
 import { acceptedFixture, previewFixture } from '@/test/paramSearchFixtures'
 import type { AxisValue, ParamSearchRequest } from '@/types/paramSearch'
+import { ParamSearchError } from '@/api/paramSearch'
 import { ParamSearchPage } from './ParamSearchPage'
 
 const apiMocks = vi.hoisted(() => ({
@@ -159,5 +160,25 @@ describe('ParamSearchPage', () => {
     })) as HTMLButtonElement
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('로그인'))
     expect(run.disabled).toBe(true)
+  })
+
+  it('저장 상한(409 RECORD_LIMIT_REACHED)은 저장할 수 있는 탐색 묶음 N/M 으로 안내한다(006 FR-018)', async () => {
+    const user = userEvent.setup()
+    apiMocks.createParamSearch.mockRejectedValue(
+      new ParamSearchError('저장할 수 있는 탐색 묶음 개수에 도달했습니다.', {
+        code: 'RECORD_LIMIT_REACHED',
+        status: 409,
+        details: { current: 2, limit: 2 },
+      }),
+    )
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))
+
+    const notice = await screen.findByRole('alert')
+    expect(notice.textContent).toContain('저장할 수 있는 탐색 묶음 2/2')
+    expect(notice.textContent).toContain('내 기록에서 탐색 묶음을 지운 뒤')
+    // 실행 자원 한도(429)의 "기다리세요"와 섞이지 않는다.
+    expect(notice.textContent).not.toMatch(/잠시 후/)
   })
 })
