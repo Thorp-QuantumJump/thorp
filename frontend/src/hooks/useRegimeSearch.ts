@@ -43,16 +43,18 @@ export function useRegimeSearch(
 
   useEffect(() => {
     const seq = ++sequence.current
-    if (!mode && !savedSearchId) {
+    let request: Promise<RegimeSearchResult>
+    const controller = new AbortController()
+    if (savedSearchId) {
+      request = getRegimeSearchById(savedSearchId, limit, controller.signal)
+    } else if (mode) {
+      request = getRegimeSearch({ mode, field, baselineMonth, limit }, controller.signal)
+    } else {
       setIsLoading(false)
       return
     }
-    const controller = new AbortController()
     setIsLoading(true)
     setError(null)
-    const request = savedSearchId
-      ? getRegimeSearchById(savedSearchId, limit, controller.signal)
-      : getRegimeSearch({ mode: mode!, field, baselineMonth, limit }, controller.signal)
     request
       .then((next) => {
         if (seq !== sequence.current) return

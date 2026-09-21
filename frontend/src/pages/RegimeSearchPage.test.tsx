@@ -41,6 +41,8 @@ describe('경제환경 검색 화면', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(getRegimeBaselineMonths).mockResolvedValue(baseline)
+    // 로그인 검사가 기록 요청을 타므로 기본은 성공으로 둔다. 실패를 보는 검사만 따로 바꾼다.
+    vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
   })
 
   it('API 분야 목록으로 검색하고 다섯 표시와 자료 기준 시점을 보인다', async () => {
@@ -203,10 +205,12 @@ describe('경제환경 검색 화면', () => {
 
   it('?searchId= 로 열면 저장된 판을 고정 조회하고 폼 검색 API 는 부르지 않는다(006 R17)', async () => {
     vi.mocked(getRegimeSearchById).mockResolvedValue(regimeResult({ searchId: 'saved-1' }))
-    renderPage({ entries: ['/regime-search?searchId=saved-1'] })
+    renderPage({ entries: ['/regime-search?searchId=saved-1'], user: authenticatedUser })
     expect(await screen.findByText('2012-03')).toBeTruthy()
     expect(vi.mocked(getRegimeSearchById)).toHaveBeenCalledWith('saved-1', 3, expect.any(AbortSignal))
     expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+    // 저장된 판을 여는 것은 열람이다. 진입 경로 없이 기록을 보내면 원래 기록 옆에 다른 경로의 기록이 하나 더 생긴다.
+    expect(vi.mocked(recordRegimeSearch)).not.toHaveBeenCalled()
     expect(screen.getByRole('status', { name: '시험 분야 2026-07 검색 결과: 저장된 검색' })).toBeTruthy()
 
     // 폼으로 새로 검색하면 고정 조회를 풀고 최신 판을 연다.

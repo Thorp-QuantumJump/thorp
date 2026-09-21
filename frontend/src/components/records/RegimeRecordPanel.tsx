@@ -1,4 +1,5 @@
 import type { MyRecordRegime } from '@/types/myRecords'
+import type { RecordLabels } from './RecordRow'
 import { WITHDRAWN_REASON } from './recordLabels'
 import styles from './records.module.css'
 
@@ -20,9 +21,9 @@ const ENTRY_LABEL: Record<string, string> = {
  *
  * <p>값은 전부 `regime_search_log`에서 읽은 것이다. 연결 정보(연결한 섹터·전략·사후 평가 구간·가용성 필터)는 011이 만들
  * 값이고 아직 표가 없어 상세에 키가 없다 — 그 자리에는 고정 문장을 두고 <b>임의 값을 채우지 않는다</b>(research R9,
- * 원칙 VI). 모르는 코드는 코드 그대로 보인다.
+ * 원칙 VI). 분야 이름은 010 분야 목록에서 읽고, 못 받았으면 코드 그대로다.
  */
-export function RegimeRecordPanel({ regime }: { regime: MyRecordRegime }) {
+export function RegimeRecordPanel({ regime, labels }: { regime: MyRecordRegime; labels: RecordLabels }) {
   return (
     <>
       {regime.withdrawn ? (
@@ -36,7 +37,7 @@ export function RegimeRecordPanel({ regime }: { regime: MyRecordRegime }) {
         {regime.fieldId ? (
           <>
             <dt>분야</dt>
-            <dd>{regime.fieldId}</dd>
+            <dd>{labels.regimeField(regime.fieldId)}</dd>
           </>
         ) : null}
         <dt>기준월</dt>

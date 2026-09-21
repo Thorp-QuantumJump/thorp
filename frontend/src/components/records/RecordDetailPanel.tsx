@@ -181,7 +181,9 @@ function DetailBody({ detail, labels }: { detail: MyRecordDetail; labels: Record
       {detail.kind === 'SEARCH_BUNDLE' ? (
         <SearchBundlePanel searchId={detail.searchId} status={detail.status} />
       ) : null}
-      {detail.kind === 'REGIME_SEARCH' ? <RegimeRecordPanel regime={detail.regime} /> : null}
+      {detail.kind === 'REGIME_SEARCH' ? (
+        <RegimeRecordPanel regime={detail.regime} labels={labels} />
+      ) : null}
     </>
   )
 }

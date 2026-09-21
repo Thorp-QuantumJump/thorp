@@ -1,8 +1,8 @@
-import { useContext, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { recordRegimeSearch } from '@/api/myRecords'
 import { getRegimeBaselineMonths } from '@/api/regime'
-import { AuthContext } from '@/auth/auth-context'
+import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { BasisNotice } from '@/components/regime/BasisNotice'
 import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'
@@ -42,8 +42,8 @@ export function RegimeSearchPage() {
   const savedSearchId = params.get('searchId')
   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)
   const location = useLocation()
-  // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037). AuthProvider 밖에서도 그려지므로 없으면 비로그인으로 본다.
-  const user = useContext(AuthContext)?.user ?? null
+  // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).
+  const { user } = useAuth()
   const recorded = useRef<Set<string>>(new Set())
   const [recordFailed, setRecordFailed] = useState(false)
 
@@ -63,16 +63,22 @@ export function RegimeSearchPage() {
   }, [baselineRetry])
 
   // 진입 경로와 기준월 근거는 이 화면만 안다 — 서버가 추정하지 않으므로 화면이 보낸다(006 research R15). 같은
-  // 검색은 한 번만 보내고, 실패해도 검색 결과를 막지 않는다.
+  // 검색은 한 번만 보내고, 실패해도 검색 결과를 막지 않는다. 실패한 것은 다음 결과가 올 때 한 번 더 시도한다.
+  //
+  // 저장된 판을 여는 것(?searchId=)은 '열람'이지 새 기록이 아니다. 그 주소에는 진입 경로가 없어 기본값으로 보내면
+  // 원래 STRATEGY_RESULT 로 남은 기록 옆에 MARKET_FLOW 기록이 하나 더 생긴다 — 서버 키가 (소유자·검색·경로)다.
   useEffect(() => {
-    if (!user || !result || recorded.current.has(result.searchId)) return
-    recorded.current.add(result.searchId)
-    const entryPath = entryPathOf(location.state)
-    recordRegimeSearch(result.searchId, entryPath, result.baselineOrigin).then(
+    if (savedSearchId || !user || !result || recorded.current.has(result.searchId)) return
+    const { searchId } = result
+    recorded.current.add(searchId)
+    recordRegimeSearch(searchId, entryPathOf(location.state), result.baselineOrigin).then(
       () => setRecordFailed(false),
-      () => setRecordFailed(true),
+      () => {
+        recorded.current.delete(searchId)
+        setRecordFailed(true)
+      },
     )
-  }, [user, result, location.state])
+  }, [savedSearchId, user, result, location.state])
 
   /**
    * 기준월이나 검색 방식이 바뀌어 후보가 달라지면 한 문장으로 알린다(spec FR-031).
