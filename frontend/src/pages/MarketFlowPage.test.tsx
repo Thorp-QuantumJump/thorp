@@ -203,15 +203,18 @@ describe('MarketFlowPage', () => {
       expect(JSON.parse(handoffAfter ?? 'null')).not.toHaveProperty('sectorCode')
     })
 
-    // 010이 붙기 전에는 고를 사례가 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어간다(FR-018).
-    it('사례가 없으면 전략 비교로 넘길 값을 만들지 않는다', async () => {
+    // 사례 없이 011을 열지 않는다(FR-018). 이 화면은 사례를 고르는 010으로만 안내한다.
+    it('사례가 없으면 전략 비교로 넘길 값을 만들지 않고 사례 고르기로 안내한다', async () => {
       await renderWithSectors()
       fireEvent.click(screen.getByRole('button', { name: '반도체' }))
       await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
 
-      expect(
-        screen.getByRole('button', { name: /전략 비교로 이어가기/ }).getAttribute('data-handoff'),
-      ).toBeNull()
+      const link = screen.getByRole('link', { name: /과거 사례 고르러 가기/ })
+      expect(link.getAttribute('data-handoff')).toBeNull()
+      expect(link.getAttribute('href')).toBe('/regime-search')
+      expect(screen.getByText(/사례를 먼저 고릅니다/)).toBeTruthy()
+      // 011 주소를 이 화면에서 직접 열지 않는다.
+      expect(document.body.innerHTML).not.toContain('/regime-link')
     })
 
     // FR-017: 참고 정보와 뉴스는 분야 요약보다 늦게 채워질 수 있고 요약 표시를 막지 않는다.

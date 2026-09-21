@@ -18,6 +18,8 @@ export default defineConfig({
     // 새 `.test.ts`를 만들 때마다 이 목록을 함께 넓힌다.
     // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.
     include: [
+      // 011 진입 훅 검사가 들어온다(011 T044).
+      'src/hooks/*.test.ts',
       'src/**/*.test.tsx',
       'src/api/*.test.ts',
       'src/auth/**/*.test.ts',

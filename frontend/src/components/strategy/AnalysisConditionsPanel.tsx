@@ -8,6 +8,7 @@ import {
   isWithin,
   type AnalysisPeriod,
 } from '@/utils/analysisPeriod'
+import type { CasePeriodConstraint } from './casePeriodConstraint'
 import styles from './AnalysisConditionsPanel.module.css'
 import fieldStyles from './AxisField.module.css'
 import type { CostRates } from './analysisSupport'
@@ -33,6 +34,11 @@ interface AnalysisConditionsPanelProps {
   period: AnalysisPeriod | null
   /** 사용자가 기간을 직접 골랐는가. 참일 때만 '범위 전체로 되돌리기'를 보인다 */
   periodChosen: boolean
+  /**
+   * 011 사례 경로에서만 오는 추가 제약(011 진입 계약 §3). 주소에 `case`가 없으면 `null`이고 동작이
+   * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다
+   */
+  caseConstraint?: CasePeriodConstraint | null
   /** 지금 쓰이는 시작 금액. 재검증이 비워 두고 복원을 기다리면 `undefined`다 */
   initialAmount: number | undefined
   minEvaluationYears: number
@@ -68,8 +74,20 @@ interface PeriodFieldProps {
   rangeUnavailableMessage: string
   period: AnalysisPeriod | null
   periodChosen: boolean
+  caseConstraint: CasePeriodConstraint | null
   onChange: (period: AnalysisPeriod) => void
   onReset: () => void
+}
+
+/** 사례 제약을 어겼는가. 어겼으면 고정 문구, 아니면 `null`이다(011 진입 계약 §3). */
+function checkCaseConstraint(
+  draft: AnalysisPeriod,
+  constraint: CasePeriodConstraint | null,
+): string | null {
+  if (constraint === null) return null
+  if (!isIsoDate(draft.start) || !isIsoDate(draft.end)) return null
+  if (draft.start > constraint.startMax || draft.end < constraint.endMin) return constraint.note
+  return null
 }
 
 /**
@@ -89,6 +107,7 @@ function PeriodField({
   rangeUnavailableMessage,
   period,
   periodChosen,
+  caseConstraint,
   onChange,
   onReset,
 }: PeriodFieldProps) {
@@ -109,13 +128,19 @@ function PeriodField({
     setDraft(period ?? { start: '', end: '' })
   }
 
+  /** 범위 검사에 사례 제약을 겹친다. 되돌리기 판정도 같은 잣대를 써야 두 길이 갈리지 않는다. */
+  const check = (next: AnalysisPeriod): string | null =>
+    range === null
+      ? rangeUnavailableMessage
+      : (checkPeriodInput(next.start, next.end, range) ?? checkCaseConstraint(next, caseConstraint))
+
   const draftIsCurrent = draft.start === period?.start && draft.end === period?.end
   const problem =
     range === null
       ? rangeUnavailableMessage
-      : draftIsCurrent && period !== null && isWithin(period, range)
+      : draftIsCurrent && period !== null && isWithin(period, range) && checkCaseConstraint(period, caseConstraint) === null
         ? null
-        : checkPeriodInput(draft.start, draft.end, range)
+        : check(draft)
 
   // 어느 칸이 문제인지 가른다. 순서가 뒤집힌 경우만 둘 다 문제다.
   const badDate = (date: string) =>
@@ -131,7 +156,7 @@ function PeriodField({
   const update = (next: AnalysisPeriod) => {
     setDraft(next)
     if (range === null) return
-    if (checkPeriodInput(next.start, next.end, range) !== null) {
+    if (check(next) !== null) {
       const before = atEditStart.current
       if (before.chosen && before.period) {
         if (before.period.start !== period?.start || before.period.end !== period?.end) {
@@ -150,6 +175,14 @@ function PeriodField({
     onChange(next)
   }
 
+  /*
+    달력의 `min`·`max`는 고르는 것을 돕기만 한다. 직접 친 날짜는 위 검사가 다시 거른다.
+  */
+  const startMax =
+    caseConstraint && range ? (caseConstraint.startMax < range.end ? caseConstraint.startMax : range.end) : range?.end
+  const endMin =
+    caseConstraint && range ? (caseConstraint.endMin > range.start ? caseConstraint.endMin : range.start) : range?.start
+
   const hint = range ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.` : rangeUnavailableMessage
 
   return (
@@ -166,7 +199,7 @@ function PeriodField({
           className={fieldStyles.input}
           type="date"
           min={range?.start}
-          max={range?.end}
+          max={startMax}
           value={draft.start}
           disabled={range === null}
           aria-invalid={startInvalid ? 'true' : 'false'}
@@ -181,7 +214,7 @@ function PeriodField({
           id={endId}
           className={fieldStyles.input}
           type="date"
-          min={range?.start}
+          min={endMin}
           max={range?.end}
           value={draft.end}
           disabled={range === null}
@@ -207,6 +240,8 @@ function PeriodField({
       <p id={messageId} className={problem && range ? fieldStyles.problem : fieldStyles.hint} aria-live="polite">
         {problem && range ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}` : hint}
       </p>
+      {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}
+      {caseConstraint ? <p className={fieldStyles.hint}>{caseConstraint.note}</p> : null}
     </fieldset>
   )
 }
@@ -230,6 +265,7 @@ export function AnalysisConditionsPanel({
   rangeUnavailableMessage = RANGE_UNAVAILABLE,
   period,
   periodChosen,
+  caseConstraint = null,
   initialAmount,
   minEvaluationYears,
   cost,
@@ -261,6 +297,7 @@ export function AnalysisConditionsPanel({
             rangeUnavailableMessage={rangeUnavailableMessage}
             period={period}
             periodChosen={periodChosen}
+            caseConstraint={caseConstraint}
             onChange={(next) => onChange({ periodStart: next.start, periodEnd: next.end })}
             onReset={() => onReset('period')}
           />
