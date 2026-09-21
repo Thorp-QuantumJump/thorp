@@ -11,8 +11,8 @@ vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 
 vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))
 vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))
 vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면</h1> }))
-vi.mock('@/pages/MyRecordsEntryPage', () => ({
-  MyRecordsEntryPage: () => <h1>내 기록 화면</h1>,
+vi.mock('@/pages/MyRecordsPage', () => ({
+  MyRecordsPage: () => <h1>내 기록 화면</h1>,
 }))
 
 const anonymousAuth: AuthContextValue = {

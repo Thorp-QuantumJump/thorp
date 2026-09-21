@@ -35,6 +35,8 @@ export type ParamSearchErrorCode =
   | 'ALREADY_FINISHED'
   | 'NOTHING_TO_RETRY'
   | 'RESOURCE_NOT_FOUND'
+  // 006 내 기록의 저장 상한(409). 실행 자원 한도(429)와 다른 거절이다 — 기존 기록을 지워야 풀린다(006 FR-018).
+  | 'RECORD_LIMIT_REACHED'
 
 /**
  * 화면이 분기할 수 있는 007 오류.
@@ -45,15 +47,23 @@ export type ParamSearchErrorCode =
 export class ParamSearchError extends Error {
   readonly code: string | null
   readonly status: number | null
+  /** 서버가 `error.details`로 준 값. 006 상한 거절의 `{ current, limit }`가 여기 온다. 없으면 `null` */
+  readonly details: Record<string, unknown> | null
 
   constructor(
     message: string,
-    options: { code?: string | null; status?: number | null; cause?: unknown } = {},
+    options: {
+      code?: string | null
+      status?: number | null
+      details?: Record<string, unknown> | null
+      cause?: unknown
+    } = {},
   ) {
     super(message, { cause: options.cause })
     this.name = 'ParamSearchError'
     this.code = options.code ?? null
     this.status = options.status ?? null
+    this.details = options.details ?? null
   }
 
   /** 화면이 자주 묻는 질문 하나를 이름으로 둔다. */
@@ -66,12 +76,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/** 응답 본문에서 `{ code, message }`를 읽는다. 모양이 다르면 `null`이다. */
-function readErrorBody(body: unknown): { code: string; message: string } | null {
+/** 응답 본문에서 `{ code, message, details }`를 읽는다. 모양이 다르면 `null`이다. */
+function readErrorBody(
+  body: unknown,
+): { code: string; message: string; details: Record<string, unknown> | null } | null {
   if (!isRecord(body) || !isRecord(body.error)) return null
-  const { code, message } = body.error
+  const { code, message, details } = body.error
   if (typeof code !== 'string' || typeof message !== 'string') return null
-  return { code, message }
+  return { code, message, details: isRecord(details) ? details : null }
 }
 
 /** Axios 오류를 화면이 분기할 수 있는 007 오류로 바꾼다. */
@@ -89,7 +101,12 @@ export function normalizeParamSearchError(error: unknown): ParamSearchError {
     const body = readErrorBody(error.response.data)
     return new ParamSearchError(
       body?.message ?? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
-      { code: body?.code ?? null, status: error.response.status, cause: error },
+      {
+        code: body?.code ?? null,
+        status: error.response.status,
+        details: body?.details ?? null,
+        cause: error,
+      },
     )
   }
 

@@ -189,14 +189,14 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
       ) : null}
 
       {/*
-        초깃값이 입력 편의를 위한 예시이며 투자 권고가 아니라는 표시다. 비중 입력 칸이 하나
-        이상 있을 때 **항상** 둔다(FR-005, 원칙 III, research.md 결정 7).
+        선택 전후 같은 자리를 유지해 카드 목록이 갑자기 밀리지 않게 한다. 선택 뒤에는 초깃값이
+        입력 편의를 위한 예시이며 투자 권고가 아니라는 사실을 알린다(FR-005, 원칙 III).
       */}
-      {selectedCount > 0 ? (
-        <p className={styles.initialValueNotice}>
-          채워진 비중은 입력 편의를 위한 예시이며 투자 권고가 아닙니다. 직접 고쳐서 쓰세요.
-        </p>
-      ) : null}
+      <p className={styles.initialValueNotice} aria-live="polite">
+        {selectedCount > 0
+          ? '채워진 비중은 입력 편의를 위한 예시이며 투자 권고가 아닙니다. 직접 고쳐서 쓰세요.'
+          : '섹터를 선택하면 카드 안에서 비중을 바로 조절할 수 있습니다.'}
+      </p>
 
       {/*
         `list-style: none`이 걸리면 Safari와 VoiceOver 조합에서 `<ul>`의 목록 역할이 사라진다.

@@ -1,28 +1,42 @@
 .panel {
   display: grid;
   gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--thorp-line);
 }
 
 .toggle {
-  justify-self: start;
-  padding: 8px 14px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  color: inherit;
+  color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.toggle::after {
-  content: ' ▾';
-  color: var(--thorp-copy);
+.toggle:hover,
+.toggle[aria-expanded='true'] {
+  color: var(--thorp-foreground);
 }
 
-.toggle[aria-expanded='true']::after {
-  content: ' ▴';
+.toggleIcon {
+  flex: none;
+  color: var(--thorp-accent-soft);
+  transition: transform 0.16s ease;
+}
+
+.toggle[aria-expanded='true'] .toggleIcon {
+  transform: rotate(180deg);
 }
 
 .toggle:focus-visible,
@@ -34,6 +48,13 @@
 .body {
   display: grid;
   gap: 14px;
+  padding-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggleIcon {
+    transition: none;
+  }
 }
 
 .axes {
