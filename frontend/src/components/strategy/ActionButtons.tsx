@@ -18,11 +18,15 @@ interface ActionButtonsProps {
 }
 
 /**
- * '분석하기'와 '설정 조합 자동 비교' 두 행동 버튼(FR-002, FR-013).
+ * '분석하기'와 '설정 조합 자동 비교' 두 행동(FR-002, FR-013).
  *
- * <p><b>같은 크기, 같은 모양이다.</b> constitution 원칙 II의 예외 조항(3.4.0,
- * S15P21E205-253, 2026-09-15 승인)이 이 화면에 같은 크기의 버튼 두 개를 허용했다. 어느 쪽이 주된
- * 행동이라는 시각적 위계를 두지 않는다.
+ * <p><b>'분석하기'가 주된 행동이다.</b> 한때 두 버튼을 같은 크기로 두었으나, 어느 쪽을 눌러야
+ * 하는지 화면이 말해 주지 않아 사용자가 멈춰 서는 문제가 있었다. 자동 비교는 설정을 어떻게 잡을지
+ * 모를 때 찾는 우회로이므로 옆에 두되 무게를 낮춘다(constitution 원칙 II).
+ *
+ * <p><b>자동 비교를 감추지는 않는다.</b> 그 경로가 없으면 같은 결과를 얻으려고 설정을 하나씩
+ * 바꿔 가며 반복 실행해야 한다 — 예외 조항이 원래 지키려던 것이 그 사실이다. 늘 보이는 자리에
+ * 두고 화살표로 다음 화면으로 이어짐을 알린다.
  *
  * <p><b>누를 수 없는 이유를 함께 전달한다.</b> `disabled` 대신 `aria-disabled`를 쓰고 이유 문장을
  * `aria-describedby`로 잇는다 — `disabled`를 걸면 키보드 사용자가 버튼에 닿지 못해 <b>왜</b> 막혔는지
@@ -37,10 +41,23 @@ export function ActionButtons({ analyze, autoCompare, onAnalyze, onAutoCompare }
 
   return (
     <div className={styles.actions}>
-      <div className={styles.buttons}>
+      <div className={styles.bar}>
         <button
           type="button"
-          className={styles.button}
+          className={styles.secondary}
+          aria-disabled={autoCompare.disabled}
+          aria-describedby={autoCompareReasonId}
+          data-action="auto-compare"
+          onClick={() => {
+            if (!autoCompare.disabled) onAutoCompare()
+          }}
+        >
+          설정 조합 자동 비교
+          <span aria-hidden="true">→</span>
+        </button>
+        <button
+          type="button"
+          className={styles.primary}
           aria-disabled={analyzeBlocked}
           aria-busy={analyze.busy === true}
           aria-describedby={analyzeReasonId}
@@ -50,18 +67,6 @@ export function ActionButtons({ analyze, autoCompare, onAnalyze, onAutoCompare }
           }}
         >
           {analyze.busy ? '분석 요청을 보내는 중' : '분석하기'}
-        </button>
-        <button
-          type="button"
-          className={styles.button}
-          aria-disabled={autoCompare.disabled}
-          aria-describedby={autoCompareReasonId}
-          data-action="auto-compare"
-          onClick={() => {
-            if (!autoCompare.disabled) onAutoCompare()
-          }}
-        >
-          설정 조합 자동 비교
         </button>
       </div>
 

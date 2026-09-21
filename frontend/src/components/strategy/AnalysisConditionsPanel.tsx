@@ -247,7 +247,7 @@ function PeriodField({
 }
 
 /**
- * 기간·금액·조건(US3, FR-009·FR-010·FR-011a).
+ * 조건 바꾸기(US3, FR-009·FR-010·FR-011a).
  *
  * <p><b>접힌 채로 시작한다.</b> 기본 화면의 입력은 전략 선택 하나이고(SC-005), 지금 적용되는 조건은 요약
  * 한 줄이 이미 보인다. 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
@@ -279,7 +279,7 @@ export function AnalysisConditionsPanel({
   const years = conditions.minEvaluationYears
 
   return (
-    <section className={styles.panel} aria-label="기간·금액·조건">
+    <section className={styles.panel} aria-label="조건 바꾸기">
       <button
         type="button"
         className={styles.toggle}
@@ -287,7 +287,7 @@ export function AnalysisConditionsPanel({
         aria-controls={open ? bodyId : undefined}
         onClick={() => setOpen((current) => !current)}
       >
-        기간·금액·조건
+        조건 바꾸기
       </button>
 
       {open ? (
