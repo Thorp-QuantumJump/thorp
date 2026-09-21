@@ -1,4 +1,13 @@
-export const DEFAULT_RETURN_TARGET = '/home'
+/**
+ * 돌아갈 곳을 모를 때만 쓰는 자리다.
+ *
+ * <p><b>거의 쓰이지 않아야 정상이다.</b> 로그인으로 들어가는 통로는 모두 떠나온 자리를
+ * {@link saveReturnTarget}으로 적어 두므로, 여기까지 내려오는 것은 주소창에 `/login`을 직접 친
+ * 경우나 저장소가 막힌 경우뿐이다. 그 드문 경우에 시장 흐름으로 보내면 로그인해서 하려던 일과
+ * 무관한 화면에 떨어지므로, 진단 흐름의 첫 단계로 보낸다. 내 기록은 아직 목록이 없어(spec 006)
+ * 빈 화면을 보여 주게 되므로 기본값으로 두지 않는다.
+ */
+export const DEFAULT_RETURN_TARGET = '/diagnosis/sectors'
 
 const RETURN_TARGET_KEY = 'thorp.auth.returnTarget'
 const AUTH_PATHS = ['/login', '/signup']

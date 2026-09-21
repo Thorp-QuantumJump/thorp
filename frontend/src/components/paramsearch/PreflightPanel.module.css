@@ -195,8 +195,9 @@
 
 .blocked {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   margin: 0;
   padding: 9px 11px;
   border: 1px solid var(--thorp-negative);
@@ -206,9 +207,52 @@
   line-height: 1.55;
 }
 
+.blocked p {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
 .blocked svg {
   flex: none;
   margin-top: 2px;
+}
+
+/*
+  막힌 이유를 푸는 행동이 앉는 자리. 무엇을 넣을지는 쓰는 쪽이 정하고 생김새는 여기서 정한다 —
+  경고 안에 있지만 누를 것이므로 색을 돌려 눌리는 것임을 보인다.
+*/
+.blockedAction > * {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--thorp-accent);
+  border-radius: 5px;
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.blockedAction > *:hover {
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.blockedAction > *:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.blockedAction svg {
+  margin-top: 0;
 }
 
 .run {
