@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
 import { ValidationBadge } from './ValidationBadge'
 import type {
@@ -98,12 +99,12 @@ export function CandidateTable({
   return (
     <section className={styles.section} aria-labelledby="candidate-table-title">
       <header className={styles.header}>
-        <div>
+        <div className={styles.headline}>
           <h2 id="candidate-table-title">전체 후보</h2>
-          <p>
-            열 제목을 눌러 한 항목 기준으로 정렬할 수 있습니다. 정렬은 보기 순서일 뿐 순위가
-            아닙니다.
-          </p>
+          <InlineHelp label="전체 후보">
+            <p>열 제목을 눌러 한 항목 기준으로 정렬할 수 있습니다.</p>
+            <p>정렬은 보기 순서일 뿐 순위가 아닙니다.</p>
+          </InlineHelp>
         </div>
         <div className={styles.filter}>
           <label htmlFor="candidate-status">상태</label>
