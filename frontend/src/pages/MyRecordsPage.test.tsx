@@ -487,6 +487,25 @@ describe('MyRecordsPage', () => {
     expect(document.activeElement?.getAttribute('aria-label') ?? '').not.toMatch(/더 보기$/)
   })
 
+  it('앞선 알림이 다음 조회의 불러오는 중 문장을 가리지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValueOnce({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '바꾼 이름' })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('바꾼 이름'))
+
+    // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.
+    apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))
+    await user.click(screen.getByRole('checkbox', { name: '경제환경' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('기록을 불러오는 중입니다.'),
+    )
+  })
+
   it('메뉴는 Esc 로 닫히고 초점이 연 버튼으로 돌아온다', async () => {
     apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
 
