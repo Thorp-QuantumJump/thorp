@@ -748,6 +748,15 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     setRegistryChange(null)
     try {
       const accepted = await support.createBacktest(request)
+      // 접수되면 그 실행의 결과 주소로 옮긴다(003 T040이 005에 넘긴 자리, 005 FR-019).
+      // 아직 계산 중이어도 결과 화면이 `QUEUED`·`RUNNING`을 폴링해 진행을 보이므로 여기서 기다리지 않는다.
+      //
+      // **토큰이 없으면 옮기지 않는다.** 공개 주소는 202 응답이 주는 값이고 화면이 지어낼 수 없다
+      // (옛 접수 응답에는 없다). 그때는 접수됐다는 사실과 요청 번호만 남겨 사용자가 잃어버리지 않게 한다.
+      if (accepted.publicToken) {
+        navigate(`/results/${accepted.publicToken}`)
+        return
+      }
       setSubmission({ status: 'accepted', accepted })
     } catch (error) {
       // 거절마다 계약 §2가 정한 처리를 한다. **어느 경우에도 요청을 다시 보내지 않는다** — 다시 보낼지는
@@ -800,6 +809,7 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     reloadRegistry,
     clearSelection,
     registry,
+    navigate,
   ])
 
   // --- 화면 -----------------------------------------------------------------------------
@@ -1163,8 +1173,8 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
             {submission.status === 'accepted' ? (
               <p className={styles.result} role="status">
                 분석 요청을 접수했습니다. 요청 번호 {submission.accepted.backtestId}, 상태{' '}
-                {statusText[submission.accepted.status] ?? submission.accepted.status}. 결과 화면으로의
-                이동은 아직 준비 중입니다.
+                {statusText[submission.accepted.status] ?? submission.accepted.status}. 결과 주소를 받지
+                못해 결과 화면으로 옮기지 못했습니다. 내 기록에서 이 요청 번호로 찾을 수 있습니다.
               </p>
             ) : null}
             {submission.status === 'failed' ? (
