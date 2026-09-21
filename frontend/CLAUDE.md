@@ -16,6 +16,7 @@ npm run lint && npm run build && npm test
 - `src/api/` 서버 통신 전용 — 컴포넌트에서 axios 직접 호출 금지, `apiClient` 경유
 - `src/types/` 백엔드 DTO와 1:1 대응 타입 (`backtest.ts` 참고). 백엔드 스펙 변경 시 여기부터 갱신
 - `src/hooks/` 커스텀 훅
+- `src/components/records/` 내 기록(spec 006) 목록 줄·펼침 층·더 보기 메뉴·대화상자. 성과 수치와 성과 정렬 선택지를 두지 않고(원칙 III), '설정 바꿔 비교'는 005의 `prefillStrategySettings`를 `reopenSettings.ts` 어댑터로 부를 뿐 인계 빌더를 따로 만들지 않는다
 
 ## 규칙
 
