@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiClientError } from '@/api/client'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'
@@ -35,6 +36,9 @@ import { EMPTY_MESSAGE, MyRecordsPage } from './MyRecordsPage'
 const apiMocks = vi.hoisted(() => ({
   fetchMyRecords: vi.fn(),
   fetchMyRecord: vi.fn(),
+  renameMyRecord: vi.fn(),
+  deleteMyRecord: vi.fn(),
+  downloadMyRecordExport: vi.fn(),
 }))
 const otherMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
@@ -116,6 +120,10 @@ describe('MyRecordsPage', () => {
   beforeEach(() => {
     apiMocks.fetchMyRecords.mockReset()
     apiMocks.fetchMyRecord.mockReset()
+    apiMocks.renameMyRecord.mockReset()
+    apiMocks.deleteMyRecord.mockReset()
+    apiMocks.downloadMyRecordExport.mockReset()
+    apiMocks.downloadMyRecordExport.mockResolvedValue(undefined)
     otherMocks.fetchSectorCatalog.mockReset()
     otherMocks.fetchStrategyRegistry.mockReset()
     prefillMocks.prefillStrategySettings.mockReset()
@@ -209,8 +217,12 @@ describe('MyRecordsPage', () => {
     renderPage()
     await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
 
-    const notice = await screen.findByRole('status')
-    expect(notice.textContent).toContain('섹터는 넘기지 않았습니다')
+    // 페이지 알림 영역(role=status)이 늘 DOM 에 있으므로 문장으로 그 자리를 집는다.
+    const notice = (await screen.findByText(/섹터는 넘기지 않았습니다/)).closest(
+      '[role="status"]',
+    ) as HTMLElement | null
+    expect(notice).not.toBeNull()
+    if (!notice) throw new Error('알림 자리를 찾지 못했다')
     expect(within(notice).getByRole('link', { name: '섹터·비중 단계로 가기' }).getAttribute('href')).toBe(
       SECTOR_SELECTION_PATH,
     )
@@ -455,5 +467,149 @@ describe('MyRecordsPage', () => {
 
     expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()
     expect(apiMocks.fetchMyRecords).not.toHaveBeenCalled()
+  })
+
+  // --- FE-4: 더 보기 메뉴(T045·T048·T049) ------------------------------------------
+
+  async function openMenu(name: string) {
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: `${name} 더 보기` }))
+    return user
+  }
+
+  it('목록을 그려도 초점이 메뉴 버튼으로 튀지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)
+
+    renderPage()
+    await screen.findByRole('list', { name: '내 기록' })
+
+    // 줄마다 있는 '더 보기'가 마운트 때 초점을 가져가면 사용자는 화면 맨 아래에서 Tab 을 시작한다.
+    expect(document.activeElement?.getAttribute('aria-label') ?? '').not.toMatch(/더 보기$/)
+  })
+
+  it('앞선 알림이 다음 조회의 불러오는 중 문장을 가리지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValueOnce({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '바꾼 이름' })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('바꾼 이름'))
+
+    // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.
+    apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))
+    await user.click(screen.getByRole('checkbox', { name: '경제환경' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('기록을 불러오는 중입니다.'),
+    )
+  })
+
+  it('메뉴는 Esc 로 닫히고 초점이 연 버튼으로 돌아온다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    expect(screen.getByRole('menu')).toBeTruthy()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe(`${analysisRecord.name} 더 보기`)
+  })
+
+  it('이름을 바꾸면 그 줄의 이름만 제자리에서 바뀐다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '반도체 비중 높인 안' })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+
+    // 대화상자를 열면 메뉴는 접힌다 — 둘이 겹쳐 뜨면 무엇을 고르는 중인지 흐려진다.
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await user.clear(screen.getByLabelText('새 이름'))
+    await user.type(screen.getByLabelText('새 이름'), '반도체 비중 높인 안')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('반도체 비중 높인 안')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull()
+    expect(apiMocks.renameMyRecord).toHaveBeenCalledWith(analysisRecord.recordId, '반도체 비중 높인 안')
+    // 목록을 다시 받지 않는다 — 처음 한 번뿐이다.
+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(1)
+  })
+
+  it('이름 변경 오류는 필드 오류로 보이고 이름이 그대로다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockRejectedValue(
+      new ApiClientError('api', '이름은 1자 이상이어야 합니다.', { code: 'INVALID_INPUT' }),
+    )
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain('이름은 1자 이상이어야 합니다.')
+    expect(screen.getByLabelText('새 이름').getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByRole('heading', { name: analysisRecord.name })).toBeTruthy()
+  })
+
+  it('삭제는 확인을 거치고 그 줄을 없애며 복구를 제안하지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.deleteMyRecord.mockResolvedValue({
+      recordId: analysisRecord.recordId,
+      deletedAt: '2026-09-21T02:00:00Z',
+    })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '지우기' }))
+
+    // 무엇이 남고 무엇이 사라지는지 확인 문구가 말한다(FR-017).
+    expect(screen.getByText('저장된 계산 결과는 남고 내 목록에서만 사라집니다.')).toBeTruthy()
+    expect(apiMocks.deleteMyRecord).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull())
+    expect(screen.queryByText(/복구|되돌리기/)).toBeNull()
+  })
+
+  it('완료 항목은 두 형식으로 내려받고 진행 중 항목은 사유와 함께 막힌다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({
+      items: [analysisRecord, { ...analysisRecord, recordId: 'MR-20260918-000099', name: '도는 중', status: 'RUNNING' }],
+      nextCursor: null,
+    })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: 'CSV로 내보내기' }))
+
+    expect(apiMocks.downloadMyRecordExport).toHaveBeenCalledWith(analysisRecord.recordId, 'csv')
+    expect((await screen.findByRole('status')).textContent).toContain('CSV')
+
+    await openMenu('도는 중')
+    const running = screen.getAllByRole('menuitem', { name: 'CSV로 내보내기' }).at(-1)
+    expect(running?.getAttribute('aria-disabled')).toBe('true')
+    expect(screen.getByText('아직 계산이 끝나지 않아 내보낼 결과가 없습니다.')).toBeTruthy()
+  })
+
+  it('내보내기가 실패하면 그 사실을 알린다 — 오류 본문을 파일로 받지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.downloadMyRecordExport.mockRejectedValue(
+      new ApiClientError('api', '아직 결과가 준비되지 않았습니다.', { code: 'RESULT_NOT_READY' }),
+    )
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: 'JSON으로 내보내기' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('내보내기에 실패했습니다'),
+    )
+    expect(screen.getByRole('status').textContent).toContain('아직 결과가 준비되지 않았습니다.')
   })
 })
