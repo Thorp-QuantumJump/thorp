@@ -54,6 +54,7 @@ public class AvailabilityService {
     private final MarketMetadataPort marketMetadata;
     private final RegimeLinkFilterRepository filters;
     private final FilterKeyCalculator filterKeys;
+    private final BundleConsistencyChecker consistency;
 
     public AvailabilityService(
             RegimeSearchReadRepository searches,
@@ -61,13 +62,15 @@ public class AvailabilityService {
             TradingCalendarPort calendar,
             MarketMetadataPort marketMetadata,
             RegimeLinkFilterRepository filters,
-            FilterKeyCalculator filterKeys) {
+            FilterKeyCalculator filterKeys,
+            BundleConsistencyChecker consistency) {
         this.searches = searches;
         this.bundles = bundles;
         this.calendar = calendar;
         this.marketMetadata = marketMetadata;
         this.filters = filters;
         this.filterKeys = filterKeys;
+        this.consistency = consistency;
     }
 
     /**
@@ -78,8 +81,21 @@ public class AvailabilityService {
      */
     @Transactional
     public AvailabilityResult evaluate(AvailabilityQuery query) {
+        return evaluate(query, bundles.resolveBundle(query.base(), query.compare()));
+    }
+
+    /**
+     * 이미 풀어 둔 비교 묶음으로 판정한다 (M5 사례 열기).
+     *
+     * <p>사례를 여는 경로는 토큰이 아니라 저장된 검색 기록에서 묶음을 되살리므로 토큰 판정을 다시 지나가지 않는다. 판정 규칙은 같은 코드를 쓴다 — 목록에서 본 판정과
+     * 열 때의 판정이 갈라지면 화면이 보인 것과 서버가 만든 것이 달라진다.
+     */
+    @Transactional
+    public AvailabilityResult evaluate(AvailabilityQuery query, List<BundleRunView> runs) {
         RegimeSearchView search = findSearch(query);
-        List<BundleRunView> runs = bundles.resolveBundle(query.base(), query.compare());
+        // 조건이 어긋난 묶음은 여기서 멈춘다(T093). 필터 행도 만들지 않는다 — 조건이 다른 두
+        // 실행으로 공통 가용 범위를 내면 그 범위 자체가 뜻을 갖지 못한다.
+        consistency.verify(runs);
         Universe universe = universe(runs);
         LocalDate postCutoff = postCutoff(search.baselineMonth());
 

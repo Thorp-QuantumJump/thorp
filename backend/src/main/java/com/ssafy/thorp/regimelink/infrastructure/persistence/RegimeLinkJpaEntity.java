@@ -135,6 +135,45 @@ public class RegimeLinkJpaEntity {
         updatedAt = Instant.now();
     }
 
+    /**
+     * 발행 경로가 쓰는 컬럼만 바꾼다.
+     *
+     * <p>{@code @DynamicUpdate}가 걸려 있어 바뀐 컬럼만 UPDATE 에 실린다 — 이벤트 경로가 같은 시각에 상태를 써도 서로의 값을 되돌리지
+     * 않는다(backend/CLAUDE.md "한 행을 여러 경로가 갱신하면 컬럼 소유를 가른다").
+     */
+    void applyPublished(String jobMessageId, int attempt, Instant queuedAt) {
+        this.status = "QUEUED";
+        this.jobMessageId = jobMessageId;
+        this.attempt = (short) attempt;
+        this.queuedAt = queuedAt;
+    }
+
+    /** 이벤트 경로가 쓰는 컬럼만 바꾼다. */
+    void applyRunning(Instant startedAt) {
+        this.status = "RUNNING";
+        this.startedAt = startedAt;
+    }
+
+    void applyCompleted(Instant finishedAt) {
+        this.status = "COMPLETED";
+        this.failure = null;
+        this.finishedAt = finishedAt;
+    }
+
+    void applyFailed(Map<String, Object> failure, Instant finishedAt) {
+        this.status = "FAILED";
+        this.failure = failure;
+        this.finishedAt = finishedAt;
+    }
+
+    /** 새 004 실행을 기다리는 상태로 되돌린다. 앞선 실패 기록은 지운다 — 남기면 화면이 끝난 실패를 다시 보인다. */
+    void applyPendingRun(Long runId) {
+        this.status = "PENDING_RUN";
+        this.runId = runId;
+        this.failure = null;
+        this.finishedAt = null;
+    }
+
     public Long getId() {
         return id;
     }
