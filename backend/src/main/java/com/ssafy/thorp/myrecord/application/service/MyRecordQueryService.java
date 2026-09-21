@@ -42,18 +42,22 @@ public class MyRecordQueryService {
     }
 
     /**
+     * 한 항목의 목록 줄. 기록 요청({@code POST /my-records/regime-searches})의 응답이 목록 항목과 같은 본문이라 그 경로가 쓴다.
+     *
+     * <p>상세와 달리 열람 표시를 남기지 않는다 — 방금 만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아니다.
+     */
+    @Transactional(readOnly = true)
+    public MyRecordView item(long ownerId, String recordId) {
+        return requireView(ownerId, recordId);
+    }
+
+    /**
      * 한 항목의 상세. 읽는 순간을 '다시 보기'로 남긴다 — 상세는 결과 화면이 기록에서 들어왔을 때({@code ?recordId=})와 펼쳐 보는 층이 부르는 경로라
      * 열람 표시를 따로 받지 않는다. 시각 하나만 남기고 자동 삭제에는 쓰지 않는다(2026-09-18 명료화).
      */
     @Transactional
     public MyRecordDetail detail(long ownerId, String recordId) {
-        MyRecordView view =
-                records.findView(ownerId, recordId)
-                        .orElseThrow(
-                                () ->
-                                        new BusinessException(
-                                                ErrorCode.RESOURCE_NOT_FOUND,
-                                                "기록을 찾을 수 없습니다: " + recordId));
+        MyRecordView view = requireView(ownerId, recordId);
         Instant now = clock.instant();
         records.markViewed(view.id(), now);
         Map<String, Object> referenceVersions = referenceVersions(view);
@@ -103,6 +107,16 @@ public class MyRecordQueryService {
             }
         }
         return out;
+    }
+
+    /** 없는 것·지운 것·남의 것을 한 가지 404 로 답한다. 두 읽기 경로가 같은 문장을 쓰도록 한 곳에 둔다. */
+    private MyRecordView requireView(long ownerId, String recordId) {
+        return records.findView(ownerId, recordId)
+                .orElseThrow(
+                        () ->
+                                new BusinessException(
+                                        ErrorCode.RESOURCE_NOT_FOUND,
+                                        "기록을 찾을 수 없습니다: " + recordId));
     }
 
     private SourceVersions source(MyRecordView view) {
