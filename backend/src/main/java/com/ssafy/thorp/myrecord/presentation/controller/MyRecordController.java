@@ -123,9 +123,11 @@ public class MyRecordController {
             @PathVariable String recordId, @Valid @RequestBody RenameMyRecordRequest request) {
         long ownerId = currentRequester.requireRequesterId();
         commandService.rename(ownerId, recordId, request.name());
+        // 이름을 바꾼 항목을 돌려줄 뿐이라 '다시 보기'로 세지 않는다 — current(...)는 열람 표시를
+        // 남기지 않는다.
         return ResponseEntity.ok(
                 ApiResponse.ok(
-                        MyRecordDetailResponse.from(queryService.detail(ownerId, recordId))));
+                        MyRecordDetailResponse.from(queryService.current(ownerId, recordId))));
     }
 
     /**

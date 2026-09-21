@@ -64,6 +64,25 @@ class MyRecordCommandIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("이름 변경은 '다시 보기'가 아니다 — 열람 시각이 오르지 않는다")
+    void 이름_변경은_열람이_아니다() throws Exception {
+        long owner = newUser("viewed");
+        backtestService.create(request(owner));
+        String recordId = recordIdOf(owner);
+        // 상세를 한 번 열어 열람 시각을 만들어 둔다. 그래야 "오르지 않았다"를 볼 수 있다.
+        mockMvc.perform(get("/my-records/{recordId}", recordId).with(as(owner)))
+                .andExpect(status().isOk());
+        java.sql.Timestamp before = lastViewedAtOf(owner);
+        assertThat(before).isNotNull();
+
+        mockMvc.perform(rename(owner, recordId, "이름만 바꾼다")).andExpect(status().isOk());
+
+        assertThat(lastViewedAtOf(owner))
+                .as("last_viewed_at 은 보관 기간 판단(PD-13)에 쓰는 값이라 이름 변경이 섞이면 안 된다")
+                .isEqualTo(before);
+    }
+
+    @Test
     @DisplayName("빈 이름은 400이고 자동 이름으로 되돌리지 않는다")
     void 빈_이름은_거절한다() throws Exception {
         long owner = newUser("blank");
@@ -194,6 +213,13 @@ class MyRecordCommandIT extends IntegrationTestSupport {
     private String nameOf(long owner) {
         return jdbc.queryForObject(
                 "SELECT name FROM my_record WHERE owner_id = ?", String.class, owner);
+    }
+
+    private java.sql.Timestamp lastViewedAtOf(long owner) {
+        return jdbc.queryForObject(
+                "SELECT last_viewed_at FROM my_record WHERE owner_id = ?",
+                java.sql.Timestamp.class,
+                owner);
     }
 
     private java.sql.Timestamp deletedAtOf(long owner) {
