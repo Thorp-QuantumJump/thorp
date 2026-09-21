@@ -44,3 +44,9 @@ export const loadErrorTitle = '조회에 실패했습니다'
 
 /** 다른 검색의 사례 상세를 섞어 보이지 않는다(spec FR-029). */
 export const detailMismatchMessage = '요청한 사례 상세와 응답이 일치하지 않습니다.'
+
+/** 내 기록의 '다시 보기'로 저장된 검색을 열었을 때(006 research R17, FR-006 "동일 버전 조회"). */
+export const savedSearchNote = '저장된 검색을 다시 봅니다(동일 버전 조회). 새로 검색하면 최신 판이 열립니다.'
+
+/** 로그인 사용자의 검색을 내 기록에 남기지 못했을 때(006 T037). 검색 결과는 그대로다 — 기록만 남지 않았다. */
+export const recordFailedNote = '이 검색을 내 기록에 남기지 못했습니다. 결과는 그대로 볼 수 있습니다.'

@@ -10,6 +10,7 @@ import com.ssafy.thorp.regimelink.domain.vo.AvailabilityReason;
 import com.ssafy.thorp.regimelink.domain.vo.AvailabilityState;
 import com.ssafy.thorp.regimelink.domain.vo.EntryPath;
 import com.ssafy.thorp.regimelink.domain.vo.LinkRole;
+import com.ssafy.thorp.regimelink.support.FakeBacktestRuns;
 import com.ssafy.thorp.regimelink.support.FakeMarketMetadata;
 import com.ssafy.thorp.regimelink.support.FakeRegimeSearches;
 import com.ssafy.thorp.regimelink.support.FakeTradingCalendar;
@@ -105,7 +106,7 @@ class AvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("구간 10거래일째 상장폐지면 미완성이고, 그 종목을 쓰지 않는 실행은 정상이다")
+    @DisplayName("구간 10거래일째 상장폐지면 묶음 전체가 미완성이다")
     void 이른_상장폐지는_미완성이다() {
         metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4))
                 .listed(BIO, LocalDate.of(2010, 1, 4));
@@ -121,25 +122,32 @@ class AvailabilityServiceTest {
         AvailabilityResult result =
                 service(
                                 calendar,
+                                // 비교 묶음의 두 실행은 같은 섹터 후보를 쓴다 — 다르면 조건 대조(T093)가
+                                // 계산 전에 400 으로 막는다. 그래서 종목 이력에서 오는 사유는 두 실행에
+                                // 함께 걸리고, 실행마다 갈리는 것은 워밍업·분석 기간 쪽이다.
                                 run(
                                         "base",
                                         LinkRole.BASE,
                                         1L,
-                                        List.of(entry("SEMICONDUCTOR", SEMICONDUCTOR)),
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
                                         LocalDate.of(2010, 1, 4),
                                         LocalDate.of(2025, 12, 30)),
                                 run(
                                         "compare",
                                         LinkRole.COMPARE,
                                         2L,
-                                        List.of(entry("BIO", BIO)),
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
                                         LocalDate.of(2010, 1, 4),
                                         LocalDate.of(2025, 12, 30)))
                         .evaluate(query(EntryPath.STRATEGY_RESULT));
 
         AvailabilityResult.CaseAvailability found = result.cases().get(0);
         assertThat(found.perRun().get(0).availability().state())
-                .isEqualTo(AvailabilityState.NORMAL);
+                .isEqualTo(AvailabilityState.POST_INCOMPLETE);
         assertThat(found.perRun().get(1).availability().state())
                 .isEqualTo(AvailabilityState.POST_INCOMPLETE);
         assertThat(found.perRun().get(1).availability().reason())
@@ -188,7 +196,7 @@ class AvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("사례 시점의 대응표에 없는 섹터를 쓴 실행만 자료 부족이 된다")
+    @DisplayName("사례 시점의 대응표에 없는 섹터를 쓰면 자료 부족이 된다")
     void 대응표에_없는_섹터는_그_실행만_걸린다() {
         metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4))
                 .listed(BIO, LocalDate.of(2010, 1, 4));
@@ -207,21 +215,25 @@ class AvailabilityServiceTest {
                                         "base",
                                         LinkRole.BASE,
                                         1L,
-                                        List.of(entry("SEMICONDUCTOR", SEMICONDUCTOR)),
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
                                         LocalDate.of(2010, 1, 4),
                                         LocalDate.of(2025, 12, 30)),
                                 run(
                                         "compare",
                                         LinkRole.COMPARE,
                                         2L,
-                                        List.of(entry("BIO", BIO)),
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
                                         LocalDate.of(2010, 1, 4),
                                         LocalDate.of(2025, 12, 30)))
                         .evaluate(query(EntryPath.STRATEGY_RESULT));
 
         AvailabilityResult.CaseAvailability found = result.cases().get(0);
-        assertThat(found.perRun().get(0).availability().state())
-                .isEqualTo(AvailabilityState.NORMAL);
+        assertThat(found.perRun().get(0).availability().reason())
+                .isEqualTo(AvailabilityReason.SECTOR_UNMAPPED);
         assertThat(found.perRun().get(1).availability().reason())
                 .isEqualTo(AvailabilityReason.SECTOR_UNMAPPED);
     }
@@ -409,9 +421,15 @@ class AvailabilityServiceTest {
     }
 
     private AvailabilityService service(FakeTradingCalendar calendar, BundleRunView... runs) {
-        BacktestRunReadPort bundles = (base, compare) -> List.of(runs);
+        BacktestRunReadPort bundles = new FakeBacktestRuns(List.of(runs));
         return new AvailabilityService(
-                searches, bundles, calendar, metadata, filters, new FilterKeyCalculator());
+                searches,
+                bundles,
+                calendar,
+                metadata,
+                filters,
+                new FilterKeyCalculator(),
+                new BundleConsistencyChecker());
     }
 
     private FakeTradingCalendar calendar() {
@@ -466,6 +484,9 @@ class AvailabilityServiceTest {
                 "FIXED_WEIGHT",
                 "내가 정한 비중",
                 "MAP-1",
+                new java.math.BigDecimal("10000000.00"),
+                "KR-ETF-2026-09",
+                "KRX-2026-09-09",
                 universe,
                 start,
                 end,

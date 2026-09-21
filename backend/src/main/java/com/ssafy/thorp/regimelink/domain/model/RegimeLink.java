@@ -62,6 +62,26 @@ public record RegimeLink(
         if (why.state() != AvailabilityState.DATA_INSUFFICIENT) {
             throw new IllegalArgumentException("자료 부족 판정이 아닙니다: " + why.state());
         }
+        return terminalWithoutResult(runId, caseRef, scenario, window, why);
+    }
+
+    /**
+     * 계산 작업을 만들지 않고 끝나는 링크 — 자료 부족과 사후 미완성 둘 다다 (T068).
+     *
+     * <p>{@code POST_INCOMPLETE}도 결과 없는 {@code COMPLETED}다. 확보 거래일이 21 미만이면 요약 수치를 내지 않기로 한 것이지 계산이
+     * 실패한 것이 아니고, 화면은 {@code completedTradingDays}와 사유만 보인다(Clarifications 09-18 Q2).
+     */
+    public static RegimeLink dataInsufficientOrIncomplete(
+            Long runId, CaseRef caseRef, Scenario scenario, PostWindow window, Availability why) {
+        if (why.state() != AvailabilityState.DATA_INSUFFICIENT
+                && why.state() != AvailabilityState.POST_INCOMPLETE) {
+            throw new IllegalArgumentException("계산 없이 끝낼 판정이 아닙니다: " + why.state());
+        }
+        return terminalWithoutResult(runId, caseRef, scenario, window, why);
+    }
+
+    private static RegimeLink terminalWithoutResult(
+            Long runId, CaseRef caseRef, Scenario scenario, PostWindow window, Availability why) {
         return new RegimeLink(
                 null,
                 null,
