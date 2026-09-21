@@ -21,10 +21,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Final
 
@@ -118,7 +120,14 @@ def _window(indicator: IndicatorDefinition, mode: str, today: date) -> tuple[str
     end = f"{today.year:04d}-{today.month:02d}"
     if mode == "initial":
         return indicator.series_start or "2000-01", end
-    months_back = max(indicator.refresh_months_n, 1)
+    # 증가율은 갱신 대상월만 다시 받아서는 계산할 수 없다. 정기 수집 창 앞에
+    # 변환식의 분모가 놓이는 선행 구간을 함께 열어, 새 관측이 직전의 정상 값을
+    # ``NOT_TRANSFORMABLE`` 로 덮지 않게 한다.
+    transform_lookback = {
+        registry.TRANSFORM_YOY: 12,
+        registry.TRANSFORM_MOM: 1,
+    }.get(indicator.transform_rule, 0)
+    months_back = max(indicator.refresh_months_n, 1) + transform_lookback
     year = today.year
     month = today.month - months_back
     while month <= 0:
@@ -186,6 +195,42 @@ def _save_raw(
             sha256=storage.content_hash(body.encode("utf-8")),
         )
     )
+
+
+def _cached_raw(data_root: Path, source_id: str, indicator_id: str) -> RawDocument | None:
+    """중단된 분할 수집이 이미 봉인한 원본을 다시 내려받지 않게 되읽는다."""
+    directory = data_root / storage.RAW_ROOT / source_id / indicator_id
+    candidates = (
+        sorted(
+            (
+                path for path in directory.glob("*/*")
+                if path.suffix in {".json", ".xml"}
+                and path.with_suffix(path.suffix + ".complete").exists()
+            ),
+            reverse=True,
+        )
+        if directory.exists()
+        else []
+    )
+    if not candidates:
+        return None
+    path = candidates[0]
+    body = path.read_text(encoding="utf-8")
+    received_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    return RawDocument(
+        indicator_id=indicator_id,
+        source=source_id,
+        body=body,
+        received_at=received_at,
+        path=path,
+        sha256=storage.content_hash(body.encode("utf-8")),
+    )
+
+
+def _mark_raw_complete(document: RawDocument) -> None:
+    """파싱까지 성공한 분할 원본만 재개 체크포인트로 표시한다."""
+    marker = document.path.with_suffix(document.path.suffix + ".complete")
+    marker.write_text(document.sha256, encoding="ascii")
 
 
 def _classify(error: Exception) -> tuple[str, str]:
@@ -394,13 +439,19 @@ def _collect_customs(
             params = customs.build_params(
                 window.start.strftime("%Y%m"), window.end.strftime("%Y%m")
             )
-            body = transport.fetch_text(
-                fetcher, config, "", params, key_param="serviceKey"
-            )
             label = f"trade__{window.start:%Y%m}_{window.end:%Y%m}"
             first = outcomes[members[0].indicator_id]
-            _save_raw(first, data_root, SOURCE_CUSTOMS, label, body, received_at)
+            cached = _cached_raw(data_root, SOURCE_CUSTOMS, label)
+            if cached is None:
+                body = transport.fetch_text(
+                    fetcher, config, "", params, key_param="serviceKey"
+                )
+                _save_raw(first, data_root, SOURCE_CUSTOMS, label, body, received_at)
+            else:
+                body = cached.body
+                first.raw_documents.append(cached)
             response = customs.parse_all(body, members)
+            _mark_raw_complete(first.raw_documents[-1])
             for indicator in members:
                 outcomes[indicator.indicator_id].observations.extend(
                     response[indicator.indicator_id]
@@ -413,12 +464,10 @@ def _collect_customs(
                 outcomes[indicator.indicator_id].status = status
                 outcomes[indicator.indicator_id].error_class = error_class
             logger.warning("관세청 %s~%s 수집 실패: %s", window.start, window.end, error)
-            if status == STATUS_QUOTA:
-                # **한도에 닿으면 그 자리에서 멈춘다**(FR-011). 전 구간이 서른일곱 조각이라
-                # 계속 부르면 남은 서른여섯 번이 전부 같은 거절을 받으며 한도를 더 깎고,
-                # 원천이 접근을 끊는 쪽으로 간다. 받은 구간은 그대로 두어 다음 실행이
-                # 그만큼 덜 부르게 한다.
-                break
+            # 실패한 구간 뒤를 계속 받지 않는다. 한도라면 추가 거절을 막고, 구조 변경이라면
+            # 잘못 해석할 수 있는 같은 형식의 응답을 더 저장하지 않는다. 성공한 앞 구간은
+            # 체크포인트로 남아 다음 실행이 실패한 구간부터 이어받는다(T047·T051).
+            break
     return list(outcomes.values())
 
 
@@ -502,6 +551,8 @@ def write_processed(
                     "raw_unit": [row.raw_unit for row in rows],
                     "transformed_unit": [row.transformed_unit for row in rows],
                     "source_updated_at": [row.source_updated_at for row in rows],
+                    "released_at": [row.released_at for row in rows],
+                    "received_at": [row.received_at for row in rows],
                 }
             )
             path = storage.processed_path(data_root, indicator_id, year)
@@ -509,6 +560,69 @@ def write_processed(
             pq.write_table(table, path)
             written.append(path)
     return written
+
+
+def merge_published_observations(
+    engine: Engine,
+    dataset_id: int,
+    indicators: Sequence[IndicatorDefinition],
+    fresh: Mapping[str, Sequence[NormalizedObservation]],
+) -> dict[str, list[NormalizedObservation]]:
+    """정기 재조회분을 직전 불변 스냅샷에 월 단위로 덮어 새 전체 후보를 만든다.
+
+    기존 자료 버전은 수정하지 않는다. 같은 월에 새 관측이 왔을 때만 새 후보의 그 월을 바꾸고,
+    재조회 범위 밖의 과거 월은 그대로 복사한다(FR-009).
+    """
+    definitions = {indicator.indicator_id: indicator for indicator in indicators}
+    merged: dict[str, dict[str, NormalizedObservation]] = {
+        indicator_id: {} for indicator_id in definitions
+    }
+    with engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT indicator_id, target_month, raw_value, transformed_value,"
+                " released_at, received_at, break_segment, missing_reason"
+                " FROM macro_observation WHERE dataset_version_id = :dataset"
+            ),
+            {"dataset": dataset_id},
+        ).mappings().all()
+    for row in rows:
+        indicator = definitions.get(row["indicator_id"])
+        if indicator is None:
+            raise ValueError("기존 자료 버전에 현재 등록표 밖의 지표가 있다")
+        raw_value = row["raw_value"]
+        if isinstance(raw_value, str):
+            raw_value = json.loads(raw_value)
+        transformed = row["transformed_value"]
+        if isinstance(transformed, str):
+            transformed = json.loads(transformed)
+        period = row["target_month"].strftime("%Y-%m")
+        merged[indicator.indicator_id][period] = NormalizedObservation(
+            indicator_id=indicator.indicator_id,
+            period=period,
+            transformed_value=None if transformed is None else Decimal(str(transformed)),
+            missing_reason=row["missing_reason"],
+            raw_values=tuple(
+                (raw_period, None if value is None else Decimal(str(value)))
+                for raw_period, value in (raw_value or [])
+            ),
+            transform_rule=indicator.transform_rule,
+            raw_unit=indicator.raw_unit,
+            transformed_unit=indicator.transformed_unit,
+            source_updated_at=None,
+            released_at=row["released_at"],
+            received_at=row["received_at"],
+            break_segment=row["break_segment"],
+        )
+    for indicator_id, observations in fresh.items():
+        if indicator_id not in merged:
+            raise ValueError(f"새 관측에 등록표 밖의 지표가 있다: {indicator_id}")
+        for observation in observations:
+            merged[indicator_id][observation.period] = observation
+    return {
+        indicator_id: [by_month[month] for month in sorted(by_month)]
+        for indicator_id, by_month in merged.items()
+    }
 
 
 def record_raw_revisions(engine: Engine, outcomes: Sequence[IndicatorOutcome]) -> int:
@@ -799,9 +913,13 @@ def run(
         indicators, outcomes, as_of=today, trading_days=trading_days, received_at=received_at
     )
     raw_written = record_raw_revisions(engine, outcomes)
+    pointer = _current_pointer(engine)
+    if mode == "regular" and pointer.dataset_id is not None:
+        observations = merge_published_observations(
+            engine, pointer.dataset_id, indicators, observations
+        )
     processed_files = tuple(write_processed(observations, data_root))
 
-    pointer = _current_pointer(engine)
     raw_files = tuple(
         document.path for outcome in outcomes for document in outcome.raw_documents
     )

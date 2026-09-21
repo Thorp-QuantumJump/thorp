@@ -143,15 +143,15 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Independent Test**: 어느 지표의 수집을 실패시켜 마지막 갱신 시각이 기록되는지, 결측월이 빈 값으로 남고 그 분야 기준월이 물러나는지 확인한다
 
-- [ ] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)
-- [ ] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다
-- [ ] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. T003의 재시도 설정(기본 최대 3회, 1·2·4초)대로 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)
-- [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다
-- [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다
-- [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다
+- [X] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)
+- [X] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다
+- [X] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. T003의 재시도 설정(기본 최대 3회, 1·2·4초)대로 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)
+- [X] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다
+- [X] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다
+- [X] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다
 - [X] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)
-- [ ] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)
-- [ ] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)
+- [X] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)
+- [X] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)
 
 **Checkpoint**: 지연·실패·결측·개정이 값에 섞이지 않고 상태로 드러난다
 
