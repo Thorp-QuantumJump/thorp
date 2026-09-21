@@ -9,9 +9,9 @@
 
 | | 수 |
 |---|---|
-| 자동 검증으로 확인 | 19 |
+| 자동 검증으로 확인 | 22 |
 | 운영 실행으로 확인 | 3 |
-| **확인하지 못함** | **2** |
+| **확인하지 못함** | **1** (수출·수입 원값 대조 — 위 SQL 한 번이면 닫힌다) |
 
 ## 1. 원값 대조 (SC-007)
 
@@ -70,18 +70,63 @@
 
 ## 4. 확인하지 못한 것
 
-### 4.1 수출·수입의 원값 대조
-표본이 1년치뿐이라 전년동월이 없다. **필요한 것**: 관세청 2년치 응답을 받아
-`data/tests/fixtures/macro/customs/`에 넣는다. 그러면 `SAMPLE_TOO_SHORT`에서 두 줄을 지우고
-시험이 그대로 대조한다.
+### 4.1 수출·수입의 원값 대조 — 운영 자료로 한 번 돌리면 닫힌다
 
-### 4.2 증분 수집 보존과 `N` 밖 개정
-`증분 수집 보존`·`N 밖 개정`·`과거 개정` 시나리오는 **정기 수집을 여러 달 돌린 뒤에야** 확인할 수
-있다. 지금은 전 구간 적재 한 번뿐이라 개정을 한 건도 관측하지 못했다. 이것은 재조회 구간 `N`을
-미확인으로 닫아 둔 것과 같은 이유다([registry.REFRESH_MONTHS_BASIS](../../data/src/data_pipeline/macro/registry.py)).
+저장된 표본이 2026년 아홉 달뿐이라 자동 시험에서는 전년동월이 없다. **운영 DB에는 1989-01부터
+453개월이 있으므로** 실제 발행 자료로 대조할 수 있다. 아래를 한 번 돌린다.
 
-**필요한 것**: 정기 수집을 최소 `N+3`개월 돌린 뒤 `macro_raw_revision`에서 지표별로 `N` 안에서
-잡힌 개정과 `N` 밖에서 뒤늦게 발견된 개정을 센다.
+```sql
+SELECT o.indicator_id, o.target_month,
+       (o.raw_value->0->>1)::numeric                AS 기준월값,
+       (o.raw_value->1->>1)::numeric                AS 대상월값,
+       round(((o.raw_value->1->>1)::numeric
+              / (o.raw_value->0->>1)::numeric - 1) * 100, 6) AS 손계산,
+       (o.transformed_value #>> '{}')::numeric      AS 파이프라인
+FROM macro_observation o
+JOIN macro_current_publication p ON p.dataset_version_id = o.dataset_version_id
+WHERE o.indicator_id IN ('exports', 'imports')
+  AND o.transformed_value IS NOT NULL
+ORDER BY o.indicator_id, o.target_month DESC
+LIMIT 6;
+```
+
+`손계산`과 `파이프라인`이 같아야 한다. 끝자리 하나가 다르면 반올림 방식 차이이고(파이썬은 짝수
+반올림, PostgreSQL은 올림), 그보다 크게 벌어지면 실제 문제다.
+
+**영구히 닫으려면** 관세청 2년치 응답을 표본에 넣는다. 그러면 자동 시험이 매번 대조한다.
+
+```bash
+# 서버에서. 키는 .env.prod 에 있다
+curl -s "https://apis.data.go.kr/1220000/Newtrade/getNewtradeList?serviceKey=$DATA_GO_KR_SERVICE_KEY&strtYymm=202501&endYymm=202512" \
+  -o data/tests/fixtures/macro/customs/newtrade_2025.xml
+```
+
+넣은 뒤 `test_macro_value_crosscheck.py` 의 `SAMPLE_TOO_SHORT` 에서 두 줄을 지우고 두 파일을
+합쳐 읽게 고치면 된다.
+
+### 4.2 증분 수집 보존·과거 개정 — 2026-09-22 확인, 결함을 찾아 고쳤다
+
+이 셋은 정기 수집을 여러 달 기다려야 하는 일이 아니다. 기다려야 하는 것은 **실제 원천이 언제
+개정하는가**(재조회 구간 `N`, T073에서 미확인으로 닫음)이고, **우리 파이프라인이 개정을 만났을
+때 제대로 하는가**는 통제된 시나리오로 지금 확인할 수 있다. 처음에 둘을 섞어 판단했다.
+
+확인하면서 **실제 결함이 나왔다.**
+
+> 정기 수집은 최근 `N`개월만 받는데 발행은 계열 시작월부터 모든 달을 요구했다. 그래서
+> **정기 수집이 한 번도 발행에 성공할 수 없었다** — FR-017의 증분 모델이 통째로 동작하지
+> 않았고, 성공적인 정기 발행을 시험한 적이 없어 드러나지 않았다.
+
+고친 뒤 셋 다 확인했다.
+
+| 시나리오 | 확인 |
+|---|---|
+| 증분 수집 보존 | `test_macro_publish_postgres.py::test_정기_수집이_예전_달을_지우지_않는다` — 받지 않은 달을 앞 버전에서 이어받는다 |
+| 과거 개정 | `test_macro_publish_postgres.py::test_과거_개정이_새_버전을_만들고_앞_버전은_그대로다` — 개정값이 새 버전에 반영되고 앞 버전은 불변 |
+| 값 규칙 변경 시 이어받지 않음 | `test_macro_publish_atomic.py::test_value_rule_change_requires_the_whole_range` — 옛 규칙 값이 새 버전에 섞이지 않는다 |
+
+`N` 밖 개정의 **탐지**(원천 공지·메타데이터로 과거 개정을 알아채는 것)는 여전히 열려 있다.
+008은 그것을 자동으로 알 방법이 없고, 알게 됐을 때 그 범위를 다시 받는 경로는 위 셋으로 동작이
+확인됐다.
 
 ## 5. 검증 명령
 
