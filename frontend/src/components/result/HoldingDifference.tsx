@@ -1,4 +1,5 @@
 import type { ResultConfigItem, ResultWeights } from '@/types/result'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { formatRatio } from './formatResult'
 import type { SectorLabels } from './sectorLabels'
 import styles from './resultDetail.module.css'
@@ -67,15 +68,22 @@ export function HoldingDifference({
 
   return (
     <section className={styles.item} aria-labelledby="holding-difference-title">
-      <h3 id="holding-difference-title" className={styles.itemTitle}>
-        보유 섹터 차이
-      </h3>
-      <p className={styles.copy}>
-        두 결과가 실제로 담은 섹터가 다릅니다. 담은 섹터가 달라 생긴 차이(선정 효과)와 같은 섹터를 담은 비중이
-        달라 생긴 차이(배분 효과)를 나눠 보입니다. 두 결과의 값을 나란히 둘 뿐 차이를 따로 계산하지 않습니다.
-      </p>
+      <div className={styles.itemHead}>
+        <h3 id="holding-difference-title" className={styles.itemTitle}>
+          보유 섹터 차이
+        </h3>
+        <InlineHelp label="보유 섹터 차이">
+          <p>두 결과의 값을 나란히 둘 뿐 차이를 따로 계산하지 않습니다.</p>
+        </InlineHelp>
+      </div>
+      <p className={styles.copy}>두 결과가 실제로 담은 섹터가 다릅니다.</p>
 
-      <h4 className={styles.subTitle}>선정 효과: 한쪽에만 있던 섹터</h4>
+      <div className={styles.itemHead}>
+        <h4 className={styles.subTitle}>선정 효과: 한쪽에만 있던 섹터</h4>
+        <InlineHelp label="선정 효과">
+          <p>담은 섹터가 달라 생긴 차이입니다.</p>
+        </InlineHelp>
+      </div>
       <dl className={styles.facts}>
         <dt>기준({base.name})에만 있던 섹터</dt>
         <dd>{joinSectors(onlyBase, labels)}</dd>
@@ -83,7 +91,12 @@ export function HoldingDifference({
         <dd>{joinSectors(onlyTarget, labels)}</dd>
       </dl>
 
-      <h4 className={styles.subTitle}>배분 효과: 함께 담은 섹터의 비중</h4>
+      <div className={styles.itemHead}>
+        <h4 className={styles.subTitle}>배분 효과: 함께 담은 섹터의 비중</h4>
+        <InlineHelp label="배분 효과">
+          <p>같은 섹터를 담은 비중이 달라 생긴 차이입니다.</p>
+        </InlineHelp>
+      </div>
       {common.length === 0 ? (
         <p className={styles.copy}>두 결과가 함께 담은 섹터가 없습니다.</p>
       ) : (
