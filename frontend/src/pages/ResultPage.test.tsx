@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -282,7 +282,11 @@ describe('ResultPage', () => {
     await user.click(screen.getByRole('button', { name: '다시 시도' }))
 
     expect(apiMocks.retryResult).toHaveBeenCalledWith(resultToken)
-    expect((await screen.findByLabelText('현재 주소')).textContent).toBe(`/results/${newToken}`)
+    // 주소는 클릭 뒤 retryResult → navigate → 렌더를 거쳐 바뀐다. 이미 있는 탐침을 바로 읽으면 바쁜 실행에서
+    // 옛 주소를 본다 — 바뀔 때까지 기다린다.
+    await waitFor(() =>
+      expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${newToken}`),
+    )
   })
 
   it.each([
