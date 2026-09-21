@@ -835,17 +835,27 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
       const accepted = await support.createBacktest(request)
       setSubmission({ status: 'accepted', accepted })
       /*
-        011 사례 경로는 **접수되면 곧바로** 011 화면으로 간다(진입 계약 §2). 003은 지금 접수 뒤 결과
-        화면으로 이동하지 않으므로 완료를 여기서 기다리지 않는다 — 기준 실행의 진행 상태는 011 화면이
-        005와 같은 방식으로 보인다. `case`가 없으면 지금 동작 그대로다.
+        011 사례 경로는 **접수되면 곧바로** 011 화면으로 간다(진입 계약 §2). 기준 실행의 진행 상태는
+        011 화면이 005와 같은 방식으로 보이므로 완료를 여기서 기다리지 않는다.
 
         004 요청 본문에는 `case`를 싣지 않았다. 004 계약을 바꾸지 않고 화면이 주소로 들고 다닌다.
-        공개 토큰이 없는 옛 접수 응답이면 이동할 곳이 없으므로 접수 안내에 머문다.
+
+        **아래 결과 화면 이동보다 먼저 본다.** 사례를 들고 온 사용자가 보러 온 것은 결과 하나가 아니라
+        사례와의 비교다. 순서를 뒤집으면 011 진입이 결과 화면에 먹혀 `case`가 주소에서 사라진다.
       */
       if (caseId !== null && caseId !== '' && accepted.publicToken) {
         void navigate(
           `/regime-link?${new URLSearchParams({ base: accepted.publicToken, case: caseId }).toString()}`,
         )
+        return
+      }
+      // 사례가 없으면 그 실행의 결과 주소로 옮긴다(003 T040이 005에 넘긴 자리, 005 FR-019).
+      // 아직 계산 중이어도 결과 화면이 `QUEUED`·`RUNNING`을 폴링해 진행을 보이므로 여기서 기다리지 않는다.
+      //
+      // **토큰이 없으면 어느 쪽으로도 옮기지 않는다.** 공개 주소는 202 응답이 주는 값이고 화면이
+      // 지어낼 수 없다(옛 접수 응답에는 없다). 그때는 접수 안내에 머물러 요청 번호를 남긴다.
+      if (accepted.publicToken) {
+        void navigate(`/results/${accepted.publicToken}`)
       }
     } catch (error) {
       // 거절마다 계약 §2가 정한 처리를 한다. **어느 경우에도 요청을 다시 보내지 않는다** — 다시 보낼지는
@@ -1264,8 +1274,8 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
             {submission.status === 'accepted' ? (
               <p className={styles.result} role="status">
                 분석 요청을 접수했습니다. 요청 번호 {submission.accepted.backtestId}, 상태{' '}
-                {statusText[submission.accepted.status] ?? submission.accepted.status}. 결과 화면으로의
-                이동은 아직 준비 중입니다.
+                {statusText[submission.accepted.status] ?? submission.accepted.status}. 결과 주소를 받지
+                못해 결과 화면으로 옮기지 못했습니다. 내 기록에서 이 요청 번호로 찾을 수 있습니다.
               </p>
             ) : null}
             {submission.status === 'failed' ? (

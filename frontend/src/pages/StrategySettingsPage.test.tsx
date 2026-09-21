@@ -249,6 +249,36 @@ function renderPageWithParamSearchRoute(support: AnalysisSupport) {
 }
 
 /**
+ * 접수 뒤 옮겨 간 결과 주소를 읽으려고 005 화면 자리에 지금 위치를 그대로 보이는 대역을 둔다.
+ * 005 화면 자체를 띄우지 않는 까닭은 이 검사가 **어느 주소로 옮기는가**만 보기 때문이다.
+ */
+function ResultProbe() {
+  const location = useLocation()
+  return <p data-testid="result-location">{location.pathname}</p>
+}
+
+function renderPageWithResultRoute(support: AnalysisSupport) {
+  const authValue: AuthContextValue = {
+    status: 'anonymous',
+    user: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    recheck: vi.fn(),
+  }
+
+  return render(
+    <MemoryRouter initialEntries={['/strategy']}>
+      <AuthContext.Provider value={authValue}>
+        <Routes>
+          <Route path="/strategy" element={<StrategySettingsPage support={support} />} />
+          <Route path="/results/:token" element={<ResultProbe />} />
+        </Routes>
+      </AuthContext.Provider>
+    </MemoryRouter>,
+  )
+}
+
+/**
  * 사용자 비중을 쓰는 전략을 섹터 셋에서 고를 수 있게 만든 응답.
  *
  * <p><b>카드만 고를 수 있게 바꾸지 않고 기본값도 규칙에 맞춘다.</b> 픽스처의 기본값(고를 섹터 수 4)은
@@ -343,6 +373,48 @@ afterEach(() => {
 })
 
 describe('StrategySettingsPage', () => {
+  it('접수되면 그 실행의 결과 주소로 옮긴다', async () => {
+    // 005 FR-019. 주소가 되는 것은 접수 응답의 공개 토큰이다 — 화면은 `backtestId`로 주소를 짓지 않는다.
+    const user = userEvent.setup()
+    const publicToken = '0123456789abcdef0123456789abcdef'
+    const { support } = makeSupport({
+      createBacktest: async () => ({
+        backtestId: 'BT-20260916-000001',
+        status: 'QUEUED' as const,
+        publicToken,
+      }),
+    })
+    renderPageWithResultRoute(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('result-location').textContent).toBe(`/results/${publicToken}`),
+    )
+  })
+
+  it('접수 응답에 결과 주소가 없으면 옮기지 않고 요청 번호를 남긴다', async () => {
+    // 공개 토큰은 서버가 주는 값이라 없을 때 화면이 지어낼 수 없다. 접수된 요청을 잃지 않게 번호를 보인다.
+    const user = userEvent.setup()
+    const { support } = makeSupport()
+    renderPageWithResultRoute(support)
+
+    await user.click(await findCardNamed(selectableStrategy.name))
+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))
+    await user.click(actionButton('분석하기'))
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('status')
+          .some((node) => node.textContent?.includes('BT-20260916-000001')),
+      ).toBe(true),
+    )
+    expect(screen.queryByTestId('result-location')).toBeNull()
+  })
+
   it('카드 한 번과 분석하기 한 번으로 기본값 요청이 만들어진다', async () => {
     // SC-001, quickstart 4. 상세 설정을 한 번도 열지 않는다.
     const user = userEvent.setup()
