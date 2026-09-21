@@ -74,7 +74,13 @@ public enum ErrorCode {
     LEARNING_TERM_ID_TAKEN(HttpStatus.CONFLICT, "다른 글이 쓰고 있는 용어 식별자입니다."),
     LEARNING_DRAFT_CHANGED(HttpStatus.CONFLICT, "다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요."),
     LEARNING_PUBLISH_CHECK_FAILED(
-            HttpStatus.UNPROCESSABLE_ENTITY, "게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.");
+            HttpStatus.UNPROCESSABLE_ENTITY, "게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다."),
+
+    // spec 006 내 기록. 계약은 specs/006-my-records/contracts/my-records-api.md "오류".
+    // 저장 자리 한도(409)와 실행 자원 한도(EXECUTION_LIMIT, 429)를 다른 코드로 나눈다 — 사용자가
+    // 할 일이 다르다. 앞은 기존 기록을 지워야 풀리고 뒤는 기다리면 풀린다(spec FR-018).
+    RECORD_LIMIT_REACHED(HttpStatus.CONFLICT, "저장할 수 있는 탐색 묶음 개수에 도달했습니다. 기존 항목을 지운 뒤 다시 시작해 주세요."),
+    RECORD_WITHDRAWN(HttpStatus.GONE, "더 볼 수 없는 검색 결과입니다.");
 
     private final HttpStatus status;
     private final String message;

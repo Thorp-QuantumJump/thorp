@@ -222,6 +222,15 @@ thorp:
     tombstone-retention: P30D
     # 공개 경로 /results/{token}/trades 의 페이지 크기이자 상한. 004 거래 내역 기본값과 같게 둔다.
     trades-page-size: 100
+  my-records:
+    # 한 사용자가 저장해 둘 수 있는 탐색 묶음 기록 수(spec 006 FR-018, PD-13).
+    #
+    # **값이 아니라 장치가 이 Task 의 산출물이다.** 20 은 spec 이 "초기 임시값"으로 표시한 수이고
+    # PD-13 이 실측 뒤 정한다 — spec 은 확정값을 고정하지 않는다. 004 PD-06 한도와 같은 방식이다.
+    #
+    # 상한은 탐색 묶음에만 있다. 단일 분석·경제환경 기록에는 개수 상한이 없다(FR-018).
+    # @NotNull 이라 비면 기동에 실패한다 — 설정 누락으로 "상한 없이 저장"이 되지 않게 한다.
+    search-bundle-limit: 20
 
 server:
   port: 8080
