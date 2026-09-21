@@ -187,10 +187,10 @@ description: "내 기록(목록·다시 보기·설정 바꿔 비교·내보내�
 
 **Purpose**: 검증 명령 통과, 문서 정합, 자동 삭제 부재 확인.
 
-- [ ] T050 Run `./gradlew spotlessApply build` in `backend/` and `npm run lint && npm run build && npm test` in `frontend/`; confirm `ArchitectureTest` passes for `myrecord` and that `npm test` reports the new test files as collected (not skipped) — add `src/components/records/*.test.ts` to `test.include` in `frontend/vite.config.ts` if needed
-- [ ] T051 [P] Run quickstart S11: `grep -rn "my_record" --include=*.java backend/src/main/java | grep -i "schedul\|expire\|cleanup\|purge"` must return nothing; confirm `saved_at`/`last_viewed_at` are populated and `last_viewed_at` updates on '다시 보기' (T019 `markViewed`)
-- [ ] T052 [P] Update `backend/CLAUDE.md` 규칙 절 with one line: "내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다." and `frontend/CLAUDE.md` 폴더 규칙에 `components/records/`를 추가
-- [ ] T053 Run quickstart S1~S13 end to end against a local stack and record outcomes in `specs/006-my-records/verification/quickstart-2026-MM-DD.md` (pass/fail per scenario, exact commands used, "확인하지 않는 것" left as documented). S14 사용성 관찰은 별도 항목이며 여기서 통과로 쓰지 않는다
+- [x] T050 Run `./gradlew spotlessApply build` in `backend/` and `npm run lint && npm run build && npm test` in `frontend/`; confirm `ArchitectureTest` passes for `myrecord` and that `npm test` reports the new test files as collected (not skipped) — add `src/components/records/*.test.ts` to `test.include` in `frontend/vite.config.ts` if needed
+- [x] T051 [P] Run quickstart S11: `grep -rn "my_record" --include=*.java backend/src/main/java | grep -i "schedul\|expire\|cleanup\|purge"` must return nothing; confirm `saved_at`/`last_viewed_at` are populated and `last_viewed_at` updates on '다시 보기' (T019 `markViewed`)
+- [x] T052 [P] Update `backend/CLAUDE.md` 규칙 절 with one line: "내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다." and `frontend/CLAUDE.md` 폴더 규칙에 `components/records/`를 추가
+- [x] T053 Run quickstart S1~S13 end to end against a local stack and record outcomes in `specs/006-my-records/verification/quickstart-2026-MM-DD.md` (pass/fail per scenario, exact commands used, "확인하지 않는 것" left as documented). S14 사용성 관찰은 별도 항목이며 여기서 통과로 쓰지 않는다
 
 ---
 
