@@ -57,6 +57,12 @@ export function RecordActionsMenu({
     if (opened.current && dialog === null) triggerRef.current?.focus()
   }, [open, dialog])
 
+  /** 대화상자를 열 때 메뉴를 접는다. 둘이 함께 떠 있으면 무엇을 고르는 중인지 흐려진다. */
+  function openDialog(which: 'rename' | 'delete') {
+    setOpen(false)
+    setDialog(which)
+  }
+
   async function startExport(format: 'csv' | 'json') {
     setOpen(false)
     announce(`${item.name} 을(를) ${format.toUpperCase()} 로 내려받습니다.`)
@@ -86,7 +92,7 @@ export function RecordActionsMenu({
 
       {open ? (
         <div id={menuId} className={styles.menu} role="menu">
-          <button type="button" role="menuitem" onClick={() => setDialog('rename')}>
+          <button type="button" role="menuitem" onClick={() => openDialog('rename')}>
             이름 바꾸기
           </button>
           {running ? (
@@ -111,7 +117,7 @@ export function RecordActionsMenu({
               </button>
             </>
           )}
-          <button type="button" role="menuitem" onClick={() => setDialog('delete')}>
+          <button type="button" role="menuitem" onClick={() => openDialog('delete')}>
             지우기
           </button>
         </div>

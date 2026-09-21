@@ -360,10 +360,23 @@
 }
 
 .dialog {
-  max-width: 28rem;
+  /* 화면 가운데에 띄운다. 이 요소가 position:relative 인 .menuAnchor 안에 있어서, 자리를 정해
+     주지 않으면 그 버튼 기준으로 배치돼 왼쪽 위에 붙는다. fixed 라야 뷰포트 기준이 된다. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
   padding: 0;
   border: 1px solid var(--border, #d4d4d8);
   border-radius: 0.75rem;
+  background: var(--background, #fff);
+  color: inherit;
+}
+
+/* showModal 로 열어야 이 배경이 생긴다. 뒤의 메뉴·목록이 비쳐 보이지 않게 덮는다. */
+.dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
 }
 
 .dialogBody {
