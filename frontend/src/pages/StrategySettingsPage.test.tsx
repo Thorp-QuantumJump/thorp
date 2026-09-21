@@ -559,7 +559,7 @@ describe('StrategySettingsPage', () => {
   })
 
   it('기본 화면의 입력은 전략 선택 하나다', async () => {
-    // SC-005. 상세 설정과 기간·금액·조건은 접혀 있고 입력 요소를 내놓지 않는다.
+    // SC-005. 상세 설정과 조건 바꾸기는 접혀 있고 입력 요소를 내놓지 않는다.
     const user = userEvent.setup()
     const { support } = makeSupport()
     const { container } = renderPage(support)
@@ -1804,7 +1804,7 @@ describe('StrategySettingsPage', () => {
   })
 })
 
-describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2·8, SC-004)', () => {
+describe('StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-004)', () => {
   /** 기간 판정 흉내. 줄어든 기간과 그 원인을 001 응답 모양 그대로 넘긴다 */
   const reducedJudgement = (): WarmupJudgement => ({
     verdict: { state: 'reduced', message: '통로가 지은 문장' },
@@ -1828,8 +1828,8 @@ describe('StrategySettingsPage 기간·금액·조건(T065~T067, quickstart 7-2�
   }
 
   async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: '기간·금액·조건' }))
-    return screen.getByRole('region', { name: '기간·금액·조건' })
+    await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
+    return screen.getByRole('region', { name: '조건 바꾸기' })
   }
 
   it('패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다', async () => {

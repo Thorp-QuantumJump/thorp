@@ -195,10 +195,10 @@ function renderPage(entry: string, support: AnalysisSupport) {
   )
 }
 
-/** 전략 카드를 고르고 '기간·금액·조건'을 펼친다. */
+/** 전략 카드를 고르고 '조건 바꾸기'를 펼친다. */
 async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))
-  await user.click(screen.getByRole('button', { name: '기간·금액·조건' }))
+  await user.click(await screen.findByRole('radio', { name: new RegExp(selectableStrategy.name) }))
+  await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
 }
 
 beforeEach(() => {
@@ -249,7 +249,7 @@ describe('003 분석 기간의 사례 제약 (011 진입 계약 §3)', () => {
   it('접수되면 곧바로 011 화면으로 base와 case를 들고 간다', async () => {
     const user = userEvent.setup()
     renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport())
-    await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))
+    await user.click(await screen.findByRole('radio', { name: new RegExp(selectableStrategy.name) }))
 
     const analyze = await screen.findByRole('button', { name: '분석하기' })
     await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('false'))
@@ -282,7 +282,7 @@ describe('003 분석 기간의 사례 제약 (011 진입 계약 §3)', () => {
         judgeWarmup: (): WarmupJudgement => ({ verdict: { state: 'ok' }, window: narrow, reduction: null }),
       }),
     )
-    await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))
+    await user.click(await screen.findByRole('radio', { name: new RegExp(selectableStrategy.name) }))
 
     const analyze = await screen.findByRole('button', { name: '분석하기' })
     await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))
