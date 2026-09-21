@@ -82,6 +82,36 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('heading', { name: '기본 도착 화면' })).toBeTruthy()
   })
 
+  it('쳐 둔 이메일은 화면을 떠났다 돌아와도 남고 비밀번호는 남지 않는다', async () => {
+    const user = userEvent.setup()
+    const first = renderLogin()
+
+    await user.type(await screen.findByLabelText('이메일'), 'new.user@example.com')
+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')
+
+    // 다른 화면에 갔다 오는 것과 같다.
+    first.unmount()
+    renderLogin()
+
+    expect(await screen.findByLabelText('이메일')).toHaveProperty(
+      'value',
+      'new.user@example.com',
+    )
+    expect(screen.getByLabelText('비밀번호')).toHaveProperty('value', '')
+  })
+
+  it('로그인에 성공하면 적어 둔 이메일을 지운다', async () => {
+    const user = userEvent.setup()
+    renderLogin()
+
+    await user.type(await screen.findByLabelText('이메일'), 'new.user@example.com')
+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+
+    await screen.findByRole('heading', { name: '기본 도착 화면' })
+    expect(window.sessionStorage.getItem('thorp.auth.loginEmail')).toBeNull()
+  })
+
   it('로그인 실패는 계정 존재 여부를 드러내지 않는 공통 안내를 표시한다', async () => {
     apiMocks.login.mockRejectedValue(
       new ApiClientError('api', '존재하지 않는 이메일입니다.', {

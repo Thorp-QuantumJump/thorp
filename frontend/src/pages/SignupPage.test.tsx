@@ -55,6 +55,8 @@ async function completeAccountStep(user: ReturnType<typeof userEvent.setup>) {
 
 describe('SignupPage', () => {
   beforeEach(() => {
+    // 진행 상태가 탭 저장소에 남으므로, 앞 테스트의 가입이 다음 테스트로 새지 않게 비운다.
+    window.sessionStorage.clear()
     vi.clearAllMocks()
     apiMocks.requestEmailVerification.mockResolvedValue(undefined)
     apiMocks.confirmEmailVerification.mockResolvedValue(undefined)
@@ -64,6 +66,40 @@ describe('SignupPage', () => {
       nickname: '새사용자',
       status: 'ACTIVE',
     })
+  })
+
+  it('인증번호를 받은 뒤 화면을 떠났다 돌아와도 다시 받지 않는다', async () => {
+    const user = userEvent.setup()
+    const first = renderSignup()
+
+    await user.type(screen.getByLabelText('이메일'), 'new.user@example.com')
+    await user.click(screen.getByRole('button', { name: '인증번호 받기' }))
+    await screen.findByLabelText('인증번호')
+
+    // 다른 화면에 갔다 오는 것과 같다 — 컴포넌트가 사라졌다 다시 선다.
+    first.unmount()
+    renderSignup()
+
+    expect(await screen.findByLabelText('인증번호')).toBeTruthy()
+    expect(screen.getByLabelText('이메일')).toHaveProperty('value', 'new.user@example.com')
+    expect(screen.getByRole('button', { name: '다시 받기' })).toBeTruthy()
+    expect(apiMocks.requestEmailVerification).toHaveBeenCalledOnce()
+  })
+
+  it('비밀번호는 화면을 떠나면 남기지 않는다', async () => {
+    const user = userEvent.setup()
+    const first = renderSignup()
+
+    await completeEmailVerification(user)
+    await user.type(screen.getByLabelText('비밀번호'), 'safe-password')
+
+    first.unmount()
+    renderSignup()
+
+    expect(await screen.findByLabelText('비밀번호')).toHaveProperty('value', '')
+    expect(window.sessionStorage.getItem('thorp.auth.signupProgress')).not.toContain(
+      'safe-password',
+    )
   })
 
   it('잘못된 입력을 요청 전에 표시하고 첫 오류 입력으로 초점을 이동한다', async () => {

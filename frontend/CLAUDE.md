@@ -29,4 +29,9 @@ npm run lint && npm run build && npm test
 - 환경변수는 `VITE_` 접두사만 클라이언트에 노출됨
 - 백테스트는 비동기: 생성 후 `QUEUED → RUNNING → COMPLETED` 폴링 UI를 전제로 설계
 - 전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005).
+- `sessionStorage` 키 `thorp.auth.signupProgress`는 회원가입 진행(이메일·발송/확인 완료 주소·단계·닉네임·전화번호)을
+  보관해 화면을 떠났다 돌아와도 인증번호를 다시 받지 않게 한다. **비밀번호와 인증번호는 넣지 않는다.**
+  가입 성공 시 지운다.
+- `sessionStorage` 키 `thorp.auth.loginEmail`은 로그인 화면에 쳐 둔 이메일을 보관한다.
+  **비밀번호는 넣지 않는다.** 로그인 성공 시 지운다.
 - `sessionStorage` 키: `thorp.strategySettings`(003 설정값), `thorp.diagnosis.sectorSelection`(002 인계 계약). 둘 다 탭 수명이며, 003은 002의 `diagnosis/selectionStorage`를 통해 섹터 선택을 읽는다. 이전 대역 키 `thorp.sectorSelection`은 사용하지 않는다.

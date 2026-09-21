@@ -47,6 +47,23 @@
   opacity: 0.62;
 }
 
+/*
+  입력칸과 그 칸에 딸린 버튼이 함께 서는 줄. 도움말·오류 문구는 이 줄 바깥(아래)에 쌓이므로
+  문구가 생기고 사라져도 버튼이 입력칸과 어긋나지 않는다.
+*/
+.controlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 142px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 560px) {
+  .controlRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hint,
 .fieldError {
   font-size: 0.68rem;
