@@ -43,6 +43,19 @@
   min-width: 0;
 }
 
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 여는 보기의 머리에서 도움말과 닫기를 한 줄에 둔다. */
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .itemTitle {
   margin: 0;
   color: var(--thorp-copy);
