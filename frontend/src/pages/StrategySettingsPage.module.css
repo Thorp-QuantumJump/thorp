@@ -1,20 +1,16 @@
 .page {
   min-height: 100svh;
   overflow-x: clip;
-  background:
-    linear-gradient(var(--thorp-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
-    var(--thorp-background);
-  background-size: 72px 72px, 72px 72px, auto;
+  background: var(--thorp-background);
   color: var(--thorp-foreground);
 }
 
 .main {
   display: grid;
   gap: 16px;
-  width: min(100% - 40px, 960px);
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
   margin: 0 auto;
-  padding: clamp(30px, 5vh, 56px) 0 80px;
+  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
@@ -181,12 +177,6 @@
   margin: 0;
 }
 
-@media (max-width: 600px) {
-  .main {
-    width: min(100% - 28px, 760px);
-    padding-top: 24px;
-  }
-}
 
 /* 사용자 비중의 합계가 어긋났다는 안내와 되돌아갈 버튼(T091). 테두리 색과 함께 문장이 뜻을 말한다. */
 .weightNotice {

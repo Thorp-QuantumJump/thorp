@@ -143,10 +143,6 @@
   place-items: center;
   overflow: hidden;
   isolation: isolate;
-  background:
-    linear-gradient(rgb(147 181 162 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(147 181 162 / 5%) 1px, transparent 1px);
-  background-size: clamp(48px, 5vw, 78px) clamp(48px, 5vw, 78px);
 }
 
 .hero::before,
@@ -410,10 +406,7 @@
   background:
     radial-gradient(circle at 13% 22%, rgb(3 199 90 / 7%), transparent 22rem),
     radial-gradient(circle at 88% 63%, rgb(3 199 90 / 5%), transparent 24rem),
-    linear-gradient(rgb(160 190 173 / 3.5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(160 190 173 / 3.5%) 1px, transparent 1px),
     var(--landing-background);
-  background-size: auto, auto, 72px 72px, 72px 72px, auto;
 }
 
 .storySection {

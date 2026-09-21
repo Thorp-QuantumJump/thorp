@@ -1,4 +1,5 @@
 import { Play, ShieldQuestion, TriangleAlert } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { ProvisionalBadge } from './ProvisionalBadge'
 import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchPreview } from '@/types/paramSearch'
@@ -15,6 +16,15 @@ interface PreflightPanelProps {
    * 주면 실행을 막고 그 문장을 그대로 보인다 — 막힌 이유를 적지 않고 버튼만 끄지 않는다.
    */
   blockedReason?: string | null
+  /**
+   * `blockedReason`을 푸는 행동. **이유만 적고 길을 내지 않으면 막다른 길이다** — 로그인이
+   * 필요하다고 알리면서 로그인으로 가는 통로를 주지 않으면 사용자는 화면을 떠나 헤더를 찾아야
+   * 하고, 돌아오면 고른 대상이 사라져 있다.
+   *
+   * <p>한도·조합 수처럼 응답이 정한 차단에는 붙지 않는다. 그건 범위를 좁혀야 풀리는 것이라
+   * 누를 것이 따로 없다.
+   */
+  blockedAction?: ReactNode
 }
 
 /** 한도 항목의 이름과 값. 필드 이름은 계약의 것이고 전략 지식이 아니다. */
@@ -56,9 +66,18 @@ export function PreflightPanel({
   onRun,
   running,
   blockedReason = null,
+  blockedAction = null,
 }: PreflightPanelProps) {
   const { strategies, spaceSummary, workload, limits } = preview
-  const blocked = limits.exceeded || workload.validCombinations === 0 || blockedReason !== null
+
+  // 응답이 정한 차단이 먼저다. 한도를 넘은 채로 로그인해 봐야 여전히 실행되지 않는다.
+  const responseBlock = limits.exceeded
+    ? '실행 예정 후보가 한도를 넘습니다. 상세 변경에서 후보값을 줄여 주세요.'
+    : workload.validCombinations === 0
+      ? '실행할 수 있는 조합이 없습니다. 대상 섹터나 후보값을 바꿔 주세요.'
+      : null
+  const blockMessage = responseBlock ?? blockedReason
+  const blocked = blockMessage !== null
 
   return (
     <section className={styles.panel} aria-labelledby="preflight-title">
@@ -188,14 +207,15 @@ export function PreflightPanel({
       )}
 
       {blocked && (
-        <p className={styles.blocked} role="alert">
-          <TriangleAlert size={15} aria-hidden="true" />
-          {limits.exceeded
-            ? '실행 예정 후보가 한도를 넘습니다. 상세 변경에서 후보값을 줄여 주세요.'
-            : workload.validCombinations === 0
-              ? '실행할 수 있는 조합이 없습니다. 대상 섹터나 후보값을 바꿔 주세요.'
-              : blockedReason}
-        </p>
+        <div className={styles.blocked} role="alert">
+          <p>
+            <TriangleAlert size={15} aria-hidden="true" />
+            {blockMessage}
+          </p>
+          {responseBlock === null && blockedAction ? (
+            <span className={styles.blockedAction}>{blockedAction}</span>
+          ) : null}
+        </div>
       )}
 
       <button
