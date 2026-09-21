@@ -143,12 +143,14 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
       */}
       {/*
         사라진 섹터의 대체 제안은 006이 정했다(FR-008, research R4): 대체 섹터를 자동으로 고르지 않고 사용자가
-        아래 목록에서 직접 고르게 한다. 기록에서 '설정 바꿔 비교'로 왔든 앞선 선택을 복원했든 같은 문장이다.
+        아래 목록에서 직접 고르게 한다. 이 화면은 진입 경로를 모르므로("기록에서 왔다" vs "앞선 선택을 복원했다")
+        앞문장은 두 경로에 다 참인 말로 두고, 뒷문장이 006의 제안이다. "저장 당시"·"대응표"는 기록에서 온 사람에게만
+        참인 말이라 쓰지 않는다.
       */}
       {missingCount > 0 ? (
         <p className={styles.restoreNotice} role="status">
-          저장 당시 섹터 {missingCount}개가 현재 대응표에 없습니다. 아래 목록에서 대체 섹터를 직접 골라
-          주세요.
+          이전에 골랐던 섹터 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다. 아래 목록에서 대체 섹터를
+          직접 골라 주세요.
         </p>
       ) : null}
       {unusableCount > 0 ? (
