@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>남의 것·없는 것·이미 지운 것을 <b>한 가지 404</b>로 답한다. 403은 그 식별자가 존재한다는 사실을 알려 준다 — 읽기 경로({@code
  * MyRecordQueryService})와 같은 규칙이다.
+ *
+ * <p><b>식별자가 둘이다.</b> 바깥에서 받는 {@code recordId}는 사용자에게 보이는 문자열({@code MR-20260921-000001})이고, 저장소에
+ * 넘기는 {@code record.id()}는 DB PK 다. PK 는 응답에 나가지 않는다 — 두 값을 섞으면 내부 번호가 주소에 실린다.
  */
 @Service
 public class MyRecordCommandService {
