@@ -11,8 +11,8 @@ import type {
 /**
  * spec 006 내 기록 API. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.
  *
- * <p>부르는 화면이 있는 것만 둔다 — 목록·상세(006 화면)와 경제환경 기록(010 화면). 이름 변경·삭제·내보내기는 FE-4가 올 때
- * 계약을 보고 더한다. 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.
+ * <p>부르는 화면이 있는 것만 둔다 — 목록·상세(006 화면), 경제환경 기록(010 화면), 그리고 목록 줄의 '더 보기'가 쓰는 이름
+ * 변경·삭제·내보내기. 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.
  *
  * <p>모든 경로가 로그인 필요다. 401은 `apiClient`의 인터셉터가 전역 인증 상태에 알리고, 화면은
  * `ProtectedRoute`가 로그인 안내로 보낸다(S12). 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다 —
@@ -90,4 +90,44 @@ export function recordRegimeSearch(
     )
     return unwrap(response.data)
   })
+}
+
+/**
+ * 이름 변경(FR-017). <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다.
+ *
+ * <p>`name` 외의 키를 보내면 서버가 400으로 거절한다 — 무시하지 않는다. 그래서 이 함수도 다른 값을 함께 보내지 않는다.
+ */
+export function renameMyRecord(recordId: string, name: string): Promise<MyRecordDetail> {
+  return runCsrfProtectedMutation(async () => {
+    const response = await apiClient.patch<ApiEnvelope<MyRecordDetail>>(
+      `${basePath}/${encodeURIComponent(recordId)}`,
+      { name },
+    )
+    return unwrap(response.data)
+  })
+}
+
+/**
+ * 삭제(FR-017). <b>개인 기록만 사라지고 공용 계산 결과는 남는다.</b>
+ *
+ * <p>확인은 화면이 받는다 — 서버는 이 요청을 받으면 바로 수행하고 되돌리는 경로가 없다. 이미 지운 항목은 404다.
+ */
+export function deleteMyRecord(recordId: string): Promise<{ recordId: string; deletedAt: string }> {
+  return runCsrfProtectedMutation(async () => {
+    const response = await apiClient.delete<ApiEnvelope<{ recordId: string; deletedAt: string }>>(
+      `${basePath}/${encodeURIComponent(recordId)}`,
+    )
+    return unwrap(response.data)
+  })
+}
+
+/**
+ * 내보내기 주소(FR-015·FR-016).
+ *
+ * <p><b>가져오지 않고 주소만 만든다.</b> 서버가 `Content-Disposition: attachment`로 내려보내므로 브라우저가 직접 받는
+ * 것이 맞다 — 여기서 받아 Blob 으로 다시 만들면 파일 이름을 화면이 짓게 되고, 그 이름은 서버가 정한 것과 갈린다.
+ */
+export function exportMyRecordUrl(recordId: string, format: 'csv' | 'json'): string {
+  const base = apiClient.defaults.baseURL ?? ''
+  return `${base}${basePath}/${encodeURIComponent(recordId)}/export?format=${format}`
 }

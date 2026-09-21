@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResultError } from '@/api/result'
@@ -59,6 +60,18 @@ vi.mock('@/api/sectors', async (importOriginal) => {
 })
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
+/**
+ * 결과 화면은 비로그인도 여는 공개 경로지만 실제 앱에서는 `main.tsx`의 `AuthProvider` 안에서 돈다. 006의
+ * '기록으로 내보내기'가 로그인 여부로 갈리므로(T045a) 테스트도 같은 자리에 둔다 — 비로그인이 기본이다.
+ */
+const anonymousAuth = {
+  user: null,
+  status: 'anonymous',
+  login: async () => {},
+  logout: async () => {},
+  refresh: async () => {},
+} as unknown as AuthContextValue
+
 function LocationProbe() {
   const location = useLocation()
   return <output aria-label="현재 주소">{location.pathname + location.search}</output>
@@ -67,12 +80,14 @@ function LocationProbe() {
 function renderResult(token = resultToken) {
   return render(
     <MemoryRouter initialEntries={[`/results/${token}`]}>
+      <AuthContext.Provider value={anonymousAuth}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
         <Route path="/strategy" element={<h1>전략 설정 화면</h1>} />
         <Route path="/diagnosis/sectors" element={<h1>섹터 선택 화면</h1>} />
       </Routes>
       <LocationProbe />
+      </AuthContext.Provider>
     </MemoryRouter>,
   )
 }
@@ -190,10 +205,12 @@ describe('ResultPage', () => {
 
     render(
       <MemoryRouter initialEntries={[`/results/${resultToken}`]}>
-        <GoToOther />
-        <Routes>
-          <Route path="/results/:token" element={<ResultPage />} />
-        </Routes>
+        <AuthContext.Provider value={anonymousAuth}>
+          <GoToOther />
+          <Routes>
+            <Route path="/results/:token" element={<ResultPage />} />
+          </Routes>
+        </AuthContext.Provider>
       </MemoryRouter>,
     )
     expect(await screen.findByText('16.67%')).not.toBeNull()
