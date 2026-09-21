@@ -26,11 +26,16 @@ public record ParamSearchPreviewResponse(
     public record StrategySpace(
             String strategyId, String strategyName, List<Axis> axes, long combinations) {}
 
+    /**
+     * @param valueLabels {@code values}와 같은 순서로 놓인 표시 문구. 화면은 값을 요청에 되돌려 보내고 문구를 그린다 — 객체형 후보는 값만으로
+     *     그릴 수 없다
+     */
     public record Axis(
             String axis,
             String label,
             String unit,
             List<Object> values,
+            List<String> valueLabels,
             Object defaultValue,
             AllowedRange allowedRange) {}
 
@@ -79,6 +84,7 @@ public record ParamSearchPreviewResponse(
                                                                                 axis.label(),
                                                                                 axis.unit(),
                                                                                 axis.values(),
+                                                                                axis.valueLabels(),
                                                                                 axis.defaultValue(),
                                                                                 toRange(axis)))
                                                         .toList(),

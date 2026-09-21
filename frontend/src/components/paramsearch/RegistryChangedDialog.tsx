@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
-import type { AxisValue, ParamSearchPreview, StrategySpaceSummary } from '@/types/paramSearch'
-import { formatCount } from '@/utils/paramSearchLabels'
+import type { ParamSearchPreview, SpaceAxis, StrategySpaceSummary } from '@/types/paramSearch'
+import { axisValueKey, formatCount } from '@/utils/paramSearchLabels'
 import styles from './RegistryChangedDialog.module.css'
 
 interface RegistryChangedDialogProps {
@@ -18,9 +18,20 @@ interface RegistryChangedDialogProps {
   onReload: () => void
 }
 
-/** 축 후보값을 비교 가능한 한 줄로 만든다. */
-function joinValues(values: AxisValue[]): string {
-  return values.map(String).join(', ')
+/**
+ * 축 후보값을 사람이 읽는 한 줄로. 등록표가 적어 둔 문구를 쓴다 — 값을 그대로 찍으면 객체형
+ * 후보가 `[object Object]`로 나온다.
+ */
+function joinLabels(axis: SpaceAxis): string {
+  return axis.values.map((value, index) => axis.valueLabels[index] ?? axisValueKey(value)).join(', ')
+}
+
+/**
+ * 후보값이 달라졌는지 견주는 열쇠. **문구가 아니라 값으로 본다** — 등록표 판이 올라가며 문구만
+ * 다듬어진 경우를 "후보가 바뀌었다"고 알리면 확인할 것이 없는 경고가 된다.
+ */
+function joinKeys(axis: SpaceAxis): string {
+  return axis.values.map(axisValueKey).join(', ')
 }
 
 function byStrategyId(spaces: StrategySpaceSummary[]) {
@@ -52,13 +63,13 @@ function describeChanges(
       const beforeAxis = beforeAxes.get(afterAxis.axis)
       if (!beforeAxis) {
         lines.push(
-          `${afterSpace.strategyName} · ${afterAxis.label}: 축이 추가되었습니다 (${joinValues(afterAxis.values)})`,
+          `${afterSpace.strategyName} · ${afterAxis.label}: 축이 추가되었습니다 (${joinLabels(afterAxis)})`,
         )
         continue
       }
-      if (joinValues(beforeAxis.values) !== joinValues(afterAxis.values)) {
+      if (joinKeys(beforeAxis) !== joinKeys(afterAxis)) {
         lines.push(
-          `${afterSpace.strategyName} · ${afterAxis.label}: ${joinValues(beforeAxis.values)} → ${joinValues(afterAxis.values)}`,
+          `${afterSpace.strategyName} · ${afterAxis.label}: ${joinLabels(beforeAxis)} → ${joinLabels(afterAxis)}`,
         )
       }
       beforeAxes.delete(afterAxis.axis)

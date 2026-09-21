@@ -14,9 +14,24 @@
   /* 브랜드 원색은 테마와 무관하며, 컴포넌트는 아래 의미 토큰을 사용한다. */
   --thorp-brand-primary: rgb(3 199 90);
   --thorp-brand-soft: #86f2a8;
-  --thorp-font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* SUIT Variable은 index.html이 CDN에서 받는다. 뒤는 못 받았을 때 대신 설 글꼴이다. */
+  --thorp-font-body: 'SUIT Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
   --thorp-font-display: 'Geist Variable', var(--thorp-font-body);
   --thorp-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  /*
+    본문이 앉는 자리. **화면마다 따로 정하지 않는다** — 값을 각 페이지에 적어 두었더니 폭이 아홉
+    가지(720·760·880·960·1080·1320·1400·1440·1520)로 갈라졌고, 한 흐름 안에서도 단계를 넘을
+    때마다 본문이 좁아졌다 넓어졌다 했다. 화면을 옮겼는데 글이 있는 자리가 바뀌면 사용자는 같은
+    서비스가 아닌 것처럼 겪는다.
+
+    폭은 섹터 고르기 화면을 기준으로 삼았다. 좁은 쪽에 맞추면 넓은 화면에서 양옆이 크게 비고,
+    읽을 것이 가운데 떠 있는 것처럼 보인다.
+  */
+  --thorp-page-width: 960px;
+  --thorp-page-gutter: 40px;
+  --thorp-page-top: clamp(30px, 5vh, 56px);
+  --thorp-page-bottom: 80px;
   /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */
   --thorp-background: #030805;
   --thorp-surface: #07110b;
@@ -96,6 +111,17 @@
   --chart-scale-04: #1b4b2e;
   --chart-scale-05: #267442;
   --chart-scale-pattern-color: #0a160f;
+}
+
+/*
+  좁은 화면의 본문 여백. 분기점도 한 곳에서 정한다 — 화면마다 560·600·720px로 갈라져 있어서,
+  창을 줄이는 동안 화면끼리 서로 다른 지점에서 여백이 바뀌었다.
+*/
+@media (max-width: 600px) {
+  :root {
+    --thorp-page-gutter: 28px;
+    --thorp-page-top: 24px;
+  }
 }
 
 html {
