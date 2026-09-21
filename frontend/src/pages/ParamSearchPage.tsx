@@ -323,7 +323,7 @@ export function ParamSearchPage() {
               비교할 섹터와 전략은 전략 화면에서 고른 것을 그대로 받아 옵니다. 전략 화면에서 '설정
               조합 자동 비교'로 들어와 주세요.
             </p>
-            <Link to="/backtest" className={styles.guideLink}>
+            <Link to="/strategy" className={styles.guideLink}>
               <ArrowLeft size={15} aria-hidden="true" />
               전략 화면으로
             </Link>
