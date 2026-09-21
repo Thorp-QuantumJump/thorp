@@ -3,18 +3,25 @@ package com.ssafy.thorp.myrecord.presentation.controller;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;
+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
 import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;
+import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
 import com.ssafy.thorp.myrecord.domain.model.RecordStatus;
+import com.ssafy.thorp.myrecord.presentation.request.RecordRegimeSearchRequest;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;
+import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,11 +40,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class MyRecordController {
 
     private final MyRecordQueryService queryService;
+    private final MyRecordRegistrar registrar;
     private final CurrentRequester currentRequester;
 
     public MyRecordController(
-            MyRecordQueryService queryService, CurrentRequester currentRequester) {
+            MyRecordQueryService queryService,
+            MyRecordRegistrar registrar,
+            CurrentRequester currentRequester) {
         this.queryService = queryService;
+        this.registrar = registrar;
         this.currentRequester = currentRequester;
     }
 
@@ -69,6 +80,28 @@ public class MyRecordController {
                         size == null ? MyRecordListQuery.DEFAULT_SIZE : size);
         return ResponseEntity.ok(
                 ApiResponse.ok(MyRecordListResponse.from(queryService.list(ownerId, query))));
+    }
+
+    /**
+     * 경제환경 검색을 기록으로 남긴다(spec 006 T035, research R15). 010의 {@code GET /regime-searches}는 바뀌지 않는다.
+     *
+     * <p>이미 같은 (스냅샷·진입 경로)의 항목이 있으면 만들지 않고 200, 새로 만들면 201이다. 본문은 두 경우 모두 <b>목록 항목과 같다</b>.
+     *
+     * <p>{@code entryPath}·{@code baselineOrigin}은 화면이 보낸다 — 서버가 추정하지 않는다. 빠지거나 모르는 값이면 400 {@code
+     * INVALID_INPUT}이고, 없는 {@code searchId}는 404다.
+     */
+    @PostMapping("/regime-searches")
+    public ResponseEntity<ApiResponse<MyRecordListResponse.Item>> recordRegimeSearch(
+            @Valid @RequestBody RecordRegimeSearchRequest request) {
+        long ownerId = currentRequester.requireRequesterId();
+        RegimeRecordOutcome outcome =
+                registrar.recordRegimeSearch(
+                        ownerId, request.searchId(), request.entryPath(), request.baselineOrigin());
+        return ResponseEntity.status(outcome.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(
+                        ApiResponse.ok(
+                                MyRecordListResponse.Item.from(
+                                        queryService.item(ownerId, outcome.recordId()))));
     }
 
     /** 상세. 남의 것·없는 것·지운 것은 모두 404 {@code RESOURCE_NOT_FOUND}다. */
