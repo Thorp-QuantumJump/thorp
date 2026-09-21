@@ -183,7 +183,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Purpose**: 009·010 연동 정합화와 남은 결정 마무리
 
-- [ ] T064 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다
+- [X] T064 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다
 - [ ] T065 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다
 - [ ] T066 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)
 - [ ] T067 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다
