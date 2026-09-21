@@ -176,6 +176,25 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("수집 상태는 계약이 정한 값만 나간다 — 저장 쪽이 더 넓다")
+    void collectionStatusStaysInsideTheContract() {
+        // 발행기는 지표 일부만 성공한 시도를 PARTIAL 로 적는데 계약의 상태 값에는 그것이 없다.
+        // 그대로 내보내면 계약으로 검증하는 소비자가 응답 전체를 거절한다(T086).
+        seedRegistry();
+        seedPublishedDataset();
+        seedFailedCollection("mining_manufacturing_production");
+
+        String status = service.getSnapshot().collection().status();
+
+        assertThat(status)
+                .isIn("NEVER_COLLECTED", "SUCCEEDED", "RUNNING", "FAILED", "HELD")
+                .isEqualTo("HELD");
+        // 거칠어진 만큼은 실패 지표 목록이 채운다 — 어느 지표가 실패했는지는 그대로 남는다.
+        assertThat(service.getSnapshot().collection().failedIndicatorIds())
+                .containsExactly("mining_manufacturing_production");
+    }
+
+    @Test
     @DisplayName("응답 봉투의 역사 비교 문구는 계약이 정한 문장 그대로다")
     void carriesHistoricalComparisonNotice() {
         seedRegistry();
