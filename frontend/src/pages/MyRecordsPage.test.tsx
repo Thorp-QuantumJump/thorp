@@ -231,6 +231,28 @@ describe('MyRecordsPage', () => {
     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()
   })
 
+  it('더 보기가 실패하면 받아 둔 항목은 남고, 다시 누르면 같은 커서로 다시 받는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords
+      .mockResolvedValueOnce({ items: [analysisRecord], nextCursor: 'c1' })
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ items: [withdrawnRegimeRecord], nextCursor: null })
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '더 보기' }))
+
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: analysisRecord.name })).toBeTruthy()
+
+    // 같은 커서를 다시 넣어도 요청이 나가야 한다. 안 나가면 눌러도 아무 일이 없는 버튼이 된다.
+    await user.click(screen.getByRole('button', { name: '더 보기' }))
+
+    expect(await screen.findByRole('heading', { name: withdrawnRegimeRecord.name })).toBeTruthy()
+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(3)
+    expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith({ cursor: 'c1' }, expect.any(AbortSignal))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('비로그인은 ProtectedRoute 가 로그인으로 보내고 기록을 부르지 않는다(S12)', async () => {
     renderPage('/records', anonymousAuth)
 

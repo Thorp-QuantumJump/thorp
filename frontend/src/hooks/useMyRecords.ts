@@ -94,6 +94,9 @@ export function useMyRecords(query: MyRecordListQuery) {
       },
       (error: unknown) => {
         if (!active) return
+        // 커서를 놓아 준다. 같은 커서를 다시 넣으면 React 가 갱신을 건너뛰어 effect 가 돌지 않고, 사용자는
+        // 눌러도 아무 일이 없는 '더 보기'를 본다.
+        setMoreCursor(null)
         setState((previous) =>
           previous.status === 'loaded'
             ? { ...previous, loadingMore: false, moreError: messageOf(error) }
@@ -108,7 +111,7 @@ export function useMyRecords(query: MyRecordListQuery) {
   }, [moreCursor, stableQuery])
 
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
-  // 커서가 같으면 effect 가 다시 돌지 않으므로, 같은 쪽을 두 번 받지 않는다.
+  // 연달아 눌러도 한 번만 받는 것은 loadingMore 검사가 막는다.
   const loadMore = useCallback(() => {
     if (state.status === 'loaded' && state.nextCursor && !state.loadingMore) {
       setMoreCursor(state.nextCursor)

@@ -75,15 +75,16 @@ export function reviewHref(item: MyRecordListItem): string | null {
   }
 }
 
-const PARAM_STOP_REASONS = new Set<string>([
-  'CANCELLED',
-  'CANDIDATE_LIMIT',
-  'TIME_LIMIT',
-  'FAILURE_LIMIT',
-  'NO_VALID_CANDIDATE',
-  'STRATEGY_NOT_REGISTERED',
-  'STRATEGY_NOT_EXECUTABLE',
-])
+// 007 이 사유를 더하면 여기서 빌드가 깨진다 — 조용히 코드 그대로 나가는 일이 없다.
+const PARAM_STOP_REASONS: Record<ParamSearchStopReason, true> = {
+  CANCELLED: true,
+  CANDIDATE_LIMIT: true,
+  TIME_LIMIT: true,
+  FAILURE_LIMIT: true,
+  NO_VALID_CANDIDATE: true,
+  STRATEGY_NOT_REGISTERED: true,
+  STRATEGY_NOT_EXECUTABLE: true,
+}
 
 /** 010 `statusReason`. 계산 불가의 사유가 넷으로 나뉜 것이 요점이다 — 사용자가 할 일이 사유마다 다르다. */
 const REGIME_REASON_LABEL: Record<string, string> = {
@@ -99,6 +100,6 @@ const REGIME_REASON_LABEL: Record<string, string> = {
  * 실행의 `failure_code` 등)는 코드를 그대로 둔다 — 문장을 지어내지 않는다(원칙 VI).
  */
 export function reasonLabel(code: string): string {
-  if (PARAM_STOP_REASONS.has(code)) return stopReasonText(code as ParamSearchStopReason)
+  if (code in PARAM_STOP_REASONS) return stopReasonText(code as ParamSearchStopReason)
   return REGIME_REASON_LABEL[code] ?? code
 }
