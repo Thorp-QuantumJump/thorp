@@ -97,18 +97,20 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     expect(api.registry).not.toHaveBeenCalled()
     expect(api.create).not.toHaveBeenCalled()
 
-    expect(
-      (
-        screen.getByRole('button', {
-          name: '경제환경이 비슷했던 과거 보기',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true)
-    expect(screen.getByText(/011 연결 계약이 아직 없어/)).toBeTruthy()
+    // 011 진입은 열려 있다(T086). 비활성 사유 문구는 사라졌다.
+    expect(screen.queryByText(/011 연결 계약이 아직 없어/)).toBeNull()
     expect(
       (screen.getByRole('button', { name: '기록으로 내보내기' }) as HTMLButtonElement).disabled,
     ).toBe(true)
     expect(screen.getByText(/006 화면이 아직 없어/)).toBeTruthy()
+  })
+
+  it('011 진입은 기준 토큰을 실은 주소로 간다(T086)', async () => {
+    renderResult()
+
+    await screen.findByText('자료 출처: 한국거래소 통계정보')
+    const entry = screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' })
+    expect(entry.getAttribute('href')).toBe(`/regime-link?base=${resultToken}`)
   })
 
   it('스펙에 없는 이전 화면 행동을 결과 화면에 추가하지 않는다', async () => {
