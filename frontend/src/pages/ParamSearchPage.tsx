@@ -5,6 +5,7 @@ import { createParamSearch, normalizeParamSearchError, previewParamSearch } from
 import { useAuth } from '@/auth/auth-context'
 import { useLoginReturn } from '@/auth/useLoginReturn'
 import { useSectorNames } from '@/hooks/useSectorNames'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { CancelButton } from '@/components/paramsearch/CancelButton'
 import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'
@@ -305,10 +306,14 @@ export function ParamSearchPage() {
           <SlidersHorizontal size={16} aria-hidden="true" />
           설정 조합 자동 비교
         </div>
-        <h1 id="param-search-title">한 번에 여러 설정을 같은 조건으로 비교합니다</h1>
+        <div className={styles.headline}>
+          <h1 id="param-search-title">한 번에 여러 설정을 같은 조건으로 비교합니다</h1>
+          <InlineHelp label="설정 조합 자동 비교">
+            <p>몇 개를 돌릴지는 등록표와 한도가 정하므로 숫자를 입력할 필요가 없습니다.</p>
+          </InlineHelp>
+        </div>
         <p className={styles.lead}>
-          고른 섹터와 전략에 등록된 설정 조합을 모두 돌려 같은 기준으로 견줍니다. 몇 개를 돌릴지는
-          등록표와 한도가 정하므로 숫자를 입력할 필요가 없습니다.
+          고른 섹터와 전략에 등록된 설정 조합을 모두 돌려 같은 기준으로 견줍니다.
         </p>
 
         {!hasTarget ? (
@@ -319,9 +324,14 @@ export function ParamSearchPage() {
               조합 자동 비교'로 들어와 주세요.
             </p>
             <p className={styles.guideNote}>
-              주소로 바로 열 때는 <code>?instruments=&#123;종목ID&#125;&amp;strategies=&#123;전략ID&#125;</code>
-              처럼 대상을 함께 적습니다. 고를 수 있는 값은 등록표가 정하므로 이 화면에 목록을 두지
-              않습니다.
+              주소로 바로 열 수도 있습니다.{' '}
+              <InlineHelp label="주소로 바로 열기">
+                <p>
+                  <code>?instruments=&#123;종목ID&#125;&amp;strategies=&#123;전략ID&#125;</code>
+                  처럼 대상을 함께 적습니다.
+                </p>
+                <p>고를 수 있는 값은 등록표가 정하므로 이 화면에 목록을 두지 않습니다.</p>
+              </InlineHelp>
             </p>
             <Link to="/backtest" className={styles.guideLink}>
               <ArrowLeft size={15} aria-hidden="true" />

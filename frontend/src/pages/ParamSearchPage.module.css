@@ -31,6 +31,12 @@
   line-height: 1.2;
 }
 
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .lead {
   max-width: 640px;
   margin: 0;
