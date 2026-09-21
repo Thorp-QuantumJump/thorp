@@ -11,6 +11,7 @@ import {
   STATUS_LABEL,
   WITHDRAWN_REASON,
   formatSavedAt,
+  reasonLabel,
   reviewHref,
 } from './recordLabels'
 import styles from './records.module.css'
@@ -26,6 +27,9 @@ type Props = {
   /** 처음부터 펼쳐 둔다(`?resultToken=`으로 들어온 행) */
   initiallyOpen?: boolean
 }
+
+// `disabled` 는 초점을 받지 못해 aria-describedby 의 사유가 읽히지 않는다(FR-021). 초점은 두고 눌러도 아무 일이 없다.
+const DISABLED_LOOK = 'aria-disabled:opacity-50 aria-disabled:cursor-not-allowed'
 
 const KIND_ICON = { ANALYSIS: LineChart, SEARCH_BUNDLE: Layers, REGIME_SEARCH: CloudSun } as const
 
@@ -49,7 +53,7 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
   const period = item.period
     ? `${item.period.start} ~ ${item.period.end}`
     : item.kind === 'REGIME_SEARCH'
-      ? `기준월 ${item.regime.baselineMonth.slice(0, 7)}`
+      ? item.regime.baselineMonth.slice(0, 7)
       : null
 
   return (
@@ -62,7 +66,9 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
         <h2 className={styles.name}>{item.name}</h2>
         <span className={styles.status} data-status={item.status}>
           {STATUS_LABEL[item.status]}
-          {item.statusReason ? <span className={styles.reason}> · {item.statusReason}</span> : null}
+          {item.statusReason ? (
+            <span className={styles.reason}> · {reasonLabel(item.statusReason)}</span>
+          ) : null}
         </span>
       </div>
 
@@ -88,7 +94,7 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
         {period ? (
           <>
             <dt>{item.kind === 'REGIME_SEARCH' ? '기준월' : '분석 기간'}</dt>
-            <dd>{item.kind === 'REGIME_SEARCH' ? period.replace('기준월 ', '') : period}</dd>
+            <dd>{period}</dd>
           </>
         ) : null}
         <dt>저장일</dt>
@@ -103,11 +109,22 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
             <Link to={href}>다시 보기</Link>
           </Button>
         ) : (
-          <Button type="button" disabled aria-describedby={reasonId}>
+          <Button
+            type="button"
+            aria-disabled="true"
+            aria-describedby={reasonId}
+            className={DISABLED_LOOK}
+          >
             다시 보기
           </Button>
         )}
-        <Button type="button" variant="outline" disabled aria-describedby={`${reasonId}-reopen`}>
+        <Button
+          type="button"
+          variant="outline"
+          aria-disabled="true"
+          aria-describedby={`${reasonId}-reopen`}
+          className={DISABLED_LOOK}
+        >
           설정 바꿔 비교
         </Button>
         <Button type="button" variant="outline" {...detail.toggleProps}>

@@ -1,4 +1,6 @@
 import type { MyRecordKind, MyRecordListItem, MyRecordStatus } from '@/types/myRecords'
+import type { ParamSearchStopReason } from '@/types/paramSearch'
+import { stopReasonText } from '@/utils/paramSearchLabels'
 
 /**
  * 목록이 쓰는 이름·문장. 상태 이름은 서버 값을 옮긴 것이고, 경제환경 상태는 010의 뜻을 그대로 둔다 —
@@ -63,7 +65,7 @@ export function formatSavedAt(value: string): string {
 export function reviewHref(item: MyRecordListItem): string | null {
   switch (item.kind) {
     case 'ANALYSIS':
-      return `/results/${item.resultToken}?from=records&recordId=${encodeURIComponent(item.recordId)}`
+      return `/results/${encodeURIComponent(item.resultToken)}?from=records&recordId=${encodeURIComponent(item.recordId)}`
     case 'SEARCH_BUNDLE':
       return `/param-search?searchId=${encodeURIComponent(item.searchId)}`
     case 'REGIME_SEARCH':
@@ -71,4 +73,32 @@ export function reviewHref(item: MyRecordListItem): string | null {
         ? null
         : `/regime-search?searchId=${encodeURIComponent(item.regime.snapshotKey)}`
   }
+}
+
+const PARAM_STOP_REASONS = new Set<string>([
+  'CANCELLED',
+  'CANDIDATE_LIMIT',
+  'TIME_LIMIT',
+  'FAILURE_LIMIT',
+  'NO_VALID_CANDIDATE',
+  'STRATEGY_NOT_REGISTERED',
+  'STRATEGY_NOT_EXECUTABLE',
+])
+
+/** 010 `statusReason`. 계산 불가의 사유가 넷으로 나뉜 것이 요점이다 — 사용자가 할 일이 사유마다 다르다. */
+const REGIME_REASON_LABEL: Record<string, string> = {
+  SCALE_WINDOW_TOO_SHORT: '척도 구간이 60개월에 못 미쳤습니다',
+  SCALE_ZERO: '지표의 산포를 말할 수 없었습니다',
+  QUERY_INPUT_MISSING: '비교 시점이 하나도 없는 지표가 있었습니다',
+  NO_CANDIDATE: '유효 후보가 없었습니다',
+  THRESHOLD_NOT_CALIBRATED: '문턱이 아직 교정되지 않았습니다',
+}
+
+/**
+ * 상태 사유 코드를 문장으로. 007 묶음의 사유는 그 화면의 문장(`stopReasonText`)을 그대로 쓴다. 모르는 코드(004
+ * 실행의 `failure_code` 등)는 코드를 그대로 둔다 — 문장을 지어내지 않는다(원칙 VI).
+ */
+export function reasonLabel(code: string): string {
+  if (PARAM_STOP_REASONS.has(code)) return stopReasonText(code as ParamSearchStopReason)
+  return REGIME_REASON_LABEL[code] ?? code
 }

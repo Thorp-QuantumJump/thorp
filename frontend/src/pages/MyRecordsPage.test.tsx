@@ -103,7 +103,8 @@ describe('MyRecordsPage', () => {
     expect(within(rows[0]).getByText('2019-01-02 ~ 2026-08-29')).toBeTruthy()
     expect(within(rows[0]).getByText('완료')).toBeTruthy()
     // 상태 사유는 상태 옆에 있고 성과와 섞이지 않는다(FR-014).
-    expect(within(rows[1]).getByText(/부분 완료/).textContent).toContain('TIME_LIMIT')
+    expect(within(rows[1]).getByText(/부분 완료/).textContent).toContain('실행 시간 한도에 닿았습니다')
+    expect(document.body.textContent).not.toContain('TIME_LIMIT')
 
     const review = (row: HTMLElement) => within(row).getByRole('link', { name: '다시 보기' })
     expect(review(rows[0]).getAttribute('href')).toBe(
@@ -125,9 +126,10 @@ describe('MyRecordsPage', () => {
       const primary = row.querySelectorAll('[data-slot="button"][data-variant="default"]')
       expect(primary).toHaveLength(1)
       expect(primary[0].textContent).toBe('다시 보기')
-      expect(within(row).getByRole('button', { name: '설정 바꿔 비교' }).getAttribute('data-variant')).toBe(
-        'outline',
-      )
+      const reopen = within(row).getByRole('button', { name: '설정 바꿔 비교' })
+      expect(reopen.getAttribute('data-variant')).toBe('outline')
+      // 아직 연결되지 않은 버튼은 disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).
+      expect(reopen.getAttribute('aria-disabled')).toBe('true')
     }
   })
 
@@ -182,7 +184,9 @@ describe('MyRecordsPage', () => {
     renderPage()
 
     const button = await screen.findByRole('button', { name: '다시 보기' })
-    expect((button as HTMLButtonElement).disabled).toBe(true)
+    // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).
+    expect(button.getAttribute('aria-disabled')).toBe('true')
+    expect((button as HTMLButtonElement).disabled).toBe(false)
     expect(screen.getByText(WITHDRAWN_REASON)).toBeTruthy()
     // 상태 필터의 체크박스 라벨과 겹치므로 행 안에서 찾는다.
     const list = screen.getByRole('list', { name: '내 기록' })

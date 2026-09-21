@@ -15,6 +15,8 @@ export function RecordOriginNotice({ recordId }: { recordId: string | null }) {
   const [drift, setDrift] = useState<string | null>(null)
 
   useEffect(() => {
+    // 기록이 바뀌면 앞 기록의 문장부터 지운다. 새 기록에 변경이 없으면 옛 문장이 남는다.
+    setDrift(null)
     if (!recordId) return
     const controller = new AbortController()
     let active = true
