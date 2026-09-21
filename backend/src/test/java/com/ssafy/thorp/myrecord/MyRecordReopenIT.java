@@ -89,6 +89,23 @@ class MyRecordReopenIT extends IntegrationTestSupport {
         assertThat(detail.registryDrift().fields()).isEmpty();
     }
 
+    @Test
+    @DisplayName("003이 다루지 않는 시나리오는 버튼만 닫고 조건은 그대로 담는다")
+    void 다른_시나리오는_열_수_없다() {
+        long owner = newUser("scenario");
+        backtestService.create(request(owner, "MONTH_END", Scenario.TARGET_RISK));
+
+        MyRecordDetail detail = queryService.detail(owner, recordIdOf(owner));
+
+        assertThat(detail.reopenSettings().available())
+                .as("005의 prefillStrategySettings 가 거절하므로 눌러 본 뒤에 실패하지 않게 막는다")
+                .isFalse();
+        // 열 수 없는 것과 없는 것은 다르다 — 조건은 그대로 있고 버튼만 닫힌다.
+        assertThat(detail.reopenPayload())
+                .as("상세는 저장 당시 조건을 계속 보인다")
+                .containsEntry("scenario", "TARGET_RISK");
+    }
+
     private int recordCount(long owner) {
         return jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM my_record WHERE owner_id = ? AND deleted_at IS NULL",
@@ -149,6 +166,16 @@ class MyRecordReopenIT extends IntegrationTestSupport {
     }
 
     private static CreateBacktestCommand request(Long requesterId, String rebalance) {
+        return request(requesterId, rebalance, Scenario.FULL_PERIOD);
+    }
+
+    /** {@code TARGET_RISK} 는 목표 변동성을 요구한다 — 접수가 시나리오마다 필요한 입력을 검사한다. */
+    private static CreateBacktestCommand request(
+            Long requesterId, String rebalance, Scenario scenario) {
+        Map<String, Object> scenarioParams =
+                scenario == Scenario.TARGET_RISK
+                        ? Map.of("targetVolatility", new BigDecimal("0.1000"))
+                        : null;
         return new CreateBacktestCommand(
                 requesterId,
                 ExecutionType.SINGLE,
@@ -168,7 +195,7 @@ class MyRecordReopenIT extends IntegrationTestSupport {
                 null,
                 "SPLIT-1",
                 null,
-                Scenario.FULL_PERIOD,
-                null);
+                scenario,
+                scenarioParams);
     }
 }
