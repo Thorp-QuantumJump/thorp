@@ -20,8 +20,3 @@
 .reason[data-unmeasured='false'] strong {
   color: var(--thorp-muted);
 }
-
-.distinction {
-  color: var(--thorp-muted);
-  font-size: 0.69rem;
-}

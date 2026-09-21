@@ -142,7 +142,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
 
     const panel = await screen.findByRole('region', { name: '지수와 비교하기' })
     expect(within(panel).getByText('10012345.67')).toBeTruthy()
-    expect(within(panel).getByText('참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다.')).toBeTruthy()
+    expect(within(panel).getByText('지수를 시작 금액으로 환산했습니다.')).toBeTruthy()
     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
   })
 
