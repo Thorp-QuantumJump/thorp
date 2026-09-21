@@ -15,7 +15,7 @@ import {
 } from './AnalysisConditionsPanel'
 
 /**
- * 기간·금액·조건 패널(T065)을 실제 설정 훅과 함께 돌린다(FR-009·FR-010·FR-011a, SC-002).
+ * 조건 바꾸기 패널(T065)을 실제 설정 훅과 함께 돌린다(FR-009·FR-010·FR-011a, SC-002).
  *
  * <p><b>"저장되지 않는다"를 훅 상태와 `sessionStorage` 둘 다로 본다.</b> 패널이 부르지 않았다는 것만 보면,
  * 훅이 다른 경로로 받아들이는 결함을 놓친다. 금액 범위와 후보는 합성 등록표의 값이다.
@@ -78,8 +78,8 @@ async function renderOpen(costView?: CostAssumptionView | 'loading' | null) {
   const onChange = vi.fn<(patch: AnalysisConditionPatch) => void>()
   const user = userEvent.setup()
   render(<Harness onChange={onChange} costView={costView} />)
-  await user.click(await screen.findByRole('button', { name: '기간·금액·조건' }))
-  return { onChange, user, panel: screen.getByRole('region', { name: '기간·금액·조건' }) }
+  await user.click(await screen.findByRole('button', { name: '조건 바꾸기' }))
+  return { onChange, user, panel: screen.getByRole('region', { name: '조건 바꾸기' }) }
 }
 
 beforeEach(() => {
@@ -94,7 +94,7 @@ describe('AnalysisConditionsPanel', () => {
   it('접힌 채로 시작하고 펼치기 전에는 입력 요소를 내놓지 않는다', async () => {
     render(<Harness onChange={vi.fn()} />)
 
-    const toggle = await screen.findByRole('button', { name: '기간·금액·조건' })
+    const toggle = await screen.findByRole('button', { name: '조건 바꾸기' })
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     // 날짜 칸은 textbox 역할이 아니라서 요소로 함께 본다.
     expect(document.querySelectorAll('input, select, textarea')).toHaveLength(0)
