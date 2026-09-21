@@ -130,7 +130,68 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인
 
 ## 실행 기록
 
-*(M8에서 채운다. 날짜·명령·결과·skipped 수·확인하지 못한 항목을 남긴다.)*
+### 2026-09-21 (M8 · T083)
+
+**이 절은 실제로 돌린 것만 적는다.** 돌리지 못한 시나리오에는 결과를 적지 않고 "미실행"과 그 이유만
+남긴다. 아래 표의 "확인함"은 명령을 돌려 출력을 본 것이고, "미실행"은 이번에 돌리지 않은 것이다.
+
+#### 묶음 검증 명령 (전체 합계)
+
+기준선은 `origin/dev` `b36ccbab`이다. 세 파트 모두 011 작업 뒤 실패 0이다.
+
+| 파트 | 명령 | 기준선 | 2026-09-21 |
+|---|---|---|---|
+| 백엔드 | `./gradlew build` | tests=1883 · failures=0 · errors=0 · **skipped=4** | tests=1918 · failures=0 · errors=0 · **skipped=4** |
+| 워커 | `pytest` | 456 passed · **1 skipped** | 516 passed · **0 skipped** |
+| 프론트 | `npm test` | 117 files / 1150 tests | 135 files / 1256 tests · 실패 0 |
+| 프론트 | `npm run lint` | 오류 0 · 경고 20 | 오류 0 · 경고 20 |
+
+**백엔드 skipped 4건은 011과 무관하다.** `MarketLiveApiTest::realEndpointsProduceSanitizedResults`,
+`NewsPerformanceIT` 2건, `RequiredDockerTest::Docker를 요구하는 환경에서는 Docker에 붙을 수 있다`이다.
+이 회차에는 Docker 데몬이 떠 있어 DB 통합 시험이 실제로 돌았다 — 데몬이 꺼져 있던 앞선 회차에서는
+592건이 조용히 건너뛰어졌으므로, 이 숫자를 인용할 때는 **Docker가 떠 있었는지를 함께 확인한다.**
+
+#### 시나리오별
+
+| 시나리오 | 결과 |
+|---|---|
+| S1 (워커 몫) | **확인함.** 아래 명령에 포함 |
+| S1 (백엔드 몫) | **미실행.** `RegimeLinkMessageContractTest`를 따로 돌리려 했으나 이 작업 환경에 JDK가 없어(`JAVA_HOME` 미설정·`java` 없음) `./gradlew`가 기동하지 않았다. 백엔드 전체 `build`는 위 표대로 통과했으므로 이 시험도 그 안에서 돌았다 |
+| S2 | **확인함** |
+| S3 | **확인함** |
+| S4~S7 · S9 | **미실행.** PostgreSQL·RabbitMQ·백엔드·워커 둘·프론트를 모두 띄우고 010 검색 결과가 있는 자료가 필요하다. 이번 회차에 그 기동을 하지 못했다 |
+| S10 (T089) | **미실행.** 아래 "T089 측정" 참고 |
+
+#### 확인한 명령과 출력
+
+```bash
+cd worker && uv run pytest tests/regime_link/test_contracts.py     tests/regime_link/test_slicer.py tests/regime_link/test_consumer.py -q
+# 72 passed in 0.33s   (skipped 0)
+```
+
+- S1(워커 몫): `test_contracts.py`가 `docs/specs/regime-link-messaging/examples/*.json`을 round-trip한다.
+- S2: `test_slicer.py`가 `examples/reconciliation/manual_reconciliation.json`과 대조한다.
+- S3: `test_consumer.py`가 오류 세 갈래(reject → DLQ / `FINISHED(FAILED)` 후 ACK / 발행 실패 requeue)를 본다.
+
+#### 확인 필요로 남은 것
+
+- **큐를 실제로 지나는 왕복은 아직 아무도 확인하지 않았다.** T036(Testcontainers RabbitMQ·PostgreSQL
+  왕복)이 미작성이고 S5의 수동 확인도 미실행이라, 백엔드가 발행한 작업이 워커에 닿아 이벤트로 돌아오는
+  경로 전체를 끝에서 끝까지 본 기록이 없다. 단위·통합 시험은 양쪽을 따로 볼 뿐이다.
+- S5~S7·S9의 화면·DB 기록 항목은 자동 시험이 같은 조건을 흉내 낸 것으로 갈음했고 사람이 눈으로 본
+  기록은 없다.
+
+### T089 측정 — 미실행
+
+S10의 두 측정(① `GET /regime-links/availability` 30회 순차 호출의 p95, ② `regime_link.queued_at →
+finished_at`의 p95)은 **이번 회차에 재지 않았다.** 전체 기동과 010 검색 결과가 있는 자료가 있어야
+하는데 확보하지 못했다. 목표(300ms·3초)는 측정 목표이지 통과 조건이 아니므로(원칙 IX, research R9)
+**측정하지 않았다는 사실만 남기고 추정치를 적지 않는다.** 다시 잴 때는 S10의 명령과 함께 날짜·장비·
+자료 규모·p50/p95를 이 절에 적는다.
+
+관련해 T110(가용성 조회의 반복 질의)이 미해결로 남아 있다 —
+`DatabaseTradingCalendarAdapter.calendarQuery`가 호출마다 자료 버전을 다시 읽어 달력 질의가 두 배가
+된다는 지적이며, 실측이 이루어지면 그 태스크의 판단 근거가 된다.
 
 ## 2026-09-20 추가 인수 시나리오 (아직 미실행)
 
