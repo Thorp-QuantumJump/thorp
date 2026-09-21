@@ -10,8 +10,8 @@ import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;
 import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;
 import com.ssafy.thorp.macro.infrastructure.persistence.MacroSnapshotRepositoryImpl;
 import com.ssafy.thorp.macro.presentation.response.MacroSnapshotResponse;
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,26 +36,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MacroSnapshotContractTest extends PostgresTestSupport {
 
     /** 분야별 지표 수 — 등록표의 실제 분포다(FR-001). 합이 17이다. */
-    private static final Map<String, Integer> FIELD_SIZES =
-            Map.of(
-                    "production", 3,
-                    "consumption_investment", 3,
-                    "external_trade", 3,
-                    "labor", 2,
-                    "prices_commodities", 2,
-                    "finance_housing", 3,
-                    "overseas", 1);
-
-    private static final List<String> FIELD_ORDER =
-            List.of(
-                    "production",
-                    "consumption_investment",
-                    "external_trade",
-                    "labor",
-                    "prices_commodities",
-                    "finance_housing",
-                    "overseas");
-
     @Autowired private JdbcTemplate jdbc;
 
     private MacroSnapshotQueryService service;
@@ -209,125 +189,11 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     // ------------------------------------------------------------------
 
     private void seedRegistry() {
-        jdbc.update(
-                """
-                INSERT INTO macro_calculation_registry_version (
-                    version_key, value_rule_fingerprint, change_reason, status, created_at)
-                VALUES ('REG-1', repeat('a', 64), '최초 등록', 'PUBLISHED', now())
-                """);
-        jdbc.update(
-                """
-                INSERT INTO macro_display_version (version_key, change_reason, created_at)
-                VALUES ('DSP-1', '최초', now())
-                """);
-        long registryId = idOf("macro_calculation_registry_version", "REG-1");
-        long displayId = idOf("macro_display_version", "DSP-1");
-
-        int order = 0;
-        int fieldOrder = 0;
-        for (String fieldId : FIELD_ORDER) {
-            fieldOrder++;
-            jdbc.update(
-                    """
-                    INSERT INTO macro_display_field (
-                        display_version_id, field_id, display_name, display_order, description)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    displayId,
-                    fieldId,
-                    "분야 " + fieldOrder,
-                    fieldOrder,
-                    fieldId + " 설명");
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
-                order++;
-                String indicatorId = fieldId + "_" + n;
-                boolean foreignAgency = indicatorId.equals("prices_commodities_2");
-                jdbc.update(
-                        """
-                        INSERT INTO macro_indicator_definition (
-                            registry_version_id, indicator_id, field_id, primary_source,
-                            raw_unit, transformed_unit, transform_rule, agency, attribution,
-                            license_status, license_review_status, refresh_months_n,
-                            nominal_weight, revision_history_available)
-                        VALUES (?, ?, ?, 'kosis', '2020=100', '%', 'YOY_GROWTH', ?, ?,
-                                'ALLOWED', 'VERIFIED', 3, '"0.0476"'::jsonb, true)
-                        """,
-                        registryId,
-                        indicatorId,
-                        fieldId,
-                        foreignAgency ? "국제통화기금(IMF)" : "통계청",
-                        foreignAgency ? "한국은행 경제통계시스템(ECOS)" : "국가통계포털(KOSIS)");
-                jdbc.update(
-                        """
-                        INSERT INTO macro_display_indicator (
-                            display_version_id, indicator_id, display_name, display_order)
-                        VALUES (?, ?, ?, ?)
-                        """,
-                        displayId,
-                        indicatorId,
-                        "지표 " + order,
-                        order);
-            }
-        }
-        jdbc.update(
-                """
-                INSERT INTO macro_current_publication (
-                    dataset_version_id, registry_version_id, display_version_id, switched_at)
-                VALUES (NULL, ?, ?, now())
-                """,
-                registryId,
-                displayId);
+        MacroRegistrySeed.seedRegistry(jdbc);
     }
 
     private void seedPublishedDataset() {
-        long registryId = idOf("macro_calculation_registry_version", "REG-1");
-        jdbc.update(
-                """
-                INSERT INTO macro_dataset_version (
-                    version_key, processing_registry_version_id, value_rule_fingerprint,
-                    status, complete_indicator_count, published_at, created_at)
-                VALUES ('DS-1', ?, repeat('a', 64), 'PUBLISHED', 17, now(), now())
-                """,
-                registryId);
-        long datasetId = idOf("macro_dataset_version", "DS-1");
-
-        for (String fieldId : FIELD_ORDER) {
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
-                String indicatorId = fieldId + "_" + n;
-                for (String month : List.of("2026-05-01", "2026-06-01", "2026-07-01")) {
-                    jdbc.update(
-                            """
-                            INSERT INTO macro_observation (
-                                dataset_version_id, indicator_id, target_month,
-                                raw_value, transformed_value, released_at, received_at)
-                            VALUES (?, ?, ?::date, '"101.2"'::jsonb, '"1.4"'::jsonb, now(), now())
-                            """,
-                            datasetId,
-                            indicatorId,
-                            month);
-                }
-            }
-            jdbc.update(
-                    """
-                    INSERT INTO macro_baseline (
-                        dataset_version_id, registry_version_id, scope_id,
-                        reference_month, reference_month_held_back_by, computed_at)
-                    VALUES (?, ?, ?, '2026-07-01'::date, '[]'::jsonb, now())
-                    """,
-                    datasetId,
-                    registryId,
-                    fieldId);
-        }
-        jdbc.update(
-                """
-                INSERT INTO macro_baseline (
-                    dataset_version_id, registry_version_id, scope_id,
-                    reference_month, reference_month_held_back_by, computed_at)
-                VALUES (?, ?, 'ALL', '2026-07-01'::date, '[]'::jsonb, now())
-                """,
-                datasetId,
-                registryId);
-        jdbc.update("UPDATE macro_current_publication SET dataset_version_id = ?", datasetId);
+        MacroRegistrySeed.seedPublishedDataset(jdbc);
     }
 
     private void seedFailedCollection(String failedIndicatorId) {

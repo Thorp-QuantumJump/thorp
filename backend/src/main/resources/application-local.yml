@@ -44,13 +44,10 @@ server:
 # API 응답의 limits.provisional에 네 항목이 모두 실려 화면에 임시값 표시가 붙는다(FR-005a).
 # 확정값은 PD-06(후보 수 상한 실측)과 PD-05 잔여(나머지 셋) 결정을 기다린다.
 thorp:
-  # 008 미구현 기간의 임시 대역. 응답의 versions.sampleData 가 true 로 나간다.
+  # 008 연동 전까지 쓰는 임시 대역. 응답의 versions.sampleData 가 true 로 나간다.
   regime:
     macro:
       source: fixture
-  # 지역 개발은 거시지표 적재 없이도 화면을 볼 수 있어야 한다. 예시임은 응답의 exampleData 로 드러난다.
-  marketflow:
-    indicator-source: example
   ops:
     # 개발용 운영자 토큰. quickstart S10 이 X-Ops-Token 에 이 값을 보낸다. 운영 값은 .env.prod 의 THORP_OPS_TOKEN.
     token: dev-ops-token
