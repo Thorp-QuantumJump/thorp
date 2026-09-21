@@ -51,6 +51,7 @@
 .connectionGrid p { margin: 0; min-height: 3.3em; color: var(--thorp-copy); font-size: .8rem; line-height: 1.65; word-break: keep-all; }
 .connectionGrid button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; background: transparent; color: var(--thorp-copy); text-align: left; font: 500 .8rem/1.4 var(--thorp-font-body); cursor: not-allowed; }
 .connectionGrid button small { margin-left: auto; white-space: nowrap; font-size: .65rem; }
+.connectionLink { display: flex; width: 100%; align-items: center; gap: 8px; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; color: var(--thorp-copy); text-decoration: none; font: 500 .8rem/1.4 var(--thorp-font-body); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 1100px) {
   .main { width: calc(100% - 48px); }

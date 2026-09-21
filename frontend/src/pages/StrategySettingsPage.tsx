@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { fetchCaseWindow } from '@/api/regimeLink'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
@@ -20,6 +21,11 @@ import {
   type BacktestRejection,
   type WarmupJudgement,
 } from '@/components/strategy/analysisSupport'
+import {
+  buildCasePeriodConstraint,
+  rangeCoversCase,
+  type CasePeriodConstraint,
+} from '@/components/strategy/casePeriodConstraint'
 import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'
 import { defaultAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'
 import { DetailSettingsPanel } from '@/components/strategy/DetailSettingsPanel'
@@ -29,6 +35,7 @@ import {
   type ReducedPeriodInput,
   type WarmupCause,
 } from '@/components/strategy/reducedPeriod'
+import type { RegimeLinkCaseWindow } from '@/types/regimeLink'
 import type { TargetWeightRow } from '@/components/strategy/ReadOnlyTargetWeights'
 import {
   RegistryChangedNotice,
@@ -94,6 +101,18 @@ function periodTooShortMessage(label: string): string {
 }
 
 const RANGE_NEEDS_STRATEGY = '전략을 고르면 평가할 수 있는 범위가 정해지고 그 안에서 기간을 바꿀 수 있습니다.'
+
+/**
+ * 011 사례 경로에서만 쓰는 문장들(011 진입 계약 §3).
+ *
+ * 공통 평가 가능 범위가 사후 구간을 덮지 못하면 그 전략으로는 이 사례를 볼 수 없다. 사례를 바꾸거나
+ * 빼지 않고(FR-017) 왜 고를 수 없는지만 말한다.
+ */
+const CASE_WINDOW_LOADING = '고른 사례의 직후 구간을 확인하는 중입니다.'
+const CASE_WINDOW_UNAVAILABLE =
+  '고른 사례의 직후 구간을 확인하지 못해 분석을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+const CASE_RANGE_UNCOVERABLE =
+  '이 전략의 자료로는 고른 사례의 직후 구간을 덮을 수 없습니다. 다른 전략을 고르거나 시장 흐름에서 사례를 다시 골라 주세요.'
 
 const REQUEST_BUILD_FAILED =
   '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'
@@ -186,6 +205,31 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) 
  */
 export function StrategySettingsPage({ support = defaultAnalysisSupport }: StrategySettingsPageProps) {
   const navigate = useNavigate()
+
+  // --- 011 사례 경로(진입 계약 §2·§3) ------------------------------------------------------
+  //
+  // 주소에 `case`가 없으면 이 절은 통째로 잠들어 있고 003의 동작은 지금과 같다. 있으면 사례의 사후
+  // 구간을 한 번 읽어 분석 기간의 상한·하한을 더하고, 접수되면 011 화면으로 이어 간다.
+  const [params] = useSearchParams()
+  const caseId = params.get('case')
+  const [caseWindow, setCaseWindow] = useState<
+    { status: 'loading' } | { status: 'loaded'; postWindow: RegimeLinkCaseWindow['postWindow']; endMonth: string } | { status: 'unavailable' }
+  >({ status: 'loading' })
+
+  useEffect(() => {
+    if (caseId === null || caseId === '') return
+    const controller = new AbortController()
+    setCaseWindow({ status: 'loading' })
+    fetchCaseWindow(caseId, controller.signal)
+      .then((next) => {
+        if (controller.signal.aborted) return
+        setCaseWindow({ status: 'loaded', postWindow: next.postWindow, endMonth: next.endMonth })
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCaseWindow({ status: 'unavailable' })
+      })
+    return () => controller.abort()
+  }, [caseId])
 
   // --- 002 경계: 섹터 목록을 받아 앞 단계의 선택을 확인한다 ---------------------------------
   const [catalog, setCatalog] = useState<SectorCatalogResult | null>(null)
@@ -528,6 +572,38 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
    * 잘라 맞추면 사용자가 고르지 않은 기간으로 분석이 나간다(FR-017).
    */
   const evaluableRange = selectedJudgement?.window ?? null
+
+  /**
+   * 011 사례 경로의 추가 제약(진입 계약 §3). `case`가 없으면 `null`이고 003은 지금과 같다.
+   *
+   * <p>거래일 셈은 001이 준 거래일 목록으로만 한다. 계산할 수 없으면 값을 지어내지 않고 그 사실을
+   * `'uncomputable'`로 남겨 '분석하기'가 이유와 함께 막히게 한다.
+   */
+  const caseConstraint = useMemo((): CasePeriodConstraint | 'uncomputable' | null => {
+    if (caseId === null || caseId === '') return null
+    if (caseWindow.status !== 'loaded') return 'uncomputable'
+    if (evaluationWindow.status !== 'loaded' || settings.warmupTradingDays === null) return 'uncomputable'
+    const built = buildCasePeriodConstraint({
+      postWindow: caseWindow.postWindow,
+      endMonth: caseWindow.endMonth,
+      warmupTradingDays: settings.warmupTradingDays,
+      tradingDays: evaluationWindow.window.tradingDaysFromBase,
+    })
+    return typeof built === 'string' ? 'uncomputable' : built
+  }, [caseId, caseWindow, evaluationWindow, settings.warmupTradingDays])
+
+  /** 공통 평가 가능 범위가 이 제약을 채우지 못하면 그 전략으로는 이 사례를 볼 수 없다. */
+  const caseBlocker = ((): string | null => {
+    if (caseId === null || caseId === '') return null
+    if (caseWindow.status === 'unavailable') return CASE_WINDOW_UNAVAILABLE
+    if (caseWindow.status === 'loading') return CASE_WINDOW_LOADING
+    if (caseConstraint === null) return null
+    if (caseConstraint === 'uncomputable') return CASE_WINDOW_UNAVAILABLE
+    if (evaluableRange === null) return null
+    return rangeCoversCase(evaluableRange, caseConstraint) ? null : CASE_RANGE_UNCOVERABLE
+  })()
+
+  const activeCaseConstraint = caseConstraint === 'uncomputable' ? null : caseConstraint
   const { periodStart, periodEnd } = settings.analysisCondition
   const chosenPeriod = useMemo(
     (): AnalysisPeriod | null =>
@@ -632,6 +708,15 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     if (!selectedJudgement.window) return EVALUATION_WINDOW_UNAVAILABLE
     if (periodOutOfRange) return periodOutOfRangeMessage(selectedJudgement.window)
     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel)
+    // 011 사례 경로의 제약(진입 계약 §3). 사례가 없으면 `caseBlocker`가 늘 `null`이라 지금과 같다.
+    if (caseBlocker !== null) return caseBlocker
+    if (
+      activeCaseConstraint !== null &&
+      period !== null &&
+      (period.start > activeCaseConstraint.startMax || period.end < activeCaseConstraint.endMin)
+    ) {
+      return activeCaseConstraint.note
+    }
     if (versions === 'loading') return VERSIONS_LOADING
     if (versions === null) return ANALYSIS_VERSIONS_UNAVAILABLE
     if (rulesVersion?.status === 'pendingDecision') return RULES_PENDING_DECISION
@@ -749,6 +834,19 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     try {
       const accepted = await support.createBacktest(request)
       setSubmission({ status: 'accepted', accepted })
+      /*
+        011 사례 경로는 **접수되면 곧바로** 011 화면으로 간다(진입 계약 §2). 003은 지금 접수 뒤 결과
+        화면으로 이동하지 않으므로 완료를 여기서 기다리지 않는다 — 기준 실행의 진행 상태는 011 화면이
+        005와 같은 방식으로 보인다. `case`가 없으면 지금 동작 그대로다.
+
+        004 요청 본문에는 `case`를 싣지 않았다. 004 계약을 바꾸지 않고 화면이 주소로 들고 다닌다.
+        공개 토큰이 없는 옛 접수 응답이면 이동할 곳이 없으므로 접수 안내에 머문다.
+      */
+      if (caseId !== null && caseId !== '' && accepted.publicToken) {
+        void navigate(
+          `/regime-link?${new URLSearchParams({ base: accepted.publicToken, case: caseId }).toString()}`,
+        )
+      }
     } catch (error) {
       // 거절마다 계약 §2가 정한 처리를 한다. **어느 경우에도 요청을 다시 보내지 않는다** — 다시 보낼지는
       // 사용자가 바뀐 내용을 보고 정한다.
@@ -793,6 +891,8 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     }
   }, [
     analyzeBlocker,
+    caseId,
+    navigate,
     prepared,
     submission.status,
     settings.analysisCondition,
@@ -1089,6 +1189,7 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
                 rangeUnavailableMessage={settings.selectedStrategy ? undefined : RANGE_NEEDS_STRATEGY}
                 period={period}
                 periodChosen={chosenPeriod !== null}
+                caseConstraint={activeCaseConstraint}
                 initialAmount={initialAmount ?? undefined}
                 minEvaluationYears={minEvaluationYears}
                 cost={costAssumption}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import type { RegimeSearchResult } from '@/types/regime'
+import { useState, type ReactNode } from 'react'
+import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'
 import { CaseDetailLoader } from './CaseDetailLoader'
 import { Disclosure } from './Disclosure'
 import styles from './CaseList.module.css'
@@ -10,10 +10,16 @@ interface CaseListProps {
   isLoading: boolean
   context: string
   fieldNames: Record<string, string>
+  /**
+   * 사례 상세의 사후 구간 자리에 끼워 넣을 것을 만든다(011 진입 계약 §4).
+   *
+   * 없으면 010이 내려 준 문구를 그대로 그린다. 사례마다 다른 것을 넣어야 해서 값이 아니라 함수다.
+   */
+  postPeriodSlot?: (summary: RegimeCaseSummary) => ReactNode
 }
 
 /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */
-export function CaseList({ result, onShowMore, isLoading, context, fieldNames }: CaseListProps) {
+export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot }: CaseListProps) {
   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)
   return (
     <section aria-labelledby="regime-cases-title" className={styles.list}>
@@ -59,7 +65,7 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames }:
             )}
             {selectedEndMonth === item.endMonth && (
               <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>
-                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} />
+                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} postPeriodSlot={postPeriodSlot?.(item)} />
               </div>
             )}
           </li>
