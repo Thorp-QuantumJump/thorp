@@ -219,6 +219,12 @@ describe('경제환경 검색 화면', () => {
     fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
     await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByRole('status', { name: '시험 분야 2026-07 검색 결과: 저장된 검색' })).toBeNull())
+    // 고정 조회를 푼 뒤의 검색은 정상적으로 남는다. 저장된 판(saved-1)은 여전히 남지 않는다 — 파라미터가 지워지는
+    // 커밋에서 result 가 아직 옛 판이면 옛 searchId 가 MARKET_FLOW 로 나갈 수 있어, 횟수 1 이 그것을 잠근다.
+    await waitFor(() =>
+      expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledWith('fresh-1', 'MARKET_FLOW', 'T_G'),
+    )
+    expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledTimes(1)
   })
 
   it('로그인 사용자의 검색은 진입 경로·기준월 근거와 함께 한 번만 내 기록에 남긴다(010 FR-032)', async () => {
