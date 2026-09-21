@@ -7,9 +7,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
+import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;
+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.TestUsers;
 import java.sql.Timestamp;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +46,7 @@ class RegimeRecordIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private MyRecordRegistrar registrar;
 
     private long owner;
 
@@ -95,6 +107,63 @@ class RegimeRecordIT extends IntegrationTestSupport {
 
         assertThat(logCount()).isZero();
         assertThat(recordCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("모르는 진입 경로·기준월 근거는 400이다 — 서버가 골라 주지 않는다")
+    void unknownEnumValueIsRejected() throws Exception {
+        for (String body :
+                List.of(body(KEY, "SOMEWHERE_ELSE", "T_G"), body(KEY, "MARKET_FLOW", "GUESSED"))) {
+            mockMvc.perform(
+                            post("/my-records/regime-searches")
+                                    .with(csrf())
+                                    .with(as(owner))
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+        }
+
+        assertThat(logCount()).isZero();
+        assertThat(recordCount()).isZero();
+    }
+
+    /**
+     * 같은 검색을 동시에 두 번 열어도 쌍이 하나다(부분 유니크 인덱스 {@code uk_my_record_regime}).
+     *
+     * <p>둘 다 "없다"를 읽고 둘 다 INSERT 하면 한쪽이 제약 위반으로 끝난다. 그러지 않는 것은 {@code append}의 {@code INSERT ... ON
+     * CONFLICT DO UPDATE}가 충돌한 로그 행을 <b>잠그기</b> 때문이다 — 뒤엣것은 앞엣것이 커밋할 때까지 거기서 기다리고, 풀린 뒤에는 앞엣것이 만든
+     * 항목을 보게 된다. 그 순서에 기대고 있으므로 여기서 고정한다.
+     */
+    @Test
+    @DisplayName("같은 검색을 동시에 두 번 열어도 로그 행과 항목이 하나씩이다")
+    void concurrentRecordingCreatesOnePair() throws Exception {
+        CountDownLatch go = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        RegimeRecordOutcome one;
+        RegimeRecordOutcome two;
+        try {
+            Callable<RegimeRecordOutcome> open =
+                    () -> {
+                        go.await();
+                        return registrar.recordRegimeSearch(
+                                owner, KEY, EntryPath.MARKET_FLOW, BaselineOrigin.T_G);
+                    };
+            Future<RegimeRecordOutcome> a = pool.submit(open);
+            Future<RegimeRecordOutcome> b = pool.submit(open);
+            go.countDown();
+            one = a.get(30, TimeUnit.SECONDS);
+            two = b.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(one.recordId()).isEqualTo(two.recordId());
+        assertThat(List.of(one.created(), two.created()))
+                .as("하나는 만들었고 하나는 이미 있던 것을 돌려준다 — 둘 다 201이면 항목이 둘이다")
+                .containsExactlyInAnyOrder(true, false);
+        assertThat(logCount()).isEqualTo(1);
+        assertThat(recordCount()).isEqualTo(1);
     }
 
     @Test
