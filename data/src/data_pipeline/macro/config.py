@@ -72,6 +72,15 @@ _DEFAULTS: Final[dict[str, tuple[str, str | None]]] = {
 }
 
 
+#: 인증키가 들어 있는 환경변수 이름 전부 (FR-021).
+#:
+#: 오류·로그를 내보내기 전에 이 값들을 지운다. 이름을 한자리에 모아 두는 이유는, 원천이
+#: 늘 때 지우는 쪽을 함께 고치지 않으면 새 키만 조용히 새기 때문이다.
+API_KEY_ENV_NAMES: Final[tuple[str, ...]] = tuple(
+    sorted({env for _, env in _DEFAULTS.values() if env})
+)
+
+
 def _env_name(source_id: str, suffix: str) -> str:
     return f"MACRO_{source_id.upper()}_{suffix}"
 
