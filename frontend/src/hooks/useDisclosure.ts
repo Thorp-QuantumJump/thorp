@@ -8,8 +8,8 @@ import { useCallback, useRef, useState } from 'react'
  *
  * <p>주소를 바꾸지 않는다. 결과 화면을 떠나지 않고 연다(SC-006).
  */
-export function useDisclosure(panelId: string) {
-  const [open, setOpen] = useState(false)
+export function useDisclosure(panelId: string, initialOpen = false) {
+  const [open, setOpen] = useState(initialOpen)
   const toggleRef = useRef<HTMLButtonElement>(null)
 
   const close = useCallback(() => {
