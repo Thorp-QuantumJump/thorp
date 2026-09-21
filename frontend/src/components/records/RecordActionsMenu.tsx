@@ -2,6 +2,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { normalizeApiError } from '@/api/client'
 import { downloadMyRecordExport } from '@/api/myRecords'
+import { closePanelOnEscape } from '@/components/result/panelEscape'
 import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'
 import { DeleteConfirmDialog } from './DeleteConfirmDialog'
 import { RenameDialog } from './RenameDialog'
@@ -43,8 +44,17 @@ export function RecordActionsMenu({
 
   // 메뉴를 닫으면 초점이 연 버튼으로 돌아온다(FR-021). 대화상자가 열려 있는 동안에는 가져오지
   // 않는다 — 그러면 대화상자 안에서 입력하던 초점을 뺏는다.
+  //
+  // <b>한 번이라도 열린 뒤에만</b> 되돌린다. 이 effect 는 마운트 때도 도는데, 그때 초점을 주면
+  // 목록을 그릴 때마다 줄마다 자기 트리거를 잡고 마지막 줄이 이긴다 — 사용자는 화면 맨 아래에서
+  // Tab 을 시작하게 되고 `?resultToken=`으로 들어온 줄에 초점을 옮기는 006 로직과도 싸운다.
+  const opened = useRef(false)
   useEffect(() => {
-    if (!open && dialog === null) triggerRef.current?.focus()
+    if (open) {
+      opened.current = true
+      return
+    }
+    if (opened.current && dialog === null) triggerRef.current?.focus()
   }, [open, dialog])
 
   async function startExport(format: 'csv' | 'json') {
@@ -58,7 +68,9 @@ export function RecordActionsMenu({
   }
 
   return (
-    <div className={styles.actions}>
+    // Esc 를 감싸개에서 받는다. 메뉴를 열어도 초점은 트리거에 남아 있어 메뉴 안쪽에만 걸면
+    // 키가 닿지 않는다.
+    <div className={styles.menuAnchor} onKeyDown={closePanelOnEscape(() => setOpen(false))}>
       <button
         ref={triggerRef}
         type="button"

@@ -217,8 +217,12 @@ describe('MyRecordsPage', () => {
     renderPage()
     await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
 
-    const notice = await screen.findByRole('status')
-    expect(notice.textContent).toContain('섹터는 넘기지 않았습니다')
+    // 페이지 알림 영역(role=status)이 늘 DOM 에 있으므로 문장으로 그 자리를 집는다.
+    const notice = (await screen.findByText(/섹터는 넘기지 않았습니다/)).closest(
+      '[role="status"]',
+    ) as HTMLElement | null
+    expect(notice).not.toBeNull()
+    if (!notice) throw new Error('알림 자리를 찾지 못했다')
     expect(within(notice).getByRole('link', { name: '섹터·비중 단계로 가기' }).getAttribute('href')).toBe(
       SECTOR_SELECTION_PATH,
     )
@@ -472,6 +476,29 @@ describe('MyRecordsPage', () => {
     await user.click(await screen.findByRole('button', { name: `${name} 더 보기` }))
     return user
   }
+
+  it('목록을 그려도 초점이 메뉴 버튼으로 튀지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)
+
+    renderPage()
+    await screen.findByRole('list', { name: '내 기록' })
+
+    // 줄마다 있는 '더 보기'가 마운트 때 초점을 가져가면 사용자는 화면 맨 아래에서 Tab 을 시작한다.
+    expect(document.activeElement?.getAttribute('aria-label') ?? '').not.toMatch(/더 보기$/)
+  })
+
+  it('메뉴는 Esc 로 닫히고 초점이 연 버튼으로 돌아온다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    expect(screen.getByRole('menu')).toBeTruthy()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe(`${analysisRecord.name} 더 보기`)
+  })
 
   it('이름을 바꾸면 그 줄의 이름만 제자리에서 바뀐다', async () => {
     apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })

@@ -143,14 +143,16 @@ export async function downloadMyRecordExport(
     `${recordId}.${format}`,
   )
   const url = URL.createObjectURL(response.data)
-  try {
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = name
-    anchor.click()
-  } finally {
-    URL.revokeObjectURL(url)
-  }
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = name
+  // 문서에 붙였다 뗀다. 붙이지 않은 앵커의 click 을 무시하는 브라우저가 있다.
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  // 해제를 다음 턴으로 미룬다. 클릭 직후 동기로 풀면 blob 을 읽기 전에 주소가 죽어 내려받기가
+  // 조용히 취소된다 — jsdom 에는 실제 다운로드가 없어 검사로는 드러나지 않는 자리다.
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 /**
