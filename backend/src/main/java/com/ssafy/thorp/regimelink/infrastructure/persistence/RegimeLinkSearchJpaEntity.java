@@ -276,6 +276,9 @@ public class RegimeLinkSearchJpaEntity {
         }
 
         public RegimeLinkSearchJpaEntity build() {
+            // 외부 식별자를 @PrePersist 가 이 날짜로 짓는다. 빠뜨리면 저장 시점에야 NPE 로
+            // 드러나므로 여기서 막는다.
+            java.util.Objects.requireNonNull(entity.searchIdDate, "searchIdDate must not be null");
             return entity;
         }
     }

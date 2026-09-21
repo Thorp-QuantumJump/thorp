@@ -67,7 +67,7 @@ public record AvailabilityResponse(
             Integer excludedCount,
             int minPostTradingDays) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    /** 덮는 사례가 없으면 양끝이 <b>명시적 {@code null}</b>이다 — 키를 지우면 필터를 걸지 않은 응답과 같아진다. */
     public record Range(String firstCaseEndMonth, String lastCaseEndMonth) {}
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -152,11 +152,17 @@ public record AvailabilityResponse(
                 instrument.delistedOn());
     }
 
+    /**
+     * 필터를 건 응답에는 범위가 비어도 {@code availableRange}를 싣는다.
+     *
+     * <p>그 키가 통째로 없는 경우는 계약이 {@code MARKET_FLOW} 하나로 정했다(§1). 빈 범위에서도 키를 지우면 "필터를 걸었는데 덮는 사례가 없다"와
+     * "필터를 걸지 않았다"가 같은 모양이 되어 화면이 둘을 가릴 수 없다(FR-019).
+     */
     private static Filter filter(AvailabilityResult.Filter filter) {
         return new Filter(
                 filter.applied(),
                 filter.key() == null ? null : filter.key().value(),
-                filter.availableRange() == null || filter.availableRange().isEmpty()
+                filter.availableRange() == null
                         ? null
                         : new Range(
                                 month(filter.availableRange().firstCaseEndMonth()),

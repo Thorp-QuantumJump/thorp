@@ -68,6 +68,8 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 - `availability`는 비교 묶음 전체의 판정(가장 나쁜 실행)이고 `perRun[]`이 실행별이다. 우선순위는
   `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`이다.
 - `OUT_OF_PERIOD`는 **필터 조건이 아니다.** `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다.
+- 필터를 건 응답은 덮는 사례가 없어도 `availableRange`를 싣고 양끝만 `null`이다. 그 키가 아예 없는 것은
+  `MARKET_FLOW` 응답뿐이다.
 - `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이고, 화면이 `UNLISTED`·
   `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은
   그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.

@@ -36,10 +36,25 @@ public class FilterKeyCalculator {
             new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
 
     public FilterKey calculate(FilterDefinition definition) {
-        return new FilterKey(sha256(canonicalJson(definition)));
+        return new FilterKey(sha256(toJson(definition)));
     }
 
-    /** 저장 컬럼({@code regime_link_filter.definition})에 그대로 들어가는 모양이기도 하다. */
+    /**
+     * 저장 컬럼({@code regime_link_filter.definition})에 들어갈 JSON.
+     *
+     * <p><b>해시를 만든 그 문자열을 그대로 저장한다.</b> 저장과 해시를 다른 직렬화로 만들면, 한쪽 설정이 바뀐 날 저장된 정의와 키가 갈라지고 같은 행을 다시
+     * 읽어 키를 검사하는 쪽에서만 오차가 드러난다.
+     */
+    public String toJson(FilterDefinition definition) {
+        return canonicalJson(asMap(definition));
+    }
+
+    /** 필터 행의 다른 JSONB 컬럼도 같은 직렬화를 쓰게 하는 자리. 저장 모양이 한 곳에서 정해진다. */
+    public String toJson(Map<String, Object> value) {
+        return canonicalJson(value);
+    }
+
+    /** 저장 컬럼의 구조. 키 계산과 저장이 같은 모양을 보게 하는 한 곳이다. */
     public Map<String, Object> asMap(FilterDefinition definition) {
         Map<String, Object> map = new TreeMap<>();
         map.put("instruments", instruments(definition.instruments()));
@@ -69,9 +84,9 @@ public class FilterKeyCalculator {
         return rows;
     }
 
-    private String canonicalJson(FilterDefinition definition) {
+    private String canonicalJson(Object value) {
         try {
-            return canonical.writeValueAsString(asMap(definition));
+            return canonical.writeValueAsString(value);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "필터 키를 만들지 못했습니다.");
         }
