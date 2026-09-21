@@ -19,7 +19,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Final, TypeVar
 
@@ -92,6 +92,8 @@ class SourceObservation:
     period: str
     value: Decimal | None
     unit: str | None = None
+    #: 원천이 관측치별로 밝힌 발표 시각. 제공하지 않으면 ``None`` 이다.
+    released_at: datetime | None = None
     source_updated_at: str | None = None
 
 

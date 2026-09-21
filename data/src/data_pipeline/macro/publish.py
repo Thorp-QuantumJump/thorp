@@ -547,11 +547,12 @@ def publish_atomically(
                              "(dataset_version_id, indicator_id, target_month, raw_value, "
                              "transformed_value, released_at, received_at, break_segment, "
                              "missing_reason) VALUES (:dataset, :indicator, :month, "
-                             f"{raw_expression}, {transformed_expression}, NULL, :received, "
+                             f"{raw_expression}, {transformed_expression}, :released, :received, "
                              ":segment, :missing)"),
                         {"dataset": dataset_id, "indicator": indicator.indicator_id,
                          "month": _month_date(observation.period), "raw_value": raw_value,
                          "transformed_value": transformed,
+                         "released": observation.released_at,
                          "received": observation.received_at or now,
                          "segment": observation.break_segment,
                          "missing": observation.missing_reason},
