@@ -11,9 +11,11 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
 
+import macro_seed
 import pytest
 
-from data_pipeline.regime.macro import SOURCE_FIXTURE, create_source
+from data_pipeline.regime.macro import SOURCE_FIXTURE, SOURCE_MACRO, create_source
+from data_pipeline.regime.macro.postgres import PostgresMacroIndicatorSource
 from data_pipeline.regime.macro.source import MacroIndicatorSource
 from data_pipeline.regime.macro.types import (
     FieldEntry,
@@ -22,8 +24,8 @@ from data_pipeline.regime.macro.types import (
     MonthlyValue,
 )
 
-#: 계약 시험을 돌릴 구현체. 008이 오면 `SOURCE_MACRO`를 더한다.
-SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE,)
+#: 계약 시험을 돌릴 구현체. 008 구현체(T068)가 들어와 둘 다 같은 시험을 통과해야 한다.
+SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE, SOURCE_MACRO)
 
 #: 운영 코드 검사(T012·T013)의 대상 뿌리. 010이 만든 자리만 본다.
 REGIME_PACKAGE: Path = Path(__file__).resolve().parents[2] / "src" / "data_pipeline" / "regime"
@@ -44,6 +46,16 @@ def production_sources() -> list[Path]:
 
 @pytest.fixture(params=SOURCE_NAMES)
 def macro_source(request: pytest.FixtureRequest) -> MacroIndicatorSource:
+    """계약 시험이 쓰는 구현체.
+
+    008 구현체는 DB 를 읽으므로 컨테이너를 띄우고 표를 채운 뒤 만든다. 팩터리(`create_source`)를
+    쓰지 않는 이유는 그쪽이 환경변수의 `DATABASE_URL` 로 접속하기 때문이다 — 시험이 개발자의
+    DB 에 붙으면 안 된다.
+    """
+    if request.param == SOURCE_MACRO:
+        engine = request.getfixturevalue("postgres_engine")
+        macro_seed.seed(engine)
+        return PostgresMacroIndicatorSource(engine)
     return create_source(request.param)
 
 
