@@ -1,6 +1,7 @@
 import { FolderClock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { getRegimeBaselineMonths } from '@/api/regime'
 import { fetchStrategyRegistry } from '@/api/strategyRegistry'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useMyRecords } from '@/hooks/useMyRecords'
 import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type { MyRecordListQuery } from '@/types/myRecords'
+import type { RegimeField } from '@/types/regime'
 import type { StrategyView } from '@/types/strategyRegistry'
 import styles from './MyRecordsPage.module.css'
 
@@ -41,6 +43,7 @@ export function MyRecordsPage() {
   const records = useMyRecords(query)
   const catalog = useSectorCatalogState()
   const [strategies, setStrategies] = useState<StrategyView[] | null>(null)
+  const [regimeFields, setRegimeFields] = useState<RegimeField[] | null>(null)
   const highlightRef = useRef<HTMLLIElement>(null)
   // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.
   const highlightedOnce = useRef(false)
@@ -54,13 +57,24 @@ export function MyRecordsPage() {
     return () => controller.abort()
   }, [])
 
+  // 경제환경 항목의 분야 이름. 010 분야 목록을 페이지에서 한 번 받아 패널마다 부르지 않는다. 못 받으면 코드 그대로다.
+  useEffect(() => {
+    const controller = new AbortController()
+    getRegimeBaselineMonths(controller.signal).then(
+      (months) => setRegimeFields(months.byField),
+      () => setRegimeFields(null),
+    )
+    return () => controller.abort()
+  }, [])
+
   const labels = useMemo<RecordLabels>(() => {
     const sectors = catalog.status === 'loaded' ? catalog.catalog.sectors : []
     return {
       sector: (code) => sectors.find((sector) => sector.code === code)?.name ?? code,
       strategy: (id) => strategies?.find((strategy) => strategy.strategyId === id)?.name ?? id,
+      regimeField: (id) => regimeFields?.find((field) => field.id === id)?.name ?? id,
     }
-  }, [catalog, strategies])
+  }, [catalog, strategies, regimeFields])
 
   useEffect(() => {
     if (records.status !== 'loaded' || !highlightToken || highlightedOnce.current) return
