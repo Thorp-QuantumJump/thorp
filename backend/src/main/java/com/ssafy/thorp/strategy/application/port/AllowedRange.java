@@ -65,6 +65,26 @@ public record AllowedRange(Object min, Object max, Object step, List<RegisteredC
     }
 
     /**
+     * 이 값을 사람에게 보일 문구. 등록표가 적어 두지 않았으면 값을 그대로 읽은 문자열이다.
+     *
+     * <p><b>값만 내보내는 통로가 라벨을 잃게 만든다.</b> {@link #values()}는 값만 넘기므로 그것만 받은 쪽은 {@code {mode:
+     * CALENDAR, unit: MONTH_END}}를 그릴 방법이 없어 화면에 {@code [object Object]}가 나온다. {@link
+     * RegisteredChoice}가 값과 문구를 한 덩이로 묶어 둔 뜻이 거기서 끊기지 않도록, 값으로 문구를 되찾는 자리를 여기 둔다.
+     *
+     * <p>비교는 {@code equals}로만 한다 — 목록형 판정({@link #contains})과 같은 잣대여야 같은 값이 두 곳에서 다르게 읽히지 않는다.
+     */
+    public String labelOf(Object value) {
+        if (choices != null) {
+            for (RegisteredChoice choice : choices) {
+                if (choice.value().equals(value) && choice.label() != null) {
+                    return choice.label();
+                }
+            }
+        }
+        return String.valueOf(value);
+    }
+
+    /**
      * 이 값이 허용 범위 안에 있는가.
      *
      * <p>목록형은 {@code equals}로만 판정한다 — 같은 뜻의 값을 두 형태로 담지 않기로 했으므로({@code 63}과 {@code 63.0}을 섞지 않는다,

@@ -1,0 +1,341 @@
+{
+  "job": {
+    "linkId": "RL-T014-partial_delisted",
+    "attempt": 1,
+    "scenario": "CONTINUOUS"
+  },
+  "window": {
+    "d0": "2012-04-02",
+    "d21": "2012-04-30",
+    "d63": "2012-06-27",
+    "lastAvailable": "2012-05-25",
+    "completedTradingDays": 40,
+    "baselineDate": "2012-03-30"
+  },
+  "run": {
+    "runId": "RUN-PARTIAL_DELISTED",
+    "effectiveStart": "2010-04-02",
+    "initialCash": "10000000.00",
+    "analyticsMethod": "ANALYTICS-1"
+  },
+  "universe": {
+    "mappingVersion": "SECTOR-ETF-2026-09",
+    "items": [
+      {
+        "sectorId": "SEMICONDUCTOR",
+        "instrumentId": "091160.XKRX"
+      },
+      {
+        "sectorId": "BATTERY",
+        "instrumentId": "305720.XKRX"
+      },
+      {
+        "sectorId": "BIO",
+        "instrumentId": "244580.XKRX",
+        "delistedOn": "2012-05-28"
+      }
+    ]
+  },
+  "marketData": {
+    "datasetId": "KRX_DAILY_20260915",
+    "dataVersion": "KRX-2026-09-09",
+    "benchmarkInstrumentId": "KOSPI"
+  },
+  "inputs": {
+    "portfolioSeries": [
+      {
+        "date": "2012-03-30",
+        "equity": "11050600.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-02",
+        "equity": "11044810.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-03",
+        "equity": "11064159.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-04",
+        "equity": "11058075.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-05",
+        "equity": "11051868.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-06",
+        "equity": "11036740.00",
+        "cash": "1200000.00"
+      },
+      {
+        "date": "2012-04-09",
+        "equity": "11045038.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-10",
+        "equity": "11066033.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-11",
+        "equity": "11067115.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-12",
+        "equity": "11073133.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-13",
+        "equity": "11082400.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-16",
+        "equity": "11091833.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-17",
+        "equity": "11093797.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-18",
+        "equity": "11102619.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-19",
+        "equity": "11075246.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-20",
+        "equity": "11061147.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-23",
+        "equity": "11066388.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-24",
+        "equity": "11092828.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-25",
+        "equity": "11060863.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-26",
+        "equity": "11069556.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-27",
+        "equity": "11054307.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-04-30",
+        "equity": "11042524.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-01",
+        "equity": "11014981.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-02",
+        "equity": "11041641.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-03",
+        "equity": "11069530.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-04",
+        "equity": "11088541.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-07",
+        "equity": "11072007.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-08",
+        "equity": "11071292.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-09",
+        "equity": "11085764.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-10",
+        "equity": "11089983.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-11",
+        "equity": "11067586.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-14",
+        "equity": "11094979.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-15",
+        "equity": "11141530.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-16",
+        "equity": "11129630.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-17",
+        "equity": "11180662.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-18",
+        "equity": "11167556.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-21",
+        "equity": "11128327.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-22",
+        "equity": "11138681.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-23",
+        "equity": "11167899.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-24",
+        "equity": "11149492.39",
+        "cash": "1263464.39"
+      },
+      {
+        "date": "2012-05-25",
+        "equity": "11106393.39",
+        "cash": "1263464.39"
+      }
+    ],
+    "openingPositions": [
+      {
+        "instrumentId": "091160.XKRX",
+        "quantity": 179
+      },
+      {
+        "instrumentId": "244580.XKRX",
+        "quantity": 233
+      },
+      {
+        "instrumentId": "305720.XKRX",
+        "quantity": 151
+      }
+    ],
+    "dailyPositions": [
+      {
+        "date": "2012-04-09",
+        "positions": [
+          {
+            "instrumentId": "091160.XKRX",
+            "quantity": 173
+          },
+          {
+            "instrumentId": "244580.XKRX",
+            "quantity": 233
+          },
+          {
+            "instrumentId": "305720.XKRX",
+            "quantity": 155
+          }
+        ]
+      },
+      {
+        "date": "2012-05-14",
+        "positions": [
+          {
+            "instrumentId": "091160.XKRX",
+            "quantity": 173
+          },
+          {
+            "instrumentId": "244580.XKRX",
+            "quantity": 466
+          },
+          {
+            "instrumentId": "305720.XKRX",
+            "quantity": 155
+          }
+        ]
+      }
+    ],
+    "trades": [
+      {
+        "fillId": "FL-000001",
+        "time": "2012-04-09T00:00:00Z",
+        "instrumentId": "091160.XKRX",
+        "side": "SELL",
+        "quantity": 6,
+        "price": "22972.61",
+        "referencePrice": "22991.00",
+        "costs": {
+          "commission": "20.69",
+          "spread": "41.38",
+          "slippage": "68.97",
+          "tax": "0.00"
+        },
+        "cashCost": "20.69",
+        "reason": "REBALANCE"
+      },
+      {
+        "fillId": "FL-000002",
+        "time": "2012-04-09T00:00:00Z",
+        "instrumentId": "305720.XKRX",
+        "side": "BUY",
+        "quantity": 4,
+        "price": "18584.86",
+        "referencePrice": "18570.00",
+        "costs": {
+          "commission": "11.14",
+          "spread": "22.28",
+          "slippage": "37.14",
+          "tax": "0.00"
+        },
+        "cashCost": "11.14",
+        "reason": "REBALANCE"
+      }
+    ],
+    "cashFlows": []
+  },
+  "inputDigest": "91802d36d06d1aeac16bca541c1b939d6b53e9d956daa32cfba9530d3ddf64a7"
+}

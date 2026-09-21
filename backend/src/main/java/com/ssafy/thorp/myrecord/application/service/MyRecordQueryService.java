@@ -81,10 +81,26 @@ public class MyRecordQueryService {
         MyRecordView view = requireView(ownerId, recordId);
         Instant now = clock.instant();
         records.markViewed(view.id(), now);
+        return detailOf(view.viewedAt(now));
+    }
+
+    /**
+     * 갱신한 항목을 그대로 돌려줄 때(이름 변경 응답). <b>열람 표시를 남기지 않는다.</b>
+     *
+     * <p>{@code last_viewed_at}은 "'다시 보기'로 열었다"는 뜻이고 보관 기간 판단(PD-13)에 쓰려고 남겨 둔 값이다. 이름을 고친 기록이 열람한
+     * 것으로 세어지면 그 판단이 조용히 어긋난다 — {@link #item}과 같은 규칙이다.
+     */
+    @Transactional(readOnly = true)
+    public MyRecordDetail current(long ownerId, String recordId) {
+        return detailOf(requireView(ownerId, recordId));
+    }
+
+    /** 펼쳐 보는 층을 조립한다. 열람 표시 여부는 부른 쪽이 정한다. */
+    private MyRecordDetail detailOf(MyRecordView view) {
         Map<String, Object> referenceVersions = referenceVersions(view);
         Map<String, Object> reopenPayload = reopenPayload(view);
         return new MyRecordDetail(
-                view.viewedAt(now),
+                view,
                 referenceVersions,
                 driftChecker
                         .check(
@@ -137,8 +153,12 @@ public class MyRecordQueryService {
      *
      * <p>{@code rulesVersion}·{@code costProfileVersion}은 {@code {version, provisional}} 꼴 그대로다 —
      * 잠정 여부가 함께 보여야 사용자가 확정 규칙 결과와 임시 규칙 결과를 구분한다.
+     *
+     * <p>내보내기({@code MyRecordExportService})가 같은 값을 파일에 담으므로 패키지 안에서 부를 수 있다. 상세({@link #detail})를
+     * 거쳐 받지 않는 이유: 상세는 열람 표시를 남기고 실행 조회({@code reopenPayload})와 등록표 판정({@code registryDrift})까지 딸려
+     * 온다 — 내보내기는 '다시 보기'가 아니고 그 둘이 필요하지도 않다.
      */
-    private Map<String, Object> referenceVersions(MyRecordView view) {
+    Map<String, Object> referenceVersions(MyRecordView view) {
         Map<String, Object> out = new LinkedHashMap<>();
         switch (view.kind()) {
             case ANALYSIS -> {

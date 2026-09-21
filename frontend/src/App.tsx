@@ -31,6 +31,20 @@ const RegimeSearchPage = lazy(() =>
   })),
 )
 
+// 011 시장 흐름 경로의 진입 화면이다. 사례를 확인한 뒤 002로 넘긴다(011 진입 계약 §2).
+const RegimeLinkStartPage = lazy(() =>
+  import('@/pages/RegimeLinkStartPage').then((module) => ({
+    default: module.RegimeLinkStartPage,
+  })),
+)
+
+// 011 사례 연결 결과 화면. 공개 토큰으로 열리므로 보호 경로 밖에 둔다(FR-025).
+const RegimeLinkPage = lazy(() =>
+  import('@/pages/RegimeLinkPage').then((module) => ({
+    default: module.RegimeLinkPage,
+  })),
+)
+
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({
     default: module.DashboardPage,
@@ -128,6 +142,13 @@ function AnimatedRoutes() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/market-flow" element={<MarketFlowPage />} />
             <Route path="/regime-search" element={<RegimeSearchPage />} />
+            <Route path="/regime-link" element={<RegimeLinkPage />} />
+            {/*
+              011 진입은 로그인을 요구하지만 `ProtectedRoute`로 감싸지 않는다. 011 경로에는 익명이
+              볼 수 있는 자리가 있어 경로 전체를 막을 수 없고, 복귀 위치 저장은 `useLoginRedirect`가
+              014와 같은 방식으로 한다(FR-025).
+            */}
+            <Route path="/regime-link/start" element={<RegimeLinkStartPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/backtest" element={<BacktestPage />} />

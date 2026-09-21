@@ -93,30 +93,6 @@ public record MyRecord(
                 isCopy);
     }
 
-    /**
-     * 개인 항목만 지운다. 공용 계산 결과는 건드리지 않는다(FR-017).
-     *
-     * <p>되돌리는 경로를 두지 않는다 — 복구 기능은 만들지 않기로 했다(research R6).
-     */
-    public MyRecord delete(Instant at) {
-        if (isDeleted()) {
-            throw new IllegalStateException("record already deleted: " + recordId);
-        }
-        return new MyRecord(
-                id,
-                recordId,
-                ownerId,
-                ref,
-                name,
-                sectorCodes,
-                strategyIds,
-                period,
-                savedAt,
-                lastViewedAt,
-                Objects.requireNonNull(at, "deletedAt must not be null"),
-                isCopy);
-    }
-
     /** '다시 보기'로 열었다. 보관 기간을 나중에 도입할 수 있게 시각만 남긴다. */
     public MyRecord markViewed(Instant at) {
         return new MyRecord(

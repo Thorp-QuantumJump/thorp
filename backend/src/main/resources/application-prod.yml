@@ -87,3 +87,9 @@ thorp:
     expiry-sweep-batch-size: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}
     tombstone-retention: ${THORP_RESULT_TOMBSTONE_RETENTION}
     trades-page-size: ${THORP_RESULT_TRADES_PAGE_SIZE}
+  # 사례 연결(spec 011 T080). 실행 한도·결과 공개와 같이 **기본값을 두지 않는다** — 감시 주기와 작업
+  # 상한을 누가 정해 배포 환경에 넣어야 비로소 뜬다. 공통 설정의 임시값을 운영이 물려받지 않게 한다.
+  regimelink:
+    pending-run-sweep-interval: ${THORP_REGIMELINK_PENDING_RUN_SWEEP_INTERVAL}
+    job-max-rows: ${THORP_REGIMELINK_JOB_MAX_ROWS}
+    job-max-instruments: ${THORP_REGIMELINK_JOB_MAX_INSTRUMENTS}

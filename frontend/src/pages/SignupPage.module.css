@@ -3,11 +3,7 @@
   box-sizing: border-box;
   min-height: 100vh;
   overflow: hidden;
-  background:
-    linear-gradient(var(--thorp-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
-    var(--thorp-background);
-  background-size: 72px 72px;
+  background: var(--thorp-background);
   color: var(--thorp-foreground);
 }
 

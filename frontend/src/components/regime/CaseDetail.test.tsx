@@ -27,4 +27,26 @@ describe('사례 상세', () => {
     expect(screen.getByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
     expect(within(screen.getByRole('region', { name: '2012-03 사례 상세' })).getByText('전체 거리', { exact: false })).toBeTruthy()
   })
+
+  /** 011 T087: 자리를 주지 않으면 010이 내려 준 문구가 그대로 보인다(010 동작 보존). */
+  it('사후 구간 자리를 주지 않으면 010의 문구를 그대로 그린다', () => {
+    render(<CaseDetail detail={regimeDetail()} summary={summary} mode="FIELD" fieldNames={{}} />)
+
+    expect(screen.getByText('사례 이후 결과는 아직 연결되지 않았습니다.')).toBeTruthy()
+  })
+
+  it('사후 구간 자리를 주면 그 자리에 끼워 넣고 010 문구를 대신한다', () => {
+    render(
+      <CaseDetail
+        detail={regimeDetail()}
+        summary={summary}
+        mode="FIELD"
+        fieldNames={{}}
+        postPeriodSlot={<span>끼워 넣은 자리</span>}
+      />,
+    )
+
+    expect(screen.getByText('끼워 넣은 자리')).toBeTruthy()
+    expect(screen.queryByText('사례 이후 결과는 아직 연결되지 않았습니다.')).toBeNull()
+  })
 })

@@ -30,6 +30,13 @@ public class RegimeLinkUseRepositoryImpl implements RegimeLinkUseRepository {
     }
 
     @Override
+    public List<RegimeLinkUse> findByOriginRunId(Long originRunId) {
+        return jpaRepository.findByOriginRunId(originRunId).stream()
+                .map(RegimeLinkUseMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public RegimeLinkUse save(RegimeLinkUse use) {
         return RegimeLinkUseMapper.toDomain(
                 jpaRepository.saveAndFlush(RegimeLinkUseMapper.toEntity(use)));
