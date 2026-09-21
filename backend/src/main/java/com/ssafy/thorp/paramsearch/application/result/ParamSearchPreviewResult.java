@@ -43,6 +43,7 @@ public record ParamSearchPreviewResult(
 
     /**
      * @param values 실제 탐색할 후보값. 인덱스가 그리드 좌표다
+     * @param valueLabels {@code values}와 같은 순서로 놓인 표시 문구. 등록표가 적어 둔 것이며 007이 짓지 않는다(FR-025)
      * @param defaultValue 등록된 기본 시작값. <b>추천값이나 최적값이 아니다</b>(원칙 III)
      */
     public record AxisSummary(
@@ -50,6 +51,7 @@ public record ParamSearchPreviewResult(
             String label,
             String unit,
             List<Object> values,
+            List<String> valueLabels,
             Object defaultValue,
             AllowedRangeSummary allowedRange) {}
 

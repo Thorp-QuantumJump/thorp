@@ -1,21 +1,16 @@
 .page {
   min-height: 100svh;
   overflow-x: clip;
-  background:
-    linear-gradient(var(--thorp-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
-    radial-gradient(circle at 50% 24%, rgb(3 199 90 / 8%), transparent 36%),
-    var(--thorp-background);
-  background-size: 72px 72px, 72px 72px, auto, auto;
+  background: var(--thorp-background);
   color: var(--thorp-foreground);
 }
 
 .main {
   display: grid;
   gap: 20px;
-  width: min(100% - 40px, 960px);
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
   margin: 0 auto;
-  padding: clamp(84px, 13vh, 130px) 0 80px;
+  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .eyebrow {
@@ -242,10 +237,6 @@
 }
 
 @media (max-width: 720px) {
-  .main {
-    width: min(100% - 28px, 960px);
-  }
-
   .target {
     grid-template-columns: minmax(0, 1fr);
   }
