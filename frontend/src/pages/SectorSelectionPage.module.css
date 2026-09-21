@@ -1,18 +1,14 @@
 .page {
   min-height: 100svh;
   overflow-x: clip;
-  background:
-    linear-gradient(var(--thorp-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),
-    var(--thorp-background);
-  background-size: 72px 72px, 72px 72px, auto;
+  background: var(--thorp-background);
   color: var(--thorp-foreground);
 }
 
 .main {
-  width: min(100% - 40px, 960px);
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
   margin: 0 auto;
-  padding: clamp(30px, 5vh, 56px) 0 80px;
+  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
@@ -684,11 +680,6 @@
 }
 
 @media (max-width: 560px) {
-  .main {
-    width: min(100% - 28px, 760px);
-    padding: 24px 0 80px;
-  }
-
   .list {
     grid-template-columns: 1fr;
   }

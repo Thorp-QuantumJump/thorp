@@ -30,6 +30,7 @@ import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;
 import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;
 import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.SearchContext;
@@ -699,20 +700,32 @@ public class ParamSearchService {
                 List<ParamSearchPreviewResult.AxisSummary> axes = new ArrayList<>();
                 for (SearchSpace.Axis axis : strategy.axes()) {
                     ParameterAxis registered = registration.axis(axis.name()).orElseThrow();
+                    AllowedRange allowedRange = registered.allowedRange();
+                    // 값만 실어 보내면 객체형 후보(리밸런싱 주기 등)를 화면이 그릴 수 없다. 등록표가
+                    // 적어 둔 문구를 같은 순서로 함께 싣는다. 007이 문구를 짓지는 않는다(FR-025).
+                    List<String> valueLabels =
+                            axis.values().stream()
+                                    .map(
+                                            value ->
+                                                    allowedRange == null
+                                                            ? String.valueOf(value)
+                                                            : allowedRange.labelOf(value))
+                                    .toList();
                     axes.add(
                             new ParamSearchPreviewResult.AxisSummary(
                                     axis.name(),
                                     axis.label(),
                                     axis.unit(),
                                     axis.values(),
+                                    valueLabels,
                                     registered.defaultValue(),
-                                    registered.allowedRange() == null
+                                    allowedRange == null
                                             ? null
                                             : new ParamSearchPreviewResult.AllowedRangeSummary(
-                                                    registered.allowedRange().min(),
-                                                    registered.allowedRange().max(),
-                                                    registered.allowedRange().step(),
-                                                    registered.allowedRange().values())));
+                                                    allowedRange.min(),
+                                                    allowedRange.max(),
+                                                    allowedRange.step(),
+                                                    allowedRange.values())));
                 }
                 summaries.add(
                         new ParamSearchPreviewResult.StrategySpaceSummary(

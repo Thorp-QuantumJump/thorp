@@ -4,7 +4,7 @@ import type {
   SpaceAxis,
   StrategySpaceSummary,
 } from '@/types/paramSearch'
-import { formatCount } from '@/utils/paramSearchLabels'
+import { axisValueKey, formatCount } from '@/utils/paramSearchLabels'
 import styles from './SpaceEditor.module.css'
 
 interface SpaceEditorProps {
@@ -77,14 +77,19 @@ export function SpaceEditor({ spaceSummary, value, onChange }: SpaceEditorProps)
 
   const toggle = (strategyId: string, axis: SpaceAxis, candidate: AxisValue) => {
     const current = selectedValues(value, strategyId, axis)
-    const isOn = current.includes(candidate)
+    // 견주기는 참조가 아니라 열쇠로 한다 — 객체형 후보는 응답을 다시 받을 때마다 새 객체다.
+    const candidateKey = axisValueKey(candidate)
+    const currentKeys = new Set(current.map(axisValueKey))
+    const isOn = currentKeys.has(candidateKey)
 
     // 마지막 하나는 끄지 못한다. 축이 비면 그 전략은 돌릴 조합이 없다.
     if (isOn && current.length === 1) return
 
-    const next = isOn
-      ? current.filter((item) => item !== candidate)
-      : axis.values.filter((item) => item === candidate || current.includes(item))
+    // 등록표가 준 순서를 지켜 고른다. 순서가 곧 그리드 좌표의 뜻이다(FR-029).
+    const next = axis.values.filter((item) => {
+      const key = axisValueKey(item)
+      return key === candidateKey ? !isOn : currentKeys.has(key)
+    })
 
     emit(strategyId, axis.axis, next)
   }
@@ -111,6 +116,9 @@ export function SpaceEditor({ spaceSummary, value, onChange }: SpaceEditorProps)
           ) : (
             space.axes.map((axis) => {
               const current = selectedValues(value, space.strategyId, axis)
+              const currentKeys = new Set(current.map(axisValueKey))
+              const defaultKey =
+                axis.defaultValue === null ? null : axisValueKey(axis.defaultValue)
               const range = describeRange(axis)
 
               return (
@@ -121,20 +129,23 @@ export function SpaceEditor({ spaceSummary, value, onChange }: SpaceEditorProps)
                   </legend>
 
                   <div className={styles.values}>
-                    {axis.values.map((candidate) => {
-                      const isOn = current.includes(candidate)
-                      const isDefault = axis.defaultValue === candidate
+                    {axis.values.map((candidate, index) => {
+                      const key = axisValueKey(candidate)
+                      const isOn = currentKeys.has(key)
+                      const isDefault = defaultKey !== null && defaultKey === key
+                      // 값이 아니라 등록표가 적어 둔 문구를 그린다. 값은 요청에만 쓴다.
+                      const text = axis.valueLabels[index] ?? key
 
                       return (
                         <button
-                          key={String(candidate)}
+                          key={key}
                           type="button"
                           className={styles.value}
                           data-on={isOn}
                           aria-pressed={isOn}
                           onClick={() => toggle(space.strategyId, axis, candidate)}
                         >
-                          {String(candidate)}
+                          {text}
                           {isDefault ? (
                             <span className={styles.defaultMark}>기본 시작값</span>
                           ) : null}

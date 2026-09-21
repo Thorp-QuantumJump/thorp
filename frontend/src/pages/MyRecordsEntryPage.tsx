@@ -16,7 +16,7 @@ export function MyRecordsEntryPage() {
           <FolderClock size={17} aria-hidden="true" />
           MY RECORDS
         </div>
-        <h1 id="records-title">{user?.nickname}님의 내 기록</h1>
+        <h1 id="records-title">{user?.nickname}님의 기록</h1>
         <p>
           로그인 상태가 확인되었습니다. 저장된 분석 기록과 다시보기 기능은 내 기록 기능에서
           이어집니다.

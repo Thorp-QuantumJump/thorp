@@ -1,8 +1,10 @@
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, LogIn, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
 import { useAuth } from '@/auth/auth-context'
+import { useLoginReturn } from '@/auth/useLoginReturn'
+import { useSectorNames } from '@/hooks/useSectorNames'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { CancelButton } from '@/components/paramsearch/CancelButton'
 import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'
@@ -58,6 +60,8 @@ const statusText: Record<string, string> = {
 export function ParamSearchPage() {
   const [params, setParams] = useSearchParams()
   const { user } = useAuth()
+  const rememberReturn = useLoginReturn()
+  const sectorName = useSectorNames()
 
   const strategyIds = useMemo(() => parseList(params.get('strategies')), [params])
   const instrumentIds = useMemo(() => parseList(params.get('instruments')), [params])
@@ -319,7 +323,8 @@ export function ParamSearchPage() {
             <section className={styles.target} aria-label="탐색 대상">
               <div>
                 <span>대상 섹터</span>
-                <strong>{instrumentIds.join(', ')}</strong>
+                {/* 종목 ID(`069500.XKRX`)는 사용자가 고른 적 없는 값이다. 고른 것은 섹터 이름이다 */}
+                <strong>{instrumentIds.map(sectorName).join(', ')}</strong>
               </div>
               <div>
                 <span>대상 전략</span>
@@ -476,6 +481,16 @@ export function ParamSearchPage() {
                       onRun={() => void startSearch(preview)}
                       running={creating}
                       blockedReason={user ? null : '실행하려면 로그인이 필요합니다.'}
+                      blockedAction={
+                        user ? null : (
+                          // 고른 대상은 질의 문자열에 있고 복귀 주소가 그것을 그대로 안고 간다.
+                          // 그래서 로그인을 마치면 이 화면의 같은 대상으로 되돌아온다.
+                          <Link to="/login" onClick={rememberReturn}>
+                            <LogIn size={15} aria-hidden="true" />
+                            로그인하고 돌아오기
+                          </Link>
+                        )
+                      }
                     />
 
                     {runError &&
