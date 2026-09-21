@@ -151,6 +151,22 @@ class ArchitectureTest {
                     .dependOnClassesThat()
                     .resideInAPackage(ROOT + ".learning..");
 
+    /**
+     * 규칙 11: {@code paramsearch}(007)는 {@code myrecord}(006)를 참조하지 않는다.
+     *
+     * <p>006의 등록기가 007의 접수 이벤트를 듣고, 저장 상한은 007이 소유한 포트({@code SaveSlotGuard})를 006이 구현해 건넨다. 방향은
+     * {@code myrecord → paramsearch} 하나다. 이 규칙이 없으면 접수 서비스가 006의 정책·저장소를 편하게 가져다 쓰는 순간 양방향이 되고,
+     * 007의 접수가 006의 사정에 묶인다. 근거: specs/006-my-records/research.md R11·R16.
+     */
+    @ArchTest
+    static final ArchRule paramsearch는_myrecord를_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage(ROOT + ".paramsearch..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".myrecord..");
+
     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */
     @ArchTest
     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =
