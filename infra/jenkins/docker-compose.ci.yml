@@ -1,3 +1,58 @@
+# # 앱 스택과 별도의 compose 프로젝트로 띄운다.
+# # 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.
+# name: thorp-ci
+
+# services:
+#   jenkins:
+#     build: .
+#     image: thorp-jenkins:lts
+#     container_name: thorp-jenkins
+#     restart: unless-stopped
+#     # RAM 4G + swap 2G. 메모리를 늘려도 기존 swap 허용량(2G)은 늘리지 않는다.
+#     memswap_limit: 6G
+#     # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아
+#     # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.
+#     #
+#     # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.
+#     # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면
+#     # socket proxy나 별도 머신의 에이전트가 필요하다.
+#     group_add:
+#       - "${DOCKER_GID}"
+#     ports:
+#       # 외부 비공개. 접근은 SSH 터널로만.
+#       - "127.0.0.1:9090:8080"
+#     environment:
+#       TZ: Asia/Seoul
+#       JAVA_OPTS: "-Xmx1024m -Djava.awt.headless=true"
+#     volumes:
+#       - jenkins-home:/var/jenkins_home
+#       - /var/run/docker.sock:/var/run/docker.sock
+#       # 기존 jenkins-home에도 재기동 때 적용한다. 실행 슬롯 수와 CI 동시 실행 상한을 건다.
+#       # 폴더째 마운트하므로 스크립트를 더할 때 이 줄을 고치지 않아도 된다.
+#       - ./init.groovy.d:/var/jenkins_home/init.groovy.d:ro
+#       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는
+#       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.
+#       - ${DEPLOY_DIR}:${DEPLOY_DIR}
+#     # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에
+#     # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.
+#     networks: [webhook]
+#     deploy:
+#       resources:
+#         limits:
+#           # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.
+#           # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.
+#           memory: 4G
+#           cpus: "2.0"
+
+# volumes:
+#   jenkins-home:
+
+# networks:
+#   webhook:
+#     external: true
+#     name: thorp-edge
+
+
 # 앱 스택과 별도의 compose 프로젝트로 띄운다.
 # 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.
 name: thorp-ci
@@ -8,41 +63,44 @@ services:
     image: thorp-jenkins:lts
     container_name: thorp-jenkins
     restart: unless-stopped
-    # RAM 4G + swap 2G. 메모리를 늘려도 기존 swap 허용량(2G)은 늘리지 않는다.
-    memswap_limit: 6G
-    # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아
-    # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.
-    #
-    # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.
-    # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면
-    # socket proxy나 별도 머신의 에이전트가 필요하다.
+
+    # 임시 CI 증설:
+    # RAM 최대 10G + swap 최대 2G
+    mem_limit: 10G
+    memswap_limit: 12G
+
+    # 호스트 4 vCPU 중 Jenkins 컨테이너 최대 3.5 vCPU
+    cpus: "3.5"
+
+    # 이미지 기본 사용자(jenkins, uid 1000)로 실행.
+    # docker.sock 접근을 위해 호스트 Docker 그룹을 추가한다.
     group_add:
       - "${DOCKER_GID}"
+
     ports:
       # 외부 비공개. 접근은 SSH 터널로만.
       - "127.0.0.1:9090:8080"
+
     environment:
       TZ: Asia/Seoul
-      JAVA_OPTS: "-Xmx1024m -Djava.awt.headless=true"
+
+      # Jenkins JVM 자체는 최대 2G.
+      # 나머지 메모리는 Gradle / Node / 테스트 프로세스에 남긴다.
+      JAVA_OPTS: "-Xms512m -Xmx2048m -Djava.awt.headless=true"
+
     volumes:
       - jenkins-home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      # 기존 jenkins-home에도 재기동 때 적용한다. 실행 슬롯 수와 CI 동시 실행 상한을 건다.
-      # 폴더째 마운트하므로 스크립트를 더할 때 이 줄을 고치지 않아도 된다.
       - ./init.groovy.d:/var/jenkins_home/init.groovy.d:ro
-      # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는
-      # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.
       - ${DEPLOY_DIR}:${DEPLOY_DIR}
-    # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에
-    # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.
+
     networks: [webhook]
+
     deploy:
       resources:
         limits:
-          # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.
-          # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.
-          memory: 4G
-          cpus: "2.0"
+          memory: 10G
+          cpus: "3.5"
 
 volumes:
   jenkins-home:

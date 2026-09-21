@@ -1,21 +1,33 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'
+import { NO_LINK_NOTICE } from '@/components/records/RegimeRecordPanel'
 import { WITHDRAWN_REASON } from '@/components/records/recordLabels'
 import { SECTOR_SELECTION_PATH, STRATEGY_SETTINGS_PATH } from '@/components/result/prefillStrategySettings'
 import { authenticatedUser } from '@/test/authFixtures'
 import {
   analysisDetail,
   analysisRecord,
+  bundleDetail,
+  bundleRecord,
   listPage,
+  regimeDetailRecord,
+  regimeRecord,
+  regimeRecordFromResult,
   reopenableDetail,
   unavailableDetail,
   withdrawnRegimeRecord,
 } from '@/test/myRecordsFixtures'
+import {
+  acceptedFixture,
+  completedCandidate,
+  configFixture,
+  excludedCandidate,
+} from '@/test/paramSearchFixtures'
 import { EMPTY_MESSAGE, MyRecordsPage } from './MyRecordsPage'
 
 /** 006 T026. quickstart S1·S12·S13, 원칙 II·III. */
@@ -27,6 +39,9 @@ const apiMocks = vi.hoisted(() => ({
 const otherMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchStrategyRegistry: vi.fn(),
+  getParamSearch: vi.fn(),
+  getParamSearchCandidates: vi.fn(),
+  getRegimeBaselineMonths: vi.fn(),
 }))
 const prefillMocks = vi.hoisted(() => ({ prefillStrategySettings: vi.fn() }))
 
@@ -45,6 +60,18 @@ vi.mock('@/api/strategyRegistry', async (importOriginal) => {
 vi.mock('@/components/result/prefillStrategySettings', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/result/prefillStrategySettings')>()
   return { ...actual, prefillStrategySettings: prefillMocks.prefillStrategySettings }
+})
+vi.mock('@/api/paramSearch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/paramSearch')>()
+  return {
+    ...actual,
+    getParamSearch: otherMocks.getParamSearch,
+    getParamSearchCandidates: otherMocks.getParamSearchCandidates,
+  }
+})
+vi.mock('@/api/regime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/regime')>()
+  return { ...actual, getRegimeBaselineMonths: otherMocks.getRegimeBaselineMonths }
 })
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
@@ -94,6 +121,10 @@ describe('MyRecordsPage', () => {
     prefillMocks.prefillStrategySettings.mockReset()
     otherMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))
     otherMocks.fetchStrategyRegistry.mockReturnValue(new Promise(() => {}))
+    otherMocks.getParamSearch.mockReset()
+    otherMocks.getParamSearchCandidates.mockReset()
+    otherMocks.getRegimeBaselineMonths.mockReset()
+    otherMocks.getRegimeBaselineMonths.mockReturnValue(new Promise(() => {}))
   })
 
   afterEach(() => {
@@ -319,6 +350,90 @@ describe('MyRecordsPage', () => {
     expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(3)
     expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith({ cursor: 'c1' }, expect.any(AbortSignal))
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('탐색 묶음을 펼치면 부분 완료 N/M, 후보 수, 선정 규칙, 후보 상태·사유가 보이고 정렬 컨트롤은 없다(S7-2·S7-3)', async () => {
+    const user = userEvent.setup()
+    const searchId = bundleRecord.kind === 'SEARCH_BUNDLE' ? bundleRecord.searchId : ''
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [bundleRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(bundleDetail)
+    otherMocks.getParamSearch.mockResolvedValue({
+      ...acceptedFixture,
+      searchId,
+      status: 'PARTIAL',
+      stopReason: 'TIME_LIMIT',
+      partial: true,
+      partialNote: '실행 시간 한도로 6개까지 계산했습니다',
+      counts: { expected: 10, valid: 9, completed: 6, failed: 1, excluded: 1, pending: 0, skipped: 2 },
+      config: configFixture,
+    })
+    otherMocks.getParamSearchCandidates.mockResolvedValue({
+      page: 0,
+      size: 20,
+      totalElements: 2,
+      totalPages: 1,
+      content: [completedCandidate, excludedCandidate],
+    })
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '자세히' }))
+
+    const banner = await screen.findByText(/부분 완료 — 6\/10 후보/)
+    expect(banner.textContent).toContain('실행 시간 한도로 6개까지')
+    expect(screen.getByText('예상 10 · 유효 9 · 완료 6 · 실패 1 · 제외 1 · 미실행 2')).toBeTruthy()
+    expect(screen.getByText(/손실 제약·인접 설정 안정성 통과 후 비용 차감 후 수익 기준 5개 표시/)).toBeTruthy()
+    expect(screen.getByText(/기울기 관측 창: 5, 10, 20 거래일/)).toBeTruthy()
+
+    const table = await screen.findByRole('table')
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows).toHaveLength(2)
+    expect(rows[0].textContent).toContain('완료')
+    expect(rows[1].textContent).toContain('계산 전 제외')
+    // 사유는 서버 문장 그대로다.
+    expect(rows[1].textContent).toContain(excludedCandidate.selectionReason?.message ?? '')
+    // 성과순 정렬 컨트롤이 없다(원칙 III). 성과 열도 없다.
+    expect(within(table).queryByRole('button')).toBeNull()
+    expect(within(table).queryByRole('columnheader', { name: /수익|하락|비용/ })).toBeNull()
+    expect(otherMocks.getParamSearchCandidates).toHaveBeenCalledWith(
+      searchId,
+      expect.objectContaining({ size: 20 }),
+    )
+  })
+
+  it('같은 경제환경 검색이라도 진입 경로가 다르면 두 항목이고, 펼치면 연결 정보 자리에 고정 문장이 있다(S7-5·S7-6)', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({
+      items: [regimeRecordFromResult, regimeRecord],
+      nextCursor: null,
+    })
+    apiMocks.fetchMyRecord.mockResolvedValue(regimeDetailRecord)
+    // 분야 이름은 010 분야 목록에서 한 번 받는다. 코드(EMPLOYMENT)를 그대로 보이지 않는다.
+    otherMocks.getRegimeBaselineMonths.mockResolvedValue({
+      byField: [{ id: 'EMPLOYMENT', name: '고용환경', baselineMonth: '2026-08' }],
+      composite: null,
+      range: null,
+    })
+
+    renderPage()
+
+    const list = await screen.findByRole('list', { name: '내 기록' })
+    const rows = within(list).getAllByRole('listitem').filter((el) => el.hasAttribute('data-record-id'))
+    expect(rows.map((row) => row.getAttribute('data-record-id'))).toEqual([
+      regimeRecordFromResult.recordId,
+      regimeRecord.recordId,
+    ])
+
+    await user.click(within(rows[1]).getByRole('button', { name: '자세히' }))
+
+    expect(await screen.findByText(NO_LINK_NOTICE)).toBeTruthy()
+    expect(screen.getByText('분야 검색')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('분야').nextElementSibling?.textContent).toBe('고용환경'))
+    expect(screen.queryByText('EMPLOYMENT')).toBeNull()
+    expect(screen.getByText('분야의 최신 기준월(T_g)')).toBeTruthy()
+    expect(screen.getByText('시장 흐름에서')).toBeTruthy()
+    expect(screen.getByText('REGIME-V1')).toBeTruthy()
+    // 연결 정보에 임의 값이 없다 — 섹터·전략·평가 구간 표기가 어디에도 없다.
+    expect(document.body.textContent).not.toMatch(/연결한 섹터|사후 평가 구간|가용성 필터/)
   })
 
   it('비로그인은 ProtectedRoute 가 로그인으로 보내고 기록을 부르지 않는다(S12)', async () => {
