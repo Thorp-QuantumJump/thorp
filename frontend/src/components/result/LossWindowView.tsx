@@ -10,6 +10,7 @@ import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { buildSectorLabels } from './sectorLabels'
 import { TradeList } from './TradeHistory'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import styles from './resultDetail.module.css'
 
 /**
@@ -60,14 +61,16 @@ export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWi
         <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>
           손실이 커진 때: {lossWindow.peakDate} ~ {lossWindow.troughDate}
         </h2>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          닫기
-        </Button>
+        <div className={styles.headActions}>
+          <InlineHelp label="손실이 커진 때">
+            <p>자산가치가 가장 높았던 날부터 가장 크게 줄어든 날까지의 구간입니다.</p>
+            <p>그래프의 음영과 같은 구간이며, 회복한 날은 넣지 않았습니다.</p>
+          </InlineHelp>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            닫기
+          </Button>
+        </div>
       </div>
-      <p className={styles.copy}>
-        자산가치가 가장 높았던 날부터 가장 크게 줄어든 날까지의 구간입니다. 그래프의 음영과 같은 구간이며,
-        회복한 날은 넣지 않았습니다.
-      </p>
 
       <div className={styles.item}>
         <h3 className={styles.itemTitle}>저점일의 보유</h3>
@@ -113,10 +116,13 @@ export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWi
       </div>
 
       <div className={styles.item}>
-        <h3 className={styles.itemTitle}>이 구간에 사고판 거래와 비용</h3>
-        <p className={styles.muted}>
-          진입이나 청산이 이 구간 안에 있는 거래입니다. 구간 내내 들고만 있던 종목은 위 보유 구성에 있습니다.
-        </p>
+        <div className={styles.itemHead}>
+          <h3 className={styles.itemTitle}>이 구간에 사고판 거래와 비용</h3>
+          <InlineHelp label="이 구간에 사고판 거래와 비용">
+            <p>진입이나 청산이 이 구간 안에 있는 거래입니다.</p>
+            <p>구간 내내 들고만 있던 종목은 위 보유 구성에 있습니다.</p>
+          </InlineHelp>
+        </div>
         <TradeList
           token={token}
           filter={{ from: lossWindow.peakDate, to: lossWindow.troughDate }}

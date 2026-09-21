@@ -1,0 +1,69 @@
+.trigger {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  border-color: currentColor;
+  color: var(--thorp-foreground);
+}
+
+.trigger:focus-visible,
+.close:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.content {
+  z-index: 50;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 12px;
+  background: var(--thorp-surface-raised);
+  box-shadow: var(--thorp-shadow);
+  color: var(--thorp-foreground);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.term {
+  margin: 0;
+  font-weight: 700;
+}
+
+.body {
+  display: grid;
+  gap: 6px;
+  color: var(--thorp-copy);
+}
+
+.body p {
+  margin: 0;
+}
+
+.close {
+  justify-self: end;
+  padding: 4px 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}

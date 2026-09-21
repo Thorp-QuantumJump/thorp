@@ -31,6 +31,12 @@
   line-height: 1.2;
 }
 
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .lead {
   max-width: 640px;
   margin: 0;
@@ -59,17 +65,6 @@
   color: var(--thorp-copy);
   font-size: 0.78rem;
   line-height: 1.65;
-}
-
-.guideNote {
-  color: var(--thorp-muted);
-}
-
-.guideNote code {
-  overflow-wrap: anywhere;
-  color: var(--thorp-accent-soft);
-  font-family: var(--thorp-font-mono);
-  font-size: 0.72rem;
 }
 
 .guideLink {
