@@ -145,7 +145,10 @@ components:
         rawUnit: {type: string}
         transformedUnit: {type: string}
         transform: {type: string, description: 전년동월 대비·월 기말·월 평균 등 등록된 변환.}
-        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE]}
+        # SUSPENDED 는 이용 권리가 거둬들여진 지표다(FR-016b). 값 없이 사유만 실려 나가며,
+        # 조용히 빠지지 않고 '빠진 상태'임이 드러난다.
+        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE, SUSPENDED]}
+        suspendedReason: {type: string, nullable: true}
         referenceMonth:
           $ref: '#/components/schemas/NullableMonth'
         referenceValue:
