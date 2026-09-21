@@ -89,8 +89,8 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                                 java.util.stream.Collectors.toMap(
                                         MacroSnapshotResult.IndicatorSummary::indicatorId, i -> i));
 
-        assertThat(byId.get("prices_commodities_2").agency()).isEqualTo("국제통화기금(IMF)");
-        assertThat(byId.get("prices_commodities_2").source()).contains("한국은행");
+        assertThat(byId.get("dubai_crude").agency()).isEqualTo("국제통화기금(IMF)");
+        assertThat(byId.get("dubai_crude").source()).contains("한국은행");
     }
 
     @Test
@@ -102,12 +102,12 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
         jdbc.update(
                 """
                 UPDATE macro_observation SET transformed_value = NULL, missing_reason = 'SOURCE_NOT_RELEASED'
-                WHERE indicator_id = 'production_1' AND target_month = '2026-06-01'::date
+                WHERE indicator_id = 'all_industry_production' AND target_month = '2026-06-01'::date
                 """);
 
         MacroSnapshotResult.IndicatorSummary indicator =
                 service.getSnapshot().indicators().stream()
-                        .filter(i -> i.indicatorId().equals("production_1"))
+                        .filter(i -> i.indicatorId().equals("all_industry_production"))
                         .findFirst()
                         .orElseThrow();
 
@@ -122,15 +122,17 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     void marksIndicatorsWhoseCollectionFailed() {
         seedRegistry();
         seedPublishedDataset();
-        seedFailedCollection("production_2");
+        seedFailedCollection("mining_manufacturing_production");
 
         MacroSnapshotResult snapshot = service.getSnapshot();
 
-        assertThat(snapshot.collection().failedIndicatorIds()).containsExactly("production_2");
-        assertThat(statusOf(snapshot, "production_2")).isEqualTo("COLLECTION_FAILED");
+        assertThat(snapshot.collection().failedIndicatorIds())
+                .containsExactly("mining_manufacturing_production");
+        assertThat(statusOf(snapshot, "mining_manufacturing_production"))
+                .isEqualTo("COLLECTION_FAILED");
         // 어제 발행한 자료는 그대로 있다. 실패는 자료를 지우지 않는다(FR-011).
-        assertThat(valueOf(snapshot, "production_2")).isNotNull();
-        assertThat(statusOf(snapshot, "production_1")).isEqualTo("READY");
+        assertThat(valueOf(snapshot, "mining_manufacturing_production")).isNotNull();
+        assertThat(statusOf(snapshot, "all_industry_production")).isEqualTo("READY");
     }
 
     @Test
@@ -151,10 +153,11 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     void exampleDataWinsOverCollectionFailure() {
         seedRegistry();
         seedPublishedDataset();
-        seedFailedCollection("production_2");
+        seedFailedCollection("mining_manufacturing_production");
         jdbc.update("UPDATE macro_dataset_version SET is_sample_data = TRUE");
 
-        assertThat(statusOf(service.getSnapshot(), "production_2")).isEqualTo("EXAMPLE");
+        assertThat(statusOf(service.getSnapshot(), "mining_manufacturing_production"))
+                .isEqualTo("EXAMPLE");
     }
 
     @Test
@@ -218,7 +221,7 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                 """
                 INSERT INTO macro_collection_item_status (
                     attempt_id, indicator_id, source, status, last_success_at)
-                VALUES (?, 'production_1', 'kosis', 'SUCCEEDED', now())
+                VALUES (?, 'all_industry_production', 'kosis', 'SUCCEEDED', now())
                 """,
                 attemptId);
     }

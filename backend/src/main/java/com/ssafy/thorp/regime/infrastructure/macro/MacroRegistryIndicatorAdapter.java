@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
  * 보인다.
  */
 @Component
-@ConditionalOnProperty(prefix = "thorp.regime.macro", name = "source", havingValue = "macro")
 public class MacroRegistryIndicatorAdapter implements MacroIndicatorPort {
 
     private final MacroSnapshotRepository repository;

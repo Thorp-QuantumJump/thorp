@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -29,7 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class RegimeSearchApiIT extends IntegrationTestSupport {
 
     private static final String LABOR_KEY =
-            "FIELD:LABOR:2026-07-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1";
+            "FIELD:labor:2026-07-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1";
     private static final String COMPOSITE_KEY =
             "COMPOSITE:ALL:2026-05-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1";
 
@@ -59,18 +60,21 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @BeforeEach
     void seed() {
         clean();
-        baseline("LABOR", "2026-07-01", "1999-04-01");
+        // 010 은 008 등록표에서 지표 이름을 읽는다(T070). 비어 있으면 조회가 503 이다.
+        // clean() 뒤라야 한다 — 먼저 심으면 그쪽이 지운다.
+        MacroRegistrySeed.seedRegistry(jdbc);
+        baseline("labor", "2026-07-01", "1999-04-01");
         baseline("ALL", "2026-05-01", "2005-04-01");
-        baseline("PRODUCTION", "2026-07-01", "1999-04-01");
-        baseline("EXTERNAL_TRADE", "2026-07-01", "1999-04-01");
-        baseline("PRICES_COMMODITIES", "2026-07-01", "1999-04-01");
-        baseline("GLOBAL_ECONOMY", "2026-07-01", "2010-04-01");
+        baseline("production", "2026-07-01", "1999-04-01");
+        baseline("external_trade", "2026-07-01", "1999-04-01");
+        baseline("prices_commodities", "2026-07-01", "1999-04-01");
+        baseline("overseas", "2026-07-01", "2010-04-01");
 
         long labor =
                 snapshot(
                         LABOR_KEY,
                         "FIELD",
-                        "LABOR",
+                        "labor",
                         "2026-07-01",
                         "NEAREST_ONLY",
                         "THRESHOLD_NOT_CALIBRATED",
@@ -90,14 +94,15 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         compositeCase(composite);
 
         // 계산 불가 네 사유 — 화면이 사용자에게 할 말이 사유마다 다르다.
-        notComputable("PRODUCTION", "SCALE_ZERO", "c");
-        notComputable("EXTERNAL_TRADE", "SCALE_WINDOW_TOO_SHORT", "d");
-        notComputable("PRICES_COMMODITIES", "QUERY_INPUT_MISSING", "e");
-        notComputable("GLOBAL_ECONOMY", "NO_CANDIDATE", "f");
+        notComputable("production", "SCALE_ZERO", "c");
+        notComputable("external_trade", "SCALE_WINDOW_TOO_SHORT", "d");
+        notComputable("prices_commodities", "QUERY_INPUT_MISSING", "e");
+        notComputable("overseas", "NO_CANDIDATE", "f");
     }
 
     @AfterEach
     void clean() {
+        MacroRegistrySeed.clear(jdbc);
         // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
         jdbc.update("DELETE FROM my_record");
         jdbc.update("DELETE FROM regime_search_log");
@@ -111,12 +116,12 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("분야 검색이 계약 모양으로 온다")
     void fieldSearchMatchesContract() throws Exception {
-        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "LABOR"))
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result.searchId").value(LABOR_KEY))
                 .andExpect(jsonPath("$.result.mode").value("FIELD"))
-                .andExpect(jsonPath("$.result.field.id").value("LABOR"))
+                .andExpect(jsonPath("$.result.field.id").value("labor"))
                 .andExpect(jsonPath("$.result.field.name").value("노동"))
                 .andExpect(jsonPath("$.result.baselineMonth").value("2026-07"))
                 // baselineMonth 를 주지 않았으니 근거는 T_G 다 — 저장 값이 아니라 요청을 보고 정한다.
@@ -141,16 +146,16 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("빠진 달이 있는 지표는 어느 달인지 표기된다")
     void omittedMonthsAreLabelled() throws Exception {
-        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "LABOR"))
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
                 .andExpect(status().isOk())
                 // 남은 시점으로 계산했다는 사실이 보이지 않으면 세 달로 비교한 결과와 구분되지 않는다.
                 .andExpect(
                         jsonPath(
-                                        "$.result.comparisonMonths[?(@.indicatorId=='EMPLOYED_PERSONS')].omitted[0]")
+                                        "$.result.comparisonMonths[?(@.indicatorId=='employed_persons')].omitted[0]")
                                 .value("2026-06"))
                 .andExpect(
                         jsonPath(
-                                        "$.result.comparisonMonths[?(@.indicatorId=='EMPLOYED_PERSONS')].note")
+                                        "$.result.comparisonMonths[?(@.indicatorId=='employed_persons')].note")
                                 .isNotEmpty());
     }
 
@@ -160,13 +165,13 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches")
                                 .param("mode", "field")
-                                .param("field", "LABOR")
+                                .param("field", "labor")
                                 .param("limit", "5"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(
                         get("/regime-searches")
                                 .param("mode", "field")
-                                .param("field", "LABOR")
+                                .param("field", "labor")
                                 .param("limit", "10"))
                 .andExpect(status().isOk());
     }
@@ -184,7 +189,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches")
                                 .param("mode", "field")
-                                .param("field", "LABOR")
+                                .param("field", "labor")
                                 .param("baselineMonth", "1970-01"))
                 .andExpect(status().isNotFound());
     }
@@ -193,10 +198,10 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
 
     @ParameterizedTest
     @CsvSource({
-        "PRODUCTION,SCALE_ZERO",
-        "EXTERNAL_TRADE,SCALE_WINDOW_TOO_SHORT",
-        "PRICES_COMMODITIES,QUERY_INPUT_MISSING",
-        "GLOBAL_ECONOMY,NO_CANDIDATE"
+        "production,SCALE_ZERO",
+        "external_trade,SCALE_WINDOW_TOO_SHORT",
+        "prices_commodities,QUERY_INPUT_MISSING",
+        "overseas,NO_CANDIDATE"
     })
     @DisplayName("계산 불가는 200이고 네 사유가 구분돼 나온다")
     void notComputableIsOkWithDistinctReasons(String field, String reason) throws Exception {
@@ -218,8 +223,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @DisplayName("네 사유의 안내 문구가 서로 다르다")
     void reasonNotesDiffer() throws Exception {
         List<String> notes =
-                List.of("PRODUCTION", "EXTERNAL_TRADE", "PRICES_COMMODITIES", "GLOBAL_ECONOMY")
-                        .stream()
+                List.of("production", "external_trade", "prices_commodities", "overseas").stream()
                         .map(this::statusNoteOf)
                         .toList();
         // 한 문구로 뭉치면 사용자가 할 수 있는 일(다른 달을 고른다 / 기다린다)이 가려진다.
@@ -240,7 +244,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("정리되어 없는 항목과 철회되어 없는 항목을 구분한다")
     void prunedAndWithdrawnAreDistinguished() throws Exception {
-        String gone = "FIELD:LABOR:2026-07-01:FIXTURE-OLD:FIXTURE-REG-1:REGIME-V1";
+        String gone = "FIELD:labor:2026-07-01:FIXTURE-OLD:FIXTURE-REG-1:REGIME-V1";
         mockMvc.perform(get("/regime-searches/{searchId}", gone))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("보관 정리")));
@@ -267,44 +271,44 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches/cases/{month}", "2012-03")
                                 .param("mode", "field")
-                                .param("field", "LABOR"))
+                                .param("field", "labor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.endMonth").value("2012-03"))
                 .andExpect(jsonPath("$.result.distance").value("0.412938571034"))
-                .andExpect(jsonPath("$.result.byField.LABOR").value("0.412938571034"))
+                .andExpect(jsonPath("$.result.byField.labor").value("0.412938571034"))
                 // 질의와 후보의 z 를 같은 척도 하나로 대조한다 — m·s·방법·구간이 모두 있어야
                 // 독립 계산으로 z 와 E_i 를 다시 만들 수 있다(SC-003).
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].scale.median")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].scale.median")
                                 .value("3.450000000000"))
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].scale.spread")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].scale.spread")
                                 .value("0.593040887402"))
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].scale.method")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].scale.method")
                                 .value("MAD"))
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].name")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].name")
                                 .value("실업률"))
                 // 비교 시점이 셋이면 z 도 셋이다. 하나로 줄이면 E_i 를 다시 만들 수 없다.
                 // 지표를 인덱스가 아니라 id 로 지목한다 — 지표마다 비교 시점 수가 다르고(빠진 달),
                 // 순서에 기대면 지표가 하나 늘 때 엉뚱한 지표를 재게 된다.
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].queryZ[2]")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].queryZ[2]")
                                 .value("-0.590178531422"))
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].caseZ[2]")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].caseZ[2]")
                                 .value("-0.421556093873"))
                 .andExpect(
                         jsonPath(
-                                        "$.result.indicators[?(@.id=='EMPLOYED_PERSONS')].comparisonMonths[1]")
+                                        "$.result.indicators[?(@.id=='employed_persons')].comparisonMonths[1]")
                                 .value("2026-07"))
                 // 명목 비중과 실제 거리 기여를 나란히 낸다(spec FR-010).
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].nominalWeight")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].nominalWeight")
                                 .value("0.500000000000"))
                 .andExpect(
-                        jsonPath("$.result.indicators[?(@.id=='UNEMPLOYMENT_RATE')].distanceShare")
+                        jsonPath("$.result.indicators[?(@.id=='unemployment_rate')].distanceShare")
                                 .value("0.204173755344"))
                 .andExpect(jsonPath("$.result.postPeriod.available").value(false));
     }
@@ -316,11 +320,11 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches/cases/{month}", "2012-03")
                                 .param("mode", "field")
-                                .param("field", "LABOR"))
+                                .param("field", "labor"))
                 .andExpect(jsonPath("$.result.contribution").doesNotExist());
         mockMvc.perform(get("/regime-searches/cases/{month}", "2009-02").param("mode", "composite"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.contribution.LABOR").value("0.418300000000"));
+                .andExpect(jsonPath("$.result.contribution.labor").value("0.418300000000"));
     }
 
     @Test
@@ -330,10 +334,10 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                 body(
                         get("/regime-searches/cases/{month}", "2012-03")
                                 .param("mode", "field")
-                                .param("field", "LABOR"));
+                                .param("field", "labor"));
         java.util.Map<String, Object> era =
                 com.jayway.jsonpath.JsonPath.read(
-                        payload, "$.result.eraPosition.UNEMPLOYMENT_RATE");
+                        payload, "$.result.eraPosition.unemployment_rate");
         assertThat(era).containsKey("sentence");
         // 숫자로 놓이면 유사도처럼 읽힌다(spec FR-017·FR-022 ① 11번).
         assertThat(era.keySet())
@@ -348,7 +352,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches/cases/{month}", "2005-09")
                                 .param("mode", "field")
-                                .param("field", "LABOR"))
+                                .param("field", "labor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.endMonth").value("2005-09"))
                 .andExpect(jsonPath("$.result.distance").value("0.512938571034"))
@@ -361,7 +365,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches/cases/{month}", "1999-01")
                                 .param("mode", "field")
-                                .param("field", "LABOR"))
+                                .param("field", "labor"))
                 .andExpect(status().isNotFound());
     }
 
@@ -373,7 +377,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches/candidates")
                                 .param("mode", "field")
-                                .param("field", "LABOR"))
+                                .param("field", "labor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.searchId").value(LABOR_KEY))
                 .andExpect(jsonPath("$.result.candidates.length()").value(3))
@@ -388,9 +392,9 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     void baselineMonthsJoinRegistryAndTable() throws Exception {
         mockMvc.perform(get("/regime-searches/baseline-months"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.byField[?(@.id=='LABOR')].name").value("노동"))
+                .andExpect(jsonPath("$.result.byField[?(@.id=='labor')].name").value("노동"))
                 .andExpect(
-                        jsonPath("$.result.byField[?(@.id=='LABOR')].baselineMonth")
+                        jsonPath("$.result.byField[?(@.id=='labor')].baselineMonth")
                                 .value("2026-07"))
                 .andExpect(jsonPath("$.result.composite").value("2026-05"))
                 .andExpect(jsonPath("$.result.range.earliest").value("1999-04"))
@@ -402,9 +406,9 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("같은 요청을 두 번 보내면 응답이 완전히 같다")
     void sameRequestGivesIdenticalResponse() throws Exception {
-        String first = body(get("/regime-searches").param("mode", "field").param("field", "LABOR"));
+        String first = body(get("/regime-searches").param("mode", "field").param("field", "labor"));
         String second =
-                body(get("/regime-searches").param("mode", "field").param("field", "LABOR"));
+                body(get("/regime-searches").param("mode", "field").param("field", "labor"));
         assertThat(second).isEqualTo(first);
     }
 
@@ -415,7 +419,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
         mockMvc.perform(
                         get("/regime-searches")
                                 .param("mode", "field")
-                                .param("field", "LABOR")
+                                .param("field", "labor")
                                 .param("baselineMonth", "2026-07"))
                 .andExpect(jsonPath("$.result.searchId").value(LABOR_KEY))
                 .andExpect(jsonPath("$.result.baselineOrigin").value("USER_SPECIFIED"));
@@ -431,20 +435,20 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                         body(
                                 get("/regime-searches")
                                         .param("mode", "field")
-                                        .param("field", "LABOR")),
+                                        .param("field", "labor")),
                         body(get("/regime-searches").param("mode", "composite")),
                         body(
                                 get("/regime-searches")
                                         .param("mode", "field")
-                                        .param("field", "PRODUCTION")),
+                                        .param("field", "production")),
                         body(
                                 get("/regime-searches/cases/{month}", "2012-03")
                                         .param("mode", "field")
-                                        .param("field", "LABOR")),
+                                        .param("field", "labor")),
                         body(
                                 get("/regime-searches/candidates")
                                         .param("mode", "field")
-                                        .param("field", "LABOR")),
+                                        .param("field", "labor")),
                         body(get("/regime-searches/baseline-months")));
         for (String payload : bodies) {
             for (String banned : FORBIDDEN) {
@@ -464,11 +468,11 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                 body(
                         get("/regime-searches")
                                 .param("mode", "field")
-                                .param("field", "LABOR")
+                                .param("field", "labor")
                                 .param("strategy", "MOMENTUM")
                                 .param("returnRate", "0.3"));
         String without =
-                body(get("/regime-searches").param("mode", "field").param("field", "LABOR"));
+                body(get("/regime-searches").param("mode", "field").param("field", "labor"));
         assertThat(withStrategy).isEqualTo(without);
     }
 
@@ -562,7 +566,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                 rank,
                 endMonth,
                 """
-                {"value": "%s", "byField": {"LABOR": "%s"}}
+                {"value": "%s", "byField": {"labor": "%s"}}
                 """
                         .formatted(distance, distance),
                 INDICATOR_VALUES_JSON,
@@ -582,8 +586,8 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                 snapshotId,
                 """
                 {"value": "0.612938571034",
-                 "byField": {"LABOR": "0.512938571034", "PRODUCTION": "0.712938571034"},
-                 "contribution": {"LABOR": "0.418300000000", "PRODUCTION": "0.581700000000"}}
+                 "byField": {"labor": "0.512938571034", "production": "0.712938571034"},
+                 "contribution": {"labor": "0.418300000000", "production": "0.581700000000"}}
                 """,
                 INDICATOR_VALUES_JSON,
                 EXPLANATION_JSON,
@@ -592,18 +596,18 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
 
     private static final String SCALE_JSON =
             """
-            {"UNEMPLOYMENT_RATE": {"m": "3.450000000000", "s": "0.593040887402",
+            {"unemployment_rate": {"m": "3.450000000000", "s": "0.593040887402",
                                    "method": "MAD", "windowStart": "2016-05",
                                    "windowEnd": "2026-04", "months": 120},
-             "EMPLOYED_PERSONS": {"m": "1.200000000000", "s": "0.800000000000",
+             "employed_persons": {"m": "1.200000000000", "s": "0.800000000000",
                                   "method": "IQR", "windowStart": "2016-05",
                                   "windowEnd": "2026-04", "months": 120}}
             """;
 
     private static final String COMPARISON_JSON =
             """
-            {"UNEMPLOYMENT_RATE": {"months": ["2026-05", "2026-06", "2026-07"], "omitted": []},
-             "EMPLOYED_PERSONS": {"months": ["2026-05", "2026-07"], "omitted": ["2026-06"]}}
+            {"unemployment_rate": {"months": ["2026-05", "2026-06", "2026-07"], "omitted": []},
+             "employed_persons": {"months": ["2026-05", "2026-07"], "omitted": ["2026-06"]}}
             """;
 
     private static final String RANKED_JSON =
@@ -622,15 +626,15 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     private static final String DATA_ASOF_JSON =
             """
             {"indicators": {
-                "UNEMPLOYMENT_RATE": {"targetMonth": "2026-07", "publishedAt": "2026-09-12"},
-                "EMPLOYED_PERSONS": {"targetMonth": "2026-07", "publishedAt": "2026-09-10",
+                "unemployment_rate": {"targetMonth": "2026-07", "publishedAt": "2026-09-12"},
+                "employed_persons": {"targetMonth": "2026-07", "publishedAt": "2026-09-10",
                                      "revisedAt": "2026-09-10"}},
              "newerReleases": []}
             """;
 
     private static final String INDICATOR_VALUES_JSON =
             """
-            {"UNEMPLOYMENT_RATE": {
+            {"unemployment_rate": {
                 "unit": "%",
                 "comparisonMonths": ["2026-05", "2026-06", "2026-07"],
                 "caseMonths": ["2012-01", "2012-02", "2012-03"],
@@ -641,7 +645,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
                 "e": "0.168622437549",
                 "nominalWeight": "0.500000000000",
                 "distanceShare": "0.204173755344"},
-             "EMPLOYED_PERSONS": {
+             "employed_persons": {
                 "unit": "%",
                 "comparisonMonths": ["2026-05", "2026-07"],
                 "caseMonths": ["2012-01", "2012-03"],
@@ -662,7 +666,7 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
 
     private static final String ERA_JSON =
             """
-            {"UNEMPLOYMENT_RATE": {"sentence": "실업률 3.2%는 당시로서는 높은 편이었습니다.",
+            {"unemployment_rate": {"sentence": "실업률 3.2%는 당시로서는 높은 편이었습니다.",
                                    "method": "MAD", "windowStart": "2002-01",
                                    "windowEnd": "2011-12", "months": 120}}
             """;

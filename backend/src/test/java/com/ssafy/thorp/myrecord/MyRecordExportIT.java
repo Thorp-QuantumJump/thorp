@@ -13,6 +13,7 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.result.BacktestJobResult;
 import com.ssafy.thorp.backtest.application.service.BacktestService;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.domain.vo.EntryPath;
 import com.ssafy.thorp.paramsearch.SearchableStrategies;
@@ -74,6 +75,8 @@ class MyRecordExportIT extends LauncherMockedIntegrationTestSupport {
                 .thenAnswer(invocation -> insertStubRun());
         Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))
                 .thenAnswer(invocation -> insertStubRun());
+        // 010 은 008 등록표에서 지표 이름을 읽는다(T070). 비어 있으면 조회가 503 이다.
+        MacroRegistrySeed.seedRegistry(jdbc);
     }
 
     @Test
