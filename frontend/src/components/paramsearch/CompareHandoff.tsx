@@ -14,7 +14,7 @@ interface CompareHandoffProps {
   onRemove: (candidateId: string) => void
   onClear: () => void
   /**
-   * 005 비교 화면으로 넘기는 동작. **없으면 진입 지점만 보이고 눌리지 않는다** —
+   * 005 비교 화면으로 넘기는 동작. **없으면 진입 버튼을 아예 그리지 않는다** —
    * 005가 아직 없으므로 지금이 그 상태다.
    */
   onOpenCompare?: (candidateIds: string[]) => void
@@ -32,8 +32,8 @@ interface CompareHandoffProps {
  * <p><b>기준 이름은 응답에서만 온다</b>(FR-025). 한때 대체 문구에 전략명을 적어 두었는데,
  * 등록표가 기준 전략을 바꾸면 화면만 옛 이름을 말하게 된다.
  *
- * <p>005가 붙기 전까지는 <b>진입 지점과 표시만</b> 만든다. 눌리지 않는 버튼을 이유 없이 두지 않고
- * 무엇이 없어서 막혔는지 적는다.
+ * <p>005가 붙기 전까지는 <b>담은 목록과 기준 표시만</b> 만든다. 넘길 곳이 없으면 진입 버튼 자리를
+ * 비운다 — 무엇이 아직 안 만들어졌는지는 사용자가 알 바가 아니다.
  */
 export function CompareHandoff({
   picks,
@@ -97,11 +97,7 @@ export function CompareHandoff({
           비교 화면에서 보기
           <ArrowUpRight size={15} aria-hidden="true" />
         </button>
-      ) : (
-        <p className={styles.blocked}>
-          비교 화면이 아직 없어 넘기지 못합니다. 담은 설정은 이 화면에서 그대로 유지됩니다.
-        </p>
-      )}
+      ) : null}
     </aside>
   )
 }
