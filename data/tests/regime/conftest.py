@@ -14,7 +14,7 @@ from pathlib import Path
 import macro_seed
 import pytest
 
-from data_pipeline.regime.macro import SOURCE_FIXTURE, SOURCE_MACRO, create_source
+from data_pipeline.regime.macro import SOURCE_MACRO
 from data_pipeline.regime.macro.postgres import PostgresMacroIndicatorSource
 from data_pipeline.regime.macro.source import MacroIndicatorSource
 from data_pipeline.regime.macro.types import (
@@ -24,13 +24,12 @@ from data_pipeline.regime.macro.types import (
     MonthlyValue,
 )
 
-#: 계약 시험을 돌릴 구현체. 008 구현체(T068)가 들어와 둘 다 같은 시험을 통과해야 한다.
-SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE, SOURCE_MACRO)
+#: 계약 시험을 돌릴 구현체. 임시 대역은 T071 에서 폐기해 008 구현 하나만 남았다.
+SOURCE_NAMES: tuple[str, ...] = (SOURCE_MACRO,)
 
 #: 운영 코드 검사(T012·T013)의 대상 뿌리. 010이 만든 자리만 본다.
 REGIME_PACKAGE: Path = Path(__file__).resolve().parents[2] / "src" / "data_pipeline" / "regime"
 PRECOMPUTE_SCRIPT: Path = Path(__file__).resolve().parents[2] / "scripts" / "precompute_regime.py"
-FIXTURE_PACKAGE: Path = REGIME_PACKAGE / "macro" / "fixture"
 
 
 def production_sources() -> list[Path]:
@@ -39,7 +38,7 @@ def production_sources() -> list[Path]:
     손으로 적은 목록을 쓰지 않는 이유는 목록이 늘 뒤처지기 때문이다. 새 모듈을 더한 사람이
     목록도 같이 고칠 것이라고 기대하면, 고치지 않은 그 파일만 검사 밖으로 나간다.
     """
-    files = [path for path in REGIME_PACKAGE.rglob("*.py") if FIXTURE_PACKAGE not in path.parents]
+    files = list(REGIME_PACKAGE.rglob("*.py"))
     files.append(PRECOMPUTE_SCRIPT)
     return sorted(files)
 
@@ -52,11 +51,9 @@ def macro_source(request: pytest.FixtureRequest) -> MacroIndicatorSource:
     쓰지 않는 이유는 그쪽이 환경변수의 `DATABASE_URL` 로 접속하기 때문이다 — 시험이 개발자의
     DB 에 붙으면 안 된다.
     """
-    if request.param == SOURCE_MACRO:
-        engine = request.getfixturevalue("postgres_engine")
-        macro_seed.seed(engine)
-        return PostgresMacroIndicatorSource(engine)
-    return create_source(request.param)
+    engine = request.getfixturevalue("postgres_engine")
+    macro_seed.seed(engine)
+    return PostgresMacroIndicatorSource(engine)
 
 
 def make_series(

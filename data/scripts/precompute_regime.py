@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from collections.abc import Mapping, Sequence
@@ -46,7 +45,6 @@ from data_pipeline.regime.load import (  # noqa: E402
 )
 from data_pipeline.regime.macro import (  # noqa: E402
     SOURCE_CHOICES,
-    SOURCE_FIXTURE,
     SOURCE_MACRO,
     create_source,
 )
@@ -77,10 +75,6 @@ _EXIT_PARTIAL: Final[int] = 4
 #: 계산한 기준월이 하나도 없다. 0으로 끝내면 배치가 돈 줄 알고 넘어간다(spec FR-033).
 _EXIT_NOTHING: Final[int] = 5
 
-#: 운영 환경 표시. 이 값일 때 임시 대역 적재를 막는다 (contracts/macro-indicator-port.md §4.1).
-ENV_VARIABLE: Final[str] = "THORP_ENV"
-PROD_ENV: Final[str] = "prod"
-
 _DATA_ROOT: Final[Path] = Path(__file__).resolve().parents[1]
 #: 중간 산출 Parquet의 뿌리. 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지).
 PROCESSED_ROOT: Final[Path] = _DATA_ROOT / "processed"
@@ -97,10 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--source",
         choices=SOURCE_CHOICES,
         default=SOURCE_MACRO,
-        help=(
-            f"지표 소스. 기본값 {SOURCE_MACRO}(008 구현체)이며 "
-            f"{SOURCE_FIXTURE}는 008 완성 전까지 쓰는 임시 대역이라 명시해야 쓰인다"
-        ),
+        help=f"지표 소스. 지금은 {SOURCE_MACRO}(008 구현체) 하나다",
     )
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument(
@@ -150,23 +141,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def reject_fixture_in_production(source: str, environment: str | None) -> str | None:
-    """운영에서 임시 대역을 쓰려 하면 거부 사유를, 아니면 ``None``을 돌려준다 (계약 §4.1).
-
-    **적재 전에 막는 것이 요점이다.** 가장 오래 남는 것은 코드가 아니라 DB에 적재된 행이라,
-    한 번 들어간 가짜 자료는 코드를 되돌려도 남는다. 설정 실수 하나로 그 경로가 열리지 않도록
-    계산을 시작하기 전에 끝낸다.
-    """
-    if source != SOURCE_FIXTURE:
-        return None
-    if (environment or "").strip().lower() != PROD_ENV:
-        return None
-    return (
-        f"{ENV_VARIABLE}={PROD_ENV}에서는 --source {SOURCE_FIXTURE}로 적재할 수 없다. "
-        "임시 대역은 지어낸 값이라 운영 자료가 될 수 없다 "
-        "(contracts/macro-indicator-port.md §4.1). "
-        f"운영에서는 --source {SOURCE_MACRO}를 쓴다"
-    )
 
 
 def load_series(
@@ -406,11 +380,6 @@ def _precompute(args: argparse.Namespace, source: MacroIndicatorSource) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-
-    rejection = reject_fixture_in_production(args.source, os.environ.get(ENV_VARIABLE))
-    if rejection is not None:
-        print(f"거부: {rejection}", file=sys.stderr)
-        return _EXIT_REJECTED
 
     try:
         if args.since is not None:

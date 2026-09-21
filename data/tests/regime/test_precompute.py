@@ -162,7 +162,7 @@ def run_batch(
         classmethod(lambda cls, path=None: repository),
     )
     monkeypatch.setattr(precompute_regime, "PROCESSED_ROOT", tmp_path)
-    return precompute_regime.main(["--source", "fixture", *argv])
+    return precompute_regime.main(["--source", "macro", *argv])
 
 
 def snapshot_rows(repository: RegimeRepository) -> list[dict[str, object]]:
@@ -364,50 +364,35 @@ class TestEraPositionReuse:
                 assert "z" not in body and "percentile" not in body
 
 
-class TestFixtureMarking:
-    """T077 — 임시 대역이 만든 행은 자료 버전이 `FIXTURE-`로 시작한다."""
-
-    def test_적재된_행의_자료_버전이_접두사를_갖는다(
-        self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
-    ) -> None:
-        from data_pipeline.regime.macro import create_source
-
-        source = create_source("fixture")
-        assert run_batch(
-            monkeypatch, repository, source, ["--baseline-month", "2004-12"], tmp_path
-        ) == 0
-        rows = snapshot_rows(repository)
-        assert rows
-        for row in rows:
-            assert str(row["data_version"]).startswith(FIXTURE_PREFIX)
-            assert row["model_version"] == MODEL_VERSION
-        assert all(
-            str(value["dataVersion"]).startswith(FIXTURE_PREFIX)
-            for value in repository.baseline_months().values()
-        )
-
-
 class TestCompositePropagation:
     """T078 — 계산 불가가 분야 → 종합으로 전파되고, 반대 방향도 있다 (spec FR-039)."""
 
-    @pytest.mark.parametrize(
-        ("baseline_month", "broken_field"),
-        [(date(2000, 1, 1), "GLOBAL_ECONOMY"), (date(2012, 6, 1), "FINANCE_HOUSING")],
-    )
-    def test_한_분야가_계산_불가면_종합도_계산_불가다(
-        self, baseline_month: date, broken_field: str
-    ) -> None:
-        from data_pipeline.regime.macro import create_source
+    def test_한_분야가_계산_불가면_종합도_계산_불가다(self) -> None:
+        """한 분야의 지표가 그 달에 비면 그 분야도, 종합도 계산할 수 없다.
 
-        source = create_source("fixture")
-        registry = source.registry()
+        모양을 여기서 만든다. 예전에는 임시 대역의 실제 자료에서 그런 달을 골라 썼는데,
+        그러면 대역이 사라질 때 이 경로가 함께 사라진다(계약 §4.4).
+        """
+        registry = make_registry({"A": ["A1"], "B": ["B1"]})
+        months = 160
+        source = StubMacroSource(
+            registry,
+            {
+                "A1": make_series((1994, 1), wave(months)),
+                # 척도 구간(최소 60개월)을 세울 만큼이 없다. 한 달만 비면 가장 가까운
+                # 달로 물러나므로, 물러날 곳조차 없는 모양이어야 계산 불가가 된다.
+                "B1": make_series((1994, 1), [None] * (months - 5) + wave(5)),
+            },
+        )
+        # A 는 끝까지 차 있고 B 는 마지막 달이 비었다. 그 마지막 달이 시험할 기준월이다.
+        baseline_month = max(source.monthly_series("A1"))
         builder = SnapshotBuilder(
             registry,
             {entry.id: source.monthly_series(entry.id) for entry in registry.indicators},
             source.publication,
             Versions(data=source.data_version(), registry=registry.version),
         )
-        broken = builder.build(SearchScope.field(broken_field), baseline_month)
+        broken = builder.build(SearchScope.field("B"), baseline_month)
         composite = builder.build(SearchScope.composite(), baseline_month)
         assert broken.status.status == STATUS_NOT_COMPUTABLE
         assert composite.status.status == STATUS_NOT_COMPUTABLE
