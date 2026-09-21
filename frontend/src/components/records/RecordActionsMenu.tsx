@@ -1,6 +1,7 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { exportMyRecordUrl } from '@/api/myRecords'
+import { normalizeApiError } from '@/api/client'
+import { downloadMyRecordExport } from '@/api/myRecords'
 import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'
 import { DeleteConfirmDialog } from './DeleteConfirmDialog'
 import { RenameDialog } from './RenameDialog'
@@ -19,8 +20,9 @@ type Props = {
 /**
  * 줄 하나의 '더 보기'(spec 006 FR-021, T045·T048).
  *
- * <p><b>내보내기는 주소만 연다.</b> 서버가 `Content-Disposition: attachment`로 내려보내므로 앵커의 `download`가 그대로
- * 받는다 — 여기서 받아 Blob 으로 다시 만들면 파일 이름을 화면이 짓게 되고 서버가 정한 이름과 갈린다.
+ * <p><b>내보내기는 받아 보고 결과를 알린다.</b> 주소를 앵커로 열면 실패를 알 수 없다 — 그 사이 계산 상태가 바뀌어 409가
+ * 오거나 세션이 끊겨 401이 와도 브라우저가 오류 본문을 파일로 받아 버리고, 화면은 "내려받습니다"라고 말한 채 남는다.
+ * 파일 이름은 서버가 붙인 것을 그대로 쓴다.
  *
  * <p><b>진행 중인 항목은 내보내지 않는다.</b> 결과가 아직 없어 서버가 409로 거절하므로, 눌러 본 뒤에 실패하는 대신 사유와
  * 함께 비활성으로 둔다. `disabled` 대신 `aria-disabled`인 이유는 초점을 받아야 사유가 읽히기 때문이다.
@@ -45,9 +47,14 @@ export function RecordActionsMenu({
     if (!open && dialog === null) triggerRef.current?.focus()
   }, [open, dialog])
 
-  function startExport(format: 'csv' | 'json') {
-    announce(`${item.name} 을(를) ${format.toUpperCase()} 로 내려받습니다.`)
+  async function startExport(format: 'csv' | 'json') {
     setOpen(false)
+    announce(`${item.name} 을(를) ${format.toUpperCase()} 로 내려받습니다.`)
+    try {
+      await downloadMyRecordExport(item.recordId, format)
+    } catch (cause) {
+      announce(`내보내기에 실패했습니다. ${normalizeApiError(cause).message}`)
+    }
   }
 
   return (
@@ -84,22 +91,12 @@ export function RecordActionsMenu({
             </>
           ) : (
             <>
-              <a
-                role="menuitem"
-                href={exportMyRecordUrl(item.recordId, 'csv')}
-                download
-                onClick={() => startExport('csv')}
-              >
+              <button type="button" role="menuitem" onClick={() => startExport('csv')}>
                 CSV로 내보내기
-              </a>
-              <a
-                role="menuitem"
-                href={exportMyRecordUrl(item.recordId, 'json')}
-                download
-                onClick={() => startExport('json')}
-              >
+              </button>
+              <button type="button" role="menuitem" onClick={() => startExport('json')}>
                 JSON으로 내보내기
-              </a>
+              </button>
             </>
           )}
           <button type="button" role="menuitem" onClick={() => setDialog('delete')}>

@@ -38,6 +38,7 @@ const apiMocks = vi.hoisted(() => ({
   fetchMyRecord: vi.fn(),
   renameMyRecord: vi.fn(),
   deleteMyRecord: vi.fn(),
+  downloadMyRecordExport: vi.fn(),
 }))
 const otherMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
@@ -121,6 +122,8 @@ describe('MyRecordsPage', () => {
     apiMocks.fetchMyRecord.mockReset()
     apiMocks.renameMyRecord.mockReset()
     apiMocks.deleteMyRecord.mockReset()
+    apiMocks.downloadMyRecordExport.mockReset()
+    apiMocks.downloadMyRecordExport.mockResolvedValue(undefined)
     otherMocks.fetchSectorCatalog.mockReset()
     otherMocks.fetchStrategyRegistry.mockReset()
     prefillMocks.prefillStrategySettings.mockReset()
@@ -532,18 +535,31 @@ describe('MyRecordsPage', () => {
     })
 
     renderPage()
-    await openMenu(analysisRecord.name)
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: 'CSV로 내보내기' }))
 
-    const csv = screen.getByRole('menuitem', { name: 'CSV로 내보내기' })
-    expect(csv.hasAttribute('download')).toBe(true)
-    expect(csv.getAttribute('href')).toContain(`${analysisRecord.recordId}/export?format=csv`)
-    expect(screen.getByRole('menuitem', { name: 'JSON으로 내보내기' }).getAttribute('href')).toContain(
-      'format=json',
-    )
+    expect(apiMocks.downloadMyRecordExport).toHaveBeenCalledWith(analysisRecord.recordId, 'csv')
+    expect((await screen.findByRole('status')).textContent).toContain('CSV')
 
     await openMenu('도는 중')
     const running = screen.getAllByRole('menuitem', { name: 'CSV로 내보내기' }).at(-1)
     expect(running?.getAttribute('aria-disabled')).toBe('true')
     expect(screen.getByText('아직 계산이 끝나지 않아 내보낼 결과가 없습니다.')).toBeTruthy()
+  })
+
+  it('내보내기가 실패하면 그 사실을 알린다 — 오류 본문을 파일로 받지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.downloadMyRecordExport.mockRejectedValue(
+      new ApiClientError('api', '아직 결과가 준비되지 않았습니다.', { code: 'RESULT_NOT_READY' }),
+    )
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: 'JSON으로 내보내기' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('내보내기에 실패했습니다'),
+    )
+    expect(screen.getByRole('status').textContent).toContain('아직 결과가 준비되지 않았습니다.')
   })
 })
