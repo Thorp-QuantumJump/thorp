@@ -21,9 +21,12 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Final, TypeVar
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from data_pipeline.macro.config import SourceConfig
+
+if TYPE_CHECKING:
+    from data_pipeline.macro.registry import SourcePolicy as SourceLimits
 
 T = TypeVar("T")
 
@@ -198,3 +201,68 @@ def require_keys(payload: Mapping[str, Any], keys: Sequence[str], context: str) 
             f"{context}: 응답에 {', '.join(missing)} 이(가) 없다."
             f" 등록표가 아는 필드는 {', '.join(keys)} 다"
         )
+
+
+class RateLimitExceeded(PermanentSourceError):
+    """원천이 밝힌 한도를 넘는 요청을 만들려 했다 (FR-017a).
+
+    **보내 보고 거절당하는 것이 아니라 만들기 전에 막는다.** 한도를 넘는 요청은 원천에
+    부담을 주고, 반복되면 차단으로 이어져 그 지표의 자료가 끊긴다. 거절을 받아 처리하는
+    것보다 애초에 만들지 않는 편이 싸고 확실하다.
+    """
+
+
+class RateLimiter:
+    """원천 하나의 호출 한도를 지킨다 (FR-017a).
+
+    두 가지를 한다. **분당 상한**은 창이 찰 때까지 기다렸다 보내고, **요청당 셀 상한**은
+    기다려도 해결되지 않으므로 그 자리에서 거절한다 — 요청을 쪼개는 것은 부르는 쪽의 일이다.
+
+    수치 한도를 밝히지 않은 원천에는 최소 간격만 둔다. 한도가 없다는 말은 마음껏 불러도
+    된다는 뜻이 아니라 과다 호출 시 차단할 수 있다는 뜻이다(pd11).
+
+    시계와 대기를 인자로 받는 이유는 시험이 실제로 1분을 자지 않게 하기 위해서다.
+    """
+
+    def __init__(
+        self,
+        policy: SourceLimits,
+        *,
+        now: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._policy = policy
+        self._now = now
+        self._sleep = sleep
+        self._calls: list[float] = []
+
+    def check_request_size(self, cells: int, context: str) -> None:
+        """보내기 전에 요청 크기를 본다. 넘으면 만들지 않는다."""
+        cap = self._policy.max_cells_per_request
+        if cap is not None and cells > cap:
+            raise RateLimitExceeded(
+                f"{context}: 요청이 {cells:,}셀로 원천 한도 {cap:,}셀을 넘는다."
+                " 구간을 나눠 부른다"
+            )
+
+    def acquire(self) -> None:
+        """호출 하나를 쓸 자리가 날 때까지 기다린다."""
+        interval = self._policy.min_interval_seconds
+        if interval > 0 and self._calls:
+            waited = self._now() - self._calls[-1]
+            if waited < interval:
+                self._sleep(interval - waited)
+
+        # 창을 벗어난 기록은 한도가 있든 없든 버린다. 가지치기를 한도 분기 안에만 두면
+        # 한도가 없는 원천(한국은행·관세청·OECD)에서 목록이 호출 수만큼 무한히 자란다.
+        cutoff = self._now() - 60.0
+        self._calls = [at for at in self._calls if at > cutoff]
+
+        limit = self._policy.max_calls_per_minute
+        if limit is not None:
+            while len(self._calls) >= limit:
+                # 창에서 가장 오래된 호출이 빠질 때까지 기다린다.
+                self._sleep(self._calls[0] - cutoff)
+                cutoff = self._now() - 60.0
+                self._calls = [at for at in self._calls if at > cutoff]
+        self._calls.append(self._now())

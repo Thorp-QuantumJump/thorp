@@ -52,6 +52,7 @@ from data_pipeline.macro.sources.base import (
     MAX_MONTHS_CUSTOMS,
     PermanentSourceError,
     QuotaExhaustedError,
+    RateLimiter,
     SourceError,
     SourceObservation,
     split_months,
@@ -275,9 +276,15 @@ def collect(
 
     for source_id, members in by_source.items():
         config = resolved.get(source_id) or load_source_config(source_id)
+        # **한도는 원천 단위다.** 지표마다 새로 만들면 분당 창이 지표 수만큼 늘어나
+        # 한도가 사실상 없는 것이 된다 (FR-017a). 겉면으로 감싸므로 아래의 모든 호출
+        # 지점이 — 주택가격 사슬의 표마다 부르는 것까지 — 같은 한도를 지난다.
+        throttled = transport.ThrottledFetcher(
+            fetcher, RateLimiter(registry.source_policy(source_id))
+        )
         if source_id == SOURCE_CUSTOMS:
             outcomes.extend(
-                _collect_customs(members, fetcher, config, data_root, mode, today)
+                _collect_customs(members, throttled, config, data_root, mode, today)
             )
             continue
         quota_reached = False
@@ -294,7 +301,7 @@ def collect(
                     )
                 )
                 continue
-            outcome = _collect_one(indicator, fetcher, config, data_root, mode, today)
+            outcome = _collect_one(indicator, throttled, config, data_root, mode, today)
             outcomes.append(outcome)
             quota_reached = outcome.status == STATUS_QUOTA
     return outcomes
@@ -433,7 +440,10 @@ def _collect_customs(
         for indicator in members
     }
     start, end = _window(members[0], mode, today)
-    windows = split_months(_first_day(start), _first_day(end), MAX_MONTHS_CUSTOMS)
+    # 상한은 등록표가 든다(FR-017a). 같은 수를 코드에도 두면 한쪽만 고쳐질 때
+    # 등록표가 기록용으로 전락하고, 실제로 지키는 값이 무엇인지 알 수 없게 된다.
+    limit = registry.source_policy(SOURCE_CUSTOMS).max_months_per_request
+    windows = split_months(_first_day(start), _first_day(end), limit or MAX_MONTHS_CUSTOMS)
     received_at = datetime.now(UTC)
 
     for window in windows:

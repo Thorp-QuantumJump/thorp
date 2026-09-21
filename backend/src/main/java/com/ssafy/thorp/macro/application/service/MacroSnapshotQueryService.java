@@ -42,6 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MacroSnapshotQueryService {
 
+    /** 이용이 중단된 지표의 허락 상태. 등록표·스키마와 같은 값이다(FR-016b). */
+    private static final String SUSPENDED_LICENSE = "SUSPENDED";
+
     /** 경로는 t-2·t-1·t 세 달이다. */
     private static final int PATH_MONTHS = 3;
 
@@ -209,6 +212,10 @@ public class MacroSnapshotQueryService {
                 fieldReferenceMonth == null ? null : observations.get(fieldReferenceMonth);
         ObservationRow latestRow = latestMonth == null ? null : observations.get(latestMonth);
 
+        // 중단된 지표는 값을 내보내지 않는다(FR-016b). 등록 정보와 중단 사유는 남겨
+        // 조용히 사라지지 않고 "빠진 상태"임이 드러나게 한다(원칙 VI).
+        boolean suspended = SUSPENDED_LICENSE.equals(definition.licenseStatus());
+
         return new IndicatorSummary(
                 definition.indicatorId(),
                 definition.fieldId(),
@@ -220,12 +227,13 @@ public class MacroSnapshotQueryService {
                 definition.transformedUnit(),
                 definition.transformRule(),
                 resolveStatus(definition, latestMonth, sampleData, failedIndicatorIds),
-                fieldReferenceMonth,
-                toValue(referenceRow),
-                toValue(latestRow),
-                toPath(fieldReferenceMonth, observations),
-                toPath(latestMonth, observations),
-                latestRow == null ? null : latestRow.receivedAt());
+                suspended ? null : fieldReferenceMonth,
+                suspended ? null : toValue(referenceRow),
+                suspended ? null : toValue(latestRow),
+                suspended ? List.of() : toPath(fieldReferenceMonth, observations),
+                suspended ? List.of() : toPath(latestMonth, observations),
+                latestRow == null ? null : latestRow.receivedAt(),
+                suspended ? definition.licenseSuspendedReason() : null);
     }
 
     /**
@@ -238,6 +246,11 @@ public class MacroSnapshotQueryService {
             LocalDate latestMonth,
             boolean sampleData,
             Set<String> failedIndicatorIds) {
+        // **중단이 가장 먼저다.** 이용 권리가 거둬들여진 지표는 개발 대역이든 운영이든 값을
+        // 내보내지 않는다(FR-016b). 예시 자료 뒤에 두면 개발 프로필에서 중단이 가려진다.
+        if (SUSPENDED_LICENSE.equals(definition.licenseStatus())) {
+            return "SUSPENDED";
+        }
         if (sampleData) {
             return "EXAMPLE";
         }

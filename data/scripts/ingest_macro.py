@@ -30,8 +30,10 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
+from typing import Final
 
 _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우
@@ -47,6 +49,16 @@ from data_pipeline.repository import database_url_from_env  # noqa: E402
 MODE_INITIAL = "initial"
 MODE_REGULAR = "regular"
 MODES = (MODE_INITIAL, MODE_REGULAR)
+
+PROFILE_PROD = "prod"
+PROFILE_DEV = "dev"
+PROFILES = (PROFILE_PROD, PROFILE_DEV)
+
+#: 예시 자료를 켜려면 함께 있어야 하는 환경변수 (FR-022).
+#:
+#: 깃발 하나로 켜지게 두지 않는 이유는, 운영 배치의 인자를 누가 복사해 붙이다가 섞여 들어갈
+#: 수 있어서다. 환경변수는 실행 명령이 아니라 **환경**에 매여 있어 같이 복사되지 않는다.
+SAMPLE_DATA_ENV: Final[str] = "MACRO_ALLOW_SAMPLE_DATA"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -71,6 +83,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="원천을 부르지 않고 대상과 계획만 보여준다",
+    )
+    parser.add_argument(
+        "--profile",
+        default=PROFILE_PROD,
+        choices=PROFILES,
+        help="dev 는 예시 자료를 쓸 수 있다. 기본은 prod 이며 예시 자료로 가는 길이 없다",
+    )
+    parser.add_argument(
+        "--sample-root",
+        default=None,
+        metavar="PATH",
+        help="dev 프로필에서 읽을 예시 응답 뿌리. prod 에서는 무시되지 않고 거부된다",
     )
     parser.add_argument(
         "--data-root",
@@ -113,6 +137,38 @@ def describe_plan(
     return lines
 
 
+def build_fetcher(args: argparse.Namespace, timeout: float) -> transport.Fetcher:
+    """프로필에 맞는 Fetcher 를 고른다 (FR-022).
+
+    **운영에는 예시 자료로 가는 길이 없다.** 수집이 실패했다고 예시로 자동 대체하지 않으며,
+    예시 인자를 운영 프로필에 주면 무시하지 않고 거부한다 — 무시하면 준 사람은 켜진 줄 알고,
+    화면은 진짜 자료를 보여 주는 줄 안다. 둘 다 틀린 채로 굴러간다.
+
+    개발 프로필은 **두 번 말해야** 켜진다. 인자와 환경변수가 모두 있어야 하며, 하나만 있으면
+    켜지지 않고 왜 안 켜졌는지 말한다.
+    """
+    if args.profile == PROFILE_PROD:
+        if args.sample_root is not None:
+            raise SystemExit(
+                "운영 프로필에 --sample-root 를 줬다. 운영은 예시 자료를 쓰지 않는다"
+                f" (FR-022). 개발이면 --profile {PROFILE_DEV} 를 함께 준다"
+            )
+        return transport.RequestsFetcher(timeout)
+
+    if os.environ.get(SAMPLE_DATA_ENV) != "1":
+        raise SystemExit(
+            f"--profile {PROFILE_DEV} 는 {SAMPLE_DATA_ENV}=1 이 함께 있어야 켜진다 (FR-022)."
+            " 예시 자료가 운영 자료로 오인되지 않도록 두 번 확인한다"
+        )
+    if args.sample_root is None:
+        raise SystemExit(f"--profile {PROFILE_DEV} 에는 --sample-root 가 필요하다")
+    root = Path(args.sample_root)
+    if not root.is_dir():
+        raise SystemExit(f"예시 자료 뿌리가 없다: {root}")
+    print(f"[예시 자료] {root} 를 읽는다. 이 실행의 결과는 실제 자료가 아니다")
+    return transport.SampleFetcher(root)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     indicators = select_indicators(args.indicator)
@@ -133,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     report = ingest.run(
         create_engine(database_url_from_env()),
         indicators,
-        fetcher=transport.RequestsFetcher(timeout),
+        fetcher=build_fetcher(args, timeout),
         data_root=Path(args.data_root),
         mode=args.mode,
     )
