@@ -101,13 +101,21 @@
   `availableRange`·`excludedCount`가 **없다**(`minPostTradingDays`만 남는다). 모든 사례가
   `shownInFiltered=true`이며, 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
-  범위도 200이다(FR-019).
+  범위도 200이다(FR-019). 그때 `availableRange`는 **키를 지우지 않고** 양끝을 `null`로 보낸다 — 키가 통째로
+  없는 경우는 `MARKET_FLOW` 하나이며, 빈 범위에서도 지우면 "필터를 걸었는데 덮는 사례가 없다"와 "필터를 걸지
+  않았다"가 같은 모양이 된다.
+- `bundle.instruments[].sectorId`는 실행이 어느 섹터로 그 종목을 골랐는지 모를 때(접수 기록이 없는 옛 실행)
+  생략된다. 종목에서 섹터를 거꾸로 찾아 채우지 않는다 — 그 실행이 고르지 않은 섹터를 판정에 넣게 된다.
 
 ## 1a. `GET /regime-links/case-window?caseId=`
 
 실행 토큰 없이 사례의 postWindow(d0·d21·d63·lastAvailable·completedTradingDays)를 조회한다.
 003이 실행 생성 전 기간 제약에 사용한다. 010 snapshotKey를 고정하며 404는 없는 사례,
-미완성 d21/d63은 null이다. 공개 조회이며 basis를 포함한다.
+미완성 d21/d63은 null이다. 공개 조회이며 basis를 포함한다. 예시는
+`docs/specs/regime-link-api/examples/case-window.json`이다.
+
+`lastAvailable`은 **여기에만** 있다. §1의 `cases[].postWindow`에는 싣지 않는다 — 그 값을 쓰는 것은
+종료일 하한을 잡는 003뿐이고, 사례가 열 개까지 오는 목록에 화면이 읽지 않는 값을 담지 않는다.
 
 ## 1b. `POST /regime-link-searches` — 목록 확정·변경 기록 (로그인 필요)
 
