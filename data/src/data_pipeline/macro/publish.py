@@ -75,6 +75,13 @@ PUBLISHABLE_LICENSE_REVIEW_STATUSES: Final[frozenset[str]] = frozenset(
 )
 """확인 완료와 명시된 권리 확인 대기만 발행할 수 있다."""
 
+BLOCK_ALL_SUSPENDED: Final[str] = "ALL_SUSPENDED"
+"""수집 가능한 지표가 하나도 남지 않았다 (FR-016b).
+
+중단된 지표를 완결 기준에서 빼는 것은 나머지로 화면을 이어 가기 위해서다. 나머지가 없으면
+뺄 것도 없다 — 이때 그냥 통과시키면 지표가 0개인 자료 버전이 발행되고, 폴인터가 그쪽으로
+옮겨 가면서 멀쩡하던 직전 완결 버전이 화면에서 사라진다."""
+
 BLOCK_NOT_COLLECTED: Final[str] = "NOT_COLLECTED"
 """등록표에 있는데 관측이 아예 오지 않았다. 유효 건수 0 과 구분한다 — 전자는 수집이 돌지
 않았다는 뜻이고 후자는 받았으나 변환하지 못했다는 뜻이라 대응이 다르다."""
@@ -176,7 +183,10 @@ def gate(
     # spec 이 두바이유를 두고 "빠져도 나머지 6개 분야 검색은 유지된다"고 적은 것이 이 뜻이다.
     # 빠진 지표는 조용히 사라지지 않고 `suspended` 로 함께 나간다(원칙 VI).
     blockers: list[PublicationBlocker] = []
-    for indicator in collectible(indicators):
+    live = collectible(indicators)
+    if not live:
+        return (PublicationBlocker(SCOPE_ALL, BLOCK_ALL_SUSPENDED),)
+    for indicator in live:
         if indicator.license_review_status not in PUBLISHABLE_LICENSE_REVIEW_STATUSES:
             blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED))
         received = observations.get(indicator.indicator_id)
