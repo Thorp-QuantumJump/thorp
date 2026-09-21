@@ -52,20 +52,26 @@ PREFETCH_COUNT = 1
 # --- 오류 분류 (계약 "처리 규칙") ------------------------------------------------------
 
 
-class ContractViolation(Exception):
+class RegimeLinkContractViolation(Exception):
     """계약 오류. 재전달해도 계속 실패하므로 requeue 없이 reject → DLQ.
 
     JSON 파싱 실패, pydantic ``ValidationError``, 지원하지 않는
     ``schemaVersion``. 계산이 실패한 것과 다르다 — 그쪽은 ``FINISHED(FAILED)`` 를
     발행하고 ACK 한다.
+
+    백테스트 경로의 ``worker.messaging.ContractViolation`` 과 **이름을 가른다.**
+    두 모듈에 같은 이름의 무관한 예외를 두면 import 를 잘못 적은 ``except`` 가
+    조용히 아무것도 잡지 않아, 계약 오류가 DLQ 로 가는 대신 처리되지 않은 예외로
+    빠져나간다. 타입이 다르다는 사실이 이름에 드러나야 한다.
     """
 
 
-class PublishError(RuntimeError):
+class RegimeLinkPublishError(RuntimeError):
     """이벤트 발행이 브로커에서 확인되지 않았다. 일시 장애로 보고 ACK 하지 않는다.
 
     발행 실패를 완료로 숨기지 않는다 — 숨기면 백엔드가 모르는 채 링크가 영영
-    ``RUNNING`` 으로 남는다.
+    ``RUNNING`` 으로 남는다. 이름을 가르는 이유는
+    :class:`RegimeLinkContractViolation` 과 같다.
     """
 
 
@@ -78,7 +84,7 @@ class EventPublisher(Protocol):
     def publish(self, event: RegimeLinkEvent) -> None:
         """브로커 확인(publisher confirm)과 라우팅 확인까지 끝난 뒤 정상 반환한다.
 
-        확인되지 않으면 :class:`PublishError`. 즉 "정상 반환 == 브로커가 받았다"
+        확인되지 않으면 :class:`RegimeLinkPublishError`. 즉 "정상 반환 == 브로커가 받았다"
         이므로 호출자는 ``FINISHED`` 발행 뒤에만 ACK 하면 계약의 순서를 지킬 수 있다.
         """
 

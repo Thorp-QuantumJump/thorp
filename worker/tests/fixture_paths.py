@@ -20,6 +20,22 @@ REGIME_LINK_FIXTURE_DIR = (
     Path(__file__).resolve().parents[2] / "docs" / "specs" / "regime-link-messaging" / "examples"
 )
 
+#: 백엔드 011 메시지 계약 record·enum 이 있는 패키지. 양쪽 enum 값 집합을 대조한다.
+REGIME_LINK_BACKEND_MESSAGE_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "backend"
+    / "src"
+    / "main"
+    / "java"
+    / "com"
+    / "ssafy"
+    / "thorp"
+    / "regimelink"
+    / "application"
+    / "port"
+    / "message"
+)
+
 #: 백엔드 토폴로지 상수(011 T030). 아직 없으면 계약 문서와 대조한다.
 REGIME_LINK_BACKEND_CONFIG = (
     Path(__file__).resolve().parents[2]
