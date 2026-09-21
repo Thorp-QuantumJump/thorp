@@ -21,7 +21,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 | [`examples/create-confirm-required.json`](examples/create-confirm-required.json) | 분석 기간이 사례를 덮지 않아 확인을 요구하는 응답 |
 | [`examples/case-window.json`](examples/case-window.json) | 실행 없이 읽는 사례의 사후 구간(§1a). `lastAvailable`이 있다 |
 
-검색 기록 생성(§1b)의 예시는 그 경로를 구현하는 묶음에서 함께 추가한다.
+검색 기록 생성(`POST /regime-link-searches`)은 예시 파일을 두지 않는다. 응답이 위 가용성 조회와 같은
+모양에 `linkSearchId`와 변경이 있을 때만 나오는 `bundleChanged`를 더한 것뿐이라, 같은 값을 두 벌로
+두면 한쪽만 낡는다. 백엔드·프론트엔드 모두 가용성 예시를 기준으로 쓴다.
 
 ## 1. 공통 규칙
 
@@ -70,6 +72,12 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
 - `OUT_OF_PERIOD`는 **필터 조건이 아니다.** `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다.
 - 필터를 건 응답은 덮는 사례가 없어도 `availableRange`를 싣고 양끝만 `null`이다. 그 키가 아예 없는 것은
   `MARKET_FLOW` 응답뿐이다.
+- `bundle.runs[]`의 `costProfileVersion`·`dataVersion`은 그 실행이 고정한 비용 조건 버전과 자료 버전이다.
+  결과 머리의 "같은 평가 날짜·비용 버전" 표시가 이 값을 읽고, 두 실행이 같은 조건인지 서버가 대조할 때
+  쓰는 값과 같다. 조건이 하나라도 다른 비교 묶음은 판정 전에 `400 INVALID_INPUT`으로 거절한다.
+- **`perRun`의 판정이 실행마다 갈릴 수 있는 사유는 `WARMUP_SHORT`와 `OUT_OF_PERIOD` 둘뿐이다.**
+  나머지 사유는 섹터 후보 집합·대응표 버전·자료 버전에서 나오는데 그 셋이 다른 묶음은 위 대조에서
+  이미 거절되기 때문이다.
 - `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이고, 화면이 `UNLISTED`·
   `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은
   그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.
@@ -98,23 +106,32 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은
   `attempt ≥ 2`에서 다시 나오면 `retryable=false`다.
 - `lossContribution`은 **종목 구간 손익 ÷ 전체 구간 손익**을 섹터별로 합산한 몫이고 합이 1이다.
   이름이 '손실'이지만 **이익 종목도 뺀 것 없이 들어간다** — 전체 손익과 반대로 움직인 섹터가 음수
-  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략한다.
+  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략하며, **생략은 `null`이 아니라 키 자체의
+  부재**다 — 화면은 키가 있는지로 표시 여부를 가른다.
 - `turnover`는 값만으로 뜻이 정해지지 않으므로 `turnoverBasis`(`ANNUALIZED_252`)를 함께 싣는다.
   **두 구간 모두 연환산한 값이라** 구간이 짧다고 작아지지 않고, `window21`과 `window63`을 같은 단위로
   나란히 놓을 수 있다. 수익률과 최대 하락 폭은 연환산하지 않는다.
 - `holdings`는 구간의 모든 거래일을, `trades`는 구간의 모든 거래를 담는다. 화면이 보유 비중 시계열과
   거래 목록을 그리려면 둘 다 빠짐없이 있어야 한다.
 - `tradesPerMonth`는 `tradeCount ÷ (tradingDays ÷ 21)`을 소수 둘째 자리로 맞춘 값이다.
-- `scenario=FRESH_CASH`의 결과는 시작 금액 기준이고 `originPublicToken`으로 기준 실행을 가리킨다.
+- `scenario=FRESH_CASH`의 결과는 시작 금액 기준이다. **기준 실행을 가리키는 별도 토큰(`originPublicToken`)은
+  싣지 않는다** — §1 공통 규칙대로 응답에는 제시된 토큰 외의 토큰이 없다(research R14). 화면은 주소에 이미
+  있는 `base`·`compare`로 기준 실행을 안다.
 
 ## 5. 사례 열기 — `POST /regime-links`
 
 - 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만들고, 이 검색이 그 계산을 열었다는 이용
   기록을 남긴다. 링크 행은 여러 사용자가 공유하므로 이미 `COMPLETED`면 작업을 만들지 않고 즉시
   결과를 돌려준다.
-- 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는데 `confirmFullPeriod=false`면 **계산을 만들지 않고**
-  `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`를 돌려준다. 확인하면 `confirmFullPeriod=true`로 다시 보내고,
-  서버가 004에 전체 기간 실행을 **요청한 사용자 본인의 분석 요청으로** 접수하며 링크는 `PENDING_RUN`이다.
+- 요청 본문은 `{linkSearchId, caseId, scenario, confirmFullPeriod}`다. 비교 묶음·snapshot·검색 경로는
+  서버가 `linkSearchId`(§1b가 만든 기록)에서 꺼내므로 토큰을 다시 보내지 않는다. 다른 사용자의 기록이나
+  그 snapshot의 표시 후보 밖 사례는 `404`다.
+- 계산을 만들기 전에 확인을 받는 경우가 **둘**이고 `outcome`이 가른다. `confirmFullPeriod=false`면 어느
+  쪽이든 링크도 메시지도 만들지 않고 `200`을 돌려준다.
+  - `OUT_OF_PERIOD_CONFIRM_REQUIRED` — 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는다.
+  - `FILLS_MISSING_CONFIRM_REQUIRED` — 기간은 덮지만 그 실행에 개별 체결 기록이 없다(옛 워커의 결과).
+  확인하면 `confirmFullPeriod=true`로 다시 보내고, 서버가 004에 전체 기간 실행을 **요청한 사용자 본인의
+  분석 요청으로** 접수하며 링크는 `PENDING_RUN`이다.
 - `scenario=FRESH_CASH`도 004 접수를 거친다. 사용자가 토글을 켤 때만 만들어진다.
 
 ## 6. 오류

@@ -15,6 +15,9 @@
 - **비교 묶음**은 `base`(필수)·`compare`(선택) 두 공개 토큰(005 `publicToken`, 32자 소문자 16진)
   이다. 서버가 005 `PublicResultService.resolve`와 같은 규칙(형식 → 존재 → 만료)으로 **분석 요청**과 그 실행으로
   푼다. 만료된 토큰은 `410 RESULT_EXPIRED`, 없는 토큰은 `404`(005 코드 재사용).
+- **비교 묶음 조건 대조**: 두 토큰은 주소로 직접 들어올 수 있으므로 서버가 섹터 후보 집합·대응표 버전·
+  시작 금액·비용 조건 버전·자료 버전이 같은지 확인하고, 다르면 계산도 기록도 만들지 않고
+  `400 INVALID_INPUT`과 어긋난 항목 이름을 돌려준다(T093). §1과 §1b가 판정보다 먼저 이 관문을 지난다.
 - 모든 응답에 `basis: {kind: "HISTORICAL_REVISION"}`가 있다(FR-015). 화면은 이 값을 읽어 "최신
   개정자료를 이용한 역사 탐색"을 표시한다.
 - **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 기존 `401 AUTHENTICATION_REQUIRED`(014 코드 재사용, FR-025). 계산은
@@ -47,9 +50,11 @@
   "bundle": {
     "runs": [
       {"publicToken": "9f2c…", "role": "BASE", "strategyId": "FIXED_WEIGHT", "strategyName": "내가 정한 비중",
-       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63},
+       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63,
+       "costProfileVersion": "KR-ETF-2026-09", "dataVersion": "KRX-2026-09-09"},
       {"publicToken": "b41e…", "role": "COMPARE", "strategyId": "INVERSE_VOLATILITY", "strategyName": "흐름을 따라 배분하기",
-       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63}
+       "period": {"start": "2010-01-04", "end": "2025-12-30", "effectiveStart": "2010-04-02"}, "warmupTradingDays": 63,
+       "costProfileVersion": "KR-ETF-2026-09", "dataVersion": "KRX-2026-09-09"}
     ],
     "instruments": [{"sectorId": "SEMICONDUCTOR", "instrumentId": "091160.XKRX", "listedOn": "2006-06-27"},
                     {"sectorId": "BIO", "instrumentId": "244580.XKRX", "listedOn": "2006-06-27", "delistedOn": "2018-11-15"}]
@@ -87,6 +92,15 @@
 - `availability`는 비교 묶음 전체의 판정(가장 나쁜 실행)이고 `perRun`이 실행별이다. 우선순위:
   `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`. `OUT_OF_PERIOD`는 **필터
   조건이 아니다** — `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다(§2).
+- **`perRun`의 판정이 실행마다 갈릴 수 있는 길은 둘뿐이다**: 전략마다 다른 워밍업 길이에서 오는
+  `WARMUP_SHORT`와, 기존 실행의 평가 시작·결과 종료가 사례 구간을 덮지 못해 생기는 `OUT_OF_PERIOD`다.
+  나머지 사유(`UNLISTED`·`SECTOR_UNMAPPED`·`RECENT`·`DELISTED`)는 섹터 후보 집합·대응표 버전·자료
+  버전에서 나오는데, 서버가 §0의 비교 묶음 조건 대조에서 그 셋이 다른 묶음을 **판정 전에 거절하므로**
+  (`400 INVALID_INPUT`, T093) 두 실행이 같은 값을 갖는다. 그래도 `perRun`을 남기는 것은 위 두 사유와
+  실행별 `completedTradingDays`를 화면이 실행 자리마다 따로 보여야 하기 때문이다.
+- `bundle.runs[]`의 `costProfileVersion`·`dataVersion`은 그 실행이 고정한 비용 조건 버전과 자료 버전이다.
+  화면이 결과 머리에 "같은 평가 날짜·비용 버전"을 보이는 근거이고(FR-011·SC-003·T061), 비교 묶음 조건 대조의 입력과
+  같은 값이다. 004 등록표가 값을 소유하며 011은 옮겨 싣기만 한다.
 - `postWindow.d63`은 미완성이면 `null`이고 `completedTradingDays`가 진짜 길이다. 21거래일 미만이면
   `state=POST_INCOMPLETE`이고 기본 목록에서 빠진다(Clarifications 09-18 Q2). `postWindow`는 시장 달력 기준이고,
   실행별 실제 확보 거래일 수는 `perRun[].completedTradingDays`다 — 구간 안 상장폐지면 폐지 전날까지로 줄고
@@ -160,11 +174,19 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 }
 ```
 
-### 응답 200 — 확인 필요 (`OUT_OF_PERIOD_CONFIRM_REQUIRED`)
+### 응답 200 — 확인 필요 (`*_CONFIRM_REQUIRED`)
 
-비교 묶음의 어느 실행이 사례 사후 구간을 덮지 않는데 `confirmFullPeriod=false`면 **계산을 만들지
-않고** 아래를 돌려준다. 화면은 "이 사례를 보려면 전체 기간으로 다시 계산합니다"를 보이고 확인하면
-`confirmFullPeriod=true`로 다시 보낸다(Clarifications 09-18 Q1).
+계산을 만들기 전에 사용자의 확인이 필요한 경우가 **둘**이고, `outcome`이 그 둘을 가른다. 어느 쪽이든
+`confirmFullPeriod=false`면 **링크도 메시지도 만들지 않고** 아래 모양을 돌려주며, 확인하면
+`confirmFullPeriod=true`로 같은 요청을 다시 보낸다(Clarifications 09-18 Q1).
+
+| `outcome` | 언제 | 화면 문구의 뜻 |
+|---|---|---|
+| `OUT_OF_PERIOD_CONFIRM_REQUIRED` | 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는다 | "기간이 모자라 다시 계산한다" |
+| `FILLS_MISSING_CONFIRM_REQUIRED` | 기간은 덮지만 그 실행에 개별 체결 기록이 없다(`backtest_result.fills_recorded=false`, 옛 워커의 결과) | "이 결과는 사후 구간을 보려면 다시 계산한다" |
+
+둘을 한 이름으로 합치지 않는 것은 사용자가 읽을 이유가 다르기 때문이다. 기간 밖을 먼저 보고, 기간이
+덮이는 실행만 체결 기록을 본다. 본문 모양(`requiredRange`·`affected`)은 둘이 같다.
 
 ```json
 {"outcome": "OUT_OF_PERIOD_CONFIRM_REQUIRED",
@@ -226,6 +248,9 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 �
 - `status=QUEUED|RUNNING`이면 `result=null`, `queuedAt`·`startedAt`.
 - 계산 작업을 만들지 않은 판정(`DATA_INSUFFICIENT`·`POST_INCOMPLETE`)은 `status=COMPLETED`이지만 큐에
   들어간 적이 없으므로 `queuedAt`·`startedAt`이 `null`이고 판정 시각만 `finishedAt`에 있다.
+- `lossContribution`을 생략할 때는 값을 `null`로 두지 않고 **키 자체가 없다.** 워커가 키를 빼고 보내면
+  저장된 결과에도 응답에도 그 키가 없으며, 화면은 키의 유무로 표시 여부를 가른다. 생략하는 경우는
+  전체 구간 손익이 0일 때 하나뿐이다.
 - `turnover`는 두 구간 모두 `ANNUALIZED_252`로 환산한 값이다. 구간이 짧다고 값이 작아지지 않으므로
   `window21`과 `window63`을 같은 단위로 나란히 놓을 수 있다.
 - `holdings`는 구간의 **모든 거래일**을, `trades`는 구간의 **모든 거래**를 담는다 — `trades`의 개수는

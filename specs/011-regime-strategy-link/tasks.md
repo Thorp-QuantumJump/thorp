@@ -301,10 +301,10 @@ flowchart LR
 
 - [X] T080 (BE) 운영 설정 마무리: `application.yml`에 `thorp.regimelink.{pending-run-sweep-interval, job-max-rows, job-max-instruments}` 자리(`application-local.yml` 로컬 값, `application-prod.yml`은 **기본값 없는** 환경변수 참조), `infra/.env.prod.example`·루트 `.env.example` 항목, `RegimeLinkProperties` `@NotNull`과 미설정 시 기동 실패를 확인하는 `RegimeLinkPropertiesTest`(T037에서 옮김). 문서에 수치를 적지 않는다
 - [X] T081 (FE 테스트) **M7 머지 전에 통과해야 한다(묶음 M7).** `frontend/src/components/regimelink/forbiddenPhrases.test.ts`: `components/regimelink/`·`pages/RegimeLink*.tsx`를 디렉터리 훑기로 모아 금지 표현(SC-007 네 종류 + 010 목록 13개: "추천"·"지금도"·"더 벌"·"이겼"·"승자"·"확률"·"유사도"·"%" 유사 표현 등) 0건 고정. 대상 파일 손 목록 금지(research R11)
-- [ ] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·linkSearchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다
+- [X] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·linkSearchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다
 - [ ] T089 (DOCS·검증) quickstart S10 측정: 표시 후보 10개 × 실행 2개 × 연속 운용(링크 20개) 조건에서 ① `GET /regime-links/availability` 30회 순차 호출의 p95, ② `regime_link.queued_at → finished_at`의 p95(워커 1개)를 재고 장비·자료 규모와 함께 기록한다. 목표(300ms·3초)는 **측정 목표이며 통과 조건이나 타임아웃이 아니다**(원칙 IX, research R9). 넘으면 수치와 병목 추정을 남기고 구현을 막지 않는다
-- [ ] T083 (DOCS) quickstart S1~S7·S9 실행 기록을 `quickstart.md` "실행 기록"에 날짜·명령·결과·**skipped 수**와 함께 남긴다. 확인하지 못한 항목은 "확인 필요"로
-- [ ] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 소유자의 결정 권한 위임(2026-09-20 사용자 확인)에 따라 이 작업에서 정한 항목으로 구분하며 추가 승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다
+- [X] T083 (DOCS) quickstart S1~S7·S9 실행 기록을 `quickstart.md` "실행 기록"에 날짜·명령·결과·**skipped 수**와 함께 남긴다. 확인하지 못한 항목은 "확인 필요"로
+- [X] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 소유자의 결정 권한 위임(2026-09-20 사용자 확인)에 따라 이 작업에서 정한 항목으로 구분하며 추가 승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다
 - T085 **(삭제, 2026-09-20)** 010 읽기 대역을 두지 않게 되어(research R8) 폐기 예행연습이 필요 없다. 번호는 재사용하지 않는다
 
 ---
