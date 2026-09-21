@@ -137,8 +137,10 @@ public class MyRecordQueryService {
      *
      * <p>{@code rulesVersion}·{@code costProfileVersion}은 {@code {version, provisional}} 꼴 그대로다 —
      * 잠정 여부가 함께 보여야 사용자가 확정 규칙 결과와 임시 규칙 결과를 구분한다.
+     *
+     * <p>내보내기({@code MyRecordExportService})가 같은 값을 파일에 담으므로 패키지 안에서 부를 수 있다.
      */
-    private Map<String, Object> referenceVersions(MyRecordView view) {
+    Map<String, Object> referenceVersions(MyRecordView view) {
         Map<String, Object> out = new LinkedHashMap<>();
         switch (view.kind()) {
             case ANALYSIS -> {
