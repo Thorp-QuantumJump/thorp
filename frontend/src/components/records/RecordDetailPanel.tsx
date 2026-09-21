@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiClientError } from '@/api/client'
 import { fetchMyRecord } from '@/api/myRecords'
 import { closePanelOnEscape } from '@/components/result/panelEscape'
+import { RegimeRecordPanel } from './RegimeRecordPanel'
+import { SearchBundlePanel } from './SearchBundlePanel'
 import { Button } from '@/components/ui/button'
 import type { MyRecordDetail, MyRecordReferenceVersions } from '@/types/myRecords'
 import type { VersionMark } from '@/types/result'
@@ -179,6 +181,14 @@ function DetailBody({ detail, labels }: { detail: MyRecordDetail; labels: Record
           )}
         </dd>
       </dl>
+
+      {/* 종류별 층. 탐색 묶음은 007이 저장한 것을, 경제환경은 로그 행을 그대로 보인다(T038·T039). */}
+      {detail.kind === 'SEARCH_BUNDLE' ? (
+        <SearchBundlePanel searchId={detail.searchId} status={detail.status} />
+      ) : null}
+      {detail.kind === 'REGIME_SEARCH' ? (
+        <RegimeRecordPanel regime={detail.regime} labels={labels} />
+      ) : null}
     </>
   )
 }
