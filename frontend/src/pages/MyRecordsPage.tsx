@@ -18,8 +18,11 @@ export const NO_MATCH_MESSAGE = '조건에 맞는 기록이 없습니다.'
 
 const DEFAULT_QUERY: MyRecordListQuery = {}
 
+/** 기본 보기인가. 정렬 드롭다운에서 기본값을 다시 고른 것은 조건을 건 것이 아니다. */
 function isDefault(query: MyRecordListQuery): boolean {
-  return Object.values(query).every((value) => value === undefined)
+  return Object.entries(query).every(
+    ([key, value]) => value === undefined || (key === 'sort' && value === 'SAVED_AT_DESC'),
+  )
 }
 
 /**
@@ -39,6 +42,8 @@ export function MyRecordsPage() {
   const catalog = useSectorCatalogState()
   const [strategies, setStrategies] = useState<StrategyView[] | null>(null)
   const highlightRef = useRef<HTMLLIElement>(null)
+  // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.
+  const highlightedOnce = useRef(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -58,9 +63,10 @@ export function MyRecordsPage() {
   }, [catalog, strategies])
 
   useEffect(() => {
-    if (records.status !== 'loaded' || !highlightToken) return
+    if (records.status !== 'loaded' || !highlightToken || highlightedOnce.current) return
     const row = highlightRef.current
     if (!row) return
+    highlightedOnce.current = true
     row.scrollIntoView?.({ block: 'center' })
     row.focus()
   }, [records.status, highlightToken])

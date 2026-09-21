@@ -132,7 +132,7 @@
 }
 
 .reason {
-  font-family: var(--thorp-font-mono);
+  color: var(--thorp-copy);
 }
 
 .facts {

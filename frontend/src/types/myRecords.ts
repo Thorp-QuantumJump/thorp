@@ -129,11 +129,6 @@ export type MyRecordListPage = {
   nextCursor: string | null
 }
 
-/** `409 RECORD_LIMIT_REACHED`의 `error.details`(FR-018). */
-export type RecordLimitError = { current: number; limit: number }
-
-export type MyRecordExportFormat = 'json' | 'csv'
-
 export type MyRecordApiErrorCode =
   | 'RECORD_LIMIT_REACHED'
   | 'RECORD_WITHDRAWN'

@@ -1,22 +1,16 @@
-import { ApiClientError, apiClient, normalizeApiError, runCsrfProtectedMutation } from './client'
+import { ApiClientError, apiClient, normalizeApiError } from './client'
 import type { ApiEnvelope } from '@/types/api'
-import type {
-  MyRecordDetail,
-  MyRecordExportFormat,
-  MyRecordListItem,
-  MyRecordListPage,
-  MyRecordListQuery,
-  MyRecordRegime,
-} from '@/types/myRecords'
+import type { MyRecordDetail, MyRecordListPage, MyRecordListQuery } from '@/types/myRecords'
 
 /**
  * spec 006 내 기록 API. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.
  *
+ * <p>US1이 쓰는 목록·상세만 있다. 이름 변경·삭제·내보내기·경제환경 기록은 그 화면(FE-3·FE-4)이 올 때 계약을 보고
+ * 더한다 — 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.
+ *
  * <p>모든 경로가 로그인 필요다. 401은 `apiClient`의 인터셉터가 전역 인증 상태에 알리고, 화면은
  * `ProtectedRoute`가 로그인 안내로 보낸다(S12). 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다 —
- * 006이 새 분류를 만들지 않는다.
- *
- * <p>남의 기록은 403이 아니라 404다(FR-020). 화면은 둘을 구분할 필요가 없고 서버도 알려 주지 않는다.
+ * 006이 새 분류를 만들지 않는다. 남의 기록은 403이 아니라 404다(FR-020).
  */
 
 const basePath = '/my-records'
@@ -71,51 +65,4 @@ export async function fetchMyRecords(
 /** 상세. 남의 것·없는 것·지운 것은 모두 404 `RESOURCE_NOT_FOUND`다. */
 export function fetchMyRecord(recordId: string, signal?: AbortSignal): Promise<MyRecordDetail> {
   return getResource<MyRecordDetail>(`${basePath}/${encodeURIComponent(recordId)}`, signal)
-}
-
-/** 이름만 바뀐다. 저장된 결과와 참조 버전은 그대로다(FR-017). 응답은 갱신된 상세다. */
-export function renameMyRecord(recordId: string, name: string): Promise<MyRecordDetail> {
-  return runCsrfProtectedMutation(async () => {
-    const response = await apiClient.patch<ApiEnvelope<MyRecordDetail>>(
-      `${basePath}/${encodeURIComponent(recordId)}`,
-      { name },
-    )
-    return unwrap(response.data)
-  })
-}
-
-/** 개인 항목만 지운다. 공용 계산 결과는 남는다(FR-017). 확인은 화면이 받는다. 복구는 없다. */
-export function deleteMyRecord(
-  recordId: string,
-): Promise<{ recordId: string; deletedAt: string }> {
-  return runCsrfProtectedMutation(async () => {
-    const response = await apiClient.delete<ApiEnvelope<{ recordId: string; deletedAt: string }>>(
-      `${basePath}/${encodeURIComponent(recordId)}`,
-    )
-    return unwrap(response.data)
-  })
-}
-
-/**
- * 경제환경 검색 결과를 개인 기록으로 남긴다(010 FR-032, research R15). `baselineOrigin`은 010 응답의 값을
- * 화면이 그대로 보낸다 — 서버는 추정하지 않는다. 같은 검색·같은 진입 경로면 기존 항목이 돌아온다(200).
- */
-export function recordRegimeSearch(
-  searchId: string,
-  entryPath: MyRecordRegime['entryPath'],
-  baselineOrigin: MyRecordRegime['baselineOrigin'],
-): Promise<MyRecordListItem> {
-  return runCsrfProtectedMutation(async () => {
-    const response = await apiClient.post<ApiEnvelope<MyRecordListItem>>(
-      `${basePath}/regime-searches`,
-      { searchId, entryPath, baselineOrigin },
-    )
-    return unwrap(response.data)
-  })
-}
-
-/** 내보내기는 파일 응답이라 봉투를 쓰지 않는다. 화면이 이 주소를 `<a download>`에 건다. */
-export function exportMyRecordUrl(recordId: string, format: MyRecordExportFormat): string {
-  const base = apiClient.defaults.baseURL ?? '/api'
-  return `${base}${basePath}/${encodeURIComponent(recordId)}/export?format=${format}`
 }

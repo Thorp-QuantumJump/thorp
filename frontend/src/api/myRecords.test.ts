@@ -4,37 +4,14 @@ import { analysisDetail, listPage } from '@/test/myRecordsFixtures'
 
 /** 006 T016. contracts "GET /my-records"·"오류". */
 
-const clientMocks = vi.hoisted(() => ({
-  get: vi.fn(),
-  patch: vi.fn(),
-  delete: vi.fn(),
-  post: vi.fn(),
-  runCsrfProtectedMutation: vi.fn(),
-}))
+const clientMocks = vi.hoisted(() => ({ get: vi.fn() }))
 
 vi.mock('./client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./client')>()
-  return {
-    ...actual,
-    apiClient: {
-      get: clientMocks.get,
-      patch: clientMocks.patch,
-      delete: clientMocks.delete,
-      post: clientMocks.post,
-      defaults: { baseURL: '/api' },
-    },
-    runCsrfProtectedMutation: clientMocks.runCsrfProtectedMutation,
-  }
+  return { ...actual, apiClient: { get: clientMocks.get } }
 })
 
-const {
-  deleteMyRecord,
-  exportMyRecordUrl,
-  fetchMyRecord,
-  fetchMyRecords,
-  renameMyRecord,
-  toSearchParams,
-} = await import('./myRecords')
+const { fetchMyRecord, fetchMyRecords, toSearchParams } = await import('./myRecords')
 const { ApiClientError } = await import('./client')
 
 function ok<T>(data: T) {
@@ -55,12 +32,6 @@ function axiosFailure(status: number, body: unknown): AxiosError {
 describe('api/myRecords', () => {
   beforeEach(() => {
     clientMocks.get.mockReset()
-    clientMocks.patch.mockReset()
-    clientMocks.delete.mockReset()
-    clientMocks.runCsrfProtectedMutation.mockReset()
-    clientMocks.runCsrfProtectedMutation.mockImplementation((request: () => Promise<unknown>) =>
-      request(),
-    )
   })
 
   afterEach(() => {
@@ -128,26 +99,5 @@ describe('api/myRecords', () => {
     })
 
     await expect(fetchMyRecords({})).rejects.toMatchObject({ code: 'INVALID_INPUT' })
-  })
-
-  it('이름 변경·삭제는 CSRF 보호 mutation 으로 간다', async () => {
-    clientMocks.patch.mockResolvedValue(ok(analysisDetail))
-    clientMocks.delete.mockResolvedValue(
-      ok({ recordId: 'MR-20260918-000042', deletedAt: '2026-09-21T00:00:00Z' }),
-    )
-
-    await renameMyRecord('MR-20260918-000042', '새 이름')
-    expect(clientMocks.patch).toHaveBeenCalledWith('/my-records/MR-20260918-000042', {
-      name: '새 이름',
-    })
-    await deleteMyRecord('MR-20260918-000042')
-    expect(clientMocks.delete).toHaveBeenCalledWith('/my-records/MR-20260918-000042')
-    expect(clientMocks.runCsrfProtectedMutation).toHaveBeenCalledTimes(2)
-  })
-
-  it('내보내기 주소는 형식을 질의로 붙인다', () => {
-    expect(exportMyRecordUrl('MR-20260918-000042', 'csv')).toBe(
-      '/api/my-records/MR-20260918-000042/export?format=csv',
-    )
   })
 })
