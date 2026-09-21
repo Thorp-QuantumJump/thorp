@@ -1,6 +1,7 @@
 package com.ssafy.thorp.paramsearch.presentation;
 
 import static com.ssafy.thorp.support.Requesters.as;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -87,6 +88,52 @@ class ParamSearchApiIT extends LauncherMockedIntegrationTestSupport {
                         jsonPath("$.data.registryVersion").value(Matchers.is(registry.version())))
                 .andExpect(jsonPath("$.data.validationLabel").value("UNVALIDATED"))
                 .andExpect(jsonPath("$.data.commonPeriod.start").exists());
+    }
+
+    /**
+     * 후보값마다 표시 문구가 함께 실린다(contracts §1).
+     *
+     * <p><b>값만 실어 보내면 화면이 그릴 수 없는 축이 있다.</b> 리밸런싱 주기처럼 후보값이 객체인 축은 등록표의 문구 없이는 그릴 방법이 없어 화면에 {@code
+     * [object Object]}가 나왔다. 개수와 순서가 {@code values}와 맞아야 화면이 인덱스로 짝지을 수 있다.
+     *
+     * <p>문구의 내용을 여기 적지 않는다 — 그것은 등록표가 정하고 판이 올라가면 바뀐다. 단언하는 것은 <b>비어 있지 않다</b>와 <b>값과 같은 수만큼
+     * 있다</b>이다.
+     */
+    @Test
+    @DisplayName("미리보기의 축은 후보값과 같은 수·같은 순서의 표시 문구를 함께 나른다")
+    void previewCarriesValueLabels() throws Exception {
+        String body =
+                mockMvc.perform(
+                                post("/param-searches/preview")
+                                        .with(csrf())
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(previewBody()))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+
+        JsonNode spaces = objectMapper.readTree(body).path("data").path("spaceSummary");
+        assertThat(spaces).isNotEmpty();
+
+        int checkedAxes = 0;
+        for (JsonNode space : spaces) {
+            for (JsonNode axis : space.path("axes")) {
+                JsonNode values = axis.path("values");
+                JsonNode labels = axis.path("valueLabels");
+
+                assertThat(labels.isArray())
+                        .as("axis %s must carry valueLabels", axis.path("axis").asText())
+                        .isTrue();
+                assertThat(labels).hasSameSizeAs(values);
+                for (JsonNode label : labels) {
+                    // 그릴 수 없는 문구를 문구라고 내보내지 않는다.
+                    assertThat(label.asText()).isNotBlank().doesNotContain("object Object");
+                }
+                checkedAxes++;
+            }
+        }
+        assertThat(checkedAxes).as("등록표에 축이 하나도 없으면 이 검사가 헛돈다").isPositive();
     }
 
     @Test

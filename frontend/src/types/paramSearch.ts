@@ -70,7 +70,14 @@ export type CandidateSort =
   | 'stability'
 
 /** 축 후보값과 파라미터 값. 등록표가 정하는 값이라 숫자·문자열 어느 쪽도 올 수 있다. */
-export type AxisValue = number | string
+/**
+ * 축의 후보값 하나.
+ *
+ * **객체도 온다.** 리밸런싱 주기처럼 값 자체가 구조를 갖는 축이 있어(`{mode, unit}`) 숫자·문자열로만
+ * 좁혀 두면 타입이 실제 응답과 어긋나고, 화면은 그 값을 `String()`으로 찍어 `[object Object]`를
+ * 보이게 된다. **값은 요청에 되돌려 보낼 때만 쓰고, 그릴 때는 `SpaceAxis.valueLabels`를 쓴다.**
+ */
+export type AxisValue = number | string | Record<string, unknown>
 
 /** 007이 쓰는 응답 껍데기. 오류 코드가 auth와 달라 `types/auth.ts`의 것을 재사용하지 않는다. */
 export type ParamSearchEnvelope<T> =
@@ -136,6 +143,8 @@ export type SpaceAxis = {
   label: string
   unit: string | null
   values: AxisValue[]
+  /** `values`와 같은 길이·같은 순서의 표시 문구. 등록표가 소유하며 화면이 짓지 않는다(FR-025). */
+  valueLabels: string[]
   defaultValue: AxisValue | null
   allowedRange: AxisAllowedRange | null
 }
