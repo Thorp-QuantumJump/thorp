@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { TermHelp } from '@/components/learning/TermHelp'
 import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'
 import type { LearningReturnState } from '@/types/learning'
@@ -76,7 +77,8 @@ export function DetailSettingsPanel({
         aria-controls={bodyId}
         onClick={() => setOpen((current) => !current)}
       >
-        상세 설정
+        <span>상세 설정</span>
+        <ChevronDown className={styles.toggleIcon} size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>
 
       {open ? (
