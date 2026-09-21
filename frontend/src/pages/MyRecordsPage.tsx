@@ -44,6 +44,9 @@ export function MyRecordsPage() {
   const catalog = useSectorCatalogState()
   const [strategies, setStrategies] = useState<StrategyView[] | null>(null)
   const [regimeFields, setRegimeFields] = useState<RegimeField[] | null>(null)
+  // 이름 변경·삭제·내보내기의 시작과 실패를 알리는 자리. 화면에 하나만 둔다 — 줄마다 두면
+  // 보조기기가 같은 말을 여러 번 읽는다(FR-021).
+  const [notice, setNotice] = useState('')
   const highlightRef = useRef<HTMLLIElement>(null)
   // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.
   const highlightedOnce = useRef(false)
@@ -104,6 +107,12 @@ export function MyRecordsPage() {
           strategies={strategies}
         />
 
+        {notice ? (
+          <p className={styles.status} role="status">
+            {notice}
+          </p>
+        ) : null}
+
         {records.status === 'loading' ? (
           <p className={styles.status} role="status">
             기록을 불러오는 중입니다.
@@ -145,6 +154,9 @@ export function MyRecordsPage() {
                     item={item}
                     labels={labels}
                     initiallyOpen={highlighted}
+                    onRenamed={records.replaceItem}
+                    onDeleted={records.removeItem}
+                    announce={setNotice}
                   />
                 )
               })}

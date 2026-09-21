@@ -297,7 +297,7 @@ function ResultView({
 
       <IndexComparisonView token={token} disabled={!viewable} />
       <TargetRiskView base={detail} disabled={!viewable} />
-      <NextStepLinks config={detail.config} />
+      <NextStepLinks config={detail.config} resultToken={token} />
 
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>

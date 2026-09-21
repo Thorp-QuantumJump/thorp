@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { AuthContext } from '@/auth/auth-context'
+import { anonymousAuthContext } from '@/test/authFixtures'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SAME_VERSION_NOTICE } from '@/components/records/RecordOriginNotice'
 import { analysisDetail, analysisDetailUnjudged } from '@/test/myRecordsFixtures'
@@ -27,9 +29,11 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T
 function renderResult(search: string) {
   return render(
     <MemoryRouter initialEntries={[`/results/${resultToken}${search}`]}>
+      <AuthContext.Provider value={anonymousAuthContext}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
       </Routes>
+    </AuthContext.Provider>
     </MemoryRouter>,
   )
 }

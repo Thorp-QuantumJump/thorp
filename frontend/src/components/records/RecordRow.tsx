@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
 import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'
+import { RecordActionsMenu } from './RecordActionsMenu'
 import { RecordDetailPanel } from './RecordDetailPanel'
 import { ReopenSettingsButton } from './ReopenSettingsButton'
 import {
@@ -28,6 +29,12 @@ type Props = {
   labels: RecordLabels
   /** 처음부터 펼쳐 둔다(`?resultToken=`으로 들어온 행) */
   initiallyOpen?: boolean
+  /** 이름이 바뀌었다. 목록이 그 줄만 제자리에서 고친다 */
+  onRenamed: (recordId: string, name: string) => void
+  /** 지웠다. 목록이 그 줄을 없앤다 */
+  onDeleted: (recordId: string) => void
+  /** 조작의 시작·실패를 알리는 자리(FR-021) */
+  announce: (message: string) => void
 }
 
 // `disabled` 는 초점을 받지 못해 aria-describedby 의 사유가 읽히지 않는다(FR-021). 초점은 두고 눌러도 아무 일이 없다.
@@ -44,7 +51,7 @@ const KIND_ICON = { ANALYSIS: LineChart, SEARCH_BUNDLE: Layers, REGIME_SEARCH: C
  * <p>상태와 사유는 성과와 다른 자리다(FR-014). 이 화면에는 성과 수치 자체가 없다.
  */
 export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
-  { item, labels, initiallyOpen = false },
+  { item, labels, initiallyOpen = false, onRenamed, onDeleted, announce },
   ref,
 ) {
   const panelId = useId()
@@ -129,6 +136,13 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
         <Button type="button" variant="outline" {...detail.toggleProps}>
           {detail.open ? '접기' : '자세히'}
         </Button>
+        <RecordActionsMenu
+          item={item}
+          initiallyOpen={initiallyOpen}
+          announce={announce}
+          onRenamed={(updated) => onRenamed(item.recordId, updated.name)}
+          onDeleted={() => onDeleted(item.recordId)}
+        />
       </div>
       {href ? null : (
         <p id={reasonId} className={styles.hint}>

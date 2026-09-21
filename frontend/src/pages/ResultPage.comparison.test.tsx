@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { AuthContext } from '@/auth/auth-context'
+import { anonymousAuthContext } from '@/test/authFixtures'
 import { ResultError } from '@/api/result'
 import { resultDetailCompleted as base, resultTimeseries } from '@/test/resultFixtures'
 import type { PublicResultDetail } from '@/types/result'
@@ -35,9 +37,11 @@ beforeEach(() => {
 function setup(search = '?compare=' + token) {
   return render(
     <MemoryRouter initialEntries={['/results/' + base.publicToken + search]}>
+      <AuthContext.Provider value={anonymousAuthContext}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
       </Routes>
+    </AuthContext.Provider>
     </MemoryRouter>,
   )
 }

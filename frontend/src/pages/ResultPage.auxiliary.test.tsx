@@ -3,6 +3,8 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { AuthContext } from '@/auth/auth-context'
+import { anonymousAuthContext } from '@/test/authFixtures'
 import { BacktestRequestError } from '@/api/backtest'
 import {
   resultDetailCompleted,
@@ -46,10 +48,12 @@ function LocationProbe() {
 function ResultRoute() {
   return (
     <MemoryRouter initialEntries={[`/results/${resultToken}`]}>
+      <AuthContext.Provider value={anonymousAuthContext}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
       </Routes>
       <LocationProbe />
+    </AuthContext.Provider>
     </MemoryRouter>
   )
 }
@@ -108,7 +112,8 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     expect(
       (screen.getByRole('button', { name: '기록으로 내보내기' }) as HTMLButtonElement).disabled,
     ).toBe(true)
-    expect(screen.getByText(/006 화면이 아직 없어/)).toBeTruthy()
+    // 006 화면이 생겨 사유가 바뀌었다(spec 006 T045a) — 이 렌더는 비로그인이라 로그인 안내다.
+    expect(screen.getByText(/로그인이 필요합니다/)).toBeTruthy()
   })
 
   it('스펙에 없는 이전 화면 행동을 결과 화면에 추가하지 않는다', async () => {

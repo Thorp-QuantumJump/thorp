@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiClientError } from '@/api/client'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'
@@ -35,6 +36,8 @@ import { EMPTY_MESSAGE, MyRecordsPage } from './MyRecordsPage'
 const apiMocks = vi.hoisted(() => ({
   fetchMyRecords: vi.fn(),
   fetchMyRecord: vi.fn(),
+  renameMyRecord: vi.fn(),
+  deleteMyRecord: vi.fn(),
 }))
 const otherMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
@@ -116,6 +119,8 @@ describe('MyRecordsPage', () => {
   beforeEach(() => {
     apiMocks.fetchMyRecords.mockReset()
     apiMocks.fetchMyRecord.mockReset()
+    apiMocks.renameMyRecord.mockReset()
+    apiMocks.deleteMyRecord.mockReset()
     otherMocks.fetchSectorCatalog.mockReset()
     otherMocks.fetchStrategyRegistry.mockReset()
     prefillMocks.prefillStrategySettings.mockReset()
@@ -455,5 +460,90 @@ describe('MyRecordsPage', () => {
 
     expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()
     expect(apiMocks.fetchMyRecords).not.toHaveBeenCalled()
+  })
+
+  // --- FE-4: 더 보기 메뉴(T045·T048·T049) ------------------------------------------
+
+  async function openMenu(name: string) {
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: `${name} 더 보기` }))
+    return user
+  }
+
+  it('이름을 바꾸면 그 줄의 이름만 제자리에서 바뀐다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '반도체 비중 높인 안' })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+    await user.clear(screen.getByLabelText('새 이름'))
+    await user.type(screen.getByLabelText('새 이름'), '반도체 비중 높인 안')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('반도체 비중 높인 안')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull()
+    expect(apiMocks.renameMyRecord).toHaveBeenCalledWith(analysisRecord.recordId, '반도체 비중 높인 안')
+    // 목록을 다시 받지 않는다 — 처음 한 번뿐이다.
+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(1)
+  })
+
+  it('이름 변경 오류는 필드 오류로 보이고 이름이 그대로다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.renameMyRecord.mockRejectedValue(
+      new ApiClientError('api', '이름은 1자 이상이어야 합니다.', { code: 'INVALID_INPUT' }),
+    )
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain('이름은 1자 이상이어야 합니다.')
+    expect(screen.getByLabelText('새 이름').getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByRole('heading', { name: analysisRecord.name })).toBeTruthy()
+  })
+
+  it('삭제는 확인을 거치고 그 줄을 없애며 복구를 제안하지 않는다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.deleteMyRecord.mockResolvedValue({
+      recordId: analysisRecord.recordId,
+      deletedAt: '2026-09-21T02:00:00Z',
+    })
+
+    renderPage()
+    const user = await openMenu(analysisRecord.name)
+    await user.click(screen.getByRole('menuitem', { name: '지우기' }))
+
+    // 무엇이 남고 무엇이 사라지는지 확인 문구가 말한다(FR-017).
+    expect(screen.getByText('저장된 계산 결과는 남고 내 목록에서만 사라집니다.')).toBeTruthy()
+    expect(apiMocks.deleteMyRecord).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '지우기' }))
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull())
+    expect(screen.queryByText(/복구|되돌리기/)).toBeNull()
+  })
+
+  it('완료 항목은 두 형식으로 내려받고 진행 중 항목은 사유와 함께 막힌다', async () => {
+    apiMocks.fetchMyRecords.mockResolvedValue({
+      items: [analysisRecord, { ...analysisRecord, recordId: 'MR-20260918-000099', name: '도는 중', status: 'RUNNING' }],
+      nextCursor: null,
+    })
+
+    renderPage()
+    await openMenu(analysisRecord.name)
+
+    const csv = screen.getByRole('menuitem', { name: 'CSV로 내보내기' })
+    expect(csv.hasAttribute('download')).toBe(true)
+    expect(csv.getAttribute('href')).toContain(`${analysisRecord.recordId}/export?format=csv`)
+    expect(screen.getByRole('menuitem', { name: 'JSON으로 내보내기' }).getAttribute('href')).toContain(
+      'format=json',
+    )
+
+    await openMenu('도는 중')
+    const running = screen.getAllByRole('menuitem', { name: 'CSV로 내보내기' }).at(-1)
+    expect(running?.getAttribute('aria-disabled')).toBe('true')
+    expect(screen.getByText('아직 계산이 끝나지 않아 내보낼 결과가 없습니다.')).toBeTruthy()
   })
 })

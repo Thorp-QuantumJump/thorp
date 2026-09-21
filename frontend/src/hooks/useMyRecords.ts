@@ -118,5 +118,31 @@ export function useMyRecords(query: MyRecordListQuery) {
     }
   }, [state])
 
-  return { ...state, retry, loadMore }
+  /**
+   * 한 줄만 제자리에서 고친다(이름 변경). 목록을 다시 받지 않는 이유는 그 사이 새 항목이 끼면 사용자가 보던 자리가
+   * 움직이기 때문이다 — 바뀐 것은 이름 하나뿐이다.
+   */
+  const replaceItem = useCallback((recordId: string, name: string) => {
+    setState((previous) =>
+      previous.status === 'loaded'
+        ? {
+            ...previous,
+            items: previous.items.map((item) =>
+              item.recordId === recordId ? { ...item, name } : item,
+            ),
+          }
+        : previous,
+    )
+  }, [])
+
+  /** 지운 줄을 없앤다. 되돌리는 경로가 없으므로 되돌릴 값을 들고 있지 않는다(research R6). */
+  const removeItem = useCallback((recordId: string) => {
+    setState((previous) =>
+      previous.status === 'loaded'
+        ? { ...previous, items: previous.items.filter((item) => item.recordId !== recordId) }
+        : previous,
+    )
+  }, [])
+
+  return { ...state, retry, loadMore, replaceItem, removeItem }
 }
