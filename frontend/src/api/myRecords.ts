@@ -122,12 +122,52 @@ export function deleteMyRecord(recordId: string): Promise<{ recordId: string; de
 }
 
 /**
- * 내보내기 주소(FR-015·FR-016).
+ * 내보내기(FR-015·FR-016·FR-021).
  *
- * <p><b>가져오지 않고 주소만 만든다.</b> 서버가 `Content-Disposition: attachment`로 내려보내므로 브라우저가 직접 받는
- * 것이 맞다 — 여기서 받아 Blob 으로 다시 만들면 파일 이름을 화면이 짓게 되고, 그 이름은 서버가 정한 것과 갈린다.
+ * <p><b>주소를 앵커로 여는 대신 받아서 내려준다.</b> 앵커는 실패를 알 수 없다 — 그 사이 계산 상태가 바뀌어 409가 오거나
+ * 세션이 끊겨 401이 오면 브라우저가 그 오류 본문을 파일로 받아 버리고, 화면은 "내려받습니다"라고 말한 채로 남는다.
+ * FR-021이 실패도 알리라고 했으므로 응답을 보고 판단한다.
+ *
+ * <p>파일 이름은 <b>서버가 정한 것을 그대로 쓴다</b>(`Content-Disposition`). 화면이 지으면 서버가 붙인 이름과 갈린다.
  */
-export function exportMyRecordUrl(recordId: string, format: 'csv' | 'json'): string {
-  const base = apiClient.defaults.baseURL ?? ''
-  return `${base}${basePath}/${encodeURIComponent(recordId)}/export?format=${format}`
+export async function downloadMyRecordExport(
+  recordId: string,
+  format: 'csv' | 'json',
+): Promise<void> {
+  const response = await apiClient.get<Blob>(
+    `${basePath}/${encodeURIComponent(recordId)}/export`,
+    { params: { format }, responseType: 'blob' },
+  )
+  const name = filenameFrom(
+    response.headers['content-disposition'],
+    `${recordId}.${format}`,
+  )
+  const url = URL.createObjectURL(response.data)
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = name
+    anchor.click()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/**
+ * `Content-Disposition`의 파일 이름. `filename*`(RFC 5987)이 먼저다 — 한글 이름이 그 자리에 온다.
+ *
+ * <p>헤더가 없거나 읽지 못하면 부른 쪽이 준 이름을 쓴다. 이름 하나 때문에 내려받기를 실패로 만들지 않는다.
+ */
+function filenameFrom(disposition: unknown, fallback: string): string {
+  if (typeof disposition !== 'string') return fallback
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1])
+    } catch {
+      return fallback
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition)
+  return plain ? plain[1] : fallback
 }
