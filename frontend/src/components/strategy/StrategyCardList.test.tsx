@@ -26,7 +26,7 @@ const loaded: RegistryViewState = { status: 'loaded', registry: registryFixture 
  * 있으면(`똑같이 나누기(시험용)`) 정규식은 그것을 문법으로 읽어 엉뚱한 것을 찾는다.
  */
 function cardNamed(name: string): HTMLElement {
-  return screen.getByRole('button', { name: (accessibleName) => accessibleName.includes(name) })
+  return screen.getByRole('radio', { name: (accessibleName) => accessibleName.includes(name) })
 }
 
 /** 워밍업을 따지지 않는 검사에서 쓰는 판정. 아무 전략에나 통과를 준다. */
@@ -83,20 +83,20 @@ describe('StrategyCardList', () => {
   it('응답의 strategies 순서를 그대로 쓴다', () => {
     renderList(loaded)
 
-    const names = screen.getAllByRole('button').map((card) => card.textContent ?? '')
+    const names = screen.getAllByRole('radio').map((card) => card.textContent ?? '')
     expect(names).toHaveLength(registryFixture.strategies.length)
     registryFixture.strategies.forEach((strategy, index) => {
       expect(names[index]).toContain(strategy.name)
     })
   })
 
-  it('키보드로 카드를 고를 수 있고 aria-pressed 가 바뀐다', async () => {
+  it('키보드로 카드를 고를 수 있고 aria-checked 가 바뀐다', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
     const { rerender } = renderList(loaded, { onSelect })
 
     const card = cardNamed(selectableStrategy.name)
-    expect(card.getAttribute('aria-pressed')).toBe('false')
+    expect(card.getAttribute('aria-checked')).toBe('false')
 
     card.focus()
     await user.keyboard('{Enter}')
@@ -111,7 +111,7 @@ describe('StrategyCardList', () => {
         judgeWarmup={allOk}
       />,
     )
-    expect(cardNamed(selectableStrategy.name).getAttribute('aria-pressed')).toBe('true')
+    expect(cardNamed(selectableStrategy.name).getAttribute('aria-checked')).toBe('true')
   })
 
   it('고를 수 없는 카드는 눌러도 선택되지 않고 이유가 함께 보인다', async () => {
@@ -123,7 +123,7 @@ describe('StrategyCardList', () => {
 
     // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 이유를 읽을 수 있다.
     expect(card.getAttribute('aria-disabled')).toBe('true')
-    expect(card.getAttribute('aria-pressed')).toBe('false')
+    expect(card.getAttribute('aria-checked')).toBe('false')
     expect(card.textContent).toContain(unselectableStrategy.unselectableReason)
 
     await user.click(card)
@@ -210,7 +210,7 @@ describe('StrategyCardList', () => {
       />,
     )
 
-    expect(document.activeElement).toBe(screen.getByRole('group', { name: '전략 고르기' }))
+    expect(document.activeElement).toBe(screen.getByRole('radiogroup', { name: '전략 고르기' }))
   })
 
   it('고른 카드가 고를 수 없게 되어도 고른 사실을 계속 전달한다', () => {
@@ -223,7 +223,7 @@ describe('StrategyCardList', () => {
 
     const card = cardNamed(selectableStrategy.name)
     expect(card.getAttribute('aria-disabled')).toBe('true')
-    expect(card.getAttribute('aria-pressed')).toBe('true')
+    expect(card.getAttribute('aria-checked')).toBe('true')
     expect(card.getAttribute('data-selected')).toBe('true')
   })
 
@@ -238,8 +238,8 @@ describe('StrategyCardList', () => {
     const card = cardNamed(selectableStrategy.name)
 
     // 판정하지 못했다는 사실이 화면에 남는다. 말하지 않으면 사용자는 판정을 통과한 줄로 읽는다.
+    // 그 사실은 사유 문장이 말한다 — 앞에 붙이던 '확인하지 못함' 딱지는 두지 않는다.
     expect(card.textContent).toContain('분석 기간을 아직 확인하지 못했습니다.')
-    expect(card.textContent).toContain('확인하지 못함')
 
     // 다만 "판정하지 못했다"는 "고를 수 없다"가 아니다. 등록표가 내린 판정을 뒤집지 않는다.
     expect(card.getAttribute('aria-disabled')).toBe('false')

@@ -961,12 +961,14 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="strategy-settings-title">
-        <h1 id="strategy-settings-title" className={styles.title}>
-          전략 고르기
-        </h1>
-        <p className={styles.lead}>
-          고른 섹터를 어떻게 나눌지 정하는 방식을 하나 고릅니다. 기본 설정으로 바로 분석할 수 있습니다.
-        </p>
+        <header className={styles.intro}>
+          <h1 id="strategy-settings-title" className={styles.title}>
+            자산 배분 방식
+          </h1>
+          <p className={styles.lead}>
+            고른 섹터에 투자금을 어떻게 나눌지 고릅니다. 기본 설정 그대로 바로 분석할 수 있습니다.
+          </p>
+        </header>
 
         {catalog === null ? (
           <p className={styles.loading} role="status">
@@ -1024,7 +1026,7 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
             ) : null}
 
             {/*
-              전략과 무관한 보관값의 안내다. **카드 목록보다 위에, 전략을 고르기 전에 보인다.**
+              전략과 무관한 보관값의 안내다. **두 단보다 위에, 전략을 고르기 전에 보인다.**
               최소 평가 기간이 그렇다 — 그 값이 카드의 선택 가능 여부를 정하므로(FR-011a) 카드를
               보기 전에 지금 어떤 값이 쓰이고 있는지 알아야 한다.
             */}
@@ -1036,207 +1038,219 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat
               />
             ) : null}
 
-            <section
-              ref={strategyCardsRef}
-              className={styles.section}
-              aria-labelledby="strategy-cards-title"
-              tabIndex={-1}
-            >
-              <h2 id="strategy-cards-title" className={styles.sectionTitle}>
-                전략 카드
-              </h2>
-              {/*
-                평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중
-                (409 EVALUATION_WINDOW_NOT_READY)이거나 잠깐의 연결 오류일 수 있어 다시 불러 달라질 수 있으므로,
-                등록표 조회와 같이 다시 시도할 길을 둔다(FR-018과 같은 규약). 다시 받는 동안에는 안내를 거두지
-                않아 읽히는 문장이 깜빡이지 않는다.
-              */}
-              {evaluationWindow.status === 'unavailable' ? (
-                <div className={styles.notice} role="status">
-                  <p>공통 평가 기간을 불러오지 못해 카드의 워밍업을 판정하지 못했습니다.</p>
-                  <button
-                    type="button"
-                    onClick={retryEvaluationWindow}
-                    disabled={evaluationWindowRetrying}
-                  >
-                    {evaluationWindowRetrying ? '다시 불러오는 중' : '평가 기간 다시 불러오기'}
-                  </button>
-                </div>
-              ) : null}
-              <StrategyCardList
-                state={registryState}
-                selectedStrategyId={selectedId}
-                onSelect={handleSelect}
-                onRetry={reloadRegistry}
-                judgeWarmup={judgeWarmup}
-                selectedContent={
-                  settings.ready && settings.selectedStrategy && selectedId !== null ? (
-                    <section
-                      className={`${styles.section} ${styles.selectionPanel}`}
-                      aria-labelledby="selected-strategy-title"
-                    >
-                      <h2 id="selected-strategy-title" className={styles.sectionTitle}>
-                        선택한 전략: {settings.selectedStrategy.name}
-                      </h2>
-
-                      <SettingsStatusBadge isDefault={settings.isDefault(selectedId)} />
-
-                      <ConditionSummaryLine
-                        period={period}
-                        sectorCount={universeSize ?? 0}
-                        initialAmount={
-                          initialAmount === null
-                            ? null
-                            : {
-                                value: initialAmount,
-                                unit: registry?.analysisConditions.initialAmount.unit,
-                              }
-                        }
-                        costProfile={costProfile}
-                      />
-
-                      {unbalancedUserWeights && selection.status === 'ready' ? (
-                        <div className={styles.weightNotice} role="status">
-                          <p>{weightsUnbalancedMessage(selection.weights.totalTenths)}</p>
-                          <button type="button" onClick={() => navigate('/diagnosis/sectors')}>
-                            섹터·비중 단계로 이동
-                          </button>
-                        </div>
-                      ) : null}
-
-                      {strategyInvalid.length > 0 ? (
-                        <InvalidValueList
-                          label="다시 확인할 설정값"
-                          entries={strategyInvalid}
-                          onRestore={restoreInvalidValue}
-                        />
-                      ) : null}
-
-                      {selectedJudgement &&
-                      (selectedJudgement.verdict.state === 'blocked' ||
-                        selectedJudgement.verdict.state === 'unknown') ? (
-                        <p
-                          className={styles.judgement}
-                          role="status"
-                          data-state={selectedJudgement.verdict.state}
-                        >
-                          {selectedJudgement.verdict.message}
-                        </p>
-                      ) : null}
-
-                      {periodOutOfRange || periodTooShort ? (
-                        <div className={styles.weightNotice} role="status">
-                          <p>
-                            {periodOutOfRange && evaluableRange
-                              ? periodOutOfRangeMessage(evaluableRange)
-                              : periodTooShortMessage(minEvaluationYearsLabel)}
-                          </p>
-                          {chosenPeriod !== null ? (
-                            <button
-                              type="button"
-                              onClick={() => settings.resetAnalysisCondition('period')}
-                            >
-                              범위 전체로 되돌리기
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      <ReducedPeriodNotice
-                        input={reducedPeriod}
-                        fallbackMessage={
-                          selectedJudgement?.verdict.state === 'reduced'
-                            ? selectedJudgement.verdict.message
-                            : undefined
-                        }
-                      />
-
-                      <ActionButtons
-                        analyze={{
-                          disabled: analyzeBlocker !== null,
-                          reason: analyzeBlocker ?? undefined,
-                          busy: submission.status === 'sending',
-                        }}
-                        autoCompare={{
-                          disabled: autoCompareBlocker !== null,
-                          reason: autoCompareBlocker ?? undefined,
-                        }}
-                        onAnalyze={() => {
-                          void handleAnalyze()
-                        }}
-                        onAutoCompare={handleAutoCompare}
-                      />
-
-                      {settings.values !== null && universeSize !== null ? (
-                        <DetailSettingsPanel
-                          strategy={settings.selectedStrategy}
-                          values={settings.values}
-                          universeSize={universeSize}
-                          targetWeights={targetWeights}
-                          onChange={(axisName, value) =>
-                            settings.setValue(selectedId, axisName, value)
-                          }
-                          onResetAxis={(axisName) => settings.resetAxis(selectedId, axisName)}
-                          onResetAll={() => settings.resetAll(selectedId)}
-                        />
-                      ) : null}
-                    </section>
-                  ) : undefined
-                }
-              />
-            </section>
-
             {/*
-              전략을 고르기 전에도 닿는 자리에 둔다(T102). 최소 평가 기간은 카드의 선택 가능 여부를 바꾸는
-              값이라, 그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이 없다(FR-011a). 접힌 채로
-              시작해 기본 화면의 입력을 늘리지 않는다(SC-005). 기간은 고른 전략의 평가 가능 범위가 있어야
-              정할 수 있으므로 그 전에는 막고 까닭을 적는다.
+              왼쪽에서 고르고 오른쪽에서 확인한다. **고른 전략의 상세를 목록 사이에 끼워 넣지
+              않는다** — 그러면 고를 때마다 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 두 단의
+              폭은 전략을 바꿔도 변하지 않는다.
             */}
-            {registry !== null && settings.ready ? (
-              <AnalysisConditionsPanel
-                conditions={registry.analysisConditions}
-                range={evaluableRange}
-                rangeUnavailableMessage={settings.selectedStrategy ? undefined : RANGE_NEEDS_STRATEGY}
-                period={period}
-                periodChosen={chosenPeriod !== null}
-                caseConstraint={activeCaseConstraint}
-                initialAmount={initialAmount ?? undefined}
-                minEvaluationYears={minEvaluationYears}
-                cost={costAssumption}
-                onChange={(patch) => {
-                  // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
-                  // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
-                  // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
-                  if (patch.initialAmount === registry.analysisConditions.initialAmount.default) {
-                    const rest = { ...patch }
-                    delete rest.initialAmount
-                    settings.resetAnalysisCondition('initialAmount')
-                    if (Object.keys(rest).length > 0) settings.setAnalysisCondition(rest)
-                    return
-                  }
-                  settings.setAnalysisCondition(patch)
-                }}
-                onReset={settings.resetAnalysisCondition}
-              />
-            ) : null}
+            <div className={styles.layout}>
+              <section
+                ref={strategyCardsRef}
+                className={styles.master}
+                aria-labelledby="strategy-cards-title"
+                tabIndex={-1}
+              >
+                <h2 id="strategy-cards-title" className={styles.columnTitle}>
+                  전략
+                </h2>
+                {/*
+                  평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중
+                  (409 EVALUATION_WINDOW_NOT_READY)이거나 잠깐의 연결 오류일 수 있어 다시 불러 달라질 수 있으므로,
+                  등록표 조회와 같이 다시 시도할 길을 둔다(FR-018과 같은 규약). 다시 받는 동안에는 안내를 거두지
+                  않아 읽히는 문장이 깜빡이지 않는다.
+                */}
+                {evaluationWindow.status === 'unavailable' ? (
+                  <div className={styles.notice} role="status">
+                    <p>공통 평가 기간을 불러오지 못해 카드의 워밍업을 판정하지 못했습니다.</p>
+                    <button
+                      type="button"
+                      onClick={retryEvaluationWindow}
+                      disabled={evaluationWindowRetrying}
+                    >
+                      {evaluationWindowRetrying ? '다시 불러오는 중' : '평가 기간 다시 불러오기'}
+                    </button>
+                  </div>
+                ) : null}
+                <StrategyCardList
+                  state={registryState}
+                  selectedStrategyId={selectedId}
+                  onSelect={handleSelect}
+                  onRetry={reloadRegistry}
+                  judgeWarmup={judgeWarmup}
+                />
+              </section>
 
-            {!settings.selectedStrategy ? (
-              <ActionButtons
-                analyze={{
-                  disabled: analyzeBlocker !== null,
-                  reason: analyzeBlocker ?? undefined,
-                  busy: submission.status === 'sending',
-                }}
-                autoCompare={{
-                  disabled: autoCompareBlocker !== null,
-                  reason: autoCompareBlocker ?? undefined,
-                }}
-                onAnalyze={() => {
-                  void handleAnalyze()
-                }}
-                onAutoCompare={handleAutoCompare}
-              />
-            ) : null}
+              <section className={styles.detail} aria-labelledby="selected-strategy-title">
+                <div className={styles.detailHead}>
+                  <h2 id="selected-strategy-title" className={styles.columnTitle}>
+                    {settings.selectedStrategy ? settings.selectedStrategy.name : '선택한 전략'}
+                  </h2>
+                  {settings.ready && selectedId !== null ? (
+                    <SettingsStatusBadge isDefault={settings.isDefault(selectedId)} />
+                  ) : null}
+                </div>
+
+                {settings.selectedStrategy ? (
+                  <p className={styles.detailDescription}>{settings.selectedStrategy.description}</p>
+                ) : (
+                  <p className={styles.empty}>
+                    왼쪽에서 배분 방식을 고르면 여기에 설명과 분석 조건이 나타납니다.
+                  </p>
+                )}
+
+                {settings.ready && settings.selectedStrategy && selectedId !== null ? (
+                  <>
+                    {unbalancedUserWeights ? (
+                      <div className={styles.weightNotice} role="status">
+                        <p>{weightsUnbalancedMessage(selection.weights.totalTenths)}</p>
+                        <button type="button" onClick={() => navigate('/diagnosis/sectors')}>
+                          섹터·비중 단계로 이동
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {strategyInvalid.length > 0 ? (
+                      <InvalidValueList
+                        label="다시 확인할 설정값"
+                        entries={strategyInvalid}
+                        onRestore={restoreInvalidValue}
+                      />
+                    ) : null}
+
+                    {selectedJudgement &&
+                    (selectedJudgement.verdict.state === 'blocked' ||
+                      selectedJudgement.verdict.state === 'unknown') ? (
+                      <p
+                        className={styles.judgement}
+                        role="status"
+                        data-state={selectedJudgement.verdict.state}
+                      >
+                        {selectedJudgement.verdict.message}
+                      </p>
+                    ) : null}
+
+                    {periodOutOfRange || periodTooShort ? (
+                      <div className={styles.weightNotice} role="status">
+                        <p>
+                          {periodOutOfRange && evaluableRange
+                            ? periodOutOfRangeMessage(evaluableRange)
+                            : periodTooShortMessage(minEvaluationYearsLabel)}
+                        </p>
+                        {chosenPeriod !== null ? (
+                          <button
+                            type="button"
+                            onClick={() => settings.resetAnalysisCondition('period')}
+                          >
+                            범위 전체로 되돌리기
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <ReducedPeriodNotice
+                      input={reducedPeriod}
+                      fallbackMessage={
+                        selectedJudgement?.verdict.state === 'reduced'
+                          ? selectedJudgement.verdict.message
+                          : undefined
+                      }
+                    />
+                  </>
+                ) : null}
+
+                {/*
+                  분석 조건은 **한 자리에만 둔다.** 요약과 편집 폼을 다른 곳에 두면 같은 값이 화면
+                  두 곳에서 각각 말해진다. 요약은 늘 보이고(FR-002) 편집은 접힌 채로 시작한다(SC-005).
+
+                  **전략을 고르기 전에도 닿는다**(T102). 최소 평가 기간은 카드의 선택 가능 여부를
+                  바꾸는 값이라, 그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이
+                  없다(FR-011a). 기간은 고른 전략의 평가 가능 범위가 있어야 정할 수 있으므로 그
+                  전에는 막고 까닭을 적는다.
+                */}
+                {registry !== null && settings.ready ? (
+                  <section className={styles.conditions} aria-labelledby="analysis-conditions-title">
+                    <h3 id="analysis-conditions-title" className={styles.groupTitle}>
+                      분석 조건
+                    </h3>
+                    <ConditionSummaryLine
+                      period={period}
+                      sectorCount={universeSize ?? 0}
+                      initialAmount={
+                        initialAmount === null
+                          ? null
+                          : {
+                              value: initialAmount,
+                              unit: registry.analysisConditions.initialAmount.unit,
+                            }
+                      }
+                      costProfile={costProfile}
+                    />
+                    <AnalysisConditionsPanel
+                      conditions={registry.analysisConditions}
+                      range={evaluableRange}
+                      rangeUnavailableMessage={
+                        settings.selectedStrategy ? undefined : RANGE_NEEDS_STRATEGY
+                      }
+                      period={period}
+                      periodChosen={chosenPeriod !== null}
+                      caseConstraint={activeCaseConstraint}
+                      initialAmount={initialAmount ?? undefined}
+                      minEvaluationYears={minEvaluationYears}
+                      cost={costAssumption}
+                      onChange={(patch) => {
+                        // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
+                        // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
+                        // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
+                        if (
+                          patch.initialAmount === registry.analysisConditions.initialAmount.default
+                        ) {
+                          const rest = { ...patch }
+                          delete rest.initialAmount
+                          settings.resetAnalysisCondition('initialAmount')
+                          if (Object.keys(rest).length > 0) settings.setAnalysisCondition(rest)
+                          return
+                        }
+                        settings.setAnalysisCondition(patch)
+                      }}
+                      onReset={settings.resetAnalysisCondition}
+                    />
+                  </section>
+                ) : null}
+
+                {settings.ready &&
+                settings.selectedStrategy &&
+                selectedId !== null &&
+                settings.values !== null &&
+                universeSize !== null ? (
+                  <DetailSettingsPanel
+                    strategy={settings.selectedStrategy}
+                    values={settings.values}
+                    universeSize={universeSize}
+                    targetWeights={targetWeights}
+                    onChange={(axisName, value) => settings.setValue(selectedId, axisName, value)}
+                    onResetAxis={(axisName) => settings.resetAxis(selectedId, axisName)}
+                    onResetAll={() => settings.resetAll(selectedId)}
+                  />
+                ) : null}
+
+                {/* 마지막 단계. 화면에서 실행 버튼이 나오는 자리는 여기 하나뿐이다. */}
+                <ActionButtons
+                  analyze={{
+                    disabled: analyzeBlocker !== null,
+                    reason: analyzeBlocker ?? undefined,
+                    busy: submission.status === 'sending',
+                  }}
+                  autoCompare={{
+                    disabled: autoCompareBlocker !== null,
+                    reason: autoCompareBlocker ?? undefined,
+                  }}
+                  onAnalyze={() => {
+                    void handleAnalyze()
+                  }}
+                  onAutoCompare={handleAutoCompare}
+                />
+              </section>
+            </div>
 
             {versions === null || versionsRetrying ? (
               <div className={styles.notice} role="status" aria-label="분석 조건 조회 상태">
