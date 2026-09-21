@@ -43,6 +43,12 @@
   min-width: 0;
 }
 
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .itemTitle {
   margin: 0;
   color: var(--thorp-copy);

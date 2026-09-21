@@ -17,6 +17,7 @@ import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { SUMMARY_NOT_CALCULATED } from './statusSentences'
 import { type SectorLabels, buildSectorLabels } from './sectorLabels'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { TradeHistory } from './TradeHistory'
 import styles from './resultDetail.module.css'
 
@@ -159,10 +160,22 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
   )
 }
 
-function Item({ title, children }: { title: string; children: ReactNode }) {
+function Item({
+  title,
+  help,
+  children,
+}: {
+  title: string
+  /** 제목 옆에 붙일 도움말. 본문에 늘 펼쳐 둘 필요가 없는 설명만 여기로 내린다 */
+  help?: ReactNode
+  children: ReactNode
+}) {
   return (
     <section className={styles.item}>
-      <h3 className={styles.itemTitle}>{title}</h3>
+      <div className={styles.itemHead}>
+        <h3 className={styles.itemTitle}>{title}</h3>
+        {help}
+      </div>
       {children}
     </section>
   )
@@ -197,7 +210,14 @@ function TurnoverItem({ detail }: { detail: PublicResultDetail }) {
   const turnover = detail.summary?.analytics?.turnover ?? null
 
   return (
-    <Item title="회전율">
+    <Item
+      title="회전율"
+      help={
+        <InlineHelp label="회전율">
+          <p>사고판 금액의 절반을 평균 자산으로 나누고 1년(252거래일) 기준으로 환산한 값입니다.</p>
+        </InlineHelp>
+      }
+    >
       {detail.summary === null ? (
         <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>
       ) : turnover === null ? (
@@ -205,9 +225,6 @@ function TurnoverItem({ detail }: { detail: PublicResultDetail }) {
       ) : (
         <p className={styles.value}>연 {formatRatio(turnover)}</p>
       )}
-      <p className={styles.muted}>
-        사고판 금액의 절반을 평균 자산으로 나누고 1년(252거래일) 기준으로 환산한 값입니다.
-      </p>
     </Item>
   )
 }
