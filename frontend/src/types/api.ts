@@ -1,6 +1,7 @@
 import type { AuthApiErrorCode, AuthFieldError } from './auth'
 import type { LearningApiErrorCode } from './learning'
 import type { LearningAdminApiErrorCode } from './learningAdmin'
+import type { MyRecordApiErrorCode } from './myRecords'
 import type { SectorApiErrorCode } from './sector'
 
 /**
@@ -33,6 +34,7 @@ export type ServiceApiErrorCode =
   | SectorApiErrorCode
   | LearningApiErrorCode
   | LearningAdminApiErrorCode
+  | MyRecordApiErrorCode
 
 /**
  * 서버가 실제로 보내는 오류 이름이다. **열려 있다.**

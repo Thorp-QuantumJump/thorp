@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { Fragment, type ReactNode, useEffect, useRef } from 'react'
 import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'
 import { StrategyCard, type WarmupVerdict } from './StrategyCard'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
@@ -41,6 +41,8 @@ interface StrategyCardListProps {
    * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.
    */
   judgeWarmup: (strategy: StrategyView) => WarmupVerdict
+  /** 고른 카드 바로 다음에 붙는 요약·행동 영역이다. */
+  selectedContent?: ReactNode
 }
 
 /**
@@ -69,6 +71,7 @@ export function StrategyCardList({
   onSelect,
   onRetry,
   judgeWarmup,
+  selectedContent,
 }: StrategyCardListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const recoveredFromFailure = useRef(false)
@@ -118,15 +121,22 @@ export function StrategyCardList({
       role="group"
       aria-label="전략 고르기"
     >
-      {state.registry.strategies.map((strategy) => (
-        <StrategyCard
-          key={strategy.strategyId}
-          strategy={strategy}
-          selected={selectedStrategyId === strategy.strategyId}
-          warmup={judgeWarmup(strategy)}
-          onSelect={() => onSelect(strategy.strategyId)}
-        />
-      ))}
+      {state.registry.strategies.map((strategy) => {
+        const selected = selectedStrategyId === strategy.strategyId
+        return (
+          <Fragment key={strategy.strategyId}>
+            <StrategyCard
+              strategy={strategy}
+              selected={selected}
+              warmup={judgeWarmup(strategy)}
+              onSelect={() => onSelect(strategy.strategyId)}
+            />
+            {selected && selectedContent ? (
+              <div className={styles.selectedContent}>{selectedContent}</div>
+            ) : null}
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

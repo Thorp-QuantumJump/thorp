@@ -271,8 +271,12 @@ public record BacktestDetailResult(
      * 무엇을 어떻게 돌렸는가. 접수가 저장한 요청 사본에 실효 기간을 얹는다.
      *
      * <p>요청 사본이 없는 실행(접수 경로를 거치지 않은 행)은 실행 스칼라 컬럼으로 최소한만 채운다.
+     *
+     * <p><b>006 내 기록의 {@code reopenPayload}도 이것을 부른다</b>(spec 006 research R4). 기록에서 '설정 바꿔 비교'를
+     * 누르면 005의 {@code prefillStrategySettings}에 이 모양 그대로 넘어가므로, 006이 같은 조립을 한 벌 더 가지면 두 화면이 다른 조건을
+     * 보인다. 그래서 {@code private}으로 두지 않는다 — 부르는 쪽이 둘이라는 사실이 이 접근 범위의 이유다.
      */
-    private static Map<String, Object> config(BacktestRun run, String currency) {
+    public static Map<String, Object> config(BacktestRun run, String currency) {
         Map<String, Object> config = new LinkedHashMap<>(run.getPlan().requestSpecOrEmpty());
         if (config.isEmpty()) {
             config.put("strategyId", run.getStrategyId());
