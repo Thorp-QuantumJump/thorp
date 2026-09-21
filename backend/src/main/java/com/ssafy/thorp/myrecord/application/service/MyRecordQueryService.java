@@ -138,7 +138,9 @@ public class MyRecordQueryService {
      * <p>{@code rulesVersion}·{@code costProfileVersion}은 {@code {version, provisional}} 꼴 그대로다 —
      * 잠정 여부가 함께 보여야 사용자가 확정 규칙 결과와 임시 규칙 결과를 구분한다.
      *
-     * <p>내보내기({@code MyRecordExportService})가 같은 값을 파일에 담으므로 패키지 안에서 부를 수 있다.
+     * <p>내보내기({@code MyRecordExportService})가 같은 값을 파일에 담으므로 패키지 안에서 부를 수 있다. 상세({@link #detail})를
+     * 거쳐 받지 않는 이유: 상세는 열람 표시를 남기고 실행 조회({@code reopenPayload})와 등록표 판정({@code registryDrift})까지 딸려
+     * 온다 — 내보내기는 '다시 보기'가 아니고 그 둘이 필요하지도 않다.
      */
     Map<String, Object> referenceVersions(MyRecordView view) {
         Map<String, Object> out = new LinkedHashMap<>();

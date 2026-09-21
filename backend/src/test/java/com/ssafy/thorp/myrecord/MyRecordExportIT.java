@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -81,6 +82,9 @@ class MyRecordExportIT extends LauncherMockedIntegrationTestSupport {
         long owner = newUser("json");
         long runId = completedRun(owner, LocalDate.of(2024, 5, 6), true);
         String recordId = recordIdOf(owner);
+        String recordName =
+                jdbc.queryForObject(
+                        "SELECT name FROM my_record WHERE record_id = ?", String.class, recordId);
 
         MvcResult result =
                 mockMvc.perform(export(recordId, "json").with(Requesters.as(owner)))
@@ -89,15 +93,20 @@ class MyRecordExportIT extends LauncherMockedIntegrationTestSupport {
                                 header().string(
                                                 "Content-Type",
                                                 Matchers.startsWith("application/json")))
+                        // 파일 이름은 기록 이름 그대로다 — record 구획의 키가 바뀌어 "null.json" 이 되면 여기서 잡힌다.
                         .andExpect(
                                 header().string(
                                                 "Content-Disposition",
-                                                Matchers.allOf(
-                                                        Matchers.startsWith("attachment"),
-                                                        Matchers.containsString(
-                                                                "filename*=UTF-8''"),
-                                                        Matchers.containsString(".json"))))
+                                                ContentDisposition.attachment()
+                                                        .filename(
+                                                                recordName + ".json",
+                                                                StandardCharsets.UTF_8)
+                                                        .build()
+                                                        .toString()))
                         .andReturn();
+        assertThat(result.getResponse().getHeader("Content-Disposition"))
+                .startsWith("attachment")
+                .contains("filename*=UTF-8''");
         String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         JsonNode json = objectMapper.readTree(body);
 
