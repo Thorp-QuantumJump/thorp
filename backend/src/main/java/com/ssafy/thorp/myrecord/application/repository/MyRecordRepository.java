@@ -1,7 +1,12 @@
 package com.ssafy.thorp.myrecord.application.repository;
 
+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;
+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;
+import com.ssafy.thorp.myrecord.application.result.MyRecordView;
+import com.ssafy.thorp.myrecord.application.result.SourceVersions;
 import com.ssafy.thorp.myrecord.domain.model.MyRecord;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -10,7 +15,8 @@ import java.util.Optional;
  * <p><b>찾는 메서드가 모두 "살아 있는" 항목만 본다.</b> 삭제는 {@code deleted_at}을 채우는 것이고 지운 행은 남으므로, 조건을 빠뜨리면 지운 항목이
  * 목록·상한·재사용 판정에 되살아난다(research R6).
  *
- * <p>목록 질의({@code findPage})는 여기 없다. 상태를 종류별 원본에서 조인해 읽어야 해서 형태가 다르고, 006의 목록·상세 API와 함께 들어온다.
+ * <p>목록·상세 읽기({@link #findPage}·{@link #findView})는 도메인 모델이 아니라 {@link MyRecordView}를 돌려준다. 상태·결과
+ * 토큰을 종류별 원본에서 조인해 파생하는 값이라 {@code my_record} 한 표의 모델로는 담을 수 없다(data-model §1 "상태는 컬럼이 아니다").
  */
 public interface MyRecordRepository {
 
@@ -56,4 +62,24 @@ public interface MyRecordRepository {
 
     /** 탐색 묶음 저장 상한 판정이 세는 경로(FR-018, research R11). 지운 항목은 세지 않는다. */
     long countActiveByOwnerAndKind(long ownerId, RecordKind kind);
+
+    /**
+     * 목록 한 쪽. 소유자의 살아 있는 항목만, 필터·정렬·커서는 {@link MyRecordListQuery}가 정한다.
+     *
+     * <p><b>성과 수치 컬럼을 select 에 넣지 않는다</b>(원칙 III).
+     */
+    MyRecordPage findPage(long ownerId, MyRecordListQuery query);
+
+    /** 한 항목. 남의 것·지운 것·없는 것을 구분하지 않고 빈 값이다 — 부른 쪽이 한 가지 404 로 답한다(FR-020). */
+    Optional<MyRecordView> findView(long ownerId, String recordId);
+
+    /**
+     * 원본이 남긴 참조 버전의 원문. 경제환경 항목은 스냅샷 키가 버전을 품고 있어 여기 오지 않는다.
+     *
+     * @param id {@code my_record} PK
+     */
+    Optional<SourceVersions> findSourceVersions(long id, RecordKind kind);
+
+    /** '다시 보기'로 열었다. 보관 기간(PD-13)을 나중에 도입할 수 있게 시각만 남긴다 — <b>시간 기반 자동 삭제는 만들지 않는다.</b> */
+    void markViewed(long id, Instant at);
 }
