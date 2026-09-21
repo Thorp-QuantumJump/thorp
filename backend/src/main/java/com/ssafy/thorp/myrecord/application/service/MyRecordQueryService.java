@@ -1,5 +1,6 @@
 package com.ssafy.thorp.myrecord.application.service;
 
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;
@@ -29,8 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MyRecordQueryService {
 
-    /** 003이 다루는 시나리오. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지 않는다(research R4). */
-    private static final String REOPENABLE_SCENARIO = "FULL_PERIOD";
+    /**
+     * 003이 다루는 시나리오. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지 않는다(research R4).
+     *
+     * <p>문자열을 적지 않고 {@link Scenario}에서 가져온다 — 적어 두면 그 상수가 이름을 바꾸거나 사라져도 여기는 조용히 지나가고, 모든 기록의 버튼이
+     * 사라진 뒤에야 드러난다. 이름이 바뀌면 빌드가 깨지는 쪽이 낫다.
+     */
+    private static final String REOPENABLE_SCENARIO = Scenario.FULL_PERIOD.name();
 
     private final MyRecordRepository records;
     private final MyRecordMappingDriftChecker driftChecker;

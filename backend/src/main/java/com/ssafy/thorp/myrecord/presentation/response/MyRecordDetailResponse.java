@@ -3,6 +3,7 @@ package com.ssafy.thorp.myrecord.presentation.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ssafy.thorp.myrecord.application.result.MappingDrift;
 import com.ssafy.thorp.myrecord.application.result.MyRecordDetail;
+import com.ssafy.thorp.myrecord.application.result.MyRecordDetail.ReopenSettings;
 import com.ssafy.thorp.myrecord.application.result.MyRecordView;
 import com.ssafy.thorp.myrecord.application.result.RegistryDrift;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
@@ -41,9 +42,6 @@ public record MyRecordDetailResponse(
         ReopenSettings reopenSettings,
         @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> reopenPayload) {
 
-    /** 계약의 {@code reopenSettings}. 이유를 나누지 않는다 — 화면은 버튼을 감출지만 정한다. */
-    public record ReopenSettings(boolean available) {}
-
     public static MyRecordDetailResponse from(MyRecordDetail detail) {
         MyRecordView view = detail.view();
         MyRecordListResponse.Item item = MyRecordListResponse.Item.from(view);
@@ -65,7 +63,7 @@ public record MyRecordDetailResponse(
                 detail.referenceVersions(),
                 detail.mappingDrift(),
                 detail.registryDrift(),
-                new ReopenSettings(detail.reopenSettings().available()),
+                detail.reopenSettings(),
                 detail.reopenPayload());
     }
 }
