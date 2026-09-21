@@ -142,6 +142,8 @@ describe('섹터 선택 화면의 비중 규칙', () => {
 
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryByText(/합계/)).toBeNull()
+    expect(screen.getByText(/선택하면 카드 안에서 비중을 바로 조절/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '전략 고르러 가기' })).toBeNull()
     // 아직 아무것도 고르지 않았으므로 두 개 이상 안내도 띄우지 않는다.
     expect(screen.queryByText(/두 개 이상/)).toBeNull()
   })
@@ -154,6 +156,11 @@ describe('섹터 선택 화면의 비중 규칙', () => {
 
     expect(shownWeights()).toEqual([50, 50])
     expect(totalText()).toContain('100.0')
+    expect(screen.getByText(/투자 권고가 아닙니다/)).toBeTruthy()
+    expect(screen.queryByText(/선택하면 카드 안에서 비중을 바로 조절/)).toBeNull()
+    expect(screen.getByRole('button', { name: '전략 고르러 가기' }).hasAttribute('disabled')).toBe(
+      false,
+    )
   })
 
   it('시나리오 2. 섹터 3개를 고르면 33.4 / 33.3 / 33.3이 보이고 예시라는 표시가 함께 보인다', async () => {

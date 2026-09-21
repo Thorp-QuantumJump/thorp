@@ -98,6 +98,11 @@
   --chart-scale-pattern-color: #0a160f;
 }
 
+html {
+  /* 동적으로 내용이 늘어나도 가운데 정렬된 화면이 스크롤바 너비만큼 흔들리지 않게 한다. */
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

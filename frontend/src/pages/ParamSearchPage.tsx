@@ -190,7 +190,17 @@ export function ParamSearchPage() {
           return
         }
 
-        setRunError({ code: failure.code, message: failure.message })
+        // 006 저장 상한(409). details 의 { current, limit } 을 "저장할 수 있는 탐색 묶음 N/M" 으로 보인다.
+        // 서버가 값을 주지 않았으면 문장을 지어내지 않고 서버 문장을 그대로 둔다.
+        const current = failure.details?.current
+        const limit = failure.details?.limit
+        const message =
+          failure.is('RECORD_LIMIT_REACHED') &&
+          typeof current === 'number' &&
+          typeof limit === 'number'
+            ? `저장할 수 있는 탐색 묶음 ${current}/${limit}`
+            : failure.message
+        setRunError({ code: failure.code, message })
       } finally {
         setCreating(false)
       }

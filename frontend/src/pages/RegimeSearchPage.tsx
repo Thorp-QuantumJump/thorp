@@ -1,5 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { recordRegimeSearch } from '@/api/myRecords'
 import { getRegimeBaselineMonths } from '@/api/regime'
+import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { BasisNotice } from '@/components/regime/BasisNotice'
 import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'
@@ -13,8 +16,18 @@ import { LoadError } from '@/components/regime/LoadError'
 import { NewerReleases } from '@/components/regime/NewerReleases'
 import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'
 import { useRegimeSearch } from '@/hooks/useRegimeSearch'
+import type { MyRecordRegime } from '@/types/myRecords'
 import type { RegimeBaselineMonths, RegimeSearchQuery } from '@/types/regime'
 import styles from './RegimeSearchPage.module.css'
+
+type EntryPath = MyRecordRegime['entryPath']
+
+/** 어디서 들어왔는가. 결과 화면(005)이 `state.entryPath = 'STRATEGY_RESULT'`를 넘기면 그것이고, 아니면 시장 흐름 탐색이다. */
+function entryPathOf(state: unknown): EntryPath {
+  return typeof state === 'object' && state !== null && (state as { entryPath?: unknown }).entryPath === 'STRATEGY_RESULT'
+    ? 'STRATEGY_RESULT'
+    : 'MARKET_FLOW'
+}
 
 export function RegimeSearchPage() {
   const [baselines, setBaselines] = useState<RegimeBaselineMonths | null>(null)
@@ -24,7 +37,15 @@ export function RegimeSearchPage() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [query, setQuery] = useState<RegimeSearchQuery | null>(null)
   const [baselineChangeNote, setBaselineChangeNote] = useState<string | null>(null)
-  const { result, error, isLoading, showMore, retry } = useRegimeSearch(query)
+  // 내 기록의 '다시 보기'(006 R17). 식별자가 있으면 폼 질의 대신 저장된 판을 고정 조회한다.
+  const [params, setParams] = useSearchParams()
+  const savedSearchId = params.get('searchId')
+  const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)
+  const location = useLocation()
+  // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).
+  const { user } = useAuth()
+  const recorded = useRef<Set<string>>(new Set())
+  const [recordFailed, setRecordFailed] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -40,6 +61,24 @@ export function RegimeSearchPage() {
       })
     return () => controller.abort()
   }, [baselineRetry])
+
+  // 진입 경로와 기준월 근거는 이 화면만 안다 — 서버가 추정하지 않으므로 화면이 보낸다(006 research R15). 같은
+  // 검색은 한 번만 보내고, 실패해도 검색 결과를 막지 않는다. 실패한 것은 다음 결과가 올 때 한 번 더 시도한다.
+  //
+  // 저장된 판을 여는 것(?searchId=)은 '열람'이지 새 기록이 아니다. 그 주소에는 진입 경로가 없어 기본값으로 보내면
+  // 원래 STRATEGY_RESULT 로 남은 기록 옆에 MARKET_FLOW 기록이 하나 더 생긴다 — 서버 키가 (소유자·검색·경로)다.
+  useEffect(() => {
+    if (savedSearchId || !user || !result || recorded.current.has(result.searchId)) return
+    const { searchId } = result
+    recorded.current.add(searchId)
+    recordRegimeSearch(searchId, entryPathOf(location.state), result.baselineOrigin).then(
+      () => setRecordFailed(false),
+      () => {
+        recorded.current.delete(searchId)
+        setRecordFailed(true)
+      },
+    )
+  }, [savedSearchId, user, result, location.state])
 
   /**
    * 기준월이나 검색 방식이 바뀌어 후보가 달라지면 한 문장으로 알린다(spec FR-031).
@@ -59,6 +98,17 @@ export function RegimeSearchPage() {
     if (selectedMonth && !month) setSelectedMonth('')
     const mode = next.mode === 'composite' ? 'COMPOSITE' : 'FIELD'
     setBaselineChangeNote(changeNote(mode, month ?? latest ?? null, month != null))
+    // 저장된 검색을 보던 중 새로 검색하면 고정 조회를 푼다 — 그때부터는 최신 판이다.
+    if (savedSearchId) {
+      setParams(
+        (current) => {
+          const cleared = new URLSearchParams(current)
+          cleared.delete('searchId')
+          return cleared
+        },
+        { replace: true },
+      )
+    }
     if (query?.mode === next.mode && query.field === next.field && query.baselineMonth === month) retry()
     else setQuery({ ...next, baselineMonth: month })
   }
@@ -114,7 +164,7 @@ export function RegimeSearchPage() {
           </form>
         )}
 
-        {query && (
+        {(query || savedSearchId) && (
           <section className={styles.results} aria-label="경제환경 검색 결과" aria-busy={isLoading}>
             {isLoading && !result && <p role="status" className={styles.loading}>{copy.loadingCases}</p>}
             {error ? <LoadError error={error} onRetry={retry} /> : result && (
@@ -127,6 +177,16 @@ export function RegimeSearchPage() {
                   <p>기준월 <strong>{result.baselineMonth}</strong></p>
                 </div>
                 <div className={styles.disclosures}>
+                  {savedSearchId && (
+                    <Disclosure label="저장된 검색" context={context}>
+                      <p>{copy.savedSearchNote}</p>
+                    </Disclosure>
+                  )}
+                  {recordFailed && (
+                    <Disclosure label="내 기록" context={context} tone="warning">
+                      <p>{copy.recordFailedNote}</p>
+                    </Disclosure>
+                  )}
                   {baselineChangeNote && <BaselineChangeNotice note={baselineChangeNote} context={context} />}
                   <SearchStatusBadge result={result} context={context} />
                   {result.versions.sampleData && (
