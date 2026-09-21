@@ -163,17 +163,17 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Independent Test**: 인증키 없는 개발 환경에서 예시 자료로 지표가 제공되고 예시 표시가 붙는지, 운영에서는 자동 대체가 일어나지 않는지 확인한다
 
-- [ ] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다. 내보내기 경로가 함께 실어야 할 이용 범위 문구도 지표별로 둔다 — 006이 파일로 내보낼 때 쓴다 (FR-016, FR-016c, FR-018)
-- [ ] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)
-- [ ] T055 [US4] `data/src/data_pipeline/macro/registry.py`와 `publish.py`에 이용 조건 철회 처리를 넣는다. 지표의 권리 상태가 중단이 되면 그 지표의 새 수집과 새 자료 버전 편입을 멈추고 중단 사유·시점을 등록표에 남긴다. 이미 발행한 자료 버전은 지우지 않는다 (FR-016b)
-- [ ] T056 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에서 중단된 지표를 값 목록에서 빼고 중단 상태와 사유를 싣는다. 조용히 사라지지 않고 빠진 상태임이 드러난다 (FR-016b, 원칙 VI)
-- [ ] T057 [US4] `data/src/data_pipeline/macro/registry.py`에 이용 조건·인증 자격 재확인 시점을 둔다. 인증키 이용기간 만료 전(한국은행은 발급일로부터 2년)과 원천의 약관·서비스 명세 개정 시 재확인하고 확인 일시를 등록표에 남긴다. 조건이 달라졌으면 T055의 중단 처리로 넘긴다 (FR-018a)
-- [ ] T058 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)
-- [ ] T059 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)
-- [ ] T060 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다
-- [ ] T061 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)
-- [ ] T062 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다. 중단된 지표가 공개 버전과 조회 응답에 남지 않는지, 인증키 만기 임박과 약관 개정이 재확인 대상으로 잡히는지도 확인한다
-- [ ] T063 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다
+- [X] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다. 내보내기 경로가 함께 실어야 할 이용 범위 문구도 지표별로 둔다 — 006이 파일로 내보낼 때 쓴다 (FR-016, FR-016c, FR-018)
+- [X] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)
+- [X] T055 [US4] `data/src/data_pipeline/macro/registry.py`와 `publish.py`에 이용 조건 철회 처리를 넣는다. 지표의 권리 상태가 중단이 되면 그 지표의 새 수집과 새 자료 버전 편입을 멈추고 중단 사유·시점을 등록표에 남긴다. 이미 발행한 자료 버전은 지우지 않는다 (FR-016b)
+- [X] T056 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에서 중단된 지표를 값 목록에서 빼고 중단 상태와 사유를 싣는다. 조용히 사라지지 않고 빠진 상태임이 드러난다 (FR-016b, 원칙 VI)
+- [X] T057 [US4] `data/src/data_pipeline/macro/registry.py`에 이용 조건·인증 자격 재확인 시점을 둔다. 인증키 이용기간 만료 전(한국은행은 발급일로부터 2년)과 원천의 약관·서비스 명세 개정 시 재확인하고 확인 일시를 등록표에 남긴다. 조건이 달라졌으면 T055의 중단 처리로 넘긴다 (FR-018a)
+- [X] T058 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)
+- [X] T059 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)
+- [X] T060 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다
+- [X] T061 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)
+- [X] T062 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다. 중단된 지표가 공개 버전과 조회 응답에 남지 않는지, 인증키 만기 임박과 약관 개정이 재확인 대상으로 잡히는지도 확인한다
+- [X] T063 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다
 
 **Checkpoint**: 이용 조건을 지키며 수집하고 개발 대역이 운영에 섞이지 않는다
 
