@@ -143,15 +143,15 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 
 **Independent Test**: 어느 지표의 수집을 실패시켜 마지막 갱신 시각이 기록되는지, 결측월이 빈 값으로 남고 그 분야 기준월이 물러나는지 확인한다
 
-- [ ] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)
-- [ ] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다
-- [ ] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. T003의 재시도 설정(기본 최대 3회, 1·2·4초)대로 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)
-- [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다
-- [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다
-- [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다
+- [X] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)
+- [X] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다
+- [X] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. T003의 재시도 설정(기본 최대 3회, 1·2·4초)대로 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)
+- [X] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다
+- [X] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다
+- [X] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다
 - [X] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)
-- [ ] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)
-- [ ] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)
+- [X] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)
+- [X] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)
 
 **Checkpoint**: 지연·실패·결측·개정이 값에 섞이지 않고 상태로 드러난다
 
@@ -192,7 +192,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
 - [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
 - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
-- [ ] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)
+- [X] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)
 
 ---
 
@@ -276,7 +276,11 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 
 ## 주의
 
-- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T073), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)
+- 남은 미확정은 셋이고 모두 **닫아 두었다**(constitution 미확인 항목 처리) — 비운 것이 아니라 왜 비었는지와 무엇을 봐야 채워지는지를 코드에 적었다
+  - 지표별 재조회 구간 N: 잠정 3개월. 개정을 한 건도 관측하지 못해 확정하지 않는다. 정기 수집을 N+3개월 돌린 뒤 `macro_raw_revision`에서 N 밖 개정을 세어 정한다. 근거는 `registry.REFRESH_MONTHS_BASIS`이고 발행 때 `macro_calculation_registry_version.refresh_months_basis`에 함께 남는다 (T073)
+  - 채권·외환 휴장일이 KRX 주식 달력과 같은가: 확인하지 못했다. **지금은 답이 필요 없다** — FR-006b 를 "판정이 필요한 지표에 한해"로 좁혔다(T085) — 거래일 달력을 읽는 곳은 월 평균을 일별 원천에서 접을 때뿐이고 17개 중 그 경로에 닿는 지표가 없다. 닿는 지표가 생기면 `registry.validate`가 등록을 거부한다 (T078)
+  - 주택가격 연결 계수: 겹침 구간에서 산출해야 한다 (T026)
+- **T078의 원래 전제는 실제와 달랐다.** "17개 모두 `trading_calendar`가 비어 있어 월 평균 경로가 항상 결측"이라고 적었지만, 두바이유는 한국은행이 월 평균을 이미 내 줘 주기가 월별이고 그대로 통과한다. 2026-09-20 전 구간 수집에서 두바이유·국고채 모두 결측 0건이었다
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
 - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다
 
@@ -287,11 +291,11 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 **Purpose**: 묶음 A·B를 구현하고 나서 spec·plan과 코드 사이에 남은 것을 메운다
 
 - [X] T074 `data/src/data_pipeline/macro/registry.py`의 `housing_sale_price`에 T026이 산출한 연결 결과를 반영한다. 연결 지점·계수·겹침 비율 편차를 `break_link_rule`에 적고 `series_start`를 2000-01로 옮긴다. 지금은 "연결 규칙을 정하기 전까지 2021-06 이전 제외"로 남아 있어 발행이 5년치만 쓴다 per FR-010, plan "등록표 확정" (partial)
-- [ ] T075 `data/src/data_pipeline/macro/sources/customs.py`에서 걸러낸 `<year>총계</year>` 행 수를 반환값에 싣고 수집 기록에 남긴다. 지금은 건너뛰기만 해 몇 행을 뺐는지 남지 않는다 per FR-017a (partial)
-- [ ] T076 `data/src/data_pipeline/macro/transform/monthly.py`의 증가율에 개편 연결 확인을 넣는다. 등록표의 연결 규칙으로 이은 구간이 아니면 단절을 넘는 비교를 결측으로 둔다 per FR-006 (missing)
-- [ ] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)
-- [ ] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)
-- [ ] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)
+- [X] T075 `data/src/data_pipeline/macro/sources/customs.py`에서 걸러낸 `<year>총계</year>` 행 수를 반환값에 싣고 수집 기록에 남긴다. 지금은 건너뛰기만 해 몇 행을 뺐는지 남지 않는다 per FR-017a (partial)
+- [X] T076 `data/src/data_pipeline/macro/transform/monthly.py`의 증가율에 개편 연결 확인을 넣는다. 등록표의 연결 규칙으로 이은 구간이 아니면 단절을 넘는 비교를 결측으로 둔다 per FR-006 (missing)
+- [X] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)
+- [X] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)
+- [X] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)
 
 ---
 
@@ -302,3 +306,9 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - [X] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)
 - [X] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)
 - [X] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)
+
+## Phase 10: Convergence
+
+- [X] T083 `data/src/data_pipeline/macro/ingest.py` 의 `record_item_status` 가 발행 보류 사실을 수집 기록에 남기게 한다. 지금은 17개가 다 성공하면 적재가 기대 대상월 수에 못 미쳐 발행을 막은 실행도 시도 행이 `SUCCEEDED` 로 남아, DB 만 보면 완전히 성공한 실행과 구분되지 않는다. 보류 사유는 stdout 과 로그에만 있고 로그는 지나간다 per FR-011, FR-011b(3) (partial)
+- [X] T084 `data/src/data_pipeline/macro/ingest.py` 의 `TAIL_SLACK_MONTHS` 를 스펙과 맞춘다. FR-011b(3) 은 받은 대상월 수가 기대에 미치지 못하면 완료로 보지 않는다고 하는데 코드는 한 달 미달을 통과시킨다. 여유를 걷고 지표별 공표 지연을 보수적으로 늘리든, 스펙에 허용 여유를 명시하든 한쪽으로 정하고 근거를 남긴다 per FR-011b(3) (contradicts)
+- [X] T085 `data/src/data_pipeline/macro/registry.py` 의 `trading_calendar` 를 FR-006b 와 맞춘다. 스펙은 판정 기준을 지표별로 기록하라고 하는데 17개 모두 비어 있다. 지금은 월 평균을 일별 원천에서 접는 지표가 없어 실질 영향이 없고 `validate` 가 그런 지표의 등록을 거부하므로, 스펙 문구를 실제 필요 범위로 좁히든 채권·외환 휴장일을 확인해 채우든 정한다 per FR-006b (partial)

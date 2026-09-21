@@ -2,15 +2,26 @@ package com.ssafy.thorp.myrecord.application.service;
 
 import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;
 import com.ssafy.thorp.backtest.domain.model.ExecutionType;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;
 import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;
+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
 import com.ssafy.thorp.myrecord.domain.model.MyRecord;
 import com.ssafy.thorp.myrecord.domain.model.RecordRef;
 import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;
+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;
 import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;
+import com.ssafy.thorp.regime.application.port.FieldRegistration;
+import com.ssafy.thorp.regime.application.port.MacroIndicatorPort;
+import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;
+import com.ssafy.thorp.regime.domain.model.RegimeSnapshot;
+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;
 import com.ssafy.thorp.sector.application.repository.SectorRepository;
 import com.ssafy.thorp.sector.application.result.SectorListResult;
 import com.ssafy.thorp.sector.domain.model.Sector;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -19,6 +30,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -30,6 +42,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
  *
  * <p><b>{@code BEFORE_COMMIT}인 이유</b>: 접수와 항목이 같은 트랜잭션에 묶여야 둘 중 하나만 남지 않는다. 접수가 끝난 뒤 항목 저장이 실패하면
  * 사용자는 "분석은 돌고 있는데 목록에 없는" 상태를 보게 된다.
+ *
+ * <p><b>경제환경만 이벤트가 아니라 요청으로 들어온다</b>({@link #recordRegimeSearch}). 진입 경로와 기준월 근거는 스냅샷의 성질이 아니라 조회한
+ * 화면만 아는 값이라, 010의 조회(GET)에 쓰기 부작용을 붙이는 대신 006이 기록 요청을 받는다(research R15).
  */
 @Service
 public class MyRecordRegistrar {
@@ -39,16 +54,25 @@ public class MyRecordRegistrar {
     private final MyRecordRepository records;
     private final RecordNamer namer;
     private final SectorRepository sectorRepository;
+    private final RegimeSearchLogWriter regimeLogs;
+    private final RegimeSnapshotRepository snapshots;
+    private final MacroIndicatorPort macroIndicators;
     private final Clock clock;
 
     public MyRecordRegistrar(
             MyRecordRepository records,
             RecordNamer namer,
             SectorRepository sectorRepository,
+            RegimeSearchLogWriter regimeLogs,
+            RegimeSnapshotRepository snapshots,
+            MacroIndicatorPort macroIndicators,
             Clock clock) {
         this.records = records;
         this.namer = namer;
         this.sectorRepository = sectorRepository;
+        this.regimeLogs = regimeLogs;
+        this.snapshots = snapshots;
+        this.macroIndicators = macroIndicators;
         this.clock = clock;
     }
 
@@ -120,6 +144,85 @@ public class MyRecordRegistrar {
                         event.strategyIds(),
                         AnalysisPeriod.ofNullable(event.periodStart(), event.periodEnd()),
                         event.acceptedAt()));
+    }
+
+    /**
+     * 경제환경 검색 기록 → {@code regime_search_log} 행 + {@code REGIME_SEARCH} 항목(contracts, research R15).
+     *
+     * <p><b>{@code baselineOrigin}을 추정하지 않는다.</b> 010의 {@code SnapshotKey}에는 기준월 근거가 없어 {@code
+     * searchId}만으로는 알 수 없다 — 화면이 보낸 값을 그대로 쓴다. 지어내면 원칙 VI 위반이다.
+     *
+     * <p><b>로그 행은 {@code append} 하나로 끝난다.</b> upsert 라 있으면 열람 시각만 올리고 같은 id 를 돌려주므로 미리 찾아보고 갈래를 나눌
+     * 일이 없다 — 나누면 동시에 두 번 열었을 때 양쪽이 "없음"을 읽는 틈이 생긴다. {@code snapshot_id}·{@code baseline_origin}은
+     * 그때 덮어쓰지 않으므로 처음 본 revision 도 그대로다.
+     *
+     * <p>새로 만들었는지는 <b>항목</b>이 있는지로 가른다. 항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만든다 — "지웠다가 다시 보면 목록에 돌아온다"가
+     * 맞는 동작이다.
+     *
+     * <p>로그 행과 항목은 <b>한 트랜잭션</b>이다. 갈라지면 아무도 가리키지 않는 로그 행이나 없는 행을 가리키는 항목이 남는다.
+     *
+     * @return 만든/찾은 항목과 새로 만들었는지 여부. 응답 본문은 목록과 같은 읽기 경로로 컨트롤러가 짓는다
+     * @throws BusinessException 없는 스냅샷 키면 {@code 404 RESOURCE_NOT_FOUND}
+     */
+    @Transactional
+    public RegimeRecordOutcome recordRegimeSearch(
+            long ownerId, String searchId, EntryPath entryPath, BaselineOrigin baselineOrigin) {
+        RegimeSnapshot snapshot =
+                snapshots
+                        .findByKey(searchId)
+                        .orElseThrow(
+                                () ->
+                                        new BusinessException(
+                                                ErrorCode.RESOURCE_NOT_FOUND,
+                                                "저장할 경제환경 검색을 찾을 수 없습니다: " + searchId));
+        Instant now = clock.instant();
+        long logId =
+                regimeLogs.append(ownerId, searchId, snapshot.id(), entryPath, baselineOrigin, now);
+        return records.findActiveByOwnerAndRegimeLog(ownerId, logId)
+                .map(kept -> new RegimeRecordOutcome(kept.recordId().value(), false))
+                .orElseGet(
+                        () ->
+                                new RegimeRecordOutcome(
+                                        newRecord(ownerId, snapshot, logId, now), true));
+    }
+
+    /** 경제환경 항목에는 섹터·전략·분석 기간이 없다 — 기준월이 그 자리를 대신한다(data-model §1). */
+    private String newRecord(long ownerId, RegimeSnapshot snapshot, long logId, Instant now) {
+        return records.save(
+                        MyRecord.create(
+                                ownerId,
+                                new RecordRef.RegimeSearch(logId),
+                                namer.forRegimeSearch(
+                                        fieldLabel(snapshot.fieldId()),
+                                        snapshot.baselineMonth().atDay(1)),
+                                List.of(),
+                                List.of(),
+                                null,
+                                now))
+                .recordId()
+                .value();
+    }
+
+    /**
+     * 분야 이름. 종합 검색은 분야가 없어 "종합"이다.
+     *
+     * <p>등록표를 읽지 못하면 분야 id 를 그대로 쓴다 — 이름이 없다고 기록을 못 남기게 하지는 않는다. 지어낸 값이 아니라 <b>가진 값</b>이라 원칙 VI 에
+     * 걸리지 않는다.
+     */
+    private String fieldLabel(String fieldId) {
+        if (fieldId == null) {
+            return "종합";
+        }
+        try {
+            return macroIndicators.fields().stream()
+                    .filter(field -> field.id().equals(fieldId))
+                    .map(FieldRegistration::name)
+                    .findFirst()
+                    .orElse(fieldId);
+        } catch (RuntimeException e) {
+            log.warn("분야 등록표를 읽지 못해 분야 id 로 이름을 짓는다", e);
+            return fieldId;
+        }
     }
 
     /** 비중이 큰 섹터가 앞이다. 비중이 없는 전략(규칙이 정하는 배분)은 요청 순서를 지킨다. */
