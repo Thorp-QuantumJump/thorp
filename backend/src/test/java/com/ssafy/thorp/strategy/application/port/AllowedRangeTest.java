@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -141,5 +142,66 @@ class AllowedRangeTest {
     @DisplayName("범위를 적지 않은 축은 어떤 값도 통과시키지 않는다 — 없는 근거로 통과시키지 않는다")
     void rejectsEverythingWhenNothingIsDeclared() {
         assertThat(new AllowedRange(null, null, null, null).contains(1)).isFalse();
+    }
+
+    /**
+     * 값으로 표시 문구를 되찾는다.
+     *
+     * <p>{@link AllowedRange#values()}가 값만 넘기는 탓에 007 미리보기가 문구를 잃었고, 객체형 후보를 받은 화면이 {@code [object
+     * Object]}를 보였다. 문구를 되찾는 이 통로가 그 구멍을 막는다.
+     */
+    @Nested
+    @DisplayName("표시 문구")
+    class Labels {
+
+        @Test
+        @DisplayName("객체형 후보도 등록된 문구로 읽힌다 — 값만으로는 그릴 수 없다")
+        void readsLabelOfObjectValue() {
+            Object monthEnd = Map.of("mode", "CALENDAR", "unit", "MONTH_END");
+            Object tradingDays = Map.of("mode", "TRADING_DAYS", "days", 21);
+            AllowedRange range =
+                    AllowedRange.ofChoices(
+                            List.of(
+                                    new RegisteredChoice(monthEnd, "월말"),
+                                    new RegisteredChoice(tradingDays, "21거래일")));
+
+            assertThat(range.labelOf(monthEnd)).isEqualTo("월말");
+            assertThat(range.labelOf(tradingDays)).isEqualTo("21거래일");
+        }
+
+        @Test
+        @DisplayName("같은 내용의 다른 객체도 같은 문구로 읽힌다 — equals로 판정한다")
+        void matchesByEquality() {
+            AllowedRange range =
+                    AllowedRange.ofChoices(
+                            List.of(
+                                    new RegisteredChoice(
+                                            Map.of("mode", "CALENDAR", "unit", "MONTH_END"),
+                                            "월말")));
+
+            assertThat(range.labelOf(Map.of("mode", "CALENDAR", "unit", "MONTH_END")))
+                    .isEqualTo("월말");
+        }
+
+        @Test
+        @DisplayName("문구를 적지 않은 후보는 값을 그대로 읽는다 — 숫자는 값으로 읽힌다")
+        void fallsBackToValueWhenUnlabelled() {
+            assertThat(AllowedRange.ofValues(List.of(21, 63)).labelOf(63)).isEqualTo("63");
+        }
+
+        @Test
+        @DisplayName("입력형 축은 후보 목록이 없으므로 값을 그대로 읽는다")
+        void readsValueForBoundedRange() {
+            assertThat(AllowedRange.between(5, 250, 1).labelOf(60)).isEqualTo("60");
+        }
+
+        @Test
+        @DisplayName("등록되지 않은 값도 문구를 지어내지 않는다")
+        void doesNotInventLabelForUnknownValue() {
+            AllowedRange range =
+                    AllowedRange.ofChoices(List.of(new RegisteredChoice("TOP_N", "상위 몇 개")));
+
+            assertThat(range.labelOf("ALL")).isEqualTo("ALL");
+        }
     }
 }

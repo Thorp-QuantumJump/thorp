@@ -20,6 +20,7 @@ import {
 } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/auth-context'
+import { useLoginReturn } from '@/auth/useLoginReturn'
 import styles from './AppHeader.module.css'
 
 /**
@@ -30,43 +31,53 @@ import styles from './AppHeader.module.css'
  *
  * '대시보드'(`/dashboard`)와 '백테스트'(`/backtest`)는 메뉴에서 뺐다. 003·005가 완성되면
  * 대체될 임시 화면이라 언젠가 빠질 자리이기 때문이다. **두 경로 자체는 지우지 않았다.**
+ *
+ * `covers`는 이 메뉴가 현재 위치로 표시될 경로들이다. **`path` 하나로는 모자란다** — 전략 진단은
+ * 섹터·비중(`/diagnosis/sectors`) → 전략 고르기(`/strategy`) → 설정 조합 자동 비교(`/param-search`)
+ * → 결과(`/results/…`)로 이어지는 한 흐름인데 주소가 서로 형제라, 두 번째 단계로 넘어가는 순간
+ * 표시가 꺼져 사용자는 흐름에서 벗어난 것처럼 겪는다. 흐름이 늘면 여기에 적는다.
  */
 const navigationItems = [
   {
     label: '전략 진단',
     description: '섹터와 비중을 골라 과거 성과를 같은 조건에서 비교합니다.',
     path: '/diagnosis/sectors',
+    covers: ['/diagnosis', '/strategy', '/param-search', '/results'],
     icon: Gauge,
   },
   {
     label: '시장 흐름',
     description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',
     path: '/market-flow',
+    covers: ['/market-flow', '/regime-search'],
     icon: ChartNoAxesCombined,
   },
   {
     label: '배우기',
     description: '투자 개념과 지표 읽는 법을 익힙니다.',
     path: '/learn',
+    covers: ['/learn'],
     icon: BookOpen,
   },
   {
     label: '내 기록',
     description: '저장한 분석과 전략 검증 기록을 확인합니다.',
     path: '/records',
+    covers: ['/records'],
     icon: FolderClock,
   },
 ]
 
 /** 하위 경로(`/records/…`)에 있어도 그 메뉴를 현재 위치로 표시한다. */
-function isCurrentPath(pathname: string, path: string): boolean {
-  return pathname === path || pathname.startsWith(`${path}/`)
+function isCurrentPath(pathname: string, covers: readonly string[]): boolean {
+  return covers.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 }
 
 /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
 export function AppHeader() {
   const location = useLocation()
   const { status: authStatus, user, logout, recheck } = useAuth()
+  const rememberReturn = useLoginReturn()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)
@@ -242,7 +253,7 @@ export function AppHeader() {
       return (
         <div className={styles.authRecovery}>
           <span className={styles.authNotice} role="status">로그인이 만료되었습니다.</span>
-          <Link className={styles.authLink} to="/login">
+          <Link className={styles.authLink} to="/login" onClick={rememberReturn}>
             <LogIn size={16} aria-hidden="true" />
             다시 로그인
           </Link>
@@ -250,7 +261,7 @@ export function AppHeader() {
       )
     }
     return (
-      <Link ref={loginLinkRef} className={styles.authLink} to="/login">
+      <Link ref={loginLinkRef} className={styles.authLink} to="/login" onClick={rememberReturn}>
         <LogIn size={16} aria-hidden="true" />
         로그인
       </Link>
@@ -281,7 +292,7 @@ export function AppHeader() {
           <nav className={styles.desktopNav} aria-label="주요 화면">
             {navigationItems.map((item) => {
               const Icon = item.icon
-              const isActive = isCurrentPath(location.pathname, item.path)
+              const isActive = isCurrentPath(location.pathname, item.covers)
 
               return (
                 <Link
@@ -291,6 +302,19 @@ export function AppHeader() {
                 >
                   <Icon size={15} aria-hidden="true" />
                   {item.label}
+                  {/*
+                    활성 표시는 메뉴마다 따로 그리지 않고 같은 `layoutId` 하나를 옮겨 그린다. 그래야
+                    표시가 꺼졌다 켜지는 대신 다음 메뉴로 미끄러져, 흐름 안에서 단계가 바뀌었다는
+                    것이 한 번의 움직임으로 읽힌다. 모션 축소 설정은 App 의 MotionConfig 가 받는다.
+                  */}
+                  {isActive ? (
+                    <motion.span
+                      layoutId="app-header-active"
+                      className={styles.navActiveBar}
+                      aria-hidden="true"
+                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  ) : null}
                 </Link>
               )
             })}
@@ -343,7 +367,7 @@ export function AppHeader() {
               <div className={styles.drawerLinks}>
                 {navigationItems.map((item, index) => {
                   const Icon = item.icon
-                  const isActive = isCurrentPath(location.pathname, item.path)
+                  const isActive = isCurrentPath(location.pathname, item.covers)
 
                   return (
                     <Link
@@ -397,7 +421,14 @@ export function AppHeader() {
                   </button>
                 </div>
               ) : (
-                <Link className={styles.drawerAuth} to="/login" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  className={styles.drawerAuth}
+                  to="/login"
+                  onClick={() => {
+                    rememberReturn()
+                    setIsMenuOpen(false)
+                  }}
+                >
                   <LogIn size={18} aria-hidden="true" />
                   {authStatus === 'expired' ? '다시 로그인' : '로그인'}
                 </Link>

@@ -1,4 +1,5 @@
 import type {
+  AxisValue,
   CandidateStability,
   CandidateStatus,
   ParamSearchConfig,
@@ -8,6 +9,20 @@ import type {
   SelectionOutcome,
   ValidationLabel,
 } from '@/types/paramSearch'
+
+/**
+ * 후보값 하나를 견주고 목록의 열쇠로 쓸 문자열.
+ *
+ * **같은 값을 `===`로 견줄 수 없다.** 객체형 후보(`{mode, unit}`)는 응답을 다시 받을 때마다 새
+ * 객체라, 켜 둔 값과 목록의 값이 같은 뜻이어도 다른 참조다. 그대로 두면 켠 값이 꺼진 것처럼
+ * 보이고 기본 시작값 표시도 붙지 않는다.
+ *
+ * 필드 순서는 서버 응답의 순서를 그대로 따르므로 같은 값은 같은 문자열이 된다. **이 문자열을
+ * 요청에 보내지 않는다** — 보내는 것은 언제나 원래 값이다.
+ */
+export function axisValueKey(value: AxisValue): string {
+  return typeof value === 'object' ? JSON.stringify(value) : String(value)
+}
 
 /**
  * 검증 라벨을 화면 문구로 바꾼다.

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/api/client'
 import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { AuthProvider } from '@/auth/AuthProvider'
-import { saveReturnTarget } from '@/auth/returnTarget'
+import { DEFAULT_RETURN_TARGET, saveReturnTarget } from '@/auth/returnTarget'
 import { authenticatedUser } from '@/test/authFixtures'
 import { render } from '@testing-library/react'
 import { LoginPage } from './LoginPage'
@@ -37,7 +37,8 @@ function renderLogin(options?: { signupEmail?: string }) {
               </AuthEntryGuard>
             }
           />
-          <Route path="/home" element={<h1>홈 화면</h1>} />
+          {/* 기본 도착지는 상수를 따른다. 경로를 박아 두면 기본값을 바꿀 때마다 이 틀이 깨진다. */}
+          <Route path={DEFAULT_RETURN_TARGET} element={<h1>기본 도착 화면</h1>} />
           <Route path="/records/*" element={<h1>내 기록 화면</h1>} />
         </Routes>
       </AuthProvider>
@@ -78,7 +79,7 @@ describe('LoginPage', () => {
       { email: 'new.user@example.com', password: 'password1234' },
       expect.any(AbortSignal),
     )
-    expect(await screen.findByRole('heading', { name: '홈 화면' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '기본 도착 화면' })).toBeTruthy()
   })
 
   it('로그인 실패는 계정 존재 여부를 드러내지 않는 공통 안내를 표시한다', async () => {
@@ -122,7 +123,7 @@ describe('LoginPage', () => {
     apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)
     renderLogin()
 
-    expect(await screen.findByRole('heading', { name: '홈 화면' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '기본 도착 화면' })).toBeTruthy()
     expect(screen.queryByLabelText('비밀번호')).toBeNull()
   })
 
