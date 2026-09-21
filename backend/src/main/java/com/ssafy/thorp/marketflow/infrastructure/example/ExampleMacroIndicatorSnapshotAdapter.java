@@ -22,12 +22,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-/** 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터. */
+/**
+ * 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터.
+ *
+ * <p><b>명시적으로 고를 때만 올라온다</b>(T064). 008 스냅샷을 읽는 {@code
+ * com.ssafy.thorp.marketflow.infrastructure.macro.MacroSnapshotIndicatorAdapter} 가 기본이고, 이 대역은
+ * {@code thorp.marketflow.indicator-source=example} 일 때만 대신 들어온다. 둘 다 올라오면 포트 구현이 둘이라 주입이 모호해진다.
+ *
+ * <p>운영에서 이것이 골라지면 {@link MarketFlowExampleDataGuard} 가 기동을 막는다.
+ */
 @Component
+@ConditionalOnProperty(name = "thorp.marketflow.indicator-source", havingValue = "example")
 public class ExampleMacroIndicatorSnapshotAdapter implements MacroIndicatorSnapshotPort {
 
     static final String RESOURCE_PATH = "marketflow/macro-indicators-example-v1.json";
