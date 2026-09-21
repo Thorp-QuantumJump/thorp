@@ -35,7 +35,12 @@ class StubFetcher:
     def __init__(self, body: str = '{"ok": true}') -> None:
         self._body = body
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str:
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
         return self._body
 
 
@@ -186,7 +191,7 @@ def test_failed_indicator_keeps_its_error_class(
     _prepare_registry(postgres_engine, seeded_indicators)
 
     class AlwaysFails:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise TransientSourceError("끊김")
 
     report = ingest.run(
@@ -222,7 +227,7 @@ def test_publication_is_held_but_records_still_land(
     _prepare_registry(postgres_engine, seeded_indicators)
 
     class AlwaysFails:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise TransientSourceError("끊김")
 
     report = ingest.run(
@@ -238,14 +243,19 @@ def test_publication_is_held_but_records_still_land(
     assert report.publication_held is not None
     with postgres_engine.begin() as connection:
         attempts = connection.execute(
-            text("SELECT status FROM macro_collection_attempt WHERE attempt_key = :key"),
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
             {"key": report.attempt_key},
-        ).scalars().all()
+        ).all()
         items = connection.execute(
             text("SELECT count(*) FROM macro_collection_item_status")
         ).scalar_one()
 
-    assert attempts == ["PARTIAL"]
+    # 아무것도 발행되지 않았으므로 성공이 아니고, 왜 막혔는지가 행에 함께 남는다 (T083).
+    assert len(attempts) == 1
+    status, hold_reason = attempts[0]
+    assert status == "HELD"
+    assert hold_reason, "보류했는데 사유가 DB 에 없다. 로그는 지나간다"
     assert items == len(seeded_indicators)
 
 
@@ -412,7 +422,7 @@ def test_quota_stops_collection_and_keeps_what_arrived(
         def __init__(self) -> None:
             self.calls = 0
 
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             self.calls += 1
             if self.calls > allowed:
                 raise QuotaExhaustedError("한도 도달")
@@ -449,7 +459,7 @@ def test_quota_is_recorded_and_publication_is_held(
     _prepare_registry(postgres_engine, indicators)
 
     class AlwaysQuota:
-        def get(self, url, params=None):
+        def get(self, url, params=None, headers=None):
             raise QuotaExhaustedError("한도 도달")
 
     report = ingest.run(
@@ -533,3 +543,296 @@ def test_item_status_creates_the_attempt_when_publication_never_started(
 
     assert attempt == ("INITIAL", "PARTIAL")
     assert items == [("all_industry_production", ingest.STATUS_FAILED)]
+
+
+# ---------------------------------------------------------------------------
+# 걸러낸 행 수 (T075, FR-017a)
+# ---------------------------------------------------------------------------
+def test_excluded_total_rows_land_in_the_collection_record(postgres_engine) -> None:
+    """관세청 합계 행을 몇 개 뺐는지가 수집 기록에 남는다.
+
+    남지 않으면 "9개월치를 받았다"와 "10행을 받아 1행을 뺐다"가 같은 모양이 된다 — 원천이
+    합계 행의 모양을 바꿔 걸러지지 않게 됐을 때 그 사실이 드러나지 않는다.
+    """
+    exports = _outcome("exports")
+    exports.source = "customs"
+    exports.excluded_rows = 37
+    imports = _outcome("imports")
+    imports.source = "customs"
+
+    ingest.record_item_status(postgres_engine, "attempt-excluded", [exports, imports])
+
+    with postgres_engine.begin() as connection:
+        rows = dict(
+            connection.execute(
+                text(
+                    "SELECT indicator_id, excluded_row_count"
+                    " FROM macro_collection_item_status"
+                    " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                    "                     WHERE attempt_key = 'attempt-excluded')"
+                )
+            ).all()
+        )
+    assert rows["exports"] == 37
+    # 아무것도 걸러내지 않은 지표는 0 이다. NULL 로 두면 "세지 않았다"와 구분되지 않는다.
+    assert rows["imports"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 전 구간 적재 완료 판정 (T077, FR-011b(3))
+# ---------------------------------------------------------------------------
+def test_initial_load_short_of_the_expected_months_is_not_published(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """기대 대상월 수를 못 채우면 발행하지 않는다.
+
+    짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡하다 — 과거가 잘려 있다는 사실이 화면 어디에도
+    드러나지 않으므로, 발행 전에 막지 않으면 아무도 알아채지 못한다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    # 표본은 2024-01 부터인데 등록표는 2000-01 부터라고 말한다. 스무 해가 비는 상황이다.
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.publication_held is not None
+    assert "기대에 못 미쳐" in report.publication_held
+    assert not report.published
+    # 발행은 막았지만 무엇을 받았는지는 남는다 (FR-011).
+    with postgres_engine.begin() as connection:
+        recorded = connection.execute(
+            text(
+                "SELECT count(*) FROM macro_collection_item_status"
+                " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                "                     WHERE attempt_key = :key)"
+            ),
+            {"key": report.attempt_key},
+        ).scalar_one()
+    assert recorded == len(indicators)
+
+
+def test_regular_mode_is_not_judged_by_the_full_range(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """정기 수집은 최근 N개월만 받으므로 전 구간 판정을 걸지 않는다.
+
+    걸면 정기 수집이 매번 미달로 보류되고, 그 보류가 쌓이면 진짜 미달을 구분하지 못한다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="regular",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.publication_held is None or "기대에 못 미쳐" not in report.publication_held
+
+
+def test_a_held_load_does_not_look_like_a_successful_one(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """지표가 다 성공해도 발행을 막았으면 시도 행이 성공으로 남지 않는다 (T083).
+
+    적재 미달로 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이다. 그 사실만 적으면 DB 를
+    읽는 사람은 아무것도 발행되지 않았다는 것을 알 수 없고, 사유는 로그와 함께 지나간다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(
+        replace(_ecos_shaped(indicator), series_start="2000-01") for indicator in INDICATORS
+    )
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+        item_statuses = set(
+            connection.execute(
+                text("SELECT status FROM macro_collection_item_status"
+                     " WHERE attempt_id = (SELECT id FROM macro_collection_attempt"
+                     "                     WHERE attempt_key = :key)"),
+                {"key": report.attempt_key},
+            ).scalars().all()
+        )
+
+    assert status == "HELD"
+    assert "기대에 못 미쳐" in hold_reason
+    # 지표별로는 성공이 맞다. 둘을 함께 읽어야 무슨 일이 있었는지가 드러난다.
+    assert item_statuses == {ingest.STATUS_SUCCEEDED}
+
+
+def test_a_diagnostic_partial_run_is_held_with_its_reason(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """`--indicator` 진단 실행도 보류로 남는다. 발행하지 않았다는 사실은 같다."""
+    indicators = tuple(replace(i, series_start="2026-05") for i in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        (indicators[0],),
+        fetcher=StubFetcher(),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 7, 15),
+    )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+
+    assert status == "HELD"
+    assert "부분 수집" in hold_reason
+
+
+def test_a_published_run_keeps_its_successful_attempt(
+    postgres_engine, tmp_path: Path, dummy_keys
+) -> None:
+    """발행에 성공한 실행은 건드리지 않는다 — 보류 기록이 성공까지 덮으면 안 된다."""
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    report = ingest.run(
+        postgres_engine,
+        indicators,
+        fetcher=StubFetcher(body),
+        data_root=tmp_path,
+        mode="initial",
+        today=date(2026, 8, 15),
+    )
+
+    assert report.published, report.publication_held
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt"
+                 " WHERE attempt_key = :key"),
+            {"key": report.attempt_key},
+        ).one()
+    assert status == "SUCCEEDED"
+    assert hold_reason is None
+
+
+def test_a_hard_publish_failure_still_records_what_arrived(
+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch
+) -> None:
+    """발행이 보류가 아니라 **터져서** 죽어도 지표별 기록은 남는다 (FR-011).
+
+    발행기가 시도 행을 FAILED 로 적어 주므로 실행이 실패했다는 사실은 남지만, 그것만으로는
+    무엇을 받았고 무엇이 실패했는지 알 수 없다. 다음 실행에서 무엇을 다시 받아야 하는지를
+    답하는 것은 지표별 기록이다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    def explode(*args: object, **kwargs: object) -> int:
+        raise RuntimeError("파일 봉인이 터졌다")
+
+    monkeypatch.setattr(ingest.publish, "publish_atomically", explode)
+
+    with pytest.raises(RuntimeError, match="파일 봉인이 터졌다"):
+        ingest.run(
+            postgres_engine,
+            indicators,
+            fetcher=StubFetcher(body),
+            data_root=tmp_path,
+            mode="initial",
+            today=date(2026, 8, 15),
+        )
+
+    with postgres_engine.begin() as connection:
+        recorded = connection.execute(
+            text(
+                "SELECT count(*) FROM macro_collection_item_status s"
+                " JOIN macro_collection_attempt a ON a.id = s.attempt_id"
+            )
+        ).scalar_one()
+    assert recorded == len(indicators), "발행이 터지면서 지표별 기록이 통째로 사라졌다"
+
+
+def test_a_hard_publish_failure_is_not_relabelled_as_a_hold(
+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch
+) -> None:
+    """터진 실행을 보류로 적지 않는다. 보류는 우리가 막은 것이고 실패는 우리가 죽은 것이다."""
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    def explode(*args: object, **kwargs: object) -> int:
+        raise RuntimeError("파일 봉인이 터졌다")
+
+    monkeypatch.setattr(ingest.publish, "publish_atomically", explode)
+
+    with pytest.raises(RuntimeError):
+        ingest.run(
+            postgres_engine,
+            indicators,
+            fetcher=StubFetcher(body),
+            data_root=tmp_path,
+            mode="initial",
+            today=date(2026, 8, 15),
+        )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt")
+        ).one()
+    assert status == "FAILED"
+    assert hold_reason is None
