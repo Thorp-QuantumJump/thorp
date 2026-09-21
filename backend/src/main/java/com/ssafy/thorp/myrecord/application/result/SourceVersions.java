@@ -1,5 +1,7 @@
 package com.ssafy.thorp.myrecord.application.result;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -13,11 +15,18 @@ import java.util.Map;
  * </ul>
  *
  * <p>경제환경 항목은 여기 없다 — 스냅샷 키 자체가 자료·등록표·모델 버전을 품는다({@code SnapshotKey}).
+ *
+ * <p>값이 null 인 키를 허용한다. 요청 사본({@code RequestSpecCodec})은 {@code mappingVersion} 같은 선택 항목을 null 로 넣을
+ * 수 있고, 저장 규약(null 키 생략)에 기대어 {@code Map.copyOf}를 쓰면 그 규약이 바뀐 날 상세가 500 이 된다.
  */
 public record SourceVersions(Map<String, Object> versions, Map<String, Object> spec) {
 
     public SourceVersions {
-        versions = versions == null ? Map.of() : Map.copyOf(versions);
-        spec = spec == null ? Map.of() : Map.copyOf(spec);
+        versions = nullTolerantCopy(versions);
+        spec = nullTolerantCopy(spec);
+    }
+
+    private static Map<String, Object> nullTolerantCopy(Map<String, Object> source) {
+        return source == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(source));
     }
 }

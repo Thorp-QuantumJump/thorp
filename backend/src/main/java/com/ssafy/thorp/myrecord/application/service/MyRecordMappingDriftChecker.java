@@ -28,20 +28,24 @@ public class MyRecordMappingDriftChecker {
     /**
      * @param savedMapVersion 기록이 참조한 대응표 버전. 없으면 판정할 수 없다
      * @param sectorCodes 기록이 쓴 섹터. 저장 당시 버전에 없던 섹터(탐색 묶음이 종목으로 접수해 현재 대응표로 되짚은 코드)는 비교하지 않는다
-     * @return 판정. 근거가 없으면(저장 버전 없음·그 버전 행 없음·열린 버전 없음·섹터 없음) 빈 값 — "안 바뀜"으로 답하지 않는다(원칙 VI)
+     * @return 판정. 근거가 없으면(저장 버전 없음·그 버전 행 없음·열린 버전 없음·비교한 섹터 없음) 빈 값 — "안 바뀜"으로 답하지 않는다(원칙 VI)
      */
     public Optional<MappingDrift> check(String savedMapVersion, List<String> sectorCodes) {
         if (savedMapVersion == null || sectorCodes.isEmpty()) {
             return Optional.empty();
         }
-        Optional<List<SectorMapEntries.Entry>> saved = entries.entriesOf(savedMapVersion);
-        Optional<List<SectorMapEntries.Entry>> current = entries.currentEntries();
-        if (saved.isEmpty() || current.isEmpty()) {
+        Optional<SectorMapEntries.Versions> loaded = entries.load(savedMapVersion);
+        if (loaded.isEmpty()) {
             return Optional.empty();
         }
-        Map<String, SectorMapEntries.Entry> before = byCode(saved.get());
-        Map<String, SectorMapEntries.Entry> now = byCode(current.get());
+        if (loaded.get().same()) {
+            // 저장 버전이 곧 열린 버전이다. 항목을 견줄 것 없이 바뀐 것이 없다.
+            return Optional.of(MappingDrift.none());
+        }
+        Map<String, SectorMapEntries.Entry> before = byCode(loaded.get().saved());
+        Map<String, SectorMapEntries.Entry> now = byCode(loaded.get().current());
 
+        int compared = 0;
         List<SectorMapEntries.Entry> removed = new ArrayList<>();
         List<SectorMapEntries.Entry> replaced = new ArrayList<>();
         for (String code : sectorCodes) {
@@ -49,12 +53,17 @@ public class MyRecordMappingDriftChecker {
             if (was == null) {
                 continue;
             }
+            compared++;
             SectorMapEntries.Entry is = now.get(code);
             if (is == null) {
                 removed.add(was);
             } else if (is.etfId() != was.etfId()) {
                 replaced.add(was);
             }
+        }
+        if (compared == 0) {
+            // 이 기록의 섹터가 저장 버전에 하나도 없다. 견준 것이 없으니 "안 바뀜"이라 말할 수 없다.
+            return Optional.empty();
         }
         // 섹터가 빠진 것이 우선이다 — 사용자가 대체 섹터를 골라야 다음 분석이 성립한다(FR-008). 둘이 함께
         // 일어나면 빠진 섹터만 알린다. 대체 섹터를 고르는 화면(002)이 현재 대응표를 보이므로 교체된 ETF 는 거기서 드러난다.

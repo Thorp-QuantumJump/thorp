@@ -33,9 +33,11 @@ import java.util.stream.Collectors;
  * <p><b>성과 수치 컬럼은 select 에 없다</b>(원칙 III). {@code backtest_result}·{@code search_candidate}는 조인하지
  * 않는다.
  *
- * <p>{@code ANALYSIS}의 요청은 저장돼 있지 않으므로 {@code (소유자, 실행)}으로 <b>취소하지 않은 최신 요청</b>을 고른다 — {@code
- * MyRecordRepository.findViewableRequestId}와 같은 규칙이며, 단건({@code SINGLE}) 요청만 본다. 탐색 후보가 같은 실행에 합류해도
- * 단건 기록이 그 상태를 따라가지 않는다.
+ * <p>{@code ANALYSIS}의 요청은 저장돼 있지 않으므로 {@code (소유자, 실행)}으로 <b>취소하지 않은 최신 요청</b>을 고른다(LATERAL). 기록이
+ * 요청을 저장하지 않는 이유: 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과 재사용) 취소는 실행이 아니라 요청에 붙어서, 하나를 골라 저장해 두면 그 요청만
+ * 취소된 순간 목록이 '취소'를 보인다. 전부 취소했으면 그중 최신이다(그때는 사용자에게 취소가 맞다). <b>단건({@code SINGLE}) 요청만 본다</b> — 동일
+ * 버전 키에 실행 유형이 없어 같은 사용자의 탐색 후보도 같은 실행에 합류하는데, 유형을 가리지 않으면 단건 기록이 후보 요청의 상태·토큰을 따라간다. 이 규칙이 사는 곳은
+ * 여기 하나다({@code MyRecordIntakeIT}가 접수 경로로 고정한다).
  *
  * <p>커서는 정렬 키와 식별자의 짝이다({@code (saved_at, id)} 또는 {@code (name, id)}). offset 을 쓰지 않는 이유: 쪽을 넘기는 사이
  * 새 항목이 들어오면 offset 이 가리키는 자리가 밀려 같은 항목을 두 번 받거나 건너뛴다(research R14).
@@ -183,7 +185,20 @@ final class MyRecordViewQuery {
                 .collect(Collectors.joining(", ", "ARRAY[", "]::text[]"));
     }
 
+    /**
+     * 원본 값이 계약 밖이면(007이 상태를 하나 더했는데 CASE 를 안 고쳤다, 스냅샷 키가 깨졌다) 데이터 결함이다. {@code
+     * IllegalArgumentException} 그대로 두면 전역 처리기가 클라이언트 입력 오류(400)로 감싸 WARN 으로만 남는다 — 500 이 맞다.
+     */
     static MyRecordView mapRow(ResultSet rs, int rowNum) throws SQLException {
+        String recordId = rs.getString("record_id");
+        try {
+            return toView(rs);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("기록의 원본 값이 계약 밖이다: record_id=" + recordId, e);
+        }
+    }
+
+    private static MyRecordView toView(ResultSet rs) throws SQLException {
         RecordKind kind = RecordKind.valueOf(rs.getString("kind"));
         return new MyRecordView(
                 rs.getLong("id"),
