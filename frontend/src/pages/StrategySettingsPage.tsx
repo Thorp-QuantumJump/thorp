@@ -89,7 +89,7 @@ const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'
 const STRATEGY_NOT_REGISTERED_MESSAGE =
   '고른 전략을 지금은 분석할 수 없어 요청이 접수되지 않았습니다. 전략 설정을 다시 불러왔으니 전략을 다시 골라 주세요.'
 const PARAMETER_REJECTED_GENERAL =
-  '설정값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정과 기간·금액·조건을 확인해 주세요.'
+  '설정값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정과 분석 조건을 확인해 주세요.'
 /** 고른 기간이 지금 평가할 수 있는 범위 밖이다. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다 */
 function periodOutOfRangeMessage(range: AnalysisPeriod): string {
   return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 범위 전체로 되돌려 주세요.`
@@ -185,7 +185,7 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps) 
  * 004 분석 / 007 자동 비교다.
  *
  * <p><b>기본 화면의 입력은 전략 선택 하나다(SC-005).</b> 카드를 고르면 '기본 설정' 표시, 조건 한 줄,
- * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 기간·금액·조건(US3)도 접힌 패널이다.
+ * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 조건 바꾸기(US3)도 접힌 패널이다.
  *
  * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 상세 설정에서 값을 바꾸면 규칙 위반,
  * 워밍업, 고른 카드의 판정, 기본 설정 표시, '분석하기'의 막힘이 한 렌더 안에서 다시 계산된다. 값을
