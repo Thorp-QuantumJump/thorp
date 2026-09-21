@@ -1,6 +1,7 @@
 import { LogIn, Menu, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useLoginReturn } from '@/auth/useLoginReturn'
 import styles from '@/pages/LandingPage.module.css'
 
 /**
@@ -23,6 +24,7 @@ const menuItems = [...primaryMenuItems, secondaryMenuItem]
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const rememberReturn = useLoginReturn()
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -55,7 +57,7 @@ export function LandingHeader() {
         </Link>
       </nav>
 
-      <Link className={styles.headerCta} to="/login">
+      <Link className={styles.headerCta} to="/login" onClick={rememberReturn}>
         로그인
         <LogIn aria-hidden="true" size={16} strokeWidth={1.8} />
       </Link>
@@ -84,7 +86,13 @@ export function LandingHeader() {
               {item.label}
             </Link>
           ))}
-          <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+          <Link
+            to="/login"
+            onClick={() => {
+              rememberReturn()
+              setIsMenuOpen(false)
+            }}
+          >
             로그인
           </Link>
         </nav>

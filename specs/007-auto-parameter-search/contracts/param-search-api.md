@@ -57,13 +57,24 @@
         "axes": [
           {
             "axis": "lookbackDays", "label": "관측 기간", "unit": "거래일",
-            "values": [20, 60, 120], "defaultValue": 60,
+            "values": [20, 60, 120], "valueLabels": ["20", "60", "120"], "defaultValue": 60,
             "allowedRange": { "min": 5, "max": 250, "step": 1, "values": null }
           },
           {
-            "axis": "topN", "label": "선정 섹터 수", "unit": null,
-            "values": [2, 3, 4], "defaultValue": 3,
-            "allowedRange": { "min": 1, "max": 50, "step": 1, "values": null }
+            "axis": "rebalancePeriod", "label": "리밸런싱 주기", "unit": null,
+            "values": [
+              { "mode": "CALENDAR", "unit": "MONTH_END" },
+              { "mode": "TRADING_DAYS", "days": 21 }
+            ],
+            "valueLabels": ["월말", "21거래일"],
+            "defaultValue": { "mode": "CALENDAR", "unit": "MONTH_END" },
+            "allowedRange": {
+              "min": null, "max": null, "step": null,
+              "values": [
+                { "mode": "CALENDAR", "unit": "MONTH_END" },
+                { "mode": "TRADING_DAYS", "days": 21 }
+              ]
+            }
           }
         ],
         "combinations": 9
@@ -95,6 +106,11 @@
   지원 여부다(FR-026).
 - `spaceSummary`는 **전략별 배열**이고 `axes` 안의 순서가 그리드 좌표 축 순서다. `values` 배열의
   순서가 인접 판정의 근거다(FR-029). `totalCombinations`는 전략별 `combinations`의 합이다.
+- **`values`는 그릴 수 없는 형태일 수 있다.** 후보값은 숫자·문자열만이 아니라 객체이기도 하다
+  (리밸런싱 주기의 `{mode, unit}`). 그래서 `valueLabels`가 **`values`와 같은 길이·같은 순서로**
+  표시 문구를 싣는다. 화면은 `values[i]`를 요청에 그대로 되돌려 보내고 `valueLabels[i]`를 그린다.
+  문구는 등록표의 `allowedRange.choices[].label`에서 오며 서버도 화면도 짓지 않는다(FR-025).
+  등록표가 문구를 적지 않은 후보(숫자처럼 값으로 읽히는 것)는 값을 그대로 읽은 문자열이다.
 - `defaultValue`는 등록된 기본 시작값을 그대로 옮긴 것이며 **추천값이나 최적값이 아니다**(원칙 III).
   화면에 '추천'·'최적' 문구를 붙이지 않는다.
 - `limits.provisional`은 임시값인 항목 이름이다. 화면은 이 항목에 임시값 표시를 붙인다(FR-005a).

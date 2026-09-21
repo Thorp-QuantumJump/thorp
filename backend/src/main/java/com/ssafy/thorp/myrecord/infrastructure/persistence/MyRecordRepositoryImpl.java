@@ -143,4 +143,24 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {
                 Timestamp.from(at),
                 id);
     }
+
+    @Override
+    public void renameTo(long id, String name, Instant at) {
+        jdbcTemplate.update(
+                "UPDATE my_record SET name = ?, updated_at = ? WHERE id = ?",
+                name,
+                Timestamp.from(at),
+                id);
+    }
+
+    /** {@code deleted_at IS NULL} 조건을 걸어 두 번째 요청이 시각을 덮어쓰지 않게 한다. */
+    @Override
+    public int softDelete(long id, Instant at) {
+        return jdbcTemplate.update(
+                "UPDATE my_record SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at"
+                        + " IS NULL",
+                Timestamp.from(at),
+                Timestamp.from(at),
+                id);
+    }
 }

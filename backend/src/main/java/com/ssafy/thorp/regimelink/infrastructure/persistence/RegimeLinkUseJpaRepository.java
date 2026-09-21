@@ -8,4 +8,6 @@ interface RegimeLinkUseJpaRepository extends JpaRepository<RegimeLinkUseJpaEntit
     List<RegimeLinkUseJpaEntity> findByLinkSearchId(Long linkSearchId);
 
     List<RegimeLinkUseJpaEntity> findByLinkId(Long linkId);
+
+    List<RegimeLinkUseJpaEntity> findByOriginRunId(Long originRunId);
 }

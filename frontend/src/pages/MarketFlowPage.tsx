@@ -1,6 +1,7 @@
 import { Activity, ArrowDown, ArrowUpRight, ChartNoAxesCombined, Newspaper, RefreshCw, Waypoints } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
 import { DomesticMarketReference } from '@/components/marketflow/DomesticMarketReference'
@@ -89,8 +90,9 @@ export function MarketFlowPage() {
   }
 
   /**
-   * 011로 넘길 값이다. 사례는 010의 검색 결과에서 고르는 값이라 010이 붙기 전에는 언제나
-   * `null`이고, 따라서 지금은 넘길 값이 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어간다.
+   * 011로 넘길 값이다. 사례는 010의 검색 결과에서 고르는 값이라 이 화면에서는 언제나 `null`이고,
+   * 따라서 넘길 값이 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어가므로(009 FR-018) 이 카드는
+   * 011을 직접 열지 않고 사례를 고르는 010으로 안내한다. 011 진입 버튼은 010 사례 상세에 있다.
    */
   const strategyComparison = buildStrategyComparisonHandoff({ sectorCode, caseId: null })
   const displayedDetail = detail?.fieldId === selectedFieldId ? detail : null
@@ -159,7 +161,7 @@ export function MarketFlowPage() {
           <div className={styles.connectionGrid}>
             <article><ChartNoAxesCombined size={22} aria-hidden="true" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>분야별 경제 흐름과는 별개로, 국내 주가지수의 수준과 변동성을 참고로 둡니다.</p><DomesticMarketReference /></article>
             <article><Newspaper size={22} aria-hidden="true" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식입니다. 무엇을 싣고 어떻게 묶을지는 뉴스 묶음이 정합니다.</p><NewsDigestSection sectorCode={sectorCode} /></article>
-            <article><Waypoints size={22} aria-hidden="true" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type="button" disabled data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden="true" /><small>준비 중</small></button></article>
+            <article><Waypoints size={22} aria-hidden="true" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>사례를 먼저 고릅니다. 가까운 과거 사례를 고른 뒤 그 사례의 상세에서 전략 비교로 이어갈 수 있습니다.</p><Link to="/regime-search" className={styles.connectionLink} data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>과거 사례 고르러 가기 <ArrowUpRight size={17} aria-hidden="true" /></Link></article>
           </div>
         </section>
       </main>
