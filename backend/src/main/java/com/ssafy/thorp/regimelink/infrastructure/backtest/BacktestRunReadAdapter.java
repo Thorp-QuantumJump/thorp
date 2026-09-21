@@ -13,6 +13,7 @@ import com.ssafy.thorp.regimelink.domain.vo.LinkRole;
 import com.ssafy.thorp.result.application.service.PublicResultService;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -76,8 +77,28 @@ public class BacktestRunReadAdapter implements BacktestRunReadPort {
                 run.getPeriod() == null ? null : run.getPeriod().startDate(),
                 run.getPeriod() == null ? null : run.getPeriod().endDate(),
                 plan.effectiveStart(),
+                resultEnd(run, plan),
                 plan.warmupTradingDays() == null ? 0 : plan.warmupTradingDays(),
                 run.getStatus() == RunStatus.COMPLETED);
+    }
+
+    /**
+     * 이 실행의 결과가 실제로 닿는 마지막 거래일.
+     *
+     * <p>취소된 실행은 요청한 기간을 다 돌지 않았으므로 마지막으로 계산한 거래일까지다(004 R-04). 한 거래일도 돌지 않고 취소됐으면 결과가 없어 {@code
+     * null}이다 — 그런 실행은 어느 사후 구간도 덮지 않는다.
+     *
+     * <p>아직 도는 실행은 계획한 끝을 쓴다. 기간 판정이 묻는 것은 "요청한 구간이 사례를 담는가"이고, 결과를 기다리는 일은 링크의 {@code PENDING_RUN}
+     * 이 맡는다.
+     */
+    private static LocalDate resultEnd(BacktestRun run, RunPlan plan) {
+        if (run.getStatus() == RunStatus.CANCELLED) {
+            return run.getProgress() == null ? null : run.getProgress().lastTradingDate();
+        }
+        if (plan.effectiveEnd() != null) {
+            return plan.effectiveEnd();
+        }
+        return run.getPeriod() == null ? null : run.getPeriod().endDate();
     }
 
     private String strategyName(String strategyId) {

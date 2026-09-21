@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -194,14 +195,17 @@ public class AvailabilityService {
                 calendar.mappingVersionAsOf(candidate.endMonth().atEndOfMonth()).orElse(null);
 
         List<AvailabilityResult.RunAvailability> perRun = new ArrayList<>(runs.size());
-        Availability bundle = null;
+        Availability resolved = null;
         for (BundleRunView run : runs) {
             Availability evaluated = evaluateRun(run, window, universe, mappingVersion);
             perRun.add(new AvailabilityResult.RunAvailability(run.publicToken(), evaluated));
-            bundle = evaluated.worseOf(bundle);
+            resolved = evaluated.worseOf(resolved);
         }
-        Availability resolved =
-                bundle == null ? Availability.normal(window.completedTradingDays()) : bundle;
+        if (resolved == null) {
+            // 묶음에는 비교 기준이 반드시 있다(resolveBundle). 비었다면 판정할 대상이 없다는 뜻이고,
+            // 그것을 NORMAL 로 떨어뜨리면 계산할 수 없는 사례가 정상으로 보인다.
+            throw new IllegalStateException("비교 묶음이 비어 있어 판정할 수 없습니다.");
+        }
 
         return new AvailabilityResult.CaseAvailability(
                 new CaseRef(snapshotKey, candidate.endMonth()),
@@ -213,30 +217,41 @@ public class AvailabilityService {
                 !filtered || !resolved.state().excludedByFilter());
     }
 
-    /** research R4 판정 표를 그 순서대로 적용한다. 한 판정에서 걸리면 뒤는 보지 않는다. */
+    /**
+     * research R4 판정 표를 그 순서대로 적용한다. 한 판정에서 걸리면 뒤는 보지 않는다.
+     *
+     * <p><b>단계마다 종목 전부를 보고 다음 단계로 간다.</b> 종목 하나씩 여섯 판정을 몰아 보면 어느 종목이 먼저 오느냐에 따라 사유가 바뀐다 — 미상장 종목과
+     * 대응표에 없는 섹터가 같이 있을 때 앞의 것이 이기므로, 같은 묶음·같은 사례인데 요청에 적힌 종목 순서만 달라도 화면의 설명이 달라진다.
+     */
     private Availability evaluateRun(
             BundleRunView run, PostWindow window, Universe universe, String mappingVersion) {
         LocalDate d0 = window.d0();
 
-        for (BundleRunView.UniverseEntry entry : run.universe()) {
-            // ① 대응표 — 사례 관측 종료월의 버전에 그 섹터가 없으면 이 실행만 걸린다.
-            // 그 시점에 유효한 버전이 없으면(대응표 이력이 그 앞까지 닿지 않으면) 판정을 건너뛴다.
-            // 지금 버전으로 과거를 판정하면 대응표가 바뀐 날 옛 사례가 통째로 사라진다.
-            if (mappingVersion != null
-                    && entry.sectorId() != null
-                    && !calendar.sectorMapped(mappingVersion, entry.sectorId())) {
-                return Availability.insufficient(AvailabilityReason.SECTOR_UNMAPPED);
+        // ① 대응표 — 사례 관측 종료월의 버전에 그 섹터가 없으면 이 실행만 걸린다.
+        // 그 시점에 유효한 버전이 없으면(대응표 이력이 그 앞까지 닿지 않으면) 판정을 건너뛴다.
+        // 지금 버전으로 과거를 판정하면 대응표가 바뀐 날 옛 사례가 통째로 사라진다.
+        if (mappingVersion != null) {
+            for (BundleRunView.UniverseEntry entry : run.universe()) {
+                if (entry.sectorId() != null
+                        && !calendar.sectorMapped(mappingVersion, entry.sectorId())) {
+                    return Availability.insufficient(AvailabilityReason.SECTOR_UNMAPPED);
+                }
             }
+        }
+
+        // ② ETF 이력 — 구간 시작에 거래되지 않는 종목이 있으면 그 사례는 계산 자체가 성립하지 않는다.
+        for (BundleRunView.UniverseEntry entry : run.universe()) {
             InstrumentHistory history = universe.history(entry.instrumentId());
-            // ② ETF 이력 — 구간 시작에 거래되지 않는 종목이 있으면 그 사례는 계산 자체가 성립하지 않는다.
             if (history == null || !history.tradableOn(d0)) {
                 return Availability.insufficient(AvailabilityReason.UNLISTED);
             }
-            // ③ 워밍업 — 상장은 했지만 d0 직전까지 그 전략의 워밍업 거래일을 채우지 못하는 경우다.
+        }
+
+        // ③ 워밍업 — 상장은 했지만 d0 직전까지 그 전략의 워밍업 거래일을 채우지 못하는 경우다.
+        for (BundleRunView.UniverseEntry entry : run.universe()) {
             LocalDate evaluable =
-                    marketMetadata
-                            .evaluationStart(history.listedOn(), run.warmupTradingDays())
-                            .orElse(null);
+                    universe.evaluationStart(
+                            entry.instrumentId(), run.warmupTradingDays(), marketMetadata);
             if (evaluable == null || evaluable.isAfter(d0)) {
                 return Availability.insufficient(AvailabilityReason.WARMUP_SHORT);
             }
@@ -438,7 +453,7 @@ public class AvailabilityService {
                 .map(
                         listedOn ->
                                 new InstrumentHistory(
-                                        sectorId == null ? instrumentId : sectorId,
+                                        sectorId,
                                         instrumentId,
                                         listedOn,
                                         calendar.delistedOn(instrumentId).orElse(null)))
@@ -449,21 +464,66 @@ public class AvailabilityService {
      * 판정에 쓰는 묶음 전체의 입력. 실행을 넘나들며 같은 값을 다시 읽지 않으려고 한 번 모은다.
      *
      * <p>이력을 모르는 종목은 여기 없다 — 그 종목을 쓴 실행은 {@code UNLISTED}가 되므로 조회에 실패하지 않는다.
+     *
+     * <p>{@code instruments}는 만들 때 한 번 정렬해 들고 있고, 워밍업 소진일은 (종목, 워밍업) 조합마다 한 번만 읽는다. 둘 다 사례와 무관한 값이라
+     * 사례 열 개를 훑는 동안 같은 답을 열 번 다시 구할 이유가 없다.
      */
-    private record Universe(
-            Map<String, InstrumentHistory> histories,
-            int maxWarmupTradingDays,
-            String mappingVersion) {
+    private static final class Universe {
+
+        private final Map<String, InstrumentHistory> histories;
+        private final List<InstrumentHistory> sorted;
+        private final Map<String, LocalDate> evaluationStarts = new HashMap<>();
+        private final int maxWarmupTradingDays;
+        private final String mappingVersion;
+
+        private Universe(
+                Map<String, InstrumentHistory> histories,
+                int maxWarmupTradingDays,
+                String mappingVersion) {
+            this.histories = histories;
+            this.sorted =
+                    histories.values().stream()
+                            .sorted(Comparator.comparing(InstrumentHistory::instrumentId))
+                            .toList();
+            this.maxWarmupTradingDays = maxWarmupTradingDays;
+            this.mappingVersion = mappingVersion;
+        }
 
         /** 종목 이력을 {@code instrumentId} 순으로. 필터 정의와 응답이 같은 순서를 보게 한다. */
         List<InstrumentHistory> instruments() {
-            return histories.values().stream()
-                    .sorted(Comparator.comparing(InstrumentHistory::instrumentId))
-                    .toList();
+            return sorted;
+        }
+
+        int maxWarmupTradingDays() {
+            return maxWarmupTradingDays;
         }
 
         InstrumentHistory history(String instrumentId) {
             return histories.get(instrumentId);
+        }
+
+        /**
+         * 상장일 이후 워밍업 거래일을 소진하고 평가가 시작되는 첫 거래일. 모르는 종목이나 달력 부족이면 {@code null}이다.
+         *
+         * <p>산식은 004 {@link MarketMetadataPort#evaluationStart}가 소유한다 — 011이 다시 만들지 않는다.
+         */
+        LocalDate evaluationStart(
+                String instrumentId, int warmupTradingDays, MarketMetadataPort marketMetadata) {
+            InstrumentHistory history = histories.get(instrumentId);
+            if (history == null) {
+                return null;
+            }
+            // 워밍업이 모자란 종목은 답이 null 이고 그것도 답이다. computeIfAbsent 로 두면 null 을
+            // 캐시하지 못해 사례마다 같은 조회를 되풀이한다.
+            String key = instrumentId + "@" + warmupTradingDays;
+            if (!evaluationStarts.containsKey(key)) {
+                evaluationStarts.put(
+                        key,
+                        marketMetadata
+                                .evaluationStart(history.listedOn(), warmupTradingDays)
+                                .orElse(null));
+            }
+            return evaluationStarts.get(key);
         }
 
         /** 실행에 기록이 없으면 지금 열린 대응표 버전을 쓴다. 필터 정의에는 버전 문자열이 반드시 있어야 한다. */

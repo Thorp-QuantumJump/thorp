@@ -13,7 +13,9 @@ import java.util.Objects;
  *
  * @param requestId 공개 토큰의 분석 요청. 005 정리 작업이 지울 수 있어 저장할 때는 {@code ON DELETE SET NULL}이다
  * @param universe 이 실행이 고른 (섹터, 종목) 쌍. 접수 기록이 없는 실행은 비어 있다
+ * @param end 요청한 분석 종료일. 응답의 {@code period.end}로 그대로 나간다
  * @param effectiveStart 워밍업을 소진하고 평가가 시작되는 첫 거래일. {@code OUT_OF_PERIOD} 판정의 기준이다
+ * @param resultEnd 이 실행의 결과가 실제로 닿는 마지막 거래일. 취소된 실행은 요청 종료일보다 앞이고, 한 거래일도 돌지 않았으면 {@code null}이다
  * @param completed 입력 실행이 끝났는가. 아니면 계산은 {@code PENDING_RUN}으로 기다린다(M5)
  */
 public record BundleRunView(
@@ -28,6 +30,7 @@ public record BundleRunView(
         LocalDate start,
         LocalDate end,
         LocalDate effectiveStart,
+        LocalDate resultEnd,
         int warmupTradingDays,
         boolean completed) {
 
@@ -51,15 +54,21 @@ public record BundleRunView(
     }
 
     /**
-     * 이 실행의 분석 기간이 사후 구간 전체를 덮는가.
+     * 이 실행의 결과가 사후 구간 전체를 덮는가.
      *
      * <p>덮지 못하면 {@code OUT_OF_PERIOD}다 — 원천 자료는 충분하므로 사용자가 확인하면 전체 기간으로 다시 계산할 수 있다(Clarifications
      * 09-18 Q1). 평가 시작 전의 구간은 실행이 값을 갖지 않으므로 {@code effectiveStart}로 본다.
+     *
+     * <p><b>끝은 요청 종료일이 아니라 {@link #resultEnd}로 본다.</b> 취소된 실행은 요청한 기간을 다 돌지 않았고, 그 사실을 보지 않으면 결과가
+     * 없는 구간을 "덮는다"고 판정해 계산할 수 없는 사례를 정상으로 보이게 한다.
      */
     public boolean covers(LocalDate windowStart, LocalDate windowEnd) {
-        if (effectiveStart == null || end == null || windowStart == null || windowEnd == null) {
+        if (effectiveStart == null
+                || resultEnd == null
+                || windowStart == null
+                || windowEnd == null) {
             return false;
         }
-        return !effectiveStart.isAfter(windowStart) && !end.isBefore(windowEnd);
+        return !effectiveStart.isAfter(windowStart) && !resultEnd.isBefore(windowEnd);
     }
 }

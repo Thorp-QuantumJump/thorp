@@ -47,6 +47,7 @@ public record RegimeLinkSearch(
         Objects.requireNonNull(ownerUserId, "ownerUserId must not be null");
         Objects.requireNonNull(entryPath, "entryPath must not be null");
         Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        Objects.requireNonNull(baselineMonth, "baselineMonth must not be null");
         Objects.requireNonNull(baseRunId, "baseRunId must not be null");
         Objects.requireNonNull(clientRequestId, "clientRequestId must not be null");
         shownCases = shownCases == null ? List.of() : List.copyOf(shownCases);

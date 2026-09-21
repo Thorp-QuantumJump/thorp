@@ -101,7 +101,11 @@
   `availableRange`·`excludedCount`가 **없다**(`minPostTradingDays`만 남는다). 모든 사례가
   `shownInFiltered=true`이며, 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.
 - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용
-  범위도 200이다(FR-019).
+  범위도 200이다(FR-019). 그때 `availableRange`는 **키를 지우지 않고** 양끝을 `null`로 보낸다 — 키가 통째로
+  없는 경우는 `MARKET_FLOW` 하나이며, 빈 범위에서도 지우면 "필터를 걸었는데 덮는 사례가 없다"와 "필터를 걸지
+  않았다"가 같은 모양이 된다.
+- `bundle.instruments[].sectorId`는 실행이 어느 섹터로 그 종목을 골랐는지 모를 때(접수 기록이 없는 옛 실행)
+  생략된다. 종목에서 섹터를 거꾸로 찾아 채우지 않는다 — 그 실행이 고르지 않은 섹터를 판정에 넣게 된다.
 
 ## 1a. `GET /regime-links/case-window?caseId=`
 

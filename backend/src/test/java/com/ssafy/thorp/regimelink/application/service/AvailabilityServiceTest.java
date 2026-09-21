@@ -227,6 +227,84 @@ class AvailabilityServiceTest {
     }
 
     @Test
+    @DisplayName("취소돼 일찍 끊긴 실행은 그 뒤 구간을 덮지 않는다")
+    void 취소된_실행은_구간을_덮지_않는다() {
+        metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4));
+        searches.holding(
+                FakeRegimeSearches.view(
+                        SNAPSHOT_KEY,
+                        YearMonth.of(2026, 7),
+                        "NEAREST_ONLY",
+                        YearMonth.of(2018, 8)));
+        // 요청 기간은 사례를 덮지만 실제로 돈 것은 사후 구간이 시작되기도 전까지다.
+        BundleRunView cancelled =
+                run(
+                        "9f2c1a7b4e0d83526af1c9d0b7e34512",
+                        LinkRole.BASE,
+                        1L,
+                        List.of(entry("SEMICONDUCTOR", SEMICONDUCTOR)),
+                        LocalDate.of(2010, 1, 4),
+                        LocalDate.of(2025, 12, 30),
+                        LocalDate.of(2018, 8, 31));
+
+        AvailabilityResult result =
+                service(calendar(), cancelled).evaluate(query(EntryPath.STRATEGY_RESULT));
+
+        assertThat(result.cases().get(0).availability().state())
+                .isEqualTo(AvailabilityState.OUT_OF_PERIOD);
+        // 원천 자료는 충분하므로 기본 목록에는 남는다.
+        assertThat(result.cases().get(0).shownInFiltered()).isTrue();
+    }
+
+    @Test
+    @DisplayName("대응표와 이력이 함께 걸리면 종목 순서와 상관없이 대응표가 사유다")
+    void 판정_순서는_종목_순서를_타지_않는다() {
+        metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4))
+                .listed(BIO, LocalDate.of(2020, 1, 2));
+        searches.holding(
+                FakeRegimeSearches.view(
+                        SNAPSHOT_KEY,
+                        YearMonth.of(2026, 7),
+                        "NEAREST_ONLY",
+                        YearMonth.of(2018, 8)));
+        // BIO 는 사례 시점에 아직 상장 전이고, SEMICONDUCTOR 는 그때 대응표에 없다.
+        FakeTradingCalendar calendar = calendar().mapping("MAP-2018", "BIO");
+
+        AvailabilityResult unmappedFirst =
+                service(
+                                calendar,
+                                run(
+                                        "base",
+                                        LinkRole.BASE,
+                                        1L,
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
+                                        LocalDate.of(2010, 1, 4),
+                                        LocalDate.of(2025, 12, 30)))
+                        .evaluate(query(EntryPath.STRATEGY_RESULT));
+        AvailabilityResult unlistedFirst =
+                service(
+                                calendar,
+                                run(
+                                        "base",
+                                        LinkRole.BASE,
+                                        1L,
+                                        List.of(
+                                                entry("BIO", BIO),
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR)),
+                                        LocalDate.of(2010, 1, 4),
+                                        LocalDate.of(2025, 12, 30)))
+                        .evaluate(query(EntryPath.STRATEGY_RESULT));
+
+        // research R4 는 단계 순서를 정했다 — 대응표를 먼저 보므로 종목을 어느 쪽으로 적든 같은 사유다.
+        assertThat(unmappedFirst.cases().get(0).availability().reason())
+                .isEqualTo(AvailabilityReason.SECTOR_UNMAPPED);
+        assertThat(unlistedFirst.cases().get(0).availability().reason())
+                .isEqualTo(AvailabilityReason.SECTOR_UNMAPPED);
+    }
+
+    @Test
     @DisplayName("기존 실행의 분석 기간이 달라도 필터 키는 같다")
     void 필터_키에_실행_기간이_들어가지_않는다() {
         metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4));
@@ -368,6 +446,18 @@ class AvailabilityServiceTest {
             List<BundleRunView.UniverseEntry> universe,
             LocalDate start,
             LocalDate end) {
+        return run(token, role, runId, universe, start, end, end);
+    }
+
+    /** 결과가 요청 종료일보다 앞에서 끊긴 실행(취소된 실행)을 만든다. */
+    private static BundleRunView run(
+            String token,
+            LinkRole role,
+            long runId,
+            List<BundleRunView.UniverseEntry> universe,
+            LocalDate start,
+            LocalDate end,
+            LocalDate resultEnd) {
         return new BundleRunView(
                 token,
                 role,
@@ -380,6 +470,7 @@ class AvailabilityServiceTest {
                 start,
                 end,
                 start,
+                resultEnd,
                 63,
                 true);
     }

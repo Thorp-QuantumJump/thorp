@@ -66,11 +66,27 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
 
     @AfterEach
     void clean() {
-        jdbc.update("DELETE FROM regime_link_use");
-        jdbc.update("DELETE FROM regime_link_result");
-        jdbc.update("DELETE FROM regime_link");
-        jdbc.update("DELETE FROM regime_link_search");
-        jdbc.update("DELETE FROM regime_link_filter");
+        // 이 검사가 만든 것만 지운다. 공용 DB 라 조건 없이 비우면 같은 표를 쓰는 다른 검사의 행까지
+        // 사라지고, 그 실패는 실행 순서에 따라만 드러난다.
+        jdbc.update(
+                "DELETE FROM regime_link_use WHERE link_id IN"
+                        + " (SELECT id FROM regime_link WHERE snapshot_key IN (?, ?))",
+                SNAPSHOT_KEY,
+                EMPTY_KEY);
+        jdbc.update(
+                "DELETE FROM regime_link_result WHERE link_id IN"
+                        + " (SELECT id FROM regime_link WHERE snapshot_key IN (?, ?))",
+                SNAPSHOT_KEY,
+                EMPTY_KEY);
+        jdbc.update(
+                "DELETE FROM regime_link WHERE snapshot_key IN (?, ?)", SNAPSHOT_KEY, EMPTY_KEY);
+        jdbc.update(
+                "DELETE FROM regime_link_search WHERE snapshot_key IN (?, ?)",
+                SNAPSHOT_KEY,
+                EMPTY_KEY);
+        jdbc.update(
+                "DELETE FROM regime_link_filter WHERE definition ->> 'dataVersion' = ?",
+                MarketCatalogSeed.DATA_VERSION);
         jdbc.update("DELETE FROM regime_search_case WHERE snapshot_id >= ?", SNAPSHOT_ID_SEED);
         jdbc.update("DELETE FROM regime_search_snapshot WHERE id >= ?", SNAPSHOT_ID_SEED);
         jdbc.update(
@@ -175,6 +191,19 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.data.cases.length()").value(0))
                 .andExpect(jsonPath("$.data.filter.applied").value(true))
                 .andExpect(jsonPath("$.data.filter.excludedCount").value(0));
+    }
+
+    @Test
+    @DisplayName("필터를 건 응답에는 가용 범위가 늘 있다")
+    void 필터를_걸면_가용_범위를_싣는다() throws Exception {
+        mockMvc.perform(
+                        get("/regime-links/availability")
+                                .param("base", BASE_TOKEN)
+                                .param("snapshotKey", SNAPSHOT_KEY)
+                                .param("entryPath", "STRATEGY_RESULT"))
+                .andExpect(status().isOk())
+                // 덮는 사례가 없어도 키를 지우지 않는다 — 지우면 MARKET_FLOW 응답과 모양이 같아진다.
+                .andExpect(jsonPath("$.data.filter.availableRange").exists());
     }
 
     @Test
