@@ -188,7 +188,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [ ] T066 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)
 - [ ] T067 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다
 - [X] T068 [P] `data/src/data_pipeline/regime/macro/postgres.py`에 010이 쓸 시계열 읽기를 만든다. `regime/macro/source.py`의 `MacroIndicatorSource` 프로토콜을 구현하고 `create_source()` 하나를 내놓는다 — `regime/macro/__init__.py`의 팩터리가 바로 이 모듈 경로로 찾으므로 다른 자리에 두면 010 배치가 구현체를 못 찾는다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다
-- [ ] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
+- [X] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
 - [X] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
 - [X] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
 - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
@@ -283,6 +283,10 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - **T078의 원래 전제는 실제와 달랐다.** "17개 모두 `trading_calendar`가 비어 있어 월 평균 경로가 항상 결측"이라고 적었지만, 두바이유는 한국은행이 월 평균을 이미 내 줘 주기가 월별이고 그대로 통과한다. 2026-09-20 전 구간 수집에서 두바이유·국고채 모두 결측 0건이었다
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
 - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다
+- **T072는 열려 있다.** 2026-09-22 수행 결과는 [verification-2026-09-22.md](verification-2026-09-22.md)에 있고,
+  스물넷 중 스물둘을 확인했다. 남은 둘은 자료가 더 있어야 닫힌다
+  - 수출·수입 원값 대조: 관세청 표본이 1년치뿐이라 전년동월이 없다. 2년치 응답을 표본에 넣으면 시험이 그대로 대조한다
+  - 증분 수집 보존·`N` 밖 개정: 정기 수집을 최소 `N+3`개월 돌려야 개정을 관측할 수 있다. 지금은 전 구간 적재 한 번뿐이다
 
 ---
 
