@@ -264,6 +264,20 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                                 Instant.class,
                                 logId))
                 .isEqualTo(later);
+
+        // 열람 시각은 뒤로 가지 않는다. 판정이 append 의 GREATEST 한 곳뿐이라 EXCLUDED 로 바꿔 써도
+        // 위 단언은 그대로 통과한다 — 되돌아가지 않는다는 것을 따로 본다.
+        regimeLogs.append(
+                owner, snapshotKey, null, EntryPath.MARKET_FLOW, BaselineOrigin.T_G, SAVED_AT);
+        entityManager.flush();
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT viewed_at FROM regime_search_log WHERE id = ?",
+                                Instant.class,
+                                logId))
+                .as("늦게 도착한 옛 요청이 열람 시각을 과거로 되돌리지 않는다")
+                .isEqualTo(later);
     }
 
     private static MyRecord analysisOf(long owner, long runId, boolean isCopy) {
