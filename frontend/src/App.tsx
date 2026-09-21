@@ -56,9 +56,10 @@ const LoginPage = lazy(() =>
   })),
 )
 
-const MyRecordsEntryPage = lazy(() =>
-  import('@/pages/MyRecordsEntryPage').then((module) => ({
-    default: module.MyRecordsEntryPage,
+// 내 기록(spec 006). 로그인 사용자만 보는 목록이며 보호 경로 안에 둔다.
+const MyRecordsPage = lazy(() =>
+  import('@/pages/MyRecordsPage').then((module) => ({
+    default: module.MyRecordsPage,
   })),
 )
 
@@ -157,7 +158,7 @@ function AnimatedRoutes() {
               path="/records/*"
               element={
                 <ProtectedRoute>
-                  <MyRecordsEntryPage />
+                  <MyRecordsPage />
                 </ProtectedRoute>
               }
             />

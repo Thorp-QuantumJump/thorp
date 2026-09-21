@@ -1,12 +1,16 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
+import { recordRegimeSearch } from '@/api/myRecords'
+import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch, getRegimeSearchById } from '@/api/regime'
+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
+import { authenticatedUser } from '@/test/authFixtures'
 import { regimeDetail, regimeResult } from '@/test/regimeFixtures'
-import { renderWithRouter } from '@/test/renderWithRouter'
 import { RegimeSearchPage } from './RegimeSearchPage'
 
-vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
+vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeSearchById: vi.fn(), getRegimeCaseDetail: vi.fn() }))
+vi.mock('@/api/myRecords', () => ({ recordRegimeSearch: vi.fn() }))
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => null }))
 
 const baseline = {
@@ -14,8 +18,21 @@ const baseline = {
   composite: '2026-05', range: { earliest: '1995-04', latest: '2026-07' }, note: '전환 안내',
 }
 
-async function search() {
-  renderWithRouter(<RegimeSearchPage />)
+/** 010 화면은 주소(`?searchId=`)와 위치 state 를 읽으므로 라우터 안에서 그린다. 로그인 문맥은 주면 쓰고 없으면 비로그인이다. */
+function renderPage(options: { entries?: string[]; user?: AuthContextValue['user'] } = {}) {
+  const auth: AuthContextValue = {
+    status: options.user ? 'authenticated' : 'anonymous', user: options.user ?? null,
+    login: vi.fn(), logout: vi.fn(), recheck: vi.fn(),
+  }
+  return render(
+    <MemoryRouter initialEntries={options.entries ?? ['/regime-search']}>
+      <AuthContext.Provider value={auth}><RegimeSearchPage /></AuthContext.Provider>
+    </MemoryRouter>,
+  )
+}
+
+async function search(options: Parameters<typeof renderPage>[0] = {}) {
+  renderPage(options)
   fireEvent.change(await screen.findByLabelText('경제 분야'), { target: { value: 'field-1' } })
   fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
 }
@@ -24,6 +41,8 @@ describe('경제환경 검색 화면', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(getRegimeBaselineMonths).mockResolvedValue(baseline)
+    // 로그인 검사가 기록 요청을 타므로 기본은 성공으로 둔다. 실패를 보는 검사만 따로 바꾼다.
+    vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
   })
 
   it('API 분야 목록으로 검색하고 다섯 표시와 자료 기준 시점을 보인다', async () => {
@@ -197,5 +216,76 @@ describe('경제환경 검색 화면', () => {
     expect(url.pathname).toBe('/regime-link/start')
     expect(url.searchParams.get('case')).toBe('search-1~2012-03')
     expect(url.searchParams.has('sector')).toBe(false)
+  })
+
+  it('?searchId= 로 열면 저장된 판을 고정 조회하고 폼 검색 API 는 부르지 않는다(006 R17)', async () => {
+    vi.mocked(getRegimeSearchById).mockResolvedValue(regimeResult({ searchId: 'saved-1' }))
+    renderPage({ entries: ['/regime-search?searchId=saved-1'], user: authenticatedUser })
+    expect(await screen.findByText('2012-03')).toBeTruthy()
+    expect(vi.mocked(getRegimeSearchById)).toHaveBeenCalledWith('saved-1', 3, expect.any(AbortSignal))
+    expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+    // 저장된 판을 여는 것은 열람이다. 진입 경로 없이 기록을 보내면 원래 기록 옆에 다른 경로의 기록이 하나 더 생긴다.
+    expect(vi.mocked(recordRegimeSearch)).not.toHaveBeenCalled()
+    expect(screen.getByRole('status', { name: '시험 분야 2026-07 검색 결과: 저장된 검색' })).toBeTruthy()
+
+    // 폼으로 새로 검색하면 고정 조회를 풀고 최신 판을 연다.
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({ searchId: 'fresh-1' }))
+    fireEvent.change(await screen.findByLabelText('경제 분야'), { target: { value: 'field-1' } })
+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByRole('status', { name: '시험 분야 2026-07 검색 결과: 저장된 검색' })).toBeNull())
+    // 고정 조회를 푼 뒤의 검색은 정상적으로 남는다. 저장된 판(saved-1)은 여전히 남지 않는다 — 파라미터가 지워지는
+    // 커밋에서 result 가 아직 옛 판이면 옛 searchId 가 MARKET_FLOW 로 나갈 수 있어, 횟수 1 이 그것을 잠근다.
+    await waitFor(() =>
+      expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledWith('fresh-1', 'MARKET_FLOW', 'T_G'),
+    )
+    expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledTimes(1)
+  })
+
+  it('로그인 사용자의 검색은 진입 경로·기준월 근거와 함께 한 번만 내 기록에 남긴다(010 FR-032)', async () => {
+    // 더 보기가 보이려면 저장된 사례가 표시 수보다 많아야 한다(첫 검사와 같은 모양).
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({
+      baselineOrigin: 'T_G',
+      counts: { evaluated: 30, eligible: 20, stored: 10, displayed: 1 },
+      displayLimitNote: '가까운 순서로 10개까지 보입니다.',
+    }))
+    vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
+    await search({ user: authenticatedUser })
+    await screen.findByText('2012-03')
+    await waitFor(() => expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledWith('search-1', 'MARKET_FLOW', 'T_G'))
+    // 더 보기로 같은 검색을 다시 받아도 기록은 한 번이다.
+    fireEvent.click(screen.getByRole('button', { name: '더 보기' }))
+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledTimes(1)
+  })
+
+  it('전략 결과에서 들어왔으면 그 경로로 남기고, 비로그인은 남기지 않는다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())
+    vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
+    const { unmount } = render(
+      <MemoryRouter initialEntries={[{ pathname: '/regime-search', state: { entryPath: 'STRATEGY_RESULT' } }]}>
+        <AuthContext.Provider value={{ status: 'authenticated', user: authenticatedUser, login: vi.fn(), logout: vi.fn(), recheck: vi.fn() }}>
+          <RegimeSearchPage />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+    fireEvent.change(await screen.findByLabelText('경제 분야'), { target: { value: 'field-1' } })
+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))
+    await waitFor(() => expect(vi.mocked(recordRegimeSearch)).toHaveBeenCalledWith('search-1', 'STRATEGY_RESULT', 'T_G'))
+    unmount()
+
+    vi.mocked(recordRegimeSearch).mockClear()
+    await search()
+    await screen.findByText('2012-03')
+    expect(vi.mocked(recordRegimeSearch)).not.toHaveBeenCalled()
+  })
+
+  it('기록에 실패해도 검색 결과는 그대로이고 한 줄만 덧붙인다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())
+    vi.mocked(recordRegimeSearch).mockRejectedValue(new Error('network'))
+    await search({ user: authenticatedUser })
+    expect(await screen.findByText('2012-03')).toBeTruthy()
+    expect(await screen.findByRole('status', { name: '시험 분야 2026-07 검색 결과: 내 기록' })).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })
