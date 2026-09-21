@@ -759,3 +759,80 @@ def test_a_published_run_keeps_its_successful_attempt(
         ).one()
     assert status == "SUCCEEDED"
     assert hold_reason is None
+
+
+def test_a_hard_publish_failure_still_records_what_arrived(
+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch
+) -> None:
+    """발행이 보류가 아니라 **터져서** 죽어도 지표별 기록은 남는다 (FR-011).
+
+    발행기가 시도 행을 FAILED 로 적어 주므로 실행이 실패했다는 사실은 남지만, 그것만으로는
+    무엇을 받았고 무엇이 실패했는지 알 수 없다. 다음 실행에서 무엇을 다시 받아야 하는지를
+    답하는 것은 지표별 기록이다.
+    """
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    def explode(*args: object, **kwargs: object) -> int:
+        raise RuntimeError("파일 봉인이 터졌다")
+
+    monkeypatch.setattr(ingest.publish, "publish_atomically", explode)
+
+    with pytest.raises(RuntimeError, match="파일 봉인이 터졌다"):
+        ingest.run(
+            postgres_engine,
+            indicators,
+            fetcher=StubFetcher(body),
+            data_root=tmp_path,
+            mode="initial",
+            today=date(2026, 8, 15),
+        )
+
+    with postgres_engine.begin() as connection:
+        recorded = connection.execute(
+            text(
+                "SELECT count(*) FROM macro_collection_item_status s"
+                " JOIN macro_collection_attempt a ON a.id = s.attempt_id"
+            )
+        ).scalar_one()
+    assert recorded == len(indicators), "발행이 터지면서 지표별 기록이 통째로 사라졌다"
+
+
+def test_a_hard_publish_failure_is_not_relabelled_as_a_hold(
+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch
+) -> None:
+    """터진 실행을 보류로 적지 않는다. 보류는 우리가 막은 것이고 실패는 우리가 죽은 것이다."""
+    from pathlib import Path as _Path
+
+    body = (
+        _Path(__file__).parent / "fixtures" / "macro" / "ecos" / "dubai_crude_monthly.json"
+    ).read_text(encoding="utf-8")
+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)
+    _prepare_registry(postgres_engine, indicators)
+
+    def explode(*args: object, **kwargs: object) -> int:
+        raise RuntimeError("파일 봉인이 터졌다")
+
+    monkeypatch.setattr(ingest.publish, "publish_atomically", explode)
+
+    with pytest.raises(RuntimeError):
+        ingest.run(
+            postgres_engine,
+            indicators,
+            fetcher=StubFetcher(body),
+            data_root=tmp_path,
+            mode="initial",
+            today=date(2026, 8, 15),
+        )
+
+    with postgres_engine.begin() as connection:
+        status, hold_reason = connection.execute(
+            text("SELECT status, hold_reason FROM macro_collection_attempt")
+        ).one()
+    assert status == "FAILED"
+    assert hold_reason is None
