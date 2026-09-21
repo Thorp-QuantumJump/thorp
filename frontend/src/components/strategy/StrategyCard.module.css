@@ -79,6 +79,21 @@
   color: var(--thorp-copy);
 }
 
+/*
+  고른 뒤에 막힌 항목. 최소 평가 기간을 바꾸면 이런 상태가 된다. **고른 사실을 지우지 않는다** —
+  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 오른쪽 단이 무엇을 말하고 있는지도 흐려진다.
+  막혔다는 것은 점선 테두리와 사유 문장이 맡는다.
+*/
+.card[data-selected='true'][data-selectable='false'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+.card[data-selected='true'][data-selectable='false'] .indicator {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+}
+
 .name {
   color: var(--thorp-foreground);
   font-size: 0.88rem;
