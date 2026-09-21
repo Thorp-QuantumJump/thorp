@@ -4,11 +4,14 @@ import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;
 import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
+import com.ssafy.thorp.myrecord.application.service.MyRecordCommandService;
 import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;
 import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
 import com.ssafy.thorp.myrecord.domain.model.RecordStatus;
 import com.ssafy.thorp.myrecord.presentation.request.RecordRegimeSearchRequest;
+import com.ssafy.thorp.myrecord.presentation.request.RenameMyRecordRequest;
+import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;
 import jakarta.validation.Valid;
@@ -18,7 +21,9 @@ import java.util.Set;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,14 +45,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class MyRecordController {
 
     private final MyRecordQueryService queryService;
+    private final MyRecordCommandService commandService;
     private final MyRecordRegistrar registrar;
     private final CurrentRequester currentRequester;
 
     public MyRecordController(
             MyRecordQueryService queryService,
+            MyRecordCommandService commandService,
             MyRecordRegistrar registrar,
             CurrentRequester currentRequester) {
         this.queryService = queryService;
+        this.commandService = commandService;
         this.registrar = registrar;
         this.currentRequester = currentRequester;
     }
@@ -102,6 +110,39 @@ public class MyRecordController {
                         ApiResponse.ok(
                                 MyRecordListResponse.Item.from(
                                         queryService.item(ownerId, outcome.recordId()))));
+    }
+
+    /**
+     * 이름 변경(FR-017). <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다.
+     *
+     * <p>{@code name} 외의 키는 무시하지 않고 400이다({@link RenameMyRecordRequest}). 응답은 갱신된 상세이며 {@code GET}과
+     * 같은 본문이다 — 화면이 바뀐 값을 다시 읽으려고 한 번 더 부르지 않아도 된다.
+     */
+    @PatchMapping("/{recordId}")
+    public ResponseEntity<ApiResponse<MyRecordDetailResponse>> rename(
+            @PathVariable String recordId, @Valid @RequestBody RenameMyRecordRequest request) {
+        long ownerId = currentRequester.requireRequesterId();
+        commandService.rename(ownerId, recordId, request.name());
+        // 이름을 바꾼 항목을 돌려줄 뿐이라 '다시 보기'로 세지 않는다 — current(...)는 열람 표시를
+        // 남기지 않는다.
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        MyRecordDetailResponse.from(queryService.current(ownerId, recordId))));
+    }
+
+    /**
+     * 삭제(FR-017). <b>개인 기록만 사라지고 공용 계산 결과는 남는다</b>(research R6).
+     *
+     * <p>확인은 화면이 받는다 — 서버는 이 요청을 받으면 바로 수행한다. 되돌리는 경로는 없다. 이미 지운 항목은 없는 항목과 같은 404다.
+     */
+    @DeleteMapping("/{recordId}")
+    public ResponseEntity<ApiResponse<DeletedMyRecordResponse>> delete(
+            @PathVariable String recordId) {
+        long ownerId = currentRequester.requireRequesterId();
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        new DeletedMyRecordResponse(
+                                recordId, commandService.delete(ownerId, recordId))));
     }
 
     /** 상세. 남의 것·없는 것·지운 것은 모두 404 {@code RESOURCE_NOT_FOUND}다. */

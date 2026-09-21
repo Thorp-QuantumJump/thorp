@@ -280,6 +280,50 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                 .isEqualTo(later);
     }
 
+    @Test
+    @DisplayName("두 번째 삭제는 바꾼 행이 없고 처음 지운 시각이 남는다")
+    void 두_번째_삭제는_아무것도_바꾸지_않는다() {
+        long owner = newUser();
+        MyRecord saved = records.save(analysisOf(owner, newRun(), false));
+        entityManager.flush();
+        Instant first = SAVED_AT.plusSeconds(60);
+
+        assertThat(records.softDelete(saved.id(), first)).isEqualTo(1);
+
+        // 서비스의 "이미 지웠나" 검사만으로는 동시에 들어온 두 요청이 갈리지 않는다 — 각자 자기
+        // 스냅샷을 읽어 둘 다 살아 있다고 본다. 늦은 쪽을 막는 것은 이 조건뿐이고, 여기서 0 이
+        // 나와야 부른 쪽이 404 로 답한다.
+        assertThat(records.softDelete(saved.id(), first.plusSeconds(3600)))
+                .as("두 번째 요청이 1 을 받으면 지우지도 않고 지웠다고 답하게 된다")
+                .isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT deleted_at FROM my_record WHERE id = ?",
+                                Instant.class,
+                                saved.id()))
+                .as("처음 지운 시각이 덮이지 않는다")
+                .isEqualTo(first);
+    }
+
+    @Test
+    @DisplayName("이름 변경은 이름과 갱신 시각만 건드린다")
+    void 이름만_바꾼다() {
+        long owner = newUser();
+        MyRecord saved = records.save(analysisOf(owner, newRun(), false));
+        entityManager.flush();
+
+        records.renameTo(saved.id(), "바꾼 이름", SAVED_AT.plusSeconds(120));
+        // JDBC 로 쓴 것을 JPA 로 읽으므로 1차 캐시를 비운다 — 비우지 않으면 옛 값이 돌아와
+        // 이 검사가 갱신을 보지 못한다.
+        entityManager.clear();
+
+        MyRecord found = records.findByRecordId(saved.recordId().value()).orElseThrow();
+        assertThat(found.name().value()).isEqualTo("바꾼 이름");
+        assertThat(found.savedAt()).isEqualTo(saved.savedAt());
+        assertThat(found.deletedAt()).isNull();
+        assertThat(found.lastViewedAt()).isNull();
+    }
+
     private static MyRecord analysisOf(long owner, long runId, boolean isCopy) {
         return new MyRecord(
                 null,
