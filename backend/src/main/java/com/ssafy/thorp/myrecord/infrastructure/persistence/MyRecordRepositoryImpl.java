@@ -76,32 +76,6 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {
         return jpaRepository.countActiveByOwnerAndKind(ownerId, kind);
     }
 
-    /**
-     * 취소하지 않은 것 중 최신, 없으면 취소한 것 중 최신.
-     *
-     * <p><b>단건 요청만 본다.</b> 동일 버전 키에는 실행 유형이 들어가지 않으므로(004 {@code DedupKeyCalculator} — 일부러 뺐다) 같은
-     * 사용자의 탐색 후보나 경제환경 파생 실행이 조건만 같으면 이 실행에 합류한다. 유형을 가리지 않으면 그중 최신이 골라져, 단건 분석 기록이 탐색 후보 요청의 취소
-     * 상태와 공개 토큰을 따라간다. 항목을 만드는 쪽도 {@code SINGLE} 만 만들므로(등록기) 읽는 쪽이 같은 조건을 건다.
-     *
-     * <p>{@code backtest_request} 는 004 소유라 엔티티를 매핑하지 않고 SQL 로 읽는다. 006 이 필요한 것은 식별자 하나다.
-     */
-    @Override
-    public Optional<Long> findViewableRequestId(long ownerId, long runId) {
-        return jdbcTemplate
-                .query(
-                        """
-                        SELECT id FROM backtest_request
-                        WHERE requester_id = ? AND run_id = ? AND execution_type = 'SINGLE'
-                        ORDER BY (cancelled_at IS NOT NULL), created_at DESC, id DESC
-                        LIMIT 1
-                        """,
-                        (rs, rowNum) -> rs.getLong("id"),
-                        ownerId,
-                        runId)
-                .stream()
-                .findFirst();
-    }
-
     @Override
     public MyRecordPage findPage(long ownerId, MyRecordListQuery query) {
         MyRecordViewQuery q = new MyRecordViewQuery(ownerId).page(query);
@@ -122,9 +96,9 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {
     }
 
     /**
-     * 원본의 JSONB 를 원문으로 읽는다. 004·007 엔티티를 거치지 않는 이유는 {@code findViewableRequestId}와 같다 — 006이 필요한 것은
-     * 두 컬럼이다. 실패한 실행에도 {@code backtest_run.versions}는 있다(접수가 확정한 값). {@code
-     * backtest_result.versions}는 워커 보고라 쓰지 않는다.
+     * 원본의 JSONB 를 원문으로 읽는다. 004·007 엔티티를 매핑하지 않고 SQL 로 읽는다 — 표의 소유자는 그쪽이고 006이 필요한 것은 두 컬럼이다. 실패한
+     * 실행에도 {@code backtest_run.versions}는 있다(접수가 확정한 값). {@code backtest_result.versions}는 워커 보고라
+     * 쓰지 않는다.
      */
     @Override
     public Optional<SourceVersions> findSourceVersions(long id, RecordKind kind) {

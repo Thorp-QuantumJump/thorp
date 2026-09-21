@@ -6,7 +6,6 @@ import com.ssafy.thorp.myrecord.application.port.SectorMapEntries;
 import com.ssafy.thorp.myrecord.application.result.MappingDrift;
 import com.ssafy.thorp.myrecord.application.service.MyRecordMappingDriftChecker;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +38,18 @@ class MappingDriftCheckerTest {
                 checker(current).check(SAVED, List.of("SEMICONDUCTOR", "BATTERY"));
 
         assertThat(drift).hasValue(MappingDrift.none());
+    }
+
+    @Test
+    @DisplayName("저장 버전이 곧 열린 버전이면 항목을 견주지 않고 바뀌지 않은 것이다")
+    void 같은_버전이면_변경이_아니다() {
+        MyRecordMappingDriftChecker checker =
+                new MyRecordMappingDriftChecker(
+                        version ->
+                                Optional.of(
+                                        new SectorMapEntries.Versions(true, List.of(), List.of())));
+
+        assertThat(checker.check(SAVED, List.of("BATTERY"))).hasValue(MappingDrift.none());
     }
 
     @Test
@@ -76,28 +87,24 @@ class MappingDriftCheckerTest {
     }
 
     @Test
-    @DisplayName("저장 당시 버전을 모르거나 그 버전 행이 없으면 판정하지 않는다 — '안 바뀜'으로 답하지 않는다")
+    @DisplayName("근거가 없으면 판정하지 않는다 — 저장 버전 없음·버전 행 없음·섹터 없음·저장 버전에 없는 섹터만 있음")
     void 근거가_없으면_판정하지_않는다() {
         MyRecordMappingDriftChecker checker = checker(SAVED_ENTRIES);
 
         assertThat(checker.check(null, List.of("BATTERY"))).isEmpty();
         assertThat(checker.check("SEM-없음", List.of("BATTERY"))).isEmpty();
         assertThat(checker.check(SAVED, List.of())).isEmpty();
+        // 저장 버전에 없는 섹터만 있으면 견준 것이 없다. "안 바뀜"이 아니다.
+        assertThat(checker.check(SAVED, List.of("BANK"))).isEmpty();
     }
 
     private static MyRecordMappingDriftChecker checker(List<SectorMapEntries.Entry> current) {
-        Map<String, List<SectorMapEntries.Entry>> versions = Map.of(SAVED, SAVED_ENTRIES);
         return new MyRecordMappingDriftChecker(
-                new SectorMapEntries() {
-                    @Override
-                    public Optional<List<Entry>> entriesOf(String mapVersion) {
-                        return Optional.ofNullable(versions.get(mapVersion));
-                    }
-
-                    @Override
-                    public Optional<List<Entry>> currentEntries() {
-                        return Optional.of(current);
-                    }
-                });
+                version ->
+                        SAVED.equals(version)
+                                ? Optional.of(
+                                        new SectorMapEntries.Versions(
+                                                false, SAVED_ENTRIES, current))
+                                : Optional.empty());
     }
 }
