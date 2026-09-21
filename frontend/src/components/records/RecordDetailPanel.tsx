@@ -61,6 +61,9 @@ export function RecordDetailPanel({
   const [state, setState] = useState<State>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  // deps 에 넣지 않는다. 호출자가 인라인 함수를 넘기면 렌더마다 effect 가 다시 돌아 상세를 끝없이 받는다.
+  const onLoadedRef = useRef(onLoaded)
+  onLoadedRef.current = onLoaded
   const titleId = `${id}-title`
 
   useEffect(() => {
@@ -75,7 +78,7 @@ export function RecordDetailPanel({
       (detail) => {
         if (!active) return
         setState({ status: 'loaded', detail })
-        onLoaded?.(detail)
+        onLoadedRef.current?.(detail)
       },
       (error: unknown) => {
         if (!active) return
@@ -92,7 +95,7 @@ export function RecordDetailPanel({
       active = false
       controller.abort()
     }
-  }, [recordId, attempt, onLoaded])
+  }, [recordId, attempt])
 
   return (
     <section

@@ -217,6 +217,20 @@ describe('MyRecordsPage', () => {
     expect(screen.queryByRole('heading', { name: '전략 설정 화면' })).toBeNull()
   })
 
+  it('펼치지 않고 눌러 열 수 없다는 판정을 받으면 문장을 보이고 버튼을 거둔다 — 같은 답을 다시 받지 않는다', async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })
+    apiMocks.fetchMyRecord.mockResolvedValue(unavailableDetail)
+
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain('열 수 없습니다')
+    expect(screen.queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()
+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledTimes(1)
+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()
+  })
+
   it('상세가 열 수 없다고 판정한 기록은 자세히를 열면 버튼이 사라지고, 열려 있던 상세는 다시 받지 않는다', async () => {
     const user = userEvent.setup()
     apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })

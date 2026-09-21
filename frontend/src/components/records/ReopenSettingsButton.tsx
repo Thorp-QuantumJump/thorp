@@ -23,7 +23,7 @@ const DETAIL_FAILED = '기록의 저장 조건을 불러오지 못해 설정 화
  * `failed`는 문장, `canceled`(화면을 떠남)는 아무것도 없다. 화면을 떠나면 요청을 끊는다.
  *
  * <p>서버가 열 수 없다고 판정한 기록(`reopenSettings.available === false`)에는 이 버튼을 두지 않는다 — 그 판정은
- * 상세를 받아야 알 수 있어, 목록 행에서는 상세를 아직 모르면 버튼을 두고 눌렀을 때 판정 결과를 그대로 보인다.
+ * 상세를 받아야 알 수 있어, 목록 행에서는 상세를 아직 모르면 버튼을 두고 눌렀을 때 판정 결과를 보인 뒤 버튼을 거둔다.
  */
 export function ReopenSettingsButton({
   recordId,
@@ -36,11 +36,15 @@ export function ReopenSettingsButton({
   const navigate = useNavigate()
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  // 눌러서 직접 받아 온 상세. 열 수 없다는 판정을 기억해 버튼을 거두고, 다시 눌러도 같은 답을 다시 받지 않는다.
+  const [learned, setLearned] = useState<MyRecordDetail | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => () => controllerRef.current?.abort(), [])
 
-  if (detail && detail.reopenSettings?.available === false) return null
+  const known = detail ?? learned
+  // 버튼만 거둔다. 눌러서 알게 된 경우에는 "열 수 없다" 문장은 남아야 왜 버튼이 사라졌는지 읽힌다.
+  const unavailable = known?.reopenSettings?.available === false
 
   const move = async () => {
     if (sending) return
@@ -49,10 +53,11 @@ export function ReopenSettingsButton({
     setSending(true)
     setNotice(null)
 
-    let loaded = detail
+    let loaded = known
     if (!loaded) {
       try {
         loaded = await fetchMyRecord(recordId, controller.signal)
+        setLearned(loaded)
       } catch {
         if (controller.signal.aborted) return
         setSending(false)
@@ -69,9 +74,11 @@ export function ReopenSettingsButton({
 
   return (
     <>
-      <Button type="button" variant="outline" disabled={sending} onClick={() => void move()}>
-        설정 바꿔 비교
-      </Button>
+      {unavailable ? null : (
+        <Button type="button" variant="outline" disabled={sending} onClick={() => void move()}>
+          설정 바꿔 비교
+        </Button>
+      )}
       {notice ? (
         <div className={styles.alert} role={notice.status === 'failed' ? 'alert' : 'status'}>
           <p>{notice.message}</p>
