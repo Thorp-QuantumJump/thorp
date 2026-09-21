@@ -95,6 +95,10 @@ thorp:
   regime:
     macro:
       source: fixture
+  # 시장 흐름(spec 009)이 지표를 어디서 읽는가. 008 스냅샷이 기본이다 — 예시 자료는 명시적으로
+  # 고를 때만 들어오고(T064), 운영에서 고르면 MarketFlowExampleDataGuard 가 기동을 막는다.
+  marketflow:
+    indicator-source: macro
   learning:
     # 배우기 관리 계정 허용 목록(spec 013 research R5). 쉼표로 구분한 사용자 ID(users.id)다.
     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy

@@ -1,5 +1,6 @@
 package com.ssafy.thorp.marketflow.infrastructure.example;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -16,9 +17,14 @@ import org.springframework.core.env.Profiles;
  * <p><b>끄는 길을 두지 않는다.</b> 속성으로 켜고 끌 수 있게 하면 배포가 급할 때 그 속성이 켜지고, 켜진 채로 잊힌다. 운영에서 예시 자료를 쓸 이유는 없으므로
  * 선택지를 만들지 않는다.
  *
- * <p>이 가드는 {@code marketflow} 의 지표 조회가 008 스냅샷을 읽도록 바뀌면(T064) 필요 없어지고, 예시 어댑터와 함께 사라진다(T071).
+ * <p><b>예시 대역을 고른 경우에만 올라온다</b>(T064). 008 스냅샷을 읽는 것이 기본이 된 뒤로는 운영이 이 자리에 오지 않으므로, 가드를 무조건 세우면 멀쩡한
+ * 운영 기동까지 막는다. 그렇다고 지우면 {@code thorp.marketflow.indicator-source=example} 이 운영에 잘못 걸렸을 때 지어낸 값이 그대로
+ * 화면에 나간다 — 그 경우에만 막는다.
+ *
+ * <p>예시 어댑터가 사라지면(T071) 이 가드도 함께 사라진다.
  */
 @Configuration
+@ConditionalOnProperty(name = "thorp.marketflow.indicator-source", havingValue = "example")
 public class MarketFlowExampleDataGuard {
 
     private static final String PROD_PROFILE = "prod";
