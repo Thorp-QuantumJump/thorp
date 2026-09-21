@@ -1,6 +1,7 @@
 package com.ssafy.thorp.regimelink.application.port;
 
 import com.ssafy.thorp.regimelink.domain.vo.LinkRole;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +18,9 @@ import java.util.Objects;
  * @param effectiveStart 워밍업을 소진하고 평가가 시작되는 첫 거래일. {@code OUT_OF_PERIOD} 판정의 기준이다
  * @param resultEnd 이 실행의 결과가 실제로 닿는 마지막 거래일. 취소된 실행은 요청 종료일보다 앞이고, 한 거래일도 돌지 않았으면 {@code null}이다
  * @param completed 입력 실행이 끝났는가. 아니면 계산은 {@code PENDING_RUN}으로 기다린다(M5)
+ * @param initialCash 시작 금액. 비교 묶음 조건 대조(T093)와 {@code FRESH_CASH} 기준값이다
+ * @param costProfileVersion 비용 조건 버전. 조건 대조에만 쓰고 값은 004 등록표가 소유한다
+ * @param dataVersion 이 실행에 고정된 자료 버전. 조건 대조와 작업 메시지 {@code marketData}에 쓰인다
  */
 public record BundleRunView(
         String publicToken,
@@ -26,6 +30,9 @@ public record BundleRunView(
         String strategyId,
         String strategyName,
         String mappingVersion,
+        BigDecimal initialCash,
+        String costProfileVersion,
+        String dataVersion,
         List<UniverseEntry> universe,
         LocalDate start,
         LocalDate end,

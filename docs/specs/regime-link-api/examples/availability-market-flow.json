@@ -23,7 +23,9 @@
             "end": "2012-12-28",
             "effectiveStart": "2012-03-02"
           },
-          "warmupTradingDays": 63
+          "warmupTradingDays": 63,
+          "costProfileVersion": "KR-ETF-2026-09",
+          "dataVersion": "KRX-2026-09-09"
         }
       ],
       "instruments": [

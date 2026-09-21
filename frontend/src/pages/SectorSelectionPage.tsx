@@ -73,7 +73,7 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
    */
   const [handoffBlocked, setHandoffBlocked] = useState(false)
 
-  // 006이 제안을 소유하는 경우(목록에서 사라진 섹터)와 보관된 값 자체를 쓸 수 없던 경우를 나눈다.
+  // 006이 제안 문장을 정한 경우(목록에서 사라진 섹터)와 보관된 값 자체를 쓸 수 없던 경우를 나눈다.
   const missingCount = selection.dropped.filter((item) => item.reason === 'notInCatalog').length
   const unusableCount = selection.dropped.length - missingCount
 
@@ -149,7 +149,7 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
 
       {/*
         보관해 둔 값을 그대로 쓰지 못한 경우다. 조용히 넘어가면 사용자가 무엇을 잃었는지 알 수
-        없다(원칙 VI). 무엇을 제안할지는 006 FR-008이 소유하므로 여기서 정하지 않는다.
+        없다(원칙 VI). 무엇을 제안할지는 006이 정했다(FR-008) — 아래 문장이 그것이다.
       */}
       {selection.restoreProblem !== null ? (
         <p className={styles.restoreNotice} role="status">
@@ -160,9 +160,16 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
         까닭이 다르면 다른 문장으로 알린다. 셋을 "목록에 없어 빠졌다" 한 문장으로 합치면 목록에
         멀쩡히 있는 섹터를 두고 없다고 말하게 된다.
       */}
+      {/*
+        사라진 섹터의 대체 제안은 006이 정했다(FR-008, research R4): 대체 섹터를 자동으로 고르지 않고 사용자가
+        아래 목록에서 직접 고르게 한다. 이 화면은 진입 경로를 모르므로("기록에서 왔다" vs "앞선 선택을 복원했다")
+        앞문장은 두 경로에 다 참인 말로 두고, 뒷문장이 006의 제안이다. "저장 당시"·"대응표"는 기록에서 온 사람에게만
+        참인 말이라 쓰지 않는다.
+      */}
       {missingCount > 0 ? (
         <p className={styles.restoreNotice} role="status">
-          이전에 골랐던 섹터 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다.
+          이전에 골랐던 섹터 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다. 아래 목록에서 대체 섹터를
+          직접 골라 주세요.
         </p>
       ) : null}
       {unusableCount > 0 ? (

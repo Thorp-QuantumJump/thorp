@@ -49,15 +49,21 @@ export function RecordDetailPanel({
   recordId,
   labels,
   onClose,
+  onLoaded,
 }: {
   id: string
   recordId: string
   labels: RecordLabels
   onClose: () => void
+  /** 상세를 받으면 행에 알린다 — 행의 '설정 바꿔 비교'가 다시 받지 않게 */
+  onLoaded?: (detail: MyRecordDetail) => void
 }) {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  // deps 에 넣지 않는다. 호출자가 인라인 함수를 넘기면 렌더마다 effect 가 다시 돌아 상세를 끝없이 받는다.
+  const onLoadedRef = useRef(onLoaded)
+  onLoadedRef.current = onLoaded
   const titleId = `${id}-title`
 
   useEffect(() => {
@@ -70,7 +76,9 @@ export function RecordDetailPanel({
     setState({ status: 'loading' })
     fetchMyRecord(recordId, controller.signal).then(
       (detail) => {
-        if (active) setState({ status: 'loaded', detail })
+        if (!active) return
+        setState({ status: 'loaded', detail })
+        onLoadedRef.current?.(detail)
       },
       (error: unknown) => {
         if (!active) return
