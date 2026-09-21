@@ -11,7 +11,8 @@ import type { SectorSummary } from '@/types/sector'
  * **읽어 온 값을 신뢰하지 않는다.** `sessionStorage`는 사용자가 편집할 수 있는 자리다. 섹터
  * 코드는 현재 `GET /sectors` 응답에 있는 코드만, 비중은 0 이상 1000 이하 정수만 받아들인다.
  * 검사에서 빠진 항목은 **조용히 버리지 않고** 빠졌다는 사실을 돌려준다(원칙 VI). 무엇을 제안할지는
- * 006 FR-008과 UI-01이 소유하므로 002가 정하지 않는다.
+ * 006이 정했다(FR-008, `SectorSelectionPage`의 `missingCount` 문장) — 대체 섹터를 자동으로 고르지 않고
+ * 사용자가 직접 고르게 한다.
  */
 
 /** 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다(research.md 결정 3). */
@@ -44,11 +45,11 @@ export type SelectionRestoreProblem = 'unreadable' | 'newerFormat'
  * 보관된 항목을 쓰지 못한 까닭이다. **셋을 한 자루에 담지 않는다.**
  *
  * 화면이 "지금 목록에 없어 빠졌다"고만 말하면 비중이 망가졌거나 중복이라 빠진 항목까지 없는
- * 섹터로 둔갑한다. 무엇을 제안할지는 006이 소유하지만, 무엇이 왜 빠졌는지 사실을 정확히
- * 알리는 것은 002의 몫이다(원칙 VI).
+ * 섹터로 둔갑한다. 무엇을 제안할지는 006이 정했지만(직접 고르게 한다), 무엇이 왜 빠졌는지 사실을
+ * 정확히 알리는 것은 002의 몫이다(원칙 VI).
  */
 export type SelectionDropReason =
-  /** 현재 `GET /sectors` 응답에 없는 코드다. 006이 제안을 소유하는 경우가 이것이다. */
+  /** 현재 `GET /sectors` 응답에 없는 코드다. 006의 대체 섹터 안내 문장이 붙는 경우가 이것이다. */
   | 'notInCatalog'
   /** 코드는 있으나 비중이 0 이상 1000 이하 정수가 아니다. */
   | 'unusableWeight'
