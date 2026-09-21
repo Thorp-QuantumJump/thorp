@@ -40,7 +40,12 @@ public record AvailabilityResponse(
 
     public record Bundle(List<Run> runs, List<Instrument> instruments) {}
 
-    /** 비교 묶음의 실행 하나. 내부 PK 대신 공개 토큰으로 가리킨다. */
+    /**
+     * 비교 묶음의 실행 하나. 내부 PK 대신 공개 토큰으로 가리킨다.
+     *
+     * <p>{@code costProfileVersion}·{@code dataVersion} 은 결과 머리에 "같은 평가 날짜·비용 버전"을 보이기 위한
+     * 값이다(T061). 값은 004 등록표가 소유하고 여기서는 그대로 실어 보낸다.
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Run(
             String publicToken,
@@ -48,7 +53,9 @@ public record AvailabilityResponse(
             String strategyId,
             String strategyName,
             Period period,
-            int warmupTradingDays) {}
+            int warmupTradingDays,
+            String costProfileVersion,
+            String dataVersion) {}
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Period(LocalDate start, LocalDate end, LocalDate effectiveStart) {}
@@ -141,7 +148,9 @@ public record AvailabilityResponse(
                 run.strategyId(),
                 run.strategyName(),
                 new Period(run.start(), run.end(), run.effectiveStart()),
-                run.warmupTradingDays());
+                run.warmupTradingDays(),
+                run.costProfileVersion(),
+                run.dataVersion());
     }
 
     private static Instrument instrument(InstrumentHistory instrument) {

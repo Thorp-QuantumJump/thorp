@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { recordRegimeSearch } from '@/api/myRecords'
 import { getRegimeBaselineMonths } from '@/api/regime'
 import { useAuth } from '@/auth/auth-context'
@@ -16,6 +16,7 @@ import { LoadError } from '@/components/regime/LoadError'
 import { NewerReleases } from '@/components/regime/NewerReleases'
 import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'
 import { useRegimeSearch } from '@/hooks/useRegimeSearch'
+import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'
 import type { MyRecordRegime } from '@/types/myRecords'
 import type { RegimeBaselineMonths, RegimeSearchQuery } from '@/types/regime'
 import styles from './RegimeSearchPage.module.css'
@@ -202,7 +203,28 @@ export function RegimeSearchPage() {
                 {result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (
                   <EmptyResult result={result} />
                 ) : (
-                  <CaseList key={result.searchId} result={result} onShowMore={showMore} isLoading={isLoading} context={context} fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])} />
+                  <CaseList
+                    key={result.searchId}
+                    result={result}
+                    onShowMore={showMore}
+                    isLoading={isLoading}
+                    context={context}
+                    fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])}
+                    /*
+                      사후 구간 자리에 011 진입을 둔다(011 T087). 이 길은 섹터를 알 수 없어 `sector`를
+                      싣지 않는다 — 009에서 010으로 오는 인계에 섹터가 없다. 사례 식별자를 만들 수 없으면
+                      010이 내려 준 문구를 그대로 둔다(빈 링크를 만들지 않는다).
+                    */
+                    postPeriodSlot={(item) => {
+                      const caseId = buildCaseId(result.searchId, item.endMonth)
+                      if (caseId === null) return undefined
+                      return (
+                        <p>
+                          <Link to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 전략 비교</Link>
+                        </p>
+                      )
+                    }}
+                  />
                 )}
               </>
             )}

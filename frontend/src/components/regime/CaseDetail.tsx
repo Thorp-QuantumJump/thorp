@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'
 import { FieldBreakdown } from './FieldBreakdown'
 import * as copy from './fixedCopy'
@@ -8,10 +9,17 @@ interface Props {
   summary: RegimeCaseSummary
   mode: RegimeMode
   fieldNames: Record<string, string>
+  /**
+   * 사후 구간 자리에 끼워 넣을 것(011 진입 계약 §4).
+   *
+   * 없으면 010이 내려 준 `postPeriod.note`를 그대로 그린다 — 010 동작을 그대로 둔다. 010 검색 화면은
+   * 여기에 '이 기간으로 전략 비교' 링크를, 011 화면은 전략 결과 영역을 넣는다.
+   */
+  postPeriodSlot?: ReactNode
 }
 
 /** 저장된 계산 입력과 척도를 그대로 보여 손계산 대조가 가능하게 한다. */
-export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {
+export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }: Props) {
   return (
     <section className={styles.detail} aria-label={`${detail.endMonth} 사례 상세`}>
       <h4>사례 상세 · {detail.endMonth}</h4>
@@ -54,7 +62,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {
           </div>
         </section>
       ))}
-      <p>{detail.postPeriod.note}</p>
+      {postPeriodSlot === undefined ? <p>{detail.postPeriod.note}</p> : postPeriodSlot}
     </section>
   )
 }
