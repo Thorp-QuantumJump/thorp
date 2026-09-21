@@ -323,16 +323,6 @@ export function ParamSearchPage() {
               비교할 섹터와 전략은 전략 화면에서 고른 것을 그대로 받아 옵니다. 전략 화면에서 '설정
               조합 자동 비교'로 들어와 주세요.
             </p>
-            <p className={styles.guideNote}>
-              주소로 바로 열 수도 있습니다.{' '}
-              <InlineHelp label="주소로 바로 열기">
-                <p>
-                  <code>?instruments=&#123;종목ID&#125;&amp;strategies=&#123;전략ID&#125;</code>
-                  처럼 대상을 함께 적습니다.
-                </p>
-                <p>고를 수 있는 값은 등록표가 정하므로 이 화면에 목록을 두지 않습니다.</p>
-              </InlineHelp>
-            </p>
             <Link to="/backtest" className={styles.guideLink}>
               <ArrowLeft size={15} aria-hidden="true" />
               전략 화면으로
