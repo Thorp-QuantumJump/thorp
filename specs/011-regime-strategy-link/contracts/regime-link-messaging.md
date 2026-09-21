@@ -77,6 +77,13 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 
 `{schemaVersion: 1, eventId, linkId, attempt, type, occurredAt, payload}`. `eventId`는 이벤트마다
 고유하고 재발행 시 유지(멱등 키, 백테스트와 같다).
 
+**`eventId`의 실제 형식은 UUID 문자열이다.** 워커가 고정 이름공간과 `"{linkId}:{attempt}:{type}"`에서
+`uuid5`로 결정적으로 뽑으므로, 같은 작업이 재전달돼 다시 계산돼도 같은 값이 나온다(백테스트 경로처럼
+실행마다 새 식별자를 발급하면 재전달마다 키가 달라져 같은 결과가 두 번 기록된다). 계약은 자유
+문자열만 요구하므로 예시 파일의 `EVT-RL-000001`은 계약 위반이 아니지만 **운영에서 나오는 모양이
+아니다** — 형식으로 값을 파싱하는 코드를 두지 않는다. 이름공간을 바꾸면 이미 발행한 이벤트와 다른
+`eventId`가 나오므로 바꾸지 않는다.
+
 | type | payload |
 |---|---|
 | `STARTED` | `{startedAt, resource: {pid, hostname}}` |

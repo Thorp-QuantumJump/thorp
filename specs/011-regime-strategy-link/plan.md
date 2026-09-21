@@ -249,6 +249,23 @@ Testcontainers에 010 표 시드 행을 넣어 검증한다(R8). **011 마이그
 | 005 `PublicResultExpirySweeper` | 만료된 비로그인 요청 행을 지운다(실행은 남는다) | 011의 요청 FK는 `ON DELETE SET NULL`. 005 정리 코드는 바꾸지 않는다(R14) |
 | 003 '분석하기' | 접수 뒤 결과 화면으로 이동하지 않는다("이동은 준비 중") | `case`가 있을 때만 접수 즉시 011로 이동(T047). `case` 없는 이동은 003·005 소유자 |
 
+### 미해결로 남긴 것 (2026-09-21, M8 검증)
+
+위 표는 **결정이 끝난** 경계다. 아래는 011 구현을 마치며 드러났고 **아직 해결하지 않은** 것들이다.
+각 줄은 이번에 코드로 확인했다. 해결한 것처럼 적지 않는다.
+
+| 항목 | 지금 상태 | 왜 남겼나 |
+|---|---|---|
+| 백엔드 시험 4건 미작성 | `T036`·`T060`·`T070`·`T076`이 `tasks.md`에서 아직 `[ ]`다. `FreshCashScenarioTest`·`OutOfPeriodFlowTest`·`BundleChangeTest` 파일은 `backend/src/test`에 생겨 작성 중이고, `RegimeLinkMessagingIT`는 파일도 없다 | **큐를 실제로 지나는 왕복(T036)을 아직 아무도 확인하지 않았다.** 발행과 소비를 각자 본 시험은 있으나 브로커를 끝에서 끝까지 지난 기록이 없다 |
+| 발행 확인(publisher confirm) 없음 | `RegimeLinkJobPublisher`의 javadoc은 "브로커가 확인한 뒤에만 정상 반환한다"고 적지만, 저장소 어디에도 `spring.rabbitmq.publisher-confirm-type` 설정이 없다(004도 같고, `application.yml`에 "confirm·returns 설정은 발행 신뢰성(outbox) 작업에서 추가"라는 주석만 있다) | 실제 동작은 "예외가 나지 않으면 성공"이다. 004와 함께 outbox 작업에서 정하는 것이 맞아 011만 고치지 않았다. **javadoc 문장을 구현에 맞추거나 설정을 더하는 일이 남았다** |
+| `RABBITMQ_URL` 기본값 | `worker/config.py`의 `rabbitmq_url` 기본값이 `amqp://thorp:thorp@localhost:5672/`다. `regime_link_main.main()`의 `if not settings.rabbitmq_url` 관문은 기본값이 비어 있지 않아 **결코 걸리지 않는다** | T018은 "기본값 없음"을 요구하지만 이 파일은 백테스트 워커와 함께 쓴다. 두 워커가 같은 설정을 읽으므로 011만 바꾸면 백테스트 쪽 기동이 달라진다 |
+| 운영 compose에 011 워커 없음 | `docker-compose.dev.yml`에 `worker-regime-link`를 등록했으나 `infra/docker-compose.prod.yml`에는 없다 | 운영 배포 담당(INFRA)과 이미지·자원 배분을 정한 뒤 넣는다 |
+| 백엔드 healthcheck 없음 | 토폴로지는 백엔드가 선언하는데 백엔드에 healthcheck가 없어, 011 워커의 기동 순서가 `restart: on-failure` 재시도에 기댄다(`docker-compose.dev.yml` 주석에 적어 두었다) | 재시도로 결과는 같지만 기동 로그에 실패가 남는다. healthcheck는 백엔드 소유 |
+| 004에 `analyticsMethod`가 없다 | `BacktestRunSliceReader.analyticsMethod`가 004 `versions.engine`(엔진·워커 버전)을 그 자리에 싣는다 | "구간 지표를 낸 방식"과 "엔진 버전"이 같은 뜻인지 **확인 필요**다. 004 소유자에게 물어야 하고 아직 묻지 않았다 |
+| 계약 픽스처가 두 벌 | `docs/specs/regime-link-messaging/generate_fixtures.py`가 원시 종가를 함께 내보내지 않아, 워커가 `worker/tests/regime_link/fixtures/`에 `*.job.json`과 `*.closes.json` 짝을 따로 둔다 | 시장 자료는 메시지에 없고 워커가 DB에서 읽는 구조라 생긴 차이다. 한 벌로 합치려면 생성기가 종가까지 내보내야 한다 |
+| 응답 봉투가 두 벌 | 010은 `HttpApiResponse`, 011과 나머지는 `ApiResponse`를 쓴다 | 011은 자기 경로에서 `ApiResponse`로 맞췄고 010의 봉투는 바꾸지 않았다. 통일은 010·공통 소유 |
+| T102~T111 | `tasks.md` Phase 13~16의 Convergence 후속이 `[ ]`로 남아 있다 | 이번 범위 밖이다. 특히 T103(구간 안 스냅샷 누락)·T105(워커 크기 상한)는 지금 보호가 작동하지 않는 자리다 |
+
 ## Complexity Tracking
 
 > Constitution Check에 정당화가 필요한 위반이 없다. 이 절은 비운다.
