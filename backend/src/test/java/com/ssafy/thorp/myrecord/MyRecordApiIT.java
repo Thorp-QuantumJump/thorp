@@ -66,6 +66,11 @@ class MyRecordApiIT extends IntegrationTestSupport {
         mockMvc.perform(get("/my-records").param("size", "0").with(Requesters.as(owner)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+        mockMvc.perform(get("/my-records").param("size", "51").with(Requesters.as(owner)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+        mockMvc.perform(get("/my-records").param("size", "50").with(Requesters.as(owner)))
+                .andExpect(status().isOk());
         mockMvc.perform(
                         get("/my-records")
                                 .param("cursor", "not-a-cursor")
@@ -116,6 +121,19 @@ class MyRecordApiIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.data.referenceVersions.worker").doesNotExist())
                 // 저장 당시 대응표가 지금 열린 대응표 그대로다 — 바뀐 것이 없다.
                 .andExpect(jsonPath("$.data.mappingDrift.changed").value(false));
+
+        // 저장 당시 대응표 버전이 지금 없으면 판정할 근거가 없다. changed:false 가 아니라 키가 없어야 한다(원칙 VI).
+        jdbcTemplate.update(
+                "UPDATE backtest_run SET versions = jsonb_set(versions, '{mapping}',"
+                        + " '\"SECTOR-ETF-없음\"') WHERE id ="
+                        + " (SELECT run_id FROM backtest_request WHERE backtest_id = ?)",
+                accepted.backtestId());
+        mockMvc.perform(get("/my-records/{id}", recordId).with(Requesters.as(owner)))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.data.referenceVersions.sectorEtfMapVersion")
+                                .value("SECTOR-ETF-없음"))
+                .andExpect(jsonPath("$.data.mappingDrift").doesNotExist());
     }
 
     @Test
