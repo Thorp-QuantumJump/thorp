@@ -8,7 +8,9 @@
 .main {
   width: min(100% - 40px, 960px);
   margin: 0 auto;
-  padding: clamp(90px, 15vh, 160px) 0 80px;
+  /* 아래 여백이 메뉴 높이만큼 있다. 마지막 줄의 '더 보기'를 눌렀을 때 메뉴가 화면 밖으로
+     나가 스크롤해야 하는 일이 없게 미리 자리를 둔다. */
+  padding: clamp(90px, 15vh, 160px) 0 clamp(80px, 14rem, 16rem);
 }
 
 .eyebrow {

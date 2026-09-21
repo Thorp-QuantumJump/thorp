@@ -526,6 +526,10 @@ describe('MyRecordsPage', () => {
     renderPage()
     const user = await openMenu(analysisRecord.name)
     await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))
+
+    // 대화상자를 열면 메뉴는 접힌다 — 둘이 겹쳐 뜨면 무엇을 고르는 중인지 흐려진다.
+    expect(screen.queryByRole('menu')).toBeNull()
+
     await user.clear(screen.getByLabelText('새 이름'))
     await user.type(screen.getByLabelText('새 이름'), '반도체 비중 높인 안')
     await user.click(screen.getByRole('button', { name: '저장' }))
