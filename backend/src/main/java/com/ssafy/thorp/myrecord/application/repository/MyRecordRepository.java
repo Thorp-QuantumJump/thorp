@@ -68,4 +68,19 @@ public interface MyRecordRepository {
 
     /** '다시 보기'로 열었다. 보관 기간(PD-13)을 나중에 도입할 수 있게 시각만 남긴다 — <b>시간 기반 자동 삭제는 만들지 않는다.</b> */
     void markViewed(long id, Instant at);
+
+    /**
+     * 이름만 바꾼다(FR-017).
+     *
+     * <p>도메인 객체를 통째로 저장하지 않는 이유는 {@link #markViewed}와 같다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다. 통째로 저장하면
+     * 늦게 저장한 쪽이 상대의 갱신을 되돌린다.
+     */
+    void renameTo(long id, String name);
+
+    /**
+     * 지운 시각을 채운다. <b>행을 지우지 않는다</b> — 지운 항목도 남아야 상한·재사용 판정이 그 사실을 볼 수 있다(research R6).
+     *
+     * <p>이 표만 건드린다. 결과·거래 내역·실행 행에는 아무것도 보내지 않는다.
+     */
+    void softDelete(long id, Instant at);
 }
