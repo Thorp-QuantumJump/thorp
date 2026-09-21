@@ -203,6 +203,21 @@ describe('경제환경 검색 화면', () => {
     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
   })
 
+  /** 011 T087: 사례 상세의 사후 구간 자리에서 011 시작 주소로 간다. 섹터는 알 수 없어 싣지 않는다. */
+  it('사례 상세에서 011 시작 주소로 가는 링크를 보인다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())
+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail())
+    await search()
+
+    fireEvent.click(await screen.findByRole('button', { name: '상세 보기' }))
+    const link = await screen.findByRole('link', { name: '이 기간으로 전략 비교' })
+
+    const url = new URL(link.getAttribute('href') ?? '', 'http://localhost')
+    expect(url.pathname).toBe('/regime-link/start')
+    expect(url.searchParams.get('case')).toBe('search-1~2012-03')
+    expect(url.searchParams.has('sector')).toBe(false)
+  })
+
   it('?searchId= 로 열면 저장된 판을 고정 조회하고 폼 검색 API 는 부르지 않는다(006 R17)', async () => {
     vi.mocked(getRegimeSearchById).mockResolvedValue(regimeResult({ searchId: 'saved-1' }))
     renderPage({ entries: ['/regime-search?searchId=saved-1'], user: authenticatedUser })
