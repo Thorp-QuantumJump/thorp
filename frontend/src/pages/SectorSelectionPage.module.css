@@ -10,9 +10,9 @@
 }
 
 .main {
-  width: min(100% - 40px, 760px);
+  width: min(100% - 40px, 960px);
   margin: 0 auto;
-  padding: clamp(90px, 15vh, 160px) 0 80px;
+  padding: clamp(30px, 5vh, 56px) 0 80px;
 }
 
 .title {
@@ -23,7 +23,7 @@
 }
 
 .lead {
-  margin: 0 0 28px;
+  margin: 0 0 20px;
   color: var(--thorp-copy);
   font-size: clamp(0.92rem, 1.7vw, 1rem);
   line-height: 1.7;
@@ -71,7 +71,7 @@
 .catalog {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .listTitle {
@@ -104,15 +104,41 @@
 
 /* 비중 입력 묶음의 머리다. 비중 칸이 하나라도 있으면 언제나 보인다. */
 .initialValueNotice {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
   margin: 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--thorp-line-strong);
+  background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.82rem;
   line-height: 1.6;
 }
 
+.initialValueNotice::before {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 50%;
+  color: var(--thorp-accent-soft);
+  content: 'i';
+  font-family: var(--thorp-font-mono);
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .list {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 9px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -123,12 +149,11 @@
   고른 카드와 고르지 않은 카드가 한눈에 구분되도록 테두리와 바탕을 함께 바꾼다.
 */
 .item {
+  overflow: hidden;
   border: 1px solid var(--thorp-line);
   border-radius: 12px;
   background: var(--thorp-surface);
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .item:hover {
@@ -137,7 +162,7 @@
 
 .item[data-selected='true'] {
   border-color: var(--thorp-accent);
-  background: var(--thorp-accent-muted);
+  box-shadow: inset 0 0 0 1px rgb(3 199 90 / 18%);
 }
 
 /* 초점이 어디에 있는지 카드 단위로도 드러낸다. */
@@ -150,18 +175,19 @@
   360px에서도 한 줄로 눌려 넘치지 않게 좁아지면 두 줄로 쌓는다.
 */
 .item [data-slot='choice'] {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px 12px;
-  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 11px;
+  padding: 11px 13px;
   border-radius: 12px;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .item [data-slot='choice-box'] {
-  align-self: center;
+  grid-row: 1 / span 2;
   width: 1.05rem;
   height: 1.05rem;
   accent-color: var(--thorp-accent);
@@ -191,13 +217,13 @@
 
 .item [data-slot='etf'] {
   display: inline-flex;
+  grid-column: 2;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
   /* 이름 묶음과 붙지 않게 반대편으로 민다. 좁아져 줄이 바뀌면 아래 미디어 쿼리가 푼다. */
-  margin-left: auto;
   color: var(--thorp-copy);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
 }
 
 .item [data-slot='etf-label'] {
@@ -218,9 +244,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  margin: 0 16px;
-  padding: 12px 0 14px;
-  border-top: 1px dashed var(--thorp-line);
+  margin: 0;
+  padding: 10px 13px 12px;
+  border-top: 1px solid var(--thorp-line-strong);
+  background: var(--thorp-surface-raised);
+  animation: weight-panel-in 160ms ease-out both;
 }
 
 .item [data-slot='weight-label'] {
@@ -277,50 +305,49 @@
 
 /* 대표 상품 정보를 펼치는 층이다. 카드 안에서 한 단 아래로 내려간다. */
 .item [data-slot='profile'] {
-  margin: 0 16px;
-  padding-bottom: 14px;
-  border-top: 1px dashed var(--thorp-line);
+  margin: 0;
+  border-top: 1px solid var(--thorp-line);
 }
 
 .item [data-slot='profile-toggle'] {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 5px 0;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 9px 13px;
   border: 0;
   background: none;
   color: var(--thorp-copy);
   font: inherit;
   font-size: 0.8rem;
-  text-decoration: underline;
-  text-decoration-color: var(--thorp-line-strong);
-  text-underline-offset: 4px;
   cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.item [data-slot='profile-toggle']:hover {
+.item [data-slot='profile-toggle']:hover,
+.item [data-slot='profile-toggle'][aria-expanded='true'] {
+  background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
-  text-decoration-color: currentColor;
 }
 
-/* 펼쳤는지를 글자 말고도 드러낸다. 삼각형이 돌아가는 방향이 곧 상태다. */
-.item [data-slot='profile-toggle']::before {
-  content: '';
-  width: 0;
-  height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 5px solid currentColor;
+.item [data-slot='profile-chevron'] {
+  flex: none;
+  color: var(--thorp-accent-soft);
   transition: transform 0.15s ease;
 }
 
-.item [data-slot='profile-toggle'][aria-expanded='true']::before {
-  transform: rotate(90deg);
+.item [data-slot='profile-toggle'][aria-expanded='true'] [data-slot='profile-chevron'] {
+  transform: rotate(180deg);
 }
 
 .item [data-slot='profile-panel'] {
-  padding: 12px 0 2px;
+  padding: 4px 13px 12px;
+  background: var(--thorp-surface-raised);
+  animation: weight-panel-in 160ms ease-out both;
 }
 
 .item [data-slot='profile-loading'] {
@@ -491,6 +518,29 @@
   border-color: currentColor;
 }
 
+@keyframes weight-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item [data-slot='weight'],
+  .item [data-slot='profile-panel'] {
+    animation: none;
+  }
+
+  .item [data-slot='profile-chevron'] {
+    transition: none;
+  }
+}
+
 /* 합계와 남은 비중이 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */
 .total {
   display: grid;
@@ -633,20 +683,14 @@
   font-size: 0.78rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 560px) {
   .main {
     width: min(100% - 28px, 760px);
-    padding-top: 72px;
+    padding: 24px 0 80px;
   }
 
-  /* 좁은 화면에서는 이름 묶음과 대표 ETF를 아래위로 쌓는다. */
-  .item [data-slot='choice'] {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .item [data-slot='etf'] {
-    margin-left: 0;
+  .list {
+    grid-template-columns: 1fr;
   }
 
   /*

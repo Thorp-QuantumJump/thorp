@@ -1,6 +1,8 @@
 package com.ssafy.thorp.myrecord.infrastructure.config;
 
+import com.ssafy.thorp.myrecord.application.port.MyRecordLimits;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -12,4 +14,10 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(MyRecordProperties.class)
-public class MyRecordConfig {}
+public class MyRecordConfig {
+
+    @Bean
+    public MyRecordLimits myRecordLimits(MyRecordProperties properties) {
+        return new MyRecordLimits(properties.getSearchBundleLimit());
+    }
+}

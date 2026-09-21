@@ -231,31 +231,44 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                         SAVED_AT);
         entityManager.flush();
 
-        assertThat(regimeLogs.findActive(owner, snapshotKey, EntryPath.MARKET_FLOW))
-                .hasValue(logId);
         // 진입 경로가 다르면 다른 기록이다 — 한쪽이 다른 쪽을 대체하지 않는다(Story 3 시나리오 4).
-        assertThat(regimeLogs.findActive(owner, snapshotKey, EntryPath.STRATEGY_RESULT)).isEmpty();
-
-        // 같은 검색을 다시 열어도 행이 늘지 않는다. 조회한 뒤 없으면 넣는 방식이면 동시에 두 번 열 때
-        // 둘 다 "없음"을 읽어 기록이 둘이 되고, 목록에 같은 항목이 두 줄로 남는다.
-        long again =
+        long otherPath =
                 regimeLogs.append(
                         owner,
                         snapshotKey,
                         null,
-                        EntryPath.MARKET_FLOW,
+                        EntryPath.STRATEGY_RESULT,
                         BaselineOrigin.T_G,
-                        SAVED_AT.plusSeconds(60));
+                        SAVED_AT);
+        assertThat(otherPath).isNotEqualTo(logId);
+
+        // 같은 검색을 다시 열어도 행이 늘지 않고 열람 시각만 오른다. 조회한 뒤 없으면 넣는 방식이면
+        // 동시에 두 번 열 때 양쪽이 "없음"을 읽어 기록이 둘이 되고, 목록에 같은 항목이 두 줄로 남는다.
+        Instant later = SAVED_AT.plusSeconds(3600);
+        long again =
+                regimeLogs.append(
+                        owner, snapshotKey, null, EntryPath.MARKET_FLOW, BaselineOrigin.T_G, later);
+        entityManager.flush();
+
         assertThat(again).isEqualTo(logId);
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT count(*) FROM regime_search_log WHERE owner_user_id = ?",
                                 Integer.class,
                                 owner))
-                .isEqualTo(1);
+                .as("경로 둘, 같은 경로의 재열람은 행을 늘리지 않는다")
+                .isEqualTo(2);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT viewed_at FROM regime_search_log WHERE id = ?",
+                                Instant.class,
+                                logId))
+                .isEqualTo(later);
 
-        Instant later = SAVED_AT.plusSeconds(3600);
-        regimeLogs.touch(logId, later);
+        // 열람 시각은 뒤로 가지 않는다. 판정이 append 의 GREATEST 한 곳뿐이라 EXCLUDED 로 바꿔 써도
+        // 위 단언은 그대로 통과한다 — 되돌아가지 않는다는 것을 따로 본다.
+        regimeLogs.append(
+                owner, snapshotKey, null, EntryPath.MARKET_FLOW, BaselineOrigin.T_G, SAVED_AT);
         entityManager.flush();
 
         assertThat(
@@ -263,6 +276,7 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {
                                 "SELECT viewed_at FROM regime_search_log WHERE id = ?",
                                 Instant.class,
                                 logId))
+                .as("늦게 도착한 옛 요청이 열람 시각을 과거로 되돌리지 않는다")
                 .isEqualTo(later);
     }
 

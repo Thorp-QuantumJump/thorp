@@ -4,7 +4,6 @@ import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;
 import com.ssafy.thorp.myrecord.domain.vo.EntryPath;
 import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;
 import java.time.Instant;
-import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -24,22 +23,6 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {
 
     public RegimeSearchLogWriterImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @Override
-    public Optional<Long> findActive(long ownerId, String snapshotKey, EntryPath entryPath) {
-        return jdbcTemplate
-                .query(
-                        """
-                        SELECT id FROM regime_search_log
-                        WHERE owner_user_id = ? AND snapshot_key = ? AND entry_path = ?
-                        """,
-                        (rs, rowNum) -> rs.getLong("id"),
-                        ownerId,
-                        snapshotKey,
-                        entryPath.name())
-                .stream()
-                .findFirst();
     }
 
     /**
@@ -78,14 +61,5 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {
                         baselineOrigin.name(),
                         java.sql.Timestamp.from(viewedAt));
         return id;
-    }
-
-    /** 뒤로 가지 않는다. 늦게 도착한 옛 요청이 최신 열람 시각을 과거로 되돌리면 보관 기간 판단이 흔들린다. */
-    @Override
-    public void touch(long logId, Instant viewedAt) {
-        jdbcTemplate.update(
-                "UPDATE regime_search_log SET viewed_at = GREATEST(viewed_at, ?) WHERE id = ?",
-                java.sql.Timestamp.from(viewedAt),
-                logId);
     }
 }

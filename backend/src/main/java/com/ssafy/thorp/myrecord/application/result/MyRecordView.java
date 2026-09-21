@@ -21,6 +21,8 @@ import java.util.List;
  * @param resultToken {@code ANALYSIS}에만 있다. '다시 보기' 링크의 열쇠(research R3)
  * @param searchId {@code SEARCH_BUNDLE}에만 있다
  * @param regime {@code REGIME_SEARCH}에만 있다
+ * @param analysisRunId {@code ANALYSIS}에만 있다. 저장 당시 실행 조건({@code reopenPayload})을 그 실행에서 읽는다 — 응답에
+ *     나가지 않는다(PK 는 노출하지 않는다)
  */
 public record MyRecordView(
         long id,
@@ -37,6 +39,7 @@ public record MyRecordView(
         String resultToken,
         String searchId,
         Regime regime,
+        Long analysisRunId,
         boolean isCopy) {
 
     /**
@@ -68,6 +71,7 @@ public record MyRecordView(
                 resultToken,
                 searchId,
                 regime,
+                analysisRunId,
                 isCopy);
     }
 
