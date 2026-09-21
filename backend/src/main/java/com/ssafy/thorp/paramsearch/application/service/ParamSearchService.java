@@ -6,6 +6,7 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;
 import com.ssafy.thorp.paramsearch.application.command.PreviewParamSearchCommand;
+import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;
 import com.ssafy.thorp.paramsearch.application.exception.ParamSearchRejectedException;
 import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;
 import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +80,7 @@ public class ParamSearchService {
     private final Clock clock;
     private final String engineVersion;
     private final BigDecimal defaultInitialCash;
+    private final ApplicationEventPublisher events;
 
     public ParamSearchService(
             ParameterRegistryPort registry,
@@ -95,7 +98,8 @@ public class ParamSearchService {
             SearchLimits limits,
             Clock clock,
             @Value("${thorp.backtest.engine-version}") String engineVersion,
-            @Value("${thorp.param-search.default-initial-cash}") BigDecimal defaultInitialCash) {
+            @Value("${thorp.param-search.default-initial-cash}") BigDecimal defaultInitialCash,
+            ApplicationEventPublisher events) {
         this.registry = registry;
         this.executionSupport = executionSupport;
         this.targetResolver = targetResolver;
@@ -112,6 +116,7 @@ public class ParamSearchService {
         this.clock = clock;
         this.engineVersion = engineVersion;
         this.defaultInitialCash = defaultInitialCash;
+        this.events = events;
     }
 
     /**
@@ -189,6 +194,18 @@ public class ParamSearchService {
                                         preflight.validCount(),
                                         preflight.excludedCount())));
         candidateRepository.saveAll(saved.getId(), toCandidates(preflight.validated()));
+
+        // 실행이 시작되는 묶음만 알린다 — 위 rejected(...) 갈래는 발행하지 않는다. 지금 듣는 것은 006 내
+        // 기록이고, 007은 받는 쪽을 알지 못한다(spec 006 research R16).
+        events.publishEvent(
+                new ParamSearchAccepted(
+                        saved.getId(),
+                        saved.getOwnerUserId(),
+                        saved.getStrategyIds(),
+                        saved.getInstrumentIds(),
+                        command.start(),
+                        command.end(),
+                        clock.instant()));
 
         ParamSearchSnapshot snapshot =
                 ParamSearchSnapshot.fromMap(
