@@ -124,6 +124,33 @@ services:
     deploy:
       replicas: 1
 
+  # 사례 연결 워커(spec 011): 같은 이미지에 엔트리포인트만 다르다(`python -m worker.regime_link_main`).
+  # 백테스트 워커와 다른 프로세스로 띄우는 이유는 큐가 다르고, 한쪽이 긴 백테스트로 막혀 있어도
+  # 다른 쪽이 멈추지 않아야 하기 때문이다(worker/README.md "사례 연결 Consumer").
+  #
+  # **토폴로지는 백엔드가 선언한다.** 이 워커는 exchange·queue 를 만들지 않고 `regime-link.jobs` 가
+  # 없으면 "백엔드를 먼저 띄워라"라는 뜻으로 즉시 종료한다. 그래서 백엔드 뒤에 두고
+  # `restart: on-failure` 로 선언이 끝날 때까지 다시 붙게 한다 — 백엔드에 healthcheck 가 없어
+  # `depends_on` 만으로는 "떴다"까지만 보장되고 "선언이 끝났다"는 보장되지 않는다.
+  worker-regime-link:
+    profiles: ["app"]
+    extends:
+      service: worker
+    command: ["python", "-m", "worker.regime_link_main"]
+    # WORKER_ROLE 은 백테스트 큐 선택용이라 이 워커는 읽지 않는다. 오해를 줄이려 비운다.
+    environment:
+      WORKER_ROLE: ""
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    deploy:
+      replicas: 1
+
 volumes:
   postgres-data:
   kafka-data:

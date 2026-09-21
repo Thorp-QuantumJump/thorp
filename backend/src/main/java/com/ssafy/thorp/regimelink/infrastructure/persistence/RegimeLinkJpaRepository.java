@@ -13,4 +13,9 @@ interface RegimeLinkJpaRepository extends JpaRepository<RegimeLinkJpaEntity, Lon
             Long runId, String snapshotKey, LocalDate endMonth, String scenario);
 
     List<RegimeLinkJpaEntity> findByRunId(Long runId);
+
+    List<RegimeLinkJpaEntity> findByStatus(String status);
+
+    List<RegimeLinkJpaEntity> findBySnapshotKeyAndEndMonthAndRunIdIn(
+            String snapshotKey, LocalDate endMonth, List<Long> runIds);
 }

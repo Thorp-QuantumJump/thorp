@@ -390,3 +390,63 @@ uv run ruff check src tests scripts && uv run ruff format --check src tests scri
   `CsvMarketDataProvider`(3종목 픽스처, 네트워크 없음)를 쓴다.
 - `tests/test_rabbitmq.py` 메시지 속성, 발행 확인·재시도, ACK/reject 매핑, 큐 부재 처리,
   그리고 큐·routing key 상수가 백엔드 `BacktestRabbitConfig.java`와 같은지 대조.
+
+## 사례 연결 Consumer (spec 011)
+
+백테스트 소비자와 **다른 프로세스**다. `regime-link.jobs`에서 사례 연결 작업을 받아 004 실행
+사본을 63(보조 21)거래일 구간으로 잘라 요약하고 `regime-link.events`로 `STARTED` / `FINISHED`를
+발행한다. 큐도 스키마 버전(`SCHEMA_VERSION = 1`)도 백테스트와 별개이며, 한쪽이 긴 백테스트로
+막혀 있는 동안 다른 쪽이 멈추지 않도록 엔트리포인트를 나눴다. 계약은
+[`docs/specs/regime-link-messaging/README.md`](../docs/specs/regime-link-messaging/README.md)다.
+
+```bash
+# 백테스트 워커와 같은 환경변수를 쓰고, 둘 다 기본값이 없다.
+export RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/
+export MARKET_DATA_URL=postgresql://thorp_ro:...@localhost:5432/thorp
+uv run python -m worker.regime_link_main
+```
+
+개발용 compose 로 띄우려면 `worker-regime-link` 서비스를 쓴다. 백테스트 워커와 **같은 이미지에
+실행 명령만 다르다**.
+
+```bash
+docker compose -f docker-compose.dev.yml --profile app up -d backend worker-regime-link
+```
+
+**백엔드가 먼저 떠야 한다.** 이 워커는 exchange·queue 를 선언하지 않으므로 `regime-link.jobs` 가
+없으면 만들지 않고 종료한다. compose 정의는 `depends_on: backend` 로 순서를 잡고
+`restart: on-failure` 로 백엔드가 토폴로지를 선언할 때까지 다시 붙게 해 두었다 — 백엔드에
+healthcheck 가 없어 순서만으로는 "선언이 끝났다"가 보장되지 않기 때문이다. 큐가 끝내 없으면
+로그에 그 사실이 남고 컨테이너가 재시작을 반복하므로 `docker compose logs worker-regime-link`
+로 확인한다.
+
+| 파일 | 역할 |
+|---|---|
+| `regime_link/messaging.py` | 계약 상수(exchange·queue·routing key, `SCHEMA_VERSION=1`, prefetch 1)와 경계 Protocol, 오류 분류. **pika 없음** |
+| `regime_link/contracts.py` | 작업·이벤트 메시지 모델(pydantic, `extra="forbid"`) |
+| `regime_link/slicer.py` | 구간 잘라내기·요약 계산. pandas도 DB도 모르고 종가는 주입받는다 |
+| `regime_link/market_data.py` | `daily_price`·`daily_index`에서 구간 원시 종가를 읽어 `slicer`에 넘긴다 |
+| `regime_link/consumer.py` | `RegimeLinkJobConsumer` — 검증 → 계산 호출 → 발행 순서 → ACK 판단 |
+| `regime_link/rabbitmq.py` | pika 구현: publisher confirm + `mandatory` 발행, ACK/reject 매핑, 소비 루프 |
+| `regime_link_main.py` | 엔트리포인트(`python -m worker.regime_link_main`) |
+
+동작 규칙(백테스트와 같은 것은 줄이고 다른 것만 적는다):
+
+- **`PROGRESS`가 없다.** 63거래일은 한 번에 끝나므로 이벤트는 `STARTED`와 `FINISHED` 둘뿐이고
+  `sequence`도 없다.
+- **`schemaVersion`은 작업 AMQP 헤더로만 온다**(본문에는 없다). 그래서 헤더가 없으면 통과시키지
+  않고 계약 오류로 거절한다 — 표시할 자리가 하나뿐이라 비어 있다는 것은 보낸 쪽이 계약을 지키지
+  않았다는 뜻이다.
+- **`eventId`는 `linkId`·`attempt`·이벤트 종류에서 결정적으로 만든다.** 011에는 `executionId`가
+  없고 재전달은 같은 작업을 그대로 다시 하는 것이라, 매번 새 값을 뽑으면 백엔드의 중복 방어 키가
+  재전달마다 달라져 같은 결과가 두 번 기록된다.
+- **시장 자료는 메시지에 없다.** 원시 종가(`daily_price.close`)와 참고 지수(`daily_index.close`)를
+  워커가 `baselineDate`~`lastAvailable` 구간만 읽는다. 수정 종가를 쓰지 않는다 — 수량 이월이
+  분할을 이미 반영해서 두 번 조정된다. 없는 날은 채우지 않고 `MARKET_DATA_MISSING`으로 실패한다.
+- 오류 세 갈래는 백테스트와 같다: 계약 오류(JSON·`ValidationError`·`schemaVersion`) → requeue 없이
+  reject → `regime-link.jobs.dlq`, 계산 실패(`INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`·
+  `ENGINE_ERROR`) → `FINISHED(FAILED)` 발행 후 ACK, 발행 실패와 자료 적재 중 일시 장애 → ACK 없음.
+- **토폴로지를 선언하지 않는다.** 시작할 때 `regime-link.jobs` 존재만 passive로 확인하고 없으면
+  "백엔드를 먼저 띄워 토폴로지를 선언하라"는 오류를 남기고 종료한다(exit code 1).
+- 테스트는 `tests/regime_link/test_consumer.py`(발행·ACK 순서, 오류 세 갈래, `eventId` 멱등성)와
+  `tests/regime_link/test_main.py`(엔트리포인트 종료 코드, 큐 부재, 메시지 속성·재시도, 종가 조회).

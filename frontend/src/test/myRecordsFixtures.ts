@@ -1,4 +1,5 @@
 import type { MyRecordDetail, MyRecordListItem, MyRecordListPage } from '@/types/myRecords'
+import { resultDetailCompleted } from './resultFixtures'
 
 type AnalysisItem = Extract<MyRecordListItem, { kind: 'ANALYSIS' }>
 type RegimeItem = Extract<MyRecordListItem, { kind: 'REGIME_SEARCH' }>
@@ -91,6 +92,19 @@ export const analysisDetailUnjudged: MyRecordDetail = {
   ...analysisRecord,
   lastViewedAt: null,
   referenceVersions: { datasetVersion: 'DS-2026-09-17-001' },
+}
+
+/** '설정 바꿔 비교'를 열 수 있는 상세. `reopenPayload`는 005 결과의 `config`와 같은 모양이고 저장 당시 실효 워밍업이 들어 있다. */
+export const reopenableDetail: MyRecordDetail = {
+  ...analysisDetail,
+  reopenSettings: { available: true },
+  reopenPayload: { ...resultDetailCompleted.config, warmupTradingDays: 77 },
+}
+
+/** 서버가 열 수 없다고 판정한 분석 상세(시나리오가 FULL_PERIOD 가 아닌 결과). 버튼을 두지 않는다. */
+export const unavailableDetail: MyRecordDetail = {
+  ...analysisDetail,
+  reopenSettings: { available: false },
 }
 
 /** 같은 검색을 전략 결과에서 열어 남은 항목. 진입 경로가 다르면 별도 항목이다(Story 3 시나리오 4). */
