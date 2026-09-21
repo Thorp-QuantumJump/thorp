@@ -67,17 +67,6 @@
   line-height: 1.65;
 }
 
-.guideNote {
-  color: var(--thorp-muted);
-}
-
-.guideNote code {
-  overflow-wrap: anywhere;
-  color: var(--thorp-accent-soft);
-  font-family: var(--thorp-font-mono);
-  font-size: 0.72rem;
-}
-
 .guideLink {
   display: inline-flex;
   min-height: 40px;
