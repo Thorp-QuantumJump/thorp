@@ -52,6 +52,8 @@ class NormalizedObservation:
     transformed_unit: str
     #: 원천이 밝힌 통계표 갱신일. 관측치별 발표일이 아니다 (FR-007).
     source_updated_at: str | None
+    #: 원천이 관측치별로 밝힌 발표 시각. 수신 시각이나 통계표 갱신일로 대신하지 않는다.
+    released_at: datetime | None = None
     #: 우리가 받은 때. 발표일 자리에 넣지 않는다.
     received_at: datetime | None = None
     #: 이 달의 값을 준 구간. 개편으로 나뉜 계열만 채워지고 나머지는 ``None`` 이다 (FR-010).
@@ -107,6 +109,7 @@ def normalize(
                 transform_rule=indicator.transform_rule,
                 raw_unit=indicator.raw_unit,
                 transformed_unit=indicator.transformed_unit,
+                released_at=_released_at(value, raw_by_period),
                 source_updated_at=_updated_at(value, raw_by_period),
                 received_at=received_at,
                 break_segment=(
@@ -143,5 +146,17 @@ def _updated_at(
         raw.source_updated_at
         for period in value.lineage
         if (raw := raw_by_period.get(period)) and raw.source_updated_at
+    ]
+    return max(stamps) if stamps else None
+
+
+def _released_at(
+    value: MonthlyValue, raw_by_period: Mapping[str, SourceObservation]
+) -> datetime | None:
+    """계보 원천이 밝힌 발표 시각. 미제공이면 비워 두며 수신 시각으로 대체하지 않는다."""
+    stamps = [
+        raw.released_at
+        for period in value.lineage
+        if (raw := raw_by_period.get(period)) and raw.released_at is not None
     ]
     return max(stamps) if stamps else None
