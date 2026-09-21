@@ -1,13 +1,13 @@
 import { CloudSun, Layers, LineChart } from 'lucide-react'
-import { forwardRef, useId } from 'react'
+import { forwardRef, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
-import type { MyRecordListItem } from '@/types/myRecords'
+import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'
 import { RecordDetailPanel } from './RecordDetailPanel'
+import { ReopenSettingsButton } from './ReopenSettingsButton'
 import {
   KIND_LABEL,
-  REOPEN_NOT_YET,
   STATUS_LABEL,
   WITHDRAWN_REASON,
   formatSavedAt,
@@ -47,6 +47,8 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
 ) {
   const panelId = useId()
   const detail = useDisclosure(panelId, initiallyOpen)
+  // 펼쳐 보는 층이 받아 둔 상세. '설정 바꿔 비교'가 다시 받지 않고, 서버가 열 수 없다고 판정했으면 버튼을 감춘다.
+  const [loadedDetail, setLoadedDetail] = useState<MyRecordDetail | null>(null)
   const reasonId = useId()
   const href = reviewHref(item)
   const Icon = KIND_ICON[item.kind]
@@ -118,22 +120,14 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
             다시 보기
           </Button>
         )}
-        <Button
-          type="button"
-          variant="outline"
-          aria-disabled="true"
-          aria-describedby={`${reasonId}-reopen`}
-          className={DISABLED_LOOK}
-        >
-          설정 바꿔 비교
-        </Button>
+        {/* 경제환경 기록은 옮길 조건이 없어 서버가 늘 available=false 다(contracts/record-handoff.md 규칙 3). 상세를 받지 않고도 안다. */}
+        {item.kind === 'REGIME_SEARCH' ? null : (
+          <ReopenSettingsButton recordId={item.recordId} detail={loadedDetail} />
+        )}
         <Button type="button" variant="outline" {...detail.toggleProps}>
           {detail.open ? '접기' : '자세히'}
         </Button>
       </div>
-      <p className={styles.srOnly} id={`${reasonId}-reopen`}>
-        {REOPEN_NOT_YET}
-      </p>
       {href ? null : (
         <p id={reasonId} className={styles.hint}>
           {WITHDRAWN_REASON}
@@ -141,7 +135,13 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
       )}
 
       {detail.open ? (
-        <RecordDetailPanel id={panelId} recordId={item.recordId} labels={labels} onClose={detail.close} />
+        <RecordDetailPanel
+          id={panelId}
+          recordId={item.recordId}
+          labels={labels}
+          onClose={detail.close}
+          onLoaded={setLoadedDetail}
+        />
       ) : null}
     </li>
   )
