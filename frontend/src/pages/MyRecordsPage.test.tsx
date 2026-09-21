@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -38,6 +38,7 @@ const otherMocks = vi.hoisted(() => ({
   fetchStrategyRegistry: vi.fn(),
   getParamSearch: vi.fn(),
   getParamSearchCandidates: vi.fn(),
+  getRegimeBaselineMonths: vi.fn(),
 }))
 
 vi.mock('@/api/myRecords', async (importOriginal) => {
@@ -59,6 +60,10 @@ vi.mock('@/api/paramSearch', async (importOriginal) => {
     getParamSearch: otherMocks.getParamSearch,
     getParamSearchCandidates: otherMocks.getParamSearchCandidates,
   }
+})
+vi.mock('@/api/regime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/regime')>()
+  return { ...actual, getRegimeBaselineMonths: otherMocks.getRegimeBaselineMonths }
 })
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
@@ -108,6 +113,8 @@ describe('MyRecordsPage', () => {
     otherMocks.fetchStrategyRegistry.mockReturnValue(new Promise(() => {}))
     otherMocks.getParamSearch.mockReset()
     otherMocks.getParamSearchCandidates.mockReset()
+    otherMocks.getRegimeBaselineMonths.mockReset()
+    otherMocks.getRegimeBaselineMonths.mockReturnValue(new Promise(() => {}))
   })
 
   afterEach(() => {
@@ -332,6 +339,12 @@ describe('MyRecordsPage', () => {
       nextCursor: null,
     })
     apiMocks.fetchMyRecord.mockResolvedValue(regimeDetailRecord)
+    // 분야 이름은 010 분야 목록에서 한 번 받는다. 코드(EMPLOYMENT)를 그대로 보이지 않는다.
+    otherMocks.getRegimeBaselineMonths.mockResolvedValue({
+      byField: [{ id: 'EMPLOYMENT', name: '고용환경', baselineMonth: '2026-08' }],
+      composite: null,
+      range: null,
+    })
 
     renderPage()
 
@@ -346,6 +359,8 @@ describe('MyRecordsPage', () => {
 
     expect(await screen.findByText(NO_LINK_NOTICE)).toBeTruthy()
     expect(screen.getByText('분야 검색')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('분야').nextElementSibling?.textContent).toBe('고용환경'))
+    expect(screen.queryByText('EMPLOYMENT')).toBeNull()
     expect(screen.getByText('분야의 최신 기준월(T_g)')).toBeTruthy()
     expect(screen.getByText('시장 흐름에서')).toBeTruthy()
     expect(screen.getByText('REGIME-V1')).toBeTruthy()
