@@ -18,17 +18,8 @@ from worker.regime_link import messaging
 #: 계약 문서에서 이름을 읽어 올 절. 다른 절의 예시 문장이 섞이지 않게 범위를 좁힌다.
 TOPOLOGY_SECTION = "## 메시지 속성과 토폴로지"
 
-#: 모듈이 들고 있는 계약 이름 상수. 값이 아니라 **집합**을 대조해 한쪽에만 있는
-#: 이름을 잡는다.
-NAME_CONSTANTS = (
-    "EXCHANGE",
-    "DEAD_LETTER_EXCHANGE",
-    "JOBS_QUEUE",
-    "JOBS_ROUTING_KEY",
-    "JOBS_DEAD_LETTER_QUEUE",
-    "EVENTS_QUEUE",
-    "EVENTS_ROUTING_KEY",
-)
+#: 계약 이름의 접두어. exchange·큐·routing key 가 모두 이것으로 시작한다.
+NAME_PREFIX = "regime-link"
 
 
 def contract_section() -> str:
@@ -40,16 +31,40 @@ def contract_section() -> str:
     return text[start:end]
 
 
+def documented_names() -> set[str]:
+    """계약 문서의 토폴로지 절이 backtick 으로 적은 이름.
+
+    글자 종류를 제한하는 정규식으로 뽑지 않는다. ``regime-link.jobs-dlq`` 처럼
+    하이픈·숫자가 든 이름을 계약에 새로 적으면 그런 정규식은 그 이름을 **조용히
+    건너뛰어**, 워커도 모르는 이름이 계약에만 남은 상태가 통과한다. backtick 토큰을
+    통째로 걷은 뒤 접두어로만 거른다.
+    """
+    tokens = re.findall(r"`([^`]+)`", contract_section())
+    return {token for token in tokens if token.startswith(NAME_PREFIX)}
+
+
+def held_names() -> set[str]:
+    """모듈이 들고 있는 계약 이름 상수.
+
+    대조할 상수를 손으로 적은 목록으로 두지 않는다 — 상수를 더하면서 목록에 넣는
+    것을 잊으면 그 상수는 계약과 한 번도 대조되지 않은 채 통과한다.
+    """
+    return {
+        value
+        for name, value in vars(messaging).items()
+        if not name.startswith("_") and isinstance(value, str) and value.startswith(NAME_PREFIX)
+    }
+
+
 # --- 계약 상수 -----------------------------------------------------------------------
 
 
 def test_topology_names_match_the_contract() -> None:
     """워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다 (T030 전까지)."""
-    documented = set(re.findall(r"`(regime-link(?:\.[a-z.]+)?)`", contract_section()))
+    documented = documented_names()
     assert documented, "계약 문서에서 토폴로지 이름을 찾지 못했다"
 
-    held = {getattr(messaging, name) for name in NAME_CONSTANTS}
-    assert held == documented
+    assert held_names() == documented
 
 
 def test_schema_version_matches_the_contract() -> None:
@@ -71,6 +86,11 @@ def test_prefetch_is_one() -> None:
 def test_topology_constants_match_the_backend() -> None:
     """백엔드 ``RegimeLinkRabbitConfig`` 가 생기면 그 상수와 직접 대조한다."""
     if not REGIME_LINK_BACKEND_CONFIG.exists():
+        # 경로가 틀려 영영 skip 되는 것과 아직 T030 을 안 한 것을 가른다. 이 skip 은
+        # "못 잡는 쪽"으로 실패하므로 닻이 없으면 대조가 영영 돌지 않아도 알 수 없다.
+        assert REGIME_LINK_BACKEND_CONFIG.parent.is_dir(), (
+            f"{REGIME_LINK_BACKEND_CONFIG.parent} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다"
+        )
         pytest.skip("RegimeLinkRabbitConfig.java 는 spec 011 T030(묶음 M5)에서 만든다")
 
     source = REGIME_LINK_BACKEND_CONFIG.read_text(encoding="utf-8")

@@ -20,7 +20,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Generic, TypeVar
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
 from worker.contracts.base import ContractModel, UtcDatetime
 
@@ -424,6 +424,10 @@ class RegimeLinkFinishedPayload(RegimeLinkModel):
     ``error``가 없으며 ``FAILED``면 반대다. ``partial``은 구간 안 상장폐지로
     63거래일을 채우지 못했다는 뜻이며 ``window21``은 언제나 완성이라 이 값과
     무관하다.
+
+    **이 짝은 모델이 지킨다.** 이벤트를 만드는 쪽이 워커라, 분기 실수로 결과 없는
+    ``COMPLETED``를 발행하면 브로커를 건너 백엔드에서야 드러나고 그때는 이미
+    ACK한 뒤라 되돌릴 길이 없다. 발행 전에 멈추는 편이 싸다.
     """
 
     status: RegimeLinkStatus
@@ -432,6 +436,20 @@ class RegimeLinkFinishedPayload(RegimeLinkModel):
     result: RegimeLinkResultPayload | None = None
     error: ErrorDetail | None = None
     resource: ResourceUsage | None = None
+
+    @model_validator(mode="after")
+    def _outcome_matches_status(self) -> "RegimeLinkFinishedPayload":
+        if self.status is RegimeLinkStatus.COMPLETED:
+            if self.result is None:
+                raise ValueError("COMPLETED 는 result 가 있어야 한다")
+            if self.error is not None:
+                raise ValueError("COMPLETED 에는 error 가 없어야 한다")
+        if self.status is RegimeLinkStatus.FAILED:
+            if self.error is None:
+                raise ValueError("FAILED 는 error 가 있어야 한다")
+            if self.result is not None:
+                raise ValueError("FAILED 에는 result 가 없어야 한다")
+        return self
 
 
 P = TypeVar("P", RegimeLinkStartedPayload, RegimeLinkFinishedPayload)

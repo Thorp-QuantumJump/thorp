@@ -1,5 +1,6 @@
 package com.ssafy.thorp.regimelink.application.port;
 
+import com.ssafy.thorp.regimelink.application.exception.RegimeLinkPublishFailedException;
 import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkJob;
 
 /**
@@ -16,8 +17,9 @@ public interface RegimeLinkJobPublisher {
     /**
      * {@code regime-link.jobs}로 작업 한 건을 발행한다.
      *
-     * <p>브로커가 받았다고 확인(publisher confirm)한 뒤에만 정상 반환한다. 확인되지 않으면 예외를 던지며, 호출자는 링크를 발행된 것으로 기록하지 않는다
-     * — 발행 실패를 성공으로 숨기면 영원히 {@code QUEUED}인 링크가 남는다.
+     * <p>브로커가 받았다고 확인(publisher confirm)한 뒤에만 정상 반환한다. 확인되지 않으면 {@link
+     * RegimeLinkPublishFailedException}을 던지며, 호출자는 링크를 발행된 것으로 기록하지 않는다 — 발행 실패를 성공으로 숨기면 영원히
+     * {@code QUEUED}인 링크가 남는다. 구현이 다른 예외 유형을 새로 만들지 않는 것이 이 포트의 계약이다.
      *
      * <p>메시지 속성({@code message_id = "RLJ-" + linkId + "-" + attempt}, {@code correlation_id =
      * linkId}, header {@code schemaVersion})은 구현이 {@code job}에서 뽑아 붙인다.

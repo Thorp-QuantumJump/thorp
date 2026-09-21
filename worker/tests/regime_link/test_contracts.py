@@ -6,12 +6,15 @@
 """
 
 import json
+import re
+from enum import StrEnum
 from typing import Any
 
 import pytest
-from fixture_paths import REGIME_LINK_FIXTURE_DIR
+from fixture_paths import REGIME_LINK_BACKEND_MESSAGE_DIR, REGIME_LINK_FIXTURE_DIR
 from pydantic import ValidationError
 
+from worker.regime_link import contracts
 from worker.regime_link.contracts import (
     BasisKind,
     FillSide,
@@ -233,3 +236,75 @@ def test_naive_datetime_is_rejected() -> None:
 
     with pytest.raises(ValidationError):
         StartedEvent.model_validate(body)
+
+
+def test_finished_completed_without_result_is_rejected() -> None:
+    """COMPLETED 인데 result 가 없는 이벤트는 만들 수도 읽을 수도 없다."""
+    body = load_dict("event-finished-completed.json")
+    del body["payload"]["result"]
+
+    with pytest.raises(ValidationError):
+        FinishedEvent.model_validate(body)
+
+
+def test_finished_completed_with_error_is_rejected() -> None:
+    body = load_dict("event-finished-completed.json")
+    body["payload"]["error"] = {"code": "ENGINE_ERROR", "message": "둘 다 실을 수 없다"}
+
+    with pytest.raises(ValidationError):
+        FinishedEvent.model_validate(body)
+
+
+def test_finished_failed_without_error_is_rejected() -> None:
+    body = load_dict("event-finished-failed.json")
+    del body["payload"]["error"]
+
+    with pytest.raises(ValidationError):
+        FinishedEvent.model_validate(body)
+
+
+def test_finished_failed_with_result_is_rejected() -> None:
+    """실패한 계산에 결과를 실으면 화면이 실패를 숫자로 읽는다."""
+    completed = load_dict("event-finished-completed.json")
+    body = load_dict("event-finished-failed.json")
+    body["payload"]["result"] = completed["payload"]["result"]
+
+    with pytest.raises(ValidationError):
+        FinishedEvent.model_validate(body)
+
+
+# --- 백엔드 enum 과의 값 대조 ----------------------------------------------------------
+
+
+def java_enum_values(source: str) -> dict[str, set[str]]:
+    """Java 소스에서 ``public enum`` 이름과 그 상수 집합을 읽는다."""
+    without_comments = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
+    without_comments = re.sub(r"//[^\n]*", " ", without_comments)
+    found: dict[str, set[str]] = {}
+    for match in re.finditer(r"public enum (\w+)\s*\{(.*?)\}", without_comments, flags=re.DOTALL):
+        body = match.group(2).split(";")[0]  # 상수 목록은 첫 세미콜론 앞까지다
+        found[match.group(1)] = set(re.findall(r"\b[A-Z][A-Z0-9_]*\b", body))
+    return found
+
+
+def test_enum_values_match_the_backend() -> None:
+    """양쪽 enum 의 값 집합이 같다.
+
+    픽스처에 나오지 않는 값(``MARKET_DATA_MISSING``·``LIQUIDATION`` 등)은 round-trip
+    으로는 한 번도 지나가지 않아, 한쪽에서만 이름이 바뀌거나 사라져도 그 값을 처음
+    발행하는 순간까지 드러나지 않는다. 그래서 값 집합을 직접 맞춘다.
+    """
+    assert REGIME_LINK_BACKEND_MESSAGE_DIR.is_dir(), (
+        f"{REGIME_LINK_BACKEND_MESSAGE_DIR} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다"
+    )
+
+    declared: dict[str, set[str]] = {}
+    for path in sorted(REGIME_LINK_BACKEND_MESSAGE_DIR.glob("*.java")):
+        declared.update(java_enum_values(path.read_text(encoding="utf-8")))
+    assert declared, "백엔드 enum 을 하나도 읽지 못했다"
+
+    for name, values in sorted(declared.items()):
+        model = getattr(contracts, name, None)
+        assert model is not None, f"{name} 이 워커 계약에 없다"
+        assert issubclass(model, StrEnum), f"{name} 이 워커에서 StrEnum 이 아니다"
+        assert {member.value for member in model} == values, name
