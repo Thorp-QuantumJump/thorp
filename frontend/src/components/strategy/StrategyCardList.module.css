@@ -1,6 +1,26 @@
 .list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 11px;
+}
+
+.selectedContent {
+  position: relative;
+  z-index: 2;
+  grid-column: 1 / -1;
+  isolation: isolate;
+  margin: 2px 7px 8px;
+}
+
+.selectedContent::before {
+  position: absolute;
+  z-index: -1;
+  inset: 7px -7px -7px 7px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 10px;
+  background: var(--thorp-surface);
+  content: '';
+  pointer-events: none;
 }
 
 .list:focus-visible {
@@ -19,4 +39,14 @@
   border: 1px solid var(--thorp-line);
   border-radius: 7px;
   background: var(--thorp-surface-raised);
+}
+
+@media (max-width: 560px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
+
+  .selectedContent {
+    margin-inline: 0;
+  }
 }

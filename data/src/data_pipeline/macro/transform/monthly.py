@@ -51,6 +51,12 @@ MISSING_SERIES_START: Final[str] = "SERIES_START"
 MISSING_INCOMPLETE_MONTH: Final[str] = "INCOMPLETE_MONTH"
 """그 달의 거래일이 다 모이지 않았다. 부분 표본으로 만든 값은 다른 달과 같은 뜻이 아니다."""
 
+MISSING_BREAK_EXCLUDED: Final[str] = "BREAK_SEGMENT_EXCLUDED"
+"""개편으로 단절된 구간을 넘는 비교인데 등록표에 그 둘을 잇는 규칙이 없다 (FR-006).
+
+이을 규칙 없이 두 구간을 견주면 두 표가 각각 100 으로 잡은 서로 다른 기준을 견주는 것이 된다.
+그 결과는 경기 변화가 아니라 기준 변경이고, 값의 모양은 멀쩡한 증가율이라 구분되지 않는다."""
+
 #: 증가율을 어디서 끊을지. 재현성(SC-004)을 위해 고정한다 — 자리를 정하지 않으면 같은 자료로
 #: 다시 돌려도 끝자리가 흔들린다.
 GROWTH_EXPONENT: Final[Decimal] = Decimal("0.000001")
@@ -207,9 +213,19 @@ def _id(observations: Sequence[SourceObservation]) -> str:
 # 증가율
 # --------------------------------------------------------------------------
 def _growth(
-    monthly: Sequence[MonthlyValue], *, lag: int, series_start: str
+    monthly: Sequence[MonthlyValue],
+    *,
+    lag: int,
+    series_start: str,
+    break_segments: Mapping[str, str] | None = None,
+    linked_segments: frozenset[str] = frozenset(),
 ) -> list[MonthlyValue]:
-    """``lag`` 달 전과 견준 증가율. 비교월은 고정이며 가장 가까운 값으로 대신하지 않는다."""
+    """``lag`` 달 전과 견준 증가율. 비교월은 고정이며 가장 가까운 값으로 대신하지 않는다.
+
+    ``break_segments`` 는 달마다 그 값을 준 구간(개편 전후로 나뉜 통계표)의 식별자다.
+    ``linked_segments`` 는 그중 등록표의 연결 규칙으로 이어진 구간들이다. 둘 다 주지 않으면
+    단절이 없는 지표라는 뜻이고, 그때는 모든 비교가 허용된다.
+    """
     by_period = {value.period: value for value in monthly}
 
     result: list[MonthlyValue] = []
@@ -230,6 +246,18 @@ def _growth(
                 _missing(current.indicator_id, current.period, MISSING_NOT_TRANSFORMABLE)
             )
             continue
+        if break_segments is not None and not _comparable(
+            current.period, base_period, break_segments, linked_segments
+        ):
+            result.append(
+                _missing(
+                    current.indicator_id,
+                    current.period,
+                    MISSING_BREAK_EXCLUDED,
+                    [base_period, current.period],
+                )
+            )
+            continue
         ratio = (current.value - base.value) / base.value * _HUNDRED
         result.append(
             MonthlyValue(
@@ -244,18 +272,63 @@ def _growth(
     return result
 
 
-def year_over_year(monthly: Sequence[MonthlyValue], *, series_start: str) -> list[MonthlyValue]:
+def _comparable(
+    current_period: str,
+    base_period: str,
+    break_segments: Mapping[str, str],
+    linked_segments: frozenset[str],
+) -> bool:
+    """두 달을 견줘도 되는가. **같은 구간 안이거나, 둘 다 이어진 구간일 때만 참이다.**
+
+    구간을 모르는 달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면, 구간
+    정보가 빠진 순간 모든 비교가 조용히 허용된다.
+    """
+    current_segment = break_segments.get(current_period)
+    base_segment = break_segments.get(base_period)
+    if current_segment is not None and current_segment == base_segment:
+        return True
+    return (
+        current_segment in linked_segments
+        and base_segment in linked_segments
+    )
+
+
+def year_over_year(
+    monthly: Sequence[MonthlyValue],
+    *,
+    series_start: str,
+    break_segments: Mapping[str, str] | None = None,
+    linked_segments: frozenset[str] = frozenset(),
+) -> list[MonthlyValue]:
     """전년동월 대비. **비교월은 t-12 로 고정한다** (FR-006).
 
     t-12 가 비었다고 t-11 이나 t-13 으로 물러서지 않는다. 그렇게 만든 값은 다른 달의 전년동월
     대비와 같은 뜻이 아닌데 표에서는 같은 열에 나란히 놓인다.
     """
-    return _growth(monthly, lag=12, series_start=series_start)
+    return _growth(
+        monthly,
+        lag=12,
+        series_start=series_start,
+        break_segments=break_segments,
+        linked_segments=linked_segments,
+    )
 
 
-def month_over_month(monthly: Sequence[MonthlyValue], *, series_start: str) -> list[MonthlyValue]:
-    """전월 대비. 주택가격이 쓴다."""
-    return _growth(monthly, lag=1, series_start=series_start)
+def month_over_month(
+    monthly: Sequence[MonthlyValue],
+    *,
+    series_start: str,
+    break_segments: Mapping[str, str] | None = None,
+    linked_segments: frozenset[str] = frozenset(),
+) -> list[MonthlyValue]:
+    """전월 대비. 주택가격이 쓴다 — 이어 붙인 이음매를 바로 넘는 비교라 단절 확인이 중요하다."""
+    return _growth(
+        monthly,
+        lag=1,
+        series_start=series_start,
+        break_segments=break_segments,
+        linked_segments=linked_segments,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -326,6 +399,8 @@ def apply(
     *,
     as_of: date | None = None,
     trading_days: Mapping[str, Sequence[str]] | None = None,
+    break_segments: Mapping[str, str] | None = None,
+    linked_segments: frozenset[str] = frozenset(),
 ) -> list[MonthlyValue]:
     """등록표의 ``transform_rule`` 이 정한 변환을 건다. **여기서 규칙을 고르지 않는다**(FR-005).
 
@@ -366,6 +441,11 @@ def apply(
             )
         levels = passthrough(observations)
         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month
-        return growth(levels, series_start=indicator.series_start)
+        return growth(
+            levels,
+            series_start=indicator.series_start,
+            break_segments=break_segments,
+            linked_segments=linked_segments,
+        )
 
     raise ValueError(f"{indicator.indicator_id}: 모르는 변환 규칙이다({rule})")
