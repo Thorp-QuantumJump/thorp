@@ -109,18 +109,11 @@
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
-.note,
-.blocked {
+.note {
   margin: 0;
   color: var(--thorp-muted);
   font-size: 0.72rem;
   line-height: 1.55;
-}
-
-.blocked {
-  padding: 9px 11px;
-  border: 1px dashed var(--thorp-line-strong);
-  border-radius: 5px;
 }
 
 .open {
