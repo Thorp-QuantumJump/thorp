@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getRegimeSearch } from '@/api/regime'
+import { getRegimeSearch, getRegimeSearchById } from '@/api/regime'
 import { regimeResult } from '@/test/regimeFixtures'
 import type { RegimeSearchResult } from '@/types/regime'
 import { useRegimeSearch } from './useRegimeSearch'
 
-vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn() }))
+vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeSearchById: vi.fn() }))
 
 function pending() {
   let resolve!: (value: RegimeSearchResult) => void
@@ -48,5 +48,15 @@ describe('경제환경 검색 훅', () => {
       { mode: 'field', field: 'new', baselineMonth: undefined, limit: 3 },
       expect.any(AbortSignal),
     ))
+  })
+
+  it('저장된 검색 식별자가 있으면 폼 질의 대신 그 판을 고정 조회한다(006 R17)', async () => {
+    vi.mocked(getRegimeSearchById).mockResolvedValue(regimeResult({ searchId: 'saved-1' }))
+    const { result } = renderHook(() => useRegimeSearch(null, 'saved-1'))
+    await waitFor(() => expect(result.current.result?.searchId).toBe('saved-1'))
+    expect(vi.mocked(getRegimeSearchById)).toHaveBeenCalledWith('saved-1', 3, expect.any(AbortSignal))
+    expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+    act(() => result.current.showMore())
+    await waitFor(() => expect(vi.mocked(getRegimeSearchById)).toHaveBeenLastCalledWith('saved-1', 10, expect.any(AbortSignal)))
   })
 })
