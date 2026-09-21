@@ -44,6 +44,10 @@ export function MyRecordsPage() {
   const catalog = useSectorCatalogState()
   const [strategies, setStrategies] = useState<StrategyView[] | null>(null)
   const [regimeFields, setRegimeFields] = useState<RegimeField[] | null>(null)
+  // 이름 변경·삭제·내보내기의 시작과 실패를 알리는 <b>페이지 수준</b> 자리(FR-021). 줄마다 두면
+  // 보조기기가 같은 말을 여러 번 읽는다. 펼친 층의 안내(RecordDetailPanel 등)는 그 자리의 것이라
+  // 따로 둔다.
+  const [notice, setNotice] = useState('')
   const highlightRef = useRef<HTMLLIElement>(null)
   // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.
   const highlightedOnce = useRef(false)
@@ -99,16 +103,22 @@ export function MyRecordsPage() {
 
         <RecordFilters
           query={query}
-          onChange={setQuery}
+          onChange={(next) => {
+            // 끝난 조작의 문장을 비운다. 두지 않으면 notice 가 로딩 문장을 영영 가리고(둘이 한
+            // 자리를 쓴다), 이미 끝난 일의 말이 다른 일을 하는 내내 남는다.
+            setNotice('')
+            setQuery(next)
+          }}
           catalog={catalog.status === 'loaded' ? catalog.catalog : null}
           strategies={strategies}
         />
 
-        {records.status === 'loading' ? (
-          <p className={styles.status} role="status">
-            기록을 불러오는 중입니다.
-          </p>
-        ) : null}
+        {/* 라이브 영역은 내용보다 먼저 DOM 에 있어야 보조기기가 변경을 알아챈다 — 영역과 내용이
+            함께 생기면 많은 스크린리더가 읽지 않는다. 페이지 수준 알림과 불러오는 중이라는 말이
+            이 한 자리를 쓰므로, 질의가 바뀔 때 앞선 알림을 비운다(FR-021). */}
+        <p className={styles.status} role="status">
+          {notice || (records.status === 'loading' ? '기록을 불러오는 중입니다.' : '')}
+        </p>
 
         {records.status === 'failed' ? (
           <div className={styles.error} role="alert">
@@ -145,6 +155,9 @@ export function MyRecordsPage() {
                     item={item}
                     labels={labels}
                     initiallyOpen={highlighted}
+                    onRenamed={records.replaceItem}
+                    onDeleted={records.removeItem}
+                    announce={setNotice}
                   />
                 )
               })}
