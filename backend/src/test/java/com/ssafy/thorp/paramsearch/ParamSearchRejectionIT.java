@@ -17,6 +17,7 @@ import com.ssafy.thorp.paramsearch.domain.model.StopReason;
 import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
+import com.ssafy.thorp.support.TestUsers;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,10 +62,16 @@ class ParamSearchRejectionIT extends LauncherMockedIntegrationTestSupport {
     @BeforeEach
     void prepare() {
         jdbcTemplate.update("DELETE FROM search_candidate");
+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).
+        jdbcTemplate.update("DELETE FROM my_record");
         jdbcTemplate.update("DELETE FROM param_search");
         Mockito.when(executionSupport.supportedStrategies())
                 .thenReturn(RegistryFixtures.supporting(STRATEGY).supportedStrategies());
+        // 로그인 요청으로 접수한다 — 거절이 내 기록을 남기지 않는지 보려면 요청자가 있어야 한다.
+        requesterId = TestUsers.ensure(jdbcTemplate, 91_001L);
     }
+
+    private long requesterId;
 
     @Test
     @DisplayName("상한을 넘으면 422이고 묶음만 REJECTED로 남는다 — 표본을 뽑지 않는다")
@@ -86,6 +93,16 @@ class ParamSearchRejectionIT extends LauncherMockedIntegrationTestSupport {
         assertThat(candidateRepository.findByParamSearchId(rejected.getId()))
                 .as("상한을 넘겼다고 표본을 뽑아 실행하지 않는다(FR-005b)")
                 .isEmpty();
+        // 거절된 접수는 내 기록에 남지 않는다(spec 006 data-model §4). 계산이 시작되지 않아 다시 열 것이
+        // 없고, 목록에 두면 사용자가 "돌다 만 탐색"으로 읽는다. 006 은 이 갈래에서 발행하지 않는 것으로
+        // 막으므로, 그 규칙이 깨지면 여기서 드러난다.
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM my_record WHERE owner_id = ?",
+                                Integer.class,
+                                requesterId))
+                .as("거절된 탐색은 기록 항목을 만들지 않는다")
+                .isZero();
         Mockito.verifyNoInteractions(launcher);
     }
 
@@ -162,7 +179,7 @@ class ParamSearchRejectionIT extends LauncherMockedIntegrationTestSupport {
 
     private CreateParamSearchCommand command() {
         return new CreateParamSearchCommand(
-                null, UNIVERSE, List.of(STRATEGY), null, null, null, Map.of(), VERSION);
+                requesterId, UNIVERSE, List.of(STRATEGY), null, null, null, Map.of(), VERSION);
     }
 
     private ParamSearch onlySearch() {
