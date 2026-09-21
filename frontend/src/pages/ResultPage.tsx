@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
@@ -7,6 +7,7 @@ import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
 import { useCompareTarget } from '@/hooks/useCompareTarget'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
@@ -94,6 +95,9 @@ function ResultView({
   timeseries: TimeseriesState
 }) {
   const navigate = useNavigate()
+  // 내 기록에서 열었으면(006 FR-006) 재계산하지 않았다는 한 줄을 덧붙인다. 다른 동작은 바꾸지 않는다.
+  const [searchParams] = useSearchParams()
+  const fromRecords = searchParams.get('from') === 'records'
   const completedThrough = completedRange(detail, timeseries)
   const compare = useCompareTarget(detail)
   const target = compare.compatibleTarget
@@ -124,6 +128,7 @@ function ResultView({
         분석 결과
       </h1>
       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
 
       {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
         <p className={styles.status} role="status">

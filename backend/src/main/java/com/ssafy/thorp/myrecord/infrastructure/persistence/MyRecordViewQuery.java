@@ -58,6 +58,7 @@ final class MyRecordViewQuery {
             WITH v AS (
                 SELECT r.id, r.record_id, r.kind, r.name, r.sector_codes, r.strategy_ids,
                        r.period_start, r.period_end, r.saved_at, r.last_viewed_at, r.is_copy,
+                       r.analysis_run_id,
                        req.public_token AS result_token,
                        ps.search_id,
                        rl.snapshot_key, rl.snapshot_id, rl.entry_path, rl.baseline_origin,
@@ -223,6 +224,7 @@ final class MyRecordViewQuery {
                                 EntryPath.valueOf(rs.getString("entry_path")),
                                 rs.getObject("snapshot_id") == null)
                         : null,
+                rs.getObject("analysis_run_id", Long.class),
                 rs.getBoolean("is_copy"));
     }
 

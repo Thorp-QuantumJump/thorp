@@ -39,7 +39,12 @@ _RETRYABLE_STATUS: Final[frozenset[int]] = frozenset({408, 500, 502, 503, 504})
 class Fetcher(Protocol):
     """요청 하나를 보내고 본문을 문자열로 돌려준다."""
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str: ...
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str: ...
 
 
 class RequestsFetcher:
@@ -48,11 +53,18 @@ class RequestsFetcher:
     def __init__(self, timeout_seconds: float) -> None:
         self._timeout = timeout_seconds
 
-    def get(self, url: str, params: dict[str, str] | None = None) -> str:
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
         import requests  # 지연 임포트 — 표본만 읽는 테스트는 이 의존을 건드리지 않는다
 
         try:
-            response = requests.get(url, params=params, timeout=self._timeout)
+            response = requests.get(
+                url, params=params, headers=headers, timeout=self._timeout
+            )
         except requests.Timeout as error:
             raise TransientSourceError(f"시간 초과: {_safe(url)}") from error
         except requests.RequestException as error:
@@ -85,6 +97,7 @@ def fetch_text(
     *,
     needs_key: bool = True,
     key_param: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> str:
     """설정된 재시도 안에서 한 요청을 끝낸다.
 
@@ -107,7 +120,7 @@ def fetch_text(
 
     url = f"{config.base_url}/{request_path.lstrip('/')}" if request_path else config.base_url
     return fetch_with_retry(
-        lambda: fetcher.get(url, request_params or None), config
+        lambda: fetcher.get(url, request_params or None, headers), config
     )
 
 
