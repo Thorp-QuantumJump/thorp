@@ -81,10 +81,26 @@ public class MyRecordQueryService {
         MyRecordView view = requireView(ownerId, recordId);
         Instant now = clock.instant();
         records.markViewed(view.id(), now);
+        return detailOf(view.viewedAt(now));
+    }
+
+    /**
+     * 갱신한 항목을 그대로 돌려줄 때(이름 변경 응답). <b>열람 표시를 남기지 않는다.</b>
+     *
+     * <p>{@code last_viewed_at}은 "'다시 보기'로 열었다"는 뜻이고 보관 기간 판단(PD-13)에 쓰려고 남겨 둔 값이다. 이름을 고친 기록이 열람한
+     * 것으로 세어지면 그 판단이 조용히 어긋난다 — {@link #item}과 같은 규칙이다.
+     */
+    @Transactional(readOnly = true)
+    public MyRecordDetail current(long ownerId, String recordId) {
+        return detailOf(requireView(ownerId, recordId));
+    }
+
+    /** 펼쳐 보는 층을 조립한다. 열람 표시 여부는 부른 쪽이 정한다. */
+    private MyRecordDetail detailOf(MyRecordView view) {
         Map<String, Object> referenceVersions = referenceVersions(view);
         Map<String, Object> reopenPayload = reopenPayload(view);
         return new MyRecordDetail(
-                view.viewedAt(now),
+                view,
                 referenceVersions,
                 driftChecker
                         .check(

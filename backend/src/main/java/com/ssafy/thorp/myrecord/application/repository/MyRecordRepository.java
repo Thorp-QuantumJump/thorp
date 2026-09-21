@@ -75,12 +75,15 @@ public interface MyRecordRepository {
      * <p>도메인 객체를 통째로 저장하지 않는 이유는 {@link #markViewed}와 같다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다. 통째로 저장하면
      * 늦게 저장한 쪽이 상대의 갱신을 되돌린다.
      */
-    void renameTo(long id, String name);
+    void renameTo(long id, String name, Instant at);
 
     /**
      * 지운 시각을 채운다. <b>행을 지우지 않는다</b> — 지운 항목도 남아야 상한·재사용 판정이 그 사실을 볼 수 있다(research R6).
      *
      * <p>이 표만 건드린다. 결과·거래 내역·실행 행에는 아무것도 보내지 않는다.
      */
-    void softDelete(long id, Instant at);
+    /**
+     * @return 바꾼 행 수. 0이면 그 사이 다른 요청이 먼저 지웠다는 뜻이고, 부른 쪽이 404로 답한다
+     */
+    int softDelete(long id, Instant at);
 }

@@ -43,11 +43,14 @@ public class MyRecordCommandService {
     @Transactional
     public void rename(long ownerId, String recordId, String name) {
         MyRecord record = require(ownerId, recordId);
-        records.renameTo(record.id(), record.rename(RecordName.of(name)).name().value());
+        records.renameTo(record.id(), RecordName.of(name).value(), clock.instant());
     }
 
     /**
      * 지운다. {@code deleted_at}을 채우는 것이 전부다.
+     *
+     * <p>동시에 두 번 들어온 요청은 둘 다 {@link #require}를 지난다 — 각자 자기 스냅샷을 읽어 둘 다 "아직 살아 있다"를 본다. 먼저 커밋한 쪽만 행을
+     * 바꾸는 것은 {@code softDelete}의 {@code deleted_at IS NULL}이고, 늦은 쪽은 바꾼 행이 없어 여기서 404가 된다.
      *
      * @return 지운 시각. 화면이 그대로 보인다
      */
@@ -55,10 +58,9 @@ public class MyRecordCommandService {
     public Instant delete(long ownerId, String recordId) {
         MyRecord record = require(ownerId, recordId);
         Instant now = clock.instant();
-        // 도메인이 이미 지운 항목을 거절한다. 여기 오기 전에 require 가 걸러 내므로 정상 경로에서는
-        // 던지지 않고, 동시에 두 번 눌렀을 때의 안전망이다.
-        record.delete(now);
-        records.softDelete(record.id(), now);
+        if (records.softDelete(record.id(), now) == 0) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "기록을 찾을 수 없습니다: " + recordId);
+        }
         return now;
     }
 
