@@ -248,6 +248,29 @@ class MyRecordListQueryIT extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("저장일이 같은 항목이 여럿이어도 쪽 크기 1로 넘기면 하나씩 빠짐없이 온다 — 식별자가 자리를 가른다")
+    void 같은_저장일도_커서가_가른다() {
+        long owner = newUser();
+        for (int i = 0; i < 4; i++) {
+            analysis(owner, newRun("COMPLETED", null), BASE);
+        }
+        flush();
+
+        List<String> seen = new java.util.ArrayList<>();
+        MyRecordListQuery.Cursor cursor = null;
+        int pages = 0;
+        do {
+            MyRecordPage page = records.findPage(owner, sized(1, cursor));
+            page.items().forEach(item -> seen.add(item.recordId()));
+            cursor = page.nextCursor();
+            pages++;
+        } while (cursor != null && pages < 10);
+
+        assertThat(pages).isEqualTo(4);
+        assertThat(seen).hasSize(4).doesNotHaveDuplicates();
+    }
+
+    @Test
     @DisplayName("다른 사용자의 항목은 목록에도 상세에도 없다. 지운 항목도 같다")
     void 남의_항목은_보이지_않는다() {
         long owner = newUser();
