@@ -51,8 +51,7 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
                 .isEqualTo("ANALYSIS");
         // 기록은 요청이 아니라 실행을 가리킨다. 공개 토큰과 상태는 읽을 때 요청을 골라 읽는다.
         assertThat(analysisRunIdOf(owner)).isEqualTo(runIdOf(accepted));
-        assertThat(records.findViewableRequestId(owner, runIdOf(accepted)))
-                .hasValue(requestIdOf(accepted));
+        assertThat(viewableToken(owner)).isEqualTo(accepted.publicToken());
     }
 
     @Test
@@ -82,11 +81,11 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
 
         // 취소는 실행이 아니라 요청에 붙는다(BacktestDetailResult). 취소한 요청을 보면 목록이
         // '취소'와 부분 결과를 보이지만 이 사용자의 분석은 아직 돌고 있다.
-        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(first));
+        assertThat(viewableToken(owner)).isEqualTo(first.publicToken());
 
         // 남은 요청까지 취소하면 그때는 취소가 맞다. 가장 최근 것을 본다.
         cancelService.cancel(first.backtestId(), owner);
-        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(second));
+        assertThat(viewableToken(owner)).isEqualTo(second.publicToken());
     }
 
     @Test
@@ -101,9 +100,9 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
         long candidateRequestId = joinAsSearchCandidate(owner, runId);
 
         assertThat(candidateRequestId).as("후보 요청이 더 나중에 생겼다").isGreaterThan(requestIdOf(single));
-        assertThat(records.findViewableRequestId(owner, runId))
+        assertThat(viewableToken(owner))
                 .as("단건 기록이 탐색 후보 요청의 상태·토큰을 따라가지 않는다")
-                .hasValue(requestIdOf(single));
+                .isEqualTo(single.publicToken());
     }
 
     @Test
@@ -139,6 +138,14 @@ class MyRecordIntakeIT extends IntegrationTestSupport {
 
     private int totalRecordCount() {
         return jdbcTemplate.queryForObject("SELECT count(*) FROM my_record", Integer.class);
+    }
+
+    /** 목록이 보이는 공개 토큰. 그 사용자의 단건 요청 중 취소하지 않은 최신 것이어야 한다(MyRecordViewQuery). */
+    private String viewableToken(long owner) {
+        String recordId =
+                jdbcTemplate.queryForObject(
+                        "SELECT record_id FROM my_record WHERE owner_id = ?", String.class, owner);
+        return records.findView(owner, recordId).orElseThrow().resultToken();
     }
 
     private long analysisRunIdOf(long owner) {
