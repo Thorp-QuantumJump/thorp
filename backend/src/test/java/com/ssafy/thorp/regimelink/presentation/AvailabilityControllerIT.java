@@ -329,11 +329,14 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
                 "INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,"
                         + " parameters, instrument_ids, start_date, end_date, initial_cash,"
                         + " position_sizing_type, random_seed, status, request_spec,"
-                        + " effective_start, data_version, created_at, updated_at)"
+                        + " effective_start, data_version, cost_profile_version, created_at,"
+                        + " updated_at)"
                         + " VALUES (?, ?, 'FIXED_WEIGHT', '1.0.0', '{}'::jsonb, ?::jsonb,"
                         + " DATE '2015-01-02', DATE '2026-12-31', 10000000.00,"
                         + " 'STRATEGY_DEFINED', 42, 'COMPLETED', ?::jsonb,"
-                        + " DATE '2015-04-01', ?, NOW(), NOW())",
+                        // 비용 버전은 응답 §1 의 bundle.runs[] 에 실린다(T061) — 비우면 NON_NULL 에
+                        // 걸려 키가 빠지고 계약 예시와 열쇠가 어긋난다.
+                        + " DATE '2015-04-01', ?, 'PROVISIONAL-DEMO-1', NOW(), NOW())",
                 id,
                 backtestId,
                 "[\"" + INSTRUMENT + "\"]",
