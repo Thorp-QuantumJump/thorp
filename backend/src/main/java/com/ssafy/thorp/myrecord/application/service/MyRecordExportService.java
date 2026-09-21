@@ -158,7 +158,12 @@ public class MyRecordExportService {
                                         "기록이 가리키는 실행에 소유자의 요청이 없습니다: " + view.recordId()));
     }
 
-    /** 거래 전체. 005의 쪽 조회를 끝까지 넘긴다 — 파일에는 쪽이 없다. */
+    /**
+     * 거래 전체. 005의 쪽 조회를 끝까지 넘긴다 — 파일에는 쪽이 없다.
+     *
+     * <p>ponytail: 파일 전체(거래·후보 목록과 CSV 문자열)를 메모리에 만든다. 지금 규모(거래 수백 건, 시계열 ~1700점, 후보는 상한이 있다)에서는
+     * 충분하고, 거래·후보가 수만 건이 되면 {@code StreamingResponseBody}로 바꾼다.
+     */
     private List<EngineOutput.TradeResult> allTrades(BacktestRequest request) {
         List<EngineOutput.TradeResult> all = new ArrayList<>();
         for (int page = 0; ; page++) {
