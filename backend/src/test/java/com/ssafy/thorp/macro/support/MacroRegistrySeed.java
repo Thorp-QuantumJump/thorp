@@ -18,16 +18,62 @@ public final class MacroRegistrySeed {
     public static final String DISPLAY_VERSION = "DSP-1";
     public static final String DATASET_VERSION = "DS-1";
 
-    /** 분야별 지표 수. 합이 17이다. */
-    public static final Map<String, Integer> FIELD_SIZES =
+    /**
+     * 분야별 지표 — <b>008 이 실제로 쓰는 식별자</b>다 (FR-001 표).
+     *
+     * <p>예전에는 {@code production_1} 처럼 지어낸 id 를 썼다. 그러면 009·010 의 검사가 실제 자료에서는 없는 이름으로 돌아, 식별자 표기가
+     * 어긋나 있어도 통과한다 — 2026-09 에 010 이 대문자 표기를 쓰고 있던 것이 그렇게 가려져 있었다.
+     */
+    public static final Map<String, List<String>> FIELD_INDICATORS =
             Map.of(
-                    "production", 3,
-                    "consumption_investment", 3,
-                    "external_trade", 3,
-                    "labor", 2,
-                    "prices_commodities", 2,
-                    "finance_housing", 3,
-                    "overseas", 1);
+                    "production",
+                            List.of(
+                                    "all_industry_production",
+                                    "mining_manufacturing_production",
+                                    "service_production"),
+                    "consumption_investment",
+                            List.of(
+                                    "retail_sales_index",
+                                    "facility_investment_index",
+                                    "construction_completed_constant"),
+                    "external_trade", List.of("exports", "imports", "trade_balance"),
+                    "labor", List.of("employed_persons", "unemployment_rate"),
+                    "prices_commodities", List.of("consumer_price_index", "dubai_crude"),
+                    "finance_housing",
+                            List.of("treasury_bond_3y", "usd_krw_rate", "housing_sale_price"),
+                    "overseas", List.of("g20_cli"));
+
+    /** 분야 표시 이름 — 008 화면 분류의 값이다. */
+    public static final Map<String, String> FIELD_NAMES =
+            Map.of(
+                    "production", "생산",
+                    "consumption_investment", "소비·투자",
+                    "external_trade", "대외거래",
+                    "labor", "노동",
+                    "prices_commodities", "물가·원자재",
+                    "finance_housing", "금융·주택",
+                    "overseas", "해외 경기");
+
+    /** 지표 표시 이름 — 008 화면 분류의 값이다. */
+    public static final Map<String, String> INDICATOR_NAMES =
+            Map.ofEntries(
+                    Map.entry("all_industry_production", "전산업생산"),
+                    Map.entry("mining_manufacturing_production", "광공업생산"),
+                    Map.entry("service_production", "서비스업생산"),
+                    Map.entry("retail_sales_index", "소매판매액지수"),
+                    Map.entry("facility_investment_index", "설비투자지수"),
+                    Map.entry("construction_completed_constant", "건설기성액(불변)"),
+                    Map.entry("exports", "수출"),
+                    Map.entry("imports", "수입"),
+                    Map.entry("trade_balance", "무역수지"),
+                    Map.entry("employed_persons", "취업자 수"),
+                    Map.entry("unemployment_rate", "실업률"),
+                    Map.entry("consumer_price_index", "소비자물가"),
+                    Map.entry("dubai_crude", "두바이유"),
+                    Map.entry("treasury_bond_3y", "국고채 3년"),
+                    Map.entry("usd_krw_rate", "원/달러 환율"),
+                    Map.entry("housing_sale_price", "주택 매매가격"),
+                    Map.entry("g20_cli", "G20 경기선행지수"));
 
     public static final List<String> FIELD_ORDER =
             List.of(
@@ -100,14 +146,13 @@ public final class MacroRegistrySeed {
                     """,
                     displayId,
                     fieldId,
-                    "분야 " + fieldOrder,
+                    FIELD_NAMES.get(fieldId),
                     fieldOrder,
                     fieldId + " 설명");
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
+            for (String indicatorId : FIELD_INDICATORS.get(fieldId)) {
                 order++;
-                String indicatorId = fieldId + "_" + n;
-                // 한 지표만 작성기관을 달리 둔다 — 제공기관과 작성기관이 다를 수 있다(FR-016).
-                boolean foreignAgency = indicatorId.equals("prices_commodities_2");
+                // 두바이유만 작성기관이 다르다 — 제공기관과 작성기관은 다를 수 있다(FR-016).
+                boolean foreignAgency = indicatorId.equals("dubai_crude");
                 jdbc.update(
                         """
                         INSERT INTO macro_indicator_definition (
@@ -131,7 +176,7 @@ public final class MacroRegistrySeed {
                         """,
                         displayId,
                         indicatorId,
-                        "지표 " + order,
+                        INDICATOR_NAMES.get(indicatorId),
                         order);
             }
         }
@@ -160,8 +205,7 @@ public final class MacroRegistrySeed {
         long datasetId = idOf(jdbc, "macro_dataset_version", DATASET_VERSION);
 
         for (String fieldId : FIELD_ORDER) {
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
-                String indicatorId = fieldId + "_" + n;
+            for (String indicatorId : FIELD_INDICATORS.get(fieldId)) {
                 for (String month : MONTHS) {
                     jdbc.update(
                             """

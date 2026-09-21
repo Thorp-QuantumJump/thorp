@@ -89,12 +89,6 @@ app:
 # 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
 
 thorp:
-  # 경제환경 검색(spec 010)이 지표 등록표를 어디서 읽는가. 008 연동은 T070 에서 구현했지만 010 의 시험·저장
-  # 자료가 아직 픽스처 식별자를 쓰므로 공통 기본은 임시 대역이다. 표기를 맞추는 일은 T065·T068 과 함께 간다.
-  # prod 는 application-prod.yml 에서 macro 로 덮고, prod + fixture 조합은 RegimeFixtureGuard 가 기동을 막는다.
-  regime:
-    macro:
-      source: fixture
   learning:
     # 배우기 관리 계정 허용 목록(spec 013 research R5). 쉼표로 구분한 사용자 ID(users.id)다.
     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy

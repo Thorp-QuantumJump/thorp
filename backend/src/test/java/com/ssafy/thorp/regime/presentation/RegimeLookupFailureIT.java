@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.regime.application.exception.RegimeLookupFailedException;
 import com.ssafy.thorp.regime.application.repository.RegimeBaselineMonthRepository;
 import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;
@@ -40,17 +41,20 @@ import org.springframework.test.web.servlet.MockMvc;
 class RegimeLookupFailureIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @MockitoBean private RegimeSnapshotRepository snapshots;
     @MockitoBean private RegimeBaselineMonthRepository baselineMonths;
 
     @BeforeEach
     void baselineIsAvailable() {
+        // 010 은 008 등록표에서 지표 이름을 읽는다(T070). 비어 있으면 조회가 503 이다.
+        MacroRegistrySeed.seedRegistry(jdbc);
         given(baselineMonths.findByScope(anyString()))
                 .willReturn(
                         Optional.of(
                                 new RegimeBaselineMonth(
-                                        "LABOR",
+                                        "labor",
                                         YearMonth.of(2026, 7),
                                         YearMonth.of(1999, 4),
                                         "FIXTURE-REG-1",
@@ -63,7 +67,7 @@ class RegimeLookupFailureIT extends IntegrationTestSupport {
         given(snapshots.findLatest(any(), anyString(), any()))
                 .willThrow(new RegimeLookupFailedException("읽기 실패", new IllegalStateException()));
 
-        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "LABOR"))
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
                 // 503 은 "일시적이니 다시 오라"는 뜻이고, 읽기 실패는 정말로 그렇다.
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.isSuccess").value(false));
@@ -79,7 +83,7 @@ class RegimeLookupFailureIT extends IntegrationTestSupport {
                 mockMvc.perform(
                                 get("/regime-searches")
                                         .param("mode", "field")
-                                        .param("field", "LABOR"))
+                                        .param("field", "labor"))
                         .andReturn()
                         .getResponse()
                         .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
@@ -93,7 +97,7 @@ class RegimeLookupFailureIT extends IntegrationTestSupport {
     @DisplayName("결과가 없는 것과 읽지 못한 것은 다른 상태 코드다")
     void missingAndUnreadableDiffer() throws Exception {
         given(snapshots.findLatest(any(), anyString(), any())).willReturn(Optional.empty());
-        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "LABOR"))
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
                 .andExpect(status().isNotFound());
     }
 }

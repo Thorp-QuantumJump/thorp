@@ -33,8 +33,8 @@ class MarketFlowControllerIT extends IntegrationTestSupport {
     void seedMacroSnapshot() {
         MacroRegistrySeed.seedRegistry(jdbc);
         MacroRegistrySeed.seedPublishedDataset(jdbc);
-        // 노동 분야의 둘째 지표만 기준월(2026-07)보다 한 달 앞서 발표된 상태로 둔다.
-        MacroRegistrySeed.seedLaterRelease(jdbc, "labor_2", "2026-08-01");
+        // 노동 분야의 둘째 지표(실업률)만 기준월(2026-07)보다 한 달 앞서 발표된 상태로 둔다.
+        MacroRegistrySeed.seedLaterRelease(jdbc, "unemployment_rate", "2026-08-01");
     }
 
     @AfterEach

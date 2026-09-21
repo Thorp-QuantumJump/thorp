@@ -6,7 +6,6 @@ import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository;
 import com.ssafy.thorp.regime.application.port.FieldRegistration;
 import com.ssafy.thorp.regime.application.port.IndicatorRegistration;
 import com.ssafy.thorp.regime.application.port.MacroIndicatorPort;
-import com.ssafy.thorp.regime.infrastructure.macro.fixture.FixtureMacroIndicatorAdapter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -25,10 +24,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 class MacroIndicatorPortContractTest {
 
     static Stream<MacroIndicatorPort> implementations() {
-        // 대역과 실제 구현이 같은 시험을 통과해야 한다. 대역을 지우는 것은 그다음이다(T071).
-        return Stream.of(
-                new FixtureMacroIndicatorAdapter(),
-                new MacroRegistryIndicatorAdapter(new StubMacroRegistry()));
+        // 임시 대역은 T071 에서 폐기했다. 구현이 하나여도 이 시험은 남는다 — 계약을
+        // 지키는지 보는 자리이지 구현이 여럿인지 보는 자리가 아니다.
+        return Stream.of(new MacroRegistryIndicatorAdapter(new StubMacroRegistry()));
     }
 
     @ParameterizedTest
@@ -84,9 +82,6 @@ class MacroIndicatorPortContractTest {
     }
 
     private static IndicatorRegistration anyIndicator(MacroIndicatorPort port) {
-        if (port instanceof FixtureMacroIndicatorAdapter) {
-            return port.indicator("UNEMPLOYMENT_RATE").orElseThrow();
-        }
         if (port instanceof MacroRegistryIndicatorAdapter) {
             // 008 은 소문자 id 를 쓴다. 대역의 대문자 표기와 다른 것이 정상이며, 어느 쪽도
             // 상대에게 맞추지 않는다 — 010 은 포트가 준 id 를 그대로 들고 다닌다(계약 §2).
