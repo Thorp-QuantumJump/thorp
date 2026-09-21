@@ -47,10 +47,12 @@ from data_pipeline.macro.normalize import NormalizedObservation
 from data_pipeline.macro.registry import (
     EXPECTED_INDICATOR_COUNT,
     FIELD_IDS,
+    LICENSE_SUSPENDED,
     REVIEW_PENDING_RIGHTS,
     REVIEW_VERIFIED,
     IndicatorDefinition,
     RegistryError,
+    collectible,
     nominal_weights,
 )
 from data_pipeline.macro.registry import (
@@ -115,6 +117,11 @@ class PublicationDecision:
     baselines: tuple[Baseline, ...]
     #: 지표별 유효 변환값 건수. 보류 사유를 사람이 읽을 때의 근거다.
     valid_month_counts: Mapping[str, int]
+    #: 이용이 중단되어 이 버전에 넣지 않은 지표와 그 사유 (FR-016b, 원칙 VI).
+    #:
+    #: 빈 자리로 두지 않고 함께 내보내는 이유는, 조용히 사라지면 화면이 "원래 없던 지표"와
+    #: "빠진 지표"를 같게 보여 주기 때문이다. 이미 발행한 버전에서 지우지는 않는다.
+    suspended: tuple[tuple[str, str], ...] = ()
 
     @property
     def can_publish(self) -> bool:
@@ -164,8 +171,12 @@ def gate(
     except RegistryError as error:
         raise PublishError(f"발행 등록표가 유효하지 않다: {error}") from error
 
+    # **중단된 지표는 완결 기준에서 뺀다**(FR-016b). FR-011 의 "17개 전부"를 글자 그대로 읽으면
+    # 지표 하나가 중단되는 순간 영영 발행할 수 없고, 그러면 중단이 플랫폼을 통째로 멈춘다.
+    # spec 이 두바이유를 두고 "빠져도 나머지 6개 분야 검색은 유지된다"고 적은 것이 이 뜻이다.
+    # 빠진 지표는 조용히 사라지지 않고 `suspended` 로 함께 나간다(원칙 VI).
     blockers: list[PublicationBlocker] = []
-    for indicator in indicators:
+    for indicator in collectible(indicators):
         if indicator.license_review_status not in PUBLISHABLE_LICENSE_REVIEW_STATUSES:
             blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED))
         received = observations.get(indicator.indicator_id)
@@ -187,7 +198,9 @@ def _baseline_for_scope(
     물린 것이다(data-model §3.3).
     """
     if not members:
-        raise PublishError(f"{scope_id}에 속한 지표가 없다")
+        # 그 분야의 지표가 전부 중단된 경우다. 오류가 아니라 자료 없음이다 — 분야가 사라진
+        # 것이 아니라 지금 볼 값이 없는 것이고, 화면은 그 사실을 보여야 한다(FR-016b).
+        return Baseline(scope_id=scope_id, reference_month=None, held_back_by=())
 
     month_sets = [valid[indicator_id] for indicator_id in members]
     common = frozenset.intersection(*month_sets) if all(month_sets) else frozenset()
@@ -212,10 +225,13 @@ def baselines(
 
     순서는 :data:`~data_pipeline.macro.registry.FIELD_IDS` 를 따르고 마지막이 전체다.
     """
-    valid = _valid_by_indicator(indicators, observations)
+    # 중단된 지표는 새 자료 버전에 들어가지 않으므로 기준월에도 세지 않는다(FR-016b).
+    # 세면 이미 빠진 지표가 기준월을 뒤로 물려 멀쩡한 분야까지 과거로 끌어내린다.
+    live = collectible(indicators)
+    valid = _valid_by_indicator(live, observations)
 
     members_by_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}
-    for indicator in indicators:
+    for indicator in live:
         if indicator.field_id not in members_by_field:
             raise PublishError(
                 f"{indicator.indicator_id}의 분야가 7개 밖이다: {indicator.field_id}"
@@ -225,7 +241,7 @@ def baselines(
     result = [
         _baseline_for_scope(field_id, members_by_field[field_id], valid) for field_id in FIELD_IDS
     ]
-    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in indicators], valid))
+    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in live], valid))
     return tuple(result)
 
 
@@ -248,6 +264,11 @@ def plan_publication(
         blockers=blockers,
         baselines=() if blockers else baselines(indicators, observations),
         valid_month_counts=counts,
+        suspended=tuple(
+            (i.indicator_id, i.license_suspended_reason or "")
+            for i in indicators
+            if i.license_status == LICENSE_SUSPENDED
+        ),
     )
 
 
