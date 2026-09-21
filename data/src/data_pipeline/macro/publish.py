@@ -548,11 +548,12 @@ def publish_atomically(
                              "transformed_value, released_at, received_at, break_segment, "
                              "missing_reason) VALUES (:dataset, :indicator, :month, "
                              f"{raw_expression}, {transformed_expression}, NULL, :received, "
-                             "NULL, :missing)"),
+                             ":segment, :missing)"),
                         {"dataset": dataset_id, "indicator": indicator.indicator_id,
                          "month": _month_date(observation.period), "raw_value": raw_value,
                          "transformed_value": transformed,
                          "received": observation.received_at or now,
+                         "segment": observation.break_segment,
                          "missing": observation.missing_reason},
                     )
             for baseline in decision.baselines:
