@@ -1,10 +1,17 @@
 package com.ssafy.thorp.myrecord.presentation.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;
+import com.ssafy.thorp.myrecord.application.result.MyRecordExport;
 import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
+import com.ssafy.thorp.myrecord.application.service.CsvWriter;
 import com.ssafy.thorp.myrecord.application.service.MyRecordCommandService;
+import com.ssafy.thorp.myrecord.application.service.MyRecordExportService;
 import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;
 import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
@@ -15,11 +22,15 @@ import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,19 +55,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/my-records")
 public class MyRecordController {
 
+    private static final MediaType CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
+
     private final MyRecordQueryService queryService;
     private final MyRecordCommandService commandService;
     private final MyRecordRegistrar registrar;
+    private final MyRecordExportService exportService;
+    private final CsvWriter csvWriter;
+    private final ObjectMapper json;
     private final CurrentRequester currentRequester;
 
     public MyRecordController(
             MyRecordQueryService queryService,
             MyRecordCommandService commandService,
             MyRecordRegistrar registrar,
+            MyRecordExportService exportService,
+            CsvWriter csvWriter,
+            ObjectMapper json,
             CurrentRequester currentRequester) {
         this.queryService = queryService;
         this.commandService = commandService;
         this.registrar = registrar;
+        this.exportService = exportService;
+        this.csvWriter = csvWriter;
+        this.json = json;
         this.currentRequester = currentRequester;
     }
 
@@ -110,6 +132,42 @@ public class MyRecordController {
                         ApiResponse.ok(
                                 MyRecordListResponse.Item.from(
                                         queryService.item(ownerId, outcome.recordId()))));
+    }
+
+    /**
+     * 내보내기(spec 006 FR-015·FR-016, research R10). <b>공통 봉투를 쓰지 않는 파일 본문</b>이다 — 실패는 봉투를 쓴다.
+     *
+     * <p>{@code format}은 필수고 {@code json}·{@code csv}만 받는다. 빠지거나 다른 값이면 400 {@code INVALID_INPUT}이다
+     * — 조용히 JSON 으로 바꾸지 않는다(원칙 VI). 파일 이름은 기록 이름이고 {@code filename*}로 UTF-8 그대로 싣는다.
+     */
+    @GetMapping("/{recordId}/export")
+    public ResponseEntity<byte[]> export(
+            @PathVariable String recordId, @RequestParam(required = false) String format) {
+        long ownerId = currentRequester.requireRequesterId();
+        boolean csv = "csv".equals(format);
+        if (!csv && !"json".equals(format)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "format 은 json 또는 csv 여야 합니다: " + format);
+        }
+        MyRecordExport export = exportService.export(ownerId, recordId);
+        String name = String.valueOf(export.record().get("name")) + (csv ? ".csv" : ".json");
+        return ResponseEntity.ok()
+                .contentType(csv ? CSV : MediaType.APPLICATION_JSON)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(name, StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
+                .body(csv ? csvWriter.write(export.sections()) : toJson(export));
+    }
+
+    private byte[] toJson(MyRecordExport export) {
+        try {
+            return json.writeValueAsBytes(export.sections());
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("내보내기 JSON 직렬화에 실패했습니다", e);
+        }
     }
 
     /**
