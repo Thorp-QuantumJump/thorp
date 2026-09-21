@@ -161,12 +161,12 @@ flowchart LR
 
 ## 워커 — 소비자·엔트리포인트 (M3)
 
-- [ ] T016 (WK) `consumer.py`에 `RegimeLinkJobConsumer`: 헤더 `schemaVersion` 확인 → `RegimeLinkJob` 파싱 → `STARTED` 발행 → `slicer` 호출 → `FINISHED` 발행 → 브로커 확인 뒤 ACK. 오류 세 갈래(계약 오류 reject/DLQ · 계산 실패는 `FINISHED(FAILED)`+ACK · 발행 실패는 requeue). 시장 자료 적재 중 일시 장애만 전파(`worker/CLAUDE.md`)
-- [ ] T017 (WK) `rabbitmq.py`에 pika 구현(소비 prefetch 1, 발행 confirm·재시도, ACK/reject 매핑). 토폴로지를 **선언하지 않고** 큐가 없으면 "백엔드를 먼저 띄워라"로 종료. `worker/rabbitmq.py`는 수정하지 않는다
-- [ ] T018 (WK) `regime_link_main.py` 엔트리포인트: `MARKET_DATA_URL`·`RABBITMQ_URL` 필수(기본값 없음), `python -m worker.regime_link_main`으로 실행. `worker/README.md`에 두 번째 소비자 실행법 추가
-- [ ] T019 (WK 테스트) `worker/tests/regime_link/test_consumer.py`: 깨진 JSON → reject, `ValidationError` → reject, 계산 실패 → `FINISHED(FAILED)` 후 ACK, 발행 실패 → ACK 없음, `FINISHED` 확인 전 ACK 경로 없음, 같은 `linkId`·`attempt` 재전달에 `eventId` 유지
-- [ ] T020 (WK 테스트) `worker/tests/regime_link/test_main.py`: 환경변수 누락 시 시작 실패, 큐 부재 시 선언 없이 종료
-- [ ] T021 (WK 테스트) 전체 `pytest` 실행 결과(수·통과·skipped)를 변경 전과 대조해 MR 본문에 적는다. 백테스트 소비자 테스트가 하나도 바뀌지 않았음을 근거로 남긴다
+- [X] T016 (WK) `consumer.py`에 `RegimeLinkJobConsumer`: 헤더 `schemaVersion` 확인 → `RegimeLinkJob` 파싱 → `STARTED` 발행 → `slicer` 호출 → `FINISHED` 발행 → 브로커 확인 뒤 ACK. 오류 세 갈래(계약 오류 reject/DLQ · 계산 실패는 `FINISHED(FAILED)`+ACK · 발행 실패는 requeue). 시장 자료 적재 중 일시 장애만 전파(`worker/CLAUDE.md`)
+- [X] T017 (WK) `rabbitmq.py`에 pika 구현(소비 prefetch 1, 발행 confirm·재시도, ACK/reject 매핑). 토폴로지를 **선언하지 않고** 큐가 없으면 "백엔드를 먼저 띄워라"로 종료. `worker/rabbitmq.py`는 수정하지 않는다
+- [X] T018 (WK) `regime_link_main.py` 엔트리포인트: `MARKET_DATA_URL`·`RABBITMQ_URL` 필수(기본값 없음), `python -m worker.regime_link_main`으로 실행. `worker/README.md`에 두 번째 소비자 실행법 추가
+- [X] T019 (WK 테스트) `worker/tests/regime_link/test_consumer.py`: 깨진 JSON → reject, `ValidationError` → reject, 계산 실패 → `FINISHED(FAILED)` 후 ACK, 발행 실패 → ACK 없음, `FINISHED` 확인 전 ACK 경로 없음, 같은 `linkId`·`attempt` 재전달에 `eventId` 유지
+- [X] T020 (WK 테스트) `worker/tests/regime_link/test_main.py`: 환경변수 누락 시 시작 실패, 큐 부재 시 선언 없이 종료
+- [X] T021 (WK 테스트) 전체 `pytest` 실행 결과(수·통과·skipped)를 변경 전과 대조해 MR 본문에 적는다. 백테스트 소비자 테스트가 하나도 바뀌지 않았음을 근거로 남긴다
 
 ## 백엔드 — 표·도메인·판정 (M4)
 
