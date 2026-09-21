@@ -43,8 +43,14 @@ Technical Context에 남은 미확정을 없애기 위해 저장소의 현재 �
 
 ## R3. '다시 보기'는 기존 `/results/{publicToken}` 화면을 그대로 연다
 
-**Decision**: `my_record`가 단일 분석의 `backtest_request.public_token`을 가리키고, '다시 보기'는
-기존 결과 화면 경로로 이동한다. 결과 조회 API도 화면도 새로 만들지 않는다.
+**Decision**: '다시 보기'는 기존 결과 화면 경로(`/results/{publicToken}`)로 이동한다. 결과 조회 API도 화면도
+새로 만들지 않는다.
+
+토큰은 **저장하지 않고 읽을 때 고른다.** `my_record`는 실행만 가리키고, 공개 토큰은 그 사용자의
+`(소유자, 실행, 단건)` 요청 중 취소하지 않은 최신 것에서 읽는다(data-model §1,
+`MyRecordRepository.findViewableRequestId`). 요청 하나를 저장해 두면 그것만 취소된 순간 기록이 취소·부분
+결과를 보이고, 접수 때 다시 잇는 것으로도 막지 못한다 — 나중 요청을 취소하면 같은 문제가 돌아온다
+(2026-09-21 코드리뷰).
 
 **Rationale**: 005가 이미 요청마다 128비트 공개 토큰을 붙이고 `/results/{token}` 화면을 구현해 두었다.
 결정적으로 `V20260917100000__public_result_token.sql`이 **로그인 요청의
