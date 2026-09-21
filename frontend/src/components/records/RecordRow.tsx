@@ -19,6 +19,8 @@ import styles from './records.module.css'
 export type RecordLabels = {
   sector: (code: string) => string
   strategy: (id: string) => string
+  /** 010 분야 이름. 목록을 받지 못했으면 코드 그대로다 — 지어내지 않는다 */
+  regimeField: (id: string) => string
 }
 
 type Props = {

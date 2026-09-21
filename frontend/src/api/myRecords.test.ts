@@ -1,17 +1,25 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { analysisDetail, listPage } from '@/test/myRecordsFixtures'
+import { analysisDetail, listPage, regimeRecord } from '@/test/myRecordsFixtures'
 
 /** 006 T016. contracts "GET /my-records"·"오류". */
 
-const clientMocks = vi.hoisted(() => ({ get: vi.fn() }))
+const clientMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  runCsrfProtectedMutation: vi.fn(),
+}))
 
 vi.mock('./client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./client')>()
-  return { ...actual, apiClient: { get: clientMocks.get } }
+  return {
+    ...actual,
+    apiClient: { get: clientMocks.get, post: clientMocks.post },
+    runCsrfProtectedMutation: clientMocks.runCsrfProtectedMutation,
+  }
 })
 
-const { fetchMyRecord, fetchMyRecords, toSearchParams } = await import('./myRecords')
+const { fetchMyRecord, fetchMyRecords, recordRegimeSearch, toSearchParams } = await import('./myRecords')
 const { ApiClientError } = await import('./client')
 
 function ok<T>(data: T) {
@@ -32,6 +40,11 @@ function axiosFailure(status: number, body: unknown): AxiosError {
 describe('api/myRecords', () => {
   beforeEach(() => {
     clientMocks.get.mockReset()
+    clientMocks.post.mockReset()
+    clientMocks.runCsrfProtectedMutation.mockReset()
+    clientMocks.runCsrfProtectedMutation.mockImplementation((request: () => Promise<unknown>) =>
+      request(),
+    )
   })
 
   afterEach(() => {
@@ -99,5 +112,19 @@ describe('api/myRecords', () => {
     })
 
     await expect(fetchMyRecords({})).rejects.toMatchObject({ code: 'INVALID_INPUT' })
+  })
+
+  it('경제환경 기록은 화면이 아는 진입 경로·기준월 근거를 그대로 CSRF 보호 mutation 으로 보낸다', async () => {
+    clientMocks.post.mockResolvedValue(ok(regimeRecord))
+
+    await expect(
+      recordRegimeSearch(regimeRecord.regime.snapshotKey, 'STRATEGY_RESULT', 'USER_SPECIFIED'),
+    ).resolves.toEqual(regimeRecord)
+    expect(clientMocks.post).toHaveBeenCalledWith('/my-records/regime-searches', {
+      searchId: regimeRecord.regime.snapshotKey,
+      entryPath: 'STRATEGY_RESULT',
+      baselineOrigin: 'USER_SPECIFIED',
+    })
+    expect(clientMocks.runCsrfProtectedMutation).toHaveBeenCalledTimes(1)
   })
 })
