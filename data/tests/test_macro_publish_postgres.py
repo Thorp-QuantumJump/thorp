@@ -49,6 +49,9 @@ def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> N
                 raw_values=(("2026-07", Decimal("1.25")),),
                 transform_rule=indicator.transform_rule, raw_unit=indicator.raw_unit,
                 transformed_unit=indicator.transformed_unit, source_updated_at=None,
+                # 개편으로 나뉜 계열만 채워지는 칸이다. 여기서는 저장되는지만 본다.
+                break_segment="2021-06" if indicator.indicator_id == "housing_sale_price"
+                else None,
             )
         ]
         for indicator in indicators
@@ -68,6 +71,17 @@ def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> N
             text("SELECT count(*) FROM macro_observation WHERE dataset_version_id=:id"),
             {"id": dataset_id},
         ).scalar_one() == 17
+        # 어느 표가 이 달을 줬는지가 자료에 남는다 (T076, FR-010). NULL 로 박혀 있으면
+        # 이어 붙인 값과 원천이 직접 말한 값을 나중에 구분할 수 없다.
+        segments = dict(
+            connection.execute(
+                text("SELECT indicator_id, break_segment FROM macro_observation"
+                     " WHERE dataset_version_id=:id"),
+                {"id": dataset_id},
+            ).all()
+        )
+        assert segments["housing_sale_price"] == "2021-06"
+        assert segments["consumer_price_index"] is None
         assert connection.execute(
             text("SELECT count(*) FROM macro_baseline WHERE dataset_version_id=:id"),
             {"id": dataset_id},

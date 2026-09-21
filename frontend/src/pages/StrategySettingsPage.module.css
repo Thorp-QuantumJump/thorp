@@ -11,10 +11,10 @@
 
 .main {
   display: grid;
-  gap: 22px;
-  width: min(100% - 40px, 760px);
+  gap: 16px;
+  width: min(100% - 40px, 960px);
   margin: 0 auto;
-  padding: clamp(90px, 15vh, 160px) 0 80px;
+  padding: clamp(30px, 5vh, 56px) 0 80px;
 }
 
 .title {
@@ -25,7 +25,7 @@
 }
 
 .lead {
-  margin: -10px 0 0;
+  margin: -6px 0 2px;
   color: var(--thorp-copy);
   font-size: clamp(0.92rem, 1.7vw, 1rem);
   line-height: 1.7;
@@ -102,6 +102,17 @@
   gap: 12px;
 }
 
+.selectionPanel {
+  position: relative;
+  z-index: 1;
+  padding: 16px;
+  border: 1px solid var(--thorp-line-strong);
+  border-left: 3px solid var(--thorp-accent);
+  border-radius: 10px;
+  background: rgb(7 17 11 / 98%);
+  box-shadow: 0 14px 38px rgb(0 0 0 / 26%);
+}
+
 .sectionTitle {
   margin: 0;
   font-size: 1.05rem;
@@ -173,7 +184,7 @@
 @media (max-width: 600px) {
   .main {
     width: min(100% - 28px, 760px);
-    padding-top: 72px;
+    padding-top: 24px;
   }
 }
 
