@@ -253,13 +253,16 @@ class RateLimiter:
             if waited < interval:
                 self._sleep(interval - waited)
 
+        # 창을 벗어난 기록은 한도가 있든 없든 버린다. 가지치기를 한도 분기 안에만 두면
+        # 한도가 없는 원천(한국은행·관세청·OECD)에서 목록이 호출 수만큼 무한히 자란다.
+        cutoff = self._now() - 60.0
+        self._calls = [at for at in self._calls if at > cutoff]
+
         limit = self._policy.max_calls_per_minute
         if limit is not None:
-            while True:
-                cutoff = self._now() - 60.0
-                self._calls = [at for at in self._calls if at > cutoff]
-                if len(self._calls) < limit:
-                    break
+            while len(self._calls) >= limit:
                 # 창에서 가장 오래된 호출이 빠질 때까지 기다린다.
                 self._sleep(self._calls[0] - cutoff)
+                cutoff = self._now() - 60.0
+                self._calls = [at for at in self._calls if at > cutoff]
         self._calls.append(self._now())

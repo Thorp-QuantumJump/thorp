@@ -187,7 +187,10 @@ def register_calculation_version(
                      "table_code, item_code, org_id, classification, source_cycle, "
                      "series_start, link_chain, raw_unit, transformed_unit, transform_rule, "
                      "release_rule, break_link_rule, missing_rule, agency, attribution, "
-                     "license_status, license_review_status, published_precision, "
+                     "license_status, license_review_status, license_verified_at, "
+                     "license_suspended_at, license_suspended_reason, "
+                     "commercial_use, redistribution_rule, export_notice, "
+                     "license_reverify_by, published_precision, "
                      "refresh_months_n, nominal_weight, trading_calendar, "
                      "publication_lag_months, revision_history_available) VALUES "
                      "(:registry, :indicator, :field, :source, :table_code, :item_code, "
@@ -195,7 +198,10 @@ def register_calculation_version(
                      f"{links_expression}, :raw_unit, :transformed_unit, :transform_rule, "
                      ":release_rule, "
                      ":break_link_rule, :missing_rule, :agency, :attribution, :license_status, "
-                     f":license_review_status, :precision, :refresh, {weight_expression}, "
+                     ":license_review_status, :license_verified_at, "
+                     ":license_suspended_at, :license_suspended_reason, "
+                     ":commercial_use, :redistribution_rule, :export_notice, "
+                     f":license_reverify_by, :precision, :refresh, {weight_expression}, "
                      ":trading_calendar, :publication_lag, :revision_history)"),
                 {"registry": registry_id, "indicator": indicator.indicator_id,
                  "field": indicator.field_id, "source": indicator.primary_source,
@@ -214,6 +220,15 @@ def register_calculation_version(
                  "attribution": indicator.attribution,
                  "license_status": indicator.license_status,
                  "license_review_status": indicator.license_review_status,
+                 # 중단은 사유와 시점이 함께 가야 한다 — 스키마의 ck_macro_indicator_suspension
+                 # 이 그렇게 잡혀 있어, 빼면 중단된 지표 하나가 발행 전체를 되돌린다(FR-016b).
+                 "license_verified_at": indicator.license_verified_on,
+                 "license_suspended_at": indicator.license_suspended_on,
+                 "license_suspended_reason": indicator.license_suspended_reason,
+                 "commercial_use": indicator.commercial_use,
+                 "redistribution_rule": indicator.redistribution_rule,
+                 "export_notice": indicator.export_notice,
+                 "license_reverify_by": indicator.license_reverify_by,
                  "precision": indicator.published_precision,
                  "refresh": indicator.refresh_months_n,
                  "weight": json.dumps(str(chosen_weights[indicator.indicator_id])),

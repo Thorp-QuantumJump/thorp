@@ -94,6 +94,11 @@ class RequestsFetcher:
 #: 오류 메시지에서 키를 가릴 때 쓸 자리표.
 _REDACTED: Final[str] = "***"
 
+#: 이보다 짧은 값은 가리지 않는다. 시험 환경의 ``ECOS_API_KEY=test`` 같은 값을 지우기
+#: 시작하면 오류 문구에서 관계없는 낱말까지 함께 사라져 진단이 불가능해진다. 실제 인증키는
+#: 네 원천 모두 훨씬 길다.
+_MIN_SECRET_LENGTH: Final[int] = 12
+
 
 def _secret_values() -> tuple[str, ...]:
     """지금 환경에 들어 있는 인증키 값들.
@@ -104,7 +109,7 @@ def _secret_values() -> tuple[str, ...]:
     return tuple(
         value
         for name in API_KEY_ENV_NAMES
-        if (value := os.environ.get(name, "").strip())
+        if len(value := os.environ.get(name, "").strip()) >= _MIN_SECRET_LENGTH
     )
 
 
@@ -258,7 +263,10 @@ class SampleFetcher:
         for path in sorted(self._root.rglob("*")):
             if path.suffix not in {".json", ".xml"} or not path.is_file():
                 continue
-            if path.stem in haystack or path.parent.name in haystack:
+            # 폴더명(원천 이름)으로는 고르지 않는다. 주소에 늘 원천 이름이 들어 있어
+            # 그 원천의 첫 파일이 전부 잡히고, 뒤이어 터지는 대조 실패가 표본을 잘못
+            # 골랐다는 사실 대신 "등록표가 원천과 다르다"처럼 읽힌다.
+            if path.stem in haystack:
                 return path.read_text(encoding="utf-8")
         raise SampleDataMissing(
             f"예시 자료에서 이 요청에 맞는 파일을 찾지 못했다: {url} {params or {}}."

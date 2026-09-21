@@ -112,9 +112,17 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:
             "transform_rule TEXT, "
             "release_rule TEXT, break_link_rule TEXT, missing_rule TEXT, agency TEXT, "
             "attribution TEXT, license_status TEXT, license_review_status TEXT, "
+            "license_verified_at TEXT, license_suspended_at TEXT, "
+            "license_suspended_reason TEXT, commercial_use TEXT, "
+            "redistribution_rule TEXT, export_notice TEXT, license_reverify_by TEXT, "
             "published_precision INTEGER, refresh_months_n INTEGER, nominal_weight TEXT, "
             "trading_calendar TEXT, publication_lag_months INTEGER, "
-            "revision_history_available INTEGER)"
+            "revision_history_available INTEGER, "
+            # 운영 스키마의 ck_macro_indicator_suspension 을 여기에도 둔다. 이 시험용
+            # 표는 손으로 옮겨 적은 것이라, 제약을 빼 두면 INSERT 가 컬럼을 빠뜨려도
+            # 여기서는 통과하고 운영에서만 트랜잭션이 되돌아간다.
+            "CHECK (license_status <> 'SUSPENDED' OR ("
+            "license_suspended_at IS NOT NULL AND license_suspended_reason IS NOT NULL)))"
         ))
         connection.execute(text(
             "CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY AUTOINCREMENT, "

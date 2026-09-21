@@ -17,8 +17,9 @@ from urllib.parse import quote
 
 import pytest
 import requests
+from sqlalchemy import text
 
-from data_pipeline.macro import publish, registry
+from data_pipeline.macro import publish, registry, versioning
 from data_pipeline.macro.config import API_KEY_ENV_NAMES
 from data_pipeline.macro.fetch import RequestsFetcher, redact
 from data_pipeline.macro.normalize import NormalizedObservation
@@ -184,6 +185,48 @@ class TestSuspension:
         with pytest.raises(RegistryError, match="중단이 아닌데 중단 기록"):
             registry.validate(dangling)
 
+    def test_전부_중단되면_발행이_막힌다(self) -> None:
+        """뺄 나머지가 없는데 통과시키면 지표 0개짜리 자료 버전이 발행된다.
+
+        폴인터가 그 빈 버전으로 옮겨 가면 멀쩡하던 직전 완결 버전이 화면에서 사라진다 —
+        중단이 화면을 지키려고 만든 장치인데 정반대로 쓰인다.
+        """
+        everything = tuple(
+            registry.suspend(i, reason=SUSPENSION_REASON, on=date(2026, 10, 1))
+            for i in INDICATORS
+        )
+
+        decision = publish.plan_publication(everything, all_filled())
+
+        assert not decision.can_publish
+        assert publish.BLOCK_ALL_SUSPENDED in {b.reason for b in decision.blockers}
+
+    def test_중단_시점과_사유가_등록표와_함께_기록된다(self, postgres_engine) -> None:
+        """운영 스키마는 중단에 시점·사유를 함께 요구한다(ck_macro_indicator_suspension).
+
+        빠뜨리면 중단된 지표 하나가 제약 위반으로 발행 트랜잭션 전체를 되돌려, 나머지를
+        살리려던 FR-016b 가 정반대로 작동한다. 손으로 만든 표가 아니라 실제 마이그레이션에
+        대고 본다.
+        """
+        versioning.register_calculation_version(
+            postgres_engine, "CALC-SUSPEND", "중단 기록", self.suspended_registry()
+        )
+
+        with postgres_engine.begin() as connection:
+            row = connection.execute(
+                text(
+                    "SELECT license_status, license_suspended_at, license_suspended_reason,"
+                    " commercial_use, export_notice, license_reverify_by"
+                    " FROM macro_indicator_definition WHERE indicator_id = 'dubai_crude'"
+                )
+            ).one()
+
+        assert row[0] == registry.LICENSE_SUSPENDED
+        assert row[1] is not None
+        assert row[2] == SUSPENSION_REASON
+        # 006 의 내보내기가 읽을 곳은 DB 다. 등록표 메모리에만 있으면 문구 없이 나간다(FR-018).
+        assert row[3] and row[4] and row[5]
+
     def test_중단이어도_등록표_자체는_유효하다(self) -> None:
         """중단은 오류가 아니라 상태다. 등록을 막으면 중단을 기록할 수 없다."""
         registry.validate(self.suspended_registry())
@@ -284,6 +327,24 @@ class TestRateLimits:
             assert policy.basis.strip(), source_id
 
 
+    def test_한도가_없는_원천도_호출_기록이_쌓이지_않는다(self) -> None:
+        """가지치기를 한도 분기 안에만 두면 한국은행·관세청·OECD 는 영영 버리지 않는다.
+
+        수집기를 상주시키거나 재시도가 잦으면 호출 수만큼 목록이 자라 메모리를 잡아먹는다.
+        """
+        assert registry.source_policy("ecos").max_calls_per_minute is None
+        clock = [0.0]
+        limiter = RateLimiter(
+            registry.source_policy("ecos"), now=lambda: clock[0], sleep=lambda _: None
+        )
+
+        for _ in range(500):
+            limiter.acquire()
+            clock[0] += 1.0
+
+        assert len(limiter._calls) <= 61, "1초 간격 500회면 최근 1분치만 남아야 한다"
+
+
 class TestKeySecrecy:
     """인증키는 환경변수에서만 읽고 어디에도 남기지 않는다 (FR-021)."""
 
@@ -304,6 +365,13 @@ class TestKeySecrecy:
 
         assert self.KEY not in cleaned
         assert quote(self.KEY, safe="") not in cleaned
+
+    def test_너무_짧은_값은_가리지_않는다(self, monkeypatch) -> None:
+        """시험 환경의 ECOS_API_KEY=test 같은 값을 지우기 시작하면, 관계없는 낱말까지 함께
+        사라져 정작 급할 때 오류 문구를 읽을 수 없다."""
+        monkeypatch.setenv("ECOS_API_KEY", "test")
+
+        assert redact("응답이 test 형식이 아니다") == "응답이 test 형식이 아니다"
 
     def test_요청이_실패해도_키가_오류에_남지_않는다(self, monkeypatch) -> None:
         """requests 는 실패한 주소를 메시지에 통째로 담는다. 그 주소에 키가 있다."""
