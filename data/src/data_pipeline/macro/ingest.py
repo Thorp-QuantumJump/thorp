@@ -216,7 +216,9 @@ def _cached_raw(data_root: Path, source_id: str, indicator_id: str) -> RawDocume
         return None
     path = candidates[0]
     body = path.read_text(encoding="utf-8")
-    received_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    # 원본 파일명은 저장 시점의 수신 시각을 마이크로초까지 품는다. 파일 수정 시각은
+    # 복사·복원·백업 과정에서 바뀔 수 있으므로 수신 시각의 근거로 쓰지 않는다.
+    received_at = datetime.strptime(path.stem, "%Y%m%dT%H%M%S%f").replace(tzinfo=UTC)
     return RawDocument(
         indicator_id=indicator_id,
         source=source_id,

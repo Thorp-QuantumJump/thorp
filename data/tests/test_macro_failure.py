@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -96,6 +96,28 @@ def test_regular_window_includes_transform_denominator() -> None:
     assert ingest._window(direct, "regular", date(2026, 9, 20)) == (
         "2026-07", "2026-09"
     )
+    assert ingest._window(yoy, "regular", date(2026, 1, 20)) == (
+        "2024-11", "2026-01"
+    )
+    assert ingest._window(mom, "regular", date(2026, 1, 20)) == (
+        "2025-10", "2026-01"
+    )
+
+
+def test_cached_raw_restores_received_at_from_immutable_filename(tmp_path: Path) -> None:
+    outcome = ingest.IndicatorOutcome("window", "customs", ingest.STATUS_SUCCEEDED)
+    received_at = datetime(2026, 1, 2, 3, 4, 5, 678901, tzinfo=UTC)
+    ingest._save_raw(
+        outcome, tmp_path, "customs", "window", "<response/>", received_at
+    )
+    document = outcome.raw_documents[0]
+    ingest._mark_raw_complete(document)
+    document.path.touch()
+
+    cached = ingest._cached_raw(tmp_path, "customs", "window")
+
+    assert cached is not None
+    assert cached.received_at == received_at
 
 
 def test_customs_initial_load_resumes_after_quota_without_refetching(tmp_path: Path) -> None:
@@ -118,13 +140,17 @@ def test_customs_initial_load_resumes_after_quota_without_refetching(tmp_path: P
         today=date(2026, 9, 20), configs={"customs": _config()},
     )
     assert first.calls == 3
+    complete_markers = sorted(tmp_path.glob("raw/macro/customs/*/*/*.complete"))
+    assert len(complete_markers) == 2
 
     class Healthy:
         def __init__(self) -> None:
             self.calls = 0
+            self.params = []
 
         def get(self, url, params=None, headers=None):
             self.calls += 1
+            self.params.append(params)
             return body
 
     resumed = Healthy()
@@ -134,5 +160,6 @@ def test_customs_initial_load_resumes_after_quota_without_refetching(tmp_path: P
     )
 
     assert resumed.calls == 36, "이미 받은 첫 두 연도는 다시 호출하지 않아야 한다"
+    assert resumed.params[0]["strtYymm"] == "199101"
     assert all(outcome.succeeded for outcome in outcomes)
     assert len(outcomes[0].raw_documents) == 38
