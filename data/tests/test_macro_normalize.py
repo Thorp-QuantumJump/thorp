@@ -153,6 +153,7 @@ class TestTimestamps:
         )
 
         assert result[0].source_updated_at is None
+        assert result[0].released_at is None
         assert result[0].received_at == received
 
     def test_수신_시각을_갱신일로_대신하지_않는다(self) -> None:
@@ -184,6 +185,25 @@ class TestTimestamps:
         result = normalize(DAILY_AVERAGE, daily, trading_days=calendar_days)
 
         assert result[0].source_updated_at == "2026-03-01"
+
+    def test_원천이_준_발표시각과_수신시각을_따로_둔다(self) -> None:
+        released = datetime(2026, 2, 1, 8, 0, tzinfo=UTC)
+        received = datetime(2026, 2, 2, 9, 0, tzinfo=UTC)
+        daily = [
+            SourceObservation(
+                "x", "2026-01-30", Decimal("3.2"), released_at=released
+            )
+        ]
+
+        result = normalize(
+            replace(BY_ID["treasury_bond_3y"], indicator_id="x"),
+            daily,
+            as_of=date(2026, 3, 1),
+            received_at=received,
+        )
+
+        assert result[0].released_at == released
+        assert result[0].received_at == received
 
 
 class TestTransformRuleIsRecorded:

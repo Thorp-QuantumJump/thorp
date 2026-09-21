@@ -21,11 +21,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
+from typing import Final
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -64,6 +67,15 @@ STATUS_KEY_NOT_ISSUED = "KEY_NOT_ISSUED"
 STATUS_RIGHTS_PENDING = "RIGHTS_PENDING"
 STATUS_RIGHTS_UNVERIFIED = "RIGHTS_UNVERIFIED"
 
+#: 경제협력개발기구 SDMX 에 JSON 을 요청하는 헤더.
+#:
+#: **판본을 2.0 으로 못 박는다.** 1.0 은 최상위에 ``structure`` 하나를 두고 2.0 은
+#: ``structures`` 배열을 둔다. 어댑터는 2.0 모양을 읽으므로 판본을 비워 두거나 1.0 을 먼저
+#: 적으면 원천이 1.0 을 주고 "응답에 structures 가 없다"로 끝난다 — 리허설에서 그렇게 걸렸다.
+_SDMX_JSON_HEADERS: Final[dict[str, str]] = {
+    "Accept": "application/vnd.sdmx.data+json;version=2.0.0"
+}
+
 
 @dataclass(frozen=True)
 class RawDocument:
@@ -87,7 +99,12 @@ class IndicatorOutcome:
     observations: list[SourceObservation] = field(default_factory=list)
     raw_documents: list[RawDocument] = field(default_factory=list)
     error_class: str | None = None
+    #: 응답에서 관측값이 아니어서 뺀 행의 수 (FR-017a). 관세청의 ``<year>총계</year>`` 가 여기다.
     excluded_rows: int = 0
+    #: 달마다 그 값을 준 구간. 개편으로 나뉜 계열만 채워진다 (FR-010).
+    break_segments: dict[str, str] = field(default_factory=dict)
+    #: 그중 등록표의 연결 규칙으로 이어진 구간들. 이어지지 않은 구간을 넘는 비교는 결측이다.
+    linked_segments: frozenset[str] = frozenset()
 
     @property
     def succeeded(self) -> bool:
@@ -103,7 +120,14 @@ def _window(indicator: IndicatorDefinition, mode: str, today: date) -> tuple[str
     end = f"{today.year:04d}-{today.month:02d}"
     if mode == "initial":
         return indicator.series_start or "2000-01", end
-    months_back = max(indicator.refresh_months_n, 1)
+    # 증가율은 갱신 대상월만 다시 받아서는 계산할 수 없다. 정기 수집 창 앞에
+    # 변환식의 분모가 놓이는 선행 구간을 함께 열어, 새 관측이 직전의 정상 값을
+    # ``NOT_TRANSFORMABLE`` 로 덮지 않게 한다.
+    transform_lookback = {
+        registry.TRANSFORM_YOY: 12,
+        registry.TRANSFORM_MOM: 1,
+    }.get(indicator.transform_rule, 0)
+    months_back = max(indicator.refresh_months_n, 1) + transform_lookback
     year = today.year
     month = today.month - months_back
     while month <= 0:
@@ -115,6 +139,33 @@ def _window(indicator: IndicatorDefinition, mode: str, today: date) -> tuple[str
 def _compact(period: str) -> str:
     """``YYYY-MM`` 을 원천이 받는 ``YYYYMM`` 으로."""
     return period.replace("-", "")
+
+
+#: 한 달의 마지막 날. 일별 조회의 끝을 그 달 말일로 잡는다.
+_MONTH_END_DAY: Final[dict[int, int]] = {1: 31, 3: 31, 5: 31, 7: 31, 8: 31, 10: 31, 12: 31}
+
+
+def _ecos_period(period: str, cycle: str, *, end: bool) -> str:
+    """한국은행이 받는 조회 구간 표기. **주기마다 자릿수가 다르다**.
+
+    일별 계열에 ``YYYYMM`` 을 주면 ``[ERROR-101] 주기와 다른 형식의 날짜 형식입니다`` 가
+    돌아온다. 국고채가 유일한 일별 계열인데, 그 사실은 등록표의 ``source_cycle`` 이 들고
+    있으므로 여기서 통계표 코드로 추측하지 않는다(FR-005).
+
+    끝 달은 말일까지 연다. 그 달의 며칠까지 자료가 있는지는 원천이 알고, 우리가 좁히면
+    그달 마지막 거래일을 놓쳐 월 기말이 한 달 밀린다(FR-006a).
+    """
+    compact = _compact(period)
+    if cycle != "D":
+        return compact
+    year, month = int(period[:4]), int(period[5:7])
+    if not end:
+        return f"{compact}01"
+    if month == 2:
+        last = 29 if (year % 4 == 0 and year % 100 != 0) or year % 400 == 0 else 28
+    else:
+        last = _MONTH_END_DAY.get(month, 30)
+    return f"{compact}{last:02d}"
 
 
 def _save_raw(
@@ -144,6 +195,44 @@ def _save_raw(
             sha256=storage.content_hash(body.encode("utf-8")),
         )
     )
+
+
+def _cached_raw(data_root: Path, source_id: str, indicator_id: str) -> RawDocument | None:
+    """중단된 분할 수집이 이미 봉인한 원본을 다시 내려받지 않게 되읽는다."""
+    directory = data_root / storage.RAW_ROOT / source_id / indicator_id
+    candidates = (
+        sorted(
+            (
+                path for path in directory.glob("*/*")
+                if path.suffix in {".json", ".xml"}
+                and path.with_suffix(path.suffix + ".complete").exists()
+            ),
+            reverse=True,
+        )
+        if directory.exists()
+        else []
+    )
+    if not candidates:
+        return None
+    path = candidates[0]
+    body = path.read_text(encoding="utf-8")
+    # 원본 파일명은 저장 시점의 수신 시각을 마이크로초까지 품는다. 파일 수정 시각은
+    # 복사·복원·백업 과정에서 바뀔 수 있으므로 수신 시각의 근거로 쓰지 않는다.
+    received_at = datetime.strptime(path.stem, "%Y%m%dT%H%M%S%f").replace(tzinfo=UTC)
+    return RawDocument(
+        indicator_id=indicator_id,
+        source=source_id,
+        body=body,
+        received_at=received_at,
+        path=path,
+        sha256=storage.content_hash(body.encode("utf-8")),
+    )
+
+
+def _mark_raw_complete(document: RawDocument) -> None:
+    """파싱까지 성공한 분할 원본만 재개 체크포인트로 표시한다."""
+    marker = document.path.with_suffix(document.path.suffix + ".complete")
+    marker.write_text(document.sha256, encoding="ascii")
 
 
 def _classify(error: Exception) -> tuple[str, str]:
@@ -232,7 +321,12 @@ def _collect_one(
                 indicator, fetcher, config, data_root, start, end, received_at, outcome
             )
         elif indicator.primary_source == SOURCE_ECOS:
-            path = ecos.build_path(indicator, _compact(start), _compact(end))
+            cycle = ecos.cycle_for(indicator)
+            path = ecos.build_path(
+                indicator,
+                _ecos_period(start, cycle, end=False),
+                _ecos_period(end, cycle, end=True),
+            )
             body = transport.fetch_text(fetcher, config, path)
             _save_raw(
                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at
@@ -247,7 +341,12 @@ def _collect_one(
             outcome.observations = kosis.parse(indicator, _as_json(body, config))
         elif indicator.primary_source == SOURCE_OECD:
             path = oecd.build_path(indicator)
-            body = transport.fetch_text(fetcher, config, path, needs_key=False)
+            # SDMX 는 **기본이 XML 이다.** 달라고 하지 않으면 JSON 을 주지 않는다 — 그대로
+            # 파서에 넣으면 "응답이 JSON 이 아니다"로 끝난다. 형식을 질의 인자가 아니라
+            # 헤더로 고르는 이유는 그것이 SDMX 규약이고, 인자는 판마다 이름이 달라서다.
+            body = transport.fetch_text(
+                fetcher, config, path, needs_key=False, headers=_SDMX_JSON_HEADERS
+            )
             _save_raw(
                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at
             )
@@ -295,6 +394,14 @@ def _collect_linked(
 
     segments = housing.segments_from(values_by_base_month, indicator.link_chain)
     linked = housing.link(segments)
+    # 어느 표가 어느 달을 줬는지 변환까지 들고 간다. 증가율이 이음매를 넘을 때 그 둘이
+    # 실제로 이어진 구간인지 확인해야 하기 때문이다(FR-006).
+    outcome.break_segments = {
+        point.period: point.source_base_month for point in linked.points
+    }
+    outcome.linked_segments = frozenset(
+        {segments[0].base_month} | {link.from_base_month for link in linked.links}
+    )
     return [
         SourceObservation(
             indicator_id=indicator.indicator_id,
@@ -334,13 +441,19 @@ def _collect_customs(
             params = customs.build_params(
                 window.start.strftime("%Y%m"), window.end.strftime("%Y%m")
             )
-            body = transport.fetch_text(
-                fetcher, config, "", params, key_param="serviceKey"
-            )
             label = f"trade__{window.start:%Y%m}_{window.end:%Y%m}"
             first = outcomes[members[0].indicator_id]
-            _save_raw(first, data_root, SOURCE_CUSTOMS, label, body, received_at)
+            cached = _cached_raw(data_root, SOURCE_CUSTOMS, label)
+            if cached is None:
+                body = transport.fetch_text(
+                    fetcher, config, "", params, key_param="serviceKey"
+                )
+                _save_raw(first, data_root, SOURCE_CUSTOMS, label, body, received_at)
+            else:
+                body = cached.body
+                first.raw_documents.append(cached)
             response = customs.parse_all(body, members)
+            _mark_raw_complete(first.raw_documents[-1])
             for indicator in members:
                 outcomes[indicator.indicator_id].observations.extend(
                     response[indicator.indicator_id]
@@ -353,12 +466,10 @@ def _collect_customs(
                 outcomes[indicator.indicator_id].status = status
                 outcomes[indicator.indicator_id].error_class = error_class
             logger.warning("관세청 %s~%s 수집 실패: %s", window.start, window.end, error)
-            if status == STATUS_QUOTA:
-                # **한도에 닿으면 그 자리에서 멈춘다**(FR-011). 전 구간이 서른일곱 조각이라
-                # 계속 부르면 남은 서른여섯 번이 전부 같은 거절을 받으며 한도를 더 깎고,
-                # 원천이 접근을 끊는 쪽으로 간다. 받은 구간은 그대로 두어 다음 실행이
-                # 그만큼 덜 부르게 한다.
-                break
+            # 실패한 구간 뒤를 계속 받지 않는다. 한도라면 추가 거절을 막고, 구조 변경이라면
+            # 잘못 해석할 수 있는 같은 형식의 응답을 더 저장하지 않는다. 성공한 앞 구간은
+            # 체크포인트로 남아 다음 실행이 실패한 구간부터 이어받는다(T047·T051).
+            break
     return list(outcomes.values())
 
 
@@ -400,6 +511,8 @@ def normalize_outcomes(
             as_of=as_of,
             trading_days=trading_days,
             received_at=received_at,
+            break_segments=outcome.break_segments or None,
+            linked_segments=outcome.linked_segments,
         )
     return result
 
@@ -440,6 +553,8 @@ def write_processed(
                     "raw_unit": [row.raw_unit for row in rows],
                     "transformed_unit": [row.transformed_unit for row in rows],
                     "source_updated_at": [row.source_updated_at for row in rows],
+                    "released_at": [row.released_at for row in rows],
+                    "received_at": [row.received_at for row in rows],
                 }
             )
             path = storage.processed_path(data_root, indicator_id, year)
@@ -447,6 +562,69 @@ def write_processed(
             pq.write_table(table, path)
             written.append(path)
     return written
+
+
+def merge_published_observations(
+    engine: Engine,
+    dataset_id: int,
+    indicators: Sequence[IndicatorDefinition],
+    fresh: Mapping[str, Sequence[NormalizedObservation]],
+) -> dict[str, list[NormalizedObservation]]:
+    """정기 재조회분을 직전 불변 스냅샷에 월 단위로 덮어 새 전체 후보를 만든다.
+
+    기존 자료 버전은 수정하지 않는다. 같은 월에 새 관측이 왔을 때만 새 후보의 그 월을 바꾸고,
+    재조회 범위 밖의 과거 월은 그대로 복사한다(FR-009).
+    """
+    definitions = {indicator.indicator_id: indicator for indicator in indicators}
+    merged: dict[str, dict[str, NormalizedObservation]] = {
+        indicator_id: {} for indicator_id in definitions
+    }
+    with engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT indicator_id, target_month, raw_value, transformed_value,"
+                " released_at, received_at, break_segment, missing_reason"
+                " FROM macro_observation WHERE dataset_version_id = :dataset"
+            ),
+            {"dataset": dataset_id},
+        ).mappings().all()
+    for row in rows:
+        indicator = definitions.get(row["indicator_id"])
+        if indicator is None:
+            raise ValueError("기존 자료 버전에 현재 등록표 밖의 지표가 있다")
+        raw_value = row["raw_value"]
+        if isinstance(raw_value, str):
+            raw_value = json.loads(raw_value)
+        transformed = row["transformed_value"]
+        if isinstance(transformed, str):
+            transformed = json.loads(transformed)
+        period = row["target_month"].strftime("%Y-%m")
+        merged[indicator.indicator_id][period] = NormalizedObservation(
+            indicator_id=indicator.indicator_id,
+            period=period,
+            transformed_value=None if transformed is None else Decimal(str(transformed)),
+            missing_reason=row["missing_reason"],
+            raw_values=tuple(
+                (raw_period, None if value is None else Decimal(str(value)))
+                for raw_period, value in (raw_value or [])
+            ),
+            transform_rule=indicator.transform_rule,
+            raw_unit=indicator.raw_unit,
+            transformed_unit=indicator.transformed_unit,
+            source_updated_at=None,
+            released_at=row["released_at"],
+            received_at=row["received_at"],
+            break_segment=row["break_segment"],
+        )
+    for indicator_id, observations in fresh.items():
+        if indicator_id not in merged:
+            raise ValueError(f"새 관측에 등록표 밖의 지표가 있다: {indicator_id}")
+        for observation in observations:
+            merged[indicator_id][observation.period] = observation
+    return {
+        indicator_id: [by_month[month] for month in sorted(by_month)]
+        for indicator_id, by_month in merged.items()
+    }
 
 
 def record_raw_revisions(engine: Engine, outcomes: Sequence[IndicatorOutcome]) -> int:
@@ -513,11 +691,26 @@ def record_item_status(
     outcomes: Sequence[IndicatorOutcome],
     *,
     mode: str = "REGULAR",
+    held: str | None = None,
+    crashed: bool = False,
 ) -> None:
-    """지표별 수집 결과를 남긴다 (T082, FR-011).
+    """지표별 수집 결과와 **발행 보류 여부**를 남긴다 (T082·T083, FR-011).
 
     008 조회가 이 표에서 실패 지표 목록을 읽는다. 쓰지 않으면 화면은 늘 "실패 없음"으로 보인다.
+
+    ``held`` 가 있으면 시도 행을 ``HELD`` 와 그 사유로 남긴다. **지표가 다 성공해도 그렇다** —
+    전 구간이 기대 대상월 수에 못 미쳐 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이지만
+    아무것도 발행되지 않았고, 그 둘을 같은 ``SUCCEEDED`` 로 적으면 DB 만 보는 사람은 구분하지
+    못한다. 보류 사유가 로그에만 있으면 로그가 지나간 뒤에는 아무 데도 없다.
+
+    ``crashed`` 는 **보류와 다른 것**이다. 보류는 우리가 규칙대로 막은 것이고 터진 것은 우리가
+    죽은 것이라, 다음에 할 일이 다르다 — 앞은 모자란 자료를 채우면 되고 뒤는 원인을 찾아야
+    한다. 발행기가 시도 행을 이미 ``FAILED`` 로 적었으면 그대로 두고, 행을 만들기 전에 터져
+    아직 없으면 여기서 ``FAILED`` 로 만든다. 이 자리가 없으면 터진 실행이 ``SUCCEEDED`` 로
+    남는다.
     """
+    if crashed and held is not None:
+        raise ValueError("보류와 실패를 함께 적을 수 없다 — 둘은 다음에 할 일이 다르다")
     now = datetime.now(UTC)
     with engine.begin() as connection:
         attempt_id = connection.execute(
@@ -529,33 +722,53 @@ def record_item_status(
             # 먼저 하고 시도 행을 나중에 만드는데, 그 판정에서 던지면 붙을 자리가 없어진다.
             # 그때 기록까지 버리면 무엇을 받았고 무엇이 실패했는지가 통째로 사라진다(FR-011).
             failed = any(not outcome.succeeded for outcome in outcomes)
+            if crashed:
+                status = "FAILED"
+            elif held:
+                status = "HELD"
+            else:
+                status = "PARTIAL" if failed else "SUCCEEDED"
             attempt_id = connection.execute(
                 text(
                     "INSERT INTO macro_collection_attempt"
-                    " (attempt_key, mode, started_at, finished_at, status)"
-                    " VALUES (:key, :mode, :now, :now, :status) RETURNING id"
+                    " (attempt_key, mode, started_at, finished_at, status, hold_reason)"
+                    " VALUES (:key, :mode, :now, :now, :status, :hold) RETURNING id"
                 ),
                 {
                     "key": attempt_key,
                     "mode": mode,
                     "now": now,
-                    "status": "PARTIAL" if failed else "SUCCEEDED",
+                    "status": status,
+                    "hold": held,
                 },
             ).scalar_one()
+        elif held is not None:
+            # 발행기가 시도 행을 만든 뒤 보류로 끝난 경우다. 발행기는 상태만 적고 사유는
+            # 예외로 올리므로, 그 사유가 여기서 행에 붙지 않으면 어디에도 남지 않는다.
+            connection.execute(
+                text(
+                    "UPDATE macro_collection_attempt"
+                    " SET status = 'HELD', hold_reason = :hold, finished_at = :now"
+                    " WHERE id = :id"
+                ),
+                {"hold": held, "now": now, "id": attempt_id},
+            )
         for outcome in outcomes:
             connection.execute(
                 text(
                     "INSERT INTO macro_collection_item_status"
                     " (attempt_id, indicator_id, source, status, last_success_at,"
-                    "  last_error_at, error_class, quota_exhausted, raw_location)"
+                    "  last_error_at, error_class, quota_exhausted, raw_location,"
+                    "  excluded_row_count)"
                     " VALUES (:attempt, :indicator, :source, :status, :success,"
-                    "  :error_at, :error_class, :quota, :raw)"
+                    "  :error_at, :error_class, :quota, :raw, :excluded)"
                     " ON CONFLICT (attempt_id, indicator_id) DO UPDATE SET"
                     "  status = EXCLUDED.status, last_success_at = EXCLUDED.last_success_at,"
                     "  last_error_at = EXCLUDED.last_error_at,"
                     "  error_class = EXCLUDED.error_class,"
                     "  quota_exhausted = EXCLUDED.quota_exhausted,"
-                    "  raw_location = EXCLUDED.raw_location"
+                    "  raw_location = EXCLUDED.raw_location,"
+                    "  excluded_row_count = EXCLUDED.excluded_row_count"
                 ),
                 {
                     "attempt": attempt_id,
@@ -569,6 +782,7 @@ def record_item_status(
                     "raw": str(outcome.raw_documents[-1].path)
                     if outcome.raw_documents
                     else None,
+                    "excluded": outcome.excluded_rows,
                 },
             )
 
@@ -600,6 +814,67 @@ class IngestReport:
     @property
     def published(self) -> bool:
         return self.dataset_version_id is not None
+
+
+@dataclass(frozen=True)
+class Shortfall:
+    """전 구간 적재가 기대에 못 미친 지표 하나 (FR-011b(3))."""
+
+    indicator_id: str
+    expected_months: int
+    received_months: int
+    expected_end_month: str
+
+    def __str__(self) -> str:
+        return (
+            f"{self.indicator_id} {self.received_months}/{self.expected_months}개월"
+            f" (~{self.expected_end_month})"
+        )
+
+
+#: 꼬리 쪽 한 달은 미달로 보지 않는다 (FR-011b(3)).
+#:
+#: 등록표의 공표 지연은 **2026-09-20 하루치 관측**으로 정한 값이다. 그날 관세청은 이번 달치를
+#: 이미 내고 있었지만 달 초에는 아직 없고, 통계청 산업활동동향도 발표가 하루 이틀 밀리는 달이
+#: 있다. 여유 없이 걸면 그런 날의 실행이 17개 전부를 발행하지 못한다.
+#:
+#: 여유를 두어 잃는 것은 작다. 이 판정이 막으려는 것은 **전 구간이 통째로 짧은 것**이다 —
+#: 주택가격이 2000-01 대신 2021-06 부터만 오면 260개월이 빈다. 한 달의 여유로는 그런 구멍이
+#: 가려지지 않는다. 반대로 여유가 없으면 발표 하루 차이가 발행 전체를 멈춘다.
+TAIL_SLACK_MONTHS: Final[int] = 1
+
+
+def shortfalls(
+    indicators: Sequence[IndicatorDefinition],
+    observations: Mapping[str, Sequence[NormalizedObservation]],
+    as_of: str,
+    *,
+    slack_months: int = TAIL_SLACK_MONTHS,
+) -> list[Shortfall]:
+    """기대 대상월 수에 못 미친 지표들 (FR-011b(3)).
+
+    **받은 대상월을 센다. 값이 있는 달이 아니다.** 전년동월 대비의 첫 열두 달은 비교월이 없어
+    결측이지만 그 달들도 받은 대상월이고, 값만 세면 증가율 지표가 영영 미달로 남는다.
+
+    기대보다 **많은** 것은 미달이 아니다 — 원천이 이번 달치를 먼저 낸 경우가 그렇고, 그것은
+    문제가 아니라 공표 지연이 우리가 적어 둔 것보다 짧았다는 뜻이다.
+
+    ``slack_months`` 만큼은 모자라도 넘어간다. 이유는 :data:`TAIL_SLACK_MONTHS` 에 있다.
+    """
+    result: list[Shortfall] = []
+    for indicator in indicators:
+        expected = registry.expected_month_count(indicator, as_of)
+        received = len(observations.get(indicator.indicator_id, ()))
+        if received < expected - slack_months:
+            result.append(
+                Shortfall(
+                    indicator_id=indicator.indicator_id,
+                    expected_months=expected,
+                    received_months=received,
+                    expected_end_month=registry.expected_end_month(indicator, as_of),
+                )
+            )
+    return result
 
 
 def run(
@@ -640,9 +915,13 @@ def run(
         indicators, outcomes, as_of=today, trading_days=trading_days, received_at=received_at
     )
     raw_written = record_raw_revisions(engine, outcomes)
+    pointer = _current_pointer(engine)
+    if mode == "regular" and pointer.dataset_id is not None:
+        observations = merge_published_observations(
+            engine, pointer.dataset_id, indicators, observations
+        )
     processed_files = tuple(write_processed(observations, data_root))
 
-    pointer = _current_pointer(engine)
     raw_files = tuple(
         document.path for outcome in outcomes for document in outcome.raw_documents
     )
@@ -659,6 +938,14 @@ def run(
 
     dataset_id: int | None = None
     held: str | None = None
+    # **전 구간 적재는 기대 대상월 수를 채워야 완료다**(FR-011b(3)). 한 지표라도 모자라면
+    # 발행하지 않는다 — 짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡해서, 과거가 잘려 있다는
+    # 사실이 화면 어디에도 드러나지 않는다. 정기 수집은 최근 N개월만 받으므로 해당 없다.
+    missing_months = (
+        shortfalls(indicators, observations, f"{today.year:04d}-{today.month:02d}")
+        if mode == "initial"
+        else []
+    )
     if len(indicators) != registry.EXPECTED_INDICATOR_COUNT:
         # **일부만 받은 실행은 발행을 시도하지 않는다.** 발행은 17개가 함께여야 성립하므로
         # (FR-011) 부분 집합으로 부르면 판정기가 그 자리에서 거절한다. 그것을 실패로 적으면
@@ -668,14 +955,27 @@ def run(
             f" (발행은 {registry.EXPECTED_INDICATOR_COUNT}개가 함께여야 한다)"
         )
         logger.info("%s", held)
+    elif missing_months:
+        held = "전 구간 적재가 기대에 못 미쳐 발행하지 않는다: " + ", ".join(
+            str(shortfall) for shortfall in missing_months
+        )
+        logger.warning("%s", held)
     else:
         try:
             dataset_id = publish.publish_atomically(engine, request)
         except publish.PublishError as error:
             held = str(error)
             logger.warning("발행 보류: %s", error)
+        except Exception:
+            # **발행이 어떻게 죽든 지표별 기록은 남긴다.** 발행기가 시도 행을 FAILED 로
+            # 적어 주므로 실행이 실패했다는 사실 자체는 사라지지 않지만, 여기서 그냥
+            # 올려보내면 아래의 기록이 건너뛰어져 **무엇을 받았고 무엇이 실패했는지가
+            # 통째로 없어진다**(FR-011). 그러면 남는 것은 "실패했다" 한 줄뿐이라 다음
+            # 실행에서 무엇을 다시 받아야 하는지 알 수 없다.
+            record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), crashed=True)
+            raise
 
-    record_item_status(engine, attempt_key, outcomes, mode=mode.upper())
+    record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), held=held)
 
     return IngestReport(
         attempt_key=attempt_key,
