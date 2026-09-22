@@ -228,6 +228,43 @@ def test_one_day_short_is_excluded_and_the_rest_renormalises():
     ]
 
 
+def inverse_volatility(parameters: dict | None = None, **rule_overrides) -> AllocationSpec:
+    return AllocationSpec.model_validate(
+        {
+            "strategyId": "INVERSE_VOLATILITY",
+            "rulesVersion": "1",
+            "rules": {**INVERSE_RULES, **rule_overrides},
+            "parameters": {"rebalance": "MONTH_END", **(parameters or {})},
+        }
+    )
+
+
+def test_inverse_user_lookback_beats_the_registry_default():
+    """003 축이 오면 그 값으로 변동성을 잰다.
+
+    규칙표 값만 읽던 동안 21거래일을 고른 사용자가 63거래일짜리 결과를 받았다 — 계약이 축을
+    거절해 요청이 통째로 죽던 자리와 같은 뿌리다.
+    """
+    prices = {
+        SEMI: [100.0, 101.0, 100.0, 102.0, 101.0, 103.0],
+        BATTERY: [100.0, 99.0, 101.0, 98.0, 102.0, 97.0],
+    }
+    universe = [item(SEMI), item(BATTERY)]
+
+    chosen = compute_weights(
+        inverse_volatility({"lookbackDays": 3}), universe, history(**prices), AS_OF
+    )
+    same_by_rule = compute_weights(
+        inverse_volatility(**{"lookbackDays": 3}), universe, history(**prices), AS_OF
+    )
+    longer = compute_weights(
+        inverse_volatility({"lookbackDays": 5}), universe, history(**prices), AS_OF
+    )
+
+    assert chosen.weights == same_by_rule.weights, "축이 규칙표 기본값과 같으면 결과도 같다"
+    assert chosen.weights != longer.weights, "관측 기간을 바꾸면 결과가 바뀌어야 한다"
+
+
 def test_weight_cap_is_enforced():
     calm = [100.0, 100.1, 100.2, 100.3]
     wild = [100.0, 110.0, 95.0, 115.0]

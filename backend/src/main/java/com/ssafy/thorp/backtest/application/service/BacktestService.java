@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.PinnedVersions;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;
 import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
@@ -311,6 +312,18 @@ public class BacktestService {
                         source,
                         command.executionType(),
                         clock.instant()));
+        if (source == ResultSource.REUSED) {
+            // **끝난 실행을 재사용하면 이 접수에는 FINISHED 가 다시 오지 않는다.** 007 후보는 그 이벤트
+            // 하나로만 DISPATCHED 를 벗어나므로(BacktestFinishedListener), 알리지 않으면 이미 답이 나와
+            // 있는 후보가 영원히 '실행 중'으로 남고 발행 창이 막혀 묶음 전체가 제한시간까지 멈춘다.
+            // 같은 조합을 두 번째로 돌리는 순간 바로 걸리는 자리다.
+            //
+            // JOINED 는 여기서 알리지 않는다 — 그 실행은 아직 돌고 있고, 끝나면 제 FINISHED 하나가
+            // 걸린 후보를 전부 전진시킨다. 미리 보내면 아직 없는 결과를 완료로 읽는다.
+            events.publishEvent(
+                    new BacktestFinished(
+                            run.getId(), run.getBacktestId().value(), run.getStatus(), null));
+        }
         return Optional.of(BacktestJobResult.of(request, run));
     }
 

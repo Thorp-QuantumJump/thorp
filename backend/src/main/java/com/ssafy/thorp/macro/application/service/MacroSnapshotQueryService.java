@@ -317,11 +317,32 @@ public class MacroSnapshotQueryService {
         };
     }
 
+    /**
+     * 저장된 수집 시도 상태를 계약이 정한 값으로 좁힌다 (T086).
+     *
+     * <p><b>저장 쪽이 계약보다 넓다.</b> 발행기는 지표 일부만 성공한 시도를 {@code PARTIAL} 로 적는데 계약의 상태 값에는 그것이 없다. 그대로
+     * 내보내면 계약으로 검증하는 소비자가 응답 전체를 거절한다 — 값 하나 때문에 화면이 통째로 비는 편이 더 나쁘다.
+     *
+     * <p>{@code PARTIAL} 은 {@code HELD} 로 읽는다. 둘 다 "이번 시도의 결과가 밖으로 나가지 않았다"는 뜻이고, 어느 지표가 실패했는지는
+     * {@code failedIndicatorIds} 가 이미 들고 있어 거칠어진 만큼을 그쪽이 채운다.
+     */
+    private String toPublicStatus(String storedStatus) {
+        if (storedStatus == null) {
+            return "NEVER_COLLECTED";
+        }
+        return switch (storedStatus) {
+            case "SUCCEEDED", "RUNNING", "FAILED", "HELD" -> storedStatus;
+            case "PARTIAL" -> "HELD";
+            // 모르는 값을 성공으로 읽지 않는다. 저장 쪽에 새 상태가 생기면 여기서 드러난다.
+            default -> "FAILED";
+        };
+    }
+
     private CollectionState toCollectionState(Optional<CollectionStateRow> row) {
         return row.map(
                         state ->
                                 new CollectionState(
-                                        state.status(),
+                                        toPublicStatus(state.status()),
                                         List.of(),
                                         state.lastSuccessfulAt(),
                                         state.lastAttemptAt(),

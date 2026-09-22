@@ -1,5 +1,6 @@
 package com.ssafy.thorp.macro.infrastructure.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository;
@@ -7,9 +8,11 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -28,6 +31,9 @@ import org.springframework.stereotype.Repository;
 public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {
 
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
+
+    /** 008 의 원값 계보: {@code [[대상월, 값], ...]}. 값은 자릿수를 지키려고 문자열이다. */
+    private static final TypeReference<List<List<String>>> LINEAGE = new TypeReference<>() {};
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
@@ -237,11 +243,48 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {
                 new ObservationRow(
                         rs.getString("indicator_id"),
                         toLocalDate(rs.getDate("target_month")),
-                        readDecimal(rs.getString("raw_value")),
+                        readRawValue(
+                                rs.getString("raw_value"), toLocalDate(rs.getDate("target_month"))),
                         readDecimal(rs.getString("transformed_value")),
                         toLocalDate(rs.getTimestamp("released_at")),
                         toInstant(rs.getTimestamp("received_at")),
                         rs.getString("missing_reason"));
+    }
+
+    /**
+     * 계보에서 <b>대상월의</b> 원값을 고른다 (008 FR-008).
+     *
+     * <p>008 의 {@code raw_value} 는 값 하나가 아니라 그 변환값을 만든 원본들이다 — 전년동월 대비는 {@code [[t-12, 값], [t, 값]]}
+     * 처럼 둘이 오고, 월 평균은 그 달 거래일 전부가 온다. 배열을 통째로 {@link BigDecimal} 에 넘기면 요청이 400 으로 떨어진다.
+     *
+     * <p><b>마지막 원소를 고르지 않는다.</b> 증가율은 마침 마지막이 대상월이지만, 규칙을 "마지막"으로 두면 순서가 다른 변환에서 조용히 틀린다. 대상월과 같은
+     * 달을 찾는 것이 규칙이다.
+     *
+     * <p>스칼라로 들어온 값도 그대로 받는다 — 옛 자료 버전이 그 모양이다.
+     */
+    private BigDecimal readRawValue(String json, LocalDate targetMonth) {
+        if (json == null || json.isBlank() || "null".equals(json)) {
+            return null;
+        }
+        String text = json.trim();
+        if (!text.startsWith("[")) {
+            return readDecimal(text);
+        }
+        List<List<String>> lineage;
+        try {
+            lineage = objectMapper.readValue(text, LINEAGE);
+        } catch (JsonProcessingException error) {
+            throw new IllegalStateException("원값 계보를 읽지 못했다: " + text, error);
+        }
+        String wanted = targetMonth == null ? null : YearMonth.from(targetMonth).toString();
+        for (List<String> pair : lineage) {
+            if (pair != null && pair.size() == 2 && Objects.equals(pair.get(0), wanted)) {
+                return readDecimal(pair.get(1));
+            }
+        }
+        // 대상월이 계보에 없으면 원값이 없는 것이다. 다른 달 값을 대신 내놓으면 화면의 숫자가
+        // 제목과 다른 달을 말한다.
+        return null;
     }
 
     /**

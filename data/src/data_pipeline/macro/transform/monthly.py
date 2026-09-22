@@ -393,6 +393,45 @@ def _require_declared_cycle(
     return indicator.source_cycle == CYCLE_MONTHLY
 
 
+def _with_incomplete(
+    values: list[MonthlyValue], incomplete: Sequence[MonthlyValue]
+) -> list[MonthlyValue]:
+    """끝나지 않은 달을 사유와 함께 결과에 되돌린다. 순서는 대상월 순이다."""
+    if not incomplete:
+        return values
+    return sorted([*values, *incomplete], key=lambda value: value.period)
+
+
+def _split_incomplete(
+    observations: Sequence[SourceObservation], as_of: date
+) -> tuple[list[SourceObservation], list[MonthlyValue]]:
+    """아직 끝나지 않은 대상월을 떼어 낸다 (FR-006a).
+
+    **원천이 진행 중인 달을 함께 준다.** 관세청은 이번 달 누적치를 그날까지 더해 내보내므로,
+    달이 끝나기 전에 받은 값은 그 달의 값이 아니라 그 시점까지의 조각이다. 2026-09-17 과
+    2026-09-22 에 받은 2026-09 수출이 148억 달러 차이였고, 전년동월 대비로 옮기면 -5.07% 와
+    +17.37% 가 된다 — 같은 이름을 달고 22%p 를 움직인다. 화면은 그중 하나를 "9월 수출"로
+    보여주고 사용자는 수출이 줄었다고 읽는다(2026-09-22 관측).
+
+    **버리지 않고 사유와 함께 남긴다.** 조용히 빼면 그 달이 원래 없는 달인지 아직 안 끝난
+    달인지 구분되지 않는다(원칙 VI).
+
+    :data:`fold_month_end` 가 일별 계열에 이미 같은 규칙을 건다. 월별 원천에만 이 규칙이
+    없었던 것이고, 달이 안 끝났다는 사실은 원천 주기와 무관하다.
+    """
+    kept: list[SourceObservation] = []
+    incomplete: list[MonthlyValue] = []
+    for observation in observations:
+        period = month_of(observation.period)
+        if _last_day(period) >= as_of:
+            incomplete.append(
+                _missing(observation.indicator_id, period, MISSING_INCOMPLETE_MONTH)
+            )
+            continue
+        kept.append(observation)
+    return kept, incomplete
+
+
 def apply(
     indicator: IndicatorDefinition,
     observations: Sequence[SourceObservation],
@@ -410,12 +449,18 @@ def apply(
     rule = indicator.transform_rule
     monthly_source = _require_declared_cycle(indicator, observations)
 
+    # 월별 원천이 진행 중인 달을 함께 줄 때 그 달을 값으로 만들지 않는다. 일별 계열은
+    # `fold_month_end` 가 as_of 로 이미 막고 있어 여기서 다시 걸지 않는다.
+    incomplete: list[MonthlyValue] = []
+    if monthly_source and as_of is not None:
+        observations, incomplete = _split_incomplete(observations, as_of)
+
     if rule in (TRANSFORM_OFFICIAL_AMOUNT, TRANSFORM_SEASONAL_RATE):
-        return passthrough(observations)
+        return _with_incomplete(passthrough(observations), incomplete)
 
     if rule == TRANSFORM_MONTH_END:
         if monthly_source:
-            return passthrough(observations)
+            return _with_incomplete(passthrough(observations), incomplete)
         if as_of is None:
             raise ValueError(
                 f"{indicator.indicator_id}: 월 기말을 접으려면 as_of 가 필요하다."
@@ -425,7 +470,7 @@ def apply(
 
     if rule == TRANSFORM_MONTH_AVERAGE:
         if monthly_source:
-            return passthrough(observations)
+            return _with_incomplete(passthrough(observations), incomplete)
         return fold_month_average(observations, trading_days=trading_days or {})
 
     if rule in (TRANSFORM_YOY, TRANSFORM_MOM):
@@ -441,11 +486,14 @@ def apply(
             )
         levels = passthrough(observations)
         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month
-        return growth(
-            levels,
-            series_start=indicator.series_start,
-            break_segments=break_segments,
-            linked_segments=linked_segments,
+        return _with_incomplete(
+            growth(
+                levels,
+                series_start=indicator.series_start,
+                break_segments=break_segments,
+                linked_segments=linked_segments,
+            ),
+            incomplete,
         )
 
     raise ValueError(f"{indicator.indicator_id}: 모르는 변환 규칙이다({rule})")

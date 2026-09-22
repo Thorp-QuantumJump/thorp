@@ -16,17 +16,22 @@ import re
 
 from conftest import production_sources
 
-from data_pipeline.regime.macro import SOURCE_FIXTURE, create_source
+from data_pipeline.macro import display
+from data_pipeline.macro.registry import INDICATORS
 
 
 def _forbidden_terms() -> dict[str, list[str]]:
-    """등록표가 소유한 값들 — 이 문자열이 운영 코드에 나타나면 안 된다."""
-    registry = create_source(SOURCE_FIXTURE).registry()
+    """등록표가 소유한 값들 — 이 문자열이 010 운영 코드에 나타나면 안 된다.
+
+    **008 의 실제 등록표에서 가져온다.** 예전에는 임시 대역의 값으로 봤는데, 그것은 지어낸
+    이름이라 `전산업생산` 같은 진짜 이름이 코드에 박혀도 잡지 못했다. 대역이 사라진 지금은
+    008 이 유일한 출처이고, 검사가 실제 값으로 강해진다.
+    """
     return {
-        "지표 id": [indicator.id for indicator in registry.indicators],
-        "지표 이름": [indicator.name for indicator in registry.indicators],
-        "분야 id": [field.id for field in registry.fields],
-        "분야 이름": [field.name for field in registry.fields],
+        "지표 id": [indicator.indicator_id for indicator in INDICATORS],
+        "지표 이름": [name for name, _ in display.INDICATORS.values()],
+        "분야 id": [indicator.field_id for indicator in INDICATORS],
+        "분야 이름": [name for name, _, _ in display.FIELDS.values()],
     }
 
 

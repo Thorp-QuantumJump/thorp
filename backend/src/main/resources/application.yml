@@ -89,16 +89,6 @@ app:
 # 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
 
 thorp:
-  # 경제환경 검색(spec 010)이 지표 등록표를 어디서 읽는가. 008 미구현 기간이라 공통 기본은 임시 대역이고,
-  # 그 사실은 응답의 versions.sampleData 와 FIXTURE- 접두사로 어디서나 드러난다(계약 §4.2).
-  # prod 는 application-prod.yml 에서 macro 로 덮고, prod + fixture 조합은 RegimeFixtureGuard 가 기동을 막는다.
-  regime:
-    macro:
-      source: fixture
-  # 시장 흐름(spec 009)이 지표를 어디서 읽는가. 008 스냅샷이 기본이다 — 예시 자료는 명시적으로
-  # 고를 때만 들어오고(T064), 운영에서 고르면 MarketFlowExampleDataGuard 가 기동을 막는다.
-  marketflow:
-    indicator-source: macro
   learning:
     # 배우기 관리 계정 허용 목록(spec 013 research R5). 쉼표로 구분한 사용자 ID(users.id)다.
     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy
