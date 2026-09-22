@@ -7,6 +7,7 @@ import {
   normalizeStrategyRegistryError,
 } from "@/api/strategyRegistry";
 import { NotReadyNotice } from "@/components/common/NotReadyNotice";
+import { InlineHelp } from "@/components/common/InlineHelp";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import { ActionButtons } from "@/components/strategy/ActionButtons";
@@ -32,9 +33,8 @@ import {
 import { ConditionSummaryLine } from "@/components/strategy/ConditionSummaryLine";
 import { defaultAnalysisSupport } from "@/components/strategy/connectedAnalysisSupport";
 import { DetailSettingsPanel } from "@/components/strategy/DetailSettingsPanel";
-import { ReducedPeriodNotice } from "@/components/strategy/ReducedPeriodNotice";
 import {
-  describeEvaluationWindow,
+  describeReducedCause,
   type ReducedPeriodInput,
   type WarmupCause,
 } from "@/components/strategy/reducedPeriod";
@@ -554,14 +554,8 @@ export function StrategySettingsPage({
             : strategy.warmupTradingDays,
         minEvaluationYears,
       }).verdict;
-      // 고른 카드에 보이는 평가 기간은 '분석하기' 위의 안내와 같은 문장이다(SC-004). 따로 지으면 두
-      // 곳이 다른 말을 한다. 까닭은 상세 쪽 안내에서 펼쳐 본다 — 카드마다 말풍선을 두면 목록이 무거워진다.
-      if (selected && verdict.state === "reduced" && reducedPeriod !== null) {
-        return {
-          state: "reduced",
-          message: describeEvaluationWindow(reducedPeriod),
-        };
-      }
+      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는
+      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).
       return verdict;
     },
     [
@@ -570,7 +564,6 @@ export function StrategySettingsPage({
       minEvaluationYears,
       selectedStrategyId,
       currentWarmup,
-      reducedPeriod,
     ],
   );
 
@@ -1325,15 +1318,6 @@ export function StrategySettingsPage({
                           ) : null}
                         </div>
                       ) : null}
-
-                      <ReducedPeriodNotice
-                        input={reducedPeriod}
-                        fallbackMessage={
-                          selectedJudgement?.verdict.state === "reduced"
-                            ? selectedJudgement.verdict.message
-                            : undefined
-                        }
-                      />
                     </>
                   ) : null}
 
@@ -1348,6 +1332,13 @@ export function StrategySettingsPage({
                 */}
                   {registry !== null && settings.ready ? (
                     <AnalysisConditionsPanel
+                      rangeReason={
+                        reducedPeriod === null ? undefined : (
+                          <InlineHelp label="평가할 수 있는 범위" on="hover">
+                            {describeReducedCause(reducedPeriod)}
+                          </InlineHelp>
+                        )
+                      }
                       summary={
                         <ConditionSummaryLine
                           period={period}

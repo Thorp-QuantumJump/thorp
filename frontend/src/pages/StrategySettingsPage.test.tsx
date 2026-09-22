@@ -2336,46 +2336,45 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(requests).toHaveLength(0);
   });
 
-  it("평가 기간은 분석하기 바로 위에만 보이고 까닭은 펼쳐 본다", async () => {
-    // SC-004. 카드는 고를 수 있는지만 말하고, 기간과 그 까닭은 고른 뒤 오른쪽 안내가 맡는다.
+  it("평가할 수 있는 범위 옆 도움말이 그 범위인 까닭을 말한다", async () => {
+    // SC-004. 범위는 분석 조건이 한 줄로 적고, 왜 그만큼인지는 그 옆에서 펼쳐 본다.
     const user = userEvent.setup();
     const { support } = makeSupport({ judgeWarmup: reducedJudgement });
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
+    const panel = await openConditions(user);
 
-    const notice = await screen.findByRole("status", { name: "평가 기간" });
-    const sentence = `평가 기간 ${windowFixture.start} ~ ${windowFixture.end}`;
-    expect(notice.textContent).toContain(sentence);
-    // 고른 적 없는 기간을 두고 "줄었다"고 말하지 않는다.
-    expect(notice.textContent).not.toContain("줄었");
+    const range = `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`;
+    expect(within(panel).getByText(range, { exact: false })).toBeTruthy();
+    // 고른 적 없는 범위를 두고 "줄었다"고 말하지 않는다.
+    expect(panel.textContent).not.toContain("줄었");
 
-    // 카드에는 적지 않는다 — 고를 수 있다는 뜻이라 선택을 가르지 않는다.
+    // 카드에도 적지 않는다 — 고를 수 있다는 뜻이라 선택을 가르지 않는다.
     const card = await findCardNamed(selectableStrategy.name);
-    expect(within(card).queryByText(sentence)).toBeNull();
+    expect(within(card).queryByText(range)).toBeNull();
 
     await user.hover(
-      within(notice).getByRole("button", { name: "평가 기간 도움말" }),
+      within(panel).getByRole("button", { name: "평가할 수 있는 범위 도움말" }),
     );
     const cause = (await screen.findByText(/나섹터/)).textContent ?? "";
     expect(cause).toContain("표류 관측 창");
     expect(cause).toContain("2019-09-02");
-
-    // 안내는 '분석하기'보다 앞에 놓인다.
-    expect(
-      notice.compareDocumentPosition(actionButton("분석하기")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 
-  it("줄지 않았으면 평가 기간 안내가 없다", async () => {
+  it("워밍업이 앞을 깎지 않았으면 범위 옆에 까닭 도움말을 두지 않는다", async () => {
     const user = userEvent.setup();
     const { support } = makeSupport();
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
+    const panel = await openConditions(user);
 
-    expect(screen.queryByRole("status", { name: "평가 기간" })).toBeNull();
+    expect(
+      within(panel).queryByRole("button", {
+        name: "평가할 수 있는 범위 도움말",
+      }),
+    ).toBeNull();
   });
 
   it("최소 평가 기간을 바꾸면 그 값으로 카드 판정을 다시 한다", async () => {
@@ -2484,8 +2483,8 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(requests[0].conditions.end).toBe(windowFixture.end);
   });
 
-  it("원인을 받지 못한 줄어든 판정도 분석하기 바로 위에 보인다", async () => {
-    // SC-004. 통로가 `reduction`을 싣지 않아도 안내 자리가 비지 않는다.
+  it("원인을 받지 못하면 범위는 그대로 적고 까닭 도움말만 두지 않는다", async () => {
+    // 통로가 `reduction`을 싣지 않으면 까닭을 지어내지 않는다. 범위 자체는 여전히 보인다.
     const user = userEvent.setup();
     const { support } = makeSupport({
       judgeWarmup: () => ({
@@ -2497,9 +2496,19 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
+    const panel = await openConditions(user);
 
-    const notice = await screen.findByRole("status", { name: "평가 기간" });
-    expect(notice.textContent).toBe("평가 기간이 줄어듭니다.");
+    expect(
+      within(panel).getByText(
+        `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`,
+        { exact: false },
+      ),
+    ).toBeTruthy();
+    expect(
+      within(panel).queryByRole("button", {
+        name: "평가할 수 있는 범위 도움말",
+      }),
+    ).toBeNull();
   });
 
   it("고르지 않은 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다", async () => {
