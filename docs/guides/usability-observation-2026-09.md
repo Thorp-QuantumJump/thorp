@@ -135,9 +135,14 @@ PD-14가 정한 **한 회차**의 진행 서식이다. 002·003·005·010의 사
 
 | spec | 남길 곳 | 닫히는 task |
 |---|---|---|
+| 002 | [usability-2026-09.md](../../specs/002-sector-weight-selection/usability-2026-09.md) | 없음 (SC-004는 기록·조치만 요구한다) |
 | 003 | [usability-2026-09.md](../../specs/003-strategy-settings/usability-2026-09.md) | T074a |
 | 005 | [usability-2026-09.md](../../specs/005-result-comparison/usability-2026-09.md) | T083a |
 | 010 | [usability-2026-09.md](../../specs/010-economic-regime-search/usability-2026-09.md) | T155 |
+
+**002는 요구하는 task가 없어도 기록할 곳이 있어야 한다.** tasks.md가 이미 비어 있어 이 표에서
+빠질 뻔했는데, 과제 1이 관찰하는 것이 002 SC-004다. 남길 곳이 없으면 회차에서 유일하게 기록이
+사라지는 과제가 된다.
 
 010은 `quickstart.md`의 실행 기록에서 그 파일을 가리킨다. 실행 기록에 관찰 결과를 통째로 옮겨
 적으면 같은 내용이 두 곳에 남고 한쪽만 고쳐진다.
