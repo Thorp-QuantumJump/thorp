@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import { AxisNumberField } from './AxisNumberField'
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { AxisNumberField } from "./AxisNumberField";
 
 /**
  * 입력형 항목은 범위 밖 값을 저장하지 않고 잘라 넣지도 않는다(FR-006, quickstart 5).
@@ -10,136 +10,149 @@ import { AxisNumberField } from './AxisNumberField'
  * <p>라벨·범위는 합성 값이다. 실제 등록표의 비중 상한을 옮겨 적지 않는다.
  */
 
-const range = { min: 10, max: 100, step: 5 }
+const range = { min: 10, max: 100, step: 5 };
 
 function renderField(initial: number | undefined) {
-  const onChange = vi.fn()
-  const onReset = vi.fn()
+  const onChange = vi.fn();
+  const onReset = vi.fn();
 
   // 실제 상태처럼 받은 값을 되돌려 주는 틀. 입력칸이 바깥 값과 맞춰지는 경로까지 함께 본다.
   function Harness() {
-    const [value, setValue] = useState<number | undefined>(initial)
+    const [value, setValue] = useState<number | undefined>(initial);
     return (
       <>
         <AxisNumberField
           label="합성 상한"
-          description="한 자리에 둘 수 있는 최대 몫이다."
           unit="퍼센트"
           range={range}
           defaultValue={20}
           value={value}
           onChange={(next) => {
-            onChange(next)
-            setValue(next)
+            onChange(next);
+            setValue(next);
           }}
           onReset={() => {
-            onReset()
-            setValue(20)
+            onReset();
+            setValue(20);
           }}
         />
-        <output data-testid="stored">{value === undefined ? '비어 있음' : String(value)}</output>
+        <output data-testid="stored">
+          {value === undefined ? "비어 있음" : String(value)}
+        </output>
       </>
-    )
+    );
   }
 
-  render(<Harness />)
-  return { onChange, onReset, input: screen.getByRole('textbox', { name: /합성 상한/ }) }
+  render(<Harness />);
+  return {
+    onChange,
+    onReset,
+    input: screen.getByRole("textbox", { name: /합성 상한/ }),
+  };
 }
 
-describe('AxisNumberField', () => {
-  it('범위 밖 값은 허용 범위를 안내하고 반영하지 않으며 최솟값으로 잘라 넣지 않는다', async () => {
-    const user = userEvent.setup()
-    const { onChange, input } = renderField(20)
+describe("AxisNumberField", () => {
+  it("범위 밖 값은 허용 범위를 안내하고 반영하지 않으며 최솟값으로 잘라 넣지 않는다", async () => {
+    const user = userEvent.setup();
+    const { onChange, input } = renderField(20);
 
-    await user.clear(input)
-    await user.type(input, '5')
+    await user.clear(input);
+    await user.type(input, "5");
 
-    expect(onChange).not.toHaveBeenCalled()
-    expect(screen.getByTestId('stored').textContent).toContain('20')
-    expect((input as HTMLInputElement).value).toBe('5')
-    expect(input.getAttribute('aria-invalid')).toBe('true')
-    expect(screen.getByText(/허용 범위 밖입니다/).textContent).toContain('허용 범위는 10~100퍼센트')
-    expect(screen.getByText(/저장하지 않았습니다/)).not.toBeNull()
-  })
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("stored").textContent).toContain("20");
+    expect((input as HTMLInputElement).value).toBe("5");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText(/허용 범위 밖입니다/).textContent).toContain(
+      "허용 범위는 10~100퍼센트",
+    );
+    expect(screen.getByText(/저장하지 않았습니다/)).not.toBeNull();
+  });
 
-  it('범위 안이고 간격에 맞는 값은 반영한다', async () => {
-    const user = userEvent.setup()
-    const { onChange, input } = renderField(20)
+  it("범위 안이고 간격에 맞는 값은 반영한다", async () => {
+    const user = userEvent.setup();
+    const { onChange, input } = renderField(20);
 
-    await user.clear(input)
-    await user.type(input, '35')
+    await user.clear(input);
+    await user.type(input, "35");
 
-    expect(onChange).toHaveBeenLastCalledWith(35)
-    expect(screen.getByTestId('stored').textContent).toContain('35')
-    expect(input.getAttribute('aria-invalid')).toBe('false')
-  })
+    expect(onChange).toHaveBeenLastCalledWith(35);
+    expect(screen.getByTestId("stored").textContent).toContain("35");
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+  });
 
-  it('치는 도중의 범위 안 글자가 먼저 반영돼도 마지막 글이 범위 밖이면 입력 전 값으로 돌아간다', async () => {
-    const user = userEvent.setup()
-    const { input } = renderField(20)
+  it("치는 도중의 범위 안 글자가 먼저 반영돼도 마지막 글이 범위 밖이면 입력 전 값으로 돌아간다", async () => {
+    const user = userEvent.setup();
+    const { input } = renderField(20);
 
     // `10`은 범위 안이라 한 번 반영되지만 `105`는 범위 밖이다.
-    await user.clear(input)
-    await user.type(input, '105')
+    await user.clear(input);
+    await user.type(input, "105");
 
-    expect(screen.getByTestId('stored').textContent).toBe('20')
-    expect((input as HTMLInputElement).value).toBe('105')
-    expect(screen.getByText(/허용 범위 밖입니다/)).not.toBeNull()
-  })
+    expect(screen.getByTestId("stored").textContent).toBe("20");
+    expect((input as HTMLInputElement).value).toBe("105");
+    expect(screen.getByText(/허용 범위 밖입니다/)).not.toBeNull();
+  });
 
-  it('간격에 맞지 않는 값은 간격을 안내하고 반영하지 않는다', async () => {
-    const user = userEvent.setup()
-    const { onChange, input } = renderField(20)
+  it("간격에 맞지 않는 값은 간격을 안내하고 반영하지 않는다", async () => {
+    const user = userEvent.setup();
+    const { onChange, input } = renderField(20);
 
-    await user.clear(input)
-    await user.type(input, '33')
+    await user.clear(input);
+    await user.type(input, "33");
 
-    expect(onChange).not.toHaveBeenCalledWith(33)
-    expect(screen.getByTestId('stored').textContent).toContain('20')
-    expect(screen.getByText(/등록된 간격에 맞지 않습니다/).textContent).toContain('5퍼센트 간격')
-  })
+    expect(onChange).not.toHaveBeenCalledWith(33);
+    expect(screen.getByTestId("stored").textContent).toContain("20");
+    expect(
+      screen.getByText(/등록된 간격에 맞지 않습니다/).textContent,
+    ).toContain("5퍼센트 간격");
+  });
 
-  it('숫자가 아닌 글은 반영하지 않는다', async () => {
-    const user = userEvent.setup()
-    const { onChange, input } = renderField(20)
+  it("숫자가 아닌 글은 반영하지 않는다", async () => {
+    const user = userEvent.setup();
+    const { onChange, input } = renderField(20);
 
-    await user.clear(input)
-    await user.type(input, 'abc')
+    await user.clear(input);
+    await user.type(input, "abc");
 
-    expect(onChange).not.toHaveBeenCalled()
-    expect(screen.getByText(/숫자로 입력해 주세요/)).not.toBeNull()
-  })
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText(/숫자로 입력해 주세요/)).not.toBeNull();
+  });
 
-  it('기본값 복원은 등록표 기본값으로 되돌리고 입력칸도 맞춘다', async () => {
-    const user = userEvent.setup()
-    const { onReset, input } = renderField(35)
+  it("기본값 복원은 등록표 기본값으로 되돌리고 입력칸도 맞춘다", async () => {
+    const user = userEvent.setup();
+    const { onReset, input } = renderField(35);
 
     // 반영되지 않은 글이 남아 있어도 복원하면 입력칸이 기본값으로 돌아온다.
-    await user.clear(input)
-    await user.type(input, '7')
-    await user.click(screen.getByRole('button', { name: '합성 상한 기본값 복원' }))
+    await user.clear(input);
+    await user.type(input, "7");
+    await user.click(
+      screen.getByRole("button", { name: "합성 상한 기본값 복원" }),
+    );
 
-    expect(onReset).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId('stored').textContent).toContain('20')
-    expect((input as HTMLInputElement).value).toBe('20')
-    expect(input.getAttribute('aria-invalid')).toBe('false')
-  })
+    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("stored").textContent).toContain("20");
+    expect((input as HTMLInputElement).value).toBe("20");
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+  });
 
-  it('상태가 이미 기본값일 때 복원해도 남아 있던 글을 기본값으로 되돌린다', async () => {
-    const user = userEvent.setup()
-    const { input } = renderField(20)
+  it("상태가 이미 기본값일 때 복원해도 남아 있던 글을 기본값으로 되돌린다", async () => {
+    const user = userEvent.setup();
+    const { input } = renderField(20);
 
-    await user.clear(input)
-    await user.type(input, '999')
-    await user.click(screen.getByRole('button', { name: '합성 상한 기본값 복원' }))
+    await user.clear(input);
+    await user.type(input, "999");
+    await user.click(
+      screen.getByRole("button", { name: "합성 상한 기본값 복원" }),
+    );
 
-    expect((input as HTMLInputElement).value).toBe('20')
-  })
+    expect((input as HTMLInputElement).value).toBe("20");
+  });
 
-  it('재검증이 비워 둔 항목은 빈칸으로 두고 값을 넣으라고 안내한다', () => {
-    const { input } = renderField(undefined)
+  it("재검증이 비워 둔 항목은 빈칸으로 두고 값을 넣으라고 안내한다", () => {
+    const { input } = renderField(undefined);
 
-    expect((input as HTMLInputElement).value).toBe('')
-    expect(screen.getByText(/값을 입력해 주세요/)).not.toBeNull()
-  })
-})
+    expect((input as HTMLInputElement).value).toBe("");
+    expect(screen.getByText(/값을 입력해 주세요/)).not.toBeNull();
+  });
+});

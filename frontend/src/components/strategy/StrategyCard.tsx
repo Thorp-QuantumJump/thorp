@@ -1,5 +1,5 @@
-import type { StrategyView } from '@/types/strategyRegistry'
-import styles from './StrategyCard.module.css'
+import type { StrategyView } from "@/types/strategyRegistry";
+import styles from "./StrategyCard.module.css";
 
 /**
  * 워밍업과 최소 평가 기간을 함께 본 판정(FR-011, FR-011a).
@@ -14,32 +14,32 @@ import styles from './StrategyCard.module.css'
  */
 export type WarmupVerdict =
   /** 워밍업을 채우고도 평가할 구간이 충분히 남는다. */
-  | { state: 'ok' }
-  /** 고를 수 있으나 평가 구간이 줄어든다. 줄어든 사실을 문장으로 알린다. */
-  | { state: 'reduced'; message: string }
+  | { state: "ok" }
+  /** 고를 수 있으나 평가 구간이 짧아진다. 카드는 적지 않고 고른 뒤 오른쪽 안내가 기간을 말한다. */
+  | { state: "reduced"; message: string }
   /** 워밍업조차 채우지 못하거나 남는 기간이 최소 평가 기간에 못 미친다. */
-  | { state: 'blocked'; message: string }
+  | { state: "blocked"; message: string }
   /** 판정에 필요한 값을 아직 받지 못했다. **고를 수 없다는 뜻이 아니다.** */
-  | { state: 'unknown'; message: string }
+  | { state: "unknown"; message: string };
 
 interface StrategyCardProps {
-  strategy: StrategyView
-  selected: boolean
+  strategy: StrategyView;
+  selected: boolean;
   /** 워밍업 판정. 계산은 호출자가 하고 카드는 결과만 받는다. */
-  warmup: WarmupVerdict
+  warmup: WarmupVerdict;
   /** 고를 수 있는 카드를 눌렀을 때만 불린다. */
-  onSelect: () => void
+  onSelect: () => void;
   /**
    * 라디오 그룹의 탭 차례를 목록이 정한다(roving tabindex). 탭 한 번으로 그룹에 들어오고
    * 그 안은 화살표로 옮겨 다닌다 — 전략이 늘어도 탭 횟수가 늘지 않는다.
    */
-  tabIndex: number
+  tabIndex: number;
 }
 
 /** 계약이 이유를 싣기로 해 놓고 싣지 않았을 때 쓰는 문장. 이유를 지어내지 않는다. */
-const REASON_MISSING = '고를 수 없는 이유를 확인하지 못했습니다.'
+const REASON_MISSING = "고를 수 없는 이유를 확인하지 못했습니다.";
 
-type CardNotice = { key: string; text: string }
+type CardNotice = { key: string; text: string };
 
 /**
  * 카드에 붙일 안내를 모은다.
@@ -51,19 +51,30 @@ type CardNotice = { key: string; text: string }
  * <p><b>'고를 수 없음' 같은 딱지를 앞에 붙이지 않는다.</b> 사유 문장이 이미 무엇이 막혔는지 말하고,
  * 딱지는 기능이 꺼진 것 같은 인상만 남긴다. 상태는 문장으로 전달된다(NFR-002).
  */
-function collectNotices(strategy: StrategyView, warmup: WarmupVerdict): CardNotice[] {
-  const notices: CardNotice[] = []
+function collectNotices(
+  strategy: StrategyView,
+  warmup: WarmupVerdict,
+): CardNotice[] {
+  const notices: CardNotice[] = [];
 
   if (!strategy.selectable) {
     // 계약 §1은 `selectable`이 false면 `unselectableReason`을 반드시 싣는다. 비어 있다면 그것은
     // 계약 위반이고, **화면이 숨겨서 넘기지 않는다**. 다만 전략 하나의 결함으로 등록표 전체를
     // 버리지는 않는다 — 나머지 전략은 정상인데 함께 막으면 FR-018이 막으려던 상황보다 넓게 막게 된다.
-    notices.push({ key: 'registry', text: strategy.unselectableReason ?? REASON_MISSING })
+    notices.push({
+      key: "registry",
+      text: strategy.unselectableReason ?? REASON_MISSING,
+    });
   }
 
-  if (warmup.state !== 'ok') notices.push({ key: 'warmup', text: warmup.message })
+  // 'reduced'는 카드에 적지 않는다. 고를 수 있다는 뜻이라 선택을 가르지 않고, 평가 기간은 고른 뒤
+  // 오른쪽 안내가 한 줄로 말한다 — 목록에 같은 말을 다섯 벌 늘어놓으면 정작 고를 수 없는 카드의
+  // 사유가 묻힌다(2026-09-22, `S15P21E205-406`). 'blocked'·'unknown'은 고를 수 있는지를 가르므로 남긴다.
+  if (warmup.state === "blocked" || warmup.state === "unknown") {
+    notices.push({ key: "warmup", text: warmup.message });
+  }
 
-  return notices
+  return notices;
 }
 
 /**
@@ -83,15 +94,24 @@ function collectNotices(strategy: StrategyView, warmup: WarmupVerdict): CardNoti
  * <p><b>상태를 색으로만 알리지 않는다.</b> 선택 불가와 기간 축소는 문장으로 함께 전달하고,
  * 스크린리더에는 `aria-checked`·`aria-disabled`·`aria-describedby`로 전달한다(NFR-002).
  */
-export function StrategyCard({ strategy, selected, warmup, onSelect, tabIndex }: StrategyCardProps) {
-  const notices = collectNotices(strategy, warmup)
+export function StrategyCard({
+  strategy,
+  selected,
+  warmup,
+  onSelect,
+  tabIndex,
+}: StrategyCardProps) {
+  const notices = collectNotices(strategy, warmup);
 
   // 워밍업을 판정하지 못한 것은 고를 수 없다는 뜻이 아니다. 등록표가 이미 내린 판정을 그대로 두고,
   // 판정하지 못했다는 사실만 문장으로 알린다. 실행 직전의 최종 판정은 서버가 다시 한다(FR-006).
-  const selectable = strategy.selectable && warmup.state !== 'blocked'
-  const noticeId = notices.length > 0 ? `strategy-card-notice-${strategy.strategyId}` : undefined
-  const descriptionId = `strategy-card-description-${strategy.strategyId}`
-  const describedBy = noticeId ? `${descriptionId} ${noticeId}` : descriptionId
+  const selectable = strategy.selectable && warmup.state !== "blocked";
+  const noticeId =
+    notices.length > 0
+      ? `strategy-card-notice-${strategy.strategyId}`
+      : undefined;
+  const descriptionId = `strategy-card-description-${strategy.strategyId}`;
+  const describedBy = noticeId ? `${descriptionId} ${noticeId}` : descriptionId;
 
   return (
     <button
@@ -107,11 +127,11 @@ export function StrategyCard({ strategy, selected, warmup, onSelect, tabIndex }:
       aria-checked={selected}
       aria-describedby={describedBy}
       tabIndex={tabIndex}
-      data-selected={selected ? 'true' : undefined}
-      data-selectable={selectable ? 'true' : 'false'}
+      data-selected={selected ? "true" : undefined}
+      data-selectable={selectable ? "true" : "false"}
       data-warmup={warmup.state}
       onClick={() => {
-        if (selectable) onSelect()
+        if (selectable) onSelect();
       }}
     >
       <span className={styles.indicator} aria-hidden="true" />
@@ -123,7 +143,11 @@ export function StrategyCard({ strategy, selected, warmup, onSelect, tabIndex }:
         {notices.length > 0 && (
           <span id={noticeId} className={styles.notice}>
             {notices.map((notice) => (
-              <span key={notice.key} className={styles.reason} data-kind={notice.key}>
+              <span
+                key={notice.key}
+                className={styles.reason}
+                data-kind={notice.key}
+              >
                 {notice.text}
               </span>
             ))}
@@ -131,5 +155,5 @@ export function StrategyCard({ strategy, selected, warmup, onSelect, tabIndex }:
         )}
       </span>
     </button>
-  )
+  );
 }

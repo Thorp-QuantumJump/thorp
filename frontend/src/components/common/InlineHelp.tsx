@@ -1,12 +1,20 @@
-import { Popover } from 'radix-ui'
-import type { ReactNode } from 'react'
-import styles from './InlineHelp.module.css'
+import { HoverCard, Popover } from "radix-ui";
+import { useState, type ReactNode } from "react";
+import styles from "./InlineHelp.module.css";
 
 interface InlineHelpProps {
   /** 무엇에 대한 도움말인지. 트리거의 접근 가능한 이름과 내용 제목에 함께 쓴다 */
-  label: string
+  label: string;
   /** 펼쳤을 때 보일 설명. 화면이 직접 가진 문장이다 */
-  children: ReactNode
+  children: ReactNode;
+  /**
+   * 무엇으로 여는가. 기본은 누르기다.
+   *
+   * `'hover'`는 마우스를 얹기만 해도 열린다. 읽을거리가 짧고 화면이 이미 붐빌 때 쓴다 — 누르는 품을 없애는
+   * 대신 닫기 버튼이 없다. 트리거는 이 모드에서도 버튼이라 초점을 받으면 열리고, 그래서 키보드와 터치에서도
+   * 닿는다(누르면 초점이 간다).
+   */
+  on?: "click" | "hover";
 }
 
 /**
@@ -22,14 +30,65 @@ interface InlineHelpProps {
  *
  * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
  */
-export function InlineHelp({ label, children }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
+  const [open, setOpen] = useState(false);
+  if (on === "hover") {
+    return (
+      <HoverCard.Root
+        open={open}
+        onOpenChange={setOpen}
+        openDelay={80}
+        closeDelay={80}
+      >
+        <HoverCard.Trigger asChild>
+          {/*
+            여는 조건을 우리가 쥔다. HoverCard 는 마우스를 얹을 때만 열고 초점·누르기에는 반응하지
+            않는다 — 그대로 두면 키보드와 터치에서 읽을 방법이 없다(확인: 2026-09-22).
+          */}
+          <button
+            type="button"
+            className={styles.trigger}
+            aria-label={`${label} 도움말`}
+            aria-expanded={open}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onClick={() => setOpen((current) => !current)}
+          >
+            ?
+          </button>
+        </HoverCard.Trigger>
+        <HoverCard.Portal>
+          <HoverCard.Content
+            className={styles.content}
+            side="top"
+            sideOffset={6}
+            collisionPadding={12}
+            aria-label={`${label} 도움말`}
+          >
+            <p className={styles.term}>{label}</p>
+            <div className={styles.body}>{children}</div>
+          </HoverCard.Content>
+        </HoverCard.Portal>
+      </HoverCard.Root>
+    );
+  }
+
   return (
     <Popover.Root>
-      <Popover.Trigger className={styles.trigger} aria-label={`${label} 도움말`}>
+      <Popover.Trigger
+        className={styles.trigger}
+        aria-label={`${label} 도움말`}
+      >
         ?
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.content} sideOffset={6} aria-label={`${label} 도움말`}>
+        <Popover.Content
+          className={styles.content}
+          side="top"
+          sideOffset={6}
+          collisionPadding={12}
+          aria-label={`${label} 도움말`}
+        >
           <p className={styles.term}>{label}</p>
           <div className={styles.body}>{children}</div>
           <Popover.Close className={styles.close} aria-label="도움말 닫기">
@@ -38,5 +97,5 @@ export function InlineHelp({ label, children }: InlineHelpProps) {
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
-  )
+  );
 }

@@ -1,84 +1,105 @@
-import { useId, useRef, useState } from 'react'
-import { DateField } from '@/components/common/DateField'
-import { ProvisionalBadge } from '@/components/paramsearch/ProvisionalBadge'
-import type { AnalysisCondition, RestorableCondition } from '@/hooks/useStrategySettings'
-import type { AnalysisConditions } from '@/types/strategyRegistry'
+import { ChevronDown } from "lucide-react";
+import { useId, useRef, useState, type ReactNode } from "react";
+import { DateField } from "@/components/common/DateField";
+import { InlineHelp } from "@/components/common/InlineHelp";
+import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
+import type {
+  AnalysisCondition,
+  RestorableCondition,
+} from "@/hooks/useStrategySettings";
+import type { AnalysisConditions } from "@/types/strategyRegistry";
 import {
   checkPeriodInput,
   isIsoDate,
   isWithin,
   type AnalysisPeriod,
-} from '@/utils/analysisPeriod'
-import { buildAmountQuickAdds } from './amountQuickAdd'
-import type { CasePeriodConstraint } from './casePeriodConstraint'
-import styles from './AnalysisConditionsPanel.module.css'
-import fieldStyles from './AxisField.module.css'
-import type { CostRates } from './analysisSupport'
-import { AxisNumberField } from './AxisNumberField'
+} from "@/utils/analysisPeriod";
+import { buildAmountQuickAdds } from "./amountQuickAdd";
+import type { CasePeriodConstraint } from "./casePeriodConstraint";
+import styles from "./AnalysisConditionsPanel.module.css";
+import fieldStyles from "./AxisField.module.css";
+import type { CostRates } from "./analysisSupport";
+import { AxisNumberField } from "./AxisNumberField";
 
 /** 화면에 보일 비용 조건. 004가 등록한 현재 버전의 것이다. */
 export type CostAssumptionView = {
-  version: string
-  provisional: boolean
-  rates: CostRates
-}
+  version: string;
+  provisional: boolean;
+  rates: CostRates;
+};
 
-export type AnalysisConditionPatch = Partial<Omit<AnalysisCondition, 'scenario'>>
+export type AnalysisConditionPatch = Partial<
+  Omit<AnalysisCondition, "scenario">
+>;
 
 interface AnalysisConditionsPanelProps {
   /** 등록표 `analysisConditions`. 금액 범위와 최소 평가 기간 후보를 여기서 읽는다 */
-  conditions: AnalysisConditions
+  conditions: AnalysisConditions;
   /** 워밍업을 채운 뒤 평가할 수 있는 공통 범위. 아직 모르면 `null`이고 기간을 바꿀 수 없다 */
-  range: AnalysisPeriod | null
+  range: AnalysisPeriod | null;
   /** `range`가 없을 때 그 까닭. 없으면 "아직 확인하지 못했다"는 일반 문장을 쓴다 */
-  rangeUnavailableMessage?: string
+  rangeUnavailableMessage?: string;
   /** 지금 쓰이는 분석 기간. 사용자가 고르지 않았으면 `range`와 같다 */
-  period: AnalysisPeriod | null
+  period: AnalysisPeriod | null;
   /** 사용자가 기간을 직접 골랐는가. 참일 때만 '범위 전체로 되돌리기'를 보인다 */
-  periodChosen: boolean
+  periodChosen: boolean;
   /**
    * 011 사례 경로에서만 오는 추가 제약(011 진입 계약 §3). 주소에 `case`가 없으면 `null`이고 동작이
    * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다
    */
-  caseConstraint?: CasePeriodConstraint | null
+  caseConstraint?: CasePeriodConstraint | null;
   /** 지금 쓰이는 시작 금액. 재검증이 비워 두고 복원을 기다리면 `undefined`다 */
-  initialAmount: number | undefined
-  minEvaluationYears: number
+  initialAmount: number | undefined;
+  /** 접혀 있을 때도 보이는 조건 요약(FR-002). 머리줄에 실린다 */
+  summary?: ReactNode;
+  /** 평가할 수 있는 범위 옆에 붙는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
+  rangeReason?: ReactNode;
+  minEvaluationYears: number;
   /**
    * 비용 조건. 조회하는 중이면 `'loading'`, 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않고, 조회 중을
    * 확인 불가로 접지 않는다
    */
-  cost: CostAssumptionView | 'loading' | null
+  cost: CostAssumptionView | "loading" | null;
   /** 허용된 값일 때만 불린다. 받는 쪽(`setAnalysisCondition`)이 같은 잣대로 한 번 더 거른다 */
-  onChange: (patch: AnalysisConditionPatch) => void
-  onReset: (name: RestorableCondition) => void
+  onChange: (patch: AnalysisConditionPatch) => void;
+  onReset: (name: RestorableCondition) => void;
 }
 
 export const COST_UNAVAILABLE =
-  '비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.'
-export const COST_LOADING = '비용 조건을 확인하는 중입니다.'
-const RANGE_UNAVAILABLE = '평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.'
+  "비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.";
+/** 비용 수치가 어디서 온 값인지. 사용자가 고칠 수 있는 값이 아니라는 사실을 문구가 대신 말한다(FR-010). */
+const COST_BASIS = "2026년 한국 ETF 거래에 적용되는 기준과 같습니다.";
+
+export const COST_LOADING = "비용 조건을 확인하는 중입니다.";
+const RANGE_UNAVAILABLE =
+  "평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.";
 
 function toNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
-    return Number(value)
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    Number.isFinite(Number(value))
+  ) {
+    return Number(value);
   }
-  return null
+  return null;
 }
 
 function formatBps(value: number): string {
-  return `${value.toLocaleString('ko-KR', { maximumFractionDigits: 4 })}bp`
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}bp`;
 }
 
 interface PeriodFieldProps {
-  range: AnalysisPeriod | null
-  rangeUnavailableMessage: string
-  period: AnalysisPeriod | null
-  periodChosen: boolean
-  caseConstraint: CasePeriodConstraint | null
-  onChange: (period: AnalysisPeriod) => void
-  onReset: () => void
+  range: AnalysisPeriod | null;
+  rangeUnavailableMessage: string;
+  period: AnalysisPeriod | null;
+  periodChosen: boolean;
+  /** 범위가 왜 그만큼인지 알려 주는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
+  rangeReason?: ReactNode;
+  caseConstraint: CasePeriodConstraint | null;
+  onChange: (period: AnalysisPeriod) => void;
+  onReset: () => void;
 }
 
 /** 사례 제약을 어겼는가. 어겼으면 고정 문구, 아니면 `null`이다(011 진입 계약 §3). */
@@ -86,10 +107,11 @@ function checkCaseConstraint(
   draft: AnalysisPeriod,
   constraint: CasePeriodConstraint | null,
 ): string | null {
-  if (constraint === null) return null
-  if (!isIsoDate(draft.start) || !isIsoDate(draft.end)) return null
-  if (draft.start > constraint.startMax || draft.end < constraint.endMin) return constraint.note
-  return null
+  if (constraint === null) return null;
+  if (!isIsoDate(draft.start) || !isIsoDate(draft.end)) return null;
+  if (draft.start > constraint.startMax || draft.end < constraint.endMin)
+    return constraint.note;
+  return null;
 }
 
 /**
@@ -105,6 +127,7 @@ function checkCaseConstraint(
  * 요청은 사용자가 의도한 적 없는 중간 날짜로 나간다.
  */
 function PeriodField({
+  rangeReason,
   range,
   rangeUnavailableMessage,
   period,
@@ -113,77 +136,102 @@ function PeriodField({
   onChange,
   onReset,
 }: PeriodFieldProps) {
-  const startId = useId()
-  const endId = useId()
-  const messageId = useId()
-  const [draft, setDraft] = useState<AnalysisPeriod>(period ?? { start: '', end: '' })
-  const [synced, setSynced] = useState(period)
+  const startId = useId();
+  const endId = useId();
+  const messageId = useId();
+  const [draft, setDraft] = useState<AnalysisPeriod>(
+    period ?? { start: "", end: "" },
+  );
+  const [synced, setSynced] = useState(period);
   /** 입력을 시작할 때의 기간과, 그것이 사용자가 고른 기간이었는지 */
-  const atEditStart = useRef<{ period: AnalysisPeriod | null; chosen: boolean }>({
+  const atEditStart = useRef<{
+    period: AnalysisPeriod | null;
+    chosen: boolean;
+  }>({
     period,
     chosen: periodChosen,
-  })
+  });
 
   // 바깥에서 기간이 바뀌면(범위 전체로 되돌리기, 전략·워밍업이 바뀌어 범위가 달라짐) 입력칸을 맞춘다.
   if (period?.start !== synced?.start || period?.end !== synced?.end) {
-    setSynced(period)
-    setDraft(period ?? { start: '', end: '' })
+    setSynced(period);
+    setDraft(period ?? { start: "", end: "" });
   }
 
   /** 범위 검사에 사례 제약을 겹친다. 되돌리기 판정도 같은 잣대를 써야 두 길이 갈리지 않는다. */
   const check = (next: AnalysisPeriod): string | null =>
     range === null
       ? rangeUnavailableMessage
-      : (checkPeriodInput(next.start, next.end, range) ?? checkCaseConstraint(next, caseConstraint))
+      : (checkPeriodInput(next.start, next.end, range) ??
+        checkCaseConstraint(next, caseConstraint));
 
-  const draftIsCurrent = draft.start === period?.start && draft.end === period?.end
+  const draftIsCurrent =
+    draft.start === period?.start && draft.end === period?.end;
   const problem =
     range === null
       ? rangeUnavailableMessage
-      : draftIsCurrent && period !== null && isWithin(period, range) && checkCaseConstraint(period, caseConstraint) === null
+      : draftIsCurrent &&
+          period !== null &&
+          isWithin(period, range) &&
+          checkCaseConstraint(period, caseConstraint) === null
         ? null
-        : check(draft)
+        : check(draft);
 
   // 어느 칸이 문제인지 가른다. 순서가 뒤집힌 경우만 둘 다 문제다.
   const badDate = (date: string) =>
-    range !== null && (!isIsoDate(date) || date < range.start || date > range.end)
-  const reversed = isIsoDate(draft.start) && isIsoDate(draft.end) && draft.start > draft.end
-  const startInvalid = problem !== null && range !== null && (badDate(draft.start) || reversed)
-  const endInvalid = problem !== null && range !== null && (badDate(draft.end) || reversed)
+    range !== null &&
+    (!isIsoDate(date) || date < range.start || date > range.end);
+  const reversed =
+    isIsoDate(draft.start) && isIsoDate(draft.end) && draft.start > draft.end;
+  const startInvalid =
+    problem !== null && range !== null && (badDate(draft.start) || reversed);
+  const endInvalid =
+    problem !== null && range !== null && (badDate(draft.end) || reversed);
 
   const rememberEditStart = () => {
-    atEditStart.current = { period, chosen: periodChosen }
-  }
+    atEditStart.current = { period, chosen: periodChosen };
+  };
 
   const update = (next: AnalysisPeriod) => {
-    setDraft(next)
-    if (range === null) return
+    setDraft(next);
+    if (range === null) return;
     if (check(next) !== null) {
-      const before = atEditStart.current
+      const before = atEditStart.current;
       if (before.chosen && before.period) {
-        if (before.period.start !== period?.start || before.period.end !== period?.end) {
+        if (
+          before.period.start !== period?.start ||
+          before.period.end !== period?.end
+        ) {
           // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다.
-          setSynced(before.period)
-          onChange(before.period)
+          setSynced(before.period);
+          onChange(before.period);
         }
       } else if (periodChosen) {
         // 고르지 않은 상태에서 시작했으면 되돌릴 곳은 범위 전체다.
-        setSynced(range)
-        onReset()
+        setSynced(range);
+        onReset();
       }
-      return
+      return;
     }
-    if (next.start === period?.start && next.end === period?.end) return
-    onChange(next)
-  }
+    if (next.start === period?.start && next.end === period?.end) return;
+    onChange(next);
+  };
 
   /*
     달력의 `min`·`max`는 고르는 것을 돕기만 한다. 직접 친 날짜는 위 검사가 다시 거른다.
   */
   const rangeStartMax =
-    caseConstraint && range ? (caseConstraint.startMax < range.end ? caseConstraint.startMax : range.end) : range?.end
+    caseConstraint && range
+      ? caseConstraint.startMax < range.end
+        ? caseConstraint.startMax
+        : range.end
+      : range?.end;
   const rangeEndMin =
-    caseConstraint && range ? (caseConstraint.endMin > range.start ? caseConstraint.endMin : range.start) : range?.start
+    caseConstraint && range
+      ? caseConstraint.endMin > range.start
+        ? caseConstraint.endMin
+        : range.start
+      : range?.start;
 
   /*
     서로를 잠근다. 시작일 달력은 이미 고른 종료일 뒤를 열지 않고, 종료일 달력은 시작일 앞을
@@ -191,11 +239,17 @@ function PeriodField({
     직접 쳐 넣는 길은 남아 있으므로 위 `checkPeriodInput` 검사는 그대로 둔다.
   */
   const startMax =
-    isIsoDate(draft.end) && (!rangeStartMax || draft.end < rangeStartMax) ? draft.end : rangeStartMax
+    isIsoDate(draft.end) && (!rangeStartMax || draft.end < rangeStartMax)
+      ? draft.end
+      : rangeStartMax;
   const endMin =
-    isIsoDate(draft.start) && (!rangeEndMin || draft.start > rangeEndMin) ? draft.start : rangeEndMin
+    isIsoDate(draft.start) && (!rangeEndMin || draft.start > rangeEndMin)
+      ? draft.start
+      : rangeEndMin;
 
-  const hint = range ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.` : rangeUnavailableMessage
+  const hint = range
+    ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.`
+    : rangeUnavailableMessage;
 
   return (
     <fieldset className={fieldStyles.field}>
@@ -214,7 +268,7 @@ function PeriodField({
           max={startMax}
           value={draft.start}
           disabled={range === null}
-          aria-invalid={startInvalid ? 'true' : 'false'}
+          aria-invalid={startInvalid ? "true" : "false"}
           aria-describedby={messageId}
           onFocus={rememberEditStart}
           onChange={(next) => update({ ...draft, start: next })}
@@ -230,7 +284,7 @@ function PeriodField({
           max={range?.end}
           value={draft.end}
           disabled={range === null}
-          aria-invalid={endInvalid ? 'true' : 'false'}
+          aria-invalid={endInvalid ? "true" : "false"}
           aria-describedby={messageId}
           onFocus={rememberEditStart}
           onChange={(next) => update({ ...draft, end: next })}
@@ -241,28 +295,40 @@ function PeriodField({
             className={fieldStyles.reset}
             onClick={() => {
               // 이미 범위 전체와 같은 날짜를 골라 두었으면 바깥 값이 바뀌지 않아 입력칸이 맞춰지지 않는다.
-              if (range) setDraft(range)
-              onReset()
+              if (range) setDraft(range);
+              onReset();
             }}
           >
             범위 전체로 되돌리기
           </button>
         ) : null}
       </div>
-      <p id={messageId} className={problem && range ? fieldStyles.problem : fieldStyles.hint} aria-live="polite">
-        {problem && range ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}` : hint}
+      <p
+        id={messageId}
+        className={problem && range ? fieldStyles.problem : fieldStyles.hint}
+        aria-live="polite"
+      >
+        {problem && range
+          ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}`
+          : hint}
+        {/* 범위가 왜 그만큼인지. 워밍업이 앞을 깎았을 때만 온다 */}
+        {range ? rangeReason : null}
       </p>
       {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}
-      {caseConstraint ? <p className={fieldStyles.hint}>{caseConstraint.note}</p> : null}
+      {caseConstraint ? (
+        <p className={fieldStyles.hint}>{caseConstraint.note}</p>
+      ) : null}
     </fieldset>
-  )
+  );
 }
 
 /**
- * 조건 바꾸기(US3, FR-009·FR-010·FR-011a).
+ * 분석 조건(US3, FR-009·FR-010·FR-011a).
  *
- * <p><b>접힌 채로 시작한다.</b> 기본 화면의 입력은 전략 선택 하나이고(SC-005), 지금 적용되는 조건은 요약
- * 한 줄이 이미 보인다. 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
+ * <p><b>접힌 채로 시작하고 열면 그 자리가 편집 폼이다.</b> 기본 화면의 입력은 전략 선택 하나이고(SC-005),
+ * 지금 적용되는 조건은 머리줄의 요약이 늘 보인다(FR-002). 요약과 '조건 바꾸기'를 따로 두었더니 한 조건이
+ * 화면 세 곳(제목·요약·여는 버튼)에서 말해졌다 — 2026-09-22에 하나로 합쳤다(`S15P21E205-406`).
+ * 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
  *
  * <p><b>바꿀 수 있는 것은 셋뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가
  * 기간(등록표 후보 가운데). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,
@@ -281,17 +347,19 @@ export function AnalysisConditionsPanel({
   initialAmount,
   minEvaluationYears,
   cost,
+  summary,
+  rangeReason,
   onChange,
   onReset,
 }: AnalysisConditionsPanelProps) {
-  const [open, setOpen] = useState(false)
-  const bodyId = useId()
-  const yearsGroup = useId()
-  const amount = conditions.initialAmount
-  const years = conditions.minEvaluationYears
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
+  const yearsGroup = useId();
+  const amount = conditions.initialAmount;
+  const years = conditions.minEvaluationYears;
 
   return (
-    <section className={styles.panel} aria-label="조건 바꾸기">
+    <section className={styles.panel} aria-label="분석 조건">
       <button
         type="button"
         className={styles.toggle}
@@ -299,19 +367,29 @@ export function AnalysisConditionsPanel({
         aria-controls={open ? bodyId : undefined}
         onClick={() => setOpen((current) => !current)}
       >
-        조건 바꾸기
+        <span>분석 조건</span>
+        <ChevronDown
+          className={styles.toggleIcon}
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
       </button>
+      {summary}
 
       {open ? (
         <div id={bodyId} className={styles.body}>
           <PeriodField
+            rangeReason={rangeReason}
             range={range}
             rangeUnavailableMessage={rangeUnavailableMessage}
             period={period}
             periodChosen={periodChosen}
             caseConstraint={caseConstraint}
-            onChange={(next) => onChange({ periodStart: next.start, periodEnd: next.end })}
-            onReset={() => onReset('period')}
+            onChange={(next) =>
+              onChange({ periodStart: next.start, periodEnd: next.end })
+            }
+            onReset={() => onReset("period")}
           />
 
           <AxisNumberField
@@ -322,9 +400,12 @@ export function AnalysisConditionsPanel({
             value={initialAmount}
             groupDigits
             roundToStep
-            quickAdd={buildAmountQuickAdds(amount.step, amount.max - amount.min)}
+            quickAdd={buildAmountQuickAdds(
+              amount.step,
+              amount.max - amount.min,
+            )}
             onChange={(next) => onChange({ initialAmount: next })}
-            onReset={() => onReset('initialAmount')}
+            onReset={() => onReset("initialAmount")}
           />
 
           <fieldset className={fieldStyles.field}>
@@ -332,14 +413,18 @@ export function AnalysisConditionsPanel({
               <span className={fieldStyles.label}>최소 평가 기간</span>
             </legend>
             <p className={fieldStyles.description}>
-              워밍업을 채운 뒤 남는 평가 기간이 이보다 짧으면 그 전략으로 분석하지 않습니다.
+              워밍업을 채운 뒤 남는 평가 기간이 이보다 짧으면 그 전략으로
+              분석하지 않습니다.
             </p>
             <div className={fieldStyles.choices}>
               {years.choices.map((choice) => {
-                const value = toNumber(choice.value)
-                if (value === null) return null
+                const value = toNumber(choice.value);
+                if (value === null) return null;
                 return (
-                  <label key={String(choice.value)} className={fieldStyles.choice}>
+                  <label
+                    key={String(choice.value)}
+                    className={fieldStyles.choice}
+                  >
                     <input
                       type="radio"
                       name={yearsGroup}
@@ -348,19 +433,30 @@ export function AnalysisConditionsPanel({
                     />
                     {choice.label}
                   </label>
-                )
+                );
               })}
             </div>
           </fieldset>
 
           <div className={fieldStyles.field}>
             <span className={fieldStyles.label}>운용 방식</span>
-            <p className={styles.readOnly}>연속 운용 (이 화면에서 바꾸지 않습니다)</p>
+            <p className={styles.readOnly}>
+              연속 운용 (이 화면에서 바꾸지 않습니다)
+            </p>
           </div>
 
-          <div className={fieldStyles.field} role="group" aria-label="비용 가정">
-            <span className={fieldStyles.label}>비용 가정 (읽기 전용)</span>
-            {cost === 'loading' ? (
+          <div
+            className={fieldStyles.field}
+            role="group"
+            aria-label="비용 가정"
+          >
+            <span className={fieldStyles.label}>
+              비용 가정
+              <InlineHelp label="비용 가정" on="hover">
+                {COST_BASIS}
+              </InlineHelp>
+            </span>
+            {cost === "loading" ? (
               <p className={styles.readOnly} role="status">
                 {COST_LOADING}
               </p>
@@ -372,7 +468,9 @@ export function AnalysisConditionsPanel({
                 <span>세금 {formatBps(cost.rates.taxBps)}</span>
                 <span>
                   버전 {cost.version}
-                  {cost.provisional ? <ProvisionalBadge label="비용 가정" /> : null}
+                  {cost.provisional ? (
+                    <ProvisionalBadge label="비용 가정" />
+                  ) : null}
                 </span>
               </p>
             ) : (
@@ -380,14 +478,15 @@ export function AnalysisConditionsPanel({
                 {COST_UNAVAILABLE}
               </p>
             )}
-            {cost !== 'loading' && cost?.provisional ? (
+            {cost !== "loading" && cost?.provisional ? (
               <p className={fieldStyles.hint}>
-                팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.
+                팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지
+                마세요.
               </p>
             ) : null}
           </div>
         </div>
       ) : null}
     </section>
-  )
+  );
 }

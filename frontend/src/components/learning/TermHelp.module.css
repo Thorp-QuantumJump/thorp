@@ -1,4 +1,6 @@
+/* 물음표는 앞말에서 조금 떨어져 선다. 붙어 있으면 글자의 일부처럼 읽힌다. */
 .trigger {
+  margin-inline-start: 8px;
   display: inline-grid;
   place-items: center;
   width: 20px;
