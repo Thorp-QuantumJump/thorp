@@ -113,19 +113,45 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-function toggleFor(sectorName: string): HTMLButtonElement {
-  return screen.getByRole('button', { name: `${sectorName}에 담긴 종목 보기` }) as HTMLButtonElement
+/** 목록의 한 줄이다. 누르면 상세 영역이 그 항목으로 바뀐다. */
+function row(sectorCode: string): HTMLButtonElement {
+  return document.querySelector(
+    `[data-sector-code="${sectorCode}"] [data-slot="row"]`,
+  ) as HTMLButtonElement
 }
 
-function panelFor(sectorCode: string): HTMLElement | null {
-  const card = document.querySelector(`[data-sector-code="${sectorCode}"]`)
-  return card?.querySelector('[data-slot="profile-panel"]') ?? null
+/** 상세 보기와 간단히 보기를 오가는 단추다. 상세 영역에 하나뿐이다. */
+function expandToggle(): HTMLButtonElement {
+  return document.querySelector('[data-slot="detail-expand"]') as HTMLButtonElement
 }
 
+/** 지금 상세 영역이 쓰는 상품 정보 패널이다. 간단히 볼 때도 같은 패널이 자리를 지킨다. */
+function profilePanel(): HTMLElement | null {
+  return document.querySelector('[data-slot="profile-panel"]')
+}
+
+function panelVariant(): string | null {
+  return profilePanel()?.getAttribute('data-variant') ?? null
+}
+
+/**
+ * 그 대상을 상세까지 펼친 상태로 만든다.
+ *
+ * 목록에서 보는 것과 상세로 펼치는 것은 서로 다른 행동이라 두 번 누른다. 이름을 함께 받는
+ * 까닭은 상세 영역이 실제로 그 대상으로 바뀌었는지 이름으로 확인하기 위해서다.
+ */
 async function openProfile(user: User, sectorName: string, sectorCode: string) {
-  await user.click(toggleFor(sectorName))
+  await user.click(row(sectorCode))
   await waitFor(() => {
-    expect(panelFor(sectorCode)?.querySelector('[data-slot="profile-body"]')).not.toBeNull()
+    expect(document.querySelector('[data-slot="detail-name"]')?.textContent).toBe(
+      `KODEX ${sectorName}`,
+    )
+  })
+  if (expandToggle().getAttribute('aria-expanded') !== 'true') {
+    await user.click(expandToggle())
+  }
+  await waitFor(() => {
+    expect(profilePanel()?.querySelector('[data-slot="profile-body"]')).not.toBeNull()
   })
 }
 
@@ -144,12 +170,13 @@ describe('대표 상품 정보 패널', () => {
     window.sessionStorage.clear()
   })
 
-  it('펼치기 전에는 조회하지 않는다', async () => {
+  it('보고 있는 대상 하나만 조회한다', async () => {
     await openPage()
 
-    // 목록만 보는 사용자는 이 왕복을 치르지 않는다.
-    expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
-    expect(panelFor('SEMICONDUCTOR')).toBeNull()
+    // 목록에 있는 여섯을 한꺼번에 불러오지 않는다. 사용자가 보는 것은 언제나 하나다.
+    await waitFor(() => expect(apiMocks.fetchInstrumentProfile).toHaveBeenCalledTimes(1))
+    expect(apiMocks.fetchInstrumentProfile.mock.calls[0][0]).toBe('SEMICONDUCTOR')
+    expect(panelVariant()).toBe('summary')
   })
 
   it('SC-012. 목록의 모든 항목에서 열린다', async () => {
@@ -162,7 +189,7 @@ describe('대표 상품 정보 패널', () => {
       ['2차전지', 'BATTERY'],
     ] as const) {
       await openProfile(user, name, code)
-      expect(panelFor(code)).not.toBeNull()
+      expect(profilePanel()?.querySelector('[data-slot="profile-body"]')).not.toBeNull()
     }
   })
 
@@ -178,7 +205,6 @@ describe('대표 상품 정보 패널', () => {
   })
 
   it('SC-012. 409에서 빈 자리가 아니라 한 문장과 다시 불러오기가 보인다', async () => {
-    const user = userEvent.setup()
     /*
       서버 문장과 화면 문장이 겹치지 않는 값을 쓴다. 겹치면 화면이 어느 쪽을 보였는지 이 검사가
       구별하지 못해, 둘 중 무엇이 바뀌어도 통과한다.
@@ -189,20 +215,18 @@ describe('대표 상품 정보 패널', () => {
     } satisfies InstrumentProfileResult)
     await openPage()
 
-    await user.click(toggleFor('반도체'))
-
-    const panel = await waitFor(() => {
-      const found = panelFor('SEMICONDUCTOR')
+    // 간단히 보는 상태에서도 자료가 없다는 사실은 그 자리에서 알린다.
+    const notReady = await waitFor(() => {
+      const found = profilePanel()
       expect(found?.textContent).toContain('대표 상품 정보가 아직 준비 중입니다')
       return found as HTMLElement
     })
-    expect(within(panel).getByRole('button', { name: '다시 불러오기' })).toBeTruthy()
+    expect(within(notReady).getByRole('button', { name: '다시 불러오기' })).toBeTruthy()
     // 문구는 화면이 정한다(research.md 결정 6). 서버 문장을 그대로 내보내지 않는다.
-    expect(panel.textContent).not.toContain('서버가 보낸 문장')
+    expect(notReady.textContent).not.toContain('서버가 보낸 문장')
   })
 
   it('없는 섹터에는 행동을 두지 않는다', async () => {
-    const user = userEvent.setup()
     apiMocks.fetchInstrumentProfile.mockResolvedValue({
       status: 'failed',
       kind: 'api',
@@ -212,18 +236,15 @@ describe('대표 상품 정보 패널', () => {
     } satisfies InstrumentProfileResult)
     await openPage()
 
-    await user.click(toggleFor('반도체'))
-
-    const panel = await waitFor(() => {
-      const found = panelFor('SEMICONDUCTOR')
+    const notFound = await waitFor(() => {
+      const found = profilePanel()
       expect(found?.textContent).toContain('찾을 수 없습니다')
       return found as HTMLElement
     })
-    expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
+    expect(within(notFound).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
   })
 
   it('서버 자료가 망가진 경우를 없는 섹터와 같은 문장으로 알리지 않는다', async () => {
-    const user = userEvent.setup()
     apiMocks.fetchInstrumentProfile.mockResolvedValue({
       status: 'failed',
       kind: 'api',
@@ -233,10 +254,8 @@ describe('대표 상품 정보 패널', () => {
     } satisfies InstrumentProfileResult)
     await openPage()
 
-    await user.click(toggleFor('반도체'))
-
-    const panel = await waitFor(() => {
-      const found = panelFor('SEMICONDUCTOR')
+    const broken = await waitFor(() => {
+      const found = profilePanel()
       expect(found?.textContent).toContain('서버에 저장된 상품 자료에 문제가 있어')
       return found as HTMLElement
     })
@@ -244,8 +263,8 @@ describe('대표 상품 정보 패널', () => {
       목록에 멀쩡히 보이는 섹터를 두고 "찾을 수 없습니다"라고 하면, 사용자는 자기가 잘못 눌렀다고
       읽는다. 둘 다 다시 눌러 달라지지 않지만 해야 할 일이 다르다.
     */
-    expect(panel.textContent).not.toContain('찾을 수 없습니다')
-    expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
+    expect(broken.textContent).not.toContain('찾을 수 없습니다')
+    expect(within(broken).queryByRole('button', { name: '다시 불러오기' })).toBeNull()
   })
 
   it('보유 구성을 상위 종목과 나머지로 나눠 보인다', async () => {
@@ -253,7 +272,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = panelFor('SEMICONDUCTOR') as HTMLElement
+    const panel = profilePanel() as HTMLElement
     const holdings = [...panel.querySelectorAll('[data-slot="holding"]')].map(
       (node) => node.textContent ?? '',
     )
@@ -271,7 +290,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = panelFor('SEMICONDUCTOR') as HTMLElement
+    const panel = profilePanel() as HTMLElement
     const caveat = panel.querySelector('[data-slot="composition-caveat"]')
 
     expect(caveat?.textContent).toMatch(/과거 수익을 이\s*종목들로 설명할 수 없습니다/)
@@ -289,7 +308,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = panelFor('SEMICONDUCTOR') as HTMLElement
+    const panel = profilePanel() as HTMLElement
     expect(panel.querySelector('[data-slot="composition-caveat"]')).toBeNull()
   })
 
@@ -302,11 +321,11 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const source = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot="profile-source"]')
+    const source = profilePanel()?.querySelector('[data-slot="profile-source"]')
     expect(source?.textContent).toContain('다른 출처 표기')
     // 어느 시점까지의 자료인지는 보이되 자료 식별자는 날것으로 두지 않는다(FR-011).
     expect(source?.textContent).toContain('2026-09-07')
-    expect(panelFor('SEMICONDUCTOR')?.textContent).not.toContain('KRX_DAILY_20260907')
+    expect(profilePanel()?.textContent).not.toContain('KRX_DAILY_20260907')
   })
 
   it('상품 정보의 예시 표시는 자료 버전 기준이며 목록의 예시 표시와 별개다', async () => {
@@ -320,7 +339,7 @@ describe('대표 상품 정보 패널', () => {
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
     expect(
-      panelFor('SEMICONDUCTOR')?.querySelector('[data-slot="profile-sample"]'),
+      profilePanel()?.querySelector('[data-slot="profile-sample"]'),
     ).not.toBeNull()
     expect(screen.queryByText(/이 섹터 목록은 아직 확정되지 않은/)).toBeNull()
   })
@@ -330,7 +349,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    expect(panelFor('SEMICONDUCTOR')?.textContent).toContain('12.4억 원')
+    expect(profilePanel()?.textContent).toContain('12.4억 원')
   })
 
   it('떨어지는 거래대금에 없는 소수 자리를 붙이지 않는다', async () => {
@@ -343,7 +362,7 @@ describe('대표 상품 정보 패널', () => {
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
     // `3,574억`이지 `3574.0억`이 아니다. 소수 한 자리까지 잰 값처럼 보이면 안 된다.
-    const text = panelFor('SEMICONDUCTOR')?.textContent ?? ''
+    const text = profilePanel()?.textContent ?? ''
     expect(text).toContain('3,574억 원')
     expect(text).not.toContain('.0억')
   })
@@ -357,45 +376,42 @@ describe('대표 상품 정보 패널', () => {
       받침이 있는지에 따라 은/는이 갈리는데 상품 이름은 서버가 주는 값이라 미리 알 수 없다.
       한쪽으로 고정하면 절반은 틀린 문장이 된다. 사실은 조사 없는 목록으로 보인다.
     */
-    const text = panelFor('SEMICONDUCTOR')?.textContent ?? ''
+    const text = profilePanel()?.textContent ?? ''
     expect(text).not.toContain('KODEX 반도체은')
     expect(text).not.toContain('KODEX 반도체는')
 
-    const facts = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot="profile-facts"]')
+    const facts = profilePanel()?.querySelector('[data-slot="profile-facts"]')
     expect(facts?.textContent).toContain('KRX 반도체')
     expect(facts?.textContent).toContain('삼성자산운용')
   })
 
-  it('키보드만으로 열고 닫을 수 있다 (CHK005, CHK033)', async () => {
+  it('키보드만으로 펼치고 접을 수 있다 (CHK005, CHK033)', async () => {
     const user = userEvent.setup()
     await openPage()
 
-    const toggle = toggleFor('반도체')
+    const toggle = expandToggle()
     toggle.focus()
     await user.keyboard('{Enter}')
-    await waitFor(() => expect(panelFor('SEMICONDUCTOR')).not.toBeNull())
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    await waitFor(() => expect(panelVariant()).toBe('full'))
+    expect(expandToggle().getAttribute('aria-expanded')).toBe('true')
 
-    await user.keyboard('{Escape}')
-    expect(panelFor('SEMICONDUCTOR')).toBeNull()
-    expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    // 닫은 뒤 초점을 두고 오면 목록의 처음부터 다시 찾아 내려와야 한다.
-    expect(document.activeElement).toBe(toggle)
+    await user.keyboard('{Enter}')
+    expect(panelVariant()).toBe('summary')
+    expect(expandToggle().getAttribute('aria-expanded')).toBe('false')
+    // 접은 뒤에도 초점이 그 자리에 남아 바로 다시 펼칠 수 있다.
+    expect(document.activeElement).toBe(expandToggle())
   })
 
-  it('펼침 버튼이 어느 패널을 여는지 보조 기술에 알린다', async () => {
+  it('펼침 버튼이 어느 패널을 넓히는지 보조 기술에 알린다', async () => {
     const user = userEvent.setup()
     await openPage()
-
-    // 접혀 있을 때는 패널이 없다. 없는 id를 가리키면 보조 기술이 그 관계를 버릴 수 있다.
-    expect(toggleFor('반도체').getAttribute('aria-controls')).toBeNull()
 
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const toggle = toggleFor('반도체')
+    const toggle = expandToggle()
     const controlled = toggle.getAttribute('aria-controls')
     expect(controlled).toBeTruthy()
-    expect(panelFor('SEMICONDUCTOR')?.id).toBe(controlled)
+    expect(profilePanel()?.id).toBe(controlled)
   })
 
   it('자료 시점을 한국 날짜로 보인다', async () => {
@@ -411,21 +427,18 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const source = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot="profile-source"]')
+    const source = profilePanel()?.querySelector('[data-slot="profile-source"]')
     expect(source?.textContent).toContain('2026-09-07')
     expect(source?.textContent).not.toContain('2026-09-06')
   })
 
-  it('펼치는 것과 섹터를 고르는 것이 서로 섞이지 않는다', async () => {
+  it('살펴보는 것과 투자 대상에 담는 것이 서로 섞이지 않는다', async () => {
     const user = userEvent.setup()
     await openPage()
 
-    const checkbox = screen.getByRole('checkbox', { name: '반도체' }) as HTMLInputElement
-    expect(checkbox.checked).toBe(false)
-
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    // 펼침이 label 안에 있으면 살펴보려다 섹터가 골라진다.
-    expect(checkbox.checked).toBe(false)
+    // 무엇을 사는지 보려던 사용자가 그 행동만으로 백테스트 대상을 정하게 되면 안 된다.
+    expect(document.querySelectorAll('[data-slot="rail-item"]')).toHaveLength(0)
   })
 })

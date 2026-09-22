@@ -6,6 +6,7 @@ import { SectorSelectionPage } from './SectorSelectionPage'
 import type { SectorCatalogResult } from '@/api/sectors'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { LEARNING_EXAMPLE_STATE_KEY } from '@/diagnosis/learningExample'
+import { SECTOR_SELECTION_STORAGE_KEY } from '@/diagnosis/selectionStorage'
 import type { SectorCatalog, SectorSummary } from '@/types/sector'
 
 /**
@@ -15,7 +16,10 @@ import type { SectorCatalog, SectorSummary } from '@/types/sector'
  * `contracts/selection-handoff.md` 2절이다.
  */
 
-const apiMocks = vi.hoisted(() => ({ fetchSectorCatalog: vi.fn() }))
+const apiMocks = vi.hoisted(() => ({
+  fetchSectorCatalog: vi.fn(),
+  fetchInstrumentProfile: vi.fn(),
+}))
 
 vi.mock('@/api/sectors', async () => {
   const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')
@@ -107,26 +111,39 @@ async function openPage(state?: unknown) {
 
 type User = ReturnType<typeof userEvent.setup>
 
-function checkbox(name: string): HTMLInputElement {
-  return screen.getByRole('checkbox', { name }) as HTMLInputElement
+/** 목록의 한 줄이다. 누르면 고르는 것이 아니라 상세 영역이 그 항목으로 바뀐다. */
+function row(code: string): HTMLButtonElement {
+  return document.querySelector(
+    `[data-sector-code="${code}"] [data-slot="row"]`,
+  ) as HTMLButtonElement
 }
 
-async function select(user: User, ...names: string[]) {
-  for (const name of names) await user.click(checkbox(name))
+/** 보고 나서 담는다. 화면이 두 행동을 가르므로 검사도 그 순서를 그대로 밟는다. */
+async function select(user: User, ...codes: string[]) {
+  for (const code of codes) {
+    await user.click(row(code))
+    await user.click(screen.getByRole('button', { name: /투자 대상에 추가/ }))
+  }
 }
 
-/** 고른 섹터를 표시 순서대로 모은다. */
+/** 오른쪽 선택 요약에 담긴 섹터 이름을 표시 순서대로 모은다. */
 function selectedNames(): string[] {
-  return screen
-    .getAllByRole('checkbox')
-    .filter((box) => (box as HTMLInputElement).checked)
-    .map((box) => box.getAttribute('aria-labelledby'))
-    .map((id) => (id ? (document.getElementById(id)?.textContent ?? '') : ''))
+  return [...document.querySelectorAll('[data-slot="rail-item-sector"]')].map(
+    (node) => node.textContent ?? '',
+  )
 }
 
-/** 화면에 보이는 비중을 표시 순서대로 모은다. 표기가 아니라 값을 본다. */
-function shownWeights(): number[] {
-  return screen.getAllByRole('spinbutton').map((input) => Number((input as HTMLInputElement).value))
+/**
+ * 인계 페이로드에 실린 비중을 표시 순서대로 모은다.
+ *
+ * 비중을 정하는 자리가 다음 화면으로 옮겨 가 이 화면에는 값을 보이는 칸이 없다. 예시가 실어 온
+ * 값이 그대로 남았는지는 넘길 값에서 확인한다.
+ */
+function storedWeights(): number[] {
+  const raw = window.sessionStorage.getItem(SECTOR_SELECTION_STORAGE_KEY)
+  if (raw === null) return []
+  const payload = JSON.parse(raw) as { selected: { weightTenths: number }[] }
+  return payload.selected.map((item) => item.weightTenths)
 }
 
 function overwriteDialog(): HTMLElement | null {
@@ -143,6 +160,10 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.sessionStorage.clear()
+    apiMocks.fetchInstrumentProfile.mockResolvedValue({
+      status: 'notReady',
+      message: '준비 중',
+    })
   })
 
   afterEach(() => {
@@ -155,7 +176,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
     // SC-011이 세는 "입력이 없는데 확인을 물은 사례"가 0건이어야 한다.
     expect(overwriteDialog()).toBeNull()
     expect(selectedNames()).toEqual(['반도체', '2차전지'])
-    expect(shownWeights()).toEqual([50, 50])
+    expect(storedWeights()).toEqual([500, 500])
   })
 
   it('시나리오 10. 이미 고른 섹터가 있으면 덮어쓸지 먼저 묻는다', async () => {
@@ -173,7 +194,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 
     expect(overwriteDialog()).toBeNull()
     expect(selectedNames()).toEqual(['조선', '철강'])
-    expect(shownWeights()).toEqual([50, 50])
+    expect(storedWeights()).toEqual([500, 500])
   })
 
   it("시나리오 10. '예시로 바꾸기'를 고르면 예시 값으로 바뀐다", async () => {
@@ -184,7 +205,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 
     expect(overwriteDialog()).toBeNull()
     expect(selectedNames()).toEqual(['반도체', '2차전지'])
-    expect(shownWeights()).toEqual([50, 50])
+    expect(storedWeights()).toEqual([500, 500])
   })
 
   it('시나리오 10. 답한 뒤에는 새로고침해도 확인이 다시 뜨지 않는다', async () => {
@@ -201,7 +222,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
     expect(selectedNames()).toEqual(['반도체', '2차전지'])
   })
 
-  it('예시 합계가 100%가 아니어도 그대로 채우고 부족·초과 안내로 처리한다', async () => {
+  it('예시 합계가 100%가 아니어도 그대로 채워 다음 단계로 넘긴다', async () => {
     await openPage(
       exampleState([
         { code: 'SEMICONDUCTOR', weightTenths: 300 },
@@ -209,9 +230,8 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
       ]),
     )
 
-    // 자동으로 100%에 맞추면 원칙 VI 위반이다.
-    expect(shownWeights()).toEqual([30, 30])
-    expect(screen.getByText(/합계를 100%로 맞추면/)).toBeTruthy()
+    // 자동으로 100%에 맞추면 원칙 VI 위반이다. 모자란 몫은 비중을 정하는 다음 화면이 알린다.
+    expect(storedWeights()).toEqual([300, 300])
   })
 
   it('현재 목록에 없는 코드는 받지 않고, 채우지 않았다는 사실을 알린다 (원칙 VI)', async () => {
@@ -224,7 +244,9 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 
     expect(selectedNames()).toEqual(['반도체'])
     // 조용히 버리면 사용자는 합계가 왜 50%인지 알 수 없다.
-    expect(screen.getByText(/섹터 1개가 지금 목록에 없어 채우지 않았습니다/)).toBeTruthy()
+    expect(
+      screen.getByText(/투자 대상 1개가 지금 목록에 없어 채우지 않았습니다/),
+    ).toBeTruthy()
   })
 
   it('비중으로 쓸 수 없는 값이 실려 오면 그 섹터를 받지 않고 다른 문장으로 알린다', async () => {
@@ -238,7 +260,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 
     expect(selectedNames()).toEqual(['반도체'])
     // 까닭이 다르면 다른 문장이다. 목록에 멀쩡히 있는 섹터를 두고 없다고 말하면 안 된다.
-    expect(screen.getByText(/비중을 그대로 쓸 수 없어 채우지/)).toBeTruthy()
+    expect(screen.getByText(/값을 그대로 쓸 수 없어 채우지/)).toBeTruthy()
     expect(screen.queryByText(/지금 목록에 없어 채우지/)).toBeNull()
   })
 
@@ -251,7 +273,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
   it("덮어쓰지 않기로 하면 예시를 쓰지 않았으므로 빠진 항목도 알리지 않는다", async () => {
     const user = userEvent.setup()
     const first = await openPage()
-    await select(user, '조선', '철강')
+    await select(user, 'SHIPBUILDING', 'STEEL')
     first.unmount()
 
     await openPage(
@@ -313,15 +335,15 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
 /**
  * 사용자가 직접 고른 값이 남은 상태에서 예시와 함께 화면을 다시 연다.
  *
- * 먼저 빈 화면에서 섹터를 골라 `sessionStorage`에 값을 남기고, 그 화면을 걷어낸 뒤 예시를 실어
- * 다시 연다. **화면을 걷어내는 까닭**은 두 화면이 문서에 함께 남으면 체크박스와 비중 칸이 두
+ * 먼저 빈 화면에서 대상을 골라 `sessionStorage`에 값을 남기고, 그 화면을 걷어낸 뒤 예시를 실어
+ * 다시 연다. **화면을 걷어내는 까닭**은 두 화면이 문서에 함께 남으면 목록과 선택 요약이 두
  * 벌씩 잡혀 검사가 무엇을 보는지 흐려지기 때문이다.
  *
  * 진단 도중 배우기에 다녀오는 실제 경로와 같다(013 FR-013). 복원은 T012가 만든 세션 보관이 한다.
  */
 async function enterWithOwnInput(user: User) {
   const first = await openPage()
-  await select(user, '조선', '철강')
+  await select(user, 'SHIPBUILDING', 'STEEL')
   first.unmount()
 
   return openPage(exampleState(반도체_2차전지_예시))

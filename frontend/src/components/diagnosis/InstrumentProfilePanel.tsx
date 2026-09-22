@@ -21,13 +21,34 @@ import type { InstrumentHolding, InstrumentProfile } from '@/types/sector'
  * UI 결정 항목이 정해질 때 채운다.
  */
 
+/**
+ * 얼마나 보일 것인가.
+ *
+ * - `summary`: 상품을 가려내는 데 필요한 것만 보인다. 설명 한 문단과 기준 지수·운용사·상장일이다
+ * - `full`: 보유 구성과 거래대금, 자료의 한계까지 모두 보인다
+ *
+ * 두 상태가 **같은 조회 결과를 쓴다.** 펼쳤다 접을 때마다 다시 불러오면 사용자는 방금 읽던
+ * 자리를 잃고, 서버는 같은 값을 거듭 내주게 된다.
+ */
+export type InstrumentProfileVariant = 'summary' | 'full'
+
 type InstrumentProfilePanelProps = {
   /** 어느 섹터의 대표 상품을 보는가. */
   sectorCode: string
   /** 패널을 가리키는 id다. 펼침 버튼이 `aria-controls`로 이 값을 쓴다. */
   id: string
+  /** 기본값은 `full`이다. 예전부터 이 패널을 쓰던 자리의 동작을 그대로 둔다. */
+  variant?: InstrumentProfileVariant
   className?: string
 }
+
+/**
+ * 구성 종목을 처음에 몇 줄까지 보일 것인가.
+ *
+ * 스무 줄이 한꺼번에 펼쳐지면 그 아래에 있는 사실이 화면 밖으로 밀린다. 나머지는 사용자가
+ * 원할 때 `전체 보기`로 연다 — 감추는 것이 아니라 뒤로 미루는 것이다.
+ */
+const VISIBLE_HOLDING_COUNT = 5
 
 /**
  * 비중 문자열을 0과 1 사이 숫자로 옮긴다. 읽을 수 없으면 0으로 본다.
@@ -136,8 +157,26 @@ function buildComposition(holdings: readonly InstrumentHolding[]): CompositionSe
 }
 
 /** 펼친 뒤 실제로 보이는 내용이다. */
-function ProfileBody({ profile }: { profile: InstrumentProfile }) {
+function ProfileBody({
+  profile,
+  variant,
+}: {
+  profile: InstrumentProfile
+  variant: InstrumentProfileVariant
+}) {
   const composition = buildComposition(profile.holdingsOverlap.topHoldings)
+  const detailed = variant === 'full'
+
+  /*
+    구성 종목을 끝까지 펼쳤는가. 상세로 바꿀 때마다 접힌 자리에서 다시 시작한다 — 앞서 펼쳐
+    두었다가 간단히 보기로 돌아간 사용자가, 다시 상세를 열었을 때 스무 줄을 마주하지 않게 한다.
+  */
+  const [allHoldingsShown, setAllHoldingsShown] = useState(false)
+  const hiddenHoldingCount = Math.max(0, composition.length - VISIBLE_HOLDING_COUNT)
+  const shownComposition =
+    allHoldingsShown || hiddenHoldingCount === 0
+      ? composition
+      : composition.slice(0, VISIBLE_HOLDING_COUNT)
 
   return (
     <div data-slot="profile-body">
@@ -155,7 +194,7 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
         숫자를 준다. 막대만 두면 몇 퍼센트인지 알 수 없고, 목록만 두면 한 종목이 얼마나 큰지가
         읽히지 않는다. 막대는 목록이 이미 읽어 주는 값이라 보조 기술에서 숨긴다.
       */}
-      {composition.length > 0 ? (
+      {detailed && composition.length > 0 ? (
         <>
           <span data-slot="composition-bar" aria-hidden="true">
             {composition.map((segment) => (
@@ -169,13 +208,26 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
           </span>
 
           <ul data-slot="holdings" role="list">
-            {composition.map((segment) => (
+            {shownComposition.map((segment) => (
               <li key={segment.key} data-slot="holding" data-rest={segment.isRest}>
                 <span data-slot="holding-name">{segment.label}</span>
                 <span data-slot="holding-weight">{(segment.fraction * 100).toFixed(2)}%</span>
               </li>
             ))}
           </ul>
+
+          {/*
+            남은 종목은 숨긴 것이 아니라 뒤로 미룬 것이다. 몇 개가 더 있는지 버튼이 먼저 말한다.
+          */}
+          {hiddenHoldingCount > 0 && !allHoldingsShown ? (
+            <button
+              type="button"
+              data-slot="holdings-more"
+              onClick={() => setAllHoldingsShown(true)}
+            >
+              전체 보기 ({hiddenHoldingCount}개 더)
+            </button>
+          ) : null}
         </>
       ) : null}
 
@@ -183,12 +235,17 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
         구성이 지금 시점의 것이면 과거를 이 구성으로 설명하지 않는다. 이 문장이 없으면 사용자는
         과거 성과가 이 종목들로 만들어졌다고 읽는다(원칙 V).
       */}
-      {profile.holdingsOverlap.asOfCurrentComposition ? (
+      {detailed && profile.holdingsOverlap.asOfCurrentComposition ? (
         <p data-slot="composition-caveat">
           지금 시점의 보유 구성입니다. 과거 어느 날의 구성을 되살린 것이 아니므로, 과거 수익을 이
           종목들로 설명할 수 없습니다.
         </p>
       ) : null}
+
+      {/*
+        무엇을 담는 상품인지가 먼저다. 사실 표는 그 설명을 뒷받침하는 자리라 아래에 둔다.
+      */}
+      <p data-slot="profile-methodology">{profile.indexMethodologySummary}</p>
 
       <dl data-slot="profile-facts">
         <div>
@@ -203,13 +260,13 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
           <dt>상장일</dt>
           <dd>{profile.listedOn}</dd>
         </div>
-        <div>
-          <dt>3개월 일평균 거래대금</dt>
-          <dd>{formatWon(profile.avgDailyValue3m) ?? '확인하지 못했습니다'}</dd>
-        </div>
+        {detailed ? (
+          <div>
+            <dt>3개월 일평균 거래대금</dt>
+            <dd>{formatWon(profile.avgDailyValue3m) ?? '확인하지 못했습니다'}</dd>
+          </div>
+        ) : null}
       </dl>
-
-      <p data-slot="profile-methodology">{profile.indexMethodologySummary}</p>
 
       {/*
         이 상품 정보를 만든 **자료 버전**이 예시라는 뜻이다. 섹터 목록의 예시 표시(대응표 기준)와
@@ -221,15 +278,19 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
         </p>
       ) : null}
 
-      <p data-slot="profile-survivorship">{profile.survivorshipNote}</p>
+      {detailed ? (
+        <p data-slot="profile-survivorship">{profile.survivorshipNote}</p>
+      ) : null}
 
       {/*
         자료 식별자는 화면에 날것으로 두지 않는다(FR-011). 사용자가 알아야 하는 것은 "언제까지의
         자료인가"이지 그 자료에 붙은 이름이 아니다.
       */}
-      <p data-slot="profile-source">
-        출처: {profile.sourceAttribution} · {toDateText(profile.dataDeadline)}까지의 자료
-      </p>
+      {detailed ? (
+        <p data-slot="profile-source">
+          출처: {profile.sourceAttribution} · {toDateText(profile.dataDeadline)}까지의 자료
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -237,6 +298,7 @@ function ProfileBody({ profile }: { profile: InstrumentProfile }) {
 export function InstrumentProfilePanel({
   sectorCode,
   id,
+  variant = 'full',
   className,
 }: InstrumentProfilePanelProps) {
   // null은 아직 결과가 없는 상태, 곧 불러오는 중이다. 목록 화면이 쓰는 표현과 같다.
@@ -261,7 +323,7 @@ export function InstrumentProfilePanel({
   const reload = () => setReloadCount((count) => count + 1)
 
   return (
-    <div className={className} id={id} data-slot="profile-panel">
+    <div className={className} id={id} data-slot="profile-panel" data-variant={variant}>
       {result === null ? (
         <p data-slot="profile-loading" role="status">
           대표 상품 정보를 불러오는 중입니다.
@@ -295,7 +357,9 @@ export function InstrumentProfilePanel({
         />
       ) : null}
 
-      {result?.status === 'loaded' ? <ProfileBody profile={result.profile} /> : null}
+      {result?.status === 'loaded' ? (
+        <ProfileBody profile={result.profile} variant={variant} />
+      ) : null}
     </div>
   )
 }
