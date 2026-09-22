@@ -34,14 +34,30 @@
   --thorp-page-bottom: 80px;
   /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */
   --thorp-background: #030805;
-  --thorp-surface: #07110b;
-  --thorp-surface-raised: #0b1710;
-  --thorp-surface-muted: #0e1c14;
+  /*
+    배경 위의 층은 색조가 아니라 **밝기**로 갈린다. 예전 값은 배경과 카드의 명암비가 1.05:1이라
+    카드가 어디서 시작하는지 눈으로 잡히지 않았다 — 초록 기운은 있는데 경계가 없는 상태였다.
+
+    경계는 테두리(조작 요소 3.08:1)가 지므로 바탕은 거들기만 하면 된다. 한 번 1.23:1까지
+    올려 봤더니 카드가 배경에서 너무 떠올라 목록이 시끄러웠다. 배경을 가장 어두운 기준점으로
+    두고 카드(surface)는 1.13:1, 한 단 위(surface-raised)는 1.25:1 정도로만 벌린다.
+  */
+  --thorp-surface: #0e1a13;
+  --thorp-surface-raised: #13251a;
+  --thorp-surface-muted: #111f17;
   --thorp-foreground: #f2f7f3;
   --thorp-copy: #a6b5ab;
   --thorp-muted: #718278;
-  --thorp-line: rgb(134 242 168 / 14%);
-  --thorp-line-strong: rgb(134 242 168 / 24%);
+  --thorp-line: rgb(134 242 168 / 18%);
+  --thorp-line-strong: rgb(134 242 168 / 30%);
+  /*
+    누를 수 있는 것의 테두리는 나누는 선과 기준이 다르다. WCAG 1.4.11은 조작 요소의 경계에
+    3:1을 요구하는데, line/line-strong은 구분선을 위한 값이라 거기까지 올리면 화면 전체가
+    선으로 시끄러워진다. 그래서 조작 요소 전용으로 따로 둔다 — control은 카드 바탕 대비
+    3.08:1, hover는 5.15:1이다. 고름(accent 7.34:1)과 초점(accent-soft 11.9:1)이 그 위에 선다.
+  */
+  --thorp-line-control: rgb(134 242 168 / 40%);
+  --thorp-line-control-hover: rgb(134 242 168 / 60%);
   --thorp-accent: var(--thorp-brand-primary);
   --thorp-accent-soft: var(--thorp-brand-soft);
   --thorp-accent-muted: rgb(3 199 90 / 12%);
@@ -50,7 +66,8 @@
   --thorp-negative: #ef8a68;
   --thorp-warning: #e8bd72;
   --thorp-neutral: #8fa198;
-  --thorp-shadow: 0 22px 58px rgb(0 0 0 / 34%);
+  /* 순검정 대신 배경 색조로 틴트한다. 배경이 L* 1.8이라 깊이를 만들지는 못하고, 색이 어긋나지 않게만 한다. */
+  --thorp-shadow: 0 22px 58px rgb(1 5 3 / 42%);
   --thorp-focus-outline: 3px solid rgb(3 199 90 / 30%);
   --thorp-focus-outline-compact: 2px solid var(--thorp-accent-soft);
   --thorp-focus-offset: 3px;
@@ -96,9 +113,10 @@
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
   --chart-crosshair: var(--thorp-accent-soft);
-  --chart-grid: var(--thorp-line);
+  /* 격자는 배경 위에 직접 그려진다. line이 올라간 만큼 따라 굵어지지 않게 예전 값에 묶어 둔다. */
+  --chart-grid: rgb(134 242 168 / 12%);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: rgb(7 17 11 / 94%);
+  --chart-tooltip-background: rgb(20 35 26 / 94%);
   --chart-tooltip-foreground: var(--thorp-foreground);
   --chart-tooltip-muted: var(--thorp-copy);
   --chart-marker-background: var(--thorp-surface-muted);

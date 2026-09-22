@@ -39,7 +39,7 @@ docker cp thorp-postgres:/tmp/thorp-before-market-data.dump ./
 
 컨테이너 밖으로 꺼내 두어야 컨테이너를 지워도 남는다.
 
-### 3) 로컬에서 자료를 뽑는다 — `02-export-local.sh`
+### 3) 로컬에서 자료를 뽑는다 — `02-export-local.py`
 
 **1단계 결과를 보고 만든다.** 서버의 대응표 번호와 발행할 자료 버전 이름이 정해져야 뽑을 수
 있으므로, 이 스크립트는 1단계 뒤에 쓴다.
@@ -63,6 +63,7 @@ docker cp thorp-postgres:/tmp/thorp-before-market-data.dump ./
 | 3 | `dataset_version` | 이 뒤로는 되돌릴 수 없다 |
 | 4 | `daily_index` · `daily_price` | 분량의 대부분 |
 | 5 | `corporate_action` · `data_gap` · `suspension_period` | |
+| 6 | `instrument_profile` | 수집 때 `--instrument-profiles`를 주지 않았으면 비어 있다 |
 
 ## 주의할 것
 

@@ -257,6 +257,54 @@ def main(argv: list[str] | None = None) -> int:
                 "ON CONFLICT DO NOTHING",
             )
 
+        # 대표 상품 정보는 시계열과 달리 문자열 ``dataset_id``를 갖지 않고 ``etf_id``·
+        # ``dataset_version_id`` 두 bigint 외래 키를 갖는다(data-model.md). 그래서 시계열 루프에
+        # 끼우지 못하고 대응표 항목과 같이 서버에서 매겨진 id를 찾아 넣는다.
+        #
+        # ``holdings_overlap``을 ``::text``로 읽어 ``::jsonb``로 되돌린다. 값을 파이썬 쪽에서
+        # 다시 직렬화하면 키 순서와 공백이 원본과 달라진다.
+        profile_columns = (
+            "instrument_id",
+            "index_methodology_summary",
+            "holdings_overlap",
+            "holdings_as_of_current",
+            "avg_daily_value_3m",
+            "source_attribution",
+            "survivorship_note",
+        )
+        profiles = rows_of(
+            conn,
+            "SELECT e.instrument_id, p.index_methodology_summary,"
+            " p.holdings_overlap::text AS holdings_overlap, p.holdings_as_of_current,"
+            " p.avg_daily_value_3m, p.source_attribution, p.survivorship_note"
+            " FROM instrument_profile p"
+            " JOIN representative_etf e ON e.id = p.etf_id"
+            " JOIN dataset_version d ON d.id = p.dataset_version_id"
+            " WHERE d.dataset_id = :src ORDER BY e.instrument_id",
+            src=args.source,
+        )
+        if not profiles:
+            out.append("\n-- instrument_profile: 옮길 행이 없다\n")
+        else:
+            out.append(f"\n-- instrument_profile: {len(profiles)}행 (id는 서버 값을 찾아 쓴다)")
+            values = ",\n    ".join(
+                "(" + ", ".join(quote(row[column]) for column in profile_columns) + ")"
+                for row in profiles
+            )
+            out.append(
+                "INSERT INTO instrument_profile (etf_id, dataset_version_id,"
+                " index_methodology_summary, holdings_overlap, holdings_as_of_current,"
+                " avg_daily_value_3m, source_attribution, survivorship_note)\n"
+                "SELECT e.id, d.id, p.index_methodology_summary, p.holdings_overlap::jsonb,"
+                " p.holdings_as_of_current, p.avg_daily_value_3m, p.source_attribution,"
+                " p.survivorship_note\n"
+                f"  FROM (VALUES\n    {values}\n"
+                f"  ) AS p ({', '.join(profile_columns)})\n"
+                "  JOIN representative_etf e ON e.instrument_id = p.instrument_id\n"
+                f"  JOIN dataset_version d ON d.dataset_id = {quote(args.target)}\n"
+                "ON CONFLICT (etf_id, dataset_version_id) DO NOTHING;"
+            )
+
     out.append("\nCOMMIT;")
     args.out.write_text("\n".join(out) + "\n", encoding="utf-8")
     print(f"{args.out} 에 썼다")

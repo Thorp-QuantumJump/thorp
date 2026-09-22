@@ -2,19 +2,23 @@ import { useId, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { InstrumentProfilePanel } from './InstrumentProfilePanel'
 import { WeightInput } from './WeightInput'
-import type { SectorClassification, SectorSummary } from '@/types/sector'
+import type { SectorSummary } from '@/types/sector'
 
-/** 목록에 보이는 업종/테마 구분 이름이다. 화면 표시 전용이라 이 파일 밖으로 내보내지 않는다. */
-const classificationLabels: Record<SectorClassification, string> = {
-  INDUSTRY: '업종',
-  THEME: '테마',
-}
+/*
+  업종/테마 구분은 목록에서 보이지 않는다. 섹터마다 붙는 배지가 이름 옆에서 시끄럽다는
+  판단으로 뺐다(팀 결정). spec 002 FR-003 과 그 인수 시나리오는 이 구분의 표시를 요구하므로
+  지금 화면은 FR-003 을 지키지 않는다. `sector.classification` 값 자체는 계약에 그대로 있다.
+*/
 
 /** 고른 섹터의 비중을 그 자리에서 다룬다. 선택되지 않은 항목에는 주지 않는다. */
 export type SectorWeightControl = {
   /** 0.1%p 단위 정수다. */
   valueTenths: number
   onCommit: (weightTenths: number) => void
+  /** 고정되어 있는가. 고정한 값은 다른 섹터를 움직여도 그대로 남는다 */
+  locked?: boolean
+  /** 주지 않으면 고정 단추를 그리지 않는다 */
+  onLockedChange?: (locked: boolean) => void
 }
 
 type SectorListItemProps = {
@@ -78,7 +82,6 @@ export function SectorListItem({
           <strong id={nameId} data-slot="name">
             {sector.name}
           </strong>
-          <span data-slot="classification">{classificationLabels[sector.classification]}</span>
         </span>
 
         <span data-slot="etf">
@@ -93,6 +96,8 @@ export function SectorListItem({
           sectorName={sector.name}
           valueTenths={weight.valueTenths}
           onCommit={weight.onCommit}
+          locked={weight.locked}
+          onLockedChange={weight.onLockedChange}
         />
       ) : null}
 

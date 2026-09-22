@@ -292,19 +292,61 @@ def test_incomplete_initial_history_is_rejected(publishing_fixture) -> None:
 
 
 def test_later_snapshot_cannot_drop_a_previously_published_month(publishing_fixture) -> None:
+    """뒤 버전이 앞 버전의 달을 잃지 않는다.
+
+    **막는 방식이 아니라 이어받는 방식이다**(FR-017). 정기 수집은 최근 N개월만 받으므로 빠진 달을
+    거절하면 정기 발행이 영영 안 된다. 받지 않은 달은 앞 버전에서 그대로 옮기고, 공개될 자료가
+    줄지 않았는지를 결과에서 확인한다.
+    """
     engine, request = publishing_fixture
     first = replace(request, observations=_observations(("2026-07", "2026-08")))
     dataset_id = publish_atomically(engine, first)
+
+    # 이번에는 2026-07 만 받았다 — 정기 수집이 하는 일이다.
     second = replace(
         request, version_key="macro-2", attempt_key="attempt-2",
         pointer=PublicationPointer(dataset_id, 1, 1),
     )
-    with pytest.raises(ValueError, match="기존 가용 월"):
-        publish_atomically(engine, second)
+    later = publish_atomically(engine, second)
+
     with engine.connect() as connection:
+        months = connection.execute(
+            text(
+                "SELECT DISTINCT target_month FROM macro_observation"
+                " WHERE dataset_version_id=:id ORDER BY target_month"
+            ),
+            {"id": later},
+        ).scalars().all()
         assert connection.execute(
             text("SELECT dataset_version_id FROM macro_current_publication")
-        ).scalar_one() == dataset_id
+        ).scalar_one() == later
+    assert [str(m) for m in months] == ["2026-07-01", "2026-08-01"], (
+        "받지 않은 달이 새 버전에서 사라졌다"
+    )
+
+
+def test_value_rule_change_requires_the_whole_range(publishing_fixture) -> None:
+    """값 규칙이 바뀌면 이어받지 않는다 — 전 구간을 다시 만들어야 한다 (FR-003).
+
+    이어받으면 한 버전 안에 옛 규칙과 새 규칙으로 계산한 값이 나란히 놓이는데, 값만 봐서는
+    어느 달이 어느 규칙인지 드러나지 않는다.
+    """
+    engine, request = publishing_fixture
+    first = replace(request, observations=_observations(("2026-07", "2026-08")))
+    dataset_id = publish_atomically(engine, first)
+
+    # 단위를 바꾸면 값 규칙 지문이 달라진다.
+    changed = tuple(
+        replace(i, transformed_unit=f"{i.transformed_unit} (개정)")
+        for i in request.indicators
+    )
+    second = replace(
+        request, version_key="macro-3", attempt_key="attempt-3",
+        indicators=changed,
+        pointer=PublicationPointer(dataset_id, 1, 1),
+    )
+    with pytest.raises(ValueError):
+        publish_atomically(engine, second)
 
 
 def test_publish_rejects_field_mapping_not_saved_in_registry(publishing_fixture) -> None:

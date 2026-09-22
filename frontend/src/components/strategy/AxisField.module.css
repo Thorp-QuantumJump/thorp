@@ -146,3 +146,44 @@
 .reset:hover {
   border-color: currentColor;
 }
+
+/* 금액 칸의 빠른 더하기 줄. 이 줄이 없는 축에서는 아예 그려지지 않는다. */
+.quickAdd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quickAddButton {
+  padding: 4px 11px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.quickAddButton:hover:not(:disabled) {
+  border-color: var(--thorp-accent-soft);
+  color: var(--thorp-foreground);
+}
+
+.quickAddButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quickAddButton:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickAddButton {
+    transition: none;
+  }
+}

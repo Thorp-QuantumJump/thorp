@@ -17,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,10 +29,6 @@ import org.springframework.stereotype.Component;
  * 그린다(원칙 VI). 여기서 달을 채우거나 이전 값을 끌어오면 화면은 자료가 있는 것처럼 보인다.
  */
 @Component
-@ConditionalOnProperty(
-        name = "thorp.marketflow.indicator-source",
-        havingValue = "macro",
-        matchIfMissing = true)
 public class MacroSnapshotIndicatorAdapter implements MacroIndicatorSnapshotPort {
 
     /** 화면이 그리는 경로의 길이. 008과 같은 t-2·t-1·t 세 달이다. */

@@ -12,6 +12,7 @@ from worker.contracts.engine_input import AllocationSpec, EngineInput
 from worker.contracts.strategy_params import (
     STRATEGY_PARAMETERS,
     CappedRebalanceParameters,
+    LookbackRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
     SectorMomentumParameters,
@@ -44,7 +45,7 @@ def test_registry_covers_the_registered_allocation_strategies() -> None:
     assert STRATEGY_PARAMETERS == {
         "FIXED_WEIGHT": CappedRebalanceParameters,
         "EQUAL_WEIGHT": RebalanceParameters,
-        "INVERSE_VOLATILITY": CappedRebalanceParameters,
+        "INVERSE_VOLATILITY": LookbackRebalanceParameters,
         "MINIMUM_VARIANCE": MinimumVarianceParameters,
         "SECTOR_MOMENTUM": SectorMomentumParameters,
     }
@@ -99,16 +100,38 @@ def test_minimum_variance_takes_the_003_axes_it_offers() -> None:
     assert (typed.lookback_days, typed.estimation_method) == (250, "SAMPLE_COV")
 
 
-def test_misspelled_or_extra_parameter_key_is_rejected() -> None:
-    """오타는 기본값으로 조용히 넘어가지 않고 검증 오류가 된다. 규칙 값은 parameters 에 오지 않는다.
+def test_inverse_volatility_takes_the_003_axes_it_offers() -> None:
+    """003이 역변동성에 두는 축은 ``lookbackDays``·``maxWeight`` 둘이다.
 
-    규칙 값(lookbackDays 등)은 ``allocation.rules`` 의 몫이다.
+    ``lookbackDays`` 를 받지 못하던 동안 007 자동 탐색이 보낸 후보가 **전부** 계약 위반으로 DLQ 에
+    버려졌다(``allocation.lookbackDays``: extra inputs are not permitted). 축을 규칙표 전용 값으로
+    착각한 자리라, 등록표가 축으로 선언하는 한 계약도 받아야 한다.
+    """
+    typed = AllocationSpec.model_validate(
+        spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "maxWeight": 40, "lookbackDays": 21})
+    ).typed_parameters
+
+    assert isinstance(typed, LookbackRebalanceParameters)
+    assert (typed.lookback_days, typed.max_weight) == (21, 40)
+    # 고르지 않으면 규칙표 기본값이 쓰이도록 비워 둔다.
+    assert (
+        AllocationSpec.model_validate(
+            spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END"})
+        ).typed_parameters.lookback_days
+        is None
+    )
+
+
+def test_misspelled_or_extra_parameter_key_is_rejected() -> None:
+    """오타는 기본값으로 조용히 넘어가지 않고 검증 오류가 된다.
+
+    축이 없는 전략에 축 이름을 실어 보내는 것도 같다 — 고정 비중에는 003 관측 기간 축이 없다.
     """
     with pytest.raises(ValidationError, match="rebalance"):
         AllocationSpec.model_validate(spec("FIXED_WEIGHT", {"rebalanse": "MONTH_END"}))
     with pytest.raises(ValidationError, match="lookbackDays"):
         AllocationSpec.model_validate(
-            spec("INVERSE_VOLATILITY", {"rebalance": "MONTH_END", "lookbackDays": 63})
+            spec("FIXED_WEIGHT", {"rebalance": "MONTH_END", "lookbackDays": 63})
         )
 
 
