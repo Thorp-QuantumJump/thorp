@@ -26,7 +26,7 @@ import { DetailSettingsPanel } from "./DetailSettingsPanel";
 import type { TargetWeightRow } from "./ReadOnlyTargetWeights";
 
 /**
- * 상세 설정 패널(T056)을 실제 설정 훅과 함께 돌린다(FR-003·FR-006·FR-008·FR-012, quickstart 5-1·6).
+ * 전략 설정 패널(T056)을 실제 설정 훅과 함께 돌린다(FR-003·FR-006·FR-008·FR-012, quickstart 5-1·6).
  *
  * <p><b>섹터 수를 여섯으로 둔다.</b> 픽스처의 규칙은 "허용 이탈 폭 × 섹터 수 < 100이면 위반"이라,
  * 기본값 35에서 섹터 여섯이면 210으로 통과하고 15로 바꾸면 90으로 위반한다. 기본 설정이 이미 위반인
@@ -103,7 +103,7 @@ async function renderOpened(
       <Harness strategy={strategy} registry={registry} />
     </MemoryRouter>,
   );
-  const toggle = await screen.findByRole("button", { name: "상세 설정" });
+  const toggle = await screen.findByRole("button", { name: "전략 설정" });
   expect(toggle.getAttribute("aria-expanded")).toBe("false");
   await user.click(toggle);
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -131,7 +131,7 @@ describe("DetailSettingsPanel", () => {
         <Harness strategy={selectableStrategy} />
       </MemoryRouter>,
     );
-    await screen.findByRole("button", { name: "상세 설정" });
+    await screen.findByRole("button", { name: "전략 설정" });
 
     for (const axis of selectableStrategy.axes) {
       expect(screen.queryByText(axis.label)).toBeNull();
@@ -237,7 +237,7 @@ describe("DetailSettingsPanel", () => {
 
     await user.clear(band);
     await user.type(band, "15");
-    await user.click(screen.getByRole("button", { name: "상세 설정" }));
+    await user.click(screen.getByRole("button", { name: "전략 설정" }));
 
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.getByRole("alert").textContent).toBe(

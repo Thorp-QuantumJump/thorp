@@ -52,3 +52,11 @@
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
 }
+
+/* 여는 버튼과 요약이 한 줄에 선다. 버튼의 이름은 '분석 조건'만이고 요약은 그 옆의 읽을거리다. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}

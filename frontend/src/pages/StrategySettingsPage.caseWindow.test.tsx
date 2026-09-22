@@ -195,10 +195,10 @@ function renderPage(entry: string, support: AnalysisSupport) {
   )
 }
 
-/** 전략 카드를 고르고 '조건 바꾸기'를 펼친다. */
+/** 전략 카드를 고르고 '분석 조건'을 펼친다. */
 async function openConditions(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('radio', { name: new RegExp(selectableStrategy.name) }))
-  await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
+  await user.click(screen.getByRole('button', { name: '분석 조건' }))
 }
 
 beforeEach(() => {

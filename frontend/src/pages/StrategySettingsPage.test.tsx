@@ -475,7 +475,7 @@ describe("StrategySettingsPage", () => {
   });
 
   it("카드 한 번과 분석하기 한 번으로 기본값 요청이 만들어진다", async () => {
-    // SC-001, quickstart 4. 상세 설정을 한 번도 열지 않는다.
+    // SC-001, quickstart 4. 전략 설정을 한 번도 열지 않는다.
     const user = userEvent.setup();
     const { support, requests } = makeSupport();
     renderPage(support);
@@ -646,7 +646,7 @@ describe("StrategySettingsPage", () => {
   });
 
   it("기본 화면의 입력은 전략 선택 하나다", async () => {
-    // SC-005. 상세 설정과 조건 바꾸기는 접혀 있고 입력 요소를 내놓지 않는다.
+    // SC-005. 전략 설정과 분석 조건은 접혀 있고 입력 요소를 내놓지 않는다.
     const user = userEvent.setup();
     const { support } = makeSupport();
     const { container } = renderPage(support);
@@ -1600,7 +1600,7 @@ describe("StrategySettingsPage", () => {
         let card = await findCardNamed(selectableStrategy.name);
         expect(card.getAttribute("data-warmup")).toBe("reduced");
 
-        await user.click(screen.getByRole("button", { name: "상세 설정" }));
+        await user.click(screen.getByRole("button", { name: "전략 설정" }));
         await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
         // 고른 카드는 지금 설정으로 다시 판정되어 막히지만 고른 사실은 남는다.
@@ -1652,7 +1652,7 @@ describe("StrategySettingsPage", () => {
           "false",
         ),
       );
-      await user.click(screen.getByRole("button", { name: "상세 설정" }));
+      await user.click(screen.getByRole("button", { name: "전략 설정" }));
 
       const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
       await user.clear(band);
@@ -1693,7 +1693,7 @@ describe("StrategySettingsPage", () => {
       renderPage(support);
 
       await user.click(await findCardNamed(selectableStrategy.name));
-      await user.click(screen.getByRole("button", { name: "상세 설정" }));
+      await user.click(screen.getByRole("button", { name: "전략 설정" }));
       await user.click(screen.getByRole("radio", { name: "15거래일" }));
       await waitFor(() =>
         expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
@@ -2256,8 +2256,8 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
   }
 
   async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole("button", { name: "조건 바꾸기" }));
-    return screen.getByRole("region", { name: "조건 바꾸기" });
+    await user.click(screen.getByRole("button", { name: "분석 조건" }));
+    return screen.getByRole("region", { name: "분석 조건" });
   }
 
   it("패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다", async () => {
@@ -2729,7 +2729,7 @@ describe("StrategySettingsPage 공통 평가 기간 연결(T042, T098)", () => {
         maxWarmupTradingDays: 90,
       });
 
-      await user.click(screen.getByRole("button", { name: "상세 설정" }));
+      await user.click(screen.getByRole("button", { name: "전략 설정" }));
       await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
       const card = await findCardNamed(selectableStrategy.name);
