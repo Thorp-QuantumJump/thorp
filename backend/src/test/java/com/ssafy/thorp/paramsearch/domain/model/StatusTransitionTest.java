@@ -99,10 +99,15 @@ class StatusTransitionTest {
     class CandidateStatusTransition {
 
         @Test
-        @DisplayName("PENDING은 DISPATCHED와 SKIPPED로만 간다")
-        void pendingGoesToDispatchedOrSkipped() {
+        @DisplayName("PENDING은 DISPATCHED·SKIPPED·EXCLUDED로만 간다")
+        void pendingGoesToDispatchedSkippedOrExcluded() {
+            // EXCLUDED 는 발행하려다 004 접수가 그 조합을 거부했을 때다. 후보 하나의 거부로 묶음이
+            // 멈추지 않으려면 그 자리에서 확정해야 한다(2026-09-22).
             assertThat(allowedFrom(CandidateStatus.PENDING))
-                    .containsExactlyInAnyOrder(CandidateStatus.DISPATCHED, CandidateStatus.SKIPPED);
+                    .containsExactlyInAnyOrder(
+                            CandidateStatus.DISPATCHED,
+                            CandidateStatus.SKIPPED,
+                            CandidateStatus.EXCLUDED);
         }
 
         @Test
