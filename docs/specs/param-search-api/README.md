@@ -84,7 +84,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
       "exclusionReasons": []
     },
     "limits": {
-      "maxCandidates": 120, "timeLimitSeconds": 120,
+      "maxCandidates": 100, "timeLimitSeconds": 1800,
       "dispatchWindow": 4, "consecutiveFailureLimit": 5,
       "provisional": ["maxCandidates", "dispatchWindow", "timeLimitSeconds", "consecutiveFailureLimit"],
       "exceeded": false
@@ -191,7 +191,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
         "stabilityFormula": { "neighbor": "SINGLE_AXIS_ONE_STEP", "value": "MEAN_ABS_NET_RETURN_DIFF" },
         "provisional": ["displayCount"]
       },
-      "limits": { "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5, "provisional": ["..."] },
+      "limits": { "maxCandidates": 100, "timeLimitSeconds": 1800, "dispatchWindow": 1, "consecutiveFailureLimit": 5, "provisional": ["..."] },
       "referenceVersions": { "marketData": "FIXTURE-three_etf_24m", "registry": "PROVISIONAL-20260911", "cost": "KR-ETF-2026-09", "engine": "nautilus_trader 1.219.0 / worker 2.0.0" },
       "dataVersionChanged": false
     },
