@@ -190,17 +190,18 @@ describe('MarketFlowPage', () => {
     it('섹터를 골라도 비슷했던 때 보기로 넘기는 값이 그대로다', async () => {
       await renderWithSectors()
       const handoffBefore = screen
-        .getByRole('button', { name: /비슷했던 때 보기/ })
+        .getByRole('link', { name: /비슷했던 때 보기/ })
         .getAttribute('data-handoff')
 
       fireEvent.click(screen.getByRole('button', { name: '반도체' }))
       await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
 
-      const handoffAfter = screen
-        .getByRole('button', { name: /비슷했던 때 보기/ })
-        .getAttribute('data-handoff')
+      const entry = screen.getByRole('link', { name: /비슷했던 때 보기/ })
+      const handoffAfter = entry.getAttribute('data-handoff')
       expect(handoffAfter).toBe(handoffBefore)
       expect(JSON.parse(handoffAfter ?? 'null')).not.toHaveProperty('sectorCode')
+      // 주소에도 섹터가 실리지 않는다 — 인자에 자리가 없어 실수로도 실을 수 없다(FR-016).
+      expect(entry.getAttribute('href')).not.toContain('sector')
     })
 
     // 사례 없이 011을 열지 않는다(FR-018). 이 화면은 사례를 고르는 010으로만 안내한다.

@@ -45,6 +45,60 @@ describe('경제환경 검색 화면', () => {
     vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
   })
 
+  it('계산된 기준월이 없으면 빈 선택 상자 대신 그 사유를 보인다', async () => {
+    // 사전 계산이 돌지 않은 서버에서 실제로 이 상태가 났다. 빈 상자만 보이면 사용자는 자기가
+    // 잘못 눌렀다고 읽는다(FR-030, 원칙 VI).
+    vi.mocked(getRegimeBaselineMonths).mockResolvedValue({
+      byField: [], composite: null, range: null, note: '전환 안내',
+    } as never)
+
+    renderPage()
+
+    expect(await screen.findByText(/아직 비교할 과거 자료가 준비되지 않았습니다/)).toBeTruthy()
+    expect(screen.queryByLabelText('경제 분야')).toBeNull()
+    expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+  })
+
+  describe('시장 흐름에서 넘어온 진입 (009 FR-009)', () => {
+    it('주소의 분야·기준월로 바로 검색한다', async () => {
+      vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({}))
+
+      renderPage({ entries: ['/regime-search?field=field-1&month=2026-07'] })
+
+      // 사용자가 분야를 다시 고르지 않아도 그 분야의 결과가 나온다. 다시 고르게 하면
+      // 시장 흐름에서 보던 분야를 화면이 잊은 것처럼 보인다.
+      await waitFor(() =>
+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(
+          { mode: 'field', field: 'field-1', baselineMonth: '2026-07', limit: 3 },
+          expect.any(AbortSignal),
+        ),
+      )
+      expect(await screen.findByLabelText('경제 분야')).toHaveProperty('value', 'field-1')
+    })
+
+    it('결과가 없는 달로 넘어오면 그 분야의 최신월로 물러나고 알린다', async () => {
+      vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({}))
+
+      // 2026-08 은 이 분야의 기준월(2026-07)보다 뒤라 결과가 없다. 그대로 보내면 빈 화면이 된다.
+      renderPage({ entries: ['/regime-search?field=field-1&month=2026-08'] })
+
+      await waitFor(() =>
+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(
+          { mode: 'field', field: 'field-1', baselineMonth: undefined, limit: 3 },
+          expect.any(AbortSignal),
+        ),
+      )
+    })
+
+    it('모르는 분야로 넘어오면 검색하지 않고 화면을 그대로 연다', async () => {
+      renderPage({ entries: ['/regime-search?field=없는-분야&month=2026-07'] })
+
+      // 오류 화면을 띄우지 않는다. 고를 수 있는 분야가 목록에 있으므로 사용자는 이어서 쓴다.
+      await screen.findByLabelText('경제 분야')
+      expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+    })
+  })
+
   it('API 분야 목록으로 검색하고 다섯 표시와 자료 기준 시점을 보인다', async () => {
     vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({
       comparisonMonths: [{ indicatorId: 'indicator-1', indicator: '시험 지표', months: ['2026-05'], omitted: ['2026-06'], note: '시험 지표는 2026년 6월 자료가 없어 그 달을 빼고 비교했습니다.' }],

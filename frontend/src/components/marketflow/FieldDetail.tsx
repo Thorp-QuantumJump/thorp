@@ -1,6 +1,7 @@
 import { ArrowUpRight, ScanLine } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { buildSimilarPeriodHandoff } from '@/marketflow/handoff'
+import { Link } from 'react-router-dom'
+import { buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/handoff'
 import type { FieldDetailResult } from '@/types/marketFlow'
 import { DataStateNotice } from './DataStateNotice'
 import { ThreeMonthChart } from './ThreeMonthChart'
@@ -12,8 +13,8 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
   const reducedMotion = useReducedMotion()
   const titleId = `field-${detail.fieldId}-title`
   const similarNoteId = `similar-note-${detail.fieldId}`
-  // 010이 붙으면 이 값을 그대로 들고 이동한다. 그때까지는 무엇을 넘길지만 정해 둔다.
   const similarPeriod = buildSimilarPeriodHandoff(detail)
+  const similarPath = buildRegimeSearchPath(similarPeriod)
   return (
     <motion.section
       className={styles.detail}
@@ -65,25 +66,30 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
           ))}
         </div>
       )}
-      {/* spec 010의 검색 목적지/입력 계약이 연결되기 전에는 임의 검색 결과를 제공하지 않는다. */}
+      {/* 넘기는 값은 분야와 그 분야의 기준월뿐이다. 섹터를 골랐어도 달라지지 않는다(FR-016). */}
       <div className={styles.similarEntry}>
         <div>
           <span className={styles.detailEyebrow}>EXPLORE THE PAST</span>
           <p id={similarNoteId}>
             {similarPeriod === null
               ? '이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.'
-              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾는 기능을 준비하고 있습니다.`}
+              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}
           </p>
         </div>
-        <button
-          type="button"
-          className={styles.similarButton}
-          disabled
-          aria-describedby={similarNoteId}
-          data-handoff={similarPeriod === null ? undefined : JSON.stringify(similarPeriod)}
-        >
-          비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" /><small>준비 중</small>
-        </button>
+        {similarPath === null ? (
+          <button type="button" className={styles.similarButton} disabled aria-describedby={similarNoteId}>
+            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
+          </button>
+        ) : (
+          <Link
+            to={similarPath}
+            className={styles.similarButton}
+            aria-describedby={similarNoteId}
+            data-handoff={JSON.stringify(similarPeriod)}
+          >
+            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
+          </Link>
+        )}
       </div>
     </motion.section>
   )

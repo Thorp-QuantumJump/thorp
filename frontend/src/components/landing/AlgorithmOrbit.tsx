@@ -200,7 +200,7 @@ export function AlgorithmOrbit() {
                 <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>
               </dl>
               {isSelected ? (
-                <Link to="/backtest" onClick={preventClickAfterDrag}>
+                <Link to="/diagnosis/sectors" onClick={preventClickAfterDrag}>
                   이 전략 백테스트하기
                   <ArrowUpRight aria-hidden="true" size={18} />
                 </Link>
