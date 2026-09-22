@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;
 import com.ssafy.thorp.backtest.application.command.PinnedVersions;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
 import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;
 import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;
@@ -579,6 +580,24 @@ class BacktestServiceTest {
 
         assertThat(result.resultSource()).isEqualTo(ResultSource.REUSED);
         assertThat(recordedReuse().kind()).isEqualTo(ResultSource.REUSED);
+    }
+
+    @Test
+    @DisplayName("완료된 실행을 재사용하면 끝났다는 것을 알린다 — 그러지 않으면 007 후보가 영원히 '실행 중'이다")
+    void announcesThatAReusedRunIsAlreadyFinished() {
+        // 재사용된 접수에는 워커의 FINISHED 가 다시 오지 않는다. 007 후보는 그 이벤트 하나로만
+        // DISPATCHED 를 벗어나므로, 알리지 않으면 이미 답이 나와 있는 후보가 발행 창을 막고 묶음이
+        // 제한시간까지 멈춘다 — 같은 조합을 두 번째로 돌리는 순간 걸린다.
+        BacktestRun completed = saved(runningRun(), 11L).markCompleted();
+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(completed));
+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(completed));
+
+        service.create(fixedWeight());
+
+        verify(events)
+                .publishEvent(
+                        new BacktestFinished(
+                                11L, completed.getBacktestId().value(), RunStatus.COMPLETED, null));
     }
 
     @Test
