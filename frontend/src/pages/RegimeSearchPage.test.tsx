@@ -45,6 +45,20 @@ describe('경제환경 검색 화면', () => {
     vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
   })
 
+  it('계산된 기준월이 없으면 빈 선택 상자 대신 그 사유를 보인다', async () => {
+    // 사전 계산이 돌지 않은 서버에서 실제로 이 상태가 났다. 빈 상자만 보이면 사용자는 자기가
+    // 잘못 눌렀다고 읽는다(FR-030, 원칙 VI).
+    vi.mocked(getRegimeBaselineMonths).mockResolvedValue({
+      byField: [], composite: null, range: null, note: '전환 안내',
+    } as never)
+
+    renderPage()
+
+    expect(await screen.findByText(/아직 비교할 과거 자료가 준비되지 않았습니다/)).toBeTruthy()
+    expect(screen.queryByLabelText('경제 분야')).toBeNull()
+    expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()
+  })
+
   describe('시장 흐름에서 넘어온 진입 (009 FR-009)', () => {
     it('주소의 분야·기준월로 바로 검색한다', async () => {
       vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({}))
