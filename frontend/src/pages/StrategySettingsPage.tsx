@@ -34,7 +34,7 @@ import { defaultAnalysisSupport } from "@/components/strategy/connectedAnalysisS
 import { DetailSettingsPanel } from "@/components/strategy/DetailSettingsPanel";
 import { ReducedPeriodNotice } from "@/components/strategy/ReducedPeriodNotice";
 import {
-  describeReducedPeriod,
+  describeEvaluationWindow,
   type ReducedPeriodInput,
   type WarmupCause,
 } from "@/components/strategy/reducedPeriod";
@@ -554,12 +554,12 @@ export function StrategySettingsPage({
             : strategy.warmupTradingDays,
         minEvaluationYears,
       }).verdict;
-      // 고른 카드에 보이는 줄어든 기간 안내는 '분석하기' 위의 안내와 같은 문장이다(SC-004). 따로 지으면 두
-      // 곳이 다른 말을 한다.
+      // 고른 카드에 보이는 평가 기간은 '분석하기' 위의 안내와 같은 문장이다(SC-004). 따로 지으면 두
+      // 곳이 다른 말을 한다. 까닭은 상세 쪽 안내에서 펼쳐 본다 — 카드마다 말풍선을 두면 목록이 무거워진다.
       if (selected && verdict.state === "reduced" && reducedPeriod !== null) {
         return {
           state: "reduced",
-          message: describeReducedPeriod(reducedPeriod),
+          message: describeEvaluationWindow(reducedPeriod),
         };
       }
       return verdict;
