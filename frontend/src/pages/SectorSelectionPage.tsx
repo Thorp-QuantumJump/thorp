@@ -225,6 +225,8 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {
                   ? {
                       valueTenths: selection.weightTenths[sector.code] ?? 0,
                       onCommit: (weightTenths) => selection.setWeight(sector.code, weightTenths),
+                      locked: selection.isLocked(sector.code),
+                      onLockedChange: (locked) => selection.toggleLock(sector.code, locked),
                     }
                   : undefined
               }
