@@ -21,7 +21,9 @@
 0이다(PD-12 확정 전까지 정확 일치).
 
 - 검증: `data/tests/test_macro_value_crosscheck.py`
-- 표본: 2026-09-17 실조회 응답 (`data/tests/fixtures/macro/`)
+- 표본: 실조회 응답 (`data/tests/fixtures/macro/`). 2026-09-17 에 받은 것이고,
+  관세청 2025년분(`customs/newtrade_2025.xml`)만 2026-09-22 에 따로 받았다 —
+  수출·수입의 전년동월 대비에 t-12 가 필요해서다
 - 대조 방식: 변환 모듈을 쓰지 않고 시험 파일 안에서 다시 계산한다. 같은 모듈로 다시 계산하면
   그 모듈이 틀렸을 때 둘이 똑같이 틀린다
 
