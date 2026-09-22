@@ -44,7 +44,6 @@ import {
   RegistryChangedNotice,
   type RegistryReloadPhase,
 } from "@/components/strategy/RegistryChangedNotice";
-import { SettingsStatusBadge } from "@/components/strategy/SettingsStatusBadge";
 import type { WarmupVerdict } from "@/components/strategy/StrategyCard";
 import {
   StrategyCardList,
@@ -1257,12 +1256,6 @@ export function StrategySettingsPage({
                 </h2>
 
                 <div className={styles.detailBody}>
-                  {settings.ready && selectedId !== null ? (
-                    <SettingsStatusBadge
-                      isDefault={settings.isDefault(selectedId)}
-                    />
-                  ) : null}
-
                   {settings.selectedStrategy ? (
                     <p className={styles.detailDescription}>
                       {settings.selectedStrategy.description}
