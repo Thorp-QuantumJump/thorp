@@ -234,15 +234,21 @@ components:
           description: 기준월 실제 값. 결측은 null이며 보간하지 않는다(008 FR-008)
         path:
           type: array
-          minItems: 3
+          minItems: 0
           maxItems: 3
-          description: t-2·t-1·t 경로. T_g 이후 발표 값은 여기 넣지 않는다
+          description: >-
+            t-2·t-1·t 경로. T_g 이후 발표 값은 여기 넣지 않는다.
+            **자료가 없으면 빈 배열이다** — 기준월이 없어 t가 정해지지 않으면 그릴 달도 없다.
+            달이 정해졌는데 값만 없는 경우는 빈 배열이 아니라 세 점이고 value가 null이다.
+            둘을 같은 모양으로 보내면 "아직 자료가 없다"와 "그 달의 값이 결측이다"가 구분되지 않는다.
           items:
             $ref: '#/components/schemas/PathPoint'
         referenceMonth:
-          type: string
+          type: [string, 'null']
           pattern: '^\d{4}-\d{2}$'
-          description: 대상월. 자료가 가리키는 달이다
+          description: >-
+            대상월. 자료가 가리키는 달이다. **분야 기준월이 없으면 null이다** — 008이 그 분야의
+            T_g를 아직 내지 못한 상태이고(무자료·수집 실패), 그때 가리킬 달을 지어내지 않는다.
         releaseDate:
           type: [string, 'null']
           format: date
