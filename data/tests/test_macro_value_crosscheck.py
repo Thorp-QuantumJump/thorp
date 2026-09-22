@@ -64,10 +64,7 @@ _ECOS_FILES: Final[dict[str, str]] = {
 #:
 #: **비어 있지 않은 것이 문제다.** 여기 있는 지표는 SC-007 의 대조를 받지 못하므로, 표본이 갖춰지면
 #: 지워야 한다. 조용히 건너뛰지 않도록 아래 시험이 이 목록을 그대로 고정한다.
-SAMPLE_TOO_SHORT: Final[dict[str, str]] = {
-    "exports": "관세청 표본이 2026년 9개월뿐이라 전년동월(t-12)이 없다. 2년치 응답이 필요하다",
-    "imports": "관세청 표본이 2026년 9개월뿐이라 전년동월(t-12)이 없다. 2년치 응답이 필요하다",
-}
+SAMPLE_TOO_SHORT: Final[dict[str, str]] = {}
 
 
 def _linked_housing(indicator: IndicatorDefinition) -> list[SourceObservation]:
@@ -95,14 +92,32 @@ def _linked_housing(indicator: IndicatorDefinition) -> list[SourceObservation]:
     ]
 
 
+#: 관세청 표본이 담은 해들. 조회 기간이 1년으로 제한돼 해마다 따로 받는다.
+_CUSTOMS_YEARS: Final[tuple[str, ...]] = ("newtrade_2025.xml", "newtrade_2026.xml")
+
+
+def _customs_two_years(indicator: IndicatorDefinition) -> list[SourceObservation]:
+    """관세청 표본 두 해를 이어 하나의 계열로 만든다 (T072).
+
+    수출·수입은 전년동월 대비라 한 해만 읽으면 t-12 가 없어 대조할 달이 하나도 없다. 원천이
+    조회 기간을 1년으로 제한하므로(FR-017a) 표본도 해마다 따로 받아 여기서 잇는다.
+    """
+    observations: list[SourceObservation] = []
+    for name in _CUSTOMS_YEARS:
+        payload = (FIXTURES / "customs" / name).read_text(encoding="utf-8")
+        observations.extend(customs.parse(indicator, payload))
+    periods = [o.period for o in observations]
+    assert len(periods) == len(set(periods)), "표본 두 해가 같은 달을 겹쳐 담았다"
+    return sorted(observations, key=lambda o: o.period)
+
+
 def _observations(indicator: IndicatorDefinition):
     """등록표가 고른 원천에서 그 지표의 관측을 읽는다. 어댑터는 파싱만 하고 변환하지 않는다."""
     name = indicator.indicator_id
     if indicator.link_chain:
         return _linked_housing(indicator)
     if indicator.primary_source == "customs":
-        payload = (FIXTURES / "customs" / "newtrade_2026.xml").read_text(encoding="utf-8")
-        return customs.parse(indicator, payload)
+        return _customs_two_years(indicator)
     if indicator.primary_source == "ecos":
         payload = json.loads(
             (FIXTURES / "ecos" / _ECOS_FILES[name]).read_text(encoding="utf-8")
@@ -242,6 +257,6 @@ def test_대조하지_못한_지표가_늘지_않는다() -> None:
     건너뛰기를 조용히 늘리면 SC-007 의 대조 범위가 줄어드는데 스위트는 초록으로 남는다. 줄어든
     것을 보이게 하려고 목록 자체를 시험한다 — 지표가 늘면 여기서 걸린다.
     """
-    assert sorted(SAMPLE_TOO_SHORT) == ["exports", "imports"]
-    # 무역수지는 같은 응답에서 오지만 변환이 공식 금액이라 t-12 가 필요 없다 — 대조된다.
-    assert "trade_balance" not in SAMPLE_TOO_SHORT
+    assert SAMPLE_TOO_SHORT == {}, "표본 한계로 대조를 건너뛴 지표가 생겼다"
+    # 17개 전부가 대조를 받는다. 하나라도 빠지면 그 지표의 화면 값이 맞는지 말할 수 없다.
+    assert len({i.indicator_id for i in INDICATORS}) == 17
