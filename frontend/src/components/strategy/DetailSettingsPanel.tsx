@@ -32,7 +32,8 @@ const RETURN_TO: LearningReturnState = { path: '/strategy', label: '전략 선�
 const AXIS_UNRENDERABLE = '이 항목의 허용 범위를 확인하지 못해 값을 바꿀 수 없습니다.'
 
 /**
- * 상세 설정(US2, FR-003·FR-004·FR-006·FR-008·FR-012).
+ * 전략 설정(US2, FR-003·FR-004·FR-006·FR-008·FR-012). 2026-09-22 까지 이름이 '상세 설정'이었다 — 옆의
+ * '분석 조건'과 형제로 읽히도록 무엇의 설정인지를 이름에 담았다(`S15P21E205-406`).
  *
  * <p><b>접힌 채로 시작한다.</b> 기본 화면의 입력은 전략 선택 하나이고(SC-005), 펼쳤을 때만 항목을
  * 그린다. <b>선택한 전략의 축만 그리고 다른 전략의 축은 만들지도 않는다.</b>
@@ -69,7 +70,7 @@ export function DetailSettingsPanel({
   })
 
   return (
-    <section className={styles.panel} aria-label="상세 설정">
+    <section className={styles.panel} aria-label="전략 설정">
       <button
         type="button"
         className={styles.toggle}
@@ -77,7 +78,7 @@ export function DetailSettingsPanel({
         aria-controls={bodyId}
         onClick={() => setOpen((current) => !current)}
       >
-        <span>상세 설정</span>
+        <span>전략 설정</span>
         <ChevronDown className={styles.toggleIcon} size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>
 

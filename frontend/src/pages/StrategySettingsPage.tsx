@@ -99,14 +99,14 @@ const INVALID_STORED_VALUES =
   "이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.";
 const WARMUP_UNCOMPUTABLE = "현재 설정으로 워밍업을 계산할 수 없습니다.";
 const RULES_VIOLATED =
-  "설정 규칙을 어기는 값이 있습니다. 상세 설정 아래의 안내를 확인해 주세요.";
+  "설정 규칙을 어기는 값이 있습니다. 전략 설정 아래의 안내를 확인해 주세요.";
 const RULES_UNJUDGED = "설정 규칙을 판정하지 못해 분석을 시작할 수 없습니다.";
 const VERSIONS_LOADING = "분석 조건 버전을 확인하는 중입니다.";
 const SUBMIT_FAILED = "분석 요청을 보내지 못했습니다.";
 const STRATEGY_NOT_REGISTERED_MESSAGE =
   "고른 전략을 지금은 분석할 수 없어 요청이 접수되지 않았습니다. 전략 설정을 다시 불러왔으니 전략을 다시 골라 주세요.";
 const PARAMETER_REJECTED_GENERAL =
-  "설정값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정과 분석 조건을 확인해 주세요.";
+  "설정값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정과 분석 조건을 확인해 주세요.";
 /** 고른 기간이 지금 평가할 수 있는 범위 밖이다. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다 */
 function periodOutOfRangeMessage(range: AnalysisPeriod): string {
   return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 범위 전체로 되돌려 주세요.`;
@@ -161,7 +161,7 @@ function parameterRejectedMessage(
       ? strategy.axes.find((candidate) => candidate.name === axisName)
       : undefined;
   if (!axis) return PARAMETER_REJECTED_GENERAL;
-  return `'${axis.label}' 값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정에서 값을 확인해 주세요.`;
+  return `'${axis.label}' 값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정에서 값을 확인해 주세요.`;
 }
 
 type Submission =
@@ -216,9 +216,9 @@ function InvalidValueList({
  * 004 분석 / 007 자동 비교다.
  *
  * <p><b>기본 화면의 입력은 전략 선택 하나다(SC-005).</b> 카드를 고르면 '기본 설정' 표시, 조건 한 줄,
- * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 조건 바꾸기(US3)도 접힌 패널이다.
+ * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 분석 조건(US3)도 접힌 패널이다.
  *
- * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 상세 설정에서 값을 바꾸면 규칙 위반,
+ * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 전략 설정에서 값을 바꾸면 규칙 위반,
  * 워밍업, 고른 카드의 판정, 기본 설정 표시, '분석하기'의 막힘이 한 렌더 안에서 다시 계산된다. 값을
  * 만지는 동안 서버로 요청이 나가지 않는다. 최종 판정은 접수 시점에 서버가 다시 하고, 그 사이 등록표가
  * 바뀌어 409로 거절되면 다시 받아 알리되 자동으로 다시 보내지 않는다(research R9).
@@ -620,7 +620,7 @@ export function StrategySettingsPage({
     !settings.isComplete(settings.selectedStrategyId);
 
   /**
-   * 고른 전략의 지금 값이 어기는 규칙(FR-008). 상세 설정 패널이 보이는 안내와 **같은 함수**로 판정한다.
+   * 고른 전략의 지금 값이 어기는 규칙(FR-008). 전략 설정 패널이 보이는 안내와 **같은 함수**로 판정한다.
    *
    * 값이 바뀔 때마다 다시 계산하며 서버에 묻지 않는다. 판정하지 못한 경우(`unjudged`)를 통과로 접지
    * 않는다 — 접수 시점에 서버가 같은 규칙으로 거절할 요청을 보내게 된다.
@@ -1347,64 +1347,55 @@ export function StrategySettingsPage({
                   전에는 막고 까닭을 적는다.
                 */}
                   {registry !== null && settings.ready ? (
-                    <section
-                      className={styles.conditions}
-                      aria-labelledby="analysis-conditions-title"
-                    >
-                      <h3
-                        id="analysis-conditions-title"
-                        className={styles.groupTitle}
-                      >
-                        분석 조건
-                      </h3>
-                      <ConditionSummaryLine
-                        period={period}
-                        sectorCount={universeSize ?? 0}
-                        initialAmount={
-                          initialAmount === null
-                            ? null
-                            : {
-                                value: initialAmount,
-                                unit: registry.analysisConditions.initialAmount
-                                  .unit,
-                              }
-                        }
-                        costProfile={costProfile}
-                      />
-                      <AnalysisConditionsPanel
-                        conditions={registry.analysisConditions}
-                        range={evaluableRange}
-                        rangeUnavailableMessage={
-                          settings.selectedStrategy
-                            ? undefined
-                            : RANGE_NEEDS_STRATEGY
-                        }
-                        period={period}
-                        periodChosen={chosenPeriod !== null}
-                        caseConstraint={activeCaseConstraint}
-                        initialAmount={initialAmount ?? undefined}
-                        minEvaluationYears={minEvaluationYears}
-                        cost={costAssumption}
-                        onChange={(patch) => {
-                          // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
-                          // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
-                          // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
-                          if (
-                            patch.initialAmount ===
-                            registry.analysisConditions.initialAmount.default
-                          ) {
-                            const rest = { ...patch };
-                            delete rest.initialAmount;
-                            settings.resetAnalysisCondition("initialAmount");
-                            if (Object.keys(rest).length > 0)
-                              settings.setAnalysisCondition(rest);
-                            return;
+                    <AnalysisConditionsPanel
+                      summary={
+                        <ConditionSummaryLine
+                          period={period}
+                          sectorCount={universeSize ?? 0}
+                          initialAmount={
+                            initialAmount === null
+                              ? null
+                              : {
+                                  value: initialAmount,
+                                  unit: registry.analysisConditions
+                                    .initialAmount.unit,
+                                }
                           }
-                          settings.setAnalysisCondition(patch);
-                        }}
-                        onReset={settings.resetAnalysisCondition}
-                      />
-                    </section>
+                          costProfile={costProfile}
+                        />
+                      }
+                      conditions={registry.analysisConditions}
+                      range={evaluableRange}
+                      rangeUnavailableMessage={
+                        settings.selectedStrategy
+                          ? undefined
+                          : RANGE_NEEDS_STRATEGY
+                      }
+                      period={period}
+                      periodChosen={chosenPeriod !== null}
+                      caseConstraint={activeCaseConstraint}
+                      initialAmount={initialAmount ?? undefined}
+                      minEvaluationYears={minEvaluationYears}
+                      cost={costAssumption}
+                      onChange={(patch) => {
+                        // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
+                        // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
+                        // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
+                        if (
+                          patch.initialAmount ===
+                          registry.analysisConditions.initialAmount.default
+                        ) {
+                          const rest = { ...patch };
+                          delete rest.initialAmount;
+                          settings.resetAnalysisCondition("initialAmount");
+                          if (Object.keys(rest).length > 0)
+                            settings.setAnalysisCondition(rest);
+                          return;
+                        }
+                        settings.setAnalysisCondition(patch);
+                      }}
+                      onReset={settings.resetAnalysisCondition}
+                    />
                   ) : null}
 
                   {settings.ready &&
