@@ -65,7 +65,7 @@
     "summaryUnavailable": "CANCELLED_BEFORE_START",
     "failure": null,
     "validationTier": "UNVALIDATED",
-    "strategyName": "내가 정한 비중",
+    "strategyName": "고정 비중",
     "weightsSource": null,
     "exceptionKinds": null
   },

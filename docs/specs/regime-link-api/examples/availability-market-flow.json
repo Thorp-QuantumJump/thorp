@@ -17,7 +17,7 @@
           "publicToken": "9f2c1a7b4e0d83526af1c9d0b7e34512",
           "role": "BASE",
           "strategyId": "FIXED_WEIGHT",
-          "strategyName": "내가 정한 비중",
+          "strategyName": "고정 비중",
           "period": {
             "start": "2011-12-01",
             "end": "2012-12-28",
