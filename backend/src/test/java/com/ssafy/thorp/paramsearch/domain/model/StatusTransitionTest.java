@@ -77,8 +77,9 @@ class StatusTransitionTest {
         }
 
         @Test
-        @DisplayName("선정 계산 대상은 COMPLETED와 PARTIAL 둘이다 — 취소된 묶음도 완료 후보로 비교한다")
-        void completedAndPartialAreSelectable() {
+        @DisplayName("RUNNING은 잠정 선정, COMPLETED와 PARTIAL은 확정 선정 대상이다")
+        void runningCompletedAndPartialAreSelectable() {
+            assertThat(ParamSearchStatus.RUNNING.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.COMPLETED.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.PARTIAL.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.FAILED.isSelectable()).isFalse();
@@ -228,12 +229,11 @@ class StatusTransitionTest {
         }
 
         @Test
-        @DisplayName("선정 스냅샷은 COMPLETED·PARTIAL에서만 붙는다")
+        @DisplayName("선정 스냅샷은 RUNNING·COMPLETED·PARTIAL에 붙는다")
         void selectionRequiresSelectableStatus() {
             ParamSearch running = newSearch().markRunning(NOW);
-            assertThatThrownBy(() -> running.withSelection(Map.of("top", List.of())))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("COMPLETED or PARTIAL");
+            assertThatCode(() -> running.withSelection(Map.of("top", List.of())))
+                    .doesNotThrowAnyException();
 
             ParamSearch partial = running.markPartial(StopReason.CANCELLED, NOW);
             assertThatCode(() -> partial.withSelection(Map.of("top", List.of())))

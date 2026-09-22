@@ -236,7 +236,8 @@ COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림
 
 ### `selection`과 `baseline`
 
-- `selection`은 `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다. 그 전에는 `null`이다.
+- `selection`은 후보가 완료될 때마다 현재 완료 후보 기준으로 갱신된다. 실행 중 값은 잠정값이며 새 결과에
+  따라 표시 순서와 통과 여부가 바뀔 수 있고, `COMPLETED`·`PARTIAL`에서 확정된다.
 - **`selection.displayed`는 순위가 아니다.** 정렬 지표(`sortMetric`)를 밝힌 집합이며 화면에 순위 번호를
   붙이지 않는다. 정렬 지표 이름을 함께 보인다.
 - `shortOfDisplayCount`가 `true`면 기준을 충족한 후보가 `displayCount`에 못 미친 것이다. **문턱을 낮춰
@@ -354,7 +355,8 @@ COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림
 `remainingFailed`로 알린다. 자동으로 이어 보내지 않으므로 화면은 그 수를 보고 다시 요청한다.
 
 다시 열린 묶음은 `selection`이 `null`로 비워진다 — 후보가 더 붙으므로 이전 선정은 사실이 아니다.
-다시 끝나면 선정을 한 번 더 계산한다. 실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.
+재시도 후보가 끝날 때마다 잠정 선정을 갱신하고 다시 끝나면 확정한다. 실패 후보가 없으면
+`409 NOTHING_TO_RETRY`다.
 
 ---
 

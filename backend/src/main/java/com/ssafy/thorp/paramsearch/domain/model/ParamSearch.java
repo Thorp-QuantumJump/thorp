@@ -215,7 +215,7 @@ public class ParamSearch {
      * 나란히 놓을 수 있다(FR-012·FR-013c).
      *
      * <p><b>선정은 비운다.</b> 후보가 더 붙으므로 이전 선정은 이미 사실이 아니다. 안정성 필터가 묶음 내 상대 분위라 후보 하나가 늘면 분위 자체가 달라진다 —
-     * 다시 끝날 때 한 번 더 계산한다(불변식 3).
+     * 재시도 후보가 끝날 때마다 현재 완료 후보 기준으로 다시 계산한다.
      *
      * <p><b>중단 사유는 남긴다.</b> 취소로 '미실행'이 된 후보는 재시도 대상이 아니라 그대로 남으므로, 이 묶음은 다시 끝나도 여전히 부분 결과다. 사유를 지우면
      * 취소한 적 없는 묶음처럼 보이고 완료 범위 표시가 뜻을 잃는다.
@@ -236,10 +236,11 @@ public class ParamSearch {
         return toBuilder().baselineJobId(baselineJobId).build();
     }
 
-    /** 선정 결과 스냅샷을 붙인다. 완료·부분 완료 후 1회 계산한다. */
+    /** 선정 결과 스냅샷을 붙인다. 실행 중에는 잠정값이며 완료·부분 완료에서 확정된다. */
     public ParamSearch withSelection(Map<String, Object> selection) {
         if (!status.isSelectable()) {
-            throw new IllegalStateException("selection requires COMPLETED or PARTIAL: " + status);
+            throw new IllegalStateException(
+                    "selection requires RUNNING, COMPLETED or PARTIAL: " + status);
         }
         return toBuilder().selection(selection).build();
     }

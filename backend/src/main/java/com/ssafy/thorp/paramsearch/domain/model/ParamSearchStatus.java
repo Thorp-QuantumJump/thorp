@@ -15,7 +15,7 @@ import java.util.Set;
  * </pre>
  *
  * <p>{@code REJECTED}는 저장하되 후보를 만들지 않는다. {@code PARTIAL}은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009). {@code
- * COMPLETED}와 {@code PARTIAL} 둘 다 선정 계산을 수행한다 — 취소된 묶음도 완료된 후보로 비교할 수 있다.
+ * RUNNING}에서는 완료된 후보 기준의 잠정 선정을 계산하고, {@code COMPLETED}와 {@code PARTIAL}에서 확정한다.
  */
 public enum ParamSearchStatus {
     QUEUED,
@@ -33,9 +33,9 @@ public enum ParamSearchStatus {
         return FINAL_STATUSES.contains(this);
     }
 
-    /** 선정 계산 대상인가. 완료와 부분 완료 둘 다 계산한다. */
+    /** 선정 계산 대상인가. 실행 중에는 잠정값, 완료와 부분 완료에서는 확정값을 계산한다. */
     public boolean isSelectable() {
-        return this == COMPLETED || this == PARTIAL;
+        return this == RUNNING || this == COMPLETED || this == PARTIAL;
     }
 
     /** {@code next}로 전이할 수 있는가. 허용 목록에 없는 전이는 전부 거부다. */
