@@ -25,30 +25,6 @@
   line-height: 1.6;
 }
 
-.validation {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 9px 11px;
-  border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
-  background: var(--thorp-surface);
-  color: var(--thorp-copy);
-  font-size: 0.72rem;
-  line-height: 1.55;
-}
-
-.validation svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--thorp-warning);
-}
-
-.validation strong {
-  color: var(--thorp-warning);
-  font-weight: 700;
-}
-
 .items {
   display: grid;
   gap: 0;
