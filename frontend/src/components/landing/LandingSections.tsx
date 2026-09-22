@@ -172,7 +172,9 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
 
         <IndicatorConveyor indicators={indicators} />
 
-        <Link className={styles.textCta} to="/dashboard">
+        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). 같은 성격의 목적지가 두
+            곳이면 첫 화면과 메뉴가 서로 다른 화면을 가리킨다. */}
+        <Link className={styles.textCta} to="/market-flow">
           <span>시장 분석 보러 가기</span>
           <ArrowUpRight aria-hidden="true" size={21} />
         </Link>
@@ -252,7 +254,9 @@ export function BacktestIntroSection() {
           </div>
         </div>
 
-        <Link className={styles.textCta} to="/backtest">
+        {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른
+            뒤에 돌리는 것이라 그 출발점으로 보낸다. */}
+        <Link className={styles.textCta} to="/diagnosis/sectors">
           <span>백테스트 시작하기</span>
           <ArrowUpRight aria-hidden="true" size={21} />
         </Link>

@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs'
 import { screen, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { renderWithRouter } from '@/test/renderWithRouter'
@@ -95,11 +96,37 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()
   })
 
-  it('소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다', () => {
+  it('소개 섹션의 링크가 헤더 메뉴와 같은 곳을 가리킨다', () => {
+    // 002 T024. 존재만 보면 목적지가 옛 화면으로 남아 있어도 통과한다 — 실제로 그랬다.
     renderWithRouter(<LandingPage />)
 
-    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ })).toBeDefined()
-    expect(screen.getByRole('link', { name: /백테스트 시작하기/ })).toBeDefined()
+    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ }).getAttribute('href')).toBe('/market-flow')
+    expect(screen.getByRole('link', { name: /백테스트 시작하기/ }).getAttribute('href')).toBe('/diagnosis/sectors')
+  })
+
+  it('첫 화면 코드 어디에도 옛 경로로 보내는 링크가 없다', () => {
+    // 전략을 골라야 나오는 링크가 하나 있어 화면을 그려 보는 검사로는 닿지 않는다. 실제로
+    // 그 링크가 옛 경로로 남아 있었다. 소스를 직접 본다.
+    const dir = 'src/components/landing'
+    const stale = readdirSync(dir)
+      .filter((name) => name.endsWith('.tsx'))
+      .flatMap((name) => {
+        const source = readFileSync(`${dir}/${name}`, 'utf8')
+        return [...source.matchAll(/to="(\/dashboard|\/backtest)"/g)].map((hit) => `${name}: ${hit[1]}`)
+      })
+    expect(stale).toEqual([])
+  })
+
+  it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {
+    // 경로 자체는 003·005가 소유하므로 지우지 않는다(002 research 결정 5). 첫 화면에서
+    // 그곳으로 보내지 않는 것만 고정한다 — 하나가 남으면 사용자는 두 종류의 화면을 만난다.
+    renderWithRouter(<LandingPage />)
+
+    const stale = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+      .filter((href) => href === '/dashboard' || href === '/backtest')
+    expect(stale).toEqual([])
   })
 
   it('소개 섹션은 그대로 남는다', () => {
