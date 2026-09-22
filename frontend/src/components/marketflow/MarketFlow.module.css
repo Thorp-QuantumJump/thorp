@@ -74,8 +74,14 @@
 .similarEntry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 22px 0; }
 .similarEntry > div { flex: 1 1 200px; }
 .similarEntry p { margin: 7px 0 0; font-size: .74rem; line-height: 1.6; color: var(--thorp-copy); }
-.similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: 10px 14px; min-height: 58px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 .84rem/1.4 var(--thorp-font-body); text-align: left; cursor: not-allowed; }
-.similarButton small { grid-column: 1 / -1; font-size: .64rem; font-weight: 400; }
+/* 열린 진입점은 링크(<a>)이고, 기준월이 없는 분야에서는 눌리지 않는 버튼이다. 한 모양으로 둔다. */
+.similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: 10px 14px; min-height: 44px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 .84rem/1.4 var(--thorp-font-body); text-align: left; text-decoration: none; cursor: pointer; }
+.similarButton svg { color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; }
+.similarButton:hover svg, .similarButton:focus-visible svg { transform: translate(2px, -2px); color: var(--thorp-accent-soft); }
+.similarButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
+/* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */
+.similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }
+.similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }
 @media (max-width: 1100px) {
   .summaryCard { padding-left: 12px; padding-right: 7px; }
   .indicatorMeta { gap: 5px 10px; }

@@ -98,15 +98,15 @@ export function RegimeSearchPage() {
     if (entryOpened.current || savedSearchId || !baselines || !entryField) return
     const field = baselines.byField.find((candidate) => candidate.id === entryField)
     if (!field) return
+    // 넘어온 달이 그 분야의 최신월보다 뒤면 결과가 없다. 최신월로 물러나고 그 사실을 알린다.
+    const month = entryMonth !== null && entryMonth <= field.baselineMonth ? entryMonth : null
     entryOpened.current = true
     setFieldId(field.id)
-    if (entryMonth) setSelectedMonth(entryMonth)
-    const month = entryMonth && entryMonth <= (field.baselineMonth ?? '') ? entryMonth : undefined
+    setSelectedMonth(month ?? '')
     setBaselineChangeNote(
-      month ? null : entryMonth ? copy.baselineMonthChangedNote(field.baselineMonth ?? '') : null,
+      entryMonth !== null && month === null ? copy.baselineMonthChangedNote(field.baselineMonth) : null,
     )
-    if (!month) setSelectedMonth('')
-    setQuery({ mode: 'field', field: field.id, baselineMonth: month })
+    setQuery({ mode: 'field', field: field.id, baselineMonth: month ?? undefined })
   }, [baselines, entryField, entryMonth, savedSearchId])
 
   /**
