@@ -2336,25 +2336,29 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(requests).toHaveLength(0);
   });
 
-  it("줄어든 기간과 원인을 고른 카드와 분석하기 바로 위에 같은 문장으로 보인다", async () => {
-    // SC-004. 원인은 시작일을 정한 섹터의 이름과 워밍업을 이루는 항목의 등록표 라벨이다.
+  it("평가 기간을 고른 카드와 분석하기 바로 위에 같은 문장으로 보이고 까닭은 펼쳐 본다", async () => {
+    // SC-004. 두 곳이 같은 기간을 말하고, 까닭(시작일을 정한 섹터와 워밍업 항목)은 상세에서 펼친다.
     const user = userEvent.setup();
     const { support } = makeSupport({ judgeWarmup: reducedJudgement });
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
 
-    const notice = await screen.findByRole("status", {
-      name: "줄어든 평가 기간",
-    });
-    const sentence = notice.textContent ?? "";
-    expect(sentence).toContain("나섹터");
-    expect(sentence).toContain("표류 관측 창");
-    expect(sentence).toContain(`${windowFixture.start} ~ ${windowFixture.end}`);
-    expect(sentence).toContain("2019-09-02");
+    const notice = await screen.findByRole("status", { name: "평가 기간" });
+    const sentence = `평가 기간 ${windowFixture.start} ~ ${windowFixture.end}`;
+    expect(notice.textContent).toContain(sentence);
+    // 고른 적 없는 기간을 두고 "줄었다"고 말하지 않는다.
+    expect(notice.textContent).not.toContain("줄었");
 
     const card = await findCardNamed(selectableStrategy.name);
     expect(within(card).getByText(sentence)).toBeTruthy();
+
+    await user.click(
+      within(notice).getByRole("button", { name: "평가 기간 도움말" }),
+    );
+    const cause = (await screen.findByText(/나섹터/)).textContent ?? "";
+    expect(cause).toContain("표류 관측 창");
+    expect(cause).toContain("2019-09-02");
 
     // 안내는 '분석하기'보다 앞에 놓인다.
     expect(
@@ -2363,16 +2367,14 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     ).toBeTruthy();
   });
 
-  it("줄지 않았으면 줄어든 기간 안내가 없다", async () => {
+  it("줄지 않았으면 평가 기간 안내가 없다", async () => {
     const user = userEvent.setup();
     const { support } = makeSupport();
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
 
-    expect(
-      screen.queryByRole("status", { name: "줄어든 평가 기간" }),
-    ).toBeNull();
+    expect(screen.queryByRole("status", { name: "평가 기간" })).toBeNull();
   });
 
   it("최소 평가 기간을 바꾸면 그 값으로 카드 판정을 다시 한다", async () => {
@@ -2495,9 +2497,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
 
     await user.click(await findCardNamed(selectableStrategy.name));
 
-    const notice = await screen.findByRole("status", {
-      name: "줄어든 평가 기간",
-    });
+    const notice = await screen.findByRole("status", { name: "평가 기간" });
     expect(notice.textContent).toBe("평가 기간이 줄어듭니다.");
   });
 
