@@ -50,6 +50,8 @@ interface AnalysisConditionsPanelProps {
   initialAmount: number | undefined;
   /** 접혀 있을 때도 보이는 조건 요약(FR-002). 머리줄에 실린다 */
   summary?: ReactNode;
+  /** 평가할 수 있는 범위 옆에 붙는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
+  rangeReason?: ReactNode;
   minEvaluationYears: number;
   /**
    * 비용 조건. 조회하는 중이면 `'loading'`, 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않고, 조회 중을
@@ -91,6 +93,8 @@ interface PeriodFieldProps {
   rangeUnavailableMessage: string;
   period: AnalysisPeriod | null;
   periodChosen: boolean;
+  /** 범위가 왜 그만큼인지 알려 주는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
+  rangeReason?: ReactNode;
   caseConstraint: CasePeriodConstraint | null;
   onChange: (period: AnalysisPeriod) => void;
   onReset: () => void;
@@ -121,6 +125,7 @@ function checkCaseConstraint(
  * 요청은 사용자가 의도한 적 없는 중간 날짜로 나간다.
  */
 function PeriodField({
+  rangeReason,
   range,
   rangeUnavailableMessage,
   period,
@@ -290,6 +295,8 @@ function PeriodField({
         {problem && range
           ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}`
           : hint}
+        {/* 범위가 왜 그만큼인지. 워밍업이 앞을 깎았을 때만 온다 */}
+        {range ? rangeReason : null}
       </p>
       {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}
       {caseConstraint ? (
@@ -325,6 +332,7 @@ export function AnalysisConditionsPanel({
   minEvaluationYears,
   cost,
   summary,
+  rangeReason,
   onChange,
   onReset,
 }: AnalysisConditionsPanelProps) {
@@ -356,6 +364,7 @@ export function AnalysisConditionsPanel({
       {open ? (
         <div id={bodyId} className={styles.body}>
           <PeriodField
+            rangeReason={rangeReason}
             range={range}
             rangeUnavailableMessage={rangeUnavailableMessage}
             period={period}
