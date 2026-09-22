@@ -408,8 +408,14 @@ def _month_date(period: str) -> date:
 def _assert_full_history(
     indicators: Sequence[IndicatorDefinition],
     observations: Mapping[str, Sequence[NormalizedObservation]],
+    carried: Mapping[str, set[date]] | None = None,
 ) -> None:
-    """시작월부터 최신월까지 결측을 포함한 모든 월이 한 번씩 있어야 한다."""
+    """시작월부터 최신월까지 결측을 포함한 모든 월이 한 번씩 있어야 한다.
+
+    ``carried`` 는 앞 자료 버전에서 그대로 이어받을 달이다. **정기 수집은 최근 N개월만 받으므로**
+    이번에 받은 것만 세면 전 구간이 늘 비어 보이고 발행이 영영 막힌다(FR-017). 공개될 자료는 둘의
+    합집합이므로 판정도 합집합으로 한다.
+    """
     expected_ids = {indicator.indicator_id for indicator in indicators}
     if set(observations) != expected_ids:
         raise PublishError("전체 이력의 지표 ID가 등록표와 다르다")
@@ -426,12 +432,83 @@ def _assert_full_history(
             if index in indices:
                 raise PublishError(f"{indicator.indicator_id}에 중복 대상월이 있다")
             indices.add(index)
+        for month in (carried or {}).get(indicator.indicator_id, ()):
+            indices.add(month.year * 12 + month.month)
         if (
             not indices
             or min(indices) != start_index
             or len(indices) != max(indices) - start_index + 1
         ):
             raise PublishError(f"{indicator.indicator_id}의 전체 가용 구간에 빠진 월이 있다")
+
+
+def _reusable_previous(
+    connection: Connection, dataset_id: int | None, fingerprint: str
+) -> int | None:
+    """앞 자료 버전에서 달을 이어받아도 되는가 (FR-003·FR-017).
+
+    **값 규칙이 같을 때만 이어받는다.** 규칙이 바뀌면 전 구간을 다시 만들어야 하므로 옛 규칙으로
+    낸 값이 새 버전에 섞이면 안 된다 — 한 버전 안에서 달마다 다른 규칙으로 계산된 값이 나란히
+    놓이고, 그 사실은 값만 봐서는 드러나지 않는다.
+    """
+    if dataset_id is None:
+        return None
+    previous = connection.execute(
+        text(
+            "SELECT value_rule_fingerprint FROM macro_dataset_version"
+            " WHERE id = :id AND status = 'PUBLISHED'"
+        ),
+        {"id": dataset_id},
+    ).scalar_one_or_none()
+    return dataset_id if previous == fingerprint else None
+
+
+def _months_of(connection: Connection, dataset_id: int | None) -> dict[str, set[date]]:
+    """앞 자료 버전이 담고 있는 지표별 대상월."""
+    if dataset_id is None:
+        return {}
+    rows = connection.execute(
+        text(
+            "SELECT indicator_id, target_month FROM macro_observation"
+            " WHERE dataset_version_id = :id"
+        ),
+        {"id": dataset_id},
+    ).all()
+    months: dict[str, set[date]] = {}
+    for indicator_id, month in rows:
+        # SQLite 는 날짜를 문자열로 돌려준다. 두 저장소에서 같은 판정이 나오게 맞춘다.
+        parsed = date.fromisoformat(month) if isinstance(month, str) else month
+        months.setdefault(indicator_id, set()).add(parsed)
+    return months
+
+
+def _carry_forward(connection: Connection, previous: int | None, dataset_id: int) -> int:
+    """앞 버전의 관측 중 이번에 받지 않은 달을 새 버전으로 그대로 옮긴다 (FR-017).
+
+    **값을 다시 만들지 않고 행을 복사한다.** 정기 수집이 받지 않은 달은 우리가 계산할 입력이 없고,
+    앞 버전에 있는 값이 그 달에 대해 아는 전부다. 다시 계산하는 척하면 그 달의 수신 시각·발표일이
+    이번 실행의 것으로 바뀌어, 언제 받은 자료인지가 조용히 틀어진다.
+    """
+    if previous is None:
+        return 0
+    result = connection.execute(
+        text(
+            "INSERT INTO macro_observation"
+            " (dataset_version_id, indicator_id, target_month, raw_value, transformed_value,"
+            "  released_at, received_at, break_segment, missing_reason)"
+            " SELECT :new, o.indicator_id, o.target_month, o.raw_value, o.transformed_value,"
+            "        o.released_at, o.received_at, o.break_segment, o.missing_reason"
+            " FROM macro_observation o"
+            " WHERE o.dataset_version_id = :old"
+            "   AND NOT EXISTS ("
+            "     SELECT 1 FROM macro_observation n"
+            "     WHERE n.dataset_version_id = :new"
+            "       AND n.indicator_id = o.indicator_id"
+            "       AND n.target_month = o.target_month)"
+        ),
+        {"new": dataset_id, "old": previous},
+    )
+    return result.rowcount or 0
 
 
 def _assert_registered_calculation(
@@ -498,15 +575,20 @@ def publish_atomically(
             )
         raise PublishError(f"발행 보류: {decision.blockers}")
 
+    fingerprint = value_rule_fingerprint(request.indicators)
     try:
-        _assert_full_history(request.indicators, request.observations)
+        # 앞 버전이 담고 있는 달을 먼저 읽는다. 정기 수집이 받지 않은 달은 그대로 이어받으므로
+        # 전 구간 판정도 둘의 합집합으로 해야 한다(FR-017).
+        with engine.begin() as connection:
+            reusable = _reusable_previous(connection, request.pointer.dataset_id, fingerprint)
+            carried = _months_of(connection, reusable)
+        _assert_full_history(request.indicators, request.observations, carried)
         raw_manifest = seal_manifest(
             request.data_root, request.version_key, "raw", request.raw_files
         )
         processed_manifest = seal_manifest(
             request.data_root, request.version_key, "processed", request.processed_files
         )
-        fingerprint = value_rule_fingerprint(request.indicators)
         target_registry = request.target_registry_id or request.pointer.registry_id
         target_display = request.target_display_id or request.pointer.display_id
         json_cast = "CAST(:value AS JSONB)" if engine.dialect.name == "postgresql" else ":value"
@@ -529,19 +611,6 @@ def publish_atomically(
                 ).scalar_one_or_none()
                 if previous_fingerprint is None:
                     raise PublishError("기존 공개 자료 버전이 없다")
-                if previous_fingerprint == fingerprint:
-                    previous = connection.execute(
-                        text("SELECT indicator_id, target_month FROM macro_observation "
-                             "WHERE dataset_version_id=:id"),
-                        {"id": request.pointer.dataset_id},
-                    ).all()
-                    current = {
-                        (indicator_id, _month_date(observation.period))
-                        for indicator_id, months in request.observations.items()
-                        for observation in months
-                    }
-                    if not set(previous).issubset(current):
-                        raise PublishError("새 자료 버전에서 기존 가용 월이 빠졌다")
             if connection.execute(
                 text("SELECT id FROM macro_display_version WHERE id=:id"),
                 {"id": target_display},
@@ -588,6 +657,26 @@ def publish_atomically(
                          "segment": observation.break_segment,
                          "missing": observation.missing_reason},
                     )
+            # 이번에 받지 않은 달을 앞 버전에서 옮긴다. 이 한 줄이 빠지면 공개된 과거가
+            # 정기 수집을 돌릴 때마다 최근 N개월로 줄어든다.
+            _carry_forward(connection, reusable, dataset_id)
+            # **결과**가 앞 버전을 덮는지 본다. 입력을 보면 이어받기로 채워질 달까지 요구하게
+            # 되어 정기 수집이 영영 발행되지 않는다. 공개될 자료가 줄지 않았는지가 물음이다.
+            if reusable is not None:
+                lost = connection.execute(
+                    text(
+                        "SELECT count(*) FROM macro_observation o"
+                        " WHERE o.dataset_version_id = :old"
+                        "   AND NOT EXISTS ("
+                        "     SELECT 1 FROM macro_observation n"
+                        "     WHERE n.dataset_version_id = :new"
+                        "       AND n.indicator_id = o.indicator_id"
+                        "       AND n.target_month = o.target_month)"
+                    ),
+                    {"old": reusable, "new": dataset_id},
+                ).scalar_one()
+                if lost:
+                    raise PublishError(f"새 자료 버전에서 기존 가용 월 {lost}개가 빠졌다")
             for baseline in decision.baselines:
                 expression = json_cast.replace(":value", ":held_back")
                 connection.execute(

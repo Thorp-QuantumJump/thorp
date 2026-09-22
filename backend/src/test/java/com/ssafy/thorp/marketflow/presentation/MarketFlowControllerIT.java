@@ -7,8 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -21,12 +23,28 @@ class MarketFlowControllerIT extends IntegrationTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbc;
 
+    /**
+     * 008 표를 채우고 시작한다 (T071).
+     *
+     * <p>예시 자료 대역을 걷어낸 뒤로 이 시험은 <b>008 표에서 읽어 화면까지 가는 실제 경로</b>를 돈다 — 등록표·자료 버전·관측·기준월이 없으면 조회가 500
+     * 이다. 2026-09-21 운영이 멈춘 자리가 008과 009 사이였고, 그 사이를 실제로 이어 본 시험이 없었다.
+     */
+    @BeforeEach
+    void seedMacroSnapshot() {
+        MacroRegistrySeed.seedRegistry(jdbc);
+        MacroRegistrySeed.seedPublishedDataset(jdbc);
+        // 노동 분야의 둘째 지표(실업률)만 기준월(2026-07)보다 한 달 앞서 발표된 상태로 둔다.
+        MacroRegistrySeed.seedLaterRelease(jdbc, "unemployment_rate", "2026-08-01");
+    }
+
     @AfterEach
-    void removeExampleReadModel() {
-        jdbc.update(
-                "DELETE FROM market_flow_field_summary WHERE registry_version = ? AND dataset_version = ?",
-                "macro-registry-example-v1",
-                "macro-dataset-example-2026-09-16");
+    void removeSeededData() {
+        // 분야 요약은 (등록표 버전, 자료 버전) 으로 저장된다. 지우지 않으면 다음 시험이 앞
+        // 시험의 읽기 모델을 그대로 쓴다.
+        jdbc.update("DELETE FROM market_flow_field_summary");
+        // 008 표도 되돌린다. 컨테이너를 다른 시험과 함께 쓰므로, 남겨 두면 "등록표가 아직
+        // 없다"를 보는 시험이 등록표를 발견한다.
+        MacroRegistrySeed.clear(jdbc);
     }
 
     @Test
@@ -84,8 +102,8 @@ class MarketFlowControllerIT extends IntegrationTestSupport {
                                 everyItem(not(emptyOrNullString()))))
                 .andExpect(
                         jsonPath("$.result.indicators[1].afterReferenceMonthRelease.referenceMonth")
-                                .value("2026-09"))
-                .andExpect(jsonPath("$.result.indicators[1].path[2].month").value("2026-08"));
+                                .value("2026-08"))
+                .andExpect(jsonPath("$.result.indicators[1].path[2].month").value("2026-07"));
     }
 
     @Test

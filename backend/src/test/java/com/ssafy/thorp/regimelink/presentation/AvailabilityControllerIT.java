@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.MarketCatalogSeed;
 import java.nio.file.Files;
@@ -59,6 +60,8 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
     @BeforeEach
     void seed() {
         clean();
+        // 010 은 008 등록표에서 지표 이름을 읽는다(T070). clean() 뒤라야 남는다.
+        MacroRegistrySeed.seedRegistry(jdbc);
         seedRuns();
         seedSnapshot(SNAPSHOT_ID_SEED, SNAPSHOT_KEY, "NEAREST_ONLY", displayedMonths());
         seedSnapshot(SNAPSHOT_ID_SEED + 1, EMPTY_KEY, "NOT_COMPUTABLE", List.of());
@@ -66,6 +69,7 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
 
     @AfterEach
     void clean() {
+        MacroRegistrySeed.clear(jdbc);
         // 이 검사가 만든 것만 지운다. 공용 DB 라 조건 없이 비우면 같은 표를 쓰는 다른 검사의 행까지
         // 사라지고, 그 실패는 실행 순서에 따라만 드러난다.
         jdbc.update(
@@ -376,7 +380,7 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
                         + " '{}'::jsonb, NOW(), NOW(), NOW())",
                 id,
                 key,
-                key.startsWith("FIELD:LABOR") ? "LABOR" : "PRODUCTION",
+                key.startsWith("FIELD:LABOR") ? "labor" : "production",
                 String.valueOf(id).repeat(64).substring(0, 64),
                 MarketCatalogSeed.DATA_VERSION,
                 status,
