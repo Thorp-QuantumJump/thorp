@@ -37,10 +37,21 @@ type WeightInputProps = {
   valueTenths: number
   /** 받아들인 값만 올라온다. 거부된 입력은 여기까지 오지 않는다. */
   onCommit: (weightTenths: number) => void
+  /** 고정되어 있는가. 고정한 값은 다른 섹터를 움직여도 그대로 남는다 */
+  locked?: boolean
+  /** 고정을 걸고 푼다. 주지 않으면 고정 단추를 그리지 않는다 */
+  onLockedChange?: (locked: boolean) => void
   className?: string
 }
 
-export function WeightInput({ sectorName, valueTenths, onCommit, className }: WeightInputProps) {
+export function WeightInput({
+  sectorName,
+  valueTenths,
+  onCommit,
+  locked = false,
+  onLockedChange,
+  className,
+}: WeightInputProps) {
   const inputId = useId()
   const errorId = useId()
 
@@ -119,6 +130,7 @@ export function WeightInput({ sectorName, valueTenths, onCommit, className }: We
           max={TOTAL_WEIGHT_TENTHS}
           step={1}
           value={valueTenths}
+          disabled={locked}
           onChange={handleSlide}
           aria-label={`${sectorName} 비중`}
           aria-valuetext={`${formatted}%`}
@@ -134,6 +146,7 @@ export function WeightInput({ sectorName, valueTenths, onCommit, className }: We
             min="0"
             max="100"
             value={draft ?? formatted}
+            disabled={locked}
             onChange={handleChange}
             onBlur={settle}
             onKeyDown={handleKeyDown}
@@ -145,6 +158,23 @@ export function WeightInput({ sectorName, valueTenths, onCommit, className }: We
             %
           </span>
         </span>
+
+        {/*
+          고정은 값을 바꾸지 않는다. 다른 섹터를 움직일 때 이 값을 건드리지 말라는 표시다.
+          걸어 둔 동안에는 슬라이더와 숫자 칸을 잠근다 — 고정한 값이 그 자리에서 또 움직이면
+          무엇을 고정한 것인지 알 수 없다. 바꾸려면 먼저 푼다.
+        */}
+        {onLockedChange ? (
+          <button
+            type="button"
+            data-slot="weight-lock"
+            aria-pressed={locked}
+            aria-label={`${sectorName} 비중 고정`}
+            onClick={() => onLockedChange(!locked)}
+          >
+            {locked ? '고정됨' : '고정하기'}
+          </button>
+        ) : null}
       </span>
 
       {errorMessage === null ? null : (
