@@ -1,7 +1,11 @@
 import { CandidateReason } from './CandidateReason'
-import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'
-import { describeCandidateSetting, formatPercent, formatWon } from '@/utils/paramSearchLabels'
+import {
+  describeCandidateParameters,
+  describeCandidateSetting,
+  formatPercent,
+  formatWon,
+} from '@/utils/paramSearchLabels'
 import styles from './CandidateSummaryCard.module.css'
 
 interface CandidateSummaryCardProps {
@@ -13,6 +17,13 @@ interface CandidateSummaryCardProps {
   /** 비교에 담기. 둘 다 주어야 체크 상자가 생긴다. */
   compareChecked?: boolean
   onCompareToggle?: () => void
+  /**
+   * 카드에 전략 이름을 적을지.
+   *
+   * 한 묶음의 후보가 모두 같은 전략이면 목록이 같은 이름을 카드 수만큼 되풀이한다 — 그때는 이름을
+   * 목록 위에 한 번만 두고 카드는 설정값에 자리를 내준다. 여러 전략이 섞이면 카드마다 필요하다.
+   */
+  showStrategy?: boolean
 }
 
 /**
@@ -24,8 +35,8 @@ interface CandidateSummaryCardProps {
  * <p><b>계산하지 않은 값을 "0%"로 그리지 않는다.</b> 값이 없으면 자리를 비우고 <b>왜 없는지</b>를
  * 함께 적는다 — 제외·실패·미실행과 "수익이 0이었다"는 전혀 다른 사실이다(FR-011, 원칙 VI).
  *
- * <p>검증 표시를 후보마다 항상 함께 보인다(plan 설계 제약 2, FR-015). 지금은 전부 '미검증'이고
- * 그것은 "통과"가 아니라 "말할 수 없음"이다.
+ * <p><b>설정값은 축마다 라벨과 값을 나눠 보인다.</b> 후보끼리 다른 것은 설정값 하나뿐이라, 한 줄로
+ * 이어 붙이면 어느 축이 달라졌는지 읽어 내는 데 시간이 걸린다.
  *
  * <p>순위 번호·추천 문구·우승 배지를 넣지 않는다(plan 설계 제약 1, 원칙 III).
  */
@@ -35,8 +46,10 @@ export function CandidateSummaryCard({
   onOpenDetail,
   compareChecked,
   onCompareToggle,
+  showStrategy = true,
 }: CandidateSummaryCardProps) {
-  const { strategyName, parameterText } = describeCandidateSetting(candidate, config)
+  const { strategyName } = describeCandidateSetting(candidate, config)
+  const parameters = describeCandidateParameters(candidate, config)
   const netReturn = formatPercent(candidate.netReturn, { sign: true })
   const maxDrawdown = formatPercent(candidate.maxDrawdown)
   const tradingCost = formatWon(candidate.tradingCost)
@@ -49,14 +62,19 @@ export function CandidateSummaryCard({
   return (
     <article className={styles.card}>
       <header className={styles.header}>
-        <div className={styles.identity}>
-          <span className={styles.strategy}>{strategyName}</span>
-          <span className={styles.parameters}>{parameterText}</span>
-        </div>
-        <ValidationBadge
-          label={candidate.validationLabel}
-          describes={`${strategyName} ${parameterText}`}
-        />
+        {showStrategy && <span className={styles.strategy}>{strategyName}</span>}
+        {parameters.length === 0 ? (
+          <p className={styles.noParameters}>설정 값 없음</p>
+        ) : (
+          <dl className={styles.settings}>
+            {parameters.map((parameter) => (
+              <div key={parameter.name}>
+                <dt>{parameter.label}</dt>
+                <dd>{parameter.valueText}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </header>
 
       {hasNumbers ? (

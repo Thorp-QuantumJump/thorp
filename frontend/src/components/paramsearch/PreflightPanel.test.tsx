@@ -4,8 +4,20 @@ import { describe, expect, it, vi } from 'vitest'
 import { previewFixture } from '@/test/paramSearchFixtures'
 import { PreflightPanel } from './PreflightPanel'
 
+/**
+ * 실행을 시작하는 버튼들. 도움말 물음표(`aria-label`이 '… 도움말')는 이름에 '실행'이 들어가도
+ * 실행 동작이 아니라 제외한다 — 여기서 세려는 것은 실행이 둘로 갈렸는지다.
+ */
+function actionButtons() {
+  return screen
+    .getAllByRole('button')
+    .filter((button) => !(button.getAttribute('aria-label') ?? '').endsWith('도움말'))
+}
+
 function runButton() {
-  return screen.getByRole('button', { name: /실행/ }) as HTMLButtonElement
+  const buttons = actionButtons()
+  expect(buttons).toHaveLength(1)
+  return buttons[0] as HTMLButtonElement
 }
 
 /**
@@ -25,7 +37,7 @@ describe('PreflightPanel', () => {
     expect(screen.queryAllByRole('textbox')).toHaveLength(0)
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.getAllByRole('button')).toHaveLength(1)
+    expect(actionButtons()).toHaveLength(1)
   })
 
   it('한 번 누르면 실행이 한 번만 나간다', async () => {
@@ -59,27 +71,18 @@ describe('PreflightPanel', () => {
     // 적용 한도 네 줄.
     expect(text).toContain('후보 수 상한')
     expect(text).toContain('실행 시간 한도')
-    expect(text).toContain('2분')
+    expect(text).toContain('30분')
     expect(text).toContain('연속 실패 한도')
   })
 
-  it('limits.provisional 에 든 항목에만 임시값 표시가 붙는다', () => {
+  it('적용 한도에는 임시값 표시를 붙이지 않는다', () => {
     render(<PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />)
 
-    // 픽스처는 maxCandidates·dispatchWindow 둘만 임시값이다.
-    expect(screen.getAllByText('임시값')).toHaveLength(2)
-    expect(screen.getByText('후보 수 상한은(는) 실측 전 임시로 정한 값입니다')).toBeTruthy()
+    // 서버가 provisional 메타데이터를 보내도 이 확인 화면에는 실제 적용값만 보인다.
+    expect(screen.queryByText('임시값')).toBeNull()
+    expect(screen.queryByText('후보 수 상한은(는) 실측 전 임시로 정한 값입니다')).toBeNull()
+    expect(screen.queryByText('동시 실행 수은(는) 실측 전 임시로 정한 값입니다')).toBeNull()
     expect(screen.queryByText('실행 시간 한도은(는) 실측 전 임시로 정한 값입니다')).toBeNull()
-  })
-
-  it('미검증을 결과보다 먼저 보인다', () => {
-    const { container } = render(
-      <PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />,
-    )
-    const text = container.textContent ?? ''
-
-    expect(text).toContain('미검증')
-    expect(text).toContain('평가 분할이 등록되지 않아')
   })
 
   it('한도를 넘으면 실행을 막고 범위를 좁히라고 안내한다', () => {

@@ -9,6 +9,7 @@ package com.ssafy.thorp.paramsearch.domain.model;
  * PENDING ──▶ SKIPPED                    취소·한도 도달로 발행되지 않음 ('미실행')
  * FAILED  ──▶ DISPATCHED                 사용자 요청 재시도. retryCount 증가 (FR-024)
  * (생성 시) ─▶ EXCLUDED                  유효성 위반으로 계산 전 제외 (FR-006)
+ * PENDING ─▶ EXCLUDED                   발행하려 했더니 004 접수가 그 조합을 거부 (FR-006)
  * </pre>
  *
  * <p>{@code FAILED}와 {@code EXCLUDED}를 낮은 수익으로 표시하지 않는다(FR-011). 성과 값 자리를 0으로 채우지 않는다.
@@ -40,7 +41,9 @@ public enum CandidateStatus {
             return false;
         }
         return switch (this) {
-            case PENDING -> next == DISPATCHED || next == SKIPPED;
+            // EXCLUDED 로 가는 길이 둘이다 — 접수 전 유효성 판정과, 그것이 놓친 조합을 004 접수가
+            // 거부한 경우다. 둘 다 "계산하지 않기로 확정"이라 같은 상태로 남긴다(FR-006).
+            case PENDING -> next == DISPATCHED || next == SKIPPED || next == EXCLUDED;
             case DISPATCHED -> next == COMPLETED || next == FAILED;
             // 재시도(FR-024). SKIPPED는 재시도 대상이 아니다.
             case FAILED -> next == DISPATCHED;

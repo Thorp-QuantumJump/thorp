@@ -127,7 +127,13 @@ public class CommonPeriodResolver {
     /**
      * 워밍업 거래일 수와 그것을 요구한 축.
      *
-     * <p>수치 축의 최댓값 중 가장 큰 값을 쓴다. 축이 없거나 수치 축이 없으면 0이다 — 파라미터가 없는 전략은 워밍업을 요구하지 않는다.
+     * <p><b>한 전략 안에서는 거래일 축을 더한다.</b> 축마다 최댓값을 구해 그것을 합치고, 전략 사이에서만 큰 쪽을 고른다. 최댓값 하나만 쓰면 관측 기간 120과
+     * 최근 구간 제외 21을 함께 고른 후보가 141거래일을 요구하는데 묶음은 120만 싣고 나가, 그 후보가 004 접수에서 거부된다(2026-09-22 확인).
+     *
+     * <p><b>어느 축이 무슨 뜻인지는 여전히 묻지 않는다</b>(FR-025). 거래일 축이 서로 더해지는지 겹치는지는 004가 아는 것이고, 007은 <b>모자라지
+     * 않는 쪽</b>으로 잡는다 — 넉넉하면 평가 시작일이 조금 늦어질 뿐이지만, 모자라면 후보가 아예 실행되지 못한다.
+     *
+     * <p>축이 없거나 거래일 축이 없으면 0이다 — 파라미터가 없는 전략은 워밍업을 요구하지 않는다.
      */
     private static WarmupRequirement warmupOf(
             SearchSpace space, List<StrategyRegistration> targets) {
@@ -138,17 +144,27 @@ public class CommonPeriodResolver {
             if (strategy == null) {
                 continue;
             }
+            int required = 0;
+            String longestAxis = null;
+            int longestAxisDays = 0;
             for (SearchSpace.Axis axis : strategy.axes()) {
                 if (!isWarmupAxis(registration, axis.name())) {
                     continue;
                 }
+                int axisMax = 0;
                 for (Object value : axis.values()) {
-                    int candidate = asTradingDays(value);
-                    if (candidate > max) {
-                        max = candidate;
-                        shortenedBy = axis.name();
-                    }
+                    axisMax = Math.max(axisMax, asTradingDays(value));
                 }
+                required += axisMax;
+                if (axisMax > longestAxisDays) {
+                    longestAxisDays = axisMax;
+                    longestAxis = axis.name();
+                }
+            }
+            if (required > max) {
+                max = required;
+                // 범위를 좁혀 구간을 되찾으려는 사용자에게 가장 효과가 큰 축을 가리킨다.
+                shortenedBy = longestAxis;
             }
         }
         return new WarmupRequirement(max, shortenedBy);

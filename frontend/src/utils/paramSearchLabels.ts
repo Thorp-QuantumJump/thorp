@@ -7,7 +7,6 @@ import type {
   SearchCandidateItem,
   SelectionFilter,
   SelectionOutcome,
-  ValidationLabel,
 } from '@/types/paramSearch'
 
 /**
@@ -22,23 +21,6 @@ import type {
  */
 export function axisValueKey(value: AxisValue): string {
   return typeof value === 'object' ? JSON.stringify(value) : String(value)
-}
-
-/**
- * 검증 라벨을 화면 문구로 바꾼다.
- *
- * **`UNVALIDATED`는 "통과"가 아니라 "말할 수 없음"이다**(FR-015, 원칙 VII). 평가 분할이 등록되기
- * 전까지 모든 결과가 이 값이므로, 문구가 안심시키는 쪽으로 기울면 화면 전체가 사실과 달라진다.
- */
-export function validationLabelText(label: ValidationLabel): string {
-  switch (label) {
-    case 'SEARCH_RESULT':
-      return '탐색 구간 결과'
-    case 'HELD_OUT_RESULT':
-      return '검증 구간 결과'
-    case 'UNVALIDATED':
-      return '미검증'
-  }
 }
 
 /** 사람이 읽는 정수. 자릿수가 큰 후보 수·조합 수가 화면에서 흐트러지지 않게 한다. */
@@ -205,27 +187,55 @@ export function describeCandidateSetting(
   config: ParamSearchConfig | null,
 ): { strategyName: string; parameterText: string } {
   const space = config?.space?.[candidate.strategyId] ?? null
-  const labelOf = (name: string) => {
-    const axis = space?.axes.find((item) => item.name === name)
-    if (!axis) return { label: name, unit: null as string | null }
-    return { label: axis.label, unit: axis.unit }
-  }
-
-  const entries = Object.entries(candidate.parameters)
-  const parameterText =
-    entries.length === 0
-      ? '설정 값 없음'
-      : entries
-          .map(([name, value]) => {
-            const { label, unit } = labelOf(name)
-            return `${label} ${value}${unit ? unit : ''}`
-          })
-          .join(' · ')
+  const parameters = describeCandidateParameters(candidate, config)
 
   return {
     strategyName: space?.strategyName ?? candidate.strategyId,
-    parameterText,
+    parameterText:
+      parameters.length === 0
+        ? '설정 값 없음'
+        : parameters.map((item) => `${item.label} ${item.valueText}`).join(' · '),
   }
+}
+
+/** 축 하나가 무슨 값인지. 라벨과 값을 따로 들고 있어 화면이 둘을 나눠 그릴 수 있다. */
+export type CandidateParameter = {
+  /** 응답의 축 이름. 화면 키로 쓴다 */
+  name: string
+  /** 사람이 읽는 축 이름. 등록표에 없으면 축 이름을 그대로 쓴다 */
+  label: string
+  /** 표시 문구와 단위를 붙인 값 */
+  valueText: string
+}
+
+/**
+ * 후보의 설정값을 축마다 라벨과 값으로 나눠 준다.
+ *
+ * <p><b>한 줄 문자열과 나눠 둔 이유가 있다.</b> 카드처럼 자리가 있는 곳은 축 이름과 값을 위아래로
+ * 놓아야 어떤 설정인지 한눈에 읽히고, 표 칸처럼 좁은 곳은 `describeCandidateSetting`의 한 줄이
+ * 맞다. 두 화면이 같은 규칙으로 값을 읽도록 여기 한 곳에서만 만든다(FR-025).
+ */
+export function describeCandidateParameters(
+  candidate: SearchCandidateItem,
+  config: ParamSearchConfig | null,
+): CandidateParameter[] {
+  const space = config?.space?.[candidate.strategyId] ?? null
+
+  return Object.entries(candidate.parameters).map(([name, value]) => {
+    const axis = space?.axes.find((item) => item.name === name) ?? null
+    const valueKey = axisValueKey(value)
+    const valueIndex = axis?.values.findIndex((candidateValue) => {
+      return axisValueKey(candidateValue) === valueKey
+    })
+    const valueLabel =
+      valueIndex !== undefined && valueIndex >= 0 ? axis?.valueLabels?.[valueIndex] : undefined
+
+    return {
+      name,
+      label: axis?.label ?? name,
+      valueText: `${valueLabel ?? valueKey}${axis?.unit ?? ''}`,
+    }
+  })
 }
 
 /**

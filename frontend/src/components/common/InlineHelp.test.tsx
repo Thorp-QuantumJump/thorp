@@ -10,7 +10,7 @@ import { InlineHelp } from './InlineHelp'
  */
 
 beforeAll(() => {
-  // Popover의 위치 계산이 크기 관찰을 쓴다. jsdom에는 없다.
+  // 말풍선 위치 계산이 크기 관찰을 쓴다. jsdom에는 없다.
   if (!('ResizeObserver' in globalThis)) {
     globalThis.ResizeObserver = class {
       observe() {}
@@ -37,19 +37,19 @@ describe('InlineHelp', () => {
     expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()
   })
 
-  it('누르면 화면이 넘긴 설명을 그대로 보인다', async () => {
+  it('마우스를 얹으면 화면이 넘긴 설명을 그대로 보인다', async () => {
     const { user, trigger } = renderHelp()
 
-    await user.click(trigger)
+    await user.hover(trigger)
 
     expect(await screen.findByText('합성 지표를 설명하는 한 문장이다.')).not.toBeNull()
   })
 
-  it('키보드로 열고 Esc로 닫으면 초점이 트리거로 돌아온다', async () => {
+  it('초점만 받아도 열리고 Esc로 닫으면 초점이 트리거에 남는다', async () => {
     const { user, trigger } = renderHelp()
 
-    trigger.focus()
-    await user.keyboard('{Enter}')
+    await user.tab()
+    expect(document.activeElement).toBe(trigger)
     expect(await screen.findByText('합성 지표를 설명하는 한 문장이다.')).not.toBeNull()
 
     await user.keyboard('{Escape}')

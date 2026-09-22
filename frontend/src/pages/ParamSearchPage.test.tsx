@@ -86,6 +86,17 @@ describe('ParamSearchPage', () => {
     expect(apiMocks.previewParamSearch).not.toHaveBeenCalled()
   })
 
+  it('대상 요약에 전체 탐색 기간을 함께 보인다', async () => {
+    renderPage()
+
+    expect(await screen.findByText('탐색 기간')).toBeTruthy()
+    expect(
+      await screen.findByText(
+        `${previewFixture.commonPeriod?.start} ~ ${previewFixture.commonPeriod?.end}`,
+      ),
+    ).toBeTruthy()
+  })
+
   it('값을 껐다가 다시 켤 수 있다 — 좁힌 응답이 등록 범위를 덮지 않는다', async () => {
     const user = userEvent.setup()
     renderPage()
@@ -141,14 +152,14 @@ describe('ParamSearchPage', () => {
     expect(requesterId).toBe(authenticatedUser.userId)
   })
 
-  it('접수하면 searchId 를 주소에 남기고 진행 상태를 폴링한다', async () => {
+  it('접수하면 식별자는 숨기고 진행 상태를 폴링한다', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))
 
-    expect(await screen.findByText(acceptedFixture.searchId)).toBeTruthy()
     await waitFor(() => expect(apiMocks.getParamSearch).toHaveBeenCalledWith(acceptedFixture.searchId))
+    expect(screen.queryByText(acceptedFixture.searchId)).toBeNull()
   })
 
   it('로그인 전에는 실행을 막고 이유를 적는다', async () => {
