@@ -74,7 +74,10 @@ export function CandidateTable({
   comparePicks,
   onCompareToggle,
 }: CandidateTableProps) {
-  const [open, setOpen] = useState(live)
+  // 기본은 열림이다. 끝난 묶음을 닫아 두면 화면에 남는 것이 선정 카드 몇 장뿐이라, 나머지 후보가
+  // 어떤 값을 냈는지 볼 길이 사라진다. 실행 중에서 완료로 넘어갈 때 이 상태를 그대로 들고 간다 —
+  // 열어 두고 보던 목록이 끝나는 순간 접히면 사용자가 무엇을 잃었는지도 모른다.
+  const [open, setOpen] = useState(true)
   const [sort, setSort] = useState<CandidateSort>('candidateNo')
   const [direction, setDirection] = useState<'asc' | 'desc'>('asc')
   const [status, setStatus] = useState<'' | CandidateStatus>('')

@@ -500,7 +500,6 @@ export function ParamSearchPage() {
 
             {searchId && detail?.config && detail.counts && (
               <CandidateTable
-                key={searchInProgress ? 'live' : 'final'}
                 searchId={searchId}
                 config={resultConfig}
                 live={searchInProgress}
