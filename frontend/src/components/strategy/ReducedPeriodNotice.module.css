@@ -12,6 +12,5 @@
 /* 도움말을 여는 자리. 모양은 InlineHelp 가 가진다. */
 .help {
   display: inline-flex;
-  margin-left: 6px;
   vertical-align: middle;
 }

@@ -101,7 +101,12 @@ export function TermHelp({
         </>
       ) : null}
 
-      {state.status === "notReady" ? (
+      {/*
+        013 이 아직 그 용어를 싣지 않았다는 사실이다(013 FR-010). 화면이 이미 한 문장을 실었으면
+        덧붙이지 않는다 — 읽을 것이 있는데 "준비 중"이 함께 뜨면 방금 읽은 문장이 임시처럼 보인다.
+        note 가 없는 곳(002·005)에서는 그대로 보인다. 도움말이 비어 있는 것과 다른 사실이다.
+      */}
+      {state.status === "notReady" && !note ? (
         <p className={styles.muted}>설명 준비 중</p>
       ) : null}
 

@@ -349,7 +349,7 @@ describe("DetailSettingsPanel", () => {
     ).toBe("5");
   });
 
-  it("대응하는 설명이 없으면 도움말은 설명 준비 중만 보인다", async () => {
+  it("013 에 실린 설명이 없으면 등록표 설명만 보이고 준비 중을 덧붙이지 않는다", async () => {
     const [gate] = conditionalStrategy.axes;
     fetchGlossaryEntry.mockResolvedValue({ status: "notReady" });
     const user = await renderOpened(
@@ -361,7 +361,9 @@ describe("DetailSettingsPanel", () => {
       screen.getByRole("button", { name: `${gate.label} 도움말` }),
     );
 
-    expect(await screen.findByText("설명 준비 중")).not.toBeNull();
+    // 읽을 것이 이미 있으면 "준비 중"을 덧붙이지 않는다 — 방금 읽은 문장이 임시처럼 보인다.
+    expect(await screen.findByText(gate.description ?? "")).not.toBeNull();
+    expect(screen.queryByText("설명 준비 중")).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
   });
 
