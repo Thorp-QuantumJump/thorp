@@ -44,21 +44,30 @@ class CappedRebalanceParameters(RebalanceParameters):
     max_weight: int | None = Field(default=None, gt=0, le=100)
 
 
-class MinimumVarianceParameters(CappedRebalanceParameters):
-    """최소분산(PD-04). 003 축 ``lookbackDays``·``estimationMethod`` 를 더 받는다.
+class LookbackRebalanceParameters(CappedRebalanceParameters):
+    """관측 기간 축을 가진 전략(역변동성·최소분산·섹터 모멘텀).
 
     **여기서 받지 않으면 화면이 고른 관측 기간이 조용히 무시된다** — 사용자가 250거래일을 골라도
     규칙표 기본값 120으로 계산한 결과가 250의 결과인 척 저장된다. 계약이 키를 거절하는 편이
     낫고(그러면 요청이 실패한다), 받아서 계산에 쓰는 편이 더 낫다.
+
+    축을 선언한 전략이 셋이라 필드를 여기 한 번만 둔다. 전략마다 따로 적으면 한 곳을 빠뜨렸을 때
+    그 전략만 조용히 규칙표 기본값으로 돈다 — 역변동성이 실제로 그렇게 빠져 있었다.
     """
 
-    # None = 미지정. 그때는 규칙표의 lookbackDays·estimationMethod 를 쓴다.
+    # None = 미지정. 그때는 규칙표의 lookbackDays 를 쓴다.
     lookback_days: int | None = Field(default=None, gt=0)
+
+
+class MinimumVarianceParameters(LookbackRebalanceParameters):
+    """최소분산(PD-04). 003 축 ``estimationMethod`` 를 더 받는다."""
+
+    # None = 미지정. 그때는 규칙표의 estimationMethod 를 쓴다.
     estimation_method: str | None = None
 
 
-class SectorMomentumParameters(CappedRebalanceParameters):
-    """섹터 모멘텀(PD-03). 003 축 여섯을 더 받는다.
+class SectorMomentumParameters(LookbackRebalanceParameters):
+    """섹터 모멘텀(PD-03). 003 축 다섯을 ``lookbackDays`` 위에 더 받는다.
 
     ``topN``·``threshold``·``topPercent`` 는 003 등록표에서 ``selectionMode`` 에 딸린 축이라
     (``appliesWhen``) 고른 방식의 것 하나만 온다. 계약이 셋을 다 선택으로 두는 이유는 어느 것이
@@ -69,7 +78,6 @@ class SectorMomentumParameters(CappedRebalanceParameters):
     """
 
     # None = 미지정. 그때는 규칙표 값이 기본값이다.
-    lookback_days: int | None = Field(default=None, gt=0)
     skip_recent_days: int | None = Field(default=None, ge=0)
     selection_mode: Literal["TOP_N", "THRESHOLD", "TOP_PERCENT", "ALL"] | None = None
     top_n: int | None = Field(default=None, gt=0)
