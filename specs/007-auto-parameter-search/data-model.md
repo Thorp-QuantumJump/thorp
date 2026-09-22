@@ -45,7 +45,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `status` | VARCHAR(20) NOT NULL | §3 상태 |
 | `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` `NO_VALID_CANDIDATE` `STRATEGY_NOT_REGISTERED` `STRATEGY_NOT_EXECUTABLE` (뒤 둘은 2026-09-11 추가, FR-026) |
 | `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |
-| `selection` | JSONB NULL | 선정 결과 스냅샷. 완료 후 1회 계산해 저장 |
+| `selection` | JSONB NULL | 선정 결과 스냅샷. 후보 완료마다 갱신하고 묶음 종료 시 확정 |
 | `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |
 | `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행시간 상한 판정과 실행 측정(FR-023) |
 | `created_at` / `updated_at` | TIMESTAMP NOT NULL | `BaseEntity` 규약 |
@@ -124,7 +124,8 @@ QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초
   미등록 전략과 실행 미지원 전략(FR-026)이 여기 들어가며 `stop_reason`에 사유가 남는다. 등록표
   조회 실패는 여기 들어가지 않는다 — 일시적 장애라 묶음을 만들지 않고 503만 돌려준다(research R9).
 - `PARTIAL`은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009).
-- `COMPLETED`와 `PARTIAL` 둘 다 선정 계산을 수행한다. 취소된 묶음도 완료된 후보로 비교할 수 있다.
+- `RUNNING`에서는 완료된 후보 기준의 잠정 선정을 갱신하고, `COMPLETED`와 `PARTIAL`에서 확정한다.
+  취소된 묶음도 완료된 후보로 비교할 수 있다.
 
 ## 4. `search_candidate` (탐색 후보)
 
