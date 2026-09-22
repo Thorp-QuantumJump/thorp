@@ -17,8 +17,6 @@ import { RejectionNotice } from '@/components/paramsearch/RejectionNotice'
 import { RetryFailedButton } from '@/components/paramsearch/RetryFailedButton'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
 import { SelectionResult } from '@/components/paramsearch/SelectionResult'
-import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'
-import { ValidationNote } from '@/components/paramsearch/ValidationNote'
 import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'
 import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
@@ -374,13 +372,7 @@ export function ParamSearchPage() {
                     <p className={styles.statusLine} aria-live="polite">
                       <strong>{statusText[detail.status] ?? detail.status}</strong>
                       {detail.stopReason ? <span> · 멈추는 중</span> : null}
-                      <ValidationBadge label={detail.validationLabel} describes="이 탐색 묶음" />
                     </p>
-
-                    <ValidationNote
-                      label={detail.validationLabel}
-                      note={detail.validationNote}
-                    />
 
                     {detail.counts && (
                       <dl className={styles.counts}>

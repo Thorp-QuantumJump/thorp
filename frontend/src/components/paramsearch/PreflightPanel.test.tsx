@@ -72,16 +72,6 @@ describe('PreflightPanel', () => {
     expect(screen.queryByText('실행 시간 한도은(는) 실측 전 임시로 정한 값입니다')).toBeNull()
   })
 
-  it('미검증을 결과보다 먼저 보인다', () => {
-    const { container } = render(
-      <PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />,
-    )
-    const text = container.textContent ?? ''
-
-    expect(text).toContain('미검증')
-    expect(text).toContain('평가 분할이 등록되지 않아')
-  })
-
   it('한도를 넘으면 실행을 막고 범위를 좁히라고 안내한다', () => {
     const exceeded = {
       ...previewFixture,

@@ -58,12 +58,6 @@ describe('CandidateSummaryCard', () => {
     expect(text).toContain('관측 창이 자료 구간보다 깁니다.')
   })
 
-  it('검증 표시를 항상 함께 보인다', () => {
-    render(<CandidateSummaryCard candidate={completedCandidate} config={configFixture} />)
-
-    expect(screen.getByText('미검증')).toBeTruthy()
-  })
-
   it('결과가 없는 후보는 비교에 담을 수 없다', () => {
     render(
       <CandidateSummaryCard

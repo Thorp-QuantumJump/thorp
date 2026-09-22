@@ -1,7 +1,6 @@
-import { Play, ShieldQuestion, TriangleAlert } from 'lucide-react'
+import { Play, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { ProvisionalBadge } from './ProvisionalBadge'
-import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchPreview } from '@/types/paramSearch'
 import { formatCount, formatSeconds } from '@/utils/paramSearchLabels'
 import styles from './PreflightPanel.module.css'
@@ -59,7 +58,6 @@ function limitRows(limits: ParamSearchPreview['limits']) {
  * <p>화면에 전략 목록을 두지 않는다. 여기 보이는 전략은 "고를 수 있는 것들"이 아니라 <b>이번 탐색의
  * 대상</b>이고, 이름은 응답의 `strategies[].name`에서만 읽는다(FR-025).
  *
- * <p>검증 표시를 결과보다 먼저 보인다 — 결과를 본 뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다(FR-015).
  */
 export function PreflightPanel({
   preview,
@@ -87,14 +85,6 @@ export function PreflightPanel({
           등록표 {preview.registryVersion} 기준입니다. 아래 내용 그대로 한 번에 실행합니다.
         </p>
       </header>
-
-      <div className={styles.validation}>
-        <ShieldQuestion size={15} aria-hidden="true" />
-        <span>
-          <ValidationBadge label={preview.validationLabel} describes="이번 탐색의 결과" />
-          {preview.validationNote ? ` ${preview.validationNote}` : null}
-        </span>
-      </div>
 
       <dl className={styles.items}>
         {/* 1. 대상 전략 — 이름은 응답에서만 읽는다 */}

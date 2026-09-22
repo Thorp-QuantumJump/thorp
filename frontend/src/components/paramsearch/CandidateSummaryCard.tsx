@@ -1,5 +1,4 @@
 import { CandidateReason } from './CandidateReason'
-import { ValidationBadge } from './ValidationBadge'
 import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'
 import { describeCandidateSetting, formatPercent, formatWon } from '@/utils/paramSearchLabels'
 import styles from './CandidateSummaryCard.module.css'
@@ -23,9 +22,6 @@ interface CandidateSummaryCardProps {
  *
  * <p><b>계산하지 않은 값을 "0%"로 그리지 않는다.</b> 값이 없으면 자리를 비우고 <b>왜 없는지</b>를
  * 함께 적는다 — 제외·실패·미실행과 "수익이 0이었다"는 전혀 다른 사실이다(FR-011, 원칙 VI).
- *
- * <p>검증 표시를 후보마다 항상 함께 보인다(plan 설계 제약 2, FR-015). 지금은 전부 '미검증'이고
- * 그것은 "통과"가 아니라 "말할 수 없음"이다.
  *
  * <p>순위 번호·추천 문구·우승 배지를 넣지 않는다(plan 설계 제약 1, 원칙 III).
  */
@@ -53,10 +49,6 @@ export function CandidateSummaryCard({
           <span className={styles.strategy}>{strategyName}</span>
           <span className={styles.parameters}>{parameterText}</span>
         </div>
-        <ValidationBadge
-          label={candidate.validationLabel}
-          describes={`${strategyName} ${parameterText}`}
-        />
       </header>
 
       {hasNumbers ? (
