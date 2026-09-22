@@ -26,7 +26,9 @@ interface ReducedPeriodNoticeProps {
  * SC-004 도 그에 맞춰 두 곳에 기간을 보이고 까닭은 펼쳐 보는 것으로 고쳤다.
  *
  * <p>도움말은 화면이 가진 문장을 담는 {@link InlineHelp}다 — 013 이 소유하는 용어가 아니라 이 화면의
- * 판정 근거라서 `TermHelp`가 아니고, 저장소가 이미 쓰는 물음표 하나로 도움말 모양을 맞춘다.
+ * 판정 근거라서 `TermHelp`가 아니고, 저장소가 이미 쓰는 물음표 하나로 도움말 모양을 맞춘다. 여는 방법은
+ * 얹기(`on="hover"`)다 — 한 줄짜리 근거를 읽는 데 누르는 품을 들이지 않는다. 트리거가 버튼이라 초점을
+ * 받아도 열리고, 그래서 키보드와 터치에서도 닿는다.
  *
  * <p><b>줄지 않았으면 그리지 않는다.</b> "줄지 않았습니다" 같은 문장은 매번 읽히는 소음이 된다.
  * <b>막는 안내가 아니다</b> — 이 기간으로도 분석할 수 있고, 막을지는 최소 평가 기간 판정이 정한다.
@@ -44,7 +46,7 @@ export function ReducedPeriodNotice({
       {message}
       {input !== null ? (
         <span className={styles.help}>
-          <InlineHelp label="평가 기간">
+          <InlineHelp label="평가 기간" on="hover">
             {describeReducedCause(input)}
           </InlineHelp>
         </span>

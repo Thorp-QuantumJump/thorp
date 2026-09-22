@@ -1,12 +1,20 @@
-import { Popover } from 'radix-ui'
-import type { ReactNode } from 'react'
-import styles from './InlineHelp.module.css'
+import { HoverCard, Popover } from "radix-ui";
+import type { ReactNode } from "react";
+import styles from "./InlineHelp.module.css";
 
 interface InlineHelpProps {
   /** 무엇에 대한 도움말인지. 트리거의 접근 가능한 이름과 내용 제목에 함께 쓴다 */
-  label: string
+  label: string;
   /** 펼쳤을 때 보일 설명. 화면이 직접 가진 문장이다 */
-  children: ReactNode
+  children: ReactNode;
+  /**
+   * 무엇으로 여는가. 기본은 누르기다.
+   *
+   * `'hover'`는 마우스를 얹기만 해도 열린다. 읽을거리가 짧고 화면이 이미 붐빌 때 쓴다 — 누르는 품을 없애는
+   * 대신 닫기 버튼이 없다. 트리거는 이 모드에서도 버튼이라 초점을 받으면 열리고, 그래서 키보드와 터치에서도
+   * 닿는다(누르면 초점이 간다).
+   */
+  on?: "click" | "hover";
 }
 
 /**
@@ -22,14 +30,47 @@ interface InlineHelpProps {
  *
  * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
  */
-export function InlineHelp({ label, children }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
+  if (on === "hover") {
+    return (
+      <HoverCard.Root openDelay={80} closeDelay={80}>
+        <HoverCard.Trigger asChild>
+          <button
+            type="button"
+            className={styles.trigger}
+            aria-label={`${label} 도움말`}
+          >
+            ?
+          </button>
+        </HoverCard.Trigger>
+        <HoverCard.Portal>
+          <HoverCard.Content
+            className={styles.content}
+            sideOffset={6}
+            aria-label={`${label} 도움말`}
+          >
+            <p className={styles.term}>{label}</p>
+            <div className={styles.body}>{children}</div>
+          </HoverCard.Content>
+        </HoverCard.Portal>
+      </HoverCard.Root>
+    );
+  }
+
   return (
     <Popover.Root>
-      <Popover.Trigger className={styles.trigger} aria-label={`${label} 도움말`}>
+      <Popover.Trigger
+        className={styles.trigger}
+        aria-label={`${label} 도움말`}
+      >
         ?
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.content} sideOffset={6} aria-label={`${label} 도움말`}>
+        <Popover.Content
+          className={styles.content}
+          sideOffset={6}
+          aria-label={`${label} 도움말`}
+        >
           <p className={styles.term}>{label}</p>
           <div className={styles.body}>{children}</div>
           <Popover.Close className={styles.close} aria-label="도움말 닫기">
@@ -38,5 +79,5 @@ export function InlineHelp({ label, children }: InlineHelpProps) {
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
-  )
+  );
 }

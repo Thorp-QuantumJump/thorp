@@ -332,24 +332,22 @@ export function AnalysisConditionsPanel({
 
   return (
     <section className={styles.panel} aria-label="분석 조건">
-      <div className={styles.header}>
-        <button
-          type="button"
-          className={styles.toggle}
-          aria-expanded={open}
-          aria-controls={open ? bodyId : undefined}
-          onClick={() => setOpen((current) => !current)}
-        >
-          <span>분석 조건</span>
-          <ChevronDown
-            className={styles.toggleIcon}
-            size={16}
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
-        </button>
-        {summary}
-      </div>
+      <button
+        type="button"
+        className={styles.toggle}
+        aria-expanded={open}
+        aria-controls={open ? bodyId : undefined}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>분석 조건</span>
+        <ChevronDown
+          className={styles.toggleIcon}
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </button>
+      {summary}
 
       {open ? (
         <div id={bodyId} className={styles.body}>
