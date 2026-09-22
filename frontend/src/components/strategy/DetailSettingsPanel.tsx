@@ -1,35 +1,43 @@
-import { useId, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
-import { TermHelp } from '@/components/learning/TermHelp'
-import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'
-import type { LearningReturnState } from '@/types/learning'
-import type { AxisValue, StrategyView } from '@/types/strategyRegistry'
-import { checkRules } from '@/utils/validationRules'
-import { AxisChoiceField } from './AxisChoiceField'
-import { AxisNumberField } from './AxisNumberField'
-import styles from './DetailSettingsPanel.module.css'
-import { ReadOnlyTargetWeights, type TargetWeightRow } from './ReadOnlyTargetWeights'
-import { RuleViolationNotice } from './RuleViolationNotice'
+import { useId, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { InlineHelp } from "@/components/common/InlineHelp";
+import { TermHelp } from "@/components/learning/TermHelp";
+import { applicableAxes, type AxisValues } from "@/hooks/useStrategySettings";
+import type { LearningReturnState } from "@/types/learning";
+import type { AxisValue, StrategyView } from "@/types/strategyRegistry";
+import { checkRules } from "@/utils/validationRules";
+import { AxisChoiceField } from "./AxisChoiceField";
+import { AxisNumberField } from "./AxisNumberField";
+import styles from "./DetailSettingsPanel.module.css";
+import {
+  ReadOnlyTargetWeights,
+  type TargetWeightRow,
+} from "./ReadOnlyTargetWeights";
+import { RuleViolationNotice } from "./RuleViolationNotice";
 
 interface DetailSettingsPanelProps {
   /** 선택한 전략. 이 전략의 축만 그린다 */
-  strategy: StrategyView
+  strategy: StrategyView;
   /** 선택 전략의 지금 값. 재검증이 비워 둔 축은 키가 없다 */
-  values: AxisValues
+  values: AxisValues;
   /** 후보 섹터 집합의 크기. 규칙의 `UNIVERSE_SIZE` 맥락이다 */
-  universeSize: number
+  universeSize: number;
   /** 002가 확정한 비중. `targetWeightSource`가 `USER`일 때만 쓴다 */
-  targetWeights: readonly TargetWeightRow[] | null
-  onChange: (axisName: string, value: AxisValue) => void
-  onResetAxis: (axisName: string) => void
-  onResetAll: () => void
+  targetWeights: readonly TargetWeightRow[] | null;
+  onChange: (axisName: string, value: AxisValue) => void;
+  onResetAxis: (axisName: string) => void;
+  onResetAll: () => void;
 }
 
-const RULES_UNJUDGED ='설정 규칙을 판정하지 못했습니다.'
+const RULES_UNJUDGED = "설정 규칙을 판정하지 못했습니다.";
 
 /** 도움말에서 글로 갔다가 돌아올 자리. 이 화면의 경로와 이름이다(013 term-help-ui §3). */
-const RETURN_TO: LearningReturnState = { path: '/strategy', label: '전략 선택' }
-const AXIS_UNRENDERABLE = '이 항목의 허용 범위를 확인하지 못해 값을 바꿀 수 없습니다.'
+const RETURN_TO: LearningReturnState = {
+  path: "/strategy",
+  label: "전략 선택",
+};
+const AXIS_UNRENDERABLE =
+  "이 항목의 허용 범위를 확인하지 못해 값을 바꿀 수 없습니다.";
 
 /**
  * 전략 설정(US2, FR-003·FR-004·FR-006·FR-008·FR-012). 2026-09-22 까지 이름이 '상세 설정'이었다 — 옆의
@@ -60,14 +68,18 @@ export function DetailSettingsPanel({
   onResetAxis,
   onResetAll,
 }: DetailSettingsPanelProps) {
-  const [open, setOpen] = useState(false)
-  const bodyId = useId()
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
 
   // 등록표가 규칙 문법을 어겼으면 통과로 접지 않고 판정하지 못했다고 알린다. 페이지가 '분석하기'를
   // 막을 때도 같은 함수를 쓴다.
-  const { violations, unjudged: rulesUnjudged } = checkRules(strategy.validationRules, values, {
-    UNIVERSE_SIZE: universeSize,
-  })
+  const { violations, unjudged: rulesUnjudged } = checkRules(
+    strategy.validationRules,
+    values,
+    {
+      UNIVERSE_SIZE: universeSize,
+    },
+  );
 
   return (
     <section className={styles.panel} aria-label="전략 설정">
@@ -79,32 +91,53 @@ export function DetailSettingsPanel({
         onClick={() => setOpen((current) => !current)}
       >
         <span>전략 설정</span>
-        <ChevronDown className={styles.toggleIcon} size={16} strokeWidth={1.8} aria-hidden="true" />
+        <ChevronDown
+          className={styles.toggleIcon}
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
       </button>
 
       {open ? (
         <div id={bodyId} className={styles.body}>
           <p className={styles.note}>
-            처음 보이는 값은 등록표의 기본값입니다. 편의용 출발점이며 최적값이나 투자 권고가 아닙니다.
+            처음 보이는 값은 등록표의 기본값입니다. 편의용 출발점이며 최적값이나
+            투자 권고가 아닙니다.
           </p>
 
-          {strategy.targetWeightSource === 'USER' ? <ReadOnlyTargetWeights rows={targetWeights} /> : null}
-          {strategy.targetWeightSource === 'COMPUTED' ? (
+          {strategy.targetWeightSource === "USER" ? (
+            <ReadOnlyTargetWeights rows={targetWeights} />
+          ) : null}
+          {strategy.targetWeightSource === "COMPUTED" ? (
             <p className={styles.note}>
               출력 비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.
             </p>
           ) : null}
 
           {strategy.axes.length === 0 ? (
-            <p className={styles.note}>이 전략에는 바꿀 수 있는 설정 항목이 없습니다.</p>
+            <p className={styles.note}>
+              이 전략에는 바꿀 수 있는 설정 항목이 없습니다.
+            </p>
           ) : (
             <div className={styles.axes}>
               {applicableAxes(strategy, values).map((axis) => {
-                const value = values[axis.name]
+                const value = values[axis.name];
+                // 한 항목에 물음표는 하나다. 등록표의 축 설명은 용어 도움말이 있으면 그 안에 함께
+                // 싣고, 없으면 화면이 가진 문장을 담는 InlineHelp 로 보인다(`S15P21E205-406`).
                 const help = axis.termId ? (
-                  <TermHelp termId={axis.termId} label={axis.label} returnTo={RETURN_TO} />
-                ) : undefined
-                if (axis.inputType === 'CHOICE') {
+                  <TermHelp
+                    termId={axis.termId}
+                    label={axis.label}
+                    returnTo={RETURN_TO}
+                    note={axis.description}
+                  />
+                ) : axis.description ? (
+                  <InlineHelp label={axis.label} on="hover">
+                    {axis.description}
+                  </InlineHelp>
+                ) : undefined;
+                if (axis.inputType === "CHOICE") {
                   return (
                     <AxisChoiceField
                       key={axis.name}
@@ -114,38 +147,41 @@ export function DetailSettingsPanel({
                       onReset={() => onResetAxis(axis.name)}
                       help={help}
                     />
-                  )
+                  );
                 }
                 // 계약은 입력형 축에 범위와 숫자 기본값을 싣는다. 어겼으면 그리지 못한 사실을 말한다.
-                const { range, defaultValue } = axis
-                if (!range || typeof defaultValue !== 'number') {
+                const { range, defaultValue } = axis;
+                if (!range || typeof defaultValue !== "number") {
                   return (
                     <p key={axis.name} className={styles.note} role="status">
                       {axis.label}: {AXIS_UNRENDERABLE}
                     </p>
-                  )
+                  );
                 }
                 return (
                   <AxisNumberField
                     key={axis.name}
                     label={axis.label}
-                    description={axis.description}
                     unit={axis.unit}
                     range={range}
                     defaultValue={defaultValue}
-                    value={typeof value === 'number' ? value : undefined}
+                    value={typeof value === "number" ? value : undefined}
                     onChange={(next) => onChange(axis.name, next)}
                     onReset={() => onResetAxis(axis.name)}
                     help={help}
                   />
-                )
+                );
               })}
             </div>
           )}
 
           {strategy.axes.length > 0 ? (
             <div>
-              <button type="button" className={styles.resetAll} onClick={onResetAll}>
+              <button
+                type="button"
+                className={styles.resetAll}
+                onClick={onResetAll}
+              >
                 모두 기본값 복원
               </button>
             </div>
@@ -160,5 +196,5 @@ export function DetailSettingsPanel({
         </p>
       ) : null}
     </section>
-  )
+  );
 }

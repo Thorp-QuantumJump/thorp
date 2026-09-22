@@ -288,7 +288,7 @@ describe("DetailSettingsPanel", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("등록표가 termId를 준 축에만 도움말이 붙고, 열면 013 원본 문구가 보이며 값은 그대로 남는다", async () => {
+  it("termId 가 있는 축은 013 문구를, 없는 축은 등록표 설명을 도움말로 보이며 값은 그대로 남는다", async () => {
     const [gate, leftGap] = conditionalStrategy.axes;
     fetchGlossaryEntry.mockResolvedValue({
       status: "ready",
@@ -308,9 +308,14 @@ describe("DetailSettingsPanel", () => {
     expect(
       screen.getByRole("button", { name: `${gate.label} 도움말` }),
     ).not.toBeNull();
-    expect(
-      screen.queryByRole("button", { name: `${leftGap.label} 도움말` }),
-    ).toBeNull();
+
+    // termId 가 없는 축에도 도움말은 있다. 다만 013 용어집이 아니라 등록표의 축 설명이고,
+    // 그래서 용어집을 부르지 않는다.
+    await user.hover(
+      screen.getByRole("button", { name: `${leftGap.label} 도움말` }),
+    );
+    expect(await screen.findByText(leftGap.description ?? "")).not.toBeNull();
+    expect(fetchGlossaryEntry).not.toHaveBeenCalled();
 
     const gap = screen.getByRole("textbox", {
       name: new RegExp(leftGap.label),

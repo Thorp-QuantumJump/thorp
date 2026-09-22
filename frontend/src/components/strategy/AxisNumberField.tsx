@@ -1,30 +1,29 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
-import { checkNumberInRange } from '@/hooks/useStrategySettings'
-import type { RangeView } from '@/types/strategyRegistry'
-import styles from './AxisField.module.css'
+import { useId, useRef, useState, type ReactNode } from "react";
+import { checkNumberInRange } from "@/hooks/useStrategySettings";
+import type { RangeView } from "@/types/strategyRegistry";
+import styles from "./AxisField.module.css";
 
 interface AxisNumberFieldProps {
-  label: string
-  description?: string
-  unit?: string
+  label: string;
+  unit?: string;
   /** 허용 범위. 등록표가 준 값을 그대로 넘긴다 */
-  range: RangeView
-  defaultValue: number
+  range: RangeView;
+  defaultValue: number;
   /** 지금 상태에 들어 있는 값. 재검증이 비워 둔 항목이면 `undefined`다 */
-  value: number | undefined
+  value: number | undefined;
   /** 범위 안이고 간격에 맞는 값일 때만 불린다 */
-  onChange: (value: number) => void
-  onReset: () => void
+  onChange: (value: number) => void;
+  onReset: () => void;
   /** 설명 옆에 붙일 용어 도움말. 없으면 그리지 않는다 */
-  help?: ReactNode
+  help?: ReactNode;
 }
 
 /** 입력칸의 글을 수로 읽는다. 빈칸·숫자가 아닌 글은 `null`이다. 쉼표는 자릿수 구분으로 보고 뺀다. */
 function parseDraft(draft: string): number | null {
-  const text = draft.replaceAll(',', '').trim()
-  if (text === '') return null
-  const parsed = Number(text)
-  return Number.isFinite(parsed) ? parsed : null
+  const text = draft.replaceAll(",", "").trim();
+  if (text === "") return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -43,7 +42,6 @@ function parseDraft(draft: string): number | null {
  */
 export function AxisNumberField({
   label,
-  description,
   unit,
   range,
   defaultValue,
@@ -52,12 +50,11 @@ export function AxisNumberField({
   onReset,
   help,
 }: AxisNumberFieldProps) {
-  const inputId = useId()
-  const descriptionId = useId()
-  const messageId = useId()
+  const inputId = useId();
+  const messageId = useId();
 
-  const [draft, setDraft] = useState(value === undefined ? '' : String(value))
-  const [syncedValue, setSyncedValue] = useState(value)
+  const [draft, setDraft] = useState(value === undefined ? "" : String(value));
+  const [syncedValue, setSyncedValue] = useState(value);
 
   /**
    * 입력을 시작할 때 상태에 있던 값.
@@ -67,62 +64,62 @@ export function AxisNumberField({
    * 말하는데 분석은 사용자가 의도한 적 없는 값으로 나간다. 그래서 글이 무효가 되면 입력을 시작하기
    * 전 값으로 되돌린다 — "저장하지 않았다"가 "이전 값 그대로다"와 같은 뜻이 된다.
    */
-  const valueAtEditStart = useRef(value)
+  const valueAtEditStart = useRef(value);
 
   // 바깥에서 값이 바뀌면(기본값 복원, 보관값 재검증) 입력칸을 그 값으로 맞춘다. 렌더 중에 맞춰
   // 효과를 거치지 않는다 — 한 번 옛 글이 그려졌다가 바뀌는 깜빡임이 없다.
   if (value !== syncedValue) {
-    setSyncedValue(value)
-    setDraft(value === undefined ? '' : String(value))
+    setSyncedValue(value);
+    setDraft(value === undefined ? "" : String(value));
   }
 
-  const unitText = unit ?? ''
-  const rangeText = `허용 범위는 ${range.min}~${range.max}${unitText}, ${range.step}${unitText} 간격입니다.`
+  const unitText = unit ?? "";
+  const rangeText = `허용 범위는 ${range.min}~${range.max}${unitText}, ${range.step}${unitText} 간격입니다.`;
 
-  const parsed = parseDraft(draft)
+  const parsed = parseDraft(draft);
   const problem = ((): string | null => {
     // 상태에 든 값과 같은 글이면 안내할 것이 없다.
-    if (value !== undefined && parsed === value) return null
+    if (value !== undefined && parsed === value) return null;
     if (parsed === null) {
-      return draft.trim() === ''
+      return draft.trim() === ""
         ? `값을 입력해 주세요. ${rangeText}`
-        : `숫자로 입력해 주세요. ${rangeText} 이 값은 저장하지 않았습니다.`
+        : `숫자로 입력해 주세요. ${rangeText} 이 값은 저장하지 않았습니다.`;
     }
-    const reason = checkNumberInRange(parsed, range)
-    if (reason === 'OUT_OF_RANGE') {
-      return `${parsed}${unitText}은(는) 허용 범위 밖입니다. ${rangeText} 이 값은 저장하지 않았습니다.`
+    const reason = checkNumberInRange(parsed, range);
+    if (reason === "OUT_OF_RANGE") {
+      return `${parsed}${unitText}은(는) 허용 범위 밖입니다. ${rangeText} 이 값은 저장하지 않았습니다.`;
     }
-    if (reason === 'OFF_STEP') {
-      return `${parsed}${unitText}은(는) 등록된 간격에 맞지 않습니다. ${rangeText} 이 값은 저장하지 않았습니다.`
+    if (reason === "OFF_STEP") {
+      return `${parsed}${unitText}은(는) 등록된 간격에 맞지 않습니다. ${rangeText} 이 값은 저장하지 않았습니다.`;
     }
-    return null
-  })()
+    return null;
+  })();
 
   const handleChange = (next: string) => {
-    setDraft(next)
-    const nextValue = parseDraft(next)
+    setDraft(next);
+    const nextValue = parseDraft(next);
     if (nextValue === null || checkNumberInRange(nextValue, range) !== null) {
-      const before = valueAtEditStart.current
+      const before = valueAtEditStart.current;
       // 비워 둔 항목에서 시작했으면 되돌릴 값이 없다. 비우는 통로는 이 컴포넌트가 갖지 않는다.
       if (before !== undefined && before !== value) {
         // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다.
-        setSyncedValue(before)
-        onChange(before)
+        setSyncedValue(before);
+        onChange(before);
       }
-      return
+      return;
     }
     // 이미 같은 값이면 부르지 않는다. 부르지 않아도 상태는 이미 그 값이다.
-    if (nextValue === value) return
-    onChange(nextValue)
-  }
+    if (nextValue === value) return;
+    onChange(nextValue);
+  };
 
   const handleReset = () => {
     // 상태가 이미 기본값이면 바깥 값이 바뀌지 않아 입력칸이 맞춰지지 않으므로 여기서 맞춘다.
-    setDraft(String(defaultValue))
-    onReset()
-  }
+    setDraft(String(defaultValue));
+    onReset();
+  };
 
-  const describedBy = description ? `${descriptionId} ${messageId}` : messageId
+  const describedBy = messageId;
 
   return (
     <div className={styles.field}>
@@ -131,14 +128,8 @@ export function AxisNumberField({
           {label}
           {unit ? <span className={styles.unit}>({unit})</span> : null}
         </label>
+        {help}
       </div>
-
-      {description || help ? (
-        <p className={styles.description}>
-          {description ? <span id={descriptionId}>{description}</span> : null}
-          {help}
-        </p>
-      ) : null}
 
       <div className={styles.inputRow}>
         <input
@@ -148,10 +139,10 @@ export function AxisNumberField({
           inputMode="decimal"
           autoComplete="off"
           value={draft}
-          aria-invalid={problem ? 'true' : 'false'}
+          aria-invalid={problem ? "true" : "false"}
           aria-describedby={describedBy}
           onFocus={() => {
-            valueAtEditStart.current = value
+            valueAtEditStart.current = value;
           }}
           onChange={(event) => handleChange(event.target.value)}
         />
@@ -166,9 +157,13 @@ export function AxisNumberField({
       </div>
 
       {/* 자리를 늘 두고 글만 바꾼다. 안내가 생길 때 자리가 새로 붙으면 보조기술이 읽지 않을 수 있다. */}
-      <p id={messageId} className={problem ? styles.problem : styles.hint} aria-live="polite">
+      <p
+        id={messageId}
+        className={problem ? styles.problem : styles.hint}
+        aria-live="polite"
+      >
         {problem ?? rangeText}
       </p>
     </div>
-  )
+  );
 }
