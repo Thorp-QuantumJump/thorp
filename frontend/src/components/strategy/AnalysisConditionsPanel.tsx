@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { DateField } from '@/components/common/DateField'
 import { ProvisionalBadge } from '@/components/paramsearch/ProvisionalBadge'
 import type { AnalysisCondition, RestorableCondition } from '@/hooks/useStrategySettings'
 import type { AnalysisConditions } from '@/types/strategyRegistry'
@@ -178,10 +179,20 @@ function PeriodField({
   /*
     달력의 `min`·`max`는 고르는 것을 돕기만 한다. 직접 친 날짜는 위 검사가 다시 거른다.
   */
-  const startMax =
+  const rangeStartMax =
     caseConstraint && range ? (caseConstraint.startMax < range.end ? caseConstraint.startMax : range.end) : range?.end
-  const endMin =
+  const rangeEndMin =
     caseConstraint && range ? (caseConstraint.endMin > range.start ? caseConstraint.endMin : range.start) : range?.start
+
+  /*
+    서로를 잠근다. 시작일 달력은 이미 고른 종료일 뒤를 열지 않고, 종료일 달력은 시작일 앞을
+    열지 않는다. 뒤집힌 기간을 달력으로는 만들 수 없게 되어, 그 경우의 안내를 읽을 일이 없다.
+    직접 쳐 넣는 길은 남아 있으므로 위 `checkPeriodInput` 검사는 그대로 둔다.
+  */
+  const startMax =
+    isIsoDate(draft.end) && (!rangeStartMax || draft.end < rangeStartMax) ? draft.end : rangeStartMax
+  const endMin =
+    isIsoDate(draft.start) && (!rangeEndMin || draft.start > rangeEndMin) ? draft.start : rangeEndMin
 
   const hint = range ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.` : rangeUnavailableMessage
 
@@ -194,10 +205,10 @@ function PeriodField({
         <label htmlFor={startId} className={styles.dateLabel}>
           시작일
         </label>
-        <input
+        <DateField
           id={startId}
+          label="시작일"
           className={fieldStyles.input}
-          type="date"
           min={range?.start}
           max={startMax}
           value={draft.start}
@@ -205,15 +216,15 @@ function PeriodField({
           aria-invalid={startInvalid ? 'true' : 'false'}
           aria-describedby={messageId}
           onFocus={rememberEditStart}
-          onChange={(event) => update({ ...draft, start: event.target.value })}
+          onChange={(next) => update({ ...draft, start: next })}
         />
         <label htmlFor={endId} className={styles.dateLabel}>
           종료일
         </label>
-        <input
+        <DateField
           id={endId}
+          label="종료일"
           className={fieldStyles.input}
-          type="date"
           min={endMin}
           max={range?.end}
           value={draft.end}
@@ -221,7 +232,7 @@ function PeriodField({
           aria-invalid={endInvalid ? 'true' : 'false'}
           aria-describedby={messageId}
           onFocus={rememberEditStart}
-          onChange={(event) => update({ ...draft, end: event.target.value })}
+          onChange={(next) => update({ ...draft, end: next })}
         />
         {periodChosen ? (
           <button
