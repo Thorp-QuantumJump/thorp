@@ -13,6 +13,8 @@ interface AxisChoiceFieldProps {
   onReset: () => void;
   /** 설명 옆에 붙일 용어 도움말. 없으면 그리지 않는다 */
   help?: ReactNode;
+  /** 값 아래에 한 줄 더. 이 값이 다른 것을 움직일 때 그 사실을 적는다. 없으면 그리지 않는다 */
+  note?: ReactNode;
 }
 
 /**
@@ -33,6 +35,7 @@ export function AxisChoiceField({
   onChange,
   onReset,
   help,
+  note,
 }: AxisChoiceFieldProps) {
   const groupName = useId();
   const choices = axis.choices ?? [];
@@ -78,6 +81,8 @@ export function AxisChoiceField({
           );
         })}
       </div>
+
+      {note ? <p className={styles.hint}>{note}</p> : null}
 
       <div>
         <button

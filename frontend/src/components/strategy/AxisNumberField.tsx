@@ -16,6 +16,8 @@ interface AxisNumberFieldProps {
   onReset: () => void;
   /** 설명 옆에 붙일 용어 도움말. 없으면 그리지 않는다 */
   help?: ReactNode;
+  /** 값 아래에 한 줄 더. 이 값이 다른 것을 움직일 때 그 사실을 적는다. 없으면 그리지 않는다 */
+  note?: ReactNode;
 }
 
 /** 입력칸의 글을 수로 읽는다. 빈칸·숫자가 아닌 글은 `null`이다. 쉼표는 자릿수 구분으로 보고 뺀다. */
@@ -49,6 +51,7 @@ export function AxisNumberField({
   onChange,
   onReset,
   help,
+  note,
 }: AxisNumberFieldProps) {
   const inputId = useId();
   const messageId = useId();
@@ -171,6 +174,8 @@ export function AxisNumberField({
       >
         {problem ?? rangeText}
       </p>
+
+      {note ? <p className={styles.hint}>{note}</p> : null}
     </div>
   );
 }

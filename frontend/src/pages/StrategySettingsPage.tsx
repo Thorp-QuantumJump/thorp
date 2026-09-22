@@ -1423,6 +1423,7 @@ export function StrategySettingsPage({
                       values={settings.values}
                       universeSize={universeSize}
                       targetWeights={targetWeights}
+                      evaluationRange={evaluableRange}
                       onChange={(axisName, value) =>
                         settings.setValue(selectedId, axisName, value)
                       }

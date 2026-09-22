@@ -24,6 +24,13 @@ interface DetailSettingsPanelProps {
   universeSize: number;
   /** 002가 확정한 비중. `targetWeightSource`가 `USER`일 때만 쓴다 */
   targetWeights: readonly TargetWeightRow[] | null;
+  /**
+   * 지금 설정으로 평가할 수 있는 범위. 워밍업을 이루는 축 아래에 그대로 적는다.
+   *
+   * <p>그 축을 늘리면 앞이 깎여 범위가 좁아진다 — 값을 고르는 자리에서 그 사실이 보여야 무엇을 잃고
+   * 무엇을 얻는지 견줄 수 있다. 판정할 수 없으면 `null`이고 아무것도 적지 않는다(원칙 VI).
+   */
+  evaluationRange: { start: string; end: string } | null;
   onChange: (axisName: string, value: AxisValue) => void;
   onResetAxis: (axisName: string) => void;
   onResetAll: () => void;
@@ -64,6 +71,7 @@ export function DetailSettingsPanel({
   values,
   universeSize,
   targetWeights,
+  evaluationRange,
   onChange,
   onResetAxis,
   onResetAll,
@@ -73,6 +81,13 @@ export function DetailSettingsPanel({
 
   // 등록표가 규칙 문법을 어겼으면 통과로 접지 않고 판정하지 못했다고 알린다. 페이지가 '분석하기'를
   // 막을 때도 같은 함수를 쓴다.
+  // 등록표가 정한 워밍업 구성 축. 숫자 항목(상수)은 축이 아니라 제외한다.
+  const warmupAxes = new Set(
+    (strategy.warmupRule?.sum ?? []).filter(
+      (term): term is string => typeof term === "string",
+    ),
+  );
+
   const { violations, unjudged: rulesUnjudged } = checkRules(
     strategy.validationRules,
     values,
@@ -123,6 +138,18 @@ export function DetailSettingsPanel({
             <div className={styles.axes}>
               {applicableAxes(strategy, values).map((axis) => {
                 const value = values[axis.name];
+                // 이 축이 워밍업을 이루는가. 등록표 `warmupRule.sum`이 정하므로 축 이름을 화면에
+                // 적어 두지 않는다(FR-005). 이런 축은 값이 평가 범위를 움직이므로 그 사실을 함께 적는다.
+                const movesRange = warmupAxes.has(axis.name);
+                const rangeNote =
+                  movesRange && evaluationRange !== null
+                    ? `지금 값으로 평가할 수 있는 범위는 ${evaluationRange.start} ~ ${evaluationRange.end}입니다.`
+                    : undefined;
+                const description =
+                  movesRange && axis.description
+                    ? `${axis.description} 이 값을 바꾸면 평가할 수 있는 범위가 달라집니다.`
+                    : axis.description;
+
                 // 한 항목에 물음표는 하나다. 등록표의 축 설명은 용어 도움말이 있으면 그 안에 함께
                 // 싣고, 없으면 화면이 가진 문장을 담는 InlineHelp 로 보인다(`S15P21E205-406`).
                 const help = axis.termId ? (
@@ -130,12 +157,12 @@ export function DetailSettingsPanel({
                     termId={axis.termId}
                     label={axis.label}
                     returnTo={RETURN_TO}
-                    note={axis.description}
+                    note={description}
                     on="hover"
                   />
-                ) : axis.description ? (
+                ) : description ? (
                   <InlineHelp label={axis.label} on="hover">
-                    {axis.description}
+                    {description}
                   </InlineHelp>
                 ) : undefined;
                 if (axis.inputType === "CHOICE") {
@@ -147,6 +174,7 @@ export function DetailSettingsPanel({
                       onChange={(next) => onChange(axis.name, next)}
                       onReset={() => onResetAxis(axis.name)}
                       help={help}
+                      note={rangeNote}
                     />
                   );
                 }
@@ -170,6 +198,7 @@ export function DetailSettingsPanel({
                     onChange={(next) => onChange(axis.name, next)}
                     onReset={() => onResetAxis(axis.name)}
                     help={help}
+                    note={rangeNote}
                   />
                 );
               })}
