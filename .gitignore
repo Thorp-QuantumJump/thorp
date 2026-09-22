@@ -74,6 +74,38 @@ infra/nginx/html/*
 .agents/*
 !.agents/skills/
 !.agents/skills/**
+
+# taste-skill 묶음(`npx skills add Leonxlnx/taste-skill`)은 개인 설치라 올리지 않는다.
+# 위 두 예외가 skills/ 아래를 통째로 되살리므로 여기서 이름을 하나씩 도로 제외한다
+# (뒤에 오는 규칙이 이긴다). .claude/skills/ 쪽은 .agents/skills/ 를 가리키는 심링크다.
+# 팀 공용으로 쓰기로 정하면 이 묶음을 지우면 된다.
+skills-lock.json
+.agents/skills/brandkit/
+.claude/skills/brandkit
+.agents/skills/design-taste-frontend/
+.claude/skills/design-taste-frontend
+.agents/skills/design-taste-frontend-v1/
+.claude/skills/design-taste-frontend-v1
+.agents/skills/full-output-enforcement/
+.claude/skills/full-output-enforcement
+.agents/skills/gpt-taste/
+.claude/skills/gpt-taste
+.agents/skills/high-end-visual-design/
+.claude/skills/high-end-visual-design
+.agents/skills/image-to-code/
+.claude/skills/image-to-code
+.agents/skills/imagegen-frontend-mobile/
+.claude/skills/imagegen-frontend-mobile
+.agents/skills/imagegen-frontend-web/
+.claude/skills/imagegen-frontend-web
+.agents/skills/industrial-brutalist-ui/
+.claude/skills/industrial-brutalist-ui
+.agents/skills/minimalist-ui/
+.claude/skills/minimalist-ui
+.agents/skills/redesign-existing-projects/
+.claude/skills/redesign-existing-projects
+.agents/skills/stitch-design-taste/
+.claude/skills/stitch-design-taste
 # AI 에이전트 인계 문서: 로컬 작업 메모라 저장소에 올리지 않는다
 docs/handoffs/
 # Spec 요약 문서: 로컬 이해·인계용 메모라 저장소에 올리지 않는다

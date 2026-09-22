@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resultDetailCompleted, resultSectorCatalog, resultToken, resultTradePage } from '@/test/resultFixtures'
@@ -167,17 +167,40 @@ describe('TradeHistory', () => {
     expect(screen.getByText(/완료 범위까지의 거래입니다/)).not.toBeNull()
   })
 
-  it('시작일이 종료일보다 늦으면 요청하지 않고 알린다', async () => {
+  it('한쪽을 고르면 반대쪽 칸이 뒤집힌 기간을 받지 않는다', async () => {
     const user = userEvent.setup()
     renderHistory()
     await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
     await screen.findByRole('table', { name: '거래 내역' })
 
     await user.type(screen.getByLabelText('시작일'), '2024-06-30')
-    await user.type(screen.getByLabelText('종료일'), '2024-01-01')
+
+    // 종료일은 시작일 이전을 열지 않는다. 달력에서도 그 앞 날짜가 잠긴다.
+    expect(screen.getByLabelText('종료일').getAttribute('min')).toBe('2024-06-30')
+
+    await user.type(screen.getByLabelText('종료일'), '2024-12-31')
+    expect(screen.getByLabelText('시작일').getAttribute('max')).toBe('2024-12-31')
+  })
+
+  /*
+    칸이 서로를 잠그면 뒤집힌 기간은 입력칸의 `min`/`max` 를 어기는 값이 된다. 그러면 브라우저가
+    제약 검증에서 폼 제출 자체를 막아 요청이 나가지 않는다 — 문장으로 알리는 것보다 앞선 방어다.
+
+    `submit` 안의 안내는 그대로 둔다. 붙여넣기처럼 검증을 건너뛰는 길이 남아 있고 서버도 400 으로
+    거절하므로, 마지막 그물까지 걷어 낼 이유가 없다.
+  */
+  it('뒤집힌 기간으로는 요청이 나가지 않는다', async () => {
+    const user = userEvent.setup()
+    renderHistory()
+    await user.click(screen.getByRole('button', { name: '거래 내역 보기' }))
+    await screen.findByRole('table', { name: '거래 내역' })
+    expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '2024-06-30' } })
+    fireEvent.change(screen.getByLabelText('종료일'), { target: { value: '2024-01-01' } })
     await user.click(screen.getByRole('button', { name: '조건 적용' }))
 
-    expect(screen.getByRole('alert').textContent).toContain('시작일이 종료일보다 늦습니다')
+    expect(screen.getByLabelText('종료일').getAttribute('min')).toBe('2024-06-30')
     expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(1)
   })
 

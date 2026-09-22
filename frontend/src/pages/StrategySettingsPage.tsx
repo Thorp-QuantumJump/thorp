@@ -1,5 +1,6 @@
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchCaseWindow } from "@/api/regimeLink";
 import { fetchSectorCatalog, type SectorCatalogResult } from "@/api/sectors";
 import {
@@ -7,6 +8,9 @@ import {
   normalizeStrategyRegistryError,
 } from "@/api/strategyRegistry";
 import { NotReadyNotice } from "@/components/common/NotReadyNotice";
+import { InlineHelp } from "@/components/common/InlineHelp";
+import { SECTOR_SELECTION_PATH } from "@/components/result/prefillStrategySettings";
+import { buildSectorSelectionPath } from "@/marketflow/handoff";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import { ActionButtons } from "@/components/strategy/ActionButtons";
@@ -32,9 +36,8 @@ import {
 import { ConditionSummaryLine } from "@/components/strategy/ConditionSummaryLine";
 import { defaultAnalysisSupport } from "@/components/strategy/connectedAnalysisSupport";
 import { DetailSettingsPanel } from "@/components/strategy/DetailSettingsPanel";
-import { ReducedPeriodNotice } from "@/components/strategy/ReducedPeriodNotice";
 import {
-  describeReducedPeriod,
+  describeReducedCause,
   type ReducedPeriodInput,
   type WarmupCause,
 } from "@/components/strategy/reducedPeriod";
@@ -44,7 +47,6 @@ import {
   RegistryChangedNotice,
   type RegistryReloadPhase,
 } from "@/components/strategy/RegistryChangedNotice";
-import { SettingsStatusBadge } from "@/components/strategy/SettingsStatusBadge";
 import type { WarmupVerdict } from "@/components/strategy/StrategyCard";
 import {
   StrategyCardList,
@@ -100,14 +102,14 @@ const INVALID_STORED_VALUES =
   "이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.";
 const WARMUP_UNCOMPUTABLE = "현재 설정으로 워밍업을 계산할 수 없습니다.";
 const RULES_VIOLATED =
-  "설정 규칙을 어기는 값이 있습니다. 상세 설정 아래의 안내를 확인해 주세요.";
+  "설정 규칙을 어기는 값이 있습니다. 전략 설정 아래의 안내를 확인해 주세요.";
 const RULES_UNJUDGED = "설정 규칙을 판정하지 못해 분석을 시작할 수 없습니다.";
 const VERSIONS_LOADING = "분석 조건 버전을 확인하는 중입니다.";
 const SUBMIT_FAILED = "분석 요청을 보내지 못했습니다.";
 const STRATEGY_NOT_REGISTERED_MESSAGE =
   "고른 전략을 지금은 분석할 수 없어 요청이 접수되지 않았습니다. 전략 설정을 다시 불러왔으니 전략을 다시 골라 주세요.";
 const PARAMETER_REJECTED_GENERAL =
-  "설정값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정과 분석 조건을 확인해 주세요.";
+  "설정값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정과 분석 조건을 확인해 주세요.";
 /** 고른 기간이 지금 평가할 수 있는 범위 밖이다. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다 */
 function periodOutOfRangeMessage(range: AnalysisPeriod): string {
   return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 범위 전체로 되돌려 주세요.`;
@@ -162,7 +164,7 @@ function parameterRejectedMessage(
       ? strategy.axes.find((candidate) => candidate.name === axisName)
       : undefined;
   if (!axis) return PARAMETER_REJECTED_GENERAL;
-  return `'${axis.label}' 값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정에서 값을 확인해 주세요.`;
+  return `'${axis.label}' 값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정에서 값을 확인해 주세요.`;
 }
 
 type Submission =
@@ -217,9 +219,9 @@ function InvalidValueList({
  * 004 분석 / 007 자동 비교다.
  *
  * <p><b>기본 화면의 입력은 전략 선택 하나다(SC-005).</b> 카드를 고르면 '기본 설정' 표시, 조건 한 줄,
- * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 조건 바꾸기(US3)도 접힌 패널이다.
+ * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 분석 조건(US3)도 접힌 패널이다.
  *
- * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 상세 설정에서 값을 바꾸면 규칙 위반,
+ * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 전략 설정에서 값을 바꾸면 규칙 위반,
  * 워밍업, 고른 카드의 판정, 기본 설정 표시, '분석하기'의 막힘이 한 렌더 안에서 다시 계산된다. 값을
  * 만지는 동안 서버로 요청이 나가지 않는다. 최종 판정은 접수 시점에 서버가 다시 하고, 그 사이 등록표가
  * 바뀌어 409로 거절되면 다시 받아 알리되 자동으로 다시 보내지 않는다(research R9).
@@ -555,14 +557,8 @@ export function StrategySettingsPage({
             : strategy.warmupTradingDays,
         minEvaluationYears,
       }).verdict;
-      // 고른 카드에 보이는 줄어든 기간 안내는 '분석하기' 위의 안내와 같은 문장이다(SC-004). 따로 지으면 두
-      // 곳이 다른 말을 한다.
-      if (selected && verdict.state === "reduced" && reducedPeriod !== null) {
-        return {
-          state: "reduced",
-          message: describeReducedPeriod(reducedPeriod),
-        };
-      }
+      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는
+      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).
       return verdict;
     },
     [
@@ -571,7 +567,6 @@ export function StrategySettingsPage({
       minEvaluationYears,
       selectedStrategyId,
       currentWarmup,
-      reducedPeriod,
     ],
   );
 
@@ -621,7 +616,7 @@ export function StrategySettingsPage({
     !settings.isComplete(settings.selectedStrategyId);
 
   /**
-   * 고른 전략의 지금 값이 어기는 규칙(FR-008). 상세 설정 패널이 보이는 안내와 **같은 함수**로 판정한다.
+   * 고른 전략의 지금 값이 어기는 규칙(FR-008). 전략 설정 패널이 보이는 안내와 **같은 함수**로 판정한다.
    *
    * 값이 바뀔 때마다 다시 계산하며 서버에 묻지 않는다. 판정하지 못한 경우(`unjudged`)를 통과로 접지
    * 않는다 — 접수 시점에 서버가 같은 규칙으로 거절할 요청을 보내게 된다.
@@ -1116,12 +1111,33 @@ export function StrategySettingsPage({
       <AppHeader />
       <main className={styles.main} aria-labelledby="strategy-settings-title">
         <header className={styles.intro}>
+          {/*
+            앞 단계로 돌아가는 길이다. 행동 버튼 줄에 두지 않는다 — 이 화면의 주된 행동은 '분석하기'
+            하나이고(FR-002, 원칙 II) 뒤로 가기는 행동이 아니라 이동이다.
+
+            브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다. 배우기·시장 흐름에서 들어온 사용자는
+            한 칸 뒤가 섹터 선택이 아니다. 사례 경로(011)로 들어왔으면 주소의 사례를 그대로 들고
+            돌아가 기간 제약이 말없이 풀리지 않게 한다(진입 계약 §2).
+
+            돌아갔다 와도 값은 남는다 — 섹터·비중과 전략 설정이 각자 탭 수명 저장소에 있다.
+          */}
+          <Link
+            className={styles.backLink}
+            to={
+              caseId === null || caseId === ""
+                ? SECTOR_SELECTION_PATH
+                : buildSectorSelectionPath(caseId, null)
+            }
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            섹터·비중 고르기
+          </Link>
           <h1 id="strategy-settings-title" className={styles.title}>
-            자산 배분 방식
+            전략 선택
           </h1>
           <p className={styles.lead}>
-            고른 섹터에 투자금을 어떻게 나눌지 고릅니다. 기본 설정 그대로 바로
-            분석할 수 있습니다.
+            고른 섹터로 어떤 전략을 돌려 볼지 고릅니다. 그대로 바로 분석할 수
+            있습니다.
           </p>
         </header>
 
@@ -1257,20 +1273,13 @@ export function StrategySettingsPage({
                 </h2>
 
                 <div className={styles.detailBody}>
-                  {settings.ready && selectedId !== null ? (
-                    <SettingsStatusBadge
-                      isDefault={settings.isDefault(selectedId)}
-                    />
-                  ) : null}
-
                   {settings.selectedStrategy ? (
                     <p className={styles.detailDescription}>
                       {settings.selectedStrategy.description}
                     </p>
                   ) : (
                     <p className={styles.empty}>
-                      왼쪽에서 배분 방식을 고르면 여기에 설명과 분석 조건이
-                      나타납니다.
+                      왼쪽에서 전략을 고르면 여기에 설명과 조건이 나타납니다.
                     </p>
                   )}
 
@@ -1333,15 +1342,6 @@ export function StrategySettingsPage({
                           ) : null}
                         </div>
                       ) : null}
-
-                      <ReducedPeriodNotice
-                        input={reducedPeriod}
-                        fallbackMessage={
-                          selectedJudgement?.verdict.state === "reduced"
-                            ? selectedJudgement.verdict.message
-                            : undefined
-                        }
-                      />
                     </>
                   ) : null}
 
@@ -1355,64 +1355,62 @@ export function StrategySettingsPage({
                   전에는 막고 까닭을 적는다.
                 */}
                   {registry !== null && settings.ready ? (
-                    <section
-                      className={styles.conditions}
-                      aria-labelledby="analysis-conditions-title"
-                    >
-                      <h3
-                        id="analysis-conditions-title"
-                        className={styles.groupTitle}
-                      >
-                        분석 조건
-                      </h3>
-                      <ConditionSummaryLine
-                        period={period}
-                        sectorCount={universeSize ?? 0}
-                        initialAmount={
-                          initialAmount === null
-                            ? null
-                            : {
-                                value: initialAmount,
-                                unit: registry.analysisConditions.initialAmount
-                                  .unit,
-                              }
-                        }
-                        costProfile={costProfile}
-                      />
-                      <AnalysisConditionsPanel
-                        conditions={registry.analysisConditions}
-                        range={evaluableRange}
-                        rangeUnavailableMessage={
-                          settings.selectedStrategy
-                            ? undefined
-                            : RANGE_NEEDS_STRATEGY
-                        }
-                        period={period}
-                        periodChosen={chosenPeriod !== null}
-                        caseConstraint={activeCaseConstraint}
-                        initialAmount={initialAmount ?? undefined}
-                        minEvaluationYears={minEvaluationYears}
-                        cost={costAssumption}
-                        onChange={(patch) => {
-                          // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
-                          // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
-                          // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
-                          if (
-                            patch.initialAmount ===
-                            registry.analysisConditions.initialAmount.default
-                          ) {
-                            const rest = { ...patch };
-                            delete rest.initialAmount;
-                            settings.resetAnalysisCondition("initialAmount");
-                            if (Object.keys(rest).length > 0)
-                              settings.setAnalysisCondition(rest);
-                            return;
+                    <AnalysisConditionsPanel
+                      rangeReason={
+                        reducedPeriod === null ? undefined : (
+                          <InlineHelp label="평가할 수 있는 범위" on="hover">
+                            {describeReducedCause(reducedPeriod)}
+                          </InlineHelp>
+                        )
+                      }
+                      summary={
+                        <ConditionSummaryLine
+                          period={period}
+                          sectorCount={universeSize ?? 0}
+                          initialAmount={
+                            initialAmount === null
+                              ? null
+                              : {
+                                  value: initialAmount,
+                                  unit: registry.analysisConditions
+                                    .initialAmount.unit,
+                                }
                           }
-                          settings.setAnalysisCondition(patch);
-                        }}
-                        onReset={settings.resetAnalysisCondition}
-                      />
-                    </section>
+                          costProfile={costProfile}
+                        />
+                      }
+                      conditions={registry.analysisConditions}
+                      range={evaluableRange}
+                      rangeUnavailableMessage={
+                        settings.selectedStrategy
+                          ? undefined
+                          : RANGE_NEEDS_STRATEGY
+                      }
+                      period={period}
+                      periodChosen={chosenPeriod !== null}
+                      caseConstraint={activeCaseConstraint}
+                      initialAmount={initialAmount ?? undefined}
+                      minEvaluationYears={minEvaluationYears}
+                      cost={costAssumption}
+                      onChange={(patch) => {
+                        // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
+                        // 입력칸이 보이던 기본값으로 되돌릴 때도 이 길로 온다. 기본값을 사용자 값으로 담으면
+                        // "없으면 기본값"이 깨져, 등록표 기본값이 바뀌어도 옛 기본값이 사용자가 고른 것처럼 남는다.
+                        if (
+                          patch.initialAmount ===
+                          registry.analysisConditions.initialAmount.default
+                        ) {
+                          const rest = { ...patch };
+                          delete rest.initialAmount;
+                          settings.resetAnalysisCondition("initialAmount");
+                          if (Object.keys(rest).length > 0)
+                            settings.setAnalysisCondition(rest);
+                          return;
+                        }
+                        settings.setAnalysisCondition(patch);
+                      }}
+                      onReset={settings.resetAnalysisCondition}
+                    />
                   ) : null}
 
                   {settings.ready &&
@@ -1425,6 +1423,7 @@ export function StrategySettingsPage({
                       values={settings.values}
                       universeSize={universeSize}
                       targetWeights={targetWeights}
+                      evaluationRange={evaluableRange}
                       onChange={(axisName, value) =>
                         settings.setValue(selectedId, axisName, value)
                       }

@@ -31,15 +31,21 @@
   font-size: 0.95rem;
 }
 
-/* 아직 줄 것이 없는 상태의 한 문장과 다시 불러오기 행동 하나가 놓이는 자리다. */
+/*
+  아직 줄 것이 없는 상태의 한 문장과 다시 불러오기 행동 하나가 놓이는 자리다.
+
+  상자는 **바탕으로** 선다. 테두리만 두고 바탕을 비워 두면 배경 위에 글자만 떠 있고 어디까지가
+  한 덩어리인지 보이지 않는다 — 다크에서 1px 선 하나로는 경계가 잡히지 않는다.
+*/
 .notice {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
   padding: 22px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 14px;
+  background: var(--thorp-surface);
 }
 
 .notice p {
@@ -51,7 +57,7 @@
 
 .notice button {
   padding: 9px 16px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-control);
   border-radius: 999px;
   background: transparent;
   color: inherit;
@@ -61,7 +67,7 @@
 }
 
 .notice button:hover {
-  border-color: currentColor;
+  border-color: var(--thorp-line-control-hover);
 }
 
 .catalog {
@@ -80,8 +86,9 @@
 .sampleNotice {
   margin: 0;
   padding: 10px 14px;
-  border: 1px dashed var(--thorp-line);
+  border: 1px dashed var(--thorp-line-strong);
   border-radius: 10px;
+  background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
   line-height: 1.6;
@@ -91,8 +98,9 @@
 .restoreNotice {
   margin: 0;
   padding: 10px 14px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 10px;
+  background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
   line-height: 1.6;
@@ -146,14 +154,18 @@
 */
 .item {
   overflow: hidden;
-  border: 1px solid var(--thorp-line);
+  /*
+    누를 수 있는 카드라 경계가 3:1을 넘어야 한다(WCAG 1.4.11). 나누는 선을 쓰던 자리라
+    1.36:1에 그쳤고, 초록 기운만 돌 뿐 선이 어디 있는지 보이지 않았다. 조작 요소용 선으로 바꾼다.
+  */
+  border: 1px solid var(--thorp-line-control);
   border-radius: 12px;
   background: var(--thorp-surface);
   transition: border-color 0.15s ease;
 }
 
 .item:hover {
-  border-color: var(--thorp-line-strong);
+  border-color: var(--thorp-line-control-hover);
 }
 
 .item[data-selected='true'] {
@@ -168,11 +180,14 @@
 
 /*
   고르는 자리다. 카드 전체를 덮으며 비중 조작 요소는 이 밖에 있다.
-  360px에서도 한 줄로 눌려 넘치지 않게 좁아지면 두 줄로 쌓는다.
+
+  체크박스 · 섹터 이름 · 대표 ETF 를 **한 줄에** 둔다. 대표 ETF 를 이름 아래에 쌓으면 카드가
+  두 줄이 되어 목록이 길어지고, 정작 고를 때 보는 것은 이름이라 아래 줄이 눈을 끌기만 한다.
+  좁은 화면에서는 아래 미디어 쿼리가 다시 두 줄로 푼다.
 */
 .item [data-slot='choice'] {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 4px 11px;
   padding: 11px 13px;
@@ -183,7 +198,6 @@
 }
 
 .item [data-slot='choice-box'] {
-  grid-row: 1 / span 2;
   width: 1.05rem;
   height: 1.05rem;
   accent-color: var(--thorp-accent);
@@ -202,24 +216,17 @@
   letter-spacing: -0.01em;
 }
 
-.item [data-slot='classification'] {
-  padding: 2px 8px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 999px;
-  color: var(--thorp-copy);
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
-
+/* 오른쪽 끝에 붙는다. 이름이 길어도 이 묶음이 먼저 줄어들지 않게 `auto` 칸을 쓴다. */
 .item [data-slot='etf'] {
   display: inline-flex;
-  grid-column: 2;
+  grid-column: 3;
   align-items: baseline;
+  justify-self: end;
   gap: 6px;
   min-width: 0;
-  /* 이름 묶음과 붙지 않게 반대편으로 민다. 좁아져 줄이 바뀌면 아래 미디어 쿼리가 푼다. */
   color: var(--thorp-copy);
   font-size: 0.78rem;
+  text-align: right;
 }
 
 .item [data-slot='etf-label'] {
@@ -284,6 +291,48 @@
   color: inherit;
   font: inherit;
   font-size: 0.88rem;
+}
+
+/*
+  고정 단추다. 걸면 초록으로 채워 "이 값은 건드리지 않는다"가 한눈에 보인다. 조작 요소라
+  테두리는 3:1 기준을 쓴다.
+*/
+.item [data-slot='weight-lock'] {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
+}
+
+.item [data-slot='weight-lock']:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+.item [data-slot='weight-lock'][aria-pressed='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+  font-weight: 700;
+}
+
+.item [data-slot='weight-lock']:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 고정한 동안 잠긴 조작 요소다. 잠겼다는 것이 보이되 값은 그대로 읽힌다. */
+.item [data-slot='weight-slider']:disabled,
+.item [data-slot='weight-field']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .item [data-slot='weight-unit'] {
@@ -471,7 +520,7 @@
 
 .item [data-slot='profile-sample'] {
   padding: 8px 12px;
-  border: 1px dashed var(--thorp-line);
+  border: 1px dashed var(--thorp-line-strong);
   border-radius: 8px;
 }
 
@@ -488,7 +537,8 @@
   align-items: flex-start;
   gap: 10px;
   padding: 14px;
-  border: 1px solid var(--thorp-line);
+  /* profile-panel(raised) 안의 3층이다. 여기에 바탕을 더 올리면 1.06:1 이라 안 보인다. */
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 10px;
 }
 
@@ -682,6 +732,21 @@
 @media (max-width: 560px) {
   .list {
     grid-template-columns: 1fr;
+  }
+
+  /* 한 줄에 셋을 넣을 폭이 없다. 대표 ETF 를 이름 아래로 내린다. */
+  .item [data-slot='choice'] {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .item [data-slot='choice-box'] {
+    grid-row: 1 / span 2;
+  }
+
+  .item [data-slot='etf'] {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left;
   }
 
   /*

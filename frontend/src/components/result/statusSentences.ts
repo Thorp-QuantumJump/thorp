@@ -1,9 +1,9 @@
-import type { PublicResultDetail, ValidationTier } from '@/types/result'
+import type { PublicResultDetail } from '@/types/result'
 
 export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'
 
 /**
- * 결과 의미를 바꾸는 상태의 고정 문장 틀(FR-012~FR-013, data-model §3-4).
+ * 결과 의미를 바꾸는 상태의 고정 문장 틀(FR-013, data-model §3-4).
  *
  * <p>이 파일은 SC-004의 검수 대상이다. 컴포넌트는 문장을 만들지 않고 이 틀의 값 자리만 채운다.
  */
@@ -22,22 +22,8 @@ export const STATUS_SENTENCE_TEMPLATES = {
   failureWithoutDetail: '실행이 끝나지 못했습니다.',
 } as const
 
-export const VALIDATION_SENTENCE_TEMPLATES = {
-  SEARCH_RESULT: '탐색 결과입니다.',
-  HELD_OUT_RESULT: '미사용 검증 결과입니다.',
-  UNVALIDATED: '검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다.',
-  unknown: '검증 구분을 확인할 수 없습니다.',
-} as const
-
 function fill(template: string, values: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder)
-}
-
-function validationSentence(tier: ValidationTier): string {
-  if (tier === 'SEARCH_RESULT') return VALIDATION_SENTENCE_TEMPLATES.SEARCH_RESULT
-  if (tier === 'HELD_OUT_RESULT') return VALIDATION_SENTENCE_TEMPLATES.HELD_OUT_RESULT
-  if (tier === 'UNVALIDATED') return VALIDATION_SENTENCE_TEMPLATES.UNVALIDATED
-  return VALIDATION_SENTENCE_TEMPLATES.unknown
 }
 
 function summaryUnavailableSentence(detail: PublicResultDetail): string | null {
@@ -56,7 +42,7 @@ function summaryUnavailableSentence(detail: PublicResultDetail): string | null {
 }
 
 /**
- * 결과 의미를 바꾸는 상태와 검증 구분을 한 단락으로 만든다.
+ * 결과 의미를 바꾸는 상태를 한 단락으로 만든다. 알릴 상태가 없으면 빈 문자열이다.
  *
  * <p>여러 상태가 함께 있으면 문장을 이어 쓰되 경고 목록으로 늘리지 않는다. 서버가 주지 않은 사유나
  * 완료 범위를 지어내지 않는다.
@@ -102,6 +88,5 @@ export function selectStatusSentence(
     )
   }
 
-  parts.push(validationSentence(detail.validationTier))
   return parts.join(' ')
 }

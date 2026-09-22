@@ -1,4 +1,5 @@
 import type { RegimeBaselineMonths } from '@/types/regime'
+import { MonthField } from '@/components/common/MonthField'
 import {
   baselineMonthLabel,
   compositeOptionLabel,
@@ -65,10 +66,10 @@ export function FieldPicker({ baselines, value, onChange }: FieldPickerProps) {
       {value !== null && (
         <label>
           {baselineMonthLabel}
-          <input
-            type="month"
+          <MonthField
+            label={baselineMonthLabel}
             value={value.baselineMonth}
-            onChange={(event) => onChange({ ...value, baselineMonth: event.target.value })}
+            onChange={(next) => onChange({ ...value, baselineMonth: next })}
           />
         </label>
       )}

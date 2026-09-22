@@ -337,6 +337,63 @@ class TestApply:
             monthly.apply(broken, [obs("exports", "2026-08", "1")])
 
 
+class TestIncompleteMonthFromMonthlySource:
+    """월별 원천이 진행 중인 달을 함께 줄 때 (FR-006a, 2026-09-22 관측).
+
+    관세청은 이번 달 누적치를 그날까지 더해 준다. 2026-09-17 과 2026-09-22 에 받은 2026-09
+    수출이 148억 달러 차이였고, 전년동월 대비로 옮기면 -5.07% 와 +17.37% 다 — 같은 이름을
+    달고 22%p 를 움직인다. 화면은 그중 하나를 "9월 수출"로 보여준다.
+    """
+
+    def test_끝나지_않은_달은_공식_금액도_내지_않는다(self) -> None:
+        result = monthly.apply(
+            BY_ID["trade_balance"],
+            [obs("trade_balance", "2026-08", "34785482585"),
+             obs("trade_balance", "2026-09", "24666472806")],
+            as_of=date(2026, 9, 22),
+        )
+
+        by_period = {value.period: value for value in result}
+        assert by_period["2026-08"].value == Decimal("34785482585")
+        assert by_period["2026-09"].value is None
+        assert by_period["2026-09"].missing_reason == monthly.MISSING_INCOMPLETE_MONTH
+
+    def test_끝나지_않은_달로_증가율을_만들지_않는다(self) -> None:
+        """분자가 조각이면 증가율은 달의 증가율이 아니다."""
+        given = [obs("exports", "2025-09", "65904118036"),
+                 obs("exports", "2026-09", "77353632466")]
+
+        result = monthly.apply(BY_ID["exports"], given, as_of=date(2026, 9, 22))
+
+        by_period = {value.period: value for value in result}
+        assert by_period["2026-09"].value is None
+        assert by_period["2026-09"].missing_reason == monthly.MISSING_INCOMPLETE_MONTH
+
+    def test_달이_끝나면_값을_낸다(self) -> None:
+        given = [obs("exports", "2025-09", "100"), obs("exports", "2026-09", "110")]
+
+        result = monthly.apply(BY_ID["exports"], given, as_of=date(2026, 10, 1))
+
+        assert {v.period: v.value for v in result}["2026-09"] == Decimal("10.000000")
+
+    def test_빠뜨리지_않고_사유와_함께_남긴다(self) -> None:
+        """조용히 빼면 원래 없는 달인지 아직 안 끝난 달인지 구분되지 않는다 (원칙 VI)."""
+        given = [obs("exports", "2025-08", "100"), obs("exports", "2026-08", "110"),
+                 obs("exports", "2026-09", "50")]
+
+        result = monthly.apply(BY_ID["exports"], given, as_of=date(2026, 9, 22))
+
+        assert [value.period for value in result] == ["2025-08", "2026-08", "2026-09"]
+
+    def test_as_of_가_없으면_거르지_않는다(self) -> None:
+        """달이 끝났는지 알 수 없으면 판단하지 않는다. 옛 호출자의 동작을 바꾸지 않는다."""
+        result = monthly.apply(
+            BY_ID["trade_balance"], [obs("trade_balance", "2026-09", "24666472806")]
+        )
+
+        assert result[0].value == Decimal("24666472806")
+
+
 class TestShiftMonths:
     @pytest.mark.parametrize(
         ("period", "months_", "expected"),
