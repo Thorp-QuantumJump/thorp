@@ -9,6 +9,7 @@ import {
   isWithin,
   type AnalysisPeriod,
 } from '@/utils/analysisPeriod'
+import { buildAmountQuickAdds } from './amountQuickAdd'
 import type { CasePeriodConstraint } from './casePeriodConstraint'
 import styles from './AnalysisConditionsPanel.module.css'
 import fieldStyles from './AxisField.module.css'
@@ -319,6 +320,9 @@ export function AnalysisConditionsPanel({
             range={amount}
             defaultValue={amount.default}
             value={initialAmount}
+            groupDigits
+            roundToStep
+            quickAdd={buildAmountQuickAdds(amount.step, amount.max - amount.min)}
             onChange={(next) => onChange({ initialAmount: next })}
             onReset={() => onReset('initialAmount')}
           />
