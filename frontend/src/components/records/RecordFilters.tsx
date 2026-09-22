@@ -4,6 +4,7 @@ import type { SectorCatalog } from '@/types/sector'
 import type { StrategyView } from '@/types/strategyRegistry'
 import { KIND_LABEL, SORT_OPTIONS, STATUS_LABEL, STATUS_OPTIONS } from './recordLabels'
 import styles from './records.module.css'
+import { DateField } from '@/components/common/DateField'
 
 type Props = {
   query: MyRecordListQuery
@@ -108,18 +109,20 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
       <fieldset className={styles.group}>
         <legend>분석 기간</legend>
         <label htmlFor={fromId}>시작</label>
-        <input
+        <DateField
           id={fromId}
-          type="date"
+          label="분석 기간 시작"
           value={query.periodFrom ?? ''}
-          onChange={(event) => onChange({ ...query, periodFrom: event.target.value || undefined })}
+          max={query.periodTo}
+          onChange={(next) => onChange({ ...query, periodFrom: next || undefined })}
         />
         <label htmlFor={toId}>끝</label>
-        <input
+        <DateField
           id={toId}
-          type="date"
+          label="분석 기간 끝"
           value={query.periodTo ?? ''}
-          onChange={(event) => onChange({ ...query, periodTo: event.target.value || undefined })}
+          min={query.periodFrom}
+          onChange={(next) => onChange({ ...query, periodTo: next || undefined })}
         />
       </fieldset>
 
