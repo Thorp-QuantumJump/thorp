@@ -1,6 +1,6 @@
 import { Play, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { ProvisionalBadge } from './ProvisionalBadge'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import type { ParamSearchPreview } from '@/types/paramSearch'
 import { formatCount, formatSeconds } from '@/utils/paramSearchLabels'
 import styles from './PreflightPanel.module.css'
@@ -143,7 +143,28 @@ export function PreflightPanel({
 
         {/* 3. 예상 작업량 — 제외된 조합은 사유와 함께 보인다 */}
         <div className={styles.item}>
-          <dt>예상 작업량</dt>
+          <dt className={styles.labelWithHelp}>
+            예상 작업량
+            <InlineHelp label="전체 조합과 실행 예정 후보">
+              <p>
+                전략별로 각 파라미터의 후보값 개수를 곱해 모든 조합을 만들고, 여러 전략을
+                탐색하면 전략별 조합 수를 더합니다.
+              </p>
+              {spaceSummary.map((space) => (
+                <p key={space.strategyId}>
+                  {space.strategyName}:{' '}
+                  {space.axes.length > 0
+                    ? `${space.axes.map((axis) => formatCount(axis.values.length)).join(' × ')} = `
+                    : ''}
+                  {formatCount(space.combinations)}개
+                </p>
+              ))}
+              <p>
+                이 중 관측 기간이나 종목 수 같은 유효성 조건을 위반한 조합을 계산 전에
+                제외한 값이 실행 예정 후보입니다.
+              </p>
+            </InlineHelp>
+          </dt>
           <dd>
             <p className={styles.workload}>
               <strong>{formatCount(workload.validCombinations)}개</strong> 실행 예정
@@ -166,7 +187,7 @@ export function PreflightPanel({
           </dd>
         </div>
 
-        {/* 4. 적용 한도 — provisional 에 든 항목에만 임시값 표시가 붙는다 */}
+        {/* 4. 적용 한도 — 서버가 이번 탐색에 실제 적용할 값만 간결하게 보인다 */}
         <div className={styles.item}>
           <dt>적용 한도</dt>
           <dd>
@@ -175,9 +196,6 @@ export function PreflightPanel({
                 <li key={row.key}>
                   <span className={styles.limitLabel}>
                     {row.label}
-                    {limits.provisional.includes(row.key) && (
-                      <ProvisionalBadge label={row.label} />
-                    )}
                   </span>
                   <span className={styles.limitValue}>{row.value}</span>
                 </li>

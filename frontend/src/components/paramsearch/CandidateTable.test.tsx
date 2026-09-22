@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -32,7 +32,7 @@ function lastQuery() {
   return calls[calls.length - 1][1]
 }
 
-function renderTable() {
+function renderClosedTable() {
   return render(
     <CandidateTable
       searchId="PS-20260914-000001"
@@ -42,6 +42,12 @@ function renderTable() {
       onCompareToggle={vi.fn()}
     />,
   )
+}
+
+function renderTable() {
+  const view = renderClosedTable()
+  fireEvent.click(screen.getByRole('button', { name: '전체 후보 열기' }))
+  return view
 }
 
 /**
@@ -54,6 +60,18 @@ describe('CandidateTable', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     apiMocks.getParamSearchCandidates.mockResolvedValue(pageFixture)
+  })
+
+  it('전체 후보를 열 때만 목록을 조회하고 다시 접을 수 있다', async () => {
+    const user = userEvent.setup()
+    renderClosedTable()
+
+    expect(apiMocks.getParamSearchCandidates).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: '전체 후보 열기' }))
+    await waitFor(() => expect(apiMocks.getParamSearchCandidates).toHaveBeenCalled())
+
+    await user.click(screen.getByRole('button', { name: '전체 후보 접기' }))
+    expect(screen.queryByRole('table')).toBeNull()
   })
 
   it('처음에는 순번 오름차순으로 묻는다', async () => {
