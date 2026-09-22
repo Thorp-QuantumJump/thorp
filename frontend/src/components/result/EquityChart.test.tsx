@@ -275,6 +275,36 @@ describe('EquityChart', () => {
     expect(container.querySelector('.chart-grid-highlight-rows line')).not.toBeNull()
     expect(screen.getByText(/시작 금액 10,000,000원/)).toBeTruthy()
   })
+
+  it('기준선 옆에 시작 금액을 적어 그래프 안에서 원금을 읽게 한다', () => {
+    const { container } = render(
+      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />,
+    )
+
+    const label = container.querySelector<SVGTextElement>('[data-testid="initial-cash-label"]')
+    expect(label?.textContent).toBe('시작 금액 1,000만원')
+
+    // 기준선과 같은 높이에 놓인다. 선 위로 띄운 만큼만 어긋나야 한다.
+    const rule = container.querySelector('.chart-grid-highlight-rows line')
+    const ruleY = Number(rule?.getAttribute('y1'))
+    expect(Math.abs(Number(label?.getAttribute('y')) - ruleY)).toBeLessThanOrEqual(16)
+
+    // 곡선과 겹쳐도 읽히도록 글자 뒤에 바탕색 외곽선을 두른다.
+    expect(label?.getAttribute('paint-order')).toBe('stroke')
+  })
+
+  it('시작 금액을 읽을 수 없으면 이름표를 그리지 않는다', () => {
+    const { container } = render(<EquityChart altNumbers={altNumbers} base={base} initialCash="" />)
+
+    expect(container.querySelector('[data-testid="initial-cash-label"]')).toBeNull()
+    expect(seriesPath(container, 'base')).toBeTruthy()
+  })
+
+  it('대안 텍스트에도 시작 금액을 담는다', () => {
+    render(<EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" />)
+
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('시작 금액은 10,000,000원')
+  })
 })
 
 /** 눈금 글자를 다시 원화 금액으로 읽는다. `formatAxisAmount`가 적은 만·억 단위를 되돌린다 */
@@ -394,9 +424,9 @@ describe('EquityChart 세로축 눈금', () => {
   it('대안 텍스트에 지금 보는 눈금 종류를 담는다', () => {
     render(<EquityChart altNumbers={altNumbers} base={growth} initialCash="10000000.00" />)
 
-    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 로그입니다')
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 로그')
     fireEvent.click(screen.getByRole('button', { name: '선형' }))
-    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 선형입니다')
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 선형')
   })
 
   it('로그 눈금에서 0원 이하인 날은 그리지 않고 곡선을 끊는다', () => {

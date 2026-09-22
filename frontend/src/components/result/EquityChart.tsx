@@ -9,6 +9,7 @@ import { DrawdownShade } from '@/components/result/DrawdownShade'
 import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'
 import { formatMoney, formatRatio } from '@/components/result/formatResult'
+import { InitialCashLabel } from '@/components/result/InitialCashLabel'
 import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'
 import type { ResultTimeseriesPoint } from '@/types/result'
 import styles from './EquityChart.module.css'
@@ -24,7 +25,9 @@ import styles from './EquityChart.module.css'
  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.
  *
  * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을
- * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다.
+ * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다. 시작 금액
+ * 자리에는 가로 점선과 함께 금액을 적은 이름표를 붙여, 곡선이 원금 위에 있는지 아래에 있는지를 그래프
+ * 안에서 바로 읽게 한다.
  *
  * <p><b>세로축 눈금은 로그가 기본이고 선형으로 바꿀 수 있다.</b> 로그 눈금에서는 같은 비율의 오르내림이
  * 구간과 관계없이 같은 높이로 보이므로, 기간이 길어 자산가치가 여러 배로 불어난 결과에서도 초반의 하락
@@ -217,7 +220,10 @@ function scaleModeNoun(mode: YScaleMode): string {
 }
 
 /** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */
-function buildAltText({ base, target, altNumbers }: EquityChartProps, mode: YScaleMode): string {
+function buildAltText(
+  { base, target, altNumbers, initialCash }: EquityChartProps,
+  mode: YScaleMode,
+): string {
   const numbers = altNumbers
     ? '비용 차감 후 전체 수익률 ' +
       formatRatio(altNumbers.netTotalReturn) +
@@ -230,7 +236,12 @@ function buildAltText({ base, target, altNumbers }: EquityChartProps, mode: YSca
   const comparison = target
     ? '비교 대상은 ' + target.name + '이며 파선으로 함께 그렸습니다.'
     : '비교 대상은 없습니다.'
-  const axis = '세로축은 원화 자산가치이고 눈금은 ' + scaleModeNoun(mode) + '입니다.'
+  const axis =
+    '세로축은 원화 자산가치이고 눈금은 ' +
+    scaleModeNoun(mode) +
+    '이며, 시작 금액은 ' +
+    formatMoney(initialCash) +
+    '입니다.'
   return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + ' ' + axis
 }
 
@@ -320,6 +331,10 @@ export function EquityChart(props: EquityChartProps) {
           />
 
           <AmountAxis ticks={amountTicks} />
+
+          {initial == null || initialAxisValue == null ? null : (
+            <InitialCashLabel amount={initial} at={initialAxisValue} />
+          )}
 
           {baseWindow ? (
             <DrawdownShade
