@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { InlineHelp } from "@/components/common/InlineHelp";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import type {
@@ -62,6 +63,9 @@ interface AnalysisConditionsPanelProps {
 
 export const COST_UNAVAILABLE =
   "비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.";
+/** 비용 수치가 어디서 온 값인지. 사용자가 고칠 수 있는 값이 아니라는 사실을 문구가 대신 말한다(FR-010). */
+const COST_BASIS = "2026년 한국 ETF 거래에 적용되는 기준과 같습니다.";
+
 export const COST_LOADING = "비용 조건을 확인하는 중입니다.";
 const RANGE_UNAVAILABLE =
   "평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.";
@@ -415,7 +419,12 @@ export function AnalysisConditionsPanel({
             role="group"
             aria-label="비용 가정"
           >
-            <span className={fieldStyles.label}>비용 가정 (읽기 전용)</span>
+            <span className={fieldStyles.label}>
+              비용 가정
+              <InlineHelp label="비용 가정" on="hover">
+                {COST_BASIS}
+              </InlineHelp>
+            </span>
             {cost === "loading" ? (
               <p className={styles.readOnly} role="status">
                 {COST_LOADING}
