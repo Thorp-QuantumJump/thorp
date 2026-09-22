@@ -1,5 +1,5 @@
 import { HoverCard, Popover } from "radix-ui";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import styles from "./InlineHelp.module.css";
 
 interface InlineHelpProps {
@@ -31,14 +31,28 @@ interface InlineHelpProps {
  * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
  */
 export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
+  const [open, setOpen] = useState(false);
   if (on === "hover") {
     return (
-      <HoverCard.Root openDelay={80} closeDelay={80}>
+      <HoverCard.Root
+        open={open}
+        onOpenChange={setOpen}
+        openDelay={80}
+        closeDelay={80}
+      >
         <HoverCard.Trigger asChild>
+          {/*
+            여는 조건을 우리가 쥔다. HoverCard 는 마우스를 얹을 때만 열고 초점·누르기에는 반응하지
+            않는다 — 그대로 두면 키보드와 터치에서 읽을 방법이 없다(확인: 2026-09-22).
+          */}
           <button
             type="button"
             className={styles.trigger}
             aria-label={`${label} 도움말`}
+            aria-expanded={open}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onClick={() => setOpen((current) => !current)}
           >
             ?
           </button>

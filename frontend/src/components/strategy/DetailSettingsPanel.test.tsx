@@ -391,6 +391,28 @@ describe("DetailSettingsPanel", () => {
     ).toBeTruthy();
   });
 
+  it("도움말은 초점을 받아도 열린다 — 키보드와 터치에서 닿는 길이다", async () => {
+    // 얹기로만 열면 마우스가 없는 환경에서 읽을 방법이 사라진다. 트리거를 버튼으로 둔 까닭이다.
+    await renderOpened(selectableStrategy);
+    const drift = selectableStrategy.axes.find(
+      (axis) => axis.name === "driftWindow",
+    )!;
+    const trigger = screen.getByRole("button", {
+      name: `${drift.label} 도움말`,
+    });
+
+    expect(
+      screen.queryByText(drift.description ?? "", { exact: false }),
+    ).toBeNull();
+    trigger.focus();
+
+    expect(trigger).toBe(document.activeElement);
+    // 워밍업 축이라 등록표 설명 뒤에 범위 안내가 한 문장 더 붙는다. 앞머리로 찾는다.
+    expect(
+      await screen.findByText(drift.description ?? "", { exact: false }),
+    ).toBeTruthy();
+  });
+
   it("목록형 항목을 바꾼 뒤 항목별 복원으로 되돌린다", async () => {
     const user = await renderOpened(selectableStrategy);
 
