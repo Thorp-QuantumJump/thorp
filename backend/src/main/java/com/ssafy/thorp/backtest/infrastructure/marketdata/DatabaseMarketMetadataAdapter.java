@@ -83,6 +83,15 @@ public class DatabaseMarketMetadataAdapter implements MarketMetadataPort {
              WHERE instrument_id = :instrumentId
             """;
 
+    /** 지금 자료 버전 달력의 마지막 거래일. 곧 이 자료로 평가할 수 있는 마지막 날이다. */
+    private static final String LAST_TRADING_DAY_SQL =
+            """
+            SELECT max(date)
+              FROM daily_index
+             WHERE dataset_id = :datasetId
+               AND index_code = :indexCode
+            """;
+
     /**
      * 달력에서 {@code notBefore} 이후 {@code offset} 번째 거래일(0부터 센다).
      *
@@ -167,6 +176,18 @@ public class DatabaseMarketMetadataAdapter implements MarketMetadataPort {
         // 같은 달력을 쓰되 워밍업을 소진하지 않는다. 뜻이 다른 두 질문이라 포트에서 이름을 갈랐고,
         // 달력 위에서는 그 차이가 건너뛸 거래일 수(0인가 아닌가)로 드러난다.
         return nthTradingDayOnOrAfter(date, 0);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> lastTradingDay() {
+        Query query =
+                entityManager
+                        .createNativeQuery(LAST_TRADING_DAY_SQL)
+                        .setParameter("datasetId", currentDataVersion())
+                        .setParameter("indexCode", CALENDAR_INDEX_CODE);
+        // max() 는 행이 없어도 한 행을 NULL 로 돌려준다. single() 이 그 NULL 을 빈 값으로 옮긴다.
+        return single(query, java.sql.Date.class).map(java.sql.Date::toLocalDate);
     }
 
     /** 달력에서 {@code notBefore} 이후 {@code offset} 번째 거래일(0부터 센다). */

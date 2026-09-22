@@ -16,6 +16,7 @@
 from worker.contracts.base import ContractModel
 from worker.contracts.strategy_params.rebalance import (
     CappedRebalanceParameters,
+    LookbackRebalanceParameters,
     MinimumVarianceParameters,
     RebalanceParameters,
     SectorMomentumParameters,
@@ -26,7 +27,7 @@ from worker.contracts.strategy_params.rebalance import (
 STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {
     "FIXED_WEIGHT": CappedRebalanceParameters,
     "EQUAL_WEIGHT": RebalanceParameters,
-    "INVERSE_VOLATILITY": CappedRebalanceParameters,
+    "INVERSE_VOLATILITY": LookbackRebalanceParameters,
     "MINIMUM_VARIANCE": MinimumVarianceParameters,
     "SECTOR_MOMENTUM": SectorMomentumParameters,
 }
@@ -34,6 +35,7 @@ STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {
 __all__ = [
     "STRATEGY_PARAMETERS",
     "CappedRebalanceParameters",
+    "LookbackRebalanceParameters",
     "MinimumVarianceParameters",
     "RebalanceParameters",
     "SectorMomentumParameters",
