@@ -57,8 +57,8 @@ describe('ResultStatusLine', () => {
     expect(container.querySelector('ul')).toBeNull()
   })
 
-  it('예외가 없으면 자료 부족 문장이 없다', () => {
-    render(
+  it('보일 것이 없으면 상자째 그리지 않는다', () => {
+    const { container } = render(
       <ResultStatusLine
         detail={detail({
           exceptionKinds: [],
@@ -68,7 +68,27 @@ describe('ResultStatusLine', () => {
       />,
     )
 
-    expect(screen.getByRole('status').textContent).not.toContain('자료 부족')
+    // 검증 구분을 걷어내면서 완료된 정상 결과에는 알릴 상태가 하나도 남지 않는다. 상자에 테두리와
+    // 배경, 안쪽 여백이 있어 내용 없이 두면 그래프 위에 빈 칸이 남는다.
+    expect(container.innerHTML).toBe('')
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('알릴 문장이 없어도 다시 시도할 실패 결과는 상자를 남긴다', () => {
+    render(
+      <ResultStatusLine
+        detail={detail({
+          status: 'FAILED',
+          summary: null,
+          exceptionKinds: null,
+          failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },
+        })}
+        completedThrough={null}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
   })
 
   it('실패 사유와 사용자가 누르는 다시 시도를 보인다', () => {

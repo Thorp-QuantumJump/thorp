@@ -11,7 +11,7 @@ type ResultStatusLineProps = {
   onRetry?: () => void | Promise<void>
 }
 
-/** 결과 의미를 바꾸는 상태와 검증 구분을 결과 옆 한 문장으로 보인다(FR-012~FR-013). */
+/** 결과 의미를 바꾸는 상태를 결과 옆 한 문장으로 보인다(FR-013). 알릴 상태가 없으면 아무것도 그리지 않는다. */
 export function ResultStatusLine({
   detail,
   completedThrough,
@@ -33,12 +33,22 @@ export function ResultStatusLine({
     }
   }
 
+  const sentence = selectStatusSentence(detail, completedThrough)
+  const retryable = detail.status === 'FAILED' && Boolean(onRetry)
+
+  // 보일 것이 하나도 없으면 상자째 그리지 않는다. `.line`이 테두리·배경·안쪽 여백을 가지고 있어,
+  // 안이 비어도 그래프 위에 빈 상자가 남는다. 빈 `role="status"`도 화면 낭독기에 아무것도 없는
+  // 알림 영역을 만든다.
+  if (!sentence && !retryable && !retryError) return null
+
   return (
     <div className={styles.line}>
-      <p className={styles.sentence} role="status">
-        {selectStatusSentence(detail, completedThrough)}
-      </p>
-      {detail.status === 'FAILED' && onRetry ? (
+      {sentence ? (
+        <p className={styles.sentence} role="status">
+          {sentence}
+        </p>
+      ) : null}
+      {retryable ? (
         <Button type="button" variant="outline" disabled={retrying} onClick={() => void retry()}>
           {retrying ? '다시 요청하는 중' : '다시 시도'}
         </Button>
