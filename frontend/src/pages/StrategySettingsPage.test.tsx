@@ -663,6 +663,20 @@ describe("StrategySettingsPage", () => {
     }
   });
 
+  it("앞 단계로 돌아가는 길이 제목 위에 있고 섹터 선택을 가리킨다", async () => {
+    // 행동 버튼 줄이 아니라 제목 쪽이다 — 이 화면의 주된 행동은 '분석하기' 하나다(FR-002, 원칙 II).
+    const { support } = makeSupport();
+    renderPage(support);
+
+    const back = await screen.findByRole("link", { name: /섹터·비중 고르기/ });
+    expect(back.getAttribute("href")).toBe("/diagnosis/sectors");
+    expect(
+      back.compareDocumentPosition(
+        screen.getByRole("heading", { name: "전략 선택" }),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("등록표가 임시값이면 그 사실을 문구로 보인다", async () => {
     // NFR-002. 색만으로 구분하지 않는다.
     const user = userEvent.setup();

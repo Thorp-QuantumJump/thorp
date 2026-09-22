@@ -1,5 +1,6 @@
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchCaseWindow } from "@/api/regimeLink";
 import { fetchSectorCatalog, type SectorCatalogResult } from "@/api/sectors";
 import {
@@ -8,6 +9,8 @@ import {
 } from "@/api/strategyRegistry";
 import { NotReadyNotice } from "@/components/common/NotReadyNotice";
 import { InlineHelp } from "@/components/common/InlineHelp";
+import { SECTOR_SELECTION_PATH } from "@/components/result/prefillStrategySettings";
+import { buildSectorSelectionPath } from "@/marketflow/handoff";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import { ActionButtons } from "@/components/strategy/ActionButtons";
@@ -1108,6 +1111,27 @@ export function StrategySettingsPage({
       <AppHeader />
       <main className={styles.main} aria-labelledby="strategy-settings-title">
         <header className={styles.intro}>
+          {/*
+            앞 단계로 돌아가는 길이다. 행동 버튼 줄에 두지 않는다 — 이 화면의 주된 행동은 '분석하기'
+            하나이고(FR-002, 원칙 II) 뒤로 가기는 행동이 아니라 이동이다.
+
+            브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다. 배우기·시장 흐름에서 들어온 사용자는
+            한 칸 뒤가 섹터 선택이 아니다. 사례 경로(011)로 들어왔으면 주소의 사례를 그대로 들고
+            돌아가 기간 제약이 말없이 풀리지 않게 한다(진입 계약 §2).
+
+            돌아갔다 와도 값은 남는다 — 섹터·비중과 전략 설정이 각자 탭 수명 저장소에 있다.
+          */}
+          <Link
+            className={styles.backLink}
+            to={
+              caseId === null || caseId === ""
+                ? SECTOR_SELECTION_PATH
+                : buildSectorSelectionPath(caseId, null)
+            }
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            섹터·비중 고르기
+          </Link>
           <h1 id="strategy-settings-title" className={styles.title}>
             전략 선택
           </h1>
