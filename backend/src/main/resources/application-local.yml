@@ -50,16 +50,13 @@ thorp:
   param-search:
     # 로컬은 네 값이 모두 채워져 있어 켠다. 개발 중 자동 탐색을 쓰는 곳이 여기다.
     enabled: true
-    # 공통 설정보다 낮춘 개발 편의값이다.
-    # **이 값으로 상한 초과 거부(FR-005b)가 재현되지 않는다**(2026-09-14 확인). space 는 등록표에
-    # 등록된 후보값만 받아 범위를 넓힐 수 없고, 실행 가능한 전략을 다 합쳐도 6조합이다.
-    # PD-03·PD-04 가 확정돼 두 전략이 실행 가능해져도 전체가 24조합이라 이 값과 같을 뿐 넘지 않는다.
-    # 그 경로는 ParamSearchRejectionIT 가 max-candidates=2 로 낮춘 프로파일에서 검증한다.
-    max-candidates: 24
-    # 발행 창. 로컬 워커가 보통 1개라 4면 큐가 비지 않으면서 취소 동작도 눈으로 확인된다.
-    dispatch-window: 4
-    # 실행시간 상한 5분. 로컬에서 한도 도달 → PARTIAL 전이를 기다릴 수 있는 길이다.
-    time-limit-seconds: 300
+    # 로컬에서도 등록된 설정 조합을 최대 100개까지 한 묶음으로 실행한다.
+    # 상한 초과 거부 경로는 ParamSearchRejectionIT 가 max-candidates=2 로 낮춘 프로파일에서 검증한다.
+    max-candidates: 100
+    # 현재 서버의 자동 탐색 벌크 워커 1개와 맞춘다. prefetch 1이라 후보 1개가 실제 실행된다.
+    dispatch-window: 1
+    # 후보 최대 100개를 순서대로 처리할 수 있도록 묶음 실행시간을 30분으로 둔다.
+    time-limit-seconds: 1800
     consecutive-failure-limit: 3
   result:
     # 결과 공개 열람(spec 005) 로컬 개발값. 만료 화면(410)을 손으로 확인하기 쉽게 유효 시간을 짧게 둔다.

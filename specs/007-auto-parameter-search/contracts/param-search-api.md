@@ -89,7 +89,7 @@
       ]
     },
     "limits": {
-      "maxCandidates": 120,
+      "maxCandidates": 100,
       "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
@@ -187,7 +187,7 @@
         "tieHandling": "SHOW_ALL_TIED"
       },
       "limits": {
-        "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5,
+        "maxCandidates": 100, "timeLimitSeconds": 1800, "dispatchWindow": 1, "consecutiveFailureLimit": 5,
         "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"]
       },
       "referenceVersions": { "marketData": "2026-08-31", "cost": "v1", "engine": "nautilus-0.1" },
