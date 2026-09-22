@@ -10,8 +10,8 @@ import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;
 import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;
 import com.ssafy.thorp.macro.infrastructure.persistence.MacroSnapshotRepositoryImpl;
 import com.ssafy.thorp.macro.presentation.response.MacroSnapshotResponse;
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.PostgresTestSupport;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,26 +36,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MacroSnapshotContractTest extends PostgresTestSupport {
 
     /** 분야별 지표 수 — 등록표의 실제 분포다(FR-001). 합이 17이다. */
-    private static final Map<String, Integer> FIELD_SIZES =
-            Map.of(
-                    "production", 3,
-                    "consumption_investment", 3,
-                    "external_trade", 3,
-                    "labor", 2,
-                    "prices_commodities", 2,
-                    "finance_housing", 3,
-                    "overseas", 1);
-
-    private static final List<String> FIELD_ORDER =
-            List.of(
-                    "production",
-                    "consumption_investment",
-                    "external_trade",
-                    "labor",
-                    "prices_commodities",
-                    "finance_housing",
-                    "overseas");
-
     @Autowired private JdbcTemplate jdbc;
 
     private MacroSnapshotQueryService service;
@@ -109,8 +89,8 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                                 java.util.stream.Collectors.toMap(
                                         MacroSnapshotResult.IndicatorSummary::indicatorId, i -> i));
 
-        assertThat(byId.get("prices_commodities_2").agency()).isEqualTo("국제통화기금(IMF)");
-        assertThat(byId.get("prices_commodities_2").source()).contains("한국은행");
+        assertThat(byId.get("dubai_crude").agency()).isEqualTo("국제통화기금(IMF)");
+        assertThat(byId.get("dubai_crude").source()).contains("한국은행");
     }
 
     @Test
@@ -122,12 +102,12 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
         jdbc.update(
                 """
                 UPDATE macro_observation SET transformed_value = NULL, missing_reason = 'SOURCE_NOT_RELEASED'
-                WHERE indicator_id = 'production_1' AND target_month = '2026-06-01'::date
+                WHERE indicator_id = 'all_industry_production' AND target_month = '2026-06-01'::date
                 """);
 
         MacroSnapshotResult.IndicatorSummary indicator =
                 service.getSnapshot().indicators().stream()
-                        .filter(i -> i.indicatorId().equals("production_1"))
+                        .filter(i -> i.indicatorId().equals("all_industry_production"))
                         .findFirst()
                         .orElseThrow();
 
@@ -142,15 +122,17 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     void marksIndicatorsWhoseCollectionFailed() {
         seedRegistry();
         seedPublishedDataset();
-        seedFailedCollection("production_2");
+        seedFailedCollection("mining_manufacturing_production");
 
         MacroSnapshotResult snapshot = service.getSnapshot();
 
-        assertThat(snapshot.collection().failedIndicatorIds()).containsExactly("production_2");
-        assertThat(statusOf(snapshot, "production_2")).isEqualTo("COLLECTION_FAILED");
+        assertThat(snapshot.collection().failedIndicatorIds())
+                .containsExactly("mining_manufacturing_production");
+        assertThat(statusOf(snapshot, "mining_manufacturing_production"))
+                .isEqualTo("COLLECTION_FAILED");
         // 어제 발행한 자료는 그대로 있다. 실패는 자료를 지우지 않는다(FR-011).
-        assertThat(valueOf(snapshot, "production_2")).isNotNull();
-        assertThat(statusOf(snapshot, "production_1")).isEqualTo("READY");
+        assertThat(valueOf(snapshot, "mining_manufacturing_production")).isNotNull();
+        assertThat(statusOf(snapshot, "all_industry_production")).isEqualTo("READY");
     }
 
     @Test
@@ -171,10 +153,11 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     void exampleDataWinsOverCollectionFailure() {
         seedRegistry();
         seedPublishedDataset();
-        seedFailedCollection("production_2");
+        seedFailedCollection("mining_manufacturing_production");
         jdbc.update("UPDATE macro_dataset_version SET is_sample_data = TRUE");
 
-        assertThat(statusOf(service.getSnapshot(), "production_2")).isEqualTo("EXAMPLE");
+        assertThat(statusOf(service.getSnapshot(), "mining_manufacturing_production"))
+                .isEqualTo("EXAMPLE");
     }
 
     @Test
@@ -190,6 +173,25 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
         assertThat(snapshot.indicators()).allMatch(i -> "NO_DATA".equals(i.status()));
         assertThat(snapshot.indicators()).allMatch(i -> i.path().isEmpty());
         assertThat(snapshot.collection().status()).isEqualTo("NEVER_COLLECTED");
+    }
+
+    @Test
+    @DisplayName("수집 상태는 계약이 정한 값만 나간다 — 저장 쪽이 더 넓다")
+    void collectionStatusStaysInsideTheContract() {
+        // 발행기는 지표 일부만 성공한 시도를 PARTIAL 로 적는데 계약의 상태 값에는 그것이 없다.
+        // 그대로 내보내면 계약으로 검증하는 소비자가 응답 전체를 거절한다(T086).
+        seedRegistry();
+        seedPublishedDataset();
+        seedFailedCollection("mining_manufacturing_production");
+
+        String status = service.getSnapshot().collection().status();
+
+        assertThat(status)
+                .isIn("NEVER_COLLECTED", "SUCCEEDED", "RUNNING", "FAILED", "HELD")
+                .isEqualTo("HELD");
+        // 거칠어진 만큼은 실패 지표 목록이 채운다 — 어느 지표가 실패했는지는 그대로 남는다.
+        assertThat(service.getSnapshot().collection().failedIndicatorIds())
+                .containsExactly("mining_manufacturing_production");
     }
 
     @Test
@@ -209,125 +211,11 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     // ------------------------------------------------------------------
 
     private void seedRegistry() {
-        jdbc.update(
-                """
-                INSERT INTO macro_calculation_registry_version (
-                    version_key, value_rule_fingerprint, change_reason, status, created_at)
-                VALUES ('REG-1', repeat('a', 64), '최초 등록', 'PUBLISHED', now())
-                """);
-        jdbc.update(
-                """
-                INSERT INTO macro_display_version (version_key, change_reason, created_at)
-                VALUES ('DSP-1', '최초', now())
-                """);
-        long registryId = idOf("macro_calculation_registry_version", "REG-1");
-        long displayId = idOf("macro_display_version", "DSP-1");
-
-        int order = 0;
-        int fieldOrder = 0;
-        for (String fieldId : FIELD_ORDER) {
-            fieldOrder++;
-            jdbc.update(
-                    """
-                    INSERT INTO macro_display_field (
-                        display_version_id, field_id, display_name, display_order, description)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    displayId,
-                    fieldId,
-                    "분야 " + fieldOrder,
-                    fieldOrder,
-                    fieldId + " 설명");
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
-                order++;
-                String indicatorId = fieldId + "_" + n;
-                boolean foreignAgency = indicatorId.equals("prices_commodities_2");
-                jdbc.update(
-                        """
-                        INSERT INTO macro_indicator_definition (
-                            registry_version_id, indicator_id, field_id, primary_source,
-                            raw_unit, transformed_unit, transform_rule, agency, attribution,
-                            license_status, license_review_status, refresh_months_n,
-                            nominal_weight, revision_history_available)
-                        VALUES (?, ?, ?, 'kosis', '2020=100', '%', 'YOY_GROWTH', ?, ?,
-                                'ALLOWED', 'VERIFIED', 3, '"0.0476"'::jsonb, true)
-                        """,
-                        registryId,
-                        indicatorId,
-                        fieldId,
-                        foreignAgency ? "국제통화기금(IMF)" : "통계청",
-                        foreignAgency ? "한국은행 경제통계시스템(ECOS)" : "국가통계포털(KOSIS)");
-                jdbc.update(
-                        """
-                        INSERT INTO macro_display_indicator (
-                            display_version_id, indicator_id, display_name, display_order)
-                        VALUES (?, ?, ?, ?)
-                        """,
-                        displayId,
-                        indicatorId,
-                        "지표 " + order,
-                        order);
-            }
-        }
-        jdbc.update(
-                """
-                INSERT INTO macro_current_publication (
-                    dataset_version_id, registry_version_id, display_version_id, switched_at)
-                VALUES (NULL, ?, ?, now())
-                """,
-                registryId,
-                displayId);
+        MacroRegistrySeed.seedRegistry(jdbc);
     }
 
     private void seedPublishedDataset() {
-        long registryId = idOf("macro_calculation_registry_version", "REG-1");
-        jdbc.update(
-                """
-                INSERT INTO macro_dataset_version (
-                    version_key, processing_registry_version_id, value_rule_fingerprint,
-                    status, complete_indicator_count, published_at, created_at)
-                VALUES ('DS-1', ?, repeat('a', 64), 'PUBLISHED', 17, now(), now())
-                """,
-                registryId);
-        long datasetId = idOf("macro_dataset_version", "DS-1");
-
-        for (String fieldId : FIELD_ORDER) {
-            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {
-                String indicatorId = fieldId + "_" + n;
-                for (String month : List.of("2026-05-01", "2026-06-01", "2026-07-01")) {
-                    jdbc.update(
-                            """
-                            INSERT INTO macro_observation (
-                                dataset_version_id, indicator_id, target_month,
-                                raw_value, transformed_value, released_at, received_at)
-                            VALUES (?, ?, ?::date, '"101.2"'::jsonb, '"1.4"'::jsonb, now(), now())
-                            """,
-                            datasetId,
-                            indicatorId,
-                            month);
-                }
-            }
-            jdbc.update(
-                    """
-                    INSERT INTO macro_baseline (
-                        dataset_version_id, registry_version_id, scope_id,
-                        reference_month, reference_month_held_back_by, computed_at)
-                    VALUES (?, ?, ?, '2026-07-01'::date, '[]'::jsonb, now())
-                    """,
-                    datasetId,
-                    registryId,
-                    fieldId);
-        }
-        jdbc.update(
-                """
-                INSERT INTO macro_baseline (
-                    dataset_version_id, registry_version_id, scope_id,
-                    reference_month, reference_month_held_back_by, computed_at)
-                VALUES (?, ?, 'ALL', '2026-07-01'::date, '[]'::jsonb, now())
-                """,
-                datasetId,
-                registryId);
-        jdbc.update("UPDATE macro_current_publication SET dataset_version_id = ?", datasetId);
+        MacroRegistrySeed.seedPublishedDataset(jdbc);
     }
 
     private void seedFailedCollection(String failedIndicatorId) {
@@ -352,7 +240,7 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                 """
                 INSERT INTO macro_collection_item_status (
                     attempt_id, indicator_id, source, status, last_success_at)
-                VALUES (?, 'production_1', 'kosis', 'SUCCEEDED', now())
+                VALUES (?, 'all_industry_production', 'kosis', 'SUCCEEDED', now())
                 """,
                 attemptId);
     }

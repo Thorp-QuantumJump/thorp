@@ -14,7 +14,6 @@
 
 아직 비워 둔 칸과 그것을 채울 작업::
 
-    published_precision      T069 — 공표 정밀도
     minimum_effective_scale  010 소유 (PD-10). 008은 채우지 않는다 (FR-015)
     trading_calendar         월 평균 경로에 닿는 지표에만 필요하다. `TRADING_CALENDAR_*` 참고
 """
@@ -508,6 +507,7 @@ def _kosis(
     transform_rule: str,
     series_start: str,
     publication_lag_months: int,
+    published_precision: int,
     *,
     agency: str = _STATISTICS_KOREA,
     org_id: str = ORG_STATISTICS_KOREA,
@@ -536,6 +536,7 @@ def _kosis(
         series_start=series_start,
         revision_history_available=True,
         publication_lag_months=publication_lag_months,
+        published_precision=published_precision,
         release_rule=_TABLE_UPDATED_AT,
     )
 
@@ -544,19 +545,19 @@ def _kosis(
 INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
     # --- 생산 (pd11 §2) ---
     _kosis("all_industry_production", FIELD_PRODUCTION, "DT_1JH20201", "T1",
-           (("objL1", "0"),), "2020=100", TRANSFORM_YOY, "2000-01", 2),
+           (("objL1", "0"),), "2020=100", TRANSFORM_YOY, "2000-01", 2, 1),
     _kosis("mining_manufacturing_production", FIELD_PRODUCTION, "DT_1F02001", "T10",
-           (("objL1", "00"), ("objL2", "0")), "2020=100", TRANSFORM_YOY, "1980-01", 2),
+           (("objL1", "00"), ("objL2", "0")), "2020=100", TRANSFORM_YOY, "1980-01", 2, 1),
     _kosis("service_production", FIELD_PRODUCTION, "DT_1KC2020", "T1",
-           (("objL1", "T"),), "2020=100", TRANSFORM_YOY, "2000-01", 2),
+           (("objL1", "T"),), "2020=100", TRANSFORM_YOY, "2000-01", 2, 1),
     # --- 소비·투자 (pd11 §2) ---
     _kosis("retail_sales_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1K41012", "T1",
-           (("objL1", "G0"),), "2020=100", TRANSFORM_YOY, "1995-01", 2),
+           (("objL1", "G0"),), "2020=100", TRANSFORM_YOY, "1995-01", 2, 1),
     # 설비투자지수는 분류가 objL2 하나뿐이다. objL1 을 지어내 채우지 않는다.
     _kosis("facility_investment_index", FIELD_CONSUMPTION_INVESTMENT, "DT_1F70011", "T3",
-           (("objL2", "C"),), "2020=100", TRANSFORM_YOY, "1995-02", 2),
+           (("objL2", "C"),), "2020=100", TRANSFORM_YOY, "1995-02", 2, 1),
     _kosis("construction_completed_constant", FIELD_CONSUMPTION_INVESTMENT, "DT_1G18011", "T10",
-           (("objL1", "0"),), "백만원", TRANSFORM_YOY, "1997-07", 2),
+           (("objL1", "0"),), "백만원", TRANSFORM_YOY, "1997-07", 2, 0),
     # --- 대외거래 (pd11 §4). 무역수지는 원천이 주는 공식 값이며 수출-수입 파생식이 아니다 ---
     IndicatorDefinition(
         indicator_id="exports", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,
@@ -570,7 +571,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ANNUAL_REVERIFY_BY,
         series_start="1989-01",
-        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=0,
+        published_precision=0,
+        release_rule=_NO_RELEASE_DATE,
         missing_rule="응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다",
     ),
     IndicatorDefinition(
@@ -585,7 +589,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ANNUAL_REVERIFY_BY,
         series_start="1989-01",
-        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=0,
+        published_precision=0,
+        release_rule=_NO_RELEASE_DATE,
         missing_rule="응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다",
     ),
     IndicatorDefinition(
@@ -602,12 +609,15 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ANNUAL_REVERIFY_BY,
         series_start="1989-01",
-        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=0,
+        published_precision=0,
+        release_rule=_NO_RELEASE_DATE,
         missing_rule="원천 제공값이다. 수출에서 수입을 빼 만들지 않는다",
     ),
     # --- 노동 (pd11 §2). 실업률은 원천이 계절조정한 값이라 우리가 다시 조정하지 않는다 ---
     _kosis("employed_persons", FIELD_LABOR, "DT_1DA7001S", "T30",
-           (("objL1", "0"),), "천명", TRANSFORM_YOY, "1999-06", 1),
+           (("objL1", "0"),), "천명", TRANSFORM_YOY, "1999-06", 1, 1),
     IndicatorDefinition(
         indicator_id="unemployment_rate", field_id=FIELD_LABOR, primary_source=SOURCE_KOSIS,
         table_code="DT_1DA9001S", item_code="T80", org_id=ORG_STATISTICS_KOREA,
@@ -621,12 +631,15 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ANNUAL_REVERIFY_BY,
         series_start="1999-06",
-        revision_history_available=True, publication_lag_months=1, release_rule=_TABLE_UPDATED_AT,
+        revision_history_available=True,
+        publication_lag_months=1,
+        published_precision=1,
+        release_rule=_TABLE_UPDATED_AT,
         missing_rule="원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다",
     ),
     # --- 물가·원자재 ---
     _kosis("consumer_price_index", FIELD_PRICES_COMMODITIES, "DT_1J22003", "T",
-           (("objL1", "T10"),), "2020=100", TRANSFORM_YOY, "1980-01", 1),
+           (("objL1", "T10"),), "2020=100", TRANSFORM_YOY, "1980-01", 1, 2),
     IndicatorDefinition(
         indicator_id="dubai_crude", field_id=FIELD_PRICES_COMMODITIES, primary_source=SOURCE_ECOS,
         table_code="902Y003", item_code="010102", org_id=None, classification=(),
@@ -648,7 +661,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         # 대상인지 물을 창구가 없다(pd11 §1). 조건 자체를 모르는 UNVERIFIED 와 구분해 두고
         # 쓴다 — 하나로 묶으면 발행이 보류되어 나머지 16개까지 멈춘다.
         license_review_status=REVIEW_PENDING_RIGHTS, series_start="1992-01",
-        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=1,
+        published_precision=2,
+        release_rule=_NO_RELEASE_DATE,
     ),
     # --- 금융·주택 ---
     IndicatorDefinition(
@@ -664,7 +680,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ECOS_REVERIFY_BY,
         series_start="1998-11",
-        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=1,
+        published_precision=3,
+        release_rule=_NO_RELEASE_DATE,
         missing_rule="일별 계열이다. 그 달 마지막 거래일 값을 쓰고 휴장일 값을 만들지 않는다",
     ),
     IndicatorDefinition(
@@ -681,7 +700,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ECOS_REVERIFY_BY,
         series_start="1964-05",
-        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,
+        revision_history_available=False,
+        publication_lag_months=1,
+        published_precision=1,
+        release_rule=_NO_RELEASE_DATE,
         missing_rule="항목2 0000200 말일자료다. 평균자료(0000100)와 섞지 않는다",
     ),
     IndicatorDefinition(
@@ -698,7 +720,10 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_reverify_by=ANNUAL_REVERIFY_BY,
         # 현행 표 하나는 2021-06 부터지만 연결 사슬을 거치면 2000-01 까지 닿는다.
         series_start="2000-01",
-        revision_history_available=True, publication_lag_months=2, release_rule=_TABLE_UPDATED_AT,
+        revision_history_available=True,
+        publication_lag_months=2,
+        published_precision=8,
+        release_rule=_TABLE_UPDATED_AT,
         break_link_rule=_HOUSING_BREAK_LINK_RULE,
         link_chain=HOUSING_LINK_CHAIN,
     ),
@@ -715,7 +740,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (
         license_verified_on=LICENSE_VERIFIED_ON,
         license_reverify_by=ANNUAL_REVERIFY_BY,
         series_start="1961-01",
-        revision_history_available=True, publication_lag_months=1,
+        revision_history_available=True, publication_lag_months=1, published_precision=5,
         release_rule="응답 헤더 Last-Modified 를 데이터셋 갱신일로 쓴다."
         " SDMX 헤더의 Prepared 는 응답 생성 시각이라 개정 식별자로 쓰지 않는다",
         missing_rule="증가율은 지수에서 직접 계산한다. 원천의 TR/GY 계열을 쓰지 않는다 (FR-019)",

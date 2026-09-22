@@ -187,10 +187,10 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`�
 - [X] T065 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다
 - [X] T066 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)
 - [X] T067 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다
-- [ ] T068 [P] `data/src/data_pipeline/regime/macro/postgres.py`에 010이 쓸 시계열 읽기를 만든다. `regime/macro/source.py`의 `MacroIndicatorSource` 프로토콜을 구현하고 `create_source()` 하나를 내놓는다 — `regime/macro/__init__.py`의 팩터리가 바로 이 모듈 경로로 찾으므로 다른 자리에 두면 010 배치가 구현체를 못 찾는다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다
-- [ ] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
-- [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
-- [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
+- [X] T068 [P] `data/src/data_pipeline/regime/macro/postgres.py`에 010이 쓸 시계열 읽기를 만든다. `regime/macro/source.py`의 `MacroIndicatorSource` 프로토콜을 구현하고 `create_source()` 하나를 내놓는다 — `regime/macro/__init__.py`의 팩터리가 바로 이 모듈 경로로 찾으므로 다른 자리에 두면 010 배치가 구현체를 못 찾는다. 010의 [contracts/macro-indicator-port.md](../010-economic-regime-search/contracts/macro-indicator-port.md) §1을 따른다. **결측은 사유가 아니라 키 없음으로 돌려준다** — 그 계약의 `MonthlyValue`에는 사유를 담을 자리가 없고, 010은 구멍 자체를 보고 척도 연속 구간과 비교 시점을 판정한다(2026-09-22 확정, T087)
+- [X] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)
+- [X] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다
+- [X] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)
 - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)
 - [X] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)
 
@@ -283,6 +283,10 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - **T078의 원래 전제는 실제와 달랐다.** "17개 모두 `trading_calendar`가 비어 있어 월 평균 경로가 항상 결측"이라고 적었지만, 두바이유는 한국은행이 월 평균을 이미 내 줘 주기가 월별이고 그대로 통과한다. 2026-09-20 전 구간 수집에서 두바이유·국고채 모두 결측 0건이었다
 - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)
 - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다
+- **T072는 열려 있다.** 2026-09-22 수행 결과는 [verification-2026-09-22.md](verification-2026-09-22.md)에 있고,
+  스물넷 중 스물둘을 확인했다. 남은 둘은 자료가 더 있어야 닫힌다
+  - 수출·수입 원값 대조: 관세청 표본이 1년치뿐이라 전년동월이 없다. 2년치 응답을 표본에 넣으면 시험이 그대로 대조한다
+  - 증분 수집 보존·`N` 밖 개정: 정기 수집을 최소 `N+3`개월 돌려야 개정을 관측할 수 있다. 지금은 전 구간 적재 한 번뿐이다
 
 ---
 
@@ -312,3 +316,8 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기�
 - [X] T083 `data/src/data_pipeline/macro/ingest.py` 의 `record_item_status` 가 발행 보류 사실을 수집 기록에 남기게 한다. 지금은 17개가 다 성공하면 적재가 기대 대상월 수에 못 미쳐 발행을 막은 실행도 시도 행이 `SUCCEEDED` 로 남아, DB 만 보면 완전히 성공한 실행과 구분되지 않는다. 보류 사유는 stdout 과 로그에만 있고 로그는 지나간다 per FR-011, FR-011b(3) (partial)
 - [X] T084 `data/src/data_pipeline/macro/ingest.py` 의 `TAIL_SLACK_MONTHS` 를 스펙과 맞춘다. FR-011b(3) 은 받은 대상월 수가 기대에 미치지 못하면 완료로 보지 않는다고 하는데 코드는 한 달 미달을 통과시킨다. 여유를 걷고 지표별 공표 지연을 보수적으로 늘리든, 스펙에 허용 여유를 명시하든 한쪽으로 정하고 근거를 남긴다 per FR-011b(3) (contradicts)
 - [X] T085 `data/src/data_pipeline/macro/registry.py` 의 `trading_calendar` 를 FR-006b 와 맞춘다. 스펙은 판정 기준을 지표별로 기록하라고 하는데 17개 모두 비어 있다. 지금은 월 평균을 일별 원천에서 접는 지표가 없어 실질 영향이 없고 `validate` 가 그런 지표의 등록을 거부하므로, 스펙 문구를 실제 필요 범위로 좁히든 채권·외환 휴장일을 확인해 채우든 정한다 per FR-006b (partial)
+
+## Phase 11: Convergence
+
+- [X] T086 `backend/src/main/java/com/ssafy/thorp/macro/application/service/MacroSnapshotQueryService.java` 가 수집 시도 상태를 계약이 정한 값으로 좁힌다. 계약의 `collectionState.status` 는 `NEVER_COLLECTED·SUCCEEDED·RUNNING·FAILED·HELD` 인데 DB 는 `PARTIAL` 도 허용하고 지금은 DB 값을 그대로 싣는다. 발행기가 `PARTIAL` 을 적은 직후 중단되면 계약에 없는 값이 응답으로 나가고, 계약으로 검증하는 소비자는 그 응답을 거절한다 per contracts/openapi.yaml §CollectionState (contradicts)
+- [X] T087 T068 의 본문을 실제 계약과 맞춘다. 없는 파일 `contracts/macro-indicator-source.md` 를 가리키고 있으며(실제는 010 의 `contracts/macro-indicator-port.md`), "결측 사유를 함께 돌려준다" 를 요구하는데 그 계약의 `MonthlyValue` 에는 사유를 담을 자리가 없다 — 계약은 결측을 **키 없음**으로 정했고 010 은 그 구멍 자체를 보고 판정한다. 사유를 함께 주려면 010 타입을 바꿔야 하므로 문구를 고칠지 타입을 열지 사람이 정한다 per T068 (partial)

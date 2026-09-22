@@ -1,4 +1,4 @@
-package com.ssafy.thorp.marketflow.infrastructure.example;
+package com.ssafy.thorp.marketflow.testfixture;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;
@@ -21,23 +21,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
 
 /**
- * 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터.
+ * 시장 흐름 시험용 표본 지표 자료.
  *
- * <p><b>명시적으로 고를 때만 올라온다</b>(T064). 008 스냅샷을 읽는 {@code
- * com.ssafy.thorp.marketflow.infrastructure.macro.MacroSnapshotIndicatorAdapter} 가 기본이고, 이 대역은
- * {@code thorp.marketflow.indicator-source=example} 일 때만 대신 들어온다. 둘 다 올라오면 포트 구현이 둘이라 주입이 모호해진다.
+ * <p><b>운영 코드가 아니다.</b> 값은 지어낸 것이라 운영 산출물에 들어가면 안 되고(FR-022), 그래서 T071 에서 시험 범위로 옮겼다 — 여기서는 스프링 빈이
+ * 아니므로 어떤 프로필에서도 선택되지 않는다.
  *
- * <p>운영에서 이것이 골라지면 {@link MarketFlowExampleDataGuard} 가 기동을 막는다.
+ * <p>남겨 둔 이유는 포트 구현 하나가 시험에 필요해서다. 분야 7개와 지표 17개가 든 결정적인 입력이라, 같은 것을 시험마다 손으로 지으면 그 값들이 조금씩 갈라진다.
  */
-@Component
-@ConditionalOnProperty(name = "thorp.marketflow.indicator-source", havingValue = "example")
 public class ExampleMacroIndicatorSnapshotAdapter implements MacroIndicatorSnapshotPort {
 
     static final String RESOURCE_PATH = "marketflow/macro-indicators-example-v1.json";
@@ -47,7 +41,6 @@ public class ExampleMacroIndicatorSnapshotAdapter implements MacroIndicatorSnaps
     private final Map<String, IndicatorPathSnapshot> paths;
     private final List<IndicatorCollectionState> collectionStates;
 
-    @Autowired
     public ExampleMacroIndicatorSnapshotAdapter(ObjectMapper objectMapper) {
         this(new ClassPathResource(RESOURCE_PATH), objectMapper);
     }

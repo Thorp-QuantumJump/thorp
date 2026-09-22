@@ -1,4 +1,4 @@
-package com.ssafy.thorp.marketflow.infrastructure.example;
+package com.ssafy.thorp.marketflow.testfixture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

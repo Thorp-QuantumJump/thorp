@@ -1,12 +1,11 @@
-"""지표 소스 구현체 선택 — 운영 코드가 픽스처를 아는 **유일한 자리**.
+"""지표 소스 구현체 선택.
 
-`--source` 플래그 하나만 보고 고른다. 고르는 곳을 여기 하나로 모으는 이유는 격리 때문이다
-(contracts/macro-indicator-port.md §4.1) — 배치 곳곳에서 구현체를 직접 만들면 008이 왔을 때
-지울 자리를 뒤져야 하고, 그러다 남은 한 곳이 가짜 자료를 운영에 흘린다.
+`--source` 플래그 하나만 보고 고른다. **임시 대역은 T071 에서 폐기했다** — 008 구현체가
+들어왔으므로 고를 것이 하나뿐이지만, 고르는 자리는 남겨 둔다. 다음 구현이 생길 때 배치
+곳곳에서 구현체를 직접 만들지 않게 하는 것이 이 모듈의 몫이다.
 
-**구현체는 이름이 아니라 모듈 경로로 고른다.** 픽스처 클래스를 ``import``하지 않으므로 이
-파일 밖 어디에도 픽스처 심볼이 없고, `fixture/`를 지우면 여기 한 줄만 지우면 된다 — 계약
-§4.3의 폐기 절차 2단계가 그것이다. 각 구현 모듈은 ``create_source()`` 하나를 내놓기로 한다.
+**구현체는 이름이 아니라 모듈 경로로 고른다.** 구현 클래스를 ``import``하지 않으므로 구현을
+갈아끼워도 이 파일 밖은 그대로다. 각 구현 모듈은 ``create_source()`` 하나를 내놓기로 한다.
 """
 
 from __future__ import annotations
@@ -19,16 +18,11 @@ from data_pipeline.regime.macro.source import MacroIndicatorSource
 #: 008 구현체. 완성되면 이것만 남는다.
 SOURCE_MACRO: Final[str] = "macro"
 
-#: ⚠ 008 완성 전까지 쓰는 임시 대역. 계약 §4.3의 폐기 대상이다.
-SOURCE_FIXTURE: Final[str] = "fixture"
-
-#: `--source`가 받는 값. 기본값은 `SOURCE_MACRO`이며 픽스처는 명시해야만 쓰인다 —
-#: 기본이 픽스처면 아무 플래그 없이 돌린 배치가 가짜 자료를 적재한다.
-SOURCE_CHOICES: Final[tuple[str, ...]] = (SOURCE_MACRO, SOURCE_FIXTURE)
+#: `--source`가 받는 값.
+SOURCE_CHOICES: Final[tuple[str, ...]] = (SOURCE_MACRO,)
 
 _IMPLEMENTATION_MODULES: Final[dict[str, str]] = {
     SOURCE_MACRO: "data_pipeline.regime.macro.postgres",
-    SOURCE_FIXTURE: "data_pipeline.regime.macro.fixture.source",
 }
 
 
@@ -51,10 +45,8 @@ def create_source(name: str) -> MacroIndicatorSource:
     try:
         module = import_module(module_path)
     except ModuleNotFoundError as error:
-        # 008 구현체가 아직 없어 기본값 `macro`로 돌리면 여기로 온다. 픽스처로 조용히
-        # 물러나지 않는다 — 그러면 가짜 자료가 기본 경로로 적재된다.
+        # 조용히 다른 구현으로 물러나지 않는다 — 그러면 의도하지 않은 자료가 적재된다.
         raise MacroSourceUnavailableError(
-            f"지표 소스 {name!r}의 구현이 없다({module_path}). "
-            "008이 완성되기 전에는 --source fixture 로 임시 대역을 명시해 쓴다"
+            f"지표 소스 {name!r}의 구현이 없다({module_path})"
         ) from error
     return module.create_source()

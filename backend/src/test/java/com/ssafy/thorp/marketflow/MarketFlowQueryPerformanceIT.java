@@ -11,7 +11,7 @@ import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;
 import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;
 import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;
 import com.ssafy.thorp.marketflow.domain.vo.PathPoint;
-import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;
+import com.ssafy.thorp.marketflow.testfixture.ExampleMacroIndicatorSnapshotAdapter;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.YearMonth;

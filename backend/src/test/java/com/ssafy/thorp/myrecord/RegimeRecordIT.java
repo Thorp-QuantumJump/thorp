@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;
 import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;
 import com.ssafy.thorp.myrecord.domain.vo.EntryPath;
@@ -54,7 +55,9 @@ class RegimeRecordIT extends IntegrationTestSupport {
     void seed() {
         clean();
         owner = TestUsers.ensure(jdbc, 96_001L);
-        snapshot(KEY, "LABOR", "2026-07-01");
+        snapshot(KEY, "labor", "2026-07-01");
+        // 010 은 008 등록표에서 지표 이름을 읽는다(T070). 비어 있으면 조회가 503 이다.
+        MacroRegistrySeed.seedRegistry(jdbc);
     }
 
     @AfterEach

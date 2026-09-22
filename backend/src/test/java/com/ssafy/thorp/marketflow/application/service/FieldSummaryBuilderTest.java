@@ -8,7 +8,7 @@ import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;
 import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;
 import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;
 import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector;
-import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;
+import com.ssafy.thorp.marketflow.testfixture.ExampleMacroIndicatorSnapshotAdapter;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
