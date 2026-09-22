@@ -4,8 +4,20 @@ import { describe, expect, it, vi } from 'vitest'
 import { previewFixture } from '@/test/paramSearchFixtures'
 import { PreflightPanel } from './PreflightPanel'
 
+/**
+ * 실행을 시작하는 버튼들. 도움말 물음표(`aria-label`이 '… 도움말')는 이름에 '실행'이 들어가도
+ * 실행 동작이 아니라 제외한다 — 여기서 세려는 것은 실행이 둘로 갈렸는지다.
+ */
+function actionButtons() {
+  return screen
+    .getAllByRole('button')
+    .filter((button) => !(button.getAttribute('aria-label') ?? '').endsWith('도움말'))
+}
+
 function runButton() {
-  return screen.getByRole('button', { name: /실행/ }) as HTMLButtonElement
+  const buttons = actionButtons()
+  expect(buttons).toHaveLength(1)
+  return buttons[0] as HTMLButtonElement
 }
 
 /**
@@ -25,7 +37,7 @@ describe('PreflightPanel', () => {
     expect(screen.queryAllByRole('textbox')).toHaveLength(0)
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.getAllByRole('button')).toHaveLength(1)
+    expect(actionButtons()).toHaveLength(1)
   })
 
   it('한 번 누르면 실행이 한 번만 나간다', async () => {
