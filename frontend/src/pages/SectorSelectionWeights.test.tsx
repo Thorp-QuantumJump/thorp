@@ -198,28 +198,34 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     expect(screen.queryByText(/두 개 이상/)).toBeNull()
   })
 
-  it('시나리오 3. 한 섹터를 올려도 다른 섹터의 값이 바뀌지 않고 초과가 그 자리에 보인다', async () => {
+  /*
+    아래 두 검사는 팀 결정으로 뜻이 뒤집혔다. 예전에는 한 섹터를 올리면 나머지가 그대로 있어
+    초과·부족이 보이는 것이 옳았고(SC-002, FR-007), 지금은 나머지가 비율대로 따라 움직여
+    합계가 늘 100%다.
+  */
+  it('시나리오 3. 한 섹터를 올리면 나머지가 비율대로 내려가 합계가 100%로 남는다', async () => {
     const user = userEvent.setup()
     await openPage()
     await select(user, '반도체', '자동차', '조선')
 
     await replaceWeight(user, '반도체', '43.4')
 
-    // SC-002: 사용자가 입력하지 않은 섹터의 값이 바뀌지 않는다.
-    expect(shownWeights()).toEqual([43.4, 33.3, 33.3])
-    expect(totalText()).toContain('110.0')
-    expect(totalText()).toMatch(/초과/)
+    // 33.3 : 33.3 이던 둘이 같은 비율로 56.6 을 나눠 갖는다.
+    expect(shownWeights()).toEqual([43.4, 28.3, 28.3])
+    expect(totalText()).toContain('100.0')
+    expect(totalText()).not.toMatch(/부족|초과/)
   })
 
-  it('시나리오 3. 합계가 모자라면 부족한 만큼을 그 자리에 보인다', async () => {
+  it('시나리오 3. 한 섹터를 내려도 나머지가 채워 합계가 100%로 남는다', async () => {
     const user = userEvent.setup()
     await openPage()
     await select(user, '반도체', '자동차')
 
     await replaceWeight(user, '자동차', '40')
 
-    expect(totalText()).toContain('90.0')
-    expect(totalText()).toMatch(/부족/)
+    expect(shownWeights()).toEqual([60, 40])
+    expect(totalText()).toContain('100.0')
+    expect(totalText()).not.toMatch(/부족|초과/)
   })
 
   it('시나리오 3. 소수 둘째 자리는 반올림되어 들어가지 않고 그 자리에 안내가 보인다', async () => {
@@ -239,7 +245,7 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     await openPage()
     await select(user, '반도체', '자동차', '조선')
     await replaceWeight(user, '반도체', '43.4')
-    expect(totalText()).toContain('110.0')
+    expect(shownWeights()).toEqual([43.4, 28.3, 28.3])
 
     await user.click(screen.getByRole('button', { name: '동일하게 나누기' }))
 
@@ -260,20 +266,20 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     await select(user, '방산')
     expect(shownWeights()).toEqual([25, 25, 25, 25])
 
-    // 3. 한 섹터를 40.0으로 수정 → 나머지는 그대로. 합계 115.0
+    // 3. 한 섹터를 40.0으로 수정 → 나머지 셋이 25.0 씩에서 20.0 씩으로 내려간다. 합계 100.0
     await replaceWeight(user, '자동차', '40')
-    expect(shownWeights()).toEqual([25, 25, 40, 25])
-    expect(totalText()).toContain('115.0')
+    expect(shownWeights()).toEqual([20, 20, 40, 20])
+    expect(totalText()).toContain('100.0')
 
-    // 4. 섹터 1개 추가 → 기존 네 개의 값이 그대로이고 새 섹터만 0.0
+    // 4. 섹터 1개 추가 → 기존 네 개의 값이 그대로이고 새 섹터만 0.0. 합계는 그대로 100.0
     await select(user, '철강')
-    expect(shownWeights()).toEqual([25, 25, 40, 25, 0])
+    expect(shownWeights()).toEqual([20, 20, 40, 20, 0])
 
-    // 5. 섹터 1개 해제 → 남은 값 그대로. 합계가 100% 아래로 내려가면 부족 안내
+    // 5. 섹터 1개 해제 → 남은 넷이 비율대로 늘어 100%를 되찾는다. 잔여 1 은 표시 순서 첫 자리로.
     await user.click(checkbox('자동차'))
-    expect(shownWeights()).toEqual([25, 25, 25, 0])
-    expect(totalText()).toContain('75.0')
-    expect(totalText()).toMatch(/부족/)
+    expect(shownWeights()).toEqual([33.4, 33.3, 33.3, 0])
+    expect(totalText()).toContain('100.0')
+    expect(totalText()).not.toMatch(/부족|초과/)
 
     // 6. '동일하게 나누기' → 전체가 동일 비중
     await user.click(screen.getByRole('button', { name: '동일하게 나누기' }))
@@ -352,23 +358,24 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     expect(checkbox('자동차').checked).toBe(false)
   })
 
-  it('슬라이더를 움직여도 다른 섹터의 값은 하나도 바뀌지 않는다', async () => {
+  it('슬라이더를 움직이면 나머지가 비율대로 따라 움직인다', async () => {
     const user = userEvent.setup()
     await openPage()
     await select(user, '반도체', '자동차', '조선')
 
-    // "하나를 올리면 나머지가 알아서 줄어드는" 방식은 이 화면에서 금지다(원칙 VI, SC-002).
+    // 팀 결정으로 "하나를 올리면 나머지가 줄어드는" 방식을 쓴다(원칙 VI·SC-002 와 어긋난다).
     fireEvent.change(slider('반도체'), { target: { value: '600' } })
 
-    expect(shownWeights()).toEqual([60, 33.3, 33.3])
-    expect(totalText()).toContain('126.6')
-    expect(totalText()).toMatch(/초과/)
+    expect(shownWeights()).toEqual([60, 20, 20])
+    expect(totalText()).toContain('100.0')
+    expect(totalText()).not.toMatch(/부족|초과/)
 
-    // 반대로 내려도 마찬가지다. 모자란 만큼을 알릴 뿐 다른 값을 채워 주지 않는다.
+    // 반대로 내리면 나머지가 같은 비율로 늘어난다.
     fireEvent.change(slider('반도체'), { target: { value: '100' } })
 
-    expect(shownWeights()).toEqual([10, 33.3, 33.3])
-    expect(totalText()).toMatch(/부족/)
+    expect(shownWeights()).toEqual([10, 45, 45])
+    expect(totalText()).toContain('100.0')
+    expect(totalText()).not.toMatch(/부족|초과/)
   })
 
   it('슬라이더와 숫자 칸이 같은 값을 가리킨다', async () => {
@@ -411,11 +418,15 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     const bar = () => document.querySelector('[data-slot="weight-total-bar"]')
     expect(bar()?.getAttribute('data-state')).toBe('balanced')
 
+    /*
+      재배분이 합계를 100%로 붙들고 있어 슬라이더로는 short·over 가 나오지 않는다. 두 상태는
+      보관값 복원과 003 인계처럼 밖에서 들어온 값에만 남는다.
+    */
     fireEvent.change(slider('반도체'), { target: { value: '100' } })
-    expect(bar()?.getAttribute('data-state')).toBe('short')
+    expect(bar()?.getAttribute('data-state')).toBe('balanced')
 
     fireEvent.change(slider('반도체'), { target: { value: '900' } })
-    expect(bar()?.getAttribute('data-state')).toBe('over')
+    expect(bar()?.getAttribute('data-state')).toBe('balanced')
 
     // 같은 사실을 문장이 이미 읽어 주므로 막대는 보조 기술에 두 번 읽히지 않는다.
     expect(bar()?.getAttribute('aria-hidden')).toBe('true')
@@ -445,7 +456,7 @@ describe('섹터 선택 화면의 비중 규칙', () => {
     expect(total?.getAttribute('aria-live')).toBe('polite')
   })
 
-  it('비중을 자동으로 정규화하거나 조정하는 수단을 두지 않는다', async () => {
+  it('비중을 건드리는 버튼은 동일하게 나누기 하나뿐이다', async () => {
     const user = userEvent.setup()
     await openPage()
     await select(user, '반도체', '자동차')
@@ -457,16 +468,47 @@ describe('섹터 선택 화면의 비중 규칙', () => {
 
       목록 항목 안의 버튼은 세지 않는다. M5의 대표 상품 정보 펼침은 항목마다 하나씩 있고 비중을
       건드리지 않으므로, 그것까지 세면 이 검사가 무엇을 지키는지 흐려진다. M4가 더한 '전략 고르러
-      가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.
+      가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다. 섹터마다 붙는 '고정하기'도 값을 바꾸지
+      않고 재배분에서 빼 두기만 하므로 같은 까닭으로 세지 않는다 — 아래에서 따로 확인한다.
     */
     const buttons = within(screen.getByRole('main'))
       .getAllByRole('button')
-      .filter((button) => button.closest('[data-slot="profile"]') === null)
+      .filter(
+        (button) =>
+          button.closest('[data-slot="profile"]') === null &&
+          button.getAttribute('data-slot') !== 'weight-lock',
+      )
     expect(buttons.map((button) => button.textContent)).toEqual([
       '동일하게 나누기',
       '전략 고르러 가기',
     ])
-    expect(shownWeights()).toEqual([60, 50])
+    // 재배분은 입력을 받는 순간 일어나고, 그 밖에 값을 바꾸는 버튼은 늘어나지 않았다.
+    expect(shownWeights()).toEqual([60, 40])
+
+    // 고정을 걸어도 값은 그대로다. 고정은 다음 재배분에서 빼 두겠다는 표시일 뿐이다.
+    await user.click(screen.getAllByRole('button', { name: /비중 고정/ })[0])
+    expect(shownWeights()).toEqual([60, 40])
+  })
+
+  it('고정한 섹터는 다른 섹터를 움직여도 값이 그대로다', async () => {
+    const user = userEvent.setup()
+    await openPage()
+    await select(user, '반도체', '자동차', '조선')
+    expect(shownWeights()).toEqual([33.4, 33.3, 33.3])
+
+    // 자동차를 고정해 두고 반도체를 올리면, 줄어드는 것은 조선뿐이다.
+    await user.click(screen.getByRole('button', { name: '자동차 비중 고정' }))
+    await replaceWeight(user, '반도체', '50')
+
+    expect(shownWeights()).toEqual([50, 33.3, 16.7])
+    expect(totalText()).toContain('100.0')
+
+    // 풀면 다시 재배분에 들어온다.
+    await user.click(screen.getByRole('button', { name: '자동차 비중 고정' }))
+    await replaceWeight(user, '반도체', '60')
+
+    expect(shownWeights()).toEqual([60, 26.6, 13.4])
+    expect(totalText()).toContain('100.0')
   })
 
   it('계산식·자료 공급원·거리 함수·실험 식별자·서버 설정 입력 항목을 두지 않는다', async () => {

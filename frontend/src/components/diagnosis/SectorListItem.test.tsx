@@ -48,22 +48,25 @@ function renderItem(sector: SectorSummary, options: RenderOptions = {}) {
 }
 
 describe('SectorListItem', () => {
-  it('섹터 이름·대표 ETF 이름·업종 구분을 함께 보인다', () => {
+  it('섹터 이름과 대표 ETF 이름을 함께 보인다', () => {
     renderItem(semiconductor)
     const item = screen.getByRole('listitem')
 
     expect(within(item).getByText('반도체')).toBeTruthy()
     expect(within(item).getByText('KODEX 반도체')).toBeTruthy()
-    expect(within(item).getByText('업종')).toBeTruthy()
   })
 
-  it('테마 섹터는 테마로 구분해 보인다', () => {
-    renderItem(battery)
-    const item = screen.getByRole('listitem')
+  /*
+    팀 결정으로 업종/테마 배지를 뺐다. spec 002 FR-003 은 이 구분의 표시를 요구하므로
+    이 단언은 FR-003 과 어긋난다. 되돌릴 때 여기와 SectorListItem.tsx 를 함께 본다.
+  */
+  it('업종·테마 구분은 목록에 보이지 않는다', () => {
+    renderItem(semiconductor)
+    expect(within(screen.getByRole('listitem')).queryByText('업종')).toBeNull()
 
-    expect(within(item).getByText('2차전지')).toBeTruthy()
-    expect(within(item).getByText('KODEX 2차전지산업')).toBeTruthy()
-    expect(within(item).getByText('테마')).toBeTruthy()
+    renderItem(battery)
+    const items = screen.getAllByRole('listitem')
+    expect(within(items[items.length - 1]).queryByText('테마')).toBeNull()
   })
 
   it('계산식·자료 공급원·실험 식별자·서버 설정을 보이지 않는다', () => {
@@ -121,7 +124,7 @@ describe('SectorListItem', () => {
     await userEvent.click(screen.getByText('KODEX 반도체'))
     expect(onSelectedChange).toHaveBeenLastCalledWith(true)
 
-    await userEvent.click(screen.getByText('업종'))
+    await userEvent.click(screen.getByText('반도체'))
     expect(onSelectedChange).toHaveBeenCalledTimes(2)
   })
 

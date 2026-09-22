@@ -2,7 +2,12 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { SectorSelectionContext } from './sector-selection-context'
 import { sortSectorsForDisplay } from './sectorOrder'
 import { readStoredSelection, writeStoredSelection } from './selectionStorage'
-import { distributeEven, isValidWeightTenths, summarizeWeights } from './weights'
+import {
+  distributeEven,
+  isValidWeightTenths,
+  rebalanceToTotal,
+  summarizeWeights,
+} from './weights'
 import type { SectorSummary } from '@/types/sector'
 
 /**
@@ -97,6 +102,13 @@ export function SectorSelectionProvider({
     writeStoredSelection(state)
   }, [state])
 
+  /*
+    고정한 섹터다. **보관하지 않는다.** 저장소 페이로드는 003 인계 계약이라 항목을 늘리면
+    읽는 쪽까지 함께 고쳐야 한다. 고정은 비중을 맞추는 동안만 쓰는 손잡이여서 탭을 새로
+    열면 풀린 채로 시작한다.
+  */
+  const [lockedCodes, setLockedCodes] = useState<readonly string[]>([])
+
   const sortCodes = useCallback(
     (codes: readonly string[]) =>
       [...codes].sort(
@@ -118,6 +130,9 @@ export function SectorSelectionProvider({
           ? sortCodes([...previous.selectedCodes, code])
           : previous.selectedCodes.filter((selectedCode) => selectedCode !== code)
 
+        // 선택에서 빠진 섹터가 고정으로 남아 있으면 남은 몫 계산이 엉킨다.
+        if (!selected) setLockedCodes((current) => current.filter((each) => each !== code))
+
         // 아직 한 번도 고치지 않았으면 더할 때도 뺄 때도 전체를 다시 채운다.
         if (!previous.weightsTouched) {
           return {
@@ -132,14 +147,22 @@ export function SectorSelectionProvider({
         return {
           mapVersion,
           selectedCodes,
+          // 섹터를 빼면 남은 섹터를 비율대로 다시 채워 합계를 100%로 되돌린다. 더할 때는
+          // 새 섹터에 0%를 주므로 합계가 그대로다.
           weightTenths: selected
             ? { ...previous.weightTenths, [code]: 0 }
-            : omit(previous.weightTenths, code),
+            : rebalanceToTotal(
+                previous.selectedCodes.filter((each) => each !== code),
+                omit(previous.weightTenths, code),
+                null,
+                0,
+                lockedCodes,
+              ),
           weightsTouched: true,
         }
       })
     },
-    [displayRank, mapVersion, sortCodes],
+    [displayRank, lockedCodes, mapVersion, sortCodes],
   )
 
   const setWeight = useCallback(
@@ -156,18 +179,29 @@ export function SectorSelectionProvider({
           return previous
         }
 
+        // 한 섹터를 올리면 나머지가 비율대로 내려가 합계가 언제나 100%다(팀 결정).
+        // 스펙 002 FR-005·FR-007과 SC-009는 사용자 비중을 건드리지 않기를 요구하므로
+        // 이 동작은 그 셋과 어긋난다. weights.ts 의 rebalanceToTotal 주석에 적어 두었다.
         return {
           mapVersion,
           selectedCodes: previous.selectedCodes,
-          weightTenths: { ...previous.weightTenths, [code]: weightTenths },
+          weightTenths: rebalanceToTotal(
+            previous.selectedCodes,
+            previous.weightTenths,
+            code,
+            weightTenths,
+            lockedCodes,
+          ),
           weightsTouched: true,
         }
       })
     },
-    [mapVersion],
+    [lockedCodes, mapVersion],
   )
 
   const distributeEvenly = useCallback(() => {
+    // 되돌리는 동작이라 고정도 함께 푼다. 고정을 남겨 두면 '동일하게'가 동일하지 않게 된다.
+    setLockedCodes([])
     setState((previous) => ({
       mapVersion,
       selectedCodes: previous.selectedCodes,
@@ -176,6 +210,19 @@ export function SectorSelectionProvider({
       weightsTouched: false,
     }))
   }, [mapVersion])
+
+  const isLocked = useCallback((code: string) => lockedCodes.includes(code), [lockedCodes])
+
+  const toggleLock = useCallback((code: string, locked: boolean) => {
+    // 고정은 값을 바꾸지 않는다. 지금 값을 그 자리에 붙들어 둘 뿐이다.
+    setLockedCodes((current) =>
+      locked
+        ? current.includes(code)
+          ? current
+          : [...current, code]
+        : current.filter((each) => each !== code),
+    )
+  }, [])
 
   /**
    * 선택과 비중을 한 번의 상태 전이로 바꾼다. 배우기 예시 진입이 쓴다(FR-012).
@@ -222,13 +269,27 @@ export function SectorSelectionProvider({
       dropped: restored.dropped,
       restoreProblem: restored.problem,
       ...summary,
+      lockedCodes,
       isSelected,
+      isLocked,
+      toggleLock,
       toggleSector,
       setWeight,
       distributeEvenly,
       applySelection,
     }
-  }, [state, restored, isSelected, toggleSector, setWeight, distributeEvenly, applySelection])
+  }, [
+    state,
+    restored,
+    lockedCodes,
+    isSelected,
+    isLocked,
+    toggleLock,
+    toggleSector,
+    setWeight,
+    distributeEvenly,
+    applySelection,
+  ])
 
   return (
     <SectorSelectionContext.Provider value={value}>{children}</SectorSelectionContext.Provider>
