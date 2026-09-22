@@ -68,17 +68,18 @@ class ParamSearchConfigTest {
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.max-candidates"))
-                                    .isEqualTo("120");
+                                    .isEqualTo("100");
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.time-limit-seconds"))
-                                    .isEqualTo("120");
+                                    .isEqualTo("1800");
+                            // 발행 창은 서버의 벌크 워커 수와 같다. 워커를 늘리면 이 값도 같이 올린다.
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.dispatch-window"))
-                                    .isEqualTo("4");
+                                    .isEqualTo("1");
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
@@ -108,10 +109,12 @@ class ParamSearchConfigTest {
                             assertThat(context).hasSingleBean(ParamSearchProperties.class);
                             ParamSearchProperties properties =
                                     context.getBean(ParamSearchProperties.class);
-                            // 로컬은 상한 초과 거부(FR-005b)를 재현하려고 공통값보다 낮춘 24다.
-                            assertThat(properties.getMaxCandidates()).isEqualTo(24);
-                            assertThat(properties.getDispatchWindow()).isEqualTo(4);
-                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(300L);
+                            // 로컬도 공통 설정과 같은 후보 수·실행시간·발행 창으로 돈다. 상한 초과
+                            // 거부(FR-005b)는 max-candidates 를 낮춘 ParamSearchRejectionIT 가 맡는다.
+                            assertThat(properties.getMaxCandidates()).isEqualTo(100);
+                            assertThat(properties.getDispatchWindow()).isEqualTo(1);
+                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(1800L);
+                            // 연속 실패 한도만 로컬이 낮다 — 실패를 빨리 눈으로 보려는 개발 편의값이다.
                             assertThat(properties.getConsecutiveFailureLimit()).isEqualTo(3);
                         });
     }

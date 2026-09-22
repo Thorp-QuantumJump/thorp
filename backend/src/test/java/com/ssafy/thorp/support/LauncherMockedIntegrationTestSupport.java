@@ -15,4 +15,10 @@ public abstract class LauncherMockedIntegrationTestSupport
 
     /** 발행 창을 1로 좁히는 속성. 이 값을 쓰는 검사끼리 컨텍스트를 함께 쓰려면 문자열이 글자 그대로 같아야 하므로 각자 적지 말고 이 상수를 가리킨다. */
     public static final String NARROW_DISPATCH_WINDOW = "thorp.param-search.dispatch-window=1";
+
+    /**
+     * 발행 창을 4로 넓히는 속성. 운영 설정은 서버의 벌크 워커 1개에 맞춰 1이지만, <b>창에 둘 이상이 들어가야만 성립하는 검사</b>(동시 수신, 창만큼만
+     * 발행하는지)가 있다. 그 검사들이 운영 값 변화에 끌려다니지 않도록 자기 창 크기를 직접 정한다. 위와 같은 이유로 각자 적지 말고 이 상수를 가리킨다.
+     */
+    public static final String WIDE_DISPATCH_WINDOW = "thorp.param-search.dispatch-window=4";
 }

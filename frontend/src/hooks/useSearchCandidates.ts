@@ -24,6 +24,7 @@ export type SearchCandidatesState = {
 export function useSearchCandidates(
   searchId: string | null,
   query: CandidateQuery = {},
+  refreshKey: string | number = 0,
 ): SearchCandidatesState {
   const [page, setPage] = useState<CandidatePage | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +79,7 @@ export function useSearchCandidates(
     return () => {
       active = false
     }
-  }, [searchId, queryPage, size, status, selected, sort, direction, reloadToken])
+  }, [searchId, queryPage, size, status, selected, sort, direction, reloadToken, refreshKey])
 
   return { page, error, isLoading, refetch }
 }

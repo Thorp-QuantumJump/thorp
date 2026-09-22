@@ -129,6 +129,20 @@ public class SearchCandidate {
                 .build();
     }
 
+    /**
+     * 발행하려 했더니 004 접수가 이 조합을 거부했다 — 계산 전 제외로 확정한다(FR-006).
+     *
+     * <p><b>실패가 아니다.</b> {@code FAILED}는 "계산했는데 틀어졌다"라 재시도 대상이고, 이것은 "계산할 수 없는 조합"이라 다시 보내도 같은 답이
+     * 온다. 접수 전 유효성 판정이 놓친 조합이 여기로 오며, 사유를 남겨 두면 어느 판정이 빠졌는지 드러난다.
+     */
+    public SearchCandidate markExcluded(String reasonCode, String reasonDetail) {
+        requireReason(reasonCode, reasonDetail);
+        return transitionTo(CandidateStatus.EXCLUDED)
+                .reasonCode(reasonCode)
+                .reasonDetail(reasonDetail)
+                .build();
+    }
+
     /** 결과 이벤트가 성공으로 도착했다. */
     public SearchCandidate markCompleted() {
         return transitionTo(CandidateStatus.COMPLETED).build();
