@@ -170,6 +170,10 @@ export function RegimeSearchPage() {
           <LoadError error={baselineError} onRetry={() => setBaselineRetry((value) => value + 1)} />
         ) : !baselines ? (
           <p role="status" className={styles.loading}>{copy.loadingFields}</p>
+        ) : baselines.byField.length === 0 ? (
+          // 사전 계산이 아직 돌지 않았다. 빈 선택 상자만 보이면 사용자는 자기가 잘못 눌렀다고
+          // 읽으므로, 고를 것이 없는 이유를 말한다(FR-030, 원칙 VI).
+          <p role="status" className={styles.loading}>{copy.baselinesNotReady}</p>
         ) : (
           <form onSubmit={submit} className={styles.searchForm}>
             <label htmlFor="regime-field">경제 분야</label>
