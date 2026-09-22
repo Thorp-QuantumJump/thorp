@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import type {
@@ -339,7 +340,13 @@ export function AnalysisConditionsPanel({
           aria-controls={open ? bodyId : undefined}
           onClick={() => setOpen((current) => !current)}
         >
-          분석 조건
+          <span>분석 조건</span>
+          <ChevronDown
+            className={styles.toggleIcon}
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
         </button>
         {summary}
       </div>

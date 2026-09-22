@@ -2336,8 +2336,8 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(requests).toHaveLength(0);
   });
 
-  it("평가 기간을 고른 카드와 분석하기 바로 위에 같은 문장으로 보이고 까닭은 펼쳐 본다", async () => {
-    // SC-004. 두 곳이 같은 기간을 말하고, 까닭(시작일을 정한 섹터와 워밍업 항목)은 상세에서 펼친다.
+  it("평가 기간은 분석하기 바로 위에만 보이고 까닭은 펼쳐 본다", async () => {
+    // SC-004. 카드는 고를 수 있는지만 말하고, 기간과 그 까닭은 고른 뒤 오른쪽 안내가 맡는다.
     const user = userEvent.setup();
     const { support } = makeSupport({ judgeWarmup: reducedJudgement });
     renderPage(support);
@@ -2350,8 +2350,9 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     // 고른 적 없는 기간을 두고 "줄었다"고 말하지 않는다.
     expect(notice.textContent).not.toContain("줄었");
 
+    // 카드에는 적지 않는다 — 고를 수 있다는 뜻이라 선택을 가르지 않는다.
     const card = await findCardNamed(selectableStrategy.name);
-    expect(within(card).getByText(sentence)).toBeTruthy();
+    expect(within(card).queryByText(sentence)).toBeNull();
 
     await user.click(
       within(notice).getByRole("button", { name: "평가 기간 도움말" }),
