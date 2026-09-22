@@ -164,17 +164,20 @@ describe('다음 단계 버튼과 003 인계', () => {
     expect(proceedButton().disabled).toBe(true)
   })
 
-  it('합계가 맞지 않으면 넘어가지 않고 한 문장으로 알린다. 값을 자동으로 고치지 않는다 (FR-007)', async () => {
+  /*
+    팀 결정으로 한 섹터를 고치면 나머지가 비율대로 따라 움직인다. 그래서 합계가 100%를 벗어나는
+    상태 자체가 만들어지지 않고, FR-007 이 정한 부족·초과 안내도 이 경로에서는 뜨지 않는다.
+  */
+  it('한 섹터를 고쳐도 합계가 100%로 유지되어 그대로 넘어간다', async () => {
     const user = userEvent.setup()
     await openPage()
     await select(user, '반도체', '자동차')
 
     await replaceWeight(user, '반도체', '40')
 
-    expect(proceedButton().disabled).toBe(true)
-    expect(screen.getByText(/합계를 100%로 맞추면/)).toBeTruthy()
-    // 안내를 띄우면서 비중을 맞춰 버리면 SC-002 위반이다.
-    expect(shownWeights()).toEqual([40, 50])
+    expect(shownWeights()).toEqual([40, 60])
+    expect(proceedButton().disabled).toBe(false)
+    expect(screen.queryByText(/합계를 100%로 맞추면/)).toBeNull()
   })
 
   it('두 개 이상이고 합계가 100%면 다음 단계로 넘어간다', async () => {
@@ -197,14 +200,15 @@ describe('다음 단계 버튼과 003 인계', () => {
     await replaceWeight(user, '반도체', '43.4')
     await replaceWeight(user, '자동차', '23.3')
 
-    expect(shownWeights()).toEqual([43.4, 23.3, 33.3])
+    // 조선은 손대지 않았지만 두 번의 재배분을 따라 움직인다. 넘기는 값은 화면에 보이는 값과 같다.
+    expect(shownWeights()).toEqual([46.4, 23.3, 30.3])
     await user.click(proceedButton())
 
     const payload = storedPayload()
     expect(payload?.selected).toEqual([
-      { code: 'SEMICONDUCTOR', weightTenths: 434 },
+      { code: 'SEMICONDUCTOR', weightTenths: 464 },
       { code: 'AUTO', weightTenths: 233 },
-      { code: 'SHIPBUILDING', weightTenths: 333 },
+      { code: 'SHIPBUILDING', weightTenths: 303 },
     ])
   })
 

@@ -202,3 +202,88 @@ export function summarizeWeights(
     hasZeroWeight,
   }
 }
+
+/**
+ * 한 섹터의 비중을 정하고 **나머지를 비율대로 줄이거나 늘려 합계를 정확히 1000으로 맞춘다.**
+ *
+ * <p>스펙(002 FR-007)은 자동 정규화를 금지하고 사용자가 '동일하게 나누기'로 직접 되돌리게
+ * 정했지만, 팀 결정으로 합계를 언제나 100%로 유지하는 쪽을 택했다. 그래서 FR-007·FR-005의
+ * "사용자 비중을 건드리지 않는다"와 SC-009는 이 함수가 있는 한 성립하지 않는다.
+ *
+ * <p>계산은 정수로만 한다. `남은 몫 = 1000 - 고정값`을 나머지 섹터의 현재 비중에 비례해 나누되,
+ * 내림으로 생긴 잔여분은 **버림 오차가 큰 순서**로 1씩 준다(최대잔여법). 동률이면 표시 순서가
+ * 앞선 쪽이 먼저다. 어떤 입력에서도 합계가 정확히 1000이고, 같은 입력이면 늘 같은 결과다.
+ *
+ * <p>나머지 섹터가 모두 0%라 비례 배분할 바탕이 없으면 남은 몫을 동일하게 나눈다. 이때 잔여분은
+ * {@link distributeEven}과 같은 규칙으로 표시 순서상 첫 섹터에 몰아준다.
+ *
+ * <p><b>고정한 섹터는 움직이지 않는다.</b> 그 값을 먼저 떼어 두고 남은 몫만 나머지에 나눈다.
+ * 방금 사용자가 정한 섹터는 고정이어도 그 입력이 이긴다 — 고정은 *다른* 섹터의 변화로부터
+ * 지키는 것이지 자기 입력까지 막는 뜻이 아니다.
+ *
+ * <p>고정한 값의 합이 이미 1000을 넘으면 남는 몫이 없다. 그때는 나머지가 모두 0이 되고, 방금
+ * 정한 값도 남은 몫까지만 받는다 — 고정을 어기고 합계를 맞추지는 않는다.
+ *
+ * @param orderedCodes 표시 순서로 정렬된 선택 섹터
+ * @param current 지금 비중. 없는 코드는 0으로 본다
+ * @param fixedCode 사용자가 방금 정한 섹터. `null`이면 전체를 비율대로 1000에 맞춘다
+ * @param fixedTenths `fixedCode`에 넣을 값
+ * @param lockedCodes 고정한 섹터들. `fixedCode`는 여기 들어 있어도 고정으로 보지 않는다
+ */
+export function rebalanceToTotal(
+  orderedCodes: readonly string[],
+  current: Readonly<Record<string, number>>,
+  fixedCode: string | null = null,
+  fixedTenths = 0,
+  lockedCodes: readonly string[] = [],
+): Record<string, number> {
+  const next: Record<string, number> = {}
+  const locked = new Set(lockedCodes.filter((code) => code !== fixedCode))
+
+  let lockedSum = 0
+  for (const code of orderedCodes) {
+    if (!locked.has(code)) continue
+    next[code] = current[code] ?? 0
+    lockedSum += next[code]
+  }
+
+  const available = Math.max(0, TOTAL_WEIGHT_TENTHS - lockedSum)
+  const movable = orderedCodes.filter((code) => code !== fixedCode && !locked.has(code))
+
+  if (fixedCode !== null) {
+    // 고정한 값이 이미 자리를 다 차지했으면 그 남은 몫까지만 받는다.
+    next[fixedCode] = movable.length === 0 ? available : Math.min(fixedTenths, available)
+  }
+  if (movable.length === 0) return next
+
+  const remaining = available - (fixedCode === null ? 0 : next[fixedCode])
+  const movableSum = movable.reduce((sum, code) => sum + (current[code] ?? 0), 0)
+
+  // 바탕이 없으면 비율을 만들 수 없다. 남은 몫을 고르게 나누고 잔여분은 앞자리에 몰아준다.
+  if (movableSum <= 0) {
+    const share = Math.floor(remaining / movable.length)
+    const extra = remaining - share * movable.length
+    movable.forEach((code, index) => {
+      next[code] = index === 0 ? share + extra : share
+    })
+    return next
+  }
+
+  // 내림으로 배분한 뒤 남는 만큼을 버림 오차가 큰 순서로 1씩 돌려준다.
+  const shortfalls: { code: string; loss: number; order: number }[] = []
+  let assigned = 0
+  movable.forEach((code, order) => {
+    const numerator = (current[code] ?? 0) * remaining
+    const base = Math.floor(numerator / movableSum)
+    next[code] = base
+    assigned += base
+    shortfalls.push({ code, loss: numerator % movableSum, order })
+  })
+
+  shortfalls.sort((a, b) => (b.loss - a.loss) || (a.order - b.order))
+  for (let i = 0; i < remaining - assigned; i += 1) {
+    next[shortfalls[i % shortfalls.length].code] += 1
+  }
+
+  return next
+}

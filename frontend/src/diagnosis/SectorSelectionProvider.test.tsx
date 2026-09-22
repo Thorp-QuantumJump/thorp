@@ -142,7 +142,7 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     expect(touched()).toBe('false')
   })
 
-  it('2행. 한 번이라도 고쳤으면 기존 값을 건드리지 않고 새 섹터에만 0을 준다', () => {
+  it('2행. 한 번이라도 고쳤으면 새 섹터에만 0을 주고 합계 100%를 유지한다', () => {
     renderProvider()
     run((value) => value.toggleSector('SEMICONDUCTOR', true))
     run((value) => value.toggleSector('AUTO', true))
@@ -151,9 +151,10 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     const before = weights()
     run((value) => value.toggleSector('SHIPBUILDING', true))
 
-    // SC-009: 기존 섹터의 비중이 바뀐 사례 0건, 새 섹터가 0%가 아닌 사례 0건.
+    // 새 섹터는 0%라 합계가 그대로다. AUTO 를 400 으로 내릴 때 SEMICONDUCTOR 가 600 으로
+    // 올라가 이미 100%를 맞춘 상태다(팀 결정으로 SC-009 는 더 이상 성립하지 않는다).
     expect(weights()).toBe(`${before},SHIPBUILDING=0`)
-    expect(weights()).toBe('SEMICONDUCTOR=500,AUTO=400,SHIPBUILDING=0')
+    expect(weights()).toBe('SEMICONDUCTOR=600,AUTO=400,SHIPBUILDING=0')
     expect(touched()).toBe('true')
   })
 
@@ -170,7 +171,7 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     expect(touched()).toBe('false')
   })
 
-  it('4행. 고친 뒤 섹터를 해제하면 남은 값을 그대로 둔다', () => {
+  it('4행. 고친 뒤 섹터를 해제하면 남은 값을 비율대로 다시 채운다', () => {
     renderProvider()
     run((value) => value.toggleSector('SEMICONDUCTOR', true))
     run((value) => value.toggleSector('AUTO', true))
@@ -179,13 +180,14 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
 
     run((value) => value.toggleSector('BATTERY', false))
 
-    // 합계가 100% 아래로 내려가는 것은 오류가 아니라 FR-007이 안내하는 정상 상태다.
-    expect(weights()).toBe('SEMICONDUCTOR=400,AUTO=333')
-    expect(screen.getByTestId('derived').textContent).toBe('733/false/267/false/false')
+    // SEMICONDUCTOR 400 · AUTO 300 이던 둘이 400:300 비율을 지킨 채 1000 으로 늘어난다.
+    // 잔여 1 은 버림 오차가 큰 AUTO 로 간다(최대잔여법).
+    expect(weights()).toBe('SEMICONDUCTOR=571,AUTO=429')
+    expect(screen.getByTestId('derived').textContent).toBe('1000/true/0/true/false')
     expect(touched()).toBe('true')
   })
 
-  it('5행. 비중 수정은 그 섹터만 바꾸고 수정 여부를 true로 만든다', () => {
+  it('5행. 비중을 고치면 나머지가 비율대로 따라 움직이고 수정 여부가 true가 된다', () => {
     renderProvider()
     run((value) => value.toggleSector('SEMICONDUCTOR', true))
     run((value) => value.toggleSector('AUTO', true))
@@ -193,10 +195,10 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
 
     run((value) => value.setWeight('AUTO', 0))
 
-    // 0%를 거부하지 않는다(FR-016, SC-010). 다른 섹터의 값은 그대로다(SC-002).
-    expect(weights()).toBe('SEMICONDUCTOR=334,AUTO=0,BATTERY=333')
+    // 0%를 거부하지 않는다(FR-016, SC-010). 남은 둘이 334:333 비율로 1000 을 나눠 갖는다.
+    expect(weights()).toBe('SEMICONDUCTOR=501,AUTO=0,BATTERY=499')
     expect(touched()).toBe('true')
-    expect(screen.getByTestId('derived').textContent).toBe('667/false/333/false/true')
+    expect(screen.getByTestId('derived').textContent).toBe('1000/true/0/true/true')
   })
 
   it('6행. 동일하게 나누기는 값을 다시 채우면서 수정 여부를 false로 되돌린다', () => {
@@ -343,7 +345,8 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     run((value) => value.toggleSector('AUTO', true))
 
     // 기억해 두었다가 되살리면 사용자가 지운 값이 말없이 되돌아온다. '섹터 체크'와 같게 다룬다.
-    expect(weights()).toBe('SEMICONDUCTOR=500,AUTO=0')
+    // AUTO 를 뺄 때 SEMICONDUCTOR 가 1000 을 가져갔고, 다시 고른 AUTO 는 0 으로 들어온다.
+    expect(weights()).toBe('SEMICONDUCTOR=1000,AUTO=0')
   })
 
   it('상태가 바뀔 때마다 계약이 정한 형태로 보관한다', () => {
@@ -356,22 +359,22 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
       version: 1,
       mapVersion: MAP_VERSION,
       selected: [
-        { code: 'SEMICONDUCTOR', weightTenths: 500 },
+        { code: 'SEMICONDUCTOR', weightTenths: 600 },
         { code: 'AUTO', weightTenths: 400 },
       ],
       weightsTouched: true,
     })
   })
 
-  it('합계가 1000이 아닌 상태도 그대로 보관한다', () => {
+  it('한 섹터를 고치면 나머지가 따라 움직여 보관값 합계도 1000이다', () => {
     renderProvider()
     run((value) => value.toggleSector('SEMICONDUCTOR', true))
     run((value) => value.toggleSector('AUTO', true))
     run((value) => value.setWeight('AUTO', 100))
 
-    // 저장 시점에 맞추면 사용자 입력을 몰래 바꾸는 것이 된다(계약 불변식 3).
+    // 맞추는 자리는 저장소가 아니라 setWeight 다. 저장소는 받은 값을 그대로 적는다.
     expect(storedPayload().selected).toEqual([
-      { code: 'SEMICONDUCTOR', weightTenths: 500 },
+      { code: 'SEMICONDUCTOR', weightTenths: 900 },
       { code: 'AUTO', weightTenths: 100 },
     ])
   })
@@ -434,6 +437,6 @@ describe('SectorSelectionProvider — data-model.md 「상태 전이」', () => 
     expect(screen.getByTestId('derived').textContent).toBe('1000/true/0/true/false')
 
     run((value) => value.setWeight('AUTO', 600))
-    expect(screen.getByTestId('derived').textContent).toBe('1100/false/-100/false/false')
+    expect(screen.getByTestId('derived').textContent).toBe('1000/true/0/true/false')
   })
 })
