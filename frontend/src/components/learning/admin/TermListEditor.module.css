@@ -4,8 +4,9 @@
   align-items: flex-start;
   gap: 14px;
   padding: 20px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 14px;
+  background: var(--thorp-surface);
 }
 
 .editor h3 {
@@ -38,8 +39,9 @@
   align-items: flex-start;
   gap: 10px;
   padding: 14px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 10px;
+  background: var(--thorp-surface-raised);
 }
 
 .field {
@@ -54,7 +56,7 @@
 .field input,
 .field textarea {
   padding: 9px 12px;
-  border: 1px solid var(--thorp-line-strong);
+  border: 1px solid var(--thorp-line-control);
   border-radius: 8px;
   background: transparent;
   color: var(--thorp-foreground);
@@ -77,7 +79,7 @@
 
 .editor button {
   padding: 7px 13px;
-  border: 1px solid var(--thorp-line-strong);
+  border: 1px solid var(--thorp-line-control);
   border-radius: 999px;
   background: transparent;
   color: inherit;
@@ -87,7 +89,7 @@
 }
 
 .editor button:hover:not(:disabled) {
-  border-color: currentColor;
+  border-color: var(--thorp-line-control-hover);
 }
 
 .editor button:disabled {
