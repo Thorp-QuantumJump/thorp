@@ -93,13 +93,17 @@ describe('SectorSelectionPage', () => {
     ])
   })
 
-  it('섹터 이름과 대표 ETF 이름을 함께 보인다', async () => {
+  it('목록에는 대표 ETF 이름을, 보고 있는 대상에는 섹터 이름까지 보인다', async () => {
     apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))
     renderPage()
 
+    // 목록은 고를 대상을 가려내는 자리라 이름 하나로 짧게 둔다.
     const items = await screen.findAllByRole('listitem')
-    expect(within(items[0]).getByText('반도체')).toBeTruthy()
     expect(within(items[0]).getByText('KODEX 반도체')).toBeTruthy()
+
+    // 어느 섹터의 상품인지는 지금 보고 있는 대상을 설명하는 자리에서 말한다.
+    const subtitle = document.querySelector('[data-slot="main-subtitle"]')
+    expect(subtitle?.textContent).toContain('반도체')
   })
 
   it('목록 역할을 명시해 스타일이 의미를 지우지 못하게 한다', async () => {
@@ -134,12 +138,12 @@ describe('SectorSelectionPage', () => {
     expect(screen.queryByText(/예시 대응표/)).toBeNull()
   })
 
-  it('예시 표시와 비중 초깃값 예시 표시를 한 문장으로 합치지 않는다', async () => {
+  it('대응표가 예시라는 표시에 비중 이야기를 섞지 않는다', async () => {
     apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(true))
     renderPage()
 
     const sampleNotice = await screen.findByText(/예시 대응표/)
-    // 비중 초깃값 예시 표시는 M3이 비중 입력 묶음의 머리에 따로 둔다.
+    // 이 문장이 가리키는 것은 목록이 어디서 왔는지다. 비중은 이 화면이 다루지 않는다.
     expect(sampleNotice.textContent).not.toMatch(/비중/)
   })
 

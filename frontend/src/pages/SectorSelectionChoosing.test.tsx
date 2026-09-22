@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -114,27 +114,31 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
 function row(code: string): HTMLButtonElement {
   return document.querySelector(
-    `[data-sector-code="${code}"] [data-slot="row"]`,
+    `[data-slot="list"] [data-sector-code="${code}"] [data-slot="pill"]`,
   ) as HTMLButtonElement
-}
-
-function detail(): HTMLElement {
-  return document.querySelector('[data-slot="detail-header"]')
-    ?.parentElement as HTMLElement
 }
 
 function detailName(): string {
   return document.querySelector('[data-slot="detail-name"]')?.textContent ?? ''
 }
 
+/** 담고 빼는 단추다. 카드 가운데 머리에 있다. */
 function actionButton(): HTMLButtonElement {
-  return document.querySelector('[data-slot="detail-action"]') as HTMLButtonElement
+  return document.querySelector('[data-slot="pick"]') as HTMLButtonElement
 }
 
+/** 카드를 넓히고 접는 단추다. 오른쪽 위에 아이콘 하나로 있다. */
 function expandButton(): HTMLButtonElement {
-  return document.querySelector('[data-slot="detail-expand"]') as HTMLButtonElement
+  return document.querySelector('[data-slot="zoom"]') as HTMLButtonElement
+}
+
+function cardExpanded(): boolean {
+  return (
+    document.querySelector('[data-viewing-code]')?.getAttribute('data-expanded') === 'true'
+  )
 }
 
 /** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */
@@ -248,24 +252,45 @@ describe('투자 대상 고르기', () => {
     expect(railCodes()).toEqual([])
   })
 
-  it('상세를 펼치면 같은 화면에서 더 많은 사실을 보인다', async () => {
-    const user = userEvent.setup()
+  it('접은 카드는 목록이 이미 준 사실만 보인다', async () => {
     await openPage()
 
-    await waitFor(() => expect(screen.getByText('삼성자산운용')).toBeTruthy())
-    // 간단히 볼 때는 보유 구성과 거래대금을 늘어놓지 않는다.
+    // 기준 지수와 상장일은 목록 응답에 있다. 이것만으로 견주는 동안에는 상품 정보를 부르지 않는다.
+    expect(screen.getByText(/KRX 반도체/)).toBeTruthy()
+    expect(screen.getByText(/2018-09-12 상장/)).toBeTruthy()
+    expect(screen.queryByText('삼성자산운용')).toBeNull()
     expect(screen.queryByText('삼성전자')).toBeNull()
+    expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
+  })
+
+  it('카드를 넓히면 담긴 종목과 자세한 설명이 같은 카드에 함께 선다', async () => {
+    const user = userEvent.setup()
+    await openPage()
 
     await user.click(expandButton())
 
     expect(await screen.findByText('삼성전자')).toBeTruthy()
+    expect(screen.getByText('삼성자산운용')).toBeTruthy()
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
-    expect(expandButton().textContent).toContain('간단히 보기')
+    expect(cardExpanded()).toBe(true)
+    expect(expandButton().getAttribute('aria-label')).toBe('간단히 보기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')
   })
 
-  it('상세를 여닫아도 보던 대상과 담아 둔 것이 그대로다', async () => {
+  it('넓힌 카드는 목록·설명·담긴 종목을 나란히 둔다', async () => {
+    const user = userEvent.setup()
+    await openPage()
+    await user.click(expandButton())
+    await screen.findByText('삼성전자')
+
+    // 세 칸이 같은 격자 안에 형제로 선다. 아래로 이어 붙이면 넓힌 뜻이 없다.
+    const body = document.querySelector('[data-slot="body"]') as HTMLElement
+    const columns = [...body.children].map((node) => node.getAttribute('data-slot'))
+    expect(columns).toEqual(['list', 'main', 'holdings'])
+  })
+
+  it('카드를 여닫아도 보던 대상과 담아 둔 것이 그대로다', async () => {
     const user = userEvent.setup()
     await openPage()
     await add(user, 'SEMICONDUCTOR')
@@ -278,27 +303,26 @@ describe('투자 대상 고르기', () => {
     expect(railCodes()).toEqual(['SEMICONDUCTOR'])
   })
 
-  it('상세를 펼친 채 다른 대상으로 옮기면 그 깊이를 유지한다', async () => {
+  it('넓힌 채 다른 대상으로 옮기면 그 크기를 유지한다', async () => {
     const user = userEvent.setup()
     await openPage()
     await user.click(expandButton())
 
     await user.click(row('AUTO'))
 
-    // 같은 깊이로 여럿을 견주는 중이다. 옮길 때마다 접히면 그 일을 방해한다.
-    expect(expandButton().getAttribute('aria-expanded')).toBe('true')
+    // 같은 크기로 여럿을 견주는 중이다. 옮길 때마다 접히면 그 일을 방해한다.
+    expect(cardExpanded()).toBe(true)
     expect(detailName()).toBe('KODEX 자동차')
   })
 
-  it('상세를 펼치고 접는 동안 상품 정보를 다시 부르지 않는다', async () => {
+  it('보고 있는 대상 하나만 조회한다', async () => {
     const user = userEvent.setup()
     await openPage()
+    await user.click(expandButton())
+
+    // 목록에 있는 여섯을 한꺼번에 불러오지 않는다. 사용자가 보는 것은 언제나 하나다.
     await waitFor(() => expect(apiMocks.fetchInstrumentProfile).toHaveBeenCalledTimes(1))
-
-    await user.click(expandButton())
-    await user.click(expandButton())
-
-    expect(apiMocks.fetchInstrumentProfile).toHaveBeenCalledTimes(1)
+    expect(apiMocks.fetchInstrumentProfile.mock.calls[0][0]).toBe('SEMICONDUCTOR')
   })
 
   it('화면을 다시 열어도 담아 둔 것이 그대로 남는다', async () => {
@@ -348,11 +372,12 @@ describe('투자 대상 고르기', () => {
     const { container } = await openPage()
     await add(user, 'SEMICONDUCTOR', 'AUTO')
     await user.click(expandButton())
+    await screen.findByText('삼성전자')
 
     // "무엇을"과 "얼마나"를 가른다. 비중은 다음 단계가 소유한다.
     expect(container.querySelectorAll('input')).toHaveLength(0)
     expect(screen.queryByText(/동일하게 나누기/)).toBeNull()
     expect(screen.queryByText(/합계/)).toBeNull()
-    expect(within(detail()).queryByText(/고정하기/)).toBeNull()
+    expect(screen.queryByText(/고정하기/)).toBeNull()
   })
 })

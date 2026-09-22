@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
-import { InstrumentDetail } from '@/components/diagnosis/InstrumentDetail'
-import { InstrumentListRow } from '@/components/diagnosis/InstrumentListRow'
+import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
 import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
 import { SelectedInstrumentsRail } from '@/components/diagnosis/SelectedInstrumentsRail'
@@ -82,8 +81,8 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   }, [initialSector, sectors, viewingCode])
 
   /*
-    상세까지 펼쳐 보고 있는가. **항목마다 따로 기억하지 않는다.** 상세를 보며 여러 상품을
-    견주는 사용자는 다음 항목에서도 같은 깊이로 보려 하므로, 옮길 때마다 접히면 그 일을 방해한다.
+    카드를 넓혀 보고 있는가. **항목마다 따로 기억하지 않는다.** 넓혀서 여러 상품을 견주는
+    사용자는 다음 항목에서도 같은 크기로 보려 하므로, 옮길 때마다 접히면 그 일을 방해한다.
   */
   const [detailExpanded, setDetailExpanded] = useState(false)
 
@@ -157,10 +156,11 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
 
   return (
     <div className={styles.board}>
-      <section className={styles.browser} aria-labelledby="instrument-list-title">
-        <h2 id="instrument-list-title" className={styles.listTitle}>
-          투자 대상 목록
-        </h2>
+      {/*
+        머리글을 따로 두지 않는다. 화면 제목이 이미 무엇을 하는 자리인지 말하고 있어, 그 아래
+        "투자 대상 목록"을 한 번 더 적으면 같은 말이 두 번 읽힌다. 보조 기술에는 영역 이름만 준다.
+      */}
+      <section className={styles.browser} aria-label="투자 대상 탐색">
 
         {/*
           목록이 예시 대응표에서 왔다는 표시다(FR-015). 상품 정보의 예시 표시와 가리키는 대상이
@@ -205,39 +205,18 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           </p>
         ) : null}
 
-        <div className={styles.masterDetail}>
-          {/*
-            `list-style: none`이 걸리면 Safari와 VoiceOver 조합에서 `<ul>`의 목록 역할이 사라진다.
-            이 화면은 목록 의미에 기대고 있으므로 역할을 명시해, 보조 기술 사용자만 "목록, 항목
-            몇 개" 안내를 못 받는 일이 없게 한다.
-          */}
-          <ul className={styles.list} role="list">
-            {sectors.map((sector) => (
-              <InstrumentListRow
-                key={sector.code}
-                className={styles.item}
-                sector={sector}
-                viewing={viewing?.code === sector.code}
-                selected={selection.isSelected(sector.code)}
-                onView={() => setViewingCode(sector.code)}
-              />
-            ))}
-          </ul>
-
-          {viewing ? (
-            <InstrumentDetail
-              className={styles.detail}
-              // 항목이 바뀌면 상세도 그 항목의 것으로 새로 만든다. 앞 항목의 조회 결과가 잠시
-              // 남아 다른 상품의 정보로 읽히는 일을 막는다.
-              key={viewing.code}
-              sector={viewing}
-              selected={selection.isSelected(viewing.code)}
-              expanded={detailExpanded}
-              onSelectedChange={(next) => selection.toggleSector(viewing.code, next)}
-              onExpandedChange={setDetailExpanded}
-            />
-          ) : null}
-        </div>
+        {viewing ? (
+          <InstrumentBrowser
+            className={styles.browserCard}
+            sectors={sectors}
+            viewing={viewing}
+            expanded={detailExpanded}
+            isSelected={selection.isSelected}
+            onView={setViewingCode}
+            onToggleSelected={selection.toggleSector}
+            onExpandedChange={setDetailExpanded}
+          />
+        ) : null}
 
         {/*
           KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만

@@ -8,10 +8,10 @@ import { SectorSelectionPage } from '@/pages/SectorSelectionPage'
 import type { InstrumentProfile, SectorCatalog, SectorSummary } from '@/types/sector'
 
 /**
- * SC-012를 이 검사가 받는다. quickstart에 그 시나리오가 없기 때문이다
- * (tasks.md 「SC-012와 SC-013에는 quickstart 시나리오가 없다」).
+ * 넓힌 카드가 보이는 상품 정보다. SC-012를 이 검사가 받는다. quickstart에 그 시나리오가 없기
+ * 때문이다(tasks.md 「SC-012와 SC-013에는 quickstart 시나리오가 없다」).
  *
- * 패널만 떼어 보지 않고 목록 화면째로 연다. SC-012가 묻는 것이 "목록의 **모든 항목**에서 열리는가"와
+ * 카드만 떼어 보지 않고 화면째로 연다. SC-012가 묻는 것이 "목록의 **모든 항목**에서 열리는가"와
  * "여는 동안 화면을 떠나지 않는가"라, 목록과 경로가 함께 있어야 확인할 수 있다.
  */
 
@@ -113,45 +113,50 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 목록의 한 줄이다. 누르면 상세 영역이 그 항목으로 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
 function row(sectorCode: string): HTMLButtonElement {
   return document.querySelector(
-    `[data-sector-code="${sectorCode}"] [data-slot="row"]`,
+    `[data-slot="list"] [data-sector-code="${sectorCode}"] [data-slot="pill"]`,
   ) as HTMLButtonElement
 }
 
-/** 상세 보기와 간단히 보기를 오가는 단추다. 상세 영역에 하나뿐이다. */
+/** 카드를 넓히고 접는 단추다. 오른쪽 위에 아이콘 하나로 있다. */
 function expandToggle(): HTMLButtonElement {
-  return document.querySelector('[data-slot="detail-expand"]') as HTMLButtonElement
+  return document.querySelector('[data-slot="zoom"]') as HTMLButtonElement
 }
 
-/** 지금 상세 영역이 쓰는 상품 정보 패널이다. 간단히 볼 때도 같은 패널이 자리를 지킨다. */
-function profilePanel(): HTMLElement | null {
-  return document.querySelector('[data-slot="profile-panel"]')
+/** 카드 안을 통째로 본다. 넓힌 카드의 설명과 담긴 종목이 모두 이 안에 있다. */
+function cardBody(): HTMLElement {
+  return document.querySelector('[data-slot="body"]') as HTMLElement
 }
 
-function panelVariant(): string | null {
-  return profilePanel()?.getAttribute('data-variant') ?? null
+function expanded(): boolean {
+  return (
+    document.querySelector('[data-viewing-code]')?.getAttribute('data-expanded') === 'true'
+  )
 }
 
-/**
- * 그 대상을 상세까지 펼친 상태로 만든다.
- *
- * 목록에서 보는 것과 상세로 펼치는 것은 서로 다른 행동이라 두 번 누른다. 이름을 함께 받는
- * 까닭은 상세 영역이 실제로 그 대상으로 바뀌었는지 이름으로 확인하기 위해서다.
- */
-async function openProfile(user: User, sectorName: string, sectorCode: string) {
+/** 상품 정보를 기다리지 않고 카드만 넓힌다. 자료가 없는 상태를 보는 검사가 쓴다. */
+async function zoomIn(user: User, sectorCode: string, sectorName: string) {
   await user.click(row(sectorCode))
   await waitFor(() => {
     expect(document.querySelector('[data-slot="detail-name"]')?.textContent).toBe(
       `KODEX ${sectorName}`,
     )
   })
-  if (expandToggle().getAttribute('aria-expanded') !== 'true') {
-    await user.click(expandToggle())
-  }
+  if (!expanded()) await user.click(expandToggle())
+}
+
+/**
+ * 그 대상을 넓혀 상품 정보가 다 실린 상태로 만든다.
+ *
+ * 목록에서 보는 것과 카드를 넓히는 것은 서로 다른 행동이라 두 번 누른다. 이름을 함께 받는
+ * 까닭은 카드가 실제로 그 대상으로 바뀌었는지 이름으로 확인하기 위해서다.
+ */
+async function openProfile(user: User, sectorName: string, sectorCode: string) {
+  await zoomIn(user, sectorCode, sectorName)
   await waitFor(() => {
-    expect(profilePanel()?.querySelector('[data-slot="profile-body"]')).not.toBeNull()
+    expect(cardBody().querySelector('[data-slot="profile-body"]')).not.toBeNull()
   })
 }
 
@@ -170,13 +175,13 @@ describe('대표 상품 정보 패널', () => {
     window.sessionStorage.clear()
   })
 
-  it('보고 있는 대상 하나만 조회한다', async () => {
+  it('접어 둔 카드는 상품 정보를 부르지 않는다', async () => {
     await openPage()
 
-    // 목록에 있는 여섯을 한꺼번에 불러오지 않는다. 사용자가 보는 것은 언제나 하나다.
-    await waitFor(() => expect(apiMocks.fetchInstrumentProfile).toHaveBeenCalledTimes(1))
-    expect(apiMocks.fetchInstrumentProfile.mock.calls[0][0]).toBe('SEMICONDUCTOR')
-    expect(panelVariant()).toBe('summary')
+    // 목록을 훑기만 하는 사용자는 이 왕복을 치르지 않는다.
+    expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
+    expect(cardBody().querySelector('[data-slot="profile-body"]')).toBeNull()
+    expect(cardBody().querySelector('[data-slot="holdings"]')).toBeNull()
   })
 
   it('SC-012. 목록의 모든 항목에서 열린다', async () => {
@@ -189,7 +194,7 @@ describe('대표 상품 정보 패널', () => {
       ['2차전지', 'BATTERY'],
     ] as const) {
       await openProfile(user, name, code)
-      expect(profilePanel()?.querySelector('[data-slot="profile-body"]')).not.toBeNull()
+      expect(cardBody().querySelector('[data-slot="profile-body"]')).not.toBeNull()
     }
   })
 
@@ -213,11 +218,12 @@ describe('대표 상품 정보 패널', () => {
       status: 'notReady',
       message: '서버가 보낸 문장',
     } satisfies InstrumentProfileResult)
+    const user = userEvent.setup()
     await openPage()
+    await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
-    // 간단히 보는 상태에서도 자료가 없다는 사실은 그 자리에서 알린다.
     const notReady = await waitFor(() => {
-      const found = profilePanel()
+      const found = cardBody()
       expect(found?.textContent).toContain('대표 상품 정보가 아직 준비 중입니다')
       return found as HTMLElement
     })
@@ -234,10 +240,12 @@ describe('대표 상품 정보 패널', () => {
       message: '없는 섹터',
       retryable: false,
     } satisfies InstrumentProfileResult)
+    const user = userEvent.setup()
     await openPage()
+    await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
     const notFound = await waitFor(() => {
-      const found = profilePanel()
+      const found = cardBody()
       expect(found?.textContent).toContain('찾을 수 없습니다')
       return found as HTMLElement
     })
@@ -252,10 +260,12 @@ describe('대표 상품 정보 패널', () => {
       message: '대응표가 망가졌습니다',
       retryable: false,
     } satisfies InstrumentProfileResult)
+    const user = userEvent.setup()
     await openPage()
+    await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
     const broken = await waitFor(() => {
-      const found = profilePanel()
+      const found = cardBody()
       expect(found?.textContent).toContain('서버에 저장된 상품 자료에 문제가 있어')
       return found as HTMLElement
     })
@@ -272,7 +282,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = profilePanel() as HTMLElement
+    const panel = cardBody() as HTMLElement
     const holdings = [...panel.querySelectorAll('[data-slot="holding"]')].map(
       (node) => node.textContent ?? '',
     )
@@ -290,7 +300,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = profilePanel() as HTMLElement
+    const panel = cardBody() as HTMLElement
     const caveat = panel.querySelector('[data-slot="composition-caveat"]')
 
     expect(caveat?.textContent).toMatch(/과거 수익을 이\s*종목들로 설명할 수 없습니다/)
@@ -308,7 +318,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const panel = profilePanel() as HTMLElement
+    const panel = cardBody() as HTMLElement
     expect(panel.querySelector('[data-slot="composition-caveat"]')).toBeNull()
   })
 
@@ -321,11 +331,14 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const source = profilePanel()?.querySelector('[data-slot="profile-source"]')
+    const source = cardBody().querySelector('[data-slot="profile-source"]')
     expect(source?.textContent).toContain('다른 출처 표기')
-    // 어느 시점까지의 자료인지는 보이되 자료 식별자는 날것으로 두지 않는다(FR-011).
-    expect(source?.textContent).toContain('2026-09-07')
-    expect(profilePanel()?.textContent).not.toContain('KRX_DAILY_20260907')
+    // 자료 식별자는 날것으로 두지 않는다(FR-011). 어느 시점까지인지는 사실 표가 말한다.
+    expect(source?.textContent).not.toContain('KRX_DAILY')
+    expect(
+      cardBody().querySelector('[data-slot="profile-facts"]')?.textContent,
+    ).toContain('2026-09-07')
+    expect(cardBody().textContent).not.toContain('KRX_DAILY_20260907')
   })
 
   it('상품 정보의 예시 표시는 자료 버전 기준이며 목록의 예시 표시와 별개다', async () => {
@@ -339,7 +352,7 @@ describe('대표 상품 정보 패널', () => {
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
     expect(
-      profilePanel()?.querySelector('[data-slot="profile-sample"]'),
+      cardBody()?.querySelector('[data-slot="profile-sample"]'),
     ).not.toBeNull()
     expect(screen.queryByText(/이 섹터 목록은 아직 확정되지 않은/)).toBeNull()
   })
@@ -349,7 +362,7 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    expect(profilePanel()?.textContent).toContain('12.4억 원')
+    expect(cardBody().textContent).toContain('12.4억 원')
   })
 
   it('떨어지는 거래대금에 없는 소수 자리를 붙이지 않는다', async () => {
@@ -362,7 +375,7 @@ describe('대표 상품 정보 패널', () => {
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
     // `3,574억`이지 `3574.0억`이 아니다. 소수 한 자리까지 잰 값처럼 보이면 안 된다.
-    const text = profilePanel()?.textContent ?? ''
+    const text = cardBody().textContent ?? ''
     expect(text).toContain('3,574억 원')
     expect(text).not.toContain('.0억')
   })
@@ -376,33 +389,33 @@ describe('대표 상품 정보 패널', () => {
       받침이 있는지에 따라 은/는이 갈리는데 상품 이름은 서버가 주는 값이라 미리 알 수 없다.
       한쪽으로 고정하면 절반은 틀린 문장이 된다. 사실은 조사 없는 목록으로 보인다.
     */
-    const text = profilePanel()?.textContent ?? ''
+    const text = cardBody().textContent ?? ''
     expect(text).not.toContain('KODEX 반도체은')
     expect(text).not.toContain('KODEX 반도체는')
 
-    const facts = profilePanel()?.querySelector('[data-slot="profile-facts"]')
+    const facts = cardBody().querySelector('[data-slot="profile-facts"]')
     expect(facts?.textContent).toContain('KRX 반도체')
     expect(facts?.textContent).toContain('삼성자산운용')
   })
 
-  it('키보드만으로 펼치고 접을 수 있다 (CHK005, CHK033)', async () => {
+  it('키보드만으로 넓히고 접을 수 있다 (CHK005, CHK033)', async () => {
     const user = userEvent.setup()
     await openPage()
 
     const toggle = expandToggle()
     toggle.focus()
     await user.keyboard('{Enter}')
-    await waitFor(() => expect(panelVariant()).toBe('full'))
+    await waitFor(() => expect(expanded()).toBe(true))
     expect(expandToggle().getAttribute('aria-expanded')).toBe('true')
 
     await user.keyboard('{Enter}')
-    expect(panelVariant()).toBe('summary')
+    expect(expanded()).toBe(false)
     expect(expandToggle().getAttribute('aria-expanded')).toBe('false')
-    // 접은 뒤에도 초점이 그 자리에 남아 바로 다시 펼칠 수 있다.
+    // 접은 뒤에도 초점이 그 자리에 남아 바로 다시 넓힐 수 있다.
     expect(document.activeElement).toBe(expandToggle())
   })
 
-  it('펼침 버튼이 어느 패널을 넓히는지 보조 기술에 알린다', async () => {
+  it('단추가 무엇을 넓히는지 보조 기술에 알린다', async () => {
     const user = userEvent.setup()
     await openPage()
 
@@ -411,7 +424,9 @@ describe('대표 상품 정보 패널', () => {
     const toggle = expandToggle()
     const controlled = toggle.getAttribute('aria-controls')
     expect(controlled).toBeTruthy()
-    expect(profilePanel()?.id).toBe(controlled)
+    expect(cardBody().id).toBe(controlled)
+    // 아이콘 하나뿐이라 이름을 직접 준다. 지금 상태에 따라 이름이 달라진다.
+    expect(toggle.getAttribute('aria-label')).toBe('간단히 보기')
   })
 
   it('자료 시점을 한국 날짜로 보인다', async () => {
@@ -427,9 +442,9 @@ describe('대표 상품 정보 패널', () => {
     await openPage()
     await openProfile(user, '반도체', 'SEMICONDUCTOR')
 
-    const source = profilePanel()?.querySelector('[data-slot="profile-source"]')
-    expect(source?.textContent).toContain('2026-09-07')
-    expect(source?.textContent).not.toContain('2026-09-06')
+    const facts = cardBody().querySelector('[data-slot="profile-facts"]')
+    expect(facts?.textContent).toContain('2026-09-07')
+    expect(facts?.textContent).not.toContain('2026-09-06')
   })
 
   it('살펴보는 것과 투자 대상에 담는 것이 서로 섞이지 않는다', async () => {
@@ -440,5 +455,8 @@ describe('대표 상품 정보 패널', () => {
 
     // 무엇을 사는지 보려던 사용자가 그 행동만으로 백테스트 대상을 정하게 되면 안 된다.
     expect(document.querySelectorAll('[data-slot="rail-item"]')).toHaveLength(0)
+    expect(
+      document.querySelector('[data-slot="pick"]')?.getAttribute('aria-pressed'),
+    ).toBe('false')
   })
 })
