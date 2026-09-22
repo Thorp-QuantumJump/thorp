@@ -9,7 +9,12 @@ import type {
   SearchCounts,
   SelectionRule,
 } from '@/types/paramSearch'
-import { formatCount, formatPercent, sortMetricText } from '@/utils/paramSearchLabels'
+import {
+  describeCandidateSetting,
+  formatCount,
+  formatPercent,
+  sortMetricText,
+} from '@/utils/paramSearchLabels'
 import styles from './SelectionResult.module.css'
 
 interface SelectionResultProps {
@@ -54,6 +59,13 @@ export function SelectionResult({
   onCompareToggle,
 }: SelectionResultProps) {
   const metric = sortMetricText(selectionRule?.sortMetric ?? 'NET_RETURN')
+
+  // 후보가 모두 한 전략이면 이름을 목록 위에 한 번만 둔다 — 카드마다 되풀이하면 정작 후보끼리
+  // 다른 설정값이 묻힌다. 여러 전략이 섞이면 카드가 각자 이름을 적어야 구분된다.
+  const strategyNames = [
+    ...new Set(candidates.map((candidate) => describeCandidateSetting(candidate, config).strategyName)),
+  ]
+  const sharedStrategy = strategyNames.length === 1 ? strategyNames[0] : null
 
   return (
     <section className={styles.section} aria-labelledby="selection-title">
@@ -156,19 +168,32 @@ export function SelectionResult({
             : '기준을 충족한 설정이 없습니다. 기준을 낮춰 채우지 않으므로 범위를 바꿔 다시 실행해 주세요.'}
         </p>
       ) : (
-        <ul className={styles.cards}>
-          {candidates.map((candidate) => (
-            <li key={candidate.candidateId}>
-              <CandidateSummaryCard
-                candidate={candidate}
-                config={config}
-                onOpenDetail={() => onOpenDetail(candidate)}
-                compareChecked={comparePicks.includes(candidate.candidateId)}
-                onCompareToggle={() => onCompareToggle(candidate)}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          {sharedStrategy && (
+            <p className={styles.strategy}>
+              <span>전략</span>
+              <strong>{sharedStrategy}</strong>
+              <span className={styles.strategyNote}>
+                아래 후보는 모두 이 전략이며 설정값만 다릅니다.
+              </span>
+            </p>
+          )}
+
+          <ul className={styles.cards}>
+            {candidates.map((candidate) => (
+              <li key={candidate.candidateId}>
+                <CandidateSummaryCard
+                  candidate={candidate}
+                  config={config}
+                  showStrategy={sharedStrategy === null}
+                  onOpenDetail={() => onOpenDetail(candidate)}
+                  compareChecked={comparePicks.includes(candidate.candidateId)}
+                  onCompareToggle={() => onCompareToggle(candidate)}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   )

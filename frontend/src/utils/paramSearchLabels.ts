@@ -187,36 +187,55 @@ export function describeCandidateSetting(
   config: ParamSearchConfig | null,
 ): { strategyName: string; parameterText: string } {
   const space = config?.space?.[candidate.strategyId] ?? null
-  const labelOf = (name: string) => {
-    const axis = space?.axes.find((item) => item.name === name)
-    if (!axis) return { label: name, unit: null as string | null, axis: null }
-    return { label: axis.label, unit: axis.unit, axis }
-  }
-
-  const entries = Object.entries(candidate.parameters)
-  const parameterText =
-    entries.length === 0
-      ? '설정 값 없음'
-      : entries
-          .map(([name, value]) => {
-            const { label, unit, axis } = labelOf(name)
-            const valueKey = axisValueKey(value)
-            const valueIndex = axis?.values.findIndex((candidateValue) => {
-              return axisValueKey(candidateValue) === valueKey
-            })
-            const valueLabel =
-              valueIndex !== undefined && valueIndex >= 0
-                ? axis?.valueLabels?.[valueIndex]
-                : undefined
-
-            return `${label} ${valueLabel ?? valueKey}${unit ? unit : ''}`
-          })
-          .join(' · ')
+  const parameters = describeCandidateParameters(candidate, config)
 
   return {
     strategyName: space?.strategyName ?? candidate.strategyId,
-    parameterText,
+    parameterText:
+      parameters.length === 0
+        ? '설정 값 없음'
+        : parameters.map((item) => `${item.label} ${item.valueText}`).join(' · '),
   }
+}
+
+/** 축 하나가 무슨 값인지. 라벨과 값을 따로 들고 있어 화면이 둘을 나눠 그릴 수 있다. */
+export type CandidateParameter = {
+  /** 응답의 축 이름. 화면 키로 쓴다 */
+  name: string
+  /** 사람이 읽는 축 이름. 등록표에 없으면 축 이름을 그대로 쓴다 */
+  label: string
+  /** 표시 문구와 단위를 붙인 값 */
+  valueText: string
+}
+
+/**
+ * 후보의 설정값을 축마다 라벨과 값으로 나눠 준다.
+ *
+ * <p><b>한 줄 문자열과 나눠 둔 이유가 있다.</b> 카드처럼 자리가 있는 곳은 축 이름과 값을 위아래로
+ * 놓아야 어떤 설정인지 한눈에 읽히고, 표 칸처럼 좁은 곳은 `describeCandidateSetting`의 한 줄이
+ * 맞다. 두 화면이 같은 규칙으로 값을 읽도록 여기 한 곳에서만 만든다(FR-025).
+ */
+export function describeCandidateParameters(
+  candidate: SearchCandidateItem,
+  config: ParamSearchConfig | null,
+): CandidateParameter[] {
+  const space = config?.space?.[candidate.strategyId] ?? null
+
+  return Object.entries(candidate.parameters).map(([name, value]) => {
+    const axis = space?.axes.find((item) => item.name === name) ?? null
+    const valueKey = axisValueKey(value)
+    const valueIndex = axis?.values.findIndex((candidateValue) => {
+      return axisValueKey(candidateValue) === valueKey
+    })
+    const valueLabel =
+      valueIndex !== undefined && valueIndex >= 0 ? axis?.valueLabels?.[valueIndex] : undefined
+
+    return {
+      name,
+      label: axis?.label ?? name,
+      valueText: `${valueLabel ?? valueKey}${axis?.unit ?? ''}`,
+    }
+  })
 }
 
 /**
