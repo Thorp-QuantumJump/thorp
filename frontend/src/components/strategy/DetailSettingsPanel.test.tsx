@@ -85,6 +85,7 @@ function Harness({
         values={settings.values}
         universeSize={UNIVERSE_SIZE}
         targetWeights={weights}
+        evaluationRange={{ start: "2019-06-03", end: "2024-12-30" }}
         onChange={(axisName, value) => settings.setValue(id, axisName, value)}
         onResetAxis={(axisName) => settings.resetAxis(id, axisName)}
         onResetAll={() => settings.resetAll(id)}
@@ -365,6 +366,29 @@ describe("DetailSettingsPanel", () => {
     expect(await screen.findByText(gate.description ?? "")).not.toBeNull();
     expect(screen.queryByText("설명 준비 중")).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("워밍업을 이루는 축에는 평가할 수 있는 범위를 적고 도움말이 그 사실을 말한다", async () => {
+    // 등록표 warmupRule.sum 이 정하는 축이다. 화면이 축 이름을 적어 두지 않는다(FR-005).
+    const user = await renderOpened(selectableStrategy);
+    const drift = selectableStrategy.axes.find(
+      (axis) => axis.name === "driftWindow",
+    )!;
+
+    expect(
+      screen.getByText(
+        "지금 값으로 평가할 수 있는 범위는 2019-06-03 ~ 2024-12-30입니다.",
+      ),
+    ).toBeTruthy();
+
+    await user.hover(
+      screen.getByRole("button", { name: `${drift.label} 도움말` }),
+    );
+    expect(
+      await screen.findByText(
+        /이 값을 바꾸면 평가할 수 있는 범위가 달라집니다/,
+      ),
+    ).toBeTruthy();
   });
 
   it("목록형 항목을 바꾼 뒤 항목별 복원으로 되돌린다", async () => {
