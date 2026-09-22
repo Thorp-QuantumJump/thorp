@@ -21,6 +21,13 @@ export type SectorSelectionContextValue = {
   weightTenths: Readonly<Record<string, number>>
   /** 사용자가 비중을 한 번이라도 고쳤는지. 이 값이 섹터를 더하고 뺄 때의 동작을 가른다. */
   weightsTouched: boolean
+  /**
+   * 고정한 섹터다. 다른 섹터를 움직여도 이 값들은 그대로 남는다.
+   *
+   * **보관하지 않는다.** 저장소 페이로드는 003 인계 계약이라 항목을 늘리면 읽는 쪽까지 함께
+   * 고쳐야 한다. 비중을 맞추는 동안만 쓰는 손잡이여서 탭을 새로 열면 풀린 채로 시작한다.
+   */
+  lockedCodes: readonly string[]
   /** 세션 복원 때 끝내 선택에 남지 못한 항목과 그 까닭이다. 코드마다 한 번만 담긴다. */
   dropped: readonly DroppedSelection[]
   /** 보관된 값을 쓸 수 없었던 까닭이다. 없으면 null이다. */
@@ -34,6 +41,9 @@ export type SectorSelectionContextValue = {
   hasZeroWeight: boolean
 
   isSelected: (code: string) => boolean
+  isLocked: (code: string) => boolean
+  /** 고정을 걸고 푼다. 값 자체는 바꾸지 않는다. */
+  toggleLock: (code: string, locked: boolean) => void
   toggleSector: (code: string, selected: boolean) => void
   setWeight: (code: string, weightTenths: number) => void
   /** '동일하게 나누기'다. 값을 다시 채우면서 `weightsTouched`를 false로 되돌린다. */

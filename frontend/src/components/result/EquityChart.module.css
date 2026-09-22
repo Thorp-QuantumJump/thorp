@@ -6,6 +6,46 @@
 }
 
 /*
+ * 세로축 눈금 전환 단추. 그래프 오른쪽 위에 붙여 어느 눈금으로 보는 중인지 그래프와 함께 읽게 한다.
+ */
+.scaleToggle {
+  display: flex;
+  gap: 2px;
+  align-self: flex-end;
+  padding: 2px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: var(--thorp-surface);
+}
+
+.scaleButton {
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.scaleButton:hover {
+  color: var(--thorp-ink);
+}
+
+/* 고른 쪽은 색만이 아니라 바탕과 글자 굵기로도 갈린다. 색을 구별하지 못해도 어느 쪽인지 읽힌다. */
+.scaleButton[aria-pressed='true'] {
+  background: var(--thorp-neutral);
+  color: var(--thorp-surface);
+  font-weight: 600;
+}
+
+.scaleButton:focus-visible {
+  outline: 2px solid var(--thorp-neutral);
+  outline-offset: 1px;
+}
+
+/*
  * 음영의 두 색을 여기 한 곳에서 정한다. SVG 안에서 `var(--result-shade-*)`로 읽으므로 테마 토큰이
  * 바뀌어도 컴포넌트를 고치지 않는다.
  */

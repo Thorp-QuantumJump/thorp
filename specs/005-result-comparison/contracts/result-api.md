@@ -55,7 +55,7 @@
 
 - **`backtestId`를 담지 않는다.** 004의 내부 실행 식별자가 화면에 드러나면 SC-009를 어긴다. 재시도도 공개 토큰으로 받는다. 공개 취소 경로는 두지 않는다.
 - `expiresAt`은 비로그인 결과에만 있다. 로그인 사용자의 결과에서는 `null`이다.
-- `validationTier`는 PD-12 확정 전까지 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이라는 뜻이며 화면도 그렇게 쓴다.
+- `validationTier`는 PD-12 확정 전까지 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이라는 뜻이다. 모든 결과가 같은 값이라 결과 사이를 가르지 못하므로 **화면은 이 값을 읽지 않는다**(FR-012). 평가 분할이 등록되면 그때 화면 표시를 만든다.
 - `progress`·`queueWaitSeconds`는 `status`가 `QUEUED`·`RUNNING`일 때만 담는다. 비교 대상 자리의 진행 상태 표시에 쓴다.
 - `strategyName`은 서버가 003 등록표에서 `config.strategyId`로 찾아 채운다. 첫 화면이 등록표를 따로 부르면 SC-001의 요청 수를 넘기기 때문이다. 등록표에 없거나 읽지 못하면 `null`이고, 화면은 이름을 지어내지 않는다.
 - `weightsSource`(`USER`|`COMPUTED`)는 FR-014를 첫 화면에서 보이려고 `/weights` 없이 담는다. `exceptionKinds`는 예외 기록 `kind`의 중복 없는 목록(처음 나온 순서)이며 결과 옆 한 문장을 `/exceptions` 없이 만들기 위해 담는다(R-12). 둘 다 `status`가 `COMPLETED`·`CANCELLED`이고 볼 결과가 있을 때만 값이 있다. 결과를 볼 수 없으면(계산 중, 실패, 시작 전 취소) `null`이고, `exceptionKinds`의 빈 목록은 "예외 없음"이다.

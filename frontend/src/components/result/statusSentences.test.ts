@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { resultDetailCompleted } from '@/test/resultFixtures'
 import type { PublicResultDetail } from '@/types/result'
-import {
-  STATUS_SENTENCE_TEMPLATES,
-  VALIDATION_SENTENCE_TEMPLATES,
-  selectStatusSentence,
-} from './statusSentences'
+import { STATUS_SENTENCE_TEMPLATES, selectStatusSentence } from './statusSentences'
 
-/** 005 T076. FR-012~FR-013, SC-004~SC-005, quickstart 5. */
+/** 005 T076. FR-013, SC-004~SC-005, quickstart 5. */
 
 const forbiddenWords = ['추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률']
 
@@ -17,10 +13,7 @@ function detail(overrides: Partial<PublicResultDetail>): PublicResultDetail {
 
 describe('결과 상태 문장 틀', () => {
   it('틀 전체 문자열에 금지 어휘가 하나도 없다', () => {
-    const allTemplates = [
-      ...Object.values(STATUS_SENTENCE_TEMPLATES),
-      ...Object.values(VALIDATION_SENTENCE_TEMPLATES),
-    ].join('\n')
+    const allTemplates = Object.values(STATUS_SENTENCE_TEMPLATES).join('\n')
 
     for (const word of forbiddenWords) {
       expect(allTemplates, word).not.toContain(word)
@@ -102,10 +95,22 @@ describe('결과 상태 문장 틀', () => {
     ).toContain('실행이 끝나지 못했습니다(ENGINE_ERROR): 계산 엔진이 응답하지 않았습니다.')
   })
 
-  it('미검증은 판정 기준이 정해지지 않았다는 이유와 항상 함께 있다', () => {
+  it('검증 구분은 문장에 담지 않는다', () => {
+    // 구분을 가르려면 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계(PD-12)가 아직
+    // 없다. 가를 수 없는 것을 화면에 적지 않는다(005 FR-012).
     const sentence = selectStatusSentence(resultDetailCompleted, null)
 
-    expect(sentence).toContain('검증되지 않았습니다.')
-    expect(sentence).toContain('판정 기준이 아직 정해지지 않았습니다.')
+    expect(sentence).not.toContain('검증')
+    expect(sentence).toContain('자료 부족·계산 제한 기록이')
   })
+
+  it('알릴 상태가 없으면 빈 문장을 돌려준다', () => {
+    const sentence = selectStatusSentence(
+      detail({ status: 'COMPLETED', partial: false, summary: null, exceptionKinds: null }),
+      null,
+    )
+
+    expect(sentence).toBe('')
+  })
+
 })

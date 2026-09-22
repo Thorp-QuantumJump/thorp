@@ -8,6 +8,7 @@ import { formatMoney } from './formatResult'
 import { ResourceArea } from './ResourceArea'
 import type { SectorLabels } from './sectorLabels'
 import styles from './resultDetail.module.css'
+import { DateField } from '@/components/common/DateField'
 
 /**
  * 전체 거래 내역(FR-007, T065). 상세 패널 안에서 '거래 내역 보기'를 누를 때 처음 부른다(SC-001).
@@ -289,20 +290,22 @@ export function TradeHistory({
             </label>
             <label className={styles.field}>
               시작일
-              <input
-                type="date"
+              <DateField
+                label="시작일"
                 value={draft.from}
+                max={draft.to || undefined}
                 aria-describedby={formError ? formErrorId : undefined}
-                onChange={(event) => update('from')(event.target.value)}
+                onChange={update('from')}
               />
             </label>
             <label className={styles.field}>
               종료일
-              <input
-                type="date"
+              <DateField
+                label="종료일"
                 value={draft.to}
+                min={draft.from || undefined}
                 aria-describedby={formError ? formErrorId : undefined}
-                onChange={(event) => update('to')(event.target.value)}
+                onChange={update('to')}
               />
             </label>
             <Button type="submit" variant="outline" size="sm">
