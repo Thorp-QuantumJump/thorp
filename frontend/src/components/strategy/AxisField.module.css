@@ -28,7 +28,11 @@
   padding: 0;
 }
 
+/* 이름·단위·물음표가 한 줄에서 가운데를 맞춘다. 맞추지 않으면 물음표만 글자 아래로 처진다. */
 .label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
   color: var(--thorp-foreground);
   font-size: 0.92rem;
   font-weight: 700;

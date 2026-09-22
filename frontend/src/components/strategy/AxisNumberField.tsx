@@ -128,6 +128,7 @@ export function AxisNumberField({
           {label}
           {unit ? <span className={styles.unit}>({unit})</span> : null}
         </label>
+        {/* 제목 바로 옆이다. header 가 양끝 정렬이라 label 밖에 두면 이 항목만 오른쪽 끝으로 밀린다. */}
         {help}
       </div>
 
