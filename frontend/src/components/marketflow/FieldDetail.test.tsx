@@ -61,6 +61,18 @@ describe('FieldDetail', () => {
       expect(screen.getByText(/기준월이 아직 정해지지 않아/)).toBeTruthy()
     })
 
+    it('열린 진입점과 막힌 진입점이 같은 모양을 쓴다', () => {
+      // CSS 는 시험이 보지 못한다. 최소한 두 상태가 같은 클래스를 쓰는 것은 고정해 둔다 —
+      // 한쪽만 바꾸면 눌리는 링크에 '못 누름' 표시가 남는 식으로 어긋난다.
+      const open = renderDetail(detailOf('2026-08'))
+      const openClass = screen.getByRole('link', { name: /비슷했던 때 보기/ }).className
+      open.unmount()
+
+      renderDetail(detailOf(null))
+
+      expect(screen.getByRole('button', { name: /비슷했던 때 보기/ }).className).toBe(openClass)
+    })
+
     it("'준비 중' 표기가 남아 있지 않다", () => {
       renderDetail(detailOf('2026-08'))
 
