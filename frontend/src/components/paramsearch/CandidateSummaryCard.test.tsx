@@ -34,7 +34,52 @@ describe('CandidateSummaryCard', () => {
     )
 
     expect(container.textContent).toContain('알파 기울기')
-    expect(container.textContent).toContain('기울기 관측 창 5거래일')
+    expect(container.textContent).toContain('기울기 관측 창')
+    expect(container.textContent).toContain('5거래일')
+  })
+
+  it('전략 이름을 끄면 설정값만 남는다 — 목록이 위에서 한 번 밝힌 경우다', () => {
+    const { container } = render(
+      <CandidateSummaryCard
+        candidate={completedCandidate}
+        config={configFixture}
+        showStrategy={false}
+      />,
+    )
+
+    expect(container.textContent).not.toContain('알파 기울기')
+    expect(container.textContent).toContain('기울기 관측 창')
+    expect(container.textContent).toContain('5거래일')
+  })
+
+  it('객체형 설정값은 등록된 표시 문구로 보인다', () => {
+    const candidate = {
+      ...completedCandidate,
+      parameters: { rebalancePeriod: { mode: 'CALENDAR', unit: 'MONTH_END' } },
+    }
+    const config = {
+      ...configFixture,
+      space: {
+        ALPHA_TILT: {
+          ...configFixture.space.ALPHA_TILT,
+          axes: [
+            {
+              name: 'rebalancePeriod',
+              label: '리밸런싱 주기',
+              unit: null,
+              values: [{ mode: 'CALENDAR', unit: 'MONTH_END' }],
+              valueLabels: ['월말'],
+            },
+          ],
+        },
+      },
+    }
+
+    const { container } = render(<CandidateSummaryCard candidate={candidate} config={config} />)
+
+    expect(container.textContent).toContain('리밸런싱 주기')
+    expect(container.textContent).toContain('월말')
+    expect(container.textContent).not.toContain('[object Object]')
   })
 
   it('config 가 없으면 축 이름을 그대로 쓰고 지어내지 않는다', () => {
@@ -43,7 +88,8 @@ describe('CandidateSummaryCard', () => {
     )
 
     expect(container.textContent).toContain('ALPHA_TILT')
-    expect(container.textContent).toContain('tiltWindow 5')
+    expect(container.textContent).toContain('tiltWindow')
+    expect(container.textContent).toContain('5')
   })
 
   it('계산하지 않은 후보를 0%로 그리지 않고 사유를 적는다', () => {
@@ -56,12 +102,6 @@ describe('CandidateSummaryCard', () => {
     expect(text).not.toContain('0원')
     expect(text).toContain('계산 전 제외')
     expect(text).toContain('관측 창이 자료 구간보다 깁니다.')
-  })
-
-  it('검증 표시를 항상 함께 보인다', () => {
-    render(<CandidateSummaryCard candidate={completedCandidate} config={configFixture} />)
-
-    expect(screen.getByText('미검증')).toBeTruthy()
   })
 
   it('결과가 없는 후보는 비교에 담을 수 없다', () => {

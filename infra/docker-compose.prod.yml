@@ -211,8 +211,7 @@ services:
       rabbitmq:
         condition: service_healthy
     deploy:
-      # 4 vCPU에서는 두 워커 서비스 합쳐 2개가 상한선. 합 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —
-      # 백엔드는 동시 실행 상한을 따로 검사하지 않고 이 배치 값이 상한이다.
+      # 단건 전용 워커 수. 자동 탐색 동시성은 아래 FLEX replica가 정한다.
       replicas: ${WORKER_SINGLE_REPLICAS}
       resources:
         limits:
@@ -228,6 +227,7 @@ services:
     environment:
       WORKER_ROLE: flex
     deploy:
+      # dispatch-window와 같은 수로 운영한다. 현재 서버 값은 1이며 prefetch도 1이다.
       replicas: ${WORKER_FLEX_REPLICAS}
       resources:
         limits:

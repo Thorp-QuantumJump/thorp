@@ -56,6 +56,21 @@ describe('CandidateTable', () => {
     apiMocks.getParamSearchCandidates.mockResolvedValue(pageFixture)
   })
 
+  it('처음부터 열려 있고 접었다 다시 열 수 있다', async () => {
+    // 끝난 묶음을 닫아 두면 선정 카드 몇 장만 남아 나머지 후보를 볼 길이 사라진다.
+    const user = userEvent.setup()
+    renderTable()
+
+    await waitFor(() => expect(apiMocks.getParamSearchCandidates).toHaveBeenCalled())
+    expect(screen.getByRole('table')).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '전체 후보 접기' }))
+    expect(screen.queryByRole('table')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '전체 후보 열기' }))
+    expect(screen.getByRole('table')).not.toBeNull()
+  })
+
   it('처음에는 순번 오름차순으로 묻는다', async () => {
     renderTable()
 
