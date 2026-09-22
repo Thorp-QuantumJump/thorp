@@ -189,8 +189,8 @@ export function describeCandidateSetting(
   const space = config?.space?.[candidate.strategyId] ?? null
   const labelOf = (name: string) => {
     const axis = space?.axes.find((item) => item.name === name)
-    if (!axis) return { label: name, unit: null as string | null }
-    return { label: axis.label, unit: axis.unit }
+    if (!axis) return { label: name, unit: null as string | null, axis: null }
+    return { label: axis.label, unit: axis.unit, axis }
   }
 
   const entries = Object.entries(candidate.parameters)
@@ -199,8 +199,17 @@ export function describeCandidateSetting(
       ? '설정 값 없음'
       : entries
           .map(([name, value]) => {
-            const { label, unit } = labelOf(name)
-            return `${label} ${value}${unit ? unit : ''}`
+            const { label, unit, axis } = labelOf(name)
+            const valueKey = axisValueKey(value)
+            const valueIndex = axis?.values.findIndex((candidateValue) => {
+              return axisValueKey(candidateValue) === valueKey
+            })
+            const valueLabel =
+              valueIndex !== undefined && valueIndex >= 0
+                ? axis?.valueLabels?.[valueIndex]
+                : undefined
+
+            return `${label} ${valueLabel ?? valueKey}${unit ? unit : ''}`
           })
           .join(' · ')
 

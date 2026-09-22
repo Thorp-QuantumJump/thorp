@@ -22,9 +22,49 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1.02rem;
-  font-weight: 700;
+  font-size: 1.16rem;
+  font-weight: 750;
   letter-spacing: -0.02em;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+}
+
+.toggle svg {
+  color: var(--thorp-muted);
+  transition: transform 160ms ease;
+}
+
+.toggle svg[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.toggle:hover {
+  color: var(--thorp-accent-soft);
+}
+
+.toggle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.content[hidden] {
+  display: none;
 }
 
 .header p {

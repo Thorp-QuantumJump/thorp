@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { InlineHelp } from '@/components/common/InlineHelp'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
 import type {
@@ -23,6 +24,9 @@ interface CandidateTableProps {
   searchId: string
   /** 축 라벨·전략 이름을 읽을 곳. */
   config: ParamSearchConfig | null
+  /** 실행 중에는 완료된 후보만 열어 두고 완료 개수가 바뀔 때 목록을 갱신한다. */
+  live?: boolean
+  refreshKey?: number
   onOpenDetail: (candidate: SearchCandidateItem) => void
   comparePicks: string[]
   onCompareToggle: (candidate: SearchCandidateItem) => void
@@ -64,22 +68,29 @@ const pageSize = 20
 export function CandidateTable({
   searchId,
   config,
+  live = false,
+  refreshKey = 0,
   onOpenDetail,
   comparePicks,
   onCompareToggle,
 }: CandidateTableProps) {
+  const [open, setOpen] = useState(live)
   const [sort, setSort] = useState<CandidateSort>('candidateNo')
   const [direction, setDirection] = useState<'asc' | 'desc'>('asc')
   const [status, setStatus] = useState<'' | CandidateStatus>('')
   const [page, setPage] = useState(0)
 
-  const { page: result, error, isLoading } = useSearchCandidates(searchId, {
-    page,
-    size: pageSize,
-    sort,
-    direction,
-    ...(status ? { status } : {}),
-  })
+  const { page: result, error, isLoading } = useSearchCandidates(
+    open ? searchId : null,
+    {
+      page,
+      size: pageSize,
+      sort,
+      direction,
+      ...(live ? { status: 'COMPLETED' } : status ? { status } : {}),
+    },
+    live ? refreshKey : 0,
+  )
 
   const changeSort = (key: CandidateSort) => {
     if (key === sort) {
@@ -99,166 +110,195 @@ export function CandidateTable({
     <section className={styles.section} aria-labelledby="candidate-table-title">
       <header className={styles.header}>
         <div className={styles.headline}>
-          <h2 id="candidate-table-title">전체 후보</h2>
-          <InlineHelp label="전체 후보">
+          <h2 id="candidate-table-title">
+            <button
+              type="button"
+              className={styles.toggle}
+              onClick={() => setOpen((current) => !current)}
+              aria-expanded={open}
+              aria-controls="candidate-table-content"
+              aria-label={
+                open
+                  ? `${live ? '완료된' : '전체'} 후보 접기`
+                  : `${live ? '완료된' : '전체'} 후보 열기`
+              }
+            >
+              {live ? '완료된 후보' : '전체 후보'}
+              <ChevronDown size={19} aria-hidden="true" data-open={open} />
+            </button>
+          </h2>
+          <InlineHelp label={live ? '완료된 후보' : '전체 후보'}>
+            {live && <p>각 후보의 계산이 끝나는 대로 이 목록에 추가됩니다.</p>}
             <p>열 제목을 눌러 한 항목 기준으로 정렬할 수 있습니다.</p>
             <p>정렬은 보기 순서일 뿐 순위가 아닙니다.</p>
           </InlineHelp>
         </div>
-        <div className={styles.filter}>
-          <label htmlFor="candidate-status">상태</label>
-          <select
-            id="candidate-status"
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value as '' | CandidateStatus)
-              setPage(0)
-            }}
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {open && !live && (
+          <div className={styles.filter}>
+            <label htmlFor="candidate-status">상태</label>
+            <select
+              id="candidate-status"
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value as '' | CandidateStatus)
+                setPage(0)
+              }}
+            >
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </header>
 
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
+      <div id="candidate-table-content" className={styles.content} hidden={!open}>
+        {live && (
+          <p className={styles.note} role="status" aria-live="polite">
+            계산을 마친 후보부터 표시하고 현재 선정 순서도 함께 갱신합니다. 모든 계산이 끝나면
+            최종 선정으로 확정됩니다.
+          </p>
+        )}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
 
-      {isLoading && !result && (
-        <p className={styles.note} role="status">
-          후보 목록을 불러오는 중입니다.
-        </p>
-      )}
+        {isLoading && !result && (
+          <p className={styles.note} role="status">
+            후보 목록을 불러오는 중입니다.
+          </p>
+        )}
 
-      {result && result.content.length === 0 && (
-        <p className={styles.note}>조건에 맞는 후보가 없습니다.</p>
-      )}
+        {result && result.content.length === 0 && (
+          <p className={styles.note}>조건에 맞는 후보가 없습니다.</p>
+        )}
 
-      {result && result.content.length > 0 && (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col" className={styles.pickColumn}>
-                  <span className={styles.srOnly}>비교에 담기</span>
-                </th>
-                <th scope="col">설정</th>
-                <th scope="col">상태</th>
-                {sortableColumns.map((column) => (
-                  <th key={column.key} scope="col" aria-sort={ariaSortOf(column.key)}>
-                    <button
-                      type="button"
-                      className={styles.sortButton}
-                      data-active={column.key === sort}
-                      onClick={() => changeSort(column.key)}
-                    >
-                      {column.label}
-                      <span aria-hidden="true">
-                        {column.key === sort ? (direction === 'asc' ? '▲' : '▼') : '↕'}
-                      </span>
-                      <span className={styles.srOnly}>
-                        {column.key === sort
-                          ? direction === 'asc'
-                            ? ' 오름차순 정렬됨, 눌러서 내림차순'
-                            : ' 내림차순 정렬됨, 눌러서 오름차순'
-                          : ' 이 항목으로 정렬'}
-                      </span>
-                    </button>
+        {result && result.content.length > 0 && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.pickColumn}>
+                    <span className={styles.srOnly}>비교에 담기</span>
                   </th>
-                ))}
-                <th scope="col">선정</th>
-                <th scope="col">
-                  <span className={styles.srOnly}>상세</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.content.map((candidate) => {
-                const { strategyName, parameterText } = describeCandidateSetting(
-                  candidate,
-                  config,
-                )
-                const stability = formatStability(candidate.stability)
-                const reason = missingPerformanceReason(candidate)
-                const pickId = `table-compare-${candidate.candidateId}`
-                const comparable = candidate.status === 'COMPLETED'
-
-                return (
-                  <tr key={candidate.candidateId}>
-                    <td>
-                      <input
-                        id={pickId}
-                        type="checkbox"
-                        checked={comparePicks.includes(candidate.candidateId)}
-                        onChange={() => onCompareToggle(candidate)}
-                        disabled={!comparable}
-                      />
-                      <label htmlFor={pickId} className={styles.srOnly}>
-                        {comparable
-                          ? `${strategyName} ${parameterText} 비교에 담기`
-                          : `${strategyName} ${parameterText} 결과가 없어 비교에 담을 수 없습니다`}
-                      </label>
-                    </td>
-                    <td>
-                      <span className={styles.strategy}>{strategyName}</span>
-                      <span className={styles.parameters}>{parameterText}</span>
-                    </td>
-                    <td>{candidateStatusText(candidate.status)}</td>
-                    <td className={styles.numeric}>{formatCount(candidate.candidateNo)}</td>
-                    <Numeric
-                      value={formatPercent(candidate.netReturn, { sign: true })}
-                      reason={reason}
-                    />
-                    <Numeric value={formatPercent(candidate.maxDrawdown)} reason={reason} />
-                    <Numeric value={formatWon(candidate.tradingCost)} reason={reason} />
-                    <Numeric value={stability.text} reason={stability.note} />
-                    <td>
-                      {candidate.selectionReason
-                        ? selectionOutcomeText(candidate.selectionReason.outcome)
-                        : '계산 전'}
-                    </td>
-                    <td>
+                  <th scope="col">설정</th>
+                  <th scope="col">상태</th>
+                  {sortableColumns.map((column) => (
+                    <th key={column.key} scope="col" aria-sort={ariaSortOf(column.key)}>
                       <button
                         type="button"
-                        className={styles.detailButton}
-                        onClick={() => onOpenDetail(candidate)}
+                        className={styles.sortButton}
+                        data-active={column.key === sort}
+                        onClick={() => changeSort(column.key)}
                       >
-                        상세
+                        {column.label}
+                        <span aria-hidden="true">
+                          {column.key === sort ? (direction === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                        <span className={styles.srOnly}>
+                          {column.key === sort
+                            ? direction === 'asc'
+                              ? ' 오름차순 정렬됨, 눌러서 내림차순'
+                              : ' 내림차순 정렬됨, 눌러서 오름차순'
+                            : ' 이 항목으로 정렬'}
+                        </span>
                       </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    </th>
+                  ))}
+                  <th scope="col">선정</th>
+                  <th scope="col">
+                    <span className={styles.srOnly}>상세</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.content.map((candidate) => {
+                  const { strategyName, parameterText } = describeCandidateSetting(
+                    candidate,
+                    config,
+                  )
+                  const stability = formatStability(candidate.stability)
+                  const reason = missingPerformanceReason(candidate)
+                  const pickId = `table-compare-${candidate.candidateId}`
+                  const comparable = candidate.status === 'COMPLETED'
 
-      {result && result.totalPages > 1 && (
-        <nav className={styles.pager} aria-label="후보 목록 페이지">
-          <button type="button" onClick={() => setPage((n) => n - 1)} disabled={page <= 0}>
-            이전
-          </button>
-          <span>{`${formatCount(result.page + 1)} / ${formatCount(result.totalPages)}`}</span>
-          <button
-            type="button"
-            onClick={() => setPage((n) => n + 1)}
-            disabled={page >= result.totalPages - 1}
-          >
-            다음
-          </button>
-        </nav>
-      )}
+                  return (
+                    <tr key={candidate.candidateId}>
+                      <td>
+                        <input
+                          id={pickId}
+                          type="checkbox"
+                          checked={comparePicks.includes(candidate.candidateId)}
+                          onChange={() => onCompareToggle(candidate)}
+                          disabled={!comparable}
+                        />
+                        <label htmlFor={pickId} className={styles.srOnly}>
+                          {comparable
+                            ? `${strategyName} ${parameterText} 비교에 담기`
+                            : `${strategyName} ${parameterText} 결과가 없어 비교에 담을 수 없습니다`}
+                        </label>
+                      </td>
+                      <td>
+                        <span className={styles.strategy}>{strategyName}</span>
+                        <span className={styles.parameters}>{parameterText}</span>
+                      </td>
+                      <td>{candidateStatusText(candidate.status)}</td>
+                      <td className={styles.numeric}>{formatCount(candidate.candidateNo)}</td>
+                      <Numeric
+                        value={formatPercent(candidate.netReturn, { sign: true })}
+                        reason={reason}
+                      />
+                      <Numeric value={formatPercent(candidate.maxDrawdown)} reason={reason} />
+                      <Numeric value={formatWon(candidate.tradingCost)} reason={reason} />
+                      <Numeric value={stability.text} reason={stability.note} />
+                      <td>
+                        {candidate.selectionReason
+                          ? selectionOutcomeText(candidate.selectionReason.outcome)
+                          : live
+                            ? '선정 전'
+                            : '계산 전'}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.detailButton}
+                          onClick={() => onOpenDetail(candidate)}
+                        >
+                          상세
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {result && (
-        <p className={styles.note}>{`후보 ${formatCount(result.totalElements)}개`}</p>
-      )}
+        {result && result.totalPages > 1 && (
+          <nav className={styles.pager} aria-label="후보 목록 페이지">
+            <button type="button" onClick={() => setPage((n) => n - 1)} disabled={page <= 0}>
+              이전
+            </button>
+            <span>{`${formatCount(result.page + 1)} / ${formatCount(result.totalPages)}`}</span>
+            <button
+              type="button"
+              onClick={() => setPage((n) => n + 1)}
+              disabled={page >= result.totalPages - 1}
+            >
+              다음
+            </button>
+          </nav>
+        )}
+
+        {result && (
+          <p className={styles.note}>{`후보 ${formatCount(result.totalElements)}개`}</p>
+        )}
+      </div>
     </section>
   )
 }

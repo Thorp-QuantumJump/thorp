@@ -37,6 +37,35 @@ describe('CandidateSummaryCard', () => {
     expect(container.textContent).toContain('기울기 관측 창 5거래일')
   })
 
+  it('객체형 설정값은 등록된 표시 문구로 보인다', () => {
+    const candidate = {
+      ...completedCandidate,
+      parameters: { rebalancePeriod: { mode: 'CALENDAR', unit: 'MONTH_END' } },
+    }
+    const config = {
+      ...configFixture,
+      space: {
+        ALPHA_TILT: {
+          ...configFixture.space.ALPHA_TILT,
+          axes: [
+            {
+              name: 'rebalancePeriod',
+              label: '리밸런싱 주기',
+              unit: null,
+              values: [{ mode: 'CALENDAR', unit: 'MONTH_END' }],
+              valueLabels: ['월말'],
+            },
+          ],
+        },
+      },
+    }
+
+    const { container } = render(<CandidateSummaryCard candidate={candidate} config={config} />)
+
+    expect(container.textContent).toContain('리밸런싱 주기 월말')
+    expect(container.textContent).not.toContain('[object Object]')
+  })
+
   it('config 가 없으면 축 이름을 그대로 쓰고 지어내지 않는다', () => {
     const { container } = render(
       <CandidateSummaryCard candidate={completedCandidate} config={null} />,

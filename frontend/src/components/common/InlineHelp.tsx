@@ -1,4 +1,4 @@
-import { Popover } from 'radix-ui'
+import { HoverCard } from 'radix-ui'
 import type { ReactNode } from 'react'
 import styles from './InlineHelp.module.css'
 
@@ -20,23 +20,22 @@ interface InlineHelpProps {
  * <p><b>설명을 지우는 대신 층을 내린다.</b> 본문에 늘 펼쳐 두면 읽지 않고 지나치고, 아예 없애면
  * 알아야 할 사람이 알 수 없다. 처음에 보이는 것과 요청하면 펼치는 것을 나눈다(원칙 II).
  *
- * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
+ * <p>HoverCard가 마우스 호버와 키보드 포커스 열기, Esc 닫기를 맡는다(005 FR-022).
  */
 export function InlineHelp({ label, children }: InlineHelpProps) {
   return (
-    <Popover.Root>
-      <Popover.Trigger className={styles.trigger} aria-label={`${label} 도움말`}>
-        ?
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content className={styles.content} sideOffset={6} aria-label={`${label} 도움말`}>
+    <HoverCard.Root openDelay={100} closeDelay={150}>
+      <HoverCard.Trigger asChild>
+        <button type="button" className={styles.trigger} aria-label={`${label} 도움말`}>
+          ?
+        </button>
+      </HoverCard.Trigger>
+      <HoverCard.Portal>
+        <HoverCard.Content className={styles.content} sideOffset={6} aria-label={`${label} 도움말`}>
           <p className={styles.term}>{label}</p>
           <div className={styles.body}>{children}</div>
-          <Popover.Close className={styles.close} aria-label="도움말 닫기">
-            닫기
-          </Popover.Close>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+        </HoverCard.Content>
+      </HoverCard.Portal>
+    </HoverCard.Root>
   )
 }

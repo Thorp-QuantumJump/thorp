@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { CandidateReason } from './CandidateReason'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import type {
   ParamSearchConfig,
   SearchCandidateItem,
@@ -111,7 +112,16 @@ export function CandidateDetail({
             <dd>{tradingCost ?? <span className={styles.absent}>계산하지 않았습니다</span>}</dd>
           </div>
           <div>
-            <dt>인접 설정 안정성</dt>
+            <dt className={styles.metricLabel}>
+              인접 설정 안정성
+              <InlineHelp label="인접 설정 안정성">
+                <p>
+                  한 파라미터만 한 단계 다른 설정들과 비용 차감 후 수익률 차이의 절댓값을
+                  구해 평균낸 값입니다.
+                </p>
+                <p>값이 작을수록 설정을 조금 바꿔도 결과가 비슷해 안정적입니다.</p>
+              </InlineHelp>
+            </dt>
             <dd>
               {stability.text ?? <span className={styles.absent}>계산 불가</span>}
               <span className={styles.rowNote}>

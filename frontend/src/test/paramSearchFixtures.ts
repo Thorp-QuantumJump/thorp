@@ -70,8 +70,8 @@ export const previewFixture: ParamSearchPreview = {
     ],
   },
   limits: {
-    maxCandidates: 120,
-    timeLimitSeconds: 120,
+    maxCandidates: 100,
+    timeLimitSeconds: 1800,
     dispatchWindow: 4,
     consecutiveFailureLimit: 5,
     provisional: ['maxCandidates', 'dispatchWindow'],
