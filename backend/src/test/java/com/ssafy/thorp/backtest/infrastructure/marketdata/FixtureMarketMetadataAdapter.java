@@ -56,6 +56,16 @@ public class FixtureMarketMetadataAdapter implements MarketMetadataPort {
         return MAPPING_VERSION;
     }
 
+    /** 달력 상한 당일 또는 그 앞의 마지막 평일. 이 대역의 달력은 주말만 빼므로 판정이 그것과 같다. */
+    @Override
+    public Optional<LocalDate> lastTradingDay() {
+        LocalDate day = calendarEnd;
+        while (day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            day = day.minusDays(1);
+        }
+        return Optional.of(day);
+    }
+
     @Override
     public Optional<String> sectorOf(String mappingVersion, String instrumentId) {
         if (!MAPPING_VERSION.equals(mappingVersion)) {
