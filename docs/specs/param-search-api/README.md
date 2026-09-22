@@ -85,7 +85,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
     },
     "limits": {
       "maxCandidates": 100, "timeLimitSeconds": 1800,
-      "dispatchWindow": 4, "consecutiveFailureLimit": 5,
+      "dispatchWindow": 1, "consecutiveFailureLimit": 5,
       "provisional": ["maxCandidates", "dispatchWindow", "timeLimitSeconds", "consecutiveFailureLimit"],
       "exceeded": false
     },
