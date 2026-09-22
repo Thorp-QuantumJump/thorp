@@ -212,11 +212,14 @@ public final class MacroRegistrySeed {
                             INSERT INTO macro_observation (
                                 dataset_version_id, indicator_id, target_month,
                                 raw_value, transformed_value, released_at, received_at)
-                            VALUES (?, ?, ?::date, '"101.2"'::jsonb, '"1.4"'::jsonb, now(), now())
+                            VALUES (?, ?, ?::date,
+                                    jsonb_build_array(jsonb_build_array(?, '101.2')),
+                                    '"1.4"'::jsonb, now(), now())
                             """,
                             datasetId,
                             indicatorId,
-                            month);
+                            month,
+                            month.substring(0, 7));
                 }
             }
             jdbc.update(
@@ -249,17 +252,22 @@ public final class MacroRegistrySeed {
      * 보는 시험이 이것을 쓴다. 기본 시딩에 넣지 않는 이유는 관측 수를 세는 다른 시험이 있어서다.
      */
     public static void seedLaterRelease(JdbcTemplate jdbc, String indicatorId, String month) {
+        // raw_value 는 008 이 쓰는 계보 배열 모양이어야 한다. 스칼라로 심으면 이 시험은
+        // 통과하면서 운영만 400 으로 떨어진다 — 2026-09-22 에 실제로 그렇게 멈췄다.
         long datasetId = idOf(jdbc, "macro_dataset_version", DATASET_VERSION);
         jdbc.update(
                 """
                 INSERT INTO macro_observation (
                     dataset_version_id, indicator_id, target_month,
                     raw_value, transformed_value, released_at, received_at)
-                VALUES (?, ?, ?::date, '"102.9"'::jsonb, '"2.1"'::jsonb, now(), now())
+                VALUES (?, ?, ?::date,
+                        jsonb_build_array(jsonb_build_array(?, '102.9')),
+                        '"2.1"'::jsonb, now(), now())
                 """,
                 datasetId,
                 indicatorId,
-                month);
+                month,
+                month.substring(0, 7));
     }
 
     private static long idOf(JdbcTemplate jdbc, String table, String versionKey) {
