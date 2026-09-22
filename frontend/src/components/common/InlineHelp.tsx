@@ -46,7 +46,9 @@ export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
         <HoverCard.Portal>
           <HoverCard.Content
             className={styles.content}
+            side="top"
             sideOffset={6}
+            collisionPadding={12}
             aria-label={`${label} 도움말`}
           >
             <p className={styles.term}>{label}</p>
@@ -68,7 +70,9 @@ export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
       <Popover.Portal>
         <Popover.Content
           className={styles.content}
+          side="top"
           sideOffset={6}
+          collisionPadding={12}
           aria-label={`${label} 도움말`}
         >
           <p className={styles.term}>{label}</p>
