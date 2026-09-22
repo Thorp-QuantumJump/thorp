@@ -234,6 +234,8 @@ export type ConfigSpaceAxis = {
   label: string
   unit: string | null
   values: AxisValue[]
+  /** 상태 응답이나 미리보기에서 함께 온 후보값 표시 문구. 객체형 값을 화면에 직접 찍지 않는다. */
+  valueLabels?: string[]
 }
 
 export type ConfigStrategySpace = {
@@ -302,7 +304,7 @@ export type ParamSearchBaseline = {
 }
 
 /**
- * 선정 결과. `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다.
+ * 선정 결과. 실행 중에는 지금까지 완료된 후보 기준으로 갱신되고, `COMPLETED`·`PARTIAL`에서 확정된다.
  *
  * **`displayed`는 순위가 아니다.** 정렬 지표를 밝힌 집합이며 화면에 순위 번호를 붙이지 않는다
  * (원칙 III). `shortOfDisplayCount`가 `true`여도 문턱을 낮춰 채우지 않는다(원칙 VII).

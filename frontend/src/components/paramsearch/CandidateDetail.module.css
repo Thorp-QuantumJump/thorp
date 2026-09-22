@@ -104,6 +104,12 @@
   font-size: 0.72rem;
 }
 
+.rows .metricLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .rows dd {
   display: grid;
   gap: 3px;

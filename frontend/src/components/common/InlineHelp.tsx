@@ -8,11 +8,13 @@ interface InlineHelpProps {
   /** 펼쳤을 때 보일 설명. 화면이 직접 가진 문장이다 */
   children: ReactNode;
   /**
-   * 무엇으로 여는가. 기본은 누르기다.
+   * 무엇으로 여는가. 기본은 얹기다.
    *
-   * `'hover'`는 마우스를 얹기만 해도 열린다. 읽을거리가 짧고 화면이 이미 붐빌 때 쓴다 — 누르는 품을 없애는
-   * 대신 닫기 버튼이 없다. 트리거는 이 모드에서도 버튼이라 초점을 받으면 열리고, 그래서 키보드와 터치에서도
-   * 닿는다(누르면 초점이 간다).
+   * 물음표 뒤의 설명은 짧고 화면은 이미 붐비므로 누르는 품을 없애는 쪽을 기본으로 둔다. 대신 닫기 버튼이
+   * 없다. 트리거는 이 모드에서도 버튼이라 초점을 받으면 열리고, 그래서 키보드와 터치에서도 닿는다
+   * (누르면 초점이 간다).
+   *
+   * `'click'`은 눌러야 열리고 닫기 버튼이 붙는다. 설명이 길어 마우스를 얹은 채로 읽기 어려울 때만 쓴다.
    */
   on?: "click" | "hover";
 }
@@ -28,9 +30,10 @@ interface InlineHelpProps {
  * <p><b>설명을 지우는 대신 층을 내린다.</b> 본문에 늘 펼쳐 두면 읽지 않고 지나치고, 아예 없애면
  * 알아야 할 사람이 알 수 없다. 처음에 보이는 것과 요청하면 펼치는 것을 나눈다(원칙 II).
  *
- * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
+ * <p>기본은 HoverCard가 얹어서 열기를 맡고 초점·누르기는 트리거에서 직접 잇는다. `on="click"`에서는
+ * Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
  */
-export function InlineHelp({ label, children, on = "click" }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
   const [open, setOpen] = useState(false);
   if (on === "hover") {
     return (

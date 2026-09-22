@@ -121,9 +121,10 @@ describe('ParamSearchPage 등록표 경계', () => {
     await waitFor(() => expect(apiMocks.createParamSearch).toHaveBeenCalledTimes(2))
     expect(apiMocks.createParamSearch.mock.calls[1][0].registryVersion).toBe('TEST-REGISTRY-2')
 
-    // 확인이 끝나면 대화상자가 닫히고 진행 상태로 넘어간다.
+    // 확인이 끝나면 대화상자가 닫히고 진행 상태로 넘어간다. 식별자는 화면에 보이지 않는다.
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(await screen.findByText(acceptedFixture.searchId)).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '진행 상태' })).toBeTruthy()
+    expect(screen.queryByText(acceptedFixture.searchId)).toBeNull()
   })
 
   it("503은 '잠시 후 다시' 안내로 끝나고 실행을 열지 않는다", async () => {
