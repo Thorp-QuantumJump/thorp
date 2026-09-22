@@ -22,10 +22,18 @@
   width: 100%;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 6px 12px;
   padding: 0;
+}
+
+/* 제목과 물음표 한 덩이. 사이 간격은 물음표가 가진 여백 하나로 정해진다. */
+.labelGroup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
 }
 
 /* 이름·단위·물음표가 한 줄에서 가운데를 맞춘다. 맞추지 않으면 물음표만 글자 아래로 처진다. */

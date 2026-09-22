@@ -124,12 +124,18 @@ export function AxisNumberField({
   return (
     <div className={styles.field}>
       <div className={styles.header}>
-        <label className={styles.label} htmlFor={inputId}>
-          {label}
-          {unit ? <span className={styles.unit}>({unit})</span> : null}
-        </label>
-        {/* 제목 바로 옆이다. header 가 양끝 정렬이라 label 밖에 두면 이 항목만 오른쪽 끝으로 밀린다. */}
-        {help}
+        {/*
+          제목과 물음표를 한 덩이로 묶는다. header 가 양끝 정렬이라 따로 두면 물음표만 오른쪽 끝으로
+          밀리고, 목록형 축은 제목 안에 있어 두 항목의 간격이 달라 보인다. label 안에 넣지 않는 까닭은
+          label 을 누르면 입력칸으로 초점이 가기 때문이다 — 도움말 버튼이 그 안에 있으면 안 된다.
+        */}
+        <span className={styles.labelGroup}>
+          <label className={styles.label} htmlFor={inputId}>
+            {label}
+            {unit ? <span className={styles.unit}>({unit})</span> : null}
+          </label>
+          {help}
+        </span>
       </div>
 
       <div className={styles.inputRow}>
