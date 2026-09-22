@@ -14,7 +14,12 @@
 
 export type ResultStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 
-/** PD-12 확정 전에는 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이다 */
+/**
+ * PD-12 확정 전에는 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이다.
+ *
+ * <b>화면은 이 값을 읽지 않는다</b>(005 FR-012). 모든 결과가 같은 값이라 결과 사이를 가르지 못한다.
+ * 응답 계약에는 그대로 있으므로 타입에도 남긴다.
+ */
 export type ValidationTier = 'UNVALIDATED' | (string & Record<never, never>)
 
 /** 004 `summaryUnavailable`. 새 사유가 더해져도 버리지 않도록 열어 둔다 */
@@ -131,6 +136,7 @@ export type PublicResultDetail = {
   summary: ResultSummary | null
   summaryUnavailable: SummaryUnavailableReason | null
   failure: ResultFailure | null
+  /** 응답에 실려 오지만 화면은 쓰지 않는다. 위 {@link ValidationTier} 주석 참고 */
   validationTier: ValidationTier
   /** 003 등록표의 전략 이름. 없으면 `null`이고 화면은 이름을 지어내지 않는다 */
   strategyName: string | null
