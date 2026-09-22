@@ -5,6 +5,7 @@
   padding: 20px;
   border: 1px solid var(--thorp-negative);
   border-radius: 14px;
+  background: var(--thorp-surface);
 }
 
 .result h3 {
@@ -27,8 +28,9 @@
   flex-direction: column;
   gap: 5px;
   padding: 12px 14px;
-  border: 1px solid var(--thorp-line);
+  border: 1px solid var(--thorp-line-strong);
   border-radius: 10px;
+  background: var(--thorp-surface-raised);
 }
 
 .check {
