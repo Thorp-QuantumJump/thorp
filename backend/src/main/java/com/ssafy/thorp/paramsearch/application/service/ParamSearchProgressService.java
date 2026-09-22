@@ -114,9 +114,17 @@ public class ParamSearchProgressService {
         // 집계 갱신과 종료 판정·선정은 completionService 한곳이 한다. 취소로 끝나는 길과
         // 같은 코드를 쓰지 않으면 한쪽만 고쳐져 취소된 묶음에만 선정이 안 붙는다.
         ParamSearch settled = completionService.settle(guarded);
-        if (!settled.getStatus().isFinal()) {
-            // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.
-            dispatcher.advance(settled.getId(), snapshotOf(settled));
+        if (settled.getStatus().isFinal()) {
+            return;
+        }
+        // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.
+        dispatcher.advance(settled.getId(), snapshotOf(settled));
+        // 남은 후보가 전부 접수에서 거부되면 발행된 것도 대기도 없이 끝난 셈이 된다. 그때 한 번 더
+        // 세지 않으면 묶음은 RUNNING 인 채로 남고, 깨울 결과 이벤트가 없어 영영 끝나지 않는다.
+        if (dispatcher.isDrained(settled.getId())) {
+            paramSearchRepository
+                    .findByIdForUpdate(settled.getId())
+                    .ifPresent(completionService::settle);
         }
     }
 
