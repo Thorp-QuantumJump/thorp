@@ -38,13 +38,15 @@ spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타
 
 | strategyId | name (등록표) | spec FR-001의 전략 |
 |---|---|---|
-| `FIXED_WEIGHT` | 내가 정한 비중 | 고정 목표 비중 |
-| `EQUAL_WEIGHT` | 똑같이 나누기 | 동일 비중 |
-| `INVERSE_VOLATILITY` | 변동성에 따라 나누기 | 역변동성 |
-| `SECTOR_MOMENTUM` | 흐름을 따라 배분하기 | 섹터 모멘텀 |
-| `MINIMUM_VARIANCE` | 전체 변동성을 줄이도록 배분하기 | 최소분산 |
+| `FIXED_WEIGHT` | 고정 비중 | 고정 목표 비중 |
+| `EQUAL_WEIGHT` | 동일 비중 | 동일 비중 |
+| `INVERSE_VOLATILITY` | 역변동성 | 역변동성 |
+| `SECTOR_MOMENTUM` | 섹터 모멘텀 | 섹터 모멘텀 |
+| `MINIMUM_VARIANCE` | 최소분산 | 최소분산 |
 
 > 정식 등록표의 `name`이 화면 이름을 소유한다. 과거 007 임시 등록표의 내부 전략명은 화면에 사용하지 않는다.
+> 화면 이름은 2026-09-22에 전략 표기로 통일했다(spec FR-001 주석). 등록표 `version`은 올리지 않는다 —
+> 표시용 값만 바뀌어 저장된 설정의 재현에 관여하지 않으며, `allowedRange`의 표시 순서를 바꿀 때와 같은 규칙이다.
 
 ## 3. 파라미터 축 (ParameterAxis) — 기존 타입 확장
 

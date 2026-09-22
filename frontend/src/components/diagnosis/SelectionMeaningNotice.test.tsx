@@ -30,7 +30,7 @@ describe('후보 집합과 0%의 뜻 안내', () => {
     // 고른 섹터를 매번 모두 보유한다는 뜻이 아니라는 사실이 문장에 있어야 한다.
     expect(text).toMatch(/모두 보유한다는 뜻이\s*아니며/)
     // 사용자가 넣은 비중과 자동 전략의 출력 비중을 구분한다.
-    expect(text).toContain('내가 정한 비중')
+    expect(text).toContain('고정 비중')
     expect(text).toContain('구분')
   })
 
