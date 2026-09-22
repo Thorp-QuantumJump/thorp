@@ -131,6 +131,7 @@ export function DetailSettingsPanel({
                     label={axis.label}
                     returnTo={RETURN_TO}
                     note={axis.description}
+                    on="hover"
                   />
                 ) : axis.description ? (
                   <InlineHelp label={axis.label} on="hover">

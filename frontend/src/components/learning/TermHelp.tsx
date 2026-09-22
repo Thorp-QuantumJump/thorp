@@ -1,4 +1,4 @@
-import { Popover } from "radix-ui";
+import { HoverCard, Popover } from "radix-ui";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -23,6 +23,14 @@ interface TermHelpProps {
    * 이 컴포넌트는 여전히 문장을 짓지 않는다 — 받은 것을 그대로 보인다.
    */
   note?: ReactNode;
+  /**
+   * 무엇으로 여는가. 기본은 누르기다.
+   *
+   * `'hover'`는 마우스를 얹기만 해도 열린다. 한 화면에 도움말이 여럿일 때 쓴다 — 어떤 물음표는 눌러야 하고
+   * 어떤 것은 얹기만 하면 되면 사용자는 열리지 않는 쪽을 고장으로 읽는다. 트리거는 이 모드에서도 버튼이라
+   * 초점을 받으면 열리고, 그래서 키보드와 터치에서도 닿는다.
+   */
+  on?: "click" | "hover";
 }
 
 type HelpState = { status: "loading" } | GlossaryLookup;
@@ -43,7 +51,13 @@ type HelpState = { status: "loading" } | GlossaryLookup;
  *
  * <p>Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(013 FR-019, 003 NFR-001).
  */
-export function TermHelp({ termId, label, returnTo, note }: TermHelpProps) {
+export function TermHelp({
+  termId,
+  label,
+  returnTo,
+  note,
+  on = "click",
+}: TermHelpProps) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<HelpState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -64,6 +78,76 @@ export function TermHelp({ termId, label, returnTo, note }: TermHelpProps) {
 
   const retry = useCallback(() => setAttempt((count) => count + 1), []);
 
+  /** 여는 방법이 달라도 보이는 것은 같다. 두 벌로 적으면 한쪽만 고쳐진다. */
+  const body = (
+    <>
+      {note ? <p className={styles.sentence}>{note}</p> : null}
+
+      {state.status === "loading" ? (
+        <p className={styles.muted}>설명을 불러오는 중입니다.</p>
+      ) : null}
+
+      {state.status === "ready" ? (
+        <>
+          <p className={styles.term}>{state.entry.label}</p>
+          <p className={styles.sentence}>{state.entry.sentence}</p>
+          <Link
+            className={styles.link}
+            to={`/learn/${encodeURIComponent(state.entry.articleId)}`}
+            state={{ learningReturn: returnTo }}
+          >
+            ‘{state.entry.articleTitle}’ 글 읽기
+          </Link>
+        </>
+      ) : null}
+
+      {state.status === "notReady" ? (
+        <p className={styles.muted}>설명 준비 중</p>
+      ) : null}
+
+      {state.status === "failed" ? (
+        <div className={styles.failed}>
+          <p role="alert">설명을 불러오지 못했습니다.</p>
+          <button type="button" className={styles.retry} onClick={retry}>
+            다시 시도
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (on === "hover") {
+    return (
+      <HoverCard.Root
+        open={open}
+        onOpenChange={setOpen}
+        openDelay={80}
+        closeDelay={80}
+      >
+        <HoverCard.Trigger asChild>
+          <button
+            type="button"
+            className={styles.trigger}
+            aria-label={`${label} 도움말`}
+          >
+            ?
+          </button>
+        </HoverCard.Trigger>
+        <HoverCard.Portal>
+          <HoverCard.Content
+            className={styles.content}
+            side="top"
+            sideOffset={6}
+            collisionPadding={12}
+            aria-label={`${label} 도움말`}
+          >
+            {body}
+          </HoverCard.Content>
+        </HoverCard.Portal>
+      </HoverCard.Root>
+    );
+  }
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
@@ -75,41 +159,12 @@ export function TermHelp({ termId, label, returnTo, note }: TermHelpProps) {
       <Popover.Portal>
         <Popover.Content
           className={styles.content}
+          side="top"
           sideOffset={6}
+          collisionPadding={12}
           aria-label={`${label} 도움말`}
         >
-          {note ? <p className={styles.sentence}>{note}</p> : null}
-
-          {state.status === "loading" ? (
-            <p className={styles.muted}>설명을 불러오는 중입니다.</p>
-          ) : null}
-
-          {state.status === "ready" ? (
-            <>
-              <p className={styles.term}>{state.entry.label}</p>
-              <p className={styles.sentence}>{state.entry.sentence}</p>
-              <Link
-                className={styles.link}
-                to={`/learn/${encodeURIComponent(state.entry.articleId)}`}
-                state={{ learningReturn: returnTo }}
-              >
-                ‘{state.entry.articleTitle}’ 글 읽기
-              </Link>
-            </>
-          ) : null}
-
-          {state.status === "notReady" ? (
-            <p className={styles.muted}>설명 준비 중</p>
-          ) : null}
-
-          {state.status === "failed" ? (
-            <div className={styles.failed}>
-              <p role="alert">설명을 불러오지 못했습니다.</p>
-              <button type="button" className={styles.retry} onClick={retry}>
-                다시 시도
-              </button>
-            </div>
-          ) : null}
+          {body}
 
           <Popover.Close className={styles.close} aria-label="도움말 닫기">
             닫기

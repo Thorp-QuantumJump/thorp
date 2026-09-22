@@ -323,16 +323,17 @@ describe("DetailSettingsPanel", () => {
     await user.clear(gap);
     await user.type(gap, "5");
 
-    await user.click(
+    await user.hover(
       screen.getByRole("button", { name: `${gate.label} 도움말` }),
     );
+    // 얹고 나서 열리기까지 잠깐 뜸을 들이므로, 먼저 보이는 것을 기다린 뒤 호출을 본다.
+    expect(
+      await screen.findByText("문은 어느 쪽 값을 쓸지 정하는 용어다."),
+    ).not.toBeNull();
     expect(fetchGlossaryEntry).toHaveBeenCalledWith(
       "synthetic-gate",
       expect.any(AbortSignal),
     );
-    expect(
-      await screen.findByText("문은 어느 쪽 값을 쓸지 정하는 용어다."),
-    ).not.toBeNull();
 
     await user.keyboard("{Escape}");
 
@@ -356,7 +357,7 @@ describe("DetailSettingsPanel", () => {
       withConditionalStrategy(),
     );
 
-    await user.click(
+    await user.hover(
       screen.getByRole("button", { name: `${gate.label} 도움말` }),
     );
 
