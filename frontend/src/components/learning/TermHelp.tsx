@@ -130,10 +130,18 @@ export function TermHelp({
         closeDelay={80}
       >
         <HoverCard.Trigger asChild>
+          {/*
+            여는 조건을 우리가 쥔다. HoverCard 는 마우스를 얹을 때만 열고 초점·누르기에는 반응하지
+            않는다 — 그대로 두면 키보드와 터치에서 읽을 방법이 없다(확인: 2026-09-22).
+          */}
           <button
             type="button"
             className={styles.trigger}
             aria-label={`${label} 도움말`}
+            aria-expanded={open}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onClick={() => setOpen((current) => !current)}
           >
             ?
           </button>
