@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
+import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
@@ -58,13 +59,16 @@ class BacktestEventServiceTest {
     @Mock private BacktestResultRepository resultRepository;
     @Mock private ApplicationEventPublisher events;
     @Mock private ExecutionMetricRecorder metrics;
+    @Mock private BacktestProgressStream progressStream;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
     private BacktestEventService service;
 
     @BeforeEach
     void createService() {
-        service = new BacktestEventService(jobRepository, resultRepository, metrics, events, clock);
+        service =
+                new BacktestEventService(
+                        jobRepository, resultRepository, metrics, events, progressStream, clock);
     }
 
     private static BacktestRun jobIn(RunStatus status) {
@@ -514,6 +518,35 @@ class BacktestEventServiceTest {
         service.handleProgress(MessageFixtures.progress());
 
         verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("PROGRESS: 시계열은 저장하지 않고 진행 스트림으로만 흘린다 (R-05)")
+    void progressSeriesGoesToStreamOnly() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<ProgressPayload> event = MessageFixtures.progress();
+
+        service.handleProgress(event);
+
+        verify(progressStream).publish(1L, event.payload());
+        // 실행 행에 남는 것은 단계·마지막 거래일·거래일 수뿐이다. 시계열을 담을 칸이 없다.
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getProgress().totalTradingDays())
+                .isEqualTo(event.payload().totalTradingDays());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"QUEUED", "COMPLETED", "FAILED"})
+    @DisplayName("PROGRESS: RUNNING이 아닌 실행의 진행은 흘리지도 않는다")
+    void progressOnNonRunningJobIsNotStreamed(RunStatus status) {
+        givenJob(status);
+
+        service.handleProgress(MessageFixtures.progress());
+
+        verifyNoInteractions(progressStream);
     }
 
     // --- R-18 중복 실행 종결 규칙 -------------------------------------------

@@ -68,3 +68,4 @@ thorp:
     expiry-sweep-batch-size: 100
     tombstone-retention: PT2H
     trades-page-size: 100
+    progress-stream-timeout: PT4M

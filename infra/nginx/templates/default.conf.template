@@ -60,6 +60,12 @@ server {
         proxy_connect_timeout 10s;
         proxy_read_timeout    300s;
         proxy_send_timeout    300s;
+        # 진행 시계열 구독(GET /api/results/{token}/progress)이 SSE 라서 버퍼링을 끈다.
+        # 기본값(on)이면 nginx 가 응답을 모아 두었다가 한꺼번에 내보내므로, 로컬에서 하루씩
+        # 자라던 그래프가 배포 환경에서는 실행이 끝날 때까지 멈춰 있는다. 지우지 말 것.
+        proxy_buffering off;
+        # 중간 프록시가 다시 버퍼링하지 않도록 백엔드가 보내는 X-Accel-Buffering 을 살려 둔다.
+        proxy_cache off;
     }
 
     # GitLab이 Jenkins 배포 Job을 호출하는 Webhook 엔드포인트만 공개한다.

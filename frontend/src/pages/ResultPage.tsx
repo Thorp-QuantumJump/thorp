@@ -28,8 +28,9 @@ import { TargetRiskView } from '@/components/result/TargetRiskView'
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
+import { useProgressSeries } from '@/hooks/useProgressSeries'
 import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'
-import type { PublicResultDetail } from '@/types/result'
+import type { PublicResultDetail, ResultTimeseriesPoint } from '@/types/result'
 import styles from './ResultPage.module.css'
 
 /**
@@ -107,6 +108,9 @@ function ResultView({
   const { summary } = detail
 
   const viewable = hasViewableResult(detail)
+  // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.
+  const inFlight = detail.status === 'QUEUED' || detail.status === 'RUNNING'
+  const progressSeries = useProgressSeries(token, inFlight)
   // 그래프 음영(B04)과 '손실이 커진 때 보기'가 같은 구간을 쓴다. 요약과 어긋나면 `null`이다(R-05).
   const lossWindow = useMemo(
     () =>
@@ -154,6 +158,7 @@ function ResultView({
       <ResultChartSlot
         detail={detail}
         timeseries={timeseries}
+        progressPoints={progressSeries.points}
         target={
           target && compare.timeseries.status === 'loaded'
             ? {
@@ -314,18 +319,28 @@ function ResultView({
  *
  * <p>시계열을 받았을 때만 그린다. 받지 못했으면 빈 곡선 대신 받지 못한 사유를 한 문장으로 둔다 —
  * 빈 그래프는 "돌았고 비어 있었다"는 거짓이 된다. 받았더라도 자산가치 기록이 하나도 없으면(거래일을
- * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다. 아직 계산 중이면
- * 그릴 것이 없으므로 자리를 비운다.
+ * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다.
+ *
+ * <p><b>계산 중에는 진행 곡선을 그린다</b>(spec 004 R-05). 구독으로 받은 거래일별 점을 그대로 쓰므로
+ * 그려진 값은 모두 워커가 실제로 계산한 것이다. 최종 시계열을 받으면 그쪽으로 바꾼다 — 같은 실행의
+ * 같은 값이라 곡선이 이어진다. 한 점도 받지 못한 동안에는 그릴 것이 없으므로 자리를 비운다.
+ *
+ * <p><b>계산 중에는 하락 구간 음영과 대안 텍스트의 핵심 숫자를 붙이지 않는다.</b> 둘의 근거는 요약의
+ * `maxDrawdown` 같은 확정된 값이고, 그 값은 실행이 끝나야 나온다. 중간 곡선으로 짐작해 칠하면 끝난 뒤
+ * 음영이 다른 자리로 옮겨 간다.
  *
  * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.
  */
 function ResultChartSlot({
   detail,
   timeseries,
+  progressPoints,
   target,
 }: {
   detail: PublicResultDetail
   timeseries: TimeseriesState
+  /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */
+  progressPoints?: ResultTimeseriesPoint[]
   target?: EquityChartSeries | null
 }) {
   if (timeseries.status === 'unavailable') {
@@ -333,7 +348,21 @@ function ResultChartSlot({
       <p className={styles.status}>그래프를 그릴 시계열을 받지 못했습니다. {timeseries.message}</p>
     )
   }
-  if (timeseries.status !== 'loaded') return null
+
+  const { summary } = detail
+
+  if (timeseries.status !== 'loaded') {
+    const inProgress = progressPoints ?? []
+    if (!hasDrawableEquity(inProgress)) return null
+    return (
+      <EquityChart
+        altNumbers={null}
+        base={{ name: strategyLabel(detail), points: inProgress, maxDrawdown: null }}
+        initialCash={detail.config.initialCash}
+      />
+    )
+  }
+
   if (!hasDrawableEquity(timeseries.data.points)) {
     return (
       <p className={styles.status}>
@@ -341,8 +370,6 @@ function ResultChartSlot({
       </p>
     )
   }
-
-  const { summary } = detail
 
   return (
     <EquityChart
