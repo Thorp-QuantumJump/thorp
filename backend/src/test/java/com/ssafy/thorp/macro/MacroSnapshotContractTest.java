@@ -48,6 +48,42 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("원값 계보에서 대상월의 값을 고른다 — 배열을 숫자 하나로 읽지 않는다")
+    void rawValueComesFromTheTargetMonthOfTheLineage() {
+        // 008 의 raw_value 는 값 하나가 아니라 그 변환값을 만든 원본들이다. 전년동월 대비는
+        // [[t-12, 값], [t, 값]] 로 오고, 이것을 통째로 BigDecimal 에 넘기면 조회가 400 으로
+        // 떨어진다 — 2026-09-22 에 시장 흐름 화면이 그렇게 멈췄다.
+        seedRegistry();
+        seedPublishedDataset();
+        String latest = MacroRegistrySeed.MONTHS.get(MacroRegistrySeed.MONTHS.size() - 1);
+        jdbc.update(
+                """
+                UPDATE macro_observation
+                SET raw_value = jsonb_build_array(
+                        jsonb_build_array(?, '110.5'),
+                        jsonb_build_array('2025-07', '90.0'))
+                WHERE indicator_id = 'exports' AND target_month = ?::date
+                """,
+                latest.substring(0, 7),
+                latest);
+
+        MacroSnapshotResult snapshot = service.getSnapshot();
+
+        MacroSnapshotResult.IndicatorSummary exports =
+                snapshot.indicators().stream()
+                        .filter(indicator -> "exports".equals(indicator.indicatorId()))
+                        .findFirst()
+                        .orElseThrow();
+        // 비교월(90.0)이 아니라 대상월(110.5)이다. 비교월을 고르면 화면의 원값이 열두 달 전
+        // 값이 되고, 숫자가 제목과 다른 달을 말한다.
+        //
+        // **대상월을 일부러 계보의 앞에 두었다.** 실제 자료는 [t-12, t] 순서라 "마지막을
+        // 고른다"로 구현해도 통과해 버린다. 순서를 뒤집어야 규칙이 대상월 찾기인지 마지막
+        // 고르기인지 갈린다.
+        assertThat(exports.latest().rawValue()).isEqualByComparingTo("110.5");
+    }
+
+    @Test
     @DisplayName("등록표가 한 번도 발행되지 않았으면 조회가 실패한다 — 자료 없음과 다르다")
     void failsWhenRegistryNeverPublished() {
         assertThatThrownBy(() -> service.getSnapshot())
