@@ -57,7 +57,7 @@ public class CommonPeriodResolver {
      * @param space 탐색 공간. 워밍업은 여기 담긴 후보값에서 나온다 — 범위를 좁히면 워밍업도 줄어든다
      * @param requestedStart 사용자가 고른 시작일. 있으면 <b>그날 또는 그 뒤 첫 거래일</b>이고 워밍업만큼 늦추지 않는다. 없으면 상장일 기준으로
      *     서버가 제시한다
-     * @param requestedEnd 사용자가 고른 끝일. 없으면 오늘
+     * @param requestedEnd 사용자가 고른 끝일. 없으면 지금 자료 버전의 마지막 거래일
      */
     public CommonPeriod resolve(
             List<String> instrumentIds,
@@ -66,7 +66,18 @@ public class CommonPeriodResolver {
             LocalDate requestedStart,
             LocalDate requestedEnd) {
         LocalDate listedFrom = latestListingDate(instrumentIds);
-        LocalDate end = requestedEnd == null ? LocalDate.now(clock) : requestedEnd;
+        // 끝일을 받지 않으면 **자료 마감일**을 쓴다. 오늘을 쓰면 수집이 거기까지 끝난 날이 아닌 한
+        // 요청 구간이 자료 밖으로 나가고, 워커가 후보를 전부 DATA_INSUFFICIENT 로 거절한다
+        // ("Requested window ends ... but ... is only complete through ..."). 주말·공휴일이거나
+        // 수집이 하루만 밀려도 탐색 전체가 전멸하던 자리다. 004 단일 실행은 001 evaluation-window 의
+        // commonEnd 를 실어 보내 이미 자료 안에 머문다 — 007 만 기준이 달랐다.
+        //
+        // 달력이 비어 있으면 오늘로 물러난다. 그때는 어차피 이어지는 evaluationStart 조회가 비어
+        // INSUFFICIENT_HISTORY 로 끝나므로, 여기서 기본값을 두고 판정을 한 곳에 모은다.
+        LocalDate end =
+                requestedEnd == null
+                        ? marketMetadata.lastTradingDay().orElseGet(() -> LocalDate.now(clock))
+                        : requestedEnd;
 
         WarmupRequirement warmup = warmupOf(space, targets);
         // 워밍업 기준점은 상장일 하나다(001 contracts/evaluation-window.md). 요청 시작일은 여기

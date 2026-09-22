@@ -4,6 +4,9 @@
 정했지만 0 변동성 처리·비중 상한·투자 비중 합계는 아직 팀 결정이 아니다. 그래서 이 모듈은 값을
 하나도 갖고 있지 않고 전부 `allocation.rules` 에서 읽는다 — 값이 정해지면 등록표 행만 고치면 되고
 코드는 그대로다.
+
+다만 `lookbackDays` 와 `maxWeight` 는 003 등록표가 **사용자가 고르는 축**으로도 선언하므로,
+`parameters` 에 오면 그것이 이기고 규칙표 값은 고르지 않은 요청의 기본값이다(PD-03 ⑥).
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from worker.allocation.base import (
     apply_cap,
     decimal_rule,
     effective_cap,
+    int_parameter,
     int_rule,
     normalise,
     quantise,
@@ -46,7 +50,14 @@ def compute(
     rules: Mapping[str, Any],
     as_of: date,
 ) -> AllocationResult:
-    lookback = int_rule(rules, "lookbackDays", STRATEGY_ID)
+    # 003 축이 오면 그것이 사용자가 고른 값이고, 없으면 규칙표 값이 기본값이다
+    # (최소분산과 같은 규칙).
+    # 받아 놓고 쓰지 않으면 21거래일을 고른 사용자가 63거래일짜리 결과를 받는다.
+    lookback = (
+        int_parameter(parameters, "lookbackDays")
+        if parameters.get("lookbackDays") is not None
+        else int_rule(rules, "lookbackDays", STRATEGY_ID)
+    )
     zero_policy = require_rule_value(rules, "zeroVolatility", STRATEGY_ID)
     cap = effective_cap(parameters, rules, STRATEGY_ID)
     invested = decimal_rule(rules, "investedFraction", STRATEGY_ID)
