@@ -88,12 +88,6 @@
   min-width: 0;
 }
 
-.listTitle {
-  margin: 0;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
-}
-
 /* 목록이 예시 대응표에서 왔다는 표시다. 상품 정보의 예시 표시와는 다른 자리에 둔다. */
 .sampleNotice {
   margin: 0;
@@ -119,389 +113,258 @@
 }
 
 /*
-  목록과 상세를 나란히 둔다. 목록은 좁게 고정하고 남는 폭을 상세가 가져간다 — 목록에서 읽는
-  것은 이름 한 줄이고, 판단에 필요한 글과 숫자는 모두 상세에 있다.
+  탐색 카드다. 목록과 상세가 한 덩이로 묶여 있고, 오른쪽 위 단추가 이 카드의 크기를 바꾼다.
+
+  바탕으로 선다. 테두리만 두고 바탕을 비우면 배경 위에 글자만 떠 있고 어디까지가 한 덩어리인지
+  보이지 않는다 — 다크에서 1px 선 하나로는 경계가 잡히지 않는다.
 */
-.masterDetail {
-  display: grid;
-  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
-  align-items: start;
-  gap: 16px;
+.browserCard {
+  position: relative;
+  padding: 20px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 18px;
+  background: var(--thorp-surface);
 }
 
-.list {
+/*
+  카드 안을 세로로 쌓지 않는다. 접었을 때는 목록과 가격 흐름 둘, 넓혔을 때는 담긴 종목 칸이
+  오른쪽에 하나 더 선다.
+*/
+.browserCard [data-slot='body'] {
+  display: grid;
+  grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.browserCard[data-expanded='true'] [data-slot='body'] {
+  grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr) minmax(12rem, 16rem);
+}
+
+/* 카드 크기를 바꾸는 단추다. 아이콘 하나뿐이라 손이 닿을 넓이를 따로 준다. */
+.browserCard [data-slot='zoom'] {
+  display: inline-grid;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 10px;
+  background: var(--thorp-surface);
+  color: var(--thorp-copy);
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.browserCard [data-slot='zoom']:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+.browserCard [data-slot='zoom']:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 왼쪽 목록이다. 길어지면 이 칸만 스크롤해 카드 높이가 끝없이 자라지 않게 한다. */
+.browserCard [data-slot='list'] ul {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 34rem;
+  gap: 8px;
+  max-height: 22rem;
   margin: 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
 }
 
-.item {
-  min-width: 0;
-}
-
 /*
-  목록의 한 줄이다. **누르면 보는 것**이지 고르는 것이 아니므로 체크 상자를 두지 않는다.
-  지금 보고 있는 줄과 이미 담아 둔 줄은 서로 다른 신호로 드러난다.
+  목록의 한 줄이다. **누르면 보는 것**이지 고르는 것이 아니라 체크 상자를 두지 않는다.
+  누를 수 있는 요소라 경계가 3:1을 넘어야 한다(WCAG 1.4.11).
 */
-.item [data-slot='row'] {
+.browserCard [data-slot='pill'] {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 9px 11px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  padding: 10px 13px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 12px;
   background: transparent;
-  color: inherit;
+  color: var(--thorp-copy);
   font: inherit;
+  font-size: 0.88rem;
   cursor: pointer;
   text-align: left;
-  transition: background-color 0.14s ease, border-color 0.14s ease;
+  transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
 }
 
-.item [data-slot='row']:hover {
-  background: var(--thorp-surface);
-}
-
-.item [data-slot='row']:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
-}
-
-/* 지금 보고 있는 줄이다. 바탕과 왼쪽 표시로 상세 영역과 이어져 있음을 보인다. */
-.item [data-slot='row'][aria-current='true'] {
-  border-color: var(--thorp-line-control);
-  background: var(--thorp-surface-raised);
-}
-
-.item [data-slot='row-heading'] {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.item [data-slot='row-name'] {
-  font-size: 0.92rem;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-}
-
-.item [data-slot='row-etf'] {
-  color: var(--thorp-copy);
-  font-size: 0.75rem;
-  overflow-wrap: anywhere;
-}
-
-/* 담아 둔 줄의 표시다. 색만으로 알리지 않고 글자를 함께 둔다. */
-.item [data-slot='row-selected'] {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--thorp-accent);
-  color: var(--thorp-action-foreground);
-  font-size: 0.68rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/*
-  상세 영역이다. 목록과 나란히 서지만 층은 한 단 위다 — 지금 읽을 곳이 여기라는 것이 바탕으로
-  먼저 보인다.
-*/
-.detail {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 18px 20px 20px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: 14px;
-  background: var(--thorp-surface);
-}
-
-.detail [data-slot='detail-header'] {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.detail [data-slot='detail-title'] {
-  min-width: 0;
-}
-
-.detail [data-slot='detail-name'] {
-  margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-
-.detail [data-slot='detail-sector'] {
-  margin: 4px 0 0;
-  color: var(--thorp-copy);
-  font-size: 0.82rem;
-}
-
-/* 정보량을 바꾸는 단추다. 조작 요소라 테두리는 3:1 기준을 쓴다(WCAG 1.4.11). */
-.detail [data-slot='detail-expand'] {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 13px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--thorp-copy);
-  font: inherit;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: border-color 0.14s ease, color 0.14s ease;
-}
-
-.detail [data-slot='detail-expand']:hover {
+.browserCard [data-slot='pill']:hover {
   border-color: var(--thorp-line-control-hover);
   color: var(--thorp-foreground);
 }
 
-.detail [data-slot='detail-expand']:focus-visible {
+.browserCard [data-slot='pill']:focus-visible {
   outline: var(--thorp-focus-outline);
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
-.detail [data-slot='detail-chevron'] {
-  color: var(--thorp-accent-soft);
-  transition: transform 0.15s ease;
+/* 지금 보고 있는 줄이다. 오른쪽 상세와 이어져 있다는 것이 바탕으로 보인다. */
+.browserCard [data-slot='pill'][aria-current='true'] {
+  border-color: var(--thorp-accent-soft);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  font-weight: 700;
 }
 
-.detail [data-slot='detail-expand'][aria-expanded='true'] [data-slot='detail-chevron'] {
-  transform: rotate(180deg);
+.browserCard [data-slot='pill-name'] {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-/* 담고 빼는 자리다. 상세를 다 읽은 뒤 손이 닿는 아래쪽에 둔다. */
-.detail [data-slot='detail-action'] {
+/* 담아 둔 줄의 표시다. 색만으로 알리지 않도록 형태가 있는 표를 쓴다. */
+.browserCard [data-slot='pill-check'] {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.browserCard [data-slot='sr-only'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 가운데 칸. 이름과 담는 단추가 한 줄에 서고 그 아래를 가격 흐름이 채운다. */
+.browserCard [data-slot='main'] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.browserCard [data-slot='main-header'] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  /* 오른쪽 위 확대 단추와 겹치지 않도록 자리를 비워 둔다. */
+  padding-right: 40px;
+}
+
+.browserCard [data-slot='main-title'] {
+  min-width: 0;
+}
+
+.browserCard [data-slot='detail-name'] {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* 섹터·기준 지수·상장일을 한 줄에 잇는다. 셋을 세로로 쌓으면 머리가 차트를 밀어낸다. */
+.browserCard [data-slot='main-subtitle'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 5px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+}
+
+.browserCard [data-slot='dot'] {
+  opacity: 0.5;
+}
+
+.browserCard [data-slot='pick'] {
   display: inline-flex;
-  align-self: flex-start;
+  flex: none;
   align-items: center;
-  gap: 7px;
-  margin-top: 16px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 9px 17px;
   border: 1px solid var(--thorp-accent);
   border-radius: 999px;
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
+  white-space: nowrap;
   cursor: pointer;
   transition: filter 0.14s ease, background-color 0.14s ease, color 0.14s ease;
 }
 
-.detail [data-slot='detail-action']:hover {
+.browserCard [data-slot='pick']:hover {
   filter: brightness(1.08);
 }
 
 /* 이미 담은 상태다. 채운 단추를 비워 "또 담는 자리"로 읽히지 않게 한다. */
-.detail [data-slot='detail-action'][data-selected='true'] {
+.browserCard [data-slot='pick'][data-selected='true'] {
   border-color: var(--thorp-line-control);
   background: transparent;
   color: var(--thorp-foreground);
-}
-
-.detail [data-slot='detail-action'][data-selected='true']:hover {
-  border-color: var(--thorp-line-control-hover);
   filter: none;
 }
 
-.detail [data-slot='detail-action']:focus-visible {
+.browserCard [data-slot='pick'][data-selected='true']:hover {
+  border-color: var(--thorp-line-control-hover);
+}
+
+.browserCard [data-slot='pick']:focus-visible {
   outline: var(--thorp-focus-outline);
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
-/* 상품 정보가 놓이는 자리다. 간단히 볼 때와 상세히 볼 때가 같은 자리를 쓴다. */
-.detail [data-slot='profile-panel'] {
-  margin-top: 14px;
+/*
+  가격 흐름이 놓일 자리다. 아직 그릴 값이 없어 비어 있지만, 넓이와 높이를 미리 잡아 두어
+  자료가 붙었을 때 화면이 흔들리지 않게 한다.
+*/
+.browserCard [data-slot='chart'] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 15rem;
+  padding: 20px;
+  border: 1px dashed var(--thorp-line-strong);
+  border-radius: 14px;
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-muted);
 }
 
-.detail [data-slot='profile-panel'][data-variant='full'] {
-  animation: detail-expand-in 160ms ease-out both;
+.browserCard[data-expanded='true'] [data-slot='chart'] {
+  min-height: 12rem;
 }
 
-.detail [data-slot='profile-loading'] {
+.browserCard [data-slot='chart'] p {
+  max-width: 28rem;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.browserCard [data-slot='profile-loading'] {
   margin: 0;
   color: var(--thorp-copy);
   font-size: 0.86rem;
-  line-height: 1.7;
-}
-
-/*
-  상위 종목이 전체에서 차지하는 몫을 한 줄로 이어 붙여, 이름과 숫자를 읽기 전에 크기가 먼저
-  보이게 한다.
-*/
-.detail [data-slot='composition-bar'] {
-  display: flex;
-  width: 100%;
-  height: 10px;
-  margin: 14px 0 10px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: var(--thorp-surface-muted);
-}
-
-.detail [data-slot='composition-segment'] {
-  flex: none;
-  border-right: 1px solid var(--thorp-surface);
-  background: var(--thorp-accent);
-}
-
-/* 뒤로 갈수록 옅어져 순서가 색으로도 읽힌다. */
-.detail [data-slot='composition-segment']:nth-child(2) {
-  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 28%);
-}
-
-.detail [data-slot='composition-segment']:nth-child(3) {
-  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 48%);
-}
-
-.detail [data-slot='composition-segment']:nth-child(n + 4) {
-  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 64%);
-}
-
-/* '그 외'는 상위 종목과 성격이 달라 강조 색을 쓰지 않는다. */
-.detail [data-slot='composition-segment'][data-rest='true'] {
-  background: var(--thorp-line-strong);
-}
-
-.detail [data-slot='holdings'] {
-  display: grid;
-  gap: 3px;
-  margin: 0 0 10px;
-  padding: 0;
-  list-style: none;
-}
-
-/*
-  이름과 비중 사이를 점선으로 이어 눈이 줄을 건너뛰지 않게 한다. 숫자는 등폭 자리를 잡아
-  자릿수가 달라도 소수점이 한 줄로 선다.
-*/
-.detail [data-slot='holding'] {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 0.84rem;
-}
-
-.detail [data-slot='holding']::after {
-  content: '';
-  grid-column: 2;
-  border-bottom: 1px dotted var(--thorp-line);
-  transform: translateY(-3px);
-}
-
-.detail [data-slot='holding'][data-rest='true'] {
-  color: var(--thorp-muted);
-}
-
-.detail [data-slot='holding-name'] {
-  grid-column: 1;
-  overflow-wrap: anywhere;
-}
-
-.detail [data-slot='holding-weight'] {
-  grid-column: 3;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 남은 종목을 마저 여는 자리다. 감춘 것이 아니라 뒤로 미룬 것이라 개수를 먼저 말한다. */
-.detail [data-slot='holdings-more'] {
-  align-self: flex-start;
-  margin: 0 0 12px;
-  padding: 5px 12px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--thorp-copy);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.detail [data-slot='holdings-more']:hover {
-  border-color: var(--thorp-line-control-hover);
-  color: var(--thorp-foreground);
-}
-
-/* 결과의 뜻을 바꾸는 사실이라 상세 안에 또 접어 두지 않고 구성 바로 아래에 둔다. */
-.detail [data-slot='composition-caveat'] {
-  margin: 0 0 12px;
-  padding-left: 10px;
-  border-left: 2px solid var(--thorp-warning);
-  color: var(--thorp-copy);
-  font-size: 0.8rem;
-  line-height: 1.6;
-}
-
-.detail [data-slot='profile-methodology'] {
-  margin: 0 0 14px;
-  color: var(--thorp-copy);
-  font-size: 0.88rem;
-  line-height: 1.75;
-}
-
-.detail [data-slot='profile-facts'] {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 32px;
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--thorp-surface-raised);
-}
-
-.detail [data-slot='profile-facts'] dt {
-  color: var(--thorp-muted);
-  font-size: 0.72rem;
-}
-
-.detail [data-slot='profile-facts'] dd {
-  margin: 3px 0 0;
-  font-size: 0.88rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.detail [data-slot='profile-survivorship'],
-.detail [data-slot='profile-sample'] {
-  margin: 10px 0 0;
-  color: var(--thorp-copy);
-  font-size: 0.8rem;
-  line-height: 1.7;
-}
-
-.detail [data-slot='profile-sample'] {
-  padding: 8px 12px;
-  border: 1px dashed var(--thorp-line-strong);
-  border-radius: 8px;
-}
-
-.detail [data-slot='profile-source'] {
-  margin: 10px 0 0;
-  color: var(--thorp-muted);
-  font-size: 0.72rem;
 }
 
 /* 패널 안의 '아직 줄 것이 없다' 표시다. */
-.detail [data-slot='profile-panel'] > div:not([data-slot='profile-body']) {
+.browserCard [data-slot='profile-notice'] > div {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -511,14 +374,14 @@
   border-radius: 10px;
 }
 
-.detail [data-slot='profile-panel'] > div:not([data-slot='profile-body']) p {
+.browserCard [data-slot='profile-notice'] p {
   margin: 0;
   color: var(--thorp-copy);
   font-size: 0.84rem;
   line-height: 1.6;
 }
 
-.detail [data-slot='profile-panel'] > div:not([data-slot='profile-body']) button {
+.browserCard [data-slot='profile-notice'] button {
   padding: 6px 14px;
   border: 1px solid var(--thorp-line);
   border-radius: 999px;
@@ -529,11 +392,178 @@
   cursor: pointer;
 }
 
-.detail [data-slot='profile-panel'] > div:not([data-slot='profile-body']) button:hover {
-  border-color: currentColor;
+.browserCard [data-slot='profile-body'] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: card-expand-in 160ms ease-out both;
 }
 
-@keyframes detail-expand-in {
+/*
+  사실은 가로로 늘어놓는다. 다섯 항목을 세로로 쌓으면 넓힌 카드의 남는 폭을 버리면서 정작
+  아래 사실이 화면 밖으로 밀린다.
+*/
+.browserCard [data-slot='profile-facts'] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 10px 18px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--thorp-surface-raised);
+}
+
+.browserCard [data-slot='profile-facts'] dt {
+  color: var(--thorp-muted);
+  font-size: 0.7rem;
+}
+
+.browserCard [data-slot='profile-facts'] dd {
+  margin: 3px 0 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.browserCard [data-slot='profile-methodology'] {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+  line-height: 1.75;
+}
+
+.browserCard [data-slot='profile-survivorship'],
+.browserCard [data-slot='profile-source'] {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.browserCard [data-slot='profile-sample'] {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--thorp-line-strong);
+  border-radius: 8px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+/* 오른쪽 칸. 넓혔을 때만 선다. */
+.browserCard [data-slot='holdings'] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+  background: var(--thorp-surface-raised);
+  animation: card-expand-in 160ms ease-out both;
+}
+
+.browserCard [data-slot='holdings-title'] {
+  margin: 0;
+  font-size: 0.86rem;
+  letter-spacing: -0.01em;
+}
+
+.browserCard [data-slot='holdings-empty'] {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+}
+
+/* 상위 종목이 전체에서 차지하는 몫을 먼저 눈에 보인다. */
+.browserCard [data-slot='composition-bar'] {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--thorp-surface-muted);
+}
+
+.browserCard [data-slot='composition-segment'] {
+  flex: none;
+  border-right: 1px solid var(--thorp-surface-raised);
+  background: var(--thorp-accent);
+}
+
+/* 뒤로 갈수록 옅어져 순서가 색으로도 읽힌다. */
+.browserCard [data-slot='composition-segment']:nth-child(2) {
+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 28%);
+}
+
+.browserCard [data-slot='composition-segment']:nth-child(3) {
+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 48%);
+}
+
+.browserCard [data-slot='composition-segment']:nth-child(n + 4) {
+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 64%);
+}
+
+/* '그 외'는 상위 종목과 성격이 달라 강조 색을 쓰지 않는다. */
+.browserCard [data-slot='composition-segment'][data-rest='true'] {
+  background: var(--thorp-line-strong);
+}
+
+.browserCard [data-slot='holdings-list'] {
+  display: grid;
+  gap: 1px;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+/*
+  이름과 비중 사이를 점선으로 이어 눈이 줄을 건너뛰지 않게 한다. 숫자는 등폭 자리를 잡아
+  자릿수가 달라도 소수점이 한 줄로 선다.
+*/
+.browserCard [data-slot='holding'] {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 0.8rem;
+}
+
+.browserCard [data-slot='holding']::after {
+  content: '';
+  grid-column: 2;
+  border-bottom: 1px dotted var(--thorp-line);
+  transform: translateY(-3px);
+}
+
+.browserCard [data-slot='holding'][data-rest='true'] {
+  color: var(--thorp-muted);
+}
+
+.browserCard [data-slot='holding-name'] {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+
+.browserCard [data-slot='holding-weight'] {
+  grid-column: 3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 결과의 뜻을 바꾸는 사실이라 접어 두지 않고 구성 바로 아래에 둔다. */
+.browserCard [data-slot='composition-caveat'] {
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid var(--thorp-warning);
+  color: var(--thorp-copy);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+@keyframes card-expand-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
@@ -546,12 +576,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .detail [data-slot='profile-panel'][data-variant='full'] {
+  .browserCard [data-slot='profile-body'],
+  .browserCard [data-slot='holdings'] {
     animation: none;
-  }
-
-  .detail [data-slot='detail-chevron'] {
-    transition: none;
   }
 }
 
@@ -738,22 +765,41 @@
   }
 }
 
-@media (max-width: 720px) {
-  .masterDetail {
+@media (max-width: 860px) {
+  /* 담긴 종목 칸까지 셋을 나란히 둘 폭이 없다. 넓힌 카드도 두 칸으로 접는다. */
+  .browserCard[data-expanded='true'] [data-slot='body'] {
+    grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr);
+  }
+
+  .browserCard[data-expanded='true'] [data-slot='holdings'] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  /* 목록을 위로 올리고 가로로 흐르게 둔다. 좁은 폭에서 왼쪽 칸을 고집하면 이름이 다 잘린다. */
+  .browserCard [data-slot='body'],
+  .browserCard[data-expanded='true'] [data-slot='body'] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .list {
-    max-height: 15rem;
+  .browserCard [data-slot='list'] ul {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
   }
 
-  /* 좁은 화면에서는 제목과 상세 단추가 서로를 밀어내지 않게 줄을 나눈다. */
-  .detail [data-slot='detail-header'] {
+  .browserCard [data-slot='pill'] {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .browserCard [data-slot='main-header'] {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .detail [data-slot='detail-expand'] {
+  .browserCard [data-slot='pick'] {
     align-self: flex-start;
   }
 }

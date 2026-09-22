@@ -111,10 +111,10 @@ async function openPage(state?: unknown) {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 목록의 한 줄이다. 누르면 고르는 것이 아니라 상세 영역이 그 항목으로 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 고르는 것이 아니라 보는 대상이 그 항목으로 바뀐다. */
 function row(code: string): HTMLButtonElement {
   return document.querySelector(
-    `[data-sector-code="${code}"] [data-slot="row"]`,
+    `[data-slot="list"] [data-sector-code="${code}"] [data-slot="pill"]`,
   ) as HTMLButtonElement
 }
 
