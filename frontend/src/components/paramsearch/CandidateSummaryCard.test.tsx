@@ -34,7 +34,22 @@ describe('CandidateSummaryCard', () => {
     )
 
     expect(container.textContent).toContain('알파 기울기')
-    expect(container.textContent).toContain('기울기 관측 창 5거래일')
+    expect(container.textContent).toContain('기울기 관측 창')
+    expect(container.textContent).toContain('5거래일')
+  })
+
+  it('전략 이름을 끄면 설정값만 남는다 — 목록이 위에서 한 번 밝힌 경우다', () => {
+    const { container } = render(
+      <CandidateSummaryCard
+        candidate={completedCandidate}
+        config={configFixture}
+        showStrategy={false}
+      />,
+    )
+
+    expect(container.textContent).not.toContain('알파 기울기')
+    expect(container.textContent).toContain('기울기 관측 창')
+    expect(container.textContent).toContain('5거래일')
   })
 
   it('객체형 설정값은 등록된 표시 문구로 보인다', () => {
@@ -62,7 +77,8 @@ describe('CandidateSummaryCard', () => {
 
     const { container } = render(<CandidateSummaryCard candidate={candidate} config={config} />)
 
-    expect(container.textContent).toContain('리밸런싱 주기 월말')
+    expect(container.textContent).toContain('리밸런싱 주기')
+    expect(container.textContent).toContain('월말')
     expect(container.textContent).not.toContain('[object Object]')
   })
 
@@ -72,7 +88,8 @@ describe('CandidateSummaryCard', () => {
     )
 
     expect(container.textContent).toContain('ALPHA_TILT')
-    expect(container.textContent).toContain('tiltWindow 5')
+    expect(container.textContent).toContain('tiltWindow')
+    expect(container.textContent).toContain('5')
   })
 
   it('계산하지 않은 후보를 0%로 그리지 않고 사유를 적는다', () => {
