@@ -733,29 +733,6 @@
     rgb(6 14 9 / 42%);
 }
 
-.chartTopline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--landing-line);
-  color: #7c8b81;
-  font-size: 0.6rem;
-  letter-spacing: 0.09em;
-}
-
-.chartTopline span {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.chartTopline strong {
-  color: var(--landing-accent-soft);
-  font-weight: 630;
-}
-
 /*
   **차트 키는 화면 높이가 정한다.** viewBox 비율(1000×390)대로 두면 폭의 39%가 키가 되어,
   넓은 화면일수록 차트가 커지면서 제목·지표·버튼을 더한 섹션이 한 칸을 넘어 한 번 더 굴러야
@@ -798,49 +775,6 @@
   stroke: rgb(3 199 90 / 22%);
   stroke-width: 15;
   filter: blur(3px);
-}
-
-.chartYears text {
-  fill: #59675e;
-  font-size: 18px;
-  letter-spacing: 0.08em;
-}
-
-.previewMetrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--landing-line);
-}
-
-.previewMetrics span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 17px 19px;
-  border-right: 1px solid var(--landing-line);
-  color: #65736a;
-  font-size: 0.58rem;
-  letter-spacing: 0.07em;
-}
-
-.previewMetrics span:last-child {
-  border-right: 0;
-}
-
-.previewMetrics strong {
-  color: #cbd8cf;
-  font-size: 0.95rem;
-  font-weight: 590;
-  letter-spacing: -0.015em;
-}
-
-.previewMetrics span:first-child strong,
-.previewMetrics span:nth-child(2) strong {
-  color: var(--landing-accent-soft);
-}
-
-.previewMetrics span:nth-child(3) strong {
-  color: var(--landing-negative);
 }
 
 .algorithmSection {
@@ -895,6 +829,40 @@
 
 .orbitStage:focus-visible {
   box-shadow: inset 0 0 0 1px rgb(3 199 90 / 58%);
+}
+
+/* 등록표를 부르는 동안과 부르지 못했을 때 자리를 채운다. 값을 지어내지 않고 상태를 말한다. */
+.orbitNotice {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: #8b9a91;
+  font-size: 0.82rem;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.orbitNotice p {
+  margin: 0;
+}
+
+.orbitNotice button {
+  padding: 8px 18px;
+  border: 1px solid var(--landing-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--landing-accent-soft);
+  font: inherit;
+  cursor: pointer;
+}
+
+.orbitNotice button:hover {
+  border-color: var(--landing-accent-soft);
 }
 
 .orbitFloor {
@@ -984,39 +952,6 @@
   color: #8b9990;
   font-size: 0.64rem;
   line-height: 1.45;
-}
-
-.algorithmCard dl {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 0 0 12px;
-  border-top: 1px solid var(--landing-line);
-  border-bottom: 1px solid var(--landing-line);
-}
-
-.algorithmCard dl div {
-  padding: 8px 5px 7px 0;
-}
-
-.algorithmCard dt {
-  color: #637168;
-  font-size: 0.48rem;
-  letter-spacing: 0.08em;
-}
-
-.algorithmCard dd {
-  margin: 4px 0 0;
-  color: #dce8e0;
-  font-size: 0.8rem;
-  font-weight: 610;
-}
-
-.algorithmCard dl div:first-child dd {
-  color: var(--landing-accent-soft);
-}
-
-.algorithmCard dl div:nth-child(2) dd {
-  color: var(--landing-negative);
 }
 
 .algorithmCard > a {
@@ -1280,18 +1215,6 @@
     min-height: 230px;
   }
 
-  .previewMetrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .previewMetrics span:nth-child(2) {
-    border-right: 0;
-  }
-
-  .previewMetrics span:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--landing-line);
-  }
-
   .algorithmSection {
     min-height: 720px;
     padding: 70px 12px 40px;
@@ -1351,14 +1274,6 @@
   .sectionHeading h2,
   .algorithmHeader h2 {
     font-size: 2.55rem;
-  }
-
-  .chartTopline {
-    padding: 0 12px;
-  }
-
-  .chartTopline strong {
-    display: none;
   }
 
   .algorithmCard {

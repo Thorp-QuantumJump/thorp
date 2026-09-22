@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react'
 import { motion, useInView, useReducedMotion } from 'motion/react'
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -9,7 +10,8 @@ import {
   type PointerEvent,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { strategyResults } from '@/data/backtestMock'
+import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'
+import type { StrategyView } from '@/types/strategyRegistry'
 import styles from '@/pages/LandingPage.module.css'
 
 function relativeIndex(index: number, selectedIndex: number, length: number) {
@@ -19,8 +21,21 @@ function relativeIndex(index: number, selectedIndex: number, length: number) {
   return difference
 }
 
-/** 전략 카드를 원근에 놓고 앞쪽 카드를 선명하게 탐색하는 3D 캐러셀이다. */
+/**
+ * 등록된 배분 전략을 원근에 놓고 탐색하는 3D 캐러셀이다.
+ *
+ * <p><b>전략 지식을 갖지 않는다.</b> 이름·설명·개수는 `GET /strategies/registry` 응답에서만
+ * 읽는다(003 FR-005). 예전에는 데모 자료의 다섯 이름을 상수로 들고 있어서 등록표에 없는 전략을
+ * 첫 화면이 광고했다.
+ *
+ * <p><b>성과를 싣지 않는다.</b> 카드에 CAGR·MDD·SHARPE를 적던 자리를 비웠다. 실행하지 않은
+ * 전략에는 성과가 없고, 있는 것처럼 보이면 첫 화면이 추천을 하는 것이 된다.
+ *
+ * <p>조회가 실패하면 대신할 값을 지어내지 않고 실패를 말한 뒤 다시 시도할 길을 둔다(003 FR-018).
+ */
 export function AlgorithmOrbit() {
+  const [strategies, setStrategies] = useState<StrategyView[]>([])
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [stageWidth, setStageWidth] = useState(960)
   const [announcement, setAnnouncement] = useState('')
@@ -29,6 +44,27 @@ export function AlgorithmOrbit() {
   const didDragRef = useRef(false)
   const reducedMotion = useReducedMotion()
   const isInView = useInView(stageRef, { amount: 0.2 })
+
+  const loadStrategies = useCallback((signal?: AbortSignal) => {
+    setLoadState('loading')
+    return fetchStrategyRegistry(undefined, signal)
+      .then((registry) => {
+        setStrategies(registry.strategies)
+        setSelectedIndex(0)
+        setLoadState('ready')
+      })
+      .catch((error: unknown) => {
+        if (normalizeStrategyRegistryError(error).canceled) return
+        setStrategies([])
+        setLoadState('failed')
+      })
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadStrategies(controller.signal)
+    return () => controller.abort()
+  }, [loadStrategies])
 
   useEffect(() => {
     const stage = stageRef.current
@@ -42,26 +78,27 @@ export function AlgorithmOrbit() {
   }, [])
 
   useEffect(() => {
-    if (reducedMotion || !isInView) return
+    if (reducedMotion || !isInView || strategies.length < 2) return
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        setSelectedIndex((selectedIndex + 1) % strategyResults.length)
+        setSelectedIndex((selectedIndex + 1) % strategies.length)
       }
     }, 3600)
 
     return () => window.clearInterval(intervalId)
-  }, [isInView, reducedMotion, selectedIndex])
+  }, [isInView, reducedMotion, selectedIndex, strategies.length])
 
   const move = (direction: number) => {
-    const nextIndex = (selectedIndex + direction + strategyResults.length) % strategyResults.length
+    if (strategies.length === 0) return
+    const nextIndex = (selectedIndex + direction + strategies.length) % strategies.length
     setSelectedIndex(nextIndex)
-    setAnnouncement(`${strategyResults[nextIndex]?.name ?? ''} 전략 선택됨`)
+    setAnnouncement(`${strategies[nextIndex]?.name ?? ''} 전략 선택됨`)
   }
 
   const selectStrategy = (index: number) => {
     setSelectedIndex(index)
-    setAnnouncement(`${strategyResults[index]?.name ?? ''} 전략 선택됨`)
+    setAnnouncement(`${strategies[index]?.name ?? ''} 전략 선택됨`)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -128,14 +165,18 @@ export function AlgorithmOrbit() {
       transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}
       aria-labelledby="algorithm-title"
     >
+      {/*
+        '검증된 알고리즘'이라고 적던 자리다. 검증 구분은 판정 기준(PD-12)이 정해지기 전까지
+        결과 화면에서도 말하지 못하는 것이라(005 FR-012) 첫 화면이 먼저 단정할 수 없다.
+      */}
       <div className={styles.algorithmHeader}>
         <p>ALGORITHM LIBRARY</p>
         <h2 id="algorithm-title">
-          검증된 알고리즘을
+          배분 규칙을
           <br />
-          사용해보세요.
+          같은 조건에서 비교하세요.
         </h2>
-        <span>카드를 눌러 각 전략의 수익과 위험을 비교해보세요.</span>
+        <span>카드를 눌러 각 전략이 비중을 어떤 규칙으로 정하는지 확인하세요.</span>
       </div>
 
       <div
@@ -152,9 +193,22 @@ export function AlgorithmOrbit() {
         onPointerCancel={handlePointerCancel}
       >
         <div className={styles.orbitFloor} aria-hidden="true" />
-        {strategyResults.map((strategy, index) => {
-          const relative = relativeIndex(index, selectedIndex, strategyResults.length)
-          const angle = relative * ((Math.PI * 2) / strategyResults.length)
+        {loadState === 'loading' ? (
+          <p className={styles.orbitNotice} role="status">
+            전략 목록을 불러오는 중입니다.
+          </p>
+        ) : null}
+        {loadState === 'failed' ? (
+          <div className={styles.orbitNotice} role="status">
+            <p>전략 목록을 불러오지 못했습니다.</p>
+            <button type="button" onClick={() => void loadStrategies()}>
+              다시 시도
+            </button>
+          </div>
+        ) : null}
+        {strategies.map((strategy, index) => {
+          const relative = relativeIndex(index, selectedIndex, strategies.length)
+          const angle = relative * ((Math.PI * 2) / strategies.length)
           const depth = Math.cos(angle)
           const isSelected = index === selectedIndex
           const x = Math.sin(angle) * xRadius
@@ -166,7 +220,7 @@ export function AlgorithmOrbit() {
 
           return (
             <motion.article
-              key={strategy.id}
+              key={strategy.strategyId}
               className={styles.algorithmCard}
               data-selected={isSelected}
               aria-current={isSelected ? 'true' : undefined}
@@ -187,18 +241,12 @@ export function AlgorithmOrbit() {
             >
               <div className={styles.cardIndex}>
                 <span>0{index + 1}</span>
-                <span>{strategy.parameter}</span>
               </div>
               <div>
                 <p>QUANT STRATEGY</p>
                 <h3>{strategy.name}</h3>
                 <span>{strategy.description}</span>
               </div>
-              <dl>
-                <div><dt>CAGR</dt><dd>{strategy.cagr}</dd></div>
-                <div><dt>MDD</dt><dd>{strategy.mdd}</dd></div>
-                <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>
-              </dl>
               {isSelected ? (
                 <Link to="/diagnosis/sectors" onClick={preventClickAfterDrag}>
                   이 전략 백테스트하기
