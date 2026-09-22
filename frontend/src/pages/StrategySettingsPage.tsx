@@ -1117,11 +1117,11 @@ export function StrategySettingsPage({
       <main className={styles.main} aria-labelledby="strategy-settings-title">
         <header className={styles.intro}>
           <h1 id="strategy-settings-title" className={styles.title}>
-            자산 배분 방식
+            전략 선택
           </h1>
           <p className={styles.lead}>
-            고른 섹터에 투자금을 어떻게 나눌지 고릅니다. 기본 설정 그대로 바로
-            분석할 수 있습니다.
+            고른 섹터로 어떤 전략을 돌려 볼지 고릅니다. 그대로 바로 분석할 수
+            있습니다.
           </p>
         </header>
 
@@ -1269,8 +1269,7 @@ export function StrategySettingsPage({
                     </p>
                   ) : (
                     <p className={styles.empty}>
-                      왼쪽에서 배분 방식을 고르면 여기에 설명과 분석 조건이
-                      나타납니다.
+                      왼쪽에서 전략을 고르면 여기에 설명과 조건이 나타납니다.
                     </p>
                   )}
 
