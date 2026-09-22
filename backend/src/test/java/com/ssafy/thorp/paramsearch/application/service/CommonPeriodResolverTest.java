@@ -137,6 +137,17 @@ class CommonPeriodResolverTest {
     }
 
     @Test
+    @DisplayName("끝일이 없으면 오늘이 아니라 자료 마감일을 쓴다")
+    void withoutARequestedEndTheDataDeadlineIsUsed() {
+        // 오늘(고정 시계 2026-09-15)을 쓰면 수집이 그날까지 끝난 날이 아닌 한 요청 구간이 자료 밖으로
+        // 나가고, 워커가 후보를 전부 DATA_INSUFFICIENT 로 거절한다. 달력 상한은 2026-12-31 이다.
+        CommonPeriodResolver.CommonPeriod period = resolve(List.of(SEMICONDUCTOR), null, null);
+
+        assertThat(period.end()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(period.end()).isNotEqualTo(LocalDate.of(2026, 9, 15));
+    }
+
+    @Test
     @DisplayName("요청 시작일이 없으면 상장일 기준값을 서버가 제시한다")
     void withoutARequestedStartTheListingBasedValueIsUsed() {
         CommonPeriodResolver.CommonPeriod period =
