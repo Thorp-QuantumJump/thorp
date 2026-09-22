@@ -413,7 +413,7 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5
 
 검증 기준선(2026-09-16, 이 브랜치): `npm run lint` 오류 0(경고 19, 모두 기존 차트·UI 파일), `npm run build` 통과, `npm test` Vitest 29파일 189건 통과·`skipped` 0, `test:legacy` 13건 통과·`skipped` 0. `src/diagnosis/`의 테스트가 수집 목록에 있다(quickstart 시나리오 0 충족). 아래 두 항목을 마친 뒤에도 이 숫자가 줄지 않아야 한다.
 
-- [ ] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급
+- [X] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급
   - **남은 일이라고 판단한 근거**: 이 브랜치의 커밋 `80e1900`이 `AppHeader`에서 '대시보드'와 '백테스트'를 뺐고 그 사유를 "003·005가 완성되면 대체될 임시 화면"이라고 적었다. 그런데 같은 첫 화면이 여전히 그 두 화면을 소개 경로로 안내한다. `LandingSections.tsx:171`이 `/dashboard`로("시장 분석 보러 가기"), `LandingSections.tsx:256`과 `AlgorithmOrbit.tsx:203`이 `/backtest`로 보낸다. 메뉴에서 뺀 화면을 첫 화면이 계속 권하면 두 판단이 서로를 무효로 만든다
   - 더 좁게 어긋난 자리가 하나 있다. 헤더의 '시장 흐름' 메뉴는 `/home`인데 첫 화면의 "시장 분석 보러 가기"는 `/dashboard`다. **같은 성격의 목적지가 둘로 갈렸다.** research.md 결정 5가 "메뉴의 목적지는 이미 화면이 있으면 그 경로로 연결한다(시장 흐름은 `/home`)"고 정한 자리다
   - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 "머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다
@@ -421,6 +421,15 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5
   - 테스트: `LandingPage.test.tsx`의 "소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다
   - **2026-09-17 판단: 지금은 그대로 둔다. 다만 의문은 닫지 않았으므로 이 task를 열어 둔다.** 세 링크를 지우지도 옮기지도 않았다. 003·005가 `/dashboard`·`/backtest`를 실제로 대체하면 그 화면들이 어디로 가야 하는지가 그때 정해지므로, 지금 옮겨 두면 두 번 고치게 된다. **답하지 못한 물음은 이것이다 — 메뉴에서 뺀 화면을 첫 화면 본문이 계속 권해도 되는가.** 특히 헤더의 '시장 흐름'이 `/market-flow`인데 본문의 "시장 분석 보러 가기"는 `/dashboard`라, 같은 성격의 목적지가 둘로 갈린 상태가 그대로 남았다. 009가 들어오면서 헤더 쪽 경로가 `/home`에서 `/market-flow`로 바뀌어 간격이 처음 적었을 때보다 더 벌어졌다
   - **이 task를 닫는 조건**: 003·005가 각자 화면을 내어 `/dashboard`·`/backtest`의 자리를 대신할 때, 또는 그 전에 첫 화면의 안내 구조를 다시 볼 때다. 둘 중 무엇이 먼저든 그 시점에 지울지 옮길지 정한다
+  - **2026-09-22 판단: 목적지를 메뉴와 같은 곳으로 옮겼다.** 닫는 조건이 충족됐다 — 003·005가
+    화면을 내어 `/diagnosis/sectors`·`/market-flow` 가 그 자리를 대신하고 있고, 사용자가 첫
+    화면에서 옛 데모 화면으로 떨어지는 것이 실제로 보고됐다. 세 링크를 옮겼다: "시장 분석 보러
+    가기"→`/market-flow`, "백테스트 시작하기"·"이 전략 백테스트하기"→`/diagnosis/sectors`.
+    백테스트를 진단 출발점으로 보내는 것은 백테스트가 섹터·전략을 고른 뒤에 돌리는 것이기
+    때문이다. `/dashboard`·`/backtest` 경로 자체는 그대로 둔다(research 결정 5).
+  - 테스트가 목적지를 보지 않고 링크 존재만 보고 있었다. 목적지를 단언으로 바꾸고, 전략을 골라야
+    나오는 링크는 화면으로 닿지 않으므로 `src/components/landing` 소스를 훑어 옛 경로가 없는지
+    함께 본다.
 - [X] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급
   - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다
   - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 "백엔드 DTO와 1:1 대응 타입"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다
