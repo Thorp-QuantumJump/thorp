@@ -64,4 +64,17 @@ public interface MarketMetadataPort {
      * 거래일이 하나도 없으면 비어 있다.
      */
     Optional<LocalDate> firstTradingDayOnOrAfter(LocalDate date);
+
+    /**
+     * 지금 자료 버전이 담은 <b>마지막 거래일</b>. 달력이 비어 있으면 비어 있다.
+     *
+     * <p>끝일을 받지 않는 경로(spec 007 자동 탐색)가 기본값으로 쓴다. <b>오늘을 쓰면 안 된다</b> — 수집은 늘 과거 어느 날까지만 완료돼 있고, 오늘이
+     * 그보다 뒤인 날(주말·공휴일이거나 수집이 하루라도 밀린 날)에는 요청 구간이 자료 밖으로 나가 워커가 후보를 전부 {@code DATA_INSUFFICIENT}로
+     * 거절한다. 004 단일 실행은 001 {@code evaluation-window}의 {@code commonEnd}를 실어 보내 같은 자리를 이미 피하고 있다.
+     *
+     * <p>기본 구현이 비어 있는 것은 시험용 대역을 위해서다. 실제 조회는 {@code DatabaseMarketMetadataAdapter}가 한다.
+     */
+    default Optional<LocalDate> lastTradingDay() {
+        return Optional.empty();
+    }
 }

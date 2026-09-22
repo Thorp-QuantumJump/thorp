@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { apiClient } from './client'
+import { ApiClientError, apiClient, runCsrfProtectedMutation } from './client'
 import type {
   CandidatePage,
   CandidateSort,
@@ -90,6 +90,18 @@ function readErrorBody(
 export function normalizeParamSearchError(error: unknown): ParamSearchError {
   if (error instanceof ParamSearchError) return error
 
+  /*
+    CSRF 준비 층(`runCsrfProtectedMutation`)은 실패를 `ApiClientError`로 한 겹 덮어 던진다. 덮개만
+    보면 서버가 준 `code`·`status`·`details`가 사라져 409 분기(등록표 변경·이미 끝남·재시도할 것
+    없음)가 모두 일반 실패로 떨어진다. 원래 응답이 `cause`에 남아 있으면 그것을 읽는다.
+  */
+  if (error instanceof ApiClientError) {
+    if (error.cause !== undefined && error.cause !== null) {
+      return normalizeParamSearchError(error.cause)
+    }
+    return new ParamSearchError(error.message, { code: error.code ?? null, cause: error })
+  }
+
   if (axios.isAxiosError(error)) {
     if (!error.response) {
       return new ParamSearchError(
@@ -149,9 +161,8 @@ export async function previewParamSearch(
   request: ParamSearchRequest,
 ): Promise<ParamSearchPreview> {
   try {
-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchPreview>>(
-      `${basePath}/preview`,
-      request,
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ParamSearchEnvelope<ParamSearchPreview>>(`${basePath}/preview`, request),
     )
     return unwrap(response.data)
   } catch (error) {
@@ -170,10 +181,10 @@ export async function createParamSearch(
   requesterId?: number | null,
 ): Promise<ParamSearchDetail> {
   try {
-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchDetail>>(
-      basePath,
-      request,
-      { headers: requesterHeaders(requesterId) },
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ParamSearchEnvelope<ParamSearchDetail>>(basePath, request, {
+        headers: requesterHeaders(requesterId),
+      }),
     )
     return unwrap(response.data)
   } catch (error) {
@@ -252,10 +263,12 @@ export async function cancelParamSearch(
   requesterId?: number | null,
 ): Promise<ParamSearchCancelResult> {
   try {
-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(
-      `${basePath}/${encodeURIComponent(searchId)}/cancel`,
-      null,
-      { headers: requesterHeaders(requesterId) },
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(
+        `${basePath}/${encodeURIComponent(searchId)}/cancel`,
+        null,
+        { headers: requesterHeaders(requesterId) },
+      ),
     )
     return unwrap(response.data)
   } catch (error) {
@@ -278,10 +291,12 @@ export async function retryFailedCandidates(
   requesterId?: number | null,
 ): Promise<ParamSearchRetryResult> {
   try {
-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(
-      `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,
-      null,
-      { headers: requesterHeaders(requesterId) },
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(
+        `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,
+        null,
+        { headers: requesterHeaders(requesterId) },
+      ),
     )
     return unwrap(response.data)
   } catch (error) {
