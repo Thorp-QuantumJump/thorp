@@ -277,3 +277,19 @@
     padding: 16px;
   }
 }
+
+/* 앞 단계로 돌아가는 길. 로그인·가입 화면이 쓰는 모양과 같다. */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  font-weight: 660;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--thorp-accent-soft);
+}
