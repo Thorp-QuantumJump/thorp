@@ -44,7 +44,7 @@ public class IndicatorDisplayAssembler {
                 metadata.indicatorId(),
                 metadata.name(),
                 metadata.unit(),
-                snapshot.path().getLast().value(),
+                snapshot.path().isEmpty() ? null : snapshot.path().getLast().value(),
                 snapshot.path(),
                 reference.referenceMonth(),
                 snapshot.releaseDate(),
@@ -53,7 +53,16 @@ public class IndicatorDisplayAssembler {
                 snapshot.afterReferenceMonthRelease());
     }
 
+    /**
+     * 값이 없는 경로.
+     *
+     * <p>기준월이 있으면 그 달과 앞 두 달을 값 없는 점으로 남긴다 — 어느 달이 비었는지가 드러나야 한다. <b>기준월 자체가 없으면 빈 배열이다</b>: 008이 그
+     * 분야의 T_g를 아직 내지 못한 상태라 그릴 달이 정해지지 않았고, 달을 지어내면 없는 자료가 있는 것처럼 보인다.
+     */
     private static IndicatorPathSnapshot emptyPath(String indicatorId, YearMonth referenceMonth) {
+        if (referenceMonth == null) {
+            return new IndicatorPathSnapshot(indicatorId, null, List.of(), null, null);
+        }
         return new IndicatorPathSnapshot(
                 indicatorId,
                 referenceMonth,
