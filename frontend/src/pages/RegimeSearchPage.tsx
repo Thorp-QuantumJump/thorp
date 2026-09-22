@@ -41,6 +41,10 @@ export function RegimeSearchPage() {
   // 내 기록의 '다시 보기'(006 R17). 식별자가 있으면 폼 질의 대신 저장된 판을 고정 조회한다.
   const [params, setParams] = useSearchParams()
   const savedSearchId = params.get('searchId')
+  // 시장 흐름에서 넘어온 분야와 기준월(009 FR-009). 상태가 아니라 주소로 오므로 새로고침에도
+  // 남고, 주소를 건네면 같은 검색을 볼 수 있다.
+  const entryField = params.get('field')
+  const entryMonth = params.get('month')
   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)
   const location = useLocation()
   // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).
@@ -80,6 +84,30 @@ export function RegimeSearchPage() {
       },
     )
   }, [savedSearchId, user, result, location.state])
+
+  // 넘어온 분야·기준월로 검색을 한 번 연다.
+  //
+  // **기준월 목록이 온 뒤에 연다.** `openSearch` 가 그 분야의 최신월과 견줘 넘어온 달이 뒤면
+  // 최신월로 물러나고 그 사실을 한 문장으로 알린다(FR-031). 목록 없이 열면 그 판정을 못 해
+  // 결과가 없는 달로 검색이 나간다.
+  //
+  // **한 번만 연다.** 사용자가 화면에서 분야를 바꾼 뒤에도 주소는 그대로라, 다시 열면 사용자가
+  // 고른 것을 주소가 덮는다.
+  const entryOpened = useRef(false)
+  useEffect(() => {
+    if (entryOpened.current || savedSearchId || !baselines || !entryField) return
+    const field = baselines.byField.find((candidate) => candidate.id === entryField)
+    if (!field) return
+    entryOpened.current = true
+    setFieldId(field.id)
+    if (entryMonth) setSelectedMonth(entryMonth)
+    const month = entryMonth && entryMonth <= (field.baselineMonth ?? '') ? entryMonth : undefined
+    setBaselineChangeNote(
+      month ? null : entryMonth ? copy.baselineMonthChangedNote(field.baselineMonth ?? '') : null,
+    )
+    if (!month) setSelectedMonth('')
+    setQuery({ mode: 'field', field: field.id, baselineMonth: month })
+  }, [baselines, entryField, entryMonth, savedSearchId])
 
   /**
    * 기준월이나 검색 방식이 바뀌어 후보가 달라지면 한 문장으로 알린다(spec FR-031).
