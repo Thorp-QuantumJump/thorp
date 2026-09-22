@@ -30,11 +30,11 @@ describe("ReducedPeriodNotice", () => {
     expect(screen.queryByText(/가섹터/)).toBeNull();
   });
 
-  it("도움말을 열면 자료 시작일과 워밍업을 이루는 항목이 보인다", async () => {
+  it("도움말에 마우스를 얹으면 자료 시작일과 워밍업을 이루는 항목이 보인다", async () => {
     const user = userEvent.setup();
     render(<ReducedPeriodNotice input={input} />);
 
-    await user.click(screen.getByRole("button", { name: "평가 기간 도움말" }));
+    await user.hover(screen.getByRole("button", { name: "평가 기간 도움말" }));
 
     const cause = (await screen.findByText(/가섹터/)).textContent ?? "";
     expect(cause).toContain("2019-01-02");
@@ -47,7 +47,7 @@ describe("ReducedPeriodNotice", () => {
     const user = userEvent.setup();
     render(<ReducedPeriodNotice input={{ ...input, causes: [] }} />);
 
-    await user.click(screen.getByRole("button", { name: "평가 기간 도움말" }));
+    await user.hover(screen.getByRole("button", { name: "평가 기간 도움말" }));
 
     const cause = (await screen.findByText(/가섹터/)).textContent ?? "";
     expect(cause).toContain("워밍업 81거래일");

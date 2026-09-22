@@ -2354,7 +2354,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     const card = await findCardNamed(selectableStrategy.name);
     expect(within(card).queryByText(sentence)).toBeNull();
 
-    await user.click(
+    await user.hover(
       within(notice).getByRole("button", { name: "평가 기간 도움말" }),
     );
     const cause = (await screen.findByText(/나섹터/)).textContent ?? "";
