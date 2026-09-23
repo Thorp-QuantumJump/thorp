@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
@@ -53,6 +53,7 @@ export function InstrumentBrowser({
 }: InstrumentBrowserProps) {
   const headingId = useId()
   const bodyId = useId()
+  const listRef = useRef<HTMLUListElement>(null)
 
   /*
     상품 정보는 카드를 넓혔을 때만 부른다. 접힌 카드가 쓰는 사실(이름·기초지수·상장일)은 이미
@@ -71,6 +72,20 @@ export function InstrumentBrowser({
     지금 보고 있는 대상을 카드에 표시할 때는 목록 항목과 다른 이름(`data-viewing-code`)을 쓴다.
     같은 이름을 쓰면 "그 코드의 항목"을 찾는 쪽이 항목 대신 카드 전체를 먼저 집는다.
   */
+
+  /*
+    보고 있는 줄을 목록 안으로 끌어온다. 목록이 길어 잘리는 자리라, 화면을 다시 열거나 다른
+    경로로 들어와 보는 대상이 정해지면 그 줄이 스크롤 밖에 있을 수 있다. 오른쪽에 그 상품이
+    펼쳐져 있는데 왼쪽 목록에서는 보이지 않으면 사용자는 자기가 무엇을 누른 것인지 잃는다.
+
+    `block: 'nearest'`라 이미 보이는 줄은 움직이지 않는다 — 목록을 눌러 옮길 때마다 화면이
+    덜컹이지 않게 하려는 것이다.
+  */
+  useEffect(() => {
+    const current = listRef.current?.querySelector('[aria-current="true"]')
+    // 이 자리를 모든 환경이 구현하지는 않는다. 없으면 목록이 제자리에 있을 뿐이라 그냥 넘어간다.
+    current?.scrollIntoView?.({ block: 'nearest' })
+  }, [viewing.code])
 
   return (
     <section
@@ -104,7 +119,7 @@ export function InstrumentBrowser({
           이 화면은 목록 의미에 기대고 있으므로 역할을 명시한다.
         */}
         <nav data-slot="list" aria-label="투자 대상 목록">
-          <ul role="list">
+          <ul ref={listRef} role="list">
             {sectors.map((sector) => {
               const picked = isSelected(sector.code)
               return (
@@ -182,6 +197,7 @@ export function InstrumentBrowser({
             name={viewing.representativeEtf.name}
             result={priceSeries.result}
             onReload={priceSeries.reload}
+            expanded={expanded}
           />
 
           {/*

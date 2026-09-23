@@ -12,6 +12,13 @@ type PriceTrendProps = {
   name: string
   result: PriceSeriesResult | null
   onReload: () => void
+  /**
+   * 카드가 넓혀져 있는가.
+   *
+   * 그림의 높이를 가로 폭에 대한 비율로 잡기 때문에 이 값이 필요하다. 넓힌 카드는 가운데 칸이
+   * 좁아지므로 같은 비율을 쓰면 그림만 납작해진다 — 자세히 보려고 넓혔는데 선이 더 안 보이게 된다.
+   */
+  expanded?: boolean
 }
 
 /**
@@ -27,7 +34,7 @@ type PriceTrendProps = {
  * <b>세로축 눈금을 적지 않는다.</b> 이 자리에서 사용자가 묻는 것은 "얼마였나"가 아니라 "어떻게
  * 움직여 왔나"다. 정확한 금액이 필요한 자리는 결과 화면이고 거기에는 금액 축이 있다.
  */
-export function PriceTrend({ name, result, onReload }: PriceTrendProps) {
+export function PriceTrend({ name, result, onReload, expanded = false }: PriceTrendProps) {
   if (result === null) {
     return (
       <div data-slot="chart" data-state="loading">
@@ -62,7 +69,7 @@ export function PriceTrend({ name, result, onReload }: PriceTrendProps) {
     )
   }
 
-  return <TrendChart name={name} series={result.series} />
+  return <TrendChart name={name} series={result.series} expanded={expanded} />
 }
 
 type ChartRow = {
@@ -70,7 +77,15 @@ type ChartRow = {
   close: number
 }
 
-function TrendChart({ name, series }: { name: string; series: PriceSeries }) {
+function TrendChart({
+  name,
+  series,
+  expanded,
+}: {
+  name: string
+  series: PriceSeries
+  expanded: boolean
+}) {
   const rows = useMemo<ChartRow[]>(
     () =>
       series.points.map((point) => ({
@@ -104,7 +119,9 @@ function TrendChart({ name, series }: { name: string; series: PriceSeries }) {
       >
         <LineChart
           animationDuration={0}
-          aspectRatio=""
+          // 높이를 비율로 잡는다. 바깥 칸의 높이를 물려받게 두면 크기를 재는 쪽이 0을 보고
+          // 아무것도 그리지 않는 순간이 생긴다. 넓힌 카드는 칸이 좁아지므로 비율을 키운다.
+          aspectRatio={expanded ? '5 / 3' : '3 / 1'}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
           margin={{ top: 10, right: 10, bottom: 22, left: 10 }}
