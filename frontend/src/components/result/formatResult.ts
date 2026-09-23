@@ -15,6 +15,19 @@ export function formatRatio(value: string): string {
   return `${percent === '-0.00' ? '0.00' : percent}%`
 }
 
+/**
+ * 비율 값의 오르내림. 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%면 방향이 없다.
+ * 읽을 수 없는 값도 방향이 없다 — 색을 칠할 근거가 없다.
+ */
+export function ratioDirection(value: string): 'up' | 'down' | undefined {
+  const ratio = Number(value)
+  if (value.trim() === '' || !Number.isFinite(ratio)) return undefined
+  const percent = Number((ratio * 100).toFixed(2))
+  if (percent > 0) return 'up'
+  if (percent < 0) return 'down'
+  return undefined
+}
+
 const moneyFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 })
 
 /** `"17078.49"` → `"17,078원"` */

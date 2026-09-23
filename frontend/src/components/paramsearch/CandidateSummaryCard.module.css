@@ -1,9 +1,9 @@
 .card {
   display: grid;
   gap: 12px;
-  padding: 15px 16px;
+  padding: var(--thorp-pad-card, 15px 16px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
 }
 
@@ -33,7 +33,7 @@
   min-width: 0;
   padding: 6px 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   background: var(--thorp-surface-muted, transparent);
 }
 
@@ -91,12 +91,13 @@
   font-weight: 700;
 }
 
+/* 수익률 부호에 따른 오르내림 색이다(성공·오류 상태가 아니다). */
 .metrics dd[data-tone='positive'] {
-  color: var(--thorp-positive);
+  color: var(--thorp-up);
 }
 
 .metrics dd[data-tone='negative'] {
-  color: var(--thorp-negative);
+  color: var(--thorp-down);
 }
 
 .absent {
@@ -140,7 +141,7 @@
   min-height: 34px;
   padding: 0 13px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;

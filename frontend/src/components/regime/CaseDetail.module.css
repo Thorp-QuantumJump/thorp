@@ -1,4 +1,4 @@
-.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: 6px; background: var(--thorp-surface); overflow-wrap: anywhere; }
+.detail { min-width: 0; grid-column: 1 / -1; padding: var(--thorp-pad-card, 18px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-card, 6px); background: var(--thorp-surface); overflow-wrap: anywhere; }
 .detail h4 { margin: 0 0 10px; font-size: 1.05rem; }
 .detail h5 { margin: 18px 0 8px; font-size: .9rem; }
 .detail p { margin: 6px 0; color: var(--thorp-copy); font-size: .8rem; }
@@ -12,4 +12,9 @@
 .tableScroll caption { text-align: left; padding: 8px 0; color: var(--thorp-copy); }
 .tableScroll th, .tableScroll td { padding: 7px 10px; border-bottom: 1px solid var(--thorp-line); text-align: left; }
 .era { margin-top: 14px; padding: 10px 12px; border-left: 2px solid var(--thorp-accent-soft); background: var(--thorp-background); }
-@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: 12px; } }
+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: var(--thorp-pad-card, 12px); } }
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
+/* 상세는 사례 카드 안에서 열린다. 카드 안에 또 카드를 겹치지 않도록 카드 안 칸 모양으로 둔다. */
+:global(:root:not([data-design='classic'])) .detail { margin-top: 4px; padding: var(--thorp-pad-inset); border-color: var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }
+:global(:root:not([data-design='classic'])) .era { border-radius: 0 var(--thorp-radius-inset) var(--thorp-radius-inset) 0; }

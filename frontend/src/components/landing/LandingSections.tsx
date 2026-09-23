@@ -1,11 +1,12 @@
-import { ArrowDown, ArrowUpRight, FlaskConical, Radar } from 'lucide-react'
+import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import type { CSSProperties } from 'react'
+import { useRef, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Indicator } from '@/types/market'
 import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
-import { NextSectionButton } from './NextSectionButton'
+import { MarketPreviewWindow } from './MarketPreviewWindow'
+import { useScrollScene } from './scrollScene'
 import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
@@ -40,9 +41,11 @@ const comparisonPaths = [
 ]
 const resultPath = buildDecorativeCurve(0.9, 96)
 
-/** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */
-export function HeroSection() {
+/** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 시장 지표 움직임 예시를 두고 뒤에 시장 그래픽을 깐다. */
+export function HeroSection({ indicators }: { indicators: Indicator[] }) {
   const reducedMotion = useReducedMotion()
+  const section = useRef<HTMLElement>(null)
+  const scene = useScrollScene(section, 'leave')
 
   const moveToMarket = () => {
     document.querySelector('#market-analysis')?.scrollIntoView({
@@ -52,7 +55,7 @@ export function HeroSection() {
   }
 
   return (
-    <section className={styles.hero} aria-labelledby="landing-title">
+    <section ref={section} id="landing-hero" className={styles.hero} aria-labelledby="landing-title">
       <div className={styles.heroFallback} aria-hidden="true">
         <span className={styles.heroGlow} />
         <svg className={styles.heroChart} viewBox="0 0 1600 700" preserveAspectRatio="none">
@@ -86,53 +89,64 @@ export function HeroSection() {
       </div>
       <MarketAtmosphereCanvas />
 
-      <motion.div
-        className={styles.heroContent}
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },
-        }}
-      >
-        <motion.p
-          className={styles.eyebrow}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          KOREA MARKET INTELLIGENCE
-        </motion.p>
-        <motion.h1
-          id="landing-title"
-          variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
-        >
-          <span>시장을 확인하고</span>
-          <span>전략을 <em>검증하세요.</em></span>
-        </motion.h1>
-        <motion.p
-          className={styles.heroDescription}
-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
-        >
-          데이터로 시장을 읽고, 검증된 전략으로 판단하세요.
-        </motion.p>
+      <div className={styles.heroLayout}>
         <motion.div
-          className={styles.heroActions}
-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
+          className={styles.heroContent}
+          style={scene.copy}
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },
+          }}
         >
-          {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
-              다른 화면으로 보내지 않는다. */}
-          <Link className={styles.primaryCta} to="/diagnosis/sectors">
-            비중 비교하기
-            <ArrowUpRight aria-hidden="true" size={18} />
-          </Link>
-          <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
-            서비스 알아보기
-            <ArrowDown aria-hidden="true" size={17} />
-          </button>
+          <motion.h1
+            id="landing-title"
+            variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            <span>내 전략이 얼마나 유효한지,</span>
+            <span><em>과거로 돌아가</em></span>
+            <span>확인해 볼까요?</span>
+          </motion.h1>
+          <motion.p
+            className={styles.heroDescription}
+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 폭에 맡기면 '비교합니다.'만 아래로 떨어진다. */}
+            <span>국내 섹터 ETF로 다섯 가지 배분 규칙을</span>
+            <span>같은 조건에서 비교합니다.</span>
+          </motion.p>
+          <motion.div
+            className={styles.heroActions}
+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
+                다른 화면으로 보내지 않는다. */}
+            <Link className={styles.primaryCta} to="/diagnosis/sectors">
+              비중 비교하기
+              <ArrowUpRight aria-hidden="true" size={18} />
+            </Link>
+            <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
+              서비스 알아보기
+              <ArrowDown aria-hidden="true" size={17} />
+            </button>
+          </motion.div>
         </motion.div>
-      </motion.div>
+
+        <motion.div
+          className={styles.heroPreview}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...revealTransition, delay: 0.3 }}
+        >
+          <motion.div style={scene.window}>
+            <MarketPreviewWindow indicators={indicators} />
+          </motion.div>
+        </motion.div>
+      </div>
 
       <div className={styles.heroFootnote} aria-hidden="true">
         <span>01</span>
@@ -142,70 +156,100 @@ export function HeroSection() {
   )
 }
 
-/** 실제 연동 지표를 비대칭 레이아웃과 무한 스트립으로 소개한다. */
+/** 분야별 흐름 미리보기. 시장 흐름 화면이 무엇을 보이는지 모양으로 알리는 예시다. */
+const exampleFields = [
+  { name: '생산', note: '광공업 생산이 두 달 연속 늘었습니다.', path: [42, 48, 55] },
+  { name: '노동', note: '실업률이 두 달 보합 뒤 0.1%p 올랐습니다.', path: [50, 50, 56] },
+  { name: '물가·원자재', note: '근원물가 상승률이 낮아졌습니다.', path: [58, 52, 47] },
+] as const
+
+/** 시장 흐름을 소개한다. 왼쪽 글, 오른쪽에 흐르는 지표 띠와 분야별 흐름 미리보기를 담은 창. */
 export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] }) {
+  const section = useRef<HTMLElement>(null)
+  const scene = useScrollScene(section, 'pass', 'left')
   return (
-    <motion.section
+    <section
+      ref={section}
       id="market-analysis"
-      className={`${styles.storySection} ${styles.marketSection}`}
-      initial={{ opacity: 0, x: 72 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={revealTransition}
+      className={`${styles.storySection} ${styles.storyLayout}`}
       aria-labelledby="market-analysis-title"
     >
-      <div className={styles.sectionAside}>
-        <span className={styles.sectionNumber} aria-hidden="true">
-          01 / MARKET PULSE
-        </span>
-        <NextSectionButton targetId="backtest-service" label="백테스트 소개로 이동" />
-      </div>
-      <div className={styles.marketContent}>
-        <div className={styles.sectionHeading}>
-          <Radar aria-hidden="true" size={22} strokeWidth={1.6} />
-          <p>MARKET ANALYSIS</p>
-          <h2 id="market-analysis-title">
-            지표를 기반으로
-            <br />
-            시장을 분석합니다.
-          </h2>
-          <span>주요 시장·거시 지표를 한곳에서 확인하고 현재 시장의 흐름을 읽어보세요.</span>
+      <motion.div className={styles.storyCopy} style={scene.copy}>
+        <h2 id="market-analysis-title">
+          <span>지표를 기반으로</span>
+          <span><em>시장을 분석</em>합니다.</span>
+        </h2>
+        <p className={styles.heroDescription}>
+          <span>주요 시장·거시 지표와 일곱 분야의 흐름을</span>
+          <span>한곳에서 확인하세요.</span>
+        </p>
+        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). */}
+        <div className={styles.heroActions}>
+          <Link className={styles.secondaryCta} to="/market-flow">
+            시장 분석 보러 가기
+            <ArrowUpRight aria-hidden="true" size={18} />
+          </Link>
         </div>
+      </motion.div>
 
-        <IndicatorConveyor indicators={indicators} />
-
-        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). 같은 성격의 목적지가 두
-            곳이면 첫 화면과 메뉴가 서로 다른 화면을 가리킨다. */}
-        <Link className={styles.textCta} to="/market-flow">
-          <span>시장 분석 보러 가기</span>
-          <ArrowUpRight aria-hidden="true" size={21} />
-        </Link>
-      </div>
-    </motion.section>
+      <motion.div className={styles.storyWindow} style={scene.window}>
+        <div className={styles.previewWindow}>
+          <div className={styles.previewBar} aria-hidden="true">
+            <span className={styles.previewDots}><i /><i /><i /></span>
+            <span className={styles.previewAddress}>thorp · <b>시장 흐름</b></span>
+            <span className={styles.previewExample}>예시 화면</span>
+          </div>
+          <IndicatorConveyor indicators={indicators} />
+          <ul className={styles.fieldPreview} aria-hidden="true">
+            {exampleFields.map((field) => (
+              <li key={field.name}>
+                <b>{field.name}</b>
+                <span>{field.note}</span>
+                <svg viewBox="0 0 60 24">
+                  <polyline points={field.path.map((value, index) => `${6 + index * 24},${(70 - value) / 1.4}`).join(' ')} />
+                  {field.path.map((value, index) => <circle key={index} cx={6 + index * 24} cy={(70 - value) / 1.4} r={2.4} />)}
+                </svg>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </motion.div>
+    </section>
   )
 }
 
-/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 성과 수치는 결과 화면에만 둔다. */
+/** 진단이 무엇을 하는지 세 단계로 말한다. 기본값·권고가 아니라 흐름이다. */
+const backtestSteps = [
+  { title: '섹터를 고르고 비중을 정해요', note: '처음엔 같은 비중으로 채워 둡니다' },
+  { title: '다섯 배분 규칙 중 하나를 골라요', note: '기본값은 출발점일 뿐입니다' },
+  { title: '같은 조건의 결과를 나란히 비교해요', note: '비용 차감 후 수익·하락 폭·거래비용' },
+]
+
+/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 왼쪽에 결과 화면 창, 오른쪽에 글과 세 단계. */
 export function BacktestIntroSection() {
+  const section = useRef<HTMLElement>(null)
+  const scene = useScrollScene(section, 'pass', 'right')
   return (
-    <motion.section
+    <section
+      ref={section}
       id="backtest-service"
-      className={`${styles.storySection} ${styles.backtestSection}`}
-      initial={{ opacity: 0, x: -72 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={revealTransition}
+      className={`${styles.storySection} ${styles.storyLayout} ${styles.storyReverse}`}
       aria-labelledby="backtest-intro-title"
     >
-      <div className={styles.backtestContent}>
-        <div className={styles.sectionHeading}>
-          <FlaskConical aria-hidden="true" size={22} strokeWidth={1.6} />
-          <p>BACKTEST STUDIO</p>
-          <h2 id="backtest-intro-title">나의 전략을 실험해보세요.</h2>
-        </div>
-
+      <motion.div className={styles.storyWindow} style={scene.window}>
         {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}
         <div className={styles.backtestVisual} aria-hidden="true">
+          {/* 결과 화면 틀. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을
+              채우면 첫 화면이 성과를 지어내게 된다. */}
+          <div className={styles.visualBar}>
+            <span className={styles.visualDots}><i /><i /><i /></span>
+            <b>결과 화면</b>
+          </div>
+          <dl className={styles.visualMetrics}>
+            {['비용 차감 후 수익', '가장 크게 줄었던 폭', '거래비용'].map((name) => (
+              <div key={name}><dt>{name}</dt><dd>실행 후 표시</dd></div>
+            ))}
+          </dl>
           <svg viewBox="0 0 1000 390">
             {[86, 144, 202, 260, 318].map((y) => (
               <line key={y} className={styles.chartGrid} x1="42" x2="958" y1={y} y2={y} />
@@ -239,20 +283,32 @@ export function BacktestIntroSection() {
             />
           </svg>
         </div>
+      </motion.div>
 
+      <motion.div className={styles.storyCopy} style={scene.copy}>
+        <h2 id="backtest-intro-title">
+          <span>나의 전략을</span> <span><em>실험해보세요.</em></span>
+        </h2>
+        <ol className={styles.storySteps}>
+          {backtestSteps.map((step, index) => (
+            <li key={step.title}>
+              <b aria-hidden="true">{index + 1}</b>
+              <span>
+                {step.title}
+                <small>{step.note}</small>
+              </span>
+            </li>
+          ))}
+        </ol>
         {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른
             뒤에 돌리는 것이라 그 출발점으로 보낸다. */}
-        <Link className={styles.textCta} to="/diagnosis/sectors">
-          <span>백테스트 시작하기</span>
-          <ArrowUpRight aria-hidden="true" size={21} />
-        </Link>
-      </div>
-      <div className={styles.sectionAside}>
-        <span className={styles.sectionNumber} aria-hidden="true">
-          02 / TEST THE PAST
-        </span>
-        <NextSectionButton targetId="algorithms" label="알고리즘 소개로 이동" />
-      </div>
-    </motion.section>
+        <div className={styles.heroActions}>
+          <Link className={styles.primaryCta} to="/diagnosis/sectors">
+            백테스트 시작하기
+            <ArrowUpRight aria-hidden="true" size={18} />
+          </Link>
+        </div>
+      </motion.div>
+    </section>
   )
 }

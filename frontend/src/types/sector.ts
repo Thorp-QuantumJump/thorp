@@ -93,6 +93,40 @@ export type InstrumentProfile = {
 }
 
 /**
+ * 대표 ETF의 하루치 가격이다.
+ *
+ * `adjustedClose`가 숫자가 아니라 문자열인 까닭은 계약이 그렇게 주기 때문이다. 소수 여덟 자리까지
+ * 오는 값을 숫자로 받아 두면 표시 단계에서 부동소수 오차가 섞인다. 그릴 때만 옮긴다.
+ *
+ * **거래정지일과 이어 붙인 가격을 숨기지 않는다.** 그 날 값은 직전 거래일에서 옮겨 적은 것이라
+ * "그 값에 거래할 수 있었다"는 뜻이 아니다(원칙 V).
+ */
+export type PricePoint = {
+  /** ISO 날짜 문자열(`YYYY-MM-DD`). */
+  date: string
+  /** `"10250.50000000"` 같은 수정종가 문자열이다. */
+  adjustedClose: string
+  tradingSuspended: boolean
+  priceCarriedForward: boolean
+}
+
+/**
+ * `GET /sectors/{code}/price-series` 응답을 camelCase로 1:1 옮긴 타입이다.
+ *
+ * **`isSample`은 자료 버전 기준이다.** 대표 상품 정보의 것과 같은 뜻이며 대응표의 값과는 다른 것을
+ * 가리킨다.
+ */
+export type PriceSeries = {
+  instrumentId: string
+  datasetId: string
+  /** ISO 시각 문자열. 이 자료가 어느 시점까지를 담는지다. */
+  dataDeadline: string
+  isSample: boolean
+  /** 날짜 오름차순이다. 서버가 정렬해 주므로 화면이 다시 정렬하지 않는다. */
+  points: PricePoint[]
+}
+
+/**
  * 섹터 도메인이 내보내는 서버 오류 신호 이름이다.
  *
  * 값의 원본은 백엔드의 `SectorExceptionHandler`이며 그 파일에 있는 넷을 그대로 옮겼다.
@@ -106,6 +140,7 @@ export const sectorApiErrorCodes = [
   'SECTOR_MAP_UNUSABLE',
   'SECTOR_NOT_FOUND',
   'INSTRUMENT_PROFILE_NOT_READY',
+  'PRICE_SERIES_NOT_READY',
 ] as const
 
 export type SectorApiErrorCode = (typeof sectorApiErrorCodes)[number]

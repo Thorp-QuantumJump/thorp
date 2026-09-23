@@ -162,6 +162,44 @@ describe('ParamSearchPage', () => {
     expect(screen.queryByText(acceptedFixture.searchId)).toBeNull()
   })
 
+  it('실행을 누르면 접수 응답을 기다리지 않고 진행 화면으로 간다', async () => {
+    const user = userEvent.setup()
+    // 접수가 끝나기를 기다렸다 넘어가면 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔
+    // 조합이면 다 끝난 뒤에 넘어가 한꺼번에 나타난다(FR-008).
+    let accept: (detail: typeof acceptedFixture) => void = () => {}
+    apiMocks.createParamSearch.mockReturnValue(
+      new Promise((resolve) => {
+        accept = resolve
+      }),
+    )
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))
+
+    // 아직 searchId 가 없는데도 진행 화면이다. 확인 화면은 물러나 있다.
+    expect(await screen.findByRole('heading', { name: '진행 상태' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeNull()
+
+    accept(acceptedFixture)
+    await waitFor(() =>
+      expect(apiMocks.getParamSearch).toHaveBeenCalledWith(acceptedFixture.searchId),
+    )
+  })
+
+  it('접수가 실패하면 확인 화면으로 돌아와 사유를 보인다', async () => {
+    const user = userEvent.setup()
+    apiMocks.createParamSearch.mockRejectedValue(
+      new ParamSearchError('요청을 처리하지 못했습니다.', { status: 500 }),
+    )
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))
+
+    // 미리 넘어간 화면에 갇히지 않는다 — 실행 버튼이 돌아오고 그 자리에서 사유를 읽는다.
+    expect((await screen.findByRole('alert')).textContent).toContain('요청을 처리하지 못했습니다')
+    expect(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeTruthy()
+  })
+
   it('로그인 전에는 실행을 막고 이유를 적는다', async () => {
     authMocks.getCurrentUser.mockRejectedValue(new Error('anonymous'))
     renderPage()

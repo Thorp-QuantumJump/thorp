@@ -5,6 +5,8 @@ import type {
   HoldingsOverlap,
   InstrumentHolding,
   InstrumentProfile,
+  PricePoint,
+  PriceSeries,
   SectorCatalog,
   SectorClassification,
   SectorSummary,
@@ -491,4 +493,134 @@ export async function fetchEvaluationWindow(
     throw new ApiClientError('unexpected', UNREADABLE_WINDOW_MESSAGE)
   }
   return window
+}
+
+/**
+ * 가격 흐름 조회의 결과다. 대표 상품 정보와 같은 갈래를 쓴다(research.md 결정 6).
+ *
+ * "아직 줄 것이 없다"를 실패와 가르는 까닭도 같다. 그래야 화면이 빈 그래프 대신 한 문장 안내를 낼
+ * 수 있다 — 점 없는 선은 "값이 없다"가 아니라 "움직임이 없었다"로 읽힌다.
+ */
+export type PriceSeriesResult =
+  | { status: 'loaded'; series: PriceSeries }
+  /** 그 종목의 가격이 아직 적재되지 않았다(409 `PRICE_SERIES_NOT_READY`). */
+  | { status: 'notReady'; message: string }
+  | {
+      status: 'failed'
+      kind: 'api' | 'network' | 'unexpected'
+      code: ApiErrorCode | null
+      message: string
+      retryable: boolean
+    }
+
+const UNREADABLE_SERIES_MESSAGE = '가격 흐름을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+/**
+ * 하루치 한 점을 읽는다.
+ *
+ * **숫자로 읽히는지까지 본다.** `"N/A"`나 빈 문자열은 문자열 검사만으로는 통과하는데, 그대로 두면
+ * 그 날 값이 0으로 떨어진 선이 그려져 실제로 있지 않았던 폭락처럼 보인다.
+ */
+function readPricePoint(value: unknown): PricePoint | null {
+  if (!isRecord(value)) return null
+  if (!isDate(value.date)) return null
+  if (typeof value.adjustedClose !== 'string') return null
+  if (typeof value.tradingSuspended !== 'boolean') return null
+  if (typeof value.priceCarriedForward !== 'boolean') return null
+
+  const close = Number(value.adjustedClose)
+  // 가격은 0보다 커야 한다. 저장 표의 제약(`ck_daily_price_adjusted_positive`)과 같은 조건이다.
+  if (!Number.isFinite(close) || close <= 0) return null
+
+  return {
+    date: value.date,
+    adjustedClose: value.adjustedClose,
+    tradingSuspended: value.tradingSuspended,
+    priceCarriedForward: value.priceCarriedForward,
+  }
+}
+
+/**
+ * 응답을 읽어 타입으로 옮긴다. 점 하나라도 계약과 다르면 전체를 읽지 못한 것으로 다룬다.
+ *
+ * **성한 점만 골라 그리지 않는다.** 그렇게 하면 빠진 날의 앞뒤가 이어져, 실제로는 있었던 구간이
+ * 없었던 것처럼 매끈한 선이 된다(원칙 VI).
+ */
+function readPriceSeries(value: unknown): PriceSeries | null {
+  if (!isRecord(value)) return null
+  if (typeof value.instrumentId !== 'string') return null
+  if (typeof value.datasetId !== 'string') return null
+  if (typeof value.dataDeadline !== 'string') return null
+  if (typeof value.isSample !== 'boolean') return null
+  if (!Array.isArray(value.points) || value.points.length === 0) return null
+
+  const points: PricePoint[] = []
+  for (const item of value.points) {
+    const point = readPricePoint(item)
+    if (!point) return null
+    points.push(point)
+  }
+
+  return {
+    instrumentId: value.instrumentId,
+    datasetId: value.datasetId,
+    dataDeadline: value.dataDeadline,
+    isSample: value.isSample,
+    points,
+  }
+}
+
+function toSeriesFailure(error: ApiClientError): PriceSeriesResult {
+  if (error.kind === 'api' && error.is('PRICE_SERIES_NOT_READY')) {
+    return { status: 'notReady', message: error.message }
+  }
+
+  return {
+    status: 'failed',
+    kind: error.kind,
+    code: error.code,
+    message: error.message,
+    // 없는 섹터를 다시 물어도 답이 달라지지 않는다. 대응표가 망가진 경우도 같다.
+    retryable: !error.is('SECTOR_NOT_FOUND') && !error.is('SECTOR_MAP_UNUSABLE'),
+  }
+}
+
+/**
+ * 한 섹터 대표 ETF의 가격 흐름을 받아 온다.
+ *
+ * 목록·상품 정보와 **같은 `apiClient` 경로**를 쓴다. 상장 이후 모든 거래일이 오므로 화면이 보고
+ * 있는 대상 하나만 부른다.
+ */
+export async function fetchPriceSeries(
+  code: string,
+  signal?: AbortSignal,
+): Promise<PriceSeriesResult> {
+  try {
+    const response = await apiClient.get<ApiEnvelope<PriceSeries>>(
+      `/sectors/${encodeURIComponent(code)}/price-series`,
+      { signal },
+    )
+    const body = response.data
+
+    if (!body.success) {
+      return toSeriesFailure(
+        new ApiClientError('api', body.error.message, { code: body.error.code }),
+      )
+    }
+
+    const series = readPriceSeries(body.data)
+    if (!series) {
+      return {
+        status: 'failed',
+        kind: 'unexpected',
+        code: null,
+        message: UNREADABLE_SERIES_MESSAGE,
+        retryable: true,
+      }
+    }
+
+    return { status: 'loaded', series }
+  } catch (error) {
+    return toSeriesFailure(normalizeApiError(error))
+  }
 }

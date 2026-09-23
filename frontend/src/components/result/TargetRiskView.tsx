@@ -6,7 +6,7 @@ import { useResult } from '@/hooks/useResult'
 import type { BacktestCreateRequest } from '@/types/backtestRequest'
 import type { PublicResultDetail } from '@/types/result'
 import { buildCompareRequest } from './compareRequest'
-import { formatMoney, formatRatio } from './formatResult'
+import { formatMoney, formatRatio, ratioDirection } from './formatResult'
 import styles from './auxiliaryViews.module.css'
 
 type RequestState =
@@ -227,11 +227,11 @@ export function TargetRiskView({ base }: { base: PublicResultDetail }) {
         <dl className={styles.metrics} aria-label="목표 위험 맞춤 핵심 결과">
           <div className={styles.metric}>
             <dt>비용 차감 후 전체 수익률</dt>
-            <dd>{formatRatio(detail.summary.netTotalReturn)}</dd>
+            <dd data-direction={ratioDirection(detail.summary.netTotalReturn)}>{formatRatio(detail.summary.netTotalReturn)}</dd>
           </div>
           <div className={styles.metric}>
             <dt>가장 크게 줄었던 폭</dt>
-            <dd>{formatRatio(detail.summary.maxDrawdown)}</dd>
+            <dd data-direction={ratioDirection(detail.summary.maxDrawdown)}>{formatRatio(detail.summary.maxDrawdown)}</dd>
           </div>
           <div className={styles.metric}>
             <dt>거래비용</dt>

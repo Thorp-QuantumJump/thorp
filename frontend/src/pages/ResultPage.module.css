@@ -73,7 +73,7 @@
 .retry {
   padding: 8px 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-control, 10px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
