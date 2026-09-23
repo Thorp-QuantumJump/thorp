@@ -47,7 +47,7 @@
   margin-top: 36px;
   padding: 20px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 

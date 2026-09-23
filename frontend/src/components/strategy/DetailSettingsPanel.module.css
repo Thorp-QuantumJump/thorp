@@ -79,7 +79,7 @@
   gap: 8px;
   padding: 14px 16px;
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
 }
 
 .weightTable {
@@ -119,7 +119,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);
   font-size: 0.84rem;
   line-height: 1.6;

@@ -183,7 +183,7 @@
   margin: 0;
   padding: 9px 11px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
   font-size: 0.74rem;
   line-height: 1.55;
@@ -274,4 +274,12 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 7px;
   }
+}
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 패널을 카드로 담는다. */
+:global(:root:not([data-design='classic'])) .panel {
+  padding: 22px 24px 24px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
 }

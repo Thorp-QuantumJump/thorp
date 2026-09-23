@@ -88,7 +88,7 @@
   margin: 0;
   padding: 9px 11px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
   font-size: 0.74rem;
 }

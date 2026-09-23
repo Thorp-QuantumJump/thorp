@@ -15,7 +15,7 @@
   width: min(100%, 560px);
   padding: 22px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);
@@ -136,7 +136,7 @@
   gap: 6px;
   padding: 13px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-inset, 6px);
   background: var(--thorp-surface);
 }
 

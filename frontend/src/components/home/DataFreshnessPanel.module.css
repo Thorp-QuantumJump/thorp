@@ -1,7 +1,7 @@
 .details {
   overflow: hidden;
   border: 1px solid var(--market-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -61,7 +61,7 @@
 .fciNote {
   min-width: 0;
   padding: 15px;
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-inset, 6px);
   background: var(--thorp-surface-muted);
 }
 
