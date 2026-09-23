@@ -86,6 +86,13 @@
   --thorp-radius-card: 12px;
   --thorp-radius-inset: 8px;
   --thorp-overlay: rgb(0 0 0 / 68%);
+  /*
+    초록은 누를 것(버튼·링크·고름·초점·진행)에만 쓴다. 영문 작은 제목과 장식 아이콘·번호, 구역 배경의
+    빛번짐은 무채색이다. 초록이 모든 곳에 있으면 무엇을 누를 수 있는지가 색으로 드러나지 않는다.
+  */
+  --thorp-eyebrow: var(--thorp-muted);
+  --thorp-ornament: var(--thorp-copy);
+  --thorp-ambient: rgb(255 255 255 / 3%);
   --thorp-input-hover: rgb(255 255 255 / 30%);
   --thorp-surface-glass: rgb(26 29 28 / 86%);
   --thorp-shadow: 0 22px 58px rgb(0 0 0 / 45%);
@@ -180,6 +187,9 @@
   --thorp-radius-card: initial;
   --thorp-radius-inset: initial;
   --thorp-overlay: initial;
+  --thorp-eyebrow: initial;
+  --thorp-ornament: initial;
+  --thorp-ambient: initial;
   --thorp-input-hover: initial;
   --thorp-surface-glass: initial;
   --thorp-shadow: 0 22px 58px rgb(1 5 3 / 42%);

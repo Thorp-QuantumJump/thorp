@@ -56,6 +56,12 @@
   color: var(--thorp-accent);
 }
 
+/* 작은 제목은 누를 것이 아니라 초록을 쓰지 않는다. classic에서는 토큰이 비어 위의 초록이 남는다. */
+.eyebrow,
+.panelHeading > span {
+  color: var(--thorp-eyebrow, var(--thorp-accent));
+}
+
 .loginLink,
 .backLink {
   display: inline-flex;

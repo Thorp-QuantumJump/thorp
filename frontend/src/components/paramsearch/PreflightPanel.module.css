@@ -123,7 +123,7 @@
 }
 
 .workload strong {
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-ornament, var(--thorp-accent-soft));
   font-size: 1.05rem;
   font-weight: 750;
 }
