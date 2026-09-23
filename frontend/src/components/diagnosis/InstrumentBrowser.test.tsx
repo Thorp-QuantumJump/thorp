@@ -18,6 +18,7 @@ import type { InstrumentProfile, SectorCatalog, SectorSummary } from '@/types/se
 const apiMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchInstrumentProfile: vi.fn(),
+  fetchPriceSeries: vi.fn(),
 }))
 
 vi.mock('@/api/sectors', async () => {
@@ -130,6 +131,16 @@ function cardBody(): HTMLElement {
   return document.querySelector('[data-slot="body"]') as HTMLElement
 }
 
+/**
+ * 상품 정보가 "아직 줄 것이 없다"고 알리는 자리다.
+ *
+ * 카드 안에는 가격 흐름도 같은 모양의 안내를 둘 수 있어, 카드 전체에서 단추를 찾으면 어느 쪽
+ * 안내를 본 것인지 가릴 수 없다.
+ */
+function profileNotice(): HTMLElement | null {
+  return document.querySelector('[data-slot="profile-notice"]')
+}
+
 function expanded(): boolean {
   return (
     document.querySelector('[data-viewing-code]')?.getAttribute('data-expanded') === 'true'
@@ -167,6 +178,11 @@ function currentPath(): string {
 describe('대표 상품 정보 패널', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 카드는 접힌 채로도 가격을 부른다. 그림 자체는 다른 검사가 본다.
+    apiMocks.fetchPriceSeries.mockResolvedValue({
+      status: 'notReady',
+      message: '준비 중',
+    })
     window.sessionStorage.clear()
     apiMocks.fetchInstrumentProfile.mockResolvedValue(profileLoaded)
   })
@@ -223,7 +239,7 @@ describe('대표 상품 정보 패널', () => {
     await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
     const notReady = await waitFor(() => {
-      const found = cardBody()
+      const found = profileNotice()
       expect(found?.textContent).toContain('대표 상품 정보가 아직 준비 중입니다')
       return found as HTMLElement
     })
@@ -245,7 +261,7 @@ describe('대표 상품 정보 패널', () => {
     await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
     const notFound = await waitFor(() => {
-      const found = cardBody()
+      const found = profileNotice()
       expect(found?.textContent).toContain('찾을 수 없습니다')
       return found as HTMLElement
     })
@@ -265,7 +281,7 @@ describe('대표 상품 정보 패널', () => {
     await zoomIn(user, 'SEMICONDUCTOR', '반도체')
 
     const broken = await waitFor(() => {
-      const found = cardBody()
+      const found = profileNotice()
       expect(found?.textContent).toContain('서버에 저장된 상품 자료에 문제가 있어')
       return found as HTMLElement
     })
