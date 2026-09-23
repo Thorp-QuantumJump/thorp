@@ -299,15 +299,6 @@ export function EquityChart(props: EquityChartProps) {
   const targetWindow =
     targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null
 
-  const notes = [
-    scaleMode === 'log'
-      ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'
-      : null,
-    baseWindow ? shadeNote(base.name, baseWindow) : null,
-    targetWindow ? shadeNote(targets[0].name, targetWindow) : null,
-    targets.length > 1 ? '비교 대상이 둘 이상이라 비교 대상의 하락 구간 음영은 그리지 않았습니다.' : null,
-  ].filter((note): note is string => note != null)
-
   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 "돌았고 비어 있었다"는 거짓이므로 그리지
   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.
   if (!hasDrawableEquity(base.points) && !targets.some((target) => hasDrawableEquity(target.points)))
@@ -430,12 +421,6 @@ export function EquityChart(props: EquityChartProps) {
         {initial == null ? null : <span>점선 · 시작 금액 {formatMoney(initialCash)}</span>}
         {baseWindow && base.maxDrawdown ? (
           <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>
-        ) : null}
-        {notes.length > 0 ? (
-          <details className={styles.help}>
-            <summary>차트 읽는 법</summary>
-            <p>{notes.join(' ')}</p>
-          </details>
         ) : null}
       </div>
     </div>
