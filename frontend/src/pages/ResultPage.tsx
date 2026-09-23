@@ -13,6 +13,7 @@ import { strategyLabel } from '@/components/result/conditionLine'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
+import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
@@ -139,12 +140,14 @@ function ResultView({
   return (
     <article className={styles.result} aria-labelledby="result-title">
       <header className={styles.intro}>
-        {/* 앞 단계로 돌아가는 길. 전략 선택 화면과 같은 모양이고 행동이 아니라 이동이라 버튼 줄에 두지 않는다.
-            브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유 주소로 들어온 사용자는 한 칸 뒤가
-            전략 선택이 아니다. 조건을 채워 넘기는 것은 '다른 조건으로 비교'(B07)의 몫이고 이 길은 그냥 돌아간다. */}
-        <Link className={styles.backLink} to="/strategy">
+        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라
+            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유
+            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에
+            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로
+            비교'(B07)의 몫이다. */}
+        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>
           <ArrowLeft size={15} aria-hidden="true" />
-          전략 선택
+          처음부터 다시 분석
         </Link>
         <h1 id="result-title" className={styles.title}>
           백테스트 결과
