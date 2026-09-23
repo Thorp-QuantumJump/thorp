@@ -21,7 +21,7 @@ export function LandingPage() {
     <main className={styles.page}>
       {/* 다른 화면과 같은 상단 바다. 로그인 상태를 읽으므로 로그인한 사용자에게 로그인 버튼을 보이지 않는다. */}
       <AppHeader />
-      <HeroSection />
+      <HeroSection indicators={indicators} />
       <div className={styles.storyFlow}>
         <MarketAnalysisSection indicators={indicators} />
         <BacktestIntroSection />

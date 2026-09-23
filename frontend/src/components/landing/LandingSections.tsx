@@ -6,7 +6,7 @@ import type { Indicator } from '@/types/market'
 import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
 import { NextSectionButton } from './NextSectionButton'
-import { ResultPreviewWindow } from './ResultPreviewWindow'
+import { MarketPreviewWindow } from './MarketPreviewWindow'
 import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
@@ -48,8 +48,8 @@ const heroSteps = [
   { title: '같은 조건의 결과를 나란히 비교해요', note: '비용 차감 후 수익·하락 폭·거래비용' },
 ]
 
-/** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 결과 화면 예시를 두고 뒤에 시장 그래픽을 깐다. */
-export function HeroSection() {
+/** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 시장 지표 움직임 예시를 두고 뒤에 시장 그래픽을 깐다. */
+export function HeroSection({ indicators }: { indicators: Indicator[] }) {
   const reducedMotion = useReducedMotion()
 
   const moveToMarket = () => {
@@ -166,7 +166,7 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...revealTransition, delay: 0.3 }}
         >
-          <ResultPreviewWindow />
+          <MarketPreviewWindow indicators={indicators} />
         </motion.div>
       </div>
 
