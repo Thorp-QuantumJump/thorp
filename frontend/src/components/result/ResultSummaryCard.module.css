@@ -4,9 +4,6 @@
   gap: 4px;
   min-height: 111px;
   padding: 6px 20px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 14px;
-  background: var(--thorp-surface);
 }
 
 .visuallyHidden {
