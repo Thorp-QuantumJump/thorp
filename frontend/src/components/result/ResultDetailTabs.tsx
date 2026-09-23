@@ -12,8 +12,8 @@ import { TargetRiskView } from './TargetRiskView'
 /**
  * 결과 화면의 일곱 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤.
  *
- * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·그래프·요약 문장·상태 문장)은 페이지가 만들어 `summary`로
- * 넘긴다 — 비교 대상·진행 구독 같은 페이지 상태에 묶여 있어서다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에
+ * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —
+ * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프와 해석 문장은 탭 위에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에
  * 넘긴다 — 탭마다 받으면 같은 목록을 세 번 받는다. 볼 결과가 없는 실행(계산 중·실패)에는 이 탭 묶음을 두지 않고
  * 페이지가 요약 내용만 그린다.
  *
@@ -29,7 +29,7 @@ export function ResultDetailTabs({
 }: {
   token: string
   detail: PublicResultDetail
-  /** 요약 탭의 내용. 핵심 숫자·그래프·요약 문장·상태 문장 */
+  /** 요약 탭의 내용. 핵심 숫자·상태 문장 */
   summary: ReactNode
   lossWindow: DrawdownWindow | null
   compare?: DetailCompareTarget | null
