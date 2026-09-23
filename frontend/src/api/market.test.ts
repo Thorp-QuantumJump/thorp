@@ -6,6 +6,7 @@ import type {
   ApiEnvelope,
   MarketIndicatorCode,
   MarketIndicatorResponse,
+  MarketSeriesResponse,
 } from '../types/marketApi.ts'
 
 const clientStubUrl = new URL('./marketClientStub.ts', import.meta.url).href
@@ -20,7 +21,7 @@ registerHooks({
   },
 })
 
-const { fetchLatestMarketIndicators, marketIndicatorCodes } = await import('./market.ts')
+const { fetchLatestMarketIndicators, fetchMarketSeries, marketIndicatorCodes } = await import('./market.ts')
 
 const codeByEndpoint: Record<string, MarketIndicatorCode> = {
   '/markets/kospi': 'KOSPI',
@@ -107,4 +108,71 @@ test('실패 envelope, 코드 불일치, NaN과 Infinity를 개별 오류로 격
   )
   assert.equal(Object.keys(batch.data).length, marketIndicatorCodes.length - 4)
   assert.equal(batch.data.KTB_3Y?.value, 100)
+})
+
+function seriesFor(points: MarketSeriesResponse['points']): ApiEnvelope<MarketSeriesResponse> {
+  return {
+    httpStatus: 'OK',
+    isSuccess: true,
+    message: '성공',
+    code: 200,
+    result: {
+      code: 'KOSPI',
+      name: 'KOSPI 지수',
+      unit: 'pt',
+      frequency: 'daily',
+      points,
+      retrievedAt: '2026-09-08T00:00:00Z',
+      source: { provider: 'KRX', datasetName: 'test' },
+      status: 'ok',
+      statusMessage: null,
+    },
+  }
+}
+
+async function withSeries(body: ApiEnvelope<MarketSeriesResponse>) {
+  const originalGet = apiClient.get
+  let requested = ''
+  apiClient.get = (async (endpoint: string) => {
+    requested = endpoint
+    return { data: body }
+  }) as typeof apiClient.get
+  try {
+    return { series: await fetchMarketSeries('KOSPI'), requested }
+  } finally {
+    apiClient.get = originalGet
+  }
+}
+
+test('최근 흐름은 지표별 series 경로에서 날짜 오름차순 값을 받는다', async () => {
+  const { series, requested } = await withSeries(
+    seriesFor([
+      { date: '2026-09-04', value: 2480 },
+      { date: '2026-09-07', value: 2510.5 },
+    ]),
+  )
+  assert.equal(requested, '/markets/kospi/series')
+  assert.deepEqual(
+    series.points.map((point) => point.value),
+    [2480, 2510.5],
+  )
+})
+
+test('날짜가 뒤섞이거나 값이 숫자가 아닌 흐름은 받지 않는다', async () => {
+  await assert.rejects(
+    withSeries(
+      seriesFor([
+        { date: '2026-09-07', value: 2510 },
+        { date: '2026-09-04', value: 2480 },
+      ]),
+    ),
+  )
+  await assert.rejects(
+    withSeries(
+      seriesFor([
+        { date: '2026-09-04', value: 2480 },
+        { date: '2026-09-07', value: Number.NaN },
+      ]),
+    ),
+  )
 })

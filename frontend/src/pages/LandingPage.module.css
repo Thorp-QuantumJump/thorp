@@ -76,7 +76,8 @@
   scroll-snap-align: start;
   scroll-snap-stop: always;
   place-items: center;
-  overflow: hidden;
+  /* hidden은 초점이 옮겨 갈 때 칸 자체가 옆으로 밀린다. clip은 그 스크롤까지 막는다. */
+  overflow: clip;
   isolation: isolate;
 }
 
