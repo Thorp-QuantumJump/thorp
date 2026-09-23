@@ -13,7 +13,8 @@ export const METRIC_DEFINITIONS = {
 
 type ResultSummaryCardProps = {
   detail: PublicResultDetail
-  target?: PublicResultDetail | null
+  /** 겹쳐 그리는 비교 대상들. 이름은 부른 쪽이 정한다 — 같은 전략이 둘이면 설정값으로 갈라야 해서다 */
+  targets?: readonly { detail: PublicResultDetail; name: string }[]
 }
 
 /**
@@ -24,11 +25,13 @@ type ResultSummaryCardProps = {
  *
  * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).
  */
-export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
+export function ResultSummaryCard({ detail, targets = [] }: ResultSummaryCardProps) {
   const condition = buildConditionLine({
     ...detail,
-    targetName: target?.strategyName ?? target?.config.strategyId,
-    targetWeightsSource: target?.weightsSource,
+    targetName: targets.length ? targets.map((target) => target.name).join(', ') : null,
+    targetWeightsSource: targets.some((target) => target.detail.weightsSource === 'COMPUTED')
+      ? 'COMPUTED'
+      : targets[0]?.detail.weightsSource,
   })
   const { summary } = detail
 

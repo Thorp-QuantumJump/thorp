@@ -95,8 +95,8 @@ describe('결과 화면의 비교 연결 (T061)', () => {
       .mockResolvedValueOnce({ publicToken: 'c'.repeat(32) })
       .mockResolvedValueOnce({ publicToken: 'd'.repeat(32) })
     setup()
-    expect(await screen.findByRole('dialog')).toBeTruthy()
-    expect(screen.getByText(/자료 또는 계산 엔진 기준이 달라/)).toBeTruthy()
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain('자료 또는 계산 엔진 기준이 달라')
     fireEvent.click(screen.getByRole('button', { name: '두 결과 다시 계산' }))
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2))
   })
@@ -106,6 +106,32 @@ describe('결과 화면의 비교 연결 (T061)', () => {
     expect(await screen.findByText(/자료 기준 또는 분석 시나리오가 달라/)).toBeTruthy()
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('비교 대상은 없습니다')
     expect(screen.queryByText(/같은 조건에서 비교 대상/)).toBeNull()
+  })
+  it('대상이 둘이면 파선 둘·문장 둘·조건 줄의 이름 둘을 보이고 한 번에 해제할 수 있다', async () => {
+    const other = 'c'.repeat(32)
+    const second = { ...target, publicToken: other, strategyName: '둘째 전략' }
+    api.detail.mockImplementation(async (requested: string) =>
+      requested === base.publicToken ? base : requested === other ? second : target,
+    )
+    const { container } = setup('?compare=' + token + ',' + other)
+    expect(await screen.findByText(/같은 조건에서 비교 대상\(비교용 전략\)/)).toBeTruthy()
+    expect(screen.getByText(/같은 조건에서 비교 대상\(둘째 전략\)/)).toBeTruthy()
+    expect(screen.getByLabelText('분석 조건').textContent).toContain('비교 대상 비교용 전략, 둘째 전략')
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain(
+      '비교 대상은 비교용 전략, 둘째 전략이며 서로 다른 파선',
+    )
+    expect(screen.getByLabelText('비교 대상 둘째 전략')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '비교 모두 해제' })).toBeTruthy()
+    expect(container.innerHTML).not.toContain('BT-')
+  })
+  it('같은 이름의 대상이 둘이면 번호를 붙여 갈라 적는다', async () => {
+    const other = 'c'.repeat(32)
+    api.detail.mockImplementation(async (requested: string) =>
+      requested === base.publicToken ? base : { ...target, publicToken: requested },
+    )
+    setup('?compare=' + token + ',' + other)
+    expect(await screen.findByLabelText('비교 대상 비교용 전략 (1)')).toBeTruthy()
+    expect(screen.getByLabelText('비교 대상 비교용 전략 (2)')).toBeTruthy()
   })
   it('대상만 410이면 기준 숫자와 곡선이 유지된다', async () => {
     api.detail.mockImplementation(async (requested: string) => {
