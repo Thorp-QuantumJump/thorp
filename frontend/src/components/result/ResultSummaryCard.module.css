@@ -2,9 +2,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 22px 24px;
+  padding: var(--thorp-pad-card, 22px 24px);
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -72,7 +72,7 @@
 
 @media (max-width: 600px) {
   .card {
-    padding: 16px;
+    padding: var(--thorp-pad-card, 16px);
   }
 
   .metrics {

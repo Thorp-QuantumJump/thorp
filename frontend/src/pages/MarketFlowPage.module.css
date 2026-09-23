@@ -7,10 +7,10 @@
 .hero { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: end; padding-bottom: 28px; }
 .hero::before {
   position: absolute; inset: -25px 0 0 30%; content: ''; pointer-events: none;
-  background: radial-gradient(ellipse at 60% 20%, var(--thorp-accent-muted), transparent 68%);
+  background: radial-gradient(ellipse at 60% 20%, var(--thorp-ambient, var(--thorp-accent-muted)), transparent 68%);
   opacity: .35;
 }
-.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--thorp-accent-soft); font: 600 .65rem/1.4 var(--thorp-font-display); letter-spacing: .16em; }
+.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 600 .65rem/1.4 var(--thorp-font-display); letter-spacing: .16em; }
 .hero h1 { margin: 10px 0 0; font: 600 clamp(1.9rem, 3vw, 2.7rem)/1.18 var(--thorp-font-body); letter-spacing: -.055em; }
 .hero h1 span { color: var(--thorp-copy); }
 .heroAside { position: relative; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
@@ -18,7 +18,7 @@
 .heroAside > span { color: var(--thorp-copy); font-size: .72rem; }
 .workspaceHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line-strong); padding: 12px 0; }
 .workspaceHeading h2 { display: flex; gap: 12px; margin: 0; font-size: .9rem; font-weight: 600; }
-.workspaceHeading h2 span { font: 500 .74rem/1.5 var(--thorp-font-display); color: var(--thorp-accent-soft); }
+.workspaceHeading h2 span { font: 500 .74rem/1.5 var(--thorp-font-display); color: var(--thorp-ornament, var(--thorp-accent-soft)); }
 .workspaceHeading > span { color: var(--thorp-copy); font: 400 .72rem/1.4 var(--thorp-font-body); }
 .workspaceHeading i { margin: 0 8px; color: var(--thorp-muted); font-style: normal; }
 .workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
@@ -86,4 +86,50 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .loadingTrack::after { animation: none; width: 100%; opacity: .5; }
+}
+
+/*
+  디자인 개편 카드 층(S15P21E205-425). 위의 선 나눔 규칙은 classic 디자인 그대로 두고, 새 디자인에서만
+  구역을 카드 면으로 묶는다. 배치(순서·열)는 바꾸지 않는다. classic을 걷어낼 때 이 층을 위 규칙에
+  합치고 접두 선택자를 지운다.
+*/
+:global(:root:not([data-design='classic'])) .workspaceHeading { border: 0; padding: 4px 2px 14px; }
+:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; grid-template-columns: minmax(320px, .85fr) minmax(0, 1.65fr); }
+:global(:root:not([data-design='classic'])) .fieldRail,
+:global(:root:not([data-design='classic'])) .detailPanel,
+:global(:root:not([data-design='classic'])) .main > .loadFailure,
+:global(:root:not([data-design='classic'])) .connectionGrid article {
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .fieldRail { padding: 8px; }
+:global(:root:not([data-design='classic'])) .fieldList { display: grid; gap: 4px; padding: 0; }
+:global(:root:not([data-design='classic'])) .detailPanel { padding: 24px; }
+:global(:root:not([data-design='classic'])) .main > .loadFailure { padding: 24px; }
+:global(:root:not([data-design='classic'])) .loadFailure button,
+:global(:root:not([data-design='classic'])) .detailJump { border-radius: var(--thorp-radius-control); }
+:global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }
+:global(:root:not([data-design='classic'])) .historyNotice { padding: 14px 2px; }
+:global(:root:not([data-design='classic'])) .connectionGrid { gap: 16px; border: 0; }
+:global(:root:not([data-design='classic'])) .connectionGrid article,
+:global(:root:not([data-design='classic'])) .connectionGrid article:first-child,
+:global(:root:not([data-design='classic'])) .connectionGrid article:last-child { display: flex; flex-direction: column; padding: 24px; }
+:global(:root:not([data-design='classic'])) .connectionGrid article + article { border-left: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .connectionLabel { color: var(--thorp-eyebrow); }
+/* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */
+:global(:root:not([data-design='classic'])) .connectionLink { margin-top: auto; padding-top: 14px; color: var(--thorp-foreground); font-weight: 600; }
+@media (max-width: 1100px) {
+  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: minmax(290px, .95fr) minmax(0, 1.5fr); }
+  :global(:root:not([data-design='classic'])) .detailPanel { padding: 20px; }
+}
+@media (max-width: 800px) {
+  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: 1fr; }
+  :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
+  :global(:root:not([data-design='classic'])) .detailJump { margin: 8px 0 0; }
+  :global(:root:not([data-design='classic'])) .connectionGrid { grid-template-columns: 1fr; }
+  :global(:root:not([data-design='classic'])) .connectionGrid article,
+  :global(:root:not([data-design='classic'])) .connectionGrid article:first-child,
+  :global(:root:not([data-design='classic'])) .connectionGrid article:last-child { padding: 20px; }
+  :global(:root:not([data-design='classic'])) .connectionGrid article + article { border-top: 1px solid var(--thorp-line); }
 }

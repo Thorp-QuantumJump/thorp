@@ -2,9 +2,9 @@
   display: grid;
   gap: 9px;
   justify-items: start;
-  padding: 18px 19px;
+  padding: var(--thorp-pad-notice, 18px 19px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 7px;
+  border-radius: var(--thorp-radius-card, 7px);
   background: var(--thorp-surface-raised);
 }
 
@@ -26,7 +26,7 @@
   min-height: 36px;
   padding: 0 15px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
