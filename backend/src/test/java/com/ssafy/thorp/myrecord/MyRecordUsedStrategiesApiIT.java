@@ -1,4 +1,4 @@
-package com.ssafy.thorp.backtest.presentation.controller;
+package com.ssafy.thorp.myrecord;
 
 import static com.ssafy.thorp.support.Requesters.as;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,12 +21,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * {@code GET /backtests/used-strategies}(README §1.12, spec 005 비교 후보).
+ * {@code GET /my-records/used-strategies}(006 contracts, spec 005 비교 후보).
  *
- * <p>요청 이력에서 전략·설정값 조합을 접는지 본다. 실제 접수 경로({@link BacktestService#create})로 요청을 만들어 동일 버전
- * 재사용(REUSED)이 낀 이력도 한 조합으로 나오는지 함께 고정한다.
+ * <p>요청 이력에서 전략·설정값 조합을 접고 내 기록 항목 이름을 붙이는지 본다. 실제 접수 경로({@link BacktestService#create})로 요청을 만들어
+ * 동일 버전 재사용(REUSED)이 낀 이력도 한 조합으로 나오는지 함께 고정한다.
  */
-class BacktestUsedStrategiesApiIT extends IntegrationTestSupport {
+class MyRecordUsedStrategiesApiIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private BacktestService backtestService;
@@ -87,12 +87,14 @@ class BacktestUsedStrategiesApiIT extends IntegrationTestSupport {
         // 같은 조합을 다시 — 동일 버전 재사용으로 실행은 공유하지만 요청은 새로 생긴다.
         backtestService.create(request(user, ExecutionType.SINGLE, "EQUAL_WEIGHT", monthly));
 
-        mockMvc.perform(get("/backtests/used-strategies").with(as(user)))
+        mockMvc.perform(get("/my-records/used-strategies").with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(2))
                 .andExpect(jsonPath("$.data.items[0].strategyId").value("EQUAL_WEIGHT"))
                 .andExpect(jsonPath("$.data.items[0].parameters.rebalance").value("MONTH_END"))
                 .andExpect(jsonPath("$.data.items[0].rulesVersion").value("1"))
+                // 접수가 만든 내 기록 항목의 이름이 조합의 이름표로 붙는다.
+                .andExpect(jsonPath("$.data.items[0].recordName").isString())
                 .andExpect(jsonPath("$.data.items[1].parameters.rebalance").value("QUARTER_END"));
     }
 
@@ -111,7 +113,7 @@ class BacktestUsedStrategiesApiIT extends IntegrationTestSupport {
                         "EQUAL_WEIGHT",
                         Map.of("rebalance", "BUNDLE")));
 
-        mockMvc.perform(get("/backtests/used-strategies").with(as(user)))
+        mockMvc.perform(get("/my-records/used-strategies").with(as(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(0));
     }
@@ -119,7 +121,7 @@ class BacktestUsedStrategiesApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("로그인 없이는 401 AUTHENTICATION_REQUIRED 다")
     void requiresLogin() throws Exception {
-        mockMvc.perform(get("/backtests/used-strategies"))
+        mockMvc.perform(get("/my-records/used-strategies"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
     }

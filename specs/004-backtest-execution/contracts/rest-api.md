@@ -99,12 +99,6 @@
 - `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 대체된 옛 버전(`SUPERSEDED`)은 내보내지 않는다(T029). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.
 - 화면은 `defaultCostProfile.version`을 요청에 **명시해** 보낸다(기본 버전이 배포로 바뀌어도 사용자가 본 조건이 적용되도록). 비용 수치는 문자열 decimal.
 
-## GET /backtests/used-strategies — 내가 써 본 전략·설정 조합 (2026-09-23, S15P21E205-418)
-
-로그인 필요. 이 사용자의 `SINGLE` 요청이 가리키는 실행의 `{strategyId, rulesVersion, parameters}`를 조합(`strategyId`+`parameters` 구조적 같음)
-단위로 접어 최근 순으로 최대 20건. `SEARCH_BUNDLE` 실행은 제외. 005 비교 후보의 원천이며 결과·실행 식별자는 싣지 않는다. 본문·규칙은
-[`docs/specs/backtest-api/README.md`](../../../docs/specs/backtest-api/README.md) §1.12.
-
 ## 오류 코드 추가분
 
 | code | HTTP | 뜻 |
