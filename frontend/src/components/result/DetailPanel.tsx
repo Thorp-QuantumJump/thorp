@@ -28,9 +28,9 @@ import styles from './resultDetail.module.css'
  * 않고, 열 때 `/weights`·`/exceptions`와 섹터 목록을 받는다(SC-001). 거래 내역과 대표 상품 정보는 패널 안에서 다시
  * 한 번 열어야 받는다.
  *
- * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로, 004가 아직 공개 조회로 내보내지 않는
- * 상관관계·위험 기여·손실 기여는 '제공되지 않음'으로 둔다. 어느 쪽도 0이나 임의 값으로 채우지 않는다(FR-009,
- * 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로 보이고 이 화면이 자료 길이로 판정하지 않는다.
+ * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다
+ * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료
+ * 길이로 판정하지 않는다. 상관관계·위험 기여·손실 기여의 정의는 워커 `calculate_analytics`가 원본이다(420).
  */
 
 /** 비교 대상이 준비되었을 때 B05가 넘긴다. 없으면 보유 섹터 차이를 그리지 않는다 */
@@ -48,7 +48,6 @@ type DetailPanelProps = {
   onClose: () => void
 }
 
-export const NOT_PROVIDED = '제공되지 않음'
 export const CALCULATION_LIMITED = '계산 제한'
 const EMPTY = '없음'
 
@@ -97,28 +96,24 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
         <TurnoverItem detail={detail} />
       </div>
 
-      <div className={styles.item}>
-        <div className={styles.grid}>
-          <Item title="상관관계">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-            <dl className={styles.facts}>
-              <dt>추정 기간</dt>
-              <dd>{NOT_PROVIDED}</dd>
-            </dl>
-          </Item>
-          <Item title="위험 기여">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-            <dl className={styles.facts}>
-              <dt>추정 기간</dt>
-              <dd>{NOT_PROVIDED}</dd>
-              <dt>공분산 산정법</dt>
-              <dd>{NOT_PROVIDED}</dd>
-            </dl>
-          </Item>
-          <Item title="손실 기여">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-          </Item>
-        </div>
+      <CorrelationItem detail={detail} labels={labels} />
+
+      <div className={styles.grid}>
+        <ContributionItem
+          title="위험 기여"
+          detail={detail}
+          labels={labels}
+          values={detail.summary?.analytics?.riskContribution ?? null}
+          note="포트폴리오 전체 변동(분산) 가운데 각 종목이 만든 몫입니다. 실제 비중 평균과 일별 수익률 공분산으로 구하며 합은 100%입니다."
+          showMethod
+        />
+        <ContributionItem
+          title="손실 기여"
+          detail={detail}
+          labels={labels}
+          values={detail.summary?.analytics?.lossContribution ?? null}
+          note="구간 손익을 종목별로 나눈 값입니다. 이익이 난 종목도 함께 들어가며 합은 100%입니다."
+        />
       </div>
 
       <div className={styles.grid}>
@@ -202,6 +197,135 @@ function RecoveryItem({ detail }: { detail: PublicResultDetail }) {
     <Item title="회복 기간">
       {body}
       <p className={styles.muted}>가장 크게 줄어든 저점에서 이전 고점을 다시 넘기까지 걸린 거래일 수입니다.</p>
+    </Item>
+  )
+}
+
+/** 요약이 없으면 그 문장, 항목이 `null`이면 계산 제한. 둘 다 아니면 `null`을 돌려 값을 그리게 한다. */
+function analyticsGap(detail: PublicResultDetail, present: boolean, what: string): ReactNode | null {
+  if (detail.summary === null) return <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>
+  if (!present) {
+    return (
+      <p className={styles.limited}>
+        {CALCULATION_LIMITED}: 이 결과에는 {what}이 계산되지 않았습니다.
+      </p>
+    )
+  }
+  return null
+}
+
+/** 추정 기간은 실제 평가 기간이고 산정법은 004가 준 `method`다. 이 화면이 이름을 짓지 않는다. */
+function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; showMethod?: boolean }) {
+  const { config } = detail
+  const method = detail.summary?.analytics?.method ?? null
+  return (
+    <dl className={styles.facts}>
+      <dt>추정 기간</dt>
+      <dd>
+        {config.effectiveStart} ~ {config.effectiveEnd}
+      </dd>
+      {showMethod ? (
+        <>
+          <dt>공분산 산정법</dt>
+          <dd>{method ?? EMPTY}</dd>
+        </>
+      ) : null}
+    </dl>
+  )
+}
+
+/** 종목 쌍의 상관 행렬. 정의되지 않은 쌍(변동성 0)은 워커가 키를 빼므로 빈칸으로 둔다. */
+function CorrelationItem({ detail, labels }: { detail: PublicResultDetail; labels: SectorLabels }) {
+  const matrix = detail.summary?.analytics?.correlationMatrix ?? null
+  const gap = analyticsGap(detail, matrix !== null, '상관관계')
+  const ids = matrix ? Object.keys(matrix) : []
+
+  return (
+    <Item title="상관관계">
+      {gap ?? (
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <caption>일별 수익률의 표본 상관 · 종목 {ids.length}개</caption>
+            <thead>
+              <tr>
+                <th scope="col">종목</th>
+                {ids.map((id) => (
+                  <th key={id} scope="col">
+                    {labels.instrument(id)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ids.map((row) => (
+                <tr key={row}>
+                  <th scope="row">{labels.instrument(row)}</th>
+                  {ids.map((col) => (
+                    <td key={col}>{formatCorrelation(matrix?.[row][col])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <EstimationFacts detail={detail} />
+      <p className={styles.muted}>
+        1에 가까우면 같이 움직이고 -1에 가까우면 반대로 움직입니다. 평가 기간의 일별 수익률로 계산합니다.
+      </p>
+    </Item>
+  )
+}
+
+/** 상관은 비율이 아니라 -1~1 값이라 `formatRatio`를 쓰지 않는다. 읽을 수 없으면 받은 문자열 그대로(원칙 VI). */
+function formatCorrelation(value: string | undefined): string {
+  if (value === undefined) return EMPTY
+  const n = Number(value)
+  return value.trim() === '' || !Number.isFinite(n) ? value : n.toFixed(2)
+}
+
+/** 위험 기여·손실 기여. 종목별 비율 한 줄씩이고 합은 1이다. */
+function ContributionItem({
+  title,
+  detail,
+  labels,
+  values,
+  note,
+  showMethod,
+}: {
+  title: string
+  detail: PublicResultDetail
+  labels: SectorLabels
+  values: Record<string, string> | null
+  note: string
+  showMethod?: boolean
+}) {
+  const gap = analyticsGap(detail, values !== null, title)
+
+  return (
+    <Item title={title}>
+      {gap ?? (
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">종목</th>
+                <th scope="col">{title}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(values ?? {}).map(([id, value]) => (
+                <tr key={id}>
+                  <td>{labels.instrument(id)}</td>
+                  <td>{formatRatio(value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <EstimationFacts detail={detail} showMethod={showMethod} />
+      <p className={styles.muted}>{note}</p>
     </Item>
   )
 }
