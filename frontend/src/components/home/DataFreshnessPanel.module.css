@@ -37,7 +37,7 @@
 }
 
 .details summary > span svg {
-  color: var(--market-brand);
+  color: var(--thorp-ornament, var(--market-brand));
 }
 
 .details summary > small {
@@ -82,7 +82,7 @@
   padding: 3px 6px;
   border-radius: 999px;
   background: var(--thorp-accent-muted);
-  color: var(--market-brand);
+  color: var(--thorp-eyebrow, var(--market-brand));
   font-size: 0.6rem;
   white-space: nowrap;
 }
@@ -145,7 +145,7 @@
 
 .fciNote svg {
   flex: 0 0 auto;
-  color: var(--market-brand);
+  color: var(--thorp-ornament, var(--market-brand));
 }
 
 .fciNote p {

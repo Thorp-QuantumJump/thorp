@@ -21,7 +21,7 @@
   padding: 2px 7px;
   border: 1px solid var(--thorp-accent);
   border-radius: 3px;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.02em;

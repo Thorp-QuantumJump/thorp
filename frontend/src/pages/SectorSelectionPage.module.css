@@ -129,7 +129,7 @@
   height: 16px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: 50%;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-ornament, var(--thorp-accent-soft));
   content: 'i';
   font-family: var(--thorp-font-mono);
   font-size: 0.65rem;

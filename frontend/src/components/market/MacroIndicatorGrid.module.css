@@ -24,7 +24,7 @@
 
 .sectionHeader p {
   margin: 0 0 4px;
-  color: var(--market-brand);
+  color: var(--thorp-eyebrow, var(--market-brand));
   font-size: 0.78rem;
   font-weight: 720;
   letter-spacing: 0.12em;
@@ -72,7 +72,7 @@
 }
 
 .cardHeader span {
-  color: var(--market-brand);
+  color: var(--thorp-eyebrow, var(--market-brand));
   font-size: 0.62rem;
   font-weight: 740;
   letter-spacing: 0.08em;

@@ -316,7 +316,7 @@
 .sectionHeading > p,
 .algorithmHeader > p {
   margin: 0;
-  color: var(--landing-accent-soft);
+  color: var(--thorp-eyebrow, var(--landing-accent-soft));
   font-size: 0.68rem;
   font-weight: 670;
   letter-spacing: 0.19em;
@@ -439,8 +439,8 @@
 .storyFlow {
   position: relative;
   background:
-    radial-gradient(circle at 13% 22%, rgb(3 199 90 / 7%), transparent 22rem),
-    radial-gradient(circle at 88% 63%, rgb(3 199 90 / 5%), transparent 24rem),
+    radial-gradient(circle at 13% 22%, var(--thorp-ambient, rgb(3 199 90 / 7%)), transparent 22rem),
+    radial-gradient(circle at 88% 63%, var(--thorp-ambient, rgb(3 199 90 / 5%)), transparent 24rem),
     var(--landing-background);
 }
 
@@ -591,7 +591,7 @@
   position: absolute;
   top: 2px;
   left: 0;
-  color: var(--landing-accent);
+  color: var(--thorp-ornament, var(--landing-accent));
 }
 
 .sectionHeading h2,
@@ -683,7 +683,7 @@
 }
 
 .indicatorItem[data-status='live'] .indicatorMeta small {
-  color: var(--landing-accent-soft);
+  color: var(--thorp-eyebrow, var(--landing-accent-soft));
 }
 
 .indicatorItem[data-status='stale'] .indicatorMeta small {
@@ -951,7 +951,7 @@
 }
 
 .cardIndex span:first-child {
-  color: var(--landing-accent);
+  color: var(--thorp-ornament, var(--landing-accent));
   font-size: 0.68rem;
   font-weight: 670;
 }

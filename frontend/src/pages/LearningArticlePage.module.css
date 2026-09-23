@@ -40,7 +40,7 @@
 
 .question {
   margin: 0;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: clamp(1rem, 2vw, 1.15rem);
   line-height: 1.6;
 }

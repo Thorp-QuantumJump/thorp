@@ -29,7 +29,7 @@
 .detail { min-width: 0; }
 .detailHeader { padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }
 .detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.detailEyebrow { color: var(--thorp-accent-soft); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
+.detailEyebrow { color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
 .detailTitle h2 { margin: 5px 0 0; font: 600 1.8rem/1.2 var(--thorp-font-body); letter-spacing: -.045em; }
 .indicatorCount { align-self: flex-end; color: var(--thorp-copy); font-size: .72rem; }
 .indicatorCount b { margin-left: 5px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 500; }

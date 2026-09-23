@@ -82,7 +82,7 @@
 }
 
 .panelHeader > span {
-  color: var(--market-brand);
+  color: var(--thorp-eyebrow, var(--market-brand));
   font-weight: 650;
 }
 
