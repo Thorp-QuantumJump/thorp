@@ -1,4 +1,5 @@
 import { useId, useMemo } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
@@ -137,9 +138,18 @@ function ResultView({
 
   return (
     <article className={styles.result} aria-labelledby="result-title">
-      <h1 id="result-title" className={styles.title}>
-        분석 결과
-      </h1>
+      <header className={styles.intro}>
+        {/* 앞 단계로 돌아가는 길. 전략 선택 화면과 같은 모양이고 행동이 아니라 이동이라 버튼 줄에 두지 않는다.
+            브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유 주소로 들어온 사용자는 한 칸 뒤가
+            전략 선택이 아니다. 조건을 채워 넘기는 것은 '다른 조건으로 비교'(B07)의 몫이고 이 길은 그냥 돌아간다. */}
+        <Link className={styles.backLink} to="/strategy">
+          <ArrowLeft size={15} aria-hidden="true" />
+          전략 선택
+        </Link>
+        <h1 id="result-title" className={styles.title}>
+          백테스트 결과
+        </h1>
+      </header>
       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
       {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
 

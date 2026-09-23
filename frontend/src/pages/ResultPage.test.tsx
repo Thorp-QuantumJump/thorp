@@ -454,6 +454,13 @@ describe('ResultPage', () => {
       expect(document.getElementById(reasonId)?.textContent).toBe(LOSS_WINDOW_UNAVAILABLE)
     })
 
+    it('제목은 백테스트 결과이고 전략 선택으로 돌아가는 길이 있다', async () => {
+      renderResult()
+
+      expect(await screen.findByRole('heading', { level: 1, name: '백테스트 결과' })).not.toBeNull()
+      expect(screen.getByRole('link', { name: '전략 선택' }).getAttribute('href')).toBe('/strategy')
+    })
+
     it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {
       const user = userEvent.setup()
       renderResult()
