@@ -200,6 +200,12 @@
 :global(:root:not([data-design='classic'])) .sectorChip[aria-pressed='true'] { border-color: var(--thorp-foreground); background: var(--thorp-foreground); color: var(--thorp-background); font-weight: 600; }
 
 :global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* 참고 지표는 값이 먼저 읽히게 키운다. 등락은 응답에 없어 색으로 칠하지 않는다. */
+:global(:root:not([data-design='classic'])) .referenceValues dt { color: var(--thorp-eyebrow); font-size: .7rem; font-weight: 600; letter-spacing: .04em; }
+:global(:root:not([data-design='classic'])) .referenceValues dd { font-family: var(--thorp-font-display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.02em; }
+:global(:root:not([data-design='classic'])) .referenceValues dd small { color: var(--thorp-muted); font-size: .72rem; font-weight: 400; }
+:global(:root:not([data-design='classic'])) .referenceValues .referenceObserved { font-family: var(--thorp-font-body); font-weight: 400; }
+:global(:root:not([data-design='classic'])) .openButton svg { color: var(--thorp-accent-soft); }
 :global(:root:not([data-design='classic'])) .referenceValues > div { padding: 10px 12px; border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }
 :global(:root:not([data-design='classic'])) .newsList { gap: 0; }
 :global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }
