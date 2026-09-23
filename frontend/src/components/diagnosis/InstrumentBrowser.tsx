@@ -1,12 +1,14 @@
 import { useId } from 'react'
-import { Check, LineChart, Maximize2, Minimize2, Plus } from 'lucide-react'
+import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
+import { PriceTrend } from '@/components/diagnosis/PriceTrend'
 import {
   buildComposition,
   formatWon,
   profileFailureMessage,
   toDateText,
 } from '@/diagnosis/instrumentFormat'
+import { useInstrumentPriceSeries } from '@/diagnosis/useInstrumentPriceSeries'
 import { useInstrumentProfile } from '@/diagnosis/useInstrumentProfile'
 import type { InstrumentProfile, SectorSummary } from '@/types/sector'
 
@@ -27,7 +29,8 @@ type InstrumentBrowserProps = {
 /**
  * 투자 대상을 훑고 하나를 들여다보는 카드다. 목록과 상세가 **한 카드 안에** 있다.
  *
- * <b>카드는 두 크기를 오간다.</b> 접었을 때는 가격 흐름만 보여 여러 대상을 빠르게 견주게 하고,
+ * <b>카드는 두 크기를 오간다.</b> 접었을 때는 가격 흐름만 보여 여러 대상을 빠르게 견주게 하고(그
+ * 선은 접은 채로도 부른다),
  * 오른쪽 위 단추로 넓히면 그 자리에서 담긴 종목과 자세한 설명까지 드러낸다. 넓히고 접는 동안
  * 보던 대상과 담아 둔 것은 그대로 남는다.
  *
@@ -56,6 +59,12 @@ export function InstrumentBrowser({
     받아 둔 목록에 있으므로, 목록을 훑기만 하는 사용자는 이 왕복을 치르지 않는다.
   */
   const { result, reload } = useInstrumentProfile(viewing.code, expanded)
+
+  /*
+    가격 흐름은 접은 카드에서도 부른다. 접은 카드가 보여 주는 것이 바로 그 선이라, 펼칠 때까지
+    미루면 가장 먼저 보이는 자리가 비어 있게 된다.
+  */
+  const priceSeries = useInstrumentPriceSeries(viewing.code)
   const selected = isSelected(viewing.code)
 
   /*
@@ -169,7 +178,11 @@ export function InstrumentBrowser({
             </button>
           </header>
 
-          <PriceTrendPlaceholder name={viewing.representativeEtf.name} />
+          <PriceTrend
+            name={viewing.representativeEtf.name}
+            result={priceSeries.result}
+            onReload={priceSeries.reload}
+          />
 
           {/*
             넓혔을 때만 나타나는 설명이다. 접힌 카드에 이 문단을 함께 두면, 빠르게 견주려고
@@ -181,22 +194,6 @@ export function InstrumentBrowser({
         {expanded ? <HoldingsColumn result={result} /> : null}
       </div>
     </section>
-  )
-}
-
-/**
- * 가격 흐름이 놓일 자리다.
- *
- * <b>아직 그리지 않는다.</b> 일별 시세는 자료로는 남아 있지만(`daily_price`) 그것을 내려 주는
- * 조회 수단이 없다. 값 없이 선을 그리면 사용자가 그 모양을 실제 성과로 읽으므로, 자리만 잡고
- * 없다는 사실을 말한다(원칙 VI).
- */
-function PriceTrendPlaceholder({ name }: { name: string }) {
-  return (
-    <div data-slot="chart" role="img" aria-label={`${name}의 가격 흐름 차트 자리`}>
-      <LineChart size={26} strokeWidth={1.4} aria-hidden="true" />
-      <p>가격 흐름은 아직 보여드릴 수 없습니다. 시세를 내려 주는 조회가 준비되면 이 자리에 그립니다.</p>
-    </div>
   )
 }
 
