@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.application.repository;
 import com.ssafy.thorp.backtest.application.result.RunView;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.CancelReason;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -98,6 +99,15 @@ public interface BacktestRunRepository {
     void lockAdmission(String key);
 
     Optional<BacktestRun> findByBacktestId(String backtestId);
+
+    /**
+     * 이 사용자의 요청이 가리키는 실행을 요청 최신순으로. 같은 실행을 여러 요청이 가리키면 여러 번 나온다 — 부른 쪽이 조합 단위로 접는다(spec 005 비교 후보,
+     * {@code GET /backtests/used-strategies}).
+     *
+     * @param executionType 이 유형의 요청만. 탐색 묶음이 만든 실행은 사용자가 고른 설정이 아니라서 후보에서 뺀다
+     */
+    List<BacktestRun> findRecentRequestedBy(
+            long requesterId, ExecutionType executionType, int limit);
 
     /**
      * 같은 동일 버전 키의 접수를 직렬화한다(R-02, T010). 트랜잭션이 끝나면 저절로 풀린다.
