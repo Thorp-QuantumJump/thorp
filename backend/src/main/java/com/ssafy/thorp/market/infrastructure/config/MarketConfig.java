@@ -1,6 +1,7 @@
 package com.ssafy.thorp.market.infrastructure.config;
 
 import com.ssafy.thorp.market.application.service.MarketCachePolicy;
+import com.ssafy.thorp.market.application.service.MarketSeriesPolicy;
 import java.time.Clock;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationStyle;
@@ -72,5 +73,15 @@ public class MarketConfig {
                 properties.getCacheMaxAge(),
                 properties.getFailureCooldown(),
                 properties.getRequestBudget());
+    }
+
+    @Bean
+    public MarketSeriesPolicy marketSeriesPolicy(MarketApiProperties properties) {
+        var series = properties.getSeries();
+        return new MarketSeriesPolicy(
+                series.getWindow(),
+                series.getLookbackDays(),
+                series.getRefreshBudget(),
+                properties.getCacheMaxAge());
     }
 }

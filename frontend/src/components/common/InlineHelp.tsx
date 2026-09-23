@@ -17,6 +17,8 @@ interface InlineHelpProps {
    * `'click'`은 눌러야 열리고 닫기 버튼이 붙는다. 설명이 길어 마우스를 얹은 채로 읽기 어려울 때만 쓴다.
    */
   on?: "click" | "hover";
+  /** 도움말을 펼칠 방향. 오른쪽 끝 칸처럼 위로 펼치면 화면을 벗어나는 자리에서 바꾼다(427) */
+  side?: "top" | "bottom" | "right";
 }
 
 /** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */
@@ -45,7 +47,7 @@ const CLOSE_DELAY_MS = 80;
  * 처리된다. 말풍선에는 초점을 옮기지 않는다 — 초점이 트리거에 남아야 Esc 를 누른 사람이 제자리에
  * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.
  */
-export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "hover", side = "top" }: InlineHelpProps) {
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | undefined>(undefined);
 
@@ -107,9 +109,10 @@ export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
             // 화면 낭독기에 "열렸는데 갈 수 없는 대화 상자"로 읽힌다.
             role="tooltip"
             className={styles.content}
-            side="top"
+            side={side}
+            align={side === "bottom" ? "start" : "center"}
             sideOffset={6}
-            collisionPadding={12}
+            collisionPadding={16}
             aria-label={`${label} 도움말`}
             // 초점은 트리거에 그대로 둔다. 옮기면 트리거가 흐려져 곧바로 닫힌다.
             onOpenAutoFocus={(event) => event.preventDefault()}
@@ -137,9 +140,10 @@ export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
       <Popover.Portal>
         <Popover.Content
           className={styles.content}
-          side="top"
+          side={side}
+          align={side === "bottom" ? "start" : "center"}
           sideOffset={6}
-          collisionPadding={12}
+          collisionPadding={16}
           aria-label={`${label} 도움말`}
         >
           <p className={styles.term}>{label}</p>

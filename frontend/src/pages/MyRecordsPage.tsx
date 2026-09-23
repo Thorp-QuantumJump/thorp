@@ -33,7 +33,7 @@ function isDefault(query: MyRecordListQuery): boolean {
  * <p>목록은 서버의 기본 보기(완료 항목, 저장일 최신순)를 그대로 보이고 필터·정렬은 서버에 맡긴다. 화면이 정렬하거나
  * 성과로 줄 세우지 않는다(원칙 III). 빈 목록은 경고가 아니라 한 문장과 진단 시작 연결이다(FR-001).
  *
- * <p>`?resultToken=`으로 들어오면(005 결과 화면의 '기록으로 내보내기', T045a) 그 항목으로 초점을 옮기고 펼쳐 둔다.
+ * <p>`?resultToken=`으로 들어오면 그 항목으로 초점을 옮기고 펼쳐 둔다.
  */
 export function MyRecordsPage() {
   const { user } = useAuth()

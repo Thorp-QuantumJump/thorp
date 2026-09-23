@@ -161,7 +161,7 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {
     expect(within(risk).getByText('추정 기간')).not.toBeNull()
     expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()
     expect(within(risk).getByText('공분산 산정법')).not.toBeNull()
-    expect(within(risk).getByText('sample-covariance-daily')).not.toBeNull()
+    expect(within(risk).getByText('일별 수익률의 표본 공분산')).not.toBeNull()
 
     const loss = sectionOf(panel, '손실 기여')
     expect(within(loss).getByText('125.00%')).not.toBeNull()

@@ -9,12 +9,25 @@
 
 .tablist {
   display: flex;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   gap: 2px 4px;
   border-bottom: 1px solid var(--thorp-line);
 }
 
+.tablist::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .tablist {
+    mask-image: linear-gradient(to right, #000 90%, transparent);
+  }
+}
+
 .tab {
+  flex: none;
   margin: 0 0 -1px;
   padding: 10px 14px;
   border: 0;
@@ -61,7 +74,25 @@
   background: var(--thorp-surface);
 }
 
+.panel:not([data-tab-id='summary']) {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+
 .panel:focus-visible {
   outline: var(--thorp-focus-outline);
   outline-offset: var(--thorp-focus-offset);
+}
+
+.panel[data-tab-id='summary'] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 600px) {
+  .panel:not([data-tab-id='summary']) {
+    max-height: none;
+    overflow-y: visible;
+  }
 }

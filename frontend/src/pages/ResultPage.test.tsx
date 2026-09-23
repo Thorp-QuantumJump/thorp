@@ -62,7 +62,7 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T
 
 /**
  * 결과 화면은 비로그인도 여는 공개 경로지만 실제 앱에서는 `main.tsx`의 `AuthProvider` 안에서 돈다. 006의
- * '기록으로 내보내기'가 로그인 여부로 갈리므로(T045a) 테스트도 같은 자리에 둔다 — 비로그인이 기본이다.
+ * 결과는 비로그인도 볼 수 있으므로 테스트는 비로그인이 기본이다.
  */
 const anonymousAuth = {
   user: null,
@@ -83,7 +83,6 @@ function renderResult(token = resultToken) {
       <AuthContext.Provider value={anonymousAuth}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
-        <Route path="/strategy" element={<h1>전략 설정 화면</h1>} />
         <Route path="/diagnosis/sectors" element={<h1>섹터 선택 화면</h1>} />
       </Routes>
       <LocationProbe />
@@ -103,6 +102,28 @@ describe('ResultPage', () => {
     vi.useRealTimers()
   })
 
+  it('비교 대상을 버튼 아래 팝오버로 열고 Escape로 닫으면 버튼에 초점이 돌아온다', async () => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
+    const user = userEvent.setup()
+    renderResult()
+
+    const trigger = await screen.findByRole('button', { name: '비교 대상 고르기' })
+    await user.click(trigger)
+
+    const dialog = await screen.findByRole('dialog', { name: '비교 대상 고르기' })
+    expect(dialog.parentElement?.parentElement).toBe(document.body)
+    expect(dialog.getAttribute('data-side')).toBe('bottom')
+    expect(document.querySelector('[class*="overlay_"]')).toBeNull()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    expect(within(dialog).getByRole('button', { name: '목록 닫기' })).not.toBeNull()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '비교 대상 고르기' })).toBeNull()
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('완료 결과는 상세·시계열·섹터 목록만 한 번씩 부르고 요약 탭에 네 요소를 보인다', async () => {
     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
@@ -110,7 +131,13 @@ describe('ResultPage', () => {
     renderResult()
 
     expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은 16\.67%/)).not.toBeNull()
-    expect(screen.getByLabelText('분석 조건')).not.toBeNull()
+    const condition = screen.getByLabelText('분석 조건')
+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByLabelText('분석 조건')).toBe(
+      condition,
+    )
+    expect(screen.getByRole('region', { name: '결과 요약' }).contains(condition)).toBe(false)
+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByText(/이전 고점 회복까지 9거래일/)).not.toBeNull()
+    expect(within(screen.getByRole('region', { name: '결과 요약' })).queryByText(/이전 고점 회복까지 9거래일/)).toBeNull()
     expect(screen.getByText('16.67%')).not.toBeNull()
     expect(screen.getByText('자료 출처: 한국거래소 통계정보')).not.toBeNull()
 
@@ -126,6 +153,21 @@ describe('ResultPage', () => {
     // 탭 묶음이 상세 탭 셋을 위해 한 번 받아 둔다(SC-001, T098).
     expect(otherMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('핵심 숫자, 차트, 탭을 그 순서로 보여준다', async () => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
+
+    renderResult()
+
+    const value = await screen.findByText('16.67%')
+    const chart = screen.getByRole('img', { name: /자산가치 곡선/ })
+    const tabs = screen.getByRole('tablist', { name: '결과 보기' })
+    expect(value.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(chart.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const valuation = screen.getByText(/종료일 시가평가 기준 수익률은/)
+    expect(tabs.compareDocumentPosition(valuation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {
@@ -384,7 +426,8 @@ describe('ResultPage', () => {
       const before = screen.getByLabelText('현재 주소').textContent
 
       expect(summaryTab.getAttribute('aria-selected')).toBe('true')
-      expect(within(screen.getByRole('tabpanel')).getByText('16.67%')).not.toBeNull()
+      expect(screen.getByText('16.67%')).not.toBeNull()
+      expect(within(screen.getByRole('tabpanel')).getByText(/비용을 뺀 뒤 전체 수익률은/)).not.toBeNull()
       expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
 
       await user.click(screen.getByRole('tab', { name: '결과 분석' }))
@@ -463,68 +506,10 @@ describe('ResultPage', () => {
       )
     })
 
-    it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {
-      const user = userEvent.setup()
-      renderResult()
-
-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
-
-      expect(await screen.findByRole('heading', { name: '전략 설정 화면' })).not.toBeNull()
-      expect(screen.getByLabelText('현재 주소').textContent).toBe('/strategy')
-      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(
-        resultDetailCompleted.config.strategyId,
-      )
-    })
-
-    it('대응표가 다른 결과는 나머지 조건만 채워 두고 섹터·비중 단계 연결을 보인다', async () => {
-      otherMocks.fetchSectorCatalog.mockResolvedValue({
-        status: 'loaded',
-        catalog: { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' },
-      })
-      const user = userEvent.setup()
-      renderResult()
-
-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
-
-      const alert = await screen.findByRole('alert')
-      expect(alert.textContent).toContain('섹터는 넘기지 않았습니다')
-      expect(alert.textContent).toContain('섹터만 다시 골라 주세요')
-      expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
-      // 섹터 선택은 건드리지 않고, 대응표와 무관한 조건은 설정 화면에 채워 둔다.
-      expect(window.sessionStorage.getItem('thorp.diagnosis.sectorSelection')).toBeNull()
-      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(
-        resultDetailCompleted.config.strategyId,
-      )
-
-      await user.click(within(alert).getByRole('link', { name: '섹터·비중 단계로 가기' }))
-      expect(await screen.findByRole('heading', { name: '섹터 선택 화면' })).not.toBeNull()
-    })
-
-    it('다시 시도하면 풀릴 수 있는 실패에는 섹터·비중 단계 연결을 두지 않는다', async () => {
-      otherMocks.fetchSectorCatalog.mockResolvedValue({
-        status: 'failed',
-        kind: 'network',
-        code: null,
-        message: '연결 실패',
-        retryable: true,
-      })
-      const user = userEvent.setup()
-      renderResult()
-
-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))
-
-      const alert = await screen.findByRole('alert')
-      expect(alert.textContent).toContain('섹터 목록을 불러오지 못했습니다')
-      expect(within(alert).queryByRole('link')).toBeNull()
-    })
-
     it('주 모양 버튼은 비교 대상 고르기 하나고 나머지 보기는 탭이다 (착수 전에 알아둘 것 ⑧, T098)', async () => {
       renderResult()
       await screen.findByRole('tablist', { name: '결과 보기' })
 
-      expect(screen.getByRole('button', { name: '다른 조건으로 비교' }).getAttribute('data-variant')).toBe(
-        'outline',
-      )
       for (const name of [
         '요약',
         '결과 분석',
@@ -554,7 +539,7 @@ describe('ResultPage', () => {
       expect(screen.getByLabelText('분석 조건')).not.toBeNull()
       expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
       expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()
-      expect(screen.getByRole('button', { name: '다른 조건으로 비교' })).not.toBeNull()
+      expect(screen.queryByRole('heading', { name: '다음 탐색' })).toBeNull()
     })
   })
 })

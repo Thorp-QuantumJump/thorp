@@ -10,4 +10,4 @@ export const RESULT_POLL_INTERVAL_MS = 3_000
  * 거래 내역을 한 번에 받는 건수(R-11). 서버가 공개 상한으로 더 작게 자를 수 있으니 실제 크기는 응답의
  * `size`를 따른다. 응답 목표와 함께 004의 실행 측정(PD-06) 뒤에 조정하는 화면 동작값이라 이 한 곳에만 둔다.
  */
-export const TRADES_PAGE_SIZE = 50
+export const TRADES_PAGE_SIZE = 20
