@@ -349,33 +349,71 @@
 }
 
 /*
-  가격 흐름이 놓일 자리다. 아직 그릴 값이 없어 비어 있지만, 넓이와 높이를 미리 잡아 두어
-  자료가 붙었을 때 화면이 흔들리지 않게 한다.
+  가격 흐름이 놓이는 자리다. 값이 있을 때와 없을 때가 같은 높이를 쓴다 — 자료가 늦게 오거나
+  없을 때 카드 높이가 튀면, 목록을 훑는 동안 아래 내용이 계속 움직인다.
 */
 .browserCard [data-slot='chart'] {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   min-height: 13rem;
-  padding: 20px;
-  border: 1px dashed var(--thorp-line-strong);
-  border-radius: 14px;
-  background: var(--thorp-surface-raised);
-  color: var(--thorp-muted);
 }
 
 .browserCard[data-expanded='true'] [data-slot='chart'] {
   min-height: 11rem;
 }
 
-.browserCard [data-slot='chart'] p {
-  max-width: 28rem;
-  margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.7;
+/* 아직 그릴 값이 없는 상태다. 빈 자리를 두지 않고 그 사실을 한 문장으로 알린다. */
+.browserCard [data-slot='chart'][data-state='loading'],
+.browserCard [data-slot='chart'][data-state='empty'] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  border: 1px dashed var(--thorp-line-strong);
+  border-radius: 14px;
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-muted);
   text-align: center;
+}
+
+.browserCard [data-slot='chart'] p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.browserCard [data-slot='chart'] button {
+  padding: 6px 14px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.browserCard [data-slot='chart'] button:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+/* 선이 놓이는 칸이다. 세로 눈금을 적지 않으므로 좌우 여백도 거의 두지 않는다. */
+.browserCard [data-slot='chart-canvas'] {
+  width: 100%;
+  height: 11rem;
+}
+
+.browserCard[data-expanded='true'] [data-slot='chart-canvas'] {
+  height: 9rem;
+}
+
+/* 그림이 말하지 않는 사실을 한 줄로 적는다. 기간과 값의 종류, 그리고 이어 붙인 날의 존재다. */
+.browserCard [data-slot='chart-note'] {
+  margin: 6px 0 0;
+  color: var(--thorp-muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
 }
 
 .browserCard [data-slot='profile-loading'] {

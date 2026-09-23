@@ -7,7 +7,10 @@ import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import type { SectorCatalog, SectorSummary } from '@/types/sector'
 import { SectorSelectionPage } from './SectorSelectionPage'
 
-const apiMocks = vi.hoisted(() => ({ fetchSectorCatalog: vi.fn() }))
+const apiMocks = vi.hoisted(() => ({
+  fetchSectorCatalog: vi.fn(),
+  fetchPriceSeries: vi.fn(),
+}))
 
 vi.mock('@/api/sectors', async () => {
   const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')
@@ -78,6 +81,11 @@ const networkFailure: SectorCatalogResult = {
 describe('SectorSelectionPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 카드는 접힌 채로도 가격을 부른다. 그림 자체는 다른 검사가 본다.
+    apiMocks.fetchPriceSeries.mockResolvedValue({
+      status: 'notReady',
+      message: '준비 중',
+    })
   })
 
   it('목록을 표시 순서대로 보인다', async () => {
