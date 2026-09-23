@@ -71,7 +71,8 @@ export const previewFixture: ParamSearchPreview = {
   },
   limits: {
     maxCandidates: 100,
-    timeLimitSeconds: 1800,
+    // 서버는 실행시간 상한을 두지 않는다 — 계약상 null 이 그 뜻이다.
+    timeLimitSeconds: null,
     dispatchWindow: 4,
     consecutiveFailureLimit: 5,
     provisional: ['maxCandidates', 'dispatchWindow'],

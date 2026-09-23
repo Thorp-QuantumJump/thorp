@@ -1,6 +1,7 @@
 package com.ssafy.thorp.paramsearch.application.result;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,24 +70,27 @@ public record ParamSearchPreviewResult(
     public record ExclusionReason(String code, String message, long count) {}
 
     /**
+     * @param timeLimitSeconds 묶음 실행시간 상한. {@code null}이면 상한을 두지 않는다
      * @param provisional 임시값인 한도 항목 이름. 화면이 임시값 표시를 붙인다(FR-005a)
      * @param exceeded 유효 후보 수가 상한을 넘었는가. true면 실행은 거부된다(FR-005b)
      */
     public record Limits(
             int maxCandidates,
-            long timeLimitSeconds,
+            Long timeLimitSeconds,
             int dispatchWindow,
             int consecutiveFailureLimit,
             List<String> provisional,
             boolean exceeded) {
 
+        /** {@code Map.of}를 쓰지 않는다 — 상한을 두지 않으면 {@code timeLimitSeconds}가 null 이라 NPE 가 난다. */
         public Map<String, Object> toSnapshot() {
-            return Map.of(
-                    "maxCandidates", maxCandidates,
-                    "timeLimitSeconds", timeLimitSeconds,
-                    "dispatchWindow", dispatchWindow,
-                    "consecutiveFailureLimit", consecutiveFailureLimit,
-                    "provisional", provisional);
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("maxCandidates", maxCandidates);
+            snapshot.put("timeLimitSeconds", timeLimitSeconds);
+            snapshot.put("dispatchWindow", dispatchWindow);
+            snapshot.put("consecutiveFailureLimit", consecutiveFailureLimit);
+            snapshot.put("provisional", provisional);
+            return snapshot;
         }
     }
 
