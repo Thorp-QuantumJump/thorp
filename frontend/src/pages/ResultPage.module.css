@@ -8,7 +8,7 @@
 .main {
   width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
   margin: 0 auto;
-  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
+  padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);
 }
 
 /* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */
@@ -23,17 +23,19 @@
 .result {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
   min-width: 0;
 }
 
 .intro {
   display: grid;
-  gap: 10px;
-  justify-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 16px;
 }
 
 .backLink {
+  grid-column: 1 / -1;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -97,9 +99,14 @@
   gap: 8px 10px;
 }
 
+@media (max-width: 600px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .source {
   margin: 0;
   color: var(--thorp-muted);
   font-size: 0.8rem;
 }
-

@@ -91,7 +91,7 @@ function targetResult(overrides: Partial<PublicResultDetail> = {}): PublicResult
   }
 }
 
-describe('결과 보조 보기와 다음 탐색 (B08)', () => {
+describe('결과 보조 보기 (B08)', () => {
   beforeEach(() => {
     Object.values(api).forEach((mock) => mock.mockReset())
     api.detail.mockImplementation(async (token: string) =>
@@ -105,7 +105,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
-  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {
+  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {
     renderResult()
 
     await screen.findByText('자료 출처: 한국거래소 통계정보')
@@ -113,21 +113,8 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     expect(api.registry).not.toHaveBeenCalled()
     expect(api.create).not.toHaveBeenCalled()
 
-    // 011 진입은 열려 있다(T086). 비활성 사유 문구는 사라졌다.
-    expect(screen.queryByText(/011 연결 계약이 아직 없어/)).toBeNull()
-    expect(
-      (screen.getByRole('button', { name: '기록으로 내보내기' }) as HTMLButtonElement).disabled,
-    ).toBe(true)
-    // 006 화면이 생겨 사유가 바뀌었다(spec 006 T045a) — 이 렌더는 비로그인이라 로그인 안내다.
-    expect(screen.getByText(/로그인이 필요합니다/)).toBeTruthy()
-  })
-
-  it('011 진입은 기준 토큰을 실은 주소로 간다(T086)', async () => {
-    renderResult()
-
-    await screen.findByText('자료 출처: 한국거래소 통계정보')
-    const entry = screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' })
-    expect(entry.getAttribute('href')).toBe(`/regime-link?base=${resultToken}`)
+    expect(screen.queryByRole('heading', { name: '다음 탐색' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '기록으로 내보내기' })).toBeNull()
   })
 
   it('스펙에 없는 이전 화면 행동을 결과 화면에 추가하지 않는다', async () => {
