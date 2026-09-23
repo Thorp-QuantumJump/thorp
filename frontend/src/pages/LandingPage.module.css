@@ -233,7 +233,6 @@
 }
 
 .eyebrow,
-.sectionHeading > p,
 .algorithmHeader > p {
   margin: 0;
   color: var(--thorp-eyebrow, var(--landing-accent-soft));
@@ -389,136 +388,6 @@
   content: '';
 }
 
-.marketSection {
-  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);
-}
-
-.marketSection::before {
-  left: 33.5%;
-}
-
-/*
-  **이 섹션은 한 칸을 넘지 않는다고 못 박는다.** `min-height`로 두면 안의 것이 커질 때 섹션이
-  따라 늘어나 스크롤이 한 번 더 생기는데, 스냅으로 넘기는 구성에서는 그 한 번이 '끝인 줄 알았는데
-  더 있는' 어긋남으로 겪힌다. 키를 고정하고, 모자랄 때 줄어들 몫은 차트에만 준다.
-*/
-.backtestSection .sectionHeading h2 {
-  font-size: clamp(2.2rem, 3.6vw, 4rem);
-}
-
-.backtestSection {
-  grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);
-  height: calc(100svh - var(--landing-header-height));
-  padding-top: clamp(64px, 8vh, 104px);
-  padding-bottom: clamp(64px, 8vh, 104px);
-}
-
-.backtestSection::before {
-  right: 31%;
-}
-
-/*
-  섹션 번호와 '다음으로' 화살표가 함께 서는 옆 여백. 번호는 가운데, 화살표는 맨 아래다 —
-  다음이 있다는 신호는 내려갈 방향인 아래쪽에 있어야 읽힌다.
-*/
-.sectionAside {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  align-items: center;
-  justify-items: center;
-  align-self: stretch;
-  gap: 18px;
-}
-
-.marketSection .sectionAside {
-  justify-self: start;
-}
-
-.backtestSection .sectionAside {
-  justify-self: end;
-}
-
-.sectionNumber {
-  color: var(--lp-14, #536158);
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
-  writing-mode: vertical-rl;
-}
-
-.nextSection {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgb(3 199 90 / 55%);
-  border-radius: 50%;
-  background: rgb(3 199 90 / 12%);
-  box-shadow: 0 0 0 6px rgb(3 199 90 / 6%);
-  color: var(--landing-accent-soft);
-  cursor: pointer;
-  transition: border-color 180ms ease, color 180ms ease, background 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.nextSection:hover {
-  border-color: var(--landing-accent);
-  background: rgb(3 199 90 / 22%);
-  box-shadow: 0 0 0 9px rgb(3 199 90 / 10%);
-  color: var(--landing-accent);
-}
-
-.nextSection:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: 3px;
-}
-
-.marketContent {
-  align-self: center;
-  min-width: 0;
-}
-
-/*
-  **차트가 남는 높이를 받아 가게 둔다.** 차트에 높이 하한을 박아 두었더니 제목·지표·버튼을 더한
-  키가 화면보다 커져서, 한 칸으로 붙어야 할 섹션이 두 번 굴러야 끝났다. 고정 높이를 정해 두면
-  화면 높이가 조금만 달라져도 다시 어긋나므로, 정해진 것들을 먼저 놓고 나머지를 차트에 준다.
-*/
-.backtestContent {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-self: stretch;
-  min-width: 0;
-  min-height: 0;
-}
-
-/* 글과 버튼은 줄이지 않는다 — 줄이면 글자가 서로 겹치거나 잘린다. */
-.backtestContent > .sectionHeading,
-.backtestContent > .textCta {
-  flex: 0 0 auto;
-}
-
-.marketContent {
-  padding-left: clamp(38px, 5vw, 88px);
-}
-
-.backtestContent {
-  padding-right: clamp(38px, 5vw, 88px);
-}
-
-.sectionHeading {
-  position: relative;
-  padding-left: 46px;
-}
-
-.sectionHeading > svg {
-  position: absolute;
-  top: 2px;
-  left: 0;
-  color: var(--thorp-ornament, var(--landing-accent));
-}
-
-.sectionHeading h2,
 .algorithmHeader h2 {
   margin: 16px 0 20px;
   color: var(--landing-text);
@@ -528,7 +397,6 @@
   line-height: 1.04;
 }
 
-.sectionHeading > span,
 .algorithmHeader > span {
   display: block;
   max-width: 650px;
@@ -656,26 +524,6 @@
   stroke-linejoin: miter;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
-}
-
-.textCta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: min(100%, 720px);
-  padding: 18px 0;
-  border-top: 1px solid var(--landing-line);
-  border-bottom: 1px solid var(--landing-line);
-  color: var(--landing-text);
-  font-size: 0.83rem;
-  font-weight: 620;
-  text-decoration: none;
-  transition: color 180ms ease, padding 180ms ease;
-}
-
-.textCta:hover {
-  padding-right: 9px;
-  color: var(--landing-accent-soft);
 }
 
 .backtestVisual {
@@ -953,7 +801,6 @@
 
 .primaryCta:focus-visible,
 .secondaryCta:focus-visible,
-.textCta:focus-visible,
 .algorithmCard > a:focus-visible,
 .cardSelectButton:focus-visible {
   outline: var(--thorp-focus-outline-compact);
@@ -985,34 +832,6 @@
 @keyframes conveyorMove {
   to {
     transform: translateX(-50%);
-  }
-}
-
-@media (max-width: 1100px) {
-
-  .marketSection,
-  .backtestSection {
-    grid-template-columns: minmax(130px, 0.22fr) minmax(0, 0.78fr);
-  }
-
-  .marketSection::before {
-    left: 21.5%;
-  }
-
-  .backtestSection {
-    grid-template-columns: minmax(0, 0.78fr) minmax(130px, 0.22fr);
-  }
-
-  .backtestSection::before {
-    right: 21.5%;
-  }
-
-  .marketContent {
-    padding-left: 42px;
-  }
-
-  .backtestContent {
-    padding-right: 42px;
   }
 }
 
@@ -1051,7 +870,6 @@
   }
 
   .heroFootnote::before,
-  .sectionAside,
   .storySection::before {
     display: none;
   }
@@ -1062,16 +880,6 @@
     padding: 100px 20px;
   }
 
-  .marketContent,
-  .backtestContent {
-    padding: 0;
-  }
-
-  .backtestSection {
-    height: auto;
-  }
-
-  .backtestContent,
   .backtestVisual {
     display: block;
     min-height: auto;
@@ -1082,16 +890,6 @@
     min-height: 240px;
   }
 
-  .sectionHeading {
-    padding-left: 0;
-  }
-
-  .sectionHeading > svg {
-    position: static;
-    margin-bottom: 16px;
-  }
-
-  .sectionHeading h2,
   .algorithmHeader h2 {
     font-size: clamp(2.5rem, 11vw, 3.7rem);
   }
@@ -1170,7 +968,6 @@
     left: 18px;
   }
 
-  .sectionHeading h2,
   .algorithmHeader h2 {
     font-size: 2.55rem;
   }
@@ -1207,10 +1004,203 @@
 
   .primaryCta,
   .secondaryCta,
-  .textCta,
   .algorithmCard > a {
     transition: none;
   }
+}
+
+/*
+  둘째·셋째 칸도 첫 칸과 같은 틀이다: 한쪽에 제목·설명·버튼, 다른 쪽에 서비스 화면을 담은 창.
+  셋째 칸은 창과 글의 자리를 바꿔 내려가는 동안 시선이 좌우로 오가게 한다.
+*/
+/*
+  글 칸은 내용 폭만큼만 잡고 창과 함께 가운데로 모은다. 두 칸을 화면 양끝까지 벌렸더니 글과 창이
+  서로 다른 칸처럼 떨어져 보였다.
+*/
+.storyLayout {
+  z-index: 1;
+  /* 옆에서 밀려 들어오는 글이 칸 밖으로 삐져나오지 않게 가로만 자른다. */
+  overflow-x: clip;
+  grid-template-columns: auto minmax(0, 640px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(32px, 4.5vw, 72px);
+  width: min(100% - 2 * clamp(24px, 4vw, 68px), 1180px);
+  padding: clamp(48px, 8vh, 96px) 0;
+}
+
+.storyReverse {
+  grid-template-columns: minmax(0, 640px) auto;
+}
+
+.storyCopy {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  min-width: 0;
+  word-break: keep-all;
+}
+
+.storyCopy h2 {
+  margin: 0;
+  color: var(--landing-text);
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.16;
+}
+
+.storyCopy h2 > span { display: block; }
+
+.storyCopy h2 em {
+  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);
+  background-clip: text;
+  color: transparent;
+  font-style: normal;
+}
+
+.storyWindow { min-width: 0; }
+
+.storySteps {
+  display: grid;
+  gap: 14px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storySteps li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  color: var(--landing-text);
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+  font-weight: 600;
+}
+
+.storySteps b {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--thorp-accent-muted);
+  color: var(--landing-accent-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  transform: translateY(-2px);
+}
+
+.storySteps small {
+  display: block;
+  margin-top: 2px;
+  color: var(--landing-muted);
+  font-size: 0.82em;
+  font-weight: 500;
+}
+
+/* 창 안에서는 흐르는 지표 띠를 창 폭에 맞춰 줄인다. */
+.storyWindow .conveyorViewport { margin: 0; padding-block: 14px; border-bottom: 1px solid var(--thorp-line); }
+.storyWindow .indicatorItem { width: clamp(250px, 21vw, 300px); min-height: 132px; padding: 18px 20px; grid-template-columns: minmax(110px, 1fr) 90px; gap: 14px; }
+.storyWindow .indicatorReading strong { font-size: 1.25rem; }
+
+.fieldPreview {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  list-style: none;
+}
+
+.fieldPreview li {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-muted);
+}
+
+.fieldPreview b { color: var(--landing-text); font-size: 0.82rem; }
+.fieldPreview span { overflow: hidden; color: var(--thorp-copy); font-size: 0.74rem; text-overflow: ellipsis; white-space: nowrap; }
+.fieldPreview svg { width: 60px; height: 24px; overflow: visible; }
+.fieldPreview polyline { fill: none; stroke: rgb(255 255 255 / 70%); stroke-width: 1.6; }
+.fieldPreview circle { fill: var(--thorp-surface); stroke: var(--landing-text); stroke-width: 1.4; }
+
+.storyWindow .backtestVisual { margin: 0; box-shadow: 0 30px 80px rgb(0 0 0 / 45%); }
+
+@media (max-width: 1040px) {
+  .storyLayout,
+  .storyReverse { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
+  .storyReverse .storyWindow { order: 2; }
+}
+
+@media (max-width: 760px) {
+  .storyLayout { display: grid; width: min(100% - 28px, 640px); padding: 72px 0; }
+  .fieldPreview li { grid-template-columns: 72px minmax(0, 1fr); }
+  .fieldPreview svg { display: none; }
+}
+
+/* 지금 몇 번째 칸인지 알리는 점. 이름은 올렸을 때만 보인다. */
+.sectionProgress {
+  position: fixed;
+  z-index: 25;
+  top: 50%;
+  right: clamp(12px, 1.6vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transform: translateY(-50%);
+}
+
+.sectionProgress button {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+
+.sectionProgress button[aria-current='true'] {
+  border-color: var(--landing-accent);
+  background: var(--landing-accent);
+  box-shadow: 0 0 0 4px var(--thorp-accent-muted);
+  transform: scale(1.15);
+}
+
+.sectionProgress button span {
+  position: absolute;
+  top: 50%;
+  right: 22px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--thorp-surface-raised);
+  color: var(--landing-text);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 160ms ease;
+}
+
+.sectionProgress button:hover span,
+.sectionProgress button:focus-visible span { opacity: 1; }
+.sectionProgress button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .sectionProgress { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sectionProgress button { transition: none; }
 }
 
 /* 첫 칸 오른쪽의 결과 화면 예시 창(ResultPreviewWindow). 셰이더 위에 뜨므로 면을 채워 글이 섞이지 않게 한다. */
@@ -1372,7 +1362,6 @@
   .heroContent { padding-top: 0; }
 }
 
-
 @media (max-width: 640px) {
   .previewTable [data-optional='true'] { display: none; }
   .previewTickers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1402,15 +1391,6 @@
   border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
-
-/* 이동 링크: 위아래 선 대신 테두리 있는 한 줄 */
-:global(:root:not([data-design='classic'])) .textCta {
-  padding: 16px 20px;
-  border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control);
-  background: var(--thorp-surface);
-}
-:global(:root:not([data-design='classic'])) .textCta:hover { padding-right: 16px; border-color: var(--thorp-line-control-hover); background: var(--thorp-surface-muted); }
 
 /* 백테스트 그림: 결과 화면 한 장을 담은 카드. 틀이 생기면 남는 높이가 빈 칸으로 보이므로 키는 내용에 맞추고, 화면이 낮을 때만 줄어든다. */
 :global(:root:not([data-design='classic'])) .backtestVisual {
