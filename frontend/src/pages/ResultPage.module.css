@@ -27,6 +27,26 @@
   min-width: 0;
 }
 
+.intro {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  font-weight: 660;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--thorp-accent-soft);
+}
+
 .title {
   margin: 0;
   font-size: clamp(1.7rem, 4.5vw, 2.6rem);
