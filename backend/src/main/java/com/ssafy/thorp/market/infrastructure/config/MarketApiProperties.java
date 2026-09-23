@@ -20,6 +20,7 @@ public class MarketApiProperties {
     private final Krx krx = new Krx();
     private final Kosis kosis = new Kosis();
     private final Customs customs = new Customs();
+    private final Series series = new Series();
 
     @Getter
     @Setter
@@ -46,6 +47,20 @@ public class MarketApiProperties {
         private String baseUrl = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
         private String cycleTable = "DT_1C8015";
         private String coreCpiTable = "DT_1J22042";
+    }
+
+    /** 최근 흐름(series) API. 요청이 아니라 백그라운드 갱신이 원천을 부른다. */
+    @Getter
+    @Setter
+    public static class Series {
+        /** 돌려주는 거래일 수. */
+        private int window = 60;
+
+        /** 거래일 60개를 덮는 달력 날짜 수. 공휴일이 몰려도 모자라지 않게 넉넉히 잡는다. */
+        private int lookbackDays = 95;
+
+        private Duration refreshBudget = Duration.ofSeconds(90);
+        private Duration krxPace = Duration.ofMillis(150);
     }
 
     @Getter

@@ -76,7 +76,8 @@
   scroll-snap-align: start;
   scroll-snap-stop: always;
   place-items: center;
-  overflow: hidden;
+  /* hidden은 초점이 옮겨 갈 때 칸 자체가 옆으로 밀린다. clip은 그 스크롤까지 막는다. */
+  overflow: clip;
   isolation: isolate;
 }
 
@@ -213,7 +214,16 @@
   align-items: center;
   gap: clamp(32px, 4vw, 64px);
   width: min(100% - 2 * clamp(24px, 4vw, 68px), 1320px);
-  padding: clamp(40px, 6vh, 72px) 0 clamp(72px, 9vh, 104px);
+  padding: clamp(24px, 4vh, 64px) 0 clamp(48px, 7vh, 96px);
+}
+
+/*
+  **첫 칸은 화면 높이를 넘지 않는다.** 한 칸씩 넘기는 스냅은 화면보다 큰 칸 안에서는 멈춰도 되는
+  규칙이라, 첫 칸이 넘치면 위로 돌아올 때 첫 칸 아래쪽에서 한 번 멈추고 한 번 더 올려야 맨 위에
+  닿았다. 화면이 낮으면 창 아래의 규칙 비교 표를 접어 높이를 맞춘다.
+*/
+@media (max-height: 800px) and (min-width: 761px) {
+  .heroLayout .previewTable { display: none; }
 }
 
 .heroContent {
@@ -592,7 +602,7 @@
   min-height: calc(100svh - var(--landing-header-height));
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  padding: clamp(72px, 8vh, 92px) clamp(18px, 5vw, 72px) 36px;
+  padding: clamp(40px, 6vh, 92px) clamp(18px, 5vw, 72px) 36px;
   overflow: hidden;
   isolation: isolate;
 }
@@ -625,7 +635,8 @@
 .orbitStage {
   position: relative;
   width: min(100%, 1320px);
-  height: clamp(350px, 38vw, 430px);
+  /* 폭만 보면 낮은 화면에서 칸이 넘쳐 스냅이 칸 안에서 멈춘다. 남은 높이도 함께 본다. */
+  height: clamp(300px, min(38vw, 100svh - var(--landing-header-height) - 312px), 430px);
   margin-top: 8px;
   outline: none;
   perspective: 1250px;
@@ -1360,6 +1371,12 @@
 @media (max-width: 1040px) {
   .heroLayout { grid-template-columns: 1fr; }
   .heroContent { padding-top: 0; }
+
+  /* 글과 창이 위아래로 쌓이면 칸이 화면보다 길어진다. 넘치는 칸에서 스냅이 중간에 멈추므로 끈다. */
+  .page { scroll-snap-type: none; }
+  .hero,
+  .storySection,
+  .algorithmSection { scroll-snap-align: none; }
 }
 
 @media (max-width: 640px) {
