@@ -1,4 +1,5 @@
 import type { PublicResultDetail } from '@/types/result'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { buildConditionLine } from './conditionLine'
 import { formatMoney, formatRatio, isZeroValue } from './formatResult'
 import styles from './ResultSummaryCard.module.css'
@@ -17,7 +18,7 @@ type ResultSummaryCardProps = {
 }
 
 /**
- * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의, 조건 한 줄, 종료 시 평가 구분(FR-001~FR-003, FR-015).
+ * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의, 조건 한 줄(FR-001~FR-003).
  *
  * <p>숫자는 응답 문자열을 자릿수만 다듬어 보인다. <b>요약이 없으면 숫자 자리를 그리지 않는다</b> — 0이나
  * 대체값을 넣으면 없는 결과를 만든다(FR-013, 원칙 VI).
@@ -41,7 +42,13 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
       <p className={styles.condition} aria-label="분석 조건">
         <span>{condition.period}</span>
         <span>{condition.comparison}</span>
-        <span>{condition.cost}</span>
+        <span>
+          {detail.versions.costProfile
+            ? detail.versions.costProfile.provisional
+              ? '비용 반영 · 임시 비용 기준'
+              : '비용 반영'
+            : condition.cost}
+        </span>
       </p>
       {condition.weightsNote ? <p className={styles.note}>{condition.weightsNote}</p> : null}
 
@@ -57,6 +64,15 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
               label="가장 크게 줄었던 폭"
               value={formatRatio(summary.maxDrawdown)}
               definition={METRIC_DEFINITIONS.maxDrawdown}
+              supplement={
+                summary.analytics
+                  ? summary.analytics.recoveryDays === null
+                    ? '분석 기간 내 이전 고점 미회복'
+                    : summary.analytics.recoveryDays > 0
+                      ? `이전 고점 회복까지 ${summary.analytics.recoveryDays}거래일`
+                      : undefined
+                  : undefined
+              }
             />
             <Metric
               label="거래비용"
@@ -73,14 +89,22 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
             </p>
           ) : null}
 
-          <p className={styles.note}>
-            {summary.liquidation
-              ? `종료일 시가평가 기준 수익률은 ${formatRatio(summary.liquidation.markToMarket.totalReturn)}이고, 종료일에 모두 판다고 가정하면 청산 비용 ${formatMoney(summary.liquidation.liquidated.liquidationCost)}을 포함해 ${formatRatio(summary.liquidation.liquidated.totalReturn)}입니다.`
-              : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}
-          </p>
         </>
       ) : null}
     </section>
+  )
+}
+
+/** 종료 시 평가 구분(FR-015)은 요약 아래의 상세 탭에서 읽는다. */
+export function ResultValuationNote({ detail }: { detail: PublicResultDetail }) {
+  const summary = detail.summary
+  if (!summary) return null
+  return (
+    <p className={styles.valuationNote}>
+      {summary.liquidation
+        ? `종료일 시가평가 기준 수익률은 ${formatRatio(summary.liquidation.markToMarket.totalReturn)}이고, 종료일에 모두 판다고 가정하면 청산 비용 ${formatMoney(summary.liquidation.liquidated.liquidationCost)}을 포함해 ${formatRatio(summary.liquidation.liquidated.totalReturn)}입니다.`
+        : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}
+    </p>
   )
 }
 
@@ -88,16 +112,20 @@ function Metric({
   label,
   value,
   definition,
+  supplement,
 }: {
   label: string
   value: string
   definition: string
+  supplement?: string
 }) {
   return (
     <div className={styles.metric}>
-      <dt className={styles.metricLabel}>{label}</dt>
+      <dt className={styles.metricLabel}>
+        {label} <InlineHelp label={label}>{definition}</InlineHelp>
+      </dt>
       <dd className={styles.metricValue}>{value}</dd>
-      <dd className={styles.metricDefinition}>{definition}</dd>
+      {supplement ? <dd className={styles.metricMeta}>{supplement}</dd> : null}
     </div>
   )
 }

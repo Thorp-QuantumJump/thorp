@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   resultDetailCancelledNoSummary,
@@ -19,14 +19,21 @@ function withSummary(overrides: Partial<ResultSummary>): PublicResultDetail {
 }
 
 describe('ResultSummaryCard', () => {
-  it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {
+  it('핵심 숫자 3개와 요청 시 각 정의, 조건 한 줄, 청산 구분을 보인다', async () => {
     render(<ResultSummaryCard detail={resultDetailCompleted} />)
 
     expect(screen.getByText('16.67%')).not.toBeNull()
     expect(screen.getByText('-4.18%')).not.toBeNull()
     expect(screen.getByText('17,078원')).not.toBeNull()
-    for (const definition of Object.values(METRIC_DEFINITIONS)) {
-      expect(screen.getByText(definition)).not.toBeNull()
+    for (const [label, definition] of [
+      ['비용 차감 후 전체 수익률', METRIC_DEFINITIONS.netTotalReturn],
+      ['가장 크게 줄었던 폭', METRIC_DEFINITIONS.maxDrawdown],
+      ['거래비용', METRIC_DEFINITIONS.totalTradingCost],
+    ] as const) {
+      const help = screen.getByRole('button', { name: `${label} 도움말` })
+      fireEvent.focus(help)
+      expect(await screen.findByText(definition)).not.toBeNull()
+      fireEvent.blur(help)
     }
     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')
 
@@ -36,12 +43,12 @@ describe('ResultSummaryCard', () => {
       within(condition).getByText(`기준 ${syntheticStrategyName} · 비교 대상 없음`),
     ).not.toBeNull()
     expect(
-      within(condition).getByText('비용 반영 (PROVISIONAL-TEST-1, 임시 비용 기준)'),
+      within(condition).getByText('비용 반영 · 임시 비용 기준'),
     ).not.toBeNull()
+    expect(condition.textContent).not.toContain('PROVISIONAL-TEST-1')
+    expect(screen.getByText('이전 고점 회복까지 9거래일')).not.toBeNull()
 
-    expect(screen.getByText(/종료일 시가평가 기준 수익률은 16\.67%/).textContent).toContain(
-      '청산 비용 3,996원을 포함해 16.63%',
-    )
+    expect(screen.queryByText(/종료일 시가평가 기준 수익률은 16\.67%/)).toBeNull()
   })
 
   it('요약이 없으면 숫자 자리를 그리지 않고 상태 문장이 쓸 자리를 비워 둔다', () => {
@@ -82,9 +89,9 @@ describe('ResultSummaryCard', () => {
     expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()
   })
 
-  it('청산을 가정하지 않은 결과는 시가평가 기준이라고 밝힌다', () => {
+  it('요약 카드는 종료일 평가 안내를 차트 위에 보이지 않는다', () => {
     render(<ResultSummaryCard detail={withSummary({ liquidation: null })} />)
 
-    expect(screen.getByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).not.toBeNull()
+    expect(screen.queryByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).toBeNull()
   })
 })

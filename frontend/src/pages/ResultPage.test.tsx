@@ -128,6 +128,21 @@ describe('ResultPage', () => {
     expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
   })
 
+  it('핵심 숫자, 차트, 탭을 그 순서로 보여준다', async () => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
+
+    renderResult()
+
+    const value = await screen.findByText('16.67%')
+    const chart = screen.getByRole('img', { name: /자산가치 곡선/ })
+    const tabs = screen.getByRole('tablist', { name: '결과 보기' })
+    expect(value.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(chart.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const valuation = screen.getByText(/종료일 시가평가 기준 수익률은/)
+    expect(tabs.compareDocumentPosition(valuation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {
     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
@@ -384,7 +399,8 @@ describe('ResultPage', () => {
       const before = screen.getByLabelText('현재 주소').textContent
 
       expect(summaryTab.getAttribute('aria-selected')).toBe('true')
-      expect(within(screen.getByRole('tabpanel')).getByText('16.67%')).not.toBeNull()
+      expect(screen.getByText('16.67%')).not.toBeNull()
+      expect(within(screen.getByRole('tabpanel')).getByText(/비용을 뺀 뒤 전체 수익률은/)).not.toBeNull()
       expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
 
       await user.click(screen.getByRole('tab', { name: '결과 분석' }))

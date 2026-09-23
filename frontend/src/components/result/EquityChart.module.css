@@ -5,13 +5,26 @@
   min-width: 0;
 }
 
+.headingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.heading {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
 /*
  * 세로축 눈금 전환 단추. 그래프 오른쪽 위에 붙여 어느 눈금으로 보는 중인지 그래프와 함께 읽게 한다.
  */
 .scaleToggle {
   display: flex;
   gap: 2px;
-  align-self: flex-end;
+  flex: none;
   padding: 2px;
   border: 1px solid var(--thorp-line);
   border-radius: 999px;
@@ -60,7 +73,7 @@
   background: var(--thorp-surface);
 
   /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 16 / 5.8;
 }
 
 /*
@@ -71,12 +84,23 @@
   height: 100%;
 }
 
-.notes {
-  margin: 0;
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
   color: var(--thorp-copy);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   line-height: 1.6;
-  overflow-wrap: anywhere;
+}
+
+.help summary {
+  color: var(--thorp-foreground);
+  cursor: pointer;
+}
+
+.help p {
+  max-width: 65ch;
+  margin: 6px 0 0;
 }
 
 @media (max-width: 600px) {

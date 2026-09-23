@@ -16,7 +16,7 @@ import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
-import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
+import { ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
@@ -35,8 +35,8 @@ import styles from './ResultPage.module.css'
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>화면은 제목·그래프·해석 요약 1문장·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 순이다. 핵심 숫자와
- * 상태 문장은 기본으로 열린 '요약' 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
+ * <p>화면은 제목·핵심 숫자·그래프·탭 묶음(`ResultDetailTabs`, T098) 순이다.
+ * 상태 문장과 해석은 기본으로 열린 '요약' 탭 안에 둔다. 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
  * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지
  * 않는다(SC-006).
  *
@@ -116,11 +116,9 @@ function ResultView({
     [summary, timeseries],
   )
 
-  // 요약 탭의 내용(핵심 숫자·상태 문장). 그래프와 해석 문장은 탭 위에 그대로 둔다. 볼 결과가 없으면 탭 없이 이것만 그린다.
+  // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
   const summaryBlock = (
     <div className={styles.summaryStack}>
-      <ResultSummaryCard detail={detail} target={target} />
-
       <ResultStatusLine
         detail={detail}
         completedThrough={completedThrough}
@@ -133,51 +131,6 @@ function ResultView({
             : undefined
         }
       />
-
-    </div>
-  )
-
-  return (
-    <article className={styles.result} aria-labelledby="result-title">
-      <header className={styles.intro}>
-        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라
-            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유
-            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에
-            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로
-            비교'(B07)의 몫이다. */}
-        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>
-          <ArrowLeft size={15} aria-hidden="true" />
-          처음부터 다시 분석
-        </Link>
-        <h1 id="result-title" className={styles.title}>
-          백테스트 결과
-        </h1>
-      </header>
-      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
-      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
-
-      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
-        <p className={styles.status} role="status">
-          {inFlightMessage(detail)}
-        </p>
-      ) : null}
-
-
-    <ResultChartSlot
-        detail={detail}
-        timeseries={timeseries}
-        progressPoints={progressSeries.points}
-        target={
-          target && compare.timeseries.status === 'loaded'
-            ? {
-                name: strategyLabel(target),
-                points: compare.timeseries.data.points,
-                maxDrawdown: target.summary?.maxDrawdown ?? null,
-              }
-            : null
-        }
-      />
-
       {summary ? (
         <p className={styles.sentence}>
           {selectSummarySentence({
@@ -199,18 +152,47 @@ function ResultView({
           })}
         </p>
       ) : null}
+      <ResultValuationNote detail={detail} />
+    </div>
+  )
 
-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}
-      <div className={styles.actions}>
-        <Button
-          id={pickerButtonId}
-          type="button"
-          disabled={!viewable || compare.targetState === 'REQUESTED'}
-          {...picker.toggleProps}
-        >
-          비교 대상 고르기
-        </Button>
-      </div>
+  return (
+    <article className={styles.result} aria-labelledby="result-title">
+      <header className={styles.intro}>
+        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라
+            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유
+            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에
+            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로
+            비교'(B07)의 몫이다. */}
+        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>
+          <ArrowLeft size={15} aria-hidden="true" />
+          처음부터 다시 분석
+        </Link>
+        <h1 id="result-title" className={styles.title}>
+          백테스트 결과
+        </h1>
+        <div className={styles.actions}>
+          <Button
+            id={pickerButtonId}
+            type="button"
+            disabled={!viewable || compare.targetState === 'REQUESTED'}
+            {...picker.toggleProps}
+          >
+            비교 대상 고르기
+          </Button>
+        </div>
+      </header>
+      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
+
+      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
+        <p className={styles.status} role="status">
+          {inFlightMessage(detail)}
+        </p>
+      ) : null}
+
+
+      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. */}
       {picker.open ? (
         <div id={pickerId}>
           <CompareTargetPicker
@@ -259,6 +241,21 @@ function ResultView({
           onCancel={compare.cancelPeriod}
         />
       ) : null}
+      <ResultSummaryCard detail={detail} target={target} />
+      <ResultChartSlot
+        detail={detail}
+        timeseries={timeseries}
+        progressPoints={progressSeries.points}
+        target={
+          target && compare.timeseries.status === 'loaded'
+            ? {
+                name: strategyLabel(target),
+                points: compare.timeseries.data.points,
+                maxDrawdown: target.summary?.maxDrawdown ?? null,
+              }
+            : null
+        }
+      />
       {viewable ? (
         <ResultDetailTabs
           token={token}

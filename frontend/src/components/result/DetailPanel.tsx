@@ -219,7 +219,7 @@ function analyticsGap(detail: PublicResultDetail, present: boolean, what: string
   return null
 }
 
-/** 추정 기간은 실제 평가 기간이고 산정법은 004가 준 `method`다. 이 화면이 이름을 짓지 않는다. */
+/** 추정 기간은 실제 평가 기간이고, 알려진 산정법 코드는 읽을 수 있는 이름으로 표시한다. */
 function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; showMethod?: boolean }) {
   const { config } = detail
   const method = detail.summary?.analytics?.method ?? null
@@ -232,7 +232,7 @@ function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; s
       {showMethod ? (
         <>
           <dt>공분산 산정법</dt>
-          <dd>{method ?? EMPTY}</dd>
+          <dd>{method === 'sample-covariance-daily' ? '일별 수익률의 표본 공분산' : method ?? EMPTY}</dd>
         </>
       ) : null}
     </dl>

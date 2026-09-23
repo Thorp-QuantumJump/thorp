@@ -1,5 +1,5 @@
 import { HoverCard, Popover } from "radix-ui";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import styles from "./InlineHelp.module.css";
 
 interface InlineHelpProps {
@@ -35,11 +35,12 @@ interface InlineHelpProps {
  */
 export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
   const [open, setOpen] = useState(false);
+  const closedByEscape = useRef(false);
   if (on === "hover") {
     return (
       <HoverCard.Root
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => setOpen(next && !closedByEscape.current)}
         openDelay={80}
         closeDelay={80}
       >
@@ -53,8 +54,22 @@ export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
             className={styles.trigger}
             aria-label={`${label} 도움말`}
             aria-expanded={open}
-            onFocus={() => setOpen(true)}
-            onBlur={() => setOpen(false)}
+            onFocus={() => {
+              if (!closedByEscape.current) setOpen(true);
+            }}
+            onBlur={() => {
+              closedByEscape.current = false;
+              setOpen(false);
+            }}
+            onPointerLeave={() => {
+              closedByEscape.current = false;
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                closedByEscape.current = true;
+                setOpen(false);
+              }
+            }}
             onClick={() => setOpen((current) => !current)}
           >
             ?
