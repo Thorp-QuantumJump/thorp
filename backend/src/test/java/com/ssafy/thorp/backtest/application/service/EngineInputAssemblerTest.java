@@ -1,0 +1,354 @@
+package com.ssafy.thorp.backtest.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.ssafy.thorp.backtest.application.port.message.EngineInput;
+import com.ssafy.thorp.backtest.application.port.message.PositionSizingType;
+import com.ssafy.thorp.backtest.application.port.message.Scenario;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CostProfile;
+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.RulesStatus;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import com.ssafy.thorp.backtest.domain.model.StrategyRules;
+import com.ssafy.thorp.backtest.domain.vo.BacktestId;
+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * 저장된 실행 → 작업 메시지(schemaVersion 2).
+ *
+ * <p>핵심은 "조립 시점에 새로 고르는 값이 없다"는 것이다. 규칙 사본·비용 값·자료 버전은 전부 접수가 확정한 계획이 가리키는 등록표에서 온다. 재발행이 며칠 뒤에
+ * 일어나도 같은 메시지가 나와야 재현이 성립한다.
+ */
+class EngineInputAssemblerTest {
+
+    private static final BacktestPeriod PERIOD =
+            new BacktestPeriod(LocalDate.of(2023, 7, 3), LocalDate.of(2024, 12, 31));
+
+    private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);
+    private final CostProfileService costProfileService = mock(CostProfileService.class);
+    private final EngineInputAssembler assembler =
+            new EngineInputAssembler(strategyRulesService, costProfileService);
+
+    private static BacktestRun run(RunPlan plan) {
+        return run(plan, Map.of("rebalance", "MONTH_END"));
+    }
+
+    private static BacktestRun run(RunPlan plan, Map<String, Object> parameters) {
+        return BacktestRun.restore(
+                        1L,
+                        BacktestId.from("BT-20260907-000001"),
+                        "INVERSE_VOLATILITY",
+                        "1",
+                        parameters,
+                        List.of(new InstrumentId("091160.XKRX"), new InstrumentId("305720.XKRX")),
+                        PERIOD,
+                        new BigDecimal("10000000"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        RunStatus.QUEUED)
+                .withPlan(plan);
+    }
+
+    private static RunPlan acceptedPlan(String scenario, Map<String, Object> scenarioParams) {
+        Map<String, Object> spec = new LinkedHashMap<>();
+        spec.put("mappingVersion", "SECTOR-ETF-2026-09");
+        spec.put(
+                "items",
+                List.of(
+                        Map.of(
+                                "sectorId",
+                                "SEMICONDUCTOR",
+                                "instrumentId",
+                                "091160.XKRX",
+                                "targetWeight",
+                                "0.4000"),
+                        Map.of(
+                                "sectorId",
+                                "BATTERY",
+                                "instrumentId",
+                                "305720.XKRX",
+                                "targetWeight",
+                                "0.6000")));
+        spec.put("evaluationSplitVersion", "SPLIT-1");
+        spec.put("scenario", scenario);
+        if (scenarioParams != null) {
+            spec.put("scenarioParams", scenarioParams);
+        }
+        return new RunPlan(
+                "a".repeat(64),
+                "1",
+                "PROVISIONAL-DEMO-1",
+                "FIXTURE-three_etf_24m",
+                LocalDate.of(2023, 10, 4),
+                LocalDate.of(2024, 12, 31),
+                63,
+                spec,
+                "TARGET_RISK".equals(scenario)
+                        ? Map.of("rules", "1", "scenarioRules", "TARGET_RISK_OVERLAY/1")
+                        : Map.of("rules", "1"),
+                null);
+    }
+
+    private void registryAnswers() {
+        when(strategyRulesService.requireExecutable("INVERSE_VOLATILITY", "1"))
+                .thenReturn(
+                        new StrategyRules(
+                                "INVERSE_VOLATILITY",
+                                "1",
+                                RulesStatus.REGISTERED,
+                                true,
+                                Map.of("lookbackDays", 63),
+                                "PD-02"));
+        when(strategyRulesService.requireExecutable("TARGET_RISK_OVERLAY", "1"))
+                .thenReturn(
+                        new StrategyRules(
+                                "TARGET_RISK_OVERLAY",
+                                "1",
+                                RulesStatus.REGISTERED,
+                                false,
+                                Map.of("lookbackDays", 63, "scaleDownOnly", true),
+                                "PD-18"));
+        when(costProfileService.resolve(any()))
+                .thenReturn(
+                        new CostProfile(
+                                "PROVISIONAL-DEMO-1",
+                                new BigDecimal("0"),
+                                new BigDecimal("0"),
+                                new BigDecimal("5"),
+                                new BigDecimal("0"),
+                                null,
+                                true,
+                                "ADR-0004"));
+    }
+
+    @Test
+    @DisplayName("접수가 확정한 계획을 그대로 싣는다 — 섹터·비중·규칙 사본·비용·자료 버전·실효 시작일")
+    void carriesTheAcceptedPlan() {
+        registryAnswers();
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null)));
+
+        assertThat(input.run().runId()).isEqualTo("BT-20260907-000001");
+        assertThat(input.run().effectiveStart()).isEqualTo(LocalDate.of(2023, 10, 4));
+        assertThat(input.universe().mappingVersion()).isEqualTo("SECTOR-ETF-2026-09");
+        assertThat(input.universe().items())
+                .extracting(EngineInput.UniverseItem::sectorId)
+                .containsExactly("SEMICONDUCTOR", "BATTERY");
+        assertThat(input.universe().items().get(0).targetWeight()).isEqualByComparingTo("0.4000");
+        assertThat(input.allocation().rulesVersion()).isEqualTo("1");
+        assertThat(input.allocation().rules())
+                .containsEntry("lookbackDays", 63)
+                // 등록표의 임시 표시가 사본에 실려 워커 결과 versions.rules.provisional 로 되돌아온다
+                .containsEntry("provisional", true);
+        assertThat(input.marketData().dataVersion()).isEqualTo("FIXTURE-three_etf_24m");
+        assertThat(input.execution().costProfile().version()).isEqualTo("PROVISIONAL-DEMO-1");
+        assertThat(input.execution().costProfile().provisional()).isTrue();
+        assertThat(input.evaluation().warmupTradingDays()).isEqualTo(63);
+        assertThat(input.evaluation().splitVersion()).isEqualTo("SPLIT-1");
+        assertThat(input.progress().batchTradingDays()).isEqualTo(20);
+        assertThat(input.portfolio().positionSizing().type())
+                .isEqualTo(PositionSizingType.STRATEGY_DEFINED);
+    }
+
+    @Test
+    @DisplayName("003 축 rebalancePeriod 를 엔진이 읽는 rebalance 로 옮겨 싣는다 — 저장된 요청은 그대로 둔다")
+    void movesTheRegistryRebalanceAxisToTheEngineName() {
+        registryAnswers();
+        Map<String, Object> chosen =
+                Map.of(
+                        "rebalancePeriod",
+                        Map.of("mode", "CALENDAR", "unit", "MONTH_END"),
+                        "maxWeight",
+                        40);
+        BacktestRun saved = run(acceptedPlan("FULL_PERIOD", null), chosen);
+
+        EngineInput input = assembler.assemble(saved);
+
+        assertThat(input.allocation().parameters())
+                .as("화면은 003 축 이름을 그대로 보내고 엔진은 rebalance 문자열만 읽는다")
+                .containsEntry("rebalance", "MONTH_END")
+                .containsEntry("maxWeight", 40)
+                .doesNotContainKey("rebalancePeriod");
+        assertThat(saved.getParameters())
+                .as("사용자가 무엇을 골랐는지의 기록이자 재현 기준이라 저장된 요청은 003 이름 그대로다")
+                .containsKey("rebalancePeriod");
+    }
+
+    @Test
+    @DisplayName("이미 rebalance 가 실린 요청은 건드리지 않는다")
+    void leavesAnEngineShapedRequestAlone() {
+        registryAnswers();
+        Map<String, Object> already = Map.of("rebalance", "MONTH_END");
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), already));
+
+        assertThat(input.allocation().parameters()).isEqualTo(already);
+    }
+
+    @Test
+    @DisplayName("옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다")
+    void leavesAnUnmappableCadenceUntouched() {
+        registryAnswers();
+        Map<String, Object> tradingDays =
+                Map.of("rebalancePeriod", Map.of("mode", "TRADING_DAYS", "days", 21));
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), tradingDays));
+
+        assertThat(input.allocation().parameters()).isEqualTo(tradingDays);
+    }
+
+    @Test
+    @DisplayName("목표 위험 시나리오는 오버레이 규칙 사본이 붙는다 — 사용자 입력이 아니라 등록표 값이다")
+    void targetRiskCarriesOverlayRules() {
+        registryAnswers();
+        EngineInput input =
+                assembler.assemble(
+                        run(acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"))));
+
+        assertThat(input.run().scenario()).isEqualTo(Scenario.TARGET_RISK);
+        assertThat(input.run().scenarioParams()).containsEntry("targetVolatility", "0.1000");
+        assertThat(input.run().scenarioRules()).containsEntry("scaleDownOnly", true);
+    }
+
+    @Test
+    @DisplayName("접수 뒤 규칙이 새 버전으로 대체돼도 실행은 접수 때 버전의 명세로 나간다(T029)")
+    void supersededRulesStillAssemble() {
+        registryAnswers();
+        when(strategyRulesService.requireExecutable("INVERSE_VOLATILITY", "1"))
+                .thenReturn(
+                        new StrategyRules(
+                                "INVERSE_VOLATILITY",
+                                "1",
+                                RulesStatus.SUPERSEDED,
+                                true,
+                                Map.of("lookbackDays", 63),
+                                "PD-02"));
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null)));
+
+        assertThat(input.allocation().rulesVersion()).isEqualTo("1");
+        assertThat(input.allocation().rules()).containsEntry("lookbackDays", 63);
+        verify(strategyRulesService, never()).requireCurrent(any(), any());
+    }
+
+    @Test
+    @DisplayName("오버레이 규칙은 실행에 기록된 버전으로 읽는다 — 지금 버전을 고르지 않는다(T029)")
+    void overlayVersionComesFromTheRun() {
+        registryAnswers();
+
+        EngineInput input =
+                assembler.assemble(
+                        run(acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"))));
+
+        assertThat(input.run().scenarioRules()).containsEntry("version", "TARGET_RISK_OVERLAY/1");
+        verify(strategyRulesService).requireExecutable("TARGET_RISK_OVERLAY", "1");
+        verify(strategyRulesService, never()).requireCurrent(any());
+    }
+
+    @Test
+    @DisplayName("오버레이 버전 기록이 없는 목표 위험 실행은 지어내지 않고 영구 실패로 던진다")
+    void overlayWithoutRecordedVersionIsRejected() {
+        registryAnswers();
+        RunPlan accepted = acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"));
+        RunPlan withoutOverlay =
+                new RunPlan(
+                        accepted.dedupKey(),
+                        accepted.rulesVersion(),
+                        accepted.costProfileVersion(),
+                        accepted.dataVersion(),
+                        accepted.effectiveStart(),
+                        accepted.effectiveEnd(),
+                        accepted.warmupTradingDays(),
+                        accepted.requestSpec(),
+                        Map.of("rules", "1"),
+                        accepted.executionType());
+
+        assertThatThrownBy(() -> assembler.assemble(run(withoutOverlay)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("scenarioRules");
+    }
+
+    @Test
+    @DisplayName("오버레이 기록이 다른 규칙을 가리키면 그 규칙을 읽지 않고 영구 실패로 던진다")
+    void overlayRecordNamingAnotherRuleIsRejected() {
+        registryAnswers();
+        RunPlan accepted = acceptedPlan("TARGET_RISK", Map.of("targetVolatility", "0.1000"));
+        RunPlan pointingElsewhere =
+                new RunPlan(
+                        accepted.dedupKey(),
+                        accepted.rulesVersion(),
+                        accepted.costProfileVersion(),
+                        accepted.dataVersion(),
+                        accepted.effectiveStart(),
+                        accepted.effectiveEnd(),
+                        accepted.warmupTradingDays(),
+                        accepted.requestSpec(),
+                        Map.of("rules", "1", "scenarioRules", "INVERSE_VOLATILITY/1"),
+                        accepted.executionType());
+
+        assertThatThrownBy(() -> assembler.assemble(run(pointingElsewhere)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("INVERSE_VOLATILITY/1");
+        verify(strategyRulesService, never()).requireExecutable("TARGET_RISK_OVERLAY", "1");
+    }
+
+    @Test
+    @DisplayName("주 분석에는 오버레이 규칙이 붙지 않는다")
+    void fullPeriodHasNoOverlay() {
+        registryAnswers();
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null)));
+
+        assertThat(input.run().scenarioRules()).isNull();
+        assertThat(input.run().scenarioParams()).isNull();
+    }
+
+    @Test
+    @DisplayName("계획이 없는 실행은 등록표를 읽지 않고 종목만으로 조립한다 (접수 경로를 거치지 않은 행)")
+    void planlessRunFallsBackToInstrumentIds() {
+        EngineInput input = assembler.assemble(run(RunPlan.empty()));
+
+        assertThat(input.universe().mappingVersion()).isNull();
+        assertThat(input.universe().items())
+                .extracting(EngineInput.UniverseItem::instrumentId)
+                .containsExactly("091160.XKRX", "305720.XKRX");
+        assertThat(input.allocation().rules()).isNull();
+        assertThat(input.execution().costProfile().version()).isEqualTo("PROVISIONAL-DEMO-1");
+    }
+
+    @Test
+    @DisplayName("저장 전 실행은 발행할 수 없다 — runId 가 없으면 이벤트를 되짚을 수 없다")
+    void unsavedRunIsRejected() {
+        BacktestRun unsaved =
+                BacktestRun.create(
+                        "FIXED_WEIGHT",
+                        "1",
+                        Map.of(),
+                        List.of(new InstrumentId("091160.XKRX")),
+                        PERIOD,
+                        new BigDecimal("10000000"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42);
+
+        assertThatThrownBy(() -> assembler.assemble(unsaved))
+                .isInstanceOf(IllegalStateException.class);
+    }
+}

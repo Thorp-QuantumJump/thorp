@@ -1,0 +1,88 @@
+{
+  "run": {
+    "runId": "DET-EQUAL",
+    "start": "2023-08-01",
+    "end": "2024-06-28",
+    "randomSeed": 42,
+    "scenario": "FULL_PERIOD"
+  },
+  "universe": {
+    "mappingVersion": "SECTOR-ETF-2026-09",
+    "items": [
+      {
+        "sectorId": "SEMICONDUCTOR",
+        "instrumentId": "091160.XKRX",
+        "targetWeight": "0.4"
+      },
+      {
+        "sectorId": "BATTERY",
+        "instrumentId": "305720.XKRX",
+        "targetWeight": "0.3"
+      },
+      {
+        "sectorId": "BIO",
+        "instrumentId": "244580.XKRX",
+        "targetWeight": "0.3"
+      }
+    ]
+  },
+  "marketData": {
+    "datasetId": "FIXTURE-three_etf_24m",
+    "dataVersion": "FIXTURE-three_etf_24m",
+    "interval": "1D",
+    "adjustment": "SPLIT_ADJUSTED",
+    "priceType": "LAST",
+    "fillPrice": "RAW",
+    "signalPrice": "ADJUSTED",
+    "distributions": "CASH_ON_PAY_DATE"
+  },
+  "allocation": {
+    "strategyId": "EQUAL_WEIGHT",
+    "rulesVersion": "1",
+    "rules": {
+      "targetWeights": "EQUAL_AMONG_INVESTABLE",
+      "weightsSource": "COMPUTED"
+    },
+    "parameters": {
+      "rebalance": "MONTH_END"
+    }
+  },
+  "portfolio": {
+    "initialCash": "10000000",
+    "currency": "KRW",
+    "positionSizing": {
+      "type": "STRATEGY_DEFINED"
+    },
+    "shortSelling": false,
+    "leverage": "1",
+    "integerLots": true
+  },
+  "execution": {
+    "signalTiming": "BAR_CLOSE",
+    "executionTiming": "NEXT_BAR_OPEN",
+    "orderTypes": [
+      "MARKET"
+    ],
+    "costProfile": {
+      "version": "PROVISIONAL-FULL-1",
+      "commissionBps": "1.5",
+      "spreadBps": "2",
+      "slippageBps": "5",
+      "taxBps": "23",
+      "provisional": true
+    },
+    "partialFill": false,
+    "liquidity": {
+      "model": "UNLIMITED"
+    },
+    "tradingHalt": "DEFER_TO_NEXT_TRADABLE",
+    "delisting": "CAUSE_BASED"
+  },
+  "evaluation": {
+    "warmupTradingDays": null,
+    "liquidationAtEnd": true
+  },
+  "progress": {
+    "batchTradingDays": 20
+  }
+}

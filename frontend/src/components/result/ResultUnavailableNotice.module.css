@@ -1,0 +1,25 @@
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.copy {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.action {
+  color: var(--thorp-accent-soft);
+  font-size: 0.95rem;
+}

@@ -1,0 +1,175 @@
+.field {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.field label {
+  color: var(--thorp-foreground);
+  font-size: 0.78rem;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+
+.field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  background: rgb(3 8 5 / 72%);
+  color: var(--thorp-foreground);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.field input::placeholder {
+  color: var(--thorp-muted);
+}
+
+.field input:hover:not(:disabled) {
+  border-color: rgb(134 242 168 / 38%);
+}
+
+.field input:focus-visible {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-surface);
+  box-shadow: var(--thorp-focus-shadow-subtle);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--thorp-negative);
+}
+
+.field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+/*
+  입력칸과 그 칸에 딸린 버튼이 함께 서는 줄. 도움말·오류 문구는 이 줄 바깥(아래)에 쌓이므로
+  문구가 생기고 사라져도 버튼이 입력칸과 어긋나지 않는다.
+*/
+.controlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 142px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 560px) {
+  .controlRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hint,
+.fieldError {
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.hint {
+  color: var(--thorp-muted);
+}
+
+.fieldError {
+  color: var(--thorp-negative);
+}
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 20px;
+  padding: 11px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 4px;
+  background: var(--thorp-surface-muted);
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.status svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.status[data-tone='success'] {
+  border-color: rgb(99 220 138 / 30%);
+  background: rgb(99 220 138 / 7%);
+  color: var(--thorp-positive);
+}
+
+.status[data-tone='error'] {
+  border-color: rgb(239 138 104 / 34%);
+  background: rgb(239 138 104 / 8%);
+  color: #f2a184;
+}
+
+.submitButton,
+.secondaryButton {
+  min-height: 48px;
+  border-radius: 4px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.submitButton {
+  border: 1px solid var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.secondaryButton {
+  border: 1px solid var(--thorp-line-strong);
+  background: transparent;
+  color: var(--thorp-foreground);
+}
+
+.submitButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+.submitButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.submitButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .submitButton,
+  .secondaryButton {
+    transition: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .status {
+    padding: 10px;
+    font-size: 0.71rem;
+  }
+
+  .submitButton,
+  .secondaryButton {
+    min-height: 46px;
+  }
+}

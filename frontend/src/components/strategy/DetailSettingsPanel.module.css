@@ -1,0 +1,133 @@
+.panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.toggle:hover,
+.toggle[aria-expanded='true'] {
+  color: var(--thorp-foreground);
+}
+
+.toggleIcon {
+  flex: none;
+  color: var(--thorp-accent-soft);
+  transition: transform 0.16s ease;
+}
+
+.toggle[aria-expanded='true'] .toggleIcon {
+  transform: rotate(180deg);
+}
+
+.toggle:focus-visible,
+.resetAll:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.body {
+  display: grid;
+  gap: 14px;
+  padding-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggleIcon {
+    transition: none;
+  }
+}
+
+.axes {
+  display: grid;
+  gap: 10px;
+}
+
+.note {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.weights {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+}
+
+.weightTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.weightTable th,
+.weightTable td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+}
+
+.weightTable td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.resetAll {
+  padding: 7px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.resetAll:hover {
+  border-color: currentColor;
+}
+
+.violations {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 10px;
+  color: var(--thorp-foreground);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.violations ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}

@@ -1,0 +1,125 @@
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# === Env / Secrets ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# === Logs ===
+*.log
+logs/
+
+# === Node (frontend) ===
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+
+# === Java / Gradle (backend) ===
+.gradle/
+build/
+out/
+bin/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# === Python (worker, data, ai) ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# === Data artifacts (raw data는 커밋하지 않는다) ===
+# 디렉터리 자체를 제외하면 그 안의 파일을 되살릴 수 없으므로 내용만 제외하고
+# .gitkeep을 남긴다. data/tests/test_pipeline_smoke.py가 raw/ 존재를 확인한다.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/
+*.parquet
+*.csv.gz
+
+# === Docker ===
+*.local.yml
+
+# === Infra (운영) ===
+infra/.env.prod
+infra/certbot/
+infra/nginx/html/*
+!infra/nginx/html/.gitkeep
+
+# Claude: 기본적으로 개인 설정 제외
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+
+# Codex: 기본적으로 개인 설정 제외
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+
+# taste-skill 묶음(`npx skills add Leonxlnx/taste-skill`)은 개인 설치라 올리지 않는다.
+# 위 두 예외가 skills/ 아래를 통째로 되살리므로 여기서 이름을 하나씩 도로 제외한다
+# (뒤에 오는 규칙이 이긴다). .claude/skills/ 쪽은 .agents/skills/ 를 가리키는 심링크다.
+# 팀 공용으로 쓰기로 정하면 이 묶음을 지우면 된다.
+skills-lock.json
+.agents/skills/brandkit/
+.claude/skills/brandkit
+.agents/skills/design-taste-frontend/
+.claude/skills/design-taste-frontend
+.agents/skills/design-taste-frontend-v1/
+.claude/skills/design-taste-frontend-v1
+.agents/skills/full-output-enforcement/
+.claude/skills/full-output-enforcement
+.agents/skills/gpt-taste/
+.claude/skills/gpt-taste
+.agents/skills/high-end-visual-design/
+.claude/skills/high-end-visual-design
+.agents/skills/image-to-code/
+.claude/skills/image-to-code
+.agents/skills/imagegen-frontend-mobile/
+.claude/skills/imagegen-frontend-mobile
+.agents/skills/imagegen-frontend-web/
+.claude/skills/imagegen-frontend-web
+.agents/skills/industrial-brutalist-ui/
+.claude/skills/industrial-brutalist-ui
+.agents/skills/minimalist-ui/
+.claude/skills/minimalist-ui
+.agents/skills/redesign-existing-projects/
+.claude/skills/redesign-existing-projects
+.agents/skills/stitch-design-taste/
+.claude/skills/stitch-design-taste
+# AI 에이전트 인계 문서: 로컬 작업 메모라 저장소에 올리지 않는다
+docs/handoffs/
+# Spec 요약 문서: 로컬 이해·인계용 메모라 저장소에 올리지 않는다
+summary/
+
+# 이해를 돕기 위한 개인 학습 메모: 저장소에 올리지 않는다
+notes/
+
+# 요약·정리용 개인 작업 공간: 저장소에 올리지 않는다
+summary/
+
+# 03-load-server.sql 같은 생성물은 커밋하지 않는다. 02-export-local.py 로 언제든 다시 만든다.
+# 5MB가 넘고 로컬 DB 상태에 딸린 값이라 저장소에 두면 곧 실제와 어긋난다.
+data/sql/*-load-server.sql
+
+# graphify 지식 그래프 산출물: 코드에서 언제든 다시 만들 수 있고 graph.json 하나가 45MB다.
+graphify-out/

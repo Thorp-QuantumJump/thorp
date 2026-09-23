@@ -1,0 +1,24 @@
+/* 세로 목록. 왼쪽 단에서 위에서 아래로 훑는다. */
+.list {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+}
+
+.list:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.loading {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.76rem;
+}
+
+.placeholder {
+  height: 58px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 8px;
+  background: var(--thorp-surface-raised);
+}

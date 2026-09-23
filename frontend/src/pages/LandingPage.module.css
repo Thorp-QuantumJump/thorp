@@ -1,0 +1,1317 @@
+.page {
+  --landing-background: var(--thorp-background);
+  --landing-surface: var(--thorp-surface);
+  --landing-surface-strong: var(--thorp-surface-raised);
+  --landing-accent: var(--thorp-accent);
+  --landing-accent-soft: var(--thorp-accent-soft);
+  --landing-text: var(--thorp-foreground);
+  --landing-muted: var(--thorp-copy);
+  --landing-line: var(--thorp-line);
+  --landing-positive: var(--thorp-positive);
+  --landing-negative: var(--thorp-negative);
+  --landing-warning: var(--thorp-warning);
+  --landing-neutral: var(--thorp-neutral);
+  position: relative;
+  height: 100svh;
+  min-height: 100vh;
+  overflow-x: clip;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  background:
+    radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),
+    linear-gradient(180deg, #030806 0%, #050b08 45%, #030806 100%);
+  color: var(--landing-text);
+  font-family: var(--thorp-font-display);
+}
+
+.page::before {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3C/svg%3E");
+  content: '';
+  opacity: 0.035;
+  pointer-events: none;
+}
+
+.landingHeader {
+  position: absolute;
+  z-index: 30;
+  top: clamp(18px, 3vw, 42px);
+  left: 50%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: min(calc(100% - 48px), 1440px);
+  min-height: 62px;
+  padding: 0 10px 0 22px;
+  border: 1px solid rgb(191 221 205 / 14%);
+  border-radius: 13px;
+  background: rgb(4 12 8 / 68%);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 20%);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+}
+
+.wordmark {
+  justify-self: start;
+  color: var(--landing-text);
+  font-size: 1.3rem;
+  font-weight: 720;
+  letter-spacing: -0.055em;
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--landing-accent);
+}
+
+.desktopNavigation {
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 3.2vw, 54px);
+}
+
+.desktopNavigation a,
+.mobileNavigation a {
+  position: relative;
+  color: #a8b5ad;
+  font-size: 0.78rem;
+  font-weight: 540;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.desktopNavigation a::after {
+  position: absolute;
+  right: 0;
+  bottom: -8px;
+  left: 0;
+  height: 1px;
+  background: var(--landing-accent);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 220ms ease;
+}
+
+.desktopNavigation a:hover,
+.mobileNavigation a:hover {
+  color: var(--landing-text);
+}
+
+.desktopNavigation a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.headerCta {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--landing-text);
+  color: var(--thorp-action-foreground);
+  font-size: 0.76rem;
+  font-weight: 680;
+  text-decoration: none;
+  transition: gap 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.headerCta:hover {
+  gap: 13px;
+  background: var(--landing-accent-soft);
+  transform: translateY(-1px);
+}
+
+.menuButton,
+.mobileNavigation {
+  display: none;
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero::before,
+.hero::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+}
+
+.hero::before {
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(3 8 6 / 12%), transparent 32%, rgb(3 8 6 / 38%)),
+    radial-gradient(ellipse at center, transparent 25%, rgb(3 8 6 / 72%) 100%);
+}
+
+.hero::after {
+  right: -12vw;
+  bottom: -38vw;
+  width: 75vw;
+  aspect-ratio: 1;
+  border: 1px solid rgb(3 199 90 / 10%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 11vw rgb(3 199 90 / 2.5%), 0 0 0 22vw rgb(3 199 90 / 1.5%);
+  transform: rotateX(66deg);
+}
+
+.heroFallback,
+.atmosphereCanvas {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.atmosphereCanvas {
+  z-index: -2;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.atmosphereCanvas[data-ready='true'] {
+  opacity: 0.78;
+}
+
+.heroGlow {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  width: min(76vw, 1050px);
+  height: 76%;
+  background:
+    radial-gradient(circle at 50% 30%, rgb(3 199 90 / 22%), transparent 23%),
+    radial-gradient(ellipse at 50% 58%, rgb(3 199 90 / 11%), transparent 54%);
+  filter: blur(25px);
+  transform: translateX(-50%);
+  animation: glowBreath 7s ease-in-out infinite alternate;
+}
+
+.heroChart {
+  position: absolute;
+  right: -3%;
+  bottom: 3%;
+  left: -3%;
+  width: 106%;
+  height: min(53vh, 570px);
+  overflow: visible;
+  filter: drop-shadow(0 0 16px rgb(3 199 90 / 25%));
+  opacity: 0.52;
+}
+
+.heroChart path {
+  fill: none;
+  stroke: url(#landing-chart-gradient);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.heroChart .heroChartGlow {
+  stroke: rgb(3 199 90 / 20%);
+  stroke-width: 13;
+}
+
+.candleField {
+  position: absolute;
+  right: 0;
+  bottom: 13%;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 2vw;
+  padding: 0 2vw;
+  opacity: 0.38;
+}
+
+.candleField span {
+  position: relative;
+  width: clamp(5px, 0.55vw, 9px);
+  height: var(--candle-height);
+  margin-bottom: var(--candle-shift);
+  border: 1px solid rgb(97 238 145 / 68%);
+  background: rgb(3 199 90 / 28%);
+  animation: candlePulse 4s ease-in-out infinite alternate;
+  animation-delay: var(--candle-delay);
+}
+
+.candleField span::before {
+  position: absolute;
+  top: -14px;
+  bottom: -14px;
+  left: 50%;
+  width: 1px;
+  background: rgb(97 238 145 / 46%);
+  content: '';
+  transform: translateX(-50%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: min(100% - 40px, 1100px);
+  padding: clamp(150px, 17vh, 210px) 0 120px;
+  text-align: center;
+}
+
+.eyebrow,
+.sectionHeading > p,
+.algorithmHeader > p {
+  margin: 0;
+  color: var(--landing-accent-soft);
+  font-size: 0.68rem;
+  font-weight: 670;
+  letter-spacing: 0.19em;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 27px;
+}
+
+.eyebrow::before {
+  width: 28px;
+  height: 1px;
+  background: var(--landing-accent);
+  content: '';
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(3.45rem, 7.2vw, 7.1rem);
+  font-weight: 540;
+  letter-spacing: -0.075em;
+  line-height: 0.98;
+}
+
+.hero h1 > span {
+  display: block;
+}
+
+.hero h1 em {
+  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);
+  background-clip: text;
+  color: transparent;
+  font-style: normal;
+  text-shadow: 0 0 42px rgb(3 199 90 / 15%);
+}
+
+.heroDescription {
+  max-width: 530px;
+  margin: 29px 0 0;
+  color: var(--landing-muted);
+  font-size: clamp(0.92rem, 1.25vw, 1.05rem);
+  letter-spacing: -0.025em;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 38px;
+}
+
+.primaryCta,
+.secondaryCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  min-height: 52px;
+  padding: 0 21px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 680;
+  text-decoration: none;
+  transition: gap 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.primaryCta {
+  background: var(--landing-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.secondaryCta {
+  border-color: rgb(210 234 220 / 22%);
+  background: rgb(7 18 12 / 64%);
+  color: var(--landing-text);
+  cursor: pointer;
+}
+
+.primaryCta:hover,
+.secondaryCta:hover {
+  gap: 16px;
+  transform: translateY(-2px);
+}
+
+.primaryCta:hover {
+  background: #56e889;
+}
+
+.secondaryCta:hover {
+  border-color: rgb(134 242 168 / 48%);
+  background: rgb(14 34 23 / 88%);
+}
+
+.heroFootnote {
+  position: absolute;
+  right: clamp(24px, 4vw, 68px);
+  bottom: 28px;
+  left: clamp(24px, 4vw, 68px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #647269;
+  font-size: 0.59rem;
+  letter-spacing: 0.16em;
+}
+
+.heroFootnote::before {
+  position: absolute;
+  right: 160px;
+  left: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(160 190 173 / 15%), transparent);
+  content: '';
+}
+
+.storyFlow {
+  position: relative;
+  background:
+    radial-gradient(circle at 13% 22%, rgb(3 199 90 / 7%), transparent 22rem),
+    radial-gradient(circle at 88% 63%, rgb(3 199 90 / 5%), transparent 24rem),
+    var(--landing-background);
+}
+
+.storySection {
+  position: relative;
+  display: grid;
+  width: min(100%, 1600px);
+  min-height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  margin: 0 auto;
+  padding: clamp(96px, 12vh, 150px) clamp(24px, 5vw, 86px);
+  border-bottom: 1px solid var(--landing-line);
+}
+
+.storySection::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(transparent, var(--landing-line) 20%, var(--landing-line) 80%, transparent);
+  content: '';
+}
+
+.marketSection {
+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);
+}
+
+.marketSection::before {
+  left: 33.5%;
+}
+
+/*
+  **이 섹션은 한 칸을 넘지 않는다고 못 박는다.** `min-height`로 두면 안의 것이 커질 때 섹션이
+  따라 늘어나 스크롤이 한 번 더 생기는데, 스냅으로 넘기는 구성에서는 그 한 번이 '끝인 줄 알았는데
+  더 있는' 어긋남으로 겪힌다. 키를 고정하고, 모자랄 때 줄어들 몫은 차트에만 준다.
+*/
+.backtestSection .sectionHeading h2 {
+  font-size: clamp(2.2rem, 3.6vw, 4rem);
+}
+
+.backtestSection {
+  grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);
+  height: 100svh;
+  padding-top: clamp(64px, 8vh, 104px);
+  padding-bottom: clamp(64px, 8vh, 104px);
+}
+
+.backtestSection::before {
+  right: 31%;
+}
+
+/*
+  섹션 번호와 '다음으로' 화살표가 함께 서는 옆 여백. 번호는 가운데, 화살표는 맨 아래다 —
+  다음이 있다는 신호는 내려갈 방향인 아래쪽에 있어야 읽힌다.
+*/
+.sectionAside {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  align-self: stretch;
+  gap: 18px;
+}
+
+.marketSection .sectionAside {
+  justify-self: start;
+}
+
+.backtestSection .sectionAside {
+  justify-self: end;
+}
+
+.sectionNumber {
+  color: #536158;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+}
+
+.nextSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgb(3 199 90 / 55%);
+  border-radius: 50%;
+  background: rgb(3 199 90 / 12%);
+  box-shadow: 0 0 0 6px rgb(3 199 90 / 6%);
+  color: var(--landing-accent-soft);
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.nextSection:hover {
+  border-color: var(--landing-accent);
+  background: rgb(3 199 90 / 22%);
+  box-shadow: 0 0 0 9px rgb(3 199 90 / 10%);
+  color: var(--landing-accent);
+}
+
+.nextSection:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: 3px;
+}
+
+.marketContent {
+  align-self: center;
+  min-width: 0;
+}
+
+/*
+  **차트가 남는 높이를 받아 가게 둔다.** 차트에 높이 하한을 박아 두었더니 제목·지표·버튼을 더한
+  키가 화면보다 커져서, 한 칸으로 붙어야 할 섹션이 두 번 굴러야 끝났다. 고정 높이를 정해 두면
+  화면 높이가 조금만 달라져도 다시 어긋나므로, 정해진 것들을 먼저 놓고 나머지를 차트에 준다.
+*/
+.backtestContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 글과 버튼은 줄이지 않는다 — 줄이면 글자가 서로 겹치거나 잘린다. */
+.backtestContent > .sectionHeading,
+.backtestContent > .textCta {
+  flex: 0 0 auto;
+}
+
+.marketContent {
+  padding-left: clamp(38px, 5vw, 88px);
+}
+
+.backtestContent {
+  padding-right: clamp(38px, 5vw, 88px);
+}
+
+.sectionHeading {
+  position: relative;
+  padding-left: 46px;
+}
+
+.sectionHeading > svg {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  color: var(--landing-accent);
+}
+
+.sectionHeading h2,
+.algorithmHeader h2 {
+  margin: 16px 0 20px;
+  color: var(--landing-text);
+  font-size: clamp(2.55rem, 4.4vw, 4.9rem);
+  font-weight: 520;
+  letter-spacing: -0.065em;
+  line-height: 1.04;
+}
+
+.sectionHeading > span,
+.algorithmHeader > span {
+  display: block;
+  max-width: 650px;
+  color: var(--landing-muted);
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.conveyorViewport {
+  width: 100%;
+  margin: clamp(50px, 7vh, 76px) 0 34px;
+  overflow: hidden;
+  border-top: 1px solid var(--landing-line);
+  border-bottom: 1px solid var(--landing-line);
+  outline: none;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.conveyorViewport:focus-visible {
+  box-shadow: inset 0 0 0 2px rgb(3 199 90 / 55%);
+}
+
+.conveyorTrack {
+  display: flex;
+  width: max-content;
+  animation: conveyorMove 38s linear infinite;
+}
+
+.conveyorGroup {
+  display: flex;
+}
+
+.indicatorItem {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 120px;
+  gap: 24px;
+  width: clamp(330px, 29vw, 430px);
+  min-height: 168px;
+  padding: 24px 27px;
+  border-right: 1px solid var(--landing-line);
+  background: rgb(8 18 12 / 44%);
+}
+
+.indicatorItem:first-child {
+  border-left: 1px solid var(--landing-line);
+}
+
+.indicatorMeta,
+.indicatorReading {
+  display: flex;
+  flex-direction: column;
+}
+
+.indicatorMeta {
+  gap: 5px;
+}
+
+.indicatorMeta > span {
+  overflow: hidden;
+  color: #dbe6df;
+  font-size: 0.72rem;
+  font-weight: 670;
+  letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indicatorMeta small {
+  overflow: hidden;
+  color: #68766d;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indicatorItem[data-status='live'] .indicatorMeta small {
+  color: var(--landing-accent-soft);
+}
+
+.indicatorItem[data-status='stale'] .indicatorMeta small {
+  color: var(--landing-warning);
+}
+
+.indicatorItem[data-status='error'] .indicatorMeta small {
+  color: var(--landing-negative);
+}
+
+.indicatorReading {
+  grid-column: 1;
+  gap: 5px;
+  align-self: end;
+}
+
+.indicatorReading strong {
+  font-size: 1.52rem;
+  font-weight: 610;
+  letter-spacing: -0.045em;
+}
+
+.indicatorReading span {
+  color: var(--indicator-tone);
+  font-size: 0.66rem;
+  font-weight: 630;
+}
+
+.indicatorItem svg {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  width: 100%;
+  overflow: visible;
+}
+
+.indicatorItem svg line {
+  stroke: rgb(160 190 173 / 11%);
+  stroke-width: 1;
+}
+
+.indicatorItem svg polyline {
+  fill: none;
+  stroke: var(--indicator-tone);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.textCta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 720px);
+  padding: 18px 0;
+  border-top: 1px solid var(--landing-line);
+  border-bottom: 1px solid var(--landing-line);
+  color: var(--landing-text);
+  font-size: 0.83rem;
+  font-weight: 620;
+  text-decoration: none;
+  transition: color 180ms ease, padding 180ms ease;
+}
+
+.textCta:hover {
+  padding-right: 9px;
+  color: var(--landing-accent-soft);
+}
+
+.backtestVisual {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: clamp(22px, 3vh, 40px) 0 clamp(18px, 2.5vh, 28px);
+  border-top: 1px solid var(--landing-line);
+  border-bottom: 1px solid var(--landing-line);
+  background:
+    linear-gradient(90deg, rgb(3 199 90 / 4%), transparent 42%),
+    rgb(6 14 9 / 42%);
+}
+
+/*
+  **차트 키는 화면 높이가 정한다.** viewBox 비율(1000×390)대로 두면 폭의 39%가 키가 되어,
+  넓은 화면일수록 차트가 커지면서 제목·지표·버튼을 더한 섹션이 한 칸을 넘어 한 번 더 굴러야
+  했다. 가로로는 늘어나되 세로로는 화면에 맞추도록 키를 따로 정한다.
+*/
+.backtestVisual > svg {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 120px;
+  max-height: 340px;
+}
+
+.chartGrid {
+  stroke: rgb(160 190 173 / 9%);
+  stroke-dasharray: 3 8;
+}
+
+.comparisonPath,
+.resultPath,
+.resultPathGlow {
+  fill: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+
+.comparisonPath {
+  stroke: #839087;
+  stroke-width: 1.25;
+}
+
+.resultPath {
+  stroke: var(--landing-accent);
+  stroke-width: 2.75;
+}
+
+.resultPathGlow {
+  stroke: rgb(3 199 90 / 22%);
+  stroke-width: 15;
+  filter: blur(3px);
+}
+
+.algorithmSection {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  min-height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding: clamp(72px, 8vh, 92px) clamp(18px, 5vw, 72px) 36px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.algorithmSection::before {
+  position: absolute;
+  z-index: -1;
+  top: 22%;
+  left: 50%;
+  width: min(92vw, 1280px);
+  aspect-ratio: 2.2;
+  border: 1px solid rgb(3 199 90 / 13%);
+  border-radius: 50%;
+  box-shadow: 0 0 100px rgb(3 199 90 / 7%);
+  content: '';
+  transform: translateX(-50%) rotateX(65deg);
+}
+
+.algorithmHeader {
+  position: relative;
+  z-index: 4;
+  max-width: 860px;
+  text-align: center;
+}
+
+.algorithmHeader > span {
+  margin: 0 auto;
+}
+
+.orbitStage {
+  position: relative;
+  width: min(100%, 1320px);
+  height: clamp(350px, 38vw, 430px);
+  margin-top: 8px;
+  outline: none;
+  perspective: 1250px;
+  perspective-origin: 50% 28%;
+  touch-action: pan-y;
+  transform-style: preserve-3d;
+}
+
+.orbitStage:focus-visible {
+  box-shadow: inset 0 0 0 1px rgb(3 199 90 / 58%);
+}
+
+/* 등록표를 부르는 동안과 부르지 못했을 때 자리를 채운다. 값을 지어내지 않고 상태를 말한다. */
+.orbitNotice {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: #8b9a91;
+  font-size: 0.82rem;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.orbitNotice p {
+  margin: 0;
+}
+
+.orbitNotice button {
+  padding: 8px 18px;
+  border: 1px solid var(--landing-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--landing-accent-soft);
+  font: inherit;
+  cursor: pointer;
+}
+
+.orbitNotice button:hover {
+  border-color: var(--landing-accent-soft);
+}
+
+.orbitFloor {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  width: min(76vw, 900px);
+  height: 220px;
+  border: 1px solid rgb(160 190 173 / 12%);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(ellipse, transparent 0 34px, rgb(3 199 90 / 3%) 35px 36px),
+    radial-gradient(ellipse, rgb(3 199 90 / 8%), transparent 68%);
+  box-shadow: inset 0 0 72px rgb(3 199 90 / 3%);
+  transform: translate(-50%, -50%) rotateX(66deg);
+}
+
+.algorithmCard {
+  position: absolute;
+  top: 23%;
+  left: calc(50% - min(29vw, 150px));
+  display: flex;
+  flex-direction: column;
+  width: min(58vw, 300px);
+  min-height: 236px;
+  padding: 16px;
+  border: 1px solid rgb(178 210 192 / 17%);
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgb(16 31 22 / 96%), rgb(5 14 9 / 98%)),
+    var(--landing-surface-strong);
+  box-shadow: 0 28px 70px rgb(0 0 0 / 52%);
+  transform-origin: center center;
+  transform-style: preserve-3d;
+}
+
+.algorithmCard[data-selected='true'] {
+  border-color: rgb(92 231 136 / 38%);
+  box-shadow: 0 30px 85px rgb(0 0 0 / 56%), 0 0 50px rgb(3 199 90 / 9%);
+}
+
+.cardIndex {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 40px;
+  border-bottom: 1px solid var(--landing-line);
+  color: #6f7e74;
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+}
+
+.cardIndex span:first-child {
+  color: var(--landing-accent);
+  font-size: 0.68rem;
+  font-weight: 670;
+}
+
+.cardIndex span:last-child {
+  max-width: 68%;
+  text-align: right;
+}
+
+.algorithmCard > div:nth-child(2) {
+  flex: 1;
+  padding: 13px 0 12px;
+}
+
+.algorithmCard > div:nth-child(2) p {
+  margin: 0 0 5px;
+  color: #69786e;
+  font-size: 0.49rem;
+  letter-spacing: 0.15em;
+}
+
+.algorithmCard h3 {
+  margin: 0 0 8px;
+  color: var(--landing-text);
+  font-size: clamp(1.05rem, 1.45vw, 1.2rem);
+  font-weight: 570;
+  letter-spacing: -0.045em;
+}
+
+.algorithmCard > div:nth-child(2) > span {
+  display: block;
+  max-width: 330px;
+  color: #8b9990;
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.algorithmCard > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--landing-accent);
+  color: var(--thorp-action-foreground);
+  font-size: 0.61rem;
+  font-weight: 680;
+  text-decoration: none;
+  transition: background 180ms ease;
+}
+
+.algorithmCard > a:hover {
+  background: var(--landing-accent-soft);
+}
+
+.cardSelectButton {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wordmark:focus-visible,
+.desktopNavigation a:focus-visible,
+.headerCta:focus-visible,
+.mobileNavigation a:focus-visible,
+.primaryCta:focus-visible,
+.secondaryCta:focus-visible,
+.textCta:focus-visible,
+.algorithmCard > a:focus-visible,
+.cardSelectButton:focus-visible,
+.menuButton:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-wide);
+}
+
+@keyframes glowBreath {
+  from {
+    opacity: 0.58;
+    transform: translateX(-50%) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.06);
+  }
+}
+
+@keyframes candlePulse {
+  from {
+    opacity: 0.54;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes conveyorMove {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 1100px) {
+  .landingHeader {
+    width: calc(100% - 32px);
+  }
+
+  .marketSection,
+  .backtestSection {
+    grid-template-columns: minmax(130px, 0.22fr) minmax(0, 0.78fr);
+  }
+
+  .marketSection::before {
+    left: 21.5%;
+  }
+
+  .backtestSection {
+    grid-template-columns: minmax(0, 0.78fr) minmax(130px, 0.22fr);
+  }
+
+  .backtestSection::before {
+    right: 21.5%;
+  }
+
+  .marketContent {
+    padding-left: 42px;
+  }
+
+  .backtestContent {
+    padding-right: 42px;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    scroll-snap-type: none;
+  }
+
+  .hero,
+  .storySection,
+  .algorithmSection {
+    scroll-snap-align: none;
+  }
+
+  .landingHeader {
+    grid-template-columns: 1fr auto;
+    min-height: 56px;
+    padding: 0 8px 0 17px;
+  }
+
+  .desktopNavigation,
+  .headerCta {
+    display: none;
+  }
+
+  .menuButton {
+    display: grid;
+    width: 40px;
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 8px;
+    background: rgb(255 255 255 / 6%);
+    color: var(--landing-text);
+    cursor: pointer;
+    place-items: center;
+  }
+
+  .mobileNavigation {
+    position: absolute;
+    top: calc(100% + 9px);
+    right: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    border: 1px solid var(--landing-line);
+    border-radius: 10px;
+    background: rgb(5 14 9 / 96%);
+    box-shadow: 0 20px 55px rgb(0 0 0 / 45%);
+  }
+
+  .mobileNavigation a {
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--landing-line);
+  }
+
+  .mobileNavigation a:last-child {
+    border-bottom: 0;
+    color: var(--landing-accent-soft);
+  }
+
+  .heroContent {
+    width: min(100% - 28px, 610px);
+  }
+
+  .hero h1 {
+    font-size: clamp(3.2rem, 12.8vw, 5rem);
+    line-height: 1.01;
+  }
+
+  .heroDescription {
+    max-width: 330px;
+    line-height: 1.65;
+  }
+
+  .heroActions {
+    flex-direction: column;
+    width: min(100%, 310px);
+  }
+
+  .primaryCta,
+  .secondaryCta {
+    width: 100%;
+  }
+
+  .heroFootnote::before,
+  .sectionAside,
+  .storySection::before {
+    display: none;
+  }
+
+  .storySection {
+    display: block;
+    min-height: auto;
+    padding: 100px 20px;
+  }
+
+  .marketContent,
+  .backtestContent {
+    padding: 0;
+  }
+
+  .backtestSection {
+    height: auto;
+  }
+
+  .backtestContent,
+  .backtestVisual {
+    display: block;
+    min-height: auto;
+  }
+
+  .backtestVisual > svg {
+    height: auto;
+    min-height: 240px;
+  }
+
+  .sectionHeading {
+    padding-left: 0;
+  }
+
+  .sectionHeading > svg {
+    position: static;
+    margin-bottom: 16px;
+  }
+
+  .sectionHeading h2,
+  .algorithmHeader h2 {
+    font-size: clamp(2.5rem, 11vw, 3.7rem);
+  }
+
+  .conveyorViewport {
+    margin-top: 43px;
+    overflow-x: auto;
+    mask-image: none;
+    scrollbar-width: thin;
+  }
+
+  .conveyorTrack {
+    animation: none;
+  }
+
+  .indicatorItem {
+    grid-template-columns: minmax(132px, 1fr) 92px;
+    width: min(86vw, 350px);
+    min-height: 150px;
+    padding: 20px;
+  }
+
+  .backtestVisual > svg {
+    min-height: 230px;
+  }
+
+  .algorithmSection {
+    min-height: 720px;
+    padding: 70px 12px 40px;
+  }
+
+  .algorithmHeader {
+    padding: 0 8px;
+  }
+
+  .orbitStage {
+    height: 360px;
+    margin-top: 8px;
+    perspective: 900px;
+  }
+
+  .orbitFloor {
+    top: 50%;
+    width: 105vw;
+  }
+
+  .algorithmCard {
+    top: 22%;
+    left: calc(50% - min(35vw, 130px));
+    width: min(70vw, 260px);
+    min-height: 235px;
+    padding: 14px;
+  }
+
+  .cardIndex {
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 430px) {
+  .landingHeader {
+    top: 12px;
+    width: calc(100% - 22px);
+  }
+
+  .heroContent {
+    padding-top: 118px;
+  }
+
+  .hero h1 {
+    font-size: 2.72rem;
+  }
+
+  .eyebrow {
+    font-size: 0.58rem;
+  }
+
+  .heroFootnote {
+    right: 18px;
+    left: 18px;
+  }
+
+  .sectionHeading h2,
+  .algorithmHeader h2 {
+    font-size: 2.55rem;
+  }
+
+  .algorithmCard {
+    left: calc(50% - min(36vw, 125px));
+    width: min(72vw, 250px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    scroll-behavior: auto;
+  }
+
+  .atmosphereCanvas {
+    display: none;
+  }
+
+  .heroGlow,
+  .candleField span,
+  .conveyorTrack {
+    animation: none;
+  }
+
+  .conveyorTrack {
+    transform: none;
+  }
+
+  .conveyorViewport {
+    overflow-x: auto;
+    mask-image: none;
+  }
+
+  .headerCta,
+  .desktopNavigation a::after,
+  .primaryCta,
+  .secondaryCta,
+  .textCta,
+  .algorithmCard > a {
+    transition: none;
+  }
+}

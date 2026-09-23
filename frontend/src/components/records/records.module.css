@@ -1,0 +1,409 @@
+/* 내 기록 목록·필터·펼쳐 보는 층이 함께 쓰는 모양. 카드보다 얇은 선과 간격으로 묶는다(design-system §1). */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  padding: 18px 0 22px;
+  border-bottom: 1px solid var(--thorp-line-strong);
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.group legend,
+.group > label:not(.check) {
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 0;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--thorp-foreground);
+  font-size: 0.85rem;
+}
+
+.group select,
+.group input[type='date'] {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 5px;
+  color: var(--thorp-foreground);
+  background: var(--thorp-surface);
+  font: inherit;
+}
+
+.group select:focus-visible,
+.group input:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.hint {
+  width: 100%;
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.row:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--thorp-accent-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.name {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* 상태는 성과와 다른 자리다(FR-014). 색만으로 뜻을 전하지 않고 글자가 함께 있다. */
+.status {
+  padding: 2px 8px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+}
+
+.status[data-status='FAILED'],
+.status[data-status='CANCELLED'],
+.status[data-status='WITHDRAWN'] {
+  border-color: var(--thorp-negative);
+  color: var(--thorp-negative);
+}
+
+.status[data-status='RUNNING'],
+.status[data-status='PARTIAL'],
+.status[data-status='NEAREST_ONLY'],
+.status[data-status='NOT_COMPUTABLE'] {
+  border-color: var(--thorp-warning);
+  color: var(--thorp-warning);
+}
+
+.reason {
+  color: var(--thorp-copy);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+}
+
+.facts dt {
+  color: var(--thorp-muted);
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--thorp-foreground);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: 1px 8px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 10px;
+  background: var(--thorp-surface);
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panelTitle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.versions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px 18px;
+  margin: 0;
+}
+
+.versions > div {
+  display: flex;
+  gap: 8px;
+}
+
+.versions dt {
+  color: var(--thorp-muted);
+}
+
+.versions dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--thorp-warning);
+  color: var(--thorp-foreground);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.alert {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.alert p {
+  margin: 0;
+  color: var(--thorp-negative);
+}
+
+.origin {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.origin p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .facts {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* 탐색 묶음 후보 표. 007 화면의 표를 옮긴 것이 아니라 상태·사유만 보이는 축약판이다. */
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table caption {
+  padding: 0 0 6px;
+  color: var(--thorp-muted);
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--thorp-muted);
+  font-weight: 600;
+}
+
+/* --- '더 보기' 메뉴와 대화상자 (spec 006 FR-021, T045·T048) --- */
+
+/* 행의 버튼 줄인 .actions 와 이름이 겹치지 않게 둔다 — 같은 모듈의 같은 이름은 양쪽에 다 붙는다. */
+.menuAnchor {
+  position: relative;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border, #d4d4d8);
+  border-radius: 0.375rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border, #d4d4d8);
+  border-radius: 0.5rem;
+  background: var(--background, #fff);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+}
+
+.menu > a,
+.menu > button,
+.menu > span {
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu > [aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menuReason {
+  margin: 0;
+  padding: 0 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.dialog {
+  /* 화면 가운데에 띄운다. 이 요소가 position:relative 인 .menuAnchor 안에 있어서, 자리를 정해
+     주지 않으면 그 버튼 기준으로 배치돼 왼쪽 위에 붙는다. fixed 라야 뷰포트 기준이 된다. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  padding: 0;
+  border: 1px solid var(--border, #d4d4d8);
+  border-radius: 0.75rem;
+  background: var(--background, #fff);
+  color: inherit;
+}
+
+/* showModal 로 열어야 이 배경이 생긴다. 뒤의 메뉴·목록이 비쳐 보이지 않게 덮는다. */
+.dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+}
+
+.dialogNote {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.dialogError {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* 비어 있어도 라이브 영역은 살아 있어야 한다. 자리만 차지하지 않게 감춘다. */
+.status:empty {
+  display: none;
+}

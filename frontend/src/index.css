@@ -1,0 +1,298 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+/* shadcn과 Bklit이 공유하는 색상·크기 디자인 토큰을 정의한다. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: dark;
+  font-size: 17px;
+  font-family: var(--thorp-font-body);
+  line-height: 1.5;
+  /* 브랜드 원색은 테마와 무관하며, 컴포넌트는 아래 의미 토큰을 사용한다. */
+  --thorp-brand-primary: rgb(3 199 90);
+  --thorp-brand-soft: #86f2a8;
+  /* SUIT Variable은 index.html이 CDN에서 받는다. 뒤는 못 받았을 때 대신 설 글꼴이다. */
+  --thorp-font-body: 'SUIT Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --thorp-font-display: 'Geist Variable', var(--thorp-font-body);
+  --thorp-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  /*
+    본문이 앉는 자리. **화면마다 따로 정하지 않는다** — 값을 각 페이지에 적어 두었더니 폭이 아홉
+    가지(720·760·880·960·1080·1320·1400·1440·1520)로 갈라졌고, 한 흐름 안에서도 단계를 넘을
+    때마다 본문이 좁아졌다 넓어졌다 했다. 화면을 옮겼는데 글이 있는 자리가 바뀌면 사용자는 같은
+    서비스가 아닌 것처럼 겪는다.
+
+    폭은 섹터 고르기 화면을 기준으로 삼았다. 좁은 쪽에 맞추면 넓은 화면에서 양옆이 크게 비고,
+    읽을 것이 가운데 떠 있는 것처럼 보인다.
+  */
+  --thorp-page-width: 960px;
+  --thorp-page-gutter: 40px;
+  --thorp-page-top: clamp(30px, 5vh, 56px);
+  --thorp-page-bottom: 80px;
+  /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */
+  --thorp-background: #030805;
+  /*
+    배경 위의 층은 색조가 아니라 **밝기**로 갈린다. 예전 값은 배경과 카드의 명암비가 1.05:1이라
+    카드가 어디서 시작하는지 눈으로 잡히지 않았다 — 초록 기운은 있는데 경계가 없는 상태였다.
+
+    경계는 테두리(조작 요소 3.08:1)가 지므로 바탕은 거들기만 하면 된다. 한 번 1.23:1까지
+    올려 봤더니 카드가 배경에서 너무 떠올라 목록이 시끄러웠다. 배경을 가장 어두운 기준점으로
+    두고 카드(surface)는 1.13:1, 한 단 위(surface-raised)는 1.25:1 정도로만 벌린다.
+  */
+  --thorp-surface: #0e1a13;
+  --thorp-surface-raised: #13251a;
+  --thorp-surface-muted: #111f17;
+  --thorp-foreground: #f2f7f3;
+  --thorp-copy: #a6b5ab;
+  --thorp-muted: #718278;
+  --thorp-line: rgb(134 242 168 / 18%);
+  --thorp-line-strong: rgb(134 242 168 / 30%);
+  /*
+    누를 수 있는 것의 테두리는 나누는 선과 기준이 다르다. WCAG 1.4.11은 조작 요소의 경계에
+    3:1을 요구하는데, line/line-strong은 구분선을 위한 값이라 거기까지 올리면 화면 전체가
+    선으로 시끄러워진다. 그래서 조작 요소 전용으로 따로 둔다 — control은 카드 바탕 대비
+    3.08:1, hover는 5.15:1이다. 고름(accent 7.34:1)과 초점(accent-soft 11.9:1)이 그 위에 선다.
+  */
+  --thorp-line-control: rgb(134 242 168 / 40%);
+  --thorp-line-control-hover: rgb(134 242 168 / 60%);
+  --thorp-accent: var(--thorp-brand-primary);
+  --thorp-accent-soft: var(--thorp-brand-soft);
+  --thorp-accent-muted: rgb(3 199 90 / 12%);
+  --thorp-action-foreground: #021108;
+  --thorp-positive: #63dc8a;
+  --thorp-negative: #ef8a68;
+  --thorp-warning: #e8bd72;
+  --thorp-neutral: #8fa198;
+  /* 순검정 대신 배경 색조로 틴트한다. 배경이 L* 1.8이라 깊이를 만들지는 못하고, 색이 어긋나지 않게만 한다. */
+  --thorp-shadow: 0 22px 58px rgb(1 5 3 / 42%);
+  --thorp-focus-outline: 3px solid rgb(3 199 90 / 30%);
+  --thorp-focus-outline-compact: 2px solid var(--thorp-accent-soft);
+  --thorp-focus-offset: 3px;
+  --thorp-focus-offset-compact: 2px;
+  --thorp-focus-offset-wide: 4px;
+  --thorp-focus-shadow: 0 0 0 3px rgb(3 199 90 / 28%);
+  --thorp-focus-shadow-subtle: 0 0 0 3px rgb(3 199 90 / 16%);
+  --background: var(--thorp-background);
+  --foreground: var(--thorp-foreground);
+  --card: var(--thorp-surface-raised);
+  --card-foreground: var(--thorp-foreground);
+  --popover: var(--thorp-surface-raised);
+  --popover-foreground: var(--thorp-foreground);
+  --primary: var(--thorp-accent);
+  --primary-foreground: var(--thorp-action-foreground);
+  --secondary: var(--thorp-surface-muted);
+  --secondary-foreground: var(--thorp-foreground);
+  --muted: var(--thorp-surface-muted);
+  --muted-foreground: var(--thorp-copy);
+  --accent: var(--thorp-accent-muted);
+  --accent-foreground: var(--thorp-accent-soft);
+  --destructive: var(--thorp-negative);
+  --border: var(--thorp-line);
+  --input: var(--thorp-line-strong);
+  --ring: var(--thorp-accent);
+  --chart-1: var(--thorp-accent);
+  --chart-2: #70d6b0;
+  --chart-3: #8cb8a0;
+  --chart-4: var(--thorp-warning);
+  --chart-5: var(--thorp-negative);
+  --radius: 0.625rem;
+  --sidebar: var(--thorp-surface);
+  --sidebar-foreground: var(--thorp-foreground);
+  --sidebar-primary: var(--thorp-accent);
+  --sidebar-primary-foreground: var(--thorp-action-foreground);
+  --sidebar-accent: var(--thorp-accent-muted);
+  --sidebar-accent-foreground: var(--thorp-accent-soft);
+  --sidebar-border: var(--thorp-line);
+  --sidebar-ring: var(--thorp-accent);
+  --chart-background: var(--thorp-background);
+  --chart-foreground: var(--thorp-foreground);
+  --chart-foreground-muted: var(--thorp-muted);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: var(--thorp-accent-soft);
+  /* 격자는 배경 위에 직접 그려진다. line이 올라간 만큼 따라 굵어지지 않게 예전 값에 묶어 둔다. */
+  --chart-grid: rgb(134 242 168 / 12%);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: rgb(20 35 26 / 94%);
+  --chart-tooltip-foreground: var(--thorp-foreground);
+  --chart-tooltip-muted: var(--thorp-copy);
+  --chart-marker-background: var(--thorp-surface-muted);
+  --chart-marker-border: var(--thorp-line-strong);
+  --chart-marker-foreground: var(--thorp-foreground);
+  --chart-label: var(--thorp-copy);
+  --chart-scale-01: #07110b;
+  --chart-scale-02: #0c1c13;
+  --chart-scale-03: #13301f;
+  --chart-scale-04: #1b4b2e;
+  --chart-scale-05: #267442;
+  --chart-scale-pattern-color: #0a160f;
+}
+
+/*
+  좁은 화면의 본문 여백. 분기점도 한 곳에서 정한다 — 화면마다 560·600·720px로 갈라져 있어서,
+  창을 줄이는 동안 화면끼리 서로 다른 지점에서 여백이 바뀌었다.
+*/
+@media (max-width: 600px) {
+  :root {
+    --thorp-page-gutter: 28px;
+    --thorp-page-top: 24px;
+  }
+}
+
+html {
+  /* 동적으로 내용이 늘어나도 가운데 정렬된 화면이 스크롤바 너비만큼 흔들리지 않게 한다. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--thorp-background);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* CSS 변수를 Tailwind 유틸리티에서 사용할 수 있는 테마 값으로 연결한다. */
+@theme inline {
+  --font-heading: var(--thorp-font-display);
+  --font-sans: var(--thorp-font-body);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* shadcn의 dark variant 호환 클래스는 루트의 Thorp 의미 토큰을 그대로 상속한다. */
+.dark {
+  color-scheme: dark;
+}
+
+/* Tailwind 기반 기본 요소에 공통 테두리와 색상 토큰을 적용한다. */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/*
+  배우기 예시 덮어쓰기 확인 대화상자다(002 FR-012).
+
+  `radix-ui`의 `AlertDialog`는 포털로 `body` 아래에 그려지므로 화면의 CSS 모듈 범위가 닿지
+  않는다. 그래서 이 한 곳에 전역으로 둔다. 문구가 아니라 자리와 층위를 정하는 규칙이다.
+*/
+[data-slot='overwrite-overlay'] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(3 8 5 / 72%);
+}
+
+[data-slot='overwrite-dialog'] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100% - 32px, 420px);
+  padding: 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background: var(--thorp-surface-raised);
+  box-shadow: var(--thorp-shadow);
+  color: var(--thorp-foreground);
+}
+
+[data-slot='overwrite-dialog'] h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+[data-slot='overwrite-dialog'] p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* 좁은 화면에서 두 선택지가 한 줄에 눌려 넘치지 않게 감싼다. */
+[data-slot='overwrite-actions'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+[data-slot='overwrite-cancel'],
+[data-slot='overwrite-confirm'] {
+  padding: 9px 18px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+[data-slot='overwrite-confirm'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}

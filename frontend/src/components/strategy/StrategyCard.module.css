@@ -1,0 +1,128 @@
+/* 왼쪽 목록의 항목 하나. 빠르게 훑는 자리라 높이를 낮게 잡는다. */
+.card {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 8px;
+  background: var(--thorp-surface);
+  cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+/* 라디오 표시. 선택 상태를 색 말고 모양으로도 알린다. */
+.indicator {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 50%;
+  background: var(--thorp-surface);
+  box-shadow: inset 0 0 0 3px var(--thorp-surface);
+}
+
+.body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.card:hover[data-selectable='true'] {
+  border-color: var(--thorp-accent-soft);
+  background: var(--thorp-surface-raised);
+}
+
+.card:hover[data-selectable='true'] .indicator {
+  border-color: var(--thorp-accent-soft);
+}
+
+.card:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.card[data-selected='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+.card[data-selected='true'] .indicator {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+}
+
+/*
+  고를 수 없는 항목. **글자를 흐리게 지우지 않는다** — 왜 고를 수 없는지 읽어야 하는 사람이
+  바로 이 항목을 보는 사람이다. 표시는 라디오의 점선과 테두리로만 하고 본문 대비는 남긴다.
+*/
+.card[data-selectable='false'] {
+  cursor: not-allowed;
+  border-style: dashed;
+  background: var(--thorp-surface);
+}
+
+.card[data-selectable='false'] .indicator {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.card[data-selectable='false'] .name {
+  color: var(--thorp-copy);
+}
+
+/*
+  고른 뒤에 막힌 항목. 최소 평가 기간을 바꾸면 이런 상태가 된다. **고른 사실을 지우지 않는다** —
+  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 오른쪽 단이 무엇을 말하고 있는지도 흐려진다.
+  막혔다는 것은 점선 테두리와 사유 문장이 맡는다.
+*/
+.card[data-selected='true'][data-selectable='false'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted);
+}
+
+.card[data-selected='true'][data-selectable='false'] .indicator {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent);
+}
+
+.name {
+  color: var(--thorp-foreground);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.description {
+  color: var(--thorp-copy);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.notice {
+  display: grid;
+  gap: 2px;
+  margin-top: 1px;
+}
+
+/* 사유 문장. 딱지 없이 문장만 두되 왼쪽 선으로 본문과 가른다. */
+.reason {
+  padding-left: 7px;
+  border-left: 2px solid var(--thorp-warning);
+  color: var(--thorp-copy);
+  font-size: 0.71rem;
+  line-height: 1.45;
+}
+
+.card[data-warmup='reduced'] .reason[data-kind='warmup'],
+.card[data-warmup='unknown'] .reason[data-kind='warmup'] {
+  border-left-color: var(--thorp-line-strong);
+}

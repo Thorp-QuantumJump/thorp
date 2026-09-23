@@ -1,0 +1,138 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '7.0.2'
+}
+
+group = 'com.ssafy.thorp'
+version = '0.1.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Boot 3.5.4 BOM이 고정하는 Testcontainers 1.21.3은 Docker Engine 29에 붙지 못한다.
+// Docker API 요청이 400으로 거부되어 Docker가 없는 것으로 판정되고, 컨테이너를 쓰는
+// 테스트가 조용히 전부 건너뛰어진다. 1.21.4에서 고쳐졌으므로 BOM 값을 덮어쓴다.
+// Boot BOM이 1.21.4 이상을 관리하게 되면 이 줄을 지운다.
+ext['testcontainers.version'] = '1.21.4'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.session:spring-session-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.kafka:spring-kafka' // 설치만. Job 전달은 RabbitMQ(starter-amqp)
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    // 운영 스키마는 Flyway가 관리한다 (prod 프로필). 버전은 Spring Boot BOM이 결정한다.
+    // Flyway 10부터 DB별 지원이 모듈로 분리되어 PostgreSQL 모듈을 명시해야 한다.
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // 테스트도 운영과 같은 PostgreSQL(Testcontainers)에서 돌기 때문에 테스트 런타임에도 이 드라이버를 쓴다.
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
+    // 통합 테스트용 컨테이너. 버전은 Boot BOM이 관리한다.
+    // DB는 운영과 같은 PostgreSQL만 쓴다. 인메모리 DB를 두면 jsonb·시퀀스처럼
+    // 방언이 갈리는 부분을 검증하지 못해 운영에서만 터지는 스키마 불일치가 남는다.
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:rabbitmq'
+    testImplementation 'org.testcontainers:postgresql'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// 코드 컨벤션: google-java-format AOSP 스타일 (4칸 들여쓰기)
+// 검사: ./gradlew spotlessCheck (build/check에 포함)
+// 자동 포맷: ./gradlew spotlessApply
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat().aosp()
+        removeUnusedImports()
+        importOrder()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+
+    // 시험 JVM 힙. Gradle 기본값은 512MB인데, 전체 시험은 설정이 다른 Spring 컨텍스트를 20개 넘게 캐시해
+    // 그 한도에 닿는다. 닿으면 실패로 끝나지 않고 OutOfMemoryError를 낸 채 멈춘다(2026-09-17, JPA 컨텍스트
+    // 25개·힙 475/512MB에서 1시간 넘게 진행 없음). 컨텍스트 캐시를 줄이면 설정마다 기동을 다시 해 느려지므로
+    // 힙을 올린다. 컨텍스트가 더 늘면 이 값부터 다시 본다.
+    maxHeapSize = '1g'
+
+    // 시험은 바깥 망에 나가지 않는다.
+    //
+    // 뉴스 수집 스케줄러는 @SpringBootTest 컨텍스트에서도 돌아, 그대로 두면 시험이 그날의 실제 기사를
+    // 받아 와 공용 Testcontainer DB에 넣는다. 그러면 뒤에 오는 DB 시험의 행 수가 달라지고, 실패가
+    // 그 시험의 잘못처럼 보인다(2026-09-15 매체를 등록하자마자 드러났다). 시험 결과가 바깥 세상의
+    // 그날 상태에 달리는 것이 가장 나쁘다.
+    systemProperty 'thorp.news.collection-enabled', 'false'
+
+    // 등록표 동기화도 같은 이유로 끈다.
+    //
+    // 기동할 때 도는 코드라 @SpringBootTest 컨텍스트에서 등록표의 매체를 공용 Testcontainer DB에
+    // 커밋한다. 수집과 달리 바깥 망에 나가지는 않지만, 결과는 같다 — 뒤에 오는 DB 시험이 자기가 만들지
+    // 않은 매체 행을 보게 된다. 등록표에 허가 상태를 적자 "허가된 매체가 없을 때"를 확인하는 시험이
+    // 전제를 만들 수 없게 되면서 드러났다(2026-09-16).
+    //
+    // 동기화 자체의 동작은 NewsPublisherRegistrySyncTest가 대역으로 본다. 그쪽은 컨텍스트를 띄우지
+    // 않고 직접 호출하므로 이 설정에 영향받지 않는다.
+    systemProperty 'thorp.news.registry-sync-enabled', 'false'
+
+    // 저장소 밖(backend/ 바깥)에 있는 공유 픽스처를 이 태스크의 입력으로 선언한다.
+    //
+    // 계약 픽스처는 워커(Python)와 백엔드(Java)가 같은 파일 하나를 읽어 두 구현을 묶는
+    // 장치다. 그런데 Gradle은 선언된 입력만 보고 최신 여부를 판단하므로, 선언하지 않으면
+    // 픽스처만 바뀌었을 때 :test가 UP-TO-DATE로 건너뛴다. 실제로 픽스처를 일부러 틀리게
+    // 고쳐도 BUILD SUCCESSFUL이 나왔다(2026-09-11 확인).
+    //
+    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 BE Test에서 cleanTest로
+    // 늘 다시 돌리지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.
+    inputs.dir(file('../specs/001-etf-market-data/contracts/fixtures'))
+            .withPropertyName('evaluationWindowFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/backtest-messaging/examples'))
+            .withPropertyName('backtestMessagingFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/backtest-api/examples'))
+            .withPropertyName('backtestApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 배우기 계약 예시(spec 013). LearningPublicApiIT·LearningAdminApiIT가 읽는다.
+    inputs.dir(file('../docs/specs/learning-api/examples'))
+            .withPropertyName('learningApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 워커 픽스처의 첫 거래일이 FixtureMarketMetadataAdapter 의 상장일과 어긋난다는 사실을
+    // MarketFixtureAlignmentTest 가 붙박는다. 그 파일이 바뀌면 이 태스크가 다시 돌아야 한다.
+    inputs.dir(file('../worker/examples/three_etf_24m'))
+            .withPropertyName('workerThreeEtfFixture')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}

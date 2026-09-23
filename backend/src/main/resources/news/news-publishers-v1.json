@@ -1,0 +1,109 @@
+{
+  "version": "news-publishers-v1",
+  "_comment": "등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외. enabled는 수집 여부이고 공개 여부가 아니다 — 공개는 허가 상태가 ALLOWED인 매체만 열린다. permission의 뜻과 지금 값의 근거는 _permission을 본다.",
+  "_topicKeys": "기사가 분류 값을 주지 않는 채널에만 적는다. 기사 분류가 등록표를 하나라도 통과하면 이 값은 쓰이지 않는다 — 기사가 말한 것을 먼저 믿는다. 국내 경제 RSS 20곳을 받아 본 결과 기사별 분류 값을 주는 곳은 경향신문뿐이었고 나머지는 피드 이름을 되풀이하거나 분류가 아예 없었다.",
+  "_permission": "아래 permission은 매체가 보낸 회신이 아니다. 각 매체가 공개한 RSS 안내를 읽고 팀이 사용 여부를 정한 기록이다(spec FR-015, PD-15). 판단 근거는 이렇다 — 이 서비스는 SSAFY 교육 과정의 팀 프로젝트로 수익을 내지 않고, 기사 본문을 저장하거나 표시하지 않으며 제목·매체명·발행 시각·원문 링크만 쓴다. 공개 범위는 발표와 심사로 한정하고 2026-09-28 최종 발표 뒤 배포를 중단한다. 팀은 이 조건이라면 불특정 다수를 상대로 한 배포나 영리 이용에 해당하지 않는다고 보았다. 다만 경향신문 RSS 안내에는 홈페이지를 통해 다수와 공유하려면 사전 허락이 필요하다는 문구가 있고 그 문구는 영리 여부를 따지지 않는다. 그 사실을 확인하고 내린 결정이며 매체의 동의를 받은 것이 아니다. 이 판단은 위 조건이 유지되는 동안에만 유효하다. 서비스를 계속 운영하거나 수익 모델을 붙이려면 각 매체와 이용 계약을 맺어야 한다.",
+  "publishers": [
+    {
+      "publisherKey": "khan-economy",
+      "displayName": "경향신문",
+      "language": "ko",
+      "registeredDomain": "khan.co.kr",
+      "rssUrl": "https://www.khan.co.kr/rss/rssdata/economy_news.xml",
+      "enabled": true,
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.khan.co.kr/help/help_rss.html). '개인적인 구독을 목적으로 지원하는 서비스이며, 홈페이지 등을 통해 다수와 정보를 공유하거나 영리를 취하는 행위는 사전에 저작권자의 허락을 받아야 한다'는 문구가 있다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "hankyung-economy",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/economy",
+      "enabled": true,
+      "topicKeys": ["economy-general"],
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "hankyung-finance",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/finance",
+      "enabled": true,
+      "topicKeys": ["markets"],
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "hankyung-it",
+      "displayName": "한국경제",
+      "language": "ko",
+      "registeredDomain": "hankyung.com",
+      "rssUrl": "https://www.hankyung.com/feed/it",
+      "enabled": true,
+      "topicKeys": ["tech"],
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "mk-economy",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/30100041/",
+      "enabled": true,
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "mk-stock",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/50200011/",
+      "enabled": true,
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    },
+    {
+      "publisherKey": "mk-company",
+      "displayName": "매일경제",
+      "language": "ko",
+      "registeredDomain": "mk.co.kr",
+      "rssUrl": "https://www.mk.co.kr/rss/50100032/",
+      "enabled": true,
+      "permission": {
+        "status": "ALLOWED",
+        "allowedFields": ["TITLE", "PUBLISHER", "PUBLISHED_AT", "ORIGINAL_URL"],
+        "respondedAt": "2026-09-16T00:00:00Z",
+        "reference": "2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다."
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+.loginPanel {
+  width: 100%;
+  max-width: 590px;
+  justify-self: end;
+}
+
+.loginForm {
+  gap: 20px;
+}
+
+.submitButton {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+@media (max-width: 900px) {
+  .loginPanel {
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 360px) {
+  .loginForm {
+    gap: 16px;
+  }
+}

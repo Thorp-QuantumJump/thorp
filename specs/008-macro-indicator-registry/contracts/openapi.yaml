@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: Thorp Macro Indicator Snapshot API (Spec 008)
+  version: 0.1.0
+  description: >-
+    17개 월별 지표와 7개 분야 기준월을 하나의 공개 자료 버전에서 조회한다.
+    /api는 기존 프록시가 제거하고 Spring controller 경로는 /macro-indicators이다.
+    009는 이 응답을 사용해 기존 두 화면 전용 API를 조립하며 macro_* 저장소를 직접 조회하지 않는다.
+    역사 비교는 최신 개정자료 기준이며 당시 발표값 재현이 아니다.
+servers:
+  - url: /api
+paths:
+  /macro-indicators/snapshot:
+    get:
+      operationId: getMacroIndicatorSnapshot
+      summary: 17개 지표·7개 분야의 현재 공개 스냅샷
+      description: >-
+        사용자 인증이나 원천 키가 필요 없는 저장 자료 조회. 완결 자료 버전이 없어도 200으로
+        17개 등록 정보, null 값/기준월, 수집 상태를 반환한다. 응답 전체는 하나의 current
+        포인터에서 읽는다. 원천 API 호출·계산 작업은 이 요청에서 실행하지 않는다.
+      responses:
+        '200':
+          description: 완결 자료 존재·무자료·최근 수집 실패 모두 정상적인 조회 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotEnvelope'
+        '500':
+          description: 저장소 자체의 조회 장애 (자료 없음/수집 실패와 다름)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  schemas:
+    Month:
+      type: string
+      pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      example: '2026-07'
+    NullableMonth:
+      type: [string, 'null']
+      pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+    FieldId:
+      type: string
+      enum: [production, consumption_investment, external_trade, labor, prices_commodities, finance_housing, overseas]
+    SnapshotEnvelope:
+      type: object
+      description: Backend 신규 API의 HttpApiResponse 형식. 009 화면 API와 같은 봉투.
+      required: [httpStatus, isSuccess, message, code, result]
+      properties:
+        httpStatus: {type: string, const: OK}
+        isSuccess: {type: boolean, const: true}
+        message: {type: string}
+        code: {type: integer, const: 200}
+        result: {$ref: '#/components/schemas/Snapshot'}
+    ErrorEnvelope:
+      type: object
+      required: [httpStatus, isSuccess, message, code, result]
+      properties:
+        httpStatus: {type: string}
+        isSuccess: {type: boolean, const: false}
+        message: {type: string}
+        code: {type: integer}
+        result: {type: 'null'}
+    Snapshot:
+      type: object
+      required: [dataVersion, calculationRegistryVersion, displayVersion, isExampleData, historicalComparisonNotice, overallReferenceMonth, collection, fields, indicators]
+      properties:
+        dataVersion:
+          type: [string, 'null']
+          description: 완결 자료 버전이 없으면 null. 불변 17개 전체 스냅샷 식별자.
+        calculationRegistryVersion:
+          type: string
+          description: 지표 정의·분야 매핑·명목 가중 버전.
+        displayVersion:
+          type: string
+          description: 분야/지표 표시명·순서·설명 버전.
+        isExampleData:
+          type: boolean
+          description: 개발용 명시적 fixture에만 true. 운영 자동 대체 금지.
+        historicalComparisonNotice:
+          type: string
+          const: 최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.
+        overallReferenceMonth:
+          $ref: '#/components/schemas/NullableMonth'
+        collection:
+          $ref: '#/components/schemas/CollectionState'
+        fields:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: {$ref: '#/components/schemas/Field'}
+        indicators:
+          type: array
+          minItems: 17
+          maxItems: 17
+          items: {$ref: '#/components/schemas/Indicator'}
+    CollectionState:
+      type: object
+      description: 수집 시도 상태는 공개 자료 버전의 상태와 별개다. 실패 중에도 이전 자료 버전은 유지할 수 있다.
+      required: [status, lastSuccessfulAt, lastAttemptAt, failedIndicatorIds, quotaLimited]
+      properties:
+        status: {type: string, enum: [NEVER_COLLECTED, SUCCEEDED, RUNNING, FAILED, HELD]}
+        licenseUnverifiedIndicatorIds:
+          description: 이용 권리를 확인하지 못해 공개 자료 버전에 넣지 않은 지표. 비어 있지 않으면 완결 버전 발행이 보류된다.
+          type: array
+          items: {type: string}
+        lastSuccessfulAt: {type: [string, 'null'], format: date-time}
+        lastAttemptAt: {type: [string, 'null'], format: date-time}
+        failedIndicatorIds:
+          type: array
+          uniqueItems: true
+          items: {type: string}
+        quotaLimited: {type: boolean}
+    Field:
+      type: object
+      required: [fieldId, displayName, displayOrder, description, referenceMonth, referenceMonthHeldBackBy, indicatorIds]
+      properties:
+        fieldId: {$ref: '#/components/schemas/FieldId'}
+        displayName: {type: string}
+        displayOrder: {type: integer, minimum: 1, maximum: 7}
+        description: {type: string}
+        referenceMonth:
+          $ref: '#/components/schemas/NullableMonth'
+        referenceMonthHeldBackBy:
+          type: array
+          description: 해당 분야의 최신 후보 월에 유효 변환값이 없어 T_g를 물러나게 한 지표 ID. T_g가 최신 후보 월이면 빈 배열.
+          uniqueItems: true
+          items: {type: string}
+        indicatorIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: string}
+    Indicator:
+      type: object
+      required: [indicatorId, fieldId, displayName, displayOrder, source, agency, rawUnit, transformedUnit, transform, status, referenceMonth, referenceValue, latest, path, latestPath, lastUpdatedAt]
+      properties:
+        indicatorId: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+        fieldId: {$ref: '#/components/schemas/FieldId'}
+        displayName: {type: string}
+        displayOrder: {type: integer, minimum: 1}
+        source: {type: string, description: 공식 출처 표기. 화면은 작성기관과 함께 표시한다.}
+        agency: {type: string, description: 작성기관. 출처와 다를 수 있다.}
+        rawUnit: {type: string}
+        transformedUnit: {type: string}
+        transform: {type: string, description: 전년동월 대비·월 기말·월 평균 등 등록된 변환.}
+        # SUSPENDED 는 이용 권리가 거둬들여진 지표다(FR-016b). 값 없이 사유만 실려 나가며,
+        # 조용히 빠지지 않고 '빠진 상태'임이 드러난다.
+        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE, SUSPENDED]}
+        suspendedReason: {type: string, nullable: true}
+        referenceMonth:
+          $ref: '#/components/schemas/NullableMonth'
+        referenceValue:
+          description: 분야 T_g 대상월의 원값/변환값. T_g가 없거나 해당 월 결측이면 null.
+          oneOf:
+            - {$ref: '#/components/schemas/ObservationValue'}
+            - {type: 'null'}
+        latest:
+          description: 분야 T_g 이후 발표분을 포함한 지표별 최신 유효 변환값. 없으면 null.
+          oneOf:
+            - {$ref: '#/components/schemas/ObservationValue'}
+            - {type: 'null'}
+        path:
+          type: array
+          description: 009 변화 요약용. T_g가 있으면 t-2,t-1,t 달력상 연속 3개월; 없으면 빈 배열. 빠진 월은 null 값으로 표시.
+          minItems: 0
+          maxItems: 3
+          items: {$ref: '#/components/schemas/PathPoint'}
+        latestPath:
+          type: array
+          description: 지표 자체의 최신 유효 대상월 기준 t-2,t-1,t. 완결 자료 버전이 없으면 빈 배열. 분야 T_g가 없어도 지표별 최근 경로는 유지한다.
+          minItems: 0
+          maxItems: 3
+          items: {$ref: '#/components/schemas/PathPoint'}
+        lastUpdatedAt: {type: [string, 'null'], format: date-time}
+    ObservationValue:
+      type: object
+      required: [targetMonth, rawValue, transformedValue, releaseDate]
+      properties:
+        targetMonth: {$ref: '#/components/schemas/Month'}
+        rawValue: {type: [number, 'null']}
+        transformedValue: {type: number}
+        releaseDate: {type: [string, 'null'], format: date}
+    PathPoint:
+      type: object
+      required: [targetMonth, rawValue, transformedValue, releaseDate]
+      properties:
+        targetMonth: {$ref: '#/components/schemas/Month'}
+        rawValue: {type: [number, 'null']}
+        transformedValue: {type: [number, 'null']}
+        releaseDate: {type: [string, 'null'], format: date}
+        missingReason:
+          description: transformedValue 가 null 인 이유. 값이 있으면 생략한다. 원천 미발표와 변환 불가를 구분한다.
+          type: [string, 'null']
+          enum: [NOT_RELEASED, COLLECTION_FAILED, NOT_TRANSFORMABLE, BREAK_EXCLUDED, null]

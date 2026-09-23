@@ -1,0 +1,93 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260911-000001",
+    "status": "COMPLETED",
+    "resultSource": "NEW",
+    "partial": false,
+    "cancelRequested": false,
+    "progress": null,
+    "queuedAt": "2026-09-11T00:00:00Z",
+    "startedAt": null,
+    "finishedAt": null,
+    "queueWaitSeconds": 0,
+    "config": {
+      "strategyId": "MA_CROSSOVER",
+      "rulesVersion": "1.0.0",
+      "parameters": {
+        "shortWindow": 20,
+        "longWindow": 60,
+        "threshold": 0.05
+      },
+      "instrumentIds": [
+        "005930.XKRX",
+        "000660.XKRX"
+      ],
+      "start": "2025-01-01",
+      "end": "2025-06-30",
+      "initialCash": "10000000.00",
+      "currency": "KRW"
+    },
+    "versions": {
+      "mapping": "SECTOR-ETF-2026-09",
+      "rules": {
+        "version": "1",
+        "provisional": false
+      },
+      "costProfile": {
+        "version": "PROVISIONAL-DEMO-1",
+        "provisional": true
+      },
+      "data": "FIXTURE-three_etf_24m",
+      "engine": "nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8",
+      "evaluationSplit": "SPLIT-1",
+      "worker": "2.0.0",
+      "dependencies": {
+        "numpy": "2.4.6",
+        "scipy": "1.17.1"
+      }
+    },
+    "summary": {
+      "initialEquity": "10000000.00",
+      "finalEquity": "11666521.51",
+      "currency": "KRW",
+      "totalReturn": "0.166652",
+      "cagr": "0.366917",
+      "maxDrawdown": "-0.041757",
+      "sharpeRatio": "2.342630",
+      "volatility": "0.132307",
+      "tradeCount": 2,
+      "winRate": "0.500000",
+      "totalCommission": "3941.19",
+      "totalSlippageCost": "13137.30",
+      "netTotalReturn": "0.166652",
+      "totalTradingCost": "17078.49",
+      "costs": {
+        "commission": "3941.19",
+        "spread": "0.00",
+        "slippage": "13137.30",
+        "tax": "0.00",
+        "total": "17078.49"
+      },
+      "liquidation": {
+        "markToMarket": {
+          "finalEquity": "11666521.51",
+          "totalReturn": "0.166652"
+        },
+        "liquidated": {
+          "finalEquity": "11662525.96",
+          "totalReturn": "0.166253",
+          "liquidationCost": "3995.55"
+        }
+      },
+      "analytics": {
+        "recoveryDays": 9,
+        "turnover": "1.219991"
+      },
+      "exceptionCount": 1
+    },
+    "summaryUnavailable": null,
+    "failure": null
+  },
+  "error": null
+}
