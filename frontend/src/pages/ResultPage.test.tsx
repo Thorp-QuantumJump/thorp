@@ -454,11 +454,13 @@ describe('ResultPage', () => {
       expect(document.getElementById(reasonId)?.textContent).toBe(LOSS_WINDOW_UNAVAILABLE)
     })
 
-    it('제목은 백테스트 결과이고 전략 선택으로 돌아가는 길이 있다', async () => {
+    it('제목은 백테스트 결과이고 섹터 선택부터 다시 시작하는 길이 있다', async () => {
       renderResult()
 
       expect(await screen.findByRole('heading', { level: 1, name: '백테스트 결과' })).not.toBeNull()
-      expect(screen.getByRole('link', { name: '전략 선택' }).getAttribute('href')).toBe('/strategy')
+      expect(screen.getByRole('link', { name: '처음부터 다시 분석' }).getAttribute('href')).toBe(
+        '/diagnosis/sectors',
+      )
     })
 
     it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {
