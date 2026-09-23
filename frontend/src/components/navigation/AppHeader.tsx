@@ -24,7 +24,7 @@ import { useLoginReturn } from '@/auth/useLoginReturn'
 import styles from './AppHeader.module.css'
 
 /**
- * 첫 화면(`LandingHeader`)과 같은 메뉴 넷이다. 목적지도 같다.
+ * 첫 화면도 이 상단 바를 쓴다. 메뉴 넷과 목적지가 모든 화면에서 같다.
  *
  * 첫 화면에서 메뉴를 눌러 들어온 화면의 헤더가 다른 메뉴를 보이면, 사용자는 한 번의 이동으로
  * 서비스의 구성이 통째로 바뀐 것처럼 겪는다.

@@ -91,11 +91,12 @@
   --thorp-pad-inset: 12px 14px;
   --thorp-overlay: rgb(0 0 0 / 68%);
   /*
-    초록은 누를 것(버튼·링크·고름·초점·진행)에만 쓴다. 영문 작은 제목과 장식 아이콘·번호, 구역 배경의
-    빛번짐은 무채색이다. 초록이 모든 곳에 있으면 무엇을 누를 수 있는지가 색으로 드러나지 않는다.
+    초록은 누를 것(버튼·링크·고름·초점·진행)과 작은 포인트(영문 작은 제목, 구역 아이콘·번호)에 쓴다.
+    구역 배경의 빛번짐은 무채색이다 — 넓은 면이 초록이면 화면 전체가 초록으로 읽힌다. 작은 제목·아이콘까지
+    무채색으로 낮췄더니 구역의 시작이 눈에 잡히지 않아 포인트로 되돌렸다.
   */
-  --thorp-eyebrow: var(--thorp-muted);
-  --thorp-ornament: var(--thorp-copy);
+  --thorp-eyebrow: var(--thorp-accent-soft);
+  --thorp-ornament: var(--thorp-accent-soft);
   --thorp-ambient: rgb(255 255 255 / 3%);
   --thorp-input-hover: rgb(255 255 255 / 30%);
   --thorp-surface-glass: rgb(26 29 28 / 86%);
