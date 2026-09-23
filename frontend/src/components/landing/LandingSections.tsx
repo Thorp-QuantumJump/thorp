@@ -6,6 +6,7 @@ import type { Indicator } from '@/types/market'
 import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
 import { NextSectionButton } from './NextSectionButton'
+import { ResultPreviewWindow } from './ResultPreviewWindow'
 import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
@@ -40,7 +41,14 @@ const comparisonPaths = [
 ]
 const resultPath = buildDecorativeCurve(0.9, 96)
 
-/** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */
+/** 진단이 무엇을 하는지 세 단계로 말한다. 기본값·권고가 아니라 흐름이다. */
+const heroSteps = [
+  { title: '섹터를 고르고 비중을 정해요', note: '처음엔 같은 비중으로 채워 둡니다' },
+  { title: '다섯 배분 규칙 중 하나를 골라요', note: '기본값은 출발점일 뿐입니다' },
+  { title: '같은 조건의 결과를 나란히 비교해요', note: '비용 차감 후 수익·하락 폭·거래비용' },
+]
+
+/** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 결과 화면 예시를 두고 뒤에 시장 그래픽을 깐다. */
 export function HeroSection() {
   const reducedMotion = useReducedMotion()
 
@@ -86,53 +94,81 @@ export function HeroSection() {
       </div>
       <MarketAtmosphereCanvas />
 
-      <motion.div
-        className={styles.heroContent}
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },
-        }}
-      >
-        <motion.p
-          className={styles.eyebrow}
-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-        >
-          KOREA MARKET INTELLIGENCE
-        </motion.p>
-        <motion.h1
-          id="landing-title"
-          variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
-        >
-          <span>시장을 확인하고</span>
-          <span>전략을 <em>검증하세요.</em></span>
-        </motion.h1>
-        <motion.p
-          className={styles.heroDescription}
-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
-        >
-          데이터로 시장을 읽고, 검증된 전략으로 판단하세요.
-        </motion.p>
+      <div className={styles.heroLayout}>
         <motion.div
-          className={styles.heroActions}
-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
-          transition={revealTransition}
+          className={styles.heroContent}
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },
+          }}
         >
-          {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
-              다른 화면으로 보내지 않는다. */}
-          <Link className={styles.primaryCta} to="/diagnosis/sectors">
-            비중 비교하기
-            <ArrowUpRight aria-hidden="true" size={18} />
-          </Link>
-          <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
-            서비스 알아보기
-            <ArrowDown aria-hidden="true" size={17} />
-          </button>
+          <motion.p
+            className={styles.heroBadge}
+            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+          >
+            <span>국내 섹터 ETF</span>
+            배분 전략 진단
+          </motion.p>
+          <motion.h1
+            id="landing-title"
+            variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            <span>섹터 비중을 바꾸면</span>
+            <span><em>과거 결과는 얼마나</em></span>
+            <span>달라졌을까</span>
+          </motion.h1>
+          <motion.p
+            className={styles.heroDescription}
+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            같은 기간, 같은 비용으로 다섯 가지 배분 규칙을 나란히 봅니다. 추천이 아니라 진단입니다.
+          </motion.p>
+          <motion.ol
+            className={styles.heroSteps}
+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            {heroSteps.map((step, index) => (
+              <li key={step.title}>
+                <b aria-hidden="true">{index + 1}</b>
+                <span>
+                  {step.title}
+                  <small>{step.note}</small>
+                </span>
+              </li>
+            ))}
+          </motion.ol>
+          <motion.div
+            className={styles.heroActions}
+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+            transition={revealTransition}
+          >
+            {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
+                다른 화면으로 보내지 않는다. */}
+            <Link className={styles.primaryCta} to="/diagnosis/sectors">
+              비중 비교하기
+              <ArrowUpRight aria-hidden="true" size={18} />
+            </Link>
+            <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
+              서비스 알아보기
+              <ArrowDown aria-hidden="true" size={17} />
+            </button>
+          </motion.div>
         </motion.div>
-      </motion.div>
+
+        <motion.div
+          className={styles.heroPreview}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...revealTransition, delay: 0.3 }}
+        >
+          <ResultPreviewWindow />
+        </motion.div>
+      </div>
 
       <div className={styles.heroFootnote} aria-hidden="true">
         <span>01</span>
