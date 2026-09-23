@@ -32,7 +32,12 @@ describe('ResultSummaryCard', () => {
     ] as const) {
       const help = screen.getByRole('button', { name: `${label} 도움말` })
       fireEvent.focus(help)
-      expect(await screen.findByText(definition)).not.toBeNull()
+      const bubble = await screen.findByText(definition)
+      expect(bubble).not.toBeNull()
+      if (label === '수익률') {
+        expect(bubble.closest('[data-side]')?.getAttribute('data-side')).toBe('bottom')
+        expect(bubble.closest('[data-align]')?.getAttribute('data-align')).toBe('start')
+      }
       fireEvent.blur(help)
     }
     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')
