@@ -407,6 +407,14 @@ const growth: EquityChartSeries = {
 }
 
 describe('EquityChart 세로축 눈금', () => {
+  it('차트 제목과 시작 금액 범례, 눈금 설명을 가까이 둔다', () => {
+    render(<EquityChart altNumbers={altNumbers} base={growth} initialCash="10000000.00" />)
+
+    expect(screen.getByText('자산가치 추이')).not.toBeNull()
+    expect(screen.getByText('점선 · 시작 금액 10,000,000원')).not.toBeNull()
+    expect(screen.getByText('차트 읽는 법')).not.toBeNull()
+  })
+
   it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {
     const { container } = render(
       <EquityChart altNumbers={altNumbers} base={growth} initialCash="10000000.00" />,

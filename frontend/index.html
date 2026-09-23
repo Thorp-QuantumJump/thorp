@@ -17,6 +17,24 @@
       href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css"
       rel="stylesheet"
     />
+    <!--
+      디자인 개편 전 화면으로 되돌려 볼 수 있게 한다. `?design=classic`이면 예전 디자인,
+      `?design=new`면 새 디자인이고, 고른 값은 localStorage `thorp.design`에 남아 다음 방문에도 이어진다.
+      첫 화면이 그려지기 전에 정해야 색이 깜빡이지 않아 번들이 아니라 여기서 읽는다.
+      classic을 걷어낼 때 이 블록과 index.css의 `[data-design='classic']` 블록을 함께 지운다.
+    -->
+    <script>
+      ;(function () {
+        var key = 'thorp.design'
+        var design = null
+        try {
+          var asked = new URLSearchParams(location.search).get('design')
+          if (asked === 'classic' || asked === 'new') localStorage.setItem(key, asked)
+          design = localStorage.getItem(key)
+        } catch (e) {}
+        if (design === 'classic') document.documentElement.dataset.design = 'classic'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

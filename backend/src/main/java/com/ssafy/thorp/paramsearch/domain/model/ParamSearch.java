@@ -66,10 +66,13 @@ public class ParamSearch {
         this.selectionRule = builder.selectionRule;
         this.evaluationSplit =
                 builder.evaluationSplit == null ? null : Map.copyOf(builder.evaluationSplit);
-        this.limits = Map.copyOf(builder.limits);
+        // Map.copyOf를 쓰지 않는다 — 한도에도 값이 null인 항목(실행시간 상한을 두지 않은 묶음의
+        // timeLimitSeconds)이 있고 Map.copyOf는 null 값에서 NPE를 던진다. 키를 빼서 null을 말하면
+        // 읽는 쪽이 "상한 없음"과 "옛 묶음이라 항목 자체가 없음"을 구분하지 못한다.
+        this.limits = Collections.unmodifiableMap(new LinkedHashMap<>(builder.limits));
         this.referenceVersions = Map.copyOf(builder.referenceVersions);
-        // Map.copyOf를 쓰지 않는다 — 실행 조건에는 값이 null인 항목(평가 분할 버전, 기준 전략 미지정)이
-        // 있고 Map.copyOf는 null 값에서 NPE를 던진다. 순서도 함께 지킨다(사람이 읽는 기록이다).
+        // 같은 이유다 — 실행 조건에는 값이 null인 항목(평가 분할 버전, 기준 전략 미지정)이 있다.
+        // 순서도 함께 지킨다(사람이 읽는 기록이다).
         this.executionPlan =
                 Collections.unmodifiableMap(new LinkedHashMap<>(builder.executionPlan));
         this.baselineJobId = builder.baselineJobId;

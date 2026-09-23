@@ -110,7 +110,7 @@ export function CompareTargetPicker({
                 ? '기준 결과의 비용 기준을 확인할 수 없습니다.'
                 : strategy.targetWeightSource === 'USER' &&
                     base.config.items.some((item) => item.targetWeight == null)
-                  ? '입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.'
+                  ? '입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.'
                   : longer && (!firstDay || start > end)
                     ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'
                     : null

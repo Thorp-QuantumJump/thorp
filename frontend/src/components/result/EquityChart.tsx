@@ -300,7 +300,6 @@ export function EquityChart(props: EquityChartProps) {
     targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null
 
   const notes = [
-    initial == null ? null : '가로 점선은 시작 금액 ' + formatMoney(initialCash) + '입니다.',
     scaleMode === 'log'
       ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'
       : null,
@@ -325,18 +324,21 @@ export function EquityChart(props: EquityChartProps) {
 
   return (
     <div className={styles.figure}>
-      <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
-        {(['linear', 'log'] as const).map((mode) => (
-          <button
-            aria-pressed={scaleMode === mode}
-            className={styles.scaleButton}
-            key={mode}
-            onClick={() => setScaleMode(mode)}
-            type="button"
-          >
-            {scaleModeNoun(mode)}
-          </button>
-        ))}
+      <div className={styles.headingRow}>
+        <h2 className={styles.heading}>자산가치 추이</h2>
+        <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
+          {(['linear', 'log'] as const).map((mode) => (
+            <button
+              aria-pressed={scaleMode === mode}
+              className={styles.scaleButton}
+              key={mode}
+              onClick={() => setScaleMode(mode)}
+              type="button"
+            >
+              {scaleModeNoun(mode)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div
@@ -424,7 +426,18 @@ export function EquityChart(props: EquityChartProps) {
         </LineChart>
       </div>
 
-      {notes.length > 0 ? <p className={styles.notes}>{notes.join(' ')}</p> : null}
+      <div className={styles.legend}>
+        {initial == null ? null : <span>점선 · 시작 금액 {formatMoney(initialCash)}</span>}
+        {baseWindow && base.maxDrawdown ? (
+          <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>
+        ) : null}
+        {notes.length > 0 ? (
+          <details className={styles.help}>
+            <summary>차트 읽는 법</summary>
+            <p>{notes.join(' ')}</p>
+          </details>
+        ) : null}
+      </div>
     </div>
   )
 }

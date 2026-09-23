@@ -23,7 +23,7 @@
 | `backtest_request.requester_id` nullable 완화 | **B01이 004 패키지 안에서 최소로 수행한다**(T008·T010). 004 research R-12가 열어 둔 경로다. MR 리뷰어에 004 담당을 지정한다 |
 | 접수 응답에 `publicToken` 추가 | **B01이 수행한다**(T011·T016). 재시도 응답도 같다 |
 | `summary.maxDrawdownWindow` 추가 | 004 몫. 그때까지 화면이 `drawdown` 계열에서 구간을 찾고, `summary.maxDrawdown`과 어긋나면 음영을 생략한다(T040, R-05). 004가 주면 T040의 함수를 지운다 |
-| `analytics`의 상관관계·위험 기여·손실 기여 노출 | 004 몫. 그때까지 상세 패널의 세 항목은 "제공되지 않음"이다(T064) |
+| `analytics`의 상관관계·위험 기여·손실 기여 노출 | 004가 420에서 노출했다. 상세의 세 항목은 그 값을 표로 보인다(T064·T098) |
 | 참조하는 요청이 없는 계산·결과의 정리 | 004 몫. 005의 정리 작업은 만료된 요청 행과 토큰만 지운다(T022). 재사용·합류 기록(`backtest_reuse_event`)은 지우지 않고 `request_id`만 NULL로 끊는다 — `backtest_run_metric` 집계의 `reuse_count`가 이 행을 세며 원칙 IX가 동일 결과 재조회 기록을 요구한다. 컬럼 완화는 T022가 한다. B02(318)는 재사용 기록을 지우는 방식으로 병합됐으므로 T022·T026을 다시 열었고, [S15P21E205-335](https://ssafy.atlassian.net/browse/S15P21E205-335) `fix(be)/335-keep-reuse-event-on-expiry`에서 고쳤다 |
 
 이 tasks가 코드와 대조하다 찾은 004 접점이 둘 더 있다. 둘 다 004 소유이므로 B01·B02의 MR 리뷰어에 004 담당을 지정하고 MR 본문에 근거를 적는다.
@@ -67,7 +67,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 
 ## Path Conventions
 
-- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T090). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`
+- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T098). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`
 - 백엔드 004 소유 접점(최소로 손댄다): `backtest/domain/model/{BacktestRequest,PublicResultToken}.java`, `backtest/infrastructure/persistence/{BacktestRequestJpaEntity,BacktestRequestMapper,BacktestRequestRepositoryImpl}.java`, `backtest/application/service/{BacktestService,BacktestRetryService,BacktestResultQueryService,ExecutionLimitPolicy,ExecutionMetricRecorder}.java`, `backtest/application/repository/BacktestRequestRepository.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/request/TradePageQuery.java`, `backtest/presentation/response/{BacktestJobResponse,BacktestRetryResponse}.java` (모두 `backend/src/main/java/com/ssafy/thorp/` 아래)
 - 마이그레이션: `backend/src/main/resources/db/migration/V{yyyyMMddHHmmss}__public_result_token.sql` (작성 시각 타임스탬프. 현재 마지막은 `V20260916163000__widen_instrument_id_format.sql`)
 - 계약 문서·픽스처: `docs/specs/result-api/{README.md,examples/*.json}`(신규), `docs/specs/backtest-api/{README.md,examples/backtest-accepted.json}`(004 접수 응답 갱신)
@@ -435,7 +435,7 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 ## Phase 10: Convergence
 
 - [X] T089 (BE) CRITICAL — 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다. 지금은 `POST /backtests`가 클라이언트가 보낸 `executionType`을 그대로 받아, 비로그인 요청이 `SEARCH_BUNDLE`·`REGIME_*`로 보내면 `backtest/application/service/ExecutionLimitPolicy.requireAdmission`이 한도 검사 없이 통과시키고, `POST /results/{token}/retry`도 원 요청의 `executionType`을 물려받아 같은 우회를 이어 간다. 비로그인 요청(요청자 없음)의 `executionType`이 `SINGLE`이 아니면 접수 단계에서 거절(400)하고, `ExecutionLimitApiIT`에 "비로그인 비단건 접수는 거절되고 대기 실행이 늘지 않는다"·"공개 재시도도 같다" 단언을 더한다. 004 소유 파일이라 리뷰어에 004 담당을 지정한다 per Constitution IX, T012 (contradicts)
-- [X] T090 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage("새 테이블을 만들지 않는다")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)
+- [X] T098 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage("새 테이블을 만들지 않는다")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)
 - [X] T091 (INFRA) 루트 `.env.example`에 `THORP_RESULT_PUBLIC_TOKEN_TTL`·`THORP_RESULT_EXPIRY_SWEEP_INTERVAL`·`THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE`·`THORP_RESULT_TOMBSTONE_RETENTION`·`THORP_RESULT_TRADES_PAGE_SIZE`를 `infra/.env.prod.example`과 같은 설명으로 더한다 per T004 (partial)
 
 ## Phase 11: Convergence
@@ -453,7 +453,7 @@ Task: "api/result.test.ts — 경로·오류 정규화" (T038)
 B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
 
 - [X] T089 (FE) 그릴 점이 없을 때 그래프 자리에 그 사실을 한 문장으로 알린다 — `frontend/src/pages/ResultPage.tsx`의 `ResultChartSlot`이 `timeseries.status === 'loaded'`인데 `points`가 비어 있는 경우를 따로 가른다. 지금은 `frontend/src/components/result/EquityChart.tsx`가 `null`을 돌려주고 화면에는 빈 칸만 남는다. 취소된 부분 결과처럼 거래일이 하나도 저장되지 않은 결과에서 일어난다 per 원칙 VI · FR-001 (partial)
-- [X] T090 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)
+- [X] T098 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)
 - [X] T091 (FE 테스트) `frontend/src/test/resultFixtures.ts`의 `resultTimeseries`와 `resultDetailCompleted.summary.maxDrawdown`을 서로 맞춘다 — 지금은 계열의 최저 하락 폭이 -0.050000인데 상세는 -0.041757이라 R-05 규칙에 걸려 픽스처로 그린 화면에 음영이 한 번도 나오지 않는다. 계약 예시(`docs/specs/result-api/examples/`)는 둘이 맞으므로 픽스처를 그쪽에 맞춘다. `resultFixtures.test.ts`·`ResultSummaryCard.test.tsx`가 계속 통과하는지 확인한다 per T002 · T006 (contradicts)
 
 ## Phase 10: Convergence
@@ -481,14 +481,15 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대�
 
 - [X] T096 (FE) LOW — 011 진입점의 보이는 이름을 spec의 `경제환경이 비슷했던 과거 보기`로 통일하고 `frontend/src/pages/ResultPage.auxiliary.test.tsx`가 그 이름과 비활성 사유를 함께 고정하게 한다. 011의 진입 계약과 라우트가 생기기 전까지는 지금처럼 누를 수 없게 둔다 per FR-018 · US5 인수 기준 3 · T079 (partial)
 - [X] T097 (FE) MEDIUM — `frontend/src/components/result/NextStepLinks.tsx`에서 spec·tasks에 없는 `이전 화면으로` 버튼과 `navigate(-1)` 행동을 제거한다. 결과에서 011로 이동한 뒤 돌아오는 수단은 FR-018이 정한 브라우저 뒤로 가기이며, 별도 이전 화면 행동은 근거 없이 결과 화면의 보조 행동을 늘린다 per FR-018 · FR-019 · Constitution II · T079 (unrequested)
+- [X] T098 (FE) 결과 화면을 제목·비교 대상 고르기·탭 하나로 정리한다. 요약(핵심 숫자·상태 문장, 기본 열림. 그래프·해석 문장은 탭 위)·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱 탭 — `frontend/src/components/result/ResultTabs.tsx`(탭 줄·키보드·지연 마운트)와 `ResultDetailTabs.tsx`(다섯 탭 조립). '자세히 보기'는 결과 분석과 설정·근거로 나눈다(`DetailPanel.tsx`의 `AnalysisPanel`·`SettingsPanel`·`TradesPanel`). 섹터 목록은 탭 묶음이 한 번 받아 나눠 쓴다. 열 수 없는 탭은 `aria-disabled`와 사유 문장이다. 420이 상관관계·위험 기여·손실 기여 표를 넣자 한 패널이 화면 두세 장이 된 것이 계기다(Jira S15P21E205-424) per FR-007 · FR-010 · FR-017 · FR-022 · SC-001(2026-09-23 개정)
 
 ## Phase 15: 비교 대상 여럿과 설정 조합 후보 (`S15P21E205-419`, 2026-09-23)
 
 '비교 대상 고르기'가 등록표 기본값으로만 상대를 돌리고 그 값을 보이지 않던 것을 고쳤다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
 
-- [X] T098 (FE) 비교 주소 `?compare=`를 쉼표로 이은 토큰 목록(최대 셋)으로 읽고 쓴다 — `frontend/src/components/result/compareQuery.ts` per FR-004 · contracts "비교 주소"
-- [X] T099 (FE) 후보를 전략·설정값 조합으로 만든다 — `frontend/src/components/result/compareCandidates.ts`. 등록표 기본값 + 써 본 조합(`GET /backtests/used-strategies`, 로그인 시), 현재 등록표로 재판정, 기준 자신과 같은 조합 제외, 설정값을 등록표 이름표로 적는 `describeParameters` per FR-004 · 003 FR-005 · 원칙 VI
-- [X] T100 (FE) 비교 훅을 대상 여럿으로 바꾼다 — `frontend/src/hooks/useCompareTargets.ts`. 대상마다 상태·불일치·다시 시도·해제, 여럿을 한 번에 접수, 공통 구간 확인은 가장 긴 준비 기간 기준으로 한 번 per FR-004 · FR-005 · 원칙 IX
-- [X] T101 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010
-- [X] T102 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004
-- [X] T103 (FE) 결과 화면이 대상마다 자리를 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetSlot.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006
+- [X] T099 (FE) 비교 주소 `?compare=`를 쉼표로 이은 토큰 목록(최대 셋)으로 읽고 쓴다 — `frontend/src/components/result/compareQuery.ts` per FR-004 · contracts "비교 주소"
+- [X] T100 (FE) 후보를 전략·설정값 조합으로 만든다 — `frontend/src/components/result/compareCandidates.ts`. 등록표 기본값 + 써 본 조합(`GET /backtests/used-strategies`, 로그인 시), 현재 등록표로 재판정, 기준 자신과 같은 조합 제외, 설정값을 등록표 이름표로 적는 `describeParameters` per FR-004 · 003 FR-005 · 원칙 VI
+- [X] T101 (FE) 비교 훅을 대상 여럿으로 바꾼다 — `frontend/src/hooks/useCompareTargets.ts`. 대상마다 상태·불일치·다시 시도·해제, 여럿을 한 번에 접수, 공통 구간 확인은 가장 긴 준비 기간 기준으로 한 번 per FR-004 · FR-005 · 원칙 IX
+- [X] T102 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010
+- [X] T103 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004
+- [X] T104 (FE) 결과 화면이 대상마다 자리를 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetSlot.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006

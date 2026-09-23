@@ -37,7 +37,7 @@ export function buildCompareRequest(
     : base.weightsSource === 'USER'
   if (userWeights && config.items.some((item) => item.targetWeight == null)) {
     throw new Error(
-      '이 결과에는 입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.',
+      '이 결과에는 입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.',
     )
   }
   return {

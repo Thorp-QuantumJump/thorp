@@ -1,0 +1,98 @@
+/* 결과 화면 보조 보기 탭. 탭 줄은 한 줄이고 좁은 화면에서는 줄을 바꿔 쌓는다. */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tablist {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  gap: 2px 4px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.tablist::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .tablist {
+    mask-image: linear-gradient(to right, #000 90%, transparent);
+  }
+}
+
+.tab {
+  flex: none;
+  margin: 0 0 -1px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--thorp-foreground);
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--thorp-accent);
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.tab[aria-disabled='true'] {
+  color: var(--thorp-muted);
+  cursor: not-allowed;
+}
+
+.tab:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.reason {
+  margin: -6px 0 0;
+  color: var(--thorp-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.panel {
+  min-width: 0;
+  padding: 22px 24px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+  background: var(--thorp-surface);
+}
+
+.panel:not([data-tab-id='summary']) {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+
+.panel:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+.panel[data-tab-id='summary'] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 600px) {
+  .panel:not([data-tab-id='summary']) {
+    max-height: none;
+    overflow-y: visible;
+  }
+}

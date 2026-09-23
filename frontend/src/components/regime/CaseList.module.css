@@ -1,6 +1,6 @@
 .list { border-top: 1px solid var(--thorp-line-strong); }
 .heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 20px 0; }
-.kicker { margin: 0 0 4px; color: var(--thorp-accent-soft); font: 600 .67rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
+.kicker { margin: 0 0 4px; color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 600 .67rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
 .heading h2 { margin: 0; font-size: 1.3rem; }
 .cases { list-style: none; margin: 0; padding: 0; }
 .case { display: grid; grid-template-columns: minmax(120px, .33fr) minmax(0, 1fr); gap: 12px 28px; border-top: 1px solid var(--thorp-line); padding: 20px 0 24px; }
@@ -12,7 +12,7 @@
 .reasons h4 { margin: 0 0 8px; color: var(--thorp-copy); font-size: .76rem; font-weight: 600; }
 .reasons ul { margin: 0; padding-left: 17px; color: var(--thorp-foreground); font-size: .84rem; line-height: 1.6; }
 .reasons li + li { margin-top: 4px; }
-.detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
+.detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
 .detailButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .detailSlot { grid-column: 1 / -1; min-width: 0; }
 .more { display: block; width: 100%; min-height: 44px; border: 1px solid var(--thorp-line-strong); margin-top: 12px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
@@ -25,3 +25,11 @@
   .months, .reasons, .detailButton { grid-column: 1; }
   .reasons { grid-template-columns: 1fr; gap: 14px; }
 }
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
+:global(:root:not([data-design='classic'])) .list { border-top: 0; }
+:global(:root:not([data-design='classic'])) .heading { padding: 8px 2px 16px; }
+:global(:root:not([data-design='classic'])) .cases { display: grid; gap: 12px; }
+:global(:root:not([data-design='classic'])) .case { padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
+:global(:root:not([data-design='classic'])) .more { margin-top: 16px; border-radius: var(--thorp-radius-control); }
+:global(:root:not([data-design='classic'])) .more:hover { border-color: var(--thorp-line-control-hover); }

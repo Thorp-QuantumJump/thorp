@@ -49,9 +49,10 @@ public record ParamSearchPreviewResponse(
 
     public record ExclusionReason(String code, String message, long count) {}
 
+    /** {@code timeLimitSeconds}는 상한을 두지 않으면 null 이다. 키는 그대로 두어 화면이 "제한 없음"을 말할 수 있게 한다. */
     public record Limits(
             int maxCandidates,
-            long timeLimitSeconds,
+            Long timeLimitSeconds,
             int dispatchWindow,
             int consecutiveFailureLimit,
             List<String> provisional,

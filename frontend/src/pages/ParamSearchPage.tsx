@@ -259,6 +259,15 @@ export function ParamSearchPage() {
   }
 
   const detail = status.detail
+  /**
+   * 실행을 누른 뒤인가. **접수 응답을 기다리는 동안에도 진행 화면을 보인다** — 버튼을 누르면 바로
+   * 이 화면으로 오고, 결과는 3초 폴링이 하나씩 채운다(FR-008). 접수가 끝나기를 기다렸다 넘어가면
+   * 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔 조합이면 다 끝난 뒤에 넘어가서
+   * 한꺼번에 나타난다.
+   *
+   * 접수가 실패하면 `creating`이 풀려 확인 화면으로 돌아오고 그 자리에서 사유를 본다.
+   */
+  const started = searchId !== null || creating
   const selection = detail?.selection ?? null
   const searchInProgress = detail?.status === 'QUEUED' || detail?.status === 'RUNNING'
   const selectionIsProvisional = selection !== null && searchInProgress
@@ -387,7 +396,7 @@ export function ParamSearchPage() {
               </div>
             </section>
 
-            {searchId ? (
+            {started ? (
               <section className={styles.progress} aria-labelledby="progress-title">
                 <header>
                   <h2 id="progress-title">진행 상태</h2>
@@ -396,7 +405,13 @@ export function ParamSearchPage() {
                   </button>
                 </header>
 
-                {status.isLoading && !detail && (
+                {!searchId && (
+                  <p className={styles.note} role="status">
+                    탐색을 접수하는 중입니다.
+                  </p>
+                )}
+
+                {searchId && status.isLoading && !detail && (
                   <p className={styles.note} role="status">
                     진행 상태를 불러오는 중입니다.
                   </p>
@@ -408,7 +423,8 @@ export function ParamSearchPage() {
                   </p>
                 )}
 
-                {detail && (
+                {/* searchId 를 함께 본다 — 접수 전에는 detail 이 없고, 아래 버튼들이 식별자를 받는다. */}
+                {searchId && detail && (
                   <>
                     <p className={styles.statusLine} aria-live="polite">
                       <strong>{statusText[detail.status] ?? detail.status}</strong>
@@ -510,7 +526,7 @@ export function ParamSearchPage() {
               />
             )}
 
-            {searchId ? null : (
+            {started ? null : (
               <>
                 {previewLoading && !preview && (
                   <p className={styles.note} role="status">

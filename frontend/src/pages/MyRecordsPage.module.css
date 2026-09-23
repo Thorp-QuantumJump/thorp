@@ -18,7 +18,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: 0.72rem;
   font-weight: 750;
   letter-spacing: 0.16em;
