@@ -35,7 +35,7 @@ describe('ResultSummaryCard', () => {
       const bubble = await screen.findByText(definition)
       expect(bubble).not.toBeNull()
       if (label === '수익률') {
-        expect(bubble.closest('[data-side]')?.getAttribute('data-side')).toBe('bottom')
+        expect(bubble.closest('[data-side]')?.getAttribute('data-side')).toBe('right')
         expect(bubble.closest('[data-align]')?.getAttribute('data-align')).toBe('start')
       }
       fireEvent.blur(help)
