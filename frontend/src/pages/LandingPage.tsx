@@ -1,10 +1,10 @@
 import { AlgorithmOrbit } from '@/components/landing/AlgorithmOrbit'
-import { LandingHeader } from '@/components/landing/LandingHeader'
 import {
   BacktestIntroSection,
   HeroSection,
   MarketAnalysisSection,
 } from '@/components/landing/LandingSections'
+import { AppHeader } from '@/components/navigation/AppHeader'
 import { marketMock } from '@/data/marketMock'
 import { useMarketIndicators } from '@/hooks/useMarketIndicators'
 import styles from './LandingPage.module.css'
@@ -19,7 +19,8 @@ export function LandingPage() {
 
   return (
     <main className={styles.page}>
-      <LandingHeader />
+      {/* 다른 화면과 같은 상단 바다. 로그인 상태를 읽으므로 로그인한 사용자에게 로그인 버튼을 보이지 않는다. */}
+      <AppHeader />
       <HeroSection />
       <div className={styles.storyFlow}>
         <MarketAnalysisSection indicators={indicators} />
