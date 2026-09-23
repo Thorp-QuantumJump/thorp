@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
@@ -61,9 +60,7 @@ public class MarketSeriesService {
         return new MarketSeriesResult(code, snapshot.points(), snapshot.retrievedAt(), stale);
     }
 
-    @Scheduled(
-            initialDelayString = "${market.series.initial-delay:PT5S}",
-            fixedDelayString = "${market.series.refresh-interval:PT6H}")
+    /** 모든 지표를 갱신한다. 부르는 곳은 전용 스레드의 {@code MarketSeriesScheduler}다. */
     public void refreshAll() {
         for (MarketCode code : CODES) {
             try {
