@@ -1,8 +1,7 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react'
+import { type ReactNode, useCallback } from 'react'
 import { fetchResultExceptions, fetchResultWeights } from '@/api/result'
-import { Button } from '@/components/ui/button'
 import { type ResourceState, useResource } from '@/hooks/useResource'
-import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
+import type { SectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type {
   PublicResultDetail,
   ResultConfigItem,
@@ -13,7 +12,6 @@ import { COMPUTED_WEIGHTS_NOTE, strategyLabel } from './conditionLine'
 import { formatMoney, formatRatio } from './formatResult'
 import { HoldingDifference } from './HoldingDifference'
 import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'
-import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { SUMMARY_NOT_CALCULATED } from './statusSentences'
 import { type SectorLabels, buildSectorLabels } from './sectorLabels'
@@ -22,11 +20,15 @@ import { TradeHistory } from './TradeHistory'
 import styles from './resultDetail.module.css'
 
 /**
- * '자세히 보기' 패널(FR-007~FR-009, T064).
+ * '자세히 보기'의 두 탭(FR-007~FR-009, T064·T098).
  *
- * <p>결과 바로 아래에서 열고 주소를 바꾸지 않는다 — 설정 화면으로 되돌리지 않는다(SC-006). 첫 화면과 함께 받지
- * 않고, 열 때 `/weights`·`/exceptions`와 섹터 목록을 받는다(SC-001). 거래 내역과 대표 상품 정보는 패널 안에서 다시
- * 한 번 열어야 받는다.
+ * <p><b>결과 분석</b>은 계산에서 나온 값(회복 기간·회전율·상관관계·위험 기여·손실 기여·계산 제한·거래 내역),
+ * <b>설정·근거</b>는 사용자가 넣은 조건과 그 근거(비교 규칙·비용 가정·목표·실제 비중·대표 ETF 구성·출처)다.
+ * 한 패널에 번갈아 두면 결과에서 나온 값과 넣은 값이 섞여 읽힌다.
+ *
+ * <p>둘 다 주소를 바꾸지 않고 설정 화면으로 되돌리지 않는다(SC-006). 결과 분석은 첫 화면에서 열려 있어 그때
+ * `/exceptions`를 받고, 설정·근거는 처음 고를 때 `/weights`를 받는다(SC-001). 거래 내역과 대표 상품 정보는
+ * 탭 안에서 다시 한 번 열어야 받는다. 섹터 목록은 두 탭이 같이 쓰므로 `ResultDetailTabs`가 한 번 받아 넘긴다.
  *
  * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다
  * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료
@@ -40,57 +42,28 @@ export type DetailCompareTarget = {
   items: readonly ResultConfigItem[]
 }
 
-type DetailPanelProps = {
-  id: string
+type PanelProps = {
   token: string
   detail: PublicResultDetail
-  compare?: DetailCompareTarget | null
-  onClose: () => void
+  /** 섹터 이름·대표 상품을 찾는 001 목록. 부모가 한 번 받아 넘긴다 */
+  catalog: SectorCatalogState
 }
 
 export const CALCULATION_LIMITED = '계산 제한'
 const EMPTY = '없음'
 
-export function DetailPanel({ id, token, detail, compare = null, onClose }: DetailPanelProps) {
-  const titleRef = useRef<HTMLHeadingElement>(null)
-  const titleId = `${id}-title`
-
-  // 열면 제목으로 초점을 옮긴다. 키보드 사용자가 버튼 줄의 나머지를 건너 내려오지 않아도 된다.
-  useEffect(() => {
-    titleRef.current?.focus()
-  }, [])
-
-  const loadWeights = useCallback(
-    (signal: AbortSignal) => fetchResultWeights(token, signal),
-    [token],
-  )
+/** '결과 분석' 탭. 계산에서 나온 값만 둔다. */
+export function AnalysisPanel({ token, detail, catalog }: PanelProps) {
   const loadExceptions = useCallback(
     (signal: AbortSignal) => fetchResultExceptions(token, signal),
     [token],
   )
-  const weights = useResource(loadWeights)
   const exceptions = useResource(loadExceptions)
-  const catalog = useSectorCatalogState()
-
   const { config } = detail
-  const labels = buildSectorLabels(
-    compare ? [...config.items, ...compare.items] : config.items,
-    catalog.status === 'loaded' ? catalog.catalog : null,
-  )
-
-  const closeOnEscape = closePanelOnEscape(onClose)
+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)
 
   return (
-    <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>
-      <div className={styles.panelHeader}>
-        <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>
-          자세히 보기
-        </h2>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          닫기
-        </Button>
-      </div>
-
+    <div className={styles.stack}>
       <div className={styles.grid}>
         <RecoveryItem detail={detail} />
         <TurnoverItem detail={detail} />
@@ -116,9 +89,42 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
         />
       </div>
 
+      <Item title="계산 제한 항목">
+        <ResourceArea resource={exceptions} loadingText="예외 처리 기록을 불러오는 중입니다.">
+          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
+        </ResourceArea>
+      </Item>
+
+      <Item title="전체 거래 내역">
+        <TradeHistory token={token} items={config.items} labels={labels} />
+      </Item>
+    </div>
+  )
+}
+
+/** '설정·근거' 탭. 사용자가 넣은 조건과 그 근거를 둔다. 비교 대상이 있으면 보유 섹터 차이(FR-008)도 여기다. */
+export function SettingsPanel({
+  token,
+  detail,
+  catalog,
+  compare = null,
+}: PanelProps & { compare?: DetailCompareTarget | null }) {
+  const loadWeights = useCallback(
+    (signal: AbortSignal) => fetchResultWeights(token, signal),
+    [token],
+  )
+  const weights = useResource(loadWeights)
+  const { config } = detail
+  const labels = buildSectorLabels(
+    compare ? [...config.items, ...compare.items] : config.items,
+    catalog.status === 'loaded' ? catalog.catalog : null,
+  )
+
+  return (
+    <div className={styles.stack}>
       <div className={styles.grid}>
-        <CostItem detail={detail} />
         <RulesItem detail={detail} labels={labels} />
+        <CostItem detail={detail} />
       </div>
 
       <Item title="목표·실제 비중">
@@ -135,23 +141,13 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
         />
       ) : null}
 
-      <Item title="계산 제한 항목">
-        <ResourceArea resource={exceptions} loadingText="예외 처리 기록을 불러오는 중입니다.">
-          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
-        </ResourceArea>
-      </Item>
-
-      <Item title="전체 거래 내역">
-        <TradeHistory token={token} items={config.items} labels={labels} />
-      </Item>
-
       <Item title="대표 ETF 구성·구성종목 중복·출처">
         <p className={styles.muted}>
           실제로 담았는지와 무관하게 이 결과의 섹터 후보를 모두 둡니다. 펼친 상품만 불러옵니다.
         </p>
         <InstrumentProfileDisclosure items={config.items} catalog={catalog} />
       </Item>
-    </section>
+    </div>
   )
 }
 
