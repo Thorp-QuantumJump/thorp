@@ -44,7 +44,7 @@
   gap: 14px;
   padding: 22px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -87,7 +87,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
@@ -99,7 +99,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
@@ -159,7 +159,7 @@
     1.36:1에 그쳤고, 초록 기운만 돌 뿐 선이 어디 있는지 보이지 않았다. 조작 요소용 선으로 바꾼다.
   */
   border: 1px solid var(--thorp-line-control);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);
   transition: border-color 0.15s ease;
 }
@@ -286,7 +286,7 @@
   width: 5.5rem;
   padding: 6px 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-inset, 8px);
   background: var(--thorp-surface);
   color: inherit;
   font: inherit;
@@ -521,7 +521,7 @@
 .item [data-slot='profile-sample'] {
   padding: 8px 12px;
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-inset, 8px);
 }
 
 .item [data-slot='profile-source'] {
@@ -539,7 +539,7 @@
   padding: 14px;
   /* profile-panel(raised) 안의 3층이다. 여기에 바탕을 더 올리면 1.06:1 이라 안 보인다. */
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
 }
 
 .item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) p {
@@ -595,7 +595,7 @@
   gap: 10px 14px;
   padding: 12px 16px;
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);
 }
 

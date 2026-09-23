@@ -105,7 +105,7 @@
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
 }
 
@@ -271,7 +271,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
   font-size: 0.75rem;
 }

@@ -41,7 +41,7 @@
   gap: 14px;
   padding: 22px;
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
 }
 
 .notice p {
@@ -72,7 +72,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
   font-size: 0.86rem;
   line-height: 1.6;
@@ -87,7 +87,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px dashed var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
   font-size: 0.82rem;
   line-height: 1.6;
@@ -129,7 +129,7 @@
   align-content: start;
   padding: 18px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);
 }
 
@@ -176,7 +176,7 @@
   margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   list-style: none;
   color: var(--thorp-copy);
   font-size: 0.82rem;
@@ -207,7 +207,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--thorp-accent-soft);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-foreground);
   font-size: 0.86rem;
   line-height: 1.6;
@@ -222,7 +222,7 @@
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-negative);
   font-size: 0.86rem;
   line-height: 1.6;
@@ -242,7 +242,7 @@
   gap: 8px 12px;
   padding: 12px 14px;
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
   font-size: 0.84rem;
   line-height: 1.6;

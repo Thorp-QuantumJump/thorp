@@ -50,7 +50,7 @@
   gap: 11px;
   padding: 20px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
 }
 
@@ -123,7 +123,7 @@
   gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
 }
 
@@ -237,7 +237,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
   font-size: 0.76rem;
   line-height: 1.6;

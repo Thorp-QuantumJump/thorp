@@ -37,7 +37,7 @@
   width: min(320px, calc(100vw - 32px));
   padding: 14px 16px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);

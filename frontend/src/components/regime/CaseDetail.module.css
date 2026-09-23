@@ -1,4 +1,4 @@
-.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: 6px; background: var(--thorp-surface); overflow-wrap: anywhere; }
+.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-card, 6px); background: var(--thorp-surface); overflow-wrap: anywhere; }
 .detail h4 { margin: 0 0 10px; font-size: 1.05rem; }
 .detail h5 { margin: 18px 0 8px; font-size: .9rem; }
 .detail p { margin: 6px 0; color: var(--thorp-copy); font-size: .8rem; }

@@ -54,7 +54,7 @@
   min-width: 0;
   padding: 17px;
   border: 1px solid var(--market-line);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-card, 8px);
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }

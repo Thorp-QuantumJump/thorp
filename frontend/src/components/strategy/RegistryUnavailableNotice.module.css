@@ -4,7 +4,7 @@
   justify-items: start;
   padding: 18px 19px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 7px;
+  border-radius: var(--thorp-radius-card, 7px);
   background: var(--thorp-surface-raised);
 }
 
