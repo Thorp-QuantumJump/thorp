@@ -1,9 +1,15 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
-import type { InstrumentProfile, SectorCatalog } from '@/types/sector'
+import type { InstrumentProfile, PriceSeries, SectorCatalog } from '@/types/sector'
 import { apiClient } from './client'
-import { fetchEvaluationWindow, fetchInstrumentProfile, fetchSectorCatalog, readEvaluationWindow } from './sectors'
+import {
+  fetchEvaluationWindow,
+  fetchInstrumentProfile,
+  fetchPriceSeries,
+  fetchSectorCatalog,
+  readEvaluationWindow,
+} from './sectors'
 
 function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {
   return {
@@ -503,5 +509,100 @@ describe('공통 평가 기간 조회(T042)', () => {
     await expect(
       fetchEvaluationWindow({ sectors: ['SEC-A'], maxWarmupTradingDays: 2 }),
     ).rejects.toMatchObject({ kind: 'api', code: 'EVALUATION_WINDOW_NOT_READY' })
+  })
+})
+
+const series: PriceSeries = {
+  instrumentId: '117700.XKRX',
+  datasetId: 'KRX_DAILY_20260922',
+  dataDeadline: '2026-09-22T06:30:00Z',
+  isSample: false,
+  points: [
+    {
+      date: '2026-09-16',
+      adjustedClose: '10000.00000000',
+      tradingSuspended: false,
+      priceCarriedForward: false,
+    },
+  ],
+}
+
+const seriesSuccess: ApiSuccessEnvelope<PriceSeries> = {
+  success: true,
+  data: series,
+  error: null,
+}
+
+describe('가격 흐름 조회', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('공용 apiClient로 해당 섹터의 경로를 부른다', async () => {
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(seriesSuccess))
+
+    const result = await fetchPriceSeries('CONSTRUCTION')
+
+    expect(getSpy).toHaveBeenCalledWith('/sectors/CONSTRUCTION/price-series', {
+      signal: undefined,
+    })
+    expect(result).toEqual({ status: 'loaded', series })
+  })
+
+  it('409는 예외가 아니라 화면이 분기할 상태 값으로 돌려준다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(409, errorEnvelope('PRICE_SERIES_NOT_READY', '가격 자료 준비 중')),
+    )
+
+    const result = await fetchPriceSeries('CONSTRUCTION')
+
+    expect(result).toEqual({ status: 'notReady', message: '가격 자료 준비 중' })
+  })
+
+  it('없는 섹터는 다시 물어도 달라지지 않으므로 행동을 주지 않는다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(404, errorEnvelope('SECTOR_NOT_FOUND', '섹터를 찾지 못했습니다')),
+    )
+
+    const result = await fetchPriceSeries('GONE')
+
+    expect(result).toMatchObject({ status: 'failed', retryable: false })
+  })
+
+  it('점이 하나도 없는 응답을 빈 선으로 받아들이지 않는다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: { ...series, points: [] }, error: null }),
+    )
+
+    // 빈 배열을 그대로 그리면 "움직임이 없었다"로 보인다. 읽지 못한 것으로 다룬다.
+    const result = await fetchPriceSeries('CONSTRUCTION')
+
+    expect(result).toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('숫자로 읽히지 않는 가격이 섞이면 그 응답을 통째로 버린다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({
+        success: true,
+        data: {
+          ...series,
+          points: [
+            series.points[0],
+            {
+              date: '2026-09-17',
+              adjustedClose: 'N/A',
+              tradingSuspended: false,
+              priceCarriedForward: false,
+            },
+          ],
+        },
+        error: null,
+      }),
+    )
+
+    // 성한 점만 골라 그리면 빠진 날의 앞뒤가 이어져 없던 구간이 매끈한 선이 된다.
+    const result = await fetchPriceSeries('CONSTRUCTION')
+
+    expect(result).toMatchObject({ status: 'failed', kind: 'unexpected' })
   })
 })

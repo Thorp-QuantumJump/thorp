@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { screen, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import { LandingPage } from './LandingPage'
 
@@ -75,9 +76,25 @@ const expectedMenus = [
   { label: '내 기록', href: '/records' },
 ]
 
+/** 첫 화면도 공용 상단 바(AppHeader)를 쓰므로 그것이 읽는 인증 상태를 최소로 준다. */
+function renderLanding() {
+  const authValue: AuthContextValue = {
+    status: 'anonymous',
+    user: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    recheck: vi.fn(),
+  }
+  return renderWithRouter(
+    <AuthContext.Provider value={authValue}>
+      <LandingPage />
+    </AuthContext.Provider>,
+  )
+}
+
 describe('LandingPage', () => {
   it('주요 메뉴 셋과 보조 메뉴 하나가 모두 보인다', () => {
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     for (const menu of expectedMenus) {
       const link = screen.getByRole('link', { name: menu.label })
@@ -86,7 +103,7 @@ describe('LandingPage', () => {
   })
 
   it("가장 중요한 행동 버튼은 '비중 비교하기' 하나이며 섹터 선택으로 간다", () => {
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     const cta = screen.getByRole('link', { name: /비중 비교하기/ })
     expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')
@@ -101,7 +118,7 @@ describe('LandingPage', () => {
   })
 
   it("보조 버튼 '서비스 알아보기'는 화면을 떠나지 않는다", () => {
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     const secondary = screen.getByRole('button', { name: /서비스 알아보기/ })
     // 링크가 아니라 버튼이라는 사실 자체가 다른 화면으로 보내지 않는다는 뜻이다.
@@ -109,7 +126,7 @@ describe('LandingPage', () => {
   })
 
   it('머리 영역의 주 버튼이 대시보드로 가지 않는다', () => {
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     // 이 자리를 '비중 비교하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.
     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()
@@ -117,7 +134,7 @@ describe('LandingPage', () => {
 
   it('소개 섹션의 링크가 헤더 메뉴와 같은 곳을 가리킨다', () => {
     // 002 T024. 존재만 보면 목적지가 옛 화면으로 남아 있어도 통과한다 — 실제로 그랬다.
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ }).getAttribute('href')).toBe('/market-flow')
     expect(screen.getByRole('link', { name: /백테스트 시작하기/ }).getAttribute('href')).toBe('/diagnosis/sectors')
@@ -139,7 +156,7 @@ describe('LandingPage', () => {
   it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {
     // 그 두 경로와 화면은 S15P21E205-416에서 저장소에서 없앴다. 링크가 되살아나면 사용자는
     // 없는 주소로 간다.
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     const stale = screen
       .getAllByRole('link')
@@ -150,7 +167,7 @@ describe('LandingPage', () => {
 
   it('전략 카드의 이름을 등록표 응답에서 읽는다', async () => {
     // 이름을 코드에 상수로 두면 등록표에 없는 전략을 첫 화면이 광고하게 된다(003 FR-005).
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     expect(await screen.findByRole('heading', { name: '동일 비중' })).toBeDefined()
   })
@@ -159,7 +176,7 @@ describe('LandingPage', () => {
     // 예전에는 데모 자료의 `누적 수익 +124.8%`·CAGR·MDD·SHARPE를 첫 화면에 적었다. 어떤
     // 실행에서도 나온 적 없는 값이라 첫 화면이 성과를 단정하는 꼴이었다. 성과 수치는 자기
     // 실행을 가진 결과 화면에만 둔다.
-    const { container } = renderWithRouter(<LandingPage />)
+    const { container } = renderLanding()
 
     const text = container.textContent ?? ''
     for (const forbidden of ['124.8', 'CAGR', 'MDD', 'SHARPE', '누적 수익']) {
@@ -168,7 +185,7 @@ describe('LandingPage', () => {
   })
 
   it('소개 섹션은 그대로 남는다', () => {
-    renderWithRouter(<LandingPage />)
+    renderLanding()
 
     expect(screen.getByRole('heading', { name: /시장을 분석합니다/ })).toBeDefined()
     expect(screen.getByRole('heading', { name: /전략을 실험해보세요/ })).toBeDefined()

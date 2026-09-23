@@ -1,7 +1,7 @@
 import type { PublicResultDetail } from '@/types/result'
 import { InlineHelp } from '@/components/common/InlineHelp'
 import { buildConditionLine } from './conditionLine'
-import { formatMoney, formatRatio, isZeroValue } from './formatResult'
+import { formatMoney, formatRatio, isZeroValue, ratioDirection } from './formatResult'
 import styles from './ResultSummaryCard.module.css'
 
 export const METRIC_DEFINITIONS = {
@@ -39,12 +39,14 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
         <Metric
           label="수익률"
           value={formatRatio(summary.netTotalReturn)}
+          direction={ratioDirection(summary.netTotalReturn)}
           definition={METRIC_DEFINITIONS.netTotalReturn}
           helpSide="right"
         />
         <Metric
           label="MDD"
           value={formatRatio(summary.maxDrawdown)}
+          direction={ratioDirection(summary.maxDrawdown)}
           definition={METRIC_DEFINITIONS.maxDrawdown}
         />
         <Metric
@@ -108,11 +110,14 @@ function Metric({
   label,
   value,
   definition,
+  direction,
   helpSide = 'bottom',
 }: {
   label: string
   value: string
   definition: string
+  /** 오르내림(425). 금액과 0.00%로 보이는 값에는 달지 않는다 — 글과 색이 다른 말을 하면 안 된다 */
+  direction?: 'up' | 'down'
   helpSide?: 'bottom' | 'right'
 }) {
   return (
@@ -120,7 +125,9 @@ function Metric({
       <dt className={styles.metricLabel}>
         {label} <InlineHelp label={label} side={helpSide}>{definition}</InlineHelp>
       </dt>
-      <dd className={styles.metricValue}>{value}</dd>
+      <dd className={styles.metricValue} data-direction={direction}>
+        {value}
+      </dd>
     </div>
   )
 }

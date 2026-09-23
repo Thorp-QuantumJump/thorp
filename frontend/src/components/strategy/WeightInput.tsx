@@ -7,7 +7,8 @@ import {
 } from '@/diagnosis/weights'
 
 /**
- * 한 섹터의 비중을 다루는 묶음이다. 섹터를 고르면 **같은 화면 그 자리에** 나타난다(FR-005).
+ * 고른 투자 대상 하나의 목표 비중을 다루는 묶음이다. 앞 단계에서 무엇을 담을지 정했고, 여기서
+ * 각각에 얼마를 줄지 정한다.
  *
  * 수단이 둘이고 **값은 하나다.** 슬라이더는 끌어서 대충 맞추는 자리이고 숫자 칸은 정확한 값을
  * 넣는 자리다. 둘 다 같은 `valueTenths`를 보이고 같은 곳으로 값을 올린다.
@@ -37,10 +38,6 @@ type WeightInputProps = {
   valueTenths: number
   /** 받아들인 값만 올라온다. 거부된 입력은 여기까지 오지 않는다. */
   onCommit: (weightTenths: number) => void
-  /** 고정되어 있는가. 고정한 값은 다른 섹터를 움직여도 그대로 남는다 */
-  locked?: boolean
-  /** 고정을 걸고 푼다. 주지 않으면 고정 단추를 그리지 않는다 */
-  onLockedChange?: (locked: boolean) => void
   className?: string
 }
 
@@ -48,8 +45,6 @@ export function WeightInput({
   sectorName,
   valueTenths,
   onCommit,
-  locked = false,
-  onLockedChange,
   className,
 }: WeightInputProps) {
   const inputId = useId()
@@ -130,7 +125,6 @@ export function WeightInput({
           max={TOTAL_WEIGHT_TENTHS}
           step={1}
           value={valueTenths}
-          disabled={locked}
           onChange={handleSlide}
           aria-label={`${sectorName} 비중`}
           aria-valuetext={`${formatted}%`}
@@ -146,7 +140,6 @@ export function WeightInput({
             min="0"
             max="100"
             value={draft ?? formatted}
-            disabled={locked}
             onChange={handleChange}
             onBlur={settle}
             onKeyDown={handleKeyDown}
@@ -159,22 +152,6 @@ export function WeightInput({
           </span>
         </span>
 
-        {/*
-          고정은 값을 바꾸지 않는다. 다른 섹터를 움직일 때 이 값을 건드리지 말라는 표시다.
-          걸어 둔 동안에는 슬라이더와 숫자 칸을 잠근다 — 고정한 값이 그 자리에서 또 움직이면
-          무엇을 고정한 것인지 알 수 없다. 바꾸려면 먼저 푼다.
-        */}
-        {onLockedChange ? (
-          <button
-            type="button"
-            data-slot="weight-lock"
-            aria-pressed={locked}
-            aria-label={`${sectorName} 비중 고정`}
-            onClick={() => onLockedChange(!locked)}
-          >
-            {locked ? '고정됨' : '고정하기'}
-          </button>
-        ) : null}
       </span>
 
       {errorMessage === null ? null : (

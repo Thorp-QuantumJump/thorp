@@ -59,9 +59,9 @@
   letter-spacing: -0.02em;
 }
 
-.metric:nth-child(2) .metricValue {
-  color: var(--thorp-negative);
-}
+/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */
+:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }
+:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }
 
 .note {
   margin: 0;

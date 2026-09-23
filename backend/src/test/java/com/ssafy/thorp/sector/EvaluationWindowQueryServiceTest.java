@@ -8,6 +8,7 @@ import com.ssafy.thorp.sector.application.exception.EvaluationWindowNotReadyExce
 import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;
 import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;
 import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository;
+import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;
 import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;
 import com.ssafy.thorp.sector.application.result.EvaluationWindowView;
 import com.ssafy.thorp.sector.application.result.SectorListResult;
@@ -218,7 +219,10 @@ class EvaluationWindowQueryServiceTest {
     void 대응표가_없으면_그_실패를_전한다() {
         EvaluationWindowQueryService service =
                 new EvaluationWindowQueryService(
-                        new SectorService(Optional::empty, stubProfileRepository()),
+                        new SectorService(
+                                Optional::empty,
+                                stubProfileRepository(),
+                                stubPriceSeriesRepository()),
                         (mapVersion, instrumentIds) -> restrictTo(inputs(), instrumentIds),
                         new EvaluationWindowService(),
                         stubRegistry());
@@ -252,7 +256,9 @@ class EvaluationWindowQueryServiceTest {
     private EvaluationWindowQueryService service(EvaluationWindowInputs inputs) {
         return new EvaluationWindowQueryService(
                 new SectorService(
-                        EvaluationWindowQueryServiceTest::sectorMap, stubProfileRepository()),
+                        EvaluationWindowQueryServiceTest::sectorMap,
+                        stubProfileRepository(),
+                        stubPriceSeriesRepository()),
                 (mapVersion, instrumentIds) -> restrictTo(inputs, instrumentIds),
                 new EvaluationWindowService(),
                 stubRegistry());
@@ -404,6 +410,12 @@ class EvaluationWindowQueryServiceTest {
     private static InstrumentProfileRepository stubProfileRepository() {
         return (mapVersion, instrumentId) -> {
             throw new UnsupportedOperationException("평가 기간 조회는 대표 상품 정보를 읽지 않는다");
+        };
+    }
+
+    private static PriceSeriesRepository stubPriceSeriesRepository() {
+        return (mapVersion, instrumentId) -> {
+            throw new UnsupportedOperationException("평가 기간 조회는 가격 흐름을 읽지 않는다");
         };
     }
 

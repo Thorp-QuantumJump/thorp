@@ -12,9 +12,9 @@
   flex-direction: column;
   gap: 22px;
   min-width: 0;
-  padding: 22px 24px;
+  padding: var(--thorp-pad-card, 22px 24px);
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -198,7 +198,7 @@
   min-height: 32px;
   padding: 4px 8px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
@@ -309,6 +309,6 @@
 
 @media (max-width: 600px) {
   .panel {
-    padding: 18px 16px;
+    padding: var(--thorp-pad-card, 18px 16px);
   }
 }

@@ -1,11 +1,14 @@
 package com.ssafy.thorp.sector.application.service;
 
 import com.ssafy.thorp.sector.application.exception.InstrumentProfileNotReadyException;
+import com.ssafy.thorp.sector.application.exception.PriceSeriesNotReadyException;
 import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;
 import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;
 import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository;
+import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;
 import com.ssafy.thorp.sector.application.repository.SectorRepository;
 import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;
+import com.ssafy.thorp.sector.application.result.PriceSeriesResult;
 import com.ssafy.thorp.sector.application.result.SectorListResult;
 import com.ssafy.thorp.sector.domain.model.Sector;
 import org.springframework.stereotype.Service;
@@ -20,12 +23,15 @@ public class SectorService {
 
     private final SectorRepository sectorRepository;
     private final InstrumentProfileRepository instrumentProfileRepository;
+    private final PriceSeriesRepository priceSeriesRepository;
 
     public SectorService(
             SectorRepository sectorRepository,
-            InstrumentProfileRepository instrumentProfileRepository) {
+            InstrumentProfileRepository instrumentProfileRepository,
+            PriceSeriesRepository priceSeriesRepository) {
         this.sectorRepository = sectorRepository;
         this.instrumentProfileRepository = instrumentProfileRepository;
+        this.priceSeriesRepository = priceSeriesRepository;
     }
 
     /**
@@ -63,5 +69,30 @@ public class SectorService {
         return instrumentProfileRepository
                 .findCurrentProfile(map.mapVersion(), sector.representativeEtf().instrumentId())
                 .orElseThrow(() -> new InstrumentProfileNotReadyException(sectorCode));
+    }
+
+    /**
+     * 한 섹터 대표 ETF의 일별 가격 흐름.
+     *
+     * <p>실패를 가르는 방식은 대표 상품 정보와 같다. 대응표 미발행은 409 {@code SECTOR_MAP_NOT_READY}, 그 대응표에 없는 섹터는 404
+     * {@code SECTOR_NOT_FOUND}, 섹터는 있는데 가격이 아직 적재되지 않았으면 409 {@code PRICE_SERIES_NOT_READY}다.
+     *
+     * <p><b>열린 대응표에서 섹터를 찾은 다음 그 대표 ETF로 조회한다.</b> 목록·대표 상품 정보와 같은 판을 보게 하려는 것이다. 물러난 대응표가 가리키던
+     * ETF의 가격이 지금 목록 옆에 그려지면, 사용자는 다른 상품의 흐름을 보고 고르게 된다.
+     *
+     * @throws SectorMapNotReadyException 대응표가 아직 발행되지 않았을 때
+     * @throws SectorNotFoundException 열린 대응표에 그 코드가 없을 때(형식이 틀린 코드도 여기다)
+     * @throws PriceSeriesNotReadyException 그 종목의 가격이 아직 적재되지 않았을 때
+     */
+    public PriceSeriesResult getPriceSeries(String sectorCode) {
+        SectorListResult map = getSectors();
+        Sector sector =
+                map.sectors().stream()
+                        .filter(candidate -> candidate.code().value().equals(sectorCode))
+                        .findFirst()
+                        .orElseThrow(() -> new SectorNotFoundException(sectorCode));
+        return priceSeriesRepository
+                .findCurrentSeries(map.mapVersion(), sector.representativeEtf().instrumentId())
+                .orElseThrow(() -> new PriceSeriesNotReadyException(sectorCode));
     }
 }

@@ -42,7 +42,7 @@ import {
   type WarmupCause,
 } from "@/components/strategy/reducedPeriod";
 import type { RegimeLinkCaseWindow } from "@/types/regimeLink";
-import type { TargetWeightRow } from "@/components/strategy/ReadOnlyTargetWeights";
+import type { TargetWeightRow } from "@/components/strategy/TargetWeightEditor";
 import {
   RegistryChangedNotice,
   type RegistryReloadPhase,
@@ -52,7 +52,12 @@ import {
   StrategyCardList,
   type RegistryViewState,
 } from "@/components/strategy/StrategyCardList";
-import { formatWeightTenths as formatDisplayWeight } from "@/diagnosis/weights";
+import { writeStoredSelection } from "@/diagnosis/selectionStorage";
+import {
+  distributeEven,
+  formatWeightTenths as formatDisplayWeight,
+  summarizeWeights,
+} from "@/diagnosis/weights";
 import { useEvaluationWindow } from "@/hooks/useEvaluationWindow";
 import { useSectorSelection } from "@/hooks/useSectorSelection";
 import {
@@ -144,7 +149,7 @@ const REQUEST_BUILD_FAILED =
  * 보이지 않게 한다.
  */
 function weightsUnbalancedMessage(totalTenths: number): string {
-  return `섹터별 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 섹터·비중 단계에서 맞춰 주세요.`;
+  return `목표 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 전략 설정의 자산 배분에서 맞춰 주세요.`;
 }
 
 /**
@@ -306,6 +311,91 @@ export function StrategySettingsPage({
   );
   const universeSize =
     selection.status === "ready" ? selection.selection.items.length : null;
+
+  /**
+   * 이 화면에서 고친 목표 비중. 키는 섹터 코드이고 값은 0.1%p 단위 정수다.
+   *
+   * <p>`null`은 아직 아무것도 고치지 않았다는 뜻이며, 그때는 앞 단계가 넘긴 값을 그대로 쓴다.
+   * 고친 값은 <b>앞 단계와 같은 보관 항목</b>에 다시 적는다 — 새로고침하거나 앞 단계를 다녀와도
+   * 방금 정한 비중이 남아 있어야 하고, 그 보관 항목을 읽는 다른 화면이 서로 다른 값을 보면 안 된다.
+   */
+  const [weightOverrides, setWeightOverrides] = useState<Record<
+    string,
+    number
+  > | null>(null);
+
+  /**
+   * 요청과 화면이 함께 읽는 선택 한 벌. <b>고친 비중이 반영된 값이다.</b>
+   *
+   * <p>고친 값을 화면에만 반영하고 요청은 앞 단계의 값으로 보내면, 사용자가 보고 있는 비중과
+   * 실제로 계산되는 비중이 갈라진다.
+   */
+  const effectiveSelection = useMemo(() => {
+    if (selection.status !== "ready") return null;
+    if (weightOverrides === null) return selection.selection;
+    return {
+      mapVersion: selection.selection.mapVersion,
+      items: selection.selection.items.map((item) => ({
+        ...item,
+        weightTenths: weightOverrides[item.sectorId] ?? item.weightTenths,
+      })),
+    };
+  }, [selection, weightOverrides]);
+
+  /** 지금 화면에 보이는 비중의 합계다. 100% 판정도 이 값으로 한다. */
+  const effectiveWeights = useMemo(() => {
+    const items = effectiveSelection?.items ?? [];
+    return summarizeWeights(
+      items.map((item) => item.sectorId),
+      Object.fromEntries(
+        items.map((item) => [item.sectorId, item.weightTenths]),
+      ),
+    );
+  }, [effectiveSelection]);
+
+  /**
+   * 고친 비중을 상태와 보관 항목에 함께 남긴다.
+   *
+   * <p>보관이 막힌 환경에서도 화면 안의 값은 그대로 둔다. 저장하지 못했다고 방금 친 값을
+   * 되돌리면 사용자는 자기가 무엇을 잘못했는지 알 수 없다.
+   */
+  const commitWeights = useCallback(
+    (next: Record<string, number>) => {
+      if (effectiveSelection === null) return;
+      setWeightOverrides(next);
+      writeStoredSelection({
+        mapVersion: effectiveSelection.mapVersion,
+        selectedCodes: effectiveSelection.items.map((item) => item.sectorId),
+        weightTenths: next,
+        // 사용자가 직접 정한 값이라, 앞 단계에서 대상을 더하고 뺄 때 동일 비중으로 덮이지 않는다.
+        weightsTouched: true,
+      });
+    },
+    [effectiveSelection],
+  );
+
+  const handleTargetWeightChange = useCallback(
+    (sectorId: string, weightTenths: number) => {
+      if (effectiveSelection === null) return;
+      commitWeights(
+        Object.fromEntries(
+          effectiveSelection.items.map((item) => [
+            item.sectorId,
+            item.sectorId === sectorId ? weightTenths : item.weightTenths,
+          ]),
+        ),
+      );
+    },
+    [commitWeights, effectiveSelection],
+  );
+
+  const handleDistributeWeightsEven = useCallback(() => {
+    if (effectiveSelection === null) return;
+    // 표시 순서는 앞 단계가 정해 넘겼다. 그 순서로 나눠야 잔여분이 붙는 자리가 두 화면에서 같다.
+    commitWeights(
+      distributeEven(effectiveSelection.items.map((item) => item.sectorId)),
+    );
+  }, [commitWeights, effectiveSelection]);
 
   // --- 등록표 조회. 섹터 수를 알아야 유효성 제약을 미리 적용한 응답을 받는다 ----------------
   const [registryState, setRegistryState] = useState<RegistryViewState>({
@@ -647,7 +737,7 @@ export function StrategySettingsPage({
   const unbalancedUserWeights =
     selection.status === "ready" &&
     settings.selectedStrategy?.targetWeightSource === "USER" &&
-    !selection.weights.isBalanced;
+    !effectiveWeights.isBalanced;
 
   /**
    * 요청에 실을 시작 금액. **화면에 보이는 값과 보내는 값이 같은 자리에서 나온다(T092).**
@@ -778,8 +868,9 @@ export function StrategySettingsPage({
     ) {
       return null;
     }
+    if (effectiveSelection === null) return null;
     return {
-      selection: selection.selection,
+      selection: effectiveSelection,
       strategy: settings.selectedStrategy,
       parameters: settings.values,
       registryVersion: settings.registryVersion,
@@ -791,6 +882,7 @@ export function StrategySettingsPage({
     };
   }, [
     selection,
+    effectiveSelection,
     registry,
     initialAmount,
     unbalancedUserWeights,
@@ -815,7 +907,7 @@ export function StrategySettingsPage({
     if (ruleCheck?.unjudged) return RULES_UNJUDGED;
     if (ruleCheck && ruleCheck.violations.length > 0) return RULES_VIOLATED;
     if (unbalancedUserWeights && selection.status === "ready") {
-      return weightsUnbalancedMessage(selection.weights.totalTenths);
+      return weightsUnbalancedMessage(effectiveWeights.totalTenths);
     }
     if (settings.warmupTradingDays === null) return WARMUP_UNCOMPUTABLE;
     if (!selectedJudgement) return EVALUATION_WINDOW_UNAVAILABLE;
@@ -1071,19 +1163,18 @@ export function StrategySettingsPage({
         ? "reloaded"
         : "reloading";
 
-  /** 002 비중을 이름과 함께 읽기 전용 표로. 이름은 섹터 목록에서, 비중은 002가 확정한 값에서 온다. */
+  /** 자산 배분 표의 줄이다. 이름은 섹터 목록에서, 비중은 지금 화면이 들고 있는 값에서 온다. */
   const targetWeights = useMemo((): TargetWeightRow[] | null => {
-    if (selection.status !== "ready" || catalog?.status !== "loaded")
-      return null;
+    if (effectiveSelection === null || catalog?.status !== "loaded") return null;
     const names = new Map(
       catalog.catalog.sectors.map((sector) => [sector.code, sector.name]),
     );
-    return selection.selection.items.map((item) => ({
+    return effectiveSelection.items.map((item) => ({
       sectorId: item.sectorId,
       name: names.get(item.sectorId) ?? item.sectorId,
       weightTenths: item.weightTenths,
     }));
-  }, [selection, catalog]);
+  }, [effectiveSelection, catalog]);
   // 조회 중과 조회 실패를 가른다. 409 뒤 다시 받는 동안을 "확인할 수 없음"으로 보이면 곧 끝날 조회가 실패로
   // 읽히고, 같은 화면의 '분석하기' 사유("확인하는 중")와 두 말을 하게 된다.
   const costProfile =
@@ -1291,14 +1382,18 @@ export function StrategySettingsPage({
                         <div className={styles.weightNotice} role="status">
                           <p>
                             {weightsUnbalancedMessage(
-                              selection.weights.totalTenths,
+                              effectiveWeights.totalTenths,
                             )}
                           </p>
+                          {/*
+                            맞추는 자리가 같은 화면 안에 있으므로 다른 화면으로 보내지 않는다.
+                            누르면 고른 대상 전체가 같은 비중으로 되돌아간다.
+                          */}
                           <button
                             type="button"
-                            onClick={() => navigate("/diagnosis/sectors")}
+                            onClick={handleDistributeWeightsEven}
                           >
-                            섹터·비중 단계로 이동
+                            동일하게 나누기
                           </button>
                         </div>
                       ) : null}
@@ -1423,6 +1518,8 @@ export function StrategySettingsPage({
                       values={settings.values}
                       universeSize={universeSize}
                       targetWeights={targetWeights}
+                      onTargetWeightChange={handleTargetWeightChange}
+                      onDistributeWeightsEven={handleDistributeWeightsEven}
                       evaluationRange={evaluableRange}
                       onChange={(axisName, value) =>
                         settings.setValue(selectedId, axisName, value)
