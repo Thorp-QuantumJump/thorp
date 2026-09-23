@@ -31,7 +31,7 @@ const authenticatedAuthContext = {
   status: 'authenticated',
   user: authenticatedUser,
 } as typeof anonymousAuthContext
-const DEFAULT_ROW = /표류 균형 맞추기 · 기본값/
+const DEFAULT_ROW = /기본 전략 · 표류 균형 맞추기/
 const DEFAULT_SETTINGS = '표류 관측 창 45거래일 · 되돌리는 시점 달 끝마다 · 허용 이탈 폭 35퍼센트'
 
 function setup(
@@ -66,7 +66,7 @@ beforeEach(() => {
 })
 
 describe('비교 목록 (T058, S15P21E205-419)', () => {
-  it('기본값 조합에 설정값을 적고, 기간 감소와 선택 불가 이유를 보이며 키보드로 고른 뒤 한 번에 넘긴다', async () => {
+  it('기본 전략 묶음에 설정값을 적고, 기간 감소와 선택 불가 이유를 보이며 키보드로 고른 뒤 한 번에 넘긴다', async () => {
     const user = userEvent.setup()
     const select = setup()
     expect(await screen.findByText('이 전략을 고르면 비교 기간이 2거래일 짧아집니다.')).toBeTruthy()
@@ -74,7 +74,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     expect(
       (
         screen.getByRole('checkbox', {
-          name: new RegExp(unselectableStrategy.name + ' · 기본값'),
+          name: new RegExp('기본 전략 · ' + unselectableStrategy.name),
         }) as HTMLInputElement
       ).disabled,
     ).toBe(true)
@@ -95,7 +95,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     // 비로그인이면 써 본 조합을 묻지 않는다.
     expect(api.used).not.toHaveBeenCalled()
   })
-  it('로그인했으면 써 본 조합을 전략 아래 설정값과 함께 올리고, 기본값과 같거나 등록표에 맞지 않는 것은 뺀다', async () => {
+  it('로그인했으면 써 본 조합을 내 전략 묶음에 설정값과 함께 올리고, 기본값과 같거나 등록표에 맞지 않는 것은 뺀다', async () => {
     api.used.mockResolvedValue([
       {
         strategyId: selectableStrategy.strategyId,
@@ -121,7 +121,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     ])
     const select = setup({ room: 1 }, authenticatedAuthContext)
     const used = (await screen.findByRole('checkbox', {
-      name: /표류 균형 맞추기 · 내가 쓴 설정/,
+      name: /내 전략 · 표류 균형 맞추기/,
     })) as HTMLInputElement
     expect(used.getAttribute('aria-label')).toContain(
       '표류 관측 창 90거래일 · 되돌리는 시점 30거래일마다 · 허용 이탈 폭 40퍼센트',
@@ -166,13 +166,13 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
         />
       </AuthContext.Provider>,
     )
-    expect(await screen.findByRole('checkbox', { name: /내가 쓴 설정/ })).toBeTruthy()
+    expect(await screen.findByRole('checkbox', { name: /내 전략/ })).toBeTruthy()
     expect(screen.queryByRole('checkbox', { name: DEFAULT_ROW })).toBeNull()
   })
-  it('써 본 조합 조회가 실패하면 기본값만 보이고 그 사실을 한 줄로 알린다', async () => {
+  it('써 본 조합 조회가 실패하면 기본 전략만 보이고 그 사실을 한 줄로 알린다', async () => {
     api.used.mockRejectedValue(new Error('401'))
     setup({}, authenticatedAuthContext)
-    expect(await screen.findByText(/내가 쓴 설정 목록은 지금 불러오지 못했습니다/)).toBeTruthy()
+    expect(await screen.findByText(/내 전략 목록은 지금 불러오지 못했습니다/)).toBeTruthy()
     expect(screen.getByRole('checkbox', { name: DEFAULT_ROW })).toBeTruthy()
   })
   it('과거 준비 자료가 충분하면 기간이 줄어든다고 잘못 안내하지 않는다', async () => {

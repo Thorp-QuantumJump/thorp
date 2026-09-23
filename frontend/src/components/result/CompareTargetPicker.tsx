@@ -22,16 +22,18 @@ type Candidate = {
   shortenedDays: number | null
 }
 
+/** 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합). */
 const SOURCE_LABELS: Record<CandidateSource, string> = {
-  default: '기본값',
-  used: '내가 쓴 설정',
+  default: '기본 전략',
+  used: '내 전략',
 }
+const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']
 
 /**
  * 비교 대상 고르기(FR-004, `S15P21E205-419`).
  *
  * <p><b>후보는 전략이 아니라 전략·설정값 조합이다.</b> 등록표 기본값 조합과, 로그인했으면 내가 써 본 조합
- * (`GET /backtests/used-strategies`)을 전략별로 묶어 보인다. 조합마다 쓰일 설정값을 적어 무엇과 비교하는지 보이게 한다.
+ * (`GET /backtests/used-strategies`)을 '기본 전략'·'내 전략' 두 묶음으로 보인다. 조합마다 쓰일 설정값을 적어 무엇과 비교하는지 보이게 한다.
  * 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보다.
  *
  * <p><b>여럿을 골라 한 번에 요청한다.</b> 남은 자리(`room`)만큼 고를 수 있고, 준비 기간이 기준보다 긴 후보는 고르기 전에
@@ -168,12 +170,11 @@ export function CompareTargetPicker({
     onSelect(chosen.map((candidate) => candidate.choice))
   }
 
-  // 전략별로 묶어 보인다. 조합 하나짜리 전략이 대부분이라 제목은 전략 이름, 줄은 출처와 설정값이다.
-  const groups = new Map<string, Candidate[]>()
-  for (const candidate of state?.candidates ?? []) {
-    const id = candidate.choice.strategy.strategyId
-    groups.set(id, [...(groups.get(id) ?? []), candidate])
-  }
+  // 출처별로 묶어 보인다. 기본 전략 묶음에는 전략마다 한 줄, 내 전략 묶음에는 돌려 본 조합마다 한 줄이다.
+  const groups = SOURCE_ORDER.map((source) => ({
+    source,
+    candidates: (state?.candidates ?? []).filter((candidate) => candidate.source === source),
+  })).filter((group) => group.candidates.length > 0)
 
   return (
     <section className={styles.panel} aria-label="비교 전략 선택">
@@ -190,23 +191,23 @@ export function CompareTargetPicker({
       {state && !state.error ? (
         <p id={listId} className={styles.pickerNote}>
           {room > 0
-            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본값은 등록표의 기본 설정이고, 내가 쓴 설정은 이전에 돌려 본 값입니다.'
+            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'
             : '비교 대상을 더 고를 자리가 없습니다. 하나를 해제한 뒤 고르세요.'}
-          {state.usedUnavailable ? ' 내가 쓴 설정 목록은 지금 불러오지 못했습니다.' : ''}
+          {state.usedUnavailable ? ' 내 전략 목록은 지금 불러오지 못했습니다.' : ''}
         </p>
       ) : null}
       <ul className={styles.candidates} aria-describedby={listId}>
-        {[...groups.entries()].map(([strategyId, candidates]) => (
-          <li key={strategyId} className={styles.group}>
-            <p className={styles.groupTitle}>{candidates[0].choice.strategy.name}</p>
+        {groups.map(({ source, candidates }) => (
+          <li key={source} className={styles.group}>
+            <p className={styles.groupTitle}>{SOURCE_LABELS[source]}</p>
             <ul className={styles.combinations}>
               {candidates.map((candidate) => {
                 const checked = picked.includes(candidate.key)
                 const disabled = !!candidate.reason || room === 0 || (full && !checked)
                 const name =
-                  candidate.choice.strategy.name +
+                  SOURCE_LABELS[source] +
                   ' · ' +
-                  SOURCE_LABELS[candidate.source] +
+                  candidate.choice.strategy.name +
                   (candidate.settings ? ' · ' + candidate.settings : '')
                 return (
                   <li key={candidate.key}>
@@ -220,7 +221,7 @@ export function CompareTargetPicker({
                         onChange={() => toggle(candidate.key)}
                       />
                       <span>
-                        <span className={styles.source}>{SOURCE_LABELS[candidate.source]}</span>
+                        <span className={styles.source}>{candidate.choice.strategy.name}</span>
                         {candidate.settings ? ' · ' + candidate.settings : ''}
                       </span>
                     </label>
