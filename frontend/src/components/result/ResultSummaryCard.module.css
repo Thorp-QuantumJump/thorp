@@ -1,8 +1,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 26px;
+  gap: 10px;
+  padding: 14px 22px;
   border: 1px solid var(--thorp-line);
   border-radius: 14px;
   background: var(--thorp-surface);
@@ -39,7 +39,7 @@
 .metric {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   min-width: 0;
 }
 

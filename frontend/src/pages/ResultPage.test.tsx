@@ -103,6 +103,26 @@ describe('ResultPage', () => {
     vi.useRealTimers()
   })
 
+  it('비교 대상을 페이지 밖 오버레이로 열고 Escape로 닫으면 버튼에 초점이 돌아온다', async () => {
+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
+    const user = userEvent.setup()
+    renderResult()
+
+    const trigger = await screen.findByRole('button', { name: '비교 대상 고르기' })
+    await user.click(trigger)
+
+    const dialog = await screen.findByRole('dialog', { name: '비교 대상 고르기' })
+    expect(dialog.parentElement).toBe(document.body)
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    expect(within(dialog).getByRole('button', { name: '목록 닫기' })).not.toBeNull()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '비교 대상 고르기' })).toBeNull()
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('완료 결과는 상세·시계열·섹터 목록만 한 번씩 부르고 요약 탭에 네 요소를 보인다', async () => {
     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)

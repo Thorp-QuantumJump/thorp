@@ -58,3 +58,9 @@
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
+
+.dialog .panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
