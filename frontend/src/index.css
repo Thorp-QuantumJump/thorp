@@ -13,7 +13,7 @@
   line-height: 1.5;
   /* 브랜드 원색은 테마와 무관하며, 컴포넌트는 아래 의미 토큰을 사용한다. */
   --thorp-brand-primary: rgb(3 199 90);
-  --thorp-brand-soft: #86f2a8;
+  --thorp-brand-soft: #2fdc7a;
   /* SUIT Variable은 index.html이 CDN에서 받는다. 뒤는 못 받았을 때 대신 설 글꼴이다. */
   --thorp-font-body: 'SUIT Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, sans-serif;
@@ -32,42 +32,60 @@
   --thorp-page-gutter: 40px;
   --thorp-page-top: clamp(30px, 5vh, 56px);
   --thorp-page-bottom: 80px;
-  /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */
-  --thorp-background: #030805;
   /*
-    배경 위의 층은 색조가 아니라 **밝기**로 갈린다. 예전 값은 배경과 카드의 명암비가 1.05:1이라
+    현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다.
+
+    값은 디자인 개편 B안(그래파이트)이다. 예전 초록 틴트 값은 아래 `[data-design='classic']`에
+    그대로 남겨 두었고, `?design=classic`으로 켠다(index.html). classic을 걷어낼 때는 그 블록과
+    `var(--토큰, 예전 값)` 폴백만 지우면 된다.
+  */
+  --thorp-background: #0d0f0e;
+  /*
+    배경 위의 층은 색조가 아니라 **밝기**로 갈린다. 처음 값은 배경과 카드의 명암비가 1.05:1이라
     카드가 어디서 시작하는지 눈으로 잡히지 않았다 — 초록 기운은 있는데 경계가 없는 상태였다.
+    B안에서 초록 기운을 걷어내고 무채색 밝기 차이만 남겼다.
 
     경계는 테두리(조작 요소 3.08:1)가 지므로 바탕은 거들기만 하면 된다. 한 번 1.23:1까지
     올려 봤더니 카드가 배경에서 너무 떠올라 목록이 시끄러웠다. 배경을 가장 어두운 기준점으로
     두고 카드(surface)는 1.13:1, 한 단 위(surface-raised)는 1.25:1 정도로만 벌린다.
   */
-  --thorp-surface: #0e1a13;
-  --thorp-surface-raised: #13251a;
-  --thorp-surface-muted: #111f17;
-  --thorp-foreground: #f2f7f3;
-  --thorp-copy: #a6b5ab;
-  --thorp-muted: #718278;
-  --thorp-line: rgb(134 242 168 / 18%);
-  --thorp-line-strong: rgb(134 242 168 / 30%);
+  --thorp-surface: #161918;
+  --thorp-surface-raised: #1f2321;
+  --thorp-surface-muted: #1a1d1c;
+  --thorp-foreground: #f5f7f6;
+  --thorp-copy: #b8bfbb;
+  --thorp-muted: #8b928e;
+  --thorp-line: rgb(255 255 255 / 9%);
+  --thorp-line-strong: rgb(255 255 255 / 15%);
   /*
     누를 수 있는 것의 테두리는 나누는 선과 기준이 다르다. WCAG 1.4.11은 조작 요소의 경계에
     3:1을 요구하는데, line/line-strong은 구분선을 위한 값이라 거기까지 올리면 화면 전체가
-    선으로 시끄러워진다. 그래서 조작 요소 전용으로 따로 둔다 — control은 카드 바탕 대비
-    3.08:1, hover는 5.15:1이다. 고름(accent 7.34:1)과 초점(accent-soft 11.9:1)이 그 위에 선다.
+    선으로 시끄러워진다. 그래서 조작 요소 전용으로 따로 둔다 — control은 한 단 위 바탕 대비
+    3:1 이상, hover는 5:1 이상이다. 고름(accent)과 초점(accent-soft)이 그 위에 선다.
   */
-  --thorp-line-control: rgb(134 242 168 / 40%);
-  --thorp-line-control-hover: rgb(134 242 168 / 60%);
+  --thorp-line-control: rgb(255 255 255 / 36%);
+  --thorp-line-control-hover: rgb(255 255 255 / 56%);
   --thorp-accent: var(--thorp-brand-primary);
   --thorp-accent-soft: var(--thorp-brand-soft);
   --thorp-accent-muted: rgb(3 199 90 / 12%);
-  --thorp-action-foreground: #021108;
-  --thorp-positive: #63dc8a;
+  --thorp-action-foreground: #01170a;
+  /* positive·negative는 성공·오류 상태다. 값의 오르내림은 up·down을 쓴다. */
+  --thorp-positive: #4fdc8c;
   --thorp-negative: #ef8a68;
-  --thorp-warning: #e8bd72;
-  --thorp-neutral: #8fa198;
-  /* 순검정 대신 배경 색조로 틴트한다. 배경이 L* 1.8이라 깊이를 만들지는 못하고, 색이 어긋나지 않게만 한다. */
-  --thorp-shadow: 0 22px 58px rgb(1 5 3 / 42%);
+  --thorp-warning: #e8b04b;
+  --thorp-neutral: #8b928e;
+  /*
+    오르내림(시장 지표 등락, 수익률 부호)은 국내 관례대로 상승 빨강·하락 파랑이다. 빨강이 좋은
+    쪽으로 읽히므로 삭제·취소 같은 되돌릴 수 없는 동작에는 빨강을 쓰지 않는다.
+  */
+  --thorp-up: #ff5f72;
+  --thorp-down: #4e97f5;
+  /* 모서리: 버튼·입력칸은 control, 칩·배지만 999px. 각 자리는 var(--thorp-radius-control, 예전 값)으로 쓴다. */
+  --thorp-radius-control: 6px;
+  --thorp-overlay: rgb(0 0 0 / 68%);
+  --thorp-input-hover: rgb(255 255 255 / 30%);
+  --thorp-surface-glass: rgb(26 29 28 / 86%);
+  --thorp-shadow: 0 22px 58px rgb(0 0 0 / 45%);
   --thorp-focus-outline: 3px solid rgb(3 199 90 / 30%);
   --thorp-focus-outline-compact: 2px solid var(--thorp-accent-soft);
   --thorp-focus-offset: 3px;
@@ -94,8 +112,8 @@
   --input: var(--thorp-line-strong);
   --ring: var(--thorp-accent);
   --chart-1: var(--thorp-accent);
-  --chart-2: #70d6b0;
-  --chart-3: #8cb8a0;
+  --chart-2: #7fcfa6;
+  --chart-3: #9aa39e;
   --chart-4: var(--thorp-warning);
   --chart-5: var(--thorp-negative);
   --radius: 0.625rem;
@@ -114,15 +132,56 @@
   --chart-line-secondary: var(--chart-2);
   --chart-crosshair: var(--thorp-accent-soft);
   /* 격자는 배경 위에 직접 그려진다. line이 올라간 만큼 따라 굵어지지 않게 예전 값에 묶어 둔다. */
-  --chart-grid: rgb(134 242 168 / 12%);
+  --chart-grid: rgb(255 255 255 / 7%);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: rgb(20 35 26 / 94%);
+  --chart-tooltip-background: rgb(31 35 33 / 96%);
   --chart-tooltip-foreground: var(--thorp-foreground);
   --chart-tooltip-muted: var(--thorp-copy);
   --chart-marker-background: var(--thorp-surface-muted);
   --chart-marker-border: var(--thorp-line-strong);
   --chart-marker-foreground: var(--thorp-foreground);
   --chart-label: var(--thorp-copy);
+  --chart-scale-01: #121413;
+  --chart-scale-02: #16201b;
+  --chart-scale-03: #183022;
+  --chart-scale-04: #1b4a30;
+  --chart-scale-05: #20744a;
+  --chart-scale-pattern-color: #151816;
+}
+
+/*
+  예전 디자인(초록 틴트·알약형 버튼). ?design=classic으로 켠다. 새로 생긴 토큰은 initial로 비워
+  각 자리의 var() 폴백, 곧 예전 값이 쓰이게 한다. up·down은 예전처럼 초록·주황으로 돌아간다.
+*/
+:root[data-design='classic'] {
+  --thorp-brand-soft: #86f2a8;
+  --thorp-background: #030805;
+  --thorp-surface: #0e1a13;
+  --thorp-surface-raised: #13251a;
+  --thorp-surface-muted: #111f17;
+  --thorp-foreground: #f2f7f3;
+  --thorp-copy: #a6b5ab;
+  --thorp-muted: #718278;
+  --thorp-line: rgb(134 242 168 / 18%);
+  --thorp-line-strong: rgb(134 242 168 / 30%);
+  --thorp-line-control: rgb(134 242 168 / 40%);
+  --thorp-line-control-hover: rgb(134 242 168 / 60%);
+  --thorp-action-foreground: #021108;
+  --thorp-positive: #63dc8a;
+  --thorp-negative: #ef8a68;
+  --thorp-warning: #e8bd72;
+  --thorp-neutral: #8fa198;
+  --thorp-up: var(--thorp-positive);
+  --thorp-down: var(--thorp-negative);
+  --thorp-radius-control: initial;
+  --thorp-overlay: initial;
+  --thorp-input-hover: initial;
+  --thorp-surface-glass: initial;
+  --thorp-shadow: 0 22px 58px rgb(1 5 3 / 42%);
+  --chart-2: #70d6b0;
+  --chart-3: #8cb8a0;
+  --chart-grid: rgb(134 242 168 / 12%);
+  --chart-tooltip-background: rgb(20 35 26 / 94%);
   --chart-scale-01: #07110b;
   --chart-scale-02: #0c1c13;
   --chart-scale-03: #13301f;
@@ -236,7 +295,7 @@ textarea {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgb(3 8 5 / 72%);
+  background: var(--thorp-overlay, rgb(3 8 5 / 72%));
 }
 
 [data-slot='overwrite-dialog'] {
@@ -283,7 +342,7 @@ textarea {
 [data-slot='overwrite-confirm'] {
   padding: 9px 18px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

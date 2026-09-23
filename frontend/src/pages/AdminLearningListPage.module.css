@@ -69,7 +69,7 @@
 .field input {
   padding: 9px 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
@@ -86,7 +86,7 @@
 .main button {
   padding: 8px 15px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

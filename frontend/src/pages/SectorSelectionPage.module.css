@@ -58,7 +58,7 @@
 .notice button {
   padding: 9px 16px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -552,7 +552,7 @@
 .item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) button {
   padding: 6px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -648,7 +648,7 @@
   grid-row: 1;
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -703,7 +703,7 @@
   margin-top: 4px;
   padding: 11px 22px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;

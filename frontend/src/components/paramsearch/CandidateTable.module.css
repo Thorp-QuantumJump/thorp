@@ -90,7 +90,7 @@
   min-height: 34px;
   padding: 0 9px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: var(--thorp-surface);
   color: var(--thorp-foreground);
   font: inherit;
@@ -209,7 +209,7 @@
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 4px;
+  border-radius: var(--thorp-radius-control, 4px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
@@ -237,7 +237,7 @@
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;

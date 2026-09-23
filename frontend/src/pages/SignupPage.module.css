@@ -118,7 +118,7 @@
 .formPanel {
   padding: clamp(24px, 3vw, 42px);
   border: 1px solid var(--thorp-line-strong);
-  background: rgb(7 17 11 / 86%);
+  background: var(--thorp-surface-glass, rgb(7 17 11 / 86%));
   box-shadow: var(--thorp-shadow);
   backdrop-filter: blur(18px);
 }

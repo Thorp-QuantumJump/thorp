@@ -93,7 +93,7 @@
   padding: 0;
   place-items: center;
   border: 1px solid var(--market-line-soft);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: var(--market-surface);
   color: var(--market-copy);
   cursor: pointer;

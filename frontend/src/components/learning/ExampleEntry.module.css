@@ -3,7 +3,7 @@
   align-self: flex-start;
   padding: 11px 22px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
