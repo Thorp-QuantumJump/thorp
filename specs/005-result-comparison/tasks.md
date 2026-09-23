@@ -481,3 +481,14 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대�
 
 - [X] T096 (FE) LOW — 011 진입점의 보이는 이름을 spec의 `경제환경이 비슷했던 과거 보기`로 통일하고 `frontend/src/pages/ResultPage.auxiliary.test.tsx`가 그 이름과 비활성 사유를 함께 고정하게 한다. 011의 진입 계약과 라우트가 생기기 전까지는 지금처럼 누를 수 없게 둔다 per FR-018 · US5 인수 기준 3 · T079 (partial)
 - [X] T097 (FE) MEDIUM — `frontend/src/components/result/NextStepLinks.tsx`에서 spec·tasks에 없는 `이전 화면으로` 버튼과 `navigate(-1)` 행동을 제거한다. 결과에서 011로 이동한 뒤 돌아오는 수단은 FR-018이 정한 브라우저 뒤로 가기이며, 별도 이전 화면 행동은 근거 없이 결과 화면의 보조 행동을 늘린다 per FR-018 · FR-019 · Constitution II · T079 (unrequested)
+
+## Phase 15: 비교 대상 여럿과 설정 조합 후보 (`S15P21E205-419`, 2026-09-23)
+
+'비교 대상 고르기'가 등록표 기본값으로만 상대를 돌리고 그 값을 보이지 않던 것을 고쳤다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.
+
+- [X] T098 (FE) 비교 주소 `?compare=`를 쉼표로 이은 토큰 목록(최대 셋)으로 읽고 쓴다 — `frontend/src/components/result/compareQuery.ts` per FR-004 · contracts "비교 주소"
+- [X] T099 (FE) 후보를 전략·설정값 조합으로 만든다 — `frontend/src/components/result/compareCandidates.ts`. 등록표 기본값 + 써 본 조합(`GET /backtests/used-strategies`, 로그인 시), 현재 등록표로 재판정, 기준 자신과 같은 조합 제외, 설정값을 등록표 이름표로 적는 `describeParameters` per FR-004 · 003 FR-005 · 원칙 VI
+- [X] T100 (FE) 비교 훅을 대상 여럿으로 바꾼다 — `frontend/src/hooks/useCompareTargets.ts`. 대상마다 상태·불일치·다시 시도·해제, 여럿을 한 번에 접수, 공통 구간 확인은 가장 긴 준비 기간 기준으로 한 번 per FR-004 · FR-005 · 원칙 IX
+- [X] T101 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010
+- [X] T102 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004
+- [X] T103 (FE) 결과 화면이 대상마다 자리를 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetSlot.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006
