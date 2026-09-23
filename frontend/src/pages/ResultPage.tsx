@@ -16,7 +16,7 @@ import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
-import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
+import { ConditionLine, ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
@@ -35,8 +35,9 @@ import styles from './ResultPage.module.css'
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>화면은 제목·그래프·해석 요약 1문장·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 순이다. 핵심 숫자와
- * 상태 문장은 기본으로 열린 '요약' 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
+ * <p>화면은 제목·조건 한 줄, 그래프와 그 옆의 핵심 숫자 3개·해석 요약 1문장·상태 문장, '비교 대상 고르기', 탭
+ * 묶음(`ResultDetailTabs`, T098) 순이다. 탭은 결과 분석이 기본으로 열려 있고 다른 탭은 고를 때 그 자료를 받는다.
+ * 볼 결과가 없는 실행은 탭 묶음을 두지 않는다. 주 모양
  * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지
  * 않는다(SC-006).
  *
@@ -116,27 +117,6 @@ function ResultView({
     [summary, timeseries],
   )
 
-  // 요약 탭의 내용(핵심 숫자·상태 문장). 그래프와 해석 문장은 탭 위에 그대로 둔다. 볼 결과가 없으면 탭 없이 이것만 그린다.
-  const summaryBlock = (
-    <div className={styles.summaryStack}>
-      <ResultSummaryCard detail={detail} target={target} />
-
-      <ResultStatusLine
-        detail={detail}
-        completedThrough={completedThrough}
-        onRetry={
-          detail.status === 'FAILED'
-            ? async () => {
-                const accepted = await retryResult(token)
-                await navigate(`/results/${accepted.publicToken}`)
-              }
-            : undefined
-        }
-      />
-
-    </div>
-  )
-
   return (
     <article className={styles.result} aria-labelledby="result-title">
       <header className={styles.intro}>
@@ -152,6 +132,7 @@ function ResultView({
         <h1 id="result-title" className={styles.title}>
           백테스트 결과
         </h1>
+        <ConditionLine detail={detail} target={target} />
       </header>
       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
       {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
@@ -162,43 +143,59 @@ function ResultView({
         </p>
       ) : null}
 
-
-    <ResultChartSlot
-        detail={detail}
-        timeseries={timeseries}
-        progressPoints={progressSeries.points}
-        target={
-          target && compare.timeseries.status === 'loaded'
-            ? {
-                name: strategyLabel(target),
-                points: compare.timeseries.data.points,
-                maxDrawdown: target.summary?.maxDrawdown ?? null,
-              }
-            : null
-        }
-      />
-
-      {summary ? (
-        <p className={styles.sentence}>
-          {selectSummarySentence({
-            base: {
-              name: strategyLabel(detail),
-              netTotalReturn: summary.netTotalReturn,
-              maxDrawdown: summary.maxDrawdown,
-              totalTradingCost: summary.totalTradingCost,
-            },
-            target: target?.summary
+      {/* 그래프와 핵심 숫자를 한 시선에 둔다(FR-001). 넓은 화면은 두 칸, 좁은 화면은 세로로 쌓인다. */}
+      <div className={styles.hero}>
+        <ResultChartSlot
+          detail={detail}
+          timeseries={timeseries}
+          progressPoints={progressSeries.points}
+          target={
+            target && compare.timeseries.status === 'loaded'
               ? {
                   name: strategyLabel(target),
-                  netTotalReturn: target.summary.netTotalReturn,
-                  maxDrawdown: target.summary.maxDrawdown,
-                  totalTradingCost: target.summary.totalTradingCost,
+                  points: compare.timeseries.data.points,
+                  maxDrawdown: target.summary?.maxDrawdown ?? null,
                 }
-              : null,
-            partial: detail.partial ? { completedThrough } : null,
-          })}
-        </p>
-      ) : null}
+              : null
+          }
+        />
+        <aside className={styles.heroSide} aria-label="핵심 숫자와 해석">
+          <ResultSummaryCard detail={detail} />
+          {summary ? (
+            <p className={styles.sentence}>
+              {selectSummarySentence({
+                base: {
+                  name: strategyLabel(detail),
+                  netTotalReturn: summary.netTotalReturn,
+                  maxDrawdown: summary.maxDrawdown,
+                  totalTradingCost: summary.totalTradingCost,
+                },
+                target: target?.summary
+                  ? {
+                      name: strategyLabel(target),
+                      netTotalReturn: target.summary.netTotalReturn,
+                      maxDrawdown: target.summary.maxDrawdown,
+                      totalTradingCost: target.summary.totalTradingCost,
+                    }
+                  : null,
+                partial: detail.partial ? { completedThrough } : null,
+              })}
+            </p>
+          ) : null}
+          <ResultStatusLine
+            detail={detail}
+            completedThrough={completedThrough}
+            onRetry={
+              detail.status === 'FAILED'
+                ? async () => {
+                    const accepted = await retryResult(token)
+                    await navigate(`/results/${accepted.publicToken}`)
+                  }
+                : undefined
+            }
+          />
+        </aside>
+      </div>
 
       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}
       <div className={styles.actions}>
@@ -263,7 +260,6 @@ function ResultView({
         <ResultDetailTabs
           token={token}
           detail={detail}
-          summary={summaryBlock}
           lossWindow={lossWindow}
           compare={
             target
@@ -275,9 +271,7 @@ function ResultView({
               : null
           }
         />
-      ) : (
-        summaryBlock
-      )}
+      ) : null}
       <NextStepLinks
         config={detail.config}
         token={token}
