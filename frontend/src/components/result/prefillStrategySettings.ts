@@ -21,7 +21,7 @@ import type { SectorCatalog } from '@/types/sector'
 import type { RegistryResponse } from '@/types/strategyRegistry'
 
 /**
- * '다른 조건으로 비교'(spec 005 FR-010, T068). 결과의 조건을 설정 화면에 채워 넘긴다.
+ * 기록의 '설정 바꿔 비교'가 결과의 조건을 설정 화면에 채워 넘긴다.
  *
  * <p>넘기는 수단은 002와 003이 이미 쓰는 탭 세션 저장소다. 002의 섹터 선택(`writeStoredSelection`)과 003의
  * 전략 설정(`writeStoredStrategySettings`)을 이 결과의 `config`로 쓰고 `/strategy`로 옮긴다. 거기서 분석하면
