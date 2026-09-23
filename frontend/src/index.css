@@ -85,6 +85,10 @@
   /* 카드는 12px, 카드 안 칸은 8px. 면은 이 두 단까지만 쓴다. */
   --thorp-radius-card: 12px;
   --thorp-radius-inset: 8px;
+  /* 안쪽 여백: 큰 틀(카드·패널·대화상자), 안내 상자(알림·오류·팝오버), 카드 안 칸 세 단계만 쓴다. */
+  --thorp-pad-card: 20px 24px;
+  --thorp-pad-notice: 12px 16px;
+  --thorp-pad-inset: 12px 14px;
   --thorp-overlay: rgb(0 0 0 / 68%);
   /*
     초록은 누를 것(버튼·링크·고름·초점·진행)에만 쓴다. 영문 작은 제목과 장식 아이콘·번호, 구역 배경의
@@ -186,6 +190,9 @@
   --thorp-radius-control: initial;
   --thorp-radius-card: initial;
   --thorp-radius-inset: initial;
+  --thorp-pad-card: initial;
+  --thorp-pad-notice: initial;
+  --thorp-pad-inset: initial;
   --thorp-overlay: initial;
   --thorp-eyebrow: initial;
   --thorp-ornament: initial;
@@ -213,6 +220,9 @@
   :root {
     --thorp-page-gutter: 28px;
     --thorp-page-top: 24px;
+  }
+  :root:not([data-design='classic']) {
+    --thorp-pad-card: 16px 18px;
   }
 }
 

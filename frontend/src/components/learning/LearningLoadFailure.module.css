@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-card, 14px);
 }

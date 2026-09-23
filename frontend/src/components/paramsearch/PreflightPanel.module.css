@@ -181,7 +181,7 @@
   align-items: center;
   gap: 8px 12px;
   margin: 0;
-  padding: 9px 11px;
+  padding: var(--thorp-pad-inset, 9px 11px);
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);

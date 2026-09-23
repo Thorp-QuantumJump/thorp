@@ -2,7 +2,7 @@
 .notice {
   display: grid;
   gap: 6px;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-notice, 12px 14px);
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);

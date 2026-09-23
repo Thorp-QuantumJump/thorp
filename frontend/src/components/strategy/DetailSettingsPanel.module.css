@@ -77,7 +77,7 @@
 .weights {
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card, 12px);
 }
@@ -117,7 +117,7 @@
 
 .violations {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-inset, 10px 14px);
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);

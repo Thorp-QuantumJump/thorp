@@ -42,7 +42,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
@@ -85,7 +85,7 @@
 /* 목록이 예시 대응표에서 왔다는 표시다. 비중 초깃값 예시 표시와는 다른 자리에 둔다. */
 .sampleNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px dashed var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
@@ -97,7 +97,7 @@
 /* 보관해 둔 값을 그대로 쓰지 못했다는 한 문장이 놓이는 자리다. */
 .restoreNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
@@ -536,7 +536,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px;
+  padding: var(--thorp-pad-inset, 14px);
   /* profile-panel(raised) 안의 3층이다. 여기에 바탕을 더 올리면 1.06:1 이라 안 보인다. */
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-inset, 10px);
@@ -593,7 +593,7 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 10px 14px;
-  padding: 12px 16px;
+  padding: var(--thorp-pad-notice, 12px 16px);
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);

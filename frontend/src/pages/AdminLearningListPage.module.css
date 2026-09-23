@@ -45,7 +45,7 @@
   gap: 12px;
   max-width: 420px;
   margin-top: 36px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);

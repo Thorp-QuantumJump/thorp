@@ -53,7 +53,7 @@
 
 .card {
   min-width: 0;
-  padding: 19px;
+  padding: var(--thorp-pad-card, 19px);
   border: 1px solid var(--market-line);
   border-radius: var(--thorp-radius-card, 8px);
   background: var(--market-surface);

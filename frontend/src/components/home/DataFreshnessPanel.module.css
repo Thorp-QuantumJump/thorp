@@ -60,7 +60,7 @@
 .stabilityCard,
 .fciNote {
   min-width: 0;
-  padding: 15px;
+  padding: var(--thorp-pad-inset, 15px);
   border-radius: var(--thorp-radius-inset, 6px);
   background: var(--thorp-surface-muted);
 }
