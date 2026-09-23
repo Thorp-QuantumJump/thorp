@@ -33,9 +33,10 @@ import styles from './ResultPage.module.css'
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>상세는 결과 아래 탭 묶음(`ResultDetailTabs`, T098) 안에 있다. 첫 화면에서 '결과 분석' 탭이 열려 있고 다른
- * 탭은 고를 때 그 자료를 받는다. 주 모양 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조
- * 모양이다. 어느 쪽도 주소를 바꾸지 않는다(SC-006).
+ * <p>화면은 제목·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 셋이다. 네 요소는 기본으로 열린 '요약'
+ * 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
+ * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지
+ * 않는다(SC-006).
  *
  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.
  */
@@ -113,6 +114,63 @@ function ResultView({
     [summary, timeseries],
   )
 
+  // 요약 탭의 내용. 볼 결과가 없으면(계산 중·실패) 탭 없이 이것만 그린다.
+  const summaryBlock = (
+    <div className={styles.summaryStack}>
+        <ResultSummaryCard detail={detail} target={target} />
+
+        <ResultStatusLine
+          detail={detail}
+          completedThrough={completedThrough}
+          onRetry={
+            detail.status === 'FAILED'
+              ? async () => {
+                  const accepted = await retryResult(token)
+                  await navigate(`/results/${accepted.publicToken}`)
+                }
+              : undefined
+          }
+        />
+
+        <ResultChartSlot
+          detail={detail}
+          timeseries={timeseries}
+          progressPoints={progressSeries.points}
+          target={
+            target && compare.timeseries.status === 'loaded'
+              ? {
+                  name: strategyLabel(target),
+                  points: compare.timeseries.data.points,
+                  maxDrawdown: target.summary?.maxDrawdown ?? null,
+                }
+              : null
+          }
+        />
+
+        {summary ? (
+          <p className={styles.sentence}>
+            {selectSummarySentence({
+              base: {
+                name: strategyLabel(detail),
+                netTotalReturn: summary.netTotalReturn,
+                maxDrawdown: summary.maxDrawdown,
+                totalTradingCost: summary.totalTradingCost,
+              },
+              target: target?.summary
+                ? {
+                    name: strategyLabel(target),
+                    netTotalReturn: target.summary.netTotalReturn,
+                    maxDrawdown: target.summary.maxDrawdown,
+                    totalTradingCost: target.summary.totalTradingCost,
+                  }
+                : null,
+              partial: detail.partial ? { completedThrough } : null,
+            })}
+          </p>
+        ) : null}
+    </div>
+  )
+
   return (
     <article className={styles.result} aria-labelledby="result-title">
       <h1 id="result-title" className={styles.title}>
@@ -127,57 +185,6 @@ function ResultView({
         </p>
       ) : null}
 
-      <ResultSummaryCard detail={detail} target={target} />
-
-      <ResultStatusLine
-        detail={detail}
-        completedThrough={completedThrough}
-        onRetry={
-          detail.status === 'FAILED'
-            ? async () => {
-                const accepted = await retryResult(token)
-                await navigate(`/results/${accepted.publicToken}`)
-              }
-            : undefined
-        }
-      />
-
-      <ResultChartSlot
-        detail={detail}
-        timeseries={timeseries}
-        progressPoints={progressSeries.points}
-        target={
-          target && compare.timeseries.status === 'loaded'
-            ? {
-                name: strategyLabel(target),
-                points: compare.timeseries.data.points,
-                maxDrawdown: target.summary?.maxDrawdown ?? null,
-              }
-            : null
-        }
-      />
-
-      {summary ? (
-        <p className={styles.sentence}>
-          {selectSummarySentence({
-            base: {
-              name: strategyLabel(detail),
-              netTotalReturn: summary.netTotalReturn,
-              maxDrawdown: summary.maxDrawdown,
-              totalTradingCost: summary.totalTradingCost,
-            },
-            target: target?.summary
-              ? {
-                  name: strategyLabel(target),
-                  netTotalReturn: target.summary.netTotalReturn,
-                  maxDrawdown: target.summary.maxDrawdown,
-                  totalTradingCost: target.summary.totalTradingCost,
-                }
-              : null,
-            partial: detail.partial ? { completedThrough } : null,
-          })}
-        </p>
-      ) : null}
 
       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}
       <div className={styles.actions}>
@@ -242,6 +249,7 @@ function ResultView({
         <ResultDetailTabs
           token={token}
           detail={detail}
+          summary={summaryBlock}
           lossWindow={lossWindow}
           compare={
             target
@@ -253,7 +261,9 @@ function ResultView({
               : null
           }
         />
-      ) : null}
+      ) : (
+        summaryBlock
+      )}
       <NextStepLinks
         config={detail.config}
         token={token}

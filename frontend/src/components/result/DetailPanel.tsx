@@ -20,15 +20,15 @@ import { TradeHistory } from './TradeHistory'
 import styles from './resultDetail.module.css'
 
 /**
- * '자세히 보기'의 두 탭(FR-007~FR-009, T064·T098).
+ * '자세히 보기'가 갈라진 세 탭(FR-007~FR-009, T064·T098).
  *
- * <p><b>결과 분석</b>은 계산에서 나온 값(회복 기간·회전율·상관관계·위험 기여·손실 기여·계산 제한·거래 내역),
- * <b>설정·근거</b>는 사용자가 넣은 조건과 그 근거(비교 규칙·비용 가정·목표·실제 비중·대표 ETF 구성·출처)다.
- * 한 패널에 번갈아 두면 결과에서 나온 값과 넣은 값이 섞여 읽힌다.
+ * <p><b>결과 분석</b>은 계산에서 나온 값(회복 기간·회전율·상관관계·위험 기여·손실 기여·계산 제한), <b>설정·근거</b>는
+ * 사용자가 넣은 조건과 그 근거(비교 규칙·비용 가정·목표·실제 비중·대표 ETF 구성·출처), <b>전체 거래 내역</b>은
+ * 거래 목록과 조건 질의다. 한 패널에 번갈아 두면 결과에서 나온 값과 넣은 값이 섞여 읽힌다.
  *
- * <p>둘 다 주소를 바꾸지 않고 설정 화면으로 되돌리지 않는다(SC-006). 결과 분석은 첫 화면에서 열려 있어 그때
- * `/exceptions`를 받고, 설정·근거는 처음 고를 때 `/weights`를 받는다(SC-001). 거래 내역과 대표 상품 정보는
- * 탭 안에서 다시 한 번 열어야 받는다. 섹터 목록은 두 탭이 같이 쓰므로 `ResultDetailTabs`가 한 번 받아 넘긴다.
+ * <p>셋 다 주소를 바꾸지 않고 설정 화면으로 되돌리지 않는다(SC-006). 각 탭은 처음 고를 때 제 자료를 받는다 —
+ * 결과 분석은 `/exceptions`, 설정·근거는 `/weights`, 전체 거래 내역은 `/trades`(SC-001). 대표 상품 정보는 탭 안에서
+ * 다시 한 번 열어야 받는다. 섹터 목록은 세 탭이 같이 쓰므로 `ResultDetailTabs`가 한 번 받아 넘긴다.
  *
  * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다
  * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료
@@ -94,9 +94,18 @@ export function AnalysisPanel({ token, detail, catalog }: PanelProps) {
           {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
         </ResourceArea>
       </Item>
+    </div>
+  )
+}
 
+/** '전체 거래 내역' 탭. 탭을 고르는 것이 여는 것이므로 목록을 바로 부른다. */
+export function TradesPanel({ token, detail, catalog }: PanelProps) {
+  const { config } = detail
+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)
+  return (
+    <div className={styles.stack}>
       <Item title="전체 거래 내역">
-        <TradeHistory token={token} items={config.items} labels={labels} />
+        <TradeHistory token={token} items={config.items} labels={labels} alwaysOpen />
       </Item>
     </div>
   )

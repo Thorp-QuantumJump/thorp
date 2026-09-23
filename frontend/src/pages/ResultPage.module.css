@@ -11,6 +11,14 @@
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
+/* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */
+.summaryStack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
 /* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */
 .result {
   display: flex;
