@@ -17,8 +17,8 @@ interface InlineHelpProps {
    * `'click'`은 눌러야 열리고 닫기 버튼이 붙는다. 설명이 길어 마우스를 얹은 채로 읽기 어려울 때만 쓴다.
    */
   on?: "click" | "hover";
-  /** 결과 화면처럼 위쪽 여백이 좁을 때 아래로 펼친다. */
-  side?: "top" | "bottom";
+  /** 도움말을 펼칠 방향. */
+  side?: "top" | "bottom" | "right";
 }
 
 /**
@@ -81,7 +81,8 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
           <HoverCard.Content
             className={styles.content}
             side={side}
-            align={side === "bottom" ? "start" : "center"}
+            align={side === "top" ? "center" : "start"}
+            alignOffset={side === "right" ? -8 : 0}
             sideOffset={6}
             collisionPadding={16}
             aria-label={`${label} 도움말`}
@@ -106,7 +107,8 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
         <Popover.Content
           className={styles.content}
           side={side}
-          align={side === "bottom" ? "start" : "center"}
+          align={side === "top" ? "center" : "start"}
+          alignOffset={side === "right" ? -8 : 0}
           sideOffset={6}
           collisionPadding={16}
           aria-label={`${label} 도움말`}

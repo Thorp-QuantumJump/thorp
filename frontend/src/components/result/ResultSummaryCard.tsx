@@ -40,6 +40,7 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
           label="수익률"
           value={formatRatio(summary.netTotalReturn)}
           definition={METRIC_DEFINITIONS.netTotalReturn}
+          helpSide="right"
         />
         <Metric
           label="MDD"
@@ -117,16 +118,18 @@ function Metric({
   value,
   definition,
   supplement,
+  helpSide = 'bottom',
 }: {
   label: string
   value: string
   definition: string
   supplement?: string
+  helpSide?: 'bottom' | 'right'
 }) {
   return (
     <div className={styles.metric}>
       <dt className={styles.metricLabel}>
-        {label} <InlineHelp label={label} side="bottom">{definition}</InlineHelp>
+        {label} <InlineHelp label={label} side={helpSide}>{definition}</InlineHelp>
       </dt>
       <dd className={styles.metricValue}>{value}</dd>
       {supplement ? <dd className={styles.metricMeta}>{supplement}</dd> : null}
