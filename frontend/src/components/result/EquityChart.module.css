@@ -73,7 +73,7 @@
   background: var(--thorp-surface);
 
   /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */
-  height: clamp(220px, 34svh, 300px);
+  height: clamp(230px, 37svh, 330px);
 }
 
 /*
