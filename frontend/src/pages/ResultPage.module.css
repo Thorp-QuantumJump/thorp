@@ -29,11 +29,13 @@
 
 .intro {
   display: grid;
-  gap: 10px;
-  justify-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 16px;
 }
 
 .backLink {
+  grid-column: 1 / -1;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -97,9 +99,14 @@
   gap: 8px 10px;
 }
 
+@media (max-width: 600px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .source {
   margin: 0;
   color: var(--thorp-muted);
   font-size: 0.8rem;
 }
-
