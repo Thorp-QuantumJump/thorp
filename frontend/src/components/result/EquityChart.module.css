@@ -94,16 +94,6 @@
   line-height: 1.6;
 }
 
-.help summary {
-  color: var(--thorp-foreground);
-  cursor: pointer;
-}
-
-.help p {
-  max-width: 65ch;
-  margin: 6px 0 0;
-}
-
 @media (max-width: 600px) {
   .chart {
     height: auto;
