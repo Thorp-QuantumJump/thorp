@@ -18,7 +18,7 @@
 .failure button {
   padding: 9px 16px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

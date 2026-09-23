@@ -244,7 +244,7 @@
   justify-content: center;
   gap: 9px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   cursor: pointer;

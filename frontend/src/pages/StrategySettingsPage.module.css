@@ -55,7 +55,7 @@
 .restoreButton {
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -255,7 +255,7 @@
 .weightNotice button {
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

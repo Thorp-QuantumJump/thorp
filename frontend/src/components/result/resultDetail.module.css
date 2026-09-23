@@ -198,7 +198,7 @@
   min-height: 32px;
   padding: 4px 8px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;

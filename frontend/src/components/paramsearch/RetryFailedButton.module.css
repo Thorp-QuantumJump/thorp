@@ -29,7 +29,7 @@
   gap: 7px;
   padding: 0 13px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;

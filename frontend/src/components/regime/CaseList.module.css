@@ -12,7 +12,7 @@
 .reasons h4 { margin: 0 0 8px; color: var(--thorp-copy); font-size: .76rem; font-weight: 600; }
 .reasons ul { margin: 0; padding-left: 17px; color: var(--thorp-foreground); font-size: .84rem; line-height: 1.6; }
 .reasons li + li { margin-top: 4px; }
-.detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
+.detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
 .detailButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .detailSlot { grid-column: 1 / -1; min-width: 0; }
 .more { display: block; width: 100%; min-height: 44px; border: 1px solid var(--thorp-line-strong); margin-top: 12px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
