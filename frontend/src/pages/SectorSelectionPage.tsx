@@ -229,6 +229,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         className={styles.rail}
         selected={selectedSectors}
         minimumCount={MINIMUM_SECTOR_COUNT}
+        compact={detailExpanded}
         onRemove={(code) => selection.toggleSector(code, false)}
         onProceed={proceed}
         proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}

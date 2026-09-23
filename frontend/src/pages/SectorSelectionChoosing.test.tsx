@@ -142,7 +142,7 @@ function cardExpanded(): boolean {
   )
 }
 
-/** 상세 상태가 바깥 보드까지 전달되어 카드가 전체 폭을 쓸 수 있는가. */
+/** 상세 상태가 바깥 보드와 선택 요약까지 전달되는가. */
 function boardExpanded(): boolean {
   return (
     document.querySelector('[data-detail-expanded]')?.getAttribute('data-detail-expanded') ===
@@ -288,6 +288,10 @@ describe('투자 대상 고르기', () => {
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
     expect(cardExpanded()).toBe(true)
     expect(boardExpanded()).toBe(true)
+    expect(document.querySelector('[data-slot="rail-compact-summary"]')?.textContent).toContain(
+      '0개 선택2개 더',
+    )
+    expect(document.querySelector('[data-compact]')?.getAttribute('data-compact')).toBe('true')
     expect(expandButton().getAttribute('aria-label')).toBe('간단히 보기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')

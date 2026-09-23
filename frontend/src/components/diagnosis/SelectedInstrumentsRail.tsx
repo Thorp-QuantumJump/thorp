@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { ArrowRight, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { SectorSummary } from '@/types/sector'
 
@@ -11,6 +11,8 @@ type SelectedInstrumentsRailProps = {
   onProceed: () => void
   /** 다음 단계로 넘길 수 없는 상태인가. 조건을 채우지 못했거나 인계가 막힌 경우다. */
   proceedDisabled: boolean
+  /** 상세 카드를 위한 폭을 남기고 선택 개수와 진행 가능 여부만 보이는가. */
+  compact?: boolean
   /** 목록과 단추 사이에 놓을 안내다. 상장일 안내처럼 선택에 딸린 사실이 여기 들어온다. */
   children?: ReactNode
   className?: string
@@ -36,16 +38,37 @@ export function SelectedInstrumentsRail({
   onRemove,
   onProceed,
   proceedDisabled,
+  compact = false,
   children,
   className,
 }: SelectedInstrumentsRailProps) {
   const count = selected.length
+  const remainingCount = Math.max(minimumCount - count, 0)
+  const ready = remainingCount === 0
 
   return (
-    <aside className={className} aria-labelledby="selected-instruments-title">
-      <h2 id="selected-instruments-title" data-slot="rail-title">
-        선택한 투자 대상
+    <aside
+      className={className}
+      data-compact={compact}
+      aria-labelledby="selected-instruments-title"
+    >
+      <h2
+        id="selected-instruments-title"
+        data-slot="rail-title"
+        aria-label="선택한 투자 대상"
+      >
+        <span data-slot="rail-title-full">선택한 투자 대상</span>
+        <span data-slot="rail-title-compact">선택</span>
       </h2>
+
+      <div data-slot="rail-compact-summary" aria-live="polite">
+        <strong data-slot="rail-compact-count">{count}</strong>
+        <span data-slot="rail-compact-unit">개 선택</span>
+        <span data-slot="rail-compact-status" data-ready={ready}>
+          <span data-slot="rail-compact-dot" aria-hidden="true" />
+          {ready ? '진행 가능' : `${remainingCount}개 더`}
+        </span>
+      </div>
 
       {count === 0 ? (
         <p data-slot="rail-empty">
@@ -93,15 +116,20 @@ export function SelectedInstrumentsRail({
         </p>
       ) : null}
 
-      {children}
+      <div data-slot="rail-supporting">{children}</div>
 
       <button
         type="button"
         data-slot="rail-proceed"
         onClick={onProceed}
         disabled={proceedDisabled}
+        aria-label="다음: 전략 고르기"
       >
-        다음: 전략 고르기
+        <span data-slot="rail-proceed-full">다음: 전략 고르기</span>
+        <span data-slot="rail-proceed-compact">
+          <span>전략 고르기</span>
+          <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
+        </span>
       </button>
     </aside>
   )
