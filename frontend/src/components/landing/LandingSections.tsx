@@ -206,6 +206,17 @@ export function BacktestIntroSection() {
 
         {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}
         <div className={styles.backtestVisual} aria-hidden="true">
+          {/* 결과 화면 틀. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을
+              채우면 첫 화면이 성과를 지어내게 된다. classic 디자인에서는 CSS가 숨긴다. */}
+          <div className={styles.visualBar}>
+            <span className={styles.visualDots}><i /><i /><i /></span>
+            <b>결과 화면</b>
+          </div>
+          <dl className={styles.visualMetrics}>
+            {['비용 차감 후 수익', '가장 크게 줄었던 폭', '거래비용'].map((name) => (
+              <div key={name}><dt>{name}</dt><dd>실행 후 표시</dd></div>
+            ))}
+          </dl>
           <svg viewBox="0 0 1000 390">
             {[86, 144, 202, 260, 318].map((y) => (
               <line key={y} className={styles.chartGrid} x1="42" x2="958" y1={y} y2={y} />

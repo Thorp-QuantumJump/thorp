@@ -1351,6 +1351,80 @@
   }
 }
 
+/* 결과 화면 틀의 머리 막대와 지표 이름 줄. classic에는 없던 요소라 기본은 숨기고 카드 층에서 켠다. */
+.visualBar,
+.visualMetrics {
+  display: none;
+}
+
+/*
+  디자인 개편 카드 층(S15P21E205-425). 위 규칙은 classic 그대로 두고, 새 디자인에서만 지표 띠 항목과
+  백테스트 그림을 카드로 담는다. 흐르는 띠·곡선이 그려지는 움직임과 한 칸 높이 규칙은 그대로다.
+*/
+:global(:root:not([data-design='classic'])) .storySection { border-bottom: 0; }
+:global(:root:not([data-design='classic'])) .storySection::before { display: none; }
+
+/* 지표 띠: 항목마다 카드. 두 묶음이 같은 폭이어야 -50% 이동에서 이음매가 보이지 않으므로 간격을 묶음 끝에도 둔다. */
+:global(:root:not([data-design='classic'])) .conveyorViewport { padding-block: 2px; border: 0; }
+:global(:root:not([data-design='classic'])) .conveyorGroup { gap: 12px; padding-right: 12px; }
+:global(:root:not([data-design='classic'])) .indicatorItem,
+:global(:root:not([data-design='classic'])) .indicatorItem:first-child {
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+
+/* 이동 링크: 위아래 선 대신 테두리 있는 한 줄 */
+:global(:root:not([data-design='classic'])) .textCta {
+  padding: 16px 20px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control);
+  background: var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .textCta:hover { padding-right: 16px; border-color: var(--thorp-line-control-hover); background: var(--thorp-surface-muted); }
+
+/* 백테스트 그림: 결과 화면 한 장을 담은 카드. 틀이 생기면 남는 높이가 빈 칸으로 보이므로 키는 내용에 맞추고, 화면이 낮을 때만 줄어든다. */
+:global(:root:not([data-design='classic'])) .backtestVisual {
+  flex: 0 1 auto;
+  overflow: hidden;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background:
+    linear-gradient(90deg, rgb(3 199 90 / 4%), transparent 42%),
+    var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .visualBar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--thorp-line);
+  color: var(--thorp-copy);
+  font-size: 0.72rem;
+}
+:global(:root:not([data-design='classic'])) .visualBar b { font-weight: 600; }
+:global(:root:not([data-design='classic'])) .visualDots { display: flex; gap: 6px; }
+:global(:root:not([data-design='classic'])) .visualDots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--thorp-line-strong); }
+:global(:root:not([data-design='classic'])) .visualMetrics {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+:global(:root:not([data-design='classic'])) .visualMetrics > div { padding: 12px 18px; min-width: 0; }
+:global(:root:not([data-design='classic'])) .visualMetrics > div + div { border-left: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .visualMetrics dt { overflow: hidden; color: var(--thorp-muted); font-size: 0.66rem; text-overflow: ellipsis; white-space: nowrap; }
+:global(:root:not([data-design='classic'])) .visualMetrics dd { margin: 4px 0 0; color: var(--thorp-copy); font-size: 0.8rem; font-weight: 600; }
+@media (max-width: 760px) {
+  :global(:root:not([data-design='classic'])) .visualMetrics > div { padding: 10px 12px; }
+}
+@media (max-width: 430px) {
+  :global(:root:not([data-design='classic'])) .visualMetrics { grid-template-columns: 1fr; }
+  :global(:root:not([data-design='classic'])) .visualMetrics > div + div { border-top: 1px solid var(--thorp-line); border-left: 0; }
+}
+
 /* classic 디자인에서는 위 토큰을 비워 각 자리의 예전 값을 쓴다. */
 :global(:root[data-design='classic']) .page {
   --lp-1: initial;
