@@ -36,7 +36,7 @@ describe('ResultSummaryCard', () => {
       expect(bubble).not.toBeNull()
       if (label === '수익률') {
         expect(bubble.closest('[data-side]')?.getAttribute('data-side')).toBe('right')
-        expect(bubble.closest('[data-align]')?.getAttribute('data-align')).toBe('start')
+        expect(bubble.closest('[data-align]')?.getAttribute('data-align')).toBe('center')
       }
       fireEvent.blur(help)
     }
