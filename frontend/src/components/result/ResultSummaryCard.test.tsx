@@ -19,6 +19,23 @@ function withSummary(overrides: Partial<ResultSummary>): PublicResultDetail {
 }
 
 describe('ResultSummaryCard', () => {
+  it('수익률·하락 폭에 부호대로 오르내림 방향을 달고, 금액에는 달지 않는다', () => {
+    render(<ResultSummaryCard detail={resultDetailCompleted} />)
+
+    expect(screen.getByText('16.67%').getAttribute('data-direction')).toBe('up')
+    expect(screen.getByText('-4.18%').getAttribute('data-direction')).toBe('down')
+    expect(screen.getByText('17,078원').hasAttribute('data-direction')).toBe(false)
+  })
+
+  it('0.00%로 보이는 값에는 오르내림 방향을 달지 않는다', () => {
+    // 글은 0.00%인데 빨강·파랑이 붙으면 글과 색이 서로 다른 말을 한다.
+    render(<ResultSummaryCard detail={withSummary({ netTotalReturn: '0.00004', maxDrawdown: '-0.00004' })} />)
+
+    for (const value of screen.getAllByText('0.00%')) {
+      expect(value.hasAttribute('data-direction')).toBe(false)
+    }
+  })
+
   it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {
     render(<ResultSummaryCard detail={resultDetailCompleted} />)
 
