@@ -5,14 +5,15 @@ import { BacktestRequestError } from '@/api/backtest'
 import { ResultError } from '@/api/result'
 import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
+import { defaultValuesOf } from '@/hooks/useStrategySettings'
 import {
   resultDetailCompleted as base,
   resultDetailRunning,
   resultTimeseries,
 } from '@/test/resultFixtures'
-import { selectableStrategy } from '@/test/strategyRegistryFixtures'
+import { plainStrategy, selectableStrategy } from '@/test/strategyRegistryFixtures'
 import type { PublicResultDetail } from '@/types/result'
-import { useCompareTarget } from './useCompareTarget'
+import { useCompareTargets } from './useCompareTargets'
 
 const api = vi.hoisted(() => ({
   create: vi.fn(),
@@ -33,41 +34,61 @@ vi.mock('@/api/result', async (load) => ({
 const targetToken = 'b'.repeat(32)
 const newBase = 'c'.repeat(32)
 const newTarget = 'd'.repeat(32)
+const secondToken = 'e'.repeat(32)
 const choice = {
   strategy: { ...selectableStrategy, warmupTradingDays: 0 },
   registryVersion: 'registry-new',
   rulesVersion: 'rules-new',
+  parameters: defaultValuesOf(selectableStrategy),
+}
+const secondChoice = {
+  strategy: { ...plainStrategy, warmupTradingDays: 0 },
+  registryVersion: 'registry-new',
+  rulesVersion: 'rules-plain',
+  parameters: defaultValuesOf(plainStrategy),
 }
 let target: PublicResultDetail
+let second: PublicResultDetail
 
 function Harness() {
-  const compare = useCompareTarget(base)
+  const compare = useCompareTargets(base)
   const location = useLocation()
   return (
     <>
       <p>기준 결과 유지</p>
-      <button onClick={() => compare.select(choice)}>전략 선택</button>
+      <button onClick={() => compare.select([choice])}>전략 선택</button>
+      <button onClick={() => compare.select([choice, secondChoice])}>둘 선택</button>
       <button
         onClick={() =>
-          compare.select({
-            ...choice,
-            strategy: { ...choice.strategy, warmupTradingDays: 80 },
-            period: { start: '2024-01-02', end: base.config.effectiveEnd },
-          })
+          compare.select([
+            {
+              ...choice,
+              strategy: { ...choice.strategy, warmupTradingDays: 80 },
+              period: { start: '2024-01-02', end: base.config.effectiveEnd },
+            },
+          ])
         }
       >
         긴 전략 선택
       </button>
-      <output aria-label="상태">{compare.targetState}</output>
+      <output aria-label="상태">
+        {compare.targets.map((item) => item.targetState).join(',') || 'NONE'}
+      </output>
       <output aria-label="주소">{location.pathname + location.search}</output>
       <output aria-label="복귀">{compare.returnTo}</output>
-      {compare.compatibleTarget ? <p>비교 곡선 사용 가능</p> : null}
-      <CompareTargetSlot
-        state={compare}
-        onRetry={compare.retry}
-        onClear={compare.clear}
-        onPick={() => {}}
-      />
+      <output aria-label="자리">{compare.room}</output>
+      {compare.compatibleTargets.length > 0 ? (
+        <p>비교 곡선 사용 가능 {compare.compatibleTargets.length}</p>
+      ) : null}
+      {compare.targets.map((item) => (
+        <CompareTargetSlot
+          key={item.key}
+          state={item}
+          name={item.detail?.strategyName ?? item.choice?.strategy.name ?? '대상'}
+          onRetry={() => compare.retry(item.key)}
+          onRemove={() => compare.remove(item.key)}
+        />
+      ))}
       {compare.period ? (
         <PeriodMismatchDialog
           period={compare.period}
@@ -90,7 +111,10 @@ function setup(search = '') {
 beforeEach(() => {
   Object.values(api).forEach((mock) => mock.mockReset())
   target = { ...base, publicToken: targetToken, strategyName: '비교용 전략' }
-  api.detail.mockImplementation(async () => target)
+  second = { ...base, publicToken: secondToken, strategyName: '둘째 전략' }
+  api.detail.mockImplementation(async (requested: string) =>
+    requested === secondToken ? second : target,
+  )
   api.series.mockResolvedValue(resultTimeseries)
   api.create.mockResolvedValue({
     publicToken: targetToken,
@@ -101,16 +125,18 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('비교 실행 흐름 (quickstart 3)', () => {
-  it('대상의 시계열에 그릴 값이 없으면 두 곡선이 준비됐다고 표시하지 않는다', async () => {
+  it('대상의 시계열에 그릴 값이 없으면 곡선이 준비됐다고 표시하지 않는다', async () => {
     api.series.mockResolvedValue({ ...resultTimeseries, points: [] })
     setup('?compare=' + targetToken)
     expect(await screen.findByText('비교 곡선을 그릴 자산가치 기록이 없습니다.')).toBeTruthy()
-    expect(screen.queryByText('비교 곡선 사용 가능')).toBeNull()
+    expect(screen.queryByText(/비교 곡선 사용 가능/)).toBeNull()
     expect(api.create).not.toHaveBeenCalled()
   })
   it('선택 전에는 조회하지 않고, 고르면 같은 조건의 요청 한 건과 공개 주소로 이어진다', async () => {
     setup()
     expect(api.detail).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('상태').textContent).toBe('NONE')
+    expect(screen.getByLabelText('자리').textContent).toBe('3')
     fireEvent.click(screen.getByText('전략 선택'))
     await waitFor(() => expect(screen.getByLabelText('상태').textContent).toBe('READY'))
     expect(api.create).toHaveBeenCalledTimes(1)
@@ -121,8 +147,59 @@ describe('비교 실행 흐름 (quickstart 3)', () => {
       warmupTradingDays: base.config.warmupTradingDays,
       costProfileVersion: base.versions.costProfile?.version,
     })
+    expect(api.create.mock.calls[0][0].strategy.parameters).toEqual(choice.parameters)
     expect(screen.getByLabelText('주소').textContent).toContain('?compare=' + targetToken)
-    expect(screen.getByText('비교 곡선 사용 가능')).toBeTruthy()
+    expect(screen.getByText('비교 곡선 사용 가능 1')).toBeTruthy()
+    expect(screen.getByLabelText('자리').textContent).toBe('2')
+  })
+  it('여럿을 고르면 한 번에 요청하고 모두 주소에 올린 뒤 하나씩 뺄 수 있다', async () => {
+    api.create
+      .mockResolvedValueOnce({ publicToken: targetToken })
+      .mockResolvedValueOnce({ publicToken: secondToken })
+    setup()
+    fireEvent.click(screen.getByText('둘 선택'))
+    await waitFor(() => expect(screen.getByLabelText('상태').textContent).toBe('READY,READY'))
+    expect(api.create).toHaveBeenCalledTimes(2)
+    expect(api.create.mock.calls[1][0].strategy.strategyId).toBe(plainStrategy.strategyId)
+    expect(screen.getByLabelText('주소').textContent).toContain(
+      '?compare=' + targetToken + '%2C' + secondToken,
+    )
+    expect(screen.getByText('비교 곡선 사용 가능 2')).toBeTruthy()
+    expect(screen.getByLabelText('비교 대상 비교용 전략')).toBeTruthy()
+    fireEvent.click(screen.getAllByRole('button', { name: '비교 해제' })[0])
+    await waitFor(() =>
+      expect(screen.getByLabelText('주소').textContent).toBe(
+        '/results/' + base.publicToken + '?compare=' + secondToken,
+      ),
+    )
+    expect(screen.queryByLabelText('비교 대상 비교용 전략')).toBeNull()
+  })
+  it('하나가 거절돼도 접수된 것은 주소에 오르고 거절은 자리에 남아 다시 요청할 수 있다', async () => {
+    api.create
+      .mockResolvedValueOnce({ publicToken: targetToken })
+      .mockRejectedValueOnce(
+        new BacktestRequestError('api', '한도', {
+          code: 'EXECUTION_LIMIT',
+          status: 429,
+          details: { retryAfterSeconds: 30 },
+        }),
+      )
+      .mockResolvedValueOnce({ publicToken: secondToken })
+    setup()
+    fireEvent.click(screen.getByText('둘 선택'))
+    expect(await screen.findByText(/30초 뒤/)).toBeTruthy()
+    await waitFor(() =>
+      expect(screen.getByLabelText('주소').textContent).toContain('?compare=' + targetToken),
+    )
+    expect(screen.getByLabelText('주소').textContent).not.toContain(secondToken)
+    expect(screen.getByLabelText('비교 대상 ' + plainStrategy.name)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '다시 요청' }))
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(3))
+    await waitFor(() =>
+      expect(screen.getByLabelText('주소').textContent).toContain(
+        targetToken + '%2C' + secondToken,
+      ),
+    )
   })
   it('대기·실행 중에는 단계와 비율을 보이고 조회만 반복한다', async () => {
     target = { ...resultDetailRunning, publicToken: targetToken }
@@ -182,7 +259,7 @@ describe('비교 실행 흐름 (quickstart 3)', () => {
     expect(screen.getByText('기준 결과 유지')).toBeTruthy()
     expect(api.create).not.toHaveBeenCalled()
   })
-  it('선택 뒤 비교 해제를 누르면 늦게 온 접수 응답으로 주소를 되돌리지 않는다', async () => {
+  it('선택 뒤 비교 해제를 누르면 늦게 온 접수 응답으로 주소를 바꾸지 않는다', async () => {
     let resolve!: (value: { publicToken: string }) => void
     api.create.mockImplementation(
       () =>
@@ -195,6 +272,7 @@ describe('비교 실행 흐름 (quickstart 3)', () => {
     fireEvent.click(await screen.findByRole('button', { name: '비교 해제' }))
     await act(async () => resolve({ publicToken: targetToken }))
     expect(screen.getByLabelText('주소').textContent).toBe('/results/' + base.publicToken)
+    expect(screen.getByLabelText('상태').textContent).toBe('NONE')
     expect(api.retry).not.toHaveBeenCalled()
   })
 })
@@ -222,6 +300,7 @@ describe('공통 기간 재계산 (T060)', () => {
     fireEvent.click(await screen.findByRole('button', { name: '두 결과 다시 계산' }))
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(4))
     expect(api.create.mock.calls[3][0].strategy.strategyId).toBe(choice.strategy.strategyId)
+    expect(api.create.mock.calls[3][0].strategy.parameters).toEqual(choice.parameters)
   })
   it('기간 불일치는 비교 곡선을 막고 취소하면 요청이 없다', async () => {
     target = {
@@ -230,10 +309,11 @@ describe('공통 기간 재계산 (T060)', () => {
     }
     setup('?compare=' + targetToken)
     expect(await screen.findByRole('dialog')).toBeTruthy()
-    expect(screen.queryByText('비교 곡선 사용 가능')).toBeNull()
+    expect(screen.queryByText(/비교 곡선 사용 가능/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '취소' }))
     expect(api.create).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText(/평가 기간 또는 준비 기간이 달라/)).toBeTruthy()
   })
   it('더 긴 전략은 사전 확인 뒤 두 건을 같은 워밍업·기간으로 요청하고 복귀 주소를 남긴다', async () => {
     api.create
