@@ -16,7 +16,6 @@ import { findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
-import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
 import { ResultConditionLine, ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
@@ -39,8 +38,7 @@ import styles from './ResultPage.module.css'
  *
  * <p>화면은 제목·핵심 숫자·그래프·탭 묶음(`ResultDetailTabs`, T098) 순이다.
  * 상태 문장과 해석은 기본으로 열린 '요약' 탭 안에 둔다. 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
- * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지
- * 않는다(SC-006).
+ * 버튼은 '비교 대상 고르기' 하나다. 비교 대상을 고르는 동안 주소는 바뀌지 않는다(SC-006).
  *
  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.
  */
@@ -305,13 +303,6 @@ function ResultView({
       ) : (
         summaryBlock
       )}
-      <NextStepLinks
-        config={detail.config}
-        token={token}
-        compareToken={compare.compareToken}
-        compareReady={compare.targetState === 'READY'}
-      />
-
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>
   )
