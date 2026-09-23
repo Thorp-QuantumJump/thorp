@@ -100,7 +100,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     api.series.mockResolvedValue(resultTimeseries)
     api.registry.mockResolvedValue(registryFixture)
     api.create.mockResolvedValue({ publicToken: targetToken, status: 'QUEUED' })
-    // 첫 화면에 열린 결과 분석 탭의 몫(T098)
+    // 탭 묶음이 첫 화면에서 섹터 목록을 받고, 결과 분석 탭을 고르면 예외 기록을 받는다(T098)
     api.exceptions.mockResolvedValue(resultExceptions)
     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
