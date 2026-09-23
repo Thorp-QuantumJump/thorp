@@ -135,15 +135,13 @@ export function InstrumentBrowser({
                 무엇을 따라가는 상품인지가 이름 다음으로 먼저 필요한 사실이다.
               */}
               <p data-slot="main-subtitle">
-                <span>{viewing.name}</span>
-                <span data-slot="dot" aria-hidden="true">
-                  ·
+                <span data-slot="main-fact">{viewing.name}</span>
+                <span data-slot="main-fact">
+                  {viewing.representativeEtf.benchmarkIndex}
                 </span>
-                <span>{viewing.representativeEtf.benchmarkIndex}</span>
-                <span data-slot="dot" aria-hidden="true">
-                  ·
+                <span data-slot="main-fact">
+                  {viewing.representativeEtf.listedOn} 상장
                 </span>
-                <span>{viewing.representativeEtf.listedOn} 상장</span>
               </p>
             </div>
 
