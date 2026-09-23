@@ -492,4 +492,4 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대�
 - [X] T101 (FE) 비교 훅을 대상 여럿으로 바꾼다 — `frontend/src/hooks/useCompareTargets.ts`. 대상마다 상태·불일치·다시 시도·해제, 여럿을 한 번에 접수, 공통 구간 확인은 가장 긴 준비 기간 기준으로 한 번 per FR-004 · FR-005 · 원칙 IX
 - [X] T102 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010
 - [X] T103 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004
-- [X] T104 (FE) 결과 화면이 대상마다 자리를 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetSlot.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006
+- [X] T104 (FE) 결과 화면이 대상마다 고르기 단추 왼쪽에 칩(이름 말줄임·짧은 상태·× 해제)을 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetChip.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006
