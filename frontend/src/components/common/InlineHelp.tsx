@@ -81,8 +81,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
           <HoverCard.Content
             className={styles.content}
             side={side}
-            align={side === "top" ? "center" : "start"}
-            alignOffset={side === "right" ? -26 : 0}
+            align={side === "bottom" ? "start" : "center"}
             sideOffset={6}
             collisionPadding={16}
             aria-label={`${label} 도움말`}
@@ -107,8 +106,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
         <Popover.Content
           className={styles.content}
           side={side}
-          align={side === "top" ? "center" : "start"}
-          alignOffset={side === "right" ? -26 : 0}
+          align={side === "bottom" ? "start" : "center"}
           sideOffset={6}
           collisionPadding={16}
           aria-label={`${label} 도움말`}
