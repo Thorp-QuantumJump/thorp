@@ -77,9 +77,9 @@
 .weights {
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
 }
 
 /* 대상 하나의 비중을 다루는 줄이다. 슬라이더와 숫자 칸이 같은 값을 보인다. */
@@ -101,7 +101,7 @@
   align-items: center;
   gap: 6px 12px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);
 }
 
@@ -138,7 +138,7 @@
   width: 5.5rem;
   padding: 6px 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-inset, 8px);
   background: var(--thorp-surface);
   color: inherit;
   font: inherit;
@@ -167,7 +167,7 @@
   margin-top: 4px;
   padding: 10px 12px;
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
 }
 
 .weightTotal p {
@@ -219,7 +219,7 @@
   grid-row: 1;
   padding: 6px 13px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -234,7 +234,7 @@
 .resetAll {
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -248,9 +248,9 @@
 
 .violations {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-inset, 10px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);
   font-size: 0.84rem;
   line-height: 1.6;

@@ -1,13 +1,20 @@
-/* 결과 근처에서 여는 보기(자세히 보기·손실이 커진 때 보기)가 함께 쓰는 모양이다. */
+/* 결과 탭 안의 보기(결과 분석·설정·근거·손실이 커진 때)가 함께 쓰는 모양이다. 테두리는 탭 패널이 그린다. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
 
 .panel {
   display: flex;
   flex-direction: column;
   gap: 22px;
   min-width: 0;
-  padding: 22px 24px;
+  padding: var(--thorp-pad-card, 22px 24px);
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -47,13 +54,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* 여는 보기의 머리에서 도움말과 닫기를 한 줄에 둔다. */
-.headActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .itemTitle {
@@ -198,7 +198,7 @@
   min-height: 32px;
   padding: 4px 8px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
@@ -309,6 +309,6 @@
 
 @media (max-width: 600px) {
   .panel {
-    padding: 18px 16px;
+    padding: var(--thorp-pad-card, 18px 16px);
   }
 }

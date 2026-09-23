@@ -45,9 +45,9 @@
   gap: 12px;
   max-width: 420px;
   margin-top: 36px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -69,7 +69,7 @@
 .field input {
   padding: 9px 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
@@ -86,7 +86,7 @@
 .main button {
   padding: 8px 15px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

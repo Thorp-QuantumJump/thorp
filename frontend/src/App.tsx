@@ -5,13 +5,6 @@ import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { LandingPage } from '@/pages/LandingPage'
 
-// 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.
-const BacktestPage = lazy(() =>
-  import('@/pages/BacktestPage').then((module) => ({
-    default: module.BacktestPage,
-  })),
-)
-
 // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.
 // 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.
 const ParamSearchPage = lazy(() =>
@@ -42,12 +35,6 @@ const RegimeLinkStartPage = lazy(() =>
 const RegimeLinkPage = lazy(() =>
   import('@/pages/RegimeLinkPage').then((module) => ({
     default: module.RegimeLinkPage,
-  })),
-)
-
-const DashboardPage = lazy(() =>
-  import('@/pages/DashboardPage').then((module) => ({
-    default: module.DashboardPage,
   })),
 )
 
@@ -150,8 +137,6 @@ function AnimatedRoutes() {
             */}
             <Route path="/regime-link/start" element={<RegimeLinkStartPage />} />
             <Route path="/home" element={<Navigate to="/market-flow" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/param-search" element={<ParamSearchPage />} />
             {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}
             <Route path="/learn" element={<LearningListPage />} />

@@ -61,24 +61,25 @@ class ParamSearchConfigTest {
                                             context.getEnvironment()
                                                     .getProperty("thorp.param-search.enabled"))
                                     .isEqualTo("true");
-                            // 켜 둔 이상 네 값이 반드시 있어야 한다. 하나라도 비면 기동이 실패한다.
-                            // 후보 수 상한과 실행시간 상한은 함께 정한 값이라 같이 단언한다 —
-                            // 한쪽만 바뀌면 예산(상한 x 건당시간 <= 실행시간)이 깨진다.
+                            // 켜 둔 이상 필수 세 값이 반드시 있어야 한다. 하나라도 비면 기동이 실패한다.
+                            // 실행시간 상한은 비워 두는 것이 지금의 설정이다 — 묶음 크기를 막는 것은
+                            // 후보 수 상한 하나뿐이므로 그 값이 사라지면 여기서 걸린다.
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.max-candidates"))
-                                    .isEqualTo("120");
+                                    .isEqualTo("100");
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.time-limit-seconds"))
-                                    .isEqualTo("120");
+                                    .isNullOrEmpty();
+                            // 발행 창은 서버의 벌크 워커 수와 같다. 워커를 늘리면 이 값도 같이 올린다.
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
                                                             "thorp.param-search.dispatch-window"))
-                                    .isEqualTo("4");
+                                    .isEqualTo("1");
                             assertThat(
                                             context.getEnvironment()
                                                     .getProperty(
@@ -88,17 +89,21 @@ class ParamSearchConfigTest {
                             assertThat(context).hasSingleBean(ParamSearchProperties.class);
                             // 유스케이스가 쓰는 모양으로도 옮겨진다(application 계층은 설정 클래스를 모른다).
                             assertThat(context).hasSingleBean(SearchLimits.class);
-                            assertThat(context.getBean(SearchLimits.class).provisional())
+                            SearchLimits limits = context.getBean(SearchLimits.class);
+                            assertThat(limits.hasTimeLimit())
+                                    .as("실행시간 상한은 두지 않는다 — 묶음은 후보를 다 돌고 끝난다")
+                                    .isFalse();
+                            // 없는 한도는 임시값 목록에도 없다. 있으면 화면이 없는 제한을 말한다.
+                            assertThat(limits.provisional())
                                     .containsExactlyInAnyOrder(
                                             "maxCandidates",
                                             "dispatchWindow",
-                                            "timeLimitSeconds",
                                             "consecutiveFailureLimit");
                         });
     }
 
     @Test
-    @DisplayName("local 프로필은 네 값이 모두 있어 플래그가 켜지고 바인딩된다")
+    @DisplayName("local 프로필은 필수 세 값이 있어 플래그가 켜지고 바인딩된다")
     void localProfileEnablesWithAllLimits() {
         contextRunner
                 .withPropertyValues("spring.profiles.active=local")
@@ -108,23 +113,28 @@ class ParamSearchConfigTest {
                             assertThat(context).hasSingleBean(ParamSearchProperties.class);
                             ParamSearchProperties properties =
                                     context.getBean(ParamSearchProperties.class);
-                            // 로컬은 상한 초과 거부(FR-005b)를 재현하려고 공통값보다 낮춘 24다.
-                            assertThat(properties.getMaxCandidates()).isEqualTo(24);
-                            assertThat(properties.getDispatchWindow()).isEqualTo(4);
-                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(300L);
+                            // 로컬도 공통 설정과 같은 후보 수·발행 창으로 돈다. 상한 초과
+                            // 거부(FR-005b)는 max-candidates 를 낮춘 ParamSearchRejectionIT 가 맡는다.
+                            assertThat(properties.getMaxCandidates()).isEqualTo(100);
+                            assertThat(properties.getDispatchWindow()).isEqualTo(1);
+                            assertThat(properties.getTimeLimitSeconds())
+                                    .as("로컬도 실행시간 상한을 두지 않는다")
+                                    .isNull();
+                            // 연속 실패 한도만 로컬이 낮다 — 실패를 빨리 눈으로 보려는 개발 편의값이다.
                             assertThat(properties.getConsecutiveFailureLimit()).isEqualTo(3);
                         });
     }
 
     @Test
-    @DisplayName("켠 채로 실행시간 상한이 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다")
+    @DisplayName("켠 채로 후보 수 상한이 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다")
     void enabledWithoutLimitsFailsFast() {
         contextRunner
                 .withPropertyValues(
                         "spring.profiles.active=none",
                         "thorp.param-search.enabled=true",
-                        // 공통 설정에는 이제 빈 값이 없다. 값을 지운 채 플래그를 켜는 실수를 재현한다.
-                        "thorp.param-search.time-limit-seconds=")
+                        // 값을 지운 채 플래그를 켜는 실수를 재현한다. 실행시간 상한은 비워도 되는 값이라
+                        // 이 검사의 대상이 아니다 — 묶음 크기를 막는 후보 수 상한으로 본다.
+                        "thorp.param-search.max-candidates=")
                 .run(
                         context -> {
                             assertThat(context).hasFailed();
@@ -137,14 +147,13 @@ class ParamSearchConfigTest {
                                                     .getSimpleName());
                             // 어느 값이 빠졌는지가 오류에 드러나야 설정으로 고칠 수 있다.
                             // 필드 이름은 최상위 메시지가 아니라 원인(BindValidationException)에 담긴다.
-                            // 공통 설정에서 아직 비어 있는 값은 실행시간 상한 하나다(PD-05 잔여).
                             assertThat(context.getStartupFailure())
-                                    .hasStackTraceContaining("timeLimitSeconds");
+                                    .hasStackTraceContaining("maxCandidates");
                         });
     }
 
     @Test
-    @DisplayName("네 값을 직접 주면 켠 상태로 바인딩된다 — 확정 후 prod 설정이 이 모양이다")
+    @DisplayName("실행시간 상한을 직접 주면 그 값으로 바인딩되고 임시값 목록에 다시 들어간다")
     void enabledWithExplicitLimitsBinds() {
         contextRunner
                 .withPropertyValues(
@@ -160,7 +169,8 @@ class ParamSearchConfigTest {
                             ParamSearchProperties properties =
                                     context.getBean(ParamSearchProperties.class);
                             assertThat(properties.getDispatchWindow()).isEqualTo(8);
-                            // 확정 전까지 네 항목 모두 임시값으로 표시된다(FR-005a).
+                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(1800L);
+                            // 상한을 되살리면 그것도 확정 전 임시값이다(FR-005a).
                             assertThat(properties.provisionalNames())
                                     .containsExactly(
                                             "maxCandidates",

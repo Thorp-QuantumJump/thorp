@@ -7,8 +7,6 @@ import App from './App'
 
 vi.mock('@/pages/LandingPage', () => ({ LandingPage: () => <h1>랜딩 화면</h1> }))
 vi.mock('@/pages/MarketFlowPage', () => ({ MarketFlowPage: () => <h1>시장 흐름 화면</h1> }))
-vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 화면</h1> }))
-vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))
 vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))
 vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면</h1> }))
 vi.mock('@/pages/MyRecordsPage', () => ({
@@ -71,8 +69,6 @@ describe('App authentication routes', () => {
 
   it.each([
     ['/market-flow', '시장 흐름 화면'],
-    ['/dashboard', '대시보드 화면'],
-    ['/backtest', '백테스트 화면'],
   ])('비로그인 상태에서도 공개 경로 %s를 이용할 수 있다', async (path, heading) => {
     renderApp(path)
 

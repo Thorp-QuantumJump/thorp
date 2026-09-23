@@ -3,9 +3,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -38,9 +38,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px;
+  padding: var(--thorp-pad-inset, 14px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);
 }
 
@@ -57,7 +57,7 @@
 .field textarea {
   padding: 9px 12px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
@@ -80,7 +80,7 @@
 .editor button {
   padding: 7px 13px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;

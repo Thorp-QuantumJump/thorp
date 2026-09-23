@@ -1,4 +1,5 @@
 import { useId, useMemo } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
@@ -9,27 +10,21 @@ import { useCompareTarget } from '@/hooks/useCompareTarget'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'
 import { strategyLabel } from '@/components/result/conditionLine'
-import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
-import { isZeroValue } from '@/components/result/formatResult'
-import {
-  LOSS_WINDOW_NONE,
-  LOSS_WINDOW_UNAVAILABLE,
-  LossWindowView,
-} from '@/components/result/LossWindowView'
-import { IndexComparisonView } from '@/components/result/IndexComparisonView'
+import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { NextStepLinks } from '@/components/result/NextStepLinks'
+import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
 import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
-import { TargetRiskView } from '@/components/result/TargetRiskView'
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
+import { useProgressSeries } from '@/hooks/useProgressSeries'
 import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'
-import type { PublicResultDetail } from '@/types/result'
+import type { PublicResultDetail, ResultTimeseriesPoint } from '@/types/result'
 import styles from './ResultPage.module.css'
 
 /**
@@ -40,8 +35,10 @@ import styles from './ResultPage.module.css'
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면
- * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).
+ * <p>화면은 제목·그래프·해석 요약 1문장·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 순이다. 핵심 숫자와
+ * 상태 문장은 기본으로 열린 '요약' 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
+ * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지
+ * 않는다(SC-006).
  *
  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.
  */
@@ -107,6 +104,9 @@ function ResultView({
   const { summary } = detail
 
   const viewable = hasViewableResult(detail)
+  // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.
+  const inFlight = detail.status === 'QUEUED' || detail.status === 'RUNNING'
+  const progressSeries = useProgressSeries(token, inFlight)
   // 그래프 음영(B04)과 '손실이 커진 때 보기'가 같은 구간을 쓴다. 요약과 어긋나면 `null`이다(R-05).
   const lossWindow = useMemo(
     () =>
@@ -116,26 +116,9 @@ function ResultView({
     [summary, timeseries],
   )
 
-  const detailPanelId = useId()
-  const lossPanelId = useId()
-  const lossReasonId = useId()
-  const detailView = useDisclosure(detailPanelId)
-  const lossView = useDisclosure(lossPanelId)
-
-  return (
-    <article className={styles.result} aria-labelledby="result-title">
-      <h1 id="result-title" className={styles.title}>
-        분석 결과
-      </h1>
-      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
-      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
-
-      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
-        <p className={styles.status} role="status">
-          {inFlightMessage(detail)}
-        </p>
-      ) : null}
-
+  // 요약 탭의 내용(핵심 숫자·상태 문장). 그래프와 해석 문장은 탭 위에 그대로 둔다. 볼 결과가 없으면 탭 없이 이것만 그린다.
+  const summaryBlock = (
+    <div className={styles.summaryStack}>
       <ResultSummaryCard detail={detail} target={target} />
 
       <ResultStatusLine
@@ -151,9 +134,39 @@ function ResultView({
         }
       />
 
-      <ResultChartSlot
+    </div>
+  )
+
+  return (
+    <article className={styles.result} aria-labelledby="result-title">
+      <header className={styles.intro}>
+        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라
+            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유
+            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에
+            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로
+            비교'(B07)의 몫이다. */}
+        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>
+          <ArrowLeft size={15} aria-hidden="true" />
+          처음부터 다시 분석
+        </Link>
+        <h1 id="result-title" className={styles.title}>
+          백테스트 결과
+        </h1>
+      </header>
+      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
+
+      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
+        <p className={styles.status} role="status">
+          {inFlightMessage(detail)}
+        </p>
+      ) : null}
+
+
+    <ResultChartSlot
         detail={detail}
         timeseries={timeseries}
+        progressPoints={progressSeries.points}
         target={
           target && compare.timeseries.status === 'loaded'
             ? {
@@ -187,7 +200,7 @@ function ResultView({
         </p>
       ) : null}
 
-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
+      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}
       <div className={styles.actions}>
         <Button
           id={pickerButtonId}
@@ -197,22 +210,6 @@ function ResultView({
         >
           비교 대상 고르기
         </Button>
-        {viewable ? (
-          <Button type="button" variant="outline" {...detailView.toggleProps}>
-            자세히 보기
-          </Button>
-        ) : null}
-        {viewable ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={lossWindow === null}
-            aria-describedby={lossWindow === null ? lossReasonId : undefined}
-            {...lossView.toggleProps}
-          >
-            손실이 커진 때 보기
-          </Button>
-        ) : null}
       </div>
       {picker.open ? (
         <div id={pickerId}>
@@ -262,18 +259,12 @@ function ResultView({
           onCancel={compare.cancelPeriod}
         />
       ) : null}
-      {viewable && lossWindow === null ? (
-        <p id={lossReasonId} className={styles.hint}>
-          {summary && isZeroValue(summary.maxDrawdown) ? LOSS_WINDOW_NONE : LOSS_WINDOW_UNAVAILABLE}
-        </p>
-      ) : null}
-
-      {detailView.open ? (
-        <DetailPanel
-          id={detailPanelId}
+      {viewable ? (
+        <ResultDetailTabs
           token={token}
           detail={detail}
-          onClose={detailView.close}
+          summary={summaryBlock}
+          lossWindow={lossWindow}
           compare={
             target
               ? {
@@ -284,19 +275,9 @@ function ResultView({
               : null
           }
         />
-      ) : null}
-      {lossView.open && lossWindow ? (
-        <LossWindowView
-          id={lossPanelId}
-          token={token}
-          lossWindow={lossWindow}
-          items={detail.config.items}
-          onClose={lossView.close}
-        />
-      ) : null}
-
-      <IndexComparisonView token={token} disabled={!viewable} />
-      <TargetRiskView base={detail} disabled={!viewable} />
+      ) : (
+        summaryBlock
+      )}
       <NextStepLinks
         config={detail.config}
         token={token}
@@ -314,18 +295,28 @@ function ResultView({
  *
  * <p>시계열을 받았을 때만 그린다. 받지 못했으면 빈 곡선 대신 받지 못한 사유를 한 문장으로 둔다 —
  * 빈 그래프는 "돌았고 비어 있었다"는 거짓이 된다. 받았더라도 자산가치 기록이 하나도 없으면(거래일을
- * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다. 아직 계산 중이면
- * 그릴 것이 없으므로 자리를 비운다.
+ * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다.
+ *
+ * <p><b>계산 중에는 진행 곡선을 그린다</b>(spec 004 R-05). 구독으로 받은 거래일별 점을 그대로 쓰므로
+ * 그려진 값은 모두 워커가 실제로 계산한 것이다. 최종 시계열을 받으면 그쪽으로 바꾼다 — 같은 실행의
+ * 같은 값이라 곡선이 이어진다. 한 점도 받지 못한 동안에는 그릴 것이 없으므로 자리를 비운다.
+ *
+ * <p><b>계산 중에는 하락 구간 음영과 대안 텍스트의 핵심 숫자를 붙이지 않는다.</b> 둘의 근거는 요약의
+ * `maxDrawdown` 같은 확정된 값이고, 그 값은 실행이 끝나야 나온다. 중간 곡선으로 짐작해 칠하면 끝난 뒤
+ * 음영이 다른 자리로 옮겨 간다.
  *
  * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.
  */
 function ResultChartSlot({
   detail,
   timeseries,
+  progressPoints,
   target,
 }: {
   detail: PublicResultDetail
   timeseries: TimeseriesState
+  /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */
+  progressPoints?: ResultTimeseriesPoint[]
   target?: EquityChartSeries | null
 }) {
   if (timeseries.status === 'unavailable') {
@@ -333,7 +324,21 @@ function ResultChartSlot({
       <p className={styles.status}>그래프를 그릴 시계열을 받지 못했습니다. {timeseries.message}</p>
     )
   }
-  if (timeseries.status !== 'loaded') return null
+
+  const { summary } = detail
+
+  if (timeseries.status !== 'loaded') {
+    const inProgress = progressPoints ?? []
+    if (!hasDrawableEquity(inProgress)) return null
+    return (
+      <EquityChart
+        altNumbers={null}
+        base={{ name: strategyLabel(detail), points: inProgress, maxDrawdown: null }}
+        initialCash={detail.config.initialCash}
+      />
+    )
+  }
+
   if (!hasDrawableEquity(timeseries.data.points)) {
     return (
       <p className={styles.status}>
@@ -341,8 +346,6 @@ function ResultChartSlot({
       </p>
     )
   }
-
-  const { summary } = detail
 
   return (
     <EquityChart

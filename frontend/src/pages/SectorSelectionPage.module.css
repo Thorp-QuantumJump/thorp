@@ -48,9 +48,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -64,7 +64,7 @@
 .notice button {
   padding: 9px 16px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -97,9 +97,9 @@
 /* 목록이 예시 대응표에서 왔다는 표시다. 상품 정보의 예시 표시와는 다른 자리에 둔다. */
 .sampleNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
@@ -109,9 +109,9 @@
 /* 보관해 둔 값을 그대로 쓰지 못했다는 한 문장이 놓이는 자리다. */
 .restoreNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.86rem;
@@ -126,9 +126,9 @@
 */
 .browserCard {
   position: relative;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-control);
-  border-radius: 18px;
+  border-radius: var(--thorp-radius-card, 18px);
   background: var(--thorp-surface);
 }
 
@@ -165,7 +165,7 @@
   width: 32px;
   height: 32px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-control, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   cursor: pointer;
@@ -207,7 +207,7 @@
   width: 100%;
   padding: 10px 13px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-control, 12px);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
@@ -317,7 +317,7 @@
   gap: 6px;
   padding: 9px 17px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
@@ -359,9 +359,9 @@
   justify-content: center;
   gap: 10px;
   min-height: 13rem;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-muted);
 }
@@ -390,9 +390,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px;
+  padding: var(--thorp-pad-inset, 14px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
 }
 
 .browserCard [data-slot='profile-notice'] p {
@@ -405,7 +405,7 @@
 .browserCard [data-slot='profile-notice'] button {
   padding: 6px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -430,7 +430,7 @@
   gap: 10px 18px;
   margin: 0;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);
 }
 
@@ -465,7 +465,7 @@
   margin: 0;
   padding: 8px 12px;
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-inset, 8px);
   color: var(--thorp-copy);
   font-size: 0.78rem;
   line-height: 1.6;
@@ -477,9 +477,9 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 14px;
+  padding: var(--thorp-pad-inset, 14px);
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-inset, 12px);
   background: var(--thorp-surface-raised);
   animation: card-expand-in 160ms ease-out both;
 }
@@ -614,9 +614,9 @@
   top: 18px;
   flex-direction: column;
   gap: 12px;
-  padding: 18px;
+  padding: var(--thorp-pad-card, 18px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -651,7 +651,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);
 }
 
@@ -717,7 +717,7 @@
   margin-top: 2px;
   padding: 11px 18px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;

@@ -1,8 +1,7 @@
-import { ArrowDown, ArrowUpRight, BarChart3, FlaskConical, Radar } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, FlaskConical, Radar } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'
 import type { Indicator } from '@/types/market'
 import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
@@ -11,32 +10,35 @@ import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
 
-type PreviewSeries = Exclude<keyof BacktestPoint, 'date'>
-
-function buildPreviewPath(series: PreviewSeries) {
+/**
+ * 진단 구역의 장식용 곡선을 만든다.
+ *
+ * <p><b>성과가 아니다.</b> 예전에는 예시 시계열을 실제 백테스트 결과처럼 그리고 그 옆에 누적
+ * 수익·CAGR·MDD·SHARPE를 적었는데, 어떤 실행에서도 나온 적 없는 값이라 첫 화면이 근거 없는
+ * 성과를 단정하는 꼴이었다. 지금 이 곡선은 사인파로 만든 무늬일 뿐이고 축·기간·종목 이름을
+ * 달지 않는다. 실제 수치는 결과 화면이 자기 실행에서 읽어 보인다.
+ */
+function buildDecorativeCurve(seed: number, amplitude: number) {
   const left = 42
-  const top = 40
   const width = 916
-  const height = 278
-  const minimum = 88
-  const maximum = 230
+  const middle = 190
+  const steps = 48
 
-  return backtestChartData
-    .map((point, index) => {
-      const x = left + (index / (backtestChartData.length - 1)) * width
-      const value = Number(point[series])
-      const y = top + height - ((value - minimum) / (maximum - minimum)) * height
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-    })
-    .join(' ')
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const ratio = index / steps
+    const x = left + ratio * width
+    const wave = Math.sin(ratio * Math.PI * 1.6 + seed) + Math.sin(ratio * Math.PI * 3.1 + seed) * 0.35
+    const y = middle - wave * amplitude - ratio * 34
+    return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
+  }).join(' ')
 }
 
 const comparisonPaths = [
-  buildPreviewPath('benchmark'),
-  buildPreviewPath('dualMomentum'),
-  buildPreviewPath('rsiMeanReversion'),
+  buildDecorativeCurve(0.4, 74),
+  buildDecorativeCurve(1.7, 58),
+  buildDecorativeCurve(2.9, 44),
 ]
-const resultPath = buildPreviewPath('trend')
+const resultPath = buildDecorativeCurve(0.9, 96)
 
 /** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */
 export function HeroSection() {
@@ -183,7 +185,7 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
   )
 }
 
-/** 기존 예시 시계열로 전략 결과가 과거 시장 위에 그려지는 과정을 보여준다. */
+/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 성과 수치는 결과 화면에만 둔다. */
 export function BacktestIntroSection() {
   return (
     <motion.section
@@ -202,12 +204,20 @@ export function BacktestIntroSection() {
           <h2 id="backtest-intro-title">나의 전략을 실험해보세요.</h2>
         </div>
 
-        <div className={styles.backtestVisual}>
-          <div className={styles.chartTopline}>
-            <span><BarChart3 aria-hidden="true" size={17} /> KOSPI 200 / 2019—2023</span>
-            <strong>STRATEGY 01</strong>
+        {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}
+        <div className={styles.backtestVisual} aria-hidden="true">
+          {/* 결과 화면 틀. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을
+              채우면 첫 화면이 성과를 지어내게 된다. classic 디자인에서는 CSS가 숨긴다. */}
+          <div className={styles.visualBar}>
+            <span className={styles.visualDots}><i /><i /><i /></span>
+            <b>결과 화면</b>
           </div>
-          <svg viewBox="0 0 1000 390" role="img" aria-label="과거 시장과 추세추종 전략의 백테스트 성과 비교 차트">
+          <dl className={styles.visualMetrics}>
+            {['비용 차감 후 수익', '가장 크게 줄었던 폭', '거래비용'].map((name) => (
+              <div key={name}><dt>{name}</dt><dd>실행 후 표시</dd></div>
+            ))}
+          </dl>
+          <svg viewBox="0 0 1000 390">
             {[86, 144, 202, 260, 318].map((y) => (
               <line key={y} className={styles.chartGrid} x1="42" x2="958" y1={y} y2={y} />
             ))}
@@ -238,20 +248,7 @@ export function BacktestIntroSection() {
               viewport={{ once: false, amount: 0.35 }}
               transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
             />
-            <g className={styles.chartYears}>
-              <text x="42" y="370">2019</text>
-              <text x="271" y="370">2020</text>
-              <text x="500" y="370">2021</text>
-              <text x="729" y="370">2022</text>
-              <text x="958" y="370" textAnchor="end">2023</text>
-            </g>
           </svg>
-          <div className={styles.previewMetrics}>
-            <span>누적 수익 <strong>+124.8%</strong></span>
-            <span>CAGR <strong>18.4%</strong></span>
-            <span>MDD <strong>-9.1%</strong></span>
-            <span>SHARPE <strong>1.42</strong></span>
-          </div>
         </div>
 
         {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른

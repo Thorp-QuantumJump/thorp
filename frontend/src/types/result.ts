@@ -85,6 +85,23 @@ export type ResultLiquidation = {
   liquidated: { finalEquity: string; totalReturn: string; liquidationCost: string }
 }
 
+/**
+ * 004 파생 지표(FR-027). 정의는 워커 `performance.calculate_analytics`가 원본이다.
+ * 맵의 키는 종목 id, 값은 비율 문자열. 워커가 계산하지 못한 항목은 `null`이다.
+ */
+export type ResultAnalytics = {
+  recoveryDays: number | null
+  turnover: string | null
+  /** 종목 쌍의 표본 상관. 변동성 0인 쌍은 키가 없다 */
+  correlationMatrix: Record<string, Record<string, string>> | null
+  /** 포트폴리오 분산에서 종목이 차지하는 비율. 합 1 */
+  riskContribution: Record<string, string> | null
+  /** 전체 손익에서 종목 손익이 차지하는 비율. 합 1. 이익 종목도 들어간다 */
+  lossContribution: Record<string, string> | null
+  /** 공분산·상관 산정법. 현재 `sample-covariance-daily` */
+  method: string | null
+}
+
 export type ResultSummary = {
   initialEquity: string
   finalEquity: string
@@ -106,7 +123,7 @@ export type ResultSummary = {
   costs: { commission: string; spread: string; slippage: string; tax: string; total: string }
   /** 요청이 청산을 끄면 `null`이다 */
   liquidation: ResultLiquidation | null
-  analytics: { recoveryDays: number | null; turnover: string | null } | null
+  analytics: ResultAnalytics | null
   exceptionCount: number
 }
 

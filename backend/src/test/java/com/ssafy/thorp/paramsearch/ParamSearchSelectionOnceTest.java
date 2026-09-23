@@ -18,8 +18,10 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;
 import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,12 +34,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 선정 계산이 묶음당 정확히 1회인지(T072, 내부 계약 §4 불변식 3).
+ * 후보 완료마다 잠정 선정을 갱신하고 마지막 결과에서 확정하는지 검증한다.
  *
- * <p><b>왜 1회여야 하는가</b>: 안정성 필터가 "묶음 내 상위 50%"라는 상대 분위다. 후보가 끝날 때마다 다시 계산하면 나중에 끝난 후보가 분위를 흔들어, 이미
- * 선정된 후보의 근거가 사라지고 같은 묶음의 결과가 볼 때마다 달라진다(원칙 VIII).
- *
- * <p>발행기는 목이다 — 여기서 볼 것은 큐가 아니라 <b>마지막 후보가 끝나는 순간에만</b> 선정이 도는가다. 성과 행은 테스트가 직접 넣는다.
+ * <p>실행 중 선정은 현재까지 완료된 후보만 사용하므로 상대 분위와 표시 순서가 바뀔 수 있다. 마지막 후보가 끝나면 같은 계산을 한 번 더 해 최종값을 남긴다. 성과 행은
+ * 테스트가 직접 넣는다.
  */
 class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport {
 
@@ -73,8 +73,8 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport 
     }
 
     @Test
-    @DisplayName("마지막 후보가 끝나기 전에는 선정이 없고, 끝나면 한 번 생긴다")
-    void selectionHappensOnlyWhenTheBatchDrains() {
+    @DisplayName("후보가 끝날 때마다 잠정 선정이 있고, 마지막 후보에서 확정된다")
+    void selectionRefreshesAsCandidatesFinish() {
         ParamSearch search = accept();
         // 계산 전에 제외된 후보(EXCLUDED)는 끝낼 수 없다 — 세면 마지막 하나를 남기지 못하고 다 비운다.
         // 유효성 규칙이 늘면 제외가 늘어나므로 상태로 거른다(2026-09-17 등록표 1.3.0).
@@ -90,7 +90,9 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport 
         // 마지막 하나를 남기고 끝낸다. 발행 창이 좁아 한 번에 다 나와 있지 않으므로 끝낼 때마다 다시 본다.
         for (int done = 0; done < runnable - 1; done++) {
             finish(nextDispatched(search), "0.1000");
-            assertThat(reload(search).getSelection()).as("아직 남은 후보가 있으면 분위가 확정되지 않는다").isNull();
+            ParamSearch running = reload(search);
+            assertThat(running.getSelection()).as("완료된 후보가 생기면 현재 선정을 바로 제공한다").isNotNull();
+            assertThat(running.getStatus()).isEqualTo(ParamSearchStatus.RUNNING);
         }
         finish(nextDispatched(search), "0.2000");
 
@@ -108,8 +110,8 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport 
     }
 
     @Test
-    @DisplayName("이미 선정된 묶음을 다시 계산하지 않는다")
-    void selectionIsNotRecomputed() {
+    @DisplayName("입력이 같으면 선정을 다시 계산해도 결과가 같다")
+    void selectionIsStableForTheSameInputs() {
         ParamSearch search = accept();
         drain(search);
 
@@ -117,9 +119,14 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport 
         Map<String, Object> first = finished.getSelection();
         assertThat(first).isNotNull();
 
-        ParamSearch again = selectionService.selectOnce(finished);
+        ParamSearch again = selectionService.refreshSelection(finished);
 
-        assertThat(again.getSelection()).as("다시 계산하면 같은 묶음의 결과가 볼 때마다 달라진다(불변식 3)").isSameAs(first);
+        // 방금 계산한 쪽은 값이 null인 키(note)를 들고 있고, 저장을 거쳐 온 쪽은 JSON 규칙대로 그 키가
+        // 빠져 있다. 둘은 같은 뜻이므로(읽는 쪽은 "키 없음 == null") 비교 전에 null 항목을 지운다.
+        Map<String, Object> recomputed = new HashMap<>(again.getSelection());
+        recomputed.values().removeIf(Objects::isNull);
+
+        assertThat(recomputed).isEqualTo(first);
     }
 
     @Test

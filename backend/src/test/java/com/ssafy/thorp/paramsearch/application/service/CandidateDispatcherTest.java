@@ -9,6 +9,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;
 import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;
 import com.ssafy.thorp.paramsearch.application.port.SearchLimits;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -108,6 +111,42 @@ class CandidateDispatcherTest {
         // 상태는 건드리지 않는다. FAILED로 바꾸면 "이 조합은 계산할 수 없다"는 뜻이 되어
         // 결과 해석과 재시도 셈이 틀어진다(FR-011).
         verify(candidateRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("접수가 거부한 후보는 계산 전 제외로 확정하고 다음 후보로 창을 다시 채운다")
+    void admissionRejectionExcludesTheCandidateAndRefillsTheWindow() {
+        // 2026-09-22 사고 재현: 공통 워밍업이 모자라 후보 하나가 422 로 거부됐고, 그 예외가 결과 반영
+        // 트랜잭션을 통째로 되돌려 끝난 후보의 완료 처리까지 사라졌다. 결과 이벤트는 AFTER_COMMIT 이라
+        // 다시 오지 않으므로 묶음은 영구히 멈췄다.
+        CandidateDispatcher narrow =
+                new CandidateDispatcher(
+                        launcher,
+                        paramSearchRepository,
+                        candidateRepository,
+                        new SearchLimits(120, 1, 1800L, 5, List.of()),
+                        Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneOffset.UTC));
+        SearchCandidate rejected = pending(1).get(0);
+        SearchCandidate accepted = pending(2).get(1);
+        when(candidateRepository.countByStatus(SEARCH_ID, CandidateStatus.DISPATCHED))
+                .thenReturn(0L);
+        when(candidateRepository.findNextByStatus(SEARCH_ID, CandidateStatus.PENDING, 1))
+                .thenReturn(List.of(rejected), List.of(accepted));
+        when(launcher.launchCandidate(any(), any()))
+                .thenThrow(
+                        new BusinessException(ErrorCode.INSUFFICIENT_HISTORY, "요청한 공통 워밍업이 짧습니다"))
+                .thenReturn(100L);
+
+        narrow.fillWindow(SEARCH_ID, snapshot());
+
+        ArgumentCaptor<SearchCandidate> saved = ArgumentCaptor.forClass(SearchCandidate.class);
+        verify(candidateRepository, times(2)).update(saved.capture());
+        // 거부된 후보는 EXCLUDED — 재시도 대상인 FAILED 가 아니다. 다시 보내도 같은 답이 온다.
+        assertThat(saved.getAllValues().get(0).getStatus()).isEqualTo(CandidateStatus.EXCLUDED);
+        assertThat(saved.getAllValues().get(0).getReasonCode())
+                .isEqualTo(ErrorCode.INSUFFICIENT_HISTORY.name());
+        // 창이 1이라 되채우지 않으면 실행 중이 0 이 되고 묶음을 깨울 이벤트가 사라진다.
+        assertThat(saved.getAllValues().get(1).getStatus()).isEqualTo(CandidateStatus.DISPATCHED);
     }
 
     @Test

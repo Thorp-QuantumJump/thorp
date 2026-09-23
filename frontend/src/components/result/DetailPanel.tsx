@@ -1,8 +1,7 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react'
+import { type ReactNode, useCallback } from 'react'
 import { fetchResultExceptions, fetchResultWeights } from '@/api/result'
-import { Button } from '@/components/ui/button'
 import { type ResourceState, useResource } from '@/hooks/useResource'
-import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
+import type { SectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type {
   PublicResultDetail,
   ResultConfigItem,
@@ -13,7 +12,6 @@ import { COMPUTED_WEIGHTS_NOTE, strategyLabel } from './conditionLine'
 import { formatMoney, formatRatio } from './formatResult'
 import { HoldingDifference } from './HoldingDifference'
 import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'
-import { closePanelOnEscape } from './panelEscape'
 import { ResourceArea } from './ResourceArea'
 import { SUMMARY_NOT_CALCULATED } from './statusSentences'
 import { type SectorLabels, buildSectorLabels } from './sectorLabels'
@@ -22,15 +20,19 @@ import { TradeHistory } from './TradeHistory'
 import styles from './resultDetail.module.css'
 
 /**
- * '자세히 보기' 패널(FR-007~FR-009, T064).
+ * '자세히 보기'가 갈라진 세 탭(FR-007~FR-009, T064·T098).
  *
- * <p>결과 바로 아래에서 열고 주소를 바꾸지 않는다 — 설정 화면으로 되돌리지 않는다(SC-006). 첫 화면과 함께 받지
- * 않고, 열 때 `/weights`·`/exceptions`와 섹터 목록을 받는다(SC-001). 거래 내역과 대표 상품 정보는 패널 안에서 다시
- * 한 번 열어야 받는다.
+ * <p><b>결과 분석</b>은 계산에서 나온 값(회복 기간·회전율·상관관계·위험 기여·손실 기여·계산 제한), <b>설정·근거</b>는
+ * 사용자가 넣은 조건과 그 근거(비교 규칙·비용 가정·목표·실제 비중·대표 ETF 구성·출처), <b>전체 거래 내역</b>은
+ * 거래 목록과 조건 질의다. 한 패널에 번갈아 두면 결과에서 나온 값과 넣은 값이 섞여 읽힌다.
  *
- * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로, 004가 아직 공개 조회로 내보내지 않는
- * 상관관계·위험 기여·손실 기여는 '제공되지 않음'으로 둔다. 어느 쪽도 0이나 임의 값으로 채우지 않는다(FR-009,
- * 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로 보이고 이 화면이 자료 길이로 판정하지 않는다.
+ * <p>셋 다 주소를 바꾸지 않고 설정 화면으로 되돌리지 않는다(SC-006). 각 탭은 처음 고를 때 제 자료를 받는다 —
+ * 결과 분석은 `/exceptions`, 설정·근거는 `/weights`, 전체 거래 내역은 `/trades`(SC-001). 대표 상품 정보는 탭 안에서
+ * 다시 한 번 열어야 받는다. 섹터 목록은 세 탭이 같이 쓰므로 `ResultDetailTabs`가 한 번 받아 넘긴다.
+ *
+ * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다
+ * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료
+ * 길이로 판정하지 않는다. 상관관계·위험 기여·손실 기여의 정의는 워커 `calculate_analytics`가 원본이다(420).
  */
 
 /** 비교 대상이 준비되었을 때 B05가 넘긴다. 없으면 보유 섹터 차이를 그리지 않는다 */
@@ -40,90 +42,98 @@ export type DetailCompareTarget = {
   items: readonly ResultConfigItem[]
 }
 
-type DetailPanelProps = {
-  id: string
+type PanelProps = {
   token: string
   detail: PublicResultDetail
-  compare?: DetailCompareTarget | null
-  onClose: () => void
+  /** 섹터 이름·대표 상품을 찾는 001 목록. 부모가 한 번 받아 넘긴다 */
+  catalog: SectorCatalogState
 }
 
-export const NOT_PROVIDED = '제공되지 않음'
 export const CALCULATION_LIMITED = '계산 제한'
 const EMPTY = '없음'
 
-export function DetailPanel({ id, token, detail, compare = null, onClose }: DetailPanelProps) {
-  const titleRef = useRef<HTMLHeadingElement>(null)
-  const titleId = `${id}-title`
-
-  // 열면 제목으로 초점을 옮긴다. 키보드 사용자가 버튼 줄의 나머지를 건너 내려오지 않아도 된다.
-  useEffect(() => {
-    titleRef.current?.focus()
-  }, [])
-
-  const loadWeights = useCallback(
-    (signal: AbortSignal) => fetchResultWeights(token, signal),
-    [token],
-  )
+/** '결과 분석' 탭. 계산에서 나온 값만 둔다. */
+export function AnalysisPanel({ token, detail, catalog }: PanelProps) {
   const loadExceptions = useCallback(
     (signal: AbortSignal) => fetchResultExceptions(token, signal),
     [token],
   )
-  const weights = useResource(loadWeights)
   const exceptions = useResource(loadExceptions)
-  const catalog = useSectorCatalogState()
+  const { config } = detail
+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)
 
+  return (
+    <div className={styles.stack}>
+      <div className={styles.grid}>
+        <RecoveryItem detail={detail} />
+        <TurnoverItem detail={detail} />
+      </div>
+
+      <CorrelationItem detail={detail} labels={labels} />
+
+      <div className={styles.grid}>
+        <ContributionItem
+          title="위험 기여"
+          detail={detail}
+          labels={labels}
+          values={detail.summary?.analytics?.riskContribution ?? null}
+          note="포트폴리오 전체 변동(분산) 가운데 각 종목이 만든 몫입니다. 실제 비중 평균과 일별 수익률 공분산으로 구하며 합은 100%입니다."
+          showMethod
+        />
+        <ContributionItem
+          title="손실 기여"
+          detail={detail}
+          labels={labels}
+          values={detail.summary?.analytics?.lossContribution ?? null}
+          note="구간 손익을 종목별로 나눈 값입니다. 이익이 난 종목도 함께 들어가며 합은 100%입니다."
+        />
+      </div>
+
+      <Item title="계산 제한 항목">
+        <ResourceArea resource={exceptions} loadingText="예외 처리 기록을 불러오는 중입니다.">
+          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
+        </ResourceArea>
+      </Item>
+    </div>
+  )
+}
+
+/** '전체 거래 내역' 탭. 탭을 고르는 것이 여는 것이므로 목록을 바로 부른다. */
+export function TradesPanel({ token, detail, catalog }: PanelProps) {
+  const { config } = detail
+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)
+  return (
+    <div className={styles.stack}>
+      <Item title="전체 거래 내역">
+        <TradeHistory token={token} items={config.items} labels={labels} alwaysOpen />
+      </Item>
+    </div>
+  )
+}
+
+/** '설정·근거' 탭. 사용자가 넣은 조건과 그 근거를 둔다. 비교 대상이 있으면 보유 섹터 차이(FR-008)도 여기다. */
+export function SettingsPanel({
+  token,
+  detail,
+  catalog,
+  compare = null,
+}: PanelProps & { compare?: DetailCompareTarget | null }) {
+  const loadWeights = useCallback(
+    (signal: AbortSignal) => fetchResultWeights(token, signal),
+    [token],
+  )
+  const weights = useResource(loadWeights)
   const { config } = detail
   const labels = buildSectorLabels(
     compare ? [...config.items, ...compare.items] : config.items,
     catalog.status === 'loaded' ? catalog.catalog : null,
   )
 
-  const closeOnEscape = closePanelOnEscape(onClose)
-
   return (
-    <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>
-      <div className={styles.panelHeader}>
-        <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>
-          자세히 보기
-        </h2>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          닫기
-        </Button>
-      </div>
-
+    <div className={styles.stack}>
       <div className={styles.grid}>
-        <RecoveryItem detail={detail} />
-        <TurnoverItem detail={detail} />
-      </div>
-
-      <div className={styles.item}>
-        <div className={styles.grid}>
-          <Item title="상관관계">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-            <dl className={styles.facts}>
-              <dt>추정 기간</dt>
-              <dd>{NOT_PROVIDED}</dd>
-            </dl>
-          </Item>
-          <Item title="위험 기여">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-            <dl className={styles.facts}>
-              <dt>추정 기간</dt>
-              <dd>{NOT_PROVIDED}</dd>
-              <dt>공분산 산정법</dt>
-              <dd>{NOT_PROVIDED}</dd>
-            </dl>
-          </Item>
-          <Item title="손실 기여">
-            <p className={styles.limited}>{NOT_PROVIDED}</p>
-          </Item>
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        <CostItem detail={detail} />
         <RulesItem detail={detail} labels={labels} />
+        <CostItem detail={detail} />
       </div>
 
       <Item title="목표·실제 비중">
@@ -140,23 +150,13 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta
         />
       ) : null}
 
-      <Item title="계산 제한 항목">
-        <ResourceArea resource={exceptions} loadingText="예외 처리 기록을 불러오는 중입니다.">
-          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}
-        </ResourceArea>
-      </Item>
-
-      <Item title="전체 거래 내역">
-        <TradeHistory token={token} items={config.items} labels={labels} />
-      </Item>
-
       <Item title="대표 ETF 구성·구성종목 중복·출처">
         <p className={styles.muted}>
           실제로 담았는지와 무관하게 이 결과의 섹터 후보를 모두 둡니다. 펼친 상품만 불러옵니다.
         </p>
         <InstrumentProfileDisclosure items={config.items} catalog={catalog} />
       </Item>
-    </section>
+    </div>
   )
 }
 
@@ -202,6 +202,135 @@ function RecoveryItem({ detail }: { detail: PublicResultDetail }) {
     <Item title="회복 기간">
       {body}
       <p className={styles.muted}>가장 크게 줄어든 저점에서 이전 고점을 다시 넘기까지 걸린 거래일 수입니다.</p>
+    </Item>
+  )
+}
+
+/** 요약이 없으면 그 문장, 항목이 `null`이면 계산 제한. 둘 다 아니면 `null`을 돌려 값을 그리게 한다. */
+function analyticsGap(detail: PublicResultDetail, present: boolean, what: string): ReactNode | null {
+  if (detail.summary === null) return <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>
+  if (!present) {
+    return (
+      <p className={styles.limited}>
+        {CALCULATION_LIMITED}: 이 결과에는 {what}이 계산되지 않았습니다.
+      </p>
+    )
+  }
+  return null
+}
+
+/** 추정 기간은 실제 평가 기간이고 산정법은 004가 준 `method`다. 이 화면이 이름을 짓지 않는다. */
+function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; showMethod?: boolean }) {
+  const { config } = detail
+  const method = detail.summary?.analytics?.method ?? null
+  return (
+    <dl className={styles.facts}>
+      <dt>추정 기간</dt>
+      <dd>
+        {config.effectiveStart} ~ {config.effectiveEnd}
+      </dd>
+      {showMethod ? (
+        <>
+          <dt>공분산 산정법</dt>
+          <dd>{method ?? EMPTY}</dd>
+        </>
+      ) : null}
+    </dl>
+  )
+}
+
+/** 종목 쌍의 상관 행렬. 정의되지 않은 쌍(변동성 0)은 워커가 키를 빼므로 빈칸으로 둔다. */
+function CorrelationItem({ detail, labels }: { detail: PublicResultDetail; labels: SectorLabels }) {
+  const matrix = detail.summary?.analytics?.correlationMatrix ?? null
+  const gap = analyticsGap(detail, matrix !== null, '상관관계')
+  const ids = matrix ? Object.keys(matrix) : []
+
+  return (
+    <Item title="상관관계">
+      {gap ?? (
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <caption>일별 수익률의 표본 상관 · 종목 {ids.length}개</caption>
+            <thead>
+              <tr>
+                <th scope="col">종목</th>
+                {ids.map((id) => (
+                  <th key={id} scope="col">
+                    {labels.instrument(id)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ids.map((row) => (
+                <tr key={row}>
+                  <th scope="row">{labels.instrument(row)}</th>
+                  {ids.map((col) => (
+                    <td key={col}>{formatCorrelation(matrix?.[row][col])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <EstimationFacts detail={detail} />
+      <p className={styles.muted}>
+        1에 가까우면 같이 움직이고 -1에 가까우면 반대로 움직입니다. 평가 기간의 일별 수익률로 계산합니다.
+      </p>
+    </Item>
+  )
+}
+
+/** 상관은 비율이 아니라 -1~1 값이라 `formatRatio`를 쓰지 않는다. 읽을 수 없으면 받은 문자열 그대로(원칙 VI). */
+function formatCorrelation(value: string | undefined): string {
+  if (value === undefined) return EMPTY
+  const n = Number(value)
+  return value.trim() === '' || !Number.isFinite(n) ? value : n.toFixed(2)
+}
+
+/** 위험 기여·손실 기여. 종목별 비율 한 줄씩이고 합은 1이다. */
+function ContributionItem({
+  title,
+  detail,
+  labels,
+  values,
+  note,
+  showMethod,
+}: {
+  title: string
+  detail: PublicResultDetail
+  labels: SectorLabels
+  values: Record<string, string> | null
+  note: string
+  showMethod?: boolean
+}) {
+  const gap = analyticsGap(detail, values !== null, title)
+
+  return (
+    <Item title={title}>
+      {gap ?? (
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">종목</th>
+                <th scope="col">{title}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(values ?? {}).map(([id, value]) => (
+                <tr key={id}>
+                  <td>{labels.instrument(id)}</td>
+                  <td>{formatRatio(value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <EstimationFacts detail={detail} showMethod={showMethod} />
+      <p className={styles.muted}>{note}</p>
     </Item>
   )
 }

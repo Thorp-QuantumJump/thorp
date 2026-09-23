@@ -179,7 +179,13 @@ class BacktestResultQueryServiceTest {
 
     private static EngineOutput.Analytics analytics() {
         return new EngineOutput.Analytics(
-                9, new BigDecimal("1.219991"), null, null, null, null, "sample-covariance-daily");
+                9,
+                new BigDecimal("1.219991"),
+                Map.of("005930.XKRX", Map.of("000660.XKRX", new BigDecimal("0.057083"))),
+                Map.of("005930.XKRX", new BigDecimal("0.079481")),
+                null,
+                null,
+                "sample-covariance-daily");
     }
 
     /** 먼저 취소해 실행은 계속 돈 요청(R-04). 스냅샷 날짜까지만 볼 수 있다. */
@@ -259,6 +265,12 @@ class BacktestResultQueryServiceTest {
         assertThat(summary.liquidation()).isEqualTo(liquidation());
         assertThat(summary.analytics().recoveryDays()).isEqualTo(9);
         assertThat(summary.analytics().turnover()).isEqualByComparingTo("1.219991");
+        // 상관·위험 기여·손실 기여도 그대로 넘긴다(420). 계산 못 한 항목은 null 이지 0 이 아니다
+        assertThat(summary.analytics().correlationMatrix()).containsKey("005930.XKRX");
+        assertThat(summary.analytics().riskContribution().get("005930.XKRX"))
+                .isEqualByComparingTo("0.079481");
+        assertThat(summary.analytics().lossContribution()).isNull();
+        assertThat(summary.analytics().method()).isEqualTo("sample-covariance-daily");
         assertThat(summary.exceptionCount()).isEqualTo(1);
     }
 
