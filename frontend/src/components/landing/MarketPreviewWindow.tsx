@@ -14,6 +14,7 @@ const MARKETS = [
   { code: 'KOSPI', label: 'KOSPI', volatility: 0.0016 },
   { code: 'KOSDAQ', label: 'KOSDAQ', volatility: 0.0022 },
   { code: 'USD_KRW', label: '원/달러', volatility: 0.0007 },
+  // 국내판 VIX(변동성 지수)다.
   { code: 'VKOSPI200', label: 'VKOSPI 200', volatility: 0.006 },
 ] as const
 
@@ -131,12 +132,25 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
   const moves = values.slice(1).map((value, index) => Math.abs(value - values[index]))
   const largestMove = Math.max(...moves) || 1
 
+  const quotes = markets.map((item) => {
+    const itemValues = series.current[item.code].values
+    const itemLast = itemValues[itemValues.length - 1]
+    const itemChange = ((itemLast - itemValues[0]) / itemValues[0]) * 100
+    return { ...item, last: itemLast, change: itemChange }
+  })
+
   return (
     <div className={styles.previewWindow} role="group" aria-label="국내 시장 지표 움직임 예시">
       <div className={styles.previewBar}>
         <span className={styles.previewDots} aria-hidden="true"><i /><i /><i /></span>
-        <div className={styles.previewTabs}>
-          {markets.map((item, index) => (
+        <span className={styles.previewAddress} aria-hidden="true">thorp · <b>시장 흐름</b></span>
+        <span className={styles.previewExample}>움직임 예시</span>
+      </div>
+
+      <div className={styles.previewTickers}>
+        {quotes.map((item, index) => {
+          const itemDirection = item.change > 0.005 ? 'up' : item.change < -0.005 ? 'down' : undefined
+          return (
             <button
               key={item.code}
               type="button"
@@ -146,22 +160,21 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
                 setPinned(true)
               }}
             >
-              {item.label}
+              <span>{item.label}</span>
+              <strong aria-hidden="true">{format(item.last, item.decimals)}</strong>
+              <em aria-hidden="true" data-direction={itemDirection}>
+                {item.change > 0 ? '+' : ''}
+                {item.change.toFixed(2)}%
+              </em>
             </button>
-          ))}
-        </div>
-        <span className={styles.previewExample}>움직임 예시</span>
+          )
+        })}
       </div>
 
-      <div className={styles.previewQuote} aria-hidden="true">
-        <span>{market.label}</span>
-        <strong>{format(last, market.decimals)}</strong>
-        <em data-direction={direction}>
-          {change > 0 ? '+' : ''}
-          {change.toFixed(2)}%
-        </em>
-      </div>
-
+      <p className={styles.previewChartTitle} aria-hidden="true">
+        {market.label} <b>최근 흐름</b>
+        <span data-direction={direction}>{format(last, market.decimals)}</span>
+      </p>
       <svg className={styles.previewChart} viewBox={`0 0 ${plot.width} ${plot.height}`} aria-hidden="true">
         {[0.25, 0.5, 0.75].map((ratio) => {
           const lineY = plot.top + ratio * (plot.bottom - plot.top)
