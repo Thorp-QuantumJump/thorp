@@ -72,8 +72,8 @@
   border-radius: 14px;
   background: var(--thorp-surface);
 
-  /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */
-  aspect-ratio: 16 / 5.8;
+  /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */
+  height: clamp(220px, 34svh, 300px);
 }
 
 /*
@@ -105,6 +105,7 @@
 
 @media (max-width: 600px) {
   .chart {
+    height: auto;
     aspect-ratio: 4 / 3;
   }
 }

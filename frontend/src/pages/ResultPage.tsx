@@ -1,9 +1,11 @@
 import { useId, useMemo } from 'react'
 import { ArrowLeft } from 'lucide-react'
+import { Dialog } from 'radix-ui'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
+import comparisonStyles from '@/components/result/comparison.module.css'
 import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
 import { useCompareTarget } from '@/hooks/useCompareTarget'
@@ -191,19 +193,37 @@ function ResultView({
         </p>
       ) : null}
 
-
-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. */}
+      {/* 비교 목록은 결과 위에 떠서 요약과 그래프의 위치를 바꾸지 않는다. */}
       {picker.open ? (
-        <div id={pickerId}>
-          <CompareTargetPicker
-            base={detail}
-            onClose={picker.close}
-            onSelect={(choice) => {
-              picker.close()
-              compare.select(choice)
-            }}
-          />
-        </div>
+        <Dialog.Root
+          open
+          onOpenChange={(open) => {
+            if (!open) picker.close()
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay className={comparisonStyles.overlay} />
+            <Dialog.Content
+              id={pickerId}
+              className={comparisonStyles.dialog}
+              aria-describedby={undefined}
+              onCloseAutoFocus={(event) => {
+                event.preventDefault()
+                document.getElementById(pickerButtonId)?.focus()
+              }}
+            >
+              <Dialog.Title className={styles.visuallyHidden}>비교 대상 고르기</Dialog.Title>
+              <CompareTargetPicker
+                base={detail}
+                onClose={picker.close}
+                onSelect={(choice) => {
+                  picker.close()
+                  compare.select(choice)
+                }}
+              />
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       ) : null}
       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
       <CompareTargetSlot
