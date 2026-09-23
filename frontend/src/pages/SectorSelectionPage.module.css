@@ -700,6 +700,8 @@
   margin: 0;
   padding: 0;
   overflow-y: auto;
+  /* 항목을 지워 스크롤바가 사라져도 목록 안쪽 폭은 바뀌지 않는다. */
+  scrollbar-gutter: stable;
   list-style: none;
 }
 
@@ -907,7 +909,7 @@
   line-height: 1.6;
 }
 
-/* 상장일 차이로 비교 기간이 줄어든다는 안내다. 접어 두고 펼치는 구조를 두지 않는다. */
+/* 아직 상장하지 않은 대상 때문에 공통 구간이 없을 때만 타임라인 대신 보인다. */
 .listingNotice {
   margin: 0;
   padding: 9px 12px;
@@ -984,5 +986,199 @@
 
   .browserCard [data-slot='pick'] {
     align-self: flex-start;
+  }
+}
+
+/* 선택한 대상의 공통 구간 하나만 남긴다. 초록색은 이 구간 외의 의미로 쓰지 않는다. */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px var(--thorp-pad-card, 20px);
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-card, 18px);
+  background: var(--thorp-surface);
+}
+
+.timeline [data-slot='timeline-title'] {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.timeline [data-slot='timeline-row'] {
+  min-width: 0;
+}
+
+.timeline [data-slot='timeline-range'] {
+  position: absolute;
+  top: 17px;
+  right: 0;
+  left: 0;
+  height: 1rem;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.timeline [data-slot='timeline-range'] strong {
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.timeline [data-slot='timeline-start-date'],
+.timeline [data-slot='timeline-end-date'] {
+  position: absolute;
+  top: 0;
+}
+
+.timeline [data-slot='timeline-start-date'] {
+  left: var(--timeline-start);
+  transform: translateX(-50%);
+  transition: left 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.timeline [data-slot='timeline-start-date'][data-align='start'] {
+  transform: none;
+}
+
+.timeline [data-slot='timeline-start-date'][data-align='end'] {
+  transform: translateX(-100%);
+}
+
+.timeline [data-slot='timeline-end-date'] {
+  right: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  text-align: right;
+}
+
+.timeline [data-slot='timeline-today'] {
+  color: var(--thorp-muted);
+  font-size: 0.64rem;
+}
+
+/* 비조작형 범위 그림이다. 키보드 포커스는 상세 정보를 여는 용도로만 쓴다. */
+.timeline [data-slot='timeline-plot'] {
+  position: relative;
+  padding-block: 6px 20px;
+  outline: none;
+  cursor: help;
+}
+
+.timeline [data-slot='timeline-plot']:focus-visible {
+  border-radius: 6px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: 5px;
+}
+
+.timeline [data-slot='timeline-lane'] {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--thorp-line-strong);
+}
+
+.timeline [data-slot='common-bar'] {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: var(--timeline-start);
+  height: 6px;
+  border-radius: 999px;
+  background: var(--thorp-accent);
+  transition: left 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.timeline [data-slot='common-start'],
+.timeline [data-slot='common-end'] {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--thorp-surface);
+  border-radius: 50%;
+  background: var(--thorp-accent);
+  transform: translateY(-50%);
+}
+
+.timeline [data-slot='common-start'] {
+  left: -4px;
+}
+
+.timeline [data-slot='common-end'] {
+  right: -4px;
+}
+
+.timeline [data-slot='timeline-tooltip'] {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: min(500px, 100%);
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: 10px;
+  background: var(--thorp-surface-raised);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 30%);
+  color: var(--thorp-copy);
+  font-size: 0.74rem;
+  line-height: 1.55;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.timeline [data-slot='timeline-tooltip'] p {
+  margin: 0;
+}
+
+.timeline [data-slot='timeline-tooltip'] p + p {
+  margin-top: 5px;
+}
+
+.timeline [data-slot='timeline-tooltip'] strong {
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.timeline [data-slot='timeline-listings'],
+.timeline [data-slot='timeline-caveat'] {
+  color: var(--thorp-muted);
+}
+
+.timeline [data-slot='timeline-plot']:hover [data-slot='timeline-tooltip'],
+.timeline [data-slot='timeline-plot']:focus-visible [data-slot='timeline-tooltip'] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 620px) {
+  .timeline [data-slot='timeline-range'] {
+    font-size: 0.62rem;
+  }
+
+  .timeline [data-slot='timeline-today'] {
+    font-size: 0.58rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline [data-slot='common-bar'],
+  .timeline [data-slot='timeline-start-date'],
+  .timeline [data-slot='timeline-tooltip'] {
+    transition: none;
   }
 }
