@@ -105,6 +105,7 @@ export function ResultTabs({ label, tabs, defaultTab }: ResultTabsProps) {
           <div
             key={tab.id}
             role="tabpanel"
+            data-tab-id={tab.id}
             id={panelId(tab.id)}
             aria-labelledby={tabId(tab.id)}
             hidden={tab.id !== active}

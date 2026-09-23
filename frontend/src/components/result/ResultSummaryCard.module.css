@@ -1,11 +1,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: var(--thorp-pad-card, 22px 24px);
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 14px);
-  background: var(--thorp-surface);
+  gap: 4px;
+  min-height: 84px;
 }
 
 .visuallyHidden {
@@ -25,43 +22,46 @@
   margin: 0;
   color: var(--thorp-copy);
   font-size: 0.88rem;
-  line-height: 1.6;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  flex: 1;
   gap: 16px;
   margin: 0;
 }
 
 .metric {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   min-width: 0;
+  text-align: center;
 }
 
 .metricLabel {
   color: var(--thorp-copy);
-  font-size: 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 650;
 }
 
 .metricValue {
   margin: 0;
   font-family: var(--thorp-font-mono);
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.7rem, 4vw, 2rem);
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-.metricDefinition {
-  margin: 0;
-  color: var(--thorp-muted);
-  font-size: 0.8rem;
-  line-height: 1.55;
-}
+/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */
+:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }
+:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }
 
 .note {
   margin: 0;
@@ -70,16 +70,31 @@
   line-height: 1.65;
 }
 
+.valuationNote {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 @media (max-width: 600px) {
   .card {
-    padding: var(--thorp-pad-card, 16px);
+    padding: 8px 0;
   }
 
   .metrics {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
-/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */
-:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }
-:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }
+  .metric:last-child {
+    grid-column: 1 / -1;
+    padding-top: 12px;
+    border-top: 1px solid var(--thorp-line);
+  }
+
+  .metric {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+}
