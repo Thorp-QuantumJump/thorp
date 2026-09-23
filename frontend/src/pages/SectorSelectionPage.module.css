@@ -5,8 +5,14 @@
   color: var(--thorp-foreground);
 }
 
+/*
+  이 화면은 공용 본문 폭(960px)보다 넓게 쓴다. 넓힌 카드가 목록·설명·담긴 종목 세 칸을
+  나란히 두는데, 오른쪽 선택 요약까지 합치면 960px 안에서는 가운데 칸이 글자 하나 폭까지
+  눌린다. 토큰을 고치지 않고 이 화면에서만 넓히는 까닭은 다른 화면의 읽는 폭을 건드리지
+  않기 위해서다.
+*/
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), 1320px);
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
@@ -132,13 +138,20 @@
 */
 .browserCard [data-slot='body'] {
   display: grid;
-  grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr);
+  grid-template-columns: 11rem minmax(0, 1fr);
   align-items: start;
   gap: 18px;
 }
 
+/*
+  가운데 칸에 최소 폭을 준다. `minmax(0, 1fr)`만 두면 양옆 칸이 제 내용만큼 자리를 차지한
+  뒤 남는 것을 가운데가 받는데, 남는 것이 없으면 0까지 줄어 글자가 한 자씩 끊긴다.
+
+  담긴 종목 칸은 고정 폭이다. `minmax`의 위 끝을 두어도 안의 내용이 더 넓으면 트랙이 그만큼
+  커지므로, 폭을 못 박고 넘치는 이름은 안에서 줄을 바꾸게 한다.
+*/
 .browserCard[data-expanded='true'] [data-slot='body'] {
-  grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-columns: 11rem minmax(20rem, 1fr) 15rem;
 }
 
 /* 카드 크기를 바꾸는 단추다. 아이콘 하나뿐이라 손이 닿을 넓이를 따로 준다. */
@@ -174,7 +187,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 22rem;
+  /* 가운데 칸의 높이(머리 + 차트 자리)와 얼추 맞춘다. 목록만 짧게 잘리면 잘린 티가 난다. */
+  max-height: 19rem;
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -285,8 +299,15 @@
   font-size: 0.8rem;
 }
 
-.browserCard [data-slot='dot'] {
-  opacity: 0.5;
+/* 구분점은 뒤따르는 사실에 붙인다. 따로 떼면 줄이 바뀔 때 점만 앞 줄 끝에 남는다. */
+.browserCard [data-slot='main-fact'] {
+  white-space: nowrap;
+}
+
+.browserCard [data-slot='main-fact'] + [data-slot='main-fact']::before {
+  margin-right: 6px;
+  opacity: 0.45;
+  content: '·';
 }
 
 .browserCard [data-slot='pick'] {
@@ -337,7 +358,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 15rem;
+  min-height: 13rem;
   padding: 20px;
   border: 1px dashed var(--thorp-line-strong);
   border-radius: 14px;
@@ -346,7 +367,7 @@
 }
 
 .browserCard[data-expanded='true'] [data-slot='chart'] {
-  min-height: 12rem;
+  min-height: 11rem;
 }
 
 .browserCard [data-slot='chart'] p {
@@ -525,7 +546,8 @@
 */
 .browserCard [data-slot='holding'] {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* 이름 칸이 제 내용만큼 넓어지려 들면 바깥 트랙까지 밀어낸다. 줄을 바꾸게 둔다. */
+  grid-template-columns: minmax(0, auto) minmax(8px, 1fr) auto;
   align-items: baseline;
   gap: 6px;
   padding: 3px 0;
@@ -755,7 +777,8 @@
 }
 
 /* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
+  /* 선택 요약을 아래로 내려 카드가 폭을 다 쓰게 한다. 셋을 한 줄에 억지로 넣지 않는다. */
   .board {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -765,10 +788,10 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   /* 담긴 종목 칸까지 셋을 나란히 둘 폭이 없다. 넓힌 카드도 두 칸으로 접는다. */
   .browserCard[data-expanded='true'] [data-slot='body'] {
-    grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr);
+    grid-template-columns: 11rem minmax(0, 1fr);
   }
 
   .browserCard[data-expanded='true'] [data-slot='holdings'] {
