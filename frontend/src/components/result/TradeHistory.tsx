@@ -11,7 +11,8 @@ import styles from './resultDetail.module.css'
 import { DateField } from '@/components/common/DateField'
 
 /**
- * 전체 거래 내역(FR-007, T065). 상세 패널 안에서 '거래 내역 보기'를 누를 때 처음 부른다(SC-001).
+ * 전체 거래 내역(FR-007, T065). 결과 화면에서는 제 탭에 놓여 탭을 고를 때 처음 부른다(`alwaysOpen`, T098). 다른
+ * 자리에 접혀 들어가면 '거래 내역 보기'를 누를 때 부른다(SC-001).
  *
  * <p>한 번에 받는 건수는 `TRADES_PAGE_SIZE` 한 곳에서 정한다(R-11). 종목·기간·상태로 좁히는 것은 서버 질의로
  * 넘긴다 — 받은 페이지를 화면에서 거르면 다른 페이지에 있는 거래가 빠진 것처럼 보인다(spec Edge Case).
@@ -220,12 +221,15 @@ export function TradeHistory({
   token,
   items,
   labels,
+  alwaysOpen = false,
 }: {
   token: string
   items: readonly ResultConfigItem[]
   labels: SectorLabels
+  /** 제 탭에 놓였을 때. 열린 채로 두고 여닫기 버튼을 그리지 않는다 */
+  alwaysOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(alwaysOpen)
   const [draft, setDraft] = useState<FilterDraft>(emptyDraft)
   const [applied, setApplied] = useState<TradeFilter>(() => toFilter(emptyDraft))
   const [formError, setFormError] = useState<string | null>(null)
@@ -248,18 +252,20 @@ export function TradeHistory({
 
   return (
     <div className={styles.item}>
-      <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={open}
-          aria-controls={open ? listId : undefined}
-          onClick={() => setOpen((current) => !current)}
-        >
-          {open ? '거래 내역 접기' : '거래 내역 보기'}
-        </Button>
-      </div>
+      {alwaysOpen ? null : (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={open}
+            aria-controls={open ? listId : undefined}
+            onClick={() => setOpen((current) => !current)}
+          >
+            {open ? '거래 내역 접기' : '거래 내역 보기'}
+          </Button>
+        </div>
+      )}
 
       {open ? (
         <div id={listId} className={styles.item}>
