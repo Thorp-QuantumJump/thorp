@@ -1,2 +1,5 @@
 .empty { border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 40px; }
 .empty h2 { margin: 0; color: var(--thorp-foreground); font-size: 1.2rem; line-height: 1.5; }
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
+:global(:root:not([data-design='classic'])) .empty { padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }

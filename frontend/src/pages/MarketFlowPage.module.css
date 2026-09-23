@@ -117,6 +117,7 @@
 :global(:root:not([data-design='classic'])) .connectionGrid article:last-child { display: flex; flex-direction: column; padding: 24px; }
 :global(:root:not([data-design='classic'])) .connectionGrid article + article { border-left: 1px solid var(--thorp-line); }
 :global(:root:not([data-design='classic'])) .connectionLabel { color: var(--thorp-eyebrow); }
+:global(:root:not([data-design='classic'])) .connectionGrid article > svg { color: var(--thorp-ornament); }
 /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */
 :global(:root:not([data-design='classic'])) .connectionLink { margin-top: auto; padding-top: 14px; color: var(--thorp-foreground); font-weight: 600; }
 @media (max-width: 1100px) {
