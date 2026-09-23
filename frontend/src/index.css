@@ -82,6 +82,9 @@
   --thorp-down: #4e97f5;
   /* 모서리: 버튼·입력칸은 control, 칩·배지만 999px. 각 자리는 var(--thorp-radius-control, 예전 값)으로 쓴다. */
   --thorp-radius-control: 6px;
+  /* 카드는 12px, 카드 안 칸은 8px. 면은 이 두 단까지만 쓴다. */
+  --thorp-radius-card: 12px;
+  --thorp-radius-inset: 8px;
   --thorp-overlay: rgb(0 0 0 / 68%);
   --thorp-input-hover: rgb(255 255 255 / 30%);
   --thorp-surface-glass: rgb(26 29 28 / 86%);
@@ -174,6 +177,8 @@
   --thorp-up: var(--thorp-positive);
   --thorp-down: var(--thorp-negative);
   --thorp-radius-control: initial;
+  --thorp-radius-card: initial;
+  --thorp-radius-inset: initial;
   --thorp-overlay: initial;
   --thorp-input-hover: initial;
   --thorp-surface-glass: initial;
