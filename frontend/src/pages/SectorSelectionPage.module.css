@@ -136,10 +136,14 @@
   카드 안을 세로로 쌓지 않는다. 접었을 때는 목록과 가격 흐름 둘, 넓혔을 때는 담긴 종목 칸이
   오른쪽에 하나 더 선다.
 */
+/*
+  칸들이 카드 높이를 함께 쓴다. 목록만 제 높이로 서면 카드가 길어질 때 그 옆만 짧게 잘려,
+  실제로는 여덟 개뿐인 목록이 스크롤 막대에 갇힌 것처럼 보인다.
+*/
 .browserCard [data-slot='body'] {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
   gap: 18px;
 }
 
@@ -182,13 +186,17 @@
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
-/* 왼쪽 목록이다. 길어지면 이 칸만 스크롤해 카드 높이가 끝없이 자라지 않게 한다. */
+/* 왼쪽 목록이다. 항목이 많으면 이 칸만 스크롤해 카드 높이가 끝없이 자라지 않게 한다. */
+.browserCard [data-slot='list'] {
+  min-height: 0;
+  max-height: 28rem;
+}
+
 .browserCard [data-slot='list'] ul {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* 가운데 칸의 높이(머리 + 차트 자리)와 얼추 맞춘다. 목록만 짧게 잘리면 잘린 티가 난다. */
-  max-height: 19rem;
+  height: 100%;
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -401,11 +409,6 @@
 /* 선이 놓이는 칸이다. 세로 눈금을 적지 않으므로 좌우 여백도 거의 두지 않는다. */
 .browserCard [data-slot='chart-canvas'] {
   width: 100%;
-  height: 11rem;
-}
-
-.browserCard[data-expanded='true'] [data-slot='chart-canvas'] {
-  height: 9rem;
 }
 
 /* 그림이 말하지 않는 사실을 한 줄로 적는다. 기간과 값의 종류, 그리고 이어 붙인 날의 존재다. */
