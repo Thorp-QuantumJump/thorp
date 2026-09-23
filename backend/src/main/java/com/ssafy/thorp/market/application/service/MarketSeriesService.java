@@ -72,8 +72,13 @@ public class MarketSeriesService {
         }
     }
 
-    /** 지표 하나를 갱신한다. 이미 모은 날짜는 넘기고, 창(window) 밖으로 밀려난 날짜는 버린다. */
-    void refresh(MarketCode code) {
+    /**
+     * 지표 하나를 갱신한다. 이미 모은 날짜는 넘기고, 창(window) 밖으로 밀려난 날짜는 버린다.
+     *
+     * <p>이전 값 읽기 → 원천 호출 → 저장이 한 덩어리라 갱신은 한 번에 하나만 돈다. 조회({@link #get})는 잠그지 않는다. 원천을 기다리는 동안 맵을
+     * 잠그면({@code compute}) 조회까지 멈추므로 쓰지 않는다.
+     */
+    synchronized void refresh(MarketCode code) {
         MarketSeriesProvider provider =
                 providers.stream()
                         .filter(p -> p.supportsSeries(code))

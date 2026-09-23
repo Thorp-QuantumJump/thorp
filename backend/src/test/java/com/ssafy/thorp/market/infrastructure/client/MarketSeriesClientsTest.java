@@ -105,6 +105,29 @@ class MarketSeriesClientsTest {
     }
 
     @Test
+    void krxSeriesStopsAtBudgetAndReturnsWhatItCollected() throws Exception {
+        config.getKrx().setApiKey("test-key");
+        // 9/9는 받고 9/8에서 예산이 다 된다. 9/7 이전은 부르지 않고 모은 하루만 돌려준다.
+        when(http.json(any(), anyMap(), any()))
+                .thenReturn(krxDay("20260909", "2,510"))
+                .thenThrow(new MarketDataException(Reason.TIMEOUT));
+        var client = new KrxMarketClient(http, config, clock);
+
+        var series =
+                client.fetchSeries(
+                        MarketCode.KOSPI,
+                        LocalDate.parse("2026-09-01"),
+                        LocalDate.parse("2026-09-09"),
+                        Set.of(),
+                        deadline());
+
+        assertThat(series)
+                .extracting(MarketObservation::observationDate)
+                .containsExactly("2026-09-09");
+        verify(http, times(2)).json(any(), anyMap(), any());
+    }
+
+    @Test
     void ecosSeriesReadsRangeOnceAndDropsMissingValues() throws Exception {
         config.getEcos().setApiKey("test-key");
         when(http.json(any(), anyMap(), any()))
