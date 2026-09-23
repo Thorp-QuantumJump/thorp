@@ -593,32 +593,6 @@ export const marketMock: MarketData = {
       },
     ],
   },
-  strategyRecommendations: [
-    {
-      id: 'trend',
-      name: '이동평균 추세추종',
-      suitability: 84,
-      reason: '시장 방향이 뚜렷할 때 따라가고, 하락할 때 투자 비중을 줄이는 전략입니다.',
-      risk: '가격이 자주 오르내리면 매수와 매도가 반복될 수 있습니다.',
-      backtestPath: '/backtest',
-    },
-    {
-      id: 'dual-momentum',
-      name: '듀얼 모멘텀',
-      suitability: 76,
-      reason: '잘 오르는 자산을 고르는 방식이라 업종별 차이가 큰 현재 시장에 활용할 수 있습니다.',
-      risk: '시장이 갑자기 반전하면 대응이 늦을 수 있습니다.',
-      backtestPath: '/backtest',
-    },
-    {
-      id: 'rsi-mean-reversion',
-      name: 'RSI 평균회귀',
-      suitability: 48,
-      reason: '많이 떨어진 뒤의 짧은 반등을 노리지만 지금처럼 불안한 시장에서는 주의가 필요합니다.',
-      risk: '하락세가 강하면 낮은 가격이 오래 이어질 수 있습니다.',
-      backtestPath: '/backtest',
-    },
-  ],
   dataFreshness: [
     {
       id: 'krx',

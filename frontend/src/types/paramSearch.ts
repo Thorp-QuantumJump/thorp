@@ -174,11 +174,15 @@ export type PreviewWorkload = {
 
 /**
  * 묶음에 걸린 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다
- * (FR-005a, 원칙 IX).
+ * (FR-005a).
+ *
+ * `timeLimitSeconds`는 **`null`이면 실행시간 상한을 두지 않는다는 뜻이다** — 묶음은 후보를 다 돌거나
+ * 연속 실패 한도·취소로만 끝난다. 0으로 접거나 없는 값으로 다루지 않는다. 상한이 없으면 서버가
+ * `provisional`에서도 그 이름을 빼므로 화면이 없는 제한에 '임시값'을 붙이지 않는다.
  */
 export type AppliedLimits = {
   maxCandidates: number
-  timeLimitSeconds: number
+  timeLimitSeconds: number | null
   dispatchWindow: number
   consecutiveFailureLimit: number
   provisional: string[]
@@ -234,6 +238,8 @@ export type ConfigSpaceAxis = {
   label: string
   unit: string | null
   values: AxisValue[]
+  /** 상태 응답이나 미리보기에서 함께 온 후보값 표시 문구. 객체형 값을 화면에 직접 찍지 않는다. */
+  valueLabels?: string[]
 }
 
 export type ConfigStrategySpace = {
@@ -302,7 +308,7 @@ export type ParamSearchBaseline = {
 }
 
 /**
- * 선정 결과. `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다.
+ * 선정 결과. 실행 중에는 지금까지 완료된 후보 기준으로 갱신되고, `COMPLETED`·`PARTIAL`에서 확정된다.
  *
  * **`displayed`는 순위가 아니다.** 정렬 지표를 밝힌 집합이며 화면에 순위 번호를 붙이지 않는다
  * (원칙 III). `shortOfDisplayCount`가 `true`여도 문턱을 낮춰 채우지 않는다(원칙 VII).

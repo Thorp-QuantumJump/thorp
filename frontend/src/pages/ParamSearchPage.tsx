@@ -1,4 +1,4 @@
-import { ArrowLeft, LogIn, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, ChevronDown, LogIn, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
@@ -17,8 +17,6 @@ import { RejectionNotice } from '@/components/paramsearch/RejectionNotice'
 import { RetryFailedButton } from '@/components/paramsearch/RetryFailedButton'
 import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'
 import { SelectionResult } from '@/components/paramsearch/SelectionResult'
-import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'
-import { ValidationNote } from '@/components/paramsearch/ValidationNote'
 import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'
 import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'
 import { useSearchCandidates } from '@/hooks/useSearchCandidates'
@@ -261,7 +259,45 @@ export function ParamSearchPage() {
   }
 
   const detail = status.detail
+  /**
+   * 실행을 누른 뒤인가. **접수 응답을 기다리는 동안에도 진행 화면을 보인다** — 버튼을 누르면 바로
+   * 이 화면으로 오고, 결과는 3초 폴링이 하나씩 채운다(FR-008). 접수가 끝나기를 기다렸다 넘어가면
+   * 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔 조합이면 다 끝난 뒤에 넘어가서
+   * 한꺼번에 나타난다.
+   *
+   * 접수가 실패하면 `creating`이 풀려 확인 화면으로 돌아오고 그 자리에서 사유를 본다.
+   */
+  const started = searchId !== null || creating
   const selection = detail?.selection ?? null
+  const searchInProgress = detail?.status === 'QUEUED' || detail?.status === 'RUNNING'
+  const selectionIsProvisional = selection !== null && searchInProgress
+  const resultConfig = useMemo(() => {
+    const config = detail?.config ?? null
+    if (!config || !preview) return config
+
+    const previewSpaces = new Map(
+      preview.spaceSummary.map((strategySpace) => [strategySpace.strategyId, strategySpace]),
+    )
+
+    return {
+      ...config,
+      space: Object.fromEntries(
+        Object.entries(config.space).map(([strategyId, strategySpace]) => {
+          const previewSpace = previewSpaces.get(strategyId)
+          return [
+            strategyId,
+            {
+              ...strategySpace,
+              axes: strategySpace.axes.map((axis) => {
+                const previewAxis = previewSpace?.axes.find((item) => item.axis === axis.name)
+                return previewAxis ? { ...axis, valueLabels: previewAxis.valueLabels } : axis
+              }),
+            },
+          ]
+        }),
+      ),
+    }
+  }, [detail?.config, preview])
 
   // 상세와 비교 담기는 후보 객체를 그대로 들고 있는다 — 목록이 다시 불릴 때마다 id 로 되찾지 않아도 된다.
   const [detailCandidate, setDetailCandidate] = useState<SearchCandidateItem | null>(null)
@@ -280,10 +316,14 @@ export function ParamSearchPage() {
   }, [])
 
   // 표시 후보만 따로 받는다. selection.displayed 의 순서가 정렬 지표 순서라 그대로 맞춘다.
-  const displayedQuery = useSearchCandidates(selection ? searchId : null, {
-    selected: true,
-    size: 200,
-  })
+  const displayedQuery = useSearchCandidates(
+    selection ? searchId : null,
+    {
+      status: 'COMPLETED',
+      size: 200,
+    },
+    detail?.counts?.completed ?? 0,
+  )
 
   const displayedCandidates = useMemo(() => {
     if (!selection || !displayedQuery.page) return []
@@ -344,9 +384,19 @@ export function ParamSearchPage() {
                     : `${formatCount(strategyIds.length)}개`}
                 </strong>
               </div>
+              <div>
+                <span>탐색 기간</span>
+                <strong>
+                  {preview?.commonPeriod
+                    ? `${preview.commonPeriod.start} ~ ${preview.commonPeriod.end}`
+                    : preview
+                      ? '확인할 수 없음'
+                      : '확인 중'}
+                </strong>
+              </div>
             </section>
 
-            {searchId ? (
+            {started ? (
               <section className={styles.progress} aria-labelledby="progress-title">
                 <header>
                   <h2 id="progress-title">진행 상태</h2>
@@ -355,9 +405,13 @@ export function ParamSearchPage() {
                   </button>
                 </header>
 
-                <p className={styles.searchId}>{searchId}</p>
+                {!searchId && (
+                  <p className={styles.note} role="status">
+                    탐색을 접수하는 중입니다.
+                  </p>
+                )}
 
-                {status.isLoading && !detail && (
+                {searchId && status.isLoading && !detail && (
                   <p className={styles.note} role="status">
                     진행 상태를 불러오는 중입니다.
                   </p>
@@ -369,18 +423,13 @@ export function ParamSearchPage() {
                   </p>
                 )}
 
-                {detail && (
+                {/* searchId 를 함께 본다 — 접수 전에는 detail 이 없고, 아래 버튼들이 식별자를 받는다. */}
+                {searchId && detail && (
                   <>
                     <p className={styles.statusLine} aria-live="polite">
                       <strong>{statusText[detail.status] ?? detail.status}</strong>
                       {detail.stopReason ? <span> · 멈추는 중</span> : null}
-                      <ValidationBadge label={detail.validationLabel} describes="이 탐색 묶음" />
                     </p>
-
-                    <ValidationNote
-                      label={detail.validationLabel}
-                      note={detail.validationNote}
-                    />
 
                     {detail.counts && (
                       <dl className={styles.counts}>
@@ -445,8 +494,11 @@ export function ParamSearchPage() {
                   selection={selection}
                   selectionRule={detail.config?.selectionRule ?? null}
                   baseline={detail.baseline}
-                  config={detail.config}
+                  config={resultConfig}
                   candidates={displayedCandidates}
+                  counts={detail.counts}
+                  candidatesReady={!displayedQuery.isLoading && displayedQuery.page !== null}
+                  provisional={selectionIsProvisional}
                   onOpenDetail={setDetailCandidate}
                   comparePicks={comparePickIds}
                   onCompareToggle={toggleComparePick}
@@ -454,23 +506,27 @@ export function ParamSearchPage() {
 
                 <CompareHandoff
                   picks={comparePicks}
-                  config={detail.config}
+                  config={resultConfig}
                   baseline={detail.baseline}
                   onRemove={removeComparePick}
                   onClear={() => setComparePicks([])}
                 />
-
-                <CandidateTable
-                  searchId={searchId}
-                  config={detail.config}
-                  onOpenDetail={setDetailCandidate}
-                  comparePicks={comparePickIds}
-                  onCompareToggle={toggleComparePick}
-                />
               </>
             )}
 
-            {searchId ? null : (
+            {searchId && detail?.config && detail.counts && (
+              <CandidateTable
+                searchId={searchId}
+                config={resultConfig}
+                live={searchInProgress}
+                refreshKey={detail.counts.completed}
+                onOpenDetail={setDetailCandidate}
+                comparePicks={comparePickIds}
+                onCompareToggle={toggleComparePick}
+              />
+            )}
+
+            {started ? null : (
               <>
                 {previewLoading && !preview && (
                   <p className={styles.note} role="status">
@@ -486,6 +542,30 @@ export function ParamSearchPage() {
 
                 {preview && (
                   <>
+                    <section className={styles.details} aria-label="탐색 범위 상세 변경">
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        onClick={() => setShowSpaceEditor((open) => !open)}
+                        aria-expanded={showSpaceEditor}
+                        aria-controls="space-editor"
+                      >
+                        {showSpaceEditor ? '상세 변경 접기' : '탐색 범위 상세 변경'}
+                        <ChevronDown
+                          size={18}
+                          aria-hidden="true"
+                          data-open={showSpaceEditor}
+                        />
+                      </button>
+                      <div id="space-editor" hidden={!showSpaceEditor}>
+                        <SpaceEditor
+                          spaceSummary={baseSpace?.summary ?? preview.spaceSummary}
+                          value={space}
+                          onChange={setSpace}
+                        />
+                      </div>
+                    </section>
+
                     <PreflightPanel
                       preview={preview}
                       onRun={() => void startSearch(preview)}
@@ -512,24 +592,6 @@ export function ParamSearchPage() {
                         </p>
                       ))}
 
-                    <section className={styles.details}>
-                      <button
-                        type="button"
-                        className={styles.textButton}
-                        onClick={() => setShowSpaceEditor((open) => !open)}
-                        aria-expanded={showSpaceEditor}
-                        aria-controls="space-editor"
-                      >
-                        {showSpaceEditor ? '상세 변경 접기' : '탐색 범위 상세 변경'}
-                      </button>
-                      <div id="space-editor" hidden={!showSpaceEditor}>
-                        <SpaceEditor
-                          spaceSummary={baseSpace?.summary ?? preview.spaceSummary}
-                          value={space}
-                          onChange={setSpace}
-                        />
-                      </div>
-                    </section>
                   </>
                 )}
               </>
@@ -541,7 +603,7 @@ export function ParamSearchPage() {
       {detailCandidate && detail && (
         <CandidateDetail
           candidate={detailCandidate}
-          config={detail.config}
+          config={resultConfig}
           selectionRule={detail.config?.selectionRule ?? null}
           onClose={() => setDetailCandidate(null)}
         />

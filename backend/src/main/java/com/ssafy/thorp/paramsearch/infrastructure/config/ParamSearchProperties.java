@@ -11,9 +11,13 @@ import org.springframework.validation.annotation.Validated;
 /**
  * 자동 탐색 실행 한도. 접두는 {@code thorp.param-search}다.
  *
- * <p><b>네 값 모두 코드 기본값이 없고 {@code @NotNull}이다.</b> 후보 수 상한은 PD-06 실측 대기, 발행 창·실행시간 상한·연속 실패 한도는
- * PD-05 잔여로 팀 확정 대기다. constitution "AI 작업 방식"이 "기획서가 실행 전 결정으로 남긴 수치를 임의로 확정하지 않는다"를 요구하므로 코드가 값을
- * 정하지 않는다. 미설정이면 기동이 실패해 설정으로 드러난다 — 조용히 임의값으로 도는 것보다 낫다.
+ * <p><b>세 값은 코드 기본값이 없고 {@code @NotNull}이다.</b> 후보 수 상한은 PD-06 실측 대기, 발행 창·연속 실패 한도는 PD-05 잔여로 팀 확정
+ * 대기다. constitution "AI 작업 방식"이 "기획서가 실행 전 결정으로 남긴 수치를 임의로 확정하지 않는다"를 요구하므로 코드가 값을 정하지 않는다. 미설정이면
+ * 기동이 실패해 설정으로 드러난다 — 조용히 임의값으로 도는 것보다 낫다.
+ *
+ * <p><b>{@code timeLimitSeconds}만 비울 수 있다</b> — 비우면 묶음 실행시간 상한을 두지 않는다. 묶음은 후보를 다 돌거나 연속 실패 한도·취소로만
+ * 끝나고, 묶음 크기는 {@code maxCandidates}가 계속 막는다. 여기만 {@code @NotNull}이 아닌 이유는 "값이 빠졌다"와 "상한을 두지 않기로
+ * 했다"를 구분해야 해서다 — 나머지 셋은 빠지면 기동이 실패하는 쪽이 맞다.
  *
  * <p>확정 전까지 이 값들은 {@link #provisionalNames()}를 통해 API 응답의 {@code limits.provisional}에 실리고, 화면이 임시값
  * 표시를 붙인다(FR-005a).
@@ -38,7 +42,7 @@ public class ParamSearchProperties {
             List.of(
                     "maxCandidates", // PD-06 실측 후 고정
                     "dispatchWindow", // PD-05 잔여
-                    "timeLimitSeconds", // PD-05 잔여
+                    "timeLimitSeconds", // PD-05 잔여. 상한을 두지 않으면 목록에서 빠진다
                     "consecutiveFailureLimit"); // PD-05 잔여
 
     /** 묶음 하나가 만들 수 있는 유효 후보 수의 상한. 초과하면 접수를 거부하고 표본 추출·간격 확대를 하지 않는다(FR-005b). */
@@ -51,8 +55,11 @@ public class ParamSearchProperties {
     @Min(1)
     private Integer dispatchWindow;
 
-    /** 묶음 시작 시각 기준 경과 시간 상한(초). 도달하면 발행을 멈추고 실행 중 후보는 완주시킨다. */
-    @NotNull
+    /**
+     * 묶음 시작 시각 기준 경과 시간 상한(초). 도달하면 발행을 멈추고 실행 중 후보는 완주시킨다.
+     *
+     * <p><b>비우면 상한을 두지 않는다.</b> 0 이하는 설정 실수로 보고 기동을 막는다 — "상한 없음"은 값을 비워서 말한다.
+     */
     @Min(1)
     private Long timeLimitSeconds;
 
@@ -61,8 +68,15 @@ public class ParamSearchProperties {
     @Min(1)
     private Integer consecutiveFailureLimit;
 
-    /** 확정되지 않은 한도 항목의 이름. */
+    /**
+     * 확정되지 않은 한도 항목의 이름.
+     *
+     * <p>실행시간 상한을 두지 않으면 그 이름은 빼고 준다 — 없는 한도에 "임시값"을 붙이면 화면이 있지도 않은 제한을 말하게 된다.
+     */
     public List<String> provisionalNames() {
-        return PROVISIONAL_NAMES;
+        if (timeLimitSeconds != null) {
+            return PROVISIONAL_NAMES;
+        }
+        return PROVISIONAL_NAMES.stream().filter(name -> !"timeLimitSeconds".equals(name)).toList();
     }
 }

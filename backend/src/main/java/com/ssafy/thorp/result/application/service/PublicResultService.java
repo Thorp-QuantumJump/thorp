@@ -20,6 +20,7 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
+import com.ssafy.thorp.result.application.result.PublicProgressTarget;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
@@ -147,6 +148,17 @@ public class PublicResultService {
                 strategyName(detail.config()),
                 resultVisible ? weightsSource(request) : null,
                 resultVisible ? exceptionKinds(request) : null);
+    }
+
+    /**
+     * 진행 시계열을 구독할 대상. 토큰 판정({@link #resolve})을 그대로 거치므로 형식 오류 400·없음 404·만료 410이 다른 경로와 같다.
+     *
+     * <p>상태를 함께 돌려주는 이유: 이미 끝난 실행에 구독을 걸면 아무것도 오지 않는 연결이 상한까지 열려 있는다. 부르는 쪽이 상태를 보고 구독 없이 닫는다.
+     */
+    public PublicProgressTarget getProgressTarget(String token) {
+        BacktestRequest request = resolve(token);
+        BacktestDetailResult detail = publicly(() -> queryService.getDetail(request));
+        return new PublicProgressTarget(request.getRunId(), detail.status());
     }
 
     public BacktestTimeseriesResult getTimeseries(String token) {

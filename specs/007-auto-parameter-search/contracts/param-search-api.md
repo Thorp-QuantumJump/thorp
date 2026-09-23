@@ -89,8 +89,9 @@
       ]
     },
     "limits": {
-      "maxCandidates": 120,
-      "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"],
+      "maxCandidates": 100,
+      "timeLimitSeconds": null,
+      "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
     "commonPeriod": { "start": "2015-01-02", "end": "2026-08-31", "shortenedBy": null },
@@ -187,8 +188,8 @@
         "tieHandling": "SHOW_ALL_TIED"
       },
       "limits": {
-        "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5,
-        "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"]
+        "maxCandidates": 100, "timeLimitSeconds": null, "dispatchWindow": 1, "consecutiveFailureLimit": 5,
+        "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"]
       },
       "referenceVersions": { "marketData": "2026-08-31", "cost": "v1", "engine": "nautilus-0.1" },
       "dataVersionChanged": false
@@ -218,7 +219,8 @@
 붙이지 않는다(plan "설계 제약"). `drawdownFilterApplied`가 `false`면 기준 백테스트가 실패해 하락 폭
 필터를 적용하지 못한 경우다(Edge Case) — 화면에 그 사실을 표시한다.
 
-`selection`은 `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다. 그 전에는 `null`이다.
+`selection`은 후보가 완료될 때마다 현재 완료 후보 기준으로 갱신된다. 실행 중 값은 잠정값이며 새 결과에
+따라 표시 순서와 통과 여부가 바뀔 수 있고, `COMPLETED`·`PARTIAL`에서 확정된다.
 
 ## 4. 후보 목록 — `GET /param-searches/{searchId}/candidates`
 

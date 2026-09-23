@@ -1,7 +1,7 @@
 .details {
   overflow: hidden;
   border: 1px solid var(--market-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--market-surface);
   box-shadow: var(--market-shadow-soft);
 }
@@ -37,7 +37,7 @@
 }
 
 .details summary > span svg {
-  color: var(--market-brand);
+  color: var(--thorp-ornament, var(--market-brand));
 }
 
 .details summary > small {
@@ -60,8 +60,8 @@
 .stabilityCard,
 .fciNote {
   min-width: 0;
-  padding: 15px;
-  border-radius: 6px;
+  padding: var(--thorp-pad-inset, 15px);
+  border-radius: var(--thorp-radius-inset, 6px);
   background: var(--thorp-surface-muted);
 }
 
@@ -82,7 +82,7 @@
   padding: 3px 6px;
   border-radius: 999px;
   background: var(--thorp-accent-muted);
-  color: var(--market-brand);
+  color: var(--thorp-eyebrow, var(--market-brand));
   font-size: 0.6rem;
   white-space: nowrap;
 }
@@ -145,7 +145,7 @@
 
 .fciNote svg {
   flex: 0 0 auto;
-  color: var(--market-brand);
+  color: var(--thorp-ornament, var(--market-brand));
 }
 
 .fciNote p {

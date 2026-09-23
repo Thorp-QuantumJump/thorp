@@ -82,6 +82,66 @@ class CommonPeriodResolverTest {
     }
 
     @Test
+    @DisplayName("한 전략의 거래일 축이 둘이면 합쳐서 워밍업을 잡는다 — 004가 요구하는 값과 같아야 한다")
+    void warmupSumsTradingDayAxesOfOneStrategy() {
+        // 2026-09-22 사고 재현: 관측 기간 120 과 최근 구간 제외 21 을 함께 고른 후보는 141거래일을
+        // 요구하는데, 묶음이 최댓값 120 만 싣고 나가 그 후보가 004 접수에서 422 로 거부됐다.
+        // 거부는 발행 트랜잭션을 되돌려 묶음을 영구 정지시켰다.
+        String skipAxis = "skipRecentDays";
+        StrategyRegistration registration =
+                new StrategyRegistration(
+                        STRATEGY,
+                        "역변동성",
+                        null,
+                        List.of(
+                                new ParameterAxis(
+                                        AXIS,
+                                        "관측 기간",
+                                        null,
+                                        "거래일",
+                                        List.of(20, 120),
+                                        20,
+                                        AllowedRange.ofValues(List.of(20, 120))),
+                                new ParameterAxis(
+                                        skipAxis,
+                                        "최근 구간 제외 기간",
+                                        null,
+                                        "거래일",
+                                        List.of(0, 21),
+                                        0,
+                                        AllowedRange.ofValues(List.of(0, 21)))),
+                        true,
+                        null,
+                        "COMPUTED");
+        SearchSpace space =
+                SearchSpace.of(
+                        Map.of(
+                                STRATEGY,
+                                SearchSpace.StrategySpace.of(
+                                        "역변동성",
+                                        List.of(
+                                                new SearchSpace.Axis(
+                                                        AXIS, "관측 기간", "거래일", List.of(20, 120)),
+                                                new SearchSpace.Axis(
+                                                        skipAxis,
+                                                        "최근 구간 제외 기간",
+                                                        "거래일",
+                                                        List.of(0, 21))))));
+
+        CommonPeriodResolver.CommonPeriod period =
+                resolver.resolve(
+                        List.of(SEMICONDUCTOR),
+                        space,
+                        List.of(registration),
+                        LocalDate.of(2024, 1, 2),
+                        LocalDate.of(2024, 12, 31));
+
+        assertThat(period.warmupTradingDays()).isEqualTo(141);
+        // 범위를 좁혀 구간을 되찾으려는 사용자에게 효과가 가장 큰 축을 가리킨다.
+        assertThat(period.shortenedBy()).isEqualTo(AXIS);
+    }
+
+    @Test
     @DisplayName("요청 시작일이 상장일보다 한참 뒤면 워밍업이 요청 구간을 깎지 않는다")
     void warmupBeforeTheRequestDoesNotPushTheStart() {
         // 2015년 상장 종목을 2024-01-02 부터 요청한다. 워밍업 63거래일은 2023년에 있으므로 워커가

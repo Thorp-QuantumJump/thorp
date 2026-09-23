@@ -13,6 +13,25 @@ vi.mock('@/api/market', async () => {
   }
 })
 
+// 전략 카드는 등록표에서 읽는다(003 FR-005). 이름을 코드에 두지 않으므로 응답으로 준다.
+vi.mock('@/api/strategyRegistry', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/api/strategyRegistry')>('@/api/strategyRegistry')
+  return {
+    ...actual,
+    fetchStrategyRegistry: vi.fn(() =>
+      Promise.resolve({
+        registryVersion: 'test',
+        provisional: false,
+        analysisConditions: {},
+        strategies: [
+          { strategyId: 'EQUAL_WEIGHT', name: '동일 비중', description: '설명', selectable: true },
+        ],
+      }),
+    ),
+  }
+})
+
 /** jsdom에 없는 브라우저 API를 채운다. 없으면 애니메이션 계층이 렌더링 도중 멈춘다. */
 beforeAll(() => {
   if (!window.matchMedia) {
@@ -118,8 +137,8 @@ describe('LandingPage', () => {
   })
 
   it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {
-    // 경로 자체는 003·005가 소유하므로 지우지 않는다(002 research 결정 5). 첫 화면에서
-    // 그곳으로 보내지 않는 것만 고정한다 — 하나가 남으면 사용자는 두 종류의 화면을 만난다.
+    // 그 두 경로와 화면은 S15P21E205-416에서 저장소에서 없앴다. 링크가 되살아나면 사용자는
+    // 없는 주소로 간다.
     renderWithRouter(<LandingPage />)
 
     const stale = screen
@@ -127,6 +146,25 @@ describe('LandingPage', () => {
       .map((link) => link.getAttribute('href'))
       .filter((href) => href === '/dashboard' || href === '/backtest')
     expect(stale).toEqual([])
+  })
+
+  it('전략 카드의 이름을 등록표 응답에서 읽는다', async () => {
+    // 이름을 코드에 상수로 두면 등록표에 없는 전략을 첫 화면이 광고하게 된다(003 FR-005).
+    renderWithRouter(<LandingPage />)
+
+    expect(await screen.findByRole('heading', { name: '동일 비중' })).toBeDefined()
+  })
+
+  it('첫 화면이 실행 근거 없는 성과 수치를 보이지 않는다', () => {
+    // 예전에는 데모 자료의 `누적 수익 +124.8%`·CAGR·MDD·SHARPE를 첫 화면에 적었다. 어떤
+    // 실행에서도 나온 적 없는 값이라 첫 화면이 성과를 단정하는 꼴이었다. 성과 수치는 자기
+    // 실행을 가진 결과 화면에만 둔다.
+    const { container } = renderWithRouter(<LandingPage />)
+
+    const text = container.textContent ?? ''
+    for (const forbidden of ['124.8', 'CAGR', 'MDD', 'SHARPE', '누적 수익']) {
+      expect(text).not.toContain(forbidden)
+    }
   })
 
   it('소개 섹션은 그대로 남는다', () => {
