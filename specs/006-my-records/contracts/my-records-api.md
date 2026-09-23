@@ -286,6 +286,29 @@
 이용 범위가 다른 자료가 섞여 있으면 **허용된 부분만 담고 제외 항목을 명시한다**(Edge Cases). 파일을
 아예 만들지 않는 처리는 하지 않는다.
 
+## GET /my-records/used-strategies
+
+005 결과 화면의 '비교 대상 고르기'가 **내 전략** 후보를 채울 때 읽는다(`S15P21E205-418`). 로그인 필요.
+
+```json
+{ "success": true,
+  "data": { "items": [
+    { "strategyId": "INVERSE_VOLATILITY", "recordName": "반도체·이차전지·은행 역변동성 9/23", "rulesVersion": "1",
+      "parameters": { "lookbackDays": 126, "rebalancePeriod": { "mode": "CALENDAR", "unit": "MONTH_END" }, "maxWeight": 50 } },
+    { "strategyId": "EQUAL_WEIGHT", "recordName": null, "rulesVersion": "1",
+      "parameters": { "rebalancePeriod": { "mode": "CALENDAR", "unit": "QUARTER_END" } } } ] },
+  "error": null }
+```
+
+- 이 사용자의 **`executionType=SINGLE` 요청**이 가리키는 실행에서 `strategyId`·`parameters`를 읽어 **조합 단위로 접는다**. 같은 조합을 여러 번
+  돌렸어도(동일 버전 재사용 포함) 한 건이다. 같음은 `strategyId`와 `parameters`의 구조적 같음이고 `rulesVersion`은 같음에 넣지 않는다.
+- **최근 요청 순**, 상한 20건. 탐색 묶음(`SEARCH_BUNDLE`)이 만든 실행은 사용자가 고른 설정이 아니라 나가지 않는다.
+- `recordName`은 그 조합의 가장 최근 실행을 가리키는 **살아 있는** 내 기록 항목의 이름이다. 항목을 지웠으면 `null`이고 화면은 전략 이름으로 대신한다
+  (FR-017 삭제 표시). 결과·실행·기록 식별자는 나가지 않는다 — 이 응답은 "무엇으로 돌렸는가"이고, 그 조합을 지금 조건에 붙인 결과가 이미 있는지는
+  `POST /backtests`의 동일 버전 재사용(`resultSource: REUSED`)이 답한다.
+- `parameters`는 접수가 저장한 JSON 그대로다(003 등록표 축 이름). 등록표가 바뀐 뒤에는 현재 축·허용 범위에 맞지 않을 수 있으므로 **화면이 현재
+  등록표로 유효성을 다시 판정**하고, 맞지 않는 조합은 후보에서 뺀다. 새 비교 요청에는 이 응답의 `rulesVersion`이 아니라 004 `GET /backtests/registry`의 현재 버전을 싣는다.
+
 ## 오류
 
 | 상황 | status · code |
