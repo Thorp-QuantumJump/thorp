@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -51,6 +52,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>실제 등록표(임시 파일)와 실제 004 지원 목록을 쓴다. 전략 이름을 단언에 적지 않는 이유는 M2의 검증과 같다 — 마이그레이션이 전략을 더해도 이 테스트는 그대로
  * 성립해야 한다.
  */
+@TestPropertySource(properties = LauncherMockedIntegrationTestSupport.WIDE_DISPATCH_WINDOW)
 class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
 
     /** 픽스처 대응표에 있는 종목. 상장일이 가장 이른 둘을 골라 공통 구간이 충분히 남게 한다. */

@@ -40,7 +40,7 @@
 
 .question {
   margin: 0;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: clamp(1rem, 2vw, 1.15rem);
   line-height: 1.6;
 }
@@ -54,9 +54,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px 22px;
+  padding: var(--thorp-pad-card, 20px 22px);
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
 }
 
@@ -126,6 +126,6 @@
 
 @media (max-width: 600px) {
   .example {
-    padding: 16px;
+    padding: var(--thorp-pad-card, 16px);
   }
 }

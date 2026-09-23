@@ -84,9 +84,9 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
       "exclusionReasons": []
     },
     "limits": {
-      "maxCandidates": 120, "timeLimitSeconds": 120,
-      "dispatchWindow": 4, "consecutiveFailureLimit": 5,
-      "provisional": ["maxCandidates", "dispatchWindow", "timeLimitSeconds", "consecutiveFailureLimit"],
+      "maxCandidates": 100, "timeLimitSeconds": null,
+      "dispatchWindow": 1, "consecutiveFailureLimit": 5,
+      "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
     "commonPeriod": { "start": "2015-12-22", "end": "2026-09-14", "shortenedBy": "lookbackDays" },
@@ -101,7 +101,11 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
   후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행 지원 여부다.
 - `axes` 순서가 그리드 좌표 축 순서이고, `values` 순서가 인접 판정의 근거다(FR-029).
 - `defaultValue`는 등록된 기본 시작값이며 **추천값이나 최적값이 아니다.** '추천'·'최적' 문구를 붙이지 않는다.
-- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 현재 네 개 전부다.
+- **`limits.timeLimitSeconds`는 `null`이면 실행시간 상한을 두지 않는다는 뜻이다**(2026-09-23). 묶음은
+  후보를 다 돌거나 연속 실패 한도·취소로만 끝난다. 0으로 접지 말 것 — 화면이 없는 마감을 말하게 된다.
+  묶음 크기를 막는 것은 `maxCandidates` 하나다.
+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 상한을 두지 않은 `timeLimitSeconds`는 이 목록에
+  실리지 않는다 — 없는 한도에 임시값 표시를 붙일 수 없다.
 - `limits.exceeded`가 `true`면 실행은 거부된다. 화면은 범위를 좁히라고 안내한다.
 - `validationLabel`을 **실행 전에도** 준다 — 결과를 본 뒤에야 미검증을 알면 이미 오해가 생긴 뒤다(FR-015).
 
@@ -191,7 +195,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
         "stabilityFormula": { "neighbor": "SINGLE_AXIS_ONE_STEP", "value": "MEAN_ABS_NET_RETURN_DIFF" },
         "provisional": ["displayCount"]
       },
-      "limits": { "maxCandidates": 120, "timeLimitSeconds": 120, "dispatchWindow": 4, "consecutiveFailureLimit": 5, "provisional": ["..."] },
+      "limits": { "maxCandidates": 100, "timeLimitSeconds": null, "dispatchWindow": 1, "consecutiveFailureLimit": 5, "provisional": ["..."] },
       "referenceVersions": { "marketData": "FIXTURE-three_etf_24m", "registry": "PROVISIONAL-20260911", "cost": "KR-ETF-2026-09", "engine": "nautilus_trader 1.219.0 / worker 2.0.0" },
       "dataVersionChanged": false
     },
@@ -236,7 +240,8 @@ COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림
 
 ### `selection`과 `baseline`
 
-- `selection`은 `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다. 그 전에는 `null`이다.
+- `selection`은 후보가 완료될 때마다 현재 완료 후보 기준으로 갱신된다. 실행 중 값은 잠정값이며 새 결과에
+  따라 표시 순서와 통과 여부가 바뀔 수 있고, `COMPLETED`·`PARTIAL`에서 확정된다.
 - **`selection.displayed`는 순위가 아니다.** 정렬 지표(`sortMetric`)를 밝힌 집합이며 화면에 순위 번호를
   붙이지 않는다. 정렬 지표 이름을 함께 보인다.
 - `shortOfDisplayCount`가 `true`면 기준을 충족한 후보가 `displayCount`에 못 미친 것이다. **문턱을 낮춰
@@ -354,7 +359,8 @@ COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림
 `remainingFailed`로 알린다. 자동으로 이어 보내지 않으므로 화면은 그 수를 보고 다시 요청한다.
 
 다시 열린 묶음은 `selection`이 `null`로 비워진다 — 후보가 더 붙으므로 이전 선정은 사실이 아니다.
-다시 끝나면 선정을 한 번 더 계산한다. 실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.
+재시도 후보가 끝날 때마다 잠정 선정을 갱신하고 다시 끝나면 확정한다. 실패 후보가 없으면
+`409 NOTHING_TO_RETRY`다.
 
 ---
 

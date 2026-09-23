@@ -95,13 +95,15 @@ function renderResult(token = resultToken) {
 describe('ResultPage', () => {
   beforeEach(() => {
     for (const mock of [...Object.values(apiMocks), ...Object.values(otherMocks)]) mock.mockReset()
+    // 탭 묶음이 섹터 목록을 첫 화면에서 한 번 받는다(T098). 개별 테스트가 덮어쓴다.
+    otherMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('완료 결과는 상세와 시계열만 한 번씩 부르고 네 요소를 보인다', async () => {
+  it('완료 결과는 상세·시계열·섹터 목록만 한 번씩 부르고 요약 탭에 네 요소를 보인다', async () => {
     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)
 
@@ -120,8 +122,10 @@ describe('ResultPage', () => {
     expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
     expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
     expect(otherMocks.fetchStrategyRegistry).not.toHaveBeenCalled()
-    expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()
     expect(otherMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
+    // 탭 묶음이 상세 탭 셋을 위해 한 번 받아 둔다(SC-001, T098).
+    expect(otherMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {
@@ -373,34 +377,39 @@ describe('ResultPage', () => {
       window.sessionStorage.clear()
     })
 
-    it('자세히 보기는 주소를 바꾸지 않고 결과 아래에서 열리며 그때 상세 자원을 받는다 (SC-006, quickstart 6)', async () => {
+    it('요약 탭이 첫 화면에 열려 있고 결과 분석·설정·근거 탭은 고를 때 제 자료를 받으며 주소는 그대로다 (SC-006, T098)', async () => {
       const user = userEvent.setup()
       renderResult()
-      const toggle = await screen.findByRole('button', { name: '자세히 보기' })
+      const summaryTab = await screen.findByRole('tab', { name: '요약' })
       const before = screen.getByLabelText('현재 주소').textContent
 
-      await user.click(toggle)
+      expect(summaryTab.getAttribute('aria-selected')).toBe('true')
+      expect(within(screen.getByRole('tabpanel')).getByText('16.67%')).not.toBeNull()
+      expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
 
-      const panel = await screen.findByRole('region', { name: '자세히 보기' })
-      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)
-      expect(toggle.getAttribute('aria-expanded')).toBe('true')
-      expect(await within(panel).findByText('HALT_DEFERRED')).not.toBeNull()
-      expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
+      await user.click(screen.getByRole('tab', { name: '결과 분석' }))
+      expect(await screen.findByText('HALT_DEFERRED')).not.toBeNull()
       expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)
-      // 대표 상품 정보도 패널 안에서 펼치고 001 화면으로 옮기지 않는다.
+      expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
+
+      await user.click(screen.getByRole('tab', { name: '설정·근거' }))
+
+      const panel = screen.getByRole('tabpanel')
+      expect(await within(panel).findByText('44.73%')).not.toBeNull()
+      expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
+      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)
+      // 대표 상품 정보도 탭 안에서 펼치고 001 화면으로 옮기지 않는다.
       await user.click(await within(panel).findByRole('button', { name: '항구 · 합성 항구 ETF' }))
       expect(screen.getByLabelText('현재 주소').textContent).toBe(before)
-
-      await user.click(within(panel).getByRole('button', { name: '닫기' }))
-      expect(screen.queryByRole('region', { name: '자세히 보기' })).toBeNull()
-      expect(document.activeElement).toBe(toggle)
+      // 지나온 탭의 내용은 내리지 않고 숨긴다.
+      expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(3)
     })
 
     it('손실이 커진 때 보기는 고점~저점 구간의 거래와 저점일 보유를 연다', async () => {
       const user = userEvent.setup()
       renderResult()
 
-      await user.click(await screen.findByRole('button', { name: '손실이 커진 때 보기' }))
+      await user.click(await screen.findByRole('tab', { name: '손실이 커진 때' }))
 
       const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })
       expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(
@@ -422,11 +431,9 @@ describe('ResultPage', () => {
       })
       renderResult()
 
-      const button = (await screen.findByRole('button', {
-        name: '손실이 커진 때 보기',
-      })) as HTMLButtonElement
-      expect(button.disabled).toBe(true)
-      const reason = document.getElementById(button.getAttribute('aria-describedby') ?? '')
+      const tab = await screen.findByRole('tab', { name: '손실이 커진 때' })
+      expect(tab.getAttribute('aria-disabled')).toBe('true')
+      const reason = document.getElementById(tab.getAttribute('aria-describedby') ?? '')
       expect(reason?.textContent).toBe(LOSS_WINDOW_NONE)
     })
 
@@ -441,12 +448,19 @@ describe('ResultPage', () => {
       })
       renderResult()
 
-      const button = (await screen.findByRole('button', {
-        name: '손실이 커진 때 보기',
-      })) as HTMLButtonElement
-      expect(button.disabled).toBe(true)
-      const reasonId = button.getAttribute('aria-describedby') ?? ''
+      const tab = await screen.findByRole('tab', { name: '손실이 커진 때' })
+      expect(tab.getAttribute('aria-disabled')).toBe('true')
+      const reasonId = tab.getAttribute('aria-describedby') ?? ''
       expect(document.getElementById(reasonId)?.textContent).toBe(LOSS_WINDOW_UNAVAILABLE)
+    })
+
+    it('제목은 백테스트 결과이고 섹터 선택부터 다시 시작하는 길이 있다', async () => {
+      renderResult()
+
+      expect(await screen.findByRole('heading', { level: 1, name: '백테스트 결과' })).not.toBeNull()
+      expect(screen.getByRole('link', { name: '처음부터 다시 분석' }).getAttribute('href')).toBe(
+        '/diagnosis/sectors',
+      )
     })
 
     it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {
@@ -504,15 +518,25 @@ describe('ResultPage', () => {
       expect(within(alert).queryByRole('link')).toBeNull()
     })
 
-    it('B07이 둔 버튼은 모두 보조 모양이다 (착수 전에 알아둘 것 ⑧)', async () => {
+    it('주 모양 버튼은 비교 대상 고르기 하나고 나머지 보기는 탭이다 (착수 전에 알아둘 것 ⑧, T098)', async () => {
       renderResult()
-      await screen.findByRole('button', { name: '자세히 보기' })
+      await screen.findByRole('tablist', { name: '결과 보기' })
 
-      for (const name of ['자세히 보기', '손실이 커진 때 보기', '다른 조건으로 비교']) {
-        expect(screen.getByRole('button', { name }).getAttribute('data-variant'), name).toBe(
-          'outline',
-        )
+      expect(screen.getByRole('button', { name: '다른 조건으로 비교' }).getAttribute('data-variant')).toBe(
+        'outline',
+      )
+      for (const name of [
+        '요약',
+        '결과 분석',
+        '설정·근거',
+        '전체 거래 내역',
+        '손실이 커진 때',
+        'KOSPI 비교',
+        '목표 위험 맞춤',
+      ]) {
+        expect(screen.getByRole('tab', { name }), name).not.toBeNull()
       }
+      expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()
       expect(
         document.querySelectorAll('[data-slot="button"][data-variant="default"]'),
       ).toHaveLength(1)
@@ -521,13 +545,15 @@ describe('ResultPage', () => {
       ).toContain('비교 대상 고르기')
     })
 
-    it('볼 결과가 없으면 자세히 보기와 손실 구간 보기를 두지 않는다', async () => {
+    it('볼 결과가 없으면 탭 없이 요약 내용만 두고 상세 자료를 받지 않는다', async () => {
       apiMocks.fetchResult.mockResolvedValue(resultDetailRunning)
       renderResult()
       await screen.findByText(/전체 380거래일 중 180거래일을 마쳤습니다/)
 
-      expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()
-      expect(screen.queryByRole('button', { name: '손실이 커진 때 보기' })).toBeNull()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(screen.getByLabelText('분석 조건')).not.toBeNull()
+      expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
+      expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()
       expect(screen.getByRole('button', { name: '다른 조건으로 비교' })).not.toBeNull()
     })
   })

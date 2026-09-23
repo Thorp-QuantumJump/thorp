@@ -8,6 +8,8 @@ import { anonymousAuthContext } from '@/test/authFixtures'
 import { BacktestRequestError } from '@/api/backtest'
 import {
   resultDetailCompleted,
+  resultExceptions,
+  resultSectorCatalog,
   resultTimeseries,
   resultToken,
 } from '@/test/resultFixtures'
@@ -22,6 +24,8 @@ const api = vi.hoisted(() => ({
   index: vi.fn(),
   registry: vi.fn(),
   create: vi.fn(),
+  exceptions: vi.fn(),
+  catalog: vi.fn(),
 }))
 
 vi.mock('@/api/result', async (load) => ({
@@ -29,6 +33,11 @@ vi.mock('@/api/result', async (load) => ({
   fetchResult: api.detail,
   fetchResultTimeseries: api.series,
   fetchResultIndexComparison: api.index,
+  fetchResultExceptions: api.exceptions,
+}))
+vi.mock('@/api/sectors', async (load) => ({
+  ...(await load<typeof import('@/api/sectors')>()),
+  fetchSectorCatalog: api.catalog,
 }))
 vi.mock('@/api/strategyRegistry', async (load) => ({
   ...(await load<typeof import('@/api/strategyRegistry')>()),
@@ -91,9 +100,12 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     api.series.mockResolvedValue(resultTimeseries)
     api.registry.mockResolvedValue(registryFixture)
     api.create.mockResolvedValue({ publicToken: targetToken, status: 'QUEUED' })
+    // 탭 묶음이 첫 화면에서 섹터 목록을 받고, 결과 분석 탭을 고르면 예외 기록을 받는다(T098)
+    api.exceptions.mockResolvedValue(resultExceptions)
+    api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
-  it('보조 보기를 열기 전에는 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {
+  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {
     renderResult()
 
     await screen.findByText('자료 출처: 한국거래소 통계정보')
@@ -126,7 +138,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     expect(screen.queryByRole('button', { name: '이전 화면으로' })).toBeNull()
   })
 
-  it('지수 보기는 서버 값을 바꾸지 않고 별도 패널에 보이며 주소를 유지한다', async () => {
+  it('KOSPI 비교 탭은 서버 값을 바꾸지 않고 그대로 보이며 주소를 유지한다', async () => {
     api.index.mockResolvedValue({
       available: true,
       reason: null,
@@ -138,7 +150,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '지수와 비교하기' }))
+    await user.click(await screen.findByRole('tab', { name: 'KOSPI 비교' }))
 
     const panel = await screen.findByRole('region', { name: '지수와 비교하기' })
     expect(within(panel).getByText('10012345.67')).toBeTruthy()
@@ -146,7 +158,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
   })
 
-  it('지수 기간 계열을 받을 수 없으면 서버 이유에 맞는 안내를 보인다', async () => {
+  it('지수 기간 계열을 받을 수 없으면 표 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {
     api.index.mockResolvedValue({
       available: false,
       reason: 'INDEX_SERIES_UNAVAILABLE',
@@ -155,13 +167,15 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    const button = await screen.findByRole('button', { name: '지수와 비교하기' })
-    await user.click(button)
+    const tab = await screen.findByRole('tab', { name: 'KOSPI 비교' })
+    await user.click(tab)
 
-    expect(await screen.findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()
-    expect((button as HTMLButtonElement).disabled).toBe(true)
-    expect(button.getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('region', { name: '지수와 비교하기' })).toBeNull()
+    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })
+    expect(await within(panel).findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()
+    expect(within(panel).queryByRole('table')).toBeNull()
+    // 다른 탭으로 옮겼다 돌아와도 같은 요청을 반복하지 않는다.
+    await user.click(screen.getByRole('tab', { name: '결과 분석' }))
+    await user.click(tab)
     expect(api.index).toHaveBeenCalledTimes(1)
     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
   })
@@ -170,7 +184,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))
     expect(api.create.mock.calls[0][0].conditions).toMatchObject({
@@ -192,7 +206,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult({ strict: true })
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))
     const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })
@@ -213,7 +227,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
       const user = userEvent.setup()
       renderResult()
 
-      await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+      await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
       const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })
       expect(
         within(panel).getByText('별도 시나리오 결과를 준비하고 있습니다.'),
@@ -243,7 +257,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(await screen.findByText(/자료가 충분하지 않아 목표 위험을 계산하지 못했습니다/)).toBeTruthy()
     expect(screen.queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()
@@ -254,7 +268,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(await screen.findByText('등록표를 불러오지 못했습니다.')).toBeTruthy()
     expect(api.create).not.toHaveBeenCalled()
@@ -279,7 +293,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(await screen.findByText(/목표 위험 시나리오를 완료하지 못했습니다/)).toBeTruthy()
     expect(screen.getByText(/작업 처리 중 오류가 발생했습니다/)).toBeTruthy()
@@ -301,7 +315,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(
       await screen.findByText('별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.'),
@@ -323,7 +337,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(await screen.findByText('결과를 불러오지 못했습니다.')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: '결과 다시 불러오기' }))
@@ -343,7 +357,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
     expect(await screen.findByText(/30초 뒤 다시 요청할 수 있습니다/)).toBeTruthy()
     expect(api.create).toHaveBeenCalledTimes(1)
 
@@ -363,7 +377,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
     expect(await screen.findByText('준비 기간이 부족합니다.')).toBeTruthy()
     expect(api.create).toHaveBeenCalledTimes(1)
 
@@ -387,7 +401,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))
+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))
 
     expect(await screen.findByText('요청 기간 안에 평가할 수 있는 날이 없습니다.')).toBeTruthy()
     expect(screen.getByText(/2025-01-02 이후를 포함하도록 분석 기간을 다시 선택해야 합니다/)).toBeTruthy()

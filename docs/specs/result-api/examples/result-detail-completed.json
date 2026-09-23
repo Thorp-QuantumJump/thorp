@@ -96,7 +96,26 @@
       },
       "analytics": {
         "recoveryDays": 9,
-        "turnover": "1.219991"
+        "turnover": "1.219991",
+        "correlationMatrix": {
+          "005930.XKRX": {
+            "005930.XKRX": "1.000000",
+            "000660.XKRX": "0.057083"
+          },
+          "000660.XKRX": {
+            "005930.XKRX": "0.057083",
+            "000660.XKRX": "1.000000"
+          }
+        },
+        "riskContribution": {
+          "005930.XKRX": "0.079481",
+          "000660.XKRX": "0.920519"
+        },
+        "lossContribution": {
+          "005930.XKRX": "1.000000",
+          "000660.XKRX": "0.000000"
+        },
+        "method": "sample-covariance-daily"
       },
       "exceptionCount": 1
     },

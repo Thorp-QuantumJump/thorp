@@ -7,8 +7,6 @@ import type { AxisValue } from './strategyRegistry'
  * `specs/004-backtest-execution/contracts/rest-api.md`다. 003의 분석 요청과 005의 비교 요청이 공유한다.
  * `evaluationSplitVersion`·`scenarioParams`는 005가 원본 결과의 평가 조건을 보존할 때 사용한다.
  *
- * `types/backtest.ts`는 v1 데모 화면(`BacktestPage`)이 쓰는 이전 모양이라 여기와 다르다.
- *
  * **금액과 비율은 문자열이다.** 계약이 부동소수 오차를 막기 위해 `initialCash`·`targetWeight`를
  * decimal 문자열로 받는다. 숫자를 그대로 실으면 400이다.
  */

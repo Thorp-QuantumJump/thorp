@@ -56,6 +56,12 @@
   color: var(--thorp-accent);
 }
 
+/* 작은 제목은 누를 것이 아니라 초록을 쓰지 않는다. classic에서는 토큰이 비어 위의 초록이 남는다. */
+.eyebrow,
+.panelHeading > span {
+  color: var(--thorp-eyebrow, var(--thorp-accent));
+}
+
 .loginLink,
 .backLink {
   display: inline-flex;
@@ -118,7 +124,7 @@
 .formPanel {
   padding: clamp(24px, 3vw, 42px);
   border: 1px solid var(--thorp-line-strong);
-  background: rgb(7 17 11 / 86%);
+  background: var(--thorp-surface-glass, rgb(7 17 11 / 86%));
   box-shadow: var(--thorp-shadow);
   backdrop-filter: blur(18px);
 }

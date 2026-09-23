@@ -31,6 +31,7 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 | `GET /results/{token}/weights` | `GET /backtests/{backtestId}/weights` | 위와 같다 |
 | `GET /results/{token}/exceptions` | `GET /backtests/{backtestId}/exceptions` | 위와 같다 |
 | `GET /results/{token}/index-comparison` | 001 기간 KOSPI 조회 포트 | 아래 §5. 같은 시작 금액으로 환산한 보조 계열 |
+| `GET /results/{token}/progress` | 004 PROGRESS 이벤트(브로커) | 아래 §5.1. **봉투가 없는 SSE다** |
 | `POST /results/{token}/retry` | `POST /backtests/{backtestId}/retry` | 아래 §6 |
 
 하위 자원의 상태별 규칙(결과 전 `409 RESULT_NOT_READY`, 실패 `409 BACKTEST_FAILED`, 빈 배열을 만들어 내지 않음)은 004 §2.5와 같다.
@@ -64,6 +65,36 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 
 현재 001에는 기간 계열 포트가 없으므로 `{available: false, reason: "INDEX_SERIES_UNAVAILABLE",
 series: []}`다. 최신 관측치 한 점으로 기간 계열을 꾸미지 않는다.
+
+## 5.1. 진행 시계열 구독 — `GET /results/{token}/progress`
+
+계산이 도는 동안 거래일별 점을 흘려 화면이 그래프를 자라게 그리게 한다(004 R-05). 워커가 20거래일
+묶음으로 보내는 PROGRESS 이벤트를 그대로 옮긴 것이며, **진행 시계열은 저장하지 않는다** — 저장하면
+최종 `/timeseries`와 두 벌이 되고 둘이 어긋날 수 있다.
+
+**이 경로만 응답 봉투가 없다.** `Content-Type: text/event-stream`이고 한 연결에 이벤트가 여러 번
+흐르므로 `ApiResponse`를 씌울 자리가 없다. 토큰 판정은 다른 경로와 같아서 형식 오류 400·없음
+404·만료 410은 연결을 열기 전에 평소의 봉투로 나간다.
+
+이벤트는 둘이다.
+
+| 이벤트 이름 | 본문 |
+|---|---|
+| `progress` | `{stage, completedTradingDays, totalTradingDays, lastTradingDate, points: [{date, equity, cumulativeReturn, drawdown}]}` |
+| `finished` | 종결 상태 이름 하나(`COMPLETED`·`FAILED`·`CANCELLED`). 이 뒤로 올 것이 없다 |
+
+`points`에는 **이번 구간에서 새로 계산한 점만** 담긴다. 앞서 보낸 점은 다시 오지 않는다. 다만 이벤트가
+재전달되면 같은 점이 두 번 올 수 있으므로, 받는 쪽은 마지막으로 그린 날짜보다 앞서지 않는 점을 버린다.
+소수 표기는 `/timeseries`와 같다 — 두 곡선을 한 그래프에 이어 그릴 수 있어야 한다.
+
+이미 끝난 실행에 구독을 걸면 이벤트 없이 바로 닫힌다. 아무것도 오지 않는 연결을 열어 두지 않는다.
+연결 하나를 열어 두는 상한은 `thorp.result.progress-stream-timeout`이고, **배포 환경 프록시의 읽기
+상한보다 짧아야 한다.** 프록시가 먼저 끊으면 화면은 서버 장애와 구분할 수 없는 오류를 받는다. 같은
+이유로 프록시는 이 경로의 응답을 버퍼링하지 않아야 한다(`infra/nginx`의 `/api/` 블록).
+
+**백엔드 인스턴스 하나를 전제한다.** 이벤트 Consumer 가 공유 큐의 competing consumer 라서, 여러 개를
+띄우면 브라우저가 붙은 인스턴스와 이벤트를 받은 인스턴스가 달라질 수 있다. 그러면 곡선이 자라지 않을
+뿐이고 진행 정도와 최종 결과는 폴링이 그대로 가져온다. 전파 장치는 ADR-0002 가 후순위로 두었다.
 
 ## 6. 재시도 — `POST /results/{token}/retry`
 

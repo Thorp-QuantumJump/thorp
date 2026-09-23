@@ -17,7 +17,7 @@ import java.util.Map;
  * 판단한다({@code GET /backtests/{id}}와 같은 규약).
  *
  * @param partial 부분 결과인가. 화면이 "여기까지 계산했다"를 밝히는 근거다(FR-009)
- * @param selection 선정 결과. {@code COMPLETED}·{@code PARTIAL} 전에는 null이다
+ * @param selection 현재까지 완료된 후보의 선정 결과. {@code COMPLETED}·{@code PARTIAL}에서 확정된다
  */
 public record ParamSearchResult(
         String searchId,

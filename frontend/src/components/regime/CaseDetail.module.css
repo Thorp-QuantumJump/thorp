@@ -1,4 +1,4 @@
-.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: 6px; background: var(--thorp-surface); overflow-wrap: anywhere; }
+.detail { min-width: 0; grid-column: 1 / -1; padding: var(--thorp-pad-card, 18px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-card, 6px); background: var(--thorp-surface); overflow-wrap: anywhere; }
 .detail h4 { margin: 0 0 10px; font-size: 1.05rem; }
 .detail h5 { margin: 18px 0 8px; font-size: .9rem; }
 .detail p { margin: 6px 0; color: var(--thorp-copy); font-size: .8rem; }
@@ -12,4 +12,4 @@
 .tableScroll caption { text-align: left; padding: 8px 0; color: var(--thorp-copy); }
 .tableScroll th, .tableScroll td { padding: 7px 10px; border-bottom: 1px solid var(--thorp-line); text-align: left; }
 .era { margin-top: 14px; padding: 10px 12px; border-left: 2px solid var(--thorp-accent-soft); background: var(--thorp-background); }
-@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: 12px; } }
+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: var(--thorp-pad-card, 12px); } }

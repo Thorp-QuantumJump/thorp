@@ -29,7 +29,7 @@
 .detail { min-width: 0; }
 .detailHeader { padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }
 .detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.detailEyebrow { color: var(--thorp-accent-soft); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
+.detailEyebrow { color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
 .detailTitle h2 { margin: 5px 0 0; font: 600 1.8rem/1.2 var(--thorp-font-body); letter-spacing: -.045em; }
 .indicatorCount { align-self: flex-end; color: var(--thorp-copy); font-size: .72rem; }
 .indicatorCount b { margin-left: 5px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 500; }
@@ -142,3 +142,78 @@
 .newsList a { display: inline-flex; align-items: center; gap: 4px; font-size: .88rem; color: inherit; }
 .newsList p { margin: 4px 0 2px; font-size: .78rem; line-height: 1.5; color: var(--thorp-copy); }
 .newsMeta { font-size: .72rem; color: var(--thorp-copy); }
+
+/*
+  디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을
+  카드 안 선택 목록으로, 상세를 머리·지표 칸·바닥으로 나뉜 카드로, 지표를 두 열 칸으로 묶는다.
+  상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.
+*/
+:global(:root:not([data-design='classic'])) .summaryCard {
+  padding: 12px 14px 12px 16px;
+  border-bottom: 0;
+  border-radius: var(--thorp-radius-inset);
+}
+:global(:root:not([data-design='classic'])) .summaryCard:hover,
+:global(:root:not([data-design='classic'])) .summaryCard:focus-within { background: var(--thorp-surface-muted); }
+:global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] { background: var(--thorp-accent-muted); }
+:global(:root:not([data-design='classic'])) .selectionLine { inset: 12px auto 12px 0; width: 3px; border-radius: 0 2px 2px 0; }
+:global(:root:not([data-design='classic'])) .openButton::after { border-radius: var(--thorp-radius-inset); }
+:global(:root:not([data-design='classic'])) .stateLabel { padding: 1px 7px; border-radius: 999px; }
+
+/* 상세 머리는 카드 안쪽 여백을 넘어 가로 끝까지 선을 긋는다. */
+:global(:root:not([data-design='classic'])) .detailHeader { margin: -24px -24px 20px; padding: 24px 24px 20px; border-bottom: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .detailTitle h2 { font-size: 1.6rem; }
+:global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+:global(:root:not([data-design='classic'])) .indicator {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset);
+  background: var(--thorp-surface-muted);
+}
+/* 지표가 홀수면 마지막 칸이 혼자 남아 옆이 비므로 가로를 채운다. */
+:global(:root:not([data-design='classic'])) .indicator:last-child:nth-child(odd) { grid-column: 1 / -1; }
+:global(:root:not([data-design='classic'])) .indicatorHeading { align-items: flex-start; }
+:global(:root:not([data-design='classic'])) .observation { font-size: clamp(1.35rem, 1.9vw, 1.7rem); }
+:global(:root:not([data-design='classic'])) .chartBlock { margin-top: 12px; }
+:global(:root:not([data-design='classic'])) .chartGrid line { stroke: var(--chart-grid); }
+:global(:root:not([data-design='classic'])) .chartPoint { fill: var(--thorp-surface-muted); }
+:global(:root:not([data-design='classic'])) .path { overflow: hidden; border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-control); }
+:global(:root:not([data-design='classic'])) .pathPoint { min-height: 56px; padding: 8px 10px; }
+:global(:root:not([data-design='classic'])) .indicatorMeta { grid-template-columns: 1fr; gap: 4px; margin-top: auto; }
+/* 비슷했던 때 보기는 카드 바닥 줄이다. */
+:global(:root:not([data-design='classic'])) .similarEntry { margin: 20px -24px -24px; padding: 16px 24px; border-top: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .similarButton { border-radius: var(--thorp-radius-control); background: transparent; color: var(--thorp-foreground); font-weight: 600; }
+:global(:root:not([data-design='classic'])) .similarButton:hover { border-color: var(--thorp-line-control-hover); }
+
+:global(:root:not([data-design='classic'])) .sectorPicker {
+  margin-top: 4px;
+  padding: 20px 24px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .sectorChip:hover { border-color: var(--thorp-line-control-hover); }
+/* --thorp-ink·--thorp-paper는 정의된 적이 없어 선택이 드러나지 않았다. 좋고 나쁨이 없는 밝기 반전으로 보인다(FR-003). */
+:global(:root:not([data-design='classic'])) .sectorChip[aria-pressed='true'] { border-color: var(--thorp-foreground); background: var(--thorp-foreground); color: var(--thorp-background); font-weight: 600; }
+
+:global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+:global(:root:not([data-design='classic'])) .referenceValues > div { padding: 10px 12px; border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }
+:global(:root:not([data-design='classic'])) .newsList { gap: 0; }
+:global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .newsList li:first-child { padding-top: 0; }
+:global(:root:not([data-design='classic'])) .newsList li:last-child { padding-bottom: 0; border-bottom: 0; }
+
+/* 상세 칸이 좁아지면 지표를 한 열로 둔다. 두 열이면 3개월 경로 칸이 읽기 어려워진다. */
+@media (max-width: 1180px) {
+  :global(:root:not([data-design='classic'])) .indicatorList { grid-template-columns: 1fr; }
+}
+@media (max-width: 1100px) {
+  :global(:root:not([data-design='classic'])) .detailHeader { margin: -20px -20px 18px; padding: 20px 20px 18px; }
+  :global(:root:not([data-design='classic'])) .similarEntry { margin: 18px -20px -20px; padding: 14px 20px; }
+}
+@media (max-width: 480px) {
+  :global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: 1fr; }
+}

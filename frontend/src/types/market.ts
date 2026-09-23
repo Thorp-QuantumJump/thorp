@@ -103,15 +103,6 @@ export interface SimilarMarketPeriod {
   comparisons: SimilarMarketComparison[]
 }
 
-export interface StrategyRecommendation {
-  id: string
-  name: string
-  suitability: number
-  reason: string
-  risk: string
-  backtestPath: string
-}
-
 export interface DataFreshnessItem {
   id: string
   provider: string
@@ -127,6 +118,5 @@ export interface MarketData {
   macroIndicators: Indicator[]
   stabilityIndicators: Indicator[]
   similarPeriod: SimilarMarketPeriod
-  strategyRecommendations: StrategyRecommendation[]
   dataFreshness: DataFreshnessItem[]
 }

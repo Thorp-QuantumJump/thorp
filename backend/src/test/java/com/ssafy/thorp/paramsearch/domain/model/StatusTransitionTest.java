@@ -77,8 +77,9 @@ class StatusTransitionTest {
         }
 
         @Test
-        @DisplayName("선정 계산 대상은 COMPLETED와 PARTIAL 둘이다 — 취소된 묶음도 완료 후보로 비교한다")
-        void completedAndPartialAreSelectable() {
+        @DisplayName("RUNNING은 잠정 선정, COMPLETED와 PARTIAL은 확정 선정 대상이다")
+        void runningCompletedAndPartialAreSelectable() {
+            assertThat(ParamSearchStatus.RUNNING.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.COMPLETED.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.PARTIAL.isSelectable()).isTrue();
             assertThat(ParamSearchStatus.FAILED.isSelectable()).isFalse();
@@ -98,10 +99,15 @@ class StatusTransitionTest {
     class CandidateStatusTransition {
 
         @Test
-        @DisplayName("PENDING은 DISPATCHED와 SKIPPED로만 간다")
-        void pendingGoesToDispatchedOrSkipped() {
+        @DisplayName("PENDING은 DISPATCHED·SKIPPED·EXCLUDED로만 간다")
+        void pendingGoesToDispatchedSkippedOrExcluded() {
+            // EXCLUDED 는 발행하려다 004 접수가 그 조합을 거부했을 때다. 후보 하나의 거부로 묶음이
+            // 멈추지 않으려면 그 자리에서 확정해야 한다(2026-09-22).
             assertThat(allowedFrom(CandidateStatus.PENDING))
-                    .containsExactlyInAnyOrder(CandidateStatus.DISPATCHED, CandidateStatus.SKIPPED);
+                    .containsExactlyInAnyOrder(
+                            CandidateStatus.DISPATCHED,
+                            CandidateStatus.SKIPPED,
+                            CandidateStatus.EXCLUDED);
         }
 
         @Test
@@ -228,12 +234,11 @@ class StatusTransitionTest {
         }
 
         @Test
-        @DisplayName("선정 스냅샷은 COMPLETED·PARTIAL에서만 붙는다")
+        @DisplayName("선정 스냅샷은 RUNNING·COMPLETED·PARTIAL에 붙는다")
         void selectionRequiresSelectableStatus() {
             ParamSearch running = newSearch().markRunning(NOW);
-            assertThatThrownBy(() -> running.withSelection(Map.of("top", List.of())))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("COMPLETED or PARTIAL");
+            assertThatCode(() -> running.withSelection(Map.of("top", List.of())))
+                    .doesNotThrowAnyException();
 
             ParamSearch partial = running.markPartial(StopReason.CANCELLED, NOW);
             assertThatCode(() -> partial.withSelection(Map.of("top", List.of())))

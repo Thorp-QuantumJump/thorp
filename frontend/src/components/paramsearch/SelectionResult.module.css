@@ -10,11 +10,17 @@
   gap: 6px;
 }
 
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.16rem;
+  font-weight: 750;
   letter-spacing: -0.02em;
 }
 
@@ -23,6 +29,32 @@
   color: var(--thorp-copy);
   font-size: 0.76rem;
   line-height: 1.6;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.flow span {
+  white-space: nowrap;
+}
+
+.flow strong {
+  color: var(--thorp-foreground);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.flow i {
+  color: var(--thorp-muted);
+  font-style: normal;
 }
 
 .notes {
@@ -55,13 +87,42 @@
   list-style: none;
 }
 
-.empty {
+.empty,
+.loading {
   margin: 0;
-  padding: 14px;
+  padding: var(--thorp-pad-notice, 14px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.78rem;
   line-height: 1.6;
+}
+
+/* 후보가 모두 한 전략일 때 목록 위에 한 번만 두는 이름. */
+.strategy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 6px);
+}
+
+.strategy > span:first-child {
+  color: var(--thorp-muted);
+  font-size: 0.68rem;
+}
+
+.strategy strong {
+  color: var(--thorp-foreground);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.strategyNote {
+  color: var(--thorp-copy);
+  font-size: 0.7rem;
 }
