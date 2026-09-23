@@ -41,13 +41,6 @@ const comparisonPaths = [
 ]
 const resultPath = buildDecorativeCurve(0.9, 96)
 
-/** 진단이 무엇을 하는지 세 단계로 말한다. 기본값·권고가 아니라 흐름이다. */
-const heroSteps = [
-  { title: '섹터를 고르고 비중을 정해요', note: '처음엔 같은 비중으로 채워 둡니다' },
-  { title: '다섯 배분 규칙 중 하나를 골라요', note: '기본값은 출발점일 뿐입니다' },
-  { title: '같은 조건의 결과를 나란히 비교해요', note: '비용 차감 후 수익·하락 폭·거래비용' },
-]
-
 /** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 시장 지표 움직임 예시를 두고 뒤에 시장 그래픽을 깐다. */
 export function HeroSection({ indicators }: { indicators: Indicator[] }) {
   const reducedMotion = useReducedMotion()
@@ -104,44 +97,24 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
             visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },
           }}
         >
-          <motion.p
-            className={styles.heroBadge}
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-          >
-            <span>국내 섹터 ETF</span>
-            배분 전략 진단
-          </motion.p>
           <motion.h1
             id="landing-title"
             variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
             transition={revealTransition}
           >
-            <span>섹터 비중을 바꾸면</span>
-            <span><em>과거 결과는 얼마나</em></span>
-            <span>달라졌을까</span>
+            <span>내 전략이 얼마나 유효한지,</span>
+            <span><em>과거로 돌아가</em></span>
+            <span>확인해 볼까요?</span>
           </motion.h1>
           <motion.p
             className={styles.heroDescription}
             variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
             transition={revealTransition}
           >
-            같은 기간, 같은 비용으로 다섯 가지 배분 규칙을 나란히 봅니다. 추천이 아니라 진단입니다.
+            {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 폭에 맡기면 '비교합니다.'만 아래로 떨어진다. */}
+            <span>국내 섹터 ETF로 다섯 가지 배분 규칙을</span>
+            <span>같은 조건에서 비교합니다.</span>
           </motion.p>
-          <motion.ol
-            className={styles.heroSteps}
-            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
-            transition={revealTransition}
-          >
-            {heroSteps.map((step, index) => (
-              <li key={step.title}>
-                <b aria-hidden="true">{index + 1}</b>
-                <span>
-                  {step.title}
-                  <small>{step.note}</small>
-                </span>
-              </li>
-            ))}
-          </motion.ol>
           <motion.div
             className={styles.heroActions}
             variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
