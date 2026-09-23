@@ -41,7 +41,7 @@
 
 /* 실제 결과가 아니라는 것이 눈에 먼저 들어와야 한다(013 FR-005). */
 .hypothetical {
-  padding: 16px 18px;
+  padding: var(--thorp-pad-inset, 16px 18px);
   border: 1px dashed var(--thorp-line-strong);
   border-radius: var(--thorp-radius-inset, 12px);
 }

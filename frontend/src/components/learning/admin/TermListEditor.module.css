@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
@@ -38,7 +38,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px;
+  padding: var(--thorp-pad-inset, 14px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);

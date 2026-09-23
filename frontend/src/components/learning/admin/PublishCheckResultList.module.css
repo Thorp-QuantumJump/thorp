@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-card, 14px);
   background: var(--thorp-surface);
@@ -27,7 +27,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-inset, 12px 14px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-inset, 10px);
   background: var(--thorp-surface-raised);

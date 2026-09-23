@@ -2,7 +2,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 13px 15px;
+  padding: var(--thorp-pad-notice, 13px 15px);
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);

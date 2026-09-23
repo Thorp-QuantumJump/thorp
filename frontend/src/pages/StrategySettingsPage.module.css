@@ -39,7 +39,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card, 14px);
 }
@@ -70,7 +70,7 @@
 
 .restoreNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
@@ -85,7 +85,7 @@
   align-items: center;
   gap: 8px 10px;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px dashed var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
@@ -127,7 +127,7 @@
   display: grid;
   gap: 14px;
   align-content: start;
-  padding: 18px;
+  padding: var(--thorp-pad-card, 18px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);
@@ -174,7 +174,7 @@
   display: grid;
   gap: 8px;
   margin: 0;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-notice, 12px 14px);
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 10px);
   list-style: none;
@@ -205,7 +205,7 @@
 
 .result {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-accent-soft);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-foreground);
@@ -220,7 +220,7 @@
   justify-content: space-between;
   gap: 6px 12px;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-negative);
@@ -240,7 +240,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-notice, 12px 14px);
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
@@ -274,7 +274,7 @@
   }
 
   .detailBody {
-    padding: 16px;
+    padding: var(--thorp-pad-card, 16px);
   }
 }
 

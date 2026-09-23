@@ -90,7 +90,7 @@
 .empty,
 .loading {
   margin: 0;
-  padding: 14px;
+  padding: var(--thorp-pad-notice, 14px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);

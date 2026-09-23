@@ -48,7 +48,7 @@
 .guide {
   display: grid;
   gap: 11px;
-  padding: 20px;
+  padding: var(--thorp-pad-card, 20px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
@@ -121,7 +121,7 @@
 .details {
   display: grid;
   gap: 12px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
@@ -235,7 +235,7 @@
 
 .error {
   margin: 0;
-  padding: 10px 12px;
+  padding: var(--thorp-pad-inset, 10px 12px);
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
