@@ -1,6 +1,6 @@
 import type { PublicResultDetail } from '@/types/result'
 import { buildConditionLine } from './conditionLine'
-import { formatMoney, formatRatio, isZeroValue } from './formatResult'
+import { formatMoney, formatRatio, isZeroValue, ratioDirection } from './formatResult'
 import styles from './ResultSummaryCard.module.css'
 
 export const METRIC_DEFINITIONS = {
@@ -51,11 +51,13 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
             <Metric
               label="비용 차감 후 전체 수익률"
               value={formatRatio(summary.netTotalReturn)}
+              direction={ratioDirection(summary.netTotalReturn)}
               definition={METRIC_DEFINITIONS.netTotalReturn}
             />
             <Metric
               label="가장 크게 줄었던 폭"
               value={formatRatio(summary.maxDrawdown)}
+              direction={ratioDirection(summary.maxDrawdown)}
               definition={METRIC_DEFINITIONS.maxDrawdown}
             />
             <Metric
@@ -87,16 +89,19 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
 function Metric({
   label,
   value,
+  direction,
   definition,
 }: {
   label: string
   value: string
+  /** 비율의 오르내림. 색만 바꾸며 값은 그대로다. 금액처럼 방향이 없는 값은 비운다. */
+  direction?: 'up' | 'down'
   definition: string
 }) {
   return (
     <div className={styles.metric}>
       <dt className={styles.metricLabel}>{label}</dt>
-      <dd className={styles.metricValue}>{value}</dd>
+      <dd className={styles.metricValue} data-direction={direction}>{value}</dd>
       <dd className={styles.metricDefinition}>{definition}</dd>
     </div>
   )
