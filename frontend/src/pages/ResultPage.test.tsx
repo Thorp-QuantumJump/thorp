@@ -132,7 +132,11 @@ describe('ResultPage', () => {
     renderResult()
 
     expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은 16\.67%/)).not.toBeNull()
-    expect(screen.getByLabelText('분석 조건')).not.toBeNull()
+    const condition = screen.getByLabelText('분석 조건')
+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByLabelText('분석 조건')).toBe(
+      condition,
+    )
+    expect(screen.getByRole('region', { name: '결과 요약' }).contains(condition)).toBe(false)
     expect(screen.getByText('16.67%')).not.toBeNull()
     expect(screen.getByText('자료 출처: 한국거래소 통계정보')).not.toBeNull()
 

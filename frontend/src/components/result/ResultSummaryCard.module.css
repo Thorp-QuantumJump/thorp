@@ -1,8 +1,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 20px;
+  gap: 4px;
+  padding: 6px 20px;
   border: 1px solid var(--thorp-line);
   border-radius: 14px;
   background: var(--thorp-surface);
@@ -25,7 +25,7 @@
   margin: 0;
   color: var(--thorp-copy);
   font-size: 0.88rem;
-  line-height: 1.6;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 

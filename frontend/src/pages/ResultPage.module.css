@@ -8,7 +8,7 @@
 .main {
   width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
   margin: 0 auto;
-  padding: min(var(--thorp-page-top), 24px) 0 var(--thorp-page-bottom);
+  padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);
 }
 
 /* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */
@@ -23,7 +23,7 @@
 .result {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
