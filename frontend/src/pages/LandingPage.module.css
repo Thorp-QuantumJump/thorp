@@ -1315,7 +1315,7 @@
   white-space: nowrap;
 }
 
-.previewExample::before { width: 6px; height: 6px; border-radius: 50%; background: var(--thorp-warning); content: ; }
+.previewExample::before { width: 6px; height: 6px; border-radius: 50%; background: var(--thorp-warning); content: ''; }
 
 .previewMetrics {
   display: grid;
