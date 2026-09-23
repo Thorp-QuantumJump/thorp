@@ -1,12 +1,12 @@
 import { useEffect, useId, useState } from 'react'
 import { fetchAnalysisVersions } from '@/api/analysisVersions'
-import { fetchUsedStrategies } from '@/api/backtest'
+import { fetchUsedStrategies } from '@/api/myRecords'
 import { fetchEvaluationWindow } from '@/api/sectors'
 import { fetchStrategyRegistry } from '@/api/strategyRegistry'
 import { useAuth } from '@/auth/auth-context'
 import { resolveRulesVersion } from '@/components/strategy/analysisSupport'
 import { Button } from '@/components/ui/button'
-import type { UsedStrategy } from '@/types/backtestRequest'
+import type { UsedStrategy } from '@/types/myRecords'
 import type { PublicResultDetail } from '@/types/result'
 import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'
 import type { CompareChoice } from './compareRequest'
@@ -16,6 +16,8 @@ type Candidate = {
   key: string
   choice: CompareChoice
   source: CandidateSource
+  /** 내 전략의 이름표(내 기록 항목 이름). 없으면 `null` */
+  recordName: string | null
   /** 설정값 한 줄. 축이 없는 전략은 빈 문자열 */
   settings: string
   reason: string | null
@@ -34,7 +36,8 @@ const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']
  *
  * <p><b>후보는 전략이 아니라 전략·설정값 조합이다.</b> 등록표 기본값 조합과, 로그인했으면 내가 써 본 조합
  * (`GET /backtests/used-strategies`)을 '기본 전략'·'내 전략' 두 묶음으로 보인다. 조합마다 쓰일 설정값을 적어 무엇과 비교하는지 보이게 한다.
- * 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보다.
+ * 기준 전략 줄은 전략 이름만 적고, 내 전략 줄은 내 기록 항목 이름 아래에 바탕 전략을 작게 적는다. 설정값은 접근 가능한 이름과 도움말에
+ * 남긴다. 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보다.
  *
  * <p><b>여럿을 골라 한 번에 요청한다.</b> 남은 자리(`room`)만큼 고를 수 있고, 준비 기간이 기준보다 긴 후보는 고르기 전에
  * 비교 기간이 짧아진다는 사실을 적는다(FR-004). 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않는다.
@@ -128,6 +131,7 @@ export function CompareTargetPicker({
           }).map((combination, index) => ({
             key: strategy.strategyId + '#' + index,
             source: combination.source,
+            recordName: combination.recordName,
             settings: describeParameters(strategy, combination.parameters),
             reason,
             shortenedDays,
@@ -204,10 +208,16 @@ export function CompareTargetPicker({
               {candidates.map((candidate) => {
                 const checked = picked.includes(candidate.key)
                 const disabled = !!candidate.reason || room === 0 || (full && !checked)
+                // 기본 전략은 전략 이름만, 내 전략은 기록 이름(없으면 설정값)과 그 아래 작은 글씨의 바탕 전략.
+                const title =
+                  source === 'used'
+                    ? (candidate.recordName ?? candidate.settings) || candidate.choice.strategy.name
+                    : candidate.choice.strategy.name
                 const name =
                   SOURCE_LABELS[source] +
                   ' · ' +
-                  candidate.choice.strategy.name +
+                  title +
+                  (source === 'used' ? ' · ' + candidate.choice.strategy.name : '') +
                   (candidate.settings ? ' · ' + candidate.settings : '')
                 return (
                   <li key={candidate.key}>
@@ -220,9 +230,11 @@ export function CompareTargetPicker({
                         aria-describedby={candidate.key + '-hint'}
                         onChange={() => toggle(candidate.key)}
                       />
-                      <span>
-                        <span className={styles.source}>{candidate.choice.strategy.name}</span>
-                        {candidate.settings ? ' · ' + candidate.settings : ''}
+                      <span className={styles.rowText}>
+                        <span className={styles.rowTitle}>{title}</span>
+                        {source === 'used' ? (
+                          <span className={styles.rowBase}>{candidate.choice.strategy.name}</span>
+                        ) : null}
                       </span>
                     </label>
                     <p id={candidate.key + '-hint'}>

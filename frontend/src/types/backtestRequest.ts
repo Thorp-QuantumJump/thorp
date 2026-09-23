@@ -68,14 +68,3 @@ export type BacktestAccepted = {
   /** `REUSED`면 이미 완료된 결과라 폴링을 시작하지 않는다 */
   resultSource?: 'NEW' | 'JOINED' | 'REUSED'
 }
-
-/**
- * `GET /backtests/used-strategies` 항목(`docs/specs/backtest-api/README.md` §1.12). 내가 단일 분석에서 써 본
- * 전략·설정값 조합이다. 결과가 아니라 조합이라 실행·결과 식별자가 없다. `parameters`는 접수가 저장한 JSON 그대로이므로
- * 화면이 현재 등록표로 다시 판정한다.
- */
-export type UsedStrategy = {
-  strategyId: string
-  rulesVersion: string
-  parameters: Record<string, unknown>
-}
