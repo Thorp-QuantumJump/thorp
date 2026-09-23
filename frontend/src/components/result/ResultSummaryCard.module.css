@@ -40,7 +40,6 @@
 }
 
 .metric {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -65,14 +64,6 @@
 
 .metric:nth-child(2) .metricValue {
   color: var(--thorp-negative);
-}
-
-.metricMeta {
-  position: absolute;
-  top: calc(100% + 2px);
-  margin: 0;
-  color: var(--thorp-foreground);
-  font-size: 0.8rem;
 }
 
 .note {
@@ -109,7 +100,4 @@
     gap: 2px;
   }
 
-  .metricMeta {
-    position: static;
-  }
 }
