@@ -48,12 +48,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * 중첩된 키를 점 경로로 모은다. 배열은 첫 원소의 모양만 본다. 자유 형식 사전(`parameters`)은 값이
- * 합성이라 키 이름을 대조하지 않는다. 비중 기록의 `target`·`actual`도 종목 식별자를 키로 쓰는 사전이라 같다.
+ * 합성이라 키 이름을 대조하지 않는다. 비중 기록의 `target`·`actual`과 `analytics`의 상관·위험 기여·손실 기여도
+ * 종목 식별자를 키로 쓰는 사전이라 같다.
  */
 function keyPaths(value: unknown, prefix = ''): string[] {
   if (Array.isArray(value)) return value.length > 0 ? keyPaths(value[0], `${prefix}[]`) : []
   if (!isRecord(value)) return []
-  if (/(parameters|\.target|\.actual)$/.test(prefix)) return []
+  if (/(parameters|\.target|\.actual|correlationMatrix|riskContribution|lossContribution)$/.test(prefix)) return []
 
   return Object.keys(value)
     .sort()
