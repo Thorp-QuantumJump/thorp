@@ -1,6 +1,6 @@
 import { useId, useMemo } from 'react'
 import { ArrowLeft } from 'lucide-react'
-import { Dialog } from 'radix-ui'
+import { Popover } from 'radix-ui'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
@@ -174,14 +174,47 @@ function ResultView({
           백테스트 결과
         </h1>
         <div className={styles.actions}>
-          <Button
-            id={pickerButtonId}
-            type="button"
-            disabled={!viewable || compare.targetState === 'REQUESTED'}
-            {...picker.toggleProps}
+          <Popover.Root
+            open={picker.open}
+            onOpenChange={(open) => {
+              if (!open) picker.close()
+            }}
           >
-            비교 대상 고르기
-          </Button>
+            <Popover.Anchor asChild>
+              <Button
+                id={pickerButtonId}
+                type="button"
+                disabled={!viewable || compare.targetState === 'REQUESTED'}
+                {...picker.toggleProps}
+              >
+                비교 대상 고르기
+              </Button>
+            </Popover.Anchor>
+            <Popover.Portal>
+              <Popover.Content
+                id={pickerId}
+                className={comparisonStyles.popover}
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                collisionPadding={16}
+                aria-label="비교 대상 고르기"
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault()
+                  document.getElementById(pickerButtonId)?.focus()
+                }}
+              >
+                <CompareTargetPicker
+                  base={detail}
+                  onClose={picker.close}
+                  onSelect={(choice) => {
+                    picker.close()
+                    compare.select(choice)
+                  }}
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
       </header>
       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
@@ -193,38 +226,6 @@ function ResultView({
         </p>
       ) : null}
 
-      {/* 비교 목록은 결과 위에 떠서 요약과 그래프의 위치를 바꾸지 않는다. */}
-      {picker.open ? (
-        <Dialog.Root
-          open
-          onOpenChange={(open) => {
-            if (!open) picker.close()
-          }}
-        >
-          <Dialog.Portal>
-            <Dialog.Overlay className={comparisonStyles.overlay} />
-            <Dialog.Content
-              id={pickerId}
-              className={comparisonStyles.dialog}
-              aria-describedby={undefined}
-              onCloseAutoFocus={(event) => {
-                event.preventDefault()
-                document.getElementById(pickerButtonId)?.focus()
-              }}
-            >
-              <Dialog.Title className={styles.visuallyHidden}>비교 대상 고르기</Dialog.Title>
-              <CompareTargetPicker
-                base={detail}
-                onClose={picker.close}
-                onSelect={(choice) => {
-                  picker.close()
-                  compare.select(choice)
-                }}
-              />
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      ) : null}
       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
       <CompareTargetSlot
         state={compare}
