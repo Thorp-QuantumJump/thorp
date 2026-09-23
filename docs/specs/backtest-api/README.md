@@ -251,6 +251,28 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   옛 행은 이미 접수된 실행의 발행·재시도만 쓰고 새 요청은 고를 수 없다. 그래서 전략당 한 행이라는 계약은 버전이 늘어도 그대로다
   (DB 부분 유니크 인덱스 `uk_strategy_rules_current`가 보장한다).
 
+## 1.12 내가 써 본 전략·설정 조합 — `GET /backtests/used-strategies`
+
+005 결과 화면의 '비교 대상 고르기'가 "내가 돌려 본 설정"을 후보로 올릴 때 읽는다(`S15P21E205-418`). **로그인이 필요하다**(401
+`AUTHENTICATION_REQUIRED`) — 요청 이력은 사용자 데이터다.
+
+```json
+{ "success": true,
+  "data": { "items": [ { "strategyId": "INVERSE_VOLATILITY", "rulesVersion": "1",
+                         "parameters": { "lookbackDays": 63, "rebalancePeriod": { "mode": "CALENDAR", "unit": "MONTH_END" }, "maxWeight": 40 } },
+                       { "strategyId": "EQUAL_WEIGHT", "rulesVersion": "1",
+                         "parameters": { "rebalancePeriod": { "mode": "CALENDAR", "unit": "QUARTER_END" } } } ] },
+  "error": null }
+```
+
+- 이 사용자의 **`executionType=SINGLE` 요청**이 가리키는 실행에서 `strategyId`·`parameters`를 읽어 **조합 단위로 접는다**. 같은 조합을 여러 번
+  돌렸어도(동일 버전 재사용 포함) 한 건이다. 같음은 `strategyId`와 `parameters`의 구조적 같음이고 `rulesVersion`은 같음에 넣지 않는다.
+- **최근 요청 순**이다. 상한 20건. 탐색 묶음(`SEARCH_BUNDLE`)이 만든 실행은 사용자가 고른 설정이 아니라 나가지 않는다.
+- `parameters`는 접수가 저장한 JSON 그대로다(003 등록표 축 이름). 등록표가 바뀐 뒤에는 현재 축·허용 범위에 맞지 않을 수 있으므로 **화면이
+  현재 등록표로 유효성을 다시 판정**하고, 맞지 않는 조합은 후보에서 뺀다. 새 비교 요청에는 이 응답의 `rulesVersion`이 아니라 §1.11의 현재 버전을 싣는다.
+- 결과·실행 식별자는 나가지 않는다. 이 응답은 "무엇으로 돌렸는가"이고, 그 조합을 지금 조건에 붙인 결과가 이미 있는지는 `POST /backtests`의
+  동일 버전 재사용(`resultSource: REUSED`)이 답한다.
+
 ## 2. 결과 조회
 
 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec "API 응답 분리"). 필드 의미·타입·nullable 규칙은
