@@ -219,7 +219,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T069 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorShortfallTest.java` — 문턱을 낮춰 채우지 않는다 (원칙 VII)
 - [X] T070 [P] [US2] (BE 테스트) 기준 백테스트 실패 시 하락 폭 필터 미적용 + `drawdownFilterApplied = false` 테스트
 - [X] T071 [P] [US2] (BE 테스트) 후보 목록 계약 테스트 — `EXCLUDED`·`FAILED`·`SKIPPED`·`PENDING` 후보의 성과 필드가 **`null`이고 0이 아니다** (FR-011)
-- [X] T072 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java` — 선정 계산이 묶음당 정확히 1회인지 검증 (내부 계약 §4 불변식 3)
+- [X] T072 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java` — 후보 완료마다 잠정 선정을 갱신하고 마지막 결과에서 확정하는지 검증
 
 ### Implementation for User Story 2 — Backend 계산
 
@@ -228,7 +228,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 
 - [X] T074a [P] [US2] (BE 테스트) 기준 전략 역할이 지정되지 않은 묶음에서 하락 폭 필터가 빠지고 `drawdownFilterApplied = false`가 응답에 나오는지, 선정 코드에 기준 전략 ID 리터럴이 없는지 검증 (FR-013d, SC-010)
 - [X] T075 [US2] (BE) `application/service/selection/StabilityFilter.java` — 묶음 내 유효 후보의 상위 50%만 통과, 계산 불가는 통과
 - [X] T076 [US2] (BE) `application/service/CandidateSelector.java` — 두 필터 적용 → 비용 차감 후 수익 정렬 → 상위 5 → 동률 전부. 후보별 선정·탈락 사유 기록 (T073~T075 의존)
-- [X] T077 [US2] (BE) `ParamSearchProgressService`에 묶음 종료 감지 추가 — `PENDING` 0 && `DISPATCHED` 0이면 안정성 → 선정 순서로 1회 실행
+- [X] T077 [US2] (BE) `ParamSearchProgressService`에 진행·종료 감지 추가 — 후보 완료마다 안정성 → 잠정 선정 순서로 갱신하고 `PENDING` 0 && `DISPATCHED` 0이면 최종 확정
 - [X] T078 [US2] (BE) 선정 결과를 `param_search.selection` 스냅샷으로 저장 ([data-model.md](data-model.md) §2)
 
 ### Implementation for User Story 2 — Backend API

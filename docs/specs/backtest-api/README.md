@@ -327,7 +327,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 | `totalTradingCost` | 거래비용 합계 = `costs.total` |
 | `costs{commission, spread, slippage, tax, total}` | 비용 네 갈래(FR-027) |
 | `liquidation{markToMarket{finalEquity,totalReturn}, liquidated{finalEquity,totalReturn,liquidationCost}}` | 종료일 종가 전량 매도 가정치(FR-017). 요청이 청산을 끄면 `null` |
-| `analytics{recoveryDays, turnover}` | 회복 거래일(미회복이면 `null`)·연환산 회전율. 나머지 파생 지표(상관·위험 기여·손실 기여)는 결과 저장소에 있고 이 API 로는 내려주지 않는다 |
+| `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` | 회복 거래일(미회복이면 `null`)·연환산 회전율·종목 쌍 표본 상관(변동성 0 인 쌍은 키 생략)·위험 기여(포트폴리오 분산 중 종목 몫, 합 1)·손실 기여(전체 손익 중 종목 몫, 합 1)·산정법(`sample-covariance-daily`). 맵의 키는 종목 id, 값은 문자열이다. 워커가 계산하지 못한 항목은 `null` 이고 0 으로 채우지 않는다. `weightError` 는 `/weights` 에만 있다 |
 | `exceptionCount` | 예외 처리 기록 건수. 본문은 `/exceptions` |
 
 값의 정의는 워커 `performance.calculate_analytics` docstring 이 원본이다(spec 004 T008 결정 ①).

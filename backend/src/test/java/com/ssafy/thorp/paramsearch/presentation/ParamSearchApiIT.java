@@ -164,7 +164,7 @@ class ParamSearchApiIT extends LauncherMockedIntegrationTestSupport {
                 .andExpect(jsonPath("$.data.config.searchMethod").value("FULL_GRID"))
                 .andExpect(jsonPath("$.data.config.randomSeed").doesNotExist())
                 .andExpect(jsonPath("$.data.config.space").isMap())
-                // 선정은 아직 없다 — COMPLETED·PARTIAL 전에는 null이다(계약 §3).
+                // 아직 끝난 후보가 없어 잠정 선정도 없다.
                 .andExpect(jsonPath("$.data.selection").doesNotExist());
     }
 

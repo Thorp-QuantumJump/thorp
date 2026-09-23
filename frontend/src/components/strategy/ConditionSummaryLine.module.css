@@ -3,9 +3,9 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font-size: 0.8rem;

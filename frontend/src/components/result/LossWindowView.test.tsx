@@ -1,5 +1,4 @@
 import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   resultDetailCompleted,
@@ -11,7 +10,7 @@ import {
 import { TRADES_PAGE_SIZE } from './constants'
 import { LossWindowView } from './LossWindowView'
 
-/** 005 T071(손실이 커진 때 보기). FR-010. 구간이 없을 때의 비활성은 `ResultPage.test.tsx`가 본다. */
+/** 005 T071(손실이 커진 때 탭). FR-010. 구간이 없을 때 탭이 비활성인 것은 `ResultPage.test.tsx`가 본다. */
 
 const apiMocks = vi.hoisted(() => ({
   fetchResultTrades: vi.fn(),
@@ -31,17 +30,10 @@ vi.mock('@/api/sectors', async (importOriginal) => {
 const lossWindow = { peakDate: '2025-02-26', troughDate: '2025-03-24' }
 
 function renderView() {
-  const onClose = vi.fn()
   render(
-    <LossWindowView
-      id="loss"
-      token={resultToken}
-      lossWindow={lossWindow}
-      items={resultDetailCompleted.config.items}
-      onClose={onClose}
-    />,
+    <LossWindowView token={resultToken} lossWindow={lossWindow} items={resultDetailCompleted.config.items} />,
   )
-  return { onClose, view: screen.getByRole('region', { name: /손실이 커진 때/ }) }
+  return { view: screen.getByRole('region', { name: /손실이 커진 때/ }) }
 }
 
 describe('LossWindowView', () => {
@@ -79,18 +71,6 @@ describe('LossWindowView', () => {
     expect(within(trades).getByRole('columnheader', { name: '수수료' })).not.toBeNull()
     expect(within(trades).getByRole('columnheader', { name: '슬리피지 비용' })).not.toBeNull()
     expect(within(view).queryByText(/합계/)).toBeNull()
-  })
-
-  it('열자마자 제목으로 초점이 가고, Esc와 닫기 버튼이 닫기를 부른다', async () => {
-    const user = userEvent.setup()
-    const { view, onClose } = renderView()
-    await within(view).findByRole('table', { name: '구간 거래' })
-
-    expect(document.activeElement).toBe(within(view).getByRole('heading', { level: 2 }))
-    await user.keyboard('{Escape}')
-    await user.click(within(view).getByRole('button', { name: '닫기' }))
-
-    expect(onClose).toHaveBeenCalledTimes(2)
   })
 
   it('부분 결과의 보유는 완료 범위까지의 기록이라고 적는다', async () => {

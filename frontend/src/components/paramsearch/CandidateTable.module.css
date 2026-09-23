@@ -22,9 +22,49 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1.02rem;
-  font-weight: 700;
+  font-size: 1.16rem;
+  font-weight: 750;
   letter-spacing: -0.02em;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+}
+
+.toggle svg {
+  color: var(--thorp-muted);
+  transition: transform 160ms ease;
+}
+
+.toggle svg[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.toggle:hover {
+  color: var(--thorp-accent-soft);
+}
+
+.toggle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.content[hidden] {
+  display: none;
 }
 
 .header p {
@@ -50,7 +90,7 @@
   min-height: 34px;
   padding: 0 9px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: var(--thorp-surface);
   color: var(--thorp-foreground);
   font: inherit;
@@ -65,7 +105,7 @@
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface);
 }
 
@@ -169,7 +209,7 @@
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 4px;
+  border-radius: var(--thorp-radius-control, 4px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
@@ -197,7 +237,7 @@
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
@@ -229,9 +269,9 @@
 
 .error {
   margin: 0;
-  padding: 10px 12px;
+  padding: var(--thorp-pad-inset, 10px 12px);
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
   font-size: 0.75rem;
 }

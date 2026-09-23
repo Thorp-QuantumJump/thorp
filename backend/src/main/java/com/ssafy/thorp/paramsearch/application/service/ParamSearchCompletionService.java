@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * 묶음의 끝을 확정한다 — 집계 갱신, 최종 상태 전이, 선정 1회(FR-008·FR-009·FR-013).
+ * 묶음을 전진시킨다 — 집계 갱신, 현재 선정 갱신, 최종 상태 전이(FR-008·FR-009·FR-013).
  *
  * <p><b>끝나는 길이 둘이라 한곳에 모았다.</b> 마지막 후보가 결과를 보내 끝나는 길({@link ParamSearchProgressService})과, 취소·한도가
  * 남은 후보를 '미실행'으로 돌려 끝나는 길({@link ParamSearchCancelService})이다. 두 곳에 같은 판정을 두면 한쪽만 고쳐져 <b>취소된 묶음에만
@@ -46,23 +46,26 @@ public class ParamSearchCompletionService {
     }
 
     /**
-     * 집계를 다시 세고, 남은 후보가 없으면 최종 상태로 확정하며 선정을 1회 계산한다.
+     * 집계를 다시 세고 현재까지의 선정을 갱신한다. 남은 후보가 없으면 최종 상태로 확정한다.
      *
-     * <p><b>호출자가 묶음 행을 잠근 뒤 부른다.</b> 선정이 묶음당 1회여야 해서(불변식 3) 종료 판정과 전이가 한 임계 구역 안에 있어야 한다.
+     * <p><b>호출자가 묶음 행을 잠근 뒤 부른다.</b> 완료 이벤트 순서대로 선정과 종료 판정을 같은 임계 구역에서 처리한다.
      *
      * @param search 잠긴 묶음 행
      * @return 갱신된 묶음. 아직 끝나지 않았으면 집계만 갱신된 상태다
      */
     public ParamSearch settle(ParamSearch search) {
         ParamSearch counted = paramSearchRepository.update(search.withCounts(recount(search)));
-        if (counted.getStatus().isFinal() || !dispatcher.isDrained(counted.getId())) {
+        if (counted.getStatus().isFinal()) {
             return counted;
+        }
+        if (!dispatcher.isDrained(counted.getId())) {
+            return paramSearchRepository.update(selectionService.refreshSelection(counted));
         }
         ParamSearch finished =
                 counted.isStopRequested()
                         ? counted.markPartial(counted.getStopReason(), clock.instant())
                         : counted.markCompleted(clock.instant());
-        return paramSearchRepository.update(selectionService.selectOnce(finished));
+        return paramSearchRepository.update(selectionService.refreshSelection(finished));
     }
 
     /**

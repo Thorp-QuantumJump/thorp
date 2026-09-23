@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   baselineFixture,
@@ -141,12 +141,6 @@ describe('SelectionResult', () => {
 
     expect(container.textContent).toContain('손실 제약 기준은 캐리 순환입니다')
     expect(container.textContent).toContain('-20.00%')
-  })
-
-  it('후보마다 검증 표시를 함께 보인다', () => {
-    renderResult()
-
-    expect(screen.getAllByText('미검증')).toHaveLength(2)
   })
 
   it('충족한 후보가 없으면 빈 목록 대신 기준을 낮추지 않는다고 말한다', () => {

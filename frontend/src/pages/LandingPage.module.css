@@ -1,4 +1,39 @@
 .page {
+  /*
+    초록 기운이 섞였던 무채색을 B안(그래파이트)으로 옮긴 값이다. 각 자리는 var(--lp-N, 예전 값)으로
+    쓰고, classic 디자인에서는 아래에서 이 토큰을 비워(initial) 예전 값으로 돌아간다. classic을
+    걷어낼 때 각 자리를 이 값으로 바꾸고 이 목록을 지운다. 브랜드 초록 빛번짐은 B안과 같아 그대로 둔다.
+  */
+  --lp-1: #0d0f0e;
+  --lp-2: #101312;
+  --lp-3: rgb(209 214 211 / 14%);
+  --lp-4: rgb(9 10 9 / 68%);
+  --lp-5: #afb2b0;
+  --lp-6: rgb(6 7 6 / 12%);
+  --lp-7: rgb(6 7 6 / 38%);
+  --lp-8: rgb(6 7 6 / 72%);
+  --lp-9: rgb(224 228 226 / 22%);
+  --lp-10: rgb(14 16 15 / 64%);
+  --lp-11: rgb(27 30 28 / 88%);
+  --lp-12: #6c6f6d;
+  --lp-13: rgb(178 183 180 / 15%);
+  --lp-14: #5b5e5c;
+  --lp-15: rgb(14 16 15 / 44%);
+  --lp-16: #e1e3e2;
+  --lp-17: #707371;
+  --lp-18: rgb(178 183 180 / 11%);
+  --lp-19: rgb(11 12 11 / 42%);
+  --lp-20: rgb(178 183 180 / 9%);
+  --lp-21: #8a8d8b;
+  --lp-22: #949695;
+  --lp-23: rgb(178 183 180 / 12%);
+  --lp-24: rgb(197 202 199 / 17%);
+  --lp-25: rgb(25 28 26 / 96%);
+  --lp-26: rgb(10 12 11 / 98%);
+  --lp-27: #787a78;
+  --lp-28: #727473;
+  --lp-29: #939694;
+  --lp-30: rgb(10 12 11 / 96%);
   --landing-background: var(--thorp-background);
   --landing-surface: var(--thorp-surface);
   --landing-surface-strong: var(--thorp-surface-raised);
@@ -20,7 +55,7 @@
   scroll-snap-type: y mandatory;
   background:
     radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),
-    linear-gradient(180deg, #030806 0%, #050b08 45%, #030806 100%);
+    linear-gradient(180deg, var(--lp-1, #030806) 0%, var(--lp-2, #050b08) 45%, var(--lp-1, #030806) 100%);
   color: var(--landing-text);
   font-family: var(--thorp-font-display);
 }
@@ -46,9 +81,9 @@
   width: min(calc(100% - 48px), 1440px);
   min-height: 62px;
   padding: 0 10px 0 22px;
-  border: 1px solid rgb(191 221 205 / 14%);
+  border: 1px solid var(--lp-3, rgb(191 221 205 / 14%));
   border-radius: 13px;
-  background: rgb(4 12 8 / 68%);
+  background: var(--lp-4, rgb(4 12 8 / 68%));
   box-shadow: 0 18px 60px rgb(0 0 0 / 20%);
   backdrop-filter: blur(18px);
   transform: translateX(-50%);
@@ -76,7 +111,7 @@
 .desktopNavigation a,
 .mobileNavigation a {
   position: relative;
-  color: #a8b5ad;
+  color: var(--lp-5, #a8b5ad);
   font-size: 0.78rem;
   font-weight: 540;
   letter-spacing: -0.01em;
@@ -114,7 +149,7 @@
   gap: 9px;
   min-height: 42px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   background: var(--landing-text);
   color: var(--thorp-action-foreground);
   font-size: 0.76rem;
@@ -156,8 +191,8 @@
 .hero::before {
   inset: 0;
   background:
-    linear-gradient(180deg, rgb(3 8 6 / 12%), transparent 32%, rgb(3 8 6 / 38%)),
-    radial-gradient(ellipse at center, transparent 25%, rgb(3 8 6 / 72%) 100%);
+    linear-gradient(180deg, var(--lp-6, rgb(3 8 6 / 12%)), transparent 32%, var(--lp-7, rgb(3 8 6 / 38%))),
+    radial-gradient(ellipse at center, transparent 25%, var(--lp-8, rgb(3 8 6 / 72%)) 100%);
 }
 
 .hero::after {
@@ -281,7 +316,7 @@
 .sectionHeading > p,
 .algorithmHeader > p {
   margin: 0;
-  color: var(--landing-accent-soft);
+  color: var(--thorp-eyebrow, var(--landing-accent-soft));
   font-size: 0.68rem;
   font-weight: 670;
   letter-spacing: 0.19em;
@@ -345,7 +380,7 @@
   min-height: 52px;
   padding: 0 21px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--thorp-radius-control, 8px);
   font-size: 0.82rem;
   font-weight: 680;
   text-decoration: none;
@@ -358,8 +393,8 @@
 }
 
 .secondaryCta {
-  border-color: rgb(210 234 220 / 22%);
-  background: rgb(7 18 12 / 64%);
+  border-color: var(--lp-9, rgb(210 234 220 / 22%));
+  background: var(--lp-10, rgb(7 18 12 / 64%));
   color: var(--landing-text);
   cursor: pointer;
 }
@@ -376,7 +411,7 @@
 
 .secondaryCta:hover {
   border-color: rgb(134 242 168 / 48%);
-  background: rgb(14 34 23 / 88%);
+  background: var(--lp-11, rgb(14 34 23 / 88%));
 }
 
 .heroFootnote {
@@ -387,7 +422,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #647269;
+  color: var(--lp-12, #647269);
   font-size: 0.59rem;
   letter-spacing: 0.16em;
 }
@@ -397,15 +432,15 @@
   right: 160px;
   left: 40px;
   height: 1px;
-  background: linear-gradient(90deg, rgb(160 190 173 / 15%), transparent);
+  background: linear-gradient(90deg, var(--lp-13, rgb(160 190 173 / 15%)), transparent);
   content: '';
 }
 
 .storyFlow {
   position: relative;
   background:
-    radial-gradient(circle at 13% 22%, rgb(3 199 90 / 7%), transparent 22rem),
-    radial-gradient(circle at 88% 63%, rgb(3 199 90 / 5%), transparent 24rem),
+    radial-gradient(circle at 13% 22%, var(--thorp-ambient, rgb(3 199 90 / 7%)), transparent 22rem),
+    radial-gradient(circle at 88% 63%, var(--thorp-ambient, rgb(3 199 90 / 5%)), transparent 24rem),
     var(--landing-background);
 }
 
@@ -480,7 +515,7 @@
 }
 
 .sectionNumber {
-  color: #536158;
+  color: var(--lp-14, #536158);
   font-size: 0.62rem;
   letter-spacing: 0.2em;
   writing-mode: vertical-rl;
@@ -556,7 +591,7 @@
   position: absolute;
   top: 2px;
   left: 0;
-  color: var(--landing-accent);
+  color: var(--thorp-ornament, var(--landing-accent));
 }
 
 .sectionHeading h2,
@@ -611,7 +646,7 @@
   min-height: 168px;
   padding: 24px 27px;
   border-right: 1px solid var(--landing-line);
-  background: rgb(8 18 12 / 44%);
+  background: var(--lp-15, rgb(8 18 12 / 44%));
 }
 
 .indicatorItem:first-child {
@@ -630,7 +665,7 @@
 
 .indicatorMeta > span {
   overflow: hidden;
-  color: #dbe6df;
+  color: var(--lp-16, #dbe6df);
   font-size: 0.72rem;
   font-weight: 670;
   letter-spacing: 0.1em;
@@ -640,7 +675,7 @@
 
 .indicatorMeta small {
   overflow: hidden;
-  color: #68766d;
+  color: var(--lp-17, #68766d);
   font-size: 0.55rem;
   letter-spacing: 0.08em;
   text-overflow: ellipsis;
@@ -648,7 +683,7 @@
 }
 
 .indicatorItem[data-status='live'] .indicatorMeta small {
-  color: var(--landing-accent-soft);
+  color: var(--thorp-eyebrow, var(--landing-accent-soft));
 }
 
 .indicatorItem[data-status='stale'] .indicatorMeta small {
@@ -686,7 +721,7 @@
 }
 
 .indicatorItem svg line {
-  stroke: rgb(160 190 173 / 11%);
+  stroke: var(--lp-18, rgb(160 190 173 / 11%));
   stroke-width: 1;
 }
 
@@ -730,30 +765,7 @@
   border-bottom: 1px solid var(--landing-line);
   background:
     linear-gradient(90deg, rgb(3 199 90 / 4%), transparent 42%),
-    rgb(6 14 9 / 42%);
-}
-
-.chartTopline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--landing-line);
-  color: #7c8b81;
-  font-size: 0.6rem;
-  letter-spacing: 0.09em;
-}
-
-.chartTopline span {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.chartTopline strong {
-  color: var(--landing-accent-soft);
-  font-weight: 630;
+    var(--lp-19, rgb(6 14 9 / 42%));
 }
 
 /*
@@ -771,7 +783,7 @@
 }
 
 .chartGrid {
-  stroke: rgb(160 190 173 / 9%);
+  stroke: var(--lp-20, rgb(160 190 173 / 9%));
   stroke-dasharray: 3 8;
 }
 
@@ -785,7 +797,7 @@
 }
 
 .comparisonPath {
-  stroke: #839087;
+  stroke: var(--lp-21, #839087);
   stroke-width: 1.25;
 }
 
@@ -798,49 +810,6 @@
   stroke: rgb(3 199 90 / 22%);
   stroke-width: 15;
   filter: blur(3px);
-}
-
-.chartYears text {
-  fill: #59675e;
-  font-size: 18px;
-  letter-spacing: 0.08em;
-}
-
-.previewMetrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--landing-line);
-}
-
-.previewMetrics span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 17px 19px;
-  border-right: 1px solid var(--landing-line);
-  color: #65736a;
-  font-size: 0.58rem;
-  letter-spacing: 0.07em;
-}
-
-.previewMetrics span:last-child {
-  border-right: 0;
-}
-
-.previewMetrics strong {
-  color: #cbd8cf;
-  font-size: 0.95rem;
-  font-weight: 590;
-  letter-spacing: -0.015em;
-}
-
-.previewMetrics span:first-child strong,
-.previewMetrics span:nth-child(2) strong {
-  color: var(--landing-accent-soft);
-}
-
-.previewMetrics span:nth-child(3) strong {
-  color: var(--landing-negative);
 }
 
 .algorithmSection {
@@ -897,13 +866,47 @@
   box-shadow: inset 0 0 0 1px rgb(3 199 90 / 58%);
 }
 
+/* 등록표를 부르는 동안과 부르지 못했을 때 자리를 채운다. 값을 지어내지 않고 상태를 말한다. */
+.orbitNotice {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--lp-22, #8b9a91);
+  font-size: 0.82rem;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.orbitNotice p {
+  margin: 0;
+}
+
+.orbitNotice button {
+  padding: 8px 18px;
+  border: 1px solid var(--landing-line);
+  border-radius: var(--thorp-radius-control, 999px);
+  background: transparent;
+  color: var(--landing-accent-soft);
+  font: inherit;
+  cursor: pointer;
+}
+
+.orbitNotice button:hover {
+  border-color: var(--landing-accent-soft);
+}
+
 .orbitFloor {
   position: absolute;
   top: 54%;
   left: 50%;
   width: min(76vw, 900px);
   height: 220px;
-  border: 1px solid rgb(160 190 173 / 12%);
+  border: 1px solid var(--lp-23, rgb(160 190 173 / 12%));
   border-radius: 50%;
   background:
     repeating-radial-gradient(ellipse, transparent 0 34px, rgb(3 199 90 / 3%) 35px 36px),
@@ -921,10 +924,10 @@
   width: min(58vw, 300px);
   min-height: 236px;
   padding: 16px;
-  border: 1px solid rgb(178 210 192 / 17%);
+  border: 1px solid var(--lp-24, rgb(178 210 192 / 17%));
   border-radius: 12px;
   background:
-    linear-gradient(145deg, rgb(16 31 22 / 96%), rgb(5 14 9 / 98%)),
+    linear-gradient(145deg, var(--lp-25, rgb(16 31 22 / 96%)), var(--lp-26, rgb(5 14 9 / 98%))),
     var(--landing-surface-strong);
   box-shadow: 0 28px 70px rgb(0 0 0 / 52%);
   transform-origin: center center;
@@ -942,13 +945,13 @@
   justify-content: space-between;
   min-height: 40px;
   border-bottom: 1px solid var(--landing-line);
-  color: #6f7e74;
+  color: var(--lp-27, #6f7e74);
   font-size: 0.56rem;
   letter-spacing: 0.06em;
 }
 
 .cardIndex span:first-child {
-  color: var(--landing-accent);
+  color: var(--thorp-ornament, var(--landing-accent));
   font-size: 0.68rem;
   font-weight: 670;
 }
@@ -965,7 +968,7 @@
 
 .algorithmCard > div:nth-child(2) p {
   margin: 0 0 5px;
-  color: #69786e;
+  color: var(--lp-28, #69786e);
   font-size: 0.49rem;
   letter-spacing: 0.15em;
 }
@@ -981,42 +984,9 @@
 .algorithmCard > div:nth-child(2) > span {
   display: block;
   max-width: 330px;
-  color: #8b9990;
+  color: var(--lp-29, #8b9990);
   font-size: 0.64rem;
   line-height: 1.45;
-}
-
-.algorithmCard dl {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 0 0 12px;
-  border-top: 1px solid var(--landing-line);
-  border-bottom: 1px solid var(--landing-line);
-}
-
-.algorithmCard dl div {
-  padding: 8px 5px 7px 0;
-}
-
-.algorithmCard dt {
-  color: #637168;
-  font-size: 0.48rem;
-  letter-spacing: 0.08em;
-}
-
-.algorithmCard dd {
-  margin: 4px 0 0;
-  color: #dce8e0;
-  font-size: 0.8rem;
-  font-weight: 610;
-}
-
-.algorithmCard dl div:first-child dd {
-  color: var(--landing-accent-soft);
-}
-
-.algorithmCard dl div:nth-child(2) dd {
-  color: var(--landing-negative);
 }
 
 .algorithmCard > a {
@@ -1157,7 +1127,7 @@
     width: 40px;
     aspect-ratio: 1;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--thorp-radius-control, 8px);
     background: rgb(255 255 255 / 6%);
     color: var(--landing-text);
     cursor: pointer;
@@ -1174,7 +1144,7 @@
     padding: 10px;
     border: 1px solid var(--landing-line);
     border-radius: 10px;
-    background: rgb(5 14 9 / 96%);
+    background: var(--lp-30, rgb(5 14 9 / 96%));
     box-shadow: 0 20px 55px rgb(0 0 0 / 45%);
   }
 
@@ -1280,18 +1250,6 @@
     min-height: 230px;
   }
 
-  .previewMetrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .previewMetrics span:nth-child(2) {
-    border-right: 0;
-  }
-
-  .previewMetrics span:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--landing-line);
-  }
-
   .algorithmSection {
     min-height: 720px;
     padding: 70px 12px 40px;
@@ -1353,14 +1311,6 @@
     font-size: 2.55rem;
   }
 
-  .chartTopline {
-    padding: 0 12px;
-  }
-
-  .chartTopline strong {
-    display: none;
-  }
-
   .algorithmCard {
     left: calc(50% - min(36vw, 125px));
     width: min(72vw, 250px);
@@ -1399,4 +1349,112 @@
   .algorithmCard > a {
     transition: none;
   }
+}
+
+/* 결과 화면 틀의 머리 막대와 지표 이름 줄. classic에는 없던 요소라 기본은 숨기고 카드 층에서 켠다. */
+.visualBar,
+.visualMetrics {
+  display: none;
+}
+
+/*
+  디자인 개편 카드 층(S15P21E205-425). 위 규칙은 classic 그대로 두고, 새 디자인에서만 지표 띠 항목과
+  백테스트 그림을 카드로 담는다. 흐르는 띠·곡선이 그려지는 움직임과 한 칸 높이 규칙은 그대로다.
+*/
+:global(:root:not([data-design='classic'])) .storySection { border-bottom: 0; }
+:global(:root:not([data-design='classic'])) .storySection::before { display: none; }
+
+/* 지표 띠: 항목마다 카드. 두 묶음이 같은 폭이어야 -50% 이동에서 이음매가 보이지 않으므로 간격을 묶음 끝에도 둔다. */
+:global(:root:not([data-design='classic'])) .conveyorViewport { padding-block: 2px; border: 0; }
+:global(:root:not([data-design='classic'])) .conveyorGroup { gap: 12px; padding-right: 12px; }
+:global(:root:not([data-design='classic'])) .indicatorItem,
+:global(:root:not([data-design='classic'])) .indicatorItem:first-child {
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+
+/* 이동 링크: 위아래 선 대신 테두리 있는 한 줄 */
+:global(:root:not([data-design='classic'])) .textCta {
+  padding: 16px 20px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control);
+  background: var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .textCta:hover { padding-right: 16px; border-color: var(--thorp-line-control-hover); background: var(--thorp-surface-muted); }
+
+/* 백테스트 그림: 결과 화면 한 장을 담은 카드. 틀이 생기면 남는 높이가 빈 칸으로 보이므로 키는 내용에 맞추고, 화면이 낮을 때만 줄어든다. */
+:global(:root:not([data-design='classic'])) .backtestVisual {
+  flex: 0 1 auto;
+  overflow: hidden;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background:
+    linear-gradient(90deg, rgb(3 199 90 / 4%), transparent 42%),
+    var(--thorp-surface);
+}
+:global(:root:not([data-design='classic'])) .visualBar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--thorp-line);
+  color: var(--thorp-copy);
+  font-size: 0.72rem;
+}
+:global(:root:not([data-design='classic'])) .visualBar b { font-weight: 600; }
+:global(:root:not([data-design='classic'])) .visualDots { display: flex; gap: 6px; }
+:global(:root:not([data-design='classic'])) .visualDots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--thorp-line-strong); }
+:global(:root:not([data-design='classic'])) .visualMetrics {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+:global(:root:not([data-design='classic'])) .visualMetrics > div { padding: 12px 18px; min-width: 0; }
+:global(:root:not([data-design='classic'])) .visualMetrics > div + div { border-left: 1px solid var(--thorp-line); }
+:global(:root:not([data-design='classic'])) .visualMetrics dt { overflow: hidden; color: var(--thorp-muted); font-size: 0.66rem; text-overflow: ellipsis; white-space: nowrap; }
+:global(:root:not([data-design='classic'])) .visualMetrics dd { margin: 4px 0 0; color: var(--thorp-copy); font-size: 0.8rem; font-weight: 600; }
+@media (max-width: 760px) {
+  :global(:root:not([data-design='classic'])) .visualMetrics > div { padding: 10px 12px; }
+}
+@media (max-width: 430px) {
+  :global(:root:not([data-design='classic'])) .visualMetrics { grid-template-columns: 1fr; }
+  :global(:root:not([data-design='classic'])) .visualMetrics > div + div { border-top: 1px solid var(--thorp-line); border-left: 0; }
+}
+
+/* classic 디자인에서는 위 토큰을 비워 각 자리의 예전 값을 쓴다. */
+:global(:root[data-design='classic']) .page {
+  --lp-1: initial;
+  --lp-2: initial;
+  --lp-3: initial;
+  --lp-4: initial;
+  --lp-5: initial;
+  --lp-6: initial;
+  --lp-7: initial;
+  --lp-8: initial;
+  --lp-9: initial;
+  --lp-10: initial;
+  --lp-11: initial;
+  --lp-12: initial;
+  --lp-13: initial;
+  --lp-14: initial;
+  --lp-15: initial;
+  --lp-16: initial;
+  --lp-17: initial;
+  --lp-18: initial;
+  --lp-19: initial;
+  --lp-20: initial;
+  --lp-21: initial;
+  --lp-22: initial;
+  --lp-23: initial;
+  --lp-24: initial;
+  --lp-25: initial;
+  --lp-26: initial;
+  --lp-27: initial;
+  --lp-28: initial;
+  --lp-29: initial;
+  --lp-30: initial;
 }
