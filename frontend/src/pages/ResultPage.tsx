@@ -6,7 +6,7 @@ import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import comparisonStyles from '@/components/result/comparison.module.css'
-import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
+import { CompareTargetChip } from '@/components/result/CompareTargetChip'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
 import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'
 import { describeParameters } from '@/components/result/compareCandidates'
@@ -193,6 +193,16 @@ function ResultView({
           백테스트 결과
         </h1>
         <div className={styles.actions}>
+          {/* 겹쳐 그리는 대상들. 단추 왼쪽에 칩으로 늘어서고 × 로 하나씩 해제한다(`S15P21E205-419`). */}
+          {compare.targets.map((target) => (
+            <CompareTargetChip
+              key={target.key}
+              state={target}
+              name={names.get(target.key)!}
+              onRetry={() => compare.retry(target.key)}
+              onRemove={() => compare.remove(target.key)}
+            />
+          ))}
           <Popover.Root
             open={picker.open}
             onOpenChange={(open) => {
@@ -247,22 +257,6 @@ function ResultView({
       ) : null}
 
       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
-      {compare.targets.map((target) => (
-        <CompareTargetSlot
-          key={target.key}
-          state={target}
-          name={names.get(target.key)!}
-          onRetry={() => compare.retry(target.key)}
-          onRemove={() => compare.remove(target.key)}
-        />
-      ))}
-      {compare.targets.length > 1 ? (
-        <div className={styles.actions}>
-          <Button type="button" variant="outline" onClick={compare.clear}>
-            비교 모두 해제
-          </Button>
-        </div>
-      ) : null}
       {compare.period ? (
         <PeriodMismatchDialog
           period={compare.period}

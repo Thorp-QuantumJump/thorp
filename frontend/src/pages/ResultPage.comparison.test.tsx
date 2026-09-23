@@ -107,7 +107,7 @@ describe('결과 화면의 비교 연결 (T061)', () => {
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('비교 대상은 없습니다')
     expect(screen.queryByText(/같은 조건에서 비교 대상/)).toBeNull()
   })
-  it('대상이 둘이면 파선 둘·문장 둘·조건 줄의 이름 둘을 보이고 한 번에 해제할 수 있다', async () => {
+  it('대상이 둘이면 파선 둘·문장 둘·조건 줄의 이름 둘과 칩 둘을 보인다', async () => {
     const other = 'c'.repeat(32)
     const second = { ...target, publicToken: other, strategyName: '둘째 전략' }
     api.detail.mockImplementation(async (requested: string) =>
@@ -120,8 +120,9 @@ describe('결과 화면의 비교 연결 (T061)', () => {
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain(
       '비교 대상은 비교용 전략, 둘째 전략이며 서로 다른 파선',
     )
+    // 대상마다 칩 하나와 해제 단추 하나가 '비교 대상 고르기' 옆에 선다.
     expect(screen.getByLabelText('비교 대상 둘째 전략')).toBeTruthy()
-    expect(screen.getByRole('button', { name: '비교 모두 해제' })).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: '비교 해제' })).toHaveLength(2)
     expect(container.innerHTML).not.toContain('BT-')
   })
   it('같은 이름의 대상이 둘이면 번호를 붙여 갈라 적는다', async () => {

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { BacktestRequestError } from '@/api/backtest'
 import { ResultError } from '@/api/result'
-import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
+import { CompareTargetChip } from '@/components/result/CompareTargetChip'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
 import { defaultValuesOf } from '@/hooks/useStrategySettings'
 import {
@@ -81,7 +81,7 @@ function Harness() {
         <p>비교 곡선 사용 가능 {compare.compatibleTargets.length}</p>
       ) : null}
       {compare.targets.map((item) => (
-        <CompareTargetSlot
+        <CompareTargetChip
           key={item.key}
           state={item}
           name={item.detail?.strategyName ?? item.choice?.strategy.name ?? '대상'}

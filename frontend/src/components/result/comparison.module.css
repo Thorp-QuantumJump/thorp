@@ -88,9 +88,82 @@
   line-height: 1.4;
 }
 
-.slotName {
-  margin: 0 0 6px;
-  font-weight: 600;
+/* 비교 대상 칩. '비교 대상 고르기' 왼쪽에 늘어선다. 이름은 폭 상한에서 말줄임이다. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  height: 36px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: var(--thorp-surface);
+  color: var(--thorp-foreground);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.chip[data-state='FAILED'],
+.chip[data-state='EXECUTION_LIMIT'],
+.chip[data-state='EXPIRED'] {
+  border-color: var(--thorp-negative);
+}
+.chipBody {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 4px 0 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+button.chipBody {
+  cursor: pointer;
+}
+button.chipBody:hover .chipName {
+  text-decoration: underline;
+}
+.chipName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chipState {
+  flex: none;
+  color: var(--thorp-muted);
+  font-size: 0.75rem;
+}
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0 3px 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  cursor: pointer;
+}
+.chipRemove:hover {
+  background: var(--thorp-surface-muted);
+  color: var(--thorp-foreground);
+}
+.chipRemove:focus-visible,
+button.chipBody:focus-visible {
+  outline: 2px solid var(--thorp-neutral);
+  outline-offset: 1px;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .pickerNote {
   margin: 0 0 12px;
