@@ -13,7 +13,7 @@ import {
   resultWeights,
 } from '@/test/resultFixtures'
 import type { PublicResultDetail, ResultWeights } from '@/types/result'
-import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget, NOT_PROVIDED } from './DetailPanel'
+import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget } from './DetailPanel'
 
 /** 005 T070. FR-007~FR-009·FR-022, SC-001·SC-006. */
 
@@ -106,17 +106,45 @@ describe('DetailPanel', () => {
     }
   })
 
-  it('004가 아직 내보내지 않는 세 항목은 제공되지 않음이며 추정 기간·산정법 자리가 있다', async () => {
+  it('상관관계·위험 기여·손실 기여를 004가 준 값으로 보이고 추정 기간·산정법이 있다', async () => {
     const { panel } = renderPanel()
+    await screen.findByText('HALT_DEFERRED')
+
+    const correlation = within(panel).getByRole('heading', { name: '상관관계' }).closest('section') as HTMLElement
+    expect(within(correlation).getAllByText('-0.19')).toHaveLength(2)
+    expect(within(correlation).getAllByText('1.00')).toHaveLength(3)
+
+    const risk = within(panel).getByRole('heading', { name: '위험 기여' }).closest('section') as HTMLElement
+    expect(within(risk).getByText('7.95%')).not.toBeNull()
+    expect(within(risk).getByText('추정 기간')).not.toBeNull()
+    expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()
+    expect(within(risk).getByText('공분산 산정법')).not.toBeNull()
+    expect(within(risk).getByText('sample-covariance-daily')).not.toBeNull()
+
+    const loss = within(panel).getByRole('heading', { name: '손실 기여' }).closest('section') as HTMLElement
+    expect(within(loss).getByText('125.00%')).not.toBeNull()
+    expect(within(loss).getByText('-25.00%')).not.toBeNull()
+  })
+
+  it('세 항목 중 004가 계산하지 못한 것은 계산 제한으로 보이고 0으로 채우지 않는다', async () => {
+    const summary = resultDetailCompleted.summary as NonNullable<PublicResultDetail['summary']>
+    const analytics = summary.analytics as NonNullable<typeof summary.analytics>
+    const limited: PublicResultDetail = {
+      ...resultDetailCompleted,
+      summary: {
+        ...summary,
+        analytics: { ...analytics, correlationMatrix: null, riskContribution: null, lossContribution: null },
+      },
+    }
+    const { panel } = renderPanel(limited)
     await screen.findByText('HALT_DEFERRED')
 
     for (const title of ['상관관계', '위험 기여', '손실 기여']) {
       const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement
-      expect(within(section).getAllByText(NOT_PROVIDED).length, title).toBeGreaterThan(0)
+      expect(within(section).getByText(new RegExp(`^${CALCULATION_LIMITED}`)), title).not.toBeNull()
+      expect(within(section).queryByText('0.00%'), title).toBeNull()
+      expect(within(section).queryByRole('table'), title).toBeNull()
     }
-    const risk = within(panel).getByRole('heading', { name: '위험 기여' }).closest('section') as HTMLElement
-    expect(within(risk).getByText('추정 기간')).not.toBeNull()
-    expect(within(risk).getByText('공분산 산정법')).not.toBeNull()
   })
 
   it('회복 기간·회전율을 004가 준 값으로 보인다', async () => {
@@ -197,7 +225,7 @@ describe('DetailPanel', () => {
       ...resultDetailCompleted,
       summary: resultDetailCompleted.summary && {
         ...resultDetailCompleted.summary,
-        analytics: { recoveryDays: null, turnover: '1.219991' },
+        analytics: { ...resultDetailCompleted.summary.analytics!, recoveryDays: null },
       },
     }
     const { panel } = renderPanel(unrecovered)
