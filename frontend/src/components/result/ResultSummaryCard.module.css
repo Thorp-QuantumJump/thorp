@@ -1,8 +1,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 24px;
+  gap: 14px;
+  padding: 18px 20px;
   border: 1px solid var(--thorp-line);
   border-radius: 14px;
   background: var(--thorp-surface);
@@ -17,6 +17,12 @@
   white-space: nowrap;
 }
 
+.conditionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 /* 조건 한 줄은 한 묶음이다. 좁은 화면에서는 항목을 생략하지 않고 줄만 바꾼다(FR-003). */
 .condition {
   display: flex;
@@ -29,38 +35,44 @@
   overflow-wrap: anywhere;
 }
 
+/* 숫자 셋은 세로로 한 줄씩. 이름은 왼쪽, 값은 오른쪽 끝에 맞춘다. */
 .metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
 }
 
 .metric {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
   min-width: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.metric:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .metricLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--thorp-copy);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
 .metricValue {
   margin: 0;
   font-family: var(--thorp-font-mono);
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-}
-
-.metricDefinition {
-  margin: 0;
-  color: var(--thorp-muted);
-  font-size: 0.8rem;
-  line-height: 1.55;
 }
 
 .note {
@@ -73,9 +85,5 @@
 @media (max-width: 600px) {
   .card {
     padding: 16px;
-  }
-
-  .metrics {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
