@@ -46,15 +46,6 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
           label="MDD"
           value={formatRatio(summary.maxDrawdown)}
           definition={METRIC_DEFINITIONS.maxDrawdown}
-          supplement={
-            summary.analytics
-              ? summary.analytics.recoveryDays === null
-                ? '분석 기간 내 이전 고점 미회복'
-                : summary.analytics.recoveryDays > 0
-                  ? `이전 고점 회복까지 ${summary.analytics.recoveryDays}거래일`
-                  : undefined
-              : undefined
-          }
         />
         <Metric
           label="거래 수수료 등"
@@ -117,13 +108,11 @@ function Metric({
   label,
   value,
   definition,
-  supplement,
   helpSide = 'bottom',
 }: {
   label: string
   value: string
   definition: string
-  supplement?: string
   helpSide?: 'bottom' | 'right'
 }) {
   return (
@@ -132,7 +121,6 @@ function Metric({
         {label} <InlineHelp label={label} side={helpSide}>{definition}</InlineHelp>
       </dt>
       <dd className={styles.metricValue}>{value}</dd>
-      {supplement ? <dd className={styles.metricMeta}>{supplement}</dd> : null}
     </div>
   )
 }

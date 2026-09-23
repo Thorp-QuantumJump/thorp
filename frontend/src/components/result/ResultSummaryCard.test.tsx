@@ -43,7 +43,7 @@ describe('ResultSummaryCard', () => {
     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')
 
     expect(screen.queryByLabelText('분석 조건')).toBeNull()
-    expect(screen.getByText('이전 고점 회복까지 9거래일')).not.toBeNull()
+    expect(screen.queryByText('이전 고점 회복까지 9거래일')).toBeNull()
     expect(screen.queryByText(/종료일 시가평가 기준 수익률은 16\.67%/)).toBeNull()
   })
 

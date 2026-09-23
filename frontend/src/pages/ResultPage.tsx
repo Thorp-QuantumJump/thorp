@@ -104,6 +104,13 @@ function ResultView({
   const picker = useDisclosure(pickerId)
   const pickerButtonId = pickerId + '-trigger'
   const { summary } = detail
+  const recoveryDays = summary?.analytics?.recoveryDays
+  const recoverySentence =
+    recoveryDays === null
+      ? '분석 기간 내 이전 고점을 회복하지 못했습니다.'
+      : typeof recoveryDays === 'number' && recoveryDays > 0
+        ? `이전 고점 회복까지 ${recoveryDays}거래일이 걸렸습니다.`
+        : null
 
   const viewable = hasViewableResult(detail)
   // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.
@@ -153,6 +160,7 @@ function ResultView({
               : null,
             partial: detail.partial ? { completedThrough } : null,
           })}
+          {recoverySentence ? ` ${recoverySentence}` : null}
         </p>
       ) : null}
       <ResultValuationNote detail={detail} />

@@ -137,6 +137,8 @@ describe('ResultPage', () => {
       condition,
     )
     expect(screen.getByRole('region', { name: '결과 요약' }).contains(condition)).toBe(false)
+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByText(/이전 고점 회복까지 9거래일/)).not.toBeNull()
+    expect(within(screen.getByRole('region', { name: '결과 요약' })).queryByText(/이전 고점 회복까지 9거래일/)).toBeNull()
     expect(screen.getByText('16.67%')).not.toBeNull()
     expect(screen.getByText('자료 출처: 한국거래소 통계정보')).not.toBeNull()
 
