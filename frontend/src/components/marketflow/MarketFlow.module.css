@@ -173,6 +173,8 @@
   border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted);
 }
+/* 지표가 홀수면 마지막 칸이 혼자 남아 옆이 비므로 가로를 채운다. */
+:global(:root:not([data-design='classic'])) .indicator:last-child:nth-child(odd) { grid-column: 1 / -1; }
 :global(:root:not([data-design='classic'])) .indicatorHeading { align-items: flex-start; }
 :global(:root:not([data-design='classic'])) .observation { font-size: clamp(1.35rem, 1.9vw, 1.7rem); }
 :global(:root:not([data-design='classic'])) .chartBlock { margin-top: 12px; }
