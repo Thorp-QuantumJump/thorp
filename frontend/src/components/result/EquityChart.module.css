@@ -59,8 +59,8 @@
   border-radius: 14px;
   background: var(--thorp-surface);
 
-  /* 기본은 납작하게. 그래프 옆에 숫자 칸을 둔 결과 화면은 `--result-chart-aspect`로 세로를 키운다. */
-  aspect-ratio: var(--result-chart-aspect, 16 / 7);
+  /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */
+  aspect-ratio: 16 / 7;
 }
 
 /*

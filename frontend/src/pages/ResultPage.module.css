@@ -11,29 +11,12 @@
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
-/* 그래프(왼쪽)와 핵심 숫자·해석(오른쪽). 옆에 칸이 붙어 폭이 줄면 그래프 세로를 조금 키운다. */
-.hero {
-  --result-chart-aspect: 16 / 10;
-
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
-  gap: 20px;
-  align-items: start;
-}
-
-.heroSide {
+/* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */
+.summaryStack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
   min-width: 0;
-}
-
-@media (max-width: 800px) {
-  .hero {
-    --result-chart-aspect: 16 / 9;
-
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */

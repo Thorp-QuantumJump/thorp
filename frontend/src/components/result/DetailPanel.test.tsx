@@ -38,10 +38,19 @@ vi.mock('@/api/sectors', async (importOriginal) => {
 
 const targetToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
-/** 결과 분석 탭이 기본으로 열려 있다. */
+/** 요약 탭이 기본이라 결과 분석 탭을 골라 둔 상태로 돌려준다. */
 async function renderPanel(detail: PublicResultDetail = resultDetailCompleted, compare?: DetailCompareTarget) {
-  render(<ResultDetailTabs token={resultToken} detail={detail} lossWindow={null} compare={compare} />)
+  render(
+    <ResultDetailTabs
+      token={resultToken}
+      detail={detail}
+      summary={<p>요약 자리</p>}
+      lossWindow={null}
+      compare={compare}
+    />,
+  )
   const tablist = screen.getByRole('tablist', { name: '결과 보기' })
+  await openTab('결과 분석')
   return { panel: tablist.parentElement as HTMLElement }
 }
 
@@ -66,10 +75,23 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {
     sectorMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
-  it('결과 분석 탭이 기본으로 열려 예외 기록을 받고, 비중은 설정·근거를, 거래 내역은 전체 거래 내역을 고를 때 받는다', async () => {
+  it('요약 탭이 기본이고 상세 자료는 어느 탭도 고르기 전에는 받지 않는다', async () => {
+    render(
+      <ResultDetailTabs token={resultToken} detail={resultDetailCompleted} summary={<p>요약 자리</p>} lossWindow={null} />,
+    )
+
+    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tabpanel').textContent).toContain('요약 자리')
+    expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()
+    // 섹터 목록은 세 상세 탭이 같이 쓰므로 묶음이 한 번 받아 둔다.
+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
+  })
+
+  it('결과 분석 탭은 예외 기록을 받고, 비중은 설정·근거를, 거래 내역은 전체 거래 내역을 고를 때 받는다', async () => {
     await renderPanel()
     await screen.findByText('HALT_DEFERRED')
-    expect(screen.getByRole('tab', { name: '결과 분석' }).getAttribute('aria-selected')).toBe('true')
 
     expect(screen.getByRole('tab', { name: '결과 분석' }).getAttribute('aria-selected')).toBe('true')
     expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)
@@ -120,7 +142,7 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {
       expect(headings, item).toContain(item)
     }
     // 결과에서 나온 값은 결과 분석에, 넣은 조건은 설정·근거에, 거래는 제 탭에 있다.
-    const analysis = screen.getAllByRole('tabpanel', { hidden: true })[0]
+    const analysis = screen.getAllByRole('tabpanel', { hidden: true })[1]
     expect(within(analysis).queryByRole('heading', { name: '비용 가정', hidden: true })).toBeNull()
     expect(within(analysis).queryByRole('heading', { name: '전체 거래 내역', hidden: true })).toBeNull()
     expect(within(analysis).getByRole('heading', { name: '상관관계', hidden: true })).not.toBeNull()
