@@ -1,0 +1,47 @@
+{
+  "httpStatus": "OK",
+  "isSuccess": true,
+  "message": "요청이 성공적으로 처리되었습니다.",
+  "code": 200,
+  "result": {
+    "context": "CURRENT",
+    "state": "READY",
+    "sectorId": "semiconductor",
+    "from": null,
+    "to": null,
+    "lastUpdatedAt": "2026-09-10T06:15:00Z",
+    "stale": false,
+    "statusMessage": null,
+    "digests": [
+      {
+        "digestId": "2356p2tnowwutogqkjlretuvevwid7lg",
+        "representativeTitle": "반도체 수출 관련 지표가 발표됐다",
+        "factualSummary": "등록 매체들이 반도체 수출 관련 지표 발표를 보도했습니다.",
+        "firstPublishedAt": "2026-09-10T04:00:00Z",
+        "publicationTimeStatus": "VERIFIED",
+        "publisherCount": 2,
+        "sectors": ["semiconductor"],
+        "topics": ["trade"],
+        "importanceRuleVersion": "news-importance-v1",
+        "articles": [
+          {
+            "articleId": "jzxp4sxkitcyjow6mtiywps42u3kr6co",
+            "title": "반도체 수출 관련 지표가 발표됐다",
+            "publisher": "허가 매체 A",
+            "publishedAt": "2026-09-10T04:00:00Z",
+            "publicationTimeStatus": "VERIFIED",
+            "originalUrl": "https://news.example.com/economy/1001"
+          },
+          {
+            "articleId": "2pkcdwrcoebpa2igzaxldxloi5qooglf",
+            "title": "반도체 수출 지표 발표",
+            "publisher": "허가 매체 B",
+            "publishedAt": "2026-09-10T04:20:00Z",
+            "publicationTimeStatus": "VERIFIED",
+            "originalUrl": "https://press.example.org/markets/2002"
+          }
+        ]
+      }
+    ]
+  }
+}

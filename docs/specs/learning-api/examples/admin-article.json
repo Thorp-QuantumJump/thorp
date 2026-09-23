@@ -1,0 +1,26 @@
+{
+  "articleId": "returns-and-losses",
+  "status": "PUBLISHED",
+  "draftVersion": 5,
+  "draft": {
+    "title": "수익과 손실",
+    "question": "가장 크게 줄었던 폭은 왜 시작 금액 대비 손실과 다른가?",
+    "readingOrder": 8,
+    "blocks": [
+      { "type": "paragraph", "text": "계약 형식을 보이는 합성 문단이다. 원고가 아니다." },
+      { "type": "term", "termId": "max-drawdown" },
+      { "type": "hypothetical", "text": "100만 원으로 시작해 120만 원까지 오른 뒤 90만 원으로 내려갔다면 고점 대비 25% 줄어든 것이다." }
+    ],
+    "example": {
+      "sectors": [
+        { "code": "SEMICONDUCTOR", "weightTenths": 500 },
+        { "code": "BATTERY", "weightTenths": 500 }
+      ]
+    },
+    "sources": [],
+    "terms": [
+      { "termId": "max-drawdown", "label": "가장 크게 줄었던 폭", "sentence": "계약 형식을 보이는 합성 용어 문장이다." }
+    ]
+  },
+  "publishedRevisionNo": 3
+}

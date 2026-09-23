@@ -1,0 +1,310 @@
+[
+  {
+    "instrument_id": "091160.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "416",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "091160.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "115",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2024-09-27",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2024-10-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2024-10-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2024-11-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2024-11-28",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2024-12-03"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2024-12-27",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-01-03"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-01-24",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-02-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-02-27",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-03-05"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-03-28",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-04-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-05-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "30",
+    "pay_date": "2025-06-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-06-27",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-07-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-08-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-08-28",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-09-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-09-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-10-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-10-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-11-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-11-27",
+    "event_type": "DISTRIBUTION",
+    "amount": "42",
+    "pay_date": "2025-12-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2025-12-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "45",
+    "pay_date": "2026-01-05"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-01-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "45",
+    "pay_date": "2026-02-03"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-02-26",
+    "event_type": "DISTRIBUTION",
+    "amount": "50",
+    "pay_date": "2026-03-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-03-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "52",
+    "pay_date": "2026-04-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "59",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-05-28",
+    "event_type": "DISTRIBUTION",
+    "amount": "58",
+    "pay_date": "2026-06-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-06-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "55",
+    "pay_date": "2026-07-02"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "60",
+    "pay_date": "2026-08-04"
+  },
+  {
+    "instrument_id": "091170.XKRX",
+    "ex_date": "2026-08-28",
+    "event_type": "DISTRIBUTION",
+    "amount": "59",
+    "pay_date": "2026-09-02"
+  },
+  {
+    "instrument_id": "091180.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "584",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "091180.XKRX",
+    "ex_date": "2026-01-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "66",
+    "pay_date": "2026-02-03"
+  },
+  {
+    "instrument_id": "091180.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "496",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "091180.XKRX",
+    "ex_date": "2026-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "151",
+    "pay_date": "2026-08-04"
+  },
+  {
+    "instrument_id": "102970.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "372",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "102970.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "340",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "102970.XKRX",
+    "ex_date": "2026-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "149",
+    "pay_date": "2026-08-04"
+  },
+  {
+    "instrument_id": "117700.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "59",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "117700.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "15",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "117700.XKRX",
+    "ex_date": "2026-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "19",
+    "pay_date": "2026-08-04"
+  },
+  {
+    "instrument_id": "139230.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "50",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "139230.XKRX",
+    "ex_date": "2025-10-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "25",
+    "pay_date": "2025-11-04"
+  },
+  {
+    "instrument_id": "139230.XKRX",
+    "ex_date": "2026-07-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "88",
+    "pay_date": "2026-08-04"
+  },
+  {
+    "instrument_id": "228790.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "10",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "228790.XKRX",
+    "ex_date": "2025-10-30",
+    "event_type": "DISTRIBUTION",
+    "amount": "9",
+    "pay_date": "2025-11-04"
+  },
+  {
+    "instrument_id": "228790.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "20",
+    "pay_date": "2026-05-06"
+  },
+  {
+    "instrument_id": "305720.XKRX",
+    "ex_date": "2025-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "80",
+    "pay_date": "2025-05-07"
+  },
+  {
+    "instrument_id": "305720.XKRX",
+    "ex_date": "2026-04-29",
+    "event_type": "DISTRIBUTION",
+    "amount": "18",
+    "pay_date": "2026-05-06"
+  }
+]

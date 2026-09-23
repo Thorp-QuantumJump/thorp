@@ -1,0 +1,577 @@
+package com.ssafy.thorp.backtest.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
+import com.ssafy.thorp.backtest.application.event.BacktestFinished;
+import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;
+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.CancelReason;
+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
+import com.ssafy.thorp.backtest.domain.model.ProgressStage;
+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;
+import com.ssafy.thorp.backtest.domain.model.RunPlan;
+import com.ssafy.thorp.backtest.domain.model.RunState;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
+import com.ssafy.thorp.backtest.domain.vo.BacktestId;
+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
+/** 상태에 따른 적용·무시 판단을 고정한다. 픽스처의 backtestId는 {@code BT-20260907-000001}이다. */
+@ExtendWith(MockitoExtension.class)
+class BacktestEventServiceTest {
+
+    private static final String BACKTEST_ID = "BT-20260907-000001";
+    private static final Instant NOW = Instant.parse("2026-09-11T05:00:00Z");
+
+    @Mock private BacktestRunRepository jobRepository;
+    @Mock private BacktestResultRepository resultRepository;
+    @Mock private ApplicationEventPublisher events;
+    @Mock private ExecutionMetricRecorder metrics;
+    @Mock private BacktestProgressStream progressStream;
+
+    private final Clock clock = Clock.fixed(Instant.parse("2026-09-11T05:00:00Z"), ZoneOffset.UTC);
+    private BacktestEventService service;
+
+    @BeforeEach
+    void createService() {
+        service =
+                new BacktestEventService(
+                        jobRepository, resultRepository, metrics, events, progressStream, clock);
+    }
+
+    private static BacktestRun jobIn(RunStatus status) {
+        return BacktestRun.restore(
+                1L,
+                BacktestId.from(BACKTEST_ID),
+                "MA_CROSSOVER",
+                "1.0.0",
+                Map.of(),
+                List.of(new InstrumentId("005930.XKRX")),
+                new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                new BigDecimal("10000000.00"),
+                PositionSizingMode.STRATEGY_DEFINED,
+                null,
+                null,
+                42,
+                status);
+    }
+
+    private void givenJob(RunStatus status) {
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(jobIn(status)));
+    }
+
+    /** 마지막 STARTED 의 executionId 를 지정한 실행. 픽스처 이벤트의 executionId 와 일부러 다르게 둔다. */
+    private void givenJob(RunStatus status, String currentExecutionId) {
+        BacktestRun job =
+                BacktestRun.restore(
+                        1L,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of(),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        new RunState(status, 1, currentExecutionId, false, null, null, null));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
+    }
+
+    private void givenUnknownJob() {
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());
+    }
+
+    private BacktestRun updatedJob() {
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    @DisplayName("STARTED: QUEUED Job을 RUNNING으로 갱신한다")
+    void startedMovesQueuedToRunning() {
+        givenJob(RunStatus.QUEUED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.RUNNING);
+    }
+
+    @Test
+    @DisplayName("STARTED: 어느 큐에서 어느 워커가 집었는지를 전용 UPDATE 로 남긴다 — 측정 기록이 복사한다(R-20, T012)")
+    void startedRecordsWorkerInfo() {
+        givenJob(RunStatus.QUEUED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(jobRepository).recordWorkerInfo(1L, "backtest.jobs", "single");
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"COMPLETED", "FAILED", "CANCELLED"})
+    @DisplayName("STARTED: 이미 끝난 실행이면 갱신하지 않는다(늦은 이벤트)")
+    void lateStartedIsIgnored(RunStatus status) {
+        givenJob(status);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("STARTED: RUNNING 중 다른 실행이 시작하면 상태는 그대로 두고 시도만 올린다 (R-06 자동 재시도)")
+    void startedFromAnotherExecutionBumpsAttempt() {
+        givenJob(RunStatus.RUNNING, "exec-previous");
+
+        service.handleStarted(MessageFixtures.started());
+
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.RUNNING);
+        assertThat(updated.getAttempt()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("FINISHED(COMPLETED): 결과를 저장하고 Job을 COMPLETED로 갱신한다")
+    void finishedCompletedSavesResultAndCompletes() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        service.handleFinished(event);
+
+        ArgumentCaptor<SaveBacktestResultCommand> captor =
+                ArgumentCaptor.forClass(SaveBacktestResultCommand.class);
+        verify(resultRepository).save(captor.capture());
+        SaveBacktestResultCommand command = captor.getValue();
+        assertThat(command.runId()).isEqualTo(1L);
+        assertThat(command.executionId()).isEqualTo(event.executionId());
+        assertThat(command.eventId()).isEqualTo(event.eventId());
+        assertThat(command.engineOutput()).isSameAs(event.payload().engineOutput());
+        assertThat(command.benchmark()).isNull(); // v2 FINISHED에는 벤치마크가 없다
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("FINISHED: 끝난 실행을 BacktestFinished로 알린다 — 007이 큐를 다시 소비하지 않는 이유다")
+    void finishedPublishesDomainEvent() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();
+
+        service.handleFinished(event);
+
+        ArgumentCaptor<BacktestFinished> captor = ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(captor.capture());
+        BacktestFinished published = captor.getValue();
+        assertThat(published.backtestJobId()).isEqualTo(1L);
+        assertThat(published.backtestId()).isEqualTo(BACKTEST_ID);
+        assertThat(published.status()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(published.errorCode()).isNull();
+    }
+
+    @Test
+    @DisplayName("FINISHED(FAILED): 실패 사유 코드를 이벤트에 담는다")
+    void finishedFailedPublishesErrorCode() {
+        givenJob(RunStatus.RUNNING);
+
+        service.handleFinished(MessageFixtures.finishedFailed());
+
+        ArgumentCaptor<BacktestFinished> captor = ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(RunStatus.FAILED);
+        assertThat(captor.getValue().errorCode()).isEqualTo("DATA_INSUFFICIENT");
+    }
+
+    @Test
+    @DisplayName("늦게 온 FINISHED는 아무것도 알리지 않는다 — 끝난 실행을 두 번 알리면 후보가 두 번 갱신된다")
+    void lateFinishedPublishesNothing() {
+        givenJob(RunStatus.COMPLETED);
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 부분 결과를 저장하고 실행을 CANCELLED·partial 로 끝내며 워커가 멈춘 거래일을 진행에 남긴다")
+    void finishedCancelledStoresPartialResult() {
+        givenJob(RunStatus.RUNNING);
+
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        verify(resultRepository).save(any());
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(updated.isPartial()).isTrue();
+        assertThat(updated.getProgress().lastTradingDate())
+                .isEqualTo(LocalDate.parse("2025-03-25"));
+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 실행 시간 상한으로 보낸 취소의 응답이면 실패 사유를 남긴다")
+    void cancelledByExecutionLimitCarriesTheFailureCode() {
+        // 사용자가 스스로 멈춘 것과 서버가 끊은 것은 다르다. 계약이 후자에 failure.code 를 정해 두었고,
+        // 자동 탐색은 이 값으로 "중간까지만 계산한 후보"를 정상 완료와 가른다(R-19).
+        BacktestRun cancelPending =
+                jobIn(RunStatus.RUNNING)
+                        .withLifecycle(
+                                RunLifecycle.queuedAt(NOW.minusSeconds(3600))
+                                        .cancelRequested(
+                                                NOW.minusSeconds(60),
+                                                CancelReason.EXECUTION_LIMIT));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(updated.isPartial()).isTrue();
+        assertThat(updated.getFailureCode()).isEqualTo("EXECUTION_LIMIT");
+
+        // 실행 행에만 남기면 부족하다. 알림에 사유가 실리지 않으면 자동 탐색이 이 후보를 정상 완료로
+        // 집계해 선정 대상에 넣는다 — 끝까지 계산되지 않은 성과가 "최적"으로 뽑힌다(R-19).
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().status()).isEqualTo(RunStatus.CANCELLED);
+        assertThat(published.getValue().errorCode()).isEqualTo("EXECUTION_LIMIT");
+    }
+
+    @Test
+    @DisplayName("FINISHED(CANCELLED): 사용자 취소의 응답에는 실패 사유를 남기지 않는다 — 스스로 멈춘 것은 실패가 아니다")
+    void cancelledByUserHasNoFailureCode() {
+        BacktestRun cancelPending =
+                jobIn(RunStatus.RUNNING)
+                        .withLifecycle(
+                                RunLifecycle.queuedAt(NOW.minusSeconds(3600))
+                                        .cancelRequested(NOW.minusSeconds(60), CancelReason.USER));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleFinished(MessageFixtures.finishedCancelled());
+
+        assertThat(updatedJob().getFailureCode()).isNull();
+
+        ArgumentCaptor<BacktestFinished> published =
+                ArgumentCaptor.forClass(BacktestFinished.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().errorCode()).isNull();
+    }
+
+    @Test
+    @DisplayName("STARTED: 대기 중 취소돼 이미 CANCELLED 인 실행이 시작하면 CANCEL 을 다시 보낸다 — 워커는 첫 거래일 뒤 멈춘다")
+    void startedOnCancelledRunRepublishesCancel() {
+        givenJob(RunStatus.CANCELLED);
+
+        service.handleStarted(MessageFixtures.started());
+
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("STARTED: 취소를 보낸 RUNNING 실행이 다시 시작하면(재전달) CANCEL 을 다시 보낸다")
+    void startedOnCancelPendingRunResendsCancel() {
+        // 워커는 실행이 끝날 때 레지스트리의 취소 표시를 지운다. 재전달된 실행에 다시 보내지 않으면
+        // 취소한 실행이 끝까지 계산돼 COMPLETED 가 된다.
+        BacktestRun cancelPending =
+                BacktestRun.restore(
+                        1L,
+                        BacktestId.from(BACKTEST_ID),
+                        "MA_CROSSOVER",
+                        "1.0.0",
+                        Map.of(),
+                        List.of(new InstrumentId("005930.XKRX")),
+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),
+                        new BigDecimal("10000000.00"),
+                        PositionSizingMode.STRATEGY_DEFINED,
+                        null,
+                        null,
+                        42,
+                        new RunState(
+                                RunStatus.RUNNING,
+                                1,
+                                "previous-execution",
+                                false,
+                                null,
+                                null,
+                                null),
+                        RunPlan.empty(),
+                        RunLifecycle.queuedAt(Instant.parse("2026-09-11T04:00:00Z"))
+                                .cancelRequested(
+                                        Instant.parse("2026-09-11T04:30:00Z"), CancelReason.USER));
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(cancelPending));
+
+        service.handleStarted(MessageFixtures.started());
+
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.RUNNING);
+        verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));
+    }
+
+    /** 발행 시도·DLQ 횟수를 지정한 실행. 종결 판정은 이 둘의 비교다(R-18 ③). */
+    private BacktestRun givenDeadLetterCounts(RunStatus status, int publishCount, int dlqCount) {
+        RunLifecycle lifecycle =
+                new RunLifecycle(
+                        Instant.parse("2026-09-11T04:00:00Z"),
+                        null,
+                        null,
+                        null,
+                        publishCount,
+                        dlqCount,
+                        null,
+                        null,
+                        null);
+        BacktestRun job = jobIn(status).withLifecycle(lifecycle);
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));
+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(true);
+        return job;
+    }
+
+    @Test
+    @DisplayName("DLQ: 발행한 메시지가 모두 죽었으면 실행을 FAILED(SYSTEM_FAILURE)로 끝낸다")
+    void deadLetterFinishesTheRunWhenEveryMessageDied() {
+        givenDeadLetterCounts(RunStatus.RUNNING, 1, 1);
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
+        BacktestRun updated = updatedJob();
+        assertThat(updated.getStatus()).isEqualTo(RunStatus.FAILED);
+        assertThat(updated.getFailureCode()).isEqualTo("SYSTEM_FAILURE");
+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());
+        // 결과 행은 만들지 않는다 — 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다.
+        verifyNoInteractions(resultRepository);
+    }
+
+    @Test
+    @DisplayName("DLQ: 아직 살아 있는 메시지가 있으면 세기만 하고 실행을 끊지 않는다 — 중복 실행의 한쪽만 죽은 경우다")
+    void deadLetterOnlyCountsWhileAnotherMessageMayRun() {
+        givenDeadLetterCounts(RunStatus.RUNNING, 2, 1);
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
+        verify(jobRepository, never()).update(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 이미 끝난 실행이면 세기만 하고 상태를 건드리지 않는다")
+    void deadLetterOnAFinishedRunChangesNothing() {
+        givenDeadLetterCounts(RunStatus.COMPLETED, 1, 1);
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 이미 센 시도의 재전달이면 아무것도 하지 않는다 — 두 번 세면 살아 있는 실행을 끊는다")
+    void deadLetterIgnoresAnAlreadyCountedAttempt() {
+        // 셈이 이미 끝난 시도라 저장소가 false 를 준다. 그 뒤로는 아무것도 읽지도 쓰지도 않는다.
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))
+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING)));
+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(false);
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository, never()).findById(any());
+        verify(jobRepository, never()).update(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("DLQ: 모르는 runId 는 로그만 남기고 버린다")
+    void deadLetterForAnUnknownRunIsDropped() {
+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());
+
+        service.handleDeadLetter(BACKTEST_ID, 1);
+
+        verify(jobRepository, never()).recordDeadLetter(any(), anyInt(), any());
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("FINISHED(FAILED): 결과(오류 포함)를 저장하고 Job을 FAILED로 갱신한다")
+    void finishedFailedSavesResultAndFails() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedFailed();
+
+        service.handleFinished(event);
+
+        ArgumentCaptor<SaveBacktestResultCommand> captor =
+                ArgumentCaptor.forClass(SaveBacktestResultCommand.class);
+        verify(resultRepository).save(captor.capture());
+        assertThat(captor.getValue().engineOutput().run().error().code())
+                .isEqualTo("DATA_INSUFFICIENT");
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.FAILED);
+    }
+
+    @Test
+    @DisplayName("FINISHED: STARTED가 유실돼 QUEUED인 Job도 저장하고 최종화한다")
+    void finishedOnQueuedJobIsApplied() {
+        givenJob(RunStatus.QUEUED);
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        verify(resultRepository).save(any());
+        assertThat(updatedJob().getStatus()).isEqualTo(RunStatus.COMPLETED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"COMPLETED", "FAILED"})
+    @DisplayName("FINISHED: 이미 최종 상태면 저장도 갱신도 하지 않는다(멱등·첫 결과 채택)")
+    void finishedOnFinalJobIsIgnored(RunStatus status) {
+        givenJob(status);
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        verifyNoInteractions(resultRepository);
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("모르는 backtestId의 이벤트는 아무것도 하지 않는다(버림)")
+    void unknownBacktestIdIsDropped() {
+        givenUnknownJob();
+
+        service.handleStarted(MessageFixtures.started());
+        service.handleFinished(MessageFixtures.finishedCompleted());
+        service.handleProgress(MessageFixtures.progress());
+
+        verify(jobRepository, never()).update(any());
+        verifyNoInteractions(resultRepository);
+    }
+
+    @Test
+    @DisplayName("PROGRESS: RUNNING 실행의 진행은 실행 행에 저장한다 (R-05)")
+    void progressOnRunningJobIsPersisted() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<ProgressPayload> event = MessageFixtures.progress();
+
+        service.handleProgress(event);
+
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getProgress().stage()).isEqualTo(ProgressStage.COMPUTING);
+        assertThat(captor.getValue().getProgress().lastTradingDate())
+                .isEqualTo(event.payload().lastTradingDate());
+        assertThat(captor.getValue().getProgress().completedTradingDays())
+                .isEqualTo(event.payload().completedTradingDays());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"QUEUED", "COMPLETED", "FAILED"})
+    @DisplayName("PROGRESS: RUNNING이 아닌 실행의 진행은 저장하지 않는다")
+    void progressOnNonRunningJobIsIgnored(RunStatus status) {
+        givenJob(status);
+
+        service.handleProgress(MessageFixtures.progress());
+
+        verify(jobRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("PROGRESS: 시계열은 저장하지 않고 진행 스트림으로만 흘린다 (R-05)")
+    void progressSeriesGoesToStreamOnly() {
+        givenJob(RunStatus.RUNNING);
+        BacktestEvent<ProgressPayload> event = MessageFixtures.progress();
+
+        service.handleProgress(event);
+
+        verify(progressStream).publish(1L, event.payload());
+        // 실행 행에 남는 것은 단계·마지막 거래일·거래일 수뿐이다. 시계열을 담을 칸이 없다.
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getProgress().totalTradingDays())
+                .isEqualTo(event.payload().totalTradingDays());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"QUEUED", "COMPLETED", "FAILED"})
+    @DisplayName("PROGRESS: RUNNING이 아닌 실행의 진행은 흘리지도 않는다")
+    void progressOnNonRunningJobIsNotStreamed(RunStatus status) {
+        givenJob(status);
+
+        service.handleProgress(MessageFixtures.progress());
+
+        verifyNoInteractions(progressStream);
+    }
+
+    // --- R-18 중복 실행 종결 규칙 -------------------------------------------
+
+    @Test
+    @DisplayName("다른 실행의 FAILED는 무시하고 RUNNING을 유지한다 — 뒤에 올 정상 결과를 덮지 않는다")
+    void failedFromSupersededExecutionIsIgnored() {
+        givenJob(RunStatus.RUNNING, "exec-current");
+
+        service.handleFinished(MessageFixtures.finishedFailed());
+
+        verify(jobRepository, never()).update(any());
+        verifyNoInteractions(resultRepository);
+    }
+
+    @Test
+    @DisplayName("COMPLETED는 어느 실행에서 와도 적용한다 — 입력이 같으므로 결과가 같다")
+    void completedFromAnyExecutionApplies() {
+        givenJob(RunStatus.RUNNING, "exec-current");
+
+        service.handleFinished(MessageFixtures.finishedCompleted());
+
+        ArgumentCaptor<BacktestRun> captor = ArgumentCaptor.forClass(BacktestRun.class);
+        verify(jobRepository).update(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(RunStatus.COMPLETED);
+        assertThat(captor.getValue().getLifecycle().finishedAt()).isEqualTo(clock.instant());
+    }
+}

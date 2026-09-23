@@ -1,0 +1,62 @@
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--thorp-negative);
+  border-radius: 14px;
+  background: var(--thorp-surface);
+}
+
+.result h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 10px;
+  background: var(--thorp-surface-raised);
+}
+
+.check {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--thorp-copy);
+}
+
+.location {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.matched {
+  font-size: 0.85rem;
+  color: var(--thorp-negative);
+}
+
+.message {
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.version {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+}

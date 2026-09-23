@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "eventId": "EVT-RL-000001",
+  "linkId": "RL-20260918-000101",
+  "attempt": 1,
+  "type": "STARTED",
+  "occurredAt": "2026-09-18T02:00:00Z",
+  "payload": {
+    "startedAt": "2026-09-18T02:00:00Z",
+    "resource": {
+      "pid": 4242,
+      "hostname": "regime-link-1"
+    }
+  }
+}

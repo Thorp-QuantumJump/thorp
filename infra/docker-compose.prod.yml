@@ -1,0 +1,277 @@
+# 운영(EC2) 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.
+name: thorp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: thorp-postgres
+    restart: unless-stopped
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c work_mem=32MB
+      -c maintenance_work_mem=512MB
+      -c max_connections=100
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      # 외부 비공개. 접근은 SSH 터널로만.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "1.5"
+    networks: [backend]
+
+  # Job 전달은 RabbitMQ가 담당한다. Kafka는 설치만 해둔 상태라 기본 기동에서 제외한다.
+  # 필요할 때만: docker compose ... --profile kafka up -d kafka
+  kafka:
+    profiles: ["kafka"]
+    image: apache/kafka:3.9.1
+    container_name: thorp-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_HEAP_OPTS: "-Xmx1024m -Xms1024m"
+      TZ: Asia/Seoul
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "0.5"
+    networks: [backend]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: thorp-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      # AMQP(5672)는 호스트에 열지 않는다. 관리 UI만 SSH 터널로 접근.
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+    networks: [backend]
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../infra/docker/backend.Dockerfile
+    image: thorp-backend:latest
+    container_name: thorp-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      BACKTEST_JOB_QUEUE: ${BACKTEST_JOB_QUEUE}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      KRX_API_KEY: ${KRX_API_KEY}
+      ECOS_API_KEY: ${ECOS_API_KEY}
+      KOSIS_API_KEY: ${KOSIS_API_KEY}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
+      # 백테스트 실행 한도(spec 004 T014·T015, FR-006). application-prod.yml 이 ${THORP_LIMIT_*} 를 기본값 없이
+      # 참조하므로 여기서 넘겨야 기동한다. :- 기본값을 두지 않는다 — 설정 누락으로 "무제한 실행 금지"를 우회하지
+      # 않게 하려는 것이라, 비어 있으면 기동 실패가 맞다. 두 대기 한도는 단건 큐(backtest.jobs)만 센다(R-20).
+      THORP_LIMIT_MAX_QUEUED_PER_USER: ${THORP_LIMIT_MAX_QUEUED_PER_USER}
+      THORP_LIMIT_MAX_QUEUED_TOTAL: ${THORP_LIMIT_MAX_QUEUED_TOTAL}
+      THORP_LIMIT_MAX_QUEUED_ANONYMOUS: ${THORP_LIMIT_MAX_QUEUED_ANONYMOUS}
+      THORP_LIMIT_MAX_RUN_SECONDS: ${THORP_LIMIT_MAX_RUN_SECONDS}
+      THORP_LIMIT_STALE_RUN_SECONDS: ${THORP_LIMIT_STALE_RUN_SECONDS}
+      THORP_LIMIT_CANCEL_GRACE_SECONDS: ${THORP_LIMIT_CANCEL_GRACE_SECONDS}
+      THORP_LIMIT_PROVISIONAL: ${THORP_LIMIT_PROVISIONAL}
+      # 결과 공개 열람(spec 005 T004). application-prod.yml 이 기본값 없이 참조하므로 여기서 넘겨야 기동한다.
+      THORP_RESULT_PUBLIC_TOKEN_TTL: ${THORP_RESULT_PUBLIC_TOKEN_TTL}
+      THORP_RESULT_EXPIRY_SWEEP_INTERVAL: ${THORP_RESULT_EXPIRY_SWEEP_INTERVAL}
+      THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}
+      THORP_RESULT_TOMBSTONE_RETENTION: ${THORP_RESULT_TOMBSTONE_RETENTION}
+      THORP_RESULT_TRADES_PAGE_SIZE: ${THORP_RESULT_TRADES_PAGE_SIZE}
+      THORP_RESULT_PROGRESS_STREAM_TIMEOUT: ${THORP_RESULT_PROGRESS_STREAM_TIMEOUT}
+      # 전략-경제환경 연결(spec 011). application-prod.yml 이 기본값 없이 참조하므로 여기서 넘겨야 기동한다.
+      THORP_REGIMELINK_PENDING_RUN_SWEEP_INTERVAL: ${THORP_REGIMELINK_PENDING_RUN_SWEEP_INTERVAL}
+      THORP_REGIMELINK_JOB_MAX_ROWS: ${THORP_REGIMELINK_JOB_MAX_ROWS}
+      THORP_REGIMELINK_JOB_MAX_INSTRUMENTS: ${THORP_REGIMELINK_JOB_MAX_INSTRUMENTS}
+      # 배우기 관리 계정 허용 목록(spec 013). application-prod.yml 이 기본값 없이 참조한다. 쉼표로 구분한 사용자 ID이고
+      # 빈 값으로 적으면 관리자가 없다(관리 경로가 모두 404). ${VAR} 로만 두면 compose 가 없는 변수를 경고만 남기고 빈 문자열로
+      # 넘겨 설정 누락이 "관리자 없음"과 구분되지 않는다 — ? 로 두어 .env.prod 에 변수가 없으면 compose 명령이 멈추게 한다.
+      THORP_LEARNING_ADMIN_USER_IDS: ${THORP_LEARNING_ADMIN_USER_IDS?.env.prod 에 THORP_LEARNING_ADMIN_USER_IDS 를 넣으세요. 빈 값이면 관리자 없음}
+      # 운영자 경로(/internal/execution-metrics)의 토큰(spec 004 T012). 비우면 그 경로는 404 다 — 기동은 된다.
+      THORP_OPS_TOKEN: ${THORP_OPS_TOKEN:-}
+      # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.
+      # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라
+      # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.
+      MARKET_CACHE_TTL: ${MARKET_CACHE_TTL:-6h}
+      MARKET_CACHE_MAX_AGE: ${MARKET_CACHE_MAX_AGE:-24h}
+      MARKET_FAILURE_COOLDOWN: ${MARKET_FAILURE_COOLDOWN:-30s}
+      MARKET_REQUEST_BUDGET: ${MARKET_REQUEST_BUDGET:-8s}
+      KRX_VOLATILITY_INDEX_NAME: ${KRX_VOLATILITY_INDEX_NAME:-코스피 200 변동성지수}
+      # ECOS 통계표·항목은 기관이 코드를 바꿀 때만 .env.prod에서 재정의한다.
+      ECOS_M2_TABLE: ${ECOS_M2_TABLE:-161Y006}
+      ECOS_M2_ITEM: ${ECOS_M2_ITEM:-BBHA00}
+      # 회원가입 인증 메일 발송 계정. application.yml이 기본값 없이 요구하므로
+      # 값이 없으면 메일 발송 빈을 만드는 단계에서 기동이 실패한다.
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      JAVA_TOOL_OPTIONS: "-Xmx1536m"
+      TZ: Asia/Seoul
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    networks: [backend, edge]
+
+  worker:
+    build:
+      context: ../worker
+      dockerfile: ../infra/docker/worker.Dockerfile
+    image: thorp-worker:latest
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      BACKTEST_JOB_QUEUE: ${BACKTEST_JOB_QUEUE}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # 시장 자료 읽기 전용 접속(spec 004 R-09). T004 공급자가 읽는다. 읽기 전용 role(MARKET_DATA_USER)은
+      # T003 마이그레이션이 만들며, 값이 없으면 일반 계정으로 내려간다.
+      MARKET_DATA_URL: postgresql://${MARKET_DATA_USER:-${POSTGRES_USER}}:${MARKET_DATA_PASSWORD:-${POSTGRES_PASSWORD}}@postgres:5432/${POSTGRES_DB}
+      PARQUET_DIR: /data/parquet
+      RAW_DIR: /data/raw
+      # Numba/OpenBLAS는 컨테이너 CPU 상한이 아니라 호스트 vCPU(4)를 보고 스레드를 띄운다.
+      # 아래를 안 걸면 Worker 2개 = 8스레드가 4코어에서 경쟁해 오히려 느려진다.
+      NUMBA_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      TZ: Asia/Seoul
+      # 워커 역할(spec 004 R-20). 이 서비스는 단건 큐(backtest.jobs)만 push 로 받는 단건 전용이다.
+      WORKER_ROLE: single
+    volumes:
+      - ${DATA_DIR}/parquet:/data/parquet
+      - ${DATA_DIR}/raw:/data/raw:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      # 단건 전용 워커 수. 자동 탐색 동시성은 아래 FLEX replica가 정한다.
+      replicas: ${WORKER_SINGLE_REPLICAS}
+      resources:
+        limits:
+          memory: 2500M
+          cpus: "1.0"
+    networks: [backend]
+
+  # 공용 워커: 벌크 큐(backtest.jobs.bulk)를 먼저 보고 비어 있으면 단건 큐를 집는다(pull, 1초 폴링).
+  # 이미지·환경·자원 제한은 worker 와 같고 역할만 다르다(spec 004 R-20).
+  worker-flex:
+    extends:
+      service: worker
+    environment:
+      WORKER_ROLE: flex
+    deploy:
+      # dispatch-window와 같은 수로 운영한다. 현재 서버 값은 1이며 prefetch도 1이다.
+      replicas: ${WORKER_FLEX_REPLICAS}
+      resources:
+        limits:
+          memory: 2500M
+          cpus: "1.0"
+    networks: [backend]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: thorp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      # templates/*.template 안에서 ${DOMAIN}만 치환한다.
+      # 이 필터가 없으면 $host, $uri 같은 nginx 변수까지 건드릴 위험이 있다.
+      NGINX_ENVSUBST_FILTER: "^DOMAIN$$"
+      TZ: Asia/Seoul
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    networks: [edge]
+
+volumes:
+  postgres-data:
+  kafka-data:
+  rabbitmq-data:
+
+networks:
+  # DB·브로커가 외부 노출 경로(edge)에 닿지 않도록 분리한다.
+  # 이름을 고정한다. 지정하지 않으면 <프로젝트명>_<키>로 생성되어,
+  # 프로젝트명이 바뀌면 Jenkinsfile의 --network 참조가 조용히 깨진다.
+  backend:
+    name: thorp-internal
+  edge:
+    name: thorp-edge

@@ -1,0 +1,32 @@
+{
+  "OutBlock_1": [
+    {
+      "BAS_DD": "20260908",
+      "IDX_CLSS": "KOSPI",
+      "IDX_NM": "코스피",
+      "CLSPRC_IDX": "6954.52",
+      "CMPPREVDD_IDX": "-40.87",
+      "FLUC_RT": "-0.58",
+      "OPNPRC_IDX": "7045.79",
+      "HGPRC_IDX": "7171.52",
+      "LWPRC_IDX": "6951.78",
+      "ACC_TRDVOL": "334951552",
+      "ACC_TRDVAL": "26187187273637",
+      "MKTCAP": "5735396964873766"
+    },
+    {
+      "BAS_DD": "20260908",
+      "IDX_CLSS": "KOSPI",
+      "IDX_NM": "코스피 200",
+      "CLSPRC_IDX": "1100.08",
+      "CMPPREVDD_IDX": "-5.11",
+      "FLUC_RT": "-0.46",
+      "OPNPRC_IDX": "1113.02",
+      "HGPRC_IDX": "1137.39",
+      "LWPRC_IDX": "1099.15",
+      "ACC_TRDVOL": "142739275",
+      "ACC_TRDVAL": "23549715484284",
+      "MKTCAP": "5333200387521620"
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+/* 목록형·입력형 설정 항목이 함께 쓰는 틀이다. 두 항목이 같은 자리에 같은 순서로 놓여야 읽는 흐름이 흔들리지 않는다. */
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+}
+
+/*
+  legend 를 상자 테두리에 걸치지 않고 상자 안에 둔다.
+
+  브라우저는 fieldset 의 첫 legend 를 "rendered legend"로 삼아 위쪽 테두리를 끊고 그 틈에 그린다. float 이
+  none 이 아니면 그 대상에서 빠져 평범한 상자가 된다(HTML 표준). 그래서 legend 를 쓰는 항목(기간·최소 평가
+  기간·목록형 축)만 글씨가 테두리에 걸쳐 있고, div 로 묶은 항목(운용 방식·비용 가정)은 안에 들어가 두 모양이
+  섞여 보였다. 묶음의 뜻(fieldset/legend)은 그대로 두고 그리는 자리만 맞춘다.
+*/
+.header {
+  float: left;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 0;
+}
+
+/* 제목과 물음표 한 덩이. 사이 간격은 물음표가 가진 여백 하나로 정해진다. */
+.labelGroup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+/* 이름·단위·물음표가 한 줄에서 가운데를 맞춘다. 맞추지 않으면 물음표만 글자 아래로 처진다. */
+.label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--thorp-foreground);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.unit {
+  margin-left: 6px;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.description {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--thorp-accent);
+}
+
+.choice:has(input:focus-visible) {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 고를 수 없는 후보는 빼지 않고 흐리게 둔다. 낱말로도 알린다. */
+.choice[data-selectable="false"] {
+  color: var(--thorp-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.input {
+  width: min(100%, 180px);
+  padding: 7px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--thorp-warning);
+}
+
+.inputRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+}
+
+.problem {
+  margin: 0;
+  color: var(--thorp-warning);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.reset {
+  padding: 4px 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.reset:hover {
+  border-color: currentColor;
+}
+
+/* 금액 칸의 빠른 더하기 줄. 이 줄이 없는 축에서는 아예 그려지지 않는다. */
+.quickAdd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quickAddButton {
+  padding: 4px 11px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.quickAddButton:hover:not(:disabled) {
+  border-color: var(--thorp-accent-soft);
+  color: var(--thorp-foreground);
+}
+
+.quickAddButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quickAddButton:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickAddButton {
+    transition: none;
+  }
+}

@@ -1,0 +1,157 @@
+name: thorp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: thorp-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-thorp}
+      POSTGRES_USER: ${POSTGRES_USER:-thorp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thorp}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thorp} -d ${POSTGRES_DB:-thorp}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: thorp-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: thorp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-thorp}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-thorp}
+    ports:
+      - "5672:5672"     # AMQP — 로컬에서는 호스트에서 직접 붙는다
+      - "15672:15672"   # 관리 UI (http://localhost:15672)
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    profiles: ["app"]
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/backend.Dockerfile
+    container_name: thorp-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-thorp}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-thorp}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-thorp}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-thorp}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-thorp}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    profiles: ["app"]
+    build:
+      context: ./worker
+      dockerfile: ../infra/docker/worker.Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-thorp}:${RABBITMQ_PASSWORD:-thorp}@rabbitmq:5672/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}
+      # 시장 자료 읽기 전용 접속(spec 004 R-09). 시장 자료 공급자(T004)가 읽는다. 읽기 전용 role은
+      # T003 마이그레이션이 만들며 그 전까지 dev는 일반 계정을 가리킨다. 워커는 결과 DB에 쓰지 않는다.
+      MARKET_DATA_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}
+      # 결정성(spec 004 R-14): 수치 라이브러리가 호스트 vCPU 수만큼 스레드를 띄우면 합산 순서가 달라져
+      # 같은 입력에 다른 결과가 나올 수 있다. 운영 compose와 같은 값.
+      NUMBA_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      # 워커 역할(spec 004 R-20). 이 서비스는 단건 큐(backtest.jobs)만 push 로 받는 단건 전용이다.
+      WORKER_ROLE: single
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      # 단건 전용 워커 1개를 유지해 자동 탐색 중에도 일반 백테스트 처리 자리를 보장한다.
+      replicas: 1
+
+  # 공용 워커: 벌크 큐(backtest.jobs.bulk)를 먼저 보고 비어 있으면 단건 큐를 집는다(pull, 1초 폴링).
+  # 이미지·환경은 worker 와 같고 역할만 다르다 — 벌크가 없을 때 워커를 놀리지 않으려는 배치다(R-20).
+  worker-flex:
+    profiles: ["app"]
+    extends:
+      service: worker
+    environment:
+      WORKER_ROLE: flex
+    deploy:
+      # 서버와 같은 구성이다. 자동 탐색 벌크 큐는 prefetch 1인 이 워커 하나가 처리한다.
+      replicas: 1
+
+  # 사례 연결 워커(spec 011): 같은 이미지에 엔트리포인트만 다르다(`python -m worker.regime_link_main`).
+  # 백테스트 워커와 다른 프로세스로 띄우는 이유는 큐가 다르고, 한쪽이 긴 백테스트로 막혀 있어도
+  # 다른 쪽이 멈추지 않아야 하기 때문이다(worker/README.md "사례 연결 Consumer").
+  #
+  # **토폴로지는 백엔드가 선언한다.** 이 워커는 exchange·queue 를 만들지 않고 `regime-link.jobs` 가
+  # 없으면 "백엔드를 먼저 띄워라"라는 뜻으로 즉시 종료한다. 그래서 백엔드 뒤에 두고
+  # `restart: on-failure` 로 선언이 끝날 때까지 다시 붙게 한다 — 백엔드에 healthcheck 가 없어
+  # `depends_on` 만으로는 "떴다"까지만 보장되고 "선언이 끝났다"는 보장되지 않는다.
+  worker-regime-link:
+    profiles: ["app"]
+    extends:
+      service: worker
+    command: ["python", "-m", "worker.regime_link_main"]
+    # WORKER_ROLE 은 백테스트 큐 선택용이라 이 워커는 읽지 않는다. 오해를 줄이려 비운다.
+    environment:
+      WORKER_ROLE: ""
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    deploy:
+      replicas: 1
+
+volumes:
+  postgres-data:
+  kafka-data:
+  rabbitmq-data:

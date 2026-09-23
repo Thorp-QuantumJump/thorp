@@ -1,0 +1,86 @@
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/*
+ * 세로축 눈금 전환 단추. 그래프 오른쪽 위에 붙여 어느 눈금으로 보는 중인지 그래프와 함께 읽게 한다.
+ */
+.scaleToggle {
+  display: flex;
+  gap: 2px;
+  align-self: flex-end;
+  padding: 2px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 999px;
+  background: var(--thorp-surface);
+}
+
+.scaleButton {
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.scaleButton:hover {
+  color: var(--thorp-ink);
+}
+
+/* 고른 쪽은 색만이 아니라 바탕과 글자 굵기로도 갈린다. 색을 구별하지 못해도 어느 쪽인지 읽힌다. */
+.scaleButton[aria-pressed='true'] {
+  background: var(--thorp-neutral);
+  color: var(--thorp-surface);
+  font-weight: 600;
+}
+
+.scaleButton:focus-visible {
+  outline: 2px solid var(--thorp-neutral);
+  outline-offset: 1px;
+}
+
+/*
+ * 음영의 두 색을 여기 한 곳에서 정한다. SVG 안에서 `var(--result-shade-*)`로 읽으므로 테마 토큰이
+ * 바뀌어도 컴포넌트를 고치지 않는다.
+ */
+.chart {
+  --result-shade-fill: rgb(232 189 114 / 16%);
+  --result-shade-edge: rgb(232 189 114 / 78%);
+
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--thorp-line);
+  border-radius: 14px;
+  background: var(--thorp-surface);
+
+  /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */
+  aspect-ratio: 16 / 7;
+}
+
+/*
+ * `LineChart`는 `aspectRatio` 속성을 비우면 인라인 크기를 정하지 않고 부모를 채운다. 비율을 CSS에
+ * 두어야 화면 폭에 따라 미디어 쿼리로 바꿀 수 있다.
+ */
+.canvas {
+  height: 100%;
+}
+
+.notes {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .chart {
+    aspect-ratio: 4 / 3;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260907-000001",
+    "partial": false,
+    "requestedDate": "2025-01-23",
+    "snapshotDate": "2025-01-22",
+    "positions": [
+      {
+        "instrumentId": "005930.XKRX",
+        "quantity": "90",
+        "marketValue": "4833000.00",
+        "weight": "0.483452",
+        "unrealizedPnl": "0.00"
+      }
+    ]
+  },
+  "error": null
+}

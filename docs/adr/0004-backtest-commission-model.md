@@ -1,0 +1,139 @@
+# ADR-0004: 백테스트 거래비용 모델 — 데모 단계는 `ZERO`, 요율표는 전략 비교 단계에서
+
+- 상태: 승인 (2026-09-08)
+- 대상: `backend/`, `worker/`, `docs/specs/backtest-messaging/`
+- 선행: [ADR-0002](0002-rabbitmq-backtest-message-contract.md) 메시지 계약, [ADR-0003](0003-nautilus-momentum-engine-boundary.md) 엔진 경계
+
+## 배경
+
+메시지 계약(`docs/specs/backtest-messaging/README.md` §4.1)은 실행 정책 중 거래비용을
+`execution.commission = {model: BROKER, broker: KIWOOM, version: 2026-09}`으로 고정해 두었다.
+`model=BROKER`는 "증권사 요율표대로 계산한다"는 뜻이고, `version`은 요율 스냅샷을 고정해
+같은 백테스트가 나중에도 재현되게 하는 장치다.
+
+그런데 현재 엔진(`worker/src/worker/nautilus_engine.py`)은 **수수료와 세금을 0으로 계산한다.**
+슬리피지(`FIXED_BPS`, 5bps)만 반영한다. 키움 요율표 구현체가 없다.
+
+이 불일치는 계약 모델을 그대로 쓸 수 없게 만든다. 계약의 `CommissionModel` enum은 `BROKER`
+하나만 허용하므로, 워커가 계약 입력 모델로 갈아타면 `model=BROKER` 요청을 받으면서 수수료 0으로
+계산하게 된다. **요청받은 정책과 다른 방식으로 계산한 숫자를 요청받은 정책의 결과로 저장하는
+셈이라, 틀린 줄 모르는 결과가 나온다.** 보정 방식(`adjustment`)·상장폐지 정책(`delisting`)의
+불일치는 경고로 해소할 수 있지만(ADR-0003), 거래비용은 모든 수익률을 바꾸므로 경고로 덮을 수 없다.
+
+### 영향 규모 실측
+
+온라인 위탁수수료 0.015%(매수·매도 각각), 매도 시 거래세+농특세 0.15%, 유관기관 제비용을
+가정하면 **왕복 0.188%**다. 엔진이 이미 반영 중인 슬리피지가 왕복 0.1%이므로 수수료는 그보다 크다.
+
+> **2026-09-17 바로잡음(PD-07 확정)**: 위 거래세+농특세 0.15%는 주식 기준이고 국내 상장 ETF 매도에는 붙지 않는다. 확정 값은 수수료 1.5·호가 차이 3·슬리피지 5·세금 0 bps(왕복 약 0.19%)로 합계는 비슷하지만 구성이 다르다. `specs/004-backtest-execution/spec.md` PD-07 참조.
+
+초기자본 1,000만원·5년 기준으로, 수수료를 0으로 두면 과대평가되는 폭:
+
+| 전략 성격 | 왕복/년 | 5년 왕복 | 누적 비용 |
+|---|---:|---:|---:|
+| 120일 모멘텀 (현 데모, 실측 561거래일에 체결 14건) | 3 | 15 | 2.78% |
+| 분기 리밸런싱 | 4 | 20 | 3.69% |
+| 월간 리밸런싱 | 12 | 60 | 10.68% |
+| 주간 리밸런싱 | 52 | 260 | 38.69% |
+| 일간 매매 | 250 | 1,250 | 90.48% |
+
+**단일 저회전 전략에서는 무시할 수 있고, 전략을 줄 세우는 순간 순위를 뒤집는다.**
+수수료 0으로 낸 5년 총수익이 A(저회전) 30%, B(주간) 45%, C(월간) 38%라면, 수수료를 반영하면
+A 26.4%, B −11.1%, C 23.3%가 되어 순위가 `B > C > A`에서 `A > C > B`로 완전히 뒤집힌다.
+B는 수익 전략에서 손실 전략이 된다.
+
+MVP v0.1.1은 알고리즘 1개를 고정 파라미터로 돌리는 단계이므로 순위 비교가 없다.
+알고리즘 20개 이상을 파라미터 전 조합으로 비교하는 단계에서 이 문제가 실현된다.
+
+## 결정
+
+### D1. `CommissionModel`에 `ZERO`를 추가한다
+
+`CommissionModel`은 `BROKER`와 `ZERO` 두 값을 갖는다. `model=ZERO`일 때 수수료·세금·제비용은
+모두 0이며 `broker` 필드를 쓰지 않는다.
+
+**`ZERO`는 임시 우회값이 아니라 정식 거래비용 모델로 둔다.** "거래비용을 제외한 순수 전략
+성능"은 그 자체로 유효한 백테스트 설정이고, 요율표가 들어온 뒤에도 두 모드를 비교하는 용도로
+계속 쓸모가 있다. 따라서 제거 시점을 정하지 않는다.
+
+### D2. 데모 단계의 고정값은 `model=ZERO`
+
+계약 §4.1 고정 실행 정책 표에서 `execution.commission`을
+`{model: BROKER, broker: KIWOOM, version: 2026-09}`에서 `{model: ZERO}`로 바꾼다.
+
+- 이유: 현재 엔진이 실제로 계산하는 방식과 계약이 일치하게 된다. 요율표 구현을 기다리지 않고
+  Backend → 브로커 → Worker 경로를 열 수 있다.
+- 단일 저회전 전략만 돌리는 현재 범위에서는 결과의 결론이 바뀌지 않는다(위 표의 2.78%).
+
+### D3. 키움 요율표(`model=BROKER`)는 전략 비교 단계에서 구현한다
+
+알고리즘 20개 이상을 비교하는 작업에 착수할 때 별도 티켓으로 구현한다. 그 전에 순위를 근거로
+의사결정하지 않는다. 구현 위치는 엔진(워커)이다 — 성과 계산은 엔진 책임이고 백엔드는 저장·조회만
+한다(ADR-0002).
+
+**요율은 확인이 필요하다.** 위 배경의 요율은 가정값이다. 특히 증권거래세율은 최근 몇 년간
+계속 조정되었으므로 구현 시 해당 시점의 실제 요율을 확인하고 `version`에 그 스냅샷을 기록한다.
+요율이 절반이어도 순위가 뒤집힌다는 결론은 그대로지만 숫자는 달라진다.
+
+### 부수 결정
+
+**enum 멤버 추가와 `schemaVersion`.** 계약은 "미지의 enum 값은 역직렬화 실패 → 계약 오류 → DLQ"
+(§5)로 규정하므로 **enum 멤버 추가는 하위호환이 아니다.** 구버전 수신자가 `ZERO`를 받으면 죽는다.
+현재는 backend·worker를 항상 함께 배포하므로 `schemaVersion`을 올리지 않는다. 배포가 분리되는
+시점(워커를 여러 대 굴리며 롤링 배포)에는 버전 정책이 필요하며, 이는 실행 Consumer 구현 티켓에서
+`schemaVersion` 검증 코드와 함께 정한다. 현재 `schemaVersion`은 필드로만 선언돼 있고 값을 확인하는
+코드도, `1`이라는 상수 정의도 없다.
+
+## 결과
+
+### 이 결정으로 열리는 것
+
+입력 계약을 통합할 수 있게 된다. ADR-0003이 기록한 세 불일치 중 거래비용이 해소되면,
+나머지 둘은 계약 변경 없이 코드로 처리할 수 있다 — `adjustment`는 공급자를
+yfinance `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED` 의미에 맞추고(배당 재투자가 빠져 데모
+수익률 숫자가 낮아진다), `delisting`은 `CAUSE_BASED` 요청을 받되 미지원 사실을
+`diagnostics.warnings`에 남긴다. **둘 다 적용을 마쳤다** — `adjustment`는 ADR-0003 "A-보정방식",
+`delisting`은 ADR-0003 "D-상장폐지"(2026-09-08). 입력 계약 통합도 함께 끝났다.
+
+### 반영 완료 (2026-09-08)
+
+거래비용 고정값이 backend와 worker 양쪽에 각각 박혀 있던 것을 하나로 합쳤다. 계약 스키마를
+바꾸므로 **픽스처 → 백엔드 → 워커 순서로 같은 MR에서** 고쳤다(§규약).
+
+| 위치 | 이전 | 변경 | 상태 |
+|---|---|---|---|
+| `docs/specs/backtest-messaging/README.md` §4.1 | 고정값 표에 `BROKER/KIWOOM/2026-09` | `ZERO` | ✅ 완료 |
+| `docs/specs/backtest-messaging/examples/engine-input.json` | `{model: BROKER, broker: KIWOOM, version: "2026-09"}` | `{model: ZERO}` | ✅ 완료 (생성기로 재생성) |
+| `generate_fixtures.py` | 위 값 생성 | 같이 수정 | ✅ 완료 |
+| `.../port/message/CommissionModel.java` | `enum { BROKER }` | `enum { BROKER, ZERO }` | ✅ 완료 |
+| `worker/src/worker/contracts/engine_input.py` | `CommissionModel` StrEnum 1개 값 | `ZERO` 추가. `model=BROKER`일 때 `broker` 필수 검증은 유지 | ✅ 완료 (검증 유지) |
+| `worker/src/worker/engine_contracts.py` | 입력 모델 한 벌 전체 | **삭제.** 엔진이 계약 입력 모델을 직접 받는다 | ✅ 완료 |
+
+백엔드 조립 로직(`EngineInputAssembler`·`ExecutionPolicy`)은 발행 구현 티켓(#108)에서 작성됐고,
+그때 `ExecutionPolicy`가 이 결정을 반영하지 않아 `BROKER/KIWOOM/2026-09`를 계속 발행했다.
+그래서 `EngineInputFixtureTest`가 실패 상태였고, 워커 엔진이 `ZERO`만 실행하므로 **모든 Job이
+`INVALID_REQUEST`로 거절됐다.** #111에서 아래와 같이 맞췄다.
+
+| 위치 | 이전 | 변경 | 상태 |
+|---|---|---|---|
+| `.../application/service/ExecutionPolicy.java` | `CommissionSpec(BROKER, "KIWOOM", "2026-09")` | `CommissionSpec(ZERO, null, null)` | ✅ 완료 (#111) |
+
+고정값은 단일 멤버 enum과 README 표에만 있었으므로 당시 백엔드 작업은 enum 값 추가와 문서·픽스처
+수정뿐이었다.
+
+`ZERO`를 추가하면서 `model=BROKER`가 계약 검증을 새로 통과하게 되었으므로, 요율표가 없는 동안
+엔진이 `BROKER` 요청을 `INVALID_REQUEST`로 거절한다(`worker/src/worker/engine_support.py`).
+수수료 0으로 계산한 숫자를 요율표 결과로 저장하지 않기 위한 것으로, 이 배경 §영향 규모 실측의
+직접적인 대응이다. 요율표를 구현하면(D3) 이 거절만 제거한다.
+
+입력 모델을 옮기면서 함께 처리한 부수 차이는 ADR-0003 "함께 정리한 부수 차이"에 있다.
+
+## 이 결정에서 다루지 않는 것
+
+- **사용자가 거래비용 모델을 고르게 하는 것.** `commission.model`을 요청 파라미터로 노출해
+  수수료 포함/제외를 비교하는 기능은 의미가 있지만 MVP 범위를 넘는다. `ZERO`를 정식 모델로
+  둔 덕에 나중에 열 수 있다.
+- **슬리피지·유동성 모델 변경.** `FIXED_BPS` 5bps와 `UNLIMITED`는 그대로다.
+- **`delisting` 전환 시점.** 위 "결과"에 방법만 적었고 적용 시점은 정하지 않았다 —
+  결과적으로 입력 계약 통합과 같은 MR에서 적용했다(ADR-0003 "D-상장폐지").
+  (`adjustment`는 그보다 먼저 전환을 마쳤다 — ADR-0003 "A-보정방식".)

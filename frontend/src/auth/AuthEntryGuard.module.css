@@ -1,0 +1,77 @@
+.checking {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--thorp-background);
+  color: var(--thorp-muted);
+}
+
+.checking span {
+  padding: 12px 16px;
+  border: 1px solid var(--thorp-line);
+  background: var(--thorp-surface);
+  font-size: 0.76rem;
+}
+
+.recovery {
+  display: grid;
+  width: min(100% - 32px, 520px);
+  gap: 12px;
+  padding: 28px;
+  border: 1px solid var(--thorp-line-strong);
+  background: var(--thorp-surface);
+}
+
+.recovery h1,
+.recovery p {
+  margin: 0;
+}
+
+.recovery h1 {
+  color: var(--thorp-foreground);
+  font-size: 1.25rem;
+}
+
+.recovery p {
+  color: var(--thorp-muted);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 3px;
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  cursor: pointer;
+}
+
+.actions button:hover {
+  border-color: var(--thorp-accent);
+  color: var(--thorp-accent-soft);
+}
+
+.actions button:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}
+
+@media (max-width: 360px) {
+  .recovery {
+    width: min(100% - 24px, 520px);
+    padding: 22px 18px;
+  }
+
+  .actions,
+  .actions button {
+    width: 100%;
+  }
+}

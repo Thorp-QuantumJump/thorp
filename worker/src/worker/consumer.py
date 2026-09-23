@@ -1,0 +1,375 @@
+"""실행 Consumer: 작업 메시지 → 엔진 실행 → STARTED / PROGRESS / FINISHED 발행 → ACK.
+
+계약 기준: ``docs/specs/backtest-messaging/README.md`` §3·§4.2·§7·§8.
+
+pika를 직접 부르지 않는다. 발행과 ACK는 ``worker.messaging`` 의 Protocol
+(:class:`~worker.messaging.EventPublisher`, :class:`~worker.messaging.JobAcknowledger`)
+뒤에 있고 pika 구현체는 ``worker.rabbitmq`` 에 있다. 엔진이 ``DataProvider`` 를 생성자로
+주입받는 것과 같은 패턴이며, 덕분에 브로커 없이 전체 흐름을 pytest로 검증한다.
+
+**EngineOutput 내용을 해석하지 않는다.** ``run.status`` 가 COMPLETED든 FAILED든 같은
+FINISHED 이벤트에 그대로 담는다. 엔진이 계약대로 답한 것이므로 DLQ가 아니다. FINISHED payload의
+``status``·``partial``·``lastTradingDate`` 는 ``run`` 블록의 값을 그대로 옮긴 것이다.
+"""
+
+import json
+import logging
+import os
+import socket
+import sys
+import time
+import uuid
+from collections.abc import Callable, Mapping
+from datetime import datetime
+from decimal import Decimal
+from typing import Any
+
+from pydantic import ValidationError
+
+from worker.contracts.base import utc_now
+from worker.contracts.engine import BacktestEngine
+from worker.contracts.engine_input import EngineInput
+from worker.contracts.engine_output import EngineOutput
+from worker.contracts.events import (
+    BacktestEvent,
+    BacktestEventType,
+    FinishedPayload,
+    ProcessInfo,
+    ProcessingStage,
+    ProgressPayload,
+    ProgressPoint,
+    ResourceUsage,
+    StartedPayload,
+)
+from worker.control import CancelRegistry
+from worker.market_data import DataUsage
+from worker.messaging import (
+    JOBS_QUEUE,
+    SCHEMA_VERSION,
+    ContractViolation,
+    EventPublisher,
+    JobAcknowledger,
+    PublishError,
+)
+from worker.portfolio_execution import CallbackError
+
+logger = logging.getLogger(__name__)
+
+IdFactory = Callable[[], str]
+Clock = Callable[[], datetime]
+
+
+def _new_id() -> str:
+    return str(uuid.uuid4())
+
+
+def verify_schema_version(headers: Mapping[str, Any] | None, body: Mapping[str, Any]) -> None:
+    """헤더·본문의 ``schemaVersion`` 이 이 워커가 아는 버전인지 확인한다(계약 §3·§8).
+
+    작업 메시지 본문은 ``EngineInput`` 전체이고 계약 모델에 ``schemaVersion`` 필드가 없으므로
+    (픽스처 ``engine-input.json`` 에도 없다) 값은 원본 dict에서 직접 읽는다. 둘 다 없으면
+    "표시하지 않았다"로 보고 통과시키고, **표시했는데 값이 다르면** 계약 오류로 거절한다 —
+    모르는 버전의 메시지를 아는 버전인 척 계산하면 요청과 다른 결과가 저장된다.
+    """
+    declared = (
+        ("header", (headers or {}).get("schemaVersion")),
+        ("body", body.get("schemaVersion")),
+    )
+    for source, value in declared:
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int) or value != SCHEMA_VERSION:
+            raise ContractViolation(
+                f"unsupported schemaVersion in {source}: {value!r} (this worker speaks "
+                f"{SCHEMA_VERSION})"
+            )
+
+
+def parse_job(body: bytes | str, headers: Mapping[str, Any] | None) -> EngineInput:
+    """작업 메시지를 계약 모델로 바꾼다. 계약 위반은 :class:`ContractViolation`."""
+    try:
+        decoded = json.loads(body)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractViolation(f"job body is not valid JSON: {exc}") from exc
+    if not isinstance(decoded, dict):
+        raise ContractViolation(f"job body must be a JSON object, got {type(decoded).__name__}")
+    verify_schema_version(headers, decoded)
+    try:
+        return EngineInput.model_validate(decoded)
+    except ValidationError as exc:
+        raise ContractViolation(f"job body violates the EngineInput contract: {exc}") from exc
+
+
+def _seconds(value: float) -> Decimal:
+    return Decimal(f"{value:.3f}")
+
+
+def current_rss_mb() -> Decimal | None:
+    """지금 이 순간의 상주 메모리(MB). 못 재는 플랫폼에서는 None → 키 생략.
+
+    ``resource.getrusage().ru_maxrss`` 를 쓰지 않는다 — 그것은 **프로세스 시작 이후의** 최고값이라,
+    큰 실행을 한 번 하면 그 뒤의 작은 실행이 모두 그 값으로 기록된다(워커는 실행을 순차 처리한다).
+    실행별 최댓값은 실행 중 표본(STARTED·PROGRESS·FINISHED 시점)의 최댓값으로 잰다.
+    Linux 는 ``/proc/self/statm`` 두 번째 열(상주 페이지 수)이다.
+    """
+    if not sys.platform.startswith("linux"):
+        return None
+    try:
+        with open("/proc/self/statm", encoding="ascii") as statm:
+            resident_pages = int(statm.read().split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return Decimal(f"{resident_pages * os.sysconf('SC_PAGE_SIZE') / (1024 * 1024):.1f}")
+
+
+class _EventStream:
+    """한 번의 엔진 실행이 발행하는 이벤트 순서와 ``sequence`` 를 관리한다.
+
+    ``sequence`` 는 STARTED=0에서 시작해 발행이 확인된 뒤 1씩 증가한다. ``eventId`` 는
+    이벤트마다 새로 발급하지만 같은 이벤트를 재발행할 때는 같은 객체를 다시 넘기므로
+    유지된다(중복 방지 키 — 계약 §4.2).
+    """
+
+    def __init__(
+        self,
+        publisher: EventPublisher,
+        run_id: str,
+        execution_id: str,
+        new_id: IdFactory,
+        clock: Clock,
+    ) -> None:
+        self._publisher = publisher
+        self._run_id = run_id
+        self._execution_id = execution_id
+        self._new_id = new_id
+        self._clock = clock
+        self._sequence = 0
+        self._wall_started = time.monotonic()
+        self._cpu_started = time.process_time()
+        # 이 실행 동안의 상주 메모리 표본 최댓값. 이벤트마다 한 번 잰다 — PROGRESS 가 20거래일마다
+        # 오므로 표본이 실행 길이에 비례해 늘고, 그 사이 순간 최고점은 놓칠 수 있다(추정치다).
+        self._peak_rss_mb: Decimal | None = None
+        self._queue: str | None = None
+        self._role: str | None = None
+
+    def _sample_rss(self) -> None:
+        now = current_rss_mb()
+        if now is not None and (self._peak_rss_mb is None or now > self._peak_rss_mb):
+            self._peak_rss_mb = now
+
+    @property
+    def sequence(self) -> int:
+        return self._sequence
+
+    def started(self, queue: str, role: str) -> None:
+        self._queue, self._role = queue, role
+        self._sample_rss()
+        now = self._clock()
+        payload = StartedPayload(
+            started_at=now,
+            stage=ProcessingStage.PREPARING_DATA,
+            # queue·role 은 백엔드 측정 기록용이다(R-20·T012) — flex 워커가 단건을 도운 비율의 근거.
+            resource=ProcessInfo(
+                pid=os.getpid(), hostname=socket.gethostname(), queue=queue, role=role
+            ),
+        )
+        self._emit(BacktestEventType.STARTED, payload, now)
+
+    def progress(self, payload: ProgressPayload) -> None:
+        self._sample_rss()
+        self._emit(BacktestEventType.PROGRESS, payload, self._clock())
+
+    def finished(self, output: EngineOutput, data_usage: DataUsage | None = None) -> None:
+        self._sample_rss()
+        usage = ResourceUsage(
+            peak_rss_mb=self._peak_rss_mb,
+            cpu_seconds=_seconds(time.process_time() - self._cpu_started),
+            wall_seconds=_seconds(time.monotonic() - self._wall_started),
+            # 이 결과를 낸 워커. 중복 실행(R-18)에서 마지막 STARTED 와 다를 수 있어 다시 싣는다.
+            queue=self._queue,
+            role=self._role,
+            # 데이터 원가(T019). 자료를 읽지 못한 실행(거절·적재 실패)에는 없다 — 지어내지 않는다.
+            data_rows=None if data_usage is None else data_usage.rows,
+            data_bytes=None if data_usage is None else data_usage.bytes,
+        )
+        payload = FinishedPayload(
+            status=output.run.status,
+            partial=bool(output.run.partial),
+            last_trading_date=output.run.last_trading_date,
+            engine_output=output,
+            resource=usage,
+        )
+        self._emit(BacktestEventType.FINISHED, payload, self._clock())
+
+    def _emit(
+        self,
+        event_type: BacktestEventType,
+        payload: StartedPayload | ProgressPayload | FinishedPayload,
+        occurred_at: datetime,
+    ) -> None:
+        event: BacktestEvent = BacktestEvent(
+            schema_version=SCHEMA_VERSION,
+            event_id=self._new_id(),
+            run_id=self._run_id,
+            execution_id=self._execution_id,
+            type=event_type,
+            sequence=self._sequence,
+            occurred_at=occurred_at,
+            payload=payload,
+        )
+        self._publisher.publish(event)  # 확인되지 않으면 PublishError
+        self._sequence += 1
+
+
+class _ProgressBatcher:
+    """거래일 1개 단위 콜백을 ``progress.batchTradingDays`` 묶음 PROGRESS로 바꾼다(계약 §4.2).
+
+    이번 구간에서 **새로 계산한 포인트만** 담고, 발행이 확인된 뒤에 버퍼를 비운다. 발행이
+    실패하면 버퍼를 유지한 채 예외가 콜백 밖으로 나가므로 같은 포인트를 잃지 않는다.
+    """
+
+    def __init__(self, stream: _EventStream, batch_size: int) -> None:
+        self._stream = stream
+        self._batch_size = batch_size
+        self._buffer: list[ProgressPoint] = []
+        self._completed = 0
+        self._total = 0
+
+    def on_progress(
+        self, point: ProgressPoint, completed_trading_days: int, total_trading_days: int
+    ) -> None:
+        self._buffer.append(point)
+        self._completed = completed_trading_days
+        self._total = total_trading_days
+        if len(self._buffer) >= self._batch_size:
+            self._publish()
+
+    def flush(self) -> None:
+        """마지막 잔여 구간을 발행한다. 묶음 경계에서 끝났으면 아무 것도 하지 않는다."""
+        if self._buffer:
+            self._publish()
+
+    def _publish(self) -> None:
+        self._stream.progress(
+            ProgressPayload(
+                stage=ProcessingStage.COMPUTING,
+                completed_trading_days=self._completed,
+                total_trading_days=self._total,
+                last_trading_date=self._buffer[-1].date,
+                portfolio_series=list(self._buffer),
+            )
+        )
+        self._buffer.clear()
+
+
+class BacktestJobConsumer:
+    """``backtest.jobs`` 한 건을 처리한다. 브로커 런타임(pika)과 분리돼 있다."""
+
+    def __init__(
+        self,
+        engine: BacktestEngine,
+        publisher: EventPublisher,
+        *,
+        registry: CancelRegistry | None = None,
+        new_id: IdFactory = _new_id,
+        clock: Clock = utc_now,
+        role: str = "single",
+    ) -> None:
+        self._engine = engine
+        self._publisher = publisher
+        self._registry = registry
+        self._new_id = new_id
+        self._clock = clock
+        self._role = role
+
+    def handle(
+        self,
+        body: bytes | str,
+        headers: Mapping[str, Any] | None,
+        acknowledger: JobAcknowledger,
+        *,
+        queue: str = JOBS_QUEUE,
+    ) -> None:
+        """수신 → 역직렬화 → 실행 → 발행 → ACK. 오류 3분류가 여기서 갈린다(계약 §7).
+
+        같은 ``runId`` 가 재전달되면 그냥 다시 실행하고 ``executionId`` 만 새로 발급한다.
+        워커는 DB에 쓰지 않아(계약 §1) 처리 이력을 남길 곳이 없다. 중복 방어는 계약 §7이
+        백엔드 결과 Consumer에 요구하며 ``eventId`` 가 그 키다.
+
+        ``queue`` 는 이 메시지를 꺼낸 큐다. STARTED 의 ``resource.queue`` 로 나가 백엔드 측정
+        기록이 어느 큐의 일이었는지 안다(R-20). 단건 전용 워커는 기본값 그대로다.
+        """
+        try:
+            engine_input = parse_job(body, headers)
+        except ContractViolation as exc:
+            # 재전달해도 결과가 같으므로 되돌리지 않는다. 이벤트도 발행하지 않는다 —
+            # runId를 신뢰할 수 없다.
+            logger.error("contract violation; rejecting to DLQ without requeue: %s", exc)
+            acknowledger.reject()
+            return
+
+        run_id = engine_input.run.run_id
+        execution_id = self._new_id()
+        try:
+            output = self._execute(engine_input, run_id, execution_id, queue)
+        except PublishError as exc:
+            logger.error(
+                "event publication failed for runId=%s executionId=%s; not acking: %s",
+                run_id,
+                execution_id,
+                exc,
+            )
+            acknowledger.requeue()
+            return
+        except CallbackError as exc:
+            # 진행 콜백(= PROGRESS 발행) 실패를 엔진이 감싸 올린 것이다.
+            logger.error(
+                "progress publication failed for runId=%s executionId=%s; not acking: %s",
+                run_id,
+                execution_id,
+                exc,
+            )
+            acknowledger.requeue()
+            return
+        except Exception:
+            # 엔진 오류는 FAILED EngineOutput으로 돌아오는 것이 계약이므로 여기까지 오는
+            # 예외는 워커 버그나 브로커 장애다. 어느 쪽이든 결과를 잃은 상태를 완료로
+            # 숨기지 않는다(ADR-0003 §6). 반복 재전달되면 로그로 드러난다.
+            logger.exception(
+                "unexpected failure for runId=%s executionId=%s; not acking",
+                run_id,
+                execution_id,
+            )
+            acknowledger.requeue()
+            return
+
+        # 여기 도달하면 FINISHED 발행이 브로커에서 확인된 것이다(publish는 확인 후 반환).
+        # 그 뒤에만 ACK한다 (계약 §7).
+        acknowledger.ack()
+        logger.info(
+            "job done: runId=%s executionId=%s status=%s",
+            run_id,
+            execution_id,
+            output.run.status,
+        )
+
+    def _execute(
+        self, engine_input: EngineInput, run_id: str, execution_id: str, queue: str
+    ) -> EngineOutput:
+        stream = _EventStream(self._publisher, run_id, execution_id, self._new_id, self._clock)
+        # 활성 실행 등록은 STARTED 보다 앞선다 — STARTED 에 대한 답으로 오는 CANCEL 을 받아야
+        # 한다(R-04).
+        if self._registry is not None:
+            self._registry.begin(run_id)
+        try:
+            stream.started(queue, self._role)
+            batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)
+            output = self._engine.run(engine_input, batcher.on_progress)
+            batcher.flush()
+            # 엔진 경계(Protocol)는 EngineOutput 만 돌려준다. 읽은 자료의 양은 메시지 밖 자원
+            # 사용이라 엔진이 선택 속성으로 내놓고, 없으면(가짜 엔진·옛 엔진) 싣지 않는다.
+            stream.finished(output, getattr(self._engine, "last_data_usage", None))
+            return output
+        finally:
+            if self._registry is not None:
+                self._registry.end(run_id)

@@ -1,0 +1,65 @@
+{
+  "success": true,
+  "data": {
+    "backtestId": "BT-20260907-000001",
+    "page": 0,
+    "size": 100,
+    "totalElements": 3,
+    "totalPages": 1,
+    "content": [
+      {
+        "tradeId": "TRD-000001",
+        "instrumentId": "005930.XKRX",
+        "side": "LONG",
+        "status": "CLOSED",
+        "entryDate": "2025-01-22",
+        "exitDate": "2025-03-12",
+        "entryPrice": "53700.00",
+        "exitPrice": "52800.00",
+        "quantity": "90",
+        "grossPnl": "-81000.00",
+        "commission": "1437.75",
+        "slippageCost": "4792.50",
+        "realizedPnl": "-87230.25",
+        "returnRate": "-0.018049",
+        "reason": "SIGNAL"
+      },
+      {
+        "tradeId": "TRD-000002",
+        "instrumentId": "000660.XKRX",
+        "side": "LONG",
+        "status": "CLOSED",
+        "entryDate": "2025-02-06",
+        "exitDate": "2025-04-03",
+        "entryPrice": "214000.00",
+        "exitPrice": "256400.00",
+        "quantity": "24",
+        "grossPnl": "1017600.00",
+        "commission": "1693.44",
+        "slippageCost": "5644.80",
+        "realizedPnl": "1010261.76",
+        "returnRate": "0.196702",
+        "reason": "SIGNAL"
+      },
+      {
+        "tradeId": "TRD-000003",
+        "instrumentId": "005930.XKRX",
+        "side": "LONG",
+        "status": "OPEN",
+        "entryDate": "2025-05-14",
+        "exitDate": null,
+        "entryPrice": "60000.00",
+        "exitPrice": null,
+        "quantity": "90",
+        "grossPnl": null,
+        "commission": "810.00",
+        "slippageCost": "2700.00",
+        "realizedPnl": null,
+        "returnRate": null,
+        "reason": "SIGNAL"
+      }
+    ],
+    "partial": false
+  },
+  "error": null
+}

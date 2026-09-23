@@ -1,0 +1,93 @@
+.page {
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--thorp-background);
+  color: var(--thorp-foreground);
+}
+
+.main {
+  width: min(100% - 40px, 960px);
+  margin: 0 auto;
+  /* 아래 여백이 메뉴 높이만큼 있다. 마지막 줄의 '더 보기'를 눌렀을 때 메뉴가 화면 밖으로
+     나가 스크롤해야 하는 일이 없게 미리 자리를 둔다. */
+  padding: clamp(90px, 15vh, 160px) 0 clamp(80px, 14rem, 16rem);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--thorp-accent-soft);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.title {
+  margin: 14px 0 6px;
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.status {
+  margin: 24px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.error p {
+  margin: 0;
+  color: var(--thorp-negative);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 1rem;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 0;
+}
+
+.more p {
+  margin: 0;
+  color: var(--thorp-negative);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .main {
+    width: min(100% - 28px, 960px);
+    padding-top: 72px;
+  }
+}
