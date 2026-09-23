@@ -82,7 +82,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
             className={styles.content}
             side={side}
             align={side === "top" ? "center" : "start"}
-            alignOffset={side === "right" ? -8 : 0}
+            alignOffset={side === "right" ? -26 : 0}
             sideOffset={6}
             collisionPadding={16}
             aria-label={`${label} 도움말`}
@@ -108,7 +108,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
           className={styles.content}
           side={side}
           align={side === "top" ? "center" : "start"}
-          alignOffset={side === "right" ? -8 : 0}
+          alignOffset={side === "right" ? -26 : 0}
           sideOffset={6}
           collisionPadding={16}
           aria-label={`${label} 도움말`}

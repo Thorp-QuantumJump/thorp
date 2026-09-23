@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-height: 111px;
   padding: 6px 20px;
   border: 1px solid var(--thorp-line);
   border-radius: 14px;
@@ -32,11 +33,14 @@
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  flex: 1;
   gap: 16px;
   margin: 0;
 }
 
 .metric {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -54,6 +58,7 @@
   margin: 0;
   font-family: var(--thorp-font-mono);
   font-size: clamp(1.7rem, 4vw, 2rem);
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -63,6 +68,8 @@
 }
 
 .metricMeta {
+  position: absolute;
+  top: calc(100% + 2px);
   margin: 0;
   color: var(--thorp-foreground);
   font-size: 0.8rem;
@@ -95,5 +102,9 @@
     grid-column: 1 / -1;
     padding-top: 12px;
     border-top: 1px solid var(--thorp-line);
+  }
+
+  .metricMeta {
+    position: static;
   }
 }
