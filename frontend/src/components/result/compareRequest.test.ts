@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { resultDetailCompleted as base } from '@/test/resultFixtures'
 import { selectableStrategy } from '@/test/strategyRegistryFixtures'
+import { defaultValuesOf } from '@/hooks/useStrategySettings'
 import { buildCompareRequest, comparisonMismatch } from './compareRequest'
 
 const choice = {
   strategy: selectableStrategy,
   registryVersion: 'registry-new',
   rulesVersion: 'rules-new',
+  parameters: defaultValuesOf(selectableStrategy),
 }
 describe('동일 조건 요청', () => {
-  it('비용 버전과 평가 조건은 보존하고 새 전략의 기본 설정과 규칙 버전을 쓴다', () => {
+  it('비용 버전과 평가 조건은 보존하고 후보가 든 설정값과 규칙 버전을 쓴다', () => {
     const request = buildCompareRequest(base, choice)
     expect(request.sectorAllocation.items).toEqual(
       base.config.items.map(({ sectorId, instrumentId }) => ({ sectorId, instrumentId })),
