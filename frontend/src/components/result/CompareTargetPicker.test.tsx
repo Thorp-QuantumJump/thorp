@@ -21,8 +21,8 @@ const api = vi.hoisted(() => ({
 vi.mock('@/api/strategyRegistry', () => ({ fetchStrategyRegistry: api.registry }))
 vi.mock('@/api/analysisVersions', () => ({ fetchAnalysisVersions: api.versions }))
 vi.mock('@/api/sectors', () => ({ fetchEvaluationWindow: api.window }))
-vi.mock('@/api/backtest', async (load) => ({
-  ...(await load<typeof import('@/api/backtest')>()),
+vi.mock('@/api/myRecords', async (load) => ({
+  ...(await load<typeof import('@/api/myRecords')>()),
   fetchUsedStrategies: api.used,
 }))
 
@@ -80,6 +80,8 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     ).toBe(true)
     const row = screen.getByRole('checkbox', { name: DEFAULT_ROW }) as HTMLInputElement
     expect(row.getAttribute('aria-label')).toContain(DEFAULT_SETTINGS)
+    // 보이는 줄은 전략 이름만이다. 설정값은 접근 가능한 이름에만 남는다.
+    expect(row.parentElement?.textContent).toBe(selectableStrategy.name)
     expect(screen.getByRole('button', { name: '비교하기' })).toHaveProperty('disabled', true)
     row.focus()
     await user.keyboard(' ')
@@ -99,6 +101,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     api.used.mockResolvedValue([
       {
         strategyId: selectableStrategy.strategyId,
+        recordName: '넓게 표류 9/23',
         rulesVersion: 'RULES-1',
         parameters: {
           driftWindow: 90,
@@ -109,23 +112,27 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
       // 기본값과 같은 조합 — 기본값 줄 하나로 접힌다.
       {
         strategyId: selectableStrategy.strategyId,
+        recordName: null,
         rulesVersion: 'RULES-1',
         parameters: defaultValuesOf(selectableStrategy),
       },
       // 허용 범위 밖(간격 5) — 값을 고쳐 넣어 올리지 않는다.
       {
         strategyId: selectableStrategy.strategyId,
+        recordName: null,
         rulesVersion: 'RULES-1',
         parameters: { ...defaultValuesOf(selectableStrategy), bandWidth: 37 },
       },
     ])
     const select = setup({ room: 1 }, authenticatedAuthContext)
     const used = (await screen.findByRole('checkbox', {
-      name: /내 전략 · 표류 균형 맞추기/,
+      name: /내 전략 · 넓게 표류 9\/23/,
     })) as HTMLInputElement
     expect(used.getAttribute('aria-label')).toContain(
       '표류 관측 창 90거래일 · 되돌리는 시점 30거래일마다 · 허용 이탈 폭 40퍼센트',
     )
+    // 보이는 줄은 기록 이름이고 그 아래에 바탕 전략 이름이 작게 붙는다.
+    expect(used.parentElement?.textContent).toBe('넓게 표류 9/23' + selectableStrategy.name)
     expect(screen.getAllByRole('checkbox', { name: /표류 균형 맞추기/ })).toHaveLength(2)
     expect(screen.getByText(/최대 1개까지/)).toBeTruthy()
     fireEvent.click(used)
@@ -145,6 +152,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     api.used.mockResolvedValue([
       {
         strategyId: selectableStrategy.strategyId,
+        recordName: null,
         rulesVersion: 'RULES-1',
         parameters: { ...defaultValuesOf(selectableStrategy), bandWidth: 40 },
       },
@@ -166,7 +174,9 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
         />
       </AuthContext.Provider>,
     )
-    expect(await screen.findByRole('checkbox', { name: /내 전략/ })).toBeTruthy()
+    // 기록 이름이 없으면(지운 항목) 설정값이 제목이 된다.
+    const used = await screen.findByRole('checkbox', { name: /내 전략/ })
+    expect(used.parentElement?.textContent).toContain('허용 이탈 폭 40퍼센트')
     expect(screen.queryByRole('checkbox', { name: DEFAULT_ROW })).toBeNull()
   })
   it('써 본 조합 조회가 실패하면 기본 전략만 보이고 그 사실을 한 줄로 알린다', async () => {

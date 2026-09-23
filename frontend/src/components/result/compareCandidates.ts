@@ -6,7 +6,7 @@ import {
   defaultValuesOf,
   isAxisValue,
 } from '@/hooks/useStrategySettings'
-import type { UsedStrategy } from '@/types/backtestRequest'
+import type { UsedStrategy } from '@/types/myRecords'
 import type { AxisValue, StrategyView } from '@/types/strategyRegistry'
 
 /**
@@ -24,6 +24,8 @@ export type ParameterCombination = {
   strategy: StrategyView
   parameters: AxisValues
   source: CandidateSource
+  /** 내 전략의 이름표 — 그 조합을 가리키는 내 기록 항목 이름. 기본 전략과 지운 항목은 `null` */
+  recordName: string | null
 }
 
 function describeValue(value: AxisValue): string {
@@ -101,17 +103,17 @@ export function combinationsFor(
     exclude && exclude.strategyId === strategy.strategyId
       ? readUsedParameters(strategy, exclude.parameters)
       : null
-  const push = (parameters: AxisValues, source: CandidateSource) => {
+  const push = (parameters: AxisValues, source: CandidateSource, recordName: string | null) => {
     if (excluded && parametersEqual(strategy, excluded, parameters)) return
     if (seen.some((known) => parametersEqual(strategy, known, parameters))) return
     seen.push(parameters)
-    result.push({ strategy, parameters, source })
+    result.push({ strategy, parameters, source, recordName })
   }
-  push(defaultValuesOf(strategy), 'default')
+  push(defaultValuesOf(strategy), 'default', null)
   for (const item of used) {
     if (item.strategyId !== strategy.strategyId) continue
     const parameters = readUsedParameters(strategy, item.parameters)
-    if (parameters) push(parameters, 'used')
+    if (parameters) push(parameters, 'used', item.recordName)
   }
   return result
 }
