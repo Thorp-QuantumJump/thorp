@@ -1,34 +1,81 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { fetchAnalysisVersions } from '@/api/analysisVersions'
+import { fetchUsedStrategies } from '@/api/backtest'
 import { fetchEvaluationWindow } from '@/api/sectors'
 import { fetchStrategyRegistry } from '@/api/strategyRegistry'
+import { useAuth } from '@/auth/auth-context'
 import { resolveRulesVersion } from '@/components/strategy/analysisSupport'
 import { Button } from '@/components/ui/button'
+import type { UsedStrategy } from '@/types/backtestRequest'
 import type { PublicResultDetail } from '@/types/result'
+import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'
 import type { CompareChoice } from './compareRequest'
 import styles from './comparison.module.css'
 
-type Candidate = { choice: CompareChoice; reason: string | null; shortenedDays: number | null }
+type Candidate = {
+  key: string
+  choice: CompareChoice
+  source: CandidateSource
+  /** 설정값 한 줄. 축이 없는 전략은 빈 문자열 */
+  settings: string
+  reason: string | null
+  shortenedDays: number | null
+}
 
+const SOURCE_LABELS: Record<CandidateSource, string> = {
+  default: '기본값',
+  used: '내가 쓴 설정',
+}
+
+/**
+ * 비교 대상 고르기(FR-004, `S15P21E205-419`).
+ *
+ * <p><b>후보는 전략이 아니라 전략·설정값 조합이다.</b> 등록표 기본값 조합과, 로그인했으면 내가 써 본 조합
+ * (`GET /backtests/used-strategies`)을 전략별로 묶어 보인다. 조합마다 쓰일 설정값을 적어 무엇과 비교하는지 보이게 한다.
+ * 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보다.
+ *
+ * <p><b>여럿을 골라 한 번에 요청한다.</b> 남은 자리(`room`)만큼 고를 수 있고, 준비 기간이 기준보다 긴 후보는 고르기 전에
+ * 비교 기간이 짧아진다는 사실을 적는다(FR-004). 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않는다.
+ *
+ * <p>비로그인이면 써 본 조합을 부르지 않는다 — 401 을 받아 넘기는 대신 기본값만 후보로 둔다.
+ */
 export function CompareTargetPicker({
   base,
+  room,
   onSelect,
   onClose,
 }: {
   base: PublicResultDetail
-  onSelect: (choice: CompareChoice) => void
+  /** 더 고를 수 있는 자리 수 */
+  room: number
+  onSelect: (choices: CompareChoice[]) => void
   onClose: () => void
 }) {
-  const [state, setState] = useState<{ candidates: Candidate[]; error: string | null } | null>(null)
+  const { status: authStatus } = useAuth()
+  const authenticated = authStatus === 'authenticated'
+  const [state, setState] = useState<{
+    candidates: Candidate[]
+    usedUnavailable: boolean
+    error: string | null
+  } | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [picked, setPicked] = useState<string[]>([])
+  const listId = useId()
+
   useEffect(() => {
     const controller = new AbortController()
     let active = true
     const load = async () => {
       try {
-        const [registry, versions] = await Promise.all([
+        const [registry, versions, used] = await Promise.all([
           fetchStrategyRegistry(base.config.items.length, controller.signal),
           fetchAnalysisVersions(controller.signal),
+          authenticated
+            ? fetchUsedStrategies(controller.signal).then(
+                (items): { items: UsedStrategy[]; failed: boolean } => ({ items, failed: false }),
+                () => ({ items: [], failed: true }),
+              )
+            : Promise.resolve({ items: [], failed: false }),
         ])
         if (!versions) throw new Error('전략 규칙 버전을 확인할 수 없습니다.')
         const maxWarmup = Math.max(
@@ -45,64 +92,88 @@ export function CompareTargetPicker({
                 controller.signal,
               ).catch(() => null)
             : null
-        const candidates = registry.strategies
-          .filter((strategy) => strategy.strategyId !== base.config.strategyId)
-          .map((strategy): Candidate => {
-            const rules = resolveRulesVersion(versions, strategy.strategyId)
-            const longer = strategy.warmupTradingDays > base.config.warmupTradingDays
-            const firstDay = longer ? window?.tradingDaysFromBase[strategy.warmupTradingDays] : null
-            const start =
-              firstDay && firstDay > base.config.effectiveStart
-                ? firstDay
-                : base.config.effectiveStart
-            const end =
-              window && window.commonEnd < base.config.effectiveEnd
-                ? window.commonEnd
-                : base.config.effectiveEnd
-            const reason = !strategy.selectable
-              ? (strategy.unselectableReason ?? '현재 조건에서는 고를 수 없습니다.')
-              : rules.status !== 'registered'
-                ? '전략의 계산 규칙을 확인할 수 없습니다.'
-                : !base.versions.costProfile
-                  ? '기준 결과의 비용 기준을 확인할 수 없습니다.'
-                  : strategy.targetWeightSource === 'USER' &&
-                      base.config.items.some((item) => item.targetWeight == null)
-                    ? '입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.'
-                    : longer && (!firstDay || start > end)
-                      ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'
-                      : null
-            return {
-              choice: {
-                strategy,
-                registryVersion: registry.registryVersion,
-                rulesVersion: rules.status === 'registered' ? rules.rulesVersion : '',
-                ...(longer && firstDay ? { period: { start, end } } : {}),
-              },
-              reason,
-              shortenedDays:
-                longer && firstDay && window
-                  ? window.tradingDaysFromBase.filter(
-                      (date) => date >= base.config.effectiveStart && date < start,
-                    ).length
-                  : null,
-            }
-          })
-        if (active) setState({ candidates, error: null })
+        const candidates = registry.strategies.flatMap((strategy): Candidate[] => {
+          const rules = resolveRulesVersion(versions, strategy.strategyId)
+          const longer = strategy.warmupTradingDays > base.config.warmupTradingDays
+          const firstDay = longer ? window?.tradingDaysFromBase[strategy.warmupTradingDays] : null
+          const start =
+            firstDay && firstDay > base.config.effectiveStart ? firstDay : base.config.effectiveStart
+          const end =
+            window && window.commonEnd < base.config.effectiveEnd
+              ? window.commonEnd
+              : base.config.effectiveEnd
+          const reason = !strategy.selectable
+            ? (strategy.unselectableReason ?? '현재 조건에서는 고를 수 없습니다.')
+            : rules.status !== 'registered'
+              ? '전략의 계산 규칙을 확인할 수 없습니다.'
+              : !base.versions.costProfile
+                ? '기준 결과의 비용 기준을 확인할 수 없습니다.'
+                : strategy.targetWeightSource === 'USER' &&
+                    base.config.items.some((item) => item.targetWeight == null)
+                  ? '입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.'
+                  : longer && (!firstDay || start > end)
+                    ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'
+                    : null
+          const shortenedDays =
+            longer && firstDay && window
+              ? window.tradingDaysFromBase.filter(
+                  (date) => date >= base.config.effectiveStart && date < start,
+                ).length
+              : null
+          return combinationsFor(strategy, used.items, {
+            strategyId: base.config.strategyId,
+            parameters: base.config.parameters,
+          }).map((combination, index) => ({
+            key: strategy.strategyId + '#' + index,
+            source: combination.source,
+            settings: describeParameters(strategy, combination.parameters),
+            reason,
+            shortenedDays,
+            choice: {
+              strategy,
+              parameters: combination.parameters,
+              registryVersion: registry.registryVersion,
+              rulesVersion: rules.status === 'registered' ? rules.rulesVersion : '',
+              ...(longer && firstDay ? { period: { start, end } } : {}),
+            },
+          }))
+        })
+        if (active) setState({ candidates, usedUnavailable: used.failed, error: null })
       } catch (error) {
         if (active)
           setState({
             candidates: [],
+            usedUnavailable: false,
             error: error instanceof Error ? error.message : '비교 전략을 불러오지 못했습니다.',
           })
       }
     }
     setState(null)
+    setPicked([])
     void load()
     return () => {
       active = false
       controller.abort()
     }
-  }, [base, attempt])
+  }, [base, attempt, authenticated])
+
+  const toggle = (key: string) =>
+    setPicked((known) =>
+      known.includes(key) ? known.filter((item) => item !== key) : [...known, key],
+    )
+  const full = picked.length >= room
+  const submit = () => {
+    const chosen = (state?.candidates ?? []).filter((candidate) => picked.includes(candidate.key))
+    if (chosen.length === 0) return
+    onSelect(chosen.map((candidate) => candidate.choice))
+  }
+
+  // 전략별로 묶어 보인다. 조합 하나짜리 전략이 대부분이라 제목은 전략 이름, 줄은 출처와 설정값이다.
+  const groups = new Map<string, Candidate[]>()
+  for (const candidate of state?.candidates ?? []) {
+    const id = candidate.choice.strategy.strategyId
+    groups.set(id, [...(groups.get(id) ?? []), candidate])
+  }
 
   return (
     <section className={styles.panel} aria-label="비교 전략 선택">
@@ -116,31 +187,73 @@ export function CompareTargetPicker({
           </Button>
         </div>
       ) : null}
-      <ul className={styles.candidates}>
-        {state?.candidates.map(({ choice, reason, shortenedDays }, index) => (
-          <li key={choice.strategy.strategyId}>
-            <Button
-              variant="outline"
-              disabled={!!reason}
-              aria-describedby={'compare-candidate-' + index}
-              onClick={() => onSelect(choice)}
-            >
-              {choice.strategy.name}
-            </Button>
-            <p id={'compare-candidate-' + index}>
-              {reason ??
-                (shortenedDays !== null && shortenedDays > 0
-                  ? '이 전략을 고르면 비교 기간이 ' + shortenedDays + '거래일 짧아집니다.'
-                  : choice.strategy.warmupTradingDays > base.config.warmupTradingDays
-                    ? '준비 기간을 맞춰 두 결과를 다시 계산합니다.'
-                    : choice.strategy.description)}
-            </p>
+      {state && !state.error ? (
+        <p id={listId} className={styles.pickerNote}>
+          {room > 0
+            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본값은 등록표의 기본 설정이고, 내가 쓴 설정은 이전에 돌려 본 값입니다.'
+            : '비교 대상을 더 고를 자리가 없습니다. 하나를 해제한 뒤 고르세요.'}
+          {state.usedUnavailable ? ' 내가 쓴 설정 목록은 지금 불러오지 못했습니다.' : ''}
+        </p>
+      ) : null}
+      <ul className={styles.candidates} aria-describedby={listId}>
+        {[...groups.entries()].map(([strategyId, candidates]) => (
+          <li key={strategyId} className={styles.group}>
+            <p className={styles.groupTitle}>{candidates[0].choice.strategy.name}</p>
+            <ul className={styles.combinations}>
+              {candidates.map((candidate) => {
+                const checked = picked.includes(candidate.key)
+                const disabled = !!candidate.reason || room === 0 || (full && !checked)
+                const name =
+                  candidate.choice.strategy.name +
+                  ' · ' +
+                  SOURCE_LABELS[candidate.source] +
+                  (candidate.settings ? ' · ' + candidate.settings : '')
+                return (
+                  <li key={candidate.key}>
+                    <label className={styles.combination}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        aria-label={name}
+                        aria-describedby={candidate.key + '-hint'}
+                        onChange={() => toggle(candidate.key)}
+                      />
+                      <span>
+                        <span className={styles.source}>{SOURCE_LABELS[candidate.source]}</span>
+                        {candidate.settings ? ' · ' + candidate.settings : ''}
+                      </span>
+                    </label>
+                    <p id={candidate.key + '-hint'}>
+                      {candidate.reason ??
+                        (candidate.shortenedDays !== null && candidate.shortenedDays > 0
+                          ? '이 전략을 고르면 비교 기간이 ' +
+                            candidate.shortenedDays +
+                            '거래일 짧아집니다.'
+                          : candidate.choice.strategy.warmupTradingDays >
+                              base.config.warmupTradingDays
+                            ? '준비 기간을 맞춰 결과를 다시 계산합니다.'
+                            : candidate.source === 'default'
+                              ? candidate.choice.strategy.description
+                              : '')}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
           </li>
         ))}
       </ul>
-      <Button variant="outline" onClick={onClose}>
-        목록 닫기
-      </Button>
+      <div className={styles.actions}>
+        {state && !state.error ? (
+          <Button variant="outline" disabled={picked.length === 0} onClick={submit}>
+            비교하기{picked.length > 0 ? ' (' + picked.length + ')' : ''}
+          </Button>
+        ) : null}
+        <Button variant="outline" onClick={onClose}>
+          목록 닫기
+        </Button>
+      </div>
     </section>
   )
 }

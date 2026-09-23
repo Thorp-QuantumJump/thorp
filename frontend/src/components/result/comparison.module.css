@@ -58,3 +58,42 @@
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
+.slotName {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.pickerNote {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+.group {
+  border-top: 1px solid var(--thorp-line);
+  padding-top: 10px;
+}
+.groupTitle {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.combinations {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.combination {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.combination input {
+  margin-top: 5px;
+}
+.combination input:disabled + span {
+  color: var(--thorp-muted);
+}
+.source {
+  font-weight: 600;
+}
