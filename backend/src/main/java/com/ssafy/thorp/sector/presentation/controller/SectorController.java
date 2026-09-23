@@ -8,6 +8,7 @@ import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;
 import com.ssafy.thorp.sector.application.service.SectorService;
 import com.ssafy.thorp.sector.presentation.response.EvaluationWindowResponse;
 import com.ssafy.thorp.sector.presentation.response.InstrumentProfileResponse;
+import com.ssafy.thorp.sector.presentation.response.PriceSeriesResponse;
 import com.ssafy.thorp.sector.presentation.response.SectorListResponse;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>읽기만 있다. 대응표를 만들거나 고치는 엔드포인트는 두지 않는다 — 원본은 {@code data/} 파이프라인이 소유한다(research.md 결정 7).
  *
- * <p>가격 시계열은 이 계약으로 내보내지 않는다.
+ * <p>가격 시계열은 <b>이 계약이 내보내는 것 가운데 유일하게 계산에 쓰이는 값</b>이다. 그린 선을 보고 무엇을 담을지 고르는 자리가 화면이라, 조회로 내보내는 길이
+ * 여기 말고는 없다. 계산 자체는 여전히 워커가 한다.
  */
 @RestController
 @RequestMapping("/sectors")
@@ -62,6 +64,20 @@ public class SectorController {
         return ResponseEntity.ok(
                 ApiResponse.ok(
                         InstrumentProfileResponse.from(sectorService.getInstrumentProfile(code))));
+    }
+
+    /**
+     * 대표 ETF의 일별 가격 흐름. 투자 대상을 고르는 화면이 카드에 그리는 선이다.
+     *
+     * <p>없는 섹터 코드는 404 {@code SECTOR_NOT_FOUND}, 가격이 아직 적재되지 않았으면 409 {@code
+     * PRICE_SERIES_NOT_READY}다 ({@link SectorExceptionHandler}). <b>빈 배열을 만들어 내지 않는다</b> — 점 없는
+     * 그래프는 "값이 없다"가 아니라 "움직임이 없었다"로 읽힌다.
+     */
+    @GetMapping("/{code}/price-series")
+    public ResponseEntity<ApiResponse<PriceSeriesResponse>> getPriceSeries(
+            @PathVariable String code) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(PriceSeriesResponse.from(sectorService.getPriceSeries(code))));
     }
 
     /**

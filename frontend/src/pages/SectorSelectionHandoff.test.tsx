@@ -21,6 +21,7 @@ import type { SectorCatalog, SectorSummary } from '@/types/sector'
 const apiMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchInstrumentProfile: vi.fn(),
+  fetchPriceSeries: vi.fn(),
 }))
 
 vi.mock('@/api/sectors', async () => {
@@ -147,6 +148,11 @@ function currentPath(): string {
 describe('다음 단계 버튼과 003 인계', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 카드는 접힌 채로도 가격을 부른다. 그림 자체는 다른 검사가 본다.
+    apiMocks.fetchPriceSeries.mockResolvedValue({
+      status: 'notReady',
+      message: '준비 중',
+    })
     window.sessionStorage.clear()
     apiMocks.fetchInstrumentProfile.mockResolvedValue({
       status: 'notReady',

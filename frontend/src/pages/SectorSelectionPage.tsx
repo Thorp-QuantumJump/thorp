@@ -155,7 +155,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   }, [caseId, navigate, selection])
 
   return (
-    <div className={styles.board}>
+    <div className={styles.board} data-detail-expanded={detailExpanded}>
       {/*
         머리글을 따로 두지 않는다. 화면 제목이 이미 무엇을 하는 자리인지 말하고 있어, 그 아래
         "투자 대상 목록"을 한 번 더 적으면 같은 말이 두 번 읽힌다. 보조 기술에는 영역 이름만 준다.
@@ -229,6 +229,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         className={styles.rail}
         selected={selectedSectors}
         minimumCount={MINIMUM_SECTOR_COUNT}
+        compact={detailExpanded}
         onRemove={(code) => selection.toggleSector(code, false)}
         onProceed={proceed}
         proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}

@@ -19,6 +19,7 @@ import { SectorSelectionPage } from './SectorSelectionPage'
 const apiMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
   fetchInstrumentProfile: vi.fn(),
+  fetchPriceSeries: vi.fn(),
 }))
 
 vi.mock('@/api/sectors', async () => {
@@ -141,6 +142,14 @@ function cardExpanded(): boolean {
   )
 }
 
+/** 상세 상태가 바깥 보드와 선택 요약까지 전달되는가. */
+function boardExpanded(): boolean {
+  return (
+    document.querySelector('[data-detail-expanded]')?.getAttribute('data-detail-expanded') ===
+    'true'
+  )
+}
+
 /** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */
 function railCodes(): string[] {
   return [...document.querySelectorAll('[data-slot="rail-item"]')].map(
@@ -158,6 +167,11 @@ async function add(user: User, ...codes: string[]) {
 describe('투자 대상 고르기', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 카드는 접힌 채로도 가격을 부른다. 그림 자체는 다른 검사가 본다.
+    apiMocks.fetchPriceSeries.mockResolvedValue({
+      status: 'notReady',
+      message: '준비 중',
+    })
     window.sessionStorage.clear()
     apiMocks.fetchInstrumentProfile.mockResolvedValue(profileLoaded)
   })
@@ -273,6 +287,11 @@ describe('투자 대상 고르기', () => {
     expect(screen.getByText('삼성자산운용')).toBeTruthy()
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
     expect(cardExpanded()).toBe(true)
+    expect(boardExpanded()).toBe(true)
+    expect(document.querySelector('[data-slot="rail-compact-summary"]')?.textContent).toContain(
+      '0개 선택2개 더',
+    )
+    expect(document.querySelector('[data-compact]')?.getAttribute('data-compact')).toBe('true')
     expect(expandButton().getAttribute('aria-label')).toBe('간단히 보기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')
