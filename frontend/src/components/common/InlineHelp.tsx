@@ -17,6 +17,8 @@ interface InlineHelpProps {
    * `'click'`은 눌러야 열리고 닫기 버튼이 붙는다. 설명이 길어 마우스를 얹은 채로 읽기 어려울 때만 쓴다.
    */
   on?: "click" | "hover";
+  /** 결과 화면처럼 위쪽 여백이 좁을 때 아래로 펼친다. */
+  side?: "top" | "bottom";
 }
 
 /**
@@ -33,7 +35,7 @@ interface InlineHelpProps {
  * <p>기본은 HoverCard가 얹어서 열기를 맡고 초점·누르기는 트리거에서 직접 잇는다. `on="click"`에서는
  * Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).
  */
-export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "hover", side = "top" }: InlineHelpProps) {
   const [open, setOpen] = useState(false);
   const closedByEscape = useRef(false);
   if (on === "hover") {
@@ -78,9 +80,10 @@ export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
         <HoverCard.Portal>
           <HoverCard.Content
             className={styles.content}
-            side="top"
+            side={side}
+            align={side === "bottom" ? "start" : "center"}
             sideOffset={6}
-            collisionPadding={12}
+            collisionPadding={16}
             aria-label={`${label} 도움말`}
           >
             <p className={styles.term}>{label}</p>
@@ -102,9 +105,10 @@ export function InlineHelp({ label, children, on = "hover" }: InlineHelpProps) {
       <Popover.Portal>
         <Popover.Content
           className={styles.content}
-          side="top"
+          side={side}
+          align={side === "bottom" ? "start" : "center"}
           sideOffset={6}
-          collisionPadding={12}
+          collisionPadding={16}
           aria-label={`${label} 도움말`}
         >
           <p className={styles.term}>{label}</p>

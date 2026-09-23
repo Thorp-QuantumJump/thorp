@@ -126,7 +126,7 @@ function Metric({
   return (
     <div className={styles.metric}>
       <dt className={styles.metricLabel}>
-        {label} <InlineHelp label={label}>{definition}</InlineHelp>
+        {label} <InlineHelp label={label} side="bottom">{definition}</InlineHelp>
       </dt>
       <dd className={styles.metricValue}>{value}</dd>
       {supplement ? <dd className={styles.metricMeta}>{supplement}</dd> : null}
