@@ -1,8 +1,11 @@
 import { useId, useMemo } from 'react'
+import { ArrowLeft } from 'lucide-react'
+import { Popover } from 'radix-ui'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
+import comparisonStyles from '@/components/result/comparison.module.css'
 import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
 import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'
@@ -10,22 +13,14 @@ import { describeParameters } from '@/components/result/compareCandidates'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'
 import { strategyLabel } from '@/components/result/conditionLine'
-import { DetailPanel } from '@/components/result/DetailPanel'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
-import { isZeroValue } from '@/components/result/formatResult'
-import {
-  LOSS_WINDOW_NONE,
-  LOSS_WINDOW_UNAVAILABLE,
-  LossWindowView,
-} from '@/components/result/LossWindowView'
-import { IndexComparisonView } from '@/components/result/IndexComparisonView'
-import { NextStepLinks } from '@/components/result/NextStepLinks'
-import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'
+import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
+import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
+import { ResultConditionLine, ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
-import { TargetRiskView } from '@/components/result/TargetRiskView'
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
@@ -37,13 +32,14 @@ import styles from './ResultPage.module.css'
 /**
  * 결과 첫 화면(`/results/:token`, spec 005 US1).
  *
- * <p><b>바로 보이는 것은 네 가지뿐이다</b>: 조건 한 줄, 핵심 숫자 3개, 그래프 1개, 해석 요약 1문장
- * (FR-001, SC-001). 상세는 요청해야 열리고, 내부 계산 항목을 나열하지 않는다(FR-020).
+ * <p>첫 화면에는 핵심 숫자 3개와 그래프를 먼저 보인다(FR-001, SC-001). 조건과 해석은 그래프 아래
+ * 기본 요약 탭에 두고, 내부 계산 항목은 나열하지 않는다(FR-020).
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
- * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면
- * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).
+ * <p>화면은 제목·핵심 숫자·그래프·탭 묶음(`ResultDetailTabs`, T098) 순이다.
+ * 상태 문장과 해석은 기본으로 열린 '요약' 탭 안에 둔다. 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양
+ * 버튼은 '비교 대상 고르기' 하나다. 비교 대상을 고르는 동안 주소는 바뀌지 않는다(SC-006).
  *
  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.
  */
@@ -107,10 +103,18 @@ function ResultView({
   const drawn = compare.compatibleTargets.filter(
     (target) => target.compatible !== null && target.timeseries.status === 'loaded',
   )
+  const drawnFirst = drawn[0]?.compatible ?? null
   const pickerId = useId()
   const picker = useDisclosure(pickerId)
   const pickerButtonId = pickerId + '-trigger'
   const { summary } = detail
+  const recoveryDays = summary?.analytics?.recoveryDays
+  const recoverySentence =
+    recoveryDays === null
+      ? '분석 기간 내 이전 고점을 회복하지 못했습니다.'
+      : typeof recoveryDays === 'number' && recoveryDays > 0
+        ? `이전 고점 회복까지 ${recoveryDays}거래일이 걸렸습니다.`
+        : null
 
   const viewable = hasViewableResult(detail)
   // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.
@@ -125,31 +129,13 @@ function ResultView({
     [summary, timeseries],
   )
 
-  const detailPanelId = useId()
-  const lossPanelId = useId()
-  const lossReasonId = useId()
-  const detailView = useDisclosure(detailPanelId)
-  const lossView = useDisclosure(lossPanelId)
-
-  return (
-    <article className={styles.result} aria-labelledby="result-title">
-      <h1 id="result-title" className={styles.title}>
-        분석 결과
-      </h1>
-      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
-      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
-
-      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
-        <p className={styles.status} role="status">
-          {inFlightMessage(detail)}
-        </p>
-      ) : null}
-
-      <ResultSummaryCard
+  // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
+  const summaryBlock = (
+    <div className={styles.summaryStack}>
+      <ResultConditionLine
         detail={detail}
         targets={drawn.map((target) => ({ detail: target.compatible!, name: names.get(target.key)! }))}
       />
-
       <ResultStatusLine
         detail={detail}
         completedThrough={completedThrough}
@@ -162,21 +148,9 @@ function ResultView({
             : undefined
         }
       />
-
-      <ResultChartSlot
-        detail={detail}
-        timeseries={timeseries}
-        progressPoints={progressSeries.points}
-        targets={drawn.map((target) => ({
-          name: names.get(target.key)!,
-          points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],
-          maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,
-        }))}
-      />
-
       {summary
         ? // 해석 요약은 비교 대상마다 한 문장이다(FR-006). 대상이 없으면 기준의 세 숫자만 말한다.
-          (drawn.length === 0 ? [null] : drawn).map((target) => (
+          (drawn.length === 0 ? [null] : drawn).map((target, index) => (
             <p className={styles.sentence} key={target?.key ?? 'single'}>
               {selectSummarySentence({
                 base: {
@@ -195,50 +169,83 @@ function ResultView({
                   : null,
                 partial: detail.partial ? { completedThrough } : null,
               })}
+              {index === 0 && recoverySentence ? ` ${recoverySentence}` : null}
             </p>
           ))
         : null}
+      <ResultValuationNote detail={detail} />
+    </div>
+  )
 
-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
-      <div className={styles.actions}>
-        <Button
-          id={pickerButtonId}
-          type="button"
-          disabled={!viewable || compare.sending || compare.room === 0}
-          {...picker.toggleProps}
-        >
-          비교 대상 고르기
-        </Button>
-        {viewable ? (
-          <Button type="button" variant="outline" {...detailView.toggleProps}>
-            자세히 보기
-          </Button>
-        ) : null}
-        {viewable ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={lossWindow === null}
-            aria-describedby={lossWindow === null ? lossReasonId : undefined}
-            {...lossView.toggleProps}
-          >
-            손실이 커진 때 보기
-          </Button>
-        ) : null}
-      </div>
-      {picker.open ? (
-        <div id={pickerId}>
-          <CompareTargetPicker
-            base={detail}
-            room={compare.room}
-            onClose={picker.close}
-            onSelect={(choices) => {
-              picker.close()
-              compare.select(choices)
+  return (
+    <article className={styles.result} aria-labelledby="result-title">
+      <header className={styles.intro}>
+        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라
+            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유
+            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에
+            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로
+            비교'(B07)의 몫이다. */}
+        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>
+          <ArrowLeft size={15} aria-hidden="true" />
+          처음부터 다시 분석
+        </Link>
+        <h1 id="result-title" className={styles.title}>
+          백테스트 결과
+        </h1>
+        <div className={styles.actions}>
+          <Popover.Root
+            open={picker.open}
+            onOpenChange={(open) => {
+              if (!open) picker.close()
             }}
-          />
+          >
+            <Popover.Anchor asChild>
+              <Button
+                id={pickerButtonId}
+                type="button"
+                disabled={!viewable || compare.sending || compare.room === 0}
+                {...picker.toggleProps}
+              >
+                비교 대상 고르기
+              </Button>
+            </Popover.Anchor>
+            <Popover.Portal>
+              <Popover.Content
+                id={pickerId}
+                className={comparisonStyles.popover}
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                collisionPadding={16}
+                aria-label="비교 대상 고르기"
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault()
+                  document.getElementById(pickerButtonId)?.focus()
+                }}
+              >
+                <CompareTargetPicker
+                  base={detail}
+                  room={compare.room}
+                  onClose={picker.close}
+                  onSelect={(choices) => {
+                    picker.close()
+                    compare.select(choices)
+                  }}
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
+      </header>
+      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}
+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}
+
+      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (
+        <p className={styles.status} role="status">
+          {inFlightMessage(detail)}
+        </p>
       ) : null}
+
       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
       {compare.targets.map((target) => (
         <CompareTargetSlot
@@ -266,49 +273,37 @@ function ResultView({
           onCancel={compare.cancelPeriod}
         />
       ) : null}
-      {viewable && lossWindow === null ? (
-        <p id={lossReasonId} className={styles.hint}>
-          {summary && isZeroValue(summary.maxDrawdown) ? LOSS_WINDOW_NONE : LOSS_WINDOW_UNAVAILABLE}
-        </p>
-      ) : null}
-
-      {detailView.open ? (
-        <DetailPanel
-          id={detailPanelId}
+      <ResultSummaryCard detail={detail} />
+      <ResultChartSlot
+        detail={detail}
+        timeseries={timeseries}
+        progressPoints={progressSeries.points}
+        targets={drawn.map((target) => ({
+          name: names.get(target.key)!,
+          points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],
+          maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,
+        }))}
+      />
+      {viewable ? (
+        <ResultDetailTabs
           token={token}
           detail={detail}
-          onClose={detailView.close}
+          summary={summaryBlock}
+          lossWindow={lossWindow}
           compare={
-            // 상세의 선정·배분 효과는 대상 하나 기준이다. 여럿이면 첫 대상만 — 표를 대상 수만큼 늘리면 첫 화면이 아니다.
-            drawn[0]?.compatible
+            // 설정·근거 탭의 선정·배분 효과는 대상 하나 기준이다. 여럿이면 첫 대상만 — 표를 대상 수만큼 늘리면 첫 화면이 아니다.
+            drawnFirst
               ? {
-                  token: drawn[0].compatible.publicToken,
+                  token: drawnFirst.publicToken,
                   name: names.get(drawn[0].key)!,
-                  items: drawn[0].compatible.config.items,
+                  items: drawnFirst.config.items,
                 }
               : null
           }
         />
-      ) : null}
-      {lossView.open && lossWindow ? (
-        <LossWindowView
-          id={lossPanelId}
-          token={token}
-          lossWindow={lossWindow}
-          items={detail.config.items}
-          onClose={lossView.close}
-        />
-      ) : null}
-
-      <IndexComparisonView token={token} disabled={!viewable} />
-      <TargetRiskView base={detail} disabled={!viewable} />
-      <NextStepLinks
-        config={detail.config}
-        token={token}
-        compareToken={drawn[0]?.token ?? null}
-        compareReady={drawn.length > 0}
-      />
-
+      ) : (
+        summaryBlock
+      )}
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
     </article>
   )
@@ -329,7 +324,7 @@ function ResultView({
  * `maxDrawdown` 같은 확정된 값이고, 그 값은 실행이 끝나야 나온다. 중간 곡선으로 짐작해 칠하면 끝난 뒤
  * 음영이 다른 자리로 옮겨 간다.
  *
- * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.
+ * <p>비교 대상 곡선들은 B05가 이 컴포넌트의 `targets`에 이어 붙인다(최대 셋, `S15P21E205-419`).
  */
 function ResultChartSlot({
   detail,

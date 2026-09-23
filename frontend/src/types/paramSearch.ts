@@ -174,11 +174,15 @@ export type PreviewWorkload = {
 
 /**
  * 묶음에 걸린 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다
- * (FR-005a, 원칙 IX).
+ * (FR-005a).
+ *
+ * `timeLimitSeconds`는 **`null`이면 실행시간 상한을 두지 않는다는 뜻이다** — 묶음은 후보를 다 돌거나
+ * 연속 실패 한도·취소로만 끝난다. 0으로 접거나 없는 값으로 다루지 않는다. 상한이 없으면 서버가
+ * `provisional`에서도 그 이름을 빼므로 화면이 없는 제한에 '임시값'을 붙이지 않는다.
  */
 export type AppliedLimits = {
   maxCandidates: number
-  timeLimitSeconds: number
+  timeLimitSeconds: number | null
   dispatchWindow: number
   consecutiveFailureLimit: number
   provisional: string[]

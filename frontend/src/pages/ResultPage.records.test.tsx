@@ -65,14 +65,14 @@ describe('ResultPage from records', () => {
     renderResult('?from=records&recordId=MR-20260918-000042')
 
     expect(await screen.findByText(SAME_VERSION_NOTICE)).toBeTruthy()
-    await screen.findByRole('heading', { name: '분석 결과' })
+    await screen.findByRole('heading', { name: '백테스트 결과' })
     expect(screen.getAllByRole('status').filter((el) => el.closest('[class*="origin"]'))).toHaveLength(1)
   })
 
   it('기록에서 오지 않았으면 그 줄이 없고 기록 상세를 부르지 않는다', async () => {
     renderResult('')
 
-    await screen.findByRole('heading', { name: '분석 결과' })
+    await screen.findByRole('heading', { name: '백테스트 결과' })
     expect(screen.queryByText(SAME_VERSION_NOTICE)).toBeNull()
     expect(recordMocks.fetchMyRecord).not.toHaveBeenCalled()
   })

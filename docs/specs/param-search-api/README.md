@@ -84,9 +84,9 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
       "exclusionReasons": []
     },
     "limits": {
-      "maxCandidates": 100, "timeLimitSeconds": 1800,
+      "maxCandidates": 100, "timeLimitSeconds": null,
       "dispatchWindow": 1, "consecutiveFailureLimit": 5,
-      "provisional": ["maxCandidates", "dispatchWindow", "timeLimitSeconds", "consecutiveFailureLimit"],
+      "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
     "commonPeriod": { "start": "2015-12-22", "end": "2026-09-14", "shortenedBy": "lookbackDays" },
@@ -101,7 +101,11 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
   후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행 지원 여부다.
 - `axes` 순서가 그리드 좌표 축 순서이고, `values` 순서가 인접 판정의 근거다(FR-029).
 - `defaultValue`는 등록된 기본 시작값이며 **추천값이나 최적값이 아니다.** '추천'·'최적' 문구를 붙이지 않는다.
-- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 현재 네 개 전부다.
+- **`limits.timeLimitSeconds`는 `null`이면 실행시간 상한을 두지 않는다는 뜻이다**(2026-09-23). 묶음은
+  후보를 다 돌거나 연속 실패 한도·취소로만 끝난다. 0으로 접지 말 것 — 화면이 없는 마감을 말하게 된다.
+  묶음 크기를 막는 것은 `maxCandidates` 하나다.
+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 상한을 두지 않은 `timeLimitSeconds`는 이 목록에
+  실리지 않는다 — 없는 한도에 임시값 표시를 붙일 수 없다.
 - `limits.exceeded`가 `true`면 실행은 거부된다. 화면은 범위를 좁히라고 안내한다.
 - `validationLabel`을 **실행 전에도** 준다 — 결과를 본 뒤에야 미검증을 알면 이미 오해가 생긴 뒤다(FR-015).
 
@@ -191,7 +195,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰
         "stabilityFormula": { "neighbor": "SINGLE_AXIS_ONE_STEP", "value": "MEAN_ABS_NET_RETURN_DIFF" },
         "provisional": ["displayCount"]
       },
-      "limits": { "maxCandidates": 100, "timeLimitSeconds": 1800, "dispatchWindow": 1, "consecutiveFailureLimit": 5, "provisional": ["..."] },
+      "limits": { "maxCandidates": 100, "timeLimitSeconds": null, "dispatchWindow": 1, "consecutiveFailureLimit": 5, "provisional": ["..."] },
       "referenceVersions": { "marketData": "FIXTURE-three_etf_24m", "registry": "PROVISIONAL-20260911", "cost": "KR-ETF-2026-09", "engine": "nautilus_trader 1.219.0 / worker 2.0.0" },
       "dataVersionChanged": false
     },

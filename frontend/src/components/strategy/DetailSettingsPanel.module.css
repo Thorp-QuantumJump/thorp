@@ -77,33 +77,164 @@
 .weights {
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
 }
 
-.weightTable {
+/* 대상 하나의 비중을 다루는 줄이다. 슬라이더와 숫자 칸이 같은 값을 보인다. */
+.weightList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weightRow {
+  min-width: 0;
+}
+
+.weightRow [data-slot='weight'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: var(--thorp-surface-raised);
+}
+
+.weightRow [data-slot='weight-label'] {
+  flex: 0 0 8rem;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+/* 슬라이더와 숫자 칸이 좁은 화면에서 서로를 밀어내지 않게 한 묶음으로 두고 함께 줄인다. */
+.weightRow [data-slot='weight-controls'] {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.weightRow [data-slot='weight-slider'] {
+  flex: 1 1 6rem;
+  min-width: 0;
+  accent-color: var(--thorp-accent);
+  cursor: pointer;
+}
+
+.weightRow [data-slot='weight-number'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.weightRow [data-slot='weight-field'] {
+  width: 5.5rem;
+  padding: 6px 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.weightRow [data-slot='weight-unit'] {
+  color: var(--thorp-copy);
+  font-size: 0.82rem;
+}
+
+/* 받지 않은 입력을 알리는 한 문장이다. 그 자리에 둔다. */
+.weightRow [data-slot='weight-error'] {
+  flex-basis: 100%;
+  color: var(--thorp-copy);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* 합계와 남은 비중, 되돌리기 하나가 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */
+.weightTotal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 10px);
+}
+
+.weightTotal p {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+/* 100% 가운데 얼마가 찼고 얼마가 넘쳤는지를 눈으로 보인다. 문장이 읽어 주는 값과 같은 값이다. */
+.weightTotal [data-slot='weight-total-bar'] {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--thorp-surface-muted);
 }
 
-.weightTable th,
-.weightTable td {
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--thorp-line);
-  text-align: left;
+.weightTotal [data-slot='weight-total-fill'],
+.weightTotal [data-slot='weight-total-over'] {
+  flex: none;
 }
 
-.weightTable td {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.weightTotal [data-slot='weight-total-fill'] {
+  background: var(--thorp-accent);
+  transition: width 0.15s ease;
+}
+
+.weightTotal [data-slot='weight-total-bar'][data-state='short'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-warning);
+}
+
+.weightTotal [data-slot='weight-total-bar'][data-state='over'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-negative);
+}
+
+/* 100%를 넘은 몫이다. 채워진 몫과 다른 색으로 두어 얼마나 넘쳤는지 바로 보이게 한다. */
+.weightTotal [data-slot='weight-total-over'] {
+  background: var(--thorp-negative);
+  opacity: 0.55;
+}
+
+.weightTotal button {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 6px 13px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control, 999px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.weightTotal button:hover {
+  border-color: var(--thorp-line-control-hover);
 }
 
 .resetAll {
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -117,9 +248,9 @@
 
 .violations {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-inset, 10px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);
   font-size: 0.84rem;
   line-height: 1.6;

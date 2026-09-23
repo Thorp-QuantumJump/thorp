@@ -5,7 +5,7 @@
   display: grid;
   padding: 20px;
   overflow-y: auto;
-  background: rgb(3 8 5 / 72%);
+  background: var(--thorp-overlay, rgb(3 8 5 / 72%));
   place-items: center;
 }
 
@@ -13,9 +13,9 @@
   display: grid;
   gap: 14px;
   width: min(100%, 560px);
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);
@@ -49,7 +49,7 @@
   height: 32px;
   place-items: center;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-copy);
   cursor: pointer;
@@ -75,7 +75,7 @@
 .retry {
   padding: 2px 7px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 3px;
+  border-radius: var(--thorp-radius-control, 3px);
   color: var(--thorp-copy);
   font-size: 0.63rem;
   font-weight: 700;
@@ -134,9 +134,9 @@
 .reason {
   display: grid;
   gap: 6px;
-  padding: 13px;
+  padding: var(--thorp-pad-inset, 13px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-inset, 6px);
   background: var(--thorp-surface);
 }
 
