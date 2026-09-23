@@ -12,26 +12,22 @@ export const METRIC_DEFINITIONS = {
   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',
 } as const
 
-type ResultSummaryCardProps = {
+type ResultConditionLineProps = {
   detail: PublicResultDetail
   target?: PublicResultDetail | null
 }
 
 /**
- * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의, 조건 한 줄(FR-001~FR-003).
+ * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의(FR-001~FR-003).
  *
  * <p>숫자는 응답 문자열을 자릿수만 다듬어 보인다. <b>요약이 없으면 숫자 자리를 그리지 않는다</b> — 0이나
  * 대체값을 넣으면 없는 결과를 만든다(FR-013, 원칙 VI).
  *
- * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).
+ * <p>숫자는 텍스트라 스크린 리더가 읽는다(FR-022).
  */
-export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
-  const condition = buildConditionLine({
-    ...detail,
-    targetName: target?.strategyName ?? target?.config.strategyId,
-    targetWeightsSource: target?.weightsSource,
-  })
+export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
   const { summary } = detail
+  if (!summary) return null
 
   return (
     <section className={styles.card} aria-labelledby="result-summary-title">
@@ -39,6 +35,54 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
         결과 요약
       </h2>
 
+      <dl className={styles.metrics}>
+        <Metric
+          label="비용 차감 후 전체 수익률"
+          value={formatRatio(summary.netTotalReturn)}
+          definition={METRIC_DEFINITIONS.netTotalReturn}
+        />
+        <Metric
+          label="가장 크게 줄었던 폭"
+          value={formatRatio(summary.maxDrawdown)}
+          definition={METRIC_DEFINITIONS.maxDrawdown}
+          supplement={
+            summary.analytics
+              ? summary.analytics.recoveryDays === null
+                ? '분석 기간 내 이전 고점 미회복'
+                : summary.analytics.recoveryDays > 0
+                  ? `이전 고점 회복까지 ${summary.analytics.recoveryDays}거래일`
+                  : undefined
+              : undefined
+          }
+        />
+        <Metric
+          label="거래비용"
+          value={formatMoney(summary.totalTradingCost)}
+          definition={METRIC_DEFINITIONS.totalTradingCost}
+        />
+      </dl>
+
+      {isZeroValue(summary.netTotalReturn) && isZeroValue(summary.maxDrawdown) ? (
+        <p className={styles.note}>
+          수익률과 가장 크게 줄었던 폭이 모두 0입니다. 기간 동안 자산가치가 달라지지 않았다는 뜻이며
+          손실이 없었다는 평가가 아닙니다.
+          {summary.tradeCount === 0 ? ' 이 기간에 체결된 거래가 없습니다.' : ''}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+/** 분석 조건은 그래프 아래 기본 요약 탭에서 읽는다. */
+export function ResultConditionLine({ detail, target }: ResultConditionLineProps) {
+  const condition = buildConditionLine({
+    ...detail,
+    targetName: target?.strategyName ?? target?.config.strategyId,
+    targetWeightsSource: target?.weightsSource,
+  })
+
+  return (
+    <>
       <p className={styles.condition} aria-label="분석 조건">
         <span>{condition.period}</span>
         <span>{condition.comparison}</span>
@@ -51,47 +95,7 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {
         </span>
       </p>
       {condition.weightsNote ? <p className={styles.note}>{condition.weightsNote}</p> : null}
-
-      {summary ? (
-        <>
-          <dl className={styles.metrics}>
-            <Metric
-              label="비용 차감 후 전체 수익률"
-              value={formatRatio(summary.netTotalReturn)}
-              definition={METRIC_DEFINITIONS.netTotalReturn}
-            />
-            <Metric
-              label="가장 크게 줄었던 폭"
-              value={formatRatio(summary.maxDrawdown)}
-              definition={METRIC_DEFINITIONS.maxDrawdown}
-              supplement={
-                summary.analytics
-                  ? summary.analytics.recoveryDays === null
-                    ? '분석 기간 내 이전 고점 미회복'
-                    : summary.analytics.recoveryDays > 0
-                      ? `이전 고점 회복까지 ${summary.analytics.recoveryDays}거래일`
-                      : undefined
-                  : undefined
-              }
-            />
-            <Metric
-              label="거래비용"
-              value={formatMoney(summary.totalTradingCost)}
-              definition={METRIC_DEFINITIONS.totalTradingCost}
-            />
-          </dl>
-
-          {isZeroValue(summary.netTotalReturn) && isZeroValue(summary.maxDrawdown) ? (
-            <p className={styles.note}>
-              수익률과 가장 크게 줄었던 폭이 모두 0입니다. 기간 동안 자산가치가 달라지지 않았다는
-              뜻이며 손실이 없었다는 평가가 아닙니다.
-              {summary.tradeCount === 0 ? ' 이 기간에 체결된 거래가 없습니다.' : ''}
-            </p>
-          ) : null}
-
-        </>
-      ) : null}
-    </section>
+    </>
   )
 }
 

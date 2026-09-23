@@ -18,7 +18,7 @@ import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { NextStepLinks } from '@/components/result/NextStepLinks'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
-import { ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'
+import { ResultConditionLine, ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'
 import { ResultStatusLine } from '@/components/result/ResultStatusLine'
 import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'
 import { selectSummarySentence } from '@/components/result/summarySentences'
@@ -32,8 +32,8 @@ import styles from './ResultPage.module.css'
 /**
  * 결과 첫 화면(`/results/:token`, spec 005 US1).
  *
- * <p><b>바로 보이는 것은 네 가지뿐이다</b>: 조건 한 줄, 핵심 숫자 3개, 그래프 1개, 해석 요약 1문장
- * (FR-001, SC-001). 상세는 요청해야 열리고, 내부 계산 항목을 나열하지 않는다(FR-020).
+ * <p>첫 화면에는 핵심 숫자 3개와 그래프를 먼저 보인다(FR-001, SC-001). 조건과 해석은 그래프 아래
+ * 기본 요약 탭에 두고, 내부 계산 항목은 나열하지 않는다(FR-020).
  *
  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).
  *
@@ -121,6 +121,7 @@ function ResultView({
   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
   const summaryBlock = (
     <div className={styles.summaryStack}>
+      <ResultConditionLine detail={detail} target={target} />
       <ResultStatusLine
         detail={detail}
         completedThrough={completedThrough}
@@ -262,7 +263,7 @@ function ResultView({
           onCancel={compare.cancelPeriod}
         />
       ) : null}
-      <ResultSummaryCard detail={detail} target={target} />
+      <ResultSummaryCard detail={detail} />
       <ResultChartSlot
         detail={detail}
         timeseries={timeseries}
