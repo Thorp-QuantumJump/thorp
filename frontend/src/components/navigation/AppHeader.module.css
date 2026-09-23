@@ -44,7 +44,7 @@
   min-height: 34px;
   padding: 0 9px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 3px;
+  border-radius: var(--thorp-radius-control, 3px);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
@@ -102,7 +102,7 @@
   width: 40px;
   height: 40px;
   border-color: transparent;
-  border-radius: 4px;
+  border-radius: var(--thorp-radius-control, 4px);
   background: transparent;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
@@ -218,7 +218,7 @@
   inset: 0;
   width: 100%;
   border: 0;
-  background: rgb(0 4 2 / 68%);
+  background: var(--thorp-overlay, rgb(0 4 2 / 68%));
   cursor: pointer;
   backdrop-filter: blur(2px);
 }
@@ -265,7 +265,7 @@
   width: 40px;
   height: 40px;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--thorp-radius-control, 4px);
 }
 
 .drawerLinks {

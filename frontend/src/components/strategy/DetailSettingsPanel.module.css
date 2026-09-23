@@ -77,9 +77,9 @@
 .weights {
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
 }
 
 .weightTable {
@@ -103,7 +103,7 @@
 .resetAll {
   padding: 7px 14px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -117,9 +117,9 @@
 
 .violations {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-inset, 10px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);
   font-size: 0.84rem;
   line-height: 1.6;

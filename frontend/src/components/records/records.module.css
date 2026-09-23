@@ -41,7 +41,7 @@
   min-height: 36px;
   padding: 4px 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   color: var(--thorp-foreground);
   background: var(--thorp-surface);
   font: inherit;
@@ -94,7 +94,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -181,9 +181,9 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px 20px;
+  padding: var(--thorp-pad-card, 18px 20px);
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
 }
 
@@ -315,7 +315,7 @@
   width: 2rem;
   height: 2rem;
   border: 1px solid var(--border, #d4d4d8);
-  border-radius: 0.375rem;
+  border-radius: var(--thorp-radius-control, 0.375rem);
   background: transparent;
   cursor: pointer;
 }
@@ -329,7 +329,7 @@
   min-width: 12rem;
   padding: 0.25rem;
   border: 1px solid var(--border, #d4d4d8);
-  border-radius: 0.5rem;
+  border-radius: var(--thorp-radius-card, 0.5rem);
   background: var(--background, #fff);
   box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
 }
@@ -369,7 +369,7 @@
   max-height: calc(100vh - 4rem);
   padding: 0;
   border: 1px solid var(--border, #d4d4d8);
-  border-radius: 0.75rem;
+  border-radius: var(--thorp-radius-card, 0.75rem);
   background: var(--background, #fff);
   color: inherit;
 }

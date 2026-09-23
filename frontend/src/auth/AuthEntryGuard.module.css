@@ -48,7 +48,7 @@
   min-height: 42px;
   padding: 0 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 3px;
+  border-radius: var(--thorp-radius-control, 3px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   cursor: pointer;
