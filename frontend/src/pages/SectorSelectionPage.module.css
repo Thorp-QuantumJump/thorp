@@ -89,9 +89,9 @@
 }
 
 .board[data-detail-expanded='true'] {
-  grid-template-areas:
-    'browser browser'
-    '. rail';
+  grid-template-areas: 'browser rail';
+  grid-template-columns: minmax(0, 1fr) 6.75rem;
+  gap: 14px;
 }
 
 .browser {
@@ -676,6 +676,15 @@
   letter-spacing: -0.02em;
 }
 
+.rail [data-slot='rail-compact-summary'] {
+  display: none;
+}
+
+.rail [data-slot='rail-title-compact'],
+.rail [data-slot='rail-proceed-compact'] {
+  display: none;
+}
+
 .rail [data-slot='rail-empty'] {
   margin: 0;
   color: var(--thorp-copy);
@@ -755,6 +764,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.rail [data-slot='rail-supporting'] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .rail [data-slot='rail-constraint'] {
   margin: 0;
   color: var(--thorp-copy);
@@ -785,6 +800,97 @@
   color: var(--thorp-copy);
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+/*
+  상세를 보는 동안에도 선택 요약의 위치는 바꾸지 않는다. 대신 넓은 화면에서만 폭을 줄이고,
+  선택 개수와 다음 단계로 갈 수 있는지만 남긴다. 색은 장식이 아니라 준비 여부를 뜻한다.
+*/
+@media (min-width: 1181px) {
+  .rail[data-compact='true'] {
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px 10px;
+    text-align: center;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-title'] {
+    color: var(--thorp-copy);
+    font-size: 0.78rem;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-title-full'],
+  .rail[data-compact='true'] [data-slot='rail-proceed-full'] {
+    display: none;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-title-compact'] {
+    display: inline;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-empty'],
+  .rail[data-compact='true'] [data-slot='rail-list'],
+  .rail[data-compact='true'] [data-slot='rail-count'],
+  .rail[data-compact='true'] [data-slot='rail-constraint'],
+  .rail[data-compact='true'] [data-slot='rail-supporting'] {
+    display: none;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-summary'] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-count'] {
+    color: var(--thorp-foreground);
+    font-size: 2rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-unit'] {
+    color: var(--thorp-copy);
+    font-size: 0.72rem;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-status'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 9px;
+    color: var(--thorp-warning);
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-status'][data-ready='true'] {
+    color: var(--thorp-accent);
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-compact-dot'] {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentcolor;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-proceed'] {
+    min-height: 64px;
+    padding: 9px 6px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-proceed-compact'] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 /* 고른 대상이 무엇을 뜻하는지 알리는 자리다. 선택 요약과 같은 묶음에서 읽힌다. */
