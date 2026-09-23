@@ -2,6 +2,7 @@ package com.ssafy.thorp.result.presentation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
+import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
 import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
 import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;
 import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;
@@ -25,6 +27,7 @@ import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.config.SecurityConfig;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.result.application.result.PublicProgressTarget;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
@@ -36,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -50,7 +55,11 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(ResultController.class)
 @Import({SecurityConfig.class, CurrentRequester.class})
-@TestPropertySource(properties = "thorp.result.trades-page-size=" + ResultControllerTest.PAGE_CAP)
+@TestPropertySource(
+        properties = {
+            "thorp.result.trades-page-size=" + ResultControllerTest.PAGE_CAP,
+            "thorp.result.progress-stream-timeout=PT4M"
+        })
 class ResultControllerTest {
 
     static final int PAGE_CAP = 50;
@@ -58,6 +67,7 @@ class ResultControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private PublicResultService service;
+    @MockitoBean private BacktestProgressStream progressStream;
 
     private static PublicResultDetail detail() {
         return new PublicResultDetail(
@@ -219,5 +229,46 @@ class ResultControllerTest {
         mockMvc.perform(post("/results/" + TOKEN + "/retry")).andExpect(status().isForbidden());
 
         verify(service, org.mockito.Mockito.times(1)).retry(TOKEN, null);
+    }
+
+    @Test
+    @DisplayName("진행 구독은 계산 중인 실행에 구독을 걸고 SSE 로 응답한다")
+    void progressSubscribesWhileRunning() throws Exception {
+        when(service.getProgressTarget(TOKEN))
+                .thenReturn(new PublicProgressTarget(42L, RunStatus.RUNNING));
+        // 구독 손잡이가 없으면 컨트롤러가 연결 종료 처리를 걸 수 없다. 실제 구현은 null 을 주지 않는다.
+        when(progressStream.subscribe(eq(42L), any())).thenReturn(() -> {});
+
+        mockMvc.perform(get("/results/" + TOKEN + "/progress"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                                .string("X-Accel-Buffering", "no"));
+
+        verify(progressStream).subscribe(eq(42L), any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = RunStatus.class,
+            names = {"COMPLETED", "FAILED", "CANCELLED"})
+    @DisplayName("이미 끝난 실행에는 구독을 걸지 않는다 — 아무것도 오지 않는 연결을 열어 두지 않는다")
+    void progressDoesNotSubscribeForFinishedRuns(RunStatus status) throws Exception {
+        when(service.getProgressTarget(TOKEN)).thenReturn(new PublicProgressTarget(42L, status));
+
+        mockMvc.perform(get("/results/" + TOKEN + "/progress")).andExpect(status().isOk());
+
+        verify(progressStream, never()).subscribe(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("진행 구독의 토큰 판정은 다른 경로와 같다 — 만료는 410 이고 구독하지 않는다")
+    void progressUsesTheSameTokenRules() throws Exception {
+        when(service.getProgressTarget(TOKEN))
+                .thenThrow(new BusinessException(ErrorCode.RESULT_EXPIRED));
+
+        mockMvc.perform(get("/results/" + TOKEN + "/progress")).andExpect(status().isGone());
+
+        verify(progressStream, never()).subscribe(anyLong(), any());
     }
 }

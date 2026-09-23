@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 /**
  * 결과 공개 열람 설정(spec 005 T004). {@code thorp.result.*}
  *
- * <p><b>다섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래
+ * <p><b>여섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래
  * 내역 페이지 크기가 없으면 공개 경로에 상한 없는 조회가 열린다(원칙 IX). 운영은 {@code application-prod.yml}이 환경변수를 기본값 없이
  * 참조한다({@code BacktestLimitProperties}와 같은 방식).
  *
@@ -45,6 +45,17 @@ public class ResultProperties {
     @NotNull
     @Min(1)
     private Integer tradesPageSize;
+
+    /**
+     * 진행 시계열 구독 하나를 열어 두는 상한. 이 시간이 지나면 연결을 닫고, 화면은 다시 붙는다.
+     *
+     * <p><b>배포 환경의 프록시 읽기 상한보다 짧아야 한다.</b> 길면 프록시가 먼저 끊고, 화면은 서버가 죽은 것과 구분할 수 없는 오류를 받는다. {@code
+     * infra/nginx}의 {@code /api/} 블록이 {@code proxy_read_timeout} 을 정한다.
+     *
+     * <p>진행 구독은 {@code presentation}이 {@code @Value}로 읽는다({@code public-token-ttl}과 같은 이유 — 계층 규약이
+     * {@code presentation → infrastructure}를 막는다). 같은 키를 여기서 {@code @NotNull}로 묶어 비어 있으면 기동을 막는다.
+     */
+    @NotNull private Duration progressStreamTimeout;
 
     public Duration getPublicTokenTtl() {
         return publicTokenTtl;
@@ -84,5 +95,13 @@ public class ResultProperties {
 
     public void setTradesPageSize(Integer tradesPageSize) {
         this.tradesPageSize = tradesPageSize;
+    }
+
+    public Duration getProgressStreamTimeout() {
+        return progressStreamTimeout;
+    }
+
+    public void setProgressStreamTimeout(Duration progressStreamTimeout) {
+        this.progressStreamTimeout = progressStreamTimeout;
     }
 }

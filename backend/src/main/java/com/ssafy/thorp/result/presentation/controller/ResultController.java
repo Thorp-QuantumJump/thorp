@@ -1,11 +1,16 @@
 package com.ssafy.thorp.result.presentation.controller;
 
 import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;
+import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
+import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.web.response.ApiResponse;
+import com.ssafy.thorp.result.application.result.PublicProgressTarget;
 import com.ssafy.thorp.result.application.service.PublicResultService;
 import com.ssafy.thorp.result.presentation.request.PublicTradePageQuery;
+import com.ssafy.thorp.result.presentation.response.PublicProgressEventResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultDetailResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultExceptionsResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultIndexComparisonResponse;
@@ -14,11 +19,15 @@ import com.ssafy.thorp.result.presentation.response.PublicResultRetryResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultTimeseriesResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultTradePageResponse;
 import com.ssafy.thorp.result.presentation.response.PublicResultWeightsResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -27,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 결과 공개 열람 API(spec 005, contracts/result-api.md). 계약 요약은 {@code docs/specs/result-api/README.md}다.
@@ -43,19 +53,26 @@ public class ResultController {
 
     private final PublicResultService service;
     private final CurrentRequester currentRequester;
+    private final BacktestProgressStream progressStream;
     private final int tradesPageSize;
+    private final Duration progressStreamTimeout;
 
     /**
      * @param tradesPageSize 공개 경로 거래 내역의 기본 크기이자 상한(R-11 임시 상한, 원칙 IX). {@code ResultProperties}가
      *     비어 있으면 기동을 막는다. 그 클래스는 {@code infrastructure}라 여기서 키로 읽는다
+     * @param progressStreamTimeout 진행 시계열 구독 하나를 열어 두는 상한. 위와 같은 이유로 키로 읽는다
      */
     public ResultController(
             PublicResultService service,
             CurrentRequester currentRequester,
-            @Value("${thorp.result.trades-page-size}") int tradesPageSize) {
+            BacktestProgressStream progressStream,
+            @Value("${thorp.result.trades-page-size}") int tradesPageSize,
+            @Value("${thorp.result.progress-stream-timeout}") Duration progressStreamTimeout) {
         this.service = service;
         this.currentRequester = currentRequester;
+        this.progressStream = progressStream;
         this.tradesPageSize = tradesPageSize;
+        this.progressStreamTimeout = progressStreamTimeout;
     }
 
     /** 상태·요약·조건. 실패해도 200이다(004 상세와 같다). 형식 오류 400, 없음 404, 만료 410. */
@@ -70,6 +87,92 @@ public class ResultController {
             @PathVariable String token) {
         return ResponseEntity.ok(
                 ApiResponse.ok(PublicResultTimeseriesResponse.from(service.getTimeseries(token))));
+    }
+
+    /**
+     * 실행 중 진행 시계열 구독(spec 004 R-05). 계산이 진행되는 동안 거래일별 포인트를 흘려, 화면이 그래프를 자라게 그린다.
+     *
+     * <p><b>{@code ApiResponse} 봉투를 쓰지 않는다.</b> 한 연결에 이벤트가 여러 번 흐르므로 봉투를 씌울 자리가 없다. 이벤트 이름은 둘이다 —
+     * {@code progress}는 {@link PublicProgressEventResponse}이고, {@code finished}는 종결 상태 이름 하나다. 토큰
+     * 판정이 다른 공개 경로와 같으므로 형식 오류 400·없음 404·만료 410은 연결을 열기 전에 평소의 봉투로 나간다.
+     *
+     * <p><b>이미 끝난 실행이면 구독하지 않고 바로 닫는다.</b> 걸어 두면 아무것도 오지 않는 연결이 상한까지 열려 있다. 화면은 닫힌 것을 보고 최종 시계열을
+     * 읽으러 간다.
+     *
+     * <p><b>구독 직후 실행이 끝나면 {@code finished}가 오지 않을 수 있다.</b> 상태를 읽은 순간과 구독을 건 순간 사이에 종결이 지나갈 수 있고, 그
+     * 틈은 잠금으로 막지 않는다 — 막으려면 종결 경로가 구독자를 기다려야 하고 그것은 계산 쪽을 화면에 묶는 일이다. 화면은 상태 폴링을 따로 돌리므로 이 경우에도 최종
+     * 결과를 놓치지 않고, 연결은 상한에서 닫힌다.
+     *
+     * <p>{@code X-Accel-Buffering: no}는 중간 프록시가 응답을 모아 두지 않게 하는 신호다. 배포 환경 nginx 는 {@code
+     * proxy_buffering off}로 이미 끄지만, 그 앞에 다른 프록시가 붙어도 곡선이 멈추지 않게 헤더로도 알린다.
+     */
+    @GetMapping(value = "/{token}/progress", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamProgress(@PathVariable String token, HttpServletResponse response) {
+        PublicProgressTarget target = service.getProgressTarget(token);
+        response.setHeader("X-Accel-Buffering", "no");
+        SseEmitter emitter = new SseEmitter(progressStreamTimeout.toMillis());
+        if (target.status().isFinal()) {
+            emitter.complete();
+            return emitter;
+        }
+        BacktestProgressStream.Subscription subscription =
+                progressStream.subscribe(target.runId(), new EmitterListener(emitter));
+        // 어느 쪽으로 끝나든 구독을 뗀다. 두 번 닫아도 문제가 없다.
+        emitter.onCompletion(subscription::close);
+        emitter.onTimeout(
+                () -> {
+                    subscription.close();
+                    emitter.complete();
+                });
+        emitter.onError(error -> subscription.close());
+        return emitter;
+    }
+
+    /**
+     * 진행 알림을 SSE 로 옮긴다.
+     *
+     * <p>전달이 끊긴 연결에서는 {@code IOException} 이 난다. 그것을 {@code RuntimeException} 으로 바꿔 올리는 이유: 알림을 보내는
+     * 쪽은 브로커 리스너 스레드이고, 거기서 검사 예외를 다루게 하면 이벤트 ACK 판단이 화면 사정에 엮인다. 스트림 구현은 예외를 던진 구독자만 떼어 내고 나머지에게
+     * 계속 보낸다.
+     */
+    private static final class EmitterListener implements BacktestProgressStream.Listener {
+
+        private final SseEmitter emitter;
+
+        private EmitterListener(SseEmitter emitter) {
+            this.emitter = emitter;
+        }
+
+        @Override
+        public void onProgress(ProgressPayload payload) {
+            send("progress", PublicProgressEventResponse.from(payload));
+        }
+
+        @Override
+        public void onComplete(RunStatus status) {
+            // 종결을 알린 뒤 닫는다. 보내지 못해도 닫는다 — 이미 끊긴 연결이다.
+            try {
+                send("finished", status.name());
+            } finally {
+                emitter.complete();
+            }
+        }
+
+        private void send(String name, Object data) {
+            try {
+                emitter.send(SseEmitter.event().name(name).data(data));
+            } catch (IOException | IllegalStateException e) {
+                emitter.completeWithError(e);
+                throw new ProgressDeliveryFailedException(e);
+            }
+        }
+    }
+
+    /** 구독자 하나의 전달이 끊겼다. 스트림 구현이 이것을 보고 그 구독자만 뗀다. */
+    private static final class ProgressDeliveryFailedException extends RuntimeException {
+        private ProgressDeliveryFailedException(Throwable cause) {
+            super(cause);
+        }
     }
 
     /**

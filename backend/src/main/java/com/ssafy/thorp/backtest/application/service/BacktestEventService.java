@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;
 import com.ssafy.thorp.backtest.application.event.BacktestFinished;
+import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
@@ -53,6 +54,7 @@ public class BacktestEventService {
     private final BacktestResultRepository resultRepository;
     private final ExecutionMetricRecorder metrics;
     private final ApplicationEventPublisher events;
+    private final BacktestProgressStream progressStream;
     private final Clock clock;
 
     public BacktestEventService(
@@ -60,11 +62,13 @@ public class BacktestEventService {
             BacktestResultRepository resultRepository,
             ExecutionMetricRecorder metrics,
             ApplicationEventPublisher events,
+            BacktestProgressStream progressStream,
             Clock clock) {
         this.jobRepository = jobRepository;
         this.resultRepository = resultRepository;
         this.metrics = metrics;
         this.events = events;
+        this.progressStream = progressStream;
         this.clock = clock;
     }
 
@@ -185,8 +189,13 @@ public class BacktestEventService {
     /**
      * 진행을 실행 행에 저장한다(R-05). 조회는 이 값을 폴링으로 읽는다.
      *
-     * <p>20거래일 배치라 실행당 수백 번 UPDATE 이하이고, 저장해 두어야 사용자가 다른 화면에 갔다 와도 진행이 보인다. SSE는 이번 범위가 아니므로 {@code
-     * LoggingBacktestProgressNotifier}는 지웠다 — 아무도 구독하지 않는 알림을 남겨 둘 이유가 없다.
+     * <p>20거래일 배치라 실행당 수백 번 UPDATE 이하이고, 저장해 두어야 사용자가 다른 화면에 갔다 와도 진행이 보인다.
+     *
+     * <p><b>시계열은 저장하지 않고 {@link BacktestProgressStream}으로만 흘린다</b>(R-05). 저장하면 최종 결과의 시계열과 두 벌이 되고
+     * 둘이 어긋날 수 있다. 구독자가 없으면 그대로 버려지고, 이벤트는 정상 ACK 된다 — 보는 사람이 없다고 계산 결과를 잃을 수는 없다.
+     *
+     * <p>흘리기를 저장보다 <b>먼저</b> 한다. UPDATE 가 실패하면 이벤트가 재전달되는데, 그때 이미 보낸 포인트가 다시 온다. 화면은 마지막으로 그린 날짜보다
+     * 앞서지 않는 포인트를 버리므로 곡선이 겹치지 않는다 — 순서를 뒤집어도 같은 중복이 생기고, 이 쪽이 지연이 짧다.
      *
      * <p>RUNNING이 아닌 실행의 PROGRESS는 무시한다. QUEUED에 진행률만 먼저 들어오면 상태와 진행이 어긋나고, 끝난 실행에 들어오면 최종 범위가 뒤로
      * 밀린다.
@@ -206,6 +215,7 @@ public class BacktestEventService {
             return;
         }
         ProgressPayload payload = event.payload();
+        progressStream.publish(job.getId(), payload);
         jobRepository.recordEventReceived(job.getId(), clock.instant());
         jobRepository.update(
                 job.recordProgress(
