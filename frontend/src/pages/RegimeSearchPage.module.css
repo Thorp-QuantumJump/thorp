@@ -23,3 +23,10 @@
 .disclosures { display: grid; gap: 8px; margin-bottom: 20px; }
 @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }
 @media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button, .monthControl, .monthControl input { width: 100%; } }
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
+:global(:root:not([data-design='classic'])) .hero { border-bottom: 0; padding-bottom: 24px; }
+:global(:root:not([data-design='classic'])) .searchForm { margin-bottom: 24px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
+:global(:root:not([data-design='classic'])) .searchForm .compositeButton:hover:not(:disabled) { border-color: var(--thorp-line-control-hover); }
+:global(:root:not([data-design='classic'])) .resultHeading { border-top: 0; padding: 4px 2px 16px; }
+:global(:root:not([data-design='classic'])) .disclosures { gap: 8px; }

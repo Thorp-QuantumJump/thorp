@@ -25,3 +25,11 @@
   .months, .reasons, .detailButton { grid-column: 1; }
   .reasons { grid-template-columns: 1fr; gap: 14px; }
 }
+
+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
+:global(:root:not([data-design='classic'])) .list { border-top: 0; }
+:global(:root:not([data-design='classic'])) .heading { padding: 8px 2px 16px; }
+:global(:root:not([data-design='classic'])) .cases { display: grid; gap: 12px; }
+:global(:root:not([data-design='classic'])) .case { padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
+:global(:root:not([data-design='classic'])) .more { margin-top: 16px; border-radius: var(--thorp-radius-control); }
+:global(:root:not([data-design='classic'])) .more:hover { border-color: var(--thorp-line-control-hover); }
