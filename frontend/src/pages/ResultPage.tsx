@@ -5,7 +5,8 @@ import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
-import { useCompareTarget } from '@/hooks/useCompareTarget'
+import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'
+import { describeParameters } from '@/components/result/compareCandidates'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'
 import { strategyLabel } from '@/components/result/conditionLine'
@@ -100,8 +101,12 @@ function ResultView({
   const [searchParams] = useSearchParams()
   const fromRecords = searchParams.get('from') === 'records'
   const completedThrough = completedRange(detail, timeseries)
-  const compare = useCompareTarget(detail)
-  const target = compare.compatibleTarget
+  const compare = useCompareTargets(detail)
+  const names = nameTargets(compare.targets)
+  // 겹쳐 그릴 수 있고 시계열까지 받은 대상만 곡선·문장·조건 줄에 오른다.
+  const drawn = compare.compatibleTargets.filter(
+    (target) => target.compatible !== null && target.timeseries.status === 'loaded',
+  )
   const pickerId = useId()
   const picker = useDisclosure(pickerId)
   const pickerButtonId = pickerId + '-trigger'
@@ -140,7 +145,10 @@ function ResultView({
         </p>
       ) : null}
 
-      <ResultSummaryCard detail={detail} target={target} />
+      <ResultSummaryCard
+        detail={detail}
+        targets={drawn.map((target) => ({ detail: target.compatible!, name: names.get(target.key)! }))}
+      />
 
       <ResultStatusLine
         detail={detail}
@@ -159,45 +167,44 @@ function ResultView({
         detail={detail}
         timeseries={timeseries}
         progressPoints={progressSeries.points}
-        target={
-          target && compare.timeseries.status === 'loaded'
-            ? {
-                name: strategyLabel(target),
-                points: compare.timeseries.data.points,
-                maxDrawdown: target.summary?.maxDrawdown ?? null,
-              }
-            : null
-        }
+        targets={drawn.map((target) => ({
+          name: names.get(target.key)!,
+          points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],
+          maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,
+        }))}
       />
 
-      {summary ? (
-        <p className={styles.sentence}>
-          {selectSummarySentence({
-            base: {
-              name: strategyLabel(detail),
-              netTotalReturn: summary.netTotalReturn,
-              maxDrawdown: summary.maxDrawdown,
-              totalTradingCost: summary.totalTradingCost,
-            },
-            target: target?.summary
-              ? {
-                  name: strategyLabel(target),
-                  netTotalReturn: target.summary.netTotalReturn,
-                  maxDrawdown: target.summary.maxDrawdown,
-                  totalTradingCost: target.summary.totalTradingCost,
-                }
-              : null,
-            partial: detail.partial ? { completedThrough } : null,
-          })}
-        </p>
-      ) : null}
+      {summary
+        ? // 해석 요약은 비교 대상마다 한 문장이다(FR-006). 대상이 없으면 기준의 세 숫자만 말한다.
+          (drawn.length === 0 ? [null] : drawn).map((target) => (
+            <p className={styles.sentence} key={target?.key ?? 'single'}>
+              {selectSummarySentence({
+                base: {
+                  name: strategyLabel(detail),
+                  netTotalReturn: summary.netTotalReturn,
+                  maxDrawdown: summary.maxDrawdown,
+                  totalTradingCost: summary.totalTradingCost,
+                },
+                target: target?.compatible?.summary
+                  ? {
+                      name: names.get(target.key)!,
+                      netTotalReturn: target.compatible.summary.netTotalReturn,
+                      maxDrawdown: target.compatible.summary.maxDrawdown,
+                      totalTradingCost: target.compatible.summary.totalTradingCost,
+                    }
+                  : null,
+                partial: detail.partial ? { completedThrough } : null,
+              })}
+            </p>
+          ))
+        : null}
 
       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}
       <div className={styles.actions}>
         <Button
           id={pickerButtonId}
           type="button"
-          disabled={!viewable || compare.targetState === 'REQUESTED'}
+          disabled={!viewable || compare.sending || compare.room === 0}
           {...picker.toggleProps}
         >
           비교 대상 고르기
@@ -223,39 +230,31 @@ function ResultView({
         <div id={pickerId}>
           <CompareTargetPicker
             base={detail}
+            room={compare.room}
             onClose={picker.close}
-            onSelect={(choice) => {
+            onSelect={(choices) => {
               picker.close()
-              compare.select(choice)
+              compare.select(choices)
             }}
           />
         </div>
       ) : null}
       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />
-      <CompareTargetSlot
-        state={compare}
-        onRetry={compare.retry}
-        onClear={compare.clear}
-        onPick={() => {
-          if (!picker.open) picker.toggleProps.onClick()
-        }}
-      />
-      {compare.mismatch === 'conditions' ? (
-        <p role="status">
-          섹터·금액·비용·자료 기준 또는 분석 시나리오가 달라 두 결과를 겹쳐 그리지 않았습니다. 기준
-          결과에서 비교 대상을 다시 골라 주세요.
-        </p>
-      ) : null}
-      {compare.mismatch === 'period' && !compare.period ? (
-        <p role="status">
-          평가 기간 또는 준비 기간이 달라 기준 결과만 표시합니다. 비교 대상을 다시 골라 주세요.
-        </p>
-      ) : null}
-      {compare.mismatch === 'versions' && !compare.period ? (
-        <p role="status">
-          자료 또는 계산 엔진 기준이 달라 기준 결과만 표시합니다. 같은 현재 기준으로 다시 계산해
-          비교할 수 있습니다.
-        </p>
+      {compare.targets.map((target) => (
+        <CompareTargetSlot
+          key={target.key}
+          state={target}
+          name={names.get(target.key)!}
+          onRetry={() => compare.retry(target.key)}
+          onRemove={() => compare.remove(target.key)}
+        />
+      ))}
+      {compare.targets.length > 1 ? (
+        <div className={styles.actions}>
+          <Button type="button" variant="outline" onClick={compare.clear}>
+            비교 모두 해제
+          </Button>
+        </div>
       ) : null}
       {compare.period ? (
         <PeriodMismatchDialog
@@ -280,11 +279,12 @@ function ResultView({
           detail={detail}
           onClose={detailView.close}
           compare={
-            target
+            // 상세의 선정·배분 효과는 대상 하나 기준이다. 여럿이면 첫 대상만 — 표를 대상 수만큼 늘리면 첫 화면이 아니다.
+            drawn[0]?.compatible
               ? {
-                  token: target.publicToken,
-                  name: strategyLabel(target),
-                  items: target.config.items,
+                  token: drawn[0].compatible.publicToken,
+                  name: names.get(drawn[0].key)!,
+                  items: drawn[0].compatible.config.items,
                 }
               : null
           }
@@ -305,8 +305,8 @@ function ResultView({
       <NextStepLinks
         config={detail.config}
         token={token}
-        compareToken={compare.compareToken}
-        compareReady={compare.targetState === 'READY'}
+        compareToken={drawn[0]?.token ?? null}
+        compareReady={drawn.length > 0}
       />
 
       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>
@@ -335,13 +335,13 @@ function ResultChartSlot({
   detail,
   timeseries,
   progressPoints,
-  target,
+  targets,
 }: {
   detail: PublicResultDetail
   timeseries: TimeseriesState
   /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */
   progressPoints?: ResultTimeseriesPoint[]
-  target?: EquityChartSeries | null
+  targets?: EquityChartSeries[]
 }) {
   if (timeseries.status === 'unavailable') {
     return (
@@ -373,7 +373,7 @@ function ResultChartSlot({
 
   return (
     <EquityChart
-      target={target}
+      targets={targets}
       altNumbers={
         summary
           ? {
@@ -411,4 +411,34 @@ function inFlightMessage(detail: PublicResultDetail): string {
     return `분석을 계산하고 있습니다. 전체 ${progress.totalTradingDays}거래일 중 ${progress.completedTradingDays}거래일을 마쳤습니다.`
   }
   return '분석을 계산하고 있습니다.'
+}
+
+/**
+ * 비교 대상의 이름. 주소에 오른 대상은 결과의 전략 이름, 접수 중인 후보는 전략 이름과 설정값이다. 같은 이름이 둘이면
+ * 번호를 붙여 곡선·문장·조건 줄에서 서로 갈리게 한다 — 결과 응답에는 설정값의 이름표(등록표)가 없어 값으로 갈라 적지 못한다.
+ */
+function nameTargets(targets: readonly CompareTargetState[]): Map<string, string> {
+  const raw = new Map<string, string>()
+  const counts = new Map<string, number>()
+  for (const target of targets) {
+    let name = '비교 대상'
+    if (target.choice) {
+      const settings = describeParameters(target.choice.strategy, target.choice.parameters)
+      name = target.choice.strategy.name + (settings ? ' · ' + settings : '')
+    } else if (target.detail) name = strategyLabel(target.detail)
+    raw.set(target.key, name)
+    counts.set(name, (counts.get(name) ?? 0) + 1)
+  }
+  const names = new Map<string, string>()
+  const seen = new Map<string, number>()
+  for (const target of targets) {
+    const name = raw.get(target.key)!
+    if ((counts.get(name) ?? 0) === 1) names.set(target.key, name)
+    else {
+      const index = (seen.get(name) ?? 0) + 1
+      seen.set(name, index)
+      names.set(target.key, name + ' (' + index + ')')
+    }
+  }
+  return names
 }
