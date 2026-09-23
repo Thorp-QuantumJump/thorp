@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
+import { AvailabilityTimeline } from '@/components/diagnosis/AvailabilityTimeline'
 import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
 import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
@@ -9,6 +10,7 @@ import { SelectedInstrumentsRail } from '@/components/diagnosis/SelectedInstrume
 import { SelectionMeaningNotice } from '@/components/diagnosis/SelectionMeaningNotice'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'
+import { buildAvailabilityTimeline } from '@/diagnosis/availabilityTimeline'
 import { useLearningExampleEntry } from '@/diagnosis/learningExample'
 import { describeListingWindow, pickSelectedSectors } from '@/diagnosis/listingWindow'
 import { useSectorSelection } from '@/diagnosis/sector-selection-context'
@@ -122,6 +124,9 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
     () => pickSelectedSectors(sectors, selection.selectedCodes),
     [sectors, selection.selectedCodes],
   )
+  // 공통 구간의 판정과 표시 재료를 한 번에 만든다. 같은 안내를 선택 요약에서 되풀이하지 않는다.
+  const timeline = useMemo(() => buildAvailabilityTimeline(selectedSectors), [selectedSectors])
+  // 아직 상장하지 않은 대상 때문에 구간이 전혀 없으면 폭 0인 그림 대신 기존 경고 문장을 쓴다.
   const listingWindow = useMemo(() => describeListingWindow(selectedSectors), [selectedSectors])
 
   /**
@@ -205,6 +210,19 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           </p>
         ) : null}
 
+        {/*
+          고른 대상의 상장 구간과 공통 구간이다. 탐색 카드 **바로 위**에 둔다 — 대상을 넣고 빼는
+          자리에서 그 결과가 바로 보여야 한다. 하나만 골라도 그 대상의 시작일부터 오늘까지를
+          보여 주며, 아무것도 고르지 않았을 때만 자리를 만들지 않는다.
+        */}
+        <AvailabilityTimeline className={styles.timeline} timeline={timeline} />
+        {listingWindow.status === 'unavailable' ? (
+          <ListingWindowNotice
+            className={styles.listingNotice}
+            listingWindow={listingWindow}
+          />
+        ) : null}
+
         {viewing ? (
           <InstrumentBrowser
             className={styles.browserCard}
@@ -235,14 +253,13 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
       >
         {/*
-          고른 대상이 무엇을 뜻하는지(FR-009)와 상장일 차이로 비교 기간이 줄어든다는 사실
-          (FR-008)이다. 둘 다 선택 요약을 보는 자리에서 함께 읽혀야 한다. 접어 두지 않는다.
+          고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
+          위 타임라인에서 이미 보이므로 여기서 같은 문장을 되풀이하지 않는다.
         */}
         <SelectionMeaningNotice
           className={styles.meaningNotice}
           selectedCount={selectedCount}
         />
-        <ListingWindowNotice className={styles.listingNotice} listingWindow={listingWindow} />
 
         {/*
           보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
