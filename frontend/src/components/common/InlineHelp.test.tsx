@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { InlineHelp } from './InlineHelp'
@@ -53,9 +53,9 @@ describe('InlineHelp', () => {
     expect(await screen.findByText('합성 지표를 설명하는 한 문장이다.')).not.toBeNull()
 
     await user.keyboard('{Escape}')
-    await act(async () => {})
-
-    expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()
+    await waitFor(() => {
+      expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()
+    })
     expect(document.activeElement).toBe(trigger)
   })
 

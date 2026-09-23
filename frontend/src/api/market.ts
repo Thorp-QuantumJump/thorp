@@ -4,6 +4,8 @@ import type {
   MarketIndicatorBatch,
   MarketIndicatorCode,
   MarketIndicatorResponse,
+  MarketSeriesCode,
+  MarketSeriesResponse,
 } from '@/types/marketApi'
 
 const indicatorEndpoints: Record<MarketIndicatorCode, string> = {
@@ -70,4 +72,32 @@ export async function fetchMarketIndicatorsFor(
 /** 대시보드가 쓰는 11개 전부다. */
 export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {
   return fetchMarketIndicatorsFor(marketIndicatorCodes)
+}
+
+const seriesEndpoints: Record<MarketSeriesCode, string> = {
+  KOSPI: '/markets/kospi/series',
+  KOSDAQ: '/markets/kosdaq/series',
+  USD_KRW: '/markets/usd-krw/series',
+  VKOSPI200: '/markets/vkospi200/series',
+}
+
+/**
+ * 일별 지표 하나의 최근 흐름. 백엔드가 아직 모으지 못했으면 503이고, 호출한 쪽은 예시 흐름을 쓴다.
+ * 날짜가 오름차순이고 값이 숫자인지 확인한다 — 어긋난 응답으로 그린 차트는 틀린 흐름을 보인다.
+ */
+export async function fetchMarketSeries(code: MarketSeriesCode): Promise<MarketSeriesResponse> {
+  const response = await apiClient.get<ApiEnvelope<MarketSeriesResponse>>(seriesEndpoints[code])
+  const body = response.data
+  const series = body.result
+  if (!body.isSuccess || !series || series.code !== code || !Array.isArray(series.points)) {
+    throw new Error(`${code} 흐름 응답 형식이 올바르지 않습니다.`)
+  }
+  const ordered = series.points.every(
+    (point, index) =>
+      Number.isFinite(point.value) && (index === 0 || series.points[index - 1].date < point.date),
+  )
+  if (!ordered || series.points.length < 2) {
+    throw new Error(`${code} 흐름 값이 올바르지 않습니다.`)
+  }
+  return series
 }
