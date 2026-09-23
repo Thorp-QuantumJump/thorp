@@ -15,11 +15,13 @@ import com.ssafy.thorp.backtest.application.result.BacktestSeries;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
+import com.ssafy.thorp.backtest.application.result.UsedStrategy;
 import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;
 import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;
 import com.ssafy.thorp.backtest.domain.model.BacktestRequest;
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -27,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -442,5 +445,36 @@ public class BacktestResultQueryService {
                 job.getStatus(),
                 job.getId());
         return new IllegalStateException("결과 행이 없습니다: backtestId=" + job.getBacktestId().value());
+    }
+
+    /** 요청 이력을 조합 단위로 접을 때 한 번에 읽는 요청 수. 같은 조합을 되풀이한 사용자라도 이 안에서 스무 조합은 나온다. */
+    private static final int USED_STRATEGY_SCAN = 200;
+
+    /** 후보 상한. 비교 목록이 이보다 길면 고르는 화면이 아니라 검색 화면이 된다(원칙 II). */
+    private static final int USED_STRATEGY_LIMIT = 20;
+
+    /**
+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합, 최근 순·중복 없이({@code GET /backtests/used-strategies}).
+     *
+     * <p>조합의 같음은 {@code strategyId}와 {@code parameters}의 구조적 같음이다 — 접수가 저장한 JSON 이라 키 순서는 같음에 영향이
+     * 없다. 규칙 버전은 같음에 넣지 않는다. 같은 설정을 규칙 버전이 바뀐 뒤 다시 돌렸어도 사용자에게는 한 조합이다.
+     */
+    public List<UsedStrategy> usedStrategies(long requesterId) {
+        Map<List<Object>, UsedStrategy> byCombination = new LinkedHashMap<>();
+        for (BacktestRun run :
+                jobRepository.findRecentRequestedBy(
+                        requesterId, ExecutionType.SINGLE, USED_STRATEGY_SCAN)) {
+            List<Object> key = List.of(run.getStrategyId(), run.getParameters());
+            byCombination.putIfAbsent(
+                    key,
+                    new UsedStrategy(
+                            run.getStrategyId(),
+                            run.getPlan().rulesVersion(),
+                            run.getParameters()));
+            if (byCombination.size() >= USED_STRATEGY_LIMIT) {
+                break;
+            }
+        }
+        return List.copyOf(byCombination.values());
     }
 }

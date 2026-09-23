@@ -31,6 +31,7 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestRetryResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;
 import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;
+import com.ssafy.thorp.backtest.presentation.response.UsedStrategiesResponse;
 import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -100,6 +101,20 @@ public class BacktestController {
                         BacktestRegistryResponse.of(
                                 strategyRulesService.findCurrent(),
                                 costProfileService.resolve(null))));
+    }
+
+    /**
+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합(README §1.12). 005 결과 화면이 비교 후보에 "내가 돌려 본 설정"을 올릴 때 읽는다.
+     *
+     * <p>로그인이 필요하다 — 요청 이력은 사용자 데이터다. {@code /{backtestId}}와는 리터럴 우선 규칙으로 갈린다.
+     */
+    @GetMapping("/used-strategies")
+    public ResponseEntity<ApiResponse<UsedStrategiesResponse>> usedStrategies() {
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        UsedStrategiesResponse.from(
+                                queryService.usedStrategies(
+                                        currentRequester.requireRequesterId()))));
     }
 
     /**
