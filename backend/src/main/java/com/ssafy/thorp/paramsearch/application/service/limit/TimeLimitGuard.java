@@ -18,8 +18,11 @@ import org.springframework.stereotype.Component;
  * 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼의 계산이 통째로 사라진다. 그래서 한도는 "여기까지만"이고 그 결과가 {@code
  * PARTIAL}이다(FR-009).
  *
- * <p>{@code timeLimitSeconds}는 <b>임시값</b>이다. 실측 전이라 팀이 정하지 않았고(PD-05·PD-06), 응답의 {@code
- * limits.provisional}이 그 사실을 화면에 나른다(FR-005a).
+ * <p><b>상한을 두지 않을 수 있다</b>({@code thorp.param-search.time-limit-seconds} 미설정). 그때 이 감시는 아무것도 막지 않고,
+ * 묶음은 후보를 다 돌거나 연속 실패 한도·취소로만 끝난다. 묶음 크기는 후보 수 상한이 계속 막는다.
+ *
+ * <p>상한을 둔 경우 그 값은 <b>임시값</b>이다. 실측 전이라 팀이 정하지 않았고(PD-05·PD-06), 응답의 {@code limits.provisional}이 그
+ * 사실을 화면에 나른다(FR-005a).
  */
 @Component
 @ConditionalOnProperty(prefix = "thorp.param-search", name = "enabled", havingValue = "true")
@@ -39,6 +42,9 @@ public class TimeLimitGuard {
      * <p>시작 시각이 없으면(아직 {@code QUEUED}) 잴 기준이 없으므로 닿지 않은 것으로 본다 — 발행이 시작되지 않았다는 뜻이라 막을 것도 없다.
      */
     public boolean isReached(ParamSearch search) {
+        if (!limits.hasTimeLimit()) {
+            return false;
+        }
         Instant startedAt = search.getStartedAt();
         if (startedAt == null) {
             return false;

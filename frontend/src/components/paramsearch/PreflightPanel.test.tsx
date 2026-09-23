@@ -68,11 +68,22 @@ describe('PreflightPanel', () => {
     expect(text).toContain('전체 조합 8개')
     expect(text).toContain('관측 창이 자료 구간보다 깁니다.')
 
-    // 적용 한도 네 줄.
+    // 적용 한도 네 줄. 실행 시간은 상한을 두지 않으므로 '제한 없음'이다 —
+    // 없는 제한을 '0초'로 적으면 사용자가 없는 마감을 읽는다.
     expect(text).toContain('후보 수 상한')
     expect(text).toContain('실행 시간 한도')
-    expect(text).toContain('30분')
+    expect(text).toContain('제한 없음')
     expect(text).toContain('연속 실패 한도')
+  })
+
+  it('실행 시간 상한이 있으면 그 값을 읽는다', () => {
+    const limited = {
+      ...previewFixture,
+      limits: { ...previewFixture.limits, timeLimitSeconds: 1800 },
+    }
+    render(<PreflightPanel preview={limited} onRun={vi.fn()} running={false} />)
+
+    expect(document.body.textContent).toContain('30분')
   })
 
   it('적용 한도에는 임시값 표시를 붙이지 않는다', () => {

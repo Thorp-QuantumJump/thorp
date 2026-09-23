@@ -38,7 +38,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `random_seed` | INTEGER NULL | 현재 항상 NULL. 무작위 표본 도입 시 채운다(FR-020) |
 | `selection_rule` | JSONB NOT NULL | 접수 시점 스냅샷. 아래 §5 |
 | `evaluation_split` | JSONB NULL | 미등록이면 NULL → 전 후보 '미검증' (R5) |
-| `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시 |
+| `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시. `timeLimitSeconds`가 `null`이면 실행시간 상한을 두지 않은 묶음이다 |
 | `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |
 | `execution_plan` | JSONB NOT NULL | 접수 시점에 고정한 실행 조건. 아래 §2.2 (2026-09-11 추가, FR-007·FR-012) |
 | `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |
@@ -47,7 +47,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원�
 | `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |
 | `selection` | JSONB NULL | 선정 결과 스냅샷. 후보 완료마다 갱신하고 묶음 종료 시 확정 |
 | `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |
-| `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행시간 상한 판정과 실행 측정(FR-023) |
+| `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행 측정(FR-023). 실행시간 상한을 둔 묶음에서는 그 판정 기준이기도 하다 |
 | `created_at` / `updated_at` | TIMESTAMP NOT NULL | `BaseEntity` 규약 |
 
 인덱스: `search_id` UNIQUE, `(owner_user_id, created_at DESC)` — 006 목록 조회 대비.
