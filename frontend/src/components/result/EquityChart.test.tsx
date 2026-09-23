@@ -48,8 +48,15 @@ const altNumbers = {
 }
 
 /** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */
-function seriesPath(container: HTMLElement, which: 'base' | 'target'): SVGPathElement {
-  const stroke = which === 'base' ? '--chart-line-primary' : '--chart-line-secondary'
+const STROKES: Record<string, string> = {
+  base: '--chart-line-primary',
+  target0: '--chart-line-secondary',
+  target1: '--chart-line-tertiary',
+  target2: '--chart-line-quaternary',
+}
+
+function seriesPath(container: HTMLElement, which: string): SVGPathElement {
+  const stroke = STROKES[which]
   const path = container.querySelector<SVGPathElement>(`path[stroke="var(${stroke})"]`)
   if (!path) throw new Error(`${which} 곡선을 찾지 못했다`)
   return path
@@ -63,7 +70,7 @@ const LONG_BASE_NAME = '가나다 라마바사 아자차카 타파하'
 const LONG_TARGET_NAME = '거너더 러머버서 어저처커 터퍼허'
 
 /** 이름표 하나의 줄들과 세로 범위. 줄마다 `y`가 그 줄의 가운데다 */
-function labelBlock(container: HTMLElement, dataKey: 'base' | 'target') {
+function labelBlock(container: HTMLElement, dataKey: string) {
   const lines = [
     ...container.querySelectorAll(`[data-testid="series-end-label-${dataKey}"] tspan`),
   ]
@@ -90,13 +97,45 @@ function pointCount(path: SVGPathElement): number {
 describe('EquityChart', () => {
   it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {
     const { container } = render(
-      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" target={target} />,
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+      />,
     )
 
     expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()
-    expect(seriesPath(container, 'target').getAttribute('stroke-dasharray')).toBe('7,5')
+    expect(seriesPath(container, 'target0').getAttribute('stroke-dasharray')).toBe('7,5')
     expect(screen.getByText('물결 고르기')).toBeTruthy()
     expect(screen.getByText('모래 고르기')).toBeTruthy()
+  })
+
+  it('비교 대상이 셋이면 파선 모양과 색이 서로 다르고 이름표가 넷이며 비교 대상 음영은 없다', () => {
+    const others = ['조약돌 고르기', '해초 고르기'].map((name) => ({ ...target, name }))
+    const { container } = render(
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target, ...others]}
+      />,
+    )
+    const dashes = [0, 1, 2].map((index) =>
+      seriesPath(container, 'target' + index).getAttribute('stroke-dasharray'),
+    )
+    const strokes = [0, 1, 2].map((index) =>
+      seriesPath(container, 'target' + index).getAttribute('stroke'),
+    )
+    expect(new Set(dashes).size).toBe(3)
+    expect(new Set(strokes).size).toBe(3)
+    for (const name of ['물결 고르기', '모래 고르기', '조약돌 고르기', '해초 고르기'])
+      expect(screen.getByText(name)).toBeTruthy()
+    expect(container.querySelector('[data-testid="drawdown-shade-target"]')).toBeNull()
+    expect(container.querySelector('[data-testid="drawdown-shade-base"]')).not.toBeNull()
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain(
+      '모래 고르기, 조약돌 고르기, 해초 고르기',
+    )
   })
 
   it.each([
@@ -109,12 +148,12 @@ describe('EquityChart', () => {
         altNumbers={altNumbers}
         base={{ ...base, name: LONG_BASE_NAME }}
         initialCash="10000000.00"
-        target={{ ...target, name: LONG_TARGET_NAME }}
+        targets={[{ ...target, name: LONG_TARGET_NAME }]}
       />,
     )
 
     const baseLabel = labelBlock(container, 'base')
-    const targetLabel = labelBlock(container, 'target')
+    const targetLabel = labelBlock(container, 'target0')
     const { height } = plotArea(container)
 
     for (const [label, name] of [
@@ -243,7 +282,12 @@ describe('EquityChart', () => {
     expect(alone).toContain('비교 대상은 없습니다')
 
     rerender(
-      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" target={target} />,
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+      />,
     )
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('모래 고르기')
   })
