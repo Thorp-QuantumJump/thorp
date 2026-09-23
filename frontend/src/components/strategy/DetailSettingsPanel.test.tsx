@@ -23,7 +23,7 @@ import {
 } from "@/test/strategyRegistryFixtures";
 import type { RegistryResponse, StrategyView } from "@/types/strategyRegistry";
 import { DetailSettingsPanel } from "./DetailSettingsPanel";
-import type { TargetWeightRow } from "./ReadOnlyTargetWeights";
+import type { TargetWeightRow } from "./TargetWeightEditor";
 
 /**
  * 전략 설정 패널(T056)을 실제 설정 훅과 함께 돌린다(FR-003·FR-006·FR-008·FR-012, quickstart 5-1·6).
@@ -57,6 +57,10 @@ const weights: TargetWeightRow[] = [
   { sectorId: "SEC-SYN-B", name: "합성 섹터 나", weightTenths: 400 },
 ];
 
+/** 비중을 고친 사실만 확인하면 되므로 값은 이 창에 적고 상태로 되돌리지는 않는다. */
+const onTargetWeightChange = vi.fn();
+const onDistributeWeightsEven = vi.fn();
+
 function Harness({
   strategy,
   registry = registryFixture,
@@ -85,6 +89,8 @@ function Harness({
         values={settings.values}
         universeSize={UNIVERSE_SIZE}
         targetWeights={weights}
+        onTargetWeightChange={onTargetWeightChange}
+        onDistributeWeightsEven={onDistributeWeightsEven}
         evaluationRange={{ start: "2019-06-03", end: "2024-12-30" }}
         onChange={(axisName, value) => settings.setValue(id, axisName, value)}
         onResetAxis={(axisName) => settings.resetAxis(id, axisName)}
@@ -155,21 +161,37 @@ describe("DetailSettingsPanel", () => {
     ).not.toBeNull();
   });
 
-  it("사용자 비중 전략은 비중을 읽기 전용으로 보이고 앞 단계로 가는 연결을 둔다", async () => {
+  it("사용자 비중 전략은 비중을 고칠 수 있게 보이고 앞 단계로 가는 연결을 둔다", async () => {
     await renderOpened(unselectableStrategy);
 
-    const table = screen.getByRole("table");
-    expect(within(table).getByText("합성 섹터 가")).not.toBeNull();
-    expect(within(table).queryByRole("textbox")).toBeNull();
-    expect(within(table).queryByRole("slider")).toBeNull();
+    const region = screen.getByRole("region", { name: "자산 배분" });
+    expect(within(region).getByText("합성 섹터 가 비중")).not.toBeNull();
+    // 값을 정하는 수단이 둘이고 가리키는 값은 하나다.
+    expect(within(region).getAllByRole("slider")).toHaveLength(weights.length);
+    expect(within(region).getAllByRole("spinbutton")).toHaveLength(
+      weights.length,
+    );
 
+    // 담을 대상 자체는 앞 단계가 소유한다.
     const link = screen.getByRole("link", {
-      name: "섹터·비중 단계로 돌아가세요",
+      name: "투자 대상 고르기로 돌아가세요",
     });
     expect(link.getAttribute("href")).toBe("/diagnosis/sectors");
     expect(
       screen.queryByText(/계산 결과이며 입력한 비중과 다릅니다/),
     ).toBeNull();
+  });
+
+  it("비중을 고치면 그 값이 올라온다", async () => {
+    const user = userEvent.setup();
+    await renderOpened(unselectableStrategy);
+
+    const region = screen.getByRole("region", { name: "자산 배분" });
+    const field = within(region).getAllByRole("spinbutton")[0];
+    await user.clear(field);
+    await user.type(field, "55.5");
+
+    expect(onTargetWeightChange).toHaveBeenLastCalledWith("SEC-SYN-A", 555);
   });
 
   it("자동 배분 전략은 출력 비중이 계산 결과라는 설명을 보이고 비중 표를 그리지 않는다", async () => {
