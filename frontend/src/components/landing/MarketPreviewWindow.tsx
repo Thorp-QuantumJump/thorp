@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
+import { fetchMarketSeries } from '@/api/market'
 import type { Indicator } from '@/types/market'
+import type { MarketSeriesCode } from '@/types/marketApi'
 import styles from '@/pages/LandingPage.module.css'
 
 /*
   첫 화면 오른쪽 창. 국내 시장 지표 칸을 눌러 고르면 그 지표의 차트가 끊김 없이 흘러간다.
   지표는 저절로 넘어가지 않는다. 사용자가 보던 지표가 멋대로 바뀌면 읽던 흐름이 끊긴다.
 
-  **움직임은 만든 것이다.** 틱 단위 시세를 받지 않으므로, 첫 화면이 받은 지표 값(없으면 예시 값)을
-  출발점으로 삼아 그 둘레를 오가는 흐름을 그린다. 그래서 창에 '움직임 예시'를 밝히고 'LIVE'라고
-  쓰지 않는다. 실제 값과 출처는 시장 흐름 화면이 보인다.
+  **실제 값이 먼저다.** 백엔드가 모아 둔 최근 거래일 종가(`GET /markets/{code}/series`)를 받으면 그 흐름을
+  왼쪽부터 그려 나간 뒤 멈추고, 창에 원천과 기준일을 밝힌다. 아직 모으지 못한 지표(503)만 첫 화면이 받은
+  지표 값(없으면 예시 값)을 출발점으로 둘레를 오가는 흐름을 만들어 그리고, 창에 '움직임 예시'를 밝힌다.
+  어느 쪽이든 'LIVE'라고 쓰지 않는다. 틱 단위 시세는 받지 않는다.
 
-  **부드럽게 그리는 방법.** 값은 TICK_MS마다 하나씩 생기는 점(키프레임)이고, 화면은 그 점들을
+  **예시 흐름을 부드럽게 그리는 방법.** 값은 TICK_MS마다 하나씩 생기는 점(키프레임)이고, 화면은 그 점들을
   곡선으로 이은 값을 매 프레임 같은 x 위치에서 읽어 그린다. 시간이 흐르면 읽는 자리가 조금씩
   옮겨 가므로 선이 한 칸씩 튀지 않고 흘러가며, 끝점은 오른쪽 끝에 머문 채 값만 바뀐다. 세로 범위도
   한 번에 바꾸지 않고 따라가게 한다. 매 프레임 React를 다시 그리지 않고 SVG를 직접 고친다.
@@ -113,19 +116,53 @@ function windowEnds(series: Series, phase: number) {
   return { first: sampleAt(series.values, now - VISIBLE), last: sampleAt(series.values, now) }
 }
 
+/** 백엔드가 모아 둔 실제 최근 흐름. 없으면 그 지표는 예시 흐름으로 그린다. */
+type RealSeries = { values: number[]; lastDate: string; provider: string; stale: boolean }
+
+/** 실제 흐름을 왼쪽부터 끝까지 그려 나가는 시간. 다 그리면 멈춘다. */
+const REVEAL_MS = 1400
+
+function easeOut(t: number) {
+  return 1 - (1 - t) ** 3
+}
+
 export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] }) {
   const reducedMotion = useReducedMotion()
   const markets = useMemo(() => toMarkets(indicators), [indicators])
   const [active, setActive] = useState(0)
+  const [real, setReal] = useState<Partial<Record<MarketSeriesCode, RealSeries>>>({})
   const store = useRef<Record<string, Series>>({})
 
-  // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 흐름을 새로 만든다.
+  // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 예시 흐름을 새로 만든다.
   for (const market of markets) {
     const current = store.current[market.code]
     if (!current || current.base !== market.base) {
       store.current[market.code] = createSeries(market.base, market.volatility, Math.round(market.base * 100) + market.code.length)
     }
   }
+
+  // 한 지표가 실패해도(아직 못 모아 503 등) 나머지는 실제 값으로 그린다.
+  useEffect(() => {
+    let alive = true
+    void Promise.allSettled(MARKETS.map((market) => fetchMarketSeries(market.code))).then((results) => {
+      if (!alive) return
+      const next: Partial<Record<MarketSeriesCode, RealSeries>> = {}
+      results.forEach((result, index) => {
+        if (result.status !== 'fulfilled') return
+        const points = result.value.points
+        next[MARKETS[index].code] = {
+          values: points.map((point) => point.value),
+          lastDate: points[points.length - 1].date,
+          provider: result.value.source.provider,
+          stale: result.value.status === 'stale',
+        }
+      })
+      setReal(next)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const line = useRef<SVGPathElement>(null)
   const area = useRef<SVGPathElement>(null)
@@ -139,65 +176,77 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
   const tickerValue = useRef<HTMLElement>(null)
   const tickerChange = useRef<HTMLElement>(null)
   const domain = useRef<{ low: number; high: number } | null>(null)
+  const activeReal = real[markets[active].code]
 
   useEffect(() => {
     const market = markets[active]
-    const series = store.current[market.code]
     // 다른 지표로 바꾸면 세로 범위를 새로 잡는다. 이어서 따라가면 선이 화면 밖에서 날아든다.
     domain.current = null
-    let tickStartedAt = performance.now()
     let frame = 0
 
-    const render = (phase: number) => {
-      const now = POINTS - 2 + phase
-      const start = now - VISIBLE
+    /**
+     * 곡선 위 시각 t0~tEnd를 그린다. x는 t0~t0+span을 창 폭에 늘어놓은 자리다. 실제 흐름은 t0=0에 고정하고 tEnd가
+     * 자라며 그려지고, 예시 흐름은 창이 시간을 따라 옮겨 간다. `fixed`면 세로 범위를 전체 값으로 미리 잡는다.
+     */
+    const render = (values: number[], t0: number, span: number, tEnd: number, fixed: boolean) => {
+      const count = Math.max(2, Math.round(SAMPLES * ((tEnd - t0) / span)))
+      const times: number[] = []
       const samples: number[] = []
-      for (let j = 0; j < SAMPLES; j += 1) samples.push(sampleAt(series.values, start + (j / (SAMPLES - 1)) * VISIBLE))
-      const first = samples[0]
-      const last = samples[SAMPLES - 1]
+      for (let j = 0; j < count; j += 1) {
+        const time = t0 + (j / (count - 1)) * (tEnd - t0)
+        times.push(time)
+        samples.push(sampleAt(values, time))
+      }
+      const first = sampleAt(values, t0)
+      const last = samples[samples.length - 1]
 
       // 세로 범위는 곧바로 바꾸지 않고 따라간다. 범위가 튀면 선 전체가 움찔한다.
-      const minimum = Math.min(...samples)
-      const maximum = Math.max(...samples)
+      const basis = fixed ? values : samples
+      const minimum = Math.min(...basis)
+      const maximum = Math.max(...basis)
       const pad = (maximum - minimum) * 0.14 || last * 0.001
       const target = { low: minimum - pad, high: maximum + pad }
       const current = domain.current ?? target
-      const follow = reducedMotion ? 1 : 0.08
+      const follow = reducedMotion || fixed ? 1 : 0.08
       domain.current = { low: current.low + (target.low - current.low) * follow, high: current.high + (target.high - current.high) * follow }
       const { low, high } = domain.current
 
-      const x = (j: number) => plot.left + (j / (SAMPLES - 1)) * (plot.right - plot.left)
+      const x = (time: number) => plot.left + ((time - t0) / span) * (plot.right - plot.left)
       const y = (value: number) => plot.bottom - ((value - low) / (high - low)) * (plot.bottom - plot.top)
       let d = ''
-      for (let j = 0; j < SAMPLES; j += 1) d += `${j === 0 ? 'M' : 'L'}${x(j).toFixed(2)} ${y(samples[j]).toFixed(2)}`
+      for (let j = 0; j < count; j += 1) d += `${j === 0 ? 'M' : 'L'}${x(times[j]).toFixed(2)} ${y(samples[j]).toFixed(2)}`
+      const tipX = x(tEnd).toFixed(2)
       line.current?.setAttribute('d', d)
-      area.current?.setAttribute('d', `${d} L${plot.right} ${plot.bottom} L${plot.left} ${plot.bottom} Z`)
+      area.current?.setAttribute('d', `${d} L${tipX} ${plot.bottom} L${plot.left} ${plot.bottom} Z`)
 
-      // 거래량 막대는 점마다 하나이고, 시간을 따라 선과 함께 왼쪽으로 흘러간다.
+      // 막대는 점 사이 하루 움직임의 크기다. 선과 함께 옮겨 가고, 아직 그리지 않은 자리는 숨긴다.
       const group = bars.current
       if (group) {
         const moves: number[] = []
-        for (let k = 1; k < series.values.length; k += 1) moves.push(Math.abs(series.values[k] - series.values[k - 1]))
+        for (let k = 1; k < values.length; k += 1) moves.push(Math.abs(values[k] - values[k - 1]))
         const largest = Math.max(...moves) || 1
         const rects = group.children
-        for (let k = 1; k < series.values.length; k += 1) {
-          const rect = rects[k - 1] as SVGRectElement | undefined
-          if (!rect) continue
-          const ratio = (k - start) / VISIBLE
-          const visible = ratio >= 0 && ratio <= 1 && k <= now
+        for (let k = 1; k <= rects.length; k += 1) {
+          const rect = rects[k - 1] as SVGRectElement
+          if (k >= values.length || k < t0 || k > tEnd) {
+            rect.style.opacity = '0'
+            continue
+          }
           const height = 3 + (moves[k - 1] / largest) * (plot.barBottom - plot.barTop - 3)
-          rect.setAttribute('x', (plot.left + ratio * (plot.right - plot.left) - 1.6).toFixed(2))
+          rect.setAttribute('x', (x(k) - 1.6).toFixed(2))
           rect.setAttribute('y', (plot.barBottom - height).toFixed(2))
           rect.setAttribute('height', height.toFixed(2))
-          rect.setAttribute('data-direction', series.values[k] >= series.values[k - 1] ? 'up' : 'down')
-          rect.style.opacity = visible ? '' : '0'
+          rect.setAttribute('data-direction', values[k] >= values[k - 1] ? 'up' : 'down')
+          rect.style.opacity = ''
         }
       }
 
       const lastY = y(last).toFixed(2)
       lastLine.current?.setAttribute('y1', lastY)
       lastLine.current?.setAttribute('y2', lastY)
+      point.current?.setAttribute('cx', tipX)
       point.current?.setAttribute('cy', lastY)
+      pulse.current?.setAttribute('cx', tipX)
       pulse.current?.setAttribute('cy', lastY)
       tag.current?.setAttribute('transform', `translate(${plot.right + 6} ${(y(last) - 9).toFixed(2)})`)
       const text = format(last, market.decimals)
@@ -205,24 +254,44 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
       if (titleValue.current) titleValue.current.textContent = text
       if (tickerValue.current) tickerValue.current.textContent = text
       const change = ((last - first) / first) * 100
-      if (tickerChange.current) {
-        tickerChange.current.textContent = formatChange(change)
-        const direction = directionOf(change)
-        if (direction) tickerChange.current.setAttribute('data-direction', direction)
-        else tickerChange.current.removeAttribute('data-direction')
-      }
-      if (titleValue.current) {
-        const direction = directionOf(change)
-        if (direction) titleValue.current.setAttribute('data-direction', direction)
-        else titleValue.current.removeAttribute('data-direction')
+      const direction = directionOf(change)
+      if (tickerChange.current) tickerChange.current.textContent = formatChange(change)
+      for (const element of [tickerChange.current, titleValue.current]) {
+        if (!element) continue
+        if (direction) element.setAttribute('data-direction', direction)
+        else element.removeAttribute('data-direction')
       }
     }
 
+    // 실제 흐름: 왼쪽부터 끝까지 그려 나가고 멈춘다. 받은 값 밖으로 움직임을 지어내지 않는다.
+    if (activeReal) {
+      const values = activeReal.values
+      const span = values.length - 1
+      if (reducedMotion) {
+        render(values, 0, span, span, true)
+        return
+      }
+      const startedAt = performance.now()
+      const reveal = (time: number) => {
+        const progress = Math.min(1, Math.max(0, (time - startedAt) / REVEAL_MS))
+        render(values, 0, span, Math.max(0.05, easeOut(progress) * span), true)
+        if (progress < 1) frame = requestAnimationFrame(reveal)
+      }
+      frame = requestAnimationFrame(reveal)
+      return () => cancelAnimationFrame(frame)
+    }
+
+    // 예시 흐름: 점이 쌓이며 창이 시간을 따라 옮겨 간다.
+    const series = store.current[market.code]
+    let tickStartedAt = performance.now()
+    const renderExample = (phase: number) => {
+      const now = POINTS - 2 + phase
+      render(series.values, now - VISIBLE, VISIBLE, now, false)
+    }
     if (reducedMotion) {
-      render(0)
+      renderExample(0)
       return
     }
-
     const loop = (time: number) => {
       if (!document.hidden) {
         let phase = (time - tickStartedAt) / TICK_MS
@@ -232,7 +301,7 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
           tickStartedAt += TICK_MS
           phase -= 1
         }
-        render(phase)
+        renderExample(phase)
       } else {
         tickStartedAt = time
       }
@@ -240,32 +309,36 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
     }
     frame = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frame)
-  }, [active, markets, reducedMotion])
+  }, [active, activeReal, markets, reducedMotion])
 
   const market = markets[active]
-  const opening = windowEnds(store.current[market.code], 0)
+  /** 칸과 제목에 처음 보일 값. 실제 흐름은 받은 구간의 처음·끝, 예시는 창의 처음·끝이다. */
+  const endsOf = (code: MarketSeriesCode) => {
+    const series = real[code]
+    if (series) return { first: series.values[0], last: series.values[series.values.length - 1] }
+    return windowEnds(store.current[code], 0)
+  }
+  const opening = endsOf(market.code)
 
   return (
-    <div className={styles.previewWindow} role="group" aria-label="국내 시장 지표 움직임 예시">
+    <div className={styles.previewWindow} role="group" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>
       <div className={styles.previewBar}>
         <span className={styles.previewDots} aria-hidden="true"><i /><i /><i /></span>
         <span className={styles.previewAddress} aria-hidden="true">thorp · <b>시장 흐름</b></span>
-        <span className={styles.previewExample}>움직임 예시</span>
+        {/* 실제 값이면 원천과 기준일을, 아니면 만든 흐름임을 밝힌다. */}
+        <span className={styles.previewExample}>
+          {activeReal ? `${activeReal.provider} · ${activeReal.lastDate} 기준${activeReal.stale ? ' · 갱신 지연' : ''}` : '움직임 예시'}
+        </span>
       </div>
 
       <div className={styles.previewTickers}>
         {markets.map((item, index) => {
-          // 고른 지표의 값은 매 프레임 흐름이 직접 바꾼다. 나머지는 멈춘 구간의 끝값이다.
-          const ends = windowEnds(store.current[item.code], 0)
+          // 고른 지표의 값은 그리는 흐름이 직접 바꾼다. 나머지는 구간의 끝값이다.
+          const ends = endsOf(item.code)
           const change = ((ends.last - ends.first) / ends.first) * 100
           const isActive = index === active
           return (
-            <button
-              key={item.code}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => setActive(index)}
-            >
+            <button key={item.code} type="button" aria-pressed={isActive} onClick={() => setActive(index)}>
               <span>{item.label}</span>
               <strong aria-hidden="true" ref={isActive ? tickerValue : undefined}>{format(ends.last, item.decimals)}</strong>
               <em aria-hidden="true" ref={isActive ? tickerChange : undefined} data-direction={directionOf(change)}>
@@ -277,7 +350,7 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
       </div>
 
       <p className={styles.previewChartTitle} aria-hidden="true">
-        {market.label} <b>최근 흐름</b>
+        {market.label} <b>{activeReal ? `최근 ${activeReal.values.length}거래일` : '최근 흐름'}</b>
         <span ref={titleValue}>{format(opening.last, market.decimals)}</span>
       </p>
       <svg className={styles.previewChart} viewBox={`0 0 ${plot.width} ${plot.height}`} aria-hidden="true">
