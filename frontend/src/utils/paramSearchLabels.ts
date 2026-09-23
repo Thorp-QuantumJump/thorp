@@ -28,8 +28,14 @@ export function formatCount(value: number): string {
   return value.toLocaleString('ko-KR')
 }
 
-/** 초 단위 한도를 분·초로 읽는다. 60초 미만은 초로 둔다. */
-export function formatSeconds(seconds: number): string {
+/**
+ * 초 단위 한도를 분·초로 읽는다. 60초 미만은 초로 둔다.
+ *
+ * **`null`은 상한을 두지 않았다는 뜻이다**(계약의 `timeLimitSeconds`). 0초로 접으면 화면이 "0초 안에
+ * 끝내야 한다"는 없는 제한을 말하게 된다.
+ */
+export function formatSeconds(seconds: number | null): string {
+  if (seconds === null) return '제한 없음'
   if (seconds < 60) return `${formatCount(seconds)}초`
 
   const minutes = Math.floor(seconds / 60)

@@ -90,7 +90,8 @@
     },
     "limits": {
       "maxCandidates": 100,
-      "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"],
+      "timeLimitSeconds": null,
+      "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"],
       "exceeded": false
     },
     "commonPeriod": { "start": "2015-01-02", "end": "2026-08-31", "shortenedBy": null },
@@ -187,8 +188,8 @@
         "tieHandling": "SHOW_ALL_TIED"
       },
       "limits": {
-        "maxCandidates": 100, "timeLimitSeconds": 1800, "dispatchWindow": 1, "consecutiveFailureLimit": 5,
-        "provisional": ["maxCandidates", "timeLimitSeconds", "dispatchWindow", "consecutiveFailureLimit"]
+        "maxCandidates": 100, "timeLimitSeconds": null, "dispatchWindow": 1, "consecutiveFailureLimit": 5,
+        "provisional": ["maxCandidates", "dispatchWindow", "consecutiveFailureLimit"]
       },
       "referenceVersions": { "marketData": "2026-08-31", "cost": "v1", "engine": "nautilus-0.1" },
       "dataVersionChanged": false
