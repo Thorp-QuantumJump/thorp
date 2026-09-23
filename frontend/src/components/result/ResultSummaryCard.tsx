@@ -8,7 +8,7 @@ export const METRIC_DEFINITIONS = {
   netTotalReturn:
     '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',
   maxDrawdown:
-    '운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',
+    'MDD(최대 낙폭)는 운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',
   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',
 } as const
 
@@ -37,12 +37,12 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
 
       <dl className={styles.metrics}>
         <Metric
-          label="비용 차감 후 전체 수익률"
+          label="수익률"
           value={formatRatio(summary.netTotalReturn)}
           definition={METRIC_DEFINITIONS.netTotalReturn}
         />
         <Metric
-          label="가장 크게 줄었던 폭"
+          label="MDD"
           value={formatRatio(summary.maxDrawdown)}
           definition={METRIC_DEFINITIONS.maxDrawdown}
           supplement={
@@ -56,7 +56,7 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
           }
         />
         <Metric
-          label="거래비용"
+          label="거래 수수료 등"
           value={formatMoney(summary.totalTradingCost)}
           definition={METRIC_DEFINITIONS.totalTradingCost}
         />

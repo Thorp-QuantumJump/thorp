@@ -26,9 +26,9 @@ describe('ResultSummaryCard', () => {
     expect(screen.getByText('-4.18%')).not.toBeNull()
     expect(screen.getByText('17,078원')).not.toBeNull()
     for (const [label, definition] of [
-      ['비용 차감 후 전체 수익률', METRIC_DEFINITIONS.netTotalReturn],
-      ['가장 크게 줄었던 폭', METRIC_DEFINITIONS.maxDrawdown],
-      ['거래비용', METRIC_DEFINITIONS.totalTradingCost],
+      ['수익률', METRIC_DEFINITIONS.netTotalReturn],
+      ['MDD', METRIC_DEFINITIONS.maxDrawdown],
+      ['거래 수수료 등', METRIC_DEFINITIONS.totalTradingCost],
     ] as const) {
       const help = screen.getByRole('button', { name: `${label} 도움말` })
       fireEvent.focus(help)
