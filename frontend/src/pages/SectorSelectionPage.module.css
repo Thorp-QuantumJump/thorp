@@ -82,13 +82,21 @@
 */
 .board {
   display: grid;
+  grid-template-areas: 'browser rail';
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
   align-items: start;
   gap: 22px;
 }
 
+.board[data-detail-expanded='true'] {
+  grid-template-areas:
+    'browser browser'
+    '. rail';
+}
+
 .browser {
   display: flex;
+  grid-area: browser;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
@@ -652,6 +660,7 @@
 .rail {
   display: flex;
   position: sticky;
+  grid-area: rail;
   top: 18px;
   flex-direction: column;
   gap: 12px;
@@ -820,7 +829,11 @@
 /* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */
 @media (max-width: 1180px) {
   /* 선택 요약을 아래로 내려 카드가 폭을 다 쓰게 한다. 셋을 한 줄에 억지로 넣지 않는다. */
-  .board {
+  .board,
+  .board[data-detail-expanded='true'] {
+    grid-template-areas:
+      'browser'
+      'rail';
     grid-template-columns: minmax(0, 1fr);
   }
 
