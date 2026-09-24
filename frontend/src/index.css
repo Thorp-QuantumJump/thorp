@@ -108,6 +108,7 @@
   --thorp-text-label: 0.66rem;
   --thorp-title-tracking: -0.045em;
   --thorp-title-leading: 1.16;
+  --thorp-title-weight: 700;
   /*
     버튼 높이는 세 단이다. 화면의 주된 행동(분석하기·다음 단계)은 첫 화면의 주 버튼과 같은 52px,
     카드 안의 행동은 40px, 아이콘·다시 시도 같은 작은 행동은 32px. 누르는 글자는 0.82rem·680이다.
@@ -244,6 +245,7 @@
   --thorp-flow-gap: initial;
   --thorp-flow-side: initial;
   --thorp-title-leading: initial;
+  --thorp-title-weight: initial;
   --thorp-control-cta: initial;
   --thorp-control: initial;
   --thorp-control-sm: initial;

@@ -11,6 +11,7 @@ import { SectorSelector } from '@/components/marketflow/SectorSelector'
 import { buildStrategyComparisonHandoff } from '@/marketflow/handoff'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './MarketFlowPage.module.css'
 
 type DetailState =
@@ -104,8 +105,10 @@ export function MarketFlowPage() {
       <main className={styles.main}>
         <header className={styles.hero}>
           <motion.div initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <span className={styles.eyebrow}><Activity size={14} aria-hidden="true" /> MARKET FLOW</span>
-            <h1>시장 흐름을<br /><span>분야별로 확인하세요.</span></h1>
+            {/* classic은 예전의 아이콘 작은 제목, 새 디자인은 첫 화면과 같은 선 작은 제목이다. */}
+            <span className={`${styles.eyebrow} ${styles.classicOnly}`}><Activity size={14} aria-hidden="true" /> MARKET FLOW</span>
+            <p className={heading.eyebrow} aria-hidden="true">MARKET FLOW</p>
+            <h1>시장 흐름을<br /><span><em className={heading.emphasis}>분야별로</em> 확인하세요.</span></h1>
           </motion.div>
           <motion.div className={styles.heroAside} initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.3, delay: reducedMotion ? 0 : 0.06 }}>
             <p>경제를 하나의 점수로 단정하지 않고, 생산·소비·대외거래 등 일곱 분야의 실제 지표와 최근 경로를 나누어 보여드립니다.</p>
