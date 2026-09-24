@@ -3,6 +3,7 @@ import { lazy, Suspense, useLayoutEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
+import { AssistantProvider, AssistantWidget } from '@/components/assistant/AssistantWidget'
 import { LandingPage } from '@/pages/LandingPage'
 
 // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.
@@ -200,7 +201,11 @@ function AnimatedRoutes() {
 function App() {
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatedRoutes />
+      {/* 화면 맥락 도우미(spec 015)는 라우트 전환 바깥에 한 번만 있다. 페이지가 맥락을 등록하면 버튼이 보인다. */}
+      <AssistantProvider>
+        <AnimatedRoutes />
+        <AssistantWidget />
+      </AssistantProvider>
     </MotionConfig>
   )
 }

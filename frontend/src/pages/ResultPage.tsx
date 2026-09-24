@@ -1,9 +1,10 @@
-import { useId, useMemo } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
+import { useAssistantPageContext } from '@/components/assistant/assistantPageContext'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import comparisonStyles from '@/components/result/comparison.module.css'
 import { CompareTargetChip } from '@/components/result/CompareTargetChip'
@@ -157,6 +158,17 @@ function ResultView({
         : null,
     [summary, timeseries],
   )
+  // 화면 맥락 도우미(spec 015). 이 화면의 맥락을 등록하고, 근거 카드가 가리키는 탭을 연다(FR-010).
+  const [activeTab, setActiveTab] = useState('summary')
+  const assistantPage = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])
+  const openTabForAssistant = useCallback(
+    (tab: string) => {
+      if (tab === 'loss' && !lossWindow) return
+      setActiveTab(tab)
+    },
+    [lossWindow],
+  )
+  useAssistantPageContext(assistantPage, { openTab: openTabForAssistant })
 
   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
   const summaryBlock = (
@@ -335,6 +347,8 @@ function ResultView({
           detail={detail}
           summary={summaryBlock}
           lossWindow={lossWindow}
+          activeTab={activeTab}
+          onActiveTabChange={setActiveTab}
           compare={
             // 설정·근거 탭의 선정·배분 효과는 대상 하나 기준이다. 여럿이면 첫 대상만 — 표를 대상 수만큼 늘리면 첫 화면이 아니다.
             drawnFirst
