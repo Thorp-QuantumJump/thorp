@@ -280,7 +280,8 @@ describe('SectorSelectionPage', () => {
     apiMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))
     renderPage()
 
-    expect(screen.getByRole('status').textContent).toContain('불러오는 중')
+    // 제목 줄의 지금 국내 시장도 따로 불러오므로 목록의 상태 문장을 문구로 찾는다.
+    expect(screen.getByText('투자 대상 목록을 불러오는 중입니다.').getAttribute('role')).toBe('status')
   })
 
   it('불러오는 동안에는 다시 불러오기를 누를 수 없다', async () => {

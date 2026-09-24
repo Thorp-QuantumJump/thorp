@@ -18,6 +18,18 @@
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
+/* 제목 줄. 왼쪽은 제목·안내, 오른쪽은 지금 국내 시장이며 칸 폭은 아래 투자 대상 보드와 같다. */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--thorp-flow-side, 19rem));
+  gap: 16px var(--thorp-flow-gap, 22px);
+  margin-bottom: 24px;
+}
+
+.intro .lead {
+  margin-bottom: 0;
+}
+
 .title {
   margin: 0 0 12px;
   font-size: var(--thorp-text-title, clamp(1.7rem, 4.4vw, 2.6rem));
@@ -676,26 +688,11 @@
   고른 것을 계속 보이는 자리다. 화면을 내려도 따라온다 — 목록을 훑는 동안 무엇을 담았는지가
   눈앞에 남아 있어야 한다.
 */
-/*
-  오른쪽 칸: 선택 요약(국내 시장 포함)과 그 아래 섹터 소식 카드. 칸 전체가 따라 내려오며, 화면보다
-  길어지면 칸 안에서 스크롤해 '다음: 전략 고르기'가 늘 보이게 한다.
-*/
-.side {
+.rail {
   display: flex;
   position: sticky;
   grid-area: rail;
   top: 18px;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  max-height: calc(100vh - 36px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.rail {
-  display: flex;
-  flex-shrink: 0;
   flex-direction: column;
   gap: 12px;
   padding: var(--thorp-pad-card, 18px);
@@ -995,10 +992,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .side {
+  .rail {
     position: static;
-    max-height: none;
-    overflow: visible;
+  }
+
+  .intro,
+  .context {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1216,17 +1216,19 @@
   }
 }
 
-/* '다음: 전략 고르기' 아래의 지금 국내 시장. 지수마다 카드 하나씩 세로로 쌓는다. */
-.railMarket {
+/*
+  제목 줄 오른쪽의 지금 국내 시장. 아래 선택 요약과 같은 칸 폭이라 두 덩이가 세로로 맞는다.
+  지수마다 카드 하나씩 세로로 쌓는다.
+*/
+.marketNow {
   display: flex;
+  align-self: end;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--thorp-line);
+  min-width: 0;
 }
 
-.railMarket h2 {
+.marketNow h2 {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1237,7 +1239,16 @@
   letter-spacing: 0.02em;
 }
 
-.railMarket h2 svg {
+.marketNow h2 svg {
   flex-shrink: 0;
   color: var(--thorp-accent-soft);
+}
+
+/* 투자 대상 아래 한 줄: 지금과 비슷했던 과거 시장(넓게)과 시장 흐름 뉴스. 높이는 둘 중 긴 쪽에 맞춘다. */
+.context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+  align-items: stretch;
+  gap: var(--thorp-flow-gap, 22px);
+  margin-top: var(--thorp-flow-gap, 22px);
 }
