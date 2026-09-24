@@ -35,7 +35,7 @@ export function LandingPage() {
         <HeroSection indicators={indicators} />
         <SectionProgress progress={scrollYProgress} targets={SECTION_IDS} />
         <div className={styles.storyFlow}>
-          <MarketAnalysisSection indicators={indicators} />
+          <MarketAnalysisSection />
           <BacktestIntroSection />
           <AlgorithmOrbit />
         </div>
