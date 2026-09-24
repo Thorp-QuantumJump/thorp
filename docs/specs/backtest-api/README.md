@@ -251,6 +251,11 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   옛 행은 이미 접수된 실행의 발행·재시도만 쓰고 새 요청은 고를 수 없다. 그래서 전략당 한 행이라는 계약은 버전이 늘어도 그대로다
   (DB 부분 유니크 인덱스 `uk_strategy_rules_current`가 보장한다).
 
+## 1.12 내가 써 본 전략·설정 조합
+
+`GET /my-records/used-strategies`로 006이 제공한다(`S15P21E205-418`). 004 는 요청 이력에서 실행을 읽는 저장소 질의만 두고, 내 기록 항목 이름을 붙이는 일은 006 몫이다. 계약은
+[`specs/006-my-records/contracts/my-records-api.md`](../../../specs/006-my-records/contracts/my-records-api.md).
+
 ## 2. 결과 조회
 
 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec "API 응답 분리"). 필드 의미·타입·nullable 규칙은

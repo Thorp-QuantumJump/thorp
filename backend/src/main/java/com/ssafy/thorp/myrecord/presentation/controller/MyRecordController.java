@@ -21,6 +21,7 @@ import com.ssafy.thorp.myrecord.presentation.request.RenameMyRecordRequest;
 import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;
 import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;
+import com.ssafy.thorp.myrecord.presentation.response.UsedStrategiesResponse;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -110,6 +111,18 @@ public class MyRecordController {
                         size == null ? MyRecordListQuery.DEFAULT_SIZE : size);
         return ResponseEntity.ok(
                 ApiResponse.ok(MyRecordListResponse.from(queryService.list(ownerId, query))));
+    }
+
+    /**
+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합(005 비교 후보, `S15P21E205-418`). 결과 화면이 '내 전략' 후보를 채울 때 읽는다.
+     *
+     * <p>{@code /{recordId}}와는 리터럴 우선 규칙으로 갈린다.
+     */
+    @GetMapping("/used-strategies")
+    public ResponseEntity<ApiResponse<UsedStrategiesResponse>> usedStrategies() {
+        long ownerId = currentRequester.requireRequesterId();
+        return ResponseEntity.ok(
+                ApiResponse.ok(UsedStrategiesResponse.from(queryService.usedStrategies(ownerId))));
     }
 
     /**

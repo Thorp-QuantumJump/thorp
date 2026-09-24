@@ -4,6 +4,8 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;
+import com.ssafy.thorp.backtest.domain.model.BacktestRun;
+import com.ssafy.thorp.backtest.domain.model.ExecutionType;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;
@@ -12,11 +14,13 @@ import com.ssafy.thorp.myrecord.application.result.MyRecordDetail;
 import com.ssafy.thorp.myrecord.application.result.MyRecordPage;
 import com.ssafy.thorp.myrecord.application.result.MyRecordView;
 import com.ssafy.thorp.myrecord.application.result.SourceVersions;
+import com.ssafy.thorp.myrecord.application.result.UsedStrategy;
 import com.ssafy.thorp.myrecord.domain.model.RecordKind;
 import com.ssafy.thorp.regime.domain.vo.SnapshotKey;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -207,5 +211,47 @@ public class MyRecordQueryService {
         if (value != null) {
             target.put(key, value);
         }
+    }
+
+    /** 요청 이력을 조합 단위로 접을 때 한 번에 읽는 요청 수. 같은 조합을 되풀이한 사용자라도 이 안에서 스무 조합은 나온다. */
+    private static final int USED_STRATEGY_SCAN = 200;
+
+    /** 후보 상한. 비교 목록이 이보다 길면 고르는 화면이 아니라 검색 화면이 된다(원칙 II). */
+    private static final int USED_STRATEGY_LIMIT = 20;
+
+    /**
+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합, 최근 순·중복 없이({@code GET /my-records/used-strategies}, 005 비교 후보).
+     *
+     * <p>조합의 같음은 {@code strategyId}와 {@code parameters}의 구조적 같음이다 — 접수가 저장한 JSON 이라 키 순서는 같음에 영향이
+     * 없다. 규칙 버전은 같음에 넣지 않는다. 같은 설정을 규칙 버전이 바뀐 뒤 다시 돌렸어도 사용자에게는 한 조합이다.
+     *
+     * <p>이름은 그 실행을 가리키는 <b>살아 있는</b> 내 기록 항목에서 읽는다. 지운 항목은 이름을 주지 않으므로 화면은 전략 이름으로 대신한다 (FR-017).
+     * 여기가 006 안에 있는 이유다 — 004 는 기록 이름을 모른다.
+     */
+    @Transactional(readOnly = true)
+    public List<UsedStrategy> usedStrategies(long ownerId) {
+        Map<List<Object>, UsedStrategy> byCombination = new LinkedHashMap<>();
+        for (BacktestRun run :
+                runs.findRecentRequestedBy(ownerId, ExecutionType.SINGLE, USED_STRATEGY_SCAN)) {
+            List<Object> key = List.of(run.getStrategyId(), run.getParameters());
+            if (byCombination.containsKey(key)) {
+                continue;
+            }
+            String recordName =
+                    records.findActiveByOwnerAndRun(ownerId, run.getId())
+                            .map(record -> record.name().value())
+                            .orElse(null);
+            byCombination.put(
+                    key,
+                    new UsedStrategy(
+                            run.getStrategyId(),
+                            recordName,
+                            run.getPlan().rulesVersion(),
+                            run.getParameters()));
+            if (byCombination.size() >= USED_STRATEGY_LIMIT) {
+                break;
+            }
+        }
+        return List.copyOf(byCombination.values());
     }
 }
