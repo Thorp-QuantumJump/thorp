@@ -237,9 +237,9 @@ thorp:
       max-facts-per-round: 30
     # 요청 전체 시간 예산이 우선이고, 라운드별 모델 호출 예산은 그 안에서 남은 시간과 작은 쪽이다.
     timeout:
-      total: PT15S
-      first-call: PT7S
-      next-call: PT4S
+      total: PT2M
+      first-call: PT60S
+      next-call: PT30S
     # 답변 검증 상한(계약 §2.4).
     answer:
       max-length: 600

@@ -10,6 +10,7 @@ import com.ssafy.thorp.assistant.application.port.AssistantSettings;
 import com.ssafy.thorp.assistant.application.port.AssistantTool;
 import com.ssafy.thorp.assistant.application.result.AnswerStatus;
 import com.ssafy.thorp.assistant.application.result.Conversation;
+import com.ssafy.thorp.assistant.application.result.Deadline;
 import com.ssafy.thorp.assistant.application.result.Evidence;
 import com.ssafy.thorp.assistant.application.result.EvidenceBundle;
 import com.ssafy.thorp.assistant.application.result.EvidenceKind;
@@ -44,9 +45,9 @@ class ToolLoopTest {
                     5,
                     1000,
                     300,
-                    Duration.ofSeconds(15),
-                    Duration.ofSeconds(7),
-                    Duration.ofSeconds(4),
+                    Duration.ofMinutes(2),
+                    Duration.ofSeconds(60),
+                    Duration.ofSeconds(30),
                     2,
                     60,
                     30,
@@ -54,7 +55,15 @@ class ToolLoopTest {
                     5);
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-09-24T03:00:00Z"));
-    private final ToolLoop loop = new ToolLoop(SETTINGS, clock);
+    private final ToolLoop loop = new ToolLoop(SETTINGS);
+
+    private Deadline deadline() {
+        return new Deadline(clock, SETTINGS.totalBudget());
+    }
+
+    private ToolLoop.Outcome run(AssistantModelPort model, String question, EvidenceBundle bundle) {
+        return loop.run(model, question, bundle, deadline());
+    }
 
     /** 호출 이력을 남기는 가짜 도구. {@code produce}만큼 근거를 돌려준다. */
     static final class FakeTool implements AssistantTool {
@@ -127,7 +136,7 @@ class ToolLoopTest {
         ScriptedModel model = new ScriptedModel(turn -> draft());
 
         ToolLoop.Outcome outcome =
-                loop.run(model, "수익률?", bundle(List.of(fact("a", "1"), fact("b", "2"))));
+                run(model, "수익률?", bundle(List.of(fact("a", "1"), fact("b", "2"))));
 
         assertThat(outcome.rounds()).isZero();
         assertThat(outcome.facts()).extracting(Evidence::id).containsExactly("F1", "F2");
@@ -147,7 +156,7 @@ class ToolLoopTest {
                                         ? request("deleteEverything", Map.of("date", "2024-01-02"))
                                         : draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(tool.runs).isEmpty();
         assertThat(outcome.rounds()).isEqualTo(1);
@@ -178,7 +187,7 @@ class ToolLoopTest {
                                     default -> draft();
                                 });
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(tool.runs).isEmpty();
         assertThat(outcome.rounds()).isEqualTo(2);
@@ -198,7 +207,7 @@ class ToolLoopTest {
                                         ? request("getEquityOn", Map.of("date", "2030-01-01"))
                                         : draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         ToolResult result = model.conversations.get(1).exchanges().get(0).results().get(0);
         assertThat(result.unavailableReason())
@@ -217,7 +226,7 @@ class ToolLoopTest {
                                         ? request("getEquityOn", Map.of("date", "2024-01-02"))
                                         : draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(tool.runs).containsExactly(Map.of("date", "2024-01-02"));
         assertThat(outcome.facts()).extracting(Evidence::id).containsExactly("F1", "F2", "F3");
@@ -233,7 +242,7 @@ class ToolLoopTest {
         ScriptedModel model =
                 new ScriptedModel(turn -> request("getEquityOn", Map.of("date", "2024-01-02")));
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(model.conversations).hasSize(3);
         assertThat(tool.runs).hasSize(2);
@@ -255,7 +264,7 @@ class ToolLoopTest {
                                         ? request("getEquityOn", Map.of("date", "2024-01-02"))
                                         : draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(initial, tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(initial, tool));
 
         assertThat(outcome.facts()).hasSize(60);
         assertThat(outcome.facts().subList(0, 58))
@@ -277,7 +286,7 @@ class ToolLoopTest {
                                         ? request("getEquityOn", Map.of("date", "2024-01-02"))
                                         : draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(outcome.facts()).hasSize(31);
         assertThat(outcome.facts().get(30).label()).isEqualTo(ToolLoop.TRUNCATED_LABEL);
@@ -290,49 +299,101 @@ class ToolLoopTest {
                 IntStream.range(0, 70).mapToObj(i -> fact("초기 " + i, "" + i)).toList();
         ScriptedModel model = new ScriptedModel(turn -> draft());
 
-        ToolLoop.Outcome outcome = loop.run(model, "q", bundle(initial));
+        ToolLoop.Outcome outcome = run(model, "q", bundle(initial));
 
         assertThat(outcome.facts()).hasSize(60);
         assertThat(outcome.facts().get(59).label()).isEqualTo(ToolLoop.TRUNCATED_LABEL);
     }
 
     @Test
-    @DisplayName("라운드별 시간 예산은 첫 호출 7초, 이후 4초이며 전체 15초의 남은 시간을 넘지 않는다")
+    @DisplayName("라운드별 시간 예산은 첫 호출 60초, 이후 30초이며 전체 2분의 남은 시간을 넘지 않는다")
     void roundBudgetsAreSlicedFromTotalDeadline() {
         FakeTool tool = new FakeTool(1);
         ScriptedModel model =
                 new ScriptedModel(
                         turn -> {
-                            clock.advance(Duration.ofSeconds(6));
+                            clock.advance(Duration.ofSeconds(turn < 3 ? 47 : 20));
                             return turn < 3
                                     ? request("getEquityOn", Map.of("date", "2024-01-02"))
                                     : draft();
                         });
 
-        loop.run(model, "q", bundle(List.of(fact("a", "1")), tool));
+        run(model, "q", bundle(List.of(fact("a", "1")), tool));
 
         assertThat(model.timeouts)
                 .containsExactly(
-                        Duration.ofSeconds(7), Duration.ofSeconds(4), Duration.ofSeconds(3));
+                        Duration.ofSeconds(60), Duration.ofSeconds(30), Duration.ofSeconds(26));
     }
 
     @Test
-    @DisplayName("전체 15초를 넘기면 다음 호출 없이 503 ASSISTANT_UNAVAILABLE 이다")
+    @DisplayName("전체 2분을 넘기면 다음 호출 없이 503 ASSISTANT_UNAVAILABLE 이다")
     void deadlineExceededIsUnavailable() {
         FakeTool tool = new FakeTool(1);
         ScriptedModel model =
                 new ScriptedModel(
                         turn -> {
-                            clock.advance(Duration.ofSeconds(16));
+                            clock.advance(Duration.ofSeconds(130));
                             return request("getEquityOn", Map.of("date", "2024-01-02"));
                         });
 
-        assertThatThrownBy(() -> loop.run(model, "q", bundle(List.of(fact("a", "1")), tool)))
+        assertThatThrownBy(() -> run(model, "q", bundle(List.of(fact("a", "1")), tool)))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         exc ->
                                 assertThat(exc.getErrorCode())
                                         .isEqualTo(ErrorCode.ASSISTANT_UNAVAILABLE));
         assertThat(model.conversations).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("예산을 넘긴 뒤 도착한 최종 초안은 버리고 503 이다")
+    void lateDraftIsDiscarded() {
+        ScriptedModel model =
+                new ScriptedModel(
+                        turn -> {
+                            clock.advance(Duration.ofSeconds(130));
+                            return draft();
+                        });
+
+        assertThatThrownBy(() -> run(model, "q", bundle(List.of(fact("a", "1")))))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        exc ->
+                                assertThat(exc.getErrorCode())
+                                        .isEqualTo(ErrorCode.ASSISTANT_UNAVAILABLE));
+    }
+
+    @Test
+    @DisplayName("이미 지난 데드라인을 받으면 모델을 부르지 않는다 — 근거 팩 만들기가 예산을 먹은 경우")
+    void expiredDeadlineSkipsModel() {
+        ScriptedModel model = new ScriptedModel(turn -> draft());
+        Deadline spent = deadline();
+        clock.advance(Duration.ofSeconds(121));
+
+        assertThatThrownBy(() -> loop.run(model, "q", bundle(List.of(fact("a", "1"))), spent))
+                .isInstanceOf(BusinessException.class);
+        assertThat(model.conversations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("팩이 가득 차 아무것도 더하지 못하면 빈 성공이 아니라 '사용할 수 없음'으로 돌려준다")
+    void fullPackReportsUnavailableInsteadOfEmptySuccess() {
+        List<Evidence> initial =
+                IntStream.range(0, 60).mapToObj(i -> fact("초기 " + i, "" + i)).toList();
+        FakeTool tool = new FakeTool(1);
+        ScriptedModel model =
+                new ScriptedModel(
+                        turn ->
+                                turn == 1
+                                        ? request("getEquityOn", Map.of("date", "2024-01-02"))
+                                        : draft());
+
+        ToolLoop.Outcome outcome = run(model, "q", bundle(initial, tool));
+
+        assertThat(outcome.facts()).hasSize(60);
+        ToolResult result = model.conversations.get(1).exchanges().get(0).results().get(0);
+        assertThat(result.unavailable()).isTrue();
+        assertThat(result.unavailableReason()).contains("가득");
+        assertThat(result.facts()).isEmpty();
     }
 }

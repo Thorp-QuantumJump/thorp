@@ -41,9 +41,14 @@ public class AnswerValidator {
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{(F\\d+)}}");
 
-    /** 자리표시자 밖에 남으면 안 되는 것: 아라비아 숫자(전각 포함)·%·통화 기호·URL. 날짜·금액은 숫자를 품으니 함께 걸린다. 한글 수사는 남는다. */
+    /**
+     * 자리표시자 밖에 남으면 안 되는 것: 아라비아 숫자(전각 포함)·%·통화 기호·URL·경로({@code /trades}). 한글 사이의 빗금({@code
+     * 매수/매도})은 남는다. 날짜·금액은 숫자를 품으니 함께 걸린다. 한글 수사는 남는다.
+     */
     private static final Pattern LITERAL_VALUE =
-            Pattern.compile("[0-9０-９%％₩$]|https?://|www\\.|://", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(
+                    "[0-9０-９%％₩$]|https?://|www\\.|://|/[A-Za-z_]|\\\\[A-Za-z]",
+                    Pattern.CASE_INSENSITIVE);
 
     private final AssistantSettings settings;
     private final List<String> forbiddenPhrases;

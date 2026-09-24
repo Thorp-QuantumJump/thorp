@@ -38,9 +38,9 @@ public class AssistantProperties {
     @Getter
     @Setter
     public static class Timeout {
-        private Duration total = Duration.ofSeconds(15);
-        private Duration firstCall = Duration.ofSeconds(7);
-        private Duration nextCall = Duration.ofSeconds(4);
+        private Duration total = Duration.ofMinutes(2);
+        private Duration firstCall = Duration.ofSeconds(60);
+        private Duration nextCall = Duration.ofSeconds(30);
     }
 
     @Getter

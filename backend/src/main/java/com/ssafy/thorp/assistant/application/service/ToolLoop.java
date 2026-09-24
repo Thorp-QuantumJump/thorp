@@ -19,7 +19,6 @@ import com.ssafy.thorp.assistant.application.result.ToolResult;
 import com.ssafy.thorp.assistant.application.result.ToolSpec;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -36,7 +35,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>라운드는 요청당 최대 {@code maxRounds}(2)다. 그 뒤 또 도구를 요청하면 끊고 근거 부족으로 답한다(spec Edge Cases). 근거는 라운드당
  * {@code maxFactsPerRound}(30), 팩 전체 {@code maxFacts}(60)이고, 넘으면 도구 결과의 뒤를 잘라 "일부만 읽음" 근거를 남기며 초기
- * 팩은 보존한다. 전체 데드라인(15초)이 라운드 예산보다 우선이다.
+ * 팩은 보존한다. 자리가 아예 없으면 그 호출은 "사용할 수 없음"으로 돌려준다 — 빈 성공으로 보이면 모델이 자료가 없었다고 읽는다. 전체 데드라인(2분, 서비스가 페이지
+ * 판정 직전에 만든다)이 라운드 예산보다 우선이고, 모델이 늦게 돌려준 초안도 버린다.
  */
 @Component
 public class ToolLoop {
@@ -45,11 +45,9 @@ public class ToolLoop {
     static final String TRUNCATED_VALUE = "일부만 읽음";
 
     private final AssistantSettings settings;
-    private final Clock clock;
 
-    public ToolLoop(AssistantSettings settings, Clock clock) {
+    public ToolLoop(AssistantSettings settings) {
         this.settings = settings;
-        this.clock = clock;
     }
 
     /**
@@ -58,8 +56,8 @@ public class ToolLoop {
      */
     public record Outcome(ModelDraft draft, List<Evidence> facts, int rounds) {}
 
-    public Outcome run(AssistantModelPort model, String question, EvidenceBundle bundle) {
-        Deadline deadline = new Deadline(clock, settings.totalBudget());
+    public Outcome run(
+            AssistantModelPort model, String question, EvidenceBundle bundle, Deadline deadline) {
         FactPack pack = new FactPack(settings.maxFacts());
         pack.add(bundle.facts(), settings.maxFacts());
         Map<String, AssistantTool> tools = new LinkedHashMap<>();
@@ -79,6 +77,9 @@ public class ToolLoop {
                             pack.facts(),
                             specs,
                             deadline.slice(roundBudget));
+            if (deadline.expired()) {
+                throw unavailable("시간 예산을 넘겼습니다");
+            }
             if (turn instanceof ModelDraft draft) {
                 return new Outcome(draft, pack.facts(), round);
             }
@@ -122,6 +123,12 @@ public class ToolLoop {
                 continue;
             }
             List<Evidence> added = pack.add(produced, room);
+            if (added.isEmpty() && !produced.isEmpty()) {
+                results.add(
+                        ToolResult.unavailable(
+                                call.id(), UNAVAILABLE_PREFIX + "근거 자리가 가득 차 더 읽지 못했습니다"));
+                continue;
+            }
             room = Math.max(0, room - added.size());
             results.add(new ToolResult(call.id(), added, null));
         }
