@@ -216,6 +216,34 @@ thorp:
     # 진행 시계열 구독(SSE) 하나를 열어 두는 상한. 배포 환경 nginx 의 /api/ proxy_read_timeout(300s)보다
     # 짧게 둔다 — 길면 프록시가 먼저 끊고 화면은 서버 장애와 구분할 수 없는 오류를 받는다.
     progress-stream-timeout: PT4M
+  assistant:
+    # 화면 맥락 도우미(spec 015, ADR-0008). **비활성이 기본**이다 — 켜는 것은 품질 관문(T053) 뒤이고, 켤 때
+    # THORP_ASSISTANT_ENABLED_SCOPES=RESULT 를 넣는다. 키·주소·모델 중 하나라도 비면 어댑터 빈이 뜨지 않아
+    # capabilities.enabled=false 이고 기동은 정상이다(계약 §4). 그래서 이 넷은 prod 에서도 빈 기본값이다.
+    enabled-scopes: ${THORP_ASSISTANT_ENABLED_SCOPES:}
+    model:
+      api-key: ${THORP_ASSISTANT_API_KEY:}
+      base-url: ${THORP_ASSISTANT_BASE_URL:}
+      model: ${THORP_ASSISTANT_MODEL:}
+    # 남용 방지 한도(FR-013). 금액 상한은 두지 않는다. 초안 수치이며 실측 뒤 조정한다(원칙 IX).
+    # 인스턴스 메모리 카운터라 다중 인스턴스에서는 인스턴스 수만큼 늘어난다 — 보안 경계가 아니다.
+    limits:
+      per-ip-per-minute: 8
+      per-token-per-minute: 5
+      per-day: 1000
+      question-max-length: 300
+      max-rounds: 2
+      max-facts: 60
+      max-facts-per-round: 30
+    # 요청 전체 시간 예산이 우선이고, 라운드별 모델 호출 예산은 그 안에서 남은 시간과 작은 쪽이다.
+    timeout:
+      total: PT15S
+      first-call: PT7S
+      next-call: PT4S
+    # 답변 검증 상한(계약 §2.4).
+    answer:
+      max-length: 600
+      max-parts: 5
   my-records:
     # 한 사용자가 저장해 둘 수 있는 탐색 묶음 기록 수(spec 006 FR-018, PD-13).
     #
