@@ -258,7 +258,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 
 - [X] T079 [US5] (FE) `frontend/src/components/result/NextStepLinks.tsx` — '경제환경이 비슷했던 과거 보기'(FR-018): 넘길 값(섹터 후보 집합·전략·설정값·분석 기간·금액)을 `config`에서 준비하되, 011의 진입 계약과 라우트가 없으면 버튼을 누를 수 없게 두고 이유를 적는다(007 `CompareHandoff`가 005 없이 한 방식). '설정 바꿔 비교'는 T068을 재사용하고, '내보내기'는 006 소유라 006 화면이 없으면 같은 방식으로 닫아 둔다(FR-019). 돌아오는 길은 브라우저 뒤로 가기다. 로그인 여부와 무관하게 결과 화면은 열린다
 - [X] T080 [US5] (FE 테스트) `frontend/src/pages/ResultPage.auxiliary.test.tsx` — 보조 보기는 열기 전 API 호출 0회(SC-001); 지수 보기는 `fetchResultIndexComparison`의 값을 그대로 그리고 화면에서 환산하지 않는다(응답 값과 렌더 값이 같다), `available: false`면 이유와 함께 비활성; 지수 보기를 열어도 `?compare=`가 바뀌지 않는다; 목표 위험 요청 본문에 `scenario`와 `targetVolatility`가 있고 별도 시나리오 표지가 보인다; 추정 실패면 계산 제한 표시; 011·006이 없으면 비활성 문구가 있고 다른 버튼 동작에 영향이 없다
 
-**B08 구현 메모**: 현재 001에는 기간 KOSPI 조회 포트가 없어 T087·T088은 계약이 정한 비활성 갈래(`INDEX_SERIES_UNAVAILABLE`)를 구현·검증했다. 첫 값 환산과 기간 경계 검증은 001이 기간 계열 포트를 제공할 때 그 포트 연결과 함께 활성화한다. 최신 관측치 한 점으로 성공 계열을 만들지는 않는다.
+**B08 구현 메모**: 처음에는 001에 기간 KOSPI 조회 포트가 없어 T087·T088은 계약이 정한 비활성 갈래(`INDEX_SERIES_UNAVAILABLE`)만 구현·검증했다. 이후 001에 `IndexSeriesRepository`(`daily_index` 기간 종가 읽기)를 두고 첫 값 환산을 활성화했다(Jira 428). 지수는 결과의 자료 버전(`versions.data`)에서 읽고, 첫 종가는 범위 안 첫 관측치이며, 빠진 날은 채우지 않는다. 최신 관측치 한 점으로 성공 계열을 만들지는 않는다.
 
 **Checkpoint**: 다섯 스토리가 모두 독립적으로 동작한다.
 

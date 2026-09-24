@@ -213,7 +213,7 @@ public class ResultController {
                 ApiResponse.ok(PublicResultExceptionsResponse.from(service.getExceptions(token))));
     }
 
-    /** KOSPI를 같은 시작 금액으로 환산한 보조 비교 계열. 기간 계열 포트가 없으면 이유와 함께 비활성이다. */
+    /** KOSPI를 같은 시작 금액으로 환산한 보조 비교 계열. 그 기간의 지수 관측치가 없으면 이유와 함께 비활성이다. */
     @GetMapping("/{token}/index-comparison")
     public ResponseEntity<ApiResponse<PublicResultIndexComparisonResponse>> getIndexComparison(
             @PathVariable String token) {
