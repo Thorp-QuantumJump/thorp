@@ -409,10 +409,9 @@ class AssistantControllerTest {
     void slowEvidenceBuilderIsUnavailable() throws Exception {
         fakes.slowBuilder.set(true);
 
-        askOk("10.0.4.2", TOKEN)
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error.code").value("ASSISTANT_UNAVAILABLE"));
+        ResultActions actions = askOk("10.0.4.2", TOKEN).andExpect(status().isServiceUnavailable());
 
+        assertThat(json(actions)).isEqualTo(example("error-unavailable.json"));
         assertThat(fakes.modelCalls.get()).isZero();
     }
 }

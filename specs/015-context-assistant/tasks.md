@@ -71,10 +71,10 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 
 **Independent Test**: 로컬 가짜 HTTP 서버가 `tool_calls`를 한 번 돌려주고 두 번째에 최종 답변을 주는 시나리오에서 요청 본문·이력·응답 파싱이 계약대로인지 확인한다.
 
-- [ ] T020 [P] [US1] 실패 테스트 `.../assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java`(가짜 HTTP) — 요청에 `model`·`store:false`·`parallel_tool_calls:false`·`response_format` strict·`tools` 5개만(내장 도구 없음); developer·user 메시지가 질문과 근거 팩을 분리; 응답 `tool_calls`를 `ToolCall`로 읽고 `arguments`가 JSON이 아니면 검증 실패로 넘김; 두 번째 라운드 요청에 이전 `assistant(tool_calls)`·`tool` 메시지가 들어 있음; `refusal`·빈 `content`·스키마 불일치·시간 초과 → `ASSISTANT_UNAVAILABLE`; 직렬화 결과 어디에도 토큰·`backtestId` 문자열 없음
-- [ ] T021 [US1] `AssistantHttpClient`(`MarketHttpClient` 관례, 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽)·`OpenAiChatCompletionsClient implements AssistantModelPort`·`AssistantModelProperties`(`THORP_ASSISTANT_API_KEY`·`THORP_ASSISTANT_BASE_URL`·`THORP_ASSISTANT_MODEL`, 비어 있으면 비활성). 응답의 `usage` 토큰 수·라운드 수·지연을 운영 로그에 남긴다(원문·식별자는 없이)
-- [ ] T022 [US1] 프롬프트 `backend/src/main/resources/assistant/prompts/answer-ko.txt` — 자리표시자 규칙, 도구 사용 지침(모르는 날짜는 묻지 말고 도구로 확인, 기간 밖은 없다고 답, 최대 2회), 부분 결과 접두, 헌장 III 금지 문구, 범위 밖 안내 문구
-- [ ] T023 [US1] 키·주소·모델명 중 하나라도 비어 있으면 어댑터 빈이 뜨지 않고 `capabilities.enabled=false`이며 **컨텍스트 기동은 성공**하는지 설정 테스트로 고정(prod 프로파일의 빈 기본값 포함). `spotlessApply build`
+- [x] T020 [P] [US1] 실패 테스트 `.../assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java`(가짜 HTTP) — 요청에 `model`·`store:false`·`parallel_tool_calls:false`·`response_format` strict·`tools` 5개만(내장 도구 없음); developer·user 메시지가 질문과 근거 팩을 분리; 응답 `tool_calls`를 `ToolCall`로 읽고 `arguments`가 JSON이 아니면 검증 실패로 넘김; 두 번째 라운드 요청에 이전 `assistant(tool_calls)`·`tool` 메시지가 들어 있음; `refusal`·빈 `content`·스키마 불일치·시간 초과 → `ASSISTANT_UNAVAILABLE`; 직렬화 결과 어디에도 토큰·`backtestId` 문자열 없음
+- [x] T021 [US1] `AssistantHttpClient`(`MarketHttpClient` 관례, 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽)·`OpenAiChatCompletionsClient implements AssistantModelPort`·`AssistantModelProperties`(`THORP_ASSISTANT_API_KEY`·`THORP_ASSISTANT_BASE_URL`·`THORP_ASSISTANT_MODEL`, 비어 있으면 비활성). 응답의 `usage` 토큰 수·라운드 수·지연을 운영 로그에 남긴다(원문·식별자는 없이)
+- [x] T022 [US1] 프롬프트 `backend/src/main/resources/assistant/prompts/answer-ko.txt` — 자리표시자 규칙, 도구 사용 지침(모르는 날짜는 묻지 말고 도구로 확인, 기간 밖은 없다고 답, 최대 2회), 부분 결과 접두, 헌장 III 금지 문구, 범위 밖 안내 문구
+- [x] T023 [US1] 키·주소·모델명 중 하나라도 비어 있으면 어댑터 빈이 뜨지 않고 `capabilities.enabled=false`이며 **컨텍스트 기동은 성공**하는지 설정 테스트로 고정(prod 프로파일의 빈 기본값 포함). `spotlessApply build`
 
 ---
 
@@ -131,7 +131,7 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 |---|---|---|---|---|---|
 | 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |
 | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |
-| 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` | `feat(be)/{N}-assistant-model-adapter` | 3 | T020~T023 | 2 |
+| 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |
 | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |
 | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |
 | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |
