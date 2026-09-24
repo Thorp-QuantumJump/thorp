@@ -11,7 +11,7 @@
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -41,7 +41,7 @@
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -76,7 +76,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   cursor: pointer;
 }
 

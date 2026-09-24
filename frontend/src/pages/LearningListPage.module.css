@@ -3,26 +3,28 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
   margin: 0 0 28px;
-  font-size: clamp(1.9rem, 5vw, 3.2rem);
-  line-height: 1.05;
-  letter-spacing: -0.05em;
+  font-size: var(--thorp-text-title, clamp(1.9rem, 5vw, 3.2rem));
+  line-height: var(--thorp-title-leading, 1.05);
+  letter-spacing: var(--thorp-title-tracking, -0.05em);
+  font-weight: 700;
 }
 
 .loading,
 .empty {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
@@ -57,22 +59,127 @@
 }
 
 .itemTitle {
-  font-size: 1.05rem;
+  font-size: var(--thorp-text-heading, 1.05rem);
   font-weight: 600;
 }
 
 .itemQuestion {
   color: var(--thorp-copy);
-  font-size: 0.92rem;
+  font-size: var(--thorp-text-body, 0.92rem);
   line-height: 1.6;
 }
 
 .diagnosis {
   margin: 28px 0 0;
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
 }
 
 .diagnosis a {
   color: var(--thorp-accent-soft);
 }
 
+/* 글 번호와 화살표. classic에는 없던 요소라 기본은 숨기고 새 디자인에서 켠다. */
+.itemIndex,
+.itemArrow {
+  display: none;
+}
+
+.diagnosisLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/*
+  새 디자인: 목록을 첫 화면 카드처럼 격자로 늘어놓는다. 카드는 번호·제목·질문·화살표 네 줄이고, 올리면
+  테두리가 밝아지며 살짝 떠오른다. 바로 시작하기는 첫 화면의 보조 버튼(52px)과 같은 모양이다.
+*/
+:global(:root:not([data-design='classic'])) .list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1000px) {
+  :global(:root:not([data-design='classic'])) .list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  :global(:root:not([data-design='classic'])) .list { grid-template-columns: 1fr; }
+}
+
+:global(:root:not([data-design='classic'])) .item {
+  position: relative;
+  height: 100%;
+  min-height: 176px;
+  padding: var(--thorp-pad-card);
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+:global(:root:not([data-design='classic'])) .item:hover {
+  border-color: var(--thorp-line-control-hover);
+  transform: translateY(var(--thorp-cta-lift));
+}
+
+:global(:root:not([data-design='classic'])) .itemIndex {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--thorp-ornament);
+  font-size: var(--thorp-text-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(:root:not([data-design='classic'])) .itemTitle {
+  font-size: var(--thorp-text-heading);
+  font-weight: 650;
+}
+
+:global(:root:not([data-design='classic'])) .itemQuestion {
+  padding-right: 28px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-body);
+}
+
+:global(:root:not([data-design='classic'])) .itemArrow {
+  display: block;
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  color: var(--thorp-accent-soft);
+  transition: transform 180ms ease;
+}
+
+:global(:root:not([data-design='classic'])) .item:hover .itemArrow {
+  transform: translate(2px, -2px);
+}
+
+:global(:root:not([data-design='classic'])) .diagnosis {
+  margin-top: 32px;
+}
+
+:global(:root:not([data-design='classic'])) .diagnosisLink {
+  justify-content: center;
+  gap: 11px;
+  min-height: var(--thorp-control-cta);
+  padding: 0 21px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
+  text-decoration: none;
+  transition: border-color 180ms ease, gap 180ms ease;
+}
+
+:global(:root:not([data-design='classic'])) .diagnosisLink:hover {
+  gap: 16px;
+  border-color: var(--thorp-line-control-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(:root:not([data-design='classic'])) .item,
+  :global(:root:not([data-design='classic'])) .itemArrow,
+  :global(:root:not([data-design='classic'])) .diagnosisLink { transition: none; }
+  :global(:root:not([data-design='classic'])) .item:hover { transform: none; }
+}

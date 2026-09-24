@@ -1,18 +1,26 @@
 /* 글 화면의 유일한 행동 버튼이다(원칙 II). */
 .start {
   align-self: flex-start;
-  padding: 11px 22px;
+  padding: var(--thorp-control-pad-block, 11px) 22px;
   border: 1px solid var(--thorp-accent);
   border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--thorp-control-font, var(--thorp-text-body, 0.92rem));
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control-cta, auto);
+  font-weight: var(--thorp-control-weight, 400);
+  transition: transform 180ms ease, background-color 180ms ease;
 }
 
 .start:hover {
   filter: brightness(1.08);
+  background: var(--thorp-accent-hover, var(--thorp-accent));
+  transform: translateY(var(--thorp-cta-lift, 0));
 }
 
 .start:focus-visible {
@@ -30,11 +38,26 @@
 .unavailable p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.92rem;
+  font-size: var(--thorp-text-body, 0.92rem);
   line-height: 1.7;
 }
 
 .unavailable a {
   color: var(--thorp-accent-soft);
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+/* 새 디자인의 올림 색은 이미 한 단 밝아 classic의 밝기 필터를 겹치지 않는다. */
+:global(:root:not([data-design='classic'])) .start:hover {
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start {
+    transition: none;
+  }
+
+  .start:hover {
+    transform: none;
+  }
 }
