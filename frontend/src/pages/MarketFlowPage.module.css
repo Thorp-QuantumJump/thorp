@@ -19,7 +19,7 @@
 .heroAside { position: relative; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
-.workspaceHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line-strong); padding: 12px 0; }
+.workspaceHeading { display: flex; align-items: center; justify-content: flex-end; gap: 16px; border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line-strong); padding: 12px 0; }
 .workspaceHeading h2 { display: flex; gap: 12px; margin: 0; font-size: var(--thorp-text-body, .9rem); font-weight: 600; }
 .workspaceHeading h2 span { font: 500 var(--thorp-text-caption, .74rem)/1.5 var(--thorp-font-display); color: var(--thorp-ornament, var(--thorp-accent-soft)); }
 .workspaceHeading > span { color: var(--thorp-copy); font: 400 var(--thorp-text-caption, .72rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); }
@@ -137,3 +137,8 @@
   :global(:root:not([data-design='classic'])) .connectionGrid article:last-child { padding: 20px; }
   :global(:root:not([data-design='classic'])) .connectionGrid article + article { border-top: 1px solid var(--thorp-line); }
 }
+
+/* 글자 밝기 세 단(MarketFlow.module.css와 같은 규칙). 목록 머리의 시점, 역사 비교 안내는 회색이다. */
+:global(:root:not([data-design='classic'])) .workspaceHeading > span,
+:global(:root:not([data-design='classic'])) .historyNotice,
+:global(:root:not([data-design='classic'])) .connectionGrid p { color: var(--thorp-muted); }

@@ -45,6 +45,37 @@ export function DataStateLine({
   )
 }
 
+/**
+ * 열린 분야 제목 줄 오른쪽. 소속 지표 수와 그 밑의 공급 상태 표만 둔다 — 표 글자가 곧 상태라 '자료 상태' 같은
+ * 이름을 따로 달지 않는다. 대상월·마지막 갱신은 분야 설명 밑 한 줄에 적는다(009 FR-011·013·014).
+ * 예시 자료는 늘 '예시 자료' 표를 함께 단다(FR-014).
+ */
+export function DataStateFacts({
+  indicatorCount, status, isExampleData = false,
+}: {
+  indicatorCount: number
+  status: FieldStatus
+  isExampleData?: boolean
+}) {
+  return (
+    <div className={styles.detailFacts} data-status={status}>
+      <span className={styles.detailCount}>소속 지표 <b>{indicatorCount}</b></span>
+      <span className={styles.detailStates}>
+        {/* 정상 공급이면 '자료 확인'(파랑), 수집 실패·자료 없음이면 '확인 중입니다'(빨강). 까닭은 읽을 수 있게 남긴다. */}
+        {status === 'READY' || status === 'EXAMPLE' ? (
+          <span className={styles.stateLabel} data-tone="confirmed">{stateLabels.READY}</span>
+        ) : (
+          <span className={styles.stateLabel} data-tone="pending" title={stateLabels[status]}>
+            확인 중입니다<span className={styles.srOnly}> ({stateLabels[status]})</span>
+          </span>
+        )}
+        {status === 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}
+        {isExampleData && status !== 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}
+      </span>
+    </div>
+  )
+}
+
 /** 공급 상태는 경제 판단과 구분하며 예시 여부와 기준 시점을 숨기지 않는다. */
 export function DataStateNotice({
   status, referenceMonth, lastUpdatedAt, isExampleData = false,

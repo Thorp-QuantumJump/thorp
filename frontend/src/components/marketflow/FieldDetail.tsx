@@ -3,9 +3,10 @@ import { motion, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/handoff'
 import type { FieldDetailResult } from '@/types/marketFlow'
-import { DataStateNotice } from './DataStateNotice'
+import { DataStateFacts } from './DataStateNotice'
 import { ThreeMonthChart } from './ThreeMonthChart'
-import { formatObservation } from './marketFlowFormat'
+import { InlineHelp } from '@/components/common/InlineHelp'
+import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
@@ -24,18 +25,21 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
     >
       <header className={styles.detailHeader}>
+        <span className={styles.detailEyebrow}>FIELD / {String(detail.displayOrder).padStart(2, '0')}</span>
+        {/* 소속 지표 수와 상태 표는 분야 제목 줄에 맞춰 오른쪽에 선다. */}
         <div className={styles.detailTitle}>
-          <div><span className={styles.detailEyebrow}>FIELD / {String(detail.displayOrder).padStart(2, '0')}</span><h2 id={titleId}>{detail.displayName}</h2></div>
-          <span className={styles.indicatorCount}>소속 지표 <b>{detail.indicators.length}</b></span>
+          <h2 id={titleId}>{detail.displayName}</h2>
+          <DataStateFacts
+            indicatorCount={detail.indicators.length}
+            status={detail.status}
+            isExampleData={detail.isExampleData}
+          />
         </div>
-        <p className={styles.detailNarrative}>{detail.narrative ?? '아래 자료 공급 상태와 기준 시점을 확인해 주세요.'}</p>
-        <DataStateNotice status={detail.status} referenceMonth={detail.referenceMonth} lastUpdatedAt={detail.lastUpdatedAt} isExampleData={detail.isExampleData} />
-        <p className={styles.referenceNote}>{detail.multipleReferenceMonthNotice}</p>
-        {detail.referenceMonthHeldBackBy.length > 0 ? (
-          <p className={styles.referenceNote}>
-            기준월 결정에 반영된 지표: {detail.referenceMonthHeldBackBy.map((id) => detail.indicators.find((indicator) => indicator.indicatorId === id)?.name ?? id).join(', ')}
-          </p>
-        ) : null}
+        <p className={styles.detailNarrative}>{detail.narrative ?? '아래 기준 시점과 자료 상태를 확인해 주세요.'}</p>
+        <p className={styles.detailTiming}>
+          <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
+          <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
+        </p>
       </header>
       {detail.indicators.length === 0 ? (
         <div className={styles.emptyDetail}><ScanLine size={28} aria-hidden="true" /><p>표시할 지표 자료가 없습니다.</p><span>다른 분야의 자료는 계속 살펴볼 수 있습니다.</span></div>
@@ -56,18 +60,30 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
                 </p>
               ) : null}
               {/*
-                대상월·발표일·출처·작성기관을 한 줄로 잇는다(FR-007·013·015). 다섯 줄 표로 두면 카드마다 표가 하나씩
-                늘어 지표보다 출처가 먼저 읽혔다. 마지막 갱신은 분야마다 하나라 상세 머리에만 둔다(FR-011).
+                출처와 작성기관을 이름을 붙여 한 줄로 잇는다(FR-015). 발표일은 실제 자료가 주지 않아 적지 않는다(2026-09-24).
+                대상월은 분야 머리와 다를 때만 적고, 마지막 갱신은 분야마다 하나라 머리에만 둔다(FR-011).
               */}
-              <p className={styles.indicatorSource}>
-                <span>대상월 {indicator.referenceMonth}</span>
-                <span>{indicator.releaseDate ? `${indicator.releaseDate} 발표` : '발표일 확인할 수 없음'}</span>
-                <span>{indicator.agency} · {indicator.source}</span>
-              </p>
+              <div className={styles.indicatorFooter}>
+                <p className={styles.indicatorSource}>
+                  {indicator.referenceMonth !== detail.referenceMonth ? <span>대상월 {indicator.referenceMonth}</span> : null}
+                  {sourceParts(indicator.agency, indicator.source).map((part) => <span key={part}>{part}</span>)}
+                </p>
+                {/* 세로축 범위 설명은 카드 오른쪽 아래 물음표 뒤에 둔다. 그래프 위에 두면 제목 줄과 겹쳐 읽힌다. */}
+                <InlineHelp label="세로축 범위" side="top"><p>{describeAxis(indicator)}</p></InlineHelp>
+              </div>
             </article>
           ))}
         </div>
       )}
+      {/* 분야마다 기준월이 다를 수 있다는 안내(FR-008)는 지표를 다 본 뒤 읽히도록 카드 아래 오른쪽에 둔다. */}
+      <div className={styles.referenceNotes}>
+        <p className={styles.referenceNote}>{detail.multipleReferenceMonthNotice}</p>
+        {detail.referenceMonthHeldBackBy.length > 0 ? (
+          <p className={styles.referenceNote}>
+            기준월 결정에 반영된 지표: {detail.referenceMonthHeldBackBy.map((id) => detail.indicators.find((indicator) => indicator.indicatorId === id)?.name ?? id).join(', ')}
+          </p>
+        ) : null}
+      </div>
       {/* 넘기는 값은 분야와 그 분야의 기준월뿐이다. 섹터를 골랐어도 달라지지 않는다(FR-016). */}
       <div className={styles.similarEntry}>
         <div>

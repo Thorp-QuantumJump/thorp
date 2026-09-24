@@ -85,6 +85,12 @@
   */
   --thorp-up: #ff5f72;
   --thorp-down: #4e97f5;
+  /*
+    자료 공급 표(시장 흐름): 확인됨은 파랑, 확인 중(수집 실패·자료 없음)은 빨강. 팀이 오르내림과 같은 두 색으로
+    맞추기로 했다(2026-09-24). 값은 같지만 뜻이 달라 토큰을 따로 둔다 — 오르내림 색을 바꿔도 이 표는 그대로다.
+  */
+  --thorp-status-confirmed: #4e97f5;
+  --thorp-status-pending: #ff5f72;
   /* 모서리: 버튼·입력칸은 control, 칩·배지만 999px. 각 자리는 var(--thorp-radius-control, 예전 값)으로 쓴다. */
   --thorp-radius-control: 6px;
   /* 카드는 12px, 카드 안 칸은 8px. 면은 이 두 단까지만 쓴다. */
