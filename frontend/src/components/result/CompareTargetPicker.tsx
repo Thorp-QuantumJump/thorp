@@ -30,12 +30,15 @@ type Candidate = {
   shortenedDays: number | null
 }
 
-/** 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합). */
+/**
+ * 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합).
+ * 목록은 참고 지수 → 변동성 제한 → 내 전략 → 기본 전략 순이다. 자주 켜는 것부터 위에 둔다.
+ */
 const SOURCE_LABELS: Record<CandidateSource, string> = {
   default: '기본 전략',
   used: '내 전략',
 }
-const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']
+const SOURCE_ORDER: readonly CandidateSource[] = ['used', 'default']
 const VOLATILITY_KEY = 'volatility'
 
 /** 등록표 범위(min~max, step 간격)의 후보 */
@@ -272,6 +275,82 @@ export function CompareTargetPicker({
         </p>
       ) : null}
       <ul className={styles.candidates} aria-describedby={listId}>
+        <li className={styles.group}>
+          <p className={styles.groupTitle}>
+            참고 지수{' '}
+            <InlineHelp label="참고 지수" side="bottom">
+              시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교
+              대상 수에 세지 않으며 바로 그래프에 더해집니다.
+            </InlineHelp>
+          </p>
+          <ul className={styles.combinations}>
+            <li>
+              <label className={styles.combination}>
+                <input
+                  type="checkbox"
+                  checked={indexOn}
+                  onChange={(event) => onIndexChange(event.target.checked)}
+                />
+                <span className={styles.rowText}>
+                  <span className={styles.rowTitle}>KOSPI 함께 보기</span>
+                </span>
+              </label>
+            </li>
+          </ul>
+        </li>
+        {volatilityRow ? (
+          <li className={styles.group}>
+            <p className={styles.groupTitle}>
+              변동성 제한{' '}
+              <InlineHelp label="변동성 제한" side="bottom">
+                {TARGET_RISK_HELP}
+              </InlineHelp>
+            </p>
+            <ul className={styles.combinations}>
+              <li>
+                <label className={styles.combination}>
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(VOLATILITY_KEY)}
+                    disabled={
+                      !!volatilityRow.reason ||
+                      room === 0 ||
+                      (full && !picked.includes(VOLATILITY_KEY))
+                    }
+                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}
+                    aria-describedby={VOLATILITY_KEY + '-hint'}
+                    onChange={() => toggle(VOLATILITY_KEY)}
+                  />
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{volatilityName}</span>
+                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>
+                  </span>
+                </label>
+                {state?.volatility && volatilityPick !== null ? (
+                  <label className={styles.volatilityField}>
+                    목표 변동성(연)
+                    <select
+                      value={volatilityPick}
+                      onChange={(event) => setVolatilityPick(Number(event.target.value))}
+                    >
+                      {rangeChoices(state.volatility).map((value) => (
+                        <option key={value} value={value}>
+                          {value}%
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <p id={VOLATILITY_KEY + '-hint'}>
+                  {volatilityRow.reason ??
+                    (state?.volatility
+                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'
+                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}
+                </p>
+              </li>
+            </ul>
+          </li>
+        ) : null}
         {groups.map(({ source, candidates }) => (
           <li key={source} className={styles.group}>
             <p className={styles.groupTitle}>{SOURCE_LABELS[source]}</p>
@@ -327,82 +406,6 @@ export function CompareTargetPicker({
             </ul>
           </li>
         ))}
-        {volatilityRow ? (
-          <li className={styles.group}>
-            <p className={styles.groupTitle}>
-              변동성 제한{' '}
-              <InlineHelp label="변동성 제한" side="bottom">
-                {TARGET_RISK_HELP}
-              </InlineHelp>
-            </p>
-            <ul className={styles.combinations}>
-              <li>
-                <label className={styles.combination}>
-                  <input
-                    type="checkbox"
-                    checked={picked.includes(VOLATILITY_KEY)}
-                    disabled={
-                      !!volatilityRow.reason ||
-                      room === 0 ||
-                      (full && !picked.includes(VOLATILITY_KEY))
-                    }
-                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}
-                    aria-describedby={VOLATILITY_KEY + '-hint'}
-                    onChange={() => toggle(VOLATILITY_KEY)}
-                  />
-                  <span className={styles.rowText}>
-                    <span className={styles.rowTitle}>{volatilityName}</span>
-                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>
-                  </span>
-                </label>
-                {state?.volatility && volatilityPick !== null ? (
-                  <label className={styles.volatilityField}>
-                    목표 변동성(연)
-                    <select
-                      value={volatilityPick}
-                      onChange={(event) => setVolatilityPick(Number(event.target.value))}
-                    >
-                      {rangeChoices(state.volatility).map((value) => (
-                        <option key={value} value={value}>
-                          {value}%
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <p id={VOLATILITY_KEY + '-hint'}>
-                  {volatilityRow.reason ??
-                    (state?.volatility
-                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'
-                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}
-                </p>
-              </li>
-            </ul>
-          </li>
-        ) : null}
-        <li className={styles.group}>
-          <p className={styles.groupTitle}>
-            참고 지수{' '}
-            <InlineHelp label="참고 지수" side="bottom">
-              시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교
-              대상 수에 세지 않으며 바로 그래프에 더해집니다.
-            </InlineHelp>
-          </p>
-          <ul className={styles.combinations}>
-            <li>
-              <label className={styles.combination}>
-                <input
-                  type="checkbox"
-                  checked={indexOn}
-                  onChange={(event) => onIndexChange(event.target.checked)}
-                />
-                <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>KOSPI 함께 보기</span>
-                </span>
-              </label>
-            </li>
-          </ul>
-        </li>
       </ul>
       <div className={styles.actions}>
         {state && !state.error ? (
