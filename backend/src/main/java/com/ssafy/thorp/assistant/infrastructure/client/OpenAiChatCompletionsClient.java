@@ -230,7 +230,7 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
     private Map<String, String> arguments(String raw) {
         try {
             JsonNode node = mapper.readTree(raw);
-            if (!node.isObject()) {
+            if (node == null || !node.isObject()) {
                 return Map.of(UNPARSED_ARGUMENTS_KEY, raw);
             }
             Map<String, String> arguments = new LinkedHashMap<>();
@@ -272,7 +272,12 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
                 throw AssistantHttpClient.unavailable("part does not match schema");
             }
             List<String> ids = new ArrayList<>();
-            factIds.forEach(id -> ids.add(id.asText()));
+            for (JsonNode id : factIds) {
+                if (!id.isTextual()) {
+                    throw AssistantHttpClient.unavailable("factIds must be strings");
+                }
+                ids.add(id.asText());
+            }
             parts.add(new AnswerPart(text.asText(), ids));
         }
         return new ModelDraft(status, parts);

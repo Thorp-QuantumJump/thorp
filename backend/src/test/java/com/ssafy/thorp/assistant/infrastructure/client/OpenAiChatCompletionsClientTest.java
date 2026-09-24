@@ -221,6 +221,18 @@ class OpenAiChatCompletionsClientTest {
     }
 
     @Test
+    @DisplayName("arguments 가 빈 문자열이어도 500 이 아니라 검증에 걸리는 값으로 넘긴다")
+    void emptyArgumentsFailValidation() {
+        responses.add(
+                Scripted.ok(TOOL_CALLS_RESPONSE.replace("{\\\"date\\\":\\\"2024-03-04\\\"}", "")));
+
+        ToolRequests requests = (ToolRequests) step(question("q"), FACTS, TOOLS);
+
+        assertThat(requests.calls().get(0).arguments())
+                .containsKey(OpenAiChatCompletionsClient.UNPARSED_ARGUMENTS_KEY);
+    }
+
+    @Test
     @DisplayName(
             "두 번째 라운드 요청에는 이전 assistant(tool_calls)·tool 메시지가 들어 있고, 도구로 얻은 근거는 사용자 메시지에 중복되지 않는다")
     void secondRoundCarriesHistory() {
@@ -293,7 +305,7 @@ class OpenAiChatCompletionsClientTest {
         assertThat(body.has("parallel_tool_calls")).isFalse();
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "[{index}] {0}")
     @ValueSource(
             strings = {
                 "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":null,\"refusal\":\"답할 수 없습니다\"}}]}",
@@ -302,7 +314,10 @@ class OpenAiChatCompletionsClientTest {
                 "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"status\\\":\\\"MAYBE\\\",\\\"answerParts\\\":[]}\"}}]}",
                 "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"status\\\":\\\"ANSWERED\\\"}\"}}]}",
                 "{\"choices\":[]}",
-                "not json at all"
+                "not json at all",
+                "",
+                "null",
+                "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"status\\\":\\\"OUT_OF_SCOPE\\\",\\\"answerParts\\\":[{\\\"text\\\":\\\"x\\\",\\\"factIds\\\":[1]}]}\"}}]}"
             })
     @DisplayName("거부·빈 본문·스키마 불일치·JSON 아님은 모두 503 ASSISTANT_UNAVAILABLE 이고 메시지는 고정 문구다")
     void unusableResponsesAreUnavailable(String body) {
