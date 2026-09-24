@@ -1,6 +1,6 @@
 import { curveLinear } from '@visx/curve'
 import { ticks } from 'd3-array'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
 import { XAxis } from '@/components/charts/x-axis'
@@ -87,9 +87,9 @@ const REFERENCE_STROKE = 'var(--muted-foreground)'
  * 넷째 대상은 없다 — 상한이 셋이다.
  */
 const TARGET_STYLES = [
-  { stroke: 'var(--chart-line-secondary)', dash: '7,5' },
-  { stroke: 'var(--chart-line-tertiary)', dash: '2,4' },
-  { stroke: 'var(--chart-line-quaternary)', dash: '10,4,2,4' },
+  { stroke: 'var(--result-line-secondary)', dash: '7,5' },
+  { stroke: 'var(--result-line-tertiary)', dash: '2,4' },
+  { stroke: 'var(--result-line-quaternary)', dash: '10,4,2,4' },
 ] as const
 /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */
 const MAX_AMOUNT_TICKS = 4
@@ -292,6 +292,12 @@ export function EquityChart(props: EquityChartProps) {
     [props.targets],
   )
   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)
+  const [compact, setCompact] = useState(() => window.innerWidth <= 600)
+  useEffect(() => {
+    const update = () => setCompact(window.innerWidth <= 600)
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   const keyed = useMemo(
     () => [
@@ -342,6 +348,18 @@ export function EquityChart(props: EquityChartProps) {
     })),
     ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),
   ]
+  const seriesKey = [
+    { name: base.name, stroke: BASE_STROKE, dash: undefined, kind: '기준' },
+    ...targets.map((target, index) => ({
+      name: target.name,
+      stroke: TARGET_STYLES[index].stroke,
+      dash: TARGET_STYLES[index].dash as string | undefined,
+      kind: '비교',
+    })),
+    ...(reference
+      ? [{ name: reference.name, stroke: REFERENCE_STROKE, dash: undefined, kind: '참고' }]
+      : []),
+  ]
 
   return (
     <div className={styles.figure}>
@@ -362,6 +380,26 @@ export function EquityChart(props: EquityChartProps) {
         </div>
       </div>
 
+      <div aria-label="그래프 선 구분" className={styles.seriesKey}>
+        {seriesKey.map((series) => (
+          <span className={styles.seriesKeyItem} key={series.kind + series.name}>
+            <svg aria-hidden="true" className={styles.seriesKeySwatch} viewBox="0 0 30 12">
+              <line
+                stroke={series.stroke}
+                strokeDasharray={series.dash}
+                strokeWidth={series.kind === '기준' ? 3.2 : series.kind === '참고' ? 1.4 : 2}
+                x1="1"
+                x2="29"
+                y1="6"
+                y2="6"
+              />
+            </svg>
+            <span className={styles.seriesKind}>{series.kind}</span>
+            <span>{series.name}</span>
+          </span>
+        ))}
+      </div>
+
       <div
         aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
@@ -373,7 +411,7 @@ export function EquityChart(props: EquityChartProps) {
           className={styles.canvas}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 18, right: 88, bottom: 44, left: 58 }}
+          margin={{ top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }}
           xDataKey="date"
           yDomain={yDomain}
           yDomainTween={false}
@@ -412,17 +450,6 @@ export function EquityChart(props: EquityChartProps) {
             />
           ) : null}
 
-          <Line
-            animate={false}
-            curve={curveLinear}
-            dataKey={BASE_KEY}
-            defined={(row) => typeof row[BASE_KEY] === 'number'}
-            fadeEdges={false}
-            showHighlight={false}
-            stroke={BASE_STROKE}
-            strokeWidth={2.4}
-          />
-
           {reference ? (
             <Line
               animate={false}
@@ -449,12 +476,23 @@ export function EquityChart(props: EquityChartProps) {
                 showHighlight={false}
                 stroke={TARGET_STYLES[index].stroke}
                 strokeDasharray={TARGET_STYLES[index].dash}
-                strokeWidth={2.4}
+                strokeWidth={2}
               />
             )
           })}
 
-          <SeriesEndLabels series={endLabels} />
+          <Line
+            animate={false}
+            curve={curveLinear}
+            dataKey={BASE_KEY}
+            defined={(row) => typeof row[BASE_KEY] === 'number'}
+            fadeEdges={false}
+            showHighlight={false}
+            stroke={BASE_STROKE}
+            strokeWidth={3.2}
+          />
+
+          {compact ? null : <SeriesEndLabels series={endLabels} />}
 
           <XAxis numTicks={4} stackYear tickMode="domain" />
         </LineChart>
