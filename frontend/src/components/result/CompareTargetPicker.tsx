@@ -43,16 +43,24 @@ const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']
  * 비교 기간이 짧아진다는 사실을 적는다(FR-004). 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않는다.
  *
  * <p>비로그인이면 써 본 조합을 부르지 않는다 — 401 을 받아 넘기는 대신 기본값만 후보로 둔다.
+ *
+ * <p><b>참고 지수(KOSPI)는 후보가 아니다</b>(FR-017). 결과를 새로 계산하지 않으므로 '비교하기'를 기다리지 않고 누르는 즉시 켜고 끄며,
+ * 남은 자리에 세지 않는다. 목록을 불러오지 못해도 이 줄은 쓸 수 있다.
  */
 export function CompareTargetPicker({
   base,
   room,
+  indexOn,
+  onIndexChange,
   onSelect,
   onClose,
 }: {
   base: PublicResultDetail
   /** 더 고를 수 있는 자리 수 */
   room: number
+  /** KOSPI 참고선이 켜져 있는가 */
+  indexOn: boolean
+  onIndexChange: (on: boolean) => void
   onSelect: (choices: CompareChoice[]) => void
   onClose: () => void
 }) {
@@ -257,6 +265,24 @@ export function CompareTargetPicker({
           </li>
         ))}
       </ul>
+      <div className={styles.group}>
+        <p className={styles.groupTitle}>참고 지수</p>
+        <label className={styles.combination}>
+          <input
+            type="checkbox"
+            checked={indexOn}
+            aria-describedby={listId + '-index-hint'}
+            onChange={(event) => onIndexChange(event.target.checked)}
+          />
+          <span className={styles.rowText}>
+            <span className={styles.rowTitle}>KOSPI 함께 보기</span>
+          </span>
+        </label>
+        <p id={listId + '-index-hint'}>
+          시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교 대상
+          수에 세지 않으며 바로 그래프에 더해집니다.
+        </p>
+      </div>
       <div className={styles.actions}>
         {state && !state.error ? (
           <Button variant="outline" disabled={picked.length === 0} onClick={submit}>

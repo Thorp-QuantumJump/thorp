@@ -24,6 +24,9 @@ import styles from './EquityChart.module.css'
  * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 각기 다른 파선이고 모든 곡선의 오른쪽 끝에
  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.
  *
+ * <p><b>참고 지수선(KOSPI)은 비교 대상과 따로다</b>(FR-017). 서버가 시작 금액으로 환산한 값을 그대로 가늘고 옅은 실선으로 그리고
+ * 끝 이름표를 붙인다. 셋의 상한에 세지 않고, 음영을 칠하지 않는다 — 전략 결과가 아니라 참고 정보다.
+ *
  * <p><b>비교 대상은 셋까지다</b>(`S15P21E205-419`). 넷을 넘으면 선 모양과 색으로 갈리지 않는다. 비교 대상의 하락 구간
  * 음영은 대상이 하나일 때만 칠한다 — 둘 이상이면 빗금이 겹쳐 어느 구간이 누구 것인지 읽을 수 없다.
  *
@@ -47,10 +50,18 @@ export type EquityChartSeries = {
   maxDrawdown: string | null
 }
 
+/** 참고 지수선. 값은 서버가 시작 금액으로 환산한 금액 문자열이다 */
+export type EquityChartReference = {
+  name: string
+  points: readonly { date: string; value: string }[]
+}
+
 export type EquityChartProps = {
   base: EquityChartSeries
   /** 비교 대상들. 없으면 곡선은 하나다. 셋을 넘는 것은 그리지 않는다 */
   targets?: readonly EquityChartSeries[] | null
+  /** 참고 지수선. 비교 대상 상한과 따로 센다 */
+  reference?: EquityChartReference | null
   /** `config.initialCash`. 세로축의 기준이자 가로 기준선의 위치다 */
   initialCash: string
   /** 대안 텍스트에 담을 기준 결과의 핵심 숫자 3개. 계산되지 않았으면 `null` */
@@ -68,6 +79,9 @@ type ChartRow = { date: Date } & Partial<Record<string, number | Date>>
 
 const BASE_KEY = 'base'
 const BASE_STROKE = 'var(--chart-line-primary)'
+const REFERENCE_KEY = 'reference'
+/** 참고선은 옅은 글자색의 가는 실선이다. 전략 곡선(굵은 실선·파선)과 모양으로 갈린다 */
+const REFERENCE_STROKE = 'var(--muted-foreground)'
 /**
  * 비교 대상의 색과 파선. 자리 순서대로 쓴다. 파선 간격이 서로 달라 색을 못 봐도 선 모양으로 갈린다.
  * 넷째 대상은 없다 — 상한이 셋이다.
@@ -115,7 +129,7 @@ function toChartDate(date: string): Date {
  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.
  */
 function buildRows(
-  series: readonly { key: string; points: ResultTimeseriesPoint[] }[],
+  series: readonly { key: string; points: readonly Pick<ResultTimeseriesPoint, 'date' | 'equity'>[] }[],
   mode: YScaleMode,
 ): ChartRow[] {
   const byDate = new Map<string, ChartRow>()
@@ -230,6 +244,7 @@ function scaleModeNoun(mode: YScaleMode): string {
 function buildAltText(
   base: EquityChartSeries,
   targets: readonly EquityChartSeries[],
+  reference: EquityChartReference | null,
   altNumbers: EquityChartProps['altNumbers'],
   initialCash: string,
   mode: YScaleMode,
@@ -250,13 +265,18 @@ function buildAltText(
         (targets.length === 1 ? '이며 파선으로' : '이며 서로 다른 파선으로') +
         ' 함께 그렸습니다.'
       : '비교 대상은 없습니다.'
+  const referenceNote = reference
+    ? ' 참고로 ' + reference.name + '를 시작 금액으로 환산한 선을 가는 실선으로 함께 그렸습니다.'
+    : ''
   const axis =
     '세로축은 원화 자산가치이고 눈금은 ' +
     scaleModeNoun(mode) +
     '이며, 시작 금액은 ' +
     formatMoney(initialCash) +
     '입니다.'
-  return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + ' ' + axis
+  return (
+    base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + referenceNote + ' ' + axis
+  )
 }
 
 /** 음영 구간을 사람이 읽을 문장으로 옮긴다 */
@@ -266,6 +286,7 @@ function shadeNote(name: string, window: DrawdownWindow): string {
 
 export function EquityChart(props: EquityChartProps) {
   const { base, initialCash, altNumbers } = props
+  const reference = props.reference ?? null
   const targets = useMemo(
     () => (props.targets ?? []).slice(0, TARGET_STYLES.length),
     [props.targets],
@@ -276,8 +297,16 @@ export function EquityChart(props: EquityChartProps) {
     () => [
       { key: BASE_KEY, points: base.points },
       ...targets.map((target, index) => ({ key: targetKey(index), points: target.points })),
+      ...(reference
+        ? [
+            {
+              key: REFERENCE_KEY,
+              points: reference.points.map((point) => ({ date: point.date, equity: point.value })),
+            },
+          ]
+        : []),
     ],
-    [base.points, targets],
+    [base.points, targets, reference],
   )
   const keys = keyed.map((series) => series.key)
   const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
@@ -311,6 +340,7 @@ export function EquityChart(props: EquityChartProps) {
       name: target.name,
       stroke: TARGET_STYLES[index].stroke,
     })),
+    ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),
   ]
 
   return (
@@ -333,7 +363,7 @@ export function EquityChart(props: EquityChartProps) {
       </div>
 
       <div
-        aria-label={buildAltText(base, targets, altNumbers, initialCash, scaleMode)}
+        aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
         role="img"
       >
@@ -393,6 +423,19 @@ export function EquityChart(props: EquityChartProps) {
             strokeWidth={2.4}
           />
 
+          {reference ? (
+            <Line
+              animate={false}
+              curve={curveLinear}
+              dataKey={REFERENCE_KEY}
+              defined={(row) => typeof row[REFERENCE_KEY] === 'number'}
+              fadeEdges={false}
+              showHighlight={false}
+              stroke={REFERENCE_STROKE}
+              strokeWidth={1.4}
+            />
+          ) : null}
+
           {targets.map((_, index) => {
             const key = targetKey(index)
             return (
@@ -422,6 +465,7 @@ export function EquityChart(props: EquityChartProps) {
         {baseWindow && base.maxDrawdown ? (
           <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>
         ) : null}
+        {reference ? <span>가는 실선 · {reference.name} 시작 금액 환산(배당·비용 제외)</span> : null}
       </div>
     </div>
   )

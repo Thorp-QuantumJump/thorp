@@ -17,7 +17,6 @@
 
 .title,
 .copy,
-.note,
 .reason {
   margin: 0;
 }
@@ -31,32 +30,6 @@
   color: var(--thorp-copy);
   font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.7;
-}
-
-.note {
-  color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.78rem);
-  line-height: 1.6;
-}
-
-.tableScroll {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--thorp-text-small, 0.82rem);
-  font-variant-numeric: tabular-nums;
-}
-
-.table th,
-.table td {
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--thorp-line);
-  text-align: left;
-  white-space: nowrap;
 }
 
 .metrics {
