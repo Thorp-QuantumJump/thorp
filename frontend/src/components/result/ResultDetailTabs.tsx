@@ -27,6 +27,8 @@ export function ResultDetailTabs({
   summary: summaryContent,
   lossWindow,
   compare = null,
+  activeTab,
+  onActiveTabChange,
 }: {
   token: string
   detail: PublicResultDetail
@@ -34,6 +36,9 @@ export function ResultDetailTabs({
   summary: ReactNode
   lossWindow: DrawdownWindow | null
   compare?: DetailCompareTarget | null
+  /** 015 근거 카드가 탭을 열 때. 없으면 탭 묶음이 스스로 든다 */
+  activeTab?: string
+  onActiveTabChange?: (id: string) => void
 }) {
   const catalog = useSectorCatalogState()
   const { summary } = detail
@@ -47,6 +52,8 @@ export function ResultDetailTabs({
     <ResultTabs
       label="결과 보기"
       defaultTab="summary"
+      activeTab={activeTab}
+      onActiveTabChange={onActiveTabChange}
       tabs={[
         { id: 'summary', label: '요약', content: summaryContent },
         {
