@@ -1,8 +1,45 @@
 .figure {
+  --result-line-secondary: #60bfe8;
+  --result-line-tertiary: #c5a6ef;
+  --result-line-quaternary: #e8b976;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+}
+
+:global([data-design='classic']) .figure {
+  --result-line-secondary: #0876a9;
+  --result-line-tertiary: #7952ae;
+  --result-line-quaternary: #a3681c;
+}
+
+.seriesKey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 2px 2px 4px;
+}
+
+.seriesKeyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--thorp-ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.seriesKeySwatch {
+  width: 30px;
+  height: 12px;
+  flex: none;
+}
+
+.seriesKind {
+  color: var(--thorp-copy);
+  font-size: 11px;
 }
 
 .headingRow {
@@ -75,7 +112,7 @@
   background: var(--thorp-surface);
 
   /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */
-  height: clamp(250px, 44svh, 390px);
+  height: clamp(340px, 48svh, 420px);
 }
 
 /*
@@ -97,7 +134,6 @@
 
 @media (max-width: 600px) {
   .chart {
-    height: auto;
-    aspect-ratio: 4 / 3;
+    height: 340px;
   }
 }

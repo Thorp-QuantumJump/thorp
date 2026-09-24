@@ -24,6 +24,7 @@ vi.mock('@visx/responsive', () => ({
 
 afterEach(() => {
   Object.assign(chartSize, WIDE)
+  window.innerWidth = 1024
 })
 
 const BASE_POINTS = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
@@ -50,9 +51,9 @@ const altNumbers = {
 /** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */
 const STROKES: Record<string, string> = {
   base: '--chart-line-primary',
-  target0: '--chart-line-secondary',
-  target1: '--chart-line-tertiary',
-  target2: '--chart-line-quaternary',
+  target0: '--result-line-secondary',
+  target1: '--result-line-tertiary',
+  target2: '--result-line-quaternary',
 }
 
 function seriesPath(container: HTMLElement, which: string): SVGPathElement {
@@ -95,6 +96,30 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
+  it('선택한 전략과 KOSPI를 선 모양 안내에 모두 표시하고 기준선을 더 강조한다', () => {
+    const { container } = render(
+      <EquityChart
+        base={base}
+        initialCash="10000000.00"
+        targets={[target, { ...target, name: '조약돌 고르기' }]}
+        reference={{ name: 'KOSPI(참고)', points: [{ date: BASE_POINTS[0].date, value: '10000000' }] }}
+      />,
+    )
+
+    const key = container.querySelector('[aria-label="그래프 선 구분"]')
+    expect(key?.textContent).toContain('물결 고르기')
+    expect(key?.textContent).toContain('모래 고르기')
+    expect(key?.textContent).toContain('조약돌 고르기')
+    expect(key?.textContent).toContain('KOSPI(참고)')
+    expect(Number(seriesPath(container, 'base').getAttribute('stroke-width'))).toBeGreaterThan(
+      Number(seriesPath(container, 'target0').getAttribute('stroke-width')),
+    )
+    const paths = [...container.querySelectorAll('path')]
+    expect(paths.indexOf(seriesPath(container, 'base'))).toBeGreaterThan(
+      paths.indexOf(seriesPath(container, 'target0')),
+    )
+  })
+
   it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {
     const { container } = render(
       <EquityChart
@@ -107,8 +132,8 @@ describe('EquityChart', () => {
 
     expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()
     expect(seriesPath(container, 'target0').getAttribute('stroke-dasharray')).toBe('7,5')
-    expect(screen.getByText('물결 고르기')).toBeTruthy()
-    expect(screen.getByText('모래 고르기')).toBeTruthy()
+    expect(screen.getAllByText('물결 고르기').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('모래 고르기').length).toBeGreaterThan(0)
   })
 
   it('비교 대상이 셋이면 파선 모양과 색이 서로 다르고 이름표가 넷이며 비교 대상 음영은 없다', () => {
@@ -130,7 +155,7 @@ describe('EquityChart', () => {
     expect(new Set(dashes).size).toBe(3)
     expect(new Set(strokes).size).toBe(3)
     for (const name of ['물결 고르기', '모래 고르기', '조약돌 고르기', '해초 고르기'])
-      expect(screen.getByText(name)).toBeTruthy()
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0)
     expect(container.querySelector('[data-testid="drawdown-shade-target"]')).toBeNull()
     expect(container.querySelector('[data-testid="drawdown-shade-base"]')).not.toBeNull()
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain(
@@ -138,11 +163,7 @@ describe('EquityChart', () => {
     )
   })
 
-  it.each([
-    ['넓은 화면', WIDE],
-    ['폭 360px 화면', { width: 326, height: 245 }],
-  ])('%s에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', (_case, size) => {
-    Object.assign(chartSize, size)
+  it('넓은 화면에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', () => {
     const { container } = render(
       <EquityChart
         altNumbers={altNumbers}
@@ -171,6 +192,23 @@ describe('EquityChart', () => {
     const [upper, lower] = [baseLabel, targetLabel].sort((left, right) => left.top - right.top)
     expect(upper.bottom).toBeLessThanOrEqual(lower.top)
     expect(container.textContent).not.toContain('…')
+  })
+
+  it('모바일에서는 끝 이름표 대신 위쪽 선 목록을 쓰고 그래프 폭을 확보한다', () => {
+    window.innerWidth = 390
+    Object.assign(chartSize, { width: 350, height: 430 })
+    const { container } = render(
+      <EquityChart
+        base={{ ...base, name: LONG_BASE_NAME }}
+        initialCash="10000000.00"
+        targets={[{ ...target, name: LONG_TARGET_NAME }]}
+      />,
+    )
+
+    expect(container.querySelector('[aria-label="그래프 선 구분"]')?.textContent).toContain(LONG_BASE_NAME)
+    expect(container.querySelector('[aria-label="그래프 선 구분"]')?.textContent).toContain(LONG_TARGET_NAME)
+    expect(container.querySelector('[data-testid="series-end-labels"]')).toBeNull()
+    expect(plotArea(container).width).toBeGreaterThan(240)
   })
 
   it('기준만 있으면 파선 곡선이 없다', () => {
