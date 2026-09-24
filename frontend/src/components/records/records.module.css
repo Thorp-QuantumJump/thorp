@@ -25,7 +25,7 @@
   margin: 0 0 2px;
   padding: 0;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
 }
 
 .check {
@@ -33,13 +33,13 @@
   align-items: center;
   gap: 6px;
   color: var(--thorp-foreground);
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
 }
 
 .group select,
 .group input[type='date'] {
-  min-height: 36px;
-  padding: 4px 10px;
+  min-height: var(--thorp-control, 36px);
+  padding: var(--thorp-control-pad-block, 4px) 12px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 5px);
   color: var(--thorp-foreground);
@@ -57,7 +57,7 @@
   width: 100%;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.6;
 }
 
@@ -95,14 +95,14 @@
   align-items: center;
   gap: 5px;
   color: var(--thorp-eyebrow, var(--thorp-accent-soft));
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
 .name {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--thorp-text-heading, 1.15rem);
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
@@ -113,7 +113,7 @@
   border: 1px solid var(--thorp-line-strong);
   border-radius: 999px;
   color: var(--thorp-copy);
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
 }
 
 .status[data-status='FAILED'],
@@ -141,7 +141,7 @@
   gap: 4px 14px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
 }
 
 .facts dt {
@@ -167,7 +167,7 @@
   padding: 1px 8px;
   border: 1px solid var(--thorp-line);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
 }
 
 .actions {
@@ -196,7 +196,7 @@
 
 .panelTitle {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
 }
 
 .panelTitle:focus-visible {
@@ -230,7 +230,7 @@
   padding: 10px 12px;
   border-left: 3px solid var(--thorp-warning);
   color: var(--thorp-foreground);
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
   line-height: 1.6;
 }
 
@@ -255,7 +255,7 @@
 .origin p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
   line-height: 1.6;
 }
 
@@ -278,13 +278,13 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
 }
 
 .table caption {
   padding: 0 0 6px;
   color: var(--thorp-muted);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   text-align: left;
 }
 
@@ -313,7 +313,7 @@
   align-items: center;
   justify-content: center;
   width: 2rem;
-  height: 2rem;
+  height: var(--thorp-control-sm, 2rem);
   border: 1px solid var(--border, #d4d4d8);
   border-radius: var(--thorp-radius-control, 0.375rem);
   background: transparent;
@@ -356,7 +356,7 @@
 .menuReason {
   margin: 0;
   padding: 0 0.75rem 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--thorp-text-small, 0.8125rem);
 }
 
 .dialog {
@@ -388,12 +388,12 @@
 
 .dialogNote {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--thorp-text-body, 0.875rem);
 }
 
 .dialogError {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--thorp-text-body, 0.875rem);
 }
 
 .dialogActions {
@@ -406,4 +406,197 @@
 /* 비어 있어도 라이브 영역은 살아 있어야 한다. 자리만 차지하지 않게 감춘다. */
 .status:empty {
   display: none;
+}
+
+/*
+  버튼 높이 규칙(index.css). 공용 Button 기본(32px)은 작은 행동 단이라, 줄·대화상자 안의 행동(다시 보기·자세히·
+  설정 바꿔 비교·취소·저장·지우기)은 40px, 상세 칸의 닫기·다시 시도는 32px 단에 맞춘다.
+*/
+.action {
+  height: var(--thorp-control, 2rem);
+  padding-inline: 16px;
+  font-size: var(--thorp-control-font, 0.875rem);
+}
+
+.smallAction {
+  height: var(--thorp-control-sm, 1.75rem);
+  padding-inline: 12px;
+}
+
+/* 필터의 두 묶음과 날짜 칸 묶음은 classic에서는 없는 것처럼 흐른다. */
+.filterColumn,
+.dateBox {
+  display: contents;
+}
+
+/*
+  새 디자인 카드 층. 배치는 classic 그대로 두고 새 디자인에서만 바꾼다.
+
+  - 필터 카드: 왼쪽 반은 종류·상태·섹터·전략 고르기 칩, 오른쪽 반은 분석 기간과 정렬이다.
+  - 칩과 입력칸: 둥근 알약 대신 버튼·입력칸과 같은 6px 모서리다. 날짜·정렬 칸은 브라우저 기본 모양을 걷어
+    다른 화면의 입력칸(40px, 조작 테두리, 본문 글자)과 맞춘다.
+  - 기록 카드: 왼쪽 반은 이름과 사실, 오른쪽 반은 다시 보기·설정 바꿔 비교·자세히다. 이름은 흰색 굵게, 사실은
+    회백, 항목 이름은 회색(글자 밝기 세 단)이고 줄 간격을 넉넉히 둔다.
+*/
+:global(:root:not([data-design='classic'])) .filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px 40px;
+  margin-top: 20px;
+  padding: var(--thorp-pad-card);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+
+/* 한 반 안의 묶음은 위에서부터 쌓인다. 두 반의 높이가 달라도 서로의 줄 간격을 벌리지 않는다. */
+:global(:root:not([data-design='classic'])) .filterColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* 시작·끝 날짜는 한 줄에 반씩 선다. */
+:global(:root:not([data-design='classic'])) .dateBox {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+:global(:root:not([data-design='classic'])) .dateBox > label {
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption);
+  font-weight: 600;
+}
+
+:global(:root:not([data-design='classic'])) .dateBox > :not(label) { width: 100%; }
+:global(:root:not([data-design='classic'])) .side { flex-wrap: nowrap; }
+:global(:root:not([data-design='classic'])) .side:has(select) { flex-direction: column; align-items: stretch; flex-wrap: wrap; }
+
+:global(:root:not([data-design='classic'])) .group legend,
+:global(:root:not([data-design='classic'])) .group > label:not(.check) {
+  margin-bottom: 6px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+:global(:root:not([data-design='classic'])) .group { gap: 8px; }
+
+
+:global(:root:not([data-design='classic'])) .check {
+  min-height: var(--thorp-control-sm);
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+:global(:root:not([data-design='classic'])) .check:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+:global(:root:not([data-design='classic'])) .check:has(input:checked) {
+  border-color: var(--thorp-accent-soft);
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-foreground);
+}
+
+:global(:root:not([data-design='classic'])) .check input { accent-color: var(--thorp-accent); }
+
+:global(:root:not([data-design='classic'])) .group select,
+:global(:root:not([data-design='classic'])) .group input[type='date'] {
+  width: 100%;
+  min-height: var(--thorp-control);
+  padding: 0 12px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control);
+  background-color: transparent;
+  color: var(--thorp-foreground);
+  color-scheme: dark;
+  font-size: var(--thorp-text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+:global(:root:not([data-design='classic'])) .group select:hover,
+:global(:root:not([data-design='classic'])) .group input[type='date']:hover { border-color: var(--thorp-line-control-hover); }
+
+/* 비어 있는 날짜 칸의 '연도. 월. 일.'은 값이 아니라 자리 표시라 회색으로 낮춘다. */
+:global(:root:not([data-design='classic'])) .group input[type='date']:invalid,
+:global(:root:not([data-design='classic'])) .group input[type='date'][value=''] { color: var(--thorp-muted); }
+
+/* 정렬: 브라우저 화살표를 걷고 같은 굵기의 꺾쇠를 그린다. */
+:global(:root:not([data-design='classic'])) .group select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8bfbb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+:global(:root:not([data-design='classic'])) .group select option { background: var(--thorp-surface-raised); color: var(--thorp-foreground); }
+
+/* 기록 카드 */
+:global(:root:not([data-design='classic'])) .row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: 'head head' 'facts actions' 'hint hint' 'panel panel';
+  align-items: center;
+  gap: 14px 32px;
+  padding: var(--thorp-pad-card);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card);
+  background: var(--thorp-surface);
+}
+
+:global(:root:not([data-design='classic'])) .rowHead { grid-area: head; align-items: center; gap: 8px 12px; }
+:global(:root:not([data-design='classic'])) .row > .facts { grid-area: facts; }
+:global(:root:not([data-design='classic'])) .row > .actions { grid-area: actions; justify-content: flex-end; align-self: center; }
+:global(:root:not([data-design='classic'])) .row > .hint { grid-area: hint; }
+:global(:root:not([data-design='classic'])) .row > .panel { grid-area: panel; }
+
+:global(:root:not([data-design='classic'])) .name {
+  font-size: var(--thorp-text-heading);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+:global(:root:not([data-design='classic'])) .facts {
+  gap: 8px 20px;
+  font-size: var(--thorp-text-body);
+  line-height: 1.6;
+}
+
+:global(:root:not([data-design='classic'])) .facts dt { color: var(--thorp-muted); font-size: var(--thorp-text-small); }
+:global(:root:not([data-design='classic'])) .facts dd { color: var(--thorp-copy); font-variant-numeric: tabular-nums; }
+:global(:root:not([data-design='classic'])) .chips { gap: 6px; }
+:global(:root:not([data-design='classic'])) .chips li { padding: 1px 8px; border-color: var(--thorp-line-strong); border-radius: var(--thorp-radius-control); color: var(--thorp-copy); }
+
+/* 상태 표: 알약 대신 6px 모서리. 끝난 기록(완료·문턱 적용)은 파랑으로 확인됨을 알린다. */
+:global(:root:not([data-design='classic'])) .status { padding: 2px 8px; border-radius: var(--thorp-radius-control); font-weight: 600; }
+:global(:root:not([data-design='classic'])) .status[data-status='COMPLETED'],
+:global(:root:not([data-design='classic'])) .status[data-status='THRESHOLD_APPLIED'] {
+  border-color: color-mix(in srgb, var(--thorp-status-confirmed) 55%, transparent);
+  color: var(--thorp-status-confirmed);
+}
+
+@media (max-width: 800px) {
+  :global(:root:not([data-design='classic'])) .filters { grid-template-columns: 1fr; }
+  :global(:root:not([data-design='classic'])) .row { grid-template-columns: 1fr; grid-template-areas: 'head' 'facts' 'actions' 'hint' 'panel'; }
+  :global(:root:not([data-design='classic'])) .row > .actions { justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(:root:not([data-design='classic'])) .check { transition: none; }
 }

@@ -76,10 +76,10 @@ export function RenameDialog({ open, recordId, currentName, onClose, onRenamed }
           </p>
         ) : null}
         <div className={styles.dialogActions}>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" className={styles.action} onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" className={styles.action} disabled={saving}>
             {saving ? '저장 중' : '저장'}
           </Button>
         </div>
