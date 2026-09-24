@@ -1,18 +1,27 @@
 import { scaleLinear } from '@visx/scale'
 import { motion, useReducedMotion } from 'motion/react'
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo } from 'react'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import type { IndicatorDisplay } from '@/types/marketFlow'
 import { buildAxisDomain, formatObservation, recentDirection } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
-const plot = { width: 640, height: 172, left: 58, right: 622, top: 14, bottom: 146 }
+/*
+  위는 점 위 값 글자, 아래는 달 글자가 들어갈 자리를 둔다. 양옆은 첫·끝 점의 글자가 잘리지 않을 만큼 들인다.
+  그림은 카드 폭에 맞춰 줄어들므로(640 → 약 360px) 글자는 viewBox 단위로 크게 잡아야 화면에서 12px 안팎이 된다.
+*/
+const plot = { width: 640, height: 208, left: 64, right: 590, top: 42, bottom: 150, monthY: 190 }
 
 
-/** 실제 세 관측점만 직선으로 연결한다. 축 범위는 buildAxisDomain이 정하고 결측 구간은 잇지 않는다. */
+/**
+ * 실제 세 관측점만 직선으로 연결한다. 축 범위는 buildAxisDomain이 정하고 결측 구간은 잇지 않는다.
+ *
+ * 값과 달(t-2·t-1·t, FR-007)은 점 옆에 바로 적는다. 예전에는 그래프 아래 같은 세 값을 칸 표로 한 번 더
+ * 늘어놓아 카드마다 숫자가 두 번씩 읽혔다. 표는 보조기기용으로만 남긴다.
+ */
 export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) {
   const reducedMotion = useReducedMotion()
   const descriptionId = useId()
-  const [activePoint, setActivePoint] = useState<number | null>(null)
   const chart = useMemo(() => {
     const values = indicator.path.flatMap(({ value }) => value === null ? [] : [value])
     const axis = buildAxisDomain(values)
@@ -26,19 +35,18 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
     }).join(' ')
     return { x, y, path, ticks: y.ticks(3), hasValues: values.length > 0, axis }
   }, [indicator.path])
+  const axisNote = chart.axis.includesZero
+    ? '세로축이 0을 포함합니다.'
+    : `세로축은 ${formatObservation(chart.axis.domain[0])}~${formatObservation(chart.axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
 
   return (
     <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)} data-direction={recentDirection(indicator.path)}>
-      <div className={styles.chartCaption} id={descriptionId}>
-        <span>최근 3개월 경로</span>
-        <span>
-          {chart.axis.includesZero
-            ? '0을 포함한 축'
-            /* 0을 뺐으면 축이 어디서 어디까지인지 밝힌다. 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. */
-            : `축 ${formatObservation(chart.axis.domain[0])}~${formatObservation(chart.axis.domain[1])}`}
-          {' · 단위 '}{indicator.unit}
-        </span>
+      <div className={styles.chartCaption}>
+        <span>최근 3개월 · 단위 {indicator.unit}</span>
+        {/* 0을 뺀 축이면 범위를 밝힌다. 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. 설명은 물음표 뒤로 내린다. */}
+        <InlineHelp label="세로축 범위"><p>{axisNote}</p></InlineHelp>
       </div>
+      <p className={styles.srOnly} id={descriptionId}>{axisNote}</p>
       <svg
         viewBox={`0 0 ${plot.width} ${plot.height}`}
         className={styles.chart}
@@ -55,9 +63,6 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
             </text>
           </g>
         ))}
-        {activePoint !== null ? (
-          <line className={styles.crosshair} x1={chart.x(activePoint)} x2={chart.x(activePoint)} y1={plot.top} y2={plot.bottom} />
-        ) : null}
         {chart.hasValues ? (
           <motion.path
             className={styles.chartLine}
@@ -68,27 +73,23 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
           />
         ) : <text className={styles.chartEmpty} x="50%" y="50%" textAnchor="middle">관측값 없음</text>}
         {indicator.path.map((point, index) => point.value === null ? null : (
-          <circle
-            key={point.month}
-            className={styles.chartPoint}
-            data-month={point.month}
-            cx={chart.x(index)} cy={chart.y(point.value)} r={activePoint === index ? 5 : 3.5}
-          />
+          <g key={point.month}>
+            <circle className={styles.chartPoint} data-month={point.month} cx={chart.x(index)} cy={chart.y(point.value)} r={3.5} />
+            <text className={styles.chartValue} x={chart.x(index)} y={chart.y(point.value) - 14} textAnchor="middle">
+              {formatObservation(point.value)}
+            </text>
+          </g>
+        ))}
+        {indicator.path.map((point, index) => (
+          <text key={`month-${point.month}`} className={styles.chartMonth} x={chart.x(index)} y={plot.monthY} textAnchor="middle">
+            {point.month.replace('-', '.')}
+          </text>
         ))}
       </svg>
-      <ol className={styles.path} aria-label={`${indicator.name} 3개월 경로`}>
+      <ol className={styles.srOnly} aria-label={`${indicator.name} 3개월 경로`}>
         {indicator.path.map((point, index) => (
           <li key={point.month}>
-            <button
-              type="button"
-              aria-label={`${point.month}, ${formatObservation(point.value)}${point.value === null ? '' : ` ${indicator.unit}`}`}
-              onMouseEnter={() => setActivePoint(index)} onMouseLeave={() => setActivePoint(null)}
-              onFocus={() => setActivePoint(index)} onBlur={() => setActivePoint(null)}
-              className={styles.pathPoint}
-            >
-              <span className={styles.pathMonth}>{point.month}<small>{['t-2', 't-1', 't'][index]}</small></span>
-              <strong>{formatObservation(point.value)}{point.value === null ? null : <small> {indicator.unit}</small>}</strong>
-            </button>
+            {['t-2', 't-1', 't'][index]} {point.month} {formatObservation(point.value)}{point.value === null ? '' : ` ${indicator.unit}`}
           </li>
         ))}
       </ol>

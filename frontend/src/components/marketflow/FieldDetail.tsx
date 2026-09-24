@@ -5,7 +5,7 @@ import { buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/h
 import type { FieldDetailResult } from '@/types/marketFlow'
 import { DataStateNotice } from './DataStateNotice'
 import { ThreeMonthChart } from './ThreeMonthChart'
-import { formatObservation, formatUpdatedAt } from './marketFlowFormat'
+import { formatObservation } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
@@ -44,7 +44,7 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
           {detail.indicators.map((indicator) => (
             <article className={styles.indicator} key={indicator.indicatorId}>
               <div className={styles.indicatorHeading}>
-                <div><span className={styles.indicatorAgency}>{indicator.agency}</span><h3>{indicator.name}</h3></div>
+                <h3>{indicator.name}</h3>
                 <strong className={styles.observation}>{formatObservation(indicator.value)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>
               </div>
               <ThreeMonthChart indicator={indicator} />
@@ -55,13 +55,15 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
                   <span>3개월 경로에는 포함하지 않습니다.</span>
                 </p>
               ) : null}
-              <dl className={styles.indicatorMeta}>
-                <div><dt>대상월</dt><dd>{indicator.referenceMonth}</dd></div>
-                <div><dt>발표일</dt><dd>{indicator.releaseDate ?? '확인할 수 없음'}</dd></div>
-                <div><dt>출처</dt><dd>{indicator.source}</dd></div>
-                <div><dt>작성기관</dt><dd>{indicator.agency}</dd></div>
-                <div className={styles.updatedMeta}><dt>마지막 갱신</dt><dd>{formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</dd></div>
-              </dl>
+              {/*
+                대상월·발표일·출처·작성기관을 한 줄로 잇는다(FR-007·013·015). 다섯 줄 표로 두면 카드마다 표가 하나씩
+                늘어 지표보다 출처가 먼저 읽혔다. 마지막 갱신은 분야마다 하나라 상세 머리에만 둔다(FR-011).
+              */}
+              <p className={styles.indicatorSource}>
+                <span>대상월 {indicator.referenceMonth}</span>
+                <span>{indicator.releaseDate ? `${indicator.releaseDate} 발표` : '발표일 확인할 수 없음'}</span>
+                <span>{indicator.agency} · {indicator.source}</span>
+              </p>
             </article>
           ))}
         </div>
