@@ -14,7 +14,7 @@
 
 .heading {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--thorp-text-heading, 1.1rem);
   font-weight: 650;
 }
 
@@ -33,14 +33,15 @@
 }
 
 .scaleButton {
-  padding: 3px 12px;
+  padding: var(--thorp-control-pad-block, 3px) 12px;
   border: 0;
   border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.6;
   cursor: pointer;
+  min-height: var(--thorp-control-sm, auto);
 }
 
 .scaleButton:hover {
@@ -90,7 +91,7 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   color: var(--thorp-copy);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   line-height: 1.6;
 }
 

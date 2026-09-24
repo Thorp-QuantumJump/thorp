@@ -26,6 +26,7 @@ import { useDisclosure } from '@/hooks/useDisclosure'
 import { useProgressSeries } from '@/hooks/useProgressSeries'
 import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'
 import type { PublicResultDetail, ResultTimeseriesPoint } from '@/types/result'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './ResultPage.module.css'
 
 /**
@@ -177,8 +178,9 @@ function ResultView({
           <ArrowLeft size={15} aria-hidden="true" />
           처음부터 다시 분석
         </Link>
+        <p className={`${heading.eyebrow} ${styles.introRow}`} aria-hidden="true">STEP 03 · RESULT</p>
         <h1 id="result-title" className={styles.title}>
-          백테스트 결과
+          백테스트 <em className={heading.emphasis}>결과</em>
         </h1>
         <div className={styles.actions}>
           <Popover.Root
@@ -189,6 +191,7 @@ function ResultView({
           >
             <Popover.Anchor asChild>
               <Button
+                className={styles.compareButton}
                 id={pickerButtonId}
                 type="button"
                 disabled={!viewable || compare.targetState === 'REQUESTED'}

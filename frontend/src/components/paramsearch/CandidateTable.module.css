@@ -22,7 +22,7 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1.16rem;
+  font-size: var(--thorp-text-heading, 1.16rem);
   font-weight: 750;
   letter-spacing: -0.02em;
 }
@@ -71,7 +71,7 @@
   max-width: 520px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
@@ -83,7 +83,7 @@
 
 .filter label {
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .filter select {
@@ -94,7 +94,7 @@
   background: var(--thorp-surface);
   color: var(--thorp-foreground);
   font: inherit;
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
 }
 
 .filter select:focus-visible {
@@ -113,7 +113,7 @@
   width: 100%;
   min-width: 880px;
   border-collapse: collapse;
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
 }
 
 .table th,
@@ -190,7 +190,7 @@
   display: block;
   margin-top: 2px;
   color: var(--thorp-muted);
-  font-size: 0.68rem;
+  font-size: var(--thorp-text-label, 0.68rem);
   line-height: 1.45;
 }
 
@@ -201,19 +201,19 @@
 
 .absent {
   color: var(--thorp-muted);
-  font-size: 0.68rem;
+  font-size: var(--thorp-text-label, 0.68rem);
   white-space: normal;
 }
 
 .detailButton {
-  min-height: 28px;
+  min-height: var(--thorp-control-sm, 28px);
   padding: 0 10px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 4px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: var(--thorp-text-caption, 0.7rem);
   font-weight: 700;
 }
 
@@ -241,7 +241,7 @@
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
-  font-size: 0.73rem;
+  font-size: var(--thorp-text-caption, 0.73rem);
   font-weight: 700;
 }
 
@@ -257,14 +257,14 @@
 
 .pager span {
   color: var(--thorp-muted);
-  font-size: 0.73rem;
+  font-size: var(--thorp-text-caption, 0.73rem);
   font-variant-numeric: tabular-nums;
 }
 
 .note {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .error {
@@ -273,7 +273,7 @@
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
 }
 
 .srOnly {
