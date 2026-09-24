@@ -35,6 +35,9 @@
   --thorp-flow-gap: 22px;
   /* 글을 읽는 화면(배우기 글)의 가운데 기둥 폭. 한 줄이 한글 40자 안팎이 된다. */
   --thorp-reading-width: 760px;
+  /* 내 기록은 예전에 위 여백을 크게 두어(최대 160px) 제목이 다른 화면보다 한참 아래에서 시작했다. 같은 자리로 맞춘다. */
+  --thorp-records-top: var(--thorp-page-top);
+  --thorp-records-title-margin: 0 0 6px;
   --thorp-flow-side: 19rem;
   --thorp-page-gutter: 40px;
   --thorp-page-top: clamp(30px, 5vh, 56px);
@@ -252,6 +255,8 @@
   --thorp-page-width-flow: initial;
   --thorp-flow-gap: initial;
   --thorp-reading-width: initial;
+  --thorp-records-top: initial;
+  --thorp-records-title-margin: initial;
   --thorp-flow-side: initial;
   --thorp-title-leading: initial;
   --thorp-title-weight: initial;
