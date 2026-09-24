@@ -6,7 +6,7 @@
   border: 1px solid var(--thorp-warning);
   border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
 }
 
@@ -25,5 +25,5 @@
   gap: 4px;
   margin: 0;
   padding-left: 18px;
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
 }

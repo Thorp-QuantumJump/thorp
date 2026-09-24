@@ -20,6 +20,7 @@ import { writeStoredSelection } from '@/diagnosis/selectionStorage'
 import { MINIMUM_SECTOR_COUNT } from '@/hooks/useSectorSelection'
 import { appendCaseToPath } from '@/marketflow/handoff'
 import type { SectorSummary } from '@/types/sector'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './SectorSelectionPage.module.css'
 
 /**
@@ -333,8 +334,9 @@ export function SectorSelectionPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="sector-selection-title">
+        <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
         <h1 id="sector-selection-title" className={styles.title}>
-          투자 대상 고르기
+          투자 대상 <em className={heading.emphasis}>고르기</em>
         </h1>
         <p className={styles.lead}>
           백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.

@@ -12,18 +12,19 @@
   justify-content: space-between;
   width: 100%;
   gap: 8px;
-  padding: 10px 2px;
+  padding: var(--thorp-control-pad-block, 10px) 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   font-weight: 700;
   cursor: pointer;
   text-align: left;
   -webkit-user-select: none;
   user-select: none;
+  min-height: var(--thorp-control, auto);
 }
 
 .toggle:hover,
@@ -53,7 +54,7 @@
 
 .dateLabel {
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
 }
 
 /* 읽기 전용 값은 입력칸처럼 보이지 않게 글로만 늘어놓는다. */
@@ -64,7 +65,7 @@
   gap: 4px 14px;
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
 }

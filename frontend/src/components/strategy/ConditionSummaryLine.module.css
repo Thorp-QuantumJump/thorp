@@ -8,7 +8,7 @@
   border-radius: var(--thorp-radius-card, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   line-height: 1.6;
 }
 
@@ -21,7 +21,7 @@
 
 .label {
   color: var(--thorp-muted);
-  font-size: 0.7rem;
+  font-size: var(--thorp-text-caption, 0.7rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   white-space: nowrap;
