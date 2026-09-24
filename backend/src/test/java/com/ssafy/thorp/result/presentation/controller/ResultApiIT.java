@@ -278,6 +278,18 @@ class ResultApiIT extends PortMockedIntegrationTestSupport {
         JsonNode timeseries =
                 objectMapper.readTree(body(get("/results/" + token + "/timeseries"), 200));
         assertThat(timeseries).isEqualTo(example("result-timeseries.json"));
+
+        // 씨앗의 KOSPI 종가는 모두 같다 — 환산값은 날마다 시작 금액이고, 범위는 결과의 effectiveStart~End 다 (T087).
+        JsonNode index =
+                objectMapper.readTree(body(get("/results/" + token + "/index-comparison"), 200));
+        assertThat(index.at("/data/available").asBoolean()).isTrue();
+        assertThat(index.at("/data/reason").isNull()).isTrue();
+        JsonNode series = index.at("/data/series");
+        assertThat(series.get(0).get("date").asText())
+                .isEqualTo(detail.at("/data/config/effectiveStart").asText());
+        assertThat(series.get(series.size() - 1).get("date").asText())
+                .isEqualTo(detail.at("/data/config/effectiveEnd").asText());
+        assertThat(series.findValuesAsText("value")).containsOnly("11110000.00");
     }
 
     @Test
