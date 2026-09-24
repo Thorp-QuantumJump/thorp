@@ -480,7 +480,15 @@ function nameTargets(targets: readonly CompareTargetState[]): Map<string, string
     let name = '비교 대상'
     if (target.choice) {
       const settings = describeParameters(target.choice.strategy, target.choice.parameters)
-      name = target.choice.strategy.name + (settings ? ' · ' + settings : '')
+      const limit = target.choice.volatilityLimit
+      name =
+        target.choice.strategy.name +
+        (settings ? ' · ' + settings : '') +
+        (!limit
+          ? ''
+          : limit.scenario === 'TARGET_RISK'
+            ? ' · 변동성 제한 연 ' + limit.targetVolatility + '%'
+            : ' · 변동성 제한 없이')
     } else if (target.detail) name = strategyLabel(target.detail)
     raw.set(target.key, name)
     counts.set(name, (counts.get(name) ?? 0) + 1)

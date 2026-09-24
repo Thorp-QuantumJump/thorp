@@ -647,6 +647,37 @@ describe("StrategySettingsPage", () => {
     expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2));
   });
 
+  it("변동성 제한을 켜면 요약 줄에 보이고 요청에 목표 변동성을 싣고 워밍업은 서버에 맡긴다", async () => {
+    const user = userEvent.setup();
+    const { support, requests } = makeSupport();
+    renderPage(support);
+
+    await user.click(await findCardNamed(selectableStrategy.name));
+    await user.click(screen.getByRole("button", { name: "분석 조건" }));
+    await user.click(screen.getByRole("radio", { name: "씀" }));
+    const volatility = registryFixture.analysisConditions.targetVolatility;
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "목표 변동성(연)" }),
+      String(volatility.max),
+    );
+    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+      `변동성 제한연 ${volatility.max}%`,
+    );
+
+    await waitFor(() =>
+      expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
+        "false",
+      ),
+    );
+    await user.click(actionButton("분석하기"));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].conditions).toMatchObject({
+      scenario: "TARGET_RISK",
+      scenarioParams: { targetVolatility: (volatility.max / 100).toFixed(4) },
+      warmupTradingDays: null,
+    });
+  });
+
   it("기본 화면의 입력은 전략 선택 하나다", async () => {
     // SC-005. 전략 설정과 분석 조건은 접혀 있고 입력 요소를 내놓지 않는다.
     const user = userEvent.setup();

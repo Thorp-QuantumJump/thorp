@@ -62,8 +62,8 @@ export type PrefillOutcome =
   /** 화면을 떠나 요청을 끊었다. 사용자에게 보일 실패가 아니다 */
   | { status: 'canceled' }
 
-/** 003 설정 화면이 다루는 분석 방식. 목표 위험 맞춤 같은 별도 시나리오는 그 화면의 상태에 없다 */
-const MAIN_SCENARIO = 'FULL_PERIOD'
+/** 003 설정 화면이 다루는 분석 방식. 연속 운용과 그 위에 변동성 제한을 건 것뿐이다 */
+const SETTINGS_SCENARIOS: readonly string[] = ['FULL_PERIOD', 'TARGET_RISK']
 
 const REGISTRY_FAILED = '설정 화면에 넘길 전략 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 const CATALOG_FAILED = '설정 화면에 넘길 섹터 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
@@ -174,6 +174,15 @@ export function buildStrategySettings(
   const initialAmount = Number(config.initialCash)
   if (config.initialCash.trim() === '' || !Number.isFinite(initialAmount)) return null
 
+  // 변동성 제한은 계약의 연환산 decimal("0.1200")을 003의 퍼센트 숫자(12)로 옮긴다. 범위 판정은 003이 보관값을 읽을 때 한다.
+  let targetVolatility: number | undefined
+  if (config.scenario === 'TARGET_RISK') {
+    const raw = config.scenarioParams?.targetVolatility
+    const value = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : Number.NaN
+    if (!Number.isFinite(value)) return null
+    targetVolatility = Number((value * 100).toFixed(4))
+  }
+
   // 보관값이 없을 때 003이 만드는 처음 상태다. 여기에 이 탭의 앞선 값과 결과의 조건을 얹는다.
   const fresh = reconcileStoredSettings(null, registry, config.items.length)
   const previous = readStoredStrategySettings()
@@ -192,6 +201,9 @@ export function buildStrategySettings(
       periodStart: config.start,
       periodEnd: config.end,
       initialAmount,
+      ...(targetVolatility === undefined
+        ? { scenario: 'FULL_PERIOD' as const }
+        : { scenario: 'TARGET_RISK' as const, targetVolatility }),
     },
   }
 }
@@ -226,7 +238,9 @@ export async function prefillStrategySettings(
   navigate: (path: string) => void,
   signal?: AbortSignal,
 ): Promise<PrefillOutcome> {
-  if (config.scenario !== MAIN_SCENARIO) return { status: 'failed', message: SCENARIO_UNSUPPORTED }
+  if (!SETTINGS_SCENARIOS.includes(config.scenario)) {
+    return { status: 'failed', message: SCENARIO_UNSUPPORTED }
+  }
 
   let registry: RegistryResponse
   let catalog: SectorCatalog
