@@ -22,9 +22,9 @@
 
 **Project Type**: React SPA + Spring Boot web API
 
-**Performance Goals**: 요청당 서버 15초 상한(도구 라운드 포함). 초기 팩은 상세 응답 한 번으로 만들어 추가 조회가 없고, 도구 라운드마다 하위 자원 조회 1회다.
+**Performance Goals**: 요청당 서버 15초 상한(도구 라운드 포함). 초기 팩은 상세(`getDetail`)와 비중(`getWeights`) 두 번의 조회로 만들고, 도구 라운드마다 하위 자원 조회 1회다.
 
-**Constraints**: `store:false`, `parallel_tool_calls:false`, `tools`에는 서버 실행 도구 5개만, `response_format` strict JSON Schema. 모델에 토큰·`backtestId` 미전달. 서버는 계산하지 않는다(원칙 1) — 응답 값 그대로와 그 안에서 고른 것만. prod는 `${ENV}` 기본값 없음, 키 없으면 비활성.
+**Constraints**: `store:false`, `parallel_tool_calls:false`, `tools`에는 서버 실행 도구 5개만, `response_format` strict JSON Schema. 모델에 토큰·`backtestId` 미전달. 서버는 계산하지 않는다(원칙 1) — 응답 값 그대로와 그 안에서 고른 것만. prod의 `THORP_ASSISTANT_*`는 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 둔다 — 기본값 없는 `${ENV}`는 미설정 시 기동 실패라 "없으면 비활성"과 양립하지 않는다. 비어 있으면 `capabilities.enabled=false`.
 
 **Scale/Scope**: 엔드포인트 2개(`GET /assistant/capabilities`, `POST /assistant/questions`), 도구 5개, 화면 부품 2개(버튼·말풍선), 결과 화면 한 곳.
 
@@ -89,13 +89,14 @@ frontend/src/api/assistant.ts, frontend/src/types/assistant.ts
 frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPage.tsx (페이지 맥락 등록)
 ```
 
-**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`에 있어 두지 않는다 — 005와 같은 예외). `assistant → result` 의존 하나만 새로 생긴다. 프론트는 `components/assistant/` 한 폴더와 `App` 마운트다.
+**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회)와 `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입) 둘이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.
 
 ## Design Decisions
 
 ### 근거 팩과 도구 (spec FR-006·FR-007)
 
-- 초기 팩은 `PublicResultService.getDetail` 한 번으로 만든다. 상세 응답은 몇 KB라 전부 넣는 비용이 없다.
+- 초기 팩은 `PublicResultService.getDetail`과 `getWeights` 두 번으로 만든다(비중은 상세에 없다). 둘 다 작다. 포함 항목은 계약 §2.1 표대로만이고, `PublicResultDetail`에 든 `publicToken`·`expiresAt`·`versions`·`progress` 등은 넣지 않는다.
+- **결과 타입 record를 통째로 근거나 도구 결과로 옮기지 않는다.** `BacktestTimeseriesResult`·`BacktestTradePageResult`에는 `backtestId`가 있다(005는 표현 계층에서 뗀다). 도구는 필드 단위로 골라 `Evidence`를 만들고, 시계열 점의 `benchmarkReturn`·`cashFlows`는 뺀다(KOSPI 참고선·현금 흐름은 범위 밖).
 - 시계열·거래·보유는 크거나 질문에 따라 달라 도구로 읽는다. 도구는 `AssistantTool` 포트(`spec()`·`run(args)`)이고 요청 시작 때 풀린 결과에 묶여 만들어진다 — 함수 시그니처에 식별자 인자가 없어 프롬프트 인젹션으로 다른 결과를 읽을 경로가 없다.
 - 도구는 시계열에서 **고르기만** 한다(첫·끝·최고·최저·가장 낮은 날). 이는 005 화면의 `drawdownWindow.ts`가 하는 일과 같은 종류다. 합산·비율 계산은 하지 않는다.
 - 버린 대안: 서버가 질문을 파싱해 날짜를 뽑고 미리 읽는다 — 파싱이 곧 두 번째 분류기가 된다. 브라우저가 계산한 날짜를 보낸다 — 화면 상태를 신뢰 밖에 두는 원칙에 어긋난다.
@@ -104,14 +105,15 @@ frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPag
 
 - 답변 스키마는 `{status, answerParts[{text, factIds}]}` strict. `text`의 값 자리는 `{{Fn}}`만이다.
 - `AnswerValidator`가 §계약의 규칙 표대로 검사하고, 통과하면 `Evidence.value`의 표기 함수(금액·비율·날짜·정수)로 치환한다. 그래서 답의 모든 숫자는 서버가 읽은 값이다.
-- 금지 표현 목록은 보조 검사다. 실제 방어는 프롬프트와 Task 6 평가 표본이다. 이 한계를 계약 문서에 그대로 적는다.
+- 금지 표현 목록은 `backend/src/main/resources/assistant/forbidden-phrases.txt`(한 줄에 하나, `#` 주석)이고 보조 검사다. 실제 방어는 프롬프트와 Task 6 평가 표본이다. 이 한계를 계약 문서에 그대로 적는다.
+- 치환 표기는 서버가 하되 프론트 `formatResult.ts`와 같은 규칙이어야 근거 카드 값과 탭의 값이 어긋나지 않는다(계약 §2.4에 수치로 적고 T032가 대조한다).
 
 ### 모델 연결 (ADR-0008)
 
 - GMS가 확인해 준 형식은 Chat Completions(`POST {base}/v1/chat/completions`)다. `messages`(developer·user·tool), `tools`(function 5개, strict), `tool_choice:auto`, `parallel_tool_calls:false`, `response_format:{type:json_schema, strict:true}`, `store:false`.
 - `store:false`라 라운드마다 이전 `assistant(tool_calls)`·`tool` 메시지를 서버가 다시 담아 보낸다.
 - 어댑터는 `AssistantModelPort.step(conversation, facts, tools): ModelTurn` 뒤에 있다. Responses API로 바꾸거나 제공업체를 바꾸면 어댑터만 교체한다.
-- 시간 예산 15초는 라운드별로 나눈다(초안: 첫 호출 7초, 이후 4초씩). 넘으면 503.
+- 시간 예산은 **전체 데드라인 15초가 우선**이고, 라운드별 모델 호출 예산(초안 첫 7초·이후 4초)은 그 안에서 `MarketHttpClient`의 `deadline.remaining()` 방식으로 남은 시간과 작은 쪽을 쓴다. 도구 실행·검증 시간도 전체 데드라인에 든다. 넘으면 503.
 
 ### 한도와 장애 (spec FR-012·FR-013)
 
