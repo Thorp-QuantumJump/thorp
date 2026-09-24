@@ -78,26 +78,32 @@ public class TradesBetweenTool implements AssistantTool {
         return facts;
     }
 
+    /** 합성 문장 안의 금액·수량도 화면과 같은 표기다(계약 §2.4) — 근거 카드와 거래 탭이 어긋나지 않게. */
     private static String describe(TradeResult trade) {
         StringBuilder text =
                 new StringBuilder()
                         .append("진입가 ")
-                        .append(ResultToolContext.plain(trade.entryPrice()))
-                        .append("원, 수량 ")
-                        .append(ResultToolContext.plain(trade.quantity()))
+                        .append(money(trade.entryPrice()))
+                        .append(", 수량 ")
+                        .append(
+                                EvidenceKind.INTEGER.format(
+                                        ResultToolContext.plain(trade.quantity())))
                         .append("주");
         if (trade.status() == TradeStatus.CLOSED) {
             text.append(", 청산 ")
                     .append(localDate(trade.exitTime()))
                     .append(" 청산가 ")
-                    .append(ResultToolContext.plain(trade.exitPrice()))
-                    .append("원, 실현 손익 ")
-                    .append(ResultToolContext.plain(trade.realizedPnl()))
-                    .append("원");
+                    .append(money(trade.exitPrice()))
+                    .append(", 실현 손익 ")
+                    .append(money(trade.realizedPnl()));
         } else {
             text.append(", 보유 중");
         }
         return text.toString();
+    }
+
+    private static String money(java.math.BigDecimal value) {
+        return EvidenceKind.MONEY.format(ResultToolContext.plain(value));
     }
 
     private static String side(TradeSide side) {

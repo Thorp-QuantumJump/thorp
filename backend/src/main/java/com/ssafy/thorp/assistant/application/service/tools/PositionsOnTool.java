@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** 특정 날짜의 보유 종목·비중(계약 §2.2). 스냅샷이 없는 날은 005와 같이 직전 스냅샷이고, 그 날짜가 {@code asOf}다. */
+/**
+ * 특정 날짜의 보유 종목·비중(계약 §2.2). 보유 종목 1개 = 근거 1개(비중). 스냅샷이 없는 날은 005와 같이 직전 스냅샷이고, 그 날짜가 {@code asOf}다.
+ */
 public class PositionsOnTool implements AssistantTool {
     static final String NAME = "getPositionsOn";
     private final ResultToolContext context;
@@ -22,7 +24,7 @@ public class PositionsOnTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "특정 날짜의 보유 종목과 비중·평가 금액", List.of("date"));
+        return new ToolSpec(NAME, "특정 날짜의 보유 종목과 비중", List.of("date"));
     }
 
     @Override
@@ -49,14 +51,6 @@ public class PositionsOnTool implements AssistantTool {
                             asOf,
                             "trades",
                             EvidenceKind.RATIO));
-            facts.add(
-                    new Evidence(
-                            null,
-                            name + " 평가 금액" + note,
-                            ResultToolContext.plain(position.marketValue()),
-                            asOf,
-                            "trades",
-                            EvidenceKind.MONEY));
         }
         return facts;
     }

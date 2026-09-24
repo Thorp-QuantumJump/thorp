@@ -160,7 +160,10 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
                         publicResults,
                         token,
                         date(config, "effectiveStart", "start", LocalDate.MIN),
-                        date(config, "effectiveEnd", "end", LocalDate.MAX),
+                        // 부분 결과는 완료 끝 날짜까지만 읽는다 — 계획된 종료일까지 열어 두면 미계산 날짜를 휴장일로 설명한다.
+                        partialUntil != null
+                                ? partialUntil
+                                : date(config, "effectiveEnd", "end", LocalDate.MAX),
                         labels,
                         summary == null ? null : summary.maxDrawdown(),
                         tradesPageSize);
