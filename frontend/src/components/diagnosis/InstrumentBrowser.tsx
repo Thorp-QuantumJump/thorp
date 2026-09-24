@@ -170,7 +170,8 @@ export function InstrumentBrowser({
             </div>
 
             {/*
-              담고 빼는 자리다. 담긴 뒤에도 같은 자리에 남아 상태를 말하고, 한 번 더 누르면 뺀다.
+              담고 빼는 자리다. 담긴 뒤에도 같은 자리에 남아 '선택됨'을 말하고, 한 번 더 누르면 뺀다.
+              빼는 길은 오른쪽 선택 목록의 X가 따로 있어 '빼기'를 글자로 되풀이하지 않는다.
             */}
             <button
               type="button"
@@ -182,7 +183,7 @@ export function InstrumentBrowser({
               {selected ? (
                 <>
                   <Check size={15} strokeWidth={2.2} aria-hidden="true" />
-                  <span>선택됨 · 빼기</span>
+                  <span>선택됨</span>
                 </>
               ) : (
                 <>
