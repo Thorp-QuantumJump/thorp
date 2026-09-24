@@ -1,8 +1,9 @@
 import { curveLinear } from '@visx/curve'
 import { ticks } from 'd3-array'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
+import { ChartTooltip, TooltipContent, type TooltipRow } from '@/components/charts/tooltip'
 import { XAxis } from '@/components/charts/x-axis'
 import { AmountAxis, type AmountTick } from '@/components/result/AmountAxis'
 import { DrawdownShade } from '@/components/result/DrawdownShade'
@@ -10,6 +11,7 @@ import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/dra
 import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'
 import { formatMoney, formatRatio } from '@/components/result/formatResult'
 import { InitialCashLabel } from '@/components/result/InitialCashLabel'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'
 import type { ResultTimeseriesPoint } from '@/types/result'
 import styles from './EquityChart.module.css'
@@ -87,9 +89,9 @@ const REFERENCE_STROKE = 'var(--muted-foreground)'
  * 넷째 대상은 없다 — 상한이 셋이다.
  */
 const TARGET_STYLES = [
-  { stroke: 'var(--chart-line-secondary)', dash: '7,5' },
-  { stroke: 'var(--chart-line-tertiary)', dash: '2,4' },
-  { stroke: 'var(--chart-line-quaternary)', dash: '10,4,2,4' },
+  { stroke: 'var(--result-line-secondary)', dash: '7,5' },
+  { stroke: 'var(--result-line-tertiary)', dash: '2,4' },
+  { stroke: 'var(--result-line-quaternary)', dash: '10,4,2,4' },
 ] as const
 /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */
 const MAX_AMOUNT_TICKS = 4
@@ -123,8 +125,59 @@ function toChartDate(date: string): Date {
   return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)
 }
 
+/** 확대해도 이보다 적은 거래일은 보이지 않는다 */
+const MIN_VIEW_ROWS = 10
+
+/** 보이는 구간. 전체 행 가운데 [처음, 끝] 번째(양끝 포함)다. `null`이면 전체 기간이다 */
+type ViewRange = [number, number] | null
+
+/**
+ * 휠 한 번의 확대·축소. `anchor`(0~1)는 커서가 그림 폭의 어디에 있는가이고, 그 자리의 날짜가 제자리에 남도록
+ * 구간을 넓히거나 좁힌다. 전체보다 넓어지면 전체 기간(`null`)으로 돌아간다.
+ */
+function zoomView(view: ViewRange, total: number, anchor: number, factor: number): ViewRange {
+  if (total <= MIN_VIEW_ROWS) return null
+  const [start, end] = view ?? [0, total - 1]
+  const span = end - start
+  const nextSpan = Math.round(Math.max(MIN_VIEW_ROWS - 1, span * factor))
+  if (nextSpan >= total - 1) return null
+  const pivot = start + anchor * span
+  const nextStart = Math.max(0, Math.min(total - 1 - nextSpan, Math.round(pivot - anchor * nextSpan)))
+  return [nextStart, nextStart + nextSpan]
+}
+
+/** 끌어서 옮기기. 구간 폭은 그대로 두고 양끝을 넘지 않는다 */
+function panView(view: ViewRange, total: number, shift: number): ViewRange {
+  if (!view) return null
+  const span = view[1] - view[0]
+  const start = Math.max(0, Math.min(total - 1 - span, view[0] + shift))
+  return [start, start + span]
+}
+
+/** 툴팁이 읽을 원래 금액의 열 이름. 곡선 열은 로그 눈금이면 금액이 아니라 좌표값이다 */
+function amountKey(key: string): string {
+  return key + ':amount'
+}
+
+/** 툴팁 제목. 기간이 여러 해라 연도를 늘 적는다. 행의 날짜는 UTC 자정이다 */
+const tooltipDateFormat = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  weekday: 'short',
+  timeZone: 'UTC',
+})
+
+/** 시작 금액 대비 변화. 부호를 늘 붙인다 */
+function changeFromInitial(amount: number, initial: number | null): string {
+  if (initial == null || initial <= 0) return ''
+  const text = formatRatio(String(amount / initial - 1))
+  return text.startsWith('-') ? text : '+' + text
+}
+
 /**
  * 계열들을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.
+ * 툴팁을 위해 원래 금액도 `amountKey` 열에 함께 담는다.
  *
  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.
  */
@@ -139,6 +192,7 @@ function buildRows(
       const equity = readEquity(point)
       const axisValue = equity == null ? null : toAxisValue(equity, mode)
       if (axisValue != null) row[key] = axisValue
+      if (equity != null) row[amountKey(key)] = equity
       byDate.set(point.date, row)
     }
   }
@@ -292,6 +346,12 @@ export function EquityChart(props: EquityChartProps) {
     [props.targets],
   )
   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)
+  const [compact, setCompact] = useState(() => window.innerWidth <= 600)
+  useEffect(() => {
+    const update = () => setCompact(window.innerWidth <= 600)
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   const keyed = useMemo(
     () => [
@@ -308,25 +368,83 @@ export function EquityChart(props: EquityChartProps) {
     ],
     [base.points, targets, reference],
   )
-  const keys = keyed.map((series) => series.key)
-  const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
+  // 구분표에서 숨긴 선. 행에서는 빼지 않는다 — 빼면 날짜 집합이 바뀌어 확대 구간이 흔들린다.
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set())
+  const shown = (key: string) => !hidden.has(key)
+  const keys = keyed.map((series) => series.key).filter(shown)
+  const allRows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
+  // 휠로 좁힌 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.
+  const [view, setView] = useState<ViewRange>(null)
+  const zoomed = view !== null && view[1] < allRows.length
+  const rows = useMemo(
+    () => (zoomed ? allRows.slice(view[0], view[1] + 1) : allRows),
+    [allRows, view, zoomed],
+  )
+  const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }
+  const chartRef = useRef<HTMLDivElement>(null)
+  const [dragging, setDragging] = useState(false)
+  // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.
+  const live = useRef({ view, total: allRows.length, margin })
+  live.current = { view: zoomed ? view : null, total: allRows.length, margin }
+
+  // 그래프 안의 휠은 그래프가 쓰고 페이지를 굴리지 않는다. React 의 onWheel 은 passive 라 막을 수 없어 직접 붙인다.
+  useEffect(() => {
+    const node = chartRef.current
+    if (!node) return
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return
+      event.preventDefault()
+      const { view: current, total, margin: m } = live.current
+      const box = node.getBoundingClientRect()
+      const plot = box.width - m.left - m.right
+      const anchor = plot > 0 ? Math.min(1, Math.max(0, (event.clientX - box.left - m.left) / plot)) : 0.5
+      setView(zoomView(current, total, anchor, Math.exp(event.deltaY * 0.002)))
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // 확대한 동안에만 끌어서 옮긴다. 옮긴 거리는 누른 자리 기준이라 조금씩 끌어도 쌓이는 오차가 없다.
+  const startPan = (event: React.PointerEvent<HTMLDivElement>) => {
+    const origin = live.current.view
+    const node = chartRef.current
+    if (!origin || !node || event.button !== 0) return
+    const { total, margin: m } = live.current
+    const plot = node.getBoundingClientRect().width - m.left - m.right
+    const span = origin[1] - origin[0]
+    const startX = event.clientX
+    setDragging(true)
+    const move = (moveEvent: PointerEvent) => {
+      if (plot <= 0) return
+      setView(panView(origin, total, Math.round(((startX - moveEvent.clientX) / plot) * span)))
+    }
+    const end = () => {
+      setDragging(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+  }
   const initial = toNumber(initialCash)
   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)
   const yDomain = useMemo(
     () => resolveYDomain(rows, keys, initialAxisValue, scaleMode),
-    // keys 는 keyed 에서 나오므로 keyed 로 갈음한다.
+    // keys 는 keyed·hidden 에서 나오므로 그 둘로 갈음한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, keyed, initialAxisValue, scaleMode],
+    [rows, keyed, hidden, initialAxisValue, scaleMode],
   )
   const amountTicks = useMemo(() => {
     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)
     return toAmountTicks(amounts, scaleMode)
   }, [yDomain, scaleMode])
 
-  const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
+  const baseWindow = shown(BASE_KEY) ? findDrawdownWindow(base.points, base.maxDrawdown) : null
   // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.
   const targetWindow =
-    targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null
+    targets.length === 1 && shown(targetKey(0))
+      ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown)
+      : null
 
   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 "돌았고 비어 있었다"는 거짓이므로 그리지
   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.
@@ -341,30 +459,108 @@ export function EquityChart(props: EquityChartProps) {
       stroke: TARGET_STYLES[index].stroke,
     })),
     ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),
+  ].filter((label) => shown(label.dataKey))
+  const seriesKey = [
+    { dataKey: BASE_KEY, name: base.name, stroke: BASE_STROKE, dash: undefined, kind: '기준' },
+    ...targets.map((target, index) => ({
+      dataKey: targetKey(index),
+      name: target.name,
+      stroke: TARGET_STYLES[index].stroke,
+      dash: TARGET_STYLES[index].dash as string | undefined,
+      kind: '비교',
+    })),
+    ...(reference
+      ? [
+          {
+            dataKey: REFERENCE_KEY,
+            name: reference.name,
+            stroke: REFERENCE_STROKE,
+            dash: undefined,
+            kind: '참고',
+          },
+        ]
+      : []),
   ]
+  const visibleCount = seriesKey.filter((series) => shown(series.dataKey)).length
+  const toggleSeries = (key: string) =>
+    setHidden((known) => {
+      const next = new Set(known)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
 
   return (
     <div className={styles.figure}>
       <div className={styles.headingRow}>
-        <h2 className={styles.heading}>자산가치 추이</h2>
-        <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
-          {(['linear', 'log'] as const).map((mode) => (
+        <h2 className={styles.heading}>
+          자산가치 추이
+          <InlineHelp label="확대" side="bottom">
+            그래프 위에서 휠을 굴리면 커서 자리를 기준으로 확대·축소하고, 확대한 뒤에는 끌어서 옮깁니다. 두 번
+            누르거나 '전체 기간'을 누르면 돌아옵니다.
+          </InlineHelp>
+        </h2>
+        <div className={styles.headingActions}>
+          {zoomed ? (
+            <button className={styles.zoomReset} onClick={() => setView(null)} type="button">
+              전체 기간
+            </button>
+          ) : null}
+          <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
+            {(['linear', 'log'] as const).map((mode) => (
+              <button
+                aria-pressed={scaleMode === mode}
+                className={styles.scaleButton}
+                key={mode}
+                onClick={() => setScaleMode(mode)}
+                type="button"
+              >
+                {scaleModeNoun(mode)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div aria-label="그래프 선 구분" className={styles.seriesKey} role="group">
+        {seriesKey.map((series) => {
+          const visible = shown(series.dataKey)
+          return (
             <button
-              aria-pressed={scaleMode === mode}
-              className={styles.scaleButton}
-              key={mode}
-              onClick={() => setScaleMode(mode)}
+              aria-pressed={visible}
+              className={styles.seriesKeyItem}
+              // 마지막 남은 선은 숨기지 않는다. 빈 그래프는 아무것도 말하지 않는다.
+              disabled={visible && visibleCount === 1}
+              key={series.dataKey}
+              onClick={() => toggleSeries(series.dataKey)}
+              title={visible ? '누르면 이 선을 숨깁니다' : '누르면 이 선을 다시 보입니다'}
               type="button"
             >
-              {scaleModeNoun(mode)}
+              <svg aria-hidden="true" className={styles.seriesKeySwatch} viewBox="0 0 30 12">
+                <line
+                  stroke={series.stroke}
+                  strokeDasharray={series.dash}
+                  strokeWidth={series.kind === '기준' ? 3.2 : series.kind === '참고' ? 1.4 : 2}
+                  x1="1"
+                  x2="29"
+                  y1="6"
+                  y2="6"
+                />
+              </svg>
+              <span className={styles.seriesKind}>{series.kind}</span>
+              <span className={styles.seriesName}>{series.name}</span>
             </button>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
       <div
         aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
+        data-pan={zoomed ? (dragging ? 'dragging' : 'ready') : undefined}
+        onDoubleClick={() => setView(null)}
+        onPointerDown={startPan}
+        ref={chartRef}
         role="img"
       >
         <LineChart
@@ -373,7 +569,7 @@ export function EquityChart(props: EquityChartProps) {
           className={styles.canvas}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 18, right: 88, bottom: 44, left: 58 }}
+          margin={margin}
           xDataKey="date"
           yDomain={yDomain}
           yDomainTween={false}
@@ -412,18 +608,7 @@ export function EquityChart(props: EquityChartProps) {
             />
           ) : null}
 
-          <Line
-            animate={false}
-            curve={curveLinear}
-            dataKey={BASE_KEY}
-            defined={(row) => typeof row[BASE_KEY] === 'number'}
-            fadeEdges={false}
-            showHighlight={false}
-            stroke={BASE_STROKE}
-            strokeWidth={2.4}
-          />
-
-          {reference ? (
+          {reference && shown(REFERENCE_KEY) ? (
             <Line
               animate={false}
               curve={curveLinear}
@@ -438,6 +623,7 @@ export function EquityChart(props: EquityChartProps) {
 
           {targets.map((_, index) => {
             const key = targetKey(index)
+            if (!shown(key)) return null
             return (
               <Line
                 animate={false}
@@ -449,14 +635,49 @@ export function EquityChart(props: EquityChartProps) {
                 showHighlight={false}
                 stroke={TARGET_STYLES[index].stroke}
                 strokeDasharray={TARGET_STYLES[index].dash}
-                strokeWidth={2.4}
+                strokeWidth={2}
               />
             )
           })}
 
-          <SeriesEndLabels series={endLabels} />
+          {shown(BASE_KEY) ? (
+            <Line
+              animate={false}
+              curve={curveLinear}
+              dataKey={BASE_KEY}
+              defined={(row) => typeof row[BASE_KEY] === 'number'}
+              fadeEdges={false}
+              showHighlight={false}
+              stroke={BASE_STROKE}
+              strokeWidth={3.2}
+            />
+          ) : null}
+
+          {compact ? null : <SeriesEndLabels series={endLabels} />}
 
           <XAxis numTicks={4} stackYear tickMode="domain" />
+
+          {/* 날짜 하나에 모든 선의 자산가치와 시작 금액 대비 변화를 한 상자에 보인다. 값은 받은 금액 그대로다. */}
+          <ChartTooltip
+            content={({ point }) => (
+              <TooltipContent
+                rows={endLabels.flatMap((series): TooltipRow[] => {
+                  const amount = point[amountKey(series.dataKey)]
+                  if (typeof amount !== 'number') return []
+                  const change = changeFromInitial(amount, initial)
+                  return [
+                    {
+                      color: series.stroke,
+                      label: series.name,
+                      value: formatMoney(String(amount)) + (change ? ' (' + change + ')' : ''),
+                    },
+                  ]
+                })}
+                title={tooltipDateFormat.format(point.date as Date)}
+              />
+            )}
+            showDatePill={false}
+          />
         </LineChart>
       </div>
 

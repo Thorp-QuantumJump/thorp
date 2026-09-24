@@ -1,8 +1,73 @@
 .figure {
+  --result-line-secondary: #60bfe8;
+  --result-line-tertiary: #c5a6ef;
+  --result-line-quaternary: #e8b976;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+}
+
+:global([data-design='classic']) .figure {
+  --result-line-secondary: #0876a9;
+  --result-line-tertiary: #7952ae;
+  --result-line-quaternary: #a3681c;
+}
+
+.seriesKey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 2px 2px 4px;
+}
+
+.seriesKeyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--thorp-ink);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seriesKeyItem:hover:not(:disabled) {
+  background: var(--thorp-surface);
+}
+
+.seriesKeyItem:disabled {
+  cursor: default;
+}
+
+.seriesKeyItem:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 숨긴 선은 흐리게 하고 이름에 줄을 긋는다. 색만으로 알리지 않는다. */
+.seriesKeyItem[aria-pressed='false'] {
+  opacity: 0.45;
+}
+
+.seriesKeyItem[aria-pressed='false'] .seriesName {
+  text-decoration: line-through;
+}
+
+.seriesKeySwatch {
+  width: 30px;
+  height: 12px;
+  flex: none;
+}
+
+.seriesKind {
+  color: var(--thorp-copy);
+  font-size: 11px;
 }
 
 .headingRow {
@@ -10,6 +75,39 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.headingActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 확대를 풀고 전체 기간으로 돌아가는 단추. 눈금 단추와 같은 높이·글자로 둔다. */
+.zoomReset {
+  min-height: var(--thorp-control-sm, auto);
+  padding: var(--thorp-control-pad-block, 3px) 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-control, 999px);
+  background: var(--thorp-surface);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+/* 확대한 동안에는 끌어서 옮길 수 있음을 손 모양으로 알린다. 차트가 곡선 영역에 인라인으로 거는 십자선 커서를 이긴다. */
+.chart[data-pan='ready'] :global(g) {
+  cursor: grab !important;
+}
+
+.chart[data-pan='dragging'] :global(g) {
+  cursor: grabbing !important;
+}
+
+.zoomReset:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
 }
 
 .heading {
@@ -75,7 +173,7 @@
   background: var(--thorp-surface);
 
   /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */
-  height: clamp(250px, 44svh, 390px);
+  height: clamp(340px, 48svh, 420px);
 }
 
 /*
@@ -97,7 +195,6 @@
 
 @media (max-width: 600px) {
   .chart {
-    height: auto;
-    aspect-ratio: 4 / 3;
+    height: 340px;
   }
 }
