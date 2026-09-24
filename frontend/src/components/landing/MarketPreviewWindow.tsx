@@ -6,11 +6,14 @@ import type { MarketSeriesCode } from '@/types/marketApi'
 import styles from '@/pages/LandingPage.module.css'
 
 /*
-  첫 화면 오른쪽 창. 국내 시장 지표 칸을 눌러 고르면 그 지표의 차트가 끊김 없이 흘러간다.
-  지표는 저절로 넘어가지 않는다. 사용자가 보던 지표가 멋대로 바뀌면 읽던 흐름이 끊긴다.
+  첫 화면 오른쪽 창. KOSPI → KOSDAQ → 원/달러 → VKOSPI 200 순서로 지표를 돌며 차트를 그려 나간다.
+  한 지표를 CYCLE_MS 동안 보여 준 뒤 다음으로 넘어가고, 마지막 다음은 처음이다. 고른 칸 밑의 막대가 다음
+  지표까지 남은 시간을 채워 가며, 막대의 CSS 애니메이션이 끝나는 순간(animationend) 넘어간다 — 타이머를 따로
+  두지 않아 막대와 넘김이 어긋나지 않는다. 칸을 누르면 그 지표부터 다시 돈다. 움직임 줄이기 설정에서는 막대가
+  없으므로 저절로 넘어가지 않는다.
 
   **실제 값이 먼저다.** 백엔드가 모아 둔 최근 거래일 종가(`GET /markets/{code}/series`)를 받으면 그 흐름을
-  왼쪽부터 그려 나간 뒤 멈추고, 창에 원천과 기준일을 밝힌다. 아직 모으지 못한 지표(503)만 첫 화면이 받은
+  왼쪽부터 그려 나간 뒤 다음 지표로 넘어갈 때까지 머물고, 창에 원천과 기준일을 밝힌다. 아직 모으지 못한 지표(503)만 첫 화면이 받은
   지표 값(없으면 예시 값)을 출발점으로 둘레를 오가는 흐름을 만들어 그리고, 창에 '움직임 예시'를 밝힌다.
   어느 쪽이든 'LIVE'라고 쓰지 않는다. 틱 단위 시세는 받지 않는다.
 
@@ -119,8 +122,10 @@ function windowEnds(series: Series, phase: number) {
 /** 백엔드가 모아 둔 실제 최근 흐름. 없으면 그 지표는 예시 흐름으로 그린다. */
 type RealSeries = { values: number[]; lastDate: string; provider: string; stale: boolean }
 
-/** 실제 흐름을 왼쪽부터 끝까지 그려 나가는 시간. 다 그리면 멈춘다. */
-const REVEAL_MS = 1400
+/** 실제 흐름을 왼쪽부터 끝까지 그려 나가는 시간. */
+const REVEAL_MS = 1800
+/** 한 지표를 보여 주는 시간. 그려 나간 뒤 잠시 머물러 끝값을 읽을 틈을 둔다. */
+const CYCLE_MS = 5200
 
 function easeOut(t: number) {
   return 1 - (1 - t) ** 3
@@ -263,7 +268,7 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
       }
     }
 
-    // 실제 흐름: 왼쪽부터 끝까지 그려 나가고 멈춘다. 받은 값 밖으로 움직임을 지어내지 않는다.
+    // 실제 흐름: 왼쪽부터 끝까지 그려 나간 뒤 머문다. 받은 값 밖으로 움직임을 지어내지 않는다.
     if (activeReal) {
       const values = activeReal.values
       const span = values.length - 1
@@ -339,6 +344,15 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
           const isActive = index === active
           return (
             <button key={item.code} type="button" aria-pressed={isActive} onClick={() => setActive(index)}>
+              {isActive && !reducedMotion ? (
+                <i
+                  key={active}
+                  className={styles.previewTickerProgress}
+                  style={{ animationDuration: `${CYCLE_MS}ms` }}
+                  onAnimationEnd={() => setActive((current) => (current + 1) % markets.length)}
+                  aria-hidden="true"
+                />
+              ) : null}
               <span>{item.label}</span>
               <strong aria-hidden="true" ref={isActive ? tickerValue : undefined}>{format(ends.last, item.decimals)}</strong>
               <em aria-hidden="true" ref={isActive ? tickerChange : undefined} data-direction={directionOf(change)}>
