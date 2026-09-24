@@ -309,7 +309,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
       */}
       <div className={styles.context}>
         <SimilarPastMarket caseId={caseId} />
-        <SectorNews sectors={sectors} />
+        <SectorNews />
       </div>
     </>
   )

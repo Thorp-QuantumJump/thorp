@@ -3,7 +3,100 @@
   "_comment": "섹터 식별자는 spec 001이 소유한다. 이 파일은 섹터를 선언하지 않고 주제 키와 001 섹터 식별자의 연결, 뉴스원 분류 값의 주제 키 매핑, 그리고 기사 제목으로 섹터를 알아보는 키워드 규칙만 담는다. v2(2026-09-24)에서 두 가지를 더했다 — 기존 주제 중 섹터가 분명한 것(반도체)에 001 식별자를 채우고, 001 대응표(data/config/sector-map-2026-09.json)의 8개 섹터마다 제목 키워드 주제(sector-*)를 두었다. 국내 매체 대부분이 기사별 분류를 주지 않아 분류 값만으로는 섹터에 연결할 근거가 없기 때문이다(spec FR-010).",
   "_domesticLink": "참이면 GDELT 질의어가 되고 해외 기사를 받는 근거가 된다. 굵은 국내 분류(경제 일반·증권·산업·IT)는 거짓이다 — 해외 보도를 받아들이는 근거로 쓰기엔 넓고, 슬러그를 그대로 검색어로 보내면 GDELT가 엉뚱한 것을 돌려준다.",
   "_mapping": "sourceCategory는 뉴스원이 실제로 주는 값을 그대로 적는다. 매핑되지 않은 값은 연결에 쓰지 않고 미등록 건수로만 센다 — 목록을 넓히는 것보다 모르는 값을 모른다고 두는 편이 낫다(spec FR-010). 주제를 실제보다 좁게 붙이지 않는다: 증권 기사에 '환율'을 달면 화면이 사실이 아닌 것을 보인다.",
-  "_titleKeywords": "titleKeywords는 제목에 그 문자열이 들어 있으면 그 주제로 연결한다. 영문은 대소문자를 가리지 않는다. titleExclusions는 먼저 제목에서 지운 뒤 키워드를 찾는다 — '한국은행' 기사가 은행 섹터로 가지 않게 하려는 것이다. 근거로는 걸린 키워드가 'title:키워드'로 남는다. 도메인 판단 없이 넓게 걸리는 단어(건설·수주·에너지·유가·코스피 등)는 넣지 않았다 — 2026-09-24 실제 제목 200건에서 오연결을 만든 단어들이다. 제목 키워드 주제는 domesticLink가 거짓이다. GDELT 질의어가 되거나 해외 기사를 받는 근거가 되지 않는다. 정밀도·재현율은 src/test/resources/news/sector-link-eval-v1.json으로 잰다.",
+  "_titleKeywords": "titleKeywords는 제목에 그 문자열이 들어 있으면 그 주제로 연결한다. 영문은 대소문자를 가리지 않는다. titleExclusions는 먼저 제목에서 지운 뒤 키워드를 찾는다 — '한국은행' 기사가 은행 섹터로 가지 않게 하려는 것이다. 근거로는 걸린 키워드가 'title:키워드'로 남는다. 도메인 판단 없이 넓게 걸리는 단어(건설·수주·에너지·유가·코스피 등)는 넣지 않았다 — 2026-09-24 실제 제목 200건에서 오연결을 만든 단어들이다. 제목 키워드 주제는 domesticLink가 거짓이다. GDELT 질의어가 되거나 해외 기사를 받는 근거가 되지 않는다. 정밀도·재현율은 src/test/resources/news/sector-link-eval-v1.json으로 잰다. 2026-09-25 뉴스 전용 섹터를 더하며 이 표본을 보고 일반 키워드(삼전닉스·테슬라·착공·게임사 이름 등)를 보탰으므로, 그 표본은 이제 개발 표본이다. 미사용 평가는 새로 수집한 기사로 다시 한다.",
+  "_newsSectors": "newsSectors는 뉴스를 좁혀 보는 칩의 목록이다. owner가 SECTOR_MAP인 것은 spec 001 대응표의 섹터(투자 대상)이고 id도 001 것을 그대로 쓴다 — 001에 열려 있을 때만 칩으로 나온다. owner가 NEWS인 것은 투자 대상과 대응하지 않는 뉴스 전용 섹터이며 012가 소유한다(spec FR-005, Session 2026-09-25). 001과 겹치지 않게 NEWS_로 시작한다. 뉴스 전용 섹터를 둔 이유는 수집한 기사 대부분이 8개 투자 대상 밖(헬스케어·IT·소비·금융·시황·거시 등)이라 칩으로 좁혀 볼 길이 없었기 때문이다.",
+  "newsSectors": [
+    {
+      "sectorId": "SEMICONDUCTOR",
+      "displayName": "반도체",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "SECONDARY_BATTERY",
+      "displayName": "2차전지",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "BANK",
+      "displayName": "은행",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "SECURITIES",
+      "displayName": "증권",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "COSMETICS",
+      "displayName": "화장품",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "CONSTRUCTION",
+      "displayName": "건설",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "AUTO",
+      "displayName": "자동차",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "HEAVY_INDUSTRY",
+      "displayName": "중공업",
+      "owner": "SECTOR_MAP"
+    },
+    {
+      "sectorId": "NEWS_HEALTHCARE",
+      "displayName": "헬스케어·바이오",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_IT",
+      "displayName": "IT·AI",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_MEDIA",
+      "displayName": "미디어·게임",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_ENERGY",
+      "displayName": "에너지·화학",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_MATERIALS",
+      "displayName": "철강·소재",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_CONSUMER",
+      "displayName": "소비·유통",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_TRANSPORT",
+      "displayName": "항공·해운",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_FINANCE",
+      "displayName": "보험·카드·가상자산",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_MARKET",
+      "displayName": "증시",
+      "owner": "NEWS"
+    },
+    {
+      "sectorId": "NEWS_MACRO",
+      "displayName": "거시경제",
+      "owner": "NEWS"
+    }
+  ],
   "topics": [
     {
       "topicKey": "monetary-policy",
@@ -89,7 +182,9 @@
         "SK하이닉스",
         "하이닉스",
         "삼성전자",
-        "팹리스"
+        "팹리스",
+        "삼전닉스",
+        "SK하닉"
       ]
     },
     {
@@ -133,11 +228,14 @@
         "우리금융",
         "예대금리",
         "주담대",
-        "가계대출"
+        "가계대출",
+        "은행",
+        "銀"
       ],
       "titleExclusions": [
         "한국은행",
-        "한은"
+        "한은",
+        "은행나무"
       ]
     },
     {
@@ -157,7 +255,12 @@
         "키움증권",
         "NH투자증권",
         "삼성증권",
-        "거래대금"
+        "거래대금",
+        "증권"
+      ],
+      "titleExclusions": [
+        "증권가",
+        "토큰증권"
       ]
     },
     {
@@ -203,7 +306,10 @@
         "부동산 PF",
         "현대건설",
         "GS건설",
-        "대우건설"
+        "대우건설",
+        "착공",
+        "GTX",
+        "시공"
       ]
     },
     {
@@ -220,7 +326,8 @@
         "완성차",
         "전기차",
         "현대모비스",
-        "車"
+        "車",
+        "테슬라"
       ]
     },
     {
@@ -241,6 +348,294 @@
         "중공업",
         "원전",
         "두산에너빌리티"
+      ]
+    },
+    {
+      "topicKey": "sector-news-healthcare",
+      "displayName": "헬스케어·바이오",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_HEALTHCARE"
+      ],
+      "titleKeywords": [
+        "바이오",
+        "제약",
+        "신약",
+        "임상",
+        "헬스케어",
+        "의료기기",
+        "치료제",
+        "항암",
+        "백신",
+        "셀트리온",
+        "삼성바이오",
+        "유한양행",
+        "FDA",
+        "항체",
+        "ADC",
+        "RNA",
+        "의약",
+        "세포치료",
+        "유전자치료",
+        "폐암"
+      ]
+    },
+    {
+      "topicKey": "sector-news-it",
+      "displayName": "IT·AI",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_IT"
+      ],
+      "titleKeywords": [
+        "AI",
+        "인공지능",
+        "소프트웨어",
+        "클라우드",
+        "데이터센터",
+        "SaaS",
+        "보안",
+        "네이버",
+        "카카오",
+        "삼성SDS",
+        "LG CNS",
+        "포스코DX",
+        "빅테크",
+        "앤트로픽",
+        "오픈AI",
+        "디스플레이",
+        "OLED",
+        "삼성전기"
+      ]
+    },
+    {
+      "topicKey": "sector-news-media",
+      "displayName": "미디어·게임",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_MEDIA"
+      ],
+      "titleKeywords": [
+        "엔터",
+        "하이브",
+        "JYP",
+        "SM엔터",
+        "YG",
+        "K팝",
+        "OTT",
+        "드라마",
+        "웹툰",
+        "게임",
+        "e스포츠",
+        "LCK",
+        "넷플릭스",
+        "방송",
+        "위메이드",
+        "넥슨",
+        "엔씨소프트",
+        "크래프톤",
+        "넷마블"
+      ],
+      "titleExclusions": [
+        "하이브리드",
+        "게임체인저"
+      ]
+    },
+    {
+      "topicKey": "sector-news-energy",
+      "displayName": "에너지·화학",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_ENERGY"
+      ],
+      "titleKeywords": [
+        "정유",
+        "석유화학",
+        "화학업계",
+        "에쓰오일",
+        "S-Oil",
+        "SK이노",
+        "LG화학",
+        "롯데케미칼",
+        "나프타",
+        "정제마진",
+        "발전소",
+        "발전량",
+        "석탄발전",
+        "연료전지",
+        "재생에너지",
+        "태양광",
+        "풍력",
+        "한전",
+        "가스공사"
+      ]
+    },
+    {
+      "topicKey": "sector-news-materials",
+      "displayName": "철강·소재",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_MATERIALS"
+      ],
+      "titleKeywords": [
+        "철강",
+        "포스코",
+        "현대제철",
+        "열연",
+        "냉연",
+        "후판",
+        "철광석",
+        "동국제강",
+        "고려아연",
+        "희토류",
+        "비철",
+        "구리",
+        "알루미늄"
+      ],
+      "titleExclusions": [
+        "포스코DX",
+        "포스코퓨처엠"
+      ]
+    },
+    {
+      "topicKey": "sector-news-consumer",
+      "displayName": "소비·유통",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_CONSUMER"
+      ],
+      "titleKeywords": [
+        "유통",
+        "편의점",
+        "백화점",
+        "이마트",
+        "쿠팡",
+        "다이소",
+        "올리브영",
+        "올영",
+        "홈플러스",
+        "무신사",
+        "식품",
+        "음식",
+        "라면",
+        "주류",
+        "소주",
+        "맥주",
+        "패션",
+        "의류",
+        "명품",
+        "외식",
+        "프랜차이즈",
+        "K푸드",
+        "오뚜기",
+        "농심",
+        "풀무원",
+        "가전"
+      ]
+    },
+    {
+      "topicKey": "sector-news-transport",
+      "displayName": "항공·해운",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_TRANSPORT"
+      ],
+      "titleKeywords": [
+        "항공",
+        "대한항공",
+        "아시아나",
+        "LCC",
+        "해운",
+        "운임",
+        "컨테이너선",
+        "물류",
+        "택배",
+        "공항",
+        "HMM",
+        "마일리지"
+      ]
+    },
+    {
+      "topicKey": "sector-news-finance",
+      "displayName": "보험·카드·가상자산",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_FINANCE"
+      ],
+      "titleKeywords": [
+        "보험",
+        "손보",
+        "생보",
+        "카드사",
+        "카드",
+        "저축은행",
+        "신협",
+        "농협",
+        "가상자산",
+        "코인",
+        "비트코인",
+        "핀테크",
+        "리볼빙",
+        "연금저축",
+        "PB"
+      ]
+    },
+    {
+      "topicKey": "sector-news-market",
+      "displayName": "증시",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_MARKET"
+      ],
+      "titleKeywords": [
+        "코스피",
+        "코스닥",
+        "증시",
+        "주가",
+        "상장",
+        "애프터마켓",
+        "공매도",
+        "ETF",
+        "시총",
+        "나스닥",
+        "월가",
+        "뉴욕증시",
+        "종목",
+        "주식",
+        "개미"
+      ]
+    },
+    {
+      "topicKey": "sector-news-macro",
+      "displayName": "거시경제",
+      "domesticLink": false,
+      "sectorIds": [
+        "NEWS_MACRO"
+      ],
+      "titleKeywords": [
+        "금리",
+        "연준",
+        "FOMC",
+        "국채",
+        "환율",
+        "원화",
+        "유가",
+        "브렌트유",
+        "물가",
+        "인플레이션",
+        "성장률",
+        "GDP",
+        "한은",
+        "한국은행",
+        "재정",
+        "세수",
+        "법인세",
+        "통화량",
+        "무역수지",
+        "긴축",
+        "ECB",
+        "중앙은행",
+        "금값"
       ]
     }
   ],

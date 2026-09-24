@@ -19,7 +19,53 @@ import java.util.Set;
  * @param categoryMappings 뉴스원 분류 값과 주제 키의 매핑.
  */
 public record NewsLinkRegistry(
-        String version, List<Topic> topics, List<CategoryMapping> categoryMappings) {
+        String version,
+        List<NewsSector> newsSectors,
+        List<Topic> topics,
+        List<CategoryMapping> categoryMappings) {
+
+    /** 뉴스 섹터를 누가 소유하는가. */
+    public enum SectorOwner {
+        /** spec 001 대응표의 섹터(투자 대상). 식별자도 001의 것이다. */
+        SECTOR_MAP,
+        /** 투자 대상과 대응하지 않는 뉴스 전용 섹터. 012가 소유한다. */
+        NEWS
+    }
+
+    /** 뉴스 전용 섹터 식별자의 머리말. 001 식별자와 겹치지 않게 한다. */
+    public static final String NEWS_SECTOR_PREFIX = "NEWS_";
+
+    /**
+     * 뉴스를 좁혀 보는 칩 하나(spec FR-005, Session 2026-09-25).
+     *
+     * @param sectorId 섹터 식별자. {@code SECTOR_MAP}이면 001의 값, {@code NEWS}이면 {@code NEWS_}로 시작한다.
+     * @param displayName 화면 이름. {@code SECTOR_MAP} 섹터는 화면에서 001의 이름을 먼저 쓴다.
+     * @param owner 소유자.
+     */
+    public record NewsSector(String sectorId, String displayName, SectorOwner owner) {
+
+        public NewsSector {
+            if (sectorId == null || sectorId.isBlank()) {
+                throw new IllegalArgumentException("sectorId는 비어 있을 수 없다");
+            }
+            if (displayName == null || displayName.isBlank()) {
+                throw new IllegalArgumentException("displayName은 비어 있을 수 없다: " + sectorId);
+            }
+            if (owner == null) {
+                throw new IllegalArgumentException("owner가 없다: " + sectorId);
+            }
+            if ((owner == SectorOwner.NEWS) != sectorId.startsWith(NEWS_SECTOR_PREFIX)) {
+                throw new IllegalArgumentException(
+                        "뉴스 전용 섹터만 " + NEWS_SECTOR_PREFIX + "로 시작한다: " + sectorId);
+            }
+        }
+    }
+
+    /** 뉴스 섹터 목록이 없는 등록표(v1과 시험용). */
+    public NewsLinkRegistry(
+            String version, List<Topic> topics, List<CategoryMapping> categoryMappings) {
+        this(version, null, topics, categoryMappings);
+    }
 
     /**
      * 등록된 경제 주제 하나.
@@ -75,11 +121,45 @@ public record NewsLinkRegistry(
                 target = target.replace(exclusion, " ");
             }
             for (String keyword : titleKeywords) {
-                if (target.contains(keyword)) {
+                if (containsTerm(target, keyword)) {
                     return Optional.of(keyword);
                 }
             }
             return Optional.empty();
+        }
+
+        /**
+         * 제목에 키워드가 들어 있는지.
+         *
+         * <p>영문·숫자로만 된 키워드(AI·ETF·PB 등)는 앞뒤가 영문·숫자가 아닐 때만 걸린다. 그렇지 않으면 'ai'가 'taiwan'에, 'pb'가 다른 영문
+         * 낱말에 걸린다. 한글 키워드는 조사가 바로 붙으므로 그대로 포함 여부만 본다.
+         */
+        private static boolean containsTerm(String target, String keyword) {
+            if (!isLatin(keyword)) {
+                return target.contains(keyword);
+            }
+            int from = 0;
+            while (true) {
+                int at = target.indexOf(keyword, from);
+                if (at < 0) {
+                    return false;
+                }
+                int end = at + keyword.length();
+                boolean leftOk = at == 0 || !isLatinChar(target.charAt(at - 1));
+                boolean rightOk = end == target.length() || !isLatinChar(target.charAt(end));
+                if (leftOk && rightOk) {
+                    return true;
+                }
+                from = at + 1;
+            }
+        }
+
+        private static boolean isLatin(String term) {
+            return term.chars().allMatch(c -> isLatinChar((char) c) || c == '-' || c == ' ');
+        }
+
+        private static boolean isLatinChar(char c) {
+            return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
         }
 
         private static List<String> normalizedTerms(
@@ -124,7 +204,26 @@ public record NewsLinkRegistry(
         if (version == null || version.isBlank()) {
             throw new IllegalArgumentException("version은 비어 있을 수 없다");
         }
+        newsSectors = newsSectors == null ? List.of() : List.copyOf(newsSectors);
         topics = topics == null ? List.of() : List.copyOf(topics);
+        Set<String> sectorIdSet =
+                newsSectors.stream()
+                        .map(NewsSector::sectorId)
+                        .collect(java.util.stream.Collectors.toSet());
+        if (sectorIdSet.size() != newsSectors.size()) {
+            throw new IllegalArgumentException("newsSectors의 sectorId가 중복됐다");
+        }
+        if (!newsSectors.isEmpty()) {
+            for (Topic topic : topics) {
+                for (String sectorId : topic.sectorIds()) {
+                    if (!sectorIdSet.contains(sectorId)) {
+                        // 칩 목록에 없는 섹터로 연결하면 그 기사는 어떤 칩으로도 볼 수 없다.
+                        throw new IllegalArgumentException(
+                                "newsSectors에 없는 섹터로 연결했다: " + topic.topicKey() + " → " + sectorId);
+                    }
+                }
+            }
+        }
         categoryMappings = categoryMappings == null ? List.of() : List.copyOf(categoryMappings);
         Set<String> topicKeys =
                 topics.stream().map(Topic::topicKey).collect(java.util.stream.Collectors.toSet());
@@ -177,6 +276,14 @@ public record NewsLinkRegistry(
             topic.matchTitle(title).ifPresent(keyword -> matched.put(topic.topicKey(), keyword));
         }
         return java.util.Collections.unmodifiableMap(matched);
+    }
+
+    /** 012가 소유하는 뉴스 전용 섹터 식별자. 001 대응표와 무관하게 늘 유효하다. */
+    public Set<String> newsOwnedSectorIds() {
+        return newsSectors.stream()
+                .filter(sector -> sector.owner() == SectorOwner.NEWS)
+                .map(NewsSector::sectorId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     /** 해외 보도를 수집할 수 있는 국내 연결 주제 키. */

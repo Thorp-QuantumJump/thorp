@@ -19,8 +19,8 @@ import org.springframework.core.io.ClassPathResource;
 /**
  * 제목 키워드 섹터 연결을 사람이 검수할 정답 표본으로 잰다(spec FR-010, S15P21E205-437).
  *
- * <p>정답은 LLM이 제목만 읽고 1차로 달았고, 키워드는 그 표본을 보지 않고 다른 날 제목으로 다듬었다. 그래서 이 값은 키워드 규칙의 미사용 평가다. 표본을 보고
- * 키워드를 고치면 그 뒤로는 개발 표본이 된다(원칙 VII) — 그때는 새 날짜의 표본으로 다시 잰다.
+ * <p>정답은 LLM이 제목만 읽고 1차로 달았다. 2026-09-25 뉴스 전용 섹터를 더하며 이 표본을 보고 일반 키워드를 보탰으므로 이 값은 <b>개발 표본
+ * 측정</b>이다(원칙 VII). 미사용 평가는 새로 수집한 기사로 다시 한다.
  *
  * <p><b>측정값을 파일에 적어 두고 그 값과 같은지 본다.</b> 키워드나 정답을 바꾸면 이 시험이 깨지고, 바꾼 사람은 새 값을 파일에 적어야 한다. 정밀도·재현율이
  * 조용히 달라지지 않게 하려는 것이다. 정밀도에는 따로 회귀 하한을 둔다 — 제목 한 단어로 잘못 연결된 기사는 사용자가 "이 섹터 뉴스"로 읽는다.
@@ -30,10 +30,10 @@ class NewsSectorKeywordEvaluationTest {
     /**
      * 정밀도의 회귀 하한.
      *
-     * <p>2026-09-24 첫 측정(0.947)을 본 뒤에 정한 값이다. 그래서 "이만큼이면 충분하다"는 기준이 아니라, 규칙을 고치다 잘못 연결이 늘어나는 것을 막는
-     * 하한으로만 쓴다.
+     * <p>2026-09-25 뉴스 전용 섹터를 더한 뒤의 측정(0.732)을 보고 정한 값이다. "이만큼이면 충분하다"는 기준이 아니라, 규칙을 고치다 잘못 연결이
+     * 늘어나는 것을 막는 하한으로만 쓴다. 뉴스 전용 섹터는 시황·거시처럼 한 기사가 여러 섹터에 걸리기 쉬워 투자 대상 8개만 쟀을 때(0.947)보다 낮다.
      */
-    private static final double MIN_PRECISION = 0.90;
+    private static final double MIN_PRECISION = 0.70;
 
     private static JsonNode json(String resource) {
         try (InputStream in = NewsSectorKeywordEvaluationTest.class.getResourceAsStream(resource)) {
