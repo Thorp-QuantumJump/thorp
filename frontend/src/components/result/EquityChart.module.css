@@ -49,6 +49,30 @@
   gap: 12px;
 }
 
+.headingActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 확대를 풀고 전체 기간으로 돌아가는 단추. 눈금 단추와 같은 높이·글자로 둔다. */
+.zoomReset {
+  min-height: var(--thorp-control-sm, auto);
+  padding: var(--thorp-control-pad-block, 3px) 12px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-control, 999px);
+  background: var(--thorp-surface);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.zoomReset:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
 .heading {
   margin: 0;
   font-size: var(--thorp-text-heading, 1.1rem);

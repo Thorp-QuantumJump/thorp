@@ -11,7 +11,9 @@ import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/dra
 import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'
 import { formatMoney, formatRatio } from '@/components/result/formatResult'
 import { InitialCashLabel } from '@/components/result/InitialCashLabel'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'
+import { ZoomSelection } from '@/components/result/ZoomSelection'
 import type { ResultTimeseriesPoint } from '@/types/result'
 import styles from './EquityChart.module.css'
 
@@ -339,7 +341,17 @@ export function EquityChart(props: EquityChartProps) {
     [base.points, targets, reference],
   )
   const keys = keyed.map((series) => series.key)
-  const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
+  const allRows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
+  // 끌어서 고른 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.
+  const [zoom, setZoom] = useState<[Date, Date] | null>(null)
+  const rows = useMemo(
+    () => (zoom ? allRows.filter((row) => row.date >= zoom[0] && row.date <= zoom[1]) : allRows),
+    [allRows, zoom],
+  )
+  const zoomTo = (range: [Date, Date]) => {
+    // 두 거래일보다 좁으면 선이 되지 않는다.
+    if (allRows.filter((row) => row.date >= range[0] && row.date <= range[1]).length >= 2) setZoom(range)
+  }
   const initial = toNumber(initialCash)
   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)
   const yDomain = useMemo(
@@ -388,19 +400,31 @@ export function EquityChart(props: EquityChartProps) {
   return (
     <div className={styles.figure}>
       <div className={styles.headingRow}>
-        <h2 className={styles.heading}>자산가치 추이</h2>
-        <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
-          {(['linear', 'log'] as const).map((mode) => (
-            <button
-              aria-pressed={scaleMode === mode}
-              className={styles.scaleButton}
-              key={mode}
-              onClick={() => setScaleMode(mode)}
-              type="button"
-            >
-              {scaleModeNoun(mode)}
+        <h2 className={styles.heading}>
+          자산가치 추이
+          <InlineHelp label="확대" side="bottom">
+            그래프를 좌우로 끌면 그 구간을 확대합니다. 두 번 누르거나 '전체 기간'을 누르면 돌아옵니다.
+          </InlineHelp>
+        </h2>
+        <div className={styles.headingActions}>
+          {zoom ? (
+            <button className={styles.zoomReset} onClick={() => setZoom(null)} type="button">
+              전체 기간
             </button>
-          ))}
+          ) : null}
+          <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
+            {(['linear', 'log'] as const).map((mode) => (
+              <button
+                aria-pressed={scaleMode === mode}
+                className={styles.scaleButton}
+                key={mode}
+                onClick={() => setScaleMode(mode)}
+                type="button"
+              >
+                {scaleModeNoun(mode)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -427,6 +451,7 @@ export function EquityChart(props: EquityChartProps) {
       <div
         aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
+        onDoubleClick={() => setZoom(null)}
         role="img"
       >
         <LineChart
@@ -519,6 +544,8 @@ export function EquityChart(props: EquityChartProps) {
           {compact ? null : <SeriesEndLabels series={endLabels} />}
 
           <XAxis numTicks={4} stackYear tickMode="domain" />
+
+          <ZoomSelection onZoom={zoomTo} />
 
           {/* 날짜 하나에 모든 선의 자산가치와 시작 금액 대비 변화를 한 상자에 보인다. 값은 받은 금액 그대로다. */}
           <ChartTooltip
