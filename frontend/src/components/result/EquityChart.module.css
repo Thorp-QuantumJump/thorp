@@ -44,13 +44,15 @@
 
 .headingRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
 }
 
 .headingActions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
