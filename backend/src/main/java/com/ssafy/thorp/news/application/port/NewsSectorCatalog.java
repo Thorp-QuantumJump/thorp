@@ -5,8 +5,9 @@ import java.util.Set;
 /**
  * 섹터 식별자 등록표를 읽는 경계(spec FR-005).
  *
- * <p><b>012는 섹터를 만들지 않는다.</b> 섹터 식별자는 spec 001이 소유하고, 뉴스는 그 값을 참조만 한다. 뉴스가 자체 섹터를 선언하면 같은 이름이 두 곳에서
- * 갈라지고 어느 쪽이 맞는지 판단할 근거가 없어진다.
+ * <p><b>투자 대상 섹터는 001이 소유한다.</b> 뉴스는 그 식별자를 참조만 하고 새로 만들지 않는다. 다만 투자 대상과 대응하지 않는 <b>뉴스 전용 섹터</b>는
+ * 012가 소유한다(spec FR-005, Session 2026-09-25). 수집한 기사 대부분이 투자 대상 밖이라 좁혀 볼 길이 없었기 때문이다. 둘이 섞이지 않게 뉴스
+ * 전용 섹터는 {@code NEWS_}로 시작한다.
  *
  * <p>이 포트를 두는 이유는 001의 저장소 계약이 바뀌어도 뉴스의 application 계층이 흔들리지 않게 하기 위함이다. 구현은 infrastructure에 둔다.
  *
@@ -31,5 +32,23 @@ public interface NewsSectorCatalog {
     /** 001의 대응표가 아직 발행되지 않았는지. 빈 화면과 잘못된 요청을 가르는 기준이다. */
     default boolean isEmpty() {
         return registeredSectorIds().isEmpty();
+    }
+
+    /**
+     * 뉴스를 좁혀 보는 칩 하나.
+     *
+     * @param sectorId 섹터 식별자.
+     * @param name 화면 이름. 001 섹터는 001의 이름이다.
+     * @param investable 001 대응표의 투자 대상 섹터인지. 거짓이면 뉴스 전용 섹터다.
+     */
+    record SelectableSector(String sectorId, String name, boolean investable) {}
+
+    /**
+     * 지금 고를 수 있는 뉴스 섹터를 화면 순서로 돌려준다(spec FR-005, Session 2026-09-25).
+     *
+     * <p>001 섹터는 001에 열려 있을 때만 들어가고, 뉴스 전용 섹터는 늘 들어간다.
+     */
+    default java.util.List<SelectableSector> selectableSectors() {
+        return java.util.List.of();
     }
 }

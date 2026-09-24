@@ -323,10 +323,12 @@ class NewsConfigTest {
 
             assertThat(registry.version()).isEqualTo("news-link-v2");
             assertThat(registry.topics()).isNotEmpty();
-            // 001 대응표(data/config/sector-map-2026-09.json)의 8개 섹터를 그대로 가리킨다. 012가 새 섹터를 만들지 않는다.
-            assertThat(registry.knownSectorIds())
-                    .as("001 대응표에 있는 섹터 식별자만 참조한다")
-                    .containsExactlyInAnyOrder(
+            // 투자 대상 섹터는 001 대응표(data/config/sector-map-2026-09.json)의 8개를 그대로 가리키고,
+            // 나머지는 012가 소유하는 뉴스 전용 섹터다(Session 2026-09-25).
+            assertThat(registry.newsSectors())
+                    .filteredOn(s -> s.owner() == NewsLinkRegistry.SectorOwner.SECTOR_MAP)
+                    .extracting(NewsLinkRegistry.NewsSector::sectorId)
+                    .containsExactly(
                             "SEMICONDUCTOR",
                             "SECONDARY_BATTERY",
                             "BANK",
@@ -335,6 +337,17 @@ class NewsConfigTest {
                             "CONSTRUCTION",
                             "AUTO",
                             "HEAVY_INDUSTRY");
+            assertThat(registry.newsOwnedSectorIds())
+                    .as("뉴스 전용 섹터는 NEWS_로 시작해 001 식별자와 겹치지 않는다")
+                    .isNotEmpty()
+                    .allSatisfy(
+                            id -> assertThat(id).startsWith(NewsLinkRegistry.NEWS_SECTOR_PREFIX));
+            assertThat(registry.knownSectorIds())
+                    .as("모든 연결은 칩 목록에 있는 섹터로 간다")
+                    .isSubsetOf(
+                            registry.newsSectors().stream()
+                                    .map(NewsLinkRegistry.NewsSector::sectorId)
+                                    .toList());
             assertThat(registry.topics())
                     .filteredOn(topic -> !topic.titleKeywords().isEmpty())
                     .as("제목 키워드 주제는 해외 기사를 받는 근거가 되지 않는다")
@@ -370,6 +383,52 @@ class NewsConfigTest {
             assertThat(registry.matchTitle("삼성, hbm 공급 확대"))
                     .containsExactly(java.util.Map.entry("sector-semiconductor", "hbm"));
             assertThat(registry.matchTitle(null)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("영문 키워드는 영문 낱말 경계에서만 걸린다")
+        void 영문_키워드_경계() {
+            NewsLinkRegistry.Topic topic =
+                    new NewsLinkRegistry.Topic(
+                            "sector-news-it",
+                            "IT·AI",
+                            false,
+                            List.of("NEWS_IT"),
+                            List.of("AI"),
+                            List.of());
+
+            assertThat(topic.matchTitle("삼성, AI 칩 투자")).contains("ai");
+            assertThat(topic.matchTitle("AI로 보고서 뚝딱")).contains("ai");
+            assertThat(topic.matchTitle("Taiwan 반도체 수출")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("뉴스 전용 섹터는 NEWS_로 시작해야 하고, 칩 목록에 없는 섹터로 연결할 수 없다")
+        void 뉴스_섹터_규칙() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry.NewsSector(
+                                            "IT", "IT", NewsLinkRegistry.SectorOwner.NEWS))
+                    .isInstanceOf(IllegalArgumentException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry(
+                                            "news-link-test",
+                                            List.of(
+                                                    new NewsLinkRegistry.NewsSector(
+                                                            "NEWS_IT",
+                                                            "IT·AI",
+                                                            NewsLinkRegistry.SectorOwner.NEWS)),
+                                            List.of(
+                                                    new NewsLinkRegistry.Topic(
+                                                            "sector-bank",
+                                                            "은행 업종",
+                                                            false,
+                                                            List.of("BANK"),
+                                                            List.of("은행권"),
+                                                            List.of())),
+                                            List.of()))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
