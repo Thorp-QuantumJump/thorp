@@ -1,3 +1,4 @@
+import { InlineHelp } from '@/components/common/InlineHelp'
 import type { CSSProperties } from 'react'
 import type { AvailabilityTimeline as Timeline } from '@/diagnosis/availabilityTimeline'
 
@@ -59,13 +60,25 @@ export function AvailabilityTimeline({ timeline, className }: AvailabilityTimeli
       aria-label="고른 투자 대상의 비교 가능 구간"
       data-slot="timeline"
     >
-      <h2 data-slot="timeline-title">함께 비교할 수 있는 기간</h2>
+      {/*
+        설명은 제목 옆 물음표 뒤에 둔다. 예전에는 막대에 마우스를 올려야 설명이 떴는데, 그 자리에 설명이
+        있다는 표시가 없어 커서가 갑자기 바뀌는 것으로만 알 수 있었다.
+      */}
+      <div data-slot="timeline-head">
+        <h2 data-slot="timeline-title">함께 비교할 수 있는 기간</h2>
+        <InlineHelp label="함께 비교할 수 있는 기간">
+          <p>
+            <strong>{bindingSectorName}</strong>이(가) {commonStart}에 상장해 시작일이 정해졌습니다.
+          </p>
+          <p>{tracks.map((track) => `${track.name} ${track.listedOn}`).join(' · ')}</p>
+          <p>상장일 기준입니다. 실제 자료 마감일과 전략 준비 기간에 따라 최종 구간은 달라질 수 있습니다.</p>
+        </InlineHelp>
+      </div>
 
       <div data-slot="timeline-row">
         <div
           data-slot="timeline-plot"
           role="img"
-          tabIndex={0}
           style={positionStyle}
           aria-label={`상장일 기준 공통 비교 가능 구간은 ${commonStart}부터 오늘 ${axisEnd}까지, ${timeline.commonSpanLabel}입니다.`}
           aria-describedby={tooltipId}
@@ -90,7 +103,7 @@ export function AvailabilityTimeline({ timeline, className }: AvailabilityTimeli
             </span>
           </p>
 
-          <div id={tooltipId} data-slot="timeline-tooltip" role="tooltip">
+          <div id={tooltipId} data-slot="timeline-description">
             <p>
               <strong>{bindingSectorName}</strong>이(가) {commonStart}에 상장해 시작일이
               정해졌습니다.
