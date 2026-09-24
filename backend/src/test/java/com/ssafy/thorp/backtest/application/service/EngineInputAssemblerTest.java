@@ -203,15 +203,28 @@ class EngineInputAssemblerTest {
     }
 
     @Test
-    @DisplayName("옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다")
-    void leavesAnUnmappableCadenceUntouched() {
+    @DisplayName("거래일 주기는 TRADING_DAYS_{days} 문자열로 옮긴다 — 엔진은 주기를 문자열 하나로 읽는다")
+    void movesATradingDayCadenceToTheEngineSpelling() {
         registryAnswers();
         Map<String, Object> tradingDays =
                 Map.of("rebalancePeriod", Map.of("mode", "TRADING_DAYS", "days", 21));
 
         EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), tradingDays));
 
-        assertThat(input.allocation().parameters()).isEqualTo(tradingDays);
+        assertThat(input.allocation().parameters())
+                .containsEntry("rebalance", "TRADING_DAYS_21")
+                .doesNotContainKey("rebalancePeriod");
+    }
+
+    @Test
+    @DisplayName("옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다")
+    void leavesAnUnmappableCadenceUntouched() {
+        registryAnswers();
+        Map<String, Object> weekly = Map.of("rebalancePeriod", Map.of("mode", "WEEKLY"));
+
+        EngineInput input = assembler.assemble(run(acceptedPlan("FULL_PERIOD", null), weekly));
+
+        assertThat(input.allocation().parameters()).isEqualTo(weekly);
     }
 
     @Test
