@@ -45,4 +45,9 @@ public class RegistryNewsTopicCatalog implements NewsTopicCatalog {
     public Set<String> domesticLinkTopicKeys() {
         return registry.domesticLinkTopicKeys();
     }
+
+    @Override
+    public java.util.Map<String, String> matchTitle(String title) {
+        return registry.matchTitle(title);
+    }
 }

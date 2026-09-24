@@ -75,6 +75,29 @@ public class NewsArticleLinkRepositoryImpl implements NewsArticleLinkRepository 
     }
 
     @Override
+    @Transactional
+    public void addLinks(
+            Long articleId,
+            Set<String> sectorIds,
+            java.util.Map<Long, String> topicEvidenceByTopicId,
+            String ruleVersion) {
+        for (java.util.Map.Entry<Long, String> entry : topicEvidenceByTopicId.entrySet()) {
+            NewsArticleTopicJpaEntity.Key key =
+                    new NewsArticleTopicJpaEntity.Key(articleId, entry.getKey(), ruleVersion);
+            if (!articleTopicRepository.existsById(key)) {
+                articleTopicRepository.save(new NewsArticleTopicJpaEntity(key, entry.getValue()));
+            }
+        }
+        for (String sectorId : sectorIds) {
+            NewsArticleSectorJpaEntity.Key key =
+                    new NewsArticleSectorJpaEntity.Key(articleId, sectorId, ruleVersion);
+            if (!articleSectorRepository.existsById(key)) {
+                articleSectorRepository.save(new NewsArticleSectorJpaEntity(key));
+            }
+        }
+    }
+
+    @Override
     public java.util.Map<Long, java.util.Set<String>> findSectorIdsByArticleIds(
             java.util.Collection<Long> articleIds) {
         if (articleIds == null || articleIds.isEmpty()) {

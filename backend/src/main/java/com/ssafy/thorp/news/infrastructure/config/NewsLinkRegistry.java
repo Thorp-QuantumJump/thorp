@@ -28,9 +28,16 @@ public record NewsLinkRegistry(
      * @param displayName 한국어 표시명.
      * @param domesticLink 국내 섹터와 연결되는 주제인지 여부. 해외 보도는 이 값이 참인 주제가 있어야 수집한다(spec FR-010).
      * @param sectorIds 이 주제가 연결되는 외부 섹터 식별자. spec 001이 소유하는 값이며 여기서 정의하지 않는다.
+     * @param titleKeywords 제목에 들어 있으면 이 주제로 연결하는 문자열. 비어 있으면 제목으로는 연결하지 않는다.
+     * @param titleExclusions 키워드를 찾기 전에 제목에서 지우는 문자열. '한국은행'이 '은행'으로 걸리는 것처럼 뜻이 다른 말을 막는다.
      */
     public record Topic(
-            String topicKey, String displayName, boolean domesticLink, List<String> sectorIds) {
+            String topicKey,
+            String displayName,
+            boolean domesticLink,
+            List<String> sectorIds,
+            List<String> titleKeywords,
+            List<String> titleExclusions) {
 
         public Topic {
             if (topicKey == null || topicKey.isBlank()) {
@@ -40,6 +47,57 @@ public record NewsLinkRegistry(
                 throw new IllegalArgumentException("displayName은 비어 있을 수 없다");
             }
             sectorIds = sectorIds == null ? List.of() : List.copyOf(sectorIds);
+            titleKeywords = normalizedTerms(titleKeywords, "titleKeywords", topicKey);
+            titleExclusions = normalizedTerms(titleExclusions, "titleExclusions", topicKey);
+            if (!titleKeywords.isEmpty() && sectorIds.isEmpty()) {
+                // 제목 키워드는 섹터에 연결하려고 둔다. 섹터 없이 두면 걸려도 아무 조회에 나오지 않는다.
+                throw new IllegalArgumentException("제목 키워드가 있는 주제에 sectorIds가 없다: " + topicKey);
+            }
+        }
+
+        /** 등록표 v1처럼 제목 규칙이 없는 주제. */
+        public Topic(
+                String topicKey, String displayName, boolean domesticLink, List<String> sectorIds) {
+            this(topicKey, displayName, domesticLink, sectorIds, List.of(), List.of());
+        }
+
+        /**
+         * 제목에서 처음 걸린 키워드를 돌려준다. 없으면 빈 값이다.
+         *
+         * <p>제외어를 먼저 지운 뒤 찾는다. 영문은 대소문자를 가리지 않는다. 등록표 순서대로 보므로 같은 제목에는 늘 같은 키워드가 근거로 남는다(원칙 VIII).
+         */
+        public Optional<String> matchTitle(String title) {
+            if (titleKeywords.isEmpty() || title == null || title.isBlank()) {
+                return Optional.empty();
+            }
+            String target = title.toLowerCase(Locale.ROOT);
+            for (String exclusion : titleExclusions) {
+                target = target.replace(exclusion, " ");
+            }
+            for (String keyword : titleKeywords) {
+                if (target.contains(keyword)) {
+                    return Optional.of(keyword);
+                }
+            }
+            return Optional.empty();
+        }
+
+        private static List<String> normalizedTerms(
+                List<String> terms, String field, String topicKey) {
+            if (terms == null) {
+                return List.of();
+            }
+            List<String> normalized = new java.util.ArrayList<>();
+            for (String term : terms) {
+                if (term == null || term.isBlank()) {
+                    throw new IllegalArgumentException(field + "에 빈 값이 있다: " + topicKey);
+                }
+                normalized.add(term.trim().toLowerCase(Locale.ROOT));
+            }
+            if (normalized.stream().distinct().count() != normalized.size()) {
+                throw new IllegalArgumentException(field + "가 중복됐다: " + topicKey);
+            }
+            return List.copyOf(normalized);
         }
     }
 
@@ -106,6 +164,19 @@ public record NewsLinkRegistry(
         return topics.stream()
                 .flatMap(t -> t.sectorIds().stream())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * 제목 키워드로 걸리는 주제와 그 근거 키워드. 등록표 순서를 지킨다.
+     *
+     * <p>뉴스원 분류 값과 별개의 근거다. 분류 값을 주지 않는 매체의 기사도 제목이 섹터를 말하면 연결한다(spec FR-010).
+     */
+    public java.util.Map<String, String> matchTitle(String title) {
+        java.util.Map<String, String> matched = new java.util.LinkedHashMap<>();
+        for (Topic topic : topics) {
+            topic.matchTitle(title).ifPresent(keyword -> matched.put(topic.topicKey(), keyword));
+        }
+        return java.util.Collections.unmodifiableMap(matched);
     }
 
     /** 해외 보도를 수집할 수 있는 국내 연결 주제 키. */

@@ -1,0 +1,317 @@
+{
+  "version": "news-link-v2",
+  "_comment": "섹터 식별자는 spec 001이 소유한다. 이 파일은 섹터를 선언하지 않고 주제 키와 001 섹터 식별자의 연결, 뉴스원 분류 값의 주제 키 매핑, 그리고 기사 제목으로 섹터를 알아보는 키워드 규칙만 담는다. v2(2026-09-24)에서 두 가지를 더했다 — 기존 주제 중 섹터가 분명한 것(반도체)에 001 식별자를 채우고, 001 대응표(data/config/sector-map-2026-09.json)의 8개 섹터마다 제목 키워드 주제(sector-*)를 두었다. 국내 매체 대부분이 기사별 분류를 주지 않아 분류 값만으로는 섹터에 연결할 근거가 없기 때문이다(spec FR-010).",
+  "_domesticLink": "참이면 GDELT 질의어가 되고 해외 기사를 받는 근거가 된다. 굵은 국내 분류(경제 일반·증권·산업·IT)는 거짓이다 — 해외 보도를 받아들이는 근거로 쓰기엔 넓고, 슬러그를 그대로 검색어로 보내면 GDELT가 엉뚱한 것을 돌려준다.",
+  "_mapping": "sourceCategory는 뉴스원이 실제로 주는 값을 그대로 적는다. 매핑되지 않은 값은 연결에 쓰지 않고 미등록 건수로만 센다 — 목록을 넓히는 것보다 모르는 값을 모른다고 두는 편이 낫다(spec FR-010). 주제를 실제보다 좁게 붙이지 않는다: 증권 기사에 '환율'을 달면 화면이 사실이 아닌 것을 보인다.",
+  "_titleKeywords": "titleKeywords는 제목에 그 문자열이 들어 있으면 그 주제로 연결한다. 영문은 대소문자를 가리지 않는다. titleExclusions는 먼저 제목에서 지운 뒤 키워드를 찾는다 — '한국은행' 기사가 은행 섹터로 가지 않게 하려는 것이다. 근거로는 걸린 키워드가 'title:키워드'로 남는다. 도메인 판단 없이 넓게 걸리는 단어(건설·수주·에너지·유가·코스피 등)는 넣지 않았다 — 2026-09-24 실제 제목 200건에서 오연결을 만든 단어들이다. 제목 키워드 주제는 domesticLink가 거짓이다. GDELT 질의어가 되거나 해외 기사를 받는 근거가 되지 않는다. 정밀도·재현율은 src/test/resources/news/sector-link-eval-v1.json으로 잰다.",
+  "topics": [
+    {
+      "topicKey": "monetary-policy",
+      "displayName": "통화정책",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "prices",
+      "displayName": "물가",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "employment",
+      "displayName": "고용",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "trade",
+      "displayName": "교역",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "exchange-rate",
+      "displayName": "환율",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "energy",
+      "displayName": "에너지",
+      "domesticLink": true,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "semiconductor",
+      "displayName": "반도체",
+      "domesticLink": true,
+      "sectorIds": [
+        "SEMICONDUCTOR"
+      ]
+    },
+    {
+      "topicKey": "economy-general",
+      "displayName": "경제 일반",
+      "domesticLink": false,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "markets",
+      "displayName": "증권·금융시장",
+      "domesticLink": false,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "industry",
+      "displayName": "산업·기업",
+      "domesticLink": false,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "tech",
+      "displayName": "IT·과학",
+      "domesticLink": false,
+      "sectorIds": []
+    },
+    {
+      "topicKey": "sector-semiconductor",
+      "displayName": "반도체 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "SEMICONDUCTOR"
+      ],
+      "titleKeywords": [
+        "반도체",
+        "HBM",
+        "D램",
+        "낸드",
+        "파운드리",
+        "SK하이닉스",
+        "하이닉스",
+        "삼성전자",
+        "팹리스"
+      ]
+    },
+    {
+      "topicKey": "sector-battery",
+      "displayName": "2차전지 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "SECONDARY_BATTERY"
+      ],
+      "titleKeywords": [
+        "2차전지",
+        "이차전지",
+        "배터리",
+        "양극재",
+        "음극재",
+        "전해액",
+        "에코프로",
+        "LG에너지솔루션",
+        "LG엔솔",
+        "엘앤에프",
+        "포스코퓨처엠",
+        "삼성SDI",
+        "SK온"
+      ]
+    },
+    {
+      "topicKey": "sector-bank",
+      "displayName": "은행 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "BANK"
+      ],
+      "titleKeywords": [
+        "시중은행",
+        "인터넷은행",
+        "은행권",
+        "금융지주",
+        "KB금융",
+        "신한금융",
+        "하나금융",
+        "우리금융",
+        "예대금리",
+        "주담대",
+        "가계대출"
+      ],
+      "titleExclusions": [
+        "한국은행",
+        "한은"
+      ]
+    },
+    {
+      "topicKey": "sector-securities",
+      "displayName": "증권 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "SECURITIES"
+      ],
+      "titleKeywords": [
+        "증권사",
+        "브로커리지",
+        "공모주",
+        "IPO",
+        "미래에셋증권",
+        "한국투자증권",
+        "키움증권",
+        "NH투자증권",
+        "삼성증권",
+        "거래대금"
+      ]
+    },
+    {
+      "topicKey": "sector-cosmetics",
+      "displayName": "화장품 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "COSMETICS"
+      ],
+      "titleKeywords": [
+        "화장품",
+        "K뷰티",
+        "뷰티",
+        "아모레퍼시픽",
+        "아모레",
+        "LG생활건강",
+        "LG생건",
+        "코스맥스",
+        "한국콜마",
+        "코스메카",
+        "에이피알",
+        "클리오",
+        "달바"
+      ]
+    },
+    {
+      "topicKey": "sector-construction",
+      "displayName": "건설 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "CONSTRUCTION"
+      ],
+      "titleKeywords": [
+        "건설사",
+        "건설업",
+        "건설 수주",
+        "해외건설",
+        "분양",
+        "재건축",
+        "재개발",
+        "주택 착공",
+        "시공사",
+        "부동산 PF",
+        "현대건설",
+        "GS건설",
+        "대우건설"
+      ]
+    },
+    {
+      "topicKey": "sector-auto",
+      "displayName": "자동차 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "AUTO"
+      ],
+      "titleKeywords": [
+        "자동차",
+        "현대차",
+        "기아",
+        "완성차",
+        "전기차",
+        "현대모비스",
+        "車"
+      ]
+    },
+    {
+      "topicKey": "sector-heavy-industry",
+      "displayName": "조선·중공업 업종",
+      "domesticLink": false,
+      "sectorIds": [
+        "HEAVY_INDUSTRY"
+      ],
+      "titleKeywords": [
+        "조선",
+        "조선사",
+        "HD현대",
+        "한화오션",
+        "삼성중공업",
+        "LNG선",
+        "방산",
+        "중공업",
+        "원전",
+        "두산에너빌리티"
+      ]
+    }
+  ],
+  "categoryMappings": [
+    {
+      "sourceCategory": "경제",
+      "topicKey": "economy-general"
+    },
+    {
+      "sourceCategory": "경제 일반",
+      "topicKey": "economy-general"
+    },
+    {
+      "sourceCategory": "금융",
+      "topicKey": "markets"
+    },
+    {
+      "sourceCategory": "금융·재테크",
+      "topicKey": "markets"
+    },
+    {
+      "sourceCategory": "증권",
+      "topicKey": "markets"
+    },
+    {
+      "sourceCategory": "산업·통상",
+      "topicKey": "industry"
+    },
+    {
+      "sourceCategory": "기업소식",
+      "topicKey": "industry"
+    },
+    {
+      "sourceCategory": "기업/경영",
+      "topicKey": "industry"
+    },
+    {
+      "sourceCategory": "IT비즈·정책",
+      "topicKey": "tech"
+    },
+    {
+      "sourceCategory": "PC·기기가전",
+      "topicKey": "tech"
+    },
+    {
+      "sourceCategory": "물가",
+      "topicKey": "prices"
+    },
+    {
+      "sourceCategory": "생활경제·소비자",
+      "topicKey": "prices"
+    },
+    {
+      "sourceCategory": "고용",
+      "topicKey": "employment"
+    },
+    {
+      "sourceCategory": "무역",
+      "topicKey": "trade"
+    },
+    {
+      "sourceCategory": "환율",
+      "topicKey": "exchange-rate"
+    },
+    {
+      "sourceCategory": "에너지",
+      "topicKey": "energy"
+    },
+    {
+      "sourceCategory": "반도체",
+      "topicKey": "semiconductor"
+    }
+  ]
+}
