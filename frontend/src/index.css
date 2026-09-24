@@ -124,6 +124,9 @@
   --thorp-cta-lift: -2px;
   /* 화면 글꼴. 첫 화면처럼 숫자·영문은 Geist, 한글은 SUIT로 선다. 각 화면 뿌리에서 var(--thorp-font-page, inherit)로 쓴다. */
   --thorp-font-page: var(--thorp-font-display);
+  /* 큰 숫자(수익률·금액)도 첫 화면처럼 Geist 고정폭 숫자로 선다. 예전에는 코드용 고정폭 글꼴이었다. */
+  --thorp-font-number: var(--thorp-font-display);
+  --thorp-number-weight: 650;
   --thorp-overlay: rgb(0 0 0 / 68%);
   /*
     초록은 누를 것(버튼·링크·고름·초점·진행)과 작은 포인트(영문 작은 제목, 구역 아이콘·번호)에 쓴다.
@@ -250,6 +253,8 @@
   --thorp-accent-hover: initial;
   --thorp-cta-lift: initial;
   --thorp-font-page: initial;
+  --thorp-font-number: initial;
+  --thorp-number-weight: initial;
   --thorp-overlay: initial;
   --thorp-eyebrow: initial;
   --thorp-ornament: initial;

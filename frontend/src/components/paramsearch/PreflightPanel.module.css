@@ -13,7 +13,7 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1.16rem;
+  font-size: var(--thorp-text-heading, 1.16rem);
   font-weight: 750;
   letter-spacing: -0.02em;
 }
@@ -21,7 +21,7 @@
 .header p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.6;
 }
 
@@ -45,7 +45,7 @@
 
 .item dt {
   color: var(--thorp-muted);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -60,12 +60,12 @@
   min-width: 0;
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
 }
 
 .empty {
   color: var(--thorp-muted);
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
 }
 
 .strategyList,
@@ -107,13 +107,13 @@
 
 .spaceAxes {
   color: var(--thorp-copy);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.5;
 }
 
 .spaceCount {
   color: var(--thorp-muted);
-  font-size: 0.7rem;
+  font-size: var(--thorp-text-caption, 0.7rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -124,13 +124,13 @@
 
 .workload strong {
   color: var(--thorp-ornament, var(--thorp-accent-soft));
-  font-size: 1.05rem;
+  font-size: var(--thorp-text-heading, 1.05rem);
   font-weight: 750;
 }
 
 .workloadTotal {
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .exclusions {
@@ -138,7 +138,7 @@
   padding-left: 11px;
   border-left: 1px solid var(--thorp-line-strong);
   color: var(--thorp-copy);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.5;
 }
 
@@ -159,11 +159,11 @@
   align-items: center;
   gap: 6px;
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
 }
 
 .limitValue {
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-variant-numeric: tabular-nums;
   font-weight: 650;
 }
@@ -171,7 +171,7 @@
 .period {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -185,7 +185,7 @@
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
@@ -214,10 +214,10 @@
   gap: 7px;
   padding: 0 12px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: var(--thorp-accent-muted);
   color: var(--thorp-accent-soft);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   font-weight: 650;
   text-decoration: none;
   transition: background 160ms ease, color 160ms ease;
@@ -239,7 +239,7 @@
 
 .run {
   display: inline-flex;
-  min-height: 46px;
+  min-height: var(--thorp-control-cta, 46px);
   align-items: center;
   justify-content: center;
   gap: 9px;
@@ -248,8 +248,8 @@
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   cursor: pointer;
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: var(--thorp-control-font, inherit);
+  font-weight: var(--thorp-control-weight, 700);
   transition: transform 160ms ease, opacity 160ms ease;
 }
 

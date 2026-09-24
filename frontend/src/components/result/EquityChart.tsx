@@ -317,7 +317,7 @@ export function EquityChart(props: EquityChartProps) {
           className={styles.canvas}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 18, right: 88, bottom: 30, left: 58 }}
+          margin={{ top: 18, right: 88, bottom: 44, left: 58 }}
           xDataKey="date"
           yDomain={yDomain}
           yDomainTween={false}
@@ -383,7 +383,7 @@ export function EquityChart(props: EquityChartProps) {
 
           <SeriesEndLabels series={endLabels} />
 
-          <XAxis numTicks={4} tickMode="domain" />
+          <XAxis numTicks={4} stackYear tickMode="domain" />
         </LineChart>
       </div>
 

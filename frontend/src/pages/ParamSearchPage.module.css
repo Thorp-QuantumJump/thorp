@@ -3,12 +3,13 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
   display: grid;
   gap: 20px;
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
@@ -18,17 +19,22 @@
   align-items: center;
   gap: 9px;
   color: var(--thorp-eyebrow, var(--thorp-accent-soft));
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 750;
   letter-spacing: 0.14em;
 }
 
+:global(:root:not([data-design='classic'])) .classicOnly {
+  display: none;
+}
+
 .main h1 {
-  max-width: 720px;
+  max-width: none;
   margin: 0;
-  font-size: clamp(1.5rem, 3.4vw, 2.2rem);
-  letter-spacing: -0.04em;
-  line-height: 1.2;
+  font-size: var(--thorp-text-title, clamp(1.5rem, 3.4vw, 2.2rem));
+  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  line-height: var(--thorp-title-leading, 1.2);
+  font-weight: 700;
 }
 
 .headline {
@@ -41,7 +47,7 @@
   max-width: 640px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.75;
 }
 
@@ -56,14 +62,14 @@
 
 .guide h2 {
   margin: 0;
-  font-size: 0.94rem;
+  font-size: var(--thorp-text-body, 0.94rem);
   font-weight: 700;
 }
 
 .guide p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.65;
 }
 
@@ -75,9 +81,9 @@
   gap: 8px;
   padding: 0 15px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   color: var(--thorp-foreground);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 700;
   text-decoration: none;
 }
@@ -108,13 +114,13 @@
 
 .target span {
   color: var(--thorp-muted);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   font-weight: 700;
 }
 
 .target strong {
   overflow-wrap: anywhere;
-  font-size: 0.92rem;
+  font-size: var(--thorp-text-body, 0.92rem);
   font-weight: 700;
 }
 
@@ -131,7 +137,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   font-weight: 750;
 }
 
@@ -150,7 +156,7 @@
   background: transparent;
   color: var(--thorp-accent-soft);
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   font-weight: 700;
 }
 
@@ -178,7 +184,7 @@
 
 .progress h2 {
   margin: 0;
-  font-size: 1.18rem;
+  font-size: var(--thorp-text-heading, 1.18rem);
   font-weight: 750;
 }
 
@@ -189,12 +195,12 @@
   flex-wrap: wrap;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
 }
 
 .statusLine strong {
   color: var(--thorp-foreground);
-  font-size: 1.12rem;
+  font-size: var(--thorp-text-heading, 1.12rem);
   font-weight: 750;
 }
 
@@ -215,13 +221,13 @@
 
 .counts dt {
   color: var(--thorp-muted);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   font-weight: 650;
 }
 
 .counts dd {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--thorp-text-heading, 1.1rem);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -229,7 +235,7 @@
 .note {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.6;
 }
 
@@ -239,7 +245,7 @@
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   line-height: 1.6;
 }
 
