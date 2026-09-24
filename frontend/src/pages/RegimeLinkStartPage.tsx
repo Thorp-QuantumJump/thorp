@@ -8,24 +8,25 @@ import { buildSectorSelectionPath, parseCaseId } from '@/marketflow/handoff'
 import styles from './RegimeLinkStartPage.module.css'
 
 /**
- * 시장 흐름 경로의 011 진입 화면이다(진입 계약 §2).
+ * 사례에서 들어오는 011 진입 화면이다(진입 계약 §2). 010 사례 상세와 투자 대상 고르기의 '지금과 비슷했던
+ * 과거 시장'이 이리로 보낸다.
  *
  * <p>하는 일은 셋뿐이다. ① 익명이면 로그인으로 보내고 같은 주소로 돌아오게 한다, ② `case`가 읽을 수 있는
  * 값이고 실제로 있는 사례인지 확인한다, ③ 확인되면 002(섹터·비중)로 넘긴다. <b>화면을 그리는 것이
  * 목적이 아니라 이어 주는 것이 목적이다.</b>
  *
  * <p><b>사례 없이 011을 열지 않는다.</b> `case`가 없거나 형식이 틀리거나 010 표시 후보에 없으면
- * 시장 흐름으로 안내하고 이유를 한 문장으로 말한다(진입 계약 §5).
+ * 사례를 다시 고르는 투자 대상 고르기로 안내하고 이유를 한 문장으로 말한다(진입 계약 §5).
  */
 
 const CASE_MISSING =
-  '전략을 비교할 과거 사례가 주소에 없습니다. 시장 흐름에서 사례를 먼저 고른 뒤 다시 시도해 주세요.'
+  '전략을 비교할 과거 사례가 주소에 없습니다. 투자 대상 고르기에서 과거 사례를 먼저 고른 뒤 다시 시도해 주세요.'
 const CASE_MALFORMED =
-  '주소에 담긴 사례를 읽을 수 없습니다. 시장 흐름에서 사례를 먼저 고른 뒤 다시 시도해 주세요.'
+  '주소에 담긴 사례를 읽을 수 없습니다. 투자 대상 고르기에서 과거 사례를 먼저 고른 뒤 다시 시도해 주세요.'
 const CASE_NOT_FOUND =
-  '그 사례를 더는 찾을 수 없습니다. 시장 흐름에서 사례를 다시 고른 뒤 이어가 주세요.'
+  '그 사례를 더는 찾을 수 없습니다. 투자 대상 고르기에서 과거 사례를 다시 고른 뒤 이어가 주세요.'
 const CASE_UNAVAILABLE =
-  '사례를 확인하지 못했습니다. 잠시 후 시장 흐름에서 다시 시도해 주세요.'
+  '사례를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
 type Phase = { status: 'checking' } | { status: 'blocked'; message: string }
 
@@ -98,7 +99,8 @@ export function RegimeLinkStartPage() {
         ) : (
           <div className={styles.blocked} role="alert">
             <p>{phase.message}</p>
-            <Link to="/market-flow">시장 흐름으로 가기</Link>
+            {/* 사례를 고르는 자리는 투자 대상 고르기의 '지금과 비슷했던 과거 시장'이다(002 FR-018). */}
+            <Link to="/diagnosis/sectors">과거 사례 다시 고르기</Link>
           </div>
         )}
       </main>

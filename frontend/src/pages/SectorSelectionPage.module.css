@@ -1198,3 +1198,35 @@
     transform: none;
   }
 }
+
+/* 지금 보는 섹터의 소식(002 FR-019). 다른 카드와 같은 면·모서리다. */
+.sectorNews {
+  padding: var(--thorp-pad-card, 20px 24px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 12px);
+  background: var(--thorp-surface);
+}
+
+.sectorNews h2 {
+  margin: 0;
+  font-size: var(--thorp-text-heading, 1.08rem);
+  font-weight: 650;
+}
+
+/* '다음: 전략 고르기' 아래의 지금 국내 시장. 지수마다 카드 하나씩 세로로 쌓는다. */
+.railMarket {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.railMarket h2 {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

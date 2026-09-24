@@ -39,22 +39,6 @@
 .loadFailure button { display: inline-flex; align-items: center; gap: 8px; min-height: var(--thorp-control, 44px); padding: var(--thorp-control-pad-block, 8px) 16px; border: 1px solid var(--thorp-line-strong); color: var(--thorp-foreground); background: transparent; cursor: pointer; }
 .loadFailure button:hover { border-color: var(--thorp-accent); }
 .historyNotice { margin: 0; padding: 13px 0; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); line-height: 1.6; }
-.connections { padding-top: 36px; }
-.connectionHeader { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 20px; }
-.connectionHeader h2 { margin: 0; font-size: var(--thorp-text-heading, 1.25rem); letter-spacing: -.035em; }
-.connectionHeader p { margin: 0 0 0 auto; font-size: var(--thorp-text-small, .78rem); color: var(--thorp-copy); }
-.connectionGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line); }
-.connectionGrid article { position: relative; min-width: 0; padding: 24px; }
-.connectionGrid article:first-child { padding-left: 0; }
-.connectionGrid article:last-child { padding-right: 0; }
-.connectionGrid article + article { border-left: 1px solid var(--thorp-line); }
-.connectionGrid article > svg { display: block; color: var(--thorp-copy); margin-bottom: 18px; }
-.connectionLabel { color: var(--thorp-copy); font: 500 var(--thorp-text-label, .6rem)/1.4 var(--thorp-font-display); letter-spacing: .12em; }
-.connectionGrid h3 { margin: 7px 0 9px; font-size: var(--thorp-text-heading, 1.05rem); }
-.connectionGrid p { margin: 0; min-height: 3.3em; color: var(--thorp-copy); font-size: var(--thorp-text-small, .8rem); line-height: 1.65; word-break: keep-all; }
-.connectionGrid button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; background: transparent; color: var(--thorp-copy); text-align: left; font: 500 var(--thorp-text-small, .8rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); cursor: not-allowed; }
-.connectionGrid button small { margin-left: auto; white-space: nowrap; font-size: var(--thorp-text-label, .65rem); }
-.connectionLink { display: flex; width: 100%; align-items: center; gap: 8px; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; color: var(--thorp-copy); text-decoration: none; font: 500 var(--thorp-text-small, .8rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 1100px) {
   .main { width: calc(100% - 48px); }
@@ -72,13 +56,6 @@
   .fieldList { padding: 0; }
   .detailPanel { border-left: 0; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; }
   .detailJump { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--thorp-control, 48px); padding: var(--thorp-control-pad-block, 10px) 14px; margin: 14px 0 24px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-accent-soft); font: 500 var(--thorp-text-small, .8rem)/1.5 var(--thorp-font-page, var(--thorp-font-body)); cursor: pointer; }
-  .connectionGrid { grid-template-columns: 1fr; }
-  .connectionGrid article, .connectionGrid article:first-child, .connectionGrid article:last-child { padding: 22px 0; }
-  .connectionGrid article + article { border-left: 0; border-top: 1px solid var(--thorp-line); }
-  .connectionGrid article > svg { float: right; }
-  .connectionGrid p { min-height: 0; }
-  .connectionHeader { display: grid; }
-  .connectionHeader p { margin: 0; }
 }
 @media (max-width: 420px) {
   .main { width: calc(100% - 28px); }
@@ -98,10 +75,7 @@
 */
 :global(:root:not([data-design='classic'])) .workspaceHeading { border: 0; padding: 4px 2px 14px; }
 :global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; grid-template-columns: minmax(320px, .85fr) minmax(0, 1.65fr); }
-:global(:root:not([data-design='classic'])) .fieldRail,
-:global(:root:not([data-design='classic'])) .detailPanel,
-:global(:root:not([data-design='classic'])) .main > .loadFailure,
-:global(:root:not([data-design='classic'])) .connectionGrid article {
+:global(:root:not([data-design='classic'])) .fieldRail, :global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
@@ -114,15 +88,7 @@
 :global(:root:not([data-design='classic'])) .detailJump { border-radius: var(--thorp-radius-control); }
 :global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }
 :global(:root:not([data-design='classic'])) .historyNotice { padding: 14px 2px; }
-:global(:root:not([data-design='classic'])) .connectionGrid { gap: 16px; border: 0; }
-:global(:root:not([data-design='classic'])) .connectionGrid article,
-:global(:root:not([data-design='classic'])) .connectionGrid article:first-child,
-:global(:root:not([data-design='classic'])) .connectionGrid article:last-child { display: flex; flex-direction: column; padding: 24px; }
-:global(:root:not([data-design='classic'])) .connectionGrid article + article { border-left: 1px solid var(--thorp-line); }
-:global(:root:not([data-design='classic'])) .connectionLabel { color: var(--thorp-eyebrow); }
-:global(:root:not([data-design='classic'])) .connectionGrid article > svg { color: var(--thorp-ornament); }
 /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */
-:global(:root:not([data-design='classic'])) .connectionLink { margin-top: auto; padding-top: 14px; color: var(--thorp-foreground); font-weight: 600; }
 @media (max-width: 1100px) {
   :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: minmax(290px, .95fr) minmax(0, 1.5fr); }
   :global(:root:not([data-design='classic'])) .detailPanel { padding: 20px; }
@@ -131,14 +97,7 @@
   :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: 1fr; }
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
   :global(:root:not([data-design='classic'])) .detailJump { margin: 8px 0 0; }
-  :global(:root:not([data-design='classic'])) .connectionGrid { grid-template-columns: 1fr; }
-  :global(:root:not([data-design='classic'])) .connectionGrid article,
-  :global(:root:not([data-design='classic'])) .connectionGrid article:first-child,
-  :global(:root:not([data-design='classic'])) .connectionGrid article:last-child { padding: 20px; }
-  :global(:root:not([data-design='classic'])) .connectionGrid article + article { border-top: 1px solid var(--thorp-line); }
 }
 
 /* 글자 밝기 세 단(MarketFlow.module.css와 같은 규칙). 목록 머리의 시점, 역사 비교 안내는 회색이다. */
-:global(:root:not([data-design='classic'])) .workspaceHeading > span,
-:global(:root:not([data-design='classic'])) .historyNotice,
-:global(:root:not([data-design='classic'])) .connectionGrid p { color: var(--thorp-muted); }
+:global(:root:not([data-design='classic'])) .workspaceHeading > span, :global(:root:not([data-design='classic'])) .historyNotice { color: var(--thorp-muted); }
