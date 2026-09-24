@@ -1,0 +1,283 @@
+/* 화면 맥락 도우미(spec 015). 층 순서: 버튼 54 < 말풍선 55 < 대화상자 60·61 < 물음표 도움말 80. */
+
+.fab {
+  position: fixed;
+  z-index: 54;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: var(--thorp-surface-raised, var(--thorp-background));
+  color: var(--thorp-accent, var(--thorp-foreground));
+  box-shadow: 0 10px 28px rgb(0 0 0 / 22%);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    top 0.18s ease,
+    left 0.18s ease,
+    right 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.fab:hover {
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+}
+
+.fab:focus-visible {
+  outline: var(--thorp-focus-outline, 2px solid var(--thorp-accent));
+  outline-offset: var(--thorp-focus-offset, 2px);
+}
+
+.fab[data-dragging='true'] {
+  cursor: grabbing;
+  transition: none;
+}
+
+.fab[data-narrow='true'] {
+  right: 16px;
+  bottom: 16px;
+  cursor: pointer;
+  touch-action: auto;
+}
+
+.fab[aria-expanded='true'] {
+  background: var(--thorp-accent-soft, var(--thorp-surface-raised));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
+}
+
+/* 넓은 화면의 말풍선. 비교 대상 팝오버와 같은 표면이고 한 층 아래다. */
+.popover {
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(600px, var(--radix-popover-content-available-height, calc(100svh - 32px)));
+  overflow: hidden;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-card, 12px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 24%);
+}
+
+/* 좁은 화면의 바닥 시트. 뒤 화면을 막지 않는다. */
+.sheet {
+  position: fixed;
+  z-index: 55;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 80svh;
+  border: 1px solid var(--thorp-line-strong);
+  border-bottom: 0;
+  border-radius: var(--thorp-radius-card, 12px) var(--thorp-radius-card, 12px) 0 0;
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 22%);
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 16px 16px;
+  gap: 10px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.context {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--thorp-muted);
+}
+
+.close {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--thorp-accent-soft, transparent);
+  color: var(--thorp-foreground);
+}
+
+.notice {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-accent-soft, var(--thorp-background));
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.example {
+  padding: 6px 10px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-foreground);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.example:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-line-strong));
+}
+
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  min-height: 0;
+}
+
+.exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.question {
+  align-self: flex-end;
+  max-width: 90%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--thorp-accent-soft, var(--thorp-background));
+  overflow-wrap: anywhere;
+}
+
+.pending,
+.answer {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pending {
+  color: var(--thorp-muted);
+}
+
+.answer[data-status='INSUFFICIENT_EVIDENCE'],
+.answer[data-status='OUT_OF_SCOPE'] {
+  color: var(--thorp-copy);
+}
+
+.evidence {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  width: 100%;
+  padding: 8px 10px;
+  gap: 2px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-background);
+  color: var(--thorp-foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--thorp-line-strong);
+}
+
+.cardLabel {
+  font-size: 0.8rem;
+  color: var(--thorp-muted);
+}
+
+.cardValue {
+  font-family: var(--thorp-font-number, inherit);
+  font-size: 1rem;
+}
+
+.cardMeta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--thorp-muted);
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--thorp-negative, var(--thorp-foreground));
+}
+
+.failure p {
+  margin: 0;
+  flex: 1 1 200px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  width: 100%;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line));
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-background);
+  color: var(--thorp-foreground);
+  font: inherit;
+}
+
+.formRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.counter {
+  font-size: 0.8rem;
+  color: var(--thorp-muted);
+  font-variant-numeric: tabular-nums;
+}
