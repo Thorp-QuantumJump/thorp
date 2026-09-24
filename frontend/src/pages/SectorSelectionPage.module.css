@@ -676,11 +676,26 @@
   고른 것을 계속 보이는 자리다. 화면을 내려도 따라온다 — 목록을 훑는 동안 무엇을 담았는지가
   눈앞에 남아 있어야 한다.
 */
-.rail {
+/*
+  오른쪽 칸: 선택 요약(국내 시장 포함)과 그 아래 섹터 소식 카드. 칸 전체가 따라 내려오며, 화면보다
+  길어지면 칸 안에서 스크롤해 '다음: 전략 고르기'가 늘 보이게 한다.
+*/
+.side {
   display: flex;
   position: sticky;
   grid-area: rail;
   top: 18px;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.rail {
+  display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 12px;
   padding: var(--thorp-pad-card, 18px);
@@ -980,8 +995,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rail {
+  .side {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -1199,20 +1216,6 @@
   }
 }
 
-/* 지금 보는 섹터의 소식(002 FR-019). 다른 카드와 같은 면·모서리다. */
-.sectorNews {
-  padding: var(--thorp-pad-card, 20px 24px);
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 12px);
-  background: var(--thorp-surface);
-}
-
-.sectorNews h2 {
-  margin: 0;
-  font-size: var(--thorp-text-heading, 1.08rem);
-  font-weight: 650;
-}
-
 /* '다음: 전략 고르기' 아래의 지금 국내 시장. 지수마다 카드 하나씩 세로로 쌓는다. */
 .railMarket {
   display: flex;
@@ -1224,9 +1227,17 @@
 }
 
 .railMarket h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.railMarket h2 svg {
+  flex-shrink: 0;
+  color: var(--thorp-accent-soft);
 }

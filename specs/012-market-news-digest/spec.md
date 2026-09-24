@@ -10,7 +10,7 @@
 
 **근거 문서**: Notion 기획서 "Thorp - 퀀트 전략 분석 플랫폼"(2026-09-09 18:03 UTC 편집판) §4.4, §6.2, §6.3, §10.1과 결정 D01·D12, constitution v1.0.0 원칙 I·III·V·VI·X와 "뉴스·거시 데이터". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.
 
-**관련 spec**: 뉴스 묶음은 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md)의 투자 대상 고르기에서 지금 보는 섹터의 소식으로 놓인다(Session 2026-09-24, 예전에는 [009](../009-market-flow-overview/spec.md) 기본 화면). 과거 사례에 당시 뉴스를 연결하는 화면은 [010](../010-economic-regime-search/spec.md)·[011](../011-regime-strategy-link/spec.md)이며, 섹터 목록은 [001](../001-etf-market-data/spec.md)의 대응표를 따른다. 012는 허가 범위를 적용한 기사 메타데이터 내보내기 API를 제공하고 [006](../006-my-records/spec.md) FR-016은 이 API를 사용한다.
+**관련 spec**: 뉴스 묶음은 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md)의 투자 대상 고르기의 '시장 흐름 뉴스' 카드로 놓이며 기본 '전체'에서 섹터별로 좁혀 볼 수 있다(Session 2026-09-24, 예전에는 [009](../009-market-flow-overview/spec.md) 기본 화면). 과거 사례에 당시 뉴스를 연결하는 화면은 [010](../010-economic-regime-search/spec.md)·[011](../011-regime-strategy-link/spec.md)이며, 섹터 목록은 [001](../001-etf-market-data/spec.md)의 대응표를 따른다. 012는 허가 범위를 적용한 기사 메타데이터 내보내기 API를 제공하고 [006](../006-my-records/spec.md) FR-016은 이 API를 사용한다.
 
 ## 범위 요약
 
