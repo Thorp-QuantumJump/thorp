@@ -1,0 +1,70 @@
+/* 오른쪽 칸의 시장 흐름 뉴스 카드. 선택 요약과 같은 면·모서리다. */
+.card {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--thorp-pad-card, 18px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 12px);
+  background: var(--thorp-surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--thorp-text-body, 0.98rem);
+  font-weight: 650;
+}
+
+.title svg {
+  flex-shrink: 0;
+  color: var(--thorp-accent-soft);
+}
+
+/* 섹터별로 보기. 좁은 칸이라 작은 칩을 여러 줄로 흘린다. */
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-text-caption, 0.72rem);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.chip:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--thorp-accent-soft);
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.chip:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}

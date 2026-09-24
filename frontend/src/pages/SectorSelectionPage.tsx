@@ -1,3 +1,4 @@
+import { ChartNoAxesCombined } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
@@ -22,7 +23,7 @@ import { appendCaseToPath } from '@/marketflow/handoff'
 import type { SectorSummary } from '@/types/sector'
 import heading from '@/components/common/PageHeading.module.css'
 import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'
-import { NewsDigestSection } from '@/components/marketflow/NewsDigestSection'
+import { SectorNews } from '@/components/diagnosis/SectorNews'
 import { MarketNow } from '@/components/diagnosis/MarketNow'
 import styles from './SectorSelectionPage.module.css'
 
@@ -251,52 +252,55 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           백테스트한다. 받지 못해도 투자 대상 고르기는 막히지 않는다.
         */}
         <SimilarPastMarket caseId={caseId} />
-
-        {/* 지금 보는 섹터의 소식(002 FR-019, 012 FR-001). 섹터는 목록에서 보고 있는 것으로 정해진다. */}
-        {viewing ? (
-          <section className={styles.sectorNews} aria-labelledby="sector-news-title">
-            <h2 id="sector-news-title">{viewing.name} 소식</h2>
-            <NewsDigestSection sectorCode={viewing.code} />
-          </section>
-        ) : null}
       </section>
 
-      <SelectedInstrumentsRail
-        className={styles.rail}
-        selected={selectedSectors}
-        minimumCount={MINIMUM_SECTOR_COUNT}
-        compact={detailExpanded}
-        onRemove={(code) => selection.toggleSector(code, false)}
-        onProceed={proceed}
-        proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
-        footer={
-          // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-          <section className={styles.railMarket} aria-labelledby="rail-market-title">
-            <h2 id="rail-market-title">지금 국내 시장</h2>
-            <MarketNow />
-          </section>
-        }
-      >
-        {/*
-          고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
-          위 타임라인에서 이미 보이므로 여기서 같은 문장을 되풀이하지 않는다.
-        */}
-        <SelectionMeaningNotice
-          className={styles.meaningNotice}
-          selectedCount={selectedCount}
-        />
+      <div className={styles.side}>
+        <SelectedInstrumentsRail
+          className={styles.rail}
+          selected={selectedSectors}
+          minimumCount={MINIMUM_SECTOR_COUNT}
+          compact={detailExpanded}
+          onRemove={(code) => selection.toggleSector(code, false)}
+          onProceed={proceed}
+          proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
+          footer={
+            // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+            <section className={styles.railMarket} aria-labelledby="rail-market-title">
+              <h2 id="rail-market-title">
+                <ChartNoAxesCombined size={14} aria-hidden="true" />
+                지금 국내 시장
+              </h2>
+              <MarketNow />
+            </section>
+          }
+        >
+          {/*
+            고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
+            위 타임라인에서 이미 보이므로 여기서 같은 문장을 되풀이하지 않는다.
+          */}
+          <SelectionMeaningNotice
+            className={styles.meaningNotice}
+            selectedCount={selectedCount}
+          />
+
+          {/*
+            보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
+            화면을 만난다(원칙 VI). 이 화면 안에서는 선택이 그대로 남아 있으므로 화면을 막지는 않는다.
+          */}
+          {handoffBlocked ? (
+            <p className={styles.constraintNotice} role="alert">
+              브라우저가 이 탭의 저장을 막고 있어 다음 단계로 값을 넘기지 못했습니다. 비공개 창이라면
+              일반 창에서 다시 시도해 주세요.
+            </p>
+          ) : null}
+        </SelectedInstrumentsRail>
 
         {/*
-          보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
-          화면을 만난다(원칙 VI). 이 화면 안에서는 선택이 그대로 남아 있으므로 화면을 막지는 않는다.
+          시장 흐름 뉴스(002 FR-019, 012 FR-001). 선택 요약·국내 시장 아래 별도 카드이며, 기본 '전체'에서
+          섹터별로 좁혀 볼 수 있다. 상세를 넓혀 보는 동안에는 오른쪽 칸이 좁아 싣지 않는다.
         */}
-        {handoffBlocked ? (
-          <p className={styles.constraintNotice} role="alert">
-            브라우저가 이 탭의 저장을 막고 있어 다음 단계로 값을 넘기지 못했습니다. 비공개 창이라면
-            일반 창에서 다시 시도해 주세요.
-          </p>
-        ) : null}
-      </SelectedInstrumentsRail>
+        {detailExpanded ? null : <SectorNews sectors={sectors} />}
+      </div>
 
       {/*
         배우기 예시가 기존 선택을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만
