@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -53,9 +53,9 @@ function LocationProbe() {
   return <output aria-label="현재 주소">{location.pathname + location.search}</output>
 }
 
-function ResultRoute() {
+function ResultRoute({ search = '' }: { search?: string }) {
   return (
-    <MemoryRouter initialEntries={[`/results/${resultToken}`]}>
+    <MemoryRouter initialEntries={[`/results/${resultToken}${search}`]}>
       <AuthContext.Provider value={anonymousAuthContext}>
       <Routes>
         <Route path="/results/:token" element={<ResultPage />} />
@@ -66,8 +66,8 @@ function ResultRoute() {
   )
 }
 
-function renderResult({ strict = false }: { strict?: boolean } = {}) {
-  const route = <ResultRoute />
+function renderResult({ strict = false, search }: { strict?: boolean; search?: string } = {}) {
+  const route = <ResultRoute search={search} />
   return render(strict ? <StrictMode>{route}</StrictMode> : route)
 }
 
@@ -104,7 +104,7 @@ describe('결과 보조 보기 (B08)', () => {
     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
-  it('KOSPI 비교 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {
+  it('KOSPI 참고선을 켜기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {
     renderResult()
 
     await screen.findByText('자료 출처: 한국거래소 통계정보')
@@ -124,7 +124,7 @@ describe('결과 보조 보기 (B08)', () => {
     expect(screen.queryByRole('button', { name: '이전 화면으로' })).toBeNull()
   })
 
-  it('KOSPI 비교 탭은 서버 값을 바꾸지 않고 그대로 보이며 주소를 유지한다', async () => {
+  it('비교 대상 고르기에서 KOSPI를 켜면 주소에 남고 서버 값을 참고선으로 그리며, 끄면 선과 주소가 함께 빠진다', async () => {
     api.index.mockResolvedValue({
       available: true,
       reason: null,
@@ -136,33 +136,47 @@ describe('결과 보조 보기 (B08)', () => {
     const user = userEvent.setup()
     renderResult()
 
-    await user.click(await screen.findByRole('tab', { name: 'KOSPI 비교' }))
+    await user.click(await screen.findByRole('button', { name: '비교 대상 고르기' }))
+    const toggle = await screen.findByRole('checkbox', { name: 'KOSPI 함께 보기' })
+    await user.click(toggle)
 
-    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })
-    expect(within(panel).getByText('10012345.67')).toBeTruthy()
-    expect(within(panel).getByText('지수를 시작 금액으로 환산했습니다.')).toBeTruthy()
+    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}?index=KOSPI`)
+    expect(await screen.findByRole('img', { name: /KOSPI\(참고\)를 시작 금액으로 환산한 선/ })).toBeTruthy()
+    expect(api.index).toHaveBeenCalledTimes(1)
+    // 비교 대상이 아니다 — 결과를 새로 접수하지 않는다.
+    expect(api.create).not.toHaveBeenCalled()
+
+    await user.click(toggle)
     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
+    expect(screen.queryByRole('img', { name: /KOSPI\(참고\)/ })).toBeNull()
   })
 
-  it('지수 기간 계열을 받을 수 없으면 표 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {
+  it('주소에 ?index=KOSPI 가 있으면 새로 열어도 참고선이 복원된다', async () => {
+    api.index.mockResolvedValue({
+      available: true,
+      reason: null,
+      series: [{ date: '2023-07-03', value: '10000000.00' }],
+    })
+    renderResult({ search: '?index=KOSPI' })
+
+    expect(await screen.findByRole('img', { name: /KOSPI\(참고\)/ })).toBeTruthy()
+    expect(api.index).toHaveBeenCalledTimes(1)
+    expect(api.index.mock.calls[0][0]).toBe(resultToken)
+  })
+
+  it('지수 기간 계열을 받을 수 없으면 선 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {
     api.index.mockResolvedValue({
       available: false,
       reason: 'INDEX_SERIES_UNAVAILABLE',
       series: [],
     })
     const user = userEvent.setup()
-    renderResult()
+    renderResult({ search: '?index=KOSPI' })
 
-    const tab = await screen.findByRole('tab', { name: 'KOSPI 비교' })
-    await user.click(tab)
-
-    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })
-    expect(await within(panel).findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()
-    expect(within(panel).queryByRole('table')).toBeNull()
-    // 다른 탭으로 옮겼다 돌아와도 같은 요청을 반복하지 않는다.
+    expect(await screen.findByText(/같은 기간의 KOSPI 자료를 받을 수 없어 참고선을/)).toBeTruthy()
+    expect(screen.queryByRole('img', { name: /KOSPI\(참고\)/ })).toBeNull()
     await user.click(screen.getByRole('tab', { name: '결과 분석' }))
-    await user.click(tab)
     expect(api.index).toHaveBeenCalledTimes(1)
-    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)
+    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}?index=KOSPI`)
   })
 })

@@ -516,11 +516,11 @@ describe('ResultPage', () => {
         '설정·근거',
         '전체 거래 내역',
         '손실이 커진 때',
-        'KOSPI 비교',
       ]) {
         expect(screen.getByRole('tab', { name }), name).not.toBeNull()
       }
-      // 변동성 제한은 탭이 아니라 비교 대상 고르기의 한 줄이다.
+      // KOSPI는 참고선, 변동성 제한은 비교 대상 한 줄이다 — 둘 다 비교 대상 고르기에 있고 탭이 아니다.
+      expect(screen.queryByRole('tab', { name: 'KOSPI 비교' })).toBeNull()
       expect(screen.queryByRole('tab', { name: /목표 위험|변동성/ })).toBeNull()
       expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()
       expect(

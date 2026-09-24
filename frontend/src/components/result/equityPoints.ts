@@ -6,7 +6,7 @@ import type { ResultTimeseriesPoint } from '@/types/result'
  */
 
 /** 자산가치가 수로 읽히면 그 수, 아니면 `null`. 읽을 수 없는 값을 0으로 바꾸지 않는다(원칙 VI) */
-export function readEquity(point: ResultTimeseriesPoint): number | null {
+export function readEquity(point: Pick<ResultTimeseriesPoint, 'equity'>): number | null {
   const value = point.equity
   if (typeof value !== 'string' || value.trim() === '') return null
   const parsed = Number(value)

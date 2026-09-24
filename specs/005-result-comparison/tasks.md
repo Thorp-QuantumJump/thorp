@@ -493,3 +493,13 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대�
 - [X] T102 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010
 - [X] T103 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004
 - [X] T104 (FE) 결과 화면이 대상마다 고르기 단추 왼쪽에 칩(이름 말줄임·짧은 상태·× 해제)을 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetChip.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006
+
+## Phase 16: KOSPI 참고선 (`S15P21E205-428`·`S15P21E205-429`, 2026-09-24)
+
+428이 서버 환산 계열을 채운 뒤, 지수 비교를 탭의 표에서 결과 그래프의 참고선으로 옮긴다. T077·T080의 탭 보기를 대체한다. 원칙 II의 '그래프 1개'는 그대로다 — 그래프를 늘리지 않고 한 그래프에 선을 더한다.
+
+- [X] T105 (BE) `daily_index` 기간 종가 조회와 환산을 붙인다 — `sector/application/repository/IndexSeriesRepository.java`, `PublicResultService.getIndexComparison`. 결과의 자료 버전(`versions.data`)·`effectiveStart~End`, 첫 관측 종가 기준 per FR-017 · T087 (`S15P21E205-428`)
+- [X] T106 (FE) 비교 주소에 `?index=KOSPI`를 더하고 비교 대상을 바꿔 주소를 다시 쓸 때도 유지한다 — `compareQuery.ts` · `useCompareTargets.ts` per FR-017 · contracts "비교 주소"
+- [X] T107 (FE) 켜졌을 때만 지수 계열을 받는 `hooks/useIndexReference.ts`와 `EquityChart`의 `reference`(가는 실선·끝 이름표 'KOSPI(참고)'·대안 텍스트·범례, 음영·상한 제외). 'KOSPI 비교' 탭과 `IndexComparisonView.tsx`를 지운다 per FR-007 · FR-017 · SC-001 · SC-010
+- [X] T108 (FE) 비교 대상 고르기에 'KOSPI 함께 보기'를 둔다. '비교하기'를 기다리지 않고 바로 켜고 끄며 남은 자리가 없어도 쓸 수 있다 — `CompareTargetPicker.tsx`. 자리가 없어도 고르기 단추를 막지 않는다 per FR-017
+- [X] T109 (FE 테스트) 켜기 전 지수 요청 0회, 켜면 주소·선·재접수 없음, 주소로 복원, `available: false`면 이유와 재요청 없음 — `ResultPage.auxiliary.test.tsx` · `CompareTargetPicker.test.tsx` · `compareQuery.test.ts` per T080

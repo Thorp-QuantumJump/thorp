@@ -41,7 +41,15 @@ function setup(
   const select = vi.fn()
   render(
     <AuthContext.Provider value={auth}>
-      <CompareTargetPicker base={base} room={3} onSelect={select} onClose={() => {}} {...props} />
+      <CompareTargetPicker
+        base={base}
+        room={3}
+        indexOn={false}
+        onIndexChange={() => {}}
+        onSelect={select}
+        onClose={() => {}}
+        {...props}
+      />
     </AuthContext.Provider>,
   )
   return select
@@ -171,6 +179,8 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
             },
           }}
           room={3}
+          indexOn={false}
+          onIndexChange={() => {}}
           onSelect={() => {}}
           onClose={() => {}}
         />
@@ -196,18 +206,30 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     expect(await screen.findByText('준비 기간을 맞춰 결과를 다시 계산합니다.')).toBeTruthy()
     expect(screen.queryByText(/짧아집니다/)).toBeNull()
   })
-  it('자리가 없으면 고를 수 없다고 알리고 모든 줄을 막는다', async () => {
+  it('자리가 없으면 후보 줄을 모두 막는다. KOSPI 참고선은 자리에 세지 않아 그대로 쓸 수 있다', async () => {
     setup({ room: 0 })
     expect(await screen.findByText(/더 고를 자리가 없습니다/)).toBeTruthy()
     expect(screen.getByText(/최대 3개까지 고를 수 있습니다\(3개 선택됨\)/)).toBeTruthy()
+    const kospi = screen.getByRole('checkbox', { name: 'KOSPI 함께 보기' }) as HTMLInputElement
     for (const box of screen.getAllByRole('checkbox'))
-      expect((box as HTMLInputElement).disabled).toBe(true)
+      if (box !== kospi) expect((box as HTMLInputElement).disabled).toBe(true)
+    expect(kospi.disabled).toBe(false)
+  })
+  it('KOSPI 함께 보기는 비교하기를 기다리지 않고 바로 켜고 끈다', async () => {
+    const onIndexChange = vi.fn()
+    const select = setup({ onIndexChange })
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'KOSPI 함께 보기' }))
+    expect(onIndexChange).toHaveBeenCalledWith(true)
+    expect(select).not.toHaveBeenCalled()
   })
   it('등록표 실패는 대체 목록 대신 사유와 수동 재조회로 보인다', async () => {
     api.registry.mockRejectedValue(new Error('등록표를 받을 수 없습니다.'))
     setup()
     expect(await screen.findByRole('alert')).toBeTruthy()
-    expect(screen.queryByRole('checkbox')).toBeNull()
+    // 후보는 없고, 목록과 상관없는 KOSPI 참고선만 남는다.
+    expect(screen.getAllByRole('checkbox')).toEqual([
+      screen.getByRole('checkbox', { name: 'KOSPI 함께 보기' }),
+    ])
     fireEvent.click(screen.getByRole('button', { name: '목록 다시 불러오기' }))
     expect(await screen.findByText('등록표를 받을 수 없습니다.')).toBeTruthy()
   })
