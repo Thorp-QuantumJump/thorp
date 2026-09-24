@@ -321,11 +321,70 @@ class NewsConfigTest {
                             new ClassPathResource(NewsConfig.LINK_REGISTRY_PATH),
                             NewsLinkRegistry.class);
 
-            assertThat(registry.version()).isEqualTo("news-link-v1");
+            assertThat(registry.version()).isEqualTo("news-link-v2");
             assertThat(registry.topics()).isNotEmpty();
+            // 001 대응표(data/config/sector-map-2026-09.json)의 8개 섹터를 그대로 가리킨다. 012가 새 섹터를 만들지 않는다.
             assertThat(registry.knownSectorIds())
-                    .as("001의 대응표가 확정되기 전에는 어떤 섹터 식별자도 선언하지 않는다")
-                    .isEmpty();
+                    .as("001 대응표에 있는 섹터 식별자만 참조한다")
+                    .containsExactlyInAnyOrder(
+                            "SEMICONDUCTOR",
+                            "SECONDARY_BATTERY",
+                            "BANK",
+                            "SECURITIES",
+                            "COSMETICS",
+                            "CONSTRUCTION",
+                            "AUTO",
+                            "HEAVY_INDUSTRY");
+            assertThat(registry.topics())
+                    .filteredOn(topic -> !topic.titleKeywords().isEmpty())
+                    .as("제목 키워드 주제는 해외 기사를 받는 근거가 되지 않는다")
+                    .allSatisfy(topic -> assertThat(topic.domesticLink()).isFalse());
+        }
+
+        @Test
+        @DisplayName("제목 키워드는 제외어를 먼저 지우고 대소문자를 가리지 않고 찾는다")
+        void 제목_키워드() {
+            NewsLinkRegistry registry =
+                    new NewsLinkRegistry(
+                            "news-link-test",
+                            List.of(
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-bank",
+                                            "은행 업종",
+                                            false,
+                                            List.of("BANK"),
+                                            List.of("은행권", "은행"),
+                                            List.of("한국은행")),
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-semiconductor",
+                                            "반도체 업종",
+                                            false,
+                                            List.of("SEMICONDUCTOR"),
+                                            List.of("HBM"),
+                                            List.of())),
+                            List.of());
+
+            assertThat(registry.matchTitle("한국은행, 기준금리 동결")).isEmpty();
+            assertThat(registry.matchTitle("은행권 대출 금리 인하"))
+                    .containsExactly(java.util.Map.entry("sector-bank", "은행권"));
+            assertThat(registry.matchTitle("삼성, hbm 공급 확대"))
+                    .containsExactly(java.util.Map.entry("sector-semiconductor", "hbm"));
+            assertThat(registry.matchTitle(null)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("제목 키워드가 있는데 섹터가 없으면 등록표를 받지 않는다")
+        void 제목_키워드_섹터_필수() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-x",
+                                            "업종",
+                                            false,
+                                            List.of(),
+                                            List.of("키워드"),
+                                            List.of()))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test

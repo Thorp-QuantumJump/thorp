@@ -1,0 +1,1864 @@
+{
+ "fixtureVersion": "sector-link-eval-v1",
+ "linkRuleVersion": "news-link-v2",
+ "titleSource": "grouping-quality-v2.json",
+ "_comment": "기사 제목의 섹터 연결 정답이다. 제목은 grouping-quality-v2.json(2026-09-15 실제 수집 345건)의 것을 url로 가리키며 여기 다시 적지 않는다. 섹터 값은 spec 001 대응표(data/config/sector-map-2026-09.json)의 8개다. 정답 기준은 '제목이 그 업종의 회사나 업황을 다루는가'이며, 시장 전체 시황·거시·정책 기사는 어느 섹터에도 넣지 않는다. ambiguous가 참인 항목은 사람마다 판단이 갈릴 만해 측정에서 뺀다. 제목 키워드는 2026-09-24 수집 제목 200건으로 다듬었고 이 표본은 그때 보지 않았다 — 이 표본을 보고 키워드를 고치면 이 값은 더 이상 미사용 평가가 아니다(원칙 VII).",
+ "labeling": {
+  "firstPass": "LLM (Claude Opus 5.5), 2026-09-24, 키워드 결과를 보기 전에 제목만 읽고 판정",
+  "humanReview": "PENDING",
+  "reviewedBy": null,
+  "reviewedAt": null
+ },
+ "measured": {
+  "scoredArticles": 298,
+  "truePositives": 36,
+  "falsePositives": 2,
+  "falseNegatives": 23,
+  "precision": 0.947,
+  "recall": 0.61
+ },
+ "labels": [
+  {
+   "url": "https://hankyung-it.example.com/198",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/197",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/196",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/195",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/194",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/193",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/192",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/191",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/248",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/190",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/247",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/189",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/188",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/187",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/186",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/185",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/184",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/246",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/183",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/245",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/244",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/243",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/242",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/182",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/181",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/297",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/241",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/296",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/180",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/240",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/295",
+   "sectors": [
+    "SECURITIES"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/239",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/294",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/293",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/292",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/291",
+   "sectors": [
+    "SECURITIES"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/238",
+   "sectors": [
+    "CONSTRUCTION"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/345",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/237",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/236",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/179",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/235",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/290",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/344",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/178",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/289",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/343",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/48",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/47",
+   "sectors": [
+    "SECONDARY_BATTERY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/46",
+   "sectors": [
+    "HEAVY_INDUSTRY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/177",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/45",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/234",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/148",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/44",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/43",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/176",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/42",
+   "sectors": [
+    "SECONDARY_BATTERY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/41",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/40",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/39",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/175",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/147",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/146",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/342",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/341",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/38",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/340",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/37",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/288",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/145",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/287",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/286",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/174",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/285",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/284",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/339",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/144",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/143",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/283",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/338",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/337",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/336",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/233",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/335",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/142",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/36",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/232",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/35",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/334",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/333",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/173",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/172",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/171",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/170",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/332",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/331",
+   "sectors": [
+    "SECONDARY_BATTERY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/329",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/330",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/328",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-it.example.com/169",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-it.example.com/168",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/167",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/141",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/166",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/327",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/231",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/282",
+   "sectors": [
+    "HEAVY_INDUSTRY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/281",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/280",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/325",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/326",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/279",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/324",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/278",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/34",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/140",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/139",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/275",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/276",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/277",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/138",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/274",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/273",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/272",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/271",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/165",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/137",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/164",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/323",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/322",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/230",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/228",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/229",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/227",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/226",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/225",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/321",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/224",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/163",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/223",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/222",
+   "sectors": [
+    "CONSTRUCTION"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/221",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/220",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/270",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/136",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/135",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/134",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/219",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/269",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/133",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/268",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/162",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/320",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/98",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/161",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/97",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/319",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/96",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/218",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/95",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/318",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/94",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/33",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/317",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/32",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/31",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/30",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/29",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/28",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/27",
+   "sectors": [
+    "CONSTRUCTION"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/26",
+   "sectors": [
+    "SECONDARY_BATTERY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/25",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/24",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/23",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/93",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/22",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/21",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/92",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/20",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/19",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/132",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/160",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/131",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/91",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/90",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/316",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/89",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/88",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/87",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/86",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/85",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/130",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/315",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/217",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/216",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/215",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/267",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/84",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/129",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/83",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/266",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/82",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/214",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/81",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/128",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/127",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/126",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/125",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/124",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/265",
+   "sectors": [
+    "HEAVY_INDUSTRY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/18",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/80",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/79",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/17",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/123",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/78",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/122",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/159",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/121",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/77",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/16",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/158",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/120",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/264",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/76",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/119",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/75",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/74",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/73",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-it.example.com/157",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/15",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/72",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/71",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/156",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/118",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/155",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/14",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/117",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/116",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/263",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/70",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/154",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/213",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/153",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/212",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/115",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/262",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/69",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/261",
+   "sectors": [
+    "SECONDARY_BATTERY"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/114",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/113",
+   "sectors": [
+    "AUTO",
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/260",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/112",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/68",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/259",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/111",
+   "sectors": [
+    "SECURITIES"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/258",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/110",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/67",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/66",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/109",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/314",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/65",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/257",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/108",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/107",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/64",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/211",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/152",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/151",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/63",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/106",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/13",
+   "sectors": [
+    "AUTO"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/256",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/210",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/313",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/62",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/255",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/209",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/208",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/207",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-economy.example.com/206",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/254",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/61",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/205",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/60",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/253",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/12",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/11",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/312",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/59",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/252",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/204",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/10",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/311",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/310",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/309",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/105",
+   "sectors": [
+    "SECURITIES"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/150",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/308",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/9",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/58",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/104",
+   "sectors": [
+    "SEMICONDUCTOR"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/57",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/203",
+   "sectors": [
+    "BANK"
+   ],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/307",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/56",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/202",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/55",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/306",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/103",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/305",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/102",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/101",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-economy.example.com/54",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/8",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/251",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/7",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/6",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/53",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-it.example.com/149",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/5",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/4",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/52",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/3",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-finance.example.com/100",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://hankyung-finance.example.com/99",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-stock.example.com/250",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/201",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://khan-economy.example.com/2",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/51",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/50",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/304",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/303",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/302",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-stock.example.com/249",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://mk-company.example.com/301",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://hankyung-economy.example.com/49",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/300",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/200",
+   "sectors": [],
+   "ambiguous": true
+  },
+  {
+   "url": "https://khan-economy.example.com/1",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/299",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-economy.example.com/199",
+   "sectors": [],
+   "ambiguous": false
+  },
+  {
+   "url": "https://mk-company.example.com/298",
+   "sectors": [],
+   "ambiguous": false
+  }
+ ]
+}

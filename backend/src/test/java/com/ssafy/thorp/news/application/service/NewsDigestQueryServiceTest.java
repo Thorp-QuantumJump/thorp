@@ -340,6 +340,15 @@ class NewsDigestQueryServiceTest {
         }
 
         @Override
+        public void addLinks(
+                Long articleId,
+                Set<String> sectorIds,
+                Map<Long, String> topicEvidenceByTopicId,
+                String ruleVersion) {
+            // 조회 시험이라 쓰지 않는다.
+        }
+
+        @Override
         public Map<Long, Set<String>> findTopicKeysByArticleIds(Collection<Long> articleIds) {
             return Map.of();
         }
