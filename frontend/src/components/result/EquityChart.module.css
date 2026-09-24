@@ -26,9 +26,37 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--thorp-ink);
+  font: inherit;
   font-size: 12px;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.seriesKeyItem:hover:not(:disabled) {
+  background: var(--thorp-surface);
+}
+
+.seriesKeyItem:disabled {
+  cursor: default;
+}
+
+.seriesKeyItem:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 숨긴 선은 흐리게 하고 이름에 줄을 긋는다. 색만으로 알리지 않는다. */
+.seriesKeyItem[aria-pressed='false'] {
+  opacity: 0.45;
+}
+
+.seriesKeyItem[aria-pressed='false'] .seriesName {
+  text-decoration: line-through;
 }
 
 .seriesKeySwatch {
