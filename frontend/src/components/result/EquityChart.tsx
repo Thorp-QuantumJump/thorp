@@ -21,8 +21,11 @@ import styles from './EquityChart.module.css'
  * 곡선이 '가장 크게 줄었던 폭' 숫자보다 얕아 보인다. 값이 없는 날은 앞뒤를 잇지 않고 선을 끊는다 —
  * 이어 그리면 없는 자산가치를 만들어 낸다(원칙 VI).
  *
- * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 파선이고 두 곡선의 오른쪽 끝에
+ * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 각기 다른 파선이고 모든 곡선의 오른쪽 끝에
  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.
+ *
+ * <p><b>비교 대상은 셋까지다</b>(`S15P21E205-419`). 넷을 넘으면 선 모양과 색으로 갈리지 않는다. 비교 대상의 하락 구간
+ * 음영은 대상이 하나일 때만 칠한다 — 둘 이상이면 빗금이 겹쳐 어느 구간이 누구 것인지 읽을 수 없다.
  *
  * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을
  * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다. 시작 금액
@@ -46,8 +49,8 @@ export type EquityChartSeries = {
 
 export type EquityChartProps = {
   base: EquityChartSeries
-  /** 비교 대상. 없으면 곡선은 하나다 */
-  target?: EquityChartSeries | null
+  /** 비교 대상들. 없으면 곡선은 하나다. 셋을 넘는 것은 그리지 않는다 */
+  targets?: readonly EquityChartSeries[] | null
   /** `config.initialCash`. 세로축의 기준이자 가로 기준선의 위치다 */
   initialCash: string
   /** 대안 텍스트에 담을 기준 결과의 핵심 숫자 3개. 계산되지 않았으면 `null` */
@@ -61,20 +64,28 @@ export type EquityChartProps = {
 /** 세로축 눈금을 금액 그대로 놓을지(`linear`) 금액의 상용로그로 놓을지(`log`) 정한다 */
 export type YScaleMode = 'linear' | 'log'
 
-type ChartRow = {
-  date: Date
-  base?: number
-  target?: number
-}
+type ChartRow = { date: Date } & Partial<Record<string, number | Date>>
 
+const BASE_KEY = 'base'
 const BASE_STROKE = 'var(--chart-line-primary)'
-const TARGET_STROKE = 'var(--chart-line-secondary)'
-/** 비교 대상 곡선의 파선 간격. 색을 못 봐도 선 모양으로 갈린다 */
-const TARGET_DASH = '7,5'
+/**
+ * 비교 대상의 색과 파선. 자리 순서대로 쓴다. 파선 간격이 서로 달라 색을 못 봐도 선 모양으로 갈린다.
+ * 넷째 대상은 없다 — 상한이 셋이다.
+ */
+const TARGET_STYLES = [
+  { stroke: 'var(--chart-line-secondary)', dash: '7,5' },
+  { stroke: 'var(--chart-line-tertiary)', dash: '2,4' },
+  { stroke: 'var(--chart-line-quaternary)', dash: '10,4,2,4' },
+] as const
 /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */
 const MAX_AMOUNT_TICKS = 4
 /** 처음 보여 줄 눈금 종류 */
 const DEFAULT_Y_SCALE_MODE: YScaleMode = 'log'
+
+/** 비교 대상 i번째의 행 열 이름(`target0`…). 시험이 이 이름의 색 변수로 곡선을 찾는다 */
+function targetKey(index: number): string {
+  return 'target' + index
+}
 
 function toNumber(value: string | null | undefined): number | null {
   if (value == null || value.trim() === '') return null
@@ -99,18 +110,16 @@ function toChartDate(date: string): Date {
 }
 
 /**
- * 두 계열을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.
+ * 계열들을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.
  *
  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.
  */
 function buildRows(
-  base: ResultTimeseriesPoint[],
-  target: ResultTimeseriesPoint[] | undefined,
+  series: readonly { key: string; points: ResultTimeseriesPoint[] }[],
   mode: YScaleMode,
 ): ChartRow[] {
   const byDate = new Map<string, ChartRow>()
-
-  const collect = (points: ResultTimeseriesPoint[], key: 'base' | 'target') => {
+  for (const { key, points } of series) {
     for (const point of points) {
       const row = byDate.get(point.date) ?? { date: toChartDate(point.date) }
       const equity = readEquity(point)
@@ -119,10 +128,6 @@ function buildRows(
       byDate.set(point.date, row)
     }
   }
-
-  collect(base, 'base')
-  if (target) collect(target, 'target')
-
   return [...byDate.values()].sort((left, right) => left.date.getTime() - right.date.getTime())
 }
 
@@ -139,14 +144,16 @@ function buildRows(
  */
 function resolveYDomain(
   rows: ChartRow[],
+  keys: readonly string[],
   initialAxisValue: number | null,
   mode: YScaleMode,
 ): [number, number] {
   let lowest = initialAxisValue ?? Number.POSITIVE_INFINITY
   let highest = initialAxisValue ?? Number.NEGATIVE_INFINITY
   for (const row of rows) {
-    for (const value of [row.base, row.target]) {
-      if (value == null) continue
+    for (const key of keys) {
+      const value = row[key]
+      if (typeof value !== 'number') continue
       if (value < lowest) lowest = value
       if (value > highest) highest = value
     }
@@ -221,7 +228,10 @@ function scaleModeNoun(mode: YScaleMode): string {
 
 /** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */
 function buildAltText(
-  { base, target, altNumbers, initialCash }: EquityChartProps,
+  base: EquityChartSeries,
+  targets: readonly EquityChartSeries[],
+  altNumbers: EquityChartProps['altNumbers'],
+  initialCash: string,
   mode: YScaleMode,
 ): string {
   const numbers = altNumbers
@@ -233,9 +243,13 @@ function buildAltText(
       formatMoney(altNumbers.totalTradingCost) +
       '입니다.'
     : '핵심 숫자가 계산되지 않아 곡선만 그렸습니다.'
-  const comparison = target
-    ? '비교 대상은 ' + target.name + '이며 파선으로 함께 그렸습니다.'
-    : '비교 대상은 없습니다.'
+  const comparison =
+    targets.length > 0
+      ? '비교 대상은 ' +
+        targets.map((target) => target.name).join(', ') +
+        (targets.length === 1 ? '이며 파선으로' : '이며 서로 다른 파선으로') +
+        ' 함께 그렸습니다.'
+      : '비교 대상은 없습니다.'
   const axis =
     '세로축은 원화 자산가치이고 눈금은 ' +
     scaleModeNoun(mode) +
@@ -251,18 +265,29 @@ function shadeNote(name: string, window: DrawdownWindow): string {
 }
 
 export function EquityChart(props: EquityChartProps) {
-  const { base, target, initialCash } = props
+  const { base, initialCash, altNumbers } = props
+  const targets = useMemo(
+    () => (props.targets ?? []).slice(0, TARGET_STYLES.length),
+    [props.targets],
+  )
   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)
 
-  const rows = useMemo(
-    () => buildRows(base.points, target?.points, scaleMode),
-    [base.points, target?.points, scaleMode],
+  const keyed = useMemo(
+    () => [
+      { key: BASE_KEY, points: base.points },
+      ...targets.map((target, index) => ({ key: targetKey(index), points: target.points })),
+    ],
+    [base.points, targets],
   )
+  const keys = keyed.map((series) => series.key)
+  const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
   const initial = toNumber(initialCash)
   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)
   const yDomain = useMemo(
-    () => resolveYDomain(rows, initialAxisValue, scaleMode),
-    [rows, initialAxisValue, scaleMode],
+    () => resolveYDomain(rows, keys, initialAxisValue, scaleMode),
+    // keys 는 keyed 에서 나오므로 keyed 로 갈음한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, keyed, initialAxisValue, scaleMode],
   )
   const amountTicks = useMemo(() => {
     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)
@@ -270,26 +295,23 @@ export function EquityChart(props: EquityChartProps) {
   }, [yDomain, scaleMode])
 
   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
-  const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null
-
-  const notes = [
-    scaleMode === 'log'
-      ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'
-      : null,
-    baseWindow ? shadeNote(base.name, baseWindow) : null,
-    target && targetWindow ? shadeNote(target.name, targetWindow) : null,
-  ].filter((note): note is string => note != null)
+  // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.
+  const targetWindow =
+    targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null
 
   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 "돌았고 비어 있었다"는 거짓이므로 그리지
   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.
-  if (!hasDrawableEquity(base.points) && !(target && hasDrawableEquity(target.points))) return null
+  if (!hasDrawableEquity(base.points) && !targets.some((target) => hasDrawableEquity(target.points)))
+    return null
 
-  const endLabels = target
-    ? [
-        { dataKey: 'base', name: base.name, stroke: BASE_STROKE },
-        { dataKey: 'target', name: target.name, stroke: TARGET_STROKE },
-      ]
-    : [{ dataKey: 'base', name: base.name, stroke: BASE_STROKE }]
+  const endLabels = [
+    { dataKey: BASE_KEY, name: base.name, stroke: BASE_STROKE },
+    ...targets.map((target, index) => ({
+      dataKey: targetKey(index),
+      name: target.name,
+      stroke: TARGET_STYLES[index].stroke,
+    })),
+  ]
 
   return (
     <div className={styles.figure}>
@@ -310,7 +332,11 @@ export function EquityChart(props: EquityChartProps) {
         </div>
       </div>
 
-      <div aria-label={buildAltText(props, scaleMode)} className={styles.chart} role="img">
+      <div
+        aria-label={buildAltText(base, targets, altNumbers, initialCash, scaleMode)}
+        className={styles.chart}
+        role="img"
+      >
         <LineChart
           animationDuration={0}
           aspectRatio=""
@@ -347,10 +373,10 @@ export function EquityChart(props: EquityChartProps) {
             />
           ) : null}
 
-          {target && targetWindow ? (
+          {targetWindow ? (
             <DrawdownShade
               from={toChartDate(targetWindow.peakDate)}
-              label={shadeNote(target.name, targetWindow)}
+              label={shadeNote(targets[0].name, targetWindow)}
               to={toChartDate(targetWindow.troughDate)}
               variant="target"
             />
@@ -359,27 +385,31 @@ export function EquityChart(props: EquityChartProps) {
           <Line
             animate={false}
             curve={curveLinear}
-            dataKey="base"
-            defined={(row) => typeof row.base === 'number'}
+            dataKey={BASE_KEY}
+            defined={(row) => typeof row[BASE_KEY] === 'number'}
             fadeEdges={false}
             showHighlight={false}
             stroke={BASE_STROKE}
             strokeWidth={2.4}
           />
 
-          {target ? (
-            <Line
-              animate={false}
-              curve={curveLinear}
-              dataKey="target"
-              defined={(row) => typeof row.target === 'number'}
-              fadeEdges={false}
-              showHighlight={false}
-              stroke={TARGET_STROKE}
-              strokeDasharray={TARGET_DASH}
-              strokeWidth={2.4}
-            />
-          ) : null}
+          {targets.map((_, index) => {
+            const key = targetKey(index)
+            return (
+              <Line
+                animate={false}
+                curve={curveLinear}
+                dataKey={key}
+                defined={(row) => typeof row[key] === 'number'}
+                fadeEdges={false}
+                key={key}
+                showHighlight={false}
+                stroke={TARGET_STYLES[index].stroke}
+                strokeDasharray={TARGET_STYLES[index].dash}
+                strokeWidth={2.4}
+              />
+            )
+          })}
 
           <SeriesEndLabels series={endLabels} />
 
@@ -391,12 +421,6 @@ export function EquityChart(props: EquityChartProps) {
         {initial == null ? null : <span>점선 · 시작 금액 {formatMoney(initialCash)}</span>}
         {baseWindow && base.maxDrawdown ? (
           <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>
-        ) : null}
-        {notes.length > 0 ? (
-          <details className={styles.help}>
-            <summary>차트 읽는 법</summary>
-            <p>{notes.join(' ')}</p>
-          </details>
         ) : null}
       </div>
     </div>

@@ -14,7 +14,8 @@ export const METRIC_DEFINITIONS = {
 
 type ResultConditionLineProps = {
   detail: PublicResultDetail
-  target?: PublicResultDetail | null
+  /** 겹쳐 그리는 비교 대상들. 이름은 부른 쪽이 정한다 — 같은 전략이 둘이면 번호로 갈라야 해서다(`S15P21E205-419`) */
+  targets?: readonly { detail: PublicResultDetail; name: string }[]
 }
 
 /**
@@ -68,11 +69,13 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {
 }
 
 /** 분석 조건은 그래프 아래 기본 요약 탭에서 읽는다. */
-export function ResultConditionLine({ detail, target }: ResultConditionLineProps) {
+export function ResultConditionLine({ detail, targets = [] }: ResultConditionLineProps) {
   const condition = buildConditionLine({
     ...detail,
-    targetName: target?.strategyName ?? target?.config.strategyId,
-    targetWeightsSource: target?.weightsSource,
+    targetName: targets.length ? targets.map((target) => target.name).join(', ') : null,
+    targetWeightsSource: targets.some((target) => target.detail.weightsSource === 'COMPUTED')
+      ? 'COMPUTED'
+      : targets[0]?.detail.weightsSource,
   })
 
   return (
