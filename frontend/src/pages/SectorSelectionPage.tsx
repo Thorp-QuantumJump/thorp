@@ -165,96 +165,90 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   }, [caseId, navigate, selection])
 
   return (
-    <div className={styles.board} data-detail-expanded={detailExpanded}>
-      {/*
-        머리글을 따로 두지 않는다. 화면 제목이 이미 무엇을 하는 자리인지 말하고 있어, 그 아래
-        "투자 대상 목록"을 한 번 더 적으면 같은 말이 두 번 읽힌다. 보조 기술에는 영역 이름만 준다.
-      */}
-      <section className={styles.browser} aria-label="투자 대상 탐색">
-
+    <>
+      <div className={styles.board} data-detail-expanded={detailExpanded}>
         {/*
-          목록이 예시 대응표에서 왔다는 표시다(FR-015). 상품 정보의 예시 표시와 가리키는 대상이
-          다르므로 한 문장으로 합치지 않는다.
+          머리글을 따로 두지 않는다. 화면 제목이 이미 무엇을 하는 자리인지 말하고 있어, 그 아래
+          "투자 대상 목록"을 한 번 더 적으면 같은 말이 두 번 읽힌다. 보조 기술에는 영역 이름만 준다.
         */}
-        {isSample ? (
-          <p className={styles.sampleNotice}>
-            이 투자 대상 목록은 아직 확정되지 않은 예시 대응표에서 왔습니다.
-          </p>
-        ) : null}
+        <section className={styles.browser} aria-label="투자 대상 탐색">
 
-        {/*
-          보관해 둔 값을 그대로 쓰지 못한 경우다. 조용히 넘어가면 사용자가 무엇을 잃었는지 알 수
-          없다(원칙 VI). 까닭이 다르면 다른 문장으로 알린다.
-        */}
-        {selection.restoreProblem !== null ? (
-          <p className={styles.restoreNotice} role="status">
-            이전에 고른 투자 대상을 불러오지 못해 빈 상태로 시작합니다.
-          </p>
-        ) : null}
-        {missingCount > 0 ? (
-          <p className={styles.restoreNotice} role="status">
-            이전에 골랐던 투자 대상 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다. 아래
-            목록에서 대체할 대상을 직접 골라 주세요.
-          </p>
-        ) : null}
-        {unusableCount > 0 ? (
-          <p className={styles.restoreNotice} role="status">
-            이전에 골랐던 투자 대상 {unusableCount}개는 보관된 값을 그대로 쓸 수 없어 선택에서
-            빠졌습니다.
-          </p>
-        ) : null}
-        {exampleMissingCount > 0 ? (
-          <p className={styles.restoreNotice} role="status">
-            배우기 예시의 투자 대상 {exampleMissingCount}개가 지금 목록에 없어 채우지 않았습니다.
-          </p>
-        ) : null}
-        {exampleUnusableCount > 0 ? (
-          <p className={styles.restoreNotice} role="status">
-            배우기 예시의 투자 대상 {exampleUnusableCount}개는 실려 온 값을 그대로 쓸 수 없어
-            채우지 않았습니다.
-          </p>
-        ) : null}
+          {/*
+            목록이 예시 대응표에서 왔다는 표시다(FR-015). 상품 정보의 예시 표시와 가리키는 대상이
+            다르므로 한 문장으로 합치지 않는다.
+          */}
+          {isSample ? (
+            <p className={styles.sampleNotice}>
+              이 투자 대상 목록은 아직 확정되지 않은 예시 대응표에서 왔습니다.
+            </p>
+          ) : null}
 
-        {/*
-          고른 대상의 상장 구간과 공통 구간이다. 탐색 카드 **바로 위**에 둔다 — 대상을 넣고 빼는
-          자리에서 그 결과가 바로 보여야 한다. 하나만 골라도 그 대상의 시작일부터 오늘까지를
-          보여 주며, 아무것도 고르지 않았을 때만 자리를 만들지 않는다.
-        */}
-        <AvailabilityTimeline className={styles.timeline} timeline={timeline} />
-        {listingWindow.status === 'unavailable' ? (
-          <ListingWindowNotice
-            className={styles.listingNotice}
-            listingWindow={listingWindow}
-          />
-        ) : null}
+          {/*
+            보관해 둔 값을 그대로 쓰지 못한 경우다. 조용히 넘어가면 사용자가 무엇을 잃었는지 알 수
+            없다(원칙 VI). 까닭이 다르면 다른 문장으로 알린다.
+          */}
+          {selection.restoreProblem !== null ? (
+            <p className={styles.restoreNotice} role="status">
+              이전에 고른 투자 대상을 불러오지 못해 빈 상태로 시작합니다.
+            </p>
+          ) : null}
+          {missingCount > 0 ? (
+            <p className={styles.restoreNotice} role="status">
+              이전에 골랐던 투자 대상 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다. 아래
+              목록에서 대체할 대상을 직접 골라 주세요.
+            </p>
+          ) : null}
+          {unusableCount > 0 ? (
+            <p className={styles.restoreNotice} role="status">
+              이전에 골랐던 투자 대상 {unusableCount}개는 보관된 값을 그대로 쓸 수 없어 선택에서
+              빠졌습니다.
+            </p>
+          ) : null}
+          {exampleMissingCount > 0 ? (
+            <p className={styles.restoreNotice} role="status">
+              배우기 예시의 투자 대상 {exampleMissingCount}개가 지금 목록에 없어 채우지 않았습니다.
+            </p>
+          ) : null}
+          {exampleUnusableCount > 0 ? (
+            <p className={styles.restoreNotice} role="status">
+              배우기 예시의 투자 대상 {exampleUnusableCount}개는 실려 온 값을 그대로 쓸 수 없어
+              채우지 않았습니다.
+            </p>
+          ) : null}
 
-        {viewing ? (
-          <InstrumentBrowser
-            className={styles.browserCard}
-            sectors={sectors}
-            viewing={viewing}
-            expanded={detailExpanded}
-            isSelected={selection.isSelected}
-            onView={setViewingCode}
-            onToggleSelected={selection.toggleSector}
-            onExpandedChange={setDetailExpanded}
-          />
-        ) : null}
+          {/*
+            고른 대상의 상장 구간과 공통 구간이다. 탐색 카드 **바로 위**에 둔다 — 대상을 넣고 빼는
+            자리에서 그 결과가 바로 보여야 한다. 하나만 골라도 그 대상의 시작일부터 오늘까지를
+            보여 주며, 아무것도 고르지 않았을 때만 자리를 만들지 않는다.
+          */}
+          <AvailabilityTimeline className={styles.timeline} timeline={timeline} />
+          {listingWindow.status === 'unavailable' ? (
+            <ListingWindowNotice
+              className={styles.listingNotice}
+              listingWindow={listingWindow}
+            />
+          ) : null}
 
-        {/*
-          KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만
-          보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.
-        */}
-        <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+          {viewing ? (
+            <InstrumentBrowser
+              className={styles.browserCard}
+              sectors={sectors}
+              viewing={viewing}
+              expanded={detailExpanded}
+              isSelected={selection.isSelected}
+              onView={setViewingCode}
+              onToggleSelected={selection.toggleSector}
+              onExpandedChange={setDetailExpanded}
+            />
+          ) : null}
 
-        {/*
-          Thorp의 핵심 흐름을 여기서 잇는다(002 FR-018): 고른 섹터를 지금과 비슷했던 과거 시장 기간으로
-          백테스트한다. 받지 못해도 투자 대상 고르기는 막히지 않는다.
-        */}
-        <SimilarPastMarket caseId={caseId} />
-      </section>
+          {/*
+            KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만
+            보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.
+          */}
+          <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+        </section>
 
-      <div className={styles.side}>
         <SelectedInstrumentsRail
           className={styles.rail}
           selected={selectedSectors}
@@ -263,16 +257,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           onRemove={(code) => selection.toggleSector(code, false)}
           onProceed={proceed}
           proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
-          footer={
-            // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-            <section className={styles.railMarket} aria-labelledby="rail-market-title">
-              <h2 id="rail-market-title">
-                <ChartNoAxesCombined size={14} aria-hidden="true" />
-                지금 국내 시장
-              </h2>
-              <MarketNow />
-            </section>
-          }
         >
           {/*
             고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
@@ -295,24 +279,29 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           ) : null}
         </SelectedInstrumentsRail>
 
+
         {/*
-          시장 흐름 뉴스(002 FR-019, 012 FR-001). 선택 요약·국내 시장 아래 별도 카드이며, 기본 '전체'에서
-          섹터별로 좁혀 볼 수 있다. 상세를 넓혀 보는 동안에는 오른쪽 칸이 좁아 싣지 않는다.
+          배우기 예시가 기존 선택을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만
+          열린다. 아무것도 고르지 않은 상태로 들어왔으면 묻지 않고 이미 채워져 있다(SC-011).
         */}
-        {detailExpanded ? null : <SectorNews sectors={sectors} />}
+        <OverwriteConfirmDialog
+          open={learningEntry.pending !== null}
+          exampleSectorCount={learningEntry.pending?.codes.length ?? 0}
+          onConfirm={learningEntry.confirmOverwrite}
+          onCancel={learningEntry.cancelOverwrite}
+        />
       </div>
 
       {/*
-        배우기 예시가 기존 선택을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만
-        열린다. 아무것도 고르지 않은 상태로 들어왔으면 묻지 않고 이미 채워져 있다(SC-011).
+        투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과
+        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 시장 흐름 뉴스(FR-019)로 기본 '전체', 섹터별로
+        좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.
       */}
-      <OverwriteConfirmDialog
-        open={learningEntry.pending !== null}
-        exampleSectorCount={learningEntry.pending?.codes.length ?? 0}
-        onConfirm={learningEntry.confirmOverwrite}
-        onCancel={learningEntry.cancelOverwrite}
-      />
-    </div>
+      <div className={styles.context}>
+        <SimilarPastMarket caseId={caseId} />
+        <SectorNews sectors={sectors} />
+      </div>
+    </>
   )
 }
 
@@ -362,13 +351,29 @@ export function SectorSelectionPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="sector-selection-title">
-        <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
-        <h1 id="sector-selection-title" className={styles.title}>
-          투자 대상 <em className={heading.emphasis}>고르기</em>
-        </h1>
-        <p className={styles.lead}>
-          백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
-        </p>
+        <div className={styles.intro}>
+          <div>
+            <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
+            <h1 id="sector-selection-title" className={styles.title}>
+              투자 대상 <em className={heading.emphasis}>고르기</em>
+            </h1>
+            <p className={styles.lead}>
+              백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
+            </p>
+          </div>
+
+          {/*
+            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 제목과 같은 줄 오른쪽, 선택 요약과 같은 폭이다.
+            과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니며, 목록을 받지 못해도 따로 보인다.
+          */}
+          <section className={styles.marketNow} aria-labelledby="market-now-title">
+            <h2 id="market-now-title">
+              <ChartNoAxesCombined size={14} aria-hidden="true" />
+              지금 국내 시장
+            </h2>
+            <MarketNow />
+          </section>
+        </div>
 
         {result === null ? (
           <p className={styles.loading} role="status">

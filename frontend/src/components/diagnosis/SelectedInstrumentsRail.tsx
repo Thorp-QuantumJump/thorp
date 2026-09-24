@@ -15,8 +15,6 @@ type SelectedInstrumentsRailProps = {
   compact?: boolean
   /** 목록과 단추 사이에 놓을 안내다. 상장일 안내처럼 선택에 딸린 사실이 여기 들어온다. */
   children?: ReactNode
-  /** '다음: 전략 고르기' 아래에 두는 참고 정보. 넓힌 상세로 칸이 좁아지면 숨긴다 */
-  footer?: ReactNode
   className?: string
 }
 
@@ -42,7 +40,6 @@ export function SelectedInstrumentsRail({
   proceedDisabled,
   compact = false,
   children,
-  footer,
   className,
 }: SelectedInstrumentsRailProps) {
   const count = selected.length
@@ -134,8 +131,6 @@ export function SelectedInstrumentsRail({
           <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
         </span>
       </button>
-
-      {footer && !compact ? <div data-slot="rail-footer">{footer}</div> : null}
     </aside>
   )
 }
