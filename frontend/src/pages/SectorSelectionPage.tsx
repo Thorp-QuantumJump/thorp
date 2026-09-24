@@ -21,6 +21,9 @@ import { MINIMUM_SECTOR_COUNT } from '@/hooks/useSectorSelection'
 import { appendCaseToPath } from '@/marketflow/handoff'
 import type { SectorSummary } from '@/types/sector'
 import heading from '@/components/common/PageHeading.module.css'
+import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'
+import { NewsDigestSection } from '@/components/marketflow/NewsDigestSection'
+import { MarketNow } from '@/components/diagnosis/MarketNow'
 import styles from './SectorSelectionPage.module.css'
 
 /**
@@ -242,6 +245,20 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.
         */}
         <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+
+        {/*
+          Thorp의 핵심 흐름을 여기서 잇는다(002 FR-018): 고른 섹터를 지금과 비슷했던 과거 시장 기간으로
+          백테스트한다. 받지 못해도 투자 대상 고르기는 막히지 않는다.
+        */}
+        <SimilarPastMarket caseId={caseId} />
+
+        {/* 지금 보는 섹터의 소식(002 FR-019, 012 FR-001). 섹터는 목록에서 보고 있는 것으로 정해진다. */}
+        {viewing ? (
+          <section className={styles.sectorNews} aria-labelledby="sector-news-title">
+            <h2 id="sector-news-title">{viewing.name} 소식</h2>
+            <NewsDigestSection sectorCode={viewing.code} />
+          </section>
+        ) : null}
       </section>
 
       <SelectedInstrumentsRail
@@ -252,6 +269,13 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         onRemove={(code) => selection.toggleSector(code, false)}
         onProceed={proceed}
         proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
+        footer={
+          // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+          <section className={styles.railMarket} aria-labelledby="rail-market-title">
+            <h2 id="rail-market-title">지금 국내 시장</h2>
+            <MarketNow />
+          </section>
+        }
       >
         {/*
           고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은

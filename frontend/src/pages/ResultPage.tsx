@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
@@ -318,6 +318,17 @@ function ResultView({
         reference={reference}
       />
       <IndexReferenceNotice state={indexReference} />
+      {/*
+        '경제환경이 비슷했던 과거 보기'(005 FR-018). 이 결과의 섹터·전략·설정을 그대로 두고 011로 넘긴다.
+        받는 화면이 분야를 먼저 고르게 한다(011 FR-001). 돌아오는 길은 브라우저 뒤로 가기다.
+      */}
+      {viewable ? (
+        <p className={styles.regimeEntry}>
+          <Link to={`/regime-link?${new URLSearchParams({ base: token }).toString()}`}>
+            경제환경이 비슷했던 과거 보기 <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        </p>
+      ) : null}
       {viewable ? (
         <ResultDetailTabs
           token={token}

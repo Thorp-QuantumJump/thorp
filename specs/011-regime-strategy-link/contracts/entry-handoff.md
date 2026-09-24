@@ -24,12 +24,12 @@
 → 기본 목록(`shownInFiltered=true`) + "선택 ETF로 비교 가능한 기간" + 제외 수 + '전체 경제환경 탐색으로
 전환' → 로그인 사용자는 `POST /regime-link-searches`로 목록·변경 기록 확정(익명은 GET과 탐색 흐름 내 변경 표시) → 사례 선택 → `POST /regime-links`(로그인 및 linkSearchId 필요) → 사례 옆 전략 결과 영역.
 
-## 2. 시장 흐름 → 011 (`MARKET_FLOW` 경로)
+## 2. 사례 → 011 (`MARKET_FLOW` 경로: 010 사례 상세, 002 '지금과 비슷했던 과거 시장')
 
 | 항목 | 값 |
 |---|---|
 | 주소 | `/regime-link/start?case={caseId}[&sector={sectorCode}]` |
-| `case` | `{snapshotKey}~{endMonth}` (research R6). 009 `StrategyComparisonHandoff.caseId`가 이 값이다 |
+| `case` | `{snapshotKey}~{endMonth}` (research R6). 010 사례 상세와 002 '지금과 비슷했던 과거 시장'이 `buildCaseId(searchId, endMonth)`로 만든다 |
 | 진입 버튼의 위치 | 사례를 고르는 곳인 010 `RegimeSearchPage`의 사례 상세(사후 구간 자리). 009 기본 화면의 카드는 사례 없이 011을 열지 않고 `/regime-search`로 안내한다 |
 | `sector` | 009에서 고른 섹터(있으면). 002 화면의 **초기 선택**으로만 쓰고 사례 순위와 무관(FR-005). 010 사례 상세에서 들어오는 길은 섹터를 알 수 없어 싣지 않는다(009 → 010 인계에 섹터가 없다) |
 | 로그인 | 이 주소를 열 때 익명이면 로그인 안내 → 로그인 후 같은 주소로 복귀(FR-025, 014 FR-011 방식). 014 `ProtectedRoute`와 같은 복귀 위치 저장(`auth/returnTarget`)을 재사용한다 |
@@ -76,5 +76,6 @@ sessionStorage 한 항목으로 한다 — 그 방식은 바꾸지 않고 `case`
 - `base`가 없거나 형식이 틀리면 `/regime-link`는 진단 시작(`/diagnosis/sectors`)으로 안내한다.
   빈 화면을 만들지 않는다.
 - `case` 형식이 틀리거나 010 표시 후보에 없으면(`404 RESOURCE_NOT_FOUND`) `/regime-link/start`는
-  시장 흐름(`/market-flow`)으로 안내하고 이유 한 문장을 보인다.
+  사례를 다시 고르는 자리인 투자 대상 고르기(`/diagnosis/sectors`)로 안내하고 이유 한 문장을 보인다
+  (2026-09-24, S15P21E205-432: 예전에는 시장 흐름 `/market-flow`).
 - 만료된 토큰(`410`)은 005의 만료 안내를 그대로 쓴다.

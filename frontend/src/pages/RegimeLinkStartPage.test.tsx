@@ -88,7 +88,7 @@ describe('011 시작 화면 (진입 계약 §2)', () => {
     renderStart('/regime-link/start?case=only-a-key')
 
     expect(await screen.findByRole('alert')).toBeTruthy()
-    expect(screen.getByRole('link', { name: '시장 흐름으로 가기' }).getAttribute('href')).toBe('/market-flow')
+    expect(screen.getByRole('link', { name: '과거 사례 다시 고르기' }).getAttribute('href')).toBe('/diagnosis/sectors')
     expect(fetchCaseWindow).not.toHaveBeenCalled()
   })
 
