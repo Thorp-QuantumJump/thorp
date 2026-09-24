@@ -6,7 +6,7 @@
   gap: 8px;
   margin-bottom: 20px;
   color: var(--thorp-accent-soft);
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
 }
 
 .link:focus-visible {
@@ -16,5 +16,5 @@
 
 .label {
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
 }

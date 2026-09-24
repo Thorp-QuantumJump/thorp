@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ArrowUpRight } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { fetchLearningArticles, type LearningListResult } from '@/api/learning'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './LearningListPage.module.css'
 
 type ListState = { status: 'loading' } | LearningListResult
@@ -40,8 +42,9 @@ export function LearningListPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="learning-list-title">
+        <p className={heading.eyebrow} aria-hidden="true">LEARN</p>
         <h1 id="learning-list-title" className={styles.title}>
-          배우기
+          <em className={heading.emphasis}>배우기</em>
         </h1>
 
         {state.status === 'loading' ? (
@@ -52,7 +55,7 @@ export function LearningListPage() {
 
         {state.status === 'loaded' ? (
           <ol className={styles.list}>
-            {state.articles.map((article) => (
+            {state.articles.map((article, index) => (
               <li key={article.articleId}>
                 {/* 도움말에서 온 돌아갈 자리를 다른 글로 옮겨 가도 잃지 않게 받은 state를 넘긴다. */}
                 <Link
@@ -60,8 +63,11 @@ export function LearningListPage() {
                   to={`/learn/${encodeURIComponent(article.articleId)}`}
                   state={location.state}
                 >
+                  {/* 번호는 서버가 준 목록의 자리다. 읽어야 할 순서를 강제하지 않는다(FR-001). */}
+                  <span className={styles.itemIndex} aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                   <span className={styles.itemTitle}>{article.title}</span>
                   <span className={styles.itemQuestion}>{article.question}</span>
+                  <ArrowUpRight className={styles.itemArrow} size={18} aria-hidden="true" />
                 </Link>
               </li>
             ))}
@@ -79,7 +85,10 @@ export function LearningListPage() {
 
         {/* 목록의 상태와 무관하게 늘 둔다. 응답이 늦어도 진단 진입을 기다리게 하지 않는다(FR-015). */}
         <p className={styles.diagnosis}>
-          <Link to="/diagnosis/sectors">글을 읽지 않고 바로 비중 비교 시작하기</Link>
+          <Link className={styles.diagnosisLink} to="/diagnosis/sectors">
+            글을 읽지 않고 바로 비중 비교 시작하기
+            <ArrowUpRight size={17} aria-hidden="true" />
+          </Link>
         </p>
       </main>
     </div>
