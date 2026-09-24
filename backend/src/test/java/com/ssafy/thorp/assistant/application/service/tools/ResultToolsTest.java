@@ -228,7 +228,12 @@ class ResultToolsTest {
             assertThat(facts).hasSize(2);
             assertThat(facts.get(0).label()).isEqualTo("반도체 매수 거래 (진입 2025-01-22)");
             assertThat(facts.get(0).value())
-                    .contains("진입가 53700.00원", "수량 90주", "청산 2025-03-12", "실현 손익 -87228.75원");
+                    .contains(
+                            "진입가 53,700원",
+                            "수량 90주",
+                            "청산 2025-03-12",
+                            "청산가 52,800원",
+                            "실현 손익 -87,229원");
             assertThat(facts.get(1).value()).contains("보유 중");
             assertThat(facts).allSatisfy(fact -> assertThat(fact.tab()).isEqualTo("trades"));
             assertThat(dump(facts)).doesNotContain("BT-", "TRD-", TOKEN);
@@ -285,9 +290,7 @@ class ResultToolsTest {
 
             List<Evidence> facts = tool.run(Map.of("date", "2025-03-20"));
 
-            assertThat(facts)
-                    .extracting(Evidence::label)
-                    .containsExactly("반도체 보유 비중 (직전 보유 기준)", "반도체 평가 금액 (직전 보유 기준)");
+            assertThat(facts).extracting(Evidence::label).containsExactly("반도체 보유 비중 (직전 보유 기준)");
             assertThat(facts.get(0).value()).isEqualTo("0.4769");
             assertThat(facts)
                     .allSatisfy(

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;
 import com.ssafy.thorp.assistant.application.port.AssistantSettings;
 import com.ssafy.thorp.assistant.application.port.AssistantTool;
 import com.ssafy.thorp.assistant.application.result.Evidence;
@@ -368,7 +369,7 @@ class ResultEvidenceBuilderTest {
     }
 
     @Test
-    @DisplayName("부분 결과면 시계열 마지막 날짜가 완료 끝 날짜이고 접두에 쓰인다")
+    @DisplayName("부분 결과면 시계열 마지막 날짜가 완료 끝 날짜이고, 도구도 그 날짜 뒤를 읽지 않는다")
     void partialUsesLastTimeseriesDate() {
         when(publicResults.getWeights(TOKEN)).thenReturn(weights(List.of("091160.XKRX")));
         when(publicResults.getDetail(TOKEN))
@@ -399,6 +400,11 @@ class ResultEvidenceBuilderTest {
         assertThat(bundle.partialUntil()).isEqualTo(LocalDate.of(2024, 3, 5));
         assertThat(byLabel(bundle).get("완료 끝 날짜").value()).isEqualTo("2024-03-05");
         assertThat(byLabel(bundle)).containsKey("결과 상태");
+        AssistantTool equityOn = bundle.tools().get(0);
+        assertThatThrownBy(() -> equityOn.run(Map.of("date", "2024-06-03")))
+                .isInstanceOf(ToolUnavailableException.class)
+                .hasMessageContaining("결과 기간");
+        verify(publicResults).getTimeseries(TOKEN);
     }
 
     @Test
