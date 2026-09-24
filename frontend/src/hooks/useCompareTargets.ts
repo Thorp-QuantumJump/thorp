@@ -190,7 +190,8 @@ function readPendingState(pending: Pending): CompareTargetState {
 export function useCompareTargets(base: PublicResultDetail) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { compareTokens, searchId } = parseCompareQuery(location.search)
+  // 참고 지수선(`?index=`)은 이 훅이 다루지 않지만 비교 주소를 다시 쓸 때 잃지 않게 물려준다.
+  const { compareTokens, searchId, index } = parseCompareQuery(location.search)
   // 훅은 반복문 안에서 부를 수 없다. 상한이 셋이라 자리 셋을 고정으로 둔다.
   const results = [
     useResult(compareTokens[0] ?? null),
@@ -257,7 +258,7 @@ export function useCompareTargets(base: PublicResultDetail) {
   const period = manualPeriod ?? inferredPeriod
 
   const go = (tokens: string[]) =>
-    navigate(buildResultPath(base.publicToken, { compareTokens: tokens, searchId }), {
+    navigate(buildResultPath(base.publicToken, { compareTokens: tokens, searchId, index }), {
       replace: true,
       state: location.state,
     })
@@ -439,6 +440,7 @@ export function useCompareTargets(base: PublicResultDetail) {
         buildResultPath(acceptedBaseToken, {
           compareTokens: acceptedTargets,
           searchId: period.choices.length ? null : searchId,
+          index,
         }),
         { state: { returnTo: location.pathname + location.search } },
       )

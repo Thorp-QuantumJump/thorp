@@ -9,13 +9,21 @@ describe('비교 주소', () => {
     const path = buildResultPath(base, {
       compareTokens: [target, second],
       searchId: 'SEARCH / 한글&',
+      index: true,
     })
     expect(parseCompareQuery(path.slice(path.indexOf('?')))).toEqual({
       compareTokens: [target, second],
       searchId: 'SEARCH / 한글&',
+      index: true,
     })
     expect(buildResultPath(base)).toBe('/results/' + base)
     expect(buildResultPath(base, { compareTokens: [] })).toBe('/results/' + base)
+  })
+  it('참고 지수는 KOSPI 만 켠다', () => {
+    expect(parseCompareQuery('?index=KOSPI').index).toBe(true)
+    expect(parseCompareQuery('?index=kospi').index).toBe(false)
+    expect(parseCompareQuery('').index).toBe(false)
+    expect(buildResultPath(base, { index: true })).toBe('/results/' + base + '?index=KOSPI')
   })
   it('같은 토큰은 한 번만 두고 상한을 넘는 토큰은 뒤에서 자른다', () => {
     const tokens = ['b', 'c', 'd', 'e'].map((char) => char.repeat(32))
