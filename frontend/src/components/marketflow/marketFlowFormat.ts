@@ -1,3 +1,5 @@
+import type { IndicatorDisplay } from '@/types/marketFlow'
+
 /** 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다. */
 export function formatObservation(value: number | null): string {
   return value === null ? '자료 없음' : value.toLocaleString('ko-KR', { maximumFractionDigits: 10 })
@@ -64,4 +66,15 @@ export function buildAxisDomain(values: readonly number[]): {
   // 0을 빼고 자료에 맞춘다. 점이 가장자리에 붙지 않게 조금 띄운다.
   const pad = spread * 0.15
   return { domain: [min - pad, max + pad], includesZero: false }
+}
+
+/**
+ * 최근 오르내림. 값이 있는 마지막 두 달을 견준다. 선 색(상승 빨강·하락 파랑)에만 쓰고 좋고 나쁨을 뜻하지 않는다 —
+ * 실업률이 오르는 것도 빨강이다. 비교할 두 달이 없거나 같으면 방향을 달지 않는다.
+ */
+export function recentDirection(path: IndicatorDisplay['path']): 'up' | 'down' | undefined {
+  const values = path.flatMap(({ value }) => (value === null ? [] : [value]))
+  if (values.length < 2) return undefined
+  const difference = values[values.length - 1] - values[values.length - 2]
+  return difference > 0 ? 'up' : difference < 0 ? 'down' : undefined
 }

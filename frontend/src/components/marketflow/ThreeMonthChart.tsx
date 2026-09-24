@@ -2,10 +2,11 @@ import { scaleLinear } from '@visx/scale'
 import { motion, useReducedMotion } from 'motion/react'
 import { useId, useMemo, useState } from 'react'
 import type { IndicatorDisplay } from '@/types/marketFlow'
-import { buildAxisDomain, formatObservation } from './marketFlowFormat'
+import { buildAxisDomain, formatObservation, recentDirection } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 const plot = { width: 640, height: 172, left: 58, right: 622, top: 14, bottom: 146 }
+
 
 /** 실제 세 관측점만 직선으로 연결한다. 축 범위는 buildAxisDomain이 정하고 결측 구간은 잇지 않는다. */
 export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) {
@@ -27,7 +28,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
   }, [indicator.path])
 
   return (
-    <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)}>
+    <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)} data-direction={recentDirection(indicator.path)}>
       <div className={styles.chartCaption} id={descriptionId}>
         <span>최근 3개월 경로</span>
         <span>
