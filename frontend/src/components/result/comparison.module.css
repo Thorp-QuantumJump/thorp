@@ -210,3 +210,20 @@ button.chipBody:focus-visible {
   font-size: 0.78rem;
   color: var(--thorp-muted);
 }
+.volatilityField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0 24px;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+.volatilityField select {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  font: inherit;
+}

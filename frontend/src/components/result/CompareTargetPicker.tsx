@@ -4,10 +4,14 @@ import { fetchUsedStrategies } from '@/api/myRecords'
 import { fetchEvaluationWindow } from '@/api/sectors'
 import { fetchStrategyRegistry } from '@/api/strategyRegistry'
 import { useAuth } from '@/auth/auth-context'
+import { InlineHelp } from '@/components/common/InlineHelp'
+import { TARGET_RISK_HELP } from '@/components/strategy/AnalysisConditionsPanel'
 import { resolveRulesVersion } from '@/components/strategy/analysisSupport'
 import { Button } from '@/components/ui/button'
+import type { AxisValues } from '@/hooks/useStrategySettings'
 import type { UsedStrategy } from '@/types/myRecords'
 import type { PublicResultDetail } from '@/types/result'
+import type { NumericCondition } from '@/types/strategyRegistry'
 import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'
 import type { CompareChoice } from './compareRequest'
 import styles from './comparison.module.css'
@@ -15,7 +19,8 @@ import styles from './comparison.module.css'
 type Candidate = {
   key: string
   choice: CompareChoice
-  source: CandidateSource
+  /** `volatility`는 기준 전략 그대로 변동성 제한만 바꿔 보는 한 줄이다 */
+  source: CandidateSource | 'volatility'
   /** 내 전략의 이름표(내 기록 항목 이름). 없으면 `null` */
   recordName: string | null
   /** 설정값 한 줄. 축이 없는 전략은 빈 문자열 */
@@ -30,6 +35,13 @@ const SOURCE_LABELS: Record<CandidateSource, string> = {
   used: '내 전략',
 }
 const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']
+const VOLATILITY_KEY = 'volatility'
+
+/** 등록표 범위(min~max, step 간격)의 후보 */
+function rangeChoices({ min, max, step }: NumericCondition): number[] {
+  const count = Math.round((max - min) / step)
+  return Array.from({ length: count + 1 }, (_, i) => Number((min + i * step).toFixed(4)))
+}
 
 /**
  * 비교 대상 고르기(FR-004, `S15P21E205-419`).
@@ -62,7 +74,10 @@ export function CompareTargetPicker({
     candidates: Candidate[]
     usedUnavailable: boolean
     error: string | null
+    /** 변동성 제한 줄의 목표 범위. 기준이 이미 제한을 켰으면 고를 값이 없어 `null`이다 */
+    volatility: NumericCondition | null
   } | null>(null)
+  const [volatilityPick, setVolatilityPick] = useState<number | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [picked, setPicked] = useState<string[]>([])
   const listId = useId()
@@ -144,13 +159,47 @@ export function CompareTargetPicker({
             },
           }))
         })
-        if (active) setState({ candidates, usedUnavailable: used.failed, error: null })
+        // 변동성 제한 줄: 기준 전략·설정·규칙 버전 그대로, 제한만 켜거나 끈다. 다른 분석 방식(새 자금 투입 등)에는 두지 않는다.
+        const baseStrategy = registry.strategies.find(
+          (strategy) => strategy.strategyId === base.config.strategyId,
+        )
+        const limited = base.config.scenario === 'TARGET_RISK'
+        const volatility = registry.analysisConditions.targetVolatility
+        if (baseStrategy && (limited || base.config.scenario === 'FULL_PERIOD')) {
+          candidates.push({
+            key: VOLATILITY_KEY,
+            source: 'volatility',
+            recordName: null,
+            settings: '',
+            reason: base.versions.costProfile ? null : '기준 결과의 비용 기준을 확인할 수 없습니다.',
+            shortenedDays: null,
+            choice: {
+              strategy: baseStrategy,
+              parameters: { ...base.config.parameters } as AxisValues,
+              registryVersion: base.config.registryVersion ?? registry.registryVersion,
+              rulesVersion: base.config.rulesVersion,
+              volatilityLimit: limited
+                ? { scenario: 'FULL_PERIOD' }
+                : { scenario: 'TARGET_RISK', targetVolatility: volatility.default },
+            },
+          })
+        }
+        if (active) {
+          setState({
+            candidates,
+            usedUnavailable: used.failed,
+            error: null,
+            volatility: limited ? null : volatility,
+          })
+          setVolatilityPick(limited ? null : volatility.default)
+        }
       } catch (error) {
         if (active)
           setState({
             candidates: [],
             usedUnavailable: false,
             error: error instanceof Error ? error.message : '비교 전략을 불러오지 못했습니다.',
+            volatility: null,
           })
       }
     }
@@ -171,7 +220,13 @@ export function CompareTargetPicker({
   const submit = () => {
     const chosen = (state?.candidates ?? []).filter((candidate) => picked.includes(candidate.key))
     if (chosen.length === 0) return
-    onSelect(chosen.map((candidate) => candidate.choice))
+    onSelect(
+      chosen.map(({ choice }) =>
+        choice.volatilityLimit?.scenario === 'TARGET_RISK' && volatilityPick !== null
+          ? { ...choice, volatilityLimit: { scenario: 'TARGET_RISK', targetVolatility: volatilityPick } }
+          : choice,
+      ),
+    )
   }
 
   // 출처별로 묶어 보인다. 기본 전략 묶음에는 전략마다 한 줄, 내 전략 묶음에는 돌려 본 조합마다 한 줄이다.
@@ -179,6 +234,8 @@ export function CompareTargetPicker({
     source,
     candidates: (state?.candidates ?? []).filter((candidate) => candidate.source === source),
   })).filter((group) => group.candidates.length > 0)
+  const volatilityRow = state?.candidates.find((candidate) => candidate.source === 'volatility')
+  const volatilityName = state?.volatility ? '변동성 제한 걸기' : '변동성 제한 없이'
 
   return (
     <section className={styles.panel} aria-label="비교 전략 선택">
@@ -256,6 +313,59 @@ export function CompareTargetPicker({
             </ul>
           </li>
         ))}
+        {volatilityRow ? (
+          <li className={styles.group}>
+            <p className={styles.groupTitle}>
+              변동성 제한{' '}
+              <InlineHelp label="변동성 제한" side="bottom">
+                {TARGET_RISK_HELP}
+              </InlineHelp>
+            </p>
+            <ul className={styles.combinations}>
+              <li>
+                <label className={styles.combination}>
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(VOLATILITY_KEY)}
+                    disabled={
+                      !!volatilityRow.reason ||
+                      room === 0 ||
+                      (full && !picked.includes(VOLATILITY_KEY))
+                    }
+                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}
+                    aria-describedby={VOLATILITY_KEY + '-hint'}
+                    onChange={() => toggle(VOLATILITY_KEY)}
+                  />
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{volatilityName}</span>
+                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>
+                  </span>
+                </label>
+                {state?.volatility && volatilityPick !== null ? (
+                  <label className={styles.volatilityField}>
+                    목표 변동성(연)
+                    <select
+                      value={volatilityPick}
+                      onChange={(event) => setVolatilityPick(Number(event.target.value))}
+                    >
+                      {rangeChoices(state.volatility).map((value) => (
+                        <option key={value} value={value}>
+                          {value}%
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <p id={VOLATILITY_KEY + '-hint'}>
+                  {volatilityRow.reason ??
+                    (state?.volatility
+                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'
+                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}
+                </p>
+              </li>
+            </ul>
+          </li>
+        ) : null}
       </ul>
       <div className={styles.actions}>
         {state && !state.error ? (
