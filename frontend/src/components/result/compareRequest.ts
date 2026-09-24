@@ -6,6 +6,7 @@ import type { AxisValue, StrategyView } from '@/types/strategyRegistry'
 export type CompareChoice = {
   period?: { start: string; end: string }
   strategy: StrategyView
+  /** 빈 문자열이면 요청에 싣지 않는다 — 등록표 버전 없이 접수된 기준을 그대로 따라갈 때다 */
   registryVersion: string
   rulesVersion: string
   /**
@@ -67,8 +68,11 @@ export function buildCompareRequest(
     strategy: {
       strategyId: choice?.strategy.strategyId ?? config.strategyId,
       rulesVersion: choice?.rulesVersion ?? config.rulesVersion,
+      // 등록표 버전이 빈 후보는 등록표 없이 접수된 기준을 그대로 따라가는 것이다(변동성 제한 줄). 없는 버전을 붙이지 않는다.
       ...(choice
-        ? { registryVersion: choice.registryVersion }
+        ? choice.registryVersion
+          ? { registryVersion: choice.registryVersion }
+          : {}
         : config.registryVersion
           ? { registryVersion: config.registryVersion }
           : {}),

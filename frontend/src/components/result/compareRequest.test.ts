@@ -108,6 +108,10 @@ describe('변동성 제한 비교', () => {
     const off = buildCompareRequest(limited, { ...choice, volatilityLimit: { scenario: 'FULL_PERIOD' } })
     expect(off.conditions.scenario).toBe('FULL_PERIOD')
     expect(off.conditions).not.toHaveProperty('scenarioParams')
+    // 등록표 버전 없이 접수된 기준을 따라가는 후보는 없는 버전을 붙이지 않는다.
+    expect(
+      buildCompareRequest(base, { ...choice, registryVersion: '' }).strategy,
+    ).not.toHaveProperty('registryVersion')
     // 후보가 제한을 말하지 않으면 기준의 제한을 따른다.
     expect(buildCompareRequest(limited, choice).conditions).toMatchObject({
       scenario: 'TARGET_RISK',

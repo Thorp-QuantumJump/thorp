@@ -176,7 +176,8 @@ export function CompareTargetPicker({
             choice: {
               strategy: baseStrategy,
               parameters: { ...base.config.parameters } as AxisValues,
-              registryVersion: base.config.registryVersion ?? registry.registryVersion,
+              // 기준과 같은 설정을 다시 싣는 줄이라 기준의 등록표 버전을 따른다. 없으면(과도기 접수) 싣지 않는다.
+              registryVersion: base.config.registryVersion ?? '',
               rulesVersion: base.config.rulesVersion,
               volatilityLimit: limited
                 ? { scenario: 'FULL_PERIOD' }
