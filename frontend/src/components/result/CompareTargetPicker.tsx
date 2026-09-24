@@ -380,25 +380,30 @@ export function CompareTargetPicker({
             </ul>
           </li>
         ) : null}
+        <li className={styles.group}>
+          <p className={styles.groupTitle}>
+            참고 지수{' '}
+            <InlineHelp label="참고 지수" side="bottom">
+              시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교
+              대상 수에 세지 않으며 바로 그래프에 더해집니다.
+            </InlineHelp>
+          </p>
+          <ul className={styles.combinations}>
+            <li>
+              <label className={styles.combination}>
+                <input
+                  type="checkbox"
+                  checked={indexOn}
+                  onChange={(event) => onIndexChange(event.target.checked)}
+                />
+                <span className={styles.rowText}>
+                  <span className={styles.rowTitle}>KOSPI 함께 보기</span>
+                </span>
+              </label>
+            </li>
+          </ul>
+        </li>
       </ul>
-      <div className={styles.group}>
-        <p className={styles.groupTitle}>참고 지수</p>
-        <label className={styles.combination}>
-          <input
-            type="checkbox"
-            checked={indexOn}
-            aria-describedby={listId + '-index-hint'}
-            onChange={(event) => onIndexChange(event.target.checked)}
-          />
-          <span className={styles.rowText}>
-            <span className={styles.rowTitle}>KOSPI 함께 보기</span>
-          </span>
-        </label>
-        <p id={listId + '-index-hint'}>
-          시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교 대상
-          수에 세지 않으며 바로 그래프에 더해집니다.
-        </p>
-      </div>
       <div className={styles.actions}>
         {state && !state.error ? (
           <Button variant="outline" disabled={picked.length === 0} onClick={submit}>
