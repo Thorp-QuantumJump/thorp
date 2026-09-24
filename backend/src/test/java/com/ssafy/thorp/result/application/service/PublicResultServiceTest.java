@@ -30,10 +30,14 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
+import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository;
+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository.IndexClose;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -63,6 +67,7 @@ class PublicResultServiceTest {
     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);
     private final ExpiredPublicTokenRepository expiredTokens =
             mock(ExpiredPublicTokenRepository.class);
+    private final IndexSeriesRepository indexSeries = mock(IndexSeriesRepository.class);
 
     private final PublicResultService service =
             new PublicResultService(
@@ -71,6 +76,7 @@ class PublicResultServiceTest {
                     retryService,
                     registry,
                     expiredTokens,
+                    indexSeries,
                     Clock.fixed(NOW, ZoneOffset.UTC));
 
     private static BacktestRequest request(Long requesterId, Instant expiresAt) {
@@ -172,16 +178,86 @@ class PublicResultServiceTest {
         verify(queryService, never()).getTimeseries(any(BacktestRequest.class));
     }
 
+    /** 지수 비교가 읽는 칸만 채운 완료 상세. {@code null}을 넘기면 그 칸이 없다. */
+    private static BacktestDetailResult completed(String initialCash, String dataVersion) {
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("effectiveStart", "2025-01-02");
+        config.put("effectiveEnd", "2025-01-07");
+        if (initialCash != null) config.put("initialCash", initialCash);
+        Map<String, Object> versions = new LinkedHashMap<>();
+        if (dataVersion != null) versions.put("data", dataVersion);
+        return new BacktestDetailResult(
+                BACKTEST_ID,
+                RunStatus.COMPLETED,
+                ResultSource.NEW,
+                false,
+                false,
+                null,
+                NOW,
+                NOW,
+                NOW,
+                0L,
+                config,
+                versions,
+                null,
+                null,
+                null);
+    }
+
     @Test
-    @DisplayName("기간 KOSPI 조회 포트가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다")
-    void indexComparisonIsExplicitlyUnavailableWithoutSeriesPort() {
+    @DisplayName("지수 비교는 결과의 자료 버전·기간에서 KOSPI 를 읽어 첫 종가를 시작 금액에 맞춰 환산한다")
+    void indexComparisonScalesKospiToInitialCash() {
         stored(request(null, NOW.plusSeconds(3600)));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(completed("10000000", "DS-1"));
+        when(indexSeries.findCloses(
+                        "DS-1", "KOSPI", LocalDate.of(2025, 1, 2), LocalDate.of(2025, 1, 7)))
+                .thenReturn(
+                        List.of(
+                                new IndexClose(LocalDate.of(2025, 1, 3), new BigDecimal("2500")),
+                                new IndexClose(LocalDate.of(2025, 1, 6), new BigDecimal("2750")),
+                                new IndexClose(LocalDate.of(2025, 1, 7), new BigDecimal("2400"))));
+
+        var result = service.getIndexComparison(TOKEN);
+
+        assertThat(result.available()).isTrue();
+        assertThat(result.reason()).isNull();
+        // 첫날(1/2)이 비어 있으면 처음 관측된 1/3 이 기준이다. 날짜는 받은 그대로이고 채우지 않는다.
+        assertThat(result.series())
+                .containsExactly(
+                        new PublicResultIndexComparison.Point(
+                                LocalDate.of(2025, 1, 3), "10000000.00"),
+                        new PublicResultIndexComparison.Point(
+                                LocalDate.of(2025, 1, 6), "11000000.00"),
+                        new PublicResultIndexComparison.Point(
+                                LocalDate.of(2025, 1, 7), "9600000.00"));
+    }
+
+    @Test
+    @DisplayName("그 기간에 지수 관측치가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다")
+    void indexComparisonIsUnavailableWithoutObservations() {
+        stored(request(null, NOW.plusSeconds(3600)));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(completed("10000000", "DS-1"));
+        when(indexSeries.findCloses(any(), any(), any(), any())).thenReturn(List.of());
 
         var result = service.getIndexComparison(TOKEN);
 
         assertThat(result.available()).isFalse();
         assertThat(result.reason()).isEqualTo("INDEX_SERIES_UNAVAILABLE");
         assertThat(result.series()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("자료 버전이나 시작 금액을 모르면 지수를 읽지 않고 비활성이다 — 다른 판의 지수를 대신 그리지 않는다")
+    void indexComparisonNeedsDataVersionAndCash() {
+        stored(request(null, NOW.plusSeconds(3600)));
+        when(queryService.getDetail(any(BacktestRequest.class)))
+                .thenReturn(completed("10000000", null), completed(null, "DS-1"));
+
+        assertThat(service.getIndexComparison(TOKEN).available()).isFalse();
+        assertThat(service.getIndexComparison(TOKEN).available()).isFalse();
+        verify(indexSeries, never()).findCloses(any(), any(), any(), any());
     }
 
     @Test

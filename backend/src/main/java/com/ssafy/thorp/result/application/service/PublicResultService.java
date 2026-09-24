@@ -25,8 +25,12 @@ import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;
 import com.ssafy.thorp.result.application.result.PublicResultRetry;
 import com.ssafy.thorp.result.application.result.ValidationTier;
+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository;
+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository.IndexClose;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -57,11 +61,18 @@ public class PublicResultService {
     private static final Logger log = LoggerFactory.getLogger(PublicResultService.class);
     private static final String INDEX_SERIES_UNAVAILABLE = "INDEX_SERIES_UNAVAILABLE";
 
+    /** 보조 비교에 쓰는 광범위 국내 주가지수(spec FR-017). */
+    private static final String COMPARISON_INDEX_CODE = "KOSPI";
+
+    /** 환산 금액의 소수 자릿수. 결과 시계열의 {@code equity}와 표기를 맞춘다. */
+    private static final int MONEY_SCALE = 2;
+
     private final BacktestRequestRepository requestRepository;
     private final BacktestResultQueryService queryService;
     private final BacktestRetryService retryService;
     private final ParameterRegistryPort registry;
     private final ExpiredPublicTokenRepository expiredTokens;
+    private final IndexSeriesRepository indexSeries;
     private final Clock clock;
 
     public PublicResultService(
@@ -70,12 +81,14 @@ public class PublicResultService {
             BacktestRetryService retryService,
             ParameterRegistryPort registry,
             ExpiredPublicTokenRepository expiredTokens,
+            IndexSeriesRepository indexSeries,
             Clock clock) {
         this.requestRepository = requestRepository;
         this.queryService = queryService;
         this.retryService = retryService;
         this.registry = registry;
         this.expiredTokens = expiredTokens;
+        this.indexSeries = indexSeries;
         this.clock = clock;
     }
 
@@ -187,15 +200,51 @@ public class PublicResultService {
     }
 
     /**
-     * KOSPI 보조 비교 계열.
+     * KOSPI 보조 비교 계열. 결과의 시작 금액으로 첫 거래일에 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치다.
      *
-     * <p>토큰의 형식·존재·만료는 다른 공개 자원과 똑같이 먼저 판정한다. 현재 001은 최신 KOSPI 관측치만 제공하고 기간 계열 조회 포트는 제공하지 않는다. 한
-     * 점이나 다른 계열을 KOSPI처럼 꾸미지 않고, 화면이 이유와 함께 비활성 상태를 보이도록 명시적으로 unavailable을 반환한다. 포트가 생기면 {@code
-     * config.effectiveStart~effectiveEnd}를 조회해 {@code config.initialCash}로 서버에서 환산한다(T087).
+     * <p>토큰의 형식·존재·만료는 다른 공개 자원과 똑같이 먼저 판정한다. 결과의 {@code config.effectiveStart~effectiveEnd} 종가를
+     * {@code initialCash × 종가 / 첫 종가}로 환산한다(T087). 첫 종가는 그 범위에서 처음 관측된 값이다. 빠진 날은 채우지 않는다.
+     *
+     * <p><b>지수는 결과가 계산에 쓴 자료 버전({@code versions.data})에서 읽는다.</b> 이유는 {@link
+     * IndexSeriesRepository}에 있다. 기간·금액·자료 버전 중 하나라도 없거나 그 범위에 관측치가 없으면 값을 지어내지 않고 이유와 함께
+     * unavailable이다.
      */
     public PublicResultIndexComparison getIndexComparison(String token) {
-        resolve(token);
-        return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);
+        BacktestRequest request = resolve(token);
+        BacktestDetailResult detail = publicly(() -> queryService.getDetail(request));
+        Object start = detail.config().get("effectiveStart");
+        Object end = detail.config().get("effectiveEnd");
+        Object initialCash = detail.config().get("initialCash");
+        Object dataVersion = detail.versions() == null ? null : detail.versions().get("data");
+        if (start == null || end == null || initialCash == null || dataVersion == null) {
+            return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);
+        }
+        List<IndexClose> closes =
+                indexSeries.findCloses(
+                        dataVersion.toString(),
+                        COMPARISON_INDEX_CODE,
+                        LocalDate.parse(start.toString()),
+                        LocalDate.parse(end.toString()));
+        if (closes.isEmpty()) {
+            return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);
+        }
+        BigDecimal cash = new BigDecimal(initialCash.toString());
+        BigDecimal first = closes.get(0).close();
+        return new PublicResultIndexComparison(
+                true,
+                null,
+                closes.stream()
+                        .map(
+                                close ->
+                                        new PublicResultIndexComparison.Point(
+                                                close.date(),
+                                                cash.multiply(close.close())
+                                                        .divide(
+                                                                first,
+                                                                MONEY_SCALE,
+                                                                RoundingMode.HALF_EVEN)
+                                                        .toPlainString()))
+                        .toList());
     }
 
     /**
