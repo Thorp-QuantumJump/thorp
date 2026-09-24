@@ -108,7 +108,7 @@ export function RecordDetailPanel({
         <h3 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>
           저장 당시 조건
         </h3>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
+        <Button type="button" variant="outline" size="sm" className={styles.smallAction} onClick={onClose}>
           닫기
         </Button>
       </div>
@@ -122,7 +122,7 @@ export function RecordDetailPanel({
       {state.status === 'failed' ? (
         <div role="alert" className={styles.alert}>
           <p>{state.message}</p>
-          <Button type="button" variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+          <Button type="button" variant="outline" size="sm" className={styles.smallAction} onClick={() => setAttempt((n) => n + 1)}>
             다시 시도
           </Button>
         </div>

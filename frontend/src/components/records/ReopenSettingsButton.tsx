@@ -75,7 +75,7 @@ export function ReopenSettingsButton({
   return (
     <>
       {unavailable ? null : (
-        <Button type="button" variant="outline" disabled={sending} onClick={() => void move()}>
+        <Button type="button" variant="outline" className={styles.action} disabled={sending} onClick={() => void move()}>
           설정 바꿔 비교
         </Button>
       )}

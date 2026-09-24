@@ -17,14 +17,14 @@
 
 .count {
   color: var(--thorp-foreground);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 
 .retry {
   display: inline-flex;
-  min-height: 36px;
+  min-height: var(--thorp-control, 36px);
   align-items: center;
   gap: 7px;
   padding: 0 13px;
@@ -33,7 +33,7 @@
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
   font-weight: 700;
 }
 
@@ -55,7 +55,7 @@
 .done {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.55;
 }
 
@@ -66,5 +66,5 @@
 .error {
   margin: 0;
   color: var(--thorp-negative);
-  font-size: 0.73rem;
+  font-size: var(--thorp-text-caption, 0.73rem);
 }

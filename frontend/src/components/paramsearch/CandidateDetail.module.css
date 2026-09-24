@@ -30,7 +30,7 @@
 
 .header h2 {
   margin: 0 0 4px;
-  font-size: 1.02rem;
+  font-size: var(--thorp-text-heading, 1.02rem);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -38,7 +38,7 @@
 .header p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
   line-height: 1.55;
 }
 
@@ -101,7 +101,7 @@
 
 .rows dt {
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .rows .metricLabel {
@@ -114,20 +114,20 @@
   display: grid;
   gap: 3px;
   margin: 0;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   font-variant-numeric: tabular-nums;
   font-weight: 650;
 }
 
 .absent {
   color: var(--thorp-muted);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   font-weight: 600;
 }
 
 .rowNote {
   color: var(--thorp-muted);
-  font-size: 0.68rem;
+  font-size: var(--thorp-text-label, 0.68rem);
   font-weight: 500;
 }
 
@@ -143,7 +143,7 @@
 .reason h3 {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.7rem;
+  font-size: var(--thorp-text-caption, 0.7rem);
   font-weight: 650;
   letter-spacing: 0.02em;
 }
@@ -151,27 +151,28 @@
 .outcome {
   margin: 0;
   color: var(--thorp-accent-soft);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   font-weight: 700;
 }
 
 .reasonText {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.6;
 }
 
 .runId {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.7rem;
+  font-size: var(--thorp-text-caption, 0.7rem);
 }
 
 .runId code {
   overflow-wrap: anywhere;
   color: var(--thorp-copy);
-  font-family: var(--thorp-font-mono);
+  font-family: var(--thorp-font-number, var(--thorp-font-mono));
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 560px) {

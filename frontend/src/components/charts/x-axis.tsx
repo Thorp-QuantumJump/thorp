@@ -20,6 +20,11 @@ export interface XAxisProps {
    * `"domain"` — evenly spaced ticks across the time domain (may not align with hover).
    */
   tickMode?: "domain" | "data";
+  /**
+   * `"Jan 2010"` 같은 눈금을 연도 위·월 아래 두 줄로 세운다. 한 줄로 늘어놓으면 눈금 넷만으로도 축이
+   * 글자로 꽉 찬다. 두 줄이 되는 만큼 그래프 아래 여백(`margin.bottom`)을 넉넉히 둔다.
+   */
+  stackYear?: boolean;
 }
 
 interface AxisTick {
@@ -36,6 +41,13 @@ interface XAxisLabelProps {
   isHovering: boolean;
   tickerHalfWidth: number;
   animatePosition: boolean;
+  stackYear: boolean;
+}
+
+/** `"Jan 2010"`을 연도와 월로 나눈다. 모양이 다르면 나누지 않는다. */
+function splitMonthYear(label: string): { year: string; month: string } | null {
+  const match = /^(\S+) (\d{4})$/.exec(label);
+  return match ? { year: match[2], month: match[1] } : null;
 }
 
 function XAxisLabel({
@@ -46,7 +58,9 @@ function XAxisLabel({
   isHovering,
   tickerHalfWidth,
   animatePosition,
+  stackYear,
 }: XAxisLabelProps) {
+  const stacked = stackYear ? splitMonthYear(label) : null;
   const fadeBuffer = 20;
   const fadeRadius = tickerHalfWidth + fadeBuffer;
 
@@ -83,7 +97,14 @@ function XAxisLabel({
           transition: "opacity 0.4s ease-in-out",
         }}
       >
-        {label}
+        {stacked ? (
+          <span className="flex flex-col items-center leading-tight">
+            <span>{stacked.year}</span>
+            <span className="opacity-70">{stacked.month}</span>
+          </span>
+        ) : (
+          label
+        )}
       </span>
     </div>
   );
@@ -576,6 +597,7 @@ const XAxisInner = memo(function XAxisInner({
   numTicks = 5,
   tickerHalfWidth = 50,
   tickMode = "data",
+  stackYear = false,
   container,
 }: XAxisProps & { container: HTMLDivElement }) {
   const { xScale, margin, tooltipData, data, xAccessor, dateLabels, xDomain } =
@@ -653,6 +675,7 @@ const XAxisInner = memo(function XAxisInner({
           isHovering={isHovering}
           key={`${item.date.getTime()}-${item.x}`}
           label={item.label}
+          stackYear={stackYear}
           tickerHalfWidth={tickerHalfWidth}
           x={item.x}
         />

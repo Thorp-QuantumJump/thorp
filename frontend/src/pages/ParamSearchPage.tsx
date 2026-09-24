@@ -28,6 +28,7 @@ import type {
   StrategySpaceSummary,
 } from '@/types/paramSearch'
 import { formatCount } from '@/utils/paramSearchLabels'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './ParamSearchPage.module.css'
 
 /** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */
@@ -342,12 +343,14 @@ export function ParamSearchPage() {
       <AppHeader />
 
       <main className={styles.main} aria-labelledby="param-search-title">
-        <div className={styles.eyebrow}>
+        {/* classic은 예전의 한글 작은 제목, 새 디자인은 첫 화면과 같은 영문 작은 제목이다. */}
+        <div className={`${styles.eyebrow} ${styles.classicOnly}`}>
           <SlidersHorizontal size={16} aria-hidden="true" />
           설정 조합 자동 비교
         </div>
+        <p className={heading.eyebrow} aria-hidden="true">STEP 02 · AUTO COMPARE</p>
         <div className={styles.headline}>
-          <h1 id="param-search-title">한 번에 여러 설정을 같은 조건으로 비교합니다</h1>
+          <h1 id="param-search-title">한 번에 여러 설정을 <em className={heading.emphasis}>같은 조건</em>으로 비교합니다</h1>
           <InlineHelp label="설정 조합 자동 비교">
             <p>몇 개를 돌릴지는 등록표와 한도가 정하므로 숫자를 입력할 필요가 없습니다.</p>
           </InlineHelp>

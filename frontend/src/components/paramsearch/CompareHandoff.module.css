@@ -30,7 +30,7 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   font-weight: 750;
 }
 
@@ -41,7 +41,7 @@
   background: transparent;
   color: var(--thorp-muted);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 650;
 }
 
@@ -77,7 +77,7 @@
 .pickText {
   min-width: 0;
   color: var(--thorp-copy);
-  font-size: 0.73rem;
+  font-size: var(--thorp-text-caption, 0.73rem);
   line-height: 1.45;
 }
 
@@ -112,7 +112,7 @@
 .note {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.55;
 }
 
@@ -128,7 +128,7 @@
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 700;
 }
 

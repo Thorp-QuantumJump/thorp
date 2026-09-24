@@ -23,7 +23,7 @@
 
 .dialog h2 {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: var(--thorp-text-heading, 1.02rem);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -31,7 +31,7 @@
 .lead {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.6;
 }
 
@@ -54,13 +54,13 @@
 
 .versions dt {
   color: var(--thorp-muted);
-  font-size: 0.66rem;
+  font-size: var(--thorp-text-label, 0.66rem);
 }
 
 .versions dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   font-weight: 650;
 }
 
@@ -72,7 +72,7 @@
 .changes h3 {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   font-weight: 650;
 }
 
@@ -84,14 +84,14 @@
   border-left: 1px solid var(--thorp-line-strong);
   list-style: none;
   color: var(--thorp-foreground);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
 .status {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
 }
 
 .error {
@@ -100,7 +100,7 @@
   border: 1px solid var(--thorp-negative);
   border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
@@ -120,7 +120,7 @@
   padding: 0 16px;
   border-radius: var(--thorp-radius-control, 5px);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 700;
 }
 

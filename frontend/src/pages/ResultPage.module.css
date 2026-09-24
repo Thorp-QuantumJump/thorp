@@ -3,10 +3,11 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
   padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);
 }
@@ -40,7 +41,7 @@
   align-items: center;
   gap: 7px;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 660;
   text-decoration: none;
 }
@@ -49,17 +50,23 @@
   color: var(--thorp-accent-soft);
 }
 
+/* 작은 제목은 되돌아가기 줄처럼 두 칸을 다 쓴다. */
+.introRow {
+  grid-column: 1 / -1;
+}
+
 .title {
   margin: 0;
-  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  font-size: var(--thorp-text-title, clamp(1.7rem, 4.5vw, 2.6rem));
+  line-height: var(--thorp-title-leading, 1.1);
+  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-weight: 700;
 }
 
 .status {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
@@ -71,13 +78,14 @@
 }
 
 .retry {
-  padding: 8px 14px;
+  padding: var(--thorp-control-pad-block, 8px) 14px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 10px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
   cursor: pointer;
+  min-height: var(--thorp-control, auto);
 }
 
 .retry:focus-visible {
@@ -87,7 +95,7 @@
 
 .sentence {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
@@ -108,5 +116,16 @@
 .source {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+/*
+  머리의 '비교 대상 고르기'. 공용 Button의 기본 높이(32px)는 작은 행동 단이라, 이 화면의 행동답게 카드 안
+  행동 단(40px)으로 올린다.
+*/
+.compareButton {
+  height: var(--thorp-control, 2rem);
+  padding-inline: 16px;
+  font-size: var(--thorp-control-font, 0.875rem);
+  font-weight: var(--thorp-control-weight, 500);
 }

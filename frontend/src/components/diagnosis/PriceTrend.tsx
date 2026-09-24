@@ -124,7 +124,7 @@ function TrendChart({
           aspectRatio={expanded ? '5 / 3' : '3 / 1'}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 10, right: 10, bottom: 22, left: 10 }}
+          margin={{ top: 10, right: 10, bottom: 36, left: 10 }}
           xDataKey="date"
           yDomainTween={false}
         >
@@ -139,7 +139,7 @@ function TrendChart({
             stroke="var(--thorp-accent)"
             strokeWidth={1.8}
           />
-          <XAxis numTicks={4} tickMode="domain" />
+          <XAxis numTicks={4} stackYear tickMode="domain" />
         </LineChart>
       </div>
 

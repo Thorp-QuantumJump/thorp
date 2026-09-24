@@ -11,19 +11,22 @@
 .failure p {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
 .failure button {
-  padding: 9px 16px;
+  padding: var(--thorp-control-pad-block, 9px) 16px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: var(--thorp-text-body, 0.88rem);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--thorp-control, auto);
 }
 
 .failure button:hover {
