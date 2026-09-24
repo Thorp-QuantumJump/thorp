@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,12 +36,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class MyRecordQueryService {
 
     /**
-     * 003이 다루는 시나리오. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지 않는다(research R4).
+     * 003이 다루는 시나리오 — 연속 운용과, 003 분석 조건의 '변동성 제한'인 {@code TARGET_RISK}. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지
+     * 않는다(research R4).
      *
      * <p>문자열을 적지 않고 {@link Scenario}에서 가져온다 — 적어 두면 그 상수가 이름을 바꾸거나 사라져도 여기는 조용히 지나가고, 모든 기록의 버튼이
      * 사라진 뒤에야 드러난다. 이름이 바뀌면 빌드가 깨지는 쪽이 낫다.
      */
-    private static final String REOPENABLE_SCENARIO = Scenario.FULL_PERIOD.name();
+    private static final Set<String> REOPENABLE_SCENARIOS =
+            Set.of(Scenario.FULL_PERIOD.name(), Scenario.TARGET_RISK.name());
 
     private final MyRecordRepository records;
     private final MyRecordMappingDriftChecker driftChecker;
@@ -137,8 +140,8 @@ public class MyRecordQueryService {
     /**
      * '설정 바꿔 비교'를 열 수 있는가.
      *
-     * <p>005의 {@code prefillStrategySettings}가 {@code FULL_PERIOD}가 아닌 시나리오를 거절한다 — 003 화면이 목표 위험
-     * 맞춤 같은 시나리오를 다루지 않기 때문이다(research R4). 열 수 없는 것을 열어 두면 눌러 본 뒤에 실패한다.
+     * <p>005의 {@code prefillStrategySettings}가 이 둘이 아닌 시나리오를 거절한다 — 003 화면이 새 자금 투입 같은 시나리오를 다루지 않기
+     * 때문이다(research R4). 열 수 없는 것을 열어 두면 눌러 본 뒤에 실패한다.
      *
      * <p>시나리오가 <b>적혀 있지 않은</b> 사본은 주 분석으로 본다 — 접수가 생략을 {@code FULL_PERIOD}로 읽는 것과 같은 규칙이다.
      */
@@ -147,7 +150,7 @@ public class MyRecordQueryService {
             return false;
         }
         Object scenario = config.get("scenario");
-        return scenario == null || REOPENABLE_SCENARIO.equals(String.valueOf(scenario));
+        return scenario == null || REOPENABLE_SCENARIOS.contains(String.valueOf(scenario));
     }
 
     /**
