@@ -37,6 +37,19 @@ describe('MarketNow (002 FR-018, 009 FR-017)', () => {
     expect(screen.getByText(/기준 · 출처 KRX/)).toBeTruthy()
   })
 
+  it('한 지수만 받으면 그 카드만 보이고 출처도 받은 쪽으로 밝힌다', async () => {
+    vi.mocked(fetchMarketSeries).mockImplementation(async (code) => {
+      if (code === 'VKOSPI200') throw new Error('offline')
+      return series('KOSPI', [2600, 2650])
+    })
+    const { container } = render(<MarketNow />)
+
+    expect(await screen.findByText('KOSPI')).toBeTruthy()
+    expect(screen.queryByText('VKOSPI 200')).toBeNull()
+    expect(container.querySelectorAll('[data-direction]')).toHaveLength(1)
+    expect(screen.getByText('2026.09.21 기준 · 출처 KRX')).toBeTruthy()
+  })
+
   it('받지 못한 지수는 빼고, 모두 못 받으면 한 문장만 남긴다', async () => {
     vi.mocked(fetchMarketSeries).mockRejectedValue(new Error('offline'))
     render(<MarketNow />)
