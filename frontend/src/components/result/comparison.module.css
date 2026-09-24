@@ -53,11 +53,14 @@
   overflow-wrap: anywhere;
 }
 
+/* 제목·안내·버튼은 제자리에 두고 후보 목록만 스크롤한다. 높이는 적당한 상한과 화면에 남은 높이 중 작은 쪽이다. */
 .popover {
   z-index: 61;
+  display: flex;
+  flex-direction: column;
   width: min(460px, calc(100vw - 32px));
-  max-height: calc(100svh - 32px);
-  overflow-y: auto;
+  max-height: min(560px, var(--radix-popover-content-available-height, calc(100svh - 32px)));
+  overflow: hidden;
   padding: 16px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 12px);
@@ -67,6 +70,9 @@
 }
 
 .popover .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -74,7 +80,10 @@
 
 .popover .candidates {
   gap: 8px;
+  min-height: 0;
   margin: 8px 0 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .popover .candidates p {
