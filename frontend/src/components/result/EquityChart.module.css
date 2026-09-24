@@ -68,6 +68,15 @@
   cursor: pointer;
 }
 
+/* 확대한 동안에는 끌어서 옮길 수 있음을 손 모양으로 알린다. 차트가 곡선 영역에 인라인으로 거는 십자선 커서를 이긴다. */
+.chart[data-pan='ready'] :global(g) {
+  cursor: grab !important;
+}
+
+.chart[data-pan='dragging'] :global(g) {
+  cursor: grabbing !important;
+}
+
 .zoomReset:focus-visible {
   outline: var(--thorp-focus-outline-compact);
   outline-offset: var(--thorp-focus-offset-compact);

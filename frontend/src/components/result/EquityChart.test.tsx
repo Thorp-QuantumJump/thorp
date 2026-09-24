@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
@@ -96,39 +96,65 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
-  it('그래프를 끌면 그 구간으로 확대하고 전체 기간·두 번 누르기로 돌아온다', async () => {
+  it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {
     const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
+    const chart = screen.getByRole('img')
+    // jsdom 은 크기를 0으로 잰다. 끌어 옮긴 거리를 거래일로 바꾸려면 그림 폭이 있어야 한다.
+    chart.getBoundingClientRect = () => ({ left: 0, top: 0, width: 840, height: 380 }) as DOMRect
     const full = pointCount(seriesPath(container, 'base'))
-    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))!
+    const firstX = () => seriesPath(container, 'base').getAttribute('d')
 
-    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
-    fireEvent.mouseMove(area, { clientX: 400, clientY: 100 })
-    fireEvent.mouseUp(area, { clientX: 400, clientY: 100 })
-    fireEvent.mouseUp(window)
+    // 그래프 밖(페이지)의 휠은 막지 않는다 — 그래프 안의 휠만 기본 동작(스크롤)을 막는다.
+    const outside = new WheelEvent('wheel', { deltaY: -100, cancelable: true })
+    document.body.dispatchEvent(outside)
+    expect(outside.defaultPrevented).toBe(false)
 
+    const inside = new WheelEvent('wheel', { deltaY: -300, cancelable: true, clientX: 0 })
+    act(() => {
+      chart.dispatchEvent(inside)
+    })
+    expect(inside.defaultPrevented).toBe(true)
     await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
     const zoomed = pointCount(seriesPath(container, 'base'))
     expect(zoomed).toBeLessThan(full)
-    expect(zoomed).toBeGreaterThan(1)
+    expect(zoomed).toBeGreaterThanOrEqual(10)
+
+    // 끌어서 옮기면 보이는 거래일 수는 그대로이고 구간만 바뀐다.
+    const before = firstX()
+    const beforePoints = pointCount(seriesPath(container, 'base'))
+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))
+      window.dispatchEvent(new MouseEvent('pointerup'))
+    })
+    expect(pointCount(seriesPath(container, 'base'))).toBe(beforePoints)
+    expect(firstX()).not.toBe(before)
 
     fireEvent.click(screen.getByRole('button', { name: '전체 기간' }))
     expect(pointCount(seriesPath(container, 'base'))).toBe(full)
-    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
 
-    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
-    fireEvent.mouseMove(area, { clientX: 400, clientY: 100 })
-    fireEvent.mouseUp(window)
+    act(() => {
+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, cancelable: true }))
+    })
     await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
-    fireEvent.doubleClick(screen.getByRole('img'))
+    fireEvent.doubleClick(chart)
     expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
   })
 
-  it('살짝 누르기만 하면 확대하지 않는다', () => {
+  it('전체 기간에서 휠로 더 줄이거나 끌어도 바뀌지 않는다', () => {
     const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
-    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))!
-    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
-    fireEvent.mouseMove(area, { clientX: 203, clientY: 100 })
-    fireEvent.mouseUp(window)
+    const chart = screen.getByRole('img')
+    const full = pointCount(seriesPath(container, 'base'))
+    act(() => {
+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, cancelable: true }))
+    })
+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))
+      window.dispatchEvent(new MouseEvent('pointerup'))
+    })
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
     expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
   })
 
