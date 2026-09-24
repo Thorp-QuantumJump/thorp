@@ -18,18 +18,6 @@
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
-/* 제목 줄. 왼쪽은 제목·안내, 오른쪽은 지금 국내 시장이며 칸 폭은 아래 투자 대상 보드와 같다. */
-.intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--thorp-flow-side, 19rem));
-  gap: 16px var(--thorp-flow-gap, 22px);
-  margin-bottom: 24px;
-}
-
-.intro .lead {
-  margin-bottom: 0;
-}
-
 .title {
   margin: 0 0 12px;
   font-size: var(--thorp-text-title, clamp(1.7rem, 4.4vw, 2.6rem));
@@ -996,7 +984,6 @@
     position: static;
   }
 
-  .intro,
   .context {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1216,19 +1203,17 @@
   }
 }
 
-/*
-  제목 줄 오른쪽의 지금 국내 시장. 아래 선택 요약과 같은 칸 폭이라 두 덩이가 세로로 맞는다.
-  지수마다 카드 하나씩 세로로 쌓는다.
-*/
-.marketNow {
+/* '다음: 전략 고르기' 아래의 지금 국내 시장. 지수마다 카드 하나씩 세로로 쌓는다. */
+.railMarket {
   display: flex;
-  align-self: end;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--thorp-line);
 }
 
-.marketNow h2 {
+.railMarket h2 {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1239,7 +1224,7 @@
   letter-spacing: 0.02em;
 }
 
-.marketNow h2 svg {
+.railMarket h2 svg {
   flex-shrink: 0;
   color: var(--thorp-accent-soft);
 }
