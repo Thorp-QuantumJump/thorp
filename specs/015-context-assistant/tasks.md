@@ -52,14 +52,14 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 
 **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 묶음 3·4를 병합하지 않는다.
 
-- [ ] T010 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java` — 301자·공백 질문 400, 낯선 `kind` 400, `RESULT`에 토큰 없음 400, 식별자 둘 동시 400, CSRF 누락 403, 플래그 비활성 404(`capabilities`는 200), IP 한도 429, 결과 토큰별 한도 429, 하루 상한 429, 응답 모양이 `docs/specs/assistant-api/examples/*.json`과 같음
-- [ ] T011 [P] 실패 테스트 `.../assistant/application/service/AnswerValidatorTest.java` — 모르는 `factId` 거절, `text` 안 아라비아 숫자·`%`·`원`·날짜·URL 거절, 한글 수사("두 번") 통과, `{{F1}}`↔`factIds` 불일치 거절, `ANSWERED`인데 `factIds` 빈 part 거절, 길이·part 수 상한, 금지 표현 거절, 치환 결과가 `Evidence.value` 표기와 같음
-- [ ] T012 [P] 실패 테스트 `.../assistant/application/service/ToolLoopTest.java`(가짜 모델·가짜 도구) — 목록에 없는 도구 이름 실행 0회, 스키마 밖 인자(식별자 필드 포함) 거절 후 "사용할 수 없음" 반환, 3번째 라운드 요청은 끊고 `INSUFFICIENT_EVIDENCE`, 팩 60개 초과 시 뒤를 잘라 "일부만 읽음" 근거, 15초 예산 초과 시 503
-- [ ] T013 타입·포트 `.../assistant/application/{port,result}/` — `Evidence(id,label,value,asOf,tab)`, `EvidenceBundle(facts, tools)`, `ToolSpec`, `ToolCall(name, arguments)`, `ModelTurn`(ToolCall | ModelDraft), `ModelDraft(status, parts[{text,factIds}])`, `AssistantAnswer(status, answer, evidence, page)`, `AssistantModelPort.step(conversation, facts, tools)`, `AssistantTool{spec(), run(args)}`, `EvidenceBuilder{supports(kind), build(context)}`
-- [ ] T014 `AssistantQuestionService.ask(question, context)` — 순서: 플래그 → 요청 검증 → 한도 → 페이지 판정(`RESULT`는 `PublicResultService.resolve`) → 근거 빌더(첫 호출 `getWeights`가 005 `requireResultReady`(private)의 409를 그대로 던진다 — `RESULT_NOT_READY`/`BACKTEST_FAILED`/`NO_PARTIAL_RESULT`, 따로 판정하지 않는다) → `ToolLoop`(전체 데드라인 15초 우선, 라운드 예산은 그 안에서) → `AnswerValidator` → 치환. 이 묶음에서는 빈 근거 빌더와 가짜 모델로 `INSUFFICIENT_EVIDENCE`까지 흐른다
-- [ ] T015 `AnswerValidator`(금지 표현은 `backend/src/main/resources/assistant/forbidden-phrases.txt`, 한 줄에 하나·`#` 주석)·`ToolLoop`(근거 알갱이: 점 1개·거래 1건·보유 1종목 = 근거 1개, 상한 초과 시 도구 결과부터 자르고 초기 팩 보존)·`RateLimiter`(`thorp.assistant.limits.*`, 인스턴스 메모리, `// ponytail:` 주석) 구현
-- [ ] T016 `AssistantController` — `GET /assistant/capabilities`, `POST /assistant/questions`; `ErrorCode`에 `ASSISTANT_UNAVAILABLE`(503)·`ASSISTANT_LIMIT`(429); `application.yml`·`application-prod.yml`·`.env.example`에 `THORP_ASSISTANT_*` — prod도 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 두어 미설정 시 기동은 되고 기능만 비활성
-- [ ] T017 `ArchitectureTest`에 규칙 12 추가 — `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다(규칙 8~11 관례). `./gradlew spotlessApply build` 통과. 로그에 토큰·식별자·원문 없음 확인
+- [x] T010 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java` — 301자·공백 질문 400, 낯선 `kind` 400, `RESULT`에 토큰 없음 400, 식별자 둘 동시 400, CSRF 누락 403, 플래그 비활성 404(`capabilities`는 200), IP 한도 429, 결과 토큰별 한도 429, 하루 상한 429, 응답 모양이 `docs/specs/assistant-api/examples/*.json`과 같음
+- [x] T011 [P] 실패 테스트 `.../assistant/application/service/AnswerValidatorTest.java` — 모르는 `factId` 거절, `text` 안 아라비아 숫자·`%`·`원`·날짜·URL 거절, 한글 수사("두 번") 통과, `{{F1}}`↔`factIds` 불일치 거절, `ANSWERED`인데 `factIds` 빈 part 거절, 길이·part 수 상한, 금지 표현 거절, 치환 결과가 `Evidence.value` 표기와 같음
+- [x] T012 [P] 실패 테스트 `.../assistant/application/service/ToolLoopTest.java`(가짜 모델·가짜 도구) — 목록에 없는 도구 이름 실행 0회, 스키마 밖 인자(식별자 필드 포함) 거절 후 "사용할 수 없음" 반환, 3번째 라운드 요청은 끊고 `INSUFFICIENT_EVIDENCE`, 팩 60개 초과 시 뒤를 잘라 "일부만 읽음" 근거, 2분 예산 초과 시 503(늦게 온 초안 포함)
+- [x] T013 타입·포트 `.../assistant/application/{port,result}/` — `Evidence(id,label,value,asOf,tab)`, `EvidenceBundle(facts, tools)`, `ToolSpec`, `ToolCall(name, arguments)`, `ModelTurn`(ToolCall | ModelDraft), `ModelDraft(status, parts[{text,factIds}])`, `AssistantAnswer(status, answer, evidence, page)`, `AssistantModelPort.step(conversation, facts, tools)`, `AssistantTool{spec(), run(args)}`, `EvidenceBuilder{supports(kind), build(context)}`
+- [x] T014 `AssistantQuestionService.ask(question, context)` — 순서: 플래그 → 요청 검증 → 한도 → 페이지 판정(`RESULT`는 `PublicResultService.resolve`) → 근거 빌더(첫 호출 `getWeights`가 005 `requireResultReady`(private)의 409를 그대로 던진다 — `RESULT_NOT_READY`/`BACKTEST_FAILED`/`NO_PARTIAL_RESULT`, 따로 판정하지 않는다) → `ToolLoop`(전체 데드라인 2분 우선 — 페이지 판정부터 세고 근거 팩 만들기도 든다, 라운드 예산은 그 안에서) → `AnswerValidator` → 치환. 이 묶음에서는 빈 근거 빌더와 가짜 모델로 `INSUFFICIENT_EVIDENCE`까지 흐른다
+- [x] T015 `AnswerValidator`(금지 표현은 `backend/src/main/resources/assistant/forbidden-phrases.txt`, 한 줄에 하나·`#` 주석)·`ToolLoop`(근거 알갱이: 점 1개·거래 1건·보유 1종목 = 근거 1개, 상한 초과 시 도구 결과부터 자르고 초기 팩 보존)·`RateLimiter`(`thorp.assistant.limits.*`, 인스턴스 메모리, `// ponytail:` 주석) 구현
+- [x] T016 `AssistantController` — `GET /assistant/capabilities`, `POST /assistant/questions`; `ErrorCode`에 `ASSISTANT_UNAVAILABLE`(503)·`ASSISTANT_LIMIT`(429); `application.yml`·`application-prod.yml`·`.env.example`에 `THORP_ASSISTANT_*` — prod도 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 두어 미설정 시 기동은 되고 기능만 비활성
+- [x] T017 `ArchitectureTest`에 규칙 12 추가 — `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다(규칙 8~11 관례). `./gradlew spotlessApply build` 통과. 로그에 토큰·식별자·원문 없음 확인
 
 **Checkpoint**: 플래그 꺼진 상태로 머지 가능. 3·4·5가 이 포트·타입 위에서 병렬로 간다.
 
@@ -130,7 +130,7 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 | 묶음 | Jira Task 제목 | 브랜치 | SP | T번호 | 선행 |
 |---|---|---|---|---|---|
 | 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |
-| 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` | `feat(be)/{N}-assistant-contract` | 3 | T010~T017 | 1 |
+| 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |
 | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` | `feat(be)/{N}-assistant-model-adapter` | 3 | T020~T023 | 2 |
 | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |
 | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |
