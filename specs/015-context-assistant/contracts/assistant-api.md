@@ -48,11 +48,13 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 | 질문 길이·공백, 낯선 `kind`, 식별자 불일치, 토큰 형식 | 400 | `INVALID_INPUT` | 입력 안내 |
 | 토큰 없음 | 404 | `RESOURCE_NOT_FOUND` | 005와 같은 뜻 |
 | 토큰 만료(묘비 포함) | 410 | `RESULT_EXPIRED` | 005와 같은 뜻 |
-| 결과 없음(계산 중·실패·시작 전 취소) | 409 | `RESULT_NOT_READY` / `BACKTEST_FAILED` | 005와 같은 뜻. 모델 무호출 |
+| 결과 없음 — 계산 중 | 409 | `RESULT_NOT_READY` | 005 하위 자원 `requireResultReady`와 같은 판정. 모델 무호출 |
+| 결과 없음 — 실패 | 409 | `BACKTEST_FAILED` | 위와 같다 |
+| 결과 없음 — 완료 거래일 없는 취소 | 409 | `NO_PARTIAL_RESULT` | 위와 같다 |
 | CSRF 누락 | 403 | 저장소 공통 | — |
 | 한도 초과(IP·토큰·하루) | 429 | `ASSISTANT_LIMIT` | `details.retryAfterSeconds`로 다시 가능한 시점 |
 | 모델 장애·시간 초과·응답 검증 실패로 답을 만들 수 없음 | 503 | `ASSISTANT_UNAVAILABLE` | "지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요." + 재시도 버튼 |
-| 기능 비활성 | 404 | `RESOURCE_NOT_FOUND` | 경로 자체를 노출하지 않음 |
+| 기능 비활성(질문 경로만) | 404 | `RESOURCE_NOT_FOUND` | 경로 자체를 노출하지 않음. `capabilities`는 항상 200 |
 
 토큰 판정(400/404/410/409)은 **모델 호출 전에** 끝난다. 어느 오류에서도 다른 자료로 대체 답변하지 않는다.
 
@@ -77,10 +79,30 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 }
 ```
 
-- 근거는 `Fn label (asOf) = value` 한 줄씩. **값은 원문 문자열이다**(모델이 표기를 바꾸지 않게 한다). 라벨에 결과 필드 이름을 쓰지 않는다.
+- 근거는 `Fn label (asOf) = value` 한 줄씩. **값은 원문 문자열이다**(모델이 표기를 바꾸지 않게 한다). 라벨은 아래 포함 표의 한국어 고정 문자열이고 결과 필드 이름을 쓰지 않는다.
+
+#### 초기 팩 포함 표 (`getDetail` + `getWeights`)
+
+| 원천 | 항목 | 라벨 | 표기 |
+|---|---|---|---|
+| `summary` | `initialEquity`·`finalEquity` | 시작 자산·종료 자산 | 금액 |
+| `summary` | `totalReturn`·`netTotalReturn`·`cagr`·`maxDrawdown`·`volatility`·`winRate` | 전체 수익률·비용 차감 후 전체 수익률·연복리 수익률·가장 크게 줄었던 폭·변동성·승률 | 비율 |
+| `summary` | `sharpeRatio` | 샤프 비율 | 소수 2자리 |
+| `summary` | `tradeCount` | 거래 횟수 | 정수 |
+| `summary` | `totalTradingCost`와 `costs`의 항목별 합계 | 거래비용 합계·수수료·세금·슬리피지 등(항목 이름은 004 `Costs` 갈래의 한국어) | 금액 |
+| `summary.analytics` | `recoveryDays`·`turnover`·`weightError`·`method` | 회복 기간(거래일)·회전율·비중 오차·추정 방법 | 정수·비율·비율·문자 |
+| `summary.analytics` | `correlationMatrix`·`riskContribution`·`lossContribution` | 종목별 상관계수·위험 기여·손실 기여(종목은 `config.items`의 섹터 이름으로) | 소수 2자리·비율·비율 |
+| `partial` | 부분 결과 여부. `true`면 완료 끝 날짜가 필요한데 상세에는 없으므로(005 화면도 시계열 마지막 점을 쓴다) **이때만** `getTimeseries`를 초기 조회에 더해 마지막 점의 날짜를 근거로 넣고 접두 문장에 쓴다 | 부분 결과·완료 끝 날짜 | 문자·날짜 |
+| `config` | `start`·`end`·`effectiveStart`·`effectiveEnd`·`warmupTradingDays`·`initialCash` | 요청 시작일·요청 종료일·평가 시작일·평가 종료일·준비 기간(거래일)·시작 금액 | 날짜·정수·금액 |
+| `config` | `strategyId`(→ `strategyName`)·`parameters`의 축마다 | 전략·(축 라벨은 003 등록표 `ParameterRegistryPort`의 한국어 라벨) | 문자·등록표 표기 |
+| `config.items[]` | `sectorId`·`instrumentId`·`targetWeight` | 투자 대상 섹터·대표 ETF·목표 비중 | 문자·비율 |
+| `weightsSource`, `getWeights` | 비중 출처, 실제 비중 | 비중 출처(사용자 입력/전략 계산)·실제 비중(종목별) | 문자·비율 |
+| `exceptionKinds` | 예외 종류 목록 | 계산 중 예외 | 문자 |
+
+**넣지 않는 것**: `publicToken`, `expiresAt`, `versions`, `progress`, `cancelRequested`, `resultSource`, `queuedAt`·`startedAt`·`finishedAt`, `queueWaitSeconds`, `failure`, `validationTier`. 결과 타입 record를 통째로 옮기지 않고 위 표의 항목만 필드 단위로 옮긴다.
 - `tools`에는 §2.2의 함수 5개만. 웹 검색·코드 실행 같은 내장 도구는 넣지 않는다.
 - 도구 라운드: 응답이 `tool_calls`면 서버가 검증·실행하고 `assistant(tool_calls)`·`tool(content=새 근거 줄들 또는 "사용할 수 없음: 이유")` 메시지를 이력에 붙여 다시 보낸다. `store:false`라 이력은 서버가 매번 담는다. 최대 2라운드.
-- 시간: 전체 15초. 첫 호출 7초, 이후 호출 4초(설정값).
+- 시간: **전체 데드라인 15초가 우선**이다. 라운드별 모델 호출 예산(첫 7초·이후 4초, 설정값)은 그 안에서 남은 시간과 작은 쪽을 쓴다(`MarketHttpClient`의 `deadline.remaining()` 방식). 도구 실행·검증 시간도 15초에 든다.
 
 ### 2.2 도구
 
@@ -94,7 +116,9 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 | `getPositionsOn` | `date` | 기간 안 | `/positions?date`의 보유 종목·비중 |
 | `getDeepestDrawdownWindow` | 없음 | — | `drawdown`이 가장 낮은 첫날과 그 앞 고점 날(005 `drawdownWindow.ts`와 같은 정의). `summary.maxDrawdown`과 다르면 빈 결과 |
 
-검증 실패·모르는 이름은 실행하지 않고 `tool` 메시지로 "사용할 수 없음: {이유}"를 돌려준다. 라운드당 근거 30개, 팩 전체 60개. 넘으면 뒤를 자르고 "일부만 읽음" 근거를 남긴다.
+검증 실패·모르는 이름은 실행하지 않고 `tool` 메시지로 "사용할 수 없음: {이유}"를 돌려준다.
+
+근거 알갱이: 시계열 점 1개·거래 1건·보유 종목 1개가 각각 근거 1개다. 라운드당 30개, 팩 전체 60개. 넘으면 **도구 결과의 뒤를 자르고 초기 팩은 보존**하며 "일부만 읽음" 근거를 남긴다(거래 첫 페이지는 공개 상한 100건이라 거의 항상 잘린다 — 그래서 `getTradesBetween`은 구간을 좁혀 다시 부르라는 안내를 프롬프트에 둔다). 도구 결과는 결과 record를 통째로 옮기지 않고 필드 단위로 만든다 — `backtestId`, 시계열 점의 `benchmarkReturn`·`cashFlows`는 넣지 않는다.
 
 ### 2.3 응답 스키마 (strict)
 
@@ -133,10 +157,21 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 | `text`의 모든 `{{Fn}}`이 그 part의 `factIds`에 있고, `factIds`의 ID가 모두 `text`에 등장 | 아니면 거절 |
 | `text`에서 자리표시자를 뺀 나머지에 아라비아 숫자, `%`, 통화 단위 뒤 숫자, `YYYY-MM-DD`·`N월 N일` 형식, URL·경로가 없다 | 있으면 거절. 한글 수사("두 번", "세 종목", "첫째")는 허용 |
 | `ANSWERED`인 part는 `factIds`가 비어 있지 않다 | 아니면 거절 |
-| 전체 길이 ≤ 600자(설정값), part ≤ 5(설정값) | 넘으면 거절 |
-| 금지 표현 목록(설정 파일: 권고·확률·원인 단정 어구) | 걸리면 거절. **보조 검사다** — 실제 방어는 프롬프트와 평가 표본 |
+| 전체 길이 ≤ 600자(설정값), part 수 ≤ 5(설정값) | 넘으면 거절 |
+| 금지 표현 목록(`backend/src/main/resources/assistant/forbidden-phrases.txt`, 한 줄에 하나, `#` 주석: 권고·확률·원인 단정 어구) | 걸리면 거절. **보조 검사다** — 실제 방어는 프롬프트와 평가 표본 |
 
-통과하면 `{{Fn}}`을 `Evidence.value`의 표기 함수로 치환한다: 금액 `formatMoney`, 비율 `formatRatio`, 날짜 `YYYY년 M월 D일`, 정수 천 단위 구분. 표기 함수는 근거를 만들 때 종류로 정해 둔다.
+통과하면 `{{Fn}}`을 `Evidence.value`의 표기 함수로 치환한다. 표기는 프론트 `frontend/src/components/result/formatResult.ts`와 같은 규칙이어야 근거 카드 값과 탭의 값이 어긋나지 않는다:
+
+| 종류 | 규칙 | 예 |
+|---|---|---|
+| 금액 | 정수로 반올림, 천 단위 구분, 뒤에 `원` (`formatMoney`) | `17078.49` → `17,078원` |
+| 비율 | ×100, 소수 2자리, 뒤에 `%`, `-0.00`은 `0.00` (`formatRatio`) | `0.166652` → `16.67%` |
+| 소수 2자리 | 반올림 소수 2자리 | `1.2345` → `1.23` |
+| 정수 | 천 단위 구분 | `1234` → `1,234` |
+| 날짜 | `YYYY년 M월 D일` | `2024-12-31` → `2024년 12월 31일` |
+| 문자 | 그대로 | — |
+
+표기 함수는 근거를 만들 때 종류로 정해 둔다.
 
 ## 3. 넘기지 않는 것
 
@@ -146,11 +181,11 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 
 | 변수 | 뜻 | prod 기본값 |
 |---|---|---|
-| `THORP_ASSISTANT_API_KEY` | GMS 키 | 없음(필수) |
-| `THORP_ASSISTANT_BASE_URL` | `https://gms.ssafy.io/gmsapi/api.openai.com` | 없음(필수) |
-| `THORP_ASSISTANT_MODEL` | `gpt-5-mini` | 없음(필수) |
+| `THORP_ASSISTANT_API_KEY` | GMS 키 | 빈 값(`${THORP_ASSISTANT_API_KEY:}`) → 비활성 |
+| `THORP_ASSISTANT_BASE_URL` | `https://gms.ssafy.io/gmsapi/api.openai.com` | 빈 값 → 비활성 |
+| `THORP_ASSISTANT_MODEL` | `gpt-5-mini` | 빈 값 → 비활성 |
 | `THORP_ASSISTANT_ENABLED_SCOPES` | 쉼표 목록, 1차 `RESULT` | 빈 값(비활성) |
 | `thorp.assistant.limits.per-ip-per-minute` 등 | IP 8, 토큰 5, 하루 1000, 질문 300자 | 설정값 |
 | `thorp.assistant.timeout.*` | 전체 15초, 첫 호출 7초, 이후 4초 | 설정값 |
 
-키·모델·주소 중 하나라도 없으면 `capabilities.enabled=false`이고 기동은 정상이다.
+키·모델·주소 중 하나라도 비어 있으면 `capabilities.enabled=false`이고 기동은 정상이다. 다른 prod 설정(`${THORP_LEARNING_ADMIN_USER_IDS}`)처럼 기본값 없이 두면 미설정 시 기동이 실패하므로, 이 셋은 예외로 **빈 기본값**을 둔다 — "없으면 기능만 꺼진다"가 이 기능의 요구다.
