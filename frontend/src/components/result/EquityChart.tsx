@@ -368,7 +368,10 @@ export function EquityChart(props: EquityChartProps) {
     ],
     [base.points, targets, reference],
   )
-  const keys = keyed.map((series) => series.key)
+  // 구분표에서 숨긴 선. 행에서는 빼지 않는다 — 빼면 날짜 집합이 바뀌어 확대 구간이 흔들린다.
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set())
+  const shown = (key: string) => !hidden.has(key)
+  const keys = keyed.map((series) => series.key).filter(shown)
   const allRows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
   // 휠로 좁힌 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.
   const [view, setView] = useState<ViewRange>(null)
@@ -427,19 +430,21 @@ export function EquityChart(props: EquityChartProps) {
   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)
   const yDomain = useMemo(
     () => resolveYDomain(rows, keys, initialAxisValue, scaleMode),
-    // keys 는 keyed 에서 나오므로 keyed 로 갈음한다.
+    // keys 는 keyed·hidden 에서 나오므로 그 둘로 갈음한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, keyed, initialAxisValue, scaleMode],
+    [rows, keyed, hidden, initialAxisValue, scaleMode],
   )
   const amountTicks = useMemo(() => {
     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)
     return toAmountTicks(amounts, scaleMode)
   }, [yDomain, scaleMode])
 
-  const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
+  const baseWindow = shown(BASE_KEY) ? findDrawdownWindow(base.points, base.maxDrawdown) : null
   // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.
   const targetWindow =
-    targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null
+    targets.length === 1 && shown(targetKey(0))
+      ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown)
+      : null
 
   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 "돌았고 비어 있었다"는 거짓이므로 그리지
   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.
@@ -454,19 +459,36 @@ export function EquityChart(props: EquityChartProps) {
       stroke: TARGET_STYLES[index].stroke,
     })),
     ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),
-  ]
+  ].filter((label) => shown(label.dataKey))
   const seriesKey = [
-    { name: base.name, stroke: BASE_STROKE, dash: undefined, kind: '기준' },
+    { dataKey: BASE_KEY, name: base.name, stroke: BASE_STROKE, dash: undefined, kind: '기준' },
     ...targets.map((target, index) => ({
+      dataKey: targetKey(index),
       name: target.name,
       stroke: TARGET_STYLES[index].stroke,
       dash: TARGET_STYLES[index].dash as string | undefined,
       kind: '비교',
     })),
     ...(reference
-      ? [{ name: reference.name, stroke: REFERENCE_STROKE, dash: undefined, kind: '참고' }]
+      ? [
+          {
+            dataKey: REFERENCE_KEY,
+            name: reference.name,
+            stroke: REFERENCE_STROKE,
+            dash: undefined,
+            kind: '참고',
+          },
+        ]
       : []),
   ]
+  const visibleCount = seriesKey.filter((series) => shown(series.dataKey)).length
+  const toggleSeries = (key: string) =>
+    setHidden((known) => {
+      const next = new Set(known)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
 
   return (
     <div className={styles.figure}>
@@ -500,24 +522,36 @@ export function EquityChart(props: EquityChartProps) {
         </div>
       </div>
 
-      <div aria-label="그래프 선 구분" className={styles.seriesKey}>
-        {seriesKey.map((series) => (
-          <span className={styles.seriesKeyItem} key={series.kind + series.name}>
-            <svg aria-hidden="true" className={styles.seriesKeySwatch} viewBox="0 0 30 12">
-              <line
-                stroke={series.stroke}
-                strokeDasharray={series.dash}
-                strokeWidth={series.kind === '기준' ? 3.2 : series.kind === '참고' ? 1.4 : 2}
-                x1="1"
-                x2="29"
-                y1="6"
-                y2="6"
-              />
-            </svg>
-            <span className={styles.seriesKind}>{series.kind}</span>
-            <span>{series.name}</span>
-          </span>
-        ))}
+      <div aria-label="그래프 선 구분" className={styles.seriesKey} role="group">
+        {seriesKey.map((series) => {
+          const visible = shown(series.dataKey)
+          return (
+            <button
+              aria-pressed={visible}
+              className={styles.seriesKeyItem}
+              // 마지막 남은 선은 숨기지 않는다. 빈 그래프는 아무것도 말하지 않는다.
+              disabled={visible && visibleCount === 1}
+              key={series.dataKey}
+              onClick={() => toggleSeries(series.dataKey)}
+              title={visible ? '누르면 이 선을 숨깁니다' : '누르면 이 선을 다시 보입니다'}
+              type="button"
+            >
+              <svg aria-hidden="true" className={styles.seriesKeySwatch} viewBox="0 0 30 12">
+                <line
+                  stroke={series.stroke}
+                  strokeDasharray={series.dash}
+                  strokeWidth={series.kind === '기준' ? 3.2 : series.kind === '참고' ? 1.4 : 2}
+                  x1="1"
+                  x2="29"
+                  y1="6"
+                  y2="6"
+                />
+              </svg>
+              <span className={styles.seriesKind}>{series.kind}</span>
+              <span className={styles.seriesName}>{series.name}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div
@@ -574,7 +608,7 @@ export function EquityChart(props: EquityChartProps) {
             />
           ) : null}
 
-          {reference ? (
+          {reference && shown(REFERENCE_KEY) ? (
             <Line
               animate={false}
               curve={curveLinear}
@@ -589,6 +623,7 @@ export function EquityChart(props: EquityChartProps) {
 
           {targets.map((_, index) => {
             const key = targetKey(index)
+            if (!shown(key)) return null
             return (
               <Line
                 animate={false}
@@ -605,16 +640,18 @@ export function EquityChart(props: EquityChartProps) {
             )
           })}
 
-          <Line
-            animate={false}
-            curve={curveLinear}
-            dataKey={BASE_KEY}
-            defined={(row) => typeof row[BASE_KEY] === 'number'}
-            fadeEdges={false}
-            showHighlight={false}
-            stroke={BASE_STROKE}
-            strokeWidth={3.2}
-          />
+          {shown(BASE_KEY) ? (
+            <Line
+              animate={false}
+              curve={curveLinear}
+              dataKey={BASE_KEY}
+              defined={(row) => typeof row[BASE_KEY] === 'number'}
+              fadeEdges={false}
+              showHighlight={false}
+              stroke={BASE_STROKE}
+              strokeWidth={3.2}
+            />
+          ) : null}
 
           {compact ? null : <SeriesEndLabels series={endLabels} />}
 

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
@@ -96,6 +96,32 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
+  it('구분표 항목을 누르면 그 선을 숨기고 다시 누르면 보이며, 마지막 남은 선은 숨길 수 없다', () => {
+    const { container } = render(
+      <EquityChart base={base} initialCash="10000000.00" targets={[target]} />,
+    )
+    const key = within(screen.getByRole('group', { name: '그래프 선 구분' }))
+    const targetButton = key.getByRole('button', { name: /모래 고르기/ })
+    const baseButton = key.getByRole('button', { name: /물결 고르기/ })
+    const targetPath = () => container.querySelector('path[stroke="var(--result-line-secondary)"]')
+
+    expect(targetPath()).not.toBeNull()
+    fireEvent.click(targetButton)
+    expect(targetButton.getAttribute('aria-pressed')).toBe('false')
+    expect(targetPath()).toBeNull()
+    expect(container.querySelector('[data-testid="series-end-label-target0"]')).toBeNull()
+    // 기준만 남으면 기준은 숨길 수 없다.
+    expect((baseButton as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.click(targetButton)
+    expect(targetPath()).not.toBeNull()
+    expect((baseButton as HTMLButtonElement).disabled).toBe(false)
+
+    fireEvent.click(baseButton)
+    expect(container.querySelector('path[stroke="var(--chart-line-primary)"]')).toBeNull()
+    expect(container.querySelector('[data-testid="drawdown-shade-base"]')).toBeNull()
+  })
+
   it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {
     const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
     const chart = screen.getByRole('img')
