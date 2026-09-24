@@ -132,7 +132,7 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 | 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |
 | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |
 | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |
-| 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |
+| 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |
 | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |
 | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |
 
