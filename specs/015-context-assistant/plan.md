@@ -89,13 +89,15 @@ frontend/src/api/assistant.ts, frontend/src/types/assistant.ts
 frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPage.tsx (페이지 맥락 등록)
 ```
 
-**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회)와 `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입) 둘이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.
+**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다) 셋이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.
 
 ## Design Decisions
 
 ### 근거 팩과 도구 (spec FR-006·FR-007)
 
-- 초기 팩은 `PublicResultService.getDetail`과 `getWeights` 두 번으로 만든다(비중은 상세에 없다). 둘 다 작다. 포함 항목은 계약 §2.1 표대로만이고, `PublicResultDetail`에 든 `publicToken`·`expiresAt`·`versions`·`progress` 등은 넣지 않는다.
+- 초기 팩은 `PublicResultService.getWeights`(먼저 — 이 호출이 005 `requireResultReady`의 409 판정을 그대로 거치므로 계산 중·실패·시작 전 취소는 여기서 끝난다)와 `getDetail` 두 번으로 만든다(비중은 상세에 없다). 둘 다 작다. 포함 항목은 계약 §2.1 표대로만이고, `PublicResultDetail`에 든 `publicToken`·`expiresAt`·`versions`·`progress` 등은 넣지 않는다.
+- 팩 상한 60은 섹터 수 N에 따라 넘칠 수 있다(고정 항목 약 34 + 섹터별 5N, 섹터 6개부터 초과). 그래서 상관 행렬(N²)은 1차 팩에 넣지 않고, 60을 넘으면 섹터별 위험 기여·손실 기여부터 빼고 "일부 분석 값은 싣지 않음" 근거 하나를 남긴다. 목표·실제 비중은 항상 싣는다. 실제 비중은 `getWeights` 마지막 점의 `actual`이다(`asOf`는 그 날짜).
+- 섹터 이름은 `sector` 도메인 `SectorService.getSectors()`에서 `sectorId`로 찾는다. 못 찾으면 `sectorId` 원문을 라벨에 쓴다(지어내지 않는다).
 - **결과 타입 record를 통째로 근거나 도구 결과로 옮기지 않는다.** `BacktestTimeseriesResult`·`BacktestTradePageResult`에는 `backtestId`가 있다(005는 표현 계층에서 뗀다). 도구는 필드 단위로 골라 `Evidence`를 만들고, 시계열 점의 `benchmarkReturn`·`cashFlows`는 뺀다(KOSPI 참고선·현금 흐름은 범위 밖).
 - 시계열·거래·보유는 크거나 질문에 따라 달라 도구로 읽는다. 도구는 `AssistantTool` 포트(`spec()`·`run(args)`)이고 요청 시작 때 풀린 결과에 묶여 만들어진다 — 함수 시그니처에 식별자 인자가 없어 프롬프트 인젹션으로 다른 결과를 읽을 경로가 없다.
 - 도구는 시계열에서 **고르기만** 한다(첫·끝·최고·최저·가장 낮은 날). 이는 005 화면의 `drawdownWindow.ts`가 하는 일과 같은 종류다. 합산·비율 계산은 하지 않는다.
