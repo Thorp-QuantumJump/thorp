@@ -91,15 +91,17 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 | `summary` | `tradeCount` | 거래 횟수 | 정수 |
 | `summary` | `totalTradingCost`와 `costs`의 항목별 합계 | 거래비용 합계·수수료·세금·슬리피지 등(항목 이름은 004 `Costs` 갈래의 한국어) | 금액 |
 | `summary.analytics` | `recoveryDays`·`turnover`·`weightError`·`method` | 회복 기간(거래일)·회전율·비중 오차·추정 방법 | 정수·비율·비율·문자 |
-| `summary.analytics` | `correlationMatrix`·`riskContribution`·`lossContribution` | 종목별 상관계수·위험 기여·손실 기여(종목은 `config.items`의 섹터 이름으로) | 소수 2자리·비율·비율 |
+| `summary.analytics` | `riskContribution`·`lossContribution` | 섹터별 위험 기여·손실 기여(섹터 이름은 `SectorService.getSectors()`에서 `sectorId`로 찾고, 없으면 `sectorId` 원문) | 비율·비율. **60을 넘으면 이 둘부터 빼고** "일부 분석 값은 싣지 않음" 근거 하나를 남긴다 |
 | `partial` | 부분 결과 여부. `true`면 완료 끝 날짜가 필요한데 상세에는 없으므로(005 화면도 시계열 마지막 점을 쓴다) **이때만** `getTimeseries`를 초기 조회에 더해 마지막 점의 날짜를 근거로 넣고 접두 문장에 쓴다 | 부분 결과·완료 끝 날짜 | 문자·날짜 |
 | `config` | `start`·`end`·`effectiveStart`·`effectiveEnd`·`warmupTradingDays`·`initialCash` | 요청 시작일·요청 종료일·평가 시작일·평가 종료일·준비 기간(거래일)·시작 금액 | 날짜·정수·금액 |
 | `config` | `strategyId`(→ `strategyName`)·`parameters`의 축마다 | 전략·(축 라벨은 003 등록표 `ParameterRegistryPort`의 한국어 라벨) | 문자·등록표 표기 |
-| `config.items[]` | `sectorId`·`instrumentId`·`targetWeight` | 투자 대상 섹터·대표 ETF·목표 비중 | 문자·비율 |
-| `weightsSource`, `getWeights` | 비중 출처, 실제 비중 | 비중 출처(사용자 입력/전략 계산)·실제 비중(종목별) | 문자·비율 |
+| `config.items[]` | `instrumentId`·`targetWeight` (라벨에 섹터 이름을 넣는다: "{섹터 이름} 대표 ETF"·"{섹터 이름} 목표 비중") | 대표 ETF·목표 비중 | 문자·비율 |
+| `weightsSource`, `getWeights` | 비중 출처, **마지막 점**의 `actual`(섹터별; `asOf`는 그 점의 날짜) | 비중 출처(사용자 입력/전략 계산)·"{섹터 이름} 실제 비중" | 문자·비율 |
 | `exceptionKinds` | 예외 종류 목록 | 계산 중 예외 | 문자 |
 
-**넣지 않는 것**: `publicToken`, `expiresAt`, `versions`, `progress`, `cancelRequested`, `resultSource`, `queuedAt`·`startedAt`·`finishedAt`, `queueWaitSeconds`, `failure`, `validationTier`. 결과 타입 record를 통째로 옮기지 않고 위 표의 항목만 필드 단위로 옮긴다.
+**넣지 않는 것**: `publicToken`, `expiresAt`, `versions`, `progress`, `cancelRequested`, `resultSource`, `queuedAt`·`startedAt`·`finishedAt`, `queueWaitSeconds`, `failure`, `validationTier`, `analytics.correlationMatrix`(N²라 60 안에 들지 않는다 — 1차는 싣지 않고, 물으면 근거 부족이다), `getWeights`의 마지막 점 이외 점과 `weightError`·`riskScale`·`estimatedVolatility`. 결과 타입 record를 통째로 옮기지 않고 위 표의 항목만 필드 단위로 옮긴다.
+
+**크기**: 고정 항목 약 34개 + 섹터별 5개(대표 ETF·목표 비중·실제 비중·위험 기여·손실 기여)라 섹터 6개부터 60을 넘는다. 넘치면 위 표의 규칙대로 위험·손실 기여부터 빼고, 목표·실제 비중은 항상 싣는다. 초기 조회 순서는 `getWeights` → `getDetail`이다 — `getWeights`가 005 `requireResultReady`의 409(`RESULT_NOT_READY`·`BACKTEST_FAILED`·`NO_PARTIAL_RESULT`)를 그대로 던지므로 결과 없음 판정을 따로 만들지 않는다.
 - `tools`에는 §2.2의 함수 5개만. 웹 검색·코드 실행 같은 내장 도구는 넣지 않는다.
 - 도구 라운드: 응답이 `tool_calls`면 서버가 검증·실행하고 `assistant(tool_calls)`·`tool(content=새 근거 줄들 또는 "사용할 수 없음: 이유")` 메시지를 이력에 붙여 다시 보낸다. `store:false`라 이력은 서버가 매번 담는다. 최대 2라운드.
 - 시간: **전체 데드라인 15초가 우선**이다. 라운드별 모델 호출 예산(첫 7초·이후 4초, 설정값)은 그 안에서 남은 시간과 작은 쪽을 쓴다(`MarketHttpClient`의 `deadline.remaining()` 방식). 도구 실행·검증 시간도 15초에 든다.
@@ -164,11 +166,11 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 
 | 종류 | 규칙 | 예 |
 |---|---|---|
-| 금액 | 정수로 반올림, 천 단위 구분, 뒤에 `원` (`formatMoney`) | `17078.49` → `17,078원` |
-| 비율 | ×100, 소수 2자리, 뒤에 `%`, `-0.00`은 `0.00` (`formatRatio`) | `0.166652` → `16.67%` |
+| 금액 | 정수로 반올림(HALF_UP), 천 단위 구분, 뒤에 `원` (`formatMoney`) | `17078.49` → `17,078원` |
+| 비율 | ×100, 소수 2자리(HALF_UP), 뒤에 `%`, `-0.00`은 `0.00` (`formatRatio`) | `0.166652` → `16.67%`, `0.12345` → `12.35%` |
 | 소수 2자리 | 반올림 소수 2자리 | `1.2345` → `1.23` |
 | 정수 | 천 단위 구분 | `1234` → `1,234` |
-| 날짜 | `YYYY년 M월 D일` | `2024-12-31` → `2024년 12월 31일` |
+| 날짜 | ISO 원문 그대로 — 결과 탭이 `2024-12-31` 형식으로 보이므로 카드도 같게 | `2024-12-31` → `2024-12-31` |
 | 문자 | 그대로 | — |
 
 표기 함수는 근거를 만들 때 종류로 정해 둔다.
