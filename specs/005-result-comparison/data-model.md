@@ -82,6 +82,7 @@
 |---|---|
 | base | 기준 결과. 사용자 고정 비중 또는 동일 비중 |
 | targets | 비교 대상 결과 0~3개(`S15P21E205-419`). 주소 `?compare=`의 토큰 순서 |
+| indexReference | KOSPI 참고선 켜짐 여부. 주소 `?index=KOSPI`. 비교 대상이 아니며 `targets` 상한에 세지 않는다(FR-017, `S15P21E205-429`) |
 | targets[].targetState | `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` `EXECUTION_LIMIT`. 대상마다 따로 |
 | targets[].mismatch | READY인데 기준과 겹쳐 그리지 않는 이유 `conditions` `versions` `period` 또는 없음 |
 | candidate | 비교 후보 하나. 전략 + 설정값 조합. `source`는 `default`(등록표 기본값) 또는 `used`(004 `GET /backtests/used-strategies`) |

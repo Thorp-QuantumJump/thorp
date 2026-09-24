@@ -4,15 +4,14 @@ import type { PublicResultDetail } from '@/types/result'
 import { AnalysisPanel, type DetailCompareTarget, SettingsPanel, TradesPanel } from './DetailPanel'
 import type { DrawdownWindow } from './drawdownWindow'
 import { isZeroValue } from './formatResult'
-import { IndexComparisonView } from './IndexComparisonView'
 import { LOSS_WINDOW_NONE, LOSS_WINDOW_UNAVAILABLE, LossWindowView } from './LossWindowView'
 import { ResultTabs } from './ResultTabs'
 
 /**
- * 결과 화면의 여섯 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교.
+ * 결과 화면의 다섯 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때.
  *
- * <p>변동성 제한(004 목표 위험 맞춤)은 탭이 아니라 분석 조건과 '비교 대상 고르기'의 한 줄로 옮겼다 — 같은 전략의 켬·끔을
- * 그래프에 겹쳐 보는 것이 이 보기의 목적이라서다.
+ * <p>KOSPI 비교와 변동성 제한(004 목표 위험 맞춤)은 탭이 아니라 '비교 대상 고르기'의 한 줄로 옮겼다 — 둘 다 결과 그래프에
+ * 겹쳐 보는 것이 목적이라서다. KOSPI는 참고선(FR-017, `S15P21E205-429`), 변동성 제한은 같은 전략의 켬·끔 비교다.
  *
  * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —
  * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프는 탭 위에, 해석 문장은 요약 탭에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에
@@ -76,7 +75,6 @@ export function ResultDetailTabs({
             <LossWindowView token={token} lossWindow={lossWindow} items={detail.config.items} />
           ) : null,
         },
-        { id: 'index', label: 'KOSPI 비교', content: <IndexComparisonView token={token} /> },
       ]}
     />
   )

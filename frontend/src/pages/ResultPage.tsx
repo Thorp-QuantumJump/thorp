@@ -1,20 +1,25 @@
 import { useId, useMemo } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Popover } from 'radix-ui'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import comparisonStyles from '@/components/result/comparison.module.css'
 import { CompareTargetChip } from '@/components/result/CompareTargetChip'
 import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'
+import { REFERENCE_INDEX } from '@/components/result/compareQuery'
 import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'
 import { describeParameters } from '@/components/result/compareCandidates'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'
 import { strategyLabel } from '@/components/result/conditionLine'
 import { findDrawdownWindow } from '@/components/result/drawdownWindow'
-import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
+import {
+  EquityChart,
+  type EquityChartReference,
+  type EquityChartSeries,
+} from '@/components/result/EquityChart'
 import { hasDrawableEquity } from '@/components/result/equityPoints'
 import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'
 import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'
@@ -24,6 +29,7 @@ import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNo
 import { selectSummarySentence } from '@/components/result/summarySentences'
 import { Button } from '@/components/ui/button'
 import { useDisclosure } from '@/hooks/useDisclosure'
+import { type IndexReferenceState, useIndexReference } from '@/hooks/useIndexReference'
 import { useProgressSeries } from '@/hooks/useProgressSeries'
 import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'
 import type { PublicResultDetail, ResultTimeseriesPoint } from '@/types/result'
@@ -95,7 +101,8 @@ function ResultView({
 }) {
   const navigate = useNavigate()
   // 내 기록에서 열었으면(006 FR-006) 재계산하지 않았다는 한 줄을 덧붙인다. 다른 동작은 바꾸지 않는다.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const fromRecords = searchParams.get('from') === 'records'
   const completedThrough = completedRange(detail, timeseries)
   const compare = useCompareTargets(detail)
@@ -118,6 +125,27 @@ function ResultView({
         : null
 
   const viewable = hasViewableResult(detail)
+  // KOSPI 참고선(FR-017). 주소 `?index=KOSPI`로 켜고 끄며, 볼 결과가 있을 때만 받는다.
+  const indexOn = searchParams.get('index') === REFERENCE_INDEX
+  const indexReference = useIndexReference(token, indexOn && viewable)
+  // 같은 응답이면 같은 객체를 넘긴다. 매번 새로 만들면 그래프가 렌더마다 행을 다시 짠다.
+  const reference = useMemo<EquityChartReference | null>(
+    () =>
+      indexReference.status === 'ready' && indexReference.data.available
+        ? { name: REFERENCE_INDEX + '(참고)', points: indexReference.data.series }
+        : null,
+    [indexReference],
+  )
+  const setIndexOn = (on: boolean) =>
+    setSearchParams(
+      (known) => {
+        const next = new URLSearchParams(known)
+        if (on) next.set('index', REFERENCE_INDEX)
+        else next.delete('index')
+        return next
+      },
+      { replace: true, state: location.state },
+    )
   // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.
   const inFlight = detail.status === 'QUEUED' || detail.status === 'RUNNING'
   const progressSeries = useProgressSeries(token, inFlight)
@@ -216,7 +244,7 @@ function ResultView({
                 className={styles.compareButton}
                 id={pickerButtonId}
                 type="button"
-                disabled={!viewable || compare.sending || compare.room === 0}
+                disabled={!viewable || compare.sending}
                 {...picker.toggleProps}
               >
                 비교 대상 고르기
@@ -231,6 +259,11 @@ function ResultView({
                 sideOffset={8}
                 collisionPadding={16}
                 aria-label="비교 대상 고르기"
+                // 첫 요소가 아니라 팝오버에 초점을 둔다. 첫 요소가 물음표면 초점만으로 설명이 열려 첫 Esc 가 팝오버를 닫지 못한다.
+                onOpenAutoFocus={(event) => {
+                  event.preventDefault()
+                  document.getElementById(pickerId)?.focus()
+                }}
                 onCloseAutoFocus={(event) => {
                   event.preventDefault()
                   document.getElementById(pickerButtonId)?.focus()
@@ -239,6 +272,8 @@ function ResultView({
                 <CompareTargetPicker
                   base={detail}
                   room={compare.room}
+                  indexOn={indexOn}
+                  onIndexChange={setIndexOn}
                   onClose={picker.close}
                   onSelect={(choices) => {
                     picker.close()
@@ -280,7 +315,9 @@ function ResultView({
           points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],
           maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,
         }))}
+        reference={reference}
       />
+      <IndexReferenceNotice state={indexReference} />
       {viewable ? (
         <ResultDetailTabs
           token={token}
@@ -328,12 +365,14 @@ function ResultChartSlot({
   timeseries,
   progressPoints,
   targets,
+  reference,
 }: {
   detail: PublicResultDetail
   timeseries: TimeseriesState
   /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */
   progressPoints?: ResultTimeseriesPoint[]
   targets?: EquityChartSeries[]
+  reference?: EquityChartReference | null
 }) {
   if (timeseries.status === 'unavailable') {
     return (
@@ -366,6 +405,7 @@ function ResultChartSlot({
   return (
     <EquityChart
       targets={targets}
+      reference={reference}
       altNumbers={
         summary
           ? {
@@ -383,6 +423,35 @@ function ResultChartSlot({
       initialCash={detail.config.initialCash}
     />
   )
+}
+
+const INDEX_UNAVAILABLE_REASONS: Record<string, string> = {
+  INDEX_SERIES_UNAVAILABLE: '같은 기간의 KOSPI 자료를 받을 수 없어 참고선을 그리지 않았습니다.',
+}
+
+/**
+ * 참고선을 켰는데 그리지 못한 이유. 서버가 자료를 주지 못하면 값을 만들어 채우지 않고 이유를 적는다(FR-017).
+ */
+function IndexReferenceNotice({ state }: { state: IndexReferenceState }) {
+  if (state.status === 'ready' && !state.data.available) {
+    return (
+      <p className={styles.status} role="status">
+        {INDEX_UNAVAILABLE_REASONS[state.data.reason ?? ''] ??
+          '지수 자료를 제공할 수 없어 참고선을 그리지 않았습니다.'}
+      </p>
+    )
+  }
+  if (state.status === 'error') {
+    return (
+      <div className={styles.error} role="alert">
+        <p className={styles.status}>{state.message}</p>
+        <button type="button" className={styles.retry} onClick={state.retry}>
+          KOSPI 다시 불러오기
+        </button>
+      </div>
+    )
+  }
+  return null
 }
 
 /**
