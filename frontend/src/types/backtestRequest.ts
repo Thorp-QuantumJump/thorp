@@ -49,8 +49,11 @@ export type BacktestCreateRequest = {
     initialCash: string
     /** `null`이면 서버 기본 비용 프로필 */
     costProfileVersion: string | null
-    /** 워밍업 규칙의 계산 결과. 선택 전략의 요구값보다 작으면 422 */
-    warmupTradingDays: number
+    /**
+     * 워밍업 규칙의 계산 결과. 선택 전략의 요구값보다 작으면 422. `null`이면 서버가 전략과 시나리오 오버레이의
+     * 요구값 중 큰 쪽으로 정한다 — 변동성 제한의 추정 기간은 화면이 모르는 값이라 그때 쓴다.
+     */
+    warmupTradingDays: number | null
     scenario: BacktestScenario
     evaluationSplitVersion?: string | null
     scenarioParams?: Record<string, unknown>

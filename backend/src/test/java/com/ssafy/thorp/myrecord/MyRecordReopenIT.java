@@ -90,10 +90,22 @@ class MyRecordReopenIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("변동성 제한(TARGET_RISK) 결과는 003 분석 조건이 다루므로 설정 바꿔 비교를 연다")
+    void 변동성_제한은_열_수_있다() {
+        long owner = newUser("volatility");
+        backtestService.create(request(owner, "MONTH_END", Scenario.TARGET_RISK));
+
+        MyRecordDetail detail = queryService.detail(owner, recordIdOf(owner));
+
+        assertThat(detail.reopenSettings().available()).isTrue();
+        assertThat(detail.reopenPayload()).containsEntry("scenario", "TARGET_RISK");
+    }
+
+    @Test
     @DisplayName("003이 다루지 않는 시나리오는 버튼만 닫고 조건은 그대로 담는다")
     void 다른_시나리오는_열_수_없다() {
         long owner = newUser("scenario");
-        backtestService.create(request(owner, "MONTH_END", Scenario.TARGET_RISK));
+        backtestService.create(request(owner, "MONTH_END", Scenario.FRESH_CASH_FROM));
 
         MyRecordDetail detail = queryService.detail(owner, recordIdOf(owner));
 
@@ -103,7 +115,7 @@ class MyRecordReopenIT extends IntegrationTestSupport {
         // 열 수 없는 것과 없는 것은 다르다 — 조건은 그대로 있고 버튼만 닫힌다.
         assertThat(detail.reopenPayload())
                 .as("상세는 저장 당시 조건을 계속 보인다")
-                .containsEntry("scenario", "TARGET_RISK");
+                .containsEntry("scenario", "FRESH_CASH_FROM");
     }
 
     private int recordCount(long owner) {
@@ -169,13 +181,18 @@ class MyRecordReopenIT extends IntegrationTestSupport {
         return request(requesterId, rebalance, Scenario.FULL_PERIOD);
     }
 
-    /** {@code TARGET_RISK} 는 목표 변동성을 요구한다 — 접수가 시나리오마다 필요한 입력을 검사한다. */
+    /**
+     * {@code TARGET_RISK} 는 목표 변동성을, {@code FRESH_CASH_FROM} 은 투입 시작일을 요구한다 — 접수가 시나리오마다 필요한 입력을
+     * 검사한다.
+     */
     private static CreateBacktestCommand request(
             Long requesterId, String rebalance, Scenario scenario) {
         Map<String, Object> scenarioParams =
-                scenario == Scenario.TARGET_RISK
-                        ? Map.of("targetVolatility", new BigDecimal("0.1000"))
-                        : null;
+                switch (scenario) {
+                    case TARGET_RISK -> Map.of("targetVolatility", new BigDecimal("0.1000"));
+                    case FRESH_CASH_FROM -> Map.of("startDate", PERIOD[0].toString());
+                    default -> null;
+                };
         return new CreateBacktestCommand(
                 requesterId,
                 ExecutionType.SINGLE,
