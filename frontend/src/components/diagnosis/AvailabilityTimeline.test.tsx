@@ -78,13 +78,15 @@ describe('비교 가능 구간 타임라인', () => {
     expect(plot?.getAttribute('role')).toBe('img')
     expect(plot?.getAttribute('aria-label')).toContain('2018-09-12')
     expect(plot?.getAttribute('aria-label')).toContain('8년')
-    expect(plot?.getAttribute('tabindex')).toBe('0')
+    // 막대 자체는 초점을 받지 않는다. 설명은 aria-describedby로 이어 두고, 눈으로는 제목 옆 물음표에서 연다.
+    const describedBy = plot?.getAttribute('aria-describedby') ?? ''
+    expect(container.querySelector(`#${describedBy}`)?.textContent).toContain('조선')
   })
 
   it('추가 정보에는 시작일을 정한 대상과 모든 상장일이 들어 있다', () => {
     const { container } = renderTimeline([반도체, 자동차, 조선])
 
-    const tooltip = container.querySelector('[role="tooltip"]')?.textContent ?? ''
+    const tooltip = container.querySelector('[data-slot="timeline-description"]')?.textContent ?? ''
     expect(tooltip).toContain('조선')
     expect(tooltip).toContain('반도체 2006-06-27')
     expect(tooltip).toContain('자동차 2011-04-12')
@@ -116,7 +118,10 @@ describe('비교 가능 구간 타임라인', () => {
     const { container } = renderTimeline([반도체, 자동차, 조선])
 
     expect(container.querySelector('input')).toBeNull()
-    expect(container.querySelector('button')).toBeNull()
+    // 누를 것은 설명을 여는 물음표 하나뿐이다. 기간을 바꾸는 조작은 두지 않는다.
+    const buttons = [...container.querySelectorAll('button')]
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0].getAttribute('aria-label') ?? buttons[0].textContent).toContain('함께 비교할 수 있는 기간')
     expect(container.querySelector('[role="slider"]')).toBeNull()
   })
 })

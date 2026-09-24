@@ -506,6 +506,13 @@ describe('ResultPage', () => {
       )
     })
 
+    it('그래프 아래에서 이 결과의 조건 그대로 경제환경이 비슷했던 과거로 넘어간다 (005 FR-018)', async () => {
+      renderResult()
+
+      const link = await screen.findByRole('link', { name: /경제환경이 비슷했던 과거 보기/ })
+      expect(link.getAttribute('href')).toBe(`/regime-link?base=${resultToken}`)
+    })
+
     it('주 모양 버튼은 비교 대상 고르기 하나고 나머지 보기는 탭이다 (착수 전에 알아둘 것 ⑧, T098)', async () => {
       renderResult()
       await screen.findByRole('tablist', { name: '결과 보기' })

@@ -129,3 +129,34 @@
   font-size: var(--thorp-control-font, 0.875rem);
   font-weight: var(--thorp-control-weight, 500);
 }
+
+/* '경제환경이 비슷했던 과거 보기'. 그래프 오른쪽 아래에 두는 이동 링크다(행동 버튼과 무게를 가른다). */
+.regimeEntry {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.regimeEntry a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--thorp-control, 40px);
+  padding: 0 16px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control, 6px);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-control-font, 0.82rem);
+  font-weight: var(--thorp-control-weight, 600);
+  text-decoration: none;
+}
+
+.regimeEntry a:hover {
+  border-color: var(--thorp-accent-soft);
+  color: var(--thorp-accent-soft);
+}
+
+.regimeEntry a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}

@@ -97,34 +97,10 @@
 }
 
 /* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */
-.sectorPicker { padding: 22px 0 0; border-top: 1px solid var(--thorp-line); }
-.sectorPicker h3 { margin: 0 0 8px; font-size: var(--thorp-text-body, .95rem); letter-spacing: -.02em; }
 .sectorNote { margin: 0 0 12px; font-size: var(--thorp-text-small, .78rem); line-height: 1.55; color: var(--thorp-copy); }
-.sectorChips { display: flex; flex-wrap: wrap; gap: 8px; }
-.sectorChip {
-  display: inline-flex; align-items: center; min-height: var(--thorp-control-sm, auto);
-  padding: var(--thorp-control-pad-block, 7px) 13px; border: 1px solid var(--thorp-line-strong); border-radius: 999px;
-  background: none; color: inherit; font: inherit; font-size: var(--thorp-text-small, .8rem); cursor: pointer;
-  transition: border-color .15s ease, background-color .15s ease;
-}
-.sectorChip:hover { border-color: var(--thorp-ink); }
 /* 선택은 굵기와 테두리로만 드러낸다. 좋고 나쁨을 뜻하는 색을 쓰지 않는다(FR-003). */
-.sectorChip[aria-pressed='true'] { border-color: var(--thorp-ink); background: var(--thorp-ink); color: var(--thorp-paper); }
-.sectorRetry {
-  display: inline-flex; align-items: center; gap: 6px; padding: 0;
-  border: 0; background: none; color: inherit; font: inherit; font-size: var(--thorp-text-small, .78rem);
-  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
-}
 
 /* 국내 시장 참고 정보. 경제환경 지표와 눈으로도 구분되게 다른 블록으로 둔다(FR-017). */
-.referenceBlock { margin-top: 14px; }
-.referenceValues { display: grid; gap: 12px; margin: 0 0 10px; }
-.referenceValues > div { display: grid; gap: 2px; }
-.referenceValues dt { font-size: var(--thorp-text-caption, .74rem); color: var(--thorp-copy); }
-.referenceValues dd { margin: 0; font-size: var(--thorp-text-heading, 1.05rem); font-variant-numeric: tabular-nums; }
-.referenceValues dd small { font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); }
-.referenceObserved { font-size: .72rem !important; color: var(--thorp-copy); }
-.referenceSource { margin: 0; font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); }
 
 /* 뉴스 묶음. 내용 규칙은 012가 소유하고 009는 자리만 내준다. */
 .newsBlock { margin-top: 14px; }
@@ -182,25 +158,10 @@
 :global(:root:not([data-design='classic'])) .similarButton { border-radius: var(--thorp-radius-control); background: transparent; color: var(--thorp-foreground); font-weight: 600; }
 :global(:root:not([data-design='classic'])) .similarButton:hover { border-color: var(--thorp-line-control-hover); }
 
-:global(:root:not([data-design='classic'])) .sectorPicker {
-  margin-top: 4px;
-  padding: 20px 24px;
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card);
-  background: var(--thorp-surface);
-}
-:global(:root:not([data-design='classic'])) .sectorChip:hover { border-color: var(--thorp-line-control-hover); }
 /* --thorp-ink·--thorp-paper는 정의된 적이 없어 선택이 드러나지 않았다. 좋고 나쁨이 없는 밝기 반전으로 보인다(FR-003). */
-:global(:root:not([data-design='classic'])) .sectorChip[aria-pressed='true'] { border-color: var(--thorp-foreground); background: var(--thorp-foreground); color: var(--thorp-background); font-weight: 600; }
 
-:global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 /* 참고 지표는 값이 먼저 읽히게 키운다. 등락은 응답에 없어 색으로 칠하지 않는다. */
-:global(:root:not([data-design='classic'])) .referenceValues dt { color: var(--thorp-eyebrow); font-size: var(--thorp-text-caption, .7rem); font-weight: 600; letter-spacing: .04em; }
-:global(:root:not([data-design='classic'])) .referenceValues dd { font-family: var(--thorp-font-display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.02em; }
-:global(:root:not([data-design='classic'])) .referenceValues dd small { color: var(--thorp-muted); font-size: var(--thorp-text-caption, .72rem); font-weight: 400; }
-:global(:root:not([data-design='classic'])) .referenceValues .referenceObserved { font-family: var(--thorp-font-body); font-weight: 400; }
 :global(:root:not([data-design='classic'])) .openButton svg { color: var(--thorp-accent-soft); }
-:global(:root:not([data-design='classic'])) .referenceValues > div { padding: 10px 12px; border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }
 :global(:root:not([data-design='classic'])) .newsList { gap: 0; }
 :global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }
 :global(:root:not([data-design='classic'])) .newsList li:first-child { padding-top: 0; }
@@ -213,9 +174,6 @@
 @media (max-width: 1100px) {
   :global(:root:not([data-design='classic'])) .detailHeader { margin: -20px -20px 18px; padding: 20px 20px 18px; }
   :global(:root:not([data-design='classic'])) .similarEntry { margin: 18px -20px -20px; padding: 14px 20px; }
-}
-@media (max-width: 480px) {
-  :global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: 1fr; }
 }
 
 /* 자료 공급 표. 확인됨은 파랑, 확인 중은 빨강(index.css --thorp-status-*). */

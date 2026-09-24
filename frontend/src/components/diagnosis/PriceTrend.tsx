@@ -103,9 +103,12 @@ function TrendChart({
 
   const first = rows[0]
   const last = rows[rows.length - 1]
+  // 보이는 기간 동안의 오르내림으로 선 색을 정한다(상승 빨강·하락 파랑·보합 회색). 좋고 나쁨이 아니다.
+  const direction = last.close > first.close ? 'up' : last.close < first.close ? 'down' : 'flat'
+  const stroke = direction === 'up' ? 'var(--thorp-up)' : direction === 'down' ? 'var(--thorp-down)' : 'var(--thorp-neutral)'
 
   return (
-    <div data-slot="chart" data-state="loaded">
+    <div data-slot="chart" data-state="loaded" data-direction={direction}>
       {/*
         그림 자체를 보조 기술에 설명한다. 축 눈금이 없으므로 기간과 양 끝 값을 말로 실어 준다 —
         그것이 이 선에서 읽히는 전부다.
@@ -136,7 +139,7 @@ function TrendChart({
             defined={(row) => typeof row.close === 'number'}
             fadeEdges={false}
             showHighlight={false}
-            stroke="var(--thorp-accent)"
+            stroke={stroke}
             strokeWidth={1.8}
           />
           <XAxis numTicks={4} stackYear tickMode="domain" />
