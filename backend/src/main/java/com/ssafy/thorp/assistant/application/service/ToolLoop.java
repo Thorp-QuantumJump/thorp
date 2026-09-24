@@ -28,6 +28,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -40,6 +42,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ToolLoop {
+    private static final Logger log = LoggerFactory.getLogger(ToolLoop.class);
     static final String UNAVAILABLE_PREFIX = "사용할 수 없음: ";
     static final String TRUNCATED_LABEL = "읽은 범위";
     static final String TRUNCATED_VALUE = "일부만 읽음";
@@ -151,8 +154,10 @@ public class ToolLoop {
         return null;
     }
 
+    /** 사유는 로그에만. 예외 메시지는 응답 본문에 실리므로 코드의 고정 문구를 쓴다(계약 §1). */
     private static BusinessException unavailable(String reason) {
-        return new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE, reason);
+        log.warn("assistant loop unavailable: {}", reason);
+        return new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE);
     }
 
     /** id를 {@code F1}부터 매기며 상한을 지키는 팩. 잘리면 마지막 자리에 "일부만 읽음" 근거를 둔다. */
