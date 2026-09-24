@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildAxisDomain } from './marketFlowFormat'
+import type { PathPoint } from '@/types/marketFlow'
+import { buildAxisDomain, recentDirection, sourceParts } from './marketFlowFormat'
 
 /**
  * 실제 지표 값으로 검증한다. 꾸며낸 숫자로는 "환율이 평평해 보인다"는 문제가 재현되지 않는다.
@@ -91,5 +92,33 @@ describe('3개월 경로의 세로축 범위', () => {
 
       expect(domain[1]).toBeGreaterThan(domain[0])
     })
+  })
+})
+
+describe('recentDirection', () => {
+  const path = (a: number | null, b: number | null, c: number | null) => [
+    { month: '2026-06', value: a },
+    { month: '2026-07', value: b },
+    { month: '2026-08', value: c },
+  ] as [PathPoint, PathPoint, PathPoint]
+
+  it('값이 있는 마지막 두 달로 오르내림을 정한다', () => {
+    expect(recentDirection(path(1, 2, 3))).toBe('up')
+    expect(recentDirection(path(3, 2, 1))).toBe('down')
+    expect(recentDirection(path(1, 2, 2))).toBeUndefined()
+    // 마지막 달이 비면 그 앞 두 달을 견준다.
+    expect(recentDirection(path(3, 1, null))).toBe('down')
+    expect(recentDirection(path(null, null, 1))).toBeUndefined()
+  })
+})
+
+describe('sourceParts', () => {
+  it('출처 이름이 작성기관을 되풀이하면 기관 하나로 합친다', () => {
+    expect(sourceParts('OECD', 'OECD Composite Leading Indicators')).toEqual(['출처·작성기관 OECD'])
+    expect(sourceParts('한국은행', '한국은행')).toEqual(['출처·작성기관 한국은행'])
+  })
+
+  it('서로 다른 이름이면 출처와 작성기관을 따로 적는다', () => {
+    expect(sourceParts('통계청', 'KOSIS 산업활동동향')).toEqual(['출처 KOSIS 산업활동동향', '작성기관 통계청'])
   })
 })

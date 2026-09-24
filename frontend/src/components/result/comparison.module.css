@@ -7,7 +7,7 @@
   overflow-wrap: anywhere;
 }
 .panel h2 {
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   margin: 0 0 12px;
 }
 .panel p {
@@ -27,7 +27,7 @@
 }
 .candidates p {
   margin: 6px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
   color: var(--thorp-copy);
 }
 .actions {
@@ -66,7 +66,7 @@
   overflow-y: auto;
   padding: 16px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   box-shadow: 0 14px 36px rgb(0 0 0 / 24%);

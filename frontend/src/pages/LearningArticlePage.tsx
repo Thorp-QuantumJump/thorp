@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, ArrowUpRight } from 'lucide-react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning'
 import { ArticleBlocks } from '@/components/learning/ArticleBlocks'
@@ -7,6 +8,7 @@ import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { ReturnToDiagnosisLink } from '@/components/learning/ReturnToDiagnosisLink'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { LearningArticle } from '@/types/learning'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './LearningArticlePage.module.css'
 
 type ArticleState = { status: 'loading' } | LearningArticleResult
@@ -43,9 +45,12 @@ export function LearningArticlePage() {
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
   // 도움말에서 온 돌아갈 자리(term-help-ui §3)를 목록으로 옮겨 가도 잃지 않게 받은 state를 넘긴다.
+  // 목록으로 돌아가는 길. 전략 선택 화면의 되돌아가기와 같은 모양(화살표 + 글자)이다. 글이 보이면 글 끝의 출처 줄
+  // 왼쪽에, 글이 없으면(볼 수 없음·실패) 바닥 줄에 둔다.
   const listLink = (
     <Link className={styles.listLink} to="/learn" state={location.state}>
-      주제 목록으로
+      <ArrowLeft size={15} aria-hidden="true" />
+      목록으로 돌아가기
     </Link>
   )
 
@@ -61,7 +66,7 @@ export function LearningArticlePage() {
           </p>
         ) : null}
 
-        {state.status === 'loaded' ? <ArticleView article={state.article} /> : null}
+        {state.status === 'loaded' ? <ArticleView article={state.article} listLink={listLink} /> : null}
 
         {state.status === 'unavailable' ? (
           <p className={styles.unavailable}>지금은 볼 수 없는 글입니다.</p>
@@ -74,7 +79,7 @@ export function LearningArticlePage() {
           />
         ) : null}
 
-        {state.status !== 'loading' ? (
+        {state.status === 'unavailable' || state.status === 'failed' ? (
           <p className={styles.footer}>
             {listLink}
             {/* 글을 받지 못해도 진단을 시작하는 길은 막지 않는다(US1 시나리오 7, FR-015). */}
@@ -90,10 +95,11 @@ export function LearningArticlePage() {
   )
 }
 
-function ArticleView({ article }: { article: LearningArticle }) {
+function ArticleView({ article, listLink }: { article: LearningArticle; listLink: ReactNode }) {
   return (
     <article className={styles.article} aria-labelledby="learning-article-title">
       <header className={styles.header}>
+        <p className={heading.eyebrow} aria-hidden="true">LEARN</p>
         <h1 id="learning-article-title" className={styles.title}>
           {article.title}
         </h1>
@@ -103,45 +109,52 @@ function ArticleView({ article }: { article: LearningArticle }) {
       <ArticleBlocks blocks={article.blocks} />
 
       <section className={styles.example} aria-labelledby="learning-example-title">
+        {/* 왼쪽 절반은 예시 섹터와 비중, 오른쪽 절반은 그 예시로 시작하는 행동이다. */}
         <h2 id="learning-example-title" className={styles.sectionTitle}>
           예시
         </h2>
-        <ul className={styles.exampleList}>
-          {article.example.sectors.map((sector) => (
-            <li key={sector.code}>
-              <span>{sector.name ?? sector.code}</span>
-              <span className={styles.weight}>{formatWeight(sector.weightTenths)}</span>
-            </li>
-          ))}
-        </ul>
-        <p className={styles.disclaimer}>설명을 위한 예시이며 투자 권고가 아닙니다.</p>
-        <ExampleEntry articleId={article.articleId} example={article.example} />
-      </section>
-
-      {article.sources.length > 0 ? (
-        <section className={styles.sources} aria-labelledby="learning-sources-title">
-          <h2 id="learning-sources-title" className={styles.sectionTitle}>
-            출처
-          </h2>
-          <ul>
-            {article.sources.map((source, index) => (
-              <li key={index}>
-                {source.url ? (
-                  <a href={source.url} target="_blank" rel="noopener noreferrer">
-                    {source.label}
-                  </a>
-                ) : (
-                  source.label
-                )}
+        <div className={styles.exampleSectors}>
+          <ul className={styles.exampleList}>
+            {article.example.sectors.map((sector) => (
+              <li key={sector.code}>
+                <span>{sector.name ?? sector.code}</span>
+                <span className={styles.weight}>{formatWeight(sector.weightTenths)}</span>
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        </div>
+        <div className={styles.exampleAction}>
+          <ExampleEntry articleId={article.articleId} example={article.example} />
+        </div>
+        <p className={styles.disclaimer}>설명을 위한 예시이며 투자 권고가 아닙니다.</p>
+      </section>
 
-      <p className={styles.published}>
-        게시 <time dateTime={article.publishedAt}>{formatPublishedAt(article.publishedAt)}</time>
-      </p>
+      {/* 글 끝 한 줄: 왼쪽은 목록으로 돌아가기, 오른쪽은 출처. */}
+      <div className={styles.articleFooter}>
+        {listLink}
+        {article.sources.length > 0 ? (
+          <section className={styles.sources} aria-labelledby="learning-sources-title">
+            {/* '출처'와 기관 이름을 한 줄에 잇는다. 주소가 있으면 밑줄과 화살표로 링크임을 보인다. */}
+            <h2 id="learning-sources-title" className={styles.sourcesLabel}>
+              출처
+            </h2>
+            <ul>
+              {article.sources.map((source, index) => (
+                <li key={index}>
+                  {source.url ? (
+                    <a href={source.url} target="_blank" rel="noopener noreferrer">
+                      {source.label}
+                      <ArrowUpRight size={14} aria-hidden="true" />
+                    </a>
+                  ) : (
+                    source.label
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </div>
     </article>
   )
 }
@@ -149,10 +162,4 @@ function ArticleView({ article }: { article: LearningArticle }) {
 /** 0.1%p 정수를 소수 한 자리 %로 보인다. 1000이 100%다. */
 function formatWeight(weightTenths: number): string {
   return `${(weightTenths / 10).toFixed(1)}%`
-}
-
-function formatPublishedAt(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })
 }

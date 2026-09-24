@@ -28,7 +28,7 @@
 
 .panelTitle {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--thorp-text-heading, 1.2rem);
   letter-spacing: -0.02em;
 }
 
@@ -59,21 +59,22 @@
 .itemTitle {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
   font-weight: 600;
 }
 
 .subTitle {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   font-weight: 600;
 }
 
 .value {
   margin: 0;
-  font-family: var(--thorp-font-mono);
-  font-size: 1.05rem;
+  font-family: var(--thorp-font-number, var(--thorp-font-mono));
+  font-variant-numeric: tabular-nums;
+  font-size: var(--thorp-text-heading, 1.05rem);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -81,7 +82,7 @@
 .copy {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -89,7 +90,7 @@
 .muted {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   line-height: 1.6;
 }
 
@@ -99,7 +100,7 @@
   padding-left: 10px;
   border-left: 2px solid var(--thorp-warning);
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -108,7 +109,7 @@
   grid-template-columns: max-content 1fr;
   gap: 4px 16px;
   margin: 0;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
 }
 
 .facts dt {
@@ -135,14 +136,14 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   font-variant-numeric: tabular-nums;
 }
 
 .table caption {
   padding-bottom: 6px;
   color: var(--thorp-muted);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   text-align: left;
 }
 
@@ -190,7 +191,7 @@
   flex-direction: column;
   gap: 4px;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
 }
 
 .field input,
@@ -202,7 +203,7 @@
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
 }
 
 .field input:focus-visible,
@@ -214,7 +215,7 @@
 .alert {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -230,7 +231,7 @@
 .profile [data-slot='profile-sample'] {
   margin: 0 0 8px;
   color: var(--thorp-copy);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
   line-height: 1.7;
 }
 
@@ -271,7 +272,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -284,18 +285,18 @@
 
 .profile [data-slot='profile-facts'] dt {
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .profile [data-slot='profile-facts'] dd {
   margin: 2px 0 0;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
 }
 
 .profile [data-slot='profile-source'] {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
 }
 
 .profileList {

@@ -36,109 +36,118 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
 
   return (
     <form className={styles.filters} aria-label="기록 필터" onSubmit={(event) => event.preventDefault()}>
-      <fieldset className={styles.group}>
-        <legend>종류</legend>
-        {KINDS.map((kind) => (
-          <label key={kind} className={styles.check}>
-            <input
-              type="checkbox"
-              checked={query.kind?.includes(kind) ?? false}
-              onChange={(event) => onChange({ ...query, kind: toggle(query.kind, kind, event.target.checked) })}
-            />
-            {KIND_LABEL[kind]}
-          </label>
-        ))}
-      </fieldset>
-
-      <fieldset className={styles.group}>
-        <legend>상태</legend>
-        {STATUS_OPTIONS.map((status) => (
-          <label key={status} className={styles.check}>
-            <input
-              type="checkbox"
-              checked={query.status?.includes(status) ?? false}
-              onChange={(event) =>
-                onChange({ ...query, status: toggle<MyRecordStatus>(query.status, status, event.target.checked) })
-              }
-            />
-            {STATUS_LABEL[status]}
-          </label>
-        ))}
-        <p className={styles.hint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</p>
-      </fieldset>
-
-      {catalog ? (
+      {/* 왼쪽 반은 고르기 칩, 오른쪽 반은 분석 기간과 정렬이다. classic에서는 두 묶음이 없는 것처럼 흐른다. */}
+      <div className={styles.filterColumn}>
         <fieldset className={styles.group}>
-          <legend>섹터</legend>
-          {catalog.sectors.map((sector) => (
-            <label key={sector.code} className={styles.check}>
+          <legend>종류</legend>
+          {KINDS.map((kind) => (
+            <label key={kind} className={styles.check}>
               <input
                 type="checkbox"
-                checked={query.sector?.includes(sector.code) ?? false}
-                onChange={(event) =>
-                  onChange({ ...query, sector: toggle(query.sector, sector.code, event.target.checked) })
-                }
+                checked={query.kind?.includes(kind) ?? false}
+                onChange={(event) => onChange({ ...query, kind: toggle(query.kind, kind, event.target.checked) })}
               />
-              {sector.name}
+              {KIND_LABEL[kind]}
             </label>
           ))}
         </fieldset>
-      ) : null}
 
-      {strategies ? (
         <fieldset className={styles.group}>
-          <legend>전략</legend>
-          {strategies.map((strategy) => (
-            <label key={strategy.strategyId} className={styles.check}>
+          <legend>상태</legend>
+          {STATUS_OPTIONS.map((status) => (
+            <label key={status} className={styles.check}>
               <input
                 type="checkbox"
-                checked={query.strategy?.includes(strategy.strategyId) ?? false}
+                checked={query.status?.includes(status) ?? false}
                 onChange={(event) =>
-                  onChange({
-                    ...query,
-                    strategy: toggle(query.strategy, strategy.strategyId, event.target.checked),
-                  })
+                  onChange({ ...query, status: toggle<MyRecordStatus>(query.status, status, event.target.checked) })
                 }
               />
-              {strategy.name}
+              {STATUS_LABEL[status]}
             </label>
           ))}
+          <p className={styles.hint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</p>
         </fieldset>
-      ) : null}
 
-      <fieldset className={styles.group}>
-        <legend>분석 기간</legend>
-        <label htmlFor={fromId}>시작</label>
-        <DateField
-          id={fromId}
-          label="분석 기간 시작"
-          value={query.periodFrom ?? ''}
-          max={query.periodTo}
-          onChange={(next) => onChange({ ...query, periodFrom: next || undefined })}
-        />
-        <label htmlFor={toId}>끝</label>
-        <DateField
-          id={toId}
-          label="분석 기간 끝"
-          value={query.periodTo ?? ''}
-          min={query.periodFrom}
-          onChange={(next) => onChange({ ...query, periodTo: next || undefined })}
-        />
-      </fieldset>
+        {catalog ? (
+          <fieldset className={styles.group}>
+            <legend>섹터</legend>
+            {catalog.sectors.map((sector) => (
+              <label key={sector.code} className={styles.check}>
+                <input
+                  type="checkbox"
+                  checked={query.sector?.includes(sector.code) ?? false}
+                  onChange={(event) =>
+                    onChange({ ...query, sector: toggle(query.sector, sector.code, event.target.checked) })
+                  }
+                />
+                {sector.name}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
 
-      <div className={styles.group}>
-        <label htmlFor={sortId}>정렬</label>
-        <select
-          id={sortId}
-          value={query.sort ?? 'SAVED_AT_DESC'}
-          onChange={(event) => onChange({ ...query, sort: event.target.value as MyRecordSort })}
-        >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        {strategies ? (
+          <fieldset className={styles.group}>
+            <legend>전략</legend>
+            {strategies.map((strategy) => (
+              <label key={strategy.strategyId} className={styles.check}>
+                <input
+                  type="checkbox"
+                  checked={query.strategy?.includes(strategy.strategyId) ?? false}
+                  onChange={(event) =>
+                    onChange({
+                      ...query,
+                      strategy: toggle(query.strategy, strategy.strategyId, event.target.checked),
+                    })
+                  }
+                />
+                {strategy.name}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
+      </div>
+
+      <div className={styles.filterColumn}>
+        <fieldset className={`${styles.group} ${styles.side}`}>
+          <legend>분석 기간</legend>
+          <span className={styles.dateBox}>
+            <label htmlFor={fromId}>시작</label>
+            <DateField
+              id={fromId}
+              label="분석 기간 시작"
+              value={query.periodFrom ?? ''}
+              max={query.periodTo}
+              onChange={(next) => onChange({ ...query, periodFrom: next || undefined })}
+            />
+          </span>
+          <span className={styles.dateBox}>
+            <label htmlFor={toId}>끝</label>
+            <DateField
+              id={toId}
+              label="분석 기간 끝"
+              value={query.periodTo ?? ''}
+              min={query.periodFrom}
+              onChange={(next) => onChange({ ...query, periodTo: next || undefined })}
+            />
+          </span>
+        </fieldset>
+
+        <div className={`${styles.group} ${styles.side}`}>
+          <label htmlFor={sortId}>정렬</label>
+          <select
+            id={sortId}
+            value={query.sort ?? 'SAVED_AT_DESC'}
+            onChange={(event) => onChange({ ...query, sort: event.target.value as MyRecordSort })}
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </form>
   )

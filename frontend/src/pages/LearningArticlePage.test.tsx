@@ -107,7 +107,7 @@ describe('LearningArticlePage', () => {
     expect(await screen.findByText('지금은 볼 수 없는 글입니다.')).not.toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.queryByRole('button')).toBeNull()
-    expect(screen.getByRole('link', { name: '주제 목록으로' }).getAttribute('href')).toBe('/learn')
+    expect(screen.getByRole('link', { name: '목록으로 돌아가기' }).getAttribute('href')).toBe('/learn')
   })
 
   it('불러오지 못하면 경고와 다시 시도를 보이고, 다시 시도는 Tab으로 닿고 누를 때만 부른다', async () => {
@@ -146,7 +146,7 @@ describe('LearningArticlePage', () => {
 
     renderArticle({ pathname: '/learn/tide-reading', state: received })
 
-    await user.click(await screen.findByRole('link', { name: '주제 목록으로' }))
+    await user.click(await screen.findByRole('link', { name: '목록으로 돌아가기' }))
 
     expect(await screen.findByText('주제 목록 화면')).not.toBeNull()
     expect(listState).toEqual(received)
