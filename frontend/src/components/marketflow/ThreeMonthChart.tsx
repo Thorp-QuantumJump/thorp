@@ -1,16 +1,15 @@
 import { scaleLinear } from '@visx/scale'
 import { motion, useReducedMotion } from 'motion/react'
 import { useId, useMemo } from 'react'
-import { InlineHelp } from '@/components/common/InlineHelp'
 import type { IndicatorDisplay } from '@/types/marketFlow'
-import { buildAxisDomain, formatObservation, recentDirection } from './marketFlowFormat'
+import { buildAxisDomain, describeAxis, formatObservation, recentDirection } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 /*
   위는 점 위 값 글자, 아래는 달 글자가 들어갈 자리를 둔다. 양옆은 첫·끝 점의 글자가 잘리지 않을 만큼 들인다.
   그림은 카드 폭에 맞춰 줄어들므로(640 → 약 360px) 글자는 viewBox 단위로 크게 잡아야 화면에서 12px 안팎이 된다.
 */
-const plot = { width: 640, height: 208, left: 64, right: 590, top: 42, bottom: 150, monthY: 190 }
+const plot = { width: 640, height: 208, left: 64, right: 620, inset: 48, top: 42, bottom: 150, monthY: 190 }
 
 
 /**
@@ -26,7 +25,8 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
     const values = indicator.path.flatMap(({ value }) => value === null ? [] : [value])
     const axis = buildAxisDomain(values)
     const y = scaleLinear({ domain: axis.domain, range: [plot.bottom, plot.top], nice: true })
-    const x = (index: number) => plot.left + index * (plot.right - plot.left) / 2
+    // 첫·끝 점은 가장자리에서 들인다. 붙여 두면 첫 점의 값 글자가 세로축 눈금 글자와 겹친다.
+    const x = (index: number) => plot.left + plot.inset + index * (plot.right - plot.left - plot.inset * 2) / 2
     // M은 새 구간 시작이다. null 양옆의 값을 L로 이어서 보간하지 않는다.
     const path = indicator.path.map((point, index) => {
       if (point.value === null) return ''
@@ -35,16 +35,12 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
     }).join(' ')
     return { x, y, path, ticks: y.ticks(3), hasValues: values.length > 0, axis }
   }, [indicator.path])
-  const axisNote = chart.axis.includesZero
-    ? '세로축이 0을 포함합니다.'
-    : `세로축은 ${formatObservation(chart.axis.domain[0])}~${formatObservation(chart.axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
+  const axisNote = describeAxis(indicator)
 
   return (
     <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)} data-direction={recentDirection(indicator.path)}>
       <div className={styles.chartCaption}>
         <span>최근 3개월 · 단위 {indicator.unit}</span>
-        {/* 0을 뺀 축이면 범위를 밝힌다. 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. 설명은 물음표 뒤로 내린다. */}
-        <InlineHelp label="세로축 범위"><p>{axisNote}</p></InlineHelp>
       </div>
       <p className={styles.srOnly} id={descriptionId}>{axisNote}</p>
       <svg

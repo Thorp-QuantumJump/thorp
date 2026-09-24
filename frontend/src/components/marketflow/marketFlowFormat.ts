@@ -78,3 +78,28 @@ export function recentDirection(path: IndicatorDisplay['path']): 'up' | 'down' |
   const difference = values[values.length - 1] - values[values.length - 2]
   return difference > 0 ? 'up' : difference < 0 ? 'down' : undefined
 }
+
+/**
+ * 지표 카드의 출처 줄. `출처 {출처}`와 `작성기관 {기관}`을 따로 적는다(FR-015). 출처 이름이 작성기관을 되풀이하면
+ * (`OECD Composite Leading Indicators` · `OECD`) 두 번 적지 않고 `출처·작성기관 OECD` 하나로 합친다.
+ */
+export function sourceParts(agency: string, source: string): string[] {
+  const a = agency.trim()
+  const b = source.trim()
+  if (!a && !b) return ['출처 확인할 수 없음']
+  if (!a) return [`출처 ${b}`]
+  if (!b) return [`작성기관 ${a}`]
+  const la = a.toLowerCase()
+  const lb = b.toLowerCase()
+  if (la === lb || lb.includes(la) || la.includes(lb)) return [`출처·작성기관 ${a}`]
+  return [`출처 ${b}`, `작성기관 ${a}`]
+}
+
+/** 세로축 범위 설명. 0을 뺀 축이면 범위를 밝힌다 — 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. */
+export function describeAxis(indicator: IndicatorDisplay): string {
+  const values = indicator.path.flatMap(({ value }) => (value === null ? [] : [value]))
+  const axis = buildAxisDomain(values)
+  return axis.includesZero
+    ? '세로축이 0을 포함합니다.'
+    : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
+}

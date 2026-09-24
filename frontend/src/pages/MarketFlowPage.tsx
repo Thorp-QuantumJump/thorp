@@ -122,7 +122,8 @@ export function MarketFlowPage() {
         </header>
 
         <div className={styles.workspaceHeading}>
-          <h2 id="field-list-title"><span>01</span> 분야별 경제 흐름</h2>
+          {/* 번호를 매길 다음 구역이 없어 눈에 보이는 제목은 두지 않는다. 목록의 이름으로 보조기기에만 읽힌다. */}
+          <h2 id="field-list-title" className={styles.srOnly}>분야별 경제 흐름</h2>
           {/* 목록 전체의 마지막 갱신은 여기 한 번만 적는다. 분야 줄은 이와 다를 때만 제 시각을 적는다(FR-011). */}
           <span>
             {summary ? `${summary.fields.length}개 분야` : '7개 분야'} <i aria-hidden="true">·</i> 최근 3개월

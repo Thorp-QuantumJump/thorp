@@ -24,12 +24,22 @@
 .historyNotice { width: 100%; margin: 0; font-size: var(--thorp-text-caption, .75rem); line-height: 1.5; }
 .detail { min-width: 0; }
 .detailHeader { padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }
-.detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 5px; }
 .detailEyebrow { color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 500 var(--thorp-text-label, .6rem)/1.4 var(--thorp-font-display); letter-spacing: .14em; }
-.detailTitle h2 { margin: 5px 0 0; font: 600 1.8rem/1.2 var(--thorp-font-page, var(--thorp-font-body)); letter-spacing: -.045em; }
-.indicatorCount { align-self: flex-end; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
-.indicatorCount b { margin-left: 5px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 500; }
+.detailTitle h2 { margin: 0; font: 600 1.8rem/1.2 var(--thorp-font-page, var(--thorp-font-body)); letter-spacing: -.045em; }
 .detailNarrative { margin: 12px 0; color: var(--thorp-foreground); font-size: var(--thorp-text-body, .91rem); line-height: 1.55; word-break: keep-all; }
+/* 머리 오른쪽. 소속 지표 수 아래에 상태 표 하나. */
+.detailFacts { display: grid; flex: none; justify-items: end; gap: 6px; font-size: var(--thorp-text-caption, .72rem); }
+.detailCount { color: var(--thorp-muted); }
+.detailCount b { margin-left: 6px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 600; }
+.detailStates { display: flex; gap: 4px; }
+/* 분야 설명 밑의 기준 시점 한 줄. */
+.detailTiming { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-caption, .72rem); font-variant-numeric: tabular-nums; }
+.detailTiming span + span::before { margin: 0 8px; opacity: .5; content: '·'; }
+/* 카드 바닥: 왼쪽 출처 줄, 오른쪽 아래 물음표. */
+.indicatorFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }
+.referenceNotes { display: grid; justify-items: end; gap: 2px; margin-top: 10px; text-align: right; }
+.referenceNotes .referenceNote { margin: 0; }
 .referenceNote { margin: 7px 0 0; color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); line-height: 1.5; }
 .indicator { padding: 20px 0; border-bottom: 1px solid var(--thorp-line); }
 .indicatorHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -50,7 +60,7 @@
 .chartNote { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); margin: -6px 0 14px; }
 .afterRelease { display: flex; flex-wrap: wrap; gap: 4px 12px; border-left: 2px solid var(--thorp-line-strong); padding: 4px 10px; margin: 0 0 14px; color: var(--thorp-foreground); font-size: var(--thorp-text-caption, .73rem); line-height: 1.5; }
 .afterRelease span { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); }
-.indicatorSource { display: flex; flex-wrap: wrap; gap: 2px 0; margin: auto 0 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }
+.indicatorSource { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }
 .indicatorSource span + span::before { margin: 0 6px; opacity: .5; content: '·'; }
 .emptyDetail { display: grid; justify-items: start; align-content: center; min-height: 240px; color: var(--thorp-copy); }
 .emptyDetail p { margin: 16px 0 8px; color: var(--thorp-foreground); }
@@ -207,3 +217,26 @@
 @media (max-width: 480px) {
   :global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: 1fr; }
 }
+
+/* 자료 공급 표. 확인됨은 파랑, 확인 중은 빨강(index.css --thorp-status-*). */
+:global(:root:not([data-design='classic'])) .stateLabel[data-tone='confirmed'] { border-color: color-mix(in srgb, var(--thorp-status-confirmed) 55%, transparent); color: var(--thorp-status-confirmed); }
+:global(:root:not([data-design='classic'])) .stateLabel[data-tone='pending'] { border-color: color-mix(in srgb, var(--thorp-status-pending) 55%, transparent); color: var(--thorp-status-pending); }
+
+/*
+  글자 밝기 세 단(첫 화면과 같은 규칙). 흰색(foreground)은 이름과 큰 숫자, 회백(copy)은 요약 문장과 그래프 값,
+  회색(muted)은 시점·출처·단위·안내문이다. 모두 흰색이면 무엇부터 읽을지 갈리지 않는다.
+  분야 목록은 고른 줄만 흰색으로 올린다.
+*/
+:global(:root:not([data-design='classic'])) .openButton { color: var(--thorp-copy); }
+:global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] .openButton,
+:global(:root:not([data-design='classic'])) .summaryCard:hover .openButton { color: var(--thorp-foreground); }
+:global(:root:not([data-design='classic'])) .summaryCard:not([data-selected='true']) .narrative { color: var(--thorp-muted); }
+:global(:root:not([data-design='classic'])) .detailNarrative { color: var(--thorp-copy); }
+:global(:root:not([data-design='classic'])) .chartValue { fill: var(--thorp-copy); }
+:global(:root:not([data-design='classic'])) .chartCaption,
+:global(:root:not([data-design='classic'])) .referenceNote { color: var(--thorp-muted); }
+:global(:root:not([data-design='classic'])) .chartGrid text { fill: var(--thorp-muted); }
+:global(:root:not([data-design='classic'])) .observation small { color: var(--thorp-muted); }
+:global(:root:not([data-design='classic'])) .afterRelease { color: var(--thorp-copy); }
+:global(:root:not([data-design='classic'])) .newsList p,
+:global(:root:not([data-design='classic'])) .sectorNote { color: var(--thorp-muted); }
