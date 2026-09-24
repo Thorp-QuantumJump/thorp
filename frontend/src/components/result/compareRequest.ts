@@ -1,4 +1,4 @@
-import { defaultValuesOf } from '@/hooks/useStrategySettings'
+import type { AxisValues } from '@/hooks/useStrategySettings'
 import type { BacktestCreateRequest, BacktestScenario } from '@/types/backtestRequest'
 import type { PublicResultDetail } from '@/types/result'
 import type { AxisValue, StrategyView } from '@/types/strategyRegistry'
@@ -8,11 +8,16 @@ export type CompareChoice = {
   strategy: StrategyView
   registryVersion: string
   rulesVersion: string
+  /**
+   * 상대편에 붙일 설정값. 등록표 기본값이거나 내가 써 본 조합이다(`S15P21E205-419`). 후보를 만드는 쪽이 채우므로
+   * 요청을 조립하는 이 파일은 어느 쪽인지 모른다.
+   */
+  parameters: AxisValues
 }
 
 /**
  * 공개 config → 004 요청의 대응은 이곳에만 둔다. 비용은 config에 없으므로 versions에서 읽는다.
- * choice가 없으면 원래 설정을 재현한다. 새 전략의 기본값과 규칙 버전은 등록표가 소유한다.
+ * choice가 없으면 원래 설정을 재현한다. 새 전략의 설정값은 choice가 들고 오고 규칙 버전은 등록표가 소유한다.
  */
 export function buildCompareRequest(
   base: PublicResultDetail,
@@ -56,7 +61,7 @@ export function buildCompareRequest(
           ? { registryVersion: config.registryVersion }
           : {}),
       parameters: choice
-        ? defaultValuesOf(choice.strategy)
+        ? { ...choice.parameters }
         : ({ ...config.parameters } as Record<string, AxisValue>),
     },
     conditions: {

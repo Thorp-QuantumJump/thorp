@@ -195,6 +195,9 @@
   --chart-foreground-muted: var(--thorp-muted);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
+  /* 비교 대상이 둘·셋일 때 쓰는 색. 선 모양과 끝 이름표가 함께 갈리므로 색은 보조다(SC-010). */
+  --chart-line-tertiary: var(--chart-3);
+  --chart-line-quaternary: var(--chart-4);
   --chart-crosshair: var(--thorp-accent-soft);
   /* 격자는 배경 위에 직접 그려진다. line이 올라간 만큼 따라 굵어지지 않게 예전 값에 묶어 둔다. */
   --chart-grid: rgb(255 255 255 / 7%);
