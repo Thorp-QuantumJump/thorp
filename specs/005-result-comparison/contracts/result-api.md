@@ -85,13 +85,15 @@
 
 ## GET /results/{publicToken}/index-comparison
 
-`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 기간 KOSPI 조회 포트가 있으면 결과의
-`effectiveStart`~`effectiveEnd` 범위에서 첫 지수 종가를 `config.initialCash`와 맞춘 환산 계열을 서버가
-만들어 `{available: true, reason: null, series: [{date, value}]}`로 돌려준다. `value`는 다른 금액처럼 decimal
-문자열이고, 화면은 다시 계산하지 않는다.
+`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 결과가 계산에 쓴 자료 버전(`versions.data`)의
+KOSPI 종가를 `effectiveStart`~`effectiveEnd`(양끝 포함) 범위에서 읽어, 시작 금액으로 첫 거래일에 KOSPI를
+사서 끝까지 들고 있었을 때의 자산가치로 환산한다 — `value = initialCash × 종가 / 첫 종가`. 첫 종가는 그
+범위에서 처음 관측된 값이고, 관측치가 없는 날은 채우지 않는다. 응답은 `{available: true, reason: null,
+series: [{date, value}]}`이며 `value`는 다른 금액처럼 소수 둘째 자리 decimal 문자열이다. 화면은 다시
+계산하지 않는다. 가격지수라 배당과 거래 비용은 들어 있지 않다.
 
-현재 001에는 기간 KOSPI 계열 조회 포트가 없으므로 `{available: false,
-reason: "INDEX_SERIES_UNAVAILABLE", series: []}`를 돌려준다. 최신 관측치 한 점이나 다른 계열로 값을
+기간·시작 금액·자료 버전 중 하나라도 없거나 그 범위에 KOSPI 관측치가 없으면 `{available: false,
+reason: "INDEX_SERIES_UNAVAILABLE", series: []}`다. 다른 자료 버전이나 최신 관측치 한 점으로 값을
 만들지 않는다. 어느 응답에도 `backtestId`는 없다.
 
 ## 오류
