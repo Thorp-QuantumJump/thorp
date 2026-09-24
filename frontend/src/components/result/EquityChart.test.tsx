@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
@@ -96,6 +96,29 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
+  it('마우스를 올린 날의 모든 선 자산가치와 시작 금액 대비 변화를 한국어 날짜와 함께 보인다', async () => {
+    const { container } = render(
+      <EquityChart
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+        reference={{
+          name: 'KOSPI(참고)',
+          points: BASE_POINTS.map((point) => ({ date: point.date, value: '11000000.00' })),
+        }}
+      />,
+    )
+
+    // 상호작용은 곡선 영역을 덮는 <g> 가 받는다. jsdom 은 크기를 0으로 재므로 clientX 가 곧 그림 안 좌표다.
+    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))
+    fireEvent.mouseMove(area!, { clientX: 58, clientY: 100 })
+
+    const first = BASE_POINTS[0]
+    await waitFor(() => expect(screen.getByText(/년 .*월 .*일/)).toBeTruthy())
+    expect(screen.getByText(/2\d{3}년/).textContent).toContain(first.date.slice(0, 4) + '년')
+    expect(screen.getByText('11,000,000원 (+10.00%)')).toBeTruthy()
+  })
+
   it('선택한 전략과 KOSPI를 선 모양 안내에 모두 표시하고 기준선을 더 강조한다', () => {
     const { container } = render(
       <EquityChart

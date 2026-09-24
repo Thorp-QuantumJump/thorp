@@ -3,6 +3,7 @@ import { ticks } from 'd3-array'
 import { useEffect, useMemo, useState } from 'react'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
+import { ChartTooltip, TooltipContent, type TooltipRow } from '@/components/charts/tooltip'
 import { XAxis } from '@/components/charts/x-axis'
 import { AmountAxis, type AmountTick } from '@/components/result/AmountAxis'
 import { DrawdownShade } from '@/components/result/DrawdownShade'
@@ -123,8 +124,30 @@ function toChartDate(date: string): Date {
   return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)
 }
 
+/** 툴팁이 읽을 원래 금액의 열 이름. 곡선 열은 로그 눈금이면 금액이 아니라 좌표값이다 */
+function amountKey(key: string): string {
+  return key + ':amount'
+}
+
+/** 툴팁 제목. 기간이 여러 해라 연도를 늘 적는다. 행의 날짜는 UTC 자정이다 */
+const tooltipDateFormat = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  weekday: 'short',
+  timeZone: 'UTC',
+})
+
+/** 시작 금액 대비 변화. 부호를 늘 붙인다 */
+function changeFromInitial(amount: number, initial: number | null): string {
+  if (initial == null || initial <= 0) return ''
+  const text = formatRatio(String(amount / initial - 1))
+  return text.startsWith('-') ? text : '+' + text
+}
+
 /**
  * 계열들을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.
+ * 툴팁을 위해 원래 금액도 `amountKey` 열에 함께 담는다.
  *
  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.
  */
@@ -139,6 +162,7 @@ function buildRows(
       const equity = readEquity(point)
       const axisValue = equity == null ? null : toAxisValue(equity, mode)
       if (axisValue != null) row[key] = axisValue
+      if (equity != null) row[amountKey(key)] = equity
       byDate.set(point.date, row)
     }
   }
@@ -495,6 +519,28 @@ export function EquityChart(props: EquityChartProps) {
           {compact ? null : <SeriesEndLabels series={endLabels} />}
 
           <XAxis numTicks={4} stackYear tickMode="domain" />
+
+          {/* 날짜 하나에 모든 선의 자산가치와 시작 금액 대비 변화를 한 상자에 보인다. 값은 받은 금액 그대로다. */}
+          <ChartTooltip
+            content={({ point }) => (
+              <TooltipContent
+                rows={endLabels.flatMap((series): TooltipRow[] => {
+                  const amount = point[amountKey(series.dataKey)]
+                  if (typeof amount !== 'number') return []
+                  const change = changeFromInitial(amount, initial)
+                  return [
+                    {
+                      color: series.stroke,
+                      label: series.name,
+                      value: formatMoney(String(amount)) + (change ? ' (' + change + ')' : ''),
+                    },
+                  ]
+                })}
+                title={tooltipDateFormat.format(point.date as Date)}
+              />
+            )}
+            showDatePill={false}
+          />
         </LineChart>
       </div>
 
