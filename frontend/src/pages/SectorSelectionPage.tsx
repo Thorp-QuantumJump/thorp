@@ -257,6 +257,16 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           onRemove={(code) => selection.toggleSector(code, false)}
           onProceed={proceed}
           proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
+          footer={
+            // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+            <section className={styles.railMarket} aria-labelledby="rail-market-title">
+              <h2 id="rail-market-title">
+                <ChartNoAxesCombined size={14} aria-hidden="true" />
+                지금 국내 시장
+              </h2>
+              <MarketNow />
+            </section>
+          }
         >
           {/*
             고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
@@ -351,29 +361,13 @@ export function SectorSelectionPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="sector-selection-title">
-        <div className={styles.intro}>
-          <div>
-            <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
-            <h1 id="sector-selection-title" className={styles.title}>
-              투자 대상 <em className={heading.emphasis}>고르기</em>
-            </h1>
-            <p className={styles.lead}>
-              백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
-            </p>
-          </div>
-
-          {/*
-            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 제목과 같은 줄 오른쪽, 선택 요약과 같은 폭이다.
-            과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니며, 목록을 받지 못해도 따로 보인다.
-          */}
-          <section className={styles.marketNow} aria-labelledby="market-now-title">
-            <h2 id="market-now-title">
-              <ChartNoAxesCombined size={14} aria-hidden="true" />
-              지금 국내 시장
-            </h2>
-            <MarketNow />
-          </section>
-        </div>
+        <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
+        <h1 id="sector-selection-title" className={styles.title}>
+          투자 대상 <em className={heading.emphasis}>고르기</em>
+        </h1>
+        <p className={styles.lead}>
+          백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
+        </p>
 
         {result === null ? (
           <p className={styles.loading} role="status">
