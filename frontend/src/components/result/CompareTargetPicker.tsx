@@ -14,6 +14,7 @@ import type { PublicResultDetail } from '@/types/result'
 import type { NumericCondition } from '@/types/strategyRegistry'
 import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'
 import type { CompareChoice } from './compareRequest'
+import { MAX_COMPARE_TARGETS } from './compareQuery'
 import styles from './comparison.module.css'
 
 type Candidate = {
@@ -252,8 +253,12 @@ export function CompareTargetPicker({
       ) : null}
       {state && !state.error ? (
         <p id={listId} className={styles.pickerNote}>
+          {/* 상한은 전체 수로 말하고, 이미 붙은 대상과 이 목록에서 고른 것을 합쳐 센다 — 남은 자리 수만 말하면 상한이 1인 것처럼 읽힌다. */}
+          {'최대 ' + MAX_COMPARE_TARGETS + '개까지 고를 수 있습니다(' +
+            (MAX_COMPARE_TARGETS - room + picked.length) +
+            '개 선택됨). '}
           {room > 0
-            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'
+            ? '기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'
             : '비교 대상을 더 고를 자리가 없습니다. 하나를 해제한 뒤 고르세요.'}
           {state.usedUnavailable ? ' 내 전략 목록은 지금 불러오지 못했습니다.' : ''}
         </p>

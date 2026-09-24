@@ -134,8 +134,10 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
     // 보이는 줄은 기록 이름이고 그 아래에 바탕 전략 이름이 작게 붙는다.
     expect(used.parentElement?.textContent).toBe('넓게 표류 9/23' + selectableStrategy.name)
     expect(screen.getAllByRole('checkbox', { name: /표류 균형 맞추기/ })).toHaveLength(2)
-    expect(screen.getByText(/최대 1개까지/)).toBeTruthy()
+    // 남은 자리가 아니라 전체 상한과, 이미 붙은 대상을 포함한 선택 수를 말한다.
+    expect(screen.getByText(/최대 3개까지 고를 수 있습니다\(2개 선택됨\)/)).toBeTruthy()
     fireEvent.click(used)
+    expect(screen.getByText(/\(3개 선택됨\)/)).toBeTruthy()
     // 자리가 하나라 다른 줄은 더 고를 수 없다.
     expect(
       (screen.getByRole('checkbox', { name: DEFAULT_ROW }) as HTMLInputElement).disabled,
@@ -197,6 +199,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {
   it('자리가 없으면 고를 수 없다고 알리고 모든 줄을 막는다', async () => {
     setup({ room: 0 })
     expect(await screen.findByText(/더 고를 자리가 없습니다/)).toBeTruthy()
+    expect(screen.getByText(/최대 3개까지 고를 수 있습니다\(3개 선택됨\)/)).toBeTruthy()
     for (const box of screen.getAllByRole('checkbox'))
       expect((box as HTMLInputElement).disabled).toBe(true)
   })
