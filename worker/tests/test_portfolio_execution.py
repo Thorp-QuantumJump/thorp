@@ -143,9 +143,48 @@ def test_last_evaluation_day_never_decides() -> None:
     assert plan.decision_days == {date(2024, 1, 30)}
 
 
+def test_quarter_end_decides_on_the_last_trading_day_of_march_june_september_december() -> None:
+    """분기말은 3·6·9·12월의 마지막 거래일이다. 다른 월말은 지나간다."""
+    calendar = [
+        date(2024, 1, 2),
+        date(2024, 1, 31),
+        date(2024, 2, 29),
+        date(2024, 3, 29),
+        date(2024, 4, 1),
+        date(2024, 6, 28),
+        date(2024, 7, 1),
+    ]
+    plan = plan_days(calendar, date(2024, 1, 2), date(2024, 7, 1), "QUARTER_END")
+    assert plan.decision_days == {date(2024, 1, 2), date(2024, 3, 29), date(2024, 6, 28)}
+
+
+def test_trading_days_cadence_counts_from_the_evaluation_start() -> None:
+    """``TRADING_DAYS_n`` 은 평가 시작일부터 n거래일마다 판단한다. 달력 월은 보지 않는다."""
+    calendar = [date(2024, 1, 2) + timedelta(days=offset) for offset in range(8)]
+    plan = plan_days(calendar, calendar[1], calendar[-1], "TRADING_DAYS_3")
+    assert plan.decision_days == {calendar[1], calendar[4]}, "마지막 날(index 6)은 판단하지 않는다"
+
+
+@pytest.mark.parametrize("rebalance", ["QUARTER_END", "TRADING_DAYS_21"])
+def test_engine_completes_and_decides_on_the_planned_days_for_every_cadence(
+    rebalance: str,
+) -> None:
+    """계약·사전 검증·엔진이 같은 주기 판정을 쓴다 — 어느 하나만 월말에 머물면 여기서 깨진다."""
+    output = completed(
+        **three_etf("2024-01-02", "2024-06-28", allocation={"parameters": {"rebalance": rebalance}})
+    )
+    calendar = sorted({snapshot.date for snapshot in output.portfolio_series})
+    plan = plan_days(calendar, calendar[0], calendar[-1], rebalance)
+    # 비중 기록은 판단일 다음 거래일(체결일)에 남는다.
+    fill_days = {plan.next_trading_day(day) for day in plan.decision_days}
+    assert {point.date for point in output.weights_series} == fill_days
+    assert len(fill_days) > 1, "6개월이면 첫날 외에도 판단일이 있어야 주기를 확인한 것이다"
+
+
 def test_unapproved_rebalance_cadence_is_rejected() -> None:
-    with pytest.raises(ValueError, match="WEEKLY"):
-        plan_days([date(2024, 1, 2)], date(2024, 1, 2), date(2024, 1, 2), "WEEKLY")
+    for rejected in ("WEEKLY", "TRADING_DAYS", "TRADING_DAYS_0", "TRADING_DAYS_21X"):
+        with pytest.raises(ValueError, match=rejected):
+            plan_days([date(2024, 1, 2)], date(2024, 1, 2), date(2024, 1, 2), rejected)
 
 
 # --- 체결 규칙(SC-004) ----------------------------------------------------------------

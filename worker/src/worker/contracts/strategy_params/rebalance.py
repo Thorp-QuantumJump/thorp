@@ -12,11 +12,22 @@
 ``allocation.base.effective_cap`` 한 곳에서만 한다 — 두 곳에서 나누면 한 곳이 100배 어긋난다.
 """
 
+import re
 from typing import Literal
 
 from pydantic import ConfigDict, Field
 
 from worker.contracts.base import ContractModel
+
+#: 계약이 허용하는 리밸런싱 주기(FR-011). 달력 주기 둘과 ``TRADING_DAYS_{n}``(평가 시작일부터
+#: n거래일마다). 003 등록표의 ``{mode: TRADING_DAYS, days: n}`` 은 백엔드가 이 철자로 옮겨 싣는다.
+REBALANCE_PATTERN = r"^(MONTH_END|QUARTER_END|TRADING_DAYS_[1-9][0-9]*)$"
+
+
+def trading_day_period(rebalance: str) -> int | None:
+    """``TRADING_DAYS_21`` → 21. 달력 주기(월말·분기말)는 None."""
+    match = re.fullmatch(r"TRADING_DAYS_([1-9][0-9]*)", rebalance)
+    return int(match.group(1)) if match else None
 
 
 class RebalanceParameters(ContractModel):
@@ -30,7 +41,7 @@ class RebalanceParameters(ContractModel):
 
     model_config = ConfigDict(extra="forbid", validate_by_name=False)
 
-    rebalance: Literal["MONTH_END"]
+    rebalance: str = Field(pattern=REBALANCE_PATTERN)
 
 
 class CappedRebalanceParameters(RebalanceParameters):
