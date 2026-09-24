@@ -89,7 +89,7 @@ frontend/src/api/assistant.ts, frontend/src/types/assistant.ts
 frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPage.tsx (페이지 맥락 등록)
 ```
 
-**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다) 셋이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.
+**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다), `assistant → strategy`(`ParameterRegistryPort`의 설정 축 라벨) 넷이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`·`strategy`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.
 
 ## Design Decisions
 
