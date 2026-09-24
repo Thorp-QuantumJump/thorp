@@ -1,6 +1,6 @@
 import { curveLinear } from '@visx/curve'
 import { ticks } from 'd3-array'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Grid } from '@/components/charts/grid'
 import { Line, LineChart } from '@/components/charts/line-chart'
 import { ChartTooltip, TooltipContent, type TooltipRow } from '@/components/charts/tooltip'
@@ -13,7 +13,6 @@ import { formatMoney, formatRatio } from '@/components/result/formatResult'
 import { InitialCashLabel } from '@/components/result/InitialCashLabel'
 import { InlineHelp } from '@/components/common/InlineHelp'
 import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'
-import { ZoomSelection } from '@/components/result/ZoomSelection'
 import type { ResultTimeseriesPoint } from '@/types/result'
 import styles from './EquityChart.module.css'
 
@@ -124,6 +123,35 @@ function toAxisValue(amount: number, mode: YScaleMode): number | null {
 /** 날짜 문자열을 UTC 자정으로 읽는다. 차트의 x 접근자가 쓰는 해석과 같게 맞춘다 */
 function toChartDate(date: string): Date {
   return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)
+}
+
+/** 확대해도 이보다 적은 거래일은 보이지 않는다 */
+const MIN_VIEW_ROWS = 10
+
+/** 보이는 구간. 전체 행 가운데 [처음, 끝] 번째(양끝 포함)다. `null`이면 전체 기간이다 */
+type ViewRange = [number, number] | null
+
+/**
+ * 휠 한 번의 확대·축소. `anchor`(0~1)는 커서가 그림 폭의 어디에 있는가이고, 그 자리의 날짜가 제자리에 남도록
+ * 구간을 넓히거나 좁힌다. 전체보다 넓어지면 전체 기간(`null`)으로 돌아간다.
+ */
+function zoomView(view: ViewRange, total: number, anchor: number, factor: number): ViewRange {
+  if (total <= MIN_VIEW_ROWS) return null
+  const [start, end] = view ?? [0, total - 1]
+  const span = end - start
+  const nextSpan = Math.round(Math.max(MIN_VIEW_ROWS - 1, span * factor))
+  if (nextSpan >= total - 1) return null
+  const pivot = start + anchor * span
+  const nextStart = Math.max(0, Math.min(total - 1 - nextSpan, Math.round(pivot - anchor * nextSpan)))
+  return [nextStart, nextStart + nextSpan]
+}
+
+/** 끌어서 옮기기. 구간 폭은 그대로 두고 양끝을 넘지 않는다 */
+function panView(view: ViewRange, total: number, shift: number): ViewRange {
+  if (!view) return null
+  const span = view[1] - view[0]
+  const start = Math.max(0, Math.min(total - 1 - span, view[0] + shift))
+  return [start, start + span]
 }
 
 /** 툴팁이 읽을 원래 금액의 열 이름. 곡선 열은 로그 눈금이면 금액이 아니라 좌표값이다 */
@@ -342,15 +370,58 @@ export function EquityChart(props: EquityChartProps) {
   )
   const keys = keyed.map((series) => series.key)
   const allRows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])
-  // 끌어서 고른 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.
-  const [zoom, setZoom] = useState<[Date, Date] | null>(null)
+  // 휠로 좁힌 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.
+  const [view, setView] = useState<ViewRange>(null)
+  const zoomed = view !== null && view[1] < allRows.length
   const rows = useMemo(
-    () => (zoom ? allRows.filter((row) => row.date >= zoom[0] && row.date <= zoom[1]) : allRows),
-    [allRows, zoom],
+    () => (zoomed ? allRows.slice(view[0], view[1] + 1) : allRows),
+    [allRows, view, zoomed],
   )
-  const zoomTo = (range: [Date, Date]) => {
-    // 두 거래일보다 좁으면 선이 되지 않는다.
-    if (allRows.filter((row) => row.date >= range[0] && row.date <= range[1]).length >= 2) setZoom(range)
+  const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }
+  const chartRef = useRef<HTMLDivElement>(null)
+  const [dragging, setDragging] = useState(false)
+  // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.
+  const live = useRef({ view, total: allRows.length, margin })
+  live.current = { view: zoomed ? view : null, total: allRows.length, margin }
+
+  // 그래프 안의 휠은 그래프가 쓰고 페이지를 굴리지 않는다. React 의 onWheel 은 passive 라 막을 수 없어 직접 붙인다.
+  useEffect(() => {
+    const node = chartRef.current
+    if (!node) return
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return
+      event.preventDefault()
+      const { view: current, total, margin: m } = live.current
+      const box = node.getBoundingClientRect()
+      const plot = box.width - m.left - m.right
+      const anchor = plot > 0 ? Math.min(1, Math.max(0, (event.clientX - box.left - m.left) / plot)) : 0.5
+      setView(zoomView(current, total, anchor, Math.exp(event.deltaY * 0.002)))
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // 확대한 동안에만 끌어서 옮긴다. 옮긴 거리는 누른 자리 기준이라 조금씩 끌어도 쌓이는 오차가 없다.
+  const startPan = (event: React.PointerEvent<HTMLDivElement>) => {
+    const origin = live.current.view
+    const node = chartRef.current
+    if (!origin || !node || event.button !== 0) return
+    const { total, margin: m } = live.current
+    const plot = node.getBoundingClientRect().width - m.left - m.right
+    const span = origin[1] - origin[0]
+    const startX = event.clientX
+    setDragging(true)
+    const move = (moveEvent: PointerEvent) => {
+      if (plot <= 0) return
+      setView(panView(origin, total, Math.round(((startX - moveEvent.clientX) / plot) * span)))
+    }
+    const end = () => {
+      setDragging(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
   }
   const initial = toNumber(initialCash)
   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)
@@ -403,12 +474,13 @@ export function EquityChart(props: EquityChartProps) {
         <h2 className={styles.heading}>
           자산가치 추이
           <InlineHelp label="확대" side="bottom">
-            그래프를 좌우로 끌면 그 구간을 확대합니다. 두 번 누르거나 '전체 기간'을 누르면 돌아옵니다.
+            그래프 위에서 휠을 굴리면 커서 자리를 기준으로 확대·축소하고, 확대한 뒤에는 끌어서 옮깁니다. 두 번
+            누르거나 '전체 기간'을 누르면 돌아옵니다.
           </InlineHelp>
         </h2>
         <div className={styles.headingActions}>
-          {zoom ? (
-            <button className={styles.zoomReset} onClick={() => setZoom(null)} type="button">
+          {zoomed ? (
+            <button className={styles.zoomReset} onClick={() => setView(null)} type="button">
               전체 기간
             </button>
           ) : null}
@@ -451,7 +523,10 @@ export function EquityChart(props: EquityChartProps) {
       <div
         aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
-        onDoubleClick={() => setZoom(null)}
+        data-pan={zoomed ? (dragging ? 'dragging' : 'ready') : undefined}
+        onDoubleClick={() => setView(null)}
+        onPointerDown={startPan}
+        ref={chartRef}
         role="img"
       >
         <LineChart
@@ -460,7 +535,7 @@ export function EquityChart(props: EquityChartProps) {
           className={styles.canvas}
           data={rows as unknown as Record<string, unknown>[]}
           decimate={false}
-          margin={{ top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }}
+          margin={margin}
           xDataKey="date"
           yDomain={yDomain}
           yDomainTween={false}
@@ -544,8 +619,6 @@ export function EquityChart(props: EquityChartProps) {
           {compact ? null : <SeriesEndLabels series={endLabels} />}
 
           <XAxis numTicks={4} stackYear tickMode="domain" />
-
-          <ZoomSelection onZoom={zoomTo} />
 
           {/* 날짜 하나에 모든 선의 자산가치와 시작 금액 대비 변화를 한 상자에 보인다. 값은 받은 금액 그대로다. */}
           <ChartTooltip
