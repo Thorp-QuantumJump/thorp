@@ -30,10 +30,17 @@ export const COMPUTED_WEIGHTS_NOTE = '비중은 선택한 규칙의 계산 결�
 
 /**
  * 전략 이름. 등록표에서 찾지 못해 `strategyName`이 없으면 `strategyId`를 그대로 보인다.
- * 이름을 지어내지 않는다.
+ * 이름을 지어내지 않는다. 변동성 제한을 켠 결과는 그 목표를 붙여, 같은 전략의 켬·끔이 곡선과 문장에서 갈리게 한다.
  */
 export function strategyLabel(detail: Pick<PublicResultDetail, 'config' | 'strategyName'>): string {
-  return detail.strategyName ?? detail.config.strategyId
+  return (detail.strategyName ?? detail.config.strategyId) + volatilityLimitSuffix(detail.config)
+}
+
+/** 변동성 제한 표기. 켜지 않았거나 목표를 읽을 수 없으면 빈 문자열이다. */
+export function volatilityLimitSuffix(config: Pick<PublicResultDetail['config'], 'scenario' | 'scenarioParams'>): string {
+  if (config.scenario !== 'TARGET_RISK') return ''
+  const value = Number(config.scenarioParams?.targetVolatility)
+  return Number.isFinite(value) ? ' · 변동성 제한 연 ' + Number((value * 100).toFixed(2)) + '%' : ' · 변동성 제한'
 }
 
 /** 응답의 조건과 버전으로 조건 한 줄을 만든다. 값을 계산하지 않고 고르고 잇기만 한다. */

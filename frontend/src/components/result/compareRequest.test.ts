@@ -3,6 +3,7 @@ import { resultDetailCompleted as base } from '@/test/resultFixtures'
 import { selectableStrategy } from '@/test/strategyRegistryFixtures'
 import { defaultValuesOf } from '@/hooks/useStrategySettings'
 import { buildCompareRequest, comparisonMismatch } from './compareRequest'
+import { strategyLabel } from './conditionLine'
 
 const choice = {
   strategy: selectableStrategy,
@@ -87,5 +88,49 @@ describe('동일 조건 요청', () => {
         config: { ...huge.config, initialCash: '9007199254740992.02' },
       }),
     ).toBe('conditions')
+  })
+})
+
+describe('변동성 제한 비교', () => {
+  const limited = {
+    ...base,
+    config: { ...base.config, scenario: 'TARGET_RISK', scenarioParams: { targetVolatility: '0.1200' } },
+  }
+  it('후보가 든 변동성 제한을 기준의 시나리오 대신 싣는다', () => {
+    const on = buildCompareRequest(base, {
+      ...choice,
+      volatilityLimit: { scenario: 'TARGET_RISK', targetVolatility: 15 },
+    })
+    expect(on.conditions).toMatchObject({
+      scenario: 'TARGET_RISK',
+      scenarioParams: { targetVolatility: '0.1500' },
+    })
+    const off = buildCompareRequest(limited, { ...choice, volatilityLimit: { scenario: 'FULL_PERIOD' } })
+    expect(off.conditions.scenario).toBe('FULL_PERIOD')
+    expect(off.conditions).not.toHaveProperty('scenarioParams')
+    // 등록표 버전 없이 접수된 기준을 따라가는 후보는 없는 버전을 붙이지 않는다.
+    expect(
+      buildCompareRequest(base, { ...choice, registryVersion: '' }).strategy,
+    ).not.toHaveProperty('registryVersion')
+    // 후보가 제한을 말하지 않으면 기준의 제한을 따른다.
+    expect(buildCompareRequest(limited, choice).conditions).toMatchObject({
+      scenario: 'TARGET_RISK',
+      scenarioParams: { targetVolatility: '0.1200' },
+    })
+  })
+  it('변동성 제한의 켬·끔과 목표 차이는 조건 차이로 보지 않지만 다른 분석 방식은 조건 차이다', () => {
+    expect(comparisonMismatch(base, limited)).toBeNull()
+    expect(
+      comparisonMismatch(limited, {
+        ...limited,
+        config: { ...limited.config, scenarioParams: { targetVolatility: '0.0500' } },
+      }),
+    ).toBeNull()
+    expect(
+      comparisonMismatch(base, { ...base, config: { ...base.config, scenario: 'FRESH_CASH_FROM' } }),
+    ).toBe('conditions')
+  })
+  it('변동성 제한을 켠 결과의 이름에 목표를 붙여 같은 전략의 켬·끔이 갈리게 한다', () => {
+    expect(strategyLabel(limited)).toBe(strategyLabel(base) + ' · 변동성 제한 연 12%')
   })
 })

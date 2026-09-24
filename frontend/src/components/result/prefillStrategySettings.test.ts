@@ -342,10 +342,33 @@ describe('prefillStrategySettings', () => {
     expect(toWeightTenths('')).toBeNaN()
   })
 
-  it('설정 화면이 다루지 않는 별도 시나리오 결과는 조건을 바꿔 넘기지 않는다', async () => {
+  it('변동성 제한 결과는 켠 목표를 퍼센트 숫자로 옮겨 설정 화면에 넘긴다', async () => {
+    const navigate = vi.fn()
+
+    const outcome = await prefillStrategySettings(
+      { ...config, scenario: 'TARGET_RISK', scenarioParams: { targetVolatility: '0.1200' } },
+      navigate,
+    )
+
+    expect(outcome).toEqual({ status: 'moved' })
+    expect(readStored(STRATEGY_SETTINGS_STORAGE_KEY)).toMatchObject({
+      analysisCondition: { scenario: 'TARGET_RISK', targetVolatility: 12 },
+    })
+  })
+
+  it('목표를 읽을 수 없는 변동성 제한 결과는 제한을 끈 채로 넘기지 않고 멈춘다', async () => {
     const navigate = vi.fn()
 
     const outcome = await prefillStrategySettings({ ...config, scenario: 'TARGET_RISK' }, navigate)
+
+    expect(outcome.status).toBe('failed')
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('설정 화면이 다루지 않는 별도 시나리오 결과는 조건을 바꿔 넘기지 않는다', async () => {
+    const navigate = vi.fn()
+
+    const outcome = await prefillStrategySettings({ ...config, scenario: 'FRESH_CASH_FROM' }, navigate)
 
     expect(outcome.status).toBe('failed')
     expect(navigate).not.toHaveBeenCalled()
