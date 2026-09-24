@@ -11,27 +11,27 @@
 .message {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 0.88rem;
+  font-size: var(--thorp-text-body, 0.88rem);
   font-weight: 700;
 }
 
 .detail {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   line-height: 1.55;
 }
 
 .retry {
-  min-height: 36px;
+  min-height: var(--thorp-control, 36px);
   padding: 0 15px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: var(--thorp-control-font, var(--thorp-text-caption, 0.76rem));
+  font-weight: var(--thorp-control-weight, 700);
 }
 
 .retry:hover:not(:disabled) {

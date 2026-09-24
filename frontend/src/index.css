@@ -29,6 +29,11 @@
     읽을 것이 가운데 떠 있는 것처럼 보인다.
   */
   --thorp-page-width: 960px;
+  /* 전략 진단 흐름(섹터 고르기 → 전략 선택)의 틀. 단계를 넘어도 제목과 본문의 왼쪽 끝이 같은 자리에 선다. */
+  --thorp-page-width-flow: 1320px;
+  /* 그 틀 안의 두 단 사이 간격과 옆 단 폭. 섹터 고르기의 오른쪽 요약과 전략 선택의 왼쪽 목록이 같은 폭이다. */
+  --thorp-flow-gap: 22px;
+  --thorp-flow-side: 19rem;
   --thorp-page-gutter: 40px;
   --thorp-page-top: clamp(30px, 5vh, 56px);
   --thorp-page-bottom: 80px;
@@ -89,6 +94,36 @@
   --thorp-pad-card: 20px 24px;
   --thorp-pad-notice: 12px 16px;
   --thorp-pad-inset: 12px 14px;
+  /*
+    '브랜드 계승' 크기 규칙. 첫 화면(LandingPage)의 글자·버튼 크기를 다른 화면이 같은 값으로 쓰도록
+    여기 모은다. 화면마다 0.7~0.95rem 사이의 값을 제각각 적었더니 글자 크기가 열여섯 가지로 갈라졌다.
+    글자는 제목·안내문·소제목·본문·작은 글·설명·라벨 일곱 단만 쓴다.
+  */
+  --thorp-text-title: clamp(2rem, 3.2vw, 2.75rem);
+  --thorp-text-lead: clamp(0.95rem, 1.3vw, 1.08rem);
+  --thorp-text-heading: 1.08rem;
+  --thorp-text-body: 0.86rem;
+  --thorp-text-small: 0.78rem;
+  --thorp-text-caption: 0.72rem;
+  --thorp-text-label: 0.66rem;
+  --thorp-title-tracking: -0.045em;
+  --thorp-title-leading: 1.16;
+  /*
+    버튼 높이는 세 단이다. 화면의 주된 행동(분석하기·다음 단계)은 첫 화면의 주 버튼과 같은 52px,
+    카드 안의 행동은 40px, 아이콘·다시 시도 같은 작은 행동은 32px. 누르는 글자는 0.82rem·680이다.
+  */
+  --thorp-control-cta: 52px;
+  --thorp-control: 40px;
+  --thorp-control-sm: 32px;
+  --thorp-control-font: 0.82rem;
+  --thorp-control-weight: 680;
+  /* 높이는 min-height가 정하므로 위아래 안쪽 여백은 비운다. classic에서는 각 자리의 예전 여백으로 돌아간다. */
+  --thorp-control-pad-block: 0px;
+  /* 주 버튼에 올렸을 때: 첫 화면 주 버튼처럼 한 단 밝아지고 2px 떠오른다. */
+  --thorp-accent-hover: #56e889;
+  --thorp-cta-lift: -2px;
+  /* 화면 글꼴. 첫 화면처럼 숫자·영문은 Geist, 한글은 SUIT로 선다. 각 화면 뿌리에서 var(--thorp-font-page, inherit)로 쓴다. */
+  --thorp-font-page: var(--thorp-font-display);
   --thorp-overlay: rgb(0 0 0 / 68%);
   /*
     초록은 누를 것(버튼·링크·고름·초점·진행)과 작은 포인트(영문 작은 제목, 구역 아이콘·번호)에 쓴다.
@@ -194,6 +229,27 @@
   --thorp-pad-card: initial;
   --thorp-pad-notice: initial;
   --thorp-pad-inset: initial;
+  --thorp-text-title: initial;
+  --thorp-text-lead: initial;
+  --thorp-text-heading: initial;
+  --thorp-text-body: initial;
+  --thorp-text-small: initial;
+  --thorp-text-caption: initial;
+  --thorp-text-label: initial;
+  --thorp-title-tracking: initial;
+  --thorp-page-width-flow: initial;
+  --thorp-flow-gap: initial;
+  --thorp-flow-side: initial;
+  --thorp-title-leading: initial;
+  --thorp-control-cta: initial;
+  --thorp-control: initial;
+  --thorp-control-sm: initial;
+  --thorp-control-font: initial;
+  --thorp-control-weight: initial;
+  --thorp-control-pad-block: initial;
+  --thorp-accent-hover: initial;
+  --thorp-cta-lift: initial;
+  --thorp-font-page: initial;
   --thorp-overlay: initial;
   --thorp-eyebrow: initial;
   --thorp-ornament: initial;
