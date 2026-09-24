@@ -58,33 +58,3 @@
   text-align: left;
   white-space: nowrap;
 }
-
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin: 0;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.metric dt {
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
-}
-
-.metric dd {
-  margin: 0;
-  font-family: var(--thorp-font-number, var(--thorp-font-mono));
-  font-variant-numeric: tabular-nums;
-  font-size: var(--thorp-text-heading, 1.05rem);
-  font-variant-numeric: tabular-nums;
-}
-
-/* 디자인 개편(S15P21E205-425): 목표 위험 결과의 오르내림 색. classic은 예전처럼 한 색이다. */
-:global(:root:not([data-design='classic'])) .metric dd[data-direction='up'] { color: var(--thorp-up); }
-:global(:root:not([data-design='classic'])) .metric dd[data-direction='down'] { color: var(--thorp-down); }

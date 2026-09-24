@@ -1049,6 +1049,7 @@ export function StrategySettingsPage({
         period: prepared.period,
         initialAmount: prepared.initialAmount,
         scenario: settings.analysisCondition.scenario,
+        targetVolatility: settings.analysisCondition.targetVolatility,
       });
     } catch (error) {
       console.error("분석 요청을 조립하지 못했습니다.", error);
@@ -1474,6 +1475,9 @@ export function StrategySettingsPage({
                                 }
                           }
                           costProfile={costProfile}
+                          targetVolatility={
+                            settings.analysisCondition.targetVolatility
+                          }
                         />
                       }
                       conditions={registry.analysisConditions}
@@ -1488,6 +1492,9 @@ export function StrategySettingsPage({
                       caseConstraint={activeCaseConstraint}
                       initialAmount={initialAmount ?? undefined}
                       minEvaluationYears={minEvaluationYears}
+                      targetVolatility={
+                        settings.analysisCondition.targetVolatility
+                      }
                       cost={costAssumption}
                       onChange={(patch) => {
                         // 금액이 등록표 기본값과 같아지면 값을 담지 않고 "없음"으로 둔다. 입력이 무효가 되어
