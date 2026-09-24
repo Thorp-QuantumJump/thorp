@@ -333,8 +333,9 @@ export function SectorSelectionPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="sector-selection-title">
+        <p className={styles.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
         <h1 id="sector-selection-title" className={styles.title}>
-          투자 대상 고르기
+          투자 대상 <em>고르기</em>
         </h1>
         <p className={styles.lead}>
           백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.

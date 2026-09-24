@@ -1223,8 +1223,9 @@ export function StrategySettingsPage({
             <ArrowLeft size={15} aria-hidden="true" />
             섹터·비중 고르기
           </Link>
+          <p className={styles.eyebrow} aria-hidden="true">STEP 02 · STRATEGY</p>
           <h1 id="strategy-settings-title" className={styles.title}>
-            전략 선택
+            <em>전략</em> 선택
           </h1>
           <p className={styles.lead}>
             고른 섹터로 어떤 전략을 돌려 볼지 고릅니다. 그대로 바로 분석할 수

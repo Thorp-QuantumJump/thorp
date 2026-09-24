@@ -42,14 +42,14 @@
   flex-wrap: wrap;
   align-items: center;
   color: var(--thorp-foreground);
-  font-size: 0.92rem;
+  font-size: var(--thorp-text-body, 0.92rem);
   font-weight: 700;
 }
 
 .unit {
   margin-left: 6px;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 400;
 }
 
@@ -60,7 +60,7 @@
   gap: 4px 8px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
 }
 
@@ -74,11 +74,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: var(--thorp-control-pad-block, 6px) 12px;
   border: 1px solid var(--thorp-line);
   border-radius: 999px;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   cursor: pointer;
+  justify-content: center;
+  min-height: var(--thorp-control-sm, auto);
 }
 
 .choice:has(input:checked) {
@@ -99,13 +101,14 @@
 
 .input {
   width: min(100%, 180px);
-  padding: 7px 10px;
+  padding: var(--thorp-control-pad-block, 7px) 12px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 8px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--thorp-text-body, 0.9rem);
+  min-height: var(--thorp-control, auto);
 }
 
 .input[aria-invalid="true"] {
@@ -122,25 +125,29 @@
 .hint {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
 }
 
 .problem {
   margin: 0;
   color: var(--thorp-warning);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
 }
 
 .reset {
-  padding: 4px 10px;
+  padding: var(--thorp-control-pad-block, 4px) 10px;
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control-sm, auto);
 }
 
 .reset:hover {
@@ -155,16 +162,20 @@
 }
 
 .quickAddButton {
-  padding: 4px 11px;
+  padding: var(--thorp-control-pad-block, 4px) 11px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: 999px;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: border-color 0.14s ease, color 0.14s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control-sm, auto);
 }
 
 .quickAddButton:hover:not(:disabled) {
