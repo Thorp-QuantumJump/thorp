@@ -117,3 +117,14 @@
     min-height: 34px;
   }
 }
+
+/* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
+@media (prefers-reduced-motion: reduce) {
+  .primary {
+    transition: none;
+  }
+
+  .primary:hover:not([aria-disabled='true']) {
+    transform: none;
+  }
+}

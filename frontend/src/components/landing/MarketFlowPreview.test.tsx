@@ -50,6 +50,8 @@ function indicator(indicatorId: string, unit: string, values: [number, number, n
 
 /** 17개 지표를 일곱 분야에 나눠 준다(3·3·3·2·2·2·2). */
 const perField = [3, 3, 3, 2, 2, 2, 2]
+/** 상세 조회를 실패시킬 분야. 시험마다 정한다. */
+const failing = vi.hoisted(() => new Set<string>())
 
 vi.mock('@/api/marketFlow', () => ({
   fetchMarketFlowFields: vi.fn(() =>
@@ -62,6 +64,7 @@ vi.mock('@/api/marketFlow', () => ({
     }),
   ),
   fetchMarketFlowField: vi.fn((fieldId: MarketFlowFieldId) => {
+    if (failing.has(fieldId)) return Promise.reject(new Error('503'))
     const index = fieldIds.indexOf(fieldId)
     const detail: FieldDetailResult = {
       ...summary(fieldId, index),
@@ -82,6 +85,21 @@ describe('MarketFlowPreview', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(7)
     expect(screen.getByLabelText('경제지표 17개 흐름')).toBeDefined()
     expect(screen.getByText('분야1 요약')).toBeDefined()
+  })
+
+  it('받지 못한 분야를 조용히 빼지 않고 밝힌다', async () => {
+    // 모두 받은 결과는 잠시 들고 있으므로, 앞 시험의 결과를 쓰지 않도록 시계를 넘긴다.
+    vi.setSystemTime(Date.now() + 10 * 60_000)
+    failing.add('labor')
+    try {
+      render(<MarketFlowPreview />)
+
+      expect(await screen.findByText('분야4 분야 자료를 불러오지 못했습니다.')).toBeDefined()
+      expect(screen.getByLabelText('경제지표 15개 흐름')).toBeDefined()
+    } finally {
+      failing.clear()
+      vi.useRealTimers()
+    }
   })
 
   it('원천의 셈 단위를 그대로 적지 않는다', () => {
