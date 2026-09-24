@@ -7,7 +7,6 @@ import { ChartTooltip, TooltipContent, type TooltipRow } from '@/components/char
 import { XAxis } from '@/components/charts/x-axis'
 import { AmountAxis, type AmountTick } from '@/components/result/AmountAxis'
 import { DrawdownShade } from '@/components/result/DrawdownShade'
-import { DrawdownStrip } from '@/components/result/DrawdownStrip'
 import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/drawdownWindow'
 import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'
 import { formatMoney, formatRatio } from '@/components/result/formatResult'
@@ -381,8 +380,6 @@ export function EquityChart(props: EquityChartProps) {
   const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }
   const chartRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
-  // 하락 폭 띠. 첫 화면 그래프는 하나라는 원칙(II)에 맞춰 누를 때만 보인다.
-  const [showDrawdown, setShowDrawdown] = useState(false)
   // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.
   const live = useRef({ view, total: allRows.length, margin })
   live.current = { view: zoomed ? view : null, total: allRows.length, margin }
@@ -482,16 +479,8 @@ export function EquityChart(props: EquityChartProps) {
           </InlineHelp>
         </h2>
         <div className={styles.headingActions}>
-          <button
-            aria-pressed={showDrawdown}
-            className={styles.actionButton}
-            onClick={() => setShowDrawdown((shown) => !shown)}
-            type="button"
-          >
-            하락 폭
-          </button>
           {zoomed ? (
-            <button className={styles.actionButton} onClick={() => setView(null)} type="button">
+            <button className={styles.zoomReset} onClick={() => setView(null)} type="button">
               전체 기간
             </button>
           ) : null}
@@ -654,25 +643,6 @@ export function EquityChart(props: EquityChartProps) {
           />
         </LineChart>
       </div>
-
-      {showDrawdown && rows.length >= 2 ? (
-        <DrawdownStrip
-          from={rows[0].date}
-          margin={margin}
-          series={[
-            ...targets.map((target, index) => ({
-              key: targetKey(index),
-              stroke: TARGET_STYLES[index].stroke,
-              dash: TARGET_STYLES[index].dash,
-              width: 1.6,
-              points: target.points,
-            })),
-            // 기준선을 마지막에 그려 겹치는 곳에서 위에 오게 한다(본 그래프와 같다).
-            { key: BASE_KEY, stroke: BASE_STROKE, width: 2.2, points: base.points },
-          ]}
-          to={rows[rows.length - 1].date}
-        />
-      ) : null}
 
       <div className={styles.legend}>
         {initial == null ? null : <span>점선 · 시작 금액 {formatMoney(initialCash)}</span>}
