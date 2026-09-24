@@ -1,0 +1,5 @@
+{
+  "success": true,
+  "data": { "enabled": true, "scopes": ["RESULT"] },
+  "error": null
+}
