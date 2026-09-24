@@ -17,8 +17,17 @@ export type AmountTick = {
   at: number
 }
 
-/** 그림 영역 왼쪽 여백에 눈금 글자를 오른쪽 끝을 맞춰 적는다. `LineChart`의 자식으로만 쓴다 */
-export function AmountAxis({ ticks }: { ticks: AmountTick[] }) {
+/**
+ * 그림 영역 왼쪽 여백에 눈금 글자를 오른쪽 끝을 맞춰 적는다. `LineChart`의 자식으로만 쓴다.
+ * `format`을 주면 금액 대신 그 글자를 적는다(하락 폭 띠의 % 눈금).
+ */
+export function AmountAxis({
+  ticks,
+  format = formatAxisAmount,
+}: {
+  ticks: AmountTick[]
+  format?: (amount: number) => string
+}) {
   const { yScale } = useChartStable()
 
   return (
@@ -36,7 +45,7 @@ export function AmountAxis({ ticks }: { ticks: AmountTick[] }) {
             x={-6}
             y={y}
           >
-            {formatAxisAmount(tick.amount)}
+            {format(tick.amount)}
           </text>
         )
       })}
