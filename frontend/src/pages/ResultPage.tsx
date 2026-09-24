@@ -259,6 +259,11 @@ function ResultView({
                 sideOffset={8}
                 collisionPadding={16}
                 aria-label="비교 대상 고르기"
+                // 첫 요소가 아니라 팝오버에 초점을 둔다. 첫 요소가 물음표면 초점만으로 설명이 열려 첫 Esc 가 팝오버를 닫지 못한다.
+                onOpenAutoFocus={(event) => {
+                  event.preventDefault()
+                  document.getElementById(pickerId)?.focus()
+                }}
                 onCloseAutoFocus={(event) => {
                   event.preventDefault()
                   document.getElementById(pickerButtonId)?.focus()
