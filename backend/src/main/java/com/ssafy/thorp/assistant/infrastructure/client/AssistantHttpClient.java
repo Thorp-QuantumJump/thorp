@@ -83,7 +83,11 @@ public class AssistantHttpClient {
             throw unavailable("http status " + status);
         }
         try {
-            return mapper.readTree(response.body());
+            JsonNode node = mapper.readTree(response.body());
+            if (node == null || node.isMissingNode() || node.isNull()) {
+                throw unavailable("empty response body");
+            }
+            return node;
         } catch (IOException | IllegalArgumentException exc) {
             throw unavailable("response is not json");
         }
