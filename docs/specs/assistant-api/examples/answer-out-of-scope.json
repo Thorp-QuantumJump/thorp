@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "data": {
+    "status": "OUT_OF_SCOPE",
+    "answer": "이 도우미는 지금 보고 있는 기준 결과의 기록을 설명합니다. 투자 추천이나 앞으로의 성과, 다른 결과에 대해서는 답하지 않습니다.",
+    "evidence": [],
+    "page": { "kind": "RESULT" }
+  },
+  "error": null
+}
