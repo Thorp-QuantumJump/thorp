@@ -10,7 +10,7 @@
 
 **근거 문서**: Notion 기획서 "Thorp - 퀀트 전략 분석 플랫폼"(2026-09-09 18:03 UTC 편집판) §4.3, §4.4, §6.4.4, §6.5, §7.1, §7.3, §7.4와 결정 D07·D08·D09·D11·D21~D24·D27, 미확인 항목 U01~U04·U06, constitution의 승인된 경제환경 검색 원칙(미승인 개정 제외) 중 원칙 II~IX와 "경제환경 검색". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.
 
-**관련 spec**: 지표 값·등록표·기준월 산출값은 [008 경제지표 등록·수집](../008-macro-indicator-registry/spec.md)이 제공한다. 진입은 [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '비슷했던 때 보기'와 [005 결과 이해·비교](../005-result-comparison/spec.md)의 '경제환경이 비슷했던 과거 보기'([011](../011-regime-strategy-link/spec.md) 경로)다. 사례 이후 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md), 기록 보존은 [006](../006-my-records/spec.md), 과거 뉴스 연결은 [012](../012-market-news-digest/spec.md)가 맡는다.
+**관련 spec**: 지표 값·등록표·기준월 산출값은 [008 경제지표 등록·수집](../008-macro-indicator-registry/spec.md)이 제공한다. 진입은 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md)의 '지금과 비슷했던 과거 시장'(FR-018, Session 2026-09-24), [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '비슷했던 때 보기'와 [005 결과 이해·비교](../005-result-comparison/spec.md)의 '경제환경이 비슷했던 과거 보기'([011](../011-regime-strategy-link/spec.md) 경로)다. 사례 이후 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md), 기록 보존은 [006](../006-my-records/spec.md), 과거 뉴스 연결은 [012](../012-market-news-digest/spec.md)가 맡는다.
 
 ## 범위 요약
 
