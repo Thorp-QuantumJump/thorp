@@ -96,6 +96,42 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
+  it('그래프를 끌면 그 구간으로 확대하고 전체 기간·두 번 누르기로 돌아온다', async () => {
+    const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
+    const full = pointCount(seriesPath(container, 'base'))
+    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))!
+
+    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
+    fireEvent.mouseMove(area, { clientX: 400, clientY: 100 })
+    fireEvent.mouseUp(area, { clientX: 400, clientY: 100 })
+    fireEvent.mouseUp(window)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
+    const zoomed = pointCount(seriesPath(container, 'base'))
+    expect(zoomed).toBeLessThan(full)
+    expect(zoomed).toBeGreaterThan(1)
+
+    fireEvent.click(screen.getByRole('button', { name: '전체 기간' }))
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
+
+    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
+    fireEvent.mouseMove(area, { clientX: 400, clientY: 100 })
+    fireEvent.mouseUp(window)
+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
+    fireEvent.doubleClick(screen.getByRole('img'))
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+  })
+
+  it('살짝 누르기만 하면 확대하지 않는다', () => {
+    const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
+    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))!
+    fireEvent.mouseDown(area, { clientX: 200, clientY: 100 })
+    fireEvent.mouseMove(area, { clientX: 203, clientY: 100 })
+    fireEvent.mouseUp(window)
+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
+  })
+
   it('마우스를 올린 날의 모든 선 자산가치와 시작 금액 대비 변화를 한국어 날짜와 함께 보인다', async () => {
     const { container } = render(
       <EquityChart
