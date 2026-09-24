@@ -27,17 +27,39 @@ class IndexSeriesRepositoryImplIT extends IntegrationTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     private void close(String indexCode, String date, int close) {
+        close(MarketCatalogSeed.DATA_VERSION, indexCode, date, close);
+    }
+
+    private void close(String datasetId, String indexCode, String date, int close) {
         jdbcTemplate.update(
                 "INSERT INTO daily_index"
                         + " (dataset_id, index_code, date, open, high, low, close, volume, value)"
                         + " VALUES (?, ?, ?::date, ?, ?, ?, ?, 0, 0)",
-                MarketCatalogSeed.DATA_VERSION,
+                datasetId,
                 indexCode,
                 date,
                 close,
                 close,
                 close,
                 close);
+    }
+
+    /** 씨앗과 같은 대응표를 가리키는 다른 자료 버전. 트랜잭션 롤백으로 지워진다. */
+    private void otherDataset(String datasetId) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO dataset_version
+                    (dataset_id, data_deadline, collected_at, last_success_at,
+                     complete, is_sample, source, map_version_id)
+                SELECT ?, TIMESTAMPTZ '2027-01-31 15:30:00+09',
+                       TIMESTAMPTZ '2027-01-31 18:00:00+09',
+                       TIMESTAMPTZ '2027-01-31 18:00:00+09',
+                       TRUE, TRUE, 'FIXED_TEST_DATA', v.id
+                  FROM sector_etf_map_version v
+                 WHERE v.version = ?
+                """,
+                datasetId,
+                MarketCatalogSeed.MAP_VERSION);
     }
 
     @Test
@@ -68,17 +90,28 @@ class IndexSeriesRepositoryImplIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("다른 자료 버전이나 행이 없는 기간이면 빈 목록이다")
-    void emptyWhenNothingMatches() {
+    @DisplayName("같은 지수·날짜라도 다른 자료 버전의 행은 섞이지 않는다")
+    void isolatesDatasetVersions() {
+        otherDataset("TEST-DS-R2");
+        close(CODE, "2025-01-02", 2500);
+        close("TEST-DS-R2", CODE, "2025-01-02", 3000);
+        close("TEST-DS-R2", CODE, "2025-01-03", 3100);
+
+        var from = LocalDate.of(2025, 1, 1);
+        var to = LocalDate.of(2025, 1, 31);
+        assertThat(repository.findCloses(MarketCatalogSeed.DATA_VERSION, CODE, from, to))
+                .extracting(c -> c.close().intValueExact())
+                .containsExactly(2500);
+        assertThat(repository.findCloses("TEST-DS-R2", CODE, from, to))
+                .extracting(c -> c.close().intValueExact())
+                .containsExactly(3000, 3100);
+    }
+
+    @Test
+    @DisplayName("행이 없는 기간이면 빈 목록이다")
+    void emptyWhenNothingInRange() {
         close(CODE, "2025-01-02", 2500);
 
-        assertThat(
-                        repository.findCloses(
-                                "NO-SUCH-DATASET",
-                                CODE,
-                                LocalDate.of(2025, 1, 1),
-                                LocalDate.of(2025, 1, 31)))
-                .isEmpty();
         assertThat(
                         repository.findCloses(
                                 MarketCatalogSeed.DATA_VERSION,
