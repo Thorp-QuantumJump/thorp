@@ -435,7 +435,7 @@
 
 /* 그림이 말하지 않는 사실을 한 줄로 적는다. 기간과 값의 종류, 그리고 이어 붙인 날의 존재다. */
 .browserCard [data-slot='chart-note'] {
-  margin: 14px 0 0;
+  margin: 28px 0 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.6;
@@ -1197,18 +1197,4 @@
   .rail [data-slot='rail-proceed']:hover:not(:disabled) {
     transform: none;
   }
-}
-
-/*
-  432: 담아 둔 표시는 초록 대신 파랑(확인됨 색, --thorp-status-confirmed)이다. 초록은 누를 것·지금 보는 줄에
-  쓰는 색이라, 담긴 것까지 초록이면 지금 보는 줄과 담긴 줄이 한 색으로 섞였다.
-*/
-:global(:root:not([data-design='classic'])) .browserCard [data-slot='pill-check'] {
-  background: var(--thorp-status-confirmed);
-  color: var(--thorp-surface);
-}
-
-:global(:root:not([data-design='classic'])) .browserCard [data-slot='pick'][data-selected='true'] {
-  border-color: color-mix(in srgb, var(--thorp-status-confirmed) 60%, transparent);
-  color: var(--thorp-status-confirmed);
 }
