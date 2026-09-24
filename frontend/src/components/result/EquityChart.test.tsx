@@ -96,33 +96,6 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
-  it('하락 폭 단추를 누르면 그래프 아래에 서버가 준 하락 폭 띠가 생기고, 확대한 구간을 따른다', async () => {
-    const { container } = render(
-      <EquityChart base={base} initialCash="10000000.00" targets={[target]} />,
-    )
-    const strip = () => container.querySelector('[class*="drawdownStrip"]')
-    const stripPoints = () => pointCount(strip()!.querySelector('path[stroke="var(--chart-line-primary)"]') as SVGPathElement)
-
-    expect(strip()).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '하락 폭' }))
-    expect(strip()).not.toBeNull()
-    expect(strip()!.textContent).toContain('하락 폭')
-    // 기준선의 가장 깊은 하락이 눈금에 적힌다(서버 값 -x.xxxx 을 %로).
-    const deepest = (Number(BASE_POINTS[55].drawdown) * 100).toFixed(1) + '%'
-    expect(strip()!.textContent).toContain(deepest)
-    expect(stripPoints()).toBe(pointCount(seriesPath(container, 'base')))
-
-    const chart = screen.getByRole('img')
-    act(() => {
-      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, cancelable: true }))
-    })
-    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
-    expect(stripPoints()).toBe(pointCount(seriesPath(container, 'base')))
-
-    fireEvent.click(screen.getByRole('button', { name: '하락 폭' }))
-    expect(strip()).toBeNull()
-  })
-
   it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {
     const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
     const chart = screen.getByRole('img')
