@@ -5,12 +5,14 @@ import com.ssafy.thorp.assistant.application.port.AssistantModelPort;
 import com.ssafy.thorp.assistant.application.port.AssistantSettings;
 import com.ssafy.thorp.assistant.application.port.EvidenceBuilder;
 import com.ssafy.thorp.assistant.application.result.AssistantAnswer;
+import com.ssafy.thorp.assistant.application.result.Deadline;
 import com.ssafy.thorp.assistant.application.result.EvidenceBundle;
 import com.ssafy.thorp.assistant.application.result.PageContext;
 import com.ssafy.thorp.assistant.application.result.PageKind;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.result.application.service.PublicResultService;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -34,6 +36,7 @@ public class AssistantQuestionService {
     private final ObjectProvider<AssistantModelPort> model;
     private final ToolLoop loop;
     private final AnswerValidator validator;
+    private final Clock clock;
 
     public AssistantQuestionService(
             AssistantSettings settings,
@@ -43,7 +46,8 @@ public class AssistantQuestionService {
             ObjectProvider<EvidenceBuilder> builders,
             ObjectProvider<AssistantModelPort> model,
             ToolLoop loop,
-            AnswerValidator validator) {
+            AnswerValidator validator,
+            Clock clock) {
         this.settings = settings;
         this.capabilities = capabilities;
         this.limiter = limiter;
@@ -52,6 +56,7 @@ public class AssistantQuestionService {
         this.model = model;
         this.loop = loop;
         this.validator = validator;
+        this.clock = clock;
     }
 
     public AssistantAnswer ask(AskQuestionCommand command) {
@@ -79,6 +84,8 @@ public class AssistantQuestionService {
         }
         limiter.admit(command.clientIp(), token);
         PageContext context = new PageContext(kind, token);
+        // 시간 예산은 여기서부터 센다 — 근거 팩 만들기도 그 안이다(FR-012).
+        Deadline deadline = new Deadline(clock, settings.totalBudget());
         // 형식 → 존재 → 만료. 실패하면 모델을 부르지 않는다.
         publicResults.resolve(token);
         EvidenceBundle bundle =
@@ -89,7 +96,7 @@ public class AssistantQuestionService {
                         .orElse(EvidenceBundle.empty());
 
         long started = System.nanoTime();
-        ToolLoop.Outcome outcome = loop.run(model.getObject(), question, bundle);
+        ToolLoop.Outcome outcome = loop.run(model.getObject(), question, bundle, deadline);
         AnswerValidator.Rendered rendered = validator.render(outcome.draft(), outcome.facts());
         String answer = rendered.answer();
         if (bundle.partialUntil() != null) {

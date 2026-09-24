@@ -22,7 +22,7 @@
 
 **Project Type**: React SPA + Spring Boot web API
 
-**Performance Goals**: 요청당 서버 15초 상한(도구 라운드 포함). 초기 팩은 상세(`getDetail`)와 비중(`getWeights`) 두 번의 조회로 만들고, 도구 라운드마다 하위 자원 조회 1회다.
+**Performance Goals**: 요청당 서버 2분 상한(근거 팩 만들기·도구 라운드 포함). 초기 팩은 상세(`getDetail`)와 비중(`getWeights`) 두 번의 조회로 만들고, 도구 라운드마다 하위 자원 조회 1회다.
 
 **Constraints**: `store:false`, `parallel_tool_calls:false`, `tools`에는 서버 실행 도구 5개만, `response_format` strict JSON Schema. 모델에 토큰·`backtestId` 미전달. 서버는 계산하지 않는다(원칙 1) — 응답 값 그대로와 그 안에서 고른 것만. prod의 `THORP_ASSISTANT_*`는 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 둔다 — 기본값 없는 `${ENV}`는 미설정 시 기동 실패라 "없으면 비활성"과 양립하지 않는다. 비어 있으면 `capabilities.enabled=false`.
 
@@ -115,7 +115,7 @@ frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPag
 - GMS가 확인해 준 형식은 Chat Completions(`POST {base}/v1/chat/completions`)다. `messages`(developer·user·tool), `tools`(function 5개, strict), `tool_choice:auto`, `parallel_tool_calls:false`, `response_format:{type:json_schema, strict:true}`, `store:false`.
 - `store:false`라 라운드마다 이전 `assistant(tool_calls)`·`tool` 메시지를 서버가 다시 담아 보낸다.
 - 어댑터는 `AssistantModelPort.step(conversation, facts, tools): ModelTurn` 뒤에 있다. Responses API로 바꾸거나 제공업체를 바꾸면 어댑터만 교체한다.
-- 시간 예산은 **전체 데드라인 15초가 우선**이고, 라운드별 모델 호출 예산(초안 첫 7초·이후 4초)은 그 안에서 `MarketHttpClient`의 `deadline.remaining()` 방식으로 남은 시간과 작은 쪽을 쓴다. 도구 실행·검증 시간도 전체 데드라인에 든다. 넘으면 503.
+- 시간 예산은 **전체 데드라인 2분이 우선**이고, 라운드별 모델 호출 예산(초안 첫 60초·이후 30초)은 그 안에서 `MarketHttpClient`의 `deadline.remaining()` 방식으로 남은 시간과 작은 쪽을 쓴다. 데드라인은 서비스가 페이지 판정 직전에 만들어 근거 팩 만들기·도구 실행·검증 시간이 모두 든다. 넘기면 모델이 늦게 돌려준 초안도 버리고 503. 15초였던 초안은 모델 한 번에 수십 초가 걸릴 수 있어 2분으로 늘렸다(2026-09-25).
 
 ### 한도와 장애 (spec FR-012·FR-013)
 

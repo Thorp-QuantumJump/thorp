@@ -46,6 +46,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -98,6 +99,7 @@ class AssistantControllerTest {
                 new AtomicReference<>(Fakes::answeredDraft);
         final AtomicInteger modelCalls = new AtomicInteger();
         final MutableClock clock = new MutableClock(Instant.parse("2026-09-24T03:00:00Z"));
+        final AtomicBoolean slowBuilder = new AtomicBoolean();
 
         static ModelTurn answeredDraft() {
             return new ModelDraft(
@@ -136,6 +138,9 @@ class AssistantControllerTest {
 
                 @Override
                 public EvidenceBundle build(PageContext context) {
+                    if (slowBuilder.get()) {
+                        clock.advance(Duration.ofMinutes(3));
+                    }
                     return new EvidenceBundle(
                             List.of(
                                     new Evidence(
@@ -197,6 +202,7 @@ class AssistantControllerTest {
         fakes.clock.advance(Duration.ofDays(2));
         fakes.script.set(Fakes::answeredDraft);
         fakes.modelCalls.set(0);
+        fakes.slowBuilder.set(false);
     }
 
     static String body(String question, String context) {
@@ -396,5 +402,17 @@ class AssistantControllerTest {
         ResultActions actions = askOk("10.0.4.1", TOKEN).andExpect(status().isServiceUnavailable());
 
         assertThat(json(actions)).isEqualTo(example("error-unavailable.json"));
+    }
+
+    @Test
+    @DisplayName("근거 팩 만들기가 시간 예산을 먹으면 503 이고 모델을 부르지 않는다")
+    void slowEvidenceBuilderIsUnavailable() throws Exception {
+        fakes.slowBuilder.set(true);
+
+        askOk("10.0.4.2", TOKEN)
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error.code").value("ASSISTANT_UNAVAILABLE"));
+
+        assertThat(fakes.modelCalls.get()).isZero();
     }
 }

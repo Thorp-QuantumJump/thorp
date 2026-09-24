@@ -28,9 +28,9 @@ class AnswerValidatorTest {
                     5,
                     1000,
                     300,
-                    Duration.ofSeconds(15),
-                    Duration.ofSeconds(7),
-                    Duration.ofSeconds(4),
+                    Duration.ofMinutes(2),
+                    Duration.ofSeconds(60),
+                    Duration.ofSeconds(30),
                     2,
                     60,
                     30,
@@ -114,9 +114,11 @@ class AnswerValidatorTest {
                 "수익률은 {{F1}}이고 기준일은 2024-12-31입니다.",
                 "수익률은 {{F1}}이고 기준일은 12월 31일입니다.",
                 "수익률은 {{F1}}입니다. https://example.com 참고.",
-                "수익률은 {{F1}}이고 거래는 ２４번입니다."
+                "수익률은 {{F1}}이고 거래는 ２４번입니다.",
+                "{{F1}}은 /trades에서 보세요.",
+                "{{F1}}은 C:\\\\results 폴더에 있습니다."
             })
-    @DisplayName("자리표시자 밖의 아라비아 숫자·%·원 금액·날짜·URL 은 거절한다")
+    @DisplayName("자리표시자 밖의 아라비아 숫자·%·원 금액·날짜·URL·경로는 거절한다")
     void rejectsLiteralValuesOutsidePlaceholders(String text) {
         assertInsufficient(validator.render(answered(part(text, "F1")), FACTS));
     }
@@ -130,6 +132,11 @@ class AnswerValidatorTest {
 
         assertThat(rendered.status()).isEqualTo(AnswerStatus.ANSWERED);
         assertThat(rendered.answer()).isEqualTo("두 번 거래했고 세 종목을 들었으며 수익률은 16.67%입니다.");
+        assertThat(
+                        validator
+                                .render(answered(part("매수/매도 모두 {{F1}}에 반영됐습니다.", "F1")), FACTS)
+                                .status())
+                .isEqualTo(AnswerStatus.ANSWERED);
     }
 
     @Test
@@ -162,9 +169,9 @@ class AnswerValidatorTest {
                                 5,
                                 1000,
                                 300,
-                                Duration.ofSeconds(15),
-                                Duration.ofSeconds(7),
-                                Duration.ofSeconds(4),
+                                Duration.ofMinutes(2),
+                                Duration.ofSeconds(60),
+                                Duration.ofSeconds(30),
                                 2,
                                 60,
                                 30,
