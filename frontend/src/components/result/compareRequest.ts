@@ -13,6 +13,11 @@ export type CompareChoice = {
    * 요청을 조립하는 이 파일은 어느 쪽인지 모른다.
    */
   parameters: AxisValues
+  /**
+   * 변동성 제한만 바꿔 보는 후보. 있으면 기준의 시나리오 대신 이것을 싣는다 — `TARGET_RISK`면 목표 변동성(연, 퍼센트
+   * 숫자)을 함께, `FULL_PERIOD`면 제한 없이. 없으면 기준 결과의 시나리오를 그대로 따른다.
+   */
+  volatilityLimit?: { scenario: 'TARGET_RISK'; targetVolatility: number } | { scenario: 'FULL_PERIOD' }
 }
 
 /**
@@ -28,10 +33,17 @@ export function buildCompareRequest(
   const { config, versions } = base
   if (!versions.costProfile)
     throw new Error('기준 결과의 비용 기준을 확인할 수 없어 같은 조건으로 요청할 수 없습니다.')
-  const scenario = config.scenario as BacktestScenario
-  if (!['FULL_PERIOD', 'FRESH_CASH_FROM', 'COST_ESCALATION', 'TARGET_RISK'].includes(scenario)) {
+  const baseScenario = config.scenario as BacktestScenario
+  if (!['FULL_PERIOD', 'FRESH_CASH_FROM', 'COST_ESCALATION', 'TARGET_RISK'].includes(baseScenario)) {
     throw new Error('기준 결과의 분석 시나리오를 확인할 수 없습니다.')
   }
+  const limit = choice?.volatilityLimit
+  const scenario = limit?.scenario ?? baseScenario
+  const scenarioParams = !limit
+    ? config.scenarioParams
+    : limit.scenario === 'TARGET_RISK'
+      ? { targetVolatility: (limit.targetVolatility / 100).toFixed(4) }
+      : undefined
   const userWeights = choice
     ? choice.strategy.targetWeightSource === 'USER'
     : base.weightsSource === 'USER'
@@ -72,7 +84,7 @@ export function buildCompareRequest(
       warmupTradingDays,
       scenario,
       evaluationSplitVersion: config.evaluationSplitVersion,
-      ...(config.scenarioParams ? { scenarioParams: { ...config.scenarioParams } } : {}),
+      ...(scenarioParams ? { scenarioParams: { ...scenarioParams } } : {}),
     },
   }
 }
@@ -104,8 +116,10 @@ export function comparisonMismatch(
     mapping: result.config.mappingVersion,
     cost: result.versions.costProfile?.version,
     evaluationSplit: result.config.evaluationSplitVersion ?? null,
-    scenario: result.config.scenario,
-    scenarioParams: result.config.scenarioParams ?? {},
+    // 변동성 제한은 비교 대상 고르기가 바꿔 보는 축이라 조건 차이로 보지 않는다. 다른 시나리오는 그대로 조건이다.
+    scenario: result.config.scenario === 'TARGET_RISK' ? 'FULL_PERIOD' : result.config.scenario,
+    scenarioParams:
+      result.config.scenario === 'TARGET_RISK' ? {} : (result.config.scenarioParams ?? {}),
   })
   if (
     !base.versions.costProfile ||
