@@ -14,6 +14,13 @@ vi.mock('@/api/market', async () => {
   }
 })
 
+// 둘째 칸의 시장 흐름 창도 자료를 읽는다. 이 파일에서는 실패로 두고 창의 자세한 동작은
+// MarketFlowPreview.test.tsx가 확인한다.
+vi.mock('@/api/marketFlow', () => ({
+  fetchMarketFlowFields: vi.fn(() => Promise.reject(new Error('offline'))),
+  fetchMarketFlowField: vi.fn(() => Promise.reject(new Error('offline'))),
+}))
+
 // 전략 카드는 등록표에서 읽는다(003 FR-005). 이름을 코드에 두지 않으므로 응답으로 준다.
 vi.mock('@/api/strategyRegistry', async () => {
   const actual =

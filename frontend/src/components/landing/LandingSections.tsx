@@ -1,45 +1,66 @@
 import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { useRef, type CSSProperties } from 'react'
+import { useId, useRef, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import type { Indicator } from '@/types/market'
-import { IndicatorConveyor } from './IndicatorConveyor'
 import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'
+import { MarketFlowPreview } from './MarketFlowPreview'
 import { MarketPreviewWindow } from './MarketPreviewWindow'
 import { useScrollScene } from './scrollScene'
 import styles from '@/pages/LandingPage.module.css'
 
 const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }
 
-/**
- * 진단 구역의 장식용 곡선을 만든다.
- *
- * <p><b>성과가 아니다.</b> 예전에는 예시 시계열을 실제 백테스트 결과처럼 그리고 그 옆에 누적
- * 수익·CAGR·MDD·SHARPE를 적었는데, 어떤 실행에서도 나온 적 없는 값이라 첫 화면이 근거 없는
- * 성과를 단정하는 꼴이었다. 지금 이 곡선은 사인파로 만든 무늬일 뿐이고 축·기간·종목 이름을
- * 달지 않는다. 실제 수치는 결과 화면이 자기 실행에서 읽어 보인다.
- */
-function buildDecorativeCurve(seed: number, amplitude: number) {
-  const left = 42
-  const width = 916
-  const middle = 190
-  const steps = 48
+/*
+  진단 구역의 결과 화면 예시 차트. 결과 화면의 자산가치 그래프(EquityChart)와 같은 문법으로 그린다 —
+  기준 전략은 실선, 비교 대상은 파선, 시작 금액은 가로 점선, 가장 크게 줄었던 구간은 음영이다.
 
+  **성과가 아니다.** 곡선은 사인파로 만든 무늬이고 축 눈금·기간·금액·종목 이름을 달지 않는다. 예전에는
+  예시 시계열 옆에 누적 수익·CAGR·MDD·SHARPE를 적었는데, 어떤 실행에서도 나온 적 없는 값이라 첫 화면이
+  근거 없는 성과를 단정하는 꼴이었다. 실제 수치는 결과 화면이 자기 실행에서 읽어 보인다.
+*/
+const resultPlot = { left: 24, right: 852, top: 22, bottom: 300, start: 218 }
+
+type CurvePoint = { x: number; y: number }
+
+/** 시작 금액 자리에서 출발하는 장식 곡선. 같은 씨앗이면 같은 모양이다. */
+function buildDecorativeCurve(seed: number, amplitude: number, rise: number): CurvePoint[] {
+  const steps = 64
+  const offset = Math.sin(seed) + Math.sin(seed) * 0.35
   return Array.from({ length: steps + 1 }, (_, index) => {
     const ratio = index / steps
-    const x = left + ratio * width
-    const wave = Math.sin(ratio * Math.PI * 1.6 + seed) + Math.sin(ratio * Math.PI * 3.1 + seed) * 0.35
-    const y = middle - wave * amplitude - ratio * 34
-    return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-  }).join(' ')
+    const wave = Math.sin(ratio * Math.PI * 2.2 + seed) + Math.sin(ratio * Math.PI * 5.3 + seed) * 0.35 - offset
+    return {
+      x: resultPlot.left + ratio * (resultPlot.right - resultPlot.left),
+      y: resultPlot.start - wave * amplitude * Math.min(1, ratio * 3) - ratio * rise,
+    }
+  })
 }
 
-const comparisonPaths = [
-  buildDecorativeCurve(0.4, 74),
-  buildDecorativeCurve(1.7, 58),
-  buildDecorativeCurve(2.9, 44),
+function toPath(points: CurvePoint[]) {
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')
+}
+
+/** 곡선에서 가장 크게 줄었던 구간(고점 → 이후 가장 깊은 저점). 화면 좌표라 값이 클수록 낮다. */
+function findDeepestFall(points: CurvePoint[]) {
+  let peak = points[0]
+  let best = { from: points[0].x, to: points[0].x, depth: 0 }
+  for (const point of points) {
+    if (point.y < peak.y) peak = point
+    const depth = point.y - peak.y
+    if (depth > best.depth) best = { from: peak.x, to: point.x, depth }
+  }
+  return best
+}
+
+const baseCurve = buildDecorativeCurve(0.9, 58, 150)
+const targetCurve = buildDecorativeCurve(2.6, 34, 70)
+const deepestFall = findDeepestFall(baseCurve)
+const curveEnds = [
+  { key: 'base', name: '기준 전략', y: baseCurve[baseCurve.length - 1].y, stroke: 'var(--chart-line-primary)' },
+  { key: 'target', name: '비교 대상', y: targetCurve[targetCurve.length - 1].y, stroke: 'var(--chart-line-secondary)' },
 ]
-const resultPath = buildDecorativeCurve(0.9, 96)
+const drawTransition = { duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }
 
 /** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 시장 지표 움직임 예시를 두고 뒤에 시장 그래픽을 깐다. */
 export function HeroSection({ indicators }: { indicators: Indicator[] }) {
@@ -156,15 +177,8 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
   )
 }
 
-/** 분야별 흐름 미리보기. 시장 흐름 화면이 무엇을 보이는지 모양으로 알리는 예시다. */
-const exampleFields = [
-  { name: '생산', note: '광공업 생산이 두 달 연속 늘었습니다.', path: [42, 48, 55] },
-  { name: '노동', note: '실업률이 두 달 보합 뒤 0.1%p 올랐습니다.', path: [50, 50, 56] },
-  { name: '물가·원자재', note: '근원물가 상승률이 낮아졌습니다.', path: [58, 52, 47] },
-] as const
-
-/** 시장 흐름을 소개한다. 왼쪽 글, 오른쪽에 흐르는 지표 띠와 분야별 흐름 미리보기를 담은 창. */
-export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] }) {
+/** 시장 흐름을 소개한다. 왼쪽 글, 오른쪽에 17개 지표가 흐르는 띠와 일곱 분야 요약을 담은 창. */
+export function MarketAnalysisSection() {
   const section = useRef<HTMLElement>(null)
   const scene = useScrollScene(section, 'pass', 'left')
   return (
@@ -180,7 +194,7 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
           <span><em>시장을 분석</em>합니다.</span>
         </h2>
         <p className={styles.heroDescription}>
-          <span>주요 시장·거시 지표와 일곱 분야의 흐름을</span>
+          <span>17개 경제지표와 일곱 분야의 흐름을</span>
           <span>한곳에서 확인하세요.</span>
         </p>
         {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). */}
@@ -193,26 +207,7 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] 
       </motion.div>
 
       <motion.div className={styles.storyWindow} style={scene.window}>
-        <div className={styles.previewWindow}>
-          <div className={styles.previewBar} aria-hidden="true">
-            <span className={styles.previewDots}><i /><i /><i /></span>
-            <span className={styles.previewAddress}>thorp · <b>시장 흐름</b></span>
-            <span className={styles.previewExample}>예시 화면</span>
-          </div>
-          <IndicatorConveyor indicators={indicators} />
-          <ul className={styles.fieldPreview} aria-hidden="true">
-            {exampleFields.map((field) => (
-              <li key={field.name}>
-                <b>{field.name}</b>
-                <span>{field.note}</span>
-                <svg viewBox="0 0 60 24">
-                  <polyline points={field.path.map((value, index) => `${6 + index * 24},${(70 - value) / 1.4}`).join(' ')} />
-                  {field.path.map((value, index) => <circle key={index} cx={6 + index * 24} cy={(70 - value) / 1.4} r={2.4} />)}
-                </svg>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <MarketFlowPreview />
       </motion.div>
     </section>
   )
@@ -229,6 +224,7 @@ const backtestSteps = [
 export function BacktestIntroSection() {
   const section = useRef<HTMLElement>(null)
   const scene = useScrollScene(section, 'pass', 'right')
+  const revealId = `landing-result-reveal-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   return (
     <section
       ref={section}
@@ -237,51 +233,85 @@ export function BacktestIntroSection() {
       aria-labelledby="backtest-intro-title"
     >
       <motion.div className={styles.storyWindow} style={scene.window}>
-        {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}
-        <div className={styles.backtestVisual} aria-hidden="true">
-          {/* 결과 화면 틀. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을
-              채우면 첫 화면이 성과를 지어내게 된다. */}
-          <div className={styles.visualBar}>
-            <span className={styles.visualDots}><i /><i /><i /></span>
-            <b>결과 화면</b>
+        {/* 장식이다. 자료를 읽지 않으므로 축 눈금·기간·수치를 달지 않고 보조기기에서 숨긴다. */}
+        <div className={styles.previewWindow} aria-hidden="true">
+          <div className={styles.previewBar}>
+            <span className={styles.previewDots}><i /><i /><i /></span>
+            <span className={styles.previewAddress}>thorp · <b>전략 진단 결과</b></span>
+            <span className={styles.previewExample}>예시 곡선</span>
           </div>
-          <dl className={styles.visualMetrics}>
+          {/* 결과 화면 요약 줄. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을
+              채우면 첫 화면이 성과를 지어내게 된다. */}
+          <dl className={styles.resultMetrics}>
             {['비용 차감 후 수익', '가장 크게 줄었던 폭', '거래비용'].map((name) => (
               <div key={name}><dt>{name}</dt><dd>실행 후 표시</dd></div>
             ))}
           </dl>
-          <svg viewBox="0 0 1000 390">
-            {[86, 144, 202, 260, 318].map((y) => (
-              <line key={y} className={styles.chartGrid} x1="42" x2="958" y1={y} y2={y} />
+          <p className={styles.previewChartTitle}>자산가치 추이 <b>기준 전략 · 비교 대상</b></p>
+          <svg className={styles.resultChart} viewBox="0 0 1000 320">
+            {[70, 144, 292].map((y) => (
+              <line key={y} className={styles.resultGrid} x1={resultPlot.left} x2={resultPlot.right} y1={y} y2={y} />
             ))}
-            {comparisonPaths.map((path, index) => (
-              <motion.path
-                key={path}
-                className={styles.comparisonPath}
-                d={path}
-                initial={{ pathLength: 0, opacity: 0 }}
-                whileInView={{ pathLength: 1, opacity: 0.34 + index * 0.08 }}
-                viewport={{ once: false, amount: 0.35 }}
-                transition={{ duration: 1.1, delay: index * 0.08, ease: 'easeOut' }}
+            <motion.g
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: false, amount: 0.35 }}
+              transition={{ duration: 0.5, delay: 1.1 }}
+            >
+              <rect
+                className={styles.resultShade}
+                x={deepestFall.from}
+                width={deepestFall.to - deepestFall.from}
+                y={resultPlot.top}
+                height={resultPlot.bottom - resultPlot.top}
               />
+              <line
+                className={styles.resultShadeEdge}
+                x1={deepestFall.from}
+                x2={deepestFall.to}
+                y1={resultPlot.top}
+                y2={resultPlot.top}
+              />
+            </motion.g>
+            <line className={styles.resultStartLine} x1={resultPlot.left} x2={resultPlot.right} y1={resultPlot.start} y2={resultPlot.start} />
+            <text className={styles.resultStartLabel} x={resultPlot.left + 6} y={resultPlot.start + 18}>시작 금액</text>
+            {/* 두 곡선을 왼쪽부터 드러낸다. pathLength로 그리면 선 무늬(stroke-dasharray)를 덮어 써서
+                비교 대상의 파선이 실선이 되므로, 곡선은 그대로 두고 보이는 폭을 넓힌다. */}
+            <defs>
+              <clipPath id={revealId}>
+                <motion.rect
+                  x={0}
+                  y={0}
+                  height={320}
+                  initial={{ width: 0 }}
+                  whileInView={{ width: resultPlot.right + 4 }}
+                  viewport={{ once: false, amount: 0.35 }}
+                  transition={drawTransition}
+                />
+              </clipPath>
+            </defs>
+            <g clipPath={`url(#${revealId})`}>
+              <path className={styles.resultTargetLine} d={toPath(targetCurve)} />
+              <path className={styles.resultBaseLine} d={toPath(baseCurve)} />
+            </g>
+            {curveEnds.map((end) => (
+              <motion.g
+                key={end.key}
+                initial={{ opacity: 0, x: -6 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: false, amount: 0.35 }}
+                transition={{ duration: 0.4, delay: 1.2 }}
+              >
+                <line stroke={end.stroke} x1={resultPlot.right} x2={resultPlot.right + 10} y1={end.y} y2={end.y} />
+                <text className={styles.resultEndLabel} x={resultPlot.right + 16} y={end.y} fill={end.stroke}>{end.name}</text>
+              </motion.g>
             ))}
-            <motion.path
-              className={styles.resultPathGlow}
-              d={resultPath}
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 1 }}
-              viewport={{ once: false, amount: 0.35 }}
-              transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            />
-            <motion.path
-              className={styles.resultPath}
-              d={resultPath}
-              initial={{ pathLength: 0 }}
-              whileInView={{ pathLength: 1 }}
-              viewport={{ once: false, amount: 0.35 }}
-              transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            />
           </svg>
+          <div className={styles.resultLegend}>
+            <span><i data-kind="start" />시작 금액</span>
+            <span><i data-kind="shade" />가장 크게 줄었던 구간</span>
+            <span><i data-kind="target" />비교 대상은 파선</span>
+          </div>
         </div>
       </motion.div>
 
