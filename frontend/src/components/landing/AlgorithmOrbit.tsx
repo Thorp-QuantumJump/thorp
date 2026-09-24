@@ -84,6 +84,7 @@ export function AlgorithmOrbit() {
 
   // 칸에 들어왔는지. 들어온 뒤 첫 회전은 곧바로, 그다음부터는 AUTO_ROTATE_MS마다 돈다.
   const arrivedRef = useRef(false)
+  const [rotationTick, setRotationTick] = useState(0)
   useEffect(() => {
     if (!isInView) arrivedRef.current = false
   }, [isInView])
@@ -92,16 +93,20 @@ export function AlgorithmOrbit() {
     if (reducedMotion || !isInView || strategies.length < 2) return
 
     // 예전에는 들어온 뒤 3.6초를 기다려야 첫 카드가 돌아서, 칸에 닿고도 한동안 멈춘 화면이었다.
+    // 탭이 가려져 있으면 돌리지 않고 다음 차례를 다시 잡는다. 그냥 넘기면 바뀌는 상태가 없어 타이머가
+    // 다시 걸리지 않고, 돌아와도 카드가 멈춰 있다.
     const delay = arrivedRef.current ? AUTO_ROTATE_MS : FIRST_ROTATE_MS
     const timeoutId = window.setTimeout(() => {
       arrivedRef.current = true
       if (document.visibilityState === 'visible') {
         setSelectedIndex((current) => (current + 1) % strategies.length)
+      } else {
+        setRotationTick((current) => current + 1)
       }
     }, delay)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isInView, reducedMotion, selectedIndex, strategies.length])
+  }, [isInView, reducedMotion, rotationTick, selectedIndex, strategies.length])
 
   const move = (direction: number) => {
     if (strategies.length === 0) return

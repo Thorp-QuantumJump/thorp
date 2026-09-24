@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useInView, useReducedMotion } from 'motion/react'
 import { fetchMarketSeries } from '@/api/market'
 import type { Indicator } from '@/types/market'
 import type { MarketSeriesCode } from '@/types/marketApi'
@@ -30,11 +30,19 @@ const MARKETS = [
   { code: 'VKOSPI200', label: 'VKOSPI 200', volatility: 0.004 },
 ] as const
 
+/** 실제 흐름으로 그리는 최대 거래일 수. 백엔드 계약의 상한과 같다. */
+const SERIES_LIMIT = 60
 /** 쌓아 두는 점 수. 화면에는 이 중 VISIBLE 걸음만큼이 보인다. */
 const POINTS = 64
 const VISIBLE = 60
-/** 화면에서 읽는 자리 수. 점보다 촘촘해야 곡선이 매끄럽다. */
-const SAMPLES = 180
+/**
+ * 점 하나 사이를 몇 자리로 나눠 읽는지. 점보다 촘촘해야 곡선이 매끄럽다.
+ *
+ * 읽는 자리는 **점 번호에 묶인 고정된 격자**다. 예전에는 그리는 구간을 매 프레임 같은 수로 나눠 읽어,
+ * 선이 자라거나 옮겨 갈 때마다 읽는 자리가 곡선 위를 미끄러졌다 — 같은 값인데 꺾인 모양이 프레임마다
+ * 바뀌어 선 전체가 떨렸다. 격자를 점 번호에 묶으면 이미 그린 부분은 다음 프레임에도 같은 자리로 그려진다.
+ */
+const SAMPLES_PER_POINT = 4
 const TICK_MS = 650
 const plot = { width: 400, height: 190, left: 8, right: 336, top: 14, bottom: 146, barTop: 156, barBottom: 184 }
 
@@ -137,6 +145,9 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
   const [active, setActive] = useState(0)
   const [real, setReal] = useState<Partial<Record<MarketSeriesCode, RealSeries>>>({})
   const store = useRef<Record<string, Series>>({})
+  // 창이 화면 밖에 있으면 남은 시간 막대를 세워 넘김도 멈춘다. 보이지 않는 차트를 계속 새로 그리지 않는다.
+  const windowRef = useRef<HTMLDivElement>(null)
+  const onScreen = useInView(windowRef, { amount: 0.2, initial: true })
 
   // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 예시 흐름을 새로 만든다.
   for (const market of markets) {
@@ -154,7 +165,10 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
       const next: Partial<Record<MarketSeriesCode, RealSeries>> = {}
       results.forEach((result, index) => {
         if (result.status !== 'fulfilled') return
-        const points = result.value.points
+        // 계약은 최근 60거래일까지다(market-api.md). 더 받아도 끝의 60개만 그린다 — 넘치면 막대 자리가 모자라고
+        // 같은 폭에 점이 몰려 선이 바늘처럼 선다.
+        const points = result.value.points.slice(-SERIES_LIMIT)
+        if (points.length < 2) return
         next[MARKETS[index].code] = {
           values: points.map((point) => point.value),
           lastDate: points[points.length - 1].date,
@@ -194,14 +208,14 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
      * 자라며 그려지고, 예시 흐름은 창이 시간을 따라 옮겨 간다. `fixed`면 세로 범위를 전체 값으로 미리 잡는다.
      */
     const render = (values: number[], t0: number, span: number, tEnd: number, fixed: boolean) => {
-      const count = Math.max(2, Math.round(SAMPLES * ((tEnd - t0) / span)))
-      const times: number[] = []
-      const samples: number[] = []
-      for (let j = 0; j < count; j += 1) {
-        const time = t0 + (j / (count - 1)) * (tEnd - t0)
-        times.push(time)
-        samples.push(sampleAt(values, time))
+      // 양 끝은 지금 보이는 가장자리, 그 사이는 점 번호에 묶인 격자다.
+      const times: number[] = [t0]
+      for (let k = Math.floor(t0 * SAMPLES_PER_POINT) + 1; k / SAMPLES_PER_POINT < tEnd; k += 1) {
+        times.push(k / SAMPLES_PER_POINT)
       }
+      times.push(tEnd)
+      const samples = times.map((time) => sampleAt(values, time))
+      const count = times.length
       const first = sampleAt(values, t0)
       const last = samples[samples.length - 1]
 
@@ -326,7 +340,7 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
   const opening = endsOf(market.code)
 
   return (
-    <div className={styles.previewWindow} role="group" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>
+    <div ref={windowRef} className={styles.previewWindow} role="group" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>
       <div className={styles.previewBar}>
         <span className={styles.previewDots} aria-hidden="true"><i /><i /><i /></span>
         <span className={styles.previewAddress} aria-hidden="true">thorp · <b>시장 흐름</b></span>
@@ -348,14 +362,24 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
                 <i
                   key={active}
                   className={styles.previewTickerProgress}
-                  style={{ animationDuration: `${CYCLE_MS}ms` }}
+                  style={{ animationDuration: `${CYCLE_MS}ms`, animationPlayState: onScreen ? 'running' : 'paused' }}
                   onAnimationEnd={() => setActive((current) => (current + 1) % markets.length)}
                   aria-hidden="true"
                 />
               ) : null}
               <span>{item.label}</span>
-              <strong aria-hidden="true" ref={isActive ? tickerValue : undefined}>{format(ends.last, item.decimals)}</strong>
-              <em aria-hidden="true" ref={isActive ? tickerChange : undefined} data-direction={directionOf(change)}>
+              {/* 고른 칸의 글자는 그리는 흐름이 직접 고친다. 고름이 풀리면 key를 바꿔 새로 그려야 React가 받은
+                  값으로 되돌린다 — 그대로 두면 그리다 만 값과 방향이 칸에 남는다. 한 칸 안의 두 요소는 key가 겹치면 안 된다
+                  (겹치면 React가 옛 요소를 치우지 못해 값이 쌓인다). */}
+              <strong key={isActive ? 'value-drawing' : 'value-still'} aria-hidden="true" ref={isActive ? tickerValue : undefined}>
+                {format(ends.last, item.decimals)}
+              </strong>
+              <em
+                key={isActive ? 'change-drawing' : 'change-still'}
+                aria-hidden="true"
+                ref={isActive ? tickerChange : undefined}
+                data-direction={directionOf(change)}
+              >
                 {formatChange(change)}
               </em>
             </button>

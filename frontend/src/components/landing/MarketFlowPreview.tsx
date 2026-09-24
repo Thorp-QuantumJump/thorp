@@ -18,7 +18,23 @@ type FlowIndicator = IndicatorDisplay & { fieldName: string }
 type LoadState =
   | { status: 'loading' }
   | { status: 'failed' }
-  | { status: 'ready'; fields: FieldSummary[]; indicators: FlowIndicator[]; detailsById: Record<string, FlowIndicator[]> }
+  | {
+      status: 'ready'
+      fields: FieldSummary[]
+      indicators: FlowIndicator[]
+      detailsById: Record<string, FlowIndicator[]>
+      /** 상세를 받지 못한 분야 이름. 그 분야의 지표는 띠에 없으므로 창에 밝힌다. */
+      failedFields: string[]
+    }
+
+type ReadyState = Extract<LoadState, { status: 'ready' }>
+
+/**
+ * 월간 자료라 자주 바뀌지 않는다. 첫 화면과 시장 흐름 화면을 오갈 때마다 요청 여덟 개를 다시 보내지 않도록
+ * 모두 받은 결과만 잠시 들고 있는다(useMarketIndicators의 캐시와 같은 방식).
+ */
+const CACHE_TTL_MS = 5 * 60_000
+let cached: { value: ReadyState; storedAt: number } | null = null
 
 function formatMonth(month: string | null) {
   return month ? month.replace('-', '.') : null
@@ -56,19 +72,24 @@ function FlowItem({ indicator }: { indicator: FlowIndicator }) {
   )
 }
 
-async function loadFlow(signal: AbortSignal): Promise<LoadState> {
+async function loadFlow(signal: AbortSignal): Promise<ReadyState> {
+  if (cached && Date.now() - cached.storedAt < CACHE_TTL_MS) return cached.value
   const summary = await fetchMarketFlowFields(signal)
   const fields = [...summary.fields].sort((a, b) => a.displayOrder - b.displayOrder)
   // 한 분야가 실패해도 나머지 분야의 지표는 보인다.
   const details = await Promise.allSettled(fields.map((field) => fetchMarketFlowField(field.fieldId, signal)))
   const detailsById: Record<string, FlowIndicator[]> = {}
+  const failedFields: string[] = []
   details.forEach((result, index) => {
     const field = fields[index]
+    if (result.status === 'rejected') failedFields.push(field.displayName)
     detailsById[field.fieldId] =
       result.status === 'fulfilled' ? result.value.indicators.map((item) => ({ ...item, fieldName: field.displayName })) : []
   })
   const indicators = fields.flatMap((field) => detailsById[field.fieldId])
-  return { status: 'ready', fields, indicators, detailsById }
+  const value: ReadyState = { status: 'ready', fields, indicators, detailsById, failedFields }
+  if (failedFields.length === 0) cached = { value, storedAt: Date.now() }
+  return value
 }
 
 /** 창 머리의 기준 표시. 가장 늦은 기준월과, 예시 자료가 섞였으면 그 사실을 적는다. */
@@ -77,6 +98,11 @@ function describeBasis(fields: FieldSummary[]) {
   const latest = formatMonth(months[months.length - 1] ?? null)
   const example = fields.some((field) => field.isExampleData)
   return [example ? '예시 자료' : '월간 경제지표', latest ? `${latest} 기준` : null].filter(Boolean).join(' · ')
+}
+
+/** 받지 못한 분야를 한 문장으로. 조용히 빼면 띠에 지표가 모자란데도 다 받은 것처럼 보인다. */
+function describeMissing(failedFields: string[]) {
+  return `${failedFields.join('·')} 분야 자료를 불러오지 못했습니다.`
 }
 
 export function MarketFlowPreview() {
@@ -118,6 +144,13 @@ export function MarketFlowPreview() {
               {state.indicators.map((indicator) => <FlowItem key={`copy-${indicator.indicatorId}`} indicator={indicator} />)}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {state.status === 'ready' && state.failedFields.length > 0 ? (
+        <div className={styles.flowPartial} role="status">
+          <p>{describeMissing(state.failedFields)}</p>
+          <button type="button" onClick={retry}>다시 시도</button>
         </div>
       ) : null}
 

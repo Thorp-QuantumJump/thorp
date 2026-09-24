@@ -22,42 +22,6 @@
   font-weight: 700;
 }
 
-/*
-  제목 머리. 첫 화면 구역 제목과 같은 짜임이다 — 초록 영문 작은 제목(eyebrow), 한 낱말에 초록 그라데이션을
-  얹은 제목, 옅은 안내문. classic에는 없던 요소라 기본은 숨기고 새 디자인에서만 보인다.
-*/
-.eyebrow {
-  display: none;
-}
-
-:global(:root:not([data-design='classic'])) .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 14px;
-  color: var(--thorp-eyebrow);
-  font-size: var(--thorp-text-label);
-  font-weight: 670;
-  letter-spacing: 0.19em;
-}
-
-:global(:root:not([data-design='classic'])) .eyebrow::before {
-  width: 28px;
-  height: 1px;
-  background: var(--thorp-accent);
-  content: '';
-}
-
-.title em {
-  font-style: normal;
-}
-
-:global(:root:not([data-design='classic'])) .title em {
-  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);
-  background-clip: text;
-  color: transparent;
-}
-
 .lead {
   margin: -6px 0 2px;
   color: var(--thorp-copy);
@@ -78,8 +42,13 @@
   align-items: flex-start;
   gap: 14px;
   padding: var(--thorp-pad-card, 22px);
-  border: 1px solid var(--thorp-line-strong);
+  border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card, 14px);
+}
+
+/* 새 디자인에서는 섹터 고르기 화면의 안내 상자와 같은 면·테두리로 선다. classic은 예전의 테두리만 있는 상자다. */
+:global(:root:not([data-design='classic'])) .notice {
+  border-color: var(--thorp-line-strong);
   background: var(--thorp-surface);
 }
 

@@ -987,6 +987,19 @@
 .fieldDirections i[data-direction='up'] { background: var(--thorp-up); }
 .fieldDirections i[data-direction='down'] { background: var(--thorp-down); }
 
+.flowPartial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--thorp-line);
+  color: var(--thorp-warning);
+  font-size: 0.72rem;
+}
+
+.flowPartial p { margin: 0; }
+
 .flowNotice {
   display: grid;
   place-items: center;
@@ -999,6 +1012,7 @@
 }
 
 .flowNotice p { margin: 0; }
+.flowPartial button,
 .flowNotice button {
   padding: 6px 14px;
   border: 1px solid var(--thorp-line-strong);
@@ -1008,7 +1022,9 @@
   font: inherit;
   cursor: pointer;
 }
+.flowPartial button:hover,
 .flowNotice button:hover { border-color: var(--landing-accent-soft); }
+.flowPartial button:focus-visible,
 .flowNotice button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: 2px; }
 
 /*
