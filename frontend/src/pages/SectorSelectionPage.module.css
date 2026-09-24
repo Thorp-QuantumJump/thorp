@@ -435,10 +435,11 @@
 
 /* 그림이 말하지 않는 사실을 한 줄로 적는다. 기간과 값의 종류, 그리고 이어 붙인 날의 존재다. */
 .browserCard [data-slot='chart-note'] {
-  margin: 6px 0 0;
+  margin: 14px 0 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.6;
+  text-align: right;
 }
 
 .browserCard [data-slot='profile-loading'] {
@@ -1150,53 +1151,24 @@
   right: -4px;
 }
 
-.timeline [data-slot='timeline-tooltip'] {
+/* 막대의 설명은 보조기기에만 읽힌다. 눈으로 보는 설명은 제목 옆 물음표 뒤에 있다. */
+.timeline [data-slot='timeline-description'] {
   position: absolute;
-  z-index: 10;
-  top: calc(100% + 10px);
-  left: 50%;
-  width: min(500px, 100%);
-  padding: 12px 14px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: 10px;
-  background: var(--thorp-surface-raised);
-  box-shadow: 0 12px 28px rgb(0 0 0 / 30%);
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-caption, 0.74rem);
-  line-height: 1.55;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, -4px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease,
-    visibility 120ms ease;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.timeline [data-slot='timeline-tooltip'] p {
+.timeline [data-slot='timeline-head'] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline [data-slot='timeline-head'] [data-slot='timeline-title'] {
   margin: 0;
-}
-
-.timeline [data-slot='timeline-tooltip'] p + p {
-  margin-top: 5px;
-}
-
-.timeline [data-slot='timeline-tooltip'] strong {
-  color: var(--thorp-foreground);
-  font-weight: 600;
-}
-
-.timeline [data-slot='timeline-listings'],
-.timeline [data-slot='timeline-caveat'] {
-  color: var(--thorp-muted);
-}
-
-.timeline [data-slot='timeline-plot']:hover [data-slot='timeline-tooltip'],
-.timeline [data-slot='timeline-plot']:focus-visible [data-slot='timeline-tooltip'] {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
 }
 
 @media (max-width: 620px) {
@@ -1211,8 +1183,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .timeline [data-slot='common-bar'],
-  .timeline [data-slot='timeline-start-date'],
-  .timeline [data-slot='timeline-tooltip'] {
+  .timeline [data-slot='timeline-start-date'] {
     transition: none;
   }
 }
@@ -1226,4 +1197,18 @@
   .rail [data-slot='rail-proceed']:hover:not(:disabled) {
     transform: none;
   }
+}
+
+/*
+  432: 담아 둔 표시는 초록 대신 파랑(확인됨 색, --thorp-status-confirmed)이다. 초록은 누를 것·지금 보는 줄에
+  쓰는 색이라, 담긴 것까지 초록이면 지금 보는 줄과 담긴 줄이 한 색으로 섞였다.
+*/
+:global(:root:not([data-design='classic'])) .browserCard [data-slot='pill-check'] {
+  background: var(--thorp-status-confirmed);
+  color: var(--thorp-surface);
+}
+
+:global(:root:not([data-design='classic'])) .browserCard [data-slot='pick'][data-selected='true'] {
+  border-color: color-mix(in srgb, var(--thorp-status-confirmed) 60%, transparent);
+  color: var(--thorp-status-confirmed);
 }
