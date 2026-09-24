@@ -24,26 +24,26 @@
   color: var(--thorp-accent-soft);
 }
 
-/* 섹터별로 보기. 좁은 칸이라 작은 칩을 여러 줄로 흘린다. */
+/* 섹터별로 보기. 옆 과거 시장 카드의 분야 칩과 같은 모양이다. */
 .filter {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: var(--thorp-control-sm, 32px);
+  padding: 0 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 6px);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-small, 0.78rem);
   cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 .chip:hover {
