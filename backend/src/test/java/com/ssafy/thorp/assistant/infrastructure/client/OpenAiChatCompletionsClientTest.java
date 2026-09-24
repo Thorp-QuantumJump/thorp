@@ -34,10 +34,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 /** 계약 §2.1~§2.3(T020). 가짜 HTTP 서버가 받은 본문과 돌려준 응답으로 요청 조립·이력·파싱·오류 매핑을 고정한다. */
+@ExtendWith(OutputCaptureExtension.class)
 class OpenAiChatCompletionsClientTest {
     static final String TOKEN = "0123456789abcdef0123456789abcdef";
     static final String TOOL_CALLS_RESPONSE =
@@ -185,6 +189,24 @@ class OpenAiChatCompletionsClientTest {
 
         assertThat(received.get(0).toString())
                 .doesNotContain(TOKEN, "BT-", "backtestId", "publicToken");
+    }
+
+    @Test
+    @DisplayName("성공·실패 호출의 로그에 키·공개 토큰·질문 원문이 남지 않는다")
+    void logsCarryNoSecretsOrText(CapturedOutput output) {
+        responses.add(Scripted.ok(TOOL_CALLS_RESPONSE));
+        responses.add(
+                new Scripted(401, "{\"error\":{\"message\":\"bad key test-key\"}}", Duration.ZERO));
+        String question = "토큰 " + TOKEN + " 결과의 거래비용은?";
+
+        step(question(question), FACTS, TOOLS);
+        assertThatThrownBy(() -> step(question(question), FACTS, TOOLS))
+                .isInstanceOf(BusinessException.class);
+
+        assertThat(output.getAll())
+                .contains("assistant model call")
+                .contains("assistant model unavailable")
+                .doesNotContain("test-key", TOKEN, "거래비용은?", "0.166652");
     }
 
     @Test
