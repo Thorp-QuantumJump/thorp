@@ -289,34 +289,6 @@ function toAmountTicks(amounts: number[], mode: YScaleMode): AmountTick[] {
   return result
 }
 
-/** 세로축 눈금 글자를 원화 금액으로 적을지(`amount`) 시작 금액 대비 수익률로 적을지(`return`) 정한다 */
-export type YUnit = 'amount' | 'return'
-
-/** 좌표값을 금액으로 되돌린다 */
-function fromAxisValue(value: number, mode: YScaleMode): number {
-  return mode === 'log' ? 10 ** value : value
-}
-
-/**
- * 수익률 눈금. 보이는 범위를 시작 금액 대비 비율로 옮겨 둥근 비율을 고르고, 그 비율이 뜻하는 금액 자리에 놓는다.
- * 모든 선이 같은 시작 금액에서 출발하므로 곡선은 그대로이고 글자와 자리만 바뀐다.
- */
-function pickReturnTicks(yDomain: [number, number], mode: YScaleMode, initial: number): AmountTick[] {
-  const low = fromAxisValue(yDomain[0], mode) / initial - 1
-  const high = fromAxisValue(yDomain[1], mode) / initial - 1
-  return toAmountTicks(
-    pickAmountTicks([low, high]).map((ratio) => initial * (1 + ratio)),
-    mode,
-  )
-}
-
-/** 수익률 눈금 글자. 부호를 붙이고 소수는 한 자리까지만 적는다 */
-function formatReturnTick(amount: number, initial: number): string {
-  const percent = Number(((amount / initial - 1) * 100).toFixed(1))
-  if (percent === 0) return '0%'
-  return (percent > 0 ? '+' : '') + percent + '%'
-}
-
 /** 눈금 종류를 사람이 읽을 말로 옮긴다 */
 function scaleModeNoun(mode: YScaleMode): string {
   return mode === 'log' ? '로그' : '선형'
@@ -330,7 +302,6 @@ function buildAltText(
   altNumbers: EquityChartProps['altNumbers'],
   initialCash: string,
   mode: YScaleMode,
-  unit: YUnit,
 ): string {
   const numbers = altNumbers
     ? '비용 차감 후 전체 수익률 ' +
@@ -352,9 +323,7 @@ function buildAltText(
     ? ' 참고로 ' + reference.name + '를 시작 금액으로 환산한 선을 가는 실선으로 함께 그렸습니다.'
     : ''
   const axis =
-    (unit === 'return'
-      ? '세로축 눈금은 시작 금액 대비 수익률로 적었고 '
-      : '세로축은 원화 자산가치이고 눈금은 ') +
+    '세로축은 원화 자산가치이고 눈금은 ' +
     scaleModeNoun(mode) +
     '이며, 시작 금액은 ' +
     formatMoney(initialCash) +
@@ -377,7 +346,6 @@ export function EquityChart(props: EquityChartProps) {
     [props.targets],
   )
   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)
-  const [unit, setUnit] = useState<YUnit>('amount')
   const [compact, setCompact] = useState(() => window.innerWidth <= 600)
   useEffect(() => {
     const update = () => setCompact(window.innerWidth <= 600)
@@ -463,13 +431,10 @@ export function EquityChart(props: EquityChartProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows, keyed, initialAxisValue, scaleMode],
   )
-  // 시작 금액을 모르면 수익률을 적을 수 없어 금액 눈금으로 둔다.
-  const shownUnit: YUnit = initial == null || initial <= 0 ? 'amount' : unit
   const amountTicks = useMemo(() => {
-    if (shownUnit === 'return' && initial != null) return pickReturnTicks(yDomain, scaleMode, initial)
     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)
     return toAmountTicks(amounts, scaleMode)
-  }, [yDomain, scaleMode, shownUnit, initial])
+  }, [yDomain, scaleMode])
 
   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)
   // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.
@@ -519,20 +484,6 @@ export function EquityChart(props: EquityChartProps) {
               전체 기간
             </button>
           ) : null}
-          <div aria-label="세로축 단위" className={styles.scaleToggle} role="group">
-            {(['amount', 'return'] as const).map((value) => (
-              <button
-                aria-pressed={shownUnit === value}
-                className={styles.scaleButton}
-                disabled={value === 'return' && (initial == null || initial <= 0)}
-                key={value}
-                onClick={() => setUnit(value)}
-                type="button"
-              >
-                {value === 'amount' ? '금액' : '수익률'}
-              </button>
-            ))}
-          </div>
           <div aria-label="세로축 눈금" className={styles.scaleToggle} role="group">
             {(['linear', 'log'] as const).map((mode) => (
               <button
@@ -570,7 +521,7 @@ export function EquityChart(props: EquityChartProps) {
       </div>
 
       <div
-        aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode, shownUnit)}
+        aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}
         className={styles.chart}
         data-pan={zoomed ? (dragging ? 'dragging' : 'ready') : undefined}
         onDoubleClick={() => setView(null)}
@@ -599,14 +550,7 @@ export function EquityChart(props: EquityChartProps) {
             strokeDasharray="2,5"
           />
 
-          <AmountAxis
-            format={
-              shownUnit === 'return' && initial != null
-                ? (amount) => formatReturnTick(amount, initial)
-                : undefined
-            }
-            ticks={amountTicks}
-          />
+          <AmountAxis ticks={amountTicks} />
 
           {initial == null || initialAxisValue == null ? null : (
             <InitialCashLabel amount={initial} at={initialAxisValue} />
