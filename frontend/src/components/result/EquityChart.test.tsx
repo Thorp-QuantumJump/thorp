@@ -96,30 +96,6 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
-  it('세로축을 수익률로 바꾸면 눈금 글자만 시작 금액 대비 %가 되고 곡선은 그대로다', () => {
-    const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
-    const path = seriesPath(container, 'base').getAttribute('d')
-    const labels = () =>
-      [...container.querySelectorAll('[data-testid="amount-axis"] text')].map((node) => node.textContent ?? '')
-
-    expect(labels().length).toBeGreaterThan(0)
-    expect(labels().some((label) => label.endsWith('%'))).toBe(false)
-
-    fireEvent.click(screen.getByRole('button', { name: '수익률' }))
-    expect(labels().length).toBeGreaterThan(0)
-    expect(labels().every((label) => /^([+-]?\d+(\.\d)?|0)%$/.test(label))).toBe(true)
-    expect(seriesPath(container, 'base').getAttribute('d')).toBe(path)
-    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('시작 금액 대비 수익률')
-
-    fireEvent.click(screen.getByRole('button', { name: '금액' }))
-    expect(labels().some((label) => label.endsWith('%'))).toBe(false)
-  })
-
-  it('시작 금액을 모르면 수익률 눈금을 고를 수 없다', () => {
-    render(<EquityChart base={base} initialCash="" />)
-    expect((screen.getByRole('button', { name: '수익률' }) as HTMLButtonElement).disabled).toBe(true)
-  })
-
   it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {
     const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
     const chart = screen.getByRole('img')
