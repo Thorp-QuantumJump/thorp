@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'
 import { renderWithRouter } from '@/test/renderWithRouter'
@@ -69,6 +70,26 @@ describe('SimilarPastMarket (002 FR-018)', () => {
     expect(await screen.findByText(/고른 기간/)).toBeTruthy()
     expect(screen.queryByRole('link', { name: '이 기간으로 백테스트' })).toBeNull()
     expect(screen.getByRole('link', { name: '사례 해제' }).getAttribute('href')).toBe('/diagnosis/sectors')
+  })
+
+  it('사례 해제를 누르면 사례 없는 투자 대상 고르기로 돌아가 다시 고를 수 있다', async () => {
+    // 화면은 고른 사례를 주소의 case에서만 읽는다(SectorSelectionPage와 같은 방식).
+    function FromAddress() {
+      const [params] = useSearchParams()
+      return <SimilarPastMarket caseId={params.get('case')} />
+    }
+    render(
+      <MemoryRouter initialEntries={['/diagnosis/sectors?case=S-1~2019-08']}>
+        <Routes>
+          <Route path="/diagnosis/sectors" element={<FromAddress />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(await screen.findByRole('link', { name: '사례 해제' }))
+
+    expect(await screen.findByRole('link', { name: '이 기간으로 백테스트' })).toBeTruthy()
+    expect(screen.queryByText(/고른 기간/)).toBeNull()
   })
 
   it('받지 못해도 경고로 막지 않고 다시 시도를 둔다', async () => {

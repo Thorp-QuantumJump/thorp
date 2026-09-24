@@ -52,13 +52,13 @@ export function MarketNow() {
 
   useEffect(() => {
     let active = true
-    void Promise.allSettled(CODES.map((item) => fetchMarketSeries(item.code))).then((results) => {
+    // 응답마다 어느 지수인지 함께 싣는다. 결과 배열의 자리에 기대 이름을 붙이지 않는다.
+    const requests = CODES.map((item) =>
+      fetchMarketSeries(item.code).then((series) => toReading(item.label, item.code, series.points, series.source.provider)),
+    )
+    void Promise.allSettled(requests).then((results) => {
       if (!active) return
-      const readings = results.flatMap((result, index) => {
-        if (result.status !== 'fulfilled') return []
-        const reading = toReading(CODES[index].label, CODES[index].code, result.value.points, result.value.source.provider)
-        return reading ? [reading] : []
-      })
+      const readings = results.flatMap((result) => (result.status === 'fulfilled' && result.value ? [result.value] : []))
       setState(readings.length > 0 ? { status: 'ready', readings } : { status: 'unavailable' })
     })
     return () => {
