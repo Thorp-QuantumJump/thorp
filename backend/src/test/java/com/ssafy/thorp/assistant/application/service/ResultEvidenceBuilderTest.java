@@ -480,6 +480,36 @@ class ResultEvidenceBuilderTest {
     }
 
     @Test
+    @DisplayName("등록표 선택지에 없는 값(옛 요청 등)은 예외 없이 원문 그대로 적는다")
+    void unknownChoiceValueStaysRaw() {
+        ParameterAxis axis = mock(ParameterAxis.class);
+        when(axis.name()).thenReturn("rebalance");
+        when(axis.label()).thenReturn("리밸런싱 주기");
+        when(axis.unit()).thenReturn(null);
+        when(axis.allowedRange())
+                .thenReturn(
+                        AllowedRange.ofChoices(List.of(new RegisteredChoice("MONTH_END", "월말"))));
+        StrategyRegistration registration = mock(StrategyRegistration.class);
+        when(registration.applicableAxes(any())).thenReturn(List.of(axis));
+        when(registry.find("EQUAL_WEIGHT")).thenReturn(Optional.of(registration));
+        Map<String, Object> config = config(twoItems());
+        config.put(
+                "parameters",
+                Map.of("rebalance", Map.of("mode", "TRADING_DAYS", "days", 21), "topN", 3));
+        when(publicResults.getWeights(TOKEN))
+                .thenReturn(weights(List.of("091160.XKRX", "305720.XKRX")));
+        when(publicResults.getDetail(TOKEN))
+                .thenReturn(detail(config, summary(List.of("091160.XKRX", "305720.XKRX")), false));
+
+        Map<String, Evidence> facts =
+                byLabel(builder.build(new PageContext(PageKind.RESULT, TOKEN)));
+
+        // Map.of 는 순서를 정하지 않으므로 통째 문자열이 아니라 원문 조각으로 본다.
+        assertThat(facts.get("리밸런싱 주기").value()).contains("TRADING_DAYS").contains("21");
+        assertThat(facts.get("topN").value()).isEqualTo("3");
+    }
+
+    @Test
     @DisplayName("도구 다섯 개가 이 요청의 결과에 묶여 만들어지고 인자는 날짜뿐이다")
     void bundlesFiveDateOnlyTools() {
         EvidenceBundle bundle = buildCompleted();
