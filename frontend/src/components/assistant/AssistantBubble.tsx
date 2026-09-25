@@ -9,9 +9,9 @@ import styles from './assistant.module.css'
 export const QUESTION_MAX_LENGTH = 300
 export const TRANSFER_NOTICE = '백테스트 결과에 대해서 질문해보세요.'
 export const EXAMPLE_QUESTIONS = [
-  '거래비용은 어떻게 구성됐어?',
-  '비용을 빼고 얼마가 남았어?',
-  '가장 크게 줄었던 때 무엇을 보유했어?',
+  '수익률은 어떻게 계산된거야?',
+  'MDD가 뭐야?',
+  '손실이 가장 컸을 때 어떻게 보유하고 있었어?',
 ] as const
 
 type Failure = { message: string; retryable: boolean; retryAfterSeconds: number | null }
