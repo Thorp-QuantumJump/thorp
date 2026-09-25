@@ -99,13 +99,13 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 
 **Independent Test**: 가짜 API로 버튼·끌기·말풍선·답변·오류·페이지 전환을 검증한다.
 
-- [ ] T040 [P] [US3] 실패 테스트 `frontend/src/components/assistant/AssistantFab.test.tsx` — 접근 이름 `질문하기`, 보이는 글자 없음, `Bot` 아이콘 `aria-hidden`; `capabilities.enabled=false`면 없음; 로그인·가입·관리 경로에 없음; 기본 우측 하단; 끌어 가운데 놓으면 가까운 여백으로 붙고 `thorp.assistant.fabPosition`에 저장; 재렌더 시 저장 자리; ≤600px에서 끌기 무시·우측 하단 고정; Tab·Enter로 열림; `[data-variant="default"]` 버튼은 '비교 대상 고르기' 하나
-- [ ] T041 [P] [US3] 실패 테스트 `.../AssistantBubble.test.tsx` — 열면 맥락 표시·예시 질문·입력 하나·전송 안내·입력에 초점; 왼쪽 여백이면 오른쏙으로 펼침; 답과 `factIds`에 쓰인 근거 카드만; 근거 카드 클릭이 해당 탭으로; 페이지 이동 시 `abort`·요청 번호로 이전 답 미표시·말풍선 닫힘; Escape·바깥 누르기로 닫히고 초점 복귀; 429 대기 문구, 503 문구+재시도 버튼(자동 재시도 없음); ≤600px 바닥 시트; `InlineHelp`(z 80)가 위에 뜸
-- [ ] T042 [US3] `frontend/src/types/assistant.ts`·`frontend/src/api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — `runCsrfProtectedMutation` 경로)·`assistantPageContext.tsx`(`useAssistantPageContext`)·`fabPosition.ts`(`localStorage` try/catch, 테스트는 `fabPosition.test.tsx` — `vite.config.ts` `test.include`가 `.test.ts`를 잡지 않는다)
-- [ ] T043 [US3] `AssistantFab.tsx`(pointer 끌기 직접 구현, 붙기, `prefers-reduced-motion`)·`AssistantBubble.tsx`(`radix-ui` Popover·`useDisclosure`, z 55, `role="dialog" aria-modal="false"`, 바닥 시트)·`assistant.module.css`
-- [ ] T044 [US3] `App.tsx`에 `AnimatedRoutes` 바깥 마운트, `ResultPage.tsx`에 맥락 등록과 "탭 열기 요청" 연결, **`ResultTabs.tsx`에 제어 prop(`activeTab`·`onActiveTabChange`, 없으면 지금처럼 비제어) 추가**와 `ResultDetailTabs.tsx` 전달, `ResultTabs.test.tsx`·`ResultPage.test.tsx` 갱신 — 근거 카드 클릭이 그 탭을 여는 경로다
-- [ ] T045 [US4] 오류 문구 — 503 "지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.", 429 다시 가능한 시점, `OUT_OF_SCOPE`·`INSUFFICIENT_EVIDENCE` 카드
-- [ ] T046 `npm run lint && npm run build && npm test`(skipped 0, `vite.config.ts` `test.include` 확인). 데스크톱(끌기·붙기·펼침 방향)·모바일(고정·바닥 시트)에서 사람이 배치 확인. 서버 플래그가 꺼져 있으면 버튼이 없음을 확인
+- [x] T040 [P] [US3] 실패 테스트 `frontend/src/components/assistant/AssistantFab.test.tsx` — 접근 이름 `질문하기`, 보이는 글자 없음, `Bot` 아이콘 `aria-hidden`; `capabilities.enabled=false`면 없음; 로그인·가입·관리 경로에 없음; 기본 우측 하단; 끌어 가운데 놓으면 가까운 여백으로 붙고 `thorp.assistant.fabPosition`에 저장; 재렌더 시 저장 자리; ≤600px에서 끌기 무시·우측 하단 고정; Tab·Enter로 열림; `[data-variant="default"]` 버튼은 '비교 대상 고르기' 하나
+- [x] T041 [P] [US3] 실패 테스트 `.../AssistantBubble.test.tsx` — 열면 맥락 표시·예시 질문·입력 하나·전송 안내·입력에 초점; 왼쪽 여백이면 오른쏙으로 펼침; 답과 `factIds`에 쓰인 근거 카드만; 근거 카드 클릭이 해당 탭으로; 페이지 이동 시 `abort`·요청 번호로 이전 답 미표시·말풍선 닫힘; Escape·바깥 누르기로 닫히고 초점 복귀; 429 대기 문구, 503 문구+재시도 버튼(자동 재시도 없음); ≤600px 바닥 시트; `InlineHelp`(z 80)가 위에 뜸
+- [x] T042 [US3] `frontend/src/types/assistant.ts`·`frontend/src/api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — `runCsrfProtectedMutation` 경로)·`assistantPageContext.tsx`(`useAssistantPageContext`)·`fabPosition.ts`(`localStorage` try/catch, 테스트는 `fabPosition.test.tsx` — `vite.config.ts` `test.include`가 `.test.ts`를 잡지 않는다)
+- [x] T043 [US3] `AssistantFab.tsx`(pointer 끌기 직접 구현, 붙기, `prefers-reduced-motion`)·`AssistantBubble.tsx`(`radix-ui` Popover·`useDisclosure`, z 55, `role="dialog" aria-modal="false"`, 바닥 시트)·`assistant.module.css`
+- [x] T044 [US3] `App.tsx`에 `AnimatedRoutes` 바깥 마운트, `ResultPage.tsx`에 맥락 등록과 "탭 열기 요청" 연결, **`ResultTabs.tsx`에 제어 prop(`activeTab`·`onActiveTabChange`, 없으면 지금처럼 비제어) 추가**와 `ResultDetailTabs.tsx` 전달, `ResultTabs.test.tsx`·`ResultPage.test.tsx` 갱신 — 근거 카드 클릭이 그 탭을 여는 경로다
+- [x] T045 [US4] 오류 문구 — 503 "지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.", 429 다시 가능한 시점, `OUT_OF_SCOPE`·`INSUFFICIENT_EVIDENCE` 카드
+- [ ] T046 `npm run lint && npm run build && npm test`(skipped 0, `vite.config.ts` `test.include` 확인). 데스크톱(끌기·붙기·펼침 방향)·모바일(고정·바닥 시트)에서 사람이 배치 확인. 서버 플래그가 꺼져 있으면 버튼이 없음을 확인 — **자동 검증은 끝났고 사람 배치 확인만 남았다(MR 리뷰 때 확인)**
 
 ---
 
@@ -133,7 +133,7 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |
 | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |
 | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |
-| 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |
+| 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` (S15P21E205-441) | `feat(fe)/441-assistant-bubble` | 5 | T040~T046 | 1 |
 | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |
 
 티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.

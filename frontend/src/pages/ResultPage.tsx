@@ -4,6 +4,7 @@ import { Popover } from 'radix-ui'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { retryResult } from '@/api/result'
 import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'
+import { useAssistantPageContext } from '@/components/assistant/assistantPageContext'
 import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'
 import comparisonStyles from '@/components/result/comparison.module.css'
 import { CompareTargetChip } from '@/components/result/CompareTargetChip'
@@ -157,6 +158,9 @@ function ResultView({
         : null,
     [summary, timeseries],
   )
+  // 화면 맥락 도우미(spec 015). 이 화면의 맥락을 등록한다.
+  const assistantPage = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])
+  useAssistantPageContext(assistantPage)
 
   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
   const summaryBlock = (
