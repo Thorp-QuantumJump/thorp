@@ -241,6 +241,39 @@ services:
           cpus: "1.0"
     networks: [backend]
 
+  # data 파이프라인 일회성 배치(S15P21E205-446). 상주하지 않는다 — `batch` 프로필이라 `up` 에 포함되지 않는다.
+  # 실행: docker compose -f docker-compose.prod.yml --env-file .env.prod --profile batch run --rm data-batch \
+  #         python scripts/precompute_regime.py --source macro
+  # 절차와 순서는 docs/guides/regime-batch-operation.md.
+  data-batch:
+    profiles: ["batch"]
+    build:
+      context: ../data
+      dockerfile: ../infra/docker/data.Dockerfile
+    image: thorp-data:latest
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      KRX_API_KEY: ${KRX_API_KEY:-}
+      ECOS_API_KEY: ${ECOS_API_KEY:-}
+      KOSIS_API_KEY: ${KOSIS_API_KEY:-}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY:-}
+      TZ: Asia/Seoul
+    volumes:
+      # ingest_macro 는 --data-root(/data) 아래 raw·processed 에, precompute_regime 은 /app/processed 에 쓴다.
+      # 둘 다 호스트의 같은 DATA_DIR 로 모은다.
+      - ${DATA_DIR}:/data
+      - ${DATA_DIR}/processed:/app/processed
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    networks: [backend]
+
   nginx:
     image: nginx:1.27-alpine
     container_name: thorp-nginx

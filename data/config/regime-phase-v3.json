@@ -13,7 +13,7 @@
     "unemployment_rate": {"kind": "YOY_DIFF", "unit": "%p"},
     "exports": {"kind": "AS_IS", "unit": "%"},
     "imports": {"kind": "AS_IS", "unit": "%"},
-    "trade_balance": {"kind": "YOY_DIFF", "unit": "미국 달러"},
+    "trade_balance": {"kind": "YOY_DIFF", "unit": "미국 달러", "displayDivisor": 100000000, "displayUnit": "억 달러"},
     "g20_cli": {"kind": "AS_IS", "unit": "%"},
     "consumer_price_index": {"kind": "AS_IS", "unit": "%"},
     "dubai_crude": {"kind": "YOY_PCT", "unit": "%"},

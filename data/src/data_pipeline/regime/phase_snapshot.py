@@ -150,12 +150,14 @@ def explanation_for(
     def sentence(template: str, block: Block, indicator_id: str) -> str:
         kind = model.config.input_kinds[indicator_id]
         series = model.series[indicator_id]
+        query, unit = model.config.display_of(indicator_id, series[query_month].value)
+        case, _ = model.config.display_of(indicator_id, series[case_month].value)
         return template.format(
             block=block.name,
             subject=subject_of(entries[indicator_id].name, KIND_LABELS[kind]),
-            query=format_phase_value(series[query_month].value),
-            case=format_phase_value(series[case_month].value),
-            unit=model.config.input_units.get(indicator_id, entries[indicator_id].unit),
+            query=format_phase_value(query),
+            case=format_phase_value(case),
+            unit=unit or entries[indicator_id].unit,
         )
 
     def representative(block: Block, *, largest: bool) -> str:
