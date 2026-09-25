@@ -102,6 +102,11 @@ describe('AssistantBubble', () => {
     expect(api.askAssistant.mock.calls[0][0]).toBe('거래비용은?')
     await within(dialog).findByText(answered.answer)
     expect(input.value).toBe('')
+
+    // Enter 로 보내도 입력이 빈다.
+    await user.type(input, '수익률은?{Enter}')
+    expect(api.askAssistant.mock.calls[1][0]).toBe('수익률은?')
+    expect(input.value).toBe('')
   })
 
   it('Escape 로 닫히고 초점이 버튼으로 돌아온다', async () => {
