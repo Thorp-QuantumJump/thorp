@@ -37,6 +37,7 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우
     sys.path.insert(0, str(_SRC))
 
+from data_pipeline.regime.context import DEFAULT_CONTEXT, load_context  # noqa: E402
 from data_pipeline.regime.load import (  # noqa: E402
     RegimeLoadError,
     RegimeRepository,
@@ -55,6 +56,9 @@ from data_pipeline.regime.macro.types import (  # noqa: E402
     format_month,
     parse_month,
 )
+from data_pipeline.regime.phase import DEFAULT_CONFIG as DEFAULT_PHASE_CONFIG  # noqa: E402
+from data_pipeline.regime.phase import PhaseConfigError  # noqa: E402
+from data_pipeline.regime.phase import load_config as load_phase_config  # noqa: E402
 from data_pipeline.regime.snapshot import (  # noqa: E402
     MODE_COMPOSITE,
     MODE_FIELD,
@@ -64,6 +68,9 @@ from data_pipeline.regime.snapshot import (  # noqa: E402
     Versions,
 )
 from data_pipeline.regime.watermark import (  # noqa: E402
+    ORIGIN_REQUESTED,
+    ORIGIN_SERIES_START,
+    Watermark,
     recomputed_months,
     series_start,
     watermark_for,
@@ -78,6 +85,12 @@ _EXIT_NOTHING: Final[int] = 5
 _DATA_ROOT: Final[Path] = Path(__file__).resolve().parents[1]
 #: 중간 산출 Parquet의 뿌리. 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지).
 PROCESSED_ROOT: Final[Path] = _DATA_ROOT / "processed"
+
+#: 종합 비교 v3 국면 모델의 블록 구성 (spec 010 v3 개정안 §3.2). 시험은 대역 등록표에 맞춰 바꾼다.
+PHASE_CONFIG: Path = DEFAULT_PHASE_CONFIG
+
+#: 특이 사례에 붙이는 당시 맥락 표 (개정안 §4). `scripts/collect_regime_context.py`가 만든다.
+CONTEXT_TABLE: Path = DEFAULT_CONTEXT
 PROCESSED_DATASET: Final[str] = "regime_search"
 #: 철회 기록. 표가 없으므로 파일로 남긴다 — 남기지 않은 철회가 0건이어야 한다(SC-012).
 WITHDRAWAL_LOG: Final[Path] = PROCESSED_ROOT / PROCESSED_DATASET / "withdrawals.jsonl"
@@ -265,7 +278,23 @@ def _precompute(args: argparse.Namespace, source: MacroIndicatorSource) -> int:
     registry = source.registry()
     series = load_series(source)
     versions = Versions(data=source.data_version(), registry=registry.version)
-    builder = SnapshotBuilder(registry, series, source.publication, versions)
+    # 종합 비교는 v3 국면 모델이다(spec 010 v3-experiment.md §6 채택). 분야 검색은 v1 그대로다.
+    # 블록 구성이 등록표와 어긋나면 계산을 시작하지 않는다 — 빠진 지표가 조용히 종합에서 사라진다.
+    try:
+        phase_config = load_phase_config(
+            PHASE_CONFIG, indicator_ids=[entry.id for entry in registry.indicators]
+        )
+    except PhaseConfigError as error:
+        print(f"거부: {error}", file=sys.stderr)
+        return _EXIT_REJECTED
+    builder = SnapshotBuilder(
+        registry,
+        series,
+        source.publication,
+        versions,
+        phase_config=phase_config,
+        context_events=load_context(CONTEXT_TABLE),
+    )
 
     repository = (
         None
@@ -294,9 +323,17 @@ def _precompute(args: argparse.Namespace, source: MacroIndicatorSource) -> int:
         # T_g·T_all이 없으면 관측 최신월로 물러난다. 그 달의 결과는 계산 불가로 저장되며,
         # 조회는 404가 아니라 200 + `NOT_COMPUTABLE`을 받는다(spec FR-039, 계약 §1).
         horizon = latest if latest is not None else months[-1]
+        scope_watermark = watermark
+        if (
+            repository is not None
+            and watermark.origin != ORIGIN_REQUESTED
+            and not repository.has_model_version(scope, builder.versions_for(scope).model)
+        ):
+            # 모델 버전이 바뀐 범위는 전 구간이다(data-model §6). 종합이 v3로 바뀐 첫 실행이 여기다.
+            scope_watermark = Watermark(month=series_start(series), origin=ORIGIN_SERIES_START)
         targets = [
             month
-            for month in recomputed_months(months, watermark)
+            for month in recomputed_months(months, scope_watermark)
             if month <= horizon and (only is None or month == only)
         ]
         for month in targets:
@@ -319,7 +356,7 @@ def _precompute(args: argparse.Namespace, source: MacroIndicatorSource) -> int:
                 result = repository.save(
                     snapshot,
                     baseline_record=(
-                        baseline_record_for(scope, horizon, versions)
+                        baseline_record_for(scope, horizon, builder.versions_for(scope))
                         if month == horizon
                         else None
                     ),
@@ -346,7 +383,10 @@ def _precompute(args: argparse.Namespace, source: MacroIndicatorSource) -> int:
     )
     elapsed = time.monotonic() - started
 
-    print(f"자료 버전: {versions.data} / 등록표 {versions.registry} / 모델 {versions.model}")
+    print(
+        f"자료 버전: {versions.data} / 등록표 {versions.registry} / 모델 {versions.model}"
+        f" (종합 {phase_config.version})"
+    )
     print(f"재계산 시작월: {watermark.describe()}")
     print(f"다시 계산한 기준월: {len(snapshots)}개 (범위 × 기준월)")
     if repository is not None:
