@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'
 import { Button } from '@/components/ui/button'
-import type { AssistantAnswer, AssistantEvidenceTab } from '@/types/assistant'
+import type { AssistantAnswer } from '@/types/assistant'
 import type { AssistantPage } from './assistantPageContext'
 import styles from './assistant.module.css'
 
@@ -13,15 +13,6 @@ export const EXAMPLE_QUESTIONS = [
   '비용을 빼고 얼마가 남았어?',
   '가장 크게 줄었던 때 무엇을 보유했어?',
 ] as const
-
-/** 005 결과 탭 이름. 근거 카드가 "어느 탭에 있는 값인지"를 이 말로 보인다. */
-const TAB_LABELS: Record<AssistantEvidenceTab, string> = {
-  summary: '요약',
-  analysis: '결과 분석',
-  settings: '설정·근거',
-  trades: '전체 거래 내역',
-  loss: '손실이 커진 때',
-}
 
 type Failure = { message: string; retryable: boolean; retryAfterSeconds: number | null }
 
@@ -45,19 +36,17 @@ function retryWording(retryAfterSeconds: number | null): string {
  * 말풍선 안쪽(spec 015 FR-004·FR-010·FR-012·FR-015).
  *
  * <p>맥락 표시, 예시 질문 두셋, 300자 입력 하나. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 외부 전달 안내를
- * 보이고 전송은 사용자가 제출할 때만 한다. 답의 숫자는 서버가 채운 값이고 근거 카드는 답에 쓰인 것만이다.
+ * 보이고 전송은 사용자가 제출할 때만 한다. 답의 숫자는 서버가 채운 값이다.
  * 각 질문은 독립이다 — 이력은 이 말풍선이 열려 있는 동안만 보이고 저장하지 않는다.
  *
  * <p>화면(맥락)이 바뀌면 진행 중 요청을 취소하고 이력을 비운다. 요청 번호로 늦게 온 이전 답을 버린다.
  */
 export function AssistantBubble({
   page,
-  openTab,
   onClose,
   autoFocus = false,
 }: {
   page: AssistantPage
-  openTab: (tab: string) => void
   onClose: () => void
   autoFocus?: boolean
 }) {
@@ -166,27 +155,6 @@ export function AssistantBubble({
                 <p className={styles.answer} data-status={exchange.answer.status}>
                   {exchange.answer.answer}
                 </p>
-                {exchange.answer.evidence.length > 0 ? (
-                  <ul className={styles.evidence} aria-label="근거">
-                    {exchange.answer.evidence.map((fact) => (
-                      <li key={fact.id}>
-                        <button
-                          type="button"
-                          className={styles.card}
-                          onClick={() => openTab(fact.tab)}
-                          aria-label={`${fact.label} ${fact.value}. ${TAB_LABELS[fact.tab] ?? fact.tab} 탭 열기`}
-                        >
-                          <span className={styles.cardLabel}>{fact.label}</span>
-                          <strong className={styles.cardValue}>{fact.value}</strong>
-                          <span className={styles.cardMeta}>
-                            {fact.asOf ? <time dateTime={fact.asOf}>{fact.asOf}</time> : null}
-                            <span>{TAB_LABELS[fact.tab] ?? fact.tab}</span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </>
             ) : null}
             {exchange.failure ? (
