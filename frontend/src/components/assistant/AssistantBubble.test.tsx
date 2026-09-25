@@ -131,6 +131,22 @@ describe('AssistantBubble', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull())
   })
 
+  it('처음으로 버튼은 보낸 뒤에만 있고, 누르면 안내와 예시 질문으로 돌아간다', async () => {
+    const user = userEvent.setup()
+    renderAssistant()
+    const { dialog } = await open(user)
+    expect(within(dialog).queryByRole('button', { name: '처음으로' })).toBeNull()
+
+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))
+    await within(dialog).findByText(answered.answer)
+    await user.click(within(dialog).getByRole('button', { name: '처음으로' }))
+
+    expect(within(dialog).queryByText(answered.answer)).toBeNull()
+    expect(within(dialog).getByText(TRANSFER_NOTICE)).not.toBeNull()
+    expect(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] })).not.toBeNull()
+    expect(within(dialog).queryByRole('button', { name: '처음으로' })).toBeNull()
+  })
+
   it('닫았다 다시 열어도 같은 화면이면 질문과 답이 남아 있다', async () => {
     const user = userEvent.setup()
     renderAssistant()

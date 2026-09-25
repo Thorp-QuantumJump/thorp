@@ -103,6 +103,12 @@
   gap: 8px;
 }
 
+.headStart {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .context {
   font-size: 0.85rem;
   font-weight: 600;
