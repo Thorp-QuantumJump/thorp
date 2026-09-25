@@ -36,9 +36,9 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 }
 ```
 
-- `status`: `ANSWERED` | `INSUFFICIENT_EVIDENCE` | `OUT_OF_SCOPE`. 뒤 둘은 `answer`가 고정 안내 문장이고 `evidence`는 빈 배열이다.
+- `status`: `ANSWERED` | `INSUFFICIENT_EVIDENCE` | `OUT_OF_SCOPE` | `GREETING`. `ANSWERED` 밖의 셋은 `answer`가 고정 안내 문장이고 `evidence`는 빈 배열이다. `GREETING`은 인사·잡담처럼 결과의 값을 묻지 않은 질문이다.
 - `answer`: 자리표시자가 치환된 최종 문장. 안의 숫자·날짜는 모두 `evidence[].value`에서 왔다.
-- `evidence[]`: 답에 실제로 쓰인 근거만. `id`는 이 응답 안에서만 뜻이 있다. `tab`은 결과 화면 탭 id(`summary`·`analysis`·`settings`·`trades`·`loss`) 중 하나이며 화면은 그 탭으로 이동한다.
+- `evidence[]`: 답에 실제로 쓰인 근거만. `id`는 이 응답 안에서만 뜻이 있다. `tab`은 결과 화면 탭 id(`summary`·`analysis`·`settings`·`trades`·`loss`) 중 하나다. 1차 화면은 근거를 그리지 않고 답만 보인다(묶음 5 결정) — 필드는 검증·평가(SC-003)와 뒤 화면을 위해 그대로 둔다.
 - 부분 결과(`partial=true`)면 `answer` 첫 문장은 서버가 붙인 "이 결과는 {완료 끝 날짜}까지의 부분 결과입니다."다.
 
 오류(봉투 `error.code`):
@@ -128,7 +128,7 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 {
   "type": "object",
   "properties": {
-    "status": { "type": "string", "enum": ["ANSWERED", "INSUFFICIENT_EVIDENCE", "OUT_OF_SCOPE"] },
+    "status": { "type": "string", "enum": ["ANSWERED", "INSUFFICIENT_EVIDENCE", "OUT_OF_SCOPE", "GREETING"] },
     "answerParts": {
       "type": "array",
       "items": {
@@ -151,7 +151,7 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d
 
 ### 2.4 서버 검증 규칙
 
-하나라도 걸리면 답변 전체를 버리고 `INSUFFICIENT_EVIDENCE` 고정 안내로 바꾼다(503이 아니다 — 모델은 응답했으나 쓸 수 없는 경우).
+하나라도 걸리면 답변 전체를 버리고 `INSUFFICIENT_EVIDENCE` 고정 안내로 바꾼다(503이 아니다 — 모델은 응답했으나 쓸 수 없는 경우). `OUT_OF_SCOPE`·`GREETING`은 초안의 part를 보지 않고 각자의 고정 문장이다.
 
 | 규칙 | 판정 |
 |---|---|
