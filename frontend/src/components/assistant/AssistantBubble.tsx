@@ -149,7 +149,7 @@ export function AssistantBubble({
   return (
     <div className={styles.bubble}>
       <div className={styles.head}>
-        <span className={styles.context}>기준 결과에 질문</span>
+        <span className={styles.context}>결과 도우미</span>
         <button type="button" className={styles.close} aria-label="말풍선 닫기" onClick={onClose}>
           <X size={18} aria-hidden="true" />
         </button>

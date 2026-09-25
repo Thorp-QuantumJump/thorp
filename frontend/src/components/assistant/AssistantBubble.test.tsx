@@ -51,7 +51,7 @@ describe('AssistantBubble', () => {
 
     const { dialog } = await open(user)
 
-    expect(within(dialog).getByText('기준 결과에 질문')).not.toBeNull()
+    expect(within(dialog).getByText('결과 도우미')).not.toBeNull()
     expect(within(dialog).getByText(TRANSFER_NOTICE)).not.toBeNull()
     const examples = within(dialog).getByRole('list', { name: '예시 질문' })
     expect(within(examples).getAllByRole('button')).toHaveLength(EXAMPLE_QUESTIONS.length)
