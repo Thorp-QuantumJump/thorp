@@ -113,10 +113,10 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 
 **Goal**: 플래그를 켤 근거를 만든다.
 
-- [ ] T050 `backend/src/test/resources/assistant/quality-cases.json` — 결과 질문 20개(절반은 날짜·구간·하락 구간) + 경계 10개(추천·미래·원인·비교 대상·KOSPI·부분 결과·기간 밖 날짜·"다른 결과 보여 줘"). 행: `question`, `expectedTools`, `requiredEvidenceKinds`, `forbiddenClaims`, `expectedStatus`
-- [ ] T051 `.../assistant/AssistantQualityTest.java`(가짜 모델·고정 fixture, CI) — 근거 ID 존재, 치환 숫자가 fixture 값과 같음, 토큰·식별자 비노출(도구 인자·이력 포함), 만료 토큰 모델 무호출, 모르는 도구·기간 밖 인자 실행 0회, 429/503 매핑
-- [ ] T052 `docs/specs/assistant-api/evaluation.md` — 실제 모델로 30개를 돌려 두 명이 독립 채점(SC-001~SC-003, 도구 사용 여부). 표본·환경·모델명·날짜·라운드 수·토큰·지연 기록. 원문은 테스트 산출물에만
-- [ ] T053 관문 판정 — SC-001~SC-004 충족 시에만 배포 설정에 `THORP_ASSISTANT_ENABLED_SCOPES=RESULT`. 미달이면 원인 기록, 플래그 유지
+- [x] T050 `backend/src/test/resources/assistant/quality-cases.json` — 결과 질문 20개(절반은 날짜·구간·하락 구간) + 경계 10개(추천·미래·원인·비교 대상·KOSPI·부분 결과·기간 밖 날짜·"다른 결과 보여 줘"). 행: `question`, `expectedTools`, `requiredEvidenceKinds`, `forbiddenClaims`, `expectedStatus`
+- [x] T051 `.../assistant/AssistantQualityTest.java`(가짜 모델·고정 fixture, CI) — 근거 ID 존재, 치환 숫자가 fixture 값과 같음, 토큰·식별자 비노출(도구 인자·이력 포함), 만료 토큰 모델 무호출, 모르는 도구·기간 밖 인자 실행 0회, 429/503 매핑
+- [x] T052 `docs/specs/assistant-api/evaluation.md` — 실제 모델로 30개를 돌려 두 명이 독립 채점(SC-001~SC-003, 도구 사용 여부). 표본·환경·모델명·날짜·라운드 수·토큰·지연 기록. 원문은 테스트 산출물에만
+- [ ] T053 관문 판정 — SC-001~SC-004 충족 시에만 배포 설정에 `THORP_ASSISTANT_ENABLED_SCOPES=RESULT`. 미달이면 원인 기록, 플래그 유지 — **자동 기준은 충족(evaluation.md §4). 두 명 채점(§5)이 끝나야 플래그를 켠다**
 
 ---
 
@@ -135,7 +135,7 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |
 | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` (S15P21E205-441) | `feat(fe)/441-assistant-bubble` | 5 | T040~T046 | 1 |
 | 5b | `[BE] 도우미 인사 고정 문구·세금 규칙 근거·설정값 라벨 표기` (S15P21E205-444) | `feat(be)/444-assistant-feedback` | 3 | 묶음 5 사람 확인에서 나온 결정 반영: `GREETING` 상태, `cost_profile.tax_note` 근거, 목록형 축 라벨, spec·계약 갱신 | 4·5 |
-| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5·5b |
+| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` (S15P21E205-445) | `feat(be)/445-assistant-quality-gate` | 2 | T050~T053 | 3·4·5·5b |
 
 티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.
 

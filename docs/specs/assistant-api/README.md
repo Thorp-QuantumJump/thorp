@@ -14,6 +14,7 @@ spec 015 결과 화면 질문 도우미가 쓰는 경로의 요약이다. 원본
 | [`examples/answer-out-of-scope.json`](examples/answer-out-of-scope.json) | 범위 밖(추천·비교 대상·다른 결과) 안내 |
 | [`examples/error-limit.json`](examples/error-limit.json) | 한도 초과 `429 ASSISTANT_LIMIT` |
 | [`examples/error-unavailable.json`](examples/error-unavailable.json) | 모델 장애·시간 초과 `503 ASSISTANT_UNAVAILABLE` |
+| [`evaluation.md`](evaluation.md) | 품질 관문 실측 기록(표본 30개, 실제 모델, SC-001~SC-005 판정) |
 
 ## 1. 공통 규칙
 
