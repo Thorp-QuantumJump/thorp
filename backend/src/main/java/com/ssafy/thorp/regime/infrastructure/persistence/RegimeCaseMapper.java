@@ -40,7 +40,8 @@ final class RegimeCaseMapper {
                 decimalMap(JsonReader.object(source, "byField")),
                 contribution == null ? null : decimalMap(contribution),
                 blocks(source),
-                blockContribution == null ? null : decimalMap(blockContribution));
+                blockContribution == null ? null : decimalMap(blockContribution),
+                source.get("meetsThreshold") instanceof Boolean meets ? meets : null);
     }
 
     @SuppressWarnings("unchecked")

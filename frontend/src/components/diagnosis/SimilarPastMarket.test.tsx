@@ -108,4 +108,23 @@ describe('SimilarPastMarket (002 FR-018)', () => {
     const text = container.textContent ?? ''
     for (const forbidden of ['추천', '1위', '최적']) expect(text).not.toContain(forbidden)
   })
+
+  it('종합 비교에 기준 충족 사례가 없으면 안내와 분야별 탐색·참고 사례 보기를 보인다', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(
+      searchResult({
+        mode: 'COMPOSITE',
+        field: null,
+        status: 'THRESHOLD_APPLIED',
+        cases: [],
+        thresholdNote: '설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다.',
+      }),
+    )
+    renderWithRouter(<SimilarPastMarket caseId={null} />)
+    expect(await screen.findByText(/설정된 종합 유사성 기준을 충족하는 사례가 없습니다/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toContain('searchId=S-1')
+    fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))
+    await waitFor(() =>
+      expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'field', field: 'production', limit: 3 }),
+    )
+  })
 })

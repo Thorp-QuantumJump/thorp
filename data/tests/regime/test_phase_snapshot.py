@@ -25,7 +25,15 @@ from data_pipeline.regime.phase_snapshot import (
     residual_threshold,
     subject_of,
 )
-from data_pipeline.regime.snapshot import MODEL_VERSION, SearchScope, SnapshotBuilder, Versions
+from data_pipeline.regime.snapshot import (
+    MODEL_VERSION,
+    STATUS_THRESHOLD_APPLIED,
+    SearchScope,
+    SearchStatus,
+    SnapshotBuilder,
+    SnapshotError,
+    Versions,
+)
 
 LAYOUT = {"A": ["A1", "A2"], "B": ["B1"], "C": ["C1", "C2"]}
 MONTHS = 240
@@ -261,3 +269,63 @@ class TestDisplay:
         value, unit = config.display_of("trade_balance", 24_137_983_294.0)
         assert unit == "억 달러"
         assert format_phase_value(value) == "241.4"
+
+
+class TestThreshold:
+    def _builder(self, tmp_path: Path, threshold: dict) -> SnapshotBuilder:
+        registry = make_registry(LAYOUT)
+        path = write_phase_config(tmp_path, registry)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw["threshold"] = threshold
+        path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        config = load_config(path, indicator_ids=[entry.id for entry in registry.indicators])
+        series = {
+            entry.id: make_series((2000, 1), _values(index))
+            for index, entry in enumerate(registry.indicators)
+        }
+        return SnapshotBuilder(
+            registry,
+            series,
+            lambda indicator_id, month: None,
+            Versions(data="D1", registry=registry.version),
+            phase_config=config,
+        )
+
+    def test_기준이_있으면_교정된_상태로_사례마다_충족_여부를_남긴다(self, tmp_path: Path) -> None:
+        snapshot = self._builder(
+            tmp_path, {"tau": 1e9, "delta": None, "minComparisonMonths": 3}
+        ).build(SearchScope.composite(), BASELINE)
+        assert snapshot.status.status == STATUS_THRESHOLD_APPLIED
+        assert snapshot.status.reason is None
+        assert all(case.distance["meetsThreshold"] is True for case in snapshot.cases)
+
+    def test_거리와_블록_큰_차이가_기준을_넘으면_미충족이다(self, tmp_path: Path) -> None:
+        loose = self._builder(tmp_path, {"tau": 1e9, "delta": None, "minComparisonMonths": 3})
+        cases = loose.build(SearchScope.composite(), BASELINE).cases
+        middle = sorted(float(c.distance["value"]) for c in cases)[len(cases) // 2]
+        tight = self._builder(
+            tmp_path, {"tau": middle, "delta": None, "minComparisonMonths": 3}
+        ).build(SearchScope.composite(), BASELINE)
+        for case in tight.cases:
+            assert case.distance["meetsThreshold"] is (float(case.distance["value"]) <= middle)
+        tiny_delta = self._builder(
+            tmp_path, {"tau": 1e9, "delta": 1e-9, "minComparisonMonths": 3}
+        ).build(SearchScope.composite(), BASELINE)
+        assert all(case.distance["meetsThreshold"] is False for case in tiny_delta.cases)
+
+    def test_분야_검색은_기준이_있어도_미판정으로_남는다(self, tmp_path: Path) -> None:
+        builder = self._builder(tmp_path, {"tau": 1e9, "delta": None, "minComparisonMonths": 3})
+        snapshot = builder.build(SearchScope.field("A"), BASELINE)
+        assert snapshot.status.status == "NEAREST_ONLY"
+        assert "meetsThreshold" not in snapshot.cases[0].distance
+
+    def test_실제_설정은_교정_결과의_기준을_담는다(self) -> None:
+        config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])
+        assert config.threshold is not None
+        assert config.threshold.tau == pytest.approx(1.5109237468134005)
+        assert config.threshold.delta == 1.0
+        assert config.threshold.min_comparison_months == 3
+
+    def test_교정된_상태에는_사유가_없다(self) -> None:
+        with pytest.raises(SnapshotError):
+            SearchStatus(status=STATUS_THRESHOLD_APPLIED, reason="THRESHOLD_NOT_CALIBRATED")

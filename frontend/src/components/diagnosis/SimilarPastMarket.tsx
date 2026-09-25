@@ -148,7 +148,22 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                 </Disclosure>
               ) : null}
             </div>
-            {result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (
+            {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (
+              // 교정된 기준을 넘는 사례가 없다(spec US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.
+              <Disclosure label="유사성 기준" context={context} tone="warning">
+                <p>{result.thresholdNote}</p>
+                <p>
+                  {baselines?.byField[0] && result.mode === 'COMPOSITE' ? (
+                    <button type="button" className={styles.detail} onClick={() => setQuery({ mode: 'field', field: baselines.byField[0].id, limit: 3 })}>
+                      분야별로 살펴보기
+                    </button>
+                  ) : null}{' '}
+                  <Link className={styles.detail} to={`/regime-search?searchId=${encodeURIComponent(result.searchId)}`}>
+                    참고 사례 보기 <ArrowUpRight size={14} aria-hidden="true" />
+                  </Link>
+                </p>
+              </Disclosure>
+            ) : result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (
               <EmptyResult result={result} />
             ) : (
               <ol className={styles.cases} aria-label="가까운 과거 사례">

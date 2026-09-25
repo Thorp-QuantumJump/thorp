@@ -182,6 +182,18 @@ public class RegimeSearchService {
     private RegimeSearchResult view(
             RegimeSnapshot snapshot, BaselineOrigin origin, FieldRegistration field, int limit) {
         // 잘라 내기만 한다. 몇 개를 잘랐는지 세지 않는다 — 그 수는 "그만큼 비슷했다"로 읽힌다.
+        if (snapshot.thresholdApplied()) {
+            // 기준 충족 사례만 기본 목록이고, 미충족 참고 사례는 따로 연다(spec FR-021).
+            // 참고 사례는 자르지 않는다 — 저장된 표시 후보(최대 10개) 안에서 나뉜 나머지다.
+            List<RegimeCase> meeting = snapshot.meetingCases().stream().limit(limit).toList();
+            return new RegimeSearchResult(
+                    snapshot,
+                    origin,
+                    field,
+                    indicatorNames(snapshot),
+                    meeting,
+                    snapshot.referenceCases());
+        }
         List<RegimeCase> displayed = snapshot.cases().stream().limit(limit).toList();
         return new RegimeSearchResult(snapshot, origin, field, indicatorNames(snapshot), displayed);
     }
