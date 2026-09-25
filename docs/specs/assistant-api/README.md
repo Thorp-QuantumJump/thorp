@@ -29,7 +29,7 @@ spec 015 결과 화면 질문 도우미가 쓰는 경로의 요약이다. 원본
 | `GET /assistant/capabilities` | 기능 켜짐 여부와 화면 범위 | `{enabled, scopes[]}`. 항상 200 |
 | `POST /assistant/questions` | 질문 | `{status, answer, evidence[], page}` |
 
-`status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`. `evidence[]`는 답에 실제로 쓰인 근거만이고 `tab`(`summary`·`analysis`·`settings`·`trades`·`loss`)으로 결과 탭에 간다. 부분 결과면 `answer` 첫 문장에 완료 끝 날짜까지의 부분 결과임이 붙는다.
+`status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`·`GREETING`(인사·잡담, `examples/answer-greeting.json`). `evidence[]`는 답에 실제로 쓰인 근거만이고 `tab`(`summary`·`analysis`·`settings`·`trades`·`loss`)은 그 값이 있는 결과 탭이다(1차 화면은 근거를 그리지 않는다). 부분 결과면 `answer` 첫 문장에 완료 끝 날짜까지의 부분 결과임이 붙는다.
 
 ## 3. 오류
 

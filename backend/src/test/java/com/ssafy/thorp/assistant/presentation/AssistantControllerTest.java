@@ -284,6 +284,16 @@ class AssistantControllerTest {
     }
 
     @Test
+    @DisplayName("인사 답은 examples/answer-greeting.json 모양이다")
+    void greetingLikeExample() throws Exception {
+        fakes.script.set(() -> new ModelDraft(AnswerStatus.GREETING, List.of()));
+
+        ResultActions actions = askOk("10.0.0.4", TOKEN).andExpect(status().isOk());
+
+        assertThat(json(actions)).isEqualTo(example("answer-greeting.json"));
+    }
+
+    @Test
     @DisplayName("301자·공백 질문은 400 이고 모델을 부르지 않는다")
     void rejectsQuestionLength() throws Exception {
         mockMvc.perform(ask(body("가".repeat(301), resultContext(TOKEN)), "10.0.0.4"))

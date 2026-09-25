@@ -37,6 +37,7 @@ public class AnswerValidator {
     static final String INSUFFICIENT_MESSAGE = "이 화면 자료만으로 확인할 수 없습니다.";
     static final String OUT_OF_SCOPE_MESSAGE =
             "이 도우미는 지금 보고 있는 기준 결과의 기록을 설명합니다. 투자 추천이나 앞으로의 성과, 다른 결과에 대해서는 답하지 않습니다.";
+    static final String GREETING_MESSAGE = "안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?";
     static final String FORBIDDEN_PHRASES_RESOURCE = "assistant/forbidden-phrases.txt";
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{(F\\d+)}}");
@@ -74,6 +75,7 @@ public class AnswerValidator {
             case OUT_OF_SCOPE ->
                     new Rendered(AnswerStatus.OUT_OF_SCOPE, OUT_OF_SCOPE_MESSAGE, List.of());
             case INSUFFICIENT_EVIDENCE -> insufficient();
+            case GREETING -> new Rendered(AnswerStatus.GREETING, GREETING_MESSAGE, List.of());
             case ANSWERED ->
                     answered(draft.parts(), facts).orElseGet(AnswerValidator::insufficient);
         };
