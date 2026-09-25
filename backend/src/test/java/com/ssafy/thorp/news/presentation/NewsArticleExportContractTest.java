@@ -35,7 +35,7 @@ class NewsArticleExportContractTest {
 
     private static MockMvc mockMvc(Function<NewsArticleExportQuery, NewsArticleExportResult> stub) {
         return MockMvcBuilders.standaloneSetup(
-                        new NewsDigestController(null, new StubExportService(stub)))
+                        new NewsDigestController(null, new StubExportService(stub), null))
                 .setControllerAdvice(new NewsArticleExportExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(MAPPER))
                 .build();

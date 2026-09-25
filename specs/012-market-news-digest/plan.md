@@ -141,7 +141,7 @@ frontend/                     # 읽기 전용, 생성·수정 금지
 ### 필터·중복·묶음 규칙 v1
 
 1. 요청 기간 밖 항목 제거
-2. 등록된 섹터·기업·경제 주제에 연결되지 않은 항목 제거; 해외 보도는 국내 연결 주제가 있어야 함. RSS `category`는 원문 값을 그대로 쓰지 않고 `news-link-v1`의 주제 키로 매핑된 경우에만 연결 근거가 되며, 매핑되지 않은 값은 무시하고 미등록 category로 집계한다. 매핑 전 원문 category 값은 저장하지 않는다
+2. 등록된 섹터·기업·경제 주제에 연결되지 않은 항목 제거; 해외 보도는 국내 연결 주제가 있어야 함. RSS `category`는 원문 값을 그대로 쓰지 않고 `news-link-v1`의 주제 키로 매핑된 경우에만 연결 근거가 되며(v2부터는 등록표의 섹터별 제목 키워드도 연결 근거다 — spec FR-010, Session 2026-09-24), 매핑되지 않은 값은 무시하고 미등록 category로 집계한다. 매핑 전 원문 category 값은 저장하지 않는다
 3. URL이 있으면 allowlist 안의 제한된 redirect를 모두 따른 최종 URL에 scheme·host 소문자화, 기본 포트 제거, fragment 제거, 빈 path의 `/` 통일, 루트 외 후행 `/` 제거, query 이름·값 정렬, `news-url-normalization-v1`에 등록된 `utm_*`·`gclid`·`fbclid` 추적 parameter 제거를 적용해 동일 원문 병합. 그 밖의 query 값과 path 대소문자는 보존하고 malformed URL·allowlist 밖 redirect는 제외
 4. URL이 없으면 `(publisherId, sourceItemId)`로 중복 판정해 매체 간 GUID 충돌을 분리한다. 그것도 없으면 정규화 제목·publisher·유효 시각 hash를 사용하고 어느 식별자도 만들 수 없으면 제외
 5. 사건 묶음은 48시간 이내, 공통 주제 1개 이상, 정규화 제목의 **문자 2-gram** Jaccard **0.30 이상**을 모두 만족하고 아래 고유어 조건에 걸리지 않을 때만 병합한다(`news-grouping-v2`). 새 기사는 묶음의 모든 기존 기사와 조건을 만족해야 하는 complete-link 방식을 사용하며, 경계 미달·불확실·전이적 bridge 항목은 별도 묶음으로 둔다.

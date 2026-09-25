@@ -242,7 +242,8 @@ public class NewsIngestionService {
 
         for (CollectedNewsItem item : fetched.items()) {
             NewsRelevanceClassifier.Relevance link =
-                    relevance.classify(item.sourceCategories(), overseas, channelTopicKeys);
+                    relevance.classify(
+                            item.sourceCategories(), overseas, channelTopicKeys, item.title());
             unmappedCategories += link.unmappedCategories().size();
             if (!link.accepted()) {
                 excluded++;

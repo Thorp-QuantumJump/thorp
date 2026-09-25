@@ -34,6 +34,18 @@ public interface NewsArticleLinkRepository {
             String ruleVersion);
 
     /**
+     * 없는 연결만 더한다. 이미 있는 연결은 그대로 두고 지우지도 않는다.
+     *
+     * <p>저장된 기사를 새 규칙으로 다시 연결할 때 쓴다. {@link #replaceLinks}처럼 같은 버전의 연결을 지우면, 새 규칙으로 수집되며 이미 붙은
+     * 분류·채널 근거까지 사라진다. 여러 번 돌려도 결과가 같다.
+     */
+    void addLinks(
+            Long articleId,
+            Set<String> sectorIds,
+            java.util.Map<Long, String> topicEvidenceByTopicId,
+            String ruleVersion);
+
+    /**
      * 기사별로 연결된 주제 키를 읽는다.
      *
      * <p>묶음 후보에 이전 회차의 기사를 넣으려면 그 기사의 주제를 알아야 한다. 주제가 없으면 공통 주제 조건을 판정할 수 없어 묶이지 않는다.

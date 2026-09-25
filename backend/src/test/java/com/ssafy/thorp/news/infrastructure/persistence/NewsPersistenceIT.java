@@ -722,6 +722,38 @@ class NewsPersistenceIT extends PostgresTestSupport {
     }
 
     @Test
+    @DisplayName("제목 키워드 다시 연결은 옛 버전 연결을 남기고 없는 연결만 더하며, 두 번 돌려도 같다")
+    void 제목_다시_연결() {
+        NewsDigest digest =
+                seedDigest(
+                        "semi",
+                        "https://semi.example.com/relink",
+                        "HBM 공급 늘린다",
+                        NOW.minusSeconds(3600),
+                        null);
+        Long articleId = digest.getArticles().get(0).getId();
+        assertThat(queryService.query(NewsDigestQuery.current(SEMICONDUCTOR)).digests())
+                .as("v1에는 섹터 연결이 없었다")
+                .isEmpty();
+
+        Long titleTopic =
+                linkRepository.ensureTopic("sector-semiconductor", "반도체 업종", false, "news-link-v2");
+        for (int run = 0; run < 2; run++) {
+            linkRepository.addLinks(
+                    articleId,
+                    Set.of(SEMICONDUCTOR),
+                    java.util.Map.of(titleTopic, "title:hbm"),
+                    "news-link-v2");
+            flushAndClear();
+        }
+
+        assertThat(queryService.query(NewsDigestQuery.current(SEMICONDUCTOR)).digests()).hasSize(1);
+        assertThat(linkRepository.findTopicKeysByArticleIds(List.of(articleId)).get(articleId))
+                .as("v1 주제 연결은 지우지 않는다")
+                .containsExactlyInAnyOrder("semiconductor", "sector-semiconductor");
+    }
+
+    @Test
     @DisplayName("001에 등록되지 않은 섹터는 거부한다")
     void 미등록_섹터() {
         assertThatThrownBy(() -> queryService.query(NewsDigestQuery.current("NOT_REGISTERED")))
