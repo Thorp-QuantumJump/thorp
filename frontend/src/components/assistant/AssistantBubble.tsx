@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { LoaderCircle, X } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'
 import { Button } from '@/components/ui/button'
@@ -147,6 +147,7 @@ export function AssistantBubble({
             <p className={styles.question}>{exchange.question}</p>
             {exchange.answer === null && exchange.failure === null ? (
               <p className={styles.pending} role="status">
+                <LoaderCircle className={styles.spinner} aria-hidden="true" />
                 답을 만들고 있어요…
               </p>
             ) : null}
