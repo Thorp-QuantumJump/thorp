@@ -24,6 +24,7 @@ export default defineConfig({
       'src/components/marketflow/*.test.ts',
       // 011 사례 연결. 금지 표현 정적 검사가 이 폴더의 `.test.ts`로 들어온다(011 T081).
       'src/components/regimelink/*.test.ts',
+      'src/components/regime/*.test.ts',
       'src/components/result/*.test.ts',
       'src/hooks/*.test.ts',
       'src/components/records/*.test.ts',

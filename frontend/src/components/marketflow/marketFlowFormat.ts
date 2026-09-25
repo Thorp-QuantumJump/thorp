@@ -1,8 +1,16 @@
 import type { IndicatorDisplay } from '@/types/marketFlow'
 
-/** 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다. */
+/**
+ * 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다.
+ *
+ * 소수 첫째 자리까지 보인다(S15P21E205-447). 원천 값은 자릿수가 제각각이라(증가율 4.346167 등) 그대로 두면
+ * 읽을 수 없다. 정밀 값은 응답에 그대로 남는다.
+ */
 export function formatObservation(value: number | null): string {
-  return value === null ? '자료 없음' : value.toLocaleString('ko-KR', { maximumFractionDigits: 10 })
+  if (value === null) return '자료 없음'
+  const text = value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
+  // -0.04 처럼 0으로 반올림된 음수는 "-0"이 아니라 "0"이다.
+  return text === '-0' ? '0' : text
 }
 
 export function formatUpdatedAt(value: string | null): string {

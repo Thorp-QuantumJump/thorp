@@ -105,7 +105,7 @@
 - `versions.revision`은 그 (모드·분야·기준월)에서 결과가 달라진 순번이다(data-model §2).
 - `versions.sampleData`가 `true`면 008 미구현 상태의 예시 자료다(008 FR-022). 화면은 이 표시를
   반드시 노출한다.
-- `distance`는 문자열이고 소수점 아래 12자리다(research R4).
+- `distance`는 문자열이고 소수점 아래 12자리다(research R4). **화면은 소수 첫째 자리로 보이고**(비율은 %) 정밀 값은 숫자의 `title`로 남긴다(spec FR-045). 응답 값은 줄이지 않는다.
 - `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전한 후보 수,
   `stored` 저장된 표시 후보 수(≤10), `displayed` 이번 응답에 담긴 수. **`stored`가 `displayed`보다
   크면 '더 보기'가 남아 있다** — 화면은 이 둘로 버튼 노출을 정하고 10을 가정하지 않는다.
@@ -113,7 +113,7 @@
   보입니다"* 만 보이고 **`evaluated`·`eligible` 값 자체를 내보이지 않는다**(spec FR-013, SC-004).
   위 예시의 412는 기준월 2026-07처럼 과거가 긴 경우이며, 오래된 기준월은 수십 개로 줄어든다.
 - **유지율(retention)을 내려보내지 않는다**(spec FR-031).
-- **종합(v3, 모델 `REGIME-V3-EQ`)만의 필드** (spec FR-042·FR-043·FR-044):
+- **종합(v3, 모델 `REGIME-V3-EQ.1`)만의 필드** (spec FR-042·FR-043·FR-044):
   - `phaseNote` — 지금 시점의 블록 안 엇갈림이 컸을 때의 고정 문장. 없으면 `null`이다. 분야 검색은 늘 `null`이다.
   - `cases[].unusual` — 사례 관측 구간의 블록 안 엇갈림이 컸는지. v1 결과는 `false`다.
   - `cases[].context` — 특이 사례의 관측 구간 안 공식 발간물·사건 `[{kind, date, title, url?, source}]`.

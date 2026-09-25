@@ -109,16 +109,18 @@ class TestSentence:
         assert position is not None
         assert "20명은 당시로서는" in position.sentence
 
-    def test_소수_자릿수를_지어내지_않는다(self) -> None:
+    def test_값은_소수_첫째_자리까지다(self) -> None:
         assert format_value(3.2) == "3.2"
         assert format_value(112.0) == "112"
-        assert format_value(-0.25) == "-0.25"
+        assert format_value(-0.25) == "-0.3"  # 사사오입
+        assert format_value(4.346167) == "4.3"
+        assert format_value(-0.04) == "0"
 
     def test_지수_표기가_문장에_실리지_않는다(self) -> None:
         position = era_position_for(indicator(), END_MONTH, series_with(0.00005))
         assert position is not None
         assert "e-" not in position.sentence
-        assert "0.00005%" in position.sentence
+        assert "실업률 0%" in position.sentence
 
     def test_좋다_나쁘다를_쓰지_않는다(self) -> None:
         for value in (4.0, WINDOW_MEDIAN, 20.0):

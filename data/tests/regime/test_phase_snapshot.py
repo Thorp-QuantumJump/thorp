@@ -16,6 +16,7 @@ from conftest import make_registry, make_series, write_phase_config
 
 from data_pipeline.macro.registry import INDICATORS
 from data_pipeline.regime.context import ContextEvent, events_within
+from data_pipeline.regime.explain import format_pair
 from data_pipeline.regime.macro.types import format_month
 from data_pipeline.regime.phase import DEFAULT_CONFIG, build_phase_model, load_config, phase_inputs
 from data_pipeline.regime.phase_snapshot import (
@@ -158,12 +159,28 @@ class TestResidual:
         assert format_month(model.months[-1]) == "2019-12"
 
 
+class TestPair:
+    def test_한_자리에서_같게_보이면_다르게_보일_때까지_늘린다(self) -> None:
+        assert format_pair(2.31, 2.34) == ("2.31", "2.34")
+        assert format_pair(2.301, 2.304) == ("2.301", "2.304")
+        assert format_pair(2.3, 4.1) == ("2.3", "4.1")
+
+    def test_저장_자릿수까지_같으면_기본_자릿수다(self) -> None:
+        assert format_pair(2.3, 2.3) == ("2.3", "2.3")
+
+
 class TestFormat:
     @pytest.mark.parametrize(
         ("value", "text"),
-        [(0.30000000000000004, "0.3"), (12.3456, "12.35"), (-0.004, "0"), (2.0, "2")],
+        [
+            (0.30000000000000004, "0.3"),
+            (12.3456, "12.3"),
+            (12.35, "12.4"),
+            (-0.04, "0"),
+            (2.0, "2"),
+        ],
     )
-    def test_값은_소수_둘째_자리까지다(self, value: float, text: str) -> None:
+    def test_값은_소수_첫째_자리까지다(self, value: float, text: str) -> None:
         assert format_phase_value(value) == text
 
     @pytest.mark.parametrize(
@@ -243,4 +260,4 @@ class TestDisplay:
         config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])
         value, unit = config.display_of("trade_balance", 24_137_983_294.0)
         assert unit == "억 달러"
-        assert format_phase_value(value) == "241.38"
+        assert format_phase_value(value) == "241.4"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PathPoint } from '@/types/marketFlow'
-import { buildAxisDomain, recentDirection, sourceParts } from './marketFlowFormat'
+import { buildAxisDomain, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'
 
 /**
  * 실제 지표 값으로 검증한다. 꾸며낸 숫자로는 "환율이 평평해 보인다"는 문제가 재현되지 않는다.
@@ -120,5 +120,15 @@ describe('sourceParts', () => {
 
   it('서로 다른 이름이면 출처와 작성기관을 따로 적는다', () => {
     expect(sourceParts('통계청', 'KOSIS 산업활동동향')).toEqual(['출처 KOSIS 산업활동동향', '작성기관 통계청'])
+  })
+})
+
+describe('관측값 표기', () => {
+  it('소수 첫째 자리까지 보인다', () => {
+    expect(formatObservation(4.346167)).toBe('4.3')
+    expect(formatObservation(1351.25)).toBe('1,351.3')
+    expect(formatObservation(3)).toBe('3')
+    expect(formatObservation(-0.04)).toBe('0')
+    expect(formatObservation(null)).toBe('자료 없음')
   })
 })
