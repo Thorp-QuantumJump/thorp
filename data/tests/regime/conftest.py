@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
@@ -105,3 +106,56 @@ def make_registry(
         )
     )
     return IndicatorRegistry(version=version, fields=fields, indicators=indicators)
+
+
+def write_phase_config(
+    directory: Path,
+    registry: IndicatorRegistry,
+    *,
+    version: str = "REGIME-V3-TEST",
+    one_block: bool = False,
+) -> Path:
+    """대역 등록표에 맞춘 v3 블록 구성 — 분야 하나가 블록 하나, 국면 입력은 변환값 그대로다.
+
+    ``one_block``이면 모든 지표를 블록 하나로 묶는다 — 모델과 함께 결과도 바뀌는 경우를 만든다.
+
+    운영 설정(`config/regime-phase-v3.json`)은 008 등록표의 17개를 묶으므로 대역 등록표로 도는
+    배치 시험은 이것을 쓴다.
+    """
+    path = directory / "regime-phase-test.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": version,
+                "inputs": {
+                    entry.id: {"kind": "AS_IS", "unit": entry.unit} for entry in registry.indicators
+                },
+                "blocks": (
+                    [
+                        {
+                            "id": "ALL",
+                            "name": "전체",
+                            "members": [
+                                {"indicator": entry.id, "sign": 1} for entry in registry.indicators
+                            ],
+                        }
+                    ]
+                    if one_block
+                    else [
+                        {
+                            "id": field.id,
+                            "name": field.name,
+                            "members": [
+                                {"indicator": entry.id, "sign": 1}
+                                for entry in registry.indicators_of(field.id)
+                            ],
+                        }
+                        for field in registry.ordered_fields()
+                    ]
+                ),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return path

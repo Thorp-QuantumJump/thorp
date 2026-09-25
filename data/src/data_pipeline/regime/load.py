@@ -278,6 +278,25 @@ class RegimeRepository:
                 select(table.c.data_version).order_by(table.c.id.desc()).limit(1)
             ).scalar_one_or_none()
 
+    def has_model_version(self, scope: SearchScope, model_version: str) -> bool:
+        """그 범위에 이 모델 버전으로 적재한 항목이 하나라도 있나.
+
+        없으면 모델 버전이 바뀐 뒤 처음 도는 실행이다 — 그 범위는 전 구간을 다시 계산한다
+        (data-model §6). 자료 버전만 보면 `changed_since()`가 준 달부터만 돌아, 옛 모델의 결과가
+        과거 기준월에 남는다.
+        """
+        table = regime_search_snapshot_table
+        with self._engine.connect() as conn:
+            return (
+                conn.execute(
+                    select(table.c.id)
+                    .where(_scope_clause(scope.mode, scope.field_id))
+                    .where(table.c.model_version == model_version)
+                    .limit(1)
+                ).first()
+                is not None
+            )
+
     def latest_revision(self, scope: SearchScope, baseline_month: date) -> tuple[int, str] | None:
         """그 (모드·분야·기준월)의 가장 큰 `revision`과 그 `content_hash`."""
         with self._engine.connect() as conn:
