@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { fetchAssistantCapabilities } from '@/api/assistant'
 import type { AssistantCapabilities } from '@/types/assistant'
@@ -6,7 +6,6 @@ import { AssistantFab } from './AssistantFab'
 import {
   type AssistantPage,
   AssistantPageContext,
-  type AssistantPageHandlers,
   type AssistantPageRegistry,
   useAssistantPageRegistry,
 } from './assistantPageContext'
@@ -14,27 +13,18 @@ import {
 /** 로그인·가입·관리 화면에는 버튼을 두지 않는다(FR-001). 맥락이 등록돼도 이 경로면 그리지 않는다. */
 const HIDDEN_PATH_PREFIXES = ['/login', '/signup', '/admin']
 
-/** 페이지가 등록한 맥락과 탭 열기 핸들러를 `App` 수준에서 들고 있는다. 라우트가 바뀌어도 살아 있다. */
+/** 페이지가 등록한 맥락을 `App` 수준에서 들고 있는다. 라우트가 바뀌어도 살아 있다. */
 export function AssistantProvider({ children }: { children: ReactNode }) {
   const [page, setPage] = useState<AssistantPage | null>(null)
-  const handlersRef = useRef<AssistantPageHandlers>({})
 
-  const register = useCallback((next: AssistantPage, handlers: AssistantPageHandlers) => {
-    handlersRef.current = handlers
+  const register = useCallback((next: AssistantPage) => {
     setPage(next)
     return () => {
-      handlersRef.current = {}
       setPage((current) => (current === next ? null : current))
     }
   }, [])
-  const openTab = useCallback((tab: string) => {
-    handlersRef.current.openTab?.(tab)
-  }, [])
 
-  const value = useMemo<AssistantPageRegistry>(
-    () => ({ page, register, openTab }),
-    [page, register, openTab],
-  )
+  const value = useMemo<AssistantPageRegistry>(() => ({ page, register }), [page, register])
   return <AssistantPageContext.Provider value={value}>{children}</AssistantPageContext.Provider>
 }
 
