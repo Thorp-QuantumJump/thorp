@@ -131,6 +131,8 @@
   background: var(--thorp-accent-soft, var(--thorp-background));
   font-size: 0.85rem;
   color: var(--thorp-action-foreground, var(--thorp-copy));
+  align-self: flex-start;
+  max-width: 100%;
 }
 
 .examples {
