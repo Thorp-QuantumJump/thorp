@@ -22,8 +22,6 @@ import {
 import { registryFixture } from '@/test/strategyRegistryFixtures'
 import type { PublicResultDetail } from '@/types/result'
 import { ResultPage } from './ResultPage'
-import { AssistantProvider } from '@/components/assistant/AssistantWidget'
-import { useAssistantPageRegistry } from '@/components/assistant/assistantPageContext'
 
 /** 005 T037. SC-001·SC-008·SC-009, quickstart 1·7·8. */
 
@@ -93,56 +91,7 @@ function renderResult(token = resultToken) {
   )
 }
 
-/** 도우미(015)가 근거 카드로 탭을 열 때 부르는 창구를 밖으로 꺼낸다. */
-const registryProbe: { openTab: ((tab: string) => void) | null } = { openTab: null }
-function RegistryProbe() {
-  const registry = useAssistantPageRegistry()
-  registryProbe.openTab = registry?.openTab ?? null
-  return null
-}
-
-function renderResultWithAssistant(token = resultToken) {
-  return render(
-    <MemoryRouter initialEntries={[`/results/${token}`]}>
-      <AuthContext.Provider value={anonymousAuth}>
-        <AssistantProvider>
-          <Routes>
-            <Route path="/results/:token" element={<ResultPage />} />
-          </Routes>
-          <RegistryProbe />
-        </AssistantProvider>
-      </AuthContext.Provider>
-    </MemoryRouter>,
-  )
-}
-
 describe('ResultPage', () => {
-  it('도우미가 근거 카드의 탭을 열어 달라고 하면 그 탭이 열리고, 열 수 없는 탭은 무시한다 (015 FR-010)', async () => {
-    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)
-    apiMocks.fetchResultTimeseries.mockResolvedValue({ ...resultTimeseries, points: [] })
-    // 설정·근거 탭이 열리면 비중·예외·등록표·대표 상품을 받는다(B07과 같은 대역).
-    apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)
-    apiMocks.fetchResultExceptions.mockResolvedValue(resultExceptions)
-    apiMocks.fetchResultTrades.mockResolvedValue(resultTradePage)
-    apiMocks.fetchResultPositions.mockResolvedValue(resultPositions)
-    otherMocks.fetchInstrumentProfile.mockResolvedValue({ status: 'notReady', message: '준비 중' })
-    otherMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture)
-    renderResultWithAssistant()
-    await screen.findByRole('tablist', { name: '결과 보기' })
-    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
-
-    await act(async () => {
-      registryProbe.openTab?.('settings')
-    })
-    expect(screen.getByRole('tab', { name: '설정·근거' }).getAttribute('aria-selected')).toBe('true')
-
-    // 시계열이 비어 하락 구간이 없으면 '손실이 커진 때'는 열 수 없다 — 요청을 무시하고 자리에 머문다.
-    await act(async () => {
-      registryProbe.openTab?.('loss')
-    })
-    expect(screen.getByRole('tab', { name: '설정·근거' }).getAttribute('aria-selected')).toBe('true')
-  })
-
   beforeEach(() => {
     for (const mock of [...Object.values(apiMocks), ...Object.values(otherMocks)]) mock.mockReset()
     // 탭 묶음이 섹터 목록을 첫 화면에서 한 번 받는다(T098). 개별 테스트가 덮어쓴다.

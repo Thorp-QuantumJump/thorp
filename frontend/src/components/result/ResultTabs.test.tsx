@@ -107,41 +107,4 @@ describe('ResultTabs', () => {
     expect(first.getAttribute('tabindex')).toBe('0')
     expect(second.getAttribute('tabindex')).toBe('-1')
   })
-
-  it('제어 모드에서는 바깥이 준 탭이 열리고, 고른 탭은 바깥에 알린다 (015 근거 카드 → 탭)', async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    function Controlled() {
-      const [active, setActive] = useState('a')
-      return (
-        <>
-          <button type="button" onClick={() => setActive('d')}>
-            넷째 열기 요청
-          </button>
-          <ResultTabs
-            label="시험 탭"
-            defaultTab="a"
-            activeTab={active}
-            onActiveTabChange={(id) => {
-              onChange(id)
-              setActive(id)
-            }}
-            tabs={[
-              { id: 'a', label: '첫째', content: <p>첫째 내용</p> },
-              { id: 'd', label: '넷째', content: <p>넷째 내용</p> },
-            ]}
-          />
-        </>
-      )
-    }
-    render(<Controlled />)
-
-    await user.click(screen.getByRole('button', { name: '넷째 열기 요청' }))
-    expect(screen.getByRole('tab', { name: '넷째' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByRole('tabpanel').textContent).toContain('넷째 내용')
-
-    await user.click(screen.getByRole('tab', { name: '첫째' }))
-    expect(onChange).toHaveBeenCalledWith('a')
-    expect(screen.getByRole('tab', { name: '첫째' }).getAttribute('aria-selected')).toBe('true')
-  })
 })

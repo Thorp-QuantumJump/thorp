@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { AssistantAnswer } from '@/types/assistant'
 import { AssistantProvider, AssistantWidget } from './AssistantWidget'
@@ -18,31 +18,21 @@ export const answered: AssistantAnswer = {
   page: { kind: 'RESULT' },
 }
 
-/** 결과 화면 대역. 실제 `ResultPage`처럼 자기 맥락을 등록하고 탭 열기 요청을 받는다. */
-export function FakeResultPage({
-  token,
-  onOpenTab,
-}: {
-  token: string
-  onOpenTab?: (tab: string) => void
-}) {
+/** 결과 화면 대역. 실제 `ResultPage`처럼 자기 맥락을 등록한다. */
+export function FakeResultPage({ token }: { token: string }) {
   const page = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])
-  const openTab = useCallback((tab: string) => onOpenTab?.(tab), [onOpenTab])
-  useAssistantPageContext(page, { openTab })
+  useAssistantPageContext(page)
   return <main>결과 {token.slice(0, 4)}</main>
 }
 
-export function renderAssistant({
-  path = `/results/${TOKEN}`,
-  onOpenTab,
-}: { path?: string; onOpenTab?: (tab: string) => void } = {}) {
+export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AssistantProvider>
         <Routes>
-          <Route path="/results/:token" element={<RouteResult onOpenTab={onOpenTab} />} />
-          <Route path="/login" element={<RouteResult onOpenTab={onOpenTab} />} />
-          <Route path="/admin/learning" element={<RouteResult onOpenTab={onOpenTab} />} />
+          <Route path="/results/:token" element={<RouteResult />} />
+          <Route path="/login" element={<RouteResult />} />
+          <Route path="/admin/learning" element={<RouteResult />} />
           <Route path="/learn" element={<main>배우기</main>} />
         </Routes>
         <AssistantWidget />
@@ -51,10 +41,10 @@ export function renderAssistant({
   )
 }
 
-function RouteResult({ onOpenTab }: { onOpenTab?: (tab: string) => void }) {
+function RouteResult() {
   // 경로에 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에 있는 상황을 흉내 낸다.
   const token = window.location.pathname.includes('/results/') ? TOKEN : TOKEN
-  return <FakeResultPage token={token} onOpenTab={onOpenTab} />
+  return <FakeResultPage token={token} />
 }
 
 /** jsdom에는 `matchMedia`가 없다. 좁은 화면을 흉내 낼 때만 붙인다. */

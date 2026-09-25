@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react'
+import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from 'react'
 import styles from './resultTabs.module.css'
 
 /**
@@ -27,12 +27,6 @@ type ResultTabsProps = {
   label: string
   tabs: readonly ResultTab[]
   defaultTab: string
-  /**
-   * 바깥에서 탭을 바꿀 때(015 근거 카드 → 탭). 주면 제어 모드다 — 고른 탭은 `onActiveTabChange`로 알리고 부모가
-   * 값을 돌려준다. 없으면 지금처럼 스스로 든다.
-   */
-  activeTab?: string
-  onActiveTabChange?: (id: string) => void
 }
 
 const KEY_MOVES: Record<string, (index: number, count: number) => number> = {
@@ -42,21 +36,10 @@ const KEY_MOVES: Record<string, (index: number, count: number) => number> = {
   End: (_index, count) => count - 1,
 }
 
-export function ResultTabs({
-  label,
-  tabs,
-  defaultTab,
-  activeTab,
-  onActiveTabChange,
-}: ResultTabsProps) {
+export function ResultTabs({ label, tabs, defaultTab }: ResultTabsProps) {
   const baseId = useId()
-  const [ownActive, setOwnActive] = useState(defaultTab)
-  const active = activeTab ?? ownActive
-  const [visited, setVisited] = useState<ReadonlySet<string>>(() => new Set([active]))
-  // 제어 모드에서 바깥이 고른 탭도 처음 열릴 때 내용을 붙인다.
-  useEffect(() => {
-    setVisited((current) => (current.has(active) ? current : new Set(current).add(active)))
-  }, [active])
+  const [active, setActive] = useState(defaultTab)
+  const [visited, setVisited] = useState<ReadonlySet<string>>(() => new Set([defaultTab]))
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
 
   const tabId = (id: string) => `${baseId}-tab-${id}`
@@ -66,8 +49,7 @@ export function ResultTabs({
   const select = (id: string) => {
     const tab = tabs.find((candidate) => candidate.id === id)
     if (!tab || tab.disabled) return
-    if (activeTab === undefined) setOwnActive(id)
-    onActiveTabChange?.(id)
+    setActive(id)
     setVisited((current) => (current.has(id) ? current : new Set(current).add(id)))
   }
 

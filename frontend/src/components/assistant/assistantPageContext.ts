@@ -12,15 +12,9 @@ export type AssistantPage = {
   publicToken: string
 }
 
-export type AssistantPageHandlers = {
-  /** 근거 카드가 가리키는 탭을 연다. 결과 화면이 넘겨준다 */
-  openTab?: (tab: string) => void
-}
-
 export type AssistantPageRegistry = {
   page: AssistantPage | null
-  register: (page: AssistantPage, handlers: AssistantPageHandlers) => () => void
-  openTab: (tab: string) => void
+  register: (page: AssistantPage) => () => void
 }
 
 export const AssistantPageContext = createContext<AssistantPageRegistry | null>(null)
@@ -32,17 +26,12 @@ export function useAssistantPageRegistry(): AssistantPageRegistry | null {
 /**
  * 화면이 자기 맥락을 등록한다. 제공자 밖(테스트 등)에서는 아무것도 하지 않는다.
  *
- * <p>`page`와 `handlers.openTab`은 호출자가 `useMemo`·`useCallback`으로 고정한다. 매 렌더 새 객체면 등록을
- * 반복한다.
+ * <p>`page`는 호출자가 `useMemo`로 고정한다. 매 렌더 새 객체면 등록을 반복한다.
  */
-export function useAssistantPageContext(
-  page: AssistantPage | null,
-  handlers: AssistantPageHandlers = {},
-): void {
+export function useAssistantPageContext(page: AssistantPage | null): void {
   const registry = useContext(AssistantPageContext)
-  const openTab = handlers.openTab
   useEffect(() => {
     if (!registry || !page) return undefined
-    return registry.register(page, { openTab })
-  }, [registry, page, openTab])
+    return registry.register(page)
+  }, [registry, page])
 }
