@@ -175,7 +175,7 @@ T_g(*"분야 지표들이 함께 확보된 최신월"*, 008 FR-013)보다 뒤로
 | `snapshot_id` | BIGINT NOT NULL → `regime_search_snapshot(id)` | |
 | `rank` | SMALLINT NOT NULL | 1부터. 거리 오름차순, 동률은 오래된 종료월 우선(FR-012) |
 | `end_month` | DATE NOT NULL | 사례의 관측 구간 종료월. **사례의 동일성은 이 값으로 판정한다** |
-| `distance` | JSONB NOT NULL | `{value, byField: {...}, contribution: {...}}` — 전부 문자열 decimal. 종합 v3는 `{value, byField: {}, blocks: [{id, name, gap, spread}], blockContribution: {...}}` (spec FR-044) |
+| `distance` | JSONB NOT NULL | `{value, byField: {...}, contribution: {...}}` — 전부 문자열 decimal. 종합 v3는 `{value, byField: {}, blocks: [{id, name, gap, spread}], blockContribution: {...}, meetsThreshold}` (spec FR-044·FR-046). `meetsThreshold`는 기준이 교정된 검색 방식에만 있다 |
 | `indicator_values` | JSONB NOT NULL | 지표별 `{queryRaw, caseRaw, queryZ, caseZ, unit, e, nominalWeight, distanceShare}`. 종합 v3는 국면 입력 값이고 `distanceShare`가 없다 |
 | `explanation` | JSONB NOT NULL | `{similar: [문장], different: [문장]}` (research R8 템플릿 조립). 종합 v3는 `unusual`(bool)과, 있으면 `queryNote`(지금 시점 안내)·`context`(당시 맥락 `[{kind, date, title, url, source}]`)를 더한다 (spec FR-042·FR-043) |
 | `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족하거나 보조 척도가 0인 지표는 키가 없고, 전부 계산 불가이면 NULL |
@@ -245,7 +245,7 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 �
 
 `model_version`은 아래가 바뀌면 올린다(spec Key Entities). 값은 `REGIME-V1` 형태의 문자열이고
 사전 계산 배치가 상수로 들고 있다. **범위마다 다를 수 있다** — 분야 검색은 `REGIME-V1.1`, 종합 비교는
-설정 `data/config/regime-phase-v3.json`의 `version`(`REGIME-V3-EQ.1`)이다(spec FR-044). 종합은 국면 입력
+설정 `data/config/regime-phase-v3.json`의 `version`(`REGIME-V3-EQ.2`)이다(spec FR-044). 교정된 유사성 기준 τ·δ·최소 비교 시점도 같은 설정의 `threshold`에 있다(spec FR-046). 종합은 국면 입력
 규칙·블록 구성·블록 요인 방식·국면 거리·잔차 문턱이 바뀌어도 올린다. 당시 맥락 표(`regime-context-v1.json`)와 문장 표기(표시 배율 등)도
 결과 본문에 들어간다. **식별 키에는 `revision`이 없어 한 키가 한 내용만 담으므로**(§2, `UNIQUE (snapshot_key)`),
 자료·등록표 버전이 같은데 이런 변경으로 내용이 달라지면 적재가 `VersionNotBumpedError`로 멈춘다 — 그런 변경은
@@ -266,7 +266,8 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 �
 | **문장의 값 표기 자릿수**(기본 소수 첫째 자리, 두 값이 같게 보이면 늘림) | spec FR-045 |
 
 이력: `REGIME-V1`→`REGIME-V1.1`, `REGIME-V3-EQ`→`REGIME-V3-EQ.1` (2026-09-25, S15P21E205-447 — 문장 값 표기를
-소수 첫째 자리로. 계산은 같다).
+소수 첫째 자리로. 계산은 같다). `REGIME-V3-EQ.1`→`REGIME-V3-EQ.2` (2026-09-25, S15P21E205-448 — 교정된 유사성 기준.
+순위는 같고 상태가 `THRESHOLD_APPLIED`, 사례에 `meetsThreshold`가 붙는다).
 
 **버전을 올리면 이전 snapshot을 지우지 않는다.** 이전 검색이 참조하던 결과가 그대로 남아야
 재현이 성립한다(spec FR-031, 원칙 VIII). 모델 버전이 바뀌면 재계산 범위의 M이 계열 시작월이 되어

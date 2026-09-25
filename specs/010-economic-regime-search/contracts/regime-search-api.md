@@ -113,7 +113,13 @@
   보입니다"* 만 보이고 **`evaluated`·`eligible` 값 자체를 내보이지 않는다**(spec FR-013, SC-004).
   위 예시의 412는 기준월 2026-07처럼 과거가 긴 경우이며, 오래된 기준월은 수십 개로 줄어든다.
 - **유지율(retention)을 내려보내지 않는다**(spec FR-031).
-- **종합(v3, 모델 `REGIME-V3-EQ.1`)만의 필드** (spec FR-042·FR-043·FR-044):
+- **교정된 결과(`status = THRESHOLD_APPLIED`, 지금은 종합 비교만)** (spec FR-021·FR-046):
+  - `statusNote` = "Thorp가 정한 유사성 기준으로 사례를 나눴습니다. 기준을 넘지 못한 사례는 참고 사례로 따로 봅니다."
+  - `caseLabel`은 없다. `cases`는 **기준 충족 사례만** 담고 `limit`로 자른다.
+  - `referenceLabel` = "기준 미충족 참고 사례", `referenceCases`는 나머지 표시 후보 전부(자르지 않는다). 교정되지 않은 결과에는 두 키가 없다.
+  - `thresholdNote`는 기준 충족 사례가 없을 때만 온다 — 종합 "설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다.", 분야 "설정된 유사성 기준을 충족하는 사례가 없습니다."
+  - `counts.stored`는 기준 충족 사례 수다 — '더 보기'는 기본 목록에만 붙는다. `displayLimitNote`는 전체 표시 후보 기준 그대로다.
+- **종합(v3, 모델 `REGIME-V3-EQ.2`)만의 필드** (spec FR-042·FR-043·FR-044):
   - `phaseNote` — 지금 시점의 블록 안 엇갈림이 컸을 때의 고정 문장. 없으면 `null`이다. 분야 검색은 늘 `null`이다.
   - `cases[].unusual` — 사례 관측 구간의 블록 안 엇갈림이 컸는지. v1 결과는 `false`다.
   - `cases[].context` — 특이 사례의 관측 구간 안 공식 발간물·사건 `[{kind, date, title, url?, source}]`.

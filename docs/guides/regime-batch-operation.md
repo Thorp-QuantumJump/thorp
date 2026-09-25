@@ -68,7 +68,7 @@ $COMPOSE run --rm data-batch python scripts/precompute_regime.py --source macro
 ```
 
 - 재계산 범위는 배치가 정한다. 자료가 바뀐 달부터 다시 돌고, **범위마다 현재 모델 버전으로 적재한
-  행이 없으면 그 범위는 전 구간을 다시 돈다**(data-model §6). 모델 버전이 바뀐 뒤(예: 2026-09-25 `REGIME-V3-EQ.1`·`REGIME-V1.1`)
+  행이 없으면 그 범위는 전 구간을 다시 돈다**(data-model §6). 모델 버전이 바뀐 뒤(예: 2026-09-25 `REGIME-V3-EQ.2`·`REGIME-V1.1`)
   첫 실행이 여기에 해당한다 — `--all`을 줄 필요가 없다.
 - 실데이터 전 구간(기준월 약 4,500개)은 로컬 실측 약 60초다.
 - 출력의 `실패` 목록이 비어 있어야 한다. 기준월 하나의 실패는 배치를 멈추지 않고 그 기준월만 이전
@@ -79,7 +79,7 @@ $COMPOSE run --rm data-batch python scripts/precompute_regime.py --source macro
 ## 5. 확인
 
 ```bash
-# 범위별 모델 버전과 기준월 수 — 종합(COMPOSITE)이 REGIME-V3-EQ.1, 분야(FIELD)가 REGIME-V1.1이어야 한다
+# 범위별 모델 버전과 기준월 수 — 종합(COMPOSITE)이 REGIME-V3-EQ.2(상태 THRESHOLD_APPLIED), 분야(FIELD)가 REGIME-V1.1(상태 NEAREST_ONLY)이어야 한다
 docker exec thorp-postgres psql -U "$(sed -n 's/^POSTGRES_USER=//p' .env.prod)" \
   -d "$(sed -n 's/^POSTGRES_DB=//p' .env.prod)" -c \
   "select mode, model_version, count(*) from regime_search_snapshot group by 1, 2 order by 1, 2"
