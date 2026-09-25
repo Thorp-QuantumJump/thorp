@@ -1,5 +1,5 @@
 import { LoaderCircle, X } from 'lucide-react'
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'
 import { Button } from '@/components/ui/button'
 import type { AssistantAnswer } from '@/types/assistant'
@@ -32,35 +32,25 @@ function retryWording(retryAfterSeconds: number | null): string {
   return `${hh}:${mm} 이후에 다시 시도할 수 있어요.`
 }
 
+export type AssistantConversation = {
+  exchanges: Exchange[]
+  sending: boolean
+  send: (text: string) => Promise<void>
+}
+
 /**
- * 말풍선 안쪽(spec 015 FR-004·FR-010·FR-012·FR-015).
- *
- * <p>맥락 표시, 예시 질문 두셋, 300자 입력 하나. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 외부 전달 안내를
- * 보이고 전송은 사용자가 제출할 때만 한다. 답의 숫자는 서버가 채운 값이다.
- * 각 질문은 독립이다 — 이력은 이 말풍선이 열려 있는 동안만 보이고 저장하지 않는다.
- *
- * <p>화면(맥락)이 바뀌면 진행 중 요청을 취소하고 이력을 비운다. 요청 번호로 늦게 온 이전 답을 버린다.
+ * 한 화면의 질문·답 이력과 진행 중 요청. 말풍선이 아니라 플로팅 버튼이 들고 있어서 말풍선을 닫았다 열어도 남는다.
+ * 저장하지 않으므로 새로 고치면 사라지고, 화면(맥락)이 바뀌면 진행 중 요청을 취소하고 이력을 비운다(FR-015).
+ * 요청 번호로 늦게 온 이전 답을 버린다.
  */
-export function AssistantBubble({
-  page,
-  onClose,
-  autoFocus = false,
-}: {
-  page: AssistantPage
-  onClose: () => void
-  autoFocus?: boolean
-}) {
-  const [question, setQuestion] = useState('')
+export function useAssistantConversation(page: AssistantPage): AssistantConversation {
   const [exchanges, setExchanges] = useState<Exchange[]>([])
   const [sending, setSending] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const controllerRef = useRef<AbortController | null>(null)
   const sequenceRef = useRef(0)
 
   useEffect(() => {
-    // 맥락이 바뀌면(다른 결과로 이동) 이전 화면의 요청과 답을 버린다(FR-015).
     setExchanges([])
-    setQuestion('')
     setSending(false)
     return () => {
       controllerRef.current?.abort()
@@ -69,53 +59,83 @@ export function AssistantBubble({
     }
   }, [page.kind, page.publicToken])
 
+  const send = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || controllerRef.current) return
+      const controller = new AbortController()
+      controllerRef.current = controller
+      const sequence = ++sequenceRef.current
+      const id = sequence
+      setExchanges((current) => [...current, { id, question: trimmed, answer: null, failure: null }])
+      setSending(true)
+      try {
+        const answer = await askAssistant(
+          trimmed,
+          { kind: page.kind, publicToken: page.publicToken },
+          controller.signal,
+        )
+        if (sequenceRef.current !== sequence) return
+        setExchanges((current) =>
+          current.map((item) => (item.id === id ? { ...item, answer } : item)),
+        )
+      } catch (error) {
+        if (isAssistantRequestCancelled(error) || sequenceRef.current !== sequence) return
+        const failure = normalizeAssistantError(error)
+        setExchanges((current) =>
+          current.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  failure: {
+                    message: failure.message,
+                    retryable: failure.retryable,
+                    retryAfterSeconds: failure.status === 429 ? failure.retryAfterSeconds : null,
+                  },
+                }
+              : item,
+          ),
+        )
+      } finally {
+        if (sequenceRef.current === sequence) {
+          controllerRef.current = null
+          setSending(false)
+        }
+      }
+    },
+    [page.kind, page.publicToken],
+  )
+
+  return { exchanges, sending, send }
+}
+
+/**
+ * 말풍선 안쪽(spec 015 FR-004·FR-010·FR-012·FR-015).
+ *
+ * <p>맥락 표시, 예시 질문 두셋, 300자 입력 하나. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 안내를 보이고 전송은
+ * 사용자가 제출할 때만 한다. 답의 숫자는 서버가 채운 값이다. 이력은 `useAssistantConversation`이 들고 있다.
+ */
+export function AssistantBubble({
+  conversation,
+  onClose,
+  autoFocus = false,
+}: {
+  conversation: AssistantConversation
+  onClose: () => void
+  autoFocus?: boolean
+}) {
+  const { exchanges, sending, send } = conversation
+  const [question, setQuestion] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   useEffect(() => {
     if (autoFocus) textareaRef.current?.focus()
   }, [autoFocus])
 
-  const send = async (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || sending) return
-    controllerRef.current?.abort()
-    const controller = new AbortController()
-    controllerRef.current = controller
-    const sequence = ++sequenceRef.current
-    const id = sequence
-    setExchanges((current) => [...current, { id, question: trimmed, answer: null, failure: null }])
-    setQuestion('')
-    setSending(true)
-    try {
-      const answer = await askAssistant(
-        trimmed,
-        { kind: page.kind, publicToken: page.publicToken },
-        controller.signal,
-      )
-      if (sequenceRef.current !== sequence) return
-      setExchanges((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)))
-    } catch (error) {
-      if (isAssistantRequestCancelled(error) || sequenceRef.current !== sequence) return
-      const failure = normalizeAssistantError(error)
-      setExchanges((current) =>
-        current.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                failure: {
-                  message: failure.message,
-                  retryable: failure.retryable,
-                  retryAfterSeconds: failure.status === 429 ? failure.retryAfterSeconds : null,
-                },
-              }
-            : item,
-        ),
-      )
-    } finally {
-      if (sequenceRef.current === sequence) setSending(false)
-    }
-  }
-
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (sending) return
+    setQuestion('')
     void send(question)
   }
 
