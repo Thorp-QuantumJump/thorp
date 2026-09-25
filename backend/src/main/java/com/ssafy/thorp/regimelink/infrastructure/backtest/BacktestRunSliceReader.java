@@ -153,7 +153,13 @@ final class BacktestRunSliceReader {
         return latest == null ? List.of() : positions(latest);
     }
 
-    private static List<RegimeLinkJob.DailyPositions> dailyPositions(
+    /**
+     * 구간(d0~lastAvailable) 안에서 004가 남긴 보유 스냅샷을 <b>한 줄도 빼지 않고</b> 담는다 (T103, 계약 "구간 입력의 출처와 제약").
+     *
+     * <p>리밸런싱일로 거르지 않는다 — 기업행위(분할·분배금)로만 수량이 바뀐 날도 스냅샷이 있고, 워커는 스냅샷이 있는 날 그 수량으로 맞춘다. 빠지면 워커가 체결
+     * 누적값을 그대로 쓰는데 종목 손익 항등식은 그때도 0이라 어긋남이 드러나지 않는다(T100).
+     */
+    static List<RegimeLinkJob.DailyPositions> dailyPositions(
             List<EngineOutput.PortfolioSnapshot> snapshots, LocalDate from, LocalDate to) {
         List<RegimeLinkJob.DailyPositions> days = new ArrayList<>();
         for (EngineOutput.PortfolioSnapshot snapshot : snapshots) {
