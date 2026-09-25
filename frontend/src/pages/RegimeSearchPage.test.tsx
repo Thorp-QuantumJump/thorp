@@ -6,7 +6,7 @@ import { recordRegimeSearch } from '@/api/myRecords'
 import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch, getRegimeSearchById } from '@/api/regime'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { authenticatedUser } from '@/test/authFixtures'
-import { regimeDetail, regimeResult } from '@/test/regimeFixtures'
+import { fullText, regimeDetail, regimeResult } from '@/test/regimeFixtures'
 import { RegimeSearchPage } from './RegimeSearchPage'
 
 vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeSearchById: vi.fn(), getRegimeCaseDetail: vi.fn() }))
@@ -163,7 +163,7 @@ describe('경제환경 검색 화면', () => {
     fireEvent.click(screen.getByRole('button', { name: '상세 보기' }))
     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()
     expect(vi.mocked(getRegimeCaseDetail)).toHaveBeenCalledWith('2012-03', { searchId: 'search-1' }, expect.any(AbortSignal))
-    expect(screen.getByText('실제 거리 기여 1.000000000000')).toBeTruthy()
+    expect(screen.getByText(fullText('실제 거리 기여 100%'))).toBeTruthy()
   })
 
   it('과거 기준월을 지정하면 요청과 입력, 결과 제목에 그 월을 유지한다', async () => {
