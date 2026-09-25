@@ -19,9 +19,11 @@ import com.ssafy.thorp.assistant.application.result.PageKind;
 import com.ssafy.thorp.assistant.application.result.ToolSpec;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
+import com.ssafy.thorp.backtest.application.repository.CostProfileRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
+import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.backtest.domain.model.ResultSource;
 import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
@@ -34,8 +36,10 @@ import com.ssafy.thorp.sector.application.result.SectorListResult;
 import com.ssafy.thorp.sector.application.service.SectorService;
 import com.ssafy.thorp.sector.domain.model.Sector;
 import com.ssafy.thorp.sector.domain.vo.SectorCode;
+import com.ssafy.thorp.strategy.application.port.AllowedRange;
 import com.ssafy.thorp.strategy.application.port.ParameterAxis;
 import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;
+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;
 import com.ssafy.thorp.strategy.application.port.StrategyRegistration;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -75,8 +79,10 @@ class ResultEvidenceBuilderTest {
     private final PublicResultService publicResults = mock(PublicResultService.class);
     private final SectorService sectors = mock(SectorService.class);
     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);
+    private final CostProfileRepository costProfiles = mock(CostProfileRepository.class);
     private final ResultEvidenceBuilder builder =
-            new ResultEvidenceBuilder(publicResults, sectors, registry, SETTINGS, 100);
+            new ResultEvidenceBuilder(
+                    publicResults, sectors, registry, costProfiles, SETTINGS, 100);
 
     @BeforeEach
     void stubs() {
@@ -97,6 +103,19 @@ class ResultEvidenceBuilderTest {
         StrategyRegistration registration = mock(StrategyRegistration.class);
         when(registration.applicableAxes(any())).thenReturn(List.of(axis));
         when(registry.find("EQUAL_WEIGHT")).thenReturn(Optional.of(registration));
+        when(costProfiles.find("KR-ETF-2026-09"))
+                .thenReturn(
+                        Optional.of(
+                                new CostProfile(
+                                        "KR-ETF-2026-09",
+                                        new BigDecimal("1.5"),
+                                        new BigDecimal("3"),
+                                        new BigDecimal("5"),
+                                        BigDecimal.ZERO,
+                                        null,
+                                        false,
+                                        "PD-07",
+                                        "국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다")));
     }
 
     static Map<String, Object> item(String sectorId, String instrumentId, String weight) {
@@ -178,7 +197,13 @@ class ResultEvidenceBuilderTest {
                 null,
                 null,
                 config,
-                Map.of("engine", "nautilus 1.219.0", "rules", Map.of("version", "1")),
+                Map.of(
+                        "engine",
+                        "nautilus 1.219.0",
+                        "rules",
+                        Map.of("version", "1"),
+                        "costProfile",
+                        Map.of("version", "KR-ETF-2026-09")),
                 summary,
                 null,
                 null,
@@ -263,6 +288,7 @@ class ResultEvidenceBuilderTest {
                         "스프레드",
                         "슬리피지",
                         "세금",
+                        "세금 규칙",
                         "회복 기간(거래일)",
                         "회전율",
                         "비중 오차",
@@ -296,6 +322,8 @@ class ResultEvidenceBuilderTest {
         assertThat(facts.get("시작 금액").formattedValue()).isEqualTo("11,110,000원");
         assertThat(facts.get("전략").value()).isEqualTo("똑같이 나누기");
         assertThat(facts.get("리밸런싱 주기").value()).isEqualTo("MONTH_END");
+        assertThat(facts.get("세금 규칙").value()).isEqualTo("국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다");
+        assertThat(facts.get("세금 규칙").tab()).isEqualTo("settings");
         assertThat(facts.get("비중 출처").value()).isEqualTo("전략 계산");
         assertThat(facts.get("반도체 실제 비중").asOf()).isEqualTo(LocalDate.of(2024, 12, 31));
         assertThat(facts.get("반도체 실제 비중").value()).isEqualTo("0.4000");
@@ -416,6 +444,39 @@ class ResultEvidenceBuilderTest {
         Map<String, Evidence> facts = byLabel(buildCompleted());
 
         assertThat(facts).containsKeys("SEMICONDUCTOR 대표 ETF", "BATTERY 실제 비중", "rebalance");
+    }
+
+    @Test
+    @DisplayName("목록형 축의 객체 값은 등록표 선택지 문구로 적고, 프로필이 없으면 세금 규칙 근거도 없다")
+    void choiceValuesUseRegistryLabels() {
+        ParameterAxis axis = mock(ParameterAxis.class);
+        when(axis.name()).thenReturn("rebalance");
+        when(axis.label()).thenReturn("리밸런싱 주기");
+        when(axis.unit()).thenReturn(null);
+        when(axis.allowedRange())
+                .thenReturn(
+                        AllowedRange.ofChoices(
+                                List.of(
+                                        new RegisteredChoice(
+                                                Map.of("mode", "CALENDAR", "unit", "MONTH_END"),
+                                                "월말"))));
+        StrategyRegistration registration = mock(StrategyRegistration.class);
+        when(registration.applicableAxes(any())).thenReturn(List.of(axis));
+        when(registry.find("EQUAL_WEIGHT")).thenReturn(Optional.of(registration));
+        when(costProfiles.find(anyString())).thenReturn(Optional.empty());
+        Map<String, Object> config = config(twoItems());
+        config.put(
+                "parameters", Map.of("rebalance", Map.of("mode", "CALENDAR", "unit", "MONTH_END")));
+        when(publicResults.getWeights(TOKEN))
+                .thenReturn(weights(List.of("091160.XKRX", "305720.XKRX")));
+        when(publicResults.getDetail(TOKEN))
+                .thenReturn(detail(config, summary(List.of("091160.XKRX", "305720.XKRX")), false));
+
+        Map<String, Evidence> facts =
+                byLabel(builder.build(new PageContext(PageKind.RESULT, TOKEN)));
+
+        assertThat(facts.get("리밸런싱 주기").value()).isEqualTo("월말");
+        assertThat(facts).doesNotContainKey("세금 규칙");
     }
 
     @Test

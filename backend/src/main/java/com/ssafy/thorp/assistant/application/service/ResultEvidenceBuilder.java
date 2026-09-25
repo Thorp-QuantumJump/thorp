@@ -16,9 +16,11 @@ import com.ssafy.thorp.assistant.application.service.tools.ResultToolContext;
 import com.ssafy.thorp.assistant.application.service.tools.TradesBetweenTool;
 import com.ssafy.thorp.backtest.application.port.message.EngineOutput;
 import com.ssafy.thorp.backtest.application.port.message.WeightsSource;
+import com.ssafy.thorp.backtest.application.repository.CostProfileRepository;
 import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;
 import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;
 import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;
+import com.ssafy.thorp.backtest.domain.model.CostProfile;
 import com.ssafy.thorp.result.application.result.PublicResultDetail;
 import com.ssafy.thorp.result.application.service.PublicResultService;
 import com.ssafy.thorp.sector.application.service.SectorService;
@@ -60,6 +62,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
     private final PublicResultService publicResults;
     private final SectorService sectors;
     private final ParameterRegistryPort registry;
+    private final CostProfileRepository costProfiles;
     private final AssistantSettings settings;
     private final int tradesPageSize;
 
@@ -67,11 +70,13 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
             PublicResultService publicResults,
             SectorService sectors,
             ParameterRegistryPort registry,
+            CostProfileRepository costProfiles,
             AssistantSettings settings,
             @Value("${thorp.result.trades-page-size}") int tradesPageSize) {
         this.publicResults = publicResults;
         this.sectors = sectors;
         this.registry = registry;
+        this.costProfiles = costProfiles;
         this.settings = settings;
         this.tradesPageSize = tradesPageSize;
     }
@@ -99,6 +104,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
         Facts contributions = new Facts();
         BacktestDetailResult.Summary summary = detail.summary();
         summaryFacts(summary, fixed);
+        taxRuleFact(detail, fixed);
         configFacts(config, detail, fixed);
         for (Item item : items) {
             perSector.add(
@@ -218,6 +224,29 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
         }
     }
 
+    /**
+     * 비용 프로필의 세금 규칙 설명 한 줄. "세금은 왜 영인가"에 답할 근거다 — 세금률 같은 수치는 싣지 않는다. 프로필을 못 읽으면 근거가 없을 뿐이다(지어내지
+     * 않는다).
+     */
+    private void taxRuleFact(PublicResultDetail detail, Facts facts) {
+        Map<String, Object> versions = detail.versions() == null ? Map.of() : detail.versions();
+        String version = text(mapOf(versions.get("costProfile")).get("version"));
+        if (version == null) {
+            return;
+        }
+        try {
+            costProfiles
+                    .find(version)
+                    .map(CostProfile::taxNote)
+                    .filter(note -> !note.isBlank())
+                    .ifPresent(note -> facts.add("세금 규칙", note, null, SETTINGS, EvidenceKind.TEXT));
+        } catch (RuntimeException exc) {
+            log.info(
+                    "assistant evidence: cost profile unavailable ({})",
+                    exc.getClass().getSimpleName());
+        }
+    }
+
     private void configFacts(Map<String, Object> config, PublicResultDetail detail, Facts facts) {
         facts.add("요청 시작일", text(config.get("start")), null, SETTINGS, EvidenceKind.DATE);
         facts.add("요청 종료일", text(config.get("end")), null, SETTINGS, EvidenceKind.DATE);
@@ -234,11 +263,31 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
         String strategyName = detail.strategyName() == null ? strategyId : detail.strategyName();
         facts.add("전략", strategyName, null, SETTINGS, EvidenceKind.TEXT);
         Map<String, Object> parameters = mapOf(config.get("parameters"));
-        Map<String, String> axisLabels = axisLabels(strategyId, parameters);
+        Map<String, ParameterAxis> axes = axes(strategyId, parameters);
         for (Map.Entry<String, Object> entry : parameters.entrySet()) {
-            String label = axisLabels.getOrDefault(entry.getKey(), entry.getKey());
-            facts.add(label, text(entry.getValue()), null, SETTINGS, EvidenceKind.TEXT);
+            ParameterAxis axis = axes.get(entry.getKey());
+            String label = axis == null ? entry.getKey() : axisLabel(axis);
+            facts.add(label, choiceText(axis, entry.getValue()), null, SETTINGS, EvidenceKind.TEXT);
         }
+    }
+
+    private static String axisLabel(ParameterAxis axis) {
+        String unit = axis.unit() == null || axis.unit().isBlank() ? "" : " (" + axis.unit() + ")";
+        return axis.label() + unit;
+    }
+
+    /**
+     * 목록형 축의 값은 등록표 선택지의 문구로 적는다. 값이 객체(리밸런싱 주기의 {@code {mode, unit}})면 {@code toString}이 그대로 나가
+     * 사람이 읽을 수 없기 때문이다. 등록표에 문구가 없으면 값 원문이다.
+     */
+    private static String choiceText(ParameterAxis axis, Object value) {
+        if (axis != null
+                && axis.allowedRange() != null
+                && axis.allowedRange().isEnumerated()
+                && axis.allowedRange().contains(value)) {
+            return axis.allowedRange().labelOf(value);
+        }
+        return text(value);
     }
 
     private static void weightsFacts(
@@ -317,22 +366,18 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
         }
     }
 
-    /** 003 등록표의 축 라벨. 등록표를 못 읽거나 전략이 없으면 축 이름 그대로 쓴다. */
-    private Map<String, String> axisLabels(String strategyId, Map<String, Object> parameters) {
-        Map<String, String> labels = new LinkedHashMap<>();
+    /** 003 등록표의 적용 축. 등록표를 못 읽거나 전략이 없으면 비어 있고, 축 이름·값 원문 그대로 쓴다. */
+    private Map<String, ParameterAxis> axes(String strategyId, Map<String, Object> parameters) {
+        Map<String, ParameterAxis> axes = new LinkedHashMap<>();
         if (strategyId == null) {
-            return labels;
+            return axes;
         }
         try {
             registry.find(strategyId)
                     .ifPresent(
                             registration -> {
                                 for (ParameterAxis axis : registration.applicableAxes(parameters)) {
-                                    String unit =
-                                            axis.unit() == null || axis.unit().isBlank()
-                                                    ? ""
-                                                    : " (" + axis.unit() + ")";
-                                    labels.put(axis.name(), axis.label() + unit);
+                                    axes.put(axis.name(), axis);
                                 }
                             });
         } catch (RuntimeException exc) {
@@ -340,7 +385,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {
                     "assistant evidence: axis labels unavailable ({})",
                     exc.getClass().getSimpleName());
         }
-        return labels;
+        return axes;
     }
 
     private static List<Item> items(Map<String, Object> config, Map<String, String> sectorNames) {
