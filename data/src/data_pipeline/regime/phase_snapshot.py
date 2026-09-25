@@ -202,6 +202,10 @@ def distance_body(model: PhaseModel, distance: PhaseDistance) -> dict[str, Any]:
             for block in distance.blocks
         ],
     }
+    threshold = model.config.threshold
+    if threshold is not None:
+        # 교정된 기준 충족 여부(FR-021). 순위는 바꾸지 않고 사례를 나눌 표시만 남긴다.
+        body["meetsThreshold"] = threshold.meets(distance, len(model.months))
     if round_for_storage(total) != 0.0:
         body["blockContribution"] = {
             block.block_id: to_storage_text(block.gap / total) for block in distance.blocks

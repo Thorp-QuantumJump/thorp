@@ -86,4 +86,46 @@ describe('사례 목록', () => {
     expect(screen.queryByText('당시 맥락')).toBeNull()
     expect(screen.queryByText('지금 시점')).toBeNull()
   })
+
+  it('교정된 결과는 기준 충족 사례를 기본 목록에, 참고 사례는 눌러야 열리는 별도 목록에 보인다', () => {
+    const base = result(2, 2, 2)
+    const applied: RegimeSearchResult = {
+      ...base,
+      status: 'THRESHOLD_APPLIED',
+      caseLabel: null,
+      cases: [base.cases[0]],
+      referenceLabel: '기준 미충족 참고 사례',
+      referenceCases: [base.cases[1]],
+      counts: { ...base.counts, stored: 1, displayed: 1 },
+    }
+    render(<CaseList result={applied} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
+    expect(screen.queryByText('2012-02')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' }))
+    expect(screen.getByText('2012-02')).toBeTruthy()
+    expect(screen.getByText(/Thorp가 정한 유사성 기준을 넘지 못한/)).toBeTruthy()
+    expect(screen.queryByText('더 보기')).toBeNull()
+  })
+
+  it('기준 충족 사례가 없으면 안내와 분야별 탐색을 보인다', () => {
+    const base = result(1, 1, 1)
+    const onBrowseFields = vi.fn()
+    const none: RegimeSearchResult = {
+      ...base,
+      mode: 'COMPOSITE',
+      field: null,
+      status: 'THRESHOLD_APPLIED',
+      caseLabel: null,
+      cases: [],
+      thresholdNote: '설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다.',
+      referenceLabel: '기준 미충족 참고 사례',
+      referenceCases: base.cases,
+      counts: { ...base.counts, stored: 0, displayed: 0 },
+    }
+    render(<CaseList result={none} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} onBrowseFields={onBrowseFields} />)
+    expect(screen.getByText(/충족하는 사례가 없습니다/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))
+    expect(onBrowseFields).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' })).toBeTruthy()
+  })
 })

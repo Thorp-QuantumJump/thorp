@@ -17,11 +17,69 @@ interface CaseListProps {
    * 없으면 010이 내려 준 문구를 그대로 그린다. 사례마다 다른 것을 넣어야 해서 값이 아니라 함수다.
    */
   postPeriodSlot?: (summary: RegimeCaseSummary) => ReactNode
+  /** 기준 충족 사례가 없는 종합 결과에서 분야별 탐색으로 잇는다(spec US3 시나리오 4). */
+  onBrowseFields?: () => void
 }
 
 /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */
-export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot }: CaseListProps) {
+export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot, onBrowseFields }: CaseListProps) {
   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)
+  const [showReferences, setShowReferences] = useState(false)
+  const references = result.referenceCases ?? []
+  const renderCase = (item: RegimeCaseSummary) => (
+    <li key={item.endMonth} className={styles.case}>
+      <div className={styles.caseHeading}>
+        <h3>{item.endMonth}</h3>
+      </div>
+      <p className={styles.months}>
+        관측 구간 <span>{item.observationMonths.join(' · ')}</span>
+      </p>
+      <div className={styles.reasons}>
+        <section>
+          <h4>비슷한 점</h4>
+          <ul>{item.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
+        </section>
+        <section>
+          <h4>다른 점</h4>
+          <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
+        </section>
+      </div>
+      {item.context && item.context.length > 0 && (
+        <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>
+          <h4>당시 맥락</h4>
+          <p>{copy.contextNote}</p>
+          <ul>
+            {item.context.map((link) => (
+              <li key={`${link.kind}-${link.date}-${link.title}`}>
+                <time dateTime={link.date}>{link.date}</time>{' '}
+                {link.url ? (
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
+                ) : (
+                  <span>{link.title}</span>
+                )}
+                <span className={styles.contextSource}> · {link.source}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {item.detailAvailable && (
+        <button
+          type="button" className={styles.detailButton}
+          aria-expanded={selectedEndMonth === item.endMonth}
+          aria-controls={`regime-detail-${item.endMonth}`}
+          onClick={() => setSelectedEndMonth((current) => current === item.endMonth ? null : item.endMonth)}
+        >
+          {selectedEndMonth === item.endMonth ? '상세 닫기' : '상세 보기'}
+        </button>
+      )}
+      {selectedEndMonth === item.endMonth && (
+        <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>
+          <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} postPeriodSlot={postPeriodSlot?.(item)} />
+        </div>
+      )}
+    </li>
+  )
   return (
     <section aria-labelledby="regime-cases-title" className={styles.list}>
       <div className={styles.heading}>
@@ -41,61 +99,35 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p
         </Disclosure>
       )}
       <ul className={styles.cases}>
-        {result.cases.map((item) => (
-          <li key={item.endMonth} className={styles.case}>
-            <div className={styles.caseHeading}>
-              <h3>{item.endMonth}</h3>
-            </div>
-            <p className={styles.months}>
-              관측 구간 <span>{item.observationMonths.join(' · ')}</span>
-            </p>
-            <div className={styles.reasons}>
-              <section>
-                <h4>비슷한 점</h4>
-                <ul>{item.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
-              </section>
-              <section>
-                <h4>다른 점</h4>
-                <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
-              </section>
-            </div>
-            {item.context && item.context.length > 0 && (
-              <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>
-                <h4>당시 맥락</h4>
-                <p>{copy.contextNote}</p>
-                <ul>
-                  {item.context.map((link) => (
-                    <li key={`${link.kind}-${link.date}-${link.title}`}>
-                      <time dateTime={link.date}>{link.date}</time>{' '}
-                      {link.url ? (
-                        <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
-                      ) : (
-                        <span>{link.title}</span>
-                      )}
-                      <span className={styles.contextSource}> · {link.source}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {item.detailAvailable && (
-              <button
-                type="button" className={styles.detailButton}
-                aria-expanded={selectedEndMonth === item.endMonth}
-                aria-controls={`regime-detail-${item.endMonth}`}
-                onClick={() => setSelectedEndMonth((current) => current === item.endMonth ? null : item.endMonth)}
-              >
-                {selectedEndMonth === item.endMonth ? '상세 닫기' : '상세 보기'}
-              </button>
-            )}
-            {selectedEndMonth === item.endMonth && (
-              <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>
-                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} postPeriodSlot={postPeriodSlot?.(item)} />
-              </div>
-            )}
-          </li>
-        ))}
+        {result.cases.map(renderCase)}
       </ul>
+      {result.thresholdNote && (
+        <Disclosure label="유사성 기준" context={context} tone="warning">
+          <p>{result.thresholdNote}</p>
+          {onBrowseFields && (
+            <button type="button" className={styles.detailButton} onClick={onBrowseFields}>
+              분야별로 살펴보기
+            </button>
+          )}
+        </Disclosure>
+      )}
+      {references.length > 0 && (
+        <section className={styles.references} aria-label={result.referenceLabel ?? copy.referenceLabel}>
+          <button
+            type="button" className={styles.more}
+            aria-expanded={showReferences} aria-controls="regime-reference-cases"
+            onClick={() => setShowReferences((current) => !current)}
+          >
+            {showReferences ? `${result.referenceLabel ?? copy.referenceLabel} 접기` : `${result.referenceLabel ?? copy.referenceLabel} 보기`}
+          </button>
+          {showReferences && (
+            <>
+              <p className={styles.limitNote}>{copy.referenceNote}</p>
+              <ul id="regime-reference-cases" className={styles.cases}>{references.map(renderCase)}</ul>
+            </>
+          )}
+        </section>
+      )}
       {result.counts.stored > result.counts.displayed && (
         <button className={styles.more} type="button" onClick={onShowMore} disabled={isLoading}>
           {isLoading ? '불러오는 중' : '더 보기'}

@@ -114,6 +114,7 @@ def write_phase_config(
     *,
     version: str = "REGIME-V3-TEST",
     one_block: bool = False,
+    threshold: Mapping[str, object] | None = None,
 ) -> Path:
     """대역 등록표에 맞춘 v3 블록 구성 — 분야 하나가 블록 하나, 국면 입력은 변환값 그대로다.
 
@@ -127,6 +128,7 @@ def write_phase_config(
         json.dumps(
             {
                 "version": version,
+                **({"threshold": dict(threshold)} if threshold is not None else {}),
                 "inputs": {
                     entry.id: {"kind": "AS_IS", "unit": entry.unit} for entry in registry.indicators
                 },

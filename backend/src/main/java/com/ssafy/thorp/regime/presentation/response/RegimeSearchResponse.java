@@ -47,7 +47,10 @@ public record RegimeSearchResponse(
         VersionsView versions,
         CountsView counts,
         String phaseNote,
-        List<CaseSummaryView> cases) {
+        List<CaseSummaryView> cases,
+        String thresholdNote,
+        String referenceLabel,
+        List<CaseSummaryView> referenceCases) {
 
     public static RegimeSearchResponse from(RegimeSearchResult result) {
         RegimeSnapshot snapshot = result.snapshot();
@@ -74,7 +77,15 @@ public record RegimeSearchResponse(
                 phaseNote(result),
                 result.displayedCases().stream()
                         .map(item -> CaseSummaryView.of(item, snapshot))
-                        .toList());
+                        .toList(),
+                thresholdNote(result),
+                snapshot.thresholdApplied() ? RegimeNotes.REFERENCE_LABEL : null,
+                // 교정된 결과에서만 목록을 나눈다(spec FR-021). 그 밖에는 키가 없다.
+                snapshot.thresholdApplied()
+                        ? result.referenceCases().stream()
+                                .map(item -> CaseSummaryView.of(item, snapshot))
+                                .toList()
+                        : null);
     }
 
     /**
@@ -87,6 +98,17 @@ public record RegimeSearchResponse(
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /** 기준 충족 사례가 하나도 없을 때의 안내 (spec US1 시나리오 5, US3 시나리오 4). */
+    private static String thresholdNote(RegimeSearchResult result) {
+        RegimeSnapshot snapshot = result.snapshot();
+        if (!snapshot.thresholdApplied() || !snapshot.meetingCases().isEmpty()) {
+            return null;
+        }
+        return snapshot.mode() == SearchMode.COMPOSITE
+                ? RegimeNotes.NO_MEETING_COMPOSITE_NOTE
+                : RegimeNotes.NO_MEETING_FIELD_NOTE;
     }
 
     /** 질의가 실제로 본 달 — 지표별 비교 시점의 합집합이다(spec FR-001). */
@@ -243,10 +265,13 @@ public record RegimeSearchResponse(
     public record CountsView(int evaluated, int eligible, int stored, int displayed) {
         static CountsView of(RegimeSearchResult result) {
             RegimeSnapshot snapshot = result.snapshot();
+            // 교정된 결과의 stored 는 기준 충족 사례 수다 — '더 보기'는 기본 목록(충족 사례)에만 붙는다(FR-021).
             return new CountsView(
                     snapshot.candidateCounts().evaluated(),
                     snapshot.eligibleCount(),
-                    snapshot.storedCount(),
+                    snapshot.thresholdApplied()
+                            ? snapshot.meetingCases().size()
+                            : snapshot.storedCount(),
                     result.displayedCount());
         }
     }
