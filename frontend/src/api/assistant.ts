@@ -110,7 +110,8 @@ export async function askAssistant(
       apiClient.post<ResultEnvelope<AssistantAnswer>>(
         '/assistant/questions',
         { question, context },
-        { signal },
+        // 서버가 질문 하나에 2분(thorp.assistant.timeout.total)까지 쓴다. 공용 10초로는 모델 응답 전에 끊긴다.
+        { signal, timeout: 120_000 },
       ),
     )
     return unwrap(response.data)
