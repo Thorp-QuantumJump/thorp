@@ -40,3 +40,8 @@ export function regimeDetail(overrides: Partial<RegimeCaseDetail> = {}): RegimeC
     ...overrides,
   }
 }
+
+
+/** 숫자가 `<Num>`으로 나뉘어도 요소 하나의 전체 글자로 찾는다(S15P21E205-447). */
+export const fullText = (text: string) => (_: string, element: Element | null) =>
+  element?.textContent === text && ![...element.children].some((child) => child.textContent === text)

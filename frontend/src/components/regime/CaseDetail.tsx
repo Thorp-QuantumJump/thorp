@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'
 import { FieldBreakdown } from './FieldBreakdown'
+import { Num } from './Num'
 import * as copy from './fixedCopy'
 import styles from './CaseDetail.module.css'
 
@@ -24,7 +25,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }
     <section className={styles.detail} aria-label={`${detail.endMonth} 사례 상세`}>
       <h4>사례 상세 · {detail.endMonth}</h4>
       <p>관측 구간 {detail.observationMonths.join(' · ')}</p>
-      <p>전체 거리 <strong>{detail.distance}</strong></p>
+      <p>전체 거리 <strong><Num value={detail.distance} /></strong></p>
       {mode === 'COMPOSITE' ? (
         <FieldBreakdown detail={detail} summary={summary} fieldNames={fieldNames} />
       ) : (
@@ -37,11 +38,11 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }
       {detail.indicators.map((indicator) => (
         <section key={indicator.id} className={styles.indicator} aria-label={`${indicator.name} 계산 근거`}>
           <h6>{indicator.name}</h6>
-          <p>지표 거리 Eᵢ {indicator.e} · 명목 비중 {indicator.nominalWeight}
-            {indicator.distanceShare != null && <> · 실제 거리 기여 {indicator.distanceShare}</>}
+          <p>지표 거리 Eᵢ <Num value={indicator.e} /> · 명목 비중 <Num value={indicator.nominalWeight} as="share" />
+            {indicator.distanceShare != null && <> · 실제 거리 기여 <Num value={indicator.distanceShare} as="share" /></>}
           </p>
           {indicator.scale ? (
-            <p>공통 척도 · {indicator.scale.method} · 중앙값 {indicator.scale.median} · 산포 {indicator.scale.spread} · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>
+            <p>공통 척도 · {indicator.scale.method} · 중앙값 <Num value={indicator.scale.median} /> · 산포 <Num value={indicator.scale.spread} /> · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>
           ) : <p>{copy.scaleMissingNote}</p>}
           <div className={styles.tableScroll}>
             <table>
@@ -50,8 +51,8 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }
               <tbody>{indicator.comparisonMonths.map((month, index) => (
                 <tr key={`${month}-${index}`}>
                   <td>{month}</td><td>{indicator.caseMonths[index]}</td>
-                  <td>{indicator.queryRaw[index]} {indicator.unit}</td><td>{indicator.caseRaw[index]} {indicator.unit}</td>
-                  <td>{indicator.queryZ[index]}</td><td>{indicator.caseZ[index]}</td>
+                  <td><Num value={indicator.queryRaw[index]} /> {indicator.unit}</td><td><Num value={indicator.caseRaw[index]} /> {indicator.unit}</td>
+                  <td><Num value={indicator.queryZ[index]} /></td><td><Num value={indicator.caseZ[index]} /></td>
                 </tr>
               ))}</tbody>
             </table>

@@ -1,5 +1,6 @@
 import type { RegimeCaseDetail, RegimeCaseSummary } from '@/types/regime'
 import * as copy from './fixedCopy'
+import { Num } from './Num'
 import styles from './FieldBreakdown.module.css'
 
 interface Props {
@@ -25,8 +26,8 @@ export function FieldBreakdown({ detail, summary, fieldNames }: Props) {
             {blocks.map((block) => (
               <li key={block.id}>
                 <strong>{block.name}</strong>
-                <span>거리 {block.gap}</span>
-                {block.contribution != null && <span>실제 거리 기여 {block.contribution}</span>}
+                <span>거리 <Num value={block.gap} /></span>
+                {block.contribution != null && <span>실제 거리 기여 <Num value={block.contribution} as="share" /></span>}
               </li>
             ))}
           </ul>
@@ -39,8 +40,8 @@ export function FieldBreakdown({ detail, summary, fieldNames }: Props) {
             {Object.entries(detail.byField).map(([id, distance]) => (
               <li key={id}>
                 <strong>{fieldNames[id] ?? id}</strong>
-                <span>거리 {distance}</span>
-                {detail.contribution?.[id] != null && <span>실제 거리 기여 {detail.contribution[id]}</span>}
+                <span>거리 <Num value={distance} /></span>
+                {detail.contribution?.[id] != null && <span>실제 거리 기여 <Num value={detail.contribution[id]} as="share" /></span>}
               </li>
             ))}
           </ul>
