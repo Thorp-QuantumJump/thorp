@@ -203,6 +203,59 @@ class NewsProcessingRulesTest {
                     .as("국내 보도는 국내 연결 여부를 따지지 않는다")
                     .isTrue();
         }
+
+        private final NewsRelevanceClassifier titleClassifier =
+                new NewsRelevanceClassifier(
+                        new RegistryNewsTopicCatalog(
+                                new NewsLinkRegistry(
+                                        "news-link-test",
+                                        List.of(
+                                                new NewsLinkRegistry.Topic(
+                                                        "markets", "증권·금융시장", false, List.of()),
+                                                new NewsLinkRegistry.Topic(
+                                                        "sector-construction",
+                                                        "건설 업종",
+                                                        false,
+                                                        List.of("CONSTRUCTION"),
+                                                        List.of("건설사"),
+                                                        List.of())),
+                                        List.of())));
+
+        @Test
+        @DisplayName("제목 키워드는 채널 주제에 더해지고 걸린 키워드를 근거로 남긴다")
+        void 제목_키워드_연결() {
+            NewsRelevanceClassifier.Relevance relevance =
+                    titleClassifier.classify(List.of(), false, List.of("markets"), "건설사 해외 수주 늘었다");
+
+            assertThat(relevance.topicKeys())
+                    .containsExactlyInAnyOrder("markets", "sector-construction");
+            assertThat(relevance.sectorIds()).containsExactly("CONSTRUCTION");
+            assertThat(relevance.evidenceByTopicKey())
+                    .containsEntry("markets", NewsRelevanceClassifier.CHANNEL_EVIDENCE)
+                    .containsEntry(
+                            "sector-construction",
+                            NewsRelevanceClassifier.TITLE_EVIDENCE_PREFIX + "건설사");
+        }
+
+        @Test
+        @DisplayName("제목 키워드만으로는 해외 기사를 받지 않는다")
+        void 제목_키워드_해외() {
+            assertThat(
+                            titleClassifier
+                                    .classify(List.of(), true, List.of(), "건설사 해외 수주 늘었다")
+                                    .accepted())
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("제목이 없으면 제목 규칙을 보지 않는다")
+        void 제목_없음() {
+            assertThat(
+                            titleClassifier
+                                    .classify(List.of(), false, List.of("markets"), null)
+                                    .topicKeys())
+                    .containsExactly("markets");
+        }
     }
 
     @Nested

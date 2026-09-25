@@ -38,14 +38,15 @@ public class NewsSectorQueryPolicy {
         if (sectorId == null || sectorId.isBlank()) {
             return true;
         }
+        if (sectors.isRegistered(sectorId)) {
+            // 뉴스 전용 섹터는 001 대응표와 무관하게 늘 여기서 통과한다(Session 2026-09-25).
+            return true;
+        }
         if (sectors.isEmpty()) {
             // 001의 대응표가 아직 발행되지 않았다. 어떤 값도 확인할 수 없으므로 거부하지 않고 빈 화면으로 답한다.
             return false;
         }
-        if (!sectors.isRegistered(sectorId)) {
-            // 값을 메시지에 싣지 않는다. 요청 값을 그대로 되돌려 주면 가림 규칙이 응답에서 무너진다(spec FR-021).
-            throw new NewsQueryException("등록되지 않은 섹터입니다.");
-        }
-        return true;
+        // 값을 메시지에 싣지 않는다. 요청 값을 그대로 되돌려 주면 가림 규칙이 응답에서 무너진다(spec FR-021).
+        throw new NewsQueryException("등록되지 않은 섹터입니다.");
     }
 }
