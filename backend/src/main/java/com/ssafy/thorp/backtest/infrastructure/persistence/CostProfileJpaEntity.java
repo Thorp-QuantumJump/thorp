@@ -43,6 +43,9 @@ public class CostProfileJpaEntity {
     @Column(columnDefinition = "text")
     private String note;
 
+    @Column(columnDefinition = "text")
+    private String taxNote;
+
     protected CostProfileJpaEntity() {}
 
     public String getVersion() {
@@ -75,5 +78,9 @@ public class CostProfileJpaEntity {
 
     public String getNote() {
         return note;
+    }
+
+    public String getTaxNote() {
+        return taxNote;
     }
 }
