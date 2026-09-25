@@ -132,11 +132,16 @@ export function AssistantBubble({
     if (autoFocus) textareaRef.current?.focus()
   }, [autoFocus])
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
+  // 보내기 버튼과 Enter 가 같은 길이다. 보내면서 입력을 비운다.
+  const sendTyped = () => {
     if (sending) return
     setQuestion('')
     void send(question)
+  }
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    sendTyped()
   }
 
   const sent = exchanges.length > 0
@@ -214,7 +219,7 @@ export function AssistantBubble({
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
-              void send(question)
+              sendTyped()
             }
           }}
         />
