@@ -21,4 +21,23 @@ describe('종합 분야 내역', () => {
     render(<FieldBreakdown detail={regimeDetail({ distance: '0', contribution: undefined })} summary={summary} fieldNames={{ 'field-1': '시험 분야' }} />)
     expect(screen.queryByText(/실제 거리 기여/)).toBeNull()
   })
+
+  it('v3 결과는 경제 블록 거리를 그리고 분야 목록을 그리지 않는다', () => {
+    render(<FieldBreakdown
+      detail={regimeDetail({
+        byField: {}, contribution: undefined,
+        blocks: [
+          { id: 'real', name: '실물 경기', gap: '2.459', contribution: '0.4177', spread: '0.61' },
+          { id: 'financial', name: '금융 여건', gap: '3.427', spread: '0.70' },
+        ],
+      })}
+      summary={summary} fieldNames={{ 'field-1': '시험 분야' }}
+    />)
+    expect(screen.getByRole('heading', { name: '경제 블록별 거리와 기여' })).toBeTruthy()
+    expect(screen.getByText('실물 경기')).toBeTruthy()
+    expect(screen.getByText('실제 거리 기여 0.4177')).toBeTruthy()
+    expect(screen.getAllByText(/실제 거리 기여/)).toHaveLength(1)
+    expect(screen.getByText(/경제 흐름별 블록/)).toBeTruthy()
+    expect(screen.queryByText('시험 분야')).toBeNull()
+  })
 })
