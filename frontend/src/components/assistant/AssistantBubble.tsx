@@ -1,4 +1,4 @@
-import { LoaderCircle, SendHorizontal, X } from 'lucide-react'
+import { ArrowLeft, LoaderCircle, SendHorizontal, X } from 'lucide-react'
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,8 @@ export type AssistantConversation = {
   exchanges: Exchange[]
   sending: boolean
   send: (text: string) => Promise<void>
+  /** 처음 화면(안내·예시 질문)으로 돌아간다. 진행 중 요청은 취소한다 */
+  reset: () => void
 }
 
 /**
@@ -106,7 +108,15 @@ export function useAssistantConversation(page: AssistantPage): AssistantConversa
     [page.kind, page.publicToken],
   )
 
-  return { exchanges, sending, send }
+  const reset = useCallback(() => {
+    controllerRef.current?.abort()
+    controllerRef.current = null
+    sequenceRef.current += 1
+    setExchanges([])
+    setSending(false)
+  }, [])
+
+  return { exchanges, sending, send, reset }
 }
 
 /**
@@ -124,7 +134,7 @@ export function AssistantBubble({
   onClose: () => void
   autoFocus?: boolean
 }) {
-  const { exchanges, sending, send } = conversation
+  const { exchanges, sending, send, reset } = conversation
   const [question, setQuestion] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -149,7 +159,14 @@ export function AssistantBubble({
   return (
     <div className={styles.bubble}>
       <div className={styles.head}>
-        <span className={styles.context}>결과 도우미</span>
+        <span className={styles.headStart}>
+          {sent ? (
+            <button type="button" className={styles.close} aria-label="처음으로" onClick={reset}>
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
+          ) : null}
+          <span className={styles.context}>결과 도우미</span>
+        </span>
         <button type="button" className={styles.close} aria-label="말풍선 닫기" onClick={onClose}>
           <X size={18} aria-hidden="true" />
         </button>
