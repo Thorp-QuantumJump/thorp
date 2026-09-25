@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'
 import { CaseDetailLoader } from './CaseDetailLoader'
 import { Disclosure } from './Disclosure'
+import * as copy from './fixedCopy'
 import styles from './CaseList.module.css'
 
 interface CaseListProps {
@@ -34,6 +35,11 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p
           <p>{result.caseLabel}</p>
         </Disclosure>
       )}
+      {result.phaseNote && (
+        <Disclosure label="지금 시점" context={context} tone="warning">
+          <p>{result.phaseNote}</p>
+        </Disclosure>
+      )}
       <ul className={styles.cases}>
         {result.cases.map((item) => (
           <li key={item.endMonth} className={styles.case}>
@@ -53,6 +59,25 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p
                 <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
               </section>
             </div>
+            {item.context && item.context.length > 0 && (
+              <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>
+                <h4>당시 맥락</h4>
+                <p>{copy.contextNote}</p>
+                <ul>
+                  {item.context.map((link) => (
+                    <li key={`${link.kind}-${link.date}-${link.title}`}>
+                      <time dateTime={link.date}>{link.date}</time>{' '}
+                      {link.url ? (
+                        <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
+                      ) : (
+                        <span>{link.title}</span>
+                      )}
+                      <span className={styles.contextSource}> · {link.source}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {item.detailAvailable && (
               <button
                 type="button" className={styles.detailButton}
