@@ -113,6 +113,13 @@
   보입니다"* 만 보이고 **`evaluated`·`eligible` 값 자체를 내보이지 않는다**(spec FR-013, SC-004).
   위 예시의 412는 기준월 2026-07처럼 과거가 긴 경우이며, 오래된 기준월은 수십 개로 줄어든다.
 - **유지율(retention)을 내려보내지 않는다**(spec FR-031).
+- **종합(v3, 모델 `REGIME-V3-EQ`)만의 필드** (spec FR-042·FR-043·FR-044):
+  - `phaseNote` — 지금 시점의 블록 안 엇갈림이 컸을 때의 고정 문장. 없으면 `null`이다. 분야 검색은 늘 `null`이다.
+  - `cases[].unusual` — 사례 관측 구간의 블록 안 엇갈림이 컸는지. v1 결과는 `false`다.
+  - `cases[].context` — 특이 사례의 관측 구간 안 공식 발간물·사건 `[{kind, date, title, url?, source}]`.
+    `kind`는 `KDI_TRENDS`·`BASE_RATE`·`CYCLE_TURN`. 본문·요약은 없다. `url`이 없는 사건(경기 정점·저점)은
+    키가 없다. **특이 사례가 아니거나 붙일 사건이 없으면 키가 없다** — 빈 목록이 "그 기간에 아무 일도
+    없었다"로 읽히지 않게. 화면은 검색에 쓰지 않은 참고 링크임을 함께 밝힌다.
 
 ### 응답 200 — 계산 불가
 
@@ -226,6 +233,11 @@
   `method`·`windowStart`·`windowEnd`·`months`는 수기 대조용이고 화면에 그대로 내보내지 않는다.
 - 이 값은 **같은 자료·등록표·모델 버전에서 기준월과 무관**하다. 같은 `endMonth`면 어느 검색에서 열어도 같은 문장이 온다(SC-011).
 - `postPeriod.available`은 011이 붙기 전까지 `false`다. 빈 값을 만들어 내지 않는다.
+- **종합(v3)의 사례 상세는 `byField`가 빈 객체이고 `contribution`이 없으며 `blocks`가 온다**(spec FR-041·FR-044) —
+  `[{id, name, gap, contribution?, spread}]`. `gap`은 블록 점수 차이의 비교 시점 평균, `contribution`은 블록
+  거리 ÷ 블록 거리 합(합이 0이면 키 없음), `spread`는 그 기준월 척도 구간의 블록 점수 표준편차(수기 대조용).
+  `indicators[]`의 `queryRaw`·`caseRaw`는 국면 입력 값, `nominalWeight`는 블록 안 `1/n` × `1/블록 수`,
+  `distanceShare`는 없다. v1 결과(분야 검색)에는 `blocks` 키가 없다.
 - `indicators[].scale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — 중앙값·산포·방법·
   기준 구간·비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다(spec FR-028).
 

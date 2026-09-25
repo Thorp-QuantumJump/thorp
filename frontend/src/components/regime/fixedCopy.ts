@@ -21,6 +21,16 @@ export const sampleDataNote = '이 결과는 아직 확정되지 않은 예시 �
 /** 동일가중이 설계 선택임을 밝힌다(spec FR-010). 중요성이 같다는 뜻으로 적지 않는다. */
 export const equalWeightNote = '분야별 거리를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.'
 
+/**
+ * v3 종합의 블록 구성과 동일가중이 설계 선택임을 밝힌다(spec 010 v3 개정안 §3.2·§5.2).
+ * 통계적 요인이나 KDI 공식 판단처럼 읽히지 않게 쓴다.
+ */
+export const blockWeightNote =
+    '지표를 경제 흐름별 블록으로 묶고, 블록 안 지표와 블록 사이를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.'
+
+/** 당시 맥락 링크가 순위의 근거로 읽히지 않게 한다(spec 010 v3 개정안 §4). */
+export const contextNote = '같은 기간에 나온 공식 발간물과 사건입니다. 검색에 쓰지 않았고, 사례를 고른 이유가 아닙니다.'
+
 /** 저장된 척도가 없어 손계산 대조를 할 수 없는 지표에 붙는다(spec FR-028). */
 export const scaleMissingNote = '공통 척도 정보를 확인할 수 없습니다.'
 

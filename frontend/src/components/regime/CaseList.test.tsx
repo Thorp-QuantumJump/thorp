@@ -53,4 +53,37 @@ describe('사례 목록', () => {
     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()
     expect(screen.queryByText('가까운 순서로 10개까지 보입니다.')).toBeNull()
   })
+
+  it('지금 시점 안내와 특이 사례의 당시 맥락을 검색 근거가 아닌 링크로 보인다', () => {
+    const base = result(2, 2, 2)
+    const withContext: RegimeSearchResult = {
+      ...base,
+      mode: 'COMPOSITE',
+      field: null,
+      phaseNote: '지금은 같은 흐름에 속한 지표들이 평소보다 엇갈려 움직이고 있습니다.',
+      cases: [
+        {
+          ...base.cases[0],
+          unusual: true,
+          context: [
+            { kind: 'KDI_TRENDS', date: '2009-01-05', title: 'KDI 경제동향 2009년 1월호', url: 'https://www.kdi.re.kr/research/monTrends?pub_no=1', source: 'KDI 한국개발연구원' },
+            { kind: 'CYCLE_TURN', date: '2009-02-01', title: '경기 저점', source: '국가데이터처 기준순환일' },
+          ],
+        },
+        base.cases[1],
+      ],
+    }
+    render(<CaseList result={withContext} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
+    expect(screen.getByText(withContext.phaseNote as string)).toBeTruthy()
+    const link = screen.getByRole('link', { name: 'KDI 경제동향 2009년 1월호' })
+    expect(link.getAttribute('rel')).toContain('noopener')
+    expect(screen.getByText('경기 저점').tagName).toBe('SPAN')
+    expect(screen.getAllByText(/검색에 쓰지 않았고/)).toHaveLength(1)
+  })
+
+  it('v1 결과에는 당시 맥락과 지금 시점 안내가 없다', () => {
+    render(<CaseList result={result(2, 2, 2)} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
+    expect(screen.queryByText('당시 맥락')).toBeNull()
+    expect(screen.queryByText('지금 시점')).toBeNull()
+  })
 })
