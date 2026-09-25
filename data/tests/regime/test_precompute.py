@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from conftest import make_registry, make_series
+from conftest import make_registry, make_series, write_phase_config
 from sqlalchemy import select
 
 import precompute_regime
@@ -153,6 +153,9 @@ def run_batch(
     source: object,
     argv: Sequence[str],
     tmp_path: Path,
+    *,
+    phase_version: str = "REGIME-V3-TEST",
+    one_block: bool = False,
 ) -> int:
     """진입점을 실제로 돌린다 — 적재까지 포함한 경로가 배치의 전부다."""
     monkeypatch.setattr(precompute_regime, "create_source", lambda name: source)
@@ -162,6 +165,11 @@ def run_batch(
         classmethod(lambda cls, path=None: repository),
     )
     monkeypatch.setattr(precompute_regime, "PROCESSED_ROOT", tmp_path)
+    monkeypatch.setattr(
+        precompute_regime,
+        "PHASE_CONFIG",
+        write_phase_config(tmp_path, source.registry(), version=phase_version, one_block=one_block),
+    )
     return precompute_regime.main(["--source", "macro", *argv])
 
 
@@ -256,6 +264,38 @@ class TestWatermarkScope:
         # t ≥ M — A는 값이 달라졌으니 새 revision, B는 내용이 같으니 그대로다.
         assert revision_of(after, "A", changed) == 2
         assert revision_of(after, "B", changed) == 1
+
+    def test_모델_버전이_바뀐_범위만_전_구간을_다시_돈다(
+        self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
+    ) -> None:
+        """자료가 최근 달만 바뀌어도 종합의 모델 버전이 바뀌면 종합은 과거 기준월까지 새로 돈다.
+
+        안 그러면 과거 기준월의 종합은 옛 모델 결과가 최신인 채로 남는다(data-model §6).
+        """
+        source = stub_source()
+        assert run_batch(monkeypatch, repository, source, ["--since", "2008-01"], tmp_path) == 0
+        changed = date(2009, 6, 1)
+        source.revise("A1", changed, 42.0, version=f"{FIXTURE_PREFIX}STUB-2")
+        second = run_batch(
+            monkeypatch,
+            repository,
+            source,
+            [],
+            tmp_path,
+            phase_version="REGIME-V3-NEXT",
+            one_block=True,
+        )
+        assert second == 0
+        rows = snapshot_rows(repository)
+        old = date(2008, 6, 1)
+        composite_models = {
+            row["model_version"]
+            for row in rows
+            if row["mode"] == "COMPOSITE" and row["baseline_month"] == old
+        }
+        assert "REGIME-V3-NEXT" in composite_models
+        # 분야는 모델 버전이 그대로라 M 이전을 다시 돌지 않는다.
+        assert revision_of(rows, "A", old) == 1
 
     def test_내용이_같으면_자료_버전이_올라도_행이_늘지_않는다(
         self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
