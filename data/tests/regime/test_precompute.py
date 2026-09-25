@@ -22,6 +22,7 @@ from sqlalchemy import select
 import precompute_regime
 from data_pipeline.regime.load import (
     RegimeRepository,
+    VersionNotBumpedError,
     baseline_record_for,
     regime_search_case_table,
     regime_search_log_table,
@@ -238,6 +239,34 @@ class TestIdempotence:
         assert first.inserted is True
         assert second.inserted is False
         assert second.revision == first.revision == 1
+
+    def test_버전을_올리지_않고_내용이_바뀌면_사유를_말하고_멈춘다(
+        self, repository: RegimeRepository
+    ) -> None:
+        """식별 키는 한 내용만 담는다.
+
+        코드·설정만 바꿔 같은 키에 다른 결과가 나오면 DB 오류가 아니라 '모델 버전을 올린다'로
+        알린다(data-model §6). 이전 revision은 그대로 남는다.
+        """
+        source = stub_source()
+        series = {
+            entry.id: dict(source.monthly_series(entry.id))
+            for entry in source.registry().indicators
+        }
+        versions = Versions(data=source.data_version(), registry=source.registry().version)
+        scope = SearchScope.field("A")
+        builder = SnapshotBuilder(source.registry(), series, source.publication, versions)
+        month = builder.observable_months(scope)[150]
+        assert repository.save(builder.build(scope, month)).inserted is True
+
+        # 자료 버전은 그대로 두고 값만 바꾼다 — 계산 규칙을 바꾼 것과 같은 효과다.
+        changed = {key: dict(values) for key, values in series.items()}
+        for key, value in list(changed["A1"].items()):
+            changed["A1"][key] = MonthlyValue(month=key, value=value.value * 3, raw=0.0)
+        other = SnapshotBuilder(source.registry(), changed, source.publication, versions)
+        with pytest.raises(VersionNotBumpedError):
+            repository.save(other.build(scope, month))
+        assert repository.latest_revision(scope, month)[0] == 1
 
 
 class TestWatermarkScope:

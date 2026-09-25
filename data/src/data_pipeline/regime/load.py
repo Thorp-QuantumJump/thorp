@@ -161,6 +161,16 @@ class RegimeLoadError(RuntimeError):
     """사전 계산 결과를 적재할 수 없다."""
 
 
+class VersionNotBumpedError(RegimeLoadError):
+    """같은 식별 키에 다른 내용이 나왔다 — 버전을 올리지 않고 계산이나 문장을 바꿨다.
+
+    식별 키에는 `revision`이 없어 `UNIQUE (snapshot_key)`가 한 키에 한 내용만 허용한다
+    (data-model §2). 자료·등록표 버전이 같은데 내용이 달라졌다면 코드나 설정(블록 구성·문장 표기·
+    맥락 표)이 바뀐 것이고, 그 변경은 모델 버전을 올려야 한다(data-model §6). DB 오류로 흘려보내지
+    않고 이 사유로 알린다.
+    """
+
+
 class ContentRevertedError(RegimeLoadError):
     """내용이 이전 `revision`의 것으로 되돌아갔다.
 
@@ -359,12 +369,25 @@ class RegimeRepository:
                     snapshot_key=snapshot.key, revision=previous[0], inserted=False
                 )
             revision = 1 if previous is None else previous[0] + 1
+            self._require_new_key(conn, snapshot)
             self._require_new_content(conn, snapshot, content)
             snapshot_id = self._insert_snapshot(conn, snapshot, revision, content, moment)
             self._insert_cases(conn, snapshot, snapshot_id, moment)
             if baseline_record is not None:
                 self._write_baseline(conn, baseline_record, moment)
         return LoadResult(snapshot_key=snapshot.key, revision=revision, inserted=True)
+
+    def _require_new_key(self, conn: Connection, snapshot: Snapshot) -> None:
+        table = regime_search_snapshot_table
+        existing = conn.execute(
+            select(table.c.revision).where(table.c.snapshot_key == snapshot.key)
+        ).scalar_one_or_none()
+        if existing is not None:
+            raise VersionNotBumpedError(
+                f"{snapshot.key}에 revision {existing}의 내용과 다른 결과가 나왔다. "
+                "자료·등록표 버전이 같으면 계산·문장·설정을 바꾼 것이므로 모델 버전을 올린다"
+                "(data-model §6)"
+            )
 
     def _require_new_content(self, conn: Connection, snapshot: Snapshot, content: str) -> None:
         table = regime_search_snapshot_table

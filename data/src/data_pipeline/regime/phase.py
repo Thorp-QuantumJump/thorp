@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Final
@@ -88,6 +88,15 @@ class PhaseConfig:
     input_kinds: Mapping[str, str]
     input_units: Mapping[str, str]
     blocks: tuple[Block, ...]
+    #: 설명 문장에만 쓰는 표시 배율·단위. 없으면 저장 값과 ``input_units`` 그대로다.
+    #: 무역수지처럼 달러 단위 1년 변화가 열한 자리 숫자로 문장에 실리는 것을 막는다(S15P21E205-446).
+    display: Mapping[str, tuple[float, str]] = field(default_factory=dict)
+
+    def display_of(self, indicator_id: str, value: float) -> tuple[float, str]:
+        """문장에 실을 (값, 단위). 계산과 저장에는 쓰지 않는다."""
+        default = (1.0, self.input_units.get(indicator_id, ""))
+        divisor, unit = self.display.get(indicator_id, default)
+        return value / divisor, unit
 
     @property
     def indicator_ids(self) -> tuple[str, ...]:
@@ -111,6 +120,7 @@ class PhaseConfig:
             input_kinds={k: v for k, v in self.input_kinds.items() if k != indicator_id},
             input_units={k: v for k, v in self.input_units.items() if k != indicator_id},
             blocks=tuple(block for block in blocks if block.members),
+            display={k: v for k, v in self.display.items() if k != indicator_id},
         )
 
 
@@ -124,6 +134,13 @@ def load_config(path: Path = DEFAULT_CONFIG, *, indicator_ids: Iterable[str]) ->
     inputs = raw.get("inputs", {})
     kinds = {key: value["kind"] for key, value in inputs.items()}
     units = {key: value.get("unit", "") for key, value in inputs.items()}
+    display = {
+        key: (float(value["displayDivisor"]), value["displayUnit"])
+        for key, value in inputs.items()
+        if "displayDivisor" in value
+    }
+    if any(divisor <= 0 for divisor, _ in display.values()):
+        raise PhaseConfigError("표시 배율은 0보다 커야 한다")
     unknown_kinds = sorted(key for key, kind in kinds.items() if kind not in INPUT_KINDS)
     if unknown_kinds:
         raise PhaseConfigError(f"모르는 국면 입력 규칙이다: {unknown_kinds}")
@@ -150,7 +167,9 @@ def load_config(path: Path = DEFAULT_CONFIG, *, indicator_ids: Iterable[str]) ->
         raise PhaseConfigError(f"국면 입력표가 등록표와 다르다: {sorted(set(kinds) ^ registered)}")
     if any(member.sign not in (1, -1) for block in blocks for member in block.members):
         raise PhaseConfigError("부호는 1 또는 -1이다")
-    return PhaseConfig(version=raw["version"], input_kinds=kinds, input_units=units, blocks=blocks)
+    return PhaseConfig(
+        version=raw["version"], input_kinds=kinds, input_units=units, blocks=blocks, display=display
+    )
 
 
 # --- 국면 입력 (§3.1) ---------------------------------------------------------------------------

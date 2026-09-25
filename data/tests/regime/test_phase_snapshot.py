@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from datetime import date
 from pathlib import Path
@@ -13,9 +14,10 @@ from pathlib import Path
 import pytest
 from conftest import make_registry, make_series, write_phase_config
 
+from data_pipeline.macro.registry import INDICATORS
 from data_pipeline.regime.context import ContextEvent, events_within
 from data_pipeline.regime.macro.types import format_month
-from data_pipeline.regime.phase import build_phase_model, load_config, phase_inputs
+from data_pipeline.regime.phase import DEFAULT_CONFIG, build_phase_model, load_config, phase_inputs
 from data_pipeline.regime.phase_snapshot import (
     CASE_UNUSUAL_SENTENCE,
     format_phase_value,
@@ -224,3 +226,21 @@ class TestContext:
                 if unusual:
                     assert len(case.explanation["context"]) == 3
         assert seen_unusual
+
+
+class TestDisplay:
+    def test_표시_배율은_문장에만_쓰고_저장_값은_그대로다(self, tmp_path: Path) -> None:
+        registry = make_registry(LAYOUT)
+        path = write_phase_config(tmp_path, registry)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw["inputs"]["B1"].update({"displayDivisor": 100, "displayUnit": "백"})
+        path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        config = load_config(path, indicator_ids=[entry.id for entry in registry.indicators])
+        assert config.display_of("B1", 250.0) == (2.5, "백")
+        assert config.display_of("A1", 250.0) == (250.0, "%")
+
+    def test_실제_설정의_무역수지는_억_달러로_말한다(self) -> None:
+        config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])
+        value, unit = config.display_of("trade_balance", 24_137_983_294.0)
+        assert unit == "억 달러"
+        assert format_phase_value(value) == "241.38"
