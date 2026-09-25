@@ -355,7 +355,9 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                         "escalation",
                         "provisional",
                         "note",
-                        "created_at");
+                        "created_at",
+                        // 세금 규칙 설명(spec 015 도우미 근거, S15P21E205-444)
+                        "tax_note");
         assertThat(columnsOf("strategy_rules"))
                 .containsExactlyInAnyOrder(
                         "strategy_id",
@@ -365,6 +367,13 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                         "spec",
                         "decision_ref",
                         "created_at");
+
+        // 두 행 모두 세금이 0이고 이유가 같다. 설명이 비면 도우미가 "세금은 왜 0원" 에 근거 부족으로 답한다.
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT tax_note FROM cost_profile ORDER BY version", String.class))
+                .containsExactly(
+                        "국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다", "국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다");
 
         // 데모 비용은 임시값으로 표시돼 있어야 한다. false로 들어가면 결과가 확정 비용인 척한다.
         assertThat(

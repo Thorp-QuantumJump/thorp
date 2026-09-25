@@ -134,7 +134,8 @@ description: "결과 화면 질문 도우미의 실행 작업 목록"
 | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |
 | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |
 | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` (S15P21E205-441) | `feat(fe)/441-assistant-bubble` | 5 | T040~T046 | 1 |
-| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |
+| 5b | `[BE] 도우미 인사 고정 문구·세금 규칙 근거·설정값 라벨 표기` (S15P21E205-444) | `feat(be)/444-assistant-feedback` | 3 | 묶음 5 사람 확인에서 나온 결정 반영: `GREETING` 상태, `cost_profile.tax_note` 근거, 목록형 축 라벨, spec·계약 갱신 | 4·5 |
+| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5·5b |
 
 티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.
 

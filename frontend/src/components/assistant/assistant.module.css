@@ -225,7 +225,8 @@
 }
 
 .answer[data-status='INSUFFICIENT_EVIDENCE'],
-.answer[data-status='OUT_OF_SCOPE'] {
+.answer[data-status='OUT_OF_SCOPE'],
+.answer[data-status='GREETING'] {
   color: var(--thorp-copy);
 }
 

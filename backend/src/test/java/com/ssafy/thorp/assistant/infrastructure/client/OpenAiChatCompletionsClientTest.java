@@ -149,7 +149,7 @@ class OpenAiChatCompletionsClientTest {
         JsonNode schema = format.get("json_schema").get("schema");
         assertThat(schema.get("properties").get("status").get("enum"))
                 .extracting(JsonNode::asText)
-                .containsExactly("ANSWERED", "INSUFFICIENT_EVIDENCE", "OUT_OF_SCOPE");
+                .containsExactly("ANSWERED", "INSUFFICIENT_EVIDENCE", "OUT_OF_SCOPE", "GREETING");
         assertThat(schema.get("additionalProperties").asBoolean()).isFalse();
 
         JsonNode tools = body.get("tools");
