@@ -27,6 +27,7 @@
 .more:hover { border-color: var(--thorp-accent-soft); }
 .more:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .more:disabled { cursor: wait; opacity: .6; }
+.references { margin-top: 16px; }
 .limitNote { margin: 14px 0 0; color: var(--thorp-copy); font-size: .78rem; }
 @media (max-width: 640px) {
   .case { grid-template-columns: 1fr; gap: 10px; }
