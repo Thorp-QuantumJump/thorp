@@ -157,6 +157,7 @@ def run_batch(
     *,
     phase_version: str = "REGIME-V3-TEST",
     one_block: bool = False,
+    threshold: Mapping[str, object] | None = None,
 ) -> int:
     """진입점을 실제로 돌린다 — 적재까지 포함한 경로가 배치의 전부다."""
     monkeypatch.setattr(precompute_regime, "create_source", lambda name: source)
@@ -169,7 +170,13 @@ def run_batch(
     monkeypatch.setattr(
         precompute_regime,
         "PHASE_CONFIG",
-        write_phase_config(tmp_path, source.registry(), version=phase_version, one_block=one_block),
+        write_phase_config(
+            tmp_path,
+            source.registry(),
+            version=phase_version,
+            one_block=one_block,
+            threshold=threshold,
+        ),
     )
     return precompute_regime.main(["--source", "macro", *argv])
 
@@ -325,6 +332,30 @@ class TestWatermarkScope:
         assert "REGIME-V3-NEXT" in composite_models
         # 분야는 모델 버전이 그대로라 M 이전을 다시 돌지 않는다.
         assert revision_of(rows, "A", old) == 1
+
+    def test_기준이_교정된_종합은_교정된_상태와_충족_여부로_적재된다(
+        self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
+    ) -> None:
+        source = stub_source()
+        threshold = {"tau": 1e9, "delta": None, "minComparisonMonths": 1}
+        code = run_batch(
+            monkeypatch, repository, source, ["--since", "2009-01"], tmp_path, threshold=threshold
+        )
+        assert code == 0
+        rows = snapshot_rows(repository)
+        computed = [r for r in rows if r["status"] != "NOT_COMPUTABLE"]
+        composite = [r for r in computed if r["mode"] == "COMPOSITE"]
+        fields = [r for r in computed if r["mode"] == "FIELD"]
+        assert composite and all(r["status"] == "THRESHOLD_APPLIED" for r in composite)
+        assert all(r["status_reason"] is None for r in composite)
+        assert fields and all(r["status"] == "NEAREST_ONLY" for r in fields)
+        table = regime_search_case_table
+        with repository.engine.connect() as conn:
+            ids = [r["id"] for r in composite]
+            distances = conn.execute(
+                select(table.c.distance).where(table.c.snapshot_id.in_(ids))
+            ).scalars()
+            assert all(d["meetsThreshold"] is True for d in distances)
 
     def test_내용이_같으면_자료_버전이_올라도_행이_늘지_않는다(
         self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
