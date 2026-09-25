@@ -33,11 +33,31 @@ public class NewsDigestController {
 
     private final NewsDigestQueryService queryService;
     private final NewsArticleExportService exportService;
+    private final com.ssafy.thorp.news.application.service.NewsSectorListService sectorList;
 
     public NewsDigestController(
-            NewsDigestQueryService queryService, NewsArticleExportService exportService) {
+            NewsDigestQueryService queryService,
+            NewsArticleExportService exportService,
+            com.ssafy.thorp.news.application.service.NewsSectorListService sectorList) {
         this.queryService = queryService;
         this.exportService = exportService;
+        this.sectorList = sectorList;
+    }
+
+    /**
+     * 뉴스를 좁혀 볼 수 있는 섹터 목록(spec FR-005, Session 2026-09-25).
+     *
+     * <p>투자 대상 섹터(001에 열린 것)와 뉴스 전용 섹터를 화면 순서로 준다. 화면이 섹터 이름을 상수로 들고 있지 않게 하려는 것이다.
+     */
+    @GetMapping("/sectors")
+    public ResponseEntity<
+                    HttpApiResponse<
+                            com.ssafy.thorp.news.presentation.response.NewsSectorListResponse>>
+            getSectors() {
+        return ResponseEntity.ok(
+                HttpApiResponse.ok(
+                        com.ssafy.thorp.news.presentation.response.NewsSectorListResponse.from(
+                                sectorList.list())));
     }
 
     /**
