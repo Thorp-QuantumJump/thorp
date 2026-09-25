@@ -328,6 +328,57 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("v3 종합은 블록 거리·특이 표시·당시 맥락·지금 안내를 낸다")
+    void phaseModelCaseCarriesBlocksAndContext() throws Exception {
+        jdbc.update(
+                """
+                UPDATE regime_search_case SET distance = ?::jsonb, explanation = ?::jsonb
+                WHERE end_month = '2009-02-01'
+                """,
+                """
+                {"value": "4.567782415550", "byField": {},
+                 "blocks": [
+                   {"id": "real", "name": "실물 경기", "gap": "2.459000000000",
+                    "spread": "0.612000000000"},
+                   {"id": "financial", "name": "금융 여건", "gap": "3.427000000000",
+                    "spread": "0.701000000000"}],
+                 "blockContribution": {"real": "0.417700000000", "financial": "0.582300000000"}}
+                """,
+                """
+                {"similar": ["실물 경기 흐름은 비슷했습니다. 실업률 1년 변화는 지금 0.3%p, 당시 0.3%p입니다."],
+                 "different": ["이 기간에는 같은 흐름에 속한 지표들이 평소보다 엇갈려 움직였습니다."],
+                 "unusual": true,
+                 "queryNote": "지금은 같은 흐름에 속한 지표들이 평소보다 엇갈려 움직이고 있어, 비슷했던 때의 흐름과 다를 수 있습니다.",
+                 "context": [
+                   {"kind": "KDI_TRENDS", "date": "2009-01-05", "title": "KDI 경제동향 2009년 1월호",
+                    "url": "https://www.kdi.re.kr/research/monTrends?pub_no=1", "source": "KDI 한국개발연구원"},
+                   {"kind": "CYCLE_TURN", "date": "2009-02-01", "title": "경기 저점",
+                    "url": null, "source": "국가데이터처 기준순환일 (2023-03-02 발표)"}]}
+                """);
+
+        mockMvc.perform(get("/regime-searches").param("mode", "composite"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.result.phaseNote")
+                                .value(org.hamcrest.Matchers.startsWith("지금은")))
+                .andExpect(jsonPath("$.result.cases[0].unusual").value(true))
+                .andExpect(
+                        jsonPath("$.result.cases[0].context[0].title").value("KDI 경제동향 2009년 1월호"))
+                .andExpect(jsonPath("$.result.cases[0].context[1].url").doesNotExist());
+        mockMvc.perform(get("/regime-searches/cases/{month}", "2009-02").param("mode", "composite"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.blocks[0].name").value("실물 경기"))
+                .andExpect(jsonPath("$.result.blocks[1].contribution").value("0.582300000000"))
+                .andExpect(jsonPath("$.result.blocks[1].spread").value("0.701000000000"))
+                .andExpect(jsonPath("$.result.contribution").doesNotExist());
+        // v1 결과에는 블록이 없고 특이 표시는 false 다.
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
+                .andExpect(jsonPath("$.result.phaseNote").doesNotExist())
+                .andExpect(jsonPath("$.result.cases[0].unusual").value(false))
+                .andExpect(jsonPath("$.result.cases[0].context").doesNotExist());
+    }
+
+    @Test
     @DisplayName("시대별 위치는 문장으로만 나가고 z·분위수가 없다")
     void eraPositionIsSentenceOnly() throws Exception {
         String payload =
