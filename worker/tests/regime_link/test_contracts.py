@@ -18,6 +18,7 @@ from worker.regime_link import contracts
 from worker.regime_link.contracts import (
     BasisKind,
     FillSide,
+    ProcessInfo,
     RegimeLinkErrorCode,
     RegimeLinkEvent,
     RegimeLinkEventType,
@@ -308,3 +309,39 @@ def test_enum_values_match_the_backend() -> None:
         assert model is not None, f"{name} 이 워커 계약에 없다"
         assert issubclass(model, StrEnum), f"{name} 이 워커에서 StrEnum 이 아니다"
         assert {member.value for member in model} == values, name
+
+
+def test_event_resource_is_required_as_the_contract_says() -> None:
+    """계약 §이벤트 봉투는 ``resource``에 ``?``를 붙이지 않는다(T106)."""
+    with pytest.raises(ValidationError):
+        RegimeLinkStartedPayload(started_at="2026-09-18T02:00:00Z")
+    with pytest.raises(ValidationError):
+        RegimeLinkStartedPayload(started_at="2026-09-18T02:00:00Z", resource=ProcessInfo(pid=1))
+
+
+def test_job_over_the_row_limit_is_a_contract_violation() -> None:
+    """계약 크기 상한의 둘째 줄(T105). 백엔드 관문을 지나친 작업도 워커를 통과하지 못한다."""
+    body = load_dict("job-continuous.json")
+    series = body["inputs"]["portfolioSeries"]
+    while len(series) <= contracts.MAX_PORTFOLIO_ROWS:
+        series.append(dict(series[-1]))
+
+    with pytest.raises(ValidationError, match="portfolioSeries"):
+        RegimeLinkJob.model_validate(body)
+
+
+def test_snapshot_wider_than_the_universe_is_a_contract_violation() -> None:
+    body = load_dict("job-continuous.json")
+    extra = {"instrumentId": "999999.XKRX", "quantity": 1}
+    count = len(body["universe"]["items"])
+    body["inputs"]["openingPositions"] = [
+        {**extra, "instrumentId": f"99999{i}.XKRX"} for i in range(count + 1)
+    ]
+
+    with pytest.raises(ValidationError, match="종목 수"):
+        RegimeLinkJob.model_validate(body)
+
+
+def test_fixtures_are_within_the_size_limits() -> None:
+    for name in ("job-continuous.json", "job-fresh-cash.json", "job-partial-delisted.json"):
+        RegimeLinkJob.model_validate_json(load(name))
