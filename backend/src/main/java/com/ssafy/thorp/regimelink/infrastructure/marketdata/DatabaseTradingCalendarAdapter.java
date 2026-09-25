@@ -31,6 +31,11 @@ public class DatabaseTradingCalendarAdapter implements TradingCalendarPort {
      */
     private static final String CALENDAR_INDEX_CODE = "KOSPI";
 
+    private static final Object DATA_VERSION_KEY =
+            DatabaseTradingCalendarAdapter.class.getName() + ".dataVersion";
+    private static final Object SECTOR_MAPPED_KEY =
+            DatabaseTradingCalendarAdapter.class.getName() + ".sectorMapped";
+
     /** 거래소 현지. 대응표 유효 구간이 TIMESTAMPTZ 라 날짜를 시각으로 옮길 때 쓴다. */
     private static final ZoneId EXCHANGE_ZONE = ZoneId.of("Asia/Seoul");
 
@@ -202,19 +207,35 @@ public class DatabaseTradingCalendarAdapter implements TradingCalendarPort {
     @Override
     @Transactional(readOnly = true)
     public boolean sectorMapped(String mappingVersion, String sectorId) {
-        Query query =
-                entityManager
-                        .createNativeQuery(SECTOR_MAPPED_SQL)
-                        .setParameter("mapVersion", mappingVersion)
-                        .setParameter("sectorId", sectorId);
-        return single(query).isPresent();
+        // 사례 10 × 실행 2 × 섹터 N 만큼 같은 (버전, 섹터)를 묻는다. 한 요청 안에서는 한 번만 읽는다(T110).
+        return RequestScopedValues.memo(
+                SECTOR_MAPPED_KEY,
+                mappingVersion + "\u0000" + sectorId,
+                () -> {
+                    Query query =
+                            entityManager
+                                    .createNativeQuery(SECTOR_MAPPED_SQL)
+                                    .setParameter("mapVersion", mappingVersion)
+                                    .setParameter("sectorId", sectorId);
+                    return single(query).isPresent();
+                });
     }
 
     private Query calendarQuery(String sql) {
         return entityManager
                 .createNativeQuery(sql)
-                .setParameter("datasetId", marketMetadata.currentDataVersion())
+                .setParameter("datasetId", dataVersion())
                 .setParameter("indexCode", CALENDAR_INDEX_CODE);
+    }
+
+    /**
+     * 달력 질의가 쓸 자료 버전. <b>한 트랜잭션 안에서는 한 번만 읽는다</b>(T110) — 호출마다 다시 읽으면 달력 질의가 두 배가 되고, 요청 도중 새 자료가
+     * 발행되면 한 요청의 판정이 두 버전의 달력을 섞어 본다. 고르는 규칙은 여전히 004 {@link
+     * MarketMetadataPort#currentDataVersion()} 하나다.
+     */
+    private String dataVersion() {
+        return RequestScopedValues.memo(
+                DATA_VERSION_KEY, "current", marketMetadata::currentDataVersion);
     }
 
     private static Optional<LocalDate> date(Query query) {

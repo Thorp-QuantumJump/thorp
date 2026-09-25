@@ -19,9 +19,9 @@ import org.springframework.context.annotation.Configuration;
  * <p>백테스트 경로({@code BacktestRabbitConfig})와 <b>분리된</b> exchange·큐다(research R1). 두 계약은 스키마 버전을 따로
  * 세므로 상수를 빌려 쓰지 않는다.
  *
- * <p><b>{@code public static final String} 상수는 계약 이름 일곱뿐이다.</b> 워커 시험({@code
+ * <p><b>{@code public static final String} 상수는 계약 이름 여덟뿐이다.</b> 워커 시험({@code
  * tests/regime_link/test_messaging.py})이 이 파일의 그 선언을 통째로 긁어 {@code worker.regime_link.messaging}의
- * 같은 이름과 대조하므로, 워커에 없는 이름을 이 형태로 더하면 워커 빌드가 깨진다. DLQ 라우팅 키처럼 계약에 이름이 없는 값은 private 으로 둔다.
+ * 같은 이름과 대조하므로, 워커에 없는 이름을 이 형태로 더하면 워커 빌드가 깨진다. 계약에 이름이 없는 값은 private 으로 둔다.
  *
  * <p>선언은 Boot 자동설정 {@code RabbitAdmin}이 브로커 연결 시점에 수행하므로 브로커 없이도 기동된다.
  */
@@ -48,8 +48,11 @@ public class RegimeLinkRabbitConfig {
     /** 작업 큐의 quorum 재전달 상한. 한 번만 다시 실행되고 두 번째도 끊기면 브로커가 DLQ 로 보낸다. */
     public static final int JOBS_DELIVERY_LIMIT = 1;
 
-    /** 계약이 이름을 정하지 않은 내부 값이라 계약 상수로 두지 않는다(위 클래스 주석 참고). */
-    private static final String JOBS_DEAD_LETTER_ROUTING_KEY = "regime-link.job.dead";
+    /**
+     * DLX 에서 DLQ 로 가는 routing key (계약 "토폴로지", T107). 작업 routing key 를 그대로 쓰지 않고 따로 둔다 — 백테스트의
+     * {@code backtest.job.dead}와 같은 방식이라, DLQ 에 걸린 바인딩만 보고도 죽은 작업의 흐름인지 알 수 있다.
+     */
+    public static final String JOBS_DEAD_LETTER_ROUTING_KEY = "regime-link.job.dead";
 
     /** exchange 2(direct), queue 3, binding 3. DLQ 로 간 메시지는 자동 재투입하지 않는다. */
     @Bean
