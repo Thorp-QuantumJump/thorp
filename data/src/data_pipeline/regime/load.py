@@ -384,9 +384,10 @@ class RegimeRepository:
         ).scalar_one_or_none()
         if existing is not None:
             raise VersionNotBumpedError(
-                f"{snapshot.key}에 revision {existing}의 내용과 다른 결과가 나왔다. "
-                "자료·등록표 버전이 같으면 계산·문장·설정을 바꾼 것이므로 모델 버전을 올린다"
-                "(data-model §6)"
+                f"{snapshot.key}에 revision {existing}의 내용과 다른 결과가 나왔다 "
+                f"(모델 {snapshot.versions.model}, 자료 {snapshot.versions.data}, "
+                f"등록표 {snapshot.versions.registry}). 버전이 같은데 결과가 바뀌었으면 계산·문장·"
+                "설정을 바꾼 것이므로 모델 버전을 올린다(data-model §6)"
             )
 
     def _require_new_content(self, conn: Connection, snapshot: Snapshot, content: str) -> None:

@@ -244,3 +244,18 @@ class TestDisplay:
         value, unit = config.display_of("trade_balance", 24_137_983_294.0)
         assert unit == "억 달러"
         assert format_phase_value(value) == "241.38"
+
+    @pytest.mark.parametrize(
+        ("raw", "text"),
+        [
+            (-24_137_983_294.0, "-241.38"),
+            (0.0, "0"),
+            (300_000.0, "0"),  # 0.003억 — 둘째 자리 아래는 0으로 읽힌다
+            (-400_000.0, "0"),  # -0이 아니라 0이다
+            (100_000_000.0, "1"),
+        ],
+    )
+    def test_표시_배율을_적용한_경계값(self, raw: float, text: str) -> None:
+        config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])
+        value, _ = config.display_of("trade_balance", raw)
+        assert format_phase_value(value) == text

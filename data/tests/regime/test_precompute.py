@@ -326,6 +326,28 @@ class TestWatermarkScope:
         # 분야는 모델 버전이 그대로라 M 이전을 다시 돌지 않는다.
         assert revision_of(rows, "A", old) == 1
 
+    def test_버전을_올리지_않고_설정을_바꾸면_배치가_부분_실패로_끝나고_행은_그대로다(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        repository: RegimeRepository,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """블록 구성을 바꾸고 모델 버전은 그대로 둔 배포를 흉내 낸다(data-model §6)."""
+        source = stub_source()
+        assert run_batch(monkeypatch, repository, source, ["--since", "2008-01"], tmp_path) == 0
+        before = {(row["snapshot_key"], row["content_hash"]) for row in snapshot_rows(repository)}
+        capsys.readouterr()
+
+        code = run_batch(
+            monkeypatch, repository, source, ["--since", "2008-01"], tmp_path, one_block=True
+        )
+        output = capsys.readouterr()
+        assert code == precompute_regime._EXIT_PARTIAL  # noqa: SLF001 - 종료 코드 계약
+        assert "VersionNotBumpedError" in output.out + output.err
+        after = {(row["snapshot_key"], row["content_hash"]) for row in snapshot_rows(repository)}
+        assert after == before
+
     def test_내용이_같으면_자료_버전이_올라도_행이_늘지_않는다(
         self, monkeypatch: pytest.MonkeyPatch, repository: RegimeRepository, tmp_path: Path
     ) -> None:

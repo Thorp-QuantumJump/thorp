@@ -261,7 +261,8 @@ services:
       TZ: Asia/Seoul
     volumes:
       # ingest_macro 는 --data-root(/data) 아래 raw·processed 에, precompute_regime 은 /app/processed 에 쓴다.
-      # 둘 다 호스트의 같은 DATA_DIR 로 모은다.
+      # 둘 다 호스트의 같은 DATA_DIR 로 모은다. 컨테이너 안의 두 경로는 서로 겹치지 않는다(/app/processed 는
+      # /data 아래가 아니다) — 호스트의 DATA_DIR/processed 한 폴더를 두 경로로 보는 것이라 같은 파일이다.
       - ${DATA_DIR}:/data
       - ${DATA_DIR}/processed:/app/processed
     depends_on:
