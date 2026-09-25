@@ -46,6 +46,7 @@
 
 .fab[aria-expanded='true'] {
   background: var(--thorp-accent-soft, var(--thorp-surface-raised));
+  color: var(--thorp-action-foreground, var(--thorp-accent));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -120,7 +121,7 @@
 
 .close:hover {
   background: var(--thorp-accent-soft, transparent);
-  color: var(--thorp-foreground);
+  color: var(--thorp-action-foreground, var(--thorp-foreground));
 }
 
 .notice {
@@ -129,7 +130,7 @@
   border-radius: var(--thorp-radius-inset, 8px);
   background: var(--thorp-accent-soft, var(--thorp-background));
   font-size: 0.85rem;
-  color: var(--thorp-copy);
+  color: var(--thorp-action-foreground, var(--thorp-copy));
 }
 
 .examples {
@@ -179,6 +180,7 @@
   padding: 8px 12px;
   border-radius: 14px 14px 4px 14px;
   background: var(--thorp-accent-soft, var(--thorp-background));
+  color: var(--thorp-action-foreground, var(--thorp-foreground));
   overflow-wrap: anywhere;
 }
 
