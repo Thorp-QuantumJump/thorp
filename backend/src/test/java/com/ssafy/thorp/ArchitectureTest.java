@@ -176,11 +176,14 @@ class ArchitectureTest {
      * specs/015-context-assistant/plan.md "Structure Decision".
      */
     @ArchTest
-    static final ArchRule result_backtest_sector는_assistant를_참조하지_않는다 =
+    static final ArchRule result_backtest_sector_strategy는_assistant를_참조하지_않는다 =
             noClasses()
                     .that()
                     .resideInAnyPackage(
-                            ROOT + ".result..", ROOT + ".backtest..", ROOT + ".sector..")
+                            ROOT + ".result..",
+                            ROOT + ".backtest..",
+                            ROOT + ".sector..",
+                            ROOT + ".strategy..")
                     .should()
                     .dependOnClassesThat()
                     .resideInAPackage(ROOT + ".assistant..");

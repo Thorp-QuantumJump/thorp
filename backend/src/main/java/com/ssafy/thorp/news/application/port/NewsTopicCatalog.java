@@ -44,4 +44,11 @@ public interface NewsTopicCatalog {
 
     /** 해외 보도를 받을 수 있는 국내 연결 주제 키. */
     Set<String> domesticLinkTopicKeys();
+
+    /**
+     * 기사 제목의 키워드로 걸리는 주제 키와 걸린 키워드.
+     *
+     * <p>뉴스원 분류 값과 별개의 연결 근거다(spec FR-010). 순서는 등록표 순서이며, 걸린 것이 없으면 빈 값이다.
+     */
+    java.util.Map<String, String> matchTitle(String title);
 }

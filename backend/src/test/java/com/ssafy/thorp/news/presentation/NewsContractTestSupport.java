@@ -68,7 +68,7 @@ final class NewsContractTestSupport {
         NewsDigestQueryService service = new StubQueryService(stub, MAX_RANGE_DAYS);
         MappingJackson2HttpMessageConverter converter =
                 new MappingJackson2HttpMessageConverter(MAPPER);
-        return MockMvcBuilders.standaloneSetup(new NewsDigestController(service, null))
+        return MockMvcBuilders.standaloneSetup(new NewsDigestController(service, null, null))
                 .setControllerAdvice(new NewsDigestExceptionHandler())
                 .setMessageConverters(converter)
                 .build();
