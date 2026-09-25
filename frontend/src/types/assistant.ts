@@ -17,7 +17,7 @@ export type AssistantContext = {
   publicToken: string
 }
 
-export type AssistantAnswerStatus = 'ANSWERED' | 'INSUFFICIENT_EVIDENCE' | 'OUT_OF_SCOPE'
+export type AssistantAnswerStatus = 'ANSWERED' | 'INSUFFICIENT_EVIDENCE' | 'OUT_OF_SCOPE' | 'GREETING'
 
 /** 결과 화면 탭 id(005). 근거 카드는 이 탭으로 이동한다. */
 export type AssistantEvidenceTab = 'summary' | 'analysis' | 'settings' | 'trades' | 'loss'
