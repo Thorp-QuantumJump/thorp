@@ -65,10 +65,13 @@ from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, SCALE_ZERO, Scale
 #: - 시대별 위치 판정 경계값 — `era.SIMILAR_THRESHOLD`(FR-017)
 #: - 후보 제한(12개월·±6개월·동률), 표시 개수(FR-012·FR-013)
 #: - 문턱(FR-019·FR-020), decimal 반올림 자릿수(research R4)
+#: - 문장의 값 표기 자릿수 — `explain.SENTENCE_DECIMALS`
+#:
+#: 이력: REGIME-V1 → REGIME-V1.1 (S15P21E205-447, 문장 값을 소수 첫째 자리로). 계산은 같다.
 #:
 #: ⚠ d21-amendment의 v2 검증 제안은 **기본 계산 경로에 들어가지 않는다**(PD-08 미확정).
 #: 제안을 여기에 미리 반영하면 검증 전 모델이 운영 값이 된다.
-MODEL_VERSION: Final[str] = "REGIME-V1"
+MODEL_VERSION: Final[str] = "REGIME-V1.1"
 
 MODE_FIELD: Final[str] = "FIELD"
 MODE_COMPOSITE: Final[str] = "COMPOSITE"

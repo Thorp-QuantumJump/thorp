@@ -25,12 +25,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Final
 
 from data_pipeline.regime.distance import CandidateDistance, IndicatorDistance
 from data_pipeline.regime.macro.types import IndicatorEntry, MonthlyValue
-from data_pipeline.regime.rounding import equal_at_storage, to_storage_text
+from data_pipeline.regime.rounding import STORAGE_DECIMALS, equal_at_storage, to_storage_text
 
 #: 한쪽에 담는 문장 수 상한 (research R8).
 MAX_SENTENCES: Final[int] = 2
@@ -57,18 +57,36 @@ def topic_particle(text: str) -> str:
     return "는"
 
 
-def format_value(value: float) -> str:
-    """문장에 넣을 값 표기.
+#: 문장에 싣는 기본 소수 자릿수 (S15P21E205-447). 모델 버전의 일부다 — 바꾸면 버전을 올린다.
+SENTENCE_DECIMALS: Final[int] = 1
 
-    **표시 자릿수를 새로 정하지 않는다.** "소수 첫째 자리" 같은 규칙을 여기서 만들면 모델 버전에
-    없는 규칙이 하나 느는 셈이라, 이미 모델 버전에 있는 저장 자릿수(12)를 그대로 쓴다. 그 자리에서
-    반올림하면 `0.30000000000000004` 같은 2진 찌꺼기가 사라지고, 꼬리 0을 덜어 내면 `0.3`이 된다.
 
-    ``repr``을 쓰지 않는 이유는 지수 표기 때문이다 — `5e-05`가 문장에 그대로 실리면 읽는 사람이
-    값을 읽을 수 없다.
+def format_value(value: float, decimals: int = SENTENCE_DECIMALS) -> str:
+    """문장에 넣을 값 표기 — 소수 ``decimals``자리에서 반올림하고 꼬리 0을 덜어 낸다.
+
+    저장 자릿수(12)를 그대로 쓰면 증가율 같은 파생 값이 `4.346167`처럼 실려 읽을 수 없다. 표시
+    자릿수는 **문장에만** 적용하고 저장 값·거리 계산은 12자리 그대로다. 반올림은 사사오입
+    (`ROUND_HALF_UP`)이고, `-0`은 `0`으로 쓴다. ``repr``을 쓰지 않는 이유는 지수 표기(`5e-05`)
+    때문이다.
     """
-    quantized = Decimal(to_storage_text(value)).normalize()
-    return f"{quantized:f}"
+    quantum = Decimal(1).scaleb(-decimals)
+    rounded = Decimal(to_storage_text(value)).quantize(quantum, rounding=ROUND_HALF_UP)
+    if rounded == 0:
+        return "0"
+    return f"{rounded.normalize():f}"
+
+
+def format_pair(query: float, case: float) -> tuple[str, str]:
+    """지금·당시 두 값을 함께 표기한다. 기본 한 자리에서 둘이 같게 보이면 다르게 보일 때까지 늘린다.
+
+    "지금이 2.3%로 당시 2.3%보다 높습니다"처럼 판정과 숫자가 어긋나는 문장을 내지 않기 위해서다.
+    저장 자릿수까지 같으면 같은 값이므로 기본 자릿수로 둔다.
+    """
+    for decimals in range(SENTENCE_DECIMALS, STORAGE_DECIMALS + 1):
+        pair = format_value(query, decimals), format_value(case, decimals)
+        if pair[0] != pair[1]:
+            return pair
+    return format_value(query), format_value(case)
 
 
 @dataclass(frozen=True)
@@ -94,12 +112,12 @@ def _values(
 def similar_sentence(
     entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]
 ) -> str:
-    query, case = _values(item, series)
+    query, case = format_pair(*_values(item, series))
     return SIMILAR_TEMPLATE.format(
         name=entry.name,
         particle=topic_particle(entry.name),
-        query=format_value(query),
-        case=format_value(case),
+        query=query,
+        case=case,
         unit=entry.unit,
     )
 
@@ -108,11 +126,12 @@ def different_sentence(
     entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]
 ) -> str:
     query, case = _values(item, series)
+    query_text, case_text = format_pair(query, case)
     return DIFFERENT_TEMPLATE.format(
         name=entry.name,
         particle=topic_particle(entry.name),
-        query=format_value(query),
-        case=format_value(case),
+        query=query_text,
+        case=case_text,
         unit=entry.unit,
         verdict=HIGHER if query > case else LOWER,
     )
