@@ -379,6 +379,49 @@ class RegimeSearchApiIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("교정된 결과는 기준 충족 사례와 참고 사례를 나누고, 충족이 없으면 분야별 탐색으로 잇는다")
+    void thresholdAppliedSplitsCases() throws Exception {
+        jdbc.update(
+                "UPDATE regime_search_snapshot SET status = 'THRESHOLD_APPLIED', status_reason = NULL"
+                        + " WHERE snapshot_key = ?",
+                COMPOSITE_KEY);
+        jdbc.update(
+                "UPDATE regime_search_case SET distance = distance || '{\"meetsThreshold\": false}'::jsonb"
+                        + " WHERE end_month = '2009-02-01'");
+
+        String none = body(get("/regime-searches").param("mode", "composite"));
+        mockMvc.perform(get("/regime-searches").param("mode", "composite"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.status").value("THRESHOLD_APPLIED"))
+                .andExpect(
+                        jsonPath("$.result.statusNote")
+                                .value(org.hamcrest.Matchers.startsWith("Thorp가 정한")))
+                .andExpect(jsonPath("$.result.caseLabel").doesNotExist())
+                .andExpect(jsonPath("$.result.cases").isEmpty())
+                .andExpect(jsonPath("$.result.referenceLabel").value("기준 미충족 참고 사례"))
+                .andExpect(jsonPath("$.result.referenceCases[0].endMonth").value("2009-02"))
+                .andExpect(
+                        jsonPath("$.result.thresholdNote")
+                                .value("설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다."))
+                .andExpect(jsonPath("$.result.counts.stored").value(0));
+        FORBIDDEN.forEach(term -> assertThat(none).doesNotContain(term));
+
+        jdbc.update(
+                "UPDATE regime_search_case SET distance = distance || '{\"meetsThreshold\": true}'::jsonb"
+                        + " WHERE end_month = '2009-02-01'");
+        mockMvc.perform(get("/regime-searches").param("mode", "composite"))
+                .andExpect(jsonPath("$.result.cases[0].endMonth").value("2009-02"))
+                .andExpect(jsonPath("$.result.referenceCases").isEmpty())
+                .andExpect(jsonPath("$.result.thresholdNote").doesNotExist())
+                .andExpect(jsonPath("$.result.counts.stored").value(1));
+        // 문턱 미교정인 분야 검색은 목록을 나누지 않는다.
+        mockMvc.perform(get("/regime-searches").param("mode", "field").param("field", "labor"))
+                .andExpect(jsonPath("$.result.status").value("NEAREST_ONLY"))
+                .andExpect(jsonPath("$.result.referenceCases").doesNotExist())
+                .andExpect(jsonPath("$.result.caseLabel").value("최근접 참고 사례"));
+    }
+
+    @Test
     @DisplayName("시대별 위치는 문장으로만 나가고 z·분위수가 없다")
     void eraPositionIsSentenceOnly() throws Exception {
         String payload =
