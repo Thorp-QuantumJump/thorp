@@ -62,5 +62,5 @@ export function AssistantWidget() {
   if (!registry || !page) return null
   if (HIDDEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null
   if (!capabilities?.enabled || !capabilities.scopes.includes(page.kind)) return null
-  return <AssistantFab page={page} openTab={registry.openTab} />
+  return <AssistantFab page={page} />
 }

@@ -48,13 +48,7 @@ type DragState = { pointerId: number; startX: number; startY: number; dx: number
  *
  * <p>`ui/Button`을 쓰지 않는다 — 결과 화면의 주 모양 버튼은 '비교 대상 고르기' 하나여야 한다(원칙 II).
  */
-export function AssistantFab({
-  page,
-  openTab,
-}: {
-  page: AssistantPage
-  openTab: (tab: string) => void
-}) {
+export function AssistantFab({ page }: { page: AssistantPage }) {
   const narrow = useNarrowScreen()
   const panelId = useId()
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -138,7 +132,7 @@ export function AssistantFab({
   )
 
   const bubble = (
-    <AssistantBubble page={page} openTab={openTab} onClose={close} autoFocus={narrow} />
+    <AssistantBubble page={page} onClose={close} autoFocus={narrow} />
   )
 
   if (narrow) {

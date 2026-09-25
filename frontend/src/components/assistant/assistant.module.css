@@ -199,48 +199,6 @@
   color: var(--thorp-copy);
 }
 
-.evidence {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: grid;
-  width: 100%;
-  padding: 8px 10px;
-  gap: 2px;
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 8px);
-  background: var(--thorp-background);
-  color: var(--thorp-foreground);
-  text-align: left;
-  cursor: pointer;
-}
-
-.card:hover {
-  border-color: var(--thorp-line-strong);
-}
-
-.cardLabel {
-  font-size: 0.8rem;
-  color: var(--thorp-muted);
-}
-
-.cardValue {
-  font-family: var(--thorp-font-number, inherit);
-  font-size: 1rem;
-}
-
-.cardMeta {
-  display: flex;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: var(--thorp-muted);
-}
-
 .failure {
   display: flex;
   flex-wrap: wrap;

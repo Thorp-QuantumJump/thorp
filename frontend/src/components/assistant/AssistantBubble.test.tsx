@@ -74,7 +74,7 @@ describe('AssistantBubble', () => {
     expect(dialog.getAttribute('aria-modal')).not.toBe('true')
   })
 
-  it('예시 질문을 누르면 그 질문이 보내지고, 답과 factIds 에 쓰인 근거 카드만 보인다', async () => {
+  it('예시 질문을 누르면 그 질문이 보내지고 답만 보인다', async () => {
     const user = userEvent.setup()
     renderAssistant()
     const { dialog } = await open(user)
@@ -85,12 +85,7 @@ describe('AssistantBubble', () => {
     expect(api.askAssistant.mock.calls[0][0]).toBe(EXAMPLE_QUESTIONS[0])
     expect(api.askAssistant.mock.calls[0][1]).toEqual({ kind: 'RESULT', publicToken: TOKEN })
     expect(await within(dialog).findByText(answered.answer)).not.toBeNull()
-    const cards = within(within(dialog).getByRole('list', { name: '근거' })).getAllByRole('button')
-    expect(cards).toHaveLength(2)
-    expect(cards[0].textContent).toContain('비용 차감 후 전체 수익률')
-    expect(cards[0].textContent).toContain('16.67%')
-    expect(cards[0].textContent).toContain('2024-12-31')
-    expect(cards[1].textContent).toContain('설정·근거')
+    expect(within(dialog).queryByRole('list', { name: '근거' })).toBeNull()
     expect(within(dialog).queryByText(TRANSFER_NOTICE)).toBeNull()
   })
 
@@ -107,19 +102,6 @@ describe('AssistantBubble', () => {
     expect(api.askAssistant.mock.calls[0][0]).toBe('거래비용은?')
     await within(dialog).findByText(answered.answer)
     expect(input.value).toBe('')
-  })
-
-  it('근거 카드를 누르면 그 값이 있는 탭을 연다', async () => {
-    const onOpenTab = vi.fn()
-    const user = userEvent.setup()
-    renderAssistant({ onOpenTab })
-    const { dialog } = await open(user)
-    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[1] }))
-    const cards = within(await within(dialog).findByRole('list', { name: '근거' })).getAllByRole('button')
-
-    await user.click(cards[1])
-
-    expect(onOpenTab).toHaveBeenCalledWith('settings')
   })
 
   it('Escape 로 닫히고 초점이 버튼으로 돌아온다', async () => {
