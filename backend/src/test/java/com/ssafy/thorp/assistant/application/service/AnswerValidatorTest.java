@@ -193,7 +193,7 @@ class AnswerValidatorTest {
     }
 
     @Test
-    @DisplayName("OUT_OF_SCOPE·INSUFFICIENT_EVIDENCE 는 고정 안내와 빈 근거다")
+    @DisplayName("OUT_OF_SCOPE·INSUFFICIENT_EVIDENCE·GREETING 은 고정 안내와 빈 근거다")
     void fixedMessagesForNonAnswered() {
         AnswerValidator.Rendered scope =
                 validator.render(
@@ -209,6 +209,14 @@ class AnswerValidatorTest {
                 validator.render(
                         new ModelDraft(AnswerStatus.INSUFFICIENT_EVIDENCE, List.of()), FACTS));
         assertInsufficient(validator.render(null, FACTS));
+
+        AnswerValidator.Rendered greeting =
+                validator.render(
+                        new ModelDraft(AnswerStatus.GREETING, List.of(part("안녕하세요 {{F1}}", "F1"))),
+                        FACTS);
+        assertThat(greeting.status()).isEqualTo(AnswerStatus.GREETING);
+        assertThat(greeting.answer()).isEqualTo(AnswerValidator.GREETING_MESSAGE);
+        assertThat(greeting.evidence()).isEmpty();
     }
 
     @Test
