@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Final
 
-from data_pipeline.regime.explain import topic_particle
+from data_pipeline.regime.explain import format_pair, format_value, topic_particle
 from data_pipeline.regime.macro.types import IndicatorEntry, format_month
 from data_pipeline.regime.phase import Block, PhaseDistance, PhaseModel
 from data_pipeline.regime.rounding import round_for_storage, to_storage_text
@@ -59,14 +59,8 @@ KIND_LABELS: Final[dict[str, str]] = {
 
 
 def format_phase_value(value: float) -> str:
-    """문장 값 표기 — 소수 둘째 자리까지, 꼬리 0은 덜어 낸다.
-
-    v1은 저장 자릿수(12)를 그대로 썼지만 v3 국면 입력은 1년 변화율처럼 원천이 공표 자릿수를 정하지
-    않은 파생 값이 섞여 12자리면 읽을 수 없다. 이 규칙은 모델 버전 ``REGIME-V3-EQ``에 속한다.
-    표시에만 쓰며 거리 계산에는 반올림하지 않은 값을 쓴다.
-    """
-    text = f"{round(value, 2) + 0.0:.2f}".rstrip("0").rstrip(".")
-    return "0" if text == "-0" else text
+    """v3 문장 값 표기 — v1과 같은 규칙(`explain.format_value`, 소수 첫째 자리)이다."""
+    return format_value(value)
 
 
 def subject_of(name: str, label: str) -> str:
@@ -150,13 +144,14 @@ def explanation_for(
     def sentence(template: str, block: Block, indicator_id: str) -> str:
         kind = model.config.input_kinds[indicator_id]
         series = model.series[indicator_id]
-        query, unit = model.config.display_of(indicator_id, series[query_month].value)
-        case, _ = model.config.display_of(indicator_id, series[case_month].value)
+        query_value, unit = model.config.display_of(indicator_id, series[query_month].value)
+        case_value, _ = model.config.display_of(indicator_id, series[case_month].value)
+        query, case = format_pair(query_value, case_value)
         return template.format(
             block=block.name,
             subject=subject_of(entries[indicator_id].name, KIND_LABELS[kind]),
-            query=format_phase_value(query),
-            case=format_phase_value(case),
+            query=query,
+            case=case,
             unit=unit or entries[indicator_id].unit,
         )
 
