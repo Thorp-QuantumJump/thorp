@@ -7,7 +7,7 @@ import type { AssistantPage } from './assistantPageContext'
 import styles from './assistant.module.css'
 
 export const QUESTION_MAX_LENGTH = 300
-export const TRANSFER_NOTICE = '질문과 답변에 필요한 화면 자료가 외부 AI 처리 서비스로 전달됩니다.'
+export const TRANSFER_NOTICE = '백테스트 결과에 대해서 질문해보세요.'
 export const EXAMPLE_QUESTIONS = [
   '거래비용은 어떻게 구성됐어?',
   '비용을 빼고 얼마가 남았어?',
