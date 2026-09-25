@@ -70,3 +70,10 @@ export const savedSearchNote = '저장된 검색을 다시 봅니다(동일 버�
 
 /** 로그인 사용자의 검색을 내 기록에 남기지 못했을 때(006 T037). 검색 결과는 그대로다 — 기록만 남지 않았다. */
 export const recordFailedNote = '이 검색을 내 기록에 남기지 못했습니다. 결과는 그대로 볼 수 있습니다.'
+
+/** 교정된 결과에서 따로 여는 목록의 이름. 서버가 `referenceLabel`을 주지 않을 때만 쓴다(spec FR-021). */
+export const referenceLabel = '기준 미충족 참고 사례'
+
+/** 참고 사례를 열었을 때 붙는 안내 — 기준을 넘지 못했다는 사실만 말하고 등급을 매기지 않는다(FR-018·FR-021). */
+export const referenceNote = 'Thorp가 정한 유사성 기준을 넘지 못한, 가까운 순서의 참고 사례입니다.'
+

@@ -93,6 +93,11 @@ export interface RegimeSearchResult {
   /** 지금 시점의 블록 안 엇갈림 안내(v3 종합). 없으면 null이다. */
   phaseNote?: string | null
   cases: RegimeCaseSummary[]
+  /** 교정된 결과(THRESHOLD_APPLIED)에서 기준 충족 사례가 없을 때의 안내. */
+  thresholdNote?: string | null
+  /** 교정된 결과의 미충족 참고 사례 목록 이름과 사례(spec FR-021). 그 밖에는 키가 없다. */
+  referenceLabel?: string | null
+  referenceCases?: RegimeCaseSummary[] | null
 }
 
 export interface RegimeCaseDetail {
