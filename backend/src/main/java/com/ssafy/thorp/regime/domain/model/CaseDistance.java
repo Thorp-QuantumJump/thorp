@@ -19,7 +19,16 @@ public record CaseDistance(
         Map<String, BigDecimal> byField,
         Map<String, BigDecimal> contribution,
         List<BlockGap> blocks,
-        Map<String, BigDecimal> blockContribution) {
+        Map<String, BigDecimal> blockContribution,
+        Boolean meetsThreshold) {
+
+    /**
+     * 교정된 유사성 기준을 만족했는가(spec FR-021). 기준이 교정되지 않은 검색 방식이면 {@code null}이다 — {@code false}로 채우면 "기준을
+     * 못 넘었다"로 읽히지만 실제로는 판정하지 않았다.
+     */
+    public boolean meets() {
+        return Boolean.TRUE.equals(meetsThreshold);
+    }
 
     /** 경제 블록 하나의 거리. {@code spread}는 그 기준월 척도 구간의 블록 점수 표준편차다(수기 대조용). */
     public record BlockGap(String id, String name, BigDecimal gap, BigDecimal spread) {}

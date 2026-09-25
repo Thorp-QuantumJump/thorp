@@ -15,6 +15,23 @@ public final class RegimeNotes {
     /** 문턱 미교정 상태의 고정 문구 (spec FR-020, research R6). */
     public static final String NEAREST_ONLY_NOTE = "가까운 순서만 제공합니다. 유사성은 아직 판정하지 않습니다.";
 
+    /**
+     * 교정된 기준으로 나눈 결과의 고정 문구 (spec FR-019·FR-021, threshold-calibration.md §6). 기준 충족은 Thorp가 정한 기준을
+     * 넘었다는 뜻이지 그 시기가 지금과 같다는 뜻이 아니다 — 그렇게 읽히는 말을 쓰지 않는다(FR-022).
+     */
+    public static final String THRESHOLD_APPLIED_NOTE =
+            "Thorp가 정한 유사성 기준으로 사례를 나눴습니다. 기준을 넘지 못한 사례는 참고 사례로 따로 봅니다.";
+
+    /** 교정된 결과에서 따로 여는 목록의 이름 (spec FR-021). */
+    public static final String REFERENCE_LABEL = "기준 미충족 참고 사례";
+
+    /** 분야 검색에서 기준 충족 사례가 없을 때 (spec US1 시나리오 5). */
+    public static final String NO_MEETING_FIELD_NOTE = "설정된 유사성 기준을 충족하는 사례가 없습니다.";
+
+    /** 종합 비교에서 기준 충족 사례가 없을 때 (spec US3 시나리오 4). 분야별 탐색으로 잇는다. */
+    public static final String NO_MEETING_COMPOSITE_NOTE =
+            "설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다.";
+
     /** 문턱 교정 전 사례에 붙는 표시 (spec FR-020). {@code THRESHOLD_APPLIED}가 되면 사라진다. */
     public static final String CASE_LABEL = "최근접 참고 사례";
 
@@ -30,6 +47,9 @@ public final class RegimeNotes {
 
     /** 계산 불가 사유별 안내. 사용자가 할 수 있는 일이 사유마다 달라 한 문구로 뭉치지 않는다. */
     public static String statusNote(SearchStatus status, StatusReason reason) {
+        if (status == SearchStatus.THRESHOLD_APPLIED) {
+            return THRESHOLD_APPLIED_NOTE;
+        }
         if (status != SearchStatus.NOT_COMPUTABLE) {
             return NEAREST_ONLY_NOTE;
         }
