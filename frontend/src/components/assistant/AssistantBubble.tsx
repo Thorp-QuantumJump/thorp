@@ -1,4 +1,4 @@
-import { LoaderCircle, X } from 'lucide-react'
+import { LoaderCircle, SendHorizontal, X } from 'lucide-react'
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'
 import { Button } from '@/components/ui/button'
@@ -230,10 +230,11 @@ export function AssistantBubble({
           <Button
             type="submit"
             variant="secondary"
-            size="sm"
+            size="icon-sm"
+            aria-label={sending ? '답을 기다리는 중' : '보내기'}
             disabled={sending || question.trim().length === 0}
           >
-            {sending ? '답을 기다리는 중' : '보내기'}
+            <SendHorizontal aria-hidden="true" />
           </Button>
         </div>
       </form>
