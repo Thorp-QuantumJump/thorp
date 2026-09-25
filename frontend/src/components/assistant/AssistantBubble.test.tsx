@@ -126,6 +126,21 @@ describe('AssistantBubble', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull())
   })
 
+  it('닫았다 다시 열어도 같은 화면이면 질문과 답이 남아 있다', async () => {
+    const user = userEvent.setup()
+    renderAssistant()
+    const { dialog } = await open(user)
+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))
+    await within(dialog).findByText(answered.answer)
+
+    await user.keyboard('{Escape}')
+    const reopened = await open(user)
+
+    expect(within(reopened.dialog).getByText(EXAMPLE_QUESTIONS[0])).not.toBeNull()
+    expect(within(reopened.dialog).getByText(answered.answer)).not.toBeNull()
+    expect(within(reopened.dialog).queryByText(TRANSFER_NOTICE)).toBeNull()
+  })
+
   it('화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫으며 이전 답을 새 화면에 보이지 않는다', async () => {
     let resolveFirst: (answer: typeof answered) => void = () => {}
     let firstSignal: AbortSignal | undefined

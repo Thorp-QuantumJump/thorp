@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AssistantBubble } from './AssistantBubble'
+import { AssistantBubble, useAssistantConversation } from './AssistantBubble'
 import type { AssistantPage } from './assistantPageContext'
 import styles from './assistant.module.css'
 import {
@@ -57,13 +57,14 @@ export function AssistantFab({ page }: { page: AssistantPage }) {
   const [drag, setDrag] = useState<DragState | null>(null)
   const suppressClickRef = useRef(false)
   const [open, setOpen] = useState(false)
+  const conversation = useAssistantConversation(page)
 
   const close = useCallback(() => {
     setOpen(false)
     buttonRef.current?.focus()
   }, [])
 
-  // 화면이 바뀌면 이전 화면의 말풍선을 닫는다. 답은 말풍선이 자기 맥락 변화를 보고 버린다.
+  // 화면이 바뀌면 이전 화면의 말풍선을 닫는다. 이력은 useAssistantConversation 이 맥락 변화를 보고 버린다.
   useEffect(() => {
     setOpen(false)
   }, [page.kind, page.publicToken])
@@ -132,7 +133,7 @@ export function AssistantFab({ page }: { page: AssistantPage }) {
   )
 
   const bubble = (
-    <AssistantBubble page={page} onClose={close} autoFocus={narrow} />
+    <AssistantBubble conversation={conversation} onClose={close} autoFocus={narrow} />
   )
 
   if (narrow) {
