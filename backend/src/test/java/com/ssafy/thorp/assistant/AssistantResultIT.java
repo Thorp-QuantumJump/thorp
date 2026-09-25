@@ -17,6 +17,7 @@ import com.ssafy.thorp.assistant.application.port.AssistantModelPort;
 import com.ssafy.thorp.assistant.application.result.AnswerStatus;
 import com.ssafy.thorp.assistant.application.result.Conversation;
 import com.ssafy.thorp.assistant.application.result.Evidence;
+import com.ssafy.thorp.assistant.application.result.EvidenceKind;
 import com.ssafy.thorp.assistant.application.result.ModelDraft;
 import com.ssafy.thorp.assistant.application.result.ModelDraft.AnswerPart;
 import com.ssafy.thorp.assistant.application.result.ToolCall;
@@ -218,6 +219,37 @@ class AssistantResultIT extends PortMockedIntegrationTestSupport {
         assertThat(equity.get("label").asText()).isEqualTo("자산가치");
         assertThat(equity.get("asOf").asText()).isEqualTo("2025-03-19");
         assertThat(equity.get("value").asText()).endsWith("원");
+        // SC-003: 근거 값은 결과 API 가 돌려주는 값을 표기한 것과 정확히 같다 — 팩이 어디서 왔는지가 아니라 값 자체를 대조한다.
+        JsonNode timeseries =
+                objectMapper
+                        .readTree(
+                                mockMvc.perform(get("/results/" + token + "/timeseries"))
+                                        .andExpect(status().isOk())
+                                        .andReturn()
+                                        .getResponse()
+                                        .getContentAsString())
+                        .get("data")
+                        .get("points");
+        String storedEquity = null;
+        for (JsonNode point : timeseries) {
+            if (point.get("date").asText().equals("2025-03-19")) {
+                storedEquity = point.get("equity").asText();
+            }
+        }
+        assertThat(storedEquity).isNotNull();
+        assertThat(equity.get("value").asText()).isEqualTo(EvidenceKind.MONEY.format(storedEquity));
+        JsonNode summary =
+                objectMapper
+                        .readTree(
+                                mockMvc.perform(get("/results/" + token))
+                                        .andExpect(status().isOk())
+                                        .andReturn()
+                                        .getResponse()
+                                        .getContentAsString())
+                        .get("data")
+                        .get("summary");
+        assertThat(data.get("evidence").get(1).get("value").asText())
+                .isEqualTo(EvidenceKind.RATIO.format(summary.get("netTotalReturn").asText()));
         assertThat(data.get("answer").asText())
                 .contains(equity.get("value").asText())
                 .contains("16.67%");

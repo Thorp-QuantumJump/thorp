@@ -366,23 +366,21 @@ class AssistantQualityTest {
     static Function<Fakes.Turn, ModelTurn> idealModel(Case c) {
         return turn -> {
             AnswerStatus expected = AnswerStatus.valueOf(c.expectedStatus());
-            boolean firstTurn = turn.conversation().exchanges().isEmpty();
-            if (!c.expectedTools().isEmpty() && firstTurn) {
-                List<ToolCall> calls = new ArrayList<>();
-                int n = 0;
-                for (String name : c.expectedTools()) {
-                    ToolSpec spec =
-                            turn.tools().stream()
-                                    .filter(s -> s.name().equals(name))
-                                    .findFirst()
-                                    .orElseThrow();
-                    Map<String, String> args = new LinkedHashMap<>();
-                    for (String arg : spec.dateArguments()) {
-                        args.put(arg, dateArgument(c, arg));
-                    }
-                    calls.add(new ToolCall("call-" + (++n), name, args));
+            int done = turn.conversation().exchanges().size();
+            if (done < c.expectedTools().size()) {
+                // 라운드마다 도구 하나. 뒤 도구의 날짜는 앞 라운드가 낸 하락 구간 근거에서 잇는다 — 저점 날의 보유·구간 거래를
+                // 물었는데 고정 날짜로 읽으면 표본이 뜻하는 질문이 아니다.
+                String name = c.expectedTools().get(done);
+                ToolSpec spec =
+                        turn.tools().stream()
+                                .filter(t -> t.name().equals(name))
+                                .findFirst()
+                                .orElseThrow();
+                Map<String, String> args = new LinkedHashMap<>();
+                for (String arg : spec.dateArguments()) {
+                    args.put(arg, dateArgument(c, arg, turn.facts()));
                 }
-                return new ToolRequests(calls);
+                return new ToolRequests(List.of(new ToolCall("call-" + (done + 1), name, args)));
             }
             if (expected != AnswerStatus.ANSWERED) {
                 return new ModelDraft(expected, List.of());
@@ -402,8 +400,16 @@ class AssistantQualityTest {
         };
     }
 
-    /** 질문에 적힌 날짜를 그대로 쓴다(기간 밖 표본은 그 값이 거절돼야 한다). 없으면 기간 안 고정값이다. */
-    static String dateArgument(Case c, String arg) {
+    /**
+     * 앞 라운드가 하락 구간 근거를 냈으면 그 날짜(from=고점, date·to=저점)를 쓴다. 없으면 질문에 적힌 날짜(기간 밖 표본은 그 값이 거절돼야 한다), 그것도
+     * 없으면 기간 안 고정값이다.
+     */
+    static String dateArgument(Case c, String arg, List<Evidence> facts) {
+        String peak = valueOf(facts, "하락 시작(고점) 날짜");
+        String trough = valueOf(facts, "가장 크게 줄어든 날짜");
+        if (trough != null) {
+            return "from".equals(arg) && peak != null ? peak : trough;
+        }
         Matcher m = Pattern.compile("\\d{4}-\\d{2}-\\d{2}").matcher(c.question());
         if (m.find()) {
             return m.group();
@@ -413,6 +419,15 @@ class AssistantQualityTest {
             case "to" -> "2024-03-29";
             default -> "2024-03-04";
         };
+    }
+
+    static String valueOf(List<Evidence> facts, String label) {
+        for (Evidence fact : facts) {
+            if (label.equals(fact.label())) {
+                return fact.value();
+            }
+        }
+        return null;
     }
 
     /** 같은 종류가 여럿이면 뒤엣것(도구 결과)을 고른다 — 도구 표본이 도구 근거를 실제로 쓰게 하기 위해서다. */
@@ -517,6 +532,23 @@ class AssistantQualityTest {
             assertThat(fakes.executed).as(c.id()).isEmpty();
         } else {
             assertThat(fakes.executed).as(c.id()).containsExactlyElementsOf(c.expectedTools());
+        }
+
+        // 하락 구간 도구 뒤에 오는 도구는 그 구간 근거의 날짜(고점 2024-03-04·저점 2024-04-19)로만 불린다.
+        int drawdownAt = c.expectedTools().indexOf("getDeepestDrawdownWindow");
+        if (drawdownAt >= 0) {
+            for (String later :
+                    c.expectedTools().subList(drawdownAt + 1, c.expectedTools().size())) {
+                CountingTool tool =
+                        fakes.tools.stream()
+                                .filter(t -> t.spec.name().equals(later))
+                                .findFirst()
+                                .orElseThrow();
+                assertThat(tool.attempts).as(c.id()).hasSize(1);
+                assertThat(tool.attempts.get(0).values())
+                        .as("%s: %s 의 날짜 인자는 하락 구간 근거에서 와야 한다", c.id(), later)
+                        .allSatisfy(d -> assertThat(d).isIn("2024-03-04", "2024-04-19"));
+            }
         }
 
         // 모델 입력(질문·이력·근거·도구 명세) 어디에도 토큰·backtestId 가 없다.
