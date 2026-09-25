@@ -82,8 +82,9 @@ COMPOSITE_SCOPE: Final[str] = "ALL"
 
 STATUS_NOT_COMPUTABLE: Final[str] = "NOT_COMPUTABLE"
 STATUS_NEAREST_ONLY: Final[str] = "NEAREST_ONLY"
-#: PD-09(문턱)이 교정된 뒤에 생기는 상태. **지금 이 값을 만드는 경로는 없다**(research R6).
-#: 어휘를 미리 두는 것은 저장 값의 목록이고, 문턱 값을 코드에 두는 것과 다르다.
+#: PD-09(문턱)이 교정된 검색 방식의 상태(threshold-calibration.md §6). 사유는 없다.
+#: 지금은 종합 비교만 이 상태를 만든다 — 분야 검색은 교정에 실패해 `NEAREST_ONLY`로 남는다(§7.2).
+#: 문턱 값은 코드가 아니라 모델 설정(`regime-phase-v3.json`의 ``threshold``)에 있다.
 STATUS_THRESHOLD_APPLIED: Final[str] = "THRESHOLD_APPLIED"
 
 #: 유효 후보가 0건이다 (data-model §2.1).
@@ -170,6 +171,9 @@ class SearchStatus:
         elif self.status == STATUS_NEAREST_ONLY:
             if self.reason != THRESHOLD_NOT_CALIBRATED:
                 raise SnapshotError(f"NEAREST_ONLY의 사유가 아니다: {self.reason!r}")
+        elif self.status == STATUS_THRESHOLD_APPLIED:
+            if self.reason is not None:
+                raise SnapshotError(f"THRESHOLD_APPLIED에는 사유가 없다: {self.reason!r}")
         else:
             raise SnapshotError(f"배치가 만들 수 있는 상태가 아니다: {self.status!r}")
 
@@ -190,6 +194,9 @@ def not_computable(reason: str) -> SearchStatus:
 NEAREST_ONLY: Final[SearchStatus] = SearchStatus(
     status=STATUS_NEAREST_ONLY, reason=THRESHOLD_NOT_CALIBRATED
 )
+
+#: 교정된 기준으로 사례를 나눈 상태. 사례마다 ``distance.meetsThreshold``가 붙는다.
+THRESHOLD_APPLIED: Final[SearchStatus] = SearchStatus(status=STATUS_THRESHOLD_APPLIED, reason=None)
 
 
 def status_for_model(model: DistanceModel | ModelUnavailable) -> SearchStatus | None:
@@ -550,6 +557,8 @@ class SnapshotBuilder:
 
         selection = select_candidates(model)
         status = status_for_selection(selection)
+        if status.computable and model.config.threshold is not None:
+            status = THRESHOLD_APPLIED
         cases = self._phase_cases(model, selection.displayed) if status.computable else ()
         offsets = tuple(shift_month(baseline_month, offset) for offset in COMPARISON_OFFSETS)
         return Snapshot(

@@ -81,6 +81,27 @@ class Block:
 
 
 @dataclass(frozen=True)
+class Threshold:
+    """교정된 유사성 기준 (PD-09). 네 조건을 모두 만족한 사례가 '기준 충족'이다(§1).
+
+    - 국면 거리 ≤ ``tau``
+    - 블록 거리가 모두 ≤ ``delta`` (``None``이면 제한 없음)
+    - 비교 시점이 ``min_comparison_months``개 이상
+    """
+
+    tau: float
+    delta: float | None
+    min_comparison_months: int
+
+    def meets(self, distance: PhaseDistance, comparison_months: int) -> bool:
+        return (
+            comparison_months >= self.min_comparison_months
+            and distance.value <= self.tau
+            and (self.delta is None or all(b.gap <= self.delta for b in distance.blocks))
+        )
+
+
+@dataclass(frozen=True)
 class PhaseConfig:
     """블록 구성표와 국면 입력표(PD-F4). 모델 버전의 일부다 — 바꾸면 새 버전이다."""
 
@@ -88,6 +109,8 @@ class PhaseConfig:
     input_kinds: Mapping[str, str]
     input_units: Mapping[str, str]
     blocks: tuple[Block, ...]
+    #: 교정된 유사성 기준(PD-09, threshold-calibration.md §7.1). 없으면 유사성을 판정하지 않는다.
+    threshold: Threshold | None = None
     #: 설명 문장에만 쓰는 표시 배율·단위. 없으면 저장 값과 ``input_units`` 그대로다.
     #: 무역수지처럼 달러 단위 1년 변화가 열한 자리 숫자로 문장에 실리는 것을 막는다(S15P21E205-446).
     display: Mapping[str, tuple[float, str]] = field(default_factory=dict)
@@ -121,6 +144,7 @@ class PhaseConfig:
             input_units={k: v for k, v in self.input_units.items() if k != indicator_id},
             blocks=tuple(block for block in blocks if block.members),
             display={k: v for k, v in self.display.items() if k != indicator_id},
+            threshold=self.threshold,
         )
 
 
@@ -167,8 +191,23 @@ def load_config(path: Path = DEFAULT_CONFIG, *, indicator_ids: Iterable[str]) ->
         raise PhaseConfigError(f"국면 입력표가 등록표와 다르다: {sorted(set(kinds) ^ registered)}")
     if any(member.sign not in (1, -1) for block in blocks for member in block.members):
         raise PhaseConfigError("부호는 1 또는 -1이다")
+    threshold = None
+    if "threshold" in raw:
+        body = raw["threshold"]
+        threshold = Threshold(
+            tau=float(body["tau"]),
+            delta=None if body.get("delta") is None else float(body["delta"]),
+            min_comparison_months=int(body["minComparisonMonths"]),
+        )
+        if threshold.tau <= 0 or (threshold.delta is not None and threshold.delta <= 0):
+            raise PhaseConfigError("유사성 기준 τ·δ는 0보다 커야 한다")
     return PhaseConfig(
-        version=raw["version"], input_kinds=kinds, input_units=units, blocks=blocks, display=display
+        version=raw["version"],
+        input_kinds=kinds,
+        input_units=units,
+        blocks=blocks,
+        display=display,
+        threshold=threshold,
     )
 
 
