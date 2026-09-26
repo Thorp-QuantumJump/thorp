@@ -20,6 +20,8 @@
 .context a { color: var(--thorp-foreground); text-decoration: underline; text-underline-offset: 2px; }
 .context a:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .contextSource { color: var(--thorp-copy); }
+.moreReasons { grid-column: 2; justify-self: start; padding: 0; border: 0; background: none; color: var(--thorp-copy); font-size: .78rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.moreReasons:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }
 .detailButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .detailSlot { grid-column: 1 / -1; min-width: 0; }
@@ -31,7 +33,7 @@
 .limitNote { margin: 14px 0 0; color: var(--thorp-copy); font-size: .78rem; }
 @media (max-width: 640px) {
   .case { grid-template-columns: 1fr; gap: 10px; }
-  .months, .reasons, .context, .detailButton { grid-column: 1; }
+  .months, .reasons, .context, .moreReasons, .detailButton { grid-column: 1; }
   .reasons { grid-template-columns: 1fr; gap: 14px; }
 }
 

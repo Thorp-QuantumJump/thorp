@@ -30,6 +30,8 @@ import {
 } from "@/components/strategy/analysisSupport";
 import {
   buildCasePeriodConstraint,
+  CASE_PERIOD_PREFILLED_NOTE,
+  defaultCasePeriod,
   rangeCoversCase,
   type CasePeriodConstraint,
 } from "@/components/strategy/casePeriodConstraint";
@@ -799,8 +801,16 @@ export function StrategySettingsPage({
       : CASE_RANGE_UNCOVERABLE;
   })();
 
-  const activeCaseConstraint =
+  const [casePeriodPrefilled, setCasePeriodPrefilled] = useState(false);
+  const baseCaseConstraint =
     caseConstraint === "uncomputable" ? null : caseConstraint;
+  const activeCaseConstraint =
+    baseCaseConstraint !== null && casePeriodPrefilled
+      ? {
+          ...baseCaseConstraint,
+          note: `${baseCaseConstraint.note} ${CASE_PERIOD_PREFILLED_NOTE}`,
+        }
+      : baseCaseConstraint;
   const { periodStart, periodEnd } = settings.analysisCondition;
   const chosenPeriod = useMemo(
     (): AnalysisPeriod | null =>
@@ -810,6 +820,29 @@ export function StrategySettingsPage({
     [periodStart, periodEnd],
   );
   const period = chosenPeriod ?? evaluableRange;
+
+  // 사례에서 들어왔고 아직 기간을 고르지 않았으면 사례 직후 구간을 포함하는 기간으로 미리 맞춘다(S15P21E205-450).
+  // 한 사례에 한 번만 한다 — 사용자가 기간을 지우거나 바꾸면 그 선택을 다시 덮지 않는다.
+  const prefilledCaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      caseId === null ||
+      baseCaseConstraint === null ||
+      evaluableRange === null ||
+      chosenPeriod !== null ||
+      prefilledCaseRef.current === caseId
+    )
+      return;
+    const next = defaultCasePeriod(
+      baseCaseConstraint,
+      evaluableRange,
+      Number.isInteger(minEvaluationYears) ? minEvaluationYears : 0,
+    );
+    prefilledCaseRef.current = caseId;
+    if (next === null) return;
+    settings.setAnalysisCondition({ periodStart: next.start, periodEnd: next.end });
+    setCasePeriodPrefilled(true);
+  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, minEvaluationYears, settings]);
   const periodOutOfRange =
     chosenPeriod !== null &&
     evaluableRange !== null &&

@@ -1,3 +1,4 @@
+import { addYears } from '@/utils/analysisPeriod'
 /**
  * 011 사례 경로에서 003이 더 지키는 분석 기간 제약(011 `contracts/entry-handoff.md` §3).
  *
@@ -79,3 +80,38 @@ export function rangeCoversCase(
 ): boolean {
   return range.start <= constraint.startMax && range.end >= constraint.endMin
 }
+
+/** 미리 맞춘 기간에 덧붙는 고정 문구. 사용자가 고른 기간과 구분되게 한다. */
+export const CASE_PERIOD_PREFILLED_NOTE =
+  '이 사례 직후 구간까지 들어가도록 분석 기간을 미리 맞춰 두었습니다. 바꿀 수 있습니다.'
+
+/**
+ * 사례에서 들어왔을 때 미리 맞출 분석 기간(S15P21E205-450). 고르지 않으면 범위 전체가 기간이 되는데,
+ * 그 기간도 제약은 만족하지만 사례와 무관해 보여 "기간이 선택되지 않았다"로 읽힌다.
+ *
+ * - 끝: 사례 사후 구간의 끝(`endMin`).
+ * - 시작: 워밍업이 사후 구간을 먹지 않는 마지막 날(`startMax`)과 끝에서 최소 평가 기간을 뺀 날 중 이른 쪽.
+ *   범위 앞쪽에 막히면 범위 시작으로 두고, 그래도 최소 평가 기간이 모자라면 끝을 범위 안에서 늘린다.
+ *
+ * 범위가 사례를 덮지 못하면 `null` — 그때는 화면이 이미 이유와 함께 분석을 막는다.
+ */
+export function defaultCasePeriod(
+  constraint: CasePeriodConstraint,
+  range: { start: string; end: string },
+  minEvaluationYears: number,
+): { start: string; end: string } | null {
+  if (!rangeCoversCase(range, constraint)) return null
+  let end = constraint.endMin
+  const minimumStart =
+    minEvaluationYears > 0 ? addYears(end, -minEvaluationYears) : constraint.startMax
+  let start = minimumStart < constraint.startMax ? minimumStart : constraint.startMax
+  if (start < range.start) {
+    start = range.start
+    if (minEvaluationYears > 0) {
+      const needed = addYears(start, minEvaluationYears)
+      if (needed > end) end = needed < range.end ? needed : range.end
+    }
+  }
+  return { start, end }
+}
+

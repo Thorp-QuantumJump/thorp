@@ -41,6 +41,15 @@ function observationRange(months: string[]) {
   return first === last ? first : `${first} ~ ${last}`
 }
 
+/**
+ * '비슷했던 때 보기'로 가는 주소. 종합 비교를 보던 중이면 종합 비교가 선택된 상태로 연다(S15P21E205-450).
+ * 분야 검색은 저장된 판(searchId)을 그대로 연다 — 카드와 같은 결과다.
+ */
+function regimeSearchPath(result: RegimeSearchResult): string {
+  if (result.mode === 'COMPOSITE') return '/regime-search?mode=composite'
+  return `/regime-search?searchId=${encodeURIComponent(result.searchId)}`
+}
+
 export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
   const [baselines, setBaselines] = useState<RegimeBaselineMonths | null>(null)
   const [baselinesFailed, setBaselinesFailed] = useState(false)
@@ -158,7 +167,7 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                       분야별로 살펴보기
                     </button>
                   ) : null}{' '}
-                  <Link className={styles.detail} to={`/regime-search?searchId=${encodeURIComponent(result.searchId)}`}>
+                  <Link className={styles.detail} to={regimeSearchPath(result)}>
                     참고 사례 보기 <ArrowUpRight size={14} aria-hidden="true" />
                   </Link>
                 </p>
@@ -190,7 +199,7 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                             이 기간으로 백테스트
                           </Link>
                         )}
-                        <Link className={styles.detail} to={`/regime-search?searchId=${encodeURIComponent(result.searchId)}`}>
+                        <Link className={styles.detail} to={regimeSearchPath(result)}>
                           자세히 <ArrowUpRight size={14} aria-hidden="true" />
                         </Link>
                       </div>
