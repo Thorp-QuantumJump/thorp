@@ -265,6 +265,19 @@ describe("003 분석 기간의 사례 제약 (011 진입 계약 §3)", () => {
     ).toBeTruthy();
   });
 
+  it("사례에서 들어오면 분석 기간을 사례 직후 구간까지 미리 맞추고 그렇다고 말한다 (S15P21E205-450)", async () => {
+    const user = userEvent.setup();
+    renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());
+    await openConditions(user);
+
+    const end = (await screen.findByLabelText("종료일")) as HTMLInputElement;
+    await waitFor(() => expect(end.value).toBe("2012-07-03"));
+    const start = screen.getByLabelText("시작일") as HTMLInputElement;
+    expect(start.value <= EXPECTED_START_MAX).toBe(true);
+    expect(start.value >= RANGE.start).toBe(true);
+    expect(screen.getByText(/분석 기간을 미리 맞춰 두었습니다/)).toBeTruthy();
+  });
+
   it("하한 밖 기간을 고르면 저장하지 않고 이유를 말한다", async () => {
     const user = userEvent.setup();
     renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());

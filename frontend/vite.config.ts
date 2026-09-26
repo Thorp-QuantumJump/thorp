@@ -26,6 +26,7 @@ export default defineConfig({
       'src/components/regimelink/*.test.ts',
       'src/components/regime/*.test.ts',
       'src/components/result/*.test.ts',
+      'src/components/strategy/*.test.ts',
       'src/hooks/*.test.ts',
       'src/components/records/*.test.ts',
       'src/test/resultFixtures.test.ts',

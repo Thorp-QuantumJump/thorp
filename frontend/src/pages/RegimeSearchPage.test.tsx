@@ -90,6 +90,23 @@ describe('경제환경 검색 화면', () => {
       )
     })
 
+    it('전략 진단에서 종합 비교로 넘어오면 종합 비교가 선택된 상태로 연다 (S15P21E205-450)', async () => {
+      vi.mocked(getRegimeSearch).mockResolvedValue(
+        regimeResult({ mode: 'COMPOSITE', field: null }),
+      )
+
+      renderPage({ entries: ['/regime-search?mode=composite'] })
+
+      await waitFor(() =>
+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(
+          expect.objectContaining({ mode: 'composite' }),
+          expect.any(AbortSignal),
+        ),
+      )
+      const button = await screen.findByRole('button', { name: 'Thorp 종합 비교' })
+      await waitFor(() => expect(button.getAttribute('aria-pressed')).toBe('true'))
+    })
+
     it('모르는 분야로 넘어오면 검색하지 않고 화면을 그대로 연다', async () => {
       renderPage({ entries: ['/regime-search?field=없는-분야&month=2026-07'] })
 
