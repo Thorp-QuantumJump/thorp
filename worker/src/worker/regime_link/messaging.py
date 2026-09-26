@@ -29,6 +29,9 @@ JOBS_ROUTING_KEY = "regime-link.job.requested"
 #: 재전달 상한을 넘긴 작업이 가는 큐. **백엔드가 소비**해 링크를
 #: ``FAILED(SYSTEM_FAILURE)`` 로 끝낸다. 워커는 이 큐를 읽지 않는다.
 JOBS_DEAD_LETTER_QUEUE = "regime-link.jobs.dlq"
+#: DLX 에서 DLQ 로 가는 routing key(계약 "토폴로지", T107). 워커는 이 이름을 쓰지 않는다 —
+#: 작업을 reject 하면 큐 속성이 이 키로 보낸다. 백엔드 상수와 대조하려고 둔다.
+JOBS_DEAD_LETTER_ROUTING_KEY = "regime-link.job.dead"
 
 EVENTS_QUEUE = "regime-link.events"
 EVENTS_ROUTING_KEY = "regime-link.event"

@@ -23,12 +23,21 @@ public class FakeTradingCalendar implements TradingCalendarPort {
     private final Set<String> mappedSectors = new HashSet<>();
     private String mappingVersion = "MAP-1";
 
+    /** 대응표 이력이 시작하는 날. {@code null}이면 모든 날에 버전이 있다(T109 시험용). */
+    private LocalDate mappingSince;
+
     public FakeTradingCalendar(LocalDate dataAsOf) {
         this.dataAsOf = dataAsOf;
     }
 
     public FakeTradingCalendar delisted(String instrumentId, LocalDate on) {
         delistings.put(instrumentId, on);
+        return this;
+    }
+
+    /** 대응표 이력이 이 날부터만 있다 — 그 앞 날짜는 유효한 버전이 없다(001 운영 자료가 2026-09 부터인 경우). */
+    public FakeTradingCalendar mappingSince(LocalDate since) {
+        this.mappingSince = since;
         return this;
     }
 
@@ -103,6 +112,9 @@ public class FakeTradingCalendar implements TradingCalendarPort {
 
     @Override
     public Optional<String> mappingVersionAsOf(LocalDate date) {
+        if (mappingSince != null && date.isBefore(mappingSince)) {
+            return Optional.empty();
+        }
         return Optional.of(mappingVersion);
     }
 
